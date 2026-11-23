@@ -20,6 +20,7 @@ import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
 import { Radio } from "~/components/ui/radio";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import { isChangedSinceRead } from "~/lib/api-error";
 import {
   DEBTOR_NUMBER_MAX_LENGTH,
   type DebtorNumberFormat,
@@ -232,6 +233,8 @@ const DUE_DAY_OPTIONS = [
 export function FamilyBillingForm({
   target,
   existing,
+  version,
+  onChangedSinceRead,
   runDueText,
   termsText,
   mandateInForce,
@@ -245,6 +248,13 @@ export function FamilyBillingForm({
   format?: DebtorNumberFormat;
   /** The family's deviation as stored, null without one. */
   existing: FamilyBilling | null;
+  /** Read-state token of `existing`; the save sends it back (ADR 0311). */
+  version: string;
+  /**
+   * Reads the family again after a save was refused because its deviation
+   * changed since: the form then shows the new stored state.
+   */
+  onChangedSinceRead: () => void;
   /**
    * The run's due dates as the run page names them („Überweisung am …“),
    * so „Wie im Lauf“ says which dates it takes. Missing outside a run.
@@ -264,9 +274,19 @@ export function FamilyBillingForm({
   onCancel: () => void;
   onSaved: (family: FamilyBilling | null) => void;
 }>) {
+  // The draft starts from the state the form read and saves over its
+  // version. A background read changes neither; after a refused save the
+  // form takes the next state it is given (ADR 0311).
+  const [base, setBase] = useState({ existing, version });
+  const [adoptNext, setAdoptNext] = useState(false);
   const [draft, setDraft] = useState<FamilyBillingDraft>(() =>
     draftOf(existing),
   );
+  if (adoptNext && version !== base.version) {
+    setAdoptNext(false);
+    setBase({ existing, version });
+    setDraft(draftOf(existing));
+  }
   const [saving, setSaving] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
@@ -278,7 +298,11 @@ export function FamilyBillingForm({
 
   const submit = async () => {
     formErrors.clear();
-    const errors = familyBillingErrors(draft, format, existing?.debtorNumber);
+    const errors = familyBillingErrors(
+      draft,
+      format,
+      base.existing?.debtorNumber,
+    );
     if (Object.keys(errors).length > 0) {
       formErrors.invalid("Bitte prüfe die markierten Felder.", errors);
       return;
@@ -287,6 +311,7 @@ export function FamilyBillingForm({
     try {
       const saved = await saveFamilyBilling(
         familyBillingInput(target.contractId, draft),
+        base.version,
       );
       success(
         saved
@@ -301,6 +326,10 @@ export function FamilyBillingForm({
       void formErrors.show(err, {
         object: "die Angabe zu Empfänger und Zahlung",
       });
+      if (isChangedSinceRead(err)) {
+        setAdoptNext(true);
+        onChangedSinceRead();
+      }
     } finally {
       setSaving(false);
     }

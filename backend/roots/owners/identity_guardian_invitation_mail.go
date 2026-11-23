@@ -134,6 +134,45 @@ func (m GuardianInvitationMailer) EnqueueWelcome(ctx context.Context, guardianPr
 	}
 }
 
+// EnqueueCareVisible queues the one care notice of a guardian, naming every
+// child it covers (#7760), related to the guardian profile. A blank address queues nothing;
+// an enqueue failure is returned so the guardian's savepoint rolls back.
+func (m GuardianInvitationMailer) EnqueueCareVisible(ctx context.Context, notice identityaccess.GuardianCareNotice) error {
+	mail, addressed := identityaccess.GuardianCareVisibleMailOf(notice, m.frontendURL)
+	if !addressed {
+		return nil
+	}
+	if m.outbox == nil {
+		return errGuardianMailOutboxMissing
+	}
+	err := m.outbox.EnqueueOutbox(ctx, deliveryCompose.MailEnqueueRequest{
+		Kind:              identityaccess.MailKindGuardianCareVisible,
+		Payload:           guardianCareVisiblePayload(mail),
+		RelatedEntityType: identityaccess.MailRelatedGuardianProfile,
+		RelatedEntityID:   notice.GuardianProfileID,
+	})
+	if err != nil {
+		return fmt.Errorf("guardian care notice: outbox enqueue: %w", err)
+	}
+	return nil
+}
+
+// guardianCareVisiblePayload stores the care notice: the guardian's name,
+// the login address of the account, the children's first names, the school
+// and the portal link.
+func guardianCareVisiblePayload(mail identityaccess.GuardianCareVisibleMail) map[string]any {
+	return map[string]any{
+		guardianPayloadRecipientEmail:  mail.Recipient,
+		guardianPayloadFirstName:       mail.FirstName,
+		guardianPayloadLastName:        mail.LastName,
+		guardianPayloadChildFirstNames: mail.ChildFirstNames,
+		guardianPayloadSchoolName:      mail.SchoolName,
+		guardianPayloadPortalURL:       mail.PortalURL,
+		guardianPayloadLogoURL:         mail.LogoURL,
+		guardianPayloadLocale:          mail.Locale,
+	}
+}
+
 // guardianPayload stores the fields every guardian mail shares.
 func guardianPayload(mail identityaccess.GuardianMail) map[string]any {
 	return map[string]any{

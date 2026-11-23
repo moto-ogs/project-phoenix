@@ -111,7 +111,7 @@ func TestFinanceExportsOfAReleasedRun(t *testing.T) {
 	f := sepaDebitFixture(t, "Träger Sollstellung SJR")
 	lia := careContract(t, f.db, f.office.organization, f.office.schools[0], "Lia", sepaDebitMonth, sjrServices()...)
 	createMandate(t, f, mandateBody(lia, "SJR-X-LIA"))
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyBillingPath,
+	rec := putFamilyBilling(t, f.traeger, f.office.token,
 		map[string]any{"contract_id": lia, "recipient_kind": "applicant", "debtor_number": " 10 4711 "})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), `"debtor_number":"10 4711"`, "a family with only a debtor number keeps it")

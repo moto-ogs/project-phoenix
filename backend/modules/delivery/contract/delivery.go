@@ -294,8 +294,10 @@ type Observation struct {
 // it goes to a family of one of its schools. A Träger's billing letter does not,
 // and neither does mail to staff. An unlisted template goes out.
 var parentMailTemplates = map[string]bool{
-	"guardian_invitation":   true,
-	"guardian_welcome":      true,
+	"guardian_invitation": true,
+	"guardian_welcome":    true,
+	// The notice that a child's care is visible in the parents portal (#7760).
+	"guardian_care_visible": true,
 	"parent_announcement":   true,
 	"parent_message":        true,
 	"enrollment_submitted":  true,
@@ -333,6 +335,7 @@ func IsParentMail(template string) bool { return parentMailTemplates[template] }
 // letters, decisions on an application, and sign-in and password mail.
 var distributionMailTemplates = map[string]bool{
 	"guardian_invitation":   true,
+	"guardian_care_visible": true,
 	"parent_announcement":   true,
 	"parent_message":        true,
 	"appointment_published": true,

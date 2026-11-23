@@ -95,7 +95,7 @@ func documentRouteContracts(signing any) []common.RouteContract {
 		{Method: "GET", Pattern: contract + "/signing", Portals: portals, Response: signing},
 		{Method: "POST", Pattern: contract + "/sign", Portals: portals, Request: ContractSignRequest{}, Response: signing},
 		{Method: "POST", Pattern: contract + "/sepa-mandate/preview", Portals: portals, NoCommit: "renders the mandate text and grants no mandate", Request: parentService.SEPAMandateInput{}, Response: parentService.SEPAMandateText{}},
-		{Method: "POST", Pattern: contract + "/sepa-mandate/revoke", Portals: portals, Response: parentService.SEPAMandateView{}},
+		{Method: "POST", Pattern: contract + "/sepa-mandate/revoke", Portals: portals, Request: ParentSEPAMandateRevokeRequest{}, Response: parentService.SEPAMandateView{}},
 		// The stored PDFs and the shared files of the inbox (#4671, #4678,
 		// #4692); the handlers refuse a non-numeric ID with 400.
 		{Method: "GET", Pattern: "/me/documents/{organizationId}/{documentId}/pdf", Portals: portals, File: true},

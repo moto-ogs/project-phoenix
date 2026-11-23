@@ -32,6 +32,9 @@ type offeringDecisionDiff struct {
 	phase         *ports.BookingPhase
 	requested     []careplan.OfferingChangeSelection
 	effectiveFrom calendar.Date
+	// bookingEnds is the exclusive end the change books each selected
+	// offering to, when one ends before the phase (#7928).
+	bookingEnds map[int64]calendar.Date
 	// weekendFollowsFriday reads a weekend occurrence as Friday's (#3921).
 	weekendFollowsFriday    bool
 	selectionFacts          *directSelectionFacts

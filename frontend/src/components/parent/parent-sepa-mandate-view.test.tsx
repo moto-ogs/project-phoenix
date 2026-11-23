@@ -91,6 +91,7 @@ const granted: SepaMandateView = {
   mandate: {
     collectionEligible: true,
     id: "9",
+    version: "v-9",
     reference: text.reference,
     signedOn: "2026-09-09",
     accountHolder: "Eva Muster",
@@ -390,7 +391,42 @@ describe("ParentSepaMandateView", () => {
     expect(
       await screen.findByRole("button", { name: "Weiter" }),
     ).toBeInTheDocument();
-    expect(mocks.revoke).toHaveBeenCalledWith("4", "75");
+    expect(mocks.revoke).toHaveBeenCalledWith("4", "75", "v-9");
+  });
+
+  it("shows the mandate given since instead of revoking it unseen", async () => {
+    const replaced: SepaMandateView = {
+      ...granted,
+      mandate: {
+        ...granted.mandate!,
+        id: "12",
+        version: "v-12",
+        ibanMasked: "DE•• •••• •••• •••• ••77 00",
+      },
+    };
+    mocks.fetch.mockResolvedValueOnce(granted).mockResolvedValueOnce(replaced);
+    mocks.revoke.mockRejectedValue(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    renderView();
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Mandat widerrufen" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Widerrufen" }));
+
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "das Lastschrift-Mandat"),
+      ),
+    ).toBeVisible();
+    expect(mocks.revoke).toHaveBeenCalledWith("4", "75", "v-9");
+    expect(await screen.findByText(replaced.mandate!.ibanMasked)).toBeVisible();
+    expect(mocks.fetch).toHaveBeenCalledTimes(2);
+    expect(mocks.revoke).toHaveBeenCalledTimes(1);
+    expect(
+      screen.queryByRole("button", { name: /Erneut versuchen|Wiederholen/ }),
+    ).not.toBeInTheDocument();
   });
 });
 

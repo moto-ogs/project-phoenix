@@ -44,6 +44,7 @@ type documentTemplateSummary struct {
 }
 
 type documentTemplateDetail struct {
+	Version      string                    `json:"version"`
 	Current      documentTemplateVersion   `json:"current"`
 	Standard     documentTemplateBody      `json:"standard_template"`
 	Placeholders []struct{ Name string }   `json:"placeholders"`
@@ -74,7 +75,30 @@ func templateDetailOf(t *testing.T, router http.Handler, office traegerOffice, k
 
 func saveTemplate(t *testing.T, router http.Handler, office traegerOffice, kind string, body documentTemplateBody) *httptest.ResponseRecorder {
 	t.Helper()
-	return traegerJSON(t, router, office.token, http.MethodPost, documentTemplatesPath+"/"+kind+"/versions", body)
+	return postTemplateVersion(t, router, office.token, kind, body)
+}
+
+// postTemplateVersion saves a template over the version the editor reads of
+// it first, as the editor does (ADR 0311); a kind the office cannot read
+// sends no version.
+func postTemplateVersion(t *testing.T, router http.Handler, token, kind string, body any) *httptest.ResponseRecorder {
+	t.Helper()
+	version := ""
+	if rec := traegerJSON(t, router, token, http.MethodGet, documentTemplatesPath+"/"+kind, nil); rec.Code == http.StatusOK {
+		version = decodeSchoolPortalData[documentTemplateDetail](t, rec.Body.Bytes()).Version
+	}
+	return traegerJSON(t, router, token, http.MethodPost, documentTemplatesPath+"/"+kind+"/versions", withExpectedVersion(t, body, version))
+}
+
+// withExpectedVersion adds the read-state token to a JSON body.
+func withExpectedVersion(t *testing.T, body any, version string) map[string]any {
+	t.Helper()
+	encoded, err := json.Marshal(body)
+	require.NoError(t, err)
+	fields := map[string]any{}
+	require.NoError(t, json.Unmarshal(encoded, &fields))
+	fields["expected_version"] = version
+	return fields
 }
 
 var hardtInvoice = documentTemplateBody{
@@ -228,6 +252,37 @@ func TestTraegerDocumentTemplatesStayWithTheirTraeger(t *testing.T) {
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	assert.Equal(t, 1, decodeSchoolPortalData[documentTemplateVersion](t, rec.Body.Bytes()).Version)
 	assert.Len(t, templateDetailOf(t, router, own, "rechnung").Versions, 1)
+}
+
+// The editor saves over the version it started from (ADR 0311): when a
+// colleague saved a version since, or the save names none, it is refused
+// with 409 general.changed_since_read and adds no version and no log entry;
+// over the version read again it goes through.
+func TestTraegerDocumentTemplateSaveNeedsTheVersionItStartedFrom(t *testing.T) {
+	t.Parallel()
+	db, router := newMasterDataPortal(t)
+	office := newMasterDataOffice(t, db, router, "Träger Vorlagen gelesener Stand", identityaccess.TraegerRoleAdministration)
+	opened := templateDetailOf(t, router, office, "rechnung").Version
+	require.NotEmpty(t, opened)
+	save := func(version string, body documentTemplateBody) *httptest.ResponseRecorder {
+		return traegerJSON(t, router, office.token, http.MethodPost, documentTemplatesPath+"/rechnung/versions", withExpectedVersion(t, body, version))
+	}
+	require.Equal(t, http.StatusCreated, save(opened, hardtInvoice).Code, "the colleague saves first")
+
+	mine := hardtInvoice
+	mine.Closing = "Viele Grüße\n{{traeger}}"
+	for name, version := range map[string]string{"the version before the colleague's": opened, "no version": ""} {
+		rec := save(version, mine)
+		require.Equal(t, http.StatusConflict, rec.Code, "%s: %s", name, rec.Body.String())
+		assert.Equal(t, "general.changed_since_read", refusalOf(t, rec).Code, name)
+	}
+	detail := templateDetailOf(t, router, office, "rechnung")
+	require.Len(t, detail.Versions, 1, "a refused save adds no version")
+	assert.Equal(t, hardtInvoice.Closing, detail.Current.Closing)
+	assert.Equal(t, []string{"template:create"}, masterDataLog(t, db, office.organization), "a refused save logs nothing")
+
+	require.Equal(t, http.StatusCreated, save(detail.Version, mine).Code)
+	assert.Equal(t, 2, templateDetailOf(t, router, office, "rechnung").Current.Version)
 }
 
 func TestTraegerDocumentTemplatesQueryBudget(t *testing.T) {

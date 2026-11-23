@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/sepa"
 )
 
@@ -168,7 +169,8 @@ func (p *ParentMandates) withMandate(ctx context.Context, organizationID int64, 
 	if err != nil {
 		return parentbilling.ParentMandate{}, fmt.Errorf("parent billing: open the account holder of mandate %d: %w", mandate.ID, err)
 	}
-	summary := &parentbilling.ParentMandateSummary{CollectionEligible: parentbilling.MandateCollectionGap(mc.creditor, &mandate, p.today()) == "", ID: mandate.ID.Int64(), Reference: mandate.Reference, SignedOn: mandate.SignedOn,
+	summary := &parentbilling.ParentMandateSummary{CollectionEligible: parentbilling.MandateCollectionGap(mc.creditor, &mandate, p.today()) == "", ID: mandate.ID.Int64(),
+		Version: mandateVersion(mandate), Reference: mandate.Reference, SignedOn: mandate.SignedOn,
 		Kind: mandate.Kind, AccountHolder: string(holder), IBANMasked: mandate.IBANMasked, BIC: mandate.BIC, Source: mandate.Source,
 		CreditorID: mandate.CreditorID, RevokedOn: mandate.RevokedOn}
 	consent, err := p.store.SEPAMandateConsent(ctx, organizationID, mandate.ID.Int64())
@@ -379,8 +381,15 @@ func (p *ParentMandates) insertMandate(ctx context.Context, organizationID int64
 }
 
 // RevokeParentSEPAMandate ends the family's mandate in force today: the
-// next run no longer collects with it.
-func (p *ParentMandates) RevokeParentSEPAMandate(ctx context.Context, organizationID int64, reader parentbilling.ParentMandateReader) (parentbilling.ParentMandate, error) {
+// next run no longer collects with it. The parents revoke the mandate they
+// read: the mandate in force must be the one their version names, else
+// readstate.ErrChanged (ADR 0311). The lock holds only that row; a
+// mandate revoked between finding and locking it keeps its identity, so
+// the locked row must still be in force: a revocation racing another one
+// is refused as changed, not answered as missing.
+func (p *ParentMandates) RevokeParentSEPAMandate(ctx context.Context, organizationID int64, reader parentbilling.ParentMandateReader,
+	expectedVersion string,
+) (parentbilling.ParentMandate, error) {
 	mc, err := p.open(ctx, organizationID, reader)
 	if err != nil {
 		return parentbilling.ParentMandate{}, err
@@ -392,8 +401,15 @@ func (p *ParentMandates) RevokeParentSEPAMandate(ctx context.Context, organizati
 	if inForce == nil {
 		return parentbilling.ParentMandate{}, parentbilling.ErrSEPAMandateNotFound
 	}
-	if _, err := p.store.SEPAMandate(ctx, organizationID, inForce.ID.Int64(), true); err != nil {
+	locked, err := p.store.SEPAMandate(ctx, organizationID, inForce.ID.Int64(), true)
+	if err != nil {
 		return parentbilling.ParentMandate{}, err
+	}
+	if err := readstate.Check(expectedVersion, mandateVersion(locked)); err != nil {
+		return parentbilling.ParentMandate{}, err
+	}
+	if !locked.InForce() {
+		return parentbilling.ParentMandate{}, readstate.ErrChanged
 	}
 	today := p.today()
 	if today.Before(inForce.SignedOn) {
@@ -408,6 +424,14 @@ func (p *ParentMandates) RevokeParentSEPAMandate(ctx context.Context, organizati
 		return parentbilling.ParentMandate{}, fmt.Errorf("parent billing: record the SEPA mandate: %w", err)
 	}
 	return p.withMandate(ctx, organizationID, reader, mc, revoked)
+}
+
+// mandateVersion is the read-state token of a mandate the parents revoke:
+// its identity. A revocation ends a mandate as a whole, so a change of its
+// account by the office does not make it another one; a mandate given
+// since is another row, and identities never repeat (bigserial).
+func mandateVersion(mandate parentbilling.SEPAMandate) string {
+	return readstate.Fingerprint(mandate.ID.Int64())
 }
 
 // consentTextContext binds the original confirmed text to its mandate.

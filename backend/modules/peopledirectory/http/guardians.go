@@ -66,12 +66,15 @@ type GuardianInviteResult struct {
 }
 
 // GuardianBulkInvite invites the guardians of many children in one run
-// (#3378). DryRun only counts; ResendOpen mails open invitations again.
+// (#3378). DryRun only counts; ResendOpen mails open invitations again;
+// NotifyActive tells guardians who already use the parents portal that the
+// child's care is visible there (#7760).
 type GuardianBulkInvite struct {
 	StudentIDs     []int64
 	ActorAccountID int64
 	ResendOpen     bool
 	DryRun         bool
+	NotifyActive   bool
 }
 
 // GuardianBulkInviteProblem is one guardian the run could not reach.
@@ -90,6 +93,9 @@ type GuardianBulkInviteResult struct {
 	SkippedActive         int
 	SkippedOpen           int
 	SkippedRestricted     int
+	Notified              int
+	AlreadyNotified       int
+	WithoutVisibleCare    int
 	Problems              []GuardianBulkInviteProblem
 }
 

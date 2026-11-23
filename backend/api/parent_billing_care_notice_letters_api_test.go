@@ -315,7 +315,7 @@ func TestCareNoticeMailGoesToTheDeviatingPayer(t *testing.T) {
 		"payer_first_name": "Oma", "payer_last_name": "Muster", "payer_email": "oma@example.org",
 		"payer_address": map[string]any{"street": "Amtsweg 2", "postal_code": "75175", "city": "Pforzheim"},
 	}
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyBillingPath, input)
+	rec := putFamilyBilling(t, f.traeger, f.office.token, input)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	run := f.releaseNoticeRun(t, f.noticeRun(t, int64(f.startNoticeRun(t, "2030-09-01", "2030-09-24").ID)))
 	assert.Equal(t, "oma@example.org", run.Notices[0].Recipient.Email)
@@ -323,7 +323,7 @@ func TestCareNoticeMailGoesToTheDeviatingPayer(t *testing.T) {
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 
 	input["payer_email"] = "opa@example.org"
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyBillingPath, input)
+	rec = putFamilyBilling(t, f.traeger, f.office.token, input)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(int64(run.ID), "/letters/mail"), nil)
 	require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
@@ -331,7 +331,7 @@ func TestCareNoticeMailGoesToTheDeviatingPayer(t *testing.T) {
 		"a payer who no longer pays gets nothing")
 
 	input["payer_email"] = "oma@example.org"
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyBillingPath, input)
+	rec = putFamilyBilling(t, f.traeger, f.office.token, input)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(int64(run.ID), "/letters/mail"), nil)
 	require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())

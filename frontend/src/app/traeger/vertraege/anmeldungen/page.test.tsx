@@ -326,11 +326,14 @@ describe("Anmeldungen nachtragen", () => {
         "OGS Sonnenhof: 1 nachgetragen, 1 nur gebunden, 1 war schon erledigt, 4 offen.",
       ),
     ).toBeInTheDocument();
-    // The parent step is the school's, and no mail is promised.
+    // The parent step is the school's (#7760): the bulk invitation, with the
+    // notice for parents who already have an account.
     expect(
       screen.getByText(/Eltern ins Elternportal einladen macht die Schule/),
     ).toBeInTheDocument();
-    expect(screen.getByText(/gibt es noch nicht/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/„Eltern mit Konto benachrichtigen“/),
+    ).toBeInTheDocument();
     // The work list opens on what is stuck.
     expect(screen.getByRole("button", { name: "Hängt 1" })).toHaveAttribute(
       "aria-pressed",

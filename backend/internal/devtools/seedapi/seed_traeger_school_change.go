@@ -131,8 +131,12 @@ func seedSchoolChangePrices(client *Client, auth AuthRef, school int64, month ca
 			prices = append(prices, seedCareWeekdays(module)...)
 		}
 	}
+	version, err := seedCarePriceListsVersion(client, auth, school)
+	if err != nil {
+		return err
+	}
 	if _, err := client.PutWithAuth(auth, "/traeger/care-tariffs/", map[string]any{
-		"school_id": school, "valid_from": month.String(), "free_months": []int{}, "prices": prices,
+		"school_id": school, "valid_from": month.String(), "free_months": []int{}, "prices": prices, "expected_version": version,
 	}); err != nil {
 		return fmt.Errorf("set the prices of the Demo-Schule Manuell: %w", err)
 	}

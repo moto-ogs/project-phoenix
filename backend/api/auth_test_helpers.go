@@ -304,7 +304,7 @@ func NewAuthTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, o
 		return AuthTestModule{}, err
 	}
 	lifecycle, err := owners.LifecycleDependencies(sessionRepos.Lifecycle, command, owners.CaregiverProfiles{Persons: operatorPersons, Membership: operatorMembership},
-		guardianMail, catererMail, enrollmentClaims, logger)
+		guardianMail, catererMail, enrollmentClaims, owners.NewEnrollmentBookings(time.Now), logger)
 	if err != nil {
 		return AuthTestModule{}, err
 	}
@@ -394,7 +394,7 @@ func IdentityAccessForTests(cfg IdentityAccessTestConfig, unit tenant.UnitOfWork
 		return nil, err
 	}
 	sessionRepos := owners.SessionRepositoriesOf(repos, organizations, audits.AuthEvent, deliveryCompose.NewPushSubscriptionRepository(db.Pool()))
-	lifecycle, err := owners.LifecycleDependencies(sessionRepos.Lifecycle, audit, caregivers, owners.UnsentGuardianMail{}, nil, nil, logger)
+	lifecycle, err := owners.LifecycleDependencies(sessionRepos.Lifecycle, audit, caregivers, owners.UnsentGuardianMail{}, nil, nil, owners.NewEnrollmentBookings(time.Now), logger)
 	if err != nil {
 		return nil, err
 	}
