@@ -146,13 +146,7 @@ func (c *CareReductions) familyImportCandidates(ctx context.Context, reviewer pa
 func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*familyNumbers, today calendar.Date) []parentbilling.FamilyChildTarget {
 	rows, owner := familyImportRows(candidates)
 	decisionDay := familyImportDecisionDay(today, familyImportTargets(candidates))
-	for i := range rows {
-		// A witness takes over nothing: its family's stored numbers do not
-		// matter for it, only whether it contradicts the family's rows.
-		if _, differing := numbers[rows[i].family].confirmedForImport(decisionDay(rows[i])); differing && !rows[i].witness {
-			rows[i].status = parentbilling.ImportedChildrenConfirmationsDiffer
-		}
-	}
+	markDifferingConfirmations(rows, numbers, decisionDay)
 	current := func(family string, day calendar.Date) *parentbilling.FamilyChildCount {
 		count, _ := numbers[family].confirmedForImport(day)
 		return count
@@ -183,6 +177,21 @@ func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*
 	}
 	alignFamilyImportDays(candidates)
 	return shown
+}
+
+// markDifferingConfirmations holds back a row whose family's stored
+// numbers disagree on its day. A witness takes over nothing: its family's
+// stored numbers do not matter for it, only whether it contradicts the
+// family's rows (#7863).
+func markDifferingConfirmations(rows []importedChildren, numbers map[string]*familyNumbers, decisionDay func(importedChildren) calendar.Date) {
+	for i := range rows {
+		if rows[i].witness {
+			continue
+		}
+		if _, differing := numbers[rows[i].family].confirmedForImport(decisionDay(rows[i])); differing {
+			rows[i].status = parentbilling.ImportedChildrenConfirmationsDiffer
+		}
+	}
 }
 
 func familyImportDecisionDay(today calendar.Date, targets map[familyImportRowFamily]familyImportTarget) func(importedChildren) calendar.Date {
