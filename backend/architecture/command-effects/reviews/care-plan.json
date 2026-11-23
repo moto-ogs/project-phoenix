@@ -198,6 +198,28 @@
       "target_owner": "enrollment"
     },
     {
+      "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.arrivalScheduleService.UpdateStudentArrivalNote",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ArrivalScheduleService.UpdateStudentArrivalNote",
+      "reason": "Guarded leaf command (lock) under ADR 0067: care-plan reaches modules/peopledirectory.Capability.FindStudentRecordForMutation (people-directory) through *modules/careplan/internal/application.arrivalScheduleService.UpdateStudentArrivalNote. It takes the student lock every weekly plan and care note writer takes before it compares the read-state token (#7904); the call participates in the caller unit.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindStudentRecordForMutation",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.arrivalScheduleService.UpdateStudentArrivalNote",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ArrivalScheduleService.UpdateStudentArrivalNote",
+      "reason": "Guarded leaf command (lock) under ADR 0067: care-plan reaches modules/peopledirectory.Owner.FindStudentRecordForMutation (people-directory) through *modules/careplan/internal/application.arrivalScheduleService.UpdateStudentArrivalNote. It takes the student lock every weekly plan and care note writer takes before it compares the read-state token (#7904); the call participates in the caller unit.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.FindStudentRecordForMutation",
+      "target_owner": "people-directory"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.arrivalScheduleService.UpsertBulkStudentArrivalSchedules",
       "classification": "query",
       "effect": "query",
@@ -10435,6 +10457,38 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.CreateStudentPickupNote",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupScheduleService.CreateStudentPickupNote",
+      "reason": "Guarded leaf command (lock) under ADR 0067: care-plan reaches modules/peopledirectory.Capability.LockStudent (people-directory) through *modules/careplan/internal/application.pickupScheduleService.CreateStudentPickupNote. A dated or weekday pickup note is written under the student lock every weekly plan writer takes, so a weekly plan save compares its token against a plan no note write can change in between (#7960, ADR 0311); the call participates in the caller unit.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.CreateStudentPickupNote",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupScheduleService.CreateStudentPickupNote",
+      "reason": "Guarded leaf command (lock) under ADR 0067: care-plan reaches modules/peopledirectory.Owner.LockStudent (people-directory) through *modules/careplan/internal/application.pickupScheduleService.CreateStudentPickupNote. A dated or weekday pickup note is written under the student lock every weekly plan writer takes, so a weekly plan save compares its token against a plan no note write can change in between (#7960, ADR 0311); the call participates in the caller unit.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.CreateStudentPickupNote",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupScheduleService.CreateStudentPickupNote",
+      "reason": "Read-only target already reviewed as query: care-plan reaches modules/peopledirectory/compose.CareStudentLock (people-directory) through *modules/careplan/internal/application.pickupScheduleService.CreateStudentPickupNote. No persistent, lock or scope effect; reached since PUT pickup-schedules saves the weekly pickup rows through this command (#7960).",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.CareStudentLock",
+      "target_owner": "people-directory"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.DeleteAllStudentPickupSchedules",
       "classification": "query",
       "effect": "query",
@@ -10652,6 +10706,38 @@
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithTenantTx",
       "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.DeleteStudentPickupNote",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupScheduleService.DeleteStudentPickupNote",
+      "reason": "Guarded leaf command (lock) under ADR 0067: care-plan reaches modules/peopledirectory.Capability.LockStudent (people-directory) through *modules/careplan/internal/application.pickupScheduleService.DeleteStudentPickupNote. A dated or weekday pickup note is written under the student lock every weekly plan writer takes, so a weekly plan save compares its token against a plan no note write can change in between (#7960, ADR 0311); the call participates in the caller unit.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.DeleteStudentPickupNote",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupScheduleService.DeleteStudentPickupNote",
+      "reason": "Guarded leaf command (lock) under ADR 0067: care-plan reaches modules/peopledirectory.Owner.LockStudent (people-directory) through *modules/careplan/internal/application.pickupScheduleService.DeleteStudentPickupNote. A dated or weekday pickup note is written under the student lock every weekly plan writer takes, so a weekly plan save compares its token against a plan no note write can change in between (#7960, ADR 0311); the call participates in the caller unit.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.DeleteStudentPickupNote",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupScheduleService.DeleteStudentPickupNote",
+      "reason": "Read-only target already reviewed as query: care-plan reaches modules/peopledirectory/compose.CareStudentLock (people-directory) through *modules/careplan/internal/application.pickupScheduleService.DeleteStudentPickupNote. No persistent, lock or scope effect; reached since PUT pickup-schedules saves the weekly pickup rows through this command (#7960).",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.CareStudentLock",
+      "target_owner": "people-directory"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.DeleteStudentPickupSchedule",
@@ -10941,6 +11027,38 @@
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithTenantTx",
       "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.UpdateStudentPickupNote",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupScheduleService.UpdateStudentPickupNote",
+      "reason": "Guarded leaf command (lock) under ADR 0067: care-plan reaches modules/peopledirectory.Capability.LockStudent (people-directory) through *modules/careplan/internal/application.pickupScheduleService.UpdateStudentPickupNote. It takes the student lock every weekly plan and care note writer takes before it compares the read-state token (#7904); the call participates in the caller unit.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.UpdateStudentPickupNote",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupScheduleService.UpdateStudentPickupNote",
+      "reason": "Guarded leaf command (lock) under ADR 0067: care-plan reaches modules/peopledirectory.Owner.LockStudent (people-directory) through *modules/careplan/internal/application.pickupScheduleService.UpdateStudentPickupNote. It takes the student lock every weekly plan and care note writer takes before it compares the read-state token (#7904); the call participates in the caller unit.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.UpdateStudentPickupNote",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupScheduleService.UpdateStudentPickupNote",
+      "reason": "Read-only target already reviewed as query: care-plan reaches modules/peopledirectory/compose.CareStudentLock (people-directory) through *modules/careplan/internal/application.pickupScheduleService.UpdateStudentPickupNote. No persistent, lock or scope effect.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.CareStudentLock",
+      "target_owner": "people-directory"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.UpsertBulkStudentPickupSchedules",
@@ -11788,6 +11906,152 @@
       "source_owner": "care-plan",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferingCatalogDependencies.LockTemplateRecurrence",
       "target_owner": ""
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "reason": "Read-only target already reviewed as query: care-plan reaches *modules/enrollment/compose.ApprovedOfferingProjection.ListApprovedByStudentIDsInRange (enrollment) through *modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan. No persistent, lock or scope effect.",
+      "source_owner": "care-plan",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/enrollment/compose.ApprovedOfferingProjection.ListApprovedByStudentIDsInRange",
+      "target_owner": "enrollment"
+    },
+    {
+      "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "reason": "Guarded leaf command (lock) under ADR 0067: care-plan reaches modules/peopledirectory.Capability.FindStudentRecordForMutation (people-directory) through *modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan. It takes the student lock every weekly plan and care note writer takes before it compares the read-state token (#7904); the call participates in the caller unit.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindStudentRecordForMutation",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "reason": "Guarded leaf command (lock) under ADR 0067: care-plan reaches modules/peopledirectory.Capability.LockStudent (people-directory) through *modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan. The weekly plan save takes the student lock before it compares the weekly plan token and replaces arrival rows, pickup rows and weekday notes; PUT pickup-schedules now saves through it (#7960, ADR 0311); the call participates in the caller unit.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "reason": "Guarded leaf command (lock) under ADR 0067: care-plan reaches modules/peopledirectory.Owner.FindStudentRecordForMutation (people-directory) through *modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan. It takes the student lock every weekly plan and care note writer takes before it compares the read-state token (#7904); the call participates in the caller unit.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.FindStudentRecordForMutation",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "reason": "Guarded leaf command (lock) under ADR 0067: care-plan reaches modules/peopledirectory.Owner.LockStudent (people-directory) through *modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan. The weekly plan save takes the student lock before it compares the weekly plan token and replaces arrival rows, pickup rows and weekday notes; PUT pickup-schedules now saves through it (#7960, ADR 0311); the call participates in the caller unit.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "reason": "Read-only target already reviewed as query: care-plan reaches modules/peopledirectory/compose.CareStudentLock (people-directory) through *modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan. No persistent, lock or scope effect; reached since PUT pickup-schedules saves the weekly pickup rows through this command (#7960).",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.CareStudentLock",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "reason": "Read-only target already reviewed as query: care-plan reaches modules/settings.DisplaySettingsSource.ResolveBool (settings-platform) through *modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan. No persistent, lock or scope effect; reached since PUT pickup-schedules saves the weekly pickup rows through this command (#7960).",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.DisplaySettingsSource.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "reason": "Read-only target already reviewed as query: care-plan reaches modules/settings.Resolver.ResolveBool (settings-platform) through *modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan. No persistent, lock or scope effect; reached since PUT pickup-schedules saves the weekly pickup rows through this command (#7960).",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.Resolver.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "reason": "Read-only target already reviewed as query: care-plan reaches modules/settings/records.BatchSettingsService.ResolveBool (settings-platform) through *modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan. No persistent, lock or scope effect; reached since PUT pickup-schedules saves the weekly pickup rows through this command (#7960).",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "reason": "Read-only target already reviewed as query: care-plan reaches modules/settings/records.SettingsService.ResolveBool (settings-platform) through *modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan. No persistent, lock or scope effect; reached since PUT pickup-schedules saves the weekly pickup rows through this command (#7960).",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "reason": "Read-only target already reviewed as query: care-plan reaches modules/studentpresence/http.TenantSettings.ResolveBool (student-presence) through *modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan. No persistent, lock or scope effect; reached since PUT pickup-schedules saves the weekly pickup rows through this command (#7960).",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence/http.TenantSettings.ResolveBool",
+      "target_owner": "student-presence"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "reason": "Read-only target already reviewed as query: care-plan reaches tenant.CurrentTransaction (tenant-runtime) through *modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan. No persistent, lock or scope effect; reached since PUT pickup-schedules saves the weekly pickup rows through this command (#7960).",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "reason": "Platform protocol participation (scope): care-plan reaches tenant.MarkRollback (tenant-runtime) through *modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.MarkRollback",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "reason": "Platform protocol participation (scope): care-plan reaches tenant.WithTenantTx (tenant-runtime) through *modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithTenantTx",
+      "target_owner": "tenant-runtime"
     },
     {
       "adr": "0098",
@@ -13757,49 +14021,6 @@
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveString",
       "target_owner": "settings-platform"
-    },
-    {
-      "adr": "0067",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.Capability.ReplaceWeekdayPickupNotes",
-      "classification": "leaf",
-      "effect": "lock",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.WeekdayPickupNoteReplacer.ReplaceWeekdayPickupNotes",
-      "reason": "Guarded leaf command (lock) already reviewed as leaf for this target: care-plan reaches modules/peopledirectory.Capability.LockStudent (people-directory) through modules/careplan.Capability.ReplaceWeekdayPickupNotes. Participates in the caller unit; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Own-child bulk planning review: the three engine lock adapters now live in Care Plan's postgres package and are promoted by the same runtime. They still call LockEngineStudentDay, careplanning.LockExceptionDay and careplanning.LockStudent with the same database and IDs. The registered WithinTenant boundary, caller transaction and lock order are unchanged.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
-      "target_owner": "people-directory"
-    },
-    {
-      "adr": "0067",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.Capability.ReplaceWeekdayPickupNotes",
-      "classification": "leaf",
-      "effect": "lock",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.WeekdayPickupNoteReplacer.ReplaceWeekdayPickupNotes",
-      "reason": "Guarded leaf command (lock) already reviewed as leaf for this target: care-plan reaches modules/peopledirectory.Owner.LockStudent (people-directory) through modules/careplan.Capability.ReplaceWeekdayPickupNotes. Participates in the caller unit; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Own-child bulk planning review: the three engine lock adapters now live in Care Plan's postgres package and are promoted by the same runtime. They still call LockEngineStudentDay, careplanning.LockExceptionDay and careplanning.LockStudent with the same database and IDs. The registered WithinTenant boundary, caller transaction and lock order are unchanged.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.Capability.ReplaceWeekdayPickupNotes",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.WeekdayPickupNoteReplacer.ReplaceWeekdayPickupNotes",
-      "reason": "Read-only target already reviewed as query: care-plan reaches modules/peopledirectory/compose.CareStudentLock (people-directory) through modules/careplan.Capability.ReplaceWeekdayPickupNotes. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Own-child bulk planning review: the three engine lock adapters now live in Care Plan's postgres package and are promoted by the same runtime. They still call LockEngineStudentDay, careplanning.LockExceptionDay and careplanning.LockStudent with the same database and IDs. The registered WithinTenant boundary, caller transaction and lock order are unchanged.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.CareStudentLock",
-      "target_owner": "people-directory"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.Capability.ReplaceWeekdayPickupNotes",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.WeekdayPickupNoteReplacer.ReplaceWeekdayPickupNotes",
-      "reason": "Platform protocol participation (scope): care-plan reaches tenant.WithinTenant (tenant-runtime) through modules/careplan.Capability.ReplaceWeekdayPickupNotes. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenant",
-      "target_owner": "tenant-runtime"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.IdentityAccountDirectory.AccountEmail",
@@ -19639,6 +19860,49 @@
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence/http.TenantSettings.ResolveBool",
       "target_owner": "student-presence"
+    },
+    {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.Capability.ReplaceWeekdayPickupNotes",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.PickupAdjustmentSchedules.ReplaceWeekdayPickupNotes",
+      "reason": "Guarded leaf command (lock) under ADR 0067: care-plan reaches modules/peopledirectory.Capability.LockStudent (people-directory) through modules/careplan.Capability.ReplaceWeekdayPickupNotes. It takes the student lock every weekly plan and care note writer takes before it compares the read-state token (#7904); the call participates in the caller unit.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.Capability.ReplaceWeekdayPickupNotes",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.PickupAdjustmentSchedules.ReplaceWeekdayPickupNotes",
+      "reason": "Guarded leaf command (lock) under ADR 0067: care-plan reaches modules/peopledirectory.Owner.LockStudent (people-directory) through modules/careplan.Capability.ReplaceWeekdayPickupNotes. It takes the student lock every weekly plan and care note writer takes before it compares the read-state token (#7904); the call participates in the caller unit.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.Capability.ReplaceWeekdayPickupNotes",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.PickupAdjustmentSchedules.ReplaceWeekdayPickupNotes",
+      "reason": "Read-only target already reviewed as query: care-plan reaches modules/peopledirectory/compose.CareStudentLock (people-directory) through modules/careplan.Capability.ReplaceWeekdayPickupNotes. No persistent, lock or scope effect.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.CareStudentLock",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.Capability.ReplaceWeekdayPickupNotes",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.PickupAdjustmentSchedules.ReplaceWeekdayPickupNotes",
+      "reason": "Platform protocol participation (scope): care-plan reaches tenant.WithinTenant (tenant-runtime) through modules/careplan.Capability.ReplaceWeekdayPickupNotes. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenant",
+      "target_owner": "tenant-runtime"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeSettings.PickupOfferingReviewRequired",

@@ -66,6 +66,10 @@ type StudentDocumentResponse struct {
 	// PDF is rendered by the accident report route.
 	HasFile        bool                    `json:"has_file"`
 	AccidentReport *AccidentReportResponse `json:"accident_report,omitempty"`
+	// Version is the read-state token of an accident report
+	// (careplan.AccidentReportVersion, ADR 0311): changing, signing and the
+	// paper copy send it back as expected_version.
+	Version string `json:"version,omitempty"`
 }
 
 // StudentDocumentListResponse is the list GET: the documents the caller may
@@ -85,7 +89,12 @@ type StudentDocumentCategory struct {
 }
 
 func newStudentDocumentResponse(doc careplan.CareDocument) StudentDocumentResponse {
+	version := ""
+	if doc.AccidentReport != nil {
+		version = careplan.AccidentReportVersion(doc)
+	}
 	return StudentDocumentResponse{
+		Version:       version,
 		ID:            ident.ID(doc.ID),
 		StudentID:     ident.ID(doc.StudentID),
 		Category:      doc.Category,

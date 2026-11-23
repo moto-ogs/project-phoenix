@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Accident reports (Unfallanzeige, #4771). The team records a child's
@@ -204,10 +206,21 @@ type AccidentSignature struct {
 	Intact     bool
 }
 
-// AccidentPaperCopyInput carries the stored signed paper copy of a report.
+// AccidentReportVersion is the read-state token of an accident report: the
+// time of its last change, which the row trigger stamps on every write
+// (ADR 0311). Changing, signing and attaching the paper copy compare it with
+// the token the caller read, so nobody signs or overwrites a report they did
+// not see.
+func AccidentReportVersion(document CareDocument) string {
+	return readstate.Of(document.UpdatedAt)
+}
+
+// AccidentPaperCopyInput carries the stored signed paper copy of a report;
+// ExpectedVersion is the AccidentReportVersion the caller read.
 type AccidentPaperCopyInput struct {
 	StudentID       int64
 	DocumentID      int64
+	ExpectedVersion string
 	FilenameDisplay string
 	FilenameStored  string
 	SizeBytes       int64
@@ -227,16 +240,18 @@ type AccidentReportFile struct {
 type StudentAccidentReports interface {
 	// CreateStudentAccidentReport records a new open report.
 	CreateStudentAccidentReport(ctx context.Context, studentID int64, report AccidentReport, actor StudentDocumentActor) (CareDocument, error)
-	// UpdateStudentAccidentReport changes an open report.
-	UpdateStudentAccidentReport(ctx context.Context, studentID, documentID int64, report AccidentReport, actor StudentDocumentActor) (CareDocument, error)
-	// SignStudentAccidentReport signs an open report digitally.
-	SignStudentAccidentReport(ctx context.Context, studentID, documentID int64, signature AccidentSignatureInput, actor StudentDocumentActor) (CareDocument, error)
+	// UpdateStudentAccidentReport changes an open report read at
+	// expectedVersion (AccidentReportVersion).
+	UpdateStudentAccidentReport(ctx context.Context, studentID, documentID int64, report AccidentReport, expectedVersion string, actor StudentDocumentActor) (CareDocument, error)
+	// SignStudentAccidentReport signs an open report digitally, as read at
+	// expectedVersion.
+	SignStudentAccidentReport(ctx context.Context, studentID, documentID int64, signature AccidentSignatureInput, expectedVersion string, actor StudentDocumentActor) (CareDocument, error)
 	// CorrectStudentAccidentReport records a new open version of a signed
 	// report; the signed one stays as it is.
 	CorrectStudentAccidentReport(ctx context.Context, studentID, documentID int64, report AccidentReport, actor StudentDocumentActor) (CareDocument, error)
 	// AuthorizeAccidentPaperCopy answers whether the caller may attach a paper
-	// copy to the report WITHOUT writing anything.
-	AuthorizeAccidentPaperCopy(ctx context.Context, studentID, documentID int64, actor StudentDocumentActor) error
+	// copy to the report read at expectedVersion WITHOUT writing anything.
+	AuthorizeAccidentPaperCopy(ctx context.Context, studentID, documentID int64, expectedVersion string, actor StudentDocumentActor) error
 	// AttachAccidentPaperCopy signs an open report with its uploaded paper
 	// copy.
 	AttachAccidentPaperCopy(ctx context.Context, input AccidentPaperCopyInput, actor StudentDocumentActor) (CareDocument, error)

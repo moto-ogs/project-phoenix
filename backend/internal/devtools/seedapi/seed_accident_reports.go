@@ -72,7 +72,7 @@ func (seedAccidentReportsStep) Run(_ context.Context, rt *Runtime) error {
 			"parents_notified": "Mutter, telefonisch", "parents_notified_at": notifiedAt.Format(time.RFC3339),
 			"supervisor": accident.supervisor,
 		}
-		reportID, err := postAccidentReport(rt, fmt.Sprintf("/api/students/%d/accident-reports", studentID), body)
+		reportID, version, err := postAccidentReport(rt, fmt.Sprintf("/api/students/%d/accident-reports", studentID), body)
 		if err != nil {
 			return err
 		}
@@ -80,7 +80,7 @@ func (seedAccidentReportsStep) Run(_ context.Context, rt *Runtime) error {
 			continue
 		}
 		if _, err := rt.Client.Post(fmt.Sprintf("/api/students/%d/accident-reports/%d/signature", studentID, reportID), map[string]any{
-			"method": "drawn", "image_png": demoSignaturePNG("Leitung"),
+			"method": "drawn", "image_png": demoSignaturePNG("Leitung"), "expected_version": version,
 		}); err != nil {
 			return fmt.Errorf("sign accident report of student %d: %w", studentID, err)
 		}
@@ -88,7 +88,7 @@ func (seedAccidentReportsStep) Run(_ context.Context, rt *Runtime) error {
 			continue
 		}
 		body["first_aid"] = accident.correction
-		if _, err := postAccidentReport(rt, fmt.Sprintf("/api/students/%d/accident-reports/%d/corrections", studentID, reportID), body); err != nil {
+		if _, _, err := postAccidentReport(rt, fmt.Sprintf("/api/students/%d/accident-reports/%d/corrections", studentID, reportID), body); err != nil {
 			return err
 		}
 	}
@@ -96,18 +96,20 @@ func (seedAccidentReportsStep) Run(_ context.Context, rt *Runtime) error {
 	return nil
 }
 
-func postAccidentReport(rt *Runtime, path string, body map[string]any) (int64, error) {
+func postAccidentReport(rt *Runtime, path string, body map[string]any) (int64, string, error) {
 	raw, err := rt.Client.Post(path, body)
 	if err != nil {
-		return 0, fmt.Errorf("record accident report %s: %w", path, err)
+		return 0, "", fmt.Errorf("record accident report %s: %w", path, err)
 	}
+	// The answer carries the version a later signature confirms it read.
 	var envelope struct {
 		Data struct {
-			ID ident.ID `json:"id"`
+			ID      ident.ID `json:"id"`
+			Version string   `json:"version"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil || envelope.Data.ID <= 0 {
-		return 0, fmt.Errorf("decode accident report %s: %w", path, err)
+		return 0, "", fmt.Errorf("decode accident report %s: %w", path, err)
 	}
-	return int64(envelope.Data.ID), nil
+	return int64(envelope.Data.ID), envelope.Data.Version, nil
 }

@@ -40,6 +40,9 @@ type CarePlanRequests struct {
 	// pickup time and serves its unread markers (#6855); nil without
 	// Delivery's notifications.
 	PickupChangeTeam careplan.PickupChangeTeam
+	// WeeklyPlans reads the token of a child's weekly plan and saves its
+	// arrival part (ADR 0311).
+	WeeklyPlans careplan.WeeklyPlans
 }
 
 // NewRequestShareVisibility builds People Directory's sharing rules over the
@@ -86,7 +89,7 @@ func BuildCarePlanRequests(
 	if requests.OfferingChanges, err = buildOfferingChanges(db, env, carePlan, people, enrollment, timetableOwner, settings, offerings, reviews, permissions, emitter, shares); err != nil {
 		return CarePlanRequests{}, err
 	}
-	adjustments, err := NewPickupAdjustments(
+	adjustments, weeklyPlans, err := NewPickupAdjustments(
 		carePlan, schedules.Pickups, schedules.Arrivals, schedules.PickupBaselines, requests.OfferingChanges,
 		settings, services.StudentAudit, people.Students, env.Today,
 	)
@@ -94,6 +97,7 @@ func BuildCarePlanRequests(
 		return CarePlanRequests{}, fmt.Errorf("compose care plan pickup adjustments: %w", err)
 	}
 	requests.CareOfferings = carePlanCompose.NewCareOfferings(offerings.Catalog, offerings.Bookings, requests.OfferingChanges, adjustments)
+	requests.WeeklyPlans = weeklyPlans
 	// The workflow is owned by Care Plan (#3093); this root adapts the
 	// retained directories, the review policy and the effect sinks.
 	if requests.Excused, err = NewExcusedAbsenceRequestService(

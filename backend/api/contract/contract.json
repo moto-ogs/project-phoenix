@@ -22002,7 +22002,7 @@
       ],
       "request": {
         "kind": "ref",
-        "ref": "ArrivalNoteRequest"
+        "ref": "ArrivalNoteUpdateRequest"
       },
       "response": {
         "kind": "ref",
@@ -22119,7 +22119,7 @@
       ],
       "request": {
         "kind": "ref",
-        "ref": "PickupNoteRequest"
+        "ref": "PickupNoteUpdateRequest"
       },
       "response": {
         "kind": "ref",
@@ -25596,6 +25596,13 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -25739,6 +25746,13 @@
         },
         {
           "name": "typed_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_version",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -30479,6 +30493,13 @@
               "ref": "ArrivalNoteResponse"
             }
           }
+        },
+        {
+          "name": "weekly_plan_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -30663,6 +30684,40 @@
         },
         {
           "name": "updated_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ArrivalNoteUpdateRequest",
+      "go_type": "careplanhttp.ArrivalNoteUpdateRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "note_date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "content",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
           "schema": {
             "kind": "string"
           }
@@ -34513,6 +34568,25 @@
               "ref": "ArrivalScheduleRequestItem"
             }
           }
+        },
+        {
+          "name": "weekday_notes",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "PickupNoteRequest"
+            }
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -34748,6 +34822,13 @@
           "schema": {
             "kind": "date",
             "nullable": true
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -79304,6 +79385,13 @@
               "ref": "DepartureExceptionResponse"
             }
           }
+        },
+        {
+          "name": "weekly_plan_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -79497,6 +79585,47 @@
         },
         {
           "name": "updated_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PickupNoteUpdateRequest",
+      "go_type": "careplanhttp.PickupNoteUpdateRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "note_date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "weekday",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "content",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
           "schema": {
             "kind": "string"
           }
@@ -98714,6 +98843,13 @@
             "kind": "ref",
             "ref": "AccidentReportResponse"
           }
+        },
+        {
+          "name": "version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -109426,6 +109562,13 @@
               "kind": "ref",
               "ref": "PickupNoteRequest"
             }
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -121917,6 +122060,25 @@
           }
         },
         {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "weekday_notes",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "PickupNoteRequest"
+            }
+          }
+        },
+        {
           "name": "preview_token",
           "optional": true,
           "schema": {
@@ -121952,6 +122114,12 @@
       "fields": [
         {
           "name": "resolution",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "weekly_plan_version",
           "schema": {
             "kind": "string"
           }

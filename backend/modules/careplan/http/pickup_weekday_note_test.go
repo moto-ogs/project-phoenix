@@ -39,6 +39,7 @@ func TestWeekdayPickupNoteWithoutPickupTime(t *testing.T) {
 			ID       testpkg.ID `json:"id"`
 			Weekday  int        `json:"weekday"`
 			NoteDate string     `json:"note_date"`
+			Version  string     `json:"version"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &created))
@@ -65,7 +66,7 @@ func TestWeekdayPickupNoteWithoutPickupTime(t *testing.T) {
 
 	t.Run("update_keeps_it_recurring", func(t *testing.T) {
 		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/pickup-notes/%d", student.ID, created.Data.ID),
-			map[string]any{"weekday": 1, "content": "Montags bei Oma"})
+			map[string]any{"weekday": 1, "content": "Montags bei Oma", "expected_version": created.Data.Version})
 		rr := authExec(t, tc, req, claims, []string{"admin:*"})
 		require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
 		assert.Contains(t, rr.Body.String(), `"weekday":1`)
@@ -83,6 +84,7 @@ func TestWeekdayPickupNoteWithoutPickupTime(t *testing.T) {
 				{"weekday": 1, "content": "Montags bei Tante"},
 				{"weekday": 2, "content": "Dienstags zu Hause"},
 			},
+			"expected_version": weeklyPlanVersion(t, tc, student.ID),
 		})
 		rr = authExec(t, tc, req, claims, []string{"admin:*"})
 		require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
@@ -138,6 +140,7 @@ func TestReplaceWeekdayPickupNotesWaitsForStudentLock(t *testing.T) {
 	_, account := testpkg.CreateTestTeacherWithAccount(t, tc.db, "Weekday", "LockTeacher")
 	claims := testutil.AdminTestClaims(int(account.ID))
 
+	version := weeklyPlanVersion(t, tc, student.ID)
 	locked := make(chan struct{})
 	release := make(chan struct{})
 	lockDone := make(chan error, 1)
@@ -173,7 +176,8 @@ func TestReplaceWeekdayPickupNotesWaitsForStudentLock(t *testing.T) {
 	writeDone := make(chan int, 1)
 	go func() {
 		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/pickup-notes", student.ID), map[string]any{
-			"notes": []map[string]any{{"weekday": 1, "content": "Montags zu Hause"}},
+			"notes":            []map[string]any{{"weekday": 1, "content": "Montags zu Hause"}},
+			"expected_version": version,
 		})
 		writeDone <- authExec(t, tc, req, claims, []string{"admin:*"}).Code
 	}()

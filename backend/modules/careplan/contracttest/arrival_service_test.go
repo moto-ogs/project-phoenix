@@ -15,6 +15,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/moto-ogs/project-phoenix/tenant/tenanttest"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -884,12 +885,20 @@ func TestArrivalScheduleService_UpdateStudentArrivalNote(t *testing.T) {
 		}
 		err := testpkg.TenantCommand1(t, ctx, db, service.CreateStudentArrivalNote, note)
 		require.NoError(t, err)
+		read := careplan.ArrivalNoteVersion(*note)
 
 		note.Content = "Updated content"
 
-		err = testpkg.TenantCommand1(t, ctx, db, service.UpdateStudentArrivalNote, note)
+		err = testpkg.TenantCommand2(t, ctx, db, service.UpdateStudentArrivalNote, note, read)
 
 		require.NoError(t, err)
+
+		// ADR 0311: a second change made on the first read is refused and
+		// keeps the stored text.
+		stale := *note
+		stale.Content = "Stale content"
+		err = testpkg.TenantCommand2(t, ctx, db, service.UpdateStudentArrivalNote, &stale, read)
+		require.ErrorIs(t, err, readstate.ErrChanged)
 
 		notes, err := testpkg.TenantQuery1(t, ctx, db, service.GetStudentArrivalNotes, student.ID)
 		require.NoError(t, err)
@@ -905,7 +914,7 @@ func TestArrivalScheduleService_UpdateStudentArrivalNote(t *testing.T) {
 			CreatedBy: createArrivalServiceTestStaffID(t, db),
 		}
 
-		err := testpkg.TenantCommand1(t, ctx, db, service.UpdateStudentArrivalNote, note)
+		err := testpkg.TenantCommand2(t, ctx, db, service.UpdateStudentArrivalNote, note, "")
 
 		require.Error(t, err)
 	})

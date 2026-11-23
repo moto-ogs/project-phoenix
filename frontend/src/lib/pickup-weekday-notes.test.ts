@@ -30,6 +30,7 @@ describe("recurring weekday notes", () => {
       content: "Mittwochs bei den Großeltern",
       created_by: "1",
       created_at: "2026-09-01T00:00:00Z",
+      version: "note-read",
       updated_at: "2026-09-01T00:00:00Z",
     });
 

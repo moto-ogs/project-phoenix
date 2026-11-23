@@ -292,7 +292,7 @@ describe("student-arrival-api", () => {
   });
 
   describe("updateArrivalSchedules", () => {
-    it("sends PUT with schedules body and maps the saved arrival data", async () => {
+    it("sends the weekly plan with its weekday notes and the read version in one PUT", async () => {
       fetchMock.mockResolvedValueOnce(
         wrapped({ schedules: [backendSchedule], exceptions: [], notes: [] }),
       );
@@ -301,13 +301,25 @@ describe("student-arrival-api", () => {
         { weekday: 1, expected_arrival: "08:00" },
         { weekday: 2, expected_arrival: "08:30", notes: "test" },
       ];
-      const result = await updateArrivalSchedules("42", schedules);
+      const weekdayNotes = [
+        { weekday: 2, content: "Dienstags zu Hause" },
+        { weekday: 5, content: "Freitags bei Oma" },
+      ];
+      const result = await updateArrivalSchedules("42", schedules, {
+        expectedVersion: "plan-read",
+        weekdayNotes,
+      });
 
+      expect(fetchMock).toHaveBeenCalledTimes(1);
       expect(fetchMock).toHaveBeenCalledWith(
         "/api/students/42/arrival-schedules",
         expect.objectContaining({
           method: "PUT",
-          body: JSON.stringify({ schedules }),
+          body: JSON.stringify({
+            schedules,
+            expected_version: "plan-read",
+            weekday_notes: weekdayNotes,
+          }),
         }),
       );
       expect(result.schedules[0]).toMatchObject({ id: "1", studentId: "42" });
@@ -535,14 +547,23 @@ describe("student-arrival-api", () => {
     it("updateArrivalNote puts with noteId path", async () => {
       fetchMock.mockResolvedValueOnce(wrapped(backendNote));
 
-      await updateArrivalNote("42", "5", {
-        note_date: "2024-01-15",
-        content: "updated",
-      });
+      await updateArrivalNote(
+        "42",
+        "5",
+        { note_date: "2024-01-15", content: "updated" },
+        "note-read",
+      );
 
       expect(fetchMock).toHaveBeenCalledWith(
         "/api/students/42/arrival-notes/5",
-        expect.objectContaining({ method: "PUT" }),
+        expect.objectContaining({
+          method: "PUT",
+          body: JSON.stringify({
+            note_date: "2024-01-15",
+            content: "updated",
+            expected_version: "note-read",
+          }),
+        }),
       );
     });
 

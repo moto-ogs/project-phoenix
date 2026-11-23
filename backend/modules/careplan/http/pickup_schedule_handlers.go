@@ -147,6 +147,16 @@ func (rs *Resource) getStudentPickupSchedules(w http.ResponseWriter, r *http.Req
 		renderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
+	// The token is read BEFORE the rows (ADR 0311). Under READ COMMITTED a
+	// plan saved in between then shows in the rows but not in the token, so
+	// a save made on these rows is refused; never the other way round, which
+	// would accept a save on rows older than its token. The editor reads its
+	// arrival rows after this read for the same reason.
+	weeklyPlanVersion, err := rs.WeeklyPlans.WeeklyPlanVersion(r.Context(), student.ID)
+	if err != nil {
+		renderError(w, r, common.ErrorInternalServer(err))
+		return
+	}
 	var data *careplan.StudentPickupData
 	if hasRange {
 		data, err = rs.PickupScheduleService.GetStudentPickupDataForRange(r.Context(), student.ID, from, to)
@@ -164,6 +174,7 @@ func (rs *Resource) getStudentPickupSchedules(w http.ResponseWriter, r *http.Req
 		renderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
+	response.WeeklyPlanVersion = weeklyPlanVersion
 
 	common.Respond(w, r, http.StatusOK, response, "Pickup schedules retrieved successfully")
 }
@@ -304,25 +315,27 @@ func (rs *Resource) updateStudentPickupSchedules(w http.ResponseWriter, r *http.
 		renderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	// Get staff ID from JWT
 	staffID, err := rs.getStaffIDFromJWT(r)
 	if err != nil {
 		renderScheduleAuthorError(w, r, err)
 		return
 	}
 
-	// Convert requests to schedule models
 	schedules := toPickupScheduleModels(r.Context(), req.Schedules, student.ID, staffID)
+	date := rs.todayDate()
+	if req.EffectiveDate != nil {
+		date = *req.EffectiveDate
+	}
 
+	// A wholesale replacement of the weekly pickup rows is a save of the
+	// weekly plan: it carries the token of the plan it was made on (ADR 0311).
 	tenantID := tenant.FromContext(r.Context())
-	if err := withinTenant(r.Context(), tenantID, func(ctx context.Context) error {
-		date := rs.todayDate()
-		if req.EffectiveDate != nil {
-			date = *req.EffectiveDate
-		}
-		return rs.PickupScheduleService.UpsertBulkStudentPickupSchedulesForDate(ctx, student.ID, date, schedules)
-	}); err != nil {
-		renderError(w, r, common.ErrorInternalServer(err))
+	version, err := rs.WeeklyPlans.SaveWeeklyPlan(r.Context(), careplan.WeeklyPlanInput{
+		StudentID: student.ID, PickupSchedules: &schedules, PickupEffectiveDate: date,
+		CreatedByStaffID: staffID, ExpectedVersion: req.ExpectedVersion,
+	})
+	if err != nil {
+		renderPickupAdjustmentError(w, r, err)
 		return
 	}
 
@@ -346,6 +359,7 @@ func (rs *Resource) updateStudentPickupSchedules(w http.ResponseWriter, r *http.
 	}
 
 	response := buildPickupDataResponse(data)
+	response.WeeklyPlanVersion = version
 
 	common.Respond(w, r, http.StatusOK, response, "Pickup schedules updated successfully")
 }
@@ -614,16 +628,11 @@ func (rs *Resource) replaceStudentWeekdayPickupNotes(w http.ResponseWriter, r *h
 		return
 	}
 
-	if rs.WeekdayPickupNotes == nil {
-		renderError(w, r, common.ErrorInternalServer(errors.New("weekday pickup notes are not configured")))
-		return
-	}
-	notes := make(map[int]string, len(req.Notes))
-	for _, note := range req.Notes {
-		notes[note.Weekday] = note.Content
-	}
-	if err := rs.WeekdayPickupNotes.ReplaceWeekdayPickupNotes(r.Context(), student.ID, staffID, notes); err != nil {
-		renderError(w, r, common.ErrorInternalServer(err))
+	if _, err := rs.WeeklyPlans.SaveWeeklyPlan(r.Context(), careplan.WeeklyPlanInput{
+		StudentID: student.ID, WeekdayNotes: weekdayPickupNoteMap(&req.Notes),
+		CreatedByStaffID: staffID, ExpectedVersion: req.ExpectedVersion,
+	}); err != nil {
+		renderPickupAdjustmentError(w, r, err)
 		return
 	}
 
@@ -651,13 +660,21 @@ func (rs *Resource) updateStudentPickupNote(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	req := &PickupNoteRequest{}
+	req := &PickupNoteUpdateRequest{}
 	if err := render.Bind(r, req); err != nil {
 		renderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
+	// A weekday note belongs to the weekly plan, whose save checks the weekly
+	// plan token (ADR 0311). This route checks one note's token only, so it
+	// keeps the note's weekday: it neither turns a dated note into a weekday
+	// note nor moves one to another weekday.
+	if req.Weekday != existingNote.Weekday {
+		renderError(w, r, common.ErrorInvalidRequest(errPickupNoteWeekdayChange))
+		return
+	}
 
-	note := req.toModel(student.ID, existingNote.CreatedBy) // Preserve original creator
+	note := req.note().toModel(student.ID, existingNote.CreatedBy) // Preserve original creator
 	note.EnteredByTraeger = existingNote.EnteredByTraeger
 	note.ID = noteID
 	note.CreatedAt = existingNote.CreatedAt // Preserve original creation timestamp
@@ -665,7 +682,7 @@ func (rs *Resource) updateStudentPickupNote(w http.ResponseWriter, r *http.Reque
 
 	tenantID := tenant.FromContext(r.Context())
 	if err := withinTenant(r.Context(), tenantID, func(ctx context.Context) error {
-		return rs.PickupScheduleService.UpdateStudentPickupNote(ctx, note)
+		return rs.PickupScheduleService.UpdateStudentPickupNote(ctx, note, req.ExpectedVersion)
 	}); err != nil {
 		renderError(w, r, common.ErrorInternalServer(err))
 		return
