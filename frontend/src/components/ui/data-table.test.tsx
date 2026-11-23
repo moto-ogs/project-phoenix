@@ -1157,3 +1157,211 @@ describe("DataTable expandable rows, sub rows and summary rows (#5600)", () => {
     );
   });
 });
+
+// The phone cards keep every column (#7911): what a card does not show
+// directly opens below it through its own button; the row menu stands top
+// right in every layout.
+describe("DataTable phone cards without lost columns (#7911)", () => {
+  usePhoneViewport();
+
+  interface CardRow {
+    id: string;
+    name: string;
+    status: string;
+    group: string;
+    room: string;
+    pickup: string;
+  }
+  const cardRows: CardRow[] = [
+    {
+      id: "1",
+      name: "Alpha",
+      status: "Da",
+      group: "Gruppe Rot",
+      room: "Raum 3",
+      pickup: "15:30",
+    },
+  ];
+  const cardColumns: DataTableColumn<CardRow>[] = [
+    { key: "name", header: "Name", stacked: "title", render: (r) => r.name },
+    {
+      key: "status",
+      header: "Status",
+      stacked: "meta",
+      render: (r) => r.status,
+    },
+    { key: "group", header: "Gruppe", render: (r) => r.group },
+    { key: "room", header: "Raum", render: (r) => r.room },
+    { key: "pickup", header: "Abholung", render: (r) => r.pickup },
+    {
+      key: "actions",
+      header: "",
+      render: (r) => <button type="button">{`Aktionen für ${r.name}`}</button>,
+    },
+  ];
+  const values = ["Alpha", "Da", "Gruppe Rot", "Raum 3", "15:30"];
+
+  function renderCards(
+    layout: "lines" | "row" | "form",
+    props: Partial<Parameters<typeof DataTable<CardRow>>[0]> = {},
+  ) {
+    const onRowClick = vi.fn();
+    render(
+      <DataTable
+        columns={cardColumns}
+        rows={cardRows}
+        getRowKey={(r) => r.id}
+        onRowClick={onRowClick}
+        stackedOnMobile
+        stackedLayout={layout}
+        stackedDetailKey={layout === "row" ? "pickup" : undefined}
+        {...props}
+      />,
+    );
+    const card = within(screen.getByTestId("data-table-stacked")).getByRole(
+      "listitem",
+    );
+    return { onRowClick, card: within(card), cardElement: card };
+  }
+
+  it.each(["lines", "form"] as const)(
+    "shows every column of a %s card directly, without a toggle",
+    (layout) => {
+      const { card } = renderCards(layout);
+
+      // Anker: die Karte ist gerendert und zeigt jeden Spaltenwert.
+      for (const value of values) {
+        expect(card.getByText(value)).toBeInTheDocument();
+      }
+      expect(
+        card.queryByRole("button", { name: /^Details zu/ }),
+      ).not.toBeInTheDocument();
+    },
+  );
+
+  it("opens the columns a row card leaves out below the card", () => {
+    const { card } = renderCards("row");
+
+    // Anker: Titel, Meta und das gewählte Detail stehen auf der Karte.
+    expect(card.getByText("Alpha")).toBeInTheDocument();
+    expect(card.getByText("Da")).toBeInTheDocument();
+    expect(card.getByText("15:30")).toBeInTheDocument();
+    expect(card.queryByText("Gruppe Rot")).not.toBeInTheDocument();
+
+    const toggle = card.getByRole("button", { name: "Details zu Alpha" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(toggle);
+
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    for (const value of values) {
+      expect(card.getByText(value)).toBeInTheDocument();
+    }
+    expect(card.getByText("Gruppe")).toBeInTheDocument();
+
+    fireEvent.click(toggle);
+    // Anker: die Karte steht noch, nur das Detail ist zu.
+    expect(card.getByText("15:30")).toBeInTheDocument();
+    expect(card.queryByText("Gruppe Rot")).not.toBeInTheDocument();
+  });
+
+  it("opens the details without opening the entry, and the card still opens it", () => {
+    const { card, onRowClick } = renderCards("row", {
+      columns: cardColumns.filter((c) => c.key !== "actions"),
+    });
+
+    const toggle = card.getByRole("button", { name: "Details zu Alpha" });
+    fireEvent.click(toggle);
+    // Anker: der Knopf hat das Detail geöffnet.
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(onRowClick).not.toHaveBeenCalled();
+
+    fireEvent.click(card.getByText("Alpha"));
+    expect(onRowClick).toHaveBeenCalledWith(cardRows[0]);
+  });
+
+  it("keeps a keyboard path to the entry when the card carries buttons", async () => {
+    const user = userEvent.setup();
+    const { card, onRowClick } = renderCards("row", {
+      columns: cardColumns.filter((c) => c.key !== "actions"),
+    });
+
+    card.getByRole("button", { name: "Alpha" }).focus();
+    await user.keyboard("{Enter}");
+
+    expect(onRowClick).toHaveBeenCalledWith(cardRows[0]);
+  });
+
+  it.each(["lines", "row", "form"] as const)(
+    "puts the row menu at the top of a %s card, outside the details",
+    (layout) => {
+      const { card, onRowClick } = renderCards(layout);
+
+      const menu = card.getByRole("button", { name: "Aktionen für Alpha" });
+      // The menu shares the card's first line with the title.
+      expect(menu.closest("[data-stacked-head]")).toHaveTextContent("Alpha");
+      fireEvent.click(menu);
+      // Anker: das Menü steht in der Karte.
+      expect(card.getByText("Alpha")).toBeInTheDocument();
+      expect(onRowClick).not.toHaveBeenCalled();
+    },
+  );
+
+  it("shows sub rows in the opened details and the summary as its own card", () => {
+    const { card, cardElement } = renderCards("lines", {
+      expandable: { rowLabel: (row) => `Details zu ${row.name}` },
+      renderSubRows: (row, expanded) => [
+        {
+          key: `${row.id}-always`,
+          cells: [{ columnKey: "room", content: "Block 8–12" }],
+        },
+        ...(expanded
+          ? [{ key: `${row.id}-history`, content: "Verlauf des Tages" }]
+          : []),
+      ],
+      summaryRow: (row) => ({
+        key: `${row.id}-sum`,
+        cells: [{ columnKey: "pickup", content: "Summe 40h" }],
+      }),
+    });
+
+    // Anker: Karte und Summenkarte sind gerendert.
+    expect(card.getByText("Alpha")).toBeInTheDocument();
+    const summary = screen.getByText("Summe 40h");
+    expect(card.queryByText("Verlauf des Tages")).not.toBeInTheDocument();
+    expect(cardElement).not.toContainElement(summary);
+
+    fireEvent.click(card.getByRole("button", { name: "Details zu Alpha" }));
+
+    expect(card.getByText("Verlauf des Tages")).toBeInTheDocument();
+    expect(card.getByText("Block 8–12")).toBeInTheDocument();
+  });
+
+  it("names the toggle of an expandable row with its own label", () => {
+    const { card } = renderCards("lines", {
+      expandable: {
+        rowLabel: (row, expanded) =>
+          `${row.name}: Verlauf ${expanded ? "schließen" : "öffnen"}`,
+      },
+      renderSubRows: (row, expanded) =>
+        expanded ? [{ key: row.id, content: "Verlauf des Tages" }] : [],
+    });
+
+    const toggle = card.getByRole("button", { name: "Alpha: Verlauf öffnen" });
+    fireEvent.click(toggle);
+
+    expect(toggle).toHaveAccessibleName("Alpha: Verlauf schließen");
+    expect(card.getByText("Verlauf des Tages")).toBeInTheDocument();
+  });
+
+  it("still opens the entry from the card of a row that expands", () => {
+    const { card, onRowClick } = renderCards("lines", {
+      expandable: { rowLabel: (row) => `Verlauf ${row.name}` },
+      renderSubRows: (row, expanded) =>
+        expanded ? [{ key: row.id, content: "Verlauf des Tages" }] : [],
+    });
+
+    fireEvent.click(card.getByText("Alpha"));
+
+    expect(onRowClick).toHaveBeenCalledWith(cardRows[0]);
+  });
+});
