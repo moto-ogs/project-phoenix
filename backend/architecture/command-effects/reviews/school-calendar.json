@@ -1615,17 +1615,6 @@
     },
     {
       "adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolcalendar/internal/application.Service.UpdateCalendarPeriod",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Calendar.UpdateCalendarPeriod",
-      "reason": "Platform protocol participation (scope): school-calendar reaches tenant.WithinCurrentTenant (tenant-runtime) through modules/schoolcalendar/internal/application.Service.UpdateCalendarPeriod. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
-      "source_owner": "school-calendar",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolcalendar/internal/application.Service.UpdateClosingDay",
       "classification": "platform",
       "effect": "scope",
@@ -1928,28 +1917,6 @@
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Capability.ListDateframes",
       "reason": "Platform protocol participation (scope): school-calendar reaches tenant.WithinCurrentTenant (tenant-runtime) through modules/schoolcalendar.Days.ListDateframes. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
-      "source_owner": "school-calendar",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Calendar.UpdateCalendarPeriod",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Capability.UpdateCalendarPeriod",
-      "reason": "Platform protocol participation (scope): school-calendar reaches tenant.WithinCurrentTenant (tenant-runtime) through modules/schoolcalendar.Calendar.UpdateCalendarPeriod. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
-      "source_owner": "school-calendar",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.UpdateCalendarPeriod",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Capability.UpdateCalendarPeriod",
-      "reason": "Platform protocol participation (scope): school-calendar reaches tenant.WithinCurrentTenant (tenant-runtime) through modules/schoolcalendar.Days.UpdateCalendarPeriod. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
       "target_owner": "tenant-runtime"
@@ -2356,17 +2323,6 @@
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveString",
       "target_owner": "settings-platform"
-    },
-    {
-      "adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolcalendar/internal/application.Service.UpdateCalendarPeriod",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.UpdateCalendarPeriod",
-      "reason": "Platform protocol participation (scope): school-calendar reaches tenant.WithinCurrentTenant (tenant-runtime) through modules/schoolcalendar/internal/application.Service.UpdateCalendarPeriod. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
-      "source_owner": "school-calendar",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
-      "target_owner": "tenant-runtime"
     },
     {
       "adr": "0098",

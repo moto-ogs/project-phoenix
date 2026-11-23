@@ -137,7 +137,7 @@ func TestModuleRunsTheCalendarPeriodLifecycle(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, created, found)
 
-	updated, err := module.UpdateCalendarPeriod(ctx, schoolcalendar.UpdateCalendarPeriod{ID: created.ID, CalendarPeriodFields: schoolcalendar.CalendarPeriodFields{
+	updated, err := module.ChangeCalendarPeriod(ctx, schoolcalendar.UpdateCalendarPeriod{ID: created.ID, ExpectedVersion: schoolcalendar.CalendarPeriodVersion(found), CalendarPeriodFields: schoolcalendar.CalendarPeriodFields{
 		Name: "Schuljahr 2030/2031", PeriodType: schoolcalendar.PeriodTypeSemester,
 		StartDate: "2030-08-01", EndDate: "2031-01-31", WeekCycleLength: 1, IsActive: false,
 	}})
@@ -157,12 +157,12 @@ func TestModuleRunsTheCalendarPeriodLifecycle(t *testing.T) {
 	_, err = module.FindCalendarPeriod(ctx, created.ID)
 	require.ErrorIs(t, err, schoolcalendar.ErrCalendarPeriodNotFound)
 	require.ErrorIs(t, module.DeleteCalendarPeriod(ctx, created.ID), schoolcalendar.ErrCalendarPeriodNotFound)
-	_, err = module.UpdateCalendarPeriod(ctx, schoolcalendar.UpdateCalendarPeriod{ID: created.ID, CalendarPeriodFields: periodFields("Gone", "2030-08-01", "2031-07-31", false)})
+	_, err = module.ChangeCalendarPeriod(ctx, schoolcalendar.UpdateCalendarPeriod{ID: created.ID, CalendarPeriodFields: periodFields("Gone", "2030-08-01", "2031-07-31", false)})
 	require.ErrorIs(t, err, schoolcalendar.ErrCalendarPeriodNotFound)
 
 	assert.Equal(t, []string{
-		"create_calendar_period", "find_calendar_period", "update_calendar_period", "list_calendar_periods",
-		"delete_calendar_period", "find_calendar_period", "delete_calendar_period", "update_calendar_period",
+		"create_calendar_period", "find_calendar_period", "change_calendar_period", "list_calendar_periods",
+		"delete_calendar_period", "find_calendar_period", "delete_calendar_period", "change_calendar_period",
 	}, log.operations())
 }
 
@@ -279,7 +279,7 @@ func TestModuleTenantIsolationHidesAnotherTenantsCalendar(t *testing.T) {
 	overlapping, err := module.ListCalendarPeriods(otherCtx, schoolcalendar.CalendarPeriodFilter{ActiveOnly: true, OverlappingFrom: "2030-09-01", OverlappingTo: "2030-10-01"})
 	require.NoError(t, err)
 	assert.Equal(t, []int64{foreign.ID}, idsOf(overlapping))
-	_, err = module.UpdateCalendarPeriod(otherCtx, schoolcalendar.UpdateCalendarPeriod{ID: period.ID, CalendarPeriodFields: periodFields("Gekapert", "2030-08-01", "2031-07-31", true)})
+	_, err = module.ChangeCalendarPeriod(otherCtx, schoolcalendar.UpdateCalendarPeriod{ID: period.ID, ExpectedVersion: schoolcalendar.CalendarPeriodVersion(period), CalendarPeriodFields: periodFields("Gekapert", "2030-08-01", "2031-07-31", true)})
 	require.ErrorIs(t, err, schoolcalendar.ErrCalendarPeriodNotFound)
 	require.ErrorIs(t, module.DeleteCalendarPeriod(otherCtx, period.ID), schoolcalendar.ErrCalendarPeriodNotFound)
 
@@ -376,7 +376,7 @@ func TestModuleRefusesWritesWithoutABoundTenant(t *testing.T) {
 
 	_, err := module.CreateCalendarPeriod(unscoped, schoolcalendar.CreateCalendarPeriod{CalendarPeriodFields: periodFields("Unscoped", "2030-08-01", "2031-07-31", true)})
 	require.ErrorContains(t, err, "tenant is required")
-	_, err = module.UpdateCalendarPeriod(unscoped, schoolcalendar.UpdateCalendarPeriod{ID: period.ID, CalendarPeriodFields: periodFields("Unscoped", "2030-08-01", "2031-07-31", true)})
+	_, err = module.ChangeCalendarPeriod(unscoped, schoolcalendar.UpdateCalendarPeriod{ID: period.ID, ExpectedVersion: schoolcalendar.CalendarPeriodVersion(period), CalendarPeriodFields: periodFields("Unscoped", "2030-08-01", "2031-07-31", true)})
 	require.ErrorContains(t, err, "tenant is required")
 	require.ErrorContains(t, module.DeleteCalendarPeriod(unscoped, period.ID), "tenant is required")
 	_, err = module.UpdateClosingDay(unscoped, schoolcalendar.UpdateClosingDay{ID: day.ID, ClosingDayFields: schoolcalendar.ClosingDayFields{StartDate: "2030-11-04", EndDate: "2030-11-08", Reason: "Unscoped"}})

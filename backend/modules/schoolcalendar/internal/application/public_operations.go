@@ -89,24 +89,6 @@ func (s *Service) CreateCalendarPeriodIfAbsent(ctx context.Context, input school
 	})
 	return result, created, err
 }
-func (s *Service) UpdateCalendarPeriod(ctx context.Context, input schoolcalendar.UpdateCalendarPeriod) (result schoolcalendar.CalendarPeriod, err error) {
-	if input.ID <= 0 {
-		return schoolcalendar.CalendarPeriod{}, invalidPeriod("calendar period ID is required")
-	}
-	if err := validateCalendarPeriodFields(&input.CalendarPeriodFields); err != nil {
-		return schoolcalendar.CalendarPeriod{}, err
-	}
-
-	fields := input.CalendarPeriodFields
-	id := input.ID
-	err = s.run(ctx, "update_calendar_period", func(ctx context.Context, stats *domain.OperationStats) error {
-		var updateStats domain.OperationStats
-		result, updateStats, err = s.store.UpdateCalendarPeriod(ctx, id, fields)
-		stats.Add(updateStats)
-		return err
-	})
-	return result, err
-}
 func (s *Service) DeleteCalendarPeriod(ctx context.Context, id int64) error {
 	if id <= 0 {
 		return invalidPeriod("calendar period ID is required")

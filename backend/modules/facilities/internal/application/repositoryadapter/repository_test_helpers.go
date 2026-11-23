@@ -36,6 +36,9 @@ func (r *Repository) Update(ctx context.Context, room *facilities.Room) error {
 		// make every legacy save silently skip the column instead of
 		// preserving what the caller actually holds.
 		IsOpenRoom: &room.IsOpenRoom,
+		// The legacy row is the state its caller read: it carries that
+		// version (ADR 0311).
+		ExpectedVersion: facilities.RoomVersion(*room),
 	})
 	if err == nil {
 		*room = updated
