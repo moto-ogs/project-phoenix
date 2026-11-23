@@ -450,7 +450,9 @@ function isArrayIndex(index, checker) {
     return true;
 
   // TypeScript also allows an array's for-in key as an index, although
-  // the variable's public type is string.
+  // the variable's public type is string. Do not override a narrowed key
+  // or assume a dictionary's named properties are array indexes.
+  if (!types.some((part) => part.flags & ts.TypeFlags.String)) return false;
   const key = ts.skipParentheses(index);
   if (!ts.isIdentifier(key)) return false;
   const symbol = checker.getSymbolAtLocation(key);
@@ -468,8 +470,7 @@ function isArrayIndex(index, checker) {
     if (!target || !ts.isIdentifier(target)) continue;
     if (checker.getSymbolAtLocation(target) !== symbol) continue;
     const collection = checker.getTypeAtLocation(parent.expression);
-    const indexes = checker.getIndexInfosOfType(collection);
-    if (indexes.length === 1 && indexes[0].keyType === checker.getNumberType())
+    if (checker.isArrayType(collection) || checker.isTupleType(collection))
       return true;
   }
   return false;
