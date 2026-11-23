@@ -207,7 +207,7 @@ func TestHandOverKeepsAHeldBankRowOnLaterWrites(t *testing.T) {
 	assert.Equal(t, record.Links[0].SchoolID, *store.trail[0].SchoolID)
 	require.Len(t, store.accesses, 1, "the school logs the Träger's read of the masks")
 	assert.Equal(t, workforce.StaffDataAccessFinancialView, store.accesses[0].Resource)
-	assert.Equal(t, int64(10), store.accesses[0].StaffID)
+	assert.Equal(t, record.Links[0].StaffID, store.accesses[0].StaffID)
 	assert.Equal(t, actor.AccountID, store.accesses[0].ActorAccountID)
 	assert.Equal(t, actorRoleTraeger, store.accesses[0].ActorRole)
 
@@ -268,5 +268,5 @@ func TestHandOverNamesAHeldRowWhenALaterSchoolFails(t *testing.T) {
 	require.Len(t, store.trail, 1, "the held row of school 2 has its trail entry")
 	assert.Equal(t, domain.StaffChangeNotChosen, store.trail[0].Kind)
 	require.NotNil(t, store.trail[0].SchoolID)
-	assert.Equal(t, int64(2), *store.trail[0].SchoolID)
+	assert.Equal(t, record.Links[0].SchoolID, *store.trail[0].SchoolID)
 }
