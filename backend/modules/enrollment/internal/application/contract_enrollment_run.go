@@ -56,7 +56,7 @@ func (d *Decisions) EnrollContractChildren(ctx context.Context, enrollments []en
 	if err != nil {
 		return nil, err
 	}
-	run := &contractRun{phases: phases}
+	run := &contractRun{phases: phases, today: d.todayDate()}
 	if err := d.readContractStudents(ctx, run, enrollments); err != nil {
 		return nil, err
 	}

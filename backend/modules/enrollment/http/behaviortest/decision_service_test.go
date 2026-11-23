@@ -180,7 +180,7 @@ func newBookingsForTest(
 	}
 	options := []api.BookingMaterializationOption{
 		api.WithBookingCatalog(env.offeringCatalog),
-		api.WithBookingToday(func() calendar.Date { return decisionTestToday }),
+		api.WithBookingToday(env.decisionDay),
 		api.WithBookingSettings(bookingSettings),
 		api.WithBookingWithdrawals(careWithdrawal),
 	}
@@ -300,7 +300,7 @@ func newDecisionsForTestWithBookings(
 			RecordChanges: recordPickupWeekdayChanges(pickupAutoExcusal),
 		},
 		Logger: slog.Default(),
-		Today:  func() calendar.Date { return decisionTestToday },
+		Today:  env.decisionDay,
 	}, settings, outbox)
 }
 

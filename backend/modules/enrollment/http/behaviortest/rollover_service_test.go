@@ -51,6 +51,17 @@ type rolloverTestEnv struct {
 	// excusalToday pins the day the pickup auto excusals resync from; nil
 	// is the real day, as the root resyncs.
 	excusalToday func() calendar.Date
+	// today moves the day of the decisions and of the bookings composed on
+	// this env after it is set; the zero value is decisionTestToday.
+	today calendar.Date
+}
+
+// decisionDay is the day the decisions and the bookings of the env run on.
+func (e *rolloverTestEnv) decisionDay() calendar.Date {
+	if e.today.IsZero() {
+		return decisionTestToday
+	}
+	return e.today
 }
 
 func setupRolloverTest(t *testing.T) *rolloverTestEnv {

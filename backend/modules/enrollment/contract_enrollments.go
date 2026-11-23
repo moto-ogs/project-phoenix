@@ -48,10 +48,26 @@ import (
 //     that its stored bookings are still the ones the plan proved, and
 //     answers existing, else changed or has_application. A contract is
 //     bound only to an application child this capability answered as
-//     enrolled or existing.
+//     enrolled or existing. The confirmation compares the application, its
+//     phase and its offerings only. It does not repeat what a new
+//     enrollment is refused for (the child record and its care end, the
+//     rosters of the offerings, the length of the window): the school
+//     approved that application itself, and nothing is written for it.
 //   - No child is booked before its contract: the bookings of a child start
 //     on one day, the service start of the phase or a later day within it,
-//     and its rosters start on that day.
+//     and its rosters start on that day. That day is never after today: the
+//     plan books a contract and a phase that began, and a row that starts
+//     later is refused (booking_window). An undated correction of the
+//     office reads the bookings on today's day, so it finds them.
+//   - It ends no roster before the phase and writes no care past the child
+//     record's care end. A booking of an offering that names its roster
+//     through the direct link (ActivityGroupID) and ends before the service
+//     of the phase is refused (roster_bound): Care Plan writes such a row
+//     to the end of the phase. So is a child whose recorded care end lies
+//     before the end of its bookings (care_ends_earlier), and a booking
+//     whose window holds none of one of its weekdays (window_too_short),
+//     which Care Plan's roster check would answer with an error for the
+//     whole call.
 //   - A school that derives no care from bookings
 //     (enrollment.care_offerings_enabled off) gets no enrollment: every row
 //     is refused before anything is read, locked or written.
@@ -116,18 +132,31 @@ const (
 	// offer, or a subset of the weekdays of an offering with fixed days.
 	ContractEnrollmentDayUnavailable = "day_unavailable"
 	// ContractEnrollmentBookingWindow is a booking that starts before the
-	// service of the phase or on another day than the other bookings of the
-	// child, does not end within the service, or names an offering twice.
+	// service of the phase, after today or on another day than the other
+	// bookings of the child, does not end within the service, or names an
+	// offering twice.
 	ContractEnrollmentBookingWindow = "booking_window"
 	// ContractEnrollmentCareOfferingsOff is a school that derives no care
 	// from bookings (enrollment.care_offerings_enabled off): an approval
 	// there writes no roster, so no child is enrolled.
 	ContractEnrollmentCareOfferingsOff = "care_offerings_off"
-	// ContractEnrollmentSharedRoster is a child with two bookings that end
-	// on different days and feed one roster through the direct link of
-	// their offerings. A roster row has one end for all its weekdays, so
-	// the child would stay on the roster after one booking ended.
-	ContractEnrollmentSharedRoster = "shared_roster"
+	// ContractEnrollmentRosterBound is a child with a booking that ends
+	// before the service of the phase on an offering that names its roster
+	// through the direct link (ActivityGroupID). Care Plan writes the roster
+	// row of such an offering to the end of the phase, whatever the booking
+	// says, so the child would stay on the roster and its occurrences after
+	// the booking ended. Two such bookings that end on different days on one
+	// roster are this case too. Known limitation of Care Plan (ADR 0309).
+	ContractEnrollmentRosterBound = "roster_bound"
+	// ContractEnrollmentCareEndsEarlier is a child record whose recorded
+	// care end (its last care day) lies before the last day of the bookings:
+	// the bookings would promise care the child record has ended.
+	ContractEnrollmentCareEndsEarlier = "care_ends_earlier"
+	// ContractEnrollmentWindowTooShort is a booking whose window holds no
+	// day of one of its weekdays, as a Monday booking from Thursday 30 July
+	// to the end of the service on Friday 31 July: there is no day of care
+	// to derive, and no roster to write.
+	ContractEnrollmentWindowTooShort = "window_too_short"
 	// ContractEnrollmentPlannedChange is a contract with a planned version.
 	// A dated change of the bookings of an approved child tells the child's
 	// guardians in the parents portal (Care Plan's offering adjustment), so
@@ -167,7 +196,8 @@ type ContractBookingChange struct {
 // the bookings that hold from the first day the contract promises care in
 // the phase, the planned changes after it, the contract they come from and
 // the account that acts. ServiceStart and ServiceEnd are the first and the
-// last day of the service of the phase as the plan read them.
+// last day of the service of the phase as the plan read them. The first day
+// of the bookings is never after today (ContractEnrollmentBookingWindow).
 //
 // With RequestChildID the row asks for no enrollment but for the
 // confirmation of the approved application the plan proved: Bookings are
@@ -251,6 +281,9 @@ type ContractStudent struct {
 	// Birthday is nil for a person without a date of birth, and for a child
 	// record without a person.
 	Birthday *calendar.Date
+	// CareEnd is the last care day the child record names (enrolled_until);
+	// nil without one.
+	CareEnd *calendar.Date
 }
 
 // ContractEnrollments enrolls the children of imported care contracts in the
@@ -261,6 +294,7 @@ type ContractEnrollments interface {
 	// with each child, and writes and locks nothing. Its answer for a row
 	// that names an application is a preview: only the answer under the
 	// locks of EnrollContractChildren confirms an application for a binding.
+	// The caller relates an answer to its row by ContractID and StudentID.
 	CheckContractChildren(ctx context.Context, enrollments []ContractEnrollment) ([]ContractEnrollmentResult, error)
 	// EnrollContractChildren enrolls each child that can be enrolled, and
 	// confirms each application a row names, under the approval gates of

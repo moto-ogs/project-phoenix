@@ -16,8 +16,7 @@ import (
 // The rules of the enrollment of the children of imported care contracts
 // that the second review round added (#7760, ADR 0309): no booking before
 // the contract, the confirmation of a proved application, an offering that
-// stopped counting as care, a school without derived care and two bookings
-// on one roster.
+// stopped counting as care and a school without derived care.
 
 // bookingOf is a booking of an offering of the phase with what a plan read
 // of it.
@@ -190,9 +189,7 @@ func TestContractEnrollmentConfirmsAProvenApplicationOnlyUnchanged(t *testing.T)
 // not enrolled. An offering that stopped counting as care since the plan
 // answers the child as changed: the plan booked it as care. A school with
 // the care offerings switched off refuses every row before it reads or
-// writes anything: an approval there writes no roster. And two bookings
-// that end on different days on one directly linked roster are refused: a
-// roster row has one end for all its weekdays.
+// writes anything: an approval there writes no roster.
 func TestContractEnrollmentRefusesCareTheSchoolDoesNotDerive(t *testing.T) {
 	t.Parallel()
 	e := setupContractEnrollment(t)
@@ -200,25 +197,7 @@ func TestContractEnrollmentRefusesCareTheSchoolDoesNotDerive(t *testing.T) {
 	student := e.student(t, "Lina")
 	written := `SELECT (SELECT COUNT(*) FROM enrollment.requests WHERE tenant_id = ? AND submission_source = 'contract_import')
 		+ (SELECT COUNT(*) FROM activities.student_enrollments WHERE tenant_id = ? AND student_id = ?)`
-
-	// Two offerings feed one roster and end apart: Monday in February,
-	// Wednesday with the phase.
-	shared := testpkg.CreateTestActivityGroup(t, e.db, "ContractSharedRoster")
-	modules := [2]*offeringContract.CareOfferingRecord{}
-	for i, name := range []string{"Modul Montag ", "Modul Mittwoch "} {
-		modules[i] = createAdjustmentCareOfferingWith(t, e.decisionTestEnv, name+t.Name(), func(o *offeringContract.CareOfferingRecord) {
-			o.ActivityGroupID, o.CountsAsCare, o.PickupTimes = &shared.ID, true, carePickupTimes("mon", "tue", "wed", "thu", "fri")
-		})
-	}
-	start, until := calendar.Date(e.sourcePhase.ServiceStartDate), calendar.Date(e.sourcePhase.ServiceEndDate).AddDays(1)
-	apart := e.input(student.ID, bookingOf(modules[0], start, calendar.NewDate(2027, 3, 1), "mon"), bookingOf(modules[1], start, until, "wed"))
-	want := []capability.ContractEnrollmentResult{{ContractID: e.contract, StudentID: student.ID,
-		Status: capability.ContractEnrollmentRefused, Reason: capability.ContractEnrollmentSharedRoster}}
-	assert.Equal(t, want, e.check(t, apart))
-	assert.Equal(t, want, e.enroll(t, apart))
-	assert.Zero(t, e.count(t, written, testpkg.Tenant(t), testpkg.Tenant(t), student.ID))
-	together := e.input(student.ID, bookingOf(modules[0], start, until, "mon"), bookingOf(modules[1], start, until, "wed"))
-	assert.Equal(t, capability.ContractEnrollmentEnrolled, e.check(t, together)[0].Status, "bookings that end together share the row")
+	together := e.input(student.ID, e.booking("mon"))
 
 	// The offering stops counting as care between the plan and the
 	// enrollment.

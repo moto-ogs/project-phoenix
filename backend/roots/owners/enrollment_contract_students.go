@@ -46,14 +46,25 @@ func (s EnrollmentContractStudents) ContractEnrollmentStudents(ctx context.Conte
 		}
 	}
 	for _, student := range students {
-		record := enrollmentOwner.ContractStudent{ID: student.ID, Status: student.Status, WithoutCarePlace: student.WithoutCarePlace}
-		if person, known := persons[student.PersonID]; known {
-			record.FirstName, record.LastName = person.FirstName, person.LastName
-			if birthday, err := calendar.ParseDate(person.Birthday); err == nil && !birthday.IsZero() {
-				record.Birthday = &birthday
-			}
-		}
-		result[student.ID] = record
+		person, known := persons[student.PersonID]
+		result[student.ID] = contractStudentOf(student, person, known)
 	}
 	return result, nil
+}
+
+// contractStudentOf is a child record as the enrollment reads it, with the
+// name and the date of birth of its person when it has one.
+func contractStudentOf(student peopledirectory.Student, person peopledirectory.Person, known bool) enrollmentOwner.ContractStudent {
+	record := enrollmentOwner.ContractStudent{ID: student.ID, Status: student.Status, WithoutCarePlace: student.WithoutCarePlace}
+	if careEnd, err := calendar.ParseDate(student.EnrolledUntil); err == nil && !careEnd.IsZero() {
+		record.CareEnd = &careEnd
+	}
+	if !known {
+		return record
+	}
+	record.FirstName, record.LastName = person.FirstName, person.LastName
+	if birthday, err := calendar.ParseDate(person.Birthday); err == nil && !birthday.IsZero() {
+		record.Birthday = &birthday
+	}
+	return record
 }

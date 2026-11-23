@@ -36,12 +36,8 @@ type careEnrollmentDraft struct {
 	// linkValidFrom/Until bound a sourced draft's rows to the window the
 	// child's offering link is actually valid in (#2147 review): a dated
 	// switch into or out of the offering must not plan the child outside it.
-	// The legacy feed leaves the start nil: its dated flows start rows via
-	// the adjustment split. It keeps the end of the link (#7760): a booking
-	// that ends before the phase ends the child's row with it, or the child
-	// stayed on the roster and its occurrences to the end of the phase. Two
-	// legacy links of the child on one template that end on different days
-	// are the exception (sharedLegacyEnd).
+	// The legacy feed leaves them nil — its dated flows cap rows via the
+	// adjustment split instead.
 	linkValidFrom  *calendar.Date
 	linkValidUntil *calendar.Date
 	// studentValidUntil is the child's exclusive care end. Unlike link bounds,
@@ -176,12 +172,12 @@ func (m *BookingMaterialization) addLegacyLinkedGroupDrafts(
 	if err := m.catalog.ValidateMaterializable(ctx, segments, phase, days); err != nil {
 		return fmt.Errorf("decision: care offering %d is not materializable: %w", link.CareOfferingID, err)
 	}
-	return addLegacySegmentDrafts(drafts, segments, days, link)
+	return addLegacySegmentDrafts(drafts, segments, days, link.CareOfferingID)
 }
 
 // addLegacySegmentDrafts drafts the legacy link's days on every segment of
 // its series.
-func addLegacySegmentDrafts(drafts map[int64]*careEnrollmentDraft, segments []careplan.LinkedSegment, days []string, link *careplan.BookedOffering) error {
+func addLegacySegmentDrafts(drafts map[int64]*careEnrollmentDraft, segments []careplan.LinkedSegment, days []string, offeringID int64) error {
 	for _, segment := range segments {
 		// The explicit legacy link owns the child's row on this template. When
 		// another link's sourced feed drafted it first, that draft is REPLACED,
@@ -190,37 +186,18 @@ func addLegacySegmentDrafts(drafts map[int64]*careEnrollmentDraft, segments []ca
 		if draft := drafts[segment.Group.ID]; draft != nil && !draft.legacyOwned {
 			delete(drafts, segment.Group.ID)
 		}
-		until := cloneOptionalDate(link.ValidUntil)
-		if joined := drafts[segment.Group.ID]; joined != nil {
-			until = sharedLegacyEnd(joined.linkValidUntil, until)
-		}
-		if err := mergeCareEnrollmentDraft(drafts, segment, days, link.CareOfferingID); err != nil {
+		if err := mergeCareEnrollmentDraft(drafts, segment, days, offeringID); err != nil {
 			return err
 		}
-		// The legacy feed plans rows from the phase start on every
-		// overlapping segment (pre-#2137 behavior), to the end of the
-		// child's booking.
+		// The legacy feed plans phase-wide rows on every overlapping segment
+		// (pre-#2137 behavior).
 		if draft := drafts[segment.Group.ID]; draft != nil {
 			draft.legacyOwned = true
 			draft.scheduleValidFrom, draft.scheduleValidUntil = nil, nil
-			draft.linkValidFrom, draft.linkValidUntil = nil, until
+			draft.linkValidFrom, draft.linkValidUntil = nil, nil
 		}
 	}
 	return nil
-}
-
-// sharedLegacyEnd is the end of a row two legacy links of one child share
-// on one template. A draft is one row per child and template, with one end
-// for all its weekdays, so it cannot end Monday in February and Wednesday in
-// July. Links that end on the same day end the row there. Links that end on
-// different days leave the row open to the end of the phase, as every
-// legacy row ran before #7760: an end taken from either booking would be
-// wrong for the weekdays of the other.
-func sharedLegacyEnd(a, b *calendar.Date) *calendar.Date {
-	if a == nil || b == nil || *a != *b {
-		return nil
-	}
-	return a
 }
 
 // sourcedDraftFeed is one booking link feeding the templates that source its

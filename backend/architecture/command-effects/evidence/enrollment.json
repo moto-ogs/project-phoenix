@@ -4866,7 +4866,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.EnrollmentContractStudents.ContractEnrollmentStudents",
-      "binding_digest": "db26a26e57a7f79729dd1c72df846385",
+      "binding_digest": "73f0e3348647ccfef04c2d3b26d73a74",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ContractStudents.ContractEnrollmentStudents",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsByID",
@@ -4874,7 +4874,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.EnrollmentContractStudents.ContractEnrollmentStudents",
-      "binding_digest": "f49265186311718427f062d375e4bc9f",
+      "binding_digest": "c2c2a622f1240a51e07f0d83d8a70656",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ContractStudents.ContractEnrollmentStudents",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsByID",
@@ -4882,7 +4882,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.EnrollmentContractStudents.ContractEnrollmentStudents",
-      "binding_digest": "68456721b29b76a32d1ea714dfb733a4",
+      "binding_digest": "8c3dfe686fceec38497f5c3b4d0dc767",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ContractStudents.ContractEnrollmentStudents",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListPersonsByID",
@@ -4890,7 +4890,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.EnrollmentContractStudents.ContractEnrollmentStudents",
-      "binding_digest": "4ea58b8b01a6d7608be173f729fd3046",
+      "binding_digest": "9b9b1cdd6cb1903313511ac974c1b9f1",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ContractStudents.ContractEnrollmentStudents",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentsByID",

@@ -11,7 +11,6 @@ import (
 	enrollmentAPI "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
 	offeringContract "github.com/moto-ogs/project-phoenix/modules/enrollment/offeringcontract"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
-	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -43,6 +42,10 @@ func (b *countingBookings) AdjustOfferings(ctx context.Context, in careplan.Offe
 	return b.TestDecisionBookings.AdjustOfferings(ctx, in)
 }
 
+// contractRunDay is the day the enrollment runs on in these suites: a
+// Monday within the service of the phase.
+var contractRunDay = calendar.NewDate(2027, 1, 4)
+
 // contractEnrollmentEnv is the decision harness with a care offering of the
 // phase that feeds a roster, and the decision flow over counting bookings.
 type contractEnrollmentEnv struct {
@@ -62,6 +65,9 @@ func setupContractEnrollment(t *testing.T) *contractEnrollmentEnv {
 		o.ActivityGroupID, o.CountsAsCare, o.PickupTimes = &group.ID, true, carePickupTimes("mon", "tue", "wed", "thu", "fri")
 	})
 	bookings := &countingBookings{TestDecisionBookings: env.bookings}
+	// The run happens within the service of the phase: no child is enrolled
+	// from a day that is still to come.
+	env.today = contractRunDay
 	// The pickup auto excusals resync from the day of the harness, so the
 	// coming pickup exception of a case is one on every day the suite runs.
 	env.excusalToday = func() calendar.Date { return decisionTestToday }
@@ -485,51 +491,6 @@ func TestContractEnrollmentQueryBudget(t *testing.T) {
 	assert.Equal(t, 4, e.count(t, `SELECT COUNT(*) FROM schedule.student_pickup_exceptions WHERE tenant_id = ? AND excused_auto`, testpkg.Tenant(t)),
 		"the resync ran for every child")
 	querybudgets.AssertQueryBudget(t, "services.enrollment.contract_enrollments.enroll", one)
-}
-
-// A booking that ends before its phase ends the child's roster row with it
-// (#7760). The offering names its roster through the direct link to a
-// template (ActivityGroupID): the child is on the roster and on the
-// occurrences up to the last day of the booking, and on none after it.
-// Before, such a row ran to the end of the phase whatever the booking said.
-func TestContractEnrollmentEndsTheRosterWithTheBooking(t *testing.T) {
-	t.Parallel()
-	e := setupContractEnrollment(t)
-	ctx := testpkg.Ctx(t)
-	category := testpkg.CreateTestActivityCategory(t, e.db, "Contract-Roster-End")
-	room := testpkg.CreateTestRoom(t, e.db, "Contract-Roster-End")
-	template := &careTemplateGroup{Name: "Vertrag Roster-Ende", Type: timetable.GroupTypeCare, CategoryID: category.ID,
-		MaxParticipants: 20, IsOpen: true, IsTemplate: true, PlannedRoomID: &room.ID}
-	template.SetTenantID(testpkg.Tenant(t))
-	require.NoError(t, createCareTemplateGroupRow(ctx, e.db, template))
-	period := createCareOfferingTestPeriod(t, e.db, "contract-roster-end", calendar.NewDate(2026, 8, 1), calendar.NewDate(2027, 8, 31))
-	createCareOfferingTemplateSchedule(t, e.db, template.ID, timetable.WeekdayTuesday, &period.ID)
-	offering := createAdjustmentCareOfferingWith(t, e.decisionTestEnv, "Ganztag bis Februar "+t.Name(), func(o *offeringContract.CareOfferingRecord) {
-		o.ActivityGroupID, o.CountsAsCare, o.PickupTimes = &template.ID, true, carePickupTimes("mon", "tue", "wed", "thu", "fri")
-	})
-	// The booking ends with February; one occurrence lies in it, one after.
-	last := calendar.NewDate(2027, 2, 28)
-	within := nextWeekday(calendar.NewDate(2027, 2, 1), time.Tuesday)
-	after := nextWeekday(calendar.NewDate(2027, 3, 1), time.Tuesday)
-	for _, day := range []calendar.Date{within, after} {
-		testpkg.CreateTestActivityInstance(t, e.db, day, room.ID, testpkg.ActivityInstanceOpts{ActivityGroupID: &template.ID, CalendarPeriodID: &period.ID})
-	}
-	student := e.student(t, "Lina")
-	booking := capability.ContractBooking{CareOfferingID: offering.ID, Days: []string{"tue"},
-		ValidFrom: calendar.Date(e.sourcePhase.ServiceStartDate), ValidUntil: last.AddDays(1),
-		EndTimes: map[string]string{"tue": offering.PickupTimes["tue"]}, AvailableDays: offering.AvailableDays, DaysOfWeekMode: offering.DaysOfWeekMode}
-	result := e.enroll(t, e.input(student.ID, booking))
-	require.Equal(t, capability.ContractEnrollmentEnrolled, result[0].Status)
-
-	var until calendar.Date
-	require.NoError(t, e.db.NewRaw(`SELECT valid_until FROM activities.student_enrollments WHERE tenant_id = ? AND student_id = ?
-		AND activity_group_id = ?`, testpkg.Tenant(t), student.ID, template.ID).Scan(ctx, &until))
-	assert.Equal(t, last.AddDays(1), until, "the roster row ends with the booking, exclusive")
-	onOccurrence := `SELECT COUNT(*) FROM schedule.instance_students AS s JOIN schedule.activity_instances AS i
-		ON i.id = s.instance_id AND i.tenant_id = s.tenant_id
-		WHERE s.tenant_id = ? AND s.student_id = ? AND i.activity_group_id = ? AND i.date = ?`
-	assert.Equal(t, 1, e.count(t, onOccurrence, testpkg.Tenant(t), student.ID, template.ID, within), "on the occurrence within the booking")
-	assert.Zero(t, e.count(t, onOccurrence, testpkg.Tenant(t), student.ID, template.ID, after), "on no occurrence after the booking ended")
 }
 
 // The rollover of a school year carries the child of a contract enrollment
