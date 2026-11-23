@@ -759,9 +759,11 @@ export function ChildOfferingAdjustment({
 }
 
 /**
- * The end of a limited booking in the correction (#7929): the last booked
- * day and, when the backend allows it, the choice to book the offering to
- * `extends_until`, the end of the phase or the earlier care end.
+ * A limited booking the office can extend (#7929): its last booked day and
+ * the choice to book the offering to `extends_until`, the end of the phase
+ * or the earlier care end. An end the backend offers no extension for stays
+ * in the booking display above; here it would read as a choice that is not
+ * there.
  */
 function BookingEnd({
   inputId,
@@ -770,7 +772,7 @@ function BookingEnd({
   onToggle,
 }: Readonly<{
   inputId: string;
-  end: { validUntil: string; extendsUntil?: string };
+  end: { validUntil: string; extendsUntil: string };
   extended: boolean;
   onToggle: () => void;
 }>) {
@@ -779,35 +781,35 @@ function BookingEnd({
       <p className="text-xs text-gray-600">
         Gebucht bis {formatDate(end.validUntil)}
       </p>
-      {end.extendsUntil ? (
-        <label
-          htmlFor={inputId}
-          className="flex cursor-pointer items-center gap-2 text-sm text-gray-900"
-        >
-          <Checkbox id={inputId} checked={extended} onChange={onToggle} />
-          Bis {formatDate(end.extendsUntil)} verlängern
-        </label>
-      ) : null}
+      <label
+        htmlFor={inputId}
+        className="flex cursor-pointer items-start gap-2 text-sm text-gray-900"
+      >
+        <Checkbox
+          id={inputId}
+          className="mt-0.5"
+          checked={extended}
+          onChange={onToggle}
+        />
+        Bis {formatDate(end.extendsUntil)} verlängern
+      </label>
     </div>
   );
 }
 
 /**
- * The last booked day of each current booking that ends, keyed by offering.
- * A row of automatic days only follows its trigger and has no own end here.
+ * The current bookings the office can extend, keyed by offering: the last
+ * booked day and the day an extension books to (`extends_until`).
  */
 function currentBookingEnds(
   offerings?: AdminRequestChildOffering[],
-): Record<string, { validUntil: string; extendsUntil?: string }> {
-  const out: Record<string, { validUntil: string; extendsUntil?: string }> = {};
+): Record<string, { validUntil: string; extendsUntil: string }> {
+  const out: Record<string, { validUntil: string; extendsUntil: string }> = {};
   for (const offering of offerings ?? []) {
-    const automaticOnly =
-      (offering.automatic_selected_days?.length ?? 0) > 0 &&
-      (offering.manual_selected_days?.length ?? 0) === 0;
-    if (!offering.valid_until || automaticOnly) continue;
+    if (!offering.valid_until || !offering.extends_until) continue;
     out[offering.offering_id] = {
       validUntil: offering.valid_until,
-      ...(offering.extends_until && { extendsUntil: offering.extends_until }),
+      extendsUntil: offering.extends_until,
     };
   }
   return out;

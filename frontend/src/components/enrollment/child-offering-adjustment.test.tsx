@@ -1351,17 +1351,19 @@ describe("ChildOfferingAdjustment booking end", () => {
     });
   });
 
-  it("shows an end it cannot extend without the choice", async () => {
+  it("shows no end for a booking it cannot extend", async () => {
     mocks.listCareOfferings.mockResolvedValue([catalogOffering()]);
     renderAdjustment(limitedBooking());
 
     fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
 
-    expect(await screen.findByText("Gebucht bis 28.02.2027")).toBeVisible();
-    expect(screen.getByRole("checkbox", { name: /Ganztag/ })).toBeVisible();
+    expect(
+      await screen.findByRole("checkbox", { name: /Ganztag/ }),
+    ).toBeVisible();
     expect(
       screen.queryByRole("checkbox", { name: /verlängern/ }),
     ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Gebucht bis/)).not.toBeInTheDocument();
   });
 
   it("names the extension in the history", async () => {

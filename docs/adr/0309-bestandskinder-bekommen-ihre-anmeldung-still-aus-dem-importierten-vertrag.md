@@ -1041,8 +1041,8 @@ behoben.
    verwirft das Ende weiterhin
    ([#7928](https://github.com/moto-ogs/project-phoenix/issues/7928)).
    **Nachtrag (#7929):** Das Büro verlängert ein Ende ausdrücklich. In der
-   Korrektur steht unter einem befristeten Angebot „Gebucht bis …“ und, wenn
-   die Betreuung danach weiterläuft, „Bis … verlängern“
+   Korrektur steht unter einem Angebot, dessen Buchung vor der Betreuung des
+   Kindes endet, „Gebucht bis …“ und „Bis … verlängern“
    (`extend_to_phase_end`). Die Korrektur ohne Datum bucht das Angebot dann
    wie ein neues bis zum Ende der Phase oder bis zum früheren Betreuungsende;
    Mitbuchungen folgen, Roster und Termine laufen mit, und ein gebundener
