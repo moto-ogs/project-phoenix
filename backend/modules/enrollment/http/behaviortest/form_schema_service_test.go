@@ -429,6 +429,8 @@ func (r activeSchemaReadFailure) ActiveSchema(context.Context) (*capability.Form
 	return nil, r.err
 }
 
+func (activeSchemaReadFailure) LockSchemaLineages(context.Context) error { return nil }
+
 func TestFormSchemaService_ActiveReadFailureStopsPublish(t *testing.T) {
 	t.Parallel()
 	testpkg.SetupTestDB(t)
@@ -654,6 +656,29 @@ func TestFormSchemaService_PublishForm_NoNameWithActiveUpdatesActive(t *testing.
 	assert.Equal(t, "Standardformular", second.Name,
 		"no name + an active schema exists updates that schema's lineage")
 	assert.Equal(t, 2, second.Version)
+}
+
+// Every version stays active, so the nameless publish must take the newest
+// one: an older version as its source fails the lineage check (ADR 0311) and
+// refuses every later nameless save with readstate.ErrChanged.
+func TestFormSchemaService_PublishForm_NoNameVersionsTheNewestActive(t *testing.T) {
+	t.Parallel()
+	db, svc, creatorID, tenantID := setupSchemaTest(t)
+	ctx := testpkg.TenantContext(tenantID)
+	publish := func(label string) (*capability.FormSchema, error) {
+		return testpkg.TenantQuery1(t, ctx, db, svc.PublishForm, capability.PublishFormInput{
+			Fields:  []capability.FormField{{Key: "diet", Label: label, Type: capability.FormFieldText, SortOrder: 0}},
+			ActorID: creatorID,
+		})
+	}
+	for version, label := range []string{"Ernährung", "Ernährung und Allergien", "Getränke", "Allergien"} {
+		schema, err := publish(label)
+		require.NoError(t, err, "nameless save %d", version+1)
+		assert.Equal(t, version+1, schema.Version)
+	}
+	active, err := testpkg.TenantQuery0(t, ctx, db, svc.GetActive)
+	require.NoError(t, err)
+	assert.Equal(t, 4, active.Version, "the active schema is the newest version")
 }
 
 func TestFormSchemaService_PublishFormVersion_WithNameRenamesAndPublishes(t *testing.T) {

@@ -218,6 +218,12 @@ func (s *FormSchemas) PublishForm(ctx context.Context, in enrollment.PublishForm
 		return s.createNamedSchema(ctx, in.Name, in)
 	}
 
+	// Lock before reading the active schema: a version published between
+	// this read and the lineage check would otherwise refuse a save that
+	// never read anything (ADR 0311 guards reads, not this legacy path).
+	if err := s.records.LockSchemaLineages(ctx); err != nil {
+		return nil, err
+	}
 	active, err := s.GetActive(ctx)
 	if err == nil {
 		return s.updateSchemaFromInput(ctx, active.ID, in)
