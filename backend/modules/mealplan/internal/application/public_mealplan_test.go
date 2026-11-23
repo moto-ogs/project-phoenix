@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/mealplan"
 	"github.com/moto-ogs/project-phoenix/modules/mealplan/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 type recordingEngine struct {
@@ -205,7 +206,7 @@ func TestModuleComparesTheReadDayBeforeTheWrite(t *testing.T) {
 		wantCalls []string
 	}{
 		{"matching read state", &asRead, nil, []string{"lock 2026-09-07", "read 2026-09-07", "write 2026-09-07"}},
-		{"changed since read", &empty, mealplan.ErrDayChanged, []string{"lock 2026-09-07", "read 2026-09-07"}},
+		{"changed since read", &empty, readstate.ErrChanged, []string{"lock 2026-09-07", "read 2026-09-07"}},
 		{"no read state", nil, nil, []string{"read 2026-09-07", "write 2026-09-07"}},
 	}
 	for _, tc := range tests {

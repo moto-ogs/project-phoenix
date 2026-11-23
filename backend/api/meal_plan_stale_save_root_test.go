@@ -35,7 +35,7 @@ func checkMealPlanStaleSave(t *testing.T, api *goldenRuntime) {
 
 	status, body = send(http.MethodPut, day, `{"dishes":[{"dish":"Nudeln"}],"expected":[]}`)
 	require.Equal(t, http.StatusConflict, status, body)
-	assert.Contains(t, body, `"code":"meals.day_changed"`)
+	assert.Contains(t, body, `"code":"general.changed_since_read"`)
 	_, body = send(http.MethodGet, week, "")
 	assert.Contains(t, body, "Suppe", "the refused save keeps the stored day")
 	assert.NotContains(t, body, "Nudeln")

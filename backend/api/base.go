@@ -96,7 +96,6 @@ var mealPlanErrorRules = []apiCommon.ErrorRule{
 	{Target: mealplanModule.ErrParticipationCutoff, Render: apiCommon.FixedCodedRenderer(apiCommon.ErrorConflictWithCode, errors.New(mealplanModule.ErrParticipationCutoff.Detail), apiCommon.CodeMealsParticipationCutoffPassed)},
 	{Target: mealplanModule.ErrPastDay, Render: apiCommon.FixedCodedRenderer(apiCommon.ErrorConflictWithCode, errors.New(mealplanModule.ErrPastDay.Detail), apiCommon.CodeMealsDayPast)},
 	{Target: mealplanModule.ErrDayClosed, Render: apiCommon.FixedCodedRenderer(apiCommon.ErrorConflictWithCode, errors.New(mealplanModule.ErrDayClosed.Detail), apiCommon.CodeMealsDayClosed)},
-	{Target: mealplanModule.ErrDayChanged, Render: apiCommon.FixedCodedRenderer(apiCommon.ErrorConflictWithCode, errors.New(mealplanModule.ErrDayChanged.Detail), apiCommon.CodeMealsDayChanged)},
 	{Target: mealplanModule.ErrChildNotEnrolled, Render: apiCommon.FixedCodedRenderer(apiCommon.ErrorConflictWithCode, errors.New(mealplanModule.ErrChildNotEnrolled.Detail), apiCommon.CodeMealsChildNotEnrolled)},
 	{Target: mealplanModule.ErrStudentNotFound, Render: apiCommon.FixedRenderer(apiCommon.ErrorNotFound, errors.New(mealplanModule.ErrStudentNotFound.Detail))},
 }

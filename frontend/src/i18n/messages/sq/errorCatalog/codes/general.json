@@ -1,5 +1,6 @@
 {
   "business_rejection": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
+  "changed_since_read": "Ndërkohë është ndryshuar: {object}. Tani shihni gjendjen aktuale. Kontrollojeni dhe provoni përsëri.",
   "input": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
   "permission": "Nuk keni qasje te: {object}. Kontaktoni shkollën.",
   "request_too_large": "Nuk u përpunua: {object}. Fshini në shfletues cookies e kësaj faqeje. Pastaj hyni përsëri.",

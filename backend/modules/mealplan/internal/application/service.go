@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/mealplan"
 	"github.com/moto-ogs/project-phoenix/modules/mealplan/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/mealplan/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 var ErrDisabled = errors.New("meal plan is disabled")
@@ -18,8 +19,6 @@ var (
 	ErrCutoffPassed         = errors.New("meal registration cutoff has passed")
 	// ErrPastDay refuses the school a change of a day already over.
 	ErrPastDay = errors.New("meal registration day is in the past")
-	// ErrDayChanged: the day was stored differently since the saver read it.
-	ErrDayChanged = errors.New("meal plan day changed since it was read")
 	// ErrDayClosed refuses a change of a day the school is closed.
 	ErrDayClosed = errors.New("meal registration day is closed")
 	// ErrStudentNotFound: the school does not know the child.
@@ -439,7 +438,7 @@ func (s *Service) weekEntries(ctx context.Context, monday domain.Date) (entries 
 // same unit of work (#7145) and marks the day as changed for the staff
 // (#7666); saving the same menu again keeps the mark it had. With expected
 // set, a day stored differently since it was read is refused
-// (ErrDayChanged).
+// (readstate.ErrChanged).
 func (s *Service) replace(ctx context.Context, date domain.Date, dishes []mealplan.Dish, expected *[]mealplan.Dish, actorAccountID int64) error {
 	operation := "replace_day"
 	if len(dishes) == 0 {
@@ -487,7 +486,7 @@ func (s *Service) storedDay(txCtx context.Context, date domain.Date, expected *[
 		return nil, stats, err
 	}
 	if expected != nil && !sameMenu(before, *expected) {
-		return nil, stats, ErrDayChanged
+		return nil, stats, readstate.ErrChanged
 	}
 	return before, stats, nil
 }

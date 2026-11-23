@@ -173,7 +173,8 @@ type DailyList struct {
 // ReplaceDay sets the dishes of a day. AccountID is the account that saves
 // them; it never hears about its own change (#7145). Expected, when set, is
 // the day as the saver read it: a day stored differently since is refused
-// with ErrDayChanged instead of overwritten. Nil saves without that check.
+// with readstate.ErrChanged instead of overwritten. Nil saves without that
+// check.
 type ReplaceDay struct {
 	Date      Date
 	Dishes    []Dish
@@ -209,9 +210,6 @@ var (
 	ErrPastDay = &Fault{Code: "meal_day_past", Detail: "the day is already over"}
 	// ErrDayClosed refuses a change of a day the school is closed.
 	ErrDayClosed = &Fault{Code: "meal_day_closed", Detail: "the school is closed that day"}
-	// ErrDayChanged refuses a save of a day stored differently since the
-	// saver read it.
-	ErrDayChanged = &Fault{Code: "meal_day_changed", Detail: "the day was changed since it was read"}
 	// ErrStudentNotFound: the school does not know the child.
 	ErrStudentNotFound = &Fault{Code: "meal_student_not_found", Detail: "student not found"}
 	// ErrChildNotEnrolled: the child is not in care on the day.

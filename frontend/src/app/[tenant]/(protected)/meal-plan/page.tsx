@@ -25,7 +25,7 @@ import {
   useApiFormError,
   useToast,
 } from "~/contexts/ToastContext";
-import { ApiError } from "~/lib/api-error";
+import { isChangedSinceRead } from "~/lib/api-error";
 import { formatWeekLabel, parseISODate, toISODate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import {
@@ -254,7 +254,7 @@ export default function MealPlanPage() {
   // A revisit shows the cached week at once and reads it again in the
   // background (no deduplication). Each save sends the day as this page
   // read it; the backend refuses a day someone stored differently since
-  // (meals.day_changed), so an older cached answer never overwrites a
+  // (general.changed_since_read), so an older cached answer never overwrites a
   // colleague's change.
   const week = useSWRAuth(weekKey, () => getMealPlanWeek(mondayISO), {
     keepPreviousData: false,
@@ -588,8 +588,7 @@ export default function MealPlanPage() {
       }
       // Der Fehler steht über dem Wochenplan (Bauart 2 Regel 5), nicht als
       // Toast: die noch ungespeicherten Tage bleiben sichtbar markiert.
-      const changedElsewhere =
-        err instanceof ApiError && err.code === "meals.day_changed";
+      const changedElsewhere = isChangedSinceRead(err);
       const readError = changedElsewhere
         ? await adoptStoredWeek(
             changedDays.filter((date) => !(date in persisted)),

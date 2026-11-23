@@ -392,7 +392,6 @@ var publicErrors = []struct{ from, to error }{
 	{ErrCutoffPassed, mealplan.ErrParticipationCutoff},
 	{ErrPastDay, mealplan.ErrPastDay},
 	{ErrDayClosed, mealplan.ErrDayClosed},
-	{ErrDayChanged, mealplan.ErrDayChanged},
 	{ErrStudentNotFound, mealplan.ErrStudentNotFound},
 	{ErrNotEnrolled, mealplan.ErrChildNotEnrolled},
 	{ErrInvalidCutoff, mealplan.ErrInvalidParticipation},

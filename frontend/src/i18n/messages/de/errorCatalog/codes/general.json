@@ -1,5 +1,6 @@
 {
   "business_rejection": "{object} konnte nicht geändert werden. Bitte prüfe den aktuellen Stand.",
+  "changed_since_read": "{object} wurde inzwischen geändert. Du siehst jetzt den neuen Stand. Prüfe ihn und versuche es dann noch einmal.",
   "input": "{object} konnte nicht übernommen werden. Bitte prüfe deine Angaben.",
   "permission": "Für {object} fehlt dir die Berechtigung. Bitte frage die Schule.",
   "request_too_large": "{object} konnte nicht bearbeitet werden. Bitte lösche im Browser die Cookies dieser Seite. Melde dich danach neu an.",

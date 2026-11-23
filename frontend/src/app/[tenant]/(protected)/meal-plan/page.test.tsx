@@ -314,7 +314,7 @@ describe("Speiseplan: Allergene je Gericht (#4777)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     await waitFor(() => expect(setDay).toHaveBeenCalledTimes(1));
-    // The day goes out with the day as the page read it (meals.day_changed).
+    // The day goes out with the day as the page read it (general.changed_since_read).
     expect(setDay).toHaveBeenCalledWith(
       "2026-10-05",
       [
@@ -435,7 +435,7 @@ describe("reload after a write (#6652)", () => {
 
 // A week reopened from the cache shows at once and stays editable while it
 // is read again; the save sends the day as read, so the backend refuses a
-// day someone changed since (meals.day_changed) instead of the page waiting.
+// day someone changed since (general.changed_since_read) instead of the page waiting.
 describe("Speiseplan: Woche aus dem Cache beim erneuten Öffnen", () => {
   const stored = {
     date: "2026-10-05",
@@ -561,7 +561,7 @@ describe("Speiseplan: Woche aus dem Cache beim erneuten Öffnen", () => {
     setDay
       .mockReset()
       .mockRejectedValueOnce(
-        new ApiError("changed", 409, { code: "meals.day_changed" }),
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
       )
       .mockResolvedValue(undefined);
     renderPage();
@@ -572,7 +572,7 @@ describe("Speiseplan: Woche aus dem Cache beim erneuten Öffnen", () => {
 
     expect(
       await screen.findByText(
-        catalogText("meals.day_changed", "die Woche im Speiseplan"),
+        catalogText("general.changed_since_read", "die Woche im Speiseplan"),
       ),
     ).toBeInTheDocument();
     expect(setDay).toHaveBeenLastCalledWith(
@@ -601,7 +601,7 @@ describe("Speiseplan: Woche aus dem Cache beim erneuten Öffnen", () => {
     setDay
       .mockReset()
       .mockRejectedValueOnce(
-        new ApiError("changed", 409, { code: "meals.day_changed" }),
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
       )
       .mockResolvedValue(undefined);
     renderPage();
@@ -610,7 +610,7 @@ describe("Speiseplan: Woche aus dem Cache beim erneuten Öffnen", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await screen.findByText(
-      catalogText("meals.day_changed", "die Woche im Speiseplan"),
+      catalogText("general.changed_since_read", "die Woche im Speiseplan"),
     );
 
     // Only the edited day keeps its draft; Tuesday shows the stored change.
@@ -637,7 +637,7 @@ describe("Speiseplan: Woche aus dem Cache beim erneuten Öffnen", () => {
     setDay
       .mockReset()
       .mockRejectedValue(
-        new ApiError("changed", 409, { code: "meals.day_changed" }),
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
       );
     renderPage();
     fireEvent.change(await screen.findByDisplayValue("Fischstäbchen"), {
@@ -652,7 +652,7 @@ describe("Speiseplan: Woche aus dem Cache beim erneuten Öffnen", () => {
     ).toBeInTheDocument();
     expect(
       screen.queryByText(
-        catalogText("meals.day_changed", "die Woche im Speiseplan"),
+        catalogText("general.changed_since_read", "die Woche im Speiseplan"),
       ),
     ).not.toBeInTheDocument();
   });
@@ -663,7 +663,7 @@ describe("Speiseplan: Woche aus dem Cache beim erneuten Öffnen", () => {
     setDay
       .mockReset()
       .mockRejectedValue(
-        new ApiError("changed", 409, { code: "meals.day_changed" }),
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
       );
     renderPage();
     fireEvent.change(await screen.findByDisplayValue("Fischstäbchen"), {
@@ -671,7 +671,7 @@ describe("Speiseplan: Woche aus dem Cache beim erneuten Öffnen", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await screen.findByText(
-      catalogText("meals.day_changed", "die Woche im Speiseplan"),
+      catalogText("general.changed_since_read", "die Woche im Speiseplan"),
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Verwerfen" }));
