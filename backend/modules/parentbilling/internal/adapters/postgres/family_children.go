@@ -188,7 +188,11 @@ func (s *Store) DeleteFamilyChildren(ctx context.Context, organizationID int64, 
 
 // InsertFamilyChildEvents records one action per target in one statement:
 // a read names the number only by its row, a change also carries value and
-// validity.
+// validity. A read of a number takes its contract from the number's row
+// under a share lock, as InsertFamilyBillingEvents does (#7964): a number
+// the hourly retention deleted with its contract gets no entry instead of
+// failing the foreign key of the gone contract, and one the retention has
+// not reached yet holds it off until the next hour.
 func (s *Store) InsertFamilyChildEvents(ctx context.Context, organizationID int64, event parentbilling.FamilyChildEvent, targets []parentbilling.FamilyChildTarget) error {
 	if len(targets) == 0 {
 		return nil
@@ -209,8 +213,14 @@ func (s *Store) InsertFamilyChildEvents(ctx context.Context, organizationID int6
 	account := accountOrNull(event.AccountID)
 	if _, err := db.ExecContext(ctx, `INSERT INTO parent_billing.family_child_count_events
 			(organization_id, care_contract_id, family_child_count_id, action, actor, actor_account_id, children, valid_from, valid_until, channel)
-		SELECT ?, target.contract_id, NULLIF(target.count_id, 0), ?, ?, ?, ?, ?, ?, NULLIF(?, '')
-		FROM unnest(?::bigint[], ?::bigint[]) AS target(contract_id, count_id)`,
+		SELECT ?0, target.contract_id, NULLIF(target.count_id, 0), ?1, ?2, ?3::bigint, ?4::smallint, ?5::date, ?6::date, NULLIF(?7::text, '')
+		FROM unnest(?8::bigint[], ?9::bigint[]) AS target(contract_id, count_id)
+		WHERE NOT (?1 = 'read' AND target.count_id > 0)
+		UNION ALL
+		SELECT ?0, number.care_contract_id, number.id, ?1, ?2, ?3::bigint, ?4::smallint, ?5::date, ?6::date, NULLIF(?7::text, '')
+		FROM (SELECT c.id, c.care_contract_id FROM parent_billing.family_child_counts c
+			WHERE ?1 = 'read' AND c.organization_id = ?0 AND c.id = ANY(?9::bigint[]) ORDER BY c.id FOR SHARE) AS number
+		CROSS JOIN unnest(?9::bigint[]) AS target(count_id) WHERE target.count_id = number.id`,
 		organizationID, event.Action, event.Actor, account, event.Children, event.ValidFrom, event.ValidUntil, event.Channel,
 		pgdialect.Array(contractIDs), pgdialect.Array(countIDs)); err != nil {
 		return fmt.Errorf("record family child count event: %w", err)

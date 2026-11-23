@@ -92,9 +92,9 @@ func officeWrite(t *testing.T, db *bun.DB, organization int64, retention bun.Tx,
 	require.NotZero(t, backend)
 	require.Eventually(t, func() bool {
 		var waiting bool
-		require.NoError(t, db.NewRaw(`SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE pid = ? AND wait_event_type = 'Lock')`, backend).
-			Scan(context.Background(), &waiting))
-		return waiting
+		err := db.NewRaw(`SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE pid = ? AND wait_event_type = 'Lock')`, backend).
+			Scan(context.Background(), &waiting)
+		return err == nil && waiting
 	}, 10*time.Second, 5*time.Millisecond, "the office write waits for the retention")
 	require.NoError(t, retention.Commit())
 	select {
@@ -107,30 +107,72 @@ func officeWrite(t *testing.T, db *bun.DB, organization int64, retention bun.Tx,
 }
 
 // TestTrailEntryDuringTheRetentionNamesTheContractThatStays: the office
-// opened the family (an unlocked read of the deviation on the old contract)
-// while the retention moves it. Its read entry waits for the retention and
-// then names the contract the deviation hangs on now.
+// read the family (an unlocked read of the deviation on the old contract)
+// while the retention moves it. The read entry, written alone or by the
+// family list in its own statement, waits for the retention and then names
+// the contract the deviation hangs on now.
 func TestTrailEntryDuringTheRetentionNamesTheContractThatStays(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	for name, read := range map[string]func(ctx context.Context, race retentionRace, deviation int64) error{
+		"read entry": func(ctx context.Context, race retentionRace, deviation int64) error {
+			read := parentbilling.FamilyBilling{ID: ident.ID(deviation), FamilyEmail: race.family, ContractID: ident.ID(race.going)}
+			return NewStore(time.Now).InsertFamilyBillingEvents(ctx, race.organization, 0, "read", []parentbilling.FamilyBilling{read})
+		},
+		"family list": func(ctx context.Context, race retentionRace, deviation int64) error {
+			_, families, err := NewStore(time.Now).ReadListedFamilies(ctx, race.organization, 0)
+			if err == nil && (len(families) != 1 || families[0].ContractID != ident.ID(race.staying)) {
+				return fmt.Errorf("the list shows %+v, not the deviation on the staying contract", families)
+			}
+			return err
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			ctx := context.Background()
+			race := newRetentionRace(t, db)
+			var deviation int64
+			require.NoError(t, db.NewRaw(`INSERT INTO parent_billing.family_billing (organization_id, family_email, care_contract_id,
+					recipient_kind, payment_method) VALUES (?, ?, ?, 'applicant', 'direct_debit') RETURNING id`,
+				race.organization, race.family, race.going).Scan(ctx, &deviation))
+
+			retention := race.runRetention(t, ctx, db, deviation)
+			err := officeWrite(t, db, race.organization, retention, func(ctx context.Context) error { return read(ctx, race, deviation) })
+			require.NoError(t, err, "the read entry must not fail on the deleted contract")
+
+			var contracts []int64
+			require.NoError(t, db.NewRaw(`SELECT care_contract_id FROM parent_billing.family_billing_events
+				WHERE organization_id = ? AND family_billing_id = ? AND action = 'read'`, race.organization, deviation).Scan(ctx, &contracts))
+			assert.Equal(t, []int64{race.staying}, contracts, "the entry names the contract the deviation hangs on now")
+		})
+	}
+}
+
+// TestChildCountReadDuringTheRetentionSkipsTheDeletedNumber: the number of
+// children of a contract goes with it. A read of it the office recorded
+// while the retention deletes the contract waits and then records nothing
+// instead of failing on the gone contract.
+func TestChildCountReadDuringTheRetentionSkipsTheDeletedNumber(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	ctx := context.Background()
 	race := newRetentionRace(t, db)
-	var deviation int64
-	require.NoError(t, db.NewRaw(`INSERT INTO parent_billing.family_billing (organization_id, family_email, care_contract_id,
-			recipient_kind, payment_method) VALUES (?, ?, ?, 'applicant', 'direct_debit') RETURNING id`,
-		race.organization, race.family, race.going).Scan(ctx, &deviation))
-	read := parentbilling.FamilyBilling{ID: ident.ID(deviation), FamilyEmail: race.family, ContractID: ident.ID(race.going)}
+	var count int64
+	require.NoError(t, db.NewRaw(`INSERT INTO parent_billing.family_child_counts (organization_id, family_email, care_contract_id,
+			stated_children, stated_at) VALUES (?, ?, ?, 2, NOW()) RETURNING id`, race.organization, race.family, race.going).Scan(ctx, &count))
 
-	retention := race.runRetention(t, ctx, db, deviation)
+	retention := race.runRetention(t, ctx, db, 0)
 	err := officeWrite(t, db, race.organization, retention, func(ctx context.Context) error {
-		return NewStore(time.Now).InsertFamilyBillingEvents(ctx, race.organization, 0, "read", []parentbilling.FamilyBilling{read})
+		return NewStore(time.Now).InsertFamilyChildEvents(ctx, race.organization,
+			parentbilling.FamilyChildEvent{Action: parentbilling.FamilyChildEventRead, Actor: parentbilling.FamilyChildActorOffice},
+			[]parentbilling.FamilyChildTarget{{ContractID: race.going, CountID: &count}})
 	})
-	require.NoError(t, err, "the read entry must not fail on the deleted contract")
+	require.NoError(t, err, "the read must not fail on the deleted contract")
 
-	var contracts []int64
-	require.NoError(t, db.NewRaw(`SELECT care_contract_id FROM parent_billing.family_billing_events
-		WHERE organization_id = ? AND family_billing_id = ? AND action = 'read'`, race.organization, deviation).Scan(ctx, &contracts))
-	assert.Equal(t, []int64{race.staying}, contracts, "the entry names the contract the deviation hangs on now")
+	var entries int
+	require.NoError(t, db.NewRaw(`SELECT count(*) FROM parent_billing.family_child_count_events WHERE organization_id = ?`,
+		race.organization).Scan(ctx, &entries))
+	assert.Zero(t, entries, "the number went with its contract and so did its trail")
 }
 
 // TestSaveThroughAContractTheRetentionDeletesIsAConflict: the office saves
