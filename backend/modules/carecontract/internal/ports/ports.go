@@ -178,7 +178,9 @@ type Store interface {
 	UpsertTemplates(ctx context.Context, organizationID, accountID, schoolID int64, inputs []carecontract.ModuleTemplateInput) ([]TemplateRow, error)
 	MarkWithdrawalInformed(ctx context.Context, organizationID, contractID int64, at time.Time) error
 	Templates(ctx context.Context, organizationID int64) ([]TemplateRow, error)
-	UpsertTemplate(ctx context.Context, organizationID, accountID, schoolID, offeringID int64, input carecontract.TemplateInput) (carecontract.ContractTemplate, error)
+	// UpsertTemplate replaces the offering's template; with replace false it
+	// only inserts one and answers readstate.ErrChanged when one exists.
+	UpsertTemplate(ctx context.Context, organizationID, accountID, schoolID, offeringID int64, input carecontract.TemplateInput, replace bool) (carecontract.ContractTemplate, error)
 	// LockTemplate takes the lock of one offering's template for the rest of
 	// the transaction, also while it has none, and reads it: nil without one.
 	LockTemplate(ctx context.Context, organizationID, schoolID, offeringID int64) (*carecontract.ContractTemplate, error)

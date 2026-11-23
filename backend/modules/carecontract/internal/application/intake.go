@@ -478,14 +478,16 @@ func (in *Intake) SaveTemplate(ctx context.Context, reviewer carecontract.Review
 	var saved carecontract.ContractTemplate
 	var head carecontract.Letterhead
 	err = in.runtime.WithinTraeger(ctx, reviewer.OrganizationID, func(txCtx context.Context) error {
-		err := in.lockTemplateAsRead(txCtx, reviewer.OrganizationID, schoolID, offeringID, expectedVersion)
+		// A save that read no template only inserts: the catalog rollout
+		// inserts templates without this lock (ADR 0311).
+		stored, err := in.lockTemplateAsRead(txCtx, reviewer.OrganizationID, schoolID, offeringID, expectedVersion)
 		if err != nil {
 			return err
 		}
 		if head, err = in.letterheads.Letterhead(txCtx, reviewer); err != nil {
 			return fmt.Errorf("care contract: letterhead: %w", err)
 		}
-		if saved, err = in.store.UpsertTemplate(txCtx, reviewer.OrganizationID, reviewer.AccountID, schoolID, offeringID, input); err != nil {
+		if saved, err = in.store.UpsertTemplate(txCtx, reviewer.OrganizationID, reviewer.AccountID, schoolID, offeringID, input, stored != nil); err != nil {
 			return err
 		}
 		return trail(txCtx, in.store, reviewer.OrganizationID, reviewer.AccountID, 0, schoolID, ActionTemplate,
@@ -501,12 +503,12 @@ func (in *Intake) SaveTemplate(ctx context.Context, reviewer carecontract.Review
 // offering without one, and refuses a template that differs from the
 // version its author read (ADR 0311): the form sends every condition back,
 // also the ones nobody touched.
-func (in *Intake) lockTemplateAsRead(ctx context.Context, organizationID, schoolID, offeringID int64, expectedVersion string) error {
+func (in *Intake) lockTemplateAsRead(ctx context.Context, organizationID, schoolID, offeringID int64, expectedVersion string) (*carecontract.ContractTemplate, error) {
 	stored, err := in.store.LockTemplate(ctx, organizationID, schoolID, offeringID)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return readstate.Check(expectedVersion, carecontract.TemplateVersion(stored))
+	return stored, readstate.Check(expectedVersion, carecontract.TemplateVersion(stored))
 }
 
 // schoolsOf is every school of the Träger, or only schoolID, which must be

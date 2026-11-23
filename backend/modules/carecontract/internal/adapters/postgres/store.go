@@ -20,6 +20,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/carecontract/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -154,7 +155,10 @@ func (Store) LockTemplate(ctx context.Context, organizationID, schoolID, offerin
 	return &template, nil
 }
 
-func (Store) UpsertTemplate(ctx context.Context, organizationID, accountID, schoolID, offeringID int64, input carecontract.TemplateInput) (carecontract.ContractTemplate, error) {
+// UpsertTemplate replaces the offering's template, or with replace false
+// only inserts one: a template another writer inserted since the caller read
+// none (the catalog rollout takes no template lock) is then readstate.ErrChanged.
+func (Store) UpsertTemplate(ctx context.Context, organizationID, accountID, schoolID, offeringID int64, input carecontract.TemplateInput, replace bool) (carecontract.ContractTemplate, error) {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {
 		return carecontract.ContractTemplate{}, err
@@ -172,10 +176,14 @@ func (Store) UpsertTemplate(ctx context.Context, organizationID, accountID, scho
 			statute_required = EXCLUDED.statute_required, statute_title = EXCLUDED.statute_title,
 			statute_url = EXCLUDED.statute_url, contract_partner = EXCLUDED.contract_partner,
 			updated_by_account_id = EXCLUDED.updated_by_account_id
+		WHERE ?
 		RETURNING `+templateColumns,
 		organizationID, schoolID, offeringID, input.TermKind, input.TermMonths, input.NoticeMonths, input.NoticeTo,
 		input.SpecialTermination, input.SpecialTerminationNote, input.StatuteRequired, input.StatuteTitle,
-		input.StatuteURL, input.ContractPartner, accountID).Scan(ctx, &row)
+		input.StatuteURL, input.ContractPartner, accountID, replace).Scan(ctx, &row)
+	if !replace && errors.Is(err, sql.ErrNoRows) {
+		return carecontract.ContractTemplate{}, readstate.ErrChanged
+	}
 	if err != nil {
 		return carecontract.ContractTemplate{}, fmt.Errorf("care contract postgres: save template: %w", err)
 	}
