@@ -51,6 +51,13 @@ func TestKeepUnextendedBookingEnds(t *testing.T) {
 			replacement: []*careplan.BookedOffering{manual(care)},
 			want:        map[int64]*calendar.Date{care: &may},
 		},
+		"a co-booking ends with an extended trigger at a scheduled change": {
+			history: []*careplan.BookedOffering{stored(care, august, march), stored(late, august, march), stored(other, may, may.AddDays(30))},
+			before:  []int{0, 1},
+			replacement: []*careplan.BookedOffering{manual(care),
+				{CareOfferingID: late, SelectedDays: []string{"mon"}, AutomaticSelectedDays: []string{"mon"}}},
+			want: map[int64]*calendar.Date{care: &may, late: &may},
+		},
 		"a co-booking goes on with an extended trigger": {
 			history: []*careplan.BookedOffering{stored(care, august, march), stored(late, august, march)}, before: []int{0, 1},
 			replacement: []*careplan.BookedOffering{manual(care),

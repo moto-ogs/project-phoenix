@@ -42,7 +42,8 @@ func keepUnextendedBookingEnds(work *offeringAdjustmentWork, history []*careplan
 			kept = append(kept, link)
 		}
 	}
-	keepBookingEnds(work.replacement, kept, history, work.offeringByID, phaseEnd)
+	// Capped before the ends are kept, so the co-bookings an extended
+	// offering adds end with it.
 	if scheduled := scheduledOfferingReplacements(history, work.selectionDate); len(scheduled) > 0 {
 		for _, row := range work.replacement {
 			if extended[row.CareOfferingID] {
@@ -50,6 +51,7 @@ func keepUnextendedBookingEnds(work *offeringAdjustmentWork, history []*careplan
 			}
 		}
 	}
+	keepBookingEnds(work.replacement, kept, history, work.offeringByID, phaseEnd)
 	return storedBookingEnds(work.beforeLinks, history, phaseEnd)
 }
 

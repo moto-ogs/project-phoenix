@@ -37,11 +37,9 @@ func (d *Decisions) markExtendableBookings(
 	if len(studentByChild) == 0 {
 		return nil
 	}
-	lastDays, err := d.lastCareDays(ctx, studentByChild, phaseEnd)
+	lastDays, err := d.optionalLastCareDays(ctx, studentByChild, phaseEnd)
 	if err != nil {
-		d.logger().Warn("decision: care ends for booking extensions unavailable, offering none",
-			slog.String("error", err.Error()))
-		return nil
+		return err
 	}
 	for childID, studentID := range studentByChild {
 		lastDay, inCare := lastDays[studentID]
@@ -88,6 +86,33 @@ func childrenWithLimitedBookings(
 		}
 	}
 	return studentByChild
+}
+
+// optionalLastCareDays reads lastCareDays in a savepoint of the ambient
+// transaction: a failed read offers no extension and leaves the transaction
+// usable for the rest of the detail. Only a failed savepoint is an error.
+func (d *Decisions) optionalLastCareDays(ctx context.Context, studentByChild map[int64]int64, phaseEnd calendar.Date) (map[int64]calendar.Date, error) {
+	var lastDays map[int64]calendar.Date
+	read := func(readCtx context.Context) error {
+		var err error
+		lastDays, err = d.lastCareDays(readCtx, studentByChild, phaseEnd)
+		return err
+	}
+	var err error
+	if d.deps.Runtime.InTransaction != nil && d.deps.Runtime.Savepoint != nil && d.deps.Runtime.InTransaction(ctx) {
+		err = d.deps.Runtime.Savepoint(ctx, read)
+	} else {
+		err = read(ctx)
+	}
+	if err == nil {
+		return lastDays, nil
+	}
+	if d.deps.Runtime.IsSavepointControl != nil && d.deps.Runtime.IsSavepointControl(err) {
+		return nil, err
+	}
+	d.logger().Warn("decision: care ends for booking extensions unavailable, offering none",
+		slog.String("error", err.Error()))
+	return nil, nil
 }
 
 // lastCareDays is the last day an extension books each student in care to:
