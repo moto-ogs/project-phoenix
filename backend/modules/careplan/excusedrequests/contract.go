@@ -134,7 +134,6 @@ var (
 
 	// Cross-kind parent-request lifecycle sentinels. Consumers that serve
 	// several request kinds match these next to the other owners' sentinels.
-	ErrParentRequestStale                 = errors.New("care plan: parent request version is stale")
 	ErrParentRequestReasonRequired        = errors.New("care plan: parent request reason is required")
 	ErrParentRequestPast                  = errors.New("care plan: parent request only covers past days")
 	ErrParentRequestNotPast               = errors.New("care plan: parent request still covers future days")

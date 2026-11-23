@@ -9,8 +9,8 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/compose"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/masterdatarequests"
-	"github.com/moto-ogs/project-phoenix/modules/careplan/parentrequests"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
@@ -66,6 +66,8 @@ func TestFamilyRequestDeletedWhileWaiting(t *testing.T) {
 				}
 				ctx, cancel := context.WithTimeout(f.care.staffCtx(f.care.staffAccount), 20*time.Second)
 				defer cancel()
+				// The reviewer read the request before it was deleted.
+				version := testpkg.ParentRequestVersion(t, f.table(kind), f.id(kind))
 				done := make(chan error, 1)
 				err := testpkg.WithTenantTx(t, ctx, db, testpkg.Tenant(t), func(deleteCtx context.Context, tx bun.Tx) error {
 					var id, pid int64
@@ -74,7 +76,7 @@ func TestFamilyRequestDeletedWhileWaiting(t *testing.T) {
 					}
 					require.NoError(t, tx.NewRaw("SELECT pg_backend_pid()").Scan(deleteCtx, &pid))
 					go func() {
-						done <- testpkg.WithTenantTx(t, ctx, db, testpkg.Tenant(t), func(writeCtx context.Context, _ bun.Tx) error { return f.call(kind, operation, id)(writeCtx) })
+						done <- testpkg.WithTenantTx(t, ctx, db, testpkg.Tenant(t), func(writeCtx context.Context, _ bun.Tx) error { return f.call(kind, operation, id, version)(writeCtx) })
 					}()
 					waitForRequestWriter(t, deleteCtx, tx, int(pid))
 					_, err := tx.NewDelete().TableExpr(f.table(kind)).Where("id = ?", id).Exec(deleteCtx)
@@ -99,6 +101,8 @@ func TestFamilyRequestChildDeletedWhileWaiting(t *testing.T) {
 			ctx, cancel := context.WithTimeout(f.care.staffCtx(f.care.staffAccount), 20*time.Second)
 			defer cancel()
 			people := owners.MustNewPeopleDirectory(testpkg.NewDatabase(t, db))
+			// The reviewer read the request before its child was deleted.
+			version := testpkg.ParentRequestVersion(t, f.table(kind), f.id(kind))
 			done := make(chan error, 1)
 			err := testpkg.WithTenantTx(t, ctx, db, testpkg.Tenant(t), func(deleteCtx context.Context, tx bun.Tx) error {
 				if err := people.LockStudent(deleteCtx, f.care.chain.StudentID); err != nil {
@@ -107,7 +111,9 @@ func TestFamilyRequestChildDeletedWhileWaiting(t *testing.T) {
 				var pid int
 				require.NoError(t, tx.NewRaw("SELECT pg_backend_pid()").Scan(deleteCtx, &pid))
 				go func() {
-					done <- testpkg.WithTenantTx(t, ctx, db, testpkg.Tenant(t), func(writeCtx context.Context, _ bun.Tx) error { return f.call(kind, "reject", f.id(kind))(writeCtx) })
+					done <- testpkg.WithTenantTx(t, ctx, db, testpkg.Tenant(t), func(writeCtx context.Context, _ bun.Tx) error {
+						return f.call(kind, "reject", f.id(kind), version)(writeCtx)
+					})
 				}()
 				waitForRequestWriter(t, deleteCtx, tx, pid)
 				_, err := people.DeleteStudent(deleteCtx, f.care.chain.StudentID)
@@ -143,7 +149,7 @@ func TestBulkRequestChildDeletedWhileWaitingPreservesRace(t *testing.T) {
 		return err
 	})
 	require.NoError(t, err)
-	require.ErrorIs(t, awaitRequestWriter(t, ctx, done), parentrequests.ErrStale)
+	require.ErrorIs(t, awaitRequestWriter(t, ctx, done), readstate.ErrChanged)
 }
 
 func requestErrorOperations(kind string) []string {

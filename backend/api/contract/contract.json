@@ -9227,7 +9227,7 @@
       ],
       "response": {
         "kind": "ref",
-        "ref": "requestSharingResponse"
+        "ref": "requestSharingStateResponse"
       }
     },
     {
@@ -22821,7 +22821,7 @@
       },
       "response": {
         "kind": "ref",
-        "ref": "requestSharingResponse"
+        "ref": "requestSharingStateResponse"
       }
     },
     {
@@ -67716,6 +67716,12 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -75140,6 +75146,12 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -76671,6 +76683,12 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -76718,6 +76736,12 @@
           "name": "submitted_by_self",
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -78271,6 +78295,12 @@
           "name": "signed",
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -122339,6 +122369,13 @@
               "kind": "string"
             }
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -122391,6 +122428,35 @@
               "kind": "ref",
               "ref": "requestSharingRecipientResponse"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "requestSharingStateResponse",
+      "go_type": "parent.requestSharingStateResponse",
+      "fields": [
+        {
+          "name": "family_protected",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "recipients",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "requestSharingRecipientResponse"
+            }
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]

@@ -10,6 +10,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // offeringChangeMaxNoteLen bounds free text (in runes) from either side so a
@@ -217,8 +218,8 @@ func (s *OfferingChanges) Edit(
 	if offeringChangeTerminal(row) {
 		return nil, careplan.ErrOfferingChangeNotPending
 	}
-	if expectedVersion != "" && careplan.ParentRequestVersion(row.UpdatedAt) != expectedVersion {
-		return nil, careplan.ErrParentRequestStale
+	if err := readstate.Check(expectedVersion, careplan.ParentRequestVersion(row.UpdatedAt)); err != nil {
+		return nil, err
 	}
 	proposal, err := s.validateOfferingChangeProposal(ctx, input)
 	if err != nil {

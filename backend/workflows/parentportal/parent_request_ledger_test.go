@@ -94,7 +94,7 @@ func TestParentRequestLedgerRecordsSubmitAndDecision(t *testing.T) {
 	assert.Equal(t, chain.StudentID, rows[0].StudentID)
 
 	err = testpkg.WithTenantTx(t, adminCtx(), db, chain.TenantID, func(txCtx context.Context, _ bun.Tx) error {
-		_, decideErr := requests.Decide(txCtx, careplan.ExcusedRequestDecideInput{
+		_, decideErr := requests.Decide(txCtx, careplan.ExcusedRequestDecideInput{ExpectedVersion: testpkg.ExcusedRequestVersion(t, requestID),
 			RequestID:  requestID,
 			Approve:    true,
 			Reason:     "Passt so",
@@ -131,7 +131,7 @@ func TestParentRequestLedgerRollsBackWithItsWrite(t *testing.T) {
 
 	// A rejection without a reason is refused, so the transaction rolls back.
 	err = testpkg.WithTenantTx(t, adminCtx(), db, chain.TenantID, func(txCtx context.Context, _ bun.Tx) error {
-		_, decideErr := requests.Decide(txCtx, careplan.ExcusedRequestDecideInput{
+		_, decideErr := requests.Decide(txCtx, careplan.ExcusedRequestDecideInput{ExpectedVersion: testpkg.ExcusedRequestVersion(t, requestID),
 			RequestID:  requestID,
 			Approve:    false,
 			ReviewedBy: chain.AccountID,

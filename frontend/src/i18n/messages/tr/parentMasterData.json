@@ -143,7 +143,6 @@
     "editedAt": "{date} tarihinde değiştirildi",
     "saveEdit": "Değişikliği kaydet",
     "noteRequired": "Lütfen bakımın neden değişmesi gerektiğini kısaca yazın.",
-    "staleError": "Talep bu arada işleme alındı. Lütfen sayfayı yenileyin.",
     "intro": "Çocuğunuzun bundan sonra hangi tekliflere katılacağını seçin. Değişikliğin ne zaman başlayacağını da seçin. Ekip talebinizi inceler.",
     "noOfferings": "Bu dönem için kayıt yapılabilecek bakım yok.",
     "effectiveFromLabel": "Değişikliğin başlangıcı",

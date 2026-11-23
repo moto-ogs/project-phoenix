@@ -477,11 +477,11 @@ func (w *targetRiskWorkload) prepare(t *testing.T, scenario checkpointScenario) 
 			scenario.Body = fmt.Sprintf(`{"rfid_tag":%q,"action":"checkin","status":"present"}`, w.staffTag)
 		}
 	case "request-review.care-schedule-decide":
-		requestID := w.pendingCareRequest(t)
+		requestID, version := w.pendingCareRequest(t)
 		scenario.Path = strings.Replace(scenario.Path, checkpointRequestPlaceholder, strconv.FormatInt(requestID, 10), 1)
 		// #6843: the approval names the diff the open queue shows.
 		impact := careScheduleImpactToken(t, w.handler, w.token, w.parentStudentID, requestID)
-		scenario.Body = fmt.Sprintf(`{"approve":true,"reason":"Checkpoint","impact_token":%q}`, impact)
+		scenario.Body = fmt.Sprintf(`{"approve":true,"reason":"Checkpoint","impact_token":%q,"expected_version":%q}`, impact, version)
 	case "care-plan.care-end":
 		scenario.Body = w.prepareCareEnd(t, false)
 	case "care-plan.care-end-replan":
@@ -534,7 +534,7 @@ func (w *targetRiskWorkload) mfaChallenge(t *testing.T, code, submitted string) 
 // pendingCareRequest files one parent care-schedule request for the chain's
 // child. The pickup time alternates so an approved plan never equals the
 // next proposal.
-func (w *targetRiskWorkload) pendingCareRequest(t *testing.T) int64 {
+func (w *targetRiskWorkload) pendingCareRequest(t *testing.T) (int64, string) {
 	t.Helper()
 	pickup := "15:30"
 	if w.decided%2 == 1 {
@@ -546,7 +546,7 @@ func (w *targetRiskWorkload) pendingCareRequest(t *testing.T) int64 {
 	path := "/parent/me/children/" + strconv.FormatInt(w.parentStudentID, 10) + "/care-schedule/requests"
 	created := doCareScheduleJSON(t, w.handler, http.MethodPost, path, w.parentToken, body)
 	require.Equal(t, http.StatusCreated, created.Code, "prepare care-schedule request: %s", created.Body.String())
-	return careSchedulePendingRequestID(t, created)
+	return careSchedulePendingRequestID(t, created), careSchedulePendingRequestVersion(t, created)
 }
 
 // observe carries state from a response into the next preparation.

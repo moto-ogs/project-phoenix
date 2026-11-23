@@ -13,6 +13,7 @@
   "valueRequired": "Bitte trage einen Wert ein.",
   "submit": "Änderung speichern",
   "saving": "Wird gespeichert …",
+  "reloading": "Lädt den gespeicherten Stand …",
   "cancel": "Abbrechen",
   "close": "Fenster schließen",
   "errorObject": "die Anfrage",

@@ -18,12 +18,19 @@ import {
   updateOfferingChangeRequest,
   type OfferingCatalog,
 } from "~/lib/parent-api";
+import { ToastProvider } from "~/contexts/ToastContext";
 import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
 
 vi.unmock("swr");
 
 function renderParent(ui: Parameters<typeof render>[0]) {
-  return render(ui, { wrapper: ParentResourceTestProvider });
+  return render(ui, {
+    wrapper: ({ children }) => (
+      <ParentResourceTestProvider>
+        <ToastProvider>{children}</ToastProvider>
+      </ParentResourceTestProvider>
+    ),
+  });
 }
 
 vi.mock("~/lib/parent-api", async (importOriginal) => {
@@ -121,7 +128,7 @@ describe("OfferingChangeRequestModal", () => {
     mockEvents.mockResolvedValue([
       {
         event_type: "submitted",
-        version: "v7",
+        version: "history-v",
         created_at: "2026-08-10T08:00:00Z",
       },
     ]);
@@ -182,7 +189,7 @@ describe("OfferingChangeRequestModal", () => {
         onClose={vi.fn()}
         onSubmit={vi.fn()}
         reasonRequired={false}
-        editRequestId="req-9"
+        editRequest={{ id: "req-9", version: "v7" }}
         onEdited={onEdited}
       />,
     );

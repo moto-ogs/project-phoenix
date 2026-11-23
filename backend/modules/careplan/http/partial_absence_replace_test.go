@@ -139,7 +139,7 @@ func TestApproveExcusedRequestReplacesConfirmedPartialAbsence(t *testing.T) {
 
 	decide := func(replace bool) (int, string) {
 		req := testutil.NewAuthenticatedRequest(t, http.MethodPost, fmt.Sprintf("/excused-absence-requests/%d/decide", pending.ID),
-			map[string]any{"approve": true, "reason": "Passt so", "replace_partial_absences": replace})
+			map[string]any{"approve": true, "reason": "Passt so", "replace_partial_absences": replace, "expected_version": testpkg.ExcusedRequestVersion(t, pending.ID)})
 		rr := authExec(t, tc, req, claims, perms)
 		return rr.Code, rr.Body.String()
 	}

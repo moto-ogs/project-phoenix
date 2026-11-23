@@ -99,6 +99,7 @@ describe("decideCareScheduleChangeRequest", () => {
       true,
       undefined,
       "impact-v1",
+      "v1",
     );
 
     expect(seenMethod).toBe("POST");
@@ -109,6 +110,7 @@ describe("decideCareScheduleChangeRequest", () => {
       approve: true,
       reason: "",
       impact_token: "impact-v1",
+      expected_version: "v1",
     });
     expect(out.status).toBe("approved");
   });
@@ -125,12 +127,14 @@ describe("decideCareScheduleChangeRequest", () => {
       false,
       "Zeiten kollidieren",
       "impact-v1",
+      "v1",
     );
 
     expect(JSON.parse(seenBody)).toEqual({
       approve: false,
       reason: "Zeiten kollidieren",
       impact_token: "impact-v1",
+      expected_version: "v1",
     });
   });
 
@@ -145,6 +149,7 @@ describe("decideCareScheduleChangeRequest", () => {
       true,
       undefined,
       "impact-v1",
+      "v1",
     );
     expect(seenURL).toContain("a%2Fb%201");
   });
@@ -168,6 +173,7 @@ describe("decideCareScheduleChangeRequest", () => {
       true,
       undefined,
       "impact-v1",
+      "v1",
     ).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(ApiError);
     expect((err as ApiError).code).toBe("students.change_request_not_pending");
@@ -186,6 +192,7 @@ describe("decideCareScheduleChangeRequest", () => {
       false,
       undefined,
       "impact-v1",
+      "v1",
     ).catch((e: unknown) => e);
     expect((err as ApiError).message).toBe(
       "Entscheidung konnte nicht gespeichert werden",

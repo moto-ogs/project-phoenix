@@ -119,7 +119,12 @@ describe("CareRequestReviewItem after a later pickup (#3261)", () => {
     const onDecided = vi.fn();
     render(
       <PickupExtensionAccessProvider value>
-        <CareRequestReviewItem row={laterPickupRow()} onDecided={onDecided} />
+        <CareRequestReviewItem
+          row={laterPickupRow()}
+          onDecided={onDecided}
+          expectedVersion="v1"
+          onStale={vi.fn()}
+        />
       </PickupExtensionAccessProvider>,
     );
 
@@ -150,6 +155,8 @@ describe("CareRequestReviewItem after a later pickup (#3261)", () => {
           key={row.id}
           row={row}
           onDecided={() => setRows([])}
+          expectedVersion="v1"
+          onStale={vi.fn()}
         />
       ));
     }
@@ -200,7 +207,12 @@ describe("CareRequestReviewItem after a later pickup (#3261)", () => {
       .mockResolvedValueOnce(undefined);
     render(
       <PickupExtensionAccessProvider value>
-        <CareRequestReviewItem row={laterPickupRow()} onDecided={vi.fn()} />
+        <CareRequestReviewItem
+          row={laterPickupRow()}
+          onDecided={vi.fn()}
+          expectedVersion="v1"
+          onStale={vi.fn()}
+        />
       </PickupExtensionAccessProvider>,
     );
 
@@ -228,7 +240,12 @@ describe("CareRequestReviewItem after a later pickup (#3261)", () => {
     );
     render(
       <PickupExtensionAccessProvider value>
-        <CareRequestReviewItem row={laterPickupRow()} onDecided={vi.fn()} />
+        <CareRequestReviewItem
+          row={laterPickupRow()}
+          onDecided={vi.fn()}
+          expectedVersion="v1"
+          onStale={vi.fn()}
+        />
       </PickupExtensionAccessProvider>,
     );
 
@@ -294,7 +311,12 @@ describe("CareRequestReviewItem after a later pickup (#3261)", () => {
     );
     render(
       <PickupExtensionAccessProvider value>
-        <CareRequestReviewItem row={laterPickupRow()} onDecided={vi.fn()} />
+        <CareRequestReviewItem
+          row={laterPickupRow()}
+          onDecided={vi.fn()}
+          expectedVersion="v1"
+          onStale={vi.fn()}
+        />
       </PickupExtensionAccessProvider>,
     );
 
@@ -312,7 +334,12 @@ describe("CareRequestReviewItem after a later pickup (#3261)", () => {
     const onDecided = vi.fn();
     render(
       <PickupExtensionAccessProvider value>
-        <CareRequestReviewItem row={laterPickupRow()} onDecided={onDecided} />
+        <CareRequestReviewItem
+          row={laterPickupRow()}
+          onDecided={onDecided}
+          expectedVersion="v1"
+          onStale={vi.fn()}
+        />
       </PickupExtensionAccessProvider>,
     );
 
@@ -327,7 +354,12 @@ describe("CareRequestReviewItem after a later pickup (#3261)", () => {
   it("fragt ohne Recht am Betreuungsplan nicht nach", async () => {
     const onDecided = vi.fn();
     render(
-      <CareRequestReviewItem row={laterPickupRow()} onDecided={onDecided} />,
+      <CareRequestReviewItem
+        row={laterPickupRow()}
+        onDecided={onDecided}
+        expectedVersion="v1"
+        onStale={vi.fn()}
+      />,
     );
 
     approve();
@@ -345,6 +377,8 @@ describe("CareRequestReviewItem after a later pickup (#3261)", () => {
         <CareRequestReviewItem
           row={{ ...laterPickupRow(), request_kind: "weekly_schedule" }}
           onDecided={onDecided}
+          expectedVersion="v1"
+          onStale={vi.fn()}
         />
       </PickupExtensionAccessProvider>,
     );
@@ -363,7 +397,12 @@ describe("CareRequestReviewItem after a later pickup (#3261)", () => {
     const onDecided = vi.fn();
     render(
       <PickupExtensionAccessProvider value>
-        <CareRequestReviewItem row={laterPickupRow()} onDecided={onDecided} />
+        <CareRequestReviewItem
+          row={laterPickupRow()}
+          onDecided={onDecided}
+          expectedVersion="v1"
+          onStale={vi.fn()}
+        />
       </PickupExtensionAccessProvider>,
     );
 
@@ -386,7 +425,12 @@ describe("CareRequestReviewItem after a later pickup (#3261)", () => {
     const onDecided = vi.fn();
     render(
       <PickupExtensionAccessProvider value>
-        <CareRequestReviewItem row={laterPickupRow()} onDecided={onDecided} />
+        <CareRequestReviewItem
+          row={laterPickupRow()}
+          onDecided={onDecided}
+          expectedVersion="v1"
+          onStale={vi.fn()}
+        />
       </PickupExtensionAccessProvider>,
     );
 

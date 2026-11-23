@@ -92,7 +92,6 @@ func ExcusedParentRequestError(err error) error {
 // sentinels onto the parent-request contract.
 func ParentRequestLifecycleError(err error) error {
 	for _, pair := range [][2]error{
-		{careplan.ErrParentRequestStale, parentrequests.ErrStale},
 		{careplan.ErrParentRequestDecisionRace, parentrequests.ErrDecisionRace},
 		{careplan.ErrParentRequestReasonRequired, parentrequests.ErrReasonRequired},
 		{careplan.ErrParentRequestPast, parentrequests.ErrPast},

@@ -160,7 +160,7 @@ func TestAggregatedChangeRequests_RouterDirectCorrections(t *testing.T) {
 	// Eine Freigabe trägt seit #2484 immer das Datum, das die OGS bestätigt —
 	// hier das der Anfrage.
 	body := strings.NewReader(fmt.Sprintf(
-		`{"approve":true,"reason":"Passt","effective_from":%q}`, pending.EffectiveFrom))
+		`{"approve":true,"reason":"Passt","effective_from":%q,"expected_version":%q}`, pending.EffectiveFrom, testpkg.OfferingRequestVersion(t, pending.ID)))
 	rr := authExec(t, tc,
 		testutil.NewRequest("POST", fmt.Sprintf("/offering-change-requests/%d/decide", pending.ID), body),
 		claims, perms)
@@ -221,7 +221,7 @@ func TestAggregatedChangeRequests_HistoryOrdersSourcesOnOneClock(t *testing.T) {
 		Payload: json.RawMessage(`{"weekdays":[{"weekday":1,"pickup":"14:00"}]}`),
 	})
 	require.NoError(t, err)
-	decide(fmt.Sprintf("/care-schedule-change-requests/%d/decide", care.ID), `{"approve":false,"reason":"Passt nicht"}`)
+	decide(fmt.Sprintf("/care-schedule-change-requests/%d/decide", care.ID), fmt.Sprintf(`{"approve":false,"reason":"Passt nicht","expected_version":%q}`, testpkg.CareRequestVersion(t, care.ID)))
 
 	require.NoError(t, testpkg.WithTenantTx(t, t.Context(), tc.db, student.TenantID, func(ctx context.Context, _ bun.Tx) error {
 		_, updateErr := tc.enrollmentDecision.UpdateChildOfferings(ctx, capability.UpdateChildOfferingsInput{
@@ -234,7 +234,7 @@ func TestAggregatedChangeRequests_HistoryOrdersSourcesOnOneClock(t *testing.T) {
 
 	offering := insertPendingOfferingChangeRequest(t, tc, fixture, student.ID, account.ID)
 	decide(fmt.Sprintf("/offering-change-requests/%d/decide", offering.ID),
-		fmt.Sprintf(`{"approve":true,"reason":"Passt","effective_from":%q}`, offering.EffectiveFrom))
+		fmt.Sprintf(`{"approve":true,"reason":"Passt","effective_from":%q,"expected_version":%q}`, offering.EffectiveFrom, testpkg.OfferingRequestVersion(t, offering.ID)))
 
 	rr := authExec(t, tc, testutil.NewRequest("GET", "/change-requests?view=history&search=Zuhrzeit", nil), claims, perms)
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
@@ -276,8 +276,8 @@ func TestOfferingWithdrawalApprovalRequiresUpdateButNotDeletePermission(t *testi
 
 	// #2267: reason policy defaults to "both"
 	body := strings.NewReader(fmt.Sprintf(
-		`{"approve":true,"reason":"Passt so","effective_from":%q,"complete_withdrawal_confirmed":true}`,
-		pending.EffectiveFrom,
+		`{"approve":true,"reason":"Passt so","effective_from":%q,"complete_withdrawal_confirmed":true,"expected_version":%q}`,
+		pending.EffectiveFrom, testpkg.OfferingRequestVersion(t, pending.ID),
 	))
 	response := authExec(t, tc,
 		testutil.NewRequest("POST", fmt.Sprintf("/offering-change-requests/%d/decide", pending.ID), body),

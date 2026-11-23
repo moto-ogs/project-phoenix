@@ -82,11 +82,12 @@ function logFailure(error: unknown): never {
 export async function decideOfferingChangeRequest(
   requestId: string,
   approve: boolean,
-  reason?: string,
-  excludedOfferingIds?: readonly string[],
-  effectiveFrom?: string,
-  completeWithdrawalConfirmed?: boolean,
-  expectedVersion?: string,
+  reason: string | undefined,
+  excludedOfferingIds: readonly string[] | undefined,
+  effectiveFrom: string | undefined,
+  completeWithdrawalConfirmed: boolean,
+  /** Die Fassung der Anfrage aus der Liste (ADR 0311). */
+  expectedVersion: string,
 ): Promise<studentsContract.rosterImpactResponse | undefined> {
   const answer = await bffJson(
     "tenant",
@@ -103,7 +104,7 @@ export async function decideOfferingChangeRequest(
         ...(completeWithdrawalConfirmed
           ? { complete_withdrawal_confirmed: true }
           : {}),
-        ...(expectedVersion ? { expected_version: expectedVersion } : {}),
+        expected_version: expectedVersion,
       },
       errorMessage: "Entscheidung konnte nicht gespeichert werden",
     },

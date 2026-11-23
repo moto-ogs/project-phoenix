@@ -314,7 +314,7 @@ describe("ConflictDecisionGroup", () => {
     const onStale = vi.fn();
     mockResolve.mockRejectedValueOnce(
       new ApiError("change request stale", 409, {
-        code: "students.change_request_stale",
+        code: "general.changed_since_read",
       }),
     );
     render(

@@ -76,11 +76,15 @@ describe("decideExcusedAbsenceRequest", () => {
       return jsonResponse({ data: mkRequest({ status: "approved" }) });
     });
 
-    const out = await decideExcusedAbsenceRequest("r1", true);
+    const out = await decideExcusedAbsenceRequest("r1", true, undefined, "v1");
 
     expect(seenMethod).toBe("POST");
     expect(seenURL).toBe("/api/students/excused-absence-requests/r1/decide");
-    expect(JSON.parse(seenBody)).toEqual({ approve: true, reason: "" });
+    expect(JSON.parse(seenBody)).toEqual({
+      approve: true,
+      reason: "",
+      expected_version: "v1",
+    });
     expect(out.status).toBe("approved");
   });
 
@@ -91,11 +95,17 @@ describe("decideExcusedAbsenceRequest", () => {
       return jsonResponse({ data: mkRequest({ status: "rejected" }) });
     });
 
-    await decideExcusedAbsenceRequest("r1", false, "Bitte telefonisch klären");
+    await decideExcusedAbsenceRequest(
+      "r1",
+      false,
+      "Bitte telefonisch klären",
+      "v1",
+    );
 
     expect(JSON.parse(seenBody)).toEqual({
       approve: false,
       reason: "Bitte telefonisch klären",
+      expected_version: "v1",
     });
   });
 
@@ -105,7 +115,7 @@ describe("decideExcusedAbsenceRequest", () => {
       seenURL = typeof input === "string" ? input : input.toString();
       return jsonResponse({ data: mkRequest() });
     });
-    await decideExcusedAbsenceRequest("a/b 1", true);
+    await decideExcusedAbsenceRequest("a/b 1", true, undefined, "v1");
     expect(seenURL).toContain("a%2Fb%201");
   });
 
@@ -120,18 +130,24 @@ describe("decideExcusedAbsenceRequest", () => {
       ),
     );
 
-    const err = await decideExcusedAbsenceRequest("r1", true).catch(
-      (e: unknown) => e,
-    );
+    const err = await decideExcusedAbsenceRequest(
+      "r1",
+      true,
+      undefined,
+      "v1",
+    ).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(ApiError);
     expect((err as ApiError).code).toBe("students.change_request_not_pending");
   });
 
   it("falls back to the German decision message on a non-JSON error", async () => {
     mockFetch(async () => new Response("", { status: 500 }));
-    const err = await decideExcusedAbsenceRequest("r1", false).catch(
-      (e: unknown) => e,
-    );
+    const err = await decideExcusedAbsenceRequest(
+      "r1",
+      false,
+      undefined,
+      "v1",
+    ).catch((e: unknown) => e);
     expect((err as ApiError).message).toBe(
       "Entscheidung konnte nicht gespeichert werden",
     );

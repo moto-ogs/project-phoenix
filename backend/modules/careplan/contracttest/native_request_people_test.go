@@ -81,7 +81,7 @@ func TestRequestApprovalPreservesNativePlanAndAuditSnapshots(t *testing.T) {
 				api.WithCareRequestToday(func() calendar.Date { return calendar.NewDate(2026, 8, 24) }),
 			)
 			request := f.createPending(t, careWeekdays(map[string]any{"weekday": 5, "mode": "pickup", "arrival": "08:00", "pickup": "16:00"}))
-			_, err = service.Decide(ctx, carerequests.DecideInput{RequestID: request.ID, Approve: true, ReviewedBy: f.staffAccount})
+			_, err = service.Decide(ctx, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, request.ID), RequestID: request.ID, Approve: true, ReviewedBy: f.staffAccount})
 			require.NoError(t, err)
 			require.NotNil(t, directory.baseline)
 			require.NotNil(t, audit.before)

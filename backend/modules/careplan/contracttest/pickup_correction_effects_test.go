@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -72,7 +73,7 @@ func correctionRequest(t *testing.T, f *careFixture, date calendar.Date, approve
 		Status: carerequests.StatusPending, Payload: raw,
 	})
 	require.NoError(t, err)
-	result, err := f.svc.Decide(correctionContext(t, f), carerequests.DecideInput{
+	result, err := f.svc.Decide(correctionContext(t, f), carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, row.ID),
 		RequestID: row.ID, Approve: approve, Reason: "Geprüft", ReviewedBy: f.staffAccount,
 	})
 	require.NoError(t, err)
@@ -181,7 +182,7 @@ func TestPickupCorrectionConcurrentGeneration(t *testing.T) {
 	})
 	loser := awaitRequestWriter(t, ctx, done)
 	require.NoError(t, err)
-	require.ErrorContains(t, loser, "stale")
+	require.ErrorIs(t, loser, readstate.ErrChanged)
 	assertCorrectionEffects(t, f, date, slotID, false)
 }
 

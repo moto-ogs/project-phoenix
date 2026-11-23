@@ -61,13 +61,20 @@ describe("master-data review API", () => {
       "id/with space",
       true,
       "passt",
+      "v1",
     );
 
     expect(seenURL).toBe(
       "/api/students/master-data-change-requests/id%2Fwith%20space/decide",
     );
     expect(seenMethod).toBe("POST");
-    expect(seenBody).toBe(JSON.stringify({ approve: true, reason: "passt" }));
+    expect(seenBody).toBe(
+      JSON.stringify({
+        approve: true,
+        reason: "passt",
+        expected_version: "v1",
+      }),
+    );
     expect(out.status).toBe("approved");
   });
 
@@ -90,9 +97,11 @@ describe("master-data review API", () => {
       });
     });
 
-    await decideMasterDataChangeRequest("100", false);
+    await decideMasterDataChangeRequest("100", false, undefined, "v1");
 
-    expect(seenBody).toBe(JSON.stringify({ approve: false, reason: "" }));
+    expect(seenBody).toBe(
+      JSON.stringify({ approve: false, reason: "", expected_version: "v1" }),
+    );
   });
 
   it("throws an ApiError with the wire code on failed requests", async () => {
@@ -107,9 +116,12 @@ describe("master-data review API", () => {
       ),
     );
 
-    const error = await decideMasterDataChangeRequest("100", true).catch(
-      (err) => err,
-    );
+    const error = await decideMasterDataChangeRequest(
+      "100",
+      true,
+      undefined,
+      "v1",
+    ).catch((err) => err);
     expect(error).toBeInstanceOf(ApiError);
     expect(error).toMatchObject({
       status: 409,
@@ -122,7 +134,7 @@ describe("master-data review API", () => {
     mockFetch(async () => new Response("nope", { status: 500 }));
 
     await expect(
-      decideMasterDataChangeRequest("100", true),
+      decideMasterDataChangeRequest("100", true, undefined, "v1"),
     ).rejects.toMatchObject({
       status: 500,
       code: "general.server",

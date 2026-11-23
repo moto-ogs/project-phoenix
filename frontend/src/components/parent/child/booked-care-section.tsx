@@ -109,7 +109,10 @@ export function BookedCareSection({
     () => mutateSchedule(),
   );
   const [modalOpen, setModalOpen] = useState(false);
-  const [editRequest, setEditRequest] = useState<string | null>(null);
+  const [editRequest, setEditRequest] = useState<{
+    id: string;
+    version: string;
+  } | null>(null);
   // `parent-conversation-refresh` reaches these readers through useChildCare
   // of the same child page, which refreshes the child's whole status family.
   const refresh = useCallback(() => {
@@ -360,7 +363,9 @@ export function BookedCareSection({
                   variant="outline"
                   size="md"
                   tooltip={t("requestEditTooltip")}
-                  onClick={() => setEditRequest(pending.id)}
+                  onClick={() =>
+                    setEditRequest({ id: pending.id, version: pending.version })
+                  }
                 >
                   {t("careOfferings.edit")}
                 </Button>
@@ -488,7 +493,7 @@ export function BookedCareSection({
           studentId={studentId}
           childName={childFirstName}
           reasonRequired={reasonRequired}
-          editRequestId={editRequest}
+          editRequest={editRequest}
           onClose={() => setEditRequest(null)}
           onEdited={refresh}
         />

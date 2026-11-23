@@ -225,6 +225,7 @@ export interface PendingOfferingChangeResponse {
   note?: string;
   diff: OfferingDiffResponse[] | null;
   submitted_by_self: boolean;
+  version: string;
 }
 
 export const PendingOfferingChangeResponseSchema: z.ZodType<PendingOfferingChangeResponse, unknown> = object<PendingOfferingChangeResponse>({
@@ -234,6 +235,7 @@ export const PendingOfferingChangeResponseSchema: z.ZodType<PendingOfferingChang
   note: optional(str),
   diff: nullable(arr(OfferingDiffResponseSchema)),
   submitted_by_self: bool,
+  version: str,
 });
 
 /** Go: parent.OfferingRequestedItemResponse */
@@ -403,6 +405,7 @@ export interface PendingCareRequestResponse {
   created_at: string;
   diff: ParentCareRequestDiffResponse[] | null;
   submitted_by_self: boolean;
+  version: string;
 }
 
 export const PendingCareRequestResponseSchema: z.ZodType<PendingCareRequestResponse, unknown> = object<PendingCareRequestResponse>({
@@ -410,6 +413,7 @@ export const PendingCareRequestResponseSchema: z.ZodType<PendingCareRequestRespo
   created_at: str,
   diff: nullable(arr(ParentCareRequestDiffResponseSchema)),
   submitted_by_self: bool,
+  version: str,
 });
 
 /** Go: parent.CareScheduleRequestCapabilitiesResponse */
@@ -512,6 +516,7 @@ export interface ParentExcusedRequestResponse {
   created_at: string;
   reviewed_at?: string;
   is_self: boolean;
+  version: string;
 }
 
 export const ParentExcusedRequestResponseSchema: z.ZodType<ParentExcusedRequestResponse, unknown> = object<ParentExcusedRequestResponse>({
@@ -525,6 +530,7 @@ export const ParentExcusedRequestResponseSchema: z.ZodType<ParentExcusedRequestR
   created_at: instant,
   reviewed_at: optional(instant),
   is_self: bool,
+  version: str,
 });
 
 /** Go: parent.ChildFeaturesResponse */
@@ -672,6 +678,7 @@ export interface MasterDataChangeResponse {
   status: string;
   created_at: string;
   is_self: boolean;
+  version: string;
 }
 
 export const MasterDataChangeResponseSchema: z.ZodType<MasterDataChangeResponse, unknown> = object<MasterDataChangeResponse>({
@@ -683,6 +690,7 @@ export const MasterDataChangeResponseSchema: z.ZodType<MasterDataChangeResponse,
   status: str,
   created_at: str,
   is_self: bool,
+  version: str,
 });
 
 /** Go: parent.MasterDataResponse */
@@ -837,6 +845,7 @@ export interface PickupChangeRequestResponse {
   pickup_person?: string;
   pickup_person_guardian_profile_id?: string;
   signed: boolean;
+  version: string;
 }
 
 export const PickupChangeRequestResponseSchema: z.ZodType<PickupChangeRequestResponse, unknown> = object<PickupChangeRequestResponse>({
@@ -855,6 +864,7 @@ export const PickupChangeRequestResponseSchema: z.ZodType<PickupChangeRequestRes
   pickup_person: optional(str),
   pickup_person_guardian_profile_id: optional(str),
   signed: bool,
+  version: str,
 });
 
 /** Go: parent.pickupPermissionRequestResponse */
@@ -933,6 +943,19 @@ export interface requestSharingResponse {
 export const requestSharingResponseSchema: z.ZodType<requestSharingResponse, unknown> = object<requestSharingResponse>({
   family_protected: bool,
   recipients: nullable(arr(requestSharingRecipientResponseSchema)),
+});
+
+/** Go: parent.requestSharingStateResponse */
+export interface requestSharingStateResponse {
+  family_protected: boolean;
+  recipients: requestSharingRecipientResponse[] | null;
+  version: string;
+}
+
+export const requestSharingStateResponseSchema: z.ZodType<requestSharingStateResponse, unknown> = object<requestSharingStateResponse>({
+  family_protected: bool,
+  recipients: nullable(arr(requestSharingRecipientResponseSchema)),
+  version: str,
 });
 
 /** Go: parent.ParentRequestEventResponse */
@@ -2611,6 +2634,7 @@ export interface EditPickupChangeRequestBody {
 /** Go: parent.requestSharingBody */
 export interface requestSharingBody {
   recipient_guardian_profile_ids?: string[] | null;
+  expected_version?: string;
 }
 
 /** Go: parent.familyChildrenRequest */
@@ -2914,7 +2938,7 @@ export const routes = {
     method: "GET",
     pattern: "/parent/me/children/{studentId}/request-sharing/{requestType}/{requestId}",
     portals: ["parent"],
-    response: success(requestSharingResponseSchema),
+    response: success(requestSharingStateResponseSchema),
   },
   "GET /parent/me/children/{studentId}/requests/{requestType}/{requestId}/events": {
     method: "GET",
@@ -3459,7 +3483,7 @@ export const routes = {
     pattern: "/parent/me/children/{studentId}/request-sharing/{requestType}/{requestId}",
     portals: ["parent"],
     request: requestBody<requestSharingBody>(),
-    response: success(requestSharingResponseSchema),
+    response: success(requestSharingStateResponseSchema),
   },
   "PUT /parent/me/children/{studentId}/room-history-stop": {
     method: "PUT",

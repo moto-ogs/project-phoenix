@@ -410,7 +410,7 @@ func TestCourseWaitlistsRejectsInvalidFilter(t *testing.T) {
 
 func decideCourseRequest(t *testing.T, tc *testContext, claims sessiontoken.AppClaims, requestID int64) *httptest.ResponseRecorder {
 	t.Helper()
-	body := strings.NewReader(fmt.Sprintf(`{"approve":true,"effective_from":"%s","reason":"Platz frei"}`, studentsTestToday.AddDays(30)))
+	body := strings.NewReader(fmt.Sprintf(`{"approve":true,"effective_from":"%s","reason":"Platz frei","expected_version":%q}`, studentsTestToday.AddDays(30), testpkg.OfferingRequestVersion(t, requestID)))
 	return authExec(t, tc, testutil.NewRequest(http.MethodPost, fmt.Sprintf("/offering-change-requests/%d/decide", requestID), body),
 		claims, []string{"users:update"})
 }

@@ -38,21 +38,27 @@ func TestOfferingChangeNotFound(t *testing.T) {
 	})
 	for name, id := range map[string]int64{"missing": missingID, "foreign": foreignID} {
 		t.Run(name, func(t *testing.T) {
+			version := testpkg.MissingRequestVersion
+			if name == "foreign" {
+				version = testpkg.OfferingRequestVersion(t, id)
+			}
 			for _, operation := range []struct {
 				name string
 				call func(context.Context) error
 			}{
 				{"approve", func(ctx context.Context) error {
-					return decideOfferingChange(ctx, svc, careplan.OfferingChangeDecisionInput{RequestID: id, Approve: true, ReviewedBy: env.creatorID})
+					return decideOfferingChange(ctx, svc, careplan.OfferingChangeDecisionInput{ExpectedVersion: version, RequestID: id, Approve: true, ReviewedBy: env.creatorID})
 				}},
 				{"reject", func(ctx context.Context) error {
-					return decideOfferingChange(ctx, svc, careplan.OfferingChangeDecisionInput{RequestID: id, Reason: "Rejected", ReviewedBy: env.creatorID})
+					return decideOfferingChange(ctx, svc, careplan.OfferingChangeDecisionInput{ExpectedVersion: version, RequestID: id, Reason: "Rejected", ReviewedBy: env.creatorID})
 				}},
-				{"mark done", func(ctx context.Context) error { return svc.MarkDone(ctx, id, "", "", env.creatorID) }},
+				{"mark done", func(ctx context.Context) error {
+					return svc.MarkDone(ctx, id, version, "", env.creatorID)
+				}},
 				{"conflict candidate", func(ctx context.Context) error { _, err := svc.ConflictCandidate(ctx, id); return err }},
 				{"lock conflict", func(ctx context.Context) error { return svc.LockConflictRequest(ctx, id) }},
 				{"decide conflict", func(ctx context.Context) error {
-					return svc.DecideConflictRequest(ctx, careplan.OfferingConflictDecision{RequestID: id, Approve: true, ReviewerID: env.creatorID})
+					return svc.DecideConflictRequest(ctx, careplan.OfferingConflictDecision{ExpectedVersion: version, RequestID: id, Approve: true, ReviewerID: env.creatorID})
 				}},
 				{"preview", func(ctx context.Context) error { _, err := svc.PreviewDecision(ctx, id, nil, nil); return err }},
 			} {
@@ -123,6 +129,7 @@ func TestOfferingChangeDeletedWhileWaitingForGate(t *testing.T) {
 				Selections: []careplan.OfferingChangeSelection{{OfferingID: fx.newOffering.ID, SelectedDays: []string{"mon"}}},
 			})
 			require.NoError(t, err)
+			version := testpkg.OfferingRequestVersion(t, row.ID)
 			people := owners.MustNewPeopleDirectory(testpkg.NewDatabase(t, env.db))
 			done := make(chan error, 1)
 			err = testpkg.WithTenantTx(t, ctx, env.db, testpkg.Tenant(t), func(deleteCtx context.Context, tx bun.Tx) error {
@@ -135,11 +142,11 @@ func TestOfferingChangeDeletedWhileWaitingForGate(t *testing.T) {
 					done <- testpkg.WithTenantTx(t, ctx, env.db, testpkg.Tenant(t), func(reviewCtx context.Context, _ bun.Tx) error {
 						switch operation {
 						case "mark done":
-							return svc.MarkDone(reviewCtx, row.ID, "", "", env.creatorID)
+							return svc.MarkDone(reviewCtx, row.ID, version, "", env.creatorID)
 						case "conflict":
 							return svc.LockConflictRequest(reviewCtx, row.ID)
 						default:
-							return decideOfferingChange(reviewCtx, svc, careplan.OfferingChangeDecisionInput{RequestID: row.ID, Approve: operation == "approve", Reason: "Reviewed", ReviewedBy: env.creatorID})
+							return decideOfferingChange(reviewCtx, svc, careplan.OfferingChangeDecisionInput{ExpectedVersion: version, RequestID: row.ID, Approve: operation == "approve", Reason: "Reviewed", ReviewedBy: env.creatorID})
 						}
 					})
 				}()

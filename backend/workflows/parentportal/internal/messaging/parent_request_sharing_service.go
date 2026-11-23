@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/collation"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/workflows/parentportal/internal/care"
 )
 
@@ -37,12 +38,15 @@ type RequestSharingRecipient struct {
 type RequestSharingState struct {
 	FamilyProtected bool
 	Recipients      []RequestSharingRecipient
+	// Version is the read-state token of one request's sharing (ADR 0311);
+	// empty for the options of a request not yet created.
+	Version string
 }
 
 type RequestSharingService interface {
 	GetRequestSharingOptions(context.Context, int64, int64) (*RequestSharingState, error)
 	GetRequestSharing(context.Context, int64, int64, string, int64) (*RequestSharingState, error)
-	SetRequestSharing(context.Context, int64, int64, string, int64, []int64) (*RequestSharingState, error)
+	SetRequestSharing(context.Context, int64, int64, string, int64, []int64, string) (*RequestSharingState, error)
 }
 
 func (s *Service) GetRequestSharingOptions(
@@ -101,10 +105,12 @@ func (s *Service) GetRequestSharing(
 // needs: a guardian whose submit permission the school withdrew can no longer
 // widen or narrow who sees the request. The configuration and the request
 // type are checked before any unit starts; the child check and the change run
-// in one transaction (ADR 0161, #5862).
+// in one transaction (ADR 0161, #5862). The choice replaces the whole
+// recipient set, so it is refused with readstate.ErrChanged unless
+// expectedVersion is the version of the sharing the guardian read (ADR 0311).
 func (s *Service) SetRequestSharing(
 	ctx context.Context, accountID, studentID int64, requestType string, requestID int64,
-	recipientGuardianProfileIDs []int64,
+	recipientGuardianProfileIDs []int64, expectedVersion string,
 ) (*RequestSharingState, error) {
 	if !s.requestSharingConfigured() {
 		return nil, errors.New("parent: request sharing service is not configured")
@@ -116,7 +122,7 @@ func (s *Service) SetRequestSharing(
 	var state *RequestSharingState
 	err := s.Children.WithPermittedChildForWrite(ctx, accountID, studentID, permission, nil, func(txCtx context.Context, _ *Child) error {
 		var changeErr error
-		state, changeErr = s.changeRequestSharingInTx(txCtx, accountID, studentID, requestType, requestID, recipientGuardianProfileIDs)
+		state, changeErr = s.changeRequestSharingInTx(txCtx, accountID, studentID, requestType, requestID, recipientGuardianProfileIDs, expectedVersion)
 		if changeErr != nil {
 			return fmt.Errorf("parent: change request sharing: %w", changeErr)
 		}
@@ -190,12 +196,23 @@ func (s *Service) readRequestSharingInTx(
 	return s.requestSharingState(ctx, studentID, requestType, requestID, facts.protected, facts.protectedAt, facts.recipients)
 }
 
-// changeRequestSharingInTx records who sees the caller's open request.
+// changeRequestSharingInTx records who sees the caller's open request. The
+// child's row lock taken by loadRequestSharingFacts serializes it with every
+// other change of the request's sharing, so the version compared here is the
+// one the write replaces.
 func (s *Service) changeRequestSharingInTx(
 	ctx context.Context, accountID, studentID int64, requestType string, requestID int64, profileIDs []int64,
+	expectedVersion string,
 ) (*RequestSharingState, error) {
 	facts, err := s.loadRequestSharingFacts(ctx, accountID, studentID, requestType, requestID, profileIDs, true)
 	if err != nil {
+		return nil, err
+	}
+	stored, err := s.requestSharingState(ctx, studentID, requestType, requestID, facts.protected, facts.protectedAt, facts.recipients)
+	if err != nil {
+		return nil, err
+	}
+	if err := readstate.Check(expectedVersion, stored.Version); err != nil {
 		return nil, err
 	}
 	if facts.protected && len(facts.accountIDs) > 0 {
@@ -279,7 +296,26 @@ func (s *Service) requestSharingState(
 	for i := range recipients {
 		recipients[i].Selected = selected[recipients[i].accountID]
 	}
-	return &RequestSharingState{FamilyProtected: protected, Recipients: recipients}, nil
+	return &RequestSharingState{FamilyProtected: protected, Recipients: recipients, Version: requestSharingVersion(protected, recipients)}, nil
+}
+
+// requestSharingVersion is the read-state token of one request's sharing:
+// whether the family protection holds, who may be chosen and who is chosen.
+// Names stay out; renaming a guardian changes no choice.
+func requestSharingVersion(protected bool, recipients []RequestSharingRecipient) string {
+	type choice struct {
+		GuardianProfileID int64 `json:"g"`
+		Selected          bool  `json:"s"`
+	}
+	choices := make([]choice, 0, len(recipients))
+	for _, recipient := range recipients {
+		choices = append(choices, choice{GuardianProfileID: recipient.GuardianProfileID, Selected: recipient.Selected})
+	}
+	sort.Slice(choices, func(i, j int) bool { return choices[i].GuardianProfileID < choices[j].GuardianProfileID })
+	return readstate.Fingerprint(struct {
+		Protected bool     `json:"p"`
+		Choices   []choice `json:"c"`
+	}{Protected: protected, Choices: choices})
 }
 
 // RequestSharePolicy reads the meaning of the two People Directory ledgers.

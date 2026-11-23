@@ -12,11 +12,11 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
-	"github.com/moto-ogs/project-phoenix/modules/careplan/parentrequests"
 	enrollment "github.com/moto-ogs/project-phoenix/modules/enrollment/enrollmenttest"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
@@ -124,20 +124,21 @@ func TestOfferingWritesAndCareExitDoNotDeadlock(t *testing.T) {
 			preview, err := testpkg.TenantQuery1(t, ctx, env.db, lifecycle.Preview, input)
 			require.NoError(t, err)
 			require.False(t, preview.Blocked)
+			version := testpkg.OfferingRequestVersion(t, request.ID)
 			write := func(writeCtx context.Context) error {
 				switch operation {
 				case "reset":
 					// The reset still resolves a valid baseline before the later care end.
 					return env.bookings.ResetStudentPickupDayToOffering(writeCtx, fx.studentID, calendar.NewDate(2026, 9, 7))
 				case "mark done":
-					return svc.MarkDone(writeCtx, request.ID, "", "Completed externally", env.creatorID)
+					return svc.MarkDone(writeCtx, request.ID, version, "Completed externally", env.creatorID)
 				case "conflict":
 					if err := svc.LockConflictRequest(writeCtx, request.ID); err != nil {
 						return err
 					}
-					return svc.DecideConflictRequest(writeCtx, careplan.OfferingConflictDecision{RequestID: request.ID, Reason: "Resolve conflict", ReviewerID: env.creatorID})
+					return svc.DecideConflictRequest(writeCtx, careplan.OfferingConflictDecision{ExpectedVersion: version, RequestID: request.ID, Reason: "Resolve conflict", ReviewerID: env.creatorID})
 				default:
-					return decideOfferingChange(writeCtx, svc, careplan.OfferingChangeDecisionInput{RequestID: request.ID, Approve: operation != "reject", Reason: "Reviewed", ReviewedBy: env.creatorID, ActorRole: "admin"})
+					return decideOfferingChange(writeCtx, svc, careplan.OfferingChangeDecisionInput{ExpectedVersion: version, RequestID: request.ID, Approve: operation != "reject", Reason: "Reviewed", ReviewedBy: env.creatorID, ActorRole: "admin"})
 				}
 			}
 			membership, err := owners.NewSchoolMembership(database)
@@ -202,6 +203,10 @@ func TestOfferingReviewRechecksVersionAfterWaitingForGate(t *testing.T) {
 		Selections: []careplan.OfferingChangeSelection{{OfferingID: fx.newOffering.ID, SelectedDays: []string{"mon"}}},
 	})
 	require.NoError(t, err)
+	err = testpkg.WithTenantTx(t, ctx, env.db, testpkg.Tenant(t), func(reviewCtx context.Context, _ bun.Tx) error {
+		return decideOfferingChange(reviewCtx, svc, careplan.OfferingChangeDecisionInput{RequestID: request.ID, Reason: "Reviewed", ReviewedBy: env.creatorID})
+	})
+	require.ErrorIs(t, err, readstate.ErrChanged, "a decision without a read is refused")
 	done := make(chan error, 1)
 	err = testpkg.WithTenantTx(t, ctx, env.db, testpkg.Tenant(t), func(editCtx context.Context, tx bun.Tx) error {
 		if err := env.bookings.LockOfferingDerivedWrites(editCtx); err != nil {
@@ -227,7 +232,7 @@ func TestOfferingReviewRechecksVersionAfterWaitingForGate(t *testing.T) {
 	require.NoError(t, err)
 	select {
 	case err := <-done:
-		require.ErrorIs(t, err, parentrequests.ErrStale)
+		require.ErrorIs(t, err, readstate.ErrChanged)
 	case <-ctx.Done():
 		t.Fatal("review did not finish")
 	}
@@ -268,17 +273,18 @@ func TestOfferingWritersTakeChildBeforeRequest(t *testing.T) {
 				_, err := env.db.NewUpdate().TableExpr("enrollment.offering_change_requests").Set("effective_from = ?", decisionTestToday.AddDays(-1)).Where("id = ?", request.ID).Exec(ctx)
 				require.NoError(t, err)
 			}
+			version := testpkg.OfferingRequestVersion(t, request.ID)
 			write := func(writeCtx context.Context) error {
 				switch operation {
 				case "mark done":
-					return svc.MarkDone(writeCtx, request.ID, "", "Completed externally", env.creatorID)
+					return svc.MarkDone(writeCtx, request.ID, version, "Completed externally", env.creatorID)
 				case "conflict":
 					if err := svc.LockConflictRequest(writeCtx, request.ID); err != nil {
 						return err
 					}
-					return svc.DecideConflictRequest(writeCtx, careplan.OfferingConflictDecision{RequestID: request.ID, Reason: "Resolve conflict", ReviewerID: env.creatorID})
+					return svc.DecideConflictRequest(writeCtx, careplan.OfferingConflictDecision{ExpectedVersion: version, RequestID: request.ID, Reason: "Resolve conflict", ReviewerID: env.creatorID})
 				default:
-					return decideOfferingChange(writeCtx, svc, careplan.OfferingChangeDecisionInput{RequestID: request.ID, Approve: operation == "approve", Reason: "Reviewed", ReviewedBy: env.creatorID, ActorRole: "admin"})
+					return decideOfferingChange(writeCtx, svc, careplan.OfferingChangeDecisionInput{ExpectedVersion: version, RequestID: request.ID, Approve: operation == "approve", Reason: "Reviewed", ReviewedBy: env.creatorID, ActorRole: "admin"})
 				}
 			}
 			people := owners.MustNewPeopleDirectory(database)

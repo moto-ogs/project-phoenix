@@ -2,6 +2,7 @@ package carecontracthttp
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -10,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The paper copy keeps the name it was uploaded under; a quote in it must
@@ -69,4 +71,22 @@ func TestRenderError_CodeFollowsValidationKind(t *testing.T) {
 			require.Len(t, body.Errors, 1, "the refused field stays marked")
 		})
 	}
+}
+
+// A decision on a change request stored differently since the office read it
+// answers the shared refusal of ADR 0311, wrapped as the school's port wraps
+// it, not a server error.
+func TestRenderChangeError_ChangedSinceReadIsTheSharedRefusal(t *testing.T) {
+	t.Parallel()
+
+	rec := httptest.NewRecorder()
+	RenderChangeError(rec, httptest.NewRequest(http.MethodPost, "/", nil),
+		fmt.Errorf("offering change 41: %w", readstate.ErrChanged))
+
+	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+	var body struct {
+		Code string `json:"code"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	assert.Equal(t, readstate.ChangedCode, body.Code)
 }

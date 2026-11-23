@@ -661,11 +661,12 @@ function IdentityFact({
           request={{
             type: "master_data",
             id: pending.id,
+            version: pending.version,
             label,
             value: editableValue,
           }}
           onClose={() => setEditing(false)}
-          onSaved={() => onEdited?.()}
+          onReload={() => onEdited?.()}
         />
       )}
     </DataField>

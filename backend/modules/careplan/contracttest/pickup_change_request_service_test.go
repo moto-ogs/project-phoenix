@@ -74,7 +74,7 @@ func TestPickupChangeRequestAppliesOnlyAfterStaffApproval(t *testing.T) {
 	require.NotNil(t, items[0].Reason)
 	assert.Equal(t, "Arzttermin", *items[0].Reason)
 
-	decided, err := testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{
+	decided, err := testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, req.ID),
 		RequestID:  req.ID,
 		Approve:    true,
 		ReviewedBy: f.staffAccount,
@@ -101,7 +101,7 @@ func TestPickupChangeApprovalExcusesBlocksAfterEarlierPickup(t *testing.T) {
 
 	req, err := testpkg.TenantQuery5(t, ctx, f.db, f.svc.CreatePickupChangeRequest, f.chain.StudentID, f.chain.AccountID, date, time.Date(2000, 1, 1, 14, 30, 0, 0, time.UTC), "Arzttermin")
 	require.NoError(t, err)
-	_, err = testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{
+	_, err = testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, req.ID),
 		RequestID:  req.ID,
 		Approve:    true,
 		ReviewedBy: f.staffAccount,
@@ -182,7 +182,7 @@ func TestPickupApprovalRejectsStaleAffectedBlockList(t *testing.T) {
 	})
 	testpkg.CreateTestInstanceStudent(t, f.db, block.ID, f.chain.StudentID, studentpresence.SessionAttendanceExpected)
 
-	_, err = testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{
+	_, err = testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, req.ID),
 		RequestID: req.ID, Approve: true, ReviewedBy: f.staffAccount,
 		ExpectedImpactToken: &expected,
 	})
@@ -198,7 +198,7 @@ func TestPickupApprovalRequiresImpactTokenForHTTPDecision(t *testing.T) {
 	ctx := f.staffCtx(f.staffAccount)
 	req := seedPickupChangeRequest(t, f, date)
 
-	_, err := testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{
+	_, err := testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, req.ID),
 		RequestID: req.ID, Approve: true, ReviewedBy: f.staffAccount,
 		RequireImpactToken: true,
 	})
@@ -218,7 +218,7 @@ func TestPickupChangeApprovalReleasesAutoExcusalAfterLaterPickup(t *testing.T) {
 
 	req, err := testpkg.TenantQuery5(t, ctx, f.db, f.svc.CreatePickupChangeRequest, f.chain.StudentID, f.chain.AccountID, date, time.Date(2000, 1, 1, 16, 30, 0, 0, time.UTC), "Späterer Termin")
 	require.NoError(t, err)
-	_, err = testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{
+	_, err = testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, req.ID),
 		RequestID:  req.ID,
 		Approve:    true,
 		ReviewedBy: f.staffAccount,
@@ -258,7 +258,7 @@ func TestPickupChangeApprovalRollsBackWhenAutoExcusalFails(t *testing.T) {
 		if _, timeoutErr := tx.ExecContext(txCtx, `SET LOCAL lock_timeout = '100ms'`); timeoutErr != nil {
 			return timeoutErr
 		}
-		_, decideErr := testpkg.TenantQuery1(t, txCtx, f.db, f.svc.Decide, carerequests.DecideInput{
+		_, decideErr := testpkg.TenantQuery1(t, txCtx, f.db, f.svc.Decide, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, req.ID),
 			RequestID:  req.ID,
 			Approve:    true,
 			ReviewedBy: f.staffAccount,
@@ -389,7 +389,7 @@ func TestPickupChangeApprovalYieldsToStaffException(t *testing.T) {
 		CreatedBy:     f.staffID,
 	}))
 
-	_, err := testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{
+	_, err := testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, req.ID),
 		RequestID:  req.ID,
 		Approve:    true,
 		ReviewedBy: f.staffAccount,
@@ -430,7 +430,7 @@ func TestPickupChangeApprovalYieldsToExcusedAbsence(t *testing.T) {
 		CreatedByGuardian: &f.chain.AccountID,
 	}))
 
-	_, err := testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{
+	_, err := testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, req.ID),
 		RequestID:  req.ID,
 		Approve:    true,
 		ReviewedBy: f.staffAccount,
@@ -461,7 +461,7 @@ func TestPickupChangeApprovalRejectsCompletedSameDayPickup(t *testing.T) {
 	_, err = testpkg.TenantQuery1(t, ctx, testpkg.SetupTestDB(t), presence.RecordAttendance, attendance)
 	require.NoError(t, err)
 
-	_, err = testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{
+	_, err = testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, req.ID),
 		RequestID:  req.ID,
 		Approve:    true,
 		ReviewedBy: f.staffAccount,
@@ -485,7 +485,7 @@ func TestPickupChangeApprovalRejectsDateAfterPlannedCareEnd(t *testing.T) {
 		Exec(ctx)
 	require.NoError(t, err)
 
-	_, err = testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{
+	_, err = testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, req.ID),
 		RequestID: req.ID, Approve: true, ReviewedBy: f.staffAccount,
 	})
 	require.ErrorIs(t, err, carerequests.ErrNotFound)
@@ -555,14 +555,14 @@ func TestPickupChangeApprovalRejectsExpiredRequest(t *testing.T) {
 	}
 	require.NoError(t, careplantest.NewScheduleRecords(f.reposCare.CarePlan()).CareScheduleChangeRequest.Create(ctx, req))
 
-	_, err := testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{
+	_, err := testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, req.ID),
 		RequestID:  req.ID,
 		Approve:    true,
 		ReviewedBy: f.staffAccount,
 	})
 	require.ErrorIs(t, err, carerequests.ErrPickupChangeExpired)
 
-	decided, err := testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{
+	decided, err := testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, req.ID),
 		RequestID:  req.ID,
 		Approve:    false,
 		Reason:     "Der Tag liegt in der Vergangenheit.",
@@ -609,7 +609,7 @@ func approvedPickupChange(t *testing.T, f *careFixture) (*carerequests.Request, 
 	date := nextSchoolDay(calendar.NewDate(2026, 8, 24).AddDays(2))
 	req, err := testpkg.TenantQuery5(t, ctx, f.db, f.svc.CreatePickupChangeRequest, f.chain.StudentID, f.chain.AccountID, date, time.Date(2000, 1, 1, 14, 30, 0, 0, time.UTC), "Arzttermin")
 	require.NoError(t, err)
-	_, err = testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{
+	_, err = testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, req.ID),
 		RequestID: req.ID, Approve: true, ReviewedBy: f.staffAccount,
 	})
 	require.NoError(t, err)
@@ -637,7 +637,7 @@ func TestPickupChangeCorrectRefusesWithoutALedgerEntry(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, applied)
 
-	err = testpkg.TenantCommand5(t, ctx, f.db, f.svc.(pickupCorrecter).Correct, req.ID, false, "", "Doch nicht genehmigt", f.staffAccount)
+	err = testpkg.TenantCommand5(t, ctx, f.db, f.svc.(pickupCorrecter).Correct, req.ID, false, testpkg.CareRequestVersion(t, req.ID), "Doch nicht genehmigt", f.staffAccount)
 	require.ErrorContains(t, err, "cannot be corrected")
 
 	survivor, ferr := careplantest.NewScheduleRecords(f.reposCare.CarePlan()).StudentPickupException.FindByStudentIDAndDate(ctx, f.chain.StudentID, careplan.Date(date))
@@ -654,12 +654,12 @@ func TestCareScheduleCorrectIsUnsupported(t *testing.T) {
 	ctx := f.staffCtx(f.staffAccount)
 	req, err := testpkg.TenantQuery3(t, ctx, f.db, f.svc.CreateRequest, f.chain.StudentID, f.chain.AccountID, careWeekdays(map[string]any{"weekday": 1, "pickup": "15:00"}))
 	require.NoError(t, err)
-	_, err = testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{
+	_, err = testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, req.ID),
 		RequestID: req.ID, Approve: false, Reason: "Nicht möglich", ReviewedBy: f.staffAccount,
 	})
 	require.NoError(t, err)
 
-	err = f.svc.(pickupCorrecter).Correct(ctx, req.ID, true, "", "Doch genehmigen", f.staffAccount)
+	err = f.svc.(pickupCorrecter).Correct(ctx, req.ID, true, testpkg.CareRequestVersion(t, req.ID), "Doch genehmigen", f.staffAccount)
 	require.ErrorContains(t, err, "cannot be corrected")
 	assert.Contains(t, err.Error(), "Wochenplan", "the message must say what to do instead")
 }
@@ -673,6 +673,6 @@ func TestPickupChangeCorrectRefusesAnUndecidedRequest(t *testing.T) {
 	req, err := testpkg.TenantQuery5(t, ctx, f.db, f.svc.CreatePickupChangeRequest, f.chain.StudentID, f.chain.AccountID, nextSchoolDay(calendar.NewDate(2026, 8, 24).AddDays(2)), time.Date(2000, 1, 1, 14, 30, 0, 0, time.UTC), "Arzttermin")
 	require.NoError(t, err)
 
-	err = f.svc.(pickupCorrecter).Correct(ctx, req.ID, false, "", "Korrektur", f.staffAccount)
+	err = f.svc.(pickupCorrecter).Correct(ctx, req.ID, false, testpkg.CareRequestVersion(t, req.ID), "Korrektur", f.staffAccount)
 	require.ErrorContains(t, err, "not decided")
 }

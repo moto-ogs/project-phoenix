@@ -22,6 +22,8 @@ const meta = {
   args: {
     row,
     onDecided: () => undefined,
+    expectedVersion: "2026-06-24T12:00:00Z",
+    onStale: () => undefined,
   },
 } satisfies Meta<typeof MasterDataReviewItem>;
 

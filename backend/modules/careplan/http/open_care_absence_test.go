@@ -163,7 +163,7 @@ func TestAbsenceWriter_ParentExcusedRequestDecidable(t *testing.T) {
 		// #2267: reason policy defaults to "both"
 		req := testutil.NewAuthenticatedRequest(t, "POST",
 			fmt.Sprintf("/excused-absence-requests/%d/decide", pending.ID),
-			map[string]any{"approve": true, "reason": "Passt so"})
+			map[string]any{"approve": true, "reason": "Passt so", "expected_version": testpkg.ExcusedRequestVersion(t, pending.ID)})
 		rr := authExec(t, tc, req, claims, absencePerms)
 		assert.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 	})

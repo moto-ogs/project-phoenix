@@ -193,12 +193,17 @@ describe("ChildMasterDataView", () => {
     mockGetMasterData.mockResolvedValue(masterData());
     mockUpdateField.mockResolvedValue(masterData({ health_info: "Neue Info" }));
     mockSubmit.mockResolvedValue([]);
-    mockSharing.mockResolvedValue({ family_protected: false, recipients: [] });
+    mockSharing.mockResolvedValue({
+      version: "v1",
+      family_protected: false,
+      recipients: [],
+    });
     mockSharingOptions.mockResolvedValue({
       family_protected: false,
       recipients: [],
     });
     mockSetRequestSharing.mockResolvedValue({
+      version: "v1",
       family_protected: false,
       recipients: [],
     });
@@ -854,6 +859,7 @@ describe("ChildMasterDataView", () => {
       masterData({
         pending_changes: [
           {
+            version: "v1",
             is_self: false,
             id: "900",
             target: "person",
@@ -895,6 +901,7 @@ describe("ChildMasterDataView", () => {
   it("keeps identity request success when the pending refresh fails", async () => {
     mockSubmit.mockResolvedValueOnce([
       {
+        version: "v1",
         is_self: false,
         id: "900",
         target: "person",
@@ -928,6 +935,7 @@ describe("ChildMasterDataView", () => {
       masterData({
         pending_changes: [
           {
+            version: "v1",
             id: "900",
             target: "person",
             field_key: "first_name",
@@ -968,6 +976,7 @@ describe("ChildMasterDataView", () => {
       masterData({
         pending_changes: [
           {
+            version: "v1",
             is_self: false,
             id: "901",
             target: "person",
@@ -995,6 +1004,7 @@ describe("ChildMasterDataView", () => {
       masterData({
         pending_changes: [
           {
+            version: "v1",
             is_self: false,
             id: "901",
             target: "departure",
@@ -1133,6 +1143,7 @@ describe("ChildMasterDataView", () => {
   it("keeps departure request success when the pending refresh fails", async () => {
     mockSubmit.mockResolvedValueOnce([
       {
+        version: "v1",
         is_self: false,
         id: "901",
         target: "departure",
@@ -1347,6 +1358,7 @@ describe("ChildMasterDataView", () => {
       masterData({
         pending_changes: [
           {
+            version: "v1",
             id: "901",
             target: "departure",
             field_key: "allowed_departure_modes",

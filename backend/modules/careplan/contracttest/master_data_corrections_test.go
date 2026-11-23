@@ -19,6 +19,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/masterdatarequests"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/parentrequests"
 	"github.com/moto-ogs/project-phoenix/realtime"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -40,7 +41,7 @@ func TestMasterDataReview_CompanionEventOnlyOnEffectiveChange(t *testing.T) {
 	approve := func(t *testing.T, row *careplan.StudentDataChangeRequest) {
 		t.Helper()
 		bc.Reset()
-		_, err := f.decide(t, svc, masterdatarequests.DecideInput{RequestID: row.ID, Approve: true, ReviewedBy: f.chain.AccountID})
+		_, err := f.decide(t, svc, masterdatarequests.DecideInput{ExpectedVersion: testpkg.MasterDataRequestVersion(t, row.ID), RequestID: row.ID, Approve: true, ReviewedBy: f.chain.AccountID})
 		require.NoError(t, err)
 	}
 
@@ -117,7 +118,7 @@ func (f masterDataFixture) personFirstName(t *testing.T) string {
 func (f masterDataFixture) correct(t *testing.T, svc masterdatarequests.Decisions, requestID int64, approve bool, reason string) error {
 	t.Helper()
 	return f.inTx(t, func(ctx context.Context) error {
-		return svc.Correct(ctx, requestID, approve, "", reason, f.chain.AccountID)
+		return svc.Correct(ctx, requestID, approve, testpkg.MasterDataRequestVersion(t, requestID), reason, f.chain.AccountID)
 	})
 }
 
@@ -129,9 +130,17 @@ func TestMasterDataCorrect_ApprovedToRejectedRestoresTheOldValue(t *testing.T) {
 	svc := f.decisions(t)
 	row := f.insert(t, peopledirectory.DataChangeTargetPerson, "first_name", `"Felix"`, `"Maximilian"`)
 
-	_, err := f.decide(t, svc, masterdatarequests.DecideInput{RequestID: row.ID, Approve: true, ReviewedBy: f.chain.AccountID})
+	_, err := f.decide(t, svc, masterdatarequests.DecideInput{ExpectedVersion: testpkg.MasterDataRequestVersion(t, row.ID), RequestID: row.ID, Approve: true, ReviewedBy: f.chain.AccountID})
 	require.NoError(t, err)
 	require.Equal(t, "Maximilian", f.personFirstName(t))
+
+	for _, expected := range []string{"stale", ""} {
+		err := f.inTx(t, func(ctx context.Context) error {
+			return svc.Correct(ctx, row.ID, false, expected, "Falsch entschieden", f.chain.AccountID)
+		})
+		require.ErrorIs(t, err, readstate.ErrChanged, "version %q", expected)
+	}
+	require.Equal(t, "Maximilian", f.personFirstName(t), "a refused correction writes nothing")
 
 	require.NoError(t, f.correct(t, svc, row.ID, false, "Falsch entschieden"))
 	assert.Equal(t, "Felix", f.personFirstName(t))
@@ -147,7 +156,7 @@ func TestMasterDataCorrect_RefusesWhenTheValueMovedOnAfterTheDecision(t *testing
 	svc := f.decisions(t)
 	row := f.insert(t, peopledirectory.DataChangeTargetPerson, "first_name", `"Felix"`, `"Maximilian"`)
 
-	_, err := f.decide(t, svc, masterdatarequests.DecideInput{RequestID: row.ID, Approve: true, ReviewedBy: f.chain.AccountID})
+	_, err := f.decide(t, svc, masterdatarequests.DecideInput{ExpectedVersion: testpkg.MasterDataRequestVersion(t, row.ID), RequestID: row.ID, Approve: true, ReviewedBy: f.chain.AccountID})
 	require.NoError(t, err)
 	_, err = f.db.NewUpdate().TableExpr("users.persons").Set("first_name = ?", "Moritz").
 		Where("id = ?", f.chain.PersonID).Exec(testpkg.Ctx(t))
@@ -204,9 +213,9 @@ func TestMasterDataReview_GraduatedChildLeavesQueueAndRefusesDecisions(t *testin
 		assert.Empty(t, items, "a graduated child's request must leave the queue and the badge")
 
 		// Neither direction may still act on the alumnus.
-		_, decideErr := svc.Decide(ctx, masterdatarequests.DecideInput{RequestID: row.ID, Approve: true, ReviewedBy: f.chain.AccountID})
+		_, decideErr := svc.Decide(ctx, masterdatarequests.DecideInput{ExpectedVersion: testpkg.MasterDataRequestVersion(t, row.ID), RequestID: row.ID, Approve: true, ReviewedBy: f.chain.AccountID})
 		assert.ErrorIs(t, decideErr, masterdatarequests.ErrReviewNotFound)
-		_, decideErr = svc.Decide(ctx, masterdatarequests.DecideInput{RequestID: row.ID, Approve: false, Reason: "child has left", ReviewedBy: f.chain.AccountID})
+		_, decideErr = svc.Decide(ctx, masterdatarequests.DecideInput{ExpectedVersion: testpkg.MasterDataRequestVersion(t, row.ID), RequestID: row.ID, Approve: false, Reason: "child has left", ReviewedBy: f.chain.AccountID})
 		assert.ErrorIs(t, decideErr, masterdatarequests.ErrReviewNotFound)
 		return nil
 	}))
@@ -230,7 +239,7 @@ func TestMasterDataReview_ListHistory(t *testing.T) {
 	autoApplied := f.insert(t, peopledirectory.DataChangeTargetPerson, "last_name", `"Schneider"`, `"Schmidt"`)
 	pending := f.insert(t, peopledirectory.DataChangeTargetPerson, "language_preference", `"de"`, `"en"`)
 
-	decided, err := f.decide(t, f.decisions(t), masterdatarequests.DecideInput{
+	decided, err := f.decide(t, f.decisions(t), masterdatarequests.DecideInput{ExpectedVersion: testpkg.MasterDataRequestVersion(t, rejected.ID),
 		RequestID: rejected.ID, Approve: false, Reason: "unpassend", ReviewedBy: reviewerAccount.ID,
 	})
 	require.NoError(t, err)
@@ -296,7 +305,7 @@ func TestMasterDataReview_ListHistoryScopedToWritableChildren(t *testing.T) {
 	t.Parallel()
 	f := newMasterDataFixture(t, testpkg.SetupTestDB(t))
 	row := f.insert(t, peopledirectory.DataChangeTargetPerson, "first_name", `"Felix"`, `"Max"`)
-	_, err := f.decide(t, f.decisions(t), masterdatarequests.DecideInput{RequestID: row.ID, Approve: false, Reason: "nein"})
+	_, err := f.decide(t, f.decisions(t), masterdatarequests.DecideInput{ExpectedVersion: testpkg.MasterDataRequestVersion(t, row.ID), RequestID: row.ID, Approve: false, Reason: "nein"})
 	require.NoError(t, err)
 
 	require.NoError(t, f.inTx(t, func(ctx context.Context) error {

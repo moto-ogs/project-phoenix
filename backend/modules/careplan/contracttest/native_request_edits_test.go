@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/compose"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
@@ -45,7 +46,12 @@ func TestNativeRequestEditChecksOwnershipBeforeStatusAndVersion(t *testing.T) {
 	}
 	require.ErrorIs(t, edit(), careplan.ErrCareScheduleRequestNotFound)
 	input.GuardianAccountID = account.ID
-	require.ErrorIs(t, edit(), careplan.ErrParentRequestStale)
+	require.ErrorIs(t, edit(), readstate.ErrChanged)
+	input.ExpectedVersion = ""
+	require.ErrorIs(t, edit(), readstate.ErrChanged, "an edit without a read is refused")
+	stored, err := owner.FindCareScheduleRequest(ctx, row.ID, false)
+	require.NoError(t, err)
+	require.JSONEq(t, string(row.Payload), string(stored.Payload), "a refused edit writes nothing")
 	require.NoError(t, owner.DecideCareScheduleRequest(ctx, careplan.CareScheduleRequestDecision{ID: row.ID, Status: "rejected"}))
 	input.GuardianAccountID = stranger.ID
 	require.ErrorIs(t, edit(), careplan.ErrCareScheduleRequestNotFound)

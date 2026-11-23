@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/communication"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -158,9 +157,7 @@ func TestParentPortalOfferingChangeIsRequestedAndEditedThroughTheParentMount(t *
 	require.Equal(t, fmt.Sprint(request), requested.PendingRequest.ID)
 
 	edit := change("Bitte erst ab Januar")
-	var updatedAt time.Time
-	require.NoError(t, r.db.NewRaw(`SELECT updated_at FROM enrollment.offering_change_requests WHERE id = ?`, request).Scan(context.Background(), &updatedAt))
-	edit["expected_version"] = careplan.ParentRequestVersion(updatedAt)
+	edit["expected_version"] = testpkg.ParentRequestVersionIn(t, r.db, "enrollment.offering_change_requests", request)
 	var edited pending
 	r.call(t, http.MethodPut, childPath(f, fmt.Sprintf("/care-offerings/requests/%d", request)), f.token, edit, &edited)
 	require.NotNil(t, edited.PendingRequest)

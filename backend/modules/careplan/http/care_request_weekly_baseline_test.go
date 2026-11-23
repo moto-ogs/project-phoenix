@@ -57,7 +57,7 @@ func TestWeeklyReviewShowsThePlanTheFamilySubmittedAgainst(t *testing.T) {
 	assert.NotEqual(t, unchangedToken, token)
 
 	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("/care-schedule-change-requests/%d/decide", pending.ID),
-		strings.NewReader(fmt.Sprintf(`{"approve":true,"reason":"Passt so","impact_token":%q}`, token)))
+		strings.NewReader(fmt.Sprintf(`{"approve":true,"reason":"Passt so","impact_token":%q,"expected_version":%q}`, token, testpkg.CareRequestVersion(t, pending.ID))))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	rr := authExec(t, tc, req, claims, []string{"admin:*"})

@@ -120,6 +120,9 @@ type PickupChangeRequestResponse struct {
 	PickupPerson                  *string `json:"pickup_person,omitempty"`
 	PickupPersonGuardianProfileID *string `json:"pickup_person_guardian_profile_id,omitempty"`
 	Signed                        bool    `json:"signed"`
+	// Version is what an edit of this request sends back as
+	// expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 func toPickupChangeRequestResponse(req *careplan.CareScheduleChangeRequest, accountID int64) (PickupChangeRequestResponse, error) {
@@ -138,6 +141,7 @@ func toPickupChangeRequestResponse(req *careplan.CareScheduleChangeRequest, acco
 		ID: strconv.FormatInt(req.ID, 10), Date: terms.Date.String(),
 		PreviousDepartureModes: terms.PreviousDepartureModes, Reason: reason, Status: req.Status, DecisionReason: req.DecisionReason,
 		CreatedAt: req.CreatedAt, ReviewedAt: req.ReviewedAt, IsSelf: req.SubmittedBy == accountID,
+		Version: careplan.ParentRequestVersion(req.UpdatedAt),
 	}
 	if terms.PickupTime != "" {
 		response.PickupTime = &terms.PickupTime

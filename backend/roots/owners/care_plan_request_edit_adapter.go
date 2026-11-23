@@ -13,8 +13,6 @@ type requestEditAdapter struct{ requestSubmissionAdapter }
 
 func legacyEditError(err error) error {
 	switch {
-	case errors.Is(err, careplan.ErrParentRequestStale):
-		return parentrequests.ErrStale
 	case errors.Is(err, careplan.ErrParentRequestNotPast):
 		return parentrequests.ErrNotPast
 	default:

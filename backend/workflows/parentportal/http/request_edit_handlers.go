@@ -12,7 +12,6 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
-	"github.com/moto-ogs/project-phoenix/modules/careplan/parentrequests"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
@@ -22,9 +21,10 @@ import (
 // filing a new one: the request keeps its id, the co-guardians it was shared
 // with stay recipients, and the ledger records the change.
 //
-// Every body carries expected_version — the value the list emitted. An empty
-// version still passes (older clients), a mismatching one is refused with 409
-// change_request_stale so an edit can never overwrite a newer state blind.
+// Every body carries expected_version, the version the list emitted for the
+// row. A missing or mismatching one is refused with 409
+// general.changed_since_read (ADR 0311), so an edit can never overwrite a
+// newer state blind.
 
 // EditExcusedRequestBody is the wire shape of
 // PUT /parent/me/children/{studentId}/excused-requests/{requestId}.
@@ -82,17 +82,12 @@ type ParentRequestEventResponse struct {
 	Version   string `json:"version"`
 }
 
-// renderParentRequestError adds the shared stale code to the parent write
+// renderParentRequestError adds the shared reason code to the parent write
 // error mapping. It stays a separate function so the big write-error switch
-// keeps its shape.
-// It also maps the shared reason_required sentinel, which the reason policy
+// keeps its shape. It maps the shared reason_required sentinel, which the reason policy
 // (operations.parent_request_reason_policy) can raise on any submit or edit.
 func renderParentRequestError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
-	// The Care Plan excused-absence workflow (#3093) raises its own lifecycle
-	// sentinels; they render the same wire codes as the shared ones.
-	case errors.Is(err, parentrequests.ErrStale), errors.Is(err, careplan.ErrParentRequestStale):
-		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeStudentsChangeRequestStale))
 	case errors.Is(err, careplan.ErrParentRequestReasonRequired):
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeStudentsReasonRequired))
 	default:

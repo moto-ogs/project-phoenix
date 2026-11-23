@@ -113,8 +113,6 @@ func mapOfferingLifecycleError(err error) error {
 	switch {
 	case err == nil:
 		return nil
-	case errors.Is(err, careplan.ErrParentRequestStale):
-		return parentrequests.ErrStale
 	case errors.Is(err, careplan.ErrParentRequestPast):
 		return parentrequests.ErrPast
 	case errors.Is(err, careplan.ErrParentRequestNotPast):
