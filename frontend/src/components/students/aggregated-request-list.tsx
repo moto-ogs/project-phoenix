@@ -15,7 +15,15 @@
  * 200 % Zoom zu abgeschnittenen Inhalten führt.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { isReadStateRefusal } from "~/lib/api-error";
 
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 
@@ -142,8 +150,15 @@ export function AggregatedRequestList({
   const { success: showSuccess } = useToast();
   const { show: showActionError } = useApiErrorDisplay();
   const [selectedCaseKey, setSelectedCaseKey] = useState<string | null>(null);
-  const [selectedForBulk, setSelectedForBulk] = useState<Set<string>>(
-    () => new Set(),
+  // Die angehakten Anfragen mit der Fassung, die beim Anhaken zu sehen war
+  // (ADR 0311): die Sammelfreigabe gibt genau diese frei, eine seither
+  // geänderte lehnt der Server ab.
+  const [selectedForBulk, setSelectedForBulk] = useState<
+    ReadonlyMap<string, readonly BulkApproveRequestRef[]>
+  >(() => new Map());
+  const selectedKeys = useMemo(
+    () => new Set(selectedForBulk.keys()),
+    [selectedForBulk],
   );
   const [bulkReason, setBulkReason] = useState("");
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
@@ -223,7 +238,7 @@ export function AggregatedRequestList({
       );
       setSelectedForBulk((current) => {
         if (!current.has(key)) return current;
-        const next = new Set(current);
+        const next = new Map(current);
         next.delete(key);
         return next;
       });
@@ -249,7 +264,7 @@ export function AggregatedRequestList({
       setItems((prev) => prev.filter((item) => itemKey(item) !== key));
       setSelectedForBulk((current) => {
         if (!current.has(key)) return current;
-        const next = new Set(current);
+        const next = new Map(current);
         next.delete(key);
         return next;
       });
@@ -366,15 +381,17 @@ export function AggregatedRequestList({
   );
 
   const confirmBulkApproval = useCallback(async () => {
-    const refs = selectedBulkItems.flatMap(bulkRef);
+    const refs = selectedBulkItems.flatMap(
+      (item) => selectedForBulk.get(itemKey(item)) ?? [],
+    );
     setBulkSaving(true);
     try {
       const count = await bulkApproveParentRequests(refs, bulkReason.trim());
-      const selectedKeys = new Set(selectedForBulk);
+      const approvedKeys = new Set(selectedForBulk.keys());
       setItems((current) =>
-        current.filter((item) => !selectedKeys.has(itemKey(item))),
+        current.filter((item) => !approvedKeys.has(itemKey(item))),
       );
-      setSelectedForBulk(new Set());
+      setSelectedForBulk(new Map());
       setBulkReason("");
       setBulkConfirmOpen(false);
       showSuccess(
@@ -388,10 +405,20 @@ export function AggregatedRequestList({
         error: err instanceof Error ? err.message : String(err),
       });
       setBulkConfirmOpen(false);
-      // Kein Wiederholen: die Liste lädt gleich neu, die Auswahl gilt dann
-      // womöglich nicht mehr. Eine veraltete Anfrage meldet ihr Code.
-      await showActionError(err, { object: "die Freigabe" });
-      await feed.reload();
+      // Kein Wiederholen: die Liste lädt neu, die Auswahl gilt dann
+      // womöglich nicht mehr. Eine seither geänderte Anfrage: die Auswahl
+      // trug ihre alte Fassung und fällt weg, die Meldung wartet auf den
+      // neuen Stand.
+      if (isReadStateRefusal(err)) {
+        setSelectedForBulk(new Map());
+        await showActionError(err, {
+          object: "die Freigabe",
+          reload: reloadFeedOrThrow,
+        });
+      } else {
+        await showActionError(err, { object: "die Freigabe" });
+        await feed.reload();
+      }
     } finally {
       setBulkSaving(false);
     }
@@ -400,6 +427,7 @@ export function AggregatedRequestList({
     showActionError,
     bulkReason,
     feed,
+    reloadFeedOrThrow,
     selectedBulkItems,
     selectedForBulk,
     setItems,
@@ -420,10 +448,18 @@ export function AggregatedRequestList({
   );
   const withdrawalDialogs = useWithdrawalDialogs(handleWithdrawalFinished);
 
+  const itemsRef = useRef(items);
+  useLayoutEffect(() => {
+    itemsRef.current = items;
+  });
   const handleBulkSelection = useCallback((key: string, checked: boolean) => {
+    // Die Fassung zählt, die beim Anhaken zu sehen ist.
+    const item = itemsRef.current.find(
+      (entry): entry is AggregatedOpenRequest => itemKey(entry) === key,
+    );
     setSelectedForBulk((current) => {
-      const next = new Set(current);
-      if (checked) next.add(key);
+      const next = new Map(current);
+      if (checked && item) next.set(key, bulkRef(item));
       else next.delete(key);
       return next;
     });
@@ -534,7 +570,7 @@ export function AggregatedRequestList({
                     filters.canManageFamilyProtection,
                   )}
                   reasonRequired={reasonRequired}
-                  selected={selectedForBulk}
+                  selected={selectedKeys}
                   narrow={!wide && !singleChild}
                   onBackToList={backToList}
                   onSelectionChange={handleBulkSelection}
