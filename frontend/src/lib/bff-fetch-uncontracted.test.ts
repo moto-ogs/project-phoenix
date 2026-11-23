@@ -7,6 +7,8 @@ import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const UNCONTRACTED_CALLERS: Readonly<Record<string, string>> = {
+  "lib/enrollment-submission-api.ts":
+    "GET enrollment/form-bootstrap/public/[tenantSlug]/[phaseId]: the route adds the signed-in staff member's profile to the public form",
   "components/tenant/tenant-relogin.ts":
     "POST auth/logout: the BFF revokes the session family before Auth.js drops the cookie",
   "lib/mfa-api.ts":
@@ -33,6 +35,8 @@ const UNCONTRACTED_CALLERS: Readonly<Record<string, string>> = {
     "POST traeger/auth/login, traeger/auth/mfa/step-up/verify: sign-in and session steps of the BFF, no backend route of their own",
   "lib/traeger-holiday-form-api.ts":
     "PUT traeger/holiday-periods/[id]/form: the contract leaves the editor's own body undescribed",
+  "lib/push-api.ts":
+    "DELETE …/push/subscriptions during logout: the family is revoked and the sign-out must stay the last cookie change, so the call bypasses the portal's 401 handling (no gate, renewal or login redirect) until bff-fetch offers that option",
   "lib/operator/provisioning-api.ts":
     "POST operator/provisioning/revalidate-tenant: the route purges the cached tenant lookup and the ISR pages, no backend route",
   "lib/operator/operator-settings-api.ts":

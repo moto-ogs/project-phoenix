@@ -1,5 +1,6 @@
 "use client";
 
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import {
   createContext,
   useCallback,
@@ -30,7 +31,6 @@ import {
   uploadValueKey,
   type EnrollmentFileType,
   type FileFieldOptions,
-  type NewUploadValue,
   type UploadValue,
 } from "~/lib/enrollment-uploads";
 
@@ -54,7 +54,7 @@ interface EnrollmentUploadTarget {
   readonly upload?: (
     file: File,
     signal: AbortSignal,
-  ) => Promise<NewUploadValue>;
+  ) => Promise<sharedContract.UploadReceipt>;
   readonly locale: string;
   /** Called with +1 when an upload starts and -1 when it settles. */
   readonly onPendingChange: (delta: number) => void;

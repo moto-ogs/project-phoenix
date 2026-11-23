@@ -171,6 +171,14 @@ function DayChangesAnnouncer({
                 ]
               : null,
             entry.closing ? [entry.closing.name, entry.closing.traeger] : null,
+            entry.appointment
+              ? [
+                  entry.appointment.title,
+                  entry.appointment.location,
+                  entry.appointment.locationChanged,
+                  entry.appointment.timeChanged,
+                ]
+              : null,
           ]),
         )
         .join("|")
@@ -396,6 +404,9 @@ function dayChangeKeys(entries: readonly DayChange[]): string[] {
   return entries.map((entry) => {
     if (entry.notice) {
       return `${entry.section}:${entry.kind}:${entry.notice.id}`;
+    }
+    if (entry.appointment) {
+      return `${entry.section}:${entry.kind}:${entry.appointment.id}:${entry.appointment.occurrenceDate ?? ""}`;
     }
     // Ein Kind (#7665) trägt seine ID, eine Zusammenfassung ohne Gruppe
     // ihre Klasse; ein Termin seine ID.

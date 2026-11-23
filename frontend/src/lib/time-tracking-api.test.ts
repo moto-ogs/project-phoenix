@@ -4,9 +4,9 @@ import { ApiError } from "./api-error";
 import { timeTrackingService } from "./time-tracking-api";
 import type {
   CreateAbsenceRequest,
-  UpdateAbsenceRequest,
   UpdateSessionRequest,
 } from "./time-tracking-api";
+import type * as tt from "~/lib/contract/time-tracking.generated";
 
 // Mock next-auth/react
 vi.mock("next-auth/react", () => ({
@@ -681,7 +681,7 @@ describe("TimeTrackingService", () => {
         data: { ...backendAbsence, note: "Severe flu" },
       });
 
-      const req: UpdateAbsenceRequest = { note: "Severe flu" };
+      const req: tt.UpdateAbsenceRequest = { note: "Severe flu" };
       const result = await timeTrackingService.updateAbsence("7", req);
 
       expect(global.fetch).toHaveBeenCalledWith(

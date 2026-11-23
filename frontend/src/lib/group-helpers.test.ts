@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
-import type { GroupWire } from "./group-helpers";
 import { mapGroupResponse, mapGroupsResponse } from "./group-helpers";
 import { suppressConsole } from "~/test/helpers/console";
 import { buildBackendGroup } from "~/test/fixtures/groups";
+import type * as groupsContract from "~/lib/contract/groups.generated";
 
 // Sample backend group for testing
 const sampleBackendGroup = buildBackendGroup({
@@ -85,7 +85,7 @@ describe("mapGroupResponse", () => {
   });
 
   it("handles group without room", () => {
-    const groupWithoutRoom: GroupWire = {
+    const groupWithoutRoom: groupsContract.GroupResponse = {
       ...sampleBackendGroup,
       room_id: undefined,
       room: undefined,
@@ -98,7 +98,7 @@ describe("mapGroupResponse", () => {
   });
 
   it("handles group without representative", () => {
-    const groupWithoutRep: GroupWire = {
+    const groupWithoutRep: groupsContract.GroupResponse = {
       ...sampleBackendGroup,
       representative_id: undefined,
       representative: undefined,
@@ -112,7 +112,7 @@ describe("mapGroupResponse", () => {
   });
 
   it("handles group without teachers array", () => {
-    const groupWithoutTeachers: GroupWire = {
+    const groupWithoutTeachers: groupsContract.GroupResponse = {
       ...sampleBackendGroup,
       teachers: undefined,
     };
@@ -144,7 +144,9 @@ describe("mapGroupsResponse", () => {
   });
 
   it("returns empty array for non-array input", () => {
-    const result = mapGroupsResponse("invalid" as unknown as GroupWire[]);
+    const result = mapGroupsResponse(
+      "invalid" as unknown as groupsContract.GroupResponse[],
+    );
 
     expect(result).toEqual([]);
     expect(consoleSpies.error).toHaveBeenCalledWith(

@@ -20,12 +20,6 @@ import {
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { MotoDuotoneIcon } from "~/components/ui/moto-duotone-icon";
 import {
-  type ChildGuardian,
-  type CreateGuardianContactPayload,
-  type GuardianContactPayload,
-  type GuardianRelationshipPayload,
-  type PickupPermissionRequest,
-  type RelatedAccount,
   createGuardianContact,
   inviteRelatedAccount,
   listChildGuardians,
@@ -88,6 +82,7 @@ import {
   type Salutation,
   salutationTitle,
 } from "~/lib/salutation";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 const logger = createLogger({ component: "GuardiansPanel" });
 
@@ -138,8 +133,9 @@ interface GuardiansPanelProps {
   readonly withoutCarePlace?: boolean;
 }
 
-const NO_PICKUP_PERMISSION_REQUESTS: Promise<PickupPermissionRequest[]> =
-  Promise.resolve([]);
+const NO_PICKUP_PERMISSION_REQUESTS: Promise<
+  parentMeContract.pickupPermissionRequestResponse[]
+> = Promise.resolve([]);
 
 export default function GuardiansPanel({
   studentId,
@@ -193,21 +189,18 @@ export default function GuardiansPanel({
     [guardiansResource.error, accountsResource.error].some(
       (error) => error instanceof ApiError && isAccessRefusal(error),
     );
-  const guardians: ChildGuardian[] = accessRefused
+  const guardians: parentMeContract.childGuardianResponse[] = accessRefused
     ? []
     : (guardiansResource.data ?? []);
-  const accounts: RelatedAccount[] = accessRefused
+  const accounts: parentMeContract.relatedAccountResponse[] = accessRefused
     ? []
     : (accountsResource.data ?? []);
-  const permissionRequests: PickupPermissionRequest[] = accessRefused
-    ? []
-    : (requestsResource.data ?? []);
-  const [editingContact, setEditingContact] = useState<ChildGuardian | null>(
-    null,
-  );
-  const [editingPickup, setEditingPickup] = useState<ChildGuardian | null>(
-    null,
-  );
+  const permissionRequests: parentMeContract.pickupPermissionRequestResponse[] =
+    accessRefused ? [] : (requestsResource.data ?? []);
+  const [editingContact, setEditingContact] =
+    useState<parentMeContract.childGuardianResponse | null>(null);
+  const [editingPickup, setEditingPickup] =
+    useState<parentMeContract.childGuardianResponse | null>(null);
   const [addMode, setAddMode] = useState<"contact" | "access" | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const inviteFormRef = useRef<HTMLFormElement>(null);
@@ -765,7 +758,7 @@ function ConnectedAccountRow({
   onCancelRemove,
   onConfirmRemove,
 }: Readonly<{
-  account: RelatedAccount;
+  account: parentMeContract.relatedAccountResponse;
   canRemove: boolean;
   busy: boolean;
   confirmingRemove: boolean;
@@ -857,10 +850,10 @@ function GuardianRow({
   onEditPickup,
   onGrantAccess,
 }: Readonly<{
-  guardian: ChildGuardian;
+  guardian: parentMeContract.childGuardianResponse;
   withoutCarePlace?: boolean;
-  access?: RelatedAccount;
-  pendingPermission?: PickupPermissionRequest;
+  access?: parentMeContract.relatedAccountResponse;
+  pendingPermission?: parentMeContract.pickupPermissionRequestResponse;
   canInvite: boolean;
   busy: boolean;
   onEditContact: () => void;
@@ -1104,7 +1097,9 @@ function GuardianRow({
   );
 }
 
-function accessTone(status: RelatedAccount["status"]): StatusBadgeTone {
+function accessTone(
+  status: parentMeContract.relatedAccountResponse["status"],
+): StatusBadgeTone {
   if (status === "active") return "green";
   if (status === "pending") return "warning";
   return "gray";
@@ -1142,7 +1137,7 @@ function ContactModal({
 }: Readonly<{
   mode: "create" | "edit";
   studentId: string;
-  guardian?: ChildGuardian;
+  guardian?: parentMeContract.childGuardianResponse;
   withoutCarePlace?: boolean;
   canManagePickup?: boolean;
   canManageEmergencyContact?: boolean;
@@ -1247,7 +1242,7 @@ function ContactModal({
     const fallbackPrimaryIndex = cleaned.length > 0 ? 0 : -1;
     const effectivePrimaryIndex =
       primaryIndex >= 0 ? primaryIndex : fallbackPrimaryIndex;
-    const payload: GuardianContactPayload = {
+    const payload: parentMeContract.updateGuardianContactRequest = {
       first_name: firstName.trim(),
       last_name: lastName.trim(),
       ...(ownProfile ? { salutation } : {}),
@@ -1264,7 +1259,7 @@ function ContactModal({
     };
     try {
       if (mode === "create") {
-        const createPayload: CreateGuardianContactPayload = {
+        const createPayload: parentMeContract.createGuardianContactRequest = {
           ...payload,
           relationship_type: relationshipType,
           can_pickup: requestsPickup,
@@ -1609,9 +1604,9 @@ function PickupModal({
   onSaved,
 }: Readonly<{
   studentId: string;
-  guardian: ChildGuardian;
+  guardian: parentMeContract.childGuardianResponse;
   withoutCarePlace?: boolean;
-  pendingPermission?: PickupPermissionRequest;
+  pendingPermission?: parentMeContract.pickupPermissionRequestResponse;
   onClose: () => void;
   /** requested: die Abholerlaubnis ging als Anfrage an die OGS (#4780). */
   onSaved: (requested: boolean) => void;
@@ -1683,7 +1678,7 @@ function PickupModal({
       !withoutCarePlace &&
       g.can_edit_contact &&
       normalizedNotes !== originalNotes;
-    const payload: GuardianRelationshipPayload = {
+    const payload: parentMeContract.updateGuardianRelationshipRequest = {
       ...(revokes ? { can_pickup: false } : {}),
       ...(isEmergency !== g.is_emergency_contact
         ? { is_emergency_contact: isEmergency }

@@ -1,3 +1,5 @@
+import type { Pagination } from "./contract/runtime";
+
 /**
  * The success envelope of a JSON answer, as the backend writes it
  * (`common.Response`, `backend/api/common/response.go`). The BFF passes it on
@@ -10,15 +12,7 @@ export interface ApiResponse<T> {
   message?: string;
 }
 
-/** The page of a paginated list (`common.Pagination`). */
-interface ApiPagination {
-  current_page: number;
-  page_size: number;
-  total_pages: number;
-  total_records: number;
-}
-
 /** A paginated success answer (`common.PaginatedResponse`). */
 export interface PaginatedApiResponse<T> extends ApiResponse<T> {
-  pagination: ApiPagination;
+  pagination: Pagination;
 }

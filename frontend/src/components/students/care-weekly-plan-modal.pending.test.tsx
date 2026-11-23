@@ -1,7 +1,7 @@
 // #6533: Schließen während der Übernahme ist gesperrt (bisher nur der
 // Hintergrund), eine späte Antwort schließt keinen anderen Dialog.
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "~/lib/api-error";
 import {
@@ -41,6 +41,11 @@ function renderAndSubmit() {
 }
 
 describe("CareWeeklyPlanModal pending lock (#6533)", () => {
+  // Wait for the real error presenter before testing the dialog's save lock.
+  beforeAll(async () => {
+    await import("~/lib/error-presentation");
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });

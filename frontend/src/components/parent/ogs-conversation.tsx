@@ -56,7 +56,6 @@ import {
   parentRequestTypeI18nKey,
 } from "~/lib/messaging-status";
 import {
-  type ChildFeatures,
   type ParentMessage,
   type ThreadSummary,
   UNKNOWN_CHILD_TODAY,
@@ -82,6 +81,7 @@ import {
   useCareFacilityTerm,
   useCareTermTranslations,
 } from "~/lib/care-facility-term";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 const logger = createLogger({ component: "OgsConversation" });
 
@@ -643,7 +643,7 @@ export function OgsConversation({
                     }
                     tone="parent"
                     attachments={message.attachments}
-                    attachmentUrl={attachmentRoutes.downloadUrl}
+                    attachmentFiles={attachmentRoutes}
                     attachmentLabels={attachmentLabels.bubble}
                     pending={send.stateOf(message.id)}
                     pendingLabel={
@@ -771,7 +771,7 @@ export function OgsConversation({
                 }}
                 sending={sending}
                 attachments={{
-                  uploadUrl: attachmentRoutes.uploadUrl,
+                  upload: attachmentRoutes.upload,
                   labels: attachmentLabels.composer,
                 }}
                 placeholder={tm(
@@ -894,7 +894,7 @@ function QuickActions({
   childName,
   onPick,
 }: Readonly<{
-  features: ChildFeatures;
+  features: parentMeContract.ChildFeaturesResponse;
   loading: boolean;
   childName?: string;
   onPick: (key: OgsActionKey) => void;

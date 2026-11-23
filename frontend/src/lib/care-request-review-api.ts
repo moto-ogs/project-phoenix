@@ -9,7 +9,6 @@ import { bffFile, bffJson } from "./bff-fetch";
 import type * as studentsContract from "./contract/students.generated";
 import { createLogger } from "~/lib/logger";
 import { downloadBlob, filenameFromDisposition } from "~/lib/file-download";
-import type { RequestDiffEntry } from "~/lib/messaging-status";
 
 const logger = createLogger({ component: "CareRequestReviewAPI" });
 
@@ -29,7 +28,7 @@ export interface StaffCareRequest {
   readonly last_name: string;
   readonly status: CareRequestStatus;
   readonly request_kind: CareRequestKind;
-  readonly diff: readonly RequestDiffEntry[];
+  readonly diff: readonly studentsContract.CareRequestDiffResponse[];
   readonly request_reason?: string;
   readonly decision_reason?: string;
   readonly created_at: string;
@@ -96,9 +95,9 @@ export interface StaffCareRequestHistoryEntry {
   readonly last_name: string;
   readonly status: CareRequestStatus;
   readonly request_kind: CareRequestKind;
-  readonly requested: readonly RequestDiffEntry[];
+  readonly requested: readonly studentsContract.CareRequestDiffResponse[];
   /** Frozen decision-time diff; absent without a snapshot. */
-  readonly diff?: readonly RequestDiffEntry[];
+  readonly diff?: readonly studentsContract.CareRequestDiffResponse[];
   readonly decision_reason?: string;
   readonly created_at: string;
   readonly decided_at: string;

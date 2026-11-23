@@ -165,7 +165,7 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/parent/child/child-switcher.tsx",
-    lines: [55],
+    lines: [57],
     reason:
       "Kinderkarte im Elternportal (Ausnahme des Epics #5576, nicht anfassen): Kachel",
   },

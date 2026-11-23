@@ -49,10 +49,11 @@ import {
   remindUnanswered,
   withApiBase,
 } from "~/lib/parent-announcements-api";
+import type * as sharedContract from "~/lib/contract/shared.generated";
+import type { AnnouncementApiBase } from "~/lib/parent-announcements-api";
 import type {
   Announcement,
   AnnouncementRecipient,
-  AnnouncementStats,
   PollChild,
   PollResults,
 } from "~/lib/parent-announcements-api";
@@ -241,7 +242,7 @@ export function ReachSummary({
   requiresAcknowledgement,
   publishedAt,
 }: {
-  readonly stats: AnnouncementStats;
+  readonly stats: sharedContract.statsResponse;
   readonly requiresAcknowledgement: boolean;
   readonly publishedAt?: string;
 }) {
@@ -510,7 +511,7 @@ interface AnnouncementDetailProps {
   /** Called with the number of guardians reached by a poll reminder. */
   readonly onReminded: (count: number) => void;
   /** The routes of the portal that shows the announcement; default the OGS's. */
-  readonly apiBase?: string;
+  readonly apiBase?: AnnouncementApiBase;
 }
 
 /**

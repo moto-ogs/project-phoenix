@@ -1,4 +1,4 @@
-import type { GroupWire } from "~/lib/group-helpers";
+import type * as groupsContract from "~/lib/contract/groups.generated";
 
 let groupIdCounter = 0;
 
@@ -9,7 +9,9 @@ function nextId() {
 /**
  * Builds a decoded group response with sensible defaults.
  */
-export function buildBackendGroup(overrides?: Partial<GroupWire>): GroupWire {
+export function buildBackendGroup(
+  overrides?: Partial<groupsContract.GroupResponse>,
+): groupsContract.GroupResponse {
   const id = overrides?.id ?? String(nextId());
   return {
     id,

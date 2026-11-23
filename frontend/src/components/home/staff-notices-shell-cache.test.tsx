@@ -28,6 +28,10 @@ import { DayNoticeRow } from "./day-notice-row";
 
 // Echtes SWR: gezählt wird, was die gemeinsame Deduplizierung übrig lässt.
 vi.unmock("swr");
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
 
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
