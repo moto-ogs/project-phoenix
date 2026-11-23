@@ -23,6 +23,7 @@ import {
   rateCountLabel,
 } from "~/components/traeger/care-notice-format";
 import { formatEuro } from "~/components/traeger/contribution-format";
+import { CareBilledChildrenCard } from "~/components/traeger/care-billed-children-card";
 import { CareJoinedChildrenCard } from "~/components/traeger/care-joined-children-card";
 import { EmptyRunCard } from "~/components/traeger/empty-run-card";
 import {
@@ -462,6 +463,14 @@ export default function TraegerCareNoticeRunPage() {
           {empty ? (
             <CareJoinedChildrenCard childrenJoined={run.joinedChildren} />
           ) : null}
+          {/* A month an issued invoice already bills (#7892): the empty run
+            says why it has no notice for the child. */}
+          {empty ? (
+            <CareBilledChildrenCard
+              childrenBilled={run.billedChildren ?? []}
+              yearly
+            />
+          ) : null}
         </>
       ) : run ? (
         <>
@@ -508,6 +517,12 @@ export default function TraegerCareNoticeRunPage() {
           ) : null}
           {preview ? (
             <CareJoinedChildrenCard childrenJoined={run.joinedChildren} />
+          ) : null}
+          {preview ? (
+            <CareBilledChildrenCard
+              childrenBilled={run.billedChildren ?? []}
+              yearly
+            />
           ) : null}
           <div className="grid gap-4 sm:grid-cols-3">
             <StatCard

@@ -197,6 +197,45 @@ describe("discarding an empty monthly run", () => {
     expect(screen.getByText("OGS Nord, dann OGS Süd")).toBeInTheDocument();
   });
 
+  it("names a child an issued invoice already bills in an empty run (#7892)", async () => {
+    api.fetchCareRun.mockResolvedValue(
+      run({
+        billedChildren: [
+          {
+            childFirstName: "Noah",
+            childLastName: "Muster",
+            reason: "already_billed",
+            contracts: [
+              { contractId: "81", schoolId: "3", schoolName: "OGS Nord" },
+            ],
+            invoices: [
+              {
+                source: "care_run",
+                runId: "5",
+                contractId: "82",
+                schoolName: "OGS Süd",
+                number: "MB-0002",
+                documentKind: "invoice",
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    renderPage();
+
+    // The month may be billed rightly, so the run can still be discarded.
+    expect(
+      await screen.findByText("Dieser Lauf hat nichts abzurechnen"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", {
+        name: "Kind hat schon eine Rechnung – bitte prüfen",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Rechnung MB-0002 · OGS Süd")).toBeInTheDocument();
+  });
+
   it("keeps the notice hold and recovery link visible for an empty run", async () => {
     api.fetchCareRun.mockResolvedValue(
       run({

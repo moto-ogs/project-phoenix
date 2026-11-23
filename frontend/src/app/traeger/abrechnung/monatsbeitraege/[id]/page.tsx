@@ -27,6 +27,7 @@ import {
   CareDuplicatesCard,
   CareUnpricedCard,
 } from "~/components/traeger/care-run-invoices";
+import { CareBilledChildrenCard } from "~/components/traeger/care-billed-children-card";
 import { CareJoinedChildrenCard } from "~/components/traeger/care-joined-children-card";
 import { CareUncountedCard } from "~/components/traeger/care-uncounted-card";
 import {
@@ -176,6 +177,13 @@ function releaseBlockReason(run: CareRunDetail): string | undefined {
     return "Lege zuerst das Muster der Rechnungsnummern für Monatsbeiträge fest.";
   }
   return undefined;
+}
+
+/** "1 Kind hat schon eine Rechnung und bekommt keine weitere." */
+function alreadyBilledLabel(children: number): string {
+  return children === 1
+    ? "1 Kind hat schon eine Rechnung und bekommt keine weitere."
+    : `${children} Kinder haben schon eine Rechnung und bekommen keine weitere.`;
 }
 
 function notBilledLabel(children: number, released = false): string {
@@ -565,6 +573,11 @@ export default function TraegerCareRunPage() {
                 neuen Lauf nach, wenn ein Vertrag beendet ist.
               </p>
             ) : null}
+            {(run.billedChildren ?? []).length > 0 ? (
+              <p className="mt-3 text-sm text-gray-700">
+                {alreadyBilledLabel((run.billedChildren ?? []).length)}
+              </p>
+            ) : null}
             <ReleaseOpenPoints points={releaseOpenPoints} />
           </ConfirmationModal>
         ) : null
@@ -611,6 +624,11 @@ export default function TraegerCareRunPage() {
               the empty run says why it has no invoice here. */}
           {empty ? (
             <CareJoinedChildrenCard childrenJoined={run.joinedChildren} />
+          ) : null}
+          {/* A child whose month an issued invoice already bills (#7892):
+              the empty run says why it has no invoice for it. */}
+          {empty ? (
+            <CareBilledChildrenCard childrenBilled={run.billedChildren ?? []} />
           ) : null}
           {/* Mensa months a school has not released yet come with a later
               run; the empty run still names them. */}
@@ -866,6 +884,10 @@ export default function TraegerCareRunPage() {
             />
           ) : null}
           <CareDuplicatesCard duplicates={run.duplicates} released={!preview} />
+          <CareBilledChildrenCard
+            childrenBilled={run.billedChildren ?? []}
+            released={!preview}
+          />
           {preview ? (
             <CareJoinedChildrenCard childrenJoined={run.joinedChildren} />
           ) : null}
