@@ -171,6 +171,7 @@ function PlanningTracksPageContent() {
           color:
             typeof values.color === "string" ? values.color : DEFAULT_COLOR,
           sort_order: track.sortOrder,
+          expected_version: track.version,
         }),
       reorder: (orderedIds) => planningTrackService.reorder(orderedIds),
       retire: {

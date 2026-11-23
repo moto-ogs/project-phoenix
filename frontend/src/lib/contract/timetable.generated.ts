@@ -53,6 +53,7 @@ export interface PlanningTrack {
   color: string;
   sort_order: number;
   archived_at?: string;
+  version: string;
 }
 
 export const PlanningTrackSchema: z.ZodType<PlanningTrack, unknown> = object<PlanningTrack>({
@@ -64,6 +65,7 @@ export const PlanningTrackSchema: z.ZodType<PlanningTrack, unknown> = object<Pla
   color: str,
   sort_order: safeInt,
   archived_at: optional(instant),
+  version: str,
 });
 
 /** Go: timetablehttp.TemplateArchivedResponse */
@@ -83,6 +85,7 @@ export interface ClosingDayResponse {
   reason: string;
   created_at: string;
   updated_at: string;
+  version: string;
   traeger: boolean;
 }
 
@@ -93,6 +96,7 @@ export const ClosingDayResponseSchema: z.ZodType<ClosingDayResponse, unknown> = 
   reason: str,
   created_at: str,
   updated_at: str,
+  version: str,
   traeger: bool,
 });
 
@@ -847,6 +851,7 @@ export interface CalendarPeriodResponse {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  version: string;
   warnings?: PeriodWarning[];
   enrollment_phase_count: number;
   activity_group_count: number;
@@ -868,6 +873,7 @@ export const CalendarPeriodResponseSchema: z.ZodType<CalendarPeriodResponse, unk
   is_active: bool,
   created_at: str,
   updated_at: str,
+  version: str,
   warnings: optional(arr(PeriodWarningSchema)),
   enrollment_phase_count: safeInt,
   activity_group_count: safeInt,
@@ -1388,6 +1394,7 @@ export interface ClosingDayRequest {
   start_date?: string;
   end_date?: string;
   reason?: string;
+  expected_version?: string;
 }
 
 /** Go: timetablehttp.createInstanceRequest */
@@ -2028,6 +2035,7 @@ export interface CalendarPeriodRequest {
   week_cycle_length?: number;
   week_cycle_anchor?: string | null;
   is_active?: boolean;
+  expected_version?: string;
 }
 
 /** Go: timetablehttp.bootstrapPeriodsResponse */
@@ -2066,6 +2074,7 @@ export interface planningTrackRequest {
   name?: string;
   color?: string;
   sort_order?: number;
+  expected_version?: string;
 }
 
 /** Go: timetablehttp.schoolVacationAcknowledgementRequest */

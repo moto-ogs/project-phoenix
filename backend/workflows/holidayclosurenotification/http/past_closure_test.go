@@ -59,7 +59,7 @@ func TestPastClosingDayChangeResolvesItsWaitingCommand(t *testing.T) {
 			}
 
 			if mode == "edited" {
-				_, err = w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ClosingDayFields: schoolcalendar.ClosingDayFields{
+				_, err = w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ExpectedVersion: w.closingDayVersion(t, day.ID), ClosingDayFields: schoolcalendar.ClosingDayFields{
 					StartDate: "2020-07-09", EndDate: "2020-07-09", Reason: "Nachgetragen"}})
 				require.NoError(t, err)
 				assert.Zero(t, w.openProposals(t, day.ID), "a change of past days proposes nothing")

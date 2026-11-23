@@ -169,6 +169,7 @@ type calendarPeriodWindow struct {
 	WeekCycleLength int      `json:"week_cycle_length"`
 	WeekCycleAnchor *string  `json:"week_cycle_anchor,omitempty"`
 	IsActive        bool     `json:"is_active"`
+	Version         string   `json:"version"`
 }
 
 // firstFutureWeekday returns the earliest weekday after today that falls into
@@ -298,7 +299,7 @@ func (rt *Runtime) createSchoolYearPeriod(name string, start, end time.Time) err
 }
 
 // activatePeriod flips an existing period active, echoing every other field
-// back unchanged as PUT /periods requires.
+// and the version it read back unchanged as PUT /periods requires.
 func (rt *Runtime) activatePeriod(period calendarPeriodWindow) error {
 	body := map[string]any{
 		"name":              period.Name,
@@ -307,6 +308,7 @@ func (rt *Runtime) activatePeriod(period calendarPeriodWindow) error {
 		"end_date":          period.EndDate,
 		"week_cycle_length": period.WeekCycleLength,
 		"is_active":         true,
+		"expected_version":  period.Version,
 	}
 	if period.WeekCycleAnchor != nil {
 		body["week_cycle_anchor"] = *period.WeekCycleAnchor

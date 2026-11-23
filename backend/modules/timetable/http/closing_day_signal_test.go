@@ -23,6 +23,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	timetablehttp "github.com/moto-ogs/project-phoenix/modules/timetable/http"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -70,16 +71,24 @@ func TestClosingDayWritesWakeTheSchoolsOpenPages(t *testing.T) {
 	assert.Equal(t, signal, signals.taken(), "a new closing day")
 	var created struct {
 		Data struct {
-			ID testpkg.ID `json:"id"`
+			ID      testpkg.ID `json:"id"`
+			Version string     `json:"version"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &created))
 	path := fmt.Sprintf("/closing-days/%d", created.Data.ID)
 
 	rec = sendClosingDay(t, router, http.MethodPut, path, account.ID, tenantID,
-		map[string]string{"start_date": "2030-06-12", "end_date": "2030-06-13", "reason": "Pädagogische Tage"}, "schedules:update")
+		map[string]string{"start_date": "2030-06-12", "end_date": "2030-06-13", "reason": "Pädagogische Tage", "expected_version": created.Data.Version}, "schedules:update")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, signal, signals.taken(), "a changed closing day")
+
+	// The version read before that change is refused (ADR 0311).
+	rec = sendClosingDay(t, router, http.MethodPut, path, account.ID, tenantID,
+		map[string]string{"start_date": "2030-06-12", "end_date": "2030-06-14", "reason": "Überschrieben", "expected_version": created.Data.Version}, "schedules:update")
+	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+	assert.Contains(t, rec.Body.String(), readstate.ChangedCode)
+	assert.Empty(t, signals.taken(), "a refused change wakes no page")
 
 	rec = sendClosingDay(t, router, http.MethodPost, "/closing-days", account.ID, tenantID,
 		map[string]string{"start_date": "2030-06-12", "end_date": "2030-06-12", "reason": ""}, "schedules:create")

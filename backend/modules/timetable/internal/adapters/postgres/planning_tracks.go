@@ -219,8 +219,10 @@ func applyPlanningTrackFields(row *planningTrackRow, fields timetable.PlanningTr
 }
 
 func planningTrackToDomain(row planningTrackRow) timetable.PlanningTrack {
-	return timetable.PlanningTrack{ID: ident.ID(row.ID), TenantID: ident.ID(row.TenantID), CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
+	track := timetable.PlanningTrack{ID: ident.ID(row.ID), TenantID: ident.ID(row.TenantID), CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
 		Name: row.Name, Color: row.Color, SortOrder: row.SortOrder, ArchivedAt: row.ArchivedAt}
+	track.Version = timetable.PlanningTrackVersion(track)
+	return track
 }
 
 func sameIDSet(left, right []int64) bool {

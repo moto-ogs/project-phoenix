@@ -46,6 +46,7 @@ import { useUpdateUrlParams } from "~/hooks/useUpdateUrlParams";
 import { configToFormSection, type SectionConfig } from "~/lib/database/types";
 import type { MotoConcept } from "~/lib/moto-concepts";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import { isChangedSinceRead } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import { foldForSearch } from "~/lib/search-fold";
 
@@ -358,7 +359,16 @@ export function CatalogPage<T extends CatalogItem>({
   const handleUpdate = useCallback(
     async (values: Record<string, unknown>) => {
       if (!selected) return;
-      await config.update(selected, values);
+      try {
+        await config.update(selected, values);
+      } catch (err) {
+        // Hat jemand den Eintrag seit dem Lesen geändert, zeigt das Formular
+        // den gespeicherten Stand; die Meldung steht darüber (ADR 0311).
+        if (isChangedSinceRead(err) && (await refreshAfterWrite())) {
+          setFormGeneration((generation) => generation + 1);
+        }
+        throw err;
+      }
       if (await refreshAfterWrite()) {
         setFormGeneration((generation) => generation + 1);
         toast.success(

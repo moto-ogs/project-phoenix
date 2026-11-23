@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -412,6 +413,36 @@ func TestModuleObservesCalendarOperations(t *testing.T) {
 
 // --- closing days ---
 
+// An update carries the version of the closing day its editor read (ADR
+// 0311): a colleague's save in between, or no version at all, refuses it and
+// writes nothing; the version of the stored closing day saves.
+func TestModuleRefusesAClosingDayChangedSinceRead(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	module := buildModule(t, db)
+	ctx := testpkg.Ctx(t)
+	read := createClosingDay(t, ctx, module, "2030-11-04", "2030-11-04", "Pädagogischer Tag")
+	fields := func(reason string) schoolcalendar.ClosingDayFields {
+		return schoolcalendar.ClosingDayFields{StartDate: "2030-11-04", EndDate: "2030-11-05", Reason: reason}
+	}
+
+	colleague, err := module.UpdateClosingDay(ctx, schoolcalendar.UpdateClosingDay{ID: read.ID, ExpectedVersion: schoolcalendar.ClosingDayVersion(read), ClosingDayFields: fields("Kollegin")})
+	require.NoError(t, err)
+	require.NotEqual(t, schoolcalendar.ClosingDayVersion(read), schoolcalendar.ClosingDayVersion(colleague), "every save moves the version")
+
+	for name, version := range map[string]string{"outdated": schoolcalendar.ClosingDayVersion(read), "missing": ""} {
+		_, err = module.UpdateClosingDay(ctx, schoolcalendar.UpdateClosingDay{ID: read.ID, ExpectedVersion: version, ClosingDayFields: fields("Überschrieben")})
+		require.ErrorIs(t, err, readstate.ErrChanged, name)
+	}
+	stored, err := module.FindClosingDay(ctx, read.ID)
+	require.NoError(t, err)
+	assert.Equal(t, "Kollegin", stored.Reason, "a refused update writes nothing")
+
+	updated, err := module.UpdateClosingDay(ctx, schoolcalendar.UpdateClosingDay{ID: read.ID, ExpectedVersion: schoolcalendar.ClosingDayVersion(stored), ClosingDayFields: fields("Neu gelesen")})
+	require.NoError(t, err)
+	assert.Equal(t, "Neu gelesen", updated.Reason)
+}
+
 func TestModuleRunsTheClosingDayLifecycleAndRangeLookup(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
@@ -427,7 +458,7 @@ func TestModuleRunsTheClosingDayLifecycleAndRangeLookup(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, summer, found)
 
-	updated, err := module.UpdateClosingDay(ctx, schoolcalendar.UpdateClosingDay{ID: summer.ID, ClosingDayFields: schoolcalendar.ClosingDayFields{
+	updated, err := module.UpdateClosingDay(ctx, schoolcalendar.UpdateClosingDay{ID: summer.ID, ExpectedVersion: schoolcalendar.ClosingDayVersion(found), ClosingDayFields: schoolcalendar.ClosingDayFields{
 		StartDate: "2030-07-22", EndDate: "2030-08-16", Reason: "Sommerschließung verlängert",
 	}})
 	require.NoError(t, err)

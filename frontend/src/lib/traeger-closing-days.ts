@@ -22,6 +22,8 @@ export interface TraegerClosingDay {
   readonly endDate: string;
   readonly reason: string;
   readonly schoolIds: readonly string[];
+  /** Stand, den eine Änderung als `expected_version` mitschickt (ADR 0311). */
+  readonly version?: string;
 }
 
 export interface TraegerClosingDayInput {
@@ -34,6 +36,8 @@ export interface TraegerClosingDayInput {
    * wenn die Vorschau keine zeigte.
    */
   readonly holidayBookingsToken?: string;
+  /** Beim Ändern: der Stand des Schließtags, den das Büro gelesen hat. */
+  readonly expectedVersion?: string;
 }
 
 /** Ein gespeicherter Schließtag mit der Zahl der informierten Familien. */
@@ -125,6 +129,7 @@ function mapTraegerClosingDay(
     endDate: requiredDay(day.end_date, "closing_day.end_date"),
     reason: day.reason,
     schoolIds: day.school_ids ?? [],
+    version: day.version,
   };
 }
 
@@ -159,6 +164,9 @@ function backendInput(
     reason: input.reason.trim(),
     school_ids: [...input.schoolIds],
     holiday_bookings_token: input.holidayBookingsToken ?? "",
+    ...(input.expectedVersion === undefined
+      ? {}
+      : { expected_version: input.expectedVersion }),
   };
 }
 

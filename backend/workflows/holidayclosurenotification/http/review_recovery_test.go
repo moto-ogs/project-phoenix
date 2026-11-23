@@ -28,7 +28,7 @@ func TestMovedNoticeOnlyApprovesItsOwnRanges(t *testing.T) {
 	t.Parallel()
 	w := newClosureWorld(t, "Träger genauer Umfang")
 	day := w.createClosingDay(t, "2030-07-08", "2030-07-08")
-	_, err := w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ClosingDayFields: schoolcalendar.ClosingDayFields{
+	_, err := w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ExpectedVersion: w.closingDayVersion(t, day.ID), ClosingDayFields: schoolcalendar.ClosingDayFields{
 		StartDate: "2030-07-12", EndDate: "2030-07-12", Reason: "Verschoben",
 	}})
 	require.NoError(t, err)
@@ -76,7 +76,7 @@ func TestTransferredSchoolReplacesTheOldProposalOwner(t *testing.T) {
 	_, err := w.db.ExecContext(context.Background(), `UPDATE platform.schools SET organization_id = ? WHERE id = ?`, next.organization, w.school)
 	require.NoError(t, err)
 	bookHolidayWeek(t, w.db, next.organization, w.school, "neue.familie@example.org")
-	_, err = w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ClosingDayFields: schoolcalendar.ClosingDayFields{
+	_, err = w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ExpectedVersion: w.closingDayVersion(t, day.ID), ClosingDayFields: schoolcalendar.ClosingDayFields{
 		StartDate: "2030-07-09", EndDate: "2030-07-09", Reason: "Neuer Träger",
 	}})
 	require.NoError(t, err)
@@ -226,7 +226,7 @@ func TestUnprocessedMoveKeepsTheLastToldRange(t *testing.T) {
 	_, err := w.notices.NotifyFromSchool(w.ctx, w.school, 0, first.ID.Int64(), first.Revision, first.Token)
 	require.NoError(t, err)
 	move := func(date string) {
-		_, err := w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ClosingDayFields: schoolcalendar.ClosingDayFields{StartDate: date, EndDate: date, Reason: "Verschoben"}})
+		_, err := w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ExpectedVersion: w.closingDayVersion(t, day.ID), ClosingDayFields: schoolcalendar.ClosingDayFields{StartDate: date, EndDate: date, Reason: "Verschoben"}})
 		require.NoError(t, err)
 	}
 	move("2030-07-12")
@@ -290,7 +290,7 @@ func TestDeletingUnpreparedNewClosureWithdrawsItsCommands(t *testing.T) {
 				}))
 			}
 			if state == "edited" || state == "confirmed_twice" {
-				_, err := w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ClosingDayFields: schoolcalendar.ClosingDayFields{StartDate: "2030-07-12", EndDate: "2030-07-12", Reason: "Verschoben"}})
+				_, err := w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ExpectedVersion: w.closingDayVersion(t, day.ID), ClosingDayFields: schoolcalendar.ClosingDayFields{StartDate: "2030-07-12", EndDate: "2030-07-12", Reason: "Verschoben"}})
 				require.NoError(t, err)
 				if state == "confirmed_twice" {
 					confirm()
@@ -420,7 +420,7 @@ func TestEditedNoticeReplacesAnOutstandingRenewal(t *testing.T) {
 				assert.Empty(t, w.mails(t))
 				return
 			}
-			_, err := w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ClosingDayFields: schoolcalendar.ClosingDayFields{StartDate: "2030-07-08", EndDate: "2030-07-12", Reason: "Verschoben"}})
+			_, err := w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ExpectedVersion: w.closingDayVersion(t, day.ID), ClosingDayFields: schoolcalendar.ClosingDayFields{StartDate: "2030-07-08", EndDate: "2030-07-12", Reason: "Verschoben"}})
 			require.NoError(t, err)
 			// Also recover proposals saved before explicit predecessor linking.
 			_, err = w.db.ExecContext(w.ctx, `UPDATE calendar.holiday_closure_proposals SET supersedes_event_id=NULL WHERE tenant_id=? AND state='open'`, w.school)
@@ -451,7 +451,7 @@ func TestEditedNoticeReplacesAnOutstandingRenewal(t *testing.T) {
 			})
 			require.ErrorIs(t, err, schoolcalendar.ErrHolidayClosureNoticeChanged, "the old command also stays superseded after the newer proposal is confirmed")
 			// A later edit must use the latest prepared source, not the old renewal.
-			_, err = w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ClosingDayFields: schoolcalendar.ClosingDayFields{StartDate: "2030-07-10", EndDate: "2030-07-10", Reason: "Verkürzt"}})
+			_, err = w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ExpectedVersion: w.closingDayVersion(t, day.ID), ClosingDayFields: schoolcalendar.ClosingDayFields{StartDate: "2030-07-10", EndDate: "2030-07-10", Reason: "Verkürzt"}})
 			require.NoError(t, err)
 			var corrections []notification.ClosureNotice
 			for _, notice := range w.schoolNotices(t) {
@@ -479,7 +479,7 @@ func TestPreparationFailureKeepsTheLastToldSourceRange(t *testing.T) {
 	_, err := w.notices.NotifyFromSchool(w.ctx, w.school, 0, n.ID.Int64(), n.Revision, n.Token)
 	require.NoError(t, err)
 	move := func(date string) {
-		_, err := w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ClosingDayFields: schoolcalendar.ClosingDayFields{StartDate: date, EndDate: date, Reason: "Verschoben"}})
+		_, err := w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ExpectedVersion: w.closingDayVersion(t, day.ID), ClosingDayFields: schoolcalendar.ClosingDayFields{StartDate: date, EndDate: date, Reason: "Verschoben"}})
 		require.NoError(t, err)
 	}
 	move("2030-07-12")

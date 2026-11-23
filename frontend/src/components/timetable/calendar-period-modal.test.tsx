@@ -10,14 +10,21 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 
-const { mockToastSuccess, mockToastError, mockCreate, mockUpdate, mockDelete } =
-  vi.hoisted(() => ({
-    mockToastSuccess: vi.fn(),
-    mockToastError: vi.fn(),
-    mockCreate: vi.fn(),
-    mockUpdate: vi.fn(),
-    mockDelete: vi.fn(),
-  }));
+const {
+  mockToastSuccess,
+  mockToastError,
+  mockCreate,
+  mockUpdate,
+  mockDelete,
+  mockGet,
+} = vi.hoisted(() => ({
+  mockToastSuccess: vi.fn(),
+  mockToastError: vi.fn(),
+  mockCreate: vi.fn(),
+  mockUpdate: vi.fn(),
+  mockDelete: vi.fn(),
+  mockGet: vi.fn(),
+}));
 
 // The date fields moved from native inputs to the kit picker; this stub keeps
 // them settable via fireEvent.change and forwards min/max so the bound
@@ -85,6 +92,7 @@ vi.mock("~/lib/calendar-period-api", () => ({
     create: mockCreate,
     update: mockUpdate,
     delete: mockDelete,
+    get: mockGet,
   },
 }));
 
@@ -102,6 +110,7 @@ const period: CalendarPeriod = {
   isActive: true,
   createdAt: "2026-05-01T00:00:00Z",
   updatedAt: "2026-05-01T00:00:00Z",
+  version: "v1",
 };
 
 describe("CalendarPeriodModal", () => {
@@ -675,6 +684,61 @@ describe("CalendarPeriodModal", () => {
     ).toBeInTheDocument();
     // Der Alert oben im Panel ist die einzige Meldung (Bauart 2 Regel 5).
     expect(mockToastError).not.toHaveBeenCalled();
+  });
+
+  // ADR 0311: das Speichern schickt den gelesenen Stand. Hat jemand den
+  // Zeitraum inzwischen geändert, zeigt das Formular den gespeicherten Stand
+  // und bietet kein Wiederholen an; das nächste Speichern trägt dessen Stand.
+  it("sends the read version and shows the stored period after a refusal", async () => {
+    const stored = { ...period, name: "Schuljahr der Kollegin", version: "v2" };
+    mockUpdate.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    mockGet.mockResolvedValueOnce(stored);
+    render(
+      <CalendarPeriodModal
+        isOpen
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+        initial={period}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Bezeichnung"), {
+      target: { value: "Mein Schuljahr" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(
+      await screen.findByText(
+        catalogText(
+          "general.changed_since_read",
+          "das Speichern des Kalenderzeitraums",
+        ),
+      ),
+    ).toBeInTheDocument();
+    expect(mockUpdate).toHaveBeenCalledWith(
+      "5",
+      expect.objectContaining({
+        name: "Mein Schuljahr",
+        expected_version: "v1",
+      }),
+    );
+    await waitFor(() =>
+      expect(screen.getByLabelText("Bezeichnung")).toHaveValue(
+        "Schuljahr der Kollegin",
+      ),
+    );
+    expect(
+      screen.queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(mockUpdate).toHaveBeenLastCalledWith(
+        "5",
+        expect.objectContaining({ expected_version: "v2" }),
+      ),
+    );
   });
 
   it("retries a failed save with the current form", async () => {
