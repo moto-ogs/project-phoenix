@@ -65,8 +65,8 @@ func contractFamilies(byContract map[int64][]parentbilling.CareContractVersion, 
 // joinSchoolChanges joins the children of E1 that are one child changing its
 // school. The result keeps the places of E1: a joined child stands where its
 // first part stood, and the places of its other parts stay empty, so every
-// other child keeps its place and the sibling chain its key. joined names
-// the joined children by their place.
+// other child keeps its place. joined names the joined children by their
+// place; aligned can refuse a part (careChain.aligned).
 func joinSchoolChanges(children [][]int64, byContract map[int64][]parentbilling.CareContractVersion, families map[int64]string,
 	aligned func(part []int64) bool,
 ) (result [][]int64, joined []int) {
