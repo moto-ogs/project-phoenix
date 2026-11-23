@@ -548,12 +548,13 @@ function StackedRowCheckbox<T>({
 function StackedRowEnd({
   toggle,
   menu,
-}: Readonly<{ toggle: ReactNode; menu: ReactNode }>) {
+  className,
+}: Readonly<{ toggle: ReactNode; menu: ReactNode; className: string }>) {
   if (toggle === null && menu === null) return null;
   return (
     <span
       data-row-control=""
-      className="-my-1.5 flex shrink-0 items-center gap-1 self-start"
+      className={`flex shrink-0 items-center gap-1 ${className}`}
     >
       {toggle}
       {menu}
@@ -622,17 +623,30 @@ function StackedFieldLine<T>({
 function StackedExtraRow<T>({
   row,
   columns,
+  titleKey,
 }: Readonly<{
   row: DataTableExtraRow;
   columns: readonly DataTableColumn<T>[];
+  // The cell under the card's title column heads the block, without a label.
+  titleKey: string | undefined;
 }>) {
   if ("content" in row) return <div>{row.content}</div>;
-  const cells = row.cells.filter(
+  const present = row.cells.filter(
     (cell) => cell.content !== null && cell.content !== undefined,
   );
-  if (cells.length === 0) return null;
+  if (present.length === 0) return null;
+  const headline = present.find((cell) => cell.columnKey === titleKey);
+  const cells = present.filter((cell) => cell !== headline);
   return (
     <dl className="space-y-1">
+      {headline ? (
+        <div>
+          <dt className="sr-only">
+            {columns.find((c) => c.key === headline.columnKey)?.header}
+          </dt>
+          <dd className="text-gray-900">{headline.content}</dd>
+        </div>
+      ) : null}
       {cells.map((cell) => (
         <StackedField
           key={cell.columnKey}
@@ -907,7 +921,15 @@ function StackedRows<T>({
         />
       </>
     ) : null;
-    const end = <StackedRowEnd toggle={toggle} menu={menu ?? null} />;
+    // "row" lines are flat: the controls overhang them instead of raising
+    // the line to 44 px by finger. The other layouts keep their spacing.
+    const end = (
+      <StackedRowEnd
+        toggle={toggle}
+        menu={menu ?? null}
+        className={layout === "row" ? "-my-1.5" : ""}
+      />
+    );
     const callerControls =
       typeof rowHasInteractiveControls === "function"
         ? rowHasInteractiveControls(row)
@@ -1051,7 +1073,11 @@ function StackedRows<T>({
                   padding="compact"
                   className="text-xs text-gray-600"
                 >
-                  <StackedExtraRow row={subRow} columns={columns} />
+                  <StackedExtraRow
+                    row={subRow}
+                    columns={columns}
+                    titleKey={title?.key}
+                  />
                 </InsetPanel>
               ))}
             </div>
@@ -1102,7 +1128,11 @@ function StackedRows<T>({
           </div>
           {segment.summary ? (
             <InsetPanel framed padding="md" className="text-sm font-medium">
-              <StackedExtraRow row={segment.summary} columns={columns} />
+              <StackedExtraRow
+                row={segment.summary}
+                columns={columns}
+                titleKey={title?.key}
+              />
             </InsetPanel>
           ) : null}
         </Fragment>
