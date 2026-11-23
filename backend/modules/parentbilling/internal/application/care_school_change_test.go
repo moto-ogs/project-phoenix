@@ -391,3 +391,29 @@ func TestCarePreviewsRankByABirthDateOfAnUnbilledContract(t *testing.T) {
 	}
 	assert.Equal(t, map[ident.ID]int64{ident.ID(contractMia): 2000, ident.ID(contractNoah): 4000}, totals)
 }
+
+// An issued contract's record never claims another contract by name alone
+// (#7863): the issued Mia outside the month has a record, the draft's Mia
+// has none and no birth date. They stay two children, the family has two,
+// and the draft pays half under a rule from two children.
+func TestCarePreviewsKeepAnUnlinkedChildApartFromAnIssuedRecord(t *testing.T) {
+	t.Parallel()
+	draft := sjrVersion(t, contractMia, schoolIspringen, 1, billingMonth, "2027-01-31", mon1400, tue1400)
+	draft.StudentID, draft.ChildBirthDate = nil, nil
+	const issuedContract = contractLea + 1
+	in := careMonthInput{
+		month: day(t, billingMonth), rule: parentbilling.MonthRuleVersionOnFirst,
+		versions: []parentbilling.CareContractVersion{draft}, tariffs: chainTariffs(t), rules: familySizeRule(false, 2)(t),
+		recipients: map[int64]parentbilling.CareRecipient{contractMia: {Email: familyEva}},
+		issuedChildren: map[int64]parentbilling.CareContractChild{issuedContract: {StudentID: ptr(int64(issuedContract + 9000)),
+			FirstName: draft.ChildFirstName, LastName: draft.ChildLastName}},
+		invoiced: map[int64]parentbilling.CareInvoice{issuedContract: {
+			ContractID: ident.ID(issuedContract), SchoolID: ident.ID(schoolIspringen), FamilyEmail: familyEva,
+			Positions: []parentbilling.CarePosition{{CareOfferingID: ident.ID(moduleUntil1630), AmountCents: 4000, PayableCents: 4000}},
+		}},
+	}
+	month, err := buildCareMonth(in)
+	require.NoError(t, err)
+	require.Len(t, month.invoices, 1)
+	assert.Equal(t, int64(4000), month.invoices[0].TotalCents, "two children: the draft pays half")
+}

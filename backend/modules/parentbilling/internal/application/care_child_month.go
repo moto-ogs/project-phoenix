@@ -107,7 +107,7 @@ func groupCare(byContract map[int64][]parentbilling.CareContractVersion, order [
 	issued map[int64]parentbilling.CareContractChild, issuedFamilies map[int64]string,
 ) careGrouping {
 	chain := newCareChain(byContract, order, issued, families, issuedFamilies)
-	children, joined, parts := joinSchoolChanges(groupCareChildren(contractChildrenOf(byContract), order), byContract, families, chain.accepts)
+	children, joined, parts := joinSchoolChanges(groupCareChildren(contractChildrenOf(byContract), order, nil), byContract, families, chain.accepts)
 	for _, joining := range parts {
 		chain.join(joining)
 	}
@@ -268,12 +268,16 @@ func childOfVersion(version parentbilling.CareContractVersion) parentbilling.Car
 		LastName: version.ChildLastName, BirthDate: version.ChildBirthDate}
 }
 
-func groupCareChildren(identities map[int64]parentbilling.CareContractChild, order []int64) [][]int64 {
+// groupCareChildren groups the contracts by child. Only a contract not in
+// issued lends its record to contracts without one by name and date of
+// birth: an issued contract outside the month joins by its own record and
+// never claims another child by name alone (#7863).
+func groupCareChildren(identities map[int64]parentbilling.CareContractChild, order []int64, issued map[int64]bool) [][]int64 {
 	recordsOf := map[string][]int64{}
 	for _, contractID := range order {
 		child := identities[contractID]
 		person := personOf(child)
-		if child.StudentID != nil && !slices.Contains(recordsOf[person], *child.StudentID) {
+		if child.StudentID != nil && !issued[contractID] && !slices.Contains(recordsOf[person], *child.StudentID) {
 			recordsOf[person] = append(recordsOf[person], *child.StudentID)
 		}
 	}
@@ -309,13 +313,15 @@ func chainChildren(byContract map[int64][]parentbilling.CareContractVersion, ord
 ) [][]int64 {
 	identities := contractChildrenOf(byContract)
 	order = slices.Clone(order)
+	outside := map[int64]bool{}
 	for _, id := range slices.Sorted(maps.Keys(issued)) {
 		if _, inForce := identities[id]; !inForce {
 			identities[id] = issued[id]
 			order = append(order, id)
+			outside[id] = true
 		}
 	}
-	return groupCareChildren(identities, order)
+	return groupCareChildren(identities, order, outside)
 }
 
 // chainKeys names the children of the chain by their place, a child only

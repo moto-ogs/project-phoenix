@@ -395,19 +395,18 @@ func TestCareChildKeysKeepThePlacesOfE1WithIssuedNamesakes(t *testing.T) {
 	issued := map[int64]parentbilling.CareContractChild{799: {StudentID: ptr(int64(9799)), FirstName: "Noah", LastName: "Beispiel",
 		BirthDate: ptr(day(t, noahBirth))}}
 	keys := childKeys(byContract, order, issued, contractFamilies(byContract, nil))
-	// E1 over both, as before #7874: Noah's record 0, Noah without a record
-	// 1 (the issued second record makes the name ambiguous), Ida 2, Ole 3.
-	assert.Equal(t, "child:0", keys[700])
-	assert.Equal(t, "child:1", keys[701])
-	assert.Equal(t, "child:2", keys[702])
-	assert.Equal(t, "child:3", keys[703])
+	without := childKeys(byContract, order, nil, contractFamilies(byContract, nil))
+	assert.Equal(t, chainKeys(byContract, chainChildren(byContract, order, issued)), keys, "the chain as before #7874")
+	assert.Equal(t, without[702], keys[702], "the issued namesake moves no twin")
+	assert.Equal(t, without[703], keys[703])
 	assert.Equal(t, "contract:799", keys[799])
 }
 
 // A school change joins only where the sibling chain sees each part as a
-// child of its own: here an issued contract spells Benjamin's record „Ben“,
-// so the chain counts the Ben without a record at the new school with him.
-// Nothing joins, in neither grouping, and the month bills as before (#7874).
+// child of its own. An issued contract that spells Benjamin's record „Ben“
+// joins his record only and claims the Ben without a record at the new
+// school by no name (#7863), so the chain agrees and the change joins; the
+// other Ben keeps his key (#7874).
 func TestCareSchoolChangeJoinsOnlyWhereTheChainAgrees(t *testing.T) {
 	t.Parallel()
 	birth := ptr(day(t, noahBirth))
@@ -430,9 +429,11 @@ func TestCareSchoolChangeJoinsOnlyWhereTheChainAgrees(t *testing.T) {
 
 	issued := map[int64]parentbilling.CareContractChild{804: {StudentID: ptr(int64(9801)), FirstName: "Ben", LastName: "Beispiel", BirthDate: birth}}
 	grouping := groupCare(byContract, order, families, issued, nil)
-	assert.Empty(t, grouping.joined)
-	assert.NotEqual(t, grouping.keys[801], grouping.keys[802])
-	assert.Equal(t, chainKeys(byContract, chainChildren(byContract, order, issued)), grouping.keys, "the chain as before #7874")
+	require.Len(t, grouping.joined, 1)
+	chain := chainKeys(byContract, chainChildren(byContract, order, issued))
+	assert.Equal(t, chain[801], grouping.keys[802], "the parts share the key of the first")
+	assert.Equal(t, chain[801], grouping.keys[804], "the issued contract of the record stays with it")
+	assert.Equal(t, chain[803], grouping.keys[803], "the other Ben keeps his key")
 }
 
 // A school change joins only where every invoice already issued for a part
