@@ -26,7 +26,8 @@ import {
 import { useApiFormError } from "~/contexts/ToastContext";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { useFreshSWR } from "~/lib/swr";
+import { isChangedSinceRead } from "~/lib/api-error";
+import { useSWRAuth } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { schoolClassLabel } from "~/lib/school-class-label";
 import {
@@ -94,12 +95,18 @@ interface TransitionEditorProps {
   readonly existingDraft: GradeTransition | null;
   readonly onClose: () => void;
   readonly onReadyForPreview: (transition: GradeTransition) => void;
+  /**
+   * The saved draft changed since it was read (ADR 0311): the caller reads
+   * it again and passes the stored draft back as `existingDraft`.
+   */
+  readonly onChangedSinceRead?: (transition: GradeTransition) => void;
 }
 
 export function TransitionEditor({
   existingDraft,
   onClose,
   onReadyForPreview,
+  onChangedSinceRead,
 }: TransitionEditorProps) {
   const [academicYear, setAcademicYear] = useState(
     existingDraft?.academicYear ??
@@ -107,17 +114,27 @@ export function TransitionEditor({
   );
   const [notes, setNotes] = useState(existingDraft?.notes ?? "");
   // The draft is local state and never written into the cache. Until the
-  // first change it waits for this opening’s fresh suggestions; the first
-  // change copies them, so a later refresh never replaces an edit.
+  // first change it follows the suggestions (cached, read again on opening);
+  // the first change copies them, so a later refresh never replaces an edit.
   // A saved draft starts from its own mappings and reads no suggestions.
   const [draftRows, setDraftRows] = useState<EditorRow[] | null>(
     existingDraft ? rowsFromTransition(existingDraft) : null,
   );
+  // A newer stored state of the saved draft replaces the editor's state:
+  // the save it was edited for was refused, and the editor shows what is
+  // stored now.
+  const [shownVersion, setShownVersion] = useState(existingDraft?.version);
+  if (existingDraft && existingDraft.version !== shownVersion) {
+    setShownVersion(existingDraft.version);
+    setAcademicYear(existingDraft.academicYear);
+    setNotes(existingDraft.notes ?? "");
+    setDraftRows(rowsFromTransition(existingDraft));
+  }
   const {
     data: suggestions,
     error: suggestionsError,
     mutate: reloadSuggestions,
-  } = useFreshSWR(
+  } = useSWRAuth(
     existingDraft ? null : tenantAdminKeys.gradeTransitionSuggestions(),
     fetchSuggestedMappings,
   );
@@ -147,7 +164,7 @@ export function TransitionEditor({
   // added back (the suggestions are only the initial proposal). Bewusst still
   // bei einem Fehler: die Liste dient nur dem Wieder-Hinzufügen einer
   // entfernten Zeile. Die Vorschläge und das Speichern gehen ohne sie.
-  const { data: allClasses = NO_CLASSES } = useFreshSWR(
+  const { data: allClasses = NO_CLASSES } = useSWRAuth(
     tenantAdminKeys.gradeTransitionClasses(),
     fetchTransitionClasses,
   );
@@ -220,6 +237,7 @@ export function TransitionEditor({
       try {
         const transition = existingDraft
           ? await updateGradeTransition(existingDraft.id, {
+              expectedVersion: existingDraft.version,
               academicYear,
               // Send the raw value (including "") so clearing the field actually
               // removes the stored note instead of leaving the old one in place.
@@ -241,10 +259,14 @@ export function TransitionEditor({
         if (!op.isCurrent()) return;
         // grade_transition.not_draft (jemand hat den Entwurf inzwischen
         // angewendet) erklärt der Katalog; Wiederholen bietet er nur bei
-        // Server- und Verbindungsfehlern an (#405 review).
+        // Server- und Verbindungsfehlern an (#405 review). Hat jemand den
+        // Entwurf seit dem Öffnen gespeichert, zeigt der Editor dessen Stand;
+        // gespeichert wird erst eine neue Bearbeitung (ADR 0311).
+        const changed = isChangedSinceRead(error);
+        if (changed && existingDraft) onChangedSinceRead?.(existingDraft);
         void showSaveError(error, {
           object: "das Speichern des Entwurfs",
-          retry: () => latestContinueRef.current(),
+          retry: changed ? undefined : () => latestContinueRef.current(),
         });
       }
     });

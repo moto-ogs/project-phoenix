@@ -592,6 +592,12 @@ export function GradeTransitionsManager({
             setEditorDraft(null);
             setPreviewFor(transition);
           }}
+          onChangedSinceRead={(stale) => {
+            void refresh().then((list) => {
+              const stored = list?.find((item) => item.id === stale.id);
+              if (stored?.canModify) setEditorDraft(stored);
+            });
+          }}
         />
       )}
 

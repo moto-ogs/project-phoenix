@@ -105,6 +105,9 @@ type TransitionRequest struct {
 	AcademicYear string                     `json:"academic_year"`
 	Notes        *string                    `json:"notes,omitempty"`
 	Mappings     []TransitionMappingRequest `json:"mappings,omitempty"`
+	// ExpectedVersion is the version of the draft an update edits; an update
+	// of a draft changed since is refused (ADR 0311). A create ignores it.
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 // Bind performs basic binding validation for the transition request.
@@ -150,6 +153,9 @@ type TransitionResponse struct {
 	CanModify    bool                        `json:"can_modify"`
 	CanApply     bool                        `json:"can_apply"`
 	CanRevert    bool                        `json:"can_revert"`
+	// Version is the token an update of this draft sends back as
+	// expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 // TransitionMappingResponse represents a mapping in API responses. Ids are strings for the
@@ -274,6 +280,7 @@ func toTransitionResponse(t gradetransition.Transition) TransitionResponse {
 		CanRevert:    t.IsApplied(),
 		AppliedBy:    (*ident.ID)(t.AppliedBy),
 		RevertedBy:   (*ident.ID)(t.RevertedBy),
+		Version:      gradetransition.Version(t),
 	}
 	if t.AppliedAt != nil {
 		formatted := t.AppliedAt.UTC().Format(timeFormatISO8601)
@@ -457,7 +464,7 @@ func (rs *GradeTransitionResource) update(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	patch := gradetransition.DraftPatch{Notes: req.Notes}
+	patch := gradetransition.DraftPatch{Notes: req.Notes, ExpectedVersion: req.ExpectedVersion}
 	if req.AcademicYear != "" {
 		patch.AcademicYear = &req.AcademicYear
 	}

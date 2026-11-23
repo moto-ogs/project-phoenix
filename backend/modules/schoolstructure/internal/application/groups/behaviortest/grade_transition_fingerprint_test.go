@@ -49,7 +49,7 @@ func TestGradeTransitionWorkflow_Fingerprint_PromotionToGraduateNamedClassIsNotG
 
 	// Another admin turns that mapping into a graduation (Abgang) — the same
 	// source class, the same single child, a completely different outcome.
-	_, err = wf.UpdateDraft(ctx, id, gradetransition.DraftPatch{
+	_, err = wf.UpdateDraft(ctx, id, gradetransition.DraftPatch{ExpectedVersion: draftVersion(t, ctx, wf, id),
 		Mappings: []gradetransition.Mapping{graduate(fromClass)},
 	})
 	require.NoError(t, err)

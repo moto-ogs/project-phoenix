@@ -105863,6 +105863,13 @@
               "ref": "TransitionMappingRequest"
             }
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -105962,6 +105969,12 @@
           "name": "can_revert",
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]

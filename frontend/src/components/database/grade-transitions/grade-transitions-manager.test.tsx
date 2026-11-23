@@ -136,6 +136,7 @@ const draftTransition: GradeTransition = {
   canModify: true,
   canApply: true,
   canRevert: false,
+  version: "v1",
 };
 
 const appliedTransition: GradeTransition = {
@@ -146,6 +147,7 @@ const appliedTransition: GradeTransition = {
   canModify: false,
   canApply: false,
   canRevert: true,
+  version: "v1",
 };
 
 const suggestions: SuggestedMapping[] = [
