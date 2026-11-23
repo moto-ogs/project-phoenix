@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync, rmSync, mkdirSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -257,12 +257,16 @@ try {
   const unsavedPath = join(root, `frontend/src/lsp-unsaved-${process.pid}.ts`);
   const unsavedText = [
     'import type { StudentResponse } from "~/lib/contract/students.generated";',
-    'export const asNumber = (student: StudentResponse["id"]) => Number(student);',
+    `import type { SelfID as LocalID } from "./${basename(unsavedPath, ".ts")}";`,
+    'import { useSession } from "next-auth/react";',
+    'export type SelfID = StudentResponse["id"];',
+    "export const asNumber = (student: LocalID) => Number(student);",
+    "export function useTenantNumber() { return Number(useSession().data?.user.tenantId); }",
     "export const send = fetch;",
     'export { bffJsonUncontracted as uncontracted } from "~/lib/bff-fetch";',
   ].join("\n");
   ox.open(unsavedPath, "typescript", unsavedText);
-  await ox.notification(
+  const unsavedDiagnostics = await ox.notification(
     (m) =>
       m.method === "textDocument/publishDiagnostics" &&
       m.params.uri === uri(unsavedPath) &&
@@ -276,7 +280,19 @@ try {
         ),
       ),
   );
-  console.log("PASS Oxlint: all BFF boundary diagnostics in an unsaved file");
+  const numericLines = unsavedDiagnostics.params.diagnostics
+    .filter((diagnostic) =>
+      String(diagnostic.code).includes("no-numeric-identifier"),
+    )
+    .map((diagnostic) => diagnostic.range.start.line);
+  assert.deepEqual(numericLines, [
+    unsavedText
+      .split("\n")
+      .findIndex((line) => line.includes("Number(student)")),
+  ]);
+  console.log(
+    "PASS Oxlint: unsaved BFF diagnostics resolve local aliases and project types",
+  );
   await ox.close();
 
   const prettier = spawnSync(

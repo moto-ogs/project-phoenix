@@ -1,35 +1,73 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { basename, dirname, resolve } from "node:path";
-import { API, SymbolFlags, TypeFlags } from "typescript-native/unstable/sync";
-import { NodeFlags, SyntaxKind } from "typescript-native/unstable/ast";
-import * as ast from "typescript-native/unstable/ast/is";
+import { resolve, sep } from "node:path";
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
 
 const frontend = fileURLToPath(new URL("../", import.meta.url));
+const sourceRoot = resolve(frontend, "src") + sep;
 const tsconfig = resolve(frontend, "tsconfig.json");
 const contractFile = new URL(
   "../../backend/api/contract/contract.json",
   import.meta.url,
 );
 
+let ts;
+let config;
 let project;
 let wireTypes;
 
-function openProject(api, openFiles) {
-  const snapshot = api.updateSnapshot({ openProjects: [tsconfig], openFiles });
-  const project = openFiles?.length
-    ? (snapshot.getDefaultProjectForFile(openFiles[0]) ??
-      snapshot.getProject(tsconfig))
-    : snapshot.getProject(tsconfig);
-  if (!project)
-    throw new Error("Could not open frontend tsconfig for identifier lint.");
-  return project;
+function lintConfig() {
+  const parsed = ts.getParsedCommandLineOfConfigFile(
+    tsconfig,
+    {},
+    {
+      ...ts.sys,
+      onUnRecoverableConfigFileDiagnostic(diagnostic) {
+        throw new Error(
+          ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"),
+        );
+      },
+    },
+  );
+  const declarations = parsed.fileNames.filter((file) =>
+    /\.d\.[cm]?ts$/.test(file),
+  );
+  const sources = parsed.fileNames.filter(
+    (file) =>
+      resolve(file).startsWith(sourceRoot) &&
+      !resolve(file).startsWith(sourceRoot + "test" + sep) &&
+      !/\.(?:test|spec|stories)\.[cm]?[jt]sx?$/.test(file),
+  );
+  return {
+    options: parsed.options,
+    declarations,
+    roots: [...new Set([...declarations, ...sources])],
+  };
 }
 
-function createProject() {
-  const api = new API();
-  process.once("beforeExit", () => api.close());
-  return openProject(api);
+function createProgram(rootNames, filename, text, oldProgram) {
+  const options = config.options;
+  const host = ts.createCompilerHost(options);
+  if (filename) {
+    // LSP buffers may not be saved yet. Supply the exact linted text as a
+    // root; imports still resolve against the normal project.
+    const isBuffer = (path) => resolve(path) === filename;
+    const diskExists = host.fileExists.bind(host);
+    const diskRead = host.readFile.bind(host);
+    const diskSource = host.getSourceFile.bind(host);
+    host.fileExists = (path) => isBuffer(path) || diskExists(path);
+    host.readFile = (path) => (isBuffer(path) ? text : diskRead(path));
+    host.getSourceFile = (path, languageVersion, ...args) => {
+      if (isBuffer(path))
+        return ts.createSourceFile(path, text, languageVersion, true);
+      const previous = oldProgram?.getSourceFile(path);
+      if (previous && previous.text === diskRead(path)) return previous;
+      return diskSource(path, languageVersion, ...args);
+    };
+  }
+  return ts.createProgram({ rootNames, options, host, oldProgram });
 }
 
 function wireField(schema) {
@@ -41,9 +79,9 @@ function wireField(schema) {
 
 function declaredKind(type, checker, seen) {
   if (!type) return;
-  if (ast.isParenthesizedTypeNode(type))
+  if (ts.isParenthesizedTypeNode(type))
     return declaredKind(type.type, checker, seen);
-  if (ast.isUnionTypeNode(type)) {
+  if (ts.isUnionTypeNode(type)) {
     let known;
     for (const member of type.types) {
       const kind = declaredKind(member, checker, seen);
@@ -53,9 +91,9 @@ function declaredKind(type, checker, seen) {
     return known;
   }
   if (
-    ast.isIndexedAccessTypeNode(type) &&
-    ast.isLiteralTypeNode(type.indexType) &&
-    ast.isStringLiteral(type.indexType.literal)
+    ts.isIndexedAccessTypeNode(type) &&
+    ts.isLiteralTypeNode(type.indexType) &&
+    ts.isStringLiteral(type.indexType.literal)
   ) {
     const object = checker.getTypeFromTypeNode(type.objectType);
     if (object)
@@ -65,36 +103,35 @@ function declaredKind(type, checker, seen) {
         seen,
       );
   }
-  if (ast.isTypeReferenceNode(type)) {
+  if (ts.isTypeReferenceNode(type)) {
     const symbol = checker.getSymbolAtLocation(type.typeName);
     return contractKind(symbol, checker, seen);
   }
 }
 
 function contractKind(symbol, checker, seen = new Set()) {
-  if (!symbol || seen.has(symbol.id)) return;
-  seen.add(symbol.id);
-  if (symbol.flags & SymbolFlags.Alias) {
+  if (!symbol || seen.has(symbol)) return;
+  seen.add(symbol);
+  if (symbol.flags & ts.SymbolFlags.Alias) {
     return contractKind(checker.getAliasedSymbol(symbol), checker, seen);
   }
 
-  for (const handle of symbol.declarations) {
+  for (const declaration of symbol.declarations ?? []) {
     // Dependencies cannot reference this app's generated contract.
-    if (handle.path.includes("/node_modules/")) continue;
+    const path = declaration.getSourceFile().fileName;
+    if (path.includes("/node_modules/")) continue;
     if (
       ![
-        SyntaxKind.PropertySignature,
-        SyntaxKind.PropertyAssignment,
-        SyntaxKind.ShorthandPropertyAssignment,
-        SyntaxKind.Parameter,
-        SyntaxKind.VariableDeclaration,
-        SyntaxKind.TypeAliasDeclaration,
-      ].includes(handle.kind)
+        ts.SyntaxKind.PropertySignature,
+        ts.SyntaxKind.PropertyAssignment,
+        ts.SyntaxKind.ShorthandPropertyAssignment,
+        ts.SyntaxKind.Parameter,
+        ts.SyntaxKind.VariableDeclaration,
+        ts.SyntaxKind.TypeAliasDeclaration,
+      ].includes(declaration.kind)
     )
       continue;
-    const declaration = handle.resolve();
-    if (!declaration) continue;
-    if (ast.isShorthandPropertyAssignment(declaration)) {
+    if (ts.isShorthandPropertyAssignment(declaration)) {
       const kind = contractKind(
         checker.getShorthandAssignmentValueSymbol(declaration),
         checker,
@@ -104,10 +141,10 @@ function contractKind(symbol, checker, seen = new Set()) {
       continue;
     }
     if (
-      ast.isPropertyAssignment(declaration) ||
-      (ast.isVariableDeclaration(declaration) &&
+      ts.isPropertyAssignment(declaration) ||
+      (ts.isVariableDeclaration(declaration) &&
         declaration.initializer &&
-        declaration.parent.flags & NodeFlags.Const)
+        declaration.parent.flags & ts.NodeFlags.Const)
     ) {
       const inferred = expressionKind(declaration.initializer, checker, seen);
       if (inferred) return inferred;
@@ -116,9 +153,9 @@ function contractKind(symbol, checker, seen = new Set()) {
     // The generator emits IDs as string in TS; the matching contract node is
     // the authoritative distinction from another string on the same object.
     if (
-      handle.kind === SyntaxKind.PropertySignature &&
-      /[\\/]lib[\\/]contract[\\/][^\\/]+\.generated\.ts$/.test(handle.path) &&
-      ast.isInterfaceDeclaration(declaration.parent)
+      declaration.kind === ts.SyntaxKind.PropertySignature &&
+      /[\\/]lib[\\/]contract[\\/][^\\/]+\.generated\.ts$/.test(path) &&
+      ts.isInterfaceDeclaration(declaration.parent)
     ) {
       const kind = generatedFieldKind(declaration.parent, symbol.name);
       if (kind) return kind;
@@ -156,15 +193,11 @@ function generatedFieldKind(interfaceNode, field) {
         );
     }
   }
-  // TS's RPC AST represents JSDoc prose as a list of JSDocText nodes.
-  const annotation = interfaceNode.jsDoc?.[0]?.comment;
-  const query =
-    typeof annotation === "string"
-      ? annotation
-      : annotation?.map((part) => part.text).join("");
-  const key = query?.startsWith("Query of ")
-    ? query.slice("Query of ".length)
-    : interfaceNode.name.text;
+  const query = interfaceNode.jsDoc?.[0]?.comment;
+  const key =
+    typeof query === "string" && query.startsWith("Query of ")
+      ? query.slice("Query of ".length)
+      : interfaceNode.name.text;
   return wireTypes.get(key)?.get(field);
 }
 
@@ -176,10 +209,10 @@ function looksLikeIdentifier(name) {
 
 function numericOrBoolean(type, checker, inspectElements = true) {
   if (!type) return false;
-  if (type.isUnionType()) {
-    const present = type
-      .getTypes()
-      .filter((part) => !(part.flags & (TypeFlags.Null | TypeFlags.Undefined)));
+  if (type.isUnion()) {
+    const present = type.types.filter(
+      (part) => !(part.flags & (ts.TypeFlags.Null | ts.TypeFlags.Undefined)),
+    );
     return (
       present.length > 0 &&
       present.every((part) => numericOrBoolean(part, checker, inspectElements))
@@ -187,17 +220,19 @@ function numericOrBoolean(type, checker, inspectElements = true) {
   }
   if (
     type.flags &
-    (TypeFlags.NumberLike | TypeFlags.BigIntLike | TypeFlags.BooleanLike)
+    (ts.TypeFlags.NumberLike |
+      ts.TypeFlags.BigIntLike |
+      ts.TypeFlags.BooleanLike)
   )
     return true;
   return (
     inspectElements &&
-    Boolean(type.flags & TypeFlags.Object) &&
+    Boolean(type.flags & ts.TypeFlags.Object) &&
     checker
       .getIndexInfosOfType(type)
       .some(
-        ({ keyType, valueType: element }) =>
-          keyType.flags & TypeFlags.NumberLike &&
+        ({ keyType, type: element }) =>
+          keyType.flags & ts.TypeFlags.NumberLike &&
           numericOrBoolean(element, checker, false),
       )
   );
@@ -207,20 +242,20 @@ function expressionKind(node, checker, seen = new Set()) {
   if (seen.has(node)) return;
   seen.add(node);
   if (
-    ast.isParenthesizedExpression(node) ||
-    ast.isNonNullExpression(node) ||
-    ast.isAssertionExpression(node) ||
-    ast.isSatisfiesExpression(node)
+    ts.isParenthesizedExpression(node) ||
+    ts.isNonNullExpression(node) ||
+    ts.isAssertionExpression(node) ||
+    ts.isSatisfiesExpression(node)
   ) {
     return expressionKind(node.expression, checker, seen);
   }
-  const alternatives = ast.isConditionalExpression(node)
+  const alternatives = ts.isConditionalExpression(node)
     ? [node.whenTrue, node.whenFalse]
-    : ast.isBinaryExpression(node) &&
+    : ts.isBinaryExpression(node) &&
         [
-          SyntaxKind.QuestionQuestionToken,
-          SyntaxKind.BarBarToken,
-          SyntaxKind.AmpersandAmpersandToken,
+          ts.SyntaxKind.QuestionQuestionToken,
+          ts.SyntaxKind.BarBarToken,
+          ts.SyntaxKind.AmpersandAmpersandToken,
         ].includes(node.operatorToken.kind)
       ? [node.left, node.right]
       : null;
@@ -234,14 +269,14 @@ function expressionKind(node, checker, seen = new Set()) {
     );
   }
   if (
-    ast.isElementAccessExpression(node) &&
+    ts.isElementAccessExpression(node) &&
     expressionKind(node.expression, checker, seen) === "id-list"
   )
     return "id";
 
-  const name = ast.isPropertyAccessExpression(node)
+  const name = ts.isPropertyAccessExpression(node)
     ? node.name
-    : ast.isElementAccessExpression(node)
+    : ts.isElementAccessExpression(node)
       ? node.argumentExpression
       : node;
   const symbol = checker.getSymbolAtLocation(name);
@@ -250,15 +285,15 @@ function expressionKind(node, checker, seen = new Set()) {
 
   // The generated TypeScript represents both IDs and ordinary strings as
   // string. Follow local aliases back to the schema, not their spelling.
-  if (ast.isIdentifier(node)) {
-    const declaration = symbol?.valueDeclaration?.resolve();
+  if (ts.isIdentifier(node)) {
+    const declaration = symbol?.valueDeclaration;
     if (
       declaration &&
-      ast.isBindingElement(declaration) &&
-      ast.isObjectBindingPattern(declaration.parent)
+      ts.isBindingElement(declaration) &&
+      ts.isObjectBindingPattern(declaration.parent)
     ) {
       const property = declaration.propertyName ?? declaration.name;
-      if (ast.isIdentifier(property) || ast.isStringLiteral(property)) {
+      if (ts.isIdentifier(property) || ts.isStringLiteral(property)) {
         const objectType = checker.getTypeAtLocation(declaration.parent);
         const fromBinding =
           objectType &&
@@ -277,7 +312,7 @@ function expressionKind(node, checker, seen = new Set()) {
   }
 
   if (
-    (ast.isIdentifier(name) || ast.isStringLiteral(name)) &&
+    (ts.isIdentifier(name) || ts.isStringLiteral(name)) &&
     looksLikeIdentifier(name.text)
   ) {
     return numericOrBoolean(checker.getTypeAtLocation(node), checker)
@@ -293,47 +328,35 @@ export function numericIdentifiers(file, text, operands) {
   // Probes for unrelated plugins also load the repo config, but lint files
   // in isolated temporary roots. Only this project's code has our wire types.
   if (!filename.startsWith(frontend)) return [];
-  project ??= createProject();
-  const source = project.program.getSourceFile(file);
+  // Most lint probes never need a project. Load TypeScript only when this
+  // rule finds an operand inside the frontend workspace.
+  ts ??= require("typescript");
+  config ??= lintConfig();
+  const inProject = filename.startsWith(sourceRoot);
+  if (!project && inProject && ts.sys.readFile(filename) === text) {
+    // Use the in-process checker. Starting a compiler child from a lint
+    // plugin can fail on memory-constrained CI workers.
+    project = createProgram(config.roots);
+  }
+  const source = project?.getSourceFile(filename);
   if (source?.text === text)
-    return findIdentifiers(source, project.checker, operands);
+    return findIdentifiers(source, project.getTypeChecker(), operands);
 
-  // Editor buffers can differ from disk. Type-check the same source Oxlint
-  // linted, without making the ordinary CLI path use a virtual filesystem.
-  const parent = dirname(filename);
-  const fileExists = (path) => path === filename || undefined;
-  const readFile = (path) => (path === filename ? text : undefined);
-  const fs = { fileExists, readFile };
-  if (!source) {
-    // Include a new buffer in tsconfig's glob before it has a disk entry.
-    fs.getAccessibleEntries = (path) => {
-      if (path !== parent) return;
-      const entries = readdirSync(parent, { withFileTypes: true });
-      return {
-        files: [
-          ...new Set([
-            basename(filename),
-            ...entries
-              .filter((entry) => !entry.isDirectory())
-              .map((entry) => entry.name),
-          ]),
-        ],
-        directories: entries
-          .filter((entry) => entry.isDirectory())
-          .map((entry) => entry.name),
-      };
-    };
-  }
-  const api = new API({ fs });
-  try {
-    const current = openProject(api, [filename]);
-    const buffer = current.program.getSourceFile(file);
-    return buffer?.text === text
-      ? findIdentifiers(buffer, current.checker, operands)
-      : [];
-  } finally {
-    api.close();
-  }
+  // Preserve project-wide module augmentations for editor buffers. A
+  // standalone test fixture needs only its own dependency graph.
+  const roots = inProject ? config.roots : config.declarations;
+  const buffer = createProgram(
+    [...new Set([filename, ...roots])],
+    filename,
+    text,
+    inProject ? project : undefined,
+  );
+  if (inProject) project = buffer;
+  return findIdentifiers(
+    buffer.getSourceFile(filename),
+    buffer.getTypeChecker(),
+    operands,
+  );
 }
 
 function findIdentifiers(source, checker, operands) {
