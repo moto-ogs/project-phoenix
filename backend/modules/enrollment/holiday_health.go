@@ -97,7 +97,7 @@ func (h HolidayHostHealth) Empty() bool {
 // family's answers to its health questions and each child's health fields
 // and answers.
 type HolidayRegistrationHealthDetail struct {
-	CustomData HolidayAnswers              `json:"custom_data"`
+	CustomData HolidayAnswers              `json:"custom_data" contract_json:"Answer values follow the school's versioned form schema"`
 	Children   []HolidayRegistrationHealth `json:"children"`
 }
 

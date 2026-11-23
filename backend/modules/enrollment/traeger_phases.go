@@ -133,8 +133,8 @@ type TraegerPhases interface {
 type TraegerFieldChange struct {
 	Field   string `json:"field"`
 	State   string `json:"state"`
-	Traeger any    `json:"traeger"`
-	School  any    `json:"school"`
+	Traeger any    `json:"traeger" contract_json:"The changed field selects the inherited phase value type"`
+	School  any    `json:"school" contract_json:"The changed field selects the overridden phase value type"`
 }
 
 // TraegerCopyState is the state of a school's copy that a preview reads and

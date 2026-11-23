@@ -138,6 +138,14 @@ func (b *builder) field(declaring, root reflect.Type, sf reflect.StructField, na
 		return Field{}, err
 	}
 	field := Field{Name: name, Schema: schema}
+	field.JSONReason = strings.TrimSpace(sf.Tag.Get("contract_json"))
+	if err := checkFreeJSON(schema, field.JSONReason, at); err != nil {
+		return Field{}, err
+	}
+	field.RefinesJSON = strings.TrimSpace(sf.Tag.Get("contract_refines"))
+	if field.RefinesJSON != "" && (!request || field.JSONReason != "") {
+		return Field{}, fmt.Errorf("%s: contract_refines is for typed requests only", at)
+	}
 	owners := []reflect.Type{declaring}
 	if root != declaring {
 		owners = append(owners, root)
@@ -155,6 +163,22 @@ func (b *builder) field(declaring, root reflect.Type, sf reflect.StructField, na
 	}
 	b.omission(&field, sf.Type, options)
 	return field, nil
+}
+
+// A container inherits the explanation of its untyped elements. A struct
+// reference does not: each field of the referenced struct explains itself.
+func checkFreeJSON(schema Schema, reason, at string) error {
+	for schema.Elem != nil && !schema.LegacyJSON {
+		schema = *schema.Elem
+	}
+	open := schema.Kind == KindJSON || schema.LegacyJSON
+	if open && reason == "" {
+		return fmt.Errorf("%s: free JSON needs a type or a contract_json tag that explains why its shape is open", at)
+	}
+	if !open && reason != "" {
+		return fmt.Errorf("%s: remove contract_json from this typed field", at)
+	}
+	return nil
 }
 
 // mark applies what the owner registered for "GoType.json_name".

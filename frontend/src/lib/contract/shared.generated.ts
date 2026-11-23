@@ -76,6 +76,113 @@ export const AnnouncementAttachmentListResponseSchema: z.ZodType<AnnouncementAtt
   editable: bool,
 });
 
+/** Go: peopledirectory.BlockerSupervision */
+export interface BlockerSupervision {
+  id: string;
+  group_name: string;
+  start_date: string;
+}
+
+export const BlockerSupervisionSchema: z.ZodType<BlockerSupervision, unknown> = object<BlockerSupervision>({
+  id: int64String,
+  group_name: str,
+  start_date: str,
+});
+
+/** Go: peopledirectory.BlockerSubstitution */
+export interface BlockerSubstitution {
+  id: string;
+  group_name: string;
+  start_date: string;
+  end_date: string;
+}
+
+export const BlockerSubstitutionSchema: z.ZodType<BlockerSubstitution, unknown> = object<BlockerSubstitution>({
+  id: int64String,
+  group_name: str,
+  start_date: str,
+  end_date: str,
+});
+
+/** Go: peopledirectory.BlockerActivity */
+export interface BlockerActivity {
+  id: string;
+  activity_id: string;
+  activity_name: string;
+  is_primary: boolean;
+}
+
+export const BlockerActivitySchema: z.ZodType<BlockerActivity, unknown> = object<BlockerActivity>({
+  id: int64String,
+  activity_id: int64String,
+  activity_name: str,
+  is_primary: bool,
+});
+
+/** Go: peopledirectory.BlockerGroup */
+export interface BlockerGroup {
+  id: string;
+  group_id: string;
+  group_name: string;
+  teacher_id: string;
+  teacher_ids?: string[];
+}
+
+export const BlockerGroupSchema: z.ZodType<BlockerGroup, unknown> = object<BlockerGroup>({
+  id: int64String,
+  group_id: int64String,
+  group_name: str,
+  teacher_id: int64String,
+  teacher_ids: optional(arr(int64String)),
+});
+
+/** Go: peopledirectory.CaregiverCapabilityState */
+export interface CaregiverCapabilityState {
+  account_id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  person_id?: string;
+  staff_id?: string;
+  teacher_id?: string;
+  has_admin_role: boolean;
+  has_user_role: boolean;
+  has_person: boolean;
+  has_staff: boolean;
+  has_teacher: boolean;
+  has_caregiver_profile: boolean;
+  is_active_caregiver: boolean;
+  disable_blocked: boolean;
+  disable_blockers?: string[];
+  active_supervisions?: BlockerSupervision[];
+  active_substitutions?: BlockerSubstitution[];
+  activity_supervisions?: BlockerActivity[];
+  group_assignments?: BlockerGroup[];
+}
+
+export const CaregiverCapabilityStateSchema: z.ZodType<CaregiverCapabilityState, unknown> = object<CaregiverCapabilityState>({
+  account_id: int64String,
+  email: str,
+  first_name: str,
+  last_name: str,
+  person_id: optional(int64String),
+  staff_id: optional(int64String),
+  teacher_id: optional(int64String),
+  has_admin_role: bool,
+  has_user_role: bool,
+  has_person: bool,
+  has_staff: bool,
+  has_teacher: bool,
+  has_caregiver_profile: bool,
+  is_active_caregiver: bool,
+  disable_blocked: bool,
+  disable_blockers: optional(arr(str)),
+  active_supervisions: optional(arr(BlockerSupervisionSchema)),
+  active_substitutions: optional(arr(BlockerSubstitutionSchema)),
+  activity_supervisions: optional(arr(BlockerActivitySchema)),
+  group_assignments: optional(arr(BlockerGroupSchema)),
+});
+
 /** Go: account.RoleResponse */
 export interface RoleResponse {
   id: string;
@@ -1089,6 +1196,12 @@ export const FormLegalBlockSchema: z.ZodType<FormLegalBlock, unknown> = object<F
   guardian_agreement: optional(bool),
 });
 
+/** Go: enrollment.TranslatedText */
+export interface TranslatedTextInput {
+  text?: string;
+  source?: string;
+}
+
 /** Go: enrollmenthttp.SubmitGuardianRequest */
 export interface SubmitGuardianRequest {
   first_name?: string;
@@ -1129,12 +1242,6 @@ export interface FormAttachmentInput {
   document_id?: string;
   label?: string;
   document_url?: string;
-}
-
-/** Go: enrollment.TranslatedText */
-export interface TranslatedTextInput {
-  text?: string;
-  source?: string;
 }
 
 /** Go: enrollment.FormFieldOption */
@@ -1192,7 +1299,7 @@ export interface SubmitEnrollmentRequest {
   guardian_email?: string;
   guardian_phone?: string | null;
   additional_guardians?: SubmitGuardianRequest[] | null;
-  consent_flags?: Record<string, unknown | null> | null;
+  consent_flags?: Record<string, boolean | null> | null;
   form_schema_id?: string;
   expected_terms_fingerprint?: string;
   custom_data?: Record<string, unknown | null> | null;
@@ -2945,8 +3052,8 @@ export const OperationRosterSchema: z.ZodType<OperationRoster, unknown> = object
 /** Go: timetablehttp.PatchAttendanceRequest */
 export interface PatchAttendanceRequest {
   status?: string | null;
-  substatus?: unknown | null;
-  note?: unknown | null;
+  substatus?: string | null;
+  note?: string | null;
 }
 
 /** Go: timetablehttp.CompleteOperationRequest */

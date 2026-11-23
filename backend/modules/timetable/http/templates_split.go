@@ -111,9 +111,7 @@ func (n *NullableStringSlice) UnmarshalJSON(b []byte) error {
 
 // NullableStr is the string analogue of NullableInt: it tells an omitted note
 // ("inherit the source Wochennotiz") apart from an explicit null ("clear the
-// series note") for the split flow (#1837 follow-up). (Named NullableStr to
-// avoid colliding with the RawMessage-based nullableString in
-// instance_students.go, which is a different tri-state mechanism.)
+// series note") for the split flow (#1837 follow-up).
 type NullableStr struct {
 	Set   bool
 	Value *string

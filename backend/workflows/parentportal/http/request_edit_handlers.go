@@ -12,6 +12,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
+	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
@@ -53,9 +54,9 @@ type EditPickupChangeRequestBody struct {
 // EditCareScheduleRequestBody is the wire shape of
 // PUT /parent/me/children/{studentId}/care-schedule/requests/{requestId}.
 type EditCareScheduleRequestBody struct {
-	Payload         map[string]any               `json:"payload"`
-	ExpectedVersion string                       `json:"expected_version"`
-	Signature       *declarationSignatureRequest `json:"signature,omitempty"`
+	Payload         common.DeferredJSON[*carerequests.WeeklyChange] `json:"payload" contract_refines:"The care-plan parser already validates this weekly change document"`
+	ExpectedVersion string                                          `json:"expected_version"`
+	Signature       *declarationSignatureRequest                    `json:"signature,omitempty"`
 }
 
 // EditMasterDataRequestBody is the wire shape of
@@ -63,7 +64,7 @@ type EditCareScheduleRequestBody struct {
 // Target and field stay fixed — they are properties of the request, not of
 // the edit.
 type EditMasterDataRequestBody struct {
-	NewValue        json.RawMessage `json:"new_value"`
+	NewValue        json.RawMessage `json:"new_value" contract_json:"The requested student field selects the master-data value type"`
 	ExpectedVersion string          `json:"expected_version"`
 }
 
@@ -228,8 +229,12 @@ func (rs *Resource) editCareScheduleRequest(w http.ResponseWriter, r *http.Reque
 	if !decodeEditBody(w, r, &body) {
 		return
 	}
+	payload, ok := weeklyPayload(w, r, body.Payload)
+	if !ok {
+		return
+	}
 	view, err := rs.ParentService.EditSignedCareScheduleRequest(
-		r.Context(), target.accountID, target.studentID, target.requestID, body.Payload, body.ExpectedVersion, body.Signature.pickupInput(),
+		r.Context(), target.accountID, target.studentID, target.requestID, payload, body.ExpectedVersion, body.Signature.pickupInput(),
 	)
 	if err != nil {
 		renderParentRequestError(w, r, err)

@@ -5,7 +5,10 @@ import (
 	"reflect"
 	"slices"
 	"strings"
+	"time"
 
+	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
+	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	birthdaysAPI "github.com/moto-ogs/project-phoenix/modules/peopledirectory/inbound/birthdays"
 	groupsHTTP "github.com/moto-ogs/project-phoenix/modules/schoolstructure/http"
 	statisticsHTTP "github.com/moto-ogs/project-phoenix/modules/statistics/http"
@@ -230,7 +233,7 @@ func contractMounts() []contractMount {
 // (#2352), under their /operator mounts.
 func operatorContractMounts() []contractMount {
 	return []contractMount{
-		{"/operator", provisioningOperatorAPI.ProvisioningRouteContracts()},
+		{"/operator", provisioningOperatorAPI.ProvisioningRouteContracts(peopledirectory.CaregiverCapabilityState{})},
 		{"/operator", identityOperatorAPI.RouteContracts()},
 		{"/operator", identityOperatorAPI.SessionRouteContracts()},
 		{"/operator/announcements", operatorAnnouncementsHTTP.RouteContracts()},
@@ -265,9 +268,15 @@ func ContractDocument() (contract.Document, error) {
 			reflect.TypeFor[ident.ID](): contract.KindID,
 			// The device management renders its instants in whole seconds.
 			reflect.TypeFor[devicesAPI.WireTime](): contract.KindInstant,
-			// The answers of an enrollment form: an object of the form's own
-			// fields, whatever the school's schema asks for.
-			reflect.TypeFor[enrollmentOwner.FormValues](): contract.KindJSON,
+		},
+		Values: map[reflect.Type]string{
+			reflect.TypeFor[common.OptionalJSON[*string]]():                                 contract.TypedValue,
+			reflect.TypeFor[common.OptionalJSON[*int16]]():                                  contract.TypedValue,
+			reflect.TypeFor[common.OptionalJSON[map[string]any]]():                          contract.TypedValue,
+			reflect.TypeFor[common.OptionalJSON[enrollmentHTTP.ConsentFlags]]():             contract.TypedValue,
+			reflect.TypeFor[common.LegacyJSON[*bool]]():                                     contract.LegacyValue,
+			reflect.TypeFor[common.LegacyJSON[enrollmentHTTP.ChangeRequestChildSnapshot]](): contract.LegacyValue,
+			reflect.TypeFor[common.LegacyJSON[enrollmentHTTP.ChangeRequestGuardian]]():      contract.LegacyValue,
 		},
 		// The one route whose answer a query parameter shapes (ADR 0270 point 3).
 		QueryVariants: []string{"GET /api/students/"},
@@ -279,14 +288,20 @@ func ContractDocument() (contract.Document, error) {
 		// An absence edit tells an absent absence_type_id from null.
 		reflect.TypeFor[workforceModule.UpdateAbsenceRequest](): contract.ReadsFields,
 		// A presence is an object or, from older clients, a bare staff id.
-		reflect.TypeFor[timetableHTTP.DeviationPresence](): contract.ReadsFields,
+		reflect.TypeFor[timetableHTTP.DeviationPresence]():                 contract.ReadsFields,
+		reflect.TypeFor[common.DeferredJSON[*string]]():                    contract.ReadsValue,
+		reflect.TypeFor[common.DeferredJSON[*float64]]():                   contract.ReadsValue,
+		reflect.TypeFor[common.DeferredJSON[*time.Time]]():                 contract.ReadsValue,
+		reflect.TypeFor[common.DeferredJSON[*carerequests.WeeklyChange]](): contract.ReadsValue,
 		// The template writes tell an absent key from null.
-		reflect.TypeFor[timetableHTTP.NullableInt]():         contract.ReadsValue,
-		reflect.TypeFor[timetableHTTP.NullableInt64]():       contract.ReadsValue,
-		reflect.TypeFor[timetableHTTP.NullableIntSlice]():    contract.ReadsValue,
-		reflect.TypeFor[timetableHTTP.NullableInt64Slice]():  contract.ReadsValue,
-		reflect.TypeFor[timetableHTTP.NullableStringSlice](): contract.ReadsValue,
-		reflect.TypeFor[timetableHTTP.NullableStr]():         contract.ReadsValue,
+		reflect.TypeFor[timetableHTTP.NullableInt]():                         contract.ReadsValue,
+		reflect.TypeFor[timetableHTTP.NullableInt64]():                       contract.ReadsValue,
+		reflect.TypeFor[timetableHTTP.NullableIntSlice]():                    contract.ReadsValue,
+		reflect.TypeFor[timetableHTTP.NullableInt64Slice]():                  contract.ReadsValue,
+		reflect.TypeFor[timetableHTTP.NullableStringSlice]():                 contract.ReadsValue,
+		reflect.TypeFor[timetableHTTP.NullableStr]():                         contract.ReadsValue,
+		reflect.TypeFor[common.DeferredJSON[enrollmentOwner.Translations]](): contract.ReadsValue,
+		reflect.TypeFor[enrollmentHTTP.ConsentFlagsInput]():                  contract.ReadsValue,
 		// A phase body tells an absent calendar_period_id from null.
 		reflect.TypeFor[enrollmentHTTP.EnrollmentPhaseRequest](): contract.ReadsFields,
 		// A school update tells an absent child quota from null (#3567).

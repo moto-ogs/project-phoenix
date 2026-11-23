@@ -43,11 +43,6 @@ const TERM_CHANGES = ["price", "days", "activity"] as const;
 const ADDRESS_MARKS = ["failed", "complained"] as const;
 
 /** An object answer the contract carries as unknown (form answers, consents). */
-function record(value: unknown): Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
-}
 
 export type DecisionStatus =
   "approved" | "waitlisted" | "rejected" | "under_review";
@@ -102,36 +97,13 @@ function childOfferingFromContract(
   };
 }
 
-/**
- * A booking as an adjustment recorded it. The contract carries `before` and
- * `after` as unknown (the backend stores the snapshot as JSON), so this is
- * the shape the backend writes there.
- */
-interface AdminOfferingAdjustmentSnapshot {
-  offering_id: string;
-  offering_name?: string;
-  days_of_week_mode?: string;
-  selected_days?: string[];
-  manual_selected_days?: string[];
-  automatic_selected_days?: string[];
-  available_days?: string[];
-  /** Last booked day of an offering the office extended (#7929), after snapshot only. */
-  extended_until?: string;
-}
-
 export type AdminOfferingAdjustment = Omit<
   enrollmentContract.AdminOfferingAdjustment,
   "before" | "after"
 > & {
-  before: AdminOfferingAdjustmentSnapshot[];
-  after: AdminOfferingAdjustmentSnapshot[];
+  before: NonNullable<enrollmentContract.AdminOfferingAdjustment["before"]>;
+  after: NonNullable<enrollmentContract.AdminOfferingAdjustment["after"]>;
 };
-
-function snapshots(value: unknown): AdminOfferingAdjustmentSnapshot[] {
-  return Array.isArray(value)
-    ? (value as AdminOfferingAdjustmentSnapshot[])
-    : [];
-}
 
 /**
  * The other active enrollment of the same phase that already created or
@@ -178,14 +150,9 @@ function candidateFromContract(
  */
 export type AdminRequestChild = Omit<
   enrollmentContract.AdminRequestChild,
-  | "status"
-  | "custom_data"
-  | "possible_existing_children"
-  | "offerings"
-  | "upcoming_offerings"
+  "status" | "possible_existing_children" | "offerings" | "upcoming_offerings"
 > & {
   status: ChildStatus;
-  custom_data?: Record<string, unknown>;
   possible_existing_children?: AdminExistingChildCandidate[];
   offerings?: AdminRequestChildOffering[];
   upcoming_offerings?: AdminRequestChildOffering[];
@@ -195,7 +162,6 @@ function requestChildFromContract(
   child: enrollmentContract.AdminRequestChild,
 ): AdminRequestChild {
   const {
-    custom_data: customData,
     possible_existing_children: candidates,
     offerings,
     upcoming_offerings: upcoming,
@@ -208,7 +174,6 @@ function requestChildFromContract(
       child.status,
       "AdminRequestChild.status",
     ),
-    ...(customData !== undefined && { custom_data: record(customData) }),
     ...(candidates && {
       possible_existing_children: candidates.map(candidateFromContract),
     }),
@@ -226,11 +191,9 @@ function requestChildFromContract(
  */
 export type AdminRequestSummary = Omit<
   enrollmentContract.AdminRequestSummary,
-  "care_offering_selection_mode" | "custom_data" | "consent_flags" | "children"
+  "care_offering_selection_mode" | "children"
 > & {
   care_offering_selection_mode: CareOfferingSelectionMode;
-  custom_data?: Record<string, unknown>;
-  consent_flags?: Record<string, unknown>;
   children: AdminRequestChild[];
 };
 
@@ -248,12 +211,7 @@ export function fromImportedContract(request: {
 function requestSummaryFromContract(
   summary: enrollmentContract.AdminRequestSummary,
 ): AdminRequestSummary {
-  const {
-    custom_data: customData,
-    consent_flags: consentFlags,
-    children,
-    ...rest
-  } = summary;
+  const { children, ...rest } = summary;
   return {
     ...rest,
     care_offering_selection_mode: requiredEnum(
@@ -261,8 +219,6 @@ function requestSummaryFromContract(
       summary.care_offering_selection_mode,
       "AdminRequestSummary.care_offering_selection_mode",
     ),
-    ...(customData !== undefined && { custom_data: record(customData) }),
-    ...(consentFlags !== undefined && { consent_flags: record(consentFlags) }),
     children: (children ?? []).map(requestChildFromContract),
   };
 }
@@ -302,10 +258,9 @@ export type AdminLegalEvidenceBlock = Omit<
 
 export type AdminLegalEvidenceEntry = Omit<
   enrollmentContract.AdminLegalEvidenceEntry,
-  "blocks" | "consent_flags"
+  "blocks"
 > & {
   blocks: AdminLegalEvidenceBlock[] | null;
-  consent_flags: Record<string, unknown> | null;
 };
 
 function evidenceFromContract(
@@ -325,8 +280,6 @@ function evidenceFromContract(
           ),
         }),
       })),
-    consent_flags:
-      entry.consent_flags === null ? null : record(entry.consent_flags),
   };
 }
 
@@ -780,8 +733,8 @@ export async function listAdminChildOfferingAdjustments(
   );
   return adjustments.map((adjustment) => ({
     ...adjustment,
-    before: snapshots(adjustment.before),
-    after: snapshots(adjustment.after),
+    before: adjustment.before ?? [],
+    after: adjustment.after ?? [],
   }));
 }
 

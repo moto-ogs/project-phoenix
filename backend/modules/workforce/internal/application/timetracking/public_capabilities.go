@@ -2,6 +2,7 @@ package timetracking
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -431,21 +432,33 @@ func (c timeTrackingAuditLogCapability) ListAuditLog(ctx context.Context, reques
 	if page.Events != nil {
 		result.Events = make([]*workforce.AuditLogEvent, 0, len(page.Events))
 		for _, event := range page.Events {
-			if event == nil {
-				result.Events = append(result.Events, nil)
-				continue
-			}
-			public := &workforce.AuditLogEvent{
-				OccurredAt: event.OccurredAt, Source: event.Source, EntryID: ident.ID(event.EntryID), Actor: workforce.AuditLogActor(event.Actor),
-				Reason: event.Reason, Detail: event.Detail,
-			}
-			if event.Staff != nil {
-				public.Staff = new(workforce.AuditLogPerson(*event.Staff))
+			public, err := timeTrackingAuditEvent(event)
+			if err != nil {
+				return nil, err
 			}
 			result.Events = append(result.Events, public)
 		}
 	}
 	return result, nil
+}
+
+func timeTrackingAuditEvent(event *AuditLogEvent) (*workforce.AuditLogEvent, error) {
+	if event == nil {
+		return nil, nil
+	}
+	public := &workforce.AuditLogEvent{
+		OccurredAt: event.OccurredAt, Source: event.Source, EntryID: ident.ID(event.EntryID),
+		Actor: workforce.AuditLogActor(event.Actor), Reason: event.Reason,
+	}
+	if len(event.Detail) > 0 {
+		if err := json.Unmarshal(event.Detail, &public.Detail); err != nil {
+			return nil, fmt.Errorf("decode time tracking audit detail: %w", err)
+		}
+	}
+	if event.Staff != nil {
+		public.Staff = new(workforce.AuditLogPerson(*event.Staff))
+	}
+	return public, nil
 }
 
 type staffTimeExportCapability struct {

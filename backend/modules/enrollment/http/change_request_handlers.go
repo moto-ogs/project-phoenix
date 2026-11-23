@@ -27,9 +27,9 @@ type ChangeRequestResponse struct {
 	Status            string                         `json:"status"`
 	ParentNote        *string                        `json:"parent_note,omitempty"`
 	AdminDecisionNote *string                        `json:"admin_decision_note,omitempty"`
-	BaseSnapshot      map[string]any                 `json:"base_snapshot"`
-	ProposedSnapshot  map[string]any                 `json:"proposed_snapshot"`
-	Diff              map[string]any                 `json:"diff"`
+	BaseSnapshot      *ChangeRequestSnapshot         `json:"base_snapshot"`
+	ProposedSnapshot  *ChangeRequestSnapshot         `json:"proposed_snapshot"`
+	Diff              *ChangeRequestDiff             `json:"diff"`
 	CreatedAt         time.Time                      `json:"created_at"`
 	UpdatedAt         time.Time                      `json:"updated_at"`
 	ReviewedAt        *time.Time                     `json:"reviewed_at,omitempty"`

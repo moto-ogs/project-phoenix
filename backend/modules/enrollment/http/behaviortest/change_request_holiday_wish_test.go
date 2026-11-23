@@ -44,13 +44,14 @@ func TestChangeRequestService_DropsUnaskedHolidayCareWish(t *testing.T) {
 					Submission: proposed, ParentNote: "Bitte Telefonnummer ändern.",
 				})
 				require.NoError(t, err)
-				children := created.ChangeRequest.ProposedSnapshot["children"].([]any)
-				child := children[0].(map[string]any)
+				children := created.ChangeRequest.ProposedSnapshot.Children
+				require.Len(t, children, 1)
+				child := &children[0].Value
 				if stage == "creation" {
-					assert.Nil(t, child["holiday_care_wish"], "unasked input must not enter the proposal")
+					assert.Nil(t, child.HolidayCareWish, "unasked input must not enter the proposal")
 				} else {
 					// A pending proposal from before the fix is revalidated on approval.
-					child["holiday_care_wish"] = injected
+					child.HolidayCareWish = &injected
 					payload, err := json.Marshal(created.ChangeRequest.ProposedSnapshot)
 					require.NoError(t, err)
 					_, err = env.db.NewUpdate().TableExpr("enrollment.change_requests").

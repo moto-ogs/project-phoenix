@@ -644,9 +644,9 @@ func TestARegisteredPointerAnswersTheObjectOrNull(t *testing.T) {
 
 // stored hands on JSON its owner stored without reading it.
 type stored struct {
-	Old json.RawMessage `json:"old,omitempty"`
-	Raw json.RawMessage `json:"raw"`
-	Any any             `json:"any"`
+	Old json.RawMessage `json:"old,omitempty" contract_json:"historical extension data"`
+	Raw json.RawMessage `json:"raw" contract_json:"external provider metadata"`
+	Any any             `json:"any" contract_json:"schema-defined answer"`
 }
 
 // presence tells an absent key from null, as the template writes do.
@@ -676,6 +676,7 @@ func TestARawValueAndAValueReaderTravelAsWhatTheyHold(t *testing.T) {
 	assert.Equal(t, Schema{Kind: KindJSON, Nullable: true}, fields["raw"].Schema, "any JSON value, null included")
 	assert.Equal(t, Schema{Kind: KindJSON, Nullable: true}, fields["old"].Schema, "omitempty leaves an empty value out; a stored null still travels")
 	assert.Equal(t, Schema{Kind: KindJSON, Nullable: true}, fields["any"].Schema, "an empty interface holds any JSON")
+	assert.Equal(t, "schema-defined answer", fields["any"].JSONReason)
 	assert.True(t, fields["old"].Optional)
 	assert.Equal(t, Schema{Kind: KindID, Nullable: true}, fieldsOf(t, doc, "presenceBody")["track_id"].Schema, "the wrapper reads its Value")
 
@@ -788,4 +789,35 @@ func TestResourceAliasAvoidsReservedWords(t *testing.T) {
 			t.Errorf("resourceAlias(%q) = %q, want %q", resource, got, want)
 		}
 	}
+}
+
+type legacyValue struct {
+	Value bool
+}
+
+func (legacyValue) MarshalJSON() ([]byte, error) { return []byte("true"), nil }
+
+type unexplainedLegacyValue struct {
+	Flag legacyValue `json:"flag"`
+}
+
+func TestAnUnexplainedLegacyFallbackStopsTheGenerator(t *testing.T) {
+	t.Parallel()
+	_, err := Build([]Registration{get("/api/stored/", unexplainedLegacyValue{})}, Options{
+		Identifiers: identifiers,
+		Values:      map[reflect.Type]string{reflect.TypeFor[legacyValue](): LegacyValue},
+	})
+	require.ErrorContains(t, err, "unexplainedLegacyValue.Flag")
+	require.ErrorContains(t, err, "contract_json")
+}
+
+type unexplainedJSONFields struct {
+	Values map[string][]any `json:"values"`
+}
+
+func TestUnexplainedJSONStopsTheGenerator(t *testing.T) {
+	t.Parallel()
+	_, err := Build([]Registration{post(unexplainedJSONFields{})}, Options{Identifiers: identifiers})
+	require.ErrorContains(t, err, "unexplainedJSONFields.Values")
+	require.ErrorContains(t, err, "contract_json")
 }

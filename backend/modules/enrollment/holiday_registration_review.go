@@ -281,7 +281,7 @@ type HolidayRegistrationHealth struct {
 	Allergies   string         `json:"allergies"`
 	Medication  string         `json:"medication"`
 	HealthNotes string         `json:"health_notes"`
-	CustomData  HolidayAnswers `json:"custom_data"`
+	CustomData  HolidayAnswers `json:"custom_data" contract_json:"Answer values follow the school's versioned form schema"`
 }
 
 // HolidayRegistrationContact is an emergency contact or a person allowed to
@@ -355,7 +355,7 @@ type HolidayRegistrationEvent struct {
 // form.
 type HolidayChildAnswers struct {
 	ChildID    ident.ID       `json:"child_id"`
-	CustomData HolidayAnswers `json:"custom_data"`
+	CustomData HolidayAnswers `json:"custom_data" contract_json:"Answer values follow the school's versioned form schema"`
 }
 
 // HolidayRegistrationAnswers are the form version and the answers of one
@@ -383,7 +383,7 @@ type HolidayRegistrationDetail struct {
 	LegalAcceptances map[string]time.Time         `json:"legal_acceptances"`
 	SecondGuardian   *HolidayGuardianInput        `json:"second_guardian,omitempty"`
 	Form             *HolidayPeriodForm           `json:"form"`
-	CustomData       HolidayAnswers               `json:"custom_data"`
+	CustomData       HolidayAnswers               `json:"custom_data" contract_json:"Answer values follow the school's versioned form schema"`
 	ChildCustomData  []HolidayChildAnswers        `json:"child_custom_data"`
 	Contacts         []HolidayRegistrationContact `json:"contacts"`
 	PrivacyConsentAt time.Time                    `json:"privacy_consent_at"`

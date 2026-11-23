@@ -35,37 +35,6 @@ import (
 )
 
 // -----------------------------------------------------------------------------
-// Unit tests: decodeNullableString
-// -----------------------------------------------------------------------------
-
-func TestDecodeNullableString(t *testing.T) {
-	t.Parallel()
-
-	t.Run("missing", func(t *testing.T) {
-		got, err := decodeNullableString(nil)
-		require.NoError(t, err)
-		assert.False(t, got.present)
-	})
-	t.Run("explicit null", func(t *testing.T) {
-		got, err := decodeNullableString(json.RawMessage("null"))
-		require.NoError(t, err)
-		assert.True(t, got.present)
-		assert.True(t, got.isNull)
-	})
-	t.Run("string value", func(t *testing.T) {
-		got, err := decodeNullableString(json.RawMessage(`"late"`))
-		require.NoError(t, err)
-		assert.True(t, got.present)
-		assert.False(t, got.isNull)
-		assert.Equal(t, "late", got.value)
-	})
-	t.Run("non-string rejects", func(t *testing.T) {
-		_, err := decodeNullableString(json.RawMessage(`5`))
-		require.Error(t, err)
-	})
-}
-
-// -----------------------------------------------------------------------------
 // Integration tests: full PATCH handler
 // -----------------------------------------------------------------------------
 
