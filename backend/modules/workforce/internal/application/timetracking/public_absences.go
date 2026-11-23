@@ -298,7 +298,7 @@ func (c staffAbsenceCapability) VacationQuotaSummary(ctx context.Context, staffI
 	return &workforce.VacationQuotaSummary{
 		StaffID: ident.ID(summary.StaffID), Year: summary.Year, EntitledDays: summary.EntitledDays, CarryoverDays: summary.CarryoverDays,
 		TakenBeforeDays: summary.TakenBeforeDays, TakenDays: summary.TakenDays, ReservedDays: summary.ReservedDays,
-		RemainingDays: summary.RemainingDays, Opening: publicVacationOpening(summary.Opening),
+		RemainingDays: summary.RemainingDays, Opening: publicVacationOpening(summary.Opening), Version: summary.Version,
 	}, nil
 }
 

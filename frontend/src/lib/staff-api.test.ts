@@ -1908,6 +1908,7 @@ describe("staff-api", () => {
         entitled_days: 30,
         carryover_days: 1,
         reason: "Tarif",
+        expected_version: "quota-1",
       };
       const result = await staffAbsenceService.setVacationQuota("1", payload);
 
@@ -2029,6 +2030,7 @@ describe("staff-api", () => {
         entitled_days: 30,
         carryover_days: 1,
         reason: "Tarif",
+        expected_version: "quota-1",
       };
 
       await expect(

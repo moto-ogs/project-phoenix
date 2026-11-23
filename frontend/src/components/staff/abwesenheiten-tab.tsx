@@ -3,6 +3,7 @@
 import {
   type ReactNode,
   useCallback,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -82,6 +83,7 @@ import {
   useRefreshAfterWrite,
   type RefreshAfterWrite,
 } from "~/lib/hooks/use-refresh-after-write";
+import { isChangedSinceRead } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import {
   formatDate,
@@ -643,6 +645,7 @@ export function AbwesenheitenTab({
                   quota={quota}
                   year={year}
                   onCancel={() => setEditing(null)}
+                  onChanged={() => void quotaResource.mutate()}
                   onSaved={() => {
                     setEditing(null);
                     return afterWrite.refresh({ silent: true });
@@ -1519,12 +1522,15 @@ function QuotaEditForm({
   quota,
   year,
   onCancel,
+  onChanged,
   onSaved,
 }: {
   readonly staffId: string;
   readonly quota: sharedContract.VacationQuotaSummary;
   readonly year: number;
   readonly onCancel: () => void;
+  /** Reads the claim again after a refusal of a changed one. */
+  readonly onChanged: () => void;
   /** Closes the form and reloads; never rejects (#6652). */
   readonly onSaved: RefreshAfterWrite;
 }) {
@@ -1536,6 +1542,15 @@ function QuotaEditForm({
   const toast = useToast();
   // „Wiederholen“ sendet den aktuellen Entwurf, nicht den vom Fehlerzeitpunkt.
   const latestSaveRef = useRef<() => Promise<void>>(async () => undefined);
+  // Ein inzwischen gespeicherter Anspruch ersetzt die Felder: das Formular
+  // zeigt den gespeicherten Stand, die Ablehnung sagt warum (ADR 0311).
+  const shownVersion = useRef(quota.version);
+  useEffect(() => {
+    if (shownVersion.current === quota.version) return;
+    shownVersion.current = quota.version;
+    setEntitled(String(quota.entitled_days));
+    setCarryover(String(quota.carryover_days));
+  }, [quota.version, quota.entitled_days, quota.carryover_days]);
 
   const handleSave = async () => {
     formErrors.clear();
@@ -1558,6 +1573,7 @@ function QuotaEditForm({
         entitled_days: Number.parseFloat(entitled),
         carryover_days: Number.parseFloat(carryover),
         reason: reason.trim(),
+        expected_version: quota.version,
       });
       toast.success("Der Urlaubsanspruch ist gespeichert.");
     } catch (err) {
@@ -1565,10 +1581,19 @@ function QuotaEditForm({
         staff_id: staffId,
         error: err instanceof Error ? err.message : String(err),
       });
-      await formErrors.show(err, {
-        object: "die Änderung am Urlaubsanspruch",
-        retry: () => void latestSaveRef.current(),
-      });
+      // Seit dem Lesen geändert: das Formular zeigt den gespeicherten Stand,
+      // dieselbe Anfrage würde wieder abgelehnt.
+      if (isChangedSinceRead(err)) {
+        onChanged();
+        await formErrors.show(err, {
+          object: "die Änderung am Urlaubsanspruch",
+        });
+      } else {
+        await formErrors.show(err, {
+          object: "die Änderung am Urlaubsanspruch",
+          retry: () => void latestSaveRef.current(),
+        });
+      }
       setSaving(false);
       return;
     }

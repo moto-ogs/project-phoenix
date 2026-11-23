@@ -1,7 +1,6 @@
 package timetracking
 
 import (
-	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -156,7 +155,15 @@ func rebookingFingerprint(result *AbsenceRebookingResult, entries []rebookedAbse
 			UpdatedAt: before.UpdatedAt.UTC(),
 		})
 	}
-	slices.SortFunc(states, func(a, b entryState) int { return cmp.Compare(a.ID, b.ID) })
+	slices.SortFunc(states, func(a, b entryState) int {
+		switch {
+		case a.ID < b.ID:
+			return -1
+		case a.ID > b.ID:
+			return 1
+		}
+		return 0
+	})
 	return readstate.Fingerprint(struct {
 		Days              float64                        `json:"days"`
 		BalanceDelta      int                            `json:"balance_delta"`

@@ -384,6 +384,9 @@ type VacationQuotaSummary struct {
 	ReservedDays    float64               `json:"reserved_days"`
 	RemainingDays   float64               `json:"remaining_days"`
 	Opening         *StaffVacationOpening `json:"opening,omitempty"`
+	// Version is the token of the stored claim (entitled and carryover
+	// days); the change sends it back as expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 // SetVacationOpeningRequest carries the vacation takeover: the Resturlaub as
@@ -685,6 +688,9 @@ type VacationQuotaChange struct {
 	CarryoverDays float64
 	Reason        string
 	ChangedBy     int64
+	// ExpectedVersion is the Version of the summary the form was read from
+	// (ADR 0311); a claim changed since is not overwritten.
+	ExpectedVersion string
 }
 
 // MonthCloseStaff is one staff member a school-wide month close may cover.

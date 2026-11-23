@@ -1490,6 +1490,7 @@ export interface VacationQuotaRequest {
   entitled_days?: number;
   carryover_days?: number;
   reason?: string;
+  expected_version?: string;
 }
 
 /** Query of DELETE /api/staff/{id}/vacation/opening */

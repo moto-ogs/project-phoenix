@@ -475,9 +475,23 @@ func seedHistorySession(admin *Client, rng *rand.Rand, staffID int64, day time.T
 
 func seedTimeTrackingCoverage(rt *Runtime, staffID int64, year int) error {
 	rt.Client.BindAuth(rt.TenantAuth)
-	if _, err := rt.Client.Put(fmt.Sprintf("/api/staff/%d/vacation/quota", staffID), map[string]any{
+	// The change carries the version of the claim it replaces (ADR 0311).
+	quotaPath := fmt.Sprintf("/api/staff/%d/vacation/quota", staffID)
+	raw, err := rt.Client.Get(fmt.Sprintf("%s?year=%d", quotaPath, year))
+	if err != nil {
+		return fmt.Errorf("read vacation quota for staff %d: %w", staffID, err)
+	}
+	var read struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(raw, &read); err != nil {
+		return fmt.Errorf("decode vacation quota for staff %d: %w", staffID, err)
+	}
+	if _, err := rt.Client.Put(quotaPath, map[string]any{
 		"year": year, "entitled_days": 30, "carryover_days": 2,
-		"reason": "Tariflicher Jahresurlaub",
+		"reason": "Tariflicher Jahresurlaub", "expected_version": read.Data.Version,
 	}); err != nil {
 		return fmt.Errorf("seed vacation quota for staff %d: %w", staffID, err)
 	}

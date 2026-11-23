@@ -256,11 +256,52 @@ func TestAdminCreateStaffAbsence_UnknownStaff(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, rec.Code)
 }
 
+// putVacationQuota sets the claim as the quota form does: with the version
+// of the summary it read (ADR 0311).
 func putVacationQuota(t *testing.T, tc *testContext, token string, staffID int64, year int, days float64) *httptest.ResponseRecorder {
+	t.Helper()
+	return putVacationQuotaAt(t, tc, token, staffID, year, days, vacationQuotaVersion(t, tc, token, staffID, year))
+}
+
+func putVacationQuotaAt(t *testing.T, tc *testContext, token string, staffID int64, year int, days float64, version string) *httptest.ResponseRecorder {
 	t.Helper()
 	return testutil.ExecuteRequest(tc.router, testutil.NewAuthenticatedRequest(
 		t, http.MethodPut, fmt.Sprintf("/staff/%d/vacation/quota", staffID),
-		map[string]any{"year": year, "entitled_days": days, "reason": "Stellenumfang"}, testutil.WithJWTBearer(token)))
+		map[string]any{"year": year, "entitled_days": days, "reason": "Stellenumfang", "expected_version": version}, testutil.WithJWTBearer(token)))
+}
+
+func vacationQuotaVersion(t *testing.T, tc *testContext, token string, staffID int64, year int) string {
+	t.Helper()
+	rec := testutil.ExecuteRequest(tc.router, testutil.NewAuthenticatedRequest(
+		t, http.MethodGet, fmt.Sprintf("/staff/%d/vacation/quota?year=%d", staffID, year), nil, testutil.WithJWTBearer(token)))
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	var read struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &read))
+	return read.Data.Version
+}
+
+// The Leitung changes the claim the form showed (ADR 0311): a second form of
+// the same read, or one without a read, is refused and the first change
+// stays.
+func TestSetVacationQuota_RefusesAClaimChangedSinceTheRead(t *testing.T) {
+	t.Parallel()
+	tc, token, subjectID, _ := setupAbsenceAdminTest(t)
+	read := vacationQuotaVersion(t, tc, token, subjectID, 2027)
+	rec := putVacationQuotaAt(t, tc, token, subjectID, 2027, 25, read)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	for _, stale := range []string{read, ""} {
+		rec = putVacationQuotaAt(t, tc, token, subjectID, 2027, 28, stale)
+		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+		assert.Contains(t, rec.Body.String(), `"code":"general.changed_since_read"`)
+	}
+	var entitled float64
+	require.NoError(t, tc.db.NewRaw(`SELECT entitled_days FROM active.staff_vacation_quota WHERE tenant_id = ? AND staff_id = ? AND year = 2027`,
+		testpkg.Tenant(t), subjectID).Scan(testpkg.Ctx(t), &entitled))
+	assert.Equal(t, 25.0, entitled)
 }
 
 // #3256: the Leitung books vacation directly, without a request, and never

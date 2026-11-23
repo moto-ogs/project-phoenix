@@ -107402,6 +107402,13 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -107463,6 +107470,12 @@
           "schema": {
             "kind": "ref",
             "ref": "StaffVacationOpening"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]

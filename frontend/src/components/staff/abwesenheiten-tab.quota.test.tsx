@@ -70,6 +70,7 @@ function quota(
     taken_days: 0,
     reserved_days: 0,
     remaining_days: 32,
+    version: "quota-1",
     ...overrides,
   };
 }
@@ -177,6 +178,7 @@ describe("AbwesenheitenTab Urlaubsanspruch bearbeiten", () => {
         entitled_days: 31.5,
         carryover_days: 0,
         reason: "Stellenumfang erhöht",
+        expected_version: "quota-1",
       });
     });
     expect(stable.toast.success).toHaveBeenCalledWith(
@@ -288,6 +290,56 @@ describe("AbwesenheitenTab Urlaubsanspruch bearbeiten", () => {
     expect(screen.getByLabelText("Jahresanspruch (Tage)")).toHaveValue(28);
     expect(stable.toast.error).not.toHaveBeenCalled();
     expect(mocks.getVacationQuota).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the stored claim without a retry when it changed since the read", async () => {
+    mocks.setVacationQuota.mockRejectedValueOnce(
+      new ApiError("changed since it was read", 409, {
+        code: "general.changed_since_read",
+      }),
+    );
+    renderWithCache(
+      <AbwesenheitenTab
+        staffId="4"
+        canEdit
+        canEditQuota
+        canManageSickReports
+      />,
+    );
+    const fields = await openQuotaEditor();
+    mocks.getVacationQuota.mockResolvedValue(
+      quota({ entitled_days: 26, version: "quota-2" }),
+    );
+    fireEvent.change(fields.entitled, { target: { value: "28" } });
+    fireEvent.change(screen.getByLabelText("Begründung"), {
+      target: { value: "Teilzeit" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      catalogText(
+        "general.changed_since_read",
+        "die Änderung am Urlaubsanspruch",
+      ),
+    );
+    // The form shows the claim a colleague stored and saves against it.
+    await waitFor(() =>
+      expect(screen.getByLabelText("Jahresanspruch (Tage)")).toHaveValue(26),
+    );
+    expect(
+      screen.queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
+    mocks.setVacationQuota.mockResolvedValue(undefined);
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(mocks.setVacationQuota).toHaveBeenLastCalledWith(
+        "4",
+        expect.objectContaining({
+          entitled_days: 26,
+          expected_version: "quota-2",
+        }),
+      ),
+    );
   });
 
   it("discards the draft on cancel", async () => {

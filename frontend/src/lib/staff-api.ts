@@ -1044,6 +1044,8 @@ class StaffAbsenceService {
       carryover_days: number;
       /** Pflicht: erscheint im Änderungsprotokoll (#3256). */
       reason: string;
+      /** Version des gelesenen Anspruchs (ADR 0311). */
+      expected_version: string;
     },
   ): Promise<sharedContract.VacationQuotaSummary> {
     const quota = await bffJson(

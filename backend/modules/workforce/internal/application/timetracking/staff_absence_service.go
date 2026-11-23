@@ -148,6 +148,8 @@ type VacationQuotaSummary struct {
 	// Opening carries the takeover row for the summary's year, if any —
 	// Stichtag, entered Resturlaub, note, actor for the admin UI.
 	Opening *StaffVacationOpening `json:"opening,omitempty"`
+	// Version is the token of the stored claim (ADR 0311).
+	Version string `json:"version"`
 }
 
 // StaffAbsenceService defines operations for staff absence management

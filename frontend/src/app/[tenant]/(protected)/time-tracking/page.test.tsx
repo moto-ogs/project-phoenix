@@ -911,6 +911,7 @@ function setupDefaultMocks(overrides?: {
     taken_before_days: 0,
     reserved_days: 0,
     remaining_days: 30,
+    version: "quota-1",
   });
   vi.mocked(timeTrackingService.getAbsences).mockResolvedValue(absences);
   vi.mocked(timeTrackingService.getQuestionedAbsences).mockResolvedValue([]);

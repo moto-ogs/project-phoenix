@@ -14,6 +14,7 @@ const quota: sharedContract.VacationQuotaSummary = {
   taken_days: 8,
   reserved_days: 3,
   remaining_days: 21,
+  version: "quota-1",
 };
 
 // Urlaubs-Übernahme zum Go-live-Stichtag (#2132).
