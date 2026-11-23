@@ -224,7 +224,7 @@ func TestOfferingReviewRechecksVersionAfterWaitingForGate(t *testing.T) {
 		go func() {
 			done <- testpkg.WithTenantTx(t, ctx, env.db, testpkg.Tenant(t), func(reviewCtx context.Context, _ bun.Tx) error {
 				return decideOfferingChange(reviewCtx, svc, careplan.OfferingChangeDecisionInput{
-					RequestID: request.ID, ExpectedVersion: careplan.ParentRequestVersion(request.UpdatedAt),
+					RequestID: request.ID, ExpectedVersion: readstate.Of(request.UpdatedAt),
 					Reason: "Reviewed", ReviewedBy: env.creatorID,
 				})
 			})

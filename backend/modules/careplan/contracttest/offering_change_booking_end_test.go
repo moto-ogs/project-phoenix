@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	timetableCompose "github.com/moto-ogs/project-phoenix/modules/timetable/compose"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -85,7 +86,7 @@ func (c *boundedOfferingChange) submit(t *testing.T) *careplan.OfferingChangeReq
 func (c *boundedOfferingChange) approve(t *testing.T, row *careplan.OfferingChangeRequest) error {
 	t.Helper()
 	return testpkg.TenantCommand1(t, offeringChangeAdminContext(t), testpkg.SetupTestDB(t), decidesOfferingChange(c.svc), careplan.OfferingChangeDecisionInput{
-		RequestID: row.ID, Approve: true, ReviewedBy: c.env.creatorID, ExpectedVersion: careplan.ParentRequestVersion(row.UpdatedAt),
+		RequestID: row.ID, Approve: true, ReviewedBy: c.env.creatorID, ExpectedVersion: readstate.Of(row.UpdatedAt),
 	})
 }
 

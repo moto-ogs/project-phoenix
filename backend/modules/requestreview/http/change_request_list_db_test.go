@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
-	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/masterdatarequests"
 	"github.com/moto-ogs/project-phoenix/modules/requestreview"
 	"github.com/moto-ogs/project-phoenix/modules/settings"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -226,7 +226,7 @@ func TestAggregatedChangeRequests_GroupLeaderPolicyAtRouterAndBulkSeam(t *testin
 	bulkBody := func(rows ...*masterdatarequests.Request) *strings.Reader {
 		refs := make([]string, 0, len(rows))
 		for _, row := range rows {
-			refs = append(refs, fmt.Sprintf(`{"kind":"master_data","id":"%d","expected_version":"%s"}`, row.ID, careplan.ParentRequestVersion(row.UpdatedAt)))
+			refs = append(refs, fmt.Sprintf(`{"kind":"master_data","id":"%d","expected_version":"%s"}`, row.ID, readstate.Of(row.UpdatedAt)))
 		}
 		return strings.NewReader(`{"requests":[` + strings.Join(refs, ",") + `],"reason":"Geprüft"}`)
 	}

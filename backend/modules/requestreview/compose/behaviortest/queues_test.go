@@ -9,6 +9,7 @@ import (
 	"time"
 
 	reviewbindings "github.com/moto-ogs/project-phoenix/roots/requestreviewbinding"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -227,7 +228,7 @@ func TestOpenRowsCarryTheOwnerRules(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, master, 1)
 	assert.Equal(t, requestreview.TypeMasterData, master[0].Type)
-	assert.Equal(t, excusedrequests.ParentRequestVersion(created.Add(time.Minute)), master[0].Version)
+	assert.Equal(t, readstate.Of(created.Add(time.Minute)), master[0].Version)
 	assert.Equal(t, created, master[0].SortTime)
 	assert.Equal(t, "Anna Adler", master[0].StudentName)
 	assert.True(t, master[0].BulkEligible)

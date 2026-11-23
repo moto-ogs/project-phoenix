@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
 
-	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/compose"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/parentrequests"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
@@ -52,8 +51,8 @@ func (f bulkReadFixture) refs() []parentrequests.Ref {
 	refs := make([]parentrequests.Ref, 0, 2*len(f.children))
 	for _, child := range f.children {
 		refs = append(refs,
-			parentrequests.Ref{Kind: parentrequests.KindMasterData, ID: child.masterRow.ID, ExpectedVersion: careplan.ParentRequestVersion(child.masterRow.UpdatedAt)},
-			parentrequests.Ref{Kind: parentrequests.KindExcused, ID: child.excusedRow.ID, ExpectedVersion: careplan.ParentRequestVersion(child.excusedRow.UpdatedAt)},
+			parentrequests.Ref{Kind: parentrequests.KindMasterData, ID: child.masterRow.ID, ExpectedVersion: readstate.Of(child.masterRow.UpdatedAt)},
+			parentrequests.Ref{Kind: parentrequests.KindExcused, ID: child.excusedRow.ID, ExpectedVersion: readstate.Of(child.excusedRow.UpdatedAt)},
 		)
 	}
 	return refs
@@ -238,7 +237,7 @@ func TestBulkApprovalRefusesAMissingRequestBeforeReadingLaterFacts(t *testing.T)
 	refs := make([]parentrequests.Ref, 0, len(f.children))
 	first := f.children[0].masterRow.ID
 	for _, child := range f.children {
-		refs = append(refs, parentrequests.Ref{Kind: parentrequests.KindMasterData, ID: child.masterRow.ID, ExpectedVersion: careplan.ParentRequestVersion(child.masterRow.UpdatedAt)})
+		refs = append(refs, parentrequests.Ref{Kind: parentrequests.KindMasterData, ID: child.masterRow.ID, ExpectedVersion: readstate.Of(child.masterRow.UpdatedAt)})
 		first = min(first, child.masterRow.ID)
 	}
 	_, err := db.NewUpdate().TableExpr("users.student_data_change_requests").Set("status = 'rejected'").Where("id = ?", first).Exec(ctx)

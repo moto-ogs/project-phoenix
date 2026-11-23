@@ -316,7 +316,7 @@ func pendingRow(id int64, dates ...careplan.Date) careplan.ExcusedAbsenceRequest
 // the version a reader of that row sends back (ADR 0311).
 var (
 	fakeUpdatedAt = fakeNow().Add(-time.Hour)
-	fakeVersion   = careplan.ParentRequestVersion(fakeUpdatedAt)
+	fakeVersion   = readstate.Of(fakeUpdatedAt)
 )
 
 func decidablePlan(row careplan.ExcusedAbsenceRequest) *fakeCarePlan {
@@ -654,7 +654,7 @@ func TestDecideRejectsStaleVersionAfterTheLock(t *testing.T) {
 	}
 	assert.Zero(t, decided, "a refused decision writes nothing")
 	_, err := h.workflow.Decide(context.Background(), careplan.ExcusedRequestDecideInput{
-		RequestID: 5, Approve: true, ExpectedVersion: careplan.ParentRequestVersion(row.UpdatedAt),
+		RequestID: 5, Approve: true, ExpectedVersion: readstate.Of(row.UpdatedAt),
 	})
 	require.NoError(t, err)
 }
@@ -864,7 +864,7 @@ func TestMarkDoneRequiresAPastRequestAndAppliesNothing(t *testing.T) {
 		assert.ErrorIs(t, h.workflow.MarkDone(context.Background(), 6, expected, "", fakeReviewer), readstate.ErrChanged)
 	}
 	assert.Empty(t, decision.Status, "a refused mark-done decides nothing")
-	require.NoError(t, h.workflow.MarkDone(context.Background(), 6, careplan.ParentRequestVersion(past.UpdatedAt), "Tage sind vorbei", fakeReviewer))
+	require.NoError(t, h.workflow.MarkDone(context.Background(), 6, readstate.Of(past.UpdatedAt), "Tage sind vorbei", fakeReviewer))
 	assert.Equal(t, careplan.ExcusedRequestStatusDone, decision.Status)
 	require.Len(t, h.ledger.entries, 1)
 	assert.Equal(t, careplan.ParentRequestEventMarkedDone, h.ledger.entries[0].EventType)

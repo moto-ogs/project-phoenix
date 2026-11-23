@@ -83,7 +83,7 @@ func correctionRequest(t *testing.T, f *careFixture, date calendar.Date, approve
 func correctPickup(ctx context.Context, t *testing.T, f *careFixture, row carerequests.Request, approve bool) error {
 	t.Helper()
 	return testpkg.WithTenantTx(t, ctx, f.db, f.chain.TenantID, func(txCtx context.Context, _ bun.Tx) error {
-		return f.svc.(pickupCorrecter).Correct(txCtx, row.ID, approve, careplan.ParentRequestVersion(row.UpdatedAt), "Korrektur", f.staffAccount)
+		return f.svc.(pickupCorrecter).Correct(txCtx, row.ID, approve, readstate.Of(row.UpdatedAt), "Korrektur", f.staffAccount)
 	})
 }
 
@@ -178,7 +178,7 @@ func TestPickupCorrectionConcurrentGeneration(t *testing.T) {
 		require.NoError(t, tx.NewRaw("SELECT pg_backend_pid()").Scan(txCtx, &pid))
 		go func() { done <- correctPickup(ctx, t, f, row, false) }()
 		waitForRequestWriter(t, txCtx, tx, pid)
-		return f.svc.(pickupCorrecter).Correct(txCtx, row.ID, false, careplan.ParentRequestVersion(row.UpdatedAt), "Korrektur", f.staffAccount)
+		return f.svc.(pickupCorrecter).Correct(txCtx, row.ID, false, readstate.Of(row.UpdatedAt), "Korrektur", f.staffAccount)
 	})
 	loser := awaitRequestWriter(t, ctx, done)
 	require.NoError(t, err)
