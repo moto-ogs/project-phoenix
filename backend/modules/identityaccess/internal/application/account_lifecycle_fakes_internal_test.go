@@ -13,8 +13,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/stretchr/testify/require"
 )
 
@@ -494,10 +496,16 @@ func (a *lifecycleAdmin) DeactivateAccount(_ context.Context, accountID int64) e
 // --- guardian directory, invitations, delivery -----------------------------------
 
 type lifecycleGuardians struct {
-	profiles       map[int64]domain.GuardianProfile
-	links          map[int64]domain.StudentGuardianLink
-	students       map[int64]domain.Student
-	names          map[int64]domain.PersonName
+	profiles map[int64]domain.GuardianProfile
+	links    map[int64]domain.StudentGuardianLink
+	students map[int64]domain.Student
+	names    map[int64]domain.PersonName
+	// carePeriods are the approved care periods of the parent step (#7760);
+	// booked names the request children with a booking in force, and
+	// bookedDays the days they were asked for.
+	carePeriods    []identityaccess.ChildCarePeriod
+	booked         map[int64]bool
+	bookedDays     []calendar.Date
 	locked         []int64
 	lockedProfiles []int64
 	nextID         int64
@@ -518,7 +526,7 @@ type lifecycleGuardians struct {
 func newLifecycleGuardians() *lifecycleGuardians {
 	return &lifecycleGuardians{
 		profiles: map[int64]domain.GuardianProfile{}, links: map[int64]domain.StudentGuardianLink{},
-		students: map[int64]domain.Student{}, names: map[int64]domain.PersonName{}, nextID: 500,
+		students: map[int64]domain.Student{}, names: map[int64]domain.PersonName{}, nextID: 500, booked: map[int64]bool{},
 	}
 }
 
@@ -693,6 +701,27 @@ func (g *lifecycleGuardians) LockStudent(_ context.Context, studentID int64) err
 	return nil
 }
 
+func (g *lifecycleGuardians) ApprovedCarePeriods(_ context.Context, studentIDs []int64) ([]identityaccess.ChildCarePeriod, error) {
+	var result []identityaccess.ChildCarePeriod
+	for _, period := range g.carePeriods {
+		if slices.Contains(studentIDs, period.StudentID) {
+			result = append(result, period)
+		}
+	}
+	return result, nil
+}
+
+func (g *lifecycleGuardians) CareBookingsInForce(_ context.Context, requestChildIDs []int64, day calendar.Date) ([]int64, error) {
+	g.bookedDays = append(g.bookedDays, day)
+	var result []int64
+	for _, id := range requestChildIDs {
+		if g.booked[id] {
+			result = append(result, id)
+		}
+	}
+	return result, nil
+}
+
 func (g *lifecycleGuardians) FindPersonNamesByIDs(_ context.Context, ids []int64) (map[int64]domain.PersonName, error) {
 	result := map[int64]domain.PersonName{}
 	for _, id := range ids {
@@ -714,10 +743,52 @@ type lifecycleInvitations struct {
 	pendingErr error
 	// now is the database clock the store stamps and judges on.
 	now func() time.Time
+	// careNotices is the parent step per relationship (#7760); marked
+	// records every stamp call.
+	careNotices       map[int64]domain.GuardianCareNoticeState
+	marked            [][]int64
+	careNoticeLocks   []bool
+	lockedAccounts    [][]int64
+	lockedMemberships [][]int64
+}
+
+func (s *lifecycleInvitations) LockBulkInviteAccounts(_ context.Context, accountIDs []int64, _ []string) error {
+	s.lockedAccounts = append(s.lockedAccounts, accountIDs)
+	return nil
+}
+
+func (s *lifecycleInvitations) LockGuardianNoticeMemberships(_ context.Context, accountIDs []int64) error {
+	s.lockedMemberships = append(s.lockedMemberships, accountIDs)
+	return nil
+}
+
+func (s *lifecycleInvitations) planCareNotice(state domain.GuardianCareNoticeState) {
+	s.careNotices[state.RelationshipID] = state
+}
+
+func (s *lifecycleInvitations) ListGuardianCareNotices(_ context.Context, relationshipIDs []int64, lock bool) (map[int64]domain.GuardianCareNoticeState, error) {
+	s.careNoticeLocks = append(s.careNoticeLocks, lock)
+	result := map[int64]domain.GuardianCareNoticeState{}
+	for _, id := range relationshipIDs {
+		if state, ok := s.careNotices[id]; ok {
+			result[id] = state
+		}
+	}
+	return result, nil
+}
+
+func (s *lifecycleInvitations) MarkGuardianCareNoticesSent(_ context.Context, relationshipIDs []int64) error {
+	s.marked = append(s.marked, relationshipIDs)
+	for _, id := range relationshipIDs {
+		state := s.careNotices[id]
+		state.Notified = true
+		s.careNotices[id] = state
+	}
+	return nil
 }
 
 func newLifecycleInvitations() *lifecycleInvitations {
-	return &lifecycleInvitations{rows: map[int64]domain.GuardianInvitation{}, nextID: 900, now: time.Now}
+	return &lifecycleInvitations{rows: map[int64]domain.GuardianInvitation{}, nextID: 900, now: time.Now, careNotices: map[int64]domain.GuardianCareNoticeState{}}
 }
 
 func (s *lifecycleInvitations) DatabaseTime(context.Context) (time.Time, domain.OperationStats, error) {
@@ -869,6 +940,10 @@ type lifecycleDelivery struct {
 	invitationMailErr     error
 	existingAccountErr    error
 	existingAccountQueued bool
+	// careNotices records the care notices (#7760); careNoticeErr fails
+	// the enqueue after recording it.
+	careNotices   []identityaccess.GuardianCareNotice
+	careNoticeErr error
 }
 
 func (lifecycleDelivery) InvitationExpiry(context.Context) (time.Duration, error) {
@@ -894,6 +969,10 @@ func (d *lifecycleDelivery) EnqueueExistingAccountEmail(_ context.Context, profi
 }
 func (d *lifecycleDelivery) EnqueueWelcomeEmail(_ context.Context, profile domain.GuardianProfile, _ int64, _ string, _ int64) {
 	d.welcomeEmails = append(d.welcomeEmails, profile)
+}
+func (d *lifecycleDelivery) EnqueueCareVisibleEmail(_ context.Context, notice identityaccess.GuardianCareNotice) error {
+	d.careNotices = append(d.careNotices, notice)
+	return d.careNoticeErr
 }
 
 type lifecycleFinancial struct {

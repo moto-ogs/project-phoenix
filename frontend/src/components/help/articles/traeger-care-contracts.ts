@@ -179,6 +179,7 @@ export function traegerCareContractsTopic(): HelpTopic {
           "Wähle unten zum Beispiel `Für 12 Verträge nachtragen`. moto fragt vorher nach. Bestätige mit `Jetzt nachtragen`.",
           "Danach zeigt moto, wie viele Anmeldungen nachgetragen und wie viele Verträge nur gebunden sind. Die offenen Zeilen bleiben als Arbeitsliste stehen.",
           "Mit `Neue Vorschau` holst du den neuen Stand. Erledigtes steht dann auf `Erledigt`. Es entsteht nichts doppelt.",
+          "Danach sind die Eltern dran. Das macht die Schule in ihrer Kinderliste mit `Eltern einladen`. Eltern ohne Konto bekommen die Einladung ins Elternportal. Mit `Eltern mit Konto benachrichtigen` bekommen Eltern mit Konto eine kurze Nachricht, für Kinder, die heute Betreuung gebucht haben. Jedes Elternteil bekommt sie pro Kind nur einmal.",
         ],
       },
       {
@@ -308,7 +309,7 @@ export function traegerCareContractsTopic(): HelpTopic {
     troubleshootingDetails: [
       "Beim Nachtragen steht `Seit deiner Vorschau hat sich etwas geändert`? Ein Vertrag, die Schule oder der Tag ist neu. moto hat nichts eingetragen. Prüfe die neue Vorschau und trag noch einmal nach.",
       "Beim Nachtragen steht `Das Nachtragen ist nicht ganz durchgelaufen`? Manche Kinder können schon angemeldet sein. Trag noch einmal nach. moto bindet dann die Verträge, es entsteht nichts doppelt.",
-      "Die Schule fragt, warum ein Kind ohne Eltern angemeldet ist? Die Anmeldung kommt aus dem importierten Vertrag. Die Schule lädt die Eltern in ihrer Kinderliste mit `Eltern einladen` ins Elternportal ein. Eine Nachricht an Eltern, die schon ein Konto haben, gibt es noch nicht.",
+      "Die Schule fragt, warum ein Kind ohne Eltern angemeldet ist? Die Anmeldung kommt aus dem importierten Vertrag. Die Schule lädt die Eltern in ihrer Kinderliste mit `Eltern einladen` ins Elternportal ein. Setzt sie dort den Haken bei `Eltern mit Konto benachrichtigen`, bekommen Eltern mit Konto eine kurze Nachricht: Die Betreuung ist jetzt im Elternportal sichtbar.",
       "Beim Import steht `Für das Modul fehlen die Vertragsbedingungen`? Trage unter `Vertragsbedingungen` Laufzeit und Frist für das Modul ein. Wähle danach im Import `Erneut prüfen` oder lade die Datei noch einmal.",
       "Beim Import steht `Dieses Modul gibt es an der Schule nicht`? Der Name in der Datei muss so heißen wie das Angebot der Schule. Ändere den Namen in der Datei, oder wähle `Modul für alle Zeilen`.",
       "Beim Import steht `„Kinder in der Familie“ ist keine ganze Zahl von 1 bis 20`? moto übernimmt die Zeile nicht. Korrigiere die Zahl in der Datei und lade die Datei noch einmal.",
