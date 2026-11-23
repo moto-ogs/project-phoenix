@@ -17,6 +17,10 @@ import {
   buildHelpHref,
   type HelpTopicId,
 } from "~/lib/help-topics";
+import {
+  isMessageComposerOnScreen,
+  useMessageComposerOnScreen,
+} from "~/lib/hooks/use-message-composer-presence";
 import { createLogger } from "~/lib/logger";
 import {
   completeSchoolSetup,
@@ -89,7 +93,16 @@ export function SchoolSetupWizard() {
 function SchoolSetupWizardForAdmin({
   viaTraeger,
 }: Readonly<{ viaTraeger: boolean }>) {
-  const [view, setView] = useState<View>("beacon");
+  const [view, setViewState] = useState<View>("beacon");
+  // Ein offener Chat hat seinen Senden-Knopf genau dort, wo Knopf und
+  // Checkliste unten am Rand stehen (#7686). Solange er offen ist, tritt
+  // beides zurück; nur eine Liste, die die Person selbst geöffnet hat, bleibt.
+  const chatOpen = useMessageComposerOnScreen();
+  const [openedItself, setOpenedItself] = useState(false);
+  const setView = useCallback((next: View) => {
+    setViewState(next);
+    setOpenedItself(false);
+  }, []);
   const { state, accountID, refresh, replace } = useSchoolSetup(
     view === "checklist",
   );
@@ -143,16 +156,19 @@ function SchoolSetupWizardForAdmin({
     followUps.current = TOUR_FOLLOW_UP_MS.map((delay) =>
       window.setTimeout(() => void refresh(), delay),
     );
-  }, [refresh]);
+  }, [refresh, setView]);
   // Hat die Person die Seite der Tour verlassen, endet die Tour. Die
   // Checkliste geht beim Schritt auf und sagt, warum, statt dass nur die
   // Abdunklung stehen bleibt.
-  const onTourLeft = useCallback((step: SchoolSetupStepKey) => {
-    setView("checklist");
-    setExpanded(step);
-    setExpandedByPerson(true);
-    setNotice(TOUR_LEFT);
-  }, []);
+  const onTourLeft = useCallback(
+    (step: SchoolSetupStepKey) => {
+      setView("checklist");
+      setExpanded(step);
+      setExpandedByPerson(true);
+      setNotice(TOUR_LEFT);
+    },
+    [setView],
+  );
   const visible = state !== null && !state.completed && !state.dismissed;
   // Die Zahl der Personen ohne Soll (#6919) lädt erst, wenn der Schritt in
   // der offenen Checkliste aufgeklappt ist: Vorher zeigt sie niemand an.
@@ -192,18 +208,21 @@ function SchoolSetupWizardForAdmin({
     ) {
       openedByItself.current = null;
     }
+    // Von selbst geht die Liste erst auf, wenn kein Chat offen ist.
     if (
       visible &&
+      !isMessageComposerOnScreen() &&
       tenantSlug &&
       accountID &&
       claimFirstOpen(tenantSlug, accountID)
     ) {
-      setView("checklist");
+      setViewState("checklist");
+      setOpenedItself(true);
       if (trackOnboardingSurface("shown", "setup_checklist")) {
         openedByItself.current = { accountID, tenantSlug };
       }
     }
-  }, [visible, tenantSlug, accountID]);
+  }, [visible, chatOpen, tenantSlug, accountID]);
   const closedByPerson = () => {
     const opened = openedByItself.current;
     if (
@@ -296,6 +315,8 @@ function SchoolSetupWizardForAdmin({
       />
     );
   }
+
+  if (chatOpen && (view === "beacon" || openedItself)) return null;
 
   if (view === "beacon") {
     return (

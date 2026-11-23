@@ -17,6 +17,7 @@ import {
 } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import type { SchoolSetupState } from "~/lib/school-setup-api";
+import { useAnnounceMessageComposer } from "~/lib/hooks/use-message-composer-presence";
 
 const push = vi.fn();
 const replace = vi.fn(() => Promise.resolve());
@@ -273,6 +274,12 @@ function studentsNext(): SchoolSetupState {
   return state;
 }
 
+/** Stands in for a chat's writing field, which announces itself (#7686). */
+function OpenChat() {
+  useAnnounceMessageComposer();
+  return null;
+}
+
 describe("SchoolSetupWizard", () => {
   // Die Tour sucht im 200-ms-Takt und wartet bewusst (Klick 250 ms, Verlassen
   // 800 ms, fehlende Seitenleiste 1,5 s). Fake-Timer für die ganze Datei
@@ -322,6 +329,81 @@ describe("SchoolSetupWizard", () => {
     ).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Erste Schritte öffnen, 5 offen" }),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps the beacon off a chat's send button and opens only after the chat (#7686)", () => {
+    const { rerender } = render(
+      <>
+        <SchoolSetupWizard />
+        <OpenChat />
+      </>,
+    );
+    expect(
+      screen.queryByRole("region", { name: "Erste Schritte mit moto" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /^Erste Schritte öffnen/ }),
+    ).not.toBeInTheDocument();
+    expect(analytics.trackOnboardingSurface).not.toHaveBeenCalled();
+
+    rerender(<SchoolSetupWizard />);
+    expect(
+      screen.getByRole("region", { name: "Erste Schritte mit moto" }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Checkliste einklappen" }),
+    );
+    rerender(
+      <>
+        <SchoolSetupWizard />
+        <OpenChat />
+      </>,
+    );
+    expect(
+      screen.queryByRole("button", { name: /^Erste Schritte öffnen/ }),
+    ).not.toBeInTheDocument();
+    rerender(<SchoolSetupWizard />);
+    expect(
+      screen.getByRole("button", { name: "Erste Schritte öffnen, 5 offen" }),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps a checklist the person opened, also in a chat (#7686)", () => {
+    sessionStorage.setItem("school-setup-opened:school-a:73", "1");
+    const { rerender } = render(<SchoolSetupWizard />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Erste Schritte öffnen, 5 offen" }),
+    );
+    rerender(
+      <>
+        <SchoolSetupWizard />
+        <OpenChat />
+      </>,
+    );
+    expect(
+      screen.getByRole("region", { name: "Erste Schritte mit moto" }),
+    ).toBeInTheDocument();
+  });
+
+  it("hides an auto-opened checklist while a chat opens after it (#7686)", () => {
+    const { rerender } = render(<SchoolSetupWizard />);
+    expect(
+      screen.getByRole("region", { name: "Erste Schritte mit moto" }),
+    ).toBeInTheDocument();
+    rerender(
+      <>
+        <SchoolSetupWizard />
+        <OpenChat />
+      </>,
+    );
+    expect(
+      screen.queryByRole("region", { name: "Erste Schritte mit moto" }),
+    ).not.toBeInTheDocument();
+    rerender(<SchoolSetupWizard />);
+    expect(
+      screen.getByRole("region", { name: "Erste Schritte mit moto" }),
     ).toBeInTheDocument();
   });
 
