@@ -1,5 +1,6 @@
 "use client";
 
+import type * as studentsContract from "~/lib/contract/students.generated";
 import {
   fetchStudentDetail,
   type StudentDetailResponse,
@@ -10,7 +11,7 @@ import { useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { hasSessionAccess } from "~/lib/session-access";
 import { useSWRAuth } from "~/lib/swr";
-import type { Student, SupervisorContact } from "~/lib/student-helpers";
+import type { Student } from "~/lib/student-helpers";
 import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "StudentData" });
@@ -40,7 +41,7 @@ interface StudentDataState {
   hasSickExcusedWriteAccess: boolean;
   attendanceLogEnabled: boolean;
   feedbackEnabled: boolean;
-  supervisors: SupervisorContact[];
+  supervisors: studentsContract.SupervisorContact[];
   myGroups: string[];
   myGroupRooms: string[];
   mySupervisedRooms: string[];

@@ -1117,13 +1117,11 @@ function ContactLine({
   );
 }
 
-interface PhoneDraft {
+// One phone row of the form: the request's entry with every field set, and
+// a key that stays stable while the number is typed.
+type PhoneDraft = Required<parentMeContract.guardianPhoneRequest> & {
   id: string;
-  phone_number: string;
-  phone_type: string;
-  label: string | null;
-  is_primary: boolean;
-}
+};
 
 function ContactModal({
   mode,

@@ -4,7 +4,6 @@ import { createLogger } from "~/lib/logger";
 import type { TrackingIndicatorsResponse } from "~/lib/active-helpers";
 import type { PlannedTimetableInstance } from "~/lib/timetable-operations-types";
 import type { DepartureMode } from "~/lib/departure-plan";
-import type { TeacherHint } from "~/lib/student-helpers";
 import { mapSupervisionDashboard } from "~/lib/supervision-dashboard-wire";
 import type { OpenRoomView, SchulhofStatusResponse } from "./view-model";
 import type * as studentsContract from "~/lib/contract/students.generated";
@@ -99,7 +98,7 @@ export interface BFFDashboardResponse {
     dayNotes: Array<{ id: string; content: string }>;
   }>;
   // Hinweise der Lehrkraft für heute (#4795), je Kind.
-  teacherHints?: Array<{ studentId: string } & TeacherHint>;
+  teacherHints?: Array<{ studentId: string } & studentsContract.TeacherHint>;
   arrivalTimes?: Array<{
     studentId: string;
     date: string;

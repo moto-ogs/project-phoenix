@@ -72,7 +72,7 @@ import {
   mapBulkPickupScheduleFormToBackend,
   type PickupScheduleFormData,
 } from "~/lib/pickup-schedule-helpers";
-import type { PickupScheduleRequest } from "~/lib/contract/students.generated";
+import type { StudentCreateBody } from "~/lib/student-request";
 import { careTimesConcept } from "~/lib/concepts/careTimes";
 import { groupsConcept } from "~/lib/concepts/groups";
 import { InsetPanel } from "~/components/ui/inset-panel";
@@ -161,14 +161,14 @@ function relationshipLabel(value: string): string {
   return RELATIONSHIP_TYPES.find((t) => t.value === value)?.label ?? value;
 }
 
-// Weekly schedules travel to the backend in snake_case alongside the student so
-// they are persisted in the same atomic create transaction. Arrival entries are
-// already backend-shaped (ArrivalScheduleFormEntry); pickup entries are mapped
-// from the care-plan form via mapBulkPickupScheduleFormToBackend.
-export type CreateStudentSchedules = {
-  arrival_schedules?: ArrivalScheduleFormEntry[];
-  pickup_schedules?: PickupScheduleRequest[];
-};
+// Weekly schedules travel to the backend alongside the student so they are
+// persisted in the same atomic create transaction. Pickup entries are mapped
+// from the care-plan form via mapBulkPickupScheduleFormToBackend; arrival
+// entries stay form entries until studentCreateRequest maps them.
+export type CreateStudentSchedules = Pick<
+  StudentCreateBody,
+  "arrival_schedules" | "pickup_schedules"
+>;
 
 // The two things "+ Kinder" can create (#2382): a regular OGS child, or a
 // minimal class-list-only entry (Name + Klasse, "Keine Betreuung").

@@ -1,6 +1,7 @@
 // components/students/student-card.tsx
 // Shared student card component used across OGS groups and active supervisions pages
 
+import type * as studentsContract from "~/lib/contract/students.generated";
 import { ParentAttentionBadge } from "~/components/students/parent-attention-badge";
 import { useParentAttentionEnabled } from "~/lib/hooks/use-parent-attention";
 import { useDataPrefetchIntent } from "~/components/ui/data-prefetch-intent";
@@ -42,7 +43,6 @@ import {
   type DepartureMode,
 } from "~/lib/departure-plan";
 import { SpinnerIcon } from "~/components/ui/icons";
-import type { PlannedActivity } from "~/lib/student-helpers";
 
 /**
  * What changed for today only (#3946): the Gehzeit, the Abholart (#3945) or
@@ -880,7 +880,7 @@ export function ArrivalTimeRow({
  */
 export function PlannedActivityRows({
   activities,
-}: Readonly<{ activities?: readonly PlannedActivity[] }>) {
+}: Readonly<{ activities?: readonly studentsContract.PlannedActivity[] }>) {
   if (!activities?.length) return null;
   return (
     <ul aria-label="Angebote heute">
