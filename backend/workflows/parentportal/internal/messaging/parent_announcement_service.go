@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/workflows/parentportal/internal/care"
 )
 
@@ -20,17 +21,6 @@ var (
 	// acknowledge an announcement that does not require acknowledgement.
 	// Handler maps it to 400.
 	ErrAnnouncementAckNotRequired = errors.New("parent: announcement does not require acknowledgement")
-	// ErrAnnouncementStale is returned when the guardian's read/ack request
-	// carries a published_at that no longer matches the live announcement — the
-	// documented correction flow (unpublish -> edit -> republish) reuses the
-	// same id but stamps a fresh published_at and clears the old read rows, so a
-	// stale client that loaded the RETRACTED wording must not record a read/ack
-	// against the corrected wording it never saw. Handler maps it to 409 so the
-	// portal can refetch and show the current text. Checked only AFTER audience
-	// authorization AND the school's parent-news flag (both collapse to 404
-	// first), so it never reveals an announcement to a non-audience caller or one
-	// whose school disabled the feature.
-	ErrAnnouncementStale = errors.New("parent: announcement changed since it was loaded")
 	// ErrAnnouncementNotAPoll is returned when an answer is submitted for an
 	// announcement that asks no question. Handler maps it to 400.
 	ErrAnnouncementNotAPoll = errors.New("parent: announcement does not accept answers")
@@ -162,12 +152,27 @@ func (s *Service) UnreadAnnouncementCount(ctx context.Context, accountID int64) 
 	return count, nil
 }
 
+// checkAnnouncementRead refuses a read, acknowledgement or answer for another
+// version of an announcement than the live one with readstate.ErrChanged (ADR
+// 0311). The version is the published_at the client loaded: the documented
+// correction flow (unpublish -> edit -> republish) reuses the id but stamps a
+// fresh published_at and clears the old read rows, so a stale client that
+// loaded the RETRACTED wording must not record a read/ack against the
+// corrected wording it never saw; the portal reloads and shows the current
+// text. Callers check it only AFTER audience authorization AND the school's
+// parent-news flag (both collapse to 404 first), so it never reveals an
+// announcement to a non-audience caller or one whose school disabled the
+// feature.
+func checkAnnouncementRead(expectedPublishedAt, publishedAt time.Time) error {
+	return readstate.Check(readstate.Of(expectedPublishedAt), readstate.Of(publishedAt))
+}
+
 // MarkAnnouncementRead records that the guardian opened an announcement. It
 // resolves the announcement (cross-tenant), refuses one that is not live or that
 // the account is not in the audience of (both surface as ErrAnnouncementNotFound
 // so the endpoint never confirms an announcement the guardian may not see),
 // rejects a stale request whose expectedPublishedAt no longer matches the live
-// announcement (ErrAnnouncementStale), then upserts the read row.
+// announcement (checkAnnouncementRead), then upserts the read row.
 // expectedPublishedAt is the published_at the client held when it loaded the
 // feed item.
 func (s *Service) MarkAnnouncementRead(ctx context.Context, accountID, announcementID int64, expectedPublishedAt time.Time) error {
@@ -222,8 +227,8 @@ func (s *Service) stampAnnouncement(ctx context.Context, accountID, announcement
 	// reused but published_at is re-stamped, so a mismatch means the client is
 	// acting on retracted wording — reject it rather than count a read/ack for
 	// text the guardian never saw.
-	if !snapshot.publishedAt.Equal(expectedPublishedAt) {
-		return ErrAnnouncementStale
+	if err := checkAnnouncementRead(expectedPublishedAt, snapshot.publishedAt); err != nil {
+		return err
 	}
 	if ack && !snapshot.requiresAck {
 		return ErrAnnouncementAckNotRequired
@@ -234,7 +239,7 @@ func (s *Service) stampAnnouncement(ctx context.Context, accountID, announcement
 	// announcement still being live at expectedPublishedAt (the version verified
 	// in Phase 1), and reports whether it applied: a correction that slipped in
 	// between Phase 1 and here makes the guard miss and the stamp a no-op, which
-	// must surface as ErrAnnouncementStale (409) — not a silent 200 that would let
+	// must surface as readstate.ErrChanged (409) — not a silent 200 that would let
 	// the client mark the retracted wording read/acknowledged locally while the DB
 	// and staff stats stay unchanged.
 	return s.Runtime.WithinAdmin(ctx, func(adminCtx context.Context) error {
@@ -278,8 +283,8 @@ func (s *Service) RespondToAnnouncement(ctx context.Context, accountID, announce
 	if !s.announcementVisibleForTenant(ctx, announcementTenantID, announcementID, nil) {
 		return ErrAnnouncementNotFound
 	}
-	if !announcementPublishedAt.Equal(expectedPublishedAt) {
-		return ErrAnnouncementStale
+	if err := checkAnnouncementRead(expectedPublishedAt, announcementPublishedAt); err != nil {
+		return err
 	}
 	if !isPoll {
 		return ErrAnnouncementNotAPoll
@@ -330,7 +335,7 @@ func (s *Service) writeChildAnswer(ctx context.Context, announcementTenantID, an
 	if errors.Is(err, care.ErrGuardianPermissionDenied) || errors.Is(err, care.ErrChildNotLinked) {
 		// The guard found the relationship, its permission or the school
 		// membership withdrawn since the check above.
-		return ErrAnnouncementStale
+		return readstate.ErrChanged
 	}
 	return err
 }

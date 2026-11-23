@@ -199,8 +199,7 @@ export function mapPreview(
       studentCount: u.student_count,
     })),
     warnings: data.warnings ?? [],
-    // An older backend sent no digest; apply then sends no expected_fingerprint.
-    fingerprint: data.fingerprint ?? "",
+    fingerprint: data.fingerprint,
   };
 }
 
@@ -413,20 +412,19 @@ export async function previewGradeTransition(
 }
 
 /**
- * Applies a transition. `expectedFingerprint` binds the call to the preview the
+ * Applies a transition. `expectedFingerprint` is the token of the preview the
  * admin confirmed: the backend refuses with {@link PREVIEW_STALE_CODE} when the
- * affected children or mappings have changed since (#405).
+ * affected children or mappings have changed since (#405), and an apply
+ * without it as well (ADR 0311).
  */
 export async function applyGradeTransition(
   id: string,
-  expectedFingerprint?: string,
+  expectedFingerprint: string,
 ): Promise<TransitionResult> {
   return mapResult(
     await bffJson("tenant", "POST /api/admin/grade-transitions/{id}/apply", {
       params: { id },
-      body: expectedFingerprint
-        ? { expected_fingerprint: expectedFingerprint }
-        : {},
+      body: { expected_fingerprint: expectedFingerprint },
     }).catch(statusMessage),
   );
 }

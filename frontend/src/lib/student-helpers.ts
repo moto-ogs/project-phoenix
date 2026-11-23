@@ -141,7 +141,7 @@ type StudentWireFields = Partial<
       "departure_label" | "departure_is_exception"
     >
   > &
-  // Write-only claims of a departure-plan save (409 `students.companions_changed`).
+  // Write-only claims of a departure-plan save (409 `general.changed_since_read`).
   Pick<
     studentsContract.UpdateStudentRequest,
     "companions_fingerprint" | "extend_companion_plans"

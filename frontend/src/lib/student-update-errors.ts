@@ -4,7 +4,12 @@
 // the ApiError of updateStudent (~/lib/student-api). Keyed off the code, never
 // the status: the student PUT answers 409 and 400 for several reasons.
 
-import { ApiError, enrichApiError, problemDetail } from "./api-error";
+import {
+  ApiError,
+  enrichApiError,
+  isChangedSinceRead,
+  problemDetail,
+} from "./api-error";
 import {
   ALL_COMPANION_WEEKDAYS,
   type CompanionExtensionConfirmation,
@@ -84,10 +89,15 @@ export function isCompanionPlanConflictResponse(body: unknown): boolean {
 /**
  * The submitted "läuft mit" list was built on a snapshot someone else has
  * since replaced. Re-sending the SAME list is exactly what the refusal
- * prevents, so the form reloads first and lets the user redo the edit.
+ * prevents, so the form reloads first and lets the user redo the edit. The
+ * backend answers it with general.changed_since_read (ADR 0311); the own code
+ * stays accepted for an older backend still in service.
  */
 export function isCompanionsChanged(err: unknown): boolean {
-  return err instanceof ApiError && err.code === "students.companions_changed";
+  return (
+    isChangedSinceRead(err) ||
+    (err instanceof ApiError && err.code === "students.companions_changed")
+  );
 }
 
 /**

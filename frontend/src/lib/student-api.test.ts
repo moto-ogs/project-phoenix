@@ -669,6 +669,13 @@ describe("updateStudent", () => {
     expect(isCompanionDepartureRefusal(otherBadRequest)).toBe(false);
     expect(stale).not.toBeInstanceOf(CompanionPlanConflictError);
     expect(isCompanionsChanged(stale)).toBe(true);
+    // The current backend refuses a stale list with the read-state code.
+    expect(
+      isCompanionsChanged(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      ),
+    ).toBe(true);
+    expect(isCompanionsChanged(otherBadRequest)).toBe(false);
   });
 
   // A refused child write on top of a committed consent write says which

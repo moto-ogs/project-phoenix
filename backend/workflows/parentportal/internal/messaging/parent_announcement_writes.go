@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/workflows/parentportal/internal/care"
 )
 
@@ -72,7 +73,7 @@ func (s *Service) writeAnnouncementStamp(adminCtx context.Context, announcementT
 			return err
 		}
 		if !applied {
-			return ErrAnnouncementStale
+			return readstate.ErrChanged
 		}
 		s.Logger.Info("parent acknowledged announcement",
 			slog.Int64("account_id", accountID),
@@ -85,7 +86,7 @@ func (s *Service) writeAnnouncementStamp(adminCtx context.Context, announcementT
 		return err
 	}
 	if !applied {
-		return ErrAnnouncementStale
+		return readstate.ErrChanged
 	}
 	return nil
 }
@@ -106,7 +107,7 @@ func (s *Service) writeAnnouncementResponse(txCtx context.Context, announcementT
 		return err
 	}
 	if !applied {
-		return ErrAnnouncementStale
+		return readstate.ErrChanged
 	}
 	s.Logger.Info("parent answered announcement poll",
 		slog.Int64("account_id", accountID),

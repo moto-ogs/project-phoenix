@@ -304,14 +304,6 @@ describe("previewGradeTransition", () => {
     expect(p.warnings).toEqual([]);
   });
 
-  it("degrades a fingerprint-less response to an empty string", async () => {
-    // An older backend answers without the digest. Apply then sends no
-    // expected_fingerprint rather than a bogus one.
-    stubOnce(okData({ ...preview, fingerprint: undefined }));
-
-    expect((await previewGradeTransition("7")).fingerprint).toBe("");
-  });
-
   it("refuses a bare payload without the { data } envelope", async () => {
     stubOnce(okBare(preview));
 
@@ -345,29 +337,11 @@ describe("applyGradeTransition", () => {
     expect(r.warnings).toEqual([]);
   });
 
-  it("sends an empty body when no fingerprint is known", async () => {
-    stubOnce(okData(resultRow));
-
-    await applyGradeTransition("7");
-
-    expect(parseBody(calls[0]?.init)).toEqual({});
-  });
-
-  it("sends an empty body for an empty-string fingerprint", async () => {
-    // previewGradeTransition degrades a missing digest to "", and an empty
-    // expected_fingerprint would be a claim the backend cannot match.
-    stubOnce(okData(resultRow));
-
-    await applyGradeTransition("7", "");
-
-    expect(parseBody(calls[0]?.init)).toEqual({});
-  });
-
   it("refuses a result sent without the { data } envelope", async () => {
     stubOnce(okBare(resultRow));
 
     // A write may have happened: the person reloads before trying again.
-    await expect(applyGradeTransition("7")).rejects.toMatchObject({
+    await expect(applyGradeTransition("7", "sha256:abc")).rejects.toMatchObject({
       status: 502,
       code: "general.write_answer_unreadable",
     });
@@ -381,7 +355,7 @@ describe("applyGradeTransition", () => {
       }),
     );
 
-    const err = await applyGradeTransition("7").catch((e: unknown) => e);
+    const err = await applyGradeTransition("7", "sha256:abc").catch((e: unknown) => e);
     expect(err).toBeInstanceOf(ApiError);
     expect((err as ApiError).code).toBe(
       "grade_transition.graduates_checked_in",
@@ -402,7 +376,7 @@ describe("applyGradeTransition", () => {
   it("falls back to the status line when the error body is unreadable", async () => {
     stubOnce(failUnparseable(500));
 
-    const err = await applyGradeTransition("7").catch((e: unknown) => e);
+    const err = await applyGradeTransition("7", "sha256:abc").catch((e: unknown) => e);
     expect((err as ApiError).message).toBe("HTTP 500");
     expect((err as ApiError).code).toBe("general.server");
   });

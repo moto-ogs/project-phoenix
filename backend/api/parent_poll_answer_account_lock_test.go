@@ -87,6 +87,6 @@ func TestParentPollAnswerWaitsForAccountAccessRevocation(t *testing.T) {
 	}
 	rec := awaitAnswer(t, done, answer.path)
 	require.Equal(t, http.StatusConflict, rec.Code, "the guard refuses the answer as stale after the revocation: %s", rec.Body.String())
-	require.Contains(t, rec.Body.String(), "care.announcement_stale")
+	require.Contains(t, rec.Body.String(), `"code":"general.changed_since_read"`)
 	require.Empty(t, withoutWithdrawalRows(changedTables(before, rig.fingerprint(t, f))), "a refused answer changes nothing of the family")
 }

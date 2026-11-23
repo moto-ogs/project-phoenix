@@ -43,11 +43,12 @@ export function useTraegerResource<T>(
 }
 
 /**
- * `useTraegerResource` for a read that has to be fresh each time its
- * surface opens (`useFreshSWR`): a preview a save confirms, or a read of
- * person data that stands in the schools' access logs. `data` stays null
- * until this opening's own request answered; focus and reconnect do not
- * read again.
+ * `useTraegerResource` for a read made again each time its surface opens
+ * (`useFreshSWR`). Since ADR 0311 only a read of person data that stands in
+ * the schools' access logs keeps it; a preview or an edit reads through
+ * `useTraegerResource` and its save sends the token of what it read. `data`
+ * stays null until this opening's own request answered; focus and reconnect
+ * do not read again.
  */
 export function useFreshTraegerResource<T>(
   key: string | null,
