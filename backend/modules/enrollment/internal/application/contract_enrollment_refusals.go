@@ -60,10 +60,10 @@ func careEndsEarlier(student enrollmentNative.ContractStudent, bookings []enroll
 
 // contractBookingRefusal checks one booking against its offering and
 // answers the weekdays it stores, or why it is refused: the offering is no
-// longer what the plan read (contractStale), a weekday is not on offer, the
-// booking is a second one of its offering or outside the window of the
-// child, its roster cannot end with it, or its window holds none of one of
-// its weekdays.
+// longer what the plan read (contractStale), a weekday is not on offer, or
+// the booking is a second one of its offering or outside the window of the
+// child. A stored enrollment of this source is compared against the same
+// checks (answerContractHolder).
 func contractBookingRefusal(phase *contractPhase, offering *offeringContract.CareOfferingRecord, booking enrollmentNative.ContractBooking,
 	bookedTwice bool, careStart calendar.Date) ([]string, string) {
 	if !offeringAsPlanned(offering, booking) {
@@ -75,12 +75,27 @@ func contractBookingRefusal(phase *contractPhase, offering *offeringContract.Car
 		return nil, enrollmentNative.ContractEnrollmentDayUnavailable
 	case bookedTwice || !bookingInWindow(phase, booking, careStart):
 		return nil, enrollmentNative.ContractEnrollmentBookingWindow
-	case rosterBound(phase, offering, booking):
-		return nil, enrollmentNative.ContractEnrollmentRosterBound
-	case !weekdaysInWindow(booking):
-		return nil, enrollmentNative.ContractEnrollmentWindowTooShort
 	}
 	return days, ""
+}
+
+// contractBookingGuard tells why a booking that is not refused as such gets
+// no new enrollment: Care Plan would derive no roster from it, or a wrong
+// one. Its offering is not active, so a roster that names it as one of its
+// sources leaves it out and the child would be approved on no roster; its
+// roster cannot end with it; or its window holds none of one of its
+// weekdays. These guard the creation only: an enrollment that is stored
+// already is not written again, so none of them refuses a repeated call.
+func contractBookingGuard(phase *contractPhase, offering *offeringContract.CareOfferingRecord, booking enrollmentNative.ContractBooking) string {
+	switch {
+	case !offering.IsActive:
+		return enrollmentNative.ContractEnrollmentOfferingInactive
+	case rosterBound(phase, offering, booking):
+		return enrollmentNative.ContractEnrollmentRosterBound
+	case !weekdaysInWindow(booking):
+		return enrollmentNative.ContractEnrollmentWindowTooShort
+	}
+	return ""
 }
 
 // rosterBound tells whether the booking ends before the service of the

@@ -26,7 +26,11 @@ import (
 //     the child record that exists, with the bookings given and the rosters
 //     an approval derives from them.
 //   - A repeated call writes nothing twice: a child that has the enrollment
-//     of this source in the phase is answered with it.
+//     of this source in the phase is answered with it. What only a new
+//     enrollment is refused for does not refuse it: an enrollment stored as
+//     asked for is answered as existing also when the school has since
+//     deactivated its offering or linked it to a roster directly, so a run
+//     that stopped before the binding can still bind its contract.
 //   - A child with any other application in the phase gets none; the answer
 //     names that application. Any other means every request child of the
 //     phase that holds the child record and is neither rejected nor
@@ -67,7 +71,9 @@ import (
 //     before the end of its bookings (care_ends_earlier), and a booking
 //     whose window holds none of one of its weekdays (window_too_short),
 //     which Care Plan's roster check would answer with an error for the
-//     whole call.
+//     whole call. So is a booking of an offering the school deactivated
+//     (offering_inactive): a roster with several sources leaves an inactive
+//     one out, and the child would be approved on no roster.
 //   - A school that derives no care from bookings
 //     (enrollment.care_offerings_enabled off) gets no enrollment: every row
 //     is refused before anything is read, locked or written.
@@ -157,6 +163,12 @@ const (
 	// to the end of the service on Friday 31 July: there is no day of care
 	// to derive, and no roster to write.
 	ContractEnrollmentWindowTooShort = "window_too_short"
+	// ContractEnrollmentOfferingInactive is a child with a booking of an
+	// offering the school deactivated. A roster that names several offerings
+	// as its sources leaves an inactive one out, so the child would be
+	// approved and on no roster. An enrollment that is stored already is
+	// answered as existing all the same: nothing is written for it.
+	ContractEnrollmentOfferingInactive = "offering_inactive"
 	// ContractEnrollmentPlannedChange is a contract with a planned version.
 	// A dated change of the bookings of an approved child tells the child's
 	// guardians in the parents portal (Care Plan's offering adjustment), so

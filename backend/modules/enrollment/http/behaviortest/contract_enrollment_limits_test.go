@@ -262,3 +262,82 @@ func TestAnUndatedCorrectionKeepsTheStartOfAContractEnrollment(t *testing.T) {
 	assert.Equal(t, 1, e.count(t, rosters+` AND activity_group_id = ? AND valid_from = ?`, testpkg.Tenant(t), applied, linked.ID, serviceStart),
 		"and on the roster from the service start")
 }
+
+// A booking of an offering the school deactivated gets no new enrollment. A
+// roster that names several offerings as its sources leaves an inactive one
+// out, so the child would be approved, and its contract bound, on no roster.
+// A check and a run answer alike, nothing is written, and the other rows of
+// the call go on.
+func TestContractEnrollmentRefusesAnInactiveOffering(t *testing.T) {
+	t.Parallel()
+	e := setupContractEnrollment(t)
+	inactive := e.careOffering(t, "Modul A", nil)
+	e.setOffering(t, inactive.ID, "is_active = FALSE")
+	start, until := calendar.Date(e.sourcePhase.ServiceStartDate), calendar.Date(e.sourcePhase.ServiceEndDate).AddDays(1)
+	held, other := e.student(t, "Lina"), e.student(t, "Mats")
+
+	inputs := []capability.ContractEnrollment{e.input(held.ID, bookingOf(inactive, start, until, "mon")), e.input(other.ID, e.booking("mon"))}
+	checked := e.check(t, inputs...)
+	assert.Equal(t, e.refused(held.ID, capability.ContractEnrollmentOfferingInactive)[0], checked[0])
+	assert.Equal(t, capability.ContractEnrollmentEnrolled, checked[1].Status)
+	enrolled := e.enroll(t, inputs...)
+	assert.Equal(t, e.refused(held.ID, capability.ContractEnrollmentOfferingInactive)[0], enrolled[0])
+	assert.Equal(t, capability.ContractEnrollmentEnrolled, enrolled[1].Status, "the other row goes on")
+	assert.Zero(t, e.count(t, contractWritten, testpkg.Tenant(t), held.ID, testpkg.Tenant(t), held.ID), "nothing is written for a refused row")
+
+	// One inactive offering among the bookings refuses the child.
+	mixed := e.input(held.ID, e.booking("mon"), bookingOf(inactive, start, until, "tue"))
+	assert.Equal(t, e.refused(held.ID, capability.ContractEnrollmentOfferingInactive), e.check(t, mixed))
+}
+
+// setOffering changes a care offering of the school in place, as the office
+// does after a run: change is the SET clause.
+func (e *contractEnrollmentEnv) setOffering(t *testing.T, offeringID int64, change string, args ...any) {
+	t.Helper()
+	_, err := e.db.ExecContext(testpkg.Ctx(t), `UPDATE enrollment.care_offerings SET `+change+` WHERE tenant_id = ? AND id = ?`,
+		append(args, testpkg.Tenant(t), offeringID)...)
+	require.NoError(t, err)
+}
+
+// A repeated call confirms its own stored enrollment whatever only guards a
+// new one. The run enrolled the child with a booking that ends in February
+// and stopped before the binding. Then the office linked the offering to a
+// roster directly and deactivated it: a new enrollment with that booking is
+// refused (roster_bound, offering_inactive). The repeated call for the
+// enrolled child still answers existing, so its contract gets bound, and
+// writes nothing. Other bookings than the stored ones are still refused.
+func TestARepeatedContractEnrollmentConfirmsItsStoredEnrollment(t *testing.T) {
+	t.Parallel()
+	e := setupContractEnrollment(t)
+	offering := e.careOffering(t, "Ganztag bis Februar", nil)
+	start, february := calendar.Date(e.sourcePhase.ServiceStartDate), calendar.NewDate(2027, 3, 1)
+	enrolled, later := e.student(t, "Lina"), e.student(t, "Mats")
+	input := e.input(enrolled.ID, bookingOf(offering, start, february, "mon"))
+	made := e.enroll(t, input)
+	require.Equal(t, capability.ContractEnrollmentEnrolled, made[0].Status)
+	written := e.count(t, contractWritten, testpkg.Tenant(t), enrolled.ID, testpkg.Tenant(t), enrolled.ID)
+
+	guards := []struct{ change, reason string }{
+		{"activity_group_id = ?", capability.ContractEnrollmentRosterBound},
+		{"is_active = FALSE, activity_group_id = NULL", capability.ContractEnrollmentOfferingInactive},
+	}
+	for _, guard := range guards {
+		args := []any{}
+		if guard.reason == capability.ContractEnrollmentRosterBound {
+			args = append(args, e.groupID)
+		}
+		e.setOffering(t, offering.ID, guard.change, args...)
+		assert.Equal(t, e.refused(later.ID, guard.reason), e.check(t, e.input(later.ID, bookingOf(offering, start, february, "mon"))),
+			"a new enrollment is refused")
+		for name, answer := range map[string][]capability.ContractEnrollmentResult{"check": e.check(t, input), "run": e.enroll(t, input)} {
+			assert.Equal(t, capability.ContractEnrollmentExisting, answer[0].Status, "%s after %s", name, guard.reason)
+			assert.Empty(t, answer[0].Reason, name)
+			assert.Equal(t, made[0].RequestChildID, answer[0].RequestChildID, name)
+		}
+	}
+	assert.Equal(t, written, e.count(t, contractWritten, testpkg.Tenant(t), enrolled.ID, testpkg.Tenant(t), enrolled.ID), "a repeated call writes nothing")
+
+	other := e.enroll(t, e.input(enrolled.ID, bookingOf(offering, start, february, "tue")))
+	assert.Equal(t, capability.ContractEnrollmentRefused, other[0].Status)
+	assert.Equal(t, capability.ContractEnrollmentBookingsDiffer, other[0].Reason, "other bookings are not the stored enrollment")
+}

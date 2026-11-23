@@ -126,6 +126,31 @@ einer Schule, welche Buchungen eine Anmeldung tragen muss:
   bindet nichts: Die Zeile trägt die Buchungen der Anmeldung ab heute und
   den Tag des Plans (`ApplicationBookings`, `ProvedOn`), und die Anmeldung
   der Schule bestätigt sie unter ihren Sperren (Abschnitte 2 und 3).
+- **Ein abgebrochener Lauf wird auch nach dem Ende des letzten Moduls
+  beendet.** Die Schule hat Buchungen bis zum 30.06. gespeichert, der Lauf
+  brach vor der Bindung ab, und am 01.07. verspricht der Vertrag nichts
+  mehr: Abgeleitet wird nichts (`care_ends`). Hat das Kind in der laufenden
+  Phase der Module genau eine angenommene Anmeldung ohne Vertrag, ist die
+  Zeile trotzdem bereit, mit dieser Anmeldung. Der Beweis ist derselbe wie
+  für einen laufenden Vertrag, nur über die Zeit des Vertrags statt ab
+  heute, weil ab heute nichts mehr zu vergleichen ist: Die Anpassung
+  schreibt keine Version; ab dem ersten Tag, an dem der Vertrag in der
+  Phase Betreuung versprach, läuft keine Buchung, die er nicht versprach;
+  und am letzten Tag, an dem er Betreuung versprach, sind die Buchungen
+  genau diese Betreuung (Wochentag, Modul, Endzeit). Der letzte Teil ist
+  nötig, weil die Vergangenheit sonst nur so weit zählt, wie sie gebucht
+  ist, und eine Anmeldung mit weniger Betreuung durchginge. `ProvedOn` ist
+  dann dieser erste Tag, und `ApplicationBookings` sind alle Buchungen der
+  Anmeldung in der Phase: Die Anmeldung der Schule bestätigt das Ganze,
+  nicht einen leeren Rest. Ein eigener Grund (`enrolled_unbound`) für einen
+  späteren Schritt wurde verworfen: Der Beweis gelingt, und die Zeile ginge
+  denselben Weg über Bestätigung und Bindung. Eine Anmeldung, die den
+  Beweis nicht besteht, hält die Zeile als `has_application` zurück; ohne
+  Anmeldung und nach dem Ende der Phase bleibt es bei `care_ends`.
+- **Ein deaktiviertes Modul hält eine neue Anmeldung zurück**
+  (`offering_inactive`), mit demselben Grund wie in der Anmeldung
+  (Abschnitt 2). An eine bestehende Anmeldung, die das Modul schon bucht,
+  wird trotzdem gebunden.
 - **Zwei importierte Verträge eines Kindes nacheinander in einer Phase.**
   Vertrag A endet am 31.12. und ist an die Anmeldung des Kindes gebunden,
   Vertrag B beginnt am 01.01. Ein Kind einer Anmeldung hat einen Vertrag,
@@ -183,7 +208,13 @@ erreicht.
   eine Buchung wirksam hält, und ihr Zeitraum, nicht nur die angekreuzten
   Tage. Hat eine Korrektur des Büros seit dem ersten Lauf einen Tag
   mitgebucht (eine Mitbuchungs-Regel), ist die Anmeldung nicht mehr die des
-  Plans: `bookings_differ`.
+  Plans: `bookings_differ`. Was nur eine neue Anmeldung verhindert, lehnt
+  die Wiederholung nicht ab (`roster_bound`, `window_too_short`,
+  `offering_inactive`, ein Beginn nach heute, `care_ends_earlier`): Für die
+  gespeicherte Anmeldung wird nichts geschrieben. Hat das Büro nach einem
+  abgebrochenen Lauf das Angebot direkt mit einem Roster verknüpft oder
+  deaktiviert, antwortet der nächste Lauf `existing`, und der Vertrag wird
+  gebunden.
 - Ein Kind mit einer anderen Anmeldung in der Phase bekommt keine
   (`has_application`). Gemeint ist jedes Kind einer Anmeldung der Phase, das
   die Kinderakte hält und weder abgelehnt noch zurückgezogen ist.
@@ -219,7 +250,14 @@ erreicht.
   (`booking_window`); eine befristete Buchung auf einem direkt verknüpften
   Roster (`roster_bound`), ein Betreuungsende der Kinderakte vor dem Ende
   der Buchungen (`care_ends_earlier`) und ein Fenster ohne einen gebuchten
-  Wochentag (`window_too_short`), alle drei siehe unten.
+  Wochentag (`window_too_short`), alle drei siehe unten; ein deaktiviertes
+  Angebot (`offering_inactive`).
+- **Ein deaktiviertes Angebot bekommt keine neue Anmeldung**
+  (`offering_inactive`). Ein Roster mit mehreren Quellen lässt eine
+  deaktivierte Quelle aus (`acceptOfferingSources`). Bucht der Vertrag nur
+  dieses Angebot, wäre das Kind genehmigt und sein Vertrag gebunden, aber
+  auf keinem Roster. Die Anmeldung lehnt die Zeile deshalb ab, in
+  `CheckContractChildren` wie im Lauf, bevor etwas geschrieben wird.
 - **Der erste Tag der Buchungen liegt nie nach heute.** Der Plan bucht nur
   einen Vertrag und eine Phase, die begonnen haben. Die Anmeldung lehnt
   einen späteren Beginn ab (`booking_window`), statt sich darauf zu
@@ -538,9 +576,10 @@ Kinder unverändert ab.
 
 ## Bekannte Grenze: befristete Buchungen und späte erste Buchungen in Care Plan
 
-Zwei Fehler in Care Plan bestehen vor diesem PR und bleiben bestehen. Beide
-gehören in das Folge-Issue
-[#7908](https://github.com/moto-ogs/project-phoenix/issues/7908).
+Drei Fehler in Care Plan bestehen vor diesem PR und bleiben bestehen. Die
+ersten beiden gehören in das Folge-Issue
+[#7908](https://github.com/moto-ogs/project-phoenix/issues/7908), der dritte
+bekommt ein eigenes.
 
 1. **Die Roster-Zeile eines direkt verknüpften Angebots endet nicht mit der
    Buchung.** `booking_drafts.go` verwirft für Angebote mit
@@ -560,6 +599,13 @@ gehören in das Folge-Issue
    auch wenn die erste Buchung des Kindes später begann (Stichtagsänderung
    für ein Kind ohne Buchung). Für die Herkunft `contract_import` ist das
    behoben (Abschnitt 2), für alle anderen nicht.
+3. **Eine Korrektur ohne Datum verwirft das Ende einer Buchung.** Bleibt
+   ein Angebot bei der Korrektur gewählt, schreibt sie seine Buchung ohne
+   das gespeicherte Ende neu (`buildOfferingAdjustmentReplacement`,
+   `changeCareBookings`): Das Kind ist bis zum Ende der Phase gebucht und
+   auf dem Roster, bei jedem Kind, auch ohne diesen PR. Nach der Bindung
+   folgt der Vertrag dieser Buchung wie jeder genehmigten Änderung: Er
+   bekommt eine neue Version.
 
 ## Verworfene Optionen
 

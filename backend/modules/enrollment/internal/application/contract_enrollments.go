@@ -292,12 +292,16 @@ func (r *contractRun) check(index int, input enrollmentNative.ContractEnrollment
 		confirmProvenApplication(phase, input, result)
 		return
 	}
-	bookings, reason := contractBookings(phase, input)
+	bookings, reason, guard := contractBookings(phase, input)
 	// An application of the phase answers first: it names what the child
-	// has, whatever the child record says by now.
+	// has, whatever the child record says by now. What only guards a new
+	// enrollment (guard) does not count for it: nothing is written.
 	if holder, held := contractHolder(phase.holders[input.StudentID]); held {
 		answerContractHolder(holder, phase, input, reason, result)
 		return
+	}
+	if reason == "" {
+		reason = guard
 	}
 	if first := phase.enrolling[input.StudentID]; first != nil {
 		answerContractRepeat(first, index, bookings, reason, result)
@@ -350,7 +354,13 @@ func ownContractEnrollment(holder enrollmentNative.ContractEnrollmentHolder) boo
 // answerContractHolder answers a student that a request child of the phase
 // holds: its own enrollment with the bookings given is the answer of a
 // repeated call, with other bookings it is refused, and any other
-// application is named.
+// application is named. reason is the refusal of the bookings without the
+// guards of a new enrollment (contractBookingGuard): a repeated call writes
+// nothing, so an enrollment that is stored as asked for is confirmed even
+// when the school has since linked its offering to a roster directly or
+// deactivated it. Otherwise a run that stopped before the binding could
+// never bind its contract. The child record is not asked either: its care
+// end and the day the bookings start guard the creation alone.
 func answerContractHolder(holder enrollmentNative.ContractEnrollmentHolder, phase *contractPhase,
 	input enrollmentNative.ContractEnrollment, reason string, result *enrollmentNative.ContractEnrollmentResult) {
 	result.RequestID, result.RequestChildID = holder.RequestID, holder.RequestChildID
@@ -386,33 +396,41 @@ func answerContractRepeat(first *contractSubject, index int, bookings []enrollme
 // as they are stored. First the phase and each offering must still be what
 // the plan read (contractStale otherwise). Then each offering is one of the
 // phase and booked once, on weekdays it offers, and all bookings start on
-// one day within the service of the phase and end within it, on a roster
-// that can end with them and over a window that holds their weekdays
+// one day within the service of the phase and end within it
 // (contractBookingRefusal). An offering with fixed weekdays is booked on
 // all of them and stores none, like a submission.
-func contractBookings(phase *contractPhase, input enrollmentNative.ContractEnrollment) ([]enrollmentNative.CareBookingInput, string) {
+//
+// The second answer is the refusal of the bookings as such. The third
+// (guard) is the first reason that only a new enrollment is refused for,
+// once no booking is refused as such: an offering that is not active, a
+// roster that cannot end with its booking, a window that holds none of a
+// weekday (contractBookingGuard).
+func contractBookings(phase *contractPhase, input enrollmentNative.ContractEnrollment) (inputs []enrollmentNative.CareBookingInput, reason, guard string) {
 	if !phaseAsPlanned(phase, input) {
-		return nil, contractStale
+		return nil, contractStale, ""
 	}
 	if len(input.Bookings) == 0 {
-		return nil, enrollmentNative.ContractEnrollmentOfferingPhase
+		return nil, enrollmentNative.ContractEnrollmentOfferingPhase, ""
 	}
-	inputs := make([]enrollmentNative.CareBookingInput, 0, len(input.Bookings))
+	inputs = make([]enrollmentNative.CareBookingInput, 0, len(input.Bookings))
 	seen := map[int64]bool{}
 	for _, booking := range input.Bookings {
 		offering := phase.offerings[booking.CareOfferingID]
 		if offering == nil {
-			return nil, enrollmentNative.ContractEnrollmentOfferingPhase
+			return nil, enrollmentNative.ContractEnrollmentOfferingPhase, ""
 		}
 		days, reason := contractBookingRefusal(phase, offering, booking, seen[offering.ID], input.Bookings[0].ValidFrom)
 		if reason != "" {
-			return nil, reason
+			return nil, reason, ""
+		}
+		if guard == "" {
+			guard = contractBookingGuard(phase, offering, booking)
 		}
 		seen[offering.ID] = true
 		from, end := booking.ValidFrom, booking.ValidUntil
 		inputs = append(inputs, enrollmentNative.CareBookingInput{CareOfferingID: offering.ID, ManualSelectedDays: days, ValidFrom: &from, ValidUntil: &end})
 	}
-	return inputs, ""
+	return inputs, "", guard
 }
 
 // phaseAsPlanned tells whether the service of the phase is still what the
