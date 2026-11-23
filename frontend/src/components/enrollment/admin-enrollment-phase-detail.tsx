@@ -27,6 +27,7 @@ import {
   type AdminRequestSummary,
   type DecisionStatus,
   decideAdminChild,
+  fromImportedContract,
   listAdminRequests,
   setAdminRequestRead,
 } from "~/lib/enrollment-admin-api";
@@ -577,9 +578,21 @@ export function AdminEnrollmentPhaseDetail({ phaseId, info }: Props) {
             <p className="font-medium text-gray-900">
               {row.child_first_name} {row.child_last_name}
             </p>
-            <p className="text-xs text-gray-500">
-              {enrolledClassLabel(row) || "Keine Klassenstufe"}
-            </p>
+            {/* The request of an imported contract keeps no grade of its
+                own; its class stands in the child record. */}
+            {fromImportedContract(row) && !enrolledClassLabel(row) ? null : (
+              <p className="text-xs text-gray-500">
+                {enrolledClassLabel(row) || "Keine Klassenstufe"}
+              </p>
+            )}
+            {fromImportedContract(row) ? (
+              <StatusBadge
+                tone="gray"
+                size="xs"
+                label="Aus importiertem Vertrag"
+                className="mt-1"
+              />
+            ) : null}
           </div>
         ),
         sortValue: (row) => `${row.child_last_name} ${row.child_first_name}`,
@@ -587,14 +600,19 @@ export function AdminEnrollmentPhaseDetail({ phaseId, info }: Props) {
       {
         key: "guardian",
         header: "Elternkontakt",
-        render: (row) => (
-          <div>
-            <p className="font-medium text-gray-900">
-              {row.guardian_first_name} {row.guardian_last_name}
+        render: (row) =>
+          fromImportedContract(row) ? (
+            <p className="text-sm text-gray-500">
+              In der Anmeldung keine Eltern
             </p>
-            <p className="text-xs text-gray-500">{row.guardian_email}</p>
-          </div>
-        ),
+          ) : (
+            <div>
+              <p className="font-medium text-gray-900">
+                {row.guardian_first_name} {row.guardian_last_name}
+              </p>
+              <p className="text-xs text-gray-500">{row.guardian_email}</p>
+            </div>
+          ),
         sortValue: (row) =>
           `${row.guardian_last_name} ${row.guardian_first_name}`,
       },
@@ -1356,7 +1374,8 @@ function OfferingList({ row }: Readonly<{ row: CareUsageRow }>) {
         <div key={offering.id} className="text-sm">
           <p className="font-medium text-gray-900">{offering.name}</p>
           <p className="text-xs text-gray-500">
-            {formatOfferingDaySource(offering) || "Keine Tage"}
+            {formatOfferingDaySource(offering, fromImportedContract(row)) ||
+              "Keine Tage"}
           </p>
         </div>
       ))}
@@ -1391,6 +1410,7 @@ function pickupTimesForReport(report: CareUsageReport | null): string[] {
 
 function formatOfferingDaySource(
   offering: CareUsageRow["offerings"][number],
+  fromContract: boolean,
 ): string {
   if (offering.days_source !== "selected") {
     const days = formatDays(offering.days);
@@ -1404,10 +1424,12 @@ function formatOfferingDaySource(
     hasProvenance ? (offering.manual_selected_days ?? []) : offering.days,
   );
   if (automatic && manual) {
-    return `${automatic} automatisch mitgebucht; ${manual} von Eltern gewählt`;
+    return `${automatic} automatisch mitgebucht; ${manual} ${fromContract ? "gebucht" : "von Eltern gewählt"}`;
   }
   if (automatic) return `${automatic} automatisch mitgebucht`;
-  if (manual) return `${manual} · von Eltern gewählt`;
+  if (manual) {
+    return `${manual} · ${fromContract ? "gebucht" : "von Eltern gewählt"}`;
+  }
   return "";
 }
 

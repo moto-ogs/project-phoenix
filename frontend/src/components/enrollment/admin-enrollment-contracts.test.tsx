@@ -59,7 +59,12 @@ describe("AdminEnrollmentContracts", () => {
         contract({
           request_child_id: "12",
           status: "aktiv",
-          concluded: { method: "mit_anmeldung", at: "2026-09-02T07:15:00Z" },
+          concluded: {
+            method: "mit_anmeldung",
+            at: "2026-09-02T07:15:00Z",
+            date_unknown: false,
+            taken_over: false,
+          },
         }),
       ],
       error: undefined,

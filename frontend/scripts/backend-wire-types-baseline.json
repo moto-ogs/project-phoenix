@@ -6,10 +6,8 @@
   "lib/enrollment-uploads.ts shape StoredUploadValue",
   "lib/error-log.ts shape ErrorLogFields",
   "lib/import-batch-result.ts shape ImportBatchResult",
-  "lib/operator/operator-invitation-helpers.ts shape InvitationValidationBody",
   "lib/sign-in-answer.ts shape WireSignInAnswer",
   "lib/sse-types.ts shape SSEEventData",
-  "lib/staff-preview-api.ts shape StaffPreviewStartBody",
   "server/auth/jwt-payload.ts shape JwtPayload",
   "server/auth/token-refresh.ts shape TokenPair"
 ]

@@ -69,6 +69,7 @@ function summary(
     guardian_last_name: "Muster",
     guardian_email: "mara@example.test",
     guardian_phone: "+491234",
+    submission_source: "public",
     submitted_at: "2026-01-01T00:00:00Z",
     is_unread: false,
     children: [child()],

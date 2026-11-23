@@ -27940,6 +27940,12 @@
           }
         },
         {
+          "name": "submission_source",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "submitted_at",
           "schema": {
             "kind": "instant"
@@ -28247,6 +28253,12 @@
         {
           "name": "guardian_phone",
           "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "submission_source",
           "schema": {
             "kind": "string"
           }
@@ -29381,6 +29393,18 @@
           "name": "at",
           "schema": {
             "kind": "instant"
+          }
+        },
+        {
+          "name": "date_unknown",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "taken_over",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -44812,6 +44836,13 @@
           }
         },
         {
+          "name": "request_child_id",
+          "schema": {
+            "kind": "id",
+            "nullable": true
+          }
+        },
+        {
           "name": "version",
           "schema": {
             "kind": "ref",
@@ -46115,6 +46146,13 @@
           "name": "follows_bookings",
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "request_child_id",
+          "schema": {
+            "kind": "id",
+            "nullable": true
           }
         }
       ]
@@ -90549,6 +90587,18 @@
               "ref": "DishRequest"
             }
           }
+        },
+        {
+          "name": "expected",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "DishRequest"
+            }
+          }
         }
       ]
     },
@@ -111115,6 +111165,12 @@
         {
           "name": "guardian_phone",
           "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "submission_source",
           "schema": {
             "kind": "string"
           }

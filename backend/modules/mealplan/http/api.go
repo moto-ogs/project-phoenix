@@ -142,6 +142,9 @@ type DishRequest struct {
 
 type SetDayRequest struct {
 	Dishes *[]DishRequest `json:"dishes"`
+	// Expected is the day as the saver read it; a day stored differently
+	// since is refused instead of overwritten. Omitted saves unchecked.
+	Expected *[]DishRequest `json:"expected"`
 }
 
 func (request *SetDayRequest) Bind(*http.Request) error {
@@ -184,19 +187,28 @@ func (rs *Resource) setDay(w http.ResponseWriter, r *http.Request) {
 		rs.runtime.InvalidRequest(w, r, err)
 		return
 	}
-	dishes := make([]mealplanModule.Dish, 0, len(*request.Dishes))
-	for _, dish := range *request.Dishes {
+	command := mealplanModule.ReplaceDay{Date: parsed, Dishes: moduleDishes(*request.Dishes), AccountID: rs.runtime.CurrentAccountID(r.Context())}
+	if request.Expected != nil {
+		expected := moduleDishes(*request.Expected)
+		command.Expected = &expected
+	}
+	if err := rs.module.ReplaceDay(r.Context(), command); err != nil {
+		rs.runtime.ModuleFailure(w, r, err, "failed to save meal")
+		return
+	}
+	rs.runtime.Success(w, r, http.StatusOK, nil, "Meal plan day saved successfully")
+}
+
+func moduleDishes(requests []DishRequest) []mealplanModule.Dish {
+	dishes := make([]mealplanModule.Dish, 0, len(requests))
+	for _, dish := range requests {
 		allergens := make([]mealplanModule.Allergen, 0, len(dish.Allergens))
 		for _, code := range dish.Allergens {
 			allergens = append(allergens, mealplanModule.Allergen(code))
 		}
 		dishes = append(dishes, mealplanModule.Dish{Dish: dish.Dish, Note: dish.Note, Allergens: allergens})
 	}
-	if err := rs.module.ReplaceDay(r.Context(), mealplanModule.ReplaceDay{Date: parsed, Dishes: dishes, AccountID: rs.runtime.CurrentAccountID(r.Context())}); err != nil {
-		rs.runtime.ModuleFailure(w, r, err, "failed to save meal")
-		return
-	}
-	rs.runtime.Success(w, r, http.StatusOK, nil, "Meal plan day saved successfully")
+	return dishes
 }
 
 func (rs *Resource) deleteDay(w http.ResponseWriter, r *http.Request) {

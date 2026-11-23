@@ -166,3 +166,82 @@ test("the phone list shows the menu beside a long file name", async ({
     ),
   ).toBe(true);
 });
+
+// Die Handykarte von `DataTable` (#7911): Was die Karte nicht zeigt, klappt
+// ein eigener Knopf auf. Er steht mit dem Menü oben rechts, hat am Finger
+// 44 px Trefferfläche und schiebt das Menü nicht aus der Karte. Das Markup
+// kommt aus der echten Komponente; vor dem Laden der Seite kennt sie die
+// Breite noch nicht und rendert beide Layouts, CSS zeigt am Handy die Karten.
+test.describe("phone card details toggle", () => {
+  test.use({
+    hasTouch: true,
+    viewport: { width: 390, height: 844 },
+  });
+
+  test("stands beside the menu at the top right with a 44 px hit area", async ({
+    page,
+  }) => {
+    const { createElement } = await import("react");
+    const { renderToStaticMarkup } = await import("react-dom/server");
+    const { DataTable } = await import("../../src/components/ui/data-table");
+    type FileRow = { id: string; name: string; size: string; date: string };
+    const markup = renderToStaticMarkup(
+      createElement(DataTable<FileRow>, {
+        columns: [
+          {
+            key: "name",
+            header: "Datei",
+            stacked: "title",
+            render: (r) => r.name,
+          },
+          { key: "size", header: "Größe", render: (r) => r.size },
+          { key: "date", header: "Hochgeladen", render: (r) => r.date },
+          {
+            key: "actions",
+            header: "",
+            render: () =>
+              createElement(
+                "button",
+                {
+                  type: "button",
+                  "data-testid": "menu",
+                  style: { width: 32, height: 32 },
+                },
+                "⋮",
+              ),
+          },
+        ],
+        rows: [
+          { id: "1", name: LONG_NAME, size: "1,2 MB", date: "26.10.2026" },
+        ],
+        getRowKey: (r) => r.id,
+        onRowClick: () => undefined,
+        stackedOnMobile: true,
+        stackedLayout: "row",
+        stackedDetailKey: "date",
+      }),
+    );
+    await render(page, compiledCss, `<div style="width:358px">${markup}</div>`);
+
+    const card = page.getByTestId("data-table-stacked").getByRole("listitem");
+    const toggle = card.getByRole("button", { name: /^Details zu/ });
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    const toggleBox = (await toggle.boundingBox())!;
+    const menuBox = (await card.getByTestId("menu").boundingBox())!;
+    const cardBox = (await card.boundingBox())!;
+
+    expect(toggleBox.width).toBeGreaterThanOrEqual(44);
+    expect(toggleBox.height).toBeGreaterThanOrEqual(44);
+    // Menü ganz rechts, der Knopf links daneben, beide in der Karte.
+    expect(menuBox.x).toBeGreaterThanOrEqual(toggleBox.x + toggleBox.width);
+    expect(menuBox.x + menuBox.width).toBeLessThanOrEqual(
+      cardBox.x + cardBox.width,
+    );
+    expect(toggleBox.y).toBeLessThan(cardBox.y + 24);
+    expect(
+      await page.evaluate(
+        () => document.scrollingElement!.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+  });
+});

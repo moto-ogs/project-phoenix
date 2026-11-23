@@ -1,5 +1,6 @@
 {
   "child_not_enrolled": "Nuk është e mundur: {object}. Fëmija nuk është në kujdes në këtë ditë.",
+  "day_changed": "Dikush tjetër e ka ndryshuar ndërkohë planin e ushqimit. Zgjidhni „Verwerfen” për të parë versionin e ri. Zgjidhni „Speichern” për ta zëvendësuar me ndryshimet tuaja.",
   "day_closed": "Nuk është e mundur: {object}. Shkolla është e mbyllur në këtë ditë.",
   "day_past": "Nuk është më e mundur: {object}. Dita ka kaluar.",
   "invalid_allergens": "Alergjenët nuk u ruajtën. Ju lutemi zgjidhini përsëri.",

@@ -8,7 +8,15 @@
 
 import { FamilyBillingStatusCard } from "~/components/traeger/family-billing-status-card";
 import { SepaMandateStatusCard } from "~/components/traeger/sepa-mandate-status-card";
-import { Download, Link2, RotateCw, Send, Trash2, Unlink } from "lucide-react";
+import {
+  Download,
+  Link2,
+  RotateCw,
+  Send,
+  Trash2,
+  Unlink,
+  Unplug,
+} from "lucide-react";
 import {
   useParams,
   usePathname,
@@ -107,6 +115,7 @@ import {
   resendCareContract,
 } from "~/lib/traeger-care-contracts-api";
 import { unlinkContractChild } from "~/lib/traeger-contract-child-links-api";
+import { unbindContractEnrollment } from "~/lib/traeger-contract-enrollments-api";
 import { traegerPath } from "~/lib/traeger-url";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 import { labelOf } from "~/lib/label-of";
@@ -198,6 +207,10 @@ function TraegerVertragView() {
   // this link, not one a colleague stored meanwhile.
   const [confirmUnlink, setConfirmUnlink] = useState<string | null>(null);
   const [unlinking, setUnlinking] = useState(false);
+  // The enrollment the dialog was opened for (ADR 0309, „Der Weg zurück“):
+  // the confirmation takes off this binding, not one made meanwhile.
+  const [confirmUnbind, setConfirmUnbind] = useState<string | null>(null);
+  const [unbinding, setUnbinding] = useState(false);
   const actionError = useApiErrorDisplay();
   const discardErrors = useApiFormError();
   const recipientForm = useRef<HTMLFormElement>(null);
@@ -215,6 +228,7 @@ function TraegerVertragView() {
       setConfirmDiscard(false);
       setLinkingChild(false);
       setConfirmUnlink(null);
+      setConfirmUnbind(null);
     }
   }
 
@@ -347,25 +361,61 @@ function TraegerVertragView() {
     try {
       await unlinkContractChild(id, studentId);
     } catch (err) {
+      setUnlinking(false);
+      if (
+        err instanceof ApiError &&
+        (err.code === wireErrorCode("care_contract.child_link_changed") ||
+          err.code === wireErrorCode("care_contract.child_link_bound"))
+      ) {
+        // Expected refusals: another child record is linked by now, or the
+        // contract was bound to its enrollment meanwhile. Show the contract
+        // as it is, so the office decides again.
+        void actionError.show(err, { object: "die Verknüpfung" });
+        setConfirmUnlink(null);
+        await afterCardWrite();
+        return;
+      }
       logger.error("traeger_care_contract_unlink_child_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
       void actionError.show(err, { object: "die Verknüpfung" });
-      setUnlinking(false);
-      if (
-        err instanceof ApiError &&
-        err.code === wireErrorCode("care_contract.child_link_changed")
-      ) {
-        // Another child record is linked by now: show the contract as it
-        // is, so the office decides again.
-        setConfirmUnlink(null);
-        await afterCardWrite();
-      }
       return;
     }
     setConfirmUnlink(null);
     setUnlinking(false);
     success("Die Verknüpfung mit der Kinderakte ist gelöst.");
+    await afterCardWrite();
+  };
+
+  const unbindEnrollment = async () => {
+    // The enrollment the office saw when it opened the dialog.
+    const requestChildId = confirmUnbind;
+    if (!requestChildId) return;
+    setUnbinding(true);
+    try {
+      await unbindContractEnrollment(id, requestChildId);
+    } catch (err) {
+      setUnbinding(false);
+      if (
+        err instanceof ApiError &&
+        err.code === wireErrorCode("care_contract.enrollment_binding_changed")
+      ) {
+        // Expected: the contract is no longer bound to this enrollment.
+        // Show it as it is now, so the office decides again.
+        void actionError.show(err, { object: "die Bindung" });
+        setConfirmUnbind(null);
+        await afterCardWrite();
+        return;
+      }
+      logger.error("traeger_care_contract_unbind_failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      void actionError.show(err, { object: "die Bindung" });
+      return;
+    }
+    setConfirmUnbind(null);
+    setUnbinding(false);
+    success("Die Bindung an die Anmeldung ist gelöst.");
     await afterCardWrite();
   };
 
@@ -491,7 +541,22 @@ function TraegerVertragView() {
       onClick: () => setLinkingChild(true),
     });
   }
-  if (contract?.imported && contract.studentId) {
+  // A bound contract keeps its child record (ADR 0309): its link comes off
+  // only after the binding.
+  if (
+    contract?.imported &&
+    contract.followsBookings &&
+    contract.requestChildId
+  ) {
+    headMenu.push({
+      label: "Bindung an die Anmeldung lösen",
+      description:
+        "moto fragt vorher nach. Die Anmeldung bleibt an der Schule.",
+      icon: <Unplug className="h-4 w-4" aria-hidden="true" />,
+      onClick: () => setConfirmUnbind(contract?.requestChildId ?? null),
+    });
+  }
+  if (contract?.imported && contract.studentId && !contract.followsBookings) {
     headMenu.push({
       label: "Verknüpfung lösen",
       description:
@@ -667,6 +732,36 @@ function TraegerVertragView() {
               bekommen keine Nachricht.
             </p>
           </ConfirmationModal>
+          <ConfirmationModal
+            isOpen={confirmUnbind !== null}
+            title="Bindung an die Anmeldung lösen?"
+            icon={<Unplug className="h-5 w-5" aria-hidden="true" />}
+            confirmText="Bindung lösen"
+            confirmVariant="warning"
+            confirmTooltip="Löst die Bindung sofort. Die Anmeldung bleibt an der Schule."
+            isConfirmLoading={unbinding}
+            loadingText="Wird gelöst …"
+            onClose={() => setConfirmUnbind(null)}
+            onConfirm={() => void unbindEnrollment()}
+          >
+            <div className="space-y-3 text-sm text-gray-700">
+              <p>
+                Der Vertrag folgt dann nicht mehr den Buchungen der Anmeldung.
+                Ändert die Schule eine Buchung, entsteht keine neue
+                Vertragsversion mehr.
+              </p>
+              <p>
+                Die Anmeldung und ihre Buchungen bleiben an der Schule. Braucht
+                das Kind sie nicht, nimmt die Schule die Buchungen heraus.
+                Versionen, die schon entstanden sind, bleiben.
+              </p>
+              <p>
+                Danach kannst du die Verknüpfung mit der Kinderakte lösen, oder
+                du bindest den Vertrag über „Anmeldungen nachtragen“ wieder.
+                Eltern bekommen keine Nachricht.
+              </p>
+            </div>
+          </ConfirmationModal>
           <ConfirmDeleteModal
             isOpen={confirmDiscard}
             title="Entwurf verwerfen?"
@@ -749,6 +844,20 @@ function TraegerVertragView() {
                         studentId={contract.studentId}
                         onLink={() => setLinkingChild(true)}
                       />
+                    </DataField>
+                  ) : null}
+                  {contract.imported && contract.followsBookings ? (
+                    <DataField label="Anmeldung">
+                      <span className="flex flex-col items-start gap-1.5">
+                        <StatusBadge
+                          tone="green"
+                          label="Anmeldung nachgetragen"
+                        />
+                        <span className="text-sm font-normal text-gray-600">
+                          Der Vertrag folgt jetzt den Buchungen der Anmeldung an
+                          der Schule.
+                        </span>
+                      </span>
                     </DataField>
                   ) : null}
                 </DataGrid>

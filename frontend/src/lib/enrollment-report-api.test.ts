@@ -77,6 +77,7 @@ function report(overrides: Partial<CareUsageReport> = {}): CareUsageReport {
         guardian_first_name: "Grace",
         guardian_last_name: "Hopper",
         guardian_email: "grace@example.test",
+        submission_source: "public",
         submitted_at: "2026-04-12T08:30:00Z",
       },
     ],

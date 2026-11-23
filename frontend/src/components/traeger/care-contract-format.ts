@@ -224,7 +224,7 @@ const TAKEN_OVER_METHOD_LABELS: Partial<Record<ConclusionMethod, string>> = {
  * der Anmeldung“. A contract taken over from an import (#4723, #7767) knows
  * at most its day: „Am 12.03.2026, auf Papier“, or „Abschlussdatum
  * unbekannt, …“ when the office does not know it; its stand-in instant is
- * never shown. A view without `takenOver` (the school's) keeps the older
+ * never shown. A view without `takenOver` keeps the older
  * rule: a paper contract stored at midnight shows without a time.
  */
 export function formatConclusion(conclusion: ContractConclusion): string {

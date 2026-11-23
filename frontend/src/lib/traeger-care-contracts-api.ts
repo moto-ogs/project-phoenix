@@ -236,7 +236,7 @@ export interface ContractConclusion {
   /**
    * The contract came from an import (#4723): it was concluded before moto,
    * online in the previous program or on paper. Absent: a view that does not
-   * carry it (the school's application view), read as false.
+   * carry it, read as false.
    */
   readonly takenOver?: boolean;
   /** The office does not know the day of the conclusion (#7767). */
@@ -280,6 +280,13 @@ export interface CareContractSummary {
   readonly studentId: string | null;
   /** Taken over from a file, not made from an application (ADR 0232). */
   readonly imported: boolean;
+  /**
+   * The contract follows the approved bookings of an enrollment: every one
+   * from an application, and an imported one once it is bound (ADR 0309).
+   */
+  readonly followsBookings: boolean;
+  /** The enrollment (application child) it follows; null without one. */
+  readonly requestChildId: string | null;
 }
 
 export interface CareContractList {
@@ -567,6 +574,8 @@ function summaryFromBackend(
     endsOn: row.ends_on,
     studentId: row.student_id,
     imported: row.imported,
+    followsBookings: row.follows_bookings,
+    requestChildId: row.request_child_id,
   };
 }
 

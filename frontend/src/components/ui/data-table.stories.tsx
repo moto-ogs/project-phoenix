@@ -2,6 +2,8 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 
 import type { DataTableColumn } from "./data-table";
 import { DataTable, DataTableStatusBadge } from "./data-table";
+import { OverflowMenu } from "./page-header/OverflowMenu";
+import { StatusBadge } from "./status-badge";
 
 interface DemoRow {
   id: string;
@@ -126,5 +128,163 @@ export const ExpandableWithSubRowsAndSummary: Story = {
           }
         : null,
     rowTone: (row) => (row.id === "2" ? "today" : null),
+  },
+};
+
+// Phone cards (#7911): every column stands on the card or opens below it.
+// Open the stories at phone width to see the stacked layout.
+
+interface ChildRow {
+  id: string;
+  name: string;
+  status: string;
+  schoolClass: string;
+  group: string;
+  arrival: string;
+  pickup: string;
+}
+
+const childRows: ChildRow[] = [
+  {
+    id: "1",
+    name: "Mia Kaya",
+    status: "Da",
+    schoolClass: "2a",
+    group: "Gruppe Rot",
+    arrival: "08:05 Uhr",
+    pickup: "15:30 Uhr",
+  },
+  {
+    id: "2",
+    name: "Noah Becker",
+    status: "Krank",
+    schoolClass: "3b",
+    group: "Gruppe Blau",
+    arrival: "–",
+    pickup: "–",
+  },
+];
+
+const childColumns: DataTableColumn<ChildRow>[] = [
+  { key: "name", header: "Name", stacked: "title", render: (r) => r.name },
+  {
+    key: "status",
+    header: "Status",
+    stacked: "meta",
+    render: (r) => (
+      <StatusBadge
+        tone={r.status === "Da" ? "green" : "warning"}
+        label={r.status}
+      />
+    ),
+  },
+  { key: "class", header: "Klasse", render: (r) => r.schoolClass },
+  { key: "group", header: "Gruppe", render: (r) => r.group },
+  { key: "arrival", header: "Ankunft", render: (r) => r.arrival },
+  { key: "pickup", header: "Gehzeit", render: (r) => r.pickup },
+];
+
+export const PhoneOneLineList: StoryObj<typeof DataTable<ChildRow>> = {
+  args: {
+    columns: childColumns,
+    rows: childRows,
+    getRowKey: (row) => row.id,
+    onRowClick: () => undefined,
+    stackedOnMobile: true,
+    stackedLayout: "row",
+    stackedDetailKey: "arrival",
+  },
+};
+
+interface DayRow {
+  id: string;
+  day: string;
+  span: string;
+  pause: string;
+  actual: string;
+  balance: string;
+}
+
+const dayRows: DayRow[] = [
+  {
+    id: "mo",
+    day: "Mo, 07.09.",
+    span: "07:45–15:15",
+    pause: "30 min",
+    actual: "7:00 / 7:00",
+    balance: "±0:00",
+  },
+  {
+    id: "di",
+    day: "Di, 08.09.",
+    span: "07:50–16:20",
+    pause: "45 min",
+    actual: "7:45 / 7:00",
+    balance: "+0:45",
+  },
+];
+
+const dayColumns: DataTableColumn<DayRow>[] = [
+  { key: "day", header: "Datum", stacked: "title", render: (r) => r.day },
+  {
+    key: "balance",
+    header: "Saldo",
+    stacked: "meta",
+    stackedTone: "figure",
+    render: (r) => r.balance,
+  },
+  { key: "span", header: "Kommen–Gehen", render: (r) => r.span },
+  { key: "pause", header: "Pause", render: (r) => r.pause },
+  { key: "actual", header: "Ist / Soll", render: (r) => r.actual },
+  {
+    key: "actions",
+    header: "",
+    align: "right",
+    render: (r) => (
+      <OverflowMenu
+        ariaLabel={`Aktionen für ${r.day}`}
+        items={[
+          {
+            label: "Korrigieren",
+            description: "Öffnet die Zeiten dieses Tages zum Ändern",
+            onClick: () => undefined,
+          },
+        ]}
+      />
+    ),
+  },
+];
+
+export const PhoneCardsWithDetailsAndSummary: StoryObj<
+  typeof DataTable<DayRow>
+> = {
+  args: {
+    columns: dayColumns,
+    rows: dayRows,
+    getRowKey: (row) => row.id,
+    stackedOnMobile: true,
+    expandable: {
+      rowLabel: (row, expanded) =>
+        `${row.day}: Verlauf ${expanded ? "schließen" : "öffnen"}`,
+    },
+    renderSubRows: (row, expanded) =>
+      expanded
+        ? [
+            {
+              key: `${row.id}-log`,
+              content: "Gehen von 16:05 auf 16:20 korrigiert.",
+            },
+          ]
+        : [],
+    summaryRow: (row) =>
+      row.id === "di"
+        ? {
+            key: "week",
+            cells: [
+              { columnKey: "day", content: "Woche 37" },
+              { columnKey: "balance", content: "+0:45" },
+            ],
+          }
+        : null,
   },
 };

@@ -141,6 +141,7 @@ func careUsageRow(req *enrollmentNative.Request, child *enrollmentNative.Request
 		GuardianLastName:  req.GuardianLastName,
 		GuardianEmail:     req.GuardianEmail,
 		GuardianPhone:     req.GuardianPhone,
+		SubmissionSource:  enrollmentNative.NormalizedSubmissionSource(req.SubmissionSource),
 		SubmittedAt:       req.SubmittedAt,
 	}
 }

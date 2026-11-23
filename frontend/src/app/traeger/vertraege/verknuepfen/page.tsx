@@ -168,9 +168,19 @@ export default function TraegerContractChildLinkPage() {
                 description={doneDescription(done)}
                 action={
                   <div className="flex flex-wrap justify-center gap-3">
+                    {/* The next step of the order of work (ADR 0309): the
+                        linked contracts get their enrollment. */}
+                    <ButtonLink
+                      href={traegerPath("/traeger/vertraege/anmeldungen")}
+                      variant="primary"
+                      size="md"
+                      tooltip="Öffnet die Vorschau: Verknüpfte Verträge bekommen ihre Anmeldung an der Schule."
+                    >
+                      Anmeldungen nachtragen
+                    </ButtonLink>
                     <ButtonLink
                       href={traegerPath(VERTRAEGE)}
-                      variant="primary"
+                      variant="outline"
                       size="md"
                       tooltip="Öffnet die Liste aller Verträge."
                     >

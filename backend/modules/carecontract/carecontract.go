@@ -308,6 +308,10 @@ type ContractSummary struct {
 	// enrollment of its child (ADR 0309); such a contract keeps its child
 	// record and takes no offering correction from a file.
 	FollowsBookings bool `json:"follows_bookings"`
+	// RequestChildID is the application child the contract follows; nil
+	// without one. The office names it to take the binding of an imported
+	// contract off again (ADR 0309, "Der Weg zurück").
+	RequestChildID *ident.ID `json:"request_child_id"`
 }
 
 // ContractList is the filtered list with the count of every status over all

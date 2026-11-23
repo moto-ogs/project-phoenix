@@ -12,6 +12,7 @@ import { signOut } from "next-auth/react";
 
 import { createLogger } from "~/lib/logger";
 import { bffJson, bffJsonUncontracted } from "~/lib/bff-fetch";
+import type * as staffPreviewContract from "~/lib/contract/auth-staff-preview.generated";
 import { clearSessionCache } from "~/lib/session-cache";
 
 const logger = createLogger({ component: "StaffPreviewApi" });
@@ -30,13 +31,12 @@ export interface StaffPreviewSession {
   targetName: string;
 }
 
-// The answer of /api/auth/staff-preview: the BFF route sets the session and
-// is outside the generated contract (#2353).
-interface StaffPreviewStartBody {
-  expires_in: number;
-  target_account_id: string;
-  target_name: string;
-}
+// The answer of /api/auth/staff-preview: the BFF route keeps the token in
+// the session and hands on the rest of the backend's answer.
+type StaffPreviewStartBody = Pick<
+  staffPreviewContract.StaffPreviewStartResponse,
+  "expires_in" | "target_account_id" | "target_name"
+>;
 
 type SessionUpdate = (data: Record<string, unknown>) => Promise<unknown>;
 type SwrMutateAll = (
