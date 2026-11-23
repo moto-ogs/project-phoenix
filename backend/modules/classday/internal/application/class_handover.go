@@ -83,7 +83,8 @@ func (h classHandover) mayHandOver(ctx context.Context) (bool, error) {
 
 // ChangeClassHandover hands the class over or takes today's handover back
 // after the write scope, date and school-day checks; a handover also checks
-// every child against the roster of the day.
+// every child against the roster of the day and its version against the
+// dialog's children (dialogChildren).
 func (h classHandover) ChangeClassHandover(ctx context.Context, in classday.ClassHandoverChange) error {
 	if h.store == nil || h.scope == nil || h.rosters == nil {
 		return classday.ErrClassHandoverNotConfigured
@@ -101,27 +102,10 @@ func (h classHandover) ChangeClassHandover(ctx context.Context, in classday.Clas
 	if h.dayRows == nil {
 		return classday.ErrClassHandoverNotConfigured
 	}
-	// The dialog's children are computed in the write's transaction under
-	// the class and day's lock, from the same projection as the report's
-	// rows (ADR 0311).
-	children := func(lockedCtx context.Context) ([]int64, error) {
-		roster, err := h.rosters.ClassRosterDay(lockedCtx, in.SchoolClass, date)
-		if err != nil {
-			return nil, err
-		}
-		if err := checkHandoverChildren(roster, in.PresentStudentIDs, in.AbsentStudentIDs); err != nil {
-			return nil, err
-		}
-		rows, err := h.dayRows(lockedCtx, roster, date, weekday)
-		if err != nil {
-			return nil, err
-		}
-		return handoverChildIDs(rows), nil
-	}
 	_, err = h.store.ChangeClassHandover(ctx, studentpresence.ClassHandoverChange{
 		SchoolClass: in.SchoolClass, Date: date, HandedOverBy: in.HandedOverBy,
 		PresentStudentIDs: in.PresentStudentIDs, AbsentStudentIDs: in.AbsentStudentIDs,
-		ExpectedVersion: in.ExpectedVersion, HandoverChildren: children,
+		ExpectedVersion: in.ExpectedVersion, HandoverChildren: h.dialogChildren(in, date, weekday),
 	})
 	if errors.Is(err, studentpresence.ErrClassHandoverInvalid) {
 		return fmt.Errorf("%w: %w", classday.ErrClassHandoverInvalid, err)
@@ -131,6 +115,27 @@ func (h classHandover) ChangeClassHandover(ctx context.Context, in classday.Clas
 	}
 	h.announce(ctx)
 	return nil
+}
+
+// dialogChildren names the children the handover dialog lists, from the
+// same projection as the report's rows (stays_today), after the roster check
+// of the handed-over children. Student Presence runs it in the write's
+// transaction under the class and day's lock (ADR 0311).
+func (h classHandover) dialogChildren(in classday.ClassHandoverChange, date calendar.Date, weekday string) func(context.Context) ([]int64, error) {
+	return func(ctx context.Context) ([]int64, error) {
+		roster, err := h.rosters.ClassRosterDay(ctx, in.SchoolClass, date)
+		if err != nil {
+			return nil, err
+		}
+		if err := checkHandoverChildren(roster, in.PresentStudentIDs, in.AbsentStudentIDs); err != nil {
+			return nil, err
+		}
+		rows, err := h.dayRows(ctx, roster, date, weekday)
+		if err != nil {
+			return nil, err
+		}
+		return handoverChildIDs(rows), nil
+	}
 }
 
 // checkDay applies the write scope, today and the school day; it returns

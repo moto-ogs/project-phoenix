@@ -6,9 +6,9 @@ status: accepted
 
 Entscheidung vom 2026-11-23 für
 [#7904](https://github.com/moto-ogs/project-phoenix/issues/7904) (PR #7956).
-Sie genehmigt zehn neue Command-Effect-Diagnosen (neun für die Mensa, eine für
-die Klassenübergabe im Nachtrag) und zwei neue Durchreicher-Methoden. Sie fügt
-keinen Owner, keine Policy-Regel und keine neue Sperrklasse hinzu.
+Sie genehmigt neun neue Command-Effect-Diagnosen und zwei neue
+Durchreicher-Methoden. Sie fügt keinen Owner, keine Policy-Regel und keine neue
+Sperrklasse hinzu.
 
 ## Kontext
 
@@ -92,18 +92,13 @@ als „da“.
 - Status- und Betreuungstage schreiben andere Owner ohne diese Sperre. Ihre
   Schreiber kennen die Klasse nicht und nehmen eigene Sperren (Kind, Tag); sie
   an die Übergabesperre zu binden, gehört nicht in diesen PR. Die Übergabe
-  liest sie unter ihrer Sperre in derselben Transaktion. Bleibt das Fenster
+  liest sie unter ihrer Sperre in derselben Transaktion. Es bleibt das Fenster
   zwischen diesem Lesen und dem Commit: Ein dort festgeschriebener Statustag
   gilt als nach der Übergabe eingetragen.
 
-Die Funktion ist für den Effekt-Scan ein nicht auflösbares Ziel. Diese ADR
-genehmigt die eine neue Diagnose:
-
-| Port | Bindung | Ziel |
-|---|---|---|
-| `studentpresence.Owner.ChangeClassHandover` | `application.Service.ChangeClassHandover` | `studentpresence.ClassHandoverChange.HandoverChildren` |
-
-Die Funktion liest nur und schreibt nichts.
+Der Effekt-Scan löst die Funktion zu `classHandover.dialogChildren` (Class Day)
+auf. Sie liest nur, schreibt nichts und nimmt keine Sperre; ihr Eintrag ist als
+`query` eingeordnet und braucht keine Genehmigung.
 
 ## Verworfen
 
