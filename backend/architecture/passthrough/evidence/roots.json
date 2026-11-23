@@ -6393,6 +6393,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (e offeringChangeEnrollment) SelectionHistory(ctx context.Context, childID int64) ([]careplan.BookedOffering, error) {\n\tvalues, err := e.owner.RequestChildOfferingHistory(ctx, childID)\n\treturn BookedOfferings(values), err\n}",
+      "form": "unclassified-evidence",
+      "id": "roots/owners/offeringChangeEnrollment.SelectionHistory",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
       "evidence": "func (e offeringChangeEnrollment) SelectionsAt(ctx context.Context, childID int64, on calendar.Date) ([]careplan.BookedOffering, error) {\n\tvalues, err := e.owner.RequestChildOfferingsAtDate(ctx, childID, enrollmentOwner.Date(on))\n\treturn BookedOfferings(values), err\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/offeringChangeEnrollment.SelectionsAt",
