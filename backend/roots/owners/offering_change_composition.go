@@ -369,6 +369,11 @@ func (e offeringChangeEnrollment) SelectionsAt(ctx context.Context, childID int6
 	return BookedOfferings(values), err
 }
 
+func (e offeringChangeEnrollment) SelectionHistory(ctx context.Context, childID int64) ([]careplan.BookedOffering, error) {
+	values, err := e.owner.RequestChildOfferingHistory(ctx, childID)
+	return BookedOfferings(values), err
+}
+
 func (e offeringChangeEnrollment) EffectiveSelectionsAt(ctx context.Context, dates map[int64]calendar.Date) ([]careplan.BookedOffering, error) {
 	ownerDates := make(map[int64]enrollmentOwner.Date, len(dates))
 	for childID, date := range dates {

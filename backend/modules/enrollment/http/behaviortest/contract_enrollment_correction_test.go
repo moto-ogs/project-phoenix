@@ -111,6 +111,51 @@ func TestAnUndatedCorrectionKeepsTheEndOfABooking(t *testing.T) {
 	}
 }
 
+// The same holds for a change with a date (#7928): the office moves the
+// booking to Monday only from 11 January, or confirms the weekdays it has.
+// The booking runs from that day to the end of February, its roster row of
+// the source rule ends there, and the child is on no occurrence after it.
+func TestADatedCorrectionKeepsTheEndOfABooking(t *testing.T) {
+	t.Parallel()
+	for name, days := range map[string][]string{"another weekday": {"mon"}, "the same weekdays": {"mon", "tue"}} {
+		t.Run(name, func(t *testing.T) {
+			testpkg.OwnTenant(t)
+			t.Parallel()
+			c := setupCorrection(t)
+			from := calendar.NewDate(2027, 1, 11)
+			c.correct(t, &from, enrollmentAPI.OfferingAdjustmentSelection{OfferingID: c.bounded.ID, SelectedDays: days})
+
+			ends := c.bookingEnds(t, c.bounded.ID)
+			require.NotEmpty(t, ends)
+			assert.Equal(t, c.bookingEnd, ends[len(ends)-1], "the booking keeps its end")
+			assert.Equal(t, 1, c.rosterEndsOn(t, c.bookingEnd), "the roster row ends with the booking")
+			assert.Zero(t, c.rosterRowsPast(t, c.bookingEnd), "no roster row runs past the booking")
+			assert.Equal(t, 1, c.onOccurrence(t, c.beforeEnd), "on the Monday before the end")
+			assert.Zero(t, c.onOccurrence(t, c.afterEnd), "on no occurrence after the end")
+		})
+	}
+}
+
+// A change with a date replaces the changes scheduled after it. An end on
+// which a replaced change starts is that change's start, not the end of the
+// care (#7928, decision of 23.11.2026): A ends with February, and from
+// 1 March a change books another offering instead. The office then moves A
+// to Monday from 11 January. A runs to the end of the phase, the scheduled
+// change is gone, and the child stays on A's occurrence after February.
+func TestADatedChangeBooksPastTheStartOfAChangeItReplaces(t *testing.T) {
+	t.Parallel()
+	c := setupCorrection(t)
+	c.correct(t, &c.bookingEnd, enrollmentAPI.OfferingAdjustmentSelection{OfferingID: c.added.ID, SelectedDays: []string{"wed"}})
+	require.Equal(t, []calendar.Date{c.bookingEnd}, c.bookingEnds(t, c.bounded.ID), "the scheduled change starts where A ends")
+
+	from := calendar.NewDate(2027, 1, 11)
+	c.correct(t, &from, enrollmentAPI.OfferingAdjustmentSelection{OfferingID: c.bounded.ID, SelectedDays: []string{"mon"}})
+
+	assert.Equal(t, []calendar.Date{from, c.phaseEndExcl}, c.bookingEnds(t, c.bounded.ID), "A runs to the end of the phase")
+	assert.Empty(t, c.bookingEnds(t, c.added.ID), "the scheduled change is replaced")
+	assert.Equal(t, 1, c.onOccurrence(t, c.afterEnd), "on A's occurrence after February")
+}
+
 // An offering the correction adds is booked to the end of the phase, while
 // the booking that stays chosen keeps its end.
 func TestAnOfferingACorrectionAddsEndsWithThePhase(t *testing.T) {

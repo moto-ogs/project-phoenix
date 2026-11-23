@@ -630,8 +630,8 @@ function RunResult({
           ) : null}
           <li>
             Eltern ins Elternportal einladen macht die Schule: in ihrer
-            Kinderliste über „Eltern einladen“. Eine Nachricht an Eltern, die
-            schon ein Konto haben, gibt es noch nicht.
+            Kinderliste über „Eltern einladen“. Mit „Eltern mit Konto
+            benachrichtigen“ bekommen Eltern mit Konto eine kurze Nachricht.
           </li>
           <li>
             War eine Verknüpfung falsch? Öffne den Vertrag und wähle im Menü

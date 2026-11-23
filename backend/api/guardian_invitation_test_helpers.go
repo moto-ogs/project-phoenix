@@ -81,7 +81,7 @@ func lifecycleTestModule(db transactionruntime.Database, unit tenant.UnitOfWork,
 	if err != nil {
 		return nil, err
 	}
-	lifecycle, err := owners.LifecycleDependencies(sessionRepos.Lifecycle, audit, caregivers, guardianMail, nil, enrollmentClaims, logger)
+	lifecycle, err := owners.LifecycleDependencies(sessionRepos.Lifecycle, audit, caregivers, guardianMail, nil, enrollmentClaims, owners.NewEnrollmentBookings(time.Now), logger)
 	if err != nil {
 		return nil, err
 	}
