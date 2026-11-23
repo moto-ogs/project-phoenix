@@ -1067,8 +1067,17 @@ func guardedWrites() []guardedWrite {
 		{
 			name:        "Essensplan der Woche",
 			permissions: []string{permMealManage},
-			prepare: func(t *testing.T, _ *guardRig, f childReadFamily) childWrite {
-				return childWrite{http.MethodPut, childPath(f, "/meal-participation"), map[string]any{"weekdays": []int{1, 3}}}
+			prepare: func(t *testing.T, r *guardRig, f childReadFamily) childWrite {
+				// The change carries the version of the regular days a read
+				// gives first (ADR 0311).
+				read := r.do(t, childWrite{http.MethodGet, childPath(f, fmt.Sprintf("/meal-participation?from=%s&to=%s", childReadToday, childReadToday)), nil}, f.token)
+				var plan struct {
+					Data struct {
+						Version string `json:"version"`
+					} `json:"data"`
+				}
+				require.NoError(t, json.Unmarshal(read.Body.Bytes(), &plan))
+				return childWrite{http.MethodPut, childPath(f, "/meal-participation"), map[string]any{"weekdays": []int{1, 3}, "expected_version": plan.Data.Version}}
 			},
 		},
 		{

@@ -34,7 +34,8 @@ import {
   setDay,
   workWeekDates,
   type DishInput,
-  type MealPlanEntry,
+  type MealPlanDay,
+  type MealPlanDish,
 } from "~/lib/meal-plan-api";
 import { createLogger } from "~/lib/logger";
 import { useNavigationGuard } from "~/lib/hooks/use-navigation-guard";
@@ -134,23 +135,27 @@ function rowHasContent(row: DishDraft): boolean {
   );
 }
 
-// Build editable drafts (always at least one empty row per day) from persisted
-// entries keyed by date.
-function draftsFromEntries(
-  entries: MealPlanEntry[],
+function draftRows(dishes: readonly MealPlanDish[] | undefined): DishDraft[] {
+  return dishes?.length
+    ? dishes.map((d) => createDishDraft(d.dish, d.note ?? "", d.allergens))
+    : [createDishDraft()];
+}
+
+// Build editable drafts (always at least one empty row per day) from the
+// stored days.
+function draftsFromDays(
+  days: MealPlanDay[],
   dates: string[],
 ): Record<string, DishDraft[]> {
-  const byDate = new Map<string, DishDraft[]>();
-  for (const e of entries) {
-    const rows = byDate.get(e.date) ?? [];
-    rows.push(createDishDraft(e.dish, e.note ?? "", e.allergens));
-    byDate.set(e.date, rows);
-  }
+  const byDate = new Map(days.map((day) => [day.date, day.dishes]));
   const next: Record<string, DishDraft[]> = {};
-  for (const date of dates) {
-    next[date] = byDate.get(date) ?? [createDishDraft()];
-  }
+  for (const date of dates) next[date] = draftRows(byDate.get(date));
   return next;
+}
+
+// The version of each stored day, which its save sends back (ADR 0311).
+function versionsFromDays(days: MealPlanDay[]): Record<string, string> {
+  return Object.fromEntries(days.map((day) => [day.date, day.version]));
 }
 
 export default function MealPlanPage() {
@@ -214,6 +219,8 @@ export default function MealPlanPage() {
   const [copyingPrev, setCopyingPrev] = useState(false);
   const [drafts, setDrafts] = useState<Record<string, DishDraft[]>>({});
   const [originals, setOriginals] = useState<Record<string, DishDraft[]>>({});
+  // The version of each day as read or as the last save answered it.
+  const [versions, setVersions] = useState<Record<string, string>>({});
   const [clipboard, setClipboard] = useState<DishDraft[] | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{
     date: string;
@@ -252,10 +259,10 @@ export default function MealPlanPage() {
       ? tenantListKeys.mealPlanWeek(mondayISO)
       : null;
   // A revisit shows the cached week at once and reads it again in the
-  // background (no deduplication). Each save sends the day as this page
-  // read it; the backend refuses a day someone stored differently since
-  // (general.changed_since_read), so an older cached answer never overwrites a
-  // colleague's change.
+  // background (no deduplication). Each save sends the version of the day
+  // this page read; the backend refuses a day someone stored differently
+  // since (general.changed_since_read), so an older cached answer never
+  // overwrites a colleague's change.
   const week = useSWRAuth(weekKey, () => getMealPlanWeek(mondayISO), {
     keepPreviousData: false,
     dedupingInterval: 0,
@@ -274,18 +281,17 @@ export default function MealPlanPage() {
     weekKey === null ||
     reloading ||
     (weekData === undefined && (!week.error || week.isValidating));
-  const appliedWeek = useRef<{ key: string; data: MealPlanEntry[] } | null>(
-    null,
-  );
+  const appliedWeek = useRef<{ key: string; data: MealPlanDay[] } | null>(null);
   const applyWeek = useCallback(
-    (key: string, entries: MealPlanEntry[]) => {
-      appliedWeek.current = { key, data: entries };
-      const built = draftsFromEntries(entries, weekDates);
+    (key: string, days: MealPlanDay[]) => {
+      appliedWeek.current = { key, data: days };
+      const built = draftsFromDays(days, weekDates);
       setDrafts(built);
       // Originals store only the persisted (non-empty) rows for dirty checks.
       const orig: Record<string, DishDraft[]> = {};
       for (const date of weekDates) orig[date] = normalizeDay(built[date]!);
       setOriginals(orig);
+      setVersions(versionsFromDays(days));
       setHasLoaded(true);
     },
     [weekDates],
@@ -298,10 +304,10 @@ export default function MealPlanPage() {
       if (!weekKey) return;
       setReloading(true);
       try {
-        const entries = await week.mutate(getMealPlanWeek(mondayISO), {
+        const days = await week.mutate(getMealPlanWeek(mondayISO), {
           revalidate: false,
         });
-        if (entries) applyWeek(weekKey, entries);
+        if (days) applyWeek(weekKey, days);
       } finally {
         setReloading(false);
       }
@@ -338,11 +344,11 @@ export default function MealPlanPage() {
   // A layout effect: a revisit paints the cached week in its first frame,
   // not an empty grid before it.
   useLayoutEffect(() => {
-    const entries = weekData;
-    if (!weekKey || !entries || appliedWeek.current?.data === entries) return;
+    const days = weekData;
+    if (!weekKey || !days || appliedWeek.current?.data === days) return;
     const sameWeek = appliedWeek.current?.key === weekKey;
     if (sameWeek && (isDirty || hasUnnamedInput || editingLocked)) return;
-    applyWeek(weekKey, entries);
+    applyWeek(weekKey, days);
   }, [weekKey, weekData, isDirty, hasUnnamedInput, editingLocked, applyWeek]);
 
   // Warn before discarding unsaved changes — both on hard unloads (tab close /
@@ -444,6 +450,7 @@ export default function MealPlanPage() {
     appliedWeek.current = null;
     setDrafts({});
     setOriginals({});
+    setVersions({});
     if (pendingOffset !== null) setWeekOffset(pendingOffset);
     setPendingOffset(null);
   };
@@ -464,23 +471,16 @@ export default function MealPlanPage() {
         return toISODate(base);
       })();
       const prevDates = workWeekDates(prevMonday);
-      const entries = await getMealPlanWeek(prevMonday);
-      const byDate = new Map<string, DishDraft[]>();
-      for (const e of entries) {
-        const rows = byDate.get(e.date) ?? [];
-        rows.push(createDishDraft(e.dish, e.note ?? "", e.allergens));
-        byDate.set(e.date, rows);
-      }
+      // Only the dishes are copied: each day of this week keeps the version
+      // it was read with, so its save still checks this week's stored day.
+      const previous = draftsFromDays(
+        await getMealPlanWeek(prevMonday),
+        prevDates,
+      );
       setDrafts((prev) => {
         const next = { ...prev };
         prevDates.forEach((pd, i) => {
-          const target = weekDates[i]!;
-          const rows = byDate.get(pd);
-          next[target] = rows?.length
-            ? rows.map((row) =>
-                createDishDraft(row.dish, row.note, row.allergens),
-              )
-            : [createDishDraft()];
+          next[weekDates[i]!] = previous[pd]!;
         });
         return next;
       });
@@ -529,27 +529,34 @@ export default function MealPlanPage() {
   };
 
   // Someone stored a day differently since this page read it: take the
-  // stored week as the new read state. Only the days still unsaved keep
-  // their drafts and stay marked; every other day shows the stored plan, so
-  // „Speichern“ cannot send back an old day the person never edited.
-  // „Verwerfen“ then shows the stored plan, „Speichern“ replaces the kept
-  // days. Answers the read's error, or null.
-  const adoptStoredWeek = async (unsaved: string[]): Promise<unknown> => {
+  // stored week as the new read state. A day keeps its draft only while it
+  // is unsaved and stored as this page read it; every other day, the refused
+  // one included, shows the stored plan, so „Speichern“ never replaces a
+  // change the person has not seen. Answers the read's error, or null.
+  const adoptStoredWeek = async (
+    unsaved: string[],
+    readVersions: Record<string, string>,
+  ): Promise<unknown> => {
     if (!weekKey) return null;
     try {
-      const entries = await week.mutate(getMealPlanWeek(mondayISO), {
+      const days = await week.mutate(getMealPlanWeek(mondayISO), {
         revalidate: false,
       });
-      if (!entries) return null;
-      appliedWeek.current = { key: weekKey, data: entries };
-      const stored = draftsFromEntries(entries, weekDates);
+      if (!days) return null;
+      appliedWeek.current = { key: weekKey, data: days };
+      const stored = draftsFromDays(days, weekDates);
       const orig: Record<string, DishDraft[]> = {};
       for (const date of weekDates) orig[date] = normalizeDay(stored[date]!);
+      const storedVersions = versionsFromDays(days);
       setOriginals(orig);
+      setVersions(storedVersions);
       setDrafts((prev) => {
         const next = { ...prev };
         for (const date of weekDates) {
-          if (!unsaved.includes(date)) next[date] = stored[date]!;
+          const keep =
+            unsaved.includes(date) &&
+            storedVersions[date] === readVersions[date];
+          if (!keep) next[date] = stored[date]!;
         }
         return next;
       });
@@ -570,13 +577,17 @@ export default function MealPlanPage() {
     // it into originals on failure, so the dirty indicator and Verwerfen reflect
     // what is really stored rather than the pre-save snapshot.
     const persisted: Record<string, DishDraft[]> = {};
+    // The version each saved day answers: a second save of the day checks
+    // against it without reading the week again.
+    const saved: Record<string, string> = {};
     try {
       for (const date of weekDates) {
         const draft = normalizeDay(drafts[date] ?? []);
         const original = originals[date] ?? [];
         if (JSON.stringify(draft) === JSON.stringify(original)) continue;
-        await setDay(date, dishInputs(draft), dishInputs(original));
+        const day = await setDay(date, dishInputs(draft), versions[date] ?? "");
         persisted[date] = draft;
+        saved[date] = day.version;
       }
     } catch (err) {
       logger.error("meal_plan_save_failed", {
@@ -585,6 +596,7 @@ export default function MealPlanPage() {
       // Commit the days that did persist; the still-unsaved days stay dirty.
       if (Object.keys(persisted).length > 0) {
         setOriginals((prev) => ({ ...prev, ...persisted }));
+        setVersions((prev) => ({ ...prev, ...saved }));
       }
       // Der Fehler steht über dem Wochenplan (Bauart 2 Regel 5), nicht als
       // Toast: die noch ungespeicherten Tage bleiben sichtbar markiert.
@@ -592,6 +604,7 @@ export default function MealPlanPage() {
       const readError = changedElsewhere
         ? await adoptStoredWeek(
             changedDays.filter((date) => !(date in persisted)),
+            { ...versions, ...saved },
           )
         : null;
       // A changed day needs the person's decision, not the same request
@@ -612,6 +625,7 @@ export default function MealPlanPage() {
     }
     // The saved days are stored even when the reload below fails.
     setOriginals((prev) => ({ ...prev, ...persisted }));
+    setVersions((prev) => ({ ...prev, ...saved }));
     toast.success("Der Speiseplan ist gespeichert.");
     // Saving stays on during the reload: no edit or week switch can slip in
     // before the stored week replaces the drafts.

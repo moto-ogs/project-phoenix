@@ -77,6 +77,18 @@ func TestAHandlerReadingAnUntypedBodyIsRefused(t *testing.T) {
 	}
 	assert.Equal(t, http.StatusInternalServerError, serve(true))
 	assert.Equal(t, http.StatusNoContent, serve(false))
+
+	// A route-sized router, as module tests build it: the relative pattern
+	// fits one registered route, so its untyped body is refused too.
+	relative := chi.NewRouter()
+	relative.Delete("/{schoolClass}/{homeworkId}", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.ReadAll(r.Body)
+		RespondNoContent(w, r)
+	})
+	recorder := httptest.NewRecorder()
+	relative.ServeHTTP(recorder, httptest.NewRequest(http.MethodDelete, "/1a/7", strings.NewReader(`{"reason":"x"}`)))
+	assert.Equal(t, http.StatusInternalServerError, recorder.Code)
+	assert.Contains(t, recorder.Body.String(), "DELETE /school/class-day/homework/{schoolClass}/{homeworkId} read a request body")
 }
 
 func TestAnswerCoverageRequiresAnUnambiguousRoute(t *testing.T) {

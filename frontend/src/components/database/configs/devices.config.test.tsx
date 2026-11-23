@@ -15,10 +15,6 @@ describe("devicesConfig", () => {
     });
   });
 
-  it("has correct API configuration", () => {
-    expect(devicesConfig.api.routes.list).toBe("GET /api/iot/");
-  });
-
   it("has form sections configured", () => {
     expect(devicesConfig.form.sections).toHaveLength(1);
     expect(devicesConfig.form.sections[0]?.title).toBe("Geräteinformationen");

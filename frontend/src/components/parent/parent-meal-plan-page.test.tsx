@@ -607,6 +607,7 @@ describe("ParentMealPlanPage", () => {
       model: "ongoing_single",
       schedule_changeable: true,
       sick_cancels_after_deadline: false,
+      version: "v-read",
       days: [
         {
           date: "2026-08-12",
@@ -682,6 +683,7 @@ describe("ParentMealPlanPage", () => {
       expect(mocks.replaceMealParticipationSchedule).toHaveBeenCalledWith(
         "child-1",
         [1, 2, 3],
+        "v-read",
       );
     });
 
@@ -1256,6 +1258,7 @@ describe("ParentMealPlanPage", () => {
       model: "ongoing_single",
       schedule_changeable: true,
       sick_cancels_after_deadline: false,
+      version: "v-read",
       days: [
         {
           date: "2026-08-12",
@@ -1342,6 +1345,7 @@ describe("ParentMealPlanPage", () => {
         expect(mocks.replaceMealParticipationSchedule).toHaveBeenLastCalledWith(
           "child-1",
           [1, 2, 3],
+          "v-read",
         ),
       );
       await waitFor(() =>
@@ -1349,6 +1353,51 @@ describe("ParentMealPlanPage", () => {
           screen.queryByRole("checkbox", { name: "Dienstag" }),
         ).not.toBeInTheDocument(),
       );
+    });
+
+    // ADR 0311: the regular days changed since the page read them (the
+    // school or another guardian): the stored days show again, with no
+    // retry of the same request.
+    it("shows the stored regular days when they changed since they were read", async () => {
+      mocks.getMealParticipation
+        .mockResolvedValueOnce(PARTICIPATION)
+        .mockResolvedValue({
+          ...PARTICIPATION,
+          weekdays: [5],
+          version: "v-stored",
+        });
+      mocks.replaceMealParticipationSchedule.mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      );
+
+      render(<ParentMealPlanPage />);
+
+      fireEvent.click(await screen.findByRole("button", { name: "Ändern" }));
+      fireEvent.click(screen.getByRole("checkbox", { name: "Dienstag" }));
+      fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+      const refusal = await screen.findByText(
+        catalogText(
+          "general.changed_since_read",
+          deMessages.parentMealPlan.errorObjectParticipation,
+        ),
+      );
+      expect(mocks.replaceMealParticipationSchedule).toHaveBeenCalledWith(
+        "child-1",
+        [1, 2, 3],
+        "v-read",
+      );
+      await waitFor(() =>
+        expect(screen.getByRole("checkbox", { name: "Freitag" })).toBeChecked(),
+      );
+      expect(
+        screen.getByRole("checkbox", { name: "Dienstag" }),
+      ).not.toBeChecked();
+      const alert = refusal.closest<HTMLElement>('[role="alert"]');
+      expect(alert).not.toBeNull();
+      expect(
+        within(alert!).queryByRole("button", { name: "Wiederholen" }),
+      ).not.toBeInTheDocument();
     });
 
     it("retries a failed day change with the current draft", async () => {

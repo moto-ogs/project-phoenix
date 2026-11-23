@@ -7,7 +7,7 @@ import {
   type Activity,
   type ActivitySupervisor,
 } from "@/lib/activity-helpers";
-import type { ActivityResponse } from "~/lib/contract/activities.generated";
+import type { ActivityRequest } from "~/lib/contract/activities.generated";
 import { bffJson } from "~/lib/bff-fetch";
 import { activitiesConcept } from "~/lib/concepts/activities";
 import { staffConcept } from "~/lib/concepts/staff";
@@ -110,6 +110,19 @@ async function loadSupervisorOptions(): Promise<
   }));
 }
 
+/** The body of an activity write: the contract's names for the form's fields. */
+export function toActivityRequest(data: Partial<Activity>): ActivityRequest {
+  // A cleared number field holds "" instead of a number.
+  const limit: unknown = data.max_participant;
+  return {
+    name: data.name,
+    max_participants: typeof limit === "number" ? limit : null,
+    category_id: data.ag_category_id || undefined,
+    // Backend expects supervisor_ids as an array even for single primary
+    ...(data.supervisor_id ? { supervisor_ids: [data.supervisor_id] } : {}),
+  };
+}
+
 export const activitiesConfig = defineEntityConfig<Activity>({
   name: {
     singular: "Aktivität",
@@ -121,16 +134,34 @@ export const activitiesConfig = defineEntityConfig<Activity>({
   backUrl: "/database",
 
   api: {
-    routes: {
-      list: "GET /api/activities/",
-      get: "GET /api/activities/{id}",
-      create: "POST /api/activities/",
-      update: "PUT /api/activities/{id}",
-      delete: "DELETE /api/activities/{id}",
-    },
-    // Admin view keeps showing system activities (Schulhof Freispiel, WC) —
-    // they are rendered greyed-out via isSystemActivity instead of hidden.
-    listParams: { include_system: "true" },
+    list: async () =>
+      (
+        await bffJson("tenant", "GET /api/activities/", {
+          // Admin view keeps showing system activities (Schulhof Freispiel,
+          // WC) — they are rendered greyed-out via isSystemActivity instead
+          // of hidden.
+          query: { include_system: "true" },
+        })
+      ).map(mapActivityResponse),
+    get: async (id) =>
+      mapActivityResponse(
+        await bffJson("tenant", "GET /api/activities/{id}", { params: { id } }),
+      ),
+    create: async (data) =>
+      mapActivityResponse(
+        await bffJson("tenant", "POST /api/activities/", {
+          body: toActivityRequest(data),
+        }),
+      ),
+    update: async (id, data) =>
+      mapActivityResponse(
+        await bffJson("tenant", "PUT /api/activities/{id}", {
+          params: { id },
+          body: toActivityRequest(data),
+        }),
+      ),
+    delete: (id) =>
+      bffJson("tenant", "DELETE /api/activities/{id}", { params: { id } }),
   },
 
   form: {
@@ -323,33 +354,6 @@ export const activitiesConfig = defineEntityConfig<Activity>({
         text: getActivityEmoji,
       },
     },
-  },
-
-  service: {
-    mapRequest: (data: Partial<Activity>): Record<string, unknown> => {
-      const maxParticipants = data.max_participant as unknown;
-
-      // Convert frontend Activity to backend format
-      const request: Record<string, unknown> = {
-        name: data.name,
-        max_participants:
-          maxParticipants === "" || maxParticipants == null
-            ? null
-            : maxParticipants,
-        category_id: data.ag_category_id || undefined,
-      };
-
-      // Backend expects supervisor_ids as an array even for single primary
-      if (data.supervisor_id) {
-        request.supervisor_ids = [data.supervisor_id];
-      }
-
-      return request;
-    },
-
-    // Supervisor data is kept for the detail view but not used for editing.
-    mapResponse: (data: unknown) =>
-      mapActivityResponse(data as ActivityResponse),
   },
 
   labels: {

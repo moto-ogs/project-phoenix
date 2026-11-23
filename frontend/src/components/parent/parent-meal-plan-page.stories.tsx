@@ -157,6 +157,7 @@ function participationForFourWeeks(): MealParticipation {
     model: "ongoing_single",
     schedule_changeable: true,
     sick_cancels_after_deadline: false,
+    version: "v1",
     days,
   };
 }

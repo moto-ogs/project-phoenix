@@ -35,6 +35,7 @@ import { ChoiceTile } from "~/components/ui/choice-tile";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { ParentPage, ParentPageHeader } from "~/components/parent/parent-page";
 import { ParentSubsection } from "~/components/parent/shell/parent-section";
+import { isChangedSinceRead } from "~/lib/api-error";
 import { isValidISODate, parseISODate, toISODate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import {
@@ -529,10 +530,24 @@ function ParticipationWeek({
       logger.error("parent_meal_participation_schedule_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
-      void showSaveError(err, {
-        object: t("errorObjectParticipation"),
-        retry: () => retrySaveRef.current(),
-      });
+      // The regular days changed since they were read: the open draft
+      // shows the stored days again, without a retry of the same request
+      // (ADR 0311).
+      const changedElsewhere = isChangedSinceRead(err);
+      if (changedElsewhere) {
+        void meal.mutate().then((stored) => {
+          if (stored) setWeekdays(stored.weekdays);
+        });
+      }
+      void showSaveError(
+        err,
+        changedElsewhere
+          ? { object: t("errorObjectParticipation") }
+          : {
+              object: t("errorObjectParticipation"),
+              retry: () => retrySaveRef.current(),
+            },
+      );
       setSaving(false);
       return;
     }

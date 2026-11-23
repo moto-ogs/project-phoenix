@@ -147,10 +147,7 @@ func registerBookedApplicationLunch(rt *Runtime, auth AuthRef, lunchDays map[int
 			if _, eats := lunchDays[studentID]; eats || len(weekdays) == 0 {
 				continue
 			}
-			if _, err := rt.Client.PutWithAuth(auth, fmt.Sprintf("/api/meal-plan/participation/%d/schedule", studentID), map[string]any{
-				"weekdays":       weekdays,
-				"effective_from": from.String(),
-			}); err != nil {
+			if err := schoolMealSchedule(rt, &auth, studentID, weekdays, from); err != nil {
 				return registered, fmt.Errorf("register booked lunch of child %d: %w", studentID, err)
 			}
 			recordRegularLunchDays(rt, studentID, weekdays)

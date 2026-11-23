@@ -12,6 +12,7 @@ import { ApiError } from "~/lib/api-error";
 import { deferred } from "~/test/helpers/form-modal-pending";
 import { catalogText } from "~/test/error-catalog-text";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
+import type { MealPlanDay } from "~/lib/meal-plan-api";
 
 import { SWRConfig } from "~/lib/swr/testing";
 
@@ -100,6 +101,16 @@ vi.mock("~/components/meal-plan/meal-participant-list", () => ({
     />
   ),
 }));
+
+// One stored day as the days read answers it. Its version follows its
+// dishes, as the server's does.
+function day(date: string, ...dishes: string[]): MealPlanDay {
+  return {
+    date,
+    version: `${date}:${dishes.join("|")}`,
+    dishes: dishes.map((dish) => ({ dish, note: null, allergens: [] })),
+  };
+}
 
 function renderPage() {
   return render(
@@ -272,17 +283,17 @@ describe("Speiseplan: Allergene je Gericht (#4777)", () => {
   beforeEach(() => {
     getMealPlanWeek.mockReset();
     setDay.mockReset();
-    setDay.mockResolvedValue(undefined);
+    setDay.mockResolvedValue(day("2026-10-05", "gespeichert"));
   });
 
   it("shows the stored marks and saves the chosen allergens", async () => {
     getMealPlanWeek.mockResolvedValue([
       {
         date: "2026-10-05",
-        position: 0,
-        dish: "Fischstäbchen",
-        note: null,
-        allergens: ["gluten", "fish"],
+        version: "v-read",
+        dishes: [
+          { dish: "Fischstäbchen", note: null, allergens: ["gluten", "fish"] },
+        ],
       },
     ]);
 
@@ -314,7 +325,7 @@ describe("Speiseplan: Allergene je Gericht (#4777)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     await waitFor(() => expect(setDay).toHaveBeenCalledTimes(1));
-    // The day goes out with the day as the page read it (general.changed_since_read).
+    // The day goes out with the version the page read (general.changed_since_read).
     expect(setDay).toHaveBeenCalledWith(
       "2026-10-05",
       [
@@ -324,7 +335,7 @@ describe("Speiseplan: Allergene je Gericht (#4777)", () => {
           allergens: ["gluten", "fish", "milk"],
         },
       ],
-      [{ dish: "Fischstäbchen", note: null, allergens: ["gluten", "fish"] }],
+      "v-read",
     );
   });
 });
@@ -333,13 +344,7 @@ describe("Speiseplan: Allergene je Gericht (#4777)", () => {
 // on screen and says the change is saved, and its retry only reloads.
 describe("reload after a write (#6652)", () => {
   const reloadText = `${catalogText("general.unavailable", "die Anzeige des Speiseplans")} ${SAVED_BUT_STALE_SUFFIX}`;
-  const stored = {
-    date: "2026-10-05",
-    position: 0,
-    dish: "Fischstäbchen",
-    note: null,
-    allergens: [],
-  };
+  const stored = day("2026-10-05", "Fischstäbchen");
 
   beforeEach(() => {
     getMealPlanWeek
@@ -348,16 +353,43 @@ describe("reload after a write (#6652)", () => {
       .mockRejectedValueOnce(
         new ApiError("down", 503, { code: "general.unavailable" }),
       )
-      .mockResolvedValue([{ ...stored, dish: "Nudeln" }]);
+      .mockResolvedValue([day("2026-10-05", "Nudeln")]);
     getMealOrders.mockReset().mockResolvedValue({
       rhythm: "daily",
       detail: "total",
       days: [],
     });
-    setDay.mockReset().mockResolvedValue(undefined);
+    setDay.mockReset().mockResolvedValue(day("2026-10-05", "Nudeln"));
     rights.admin = true;
     rights.permissions = [];
     features.mealPlanEnabled = true;
+  });
+
+  // The save answers the day's new version: the same day saves again
+  // against it, also when the week could not be read after the save.
+  it("saves the same day again with the version its save answered", async () => {
+    renderPage();
+    fireEvent.change(await screen.findByDisplayValue("Fischstäbchen"), {
+      target: { value: "Nudeln" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await screen.findByText(reloadText);
+    expect(setDay).toHaveBeenLastCalledWith(
+      "2026-10-05",
+      [{ dish: "Nudeln", note: null, allergens: [] }],
+      stored.version,
+    );
+
+    fireEvent.change(screen.getByDisplayValue("Nudeln"), {
+      target: { value: "Suppe" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(setDay).toHaveBeenCalledTimes(2));
+    expect(setDay).toHaveBeenLastCalledWith(
+      "2026-10-05",
+      [{ dish: "Suppe", note: null, allergens: [] }],
+      day("2026-10-05", "Nudeln").version,
+    );
   });
 
   it("keeps a saved week saved when the reload fails", async () => {
@@ -425,7 +457,7 @@ describe("reload after a write (#6652)", () => {
     expect(screen.getByDisplayValue("Neuer Entwurf")).toHaveAttribute(
       "readonly",
     );
-    pending.resolve([{ ...stored, dish: "Gespeicherter Plan" }]);
+    pending.resolve([day("2026-10-05", "Gespeicherter Plan")]);
     expect(
       await screen.findByDisplayValue("Gespeicherter Plan"),
     ).not.toHaveAttribute("readonly");
@@ -437,13 +469,7 @@ describe("reload after a write (#6652)", () => {
 // is read again; the save sends the day as read, so the backend refuses a
 // day someone changed since (general.changed_since_read) instead of the page waiting.
 describe("Speiseplan: Woche aus dem Cache beim erneuten Öffnen", () => {
-  const stored = {
-    date: "2026-10-05",
-    position: 0,
-    dish: "Fischstäbchen",
-    note: null,
-    allergens: [],
-  };
+  const stored = day("2026-10-05", "Fischstäbchen");
 
   beforeEach(() => {
     getMealPlanWeek.mockReset().mockResolvedValueOnce([stored]);
@@ -496,7 +522,7 @@ describe("Speiseplan: Woche aus dem Cache beim erneuten Öffnen", () => {
       }),
     ).not.toBeInTheDocument();
 
-    pending.resolve([{ ...stored, dish: "Nudeln" }]);
+    pending.resolve([day("2026-10-05", "Nudeln")]);
     expect(await screen.findByDisplayValue("Nudeln")).not.toHaveAttribute(
       "readonly",
     );
@@ -554,16 +580,15 @@ describe("Speiseplan: Woche aus dem Cache beim erneuten Öffnen", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("keeps the drafts when someone changed the day since it was read", async () => {
-    const colleague = { ...stored, dish: "Eintopf" };
+  it("shows the stored day it refused instead of keeping the draft over it", async () => {
+    const colleague = day("2026-10-05", "Eintopf");
     getMealPlanWeek.mockReset().mockResolvedValueOnce([stored]);
     getMealPlanWeek.mockResolvedValue([colleague]);
     setDay
       .mockReset()
-      .mockRejectedValueOnce(
+      .mockRejectedValue(
         new ApiError("changed", 409, { code: "general.changed_since_read" }),
-      )
-      .mockResolvedValue(undefined);
+      );
     renderPage();
     fireEvent.change(await screen.findByDisplayValue("Fischstäbchen"), {
       target: { value: "Nudeln" },
@@ -578,32 +603,65 @@ describe("Speiseplan: Woche aus dem Cache beim erneuten Öffnen", () => {
     expect(setDay).toHaveBeenLastCalledWith(
       "2026-10-05",
       [{ dish: "Nudeln", note: null, allergens: [] }],
-      [{ dish: "Fischstäbchen", note: null, allergens: [] }],
+      stored.version,
     );
-    // The draft stays; the next save is checked against the stored day.
-    expect(screen.getByDisplayValue("Nudeln")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
-    await waitFor(() => expect(setDay).toHaveBeenCalledTimes(2));
-    expect(setDay).toHaveBeenLastCalledWith(
-      "2026-10-05",
-      [{ dish: "Nudeln", note: null, allergens: [] }],
-      [{ dish: "Eintopf", note: null, allergens: [] }],
-    );
+    // The colleague's change is on screen and nothing is left to save, so
+    // no second „Speichern“ can replace it unseen.
+    expect(await screen.findByDisplayValue("Eintopf")).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("Nudeln")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Speichern" }),
+    ).not.toBeInTheDocument();
   });
 
-  it("shows a colleague's other days after a conflict instead of saving them back", async () => {
-    const tuesday = { ...stored, date: "2026-10-06", dish: "Linsen" };
+  it("keeps the draft of an unsaved day nobody changed since it was read", async () => {
+    const tuesday = day("2026-10-06", "Linsen");
     getMealPlanWeek.mockReset().mockResolvedValueOnce([stored, tuesday]);
-    getMealPlanWeek.mockResolvedValue([
-      { ...stored, dish: "Eintopf" },
-      { ...tuesday, dish: "Reis" },
-    ]);
+    getMealPlanWeek.mockResolvedValue([day("2026-10-05", "Eintopf"), tuesday]);
     setDay
       .mockReset()
       .mockRejectedValueOnce(
         new ApiError("changed", 409, { code: "general.changed_since_read" }),
       )
-      .mockResolvedValue(undefined);
+      .mockResolvedValue(day("2026-10-06", "Reis"));
+    renderPage();
+    fireEvent.change(await screen.findByDisplayValue("Fischstäbchen"), {
+      target: { value: "Nudeln" },
+    });
+    fireEvent.change(screen.getByDisplayValue("Linsen"), {
+      target: { value: "Reis" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await screen.findByText(
+      catalogText("general.changed_since_read", "die Woche im Speiseplan"),
+    );
+
+    // Monday was refused and shows the stored change; Tuesday is stored as
+    // read, so its draft stays and saves against the same version.
+    expect(await screen.findByDisplayValue("Eintopf")).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("Nudeln")).not.toBeInTheDocument();
+    expect(screen.getByDisplayValue("Reis")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(setDay).toHaveBeenCalledTimes(2));
+    expect(setDay).toHaveBeenLastCalledWith(
+      "2026-10-06",
+      [{ dish: "Reis", note: null, allergens: [] }],
+      tuesday.version,
+    );
+  });
+
+  it("shows a colleague's change on a day the person did not edit", async () => {
+    const tuesday = day("2026-10-06", "Linsen");
+    getMealPlanWeek.mockReset().mockResolvedValueOnce([stored, tuesday]);
+    getMealPlanWeek.mockResolvedValue([
+      day("2026-10-05", "Eintopf"),
+      day("2026-10-06", "Reis"),
+    ]);
+    setDay
+      .mockReset()
+      .mockRejectedValue(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      );
     renderPage();
     fireEvent.change(await screen.findByDisplayValue("Fischstäbchen"), {
       target: { value: "Nudeln" },
@@ -613,17 +671,8 @@ describe("Speiseplan: Woche aus dem Cache beim erneuten Öffnen", () => {
       catalogText("general.changed_since_read", "die Woche im Speiseplan"),
     );
 
-    // Only the edited day keeps its draft; Tuesday shows the stored change.
     expect(await screen.findByDisplayValue("Reis")).toBeInTheDocument();
     expect(screen.queryByDisplayValue("Linsen")).not.toBeInTheDocument();
-    expect(screen.getByDisplayValue("Nudeln")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
-    await waitFor(() => expect(setDay).toHaveBeenCalledTimes(2));
-    expect(setDay).toHaveBeenLastCalledWith(
-      "2026-10-05",
-      [{ dish: "Nudeln", note: null, allergens: [] }],
-      [{ dish: "Eintopf", note: null, allergens: [] }],
-    );
   });
 
   it("shows the failed read after a conflict, not an old week to discard to", async () => {
@@ -633,7 +682,7 @@ describe("Speiseplan: Woche aus dem Cache beim erneuten Öffnen", () => {
       .mockRejectedValueOnce(
         new ApiError("week exploded", 503, { code: "general.unavailable" }),
       )
-      .mockResolvedValue([{ ...stored, dish: "Eintopf" }]);
+      .mockResolvedValue([day("2026-10-05", "Eintopf")]);
     setDay
       .mockReset()
       .mockRejectedValue(
@@ -656,26 +705,44 @@ describe("Speiseplan: Woche aus dem Cache beim erneuten Öffnen", () => {
       ),
     ).not.toBeInTheDocument();
   });
+});
 
-  it("shows the stored day after a conflict when the person discards", async () => {
-    getMealPlanWeek.mockReset().mockResolvedValueOnce([stored]);
-    getMealPlanWeek.mockResolvedValue([{ ...stored, dish: "Eintopf" }]);
-    setDay
+// „Vorwoche übernehmen“ copies only the dishes: each day of this week saves
+// against the version it was read with in this week.
+describe("Speiseplan: Vorwoche übernehmen", () => {
+  beforeEach(() => {
+    getMealPlanWeek
       .mockReset()
-      .mockRejectedValue(
-        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      .mockImplementation(async (monday: string) =>
+        monday === "2026-09-28"
+          ? [day("2026-09-28", "Gulasch")]
+          : [day("2026-10-05")],
       );
-    renderPage();
-    fireEvent.change(await screen.findByDisplayValue("Fischstäbchen"), {
-      target: { value: "Nudeln" },
+    getMealOrders.mockReset().mockResolvedValue({
+      rhythm: "daily",
+      detail: "total",
+      days: [],
     });
-    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
-    await screen.findByText(
-      catalogText("general.changed_since_read", "die Woche im Speiseplan"),
-    );
+    setDay.mockReset().mockResolvedValue(day("2026-10-05", "Gulasch"));
+    rights.admin = true;
+    rights.permissions = [];
+    features.mealPlanEnabled = true;
+  });
 
-    fireEvent.click(screen.getByRole("button", { name: "Verwerfen" }));
-    expect(await screen.findByDisplayValue("Eintopf")).toBeInTheDocument();
-    expect(screen.queryByDisplayValue("Nudeln")).not.toBeInTheDocument();
+  it("saves the copied dishes against this week's versions", async () => {
+    renderPage();
+    await screen.findByText("0 von 5 Tagen geplant");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Vorwoche übernehmen" }),
+    );
+    expect(await screen.findByDisplayValue("Gulasch")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(setDay).toHaveBeenCalledTimes(1));
+    expect(setDay).toHaveBeenCalledWith(
+      "2026-10-05",
+      [{ dish: "Gulasch", note: null, allergens: [] }],
+      day("2026-10-05").version,
+    );
   });
 });

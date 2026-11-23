@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type * as operatorInvitationsContract from "~/lib/contract/operator-invitations.generated";
 import { ApiError } from "~/lib/api-error";
-import type { InvitationValidationBody } from "./operator-invitation-helpers";
+import type { OperatorInvitationValidationResponse } from "~/lib/contract/operator-auth.generated";
 
 // Hoist mocks
 const { mockBffJson } = vi.hoisted(() => ({
@@ -201,7 +201,7 @@ describe("validateOperatorInvitation", () => {
   });
 
   it("returns mapped validation data on success", async () => {
-    const backendData: InvitationValidationBody = {
+    const backendData: OperatorInvitationValidationResponse = {
       email: "invited@example.com",
       display_name: "Test User",
       expires_at: "2026-04-06T00:00:00Z",
@@ -274,10 +274,10 @@ describe("validateOperatorInvitation", () => {
     });
   });
 
-  it("maps a null display name to undefined", async () => {
-    const backendData: InvitationValidationBody = {
+  it("maps an absent display name to undefined", async () => {
+    // Go omits a nil display name (`*string,omitempty`); it never sends null.
+    const backendData: OperatorInvitationValidationResponse = {
       email: "direct@example.com",
-      display_name: null,
       expires_at: "2026-04-06T00:00:00Z",
     };
 

@@ -18,7 +18,8 @@ import { formatDate, parseISODate, toISODate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { useLocalizedDatePicker } from "~/lib/hooks/use-localized-date-picker";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useFreshSWR } from "~/lib/swr";
+import { isChangedSinceRead } from "~/lib/api-error";
+import { useSWRAuth } from "~/lib/swr";
 import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
 import { createLogger } from "~/lib/logger";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
@@ -105,12 +106,14 @@ export function MealRegistrationChangeModal({
 
   // Die festen Tage des gewählten Kindes vorbelegen. Bis sie da sind, bleiben
   // die Tage leer und Speichern gesperrt, damit nie die Tage eines anderen
-  // Kindes gespeichert werden.
+  // Kindes gespeichert werden. Ein Wiederöffnen zeigt den gemerkten Stand und
+  // liest im Hintergrund nach; das Speichern schickt die Version mit, die es
+  // gelesen hat, und der Server lehnt veraltete Tage ab (ADR 0311).
   const scheduleKey =
     isOpen && studentId
       ? tenantContactKeys.childMealSchedule(studentId, effectiveFrom)
       : null;
-  const schedule = useFreshSWR(
+  const schedule = useSWRAuth(
     scheduleKey,
     () => getChildMealSchedule(studentId, effectiveFrom),
     { keepPreviousData: false },
@@ -209,15 +212,22 @@ export function MealRegistrationChangeModal({
             studentId,
             [...weekdays],
             effectiveFrom,
+            schedule.data?.version ?? "",
           );
         }
       } catch (cause) {
         logger.error("meal_registration_change_failed", {
           error: cause instanceof Error ? cause.message : String(cause),
         });
-        if (op.isCurrent()) {
-          void showError(cause, { object: t("errorObjectChange") });
+        if (!op.isCurrent()) return;
+        // Someone changed the regular days since they were read: show the
+        // stored days again instead of the edited ones, with no retry of
+        // the same request.
+        if (isChangedSinceRead(cause)) {
+          setDraft(null);
+          void schedule.mutate();
         }
+        void showError(cause, { object: t("errorObjectChange") });
         return;
       }
       success(t("changeSaved", { name: childName }));

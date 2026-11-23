@@ -2,7 +2,7 @@
   "entries": [
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.BillingMonth",
-      "binding_digest": "da16a8bfd92d1318267cdabd3a97b300",
+      "binding_digest": "a0c7aef35219a42682ce1d9bf093c30e",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
       "source_owner": "meal-plan",
       "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
@@ -10,7 +10,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.BillingMonth",
-      "binding_digest": "2572201d760ac6f29f6664610f3236ee",
+      "binding_digest": "f67a17a3ac652d10d63d5d691f0a3ab2",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentNamesByID",
@@ -18,7 +18,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.BillingMonth",
-      "binding_digest": "cc9ba349abc0c72836c44216bdbc1e9f",
+      "binding_digest": "a287906f9d7fb1dbfc519529c12f29bf",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentNamesByID",
@@ -26,7 +26,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.BillingMonth",
-      "binding_digest": "fde800800587d40b41b78c66fccdc236",
+      "binding_digest": "15af1ea6bd831192512711df15e54c2e",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRostersOnDates",
@@ -34,7 +34,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.BillingMonth",
-      "binding_digest": "a4b8e587a79030d068b10202e2c5f51e",
+      "binding_digest": "5d3e546e2a0e157a82119641574de600",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate",
@@ -42,7 +42,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.BillingMonth",
-      "binding_digest": "f4bafce0ee034c0975486b6bd1fcf853",
+      "binding_digest": "2b70cccb64f8a30d09e51ad30aeb3a03",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
@@ -50,7 +50,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.BillingMonth",
-      "binding_digest": "b519ccac1bf57afc11eca0f36103d087",
+      "binding_digest": "711cbdc1f29005cf029fc3b12b5fed6f",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
@@ -58,7 +58,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.BillingMonth",
-      "binding_digest": "8f7da5f8a0179577fe23f3107e29b5b7",
+      "binding_digest": "d6704af48ee94daf69ebe4e897e10f0b",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
@@ -90,7 +90,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.BillingMonth",
-      "binding_digest": "e15b01b176f5f30dccdfbd90e9a86762",
+      "binding_digest": "16d598528c327cc58414487c0d9289e8",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
@@ -122,7 +122,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth",
-      "binding_digest": "da16a8bfd92d1318267cdabd3a97b300",
+      "binding_digest": "a0c7aef35219a42682ce1d9bf093c30e",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
       "source_owner": "meal-plan",
       "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
@@ -130,7 +130,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth",
-      "binding_digest": "2572201d760ac6f29f6664610f3236ee",
+      "binding_digest": "f67a17a3ac652d10d63d5d691f0a3ab2",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentNamesByID",
@@ -138,7 +138,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth",
-      "binding_digest": "cc9ba349abc0c72836c44216bdbc1e9f",
+      "binding_digest": "a287906f9d7fb1dbfc519529c12f29bf",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentNamesByID",
@@ -146,7 +146,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth",
-      "binding_digest": "fde800800587d40b41b78c66fccdc236",
+      "binding_digest": "15af1ea6bd831192512711df15e54c2e",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRostersOnDates",
@@ -154,7 +154,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth",
-      "binding_digest": "a4b8e587a79030d068b10202e2c5f51e",
+      "binding_digest": "5d3e546e2a0e157a82119641574de600",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate",
@@ -162,7 +162,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth",
-      "binding_digest": "f4bafce0ee034c0975486b6bd1fcf853",
+      "binding_digest": "2b70cccb64f8a30d09e51ad30aeb3a03",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
@@ -170,7 +170,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth",
-      "binding_digest": "b519ccac1bf57afc11eca0f36103d087",
+      "binding_digest": "711cbdc1f29005cf029fc3b12b5fed6f",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
@@ -178,7 +178,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth",
-      "binding_digest": "8f7da5f8a0179577fe23f3107e29b5b7",
+      "binding_digest": "d6704af48ee94daf69ebe4e897e10f0b",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
@@ -210,7 +210,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth",
-      "binding_digest": "e15b01b176f5f30dccdfbd90e9a86762",
+      "binding_digest": "16d598528c327cc58414487c0d9289e8",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
@@ -297,54 +297,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ClearDay",
-      "binding_digest": "74988094176d6277ca72ef2fa7dd1d72",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearDay",
-      "source_owner": "meal-plan",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ClearDay",
-      "binding_digest": "fab0014e91401a4515cc71da3a25cbaa",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearDay",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ClearDay",
-      "binding_digest": "5eab0220ddb58c70d2b5acb755e75246",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearDay",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ClearDay",
-      "binding_digest": "ef6535a6a20a9c6f1c8124fa85d058ee",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearDay",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ClearDay",
-      "binding_digest": "805dfad3c0c83434ee8daf023b383312",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearDay",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ClearDay",
-      "binding_digest": "275d569f6676259283e27edd6fa3285f",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearDay",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ClearParticipationBySchool",
       "binding_digest": "74988094176d6277ca72ef2fa7dd1d72",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearParticipationBySchool",
@@ -548,6 +500,22 @@
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.DailyList",
       "binding_digest": "275d569f6676259283e27edd6fa3285f",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.DailyList",
+      "source_owner": "meal-plan",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.Days",
+      "binding_digest": "74988094176d6277ca72ef2fa7dd1d72",
+      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.Days",
+      "source_owner": "meal-plan",
+      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.Days",
+      "binding_digest": "275d569f6676259283e27edd6fa3285f",
+      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.Days",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -2185,6 +2153,14 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/adapters/postgres.Store.FindSchedules",
+      "binding_digest": "275d569f6676259283e27edd6fa3285f",
+      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan/internal/ports.Store.FindSchedules",
+      "source_owner": "meal-plan",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/adapters/postgres.Store.FindWeek",
       "binding_digest": "275d569f6676259283e27edd6fa3285f",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan/internal/ports.Store.FindWeek",
@@ -2236,6 +2212,14 @@
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/adapters/postgres.Store.LockOrders",
       "binding_digest": "275d569f6676259283e27edd6fa3285f",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan/internal/ports.Store.LockOrders",
+      "source_owner": "meal-plan",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/adapters/postgres.Store.LockSchedule",
+      "binding_digest": "275d569f6676259283e27edd6fa3285f",
+      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan/internal/ports.Store.LockSchedule",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"

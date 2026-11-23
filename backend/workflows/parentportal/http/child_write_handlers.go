@@ -385,10 +385,18 @@ type MealParticipationResponse struct {
 	ScheduleChangeable bool                           `json:"schedule_changeable"`
 	SickCancels        bool                           `json:"sick_cancels_after_deadline"`
 	Days               []MealParticipationDayResponse `json:"days"`
+	// Version is the read-state token of the child's regular days (ADR
+	// 0311); a change of them sends it back as expected_version.
+	Version string `json:"version"`
 }
 
+// ReplaceMealParticipationRequest replaces the child's regular days.
+// ExpectedVersion is the version of the regular days as read: days changed
+// since, and a change without one, are refused with
+// general.changed_since_read.
 type ReplaceMealParticipationRequest struct {
-	Weekdays []parentService.MealWeekday `json:"weekdays"`
+	Weekdays        []parentService.MealWeekday `json:"weekdays"`
+	ExpectedVersion string                      `json:"expected_version"`
 }
 
 // MealPlanSavedResponse names the day the regular meal plan applies from.
@@ -476,7 +484,7 @@ func (rs *Resource) replaceMealParticipation(w http.ResponseWriter, r *http.Requ
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid JSON body")))
 		return
 	}
-	effectiveFrom, err := rs.ParentService.ReplaceMealParticipationSchedule(r.Context(), accountID, studentID, request.Weekdays)
+	effectiveFrom, err := rs.ParentService.ReplaceMealParticipationSchedule(r.Context(), accountID, studentID, request.Weekdays, request.ExpectedVersion)
 	if err != nil {
 		renderParentWriteError(w, r, err)
 		return
@@ -573,7 +581,7 @@ func mealParticipationResponse(plan parentService.MealParticipationPlan) MealPar
 			CanRegister: day.CanRegister, CanCancel: day.CanCancel, RegisterUntil: day.RegisterUntil, CancelUntil: day.CancelUntil,
 		})
 	}
-	return MealParticipationResponse{Weekdays: plan.Weekdays, EffectiveFrom: string(plan.EffectiveFrom), CutoffTime: plan.CutoffTime, Model: plan.Model, ScheduleChangeable: plan.ScheduleChangeable, SickCancels: plan.SickCancels, Days: days}
+	return MealParticipationResponse{Weekdays: plan.Weekdays, EffectiveFrom: string(plan.EffectiveFrom), CutoffTime: plan.CutoffTime, Model: plan.Model, ScheduleChangeable: plan.ScheduleChangeable, SickCancels: plan.SickCancels, Days: days, Version: plan.Version}
 }
 
 // --- shared helpers ---
