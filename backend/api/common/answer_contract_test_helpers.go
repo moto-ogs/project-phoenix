@@ -29,7 +29,10 @@ import (
 // that end in this pattern and answer with this Go type, so a handler that
 // writes a different type than it registered shows only in a whole-router
 // test.
-func init() { answerObserver = observeAnswerContract }
+func init() {
+	answerObserver = observeAnswerContract
+	refusalObserver = observeRefusal
+}
 
 // answersFileEnv names a file that collects the key of every registered
 // route a test unambiguously identified and answered, one per line, to
@@ -73,6 +76,32 @@ var loadAnswerContract = sync.OnceValue(func() *answerContract {
 
 func observeAnswerContract(r *http.Request, status int, data any, envelope any) error {
 	return loadAnswerContract().observe(r, status, data, envelope, recordAnswered)
+}
+
+func observeRefusal(r *http.Request) {
+	loadAnswerContract().observeRefusal(r, recordAnswered)
+}
+
+// RefusedAnswerKey is the line the answers file holds for a refusal of the
+// route key: it answers a route that only refuses (RouteContract.Refuses),
+// no other.
+func RefusedAnswerKey(key string) string { return "refused " + key }
+
+// observeRefusal records a refusal of a route a test identified by its full
+// pattern. A route-sized router cannot tell which route refused: an error
+// carries no type to narrow the candidates.
+func (loaded *answerContract) observeRefusal(r *http.Request, record func(string)) {
+	routeContext := chi.RouteContext(r.Context())
+	if routeContext == nil {
+		return
+	}
+	pattern := strings.TrimSuffix(routeContext.RoutePattern(), "/")
+	for _, route := range loaded.doc.Routes {
+		if route.Method == r.Method && strings.TrimSuffix(route.Pattern, "/") == pattern {
+			record(RefusedAnswerKey(route.Key()))
+			return
+		}
+	}
 }
 
 func (loaded *answerContract) observe(r *http.Request, status int, data any, envelope any, record func(string)) error {

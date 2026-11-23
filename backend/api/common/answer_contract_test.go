@@ -150,3 +150,36 @@ func TestAnswerCoverageRequiresAnUnambiguousRoute(t *testing.T) {
 		})
 	}
 }
+
+// A refusal answers a route that only refuses, when the test identified the
+// route by its full pattern; a route-sized router names no route.
+func TestARefusalIsRecordedForItsFullPatternOnly(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name  string
+		mount string
+		want  []string
+	}{
+		{name: "route-sized router"},
+		{name: "full pattern", mount: "/api/guardians", want: []string{"refused PUT /api/guardians/{id}"}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			var recorded []string
+			relative := chi.NewRouter()
+			relative.Put("/{id}", func(w http.ResponseWriter, r *http.Request) {
+				loadAnswerContract().observeRefusal(r, func(key string) { recorded = append(recorded, key) })
+				w.WriteHeader(http.StatusConflict)
+			})
+			var handler http.Handler = relative
+			target := "/7"
+			if tt.mount != "" {
+				router := chi.NewRouter()
+				router.Mount(tt.mount, relative)
+				handler, target = router, tt.mount+target
+			}
+			handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodPut, target, nil))
+			assert.Equal(t, tt.want, recorded)
+		})
+	}
+}
