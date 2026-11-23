@@ -214,6 +214,47 @@ describe("RequestSharingControl", () => {
   // ADR 0311: a newer read arriving while the dialog is open must not
   // replace the parent's ticks. The choice keeps the version it was made on;
   // its refusal then shows the stored recipients.
+  // ADR 0311, rule 6: a failed read after the refusal is a load error, not
+  // „Du siehst jetzt den neuen Stand“, and the old choice is not sent again.
+  it("names a failed reload of the sharing after a refusal", async () => {
+    getSharing
+      .mockResolvedValueOnce({
+        version: "v1",
+        family_protected: false,
+        recipients: [
+          {
+            guardian_profile_id: "7",
+            first_name: "Mara",
+            last_name: "Muster",
+            selected: true,
+          },
+        ],
+      })
+      .mockRejectedValue(
+        new ApiError("offline", 503, { code: "general.unavailable" }),
+      );
+    setSharing.mockRejectedValueOnce(
+      new ApiError("changed since it was read", 409, {
+        code: "general.changed_since_read",
+      }),
+    );
+    renderControl();
+    fireEvent.click(await screen.findByText("Anfrage teilen"));
+    fireEvent.click(
+      await screen.findByRole("checkbox", { name: "Mara Muster" }),
+    );
+    fireEvent.click(screen.getByText("Auswahl speichern"));
+
+    const dialog = screen.getByRole("dialog");
+    expect(
+      await within(dialog).findByText(
+        /Der neue Stand konnte nicht geladen werden/,
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByText("Auswahl speichern"));
+    expect(setSharing).toHaveBeenCalledTimes(1);
+  });
+
   it("keeps a touched selection when a newer read arrives and sends its own version", async () => {
     const recipient = {
       guardian_profile_id: "7",
