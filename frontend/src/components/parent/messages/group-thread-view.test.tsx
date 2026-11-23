@@ -29,8 +29,15 @@ import { ParentGroupThreadView } from "./group-thread-view";
 
 vi.unmock("swr");
 
+const loadAttachment = vi.hoisted(() => vi.fn<() => Promise<Response>>());
+
 vi.mock("~/lib/parent-url", () => ({
   parentPath: (path: string) => path,
+}));
+
+vi.mock("~/lib/bff-fetch", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/bff-fetch")>()),
+  bffFile: loadAttachment,
 }));
 
 vi.mock("~/lib/parent-api", async (importOriginal) => ({
@@ -104,6 +111,102 @@ beforeEach(() => {
 });
 
 describe("ParentGroupThreadView (#4784)", () => {
+  it("keeps an open PDF across draft edits and thread refreshes, but reloads for another child", async () => {
+    const attachment = {
+      id: "12",
+      filename: "bastelliste.pdf",
+      content_type: "application/pdf",
+      size_bytes: 1024,
+    };
+    const thread = {
+      ...sommerfest,
+      messages: [{ ...sommerfest.messages[0]!, attachments: [attachment] }],
+    };
+    mockedThread.mockResolvedValue(thread);
+    loadAttachment.mockImplementation(
+      async () => new Response(new Blob(["%PDF-1.7"])),
+    );
+    URL.createObjectURL = vi
+      .fn()
+      .mockReturnValueOnce("blob:first")
+      .mockReturnValueOnce("blob:second");
+    URL.revokeObjectURL = vi.fn();
+    let read!: ReturnType<
+      typeof useSWRAuth<Awaited<ReturnType<typeof getGroupThread>>>
+    >;
+    function Probe() {
+      read = useSWRAuth(parentInboxKeys.groupThread("9"), () =>
+        getGroupThread("9"),
+      );
+      return null;
+    }
+    const { unmount } = render(
+      <ParentResourceTestProvider>
+        <NextIntlClientProvider locale="de" messages={deMessages}>
+          <ParentGroupThreadView groupThreadId="9" />
+          <Probe />
+        </NextIntlClientProvider>
+      </ParentResourceTestProvider>,
+    );
+    await screen.findByRole("textbox", { name: "Antwort" });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Datei öffnen: bastelliste.pdf" }),
+    );
+    const frame = await screen.findByTitle("bastelliste.pdf");
+    expect(frame).toHaveAttribute("src", "blob:first#view=FitH&navpanes=0");
+    expect(loadAttachment).toHaveBeenCalledWith(
+      "parent",
+      "GET /parent/me/messages/children/{studentId}/attachments/{attachmentId}/download",
+      expect.objectContaining({
+        params: { studentId: "42", attachmentId: "12" },
+      }),
+    );
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Antwort" }), {
+      target: { value: "Wir bringen Kuchen." },
+    });
+    mockedThread.mockResolvedValue({
+      ...thread,
+      children: [{ ...felix }],
+      messages: [
+        {
+          ...thread.messages[0]!,
+          body: "Aktualisierte Nachricht",
+          attachments: [{ ...attachment }],
+        },
+      ],
+    });
+    await act(async () => {
+      await read.mutate();
+    });
+    expect(screen.getByText("Aktualisierte Nachricht")).toBeVisible();
+    expect(screen.getByTitle("bastelliste.pdf")).toBe(frame);
+    expect(frame).toHaveAttribute("src", "blob:first#view=FitH&navpanes=0");
+    expect(loadAttachment).toHaveBeenCalledTimes(1);
+    expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
+    expect(URL.revokeObjectURL).not.toHaveBeenCalled();
+
+    mockedThread.mockResolvedValue({ ...thread, children: [mia] });
+    await act(async () => {
+      await read.mutate();
+    });
+    expect(screen.getByTitle("bastelliste.pdf")).toHaveAttribute(
+      "src",
+      "blob:second#view=FitH&navpanes=0",
+    );
+    expect(loadAttachment).toHaveBeenCalledTimes(2);
+    expect(loadAttachment).toHaveBeenLastCalledWith(
+      "parent",
+      "GET /parent/me/messages/children/{studentId}/attachments/{attachmentId}/download",
+      expect.objectContaining({
+        params: { studentId: "43", attachmentId: "12" },
+      }),
+    );
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:first");
+    unmount();
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:second");
+  });
+
   it("withdraws a deleted cached thread and its composer after a 404", async () => {
     mockedThread.mockResolvedValue(sommerfest);
     let read!: ReturnType<

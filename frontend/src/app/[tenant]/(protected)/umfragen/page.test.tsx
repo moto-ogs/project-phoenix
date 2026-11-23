@@ -2,7 +2,8 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "~/contexts/ToastContext";
-import type { Survey, SurveyToAnswer } from "~/lib/surveys-api";
+import type * as surveysContract from "~/lib/contract/surveys.generated";
+import type { Survey } from "~/lib/surveys-api";
 import { testClockDay } from "~/test/clock";
 
 import SurveysPage from "./page";
@@ -14,7 +15,7 @@ const CLOSES_AT = `${testClockDay(21)}T16:00:00Z`;
 const state = vi.hoisted(() => ({
   canManage: false,
   search: "",
-  toAnswer: [] as SurveyToAnswer[],
+  toAnswer: [] as surveysContract.surveyToAnswerResponse[],
   surveys: [] as Survey[],
   // Like useSWRAuth before the session is known: the key is held back, so
   // there is neither data nor a running request.
@@ -87,7 +88,7 @@ vi.mock("~/lib/surveys-api", async (importOriginal) => ({
   fetchSurveyForm: vi.fn(() => Promise.resolve(state.form)),
 }));
 
-const openSurvey: SurveyToAnswer = {
+const openSurvey: surveysContract.surveyToAnswerResponse = {
   id: "11",
   title: "Teamklima",
   intro: "Wie geht es Ihnen im Team?",

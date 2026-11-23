@@ -20,9 +20,9 @@ import {
   MessageAttachments,
   type MessageAttachmentLabels,
 } from "~/components/ui/message-attachments";
-import {
-  fetchMessageAttachmentFile,
-  type MessageAttachment,
+import type {
+  MessageAttachment,
+  MessageAttachmentRoutes,
 } from "~/lib/message-attachments";
 
 /** One chat message bubble. */
@@ -39,7 +39,7 @@ export function ChatBubble({
   pending,
   pendingLabel,
   attachments,
-  attachmentUrl,
+  attachmentFiles,
   attachmentLabels,
   showSenderName = true,
   showOwnSenderName = true,
@@ -81,8 +81,11 @@ export function ChatBubble({
    * Nachricht nur mit Anhängen hat keine Sprechblase.
    */
   attachments?: readonly MessageAttachment[];
-  /** Adresse, die einen Anhang speichert. Ohne sie bleiben Anhänge aus. */
-  attachmentUrl?: (attachmentId: string) => string;
+  /**
+   * Wo die Anhänge gespeichert und für die Ansicht geladen werden. Ohne
+   * bleiben Anhänge aus.
+   */
+  attachmentFiles?: Pick<MessageAttachmentRoutes, "downloadUrl" | "loadFile">;
   attachmentLabels?: MessageAttachmentLabels;
   /** Whether to show the sender label above this bubble. */
   showSenderName?: boolean;
@@ -119,7 +122,7 @@ export function ChatBubble({
           {senderName}
         </p>
       ) : null}
-      {attachments?.length && attachmentUrl ? (
+      {attachments?.length && attachmentFiles ? (
         <div
           className={`w-full max-w-[84%] sm:max-w-[72%] lg:max-w-[38rem] ${
             pending === "pending" ? "opacity-70" : ""
@@ -127,9 +130,9 @@ export function ChatBubble({
         >
           <MessageAttachments
             attachments={attachments}
-            downloadUrl={attachmentUrl}
+            downloadUrl={attachmentFiles.downloadUrl}
             align={own ? "end" : "start"}
-            loadFile={fetchMessageAttachmentFile}
+            loadFile={attachmentFiles.loadFile}
             labels={attachmentLabels}
           />
         </div>

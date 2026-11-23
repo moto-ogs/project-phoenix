@@ -17,8 +17,8 @@ import { formatChatDateTime } from "~/lib/date-helpers";
 import { useMessagesActivity } from "~/lib/hooks/use-messages-activity";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import type * as messagesContract from "~/lib/contract/messages.generated";
 import {
-  type GroupThreadSummary,
   familyReadLabel,
   fetchGroupThreads,
 } from "~/lib/parent-group-threads-api";
@@ -42,18 +42,16 @@ function GroupMessagesContent() {
   const messagingEnabled = tenant?.messagingEnabled === true;
   const [composeOpen, setComposeOpen] = useState(false);
 
-  const { data, error, isLoading, mutate } = useSWRAuth<GroupThreadSummary[]>(
-    messageKeys.groupMessages(),
-    fetchGroupThreads,
-    {
-      revalidateOnFocus: false,
-      keepPreviousData: true,
-      onError: (err: unknown) =>
-        logger.error("group_messages_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        }),
-    },
-  );
+  const { data, error, isLoading, mutate } = useSWRAuth<
+    messagesContract.StaffGroupThreadSummaryResponse[]
+  >(messageKeys.groupMessages(), fetchGroupThreads, {
+    revalidateOnFocus: false,
+    keepPreviousData: true,
+    onError: (err: unknown) =>
+      logger.error("group_messages_load_failed", {
+        error: err instanceof Error ? err.message : String(err),
+      }),
+  });
   // Group-thread changes use the shared staff messaging event. Revalidation
   // only reloads the list; it does not advance a read cursor, even in a
   // background tab.

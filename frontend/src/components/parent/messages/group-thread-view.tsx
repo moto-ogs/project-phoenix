@@ -94,6 +94,12 @@ export function ParentGroupThreadView({
     },
   );
   const thread = threadResource.data ?? null;
+  // Any of the guardian's children the thread reached opens its files.
+  const firstChild = thread?.children[0]?.student_id;
+  const attachmentRoutes = useMemo(
+    () => (firstChild ? guardianMessageAttachments(firstChild) : undefined),
+    [firstChild],
+  );
   // Eine Gruppennachricht kommt von einer Schule: ihre Texte nennen die
   // Betreuung so, wie diese Schule sie nennt (#6082).
   const { termOfSchool } = useParentCareTerms();
@@ -253,8 +259,6 @@ export function ParentGroupThreadView({
     selected,
     ...thread.children.map((child) => child.student_id),
   ].find((id): id is string => !!id && !withoutPlace.has(id));
-  // Any of the guardian's children the thread reached opens its files.
-  const firstChild = thread.children[0]?.student_id;
   const chatLink = chatChild ? (
     <NavigationLink
       href={parentPath(childConversationPath(chatChild))}
@@ -294,11 +298,7 @@ export function ParentGroupThreadView({
               locale={locale}
               tone="parent"
               attachments={message.attachments}
-              attachmentUrl={
-                firstChild
-                  ? guardianMessageAttachments(firstChild).downloadUrl
-                  : undefined
-              }
+              attachmentFiles={attachmentRoutes}
               attachmentLabels={attachmentLabels.bubble}
             />
           ))}
@@ -363,7 +363,7 @@ export function ParentGroupThreadView({
               attachments={
                 selected
                   ? {
-                      uploadUrl: guardianMessageAttachments(selected).uploadUrl,
+                      upload: guardianMessageAttachments(selected).upload,
                       labels: attachmentLabels.composer,
                     }
                   : undefined

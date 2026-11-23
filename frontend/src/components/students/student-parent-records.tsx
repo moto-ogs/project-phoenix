@@ -31,9 +31,9 @@ import {
   downloadDeclarationExport,
   fetchStudentParentRecords,
   type StudentParentDeclaration,
-  type StudentParentLetter,
   type StudentParentRecords,
 } from "~/lib/parent-announcements-api";
+import type * as parentAnnouncementsContract from "~/lib/contract/parent-announcements.generated";
 import { useSWRAuth } from "~/lib/swr";
 import { studentKeys } from "~/lib/swr/portal-keys";
 
@@ -53,7 +53,9 @@ interface RowMeta {
   readonly title?: string;
 }
 
-function letterState(letter: StudentParentLetter): RowMeta {
+function letterState(
+  letter: parentAnnouncementsContract.studentLetterResponse,
+): RowMeta {
   if (letter.acknowledged_at) {
     return { label: "Bestätigt", tone: "green" };
   }
@@ -68,7 +70,9 @@ function letterState(letter: StudentParentLetter): RowMeta {
   return { label: "Nicht bestätigt", tone: "warning" };
 }
 
-function letterDetail(letter: StudentParentLetter): string {
+function letterDetail(
+  letter: parentAnnouncementsContract.studentLetterResponse,
+): string {
   const sent = `Verschickt am ${formatDate(letter.published_at)}`;
   if (!letter.acknowledged_at) return sent;
   const by = letter.acknowledged_by ? ` von ${letter.acknowledged_by}` : "";
@@ -173,7 +177,9 @@ function useFold<T>(rows: readonly T[]) {
 
 function LetterGroup({
   letters,
-}: Readonly<{ letters: readonly StudentParentLetter[] }>) {
+}: Readonly<{
+  letters: readonly parentAnnouncementsContract.studentLetterResponse[];
+}>) {
   const fold = useFold(letters);
   const confirmed = letters.filter((letter) => letter.acknowledged_at).length;
   return (

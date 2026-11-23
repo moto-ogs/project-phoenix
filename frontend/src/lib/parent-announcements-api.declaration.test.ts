@@ -9,6 +9,11 @@ import {
   type Announcement,
 } from "./parent-announcements-api";
 
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 const downloadBlobMock = vi.hoisted(() => vi.fn());
 vi.mock("~/lib/file-download", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/file-download")>()),
@@ -41,17 +46,52 @@ describe("Einverständnisse in the staff client (#3430)", () => {
   it("loads the status from the proxy route", async () => {
     const fetchMock = mockFetch(
       new Response(
-        JSON.stringify({ status: "success", data: { kind: "consent" } }),
+        JSON.stringify({
+          status: "success",
+          data: {
+            kind: "consent",
+            signers: "any",
+            requires_password: false,
+            requires_signature: false,
+            deadline: null,
+            current_version: null,
+            versions: null,
+            summary: { agreed: 2 },
+            children: null,
+            submissions: null,
+            integrity_ok: true,
+          },
+        }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       ),
     );
 
+    // Go writes empty lists as null; a count it leaves out is zero.
     await expect(fetchDeclarationStatus("42")).resolves.toEqual({
       kind: "consent",
+      signers: "any",
+      requires_password: false,
+      requires_signature: false,
+      deadline: null,
+      current_version: null,
+      versions: [],
+      summary: {
+        children_total: 0,
+        agreed: 2,
+        declined: 0,
+        revoked: 0,
+        partial: 0,
+        open: 0,
+        no_signer: 0,
+        expired: 0,
+      },
+      children: [],
+      submissions: [],
+      integrity_ok: true,
     });
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/parent-announcements/42/declaration-status",
-      undefined,
+      expect.objectContaining({ method: "GET" }),
     );
   });
 
@@ -92,7 +132,7 @@ describe("Einverständnisse in the staff client (#3430)", () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/parent-announcements/42/declaration-export?format=csv",
-      undefined,
+      expect.objectContaining({ method: "GET" }),
     );
     expect(downloadBlobMock).toHaveBeenCalledWith(
       expect.any(Blob),
@@ -116,7 +156,7 @@ describe("Einverständnisse in the staff client (#3430)", () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/parent-announcements/42/declaration-export?format=pdf",
-      undefined,
+      expect.objectContaining({ method: "GET" }),
     );
     expect(downloadBlobMock).toHaveBeenCalledWith(
       expect.any(Blob),

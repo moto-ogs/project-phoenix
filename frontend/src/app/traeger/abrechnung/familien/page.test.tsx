@@ -242,7 +242,26 @@ describe("TraegerBillingFamiliesPage", () => {
     expect(row).not.toHaveClass("cursor-pointer");
   });
 
-  it.each([320, 1440])(
+  // Am Handy steht die einzige Aktion der Zeile gleich als Knopf da (#7799).
+  it("offers number entry through the row button at 320 px without opening the family", async () => {
+    setViewportWidth(320);
+    onTestFinished(() => setViewportWidth(DESKTOP_WIDTH));
+    api.fetchBillingFamilies.mockResolvedValue([BERGER]);
+    renderPage();
+    await screen.findAllByText("Tom Berger");
+    expect(
+      screen.queryByRole("button", { name: "Aktionen für Tom Berger" }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /^Debitorennummer eintragen ?, Aktionen für Tom Berger$/,
+      }),
+    );
+    expect(await screen.findByLabelText("Debitorennummer")).toHaveValue("");
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it.each([1440])(
     "offers number entry through the row menu at %s px without opening the family",
     async (width) => {
       setViewportWidth(width);

@@ -120,6 +120,9 @@ describe("NewTeamMessageModal", () => {
         counterpart_account_id: "7",
         counterpart_name: "Anna Beispiel",
         counterpart_role_kind: "staff",
+        kind: "direct",
+        can_manage: false,
+        members: [],
         messages: [],
       });
     const { onOpened } = renderModal();
