@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/modules/communication"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -334,7 +336,7 @@ func TestOperatorRoutesPublishAnAnnouncementAndReadItsViews(t *testing.T) {
 	base := fmt.Sprintf("/operator/announcements/%d", announcement.ID)
 
 	_, viewer := testpkg.CreateTestPersonWithAccount(t, db, "Route", "Leserin")
-	f.call(t, http.MethodPost, base+"/publish", nil, nil)
+	f.call(t, http.MethodPost, base+"/publish", map[string]any{"expected_edit_version": communication.AnnouncementEditVersion(*announcement)}, nil)
 	var publishedAt *time.Time
 	require.NoError(t, db.NewSelect().TableExpr("platform.announcements").Column("published_at").Where("id = ?", announcement.ID).Scan(testpkg.Ctx(t), &publishedAt))
 	assert.NotNil(t, publishedAt, "the announcement is published")

@@ -283,6 +283,7 @@ func TestOperatorRoutesWriteChangeAndDeleteAnAnnouncement(t *testing.T) {
 		ID              wireID   `json:"id"`
 		Title           string   `json:"title"`
 		TargetTenantIDs []wireID `json:"target_tenant_ids"`
+		EditVersion     string   `json:"edit_version"`
 	}
 
 	var created announcement
@@ -294,6 +295,7 @@ func TestOperatorRoutesWriteChangeAndDeleteAnAnnouncement(t *testing.T) {
 	var changed announcement
 	f.call(t, http.MethodPut, fmt.Sprintf("/operator/announcements/%d", created.ID), map[string]any{
 		"title": "Route Wartung verschoben", "content": "Morgen Abend", "type": "announcement", "severity": "info",
+		"expected_edit_version": created.EditVersion,
 	}, &changed)
 	assert.Equal(t, "Route Wartung verschoben", changed.Title)
 	f.call(t, http.MethodDelete, fmt.Sprintf("/operator/announcements/%d", created.ID), nil, nil)

@@ -13,8 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
-
 	"github.com/moto-ogs/project-phoenix/modules/communication"
 )
 
@@ -171,17 +169,8 @@ func (s *service) Update(ctx context.Context, id int64, in Input) (*StaffParentA
 	// Under the row lock: the edit compares the draft its author read with
 	// the stored one, and no other edit or publication lands in between
 	// (ADR 0311).
-	a, err := s.repo.FindByIDForUpdate(ctx, id)
+	a, err := s.lockAsRead(ctx, id, in.ExpectedVersion, "update")
 	if err != nil {
-		return nil, fmt.Errorf("announcement: load for update: %w", err)
-	}
-	if a == nil {
-		return nil, ErrNotFound
-	}
-	if err := guardClassLetterWrite(ctx, a); err != nil {
-		return nil, err
-	}
-	if err := readstate.Check(in.ExpectedVersion, readstate.Of(a.UpdatedAt)); err != nil {
 		return nil, err
 	}
 	// Published announcements are immutable (user decision, #1669): parents may
@@ -288,17 +277,8 @@ func (s *service) deleteLocked(ctx context.Context, a *StaffParentAnnouncement) 
 func (s *service) Publish(ctx context.Context, id int64, expectedVersion string) (*StaffParentAnnouncement, error) {
 	// Under the row lock: the person publishes the draft they read, so an
 	// edit or a publication since then refuses (ADR 0311).
-	a, err := s.repo.FindByIDForUpdate(ctx, id)
+	a, err := s.lockAsRead(ctx, id, expectedVersion, "publish")
 	if err != nil {
-		return nil, fmt.Errorf("announcement: load for publish: %w", err)
-	}
-	if a == nil {
-		return nil, ErrNotFound
-	}
-	if err := guardClassLetterWrite(ctx, a); err != nil {
-		return nil, err
-	}
-	if err := readstate.Check(expectedVersion, readstate.Of(a.UpdatedAt)); err != nil {
 		return nil, err
 	}
 	// Re-check the flag at publish time: a draft authored while the feature was
