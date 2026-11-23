@@ -29,6 +29,14 @@ import (
 // of its own; it never holds another contract back. Once its invoice is
 // cancelled it has none, and a stale day it would bill holds its child (S3).
 //
+// A run of Jahresbescheide keeps the assessment of a contract it cannot
+// price (S11). Pro rata that assessment still bills the days its contract no
+// longer runs. A contract of the child without a kept assessment that would
+// assess such a day anew holds the child like an issued invoice (S3, S4),
+// and the review names the kept notice in its way (#7952): the office gives
+// the contract its price, then the run assesses the month anew. The contract
+// without a price stays under "Ohne Preis".
+//
 // billedChildHolds is pure: it reads only its arguments.
 
 // monthDays is a set of days of one month: bit n-1 is the n-th day.
@@ -117,19 +125,20 @@ type staleInvoice struct {
 	days       monthDays
 }
 
-// billedChild is a child with an issued invoice of the month: its contracts
-// in force without one (open), its contracts whose invoice carries only the
-// Mensa while they would bill care (mealOnly), and its stale invoices.
-// Contracts held for a duplicate (E4) are in neither list.
+// billedChild is a child with an issued invoice of the month or a kept
+// assessment: its contracts in force without an invoice (open), its contracts
+// whose invoice carries only the Mensa while they would bill care
+// (mealOnly), its stale invoices and its stale kept assessments (kept).
+// Contracts held for a duplicate (E4) are in no list.
 type billedChild struct {
 	open, mealOnly []int64
-	stale          []staleInvoice
+	stale, kept    []staleInvoice
 }
 
-// staleDays are the days any stale invoice of the child bills.
-func (c *billedChild) staleDays() monthDays {
+// staleDays are the days any of the stale documents bills.
+func staleDays(stale []staleInvoice) monthDays {
 	var days monthDays
-	for _, invoice := range c.stale {
+	for _, invoice := range stale {
 		days |= invoice.days
 	}
 	return days
@@ -151,18 +160,28 @@ func billedChildHolds(in billedHoldInput, held map[int64]bool) []parentbilling.C
 		return []parentbilling.CareBilledChild{}
 	}
 	holds := []parentbilling.CareBilledChild{}
-	if len(in.invoiced) == 0 {
+	if len(in.invoiced) == 0 && len(in.assessed) == 0 {
 		return holds
 	}
 	children, keys := in.billedChildren(held)
 	for _, key := range keys {
 		child := children[key]
-		if inTheWay := in.staleInTheWay(child); len(inTheWay) > 0 {
+		if inTheWay := in.staleInTheWay(child.open, child.stale); len(inTheWay) > 0 {
 			// The whole child, with the Mensa of the contracts in its way (S4).
 			for _, contractID := range slices.Concat(child.open, inTheWay) {
 				held[contractID] = true
 			}
 			holds = append(holds, in.hold(parentbilling.HoldReasonAlreadyBilled, child.open, inTheWay))
+		} else if inTheWay := in.staleInTheWay(child.open, child.kept); len(inTheWay) > 0 {
+			// The contracts without a price keep their assessment and stay
+			// under "Ohne Preis"; every other contract of the child waits.
+			open := slices.DeleteFunc(slices.Clone(child.open), func(contractID int64) bool {
+				return slices.ContainsFunc(child.kept, func(kept staleInvoice) bool { return kept.contractID == contractID })
+			})
+			for _, contractID := range open {
+				held[contractID] = true
+			}
+			holds = append(holds, in.hold(parentbilling.HoldReasonUnpricedNotice, open, inTheWay))
 		}
 		// The care behind an invoice with only the Mensa is open (S5), whether
 		// the child is held or not: the office cancels that invoice.
@@ -188,6 +207,18 @@ func (in billedHoldInput) billedChildren(held map[int64]bool) (map[string]*bille
 			children[key] = &billedChild{}
 		}
 		in.addIssued(children[key], contractID, held[contractID])
+	}
+	for _, contractID := range in.order {
+		key := in.childOf[contractID]
+		if key == "" || !in.keptForPrice(contractID, held) {
+			continue
+		}
+		if children[key] == nil {
+			children[key] = &billedChild{}
+		}
+		if stale := billedDays(in.month, in.assessed[contractID]) &^ in.billingDays(contractID); stale != 0 {
+			children[key].kept = append(children[key].kept, staleInvoice{contractID: contractID, days: stale})
+		}
 	}
 	listed := map[string]bool{}
 	for _, contractID := range in.order {
@@ -222,23 +253,37 @@ func (in billedHoldInput) addIssued(child *billedChild, contractID int64, duplic
 	}
 }
 
-// staleInTheWay names the contracts whose stale invoices bill a day a
-// contract of the child without an invoice would bill (S3); empty when none
-// does. A contract of a free month or without a price bills nothing
-// (wouldBill), and a contract with an invoice of its own triggers nothing.
-func (in billedHoldInput) staleInTheWay(child *billedChild) []int64 {
-	all := child.staleDays()
+// keptForPrice tells whether a run of Jahresbescheide keeps the assessment
+// of a contract it computes again because a booked weekday has no price
+// (S11), as buildCareMonth decides it: a contract in force, held for no
+// duplicate, its month not free of charge.
+func (in billedHoldInput) keptForPrice(contractID int64, held map[int64]bool) bool {
+	versions, inForce := in.byContract[contractID]
+	if _, assessed := in.assessed[contractID]; !assessed || !inForce || held[contractID] ||
+		in.free.free(versions[0].SchoolID, in.month) {
+		return false
+	}
+	_, unpriced := billContract(in.month, in.rule, versions, in.entries[contractID], in.prices)
+	return len(unpriced) > 0
+}
+
+// staleInTheWay names the contracts whose stale documents bill a day an
+// open contract of the child would bill (S3); empty when none does. A
+// contract of a free month or without a price bills nothing (wouldBill), and
+// a contract with an invoice of its own triggers nothing.
+func (in billedHoldInput) staleInTheWay(open []int64, stale []staleInvoice) []int64 {
+	all := staleDays(stale)
 	if all == 0 {
 		return nil
 	}
 	var billing monthDays
-	for _, contractID := range child.open {
+	for _, contractID := range open {
 		if days := in.billingDays(contractID); days&all != 0 && in.wouldBill(contractID) {
 			billing |= days
 		}
 	}
 	var inTheWay []int64
-	for _, invoice := range child.stale {
+	for _, invoice := range stale {
 		if invoice.days&billing != 0 {
 			inTheWay = append(inTheWay, invoice.contractID)
 		}
@@ -248,11 +293,14 @@ func (in billedHoldInput) staleInTheWay(child *billedChild) []int64 {
 
 // documents names the issued documents of the contracts that are in the
 // way: the Jahresbescheid when it assesses the month, else the monthly
-// invoice.
+// invoice; for a kept assessment its Jahresbescheid.
 func (in billedHoldInput) documents(contractIDs []int64) []parentbilling.CareBilledInvoice {
 	documents := []parentbilling.CareBilledInvoice{}
 	for _, contractID := range contractIDs {
-		invoice := in.invoiced[contractID]
+		invoice, issued := in.invoiced[contractID]
+		if !issued {
+			invoice = in.assessed[contractID]
+		}
 		source := parentbilling.BilledByCareRun
 		if invoice.DocumentKind == parentbilling.DocumentKindFeeNotice {
 			source = parentbilling.BilledByNoticeRun

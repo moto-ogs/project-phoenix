@@ -58,6 +58,24 @@ describe("texts about children a run holds back for an issued invoice", () => {
     );
   });
 
+  // A contract without a price keeps its notice, which bills days another
+  // contract would assess anew (#7952): the price is missing, so the empty
+  // Jahreslauf asks for it and never offers to discard the run.
+  it("asks for the missing price and never to discard the Jahreslauf", () => {
+    expect(emptyNoticeRunText(2027, [child("unpriced_notice")])).toBe(
+      "Für das Jahr 2027 gibt es keinen neuen Bescheid. Bei einem Kind fehlt ein Preis, siehe unten. Trage ihn in der Preisliste ein. Danach rechnet diese Vorschau den Monat neu.",
+    );
+    expect(
+      emptyNoticeRunText(2027, [
+        child("already_billed"),
+        child("unpriced_notice"),
+        child("unpriced_notice"),
+      ]),
+    ).toBe(
+      "Für das Jahr 2027 gibt es keinen neuen Bescheid. Für ein Kind ist ein Monat schon abgerechnet, siehe unten. Bei 2 Kindern fehlt ein Preis, siehe unten. Trage die Preise in der Preisliste ein. Danach rechnet diese Vorschau den Monat neu.",
+    );
+  });
+
   it("names both kinds in the release question", () => {
     expect(
       releaseBilledLines([

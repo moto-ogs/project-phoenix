@@ -148,6 +148,73 @@ describe("CareBilledChildrenCard", () => {
     ).toHaveAttribute("href", "/abrechnung/jahresbescheide/9/bescheid/32");
   });
 
+  // A contract without a price keeps its notice for days another contract
+  // runs now (#7952): the card asks for the price, opens the price list, the
+  // notice and both contracts, and never says that nothing is to do.
+  it("asks for the missing price of a contract whose notice still holds", () => {
+    render(
+      <CareBilledChildrenCard
+        yearly
+        childrenBilled={[
+          billed(4, {
+            reason: "unpriced_notice",
+            contracts: [
+              {
+                contractId: "41",
+                schoolId: "2",
+                schoolName: "OGS Ispringen",
+              },
+            ],
+            invoices: [
+              {
+                source: "care_notice_run",
+                runId: "9",
+                contractId: "42",
+                schoolName: "OGS Birkenfeld",
+                number: "JB-0004",
+                documentKind: "fee_notice",
+              },
+            ],
+          }),
+        ]}
+      />,
+    );
+    const heading = screen.getByRole("heading", {
+      name: "Preis fehlt – Kind bekommt keinen neuen Bescheid",
+    });
+    const card = heading.closest("section");
+    if (!card) throw new Error("the price card without its section");
+    expect(
+      within(card).getByText(
+        "Für einen Vertrag dieses Kindes fehlt ein Preis. Sein bisheriger Jahresbescheid gilt darum weiter. Er rechnet auch Tage ab, an denen jetzt ein anderer Vertrag läuft. Damit kein Tag doppelt abgerechnet wird, bekommt der andere Vertrag keinen neuen Bescheid. Trage den Preis in der Preisliste ein. Danach rechnet diese Vorschau den Monat neu.",
+      ),
+    ).toBeInTheDocument();
+    expect(within(card).queryByText(/musst du nichts tun/)).toBeNull();
+    expect(
+      within(card).getByRole("link", { name: "Preisliste öffnen" }),
+    ).toHaveAttribute("href", "/abrechnung/preise");
+    expect(
+      within(card).getByRole("link", {
+        name: "Jahresbescheid öffnen: JB-0004, Kind 4 Beispiel",
+      }),
+    ).toHaveAttribute("href", "/abrechnung/jahresbescheide/9/bescheid/42");
+    expect(
+      within(card).getByRole("link", {
+        name: "Vertrag ohne Preis · OGS Birkenfeld: Kind 4 Beispiel",
+      }),
+    ).toHaveAttribute("href", "/vertraege/42");
+    expect(
+      within(card).getByRole("link", {
+        name: "Vertrag · OGS Ispringen: Kind 4 Beispiel",
+      }),
+    ).toHaveAttribute("href", "/vertraege/41");
+    expect(
+      screen.queryByRole("heading", {
+        name: "Kind hat schon eine Rechnung – bitte prüfen",
+      }),
+    ).toBeNull();
+  });
+
   it("speaks of what the release did in a released run and of the month in a Jahreslauf", () => {
     const { rerender } = render(
       <CareBilledChildrenCard childrenBilled={[billed(1)]} released />,

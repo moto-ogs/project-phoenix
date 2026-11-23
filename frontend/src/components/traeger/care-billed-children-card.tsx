@@ -8,10 +8,13 @@
 // Oder die Rechnung des Vertrags enthält nur die Mensa und sperrt seine
 // Betreuung. Die Betreuung ist dann nicht abgerechnet, und das Büro muss die
 // Rechnung stornieren. Ein freigegebener Lauf zeigt, was seine Freigabe
-// gespeichert hat.
+// gespeichert hat. Im Jahreslauf kommt eine dritte Karte dazu (#7952): Einem
+// Vertrag des Kindes fehlt ein Preis, sein bisheriger Bescheid gilt weiter und
+// rechnet Tage ab, die ein anderer Vertrag neu festsetzen würde. Das Büro
+// trägt den Preis ein.
 
 import { ChevronDown, ChevronUp, TriangleAlert } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import {
   ResponsiveActionList,
   ResponsiveActionRow,
@@ -100,6 +103,30 @@ function billedText(
     .join(" ");
 }
 
+/**
+ * A contract without a price keeps its notice for the whole month, also for
+ * days another contract runs now: that one waits for the price (#7952).
+ */
+function unpricedNoticeText(children: readonly CareBilledChild[]): string {
+  const one = children.length === 1;
+  return [
+    one
+      ? "Für einen Vertrag dieses Kindes fehlt ein Preis."
+      : "Für je einen Vertrag dieser Kinder fehlt ein Preis.",
+    one
+      ? "Sein bisheriger Jahresbescheid gilt darum weiter."
+      : "Die bisherigen Jahresbescheide gelten darum weiter.",
+    one
+      ? "Er rechnet auch Tage ab, an denen jetzt ein anderer Vertrag läuft."
+      : "Sie rechnen auch Tage ab, an denen jetzt andere Verträge laufen.",
+    one
+      ? "Damit kein Tag doppelt abgerechnet wird, bekommt der andere Vertrag keinen neuen Bescheid."
+      : "Damit kein Tag doppelt abgerechnet wird, bekommen die anderen Verträge keinen neuen Bescheid.",
+    "Trage den Preis in der Preisliste ein.",
+    "Danach rechnet diese Vorschau den Monat neu.",
+  ].join(" ");
+}
+
 /** The invoice carries only the Mensa: the care is open until its Storno. */
 function mealOnlyText(
   children: readonly CareBilledChild[],
@@ -127,7 +154,8 @@ function mealOnlyText(
 
 /**
  * The children a run holds back for an issued invoice: one card for those
- * whose month is billed already, one for those whose invoice carries only
+ * whose month is billed already, one in a Jahreslauf for those whose contract
+ * without a price keeps its notice, one for those whose invoice carries only
  * the Mensa.
  */
 export function CareBilledChildrenCard({
@@ -142,7 +170,8 @@ export function CareBilledChildrenCard({
   /** A run of Jahresbescheide: it keeps the month as it was assessed. */
   yearly?: boolean;
 }>) {
-  const { billed, mealOnly } = splitBilledChildren(childrenBilled);
+  const { billed, mealOnly, unpricedNotice } =
+    splitBilledChildren(childrenBilled);
   return (
     <>
       <BilledCard
@@ -155,8 +184,24 @@ export function CareBilledChildrenCard({
         description={billedText(billed, released, yearly)}
       />
       <BilledCard
+        childrenBilled={unpricedNotice}
+        kind="unpricedNotice"
+        title="Preis fehlt – Kind bekommt keinen neuen Bescheid"
+        description={unpricedNoticeText(unpricedNotice)}
+        action={
+          <ButtonLink
+            href={traegerPath("/traeger/abrechnung/preise")}
+            variant="surface"
+            size="compact"
+            tooltip="Öffnet die Preisliste, dort trägst du die Preise ein."
+          >
+            Preisliste öffnen
+          </ButtonLink>
+        }
+      />
+      <BilledCard
         childrenBilled={mealOnly}
-        mealOnly
+        kind="mealOnly"
         title="Betreuung noch nicht abgerechnet – Rechnung nur mit Mensa"
         description={mealOnlyText(mealOnly, released, yearly)}
       />
@@ -164,17 +209,38 @@ export function CareBilledChildrenCard({
   );
 }
 
+/** Why the children of a card are held, and so what the office does. */
+type BilledCardKind = "billed" | "mealOnly" | "unpricedNotice";
+
+/** What the button of a document in the way opens. */
+function documentTooltip(
+  kind: BilledCardKind,
+  invoice: CareBilledInvoice,
+): string {
+  if (kind === "mealOnly") {
+    return "Öffnet die Rechnung, die nur die Mensa enthält.";
+  }
+  if (kind === "unpricedNotice") {
+    return "Öffnet den Jahresbescheid, der weiter gilt.";
+  }
+  return invoice.source === "care_notice_run"
+    ? "Öffnet den Jahresbescheid, der den Monat schon abrechnet."
+    : "Öffnet die Rechnung, die den Monat schon abrechnet.";
+}
+
 function BilledCard({
   childrenBilled,
   title,
   description,
-  mealOnly = false,
+  kind = "billed",
+  action,
 }: Readonly<{
   childrenBilled: readonly CareBilledChild[];
   title: string;
   description: string;
-  /** The invoices of these children carry only the Mensa. */
-  mealOnly?: boolean;
+  kind?: BilledCardKind;
+  /** The one step the card leads to, in its head. */
+  action?: ReactNode;
 }>) {
   const [expanded, setExpanded] = useState(false);
   if (childrenBilled.length === 0) return null;
@@ -192,6 +258,7 @@ function BilledCard({
         />
       }
       description={description}
+      action={action}
       leading={
         <TriangleAlert
           className="text-moto-orange-strong mt-0.5 size-5 shrink-0"
@@ -226,18 +293,31 @@ function BilledCard({
                       variant="surface"
                       size="compact"
                       aria-label={`${label} öffnen: ${invoice.number}, ${child}`}
-                      tooltip={
-                        mealOnly
-                          ? "Öffnet die Rechnung, die nur die Mensa enthält."
-                          : invoice.source === "care_notice_run"
-                            ? "Öffnet den Jahresbescheid, der den Monat schon abrechnet."
-                            : "Öffnet die Rechnung, die den Monat schon abrechnet."
-                      }
+                      tooltip={documentTooltip(kind, invoice)}
                     >
                       {label} öffnen
                     </ButtonLink>
                   );
                 })}
+                {/* The contract whose price is missing: the notice is its own. */}
+                {kind === "unpricedNotice"
+                  ? billed.invoices.map((invoice) =>
+                      invoice.contractId ? (
+                        <ButtonLink
+                          key={`unpriced-${invoice.contractId}`}
+                          href={traegerPath(
+                            `/traeger/vertraege/${invoice.contractId}`,
+                          )}
+                          variant="surface"
+                          size="compact"
+                          aria-label={`Vertrag ohne Preis · ${invoice.schoolName}: ${child}`}
+                          tooltip="Öffnet den Vertrag, für den ein Preis fehlt."
+                        >
+                          Vertrag ohne Preis · {invoice.schoolName}
+                        </ButtonLink>
+                      ) : null,
+                    )
+                  : null}
                 {billed.contracts.map((contract, index) => {
                   const label =
                     billed.contracts.length === 1
@@ -252,7 +332,11 @@ function BilledCard({
                       variant="surface"
                       size="compact"
                       aria-label={`${label} · ${contract.schoolName}: ${child}`}
-                      tooltip="Öffnet den Vertrag, für den der Lauf keine Rechnung ausstellt."
+                      tooltip={
+                        kind === "unpricedNotice"
+                          ? "Öffnet den Vertrag, der noch keinen neuen Bescheid bekommt."
+                          : "Öffnet den Vertrag, für den der Lauf keine Rechnung ausstellt."
+                      }
                     >
                       {label} · {contract.schoolName}
                     </ButtonLink>
