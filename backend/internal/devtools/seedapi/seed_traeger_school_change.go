@@ -332,7 +332,7 @@ func seedSchoolChangeApproval(rt *Runtime, auth AuthRef, phaseID int64, child se
 	if offeringID, err = parseEnvelopeStringID(raw); err != nil {
 		return 0, 0, err
 	}
-	raw, err = rt.Client.PostWithAuth(auth, fmt.Sprintf("/api/enrollment/phases/%d/manual-approved-enrollments", phaseID), map[string]any{
+	enrollment := map[string]any{
 		"guardian_first_name": child.party.FirstName, "guardian_last_name": child.party.LastName, "guardian_email": child.party.Email,
 		"consent_flags": map[string]bool{"data_processing": true},
 		"children": []map[string]any{{
@@ -340,7 +340,11 @@ func seedSchoolChangeApproval(rt *Runtime, auth AuthRef, phaseID int64, child se
 			"target_grade_level": 2, "offering_ids": []int64{offeringID},
 		}},
 		"reason": "Schulwechsel im laufenden Schuljahr", "external_consent_confirmed": true,
-	})
+	}
+	if err := showPhaseFormVersion(staffGet(rt, auth), phaseID, enrollment); err != nil {
+		return 0, 0, err
+	}
+	raw, err = rt.Client.PostWithAuth(auth, fmt.Sprintf("/api/enrollment/phases/%d/manual-approved-enrollments", phaseID), enrollment)
 	if err != nil {
 		return 0, 0, fmt.Errorf("enroll the child at the Demo-Schule Manuell: %w", err)
 	}

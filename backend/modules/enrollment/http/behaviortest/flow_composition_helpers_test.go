@@ -217,8 +217,26 @@ func (r requestFixtureRoot) Submit(ctx context.Context, req enrollmentAPI.Submit
 	if err != nil {
 		return nil, err
 	}
-	err = tenant.WithinTenant(ctx, id, func(txCtx context.Context) error { value, err = r.RequestService.Submit(txCtx, req); return err })
+	err = tenant.WithinTenant(ctx, id, func(txCtx context.Context) error {
+		r.showCurrentForm(txCtx, &req)
+		value, err = r.RequestService.Submit(txCtx, req)
+		return err
+	})
 	return value, err
+}
+
+// showCurrentForm sends a submission without a form version as the form
+// client does: with the version of the phase's form it loaded (ADR 0311).
+// A test of a stale form sets the version itself; a phase whose form does
+// not load is left to the submission's own refusal.
+func (r requestFixtureRoot) showCurrentForm(ctx context.Context, req *enrollmentAPI.SubmitRequest) {
+	if req.DisplayedFormSchemaID != 0 {
+		return
+	}
+	bootstrap, err := r.LoadManualEnrollmentBootstrap(ctx, req.PhaseID)
+	if err == nil && bootstrap != nil && bootstrap.Schema != nil {
+		req.DisplayedFormSchemaID = bootstrap.Schema.ID
+	}
 }
 func (r requestFixtureRoot) GetByStatusToken(ctx context.Context, token string) (value *enrollmentNative.Request, children []*enrollmentNative.RequestChild, err error) {
 	err = fixturePublicTokenRoot(ctx, func(txCtx context.Context) error {

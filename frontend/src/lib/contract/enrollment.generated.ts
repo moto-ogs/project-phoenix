@@ -63,6 +63,7 @@ import {
 /** Go: enrollmenthttp.AdminEnrollmentDeleteRequest */
 export interface AdminEnrollmentDeleteRequest {
   reason?: string;
+  expected_fingerprint?: string;
 }
 
 /** Go: enrollmenthttp.AdminEnrollmentDeletionCounts */
@@ -108,6 +109,7 @@ export interface AdminEnrollmentDeletionImpact {
   preserved_parent_accounts: number;
   unlinked_guardian_profiles: number;
   parent_accounts_without_students: number;
+  fingerprint: string;
 }
 
 export const AdminEnrollmentDeletionImpactSchema: z.ZodType<AdminEnrollmentDeletionImpact, unknown> = object<AdminEnrollmentDeletionImpact>({
@@ -121,6 +123,7 @@ export const AdminEnrollmentDeletionImpactSchema: z.ZodType<AdminEnrollmentDelet
   preserved_parent_accounts: safeInt,
   unlinked_guardian_profiles: safeInt,
   parent_accounts_without_students: safeInt,
+  fingerprint: str,
 });
 
 /** Go: enrollmenthttp.AdminRequestSchemaFieldOption */

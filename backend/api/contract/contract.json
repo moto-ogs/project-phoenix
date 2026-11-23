@@ -27040,6 +27040,13 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "expected_fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -27189,6 +27196,12 @@
           "name": "parent_accounts_without_students",
           "schema": {
             "kind": "int"
+          }
+        },
+        {
+          "name": "fingerprint",
+          "schema": {
+            "kind": "string"
           }
         }
       ]

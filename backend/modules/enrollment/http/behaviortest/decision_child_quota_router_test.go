@@ -31,6 +31,7 @@ import (
 	identityaccessCompose "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose"
 	transactionFailures "github.com/moto-ogs/project-phoenix/modules/transactionruntime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -251,8 +252,16 @@ func (m manualEnrollmentRouter) postManualEnrollment(t *testing.T, child enrollm
 }
 
 // postManualEnrollmentChoosing posts one manual enrollment of the child with
-// the office's answer to an already enrolled child (#6148).
+// the office's answer to an already enrolled child (#6148), from the form
+// of the phase's current version.
 func (m manualEnrollmentRouter) postManualEnrollmentChoosing(t *testing.T, child enrollmentAPI.SubmitChildRequest, existingStudentID string, createNewStudent bool, shownStudentIDs ...string) *httptest.ResponseRecorder {
+	t.Helper()
+	return m.postManualEnrollmentForm(t, *m.phase.FormSchemaID, child, existingStudentID, createNewStudent, shownStudentIDs...)
+}
+
+// postManualEnrollmentForm posts one manual enrollment from the form of
+// version formSchemaID.
+func (m manualEnrollmentRouter) postManualEnrollmentForm(t *testing.T, formSchemaID int64, child enrollmentAPI.SubmitChildRequest, existingStudentID string, createNewStudent bool, shownStudentIDs ...string) *httptest.ResponseRecorder {
 	t.Helper()
 	payload, err := json.Marshal(enrollmentAPI.AdminManualApprovedEnrollmentRequest{
 		ExistingStudentID:       existingStudentID,
@@ -262,6 +271,7 @@ func (m manualEnrollmentRouter) postManualEnrollmentChoosing(t *testing.T, child
 			GuardianFirstName: "Anna", GuardianLastName: "Beispiel",
 			GuardianEmail: fmt.Sprintf("manuell-%d@example.test", testpkg.Tenant(t)),
 			Children:      []enrollmentAPI.SubmitChildRequest{child},
+			FormSchemaID:  ident.ID(formSchemaID),
 		},
 		ExternalConsentConfirmed: true,
 		Reason:                   "Anmeldung auf Papier",

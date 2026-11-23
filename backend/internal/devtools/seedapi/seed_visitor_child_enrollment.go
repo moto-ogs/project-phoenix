@@ -48,6 +48,9 @@ func (s parentEnrollmentSeedStep) seedVisitorChildEnrollment(
 	}
 	body := s.visitorChildSubmission(rt, phaseID, offerings, parent, child, grade)
 	return withPhaseAudience(rt, adminAuth, phaseID, phaseBody, "existing_students", func() error {
+		if err := showFormVersion(staffGet(rt, adminAuth), body); err != nil {
+			return err
+		}
 		raw, err := rt.Client.PostWithAuth(parentAuth, "/parent/enrollments/"+rt.Bootstrap.TenantSlug+"/submit", body)
 		if err != nil {
 			return fmt.Errorf("submit enrollment of the demo parent's child: %w", err)

@@ -201,6 +201,9 @@ func submitWeeklyProfileRequest(rt *Runtime, step parentEnrollmentSeedStep, enro
 	offeringID := enrollment.Offerings["wochenangebot"]
 	body := step.enrollmentSubmissionWithDays(enrollment.PhaseID, enrollment.Offerings, weeklyProfileNames()[index], "Wochenplan", "2019-04-18", 1,
 		"Alex", fmt.Sprintf("Wochenplan%02d", index+1), email, key, []int64{offeringID}, map[int64][]string{offeringID: {"mon"}})
+	if err := showFormVersion(staffGet(rt, rt.TenantAuth), body); err != nil {
+		return SeedEnrollmentRequest{}, err
+	}
 	source := "public"
 	var raw []byte
 	var err error

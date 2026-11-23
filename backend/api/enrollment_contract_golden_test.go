@@ -362,18 +362,19 @@ func checkEnrollmentChangeRequestDialogueGolden(t *testing.T, api *goldenRuntime
 	require.Equal(t, "pending_review", createdEnvelope.Data.Status)
 	adminBase := "/api/enrollment/admin/change-requests/" + createdEnvelope.Data.ID
 
-	// A reply is only possible after staff asked back: the stable 400 keeps
-	// the family from answering a question nobody asked. Its code names the
-	// changed state (#2515), so the class and help anchor follow it.
+	// A reply is only possible after staff asked back: the business
+	// rejection (409) keeps the family from answering a question nobody
+	// asked. Its code names the changed state (#2515), so the class and
+	// help anchor follow it.
 	early := checkpointRequest(api, checkpointScenario{Method: http.MethodPost, Path: publicBase + "/" + createdEnvelope.Data.ID + "/messages", Body: `{"body":"Zu früh."}`}, "")
-	require.Equal(t, http.StatusBadRequest, early.Code, early.Body.String())
+	require.Equal(t, http.StatusConflict, early.Code, early.Body.String())
 	var earlyProblem map[string]any
 	require.NoError(t, json.Unmarshal(early.Body.Bytes(), &earlyProblem))
-	require.Equal(t, float64(http.StatusBadRequest), earlyProblem["status"])
+	require.Equal(t, float64(http.StatusConflict), earlyProblem["status"])
 	require.Equal(t, "enrollment change request has invalid status", earlyProblem["detail"])
 	require.Equal(t, "enrollment.change_request_status_changed", earlyProblem["code"])
 	require.NotContains(t, earlyProblem, "error")
-	require.Equal(t, "Bad Request", earlyProblem["title"])
+	require.Equal(t, "Conflict", earlyProblem["title"])
 	require.Equal(t, "https://moto-app.de/help/fehlermeldungen#anleitung-vorgang-nicht-moeglich", earlyProblem["type"])
 	require.NotEmpty(t, earlyProblem["instance"])
 	require.Equal(t, early.Header().Get("X-Request-Id"), earlyProblem["instance"])

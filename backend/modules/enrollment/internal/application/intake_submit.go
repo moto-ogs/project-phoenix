@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"strings"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/selection"
 	enrollmentNative "github.com/moto-ogs/project-phoenix/modules/enrollment"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -167,6 +169,13 @@ func (s *Intake) planSubmissionContract(ctx context.Context, req *SubmitRequest,
 	if plan.legalBlocks, err = s.resolveSubmissionLegalBlocks(ctx, schema); err != nil {
 		return fmt.Errorf("submit: resolve legal blocks: %w", err)
 	}
+	// A form of another version is refused before its answers are checked
+	// against the current one; without enrollment the validation refuses.
+	if s.isEnrollmentEnabled(ctx) {
+		if err := checkDisplayedForm(req.DisplayedFormSchemaID, schema); err != nil {
+			return err
+		}
+	}
 	plan.eligibility = submissionEligibility(*req)
 	if err := s.validateIntakePayload(ctx, req, intakePayload{
 		phase: plan.phase, schema: schema, legalBlocks: plan.legalBlocks,
@@ -311,8 +320,27 @@ func (s *Intake) lockSubmissionPhase(ctx context.Context, req *SubmitRequest, pl
 	if !req.AllowClosedPhase && !phase.EnrollmentWindowOpen(plan.now) {
 		return enrollmentNative.ErrEnrollmentWindowClosed
 	}
+	// The form the pre-check validated against must still be the phase's.
+	if !sameSchemaPin(plan.phase.FormSchemaID, phase.FormSchemaID) {
+		return readstate.ErrChanged
+	}
 	plan.phase, plan.locked = phase, locked
 	return nil
+}
+
+// checkDisplayedForm refuses a submission whose form showed another version
+// than the one in force (ADR 0311): the form schema ID is the read-state
+// token of the form, so consents to an outdated form are never recorded as
+// given to the current one. A Basis form has the token 0.
+func checkDisplayedForm(displayed int64, current *enrollmentNative.FormSchema) error {
+	return readstate.Check(strconv.FormatInt(displayed, 10), strconv.FormatInt(formsOf(current, 0).stored, 10))
+}
+
+func sameSchemaPin(a, b *int64) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return *a == *b
 }
 
 // submissionLateInvite resolves and locks the late invite of a submission
