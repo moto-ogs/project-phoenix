@@ -320,7 +320,7 @@ describe("TraegerStaffRecordsPage", () => {
       fields: [],
     });
     renderPage();
-    const dialog = await screen.findByRole("dialog");
+    await screen.findByRole("dialog");
     await vi.waitFor(() =>
       expect(api.previewStaffLink).toHaveBeenCalledWith({
         recordId: null,
@@ -328,14 +328,20 @@ describe("TraegerStaffRecordsPage", () => {
         choices: {},
       }),
     );
-    // The preview of this opening has to be on screen before it is confirmed.
+    // The preview of this opening has to be on screen before it is
+    // confirmed; the dialog of the loaded preview is queried anew.
+    // A locked button carries aria-disabled with its reason (#6643).
     await vi.waitFor(() =>
       expect(
-        within(dialog).getByRole("button", { name: "Akte anlegen" }),
-      ).toBeEnabled(),
+        within(screen.getByRole("dialog")).getByRole("button", {
+          name: "Akte anlegen",
+        }),
+      ).not.toHaveAttribute("aria-disabled", "true"),
     );
     fireEvent.click(
-      within(dialog).getByRole("button", { name: "Akte anlegen" }),
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Akte anlegen",
+      }),
     );
     await vi.waitFor(() =>
       expect(api.linkStaff).toHaveBeenCalledWith({
