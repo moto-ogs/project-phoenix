@@ -612,6 +612,10 @@ describe("SchoolSetupWizard", () => {
       await waitForHighlight();
       if (asSheet) {
         expect(menuButton).toHaveAttribute("aria-expanded", "false");
+        // Die Sprechblase sagt, dass das Menü noch einmal aufgeht (#7799).
+        expect(
+          screen.getByRole("dialog", { name: "Einladen" }),
+        ).toHaveTextContent("Öffne das Menü noch einmal und wähle „Einladen“.");
       }
       // Am Handy liegt die Markierung weiter auf dem Auslöser. Er darf diese
       // Station aber nicht beenden; das übernimmt der Menüeintrag im Blatt.

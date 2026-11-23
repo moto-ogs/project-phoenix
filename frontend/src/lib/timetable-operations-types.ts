@@ -1,4 +1,3 @@
-import type { TeacherHint } from "./student-helpers";
 import {
   HOMEWORK_FEEDBACK_STATUSES,
   type HomeworkFeedbackStatus,
@@ -165,7 +164,7 @@ export interface TimetableRosterRow {
    */
   careDayStatus: CareDayStatus;
   /** Hinweise der Lehrkraft für den Tag des Blocks (#4795); nur mit users:read. */
-  teacherHints?: TeacherHint[];
+  teacherHints?: studentsContract.TeacherHint[];
   /**
    * Names the other running instance where this child is currently recorded
    * present (#2265). Null when no parallel block holds the child as present;

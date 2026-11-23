@@ -1,7 +1,7 @@
+import type * as studentsContract from "~/lib/contract/students.generated";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { ToastProvider } from "~/contexts/ToastContext";
 import type { Student } from "~/lib/student-helpers";
-import type { SupervisorContact } from "~/lib/student-helpers";
 import {
   StudentHeaderStats,
   SupervisorsCard,
@@ -25,7 +25,7 @@ const mockStudent: Student = {
   bus: false,
 };
 
-const mockSupervisors: SupervisorContact[] = [
+const mockSupervisors: studentsContract.SupervisorContact[] = [
   {
     id: "1",
     first_name: "Anna",

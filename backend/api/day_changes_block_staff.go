@@ -25,23 +25,16 @@ type dayChangesBlockStaff interface {
 	BlockStaffChanges(ctx context.Context, date calendar.Date) ([]timetable.BlockStaffChange, error)
 }
 
-// addBlocks reads the day's block changes in one read and adds those the
-// caller may see. An account without a staff record reads only the count when
-// it has users:read; it sees no named entries. absentToday are the staff
-// members with an absence of the day: their entry already says they are not
-// there.
-func (s dayChangesStaff) addBlocks(ctx context.Context, builder *staffEntryBuilder, day calendar.Date, absentToday map[int64]bool) error {
-	if builder.viewer.selfID == 0 && !builder.viewer.lead && !builder.viewer.counts {
-		return nil
-	}
+// blockStaffChanges reads the day's block changes in one read. The caller
+// adds those it may see (staffEntryBuilder.block): an account without a staff
+// record reads only the count when it has users:read; it sees no named
+// entries.
+func (s dayChangesStaff) blockStaffChanges(ctx context.Context, day calendar.Date) ([]timetable.BlockStaffChange, error) {
 	changes, err := s.sources.BlockStaff.BlockStaffChanges(ctx, day)
 	if err != nil {
-		return fmt.Errorf("list block staff changes: %w", err)
+		return nil, fmt.Errorf("list block staff changes: %w", err)
 	}
-	for _, change := range changes {
-		builder.block(change, absentToday)
-	}
-	return nil
+	return changes, nil
 }
 
 // blockStaff sorts a block's staff rows: who covers, whom they replace,

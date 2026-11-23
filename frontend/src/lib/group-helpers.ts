@@ -6,26 +6,30 @@ import type * as groupsContract from "~/lib/contract/groups.generated";
 
 const logger = createLogger({ component: "GroupHelpers" });
 
-export interface Group {
-  id: string;
-  name: string;
-  room_id?: string;
-  room_name?: string;
-  representative_id?: string;
-  representative_name?: string;
-  representative?: {
-    id: string;
-    staffId: string;
-    firstName: string;
-    lastName: string;
-    fullName: string;
+/** The group as the browser holds it, with the names it shows mapped in. */
+export type Group = Pick<
+  groupsContract.GroupResponse,
+  "id" | "name" | "room_id" | "representative_id"
+> &
+  // Optional: a group written by a form carries none of them yet.
+  Partial<
+    Pick<
+      groupsContract.GroupResponse,
+      "student_count" | "created_at" | "updated_at"
+    >
+  > & {
+    room_name?: string;
+    representative_name?: string;
+    representative?: {
+      id: string;
+      staffId: string;
+      firstName: string;
+      lastName: string;
+      fullName: string;
+    };
+    supervisors?: Array<{ id: string; name: string }>;
+    teacher_ids?: string[];
   };
-  student_count?: number;
-  created_at?: string;
-  updated_at?: string;
-  supervisors?: Array<{ id: string; name: string }>;
-  teacher_ids?: string[];
-}
 
 // Mapping functions
 export function mapGroupResponse(

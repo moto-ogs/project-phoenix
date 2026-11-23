@@ -42,7 +42,7 @@ func validInstanceStaffFilter(filter timetable.InstanceStaffFilter) bool {
 		!hasInvalidID(filter.IDs) && !hasInvalidID(filter.InstanceIDs) && !hasInvalidID(filter.StaffIDs) &&
 		(filter.SickAbsenceID == nil || *filter.SickAbsenceID > 0) &&
 		validOptionalDate(filter.Date) && validOptionalDate(filter.FromDate) && validOptionalDate(filter.ToDate) &&
-		(!filter.StaffChangesOnly || filter.Date != nil)
+		(!filter.StaffChangesOnly || filter.Date != nil) && (!filter.WithBlock || filter.Date != nil)
 }
 
 func validInstanceStaffColumns(columns []string) bool {

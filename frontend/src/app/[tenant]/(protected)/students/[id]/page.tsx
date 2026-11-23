@@ -1,5 +1,6 @@
 "use client";
 
+import type * as studentsContract from "~/lib/contract/students.generated";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, usePathname, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -50,7 +51,7 @@ import {
   useSwrLoadError,
   useSwrResourceLoadError,
 } from "~/lib/hooks/use-swr-load-error";
-import type { Student, SupervisorContact } from "~/lib/student-helpers";
+import type { Student } from "~/lib/student-helpers";
 import {
   allowedDepartureModesFromDeparture,
   allowedDepartureToDepartureDays,
@@ -2018,7 +2019,7 @@ interface LimitedAccessViewProps {
   studentId: string;
   attendanceLogEnabled: boolean;
   feedbackEnabled: boolean;
-  supervisors: SupervisorContact[];
+  supervisors: studentsContract.SupervisorContact[];
   activeTab: StudentTabId;
   tabs: StudentTabId[];
   canViewEnrollments: boolean;

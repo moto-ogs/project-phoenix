@@ -84,8 +84,11 @@ func (s *operations) visibleBlocks(ctx context.Context, viewer blockDayViewer, d
 	if err != nil {
 		return nil, nil, err
 	}
-	staffRows, err := staffOfInstances(ctx, s.deps.InstanceStaff, retainedInstanceIDs(instances))
-	if err != nil {
+	var staffRows []*scheduleModels.InstanceStaff
+	if shared, ok := sharedStaffOf(ctx, date.String()); ok {
+		// The Personal source read the day's staff rows already (#7666).
+		staffRows = staffOfShared(shared, retainedInstanceIDs(instances))
+	} else if staffRows, err = staffOfInstances(ctx, s.deps.InstanceStaff, retainedInstanceIDs(instances)); err != nil {
 		return nil, nil, err
 	}
 	staffByInstance := IndexInstanceStaffRows(staffRows)

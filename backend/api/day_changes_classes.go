@@ -227,6 +227,37 @@ func (sources DayChangesSources) teacherGroups(ctx context.Context, staffID int6
 	return groups, nil
 }
 
+// groupTeam reads, in one statement, the staff member's teacher groups and
+// the live teachers of these groups and of the covered ones (#7666). It fills
+// the memo of teacherGroups, so the other sources of the savepoint read no
+// more.
+func (sources DayChangesSources) groupTeam(ctx context.Context, staffID int64, covered []int64) ([]int64, map[int64][]int64, error) {
+	filter := schoolmembership.GroupAssignmentFilter{GroupsOfTeacherStaffIDs: []int64{staffID}, WithTeacherStaff: true}
+	if len(covered) > 0 {
+		filter.GroupIDs = covered
+	}
+	assignments, err := sources.Assignments.ListGroupAssignments(ctx, filter)
+	if err != nil {
+		return nil, nil, fmt.Errorf("resolve group teachers: %w", err)
+	}
+	own := map[int64]bool{}
+	teachers := map[int64][]int64{}
+	for _, assignment := range assignments {
+		if assignment.TeacherStaffID == 0 {
+			continue
+		}
+		teachers[assignment.GroupID] = append(teachers[assignment.GroupID], assignment.TeacherStaffID)
+		if assignment.TeacherStaffID == staffID {
+			own[assignment.GroupID] = true
+		}
+	}
+	groups := sortedIDs(own)
+	if memo, ok := ctx.Value(dayChangesGroupMemoKey{}).(*dayChangesGroupMemo); ok {
+		memo.staffID, memo.groups, memo.read = staffID, groups, true
+	}
+	return groups, teachers, nil
+}
+
 // ownGroups are the groups of the Kinder source: the caller's teacher groups
 // and the groups it covers on the day, as Identity & Access's own groups are.
 func (s dayChangesChildren) ownGroups(ctx context.Context, day calendar.Date) (map[int64]bool, error) {

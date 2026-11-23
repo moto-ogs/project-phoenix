@@ -50,3 +50,29 @@ func BlockStaffChangesOf(day OperationCapability) (BlockStaffChangeQuery, error)
 	}
 	return changes, nil
 }
+
+// DayStaffShare holds the staff rows of one day, each with its block, for
+// the block reads of one "Heute anders" request (#7666, the query budget of
+// the route): BlockStaffChanges takes every row of the day once,
+// BlockDayChanges filters them instead of a statement of its own. Only the
+// owner's reads fill it.
+type DayStaffShare struct {
+	Day  string
+	Rows []InstanceStaff
+	Read bool
+}
+
+type dayStaffShareKey struct{}
+
+// WithDayStaffShare marks a request whose block reads share the day's staff
+// rows. The rows live as long as the context; the root scopes it to one
+// read-only transaction.
+func WithDayStaffShare(ctx context.Context) context.Context {
+	return context.WithValue(ctx, dayStaffShareKey{}, &DayStaffShare{})
+}
+
+// DayStaffShareOf returns the request's share, if the root set one.
+func DayStaffShareOf(ctx context.Context) (*DayStaffShare, bool) {
+	share, ok := ctx.Value(dayStaffShareKey{}).(*DayStaffShare)
+	return share, ok
+}

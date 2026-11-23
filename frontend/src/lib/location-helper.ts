@@ -2,6 +2,7 @@
  * Centralized helpers for parsing, styling, and rendering student location data.
  */
 
+import type * as studentsContract from "~/lib/contract/students.generated";
 import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
 
 interface ParsedLocation {
@@ -11,34 +12,38 @@ interface ParsedLocation {
 
 export type DisplayMode = "groupName" | "roomName" | "contextAware";
 
-export interface StudentLocationContext {
-  current_location?: string | null;
-  location_since?: string | null;
-  /**
-   * Hex color of the student's current room when set. Backend serves this in
-   * `current_room_color` for visit/student responses; the active-supervisions
-   * page derives it from the current room object directly. Drives the room
-   * badge color so the OGS list isn't a wall of identical blue badges anymore.
-   * Nil for status-only locations (Schulhof / Unterwegs / Zuhause / sick / etc.)
-   * and for rooms without a custom color set.
-   *
-   * **Maintenance note**: any new SWR cache that stores rows containing this
-   * field (or any other room-derived attribute like the room name baked into
-   * `current_location`) MUST register its key substring in
-   * `lib/swr/room-derived-caches.ts`. Otherwise badge colours stay stale
-   * after an admin saves a room until the cache happens to refetch.
-   */
-  current_room_color?: string | null;
-  group_id?: string | null;
-  group_name?: string | null;
-  sick?: boolean;
-  sick_since?: string | null;
-  excused?: boolean;
-  excused_since?: string | null;
-  class_trip?: boolean;
-  class_trip_since?: string | null;
-  has_full_access?: boolean;
-}
+type StudentLocationField =
+  | "current_location"
+  | "location_since"
+  | "current_room_color"
+  | "group_id"
+  | "group_name"
+  | "sick"
+  | "sick_since"
+  | "excused"
+  | "excused_since"
+  | "class_trip"
+  | "class_trip_since"
+  | "has_full_access";
+
+/**
+ * The location fields of a student row (student reads, visits, the active
+ * supervisions page), each missing or null where a source has none.
+ *
+ * `current_room_color` is the hex color of the student's current room when
+ * set; it drives the room badge color. Nil for status-only locations
+ * (Schulhof / Unterwegs / Zuhause / sick / etc.) and for rooms without a
+ * custom color.
+ *
+ * **Maintenance note**: any new SWR cache that stores rows containing
+ * `current_room_color` (or any other room-derived attribute like the room
+ * name baked into `current_location`) MUST register its key substring in
+ * `lib/swr/room-derived-caches.ts`. Otherwise badge colours stay stale
+ * after an admin saves a room until the cache happens to refetch.
+ */
+export type StudentLocationContext = {
+  [K in StudentLocationField]?: studentsContract.SlimStudentResponse[K] | null;
+};
 
 export const LOCATION_STATUSES = {
   PRESENT: "Anwesend",

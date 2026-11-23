@@ -340,6 +340,8 @@ const DAY_CHANGE_TEXTS: Readonly<
   // Termine aus dem eigenen Kalender (#7663).
   appointment_cancelled: appointmentCancelledText,
   appointment_changed: appointmentChangedText,
+  // Nur die Kurzinfo (#7666); was es gibt, steht auf der Seite Speiseplan.
+  meal_plan_changed: () => "Der Speiseplan für heute wurde geändert.",
 };
 
 export function dayChangeText(change: DayChange): string | null {
@@ -403,6 +405,7 @@ const SOURCE_FAILURE_TEXTS: Readonly<Record<string, string>> = {
   classes:
     "Änderungen am Unterrichtsschluss der Klassen konnten gerade nicht geladen werden.",
   appointments: "Deine Termine konnten gerade nicht geladen werden.",
+  meal_plan: "Änderungen am Speiseplan konnten gerade nicht geladen werden.",
 };
 
 export function sourceFailureText(source: string): string {
@@ -454,6 +457,8 @@ export function dayChangeLinkHref(link: DayChangeLink | null): string | null {
       return "/tagesplan";
     case "calendar":
       return "/calendar";
+    case "meal_plan":
+      return "/meal-plan";
     default:
       return null;
   }

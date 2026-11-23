@@ -13,12 +13,9 @@ import (
 // statement (#7675). Cancelled blocks are left out: the cancellation is the
 // change. The absence reason stays in the owner.
 func (s *operations) BlockStaffChanges(ctx context.Context, date calendar.Date) ([]timetable.BlockStaffChange, error) {
-	day := date.String()
-	rows, err := s.deps.InstanceStaff.ListInstanceStaff(ctx, timetable.InstanceStaffFilter{
-		Date: &day, StaffChangesOnly: true, OrderByActivityTime: true,
-	})
+	rows, err := s.staffChangesOn(ctx, date.String())
 	if err != nil {
-		return nil, &ports.ScheduleError{Op: "block staff changes", Err: err}
+		return nil, err
 	}
 	changes := make([]timetable.BlockStaffChange, 0)
 	index := map[int64]int{}
@@ -41,4 +38,23 @@ func (s *operations) BlockStaffChanges(ctx context.Context, date calendar.Date) 
 		})
 	}
 	return changes, nil
+}
+
+// staffChangesOn reads the staff rows of the day's changed blocks; with a
+// day staff share it takes every row of the day once and filters them.
+func (s *operations) staffChangesOn(ctx context.Context, day string) ([]timetable.InstanceStaff, error) {
+	if share, ok := timetable.DayStaffShareOf(ctx); ok {
+		rows, err := s.dayStaff(ctx, share, day)
+		if err != nil {
+			return nil, err
+		}
+		return staffChangeRows(rows), nil
+	}
+	rows, err := s.deps.InstanceStaff.ListInstanceStaff(ctx, timetable.InstanceStaffFilter{
+		Date: &day, StaffChangesOnly: true, OrderByActivityTime: true,
+	})
+	if err != nil {
+		return nil, &ports.ScheduleError{Op: "block staff changes", Err: err}
+	}
+	return rows, nil
 }

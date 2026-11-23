@@ -24436,6 +24436,7 @@
         "closing_day",
         "group_substitution",
         "group_substitution_count",
+        "meal_plan_changed",
         "shift_cancelled",
         "shift_changed",
         "shift_replacement",
@@ -24451,6 +24452,7 @@
         "calendar_periods",
         "day_plan",
         "group_handovers",
+        "meal_plan",
         "own_absences",
         "own_shift_plan",
         "shift_plan",
@@ -24546,6 +24548,7 @@
         "children",
         "classes",
         "closing_days",
+        "meal_plan",
         "notices",
         "staff"
       ]

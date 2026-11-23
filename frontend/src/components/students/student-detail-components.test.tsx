@@ -1,3 +1,4 @@
+import type * as studentsContract from "~/lib/contract/students.generated";
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import {
   render as rtlRender,
@@ -75,7 +76,6 @@ import type { Student } from "~/lib/student-helpers";
 import { LOCATION_COLORS } from "~/lib/location-helper";
 import { getPillTone } from "~/lib/kit-palette";
 import { setTestClock } from "~/test/clock";
-import type { SupervisorContact } from "~/lib/student-helpers";
 import type { AttendanceActor } from "~/lib/attendance-actor";
 
 vi.unmock("swr");
@@ -734,7 +734,7 @@ describe("Kopf der Kindakte", () => {
 // =============================================================================
 
 describe("SupervisorsCard", () => {
-  const mockSupervisors: SupervisorContact[] = [
+  const mockSupervisors: studentsContract.SupervisorContact[] = [
     {
       id: "1",
       first_name: "Anna",
@@ -822,7 +822,7 @@ describe("SupervisorsCard", () => {
   });
 
   it("renders multiple supervisors with divider", () => {
-    const multipleSupervisors: SupervisorContact[] = [
+    const multipleSupervisors: studentsContract.SupervisorContact[] = [
       {
         id: "1",
         first_name: "Anna",
@@ -861,7 +861,7 @@ describe("SupervisorsCard", () => {
   });
 
   it("does not render contact button when supervisor has no email", () => {
-    const supervisorWithoutEmail: SupervisorContact[] = [
+    const supervisorWithoutEmail: studentsContract.SupervisorContact[] = [
       {
         id: "1",
         first_name: "Anna",
