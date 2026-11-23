@@ -267,6 +267,10 @@ func BillingTermsRouteContracts() []common.RouteContract {
 // /traeger/family-billing.
 func FamilyBillingRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
+		// The list has no caller since #7934 (the Monatslauf reads the
+		// family of its contract); it stays one release for open tabs of
+		// the older frontend and then goes with its handler (ADR 0270).
+		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: []capability.FamilyBilling{}, Deprecated: true},
 		{Method: "GET", Pattern: "/contracts/{id}", Portals: traegerPortal, Response: capability.ContractFamilyBilling{}},
 		{Method: "PUT", Pattern: "/", Portals: traegerPortal, Request: FamilyBillingRequest{}, Response: FamilyBillingResponse{}},
 	}

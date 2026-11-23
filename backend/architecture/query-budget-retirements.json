@@ -393,10 +393,5 @@
     "scenario": "api.auth.accounts.list.positive_growth",
     "route": "GET /auth/accounts/",
     "issue": 7808
-  },
-  {
-    "scenario": "api.traeger.family_billing",
-    "route": "GET /traeger/family-billing/",
-    "issue": 7904
   }
 ]

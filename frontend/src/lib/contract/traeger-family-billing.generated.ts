@@ -103,6 +103,13 @@ export const FamilyBillingResponseSchema: z.ZodType<FamilyBillingResponse, unkno
 });
 
 export const routes = {
+  "GET /traeger/family-billing/": {
+    method: "GET",
+    pattern: "/traeger/family-billing/",
+    portals: ["org"],
+    deprecated: true,
+    response: success(z.array(FamilyBillingSchema)),
+  },
   "GET /traeger/family-billing/contracts/{id}": {
     method: "GET",
     pattern: "/traeger/family-billing/contracts/{id}",
