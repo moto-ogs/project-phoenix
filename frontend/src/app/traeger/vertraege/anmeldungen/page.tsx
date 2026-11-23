@@ -117,8 +117,10 @@ function ContractEnrollmentView() {
     setNotice(null);
     setConfirming(null);
     setRunning(false);
-    owner.current++;
   }
+  useEffect(() => {
+    owner.current++;
+  }, [schoolId]);
   // After a step that replaces the preview, the focus goes to what comes
   // next (the new preview or its load error), not to the page start.
   const focusNext = useRef(false);
