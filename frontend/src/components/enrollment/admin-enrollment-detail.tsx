@@ -1022,6 +1022,8 @@ function ChildInformationCard({
                 requestId={requestId}
                 child={child}
                 onSaved={onDataCorrected}
+                // Both read the request again.
+                onChangedSinceRead={onOfferingsChanged}
               />
             </>
           ) : null}

@@ -261,6 +261,7 @@ export interface AdminRequestChild {
   date_of_birth: string;
   target_grade_level?: number;
   target_school_class?: string;
+  version: string;
   holiday_care_wish?: boolean;
   status: string;
   status_reason?: string;
@@ -287,6 +288,7 @@ export const AdminRequestChildSchema: z.ZodType<AdminRequestChild, unknown> = ob
   date_of_birth: str,
   target_grade_level: optional(safeInt),
   target_school_class: optional(str),
+  version: str,
   holiday_care_wish: optional(bool),
   status: str,
   status_reason: optional(str),
@@ -1903,6 +1905,7 @@ export interface AdminChildDataCorrectionRequest {
   target_grade_level?: number | null;
   target_school_class?: string | null;
   reason?: string;
+  expected_version?: string;
 }
 
 /** Go: enrollmenthttp.AdminUpdateOfferingSelection */
@@ -1927,6 +1930,7 @@ export interface AdminChildOfferingsResponse {
   date_of_birth: string;
   target_grade_level?: number;
   target_school_class?: string;
+  version: string;
   holiday_care_wish?: boolean;
   status: string;
   status_reason?: string;
@@ -1954,6 +1958,7 @@ export const AdminChildOfferingsResponseSchema: z.ZodType<AdminChildOfferingsRes
   date_of_birth: str,
   target_grade_level: optional(safeInt),
   target_school_class: optional(str),
+  version: str,
   holiday_care_wish: optional(bool),
   status: str,
   status_reason: optional(str),

@@ -1,7 +1,13 @@
 "use client";
 
 import { MAX_SUPPORTED_GRADE_LEVEL } from "~/lib/grade-level";
-import { useLayoutEffect, useRef, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import { Pencil } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { ISODatePicker } from "~/components/ui/date-picker";
@@ -10,6 +16,7 @@ import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
 import { useApiFormError } from "~/contexts/ToastContext";
+import { isChangedSinceRead } from "~/lib/api-error";
 import { todayISO } from "~/lib/date-helpers";
 import {
   correctAdminChildData,
@@ -23,12 +30,19 @@ export function AdminChildDataCorrection({
   child,
   requestId,
   onSaved,
+  onChangedSinceRead,
 }: Readonly<{
   child: AdminRequestChild;
   requestId: string;
   onSaved: (correctedChild: AdminRequestChild) => void;
+  /** Reads the request again after a colleague changed the child. */
+  onChangedSinceRead: () => void;
 }>) {
   const [open, setOpen] = useState(false);
+  // The version of the child data the form was filled from (ADR 0311): a
+  // background read of the page does not move it under the person's input.
+  const [readVersion, setReadVersion] = useState(child.version);
+  const [showStored, setShowStored] = useState(false);
   const [firstName, setFirstName] = useState(child.first_name);
   const [lastName, setLastName] = useState(child.last_name);
   const [dateOfBirth, setDateOfBirth] = useState(child.date_of_birth);
@@ -49,16 +63,31 @@ export function AdminChildDataCorrection({
     if (!saving) setOpen(false);
   };
 
-  const openCorrection = () => {
+  const fillFromStored = () => {
     setFirstName(child.first_name);
     setLastName(child.last_name);
     setDateOfBirth(child.date_of_birth);
     setGrade(child.target_grade_level?.toString() ?? "");
     setSchoolClass(child.target_school_class ?? "");
+    setReadVersion(child.version);
+  };
+
+  const openCorrection = () => {
+    fillFromStored();
+    setShowStored(false);
     setReason("");
     errors.clear();
     setOpen(true);
   };
+
+  // A refused correction shows the colleague's data once the page read it;
+  // the reason stays.
+  useEffect(() => {
+    if (!showStored || child.version === readVersion) return;
+    setShowStored(false);
+    fillFromStored();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the child of this render
+  }, [showStored, child, readVersion]);
 
   const save = async () => {
     const parsedGrade = grade === "" ? undefined : Number(grade);
@@ -84,6 +113,7 @@ export function AdminChildDataCorrection({
           target_grade_level: parsedGrade,
           target_school_class: schoolClass.trim() || undefined,
           reason: reason.trim(),
+          expected_version: readVersion,
         };
         const result = await correctAdminChildData(
           requestId,
@@ -109,6 +139,12 @@ export function AdminChildDataCorrection({
           child_id: child.id,
         });
         if (!op.isCurrent()) return;
+        if (isChangedSinceRead(err)) {
+          setShowStored(true);
+          onChangedSinceRead();
+          await errors.show(err, { object: "der Eintrag des Kindes" });
+          return;
+        }
         await errors.show(err, {
           object: "die Korrektur",
           retry: () => void latestSubmitRef.current(),

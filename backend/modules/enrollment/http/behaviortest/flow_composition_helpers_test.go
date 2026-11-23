@@ -174,7 +174,26 @@ func newTestChangeRequestService(cfg owners.EnrollmentChangeRequestSources) enro
 		offerings, _ := cfg.CareOfferingRepo.(capacityOfferings)
 		cfg.Capacity = owners.NewEnrollmentOfferingCapacity(offerings, cfg.Children, cfg.Settings, calendar.TodayDate)
 	}
-	return enrollmentAPI.NewChangeRequestService(owners.NewEnrollmentChangeRequests(cfg))
+	return changeRequestFixtureRoot{enrollmentAPI.NewChangeRequestService(owners.NewEnrollmentChangeRequests(cfg)), cfg.Children}
+}
+
+// changeRequestFixtureRoot sends a staff correction without a version as the
+// correction form does: with the version of the child it read (ADR 0311). A
+// test of a stale correction sets the version itself.
+type changeRequestFixtureRoot struct {
+	enrollmentAPI.ChangeRequestService
+	children interface {
+		ChildByID(context.Context, int64) (*enrollmentNative.RequestChild, error)
+	}
+}
+
+func (r changeRequestFixtureRoot) CorrectApprovedChildData(ctx context.Context, input enrollmentAPI.CorrectApprovedChildDataInput) (*enrollmentAPI.ChangeRequestAggregate, error) {
+	if input.ExpectedVersion == "" && r.children != nil {
+		if child, err := r.children.ChildByID(ctx, input.ChildID); err == nil && child != nil {
+			input.ExpectedVersion = enrollmentNative.ChildDataVersion(child)
+		}
+	}
+	return r.ChangeRequestService.CorrectApprovedChildData(ctx, input)
 }
 
 // capacityOfferings locks the offerings a capacity check claims.
