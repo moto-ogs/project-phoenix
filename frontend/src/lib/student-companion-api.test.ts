@@ -8,16 +8,17 @@ import {
   formatCompanionWeekdays,
 } from "./student-companion-api";
 
-const { mockSessionFetch } = vi.hoisted(() => ({
-  mockSessionFetch:
-    vi.fn<(url: string, init?: RequestInit) => Promise<Response>>(),
-}));
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
-vi.mock("./session-cache", () => ({ sessionFetch: mockSessionFetch }));
+const fetchMock =
+  vi.fn<(url: string, init?: RequestInit) => Promise<Response>>();
+beforeEach(() => {
+  vi.stubGlobal("fetch", fetchMock);
+});
 
 describe("student-companion-api", () => {
   beforeEach(() => {
-    mockSessionFetch.mockReset();
+    fetchMock.mockReset();
   });
 
   describe("COMPANION_WEEKDAYS", () => {
@@ -48,7 +49,7 @@ describe("student-companion-api", () => {
 
   describe("fetchStudentCompanions", () => {
     it("fetches the companion list of the contract", async () => {
-      mockSessionFetch.mockResolvedValueOnce(
+      fetchMock.mockResolvedValueOnce(
         Response.json({
           status: "success",
           data: [
@@ -65,7 +66,7 @@ describe("student-companion-api", () => {
 
       const result = await fetchStudentCompanions("42");
 
-      expect(mockSessionFetch).toHaveBeenCalledWith(
+      expect(fetchMock).toHaveBeenCalledWith(
         "/api/students/42/companions",
         expect.objectContaining({ method: "GET" }),
       );
@@ -84,7 +85,7 @@ describe("student-companion-api", () => {
     });
 
     it("drops a weekday this build does not know", async () => {
-      mockSessionFetch.mockResolvedValueOnce(
+      fetchMock.mockResolvedValueOnce(
         Response.json({
           status: "success",
           data: [{ companion_student_id: "7", weekdays: ["mon", "sat"] }],
@@ -99,7 +100,7 @@ describe("student-companion-api", () => {
 
   describe("error handling", () => {
     it("keeps the backend diagnostic out of the message", async () => {
-      mockSessionFetch.mockResolvedValueOnce(
+      fetchMock.mockResolvedValueOnce(
         Response.json(
           {
             status: 400,
@@ -120,7 +121,7 @@ describe("student-companion-api", () => {
     });
 
     it("throws an ApiError with code and request ID for the shared error path", async () => {
-      mockSessionFetch.mockResolvedValueOnce(
+      fetchMock.mockResolvedValueOnce(
         Response.json(
           {
             detail: "unavailable",
@@ -143,7 +144,7 @@ describe("student-companion-api", () => {
     });
 
     it("classifies a body that is not JSON by its status", async () => {
-      mockSessionFetch.mockResolvedValueOnce(
+      fetchMock.mockResolvedValueOnce(
         new Response("server exploded", { status: 500 }),
       );
 

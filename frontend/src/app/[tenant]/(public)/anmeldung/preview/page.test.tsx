@@ -2,6 +2,11 @@ import type { Session } from "next-auth";
 import { Suspense } from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
 import "@testing-library/jest-dom/vitest";
 import { TEST_CLOCK_INSTANT } from "~/test/clock";
 import { SessionProvider } from "next-auth/react";
@@ -36,13 +41,17 @@ vi.mock("~/lib/tenant-context", () => ({
   useTenantRoutingModeSafe: () => "path",
 }));
 
-vi.mock("~/lib/enrollment-form-schema-api", () => ({
+vi.mock("~/lib/enrollment-form-schema-api", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("~/lib/enrollment-form-schema-api")
+  >()),
   fetchEnrollmentPreviewBootstrap: mocks.fetchEnrollmentPreviewBootstrap,
   fetchPublicLegalTexts: mocks.fetchPublicLegalTexts,
   schemaToPublicFormSchema: (schema: unknown) => schema,
 }));
 
-vi.mock("~/lib/enrollment-phase-api", () => ({
+vi.mock("~/lib/enrollment-phase-api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/enrollment-phase-api")>()),
   listPhases: mocks.listPhases,
 }));
 
@@ -334,6 +343,7 @@ describe("EnrollmentPreviewPage", () => {
         },
         collect_grade_level: true,
         care_offerings_enabled: true,
+        care_required: false,
       },
     });
 
@@ -394,6 +404,13 @@ describe("EnrollmentPreviewPage", () => {
         eligible_grade_levels: [],
         collect_grade_level: true,
         care_offerings_enabled: true,
+        school_class: {
+          collect: false,
+          available_classes: [],
+          require: false,
+          collect_grade_1: false,
+        },
+        care_required: false,
       },
       schema: null,
       assigned_phase_count: 0,
@@ -437,6 +454,13 @@ describe("EnrollmentPreviewPage", () => {
           eligible_grade_levels: [],
           collect_grade_level: true,
           care_offerings_enabled: true,
+          school_class: {
+            collect: false,
+            available_classes: [],
+            require: false,
+            collect_grade_1: false,
+          },
+          care_required: false,
         },
         schema,
         assigned_phase_count: 1,
@@ -469,6 +493,7 @@ describe("EnrollmentPreviewPage", () => {
         school_class: { collect: false, available_classes: [], require: false },
         collect_grade_level: true,
         care_offerings_enabled: true,
+        care_required: false,
       },
       schema,
       assigned_phase_count: 1,
@@ -510,6 +535,15 @@ describe("EnrollmentPreviewPage", () => {
             offerings: [],
             care_offering_selection_mode: "optional",
             eligible_grade_levels: [],
+            school_class: {
+              collect: false,
+              available_classes: [],
+              require: false,
+              collect_grade_1: false,
+            },
+            collect_grade_level: true,
+            care_offerings_enabled: true,
+            care_required: false,
           },
         });
         const { unmount } = render(<EnrollmentPreviewPage />, {
@@ -556,6 +590,15 @@ describe("EnrollmentPreviewPage", () => {
           offerings: [],
           care_offering_selection_mode: "optional",
           eligible_grade_levels: [],
+          school_class: {
+            collect: false,
+            available_classes: [],
+            require: false,
+            collect_grade_1: false,
+          },
+          collect_grade_level: true,
+          care_offerings_enabled: true,
+          care_required: false,
         },
       });
       await renderPage();

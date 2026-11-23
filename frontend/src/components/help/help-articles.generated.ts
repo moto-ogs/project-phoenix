@@ -1046,13 +1046,20 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
           "Auch wer nur bei einem Termin fehlt oder vertritt, steht mit Uhrzeit da. Beispiel: `Sara übernimmt heute „Chor“ für Ben.`",
           "Darfst du den `Vertretungsplan` öffnen, führt dich der Eintrag zu diesem Termin.",
           "Am Handy zeigt `Schule` nur die ersten 3 Einträge. Den Rest zeigt `Alle anzeigen`.",
-          "Dienste, Angebote und AGs, die schon vorbei sind, stehen ganz unten unter `erledigt`. Wähle `erledigt`, um sie zu sehen.",
+          // Termine aus dem eigenen Kalender (#7663), api/day_changes_appointments.go.
+          "Unter `Betrifft dich` stehen auch deine Termine aus `Mein Kalender`. Du siehst dort, welcher Termin heute ausfällt. Du siehst auch, welcher Termin heute woanders oder zu einer anderen Zeit ist.",
+          "Dienste, Termine, Angebote und AGs, die schon vorbei sind, stehen ganz unten unter `erledigt`. Wähle `erledigt`, um sie zu sehen.",
           // Hinweise der Leitung in „Heute anders" (#7667), components/home/day-notice-row.tsx.
           "Einen Hinweis der Leitung, den du noch bestätigen sollst, siehst du ganz oben. Wähle `Zur Kenntnis nehmen`. Danach steht er unter `Schule`.",
+          // Speiseplan in „Heute anders" (#7666): nur die Kurzinfo, ohne Gerichte.
+          "Steht dort `Der Speiseplan für heute wurde geändert.`, gibt es heute etwas anderes zu essen. Was es gibt, steht auf der Seite `Speiseplan`.",
           "Tippe auf einen Eintrag, um die passende Seite zu öffnen.",
           "Steht dort `Heute läuft alles wie geplant.`, gibt es heute nichts Besonderes.",
           "Die Karte zeigt nie, warum jemand fehlt.",
           "Ändert sich etwas, zeigt die Karte es ohne Neuladen.",
+          // Krank und Urlaub des Teams stehen seit #7668 nur noch hier, nicht
+          // mehr in „Personal heute“ (components/home/staff-today-block.tsx).
+          "Die Leitung sieht in `Personal heute`, wie viele in Aufsicht und eingestempelt sind. Wer krank oder im Urlaub ist, steht in `Heute anders`.",
         ],
       },
       {
@@ -1081,10 +1088,16 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
       "Du weißt, wo du die wichtigsten Bereiche und die passende Hilfe findest.",
     differences: [
       "Welche Bereiche du siehst, hängt von deiner Rolle und den Einstellungen deiner OGS ab.",
+      // Menü mit einem Eintrag am Handy (#7799, OverflowMenu): die
+      // Anleitungen nennen weiter „das Menü mit den drei Punkten“.
+      "Eine Anleitung nennt das Menü mit den drei Punkten, aber am Handy steht dort ein Knopf wie `Einladen`? Hat das Menü nur einen Eintrag, zeigt moto am Handy gleich diesen Knopf. Tippe direkt darauf.",
       "Du siehst keine Überschriften wie `Tagesbetrieb` oder `Team`? Dann hat deine OGS die einfache Seitenleiste eingeschaltet. Alle Seiten zeigt `Alle Seiten anzeigen` ganz unten.",
       "Unter `Bausteine` fehlt eine Karte? Dann steht sie schon auf deiner Startseite. Oder deine Rolle oder deine OGS sieht sie nicht vor.",
       // Sichtregel von „Heute anders" (#7659): Namen nur für die eigenen
       // Gruppen, für die übrige Schule nur die Zahl; die Leitung sieht alle.
+      // Der Baustein „Hinweise der Leitung“ ist seit #7668 weg; Pflicht und
+      // Abschaltung der Schule gelten per Migration für „Heute anders“.
+      "Die Karte `Hinweise der Leitung` fehlt auf der Startseite? Ihre Hinweise stehen jetzt in `Heute anders`. Alle Hinweise, auch für andere Tage, findest du weiter in der Seitenleiste unter `Hinweise der Leitung`.",
       // Kinder nur mit users:read, wie auf der Seite eines Kindes (#7665).
       "In `Heute anders` fehlen die Kinder und Klassen? Du siehst sie nur, wenn du auch die Krankmeldungen auf der Seite eines Kindes sehen darfst.",
       "In `Heute anders` stehen bei dir nur Zahlen statt Namen? Namen siehst du für deine eigenen Gruppen. Für den Rest der Schule zeigt die Karte nur, wie viele fehlen. Die Leitung sieht alle Namen.",
@@ -1096,6 +1109,8 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
       "Du siehst in `Heute anders` nur deinen eigenen Dienst? Geänderte Dienste der anderen sieht nur, wer den `Dienstplan` der Schule öffnen darf.",
       // Sichtregel der Quelle Stundenplan (#7662): wie im Tagesplan.
       "In `Heute anders` fehlen Angebote anderer Leute? Die Karte zeigt die Termine, die du auch im Tagesplan siehst. Je nach Einstellung deiner Schule sind das nur deine eigenen.",
+      // Link zum Speiseplan nur mit Leserecht des Speiseplans (#7666).
+      "Du kannst `Der Speiseplan für heute wurde geändert.` nicht antippen? Dann darfst du den Speiseplan nicht öffnen. Frag in der Küche oder bei der Leitung, was es gibt.",
       // Kopfzeile aus BrandTraegerLine (#4656): nur bei einem Träger mit
       // mehreren Schulen, und nur am Computer, wo auch der Schulname steht.
       "Steht am Computer oben links unter dem Namen deiner Schule `Träger:` und ein Name? Das ist der Träger deiner Schule. Die Zeile gibt es nur, wenn dein Träger mehrere Schulen hat.",
@@ -5084,6 +5099,8 @@ export const mealPlanTopic = function mealPlanTopic(): HelpTopic {
     notes: [
       "Pro Tag sind mehrere Gerichte möglich.",
       "Änderst du einen Tag, der schon Gerichte hatte, bekommen die Eltern einen Hinweis in moto. Das gilt nur für Kinder, die an dem Tag ein Essen gebucht haben. Mehrere Änderungen einer Woche in 10 Minuten werden ein Hinweis.",
+      // „Heute anders“ zeigt dem Team den geänderten Tag (#7666).
+      "Am Tag selbst sieht das Team auf der `Startseite` unter `Heute anders`, dass der Speiseplan geändert wurde. Die Gerichte stehen dort nicht.",
       "Zur Auswahl stehen die 14 Hauptallergene, jedes mit einem festen Buchstaben. Die Liste ist für alle Schulen gleich.",
       "Eltern sehen die Buchstaben am Gericht und darunter die Erklärung. Dort steht auch, dass die Angaben von der Schule oder vom Caterer kommen.",
       "Mit `Vorwoche übernehmen` holst du die Gerichte der Vorwoche in diese Woche.",
@@ -12415,6 +12432,7 @@ export const traegerCareMonthsTopic =
             "Prüfe die Rechnungen. Je Schule steht eine Karte. Jede Rechnung hat je Modul eine Zeile mit den gebuchten Wochentagen.",
             "Steht oben `Ohne Preis`, fehlt für einen gebuchten Wochentag oder eine Zahl von Tagen je Woche ein Preis. Wähle `Preis eintragen`. Danach kommt das Kind in den Lauf.",
             "Steht oben `Doppelter Vertrag – bitte prüfen`, rechnen zwei Verträge eines Kindes am selben Tag dasselbe Modul ab. Die Freigabe rechnet dieses Kind mit allen seinen Verträgen nicht ab, alle anderen Kinder schon. Nach der Freigabe steht es unter `Nicht abgerechnet – Doppelter Vertrag`. Beende oder ändere einen der Verträge. Starte dann einen neuen Monatslauf für diesen Monat. Er rechnet nur dieses Kind ab.",
+            "Steht `Ein Kind an zwei Schulen`, hat ein Kind die Schule gewechselt und an jeder Schule eine eigene Kinderakte. Name, Geburtstag und Familie sind gleich, die Verträge laufen nacheinander. moto rechnet beide Verträge darum ab wie die eines Kindes. Sind es doch zwei Kinder, gib den Lauf nicht frei und schreib dem moto-Support.",
           ],
         },
         {
@@ -12704,10 +12722,10 @@ export const traegerCareReductionsTopic =
             "Wähle bei `Wer zahlt weniger?`, für welche Kinder die Regel gilt.",
             "`Nur weitere Kinder` heißt: Die ersten Kinder zahlen den vollen Beitrag. Wähle bei `Ab dem Kind`, ab welchem Kind die Familie weniger zahlt, zum Beispiel ab dem 2. Kind.",
             "`Alle Kinder der Familie` heißt: Ab einer Kinderzahl zahlt jedes Kind mit Vertrag weniger, auch das erste. Wähle bei `Ab so vielen Kindern` die Kinderzahl, zum Beispiel 2.",
-            "Wähle bei `Geschwister zählen an` die Schulen, deren Kinder mitzählen. Lässt du das Feld leer, zählen nur die Schulen der Regel. Bei `Alle Kinder der Familie` zählen die Schulen der Regel immer mit.",
+            "Die Schulen der Regel zählen immer. Sollen auch Kinder an anderen Schulen mitzählen? Wähle diese Schulen bei `Geschwister zählen auch an`. Sonst lass das Feld leer.",
             "`Fester Preis` heißt: Das Kind zahlt genau diesen Betrag. `Betrag weniger` zieht den Betrag vom Preis ab.",
             "`Preis laut Preisliste` heißt: Jedes weitere Kind zahlt je Modul und Tag den Preis unter `Jedes weitere Kind` der Preisliste. Die Zahl trägst du dort ein, nicht in der Regel. Bei `Alle Kinder der Familie` zahlt auch das erste Kind diesen Preis.",
-            "Sollen Geschwister an zwei Standorten getrennt zählen, lege je Standort eine eigene Regel an. Lass `Geschwister zählen an` leer.",
+            "Sollen Geschwister an zwei Standorten getrennt zählen, lege je Standort eine eigene Regel an. Lass `Geschwister zählen auch an` leer.",
             "Sollen auch Geschwister ohne Betreuungsvertrag zählen? Schalte `Geschwister ohne Vertrag mitzählen` ein. Bei `Alle Kinder der Familie` zählt sonst nur, wie viele Kinder einen Vertrag haben.",
           ],
         },
@@ -12735,7 +12753,8 @@ export const traegerCareReductionsTopic =
             "Ziehe die Datei in das Feld oder wähle `Datei wählen`.",
             "Prüfe unter `Spalten zuordnen`, aus welcher Spalte jedes Feld kommt. Hat die Datei keine Spalte für die Schule, wähle `Schule für alle Zeilen`.",
             "Wähle bei `Kinderzahl gilt ab` den Tag, ab dem die Zahlen der Datei belegt sind, zum Beispiel den Tag, an dem du die Liste erstellt hast. moto schlägt heute vor.",
-            "Nennt deine Datei den Tag je Kind? Ordne die Spalte `Gültig ab` zu. Eine Spalte mit dem Namen `Kinderzahl gilt ab` erkennt moto von selbst. Eine Zeile ohne Tag bekommt den Tag, den du für die ganze Datei gewählt hast.",
+            "Nennt deine Datei den Tag je Kind? Ordne die Spalte `Gültig ab` zu. Eine Spalte mit dem Namen `Kinderzahl gilt ab` erkennt moto von selbst. Eine Zeile ohne Tag bekommt den Tag, den du für die ganze Datei gewählt hast. Nennen Geschwister verschiedene Tage, gilt der früheste Tag. moto zählt dabei nur Zeilen, die es übernimmt.",
+            "Der Tag darf höchstens neun Monate voraus liegen. Eine Zeile mit einem späteren Tag übernimmt moto nicht. Endet der Vertrag des Kindes, bevor die neue Kinderzahl gelten kann, übernimmt moto die Zeile auch nicht.",
             "Prüfe die Zeilen unter `Prüfen und übernehmen`. `Bereit` übernimmt moto. Bei `Fehlerhaft` und `Widerspruch in der Datei` steht der Grund in der Spalte `Hinweis`.",
             "`Andere Zahl bestätigt` heißt: Für die Familie gilt schon eine andere Zahl. moto ändert sie nicht. Ändere sie in der Liste über `Kinderzahl ändern`.",
             "`Verschiedene Angaben` heißt: Für die Familie sind verschiedene Kinderzahlen bestätigt. Bestätige die Kinderzahl in der Familienliste. Die Datei löst diesen Widerspruch nicht.",
@@ -12782,7 +12801,8 @@ export const traegerCareReductionsTopic =
         "Geschwister erkennt moto an derselben E-Mail-Adresse der Rechnung. Haben zwei Familien dieselbe Adresse, zählen ihre Kinder zusammen. Hat eine Familie zwei Adressen, zählen ihre Kinder nicht als Geschwister. Gleiche die Adresse dann im Vertrag an.",
         "Gilt ein Nachweis erst ab Mitte des Monats, zählt er für den ganzen Monat.",
         "Zählt eine Regel die Kinderzahl, gilt die bestätigte Zahl. Es zählen aber immer mindestens die Kinder mit Vertrag. Geschwister ohne Vertrag stehen in der Reihe vorn: Bei 3 Kindern und einem Kind mit Vertrag ist es das 3. Kind.",
-        "Geschwister zählen je Schule getrennt. Ein Kind mit Vertrag an einer anderen Schule zählt bei der Kinderzahl nur mit, wenn die Regel unter `Geschwister zählen an` auch diese Schule nennt. Geschwister ohne Vertrag zählen an jeder Schule mit.",
+        "Geschwister zählen je Schule getrennt. Ein Kind mit Vertrag an einer anderen Schule zählt bei der Kinderzahl nur mit, wenn die Regel unter `Geschwister zählen auch an` diese Schule nennt. Geschwister ohne Vertrag zählen an jeder Schule mit.",
+        "Wechselt ein Kind im Monat die Schule, zählt es in diesem Monat an jeder Schule mit, die die Regel zählt.",
         "Eine Angabe der Eltern, die du noch nicht bestätigt hast, zählt nicht. Ist die Zahl abgelaufen, zählen nur die Kinder mit Vertrag. Der Monatslauf nennt diese Kinder dann unter `Kinderzahl der Familie fehlt`.",
         "Ein Vertrag ohne E-Mail-Adresse der Eltern ist eine eigene Familie, zum Beispiel nach einem Import. Die Liste nennt sie nach dem Kind und zeigt `Vertrag Nr.`. Sie bekommt ihre eigene Kinderzahl.",
         "Aus einer Datei gilt die Zahl ab dem Tag, den du beim Nachtragen wählst. moto setzt den Beginn nie von selbst auf den Vertragsbeginn zurück. Für einen Monat zählt die Zahl, die am Ersten gilt. Gilt am Ersten keine, zählt die erste Zahl, die in dem Monat beginnt. Einen anderen Beginn wählst du später über `Kinderzahl ändern`.",

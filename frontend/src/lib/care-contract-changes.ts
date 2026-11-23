@@ -1,3 +1,4 @@
+import type * as studentsContract from "./contract/students.generated";
 /**
  * The parents' change of the booked care of a contract's child, as the
  * Träger-Büro decides it (#5979): the open request with its modules and
@@ -9,11 +10,7 @@
 import { mapRosterImpact, type RosterImpact } from "./roster-impact";
 import { knownEnum } from "./contract/known-enum";
 import { requiredDay } from "./contract/required-day";
-import type {
-  ChangeDecisionRequest,
-  ContractChanges as WireContractChanges,
-} from "./contract/traeger-contract-changes.generated";
-import type { OfferingRequestDiffLine } from "./offering-request-review-api";
+import type * as traegerContractChangesContract from "./contract/traeger-contract-changes.generated";
 import type { Weekday } from "./traeger-care-contracts-api";
 
 // Go does not register these sets; the contract types them as string.
@@ -93,7 +90,7 @@ export interface ContractChangeDecision {
 }
 
 export function contractChangesFromBackend(
-  data: WireContractChanges,
+  data: traegerContractChangesContract.ContractChanges,
 ): ContractChanges {
   return {
     decidable: data.decidable,
@@ -133,7 +130,7 @@ export function contractChangesFromBackend(
 
 export function decisionBody(
   decision: ContractChangeDecision,
-): ChangeDecisionRequest {
+): traegerContractChangesContract.ChangeDecisionRequest {
   return {
     approve: decision.approve,
     reason: decision.reason.trim(),
@@ -157,7 +154,7 @@ export function contractChangeReview(request: ContractChangeRequest) {
     days.length
       ? days.map((day) => dayLabels[day]).join(", ")
       : "Gebucht (feste Tage)";
-  const diff: OfferingRequestDiffLine[] = request.lines
+  const diff: studentsContract.OfferingRequestDiffResponse[] = request.lines
     .filter((line) => line.state !== "unchanged")
     .map((line) => ({
       offering_id: line.careOfferingId,

@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	enrollmentOwner "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
+	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	"github.com/moto-ogs/project-phoenix/realtime"
 
 	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
@@ -31,6 +32,9 @@ func NewEnrollmentDecisions(deps enrollmentCompose.DecisionDependencies) *enroll
 	deps.People.ErrCompanionWouldLoseDeparture = peopleValues.TranslateStudentWriteError(peopleValues.ErrCompanionWouldLoseDeparture)
 	deps.People.ErrCompanionLockBusy = peopleValues.TranslateStudentWriteError(peopleValues.ErrCompanionLockBusy)
 	deps.People.IsLockNotAvailable = isPostgresLockNotAvailable
+	// The status token of an enrollment made for a child of an imported
+	// care contract (ADR 0309) takes its entropy from Security Runtime.
+	deps.Random = securityruntime.FillRandom
 	if reads, ok := deps.Requests.(enrollmentOwner.RequestReads); ok {
 		deps.Reads = reads
 	}

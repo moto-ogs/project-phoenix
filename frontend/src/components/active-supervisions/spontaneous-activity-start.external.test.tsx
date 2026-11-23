@@ -10,7 +10,7 @@ import { SWRConfig } from "~/lib/swr/testing";
 import type React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { pagedJson } from "~/test/mocks/plain-session-fetch";
+import { pagedJson, plainResponse } from "~/test/mocks/plain-session-fetch";
 vi.mock(
   "~/lib/session-cache",
   () => import("~/test/mocks/plain-session-fetch"),
@@ -163,9 +163,11 @@ describe("SpontaneousActivityStart external caregivers", () => {
     });
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({
-        json: async () => pagedJson([{ id: "3", name: "Mensa" }]),
-      }),
+      vi.fn().mockImplementation(() =>
+        plainResponse({
+          json: async () => pagedJson([{ id: "3", name: "Mensa" }]),
+        }),
+      ),
     );
   });
 

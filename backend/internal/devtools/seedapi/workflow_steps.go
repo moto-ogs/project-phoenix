@@ -246,7 +246,7 @@ func fullDemoWorkflow(seeder *Seeder) Workflow {
 		steps = append(steps, parentRequestsSeedStep{seeder: seeder}, seedEnrollmentPlacementStep{}, seedEnrollmentIncomeProofStep{}, seedEnrollmentSignatureStep{}, seedOfferingRosterStep{seeder: seeder}, seedBookingLeftoverStep{seeder: seeder}, seedFamilyAppAccountsStep{seeder: seeder})
 	}
 	steps = append(steps,
-		seedParentEngagementStep{}, seedParentCancellationNoticeStep{}, seedRoomChangeNoticeStep{}, seedAnalyticsConsentStep{}, seedSchoolLifeStep{},
+		seedParentEngagementStep{}, seedParentCancellationNoticeStep{}, seedRoomChangeNoticeStep{}, seedAnalyticsConsentStep{}, seedSchoolLifeStep{}, seedTodaysCalendarChangesStep{},
 		// After the parents: it orders lunch for the children they registered.
 		seedMealOrdersStep{seeder: seeder}, seedMealPlanChangeStep{}, seedEmailStopStep{},
 	)
@@ -324,7 +324,7 @@ func traegerSetupSteps(seeder *Seeder) []Step {
 // applications, then seed the Träger work that follows the billing in a
 // full seed. They follow the applications and the booked care.
 func traegerCareSteps(seeder *Seeder) []Step {
-	return traegerSerial(seedTraegerCareContractsStep{}, seedTraegerCareContractSignaturesStep{}, seedMealBillingStep{seeder: seeder}, seedTraegerCareMonthsStep{}, seedTraegerChildDebtorNumbersStep{}, seedTraegerCareLettersStep{}, seedParentSEPAMandateStep{}, seedParentRoomHistoryStopStep{}, seedTraegerDocumentsStep{}, seedTraegerBillingLettersStep{}, seedTraegerBillingReissueStep{}, seedTraegerBillingCreditStep{}, seedBelegRetentionStep{}, seedTraegerCareContractImportStep{}, seedTraegerCareContractOfferingCorrectionStep{}, seedHolidayClosuresStep{}, seedTestTraegerStep{})
+	return traegerSerial(seedTraegerCareContractsStep{}, seedTraegerCareContractSignaturesStep{}, seedMealBillingStep{seeder: seeder}, seedTraegerCareMonthsStep{}, seedTraegerChildDebtorNumbersStep{}, seedTraegerCareLettersStep{}, seedParentSEPAMandateStep{}, seedParentRoomHistoryStopStep{}, seedTraegerDocumentsStep{}, seedTraegerBillingLettersStep{}, seedTraegerBillingReissueStep{}, seedTraegerBillingCreditStep{}, seedBelegRetentionStep{}, seedTraegerCareContractImportStep{}, seedTraegerCareContractOfferingCorrectionStep{}, seedHolidayClosuresStep{}, seedTestTraegerStep{}, seedTraegerSchoolChangeStep{})
 }
 
 func appendPayrollRuleSteps(steps []Step, seeder *Seeder) []Step {

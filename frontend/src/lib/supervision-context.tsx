@@ -33,7 +33,7 @@ import {
   type SupervisedRoom,
   type SupervisionSnapshot,
 } from "~/lib/supervision-derive";
-import type { NavigationEducationalGroup } from "~/lib/usercontext-helpers";
+import type * as studentsContract from "~/lib/contract/students.generated";
 
 const logger = createLogger({ component: "SupervisionContext" });
 
@@ -59,7 +59,7 @@ interface SupervisionState extends DerivedSupervision {
   // Group supervision
   hasGroups: boolean;
   isLoadingGroups: boolean;
-  groups: NavigationEducationalGroup[];
+  groups: studentsContract.NavigationGroup[];
   /**
    * Der letzte Abruf der Gruppen ist gescheitert. Dann ist `groups` leer,
    * ohne dass die Person keine Gruppe hätte; die Auswahlseite sagt das
@@ -202,7 +202,7 @@ export function SupervisionProvider({
   >(null);
 
   const applyGroups = useCallback(
-    (groupList: NavigationEducationalGroup[], loadFailed = false) => {
+    (groupList: studentsContract.NavigationGroup[], loadFailed = false) => {
       setState((prev) => {
         // Only update if value actually changed
         if (
@@ -260,7 +260,7 @@ export function SupervisionProvider({
     const hasSession = sessionKeyRef.current !== null;
     const generation = schoolGenerationRef.current;
     const applyCurrent = (
-      groupList: NavigationEducationalGroup[],
+      groupList: studentsContract.NavigationGroup[],
       loadFailed = false,
     ) => {
       if (generation === schoolGenerationRef.current) {

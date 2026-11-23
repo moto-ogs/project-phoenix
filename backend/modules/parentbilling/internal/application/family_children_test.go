@@ -434,7 +434,7 @@ func TestImportedChildrenAreDecidedAgainstTheConfirmedNumber(t *testing.T) {
 		row("contract:7", 2), row("split@example.org", 2), row("split@example.org", 3),
 		{family: "contract:8", status: parentbilling.ImportedChildrenInvalid},
 	}
-	decideImportedChildren(rows, func(family string) *parentbilling.FamilyChildCount { return confirmed[family] },
+	decideImportedChildren(rows, func(family string, _ calendar.Date) *parentbilling.FamilyChildCount { return confirmed[family] },
 		func(importedChildren) calendar.Date { return today })
 	statuses := make([]string, len(rows))
 	for i, decided := range rows {

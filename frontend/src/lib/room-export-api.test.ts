@@ -1,18 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
+
 import {
   exportRoomSnapshot,
-  type RoomSnapshotExportRequest,
+  type RoomSnapshotExportOptions,
 } from "./room-export-api";
 
 const originalFetch = globalThis.fetch;
 const originalCreateObjectURL = URL.createObjectURL;
 const originalRevokeObjectURL = URL.revokeObjectURL;
 
-const request: RoomSnapshotExportRequest = {
+const request: RoomSnapshotExportOptions = {
   format: "pdf",
   title: "Wer ist wo",
-  room_ids: [1, 4, 10],
-  include_transit: true,
+  roomIds: ["1", "4", "10"],
+  includeTransit: true,
 };
 
 beforeEach(() => {
@@ -28,7 +31,7 @@ afterEach(() => {
 });
 
 describe("exportRoomSnapshot", () => {
-  it("posts the room snapshot request and downloads the returned blob", async () => {
+  it("posts the room snapshot request with text IDs and downloads the returned blob", async () => {
     const click = vi.fn();
     const remove = vi.fn();
     const append = vi.spyOn(document.body, "append");
@@ -50,7 +53,12 @@ describe("exportRoomSnapshot", () => {
     expect(globalThis.fetch).toHaveBeenCalledWith("/api/rooms/export", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(request),
+      body: JSON.stringify({
+        format: "pdf",
+        title: "Wer ist wo",
+        room_ids: ["1", "4", "10"],
+        include_transit: true,
+      }),
     });
     expect(createElement).toHaveBeenCalledWith("a");
     expect(append).toHaveBeenCalled();

@@ -3,13 +3,19 @@
 // the path parameters, the query, the body and the answer. Decisions:
 // docs/agents/frontend-api.md#browser-calls.
 import type { z } from "zod";
-import { ApiError, apiErrorFromResponse, transportFetch } from "./api-error";
-import type { portalRoutes } from "./contract/portals.generated";
+import {
+  ApiError,
+  apiErrorFromResponse,
+  unavailableApiError,
+} from "./api-error";
+import type {
+  portalRoutes,
+  routeFileRoutes,
+} from "./contract/portals.generated";
 import type { RequestBody } from "./contract/runtime";
 import type { ErrorCode } from "./error-codes.generated";
-import { sessionFetch } from "./session-cache";
+import { renewTenantSession, requireTenantSession } from "./session-cache";
 
-/** A portal by the scope of its session token (`portalRoutes`). */
 /**
  * A portal by the scope of its session token (`portalRoutes`); `public` are
  * the routes without a session (links, password reset, invitations).
@@ -18,12 +24,48 @@ export type Portal = keyof typeof portalRoutes;
 
 type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
+/**
+ * The routes of a portal: those its catalog proxy forwards, and those a named
+ * `route.ts` serves (`routeFileRoutes`, a cache purge or a flow cookie
+ * around the backend's answer).
+ */
+type AnyRoute<P extends Portal> =
+  | (typeof portalRoutes)[P][number]
+  | (P extends keyof typeof routeFileRoutes
+      ? (typeof routeFileRoutes)[P][number]
+      : never);
+
+/**
+ * A sign-in, second factor, renewal or switch step: its route file keeps the
+ * tokens and answers the BFF's own `{ status, data }` (#7833). The generated
+ * answer is the backend's, not the browser's, so these steps are no routes
+ * of bffJson; their callers name the BFF's answer (bffJsonUncontracted).
+ */
+const SESSION_STEP =
+  "the answer carries or ends the tokens the portal's route file turns into its session cookie";
+
+type RouteFileReason = {
+  [
+    P in keyof typeof routeFileRoutes
+  ]: (typeof routeFileRoutes)[P][number] extends infer R
+    ? R extends { routeFile: infer T extends string }
+      ? T
+      : never
+    : never;
+}[keyof typeof routeFileRoutes];
+
+// Fails to compile once the generator words the reason differently, so the
+// session steps never slip into bffJson with the backend's answer type.
+const sessionStepAnchor: RouteFileReason = SESSION_STEP;
+void sessionStepAnchor;
+
 // A JSON route: its answer is one decoder, or one per variant that a query
-// parameter picks (GET /api/students/ and its `view`). File answers are not
-// JSON routes of this helper.
-type JsonRoute<P extends Portal> = Extract<
-  (typeof portalRoutes)[P][number],
-  { response: z.ZodType } | { variantParam: string }
+// parameter picks (GET /api/students/ and its `view`). File answers, the
+// session steps and answers without the envelope (`plain`) are not JSON
+// routes of this helper.
+type JsonRoute<P extends Portal> = Exclude<
+  Extract<AnyRoute<P>, { response: z.ZodType } | { variantParam: string }>,
+  { routeFile: typeof SESSION_STEP } | { plain: true }
 >;
 
 type KeyOf<R> = R extends {
@@ -34,7 +76,7 @@ type KeyOf<R> = R extends {
   : never;
 
 type FileRoute<P extends Portal> = Extract<
-  (typeof portalRoutes)[P][number],
+  AnyRoute<P>,
   { response: { kind: "file" } }
 >;
 
@@ -144,10 +186,17 @@ interface CallOptions {
    */
   errorMessage?: string;
   /**
-   * Tenant and parent: a 401 with one of these codes refuses this operation
-   * and leaves the session as it is, without renewal or a login redirect.
+   * Tenant, parent and operator: a 401 with one of these codes refuses this
+   * operation and leaves the session as it is, without renewal or a login
+   * redirect.
    */
   authRefusals?: readonly ErrorCode[];
+  /**
+   * Lets the request outlive the page (`fetch` keepalive): a cleanup sent
+   * from `pagehide`, such as deleting a draft's upload. Starts immediately
+   * without a browser session lookup or renewal; the BFF authenticates it.
+   */
+  keepalive?: boolean;
 }
 
 type BffOptions<R, V> = CallOptions & BodyOf<R> & ParamsOf<R> & QueryOf<R, V>;
@@ -170,8 +219,66 @@ interface PortalRow {
   ) => Promise<Response>;
 }
 
+/**
+ * The one `fetch` of the helper. A request that never reached the BFF
+ * (offline, DNS) becomes `general.unavailable` instead of a raw TypeError
+ * like "Failed to fetch"; a cancellation stays an AbortError, because
+ * callers use AbortSignal to supersede stale work.
+ */
+async function transport(url: string, init: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, init);
+  } catch (error) {
+    if (isAbort(error)) throw error;
+    throw unavailableApiError(error);
+  }
+}
+
+function isAbort(error: unknown): boolean {
+  return (
+    error !== null &&
+    typeof error === "object" &&
+    "name" in error &&
+    error.name === "AbortError"
+  );
+}
+
+/** Whether a 401 is one of the call's operation-specific refusals. */
+async function isAuthRefusal(
+  response: Response,
+  authRefusals: readonly ErrorCode[] | undefined,
+): Promise<boolean> {
+  if (!authRefusals?.length) return false;
+  const refusal = await apiErrorFromResponse(
+    response.clone(),
+    "Request refused",
+  );
+  return refusal.code !== undefined && authRefusals.includes(refusal.code);
+}
+
 const sendPlain = (url: string, init: RequestInit) =>
-  transportFetch(url, { ...init, credentials: "include", cache: "no-store" });
+  transport(url, { ...init, credentials: "include", cache: "no-store" });
+
+/**
+ * Staff: the session gate before the request, then on a 401 one renewal and
+ * one retry. Keepalive cleanup goes out immediately: a session lookup or
+ * renewal cannot outlive an unloading page; the BFF still authenticates it.
+ * An operation-specific refusal (`authRefusals`) leaves the session as it is
+ * and reaches the caller as its ApiError.
+ */
+async function sendTenant(
+  url: string,
+  init: RequestInit,
+  { authRefusals }: CallOptions,
+): Promise<Response> {
+  if (init.keepalive) return transport(url, init);
+  await requireTenantSession();
+  const response = await transport(url, init);
+  if (response.status !== 401) return response;
+  if (await isAuthRefusal(response, authRefusals)) return response;
+  await renewTenantSession();
+  return transport(url, init);
+}
 
 function onLoginPage(path: string): boolean {
   return window.location.pathname.startsWith(path);
@@ -180,35 +287,21 @@ function onLoginPage(path: string): boolean {
 /**
  * Where the portals differ, and nowhere else. A 401 has reached the browser
  * after the BFF renewed the session once:
- * - tenant: the session gate and one renewal with a retry (`sessionFetch`),
+ * - tenant: the session gate and one renewal with a retry (`sendTenant`),
  *   then a sign-out;
  * - operator (`platform`) and parents: a switch to the portal's login
- *   (parents keep operation-specific `authRefusals` on the page);
+ *   (operation-specific `authRefusals` stay on the page);
  * - Träger (`org`), moto schule and caterer: the ApiError, as before.
  */
 const PORTALS: Readonly<Record<Portal, PortalRow>> = {
-  tenant: {
-    mount: "/api",
-    bff: "/api",
-    send: (url, init, { authRefusals }) =>
-      authRefusals
-        ? sessionFetch(url, init, { authRefusals })
-        : sessionFetch(url, init),
-  },
+  tenant: { mount: "/api", bff: "/api", send: sendTenant },
   parent: {
     mount: "/parent",
     bff: "/api/parent",
     send: async (url, init, { authRefusals }) => {
       const response = await sendPlain(url, init);
       if (response.status === 401 && typeof window !== "undefined") {
-        if (authRefusals?.length) {
-          const refusal = await apiErrorFromResponse(
-            response.clone(),
-            "Request refused",
-          );
-          if (refusal.code && authRefusals.includes(refusal.code))
-            return response;
-        }
+        if (await isAuthRefusal(response, authRefusals)) return response;
         window.location.assign("/parents/login");
       }
       return response;
@@ -223,12 +316,13 @@ const PORTALS: Readonly<Record<Portal, PortalRow>> = {
   platform: {
     mount: "/operator",
     bff: "/api/operator",
-    send: async (url, init) => {
+    send: async (url, init, { authRefusals }) => {
       const response = await sendPlain(url, init);
       if (
         response.status === 401 &&
         typeof window !== "undefined" &&
-        !onLoginPage("/operator/login")
+        !onLoginPage("/operator/login") &&
+        !(await isAuthRefusal(response, authRefusals))
       ) {
         window.location.href = "/operator/login";
         throw new ApiError("Session expired", 401);
@@ -292,13 +386,14 @@ async function send(
 /** The fetch init of a call: JSON serialized, FormData as is. */
 function requestInit(
   method: Method,
-  { body, signal, headers }: CallOptions & { body?: unknown },
+  { body, signal, headers, keepalive }: CallOptions & { body?: unknown },
 ): RequestInit {
   const isForm = body instanceof FormData;
   const json = body !== undefined && !isForm;
   return {
     method,
     ...(signal && { signal }),
+    ...(keepalive && { keepalive }),
     ...((json || headers) && {
       headers: json
         ? { "Content-Type": "application/json", ...headers }
@@ -324,14 +419,7 @@ async function call<T>(
   try {
     answer = await response.json();
   } catch (error) {
-    if (
-      error !== null &&
-      typeof error === "object" &&
-      "name" in error &&
-      error.name === "AbortError"
-    ) {
-      throw error;
-    }
+    if (isAbort(error)) throw error;
     answer = undefined;
   }
   if (answer === null || typeof answer !== "object" || !("data" in answer)) {

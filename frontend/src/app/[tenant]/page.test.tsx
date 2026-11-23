@@ -166,8 +166,10 @@ function mockFetchResponse(status: number, body: unknown): typeof global.fetch {
 }
 
 function mockTenantAuthenticatedResponse(): typeof global.fetch {
+  // The BFF's answer to the password step: `{ status, data }`.
   return mockFetchResponse(200, {
-    status: "authenticated",
+    status: "success",
+    data: { status: "authenticated" },
   });
 }
 
@@ -901,8 +903,12 @@ describe("HomePage (Login)", () => {
           },
         }),
       )
+      // The enrollment start route answers the BFF's `{ status, data }`.
       .mockResolvedValueOnce(
-        Response.json({ challenge_token: "challenge-abc" }),
+        Response.json({
+          status: "success",
+          data: { challenge_token: "challenge-abc" },
+        }),
       )
       .mockResolvedValueOnce(
         Response.json({ status: "success", data: { status: "authenticated" } }),

@@ -40,6 +40,9 @@ func TestDurableSideEffectsRatchet(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if findings, err = withoutSharedTenantSignalSite(findings); err != nil {
+		t.Fatal(err)
+	}
 	var failures []string
 	for key, fingerprint := range findings {
 		notice, ok := notices[key]
@@ -266,5 +269,26 @@ func TestSideEffectNoticeRegisterRejectsEqualSizedReplacements(t *testing.T) {
 	changed.Fingerprint = "durable operation"
 	if err := sideEffectRegisterSubset(map[string]losableSideEffectNotice{"original": changed}, base); err == nil {
 		t.Fatal("a changed operation is not the original losable notice")
+	}
+}
+
+// The shared site of ADR 0310 is the one exact finding outside the register;
+// every other after-commit site, also one with the same callback, still fails.
+func TestSharedTenantSignalSiteAllowsOnlyItself(t *testing.T) {
+	t.Parallel()
+	path, operation, _ := strings.Cut(sharedTenantSignalSite, ":")
+	fingerprint := sharedTenantSignalSite[strings.LastIndex(sharedTenantSignalSite, "@")+1 : strings.LastIndex(sharedTenantSignalSite, "#")]
+	other := "modules/schoolcalendar/portal/internal/application/service.go:service.withinAppointmentWrite:RegisterAfterCommit@" + fingerprint + "#1"
+	second := strings.TrimSuffix(sharedTenantSignalSite, "#1") + "#2"
+	rest, err := withoutSharedTenantSignalSite(map[string]string{sharedTenantSignalSite: fingerprint, other: fingerprint, second: fingerprint})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := rest[sharedTenantSignalSite]; ok || len(rest) != 2 {
+		t.Fatalf("only the shared site leaves the findings, got %v", rest)
+	}
+	changed := path + ":" + strings.Replace(operation, fingerprint, "00000000000000000000000000000000", 1)
+	if _, err := withoutSharedTenantSignalSite(map[string]string{changed: "00000000000000000000000000000000"}); err == nil {
+		t.Fatal("a changed callback of the shared site must fail the scan")
 	}
 }

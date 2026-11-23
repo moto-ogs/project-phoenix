@@ -47,11 +47,7 @@ import {
   importFailureBody,
 } from "~/lib/import-request";
 import { bffJson } from "~/lib/bff-fetch";
-import type {
-  StudentImportError,
-  StudentPreviewResponse,
-  ValidationError,
-} from "~/lib/contract/import.generated";
+import type * as importContract from "~/lib/contract/import.generated";
 import { createLogger } from "~/lib/logger";
 
 /** Info-Knopf am Seitentitel: wofür die Seite da ist und was man zuerst tut. */
@@ -59,12 +55,6 @@ const STUDENTS_IMPORT_INFO =
   "Hier legst du viele Kinder auf einmal aus einer Datei an. Lade zuerst die Vorlage herunter und fülle sie aus.";
 
 const logger = createLogger({ component: "StudentImportPage" });
-
-// Vertragsformat des Imports (ADR 0270, #2352). Die Vorschau trägt
-// zusätzlich das Kinderkontingent der Schule.
-type ImportError = ValidationError;
-type ImportRowResult = StudentImportError;
-type ImportResult = StudentPreviewResponse;
 
 // Status types for display
 type RowStatus = "new" | "existing" | "error" | "warning";
@@ -74,12 +64,12 @@ interface DisplayStudent {
   status: RowStatus;
   errors: string[];
   notes: string[];
-  first_name: string;
-  last_name: string;
-  school_class: string;
-  group_name: string;
-  guardian_info: string;
-  health_info: string;
+  firstName: string;
+  lastName: string;
+  schoolClass: string;
+  groupName: string;
+  guardianInfo: string;
+  healthInfo: string;
 }
 
 function childCountLabel(count: number): string {
@@ -87,7 +77,9 @@ function childCountLabel(count: number): string {
 }
 
 /** Blocking and warning messages in red; plain hints stay gray. */
-function splitMessages(findings: readonly ImportError[] | null): {
+function splitMessages(
+  findings: readonly importContract.ValidationError[] | null,
+): {
   errors: string[];
   notes: string[];
 } {
@@ -98,7 +90,9 @@ function splitMessages(findings: readonly ImportError[] | null): {
   };
 }
 
-function toDisplayStudent(row: ImportRowResult): DisplayStudent {
+function toDisplayStudent(
+  row: importContract.StudentImportError,
+): DisplayStudent {
   return {
     row: row.row_number,
     status: (row.errors ?? []).some(
@@ -112,18 +106,18 @@ function toDisplayStudent(row: ImportRowResult): DisplayStudent {
           ? "warning"
           : "new",
     ...splitMessages(row.errors),
-    first_name: row.data.first_name,
-    last_name: row.data.last_name,
-    school_class: row.data.school_class,
-    group_name: row.data.group_name ?? "",
-    guardian_info: guardianLabel(row.data.guardians),
-    health_info: row.data.health_info ?? "",
+    firstName: row.data.first_name,
+    lastName: row.data.last_name,
+    schoolClass: row.data.school_class,
+    groupName: row.data.group_name ?? "",
+    guardianInfo: guardianLabel(row.data.guardians),
+    healthInfo: row.data.health_info ?? "",
   };
 }
 
 /** "Maria Muster (Mutter)" from whatever parts the row carries; empty when none. */
 function guardianLabel(
-  guardians: ImportRowResult["data"]["guardians"] | undefined,
+  guardians: importContract.StudentImportError["data"]["guardians"] | undefined,
 ): string {
   const first = guardians?.[0];
   if (!first) return "";
@@ -143,7 +137,8 @@ export default function StudentImportPage() {
   const [isImporting, setIsImporting] = useState(false);
   const [importComplete, setImportComplete] = useState(false);
   const [importInterrupted, setImportInterrupted] = useState(false);
-  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [importResult, setImportResult] =
+    useState<importContract.StudentPreviewResponse | null>(null);
   // Fehler der Datei und des Imports stehen im Kasten über der Vorlage,
   // mit Wiederholen (#2517). Ein angehaltener Stapel steht dort auch, mit
   // oder ohne gespeicherte Zeilen: der Import als Ganzes ist gescheitert.
@@ -216,7 +211,7 @@ export default function StudentImportPage() {
         formData.append("file", file);
         formData.append("mode", importMode);
 
-        const importData: ImportResult = await bffJson(
+        const importData: importContract.StudentPreviewResponse = await bffJson(
           "tenant",
           "POST /api/import/students/preview",
           { body: formData, errorMessage: "Student import preview failed" },
@@ -250,12 +245,12 @@ export default function StudentImportPage() {
               row: row.row_number,
               status: getRowStatus(),
               ...splitMessages(row.errors),
-              first_name: row.data.first_name,
-              last_name: row.data.last_name,
-              school_class: row.data.school_class,
-              group_name: row.data.group_name ?? "",
-              guardian_info: guardianLabel(row.data.guardians),
-              health_info: row.data.health_info ?? "",
+              firstName: row.data.first_name,
+              lastName: row.data.last_name,
+              schoolClass: row.data.school_class,
+              groupName: row.data.group_name ?? "",
+              guardianInfo: guardianLabel(row.data.guardians),
+              healthInfo: row.data.health_info ?? "",
             });
           }
         }
@@ -272,16 +267,16 @@ export default function StudentImportPage() {
             status: "new",
             errors: [],
             notes: [],
-            first_name: `${importData.total_rows} Kinder`,
+            firstName: `${importData.total_rows} Kinder`,
             // Passt die Datei nicht ins Kinderkontingent, ist nichts bereit.
-            last_name:
+            lastName:
               importData.child_quota?.fits === false
                 ? "neu in der Datei"
                 : "bereit zum Import",
-            school_class: "",
-            group_name: "",
-            guardian_info: "",
-            health_info: "",
+            schoolClass: "",
+            groupName: "",
+            guardianInfo: "",
+            healthInfo: "",
           });
         }
 
@@ -328,7 +323,7 @@ export default function StudentImportPage() {
       formData.append("file", uploadedFile);
       formData.append("mode", mode);
 
-      let importData: ImportResult;
+      let importData: importContract.StudentPreviewResponse;
       try {
         importData = await bffJson(
           "tenant",
@@ -338,9 +333,10 @@ export default function StudentImportPage() {
       } catch (error) {
         // A stopped batch carries the rows already saved in its error body.
         const result = importFailureBody(error);
-        const interrupted = readImportBatchFailure<ImportRowResult>(result);
+        const interrupted =
+          readImportBatchFailure<importContract.StudentImportError>(result);
         if (interrupted) {
-          setImportResult(interrupted as ImportResult);
+          setImportResult(interrupted as importContract.StudentPreviewResponse);
           setImportInterrupted(true);
           setPreviewData((interrupted.errors ?? []).map(toDisplayStudent));
           // Ein Stapel kann am Kinderkontingent scheitern, wenn zwischen
@@ -611,12 +607,12 @@ export default function StudentImportPage() {
                       status: student.status,
                       errors: student.errors,
                       notes: student.notes,
-                      first_name: student.first_name,
-                      last_name: student.last_name,
+                      firstName: student.firstName,
+                      lastName: student.lastName,
                       meta: [
-                        student.school_class,
-                        student.group_name,
-                        student.guardian_info,
+                        student.schoolClass,
+                        student.groupName,
+                        student.guardianInfo,
                       ],
                     }}
                     index={idx}

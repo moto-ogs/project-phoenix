@@ -5,7 +5,6 @@
  */
 
 import { normalizeCareFacilityTerm } from "~/lib/care-facility-term-value";
-import { apiErrorFromResponse, transportFetch } from "./api-error";
 import { bffJson, bffJsonUncontracted } from "./bff-fetch";
 import { clearSessionCache } from "./session-cache";
 import { clearPersonalStorage } from "./personal-storage";
@@ -221,49 +220,6 @@ export type TenantSummary = Pick<
   | "hidden"
 >;
 
-interface TenantResolveResponse {
-  tenant_id: string;
-  slug: string;
-  name: string;
-  subdomain: string;
-  organization_id: string;
-  organization_name: string;
-  traeger_name?: string;
-  hidden?: boolean;
-  settings: TenantSettings;
-  presence_mode?: string;
-  student_photos_enabled?: boolean;
-  booked_modules?: string[];
-  parent_messaging_enabled?: boolean;
-  parent_message_card_badge_enabled?: boolean;
-  staff_messaging_enabled?: boolean;
-  display_enabled?: boolean;
-  caldav_enabled?: boolean;
-  care_offerings_enabled?: boolean;
-  attendance_web_enabled?: boolean;
-  attendance_log_enabled?: boolean;
-  group_mode?: string;
-  operational_overview_scope?: string;
-  attendance_edit_scope?: string;
-  parent_request_reason_policy?: string;
-  show_timetable_counts?: boolean;
-  timetable_enabled?: boolean;
-  meal_plan_enabled?: boolean;
-  meal_registration_enabled?: boolean;
-  waitlist_enabled?: boolean;
-  grade_level_max: number;
-  analytics_enabled?: boolean;
-  analytics_freigabe?: boolean;
-  analytics_recording_sample_percent?: number;
-  early_checkout_note_enabled?: boolean;
-  early_checkout_note_tolerance_minutes?: number;
-  weekend_follows_friday?: boolean;
-  children_without_care_place?: boolean;
-  child_search_only_navigation?: boolean;
-  simple_staff_navigation?: boolean;
-  care_facility_term?: string;
-}
-
 /**
  * Normalize analytics_recording_sample_percent. Anything that is not a whole
  * percentage records nothing: an unreadable value must never widen the
@@ -361,22 +317,10 @@ export function normalizePresenceMode(raw: unknown): PresenceMode {
  * what a missing school means on its screen.
  */
 export async function resolveTenant(slug: string): Promise<TenantInfo> {
-  const response = await transportFetch(
-    `/api/auth/tenant/resolve?slug=${encodeURIComponent(slug)}`,
-  );
-
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Failed to resolve tenant: ${response.statusText}`,
-    );
-  }
-
-  const json = (await response.json()) as {
-    status: string;
-    data: TenantResolveResponse;
-  };
-  const data = json.data;
+  const data = await bffJson("public", "GET /auth/tenant/resolve", {
+    query: { slug },
+    errorMessage: "Failed to resolve tenant",
+  });
   return {
     tenantId: data.tenant_id,
     slug: data.slug,
@@ -386,7 +330,8 @@ export async function resolveTenant(slug: string): Promise<TenantInfo> {
     organizationName: data.organization_name,
     traegerName: data.traeger_name,
     hidden: data.hidden === true,
-    settings: data.settings ?? {},
+    // The contract types the school's settings map as open JSON.
+    settings: (data.settings ?? {}) as TenantSettings,
     presenceMode: normalizePresenceMode(data.presence_mode),
     studentPhotosEnabled: data.student_photos_enabled === true,
     ...bookedModuleFields(data.booked_modules),
@@ -433,14 +378,6 @@ export async function resolveTenant(slug: string): Promise<TenantInfo> {
   };
 }
 
-/** Public tenant response (no internal IDs) */
-interface PublicTenantBackend {
-  slug: string;
-  name: string;
-  subdomain: string;
-  organization_name: string;
-}
-
 export interface TenantListResult {
   tenants: TenantSummary[];
   /** "ok" = backend responded successfully, "error" = network or server failure */
@@ -462,20 +399,9 @@ export async function listAllTenants(
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      const response = await fetch("/api/auth/tenants");
-      if (!response.ok) {
-        lastError = new Error(`HTTP ${response.status}`);
-        if (attempt < maxAttempts) {
-          await delay(1000 * 2 ** (attempt - 1));
-          continue;
-        }
-        return { tenants: [], status: "error" };
-      }
-
-      const json = (await response.json()) as {
-        data?: PublicTenantBackend[];
-      };
-      const items = json.data ?? [];
+      const items = await bffJson("public", "GET /auth/tenants", {
+        errorMessage: "Tenant list load failed",
+      });
       return {
         tenants: items.map((t) => ({
           tenantId: "",

@@ -389,13 +389,16 @@ describe.each([
     );
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
-      session_created: true,
-      demo: {
-        access_id: "4711",
-        role,
-        src: "fair",
-        fixed_role: true,
-        traeger: false,
+      status: "success",
+      data: {
+        session_created: true,
+        demo: {
+          access_id: "4711",
+          role,
+          src: "fair",
+          fixed_role: true,
+          traeger: false,
+        },
       },
     });
     expect(response.headers.getSetCookie()).toContainEqual(
@@ -427,12 +430,15 @@ describe.each([
       request(host, { token: "demo-link-proof", role }),
     );
     expect(await response.json()).toEqual({
-      session_created: false,
-      demo: {
-        access_id: "4711",
-        role: otherRole,
-        fixed_role: true,
-        traeger: false,
+      status: "success",
+      data: {
+        session_created: false,
+        demo: {
+          access_id: "4711",
+          role: otherRole,
+          fixed_role: true,
+          traeger: false,
+        },
       },
     });
     expect(backend.mock.calls[1]?.[0]).toBe("http://server:8080/auth/logout");
@@ -475,8 +481,11 @@ it("selects the parent demo cookie using the proxy-owned original host", async (
   const response = await demo(req);
   expect(response.status).toBe(200);
   expect(await response.json()).toEqual({
-    session_created: true,
-    demo: { access_id: "4711", role: "parent", traeger: false },
+    status: "success",
+    data: {
+      session_created: true,
+      demo: { access_id: "4711", role: "parent", traeger: false },
+    },
   });
   expect(response.headers.getSetCookie()).toContainEqual(
     expect.stringMatching(/parent\.session-token=.*HttpOnly/),

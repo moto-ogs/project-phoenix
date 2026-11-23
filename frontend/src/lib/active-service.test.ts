@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import type { SchulhofStatusWire } from "./active-helpers";
 import { suppressConsole } from "~/test/helpers/console";
 import { mockSessionData } from "~/test/mocks/next-auth";
 import {
@@ -16,6 +15,7 @@ vi.mock("next-auth/react", () => ({
 // Import after mocks are set up
 import { getSession } from "next-auth/react";
 import { activeService } from "./active-service";
+import type * as activeContract from "~/lib/contract/active.generated";
 
 // Type for mocked functions
 const mockedGetSession = vi.mocked(getSession);
@@ -92,12 +92,8 @@ describe("active-service", () => {
 
         expect(mockFetch).toHaveBeenCalledWith(
           "/api/active/groups",
-          expect.objectContaining({
-            method: "GET",
-            headers: expect.not.objectContaining({
-              Authorization: expect.anything(),
-            }),
-          }),
+          // No Authorization header: the BFF carries the session cookie.
+          { method: "GET" },
         );
         expect(result).toHaveLength(1);
         expect(result[0]?.id).toBe("1");
@@ -359,7 +355,7 @@ describe("active-service", () => {
   describe("Schulhof (Schoolyard)", () => {
     describe("getSchulhofStatus", () => {
       it("fetches Schulhof status via proxy in browser context", async () => {
-        const sampleBackendStatus: SchulhofStatusWire = {
+        const sampleBackendStatus: activeContract.SchulhofStatusResponse = {
           exists: true,
           room_id: "42",
           room_name: "Schulhof",
@@ -389,12 +385,8 @@ describe("active-service", () => {
 
         expect(mockFetch).toHaveBeenCalledWith(
           "/api/active/schulhof/status",
-          expect.objectContaining({
-            method: "GET",
-            headers: expect.not.objectContaining({
-              Authorization: expect.anything(),
-            }),
-          }),
+          // No Authorization header: the BFF carries the session cookie.
+          { method: "GET" },
         );
         expect(result.exists).toBe(true);
         expect(result.roomId).toBe("42");
@@ -405,7 +397,7 @@ describe("active-service", () => {
       });
 
       it("handles non-existent Schulhof", async () => {
-        const sampleBackendStatus: SchulhofStatusWire = {
+        const sampleBackendStatus: activeContract.SchulhofStatusResponse = {
           exists: false,
           room_name: "",
           is_user_supervising: false,

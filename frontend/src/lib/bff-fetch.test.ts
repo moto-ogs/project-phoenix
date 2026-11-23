@@ -1,22 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { mockSessionFetch, mockTransportFetch } = vi.hoisted(() => ({
-  mockSessionFetch:
-    vi.fn<
-      (
-        url: string,
-        init?: RequestInit,
-        options?: { authRefusals?: readonly string[] },
-      ) => Promise<Response>
-    >(),
-  mockTransportFetch:
-    vi.fn<(url: string, init?: RequestInit) => Promise<Response>>(),
+const { mockFetch, mockRequireSession, mockRenewSession } = vi.hoisted(() => ({
+  mockFetch: vi.fn<(url: string, init?: RequestInit) => Promise<Response>>(),
+  mockRequireSession: vi.fn<() => Promise<void>>(),
+  mockRenewSession: vi.fn<() => Promise<void>>(),
 }));
 
-vi.mock("./session-cache", () => ({ sessionFetch: mockSessionFetch }));
-vi.mock("./api-error", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("./api-error")>()),
-  transportFetch: mockTransportFetch,
+// The session gate and its renewal are session-cache.test.ts's cases; here
+// they are seams that let the request through or renew on demand.
+vi.mock("./session-cache", () => ({
+  requireTenantSession: mockRequireSession,
+  renewTenantSession: mockRenewSession,
 }));
 
 import { ApiError } from "./api-error";
@@ -26,8 +20,10 @@ const ok = (data: unknown, extra: object = {}) =>
   Response.json({ status: "success", data, ...extra });
 
 beforeEach(() => {
-  mockSessionFetch.mockReset();
-  mockTransportFetch.mockReset();
+  mockFetch.mockReset();
+  mockRequireSession.mockReset().mockResolvedValue(undefined);
+  mockRenewSession.mockReset().mockResolvedValue(undefined);
+  vi.stubGlobal("fetch", mockFetch);
 });
 
 afterEach(() => {
@@ -93,7 +89,7 @@ describe("bffPath", () => {
 
 describe("bffFile", () => {
   it("hands the file answer to the caller", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    mockFetch.mockResolvedValueOnce(
       new Response("pdf", { headers: { "Content-Disposition": "x.pdf" } }),
     );
 
@@ -104,20 +100,20 @@ describe("bffFile", () => {
     );
 
     await expect(response.text()).resolves.toBe("pdf");
-    expect(mockSessionFetch).toHaveBeenCalledWith(
+    expect(mockFetch).toHaveBeenCalledWith(
       "/api/meal-plan/orders/month/export?month=2026-09&format=pdf",
       { method: "GET" },
     );
   });
 
   it("sends the body of a file route that takes one", async () => {
-    mockSessionFetch.mockResolvedValueOnce(new Response("xlsx"));
+    mockFetch.mockResolvedValueOnce(new Response("xlsx"));
 
     await bffFile("tenant", "POST /api/students/export", {
       body: { format: "xlsx" },
     });
 
-    expect(mockSessionFetch).toHaveBeenCalledWith("/api/students/export", {
+    expect(mockFetch).toHaveBeenCalledWith("/api/students/export", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: '{"format":"xlsx"}',
@@ -125,7 +121,7 @@ describe("bffFile", () => {
   });
 
   it("turns a refused file into the ApiError with the caller's text", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    mockFetch.mockResolvedValueOnce(
       Response.json({ code: "general.permission" }, { status: 403 }),
     );
 
@@ -151,7 +147,7 @@ describe("bffFile", () => {
 
 describe("bffJson", () => {
   it("returns the data of the answer, typed by the route", async () => {
-    mockSessionFetch.mockResolvedValueOnce(ok([{ id: "7", name: "Sport" }]));
+    mockFetch.mockResolvedValueOnce(ok([{ id: "7", name: "Sport" }]));
 
     const rows = await bffJson("tenant", "GET /api/activities/categories", {
       query: { include_archived: true },
@@ -159,14 +155,14 @@ describe("bffJson", () => {
 
     const first: string | undefined = rows[0]?.id;
     expect(first).toBe("7");
-    expect(mockSessionFetch).toHaveBeenCalledWith(
+    expect(mockFetch).toHaveBeenCalledWith(
       "/api/activities/categories?include_archived=true",
       { method: "GET" },
     );
   });
 
   it("sends a JSON body serialized and a FormData body as is", async () => {
-    mockSessionFetch
+    mockFetch
       .mockResolvedValueOnce(ok({ id: "1", name: "A" }))
       .mockResolvedValueOnce(ok({ id: "1" }));
     const form = new FormData();
@@ -180,20 +176,20 @@ describe("bffJson", () => {
       body: form,
     });
 
-    const [, json] = mockSessionFetch.mock.calls[0] ?? [];
+    const [, json] = mockFetch.mock.calls[0] ?? [];
     expect(json).toMatchObject({
       method: "PUT",
       body: '{"name":"A"}',
       headers: { "Content-Type": "application/json" },
     });
-    const [url, multipart] = mockSessionFetch.mock.calls[1] ?? [];
+    const [url, multipart] = mockFetch.mock.calls[1] ?? [];
     expect(url).toBe("/api/students/4/photo");
     expect(multipart?.body).toBe(form);
     expect(multipart?.headers).toBeUndefined();
   });
 
   it("resolves a 204 and an answer without data to null", async () => {
-    mockSessionFetch
+    mockFetch
       .mockResolvedValueOnce(new Response(null, { status: 204 }))
       .mockResolvedValueOnce(ok(null));
 
@@ -213,7 +209,7 @@ describe("bffJson", () => {
       total_pages: 1,
       total_records: 0,
     };
-    mockSessionFetch.mockResolvedValueOnce(ok([], { pagination }));
+    mockFetch.mockResolvedValueOnce(ok([], { pagination }));
 
     const page = await bffJson("tenant", "GET /api/groups/", {
       query: { page: 1 },
@@ -223,7 +219,7 @@ describe("bffJson", () => {
   });
 
   it("returns the variant the query names", async () => {
-    mockSessionFetch.mockResolvedValue(
+    mockFetch.mockResolvedValue(
       ok([{ id: "1", first_name: "A", last_name: "B" }], {
         pagination: {
           current_page: 1,
@@ -240,14 +236,13 @@ describe("bffJson", () => {
 
     const first: { first_name: string } | undefined = names.data[0];
     expect(first?.first_name).toBe("A");
-    expect(mockSessionFetch).toHaveBeenCalledWith(
-      "/api/students?view=names&page=1",
-      { method: "GET" },
-    );
+    expect(mockFetch).toHaveBeenCalledWith("/api/students?view=names&page=1", {
+      method: "GET",
+    });
   });
 
   it("turns a refusal into an ApiError with the envelope and the caller's text", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    mockFetch.mockResolvedValueOnce(
       Response.json(
         {
           status: 409,
@@ -276,7 +271,7 @@ describe("bffJson", () => {
   });
 
   it("carries the wait of a refused request (Retry-After) on the ApiError", async () => {
-    mockTransportFetch.mockResolvedValueOnce(
+    mockFetch.mockResolvedValueOnce(
       Response.json(
         { status: 429, code: "general.rate_limited" },
         { status: 429, headers: { "Retry-After": "60" } },
@@ -291,7 +286,7 @@ describe("bffJson", () => {
   });
 
   it("refuses a success without data as an unreadable answer", async () => {
-    mockSessionFetch
+    mockFetch
       .mockResolvedValueOnce(Response.json({ id: "7" }))
       .mockResolvedValueOnce(Response.json({ status: "success" }));
 
@@ -321,7 +316,7 @@ describe("bffJson", () => {
       },
       { highWaterMark: 0 },
     );
-    mockSessionFetch.mockResolvedValueOnce(new Response(stream));
+    mockFetch.mockResolvedValueOnce(new Response(stream));
 
     await expect(
       bffJson("tenant", "GET /api/activities/categories", {
@@ -331,49 +326,200 @@ describe("bffJson", () => {
   });
 
   it("still reports malformed JSON as an unreadable answer", async () => {
-    mockSessionFetch.mockResolvedValueOnce(new Response("not JSON"));
+    mockFetch.mockResolvedValueOnce(new Response("not JSON"));
 
     await expect(
       bffJson("tenant", "GET /api/activities/categories"),
     ).rejects.toMatchObject({ status: 502, code: "general.unavailable" });
   });
 
-  it("passes signal and tenant auth refusals to the session fetch", async () => {
-    const controller = new AbortController();
-    mockSessionFetch.mockResolvedValueOnce(ok([]));
+  it("lets a cleanup outlive the page with keepalive", async () => {
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
 
-    await bffJson("tenant", "GET /api/activities/categories", {
-      signal: controller.signal,
-      authRefusals: ["identity.session_tenant_mismatch"],
-    });
+    await bffJson(
+      "org",
+      "DELETE /traeger/holiday-periods/{id}/form/documents/{documentId}",
+      { params: { id: "3", documentId: "9" }, keepalive: true },
+    );
 
-    const [, init, options] = mockSessionFetch.mock.calls[0] ?? [];
-    expect(init?.signal).toBe(controller.signal);
-    expect(options).toEqual({
-      authRefusals: ["identity.session_tenant_mismatch"],
-    });
-  });
-
-  it("sends the other portals with their cookie and without a cache", async () => {
-    mockTransportFetch.mockResolvedValueOnce(ok([]));
-
-    await bffJson("org", "GET /traeger/absence-types/");
-
-    expect(mockTransportFetch).toHaveBeenCalledWith(
-      "/api/traeger/absence-types",
+    expect(mockFetch).toHaveBeenCalledWith(
+      "/api/traeger/holiday-periods/3/form/documents/9",
       {
-        method: "GET",
+        method: "DELETE",
+        keepalive: true,
         credentials: "include",
         cache: "no-store",
       },
     );
-    expect(mockSessionFetch).not.toHaveBeenCalled();
+  });
+
+  it("starts a tenant keepalive cleanup before a pending session lookup can finish", async () => {
+    let finishLookup!: () => void;
+    mockRequireSession.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        finishLookup = resolve;
+      }),
+    );
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+    const cleanup = bffJson(
+      "tenant",
+      "DELETE /api/enrollment/legal-documents/{filename}",
+      { params: { filename: "draft.pdf" }, keepalive: true },
+    );
+    const callsBeforeUnload = [...mockFetch.mock.calls];
+    finishLookup();
+    await cleanup;
+
+    expect(callsBeforeUnload).toEqual([
+      [
+        "/api/enrollment/legal-documents/draft.pdf",
+        { method: "DELETE", keepalive: true },
+      ],
+    ]);
+    expect(mockRequireSession).not.toHaveBeenCalled();
+  });
+
+  it("surfaces a refused keepalive cleanup without a session renewal or retry", async () => {
+    mockFetch.mockResolvedValueOnce(
+      Response.json({ code: "general.permission" }, { status: 401 }),
+    );
+
+    await expect(
+      bffJson("tenant", "DELETE /api/enrollment/legal-documents/{filename}", {
+        params: { filename: "draft.pdf" },
+        keepalive: true,
+      }),
+    ).rejects.toMatchObject({ status: 401, code: "general.permission" });
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockRequireSession).not.toHaveBeenCalled();
+    expect(mockRenewSession).not.toHaveBeenCalled();
+  });
+
+  it("passes the signal to the request", async () => {
+    const controller = new AbortController();
+    mockFetch.mockResolvedValueOnce(ok([]));
+
+    await bffJson("tenant", "GET /api/activities/categories", {
+      signal: controller.signal,
+    });
+
+    const [, init] = mockFetch.mock.calls[0] ?? [];
+    expect(init?.signal).toBe(controller.signal);
+  });
+
+  it("checks the staff session before the request goes out", async () => {
+    mockRequireSession.mockRejectedValueOnce(
+      new ApiError("Authentication required", 401, {
+        code: "general.permission",
+      }),
+    );
+
+    await expect(
+      bffJson("tenant", "GET /api/activities/categories"),
+    ).rejects.toMatchObject({ status: 401, code: "general.permission" });
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("renews the staff session once on a 401 and repeats the request", async () => {
+    mockFetch
+      .mockResolvedValueOnce(Response.json({ status: 401 }, { status: 401 }))
+      .mockResolvedValueOnce(ok([]));
+
+    await expect(
+      bffJson("tenant", "GET /api/activities/categories"),
+    ).resolves.toEqual([]);
+    expect(mockRenewSession).toHaveBeenCalledTimes(1);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("ends with the renewal's refusal when the session cannot be renewed", async () => {
+    mockFetch.mockResolvedValue(
+      Response.json({ status: 401 }, { status: 401 }),
+    );
+    mockRenewSession.mockRejectedValueOnce(
+      new ApiError("Authentication required", 401, {
+        code: "general.permission",
+      }),
+    );
+
+    await expect(
+      bffJson("tenant", "GET /api/activities/categories"),
+    ).rejects.toMatchObject({ status: 401, code: "general.permission" });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves the session alone on an operation's own auth refusal", async () => {
+    mockFetch.mockResolvedValueOnce(
+      Response.json(
+        { status: 401, code: "identity.session_tenant_mismatch" },
+        { status: 401 },
+      ),
+    );
+
+    await expect(
+      bffJson("tenant", "GET /api/activities/categories", {
+        authRefusals: ["identity.session_tenant_mismatch"],
+      }),
+    ).rejects.toMatchObject({
+      status: 401,
+      code: "identity.session_tenant_mismatch",
+    });
+    expect(mockRenewSession).not.toHaveBeenCalled();
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("turns a request that never reached the BFF into general.unavailable", async () => {
+    mockFetch.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+
+    const error = await bffJson("org", "GET /traeger/absence-types/").catch(
+      (caught: unknown) => caught,
+    );
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({
+      status: 503,
+      code: "general.unavailable",
+      noResponse: true,
+    });
+  });
+
+  it("keeps an AbortError that is not an Error instance", async () => {
+    const abort = { name: "AbortError", message: "Request aborted" };
+    mockFetch.mockRejectedValueOnce(abort);
+
+    await expect(bffJson("org", "GET /traeger/absence-types/")).rejects.toBe(
+      abort,
+    );
+  });
+
+  it("keeps a cancelled request an AbortError", async () => {
+    const abort = new DOMException("aborted", "AbortError");
+    mockFetch.mockRejectedValueOnce(abort);
+
+    await expect(bffJson("org", "GET /traeger/absence-types/")).rejects.toBe(
+      abort,
+    );
+  });
+
+  it("sends the other portals with their cookie and without a cache", async () => {
+    mockFetch.mockResolvedValueOnce(ok([]));
+
+    await bffJson("org", "GET /traeger/absence-types/");
+
+    expect(mockFetch).toHaveBeenCalledWith("/api/traeger/absence-types", {
+      method: "GET",
+      credentials: "include",
+      cache: "no-store",
+    });
+    expect(mockRequireSession).not.toHaveBeenCalled();
   });
 
   it("sends the operator to the login on a 401", async () => {
     const location = { pathname: "/operator/schools", href: "" };
     vi.stubGlobal("window", { location });
-    mockTransportFetch.mockResolvedValueOnce(
+    mockFetch.mockResolvedValueOnce(
       Response.json({ status: 401 }, { status: 401 }),
     );
 
@@ -383,10 +529,28 @@ describe("bffJson", () => {
     expect(location.href).toBe("/operator/login");
   });
 
+  it("keeps the operator on the page for an operation's own refusal", async () => {
+    const location = { pathname: "/operator/account", href: "" };
+    vi.stubGlobal("window", { location });
+    mockFetch.mockResolvedValueOnce(
+      Response.json(
+        { status: 401, code: "identity.mfa_code_invalid" },
+        { status: 401 },
+      ),
+    );
+
+    await expect(
+      bffJson("platform", "GET /operator/stats", {
+        authRefusals: ["identity.mfa_code_invalid"],
+      }),
+    ).rejects.toMatchObject({ status: 401, code: "identity.mfa_code_invalid" });
+    expect(location.href).toBe("");
+  });
+
   it("sends parents to the login on a 401 and throws the backend's error", async () => {
     const assign = vi.fn();
     vi.stubGlobal("window", { location: { assign } });
-    mockTransportFetch.mockResolvedValueOnce(
+    mockFetch.mockResolvedValueOnce(
       Response.json(
         { status: 401, code: "general.permission" },
         { status: 401 },
@@ -403,21 +567,22 @@ describe("bffJson", () => {
   });
 
   it("sends a public route without a session", async () => {
-    mockTransportFetch.mockResolvedValueOnce(ok({ valid: true }));
+    mockFetch.mockResolvedValueOnce(ok({ valid: true }));
 
     await bffJson("public", "GET /traeger/invitations/{token}", {
       params: { token: "abc" },
     });
 
-    expect(mockTransportFetch).toHaveBeenCalledWith(
-      "/api/traeger/invitations/abc",
-      { method: "GET", credentials: "include", cache: "no-store" },
-    );
-    expect(mockSessionFetch).not.toHaveBeenCalled();
+    expect(mockFetch).toHaveBeenCalledWith("/api/traeger/invitations/abc", {
+      method: "GET",
+      credentials: "include",
+      cache: "no-store",
+    });
+    expect(mockRequireSession).not.toHaveBeenCalled();
   });
 
   it("leaves Träger, moto schule and caterer on the page on a 401", async () => {
-    mockTransportFetch.mockResolvedValueOnce(
+    mockFetch.mockResolvedValueOnce(
       Response.json({ status: 401 }, { status: 401 }),
     );
 
@@ -444,6 +609,12 @@ describe("bffJson", () => {
       });
       // @ts-expect-error: the route belongs to the Träger portal
       void bffJson("tenant", "GET /traeger/absence-types/");
+      // A route its own route.ts serves, with the backend's answer.
+      void bffJson("tenant", "GET /api/settings/login-image");
+      // @ts-expect-error: a session step answers the BFF's own shape
+      void bffJson("tenant", "POST /auth/login", { body: {} });
+      // @ts-expect-error: the wall display answers without the envelope
+      void bffJson("tenant", "GET /api/display/dashboard");
       // @ts-expect-error: the path parameter is missing
       void bffJson("tenant", "DELETE /api/activities/{id}");
       void bffJson("tenant", "GET /api/activities/categories", {

@@ -302,6 +302,12 @@ type ContractSummary struct {
 	// of an application: only an imported contract is linked to a child
 	// record by hand (ADR 0307).
 	Imported bool `json:"imported"`
+	// FollowsBookings tells that the contract has an application child: its
+	// versions follow the approved bookings of that child. Every contract
+	// from an application does, and an imported one once it is bound to the
+	// enrollment of its child (ADR 0309); such a contract keeps its child
+	// record and takes no offering correction from a file.
+	FollowsBookings bool `json:"follows_bookings"`
 }
 
 // ContractList is the filtered list with the count of every status over all

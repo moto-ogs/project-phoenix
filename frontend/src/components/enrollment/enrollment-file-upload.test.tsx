@@ -272,7 +272,7 @@ describe("FileUploadInput", () => {
     expect((init.body as FormData).get("status_token")).toBe("status-token");
   });
 
-  it("uses the parent upload endpoint when the form asks for it", async () => {
+  it("uses the parent upload endpoint when the form provides one", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValue(

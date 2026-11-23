@@ -576,6 +576,10 @@ func (c *CareBilling) careMonthInput(ctx context.Context, organizationID int64, 
 	if in.invoiced, err = c.store.InvoicedContracts(ctx, organizationID, run.BillingMonth); err != nil {
 		return in, err
 	}
+	in.issuedChildren, err = c.issuedCareChildren(ctx, organizationID, missingCareChildren(in.versions, in.invoiced))
+	if err != nil {
+		return in, err
+	}
 	if in.familyCounts, err = c.store.FamilyChildCounts(ctx, organizationID); err != nil {
 		return in, err
 	}
@@ -594,11 +598,42 @@ func (c *CareBilling) careMonthInput(ctx context.Context, organizationID int64, 
 	return in, nil
 }
 
+// missingCareChildren names the issued contracts whose identities are not
+// in the versions of the month.
+func missingCareChildren(versions []parentbilling.CareContractVersion, issued map[int64]parentbilling.CareInvoice) []int64 {
+	if len(issued) == 0 {
+		return nil
+	}
+	current := make(map[int64]bool, len(versions))
+	for _, version := range versions {
+		current[version.ContractID] = true
+	}
+	var missing []int64
+	for id := range issued {
+		if !current[id] {
+			missing = append(missing, id)
+		}
+	}
+	return missing
+}
+
+func (c *CareBilling) issuedCareChildren(ctx context.Context, organizationID int64, ids []int64) (map[int64]parentbilling.CareContractChild, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	children, err := c.contracts.ChildrenOf(ctx, organizationID, ids)
+	if err != nil {
+		return nil, fmt.Errorf("parent billing: read children of issued contracts: %w", err)
+	}
+	return children, nil
+}
+
 // detail is the run with its preview or its issued invoices and the number
 // range the release uses.
 func (c *CareBilling) detail(ctx context.Context, reviewer parentbilling.HolidayReviewer, run parentbilling.CareRun) (parentbilling.CareRunDetail, error) {
 	detail := parentbilling.CareRunDetail{CareRun: run, Unpriced: []parentbilling.CareUnpriced{}, Duplicates: []parentbilling.CareDuplicate{},
-		MealGaps: []parentbilling.CareMealGap{}, MealUnbilled: []parentbilling.CareMealUnbilled{}, MealChanged: []parentbilling.CareMealChanged{}}
+		JoinedChildren: []parentbilling.CareJoinedChild{},
+		MealGaps:       []parentbilling.CareMealGap{}, MealUnbilled: []parentbilling.CareMealUnbilled{}, MealChanged: []parentbilling.CareMealChanged{}}
 	if run.Status == parentbilling.RunDiscarded {
 		return c.discardedDetail(ctx, reviewer.OrganizationID, detail)
 	}
@@ -701,7 +736,7 @@ func versionContracts(versions []parentbilling.CareContractVersion) []int64 {
 }
 
 // shownContracts names the contracts whose child a detail shows: on an
-// invoice, without a price or as a duplicate.
+// invoice, without a price, as a duplicate or joined across schools.
 func shownContracts(detail parentbilling.CareRunDetail) []int64 {
 	ids := []int64{}
 	for _, invoice := range detail.Invoices {
@@ -713,10 +748,19 @@ func shownContracts(detail parentbilling.CareRunDetail) []int64 {
 		}
 	}
 	for _, duplicate := range detail.Duplicates {
-		for _, contract := range duplicate.Contracts {
-			if !slices.Contains(ids, contract.ContractID.Int64()) {
-				ids = append(ids, contract.ContractID.Int64())
-			}
+		ids = appendContracts(ids, duplicate.Contracts)
+	}
+	for _, child := range detail.JoinedChildren {
+		ids = appendContracts(ids, child.Contracts)
+	}
+	return ids
+}
+
+// appendContracts adds the contracts not named yet.
+func appendContracts(ids []int64, contracts []parentbilling.CareDuplicateContract) []int64 {
+	for _, contract := range contracts {
+		if !slices.Contains(ids, contract.ContractID.Int64()) {
+			ids = append(ids, contract.ContractID.Int64())
 		}
 	}
 	return ids

@@ -1,6 +1,18 @@
 package carecontract
 
-import "context"
+import (
+	"context"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+)
+
+// BillingChild is the identity of a contract's child for sibling counting.
+type BillingChild struct {
+	StudentID *int64
+	FirstName string
+	LastName  string
+	BirthDate *calendar.Date
+}
 
 // ContractBilling is what the parents' billing reads of the contracts
 // (#4681, #4684): the versions in force and the party each monthly invoice
@@ -15,4 +27,7 @@ type ContractBilling interface {
 	// first party. A contract of another Träger or without a party has
 	// none.
 	BillingRecipients(ctx context.Context, organizationID int64, contractIDs []int64) (map[int64]Party, error)
+	// BillingChildren also reads ended contracts that no longer overlap the
+	// billing month. Only the supplied contracts of this Träger are read.
+	BillingChildren(ctx context.Context, organizationID int64, contractIDs []int64) (map[int64]BillingChild, error)
 }

@@ -36,6 +36,9 @@ const acceptedContractApplicationsSQL = `SELECT child.id AS request_child_id,
 	request.legal_blocks_snapshot, request.submission_source, child.reviewed_at AS accepted_at,
 	request.family_children, request.family_children_stated_at,
 	child.rollover_source_child_id IS NOT NULL AS renewal,
+	CASE WHEN request.submission_source = '` + enrollment.RequestSourceContractImport + `'
+		AND jsonb_typeof(request.source_metadata->'contract_id') = 'number'
+		THEN (request.source_metadata->>'contract_id')::bigint END AS source_contract_id,
  phase.id AS phase_id, phase.name AS phase_name, phase.service_start_date, child.activate_on
 	FROM enrollment.request_children AS child
 	JOIN enrollment.requests AS request ON request.id = child.request_id AND request.tenant_id = child.tenant_id
@@ -43,12 +46,27 @@ const acceptedContractApplicationsSQL = `SELECT child.id AS request_child_id,
 	WHERE child.tenant_id = ? AND child.status = ? AND request.withdrawn_at IS NULL
 		AND NOT child.matched_by_office
 		AND (cardinality(?::bigint[]) = 0 OR child.id = ANY(?::bigint[]))
+		AND (cardinality(?::bigint[]) = 0 OR COALESCE(child.created_student_id, child.matched_student_id) = ANY(?::bigint[]))
 	ORDER BY child.last_name, child.first_name, child.id`
 
 // AcceptedContractApplications lists accepted children whose submissions may
 // supply the contract party. An office match renews care only: its unrelated
 // submitter cannot become the existing student's contract party.
 func (s ContractApplicationStore) AcceptedContractApplications(ctx context.Context, requestChildIDs []int64) ([]enrollment.ContractApplication, error) {
+	return s.acceptedApplications(ctx, requestChildIDs, nil)
+}
+
+// AcceptedStudentApplications lists the accepted children of the given
+// child records only: the read of a caller that asks for named children
+// loads no other family of the school.
+func (s ContractApplicationStore) AcceptedStudentApplications(ctx context.Context, studentIDs []int64) ([]enrollment.ContractApplication, error) {
+	if len(studentIDs) == 0 {
+		return []enrollment.ContractApplication{}, nil
+	}
+	return s.acceptedApplications(ctx, nil, studentIDs)
+}
+
+func (s ContractApplicationStore) acceptedApplications(ctx context.Context, requestChildIDs, studentIDs []int64) ([]enrollment.ContractApplication, error) {
 	tx, tenantID, err := tenant.CurrentTenantTransaction[bun.Tx](ctx)
 	if err != nil {
 		return nil, fmt.Errorf("enrollment postgres: contract applications need the school transaction: %w", err)
@@ -56,9 +74,12 @@ func (s ContractApplicationStore) AcceptedContractApplications(ctx context.Conte
 	if requestChildIDs == nil {
 		requestChildIDs = []int64{}
 	}
+	if studentIDs == nil {
+		studentIDs = []int64{}
+	}
 	var rows []contractApplicationRow
 	if err := tx.NewRaw(acceptedContractApplicationsSQL, tenantID, enrollment.ChildStatusApproved, pgdialect.Array(requestChildIDs),
-		pgdialect.Array(requestChildIDs)).Scan(ctx, &rows); err != nil {
+		pgdialect.Array(requestChildIDs), pgdialect.Array(studentIDs), pgdialect.Array(studentIDs)).Scan(ctx, &rows); err != nil {
 		return nil, fmt.Errorf("enrollment postgres: contract applications: %w", err)
 	}
 	result := make([]enrollment.ContractApplication, len(rows))
@@ -88,6 +109,7 @@ type contractApplicationRow struct {
 	FamilyChildren      *int            `bun:"family_children"`
 	FamilyStatedAt      *time.Time      `bun:"family_children_stated_at"`
 	Renewal             bool            `bun:"renewal"`
+	SourceContractID    *int64          `bun:"source_contract_id"`
 }
 
 // ContractPhases reads the school's phase names and inclusive service bounds.
@@ -124,6 +146,7 @@ func (r contractApplicationRow) application(fingerprint func([]byte) string) enr
 		GuardianFirstName: r.GuardianFirstName, GuardianLastName: r.GuardianLastName, GuardianEmail: r.GuardianEmail,
 		GuardianAccountID: r.GuardianAccountID, PhaseID: r.PhaseID, PhaseName: r.PhaseName,
 		ServiceStartDate: r.ServiceStartDate, ActivateOn: r.ActivateOn,
-		FamilyChildren: r.FamilyChildren, FamilyChildrenStatedAt: r.FamilyStatedAt, Renewal: r.Renewal,
+		FamilyChildren: r.FamilyChildren, FamilyChildrenStatedAt: r.FamilyStatedAt, Renewal: r.Renewal, Source: r.SubmissionSource,
+		SourceContractID: r.SourceContractID,
 	}
 }

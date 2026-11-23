@@ -1609,10 +1609,10 @@ const EDIT_OVERLAY_BASELINE = new Map(
       "Schuljahreswechsel bearbeiten Neuer Schuljahreswechsel@268",
     ],
     "src/components/enrollment/care-offerings-editor.tsx": [
-      "Betreuungsangebot duplizieren new Neues Betreuungsangebot Betreuungsangebot bearbeiten@1012",
+      "Betreuungsangebot duplizieren new Neues Betreuungsangebot Betreuungsangebot bearbeiten@1013",
     ],
     "src/components/enrollment/phases-editor.tsx": [
-      "Anmeldephase übertragen new Neue Anmeldephase Anmeldephase bearbeiten@1040",
+      "Anmeldephase übertragen new Neue Anmeldephase Anmeldephase bearbeiten@1039",
     ],
     "src/components/files/folder-modal.tsx": [
       "Ordner bearbeiten Neuer Ordner@157",
@@ -1624,7 +1624,7 @@ const EDIT_OVERLAY_BASELINE = new Map(
       "Hinweis bearbeiten Neuer Hinweis@190",
     ],
     "src/components/timetable/calendar-period-modal.tsx": [
-      "Kalenderzeitraum bearbeiten Kalenderzeitraum anlegen@447",
+      "Kalenderzeitraum bearbeiten Kalenderzeitraum anlegen@449",
     ],
     // Kontoaktionen mit eigenem Ablauf (Begründung und Rückfrage bei der
     // Zwei-Faktor-Authentifizierung, Auflösen offener Zuordnungen bei der

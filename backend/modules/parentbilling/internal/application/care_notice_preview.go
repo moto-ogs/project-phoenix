@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
+	"maps"
 	"slices"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
@@ -18,11 +19,14 @@ import (
 // in a month of the period, the bookings the months leave out and the legal
 // remedy the notices would print.
 type noticePreview struct {
-	notices            []parentbilling.CareNotice
-	unchanged          int
-	billed             int
-	unpriced           []parentbilling.CareUnpriced
-	duplicates         []parentbilling.CareDuplicate
+	notices    []parentbilling.CareNotice
+	unchanged  int
+	billed     int
+	unpriced   []parentbilling.CareUnpriced
+	duplicates []parentbilling.CareDuplicate
+	// joined are the children the months join by their name across
+	// schools (ADR 0158, Nachtrag Schulwechsel).
+	joined             []parentbilling.CareJoinedChild
 	legalRemedyMissing bool
 	issuedOn           calendar.Date
 	fingerprint        string
@@ -59,7 +63,8 @@ func (n *CareFeeNotices) preview(ctx context.Context, organizationID int64, run 
 	if run.NoticeDate != nil {
 		issuedOn = *run.NoticeDate
 	}
-	preview := noticePreview{issuedOn: issuedOn, unpriced: []parentbilling.CareUnpriced{}, duplicates: []parentbilling.CareDuplicate{}}
+	preview := noticePreview{issuedOn: issuedOn, unpriced: []parentbilling.CareUnpriced{}, duplicates: []parentbilling.CareDuplicate{},
+		joined: []parentbilling.CareJoinedChild{}}
 	drafts, err := n.noticeDrafts(ctx, organizationID, run, in, &preview)
 	if err != nil {
 		return noticePreview{}, err
@@ -89,8 +94,36 @@ func (n *CareFeeNotices) preview(ctx context.Context, organizationID int64, run 
 func (n *CareFeeNotices) noticeDrafts(ctx context.Context, organizationID int64, run parentbilling.CareNoticeRun, in noticeInput,
 	preview *noticePreview,
 ) (map[calendar.Date][]parentbilling.CareInvoice, error) {
+	months, err := n.noticeMonths(ctx, organizationID, in)
+	if err != nil {
+		return nil, err
+	}
 	drafts := map[calendar.Date][]parentbilling.CareInvoice{}
 	billed := map[int64]bool{}
+	schools := ident.Int64s(run.SchoolIDs)
+	for _, monthIn := range months {
+		month := monthIn.month
+		review, final, err := computeNoticeMonth(monthIn, monthIn.invoiced, in.noticed[month], schools)
+		if err != nil {
+			return nil, err
+		}
+		drafts[month] = retainFailedAssessments(final, review.careMonth, in.previous, in.month.recipients, month)
+		if !month.Before(run.PeriodFrom) {
+			addBilledByInvoice(billed, monthIn.invoiced, schools)
+		}
+		preview.unpriced = appendNew(preview.unpriced, review.unpriced)
+		preview.duplicates = appendNew(preview.duplicates, review.duplicates)
+		preview.joined = appendNew(preview.joined, review.joined)
+	}
+	preview.billed = len(billed)
+	return drafts, nil
+}
+
+// noticeMonths reads all issued child identities missing from the monthly
+// versions in one batch for the whole notice run.
+func (n *CareFeeNotices) noticeMonths(ctx context.Context, organizationID int64, in noticeInput) ([]careMonthInput, error) {
+	months := make([]careMonthInput, 0, len(in.months))
+	missing := map[int64]bool{}
 	for _, month := range in.months {
 		monthIn := in.month
 		monthIn.month = month
@@ -99,19 +132,20 @@ func (n *CareFeeNotices) noticeDrafts(ctx context.Context, organizationID int64,
 		if err != nil {
 			return nil, err
 		}
-		review, final, err := computeNoticeMonth(monthIn, invoiced, in.noticed[month], ident.Int64s(run.SchoolIDs))
-		if err != nil {
-			return nil, err
+		monthIn.invoiced = invoiced
+		for _, id := range missingCareChildren(monthIn.versions, invoiced) {
+			missing[id] = true
 		}
-		drafts[month] = retainFailedAssessments(final, review.careMonth, in.previous, in.month.recipients, month)
-		if !month.Before(run.PeriodFrom) {
-			addBilledByInvoice(billed, invoiced, ident.Int64s(run.SchoolIDs))
-		}
-		preview.unpriced = appendNew(preview.unpriced, review.unpriced)
-		preview.duplicates = appendNew(preview.duplicates, review.duplicates)
+		months = append(months, monthIn)
 	}
-	preview.billed = len(billed)
-	return drafts, nil
+	children, err := n.billing.issuedCareChildren(ctx, organizationID, slices.Collect(maps.Keys(missing)))
+	if err != nil {
+		return nil, err
+	}
+	for i := range months {
+		months[i].issuedChildren = children
+	}
+	return months, nil
 }
 
 // computeNoticeMonth computes a month for the notices: every contract of an
@@ -131,6 +165,7 @@ func computeNoticeMonth(in careMonthInput, invoiced map[int64]parentbilling.Care
 		}
 	}
 	in.invoiced = issued
+	in.frozenFamilies = invoiceFamilies(invoiced)
 	computed, err := buildCareMonth(in)
 	if err != nil {
 		return reviewedMonth{}, careMonth{}, err
@@ -327,7 +362,8 @@ func (n *CareFeeNotices) withPayments(ctx context.Context, organizationID int64,
 // method, lines, installments, the months it bills with the cents the rule
 // chain allocated and the notice it amends; the contracts whose notice
 // still holds and those a monthly invoice bills; the bookings without a
-// price and the duplicates; and the legal remedy. A change of any of them
+// price, the duplicates and the children joined by their name; and the
+// legal remedy. A change of any of them
 // since the review makes the release refuse.
 func noticeFingerprint(run parentbilling.CareNoticeRun, rule string, preview noticePreview, legalRemedy string) string {
 	notices := make([]any, len(preview.notices))
@@ -350,8 +386,11 @@ func noticeFingerprint(run parentbilling.CareNoticeRun, rule string, preview not
 		Unpriced    []parentbilling.CareUnpriced  `json:"unpriced"`
 		Duplicates  []parentbilling.CareDuplicate `json:"duplicates"`
 		LegalRemedy string                        `json:"legal_remedy"`
+		// Joined stays out while empty, so a run without a joined child
+		// keeps the fingerprint it had before #7874.
+		Joined []parentbilling.CareJoinedChild `json:"joined,omitempty"`
 	}{run.ID.Int64(), ident.Int64s(run.SchoolIDs), run.PeriodFrom, preview.issuedOn, rule, notices, preview.unchanged, preview.billed,
-		preview.unpriced, preview.duplicates, legalRemedy})
+		preview.unpriced, preview.duplicates, legalRemedy, preview.joined})
 	if err != nil {
 		return ""
 	}

@@ -1,8 +1,8 @@
 import type { StatusBadgeTone } from "~/components/ui/status-badge";
-import type { ClassHandover } from "~/lib/class-handover";
-import type { Student, TeacherHint } from "~/lib/student-helpers";
+import type { Student } from "~/lib/student-helpers";
 import type { TimetableRoster } from "~/lib/timetable-operations-types";
 import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
+import type * as studentsContract from "~/lib/contract/students.generated";
 
 export const SCHULHOF_ROOM_NAME = "Schulhof";
 
@@ -445,7 +445,7 @@ export interface VisitDisplayLike {
   sickSince?: string;
   excused?: boolean;
   excusedSince?: string;
-  classHandover?: ClassHandover;
+  classHandover?: studentsContract.ClassHandover;
   photoUrl?: string;
 }
 
@@ -641,7 +641,7 @@ function mapVisitToSupervisionStudent(
     roomName?: string;
     roomColor?: string | null;
     groupNameToId?: Map<string, string>;
-    teacherHints?: ReadonlyMap<string, TeacherHint[]>;
+    teacherHints?: ReadonlyMap<string, studentsContract.TeacherHint[]>;
   },
 ): ActiveSupervisionStudent {
   const nameParts = visit.studentName?.split(" ") ?? ["", ""];
@@ -690,7 +690,7 @@ export function mapVisitsToSupervisionStudents(
     roomColor?: string | null;
     groupNameToId?: Map<string, string>;
     /** Hinweise der Lehrkraft für heute (#4795), je Kind. */
-    teacherHints?: ReadonlyMap<string, TeacherHint[]>;
+    teacherHints?: ReadonlyMap<string, studentsContract.TeacherHint[]>;
   },
 ): ActiveSupervisionStudent[] {
   return visits

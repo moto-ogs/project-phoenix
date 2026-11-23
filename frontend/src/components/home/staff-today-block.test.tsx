@@ -50,36 +50,40 @@ describe("StaffTodayBlock (#2180)", () => {
     swr.isLoading = false;
   });
 
-  it("zeigt Aufsicht, Ausfälle und Stempeluhr", () => {
+  // Krank und Urlaub stehen mit Namen in „Heute anders“, nicht noch einmal
+  // als Zahl hier (#7668).
+  it("zeigt Aufsicht, Stempeluhr und Team, aber nicht Krank und Urlaub", () => {
     render(<StaffTodayBlock analytics={analytics} />);
 
     expect(screen.getByText("In Aufsicht")).toBeInTheDocument();
     expect(screen.getByText("7")).toBeInTheDocument();
-    expect(screen.getByText("Krank")).toBeInTheDocument();
-    expect(screen.getByText("Im Urlaub")).toBeInTheDocument();
     expect(screen.getByText("6 von 8")).toBeInTheDocument();
+    expect(screen.getByText("Team gesamt")).toBeInTheDocument();
+    expect(screen.getByText("12")).toBeInTheDocument();
+    expect(screen.queryByText("Krank")).not.toBeInTheDocument();
+    expect(screen.queryByText("Im Urlaub")).not.toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "Personal heute: zum Team" }),
     ).toHaveAttribute("href", "/test-tenant/staff");
   });
 
   // Die Stempeluhr steht nur da, wo sie benutzt wird; ohne Betriebszahlen
-  // fehlt die Aufsicht, und das Team gesamt füllt den Platz.
+  // fehlt die Aufsicht, und das Team gesamt bleibt.
   it("lässt weg, was die Schule nicht nutzt", () => {
     const tiles = staffTiles(
       summary({ currentlyClockedIn: 0, expectedClockedIn: 0 }),
       undefined,
     );
 
-    expect(tiles.map((tile) => tile.label)).toEqual([
-      "Krank",
-      "Im Urlaub",
-      "Team gesamt",
-    ]);
+    expect(tiles.map((tile) => tile.label)).toEqual(["Team gesamt"]);
   });
 
-  it("zeigt nie mehr als vier Zahlen", () => {
-    expect(staffTiles(summary(), analytics)).toHaveLength(4);
+  it("zeigt mit allem genau Aufsicht, Stempeluhr und Team", () => {
+    expect(staffTiles(summary(), analytics).map((tile) => tile.label)).toEqual([
+      "In Aufsicht",
+      "Eingestempelt",
+      "Team gesamt",
+    ]);
   });
 
   it("unterscheidet einen Ladefehler von Nullen", async () => {
@@ -93,7 +97,7 @@ describe("StaffTodayBlock (#2180)", () => {
         catalogText("general.unavailable", "die Karte „Personal heute“"),
       ),
     ).toBeInTheDocument();
-    expect(screen.queryByText("Krank")).not.toBeInTheDocument();
+    expect(screen.queryByText("Team gesamt")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
     expect(swr.mutate).toHaveBeenCalled();
   });

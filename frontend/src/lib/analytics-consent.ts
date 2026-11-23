@@ -14,7 +14,7 @@ import { useSyncExternalStore } from "react";
 import { clientEnv } from "~/env.client";
 import { analyticsDeployment } from "~/lib/analytics-deployment";
 import type { AnalyticsSurface } from "~/lib/analytics-policy";
-import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";
+import { bffJson } from "~/lib/bff-fetch";
 import {
   analyticsHostSurface,
   setAnalyticsContext,
@@ -28,12 +28,6 @@ const PORTAL_SURFACES: Readonly<
   tenant: "ogs",
   parent: "parents",
   school: "school",
-};
-
-const PORTAL_PATHS: Readonly<Record<AnalyticsConsentPortal, string>> = {
-  tenant: "/api/analytics-consent",
-  parent: "/api/parent/analytics-consent",
-  school: "/api/school/analytics-consent",
 };
 
 export interface AnalyticsConsentState {
@@ -58,14 +52,6 @@ const IDLE: AnalyticsConsentState = {
   schoolAllows: false,
   dismissed: false,
 };
-
-/** The stored answer from `{ data: { granted } }`; any other shape fails. */
-function grantedOf(body: unknown): boolean | null {
-  const granted = (body as { data?: { granted?: unknown } } | null)?.data
-    ?.granted;
-  if (granted === null || typeof granted === "boolean") return granted;
-  throw new Error("analytics consent: unexpected response shape");
-}
 
 let state = IDLE;
 let sessionKey: string | null = null;
@@ -95,24 +81,25 @@ function publishConsent(consent: boolean): void {
   setAnalyticsContext({ consent });
 }
 
-async function requestConsent(
+const CONSENT_ERROR = "Nutzungsstatistik-Einwilligung fehlgeschlagen.";
+
+/** Reads the stored answer of the portal's session; null: not decided. */
+async function readConsent(
   portal: AnalyticsConsentPortal,
-  init?: RequestInit,
 ): Promise<boolean | null> {
-  const response = await transportFetch(PORTAL_PATHS[portal], {
-    cache: "no-store",
-    credentials: "include",
-    ...init,
-    headers: { "Content-Type": "application/json", ...init?.headers },
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Nutzungsstatistik-Einwilligung fehlgeschlagen (${response.status}).`,
-    );
-  }
-  // Mounted on every portal page: a hand check instead of a schema library.
-  return grantedOf(await response.json());
+  const options = { errorMessage: CONSENT_ERROR };
+  const answer = await bffJson(portal, "GET /analytics-consent/", options);
+  return answer.granted;
+}
+
+/** Stores the decision and returns the answer as stored. */
+async function storeConsent(
+  portal: AnalyticsConsentPortal,
+  granted: boolean,
+): Promise<boolean | null> {
+  const options = { body: { granted }, errorMessage: CONSENT_ERROR };
+  const answer = await bffJson(portal, "PUT /analytics-consent/", options);
+  return answer.granted;
 }
 
 /**
@@ -192,7 +179,7 @@ async function refreshAnalyticsConsent(): Promise<void> {
   if (state.status !== "ready") return;
   const current = ++sequence;
   try {
-    const granted = await requestConsent(portal);
+    const granted = await readConsent(portal);
     if (current !== sequence) return;
     refreshFailed = false;
     update({ granted });
@@ -213,7 +200,7 @@ export async function loadAnalyticsConsent(): Promise<void> {
   const current = ++sequence;
   update({ status: "loading", error: null });
   try {
-    const granted = await requestConsent(portal);
+    const granted = await readConsent(portal);
     if (current !== sequence) return;
     refreshFailed = false;
     update({ status: "ready", granted });
@@ -263,10 +250,7 @@ export async function decideAnalyticsConsent(granted: boolean): Promise<void> {
   deciding = true;
   let stored: boolean | null;
   try {
-    stored = await requestConsent(portal, {
-      method: "PUT",
-      body: JSON.stringify({ granted }),
-    });
+    stored = await storeConsent(portal, granted);
   } finally {
     deciding = false;
   }

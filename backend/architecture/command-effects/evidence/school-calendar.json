@@ -3105,6 +3105,14 @@
       "target_owner": "identity-access"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CalendarAppointmentChanges.Announce",
+      "binding_digest": "a33960403d741b2350288c4e2c5dd807",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal/internal/ports.AppointmentChanges.Announce",
+      "source_owner": "school-calendar",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/application/realtimeevents.BoundTenantSignal.Announce",
+      "target_owner": "delivery-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CalendarAppointmentMails.AppointmentMails",
       "binding_digest": "0857f501798045d0d0a6e80d81fa5bfb",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal/internal/ports.AppointmentMails.AppointmentMails",

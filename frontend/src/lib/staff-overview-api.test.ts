@@ -8,8 +8,12 @@ import {
 import { routes } from "./contract/staff.generated";
 import type * as staffContract from "./contract/staff.generated";
 
-const sessionFetch = vi.hoisted(() => vi.fn());
-vi.mock("./session-cache", () => ({ sessionFetch }));
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
+
+const fetchMock = vi.fn();
+beforeEach(() => {
+  vi.stubGlobal("fetch", fetchMock);
+});
 
 function jsonResponse(data: unknown): Response {
   return {
@@ -84,18 +88,18 @@ describe("mapTimeAccountRow", () => {
 
 describe("staffOverviewService", () => {
   beforeEach(() => {
-    sessionFetch.mockReset();
+    fetchMock.mockReset();
   });
   afterEach(() => {
     vi.clearAllMocks();
   });
 
   it("requests the selected period", async () => {
-    sessionFetch.mockResolvedValue(jsonResponse(summaryFixture));
+    fetchMock.mockResolvedValue(jsonResponse(summaryFixture));
 
     await staffOverviewService.getDashboardSummary("week");
 
-    expect(sessionFetch).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/staff/dashboard-summary?period=week",
       { method: "GET" },
     );
@@ -107,25 +111,25 @@ describe("staffOverviewService", () => {
       await expect(staffOverviewService.getTimeAccounts(query)).rejects.toThrow(
         "Jahr und Monat müssen gemeinsam angegeben werden",
       );
-      expect(sessionFetch).not.toHaveBeenCalled();
+      expect(fetchMock).not.toHaveBeenCalled();
     },
   );
 
   it("omits year/month when neither is given", async () => {
-    sessionFetch.mockResolvedValue(
+    fetchMock.mockResolvedValue(
       jsonResponse({ year: 2026, month: 7, rows: [] }),
     );
 
     await staffOverviewService.getTimeAccounts();
 
-    expect(sessionFetch).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/staff/time-tracking/overview",
       { method: "GET" },
     );
   });
 
   it("forwards month, employment type and saldo bounds", async () => {
-    sessionFetch.mockResolvedValue(
+    fetchMock.mockResolvedValue(
       jsonResponse({ year: 2026, month: 6, rows: [] }),
     );
 
@@ -137,7 +141,7 @@ describe("staffOverviewService", () => {
       saldoMax: 600,
     });
 
-    const url = sessionFetch.mock.calls[0]?.[0] as string;
+    const url = fetchMock.mock.calls[0]?.[0] as string;
     expect(url).toContain("year=2026");
     expect(url).toContain("month=6");
     expect(url).toContain("employment_type=part_time");
@@ -146,17 +150,17 @@ describe("staffOverviewService", () => {
   });
 
   it("sends saldo_min=0 rather than dropping a zero bound", async () => {
-    sessionFetch.mockResolvedValue(
+    fetchMock.mockResolvedValue(
       jsonResponse({ year: 2026, month: 7, rows: [] }),
     );
 
     await staffOverviewService.getTimeAccounts({ saldoMin: 0 });
 
-    expect(sessionFetch.mock.calls[0]?.[0]).toContain("saldo_min=0");
+    expect(fetchMock.mock.calls[0]?.[0]).toContain("saldo_min=0");
   });
 
   it("survives a null rows array", async () => {
-    sessionFetch.mockResolvedValue(
+    fetchMock.mockResolvedValue(
       jsonResponse({ year: 2026, month: 7, rows: null }),
     );
 
@@ -168,7 +172,7 @@ describe("staffOverviewService", () => {
   });
 
   it("throws a German message on a failed response", async () => {
-    sessionFetch.mockResolvedValue({ ok: false } as Response);
+    fetchMock.mockResolvedValue({ ok: false } as Response);
 
     await expect(staffOverviewService.getTimeAccounts()).rejects.toThrow(
       "Zeitkonten konnten nicht geladen werden",

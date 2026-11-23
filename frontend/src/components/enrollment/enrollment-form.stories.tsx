@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { EnrollmentForm } from "./enrollment-form";
 import type { PublicFormSchema } from "~/lib/enrollment-form-schema-api";
-import type { PublicCareOffering } from "~/lib/enrollment-submission-api";
+import type { CareOffering } from "~/lib/care-offering-api";
 
 // With prefetchedData the form renders the phase synchronously, as the phase
 // pages do; without it the form would load a template preview.
@@ -22,7 +22,7 @@ function schema(): PublicFormSchema {
   };
 }
 
-function offerings(): PublicCareOffering[] {
+function offerings(): CareOffering[] {
   return [
     {
       id: "11",
@@ -35,7 +35,13 @@ function offerings(): PublicCareOffering[] {
       includes_lunch: true,
       is_active: true,
       is_required: false,
-      capacity: null,
+      capacity: undefined,
+      counts_as_care: true,
+      auto_add_grade_levels: [],
+      auto_add_trigger_offering_ids: [],
+      sort_order: 0,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
     },
   ];
 }
@@ -61,6 +67,7 @@ export const Default: Story = {
       captchaConfig: null,
       legalTexts: {
         agb: "AGB Text",
+        agb_document_url: "",
         dsgvo: "Datenschutz Text",
         email_contact: "",
         photo: "",

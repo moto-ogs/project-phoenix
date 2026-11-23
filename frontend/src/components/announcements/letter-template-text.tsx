@@ -4,6 +4,7 @@ import { LinkifiedText } from "~/components/ui/linkified-text";
 import { splitLetterText } from "~/lib/parent-letter-placeholders";
 
 import { useLetterPlaceholders } from "./use-letter-placeholders";
+import type { AnnouncementApiBase } from "~/lib/parent-announcements-api";
 
 /**
  * Der Text eines Elternbriefs mit seinen Platzhaltern (#4813) als
@@ -14,7 +15,7 @@ export function LetterTemplateInline({
   text,
   apiBase,
   links = true,
-}: Readonly<{ text: string; apiBase?: string; links?: boolean }>) {
+}: Readonly<{ text: string; apiBase?: AnnouncementApiBase; links?: boolean }>) {
   const { labels } = useLetterPlaceholders(apiBase);
   return (
     <>
@@ -47,7 +48,7 @@ export function LetterTemplateInline({
 export function LetterTemplateText({
   text,
   apiBase,
-}: Readonly<{ text: string; apiBase?: string }>) {
+}: Readonly<{ text: string; apiBase?: AnnouncementApiBase }>) {
   return (
     <>
       <p className="text-sm leading-6 whitespace-pre-line text-gray-800">

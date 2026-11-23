@@ -324,6 +324,26 @@
       "target_owner": "settings-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingCareContracts.ChildrenOf",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareContracts.ChildrenOf",
+      "reason": "Reads a batch of retained child identities for issued contracts in the caller's Träger transaction, filtered by organization and contract IDs. No locks or mutations; used only for sibling counting (#7863, ADR 0158 E1).",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingChildren",
+      "target_owner": "care-contract"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingTermContracts.ChildrenOf",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareContracts.ChildrenOf",
+      "reason": "Inherits the same organization-scoped read-only binding as parentBillingCareContracts.ChildrenOf; the adapter adds no effects.",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingChildren",
+      "target_owner": "care-contract"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingCareContracts.Recipients",
       "classification": "query",
       "effect": "query",

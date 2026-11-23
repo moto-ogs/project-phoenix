@@ -1,14 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ApiError } from "./api-error";
+import * as sessionCache from "./session-cache";
 import type { ResolvedSetting, SettingsSchema } from "./settings-api";
 
-const mockSessionFetch =
-  vi.fn<(url: string, init?: RequestInit) => Promise<Response>>();
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
-vi.mock("./session-cache", () => ({
-  sessionFetch: (...args: Parameters<typeof mockSessionFetch>) =>
-    mockSessionFetch(...args),
-}));
+const fetchMock =
+  vi.fn<(url: string, init?: RequestInit) => Promise<Response>>();
+beforeEach(() => {
+  vi.stubGlobal("fetch", fetchMock);
+});
 
 // Import after mocking
 const {
@@ -53,20 +54,20 @@ describe("fetchSettingsSchema", () => {
     const schemaData = {
       tabs: [{ key: "operations", label: "Betrieb", categories: [] }],
     };
-    mockSessionFetch.mockResolvedValue(
+    fetchMock.mockResolvedValue(
       mockResponse(200, { status: "success", data: schemaData }),
     );
 
     const result = await fetchSettingsSchema();
 
     expect(result).toEqual(schemaData);
-    expect(mockSessionFetch).toHaveBeenCalledWith("/api/settings/schema", {
+    expect(fetchMock).toHaveBeenCalledWith("/api/settings/schema", {
       method: "GET",
     });
   });
 
   it("returns null on 401", async () => {
-    mockSessionFetch.mockResolvedValue(mockResponse(401));
+    fetchMock.mockResolvedValue(mockResponse(401));
 
     const result = await fetchSettingsSchema();
 
@@ -74,7 +75,7 @@ describe("fetchSettingsSchema", () => {
   });
 
   it("returns null on 403", async () => {
-    mockSessionFetch.mockResolvedValue(mockResponse(403));
+    fetchMock.mockResolvedValue(mockResponse(403));
 
     const result = await fetchSettingsSchema();
 
@@ -82,10 +83,10 @@ describe("fetchSettingsSchema", () => {
   });
 
   it("throws on 500 (server error)", async () => {
-    mockSessionFetch.mockResolvedValue(mockResponse(500));
+    fetchMock.mockResolvedValue(mockResponse(500));
 
     await expect(fetchSettingsSchema()).rejects.toMatchObject({ status: 500 });
-    mockSessionFetch.mockResolvedValue(mockResponse(500));
+    fetchMock.mockResolvedValue(mockResponse(500));
     await expect(fetchSettingsSchema()).rejects.toMatchObject({
       status: 500,
       code: "general.server",
@@ -93,8 +94,8 @@ describe("fetchSettingsSchema", () => {
   });
 
   it("returns null when no auth token available", async () => {
-    // sessionFetch answers a missing token with an ApiError 401.
-    mockSessionFetch.mockRejectedValue(
+    // The session gate answers a missing token with an ApiError 401.
+    vi.spyOn(sessionCache, "requireTenantSession").mockRejectedValueOnce(
       new ApiError("Authentication required", 401, {
         code: "general.permission",
       }),
@@ -103,16 +104,22 @@ describe("fetchSettingsSchema", () => {
     const result = await fetchSettingsSchema();
 
     expect(result).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   // #2517: a failed request must not read as "no settings for your role".
   it("passes a network error on instead of returning null", async () => {
-    const failure = new ApiError("Network request failed", 503, {
+    fetchMock.mockRejectedValue(new TypeError("Network request failed"));
+
+    const failure: unknown = await fetchSettingsSchema().catch(
+      (error: unknown) => error,
+    );
+    expect(failure).toBeInstanceOf(ApiError);
+    expect(failure).toMatchObject({
+      message: "Network request failed",
+      status: 503,
       code: "general.unavailable",
     });
-    mockSessionFetch.mockRejectedValue(failure);
-
-    await expect(fetchSettingsSchema()).rejects.toBe(failure);
   });
 });
 
@@ -122,12 +129,12 @@ describe("saveSettingValue", () => {
   });
 
   it("resolves on success", async () => {
-    mockSessionFetch.mockResolvedValue(
+    fetchMock.mockResolvedValue(
       mockResponse(200, { status: "success", data: null }),
     );
 
     await expect(saveSettingValue("test.key", 5)).resolves.toBeUndefined();
-    expect(mockSessionFetch).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/settings/values/test.key",
       expect.objectContaining({
         method: "PUT",
@@ -137,7 +144,7 @@ describe("saveSettingValue", () => {
   });
 
   it("throws an ApiError that keeps the status class", async () => {
-    mockSessionFetch.mockResolvedValue(
+    fetchMock.mockResolvedValue(
       mockResponse(400, {
         error: "invalid value for setting test.key: below minimum 10",
       }),
@@ -156,13 +163,13 @@ describe("clearSettingValue", () => {
   });
 
   it("resolves on 204", async () => {
-    mockSessionFetch.mockResolvedValue(mockResponse(204));
+    fetchMock.mockResolvedValue(mockResponse(204));
 
     await expect(clearSettingValue("test.key")).resolves.toBeUndefined();
   });
 
   it("throws an ApiError on 500", async () => {
-    mockSessionFetch.mockResolvedValue(mockResponse(500));
+    fetchMock.mockResolvedValue(mockResponse(500));
 
     await expect(clearSettingValue("test.key")).rejects.toMatchObject({
       status: 500,
@@ -424,23 +431,19 @@ describe("revealSettingValue", () => {
   // The catalog proxy answers the backend's data once (#2352); the nested
   // form came only from the deleted route file.
   it("returns revealed value on success", async () => {
-    mockSessionFetch.mockResolvedValue(
-      mockResponse(200, { data: { value: "1234" } }),
-    );
+    fetchMock.mockResolvedValue(mockResponse(200, { data: { value: "1234" } }));
 
     const result = await revealSettingValue("security.ogs_device_pin");
 
     expect(result).toBe("1234");
-    expect(mockSessionFetch).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/settings/values/security.ogs_device_pin/reveal",
       { method: "GET" },
     );
   });
 
   it("returns null when value is not a string", async () => {
-    mockSessionFetch.mockResolvedValue(
-      mockResponse(200, { data: { value: 1234 } }),
-    );
+    fetchMock.mockResolvedValue(mockResponse(200, { data: { value: 1234 } }));
 
     const result = await revealSettingValue("security.ogs_device_pin");
 
@@ -449,7 +452,7 @@ describe("revealSettingValue", () => {
 
   // #2517: a failed reveal is shown, not silently masked.
   it("throws an ApiError with the status class on a non-ok response", async () => {
-    mockSessionFetch.mockResolvedValue(mockResponse(403));
+    fetchMock.mockResolvedValue(mockResponse(403));
 
     await expect(
       revealSettingValue("security.ogs_device_pin"),
@@ -457,14 +460,17 @@ describe("revealSettingValue", () => {
   });
 
   it("passes a transport failure on to the caller", async () => {
-    const failure = new ApiError("Network request failed", 503, {
+    fetchMock.mockRejectedValue(new TypeError("Network request failed"));
+
+    const failure: unknown = await revealSettingValue(
+      "security.ogs_device_pin",
+    ).catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(ApiError);
+    expect(failure).toMatchObject({
+      message: "Network request failed",
+      status: 503,
       code: "general.unavailable",
     });
-    mockSessionFetch.mockRejectedValue(failure);
-
-    await expect(revealSettingValue("security.ogs_device_pin")).rejects.toBe(
-      failure,
-    );
   });
 });
 
@@ -474,30 +480,29 @@ describe("fetchDevicePinSetupReason", () => {
   });
 
   it("maps the backend status to the reason of the notice", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       mockResponse(200, { data: { setup_required: true, reason: "missing" } }),
     );
     await expect(fetchDevicePinSetupReason()).resolves.toBe("missing");
-    expect(mockSessionFetch).toHaveBeenCalledWith(
-      "/api/settings/device-pin-status",
-      { method: "GET" },
-    );
+    expect(fetchMock).toHaveBeenCalledWith("/api/settings/device-pin-status", {
+      method: "GET",
+    });
 
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       mockResponse(200, {
         data: { setup_required: true, reason: "too_simple" },
       }),
     );
     await expect(fetchDevicePinSetupReason()).resolves.toBe("too_simple");
 
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       mockResponse(200, { data: { setup_required: false } }),
     );
     await expect(fetchDevicePinSetupReason()).resolves.toBeNull();
   });
 
   it("throws an ApiError that keeps the status", async () => {
-    mockSessionFetch.mockResolvedValue(mockResponse(403, {}));
+    fetchMock.mockResolvedValue(mockResponse(403, {}));
 
     await expect(fetchDevicePinSetupReason()).rejects.toMatchObject({
       status: 403,

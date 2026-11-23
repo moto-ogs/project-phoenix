@@ -10,7 +10,6 @@ import { MyDayBlock } from "~/components/home/my-day-block";
 import { MyGroupBlock } from "~/components/home/my-group-block";
 import { OpenRequestsBlock } from "~/components/home/open-requests-block";
 import { RemindersBlock } from "~/components/home/reminders-block";
-import { StaffNoticesBlock } from "~/components/home/staff-notices-block";
 import { DayChangesBlock } from "~/components/home/day-changes-block";
 import { StaffTodayBlock } from "~/components/home/staff-today-block";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
@@ -536,8 +535,6 @@ export function HomeBlockContent({
       return <MyDayBlock />;
     case "section.my_group":
       return <MyGroupBlock />;
-    case "section.staff_notices":
-      return <StaffNoticesBlock />;
     case "section.staff_today":
       return <StaffTodayBlock analytics={data.analytics} />;
     case "section.messages":

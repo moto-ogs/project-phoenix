@@ -1,5 +1,6 @@
 "use client";
 
+import type * as staffContract from "~/lib/contract/staff.generated";
 import { Plus } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
@@ -65,10 +66,7 @@ type Draft = {
 // Keyed by the API field names, so a server field error lands on the same
 // control as the local check (#2514).
 type FieldErrors = {
-  readonly start_date?: string;
-  readonly end_date?: string;
-  readonly daily_minutes?: string;
-  readonly weekday_minutes?: string;
+  readonly [Field in keyof staffContract.targetOverrideRequest]?: string;
 };
 
 const HOURS_ERROR = "Bitte 0 bis 12 Stunden eingeben.";

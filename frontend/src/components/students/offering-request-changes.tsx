@@ -12,10 +12,7 @@ import { Checkbox } from "~/components/ui/checkbox";
 import { SectionLabel } from "~/components/ui/section-label";
 import { StatusBadge } from "~/components/ui/status-badge";
 import type * as studentsContract from "~/lib/contract/students.generated";
-import type {
-  OfferingRequestDiffLine,
-  StaffOfferingRequest,
-} from "~/lib/offering-request-review-api";
+import type { StaffOfferingRequest } from "~/lib/offering-request-review-api";
 
 const NO_EXCLUDED_OFFERINGS: readonly string[] = [];
 
@@ -26,7 +23,9 @@ function joinNames(names: readonly string[]): string {
 
 // automaticHint says why a line appeared. Kept to one short sentence: the
 // review card must be readable at a glance.
-function automaticHint(entry: OfferingRequestDiffLine): string {
+function automaticHint(
+  entry: studentsContract.OfferingRequestDiffResponse,
+): string {
   const names = entry.trigger_names ?? [];
   const attributedDays = entry.rule_days ?? entry.automatic_days;
   const partial = attributedDays !== undefined && attributedDays !== entry.new;
@@ -42,8 +41,8 @@ function automaticHint(entry: OfferingRequestDiffLine): string {
 
 // cascadeSourceName names the unticked line a greyed dependent hangs on.
 function cascadeSourceName(
-  entry: OfferingRequestDiffLine,
-  diff: readonly OfferingRequestDiffLine[],
+  entry: studentsContract.OfferingRequestDiffResponse,
+  diff: readonly studentsContract.OfferingRequestDiffResponse[],
   removed: ReadonlySet<string>,
 ): string {
   for (const id of entry.trigger_ids ?? []) {

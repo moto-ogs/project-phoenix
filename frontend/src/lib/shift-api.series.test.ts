@@ -1,21 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mockSessionFetch = vi.hoisted(() => vi.fn());
+const fetchMock = vi.hoisted(() => vi.fn());
 
-vi.mock("./session-cache", () => ({
-  sessionFetch: mockSessionFetch,
-}));
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
+
+beforeEach(() => {
+  vi.stubGlobal("fetch", fetchMock);
+});
 
 import { ApiError } from "./api-error";
 import { staffShiftSeriesService } from "./shift-api";
 
 beforeEach(() => {
-  mockSessionFetch.mockReset();
+  fetchMock.mockReset();
 });
 
 describe("staffShiftSeriesService", () => {
   it("creates a series with a snake_case backend body", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json(
         {
           data: {
@@ -50,17 +52,17 @@ describe("staffShiftSeriesService", () => {
       skippedNonWorkingDays: 0,
     });
 
-    expect(mockSessionFetch).toHaveBeenCalledWith("/api/staff-shifts/series", {
+    expect(fetchMock).toHaveBeenCalledWith("/api/staff-shifts/series", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        staff_id: 7,
+        staff_id: "7",
         weekdays: [1, 3],
         start_time: "09:00",
         end_time: "12:00",
         break_minutes: 15,
-        shift_type_id: 4,
-        calendar_period_id: 8,
+        shift_type_id: "4",
+        calendar_period_id: "8",
         week_pattern: 1,
         valid_from: "2026-09-01",
         valid_until: null,
@@ -70,7 +72,7 @@ describe("staffShiftSeriesService", () => {
   });
 
   it("defaults missing skipped_dates to an empty list and null type stays null", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json(
         {
           data: {
@@ -105,7 +107,7 @@ describe("staffShiftSeriesService", () => {
       skippedNonWorkingDays: 0,
     });
 
-    const init = mockSessionFetch.mock.calls[0]?.[1] as RequestInit | undefined;
+    const init = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
     const body = JSON.parse((init?.body as string) ?? "{}") as Record<
       string,
       unknown
@@ -115,7 +117,7 @@ describe("staffShiftSeriesService", () => {
   });
 
   it("splits a series sending only the edited fields", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json(
         {
           data: {
@@ -144,24 +146,21 @@ describe("staffShiftSeriesService", () => {
       skippedNonWorkingDays: 6,
     });
 
-    expect(mockSessionFetch).toHaveBeenCalledWith(
-      "/api/staff-shifts/series/5/split",
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          effective_date: "2026-10-05",
-          start_time: "10:00",
-          end_time: "14:00",
-          break_minutes: 30,
-          shift_type_id: null,
-        }),
-      },
-    );
+    expect(fetchMock).toHaveBeenCalledWith("/api/staff-shifts/series/5/split", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        effective_date: "2026-10-05",
+        start_time: "10:00",
+        end_time: "14:00",
+        break_minutes: 30,
+        shift_type_id: null,
+      }),
+    });
   });
 
   it("sends the edited rule fields when the series editor changes them", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json(
         { data: { series_id: "9", created: 7, skipped_dates: [] } },
         { status: 200 },
@@ -181,14 +180,14 @@ describe("staffShiftSeriesService", () => {
       includeSchoolBreaks: true,
     });
 
-    const init = mockSessionFetch.mock.calls[0]?.[1] as RequestInit | undefined;
+    const init = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
     expect(JSON.parse((init?.body as string) ?? "{}")).toEqual({
       effective_date: "2026-10-05",
       occurrence_shift_id: "42",
       start_time: "10:00",
       end_time: "14:00",
       break_minutes: 30,
-      shift_type_id: 4,
+      shift_type_id: "4",
       weekdays: [2, 5],
       week_pattern: 2,
       valid_until: "2026-11-02",
@@ -197,7 +196,7 @@ describe("staffShiftSeriesService", () => {
   });
 
   it("keeps a large occurrence ID lossless in the split payload", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json(
         { data: { series_id: "9", created: 7, skipped_dates: [] } },
         { status: 200 },
@@ -213,14 +212,14 @@ describe("staffShiftSeriesService", () => {
       shiftTypeId: null,
     });
 
-    const init = mockSessionFetch.mock.calls[0]?.[1] as RequestInit | undefined;
+    const init = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
     expect(JSON.parse((init?.body as string) ?? "{}")).toMatchObject({
       occurrence_shift_id: "9223372036854775807",
     });
   });
 
   it("sends an explicit null valid_until to run the series to the period end", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json(
         { data: { series_id: 9, created: 7, skipped_dates: [] } },
         { status: 200 },
@@ -236,7 +235,7 @@ describe("staffShiftSeriesService", () => {
       validUntil: null,
     });
 
-    const init = mockSessionFetch.mock.calls[0]?.[1] as RequestInit | undefined;
+    const init = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
     const body = JSON.parse((init?.body as string) ?? "{}") as Record<
       string,
       unknown
@@ -248,7 +247,7 @@ describe("staffShiftSeriesService", () => {
   });
 
   it("loads the stored rule behind a series shift", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json(
         {
           data: {
@@ -285,11 +284,13 @@ describe("staffShiftSeriesService", () => {
       includeSchoolBreaks: true,
     });
 
-    expect(mockSessionFetch).toHaveBeenCalledWith("/api/staff-shifts/series/5");
+    expect(fetchMock).toHaveBeenCalledWith("/api/staff-shifts/series/5", {
+      method: "GET",
+    });
   });
 
   it("maps a rule without weekdays, type, or end date", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json(
         {
           data: {
@@ -322,7 +323,7 @@ describe("staffShiftSeriesService", () => {
   });
 
   it("maps a failed rule load onto an ApiError", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json({ detail: "shift series not found" }, { status: 404 }),
     );
 
@@ -330,13 +331,14 @@ describe("staffShiftSeriesService", () => {
     await expect(failure).rejects.toBeInstanceOf(ApiError);
     await expect(failure).rejects.toMatchObject({
       status: 404,
-      message: "shift series not found",
+      message: "Serie konnte nicht geladen werden",
+      detail: "shift series not found",
       code: "general.input",
     });
   });
 
   it("ends a series from the given date", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json({ data: { series_id: "5", deleted: 6 } }, { status: 200 }),
     );
 
@@ -344,14 +346,14 @@ describe("staffShiftSeriesService", () => {
       staffShiftSeriesService.endSeries("5", "2026-10-05"),
     ).resolves.toBeUndefined();
 
-    expect(mockSessionFetch).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/staff-shifts/series/5?from=2026-10-05",
       { method: "DELETE" },
     );
   });
 
   it("maps failures onto an ApiError", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json({ detail: "invalid shift series" }, { status: 400 }),
     );
     const split = staffShiftSeriesService.splitSeries("5", {
@@ -364,18 +366,20 @@ describe("staffShiftSeriesService", () => {
     await expect(split).rejects.toBeInstanceOf(ApiError);
     await expect(split).rejects.toMatchObject({
       status: 400,
-      message: "invalid shift series",
+      message: "Schicht-Serie konnte nicht gespeichert werden",
+      detail: "invalid shift series",
       code: "general.input",
     });
 
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json({ detail: "shift series not found" }, { status: 404 }),
     );
     const end = staffShiftSeriesService.endSeries("5", "2026-10-05");
     await expect(end).rejects.toBeInstanceOf(ApiError);
     await expect(end).rejects.toMatchObject({
       status: 404,
-      message: "shift series not found",
+      message: "Schicht-Serie konnte nicht beendet werden",
+      detail: "shift series not found",
       code: "general.input",
     });
   });

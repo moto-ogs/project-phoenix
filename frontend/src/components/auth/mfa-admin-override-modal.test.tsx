@@ -29,6 +29,11 @@ function render(ui: ReactNode) {
 
 const toastSuccess = vi.fn();
 const toastError = vi.fn();
+// The staff session gate lets the request through; fetch gets the answer on.
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
 vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/contexts/ToastContext")>()),
   useToast: () => ({

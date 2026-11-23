@@ -23,6 +23,14 @@ type careMonthInput struct {
 	tariffs    []parentbilling.CareTariff
 	invoiced   map[int64]parentbilling.CareInvoice
 	recipients map[int64]parentbilling.CareRecipient
+	// issuedChildren identifies issued contracts outside the versions in
+	// force; a notice preview may compute a month with only some of them.
+	issuedChildren map[int64]parentbilling.CareContractChild
+	// frozenFamilies are the families of every invoice issued for the
+	// month, those a notice preview computes again included, so both of its
+	// computations decide a school change alike (#7874); nil reads them from
+	// invoiced.
+	frozenFamilies map[int64]string
 	// rules and evidences feed the rule chain (#4685); without them every
 	// invoice is its base price.
 	rules     []parentbilling.ContributionRule
@@ -47,10 +55,13 @@ type careMonth struct {
 	// mandates are the SEPA mandates the invoices took (#4695).
 	mandates []parentbilling.SEPAMandate
 	// childNumbers are the numbers of children the invoices took (#7007).
-	childNumbers   []parentbilling.ChildDebtorNumber
-	invoices       []parentbilling.CareInvoice
-	unpriced       []parentbilling.CareUnpriced
-	duplicates     []parentbilling.CareDuplicate
+	childNumbers []parentbilling.ChildDebtorNumber
+	invoices     []parentbilling.CareInvoice
+	unpriced     []parentbilling.CareUnpriced
+	duplicates   []parentbilling.CareDuplicate
+	// joined are the children with a record at each of several schools
+	// the month bills as one (ADR 0158, Nachtrag Schulwechsel).
+	joined         []parentbilling.CareJoinedChild
 	billed         int
 	billedBySchool map[int64]int
 	// feeNoticesBySchool names per school the Jahresbescheide that assess
@@ -128,15 +139,19 @@ func buildCareMonth(in careMonthInput) (careMonth, error) {
 	if err := checkVersions(byContract, order); err != nil {
 		return careMonth{}, err
 	}
-	duplicates, held := childMonthHolds(in.month, in.rule, byContract, order)
-	entries := monthEntries(in.month, byContract, order)
+	// One grouping of the children for the billed days (E2), the
+	// duplicates (E3), the sibling chain and the review (ADR 0158 E1).
+	grouping := groupCare(byContract, order, contractFamilies(byContract, in.recipients), in.issuedChildIdentities(), in.issuedFamilies())
+	children := grouping.children
+	entries := monthEntries(in.month, byContract, children)
+	duplicates, held := childMonthHolds(in.month, in.rule, byContract, children, entries)
 	prices := newPriceBook(in.tariffs)
 	free := newFreeMonths(in.lists)
 	result := careMonth{invoices: []parentbilling.CareInvoice{}, unpriced: []parentbilling.CareUnpriced{}, duplicates: duplicates,
-		freeBySchool: map[int64]int{}}
+		joined: joinedChildren(children, grouping.joined, byContract), freeBySchool: map[int64]int{}}
 	var chained []*careChainEntry
 	var unbilled []careContractPlace
-	childOf := childKeys(byContract, order)
+	childOf := grouping.keys
 	for _, contractID := range order {
 		if _, issued := in.invoiced[contractID]; issued {
 			continue
@@ -157,6 +172,9 @@ func buildCareMonth(in careMonthInput) (careMonth, error) {
 			continue
 		}
 		if len(invoice.Positions) == 0 {
+			// Another contract of the child bills the month (ADR 0158 E2):
+			// this one gets no invoice, but its child counts at its school.
+			unbilled = appendInForce(unbilled, in, byContract[contractID], entries[contractID], childOf[contractID])
 			continue
 		}
 		invoice.Recipient = in.recipients[contractID]
@@ -169,6 +187,36 @@ func buildCareMonth(in careMonthInput) (careMonth, error) {
 	return result, nil
 }
 
+// issuedFamilies are the families the issued invoices of the month froze,
+// by contract.
+func (in careMonthInput) issuedFamilies() map[int64]string {
+	if in.frozenFamilies != nil {
+		return in.frozenFamilies
+	}
+	return invoiceFamilies(in.invoiced)
+}
+
+// invoiceFamilies are the families the invoices froze, by contract, as the
+// sibling chain counts them (familyOf).
+func invoiceFamilies(invoiced map[int64]parentbilling.CareInvoice) map[int64]string {
+	families := make(map[int64]string, len(invoiced))
+	for contractID, invoice := range invoiced {
+		families[contractID] = invoiceFamily(invoice)
+	}
+	return families
+}
+
+// issuedChildIdentities excludes notices that this preview recomputes.
+func (in careMonthInput) issuedChildIdentities() map[int64]parentbilling.CareContractChild {
+	children := make(map[int64]parentbilling.CareContractChild, len(in.issuedChildren))
+	for id, child := range in.issuedChildren {
+		if _, issued := in.invoiced[id]; issued {
+			children[id] = child
+		}
+	}
+	return children
+}
+
 // chainCareMonth runs the rule chain over the drafts and the issued
 // invoices of the month and sorts the drafts. result.invoices no longer
 // grows: the entries point into it.
@@ -178,7 +226,8 @@ func chainCareMonth(result *careMonth, in careMonthInput, chained []*careChainEn
 	for i, entry := range chained {
 		entry.invoice = &result.invoices[i]
 	}
-	chained = append(chained, issuedCareEntries(in.invoiced, childOf, byContract)...)
+	chained = append(chained, issuedCareEntries(in.invoiced, childOf, byContract, in.issuedChildren)...)
+	knownBirthDates(chained, childOf, byContract)
 	result.billed = len(in.invoiced)
 	result.billedBySchool = make(map[int64]int)
 	result.feeNoticesBySchool = make(map[int64][]string)
@@ -214,12 +263,22 @@ func (m *careMonth) countFree(in careMonthInput, versions []parentbilling.CareCo
 // appendInForce adds the place of a contract that books care in the month
 // but gets no draft, so a sibling rule still sees its child at its school.
 func appendInForce(places []careContractPlace, in careMonthInput, versions []parentbilling.CareContractVersion, entry bool, child string) []careContractPlace {
-	if len(tracksOf(in.month, in.rule, versions, entry)) == 0 {
+	if !booksCareIn(in, versions, entry) {
 		return places
 	}
 	head := versions[0]
 	family := parentbilling.ContractFamilyKey(in.recipients[head.ContractID].Email, head.ContractID)
 	return append(places, careContractPlace{family: family, child: child, school: head.SchoolID})
+}
+
+// booksCareIn tells whether a contract books care on a day of the month.
+// Under the full month a contract may bill nothing because another contract
+// of its child bills the month (ADR 0158 E2); it still books care on its
+// days, read day by day like pro rata, and counts for a sibling rule at its
+// school (#7863, ADR 0305 Nachtrag).
+func booksCareIn(in careMonthInput, versions []parentbilling.CareContractVersion, entry bool) bool {
+	return len(tracksOf(in.month, in.rule, versions, entry)) > 0 ||
+		len(tracksOf(in.month, parentbilling.MonthRuleProRata, versions, false)) > 0
 }
 
 // familyChildrenIn keys the confirmed numbers valid in the month by the
@@ -236,9 +295,29 @@ func familyChildrenIn(counts []parentbilling.FamilyChildCount, recipients map[in
 	return children
 }
 
+// knownBirthDates gives an entry without a birth date the one any version
+// of its child's contracts of the month names, also of a contract that
+// bills nothing (#7863): the sibling order ranks by it.
+func knownBirthDates(entries []*careChainEntry, childOf map[int64]string, byContract map[int64][]parentbilling.CareContractVersion) {
+	known := map[string]*calendar.Date{}
+	for _, contractID := range slices.Sorted(maps.Keys(byContract)) {
+		child := childOf[contractID]
+		for _, version := range byContract[contractID] {
+			if _, seen := known[child]; !seen && version.ChildBirthDate != nil {
+				known[child] = version.ChildBirthDate
+			}
+		}
+	}
+	for _, entry := range entries {
+		if entry.birthDate == nil {
+			entry.birthDate = known[entry.child]
+		}
+	}
+}
+
 // issuedCareEntries keeps earlier invoices independent of current pricing.
 func issuedCareEntries(invoiced map[int64]parentbilling.CareInvoice, childOf map[int64]string,
-	byContract map[int64][]parentbilling.CareContractVersion,
+	byContract map[int64][]parentbilling.CareContractVersion, issuedChildren map[int64]parentbilling.CareContractChild,
 ) []*careChainEntry {
 	var entries []*careChainEntry
 	// Issued invoices keep their saved recipient, base prices and net amounts,
@@ -252,6 +331,10 @@ func issuedCareEntries(invoiced map[int64]parentbilling.CareInvoice, childOf map
 		entry := &careChainEntry{invoice: &invoice, child: child, issued: true}
 		if versions := byContract[id]; len(versions) > 0 {
 			entry.birthDate = versions[0].ChildBirthDate
+		} else if identity, ok := issuedChildren[id]; ok {
+			// A contract outside the month still ranks its child by birth
+			// date, as its sibling's draft does (#7863).
+			entry.birthDate = identity.BirthDate
 		}
 		entries = append(entries, entry)
 	}

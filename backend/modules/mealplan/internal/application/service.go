@@ -436,9 +436,10 @@ func (s *Service) weekEntries(ctx context.Context, monday domain.Date) (entries 
 
 // replace sets the dishes of a day; no dishes clear it. A change of a day
 // that already had a menu tells the families with a meal booked on it in the
-// same unit of work (#7145).
-// replace writes a day. With expected set, the day is locked first and a
-// day stored differently since it was read is refused (ErrDayChanged).
+// same unit of work (#7145) and marks the day as changed for the staff
+// (#7666); saving the same menu again keeps the mark it had. With expected
+// set, the day is locked first and a day stored differently since it was
+// read is refused (ErrDayChanged).
 func (s *Service) replace(ctx context.Context, date domain.Date, dishes []mealplan.Dish, expected *[]mealplan.Dish, actorAccountID int64) error {
 	operation := "replace_day"
 	if len(dishes) == 0 {
@@ -452,7 +453,8 @@ func (s *Service) replace(ctx context.Context, date domain.Date, dishes []mealpl
 		if err != nil {
 			return stats, err
 		}
-		write := func() (domain.OperationStats, error) { return s.store.ReplaceDay(txCtx, date, dishes) }
+		changedAt := menuChangeMark(before, dishes, s.now())
+		write := func() (domain.OperationStats, error) { return s.store.ReplaceDay(txCtx, date, dishes, changedAt) }
 		if len(dishes) == 0 {
 			write = func() (domain.OperationStats, error) { return s.store.ClearDay(txCtx, date) }
 		}
@@ -466,9 +468,9 @@ func (s *Service) replace(ctx context.Context, date domain.Date, dishes []mealpl
 	})
 }
 
-// storedDay reads the day before a write when the menu-change notice or the
-// saver's read state needs it. A save with its read state holds the day's
-// lock until commit, so no other save slips in between check and write.
+// storedDay reads the day before a write. A save with its read state holds
+// the day's lock until commit, so no other save slips in between check and
+// write.
 func (s *Service) storedDay(txCtx context.Context, date domain.Date, expected *[]mealplan.Dish) ([]domain.Entry, domain.OperationStats, error) {
 	var stats domain.OperationStats
 	if expected != nil {
@@ -477,9 +479,6 @@ func (s *Service) storedDay(txCtx context.Context, date domain.Date, expected *[
 		if err != nil {
 			return nil, stats, err
 		}
-	}
-	if s.notices == nil && expected == nil {
-		return nil, stats, nil
 	}
 	before, read, err := s.store.FindWeek(txCtx, date, date)
 	stats = addStats(stats, read)

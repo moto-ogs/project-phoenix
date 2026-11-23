@@ -80,31 +80,6 @@ export function unavailableApiError(cause?: unknown): ApiError {
 }
 
 /**
- * `fetch` for domain clients: a request that never reached the API (offline
- * or DNS failure) becomes `general.unavailable` instead of a raw `TypeError`
- * like "Failed to fetch". Callers use AbortSignal to supersede stale work;
- * those cancellations must retain their normal AbortError semantics.
- */
-export async function transportFetch(
-  input: RequestInfo | URL,
-  init?: RequestInit,
-): Promise<Response> {
-  try {
-    return await fetch(input, init);
-  } catch (error) {
-    if (
-      error !== null &&
-      typeof error === "object" &&
-      "name" in error &&
-      error.name === "AbortError"
-    ) {
-      throw error;
-    }
-    throw unavailableApiError(error);
-  }
-}
-
-/**
  * The RFC 9457 error body every API answer carries (ADR 0006). `status` is the
  * HTTP status number, `detail` is developer diagnostics and never shown; the
  * user reads the catalog text for `code`.

@@ -12,7 +12,7 @@ import {
 } from "./use-holiday-guest-labels";
 
 const ben = { id: "5", school_class: "Feriengast" };
-const ida = { id: 6, school_class: "Feriengast" };
+const ida = { id: "6", school_class: "Feriengast" };
 const lia = { id: "7", school_class: "2a" };
 
 describe("useHolidayGuestLabels (#5630)", () => {

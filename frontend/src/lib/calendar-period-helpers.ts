@@ -1,3 +1,4 @@
+import { compareIds } from "~/lib/compare-ids";
 // Calendar period (Kalenderperiode) — domain types and mappers.
 //
 // Calendar periods anchor the materialization service: without an active
@@ -232,7 +233,7 @@ export function findPeriodForDate(
   const matches = periods
     .filter((p) => p.isActive)
     .filter((p) => p.startDate <= isoDate && isoDate <= p.endDate)
-    .sort((a, b) => Number(a.id) - Number(b.id));
+    .sort((a, b) => compareIds(a.id, b.id));
 
   return matches[0] ?? null;
 }
@@ -261,7 +262,7 @@ export function uniqueAssignedPeriods(
       byID.set(assignment.period.id, assignment.period);
     }
   }
-  return [...byID.values()].sort((a, b) => Number(a.id) - Number(b.id));
+  return [...byID.values()].sort((a, b) => compareIds(a.id, b.id));
 }
 
 /**

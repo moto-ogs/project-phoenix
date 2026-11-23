@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/daychangesview"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/modules/mealplan"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -32,9 +33,10 @@ type unavailableDayChangesWorkforce struct {
 	shiftsRead    bool
 }
 
-func (w *unavailableDayChangesWorkforce) ListStaffAbsences(context.Context, workforce.StaffAbsenceFilter) ([]workforce.StaffAbsence, error) {
-	w.absencesRead = true
-	return nil, errors.New("staff absences unavailable")
+// StaffDay reads the absences and the handovers of the day together (#7903).
+func (w *unavailableDayChangesWorkforce) StaffDay(context.Context, string) (workforce.StaffDay, error) {
+	w.absencesRead, w.handoversRead = true, true
+	return workforce.StaffDay{}, errors.New("staff absences and handovers unavailable")
 }
 
 func (w *unavailableDayChangesWorkforce) ListGroupSubstitutions(context.Context, workforce.GroupSubstitutionFilter) ([]workforce.GroupSubstitution, error) {
@@ -55,6 +57,13 @@ func (directDayChangesIsolation) Run(ctx context.Context, read func(context.Cont
 
 func (directDayChangesIsolation) IsFatal(error) bool { return false }
 
+// unchangedDayChangesMenu is a meal plan without a changed menu today.
+type unchangedDayChangesMenu struct{}
+
+func (unchangedDayChangesMenu) MenuChangedOn(context.Context, mealplan.Date) (bool, error) {
+	return false, nil
+}
+
 func TestDayChangesInvisibleAccountSkipsUnavailableWorkforce(t *testing.T) {
 	t.Parallel()
 	workforceSource := &unavailableDayChangesWorkforce{}
@@ -73,6 +82,10 @@ func TestDayChangesInvisibleAccountSkipsUnavailableWorkforce(t *testing.T) {
 		Activities: dayChangesActivities{},
 		// Without users:read the class source reads nothing (#7681).
 		Classes: dayChangesClasses{},
+		// Without calendar:own the appointment source answers before reading.
+		Appointments: dayChangesAppointments{},
+		// No change mark today: the Essen source answers without an entry.
+		MealPlan: dayChangesMealPlan{reads: unchangedDayChangesMenu{}},
 	})
 	require.NoError(t, err)
 
@@ -85,6 +98,8 @@ func TestDayChangesInvisibleAccountSkipsUnavailableWorkforce(t *testing.T) {
 		{Source: daychangesview.SourceClosingDays, Status: daychangesview.SourceLoaded},
 		{Source: daychangesview.SourceActivities, Status: daychangesview.SourceLoaded},
 		{Source: daychangesview.SourceClasses, Status: daychangesview.SourceLoaded},
+		{Source: daychangesview.SourceAppointments, Status: daychangesview.SourceLoaded},
+		{Source: daychangesview.SourceMealPlan, Status: daychangesview.SourceLoaded},
 	}, overview.Sources)
 	assert.Empty(t, overview.Entries)
 	assert.False(t, workforceSource.handoversRead)

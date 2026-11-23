@@ -225,7 +225,7 @@ func (n *CareFeeNotices) CareNoticeRun(ctx context.Context, reviewer parentbilli
 		return parentbilling.CareNoticeRunDetail{}, err
 	}
 	if err := n.store.InsertCareNoticeRunEvent(ctx, reviewer.OrganizationID, run.ID.Int64(), reviewer.AccountID, runEventRead,
-		map[string]any{"contract_ids": noticeContracts(detail.Notices)}); err != nil {
+		map[string]any{"contract_ids": shownNoticeContracts(detail)}); err != nil {
 		return parentbilling.CareNoticeRunDetail{}, fmt.Errorf("parent billing: record notice run read: %w", err)
 	}
 	return detail, nil
@@ -410,7 +410,8 @@ func logoMIME(logo []byte) string {
 // range the release uses.
 func (n *CareFeeNotices) detail(ctx context.Context, organizationID int64, run parentbilling.CareNoticeRun) (parentbilling.CareNoticeRunDetail, error) {
 	detail := parentbilling.CareNoticeRunDetail{CareNoticeRun: run, Notices: []parentbilling.CareNotice{},
-		Unpriced: []parentbilling.CareUnpriced{}, Duplicates: []parentbilling.CareDuplicate{}}
+		Unpriced: []parentbilling.CareUnpriced{}, Duplicates: []parentbilling.CareDuplicate{},
+		JoinedChildren: []parentbilling.CareJoinedChild{}}
 	if run.Status == parentbilling.RunDiscarded {
 		// A discarded run issued nothing and reads no contract again (#6626).
 		return detail, nil
@@ -428,6 +429,7 @@ func (n *CareFeeNotices) detail(ctx context.Context, organizationID int64, run p
 		}
 		detail.Notices, detail.Unchanged, detail.Billed = preview.notices, preview.unchanged, preview.billed
 		detail.Unpriced, detail.Duplicates = preview.unpriced, preview.duplicates
+		detail.JoinedChildren = preview.joined
 		detail.Fingerprint, detail.LegalRemedyMissing = preview.fingerprint, preview.legalRemedyMissing
 	}
 	for _, notice := range detail.Notices {
@@ -450,6 +452,16 @@ func noticeContracts(notices []parentbilling.CareNotice) []int64 {
 	ids := make([]int64, len(notices))
 	for i, notice := range notices {
 		ids[i] = notice.ContractID.Int64()
+	}
+	return ids
+}
+
+// shownNoticeContracts names the contracts whose child a notice run shows:
+// on a notice or joined across schools (#7874).
+func shownNoticeContracts(detail parentbilling.CareNoticeRunDetail) []int64 {
+	ids := noticeContracts(detail.Notices)
+	for _, child := range detail.JoinedChildren {
+		ids = appendContracts(ids, child.Contracts)
 	}
 	return ids
 }

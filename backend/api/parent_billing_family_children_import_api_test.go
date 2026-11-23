@@ -100,8 +100,9 @@ func TestFamilyChildrenImportAddsTheNumbersOfAFile(t *testing.T) {
 	assert.Equal(t, []string{"school"}, suggested.Unmapped)
 	require.NotNil(t, suggested.Mapping.ValidFrom, "without a day from the office the answer names the day it would use")
 	assert.NotEqual(t, careReductionStart, *suggested.Mapping.ValidFrom, "moto never suggests the first day of the contract")
-	// The office names the day its source proves the numbers from.
-	const provenFrom = "2027-09-01"
+	// The office names a day within the import's nine-month lookahead,
+	// distinct from the first day of the contracts.
+	const provenFrom = "2027-07-01"
 	fields := map[string]string{"mapping": fmt.Sprintf(`{"columns":{"child_first_name":"Vorname","child_last_name":"Nachname",
 		"children":"Anzahl der Kinder in der Familie unter 18 Jahren"},"school_id":%d,"valid_from":%q}`, school, provenFrom)}
 	rec = importForm(t, f.traeger, f.office.token, familyImportPreviewPath, "kinderzahl.csv", content, fields)

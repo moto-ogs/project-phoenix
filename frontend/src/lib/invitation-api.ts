@@ -1,6 +1,5 @@
-import { transportFetch } from "~/lib/api-error";
-import { buildApiError } from "~/lib/api-error-response";
-import { bffJson } from "~/lib/bff-fetch";
+import { bffJson, bffJsonUncontracted } from "~/lib/bff-fetch";
+import type * as authInvitationsContract from "~/lib/contract/auth-invitations.generated";
 import type {
   InvitationValidation,
   InvitationAcceptRequest,
@@ -35,29 +34,21 @@ export async function acceptInvitation(
   token: string,
   data: InvitationAcceptRequest,
 ): Promise<AcceptInvitationResult> {
-  const response = await transportFetch("/api/invitations/accept", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ token, ...data }),
-  });
-
-  if (!response.ok) {
-    throw await buildApiError(
-      response,
-      "Einladung konnte nicht angenommen werden.",
+  // A new account accepts without a session, an existing one with the
+  // owner's: the route file decides by `existingAccount` and forwards the
+  // backend's answer. No portal of the route's contract carries both, so
+  // bff-fetch-uncontracted.test.ts names this caller.
+  const result =
+    await bffJsonUncontracted<authInvitationsContract.AcceptInvitationResponse>(
+      "public",
+      "POST",
+      "/api/invitations/accept",
+      {
+        body: { token, ...data },
+        errorMessage: "Einladung konnte nicht angenommen werden.",
+      },
     );
-  }
-
-  const raw = (await response.json()) as Record<string, unknown>;
-  const result = (raw.data ?? raw) as Record<string, unknown>;
-  return {
-    tenantSubdomain:
-      typeof result.tenant_subdomain === "string"
-        ? result.tenant_subdomain
-        : undefined,
-  };
+  return { tenantSubdomain: result.tenant_subdomain || undefined };
 }
 
 export async function createInvitation(

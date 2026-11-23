@@ -31,12 +31,13 @@ type (
 )
 
 // signatureRequired reports whether a submission of this form needs the
-// parent's signature. A staff-entered enrollment has no parent signing it.
+// parent's signature. A staff-entered enrollment has no parent signing it,
+// and neither has the enrollment of a child of an imported care contract.
 func signatureRequired(schema *enrollmentNative.FormSchema, source string) bool {
 	if schema == nil || !schema.CoreRequirements.Required(enrollmentNative.CoreRequirementSignature) {
 		return false
 	}
-	return strings.TrimSpace(source) != enrollmentNative.RequestSourceAdminManual
+	return !enrollmentNative.StaffEnteredSubmissionSource(source)
 }
 
 // requireSignature refuses a submission or edit of a signed form without a

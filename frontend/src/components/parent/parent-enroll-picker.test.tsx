@@ -37,9 +37,11 @@ vi.mock("~/lib/parent-api", () => ({
 }));
 
 import { ParentEnrollPicker } from "./parent-enroll-picker";
-import type { EnrollablePhase } from "~/lib/parent-api";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
-function phase(overrides: Partial<EnrollablePhase> = {}): EnrollablePhase {
+function phase(
+  overrides: Partial<parentMeContract.EnrollablePhaseResponse> = {},
+): parentMeContract.EnrollablePhaseResponse {
   return {
     school_id: "1",
     school_name: "OGS Nord",

@@ -10,7 +10,9 @@ import (
 
 type Store interface {
 	FindWeek(context.Context, domain.Date, domain.Date) ([]domain.Entry, domain.OperationStats, error)
-	ReplaceDay(context.Context, domain.Date, []mealplan.Dish) (domain.OperationStats, error)
+	// ReplaceDay sets the dishes of a day; the instant marks a menu that
+	// changed after it was published (#7666), nil a day as first published.
+	ReplaceDay(context.Context, domain.Date, []mealplan.Dish, *time.Time) (domain.OperationStats, error)
 	ClearDay(context.Context, domain.Date) (domain.OperationStats, error)
 	// LockDay holds a day of the school's plan until the transaction ends,
 	// so a save's check of the stored day and its write stay together.

@@ -170,7 +170,13 @@ function GroupMessageContent() {
         ...current,
         messages: [
           ...current.messages,
-          { id, sender_name: "", body, created_at: "", attachments },
+          {
+            id,
+            sender_name: "",
+            body,
+            created_at: "",
+            attachments: [...attachments],
+          },
         ],
       }),
       request: () =>
@@ -337,7 +343,7 @@ function GroupMessageContent() {
               createdAt={message.created_at}
               pending={sendAction.stateOf(message.id)}
               attachments={message.attachments}
-              attachmentUrl={PARENT_MESSAGE_ATTACHMENTS.downloadUrl}
+              attachmentFiles={PARENT_MESSAGE_ATTACHMENTS}
               mailStatus={
                 <GroupMessageMailBadges counts={groupMails.mails[message.id]} />
               }
@@ -373,7 +379,7 @@ function GroupMessageContent() {
               sendHint="Schickt die Nachricht sofort an alle Eltern dieser Gruppennachricht."
               placeholder="Weitere Nachricht an alle Eltern…"
               attachments={{
-                uploadUrl: PARENT_MESSAGE_ATTACHMENTS.uploadUrl,
+                upload: PARENT_MESSAGE_ATTACHMENTS.upload,
                 notice: "Alle Eltern dieser Gruppennachricht sehen die Datei.",
               }}
             />

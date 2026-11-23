@@ -1,36 +1,36 @@
-import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";
+import { bffFile } from "~/lib/bff-fetch";
 import { downloadBlob, filenameFromDisposition } from "~/lib/file-download";
 
 export type RoomSnapshotExportFormat = "pdf" | "docx" | "xlsx";
 
-export interface RoomSnapshotExportRequest {
+export interface RoomSnapshotExportOptions {
   format: RoomSnapshotExportFormat;
   title: string;
   /**
-   * Rooms to include. Omit the key entirely to export every room — the backend
-   * models this as a pointer and distinguishes an absent key (no filter) from
-   * an empty list (matches nothing, so the document comes out empty).
+   * Rooms to include. Omit it to export every room — the backend models this
+   * as a pointer and distinguishes an absent key (no filter) from an empty
+   * list (matches nothing, so the document comes out empty).
    */
-  room_ids?: number[];
-  include_transit: boolean;
+  roomIds?: readonly string[];
+  includeTransit: boolean;
 }
 
 export async function exportRoomSnapshot(
-  request: RoomSnapshotExportRequest,
+  options: RoomSnapshotExportOptions,
 ): Promise<void> {
-  const response = await transportFetch("/api/rooms/export", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(request),
+  const response = await bffFile("tenant", "POST /api/rooms/export", {
+    body: {
+      format: options.format,
+      title: options.title,
+      ...(options.roomIds ? { room_ids: [...options.roomIds] } : {}),
+      include_transit: options.includeTransit,
+    },
+    errorMessage: "Room snapshot export failed",
   });
-
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "Room snapshot export failed");
-  }
 
   const blob = await response.blob();
   downloadBlob(
     blob,
-    filenameFromDisposition(response) ?? `wer-ist-wo.${request.format}`,
+    filenameFromDisposition(response) ?? `wer-ist-wo.${options.format}`,
   );
 }

@@ -111,7 +111,7 @@ export async function handleAuthFailure(): Promise<boolean> {
       // Token refresh successful. The /api/auth/token route called auth()
       // which refreshed tokens via the JWT callback and cached them in
       // refreshCache (module-level, 5-min TTL). Callers still trigger
-      // getSession() (sessionFetch, SessionProvider refetchInterval) before
+      // getSession() (renewTenantSession, SessionProvider refetchInterval) before
       // they retry, so the next request reads the current cookie.
       sessionStorage.setItem("lastSuccessfulRefresh", Date.now().toString());
       return true;

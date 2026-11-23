@@ -1,12 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mockSessionFetch = vi.fn();
+const mockFetch = vi.fn();
 const mockClearSessionCache = vi.fn();
 const mockSignOut = vi.fn().mockResolvedValue(undefined);
 
-vi.mock("~/lib/session-cache", () => ({
-  sessionFetch: (...args: unknown[]) =>
-    mockSessionFetch(...args) as Promise<Response>,
+vi.mock("~/lib/session-cache", async () => ({
+  ...(await import("~/test/mocks/plain-session-fetch")),
   clearSessionCache: () => mockClearSessionCache(),
 }));
 
@@ -31,9 +30,10 @@ const swrMutate = vi.fn().mockResolvedValue(undefined);
 describe("performStartStaffPreview", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    global.fetch = mockFetch as unknown as typeof fetch;
   });
   it("reads only allowlisted metadata and clears caches after the server swap", async () => {
-    mockSessionFetch.mockResolvedValue(
+    mockFetch.mockResolvedValue(
       Response.json({
         status: "success",
         data: {
@@ -48,7 +48,7 @@ describe("performStartStaffPreview", () => {
       targetAccountId: "42",
       targetName: "Anna Beispiel",
     });
-    expect(mockSessionFetch).toHaveBeenCalledWith(
+    expect(mockFetch).toHaveBeenCalledWith(
       "/api/auth/staff-preview",
       expect.objectContaining({ body: JSON.stringify({ account_id: "42" }) }),
     );
@@ -58,13 +58,13 @@ describe("performStartStaffPreview", () => {
     expect(mockClearSessionCache).toHaveBeenCalledOnce();
   });
   it("leaves caches alone when the BFF rejects the start or its session swap", async () => {
-    mockSessionFetch.mockResolvedValue(
+    mockFetch.mockResolvedValue(
       Response.json({ code: "general.server" }, { status: 500 }),
     );
     await expect(
       performStartStaffPreview("42", swrMutate),
     ).rejects.toMatchObject({ status: 500 });
-    expect(mockSessionFetch).toHaveBeenCalledOnce();
+    expect(mockFetch).toHaveBeenCalledOnce();
     expect(swrMutate).not.toHaveBeenCalled();
     expect(mockClearSessionCache).not.toHaveBeenCalled();
   });

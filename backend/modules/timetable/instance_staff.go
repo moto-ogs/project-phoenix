@@ -19,7 +19,7 @@ type InstanceStaff struct {
 	AbsenceReason *string
 	SickAbsenceID *int64
 	// Block is the row's block; only InstanceStaffFilter.StaffChangesOnly
-	// fills it (#7675).
+	// and WithBlock fill it (#7675, #7666).
 	Block *InstanceStaffBlock
 }
 
@@ -29,6 +29,8 @@ type InstanceStaffBlock struct {
 	Title     string
 	StartTime string
 	EndTime   string
+	// Cancelled says the block is cancelled; only WithBlock reads such rows.
+	Cancelled bool
 }
 
 type InstanceStaffInput struct {
@@ -59,8 +61,12 @@ type InstanceStaffFilter struct {
 	// rows of such a block, and fills Block, in one statement ("Heute
 	// anders", #7675). It requires Date.
 	StaffChangesOnly bool
-	Limit            int
-	Offset           int
+	// WithBlock fills Block for every row of Date, cancelled blocks
+	// included, in the same statement: the block reads of one "Heute
+	// anders" request share these rows (#7666). It requires Date.
+	WithBlock bool
+	Limit     int
+	Offset    int
 }
 
 type InstanceStaffQuery interface {

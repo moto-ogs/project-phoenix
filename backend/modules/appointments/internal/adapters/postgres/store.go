@@ -113,11 +113,7 @@ func (s *Store) ListAppointmentsVisibleToStaff(ctx context.Context, staffID int6
 	}
 	rows := []appointmentRow{}
 	query := db.NewSelect().Model(&rows).ModelTableExpr(appointmentTable).
-		Where(`("appointment".organizer_staff_id = ? OR EXISTS (
-			SELECT 1 FROM calendar.appointment_recipients ar
-			WHERE ar.appointment_id = "appointment".id AND ar.tenant_id = "appointment".tenant_id
-			  AND ar.recipient_type = ? AND ar.staff_id = ?
-		))`, staffID, recipientTypeStaff, staffID).
+		Where(staffVisibilitySQL, staffID, recipientTypeStaff, staffID).
 		Where(`"appointment".deleted_at IS NULL`).
 		OrderExpr(`"appointment".start_date, "appointment".start_time, "appointment".id`)
 	query = withTenant(applyAppointmentWindow(query, from, to), "appointment", tenantID)
@@ -183,6 +179,14 @@ func (s *Store) ListGuardianCancellationTombstones(ctx context.Context, guardian
 	stats.Rows = int64(len(rows))
 	return appointmentsToPublic(rows), stats, err
 }
+
+// staffVisibilitySQL is the own calendar of a staff member: the appointments
+// it organizes or is a staff recipient of.
+const staffVisibilitySQL = `("appointment".organizer_staff_id = ? OR EXISTS (
+	SELECT 1 FROM calendar.appointment_recipients ar
+	WHERE ar.appointment_id = "appointment".id AND ar.tenant_id = "appointment".tenant_id
+	  AND ar.recipient_type = ? AND ar.staff_id = ?
+))`
 
 const guardianVisibilitySQL = `EXISTS (
 	SELECT 1 FROM calendar.appointment_recipients ar

@@ -45,8 +45,6 @@ import { parentKeys } from "~/lib/swr/parent-keys";
 import {
   UNKNOWN_CHILD_TODAY,
   fetchChildParentConferences,
-  type Child,
-  type ChildToday,
 } from "~/lib/parent-api";
 import { parentPath } from "~/lib/parent-url";
 import { parseISODate } from "~/lib/date-helpers";
@@ -70,9 +68,10 @@ import {
   useParentChildren,
   useParentToday,
 } from "~/lib/hooks/use-parent-resources";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
-const EMPTY_CHILDREN: Child[] = [];
-const EMPTY_TODAY: Record<string, ChildToday> = {};
+const EMPTY_CHILDREN: parentMeContract.ChildResponse[] = [];
+const EMPTY_TODAY: Record<string, parentMeContract.TodayStatusResponse> = {};
 const NO_CONFERENCES: readonly ParentConferenceOffer[] = [];
 
 type ChildArea = "betreuung" | "angaben" | "kontakte";
@@ -228,7 +227,10 @@ export function ChildPage({
 function ChildSections({
   child,
   today,
-}: Readonly<{ child: Child; today: ChildToday | null }>) {
+}: Readonly<{
+  child: parentMeContract.ChildResponse;
+  today: parentMeContract.TodayStatusResponse | null;
+}>) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const t = useCareTermTranslations("parentChild");
@@ -420,7 +422,7 @@ function ChildAreaTabs({
   reasonRequired,
   onCareRefresh,
 }: Readonly<{
-  child: Child;
+  child: parentMeContract.ChildResponse;
   childName: string;
   canInvite: boolean;
   canRemove: boolean;
@@ -429,8 +431,8 @@ function ChildAreaTabs({
   canManageEmergencyContact: boolean;
   careEnded: boolean;
   withoutCarePlace: boolean;
-  sickDays: import("~/lib/parent-api").StatusDay[];
-  excusedRequests: import("~/lib/parent-api").ExcusedRequest[];
+  sickDays: parentMeContract.StatusDayResponse[];
+  excusedRequests: parentMeContract.ParentExcusedRequestResponse[];
   canEditAbsenceRequests: boolean;
   reasonRequired: boolean;
   onCareRefresh: () => void;

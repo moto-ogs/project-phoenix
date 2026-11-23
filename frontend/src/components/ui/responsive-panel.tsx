@@ -60,6 +60,10 @@ interface ResponsivePanelProps {
  * Eintrag (oder `initialFocus`), beim Schließen kehrt er zum Auslöser zurück,
  * außer ein Dialog, den ein Eintrag geöffnet hat, hält ihn schon.
  *
+ * Geht es in einem offenen Blatt auf (eine Auswahlliste im Filter-Blatt),
+ * wird es zum gestapelten Blatt darüber (vaul `NestedRoot`, #7800): Das
+ * untere rückt nach hinten und bleibt offen. Das erkennt der Baustein selbst.
+ *
  * In einem Modal oder Slide-over liegt das Blatt darüber (Ebene `popover`).
  * Escape und Tippen daneben schließen nur das Blatt, nicht das Fenster
  * darunter; dessen Fokusfalle ruht, solange das Blatt offen ist.

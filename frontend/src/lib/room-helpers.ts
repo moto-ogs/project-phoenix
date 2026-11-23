@@ -3,9 +3,6 @@
 
 import type { RoomRequest, RoomResponse } from "~/lib/contract/rooms.generated";
 import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
-import { createLogger } from "~/lib/logger";
-
-const logger = createLogger({ component: "RoomHelpers" });
 
 // Accent per room category — used by the rooms grid card and the
 // room-detail history timeline so a category reads the same way in both
@@ -131,28 +128,11 @@ export function mapRoomResponse(room: RoomResponse): Room {
   };
 }
 
+/** The rooms of a list answer; Go writes an empty list as null. */
 export function mapRoomsResponse(
-  rooms: RoomResponse[] | null | { data: RoomResponse[] },
+  rooms: readonly RoomResponse[] | null,
 ): Room[] {
-  // The list arrives inside its envelope ({ data: [...] }).
-  if (
-    rooms &&
-    typeof rooms === "object" &&
-    "data" in rooms &&
-    Array.isArray(rooms.data)
-  ) {
-    logger.debug("handling nested API response for rooms");
-    return rooms.data.map(mapRoomResponse);
-  }
-
-  if (!rooms || !Array.isArray(rooms)) {
-    logger.warn("received invalid response format for rooms", {
-      received: typeof rooms,
-    });
-    return [];
-  }
-
-  return rooms.map(mapRoomResponse);
+  return (rooms ?? []).map(mapRoomResponse);
 }
 
 /** Prepares a frontend room as the body of POST and PUT /api/rooms. */

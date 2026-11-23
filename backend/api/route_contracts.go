@@ -76,6 +76,7 @@ import (
 	worktimemodelsHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/worktimemodels"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	catererPortalHTTP "github.com/moto-ogs/project-phoenix/workflows/catererportal/http"
+	contractEnrollmentHTTP "github.com/moto-ogs/project-phoenix/workflows/contractenrollment/http"
 	holidayClosureHTTP "github.com/moto-ogs/project-phoenix/workflows/holidayclosurenotification/http"
 	parentAPI "github.com/moto-ogs/project-phoenix/workflows/parentportal/http"
 	staffPersonMergeHTTP "github.com/moto-ogs/project-phoenix/workflows/staffpersonmerge/http"
@@ -122,6 +123,7 @@ func traegerBillingContractMounts() []contractMount {
 		{"/traeger/contract-imports", careContractHTTP.ImportRouteContracts()},
 		{"/traeger/contract-corrections", careContractHTTP.CorrectionRouteContracts()},
 		{"/traeger/contract-child-links", careContractHTTP.ChildLinkRouteContracts()},
+		{"/traeger/contract-enrollments", contractEnrollmentHTTP.RouteContracts()},
 	}
 }
 

@@ -2128,6 +2128,13 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 				"data":   []map[string]any{{"id": idCounter, "name": "Betreuung"}},
 			})
 
+		case "/api/calendar/appointments":
+			// The detail of the created appointment (#7663 reads its string id).
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"status": "success",
+				"data":   map[string]any{"appointment": map[string]any{"id": fmt.Sprint(idCounter)}},
+			})
+
 		case "/api/active/visits", "/api/time-tracking/holidays", "/api/timetable/closing-days/":
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"status": "success",
@@ -2135,12 +2142,13 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 			})
 
 		case "/api/enrollment/phases":
-			_ = json.NewEncoder(w).Encode(map[string]any{
-				"status": "success",
-				"data": map[string]any{
-					"id": "1001",
-				},
-			})
+			// The list (the school change step looks for its phase) or a
+			// new phase.
+			var data any = map[string]any{"id": "1001"}
+			if r.Method == "GET" {
+				data = []any{}
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": data})
 
 		case "/api/enrollment/schema/":
 			_ = json.NewEncoder(w).Encode(map[string]any{

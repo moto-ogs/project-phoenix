@@ -92,18 +92,10 @@ const REPORT_FOCUS_THROTTLE_MS = 60 * 1000;
  * Schulverwaltung, aus der Tagesübersicht der ganzen Schule (#4802): beide
  * zählen nach denselben Regeln, die Zeile liest sich gleich.
  */
-interface ClassLine {
-  school_day: boolean;
-  enrollment_known: boolean;
-  totals: {
-    students: number;
-    staying: number;
-    leaving: number;
-    absent: number;
-    list_entries: number;
-  };
-  changes: number;
-}
+type ClassLine = Pick<
+  schoolClassDayContract.DayReport,
+  "school_day" | "enrollment_known" | "totals"
+> & { changes: number };
 
 function reportLine(report: ClassDayReport): ClassLine {
   return {

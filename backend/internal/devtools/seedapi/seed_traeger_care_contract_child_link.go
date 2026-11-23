@@ -27,36 +27,109 @@ type seedChildRecord struct {
 	Birthday  string   `json:"birthday"`
 }
 
+// seedChildLinkTries bounds the contracts the seed links while it looks for
+// one the enrollment run can bind.
+const seedChildLinkTries = 5
+
 // seedCareContractChildLink takes over the contract of an existing child of
 // the seeded school from a file and links it to the child's record through
-// the file preview and the run, as the office does (#7760). The four
-// children of the import stay unlinked: they have no child record. A
-// repeated seed finds the contract linked and links nothing.
-func seedCareContractChildLink(rt *Runtime, auth AuthRef, module seedImportModule) (int, error) {
+// the file preview and the run, as the office does (#7760). Then it runs
+// the enrollment of the children of imported contracts for the school
+// (ADR 0309), so the demo has an imported contract that is linked and bound
+// to an enrollment. A linked contract the run holds back stays as it is and
+// the seed tries the next child, a few times. The four children of the
+// import stay unlinked: they have no child record. A repeated seed finds
+// the contract linked and bound and writes nothing.
+func seedCareContractChildLink(rt *Runtime, auth AuthRef, module seedImportModule) (linked, bound int, err error) {
 	if module.module == "" || rt.TenantAuth.Token == "" {
-		return 0, nil
+		return 0, 0, nil
 	}
+	tries := 0
 	for _, candidate := range seedChildLinkCandidates {
-		child, found, err := seedFindChildRecord(rt, candidate)
+		now, done, err := seedLinkedCandidate(rt, auth, module, candidate)
 		if err != nil {
-			return 0, err
+			return linked, bound, err
 		}
-		if !found || child.Birthday == "" {
+		if !done {
 			continue
 		}
-		contractID, err := seedImportChildRecordContract(rt.Client, auth, module, child)
+		linked += now
+		if bound, err = seedContractEnrollmentRun(rt.Client, auth, rt.Bootstrap.SchoolID); err != nil || bound > 0 {
+			return linked, bound, err
+		}
+		if tries++; tries >= seedChildLinkTries {
+			break
+		}
+	}
+	return linked, bound, nil
+}
+
+// seedLinkedCandidate links the contract of one demo child to its child
+// record; done is false for a child without a record or a contract.
+func seedLinkedCandidate(rt *Runtime, auth AuthRef, module seedImportModule, candidate DemoStudent) (int, bool, error) {
+	child, found, err := seedFindChildRecord(rt, candidate)
+	if err != nil || !found || child.Birthday == "" {
+		return 0, false, err
+	}
+	return seedLinkedChildRecordContract(rt.Client, auth, module, child)
+}
+
+// seedLinkedChildRecordContract takes over the contract of the child and
+// links it to its record. The contract starts this month, so the enrollment
+// run finds it begun; where the import takes no such contract (the phase of
+// the module began later), it starts with the other imported contracts.
+// done reports a contract linked now or before.
+func seedLinkedChildRecordContract(client *Client, auth AuthRef, module seedImportModule, child seedChildRecord) (int, bool, error) {
+	today := calendar.TodayDate()
+	begun := module
+	begun.start = calendar.NewDate(today.Year(), today.Month(), 1).Format("02.01.2006")
+	for _, take := range []seedImportModule{begun, module} {
+		contractID, err := seedImportChildRecordContract(client, auth, take, child)
 		if err != nil {
-			return 0, err
+			return 0, false, err
 		}
 		if contractID == 0 {
 			continue
 		}
-		linked, done, err := seedLinkChildRecord(rt.Client, auth, contractID, int64(child.ID))
-		if err != nil || done {
-			return linked, err
-		}
+		return seedLinkChildRecord(client, auth, contractID, int64(child.ID))
 	}
-	return 0, nil
+	return 0, false, nil
+}
+
+// seedContractEnrollmentRun previews the enrollment of the children of the
+// imported contracts of the school and runs what the preview shows, as the
+// office does, and answers how many contracts are bound afterwards.
+func seedContractEnrollmentRun(client *Client, auth AuthRef, school int64) (int, error) {
+	type answer struct {
+		Data struct {
+			Fingerprint string `json:"fingerprint"`
+			Counts      struct {
+				Ready int `json:"ready"`
+				Done  int `json:"done"`
+			} `json:"counts"`
+		} `json:"data"`
+	}
+	raw, err := client.PostWithAuth(auth, "/traeger/contract-enrollments/preview", map[string]any{"school_id": ident.ID(school)})
+	if err != nil {
+		return 0, fmt.Errorf("preview the enrollment of the contract children: %w", err)
+	}
+	var preview answer
+	if err := json.Unmarshal(raw, &preview); err != nil {
+		return 0, fmt.Errorf("read the preview of the enrollment of the contract children: %w", err)
+	}
+	if preview.Data.Counts.Ready == 0 {
+		return preview.Data.Counts.Done, nil
+	}
+	raw, err = client.PostWithAuth(auth, "/traeger/contract-enrollments/", map[string]any{
+		"school_id": ident.ID(school), "fingerprint": preview.Data.Fingerprint})
+	if err != nil {
+		return 0, fmt.Errorf("enroll the contract children: %w", err)
+	}
+	var run answer
+	if err := json.Unmarshal(raw, &run); err != nil {
+		return 0, fmt.Errorf("read the enrollment of the contract children: %w", err)
+	}
+	return run.Data.Counts.Done, nil
 }
 
 // seedFindChildRecord reads the child record of a demo child at the seeded

@@ -1,8 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mockSessionFetch = vi.hoisted(() => vi.fn());
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
-vi.mock("./session-cache", () => ({ sessionFetch: mockSessionFetch }));
+const fetchMock = vi.fn();
+beforeEach(() => {
+  vi.stubGlobal("fetch", fetchMock);
+});
 
 import {
   weekProtocolPath,
@@ -69,13 +72,13 @@ function ok(data: unknown): Response {
 
 describe("weekProtocolsService", () => {
   beforeEach(() => {
-    mockSessionFetch.mockReset();
+    fetchMock.mockReset();
   });
 
   it("maps a protocol with its days", async () => {
-    mockSessionFetch.mockResolvedValue(ok(backendProtocol));
+    fetchMock.mockResolvedValue(ok(backendProtocol));
     const protocol = await weekProtocolsService.get("41");
-    expect(mockSessionFetch).toHaveBeenCalledWith("/api/week-protocols/41", {
+    expect(fetchMock).toHaveBeenCalledWith("/api/week-protocols/41", {
       method: "GET",
     });
     expect(protocol).toMatchObject({
@@ -101,22 +104,21 @@ describe("weekProtocolsService", () => {
   });
 
   it("lists the protocols of one group", async () => {
-    mockSessionFetch.mockResolvedValue(ok([backendProtocol]));
+    fetchMock.mockResolvedValue(ok([backendProtocol]));
     const list = await weekProtocolsService.list("7");
-    expect(mockSessionFetch).toHaveBeenCalledWith(
-      "/api/week-protocols?group_id=7",
-      { method: "GET" },
-    );
+    expect(fetchMock).toHaveBeenCalledWith("/api/week-protocols?group_id=7", {
+      method: "GET",
+    });
     expect(list).toHaveLength(1);
   });
 
   it("sends the notes as days with their date", async () => {
-    mockSessionFetch.mockResolvedValue(ok(backendProtocol));
+    fetchMock.mockResolvedValue(ok(backendProtocol));
     await weekProtocolsService.saveNotes("41", {
       weekNote: "Ruhig",
       days: { "2026-09-07": "Elternabend" },
     });
-    const [url, init] = mockSessionFetch.mock.calls[0] as [string, RequestInit];
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("/api/week-protocols/41/notes");
     expect(init.method).toBe("PUT");
     expect(JSON.parse(init.body as string)).toEqual({
@@ -126,7 +128,7 @@ describe("weekProtocolsService", () => {
   });
 
   it("throws the backend error of a refused close", async () => {
-    mockSessionFetch.mockResolvedValue(
+    fetchMock.mockResolvedValue(
       new Response(
         JSON.stringify({
           status: 409,

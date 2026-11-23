@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
+
 import {
   RESERVED_TARGETS,
   blankField,
@@ -240,12 +242,6 @@ describe("listSchemas", () => {
     expect(out[0]!.name).toBe("A");
   });
 
-  it("returns [] when the backend returns a non-array data", async () => {
-    mockFetch(async () => jsonResponse({ data: null }));
-    const out = await listSchemas();
-    expect(out).toEqual([]);
-  });
-
   it("throws with the German fallback on non-OK", async () => {
     mockFetch(async () => new Response("server boom", { status: 500 }));
     await expect(listSchemas()).rejects.toThrow(
@@ -423,9 +419,12 @@ describe("createSchema", () => {
     expect(error.message).not.toContain("duplicate name");
   });
 
-  it("falls back to HTTP status when body has no error string", async () => {
+  it("falls back to the status class when body has no error string", async () => {
     mockFetch(async () => new Response("not json", { status: 500 }));
-    await expect(createSchema("X", [])).rejects.toThrow(/HTTP 500/);
+    await expect(createSchema("X", [])).rejects.toMatchObject({
+      status: 500,
+      code: "general.server",
+    });
   });
 });
 
@@ -618,17 +617,6 @@ describe("uploadEnrollmentLegalDocument", () => {
     expect(error.status).toBe(415);
     expect(error.code).toBe("general.input");
   });
-
-  it("rejects successful responses without a document URL", async () => {
-    mockFetch(async () => jsonResponse({ data: {} }));
-
-    const error = await rejection(
-      uploadEnrollmentLegalDocument(
-        new File(["%PDF-1.4"], "terms.pdf", { type: "application/pdf" }),
-      ),
-    );
-    expect(error.code).toBe("general.server");
-  });
 });
 
 describe("deleteEnrollmentLegalDocument", () => {
@@ -790,8 +778,8 @@ describe("deleteSchema", () => {
     );
   });
 
-  it("falls back to HTTP status when body has neither code nor error", async () => {
+  it("keeps the HTTP status when body has neither code nor error", async () => {
     mockFetch(async () => new Response("not json at all", { status: 500 }));
-    await expect(deleteSchema("1234")).rejects.toThrow(/HTTP 500/);
+    await expect(deleteSchema("1234")).rejects.toMatchObject({ status: 500 });
   });
 });

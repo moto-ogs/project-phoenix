@@ -14,7 +14,7 @@ import {
   useWeekendFollowsFriday,
 } from "~/lib/tenant-context";
 import { fetchStudents } from "~/lib/student-api";
-import { ApiError, transportFetch } from "~/lib/api-error";
+import { ApiError, unavailableApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { deferred } from "~/test/helpers/form-modal-pending";
@@ -2414,15 +2414,8 @@ describe("BetreuungsplanView", () => {
 
   it("shows a network failure of the week in place, never the browser text (#1577)", async () => {
     // Was der Client bei einem Netzfehler wirft: fetch scheitert mit
-    // TypeError, transportFetch macht daraus general.unavailable.
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockRejectedValue(new TypeError("Failed to fetch")),
-    );
-    const networkError = await transportFetch("/api/timetable/instances").catch(
-      (err: unknown) => err,
-    );
-    vi.unstubAllGlobals();
+    // TypeError, der Transport von bffJson macht daraus general.unavailable.
+    const networkError = unavailableApiError(new TypeError("Failed to fetch"));
     const base = mockUseSWRAuth.getMockImplementation()!;
     mockUseSWRAuth.mockImplementation((key: string | null) =>
       key?.startsWith("timetable-week-")

@@ -50,12 +50,13 @@ var familyImportHeaderNames = map[string][]string{
 }
 
 // familyImportIndex is a mapping resolved against a file: the position of
-// each mapped column, the school of a file without that column and the day
-// the numbers count from where a row names none.
+// each mapped column, the school of a file without that column, the day
+// the numbers count from where a row names none and the day of the import.
 type familyImportIndex struct {
 	fields    map[string]int
 	schoolID  int64
 	validFrom calendar.Date
+	today     calendar.Date
 }
 
 func (index familyImportIndex) has(field string) bool {
@@ -88,8 +89,10 @@ func (index familyImportIndex) unmapped() []string {
 
 // resolveFamilyImportMapping finds the column of each mapped field. A
 // header the file does not have, a column used twice or a school that is
-// not the Träger's refuses the mapping.
-func resolveFamilyImportMapping(headers []string, mapping parentbilling.FamilyChildrenImportMapping, schools []parentbilling.CareSchool) (familyImportIndex, error) {
+// not the Träger's refuses the mapping. today is the day of the import.
+func resolveFamilyImportMapping(headers []string, mapping parentbilling.FamilyChildrenImportMapping, schools []parentbilling.CareSchool,
+	today calendar.Date,
+) (familyImportIndex, error) {
 	columns := map[string]string{
 		parentbilling.FamilyImportFieldChildFirstName: mapping.Columns.ChildFirstName,
 		parentbilling.FamilyImportFieldChildLastName:  mapping.Columns.ChildLastName,
@@ -99,7 +102,7 @@ func resolveFamilyImportMapping(headers []string, mapping parentbilling.FamilyCh
 		parentbilling.FamilyImportFieldValidFrom:      mapping.Columns.ValidFrom,
 	}
 	refused := validation.Errors{}
-	index := familyImportIndex{fields: map[string]int{}, schoolID: mapping.SchoolID.Int64()}
+	index := familyImportIndex{fields: map[string]int{}, schoolID: mapping.SchoolID.Int64(), today: today}
 	if mapping.ValidFrom == nil || !plausibleFamilyImportDay(*mapping.ValidFrom) {
 		refused[parentbilling.FamilyImportFieldValidFrom] = errors.New("is no day the numbers can count from")
 	} else {
@@ -189,6 +192,9 @@ type familyImportTarget struct {
 	// inForce are the times the child's contracts of the family are in
 	// force, one per version of a contract.
 	inForce []familyImportSpan
+	// witness marks a family the number no longer reaches: the row speaks
+	// against its rows and takes over nothing there (#7863).
+	witness bool
 }
 
 // familyImportSpan is the time one version of a contract is in force, both
@@ -201,6 +207,15 @@ func (t familyImportTarget) covers(day calendar.Date) bool {
 	return slices.ContainsFunc(t.inForce, func(span familyImportSpan) bool {
 		return span.from != "" && span.until != "" && !day.Before(span.from) && !day.After(span.until)
 	})
+}
+
+// decisionDay looks ahead only when the child's own contract covers the
+// row's day. For past dates or a gap in the contracts, compare with today.
+func (t familyImportTarget) decisionDay(today, from calendar.Date) calendar.Date {
+	if from.After(today) && t.covers(from) {
+		return from
+	}
+	return today
 }
 
 // familyImportCandidate is a row with the families its number goes to, the
@@ -222,10 +237,8 @@ type familyImportCheck struct {
 	schools    []parentbilling.CareSchool
 	contracts  []familyImportContract
 	recipients map[int64]parentbilling.CareRecipient
+	numbers    map[string]*familyNumbers
 	named      map[int64]int
-	// unnamed is set while a row is read that names its child for no later
-	// row.
-	unnamed bool
 }
 
 // problemOf notes what holds a row back: the field and the kind of problem.
@@ -254,11 +267,7 @@ func (c *familyImportCheck) candidate(cells []string, line int) familyImportCand
 		row.Status = parentbilling.FamilyImportInvalid
 		return candidate
 	}
-	// A row held back by its day names its child for no later row: a
-	// second row of the child with a sound day still counts.
-	c.unnamed = candidate.speaksOnly
-	candidate.targets = c.match(row, schoolID)
-	c.unnamed = false
+	candidate.targets = c.match(row, schoolID, candidate.validFrom, candidate.speaksOnly)
 	if candidate.speaksOnly {
 		row.Status = parentbilling.FamilyImportInvalid
 	}
@@ -266,24 +275,29 @@ func (c *familyImportCheck) candidate(cells []string, line int) familyImportCand
 }
 
 // onlyDayHoldsBack tells whether a row's one problem is its day. Its child
-// and number are sound: without the day column the row would count, so its
-// number must still speak against a sibling's row that names another one.
+// and number can still identify a conflict with a sibling's row.
 func onlyDayHoldsBack(row *parentbilling.FamilyChildrenImportRow) bool {
 	return len(row.Problems) == 1 && row.Problems[0].Field == parentbilling.FamilyImportFieldValidFrom
 }
 
 // validFrom reads the day the row's number counts from: its own column,
 // else the day of the file. A cell that is no day holds the row back, so a
-// number never counts from a day the office did not mean.
+// number never counts from a day the office did not mean. So does a day
+// beyond the contracts moto reads ahead (#7863): moto cannot tell who
+// belongs to the family then, and a confirmation that holds today would
+// read as the number of a time it may have ended by.
 func (c *familyImportCheck) validFrom(row *parentbilling.FamilyChildrenImportRow, cells []string) calendar.Date {
-	value := c.index.cell(cells, parentbilling.FamilyImportFieldValidFrom)
-	if value == "" {
-		return c.index.validFrom
+	day := c.index.validFrom
+	if value := c.index.cell(cells, parentbilling.FamilyImportFieldValidFrom); value != "" {
+		parsed, ok := calendar.ParseFileDate(value)
+		if !ok || !plausibleFamilyImportDay(parsed) {
+			problemOf(row, parentbilling.FamilyImportFieldValidFrom, parentbilling.FamilyImportProblemInvalid)
+			return c.index.validFrom
+		}
+		day = parsed
 	}
-	day, ok := calendar.ParseFileDate(value)
-	if !ok || !plausibleFamilyImportDay(day) {
-		problemOf(row, parentbilling.FamilyImportFieldValidFrom, parentbilling.FamilyImportProblemInvalid)
-		return c.index.validFrom
+	if day.After(c.index.today.AddDays(evidenceLookAhead)) {
+		problemOf(row, parentbilling.FamilyImportFieldValidFrom, parentbilling.FamilyImportProblemTooFarAhead)
 	}
 	return day
 }
@@ -353,7 +367,7 @@ func (c *familyImportCheck) school(row *parentbilling.FamilyChildrenImportRow, c
 // cannot tell two children apart, so contracts with different dates of
 // birth that all fit the row name no single child. A child an earlier row
 // named is a conflict.
-func (c *familyImportCheck) match(row *parentbilling.FamilyChildrenImportRow, schoolID int64) []familyImportTarget {
+func (c *familyImportCheck) match(row *parentbilling.FamilyChildrenImportRow, schoolID int64, from calendar.Date, speaksOnly bool) []familyImportTarget {
 	name := foldFamilyImportName(row.ChildFirstName) + "\x1f" + foldFamilyImportName(row.ChildLastName)
 	var found []familyImportContract
 	births := map[calendar.Date]bool{}
@@ -378,13 +392,89 @@ func (c *familyImportCheck) match(row *parentbilling.FamilyChildrenImportRow, sc
 		row.Status = parentbilling.FamilyImportInvalid
 		return nil
 	}
-	return c.targets(row, found)
+	// Without a usable start day, even an ended contract can identify a
+	// family whose sibling rows the number contradicts. Nothing is stored.
+	if speaksOnly {
+		return c.targets(row, found, speaksOnly)
+	}
+	return c.reachedTargets(row, found, from)
+}
+
+// reachedTargets names the families the row's number reaches from its day
+// and, as witnesses, those the child belonged to on that day but that a
+// renewal no longer reaches. Without any family it reaches, the contract
+// ended before the number could count (#7863).
+func (c *familyImportCheck) reachedTargets(row *parentbilling.FamilyChildrenImportRow, found []familyImportContract, from calendar.Date) []familyImportTarget {
+	field := parentbilling.FamilyImportFieldChildLastName
+	running := c.applicableContracts(slices.Clone(found), from)
+	heard := c.heardContracts(found, running)
+	var targets []familyImportTarget
+	if len(running) == 0 {
+		problemOf(row, field, parentbilling.FamilyImportProblemContractEnded)
+		row.Status = parentbilling.FamilyImportInvalid
+	} else {
+		targets = c.targets(row, running, false)
+	}
+	if len(heard) > 0 {
+		// A witness takes over nothing, so it names no contract of the row.
+		contractID := row.ContractID
+		for _, target := range c.targets(row, heard, true) {
+			target.witness = true
+			targets = append(targets, target)
+		}
+		row.ContractID = contractID
+	}
+	return targets
+}
+
+// heardContracts are the contracts of the families applicableContracts
+// left out entirely: they take over nothing from the row, but its number
+// still speaks against their rows, as it did before point 5 (ADR 0305,
+// #7863). A family that keeps a running contract is no witness: the row
+// decides there.
+func (c *familyImportCheck) heardContracts(found, running []familyImportContract) []familyImportContract {
+	reached := map[string]bool{}
+	for _, contract := range running {
+		reached[c.family(contract.id)] = true
+	}
+	return slices.DeleteFunc(slices.Clone(found), func(contract familyImportContract) bool { return reached[c.family(contract.id)] })
+}
+
+// applicableContracts keeps a historical contract for a historical count,
+// but not when a renewal would start only after the child left the family.
+func (c *familyImportCheck) applicableContracts(contracts []familyImportContract, from calendar.Date) []familyImportContract {
+	spans := map[string][]familyImportSpan{}
+	for _, contract := range contracts {
+		family := c.family(contract.id)
+		spans[family] = append(spans[family], contract.inForce...)
+	}
+	start := make(map[string]calendar.Date, len(spans))
+	for family, inForce := range spans {
+		target := familyImportTarget{inForce: inForce}
+		day := target.decisionDay(c.index.today, from)
+		count, _ := c.numbers[family].confirmedForImport(day)
+		start[family] = importedChildrenStart(from, day, count)
+	}
+	return slices.DeleteFunc(contracts, func(contract familyImportContract) bool {
+		return contract.endedBefore(start[c.family(contract.id)])
+	})
+}
+
+func (c *familyImportCheck) family(contractID int64) string {
+	return parentbilling.ContractFamilyKey(c.recipients[contractID].Email, contractID)
+}
+
+// endedBefore tells whether every version of the contract ended before the
+// day. A version without an end runs on.
+func (c familyImportContract) endedBefore(day calendar.Date) bool {
+	return !slices.ContainsFunc(c.inForce, func(span familyImportSpan) bool { return span.until.IsZero() || !span.until.Before(day) })
 }
 
 // targets names the families of the child's contracts, each once. A child
 // an earlier row named is a conflict; its row still names its families, so
-// its number speaks against theirs.
-func (c *familyImportCheck) targets(row *parentbilling.FamilyChildrenImportRow, found []familyImportContract) []familyImportTarget {
+// its number speaks against theirs. A row held back by its day does not make
+// a later row a repeat: the same child with a valid day still counts.
+func (c *familyImportCheck) targets(row *parentbilling.FamilyChildrenImportRow, found []familyImportContract, speaksOnly bool) []familyImportTarget {
 	if c.named == nil {
 		c.named = map[int64]int{}
 	}
@@ -397,10 +487,10 @@ func (c *familyImportCheck) targets(row *parentbilling.FamilyChildrenImportRow, 
 	}
 	var targets []familyImportTarget
 	for _, contract := range found {
-		if !repeated && !c.unnamed {
+		if !repeated && !speaksOnly {
 			c.named[contract.id] = row.Line
 		}
-		family := parentbilling.ContractFamilyKey(c.recipients[contract.id].Email, contract.id)
+		family := c.family(contract.id)
 		position := slices.IndexFunc(targets, func(target familyImportTarget) bool { return target.family == family })
 		switch {
 		case position < 0:

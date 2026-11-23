@@ -1,6 +1,6 @@
 "use client";
 
-import type { DashboardPickupBucket } from "~/lib/display-api";
+import type * as displayContract from "~/lib/contract/display.generated";
 import { LOCATION_COLORS } from "~/lib/location-helper";
 import { InsetPanel } from "~/components/ui/inset-panel";
 import { SectionCard } from "~/components/ui/section-card";
@@ -8,7 +8,7 @@ import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 import { pickupConcept } from "~/lib/concepts/pickup";
 
 interface PickupTimesPanelProps {
-  readonly buckets: DashboardPickupBucket[];
+  readonly buckets: displayContract.PickupBucket[];
 }
 
 /**

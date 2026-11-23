@@ -321,3 +321,93 @@ Projektion nutzt „change“.
 - Die eigenen Gruppen der Quelle Kinder sind die Lehrkraft-Gruppen und die
   Vertretungen der Sitzung am Tag der Übersicht, wie `MyGroupIDs` sie
   bestimmt, aber für den Tag der Übersicht statt für den Kalendertag der Uhr.
+
+## Nachtrag 2026-11-21: Quelle Termine im Kalender (#7663)
+
+- Die Quelle Termine liest die Ausnahmen einzelner Kalendertermine über
+  die bestehenden Lesefähigkeiten von Appointments
+  (`ListAppointmentsVisibleToStaff`, `FindOccurrenceOverrides`,
+  `FindRecurrenceRules`). Ihre Rechte-Regel ist die des eigenen Kalenders
+  (`GET /api/calendar/my`): `calendar:own` und ein Personaldatensatz. Sichtbar
+  sind nur Termine, die das Konto organisiert oder zu denen es eingeladen ist;
+  die Leitung sieht hier keine fremden Termine. Darum steht jeder Eintrag
+  unter „Betrifft dich“. Ohne Recht bleibt die Quelle „geladen“ und leer.
+- Arten: `appointment_cancelled` (der Termin ist abgesagt oder der heutige
+  Termin einer Serie ist einzeln abgesagt) und `appointment_changed` (der
+  heutige Termin einer Serie hat einen anderen Ort oder eine andere Zeit).
+  Die Rücknahme einer Absage hat keinen eigenen Zustand: Es gibt keinen
+  Schreibweg dafür, und ein Termin ohne Ausnahme erscheint nicht.
+- Die Quelle liest neben dem Personaldatensatz der Sitzung, den die Anfrage
+  schon für die Quelle Personal kennt, höchstens drei Statements: die Termine,
+  die Ausnahmen der Tage, die heute erreichen können, und die Regeln nur
+  abgesagter Serien. Ohne `calendar:own` liest sie nichts.
+- Ein heutiger Termin, der auf einen anderen Tag verlegt ist, findet heute
+  nicht statt und erscheint als abgesagt. Ein Termin, der von einem anderen
+  Tag auf heute verlegt ist, wird nicht gelesen. Beides kann heute noch kein
+  Schreibweg des Kalenders erzeugen; es gibt nur die Absage.
+- Ein Live-Signal gibt es noch nicht. Eine neue After-Commit-Stelle müsste das
+  schrumpfende Register `durable_side_effect_notices.json` erweitern; das
+  entscheidet #7693. Bis dahin wird die Übersicht beim Fokus, bei erneuter
+  Verbindung und beim Laden aktuell.
+
+## Nachtrag 2026-11-21: Quelle Speiseplan (#7666)
+
+- Die Quelle Essen liest Meal Plans neue Lesefähigkeit `MenuChanges`
+  (`MenuChangedOn`, ein Statement im Adapter des Owners). Meal Plan
+  kennzeichnet einen Tag beim Speichern mit `menu_changed_at`, wenn ein schon
+  veröffentlichtes Menü geändert wird. Das ist dieselbe Regel wie beim Hinweis
+  an die Eltern (#7145): Die erste Veröffentlichung ist keine Änderung, ein
+  erneutes Speichern desselben Menüs behält die Kennzeichnung, Löschen entfernt
+  den Tag samt Kennzeichnung.
+- Rechte-Regel: Jedes Konto des Staff-Portals sieht die Kurzinfo, auch ohne
+  `meals:read`. Sie nennt kein Gericht. Den Link auf die Seite Speiseplan
+  bekommt nur ein Konto, das den Speiseplan lesen darf (Regel von
+  `GET /api/meal-plan/`), damit niemand auf einer leeren Seite landet.
+- Live: Meal Plan meldet ein gespeichertes oder gelöschtes Menü mit dem Event
+  `meal_plan_changed` ohne Inhalt an die Schule. Die Wurzel bindet es als
+  Middleware außerhalb der Anfrage-Transaktion der beiden Schreibrouten, sie
+  sendet also nur nach einer bestätigten 2xx-Antwort, und braucht keinen
+  neuen After-Commit-Eintrag.
+- Query-Budget: Die Quelle kostet ein Statement. Zwei Einsparungen gleichen
+  es aus. Die Quelle Personal liest die eigenen Lehrkraft-Gruppen und die
+  Lehrkräfte dieser und der heute vertretenen Gruppen in einem Statement von
+  School Membership (`GroupAssignmentFilter.GroupsOfTeacherStaffIDs`) statt in
+  zweien; die Quellen Kinder und Klassen nutzen das Ergebnis im Savepoint
+  weiter. Die beiden Termin-Lesungen von Timetable (`BlockStaffChanges` für
+  Personal, `BlockDayChanges` für Stundenplan) teilen sich im Savepoint die
+  Zuordnungen des Tages (`WithDayStaffShare`): Die erste liest alle Zeilen des
+  Tages mit ihrem Termin in einem Statement, die zweite filtert sie.
+  Das Team liest die Quelle Personal nur, wenn der Tag Abwesenheiten,
+  Gruppenübergaben oder Terminänderungen hat; nur für diese entscheidet es,
+  ob sie das Konto betreffen. `api.day_changes.today` bleibt bei 17,
+  `api.day_changes.today.children` bei 24,
+  `api.day_changes.today_activities` bei 20 und
+  `api.day_changes.today_appointments` bei 15 Anweisungen.
+
+## Nachtrag 2026-11-23: Budget mit Kalender-Recht (#7903)
+
+- Das Szenario `api.day_changes.today` misst jetzt den realistischen Fall:
+  eine Betreuung mit Gruppe und `calendar:own`, mit Abwesenheiten,
+  Gruppenübergaben, geänderten Diensten und Termin-Ausnahmen (ein einzeln
+  abgesagter Termin einer Serie und eine ganz abgesagte Serie). Gemessen
+  vor dem Umbau: 20 Anweisungen bei einer Obergrenze von 17.
+- Die Quelle Termine liest über die neue Lesefähigkeit
+  `appointments.StaffDayAppointments` in einer statt drei Anweisungen:
+  die sichtbaren Termine des Tages mit ihrer Regel und den Ausnahmen der
+  Tage, die heute erreichen können (höchstens 31 Tage zurück, wie bisher).
+  Appointments faltet die Zeilen der Verbindung zu einem Wert je Termin.
+  Sichtregel (`calendar:own`, Organisator oder eingeladenes Personal) und
+  Ergebnis bleiben gleich.
+- Die Quelle Personal liest die Abwesenheiten mit Planwirkung und die
+  Gruppenübergaben des Tages über `workforce.StaffDayReads` in einer statt
+  zwei Anweisungen (zwei JSON-Listen in einem Select, dieselben Filter wie
+  `ListStaffAbsences` und `ListGroupSubstitutions`).
+- Beide Lesungen bindet die Root an die vorhandenen Kompositionen der
+  Owner (`appointments.StaffDayAppointmentsOf`, Typprüfung des
+  Work-Time-Service in `NewDayChanges`), ohne neue Kompositionszeilen.
+- `api.day_changes.today` bleibt bei 17 Anweisungen.
+  `api.day_changes.today_appointments` sinkt von 15 auf 12,
+  `api.day_changes.today.children` von 24 auf 23 und
+  `api.day_changes.today_activities` von 20 auf 19. Das Szenario
+  `today_appointments` bleibt: Es misst die Sitzung ohne Gruppe mit
+  engerer Obergrenze.

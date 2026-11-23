@@ -41,11 +41,7 @@ import {
   importBatchSavedCount,
   readImportBatchFailure,
 } from "~/lib/import-batch-result";
-import type {
-  ClassListImportError,
-  ClassListImportResult,
-  ValidationError,
-} from "~/lib/contract/import.generated";
+import type * as importContract from "~/lib/contract/import.generated";
 import { createLogger } from "~/lib/logger";
 
 /** Info-Knopf am Seitentitel: wofür die Seite da ist und was man zuerst tut. */
@@ -54,22 +50,20 @@ const CLASS_LIST_IMPORT_INFO =
 
 const logger = createLogger({ component: "ClassListImportPage" });
 
-type ImportError = ValidationError;
-type ImportRowResult = ClassListImportError;
-type ImportResult = ClassListImportResult;
-
 type RowStatus = "new" | "existing" | "error" | "warning";
 
 interface DisplayEntry {
   row: number;
   status: RowStatus;
   errors: string[];
-  first_name: string;
-  last_name: string;
-  school_class: string;
+  firstName: string;
+  lastName: string;
+  schoolClass: string;
 }
 
-function rowStatusFor(findings: readonly ImportError[] | null): RowStatus {
+function rowStatusFor(
+  findings: readonly importContract.ValidationError[] | null,
+): RowStatus {
   const errors = findings ?? [];
   const isExisting = errors.some((e) => e.code === "already_exists");
   if (isExisting) return "existing";
@@ -78,14 +72,16 @@ function rowStatusFor(findings: readonly ImportError[] | null): RowStatus {
   return "new";
 }
 
-function toDisplayEntry(row: ImportRowResult): DisplayEntry {
+function toDisplayEntry(
+  row: importContract.ClassListImportError,
+): DisplayEntry {
   return {
     row: row.row_number,
     status: rowStatusFor(row.errors),
     errors: (row.errors ?? []).map((e) => e.message),
-    first_name: row.data.first_name,
-    last_name: row.data.last_name,
-    school_class: row.data.school_class,
+    firstName: row.data.first_name,
+    lastName: row.data.last_name,
+    schoolClass: row.data.school_class,
   };
 }
 
@@ -96,7 +92,8 @@ export default function ClassListImportPage() {
   const [isImporting, setIsImporting] = useState(false);
   const [importComplete, setImportComplete] = useState(false);
   const [importInterrupted, setImportInterrupted] = useState(false);
-  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [importResult, setImportResult] =
+    useState<importContract.ClassListImportResult | null>(null);
   // Fehler der Datei und des Imports stehen im Kasten über der Vorlage,
   // mit Wiederholen (#2517). Ein angehaltener Stapel steht dort auch, mit
   // oder ohne gespeicherte Zeilen: der Import als Ganzes ist gescheitert.
@@ -167,7 +164,7 @@ export default function ClassListImportPage() {
         const formData = new FormData();
         formData.append("file", file);
 
-        const importData: ImportResult = await bffJson(
+        const importData: importContract.ClassListImportResult = await bffJson(
           "tenant",
           "POST /api/import/class-list-entries/preview",
           { body: formData, errorMessage: "Class list preview failed" },
@@ -183,9 +180,9 @@ export default function ClassListImportPage() {
             row: 0,
             status: "new",
             errors: [],
-            first_name: `${importData.total_rows} Einträge`,
-            last_name: "bereit zum Import",
-            school_class: "",
+            firstName: `${importData.total_rows} Einträge`,
+            lastName: "bereit zum Import",
+            schoolClass: "",
           });
         }
 
@@ -218,7 +215,7 @@ export default function ClassListImportPage() {
       const formData = new FormData();
       formData.append("file", uploadedFile);
 
-      let importData: ImportResult;
+      let importData: importContract.ClassListImportResult;
       try {
         importData = await bffJson(
           "tenant",
@@ -228,9 +225,10 @@ export default function ClassListImportPage() {
       } catch (error) {
         // A stopped batch carries the rows already saved in its error body.
         const result = importFailureBody(error);
-        const interrupted = readImportBatchFailure<ImportRowResult>(result);
+        const interrupted =
+          readImportBatchFailure<importContract.ClassListImportError>(result);
         if (interrupted) {
-          setImportResult(interrupted as ImportResult);
+          setImportResult(interrupted as importContract.ClassListImportResult);
           setImportInterrupted(true);
           setPreviewData((interrupted.errors ?? []).map(toDisplayEntry));
           setBatchNotice(importBatchFailureMessage(interrupted));
@@ -436,9 +434,9 @@ export default function ClassListImportPage() {
                       row: entry.row,
                       status: entry.status,
                       errors: entry.errors,
-                      first_name: entry.first_name,
-                      last_name: entry.last_name,
-                      meta: [entry.school_class],
+                      firstName: entry.firstName,
+                      lastName: entry.lastName,
+                      meta: [entry.schoolClass],
                     }}
                     index={idx}
                   />

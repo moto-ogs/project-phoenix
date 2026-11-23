@@ -128,7 +128,9 @@ describe("TraegerLoginPage", () => {
       trustedDeviceEnabled: true,
       trustedDeviceDays: 90,
     });
-    fetchMock.mockResolvedValue(jsonResponse({ status: "authenticated" }));
+    fetchMock.mockResolvedValue(
+      jsonResponse({ status: "success", data: { status: "authenticated" } }),
+    );
     mockSignIn.mockResolvedValue({ error: undefined });
     render(<TraegerLoginPage />);
 
@@ -175,7 +177,9 @@ describe("TraegerLoginPage", () => {
       trustedDeviceEnabled: true,
       trustedDeviceDays: 90,
     });
-    fetchMock.mockResolvedValue(jsonResponse({ status: "authenticated" }));
+    fetchMock.mockResolvedValue(
+      jsonResponse({ status: "success", data: { status: "authenticated" } }),
+    );
     mockSignIn.mockResolvedValue({ error: undefined });
     render(<TraegerLoginPage />);
 
@@ -357,8 +361,15 @@ describe("TraegerLoginPage", () => {
       organizationId: "9007199254740993",
     });
     fetchMock
-      .mockResolvedValueOnce(jsonResponse({ challenge_token: "challenge" }))
-      .mockResolvedValueOnce(jsonResponse({ status: "authenticated" }));
+      .mockResolvedValueOnce(
+        jsonResponse({
+          status: "success",
+          data: { challenge_token: "challenge" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({ status: "success", data: { status: "authenticated" } }),
+      );
     mockSignIn.mockResolvedValue({ error: undefined });
     render(<TraegerLoginPage />);
 
@@ -536,9 +547,7 @@ describe("TraegerLoginPage", () => {
   // logins, which asks the Träger route for the link.
   it("requests a reset link through the Träger route", async () => {
     fetchMock.mockResolvedValue(
-      jsonResponse({
-        message: "If the email exists, a password reset link has been sent",
-      }),
+      jsonResponse({ status: "success", data: null }),
     );
     render(<TraegerLoginPage />);
 

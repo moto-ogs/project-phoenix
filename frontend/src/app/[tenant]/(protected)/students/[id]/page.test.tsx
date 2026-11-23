@@ -2917,7 +2917,7 @@ describe("StudentDetailPage", () => {
         vi.spyOn(globalThis, "fetch").mockImplementation(
           async (input, init) => {
             const path = new URL(String(input), "http://localhost").pathname;
-            if (path === "/api/students/change-requests") {
+            if (path === "/api/students/change-requests/history") {
               return json(200, { data: { items: [] } });
             }
             if (path === "/api/students/1/care-withdrawals") {
@@ -3067,7 +3067,9 @@ describe("StudentDetailPage", () => {
         render(<StudentDetailPage />);
 
         await waitFor(() =>
-          expect(requestedPaths()).toContain("/api/students/change-requests"),
+          expect(requestedPaths()).toContain(
+            "/api/students/change-requests/history",
+          ),
         );
         // Anker: das Protokoll ist geladen und zeigt seinen Leerzustand.
         expect(

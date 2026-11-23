@@ -26,7 +26,6 @@ import {
   updateOfferingChangeRequest,
   type OfferingCatalog,
   type OfferingCatalogItem,
-  type OfferingChangeSelectionInput,
 } from "~/lib/parent-api";
 import { ApiError } from "~/lib/api-error";
 import {
@@ -37,6 +36,7 @@ import {
 import { formatDate } from "~/lib/date-helpers";
 import { ChoiceTile } from "~/components/ui/choice-tile";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 // Day abbreviations as the backend stores them, in week order. The label comes
 // from parentMasterData.weekdayShort keyed by ISO weekday.
@@ -134,7 +134,7 @@ export function OfferingChangeRequestModal({
   onClose: () => void;
   onSubmit?: (
     input: {
-      offerings: OfferingChangeSelectionInput[];
+      offerings: parentMeContract.OfferingSelectionBody[];
       effective_from: string;
       note?: string;
       complete_withdrawal_confirmed?: boolean;
@@ -279,7 +279,7 @@ export function OfferingChangeRequestModal({
       form.invalid(dayConflictText(dayConflict));
       return;
     }
-    const offerings: OfferingChangeSelectionInput[] = [];
+    const offerings: parentMeContract.OfferingSelectionBody[] = [];
     for (const item of items) {
       const row = draft[item.id];
       if (!row?.selected) continue;

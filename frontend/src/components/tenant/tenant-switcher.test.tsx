@@ -437,7 +437,7 @@ describe("BrandTenantSwitcher", () => {
     mockPerformTenantSwitch.mockImplementationOnce(actual.performTenantSwitch);
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) =>
       ["/api/auth/logout", "/api/auth/session"].includes(String(input))
-        ? new Response("{}", { status: 200 })
+        ? new Response(null, { status: 204 })
         : new Response(
             JSON.stringify({
               status: 401,

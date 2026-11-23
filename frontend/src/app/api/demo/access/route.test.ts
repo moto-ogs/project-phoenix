@@ -42,7 +42,10 @@ describe("demo access routes", () => {
 
     const response = await status(request({ token: "secret-token" }));
 
-    expect(await response.json()).toEqual({ status: "ready" });
+    expect(await response.json()).toEqual({
+      status: "success",
+      data: { status: "ready" },
+    });
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("http://server:8080/demo/access/status");
     expect((init.headers as Record<string, string>).Authorization).toBe(
@@ -96,8 +99,11 @@ describe("demo access routes", () => {
     });
     // The banner learns whether the school's own Träger-Büro is open (#6193).
     expect(await response.json()).toEqual({
-      session_created: true,
-      demo: { access_id: "4711", role: "lead", traeger: true },
+      status: "success",
+      data: {
+        session_created: true,
+        demo: { access_id: "4711", role: "lead", traeger: true },
+      },
     });
     // Tokens and access IDs must not stay in a shared device's cache (#4999).
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");

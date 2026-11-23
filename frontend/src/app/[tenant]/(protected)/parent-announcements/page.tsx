@@ -146,9 +146,9 @@ import {
   fetchAnnouncementAttachments,
   uploadAnnouncementAttachment,
 } from "~/lib/parent-announcements-api";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import type {
   Announcement,
-  AnnouncementAttachment,
   AnnouncementAttachmentList,
   AnnouncementEmailAudience,
   AnnouncementInput,
@@ -1032,7 +1032,9 @@ function AnnouncementFormModal({
   const tenantMutate = useTenantMutate();
   const writeAttachments = (
     announcementId: string,
-    change: (list: AnnouncementAttachment[]) => AnnouncementAttachment[],
+    change: (
+      list: sharedContract.AnnouncementAttachmentResponse[],
+    ) => sharedContract.AnnouncementAttachmentResponse[],
   ) => {
     // A draft saved a moment ago: its attachments are still editable.
     const update = (current?: AnnouncementAttachmentList) => ({
@@ -1431,9 +1433,7 @@ function AnnouncementFormModal({
               // Anhang läge doppelt an, und die Höchstzahl wäre schneller
               // erreicht als die Person Dateien ausgewählt hat.
               setPendingFiles((prev) => prev.filter((entry) => entry !== file));
-              if (uploaded) {
-                await writeAttachments(saved.id, (list) => [...list, uploaded]);
-              }
+              await writeAttachments(saved.id, (list) => [...list, uploaded]);
             }
           } catch (err) {
             logger.error("announcement_attachment_upload_failed", {

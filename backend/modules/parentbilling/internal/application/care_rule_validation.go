@@ -36,6 +36,11 @@ func normalizeCareRule(input parentbilling.CareRuleInput, schools []parentbillin
 	}
 	input.SchoolIDs = ident.IDs(uniqueIDs(ident.Int64s(input.SchoolIDs)))
 	input.CountSchoolIDs = ident.IDs(uniqueIDs(ident.Int64s(input.CountSchoolIDs)))
+	if input.Kind == parentbilling.RuleSibling {
+		// A sibling rule always counts its own schools (#7863): the choice
+		// keeps the schools it counts with them.
+		input.CountSchoolIDs = slices.DeleteFunc(input.CountSchoolIDs, func(id ident.ID) bool { return slices.Contains(input.SchoolIDs, id) })
+	}
 	input.CareOfferingIDs = ident.IDs(uniqueIDs(ident.Int64s(input.CareOfferingIDs)))
 	switch {
 	case len(input.SchoolIDs) == 0:

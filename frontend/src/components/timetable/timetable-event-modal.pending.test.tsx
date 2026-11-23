@@ -11,7 +11,7 @@ import {
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { pagedJson } from "~/test/mocks/plain-session-fetch";
+import { pagedJson, plainFetch } from "~/test/mocks/plain-session-fetch";
 vi.mock(
   "~/lib/session-cache",
   () => import("~/test/mocks/plain-session-fetch"),
@@ -165,16 +165,18 @@ const savedInstance = {
 function stubReferenceFetch() {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async (input: unknown) => {
-      const url = String(input);
-      if (url.includes("/api/activities/categories")) {
-        return { json: async () => ({ data: [{ id: "2", name: "AG" }] }) };
-      }
-      const rows = url.includes("/api/rooms")
-        ? [{ id: "3", name: "Mensa", building: "Haus A" }]
-        : [];
-      return { json: async () => pagedJson(rows) };
-    }),
+    vi.fn(
+      plainFetch(async (input: unknown) => {
+        const url = String(input);
+        if (url.includes("/api/activities/categories")) {
+          return { json: async () => ({ data: [{ id: "2", name: "AG" }] }) };
+        }
+        const rows = url.includes("/api/rooms")
+          ? [{ id: "3", name: "Mensa", building: "Haus A" }]
+          : [];
+        return { json: async () => pagedJson(rows) };
+      }),
+    ),
   );
 }
 

@@ -9,13 +9,17 @@ import {
   type MaterializedCareSelection,
 } from "~/lib/care-offering-selection";
 import type { ConditionContext } from "~/lib/enrollment-field-visibility";
-import type {
-  PublicCareOffering,
-  PublicSchoolClassConfig,
-  SubmitChildPayload,
-} from "~/lib/enrollment-submission-api";
+import type { PublicSchoolClassConfig } from "~/lib/enrollment-submission-api";
 import { WEEKDAYS, type FormField } from "./enrollment-form-shared";
+import type * as sharedContract from "~/lib/contract/shared.generated";
+import type { CareOffering } from "~/lib/care-offering-api";
 
+/**
+ * The form's state of one child: Sets for the picks, strings as typed. Its
+ * keys follow the request's field names, so a field error of the answer
+ * ("children.0.first_name") lands on the same field; `enrollment-form-payload`
+ * turns it into the generated request.
+ */
 export interface ChildDraft {
   // Client-only identity for React list keys, never sent. Keyed by index, a
   // removed middle slot would hand its local view state to the next child.
@@ -44,14 +48,14 @@ export interface ChildDraft {
    * normal form serialization so catalog changes cannot turn an unchanged,
    * read-only child into a rejected change request.
    */
-  lockedPayload?: SubmitChildPayload;
+  lockedPayload?: sharedContract.SubmitChildRequest;
 }
 
 export interface ChildDerivationContext {
   /** The catalog as displayed (localized). */
-  readonly offerings: readonly PublicCareOffering[];
+  readonly offerings: readonly CareOffering[];
   /** The loaded German catalog; offering conditions match its names. */
-  readonly canonicalOfferings: readonly PublicCareOffering[];
+  readonly canonicalOfferings: readonly CareOffering[];
   readonly collectGradeLevel: boolean;
   readonly careOfferingsEnabled: boolean;
   readonly schoolClass: PublicSchoolClassConfig;
@@ -64,7 +68,7 @@ export interface ChildDerivation {
   /** The grade the rules see: undefined while the form collects none. */
   readonly grade: string | undefined;
   /** Offerings the child's grade may book. */
-  readonly offerings: PublicCareOffering[];
+  readonly offerings: CareOffering[];
   readonly requiredOfferingIds: ReadonlySet<string>;
   /** The selection with automatic additions applied. */
   readonly care: MaterializedCareSelection;
@@ -144,7 +148,7 @@ export function deriveChild(
  */
 export function withRequiredOfferings(
   child: ChildDraft,
-  offerings: readonly PublicCareOffering[],
+  offerings: readonly CareOffering[],
   collectGradeLevel: boolean,
 ): ChildDraft {
   if (child.locked) return child;
@@ -227,7 +231,7 @@ function collectsConcreteClassForGrade(
 
 function materializeChildCare(
   child: ChildDraft,
-  offerings: readonly PublicCareOffering[],
+  offerings: readonly CareOffering[],
   gradeLevel: string | undefined,
 ): MaterializedCareSelection {
   const grade = Number(gradeLevel);
@@ -240,7 +244,7 @@ function materializeChildCare(
 
 function bookedCareDays(
   care: MaterializedCareSelection,
-  offerings: readonly PublicCareOffering[],
+  offerings: readonly CareOffering[],
 ): string[] {
   const days = new Set<string>();
   for (const id of care.offeringIds) {

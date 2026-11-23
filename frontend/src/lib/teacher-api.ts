@@ -1,5 +1,6 @@
 // This file contains the Teacher API service and related types
 
+import type * as linkToTenantContract from "~/lib/contract/auth-link-to-tenant.generated";
 import { bffJson } from "./bff-fetch";
 import { ApiError, wireErrorCode } from "~/lib/api-error";
 import type { SchoolIdentityResponse } from "./contract/shared.generated";
@@ -16,11 +17,10 @@ type CreateTeacherResult =
   | { status: "account_exists"; email: string };
 
 /** The person fields the backend needs to provision a staff identity. */
-interface PersonIdentityFields {
-  first_name: string;
-  last_name: string;
-  tag_id?: string | null;
-}
+type PersonIdentityFields = Required<
+  Pick<linkToTenantContract.LinkToTenantRequest, "first_name" | "last_name">
+> &
+  Pick<linkToTenantContract.LinkToTenantRequest, "tag_id">;
 
 /**
  * What the backend provisioned alongside the account (#2222).

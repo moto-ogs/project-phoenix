@@ -45,31 +45,45 @@ func importedChildrenFamily(number parentbilling.ImportedFamilyChildren) string 
 	return previewChildrenFamily(number.Line)
 }
 
-// decideImportedChildren gives every row its status. current answers the
-// number the Abrechnung confirmed for a family, nil without one; day the
-// day a row's number has to hold on. A confirmation that ended before that
-// day no longer speaks: the file renews it from the day after its end, so
-// the months it covered keep what they had.
-func decideImportedChildren(rows []importedChildren, current func(family string) *parentbilling.FamilyChildCount,
+// decideImportedChildren gives every row its status. day answers the day
+// a row's number has to hold on; current the number the Abrechnung
+// confirmed for a family that decides that day, nil without one. A
+// confirmation that ended before that day no longer speaks: the file renews
+// it from the day after its end, so the months it covered keep what they
+// had.
+func decideImportedChildren(rows []importedChildren, current func(family string, day calendar.Date) *parentbilling.FamilyChildCount,
 	day func(row importedChildren) calendar.Date,
 ) {
-	distinct := distinctImportedChildren(rows)
+	// The rows that speak, read before any row gets its status here.
+	byFamily := map[string][]importedChildren{}
+	for _, row := range rows {
+		if row.status == "" || row.status == parentbilling.ImportedChildrenConfirmationsDiffer {
+			byFamily[row.family] = append(byFamily[row.family], row)
+		}
+	}
 	for i := range rows {
 		row := &rows[i]
-		if row.status != "" || row.witness {
+		if row.status != "" {
 			continue
 		}
-		count := current(row.family)
+		if row.witness {
+			// A witness takes over nothing, but its row holds back when it
+			// contradicts the rows of the family (#7863).
+			if importedRowsDiffer(byFamily[row.family], *row) {
+				row.status = parentbilling.ImportedChildrenRowsDiffer
+			}
+			continue
+		}
+		decisionDay := day(*row)
+		count := current(row.family, decisionDay)
 		switch {
-		case len(distinct[row.family]) > 1:
+		case importedRowsDiffer(byFamily[row.family], *row):
 			row.status = parentbilling.ImportedChildrenRowsDiffer
 		case count == nil || count.ConfirmedChildren == nil:
 			row.status = parentbilling.ImportedChildrenNew
-		case count.ValidUntil != nil && count.ValidUntil.Before(day(*row)):
+		case confirmationExpired(count, decisionDay):
 			row.status = parentbilling.ImportedChildrenNew
-			if next := count.ValidUntil.AddDays(1); next.After(row.number.ValidFrom) {
-				row.number.ValidFrom = next
-			}
+			row.number.ValidFrom = importedChildrenStart(row.number.ValidFrom, decisionDay, count)
 		case *count.ConfirmedChildren == row.number.Children:
 			row.status, row.confirmed = parentbilling.ImportedChildrenSame, count.ConfirmedChildren
 		default:
@@ -78,20 +92,29 @@ func decideImportedChildren(rows []importedChildren, current func(family string)
 	}
 }
 
-// distinctImportedChildren collects per family the numbers its rows name,
-// those of a witness included.
-func distinctImportedChildren(rows []importedChildren) map[string]map[int]bool {
-	distinct := map[string]map[int]bool{}
-	for _, row := range rows {
-		if row.status != "" {
-			continue
-		}
-		if distinct[row.family] == nil {
-			distinct[row.family] = map[int]bool{}
-		}
-		distinct[row.family][row.number.Children] = true
+func confirmationExpired(count *parentbilling.FamilyChildCount, day calendar.Date) bool {
+	return count != nil && count.ConfirmedChildren != nil && count.ValidUntil != nil && count.ValidUntil.Before(day)
+}
+
+// importedChildrenStart keeps the dates covered by an expired confirmation.
+func importedChildrenStart(from, decisionDay calendar.Date, count *parentbilling.FamilyChildCount) calendar.Date {
+	if confirmationExpired(count, decisionDay) {
+		return max(from, count.ValidUntil.AddDays(1))
 	}
-	return distinct
+	return from
+}
+
+// importedRowsDiffer tells whether another row of the row's family names
+// a different number. A conflict with stored confirmations on one day does
+// not disqualify a row's number as evidence against sibling rows elsewhere
+// in the file.
+func importedRowsDiffer(family []importedChildren, row importedChildren) bool {
+	for _, other := range family {
+		if other.number.Children != row.number.Children {
+			return true
+		}
+	}
+	return false
 }
 
 // newImportedChildren are the numbers to store: each family once, from the
@@ -198,8 +221,11 @@ func (f *FamilyNumbers) DecideImportedFamilyChildren(ctx context.Context, review
 		return nil, fmt.Errorf("parent billing: record family child count read: %w", err)
 	}
 	// An import of contracts has no clock of its own: a confirmation that
-	// ended before the first day of the row's contract has run out.
-	decideImportedChildren(rows, func(family string) *parentbilling.FamilyChildCount { return confirmed[family] },
+	// ended before the first day of the row's contract has run out, and the
+	// row compares with the one in force on that day.
+	decideImportedChildren(rows, func(family string, day calendar.Date) *parentbilling.FamilyChildCount {
+		return confirmationOnDay(confirmed[family], day)
+	},
 		func(row importedChildren) calendar.Date { return row.number.ValidFrom })
 	if save {
 		if err := f.saveImportedChildren(ctx, reviewer, rows); err != nil {

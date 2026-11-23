@@ -250,6 +250,14 @@ export function CareRuleModal({
     value: school.id,
     label: school.name,
   }));
+  // A sibling rule always counts its own schools (#7863): the field offers
+  // and keeps only the others.
+  const countOptions = schoolOptions.filter(
+    (option) => !draft.schoolIds.includes(option.value),
+  );
+  const countSchoolIds = draft.countSchoolIds.filter(
+    (id) => !draft.schoolIds.includes(id),
+  );
   const effects = KIND_EFFECTS[kind];
   const set = (patch: Partial<Draft>) =>
     setDraft((current) => ({ ...current, ...patch }));
@@ -298,7 +306,7 @@ export function CareRuleModal({
       validUntil: draft.validUntil ? monthEnd(draft.validUntil) : null,
       schoolIds: draft.schoolIds,
       careOfferingIds: draft.moduleIds,
-      countSchoolIds: kind === "sibling" ? draft.countSchoolIds : [],
+      countSchoolIds: kind === "sibling" ? countSchoolIds : [],
       siblingFromChild: kind === "sibling" ? draft.fromChild : null,
       countsFamilyChildren: kind === "sibling" && draft.countsFamilyChildren,
       siblingAllChildren: kind === "sibling" && draft.siblingScope === "family",
@@ -507,16 +515,24 @@ export function CareRuleModal({
               />
             </div>
             <div>
-              <FieldLabel id={countLabel}>Geschwister zählen an</FieldLabel>
+              <FieldLabel id={countLabel}>
+                Geschwister zählen auch an
+              </FieldLabel>
               <MultiSelect
                 ariaLabelledBy={countLabel}
-                value={draft.countSchoolIds}
-                options={schoolOptions}
-                placeholder="Schulen der Regel"
+                ariaDescribedBy={`${countLabel}-hint`}
+                value={countSchoolIds}
+                options={countOptions}
+                placeholder="Keine weitere Schule"
                 onChange={(values) => set({ countSchoolIds: values })}
               />
-              <p className="mt-1 text-sm text-gray-600">
-                Leer lassen, dann zählen nur Kinder an den Schulen der Regel.
+              <p
+                id={`${countLabel}-hint`}
+                className="mt-1 text-sm text-gray-600"
+              >
+                {countOptions.length === 0
+                  ? "Die Schulen der Regel zählen immer. Es gibt keine weitere Schule."
+                  : "Die Schulen der Regel zählen immer. Wähle hier weitere Schulen, deren Kinder mitzählen."}
               </p>
             </div>
           </div>
@@ -524,7 +540,7 @@ export function CareRuleModal({
         {kind === "sibling" ? (
           <SwitchRow
             label="Geschwister ohne Vertrag mitzählen"
-            description="moto zählt die Kinderzahl, die du unter „Kinderzahl“ bestätigt hast. Es zählen immer mindestens die Kinder mit Vertrag. Kinder mit Vertrag an einer anderen Schule zählen nur, wenn die Regel dort Geschwister zählt."
+            description="moto zählt die Kinderzahl, die du unter „Kinderzahl“ bestätigt hast. Es zählen immer mindestens die Kinder mit Vertrag. Kinder mit Vertrag an einer anderen Schule zählen nur, wenn du die Schule bei „Geschwister zählen auch an“ wählst."
             checked={draft.countsFamilyChildren}
             onCheckedChange={(countsFamilyChildren) =>
               set({ countsFamilyChildren })

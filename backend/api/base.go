@@ -106,7 +106,7 @@ func renderMealPlanFailure(w http.ResponseWriter, r *http.Request, err error, in
 	apiCommon.RenderError(w, r, renderer(err))
 }
 
-func newMealPlanResource(module mealplanModule.Capability, renderer SimpleListRenderer) *mealplanAPI.Resource {
+func newMealPlanResource(module mealplanModule.Capability, renderer SimpleListRenderer, menuChanged mealplanAPI.Middleware) *mealplanAPI.Resource {
 	return mealplanAPI.NewResource(module, mealplanAPI.Runtime{
 		Protected: func(router chi.Router, register func(chi.Router, mealplanAPI.Middleware)) {
 			ProtectedTenantRoutes(router, register)
@@ -127,6 +127,7 @@ func newMealPlanResource(module mealplanModule.Capability, renderer SimpleListRe
 		},
 		CurrentAccountID: func(ctx context.Context) int64 { return int64(sessiontoken.ClaimsFromCtx(ctx).ID) },
 		Allowed:          mealPlanAllowed,
+		MenuChanged:      menuChanged,
 	})
 }
 

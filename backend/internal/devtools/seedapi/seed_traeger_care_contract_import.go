@@ -34,11 +34,11 @@ func (seedTraegerCareContractImportStep) Run(_ context.Context, rt *Runtime) err
 		return err
 	}
 	fmt.Printf("  Träger care contract import: %d contracts taken over\n", imported)
-	linked, err := seedCareContractChildLink(rt, auth, module)
+	linked, bound, err := seedCareContractChildLink(rt, auth, module)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("  Träger care contract child links: %d contracts linked\n", linked)
+	fmt.Printf("  Träger care contract child links: %d contracts linked, %d bound to an enrollment\n", linked, bound)
 	return nil
 }
 

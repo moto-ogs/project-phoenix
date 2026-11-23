@@ -19,11 +19,18 @@ vi.mock("./auth-failure", () => ({
   handleAuthFailure: mockHandleAuthFailure,
 }));
 
-type SessionCacheModule = typeof import("./session-cache");
+const EXPORT_ROUTE = "GET /api/meal-plan/orders/month/export";
 
-async function freshModule(): Promise<SessionCacheModule> {
+/**
+ * A fresh session cache, and a staff request through it: bffFile hands the
+ * answer back as it is, so a case reads the status of the retry.
+ */
+async function freshModule() {
   vi.resetModules();
-  return import("./session-cache");
+  const cache = await import("./session-cache");
+  const { bffFile, bffJson } = await import("./bff-fetch");
+  const staffRequest = () => bffFile("tenant", EXPORT_ROUTE);
+  return { ...cache, bffFile, bffJson, staffRequest };
 }
 
 // The browser session carries no token (#5005); `id` tells sessions apart.
@@ -223,7 +230,7 @@ describe("primeSessionCache", () => {
   });
 });
 
-describe("sessionFetch", () => {
+describe("the staff session gate of bffJson and bffFile", () => {
   let originalFetch: typeof fetch;
   const mockFetch = vi.fn();
 
@@ -243,18 +250,18 @@ describe("sessionFetch", () => {
   // A Bearer header on top sends the same token twice and pushed large
   // sessions past Node's header limit (HTTP 431, #3918).
   it("sends the access token only in the session cookie, not as a header", async () => {
-    const { sessionFetch } = await freshModule();
+    const { bffFile } = await freshModule();
     mockGetSession.mockResolvedValue(session("token-a"));
     mockFetch.mockResolvedValueOnce(new Response(null, { status: 200 }));
 
-    await sessionFetch("/api/test", {
-      method: "POST",
+    await bffFile("tenant", "POST /api/students/export", {
+      body: { format: "xlsx" },
       headers: { "X-Custom": "1" },
     });
 
     expect(mockFetch).toHaveBeenCalledTimes(1);
     const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("/api/test");
+    expect(url).toBe("/api/students/export");
     expect(init.method).toBe("POST");
     expect(init.headers).toEqual({
       "Content-Type": "application/json",
@@ -265,13 +272,18 @@ describe("sessionFetch", () => {
   // The browser sets the multipart boundary itself; a JSON Content-Type
   // would clobber it.
   it("sends a FormData body without a Content-Type of its own", async () => {
-    const { sessionFetch } = await freshModule();
+    const { bffJson } = await freshModule();
     mockGetSession.mockResolvedValue(session("token-a"));
-    mockFetch.mockResolvedValueOnce(new Response(null, { status: 200 }));
+    mockFetch.mockResolvedValueOnce(
+      Response.json({ status: "success", data: null }),
+    );
     const body = new FormData();
     body.append("file", new Blob(["x"]), "x.pdf");
 
-    await sessionFetch("/api/upload", { method: "POST", body });
+    await bffJson("tenant", "POST /api/students/{id}/photo", {
+      params: { id: "4" },
+      body,
+    });
 
     const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
     expect(init.body).toBe(body);
@@ -281,17 +293,17 @@ describe("sessionFetch", () => {
   // A superseded request is cancelled on purpose; it must stay an AbortError
   // instead of reading as an unreachable server.
   it("keeps a cancelled request an AbortError", async () => {
-    const { sessionFetch } = await freshModule();
+    const { staffRequest } = await freshModule();
     mockGetSession.mockResolvedValue(session("token-a"));
     mockFetch.mockRejectedValueOnce(new DOMException("aborted", "AbortError"));
 
-    await expect(sessionFetch("/api/test")).rejects.toMatchObject({
+    await expect(staffRequest()).rejects.toMatchObject({
       name: "AbortError",
     });
   });
 
   it("retries after a refresh without a Bearer header", async () => {
-    const { sessionFetch } = await freshModule();
+    const { staffRequest } = await freshModule();
     mockGetSession
       .mockResolvedValueOnce(session("token-old"))
       .mockResolvedValueOnce(session("token-new"));
@@ -300,23 +312,21 @@ describe("sessionFetch", () => {
       .mockResolvedValueOnce(new Response(null, { status: 401 }))
       .mockResolvedValueOnce(new Response(null, { status: 200 }));
 
-    const response = await sessionFetch("/api/test");
+    const response = await staffRequest();
 
     expect(response.status).toBe(200);
     expect(mockFetch).toHaveBeenCalledTimes(2);
     for (const [, init] of mockFetch.mock.calls as [string, RequestInit][]) {
-      expect(init.headers).toEqual({ "Content-Type": "application/json" });
+      expect(init.headers).toBeUndefined();
     }
   });
 
   it("normalizes a failed session lookup as unavailable", async () => {
-    const { sessionFetch } = await freshModule();
+    const { staffRequest } = await freshModule();
     const { ApiError } = await import("./api-error");
     mockGetSession.mockRejectedValueOnce(new TypeError("Failed to fetch"));
 
-    const error = await sessionFetch("/api/test").catch(
-      (caught: unknown) => caught,
-    );
+    const error = await staffRequest().catch((caught: unknown) => caught);
 
     expect(error).toBeInstanceOf(ApiError);
     expect(error).toMatchObject({
@@ -327,16 +337,14 @@ describe("sessionFetch", () => {
   });
 
   it("refuses a session the callback stripped without sending the request", async () => {
-    const { sessionFetch } = await freshModule();
+    const { staffRequest } = await freshModule();
     const { ApiError } = await import("./api-error");
     mockGetSession.mockResolvedValueOnce({
       ...session("token-a"),
       error: "RefreshTokenError",
     });
 
-    const error = await sessionFetch("/api/test").catch(
-      (caught: unknown) => caught,
-    );
+    const error = await staffRequest().catch((caught: unknown) => caught);
 
     expect(error).toBeInstanceOf(ApiError);
     expect(error).toMatchObject({
@@ -347,13 +355,11 @@ describe("sessionFetch", () => {
   });
 
   it("normalizes a missing session token as a permission failure", async () => {
-    const { sessionFetch } = await freshModule();
+    const { staffRequest } = await freshModule();
     const { ApiError } = await import("./api-error");
     mockGetSession.mockResolvedValueOnce(null);
 
-    const error = await sessionFetch("/api/test").catch(
-      (caught: unknown) => caught,
-    );
+    const error = await staffRequest().catch((caught: unknown) => caught);
 
     expect(error).toBeInstanceOf(ApiError);
     expect(error).toMatchObject({
@@ -364,14 +370,12 @@ describe("sessionFetch", () => {
   });
 
   it("normalizes an initial transport failure as unavailable", async () => {
-    const { sessionFetch } = await freshModule();
+    const { staffRequest } = await freshModule();
     const { ApiError } = await import("./api-error");
     mockGetSession.mockResolvedValue(session("token-a"));
     mockFetch.mockRejectedValueOnce(new TypeError("Failed to fetch"));
 
-    const error = await sessionFetch("/api/test").catch(
-      (caught: unknown) => caught,
-    );
+    const error = await staffRequest().catch((caught: unknown) => caught);
 
     expect(error).toBeInstanceOf(ApiError);
     expect(error).toMatchObject({
@@ -381,7 +385,7 @@ describe("sessionFetch", () => {
   });
 
   it("normalizes a transport failure after refreshing the session", async () => {
-    const { sessionFetch } = await freshModule();
+    const { staffRequest } = await freshModule();
     const { ApiError } = await import("./api-error");
     mockGetSession
       .mockResolvedValueOnce(session("token-old"))
@@ -391,9 +395,7 @@ describe("sessionFetch", () => {
       .mockResolvedValueOnce(new Response(null, { status: 401 }))
       .mockRejectedValueOnce(new TypeError("Failed to fetch"));
 
-    const error = await sessionFetch("/api/test").catch(
-      (caught: unknown) => caught,
-    );
+    const error = await staffRequest().catch((caught: unknown) => caught);
 
     expect(error).toBeInstanceOf(ApiError);
     expect(error).toMatchObject({
@@ -403,15 +405,13 @@ describe("sessionFetch", () => {
   });
 
   it("normalizes an unrecoverable authentication failure as permission denied", async () => {
-    const { sessionFetch } = await freshModule();
+    const { staffRequest } = await freshModule();
     const { ApiError } = await import("./api-error");
     mockGetSession.mockResolvedValueOnce(session("token-old"));
     mockHandleAuthFailure.mockResolvedValueOnce(false);
     mockFetch.mockResolvedValueOnce(new Response(null, { status: 401 }));
 
-    const error = await sessionFetch("/api/test").catch(
-      (caught: unknown) => caught,
-    );
+    const error = await staffRequest().catch((caught: unknown) => caught);
 
     expect(error).toBeInstanceOf(ApiError);
     expect(error).toMatchObject({
@@ -421,7 +421,7 @@ describe("sessionFetch", () => {
   });
 
   it("normalizes a missing token after a successful refresh as permission denied", async () => {
-    const { sessionFetch } = await freshModule();
+    const { staffRequest } = await freshModule();
     const { ApiError } = await import("./api-error");
     mockGetSession
       .mockResolvedValueOnce(session("token-old"))
@@ -429,9 +429,7 @@ describe("sessionFetch", () => {
     mockHandleAuthFailure.mockResolvedValueOnce(true);
     mockFetch.mockResolvedValueOnce(new Response(null, { status: 401 }));
 
-    const error = await sessionFetch("/api/test").catch(
-      (caught: unknown) => caught,
-    );
+    const error = await staffRequest().catch((caught: unknown) => caught);
 
     expect(error).toBeInstanceOf(ApiError);
     expect(error).toMatchObject({
@@ -519,7 +517,7 @@ describe("primeSessionCache when the sign-in ends or changes", () => {
 
   // Abmelden: the provider answers without a session.
   it("drops the signed-in session when the provider loses the sign-in", async () => {
-    const { getCachedSession, primeSessionCache, sessionFetch } =
+    const { getCachedSession, primeSessionCache, staffRequest } =
       await freshModule();
     primeSessionCache(session("signed-in"));
 
@@ -527,7 +525,7 @@ describe("primeSessionCache when the sign-in ends or changes", () => {
     mockGetSession.mockResolvedValue(null);
 
     expect(await getCachedSession()).toBeNull();
-    await expect(sessionFetch("/api/test")).rejects.toMatchObject({
+    await expect(staffRequest()).rejects.toMatchObject({
       status: 401,
       code: "general.permission",
     });
@@ -583,7 +581,7 @@ describe("primeSessionCache when the sign-in ends or changes", () => {
 
   // Token-Erneuerung: a 401 renews the session; the renewed one stays.
   it("keeps the renewed session after a 401 and retries once", async () => {
-    const { getCachedSession, primeSessionCache, sessionFetch } =
+    const { getCachedSession, primeSessionCache, staffRequest } =
       await freshModule();
     primeSessionCache(session("before-refresh"));
     mockHandleAuthFailure.mockResolvedValueOnce(true);
@@ -592,7 +590,7 @@ describe("primeSessionCache when the sign-in ends or changes", () => {
       .mockResolvedValueOnce(new Response(null, { status: 401 }))
       .mockResolvedValueOnce(new Response(null, { status: 200 }));
 
-    const response = await sessionFetch("/api/test");
+    const response = await staffRequest();
 
     expect(response.status).toBe(200);
     expect(mockFetch).toHaveBeenCalledTimes(2);
@@ -602,7 +600,7 @@ describe("primeSessionCache when the sign-in ends or changes", () => {
 
   // Abgelaufene oder widerrufene Session: one failed refresh, no loop.
   it("asks again after a revoked session and stops there", async () => {
-    const { getCachedSession, primeSessionCache, sessionFetch } =
+    const { getCachedSession, primeSessionCache, staffRequest } =
       await freshModule();
     primeSessionCache(session("revoked"));
     mockHandleAuthFailure.mockResolvedValueOnce(false);
@@ -611,7 +609,7 @@ describe("primeSessionCache when the sign-in ends or changes", () => {
     Object.assign(ended, { error: "RefreshTokenError" });
     mockGetSession.mockResolvedValue(ended);
 
-    await expect(sessionFetch("/api/test")).rejects.toMatchObject({
+    await expect(staffRequest()).rejects.toMatchObject({
       status: 401,
     });
     expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -619,7 +617,7 @@ describe("primeSessionCache when the sign-in ends or changes", () => {
 
     // The next request asks the session route, learns the session is gone
     // and does not send anything.
-    await expect(sessionFetch("/api/test")).rejects.toMatchObject({
+    await expect(staffRequest()).rejects.toMatchObject({
       status: 401,
       code: "general.permission",
     });
@@ -627,7 +625,7 @@ describe("primeSessionCache when the sign-in ends or changes", () => {
     // the cache keeps it instead of asking again for every request.
     primeSessionCache(ended);
     await getCachedSession();
-    await expect(sessionFetch("/api/test")).rejects.toMatchObject({
+    await expect(staffRequest()).rejects.toMatchObject({
       status: 401,
     });
 

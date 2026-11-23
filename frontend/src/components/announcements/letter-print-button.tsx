@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { downloadLetterPrint } from "~/lib/parent-announcements-api";
+import type { AnnouncementApiBase } from "~/lib/parent-announcements-api";
 
 /**
  * Lädt alle Briefe eines veröffentlichten Elternbriefs als ein PDF zum
@@ -15,7 +16,7 @@ import { downloadLetterPrint } from "~/lib/parent-announcements-api";
 export function LetterPrintButton({
   announcementId,
   apiBase,
-}: Readonly<{ announcementId: string; apiBase?: string }>) {
+}: Readonly<{ announcementId: string; apiBase?: AnnouncementApiBase }>) {
   const { show: showError } = useApiErrorDisplay();
   const [busy, setBusy] = useState(false);
 

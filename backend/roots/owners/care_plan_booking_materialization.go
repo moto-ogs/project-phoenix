@@ -322,7 +322,8 @@ func (e bookingEnrollment) Request(ctx context.Context, id int64) (careplanCompo
 	if request == nil {
 		return careplanCompose.BookingRequest{}, careplanCompose.BookingRowNotFound(fmt.Errorf("request %d not found", id))
 	}
-	return careplanCompose.BookingRequest{ID: request.ID, PhaseID: request.PhaseID}, nil
+	return careplanCompose.BookingRequest{ID: request.ID, PhaseID: request.PhaseID,
+		StartsWithFirstBooking: request.SubmissionSource == enrollmentOwner.RequestSourceContractImport}, nil
 }
 
 func (e bookingEnrollment) Child(ctx context.Context, id int64) (careplanCompose.BookingChild, error) {

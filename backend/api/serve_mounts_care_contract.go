@@ -199,6 +199,10 @@ func (a careContractApplications) AcceptedApplications(ctx context.Context, requ
 			GuardianLastName: application.GuardianLastName, GuardianEmail: application.GuardianEmail,
 			GuardianAccountID: application.GuardianAccountID, PhaseName: application.PhaseName,
 			ServiceStartDate: application.ServiceStartDate, ActivateOn: application.ActivateOn, Renewal: application.Renewal,
+			ContractImport: application.Source == enrollment.RequestSourceContractImport,
+		}
+		if result[i].ContractImport && application.SourceContractID != nil {
+			result[i].ImportContractID = *application.SourceContractID
 		}
 		if application.FamilyChildren != nil && application.FamilyChildrenStatedAt != nil {
 			result[i].FamilyChildren = &carecontract.FamilyStatement{Children: *application.FamilyChildren, StatedAt: *application.FamilyChildrenStatedAt}
@@ -206,6 +210,26 @@ func (a careContractApplications) AcceptedApplications(ctx context.Context, requ
 		for _, proof := range application.Acceptances {
 			result[i].Acceptances = append(result[i].Acceptances, carecontract.AcceptedText{Key: proof.Key, Text: proof.Text, SHA256: proof.SHA256, SubmittedAt: proof.SubmittedAt,
 				Required: proof.Required})
+		}
+	}
+	return result, nil
+}
+
+// AcceptedStudentApplications reads the accepted applications of the child
+// records for the plan of imported contracts (ADR 0309). It passes on the
+// application child, its child record and the source of the application,
+// and nothing of the guardians: the plan reads no more.
+func (a careContractApplications) AcceptedStudentApplications(ctx context.Context, studentIDs []int64) ([]carecontract.Application, error) {
+	found, err := a.applications.AcceptedStudentApplications(ctx, studentIDs)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]carecontract.Application, len(found))
+	for i, application := range found {
+		result[i] = carecontract.Application{RequestChildID: application.RequestChildID, StudentID: application.StudentID,
+			ContractImport: application.Source == enrollment.RequestSourceContractImport}
+		if result[i].ContractImport && application.SourceContractID != nil {
+			result[i].ImportContractID = *application.SourceContractID
 		}
 	}
 	return result, nil
