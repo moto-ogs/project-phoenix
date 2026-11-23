@@ -217,8 +217,8 @@ func (in billedHoldInput) addKept(children map[string]*billedChild, held map[int
 		if key == "" || !in.keptForPrice(contractID, held) {
 			continue
 		}
-		child := childEntry(children, key)
 		if stale := billedDays(in.month, in.assessed[contractID]) &^ in.billingDays(contractID); stale != 0 {
+			child := childEntry(children, key)
 			child.kept = append(child.kept, staleInvoice{contractID: contractID, days: stale})
 		}
 	}
