@@ -4216,7 +4216,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (e bookingEnrollment) Request(ctx context.Context, id int64) (careplanCompose.BookingRequest, error) {\n\trequest, err := e.owner.RequestByID(ctx, id, false)\n\tif err != nil {\n\t\treturn careplanCompose.BookingRequest{}, err\n\t}\n\tif request == nil {\n\t\treturn careplanCompose.BookingRequest{}, careplanCompose.BookingRowNotFound(fmt.Errorf(\"request %d not found\", id))\n\t}\n\treturn careplanCompose.BookingRequest{ID: request.ID, PhaseID: request.PhaseID}, nil\n}",
+      "evidence": "func (e bookingEnrollment) Request(ctx context.Context, id int64) (careplanCompose.BookingRequest, error) {\n\trequest, err := e.owner.RequestByID(ctx, id, false)\n\tif err != nil {\n\t\treturn careplanCompose.BookingRequest{}, err\n\t}\n\tif request == nil {\n\t\treturn careplanCompose.BookingRequest{}, careplanCompose.BookingRowNotFound(fmt.Errorf(\"request %d not found\", id))\n\t}\n\treturn careplanCompose.BookingRequest{ID: request.ID, PhaseID: request.PhaseID, StartsWithFirstBooking: request.SubmissionSource == enrollmentOwner.RequestSourceContractImport}, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/bookingEnrollment.Request",
       "owner": "roots"

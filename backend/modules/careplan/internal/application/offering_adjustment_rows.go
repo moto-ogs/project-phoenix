@@ -20,11 +20,17 @@ type scheduledOfferingReplacement struct {
 }
 
 func (m *BookingMaterialization) persistOfferingAdjustment(ctx context.Context, work *offeringAdjustmentWork) error {
-	scheduled, err := m.scheduledOfferingReplacements(ctx, work.child.ID, work.selectionDate, work.effectiveFrom)
+	history, err := m.correctedSelectionHistory(ctx, work)
 	if err != nil {
 		return err
 	}
-	if err := m.persistOfferingBookings(ctx, work, scheduled); err != nil {
+	scheduled := scheduledOfferingReplacements(history, work.selectionDate)
+	phase := work.phase.OfferingPhase
+	if start := correctionStart(work, history); len(scheduled) == 0 && start.After(phase.ServiceStart) {
+		phase.ServiceStart = start
+		work.replacement = replacementFrom(work.replacement, start)
+	}
+	if err := m.persistOfferingBookings(ctx, work, scheduled, phase); err != nil {
 		return err
 	}
 	materializeFrom := work.effectiveFrom
@@ -32,7 +38,7 @@ func (m *BookingMaterialization) persistOfferingAdjustment(ctx context.Context, 
 		materializeFrom = &work.selectionDate
 	}
 	studentID := *work.child.CreatedStudentID
-	adjusted := adjustedRoster{requestChildID: work.child.ID, studentID: studentID, phase: work.phase.OfferingPhase}
+	adjusted := adjustedRoster{requestChildID: work.child.ID, studentID: studentID, phase: phase}
 	if err := m.rematerializeAdjustedEnrollments(ctx, adjusted, work.beforeLinks, work.replacement, materializeFrom); err != nil {
 		return err
 	}
@@ -44,24 +50,67 @@ func (m *BookingMaterialization) persistOfferingAdjustment(ctx context.Context, 
 	return nil
 }
 
-// scheduledOfferingReplacements captures future changes before an undated
-// staff correction rewrites the current selection. A correction applies now;
-// it must not silently cancel a separately approved future request.
-func (m *BookingMaterialization) scheduledOfferingReplacements(
-	ctx context.Context,
-	requestChildID int64,
-	selectionDate calendar.Date,
-	effectiveFrom *calendar.Date,
-) ([]scheduledOfferingReplacement, error) {
-	if effectiveFrom != nil {
+// correctedSelectionHistory reads every dated selection of the child before
+// an undated staff correction rewrites the current one; a dated switch reads
+// none.
+func (m *BookingMaterialization) correctedSelectionHistory(ctx context.Context, work *offeringAdjustmentWork) ([]*careplan.BookedOffering, error) {
+	if work.effectiveFrom != nil {
 		return nil, nil
 	}
-	history, err := m.deps.Enrollment.SelectionHistory(ctx, requestChildID)
+	history, err := m.deps.Enrollment.SelectionHistory(ctx, work.child.ID)
 	if err != nil {
 		return nil, fmt.Errorf("decision: list scheduled child offerings: %w", err)
 	}
+	return bookedOfferingPointers(history), nil
+}
+
+// correctionStart is the day an undated correction books and plans the
+// child from: the service start of the phase. For a child whose request
+// books from the first day of its bookings (an enrollment from an imported
+// care contract, #7760) it is that day when it lies later: a child booked
+// from 4 January is not booked or planned from August because the office
+// corrected a weekday. Any stored booking without a start, or with one on
+// or before the service start, keeps the service start.
+func correctionStart(work *offeringAdjustmentWork, history []*careplan.BookedOffering) calendar.Date {
+	start := work.phase.ServiceStart
+	if !work.startsWithFirstBooking || len(history) == 0 {
+		return start
+	}
+	first := work.phase.ServiceEnd
+	for _, row := range history {
+		if row.ValidFrom == nil || !row.ValidFrom.After(start) {
+			return start
+		}
+		if row.ValidFrom.Before(first) {
+			first = *row.ValidFrom
+		}
+	}
+	return first
+}
+
+// replacementFrom starts the new selection on start where a row names an
+// earlier day (the care-end cap dates rows from the service start), and
+// drops a row that would end before it began.
+func replacementFrom(rows []*careplan.BookedOffering, start calendar.Date) []*careplan.BookedOffering {
+	kept := rows[:0:0]
+	for _, row := range rows {
+		if row.ValidFrom != nil && row.ValidFrom.Before(start) {
+			from := start
+			row.ValidFrom = &from
+		}
+		if row.ValidUntil == nil || start.Before(*row.ValidUntil) {
+			kept = append(kept, row)
+		}
+	}
+	return kept
+}
+
+// scheduledOfferingReplacements captures future changes before an undated
+// staff correction rewrites the current selection. A correction applies now;
+// it must not silently cancel a separately approved future request.
+func scheduledOfferingReplacements(history []*careplan.BookedOffering, selectionDate calendar.Date) []scheduledOfferingReplacement {
 	byDate := make(map[calendar.Date][]*careplan.BookedOffering)
-	for _, row := range bookedOfferingPointers(history) {
+	for _, row := range history {
 		if row.ValidFrom == nil || !row.ValidFrom.After(selectionDate) {
 			continue
 		}
@@ -76,14 +125,15 @@ func (m *BookingMaterialization) scheduledOfferingReplacements(
 	for _, date := range dates {
 		scheduled = append(scheduled, scheduledOfferingReplacement{EffectiveFrom: date, Rows: byDate[date]})
 	}
-	return scheduled, nil
+	return scheduled
 }
 
 // persistOfferingBookings writes the new effective bookings: dated when the
 // switch has a date or future selections must be kept, a replacement
-// otherwise.
-func (m *BookingMaterialization) persistOfferingBookings(ctx context.Context, work *offeringAdjustmentWork, scheduled []scheduledOfferingReplacement) error {
-	phase := work.phase.OfferingPhase
+// otherwise. phase is the phase of the child, from the day a replacement
+// starts on (correctionStart).
+func (m *BookingMaterialization) persistOfferingBookings(ctx context.Context, work *offeringAdjustmentWork, scheduled []scheduledOfferingReplacement,
+	phase careplan.OfferingPhase) error {
 	if work.effectiveFrom == nil && len(scheduled) == 0 {
 		if err := m.changeCareBookings(ctx, work.child.ID, phase, nil, work.replacement); err != nil {
 			return fmt.Errorf("decision: replace child offerings: %w", err)
