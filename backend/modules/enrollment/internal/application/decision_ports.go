@@ -267,8 +267,11 @@ type DecisionDependencies struct {
 	StudentAudit        StudentAudit
 	StudentConsents     StudentConsents
 	CareWithdrawal      CareWithdrawalReconciler
-	Broadcasts          StudentPlanBroadcasts
-	Settings            DecisionSettings
+	// CareStudents reads the care ends behind the bookings the office can
+	// extend (#7929). Nil offers no extension.
+	CareStudents enrollmentNative.PhaseCareStudents
+	Broadcasts   StudentPlanBroadcasts
+	Settings     DecisionSettings
 	// LockTemplateRecurrence takes the tenant recurrence gate before an
 	// approval rewrites an existing student's class, the same gate Care
 	// Plan's booking materialization serializes its roster writes with.

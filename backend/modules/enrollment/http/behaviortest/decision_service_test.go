@@ -291,6 +291,7 @@ func newDecisionsForTestWithBookings(
 		StudentAudit:           owners.EnrollmentDecisionStudentAudit(api.NewEnrollmentFlowStudentAudit(testpkg.MustDatabase(env.db), testpkg.RequestAuditActor)),
 		StudentConsents:        owners.EnrollmentDecisionStudentConsents(studentConsents),
 		CareWithdrawal:         careWithdrawal,
+		CareStudents:           owners.NewEnrollmentPhaseCareStudents(owners.MustNewPeopleDirectory(testpkg.MustDatabase(env.db))),
 		ParentsURL:             owners.EnrollmentDecisionParentsURL("http://parents.localhost:3000", "http://localhost:3000"),
 		LockTemplateRecurrence: lockTemplateRecurrence,
 		FollowClassChanges:     api.MustEnrollmentTestClassFollowUp(testpkg.MustDatabase(env.db)),
@@ -4662,6 +4663,15 @@ func TestDecisionService_UpdateChildOfferings_RemovesSourcedEnrollmentAfterPhase
 	env.sourcePhase.ServiceStartDate = enrollmentNative.Date(calendar.NewDate(2026, 10, 1))
 	env.sourcePhase.ServiceEndDate = enrollmentNative.Date(calendar.NewDate(2027, 8, 15))
 	require.NoError(t, testpkg.TenantCommand1(t, ctx, env.db, env.repos.Enrollment().UpdatePhase, OwnerPhaseForTest(env.sourcePhase)))
+	// The phase edit carries the bounds the phase set on the child's booking
+	// (FollowPhaseBookingBounds, #6597); the raw update above does not, so the
+	// booking follows here. A booking that kept the old end would be a
+	// booking ending before the phase, and its row ends with it (#7908).
+	_, err = env.db.NewRaw(`UPDATE enrollment.care_offering_bookings SET valid_from = ?, valid_until = ?
+		WHERE tenant_id = ? AND request_child_id = ?`,
+		calendar.Date(env.sourcePhase.ServiceStartDate), calendar.Date(env.sourcePhase.ServiceEndDate).AddDays(1),
+		testpkg.Tenant(t), submitted.Children[0].ID).Exec(ctx)
+	require.NoError(t, err)
 	// This test isolates a phase-window correction, not a planned individual
 	// care end. Keep the student's master interval aligned with the corrected
 	// phase; otherwise enrolled_until must win and cap every rematerialization.

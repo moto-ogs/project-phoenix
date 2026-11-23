@@ -67,6 +67,9 @@ func (d *Decisions) ListChildOfferings(ctx context.Context, requestID int64) (pu
 	for _, child := range children {
 		out[child.ID] = sets.build(linksByChild[child.ID])
 	}
+	if err := d.markExtendableBookings(ctx, phase, selectionDate, children, linksByChild, out); err != nil {
+		return nil, err
+	}
 	return out, nil
 }
 

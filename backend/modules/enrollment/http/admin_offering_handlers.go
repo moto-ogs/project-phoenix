@@ -28,6 +28,9 @@ type AdminUpdateOfferingsRequest struct {
 type AdminUpdateOfferingSelection struct {
 	OfferingID   string   `json:"offering_id"`
 	SelectedDays []string `json:"selected_days,omitempty"`
+	// ExtendToPhaseEnd books a limited offering to the end of the phase, or
+	// to the earlier care end of the child record (#7929).
+	ExtendToPhaseEnd bool `json:"extend_to_phase_end,omitempty"`
 }
 
 func (req *AdminUpdateOfferingsRequest) Bind(_ *http.Request) error { return nil }
@@ -135,8 +138,9 @@ func parseAdminOfferingUpdate(
 			return nil, nil, fmt.Errorf("%w: invalid offering_id", capability.ErrOfferingAdjustmentInvalid)
 		}
 		selections = append(selections, OfferingAdjustmentSelection{
-			OfferingID:   offeringID,
-			SelectedDays: row.SelectedDays,
+			OfferingID:       offeringID,
+			SelectedDays:     row.SelectedDays,
+			ExtendToPhaseEnd: row.ExtendToPhaseEnd,
 		})
 	}
 	var effectiveFrom *calendar.Date
@@ -268,6 +272,10 @@ type AdminRequestChildOffering struct {
 	ValidFrom             string   `json:"valid_from,omitempty"`
 	ValidUntil            string   `json:"valid_until,omitempty"`
 	StartsLater           bool     `json:"starts_later,omitempty"`
+	// ExtendsUntil is the last day (inclusive) the office can extend this
+	// current booking to in an undated correction (#7929), absent when it
+	// cannot be extended.
+	ExtendsUntil string `json:"extends_until,omitempty"`
 	// SubmittedTerms are the catalog terms the parents submitted and signed
 	// (#6837), absent for a booking without a snapshot. ChangedTerms names
 	// what the catalog changed since: price, days, activity. While it is
@@ -300,6 +308,7 @@ func toAdminChildOffering(row ChildOfferingRow) AdminRequestChildOffering {
 		ValidFrom:             optionalDateString(row.ValidFrom),
 		ValidUntil:            optionalInclusiveEndDateString(row.ValidUntil),
 		StartsLater:           row.StartsLater,
+		ExtendsUntil:          optionalDateString(row.ExtendsUntil),
 		SubmittedTerms:        toAdminSubmittedOfferingTerms(row.SubmittedTerms),
 		ChangedTerms:          row.ChangedTerms,
 	}

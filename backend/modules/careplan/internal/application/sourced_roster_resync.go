@@ -495,7 +495,7 @@ func (m *BookingMaterialization) reconcileSourcedRosterRow(
 		return false, nil // history stays
 	}
 	childID := *row.EnrollmentRequestChildID
-	if coverage := protectedChildren[childID]; coverage.coversRow(row) {
+	if coverage := protectedChildren[childID]; coverage.coversRow(row, effectiveFrom) {
 		// The row plans nothing the legacy CareOffering.ActivityGroupID feed
 		// would not plan itself: its lifecycle belongs to THAT offering's
 		// flows and is never rewritten here. A row of the same child reaching
