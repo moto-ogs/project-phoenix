@@ -476,7 +476,7 @@ func (s bookingStudents) Student(ctx context.Context, id int64, lock bool) (care
 	if err != nil {
 		return careplanCompose.BookingStudent{}, err
 	}
-	student := careplanCompose.BookingStudent{ID: row.ID, GradeLevel: enrollmentOwner.SchoolClassGradeLevel(row.SchoolClass)}
+	student := careplanCompose.BookingStudent{ID: row.ID, SchoolClass: row.SchoolClass, GradeLevel: enrollmentOwner.SchoolClassGradeLevel(row.SchoolClass)}
 	// Both enrollment dates are validated, as the decision's student read
 	// always did; only the care end bounds the rosters.
 	if row.EnrolledFrom != "" {

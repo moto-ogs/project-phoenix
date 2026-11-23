@@ -48,12 +48,17 @@ func (w *legacyCoverageWindow) activeOn(date calendar.Date) bool {
 
 func allISOWeekdays() []int { return []int{1, 2, 3, 4, 5, 6, 7} }
 
-// coversRow reports whether a roster row's weekday selection AND validity lie
-// fully inside what the legacy feed plans. Such a row plans nothing the
-// legacy feed would not plan itself, so the resync leaves it alone; a row
-// reaching outside the legacy windows carries a source contribution and is
-// reconciled normally (#2147 review).
-func (c *legacyChildCoverage) coversRow(row ports.RosterEnrollment) bool {
+// coversRow reports whether a roster row's weekday selection AND validity
+// from effectiveFrom on lie fully inside what the legacy feed plans. Such a
+// row plans nothing the legacy feed would not plan itself, so the resync
+// leaves it alone; a row reaching outside the legacy windows carries a
+// source contribution and is reconciled normally (#2147 review).
+//
+// The part of the row before effectiveFrom is history the resync never
+// rewrites, and the coverage only lists links active from effectiveFrom on:
+// a direct row kept across a dated switch starts before the new booking that
+// covers it from the switch on, and must stay protected (#7908).
+func (c *legacyChildCoverage) coversRow(row ports.RosterEnrollment, effectiveFrom calendar.Date) bool {
 	if c == nil || len(c.windows) == 0 {
 		return false
 	}
@@ -62,8 +67,9 @@ func (c *legacyChildCoverage) coversRow(row ports.RosterEnrollment) bool {
 		// An empty selection means every weekday.
 		weekdays = allISOWeekdays()
 	}
+	from := latestDate(row.ValidFrom, &effectiveFrom)
 	for _, weekday := range weekdays {
-		if !c.coversSpan(weekday, row.ValidFrom, row.ValidUntil) {
+		if !c.coversSpan(weekday, from, row.ValidUntil) {
 			return false
 		}
 	}

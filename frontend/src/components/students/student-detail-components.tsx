@@ -859,7 +859,7 @@ export function PersonalInfoReadOnly({
   const companionsUnavailable = companionsRead.error !== undefined;
   const companions = companionsUnavailable
     ? NO_COMPANIONS
-    : (companionsRead.data ?? NO_COMPANIONS);
+    : (companionsRead.data?.companions ?? NO_COMPANIONS);
   // Der Ladefehler steht im Feld „Geht mit“, mit Wiederholen (#2513). Also
   // after a failed refresh: the stale list must not read as current.
   const companionsLoadError = useSwrLoadError(

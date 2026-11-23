@@ -23,7 +23,7 @@ import {
 import { Button, ButtonLink } from "~/components/ui/button";
 import { SegmentedControl } from "~/components/ui/segmented-control";
 import { createLogger } from "~/lib/logger";
-import type { Student } from "~/lib/student-helpers";
+import type { Student, PrivacyConsent } from "~/lib/student-helpers";
 import {
   AdditionalInfoSection,
   DepartureSection,
@@ -66,7 +66,7 @@ import {
 import { fetchPrivacyConsentDefaults } from "~/lib/student-api";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useFreshSWR, useSWRAuth } from "~/lib/swr";
+import { useSWRAuth } from "~/lib/swr";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import {
   mapBulkPickupScheduleFormToBackend,
@@ -281,18 +281,22 @@ export function StudentCreateModal({
     isOpen && !settings && settingsLoad.failure === undefined;
   // The consent fields start at the school's defaults and are only sent when
   // the person changed one: the stored consent then follows the school
-  // setting until somebody decides otherwise for this child.
-  const consentDefaults = useFreshSWR(
+  // setting until somebody decides otherwise for this child. A template
+  // needs no read token (ADR 0311): the backend validates what is saved.
+  // Every opening reads them again in the background (no deduplication).
+  const consentDefaults = useSWRAuth(
     isOpen ? tenantStudentKeys.privacyConsentDefaults() : null,
     fetchPrivacyConsentDefaults,
+    { dedupingInterval: 0 },
   );
   const consentDefaultsLoad = useSwrResourceLoadError(
     [consentDefaults],
     "die Datenschutz-Voreinstellung",
     () => consentDefaults.mutate(),
   );
-  // Whether this opening's form already took the school's defaults.
-  const [consentDefaultsApplied, setConsentDefaultsApplied] = useState(false);
+  // The defaults answer this opening's form took last; null = none yet.
+  const [appliedConsentDefaults, setAppliedConsentDefaults] =
+    useState<PrivacyConsent | null>(null);
   const touchedConsentFieldsRef = useRef(new Set<string>());
   const [guardianPickerOpen, setGuardianPickerOpen] = useState(false);
   // The inline picker panel is tall; collapsing it (on add or cancel) shrinks
@@ -336,22 +340,20 @@ export function StudentCreateModal({
       pendingGuardianScrollRef.current = false;
       touchedConsentFieldsRef.current = new Set();
     }
-    setConsentDefaultsApplied(false);
+    setAppliedConsentDefaults(null);
   }, [isOpen, clearErrors]);
 
-  // Take the defaults once per opening, from an answer read in this opening,
-  // and only into fields nobody touched yet.
+  // Take each defaults answer of this opening (the cached one at once, the
+  // one read again after it), only into fields nobody touched yet.
   const consentDefaultsData = consentDefaults.data;
-  const consentDefaultsValidating = consentDefaults.isValidating;
   useEffect(() => {
     if (
       !isOpen ||
-      consentDefaultsApplied ||
       !consentDefaultsData ||
-      consentDefaultsValidating
+      appliedConsentDefaults === consentDefaultsData
     )
       return;
-    setConsentDefaultsApplied(true);
+    setAppliedConsentDefaults(consentDefaultsData);
     const touched = touchedConsentFieldsRef.current;
     setFormData((prev) => ({
       ...prev,
@@ -362,12 +364,7 @@ export function StudentCreateModal({
         data_retention_days: consentDefaultsData.dataRetentionDays,
       }),
     }));
-  }, [
-    isOpen,
-    consentDefaultsApplied,
-    consentDefaultsData,
-    consentDefaultsValidating,
-  ]);
+  }, [isOpen, appliedConsentDefaults, consentDefaultsData]);
 
   // After the inline picker collapses (add or cancel), re-anchor to the guardian
   // section so the shrinking modal doesn't leave the user scrolled past it.

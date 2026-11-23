@@ -37,6 +37,24 @@ func (r privacyConsentRow) toPort() studentpresence.PrivacyConsent {
 	}
 }
 
+// LockPrivacyConsents serializes the edits of one student's consents until
+// the tenant transaction ends. The key names the student, not a row, so it
+// also holds while the student has no consent yet.
+func (s *Store) LockPrivacyConsents(ctx context.Context, studentID int64) (ports.Stats, error) {
+	db, tenantID, err := s.database(ctx)
+	if err != nil {
+		return ports.Stats{}, err
+	}
+	key := fmt.Sprintf("privacy-consent:%d:%d", tenantID, studentID)
+	started := time.Now()
+	_, err = db.ExecContext(ctx, "SELECT pg_advisory_xact_lock(hashtextextended(?, 0))", key)
+	stats := ports.Stats{Queries: 1, StatementDuration: time.Since(started)}
+	if err != nil {
+		return stats, fmt.Errorf("lock privacy consents: %w", err)
+	}
+	return stats, nil
+}
+
 func (s *Store) ListPrivacyConsents(ctx context.Context, studentID int64) ([]studentpresence.PrivacyConsent, ports.Stats, error) {
 	db, tenantID, err := s.database(ctx)
 	if err != nil {

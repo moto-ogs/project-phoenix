@@ -102,8 +102,6 @@ const REASON_TEXTS: Record<EnrollmentReason, string> = {
     "In der Kinderakte fehlt das Geburtsdatum. Die Schule trägt es ein.",
   care_ends_earlier:
     "In der Kinderakte endet die Betreuung früher als der Vertrag. Kläre mit der Schule, welches Ende stimmt.",
-  roster_bound:
-    "Die Buchung endet vor dem Schuljahr, das Modul hängt aber fest an einer Gruppe. Kläre das Ende mit der Schule.",
   care_offerings_off:
     "An dieser Schule sind Betreuungsangebote ausgeschaltet. Die Schule schaltet sie in ihren Einstellungen ein.",
   offering_phase:

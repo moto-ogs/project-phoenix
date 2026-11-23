@@ -80,7 +80,7 @@ func TestCreateStudentWithoutCarePlace(t *testing.T) {
 
 	// Every later write of the child (an edit, a sick note) rewrites its
 	// membership; it keeps the mark and gives the child no OGS place.
-	update := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", created.Data.ID), map[string]any{
+	update := studentUpdateRequest(t, tc, int64(created.Data.ID), map[string]any{
 		"extra_info": "Brille", "bus_days": map[string]bool{"mon": true},
 	})
 	rr = authExec(t, tc, update, testutil.AdminTestClaims(1), []string{"admin:*"})
