@@ -174,6 +174,12 @@ const (
 	// view („Heute anders“, Tagesinformationen, the sidebar count).
 	EventStaffNoticesChanged EventType = "staff_notices_changed"
 
+	// EventMealPlanChanged is a tenant-wide staff signal that the menu of a
+	// day was saved or cleared (#7666). It carries no content: the menu stays
+	// behind the meal plan's permission, and readers refetch their own view
+	// („Heute anders“ shows only that today's menu changed).
+	EventMealPlanChanged EventType = "meal_plan_changed"
+
 	// Tenant-scoped settings change. Fires when a setting whose value travels
 	// through /auth/tenant/resolve (currently operations.student_photos_enabled)
 	// is written or reset. Already-open tabs at the affected tenant pick this

@@ -505,6 +505,9 @@ const CHILD_SEARCH_ONLY_TOURS: Readonly<
         target: 'a[role="menuitem"][href$="/active-supervisions"]',
         title: "Zur Aufsicht öffnen",
         text: "Wähle „Zur Aufsicht“.",
+        // Am Handy liegt der Eintrag im Blatt: Die Station zeigt aufs Menü.
+        mobileTarget: ALL_CHILDREN_MENU,
+        mobileText: "Öffne das Menü noch einmal und wähle „Zur Aufsicht“.",
         advance: "click",
         nav: true,
       },

@@ -557,7 +557,9 @@ export function useSetupTour<K extends string>(
             text:
               current?.variant && stop.textWhenVisible
                 ? stop.textWhenVisible.text
-                : stop.text,
+                : asSheet && stop.mobileText !== undefined
+                  ? stop.mobileText
+                  : stop.text,
           }
         : null,
     start,

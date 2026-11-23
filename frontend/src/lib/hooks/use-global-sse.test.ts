@@ -998,6 +998,8 @@ describe("useGlobalSSE — Heute anders", () => {
     "instance_cancelled",
     // A day outing or a changed Unterrichtsschluss of a class (#7681).
     "arrival_schedule_changed",
+    // A saved or deleted menu (#7666).
+    "meal_plan_changed",
   ] as const)("reloads the block on %s", (type) => {
     renderHook(() => useGlobalSSE());
 

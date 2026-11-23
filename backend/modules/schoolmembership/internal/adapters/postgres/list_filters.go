@@ -85,17 +85,50 @@ func externalCaregiverRecordListQuery(query *bun.SelectQuery, filter schoolmembe
 	return query, true, nil
 }
 
+// groupAssignmentGroupQuery applies the group part of a group assignment
+// filter: the listed groups, widened by the groups of the listed live
+// teachers. False means it matches nothing.
+func groupAssignmentGroupQuery(query *bun.SelectQuery, filter schoolmembership.GroupAssignmentFilter) (*bun.SelectQuery, bool) {
+	if filter.GroupsOfTeacherStaffIDs == nil {
+		if matchesNothing(filter.GroupIDs) {
+			return query, false
+		}
+		if filter.GroupIDs != nil {
+			query = query.Where(`"group_assignment".group_id IN (?)`, bun.List(filter.GroupIDs))
+		}
+		return query, true
+	}
+	if len(filter.GroupsOfTeacherStaffIDs) == 0 && len(filter.GroupIDs) == 0 {
+		return query, false
+	}
+	return query.WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
+		if len(filter.GroupIDs) > 0 {
+			q = q.WhereOr(`"group_assignment".group_id IN (?)`, bun.List(filter.GroupIDs))
+		}
+		if len(filter.GroupsOfTeacherStaffIDs) > 0 {
+			q = q.WhereOr(`"group_assignment".group_id IN (SELECT "own_assignment".group_id
+				FROM education.group_teacher AS "own_assignment"
+				INNER JOIN users.teachers AS "own_teacher" ON "own_teacher".id = "own_assignment".teacher_id
+					AND "own_teacher".tenant_id = "own_assignment".tenant_id AND "own_teacher".deleted_at IS NULL
+				WHERE "own_assignment".tenant_id = "group_assignment".tenant_id AND "own_teacher".staff_id IN (?))`,
+				bun.List(filter.GroupsOfTeacherStaffIDs))
+		}
+		return q
+	}), true
+}
+
 // groupAssignmentListQuery applies a group assignment filter; false means it
 // matches nothing.
 func groupAssignmentListQuery(query *bun.SelectQuery, filter schoolmembership.GroupAssignmentFilter, forUpdate bool) (*bun.SelectQuery, bool) {
-	if matchesNothing(filter.IDs, filter.GroupIDs, filter.TeacherIDs, filter.TeacherStaffIDs) {
+	if matchesNothing(filter.IDs, filter.TeacherIDs, filter.TeacherStaffIDs) {
+		return query, false
+	}
+	query, matches := groupAssignmentGroupQuery(query, filter)
+	if !matches {
 		return query, false
 	}
 	if filter.IDs != nil {
 		query = query.Where(`"group_assignment".id IN (?)`, bun.List(filter.IDs))
-	}
-	if filter.GroupIDs != nil {
-		query = query.Where(`"group_assignment".group_id IN (?)`, bun.List(filter.GroupIDs))
 	}
 	if filter.TeacherIDs != nil {
 		query = query.Where(`"group_assignment".teacher_id IN (?)`, bun.List(filter.TeacherIDs))
