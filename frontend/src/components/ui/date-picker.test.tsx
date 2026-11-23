@@ -1324,8 +1324,8 @@ describe("DatePicker am Handy", () => {
 
     fireEvent.click(screen.getByRole("combobox", { name: "Monat" }));
     const months = screen.getByRole("listbox", { name: "Monat" });
-    // Das Blatt verschiebt seinen Inhalt per transform; die Liste hängt am
-    // body und läge sonst neben ihrem Auslöser.
+    // Das Blatt verschiebt seinen Inhalt per transform; die Liste öffnet
+    // als eigenes Blatt (#7800) und läge sonst neben ihrem Auslöser.
     expect(sheet).not.toContainElement(months);
     // Die Monatsnamen sind in dieser Datei gemockt; der dritte ist der März.
     fireEvent.click(screen.getAllByRole("option")[2]!);

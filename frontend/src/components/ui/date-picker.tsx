@@ -649,7 +649,6 @@ function DatePickerCalendar({
         maxDate={maxDate}
         locale={locale}
         labels={labels}
-        inSheet={inSheet}
       />
       <CalendarShell
         mode="single"

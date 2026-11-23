@@ -11,7 +11,6 @@ import {
 import userEvent from "@testing-library/user-event";
 import { useRef } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { usePhoneViewport } from "~/test/helpers/viewport";
 
 vi.mock("react-day-picker", () => ({
   DayPicker: ({ month }: { month: Date }) => (

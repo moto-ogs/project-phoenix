@@ -246,7 +246,6 @@ export function CalendarMonthHeader({
   maxDate,
   locale = de,
   labels = CALENDAR_LABELS,
-  inSheet = false,
 }: {
   /** `range`: two months side by side (`DateRangePicker`). */
   readonly variant?: "single" | "range";
@@ -260,12 +259,6 @@ export function CalendarMonthHeader({
   readonly maxDate?: Date;
   readonly locale?: Locale;
   readonly labels?: CalendarLabels;
-  /**
-   * Im Blatt von unten (`ResponsivePanel`): Das Blatt verschiebt seinen
-   * Inhalt per `transform`, eine Liste darin läge neben ihrem Auslöser. Monat
-   * und Jahr öffnen dann am `body`; der Fokus bleibt als Combobox am Auslöser.
-   */
-  readonly inSheet?: boolean;
 }) {
   const monthLabels = useMemo(() => buildMonthLabels(locale), [locale]);
 
@@ -364,9 +357,7 @@ export function CalendarMonthHeader({
             className={NAV_SELECT_CLASS}
             menuClassName={NAV_MENU_CLASS}
             menuZIndex={NAV_MENU_Z_INDEX}
-            portalScopeSelector={
-              inSheet ? undefined : "[data-date-picker-panel]"
-            }
+            portalScopeSelector="[data-date-picker-panel]"
             triggerRole="combobox"
           />
           <ListboxDropdown
@@ -384,9 +375,7 @@ export function CalendarMonthHeader({
             className={NAV_SELECT_CLASS}
             menuClassName={NAV_MENU_CLASS}
             menuZIndex={NAV_MENU_Z_INDEX}
-            portalScopeSelector={
-              inSheet ? undefined : "[data-date-picker-panel]"
-            }
+            portalScopeSelector="[data-date-picker-panel]"
             triggerRole="combobox"
           />
         </div>
