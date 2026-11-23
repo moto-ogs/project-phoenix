@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"fmt"
 	"maps"
 )
@@ -13,15 +12,7 @@ func readSeedVersion(rt *Runtime, auth AuthRef, path, what string) (string, erro
 	if err != nil {
 		return "", fmt.Errorf("read %s: %w", what, err)
 	}
-	var read struct {
-		Data struct {
-			Version string `json:"version"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(raw, &read); err != nil {
-		return "", fmt.Errorf("decode %s: %w", what, err)
-	}
-	return read.Data.Version, nil
+	return seedReadToken(raw, "version")
 }
 
 // putReadPhase saves the phase at path over the version it reads first, as
