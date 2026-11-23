@@ -1,7 +1,15 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
+import { finishSheetClosing } from "~/test/helpers/sheet";
+import { usePhoneViewport } from "~/test/helpers/viewport";
 import { MultiSelect } from "./multi-select";
 
 const OPTIONS = [
@@ -418,6 +426,39 @@ describe("MultiSelect", () => {
       } finally {
         document.removeEventListener("keydown", onDocumentKeyDown);
       }
+    });
+  });
+
+  describe("am Telefon (#7800)", () => {
+    usePhoneViewport();
+
+    it("wählt im Blatt an und ab und bleibt dabei offen", async () => {
+      const onChange = vi.fn();
+      render(<Controlled initial={["2"]} onChange={onChange} />);
+      openMenu();
+
+      const sheet = await screen.findByRole("dialog", { name: "Auswahl" });
+      expect(sheet).toContainElement(
+        screen.getByRole("listbox", { name: "Auswahl" }),
+      );
+      await waitFor(() =>
+        expect(
+          screen.getByRole("option", { name: "Sternengruppe" }),
+        ).toHaveFocus(),
+      );
+
+      fireEvent.click(screen.getByRole("option", { name: "Bärengruppe" }));
+      expect(onChange).toHaveBeenLastCalledWith(["2", "1"]);
+      fireEvent.click(screen.getByRole("option", { name: "Sternengruppe" }));
+      expect(onChange).toHaveBeenLastCalledWith(["1"]);
+      expect(screen.getByRole("dialog", { name: "Auswahl" })).toBe(sheet);
+      expect(
+        screen.getByRole("option", { name: "Bärengruppe" }),
+      ).toHaveAttribute("aria-selected", "true");
+
+      fireEvent.keyDown(sheet, { key: "Escape" });
+      await finishSheetClosing("Auswahl");
+      expect(trigger()).toHaveFocus();
     });
   });
 });

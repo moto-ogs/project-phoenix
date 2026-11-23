@@ -10,6 +10,7 @@ import {
 } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { usePhoneViewport } from "~/test/helpers/viewport";
 import { DatePicker, ISODateInput, ISODatePicker } from "./date-picker";
 import { useScrollLock } from "./overlay-stack";
 import { preloadDayPicker } from "./lazy-day-picker";
@@ -895,6 +896,39 @@ describe("DatePicker", () => {
         .getByRole("listbox", { name: "Monat" })
         .closest("[data-date-picker-panel]"),
     ).not.toBeNull();
+  });
+
+  describe("on a phone (#7800)", () => {
+    usePhoneViewport();
+
+    it("keeps the calendar open on a tap on the month sheet's backdrop", async () => {
+      render(
+        <DatePicker
+          value={new Date("2024-01-15T00:00:00Z")}
+          onChange={mockOnChange}
+          calendarLayout="popover"
+          monthYearNavigation
+        />,
+      );
+      fireEvent.click(screen.getByRole("button", { name: /15\.01\.2024/i }));
+      await screen.findByTestId("day-picker");
+      fireEvent.click(screen.getByRole("combobox", { name: "Monat" }));
+      const monthSheet = await screen.findByRole("dialog", { name: "Monat" });
+      const backdrop = document.querySelector("[data-vaul-overlay]");
+      expect(backdrop).not.toBeNull();
+
+      // Ein Tipp: Druck, dann Klick; Radix schließt das Blatt erst beim Klick.
+      await waitFor(() => {
+        fireEvent.pointerDown(backdrop!, { pointerType: "touch" });
+        fireEvent.mouseDown(backdrop!);
+        fireEvent.mouseUp(backdrop!);
+        fireEvent.click(backdrop!);
+        expect(screen.queryByTestId("day-picker")).not.toBeNull();
+        expect(monthSheet).toHaveAttribute("data-state", "closed");
+      });
+
+      expect(screen.getByTestId("day-picker")).toBeInTheDocument();
+    });
   });
 
   it("does not close calendar when clicking inside the calendar container", async () => {

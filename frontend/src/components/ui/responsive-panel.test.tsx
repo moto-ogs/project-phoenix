@@ -259,4 +259,45 @@ describe("ResponsivePanel unter sm", () => {
       screen.getByRole("dialog", { name: "Vertretung" }),
     ).toBeInTheDocument();
   });
+
+  it("öffnet in einem offenen Blatt gestapelt; das untere rückt nach hinten und bleibt offen", async () => {
+    render(<Outer />);
+    fireEvent.click(screen.getByRole("button", { name: "Filter" }));
+    const outer = await screen.findByRole("dialog", { name: "Filter" });
+
+    const trigger = screen.getByRole("button", { name: "Menü" });
+    fireEvent.click(trigger);
+    const inner = await screen.findByRole("dialog", {
+      name: "Weitere Aktionen",
+    });
+    expect(outer).not.toContainElement(inner);
+    await waitFor(() => expect(outer.style.transform).toContain("scale("));
+
+    fireEvent.keyDown(inner, { key: "Escape" });
+    await finishClosing();
+    expect(screen.getByRole("dialog", { name: "Filter" })).toBe(outer);
+    expect(outer.style.transform).toBe("");
+    expect(trigger).toHaveFocus();
+  });
 });
+
+/** Ein Blatt, in dem ein zweites `ResponsivePanel` steht. */
+function Outer() {
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  return (
+    <ResponsivePanel
+      open={open}
+      onOpenChange={setOpen}
+      label="Filter"
+      returnFocusRef={triggerRef}
+      trigger={
+        <button ref={triggerRef} type="button" onClick={() => setOpen(!open)}>
+          Filter
+        </button>
+      }
+    >
+      {() => <Panel />}
+    </ResponsivePanel>
+  );
+}
