@@ -72,6 +72,9 @@ type Directory interface {
 	FindDailyCandidates(context.Context, domain.Date) ([]domain.DailyCandidate, domain.OperationStats, error)
 	// FindStudentNames names the children of past orders, enrolled or not.
 	FindStudentNames(context.Context, []int64) (map[int64]domain.DailyCandidate, domain.OperationStats, error)
+	// LockStudent takes the child's student row, the first lock of every
+	// write of the child's participation.
+	LockStudent(context.Context, int64) (domain.OperationStats, error)
 }
 
 type Settings interface {

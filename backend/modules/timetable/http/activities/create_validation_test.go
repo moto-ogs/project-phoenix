@@ -45,7 +45,7 @@ func TestUpdateActivityKeepsZeroAsNoLimit(t *testing.T) {
 	ctx := setupActivitiesRoute(t)
 	activity := testpkg.CreateTestActivityGroup(t, ctx.db, "Zero limit update")
 
-	body := map[string]any{"name": "Zero limit update", "max_participants": 0, "is_open": true, "category_id": activity.CategoryID}
+	body := map[string]any{"name": "Zero limit update", "max_participants": 0, "is_open": true, "category_id": activity.CategoryID, "expected_version": activityVersion(t, ctx, activity.ID)}
 	req := testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/activities/%d", activity.ID), body)
 	rr := testutil.ExecuteWithAuth(t, ctx.router, req, testutil.DefaultTestClaims())
 

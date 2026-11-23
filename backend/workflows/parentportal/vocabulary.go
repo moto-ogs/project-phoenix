@@ -118,6 +118,7 @@ type (
 	MealParticipationDay             = care.MealParticipationDay
 	MealParticipationPlan            = care.MealParticipationPlan
 	MealWeekChange                   = care.MealWeekChange
+	MealScheduleSaved                = care.MealScheduleSaved
 	MealPlanEntry                    = care.MealPlanEntry
 	MealWeekday                      = care.MealWeekday
 	ParentRequestEventView           = messaging.ParentRequestEventView

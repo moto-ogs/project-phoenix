@@ -39,11 +39,16 @@ type MorningAttendanceEntry struct {
 }
 
 // MorningAttendanceWrite records the marks of one school morning, attributed
-// to the users.staff_school_memberships row of the Lehrkraft.
+// to the users.staff_school_memberships row of the Lehrkraft. SchoolClass,
+// when set, is the class whose marks these are: the write then takes the
+// lock of that class's handover of the date (ClassHandovers) before it
+// stores them, so a mark never lands between a handover's version check
+// and its commit (ADR 0311).
 type MorningAttendanceWrite struct {
-	Date       calendar.Date
-	RecordedBy int64
-	Marks      []MorningAttendanceMark
+	Date        calendar.Date
+	RecordedBy  int64
+	Marks       []MorningAttendanceMark
+	SchoolClass string
 }
 
 // MorningAttendance stores what the Lehrkraft of a class marked for the

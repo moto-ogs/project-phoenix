@@ -1,6 +1,6 @@
 // lib/activity-api.ts
 import { bffJson } from "./bff-fetch";
-import type { ActivityRequest } from "./contract/activities.generated";
+import type { ActivityUpdateRequest } from "./contract/activities.generated";
 import { handleDomainApiError } from "./api-helpers";
 import { ApiError } from "./api-error";
 import {
@@ -48,10 +48,23 @@ export async function getEnrolledStudents(
   return students.map(mapEnrolledStudentResponse);
 }
 
-// Update an activity
+/**
+ * One activity as its detail read shows it, with its schedules, its
+ * supervisors and the `version` a save sends back (ADR 0311).
+ */
+export async function fetchActivity(id: string): Promise<Activity> {
+  return mapActivityResponse(
+    await bffJson("tenant", "GET /api/activities/{id}", { params: { id } }),
+  );
+}
+
+/**
+ * Saves an activity's master data. The route keeps what the body does not
+ * name; `expected_version` is the version the editor read.
+ */
 export async function updateActivity(
   id: string,
-  data: ActivityRequest,
+  data: ActivityUpdateRequest,
 ): Promise<Activity> {
   const activity = await bffJson("tenant", "PUT /api/activities/{id}", {
     params: { id },

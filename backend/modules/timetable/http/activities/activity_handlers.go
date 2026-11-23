@@ -86,15 +86,6 @@ func addSchedulesToResponse(response *ActivityResponse, schedules []*activityCon
 	}
 }
 
-// updateGroupFields updates the basic fields of an activity group from a request.
-func updateGroupFields(group *activityContract.Group, req *ActivityRequest) {
-	group.Name = req.Name
-	group.MaxParticipants = participantLimit(req.MaxParticipants)
-	group.IsOpen = req.IsOpen
-	group.CategoryID = req.CategoryID.Int64()
-	group.PlannedRoomID = (*int64)(req.PlannedRoomID)
-}
-
 // fetchUpdatedGroupData retrieves the updated group with response details.
 func (rs *Resource) fetchUpdatedGroupData(ctx context.Context, groupID int64) (*activityContract.Group, error) {
 	detailedGroup, supervisors, schedules, err := rs.ActivityService.GetGroupWithDetails(ctx, groupID)
@@ -124,13 +115,15 @@ func (rs *Resource) buildUpdateResponse(ctx context.Context, group *activityCont
 
 	response := newActivityResponse(group, len(enrolledStudents))
 	addSupervisorsToResponse(&response, group.Supervisors)
+	addSchedulesToResponse(&response, group.Schedules)
+	response.Version = activityContract.GroupVersion(group, group.Supervisors, group.Schedules)
 	return response, nil
 }
 
-func (rs *Resource) updateActivityInTx(ctx context.Context, group *activityContract.Group, staffID int64, canManage bool, supervisorIDs []int64, schedules []*activityContract.Schedule) (ActivityResponse, error) {
+func (rs *Resource) updateActivityInTx(ctx context.Context, edit activityContract.GroupEdit, staffID int64, canManage bool) (ActivityResponse, error) {
 	var response ActivityResponse
 	err := rs.transactions.WithinTenant(ctx, tenant.FromContext(ctx), func(txCtx context.Context) error {
-		updated, err := rs.ActivityService.UpdateGroupWithDetails(txCtx, group, staffID, canManage, supervisorIDs, schedules)
+		updated, err := rs.ActivityService.UpdateGroupWithDetails(txCtx, edit, staffID, canManage)
 		if err != nil {
 			return err
 		}
@@ -236,6 +229,7 @@ func (rs *Resource) getActivity(w http.ResponseWriter, r *http.Request) {
 	addCategoryToResponse(&response, group)
 	addSupervisorsToResponse(&response, supervisors)
 	addSchedulesToResponse(&response, schedules)
+	response.Version = activityContract.GroupVersion(group, supervisors, schedules)
 
 	common.Respond(w, r, http.StatusOK, response, "Activity retrieved successfully")
 }
@@ -371,33 +365,13 @@ func (rs *Resource) updateActivity(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse request
-	req := &ActivityRequest{}
+	req := &ActivityUpdateRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
 
-	// Get and update existing group
-	existingGroup, err := rs.ActivityService.GetGroup(r.Context(), id)
-	if err != nil {
-		common.RenderError(w, r, ErrorRenderer(err))
-		return
-	}
-
-	updateGroupFields(existingGroup, req)
-
-	// Convert schedule requests to model schedules for the service call.
-	newSchedules := make([]*activityContract.Schedule, 0, len(req.Schedules))
-	for _, scheduleReq := range req.Schedules {
-		newSchedules = append(newSchedules, &activityContract.Schedule{
-			Weekday:     scheduleReq.Weekday,
-			TimeframeID: (*int64)(scheduleReq.TimeframeID),
-		})
-	}
-
-	response, err := rs.updateActivityInTx(
-		r.Context(), existingGroup, staffID, hasManagePermission, ident.Int64s(req.SupervisorIDs), newSchedules,
-	)
+	response, err := rs.updateActivityInTx(r.Context(), req.groupEdit(id), staffID, hasManagePermission)
 	if err != nil {
 		// Check for ownership error
 		if errors.Is(err, activityContract.ErrNotOwner) {
@@ -445,16 +419,7 @@ func (rs *Resource) deleteActivity(w http.ResponseWriter, r *http.Request) {
 }
 
 func activityRequestSchedules(req *ActivityRequest) []*activityContract.Schedule {
-	// Prepare schedules
-	schedules := make([]*activityContract.Schedule, 0, len(req.Schedules))
-	for _, s := range req.Schedules {
-		schedules = append(schedules, &activityContract.Schedule{
-			Weekday:     s.Weekday,
-			TimeframeID: (*int64)(s.TimeframeID),
-		})
-	}
-
-	return schedules
+	return scheduleRequests(req.Schedules)
 }
 
 func activityListResponses(groups []*activityContract.Group, enrollmentCounts map[int64]int, supervisorMap map[int64][]*activityContract.SupervisorPlanned) []ActivityResponse {

@@ -129,13 +129,9 @@ func (s *legacyGroupManagement) CreateGroup(ctx context.Context, row *domain.Gro
 	}
 	return legacyGroupError(err)
 }
+
 func (s *legacyGroupManagement) UpdateGroup(ctx context.Context, row *domain.Group) error {
-	value := groups.PublicGroup(row)
-	err := s.capability.UpdateGroup(ctx, value)
-	if row != nil && value != nil {
-		*row = *groups.LegacyGroup(value)
-	}
-	return legacyGroupError(err)
+	return legacyGroupError(groups.EditAsStored(ctx, s.capability, row))
 }
 func (s *legacyGroupManagement) DeleteGroup(ctx context.Context, id int64) error {
 	return legacyGroupError(s.capability.DeleteGroup(ctx, id))

@@ -60,13 +60,8 @@ func (s *groupManagement) CreateGroup(ctx context.Context, value *schoolstructur
 	return PublicGroupError(err)
 }
 
-func (s *groupManagement) UpdateGroup(ctx context.Context, value *schoolstructure.Group) error {
-	row := LegacyGroup(value)
-	err := s.service.UpdateGroup(ctx, row)
-	if value != nil && row != nil {
-		*value = *PublicGroup(row)
-	}
-	return PublicGroupError(err)
+func (s *groupManagement) UpdateGroup(ctx context.Context, edit schoolstructure.GroupEdit) error {
+	return PublicGroupError(s.service.EditGroup(ctx, edit))
 }
 
 func (s *groupManagement) DeleteGroup(ctx context.Context, id int64) error {

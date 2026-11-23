@@ -9843,6 +9843,16 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ChangeClassHandover",
+      "reason": "Read-only newly exposed target (#7956, ADR 0311, ADR 0313 Nachtrag): student-presence calls the HandoverChildren function of the class handover command, which Class Day binds to modules/classday/internal/application.classHandover.dialogChildren. It reads Class Day's day projection (Enrollment's day roster, the standing status days, Care Plan's care days and effective pickups) to name the children the handover dialog lists. No write, lock or scope of its own; it runs in the handover's tenant transaction under Student Presence's class and day advisory lock, which it does not take or release.",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/modules/classday/internal/application.classHandover.dialogChildren",
+      "target_owner": "class-day-view"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ChangeClassHandover",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ChangeClassHandover",
       "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through *modules/studentpresence/internal/application.Service.ChangeClassHandover. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
@@ -25575,6 +25585,16 @@
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.ListVisits",
       "reason": "Read-only newly exposed target: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/adapters/postgres.Store.ListVisits. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.LockClassHandover",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.LockClassHandover",
+      "reason": "Read-only target: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/adapters/postgres.Store.LockClassHandover to run its own advisory lock of the class and day in the caller's tenant transaction. The lock moved out of DeleteClassHandover so the handover's read-state check reads under it (ADR 0311, #7904); no persistent or scope effect.",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
       "target_owner": "tenant-runtime"

@@ -7,7 +7,10 @@ import {
   type Activity,
   type ActivitySupervisor,
 } from "@/lib/activity-helpers";
-import type { ActivityRequest } from "~/lib/contract/activities.generated";
+import type {
+  ActivityRequest,
+  ActivityUpdateRequest,
+} from "~/lib/contract/activities.generated";
 import { bffJson } from "~/lib/bff-fetch";
 import { activitiesConcept } from "~/lib/concepts/activities";
 import { staffConcept } from "~/lib/concepts/staff";
@@ -123,6 +126,35 @@ export function toActivityRequest(data: Partial<Activity>): ActivityRequest {
   };
 }
 
+/**
+ * The body of a save from the database form, which shows the name, the
+ * limit, the category and the primary supervisor only. The route keeps what
+ * the body does not name (opening, planned room, schedules), and a changed
+ * primary supervisor travels with the co-supervisors the form read, so they
+ * stay. `version` is the stored state the form was filled from (ADR 0311).
+ */
+export function toActivityUpdateRequest(
+  data: Partial<Activity>,
+): ActivityUpdateRequest {
+  const limit: unknown = data.max_participant;
+  const request: ActivityUpdateRequest = {
+    name: data.name,
+    max_participants: typeof limit === "number" ? limit : null,
+    category_id: data.ag_category_id || undefined,
+    expected_version: data.version,
+  };
+  const read = data.supervisors ?? [];
+  const readPrimary = read.find((s) => s.is_primary)?.staff_id ?? "";
+  const primary = data.supervisor_id ?? "";
+  if (primary !== readPrimary) {
+    const others = read
+      .map((s) => s.staff_id)
+      .filter((id) => id !== primary && id !== readPrimary);
+    request.supervisor_ids = primary ? [primary, ...others] : others;
+  }
+  return request;
+}
+
 export const activitiesConfig = defineEntityConfig<Activity>({
   name: {
     singular: "Aktivität",
@@ -157,7 +189,7 @@ export const activitiesConfig = defineEntityConfig<Activity>({
       mapActivityResponse(
         await bffJson("tenant", "PUT /api/activities/{id}", {
           params: { id },
-          body: toActivityRequest(data),
+          body: toActivityUpdateRequest(data),
         }),
       ),
     delete: (id) =>

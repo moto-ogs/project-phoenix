@@ -9,7 +9,7 @@ var (
 	AddCategoryToResponseForTest     = addCategoryToResponse
 	AddSupervisorsToResponseForTest  = addSupervisorsToResponse
 	AddSchedulesToResponseForTest    = addSchedulesToResponse
-	UpdateGroupFieldsForTest         = updateGroupFields
+	GroupEditForTest                 = (*ActivityUpdateRequest).groupEdit
 	NewCategoryResponseForTest       = newCategoryResponse
 	NewScheduleResponseForTest       = newScheduleResponse
 	NewSupervisorResponseForTest     = newSupervisorResponse

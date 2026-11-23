@@ -44,10 +44,13 @@ type GroupOperations interface {
 	CreateGroup(ctx context.Context, group *Group, supervisorIDs []int64, schedules []*Schedule) (*Group, error)
 	GetGroup(ctx context.Context, id int64) (*Group, error)
 	UpdateGroup(ctx context.Context, group *Group, requestingStaffID int64, hasManagePermission bool) (*Group, error)
-	// UpdateGroupWithDetails updates group fields + supervisor set + schedule
-	// replacement as one failing-together unit; run inside a tenant tx so a
-	// partial failure rolls everything back (issue #575 B10).
-	UpdateGroupWithDetails(ctx context.Context, group *Group, requestingStaffID int64, hasManagePermission bool, supervisorIDs []int64, schedules []*Schedule) (*Group, error)
+	// UpdateGroupWithDetails applies an edit to the group fields and, where
+	// the edit names them, the supervisor set and the schedules, as one
+	// failing-together unit; run inside a tenant tx so a partial failure
+	// rolls everything back (issue #575 B10). It refuses an edit whose
+	// ExpectedVersion is not the stored GroupVersion with
+	// readstate.ErrChanged (ADR 0311).
+	UpdateGroupWithDetails(ctx context.Context, edit GroupEdit, requestingStaffID int64, hasManagePermission bool) (*Group, error)
 	DeleteGroup(ctx context.Context, id int64, requestingStaffID int64, hasManagePermission bool) error
 	ListGroups(ctx context.Context, query *GroupListQuery) ([]*Group, error)
 	GetGroupWithDetails(ctx context.Context, id int64) (*Group, []*SupervisorPlanned, []*Schedule, error)

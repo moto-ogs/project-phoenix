@@ -88,7 +88,10 @@ func TestPresenceGroups20SchoolQueryBudget(t *testing.T) {
 					ids = append(ids, row.ID.Int64())
 					row.CreatedAt = row.CreatedAt.UTC()
 					row.UpdatedAt = row.UpdatedAt.UTC()
-					require.Equal(t, expectedGroups[row.ID.Int64()], row)
+					require.NotEmpty(t, row.Version, "the list carries each group's version (ADR 0311)")
+					want := expectedGroups[row.ID.Int64()]
+					want.Version = row.Version
+					require.Equal(t, want, row)
 					require.NotEqual(t, hidden.ID, row.ID)
 					if row.ID == ident.ID(group.ID) {
 						require.Equal(t, n, row.StudentCount)
@@ -102,7 +105,10 @@ func TestPresenceGroups20SchoolQueryBudget(t *testing.T) {
 				require.NoError(t, json.Unmarshal(envelope.Data, &row))
 				row.CreatedAt = row.CreatedAt.UTC()
 				row.UpdatedAt = row.UpdatedAt.UTC()
-				require.Equal(t, expectedGroups[group.ID], row)
+				require.NotEmpty(t, row.Version, "the detail read carries the group's version (ADR 0311)")
+				want := expectedGroups[group.ID]
+				want.Version = row.Version
+				require.Equal(t, want, row)
 				require.Equal(t, group.Name, row.Name)
 				require.Equal(t, n, row.StudentCount)
 				require.Equal(t, teachers, row.Teachers)

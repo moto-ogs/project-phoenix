@@ -17,8 +17,11 @@ type ClassHandoverStore interface {
 	// reports whether there was one, and stores the new one with its
 	// children.
 	ReplaceClassHandover(ctx context.Context, in studentpresence.ClassHandoverChange, normalizedClass string, at time.Time) (replaced bool, stats Stats, err error)
-	// DeleteClassHandover deletes the handover of the normalized class on
-	// date; Rows counts the deleted handovers.
+	// LockClassHandover takes the transaction lock of the normalized class's
+	// handover on date, also while there is none yet.
+	LockClassHandover(ctx context.Context, normalizedClass string, date Date) (Stats, error)
+	// DeleteClassHandover takes that lock and deletes the handover of the
+	// normalized class on date; Rows counts the deleted handovers.
 	DeleteClassHandover(ctx context.Context, normalizedClass string, date Date) (Stats, error)
 	// DeleteClassHandoversBefore deletes the tenant's handovers dated before
 	// cutoff, their children with them.

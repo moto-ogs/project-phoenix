@@ -8,6 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // ClassHandoversOn returns the handovers of date (#4794), each assembled with
@@ -41,7 +42,7 @@ func (s *Service) ChangeClassHandover(ctx context.Context, in studentpresence.Cl
 	}
 	in.PresentStudentIDs = distinctIDs(in.PresentStudentIDs)
 	in.AbsentStudentIDs = distinctIDs(in.AbsentStudentIDs)
-	if !in.Withdraw && (in.HandedOverBy <= 0 || !validHandoverChildren(in.PresentStudentIDs, in.AbsentStudentIDs)) {
+	if !in.Withdraw && (in.HandedOverBy <= 0 || in.HandoverChildren == nil || !validHandoverChildren(in.PresentStudentIDs, in.AbsentStudentIDs)) {
 		return false, studentpresence.ErrClassHandoverInvalid
 	}
 	in.SchoolClass = strings.TrimSpace(in.SchoolClass)
@@ -51,11 +52,78 @@ func (s *Service) ChangeClassHandover(ctx context.Context, in studentpresence.Cl
 			existed = stats.Rows > 0
 			return stats, err
 		}
-		var stats ports.Stats
-		existed, stats, err = s.store.ReplaceClassHandover(txCtx, in, class, s.now())
+		stats, err := s.checkClassHandover(txCtx, in, class)
+		if err != nil {
+			return stats, err
+		}
+		var replaceStats ports.Stats
+		existed, replaceStats, err = s.store.ReplaceClassHandover(txCtx, in, class, s.now())
+		stats.Queries += replaceStats.Queries
+		stats.Rows += replaceStats.Rows
+		stats.StatementDuration += replaceStats.StatementDuration
 		return stats, err
 	})
 	return existed, err
+}
+
+// checkClassHandover takes the lock of the class and day and refuses a
+// handover over another state than the one its Lehrkraft read (ADR 0311):
+// another stored handover, another set of children in the dialog, or
+// another morning absence mark of one of them. The dialog's children and
+// their marks are read under that lock; the morning-mark writes of the
+// class take it too, so no mark lands between this check and the
+// handover's commit. A stale save would mark a child the class now has
+// "nicht da", or no longer hands over, as "da".
+func (s *Service) checkClassHandover(ctx context.Context, in studentpresence.ClassHandoverChange, class string) (ports.Stats, error) {
+	stats, err := s.store.LockClassHandover(ctx, class, in.Date)
+	if err != nil {
+		return stats, err
+	}
+	handovers, listStats, err := s.store.ListClassHandovers(ctx, in.Date)
+	stats.Queries += listStats.Queries
+	stats.Rows += listStats.Rows
+	stats.StatementDuration += listStats.StatementDuration
+	if err != nil {
+		return stats, err
+	}
+	var stored *studentpresence.ClassHandover
+	for i := range handovers {
+		if strings.ToLower(strings.TrimSpace(handovers[i].SchoolClass)) == class {
+			stored = &handovers[i]
+		}
+	}
+	children, err := in.HandoverChildren(ctx)
+	if err != nil {
+		return stats, err
+	}
+	morningAbsent, markStats, err := s.morningAbsentOf(ctx, in.Date, children)
+	stats.Queries += markStats.Queries
+	stats.Rows += markStats.Rows
+	stats.StatementDuration += markStats.StatementDuration
+	if err != nil {
+		return stats, err
+	}
+	return stats, readstate.Check(in.ExpectedVersion, studentpresence.ClassHandoverVersion(stored, children, morningAbsent))
+}
+
+// morningAbsentOf lists the children among studentIDs whose stored morning
+// mark of date is "absent".
+func (s *Service) morningAbsentOf(ctx context.Context, date calendar.Date, studentIDs []int64) ([]int64, ports.Stats, error) {
+	studentIDs = distinctIDs(studentIDs)
+	if len(studentIDs) == 0 {
+		return nil, ports.Stats{}, nil
+	}
+	entries, stats, err := s.store.ListMorningAttendance(ctx, date, date, studentIDs, nil)
+	if err != nil {
+		return nil, stats, err
+	}
+	absent := make([]int64, 0, len(entries))
+	for _, entry := range entries {
+		if entry.Child.StudentID > 0 && entry.Status == studentpresence.MorningAttendanceAbsent {
+			absent = append(absent, entry.Child.StudentID)
+		}
+	}
+	return absent, stats, nil
 }
 
 // validHandoverChildren accepts positive IDs, each child either "da" or

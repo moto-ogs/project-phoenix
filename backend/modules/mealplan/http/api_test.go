@@ -271,6 +271,7 @@ func TestStaffWeekendWriteKeepsItsErrorContract(t *testing.T) {
 			return nil, nil
 		},
 		StudentNames: func(context.Context, []int64) ([]mealplanModule.ParticipantCandidate, error) { return nil, nil },
+		LockStudent:  func(context.Context, int64) (bool, error) { return true, nil },
 		Calendar: func(context.Context, string, string) (map[string]bool, []mealplanModule.HolidayPeriod, error) {
 			return nil, nil, nil
 		},
