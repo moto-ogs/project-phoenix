@@ -36,6 +36,9 @@ const sampleTeacher: Teacher = {
   is_teacher: true,
   staff_id: "1",
   teacher_id: "10",
+  // Die Stände der Lesung (ADR 0311); die Speicherungen senden sie zurück.
+  version: "record-v1",
+  person_version: "person-v1",
 };
 
 // The staff record the staff writes answer, as the contract delivers it
@@ -54,6 +57,7 @@ const sampleStaffRecord: StaffRecordResponse = {
     account_id: "50",
     created_at: "2024-01-01T00:00:00Z",
     updated_at: "2024-01-15T00:00:00Z",
+    version: "person-version",
   },
   specialization: "Mathematics",
   role: "Teacher",
@@ -494,6 +498,7 @@ describe("teacher-api", () => {
         mockFetch.mock.calls.map(([url, init]) => [url, init?.method]),
       ).toEqual([["/api/staff/1", "PUT"]]);
       expect(JSON.parse(mockFetch.mock.calls[0]![1]!.body as string)).toEqual({
+        expected_version: "record-v1",
         person_id: "100",
         is_teacher: true,
         specialization: "Physics",
@@ -529,7 +534,7 @@ describe("teacher-api", () => {
 
         await teacherService.updateTeacher(
           "1",
-          { first_name: "Milena" },
+          { first_name: "Milena", expected_version: "person-v1" },
           { ...sampleTeacher, ...profile },
         );
 
@@ -542,10 +547,11 @@ describe("teacher-api", () => {
         // The person update omits account_id: the backend keeps the stored
         // link (#2352).
         expect(JSON.parse(mockFetch.mock.calls[0]![1]!.body as string)).toEqual(
-          { first_name: "Milena" },
+          { first_name: "Milena", expected_version: "person-v1" },
         );
         expect(JSON.parse(mockFetch.mock.calls[1]![1]!.body as string)).toEqual(
           {
+            expected_version: "record-v1",
             person_id: "100",
             is_teacher: expected,
             specialization: "Mathematics",
@@ -573,7 +579,7 @@ describe("teacher-api", () => {
         expect(mockFetch.mock.calls[0]![0]).toBe("/api/users/100");
         // Go reads null and "" alike for tag_id; removal travels as "".
         expect(JSON.parse(mockFetch.mock.calls[0]![1]!.body as string)).toEqual(
-          { tag_id: tag_id ?? "" },
+          { tag_id: tag_id ?? "", expected_version: "person-v1" },
         );
       },
     );
@@ -592,6 +598,7 @@ describe("teacher-api", () => {
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
       expect(JSON.parse(mockFetch.mock.calls[0]![1]!.body as string)).toEqual({
+        expected_version: "record-v1",
         person_id: "100",
         is_teacher: true,
         specialization: "",
@@ -628,7 +635,7 @@ describe("teacher-api", () => {
         await expect(
           teacherService.updateTeacher(
             "1",
-            { first_name: "Milena" },
+            { first_name: "Milena", expected_version: "person-v1" },
             sampleTeacher,
           ),
         ).rejects.toMatchObject({

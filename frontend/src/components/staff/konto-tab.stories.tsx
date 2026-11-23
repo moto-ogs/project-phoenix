@@ -52,6 +52,7 @@ export const Editable: Story = {
       },
       onEditingChange: () => undefined,
       onSave: async () => undefined,
+      reload: async () => undefined,
     },
   },
 };
@@ -67,6 +68,7 @@ export const EditableWithoutPersonFields: Story = {
       canDeleteStaff: false,
       onEditingChange: () => undefined,
       onSave: async () => undefined,
+      reload: async () => undefined,
     },
   },
 };

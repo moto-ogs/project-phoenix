@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   mutateSchedule: vi.fn(),
   mutate: vi.fn(),
   toastError: vi.fn(),
+  refusalShow: vi.fn(),
   templates: [] as unknown[],
 }));
 
@@ -23,6 +24,7 @@ const schedule: StaffSchedule = {
   entries: [{ weekIndex: 0, dayOfWeek: 0, targetMinutes: 267 }],
   weeklyTotals: [267],
   validFrom: "2026-08-10",
+  version: "schedule-v1",
 };
 
 vi.mock("~/lib/swr", () => ({
@@ -53,6 +55,13 @@ vi.mock("~/lib/staff-api", () => ({
 
 vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/contexts/ToastContext")>()),
+  // Ablehnungen stehen beim Reiter (ADR 0311); hier ohne ToastProvider.
+  useApiErrorDisplay: () => ({
+    error: null,
+    show: mocks.refusalShow,
+    clear: vi.fn(),
+    showMessage: vi.fn(),
+  }),
   useToast: () => ({
     success: vi.fn(),
     error: mocks.toastError,
@@ -86,6 +95,7 @@ describe("Arbeitszeitmodell decimal-hours editor", () => {
     mocks.mutateSchedule.mockReset();
     mocks.mutate.mockReset();
     mocks.toastError.mockReset();
+    mocks.refusalShow.mockReset();
     mocks.templates = [];
   });
 
@@ -233,11 +243,15 @@ describe("Arbeitszeitmodell decimal-hours editor", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     await waitFor(() =>
-      expect(mocks.updateSchedule).toHaveBeenCalledWith("42", {
-        mode: "custom",
-        rotationLength: 1,
-        entries: [{ weekIndex: 0, dayOfWeek: 0, targetMinutes: 267 }],
-      }),
+      expect(mocks.updateSchedule).toHaveBeenCalledWith(
+        "42",
+        {
+          mode: "custom",
+          rotationLength: 1,
+          entries: [{ weekIndex: 0, dayOfWeek: 0, targetMinutes: 267 }],
+        },
+        "schedule-v1",
+      ),
     );
   });
 
@@ -309,14 +323,56 @@ describe("Arbeitszeitmodell decimal-hours editor", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await waitFor(() =>
-      expect(mocks.updateSchedule).toHaveBeenCalledWith("42", {
-        mode: "custom",
-        rotationLength: 2,
-        entries: [
-          { weekIndex: 0, dayOfWeek: 0, targetMinutes: 267 },
-          { weekIndex: 1, dayOfWeek: 1, targetMinutes: 60 },
-        ],
-      }),
+      expect(mocks.updateSchedule).toHaveBeenCalledWith(
+        "42",
+        {
+          mode: "custom",
+          rotationLength: 2,
+          entries: [
+            { weekIndex: 0, dayOfWeek: 0, targetMinutes: 267 },
+            { weekIndex: 1, dayOfWeek: 1, targetMinutes: 60 },
+          ],
+        },
+        "schedule-v1",
+      ),
     );
+  });
+
+  it("closes the editor and reads the stored model when it changed since opening", async () => {
+    // ADR 0311: Speichern sendet den Stand beim Öffnen. Hat jemand das
+    // Modell inzwischen geändert, schließt der Editor und der Reiter meldet
+    // es mit dem Neuladen, ohne „Wiederholen“.
+    const refusal = new ApiError("changed", 409, {
+      code: "general.changed_since_read",
+    });
+    mocks.updateSchedule.mockRejectedValue(refusal);
+    openEditor();
+
+    fireEvent.change(
+      screen.getByRole("textbox", { name: "Dezimalstunden Montag" }),
+      { target: { value: "5" } },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() =>
+      expect(mocks.refusalShow).toHaveBeenCalledWith(
+        refusal,
+        expect.objectContaining({
+          object: "das Arbeitszeitmodell",
+          reload: expect.any(Function),
+        }),
+      ),
+    );
+    expect(mocks.updateSchedule).toHaveBeenCalledWith(
+      "42",
+      expect.anything(),
+      "schedule-v1",
+    );
+    expect(
+      screen.queryByRole("button", { name: "Speichern" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Bearbeiten" }),
+    ).toBeInTheDocument();
   });
 });

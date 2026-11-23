@@ -50,6 +50,7 @@ import {
   getStaffLocationStatus,
 } from "~/lib/staff-helpers";
 import {
+  revalidateOrThrow,
   useSWRAuth,
   useSWRSeedFrom,
   useTenantMutate,
@@ -333,6 +334,16 @@ export default function StaffDetailContent() {
   const [mfaModalOpen, setMfaModalOpen] = useState(false);
   const hasAccess = hasSessionAccess(session);
 
+  // Liest den Datensatz nach einer Ablehnung; lehnt ab, wenn das Lesen
+  // scheitert (ADR 0311, Regel 6).
+  const recordReadRef = useRef(recordRequest);
+  useLayoutEffect(() => {
+    recordReadRef.current = recordRequest;
+  });
+  const reloadRecordOrThrow = useCallback(
+    () => revalidateOrThrow(recordReadRef.current),
+    [],
+  );
   const reloadRecord = useCallback(async () => {
     await Promise.all([
       tenantMutate(staffKeys.recordKey(staffId)),
@@ -360,13 +371,17 @@ export default function StaffDetailContent() {
       const {
         role_id: targetRoleId,
         role_version: roleVersion,
+        record: readRecord,
         ...recordData
       } = draft;
       const hasRecordChanges = Object.keys(recordData).length > 0;
       if (hasRecordChanges) {
         try {
-          if (!record) throw new Error("Staff record is not loaded");
-          await teacherService.updateTeacher(staffId, recordData, record);
+          // Der Datensatz, den der Entwurf beim Öffnen las: seine Stände
+          // gehen mit (ADR 0311), nicht die einer späteren Lesung.
+          const base = readRecord ?? record;
+          if (!base) throw new Error("Staff record is not loaded");
+          await teacherService.updateTeacher(staffId, recordData, base);
         } catch (err) {
           logger.error("failed to update staff record", {
             staff_id: staffId,
@@ -979,6 +994,7 @@ export default function StaffDetailContent() {
                         roleAssignmentError: Boolean(roleAssignmentError),
                         onEditingChange: setKontoEditing,
                         onSave: handleSaveKonto,
+                        reload: reloadRecordOrThrow,
                       }
                     : undefined
                 }

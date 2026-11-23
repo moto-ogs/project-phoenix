@@ -34,10 +34,12 @@ import { Radio } from "~/components/ui/radio";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import {
+  useApiErrorDisplay,
   useApiFormError,
   useApiLoadError,
   useToast,
 } from "~/contexts/ToastContext";
+import { isReadStateRefusal } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import {
   staffMonthSummaryService,
@@ -54,7 +56,11 @@ import {
   startOfWeek,
   toDateKey,
 } from "~/lib/staff-metrics-helpers";
-import { useInvalidateMatching, useSWRAuth } from "~/lib/swr";
+import {
+  revalidateOrThrow,
+  useInvalidateMatching,
+  useSWRAuth,
+} from "~/lib/swr";
 import { workTimeModelKeys, staffTimeKeys } from "~/lib/swr/staff-keys";
 import { formatDuration } from "~/lib/time-tracking-helpers";
 
@@ -106,14 +112,21 @@ export function ArbeitszeitmodellTab({
   // Den Reiter sieht nur die Leitung; sie darf Zeitkonten lesen.
   const hasTarget = useStaffHasTarget(staffId, berlinTodayISO(), canEdit);
 
+  const scheduleRead = useSWRAuth(staffTimeKeys.schedule(staffId), () =>
+    staffScheduleService.getSchedule(staffId),
+  );
   const {
     data: schedule,
     isLoading,
     error: scheduleError,
     mutate: mutateSchedule,
-  } = useSWRAuth(staffTimeKeys.schedule(staffId), () =>
-    staffScheduleService.getSchedule(staffId),
-  );
+  } = scheduleRead;
+  const scheduleReadRef = useRef(scheduleRead);
+  useLayoutEffect(() => {
+    scheduleReadRef.current = scheduleRead;
+  });
+  // Eine Ablehnung steht beim Reiter: der Editor schließt (ADR 0311).
+  const refusals = useApiErrorDisplay();
 
   const invalidate = useInvalidateMatching();
   const load = useApiLoadError();
@@ -167,10 +180,21 @@ export function ArbeitszeitmodellTab({
       : "1 Woche";
   const averagePerWeek =
     schedule.rotationLength > 0 ? weeklyTotal / schedule.rotationLength : 0;
-  const handleScheduleSaved = () => {
-    mutateSchedule();
+  const handleScheduleSaved = (saved: StaffSchedule) => {
+    // Die Antwort ist der gespeicherte Stand samt neuem Stand-Token.
+    void mutateSchedule(saved, { revalidate: false });
     void invalidate(isStaleAfterModelSave);
     setEditing(false);
+  };
+  // Jemand hat das Modell seit dem Öffnen geändert (ADR 0311): Der Editor
+  // schließt, das gespeicherte Modell erscheint mit der Meldung, ohne
+  // „Wiederholen“. Scheitert das Lesen, sagt die Meldung das.
+  const handleScheduleRefused = (error: unknown) => {
+    setEditing(false);
+    void refusals.show(error, {
+      object: "das Arbeitszeitmodell",
+      reload: () => revalidateOrThrow(scheduleReadRef.current),
+    });
   };
 
   if (editing) {
@@ -185,6 +209,7 @@ export function ArbeitszeitmodellTab({
             schedule={schedule}
             onCancel={() => setEditing(false)}
             onSaved={handleScheduleSaved}
+            onRefused={handleScheduleRefused}
           />
         </SectionCard>
       </div>
@@ -478,13 +503,19 @@ function ArbeitszeitmodellEditor({
   schedule,
   onCancel,
   onSaved,
+  onRefused,
 }: {
   readonly staffId: string;
   readonly schedule: StaffSchedule;
   readonly onCancel: () => void;
-  readonly onSaved: () => void;
+  readonly onSaved: (saved: StaffSchedule) => void;
+  /** Das Modell wurde seit dem Öffnen geändert (ADR 0311). */
+  readonly onRefused: (error: unknown) => void;
 }) {
   const toast = useToast();
+  // Der Stand, den der Editor beim Öffnen zeigte (ADR 0311); ein Neuladen
+  // darunter ändert ihn nicht.
+  const [readVersion] = useState(schedule.version ?? "");
 
   const formErrors = useApiFormError();
   const [mode, setMode] = useState<"template" | "custom">(schedule.mode);
@@ -542,14 +573,22 @@ function ArbeitszeitmodellEditor({
                 : {}),
             };
 
-      await staffScheduleService.updateSchedule(staffId, payload);
+      const saved = await staffScheduleService.updateSchedule(
+        staffId,
+        payload,
+        readVersion,
+      );
       toast.success("Das Arbeitszeitmodell ist gespeichert.");
-      onSaved();
+      onSaved(saved);
     } catch (error) {
       logger.error("schedule_save_failed", {
         error: error instanceof Error ? error.message : String(error),
         staff_id: staffId,
       });
+      if (isReadStateRefusal(error)) {
+        onRefused(error);
+        return;
+      }
       await formErrors.show(error, {
         object: "das Arbeitszeitmodell",
         retry: () => void latestSave.current(),

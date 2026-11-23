@@ -1,5 +1,12 @@
 import "@testing-library/jest-dom/vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render as renderUi,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import type { ReactElement } from "react";
+import { ToastProvider } from "~/contexts/ToastContext";
 import { describe, expect, it, vi } from "vitest";
 import type { Teacher } from "~/lib/teacher-api";
 import { ApiError } from "~/lib/api-error";
@@ -9,6 +16,11 @@ import {
   type KontoDraft,
   type KontoEditing,
 } from "./konto-tab";
+
+// Eine Ablehnung des Datensatzes meldet der Reiter über den Toast-Weg.
+function render(ui: ReactElement) {
+  return renderUi(ui, { wrapper: ToastProvider });
+}
 
 vi.mock("~/lib/use-clipboard-copy", () => ({
   useClipboardCopy: () => ({ copied: false, copy: vi.fn() }),
@@ -101,6 +113,7 @@ function editingProps(overrides: Partial<KontoEditing> = {}): KontoEditing {
     canDeleteStaff: false,
     onEditingChange: vi.fn(),
     onSave: vi.fn(() => Promise.resolve()),
+    reload: vi.fn(() => Promise.resolve()),
     ...overrides,
   };
 }
@@ -161,6 +174,8 @@ describe("KontoTab", () => {
         last_name: "Muster",
         role: "OGS-Büro",
         staff_notes: "Neue Notiz",
+        // Der Datensatz beim Öffnen: seine Stände gehen mit (ADR 0311).
+        record: teacher,
       });
     });
     await waitFor(() => {
@@ -187,6 +202,7 @@ describe("KontoTab", () => {
       expect(editing.onSave).toHaveBeenCalledWith({
         role: "Betreuung",
         staff_notes: "Springt gerne ein.",
+        record: teacher,
       });
     });
   });
@@ -440,6 +456,42 @@ describe("KontoTab", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     await waitFor(() => expect(role).toHaveValue("2"));
+    expect(
+      screen.queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("closes the draft and shows the stored record when the record changed since reading", async () => {
+    // ADR 0311: Name, Position und Notizen ruhen auf dem Datensatz beim
+    // Öffnen. Lehnt der Server ab, schließt der Entwurf, der Reiter liest
+    // den gespeicherten Stand und meldet es ohne „Wiederholen“.
+    const reload = vi.fn(() => Promise.resolve());
+    const editing = editingProps({
+      reload,
+      onSave: vi.fn(() =>
+        Promise.reject(
+          new ApiError("changed", 409, { code: "general.changed_since_read" }),
+        ),
+      ),
+    });
+    render(<KontoTab teacher={teacher} editing={editing} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    fireEvent.change(screen.getByLabelText("Notizen der Leitung"), {
+      target: { value: "Ältere Notiz" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
+    expect(editing.onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ record: teacher, staff_notes: "Ältere Notiz" }),
+    );
+    expect(
+      await screen.findByRole("button", { name: "Bearbeiten" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("Notizen der Leitung"),
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Wiederholen" }),
     ).not.toBeInTheDocument();

@@ -78,6 +78,13 @@ vi.mock("~/lib/breadcrumb-context", () => ({
 vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/contexts/ToastContext")>()),
   useToast: () => ({ success: vi.fn(), error: vi.fn() }),
+  // Ablehnungen stehen beim Reiter (ADR 0311); hier ohne ToastProvider.
+  useApiErrorDisplay: () => ({
+    error: null,
+    show: vi.fn(),
+    clear: vi.fn(),
+    showMessage: vi.fn(),
+  }),
 }));
 
 vi.mock("~/lib/teacher-api", () => ({

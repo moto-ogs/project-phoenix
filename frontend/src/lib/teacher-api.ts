@@ -295,7 +295,11 @@ class TeacherService {
 
     await bffJson("tenant", "PUT /api/users/{id}", {
       params: { id: personId },
-      body: personData,
+      // The person as the form read it (ADR 0311).
+      body: {
+        ...personData,
+        expected_version: currentTeacher.person_version ?? "",
+      },
       errorMessage: "Failed to update person",
     });
   }
@@ -339,8 +343,12 @@ class TeacherService {
     specialization: string;
     role: string;
     qualifications: string;
+    expected_version: string;
   } {
     return {
+      // The record as the form read it (ADR 0311): the unchanged fields
+      // below come from that read, so the save rests on it.
+      expected_version: currentTeacher.version ?? "",
       person_id: currentTeacher.person_id,
       // Den bestehenden Profil-Zustand erhalten, NIE hart true senden:
       // PUT /api/staff/{id} legt bei is_teacher=true eine fehlende

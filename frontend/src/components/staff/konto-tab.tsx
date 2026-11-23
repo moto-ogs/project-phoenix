@@ -18,8 +18,8 @@ import {
   type AccountRoleAssignment,
 } from "~/lib/account-role-assignment";
 import { getRoleDisplayName } from "~/lib/auth-helpers";
-import { useApiFormError } from "~/contexts/ToastContext";
-import { isChangedSinceRead } from "~/lib/api-error";
+import { useApiErrorDisplay, useApiFormError } from "~/contexts/ToastContext";
+import { isChangedSinceRead, isReadStateRefusal } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import { displayEmail } from "~/lib/demo-build";
 import { useClipboardCopy } from "~/lib/use-clipboard-copy";
@@ -48,6 +48,11 @@ export type KontoDraft = Readonly<
    * sie nicht, sonst ersetzte das Speichern eine inzwischen vergebene Rolle.
    */
   readonly role_version?: string;
+  /**
+   * Der Datensatz, auf dem der Entwurf ruht (ADR 0311): seine Stände gehen
+   * mit Name, Position und Notizen zurück, nicht die einer späteren Lesung.
+   */
+  readonly record?: Teacher;
 };
 
 /** Der Bearbeiten-Zustand des Reiters. */
@@ -80,6 +85,11 @@ export interface KontoEditing {
    * scheitert erst der Rollenwechsel, als `KontoRoleSaveError`.
    */
   readonly onSave: (draft: KontoDraft) => Promise<void>;
+  /**
+   * Liest den gespeicherten Datensatz nach einer Ablehnung; lehnt ab, wenn
+   * das Lesen scheitert (ADR 0311, Regel 6).
+   */
+  readonly reload: () => Promise<unknown>;
 }
 
 /**
@@ -107,6 +117,8 @@ interface Draft {
   roleId: string;
   /** Die Version der Rollen bei der ersten Wahl einer Rolle (ADR 0311). */
   roleVersion?: string;
+  /** Der Datensatz beim Öffnen des Entwurfs; seine Stände gehen mit. */
+  base: Teacher;
 }
 
 function formatTimestamp(iso: string): string {
@@ -154,6 +166,8 @@ export function KontoTab({ teacher, editing }: KontoTabProps) {
   // The public demo hides its technical seed addresses (#5033).
   const email = displayEmail(teacher.email);
   const errors = useApiFormError(formRef);
+  // Eine Ablehnung des Datensatzes steht beim Reiter, der Entwurf schließt.
+  const refusals = useApiErrorDisplay();
 
   const displayRole = teacher.account_role
     ? getRoleDisplayName(teacher.account_role)
@@ -170,6 +184,7 @@ export function KontoTab({ teacher, editing }: KontoTabProps) {
       position: teacher.role ?? "",
       notes: teacher.staff_notes ?? "",
       roleId: "",
+      base: teacher,
     });
     errors.clear();
     editing.onEditingChange(true);
@@ -191,7 +206,12 @@ export function KontoTab({ teacher, editing }: KontoTabProps) {
     const assignment = editing.roleAssignment;
     const selectedRoleId = draft.roleId;
 
+    const savesRecord =
+      !retryRoleOnly &&
+      (editing.canEditStaffFields || editing.canEditPersonFields);
     const payload: KontoDraft = {
+      // Name, Position und Notizen ruhen auf dem Datensatz beim Öffnen.
+      ...(savesRecord ? { record: draft.base } : {}),
       ...(!retryRoleOnly && editing.canEditStaffFields
         ? {
             staff_notes: draft.notes,
@@ -229,6 +249,17 @@ export function KontoTab({ teacher, editing }: KontoTabProps) {
       });
       const roleOnly = err instanceof KontoRoleSaveError;
       const cause = roleOnly ? err.cause : err;
+      if (!roleOnly && isReadStateRefusal(cause)) {
+        // Jemand hat Name, Position oder Notizen seit dem Lesen geändert
+        // (ADR 0311): Der Entwurf schließt, der gespeicherte Stand erscheint
+        // mit der Meldung, ohne „Wiederholen“.
+        stopEditing();
+        await refusals.show(cause, {
+          object: "das Konto",
+          reload: editing.reload,
+        });
+        return;
+      }
       if (roleOnly && isChangedSinceRead(cause)) {
         // Die Rollen haben sich seit dem Lesen geändert (ADR 0311): Das Feld
         // zeigt wieder die gespeicherte Rolle, die die Seite neu liest. Ein
