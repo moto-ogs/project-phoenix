@@ -13,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -77,7 +78,7 @@ func TestStudentAccidentReports_LifecycleAndImmutability(t *testing.T) {
 
 	changed := sampleAccidentReport()
 	changed.InjuryKind = "Verstauchung"
-	report, err = reports.UpdateStudentAccidentReport(s.ctx, s.studentID, report.ID, changed, leader)
+	report, err = reports.UpdateStudentAccidentReport(s.ctx, s.studentID, report.ID, changed, careplan.AccidentReportVersion(report), leader)
 	require.NoError(t, err)
 	assert.Equal(t, "Verstauchung", report.AccidentReport.InjuryKind)
 
@@ -86,16 +87,16 @@ func TestStudentAccidentReports_LifecycleAndImmutability(t *testing.T) {
 
 	signed, err := reports.SignStudentAccidentReport(s.ctx, s.studentID, report.ID, careplan.AccidentSignatureInput{
 		Method: "drawn", ImagePNG: signaturePNG(t),
-	}, leader)
+	}, careplan.AccidentReportVersion(report), leader)
 	require.NoError(t, err)
 	require.NotNil(t, signed.AccidentSignatureID)
 	assert.Equal(t, careplan.AccidentReportStatusSigned, careplan.AccidentReportStatus(signed))
 
-	_, err = reports.UpdateStudentAccidentReport(s.ctx, s.studentID, report.ID, sampleAccidentReport(), leader)
+	_, err = reports.UpdateStudentAccidentReport(s.ctx, s.studentID, report.ID, sampleAccidentReport(), careplan.AccidentReportVersion(signed), leader)
 	require.ErrorIs(t, err, careplan.ErrAccidentReportSigned)
 	_, err = reports.SignStudentAccidentReport(s.ctx, s.studentID, report.ID, careplan.AccidentSignatureInput{
 		Method: "drawn", ImagePNG: signaturePNG(t),
-	}, leader)
+	}, careplan.AccidentReportVersion(signed), leader)
 	require.ErrorIs(t, err, careplan.ErrAccidentReportSigned)
 	_, err = s.svc.DeleteStudentDocument(s.ctx, s.studentID, report.ID, leader)
 	require.ErrorIs(t, err, careplan.ErrAccidentReportSigned, "a signed report is a record that stays")
@@ -139,12 +140,12 @@ func TestStudentAccidentReports_PaperCopySigns(t *testing.T) {
 
 	report, err := reports.CreateStudentAccidentReport(s.ctx, s.studentID, sampleAccidentReport(), leader)
 	require.NoError(t, err)
-	require.NoError(t, reports.AuthorizeAccidentPaperCopy(s.ctx, s.studentID, report.ID, leader))
+	require.NoError(t, reports.AuthorizeAccidentPaperCopy(s.ctx, s.studentID, report.ID, careplan.AccidentReportVersion(report), leader))
 
 	stored := "unfallanzeige-papier-" + time.Now().Format("150405.000000000") + ".pdf"
 	require.NoError(t, s.svc.QueueStudentDocumentFileCleanup(s.ctx, s.studentID, stored))
 	signed, err := reports.AttachAccidentPaperCopy(s.ctx, careplan.AccidentPaperCopyInput{
-		StudentID: s.studentID, DocumentID: report.ID, FilenameDisplay: "Unfallanzeige unterschrieben.pdf",
+		StudentID: s.studentID, DocumentID: report.ID, ExpectedVersion: careplan.AccidentReportVersion(report), FilenameDisplay: "Unfallanzeige unterschrieben.pdf",
 		FilenameStored: stored, SizeBytes: 1024, ContentType: "application/pdf",
 	}, leader)
 	require.NoError(t, err)
@@ -152,7 +153,56 @@ func TestStudentAccidentReports_PaperCopySigns(t *testing.T) {
 	assert.Nil(t, signed.AccidentSignatureID)
 	assert.Equal(t, stored, signed.FilenameStored)
 
-	require.ErrorIs(t, reports.AuthorizeAccidentPaperCopy(s.ctx, s.studentID, report.ID, leader), careplan.ErrAccidentReportSigned)
+	require.ErrorIs(t, reports.AuthorizeAccidentPaperCopy(s.ctx, s.studentID, report.ID, careplan.AccidentReportVersion(signed), leader), careplan.ErrAccidentReportSigned)
+}
+
+// Changing, signing and attaching the paper copy act on the report the caller
+// read. After a colleague changed it, each is refused with the read-state
+// rejection and writes nothing; the current version goes through (ADR 0311).
+func TestStudentAccidentReports_RefuseAStaleRead(t *testing.T) {
+	t.Parallel()
+
+	s := newStudentDocumentScenario(t)
+	reports := newAccidentReports(t, s.db)
+	leader := s.actor("student_accidents:read", "student_accidents:manage")
+
+	read, err := reports.CreateStudentAccidentReport(s.ctx, s.studentID, sampleAccidentReport(), leader)
+	require.NoError(t, err)
+	colleague := sampleAccidentReport()
+	colleague.Location = "Turnhalle"
+	current, err := reports.UpdateStudentAccidentReport(s.ctx, s.studentID, read.ID, colleague, careplan.AccidentReportVersion(read), leader)
+	require.NoError(t, err)
+	stale := careplan.AccidentReportVersion(read)
+	require.NotEqual(t, stale, careplan.AccidentReportVersion(current), "every change gives the report a new version")
+
+	mine := sampleAccidentReport()
+	mine.Location = "Schulhof"
+	_, err = reports.UpdateStudentAccidentReport(s.ctx, s.studentID, read.ID, mine, stale, leader)
+	require.ErrorIs(t, err, readstate.ErrChanged)
+	_, err = reports.UpdateStudentAccidentReport(s.ctx, s.studentID, read.ID, mine, "", leader)
+	require.ErrorIs(t, err, readstate.ErrChanged, "an update without a read version is refused")
+	_, err = reports.SignStudentAccidentReport(s.ctx, s.studentID, read.ID, careplan.AccidentSignatureInput{
+		Method: "drawn", ImagePNG: signaturePNG(t),
+	}, stale, leader)
+	require.ErrorIs(t, err, readstate.ErrChanged, "nobody signs a report they did not see")
+	require.ErrorIs(t, reports.AuthorizeAccidentPaperCopy(s.ctx, s.studentID, read.ID, stale, leader), readstate.ErrChanged)
+	_, err = reports.AttachAccidentPaperCopy(s.ctx, careplan.AccidentPaperCopyInput{
+		StudentID: s.studentID, DocumentID: read.ID, ExpectedVersion: stale, FilenameDisplay: "Unfallanzeige unterschrieben.pdf",
+		FilenameStored: "unfallanzeige-stale.pdf", SizeBytes: 1024, ContentType: "application/pdf",
+	}, leader)
+	require.ErrorIs(t, err, readstate.ErrChanged)
+
+	docs, _, err := s.svc.ListStudentDocuments(s.ctx, s.studentID, careplan.StudentDocumentCategoryUnfallanzeige, leader)
+	require.NoError(t, err)
+	require.Len(t, docs, 1)
+	assert.Equal(t, "Turnhalle", docs[0].AccidentReport.Location, "a refused change keeps the colleague's report")
+	assert.Equal(t, careplan.AccidentReportStatusOpen, careplan.AccidentReportStatus(docs[0]), "a refused signature signs nothing")
+
+	signed, err := reports.SignStudentAccidentReport(s.ctx, s.studentID, read.ID, careplan.AccidentSignatureInput{
+		Method: "drawn", ImagePNG: signaturePNG(t),
+	}, careplan.AccidentReportVersion(docs[0]), leader)
+	require.NoError(t, err)
+	assert.Equal(t, careplan.AccidentReportStatusSigned, careplan.AccidentReportStatus(signed))
 }
 
 func TestStudentAccidentReports_PermissionsAndValidation(t *testing.T) {
@@ -201,7 +251,7 @@ func TestStudentAccidentReports_PermissionsAndValidation(t *testing.T) {
 
 	_, err = reports.SignStudentAccidentReport(s.ctx, s.studentID, report.ID, careplan.AccidentSignatureInput{
 		Method: "drawn", ImagePNG: base64.StdEncoding.EncodeToString([]byte("not a png")),
-	}, leader)
+	}, careplan.AccidentReportVersion(report), leader)
 	require.ErrorIs(t, err, careplan.ErrAccidentSignatureInvalid)
 }
 
@@ -219,7 +269,7 @@ func TestStudentAccidentReports_TenantIsolation(t *testing.T) {
 	otherCtx := testpkg.TenantContext(otherSchool)
 	_, err = reports.ResolveStudentAccidentReportFile(otherCtx, s.studentID, report.ID, leader)
 	require.Error(t, err)
-	_, err = reports.UpdateStudentAccidentReport(otherCtx, s.studentID, report.ID, sampleAccidentReport(), leader)
+	_, err = reports.UpdateStudentAccidentReport(otherCtx, s.studentID, report.ID, sampleAccidentReport(), careplan.AccidentReportVersion(report), leader)
 	require.Error(t, err)
 }
 

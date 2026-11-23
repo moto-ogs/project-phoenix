@@ -47,19 +47,21 @@ type ResourceConfig struct {
 	PickupAdjustmentService      careplan.PickupAdjustments
 	// PickupChangeNotices serves the reader's unread markers of changed
 	// pickup times (#6855).
-	PickupChangeNotices      careplan.PickupChangeTeamNotices
-	PickupScheduleService    careplan.PickupScheduleService
-	PickupSignatureProofs    PickupSignatureProofs
-	Reports                  ReportRenderer
-	Schools                  SchoolIdentity
-	SettingsService          TenantSettings
-	StudentAuditService      StudentChangeHistory
-	StudentAccidentReports   careplan.StudentAccidentReports
-	StudentConsents          StudentConsentCapability
-	StudentDocumentService   careplan.StudentDocuments
-	StudentPhotos            StudentPhotoLifecycle
-	UserContextService       CallerContext
-	WeekdayPickupNotes       WeekdayPickupNoteReplacer
+	PickupChangeNotices    careplan.PickupChangeTeamNotices
+	PickupScheduleService  careplan.PickupScheduleService
+	PickupSignatureProofs  PickupSignatureProofs
+	Reports                ReportRenderer
+	Schools                SchoolIdentity
+	SettingsService        TenantSettings
+	StudentAuditService    StudentChangeHistory
+	StudentAccidentReports careplan.StudentAccidentReports
+	StudentConsents        StudentConsentCapability
+	StudentDocumentService careplan.StudentDocuments
+	StudentPhotos          StudentPhotoLifecycle
+	UserContextService     CallerContext
+	// WeeklyPlans reads the token of a child's weekly plan and saves the plan
+	// without a pickup change (ADR 0311).
+	WeeklyPlans              careplan.WeeklyPlans
 	RespondCreatedStudent    func(http.ResponseWriter, *http.Request, *peopleModule.StudentState, *peopleModule.Person)
 	RespondUpdatedStudent    func(http.ResponseWriter, *http.Request, int64, *peopleModule.Person, bool, bool, time.Time)
 	ApplyProfileStatusChange func(context.Context, *peopleModule.StudentState, *bool, *bool, time.Time, *string) error

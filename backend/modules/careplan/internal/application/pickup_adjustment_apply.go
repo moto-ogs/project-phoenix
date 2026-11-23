@@ -62,7 +62,7 @@ func (s *PickupAdjustments) applyPickupAdjustment(
 			return nil, err
 		}
 	}
-	if err := s.lockAndAuthorizePickupStudent(ctx, input); err != nil {
+	if err := s.lockAndCheckWeeklyPlan(ctx, input.StudentID, input.Authorize, input.ExpectedVersion); err != nil {
 		return nil, err
 	}
 	if resolution == careplan.PickupAdjustmentResolutionOffering {
@@ -94,6 +94,12 @@ func (s *PickupAdjustments) applyPickupAdjustment(
 	if err := s.applyPickupArrivalSchedules(ctx, input, resolution, today); err != nil {
 		return nil, err
 	}
+	if err := s.replaceWeekdayNotes(ctx, input.StudentID, input.CreatedByStaffID, input.WeekdayNotes); err != nil {
+		return nil, err
+	}
+	if result.Version, err = s.WeeklyPlanVersion(ctx, input.StudentID); err != nil {
+		return nil, err
+	}
 	return result, nil
 }
 
@@ -121,22 +127,6 @@ func (s *PickupAdjustments) applyPickupArrivalSchedules(
 
 func appliesArrivalSchedulesOn(resolution string, effectiveFrom, today calendar.Date) bool {
 	return resolution == careplan.PickupAdjustmentResolutionException && !effectiveFrom.After(today)
-}
-
-func (s *PickupAdjustments) lockAndAuthorizePickupStudent(ctx context.Context, input careplan.PickupAdjustmentApplyInput) error {
-	// A student that cannot be read under lock is reported as missing.
-	student, err := s.deps.Students.LockStudent(ctx, input.StudentID)
-	if err != nil || student == nil {
-		return careplan.ErrPickupAdjustmentStudentNotFound
-	}
-	if input.Authorize == nil {
-		return nil
-	}
-	allowed, err := input.Authorize(ctx, *student)
-	if err != nil || !allowed {
-		return careplan.ErrPickupAdjustmentUnauthorized
-	}
-	return nil
 }
 
 func directOfferingInput(input careplan.PickupAdjustmentApplyInput) careplan.DirectOfferingAdjustmentInput {

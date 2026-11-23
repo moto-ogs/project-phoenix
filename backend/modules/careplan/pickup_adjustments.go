@@ -75,9 +75,14 @@ type PickupAdjustmentRemovedNote struct {
 }
 
 // PickupAdjustmentApplyInput applies a previewed pickup adjustment.
-// Authorize re-checks the caller against the locked student.
+// Authorize re-checks the caller against the locked student. ExpectedVersion
+// is the token of the weekly plan the change was made on (WeeklyPlanVersion);
+// WeekdayNotes replaces the recurring weekday notes in the same unit, nil
+// leaves them.
 type PickupAdjustmentApplyInput struct {
 	PickupAdjustmentPreviewInput
+	ExpectedVersion             string
+	WeekdayNotes                map[int]string
 	PreviewToken                string
 	Resolution                  string
 	Reason                      string
@@ -91,6 +96,8 @@ type PickupAdjustmentApplyInput struct {
 // PickupAdjustmentResult names the resolution an apply took.
 type PickupAdjustmentResult struct {
 	Resolution string `json:"resolution"`
+	// Version is the token of the saved weekly plan.
+	Version string `json:"-"`
 	// RosterImpact is set when the adjustment switched the child's offering
 	// (#5102); the HTTP adapter renders it.
 	RosterImpact *RosterImpact `json:"-"`

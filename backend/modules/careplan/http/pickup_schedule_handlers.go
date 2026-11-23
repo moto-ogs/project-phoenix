@@ -164,6 +164,10 @@ func (rs *Resource) getStudentPickupSchedules(w http.ResponseWriter, r *http.Req
 		renderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
+	if response.WeeklyPlanVersion, err = rs.WeeklyPlans.WeeklyPlanVersion(r.Context(), student.ID); err != nil {
+		renderError(w, r, common.ErrorInternalServer(err))
+		return
+	}
 
 	common.Respond(w, r, http.StatusOK, response, "Pickup schedules retrieved successfully")
 }
@@ -614,16 +618,11 @@ func (rs *Resource) replaceStudentWeekdayPickupNotes(w http.ResponseWriter, r *h
 		return
 	}
 
-	if rs.WeekdayPickupNotes == nil {
-		renderError(w, r, common.ErrorInternalServer(errors.New("weekday pickup notes are not configured")))
-		return
-	}
-	notes := make(map[int]string, len(req.Notes))
-	for _, note := range req.Notes {
-		notes[note.Weekday] = note.Content
-	}
-	if err := rs.WeekdayPickupNotes.ReplaceWeekdayPickupNotes(r.Context(), student.ID, staffID, notes); err != nil {
-		renderError(w, r, common.ErrorInternalServer(err))
+	if _, err := rs.WeeklyPlans.SaveWeeklyPlan(r.Context(), careplan.WeeklyPlanInput{
+		StudentID: student.ID, WeekdayNotes: weekdayPickupNoteMap(&req.Notes),
+		CreatedByStaffID: staffID, ExpectedVersion: req.ExpectedVersion,
+	}); err != nil {
+		renderPickupAdjustmentError(w, r, err)
 		return
 	}
 

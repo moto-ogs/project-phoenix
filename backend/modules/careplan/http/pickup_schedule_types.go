@@ -69,6 +69,9 @@ type PickupDataResponse struct {
 	// DepartureExceptions is the Abholart of single days (#3945) in the same
 	// window as Exceptions.
 	DepartureExceptions []DepartureExceptionResponse `json:"departure_exceptions"`
+	// WeeklyPlanVersion is the token of the child's weekly plan the weekly
+	// editor sends back with its save (ADR 0311); only the read sets it.
+	WeeklyPlanVersion string `json:"weekly_plan_version,omitempty"`
 }
 
 type DatedPickupScheduleResponse struct {
@@ -116,8 +119,11 @@ type PickupNoteRequest struct {
 
 // WeekdayPickupNotesRequest replaces the notes that recur every week. Dated
 // notes stay owned by the single-day editor and are deliberately excluded.
+// ExpectedVersion is the weekly plan token the notes were read with
+// (weekly_plan_version of GET pickup-schedules, ADR 0311).
 type WeekdayPickupNotesRequest struct {
-	Notes []PickupNoteRequest `json:"notes"`
+	Notes           []PickupNoteRequest `json:"notes"`
+	ExpectedVersion string              `json:"expected_version"`
 }
 
 // Bind implements render.Binder.
@@ -125,8 +131,26 @@ func (r *WeekdayPickupNotesRequest) Bind(_ *http.Request) error {
 	if r.Notes == nil {
 		return errors.New("notes is required")
 	}
-	seen := make(map[int]struct{}, len(r.Notes))
-	for _, note := range r.Notes {
+	return validateWeekdayPickupNotes(r.Notes)
+}
+
+// weekdayPickupNoteMap keys recurring notes by weekday; nil stays nil, so a
+// request without notes leaves them as they are.
+func weekdayPickupNoteMap(notes *[]PickupNoteRequest) map[int]string {
+	if notes == nil {
+		return nil
+	}
+	byWeekday := make(map[int]string, len(*notes))
+	for _, note := range *notes {
+		byWeekday[note.Weekday] = note.Content
+	}
+	return byWeekday
+}
+
+// validateWeekdayPickupNotes checks a complete set of recurring notes.
+func validateWeekdayPickupNotes(notes []PickupNoteRequest) error {
+	seen := make(map[int]struct{}, len(notes))
+	for _, note := range notes {
 		if note.NoteDate != "" {
 			return errors.New("weekday notes cannot have note_date")
 		}

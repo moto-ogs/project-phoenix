@@ -329,6 +329,8 @@ func (m *weeklyProfileAPIMock) serve(t *testing.T, w seedHTTPResponseWriter, r *
 		data = map[string]any{"account_id": fmt.Sprintf("%d", m.nextID)}
 	case path == "/parent/auth/login":
 		data = map[string]any{"access_token": "weekly-parent", "refresh_token": "refresh"}
+	case r.Method == "GET" && strings.HasSuffix(path, "/pickup-schedules"):
+		data = map[string]any{"weekly_plan_version": "weekly-plan"}
 	case strings.HasSuffix(path, "/arrival-schedules") || strings.HasSuffix(path, "/pickup-schedules"):
 		rows := []map[string]any{}
 		for _, row := range body["schedules"].([]any) {

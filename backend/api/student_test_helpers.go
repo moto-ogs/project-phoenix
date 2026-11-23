@@ -50,7 +50,7 @@ type StudentTestModule struct {
 	PartialAbsence    careplan.PartialAbsenceService
 	CareRequests      carerequests.Service
 	OfferingChanges   careplan.OfferingChangeCapability
-	PickupAdjustments careplan.PickupAdjustments
+	PickupAdjustments careplan.PickupPlanning
 	ExcusedRequests   careplan.ExcusedAbsenceRequests
 	MasterDataReview  masterdatarequests.Decisions
 	ParentRequests    parentrequests.Coordinator
@@ -332,13 +332,16 @@ func newStudentTestModule(db transactionruntime.Database, unit tenant.UnitOfWork
 	if err != nil {
 		return StudentTestModule{}, ActiveTestModule{}, StudentTestPeople{}, nil, nil, nil, err
 	}
-	newPickupAdjustmentsFor := func(offerings careplan.DirectOfferingAdjustments) (careplan.PickupAdjustments, error) {
+	newPickupPlanningFor := func(offerings careplan.DirectOfferingAdjustments) (careplan.PickupPlanning, error) {
 		return owners.NewPickupAdjustments(
 			students.CarePlan, pickupScheduleService, arrivalScheduleService, pickupBaselines, offerings,
 			settingsService, studentAuditService, repos.Student, today,
 		)
 	}
-	pickupAdjustments, err := newPickupAdjustmentsFor(offeringChanges)
+	newPickupAdjustmentsFor := func(offerings careplan.DirectOfferingAdjustments) (careplan.PickupAdjustments, error) {
+		return newPickupPlanningFor(offerings)
+	}
+	pickupAdjustments, err := newPickupPlanningFor(offeringChanges)
 	if err != nil {
 		return StudentTestModule{}, ActiveTestModule{}, StudentTestPeople{}, nil, nil, nil, err
 	}

@@ -83,6 +83,7 @@ func TestWeekdayPickupNoteWithoutPickupTime(t *testing.T) {
 				{"weekday": 1, "content": "Montags bei Tante"},
 				{"weekday": 2, "content": "Dienstags zu Hause"},
 			},
+			"expected_version": weeklyPlanVersion(t, tc, student.ID),
 		})
 		rr = authExec(t, tc, req, claims, []string{"admin:*"})
 		require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
@@ -138,6 +139,7 @@ func TestReplaceWeekdayPickupNotesWaitsForStudentLock(t *testing.T) {
 	_, account := testpkg.CreateTestTeacherWithAccount(t, tc.db, "Weekday", "LockTeacher")
 	claims := testutil.AdminTestClaims(int(account.ID))
 
+	version := weeklyPlanVersion(t, tc, student.ID)
 	locked := make(chan struct{})
 	release := make(chan struct{})
 	lockDone := make(chan error, 1)
@@ -173,7 +175,8 @@ func TestReplaceWeekdayPickupNotesWaitsForStudentLock(t *testing.T) {
 	writeDone := make(chan int, 1)
 	go func() {
 		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/pickup-notes", student.ID), map[string]any{
-			"notes": []map[string]any{{"weekday": 1, "content": "Montags zu Hause"}},
+			"notes":            []map[string]any{{"weekday": 1, "content": "Montags zu Hause"}},
+			"expected_version": version,
 		})
 		writeDone <- authExec(t, tc, req, claims, []string{"admin:*"}).Code
 	}()

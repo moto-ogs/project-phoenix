@@ -137,6 +137,7 @@ func TestUpdateStudentArrivalSchedules(t *testing.T) {
 				{"weekday": 1, "expected_arrival": "07:45"},
 				{"weekday": 3, "expected_arrival": "08:00"},
 			},
+			"expected_version": weeklyPlanVersion(t, tc, student.ID),
 		}
 		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/arrival-schedules", student.ID), body)
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"})
@@ -161,7 +162,8 @@ func TestUpdateStudentArrivalSchedules(t *testing.T) {
 		})
 
 		body := map[string]any{
-			"schedules": []map[string]any{},
+			"schedules":        []map[string]any{},
+			"expected_version": weeklyPlanVersion(t, tc, student.ID),
 		}
 		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/arrival-schedules", student.ID), body)
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"})
@@ -229,6 +231,7 @@ func TestUpdateStudentArrivalSchedules(t *testing.T) {
 			"schedules": []map[string]any{
 				{"weekday": 1},
 			},
+			"expected_version": weeklyPlanVersion(t, tc, student.ID),
 		}
 		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/arrival-schedules", student.ID), body)
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"})
@@ -1117,9 +1120,11 @@ func TestStaffArrivalWrite_BroadcastsArrivalScheduleChanged(t *testing.T) {
 	t.Run("weekly_schedule_update", func(t *testing.T) {
 		student := testpkg.CreateTestStudent(t, tc.db, "ArrCast", "Weekly", "AC1")
 
+		version := weeklyPlanVersion(t, tc, student.ID)
 		tc.broadcaster.Reset()
 		body := map[string]any{
-			"schedules": []map[string]any{{"weekday": 1, "expected_arrival": "07:45"}},
+			"schedules":        []map[string]any{{"weekday": 1, "expected_arrival": "07:45"}},
+			"expected_version": version,
 		}
 		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/arrival-schedules", student.ID), body)
 		rr := authExec(t, tc, req, claims, []string{"admin:*"})

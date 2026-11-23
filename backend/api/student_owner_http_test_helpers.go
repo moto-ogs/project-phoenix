@@ -149,7 +149,7 @@ func NewStudentHTTPTestResources(store transactionruntime.Database, unit tenant.
 			StudentConsents:          NewStudentHTTPTestConsents(store),
 			StudentPhotos:            peopleServices.PeopleDirectory,
 			UserContextService:       caller,
-			WeekdayPickupNotes:       students.CarePlan,
+			WeeklyPlans:              svc.PickupAdjustments,
 		},
 		projectionStudentsHTTP.ResourceConfig{
 			PrivacyConsents:        presence,

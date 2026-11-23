@@ -7,10 +7,13 @@ import (
 )
 
 // PickupAdjustmentSchedules reads the stored weekly pickup and arrival rows
-// a pickup adjustment compares with and replaces.
+// and the notes a pickup adjustment compares with and replaces, and replaces
+// the recurring weekday notes of the weekly plan it saves.
 type PickupAdjustmentSchedules interface {
 	ListPickupSchedules(ctx context.Context, filter careplan.StudentScheduleFilter) ([]careplan.PickupSchedule, error)
 	ListArrivalSchedules(ctx context.Context, filter careplan.StudentScheduleFilter) ([]careplan.ArrivalSchedule, error)
+	ListPickupNotes(ctx context.Context, filter careplan.StudentScheduleFilter) ([]careplan.PickupNote, error)
+	ReplaceWeekdayPickupNotes(ctx context.Context, studentID, createdBy int64, notes map[int]string) error
 }
 
 // PickupAdjustmentStudents locks the People Directory students a pickup

@@ -148,10 +148,12 @@ func (rs *Resource) updateStudentArrivalSchedules(w http.ResponseWriter, r *http
 	schedules := toArrivalScheduleModels(r.Context(), req.Schedules, student.ID, staffID)
 
 	tenantID := tenant.FromContext(r.Context())
-	if err := withinTenant(r.Context(), tenantID, func(ctx context.Context) error {
-		return rs.ArrivalScheduleService.UpsertBulkStudentArrivalSchedules(ctx, student.ID, schedules)
-	}); err != nil {
-		renderError(w, r, common.ErrorInternalServer(err))
+	version, err := rs.WeeklyPlans.SaveWeeklyPlan(r.Context(), careplan.WeeklyPlanInput{
+		StudentID: student.ID, ArrivalSchedules: &schedules, WeekdayNotes: weekdayPickupNoteMap(req.WeekdayNotes),
+		CreatedByStaffID: staffID, ExpectedVersion: req.ExpectedVersion,
+	})
+	if err != nil {
+		renderPickupAdjustmentError(w, r, err)
 		return
 	}
 
@@ -172,8 +174,12 @@ func (rs *Resource) updateStudentArrivalSchedules(w http.ResponseWriter, r *http
 	tenant.RegisterAfterCommit(r.Context(), func() {
 		rs.broadcastArrivalScheduleChanged(tenantID, student.ID)
 		rs.wakeChildGuardians(tenantID, student.ID)
+		if req.WeekdayNotes != nil {
+			rs.broadcastPickupScheduleChanged(tenantID, student.ID)
+		}
 	})
 	response := buildArrivalDataResponse(data)
+	response.WeeklyPlanVersion = version
 	common.Respond(w, r, http.StatusOK, response, "Arrival schedules updated successfully")
 }
 
