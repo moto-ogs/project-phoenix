@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"maps"
 	"slices"
 
@@ -16,11 +17,14 @@ import (
 // there (that would be a scheduled change, which the correction keeps), and
 // the child's care runs on past it. The new last day is the end of the phase
 // or the child's earlier care end. A row of automatic days only follows its
-// trigger and is never marked. The care ends are read in one statement, and
-// only when a row qualifies.
+// trigger and is never marked. A change scheduled after the end bounds the
+// extension: the correction keeps it and it starts where it is planned, so
+// the new last day is the day before. The care ends are read once per
+// request, and only when a row qualifies; a failed read offers nothing.
 func (d *Decisions) markExtendableBookings(
 	ctx context.Context,
 	phase *enrollmentNative.Phase,
+	selectionDate calendar.Date,
 	children []*enrollmentNative.RequestChild,
 	linksByChild map[int64][]*enrollmentNative.RequestChildOfferingRecord,
 	sets map[int64]enrollmentNative.ChildOfferingSet,
@@ -35,12 +39,17 @@ func (d *Decisions) markExtendableBookings(
 	}
 	lastDays, err := d.lastCareDays(ctx, studentByChild, phaseEnd)
 	if err != nil {
-		return err
+		d.logger().Warn("decision: care ends for booking extensions unavailable, offering none",
+			slog.String("error", err.Error()))
+		return nil
 	}
 	for childID, studentID := range studentByChild {
 		lastDay, inCare := lastDays[studentID]
 		if !inCare {
 			continue
+		}
+		if next, scheduled := nextScheduledChange(linksByChild[childID], selectionDate); scheduled && next.Before(lastDay.AddDays(1)) {
+			lastDay = next.AddDays(-1)
 		}
 		set := sets[childID]
 		for i := range set.Current {
@@ -123,6 +132,19 @@ func limitedBookingEnd(row enrollmentNative.ChildOfferingRow, links []*enrollmen
 		return "", false
 	}
 	return end, true
+}
+
+// nextScheduledChange is the first day after selectionDate on which a stored
+// booking of the child starts: the change an undated correction schedules
+// again (scheduledOfferingReplacements in Care Plan).
+func nextScheduledChange(links []*enrollmentNative.RequestChildOfferingRecord, selectionDate calendar.Date) (calendar.Date, bool) {
+	var next calendar.Date
+	for _, link := range links {
+		if link != nil && link.ValidFrom != nil && link.ValidFrom.After(selectionDate) && (next.IsZero() || link.ValidFrom.Before(next)) {
+			next = *link.ValidFrom
+		}
+	}
+	return next, !next.IsZero()
 }
 
 // linkStartingOn is the link that starts on day, of offering when it is set.

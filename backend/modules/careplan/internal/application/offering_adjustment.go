@@ -35,6 +35,9 @@ type offeringAdjustmentWork struct {
 	// keptEnds are the stored ends an undated correction found before the
 	// office's extensions (#7929); see keepUnextendedBookingEnds.
 	keptEnds map[int64]calendar.Date
+	// nextScheduledChange is the first change an undated correction
+	// schedules again; it closes an extended booking there.
+	nextScheduledChange *calendar.Date
 }
 
 func (m *BookingMaterialization) AdjustOfferings(ctx context.Context, in careplan.OfferingAdjustment) (*careplan.OfferingAdjustmentResult, error) {

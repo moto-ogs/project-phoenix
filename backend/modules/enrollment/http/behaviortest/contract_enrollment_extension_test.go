@@ -100,6 +100,38 @@ func TestAScheduledChangeIsNoEndToExtend(t *testing.T) {
 	assert.Nil(t, c.extendsUntil(t, c.bounded.ID))
 }
 
+// A change scheduled after the end bounds the extension: the detail offers
+// the day before it, the booking runs to there, and the history names that
+// day. A change that keeps the offering past the end leaves nothing to
+// extend.
+func TestAScheduledChangeBoundsTheExtension(t *testing.T) {
+	t.Parallel()
+	c := setupCorrection(t)
+	inMay, lastApril := calendar.NewDate(2027, 5, 3), calendar.NewDate(2027, 5, 2)
+	c.correct(t, &inMay, enrollmentAPI.OfferingAdjustmentSelection{OfferingID: c.added.ID, SelectedDays: []string{"wed"}})
+	require.Equal(t, &lastApril, c.extendsUntil(t, c.bounded.ID), "the detail offers the day before the change")
+
+	c.correct(t, nil, c.extend("mon", "tue"))
+
+	assert.Equal(t, []calendar.Date{contractRunDay, inMay}, c.bookingEnds(t, c.bounded.ID),
+		"with a scheduled change the correction applies from today; the booking runs to the change")
+	assert.Equal(t, []calendar.Date{c.phaseEndExcl}, c.bookingEnds(t, c.added.ID), "the change stays")
+	var after string
+	require.NoError(t, c.db.NewRaw(`SELECT after_json::text FROM audit.enrollment_offering_adjustments
+		WHERE tenant_id = ? AND request_child_id = ? ORDER BY id DESC LIMIT 1`, testpkg.Tenant(t), c.childID).Scan(testpkg.Ctx(t), &after))
+	assert.Contains(t, after, `"extended_until": "`+lastApril.String()+`"`, "the history names the end that was written")
+}
+
+func TestAChangeThatKeepsTheOfferingLeavesNothingToExtend(t *testing.T) {
+	t.Parallel()
+	c := setupCorrection(t)
+	inMarch, inMay := c.bookingEnd, calendar.NewDate(2027, 5, 3)
+	c.correct(t, &inMarch, enrollmentAPI.OfferingAdjustmentSelection{OfferingID: c.bounded.ID, SelectedDays: []string{"mon"}})
+	c.correct(t, &inMay, enrollmentAPI.OfferingAdjustmentSelection{OfferingID: c.added.ID, SelectedDays: []string{"wed"}})
+
+	assert.Nil(t, c.extendsUntil(t, c.bounded.ID))
+}
+
 // Only an undated correction extends an end; a dated switch refuses it.
 func TestADatedSwitchRefusesAnExtension(t *testing.T) {
 	t.Parallel()
