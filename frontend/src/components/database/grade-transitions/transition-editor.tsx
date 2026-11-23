@@ -26,7 +26,7 @@ import {
 import { useApiFormError } from "~/contexts/ToastContext";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { isChangedSinceRead } from "~/lib/api-error";
+import { ApiError, isChangedSinceRead } from "~/lib/api-error";
 import { useSWRAuth } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { schoolClassLabel } from "~/lib/school-class-label";
@@ -34,6 +34,7 @@ import {
   createGradeTransition,
   fetchSuggestedMappings,
   fetchTransitionClasses,
+  NOT_DRAFT_CODE,
   updateGradeTransition,
   type GradeTransition,
   type MappingInput,
@@ -96,10 +97,15 @@ interface TransitionEditorProps {
   readonly onClose: () => void;
   readonly onReadyForPreview: (transition: GradeTransition) => void;
   /**
-   * The saved draft changed since it was read (ADR 0311): the caller reads
-   * it again and passes the stored draft back as `existingDraft`.
+   * The saved draft changed since it was read (ADR 0311), or a colleague
+   * applied it meanwhile (`grade_transition.not_draft`): the caller reads it
+   * again. A draft still open comes back as `existingDraft`; an applied one
+   * closes the editor, and the caller shows `error` with the stored state.
    */
-  readonly onChangedSinceRead?: (transition: GradeTransition) => void;
+  readonly onChangedSinceRead?: (
+    transition: GradeTransition,
+    error: unknown,
+  ) => void;
 }
 
 export function TransitionEditor({
@@ -262,8 +268,11 @@ export function TransitionEditor({
         // Server- und Verbindungsfehlern an (#405 review). Hat jemand den
         // Entwurf seit dem Öffnen gespeichert, zeigt der Editor dessen Stand;
         // gespeichert wird erst eine neue Bearbeitung (ADR 0311).
-        const changed = isChangedSinceRead(error);
-        if (changed && existingDraft) onChangedSinceRead?.(existingDraft);
+        const changed =
+          isChangedSinceRead(error) ||
+          (error instanceof ApiError && error.code === NOT_DRAFT_CODE);
+        if (changed && existingDraft)
+          onChangedSinceRead?.(existingDraft, error);
         void showSaveError(error, {
           object: "das Speichern des Entwurfs",
           retry: changed ? undefined : () => latestContinueRef.current(),
