@@ -39,7 +39,9 @@ type careEnrollmentDraft struct {
 	// The legacy feed leaves the start nil: its dated flows start rows via
 	// the adjustment split. It keeps the end of the link (#7760): a booking
 	// that ends before the phase ends the child's row with it, or the child
-	// stayed on the roster and its occurrences to the end of the phase.
+	// stayed on the roster and its occurrences to the end of the phase. Two
+	// legacy links of the child on one template that end on different days
+	// are the exception (sharedLegacyEnd).
 	linkValidFrom  *calendar.Date
 	linkValidUntil *calendar.Date
 	// studentValidUntil is the child's exclusive care end. Unlike link bounds,
@@ -188,11 +190,9 @@ func addLegacySegmentDrafts(drafts map[int64]*careEnrollmentDraft, segments []ca
 		if draft := drafts[segment.Group.ID]; draft != nil && !draft.legacyOwned {
 			delete(drafts, segment.Group.ID)
 		}
-		// Another legacy link of the child drafted this row already: the row
-		// then runs as long as the longer of the two bookings.
 		until := cloneOptionalDate(link.ValidUntil)
 		if joined := drafts[segment.Group.ID]; joined != nil {
-			until = laterOptionalEnd(joined.linkValidUntil, until)
+			until = sharedLegacyEnd(joined.linkValidUntil, until)
 		}
 		if err := mergeCareEnrollmentDraft(drafts, segment, days, link.CareOfferingID); err != nil {
 			return err
@@ -209,13 +209,16 @@ func addLegacySegmentDrafts(drafts map[int64]*careEnrollmentDraft, segments []ca
 	return nil
 }
 
-// laterOptionalEnd is the later of two exclusive ends; nil is open and wins.
-func laterOptionalEnd(a, b *calendar.Date) *calendar.Date {
-	if a == nil || b == nil {
+// sharedLegacyEnd is the end of a row two legacy links of one child share
+// on one template. A draft is one row per child and template, with one end
+// for all its weekdays, so it cannot end Monday in February and Wednesday in
+// July. Links that end on the same day end the row there. Links that end on
+// different days leave the row open to the end of the phase, as every
+// legacy row ran before #7760: an end taken from either booking would be
+// wrong for the weekdays of the other.
+func sharedLegacyEnd(a, b *calendar.Date) *calendar.Date {
+	if a == nil || b == nil || *a != *b {
 		return nil
-	}
-	if b.After(*a) {
-		return b
 	}
 	return a
 }
