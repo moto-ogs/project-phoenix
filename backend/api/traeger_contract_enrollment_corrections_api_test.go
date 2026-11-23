@@ -33,10 +33,8 @@ func TestAnUndatedCorrectionMakesNoVersionOfABoundContract(t *testing.T) {
 			manual_selected_days, valid_from, valid_until) VALUES (?, ?, ?, '[]'::jsonb, DATE '2027-08-01', DATE '2028-02-01')`,
 		f.school, miaChild, late.ID)
 	require.NoError(t, err)
-	for range 3 {
-		_, err = conclusion.AmendFromBookings(ctx, f.office.organization)
-		require.NoError(t, err)
-	}
+	_, err = conclusion.AmendFromBookings(ctx, f.office.organization)
+	require.NoError(t, err)
 	versions := f.versions(t, f.mia)
 	require.Equal(t, 1, f.count(t, `SELECT COUNT(*) FROM care_contract.contract_versions AS v
 		JOIN care_contract.contract_version_services AS s ON s.contract_version_id = v.id

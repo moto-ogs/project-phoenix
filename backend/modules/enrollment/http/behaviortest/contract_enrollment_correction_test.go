@@ -156,3 +156,45 @@ func TestACorrectionCapsKeptAndAddedBookingsAtTheCareEnd(t *testing.T) {
 		})
 	}
 }
+
+// A co-booking ends with the last of its triggers, on the roster too. Two
+// offerings book Monday until 15 February and 1 March; a co-booking they
+// both trigger feeds a roster, and a switch to another offering is
+// scheduled for May. The office removes the March trigger without a date:
+// the co-booking and its roster row end on 15 February, and the child is on
+// no occurrence after that day. The scheduled switch stays.
+func TestACoBookingEndsWithItsLastTrigger(t *testing.T) {
+	t.Parallel()
+	e := setupContractEnrollment(t)
+	early, late, may := e.careOffering(t, "Modul bis Februar", nil), e.careOffering(t, "Modul bis März", nil), e.careOffering(t, "Modul ab Mai", nil)
+	coBooking := createAdjustmentCareOfferingWith(t, e.decisionTestEnv, "Mitbuchung "+t.Name(), func(o *offeringContract.CareOfferingRecord) {
+		o.AutoAddTriggerOfferingIDs, o.SortOrder = []int64{early.ID, late.ID}, 101
+	})
+	period := offeringSourcePeriod(t, e.decisionTestEnv)
+	roster := createSourcedTemplate(t, e.decisionTestEnv, "correction-co-booking", coBooking.ID, nil, period)
+	february, march, afterFebruary := calendar.NewDate(2027, 2, 15), calendar.NewDate(2027, 3, 1), calendar.NewDate(2027, 2, 22)
+	testpkg.CreateTestActivityInstance(t, e.db, afterFebruary, *roster.PlannedRoomID,
+		testpkg.ActivityInstanceOpts{ActivityGroupID: &roster.ID, CalendarPeriodID: &period.ID})
+	start := calendar.Date(e.sourcePhase.ServiceStartDate)
+	student := e.student(t, "Lina")
+	made := e.enroll(t, e.input(student.ID, bookingOf(early, start, february, "mon"), bookingOf(late, start, march, "mon")))
+	require.Equal(t, capability.ContractEnrollmentEnrolled, made[0].Status)
+	c := &correctionEnv{contractEnrollmentEnv: e, studentID: student.ID, requestID: made[0].RequestID, childID: made[0].RequestChildID, roster: roster}
+	monday := func(id int64) enrollmentAPI.OfferingAdjustmentSelection {
+		return enrollmentAPI.OfferingAdjustmentSelection{OfferingID: id, SelectedDays: []string{"mon"}}
+	}
+	c.correct(t, nil, monday(early.ID), monday(late.ID))
+	require.Equal(t, []calendar.Date{march}, c.bookingEnds(t, coBooking.ID), "the co-booking ends with its last trigger")
+	require.Equal(t, 1, c.rosterEndsOn(t, march))
+	switchDay := calendar.NewDate(2027, 5, 3)
+	c.correct(t, &switchDay, monday(may.ID))
+
+	c.correct(t, nil, monday(early.ID))
+
+	assert.Equal(t, []calendar.Date{contractRunDay, february}, c.bookingEnds(t, coBooking.ID),
+		"with a scheduled switch the correction applies from today; the co-booking ends with the trigger that is left")
+	assert.Equal(t, 1, c.rosterEndsOn(t, february), "its roster row ends there too")
+	assert.Zero(t, c.rosterRowsPast(t, february))
+	assert.Zero(t, c.onOccurrence(t, afterFebruary), "on no occurrence after the end")
+	assert.Equal(t, []calendar.Date{calendar.Date(e.sourcePhase.ServiceEndDate).AddDays(1)}, c.bookingEnds(t, may.ID), "the scheduled switch stays")
+}

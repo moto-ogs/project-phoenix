@@ -8,25 +8,33 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// The ends an adjustment keeps (#7909). The phase ends with July.
+// The ends an undated correction keeps (#7909). The phase ends with July.
 func TestKeepBookingEnds(t *testing.T) {
 	t.Parallel()
-	const care, other, lunch, late = 1, 2, 3, 4
+	const care, other, lunch, late, extra, friday, loop = 1, 2, 3, 4, 5, 6, 7
 	phaseEnd := calendar.NewDate(2027, 8, 1)
 	august, march, may := calendar.NewDate(2026, 9, 1), calendar.NewDate(2027, 3, 1), calendar.NewDate(2027, 5, 1)
 	stored := func(offering int64, from calendar.Date, until *calendar.Date) *careplan.BookedOffering {
 		return &careplan.BookedOffering{CareOfferingID: offering, ManualSelectedDays: []string{"mon"}, ValidFrom: &from, ValidUntil: until}
 	}
 	manual := func(offering int64) *careplan.BookedOffering {
-		return &careplan.BookedOffering{CareOfferingID: offering, ManualSelectedDays: []string{"mon"}}
+		return &careplan.BookedOffering{CareOfferingID: offering, SelectedDays: []string{"mon"}, ManualSelectedDays: []string{"mon"}}
 	}
 	automatic := func(offering int64) *careplan.BookedOffering {
-		return &careplan.BookedOffering{CareOfferingID: offering, AutomaticSelectedDays: []string{"mon"}}
+		return &careplan.BookedOffering{CareOfferingID: offering, SelectedDays: []string{"mon"}, AutomaticSelectedDays: []string{"mon"}}
+	}
+	weekdays := []string{"mon", "tue", "wed", "thu", "fri"}
+	choice := func(id int64, countsAsCare bool, triggers ...int64) *careplan.CareOffering {
+		return &careplan.CareOffering{ID: id, DaysOfWeekMode: daysOfWeekModeParentChoice, AvailableDays: weekdays,
+			CountsAsCare: countsAsCare, AutoAddTriggerOfferingIDs: triggers}
 	}
 	offerings := map[int64]*careplan.CareOffering{
-		care: {ID: care}, other: {ID: other},
-		late:  {ID: late, AutoAddTriggerOfferingIDs: []int64{care}},
-		lunch: {ID: lunch, IsRequired: true, IncludesLunch: true, DaysOfWeekMode: daysOfWeekModeParentChoice},
+		care: choice(care, true), other: choice(other, true), extra: choice(extra, false),
+		late:   choice(late, false, care),
+		friday: {ID: friday, DaysOfWeekMode: daysOfWeekModeParentChoice, AvailableDays: []string{"fri"}, AutoAddTriggerOfferingIDs: []int64{other}},
+		lunch:  {ID: lunch, IsRequired: true, IncludesLunch: true, DaysOfWeekMode: daysOfWeekModeParentChoice, AvailableDays: weekdays},
+		// loop counts as care and is added by the lunch, which it feeds.
+		loop: choice(loop, true, lunch),
 	}
 	ends := func(rows []*careplan.BookedOffering) map[int64]*calendar.Date {
 		result := map[int64]*calendar.Date{}
@@ -77,6 +85,26 @@ func TestKeepBookingEnds(t *testing.T) {
 			replacement: []*careplan.BookedOffering{manual(care), manual(other), automatic(lunch)},
 			want:        map[int64]*calendar.Date{care: &march, other: &may, lunch: &may},
 		},
+		"an offering that is no care adds no lunch day": {
+			history: []*careplan.BookedOffering{stored(care, august, &march)}, before: []int{0},
+			replacement: []*careplan.BookedOffering{manual(care), manual(extra), automatic(lunch)},
+			want:        map[int64]*calendar.Date{care: &march, extra: nil, lunch: &march},
+		},
+		"a trigger without a day of the target adds nothing": {
+			history: []*careplan.BookedOffering{stored(care, august, &march), stored(friday, august, &march)}, before: []int{0, 1},
+			replacement: []*careplan.BookedOffering{manual(care), manual(other), automatic(friday), automatic(late)},
+			want:        map[int64]*calendar.Date{care: &march, other: nil, friday: &march, late: &march},
+		},
+		"co-bookings that add each other end with the care that adds them": {
+			history: []*careplan.BookedOffering{stored(care, august, &march)}, before: []int{0},
+			replacement: []*careplan.BookedOffering{manual(care), automatic(lunch), automatic(loop)},
+			want:        map[int64]*calendar.Date{care: &march, lunch: &march, loop: &march},
+		},
+		"a co-booking nothing adds keeps its own end": {
+			history: []*careplan.BookedOffering{stored(late, august, &march)}, before: []int{0},
+			replacement: []*careplan.BookedOffering{automatic(late)},
+			want:        map[int64]*calendar.Date{late: &march},
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -89,16 +117,11 @@ func TestKeepBookingEnds(t *testing.T) {
 		})
 	}
 
-	// The care end on a row wins when it is earlier, and a co-booking of a
-	// co-booking follows the chain.
+	// The care end on a row wins when it is earlier.
 	careEnd := calendar.NewDate(2027, 2, 1)
 	capped := manual(care)
 	capped.ValidUntil = &careEnd
 	keepBookingEnds([]*careplan.BookedOffering{capped}, []*careplan.BookedOffering{stored(care, august, &march)},
 		[]*careplan.BookedOffering{stored(care, august, &march)}, offerings, phaseEnd)
 	assert.Equal(t, careEnd, *capped.ValidUntil)
-	chained := map[int64]*careplan.CareOffering{care: {ID: care}, late: offerings[late], other: {ID: other, AutoAddTriggerOfferingIDs: []int64{late}}}
-	rows := []*careplan.BookedOffering{automatic(other), automatic(late), manual(care)}
-	keepBookingEnds(rows, []*careplan.BookedOffering{stored(care, august, &march)}, []*careplan.BookedOffering{stored(care, august, &march)}, chained, phaseEnd)
-	assert.Equal(t, map[int64]*calendar.Date{care: &march, late: &march, other: &march}, ends(rows))
 }

@@ -81,22 +81,28 @@ func (m *BookingMaterialization) correctedSelectionHistory(ctx context.Context, 
 // capacity check reads the phase end). The care end of the child record,
 // set on the rows already, still wins when it is earlier.
 //
-// A row of automatic days only follows the rows that add them: it ends with
-// the last of them, not with an end of its own, so a co-booking stops with
-// a trigger that keeps its end and goes on with one that does not.
+// A row of automatic days only (a co-booking or the required lunch) ends
+// with the last of the rows that add its days (coBookingEnds), and keeps its
+// own end only when no row of the selection adds one.
 func keepBookingEnds(replacement, before, stored []*careplan.BookedOffering, offerings map[int64]*careplan.CareOffering, phaseEnd calendar.Date) {
 	ends := storedBookingEnds(before, stored, phaseEnd)
-	derived := make(map[*careplan.BookedOffering]bool, len(replacement))
 	for _, row := range replacement {
-		if automaticOnly(row) && len(drivers(row, replacement, offerings[row.CareOfferingID])) > 0 {
-			derived[row] = true
-		} else if end, ok := ends[row.CareOfferingID]; ok {
+		if end, ok := ends[row.CareOfferingID]; ok && !automaticOnly(row) {
 			endAtMost(row, end)
 		}
 	}
-	// A co-booking can add another; each pass only moves ends earlier.
-	for range derived {
-		endWithDrivers(replacement, derived, offerings)
+	coBooked := coBookingEnds(replacement, offerings)
+	for _, row := range replacement {
+		if !automaticOnly(row) {
+			continue
+		}
+		if end, derived := coBooked[row]; derived {
+			if end != nil {
+				endAtMost(row, *end)
+			}
+		} else if end, ok := ends[row.CareOfferingID]; ok {
+			endAtMost(row, end)
+		}
 	}
 }
 
@@ -116,46 +122,92 @@ func automaticOnly(row *careplan.BookedOffering) bool {
 	return len(row.ManualSelectedDays) == 0 && len(row.AutomaticSelectedDays) > 0
 }
 
-// endWithDrivers ends each derived row with the last of its drivers.
-func endWithDrivers(replacement []*careplan.BookedOffering, derived map[*careplan.BookedOffering]bool, offerings map[int64]*careplan.CareOffering) {
+// coBookingEnds is the end of each row of automatic days only: the latest
+// end of the rows that add one of its days, by the rules of the selection
+// engine (a trigger's days, or the care days of a required lunch). A nil
+// end is open. The ends grow from none, so co-bookings that only add each
+// other's days hold nothing; a row nothing adds a day to is left out.
+func coBookingEnds(replacement []*careplan.BookedOffering, offerings map[int64]*careplan.CareOffering) map[*careplan.BookedOffering]*calendar.Date {
+	sources := make(map[*careplan.BookedOffering][]*careplan.BookedOffering)
 	for _, row := range replacement {
-		if !derived[row] {
-			continue
-		}
-		if end, ok := latestEnd(drivers(row, replacement, offerings[row.CareOfferingID])); ok {
-			endAtMost(row, end)
+		if automaticOnly(row) {
+			sources[row] = addingRows(row, replacement, offerings)
 		}
 	}
+	ends := make(map[*careplan.BookedOffering]*calendar.Date, len(sources))
+	for range len(sources) + 1 {
+		for _, row := range replacement {
+			if from, ok := sources[row]; ok {
+				if end, covered := latestEnd(from, sources, ends); covered {
+					ends[row] = end
+				}
+			}
+		}
+	}
+	return ends
 }
 
-// drivers are the rows of the selection that add row's automatic days: its
-// triggers, and for a required lunch every other row (selection.materialize).
-func drivers(row *careplan.BookedOffering, rows []*careplan.BookedOffering, offering *careplan.CareOffering) []*careplan.BookedOffering {
-	if offering == nil {
+// addingRows are the rows of the selection that add one of row's days.
+func addingRows(row *careplan.BookedOffering, rows []*careplan.BookedOffering, offerings map[int64]*careplan.CareOffering) []*careplan.BookedOffering {
+	target := offerings[row.CareOfferingID]
+	if target == nil {
 		return nil
 	}
-	lunch := offering.IsRequired && offering.IncludesLunch && offering.DaysOfWeekMode == daysOfWeekModeParentChoice
+	lunch := target.IsRequired && target.IncludesLunch && target.DaysOfWeekMode == daysOfWeekModeParentChoice
 	var result []*careplan.BookedOffering
 	for _, other := range rows {
-		if other != row && (lunch || slices.Contains(offering.AutoAddTriggerOfferingIDs, other.CareOfferingID)) {
+		source := offerings[other.CareOfferingID]
+		if other == row || source == nil {
+			continue
+		}
+		adds := slices.Contains(target.AutoAddTriggerOfferingIDs, other.CareOfferingID) || (lunch && source.CountsAsCare)
+		if adds && daysOverlap(contributedDays(source, other), target.AvailableDays) {
 			result = append(result, other)
 		}
 	}
 	return result
 }
 
-// latestEnd is the last end of rows; an open row has none.
-func latestEnd(rows []*careplan.BookedOffering) (calendar.Date, bool) {
-	var latest calendar.Date
-	for _, row := range rows {
-		if row.ValidUntil == nil {
-			return "", false
-		}
-		if latest == "" || row.ValidUntil.After(latest) {
-			latest = *row.ValidUntil
+// contributedDays are the days a selected offering passes on to a rule.
+func contributedDays(offering *careplan.CareOffering, row *careplan.BookedOffering) []string {
+	if offering.DaysOfWeekMode == daysOfWeekModeFixed {
+		return offering.AvailableDays
+	}
+	return row.SelectedDays
+}
+
+func daysOverlap(days, available []string) bool {
+	for _, day := range days {
+		if slices.Contains(available, day) {
+			return true
 		}
 	}
-	return latest, latest != ""
+	return false
+}
+
+// latestEnd is the last end of the rows that cover any day yet: a row of
+// its own days by its end, a co-booking by the end found so far. Open wins.
+func latestEnd(rows []*careplan.BookedOffering, sources map[*careplan.BookedOffering][]*careplan.BookedOffering,
+	found map[*careplan.BookedOffering]*calendar.Date) (*calendar.Date, bool) {
+	var latest *calendar.Date
+	covered := false
+	for _, row := range rows {
+		end, ok := row.ValidUntil, true
+		if _, derived := sources[row]; derived {
+			end, ok = found[row]
+		}
+		if !ok {
+			continue
+		}
+		if end == nil {
+			return nil, true
+		}
+		if !covered || end.After(*latest) {
+			latest = end
+		}
+		covered = true
+	}
+	return latest, covered
 }
 
 func endAtMost(row *careplan.BookedOffering, end calendar.Date) {
@@ -606,19 +658,8 @@ func (m *BookingMaterialization) reconcileAdjustedEnrollment(
 		return nil
 	}
 	if draft := drafts[row.ActivityGroupID]; draft != nil && !row.ValidFrom.After(effectiveFrom) && careDraftMatchesEnrollment(draft, row) {
-		// The retained row is only ever extended to the end the draft itself
-		// may reach — the phase end, clamped by the sourced segment's envelope
-		// and the offering-link window (#2147 review). Extending a capped
-		// split predecessor back to the phase end would restore coverage past
-		// the split and overlap its successor.
-		draftEndExclusive := careDraftValidUntil(draft, phase)
-		if row.ValidUntil != nil && row.ValidUntil.Before(draftEndExclusive) {
-			if err := m.deps.Rosters.SetEnrollmentValidUntil(ctx, row.ID, draftEndExclusive); err != nil {
-				return fmt.Errorf("decision: extend retained adjusted enrollment: %w", err)
-			}
-		}
 		delete(drafts, row.ActivityGroupID)
-		return nil
+		return m.retainAdjustedEnrollment(ctx, row, draft, phase)
 	}
 	if !row.ValidFrom.Before(effectiveFrom) {
 		if err := m.deps.Rosters.DeleteEnrollment(ctx, row.ID); err != nil {
@@ -628,6 +669,31 @@ func (m *BookingMaterialization) reconcileAdjustedEnrollment(
 	}
 	if err := m.deps.Rosters.SetEnrollmentValidUntil(ctx, row.ID, effectiveFrom); err != nil {
 		return fmt.Errorf("decision: cap adjusted enrollment: %w", err)
+	}
+	return nil
+}
+
+// retainAdjustedEnrollment moves the end of a row the new selection keeps
+// to the end of its draft. The row is only ever extended to the end the
+// draft itself may reach — the phase end, clamped by the sourced segment's
+// envelope and the offering-link window (#2147 review). Extending a capped
+// split predecessor back to the phase end would restore coverage past the
+// split and overlap its successor. It is shortened only to a booking that
+// ends before the phase (#7909): a co-booking whose trigger ends earlier
+// ends there on the roster too.
+func (m *BookingMaterialization) retainAdjustedEnrollment(ctx context.Context, row ports.RosterEnrollment, draft *careEnrollmentDraft, phase careplan.OfferingPhase) error {
+	draftEndExclusive := careDraftValidUntil(draft, phase)
+	if row.ValidUntil != nil && row.ValidUntil.Before(draftEndExclusive) {
+		if err := m.deps.Rosters.SetEnrollmentValidUntil(ctx, row.ID, draftEndExclusive); err != nil {
+			return fmt.Errorf("decision: extend retained adjusted enrollment: %w", err)
+		}
+		return nil
+	}
+	bookingEnds := draft.linkValidUntil != nil && *draft.linkValidUntil == draftEndExclusive && draftEndExclusive.Before(phase.ServiceEnd.AddDays(1))
+	if bookingEnds && (row.ValidUntil == nil || row.ValidUntil.After(draftEndExclusive)) {
+		if err := m.deps.Rosters.SetEnrollmentValidUntil(ctx, row.ID, draftEndExclusive); err != nil {
+			return fmt.Errorf("decision: shorten retained adjusted enrollment: %w", err)
+		}
 	}
 	return nil
 }
