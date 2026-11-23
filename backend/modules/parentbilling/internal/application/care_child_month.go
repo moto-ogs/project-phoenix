@@ -173,9 +173,14 @@ func (c careChain) accepts(parts [][]int64) bool {
 }
 
 // hasTwin tells whether the family of a school change has another child,
-// in force or issued, born on the day of the joining child.
+// in force or issued, born on the day of the joining child, as the chain
+// ranks them: a missing date of birth is the one knownBirthDates gives its
+// child, and an issued entry counts under its frozen family (familyOf).
 func (c careChain) hasTwin(parts [][]int64) bool {
 	family, birth := c.families[parts[0][0]], c.identities[parts[0][0]].BirthDate
+	if birth == nil {
+		return false
+	}
 	joining := map[int64]bool{}
 	for _, part := range parts {
 		for _, member := range c.children[c.place[part[0]]] {
@@ -183,14 +188,31 @@ func (c careChain) hasTwin(parts [][]int64) bool {
 		}
 	}
 	for contractID, child := range c.identities {
-		if joining[contractID] || child.BirthDate == nil || birth == nil || *child.BirthDate != *birth {
+		if joining[contractID] {
 			continue
 		}
-		if c.families[contractID] == family || c.issuedFamilies[contractID] == family {
+		born := child.BirthDate
+		if born == nil {
+			born = c.groupBirth(c.place[contractID])
+		}
+		if born != nil && *born == *birth && (c.families[contractID] == family || c.issuedFamilies[contractID] == family) {
 			return true
 		}
 	}
 	return false
+}
+
+// groupBirth is the date of birth knownBirthDates gives a child of the
+// chain without one: the first a version of its contracts in force names.
+func (c careChain) groupBirth(place int) *calendar.Date {
+	for _, contractID := range slices.Sorted(slices.Values(c.children[place])) {
+		for _, version := range c.byContract[contractID] {
+			if version.ChildBirthDate != nil {
+				return version.ChildBirthDate
+			}
+		}
+	}
+	return nil
 }
 
 // aligned tells whether the chain sees a part as one child of its own whose

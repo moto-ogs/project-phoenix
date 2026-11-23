@@ -196,11 +196,12 @@ func (in careMonthInput) issuedFamilies() map[int64]string {
 	return invoiceFamilies(in.invoiced)
 }
 
-// invoiceFamilies are the families the invoices froze, by contract.
+// invoiceFamilies are the families the invoices froze, by contract, as the
+// sibling chain counts them (familyOf).
 func invoiceFamilies(invoiced map[int64]parentbilling.CareInvoice) map[int64]string {
 	families := make(map[int64]string, len(invoiced))
 	for contractID, invoice := range invoiced {
-		families[contractID] = invoice.FamilyEmail
+		families[contractID] = invoiceFamily(invoice)
 	}
 	return families
 }

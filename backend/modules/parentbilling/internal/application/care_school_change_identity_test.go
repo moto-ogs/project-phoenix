@@ -530,4 +530,24 @@ func TestCareSchoolChangeLeavesTwinsAsBefore(t *testing.T) {
 	issuedTwin := groupCare(byContract, order, contractFamilies(byContract, recipients), issued,
 		map[int64]string{824: parentbilling.FamilyKey(familyEva)})
 	assert.Empty(t, issuedTwin.joined)
+
+	// An invoice issued before #4689 names the family only by its recipient.
+	legacy := groupCare(byContract, order, contractFamilies(byContract, recipients), issued,
+		invoiceFamilies(map[int64]parentbilling.CareInvoice{824: {ContractID: ident.ID(824),
+			Recipient: parentbilling.CareRecipient{Email: familyEva}}}))
+	assert.Empty(t, legacy.joined)
+
+	// The twin's contract in the family names no date of birth; another
+	// contract of its record, of another family, does, and the chain ranks
+	// the twin by it (knownBirthDates).
+	noBirth := version(825, schoolIspringen, 9825, "Ida", billingMonth, "2027-01-31")
+	noBirth.ChildBirthDate = nil
+	byContract, order = versionsByContract([]parentbilling.CareContractVersion{
+		version(821, schoolBirkenfeld, 9821, "Noah", billingMonth, "2027-01-14"),
+		version(822, schoolIspringen, 9822, "Noah", "2027-01-15", "2027-01-31"),
+		noBirth, version(826, schoolBirkenfeld, 9825, "Ida", billingMonth, "2027-01-31"),
+	})
+	recipients[825], recipients[826] = parentbilling.CareRecipient{Email: familyEva}, parentbilling.CareRecipient{Email: familyOther}
+	inherited := groupCare(byContract, order, contractFamilies(byContract, recipients), nil, nil)
+	assert.Empty(t, inherited.joined)
 }
