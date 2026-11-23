@@ -115,8 +115,10 @@ type DayChangesSources struct {
 	ClassArrivals timetable.ClassArrivalQuery
 	// MealPlan is Meal Plan's change mark of a day (#7666).
 	MealPlan dayChangesMenuChanges
-	Today    func() calendar.Date
-	Logger   *slog.Logger
+	// Appointments is Appointments' read of the own calendar (#7663).
+	Appointments dayChangesAppointmentReads
+	Today        func() calendar.Date
+	Logger       *slog.Logger
 }
 
 // NewDayChanges binds the sources to the projection's ports.
@@ -142,6 +144,9 @@ func NewDayChanges(sources DayChangesSources) (daychangesview.Query, error) {
 	if sources.Assignments == nil || sources.ClassArrivals == nil {
 		return nil, fmt.Errorf("%w: class sources", daychangesview.ErrDependencies)
 	}
+	if sources.Appointments == nil {
+		return nil, fmt.Errorf("%w: appointment source", daychangesview.ErrDependencies)
+	}
 	classDay, err := timetable.ClassArrivalDayOf(sources.ClassArrivals)
 	if err != nil {
 		return nil, err
@@ -149,16 +154,17 @@ func NewDayChanges(sources DayChangesSources) (daychangesview.Query, error) {
 	// One name read per request for the sources that name staff (#7675).
 	sources.Names = memoStaffNames{inner: sources.Names}
 	return daychangesview.New(daychangesview.Dependencies{
-		Today:      sources.Today,
-		Isolation:  dayChangesSavepoints{},
-		Staff:      dayChangesStaff{sources: sources},
-		Children:   dayChangesChildren{sources: sources},
-		Notices:    dayChangesNotices{reads: sources.Notices},
-		Closing:    dayChangesClosingDays{reads: sources.ClosingDays},
-		Activities: dayChangesActivities{sources: sources},
-		Classes:    dayChangesClasses{sources: sources, classDay: classDay},
-		MealPlan:   dayChangesMealPlan{reads: sources.MealPlan},
-		Logger:     sources.Logger,
+		Today:        sources.Today,
+		Isolation:    dayChangesSavepoints{},
+		Staff:        dayChangesStaff{sources: sources},
+		Children:     dayChangesChildren{sources: sources},
+		Notices:      dayChangesNotices{reads: sources.Notices},
+		Closing:      dayChangesClosingDays{reads: sources.ClosingDays},
+		Activities:   dayChangesActivities{sources: sources},
+		Classes:      dayChangesClasses{sources: sources, classDay: classDay},
+		MealPlan:     dayChangesMealPlan{reads: sources.MealPlan},
+		Appointments: dayChangesAppointments{caller: sources.Caller, reads: sources.Appointments},
+		Logger:       sources.Logger,
 	})
 }
 
@@ -232,16 +238,25 @@ func (s dayChangesStaff) StaffChanges(ctx context.Context, day calendar.Date) ([
 	if err != nil {
 		return nil, err
 	}
-	if err := s.addTeam(ctx, &viewer, handovers); err != nil {
-		return nil, err
-	}
-	viewer.addSubstitutes(handovers)
 	absences, err := s.sources.Workforce.ListStaffAbsences(ctx, workforce.StaffAbsenceFilter{
 		Statuses:    []string{workforce.AbsenceStatusReported, workforce.AbsenceStatusApproved},
 		OverlapFrom: day.String(), OverlapTo: day.String(),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("list staff absences: %w", err)
+	}
+	blocks, err := s.blockStaffChanges(ctx, day)
+	if err != nil {
+		return nil, err
+	}
+	// The team decides only which absences, handovers and block changes
+	// involve the caller; a day without them reads no team (#7666, the query
+	// budget of the route).
+	if len(handovers) > 0 || len(absences) > 0 || len(blocks) > 0 {
+		if err := s.addTeam(ctx, &viewer, handovers); err != nil {
+			return nil, err
+		}
+		viewer.addSubstitutes(handovers)
 	}
 	builder := newStaffEntryBuilder(viewer, day)
 	absentToday := map[int64]bool{}
@@ -256,8 +271,8 @@ func (s dayChangesStaff) StaffChanges(ctx context.Context, day calendar.Date) ([
 	if err := s.addShifts(ctx, builder, day); err != nil {
 		return nil, err
 	}
-	if err := s.addBlocks(ctx, builder, day, absentToday); err != nil {
-		return nil, err
+	for _, change := range blocks {
+		builder.block(change, absentToday)
 	}
 	return builder.finish(ctx, s.sources.Names, s.sources.Groups)
 }

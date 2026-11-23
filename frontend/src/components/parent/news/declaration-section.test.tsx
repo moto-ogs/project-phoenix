@@ -25,12 +25,8 @@ import {
   isOpenDeclaration,
 } from "./declaration-section";
 import { catalogText } from "~/test/error-catalog-text";
-import type {
-  ParentAnnouncement,
-  ParentDeclaration,
-  ParentDeclarationChild,
-} from "~/lib/parent-api";
 import * as parentApi from "~/lib/parent-api";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 // Einverständnisse (#3430) in the parent portal: the portal shows exactly the
 // server's allowed actions, never preselects one, repeats child, action and
@@ -38,8 +34,8 @@ import * as parentApi from "~/lib/parent-api";
 // wants it, and turns every backend refusal into a sentence.
 
 function child(
-  overrides: Partial<ParentDeclarationChild> = {},
-): ParentDeclarationChild {
+  overrides: Partial<parentMeContract.parentDeclarationChildResponse> = {},
+): parentMeContract.parentDeclarationChildResponse {
   return {
     earlier_consent: null,
     student_id: "5",
@@ -56,8 +52,8 @@ function child(
 }
 
 function declaration(
-  overrides: Partial<ParentDeclaration> = {},
-): ParentDeclaration {
+  overrides: Partial<parentMeContract.AnnouncementDeclarationResponse> = {},
+): parentMeContract.AnnouncementDeclarationResponse {
   return {
     kind: "consent",
     signers: "any",
@@ -73,9 +69,9 @@ function declaration(
 }
 
 function item(
-  overrides: Partial<ParentAnnouncement> = {},
-  decl: Partial<ParentDeclaration> = {},
-): ParentAnnouncement {
+  overrides: Partial<parentMeContract.AnnouncementResponse> = {},
+  decl: Partial<parentMeContract.AnnouncementDeclarationResponse> = {},
+): parentMeContract.AnnouncementResponse {
   return {
     id: "42",
     title: "Ausflug in den Zoo",
@@ -973,7 +969,9 @@ describe("unclear submit result (#3430)", () => {
 });
 
 describe("an Einverständnis the school ended (#6290)", () => {
-  function ended(overrides: Partial<ParentAnnouncement> = {}) {
+  function ended(
+    overrides: Partial<parentMeContract.AnnouncementResponse> = {},
+  ) {
     return item(overrides, {
       ended: true,
       closed: true,

@@ -24,11 +24,10 @@ import {
   getChildCourses,
   requestChildCourse,
   withdrawChildCourseRequest,
-  type ChildCourses,
-  type CourseItem,
 } from "~/lib/parent-api";
 import { activitiesConcept } from "~/lib/concepts/activities";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 const logger = createLogger({ component: "CoursesSection" });
 
@@ -111,7 +110,7 @@ export function CoursesSection({
       setBusyCourseId(courseId);
       clearActionError();
       try {
-        const next: ChildCourses =
+        const next: parentMeContract.CoursesResponse =
           kind === "request"
             ? await requestChildCourse(studentId, courseId, note)
             : await withdrawChildCourseRequest(
@@ -300,7 +299,9 @@ export function CoursesSection({
 }
 
 /** Freie Plätze im Klartext. Ohne Grenze steht hier nichts. */
-function CourseSlots({ course }: Readonly<{ course: CourseItem }>) {
+function CourseSlots({
+  course,
+}: Readonly<{ course: parentMeContract.CourseItemResponse }>) {
   const t = useCareTermTranslations("parentMasterData");
   if (course.free_slots === undefined) return null;
   if (course.free_slots <= 0) {
@@ -318,7 +319,9 @@ function CourseSlots({ course }: Readonly<{ course: CourseItem }>) {
 }
 
 /** Der Stand des Kindes bei diesem Kurs, in einem Wort. */
-function CourseState({ course }: Readonly<{ course: CourseItem }>) {
+function CourseState({
+  course,
+}: Readonly<{ course: parentMeContract.CourseItemResponse }>) {
   const t = useCareTermTranslations("parentMasterData");
   if (course.booked) {
     return <StatusBadge label={t("courses.booked")} tone="green" />;
@@ -349,8 +352,8 @@ function CourseAction({
   onWithdraw,
   careEnded,
 }: Readonly<{
-  course: CourseItem;
-  courses: ChildCourses;
+  course: parentMeContract.CourseItemResponse;
+  courses: parentMeContract.CoursesResponse;
   requestable: boolean;
   reasonMissing: boolean;
   busy: boolean;

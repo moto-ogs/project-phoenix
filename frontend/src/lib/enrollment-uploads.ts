@@ -1,14 +1,17 @@
 import { bffJson } from "~/lib/bff-fetch";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 
 /** File kinds a `file` form field may accept (backend FileType*). */
 export type EnrollmentFileType = "pdf" | "jpg" | "png";
 
 /** Per-field rules of a `file` form field (#4783). */
-export interface FileFieldOptions {
+export type FileFieldOptions = Omit<
+  sharedContract.FormFileOptions,
+  "allowed_types" | "multiple"
+> & {
   allowed_types: EnrollmentFileType[];
-  max_size_mb: number;
   multiple: boolean;
-}
+};
 
 export const ENROLLMENT_FILE_TYPES: readonly EnrollmentFileType[] = [
   "pdf",
@@ -74,15 +77,11 @@ export function acceptFor(options: FileFieldOptions): string {
   return options.allowed_types.map((type) => FILE_TYPE_MIME[type]).join(",");
 }
 
-/** A file uploaded in this form session, claimed by its token on submit. */
-export interface NewUploadValue {
-  token: string;
-  filename: string;
-  size_bytes: number;
-  content_type: string;
-}
-
-/** A file stored with an earlier submission (status-token edit). */
+/**
+ * A file stored with an earlier submission (status-token edit). The answers
+ * of a form travel in `custom_data`, which the contract carries as unknown;
+ * this is the shape the backend writes there.
+ */
 interface StoredUploadValue {
   upload_id: string;
   filename: string;
@@ -90,7 +89,11 @@ interface StoredUploadValue {
   content_type: string;
 }
 
-export type UploadValue = NewUploadValue | StoredUploadValue;
+/**
+ * A file field's answer entry: a file uploaded in this form session, claimed
+ * by its receipt's token on submit, or one stored before.
+ */
+export type UploadValue = sharedContract.UploadReceipt | StoredUploadValue;
 
 /** Stable identity of one entry for list keys and removal. */
 export function uploadValueKey(value: UploadValue): string {
@@ -165,9 +168,9 @@ export const UPLOAD_FAILED = "Datei konnte nicht hochgeladen werden";
 
 /**
  * Uploads one file for a `file` field of the enrollment form. The public
- * route is anonymous like the submit; a restricted phase in the parents
- * portal uploads through the parent's session (`viaParentPortal`). The
- * answer's token is single-use and claimed by the submission.
+ * route is anonymous like the submit; a signed-in parent uploads through the
+ * parents portal (`viaParentPortal`). The answer's token is single-use and
+ * claimed by the submission.
  */
 export async function uploadEnrollmentFile(params: {
   tenantSlug: string;
@@ -178,7 +181,7 @@ export async function uploadEnrollmentFile(params: {
   statusToken?: string;
   viaParentPortal?: boolean;
   signal?: AbortSignal;
-}): Promise<NewUploadValue> {
+}): Promise<sharedContract.UploadReceipt> {
   // The upload endpoint verifies the same authorization context as the form:
   // public/late-invite submission or a status-link edit.
   const body = new FormData();
@@ -194,7 +197,7 @@ export async function uploadEnrollmentFile(params: {
   const options = {
     params: { tenantSlug: params.tenantSlug },
     body,
-    signal: params.signal,
+    ...(params.signal && { signal: params.signal }),
     errorMessage: UPLOAD_FAILED,
   };
   return params.viaParentPortal

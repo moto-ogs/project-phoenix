@@ -30,16 +30,8 @@ import { ISODatePicker } from "~/components/ui/date-picker";
 import { knownEnum } from "~/lib/contract/known-enum";
 import { useLocalizedDatePicker } from "~/lib/hooks/use-localized-date-picker";
 import {
-  type CareException,
-  type ChildCareSchedule,
-  type ChildGuardian,
-  type ChildFeatures,
-  type ChildToday,
   type DayDepartureMode,
-  type ExcusedRequest,
-  type PickupChangeRequest,
   REQUESTABLE_DAY_DEPARTURE_MODES,
-  type StatusDay,
   type StudentStatusKind,
   deleteCareException,
   downloadPickupRequestProofPdf,
@@ -84,6 +76,7 @@ import { sickConcept } from "~/lib/concepts/sick";
 import { InsetPanel } from "~/components/ui/inset-panel";
 import { SectionLabel } from "~/components/ui/section-label";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 const logger = createLogger({ component: "ChildCare" });
 
@@ -110,11 +103,14 @@ export type AbsenceSubmissionOutcome = "applied" | "pending" | "partly_pending";
 // Stable empty default for SickStatusSummary's optional excusedRequests prop —
 // a fresh [] literal per render would break referential equality (oxlint
 // react/no-object-type-as-default-prop).
-const EMPTY_EXCUSED_REQUESTS: readonly ExcusedRequest[] = [];
-const EMPTY_PICKUP_CHANGE_REQUESTS: PickupChangeRequest[] = [];
-const NO_STATUS_DAY_LIST: StatusDay[] = [];
-const NO_EXCUSED_REQUEST_LIST: ExcusedRequest[] = [];
-const NO_CARE_EXCEPTION_LIST: CareException[] = [];
+const EMPTY_EXCUSED_REQUESTS: readonly parentMeContract.ParentExcusedRequestResponse[] =
+  [];
+const EMPTY_PICKUP_CHANGE_REQUESTS: parentMeContract.PickupChangeRequestResponse[] =
+  [];
+const NO_STATUS_DAY_LIST: parentMeContract.StatusDayResponse[] = [];
+const NO_EXCUSED_REQUEST_LIST: parentMeContract.ParentExcusedRequestResponse[] =
+  [];
+const NO_CARE_EXCEPTION_LIST: parentMeContract.CareExceptionResponse[] = [];
 
 // --- date helpers (native <input type=date> already yields YYYY-MM-DD) ---
 
@@ -151,7 +147,7 @@ function formatLocaleDate(iso: string, locale: string): string {
 // --- data hook ---
 
 // An unavailable capability response must not offer parent mutations.
-const DEFAULT_FEATURES: ChildFeatures = {
+const DEFAULT_FEATURES: parentMeContract.ChildFeaturesResponse = {
   sick_note_enabled: false,
   excused_note_enabled: false,
   // Default false on fetch failure (least privilege), consistent with the other
@@ -240,12 +236,12 @@ function isoWeekday(dateISO: string): number {
 // LOADED same-day override with a pickup time is authoritative even if the base
 // plan never loaded — we just can't call it "changed" without a base to compare.
 export function resolveTodayPickup(params: {
-  readonly weekdays: ChildCareSchedule["weekdays"];
+  readonly weekdays: parentMeContract.CareScheduleResponse["weekdays"];
   readonly weekPlanLoaded: boolean;
   // Authoritative all-source absence for today (sick / excused / class trip),
   // computed server-side. Only meaningful when weekPlanLoaded (same response).
   readonly todayAbsent: boolean;
-  readonly careExceptions: readonly CareException[];
+  readonly careExceptions: readonly parentMeContract.CareExceptionResponse[];
   readonly careExceptionsLoaded: boolean;
   readonly today: string;
 }): TodayPickup {
@@ -305,12 +301,12 @@ export function resolveTodayPickup(params: {
 }
 
 export interface ChildCare {
-  readonly sickDays: StatusDay[];
+  readonly sickDays: parentMeContract.StatusDayResponse[];
   // Absence requests that went through the OGS approval gate (pending +
   // recently decided). Empty for schools that gate neither absence type.
-  readonly excusedRequests: ExcusedRequest[];
-  readonly careExceptions: CareException[];
-  readonly pickupChangeRequests: PickupChangeRequest[];
+  readonly excusedRequests: parentMeContract.ParentExcusedRequestResponse[];
+  readonly careExceptions: parentMeContract.CareExceptionResponse[];
+  readonly pickupChangeRequests: parentMeContract.PickupChangeRequestResponse[];
   // Whether the care-exception list actually loaded. A failed fetch leaves
   // careExceptions empty, which is indistinguishable from "no overrides exist"
   // — and submitCareException treats an omitted leg as an authoritative clear.
@@ -320,7 +316,7 @@ export interface ChildCare {
   readonly pickupChangeRequestsLoaded: boolean;
   // Today's resolved pickup state for the "Heute" tile (see TodayPickup).
   readonly todayPickup: TodayPickup;
-  readonly features: ChildFeatures;
+  readonly features: parentMeContract.ChildFeaturesResponse;
   readonly loading: boolean;
   /**
    * The first failure of the latest load, null when every list arrived. The
@@ -634,8 +630,9 @@ function knownSickErrorKey(err: unknown): string | null {
   return null;
 }
 
-const NO_CARE_EXCEPTIONS: readonly CareException[] = [];
-const NO_STATUS_DAYS: readonly StatusDay[] = [];
+const NO_CARE_EXCEPTIONS: readonly parentMeContract.CareExceptionResponse[] =
+  [];
+const NO_STATUS_DAYS: readonly parentMeContract.StatusDayResponse[] = [];
 /** A day the school already holds: from a time, or (`time` null) sick. */
 type SchoolDay = { readonly date: string; readonly time: string | null };
 // "Mittwoch, 11.11.2026": parents plan absences by weekday.
@@ -679,12 +676,12 @@ export function SickNoteModal({
    * Die Tagesänderungen des Kindes. Für Tage mit einer Teil-Abwesenheit der
    * OGS (`excused_from`) geht die Meldung als Anfrage an die OGS (#5698).
    */
-  careExceptions?: readonly CareException[];
+  careExceptions?: readonly parentMeContract.CareExceptionResponse[];
   /**
    * Die Abwesenheiten, die Eltern sehen. Eine Krankmeldung der OGS
    * (`source` nicht `parent`) ist ein Schuleintrag wie eine Teil-Abwesenheit.
    */
-  sickDays?: readonly StatusDay[];
+  sickDays?: readonly parentMeContract.StatusDayResponse[];
   /**
    * Das Kind hat keinen Platz in der OGS (#4803): die Meldung geht an die
    * Schule, die Texte nennen darum keine OGS.
@@ -721,7 +718,9 @@ export function SickNoteModal({
   // the school may have entered it after the page loaded, or beyond the
   // window the page reads.
   const [reloadedExceptions, setReloadedExceptions] =
-    useState<readonly CareException[]>(NO_CARE_EXCEPTIONS);
+    useState<readonly parentMeContract.CareExceptionResponse[]>(
+      NO_CARE_EXCEPTIONS,
+    );
   // Only a manual partial absence is a school entry; the backend ignores
   // automatic excusals from a pulled-forward pickup time, and so does the
   // read that fills excused_from. Such days go to the school as a request.
@@ -1067,7 +1066,9 @@ const DAY_SIGNATURE_FIELD = "pickup-day-signature";
  * Die Kontaktpersonen des Kindes, die an einem Tag abholen können (#4780):
  * alle eingetragenen Personen außer dem eigenen Konto.
  */
-function useDayPickupContacts(studentId: string | undefined): ChildGuardian[] {
+function useDayPickupContacts(
+  studentId: string | undefined,
+): parentMeContract.childGuardianResponse[] {
   // Without the list only the choice „Wer holt ab?“ is missing; pickup time
   // and mode stay requestable, so a failure stays silent.
   const { data } = useSWRAuth(
@@ -1101,15 +1102,15 @@ export function PickupTimeModal({
   onCutoffPassed,
 }: Readonly<{
   studentId?: string;
-  careExceptions: CareException[];
-  pickupChangeRequests?: PickupChangeRequest[];
+  careExceptions: parentMeContract.CareExceptionResponse[];
+  pickupChangeRequests?: parentMeContract.PickupChangeRequestResponse[];
   careExceptionsLoaded: boolean;
   pickupChangeRequestsLoaded?: boolean;
   pickupChangeEnabled: boolean;
   /** Die Anfrage darf auch die Abholart des Tages ändern (#3945). */
   departureModeEnabled?: boolean;
   childFirstName?: string;
-  today?: ChildToday;
+  today?: parentMeContract.TodayStatusResponse;
   onClose: () => void;
   onSubmit: (params: PickupChangeSubmitParams) => Promise<void | string>;
   onRemove: (date: string) => Promise<void>;
@@ -1949,12 +1950,12 @@ export function SickStatusSummary({
   onEdited,
 }: Readonly<{
   studentId?: string;
-  sickDays: StatusDay[];
+  sickDays: parentMeContract.StatusDayResponse[];
   // Absence requests behind an OGS approval gate. Pending ones show as
   // "Freigabe ausstehend" and can still be changed by their author; rejected
   // ones show the decision reason. Confirmed (approved) requests arrive as
   // StatusDays instead.
-  excusedRequests?: readonly ExcusedRequest[];
+  excusedRequests?: readonly parentMeContract.ParentExcusedRequestResponse[];
   /** Ob die Person Abwesenheiten melden darf und eigene offene Anfragen damit
    * ändern kann (features.absence_request_edit_enabled, #4603). */
   canEdit?: boolean;
@@ -1965,7 +1966,8 @@ export function SickStatusSummary({
 }>) {
   const t = useCareTermTranslations("parentChildCare");
   const locale = useLocale();
-  const [editing, setEditing] = useState<ExcusedRequest | null>(null);
+  const [editing, setEditing] =
+    useState<parentMeContract.ParentExcusedRequestResponse | null>(null);
 
   // Collapse to a "first – last" range ONLY when the days are actually
   // contiguous; otherwise list them comma-separated. The request endpoint accepts
@@ -1993,7 +1995,9 @@ export function SickStatusSummary({
     .map((d) => d.date);
   const pending = excusedRequests.filter((r) => r.status === "pending");
   const rejected = excusedRequests.filter((r) => r.status === "rejected");
-  const requestLabel = (request: ExcusedRequest) =>
+  const requestLabel = (
+    request: parentMeContract.ParentExcusedRequestResponse,
+  ) =>
     request.absence_status === "sick"
       ? t("summary.sickLabel")
       : t("summary.excusedLabel");
@@ -2167,7 +2171,9 @@ export interface OgsAction {
 // not a hook, so consumers localize each key via
 // t(`actions.${key}.{label,shortLabel,hint}`) in the "parentChildCare"
 // namespace (mirrors the child-detail action pattern).
-export function getOgsActions(features: ChildFeatures): OgsAction[] {
+export function getOgsActions(
+  features: parentMeContract.ChildFeaturesResponse,
+): OgsAction[] {
   return [
     {
       key: "sick",

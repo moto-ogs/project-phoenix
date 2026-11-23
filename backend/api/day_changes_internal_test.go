@@ -81,6 +81,8 @@ func TestDayChangesInvisibleAccountSkipsUnavailableWorkforce(t *testing.T) {
 		Activities: dayChangesActivities{},
 		// Without users:read the class source reads nothing (#7681).
 		Classes: dayChangesClasses{},
+		// Without calendar:own the appointment source answers before reading.
+		Appointments: dayChangesAppointments{},
 		// No change mark today: the Essen source answers without an entry.
 		MealPlan: dayChangesMealPlan{reads: unchangedDayChangesMenu{}},
 	})
@@ -95,6 +97,7 @@ func TestDayChangesInvisibleAccountSkipsUnavailableWorkforce(t *testing.T) {
 		{Source: daychangesview.SourceClosingDays, Status: daychangesview.SourceLoaded},
 		{Source: daychangesview.SourceActivities, Status: daychangesview.SourceLoaded},
 		{Source: daychangesview.SourceClasses, Status: daychangesview.SourceLoaded},
+		{Source: daychangesview.SourceAppointments, Status: daychangesview.SourceLoaded},
 		{Source: daychangesview.SourceMealPlan, Status: daychangesview.SourceLoaded},
 	}, overview.Sources)
 	assert.Empty(t, overview.Entries)

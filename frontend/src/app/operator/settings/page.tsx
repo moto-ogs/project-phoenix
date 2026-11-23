@@ -191,7 +191,7 @@ function OperatorSettingsContent() {
             <PasswordChangeModal
               isOpen={showPasswordModal}
               onClose={handleClosePasswordModal}
-              apiEndpoint="/api/operator/profile/password"
+              portal="platform"
               errorPath={passwordErrors}
               formRef={passwordFormRef}
               // The change ended every operator session, this one too (the

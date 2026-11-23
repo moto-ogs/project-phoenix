@@ -5,54 +5,31 @@
 //
 // Aggregate-only by design: counts per grade level, never child identities.
 
-import { createLogger } from "~/lib/logger";
-import { readEnrollmentError } from "~/lib/enrollment-api-error";
-import {
-  readEnrollmentJSON,
-  sendEnrollmentRequest,
-} from "~/lib/enrollment-http";
-import type { CareOfferingBookingGradeCounts } from "~/lib/care-offering-availability";
-
-const logger = createLogger({ component: "CareOfferingBookingStatsAPI" });
-
-export interface CareOfferingBookingStats extends CareOfferingBookingGradeCounts {
-  offering_id: string;
-  /** Absent/null when the offering has no capacity limit. */
-  capacity?: number | null;
-  /**
-   * Peak number of children holding a slot at the same time inside the
-   * phase's remaining service window — the same number the backend capacity
-   * gate compares against `capacity` when a booking is saved.
-   */
-  booked: number;
-}
+import { bffJson } from "~/lib/bff-fetch";
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 
 /**
  * Loads booking stats for every offering of a phase. Returns them keyed by
- * offering id, which is how every consumer looks them up.
+ * offering id, which is how every consumer looks them up. `booked` is the
+ * peak number of children holding a slot at the same time inside the
+ * phase's remaining service window, the number the backend capacity gate
+ * compares against `capacity` (absent without a limit) when a booking is
+ * saved.
  */
 export async function fetchCareOfferingBookingStats(
   phaseId: string,
-): Promise<Record<string, CareOfferingBookingStats>> {
-  const response = await sendEnrollmentRequest(
-    `/api/enrollment/care-offerings/booking-stats?phase_id=${encodeURIComponent(phaseId)}`,
-    { cache: "no-store" },
+): Promise<
+  Record<string, enrollmentContract.CareOfferingBookingStatsResponse>
+> {
+  const list = await bffJson(
+    "tenant",
+    "GET /api/enrollment/care-offerings/booking-stats",
+    {
+      query: { phase_id: phaseId },
+      errorMessage: "Belegung konnte nicht geladen werden",
+    },
   );
-  if (!response.ok) {
-    throw await readEnrollmentError(
-      response,
-      "Belegung konnte nicht geladen werden",
-      logger,
-      "care_offering_booking_stats_failed",
-    );
-  }
-  const raw = await readEnrollmentJSON<CareOfferingBookingStats[]>(response);
-  const list = Array.isArray(raw) ? raw : [];
-  const byID: Record<string, CareOfferingBookingStats> = {};
-  for (const entry of list) {
-    byID[entry.offering_id] = entry;
-  }
-  return byID;
+  return Object.fromEntries(list.map((entry) => [entry.offering_id, entry]));
 }
 
 /**
@@ -61,7 +38,7 @@ export async function fetchCareOfferingBookingStats(
  * render no line at all rather than an empty one.
  */
 export function formatOfferingOccupancy(
-  stats: CareOfferingBookingStats | null | undefined,
+  stats: enrollmentContract.CareOfferingBookingStatsResponse | null | undefined,
 ): string | null {
   if (!stats) return null;
   if (stats.capacity == null) {
@@ -77,7 +54,7 @@ export function formatOfferingOccupancy(
 
 /** True when one more booking would exceed the offering's capacity. */
 export function offeringIsFull(
-  stats: CareOfferingBookingStats | null | undefined,
+  stats: enrollmentContract.CareOfferingBookingStatsResponse | null | undefined,
 ): boolean {
   return offeringOccupancy(stats)?.full ?? false;
 }
@@ -98,7 +75,9 @@ export interface OfferingOccupancy {
 /** Occupancy of one offering; null while its stats are not loaded. */
 export function offeringOccupancy(
   stats:
-    Pick<CareOfferingBookingStats, "booked" | "capacity"> | null | undefined,
+    | { readonly booked: number; readonly capacity?: number | null }
+    | null
+    | undefined,
 ): OfferingOccupancy | null {
   if (!stats) return null;
   const capacity = stats.capacity ?? null;
@@ -125,7 +104,9 @@ export function totalFreePlaces(
     readonly capacity?: number | null;
     readonly is_active: boolean;
   }[],
-  statsById: Readonly<Record<string, CareOfferingBookingStats>>,
+  statsById: Readonly<
+    Record<string, enrollmentContract.CareOfferingBookingStatsResponse>
+  >,
 ): number | null {
   let total = 0;
   let limited = false;

@@ -53,6 +53,10 @@ func NewDayChangesTestResource(db transactionruntime.Database, unit tenant.UnitO
 	if err != nil {
 		return nil, err
 	}
+	calendarAppointments, err := NewAppointments(db)
+	if err != nil {
+		return nil, err
+	}
 	classArrivals, err := owners.BuildClassArrivals(db, slog.Default())
 	if err != nil {
 		return nil, err
@@ -67,9 +71,10 @@ func NewDayChangesTestResource(db transactionruntime.Database, unit tenant.UnitO
 		Notices: timetableCompose.NewStaffNotices(timetableCompose.StaffNoticeDependencies{
 			DB: db.Pool(), Now: func() time.Time { return today.BerlinMidnight().Add(12 * time.Hour) },
 		}),
-		ClosingDays: owners.NewSchoolClosingDayReads(),
-		MealPlan:    mealplanCompose.NewMenuChanges(),
-		Today:       func() calendar.Date { return today }, Logger: slog.Default(),
+		ClosingDays:  owners.NewSchoolClosingDayReads(),
+		MealPlan:     mealplanCompose.NewMenuChanges(),
+		Appointments: calendarAppointments,
+		Today:        func() calendar.Date { return today }, Logger: slog.Default(),
 	})
 	if err != nil {
 		return nil, err

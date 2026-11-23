@@ -12,7 +12,6 @@ import { SWRConfig } from "~/lib/swr/testing";
 vi.unmock("swr");
 
 import { ApiError } from "~/lib/api-error";
-import type { StaffVacationQuotaSummary } from "~/lib/staff-api";
 import { catalogText } from "~/test/error-catalog-text";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 
@@ -55,12 +54,13 @@ vi.mock("~/lib/staff-api", () => ({
 }));
 
 import { AbwesenheitenTab } from "./abwesenheiten-tab";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 
 const year = new Date().getFullYear();
 
 function quota(
-  overrides: Partial<StaffVacationQuotaSummary> = {},
-): StaffVacationQuotaSummary {
+  overrides: Partial<sharedContract.VacationQuotaSummary> = {},
+): sharedContract.VacationQuotaSummary {
   return {
     staff_id: "4",
     year,
@@ -100,7 +100,7 @@ describe("AbwesenheitenTab Urlaubsanspruch bearbeiten", () => {
   });
 
   it("ignores an older year's late response before editing the current quota", async () => {
-    let resolveOld!: (value: StaffVacationQuotaSummary) => void;
+    let resolveOld!: (value: sharedContract.VacationQuotaSummary) => void;
     renderWithCache(
       <AbwesenheitenTab
         staffId="4"
@@ -113,7 +113,7 @@ describe("AbwesenheitenTab Urlaubsanspruch bearbeiten", () => {
     mocks.getVacationQuota.mockImplementation(
       (_id: string, requestedYear: number) =>
         requestedYear === year - 1
-          ? new Promise<StaffVacationQuotaSummary>((resolve) => {
+          ? new Promise<sharedContract.VacationQuotaSummary>((resolve) => {
               resolveOld = resolve;
             })
           : Promise.resolve(quota({ year: requestedYear, entitled_days: 40 })),

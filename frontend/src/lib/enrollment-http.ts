@@ -29,20 +29,6 @@ export async function sendEnrollmentRequest(
   }
 }
 
-/** The backend wraps payloads as `{ status, data }`; bare payloads pass through. */
-export async function readEnrollmentJSON<T>(response: Response): Promise<T> {
-  const raw = (await response.json()) as { data?: T } | T;
-  if (
-    raw &&
-    typeof raw === "object" &&
-    "data" in raw &&
-    raw.data !== undefined
-  ) {
-    return raw.data;
-  }
-  return raw as T;
-}
-
 /** Binds one API module's logger and log event to `readEnrollmentError`. */
 export function enrollmentErrorReader(
   logger: EnrollmentErrorLogger,

@@ -322,6 +322,34 @@ Projektion nutzt „change“.
   Vertretungen der Sitzung am Tag der Übersicht, wie `MyGroupIDs` sie
   bestimmt, aber für den Tag der Übersicht statt für den Kalendertag der Uhr.
 
+## Nachtrag 2026-11-21: Quelle Termine im Kalender (#7663)
+
+- Die Quelle Termine liest die Ausnahmen einzelner Kalendertermine über
+  die bestehenden Lesefähigkeiten von Appointments
+  (`ListAppointmentsVisibleToStaff`, `FindOccurrenceOverrides`,
+  `FindRecurrenceRules`). Ihre Rechte-Regel ist die des eigenen Kalenders
+  (`GET /api/calendar/my`): `calendar:own` und ein Personaldatensatz. Sichtbar
+  sind nur Termine, die das Konto organisiert oder zu denen es eingeladen ist;
+  die Leitung sieht hier keine fremden Termine. Darum steht jeder Eintrag
+  unter „Betrifft dich“. Ohne Recht bleibt die Quelle „geladen“ und leer.
+- Arten: `appointment_cancelled` (der Termin ist abgesagt oder der heutige
+  Termin einer Serie ist einzeln abgesagt) und `appointment_changed` (der
+  heutige Termin einer Serie hat einen anderen Ort oder eine andere Zeit).
+  Die Rücknahme einer Absage hat keinen eigenen Zustand: Es gibt keinen
+  Schreibweg dafür, und ein Termin ohne Ausnahme erscheint nicht.
+- Die Quelle liest neben dem Personaldatensatz der Sitzung, den die Anfrage
+  schon für die Quelle Personal kennt, höchstens drei Statements: die Termine,
+  die Ausnahmen der Tage, die heute erreichen können, und die Regeln nur
+  abgesagter Serien. Ohne `calendar:own` liest sie nichts.
+- Ein heutiger Termin, der auf einen anderen Tag verlegt ist, findet heute
+  nicht statt und erscheint als abgesagt. Ein Termin, der von einem anderen
+  Tag auf heute verlegt ist, wird nicht gelesen. Beides kann heute noch kein
+  Schreibweg des Kalenders erzeugen; es gibt nur die Absage.
+- Ein Live-Signal gibt es noch nicht. Eine neue After-Commit-Stelle müsste das
+  schrumpfende Register `durable_side_effect_notices.json` erweitern; das
+  entscheidet #7693. Bis dahin wird die Übersicht beim Fokus, bei erneuter
+  Verbindung und beim Laden aktuell.
+
 ## Nachtrag 2026-11-21: Quelle Speiseplan (#7666)
 
 - Die Quelle Essen liest Meal Plans neue Lesefähigkeit `MenuChanges`
@@ -349,5 +377,9 @@ Projektion nutzt „change“.
   Personal, `BlockDayChanges` für Stundenplan) teilen sich im Savepoint die
   Zuordnungen des Tages (`WithDayStaffShare`): Die erste liest alle Zeilen des
   Tages mit ihrem Termin in einem Statement, die zweite filtert sie.
-  `api.day_changes.today` bleibt bei 17, `api.day_changes.today.children` bei
-  24 und `api.day_changes.today_activities` bei 20 Anweisungen.
+  Das Team liest die Quelle Personal nur, wenn der Tag Abwesenheiten,
+  Gruppenübergaben oder Terminänderungen hat; nur für diese entscheidet es,
+  ob sie das Konto betreffen. `api.day_changes.today` bleibt bei 17,
+  `api.day_changes.today.children` bei 24,
+  `api.day_changes.today_activities` bei 20 und
+  `api.day_changes.today_appointments` bei 15 Anweisungen.

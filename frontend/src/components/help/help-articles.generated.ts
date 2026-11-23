@@ -1046,7 +1046,9 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
           "Auch wer nur bei einem Termin fehlt oder vertritt, steht mit Uhrzeit da. Beispiel: `Sara übernimmt heute „Chor“ für Ben.`",
           "Darfst du den `Vertretungsplan` öffnen, führt dich der Eintrag zu diesem Termin.",
           "Am Handy zeigt `Schule` nur die ersten 3 Einträge. Den Rest zeigt `Alle anzeigen`.",
-          "Dienste, Angebote und AGs, die schon vorbei sind, stehen ganz unten unter `erledigt`. Wähle `erledigt`, um sie zu sehen.",
+          // Termine aus dem eigenen Kalender (#7663), api/day_changes_appointments.go.
+          "Unter `Betrifft dich` stehen auch deine Termine aus `Mein Kalender`. Du siehst dort, welcher Termin heute ausfällt. Du siehst auch, welcher Termin heute woanders oder zu einer anderen Zeit ist.",
+          "Dienste, Termine, Angebote und AGs, die schon vorbei sind, stehen ganz unten unter `erledigt`. Wähle `erledigt`, um sie zu sehen.",
           // Hinweise der Leitung in „Heute anders" (#7667), components/home/day-notice-row.tsx.
           "Einen Hinweis der Leitung, den du noch bestätigen sollst, siehst du ganz oben. Wähle `Zur Kenntnis nehmen`. Danach steht er unter `Schule`.",
           // Speiseplan in „Heute anders" (#7666): nur die Kurzinfo, ohne Gerichte.
@@ -1055,6 +1057,9 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
           "Steht dort `Heute läuft alles wie geplant.`, gibt es heute nichts Besonderes.",
           "Die Karte zeigt nie, warum jemand fehlt.",
           "Ändert sich etwas, zeigt die Karte es ohne Neuladen.",
+          // Krank und Urlaub des Teams stehen seit #7668 nur noch hier, nicht
+          // mehr in „Personal heute“ (components/home/staff-today-block.tsx).
+          "Die Leitung sieht in `Personal heute`, wie viele in Aufsicht und eingestempelt sind. Wer krank oder im Urlaub ist, steht in `Heute anders`.",
         ],
       },
       {
@@ -1087,6 +1092,9 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
       "Unter `Bausteine` fehlt eine Karte? Dann steht sie schon auf deiner Startseite. Oder deine Rolle oder deine OGS sieht sie nicht vor.",
       // Sichtregel von „Heute anders" (#7659): Namen nur für die eigenen
       // Gruppen, für die übrige Schule nur die Zahl; die Leitung sieht alle.
+      // Der Baustein „Hinweise der Leitung“ ist seit #7668 weg; Pflicht und
+      // Abschaltung der Schule gelten per Migration für „Heute anders“.
+      "Die Karte `Hinweise der Leitung` fehlt auf der Startseite? Ihre Hinweise stehen jetzt in `Heute anders`. Alle Hinweise, auch für andere Tage, findest du weiter in der Seitenleiste unter `Hinweise der Leitung`.",
       // Kinder nur mit users:read, wie auf der Seite eines Kindes (#7665).
       "In `Heute anders` fehlen die Kinder und Klassen? Du siehst sie nur, wenn du auch die Krankmeldungen auf der Seite eines Kindes sehen darfst.",
       "In `Heute anders` stehen bei dir nur Zahlen statt Namen? Namen siehst du für deine eigenen Gruppen. Für den Rest der Schule zeigt die Karte nur, wie viele fehlen. Die Leitung sieht alle Namen.",
@@ -15016,7 +15024,7 @@ export const traegerSepaMandatesTopic =
             "Je Familie gilt ein Mandat. Es gilt auch für Geschwister mit derselben E-Mail-Adresse im Vertrag. Stehen Geschwister mit demselben Konto und derselben Mandatsreferenz in mehreren Zeilen, legt moto das Mandat einmal an. Die Vorschau zeigt die weiteren Zeilen als `Gleiches Mandat`.",
           steps: [
             "Öffne den Vertrag des Kindes unter `Verträge`. Oder öffne im Monatslauf bei der Rechnung das Menü mit den drei Punkten und dann `Empfänger und Zahlung`.",
-            "Wähle in der Karte `SEPA-Lastschriftmandat` den Knopf `Mandat erfassen`. Es öffnet sich die Seite des Mandats.",
+            "Wähle in der Karte `SEPA-Lastschriftmandat` den Knopf `Mandat erfassen`. Es öffnet sich die Seite des Mandats. Bei einem Entwurf fehlt die Karte: Sende den Vertrag zuerst. Ein verworfener Entwurf würde das Mandat mitlöschen.",
             "Wähle dort `Mandat erfassen`.",
             "Übernimm `Kontoinhaber`, `IBAN` und `Unterschrieben am` aus dem unterschriebenen Mandat. Die `BIC` brauchst du nur bei Konten außerhalb der EU.",
             "Trage die `Mandatsreferenz` ein. Lässt du das Feld leer, vergibt moto eine.",

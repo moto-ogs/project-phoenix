@@ -89,7 +89,6 @@ var seedCoverageExemptions = map[string]string{
 	"auth.password_reset_tokens":                "empty in prod too",
 	"auth.parent_declaration_permission_grants": "one-time migration ledger; only upgrades with existing guardian relationships write it",
 
-	"calendar.appointment_occurrence_overrides":     "empty in prod too",
 	"calendar.appointment_reminder_push_deliveries": "empty in prod too",
 
 	"display.displays": "empty in prod too",

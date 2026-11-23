@@ -13,19 +13,22 @@ import { SectionCard } from "~/components/ui/section-card";
 import {
   fetchParentSurveyForm,
   submitParentSurveyAnswers,
-  type ParentAnnouncement,
-  type ParentAnnouncementSurvey,
 } from "~/lib/parent-api";
 import type { SurveyAnswersRequest } from "~/lib/survey-form";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 export function isSurveyItem(
-  item: ParentAnnouncement,
-): item is ParentAnnouncement & { survey: ParentAnnouncementSurvey } {
+  item: parentMeContract.AnnouncementResponse,
+): item is parentMeContract.AnnouncementResponse & {
+  survey: parentMeContract.AnnouncementSurveyResponse;
+} {
   return item.system_kind === "survey" && item.survey !== undefined;
 }
 
 /** Noch offen und von diesem Elternkonto noch nicht beantwortet. */
-export function isOpenSurvey(item: ParentAnnouncement): boolean {
+export function isOpenSurvey(
+  item: parentMeContract.AnnouncementResponse,
+): boolean {
   if (!isSurveyItem(item)) return false;
   return (
     !item.survey.participated && new Date(item.survey.closes_at) > new Date()
@@ -37,8 +40,13 @@ export function ParentSurveySection({
   onUpdated,
   onBusyChange,
 }: Readonly<{
-  item: ParentAnnouncement & { survey: ParentAnnouncementSurvey };
-  onUpdated: (id: string, patch: Partial<ParentAnnouncement>) => void;
+  item: parentMeContract.AnnouncementResponse & {
+    survey: parentMeContract.AnnouncementSurveyResponse;
+  };
+  onUpdated: (
+    id: string,
+    patch: Partial<parentMeContract.AnnouncementResponse>,
+  ) => void;
   onBusyChange: (busy: boolean) => void;
 }>) {
   const announcementId = item.id;

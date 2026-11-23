@@ -358,6 +358,8 @@ describe("TeacherShellProvider", () => {
       expect(mockFetch).toHaveBeenCalledWith("/api/auth/logout", {
         method: "POST",
         signal: expect.any(AbortSignal) as AbortSignal,
+        credentials: "include",
+        cache: "no-store",
       });
       expect(mockSignOut).toHaveBeenCalledWith(
         { callbackUrl: "/" },
@@ -384,6 +386,8 @@ describe("TeacherShellProvider", () => {
     expect(mockFetch).toHaveBeenCalledWith("/api/auth/logout", {
       method: "POST",
       signal: expect.any(AbortSignal) as AbortSignal,
+      credentials: "include",
+      cache: "no-store",
     });
     expect(mockClearSessionCache).toHaveBeenCalled();
 

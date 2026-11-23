@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
-import type { ClassDayRow } from "~/lib/class-day-api";
 import { handoverLine, handoverRows, initialAbsentIds } from "./class-handover";
+import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 
-function row(overrides: Partial<ClassDayRow>): ClassDayRow {
+function row(
+  overrides: Partial<schoolClassDayContract.DayRow>,
+): schoolClassDayContract.DayRow {
   return {
     student_id: "1",
     first_name: "Kind",

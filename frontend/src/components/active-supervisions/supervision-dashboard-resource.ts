@@ -1,13 +1,13 @@
-import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";
+import { ApiError } from "~/lib/api-error";
+import { bffJson } from "~/lib/bff-fetch";
 import { createLogger } from "~/lib/logger";
 import type { TrackingIndicatorsResponse } from "~/lib/active-helpers";
 import type { PlannedTimetableInstance } from "~/lib/timetable-operations-types";
 import type { DepartureMode } from "~/lib/departure-plan";
 import type { TeacherHint } from "~/lib/student-helpers";
-import type { ClassHandover } from "~/lib/class-handover";
-import type { DashboardProjection } from "~/lib/contract/active.generated";
 import { mapSupervisionDashboard } from "~/lib/supervision-dashboard-wire";
 import type { OpenRoomView, SchulhofStatusResponse } from "./view-model";
+import type * as studentsContract from "~/lib/contract/students.generated";
 const logger = createLogger({ component: "useSupervisionDashboard" });
 
 // The page's view of the supervision projection (#2096), mapped once from
@@ -56,7 +56,7 @@ export interface BFFDashboardResponse {
     class_trip?: boolean;
     class_trip_since?: string;
     // Übergabe nach dem Unterricht (#4794).
-    classHandover?: ClassHandover;
+    classHandover?: studentsContract.ClassHandover;
     // Authenticated proxy URL — backend rewrites the raw /uploads path
     // to /api/students/{id}/photo/{filename} before sending it down.
     photoUrl?: string;
@@ -117,42 +117,38 @@ export async function fetchSupervisionDashboard(
   logger.debug("SWR fetching dashboard data");
   const start = performance.now();
 
-  const fetchDashboard = async (groupId: string | null) => {
-    const query =
-      groupId && /^[1-9]\d{0,18}$/.test(groupId)
-        ? `?group_id=${encodeURIComponent(groupId)}`
-        : "";
-    // The catalog proxy reads the session cookie and checks the answer
-    // against the contract (#7563).
-    return transportFetch(`/api/active/supervision-dashboard${query}`, {
-      headers: {
-        "Content-Type": "application/json",
+  // The catalog proxy reads the session cookie and checks the answer
+  // against the contract (#7563). No silent fallback fan-out (#2096): a
+  // failed aggregate is an error, never a partial-empty payload — admins
+  // included.
+  const fetchDashboard = (groupId: string | null) =>
+    bffJson("tenant", "GET /api/active/supervision-dashboard", {
+      query: {
+        group_id:
+          groupId && /^[1-9]\d{0,18}$/.test(groupId) ? groupId : undefined,
       },
+      errorMessage: "BFF request failed",
     });
-  };
 
-  let response = await fetchDashboard(requestedGroupId);
-  // A stale selection (supervision revoked, session ended) is a backend
-  // 403 — retry once without group_id so the backend resolves the
-  // caller's first supervised session; the selection effects then
-  // re-align from the response.
-  if (!response.ok && response.status === 403 && requestedGroupId) {
-    response = await fetchDashboard(null);
+  let data;
+  try {
+    data = await fetchDashboard(requestedGroupId);
+  } catch (error) {
+    // A stale selection (supervision revoked, session ended) is a backend
+    // 403 — retry once without group_id so the backend resolves the
+    // caller's first supervised session; the selection effects then
+    // re-align from the response.
+    if (!(
+      error instanceof ApiError &&
+      error.status === 403 &&
+      requestedGroupId
+    ))
+      throw error;
+    data = await fetchDashboard(null);
   }
-
-  if (!response.ok) {
-    // No silent fallback fan-out (#2096): a failed aggregate is an
-    // error, never a partial-empty payload — admins included.
-    throw await apiErrorFromResponse(
-      response,
-      `BFF request failed: ${response.status}`,
-    );
-  }
-
-  const body = (await response.json()) as { data: DashboardProjection };
 
   logger.debug("SWR fetch complete", {
     duration_ms: Math.round(performance.now() - start),
   });
-  return mapSupervisionDashboard(body.data);
+  return mapSupervisionDashboard(data);
 }

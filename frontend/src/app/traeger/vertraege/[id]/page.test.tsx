@@ -402,8 +402,12 @@ describe("TraegerVertragPage", () => {
     expect(
       screen.getByText(/Die Eltern sehen den Vertrag erst/),
     ).toBeInTheDocument();
-    // A discarded draft would take the family's choice with it (#7770).
+    // A discarded draft would take the family's choice with it (#7770),
+    // and its mandate too (#7862).
     expect(screen.queryByText("Empfänger und Zahlung")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("SEPA-Lastschriftmandat"),
+    ).not.toBeInTheDocument();
 
     showTab("Kündigung");
     expect(
@@ -702,9 +706,13 @@ describe("TraegerVertragPage", () => {
     expect(
       screen.getByText(/Die Mail ging an erika@example.org/),
     ).toBeInTheDocument();
-    // A sent contract cannot be discarded: its family sets how it pays.
+    // A sent contract cannot be discarded: its family sets how it pays
+    // and gives its mandate.
     expect(
       await screen.findByText("Empfänger und Zahlung"),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByText("SEPA-Lastschriftmandat"),
     ).toBeInTheDocument();
     showTab("Unterschrift und Versand");
     expect(screen.getByText("Gesendet")).toBeInTheDocument();

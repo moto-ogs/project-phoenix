@@ -44,6 +44,9 @@ const (
 	// SourceClasses is Stundenplan der Klassen: a class whose
 	// Unterrichtsschluss changes today (#7681).
 	SourceClasses Source = "classes"
+	// SourceAppointments is Termine im Kalender: today's exceptions of the
+	// caller's calendar appointments (#7663).
+	SourceAppointments Source = "appointments"
 	// SourceMealPlan is Essen: whether today's menu changed (#7666).
 	SourceMealPlan Source = "meal_plan"
 )
@@ -121,6 +124,12 @@ const (
 	// KindClassDismissalChanged: a class ends school at another time today
 	// (#7681); Class.Time is the new Unterrichtsschluss. Never a reason.
 	KindClassDismissalChanged Kind = "class_dismissal_changed"
+	// KindAppointmentCancelled: a calendar appointment of the caller does not
+	// take place today, as a single date of a series or as a whole (#7663).
+	KindAppointmentCancelled Kind = "appointment_cancelled"
+	// KindAppointmentChanged: today's date of a calendar appointment of the
+	// caller takes place at another location or another time (#7663).
+	KindAppointmentChanged Kind = "appointment_changed"
 	// KindMealPlanChanged: today's menu changed after it was published
 	// (#7666). Never the dishes; the meal plan page shows them.
 	KindMealPlanChanged Kind = "meal_plan_changed"
@@ -175,6 +184,8 @@ const (
 	// LinkSubstitutionPlan is the Vertretungsplan of the day with the block
 	// (Link.InstanceID) open (#7675).
 	LinkSubstitutionPlan LinkTarget = "substitution_plan"
+	// LinkCalendar is the caller's own calendar ("Mein Kalender", #7663).
+	LinkCalendar LinkTarget = "calendar"
 	// LinkMealPlan is the meal plan page of the week.
 	LinkMealPlan LinkTarget = "meal_plan"
 )
@@ -291,6 +302,19 @@ type BlockActivity struct {
 	Title string   `json:"title"`
 }
 
+// DayAppointment is today's date of a calendar appointment of the caller
+// (#7663). Title and Location are the organizer's own text, as the date
+// takes place today. The new time travels in the entry's StartsAt and
+// EndsAt.
+type DayAppointment struct {
+	ID              ident.ID      `json:"id"`
+	OccurrenceDate  calendar.Date `json:"occurrence_date"`
+	Title           string        `json:"title"`
+	Location        *string       `json:"location"`
+	LocationChanged bool          `json:"location_changed"`
+	TimeChanged     bool          `json:"time_changed"`
+}
+
 // SourceEntry is what a source port returns: an entry without its section,
 // and whether the caller is involved. The source has applied its own
 // permission rule already; the projection never filters.
@@ -329,6 +353,8 @@ type SourceEntry struct {
 	PreviousRoom *BlockRoom
 	// Class is set on the class kinds (#7681).
 	Class *DayClass
+	// Appointment is set on the appointment kinds only (#7663).
+	Appointment *DayAppointment
 }
 
 // Entry is one change to regular operation of the day.
@@ -360,6 +386,8 @@ type Entry struct {
 	PreviousRoom *BlockRoom     `json:"previous_room"`
 	// Class: see SourceEntry.
 	Class *DayClass `json:"class"`
+	// Appointment is set on the appointment kinds only (#7663).
+	Appointment *DayAppointment `json:"appointment"`
 }
 
 // SourceStatus reports one source.
@@ -418,6 +446,13 @@ type ClassChanges interface {
 	ClassChanges(ctx context.Context, day calendar.Date) ([]SourceEntry, error)
 }
 
+// AppointmentChanges is the Termine port (#7663): today's cancelled and
+// changed dates of the calendar appointments the caller may see in the own
+// calendar. A caller without the calendar gets none.
+type AppointmentChanges interface {
+	AppointmentChanges(ctx context.Context, day calendar.Date) ([]SourceEntry, error)
+}
+
 // MealPlanChanges is the Essen port: whether the menu of the day changed,
 // for every staff account of the school (#7666). It carries no dish.
 type MealPlanChanges interface {
@@ -450,6 +485,8 @@ type Dependencies struct {
 	Activities ActivityChanges
 	// Classes is the Stundenplan der Klassen (#7681).
 	Classes ClassChanges
+	// Appointments is the Termine source (#7663).
+	Appointments AppointmentChanges
 	// MealPlan is the Essen source (#7666).
 	MealPlan MealPlanChanges
 	Logger   *slog.Logger
@@ -477,7 +514,7 @@ type view struct {
 
 // New builds the projection.
 func New(deps Dependencies) (Query, error) {
-	if deps.Today == nil || deps.Isolation == nil || deps.Staff == nil || deps.Children == nil || deps.Notices == nil || deps.Closing == nil || deps.Activities == nil || deps.Classes == nil || deps.MealPlan == nil {
+	if deps.Today == nil || deps.Isolation == nil || deps.Staff == nil || deps.Children == nil || deps.Notices == nil || deps.Closing == nil || deps.Activities == nil || deps.Classes == nil || deps.Appointments == nil || deps.MealPlan == nil {
 		return nil, ErrDependencies
 	}
 	logger := deps.Logger
@@ -496,6 +533,7 @@ func New(deps Dependencies) (Query, error) {
 			{source: SourceClosingDays, read: deps.Closing.ClosingDays},
 			{source: SourceActivities, read: deps.Activities.ActivityChanges},
 			{source: SourceClasses, read: deps.Classes.ClassChanges},
+			{source: SourceAppointments, read: deps.Appointments.AppointmentChanges},
 			{source: SourceMealPlan, read: deps.MealPlan.MealPlanChanges},
 		},
 	}, nil
@@ -618,7 +656,7 @@ func toEntry(entry SourceEntry) Entry {
 		People: people, Group: entry.Group, Link: entry.Link, Count: entry.Count, Notice: entry.Notice,
 		Closing: entry.Closing, Child: entry.Child, ChildSummary: entry.ChildSummary,
 		Activity: entry.Activity, Room: entry.Room, PreviousRoom: entry.PreviousRoom,
-		Class: entry.Class,
+		Class: entry.Class, Appointment: entry.Appointment,
 	}
 }
 

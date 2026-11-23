@@ -83,7 +83,9 @@ describe("CatererLoginPage (#4497)", () => {
       trustedDeviceEnabled: true,
       trustedDeviceDays: 90,
     });
-    fetchMock.mockResolvedValue(Response.json({ status: "authenticated" }));
+    fetchMock.mockResolvedValue(
+      Response.json({ status: "success", data: { status: "authenticated" } }),
+    );
     render(<CatererLoginPage />);
 
     submitCredentials();

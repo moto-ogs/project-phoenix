@@ -100,6 +100,10 @@ var (
 	// ErrSEPAMandateInForce reports a family that already has a mandate in
 	// force; it has to be revoked first.
 	ErrSEPAMandateInForce = errors.New("the family already has a SEPA mandate in force")
+	// ErrSEPAMandateContractDraft reports a mandate for a contract that is
+	// still a draft: discarding the draft would take the mandate with it
+	// (#7862).
+	ErrSEPAMandateContractDraft = errors.New("a SEPA mandate needs a contract that is no draft")
 	// ErrSEPAMandateReferenceTaken reports a reference the Träger already
 	// gave another mandate.
 	ErrSEPAMandateReferenceTaken = errors.New("the Träger already has a SEPA mandate with this reference")
