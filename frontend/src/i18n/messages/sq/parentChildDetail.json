@@ -129,6 +129,7 @@
     "errorObjectRemove": "qasja për këtë llogari",
     "reloadObject": "pamja e kontakteve",
     "savedButStale": "Ndryshimi juaj u ruajt. Vetëm pamja nuk është ende e përditësuar.",
+    "contactGone": "Ky kontakt nuk është më i regjistruar për fëmijën tuaj. Ndryshimi juaj nuk u ruajt.",
     "errorObjectContact": "ndryshimi i kontaktit",
     "errorObjectPickup": "rregullimi i marrjes",
     "addContactTooltip": "Hap një formular për një person kontakti ose marrjeje pa llogari.",

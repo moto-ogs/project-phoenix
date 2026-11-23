@@ -235,6 +235,7 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "no_data": true
     },
     {
@@ -14389,6 +14390,7 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "response": {
         "kind": "ref",
         "ref": "PhoneNumberResponse"
@@ -21222,11 +21224,27 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "request": {
         "kind": "ref",
         "ref": "StudentGuardianUpdateRequest"
       },
       "no_data": true
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/guardians/students/{studentId}/guardians/{guardianId}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "GuardianEntryRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "GuardianWithRelationship"
+      }
     },
     {
       "method": "PUT",
@@ -21246,6 +21264,7 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "request": {
         "kind": "ref",
         "ref": "GuardianUpdateRequest"
@@ -21273,6 +21292,7 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "request": {
         "kind": "ref",
         "ref": "PhoneNumberUpdateRequest"
@@ -58032,6 +58052,92 @@
       ]
     },
     {
+      "name": "GuardianEntryPhone",
+      "go_type": "users.GuardianEntryPhone",
+      "request": true,
+      "fields": [
+        {
+          "name": "id",
+          "optional": true,
+          "schema": {
+            "kind": "id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "phone_number",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "phone_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "is_primary",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "GuardianEntryRequest",
+      "go_type": "users.GuardianEntryRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "guardian",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "GuardianUpdateRequest"
+          }
+        },
+        {
+          "name": "relationship",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "StudentGuardianUpdateRequest"
+          }
+        },
+        {
+          "name": "phone_numbers",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "GuardianEntryPhone"
+            }
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "GuardianImportData",
       "go_type": "dataimport.GuardianImportData",
       "fields": [
@@ -58429,6 +58535,12 @@
             "kind": "string",
             "nullable": true
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -58459,6 +58571,13 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -58484,6 +58603,12 @@
           "schema": {
             "kind": "string",
             "nullable": true
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -58908,6 +59033,12 @@
         },
         {
           "name": "account_status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "version",
           "schema": {
             "kind": "string"
           }
@@ -113420,6 +113551,13 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -128177,6 +128315,13 @@
               "kind": "ref",
               "ref": "guardianPhoneRequest"
             }
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]

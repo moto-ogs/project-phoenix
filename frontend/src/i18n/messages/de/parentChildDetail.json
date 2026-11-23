@@ -129,6 +129,7 @@
     "errorObjectRemove": "die Freigabe für dieses Konto",
     "reloadObject": "die Anzeige der Kontakte",
     "savedButStale": "Deine Änderung ist gespeichert. Nur die Anzeige ist noch nicht aktuell.",
+    "contactGone": "Diesen Kontakt gibt es bei deinem Kind nicht mehr. Deine Änderung ist nicht gespeichert.",
     "errorObjectContact": "die Änderung am Kontakt",
     "errorObjectPickup": "die Abholregelung",
     "addContactTooltip": "Öffnet ein Formular für eine Kontakt- oder Abholperson ohne Konto.",

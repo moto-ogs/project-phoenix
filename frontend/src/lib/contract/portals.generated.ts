@@ -1211,6 +1211,7 @@ export const portalRoutes = {
     guardians["POST /api/guardians/{id}/phone-numbers/"],
     guardians["POST /api/guardians/{id}/phone-numbers/{phoneId}/set-primary"],
     guardians["PUT /api/guardians/relationships/{relationshipId}"],
+    guardians["PUT /api/guardians/students/{studentId}/guardians/{guardianId}"],
     guardians["PUT /api/guardians/students/{studentId}/payer"],
     guardians["PUT /api/guardians/{id}"],
     guardians["PUT /api/guardians/{id}/payment"],

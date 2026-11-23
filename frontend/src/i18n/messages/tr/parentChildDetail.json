@@ -129,6 +129,7 @@
     "errorObjectRemove": "bu hesabın erişimi",
     "reloadObject": "kişiler görünümü",
     "savedButStale": "Değişikliğiniz kaydedildi. Yalnızca görünüm henüz güncel değil.",
+    "contactGone": "Bu kişi artık çocuğunuzun kayıtlarında yok. Değişikliğiniz kaydedilmedi.",
     "errorObjectContact": "kişi değişikliği",
     "errorObjectPickup": "teslim alma düzeni",
     "addContactTooltip": "Hesabı olmayan bir iletişim veya teslim alma kişisi için form açar.",

@@ -10,6 +10,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
@@ -112,6 +114,7 @@ type guardianHarness struct {
 	bulkErr     error
 	observed    []string
 	rendered    []string
+	lastFailure error
 }
 
 func newGuardianHarness(t *testing.T, directory *fakeGuardianDirectory) *guardianHarness {
@@ -150,6 +153,7 @@ func newGuardianHarness(t *testing.T, directory *fakeGuardianDirectory) *guardia
 		},
 		Failure: func(w http.ResponseWriter, r *http.Request, kind usersHTTP.FailureKind, err error) {
 			h.rendered = append(h.rendered, string(kind))
+			h.lastFailure = err
 			_ = render.Render(w, r, errorResponse{StatusCode: statusOf[kind], Status: statusOf[kind], Kind: string(kind), Detail: err.Error()})
 		},
 		ObserveResponse: func(status int, code string) { h.observed = append(h.observed, http.StatusText(status)+":"+code) },
@@ -257,10 +261,12 @@ func TestDeleteGuardianRendersAudienceSpecificConflicts(t *testing.T) {
 	require.Len(t, directory.deleted, 1)
 	assert.Equal(t, peopledirectory.GuardianDelete{GuardianID: 7, ActorAccountID: 42, WithLinks: true, ExpectedLinkIDs: []int64{11}}, directory.deleted[0])
 
-	directory.deleteErr = peopledirectory.ErrGuardianDeletePreviewChanged
+	// The links changed since the preview: the read-state refusal lets the
+	// dialog read the new set (ADR 0311).
+	directory.deleteErr = readstate.ErrChanged
 	recorder = h.do(t, http.MethodDelete, "/guardians/7?force=true&expected_link_ids=11", nil)
 	require.Equal(t, http.StatusConflict, recorder.Code)
-	assert.Contains(t, recorder.Body.String(), "Vorschau")
+	assert.ErrorIs(t, h.lastFailure, readstate.ErrChanged)
 	assert.Equal(t, 1, h.rollbacks, "a stale preview rolls the request back")
 }
 
