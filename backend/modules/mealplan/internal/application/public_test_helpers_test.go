@@ -15,7 +15,12 @@ type seamStore struct {
 	e *recordingEngine
 }
 
-func (s seamStore) ReplaceDay(ctx context.Context, date domain.Date, values []mealplan.Dish) (domain.OperationStats, error) {
+// FindWeek reads no earlier menu: every save in the seam is a first publish.
+func (s seamStore) FindWeek(context.Context, domain.Date, domain.Date) ([]domain.Entry, domain.OperationStats, error) {
+	return nil, domain.OperationStats{}, nil
+}
+
+func (s seamStore) ReplaceDay(ctx context.Context, date domain.Date, values []mealplan.Dish, _ *time.Time) (domain.OperationStats, error) {
 	dishes := make([]mealplan.Dish, 0, len(values))
 	for _, v := range values {
 		dishes = append(dishes, mealplan.Dish{Dish: v.Dish, Note: v.Note, Allergens: v.Allergens})

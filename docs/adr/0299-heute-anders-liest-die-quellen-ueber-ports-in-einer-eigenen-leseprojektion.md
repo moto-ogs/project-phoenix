@@ -349,3 +349,37 @@ Projektion nutzt „change“.
   schrumpfende Register `durable_side_effect_notices.json` erweitern; das
   entscheidet #7693. Bis dahin wird die Übersicht beim Fokus, bei erneuter
   Verbindung und beim Laden aktuell.
+
+## Nachtrag 2026-11-21: Quelle Speiseplan (#7666)
+
+- Die Quelle Essen liest Meal Plans neue Lesefähigkeit `MenuChanges`
+  (`MenuChangedOn`, ein Statement im Adapter des Owners). Meal Plan
+  kennzeichnet einen Tag beim Speichern mit `menu_changed_at`, wenn ein schon
+  veröffentlichtes Menü geändert wird. Das ist dieselbe Regel wie beim Hinweis
+  an die Eltern (#7145): Die erste Veröffentlichung ist keine Änderung, ein
+  erneutes Speichern desselben Menüs behält die Kennzeichnung, Löschen entfernt
+  den Tag samt Kennzeichnung.
+- Rechte-Regel: Jedes Konto des Staff-Portals sieht die Kurzinfo, auch ohne
+  `meals:read`. Sie nennt kein Gericht. Den Link auf die Seite Speiseplan
+  bekommt nur ein Konto, das den Speiseplan lesen darf (Regel von
+  `GET /api/meal-plan/`), damit niemand auf einer leeren Seite landet.
+- Live: Meal Plan meldet ein gespeichertes oder gelöschtes Menü mit dem Event
+  `meal_plan_changed` ohne Inhalt an die Schule. Die Wurzel bindet es als
+  Middleware außerhalb der Anfrage-Transaktion der beiden Schreibrouten, sie
+  sendet also nur nach einer bestätigten 2xx-Antwort, und braucht keinen
+  neuen After-Commit-Eintrag.
+- Query-Budget: Die Quelle kostet ein Statement. Zwei Einsparungen gleichen
+  es aus. Die Quelle Personal liest die eigenen Lehrkraft-Gruppen und die
+  Lehrkräfte dieser und der heute vertretenen Gruppen in einem Statement von
+  School Membership (`GroupAssignmentFilter.GroupsOfTeacherStaffIDs`) statt in
+  zweien; die Quellen Kinder und Klassen nutzen das Ergebnis im Savepoint
+  weiter. Die beiden Termin-Lesungen von Timetable (`BlockStaffChanges` für
+  Personal, `BlockDayChanges` für Stundenplan) teilen sich im Savepoint die
+  Zuordnungen des Tages (`WithDayStaffShare`): Die erste liest alle Zeilen des
+  Tages mit ihrem Termin in einem Statement, die zweite filtert sie.
+  Das Team liest die Quelle Personal nur, wenn der Tag Abwesenheiten,
+  Gruppenübergaben oder Terminänderungen hat; nur für diese entscheidet es,
+  ob sie das Konto betreffen. `api.day_changes.today` bleibt bei 17,
+  `api.day_changes.today.children` bei 24,
+  `api.day_changes.today_activities` bei 20 und
+  `api.day_changes.today_appointments` bei 15 Anweisungen.

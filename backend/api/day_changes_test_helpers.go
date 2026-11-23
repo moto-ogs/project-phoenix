@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	dayChangesHTTP "github.com/moto-ogs/project-phoenix/modules/daychangesview/http"
+	mealplanCompose "github.com/moto-ogs/project-phoenix/modules/mealplan/compose"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	timetableCompose "github.com/moto-ogs/project-phoenix/modules/timetable/compose"
 	timetableAPI "github.com/moto-ogs/project-phoenix/modules/timetable/http"
@@ -62,7 +63,7 @@ func NewDayChangesTestResource(db transactionruntime.Database, unit tenant.UnitO
 	}
 	view, err := NewDayChanges(DayChangesSources{
 		Assignments: membership, ClassArrivals: classArrivals,
-		Caller: caller, Workforce: owners.MustNewWorkforce(db), Teachers: owners.NewGroupTeacherStaff(membership),
+		Caller: caller, Workforce: owners.MustNewWorkforce(db),
 		CarePlan: carePlan, Students: owners.MustNewPeopleDirectory(db), Blocks: blocks, BlockStaff: blockStaff,
 		Names: newDayChangesStaffNames(people), Groups: owners.NewSchoolStructureSuiteRepositories(db).Group,
 		// Without calendar periods every notice applies in every week; the
@@ -71,6 +72,7 @@ func NewDayChangesTestResource(db transactionruntime.Database, unit tenant.UnitO
 			DB: db.Pool(), Now: func() time.Time { return today.BerlinMidnight().Add(12 * time.Hour) },
 		}),
 		ClosingDays:  owners.NewSchoolClosingDayReads(),
+		MealPlan:     mealplanCompose.NewMenuChanges(),
 		Appointments: calendarAppointments,
 		Today:        func() calendar.Date { return today }, Logger: slog.Default(),
 	})

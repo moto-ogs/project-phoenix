@@ -25,6 +25,9 @@ type row struct {
 	Note          *string       `bun:"note"`
 	// nullzero: an unset list inserts the column default, the empty list.
 	Allergens []string `bun:"allergens,array,nullzero"`
+	// MenuChangedAt marks every dish of a day whose menu changed after it
+	// was published (#7666).
+	MenuChangedAt *time.Time `bun:"menu_changed_at"`
 }
 
 type participationScheduleRow struct {
@@ -86,12 +89,14 @@ func (s *Store) FindWeek(ctx context.Context, start, end domain.Date) ([]domain.
 	}
 	entries := make([]domain.Entry, 0, len(rows))
 	for _, value := range rows {
-		entries = append(entries, domain.Entry{Date: value.Date, Position: value.Position, Dish: value.Dish, Note: value.Note, Allergens: value.Allergens})
+		entries = append(entries, domain.Entry{Date: value.Date, Position: value.Position, Dish: value.Dish, Note: value.Note, Allergens: value.Allergens, MenuChangedAt: value.MenuChangedAt})
 	}
 	return entries, stats, nil
 }
 
-func (s *Store) ReplaceDay(ctx context.Context, date domain.Date, dishes []mealplan.Dish) (domain.OperationStats, error) {
+// ReplaceDay sets the dishes of a day; changedAt marks a menu that changed
+// after it was published (#7666), nil a day as first published.
+func (s *Store) ReplaceDay(ctx context.Context, date domain.Date, dishes []mealplan.Dish, changedAt *time.Time) (domain.OperationStats, error) {
 	db, tenantID, err := s.database(ctx)
 	if err != nil {
 		return domain.OperationStats{}, err
@@ -106,7 +111,7 @@ func (s *Store) ReplaceDay(ctx context.Context, date domain.Date, dishes []mealp
 		for _, allergen := range dish.Allergens {
 			allergens = append(allergens, string(allergen))
 		}
-		rows = append(rows, row{TenantID: tenantID, Date: date, Position: position, Dish: dish.Dish, Note: dish.Note, Allergens: allergens})
+		rows = append(rows, row{TenantID: tenantID, Date: date, Position: position, Dish: dish.Dish, Note: dish.Note, Allergens: allergens, MenuChangedAt: changedAt})
 	}
 	query := db.NewInsert().Model(&rows).ModelTableExpr(`schedule.meal_plan_entries`)
 	started := time.Now()

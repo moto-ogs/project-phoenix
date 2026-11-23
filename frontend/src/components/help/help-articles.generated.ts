@@ -1051,6 +1051,8 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
           "Dienste, Termine, Angebote und AGs, die schon vorbei sind, stehen ganz unten unter `erledigt`. Wähle `erledigt`, um sie zu sehen.",
           // Hinweise der Leitung in „Heute anders" (#7667), components/home/day-notice-row.tsx.
           "Einen Hinweis der Leitung, den du noch bestätigen sollst, siehst du ganz oben. Wähle `Zur Kenntnis nehmen`. Danach steht er unter `Schule`.",
+          // Speiseplan in „Heute anders" (#7666): nur die Kurzinfo, ohne Gerichte.
+          "Steht dort `Der Speiseplan für heute wurde geändert.`, gibt es heute etwas anderes zu essen. Was es gibt, steht auf der Seite `Speiseplan`.",
           "Tippe auf einen Eintrag, um die passende Seite zu öffnen.",
           "Steht dort `Heute läuft alles wie geplant.`, gibt es heute nichts Besonderes.",
           "Die Karte zeigt nie, warum jemand fehlt.",
@@ -1107,6 +1109,8 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
       "Du siehst in `Heute anders` nur deinen eigenen Dienst? Geänderte Dienste der anderen sieht nur, wer den `Dienstplan` der Schule öffnen darf.",
       // Sichtregel der Quelle Stundenplan (#7662): wie im Tagesplan.
       "In `Heute anders` fehlen Angebote anderer Leute? Die Karte zeigt die Termine, die du auch im Tagesplan siehst. Je nach Einstellung deiner Schule sind das nur deine eigenen.",
+      // Link zum Speiseplan nur mit Leserecht des Speiseplans (#7666).
+      "Du kannst `Der Speiseplan für heute wurde geändert.` nicht antippen? Dann darfst du den Speiseplan nicht öffnen. Frag in der Küche oder bei der Leitung, was es gibt.",
       // Kopfzeile aus BrandTraegerLine (#4656): nur bei einem Träger mit
       // mehreren Schulen, und nur am Computer, wo auch der Schulname steht.
       "Steht am Computer oben links unter dem Namen deiner Schule `Träger:` und ein Name? Das ist der Träger deiner Schule. Die Zeile gibt es nur, wenn dein Träger mehrere Schulen hat.",
@@ -5095,6 +5099,8 @@ export const mealPlanTopic = function mealPlanTopic(): HelpTopic {
     notes: [
       "Pro Tag sind mehrere Gerichte möglich.",
       "Änderst du einen Tag, der schon Gerichte hatte, bekommen die Eltern einen Hinweis in moto. Das gilt nur für Kinder, die an dem Tag ein Essen gebucht haben. Mehrere Änderungen einer Woche in 10 Minuten werden ein Hinweis.",
+      // „Heute anders“ zeigt dem Team den geänderten Tag (#7666).
+      "Am Tag selbst sieht das Team auf der `Startseite` unter `Heute anders`, dass der Speiseplan geändert wurde. Die Gerichte stehen dort nicht.",
       "Zur Auswahl stehen die 14 Hauptallergene, jedes mit einem festen Buchstaben. Die Liste ist für alle Schulen gleich.",
       "Eltern sehen die Buchstaben am Gericht und darunter die Erklärung. Dort steht auch, dass die Angaben von der Schule oder vom Caterer kommen.",
       "Mit `Vorwoche übernehmen` holst du die Gerichte der Vorwoche in diese Woche.",

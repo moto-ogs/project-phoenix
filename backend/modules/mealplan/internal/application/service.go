@@ -434,7 +434,8 @@ func (s *Service) weekEntries(ctx context.Context, monday domain.Date) (entries 
 
 // replace sets the dishes of a day; no dishes clear it. A change of a day
 // that already had a menu tells the families with a meal booked on it in the
-// same unit of work (#7145).
+// same unit of work (#7145) and marks the day as changed for the staff
+// (#7666); saving the same menu again keeps the mark it had.
 func (s *Service) replace(ctx context.Context, date domain.Date, dishes []mealplan.Dish, actorAccountID int64) error {
 	operation := "replace_day"
 	if len(dishes) == 0 {
@@ -444,15 +445,12 @@ func (s *Service) replace(ctx context.Context, date domain.Date, dishes []mealpl
 		if err := s.requireEnabled(txCtx); err != nil {
 			return domain.OperationStats{}, err
 		}
-		var stats domain.OperationStats
-		var before []domain.Entry
-		if s.notices != nil {
-			var err error
-			if before, stats, err = s.store.FindWeek(txCtx, date, date); err != nil {
-				return stats, err
-			}
+		before, stats, err := s.store.FindWeek(txCtx, date, date)
+		if err != nil {
+			return stats, err
 		}
-		write := func() (domain.OperationStats, error) { return s.store.ReplaceDay(txCtx, date, dishes) }
+		changedAt := menuChangeMark(before, dishes, s.now())
+		write := func() (domain.OperationStats, error) { return s.store.ReplaceDay(txCtx, date, dishes, changedAt) }
 		if len(dishes) == 0 {
 			write = func() (domain.OperationStats, error) { return s.store.ClearDay(txCtx, date) }
 		}
