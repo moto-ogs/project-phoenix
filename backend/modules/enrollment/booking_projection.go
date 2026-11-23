@@ -2,6 +2,7 @@ package enrollment
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"time"
 )
@@ -45,6 +46,22 @@ type BookingProjection struct {
 // NewBookingProjection binds the projection to the owner and the bookings.
 func NewBookingProjection(owner Owner, bookings OfferingBookings) *BookingProjection {
 	return &BookingProjection{Owner: owner, bookings: bookings}
+}
+
+// phaseLocks is the row lock of a phase the owner's records offer beside
+// its facade (ADR 0311): the facade's method set is frozen (ADR 0178).
+type phaseLocks interface {
+	LockPhase(ctx context.Context, id int64) (*Phase, error)
+}
+
+// LockPhase reads one phase under its row lock, for an edit that compares
+// the version its author read with the phase as stored (ADR 0311).
+func (p *BookingProjection) LockPhase(ctx context.Context, id int64) (*Phase, error) {
+	locks, ok := p.Owner.(phaseLocks)
+	if !ok {
+		return nil, fmt.Errorf("enrollment: the owner %T locks no phase", p.Owner)
+	}
+	return locks.LockPhase(ctx, id)
 }
 
 // AllCareOfferingLinks lists every booking of the tenant's request children.

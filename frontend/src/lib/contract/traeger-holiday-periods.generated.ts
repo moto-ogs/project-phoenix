@@ -110,6 +110,7 @@ export interface HolidayPeriod {
   public_token: string;
   registration_count: number;
   weeks: HolidayWeek[] | null;
+  version: string;
 }
 
 export const HolidayPeriodSchema: z.ZodType<HolidayPeriod, unknown> = object<HolidayPeriod>({
@@ -130,6 +131,7 @@ export const HolidayPeriodSchema: z.ZodType<HolidayPeriod, unknown> = object<Hol
   public_token: str,
   registration_count: safeInt,
   weeks: nullable(arr(HolidayWeekSchema)),
+  version: str,
 });
 
 /** Go: enrollment.HolidayCriterion */
@@ -168,11 +170,13 @@ export const HolidayCriterionPeriodSchema: z.ZodType<HolidayCriterionPeriod, unk
 export interface HolidayCriteriaCatalog {
   criteria: HolidayCriterion[] | null;
   periods: HolidayCriterionPeriod[] | null;
+  version: string;
 }
 
 export const HolidayCriteriaCatalogSchema: z.ZodType<HolidayCriteriaCatalog, unknown> = object<HolidayCriteriaCatalog>({
   criteria: nullable(arr(HolidayCriterionSchema)),
   periods: nullable(arr(HolidayCriterionPeriodSchema)),
+  version: str,
 });
 
 /** Go: enrollment.HolidayCriterionRef */
@@ -548,6 +552,7 @@ export interface HolidayPeriodRequest {
   max_days_per_child?: number | null;
   allocation_mode?: string;
   weeks?: HolidayWeekRequest[] | null;
+  expected_version?: string;
 }
 
 /** Go: enrollmenthttp.holidayAllocationChoiceRequest */
@@ -588,6 +593,7 @@ export interface holidayCriterionRequest {
 /** Go: enrollmenthttp.HolidayCriteriaRequest */
 export interface HolidayCriteriaRequest {
   criteria?: holidayCriterionRequest[] | null;
+  expected_version?: string;
 }
 
 /** Go: enrollment.HolidayFormField */
@@ -619,6 +625,7 @@ export interface HolidayPeriodFormRequest {
   legal_blocks?: FormLegalBlockInput[] | null;
   address_requirement?: string;
   health_requirement?: string;
+  expected_version?: number;
 }
 
 /** Go: enrollmenthttp.HolidayWishRequest */
@@ -658,6 +665,7 @@ export interface HolidayRegistrationEditRequest {
   emergency_contacts?: holidayContactRequest[] | null;
   pickup_persons?: holidayContactRequest[] | null;
   custom_data?: Record<string, unknown | null> | null;
+  expected_version?: string;
 }
 
 export const routes = {

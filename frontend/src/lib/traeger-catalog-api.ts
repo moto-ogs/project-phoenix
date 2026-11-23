@@ -127,6 +127,8 @@ export interface TraegerOffering {
   readonly released: TraegerOfferingDraft | null;
   readonly withdrawnAt: string | null;
   readonly schools: readonly TraegerOfferingSchool[];
+  /** Token of the stored draft; a save sends it back (ADR 0311). */
+  readonly version: string;
 }
 
 export interface TraegerPhase {
@@ -138,6 +140,8 @@ export interface TraegerPhase {
   readonly withdrawnAt: string | null;
   readonly schools: readonly TraegerCatalogSchool[];
   readonly updatedAt: string;
+  /** Token of the stored draft and schools; a save sends it back (ADR 0311). */
+  readonly version: string;
 }
 
 export interface TraegerPhaseDetail extends TraegerPhase {
@@ -375,6 +379,7 @@ function offeringFromBackend(
       outcome: outcomeOf(school.outcome),
       errorCode: school.error_code || null,
     })),
+    version: offering.version,
   };
 }
 
@@ -399,6 +404,7 @@ function phaseFromBackend(
       recordedAt: school.recorded_at ?? null,
     })),
     updatedAt: phase.updated_at,
+    version: phase.version,
   };
 }
 
@@ -511,14 +517,16 @@ export async function createTraegerPhase(
   );
 }
 
+/** Saves the phase over the version its draft rests on (ADR 0311). */
 export async function updateTraegerPhase(
   id: string,
   input: TraegerPhaseInput,
+  version: string,
 ): Promise<TraegerPhaseDetail> {
   return phaseDetailFromBackend(
     await bffJson("org", "PUT /traeger/catalog/phases/{id}", {
       params: { id },
-      body: phaseInputToBackend(input),
+      body: { ...phaseInputToBackend(input), expected_version: version },
     }),
   );
 }
@@ -545,14 +553,16 @@ export async function createTraegerOffering(
   );
 }
 
+/** Saves the offering over the version its draft rests on (ADR 0311). */
 export async function updateTraegerOffering(
   id: string,
   draft: TraegerOfferingDraft,
+  version: string,
 ): Promise<TraegerOffering> {
   return offeringFromBackend(
     await bffJson("org", "PUT /traeger/catalog/offerings/{id}", {
       params: { id },
-      body: offeringDraftToBackend(draft),
+      body: { ...offeringDraftToBackend(draft), expected_version: version },
     }),
   );
 }

@@ -60,6 +60,12 @@ func (s *TraegerPhaseCopies) ApplyTraegerPhase(ctx context.Context, copy enrollm
 	if err != nil {
 		return enrollment.TraegerPhaseApplied{}, err
 	}
+	// The copy read the phase under the row lock TraegerPhaseCopyState took,
+	// so no school edit lands between this read and the write: the version
+	// passes UpdatePhase's check (ADR 0311) and never refuses the copy. A
+	// school edit saved before keeps its values through the deviations:
+	// mergeTraegerValues keeps every field the school changed.
+	read := enrollment.PhaseVersion(phase)
 	deviations := []string{}
 	if phase.Traeger != nil {
 		deviations = phase.Traeger.Deviations
@@ -69,7 +75,7 @@ func (s *TraegerPhaseCopies) ApplyTraegerPhase(ctx context.Context, copy enrollm
 	if err := applyTraegerPhaseValues(phase, merged); err != nil {
 		return enrollment.TraegerPhaseApplied{}, err
 	}
-	report, err := s.phases.UpdatePhase(ctx, phase)
+	report, err := s.phases.UpdatePhase(ctx, phase, read)
 	if err != nil {
 		return enrollment.TraegerPhaseApplied{}, err
 	}
@@ -117,9 +123,10 @@ func (s *TraegerPhaseCopies) WithdrawTraegerPhase(ctx context.Context, sourceID 
 	if err != nil {
 		return enrollment.TraegerWithdrawal{}, err
 	}
+	read := enrollment.PhaseVersion(phase)
 	// Only is_active changes: the window stays, so the report is empty.
 	phase.IsActive = false
-	_, err = s.phases.UpdatePhase(ctx, phase)
+	_, err = s.phases.UpdatePhase(ctx, phase, read)
 	return enrollment.TraegerWithdrawal{Found: true}, err
 }
 

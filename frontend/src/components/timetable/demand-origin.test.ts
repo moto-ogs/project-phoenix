@@ -8,6 +8,7 @@ function makePhase(overrides: Partial<Phase>): Phase {
     id: "1",
     name: "Phase",
     kind: "school_year",
+    version: "phase-read",
     service_start_date: "2026-08-01",
     service_end_date: "2027-07-31",
     calendar_period_id: undefined,

@@ -51,7 +51,7 @@ func (f reviewFixture) writeAcceptanceText(t *testing.T, text string) (int, holi
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	body := decodeSchoolPortalData[holidayPeriodBody](t, rec.Body.Bytes())
 	body.AcceptanceMailText = text
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayPeriodPath(int64(f.period.ID)), body)
+	rec = putHolidayPeriod(t, f.traeger, f.office.token, holidayPeriodPath(int64(f.period.ID)), body)
 	if rec.Code != http.StatusOK {
 		return rec.Code, holidayPeriodBody{}
 	}

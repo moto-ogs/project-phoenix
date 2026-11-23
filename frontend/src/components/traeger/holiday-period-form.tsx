@@ -10,14 +10,19 @@ import { Button, ButtonLink } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { ISODateInput } from "~/components/ui/date-picker";
 import { EditActions } from "~/components/ui/edit-actions";
-import { FormErrorAlert } from "~/components/ui/form-error-alert";
+import {
+  FormErrorAlert,
+  LoadErrorAlert,
+} from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
 import { SectionCard } from "~/components/ui/section-card";
 import { SectionLabel } from "~/components/ui/section-label";
 import { SwitchRow } from "~/components/ui/switch";
 import { Textarea } from "~/components/ui/textarea";
 import { useApiFormError } from "~/contexts/ToastContext";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { type DraftSource, useDraftOn } from "~/lib/swr/read-draft";
 import { TRAEGER_HOLIDAY_TAB } from "~/lib/traeger-payment-text";
 import { traegerPath } from "~/lib/traeger-url";
 import {
@@ -72,6 +77,13 @@ function invalidDateFields(
   return fields;
 }
 
+/** No period to change: the form creates one and sends no version. */
+const NEW_PERIOD: DraftSource<HolidayPeriod> = {
+  opening: null,
+  data: undefined,
+  reload: () => Promise.resolve(undefined),
+};
+
 export function HolidayPeriodForm({
   period,
   schools,
@@ -80,6 +92,7 @@ export function HolidayPeriodForm({
   onDirtyChange,
   calendar,
   criteria,
+  reload,
 }: Readonly<{
   /** The stored period; without it the form creates a new one. */
   period?: HolidayPeriod;
@@ -92,14 +105,14 @@ export function HolidayPeriodForm({
   calendar?: TraegerCalendar;
   /** The Träger's criteria for the hint at the allocation (#4700). */
   criteria?: readonly HolidayCriterion[];
+  /**
+   * Reads the stored period again and rejects when that fails: after a
+   * refused save the form shows it (ADR 0311).
+   */
+  reload?: () => Promise<HolidayPeriod>;
 }>) {
   const formRef = useRef<HTMLFormElement>(null);
-  const [draft, setDraftState] = useState<HolidayPeriodDraft>(() =>
-    period ? draftFromPeriod(period) : emptyHolidayPeriod(),
-  );
   const [saving, setSaving] = useState(false);
-  const [source, setSource] = useState(period);
-  const [edited, setEdited] = useState(false);
   const [invalidDates, setInvalidDates] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
@@ -127,24 +140,49 @@ export function HolidayPeriodForm({
   // A date field whose text is no valid date holds an unsaved change: the
   // stored period no longer matches what the person sees.
   const hasInvalidDate = invalidDates.size > 0;
-  // Revalidation may replace cached metadata after this form mounted. Adopt
-  // it before rendering fields only while pristine, never over typed edits,
-  // invalid date text or an in-flight save. Remember an ignored answer too.
-  if (source !== period) {
-    setSource(period);
-    if (period && !edited && !hasInvalidDate && !saving) {
-      setDraftState(draftFromPeriod(period));
-    }
-  }
+  // An edit rests on the version read when editing starts (ADR 0311): a
+  // newer read refills only an untouched draft (typed text that is no valid
+  // date counts as touched), the save sends that version and its answer is
+  // the new base, and after a refusal the stored period shows. Nothing is
+  // sent until it was read.
+  const editor = useDraftOn<
+    HolidayPeriod,
+    HolidayPeriodDraft,
+    string,
+    HolidayPeriod
+  >(
+    period
+      ? {
+          opening: period.id,
+          data: period,
+          reload: reload ?? (() => Promise.resolve(undefined)),
+        }
+      : NEW_PERIOD,
+    {
+      token: (stored) => stored.version,
+      toDraft: draftFromPeriod,
+      answer: (stored) => stored,
+      follow: !hasInvalidDate,
+    },
+  );
+  const [blank, setBlank] = useState<HolidayPeriodDraft>(emptyHolidayPeriod);
+  const [blankEdited, setBlankEdited] = useState(false);
+  const draft = (period ? editor.draft : undefined) ?? blank;
+  const edited = period ? editor.touched : blankEdited;
+  const errorPath = useApiFormError(formRef);
+  const form = useReadDraftForm(
+    period ? editor : null,
+    errorPath,
+    "die Planung des Ferienzeitraums",
+  );
   useEffect(() => {
-    if (hasInvalidDate) onDirtyChange?.(true);
-  }, [hasInvalidDate, onDirtyChange]);
+    onDirtyChange?.(edited || hasInvalidDate);
+  }, [edited, hasInvalidDate, onDirtyChange]);
   const weekDateValidity = useCallback(
     (weekKey: string, field: "starts_on" | "ends_on", valid: boolean) =>
       markDate(`${weekKey}:${field}`, valid),
     [markDate],
   );
-  const errorPath = useApiFormError(formRef);
   const fieldError = (name: string) => errorPath.fieldError(name);
   const noCareDays = useMemo(
     () => weekNoCareDays(draft.weeks, calendar, period),
@@ -152,9 +190,12 @@ export function HolidayPeriodForm({
   );
 
   const setDraft = (next: HolidayPeriodDraft) => {
-    setDraftState(next);
-    setEdited(true);
-    onDirtyChange?.(true);
+    if (period) {
+      editor.setDraft(next);
+      return;
+    }
+    setBlank(next);
+    setBlankEdited(true);
   };
   const setWeek = (index: number, week: WeekDraft) =>
     setDraft({
@@ -163,6 +204,9 @@ export function HolidayPeriodForm({
     });
 
   const save = async () => {
+    // Enter submits too: nothing goes out before the stored period is read,
+    // and the shown error stays.
+    if (!form.begin()) return;
     const errors = {
       ...validateHolidayPeriod(draft),
       ...invalidDateFields(invalidDates, draft),
@@ -171,22 +215,55 @@ export function HolidayPeriodForm({
       errorPath.invalid("Bitte prüfe die markierten Felder.", errors);
       return;
     }
-    errorPath.clear();
     setSaving(true);
     try {
-      const input = inputFromDraft(draft);
-      const saved = period
-        ? await updateHolidayPeriod(period.id, input)
-        : await createHolidayPeriod(input);
-      setDraftState(draftFromPeriod(saved));
-      setEdited(false);
-      onDirtyChange?.(false);
-      onSaved(saved);
-    } catch (err) {
+      if (!period) {
+        let saved: HolidayPeriod;
+        try {
+          saved = await createHolidayPeriod(inputFromDraft(draft));
+        } catch (err) {
+          logger.error("holiday_period_save_failed", {
+            error: err instanceof Error ? err.message : String(err),
+          });
+          void errorPath.show(err, {
+            object: "die Planung des Ferienzeitraums",
+          });
+          return;
+        }
+        setBlank(draftFromPeriod(saved));
+        setBlankEdited(false);
+        onSaved(saved);
+        return;
+      }
+      const result = await editor.submit((version, next) =>
+        updateHolidayPeriod(period.id, inputFromDraft(next), version),
+      );
+      if (result.ok) {
+        onSaved(result.saved);
+        return;
+      }
       logger.error("holiday_period_save_failed", {
-        error: err instanceof Error ? err.message : String(err),
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
       });
-      void errorPath.show(err, { object: "die Planung des Ferienzeitraums" });
+      // Changed since it was read: the stored period replaces the draft once
+      // it is read, without offering the same save again. A failed read
+      // shows as a load error with a retry of the read alone.
+      const reread = result.reload;
+      void errorPath.show(result.error, {
+        object: "die Planung des Ferienzeitraums",
+        ...(reread
+          ? {
+              reload: async () => {
+                const stored = await reread();
+                setInvalidDates(new Set());
+                return stored;
+              },
+            }
+          : {}),
+      });
     } finally {
       setSaving(false);
     }
@@ -203,6 +280,7 @@ export function HolidayPeriodForm({
       }}
     >
       <FormErrorAlert message={errorPath.error} />
+      <LoadErrorAlert error={form.loadError} />
 
       {/* The save stays in the form's card and in view while the long form
           scrolls. */}
@@ -210,7 +288,20 @@ export function HolidayPeriodForm({
         title="Anmeldung und Wochen"
         stickyFooter
         footer={
-          <EditActions onCancel={onCancel} saving={saving} saveType="submit" />
+          <EditActions
+            onCancel={onCancel}
+            saving={saving}
+            saveType="submit"
+            {...(period && !editor.canSubmit && editor.status !== "saving"
+              ? {
+                  disabled: true,
+                  disabledReason:
+                    editor.status === "loadFailed"
+                      ? "Lade zuerst den gespeicherten Stand neu."
+                      : "Der gespeicherte Stand wird geladen.",
+                }
+              : {})}
+          />
         }
       >
         {/* Locked while saving: the answer replaces the draft, so an edit made

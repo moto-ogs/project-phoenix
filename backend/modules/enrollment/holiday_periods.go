@@ -175,6 +175,9 @@ type HolidayPeriod struct {
 	// figure without personal data.
 	RegistrationCount int           `json:"registration_count"`
 	Weeks             []HolidayWeek `json:"weeks"`
+	// Version is the token of the period as the Büro edits it; an update
+	// sends it back (ADR 0311).
+	Version string `json:"version"`
 }
 
 // HolidayTimeModelInput is a time model as the Träger-Büro writes it. A zero
@@ -224,6 +227,9 @@ type HolidayPeriodInput struct {
 	// period has no registration.
 	AllocationMode string
 	Weeks          []HolidayWeekInput
+	// ExpectedVersion is the Version of the period the Büro read; an
+	// update refuses another one (ADR 0311). Creating sends none.
+	ExpectedVersion string
 }
 
 // HolidayWeekHost is a week of a holiday period with the school that hosts
@@ -264,5 +270,5 @@ type HolidayPeriods interface {
 	// and returns it. accountID is the person of the Träger-Büro who saves;
 	// address is the building block "Anschrift" of the version (#5625),
 	// health the building block "Gesundheit" (#6686).
-	SaveHolidayPeriodForm(ctx context.Context, organizationID, periodID, accountID int64, fields []HolidayFormField, blocks []FormLegalBlock, address HolidayAddressRequirement, health HolidayHealthRequirement) (HolidayFormEditor, error)
+	SaveHolidayPeriodForm(ctx context.Context, organizationID, periodID, accountID int64, expectedVersion int, fields []HolidayFormField, blocks []FormLegalBlock, address HolidayAddressRequirement, health HolidayHealthRequirement) (HolidayFormEditor, error)
 }

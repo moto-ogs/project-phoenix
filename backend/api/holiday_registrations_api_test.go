@@ -509,7 +509,7 @@ func TestHolidayWeekWithRegistrationsCannotBeRemoved(t *testing.T) {
 
 	withoutBookedWeek := current
 	withoutBookedWeek.Weeks = []holidayWeekBody{current.Weeks[1]}
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayPeriodPath(int64(period.ID)), withoutBookedWeek)
+	rec = putHolidayPeriod(t, f.traeger, office.token, holidayPeriodPath(int64(period.ID)), withoutBookedWeek)
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	code, _ := registrationRefusalOf(t, rec)
 	assert.Equal(t, "enrollment.holiday_week_booked", code)
@@ -517,12 +517,12 @@ func TestHolidayWeekWithRegistrationsCannotBeRemoved(t *testing.T) {
 	withoutBookedModel := current
 	withoutBookedModel.Weeks = []holidayWeekBody{current.Weeks[0], current.Weeks[1]}
 	withoutBookedModel.Weeks[0].TimeModels = current.Weeks[0].TimeModels[:1]
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayPeriodPath(int64(period.ID)), withoutBookedModel)
+	rec = putHolidayPeriod(t, f.traeger, office.token, holidayPeriodPath(int64(period.ID)), withoutBookedModel)
 	require.Equal(t, http.StatusConflict, rec.Code, "the booked time model stays: %s", rec.Body.String())
 
 	withoutFreeWeek := current
 	withoutFreeWeek.Weeks = []holidayWeekBody{current.Weeks[0]}
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayPeriodPath(int64(period.ID)), withoutFreeWeek)
+	rec = putHolidayPeriod(t, f.traeger, office.token, holidayPeriodPath(int64(period.ID)), withoutFreeWeek)
 	require.Equal(t, http.StatusOK, rec.Code, "a week without registrations may go: %s", rec.Body.String())
 }
 

@@ -38,8 +38,12 @@ func TestSeedConclusionSubmitsConditionsBeforeApproval(t *testing.T) {
 					assert.Equal(t, true, block["enabled"])
 					assert.NotContains(t, block, "text_sha256")
 					_, _ = fmt.Fprint(w, `{"data":{"id":"81"}}`)
+				case "GET /api/enrollment/phases/61":
+					// The phase editor reads the version it saves over (ADR 0311).
+					_, _ = fmt.Fprint(w, `{"data":{"version":"phase-61"}}`)
 				case "PUT /api/enrollment/phases/61":
-					if len(calls) == 4 {
+					assert.Equal(t, "phase-61", body["expected_version"])
+					if len(calls) == 5 {
 						assert.Equal(t, "81", body["form_schema_id"])
 					} else {
 						assert.Equal(t, "60", body["form_schema_id"], "restore the original form even after a failed submit")
@@ -100,6 +104,7 @@ func TestSeedConclusionSubmitsConditionsBeforeApproval(t *testing.T) {
 				"PUT /operator/schools/42/settings/values/care_contract.conclusion_mode",
 				"GET /traeger/contract-templates/",
 				"POST /api/enrollment/schema/",
+				"GET /api/enrollment/phases/61",
 				"PUT /api/enrollment/phases/61",
 				"GET /api/enrollment/phases/61/manual-bootstrap",
 				"POST /api/enrollment/demo/submit",
@@ -107,7 +112,7 @@ func TestSeedConclusionSubmitsConditionsBeforeApproval(t *testing.T) {
 			if !refuseSubmission {
 				want = append(want, "GET /api/enrollment/admin/requests/91", "POST /api/enrollment/admin/requests/91/children/92/decide")
 			}
-			want = append(want, "PUT /api/enrollment/phases/61")
+			want = append(want, "GET /api/enrollment/phases/61", "PUT /api/enrollment/phases/61")
 			assert.Equal(t, want, calls)
 		})
 	}

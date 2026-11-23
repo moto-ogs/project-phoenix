@@ -11,6 +11,9 @@ import (
 type Phase = enrollment.Phase
 type Date = enrollment.Date
 
+// PhaseVersion is the version a read of the phase answers (ADR 0311).
+var PhaseVersion = enrollment.PhaseVersion
+
 type Request = enrollment.Request
 type RequestChild = enrollment.RequestChild
 type RequestChildOffering = enrollment.RequestChildOffering

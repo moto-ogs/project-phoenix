@@ -11,6 +11,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The phase writes apply the service period bounds (#5658) when a phase is
@@ -31,6 +32,10 @@ type boundsPhaseRecords struct {
 func (r *boundsPhaseRecords) Phase(context.Context, int64) (*enrollment.Phase, error) {
 	phase := *r.stored
 	return &phase, nil
+}
+
+func (r *boundsPhaseRecords) LockPhase(ctx context.Context, id int64) (*enrollment.Phase, error) {
+	return r.Phase(ctx, id)
 }
 
 func (r *boundsPhaseRecords) InsertPhase(_ context.Context, phase *enrollment.Phase) error {
@@ -94,6 +99,29 @@ func TestCreatePhase_AppliesTheServicePeriodBounds(t *testing.T) {
 	}
 }
 
+// TestUpdatePhase_RefusesAnotherReadVersion pins ADR 0311 for the school
+// phase: an edit over another version than the stored phase, or over none,
+// is refused before anything is written.
+func TestUpdatePhase_RefusesAnotherReadVersion(t *testing.T) {
+	t.Parallel()
+
+	stored := boundsPhase("2026-08-01", "2027-07-31")
+	stored.ID = 7
+	records := &boundsPhaseRecords{stored: stored}
+	renamed := *stored
+	renamed.Name = "Schuljahr neu"
+	older := *stored
+	older.Name = "Schuljahr alt"
+	for _, expected := range []string{enrollment.PhaseVersion(&older), ""} {
+		_, err := boundsPhases(records).UpdatePhase(context.Background(), &renamed, expected)
+		require.ErrorIs(t, err, readstate.ErrChanged, "expected version %q", expected)
+	}
+	assert.Zero(t, records.updated, "a refused edit writes nothing")
+	_, err := boundsPhases(records).UpdatePhase(context.Background(), &renamed, enrollment.PhaseVersion(stored))
+	require.NoError(t, err)
+	assert.Equal(t, 1, records.updated)
+}
+
 func TestUpdatePhase_KeepsAStoredPeriodBeyondTheBounds(t *testing.T) {
 	t.Parallel()
 
@@ -104,7 +132,7 @@ func TestUpdatePhase_KeepsAStoredPeriodBeyondTheBounds(t *testing.T) {
 	records := &boundsPhaseRecords{stored: stored}
 	renamed := *stored
 	renamed.Name = "Schuljahr neu"
-	_, err := boundsPhases(records).UpdatePhase(context.Background(), &renamed)
+	_, err := boundsPhases(records).UpdatePhase(context.Background(), &renamed, enrollment.PhaseVersion(stored))
 	require.NoError(t, err)
 	assert.Equal(t, 1, records.updated)
 
@@ -121,7 +149,7 @@ func TestUpdatePhase_KeepsAStoredPeriodBeyondTheBounds(t *testing.T) {
 		records := &boundsPhaseRecords{stored: stored}
 		moved := *stored
 		moved.ServiceStartDate, moved.ServiceEndDate = tc.start, tc.end
-		_, err := boundsPhases(records).UpdatePhase(context.Background(), &moved)
+		_, err := boundsPhases(records).UpdatePhase(context.Background(), &moved, enrollment.PhaseVersion(stored))
 		requireBoundsRejection(t, err, enrollment.ErrInvalidPhase, tc.code)
 		assert.Zero(t, records.updated, tc.name)
 	}
@@ -210,7 +238,8 @@ func TestTraegerPhases_ApplyTheServicePeriodBounds(t *testing.T) {
 
 	// A stored draft beyond the bounds saves while its period stays.
 	legacy := traegerBoundsInput("2026-08-01", "5000-07-31")
-	store.current = enrollment.TraegerPhase{ID: 9, Draft: legacy.Fields}
+	store.current = enrollment.TraegerPhase{ID: 9, Draft: legacy.Fields, Version: "read"}
+	legacy.ExpectedVersion = "read"
 	renamed := legacy
 	renamed.Fields.Name = "Schuljahr neu"
 	_, err = phases.UpdateTraegerPhase(context.Background(), 3, 9, renamed)
@@ -220,5 +249,27 @@ func TestTraegerPhases_ApplyTheServicePeriodBounds(t *testing.T) {
 	moved.Fields.ServiceEndDate = "4000-07-31"
 	_, err = phases.UpdateTraegerPhase(context.Background(), 3, 9, moved)
 	requireBoundsRejection(t, err, enrollment.ErrInvalidPhase, enrollment.CodePhaseServicePeriodTooLong)
+	assert.Equal(t, 1, store.updated)
+}
+
+// TestTraegerPhases_UpdateRefusesAnotherReadVersion pins ADR 0311 for the
+// Träger phase: a draft saved over another version than the stored one, or
+// over none, is refused before anything is written.
+func TestTraegerPhases_UpdateRefusesAnotherReadVersion(t *testing.T) {
+	t.Parallel()
+
+	store := &boundsTraegerStore{}
+	phases := NewTraegerPhases(store, func() calendar.Date { return boundsToday })
+	input := traegerBoundsInput("2026-08-01", "2027-07-31")
+	store.current = enrollment.TraegerPhase{ID: 9, Draft: input.Fields, Version: "stored"}
+	for _, expected := range []string{"older", ""} {
+		input.ExpectedVersion = expected
+		_, err := phases.UpdateTraegerPhase(context.Background(), 3, 9, input)
+		require.ErrorIs(t, err, readstate.ErrChanged, "expected version %q", expected)
+	}
+	assert.Zero(t, store.updated, "a refused save writes nothing")
+	input.ExpectedVersion = "stored"
+	_, err := phases.UpdateTraegerPhase(context.Background(), 3, 9, input)
+	require.NoError(t, err)
 	assert.Equal(t, 1, store.updated)
 }

@@ -66,7 +66,7 @@ func TestHolidayChildDayLimitCountsTheChildsOtherRegistrations(t *testing.T) {
 
 	child := d.childOf(t, int64(second.ID))
 	rebook := func(bookings ...map[string]any) *httptest.ResponseRecorder {
-		return traegerJSON(t, d.traeger, d.office.token, http.MethodPut, holidayRebookPath(int64(d.period.ID), int64(second.ID), child),
+		return putReadRegistration(t, d.traeger, d.office.token, holidayRebookPath(int64(d.period.ID), int64(second.ID), child),
 			map[string]any{"bookings": bookings})
 	}
 	rec = rebook(d.days(dayWednesday, dayThursday))
@@ -188,14 +188,14 @@ func TestHolidayChildDayLimitWithRepeatedIdentityEditKeys(t *testing.T) {
 		{"id": detail.Children[0].ID, "first_name": "Ole", "last_name": "Tag", "birth_date": "2017-05-04", "home_school_id": d.offer.Schools[0].ID},
 		{"id": detail.Children[1].ID, "first_name": "ole", "last_name": "Tag", "birth_date": "2017-05-04", "home_school_id": d.offer.Schools[0].ID},
 	}}
-	rec = traegerJSON(t, d.traeger, d.office.token, http.MethodPut, path+"/details", edit)
+	rec = putReadRegistration(t, d.traeger, d.office.token, path+"/details", edit)
 	assert.Equal(t, map[string]any{"limit": float64(3), "days": float64(4), "elsewhere": float64(2), "child": float64(1)},
 		dayLimitRefusal(t, rec.Code, rec.Body.Bytes()), "merging identities still counts every child's bookings")
 
-	rec = traegerJSON(t, d.traeger, d.office.token, http.MethodPut, holidayRebookPath(int64(d.period.ID), int64(registration.ID), int64(detail.Children[0].ID)),
+	rec = putReadRegistration(t, d.traeger, d.office.token, holidayRebookPath(int64(d.period.ID), int64(registration.ID), int64(detail.Children[0].ID)),
 		map[string]any{"bookings": []map[string]any{d.days(dayTuesday)}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, d.traeger, d.office.token, http.MethodPut, path+"/details", edit)
+	rec = putReadRegistration(t, d.traeger, d.office.token, path+"/details", edit)
 	require.Equal(t, http.StatusOK, rec.Code, "one existing day plus two merged entries fits the three-day limit: %s", rec.Body.String())
 }
 
@@ -234,7 +234,7 @@ func TestHolidayWeekChangeCountsTheChildsOtherRegistrations(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	period := decodeSchoolPortalData[map[string]any](t, rec.Body.Bytes())
 	period["weeks"].([]any)[1].(map[string]any)["ends_on"] = "2027-01-19"
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayPeriodPath(int64(created.ID)), period)
+	rec = putHolidayPeriod(t, f.traeger, office.token, holidayPeriodPath(int64(created.ID)), period)
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	code, fields := registrationRefusalOf(t, rec)
 	assert.Equal(t, "enrollment.holiday_week_day_limit", code)
@@ -273,7 +273,7 @@ func TestHolidayIdentityEditsKeepTheChildDayLimit(t *testing.T) {
 			} else {
 				edit["children"] = []map[string]any{{"id": child, "first_name": "Ole", "last_name": "Tag", "birth_date": "2017-05-04", "home_school_id": d.offer.Schools[0].ID}}
 			}
-			rec := traegerJSON(t, d.traeger, d.office.token, http.MethodPut, path, edit)
+			rec := putReadRegistration(t, d.traeger, d.office.token, path, edit)
 			assert.Equal(t, map[string]any{"limit": float64(3), "days": float64(4), "elsewhere": float64(2), "child": float64(1)}, dayLimitRefusal(t, rec.Code, rec.Body.Bytes()))
 			after := traegerJSON(t, d.traeger, d.office.token, http.MethodGet, holidayPeriodPath(int64(d.period.ID))+fmt.Sprintf("/registrations/%d", second.ID), nil)
 			require.Equal(t, http.StatusOK, after.Code, after.Body.String())
@@ -284,10 +284,10 @@ func TestHolidayIdentityEditsKeepTheChildDayLimit(t *testing.T) {
 			} else {
 				edit["children"].([]map[string]any)[0]["first_name"] = "New"
 			}
-			rec = traegerJSON(t, d.traeger, d.office.token, http.MethodPut, path, edit)
+			rec = putReadRegistration(t, d.traeger, d.office.token, path, edit)
 			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 			// Joining the identities is allowed once their total fits the bound.
-			rec = traegerJSON(t, d.traeger, d.office.token, http.MethodPut, holidayRebookPath(int64(d.period.ID), int64(second.ID), child),
+			rec = putReadRegistration(t, d.traeger, d.office.token, holidayRebookPath(int64(d.period.ID), int64(second.ID), child),
 				map[string]any{"bookings": []map[string]any{d.days(dayWednesday)}})
 			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 			if field == "email" {
@@ -295,7 +295,7 @@ func TestHolidayIdentityEditsKeepTheChildDayLimit(t *testing.T) {
 			} else {
 				edit["children"].([]map[string]any)[0]["first_name"] = "Ole"
 			}
-			rec = traegerJSON(t, d.traeger, d.office.token, http.MethodPut, path, edit)
+			rec = putReadRegistration(t, d.traeger, d.office.token, path, edit)
 			assert.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		})
 	}
@@ -316,12 +316,12 @@ func TestHolidayIdentityEditsCountTheFinalIdentitiesOfAllSiblings(t *testing.T) 
 		return map[string]any{"id": detail.Children[index].ID, "first_name": name, "last_name": "Tag", "birth_date": "2017-05-04", "home_school_id": d.offer.Schools[0].ID}
 	}
 	// Neither child has this name yet: the count must include both edits.
-	rec = traegerJSON(t, d.traeger, d.office.token, http.MethodPut, path+"/details", map[string]any{
+	rec = putReadRegistration(t, d.traeger, d.office.token, path+"/details", map[string]any{
 		"children": []map[string]any{editChild(0, "Merged"), editChild(1, "Merged")},
 	})
 	assert.Equal(t, map[string]any{"limit": float64(3), "days": float64(4), "elsewhere": float64(2), "child": float64(1)}, dayLimitRefusal(t, rec.Code, rec.Body.Bytes()))
 	// Both move away from their old identity: stored days must not count twice.
-	rec = traegerJSON(t, d.traeger, d.office.token, http.MethodPut, path+"/details", map[string]any{
+	rec = putReadRegistration(t, d.traeger, d.office.token, path+"/details", map[string]any{
 		"children": []map[string]any{editChild(0, "Ada"), editChild(1, "Ole")},
 	})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -329,7 +329,7 @@ func TestHolidayIdentityEditsCountTheFinalIdentitiesOfAllSiblings(t *testing.T) 
 	// Lowering the bound still permits unrelated edits and case corrections.
 	_, err := d.db.ExecContext(context.Background(), `UPDATE enrollment.holiday_periods SET max_days_per_child = 1 WHERE id = ?`, d.period.ID)
 	require.NoError(t, err)
-	rec = traegerJSON(t, d.traeger, d.office.token, http.MethodPut, path+"/details", map[string]any{
+	rec = putReadRegistration(t, d.traeger, d.office.token, path+"/details", map[string]any{
 		"guardian": map[string]any{"first_name": "Eva", "last_name": "Tag", "email": " EVA.Geschwister@example.org ", "phone": "0151 9999999"},
 		"children": []map[string]any{editChild(0, "ADA")},
 	})

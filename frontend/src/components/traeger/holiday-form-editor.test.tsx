@@ -11,6 +11,7 @@ import { ToastProvider } from "~/contexts/ToastContext";
 import { usePhoneViewport } from "~/test/helpers/viewport";
 import germanMessages from "~/i18n/messages/de/holidayRegistration.json";
 import { ApiError } from "~/lib/api-error";
+import { catalogText } from "~/test/error-catalog-text";
 import type {
   HolidayAddressRequirement,
   HolidayForm,
@@ -18,16 +19,19 @@ import type {
   HolidayHealthRequirement,
 } from "~/lib/traeger-holiday-form-api";
 
-const { mockSave, mockSavedAddress, mockSavedHealth } = vi.hoisted(() => ({
-  mockSave: vi.fn(),
-  mockSavedAddress: vi.fn(),
-  mockSavedHealth: vi.fn(),
-}));
+const { mockSave, mockSavedAddress, mockSavedHealth, mockSavedVersion } =
+  vi.hoisted(() => ({
+    mockSavedVersion: vi.fn(),
+    mockSave: vi.fn(),
+    mockSavedAddress: vi.fn(),
+    mockSavedHealth: vi.fn(),
+  }));
 
 vi.mock("~/lib/traeger-holiday-form-api", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   saveHolidayForm: (
     periodId: string,
+    version: number,
     fields: HolidayFormField[],
     _blocks: unknown,
     address: HolidayAddressRequirement,
@@ -35,6 +39,7 @@ vi.mock("~/lib/traeger-holiday-form-api", async (importOriginal) => ({
   ) => {
     mockSavedAddress(address);
     mockSavedHealth(health);
+    mockSavedVersion(version);
     return mockSave(periodId, fields);
   },
 }));
@@ -74,18 +79,23 @@ function renderEditor(initial: HolidayForm = form()) {
   const onSaved = vi.fn();
   render(
     <ToastProvider>
-      <HolidayFormEditor periodId="5" form={initial} onSaved={onSaved} />
+      <HolidayFormEditor
+        reload={vi.fn()}
+        periodId="5"
+        form={initial}
+        onSaved={onSaved}
+      />
     </ToastProvider>,
   );
   return onSaved;
 }
 
-// Mirrors the page: the editor remounts with each saved version.
+// Mirrors the page: the saved version becomes the read the editor gets.
 function RemountingPage({ initial }: Readonly<{ initial: HolidayForm }>) {
   const [current, setCurrent] = useState(initial);
   return (
     <HolidayFormEditor
-      key={current.version}
+      reload={vi.fn()}
       periodId="5"
       form={current}
       onSaved={setCurrent}
@@ -108,6 +118,87 @@ describe("HolidayFormEditor (#5198)", () => {
     mockSave.mockReset();
     mockSavedAddress.mockReset();
     mockSavedHealth.mockReset();
+  });
+
+  // ADR 0311: the save sends the version it read; once another version is
+  // current the refusal reads the form again and sends nothing meanwhile.
+  it("sends the read version and reads the form again after a refusal", async () => {
+    mockSave.mockRejectedValue(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    const reload = vi.fn().mockResolvedValue(form());
+    render(
+      <ToastProvider>
+        <HolidayFormEditor
+          reload={reload}
+          periodId="5"
+          form={form()}
+          onSaved={vi.fn()}
+        />
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Frage hinzufügen/ }));
+    fireEvent.change(questionInputs()[0]!, { target: { value: "Neu" } });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Als neue Version speichern" }),
+    );
+
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "das Anmeldeformular"),
+      ),
+    ).toBeInTheDocument();
+    expect(mockSavedVersion).toHaveBeenCalledWith(1);
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect(mockSave).toHaveBeenCalledTimes(1);
+  });
+
+  // ADR 0311, rule 2: a newer version refills an untouched editor; once
+  // something is typed the draft keeps its input and the version it rests
+  // on, so a save never carries a version the person did not see.
+  it("follows a newer version only while untouched and keeps typed input", async () => {
+    mockSave.mockResolvedValue({ ...form(), version: 4 });
+    const colleague = (version: number, label: string): HolidayForm => ({
+      ...form([
+        {
+          key: `frage_${version}`,
+          label,
+          type: "text",
+          applies_to_child: false,
+          sort_order: 0,
+        },
+      ]),
+      version,
+    });
+    const editor = (current: HolidayForm) => (
+      <ToastProvider>
+        <HolidayFormEditor
+          reload={vi.fn()}
+          periodId="5"
+          form={current}
+          onSaved={vi.fn()}
+        />
+      </ToastProvider>
+    );
+    const view = render(editor(form()));
+
+    view.rerender(editor(colleague(2, "Von der Kollegin")));
+    expect(questionInputs().map((input) => input.value)).toEqual([
+      "Von der Kollegin",
+    ]);
+
+    fireEvent.change(questionInputs()[0]!, {
+      target: { value: "Mein Entwurf" },
+    });
+    view.rerender(editor(colleague(3, "Noch eine Änderung")));
+    expect(questionInputs().map((input) => input.value)).toEqual([
+      "Mein Entwurf",
+    ]);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Als neue Version speichern" }),
+    );
+    await waitFor(() => expect(mockSave).toHaveBeenCalledTimes(1));
+    expect(mockSavedVersion).toHaveBeenCalledWith(2);
   });
 
   it("builds the editor like the OGS form editor: one card, one plus per add button (#7412)", () => {
@@ -231,6 +322,7 @@ describe("HolidayFormEditor (#5198)", () => {
     render(
       <ToastProvider>
         <HolidayFormEditor
+          reload={vi.fn()}
           periodId="5"
           form={{ ...form(TEMPLATE), template: [...TEMPLATE, klasse] }}
           onSaved={vi.fn()}

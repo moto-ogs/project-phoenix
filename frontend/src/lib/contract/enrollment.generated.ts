@@ -1167,6 +1167,7 @@ export interface PhaseResponse {
   translations?: Record<string, Record<string, TranslatedText> | null>;
   created_at: string;
   updated_at: string;
+  version: string;
 }
 
 export const PhaseResponseSchema: z.ZodType<PhaseResponse, unknown> = object<PhaseResponse>({
@@ -1196,6 +1197,7 @@ export const PhaseResponseSchema: z.ZodType<PhaseResponse, unknown> = object<Pha
   translations: optional(rec(nullable(rec(TranslatedTextSchema)))),
   created_at: str,
   updated_at: str,
+  version: str,
 });
 
 /** Go: enrollmenthttp.PhaseExpiryWarningResponse */
@@ -1824,6 +1826,7 @@ export interface EnrollmentPhaseRequest {
   eligible_school_classes?: string[] | null;
   eligible_grade_levels?: number[] | null;
   translations?: Record<string, Record<string, PhaseTranslatedTextRequest> | null> | null;
+  expected_version?: string;
 }
 
 /** Go: enrollmenthttp.AdminCreateLateInviteRequest */
@@ -2147,6 +2150,7 @@ export interface PhaseUpdateResponse {
   translations?: Record<string, Record<string, TranslatedText> | null>;
   created_at: string;
   updated_at: string;
+  version: string;
   care_beyond_end: CareBeyondEndResponse[] | null;
 }
 
@@ -2177,6 +2181,7 @@ export const PhaseUpdateResponseSchema: z.ZodType<PhaseUpdateResponse, unknown> 
   translations: optional(rec(nullable(rec(TranslatedTextSchema)))),
   created_at: str,
   updated_at: str,
+  version: str,
   care_beyond_end: nullable(arr(CareBeyondEndResponseSchema)),
 });
 

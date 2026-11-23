@@ -50,7 +50,9 @@ func TestHolidayAllocationHoldsTheCatalogUntilCommit(t *testing.T) {
 	})
 	probe(true)
 	withinTraeger(t, db, w.organization, func(ctx context.Context) {
-		_, err := allocation.SaveHolidayCriteria(ctx, reviewer, nil)
+		catalog, err := allocation.HolidayCriteria(ctx, reviewer)
+		require.NoError(t, err)
+		_, err = allocation.SaveHolidayCriteria(ctx, reviewer, catalog.Version, nil)
 		require.NoError(t, err)
 		probe(false)
 	})

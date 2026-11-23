@@ -30,6 +30,9 @@ type HolidayRegistrationEditRequest struct {
 	EmergencyContacts *[]holidayContactRequest    `json:"emergency_contacts"`
 	PickupPersons     []holidayContactRequest     `json:"pickup_persons"`
 	CustomData        *map[string]json.RawMessage `json:"custom_data" contract_json:"Answer values follow the school's versioned form schema"`
+	// ExpectedVersion is the version of the registration the Büro read; a
+	// registration changed since is refused (ADR 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 type holidayChildEditRequest struct {
@@ -46,7 +49,7 @@ type holidayChildEditRequest struct {
 func (req *HolidayRegistrationEditRequest) Bind(*http.Request) error { return nil }
 
 func (req *HolidayRegistrationEditRequest) edit() capability.HolidayRegistrationEdit {
-	edit := capability.HolidayRegistrationEdit{}
+	edit := capability.HolidayRegistrationEdit{ExpectedVersion: req.ExpectedVersion}
 	if req.Guardian != nil {
 		guardians := &capability.HolidayGuardiansEdit{Guardian: capability.HolidayGuardianInput(*req.Guardian)}
 		if req.SecondGuardian != nil {

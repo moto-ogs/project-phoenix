@@ -81,7 +81,7 @@ func (w weekLimitFixture) write(t *testing.T, endsOn string, limit int, priceCen
 	week := period["weeks"].([]any)[0].(map[string]any)
 	week["ends_on"] = endsOn
 	week["time_models"].([]any)[0].(map[string]any)["price_cents"] = priceCents
-	rec := traegerJSON(t, w.traeger, w.office.token, http.MethodPut, holidayPeriodPath(int64(w.period.ID)), period)
+	rec := putHolidayPeriod(t, w.traeger, w.office.token, holidayPeriodPath(int64(w.period.ID)), period)
 	if rec.Code == http.StatusOK {
 		return rec.Code, "", nil
 	}
@@ -140,15 +140,15 @@ func TestHolidayWeekChangeKeepsBookingsAboveALoweredLimit(t *testing.T) {
 	period := w.stored(t)
 	week := period["weeks"].([]any)[0].(map[string]any)
 	week["starts_on"], week["ends_on"] = limitTuesday, limitWednesday
-	rec := traegerJSON(t, w.traeger, w.office.token, http.MethodPut, holidayPeriodPath(int64(w.period.ID)), period)
+	rec := putHolidayPeriod(t, w.traeger, w.office.token, holidayPeriodPath(int64(w.period.ID)), period)
 	require.Equal(t, http.StatusOK, rec.Code, "a week moved by a day keeps its two days: %s", rec.Body.String())
 	week["starts_on"] = limitMonday
-	rec = traegerJSON(t, w.traeger, w.office.token, http.MethodPut, holidayPeriodPath(int64(w.period.ID)), period)
+	rec = putHolidayPeriod(t, w.traeger, w.office.token, holidayPeriodPath(int64(w.period.ID)), period)
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	_, fields := registrationRefusalOf(t, rec)
 	assert.Equal(t, []string{"weeks.0.starts_on"}, fields, "an earlier start names the start")
 	week["starts_on"], week["ends_on"] = limitMonday, limitTuesday
-	rec = traegerJSON(t, w.traeger, w.office.token, http.MethodPut, holidayPeriodPath(int64(w.period.ID)), period)
+	rec = putHolidayPeriod(t, w.traeger, w.office.token, holidayPeriodPath(int64(w.period.ID)), period)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	status, _, _ = w.write(t, limitWednesday, 1, 4500)
 	assert.Equal(t, http.StatusConflict, status, "the days lost stay lost under the lower bound")
@@ -196,7 +196,7 @@ func TestHolidayWeekChangeWaitsForAConcurrentRegistration(t *testing.T) {
 	period["weeks"].([]any)[0].(map[string]any)["ends_on"] = limitTuesday
 	sent := make(chan int, 1)
 	go func() {
-		sent <- traegerJSON(t, w.traeger, w.office.token, http.MethodPut, holidayPeriodPath(int64(w.period.ID)), period).Code
+		sent <- putHolidayPeriod(t, w.traeger, w.office.token, holidayPeriodPath(int64(w.period.ID)), period).Code
 	}()
 	status := 0
 	deadline := time.Now().Add(20 * time.Second)

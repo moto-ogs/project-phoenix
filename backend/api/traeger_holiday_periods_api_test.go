@@ -41,6 +41,7 @@ type holidayWeekBody struct {
 
 type holidayPeriodBody struct {
 	ID                   wireID            `json:"id,omitempty"`
+	Version              string            `json:"version,omitempty"`
 	Name                 string            `json:"name"`
 	RegistrationOpensOn  string            `json:"registration_opens_on"`
 	RegistrationClosesOn string            `json:"registration_closes_on"`
@@ -92,6 +93,23 @@ func newTraegerOffice(t *testing.T, db *bun.DB, router *traegerPortalHandler, na
 	code, answer := traegerSignIn(t, router, account.Email, password, 0)
 	require.Equal(t, http.StatusOK, code)
 	return traegerOffice{organization: organization, schools: schools, token: answer.AccessToken}
+}
+
+// putHolidayPeriod saves a period over the version its caller reads first,
+// as the period page does (ADR 0311). A caller that may not read the period
+// sends none; its save is refused for the same reason.
+func putHolidayPeriod(t *testing.T, router http.Handler, token, path string, body any) *httptest.ResponseRecorder {
+	t.Helper()
+	encoded, err := json.Marshal(body)
+	require.NoError(t, err)
+	sent := map[string]any{}
+	require.NoError(t, json.Unmarshal(encoded, &sent))
+	if read := traegerJSON(t, router, token, http.MethodGet, path, nil); read.Code == http.StatusOK {
+		sent["expected_version"] = decodeSchoolPortalData[struct {
+			Version string `json:"version"`
+		}](t, read.Body.Bytes()).Version
+	}
+	return traegerJSON(t, router, token, http.MethodPut, path, sent)
 }
 
 func traegerJSON(t *testing.T, router http.Handler, token, method, path string, body any) *httptest.ResponseRecorder {
@@ -175,7 +193,7 @@ func TestTraegerHolidayPeriodIsPlannedChangedAndPublished(t *testing.T) {
 		{Name: "bis 16 Uhr", StartsAt: "08:00", EndsAt: "16:00", PriceCents: 7000},
 	}}}
 	change.Name = "Winterferien 2027 (geändert)"
-	rec := traegerJSON(t, router, office.token, http.MethodPut, holidayPeriodPath(int64(created.ID)), change)
+	rec := putHolidayPeriod(t, router, office.token, holidayPeriodPath(int64(created.ID)), change)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	updated := decodeSchoolPortalData[holidayPeriodBody](t, rec.Body.Bytes())
 	assert.Equal(t, "Winterferien 2027 (geändert)", updated.Name)
@@ -187,6 +205,24 @@ func TestTraegerHolidayPeriodIsPlannedChangedAndPublished(t *testing.T) {
 	assert.Equal(t, "2027-01-18", updated.Weeks[1].StartsOn)
 	assert.NotEqual(t, created.Weeks[1].ID, updated.Weeks[1].ID, "the left-out week is gone")
 
+	// A save over the version read before that change, or over none, is
+	// refused and writes nothing (ADR 0311).
+	for _, stale := range []string{created.Version, ""} {
+		outdated := created
+		outdated.Name = "Veraltet"
+		sent := map[string]any{}
+		encoded, err := json.Marshal(outdated)
+		require.NoError(t, err)
+		require.NoError(t, json.Unmarshal(encoded, &sent))
+		sent["expected_version"] = stale
+		rec = traegerJSON(t, router, office.token, http.MethodPut, holidayPeriodPath(int64(created.ID)), sent)
+		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+		assert.Contains(t, rec.Body.String(), `"code":"general.changed_since_read"`)
+	}
+	rec = traegerJSON(t, router, office.token, http.MethodGet, holidayPeriodPath(int64(created.ID)), nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.Equal(t, "Winterferien 2027 (geändert)", decodeSchoolPortalData[holidayPeriodBody](t, rec.Body.Bytes()).Name, "a refused save writes nothing")
+
 	rec = traegerJSON(t, router, office.token, http.MethodPost, holidayPeriodPath(int64(created.ID))+"/publish", nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	published := decodeSchoolPortalData[holidayPeriodBody](t, rec.Body.Bytes())
@@ -197,12 +233,12 @@ func TestTraegerHolidayPeriodIsPlannedChangedAndPublished(t *testing.T) {
 	// week without time models, is refused and changes nothing.
 	emptied := published
 	emptied.Weeks = nil
-	rec = traegerJSON(t, router, office.token, http.MethodPut, holidayPeriodPath(int64(created.ID)), emptied)
+	rec = putHolidayPeriod(t, router, office.token, holidayPeriodPath(int64(created.ID)), emptied)
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	noModels := published
 	noModels.Weeks = []holidayWeekBody{published.Weeks[0], published.Weeks[1]}
 	noModels.Weeks[1].TimeModels = nil
-	rec = traegerJSON(t, router, office.token, http.MethodPut, holidayPeriodPath(int64(created.ID)), noModels)
+	rec = putHolidayPeriod(t, router, office.token, holidayPeriodPath(int64(created.ID)), noModels)
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	var refusal holidayErrorBody
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &refusal))
@@ -249,7 +285,7 @@ func TestTraegerHolidayPeriodAcceptsOnlySchoolsOfTheTraeger(t *testing.T) {
 	testpkg.SoftDeleteTestSchool(t, db, office.schools[1])
 	change := created
 	change.Weeks[0].HostSchoolID = wireID(office.schools[1])
-	rec = traegerJSON(t, router, office.token, http.MethodPut, holidayPeriodPath(int64(created.ID)), change)
+	rec = putHolidayPeriod(t, router, office.token, holidayPeriodPath(int64(created.ID)), change)
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &refusal))
 	assert.Equal(t, "enrollment.holiday_host_school_outside_traeger", refusal.Code)

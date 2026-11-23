@@ -585,6 +585,11 @@ func checkEnrollmentCatalogGoldens(t *testing.T, api *goldenRuntime, token strin
 				require.Equal(t, strconv.FormatInt(staffID, 10), data["created_by"])
 				data["created_by"] = "ACCOUNT_ID"
 			}
+			if scenario.name == "phase" {
+				// The phase answers the token of its stored state (ADR 0311).
+				require.NotEmpty(t, data["version"])
+				data["version"] = "VERSION"
+			}
 			normalized, err := json.MarshalIndent(envelope, "", "  ")
 			require.NoError(t, err)
 			compareGolden(t, "testdata/enrollment_"+scenario.name+".golden", string(normalized)+"\n", "Enrollment catalog response contract changed")

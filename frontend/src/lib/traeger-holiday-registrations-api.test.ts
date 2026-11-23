@@ -117,6 +117,7 @@ const BACKEND_DETAIL = {
     event("confirm", "2026-11-05T09:00:00Z", { from: "received" }),
   ],
   criteria: null,
+  version: "registration-read",
 } satisfies sharedContract.HolidayRegistrationDetail;
 
 describe("traeger-holiday-registrations-api", () => {
@@ -389,10 +390,16 @@ describe("traeger-holiday-registrations-api", () => {
     );
 
     await changeHolidayRegistration("5", "7", "reopen");
-    await rebookHolidayChild("5", "7", "9", [
-      { weekId: "51", timeModelId: "61" },
-      { weekId: "9007199254740993", timeModelId: "9007199254740995" },
-    ]);
+    await rebookHolidayChild(
+      "5",
+      "7",
+      "9",
+      [
+        { weekId: "51", timeModelId: "61" },
+        { weekId: "9007199254740993", timeModelId: "9007199254740995" },
+      ],
+      "registration-read",
+    );
 
     expect(fetchMock.mock.calls[0]?.[0]).toBe(
       "/api/traeger/holiday-periods/5/registrations/7/reopen",
@@ -403,6 +410,7 @@ describe("traeger-holiday-registrations-api", () => {
     );
     expect(fetchMock.mock.calls[1]?.[1]?.method).toBe("PUT");
     expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({
+      expected_version: "registration-read",
       bookings: [
         { week_id: "51", time_model_id: "61" },
         { week_id: "9007199254740993", time_model_id: "9007199254740995" },
@@ -427,37 +435,49 @@ describe("traeger-holiday-registrations-api", () => {
       ),
     );
 
-    const detail = await editHolidayRegistration("5", "7", {
-      guardians: {
-        guardian: {
-          firstName: "Eva",
+    const detail = await editHolidayRegistration(
+      "5",
+      "7",
+      {
+        guardians: {
+          guardian: {
+            firstName: "Eva",
+            lastName: "Muster",
+            email: "eva@example.org",
+            phone: "0151 9999999",
+          },
+          address: {
+            street: "Neue Straße 3",
+            postalCode: "49143",
+            city: "Bissendorf",
+          },
+          secondGuardian: null,
+        },
+      },
+      "registration-read",
+    );
+    await editHolidayRegistration(
+      "5",
+      "7",
+      {
+        child: {
+          id: "9",
+          firstName: "Ben",
           lastName: "Muster",
-          email: "eva@example.org",
-          phone: "0151 9999999",
+          birthDate: "2016-09-12",
+          homeSchoolId: null,
+          guestSchoolName: "Grundschule Melle",
+          answers: { lieblingsessen: "Nudeln" },
         },
-        address: {
-          street: "Neue Straße 3",
-          postalCode: "49143",
-          city: "Bissendorf",
+        contacts: {
+          emergency: [
+            { name: "Oma Muster", phone: "05402 1", relationship: "" },
+          ],
+          pickup: [],
         },
-        secondGuardian: null,
       },
-    });
-    await editHolidayRegistration("5", "7", {
-      child: {
-        id: "9",
-        firstName: "Ben",
-        lastName: "Muster",
-        birthDate: "2016-09-12",
-        homeSchoolId: null,
-        guestSchoolName: "Grundschule Melle",
-        answers: { lieblingsessen: "Nudeln" },
-      },
-      contacts: {
-        emergency: [{ name: "Oma Muster", phone: "05402 1", relationship: "" }],
-        pickup: [],
-      },
-    });
+      "registration-read",
+    );
 
     expect(fetchMock.mock.calls[0]?.[0]).toBe(
       "/api/traeger/holiday-periods/5/registrations/7/details",
@@ -476,8 +496,10 @@ describe("traeger-holiday-registrations-api", () => {
         city: "Bissendorf",
       },
       second_guardian: null,
+      expected_version: "registration-read",
     });
     expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({
+      expected_version: "registration-read",
       children: [
         {
           id: "9",

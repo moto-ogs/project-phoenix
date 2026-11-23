@@ -39,6 +39,7 @@ const period: HolidayPeriod = {
   publishedAt: "2027-01-04T09:00:00Z",
   publicToken: "token",
   registrationCount: 0,
+  version: "period-read",
   weeks: [
     {
       id: "7",

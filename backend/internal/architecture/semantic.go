@@ -548,16 +548,12 @@ func (a semanticAnalyzer) matchSQLTables(source, sourceOwner, query string, alia
 }
 
 // sqlUpdateIsNotStatementTarget reports whether the UPDATE keyword at
-// matchStart names no table of its own: a `FOR UPDATE` lock clause or the
-// `ON CONFLICT ... DO UPDATE SET` conflict action, whose target is the table
-// the surrounding INSERT already names.
+// matchStart names no table of its own: a `FOR UPDATE` or `FOR NO KEY
+// UPDATE` lock clause or the `ON CONFLICT ... DO UPDATE SET` conflict action,
+// whose target is the table the surrounding INSERT already names.
 func sqlUpdateIsNotStatementTarget(query string, matchStart int) bool {
-	prefix := strings.Fields(query[:matchStart])
-	if len(prefix) == 0 {
-		return false
-	}
-	previous := prefix[len(prefix)-1]
-	return strings.EqualFold(previous, "FOR") || strings.EqualFold(previous, "DO")
+	prefix := " " + strings.ToUpper(strings.Join(strings.Fields(query[:matchStart]), " "))
+	return strings.HasSuffix(prefix, " FOR") || strings.HasSuffix(prefix, " FOR NO KEY") || strings.HasSuffix(prefix, " DO")
 }
 
 func (a semanticAnalyzer) matchDataObjects(source, sourceOwner string, objects []string, aliases map[string]struct{}, operation tableOperation) tableMatchSummary {

@@ -111,6 +111,9 @@ type TraegerOffering struct {
 	WithdrawnAt     *time.Time              `json:"withdrawn_at,omitempty"`
 	Schools         []TraegerOfferingSchool `json:"schools"`
 	UpdatedAt       time.Time               `json:"updated_at"`
+	// Version is readstate.Of(UpdatedAt): a trigger stamps every change of
+	// the row, and the draft is all the office edits on it (ADR 0311).
+	Version string `json:"version"`
 }
 
 // TraegerOfferingOutcome records the outcome of one school's copy.
@@ -129,7 +132,9 @@ type TraegerOfferings interface {
 	ListTraegerOfferings(ctx context.Context, organizationID, traegerPhaseID int64) ([]TraegerOffering, error)
 	TraegerOffering(ctx context.Context, organizationID, id int64) (TraegerOffering, error)
 	CreateTraegerOffering(ctx context.Context, organizationID, traegerPhaseID int64, draft TraegerOfferingDraft) (TraegerOffering, error)
-	UpdateTraegerOffering(ctx context.Context, organizationID, id int64, draft TraegerOfferingDraft) (TraegerOffering, error)
+	// UpdateTraegerOffering replaces the draft under the row lock when
+	// expectedVersion is the stored Version, else readstate.ErrChanged.
+	UpdateTraegerOffering(ctx context.Context, organizationID, id int64, expectedVersion string, draft TraegerOfferingDraft) (TraegerOffering, error)
 	// WithdrawTraegerOffering marks the offering withdrawn; the next rollout
 	// of its phase withdraws its copies.
 	WithdrawTraegerOffering(ctx context.Context, organizationID, id int64) (TraegerOffering, error)
