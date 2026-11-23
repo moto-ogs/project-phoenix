@@ -341,6 +341,63 @@ describe("CatalogPage", () => {
     ).not.toBeInTheDocument();
   });
 
+  // ADR 0311 rule 2: a reload of the list (a live event, another tab)
+  // keeps the typed draft and the entry it was typed over.
+  it("keeps an edit and its entry across a reload of the list", async () => {
+    const { config, update } = buildConfig();
+    const props = {
+      config,
+      isLoading: false,
+      error: null,
+      onChanged: vi.fn().mockResolvedValue(undefined),
+      canManage: true,
+      selectedId: "1",
+    };
+    const { rerender } = render(<CatalogPage {...props} items={ITEMS} />);
+    fireEvent.change(screen.getByDisplayValue("Essen"), {
+      target: { value: "Mittagessen" },
+    });
+    rerender(
+      <CatalogPage {...props} items={ITEMS.map((item) => ({ ...item }))} />,
+    );
+    rerender(
+      <CatalogPage
+        {...props}
+        items={ITEMS.map((item) =>
+          item.id === "1" ? { ...item, name: "Essen der Kollegin" } : item,
+        )}
+      />,
+    );
+    expect(screen.getByDisplayValue("Mittagessen")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(update).toHaveBeenCalledWith(
+        ITEMS[0],
+        expect.objectContaining({ name: "Mittagessen" }),
+      ),
+    );
+  });
+
+  // ADR 0311 rules 5 and 6: after a save whose read failed, the next save
+  // waits for a read of the stored entry instead of sending the old one.
+  it("sends no second save over the old entry when the read after a save failed", async () => {
+    const onChanged = vi.fn().mockRejectedValue(new Error("nicht erreichbar"));
+    const { update } = renderPage({ selectedId: "1", onChanged });
+    fireEvent.change(screen.getByDisplayValue("Essen"), {
+      target: { value: "Mittagessen" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(onChanged).toHaveBeenCalled());
+
+    fireEvent.change(screen.getByDisplayValue("Mittagessen"), {
+      target: { value: "Mittagessen 2" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(onChanged.mock.calls.length).toBeGreaterThan(0));
+    expect(update).toHaveBeenCalledTimes(1);
+  });
+
   it("keeps an edit while the catalog page rerenders", () => {
     renderPage({ selectedId: "1" });
 

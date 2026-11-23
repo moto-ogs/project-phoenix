@@ -13,7 +13,14 @@
 // Felder.
 
 import { EmptyState } from "~/components/ui/empty-state";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { ChevronDown, ChevronUp, MousePointer2 } from "lucide-react";
 
 import { DatabaseCreateAction } from "~/components/database/database-create-action";
@@ -28,7 +35,10 @@ import {
 import { MasterDetailLayout } from "~/components/database/master-detail-layout";
 import { Button } from "~/components/ui/button";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
-import { DatabaseForm } from "~/components/database/database-form";
+import {
+  DatabaseForm,
+  formValuesFor,
+} from "~/components/database/database-form";
 import { DatabaseFormModal } from "~/components/database/database-form-modal";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { MotoDuotoneIcon } from "~/components/ui/moto-duotone-icon";
@@ -46,7 +56,7 @@ import { useUpdateUrlParams } from "~/hooks/useUpdateUrlParams";
 import { configToFormSection, type SectionConfig } from "~/lib/database/types";
 import type { MotoConcept } from "~/lib/moto-concepts";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
-import { isChangedSinceRead } from "~/lib/api-error";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { createLogger } from "~/lib/logger";
 import { foldForSearch } from "~/lib/search-fold";
 
@@ -170,7 +180,10 @@ interface CatalogPageProps<T extends CatalogItem> {
   /** Ladefehler der Liste, am besten aus `useSwrLoadError` (Wiederholen und
    *  Vorgangskennung kommen mit). Ein Fehler ist nie ein Leerzustand. */
   readonly error: FormErrorInput;
-  /** Neu laden, nachdem geschrieben wurde. */
+  /**
+   * Neu laden, nachdem geschrieben wurde. Lehnt ab, wenn das Lesen scheitert
+   * (ADR 0311), am besten mit der gelesenen Liste als Antwort.
+   */
   readonly onChanged: () => Promise<unknown> | void;
   /** Ohne Recht bleibt die Fläche eine Liste zum Nachlesen. */
   readonly canManage: boolean;
@@ -232,9 +245,6 @@ export function CatalogPage<T extends CatalogItem>({
       ? config.remove.confirmLabels(removeTarget)
       : undefined;
   const [busy, setBusy] = useState(false);
-  // Zählt jedes gespeicherte Formular hoch, damit `DatabaseForm` seine Felder
-  // aus dem frisch geladenen Eintrag neu aufbaut (wie in den Räumen).
-  const [formGeneration, setFormGeneration] = useState(0);
 
   useEffect(() => {
     if (items !== undefined) return;
@@ -356,31 +366,85 @@ export function CatalogPage<T extends CatalogItem>({
     [config, refreshAfterWrite, toast],
   );
 
+  // The entry list after `onChanged`: its answer, else the list on screen.
+  const itemsRef = useRef(all);
+  useLayoutEffect(() => {
+    itemsRef.current = all;
+  });
+  const lastReadFailed = useRef(false);
+  const readSelected = useCallback(async () => {
+    lastReadFailed.current = false;
+    try {
+      const answer = await onChanged();
+      const list = Array.isArray(answer) ? (answer as T[]) : itemsRef.current;
+      const stored = list.find((item) => item.id === selectedId);
+      if (!stored) throw new Error("catalog entry is gone");
+      return stored;
+    } catch (err) {
+      lastReadFailed.current = true;
+      throw err;
+    }
+  }, [onChanged, selectedId]);
+  // The form of an entry rests on the entry it was filled from (ADR 0311):
+  // a reload of the list refills it only while untouched, the save sends
+  // that entry, and after a refusal the stored entry shows.
+  const edit = useDraftOn<T, Record<string, unknown>, T, unknown>(
+    {
+      opening: selected?.id ?? null,
+      data: selected ?? undefined,
+      reload: readSelected,
+    },
+    {
+      token: (item) => item,
+      // Only the fields on screen: a field the sections add later (options
+      // loaded) starts with its stored value below.
+      toDraft: (item) => {
+        const fields = config.sections(item).map(configToFormSection);
+        const values = formValuesFor(fields, config.toFormValues(item));
+        const names = new Set(
+          fields.flatMap((section) => section.fields.map((f) => f.name)),
+        );
+        return Object.fromEntries(
+          Object.entries(values).filter(([name]) => names.has(name)),
+        );
+      },
+    },
+  );
+
   const handleUpdate = useCallback(
     async (values: Record<string, unknown>) => {
-      if (!selected) return;
-      try {
-        await config.update(selected, values);
-      } catch (err) {
-        // Hat jemand den Eintrag seit dem Lesen geändert, zeigt das Formular
-        // den gespeicherten Stand; die Meldung steht darüber (ADR 0311).
-        if (isChangedSinceRead(err) && (await refreshAfterWrite())) {
-          setFormGeneration((generation) => generation + 1);
-        }
-        throw err;
+      if (!selected || !edit.canSubmit) return;
+      const result = await edit.submit((entry) => config.update(entry, values));
+      if (!result.ok) {
+        // Seit dem Lesen geändert: `reload` zeigt den gespeicherten Eintrag,
+        // ohne Wiederholen. Jeder andere Fehler geht an das Formular.
+        if (!result.refused) throw result.error;
+        void detailErrors.show(result.error, {
+          object: errorObject,
+          reload: result.reload,
+        });
+        return;
       }
-      if (await refreshAfterWrite()) {
-        setFormGeneration((generation) => generation + 1);
-        toast.success(
-          successSentence(
-            config.singular,
-            values.name ?? config.toRow(selected).name,
-            "gespeichert",
-          ),
-        );
-      }
+      // Ein gescheitertes Lesen nach dem Speichern steht über der Liste und
+      // sagt, dass die Änderung gespeichert ist (#6652).
+      if (lastReadFailed.current && !(await refreshAfterWrite())) return;
+      toast.success(
+        successSentence(
+          config.singular,
+          values.name ?? config.toRow(selected).name,
+          "gespeichert",
+        ),
+      );
     },
-    [config, refreshAfterWrite, selected, toast],
+    [
+      config,
+      detailErrors,
+      edit,
+      errorObject,
+      refreshAfterWrite,
+      selected,
+      toast,
+    ],
   );
 
   const handleRetire = useCallback(async () => {
@@ -644,13 +708,21 @@ export function CatalogPage<T extends CatalogItem>({
           content:
             canManage && !selectedReadOnly ? (
               <DatabaseForm
-                key={`${selected.id}:${formGeneration}`}
                 sections={detailSections}
                 initialData={detailInitialData}
-                onSubmit={handleUpdate}
-                onCancel={() =>
-                  setFormGeneration((generation) => generation + 1)
+                draft={
+                  edit.draft
+                    ? {
+                        values: {
+                          ...formValuesFor(detailSections, detailInitialData),
+                          ...edit.draft,
+                        },
+                        setValues: edit.setDraft,
+                      }
+                    : undefined
                 }
+                onSubmit={handleUpdate}
+                onCancel={edit.discard}
                 submitLabel="Speichern"
                 stickyActions
                 preserveDraftOnSectionsChange={
