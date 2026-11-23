@@ -43,7 +43,7 @@
   "companion_lock_busy": "Gerade ändert jemand anderes die Laufgemeinschaft. Bitte versuche es gleich noch einmal.",
   "companion_plan_conflict": "Ein verknüpftes Kind darf an diesen Tagen noch nicht mitgehen. Bitte prüfe die Laufgemeinschaft.",
   "companion_would_lose_departure": "Ein verknüpftes Kind hätte dann keinen Heimweg mehr. Bitte passe zuerst dessen Heimweg an.",
-  "companions_changed": "Die Laufgemeinschaft wurde inzwischen geändert. Bitte lade die Seite neu.",
+  "companions_changed": "Die Laufgemeinschaft wurde inzwischen geändert. Du siehst jetzt die gespeicherte Liste. Prüfe sie und versuche es dann noch einmal.",
   "conflict_kind_unsupported": "Diese Anfragen lassen sich nicht gemeinsam entscheiden. Bitte entscheide sie einzeln.",
   "correction_unsupported": "Diese Entscheidung lässt sich nicht zurücknehmen. Bitte ändere den Eintrag direkt beim Kind.",
   "day_log_disabled": "Das Anwesenheitsprotokoll ist für deine Schule ausgeschaltet. Deine Leitung kann es in den Einstellungen unter Datenschutz einschalten.",

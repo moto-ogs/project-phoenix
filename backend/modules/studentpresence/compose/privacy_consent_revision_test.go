@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/compose"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
@@ -62,10 +63,17 @@ func TestConsentRevisionPreservesDetailsAndRollsBack(t *testing.T) {
 	require.Error(t, err)
 	foreignID := testpkg.UniqueTestTenantID(t)
 	testpkg.EnsureTestTenant(t, db, foreignID)
-	revision.ExpectedVersion = studentpresence.PrivacyConsentVersion(rows)
-	err = testpkg.WithinTenantContext(t, ctx, db, foreignID, func(txCtx context.Context) error {
+	// The foreign tenant sees no consent of this child, so it sends the
+	// version of that empty read: the token passes, isolation must refuse.
+	revision.ExpectedVersion = studentpresence.PrivacyConsentVersion(nil)
+	err = testpkg.WithinTenantContext(t, context.Background(), db, foreignID, func(txCtx context.Context) error {
 		_, err := module.RevisePrivacyConsent(txCtx, revision)
 		return err
 	})
 	require.Error(t, err, "another tenant cannot revise this consent")
+	require.NotErrorIs(t, err, readstate.ErrChanged, "refused by isolation, not by the token")
+	rows, err = module.ListPrivacyConsents(ctx, student.ID)
+	require.NoError(t, err)
+	require.Len(t, rows, 1)
+	require.Equal(t, 14, rows[0].DataRetentionDays)
 }

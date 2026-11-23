@@ -194,6 +194,10 @@ export function PersonalInfoEditPanel({
   const formRef = useRef<HTMLDivElement>(null);
   const errors = useApiFormError(formRef);
   const clearErrors = errors.clear;
+  // The student a changed-since-read refusal was shown for. The refresh the
+  // refusal starts hands in a new object, and its reset keeps the
+  // explanation: it is the stored state the message announces.
+  const refusedStudentRef = useRef<Student | null>(null);
   // „Wiederholen“ speichert den aktuellen Entwurf, nicht den vom Fehler.
   const latestSaveRef = useRef<() => Promise<void>>(async () => undefined);
   // Scheitert nach gespeicherten Angaben nur das Foto, versucht
@@ -224,9 +228,11 @@ export function PersonalInfoEditPanel({
   // stored links are known: an empty list from a pending or failed load would
   // silently delete the child's Laufgemeinschaft.
   //
-  // The shared read (also behind the Stammdaten card) only fills the draft on
-  // this panel's own loads: the first answer read after opening, a remote
-  // refresh and a retry. A refresh the card starts never replaces the draft.
+  // The shared read (also behind the Stammdaten card) fills the draft with
+  // its newest answer while neither the list nor the departure plan is
+  // edited: a cached first answer is followed by the background read, and
+  // the save must carry the token of the list it shows. An edited draft keeps
+  // its baseline; a remote refresh, a retry and a refused save read again.
   const companionsRead = useSWRAuth(
     student.id ? tenantStudentKeys.companions(student.id) : null,
     () => fetchStudentCompanions(student.id),
@@ -296,7 +302,9 @@ export function PersonalInfoEditPanel({
     setPlanConflict(false);
     setConfirmedExtensions([]);
     setPendingExtensions([]);
-    clearErrors();
+    const refused = refusedStudentRef.current;
+    refusedStudentRef.current = null;
+    if (refused === null || refused === student) clearErrors();
     setPrivacyConsentChanged(false);
   }, [student, clearErrors]);
 
@@ -348,15 +356,6 @@ export function PersonalInfoEditPanel({
     },
     [],
   );
-  useEffect(() => {
-    if (
-      companionsSeed.status !== "first" ||
-      companionsSeed.studentId !== student.id ||
-      !companionsData
-    )
-      return;
-    seedCompanions(student.id, companionsData);
-  }, [companionsSeed, student.id, companionsData, seedCompanions]);
 
   // A remote refresh or a retry: read again and fill the draft with exactly
   // that answer.
@@ -426,6 +425,23 @@ export function PersonalInfoEditPanel({
     [student, editedStudent],
   );
 
+  const companionsUntouched = !companionsDirty && !departurePlanDirty;
+  useEffect(() => {
+    if (companionsSeed.studentId !== student.id || !companionsData) return;
+    const fill =
+      companionsSeed.status === "first" ||
+      (companionsSeed.status === "ready" &&
+        companionsUntouched &&
+        companionsSeed.fingerprint !== companionsData.fingerprint);
+    if (fill) seedCompanions(student.id, companionsData);
+  }, [
+    companionsSeed,
+    student.id,
+    companionsData,
+    companionsUntouched,
+    seedCompanions,
+  ]);
+
   // The modal can stay open while someone else edits the same child's links,
   // and the list it submits REPLACES the stored one. Reacting to companion
   // writes is what keeps an edit from saving on top of a snapshot that no
@@ -434,7 +450,7 @@ export function PersonalInfoEditPanel({
     () => void reloadCompanionsRef.current(),
     [],
   );
-  const { companionsStale, refreshFromRemote, withOwnWrite, markStale } =
+  const { companionsStale, refreshFromRemote, withOwnWrite } =
     useCompanionRemoteRefresh({
       // Listening for the whole time the panel is mounted, including while
       // the first load is still in flight — that request can have been
@@ -537,6 +553,7 @@ export function PersonalInfoEditPanel({
       return;
     }
     errors.clear();
+    refusedStudentRef.current = null;
     const allowedDepartureModes = departureModesOf(editedStudent);
     // "Mit anderem Kind" needs to say with whom (#1694) — either a linked
     // child (better: structured, symmetric) or the free-text note for someone
@@ -704,6 +721,7 @@ export function PersonalInfoEditPanel({
       // show the stored state again. The same save would be refused again,
       // so the error offers no retry (ADR 0311).
       if (isChangedSinceRead(err)) {
+        refusedStudentRef.current = student;
         setPrivacyConsentChanged(false);
         void consentRead.mutate();
         void onStudentRefresh?.();
@@ -711,11 +729,11 @@ export function PersonalInfoEditPanel({
         return;
       }
       // The backend saw what the announcement bus could not: another browser
-      // replaced the links this list was built on. Nothing was written — flag
-      // the modal stale so the user reloads and redoes the edit instead of
-      // retrying the same save, which is exactly the write that was refused.
+      // replaced the links this list was built on. Nothing was written. Show
+      // the stored list instead of the refused draft (ADR 0311); the same
+      // save would be refused again, so the error offers no retry.
       if (isCompanionsChanged(err)) {
-        markStale();
+        void reloadCompanionsRef.current();
         await errors.show(err, { object: "die Laufgemeinschaft" });
         return;
       }

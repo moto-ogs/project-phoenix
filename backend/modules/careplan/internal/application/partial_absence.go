@@ -3,13 +3,13 @@ package application
 import (
 	"context"
 	"errors"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"slices"
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 type partialAbsenceService struct {

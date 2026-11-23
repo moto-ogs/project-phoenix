@@ -1471,7 +1471,7 @@ export const ERROR_CATALOG = {
       "students.companion_would_lose_departure":
         "Ein verknüpftes Kind hätte dann keinen Heimweg mehr. Bitte passe zuerst dessen Heimweg an.",
       "students.companions_changed":
-        "Die Laufgemeinschaft wurde inzwischen geändert. Bitte lade die Seite neu.",
+        "Die Laufgemeinschaft wurde inzwischen geändert. Du siehst jetzt die gespeicherte Liste. Prüfe sie und versuche es dann noch einmal.",
       "students.conflict_kind_unsupported":
         "Diese Anfragen lassen sich nicht gemeinsam entscheiden. Bitte entscheide sie einzeln.",
       "students.correction_unsupported":

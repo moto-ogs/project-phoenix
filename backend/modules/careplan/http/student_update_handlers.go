@@ -4,7 +4,6 @@ import (
 	context "context"
 	errors "errors"
 	fmt "fmt"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	http "net/http"
 	time "time"
 
@@ -18,6 +17,7 @@ import (
 	departure "github.com/moto-ogs/project-phoenix/modules/peopledirectory/departure"
 	securityruntime "github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	tenant "github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -198,27 +198,40 @@ func (rs *Resource) lockStudentForUpdate(ctx context.Context, student *peopleMod
 		return nil, errSickExcusedConflict
 	}
 
-	if err := rs.checkStudentRecordVersion(ctx, fresh, req); err != nil {
-		return nil, err
-	}
 	return fresh, nil
 }
 
-// checkStudentRecordVersion refuses a form save built on master data that
-// changed since it was read (ADR 0311). The form sends every field back, so
-// without it a stale save would put back a colleague's change. The person is
-// read again here, under the child's row lock: the copy staged before the
-// transaction already carries this request's own changes. A pure absence
-// report reads no form and carries no version.
-func (rs *Resource) checkStudentRecordVersion(ctx context.Context, fresh *peopleModule.StudentState, req *UpdateStudentRequest) error {
-	if req.isAbsenceOnly() {
+// lockStudentPerson locks the child's person after the child's row, the
+// order every writer of a child's person takes (status, import, enrollment,
+// master-data decisions, wristband link), and checks the form's version
+// against the locked state (ADR 0311). The form sends every field back, so
+// without the check a stale save would put back a colleague's change. A
+// person write starts from the locked copy with this request's fields
+// applied: the copy read before the transaction would write back a wristband
+// or account link changed in the meantime. A pure absence report reads no
+// form, carries no version and writes no person.
+func (rs *Resource) lockStudentPerson(ctx context.Context, update *studentUpdate) error {
+	formSave := !update.req.isAbsenceOnly()
+	if !formSave && !update.personUpdated {
 		return nil
 	}
-	stored, err := rs.findPerson(ctx, fresh.PersonID)
+	locked, err := rs.PeopleDirectory.FindPersonForMutation(ctx, update.fresh.PersonID)
 	if err != nil {
 		return err
 	}
-	return readstate.Check(req.ExpectedVersion, peopleModule.StudentRecordVersion(*fresh, *stored))
+	if formSave {
+		if err := readstate.Check(update.req.ExpectedVersion, peopleModule.StudentRecordVersion(*update.fresh, locked)); err != nil {
+			return err
+		}
+	}
+	if update.personUpdated {
+		*update.person = locked
+		// The fields passed validation before the transaction.
+		if result := applyPersonUpdates(update.req, update.person); result.err != nil {
+			return result.err
+		}
+	}
+	return nil
 }
 
 // acquirePreRowLockGates takes the advisory locks that must precede ANY
@@ -427,7 +440,7 @@ func (rs *Resource) lockStudentUpdateRows(ctx context.Context, update *studentUp
 		return err
 	}
 	update.fresh = fresh
-	return nil
+	return rs.lockStudentPerson(ctx, update)
 }
 
 // writeStudentUpdate persists the patched row and everything that has to land

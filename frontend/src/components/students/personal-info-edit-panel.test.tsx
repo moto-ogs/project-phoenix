@@ -994,6 +994,48 @@ describe("PersonalInfoEditPanel", () => {
       expect(mockOnCancel).not.toHaveBeenCalled();
     });
 
+    // The refresh the refusal starts hands in a new student object; the reset
+    // it causes shows the stored child and must keep the explanation.
+    it("keeps the refusal when the refresh hands in the stored child", async () => {
+      const onStudentRefresh = vi.fn();
+      mockOnSave.mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      );
+      fetchStudentPrivacyConsentMock.mockResolvedValue({
+        accepted: true,
+        dataRetentionDays: 21,
+        version: "consent-v1",
+      });
+      const panel = (student: Student) => (
+        <PersonalInfoEditPanel
+          onCancel={mockOnCancel}
+          student={student}
+          onSave={mockOnSave}
+          onStudentRefresh={onStudentRefresh}
+        />
+      );
+      const view = render(panel(createMockStudent({ version: "record-v1" })));
+      await consentLoaded();
+
+      const firstName = screen.getByLabelText<HTMLInputElement>("Vorname");
+      fireEvent.change(firstName, { target: { value: "Mia" } });
+      fireEvent.click(screen.getByText("Speichern"));
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Du siehst jetzt den neuen Stand.",
+      );
+      expect(onStudentRefresh).toHaveBeenCalled();
+
+      // The refreshed read arrives after the refusal is on screen.
+      view.rerender(
+        panel(createMockStudent({ first_name: "Lena", version: "record-v2" })),
+      );
+
+      await waitFor(() => expect(firstName.value).toBe("Lena"));
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Du siehst jetzt den neuen Stand.",
+      );
+    });
+
     it("does not mark loaded privacy consent as changed for an unrelated save", async () => {
       mockOnSave.mockResolvedValue(undefined);
       fetchStudentPrivacyConsentMock.mockResolvedValue({

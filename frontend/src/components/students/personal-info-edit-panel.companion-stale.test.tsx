@@ -93,8 +93,11 @@ vi.mock("./student-form-fields", () => ({
 }));
 
 import { PersonalInfoEditPanel } from "./personal-info-edit-panel";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import {
   companionListKey,
+  fetchStudentCompanions,
   notifyStudentCompanionsChanged,
   type StudentCompanion,
   type StudentCompanionList,
@@ -279,9 +282,10 @@ describe("PersonalInfoEditPanel — remote companion changes", () => {
   });
 
   // The in-tab bus cannot see a write from another browser, so the backend's
-  // 409 is the only signal there — and it has to leave the form in the same
-  // state a local announcement would: draft kept, save blocked, reload offered.
-  it("blocks the form when the backend reports the list as stale", async () => {
+  // 409 is the only signal there. Nothing was written, and the same save would
+  // be refused again: the form shows the stored list instead of the refused
+  // draft and offers no retry (ADR 0311).
+  it("shows the stored list when the backend reports the list as stale", async () => {
     fetchStudentCompanionsMock.mockResolvedValueOnce(
       companionList([companion("2")]),
     );
@@ -295,6 +299,9 @@ describe("PersonalInfoEditPanel — remote companion changes", () => {
     );
 
     fireEvent.click(screen.getByTestId("edit-companions"));
+    fetchStudentCompanionsMock.mockResolvedValueOnce(
+      companionList([companion("2"), companion("3")]),
+    );
     fireEvent.click(screen.getByText("Speichern"));
 
     // Text aus dem Katalog nach dem Code, nie der Satz des Servers.
@@ -304,11 +311,66 @@ describe("PersonalInfoEditPanel — remote companion changes", () => {
     );
     expect(alert).not.toHaveTextContent(/companions changed/);
     expect(toastErrorMock).not.toHaveBeenCalled();
-    // The draft survives, and the form now offers the explicit way out.
-    expect(screen.getByTestId("companion-count").textContent).toBe("1");
+    await waitFor(() =>
+      expect(screen.getByTestId("companion-count").textContent).toBe("2"),
+    );
     expect(
-      await screen.findByText(/zwischenzeitlich an anderer Stelle geändert/),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/zwischenzeitlich an anderer Stelle geändert/),
+    ).not.toBeInTheDocument();
+  });
+
+  // The panel shares its read with the Stammdaten card: a cached first answer
+  // is followed by the read in the background, and the card refreshes the
+  // same entry. An untouched form shows the newest list, and an edit started
+  // on it carries that list's token.
+  it("takes a newer shared read while nothing is edited", async () => {
+    fetchStudentCompanionsMock.mockResolvedValueOnce({
+      companions: [companion("2")],
+      fingerprint: "token-1",
+    });
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    function SharedRead() {
+      const read = useSWRAuth(tenantStudentKeys.companions(student.id), () =>
+        fetchStudentCompanions(student.id),
+      );
+      return (
+        <button type="button" onClick={() => void read.mutate()}>
+          read again
+        </button>
+      );
+    }
+    render(
+      <>
+        <SharedRead />
+        <PersonalInfoEditPanel
+          onCancel={vi.fn()}
+          student={student}
+          onSave={onSave}
+        />
+      </>,
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("companion-count").textContent).toBe("1"),
+    );
+
+    fetchStudentCompanionsMock.mockResolvedValueOnce({
+      companions: [companion("2"), companion("3")],
+      fingerprint: "token-2",
+    });
+    fireEvent.click(screen.getByText("read again"));
+    await waitFor(() =>
+      expect(screen.getByTestId("companion-count").textContent).toBe("2"),
+    );
+
+    fireEvent.click(screen.getByTestId("edit-companions"));
+    fireEvent.click(screen.getByText("Speichern"));
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave.mock.calls[0]?.[0]).toMatchObject({
+      companions_fingerprint: "token-2",
+    });
   });
 
   // Narrowing the plan is a pending DELETE of every link on the days it drops

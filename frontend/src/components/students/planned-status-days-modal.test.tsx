@@ -506,6 +506,69 @@ describe("PlannedStatusDaysModal", () => {
     );
   });
 
+  // A newer stored entry fills the form only while nobody typed; the save
+  // then goes out with the read version and is refused, and the refusal
+  // shows the stored entry.
+  it("keeps typed input over a newer entry until the save is refused", async () => {
+    const onSubmitPartialAbsence = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      );
+    const panel = (absence: StudentPartialAbsence) => (
+      <PlannedStatusDaysModal
+        isOpen
+        status="excused"
+        studentName="Kevin Anders"
+        isSubmitting={false}
+        existingDays={[]}
+        existingPartialAbsences={[absence]}
+        onClose={vi.fn()}
+        loadExistingDays={loadNoExistingDays}
+        loadCarePlanDay={vi.fn().mockResolvedValue({
+          studentId: "42",
+          date: "2026-05-27",
+          weekday: 3,
+          arrival: { expectedTime: null, source: "none" },
+          pickup: { expectedTime: "13:30", source: "exception" },
+          instances: [],
+        })}
+        onSubmit={vi.fn()}
+        onSubmitPartialAbsence={onSubmitPartialAbsence}
+      />
+    );
+    const { rerender } = render(panel(existingPartialAbsence));
+
+    fireEvent.click(screen.getByRole("button", { name: "Ab Uhrzeit" }));
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Aktionen für Teilentschuldigung vom Mittwoch, 27. Mai 2026",
+      }),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Bearbeiten" }));
+    fireEvent.change(screen.getByLabelText("Entschuldigt ab"), {
+      target: { value: "14:00" },
+    });
+    rerender(
+      panel({ ...existingPartialAbsence, fromTime: "15:15", version: "pa-v2" }),
+    );
+    expect(screen.getByLabelText("Entschuldigt ab")).toHaveValue("14:00");
+
+    await clickEnabledButton("Entschuldigung aktualisieren");
+    expect(onSubmitPartialAbsence).toHaveBeenCalledWith(
+      { id: "9", version: "pa-v1" },
+      "2026-05-27",
+      "14:00",
+      "Arzttermin",
+    );
+    expect(
+      await screen.findByText(/Du siehst jetzt den neuen Stand/),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByLabelText("Entschuldigt ab")).toHaveValue("15:15"),
+    );
+  });
+
   it("keeps the edited date when another day is selected during edit", async () => {
     const onSubmitPartialAbsence = vi.fn().mockResolvedValue(undefined);
 

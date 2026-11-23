@@ -197,6 +197,11 @@ export function PlannedStatusDaysModal({
   // sends it back and is refused when the entry changed since (ADR 0311).
   const [editingPartialAbsenceVersion, setEditingPartialAbsenceVersion] =
     useState<string | null>(null);
+  // The person typed into the partial-absence form since it was filled. A
+  // newer stored state of the same entry then waits: the save goes out with
+  // the version the form shows and is refused, and the refusal fills the
+  // stored state (ADR 0311).
+  const [partialDraftTouched, setPartialDraftTouched] = useState(false);
   const [partialAbsencePendingDeletion, setPartialAbsencePendingDeletion] =
     useState<StudentPartialAbsence | null>(null);
   const [statusDayPendingDeletion, setStatusDayPendingDeletion] = useState<{
@@ -266,15 +271,18 @@ export function PlannedStatusDaysModal({
   useEffect(() => {
     if (!isOpen || !isPartialExcusal || selectedDates.length !== 1) return;
     const existing = partialAbsenceByDate.get(toISODate(selectedDates[0]!));
-    // A newer stored state of the same entry fills the form again.
+    // A newer stored state of the same entry fills the form again while
+    // nobody typed into it.
     if (
       !existing ||
       (existing.id === editingPartialAbsenceId &&
-        existing.version === editingPartialAbsenceVersion)
+        (existing.version === editingPartialAbsenceVersion ||
+          partialDraftTouched))
     )
       return;
     setEditingPartialAbsenceId(existing.id);
     setEditingPartialAbsenceVersion(existing.version);
+    setPartialDraftTouched(false);
     setFromTime(existing.fromTime);
     setReason(existing.reason ?? "");
   }, [
@@ -283,6 +291,7 @@ export function PlannedStatusDaysModal({
     isOpen,
     isPartialExcusal,
     partialAbsenceByDate,
+    partialDraftTouched,
     selectedDates,
   ]);
   // Fingerprint active rows so a delete (or external refresh) re-runs the
@@ -441,17 +450,20 @@ export function PlannedStatusDaysModal({
     if (!checkedPartialAbsence) return;
     if (
       checkedPartialAbsence.id === editingPartialAbsenceId &&
-      checkedPartialAbsence.version === editingPartialAbsenceVersion
+      (checkedPartialAbsence.version === editingPartialAbsenceVersion ||
+        partialDraftTouched)
     )
       return;
     setEditingPartialAbsenceId(checkedPartialAbsence.id);
     setEditingPartialAbsenceVersion(checkedPartialAbsence.version);
+    setPartialDraftTouched(false);
     setFromTime(checkedPartialAbsence.fromTime);
     setReason(checkedPartialAbsence.reason ?? "");
   }, [
     checkedPartialAbsence,
     editingPartialAbsenceId,
     editingPartialAbsenceVersion,
+    partialDraftTouched,
   ]);
   // Best-effort only: the timetable care-plan endpoint needs schedules:read.
   // Staff who may edit the student but lack that permission must still save
@@ -612,6 +624,7 @@ export function PlannedStatusDaysModal({
       setFromTime("");
       setEditingPartialAbsenceId(null);
       setEditingPartialAbsenceVersion(null);
+      setPartialDraftTouched(false);
       setPartialAbsencePendingDeletion(null);
       clearPartialDeleteError();
       setStatusDayPendingDeletion(null);
@@ -676,6 +689,7 @@ export function PlannedStatusDaysModal({
         : undefined;
       setEditingPartialAbsenceId(existing?.id ?? null);
       setEditingPartialAbsenceVersion(existing?.version ?? null);
+      setPartialDraftTouched(false);
       setFromTime(existing?.fromTime ?? "");
       setReason(existing?.reason ?? "");
     }
@@ -694,6 +708,7 @@ export function PlannedStatusDaysModal({
     setReason("");
     setEditingPartialAbsenceId(null);
     setEditingPartialAbsenceVersion(null);
+    setPartialDraftTouched(false);
     setPartialAbsencePendingDeletion(null);
     clearPartialDeleteError();
   };
@@ -704,6 +719,7 @@ export function PlannedStatusDaysModal({
     setSelectedDates([parseISODate(absence.date)]);
     setEditingPartialAbsenceId(absence.id);
     setEditingPartialAbsenceVersion(absence.version);
+    setPartialDraftTouched(false);
     setFromTime(absence.fromTime);
     setReason(absence.reason ?? "");
   };
@@ -789,6 +805,7 @@ export function PlannedStatusDaysModal({
         setSelectedDates([]);
         setEditingPartialAbsenceId(null);
         setEditingPartialAbsenceVersion(null);
+        setPartialDraftTouched(false);
         setFromTime("");
         setReason("");
       }
@@ -839,6 +856,7 @@ export function PlannedStatusDaysModal({
           // above reads it again and fills the form with the stored state.
           // The same save would be refused again, so no retry (ADR 0311).
           if (isChangedSinceRead(error)) {
+            setPartialDraftTouched(false);
             await submitErrors.show(error, { object: "die Entschuldigung" });
             return;
           }
@@ -1200,7 +1218,10 @@ export function PlannedStatusDaysModal({
                     type="time"
                     label="Entschuldigt ab"
                     value={fromTime}
-                    onChange={(event) => setFromTime(event.target.value)}
+                    onChange={(event) => {
+                      setFromTime(event.target.value);
+                      setPartialDraftTouched(true);
+                    }}
                     required
                     controlSize="compact"
                   />
@@ -1208,7 +1229,10 @@ export function PlannedStatusDaysModal({
                     id="planned-partial-excusal-reason"
                     label="Grund (optional)"
                     value={reason}
-                    onChange={(event) => setReason(event.target.value)}
+                    onChange={(event) => {
+                      setReason(event.target.value);
+                      setPartialDraftTouched(true);
+                    }}
                     rows={2}
                     maxLength={255}
                     placeholder="z. B. Arzttermin"

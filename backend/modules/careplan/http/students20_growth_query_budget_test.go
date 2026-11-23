@@ -180,8 +180,22 @@ func TestStudents20CompanionsGrowthQueryBudget(t *testing.T) {
 		require.Equal(t, mondayLinkFingerprint(ids...), body.Data.Fingerprint)
 		require.NotContains(t, rr.Body.String(), "Unrelated")
 		require.Zero(t, counter.WriteRows())
+		assertStudents20CareplanBudget(t, "companion-links", n, counter.Measurement(counter.Queries()))
+		t.Logf("students20 companion-links N%d SQL=%d", n, counter.Total())
+
+		// The deprecated list route stays for one release and keeps its budget.
+		counter.Reset()
+		req = testutil.NewRequest(http.MethodGet, fmt.Sprintf("/%d/companions", child.ID), nil)
+		req = req.WithContext(counter.Context(req.Context()))
+		rr = students20Exec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
+		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+		var list struct {
+			Data []companion `json:"data"`
+		}
+		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &list))
+		require.Equal(t, expected, list.Data)
+		require.Zero(t, counter.WriteRows())
 		assertStudents20CareplanBudget(t, "companions", n, counter.Measurement(counter.Queries()))
-		t.Logf("students20 companions N%d SQL=%d", n, counter.Total())
 	}
 	guest := testpkg.CreateTestAccount(t, tc.db, "s20-companion-guest@example.com")
 	rr := students20Exec(t, tc, testutil.NewRequest(http.MethodGet, fmt.Sprintf("/%d/companion-links", child.ID), nil), testutil.TeacherTestClaims(int(guest.ID)), []string{"users:read"})
@@ -479,6 +493,10 @@ func assertStudents20CareplanBudget(t *testing.T, route string, n int, queries q
 		querybudgets.AssertQueryBudget(t, "api.students.students20.class_exceptions.n3", queries)
 	case "class_exceptions.n8":
 		querybudgets.AssertQueryBudget(t, "api.students.students20.class_exceptions.n8", queries)
+	case "companion-links.n3":
+		querybudgets.AssertQueryBudget(t, "api.students.students20.companion-links.n3", queries)
+	case "companion-links.n8":
+		querybudgets.AssertQueryBudget(t, "api.students.students20.companion-links.n8", queries)
 	case "companions.n3":
 		querybudgets.AssertQueryBudget(t, "api.students.students20.companions.n3", queries)
 	case "companions.n8":

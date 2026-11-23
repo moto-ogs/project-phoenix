@@ -1,8 +1,10 @@
 package careplanhttp_test
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"sync"
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
@@ -78,4 +80,41 @@ func TestUpdateStudentRefusesMasterDataChangedSinceRead(t *testing.T) {
 	// The excuse changed no master data: a form read before it still saves.
 	rr = authExec(t, tc, studentUpdateRequest(t, tc, student.ID, map[string]any{"school_class": "SF2", "expected_version": beforeExcuse}), testutil.AdminTestClaims(1), []string{"admin:*"})
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+}
+
+// wristbandRaceDirectory assigns a wristband to the child the moment the
+// update takes the child's row lock: after the update read the person, before
+// it writes the person back.
+type wristbandRaceDirectory struct {
+	peopleModule.Capability
+	assign func()
+}
+
+func (d wristbandRaceDirectory) FindStudentRecordForMutation(ctx context.Context, id int64) (peopleModule.StudentRecord, error) {
+	d.assign()
+	return d.Capability.FindStudentRecordForMutation(ctx, id)
+}
+
+// TestUpdateStudentKeepsWristbandAssignedDuringTheSave: the form writes the
+// person from the copy read under the lock, so a wristband assigned while the
+// save ran stays on the child.
+func TestUpdateStudentKeepsWristbandAssignedDuringTheSave(t *testing.T) {
+	t.Parallel()
+	tc := setupStudentsRoute(t)
+	student := testpkg.CreateTestStudent(t, tc.db, "Band", "Race", "BR1")
+	card := testpkg.CreateTestRFIDCard(t, tc.db, "BANDRACE")
+	req := studentUpdateRequest(t, tc, student.ID, map[string]any{"first_name": "Bandi"})
+	tc.resource.PeopleDirectory = wristbandRaceDirectory{
+		Capability: tc.resource.PeopleDirectory,
+		assign:     sync.OnceFunc(func() { testpkg.LinkRFIDToStudent(t, tc.db, student.PersonID, card.ID) }),
+	}
+
+	rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+
+	person, err := tc.resource.PeopleDirectory.FindPerson(testpkg.Ctx(t), student.PersonID)
+	require.NoError(t, err)
+	require.Equal(t, "Bandi", person.FirstName)
+	require.NotNil(t, person.TagID, "the wristband assigned during the save stays")
+	require.Equal(t, card.ID, *person.TagID)
 }
