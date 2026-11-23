@@ -28741,7 +28741,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateRosterReview.ConnectOfferingSource",
-      "reason": "Read-only reviewed target (#5103): timetable-activities reaches modules/peopledirectory.Capability.ListStudentNamesByID (people-directory) through modules/timetable/internal/application.templateRosterReview.ConnectOfferingSource. No persistent, lock or scope effect.",
+      "reason": "Read-only reviewed target (#5103): timetable-activities reaches modules/peopledirectory.Capability.ListStudentNamesByID (people-directory) through modules/timetable/internal/application.templateRosterReview.ConnectOfferingSource. No persistent, lock or scope effect. Re-reviewed with #7935: the connection now first runs the confirmed-preview check of its command under the recurrence gate (ADR 0311), which reads rosters and bookings only; this binding keeps its target and its effect.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentNamesByID",
       "target_owner": "people-directory"
@@ -28751,7 +28751,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateRosterReview.ConnectOfferingSource",
-      "reason": "Read-only reviewed target (#5103): timetable-activities reaches modules/peopledirectory.Capability.ListStudentsByID (people-directory) through modules/timetable/internal/application.templateRosterReview.ConnectOfferingSource. No persistent, lock or scope effect.",
+      "reason": "Read-only reviewed target (#5103): timetable-activities reaches modules/peopledirectory.Capability.ListStudentsByID (people-directory) through modules/timetable/internal/application.templateRosterReview.ConnectOfferingSource. No persistent, lock or scope effect. Re-reviewed with #7935: the connection now first runs the confirmed-preview check of its command under the recurrence gate (ADR 0311), which reads rosters and bookings only; this binding keeps its target and its effect.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsByID",
       "target_owner": "people-directory"
@@ -28761,7 +28761,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateRosterReview.ConnectOfferingSource",
-      "reason": "Read-only reviewed target (#5103): timetable-activities reaches modules/peopledirectory.Owner.ListStudentNamesByID (people-directory) through modules/timetable/internal/application.templateRosterReview.ConnectOfferingSource. No persistent, lock or scope effect.",
+      "reason": "Read-only reviewed target (#5103): timetable-activities reaches modules/peopledirectory.Owner.ListStudentNamesByID (people-directory) through modules/timetable/internal/application.templateRosterReview.ConnectOfferingSource. No persistent, lock or scope effect. Re-reviewed with #7935: the connection now first runs the confirmed-preview check of its command under the recurrence gate (ADR 0311), which reads rosters and bookings only; this binding keeps its target and its effect.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentNamesByID",
       "target_owner": "people-directory"
@@ -28771,7 +28771,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateRosterReview.ConnectOfferingSource",
-      "reason": "Read-only reviewed target (#5103): timetable-activities reaches modules/peopledirectory.Owner.ListStudentsByID (people-directory) through modules/timetable/internal/application.templateRosterReview.ConnectOfferingSource. No persistent, lock or scope effect.",
+      "reason": "Read-only reviewed target (#5103): timetable-activities reaches modules/peopledirectory.Owner.ListStudentsByID (people-directory) through modules/timetable/internal/application.templateRosterReview.ConnectOfferingSource. No persistent, lock or scope effect. Re-reviewed with #7935: the connection now first runs the confirmed-preview check of its command under the recurrence gate (ADR 0311), which reads rosters and bookings only; this binding keeps its target and its effect.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentsByID",
       "target_owner": "people-directory"
@@ -28781,7 +28781,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateRosterReview.ConnectOfferingSource",
-      "reason": "Read-only reviewed target (#5103): timetable-activities reaches modules/peopledirectory.Student.IsAlumnus (people-directory) through modules/timetable/internal/application.templateRosterReview.ConnectOfferingSource. No persistent, lock or scope effect.",
+      "reason": "Read-only reviewed target (#5103): timetable-activities reaches modules/peopledirectory.Student.IsAlumnus (people-directory) through modules/timetable/internal/application.templateRosterReview.ConnectOfferingSource. No persistent, lock or scope effect. Re-reviewed with #7935: the connection now first runs the confirmed-preview check of its command under the recurrence gate (ADR 0311), which reads rosters and bookings only; this binding keeps its target and its effect.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Student.IsAlumnus",
       "target_owner": "people-directory"
@@ -28791,7 +28791,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateRosterReview.ConnectOfferingSource",
-      "reason": "Read-only reviewed target (#5103): timetable-activities reaches modules/peopledirectory.StudentQuery.ListStudentNamesByID (people-directory) through modules/timetable/internal/application.templateRosterReview.ConnectOfferingSource. No persistent, lock or scope effect.",
+      "reason": "Read-only reviewed target (#5103): timetable-activities reaches modules/peopledirectory.StudentQuery.ListStudentNamesByID (people-directory) through modules/timetable/internal/application.templateRosterReview.ConnectOfferingSource. No persistent, lock or scope effect. Re-reviewed with #7935: the connection now first runs the confirmed-preview check of its command under the recurrence gate (ADR 0311), which reads rosters and bookings only; this binding keeps its target and its effect.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentQuery.ListStudentNamesByID",
       "target_owner": "people-directory"
@@ -28801,7 +28801,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateRosterReview.ConnectOfferingSource",
-      "reason": "Read-only reviewed target (#5103): timetable-activities reaches modules/peopledirectory.StudentQuery.ListStudentsByID (people-directory) through modules/timetable/internal/application.templateRosterReview.ConnectOfferingSource. No persistent, lock or scope effect.",
+      "reason": "Read-only reviewed target (#5103): timetable-activities reaches modules/peopledirectory.StudentQuery.ListStudentsByID (people-directory) through modules/timetable/internal/application.templateRosterReview.ConnectOfferingSource. No persistent, lock or scope effect. Re-reviewed with #7935: the connection now first runs the confirmed-preview check of its command under the recurrence gate (ADR 0311), which reads rosters and bookings only; this binding keeps its target and its effect.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentQuery.ListStudentsByID",
       "target_owner": "people-directory"
