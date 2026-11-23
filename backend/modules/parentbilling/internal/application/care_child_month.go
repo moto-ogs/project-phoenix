@@ -153,10 +153,7 @@ func groupCareMonth(byContract map[int64][]parentbilling.CareContractVersion, or
 // group joins the school changes of the chain and answers both groupings.
 func (c careChain) group(order []int64, source schoolChangeSource) careGrouping {
 	inForce := groupCareChildren(contractChildrenOf(c.byContract), order, nil)
-	// The children only an issued invoice names follow the children in
-	// force, so those keep their places.
-	candidates := append(slices.Clone(inForce), c.outsideChildren(source)...)
-	all, joined, parts := joinSchoolChanges(candidates, source, c.accepts)
+	all, joined, parts := joinSchoolChanges(c.schoolChangeCandidates(inForce, source), source, c.accepts)
 	grouping := careGrouping{children: make([][]int64, len(inForce)), keys: c.keys, joinedContracts: map[int][]int64{}}
 	for i := range inForce {
 		// The place of a part that joined another child stays empty.
@@ -188,6 +185,9 @@ type careChain struct {
 	// identities are the children the contracts in force and the issued ones
 	// name.
 	identities map[int64]parentbilling.CareContractChild
+	// recomputed are the contracts whose notice a notice preview computes
+	// again (careMonthInput.recomputed).
+	recomputed map[int64]bool
 }
 
 func newCareChain(byContract map[int64][]parentbilling.CareContractVersion, order []int64, issued map[int64]parentbilling.CareContractChild,
@@ -226,21 +226,49 @@ func (c careChain) schoolChangeSource(places map[int64]parentbilling.CareDuplica
 	return source
 }
 
-// outsideChildren are the children of the chain no contract in force names,
-// each with the school of its invoices known: the candidates of a school
-// change beside the children in force.
-func (c careChain) outsideChildren(source schoolChangeSource) [][]int64 {
-	var children [][]int64
-	for _, child := range c.children {
-		outside := !slices.ContainsFunc(child, func(contractID int64) bool {
-			_, known := source.outside[contractID]
-			return !known
-		})
-		if outside {
-			children = append(children, child)
+// schoolChangeCandidates are the children a school change is decided
+// between: the children in force in their places, then the children only an
+// issued invoice names. An issued contract outside the versions in force that
+// the chain counts to a child in force stands with that child, so its name,
+// family and school count for it like those of a running contract (#7892).
+func (c careChain) schoolChangeCandidates(inForce [][]int64, source schoolChangeSource) [][]int64 {
+	outsideAt, running := c.outsideByPlace(source)
+	candidates := make([][]int64, len(inForce))
+	for i, child := range inForce {
+		candidates[i] = child
+		taken := map[int]bool{}
+		for _, contractID := range child {
+			place := c.place[contractID]
+			if !taken[place] && len(outsideAt[place]) > 0 {
+				candidates[i] = slices.Concat(candidates[i], outsideAt[place])
+			}
+			taken[place] = true
 		}
 	}
-	return children
+	for place := range c.children {
+		if !running[place] && len(outsideAt[place]) > 0 {
+			candidates = append(candidates, outsideAt[place])
+		}
+	}
+	return candidates
+}
+
+// outsideByPlace names per child of the chain its contracts outside the
+// versions in force that take part in a school change, and the children with
+// a contract in force.
+func (c careChain) outsideByPlace(source schoolChangeSource) (outsideAt map[int][]int64, running map[int]bool) {
+	outsideAt, running = map[int][]int64{}, map[int]bool{}
+	for place, child := range c.children {
+		for _, contractID := range child {
+			if _, outside := source.outside[contractID]; outside {
+				outsideAt[place] = append(outsideAt[place], contractID)
+			}
+			if _, inForce := c.byContract[contractID]; inForce {
+				running[place] = true
+			}
+		}
+	}
+	return outsideAt, running
 }
 
 // familyOf is the family of a contract: of its recipient in force, else the
@@ -330,13 +358,15 @@ func (c careChain) birthsOf(child []int64, births []calendar.Date) []calendar.Da
 
 // aligned tells whether the chain sees a part as one child of its own whose
 // issued invoices all froze its family; issued tells whether it has one. A
-// part is the contracts in force of a child, or a child only issued invoices
-// name with all its contracts (#7892).
+// part is the contracts in force of a child with the issued contracts the
+// chain counts to it, or a child only issued invoices name (#7892). A notice
+// the preview computes again keeps its family in the check but is no issued
+// invoice in that computation.
 func (c careChain) aligned(part []int64) (aligned, issued bool) {
-	group := c.children[c.place[part[0]]]
+	place := c.place[part[0]]
 	family := c.familyOf(part[0])
 	inForce := 0
-	for _, contractID := range group {
+	for _, contractID := range c.children[place] {
 		if _, ok := c.byContract[contractID]; ok {
 			inForce++
 		}
@@ -344,17 +374,19 @@ func (c careChain) aligned(part []int64) (aligned, issued bool) {
 			if frozen != family {
 				return false, true
 			}
-			issued = true
+			issued = issued || !c.recomputed[contractID]
 		}
 	}
 	partInForce := 0
 	for _, contractID := range part {
+		if c.place[contractID] != place {
+			return false, issued
+		}
 		if _, ok := c.byContract[contractID]; ok {
 			partInForce++
 		}
 	}
-	whole := partInForce == len(part) || len(group) == len(part)
-	return whole && inForce == partInForce && !slices.ContainsFunc(part, func(contractID int64) bool { return c.place[contractID] != c.place[part[0]] }), issued
+	return inForce == partInForce, issued
 }
 
 // join gives the chain groups of the parts of a joined child one key: that

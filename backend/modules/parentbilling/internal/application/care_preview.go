@@ -31,6 +31,15 @@ type careMonthInput struct {
 	// computations decide a school change alike (#7874); nil reads them from
 	// invoiced.
 	frozenFamilies map[int64]string
+	// recomputed are the contracts whose notice a notice preview computes
+	// again, in both of its computations of a month: their frozen family
+	// still decides a school change, but they count as not issued there, so
+	// a child an issued invoice bills is found among them too (#7892).
+	recomputed map[int64]bool
+	// keepHeld are the contracts the first computation of a notice month
+	// held back for an issued invoice: the second one keeps the whole child
+	// held (#7892, S4).
+	keepHeld map[int64]bool
 	// rules and evidences feed the rule chain (#4685); without them every
 	// invoice is its base price.
 	rules     []parentbilling.ContributionRule
@@ -147,6 +156,7 @@ func buildCareMonth(in careMonthInput) (careMonth, error) {
 	// One grouping of the children for the billed days (E2), the
 	// duplicates (E3), the sibling chain and the review (ADR 0158 E1).
 	chain := newCareChain(byContract, order, in.issuedChildIdentities(), contractFamilies(byContract, in.recipients), in.issuedFamilies())
+	chain.recomputed = in.recomputed
 	source := chain.schoolChangeSource(in.issuedPlaces())
 	grouping := chain.group(order, source)
 	children := grouping.children
@@ -213,17 +223,6 @@ func invoiceFamilies(invoiced map[int64]parentbilling.CareInvoice) map[int64]str
 		families[contractID] = invoiceFamily(invoice)
 	}
 	return families
-}
-
-// issuedPlaces names the contract and school of every issued invoice of a
-// contract outside the versions in force, as its invoice kept them.
-func (in careMonthInput) issuedPlaces() map[int64]parentbilling.CareDuplicateContract {
-	places := map[int64]parentbilling.CareDuplicateContract{}
-	for id := range in.issuedChildIdentities() {
-		invoice := in.invoiced[id]
-		places[id] = parentbilling.CareDuplicateContract{ContractID: ident.ID(id), SchoolID: invoice.SchoolID, SchoolName: invoice.SchoolName}
-	}
-	return places
 }
 
 // issuedChildIdentities excludes notices that this preview recomputes.

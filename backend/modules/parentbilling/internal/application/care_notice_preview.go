@@ -171,6 +171,10 @@ func computeNoticeMonth(in careMonthInput, invoiced map[int64]parentbilling.Care
 	}
 	in.invoiced = issued
 	in.frozenFamilies = invoiceFamilies(invoiced)
+	// Both computations decide a school change alike: a notice computed
+	// again keeps its frozen family and counts as not issued in both, also
+	// when the second one takes its assessment back (#7874, #7892).
+	in.recomputed = recomputedNotices(invoiced, noticed)
 	computed, err := buildCareMonth(in)
 	if err != nil {
 		return reviewedMonth{}, careMonth{}, err
@@ -185,11 +189,37 @@ func computeNoticeMonth(in careMonthInput, invoiced map[int64]parentbilling.Care
 	if !kept {
 		return review, review.careMonth, nil
 	}
+	// A child held for an issued invoice stays held as a whole (S4): taking
+	// one contract's assessment back must not free the others.
+	in.keepHeld = heldForInvoice(computed.billedChildren)
 	again, err := buildCareMonth(in)
 	if err != nil {
 		return reviewedMonth{}, careMonth{}, err
 	}
 	return review, narrowMonth(again, schoolIDs, nil).careMonth, nil
+}
+
+// recomputedNotices are the issued notice months a preview computes again.
+func recomputedNotices(invoiced map[int64]parentbilling.CareInvoice, noticed map[int64]bool) map[int64]bool {
+	recomputed := map[int64]bool{}
+	for contractID := range invoiced {
+		if noticed[contractID] {
+			recomputed[contractID] = true
+		}
+	}
+	return recomputed
+}
+
+// heldForInvoice names the contracts of the children held for an issued
+// invoice.
+func heldForInvoice(children []parentbilling.CareBilledChild) map[int64]bool {
+	held := map[int64]bool{}
+	for _, child := range children {
+		for _, contract := range child.Contracts {
+			held[contract.ContractID.Int64()] = true
+		}
+	}
+	return held
 }
 
 // retainFailedAssessments keeps the effective assessment of months the

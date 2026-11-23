@@ -83,22 +83,28 @@ func (in billedHoldInput) billingDays(contractID int64) monthDays {
 	return days
 }
 
-// isFree tells whether the price list of a contract's school makes the
-// month free of charge.
-func (in billedHoldInput) isFree(contractID int64) bool {
-	return in.free.free(in.byContract[contractID][0].SchoolID, in.month)
+// wouldBill tells whether a contract in force would get an invoice with care
+// positions today (S3): its month is not free of charge and every weekday it
+// bills has a price. A contract without a price stays under "Ohne Preis" and
+// holds nobody back.
+func (in billedHoldInput) wouldBill(contractID int64) bool {
+	versions := in.byContract[contractID]
+	if in.free.free(versions[0].SchoolID, in.month) {
+		return false
+	}
+	draft, unpriced := billContract(in.month, in.rule, versions, in.entries[contractID], in.prices)
+	return len(unpriced) == 0 && len(draft.Positions) > 0
 }
 
 // blocked tells whether the issued invoice of a contract in force carries
 // only its Mensa while the contract would bill care today.
 func (in billedHoldInput) blocked(contractID int64) bool {
 	invoice := in.invoiced[contractID]
-	versions, inForce := in.byContract[contractID]
-	if !inForce || len(invoice.Positions) > 0 || invoice.DocumentKind == parentbilling.DocumentKindFeeNotice || in.isFree(contractID) {
+	if _, inForce := in.byContract[contractID]; !inForce || len(invoice.Positions) > 0 ||
+		invoice.DocumentKind == parentbilling.DocumentKindFeeNotice {
 		return false
 	}
-	draft, unpriced := billContract(in.month, in.rule, versions, in.entries[contractID], in.prices)
-	return len(unpriced) == 0 && len(draft.Positions) > 0
+	return in.wouldBill(contractID)
 }
 
 // billedChild is a child with an issued invoice of the month: its contracts
@@ -112,8 +118,19 @@ type billedChild struct {
 
 // billedChildHolds finds the children an issued invoice of the month
 // already bills and marks their contracts as held. It leaves a child held
-// for a duplicate contract (E4) as it is.
+// for a duplicate contract (E4) as it is. The contracts an earlier
+// computation of the month held (keepHeld) stay held.
 func billedChildHolds(in billedHoldInput, held map[int64]bool) []parentbilling.CareBilledChild {
+	holds := in.findBilledChildren(held)
+	for contractID := range in.keepHeld {
+		held[contractID] = true
+	}
+	return holds
+}
+
+// findBilledChildren is billedChildHolds for the contracts of this
+// computation.
+func (in billedHoldInput) findBilledChildren(held map[int64]bool) []parentbilling.CareBilledChild {
 	holds := []parentbilling.CareBilledChild{}
 	if len(in.invoiced) == 0 {
 		return holds
@@ -186,14 +203,14 @@ func (in billedHoldInput) addIssued(child *billedChild, contractID int64) {
 }
 
 // billsStaleDay tells whether a contract of the child would bill a day one
-// of its stale invoices bills already. A contract of a free month bills
-// nothing.
+// of its stale invoices bills already. A contract of a free month or without
+// a price bills nothing (wouldBill).
 func (in billedHoldInput) billsStaleDay(child *billedChild) bool {
 	if child.stale == 0 {
 		return false
 	}
 	return slices.ContainsFunc(slices.Concat(child.open, child.blocked), func(contractID int64) bool {
-		return !in.isFree(contractID) && in.billingDays(contractID)&child.stale != 0
+		return in.billingDays(contractID)&child.stale != 0 && in.wouldBill(contractID)
 	})
 }
 

@@ -325,3 +325,19 @@ func startOf(versions []parentbilling.CareContractVersion) calendar.Date {
 	}
 	return versions[0].From
 }
+
+// issuedPlaces names the contract and school of every issued invoice that
+// bills care for a contract outside the versions in force, as its invoice
+// kept them. An invoice with only the Mensa and a notice month set to
+// nothing bill no care: they take no part in a school change (#7892, S6).
+func (in careMonthInput) issuedPlaces() map[int64]parentbilling.CareDuplicateContract {
+	places := map[int64]parentbilling.CareDuplicateContract{}
+	for id := range in.issuedChildIdentities() {
+		invoice := in.invoiced[id]
+		if len(invoice.Positions) == 0 {
+			continue
+		}
+		places[id] = parentbilling.CareDuplicateContract{ContractID: ident.ID(id), SchoolID: invoice.SchoolID, SchoolName: invoice.SchoolName}
+	}
+	return places
+}
