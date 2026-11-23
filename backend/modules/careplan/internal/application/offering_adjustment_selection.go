@@ -259,7 +259,7 @@ func buildOfferingAdjustmentReplacement(work *offeringAdjustmentWork) error {
 		})
 	}
 	replacement = capOfferingReplacementAtCareEnd(replacement, work.student.EnrolledUntil, work.phase.OfferingPhase, work.effectiveFrom)
-	afterJSON, err := adjustmentSnapshotJSON(replacement, work.offeringByID)
+	afterJSON, err := adjustmentSnapshotJSON(replacement, work.offeringByID, nil)
 	if err != nil {
 		return err
 	}
@@ -297,7 +297,10 @@ func capOfferingReplacementAtCareEnd(
 	return rows
 }
 
-func adjustmentSnapshotJSON(links []*careplan.BookedOffering, offeringByID map[int64]*careplan.CareOffering) ([]byte, error) {
+// adjustmentSnapshotJSON records links; extendedUntil names the last day of
+// an offering the office extended (#7929).
+func adjustmentSnapshotJSON(links []*careplan.BookedOffering, offeringByID map[int64]*careplan.CareOffering,
+	extendedUntil map[int64]calendar.Date) ([]byte, error) {
 	rows := make([]careplan.OfferingAdjustmentSnapshot, 0, len(links))
 	for _, link := range links {
 		if link == nil {
@@ -308,6 +311,9 @@ func adjustmentSnapshotJSON(links []*careplan.BookedOffering, offeringByID map[i
 			SelectedDays:          copyDays(link.SelectedDays),
 			ManualSelectedDays:    copyDays(link.ManualSelectedDays),
 			AutomaticSelectedDays: copyDays(link.AutomaticSelectedDays),
+		}
+		if until, ok := extendedUntil[link.CareOfferingID]; ok {
+			row.ExtendedUntil = until.String()
 		}
 		if offering := offeringByID[link.CareOfferingID]; offering != nil {
 			row.OfferingName = offering.Name

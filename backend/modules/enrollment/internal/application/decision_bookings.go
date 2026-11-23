@@ -173,7 +173,9 @@ func offeringPhaseOf(phase *enrollment.Phase) careplan.OfferingPhase {
 func adjustmentChoices(rows []enrollment.OfferingAdjustmentSelection) []careplan.OfferingAdjustmentChoice {
 	choices := make([]careplan.OfferingAdjustmentChoice, 0, len(rows))
 	for _, row := range rows {
-		choices = append(choices, careplan.OfferingAdjustmentChoice{OfferingID: row.OfferingID, SelectedDays: row.SelectedDays})
+		choices = append(choices, careplan.OfferingAdjustmentChoice{
+			OfferingID: row.OfferingID, SelectedDays: row.SelectedDays, ExtendToPhaseEnd: row.ExtendToPhaseEnd,
+		})
 	}
 	return choices
 }
