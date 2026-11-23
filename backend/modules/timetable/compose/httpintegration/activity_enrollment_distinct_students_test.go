@@ -29,13 +29,16 @@ func (s countGroupRows) ListGroups(context.Context, timetable.GroupFilter) ([]ti
 // The staff reads list and count the child once.
 func TestEnrolledStudentsListEachChildOnce(t *testing.T) {
 	t.Parallel()
-	const groupID, split, single = int64(40), int64(7), int64(8)
+	db := testpkg.SetupTestDB(t)
+	groupID := testpkg.CreateTestActivityGroup(t, db, "Mehrere Zeilen").ID
+	split := testpkg.CreateTestStudent(t, db, "Geteilt", "Kind", "2a").ID
+	single := testpkg.CreateTestStudent(t, db, "Eine", "Zeile", "2a").ID
 	february := "2027-02-01"
 	rows := countGroupRows{
 		countEnrollmentRows: countEnrollmentRows{rows: []timetable.StudentEnrollment{
-			{ID: 1, ActivityGroupID: groupID, StudentID: split, ValidFrom: "2026-09-01", ValidUntil: &february, SelectedWeekdays: []int{1, 2}},
-			{ID: 2, ActivityGroupID: groupID, StudentID: split, ValidFrom: february, SelectedWeekdays: []int{2}},
-			{ID: 3, ActivityGroupID: groupID, StudentID: single, ValidFrom: "2026-09-01"},
+			{ActivityGroupID: groupID, StudentID: split, ValidFrom: "2026-09-01", ValidUntil: &february, SelectedWeekdays: []int{1, 2}},
+			{ActivityGroupID: groupID, StudentID: split, ValidFrom: february, SelectedWeekdays: []int{2}},
+			{ActivityGroupID: groupID, StudentID: single, ValidFrom: "2026-09-01"},
 		}},
 		groups: []timetable.Group{{ID: groupID, Name: "Liste"}},
 	}
