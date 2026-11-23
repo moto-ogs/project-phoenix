@@ -1,6 +1,7 @@
 // Time tracking API service for check-in/out and history management
 
 import type * as shared from "~/lib/contract/shared.generated";
+import type * as tt from "~/lib/contract/time-tracking.generated";
 import type { ErrorCode } from "~/lib/error-codes.generated";
 import {
   knownMailOutcome,
@@ -57,33 +58,27 @@ export interface UpdateSessionRequest {
 }
 
 /**
- * Create absence request body
+ * Body of POST /api/time-tracking/absences: the generated request with the
+ * fields every new absence carries. With `absence_type_id` (school-defined
+ * Abwesenheitsart, #2403) the backend takes the canonical absence_type from
+ * the art itself, so the pair can never disagree.
  */
-export interface CreateAbsenceRequest {
-  absence_type: string;
-  /**
-   * School-defined Abwesenheitsart (#2403). When set, the backend takes the
-   * canonical absence_type from the art itself, so the pair can never disagree.
-   */
-  absence_type_id?: string | null;
-  date_start: string;
-  date_end: string;
-  half_day?: boolean;
-  note?: string;
-}
+export type CreateAbsenceRequest = shared.CreateAbsenceRequest &
+  Required<
+    Pick<
+      shared.CreateAbsenceRequest,
+      "absence_type" | "date_start" | "date_end"
+    >
+  >;
 
-/**
- * Update absence request body
- */
-export interface UpdateAbsenceRequest {
-  absence_type?: string;
-  /** Re-points the school-defined Abwesenheitsart; `null` clears it (#2403). */
-  absence_type_id?: string | null;
-  date_start?: string;
-  date_end?: string;
-  half_day?: boolean;
-  note?: string;
-}
+/** Body of POST /api/time-tracking/vacation/request. */
+type VacationRequestPayload = Required<
+  Pick<
+    tt.RequestVacationRequest,
+    "date_start" | "date_end" | "start_half_day" | "end_half_day"
+  >
+> &
+  Pick<tt.RequestVacationRequest, "note" | "substitute_staff_id">;
 
 interface TimeTrackingConfig {
   accountStartDate: string;
@@ -321,7 +316,7 @@ class TimeTrackingService {
 
   async updateAbsence(
     id: string,
-    req: UpdateAbsenceRequest,
+    req: tt.UpdateAbsenceRequest,
   ): Promise<StaffAbsence> {
     const absence = await bffJson(
       "tenant",
@@ -396,15 +391,6 @@ class TimeTrackingService {
 export interface OwnAbsenceAllowance {
   readonly name: string;
   readonly summary: AbsenceTypeAllowanceSummary;
-}
-
-interface VacationRequestPayload {
-  date_start: string;
-  date_end: string;
-  start_half_day: boolean;
-  end_half_day: boolean;
-  note?: string;
-  substitute_staff_id?: string;
 }
 
 export const timeTrackingService = new TimeTrackingService();

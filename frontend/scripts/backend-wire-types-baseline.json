@@ -103,9 +103,6 @@
   "lib/teacher-api.ts shape PersonIdentityFields",
   "lib/teacher-types.ts shape Teacher",
   "lib/tenant-resolve.server.ts shape TenantResolveResponse",
-  "lib/time-tracking-api.ts shape CreateAbsenceRequest",
-  "lib/time-tracking-api.ts shape UpdateAbsenceRequest",
-  "lib/time-tracking-api.ts shape VacationRequestPayload",
   "server/auth/jwt-payload.ts shape JwtPayload",
   "server/auth/token-refresh.ts shape TokenPair"
 ]
