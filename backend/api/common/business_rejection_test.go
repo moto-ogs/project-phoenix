@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/stretchr/testify/assert"
@@ -56,6 +57,30 @@ func TestUnclassifiedBusinessRejectionIsNotAServerError(t *testing.T) {
 
 	require.Equal(t, http.StatusConflict, w.Code)
 	assert.Contains(t, w.Body.String(), `"code":"students.child_quota_reached"`)
+}
+
+// TestCodelessFallbackDoesNotSwallowABusinessRejection pins that a handler's
+// code-less 4xx fallback (ErrorInvalidRequest, ErrorConflict) answers a
+// rejection in the chain with its 409 and code, while a 4xx that names its
+// own code keeps it.
+func TestCodelessFallbackDoesNotSwallowABusinessRejection(t *testing.T) {
+	t.Parallel()
+	refusal := fmt.Errorf("publish: %w", quotaRejection{})
+	for name, renderer := range map[string]render.Renderer{
+		"invalid request": common.ErrorInvalidRequest(refusal),
+		"conflict":        common.ErrorConflict(refusal),
+		"not found":       common.ErrorNotFound(refusal),
+	} {
+		w := httptest.NewRecorder()
+		common.RenderError(w, httptest.NewRequest(http.MethodPost, "/", nil), renderer)
+		assert.Equal(t, http.StatusConflict, w.Code, name)
+		assert.Contains(t, w.Body.String(), `"code":"students.child_quota_reached"`, name)
+	}
+
+	w := httptest.NewRecorder()
+	common.RenderError(w, httptest.NewRequest(http.MethodPost, "/", nil), common.ErrorNotFoundWithCode(refusal, common.CodeEnrollmentSchemaNotFound))
+	assert.Equal(t, http.StatusNotFound, w.Code, "a classified answer keeps its status")
+	assert.Contains(t, w.Body.String(), `"code":"`+common.CodeEnrollmentSchemaNotFound+`"`)
 }
 
 // TestBusinessRejectionRollsBackTheRequest pins that a 409 rejection never

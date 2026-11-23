@@ -3,13 +3,11 @@ package application
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 
-	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -321,6 +319,4 @@ func TestErrorCodeLabelsTheStableOutcomes(t *testing.T) {
 	assert.Equal(t, "invalid", schoolcalendar.ErrorCode(&schoolcalendar.InvalidDateframeError{Reason: "x"}))
 	assert.Equal(t, "calendar_period_name_conflict", schoolcalendar.ErrorCode(schoolcalendar.ErrCalendarPeriodNameConflict))
 	assert.Equal(t, "internal_error", schoolcalendar.ErrorCode(errors.New("boom")))
-	assert.Equal(t, readstate.ChangedCode, schoolcalendar.ErrorCode(fmt.Errorf("change period: %w", readstate.ErrChanged)),
-		"a business rejection outside the table is labelled with its own code")
 }

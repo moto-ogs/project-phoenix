@@ -17,8 +17,10 @@ import (
 // ServerErrorReporting, which reports the answer to Sentry once.
 func RenderError(w http.ResponseWriter, r *http.Request, renderer render.Renderer) {
 	// A business rejection is never a server error, even where a handler
-	// does not classify it yet: it keeps its 409, code and details (ADR 0006).
-	if errResp, ok := renderer.(*ErrResponse); ok && errResp.HTTPStatusCode >= 500 && IsBusinessRejection(errResp.Err) {
+	// does not classify it yet, and a handler's code-less 4xx fallback does
+	// not swallow it either: it keeps its 409, code and details (ADR 0006),
+	// so readstate.ErrChanged needs no case of its own (ADR 0311).
+	if errResp, ok := renderer.(*ErrResponse); ok && unclassifiedRejection(errResp) {
 		renderer = ErrorBusinessRejection(errResp.Err)
 	}
 	// A rejected input value is never a server error either: it keeps its
@@ -56,6 +58,19 @@ func RenderError(w http.ResponseWriter, r *http.Request, renderer render.Rendere
 	if err := render.Render(w, r, renderer); err != nil {
 		slog.Default().Error("error rendering error response", slog.String("error", err.Error()))
 	}
+}
+
+// unclassifiedRejection reports whether errResp carries a BusinessRejection
+// its handler did not classify: as a server error, or as a 4xx without a code
+// of its own. An input rejection keeps its 400.
+func unclassifiedRejection(errResp *ErrResponse) bool {
+	if !IsBusinessRejection(errResp.Err) {
+		return false
+	}
+	if errResp.HTTPStatusCode >= 500 {
+		return true
+	}
+	return errResp.HTTPStatusCode >= 400 && errResp.Code == "" && !HasInputRejection(errResp.Err)
 }
 
 // ClientCanceled reports whether err is the cancellation of a request the

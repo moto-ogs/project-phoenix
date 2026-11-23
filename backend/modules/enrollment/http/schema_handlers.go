@@ -472,12 +472,11 @@ func (rs *Resource) updateSchema(w http.ResponseWriter, r *http.Request) {
 // missing lineage is a 404 — same as the PATCH route, regardless of which
 // step raised it. A rename failure beyond those sentinels is infrastructure
 // (lock/read/exec), mapped to 5xx like the PATCH handler; publish/validation
-// errors keep the 400 contract shared with POST /schema.
+// errors keep the 400 contract shared with POST /schema. A version published
+// since the editor read {id} is a business rejection that RenderError answers
+// with 409 general.changed_since_read through any of these (ADR 0311).
 func renderSchemaVersionError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
-	case common.IsBusinessRejection(err):
-		// A version published since the editor read {id} (ADR 0311).
-		common.RenderError(w, r, common.ErrorBusinessRejection(err))
 	case errors.Is(err, capability.ErrFormSchemaNameExists):
 		common.RenderError(w, r, common.ErrorConflictOnField(err, common.CodeEnrollmentSchemaNameExists, "name"))
 	case errors.Is(err, capability.ErrFormSchemaNotFound):
