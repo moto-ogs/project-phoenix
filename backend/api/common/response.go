@@ -34,6 +34,11 @@ func (r *Response) Render(_ http.ResponseWriter, _ *http.Request) error {
 // against the contract (answer_contract_test_helpers.go).
 var answerObserver func(r *http.Request, status int, data any, envelope any) error
 
+// refusalObserver sees every refusal (a 4xx) before it is written. Production
+// installs none; the test build counts it as the answer of a route that only
+// refuses (RouteContract.Refuses).
+var refusalObserver func(r *http.Request)
+
 // answerObserved reports whether the answer may be written. A refused answer
 // has been replaced by a 500 that names the reason.
 func answerObserved(w http.ResponseWriter, r *http.Request, status int, data any, envelope any) bool {

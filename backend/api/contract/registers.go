@@ -59,6 +59,9 @@ type Registration struct {
 	Enums            []EnumSpec
 	Deprecated       bool
 	DeprecatedFields []string
+	// Refuses is the marker of common.RouteContract for a deprecated route
+	// that only refuses; it stays out of the document.
+	Refuses string
 	// NoRetryAfterRenewal and MaxBodyBytes are the proxy traits of
 	// common.RouteContract.
 	NoRetryAfterRenewal string

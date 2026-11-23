@@ -244,8 +244,11 @@ func TestUpdatePersonKeepsStoredLinksWhenBodyOmitsThem(t *testing.T) {
 	h.accounts[5] = "five@example.com"
 	h.accounts[6] = "six@example.com"
 
-	recorder := h.do(t, http.MethodPut, "/users/7", map[string]any{"first_name": "New", "last_name": "Name"})
+	recorder := h.do(t, http.MethodPut, "/users/7", map[string]any{"first_name": "New", "last_name": "Name", "expected_version": "read"})
 	require.Equal(t, http.StatusOK, recorder.Code)
+	require.NotNil(t, directory.updated.ExpectedVersion, "the route always hands the read's version to the owner")
+	assert.Equal(t, "read", *directory.updated.ExpectedVersion)
+	assert.Contains(t, string(decode(t, recorder).Data), `"version":`, "the answer carries the saved person's version")
 	require.NotNil(t, directory.updated.AccountID)
 	assert.EqualValues(t, 5, *directory.updated.AccountID)
 	require.NotNil(t, directory.updated.TagID)

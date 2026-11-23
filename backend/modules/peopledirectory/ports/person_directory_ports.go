@@ -56,8 +56,11 @@ type StaffDirectory interface {
 	// UpdateStaffWithTeacher applies the already-mutated directory fields to a
 	// freshly locked staff row, reloads it with person data, and applies the
 	// requested teacher-record change. Teacher-record failures are non-fatal
-	// and reported through the returned TeacherAction.
-	UpdateStaffWithTeacher(ctx context.Context, staff *peopleValues.Staff, isTeacher bool, specialization, role, qualifications string) (*peopleValues.Teacher, TeacherAction, error)
+	// and reported through the returned TeacherAction. expectedVersion is the
+	// peopledirectory.StaffRecordVersion the form showed (ADR 0311): checked
+	// under the staff row lock before anything is written; a different or
+	// empty one is readstate.ErrChanged.
+	UpdateStaffWithTeacher(ctx context.Context, staff *peopleValues.Staff, isTeacher bool, specialization, role, qualifications, expectedVersion string) (*peopleValues.Teacher, TeacherAction, error)
 }
 
 // CreateStaffInput carries the payload for CreateStaffWithTeacher.

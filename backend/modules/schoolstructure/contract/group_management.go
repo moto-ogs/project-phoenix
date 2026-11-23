@@ -49,8 +49,10 @@ type GroupTeaching interface {
 }
 
 // StaffSchoolClasses manages free-text classes matched by normalized name.
-// The last argument of SetStaffSchoolClasses is the authenticated audit actor.
+// The last argument of SetStaffSchoolClasses is the authenticated audit
+// actor; the string before it the StaffSchoolClassesVersion the form showed
+// (ADR 0311), refused when the stored assignments differ or it is empty.
 type StaffSchoolClasses interface {
 	GetStaffSchoolClasses(context.Context, int64) ([]string, error)
-	SetStaffSchoolClasses(context.Context, int64, []string, int64) error
+	SetStaffSchoolClasses(context.Context, int64, []string, string, int64) error
 }

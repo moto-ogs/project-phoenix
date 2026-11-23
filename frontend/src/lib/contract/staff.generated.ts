@@ -29,7 +29,6 @@ import {
   StaffVacationOpeningSchema,
   VacationQuotaSummarySchema,
   WorkSessionEditViewSchema,
-  type CreateAbsenceRequest,
   type SessionUpdateRequest,
   type StaffAbsenceResponse,
 } from "./shared.generated";
@@ -60,6 +59,7 @@ export interface StaffPersonResponse {
   account_id?: string;
   created_at: string;
   updated_at: string;
+  version: string;
 }
 
 export const StaffPersonResponseSchema: z.ZodType<StaffPersonResponse, unknown> = object<StaffPersonResponse>({
@@ -72,6 +72,7 @@ export const StaffPersonResponseSchema: z.ZodType<StaffPersonResponse, unknown> 
   account_id: optional(int64String),
   created_at: instant,
   updated_at: instant,
+  version: str,
 });
 
 /** Go: staff.StaffRecordResponse */
@@ -100,6 +101,7 @@ export interface StaffRecordResponse {
   role?: string;
   role_form?: OpenEnum<RoleForm>;
   qualifications?: string;
+  version?: string;
 }
 
 export const StaffRecordResponseSchema: z.ZodType<StaffRecordResponse, unknown> = object<StaffRecordResponse>({
@@ -127,6 +129,7 @@ export const StaffRecordResponseSchema: z.ZodType<StaffRecordResponse, unknown> 
   role: optional(str),
   role_form: optional(str),
   qualifications: optional(str),
+  version: optional(str),
 });
 
 /** Go: timetracking.AbsenceDecisionMailsResponse */
@@ -840,6 +843,7 @@ export interface ScheduleResponse {
   weekly_totals: number[] | null;
   valid_from?: string;
   kept_by_traeger: boolean;
+  version: string;
 }
 
 export const ScheduleResponseSchema: z.ZodType<ScheduleResponse, unknown> = object<ScheduleResponse>({
@@ -851,17 +855,20 @@ export const ScheduleResponseSchema: z.ZodType<ScheduleResponse, unknown> = obje
   weekly_totals: nullable(arr(safeInt)),
   valid_from: optional(str),
   kept_by_traeger: bool,
+  version: str,
 });
 
 /** Go: staff.SchoolClassesResponse */
 export interface SchoolClassesResponse {
   staff_id: string;
   school_classes: string[] | null;
+  version: string;
 }
 
 export const SchoolClassesResponseSchema: z.ZodType<SchoolClassesResponse, unknown> = object<SchoolClassesResponse>({
   staff_id: int64String,
   school_classes: nullable(arr(str)),
+  version: str,
 });
 
 /** Go: timetracking.StammdatenPersonPayload */
@@ -1081,6 +1088,7 @@ export interface StaffRequest {
   specialization?: string;
   role?: string;
   qualifications?: string;
+  expected_version?: string;
 }
 
 /** Go: workforce.VacationDecisionRequest */
@@ -1236,6 +1244,17 @@ export interface PayrollWageTypeRequest {
   name?: string;
   number?: string;
   unit?: string;
+}
+
+/** Go: workforce.CreateAbsenceRequest */
+export interface CreateAbsenceRequest {
+  absence_type?: string;
+  absence_type_id?: string | null;
+  date_start?: string;
+  date_end?: string;
+  half_day?: boolean;
+  note?: string;
+  expected_fingerprint?: string;
 }
 
 /** Go: timetracking.RebookAbsencesBody */
@@ -1449,11 +1468,13 @@ export interface ScheduleUpdateRequest {
   entries?: ScheduleEntryRequest[] | null;
   save_as_template?: string;
   valid_from?: string;
+  expected_version?: string;
 }
 
 /** Go: staff.SchoolClassesRequest */
 export interface SchoolClassesRequest {
   school_classes?: string[] | null;
+  expected_version?: string;
 }
 
 /** Go: timetracking.StammdatenArbeitsvertragRequest */

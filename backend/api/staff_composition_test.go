@@ -2,9 +2,11 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -119,6 +121,23 @@ func setupStaffCompositionRouteAt(t *testing.T, now func() time.Time) *staffComp
 	}
 }
 
+// staffRecordVersion reads the version of the staff record form, as the
+// Konto tab does before it saves (ADR 0311).
+func staffRecordVersion(t *testing.T, router chi.Router, staffID int64) string {
+	t.Helper()
+	rr := testutil.ExecuteRequest(router, testutil.NewAuthenticatedRequest(t, http.MethodGet, fmt.Sprintf("/staff/%d", staffID), nil,
+		testutil.WithJWTBearer(staffCompositionToken(t, "staff:manage"))))
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	var envelope struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &envelope))
+	require.NotEmpty(t, envelope.Data.Version, "a staff:manage read answers the record's version")
+	return envelope.Data.Version
+}
+
 func staffCompositionToken(t *testing.T, perms ...string) string {
 	t.Helper()
 	claims := testutil.DefaultTestClaims()
@@ -195,8 +214,9 @@ func TestBetreuerRoleSeesOnlyTheMinimalColleagueView(t *testing.T) {
 	colleagueID, colleaguePersonID := ctx.createStaff("Sichtbare", "Kollegin")
 
 	body := map[string]interface{}{
-		"person_id":   colleaguePersonID,
-		"staff_notes": "Geheime Personalnotiz",
+		"person_id":        colleaguePersonID,
+		"staff_notes":      "Geheime Personalnotiz",
+		"expected_version": staffRecordVersion(t, ctx.router, colleagueID),
 	}
 	req := testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/staff/%d", colleagueID), body,
 		testutil.WithJWTBearer(staffCompositionToken(t, "staff:manage")))
@@ -251,11 +271,63 @@ func TestStaffPersonConflictIsHTTPConflict(t *testing.T) {
 	_, conflictingPersonID := ctx.createStaff("Doppelte", "Zuordnung")
 
 	req := testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/staff/%d", staffID),
-		map[string]interface{}{"person_id": conflictingPersonID},
+		map[string]interface{}{"person_id": conflictingPersonID, "expected_version": staffRecordVersion(t, ctx.router, staffID)},
 		testutil.WithJWTBearer(staffCompositionToken(t, "staff:manage", "users:manage")))
 	rr := testutil.ExecuteRequest(ctx.router, req)
 
 	assert.Equal(t, http.StatusConflict, rr.Code, rr.Body.String())
+	assert.NotContains(t, rr.Body.String(), "general.changed_since_read", "the conflict is the person, not the read")
+}
+
+// TestStaffRecordUpdateRefusesAStaleRead pins ADR 0311 on PUT /staff/{id}:
+// the Konto tab sends the record's version of its read; notes or a profile
+// saved meanwhile refuse the save with general.changed_since_read and keep
+// what was stored, an empty version too. The save answers the new version,
+// so a second save from the same form succeeds.
+func TestStaffRecordUpdateRefusesAStaleRead(t *testing.T) {
+	t.Parallel()
+
+	ctx := setupStaffCompositionRoute(t)
+	staffID, personID := ctx.createStaff("Gelesene", "Akte")
+	manage := testutil.WithJWTBearer(staffCompositionToken(t, "staff:manage"))
+	put := func(notes, version string) *httptest.ResponseRecorder {
+		t.Helper()
+		return testutil.ExecuteRequest(ctx.router, testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/staff/%d", staffID),
+			map[string]interface{}{"person_id": personID, "staff_notes": notes, "expected_version": version}, manage))
+	}
+	notes := func() string {
+		t.Helper()
+		rr := testutil.ExecuteRequest(ctx.router, testutil.NewAuthenticatedRequest(t, http.MethodGet, fmt.Sprintf("/staff/%d", staffID), nil, manage))
+		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+		var envelope struct {
+			Data struct {
+				StaffNotes string `json:"staff_notes"`
+			} `json:"data"`
+		}
+		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &envelope))
+		return envelope.Data.StaffNotes
+	}
+
+	shown := staffRecordVersion(t, ctx.router, staffID)
+	saved := put("Notiz der Kollegin", staffRecordVersion(t, ctx.router, staffID))
+	require.Equal(t, http.StatusOK, saved.Code, saved.Body.String())
+
+	for name, version := range map[string]string{"stale": shown, "empty": ""} {
+		refused := put("Ältere Notiz", version)
+		require.Equal(t, http.StatusConflict, refused.Code, "%s: %s", name, refused.Body.String())
+		assert.Contains(t, refused.Body.String(), "general.changed_since_read", name)
+	}
+	assert.Equal(t, "Notiz der Kollegin", notes(), "the refused saves wrote nothing")
+
+	var answer struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(saved.Body.Bytes(), &answer))
+	again := put("Zweite Notiz", answer.Data.Version)
+	require.Equal(t, http.StatusOK, again.Code, "the save's answered version carries a second save: %s", again.Body.String())
+	assert.Equal(t, "Zweite Notiz", notes())
 }
 
 // TestBetreuerRoleDoesNotSeeTheSchoolsAbsenceWording pins that the school's

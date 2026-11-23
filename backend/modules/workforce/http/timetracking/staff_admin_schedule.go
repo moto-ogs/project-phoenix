@@ -117,6 +117,20 @@ func (rs *StaffAdminResource) updateSchedule(w http.ResponseWriter, r *http.Requ
 	common.Respond(w, r, http.StatusOK, resp, "Schedule updated successfully")
 }
 
+// scheduleVersion is the token of the schedule the response shows: the
+// staff member's binding and the running rows it was built from.
+func scheduleVersion(staff scheduleSubject, rows []workforce.StaffWorkSchedule) string {
+	canonical := make([]workforce.ScheduleVersionRow, 0, len(rows))
+	for _, row := range rows {
+		canonical = append(canonical, workforce.ScheduleVersionRow{
+			WeekIndex: row.WeekIndex, RotationLength: row.RotationLength, DayOfWeek: row.DayOfWeek,
+			TargetMinutes: row.TargetMinutes, StartTime: row.StartTime,
+			RotationAnchorDate: row.RotationAnchorDate, ValidFrom: row.ValidFrom,
+		})
+	}
+	return workforce.ScheduleVersion(staff.WorkTimeModelID, staff.RotationAnchorDate, canonical)
+}
+
 // scheduleSubject is the projection of a staff row the schedule responses
 // need. RotationAnchorDate is a calendar day or empty.
 type scheduleSubject struct {
@@ -161,7 +175,8 @@ func (rs *StaffAdminResource) buildTemplateScheduleResponse(ctx context.Context,
 		return nil, err
 	}
 	return &ScheduleResponse{
-		Mode: "template",
+		Version: scheduleVersion(staff, rows),
+		Mode:    "template",
 		Model: &ScheduleModelInfo{
 			ID:                 ident.ID(model.ID),
 			Name:               model.Name,
@@ -193,6 +208,7 @@ func (rs *StaffAdminResource) buildCustomScheduleResponse(ctx context.Context, s
 		anchor = earliest
 	}
 	return &ScheduleResponse{
+		Version:            scheduleVersion(staff, rows),
 		Mode:               "custom",
 		RotationLength:     rotation,
 		RotationAnchorDate: anchor,
