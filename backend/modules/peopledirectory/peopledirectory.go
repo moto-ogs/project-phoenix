@@ -84,7 +84,15 @@ type UpdatePerson struct {
 	Birthday  string
 	TagID     *string
 	AccountID *int64
+	// ExpectedVersion is the PersonVersion of the person the form showed
+	// (ADR 0311). Nil only for a writer that showed no read; the person
+	// route always sets it.
+	ExpectedVersion *string
 }
+
+// PersonVersion is the token of a stored person (ADR 0311): the time of
+// its last change, which a trigger moves on every update of the row.
+func PersonVersion(updatedAt time.Time) string { return readstate.Of(updatedAt) }
 
 // PersonFilter narrows a directory search. Every field is optional; the
 // prefix, contains and equals matches are case-insensitive, and the equals

@@ -8,7 +8,9 @@ import (
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/internal/schoolclass"
+	"github.com/moto-ogs/project-phoenix/modules/schoolstructure"
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // requireStaff resolves the staff existence check shared by both class
@@ -81,11 +83,19 @@ func classesInClassOrder(assignments map[int64]string) []string {
 // audit.staff_master_data_changes row in the same transaction — these
 // assignments scope the Lehrkraft student day view, so no rewrite may happen
 // without a trace.
-func (s *service) SetStaffSchoolClasses(ctx context.Context, staffID int64, classes []string, changedBy int64) error {
+//
+// expectedVersion is the StaffSchoolClassesVersion of the assignments the
+// form showed (ADR 0311). The staff row lock serializes the writers of one
+// person's assignments; under it the stored assignments are compared with
+// that read before anything is written.
+func (s *service) SetStaffSchoolClasses(ctx context.Context, staffID int64, classes []string, expectedVersion string, changedBy int64) error {
 	const op = "SetStaffSchoolClasses"
 
 	if err := s.requireStaff(ctx, op, staffID); err != nil {
 		return err
+	}
+	if err := s.staff.LockStaff(ctx, staffID); err != nil {
+		return &EducationError{Op: op, Err: err}
 	}
 
 	wanted, err := dedupeSchoolClasses(classes)
@@ -95,6 +105,9 @@ func (s *service) SetStaffSchoolClasses(ctx context.Context, staffID int64, clas
 
 	current, err := s.staffClassAssignments(ctx, op, staffID)
 	if err != nil {
+		return err
+	}
+	if err := readstate.Check(expectedVersion, schoolstructure.StaffSchoolClassesVersion(classesInClassOrder(current))); err != nil {
 		return err
 	}
 

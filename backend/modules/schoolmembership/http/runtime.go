@@ -49,6 +49,9 @@ type Person struct {
 	AccountID *int64
 	CreatedAt time.Time
 	UpdatedAt time.Time
+	// Version is the People Directory token of the person (ADR 0311); the
+	// root resolves it with the person.
+	Version string
 }
 
 // TeacherAction describes the teacher-record outcome of an update; it mirrors
@@ -130,6 +133,10 @@ type UpdateStaffInput struct {
 	Specialization string
 	Role           string
 	Qualifications string
+	// ExpectedVersion is the record's version the form showed (ADR 0311,
+	// schoolmembership.StaffRecordVersion); checked under the staff row
+	// lock before the write. Empty is refused.
+	ExpectedVersion string
 }
 
 // UpdateStaffResult carries the persisted staff row and the teacher outcome.
@@ -222,10 +229,13 @@ type Runtime struct {
 	// cleanups; the directory listing triggers it with source "directory".
 	RetryQueuedDocumentCleanups func(context.Context, string)
 
-	SchoolClasses    func(context.Context, int64) ([]string, error)
-	SetSchoolClasses func(context.Context, int64, []string, int64) error
-	ActiveCaregivers func(context.Context) ([]StaffWithRoleResponse, error)
-	StaffByRoles     func(context.Context, []string) ([]StaffWithRoleResponse, error)
+	SchoolClasses func(context.Context, int64) ([]string, error)
+	// SchoolClassesVersion is the token of the classes SchoolClasses
+	// answered (ADR 0311); SetSchoolClasses takes it back before the actor.
+	SchoolClassesVersion func([]string) string
+	SetSchoolClasses     func(context.Context, int64, []string, string, int64) error
+	ActiveCaregivers     func(context.Context) ([]StaffWithRoleResponse, error)
+	StaffByRoles         func(context.Context, []string) ([]StaffWithRoleResponse, error)
 
 	CreateStaff func(context.Context, CreateStaffInput) (CreateStaffResult, error)
 	UpdateStaff func(context.Context, UpdateStaffInput) (UpdateStaffResult, error)
@@ -265,7 +275,7 @@ func NewResource(membership schoolmembership.Capability, runtime Runtime) *Resou
 		runtime.AbsenceLabelMap == nil || runtime.StaffGenders == nil || runtime.AccountRoles == nil || runtime.AccountEmails == nil ||
 		runtime.PersonAccountID == nil || runtime.AccountAvatars == nil || runtime.AccountHasRole == nil || runtime.AccountsHoldingRole == nil ||
 		runtime.RetryQueuedDocumentCleanups == nil ||
-		runtime.SchoolClasses == nil || runtime.SetSchoolClasses == nil ||
+		runtime.SchoolClasses == nil || runtime.SchoolClassesVersion == nil || runtime.SetSchoolClasses == nil ||
 		runtime.ActiveCaregivers == nil || runtime.StaffByRoles == nil ||
 		runtime.CreateStaff == nil || runtime.UpdateStaff == nil || runtime.Offboard == nil ||
 		runtime.PlanExit == nil || runtime.WithdrawExit == nil || runtime.ExitFailure == nil ||

@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -30,8 +31,14 @@ func (s *Service) UpdatePerson(ctx context.Context, input peopledirectory.Update
 	}
 
 	err = s.runWrite(ctx, "update_person", func(txCtx context.Context, stats *domain.OperationStats) error {
-		if err := s.requireLocked(txCtx, input.ID, stats); err != nil {
+		stored, err := s.lockedPerson(txCtx, input.ID, stats)
+		if err != nil {
 			return err
+		}
+		if input.ExpectedVersion != nil {
+			if err := readstate.Check(*input.ExpectedVersion, peopledirectory.PersonVersion(stored.UpdatedAt)); err != nil {
+				return err
+			}
 		}
 		var updateStats domain.OperationStats
 		result, updateStats, err = s.store.Update(txCtx, input)

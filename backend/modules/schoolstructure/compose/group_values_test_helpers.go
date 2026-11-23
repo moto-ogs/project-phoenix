@@ -202,8 +202,8 @@ func (s *legacyGroupManagement) GetStaffSchoolClasses(ctx context.Context, id in
 	values, err := s.capability.GetStaffSchoolClasses(ctx, id)
 	return values, legacyGroupError(err)
 }
-func (s *legacyGroupManagement) SetStaffSchoolClasses(ctx context.Context, id int64, classes []string, changedBy int64) error {
-	return legacyGroupError(s.capability.SetStaffSchoolClasses(ctx, id, classes, changedBy))
+func (s *legacyGroupManagement) SetStaffSchoolClasses(ctx context.Context, id int64, classes []string, expectedVersion string, changedBy int64) error {
+	return legacyGroupError(s.capability.SetStaffSchoolClasses(ctx, id, classes, expectedVersion, changedBy))
 }
 
 func NewService(groupRepo GroupRecords, groupTeachers GroupTeacherStore, classTeachers ClassTeacherStore, rooms RoomDirectory, teachers TeacherDirectory, staff StaffDirectory, students StudentCounter, handovers HandoverReader, runtime Runtime, options ...GroupServiceOptions) Service {
@@ -232,7 +232,7 @@ type Service interface {
 	// Staff-to-class assignments scope the Lehrkraft day view (#1772); free-text
 	// classes use schoolclass.Normalize. changedBy is the authenticated audit account.
 	GetStaffSchoolClasses(ctx context.Context, staffID int64) ([]string, error)
-	SetStaffSchoolClasses(ctx context.Context, staffID int64, classes []string, changedBy int64) error
+	SetStaffSchoolClasses(ctx context.Context, staffID int64, classes []string, expectedVersion string, changedBy int64) error
 }
 
 func publicGroupError(err error) error { return groups.PublicGroupError(err) }

@@ -95,6 +95,7 @@ func toStaffHTTPPerson(person StaffDirectoryPerson) staffHTTP.Person {
 	return staffHTTP.Person{
 		ID: person.ID, FirstName: person.FirstName, LastName: person.LastName, TagID: person.TagID,
 		AccountID: person.AccountID, CreatedAt: person.CreatedAt, UpdatedAt: person.UpdatedAt,
+		Version: person.Version,
 	}
 }
 
@@ -197,10 +198,11 @@ func newStaffResource(
 
 		RetryQueuedDocumentCleanups: staffAdmin.RetryQueuedStaffDocumentCleanups,
 
-		SchoolClasses:    runtime.SchoolClasses,
-		SetSchoolClasses: runtime.SetSchoolClasses,
-		ActiveCaregivers: staffRoleRows(runtime.ActiveCaregivers),
-		StaffByRoles:     staffRoleRowsByRole(runtime.StaffByRoles),
+		SchoolClasses:        runtime.SchoolClasses,
+		SchoolClassesVersion: schoolstructure.StaffSchoolClassesVersion,
+		SetSchoolClasses:     runtime.SetSchoolClasses,
+		ActiveCaregivers:     staffRoleRows(runtime.ActiveCaregivers),
+		StaffByRoles:         staffRoleRowsByRole(runtime.StaffByRoles),
 
 		CreateStaff: staffCreate(runtime),
 		UpdateStaff: staffUpdate(runtime),
@@ -337,6 +339,7 @@ func staffUpdate(runtime StaffMembershipRuntime) func(context.Context, staffHTTP
 		result, err := runtime.UpdateStaff(ctx, StaffUpdateInput{
 			StaffID: input.StaffID, PersonID: input.PersonID, StaffNotes: input.StaffNotes, IsTeacher: input.IsTeacher,
 			Specialization: input.Specialization, Role: input.Role, Qualifications: input.Qualifications,
+			ExpectedVersion: input.ExpectedVersion,
 		})
 		if err != nil {
 			return staffHTTP.UpdateStaffResult{}, err

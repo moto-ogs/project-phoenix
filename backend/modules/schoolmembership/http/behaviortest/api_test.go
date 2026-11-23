@@ -172,10 +172,12 @@ type harness struct {
 	classes       []string
 	setClasses    []string
 	setClassActor int64
-	classErr      error
-	caregivers    []staffHTTP.StaffWithRoleResponse
-	byRoles       []staffHTTP.StaffWithRoleResponse
-	rolesAsked    []string
+	// setClassVersion is the token the PUT handed on (ADR 0311).
+	setClassVersion string
+	classErr        error
+	caregivers      []staffHTTP.StaffWithRoleResponse
+	byRoles         []staffHTTP.StaffWithRoleResponse
+	rolesAsked      []string
 
 	created      staffHTTP.CreateStaffInput
 	createResult staffHTTP.CreateStaffResult
@@ -321,11 +323,13 @@ func newHarness(t *testing.T, membership *fakeMembership) *harness {
 			}
 			return h.classes, nil
 		},
-		SetSchoolClasses: func(_ context.Context, _ int64, classes []string, actor int64) error {
+		SchoolClassesVersion: func(classes []string) string { return "v:" + strings.Join(classes, ",") },
+		SetSchoolClasses: func(_ context.Context, _ int64, classes []string, version string, actor int64) error {
 			if h.classErr != nil {
 				return h.classErr
 			}
 			h.setClasses = classes
+			h.setClassVersion = version
 			h.setClassActor = actor
 			h.classes = classes
 			return nil
@@ -695,11 +699,14 @@ func TestSchoolClassesRoundTripAndValidation(t *testing.T) {
 	require.Equal(t, http.StatusOK, read.Code)
 	assert.Equal(t, "School classes retrieved successfully", decode(t, read).Message)
 	assert.Contains(t, string(decode(t, read).Data), `"school_classes":["1a","2b"]`)
+	assert.Contains(t, string(decode(t, read).Data), `"version":"v:1a,2b"`, "the read answers the token of the classes")
 
-	written := h.do(t, http.MethodPut, "/staff/2/school-classes", map[string]any{"school_classes": []string{"3c"}})
+	written := h.do(t, http.MethodPut, "/staff/2/school-classes", map[string]any{"school_classes": []string{"3c"}, "expected_version": "v:1a,2b"})
 	require.Equal(t, http.StatusOK, written.Code)
 	assert.Equal(t, "School classes updated successfully", decode(t, written).Message)
 	assert.Equal(t, []string{"3c"}, h.setClasses)
+	assert.Equal(t, "v:1a,2b", h.setClassVersion, "the PUT hands the read's token to the owner")
+	assert.Contains(t, string(decode(t, written).Data), `"version":"v:3c"`, "the PUT answers the token of the saved classes")
 	assert.EqualValues(t, 7, h.setClassActor, "the audit actor is the authenticated account")
 
 	missingField := h.do(t, http.MethodPut, "/staff/2/school-classes", map[string]any{})

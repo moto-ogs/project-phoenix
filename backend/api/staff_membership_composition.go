@@ -9,6 +9,7 @@ import (
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	peoplePorts "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure"
@@ -17,6 +18,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/realtime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/workflows/staffoffboarding"
 	offboardingcompose "github.com/moto-ogs/project-phoenix/workflows/staffoffboarding/compose"
 )
@@ -35,6 +37,8 @@ type StaffDirectoryPerson struct {
 	AccountID *int64
 	CreatedAt time.Time
 	UpdatedAt time.Time
+	// Version is the person's token (peopledirectory.PersonVersion).
+	Version string
 }
 
 // StaffRoleRow is one staff member selected by account role.
@@ -75,6 +79,8 @@ type StaffUpdateInput struct {
 	Specialization string
 	Role           string
 	Qualifications string
+	// ExpectedVersion is the record's version the form showed (ADR 0311).
+	ExpectedVersion string
 }
 
 // StaffTeacherAction mirrors peoplePorts.TeacherAction as a stable string.
@@ -137,7 +143,7 @@ type StaffMembershipRuntime struct {
 	AccountsHoldingRole func(context.Context, []int64, string) (map[int64]bool, error)
 
 	SchoolClasses    func(context.Context, int64) ([]string, error)
-	SetSchoolClasses func(context.Context, int64, []string, int64) error
+	SetSchoolClasses func(context.Context, int64, []string, string, int64) error
 	ActiveCaregivers func(context.Context) ([]StaffRoleRow, error)
 	StaffByRoles     func(context.Context, []string) ([]StaffRoleRow, error)
 
@@ -318,8 +324,19 @@ func staffDirectoryWrites(users peoplePorts.PersonDirectory) (func(context.Conte
 		return StaffCreateResult{Staff: legacyStaffToMembership(staff), Teacher: legacyTeacherToMembership(teacher), TeacherCreationFailed: teacherCreationFailed}, nil
 	}
 	updateStaff := func(ctx context.Context, input StaffUpdateInput) (StaffUpdateResult, error) {
-		staff, err := users.StaffRows().FindByID(ctx, input.StaffID)
+		// The staff row lock UpdateStaffWithTeacher writes under, taken
+		// first in the request transaction: the record is compared with
+		// what the form showed before anything is written (ADR 0311).
+		staff, err := users.StaffRows().FindByIDForUpdate(ctx, input.StaffID)
 		if err != nil {
+			return StaffUpdateResult{}, err
+		}
+		teacher, err := users.TeacherRows().FindByStaffID(ctx, input.StaffID)
+		if err != nil {
+			return StaffUpdateResult{}, err
+		}
+		stored := schoolmembership.StaffRecordVersion(legacyStaffToMembership(staff), legacyTeacherToMembership(teacher))
+		if err := readstate.Check(input.ExpectedVersion, stored); err != nil {
 			return StaffUpdateResult{}, err
 		}
 		staff.StaffNotes = input.StaffNotes
@@ -380,7 +397,7 @@ func ClassifyStaffSchoolClassFailure(err error) (StaffFailureKind, error) {
 }
 
 func toStaffDirectoryPerson(id int64, firstName, lastName string, tagID *string, accountID *int64, createdAt, updatedAt time.Time) StaffDirectoryPerson {
-	person := StaffDirectoryPerson{ID: id, FirstName: firstName, LastName: lastName, AccountID: accountID, CreatedAt: createdAt, UpdatedAt: updatedAt}
+	person := StaffDirectoryPerson{ID: id, FirstName: firstName, LastName: lastName, AccountID: accountID, CreatedAt: createdAt, UpdatedAt: updatedAt, Version: peopledirectory.PersonVersion(updatedAt)}
 	if tagID != nil {
 		person.TagID = *tagID
 	}

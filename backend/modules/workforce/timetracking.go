@@ -238,6 +238,9 @@ type ScheduleUpdateInput struct {
 	RotationAnchorDate, ValidFrom string
 	Entries                       []ScheduleEntry
 	SaveAsTemplateName            string
+	// ExpectedVersion is the ScheduleVersion of the schedule the form
+	// showed (ADR 0311); another one, also an empty one, is refused.
+	ExpectedVersion string
 }
 
 // WorkSessionHistory reads and exports session history for both staff and administrators.
@@ -312,8 +315,9 @@ type CreateAbsenceRequest struct {
 	// ExpectedFingerprint confirms a Freizeitausgleich that takes the
 	// Stundenkonto below zero (#2873): the Fingerprint of the preview the
 	// Leitung confirmed. The Leitung's booking refuses an overdraft whose
-	// projection differs with general.changed_since_read (ADR 0311); a staff
-	// member's own request asks no confirmation and ignores it.
+	// projection differs with general.changed_since_read (ADR 0311). A staff
+	// member's own absence confirms nothing; its route takes the
+	// OwnAbsenceRequest of the HTTP adapter, which has no such field.
 	ExpectedFingerprint string `json:"expected_fingerprint"`
 }
 

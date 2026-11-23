@@ -290,13 +290,18 @@ func TestSeedSchedulesViaAPISkipsExternalStaff(t *testing.T) {
 	t.Parallel()
 
 	var paths []string
-	var validFrom []any
+	var validFrom, versions []any
 	srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == "GET" {
+			_, _ = fmt.Fprint(w, `{"status":"success","data":{"version":"read-schedule"}}`)
+			return
+		}
 		paths = append(paths, r.URL.Path)
 		var body map[string]any
 		_ = json.NewDecoder(r.Body).Decode(&body)
 		validFrom = append(validFrom, body["valid_from"])
-		w.Header().Set("Content-Type", "application/json")
+		versions = append(versions, body["expected_version"])
 		_, _ = fmt.Fprint(w, `{"status":"success","data":{}}`)
 	})
 	defer srv.Close()
@@ -316,6 +321,7 @@ func TestSeedSchedulesViaAPISkipsExternalStaff(t *testing.T) {
 	assert.Equal(t, []string{"/api/staff/11/schedule"}, paths)
 	// The schedule reaches back to the history, or its days carry no Soll.
 	assert.Equal(t, []any{"2026-06-03"}, validFrom)
+	assert.Equal(t, []any{"read-schedule"}, versions, "the save sends the version of the schedule it read")
 }
 
 // One member of staff stays without a Soll (#6887), so every dev and demo
@@ -325,7 +331,9 @@ func TestSeedSchedulesViaAPISkipsStaffWithoutTarget(t *testing.T) {
 
 	var paths []string
 	srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
-		paths = append(paths, r.URL.Path)
+		if r.Method != "GET" {
+			paths = append(paths, r.URL.Path)
+		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = fmt.Fprint(w, `{"status":"success","data":{}}`)
 	})
