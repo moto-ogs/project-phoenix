@@ -267,7 +267,7 @@ func (s *Phases) UpdatePhase(ctx context.Context, phase *enrollment.Phase, expec
 	var report enrollment.PhaseUpdateReport
 	err := s.runInTx(ctx, func(txCtx context.Context) error {
 		var err error
-		report, err = s.update(txCtx, phase, &expectedVersion)
+		report, err = s.update(txCtx, phase, expectedVersion)
 		return err
 	})
 	if err != nil {
@@ -276,19 +276,11 @@ func (s *Phases) UpdatePhase(ctx context.Context, phase *enrollment.Phase, expec
 	return report, nil
 }
 
-// updateInTx writes a phase a Träger copy command derived; it binds no
-// read of the school.
-func (s *Phases) updateInTx(ctx context.Context, phase *enrollment.Phase) (enrollment.PhaseUpdateReport, error) {
-	var report enrollment.PhaseUpdateReport
-	err := s.runInTx(ctx, func(txCtx context.Context) error {
-		var err error
-		report, err = s.update(txCtx, phase, nil)
-		return err
-	})
-	if err != nil {
-		return enrollment.PhaseUpdateReport{}, err
-	}
-	return report, nil
+// phaseRowLocks is the row lock of a phase beside the records port: the
+// owner's records offer it (enrollment.BookingProjection), the facade's
+// method set stays as it is (ADR 0178).
+type phaseRowLocks interface {
+	LockPhase(ctx context.Context, id int64) (*enrollment.Phase, error)
 }
 
 // checkReadPhase takes the phase's row lock and refuses with
@@ -296,7 +288,11 @@ func (s *Phases) updateInTx(ctx context.Context, phase *enrollment.Phase) (enrol
 // (ADR 0311). The caller holds the recurrence gate already, which every
 // writer that holds it takes before the row.
 func (s *Phases) checkReadPhase(ctx context.Context, id int64, expectedVersion string) error {
-	stored, err := s.deps.Records.LockPhase(ctx, id)
+	locks, ok := s.deps.Records.(phaseRowLocks)
+	if !ok {
+		return fmt.Errorf("lock phase %d: the phase records lock no row", id)
+	}
+	stored, err := locks.LockPhase(ctx, id)
 	if err != nil {
 		if s.notFound(err) {
 			return fmt.Errorf("%w: phase %d", enrollment.ErrPhaseNotFound, id)
@@ -306,9 +302,22 @@ func (s *Phases) checkReadPhase(ctx context.Context, id int64, expectedVersion s
 	return readstate.Check(expectedVersion, enrollment.PhaseVersion(stored))
 }
 
-// update writes the phase. expectedVersion binds the write to the version
-// its author read; nil is a Träger copy, which binds none.
-func (s *Phases) update(ctx context.Context, phase *enrollment.Phase, expectedVersion *string) (enrollment.PhaseUpdateReport, error) {
+// lockedForUpdate takes the recurrence gate and reads the stored phase
+// (validateCareOfferingPhaseUpdate), then holds its row and checks the
+// version its author read.
+func (s *Phases) lockedForUpdate(ctx context.Context, phase *enrollment.Phase, expectedVersion string) (*enrollment.Phase, bool, error) {
+	existing, serviceWindowChanged, err := s.validateCareOfferingPhaseUpdate(ctx, phase)
+	if err != nil {
+		return nil, false, err
+	}
+	if err := s.checkReadPhase(ctx, phase.ID, expectedVersion); err != nil {
+		return nil, false, err
+	}
+	return existing, serviceWindowChanged, nil
+}
+
+// update writes the phase over the version its author read.
+func (s *Phases) update(ctx context.Context, phase *enrollment.Phase, expectedVersion string) (enrollment.PhaseUpdateReport, error) {
 	var report enrollment.PhaseUpdateReport
 	if phase == nil || phase.ID <= 0 {
 		return report, fmt.Errorf("%w: phase with valid id is required", enrollment.ErrInvalidPhase)
@@ -316,14 +325,9 @@ func (s *Phases) update(ctx context.Context, phase *enrollment.Phase, expectedVe
 	if err := s.validatePhaseWrite(ctx, phase); err != nil {
 		return report, err
 	}
-	existing, serviceWindowChanged, err := s.validateCareOfferingPhaseUpdate(ctx, phase)
+	existing, serviceWindowChanged, err := s.lockedForUpdate(ctx, phase, expectedVersion)
 	if err != nil {
 		return report, err
-	}
-	if expectedVersion != nil {
-		if err := s.checkReadPhase(ctx, phase.ID, *expectedVersion); err != nil {
-			return report, err
-		}
 	}
 	if err := s.deps.Records.UpdatePhase(ctx, phase); err != nil {
 		return report, s.translatePhaseWriteError(err)

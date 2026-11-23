@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
@@ -114,27 +113,6 @@ func withPhaseAudience(rt *Runtime, auth AuthRef, phaseID int64, phaseBody map[s
 		}
 	}()
 	return action()
-}
-
-// putReadPhase saves the phase at path over the version it reads first, as
-// the phase editor does (ADR 0311).
-func putReadPhase(rt *Runtime, auth AuthRef, path string, body map[string]any) error {
-	raw, err := rt.Client.GetWithAuth(auth, path)
-	if err != nil {
-		return fmt.Errorf("read the phase: %w", err)
-	}
-	var stored struct {
-		Data struct {
-			Version string `json:"version"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(raw, &stored); err != nil {
-		return fmt.Errorf("decode the phase: %w", err)
-	}
-	sent := maps.Clone(body)
-	sent["expected_version"] = stored.Data.Version
-	_, err = rt.Client.PutWithAuth(auth, path, sent)
-	return err
 }
 
 // seedStudentGrade reads the grade of the class a child is in today.

@@ -72,19 +72,11 @@ func (seedTraegerHolidayCriteriaStep) Run(_ context.Context, rt *Runtime) error 
 // hardship case switched off. It returns their IDs in this order.
 func seedHolidayCriteria(rt *Runtime, auth AuthRef) ([]int64, error) {
 	// The save carries the version of the criteria it replaces (ADR 0311).
-	read, err := rt.Client.GetWithAuth(auth, "/traeger/holiday-periods/criteria")
+	version, err := readSeedVersion(rt, auth, "/traeger/holiday-periods/criteria", "the holiday criteria")
 	if err != nil {
-		return nil, fmt.Errorf("read the holiday criteria: %w", err)
+		return nil, err
 	}
-	var stored struct {
-		Data struct {
-			Version string `json:"version"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(read, &stored); err != nil || stored.Data.Version == "" {
-		return nil, fmt.Errorf("the holiday criteria carry no version: %s", read)
-	}
-	raw, err := rt.Client.PutWithAuth(auth, "/traeger/holiday-periods/criteria", map[string]any{"expected_version": stored.Data.Version, "criteria": []map[string]any{
+	raw, err := rt.Client.PutWithAuth(auth, "/traeger/holiday-periods/criteria", map[string]any{"expected_version": version, "criteria": []map[string]any{
 		{"name": "Beide Eltern berufstätig", "question": "Sind beide Eltern berufstätig?", "scope": "family", "active": true},
 		{"name": "Alleinerziehend und berufstätig", "question": "Sind Sie alleinerziehend und berufstätig?", "scope": "family", "active": true},
 		{"name": "Geschwisterkind in der OGS", "question": "Geht ein Geschwisterkind schon in die OGS?", "scope": "child", "active": true},

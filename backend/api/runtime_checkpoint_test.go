@@ -214,22 +214,29 @@ func measureRuntimeCheckpoint(t *testing.T, production *Runtime) {
 			// each repetition then saves the same state over its version.
 			phasePath := fmt.Sprintf("/api/enrollment/phases/%d", phase.ID)
 			phaseUpdate := fmt.Sprintf(`"name":"Checkpoint Updated Phase","kind":"school_year","service_start_date":%q,"service_end_date":%q,"care_overflow_mode":"waitlist","care_offering_selection_mode":"optional","is_active":true`, phaseStart, phaseEnd)
-			phaseVersion := func() string {
+			type storedPhase struct {
+				Version          string `json:"version"`
+				ServiceStartDate string `json:"service_start_date"`
+				ServiceEndDate   string `json:"service_end_date"`
+			}
+			readPhase := func() storedPhase {
 				read := checkpointRequest(production.Handler(), checkpointScenario{Method: "GET", Path: phasePath, Authenticated: true}, token)
 				require.Equal(t, http.StatusOK, read.Code, read.Body.String())
 				var stored struct {
-					Data struct {
-						Version string `json:"version"`
-					} `json:"data"`
+					Data storedPhase `json:"data"`
 				}
 				require.NoError(t, json.Unmarshal(read.Body.Bytes(), &stored))
-				return stored.Data.Version
+				return stored.Data
 			}
+			// The priming save takes the period the phase stores.
+			before := readPhase()
 			primed := checkpointRequest(production.Handler(), checkpointScenario{
-				Method: "PUT", Path: phasePath, Authenticated: true, Body: fmt.Sprintf(`{%s,"expected_version":%q}`, phaseUpdate, phaseVersion()),
+				Method: "PUT", Path: phasePath, Authenticated: true,
+				Body: fmt.Sprintf(`{"name":"Checkpoint Updated Phase","kind":"school_year","service_start_date":%q,"service_end_date":%q,"care_overflow_mode":"waitlist","care_offering_selection_mode":"optional","is_active":true,"expected_version":%q}`,
+					before.ServiceStartDate, before.ServiceEndDate, before.Version),
 			}, token)
 			require.Equal(t, http.StatusOK, primed.Code, primed.Body.String())
-			updated := phaseVersion()
+			updated := readPhase().Version
 			scenarios = []checkpointScenario{
 				{"enrollment.phase-update", "PUT", phasePath, 200, true, fmt.Sprintf(`{%s,"expected_version":%q}`, phaseUpdate, updated)},
 				{"enrollment.phase-update-invalid", "PUT", phasePath, 400, true, fmt.Sprintf(`{"expected_version":%q}`, updated)},
