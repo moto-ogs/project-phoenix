@@ -181,17 +181,9 @@ func (s *Store) FindParticipation(ctx context.Context, studentID int64, start, e
 		return domain.ParticipationData{}, domain.OperationStats{}, err
 	}
 	stats := domain.OperationStats{}
-	var schedules []participationScheduleRow
-	if err := timedQuery(&stats, func() error {
-		return db.NewSelect().Model(&schedules).
-			ModelTableExpr(`schedule.meal_participation_schedules AS "meal_participation_schedule"`).
-			Where(`"meal_participation_schedule".tenant_id = ?`, tenantID).
-			Where(`"meal_participation_schedule".student_id = ?`, studentID).
-			Where(`"meal_participation_schedule".effective_from <= ?`, end).
-			OrderExpr(`"meal_participation_schedule".effective_from ASC`).
-			Scan(ctx)
-	}); err != nil {
-		return domain.ParticipationData{}, stats, fmt.Errorf("meal plan postgres: find participation schedules: %w", err)
+	schedules, err := findSchedules(ctx, db, tenantID, studentID, &stats)
+	if err != nil {
+		return domain.ParticipationData{}, stats, err
 	}
 
 	var overrides []participationOverrideRow
@@ -220,6 +212,57 @@ func (s *Store) FindParticipation(ctx context.Context, studentID int64, start, e
 
 	data := participationValues(schedules, overrides, sickDays)
 	return data, stats, nil
+}
+
+// findSchedules reads every period of a child's regular days, the past and
+// the coming ones: a read shows the one in force, and the version of a
+// schedule save covers all of them (ADR 0311).
+func findSchedules(ctx context.Context, db bun.IDB, tenantID, studentID int64, stats *domain.OperationStats) ([]participationScheduleRow, error) {
+	var schedules []participationScheduleRow
+	if err := timedQuery(stats, func() error {
+		return db.NewSelect().Model(&schedules).
+			ModelTableExpr(`schedule.meal_participation_schedules AS "meal_participation_schedule"`).
+			Where(`"meal_participation_schedule".tenant_id = ?`, tenantID).
+			Where(`"meal_participation_schedule".student_id = ?`, studentID).
+			OrderExpr(`"meal_participation_schedule".effective_from ASC`).
+			Scan(ctx)
+	}); err != nil {
+		return nil, fmt.Errorf("meal plan postgres: find participation schedules: %w", err)
+	}
+	return schedules, nil
+}
+
+// FindSchedules reads every period of a child's regular days, as
+// FindParticipation does.
+func (s *Store) FindSchedules(ctx context.Context, studentID int64) ([]domain.ParticipationSchedule, domain.OperationStats, error) {
+	db, tenantID, err := s.database(ctx)
+	if err != nil {
+		return nil, domain.OperationStats{}, err
+	}
+	var stats domain.OperationStats
+	rows, err := findSchedules(ctx, db, tenantID, studentID, &stats)
+	if err != nil {
+		return nil, stats, err
+	}
+	return participationValues(rows, nil, nil).Schedules, stats, nil
+}
+
+// LockSchedule takes the transaction lock of a child's regular days, so a
+// schedule save's check of the stored days and its write stay together.
+func (s *Store) LockSchedule(ctx context.Context, studentID int64) (domain.OperationStats, error) {
+	db, tenantID, err := s.database(ctx)
+	if err != nil {
+		return domain.OperationStats{}, err
+	}
+	stats := domain.OperationStats{Queries: 1}
+	started := time.Now()
+	_, err = db.NewRaw(`SELECT pg_advisory_xact_lock(hashtextextended(?, 0))`,
+		fmt.Sprintf("meal_plan.schedule:%d:%d", tenantID, studentID)).Exec(ctx)
+	stats.StatementDuration = time.Since(started)
+	if err != nil {
+		return stats, fmt.Errorf("meal plan postgres: lock schedule: %w", err)
+	}
+	return stats, nil
 }
 
 func (s *Store) InsertParticipationSchedule(ctx context.Context, studentID, accountID int64, effectiveFrom domain.Date, weekdays []domain.Weekday) (domain.OperationStats, error) {

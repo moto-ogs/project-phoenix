@@ -129,14 +129,16 @@ func mealParticipationWriter(child *Child) error {
 	return child.RequireOGSCareRunning()
 }
 
-func (s *Service) ReplaceMealParticipationSchedule(ctx context.Context, accountID, studentID int64, weekdays []MealWeekday) (string, error) {
+// ReplaceMealParticipationSchedule replaces the child's regular days against
+// the version the parent read (MealParticipationPlan.Version).
+func (s *Service) ReplaceMealParticipationSchedule(ctx context.Context, accountID, studentID int64, weekdays []MealWeekday, expectedVersion string) (string, error) {
 	var effectiveFrom string
 	err := s.WithPermittedChildForWrite(ctx, accountID, studentID, GuardianPermissionPortalAccess, mealParticipationWriter, func(txCtx context.Context, _ *Child) error {
 		if err := s.RequireCareRunningForUpdate(txCtx, studentID); err != nil {
 			return err
 		}
 		var writeErr error
-		effectiveFrom, writeErr = s.MealPlan.ReplaceParticipationSchedule(txCtx, MealParticipationSchedule{StudentID: studentID, GuardianAccountID: accountID, Weekdays: weekdays})
+		effectiveFrom, writeErr = s.MealPlan.ReplaceParticipationSchedule(txCtx, MealParticipationSchedule{StudentID: studentID, GuardianAccountID: accountID, Weekdays: weekdays, ExpectedVersion: expectedVersion})
 		return writeErr
 	}, mealParticipationWriteAccess)
 	if err != nil {

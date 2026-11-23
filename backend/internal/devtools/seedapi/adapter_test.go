@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -31,7 +32,24 @@ const (
 	seedHTTPStatusServiceUnavailable  = testpkg.HTTPStatusServiceUnavailable
 )
 
-var newSeedHTTPTestServer = testpkg.NewHTTPTestServer
+// newSeedHTTPTestServer answers the reads a seeded save takes its version
+// from (ADR 0311) before the test's handler: the meal plan days and a
+// child's regular lunch days, from the staff or the parents' route.
+func newSeedHTTPTestServer(handler func(seedHTTPResponseWriter, *seedHTTPRequest)) *testpkg.HTTPTestServer {
+	return testpkg.NewHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
+		if r.Method == seedHTTPMethodGet {
+			switch {
+			case r.URL.Path == "/api/meal-plan/days":
+				_, _ = fmt.Fprint(w, `{"status":"success","data":[]}`)
+				return
+			case strings.HasPrefix(r.URL.Path, "/api/meal-plan/participation/"), strings.HasSuffix(r.URL.Path, "/meal-participation"):
+				_, _ = fmt.Fprint(w, `{"status":"success","data":{"version":"read-version"}}`)
+				return
+			}
+		}
+		handler(w, r)
+	})
+}
 
 type seedTestAdapter struct{ inner *testpkg.HTTPAPIAdapter }
 

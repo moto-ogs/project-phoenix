@@ -161,6 +161,7 @@ describe("MealParticipantList", () => {
     mocks.getChildMealSchedule.mockResolvedValue({
       weekdays: [1, 3],
       effectiveFrom: "2026-09-01",
+      version: "v-read",
     });
     mocks.setChildMealDay.mockResolvedValue(undefined);
     mocks.clearChildMealDay.mockResolvedValue(undefined);
@@ -172,9 +173,9 @@ describe("MealParticipantList", () => {
     async (selection) => {
       mocks.getChildMealSchedule
         .mockReset()
-        .mockResolvedValueOnce({ weekdays: [1, 3] })
-        .mockResolvedValueOnce({ weekdays: [4] })
-        .mockResolvedValueOnce({ weekdays: [5] });
+        .mockResolvedValueOnce({ weekdays: [1, 3], version: "v-first" })
+        .mockResolvedValueOnce({ weekdays: [4], version: "v-other" })
+        .mockResolvedValue({ weekdays: [1, 3], version: "v-first" });
       render(
         <MealRegistrationChangeModal
           isOpen
@@ -237,9 +238,11 @@ describe("MealParticipantList", () => {
           screen.getByRole("checkbox", { name: "Donnerstag" }),
         ).toBeChecked(),
       );
+      // Back on the first selection, its stored days show again (from the
+      // shared cache) and the edit made before is gone.
       await selectOther(true);
       await waitFor(() =>
-        expect(screen.getByRole("checkbox", { name: "Freitag" })).toBeChecked(),
+        expect(screen.getByRole("checkbox", { name: "Montag" })).toBeChecked(),
       );
       expect(
         screen.getByRole("checkbox", { name: "Dienstag" }),
@@ -248,43 +251,40 @@ describe("MealParticipantList", () => {
       await waitFor(() =>
         expect(mocks.replaceChildMealSchedule).toHaveBeenCalledWith(
           "42",
-          [5],
+          [1, 3],
           "2026-09-07",
+          "v-first",
         ),
       );
     },
   );
 
-  it("waits for this opening's meal schedule before edits can freeze a draft", async () => {
-    const props = {
-      date: "2026-09-07",
-      participants: [
-        {
-          studentId: "42",
-          firstName: "Mia",
-          lastName: "Muster",
-          schoolClass: "2a",
-        },
-      ],
-      others: [],
-      initialStudentId: "42",
-      onClose: vi.fn(),
-      onSaved: vi.fn(),
-    };
-    const view = render(<MealRegistrationChangeModal {...props} isOpen />);
-    fireEvent.click(screen.getByRole("button", { name: "Feste Tage" }));
-    await waitFor(() =>
-      expect(screen.getByRole("checkbox", { name: "Montag" })).toBeChecked(),
+  it("keeps saving locked until the regular days have loaded", async () => {
+    const first = deferred<{ weekdays: number[]; version: string }>();
+    mocks.getChildMealSchedule.mockReturnValueOnce(first.promise);
+    render(
+      <MealRegistrationChangeModal
+        isOpen
+        date="2026-09-07"
+        participants={[
+          {
+            studentId: "42",
+            firstName: "Mia",
+            lastName: "Muster",
+            schoolClass: "2a",
+          },
+        ]}
+        others={[]}
+        initialStudentId="42"
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
     );
-    view.rerender(<MealRegistrationChangeModal {...props} isOpen={false} />);
-    const fresh = deferred<{ weekdays: number[]; effectiveFrom: null }>();
-    mocks.getChildMealSchedule.mockReturnValue(fresh.promise);
-    view.rerender(<MealRegistrationChangeModal {...props} isOpen />);
     fireEvent.click(screen.getByRole("button", { name: "Feste Tage" }));
     expect(screen.getByRole("button", { name: "Speichern" })).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     expect(mocks.replaceChildMealSchedule).not.toHaveBeenCalled();
-    await act(async () => fresh.reject(new ApiError("offline", 503)));
+    await act(async () => first.reject(new ApiError("offline", 503)));
     expect(
       await screen.findByText(
         catalogText("general.unavailable", "die festen Tage"),
@@ -294,13 +294,12 @@ describe("MealParticipantList", () => {
     expect(screen.getByRole("checkbox", { name: "Montag" })).toBeDisabled();
     mocks.getChildMealSchedule.mockResolvedValue({
       weekdays: [2, 4],
-      effectiveFrom: null,
+      version: "v-retried",
     });
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
     await waitFor(() =>
       expect(screen.getByRole("checkbox", { name: "Dienstag" })).toBeChecked(),
     );
-    expect(screen.getByRole("checkbox", { name: "Donnerstag" })).toBeChecked();
     fireEvent.click(screen.getByRole("checkbox", { name: "Freitag" }));
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await waitFor(() =>
@@ -308,8 +307,67 @@ describe("MealParticipantList", () => {
         "42",
         [2, 4, 5],
         "2026-09-07",
+        "v-retried",
       ),
     );
+  });
+
+  // ADR 0311: the save carries the version of the regular days as read. A
+  // colleague's or a parent's change since is refused; the dialog then shows
+  // the stored days instead of the edit and offers no retry of the request.
+  it("shows the stored regular days when they changed since they were read", async () => {
+    mocks.getChildMealSchedule
+      .mockReset()
+      .mockResolvedValueOnce({ weekdays: [1, 3], version: "v-read" })
+      .mockResolvedValue({ weekdays: [2, 4], version: "v-stored" });
+    mocks.replaceChildMealSchedule.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    const onSaved = vi.fn();
+    render(
+      <MealRegistrationChangeModal
+        isOpen
+        date="2026-09-07"
+        participants={[
+          {
+            studentId: "42",
+            firstName: "Mia",
+            lastName: "Muster",
+            schoolClass: "2a",
+          },
+        ]}
+        others={[]}
+        initialStudentId="42"
+        onClose={vi.fn()}
+        onSaved={onSaved}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Feste Tage" }));
+    await waitFor(() =>
+      expect(screen.getByRole("checkbox", { name: "Montag" })).toBeChecked(),
+    );
+    fireEvent.click(screen.getByRole("checkbox", { name: "Freitag" }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    const refusal = await screen.findByText(
+      catalogText("general.changed_since_read", "die Anmeldung"),
+    );
+    expect(mocks.replaceChildMealSchedule).toHaveBeenCalledWith(
+      "42",
+      [1, 3, 5],
+      "2026-09-07",
+      "v-read",
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("checkbox", { name: "Dienstag" })).toBeChecked(),
+    );
+    expect(screen.getByRole("checkbox", { name: "Freitag" })).not.toBeChecked();
+    const alert = refusal.closest<HTMLElement>('[role="alert"]');
+    expect(alert).not.toBeNull();
+    expect(
+      within(alert!).queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
+    expect(onSaved).not.toHaveBeenCalled();
   });
 
   // #3873: seeing the list opens no change of a registration.
@@ -723,7 +781,10 @@ describe("MealParticipantList", () => {
     });
 
     it("reloads the regular days for each selected effective date", async () => {
-      let finishLoad: (value: { weekdays: number[] }) => void = () => undefined;
+      let finishLoad: (value: {
+        weekdays: number[];
+        version: string;
+      }) => void = () => undefined;
       render(<MealParticipantList canRegister />);
       const dialog = await openChangeFromHead();
       fireEvent.click(within(dialog).getByRole("combobox", { name: "Kind" }));
@@ -762,7 +823,7 @@ describe("MealParticipantList", () => {
       expect(
         within(dialog).getByRole("button", { name: "Speichern" }),
       ).toBeDisabled();
-      finishLoad({ weekdays: [2, 4] });
+      finishLoad({ weekdays: [2, 4], version: "v-later" });
       await waitFor(() =>
         expect(
           within(dialog).getByRole("checkbox", { name: "Dienstag" }),
@@ -779,6 +840,7 @@ describe("MealParticipantList", () => {
           "42",
           [2, 4],
           "2026-09-14",
+          "v-later",
         ),
       );
     });
@@ -813,6 +875,7 @@ describe("MealParticipantList", () => {
           "42",
           [1, 3, 5],
           "2026-09-07",
+          "v-read",
         ),
       );
     });

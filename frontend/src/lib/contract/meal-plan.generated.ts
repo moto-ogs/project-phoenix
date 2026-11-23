@@ -33,6 +33,32 @@ export const MealPlanWeekEntryResponseSchema: z.ZodType<MealPlanWeekEntryRespons
   allergens: nullable(arr(str)),
 });
 
+/** Go: mealplan.MealPlanDishResponse */
+export interface MealPlanDishResponse {
+  dish: string;
+  note?: string;
+  allergens: string[] | null;
+}
+
+export const MealPlanDishResponseSchema: z.ZodType<MealPlanDishResponse, unknown> = object<MealPlanDishResponse>({
+  dish: str,
+  note: optional(str),
+  allergens: nullable(arr(str)),
+});
+
+/** Go: mealplan.MealPlanDayResponse */
+export interface MealPlanDayResponse {
+  date: string;
+  version: string;
+  dishes: MealPlanDishResponse[] | null;
+}
+
+export const MealPlanDayResponseSchema: z.ZodType<MealPlanDayResponse, unknown> = object<MealPlanDayResponse>({
+  date: calendarDate,
+  version: str,
+  dishes: nullable(arr(MealPlanDishResponseSchema)),
+});
+
 /** Go: mealplan.OrderClassCountResponse */
 export interface OrderClassCountResponse {
   school_class: string;
@@ -181,13 +207,28 @@ export interface ChildParticipationResponse {
   weekdays: number[] | null;
   effective_from?: string;
   days: ChildDayResponse[] | null;
+  version: string;
 }
 
 export const ChildParticipationResponseSchema: z.ZodType<ChildParticipationResponse, unknown> = object<ChildParticipationResponse>({
   weekdays: nullable(arr(safeInt)),
   effective_from: optional(calendarDate),
   days: nullable(arr(ChildDayResponseSchema)),
+  version: str,
 });
+
+/** Go: mealplan.DishRequest */
+export interface DishRequest {
+  dish?: string;
+  note?: string | null;
+  allergens?: string[] | null;
+}
+
+/** Go: mealplan.SaveDayRequest */
+export interface SaveDayRequest {
+  dishes?: DishRequest[] | null;
+  expected_version?: string;
+}
 
 /** Go: mealplan.ChildDayRequest */
 export interface ChildDayRequest {
@@ -198,6 +239,7 @@ export interface ChildDayRequest {
 export interface ChildScheduleRequest {
   weekdays?: number[] | null;
   effective_from?: string;
+  expected_version?: string;
 }
 
 /** Go: mealplan.ScheduleChangedResponse */
@@ -209,21 +251,24 @@ export const ScheduleChangedResponseSchema: z.ZodType<ScheduleChangedResponse, u
   effective_from: calendarDate,
 });
 
-/** Go: mealplan.DishRequest */
-export interface DishRequest {
-  dish?: string;
-  note?: string | null;
-  allergens?: string[] | null;
-}
-
 /** Go: mealplan.SetDayRequest */
 export interface SetDayRequest {
   dishes?: DishRequest[] | null;
   expected?: DishRequest[] | null;
 }
 
+/** Query of DELETE /api/meal-plan/{date} */
+export interface DeleteMealPlanDateQuery {
+  expected_version?: string;
+}
+
 /** Query of GET /api/meal-plan/ */
 export interface GetMealPlanQuery {
+  week_start?: string;
+}
+
+/** Query of GET /api/meal-plan/days */
+export interface GetMealPlanDaysQuery {
   week_start?: string;
 }
 
@@ -280,14 +325,24 @@ export const routes = {
     method: "DELETE",
     pattern: "/api/meal-plan/{date}",
     portals: ["tenant"],
+    deprecated: true,
+    query: ["expected_version"],
     response: noData,
   },
   "GET /api/meal-plan/": {
     method: "GET",
     pattern: "/api/meal-plan/",
     portals: ["tenant"],
+    deprecated: true,
     query: ["week_start"],
     response: success(z.array(MealPlanWeekEntryResponseSchema)),
+  },
+  "GET /api/meal-plan/days": {
+    method: "GET",
+    pattern: "/api/meal-plan/days",
+    portals: ["tenant"],
+    query: ["week_start"],
+    response: success(z.array(MealPlanDayResponseSchema)),
   },
   "GET /api/meal-plan/orders": {
     method: "GET",
@@ -338,6 +393,13 @@ export const routes = {
     query: ["from", "to"],
     response: success(ChildParticipationResponseSchema),
   },
+  "PUT /api/meal-plan/days/{date}": {
+    method: "PUT",
+    pattern: "/api/meal-plan/days/{date}",
+    portals: ["tenant"],
+    request: requestBody<SaveDayRequest>(),
+    response: success(MealPlanDayResponseSchema),
+  },
   "PUT /api/meal-plan/participation/{studentId}/days/{date}": {
     method: "PUT",
     pattern: "/api/meal-plan/participation/{studentId}/days/{date}",
@@ -356,6 +418,7 @@ export const routes = {
     method: "PUT",
     pattern: "/api/meal-plan/{date}",
     portals: ["tenant"],
+    deprecated: true,
     request: requestBody<SetDayRequest>(),
     response: noData,
   },

@@ -10,6 +10,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 const DateLayout = "2006-01-02"
@@ -160,13 +162,13 @@ func StudentStatusDayStatusesExcept(status string) []string {
 	return result
 }
 
-// ParentRequestVersion is the optimistic-concurrency token of one request
-// row: its updated_at in RFC 3339 nanoseconds, empty for a zero time.
+// ParentRequestVersion is the read-state token of one request row
+// (readstate.Of, ADR 0311), empty for a zero time.
 func ParentRequestVersion(updatedAt time.Time) string {
 	if updatedAt.IsZero() {
 		return ""
 	}
-	return updatedAt.UTC().Format(time.RFC3339Nano)
+	return readstate.Of(updatedAt)
 }
 
 // Request is one excused-absence request row.

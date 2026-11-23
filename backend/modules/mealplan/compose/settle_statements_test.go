@@ -39,8 +39,8 @@ func TestSettleReadsTheDueDaysOnce(t *testing.T) {
 		for range children {
 			student := testpkg.CreateTestStudent(t, db, "Wenn", "Woche", "4a")
 			tenantID = student.TenantID
-			_, err := early.ReplaceParticipationSchedule(ctx, mealplan.ReplaceParticipationSchedule{StudentID: student.ID, GuardianAccountID: account.ID,
-				Weekdays: []mealplan.Weekday{mealplan.Monday, mealplan.Tuesday, mealplan.Wednesday, mealplan.Thursday, mealplan.Friday}})
+			_, err := early.ReplaceParticipationSchedule(ctx, AsRead(t, early, ctx, mealplan.ReplaceParticipationSchedule{StudentID: student.ID, GuardianAccountID: account.ID,
+				Weekdays: []mealplan.Weekday{mealplan.Monday, mealplan.Tuesday, mealplan.Wednesday, mealplan.Thursday, mealplan.Friday}}))
 			require.NoError(t, err)
 		}
 		worker := buildModuleWithRules(t, db, weekly, now)
@@ -102,8 +102,8 @@ func TestSettleKeepsEachDaysDeadlineWhenReadTogether(t *testing.T) {
 	sickLate := testpkg.CreateTestStudent(t, db, "Simon", "Spät", "4a")
 	healthy := testpkg.CreateTestStudent(t, db, "Greta", "Gesund", "4a")
 	for _, id := range []int64{sickEarly.ID, sickLate.ID, healthy.ID} {
-		_, err := early.ReplaceParticipationSchedule(ctx, mealplan.ReplaceParticipationSchedule{StudentID: id, GuardianAccountID: account.ID,
-			Weekdays: []mealplan.Weekday{mealplan.Monday, mealplan.Wednesday, mealplan.Friday}})
+		_, err := early.ReplaceParticipationSchedule(ctx, AsRead(t, early, ctx, mealplan.ReplaceParticipationSchedule{StudentID: id, GuardianAccountID: account.ID,
+			Weekdays: []mealplan.Weekday{mealplan.Monday, mealplan.Wednesday, mealplan.Friday}}))
 		require.NoError(t, err)
 	}
 	// The order of the week of 2026-09-14 is due at Thursday 2026-09-10 noon.

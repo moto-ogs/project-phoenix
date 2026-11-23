@@ -22,7 +22,7 @@ type MealPlanRows[D ~string, E, P any, W ~int, Day, R, C any] struct {
 	// the regular days are changeable, the sick-note rule) and its rows.
 	Plan             func(P) (MealParticipationPlan, []W, []Day)
 	ParticipationDay func(Day) MealParticipationDay
-	Schedule         func(int64, int64, []W) R
+	Schedule         func(int64, int64, []W, string) R
 	Change           func(int64, int64, D, bool) C
 	// Week changes the open days of a week in one write (#3873).
 	Week func(context.Context, MealParticipationChange) (MealWeekChange, error)
@@ -47,12 +47,12 @@ func NewMealPlan[D ~string, E, P any, W ~int, Day, R, C any](provider MealPlanSo
 func mealParticipationDay[D ~string, C any](change MealParticipationChange, convert func(int64, int64, D, bool) C) C {
 	return convert(change.StudentID, change.GuardianAccountID, D(change.Date.String()), change.Participating)
 }
-func portalSchedule[W ~int, R any](schedule MealParticipationSchedule, convert func(int64, int64, []W) R) R {
+func portalSchedule[W ~int, R any](schedule MealParticipationSchedule, convert func(int64, int64, []W, string) R) R {
 	weekdays := make([]W, 0, len(schedule.Weekdays))
 	for _, weekday := range schedule.Weekdays {
 		weekdays = append(weekdays, W(weekday))
 	}
-	return convert(schedule.StudentID, schedule.GuardianAccountID, weekdays)
+	return convert(schedule.StudentID, schedule.GuardianAccountID, weekdays, schedule.ExpectedVersion)
 }
 func portalParticipation[D ~string, E, P any, W ~int, Day, R, C any](plan P, rows MealPlanRows[D, E, P, W, Day, R, C]) MealParticipationPlan {
 	out, weekdays, days := rows.Plan(plan)

@@ -25,6 +25,9 @@ type ChildParticipationResponse struct {
 	Weekdays      []int              `json:"weekdays"`
 	EffectiveFrom string             `json:"effective_from,omitempty" contract:"date"`
 	Days          []ChildDayResponse `json:"days"`
+	// Version is the read-state token of the child's regular days (ADR
+	// 0311); a change of them sends it back as expected_version.
+	Version string `json:"version"`
 }
 
 // ChildDayRequest registers (true) or cancels (false) a day.
@@ -40,9 +43,13 @@ func (request *ChildDayRequest) Bind(*http.Request) error {
 }
 
 // ChildScheduleRequest sets the regular days from a day on.
+// ExpectedVersion is the version of the regular days as read: days changed
+// since, and a change without one, are refused with
+// general.changed_since_read.
 type ChildScheduleRequest struct {
-	Weekdays      []int  `json:"weekdays"`
-	EffectiveFrom string `json:"effective_from" contract:"date"`
+	Weekdays        []int  `json:"weekdays"`
+	EffectiveFrom   string `json:"effective_from" contract:"date"`
+	ExpectedVersion string `json:"expected_version"`
 }
 
 func (request *ChildScheduleRequest) Bind(*http.Request) error {
@@ -69,7 +76,7 @@ func (rs *Resource) getChildParticipation(w http.ResponseWriter, r *http.Request
 		rs.runtime.ModuleFailure(w, r, err, "failed to load meal participation")
 		return
 	}
-	response := ChildParticipationResponse{EffectiveFrom: string(plan.EffectiveFrom), Weekdays: make([]int, 0, len(plan.Weekdays)), Days: make([]ChildDayResponse, 0, len(plan.Days))}
+	response := ChildParticipationResponse{EffectiveFrom: string(plan.EffectiveFrom), Version: plan.Version, Weekdays: make([]int, 0, len(plan.Weekdays)), Days: make([]ChildDayResponse, 0, len(plan.Days))}
 	for _, weekday := range plan.Weekdays {
 		response.Weekdays = append(response.Weekdays, int(weekday))
 	}
@@ -129,6 +136,7 @@ func (rs *Resource) replaceChildSchedule(w http.ResponseWriter, r *http.Request)
 	}
 	effectiveFrom, err := rs.module.ReplaceScheduleBySchool(r.Context(), mealplanModule.SchoolSchedule{
 		StudentID: studentID, StaffAccountID: rs.runtime.CurrentAccountID(r.Context()), Weekdays: weekdays, EffectiveFrom: mealplanModule.Date(request.EffectiveFrom),
+		ExpectedVersion: request.ExpectedVersion,
 	})
 	if err != nil {
 		rs.runtime.ModuleFailure(w, r, err, "failed to change the regular meal days")

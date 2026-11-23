@@ -600,9 +600,15 @@ func mealPlanRouteContracts() []common.RouteContract {
 	week := []common.QueryParam{{Name: "week_start", Kind: common.QueryDate}}
 	format := common.QueryParam{Name: "format", Kind: common.QueryString, Values: []string{"pdf", "xlsx"}}
 	return []common.RouteContract{
-		{Method: "GET", Pattern: "/meal-plan/", Portals: portals, Query: week, Response: types.Week},
-		{Method: "PUT", Pattern: "/meal-plan/{date}", Portals: portals, Request: types.Day, NoData: true},
-		{Method: "DELETE", Pattern: "/meal-plan/{date}", Portals: portals, NoData: true},
+		// The days with their version replace the week as entries and the
+		// save with the day as read (ADR 0311); no client calls the
+		// deprecated routes after this release.
+		{Method: "GET", Pattern: "/meal-plan/days", Portals: portals, Query: week, Response: types.Days},
+		{Method: "PUT", Pattern: "/meal-plan/days/{date}", Portals: portals, Request: types.SaveDay, Response: types.SavedDay},
+		{Method: "GET", Pattern: "/meal-plan/", Portals: portals, Query: week, Response: types.Week, Deprecated: true},
+		{Method: "PUT", Pattern: "/meal-plan/{date}", Portals: portals, Request: types.Day, NoData: true, Deprecated: true},
+		{Method: "DELETE", Pattern: "/meal-plan/{date}", Portals: portals, NoData: true, Deprecated: true,
+			Query: []common.QueryParam{{Name: "expected_version", Kind: common.QueryString}}},
 		{Method: "GET", Pattern: "/meal-plan/orders", Portals: portals, Query: window, Response: types.Orders},
 		{Method: "GET", Pattern: "/meal-plan/participants", Portals: portals, Query: daily, Response: types.DailyList},
 		{Method: "GET", Pattern: "/meal-plan/participants/week", Portals: portals, Query: week, Response: types.WeeklyList},
