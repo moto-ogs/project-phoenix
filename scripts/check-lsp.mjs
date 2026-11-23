@@ -236,6 +236,23 @@ try {
     await ts.close();
   }
 
+  const editorKeyName = `lsp-key-${process.pid}`;
+  const editorKeyPath = fixture(
+    join(root, `frontend/src/${editorKeyName}.ts`),
+    "export type Key = number;",
+  );
+  const editorConsumer = [
+    `import type { Key } from "./${editorKeyName}";`,
+    "export const send = fetch;",
+    "export const asNumber = (value: Key) => Number(value);",
+  ].join("\n");
+  const editorConsumers = ["first", "second"].map((name) =>
+    fixture(
+      join(root, `frontend/src/${editorKeyName}-${name}.ts`),
+      editorConsumer,
+    ),
+  );
+
   const ox = new Lsp("oxlint", ["--lsp"]);
   await ox.initialize(root);
   const lintText =
@@ -292,6 +309,35 @@ try {
   ]);
   console.log(
     "PASS Oxlint: unsaved BFF diagnostics resolve local aliases and project types",
+  );
+  const hasDiagnostic = (messages, rule) =>
+    messages.params.diagnostics.some((diagnostic) =>
+      String(diagnostic.code).includes(rule),
+    );
+  for (const [index, consumer] of editorConsumers.entries()) {
+    if (index === 1) {
+      writeFileSync(
+        editorKeyPath,
+        [
+          'import type { StudentResponse } from "~/lib/contract/students.generated";',
+          'export type Key = StudentResponse["id"];',
+        ].join("\n"),
+      );
+    }
+    ox.open(consumer, "typescript", editorConsumer);
+    const diagnostics = await ox.notification(
+      (m) =>
+        m.method === "textDocument/publishDiagnostics" &&
+        m.params.uri === uri(consumer) &&
+        hasDiagnostic(m, "no-raw-browser-transport"),
+    );
+    assert.equal(
+      hasDiagnostic(diagnostics, "no-numeric-identifier"),
+      index === 1,
+    );
+  }
+  console.log(
+    "PASS Oxlint: a saved dependency refreshes another file's identifier diagnostics",
   );
   await ox.close();
 

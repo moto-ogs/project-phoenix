@@ -27,13 +27,15 @@ let project;
 let wireTypes;
 let wireContractText;
 let diskCache;
+let editorSnapshot;
 
 const cacheFile = resolve(
   frontend,
   "node_modules/.cache/identifier-provenance.json",
 );
 // Never use persisted CLI results in CI or the language server.
-const reuseDiskResults = !process.env.CI && !process.argv.includes("--lsp");
+const inEditor = process.argv.includes("--lsp");
+const reuseDiskResults = !process.env.CI && !inEditor;
 
 // Checking just the files in the program misses module resolution changes.
 // Record the compiler's directory listings, symlink resolutions and failed
@@ -76,6 +78,44 @@ function observeInputs(host, snapshot) {
   return host;
 }
 
+function inputsStillMatch(observations) {
+  try {
+    for (const [method, inputs] of observations) {
+      if (!compilerInputs.includes(method)) return false;
+      for (const [key, value] of inputs) {
+        const args =
+          method === "readDirectory"
+            ? JSON.parse(key).map((arg) => arg ?? undefined)
+            : [key];
+        if (inputValue(method, ts.sys[method](...args)) !== value) return false;
+      }
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function currentEditorInputs() {
+  if (!inEditor) return;
+  if (
+    editorSnapshot &&
+    (editorSnapshot.changed ||
+      !inputsStillMatch(editorSnapshot.inputs) ||
+      (wireContractText !== undefined &&
+        readFileSync(contractFile, "utf8") !== wireContractText))
+  ) {
+    // Unchanged buffer text is not a version for its imported types.
+    config =
+      project =
+      wireTypes =
+      wireContractText =
+      editorSnapshot =
+        undefined;
+  }
+  return (editorSnapshot ??= { inputs: new Map(), changed: false });
+}
+
 function loadCache() {
   let version;
   try {
@@ -89,20 +129,7 @@ function loadCache() {
       readContract(),
     ]);
     const previous = JSON.parse(readFileSync(cacheFile, "utf8"));
-    if (
-      previous.version === version &&
-      previous.inputs.every(
-        ([method, inputs]) =>
-          compilerInputs.includes(method) &&
-          inputs.every(([key, value]) => {
-            const args =
-              method === "readDirectory"
-                ? JSON.parse(key).map((arg) => arg ?? undefined)
-                : [key];
-            return inputValue(method, ts.sys[method](...args)) === value;
-          }),
-      )
-    ) {
+    if (previous.version === version && inputsStillMatch(previous.inputs)) {
       return { version, results: new Map(previous.results) };
     }
   } catch {
@@ -212,11 +239,8 @@ function declaredKind(type, checker, seen) {
     type.operator === ts.SyntaxKind.ReadonlyKeyword
   )
     return declaredKind(type.type, checker, seen);
-  if (ts.isArrayTypeNode(type)) {
-    return declaredKind(type.elementType, checker, seen) === "id"
-      ? "id-list"
-      : undefined;
-  }
+  if (ts.isArrayTypeNode(type))
+    return declaredCollectionKind(type.elementType, checker, seen);
   if (ts.isUnionTypeNode(type)) {
     let known;
     for (const member of type.types) {
@@ -242,13 +266,16 @@ function declaredKind(type, checker, seen) {
   if (ts.isTypeReferenceNode(type)) {
     const [element] = type.typeArguments ?? [];
     if (element && checker.isArrayType(checker.getTypeFromTypeNode(type))) {
-      return declaredKind(element, checker, seen) === "id"
-        ? "id-list"
-        : undefined;
+      return declaredCollectionKind(element, checker, seen);
     }
     const symbol = checker.getSymbolAtLocation(type.typeName);
     return contractKind(symbol, checker, seen);
   }
+}
+
+function declaredCollectionKind(element, checker, seen) {
+  const kind = declaredKind(element, checker, seen);
+  return kind === "id" ? "id-list" : kind;
 }
 
 function contractKind(symbol, checker, seen = new Set()) {
@@ -478,6 +505,7 @@ export function numericIdentifiers(file, text, operands) {
   // rule finds an operand inside the frontend workspace.
   ts ??= require("typescript");
   const inProject = filename.startsWith(sourceRoot);
+  const editorInputs = inProject ? currentEditorInputs() : undefined;
   const canCache = inProject && reuseDiskResults;
   const request =
     canCache &&
@@ -497,17 +525,17 @@ export function numericIdentifiers(file, text, operands) {
     // plugin can fail on memory-constrained CI workers.
     const snapshot = canCache
       ? { inputs: new Map(), changed: false }
-      : undefined;
+      : editorInputs;
     config = lintConfig(snapshot);
     project = createProgram(config.roots, { snapshot });
-    if (snapshot) {
+    if (canCache) {
       // Keep results from one compiler snapshot. Files can change after a
       // cache hit but before a later request needs to open a new program.
       diskCache.results.clear();
       saveCache(snapshot);
     }
   }
-  config ??= lintConfig();
+  config ??= lintConfig(editorInputs);
   const source = project?.getSourceFile(filename);
   if (source?.text === text) {
     const identifiers = findIdentifiers(
@@ -530,6 +558,7 @@ export function numericIdentifiers(file, text, operands) {
     filename,
     text,
     oldProgram: inProject ? project : undefined,
+    snapshot: editorInputs,
   });
   if (inProject && !canCache) project = buffer;
   return findIdentifiers(
