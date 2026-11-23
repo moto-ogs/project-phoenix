@@ -22,6 +22,8 @@ type linkSource struct {
 	ref       workforce.TraegerStaffMemberRef
 	member    workforce.TraegerSchoolStaffMember
 	financial map[string]string
+	// bankRow is the token of the school's bank row as the link read it.
+	bankRow string
 }
 
 // linkPlan is everything a link read before it writes.
@@ -103,9 +105,10 @@ func (t *TraegerStaff) Link(ctx context.Context, actor workforce.TraegerStaffAct
 		return workforce.TraegerStaffRecordDetail{}, err
 	}
 	// The choices were made on the preview's values. The schools are read in
-	// their own transactions (ADR 0105), so this read right before the write
-	// is the check: a value changed since, like a new IBAN, is not taken over
-	// unseen.
+	// their own transactions (ADR 0105): this read refuses what changed while
+	// the dialog was open. What changes after it is caught under the lock each
+	// write takes: the record's values in writeLink, a school's bank row in
+	// handOverSchool, which keeps a row it did not read and refuses.
 	if err := readstate.Check(request.ExpectedFingerprint, plan.fingerprint()); err != nil {
 		return workforce.TraegerStaffRecordDetail{}, err
 	}
@@ -129,10 +132,38 @@ func (t *TraegerStaff) Link(ctx context.Context, actor workforce.TraegerStaffAct
 	if err != nil {
 		return workforce.TraegerStaffRecordDetail{}, publicTraegerStaffError(err)
 	}
-	if err := t.handOver(ctx, actor, saved); err != nil {
+	if err := t.handOver(ctx, actor, saved, plannedBankRows(plan)); err != nil {
 		return workforce.TraegerStaffRecordDetail{}, err
 	}
 	return t.Record(ctx, actor, saved.ID)
+}
+
+// employmentKey names one employment: school and staff.
+type employmentKey struct{ schoolID, staffID int64 }
+
+// plannedBankRows lists the bank row of every new employment as the link
+// read it: only that row moves to the record.
+func plannedBankRows(plan linkPlan) map[employmentKey]string {
+	rows := make(map[employmentKey]string, len(plan.members))
+	for _, member := range plan.members {
+		rows[employmentKey{member.ref.SchoolID.Int64(), member.ref.StaffID.Int64()}] = member.bankRow
+	}
+	return rows
+}
+
+// bankRowState is the token of a school's bank row: its sealed values, none
+// for a school without a row. Nothing is opened.
+func bankRowState(rows []domain.StaffFinancialData) string {
+	if len(rows) == 0 {
+		return readstate.Fingerprint(nil)
+	}
+	row := rows[0]
+	return readstate.Fingerprint([][]byte{row.IBANSealed, row.TaxIDSealed, row.SocialSecurityNumberSealed})
+}
+
+// recordState is the record's entry in the fingerprint of a link.
+func recordState(record domain.TraegerStaffRecord, values map[string]string) linkSourceState {
+	return sourceState(domain.StaffSourceRecord, values, record.IBANSealed, record.TaxIDSealed, record.SocialSecurityNumberSealed)
 }
 
 // planLink checks the request against the Träger's schools and records and
@@ -233,8 +264,7 @@ func (t *TraegerStaff) collectSources(plan linkPlan, refs []workforce.TraegerSta
 		}
 		values := recordValues(*plan.record, financial)
 		plan.sources = append(plan.sources, staffSource(domain.StaffSourceRecord, 0, "", values))
-		record := plan.record
-		plan.state = append(plan.state, sourceState(domain.StaffSourceRecord, values, record.IBANSealed, record.TaxIDSealed, record.SocialSecurityNumberSealed))
+		plan.state = append(plan.state, recordState(*plan.record, values))
 	}
 	for _, ref := range refs {
 		read := reads[ref.SchoolID.Int64()]
@@ -242,9 +272,10 @@ func (t *TraegerStaff) collectSources(plan linkPlan, refs []workforce.TraegerSta
 		if !ok {
 			return linkPlan{}, &workforce.TraegerStaffLinkError{Field: "members", Reason: "an employment is no longer live at its school"}
 		}
-		source := linkSource{ref: ref, member: member, financial: map[string]string{}}
+		source := linkSource{ref: ref, member: member, financial: map[string]string{}, bankRow: bankRowState(nil)}
 		var sealed [][]byte
 		if row, ok := read.financial[ref.StaffID.Int64()]; ok {
+			source.bankRow = bankRowState([]domain.StaffFinancialData{row})
 			sealed = [][]byte{row.IBANSealed, row.TaxIDSealed, row.SocialSecurityNumberSealed}
 			opened, err := t.openSchoolFinancial(row)
 			if err != nil {

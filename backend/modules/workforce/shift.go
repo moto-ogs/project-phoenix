@@ -184,6 +184,9 @@ type StaffShiftSeries struct {
 	PlannedByTraeger bool
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
+	// Version is the token of the stored series a read returns; a split
+	// sends it back as ExpectedVersion (ADR 0311). Empty on a written row.
+	Version string
 }
 
 // StaffShiftSeriesException is one deliberately removed occurrence of a

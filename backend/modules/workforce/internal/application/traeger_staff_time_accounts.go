@@ -57,13 +57,14 @@ func (t *TraegerStaff) monthOrThisMonth(year, month int) (int, int) {
 // fails anyway (a race after the checks) leaves the schools before it closed;
 // a second close finishes the rest (ADR 0243 point 4).
 func (t *TraegerStaff) CloseTimeAccountMonth(ctx context.Context, actor workforce.TraegerStaffActor, recordID int64, change workforce.TraegerMonthChange) (workforce.TraegerTimeAccount, error) {
-	links, account, err := t.readTimeAccount(ctx, actor, recordID, change.Year, change.Month)
+	sites, account, err := t.readTimeAccount(ctx, actor, recordID, change.Year, change.Month)
 	if err != nil {
 		return workforce.TraegerTimeAccount{}, err
 	}
 	// The close freezes the balances the Personalverwaltung confirmed. Each
 	// school closes in its own transaction (ADR 0105), so no lock spans the
-	// schools: this read right before the first write is the check.
+	// schools: this read refuses what changed while the dialog was open, and
+	// each school compares its part of the same read under its balance lock.
 	if err := readstate.Check(change.ExpectedFingerprint, account.Fingerprint); err != nil {
 		return workforce.TraegerTimeAccount{}, err
 	}
@@ -75,7 +76,7 @@ func (t *TraegerStaff) CloseTimeAccountMonth(ctx context.Context, actor workforc
 			continue
 		}
 		err := t.ports.Runtime.WithinSchool(ctx, school.SchoolID.Int64(), func(ctx context.Context) error {
-			_, err := t.ports.Months.CloseMonthForTraeger(ctx, links[i].StaffID, actor.AccountID, change.Year, change.Month, change.Reason)
+			_, err := t.ports.Months.CloseMonthForTraeger(ctx, sites[i].link.StaffID, actor.AccountID, change.Year, change.Month, change.Reason, sites[i].version)
 			return err
 		})
 		if err != nil {
@@ -88,7 +89,7 @@ func (t *TraegerStaff) CloseTimeAccountMonth(ctx context.Context, actor workforc
 // ReopenTimeAccountMonth reopens the closes of the Träger in the month. A
 // month the school closed itself stays closed: only the school reopens it.
 func (t *TraegerStaff) ReopenTimeAccountMonth(ctx context.Context, actor workforce.TraegerStaffActor, recordID int64, change workforce.TraegerMonthChange) (workforce.TraegerTimeAccount, error) {
-	links, account, err := t.readTimeAccount(ctx, actor, recordID, change.Year, change.Month)
+	sites, account, err := t.readTimeAccount(ctx, actor, recordID, change.Year, change.Month)
 	if err != nil {
 		return workforce.TraegerTimeAccount{}, err
 	}
@@ -100,7 +101,7 @@ func (t *TraegerStaff) ReopenTimeAccountMonth(ctx context.Context, actor workfor
 			continue
 		}
 		err := t.ports.Runtime.WithinSchool(ctx, school.SchoolID.Int64(), func(ctx context.Context) error {
-			return t.ports.Months.ReopenMonthForTraeger(ctx, links[i].StaffID, actor.AccountID, change.Year, change.Month, change.Reason)
+			return t.ports.Months.ReopenMonthForTraeger(ctx, sites[i].link.StaffID, actor.AccountID, change.Year, change.Month, change.Reason)
 		})
 		if err != nil {
 			return workforce.TraegerTimeAccount{}, schoolMonthError(school, err)
@@ -109,10 +110,17 @@ func (t *TraegerStaff) ReopenTimeAccountMonth(ctx context.Context, actor workfor
 	return t.TimeAccount(ctx, actor, recordID, change.Year, change.Month)
 }
 
+// timeAccountSite is one school of the account: the employment and the
+// token of its month as read.
+type timeAccountSite struct {
+	link    domain.TraegerStaffLink
+	version string
+}
+
 // readTimeAccount reads the record in the Träger transaction and then each
 // live school of it in that school's tenant transaction. It returns the
-// links in the order of the account's schools.
-func (t *TraegerStaff) readTimeAccount(ctx context.Context, actor workforce.TraegerStaffActor, recordID int64, year, month int) ([]domain.TraegerStaffLink, workforce.TraegerTimeAccount, error) {
+// sites in the order of the account's schools.
+func (t *TraegerStaff) readTimeAccount(ctx context.Context, actor workforce.TraegerStaffActor, recordID int64, year, month int) ([]timeAccountSite, workforce.TraegerTimeAccount, error) {
 	if year < 2000 || year > 2100 || month < 1 || month > 12 {
 		return nil, workforce.TraegerTimeAccount{}, fmt.Errorf("%w: %w", workforce.ErrMonthCloseInvalid, errTimeAccountMonthInvalid)
 	}
@@ -140,6 +148,7 @@ func (t *TraegerStaff) readTimeAccount(ctx context.Context, actor workforce.Trae
 		return strings.Compare(names[a.SchoolID], names[b.SchoolID])
 	})
 	account := workforce.TraegerTimeAccount{Year: year, Month: month, Schools: make([]workforce.TraegerTimeAccountSchool, 0, len(links))}
+	sites := make([]timeAccountSite, 0, len(links))
 	for _, link := range links {
 		var read workforce.TraegerSchoolMonth
 		err := t.ports.Runtime.WithinSchool(ctx, link.SchoolID, func(ctx context.Context) error {
@@ -158,10 +167,11 @@ func (t *TraegerStaff) readTimeAccount(ctx context.Context, actor workforce.Trae
 		}
 		account.Ended = read.Ended
 		account.Schools = append(account.Schools, schoolMonth(link.SchoolID, names[link.SchoolID], read))
+		sites = append(sites, timeAccountSite{link: link, version: read.Version})
 	}
 	account.TraegerTimeAccountMinutes, account.State = sumTimeAccount(account.Schools)
 	account.Fingerprint = timeAccountFingerprint(account)
-	return links, account, nil
+	return sites, account, nil
 }
 
 // schoolMonth is the school's Monatskarte as one line of the account.

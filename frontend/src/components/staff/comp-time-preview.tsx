@@ -52,9 +52,10 @@ export function useCompTimePreview({
     { keepPreviousData: false },
   );
   const reload = useCallback(() => void mutate(), [mutate]);
-  // Der Block zeigt den Ladefehler (das Panel), die Buchung selbst bleibt
-  // möglich und meldet ihre eigenen Fehler. Ein gescheitertes Auffrischen
-  // zeigt keine alte Projektion als Grundlage einer Bestätigung.
+  // Der Block zeigt den Ladefehler (das Panel); ohne Vorschau bucht der
+  // Dialog keinen Freizeitausgleich, denn der Server prüft genau die gezeigte
+  // Projektion. Ein gescheitertes Auffrischen zeigt keine alte Projektion als
+  // Grundlage einer Bestätigung.
   const failure = isValidating ? undefined : error;
   const preview = failure ? null : (data ?? null);
   const active = enabled && Boolean(dateStart && dateEnd);

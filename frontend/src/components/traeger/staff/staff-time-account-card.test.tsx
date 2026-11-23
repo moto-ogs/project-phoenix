@@ -155,19 +155,25 @@ describe("StaffTimeAccountCard", () => {
       within(dialog).getByRole("button", { name: "Monat abschließen" }),
     );
 
+    // The dialog closes: a second click would freeze balances the person has
+    // not seen. The refusal stands beside the month read again.
     expect(
-      await within(dialog).findByText(
+      await screen.findByText(
         catalogText("general.changed_since_read", "das Abschließen des Monats"),
       ),
     ).toBeInTheDocument();
+    await vi.waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
     expect(
-      within(dialog).queryByRole("button", { name: "Wiederholen" }),
+      screen.queryByRole("button", { name: "Wiederholen" }),
     ).not.toBeInTheDocument();
     await vi.waitFor(() =>
       expect(api.fetchTraegerTimeAccount.mock.calls.length).toBeGreaterThan(
         reads,
       ),
     );
+    expect(api.closeTraegerTimeAccountMonth).toHaveBeenCalledTimes(1);
   });
 
   it("names the school whose later month blocks the close", async () => {

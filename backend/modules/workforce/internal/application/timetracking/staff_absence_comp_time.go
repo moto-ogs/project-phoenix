@@ -33,6 +33,8 @@ type CompTimeBalancePreview struct {
 	// commitments − the unrealized part of the new deduction: the account once
 	// every named day has passed.
 	ProjectedBalanceMinutes int `json:"projected_balance_minutes"`
+	// Fingerprint is the token of the projection for this range (ADR 0311).
+	Fingerprint string `json:"fingerprint"`
 }
 
 func (s *staffAbsenceService) PreviewCompTimeBalance(
@@ -47,14 +49,14 @@ func (s *staffAbsenceService) PreviewCompTimeBalance(
 	return s.compTimeProjection(ctx, staffID, start, end, halfDay)
 }
 
-// confirmCompTimeOverdraft refuses a Freizeitausgleich that takes the
-// Stundenkonto below zero when the Leitung did not confirm the overdraft.
-// It runs under the absence lock the booking holds, so the projection is the
-// one the booking writes into. A preview showed the Leitung a projection at
-// or above zero, else it would have asked: the account changed since that
-// read (ADR 0311), and the dialog shows the new projection.
+// confirmCompTimeOverdraft books a Freizeitausgleich below zero only on the
+// projection the Leitung confirmed (ADR 0311). It runs under the absence lock
+// the booking holds, so the projection is the one the booking writes into. A
+// confirmed −1 h that became −10 h is refused like an unconfirmed minus: the
+// dialog requires its preview, so the account changed since that read, and
+// the dialog shows the new projection.
 func (s *staffAbsenceService) confirmCompTimeOverdraft(ctx context.Context, staffID int64, start, end calendar.Date, req CreateAbsenceRequest) error {
-	if req.AbsenceType != AbsenceTypeCompTime || req.OverdraftConfirmed == nil || *req.OverdraftConfirmed {
+	if req.AbsenceType != AbsenceTypeCompTime || req.OverdraftFingerprint == nil {
 		return nil
 	}
 	if s.monthService == nil {
@@ -64,10 +66,10 @@ func (s *staffAbsenceService) confirmCompTimeOverdraft(ctx context.Context, staf
 	if err != nil {
 		return err
 	}
-	if projection.ProjectedBalanceMinutes < 0 {
-		return readstate.ErrChanged
+	if projection.ProjectedBalanceMinutes >= 0 {
+		return nil
 	}
-	return nil
+	return readstate.Check(*req.OverdraftFingerprint, projection.Fingerprint)
 }
 
 // compTimeProjection is the Stundenkonto once every day of a planned
@@ -109,14 +111,25 @@ func (s *staffAbsenceService) compTimeProjection(ctx context.Context, staffID in
 		return nil, fmt.Errorf("failed to compute future balance adjustments: %w", err)
 	}
 
-	return &CompTimeBalancePreview{
+	projection := &CompTimeBalancePreview{
 		CurrentBalanceMinutes:    currentBalance,
 		DeductionMinutes:         deduction,
 		RealizedDeductionMinutes: deduction - unrealizedDeduction,
 		FutureCommitmentMinutes:  futureCommitment,
 		FutureAdjustmentMinutes:  futureAdjustments,
 		ProjectedBalanceMinutes:  currentBalance + futureAdjustments - futureCommitment - unrealizedDeduction,
-	}, nil
+	}
+	// The token names the range too: a confirmation holds for the booking
+	// it was shown for, on the day it was shown.
+	projection.Fingerprint = readstate.Fingerprint(struct {
+		StaffID    int64                  `json:"staff_id"`
+		Today      calendar.Date          `json:"today"`
+		Start      calendar.Date          `json:"start"`
+		End        calendar.Date          `json:"end"`
+		HalfDay    bool                   `json:"half_day"`
+		Projection CompTimeBalancePreview `json:"projection"`
+	}{staffID, today, start, end, halfDay, *projection})
+	return projection, nil
 }
 
 // validateCompTimePreview rejects a preview the create itself would reject.

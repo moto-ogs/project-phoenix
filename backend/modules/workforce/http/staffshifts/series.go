@@ -8,7 +8,6 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // SeriesRequest is the create payload for a recurring shift series (#1889).
@@ -139,7 +138,7 @@ func toSeriesDetailResponse(series workforce.StaffShiftSeries) SeriesDetailRespo
 		WeekPattern:         series.WeekPattern,
 		ValidFrom:           series.ValidFrom,
 		IncludeSchoolBreaks: series.IncludeSchoolBreaks,
-		Version:             readstate.Of(series.UpdatedAt),
+		Version:             series.Version,
 	}
 	if series.ValidUntil != "" {
 		until := series.ValidUntil

@@ -44037,6 +44037,12 @@
           "schema": {
             "kind": "int"
           }
+        },
+        {
+          "name": "fingerprint",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -47326,10 +47332,10 @@
           }
         },
         {
-          "name": "overdraft_confirmed",
+          "name": "expected_fingerprint",
           "optional": true,
           "schema": {
-            "kind": "bool"
+            "kind": "string"
           }
         }
       ]

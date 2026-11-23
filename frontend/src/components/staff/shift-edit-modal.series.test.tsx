@@ -1,11 +1,12 @@
 import {
+  act,
   fireEvent,
   render as renderUi,
   screen,
   waitFor,
 } from "@testing-library/react";
 import type { ReactElement, ReactNode } from "react";
-import { SWRConfig } from "~/lib/swr/testing";
+import { SWRConfig, useSWRConfig } from "~/lib/swr/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "~/lib/api-error";
 import { setTestClock } from "~/test/clock";
@@ -35,6 +36,15 @@ function FreshCache({ children }: { children: ReactNode }) {
 
 function render(ui: ReactElement) {
   return renderUi(ui, { wrapper: FreshCache });
+}
+
+// Stands in for the plan reload after a colleague's change: every read in
+// the cache revalidates, the series rule included.
+let revalidateAll: () => Promise<unknown> = () => Promise.resolve();
+function CacheHandle() {
+  const { mutate } = useSWRConfig();
+  revalidateAll = () => mutate(() => true);
+  return null;
 }
 
 const createSeries = vi.fn();
@@ -1054,4 +1064,78 @@ it("shows the stored series again without a retry when a colleague changed it", 
       }),
     ),
   );
+});
+
+describe("ShiftEditModal series editor and a colleague's change", () => {
+  const colleagueRule = {
+    ...seriesRule,
+    validUntil: "2026-10-01",
+    version: "series-v2",
+  };
+
+  function renderEditor() {
+    splitSeries.mockResolvedValue({
+      seriesId: "6",
+      created: 1,
+      skippedDates: [],
+    });
+    render(
+      <>
+        <CacheHandle />
+        <ShiftEditModal
+          isOpen
+          mode="edit"
+          staffId="7"
+          staffName="Ada Lovelace"
+          date="2026-09-07"
+          shift={seriesShift}
+          shiftTypes={[]}
+          onClose={vi.fn()}
+          onSaved={vi.fn()}
+        />
+      </>,
+    );
+  }
+
+  it("keeps typed input and the version it opened from when the rule is read again", async () => {
+    renderEditor();
+    await openSeriesEditor();
+    fireEvent.change(screen.getByLabelText("Ende"), {
+      target: { value: "14:00" },
+    });
+    getSeries.mockResolvedValue(colleagueRule);
+    await act(revalidateAll);
+
+    fireEvent.click(screen.getByRole("button", { name: "Serie speichern" }));
+    // The typed end stays, and the server sees the version the editor opened
+    // from: it refuses instead of the save reverting the colleague's end date.
+    await waitFor(() =>
+      expect(splitSeries).toHaveBeenCalledWith(
+        "5",
+        expect.objectContaining({
+          endTime: "14:00",
+          validUntil: null,
+          expectedVersion: "series-v1",
+        }),
+      ),
+    );
+  });
+
+  it("refills an untouched editor from the newer rule and saves its version", async () => {
+    renderEditor();
+    await openSeriesEditor();
+    getSeries.mockResolvedValue(colleagueRule);
+    await act(revalidateAll);
+
+    fireEvent.click(screen.getByRole("button", { name: "Serie speichern" }));
+    await waitFor(() =>
+      expect(splitSeries).toHaveBeenCalledWith(
+        "5",
+        expect.objectContaining({
+          validUntil: "2026-10-01",
+          expectedVersion: "series-v2",
+        }),
+      ),
+    );
+  });
 });

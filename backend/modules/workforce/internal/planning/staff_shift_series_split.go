@@ -81,7 +81,13 @@ func (s *staffShiftSeriesService) checkSeriesVersion(ctx context.Context, series
 	if err != nil {
 		return err
 	}
-	return readstate.Check(expected, readstate.Of(current.UpdatedAt))
+	return readstate.Check(expected, seriesVersion(current))
+}
+
+// seriesVersion is the token of a stored series: the read returns it and
+// the split compares it under the lock (ADR 0311).
+func seriesVersion(series *StaffShiftSeries) string {
+	return readstate.Of(series.UpdatedAt)
 }
 
 // splitSeriesBounds clamps the split's effective date to tomorrow and the

@@ -668,14 +668,20 @@ func seedCompTimeFridays(rt *Runtime, staffID int64, fridays []time.Time, sickLe
 	}
 	ids := make([]string, 0, len(fridays))
 	for _, friday := range fridays {
+		// The demo books the Fridays even where the Stundenkonto goes below
+		// zero, as the Leitung confirms the dialog's preview (#2873, ADR 0311).
+		day := toDateKey(friday)
+		preview, err := rt.Client.Get(fmt.Sprintf("/api/staff/%d/time-tracking/comp-time-preview?date_start=%s&date_end=%s&half_day=false", staffID, day, day))
+		fingerprint, readErr := seedReadToken(preview, "fingerprint")
+		if err = errors.Join(err, readErr); err != nil {
+			return 0, fmt.Errorf("seed comp_time preview for staff %d: %w", staffID, err)
+		}
 		resp, err := rt.Client.Post(fmt.Sprintf("/api/staff/%d/absences", staffID), map[string]any{
-			"absence_type": "comp_time",
-			"date_start":   toDateKey(friday),
-			"date_end":     toDateKey(friday),
-			"note":         "Freitag frei",
-			// The demo books the Fridays even where the Stundenkonto goes
-			// below zero, as the Leitung confirms in the dialog (#2873).
-			"overdraft_confirmed": true,
+			"absence_type":         "comp_time",
+			"date_start":           day,
+			"date_end":             day,
+			"note":                 "Freitag frei",
+			"expected_fingerprint": fingerprint,
 		})
 		if err != nil {
 			return 0, fmt.Errorf("seed comp_time Friday for staff %d: %w", staffID, err)

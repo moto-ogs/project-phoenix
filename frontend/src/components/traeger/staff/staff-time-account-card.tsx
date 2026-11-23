@@ -18,6 +18,7 @@ import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatCard } from "~/components/ui/stat-card";
 import { StatusBadge } from "~/components/ui/status-badge";
+import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
 import { formatBerlinDate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
@@ -149,6 +150,7 @@ export function StaffTimeAccountCard({
     "das Stundenkonto",
   );
   const [dialog, setDialog] = useState<"close" | "reopen" | null>(null);
+  const actionErrors = useApiErrorDisplay();
 
   const isThisMonth =
     shown.year === thisMonth.year && shown.month === thisMonth.month;
@@ -423,6 +425,13 @@ export function StaffTimeAccountCard({
               throw err;
             }
           }}
+          // Die neuen Salden stehen nur auf der Karte: der Dialog schließt,
+          // die Person sieht sie, bevor sie erneut abschließt.
+          onChangedSinceRead={(err) =>
+            void actionErrors.show(err, {
+              object: "das Abschließen des Monats",
+            })
+          }
           onClose={() => setDialog(null)}
         />
       ) : null}

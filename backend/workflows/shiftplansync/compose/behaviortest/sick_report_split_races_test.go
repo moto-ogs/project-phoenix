@@ -15,26 +15,34 @@ import (
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/stretchr/testify/require"
 )
 
-// splitSeriesAtWeekTwo adds Tuesday to the Monday series from the second
-// week on and returns the successor.
 // seriesVersion is the version of the stored series a planner reads (ADR
-// 0311), read in the transaction of the split; a failed read yields no
-// version, which the split refuses.
-func (e *sickCascadeEnv) seriesVersion(ctx context.Context, seriesID int64) string {
+// 0311), read in the transaction of the split.
+func (e *sickCascadeEnv) seriesVersion(ctx context.Context, seriesID int64) (string, error) {
 	series, err := e.Planning.GetSeries(ctx, seriesID)
-	if err != nil {
-		return ""
-	}
-	return readstate.Of(series.UpdatedAt)
+	return series.Version, err
 }
 
+// mustSeriesVersion is seriesVersion on the test goroutine: a failed read
+// fails the test instead of sending no version.
+func (e *sickCascadeEnv) mustSeriesVersion(ctx context.Context, t *testing.T, seriesID int64) string {
+	t.Helper()
+	version, err := e.seriesVersion(ctx, seriesID)
+	require.NoError(t, err)
+	return version
+}
+
+// splitSeriesAtWeekTwo adds Tuesday to the Monday series from the second
+// week on and returns the successor.
 func (e *sickCascadeEnv) splitSeriesAtWeekTwo(ctx context.Context, seriesID int64) (int64, error) {
+	version, err := e.seriesVersion(ctx, seriesID)
+	if err != nil {
+		return 0, err
+	}
 	result, err := e.Planning.SplitSeries(ctx, workforce.SplitStaffShiftSeries{
-		SeriesID: seriesID, ExpectedVersion: e.seriesVersion(ctx, seriesID), EffectiveDate: stampWeekTwo.String(), Weekdays: []int{1, 2},
+		SeriesID: seriesID, ExpectedVersion: version, EffectiveDate: stampWeekTwo.String(), Weekdays: []int{1, 2},
 		StartTime: clock("08:00"), EndTime: clock("12:00"), ActorStaffID: e.admin.ID,
 	})
 	return result.SeriesID, err

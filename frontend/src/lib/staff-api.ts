@@ -986,6 +986,8 @@ export interface CompTimeBalancePreview {
   // Reset) that are booked but not yet part of the current balance.
   futureAdjustmentMinutes: number;
   projectedBalanceMinutes: number;
+  /** Token of this projection (ADR 0311); confirming a minus sends it. */
+  fingerprint: string;
 }
 
 // Was eine Umbuchung bewirkt (#3258), vorher als Vorschau (dry run) oder
@@ -1194,9 +1196,9 @@ class StaffAbsenceService {
 
   // Stundenkonto projection for a planned Freizeitausgleich (#2873):
   // GET /api/staff/{id}/time-tracking/comp-time-preview. A negative
-  // projection asks for a confirmation in the modal; the create sends it as
-  // overdraft_confirmed, and the server refuses an unconfirmed overdraft
-  // under its lock (ADR 0311).
+  // projection asks for a confirmation in the modal; the create sends the
+  // fingerprint of the confirmed preview as expected_fingerprint, and the
+  // server books a minus only on that projection, under its lock (ADR 0311).
   async getCompTimePreview(
     staffId: string,
     args: { dateStart: string; dateEnd: string; halfDay: boolean },
@@ -1221,6 +1223,7 @@ class StaffAbsenceService {
       futureCommitmentMinutes: preview.future_commitment_minutes,
       futureAdjustmentMinutes: preview.future_adjustment_minutes,
       projectedBalanceMinutes: preview.projected_balance_minutes,
+      fingerprint: preview.fingerprint,
     };
   }
 

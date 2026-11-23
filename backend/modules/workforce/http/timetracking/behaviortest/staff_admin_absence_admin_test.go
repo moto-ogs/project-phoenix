@@ -18,6 +18,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -162,10 +163,32 @@ func TestAdminCreateStaffAbsence_CompTimeAllowedForManager(t *testing.T) {
 	assert.Equal(t, absenceStatusRepd, absences[0].Status)
 }
 
+// compTimePreview reads the projection of a one-day Freizeitausgleich and
+// returns it with its fingerprint; a failed read fails the test.
+func compTimePreview(t *testing.T, tc *testContext, token string, staffID int64, day calendar.Date) (int, string) {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf(
+		"/staff/%d/time-tracking/comp-time-preview?date_start=%s&date_end=%s&half_day=false", staffID, day.String(), day.String(),
+	), nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+	tc.router.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	var body struct {
+		Data struct {
+			ProjectedBalanceMinutes int    `json:"projected_balance_minutes"`
+			Fingerprint             string `json:"fingerprint"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	require.NotEmpty(t, body.Data.Fingerprint)
+	return body.Data.ProjectedBalanceMinutes, body.Data.Fingerprint
+}
+
 // The server owns the overdraft confirmation (#2873, ADR 0311): a
-// Freizeitausgleich that takes the Stundenkonto below zero books only with
-// overdraft_confirmed. Without it the Leitung saw no minus, so the account
-// changed since the preview: refused, nothing booked.
+// Freizeitausgleich that takes the Stundenkonto below zero books only on the
+// projection the Leitung confirmed, its preview's fingerprint. Without one,
+// or with one whose minus grew since, nothing is booked.
 func TestAdminCreateStaffAbsence_CompTimeOverdraftNeedsConfirmation(t *testing.T) {
 	t.Parallel()
 
@@ -174,17 +197,38 @@ func TestAdminCreateStaffAbsence_CompTimeOverdraftNeedsConfirmation(t *testing.T
 	for weekday := range 5 {
 		testpkg.CreateTestStaffWorkScheduleForTenant(t, tc.db, testpkg.Tenant(t), subjectID, weekday, 480, testpkg.Date(2026, time.November, 1))
 	}
-	day := absenceAdminDay.AddDays(2)
+	day, other := absenceAdminDay.AddDays(2), absenceAdminDay.AddDays(3)
 	booking := map[string]any{"absence_type": "comp_time", "date_start": day.String(), "date_end": day.String()}
+	assertNothingBookedOn := func(day calendar.Date) {
+		t.Helper()
+		absences, err := newWorkforceTestRepositories(t, tc.db).StaffAbsence.ListStaffAbsences(testpkg.Ctx(t), workforce.StaffAbsenceFilter{StaffID: subjectID, OverlapFrom: day.String(), OverlapTo: day.String()})
+		require.NoError(t, err)
+		assert.Empty(t, absences)
+	}
 
 	rec := postAbsence(t, tc, token, subjectID, booking)
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), `"code":"general.changed_since_read"`)
-	absences, err := newWorkforceTestRepositories(t, tc.db).StaffAbsence.ListStaffAbsences(testpkg.Ctx(t), workforce.StaffAbsenceFilter{StaffID: subjectID})
-	require.NoError(t, err)
-	assert.Empty(t, absences)
+	assertNothingBookedOn(day)
 
-	booking["overdraft_confirmed"] = true
+	// The Leitung confirms −8 h; a colleague then books another day, and the
+	// same booking would take the account to −16 h.
+	projected, confirmed := compTimePreview(t, tc, token, subjectID, day)
+	require.Negative(t, projected)
+	_, otherFingerprint := compTimePreview(t, tc, token, subjectID, other)
+	rec = postAbsence(t, tc, token, subjectID, map[string]any{
+		"absence_type": "comp_time", "date_start": other.String(), "date_end": other.String(), "expected_fingerprint": otherFingerprint,
+	})
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+	booking["expected_fingerprint"] = confirmed
+	rec = postAbsence(t, tc, token, subjectID, booking)
+	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+	assert.Contains(t, rec.Body.String(), `"code":"general.changed_since_read"`)
+	assertNothingBookedOn(day)
+
+	grown, current := compTimePreview(t, tc, token, subjectID, day)
+	assert.Less(t, grown, projected)
+	booking["expected_fingerprint"] = current
 	rec = postAbsence(t, tc, token, subjectID, booking)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 }

@@ -200,8 +200,9 @@ func TestTraegerAbsenceTypesShareOneKontingentOverAllSchools(t *testing.T) {
 		// The days are written onto the claim the form read (ADR 0311): a
 		// second form of the same read, or one without a read, is refused and
 		// the first change stays (5 days, read below).
-		version, ok := allowanceVersion(t, router, office.token, int64(record.ID), int64(regeneration.ID), 2027)
-		require.True(t, ok)
+		read := traegerJSON(t, router, office.token, http.MethodGet, fmt.Sprintf("/traeger/staff-records/%d/absence-accounts?year=2027", record.ID), nil)
+		require.Equal(t, http.StatusOK, read.Code, read.Body.String())
+		version := allowanceVersion(t, read, int64(regeneration.ID))
 		path := fmt.Sprintf("/traeger/staff-records/%d/absence-accounts/%d", record.ID, regeneration.ID)
 		rec := traegerJSON(t, router, office.token, http.MethodPut, path, map[string]any{"year": 2027, "entitled_days": 5, "reason": "Vereinbarung", "expected_version": version})
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())

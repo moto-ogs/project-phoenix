@@ -1,10 +1,11 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type { TraegerAbsenceAccount } from "~/lib/traeger-absence-api";
 import { TEST_CLOCK_TODAY } from "~/test/clock";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
+import { useSWRConfig } from "~/lib/swr/testing";
 
 vi.unmock("swr");
 
@@ -57,9 +58,18 @@ const ACCOUNT: TraegerAbsenceAccount = {
   ],
 };
 
+// Stands in for a live update: every read in the cache revalidates.
+let revalidateAll: () => Promise<unknown> = () => Promise.resolve();
+function CacheHandle() {
+  const { mutate } = useSWRConfig();
+  revalidateAll = () => mutate(() => true);
+  return null;
+}
+
 function renderCard() {
   return render(
     <TraegerResourceTestProvider>
+      <CacheHandle />
       <StaffAbsenceAccountsCard recordId="5" />
     </TraegerResourceTestProvider>,
   );
@@ -164,6 +174,44 @@ describe("StaffAbsenceAccountsCard", () => {
         expect.objectContaining({
           entitledDays: 6,
           expectedVersion: "claim-2",
+        }),
+      ),
+    );
+  });
+
+  it("keeps typed days and their version when a colleague's claim arrives", async () => {
+    renderCard();
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Anspruch ändern: Regenerationstag",
+      }),
+    );
+    fireEvent.change(screen.getByLabelText(`Anspruch ${YEAR} in Tagen`), {
+      target: { value: "4" },
+    });
+    const reads = api.fetchTraegerAbsenceAccounts.mock.calls.length;
+    api.fetchTraegerAbsenceAccounts.mockResolvedValue([
+      { ...ACCOUNT, entitledDays: 6, version: "claim-2" },
+    ]);
+    await act(revalidateAll);
+    expect(api.fetchTraegerAbsenceAccounts.mock.calls.length).toBeGreaterThan(
+      reads,
+    );
+
+    // The typed 4 stays; the save carries the version it was typed over, so
+    // the server refuses instead of storing 4 over the colleague's 6 unseen.
+    expect(screen.getByLabelText(`Anspruch ${YEAR} in Tagen`)).toHaveValue("4");
+    fireEvent.change(screen.getByLabelText("Begründung"), {
+      target: { value: "Vertrag" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await vi.waitFor(() =>
+      expect(api.setTraegerAbsenceAllowance).toHaveBeenCalledWith(
+        "5",
+        "7",
+        expect.objectContaining({
+          entitledDays: 4,
+          expectedVersion: "claim-1",
         }),
       ),
     );

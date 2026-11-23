@@ -302,11 +302,12 @@ type CreateAbsenceRequest struct {
 	DateEnd       string    `json:"date_end"`
 	HalfDay       bool      `json:"half_day"`
 	Note          string    `json:"note"`
-	// OverdraftConfirmed confirms a Freizeitausgleich that takes the
-	// Stundenkonto below zero (#2873). The Leitung's booking refuses an
-	// unconfirmed overdraft with general.changed_since_read (ADR 0311); a
-	// staff member's own request asks no confirmation and ignores it.
-	OverdraftConfirmed bool `json:"overdraft_confirmed"`
+	// ExpectedFingerprint confirms a Freizeitausgleich that takes the
+	// Stundenkonto below zero (#2873): the Fingerprint of the preview the
+	// Leitung confirmed. The Leitung's booking refuses an overdraft whose
+	// projection differs with general.changed_since_read (ADR 0311); a staff
+	// member's own request asks no confirmation and ignores it.
+	ExpectedFingerprint string `json:"expected_fingerprint"`
 }
 
 // UpdateAbsenceRequest edits an absence; nil leaves a field untouched.
@@ -406,6 +407,9 @@ type CompTimeBalancePreview struct {
 	FutureCommitmentMinutes  int `json:"future_commitment_minutes"`
 	FutureAdjustmentMinutes  int `json:"future_adjustment_minutes"`
 	ProjectedBalanceMinutes  int `json:"projected_balance_minutes"`
+	// Fingerprint is the token of this projection (ADR 0311): a booking that
+	// confirms an overdraft sends it back as expected_fingerprint.
+	Fingerprint string `json:"fingerprint"`
 }
 
 // RebookAbsencesRequest moves stored absences of one staff member to another

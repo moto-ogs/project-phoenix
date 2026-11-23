@@ -2391,6 +2391,7 @@ describe("staff-api", () => {
               future_commitment_minutes: 240,
               future_adjustment_minutes: -60,
               projected_balance_minutes: -660,
+              fingerprint: "preview-1",
             },
           }),
       } as Response);
@@ -2412,6 +2413,7 @@ describe("staff-api", () => {
         futureCommitmentMinutes: 240,
         futureAdjustmentMinutes: -60,
         projectedBalanceMinutes: -660,
+        fingerprint: "preview-1",
       });
     });
 

@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Notes the schools' audit trail carries for a change of the Träger.
@@ -18,7 +19,8 @@ const (
 
 // writeLink saves the record, its new Einsatzorte and the trail in the
 // Träger transaction. An existing record is locked first, so two links of
-// one record wait for each other.
+// one record wait for each other, and a record changed since the link read
+// it is refused (ADR 0311): the choices were made on its values.
 func (t *TraegerStaff) writeLink(ctx context.Context, actor workforce.TraegerStaffActor, plan linkPlan, resolved domain.ResolvedStaffFields) (domain.TraegerStaffRecord, error) {
 	record := domain.TraegerStaffRecord{OrganizationID: actor.OrganizationID}
 	var before map[string]string
@@ -32,6 +34,10 @@ func (t *TraegerStaff) writeLink(ctx context.Context, actor workforce.TraegerSta
 			return domain.TraegerStaffRecord{}, err
 		}
 		record, before = locked, recordValues(locked, financial)
+		// collectSources puts the record first in the link's state.
+		if err := readstate.Check(readstate.Fingerprint(plan.state[0]), readstate.Fingerprint(recordState(locked, before))); err != nil {
+			return domain.TraegerStaffRecord{}, err
+		}
 	}
 	values := resolved.Values
 	record.FirstName, record.LastName = strings.TrimSpace(values[domain.StaffFieldFirstName]), strings.TrimSpace(values[domain.StaffFieldLastName])
@@ -120,49 +126,74 @@ func (t *TraegerStaff) replacedValues(actor workforce.TraegerStaffActor, recordI
 // tenant transaction: the record's personnel number on the employment, and
 // no bank row of the school, because the record keeps the values (decision
 // E1). Every write of the record repeats it, so a school that failed before
-// catches up (ADR 0233 section 6).
-func (t *TraegerStaff) handOver(ctx context.Context, actor workforce.TraegerStaffActor, record domain.TraegerStaffRecord) error {
+// catches up (ADR 0233 section 6). A link names the bank row it read per new
+// employment: a school whose row changed since keeps it, and the link is
+// refused as changed (ADR 0311) once every school is through.
+func (t *TraegerStaff) handOver(ctx context.Context, actor workforce.TraegerStaffActor, record domain.TraegerStaffRecord, planned map[employmentKey]string) error {
+	changed := false
 	for _, link := range record.Links {
 		err := t.ports.Runtime.WithinSchool(ctx, link.SchoolID, func(ctx context.Context) error {
-			return t.handOverSchool(ctx, actor, link.StaffID, record.PersonnelNumber)
+			expected, read := planned[employmentKey{link.SchoolID, link.StaffID}]
+			var plannedRow *string
+			if read {
+				plannedRow = &expected
+			}
+			kept, err := t.handOverSchool(ctx, actor, link.StaffID, record.PersonnelNumber, plannedRow)
+			changed = changed || kept
+			return err
 		})
 		if err != nil {
 			return publicTraegerStaffError(fmt.Errorf("hand over to school %d: %w", link.SchoolID, err))
 		}
 	}
+	if changed {
+		return readstate.ErrChanged
+	}
 	return nil
 }
 
-func (t *TraegerStaff) handOverSchool(ctx context.Context, actor workforce.TraegerStaffActor, staffID int64, number *string) error {
+// handOverSchool reports whether it kept a bank row that differs from the
+// planned one; without a plan every row goes to the record.
+func (t *TraegerStaff) handOverSchool(ctx context.Context, actor workforce.TraegerStaffActor, staffID int64, number *string, planned *string) (bool, error) {
 	live, err := t.schoolStaff(ctx, []int64{staffID})
 	if err != nil || len(live) == 0 {
-		return err
+		return false, err
 	}
+	// The school writes its bank row under the same lock and refuses one the
+	// Träger keeps, so the row read below stays until this transaction ends.
 	subject, err := t.subjects.LockStaff(ctx, staffID, false)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if oldNumber, newNumber := domain.Deref(subject.PersonnelNumber), domain.Deref(number); oldNumber != newNumber {
 		if err := t.audit.RecordMasterDataChange(ctx, domain.MasterDataChange{
 			StaffID: staffID, ChangedBy: actor.AccountID, Section: domain.AuditSectionArbeitsvertrag,
 			Field: domain.StaffFieldPersonnelNumber, OldValue: oldNumber, NewValue: newNumber, Note: noteNumberOfTraeger,
 		}); err != nil {
-			return fmt.Errorf("write personnel number audit: %w", err)
+			return false, fmt.Errorf("write personnel number audit: %w", err)
 		}
 		if err := t.subjects.SetPersonnelNumber(ctx, staffID, number); err != nil {
-			return err
+			return false, err
 		}
 	}
-	return t.removeSchoolBankRow(ctx, actor, staffID)
+	rows, err := t.store.SchoolFinancialRows(ctx, []int64{staffID})
+	if err != nil {
+		return false, err
+	}
+	if planned != nil && bankRowState(rows) != *planned {
+		// A value the Personalverwaltung has not seen, like a new IBAN, is
+		// neither taken over nor deleted.
+		return true, nil
+	}
+	return false, t.removeSchoolBankRow(ctx, actor, staffID, rows)
 }
 
 // removeSchoolBankRow deletes the school's bank row of an employment the
 // record holds, with an audit entry per value the school had. Only the masks
 // go into the school's trail; nothing is opened.
-func (t *TraegerStaff) removeSchoolBankRow(ctx context.Context, actor workforce.TraegerStaffActor, staffID int64) error {
-	rows, err := t.store.SchoolFinancialRows(ctx, []int64{staffID})
-	if err != nil || len(rows) == 0 {
-		return err
+func (t *TraegerStaff) removeSchoolBankRow(ctx context.Context, actor workforce.TraegerStaffActor, staffID int64, rows []domain.StaffFinancialData) error {
+	if len(rows) == 0 {
+		return nil
 	}
 	masked := domain.MaskFinancial(staffID, &rows[0])
 	for field, value := range map[string]*string{
@@ -224,7 +255,7 @@ func (t *TraegerStaff) UpdatePersonnelNumber(ctx context.Context, actor workforc
 	if err != nil {
 		return workforce.TraegerStaffRecordDetail{}, publicTraegerStaffError(err)
 	}
-	if err := t.handOver(ctx, actor, record); err != nil {
+	if err := t.handOver(ctx, actor, record, nil); err != nil {
 		return workforce.TraegerStaffRecordDetail{}, err
 	}
 	return t.Record(ctx, actor, recordID)

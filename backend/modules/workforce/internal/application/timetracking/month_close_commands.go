@@ -44,9 +44,9 @@ func (s *monthCloseCommands) TraegerMonthState(ctx context.Context, staffID int6
 	return
 }
 
-func (s *monthCloseCommands) CloseMonthForTraeger(ctx context.Context, staffID, accountID int64, year, month int, reason string) (value0 bool, err error) {
+func (s *monthCloseCommands) CloseMonthForTraeger(ctx context.Context, staffID, accountID int64, year, month int, reason string, unchanged func(context.Context) error) (value0 bool, err error) {
 	err = s.commands.runCommand(ctx, func(txCtx context.Context) error {
-		value0, err = s.commands.CloseMonthForTraeger(txCtx, staffID, accountID, year, month, reason)
+		value0, err = s.commands.CloseMonthForTraeger(txCtx, staffID, accountID, year, month, reason, unchanged)
 		return err
 	})
 	return

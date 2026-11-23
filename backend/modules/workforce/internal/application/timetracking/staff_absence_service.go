@@ -53,10 +53,11 @@ type CreateAbsenceRequest struct {
 	DateEnd       string `json:"date_end"`
 	HalfDay       bool   `json:"half_day"`
 	Note          string `json:"note"`
-	// OverdraftConfirmed is the Leitung's answer to a Freizeitausgleich the
-	// Stundenkonto preview showed below zero (#2873). Nil: the caller shows
-	// no preview (self-service), so no confirmation is asked.
-	OverdraftConfirmed *bool `json:"-"`
+	// OverdraftFingerprint is the Fingerprint of the preview the Leitung
+	// confirmed a Freizeitausgleich below zero on (#2873), empty without a
+	// confirmation. Nil: the caller shows no preview (self-service), so no
+	// confirmation is asked.
+	OverdraftFingerprint *string `json:"-"`
 }
 
 // UpdateAbsenceRequest defines the request for updating an absence

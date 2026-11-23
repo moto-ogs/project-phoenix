@@ -406,7 +406,7 @@ func seriesToCapability(series *StaffShiftSeries) workforce.StaffShiftSeries {
 		WeekPattern: series.WeekPattern, ValidFrom: series.ValidFrom.String(), SeriesRootID: series.SeriesRootID,
 		RetainedOccurrenceShiftID: series.RetainedOccurrenceShiftID, IncludeSchoolBreaks: series.IncludeSchoolBreaks,
 		CreatedBy: series.CreatedBy, UpdatedBy: series.UpdatedBy, PlannedByTraeger: series.PlannedByTraeger,
-		CreatedAt: series.CreatedAt, UpdatedAt: series.UpdatedAt,
+		CreatedAt: series.CreatedAt, UpdatedAt: series.UpdatedAt, Version: seriesVersion(series),
 	}
 	if series.ValidUntil != nil {
 		value.ValidUntil = series.ValidUntil.String()

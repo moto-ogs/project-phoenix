@@ -13,7 +13,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -155,7 +154,7 @@ func TestSplitSeries_SchoolBreakOptIn(t *testing.T) {
 			})
 
 			result, err := service.SplitSeries(context.Background(), SplitSeriesInput{
-				SeriesID: old.ID, ExpectedVersion: readstate.Of(old.UpdatedAt), EffectiveDate: seriesTestToday.AddDays(1),
+				SeriesID: old.ID, ExpectedVersion: seriesVersion(old), EffectiveDate: seriesTestToday.AddDays(1),
 				StartTime: old.StartTime, EndTime: old.EndTime, IncludeSchoolBreaks: tc.edit, ActorStaffID: 5,
 			})
 			require.NoError(t, err)

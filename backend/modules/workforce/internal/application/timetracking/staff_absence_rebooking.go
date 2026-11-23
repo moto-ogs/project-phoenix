@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"sort"
 	"strings"
 	"time"
 
@@ -155,15 +156,8 @@ func rebookingFingerprint(result *AbsenceRebookingResult, entries []rebookedAbse
 			UpdatedAt: before.UpdatedAt.UTC(),
 		})
 	}
-	slices.SortFunc(states, func(a, b entryState) int {
-		switch {
-		case a.ID < b.ID:
-			return -1
-		case a.ID > b.ID:
-			return 1
-		}
-		return 0
-	})
+	// The policy keeps cmp to tests (class "test"), so sort orders by ID.
+	sort.Slice(states, func(i, j int) bool { return states[i].ID < states[j].ID })
 	return readstate.Fingerprint(struct {
 		Days              float64                        `json:"days"`
 		BalanceDelta      int                            `json:"balance_delta"`

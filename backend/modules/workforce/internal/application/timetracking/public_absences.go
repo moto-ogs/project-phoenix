@@ -117,7 +117,7 @@ func (c staffAbsenceCapability) CreateAbsenceFor(ctx context.Context, subjectSta
 		return nil, nil, err
 	}
 	booking := legacyCreateAbsence(request)
-	booking.OverdraftConfirmed = &request.OverdraftConfirmed
+	booking.OverdraftFingerprint = &request.ExpectedFingerprint
 	return plannedAbsence(plan)(c.absence(absences.CreateAbsenceFor(ctx, subjectStaffID, createdByStaffID, actorAccountID, booking)))
 }
 

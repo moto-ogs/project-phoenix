@@ -38,6 +38,7 @@ describe("useCompTimePreview", () => {
         futureCommitmentMinutes: 0,
         futureAdjustmentMinutes: 0,
         realizedDeductionMinutes: 0,
+        fingerprint: "preview-1",
       };
       const next = deferred<typeof positive>();
       getPreview
@@ -106,6 +107,7 @@ describe("useCompTimePreview", () => {
       futureCommitmentMinutes: 0,
       futureAdjustmentMinutes: 0,
       realizedDeductionMinutes: 0,
+      fingerprint: "preview-1",
     };
     getPreview.mockResolvedValue(positive);
     const { result, rerender } = renderHook(

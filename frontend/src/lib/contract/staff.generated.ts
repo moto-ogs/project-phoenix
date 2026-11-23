@@ -1026,6 +1026,7 @@ export interface CompTimeBalancePreview {
   future_commitment_minutes: number;
   future_adjustment_minutes: number;
   projected_balance_minutes: number;
+  fingerprint: string;
 }
 
 export const CompTimeBalancePreviewSchema: z.ZodType<CompTimeBalancePreview, unknown> = object<CompTimeBalancePreview>({
@@ -1035,6 +1036,7 @@ export const CompTimeBalancePreviewSchema: z.ZodType<CompTimeBalancePreview, unk
   future_commitment_minutes: safeInt,
   future_adjustment_minutes: safeInt,
   projected_balance_minutes: safeInt,
+  fingerprint: str,
 });
 
 /** Go: timetracking.TraegerProofResponse */

@@ -81,7 +81,7 @@ func (t *TraegerStaff) UpdateFinancial(ctx context.Context, actor workforce.Trae
 	if saved.ID == 0 {
 		return nil
 	}
-	return t.handOver(ctx, actor, saved)
+	return t.handOver(ctx, actor, saved, nil)
 }
 
 // Dissolve ends a record: every live Einsatzort gets the bank and tax values

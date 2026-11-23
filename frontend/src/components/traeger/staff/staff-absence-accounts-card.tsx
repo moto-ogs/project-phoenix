@@ -8,7 +8,7 @@
 // jedem Öffnen neu. Das Speichern trägt die Version des gelesenen Anspruchs
 // (ADR 0311).
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 
 import { AllowanceCard } from "~/components/staff/allowance-card";
 import { useFreshTraegerResource } from "~/components/traeger/use-traeger-resource";
@@ -108,6 +108,14 @@ function SchoolShares({
   );
 }
 
+/** The values a stored claim fills the allowance form with. */
+function allowanceDraftBase(account: TraegerAbsenceAccount) {
+  return {
+    version: account.version,
+    days: formatInput(account.entitledDays),
+  };
+}
+
 function AllowanceForm({
   recordId,
   account,
@@ -122,20 +130,31 @@ function AllowanceForm({
   /** Reads the accounts again after a refusal of a changed claim. */
   onChanged: () => void;
 }>) {
-  const [days, setDays] = useState(formatInput(account.entitledDays));
+  // The claim the form opened from (ADR 0311): its version goes out with the
+  // save, its days tell whether the person has typed since.
+  const [base, setBase] = useState(() => allowanceDraftBase(account));
+  const [days, setDays] = useState(base.days);
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
+  // After a refusal the form shows the stored claim, also over typed days.
+  const [showStored, setShowStored] = useState(false);
   const errors = useApiFormError();
   const { success } = useToast();
   const latestSaveRef = useRef<() => Promise<void>>(async () => undefined);
-  // A claim stored since the form opened replaces the days in the form: the
-  // form shows what is stored, the refusal says why (ADR 0311).
-  const shownVersion = useRef(account.version);
-  useEffect(() => {
-    if (shownVersion.current === account.version) return;
-    shownVersion.current = account.version;
-    setDays(formatInput(account.entitledDays));
-  }, [account.version, account.entitledDays]);
+  // A newer read refills the form only while nothing is typed; typed days
+  // stay and the save keeps the version they were typed over, so the server
+  // refuses it instead of storing them over a claim the person has not seen.
+  const untouched = days === base.days && reason === "";
+  const newer =
+    account.version !== base.version && (untouched || showStored)
+      ? allowanceDraftBase(account)
+      : null;
+  // Adjusted while rendering: setting base ends the condition.
+  if (newer) {
+    setBase(newer);
+    setDays(newer.days);
+    setShowStored(false);
+  }
   const used = account.takenDays + account.reservedDays;
   const parsed = parseDays(days);
   const id = `traeger-allowance-${account.absenceTypeId}`;
@@ -165,7 +184,7 @@ function AllowanceForm({
         year: account.year,
         entitledDays: parsed,
         reason,
-        expectedVersion: account.version,
+        expectedVersion: base.version,
       });
       success(
         `Der Anspruch ${account.absenceTypeName} ${account.year} ist gespeichert. Er gilt an allen Schulen der Person.`,
@@ -177,6 +196,7 @@ function AllowanceForm({
       // Changed since the read: the card shows the stored claim again; the
       // same request would be refused again, so there is no retry.
       if (isChangedSinceRead(err)) {
+        setShowStored(true);
         onChanged();
         await errors.show(err, { object: "die Änderung am Anspruch" });
       } else {
