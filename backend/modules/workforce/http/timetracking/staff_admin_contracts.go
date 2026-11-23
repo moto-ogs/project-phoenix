@@ -69,6 +69,7 @@ func newExportTransferResponse(outcome ExportTransferOutcome) ExportTransferResp
 // or null to clear the number.
 type PayrollNumberBody struct {
 	PersonnelNumber *string `json:"personnel_number"`
+	ExpectedVersion string  `json:"expected_version"`
 	Note            string  `json:"note"`
 }
 
@@ -161,12 +162,12 @@ type contractRoute func(method, pattern string, request, response any, query ...
 func staffAdminPersonnelContracts(route contractRoute) []common.RouteContract {
 	return []common.RouteContract{
 		route("GET", "/{id}/stammdaten", nil, StammdatenResponse{}),
-		route("PUT", "/{id}/stammdaten/person", StammdatenPersonRequest{}, StammdatenAck{}),
-		route("PUT", "/{id}/stammdaten/kontakt", StammdatenKontaktRequest{}, StammdatenAck{}),
-		route("PUT", "/{id}/stammdaten/arbeitsvertrag", StammdatenArbeitsvertragRequest{}, StammdatenAck{}),
-		route("PUT", "/{id}/stammdaten/qualifikationen", StammdatenQualifikationenRequest{}, StammdatenAck{}),
+		route("PUT", "/{id}/stammdaten/person", StammdatenPersonRequest{}, StammdatenSectionAck{}),
+		route("PUT", "/{id}/stammdaten/kontakt", StammdatenKontaktRequest{}, StammdatenSectionAck{}),
+		route("PUT", "/{id}/stammdaten/arbeitsvertrag", StammdatenArbeitsvertragRequest{}, StammdatenSectionAck{}),
+		route("PUT", "/{id}/stammdaten/qualifikationen", StammdatenQualifikationenRequest{}, StammdatenSectionAck{}),
 		route("GET", "/{id}/stammdaten/bank-steuer", nil, StammdatenFinancialMaskedResponse{}),
-		route("PUT", "/{id}/stammdaten/bank-steuer", StammdatenFinancialRequest{}, StammdatenAck{}),
+		route("PUT", "/{id}/stammdaten/bank-steuer", StammdatenFinancialRequest{}, StammdatenSectionAck{}),
 		route("POST", "/{id}/stammdaten/bank-steuer/reveal", nil, StammdatenFinancialRevealResponse{}),
 		route("GET", "/qualification-types", nil, []QualificationTypeResponse{}),
 		route("POST", "/qualification-types", QualificationTypeRequest{}, QualificationTypeResponse{}),

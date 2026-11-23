@@ -26,7 +26,7 @@ func (s *FixedSeeder) seedStaffGender(i int, staff DemoStaffMember, staffID int6
 	}
 	first, last := visitorDisplayName(s.visitor, i == visitorStaffIndex,
 		staff.FirstName, staff.LastName, DemoStaff[visitorStaffIndex].FirstName, DemoStaff[visitorStaffIndex].LastName)
-	if _, err := s.client.Put(fmt.Sprintf("/api/staff/%d/stammdaten/person", staffID), map[string]any{
+	if err := putStammdatenSection(s.client, staffID, "person", map[string]any{
 		"first_name": first, "last_name": last, "gender": staff.Gender, "note": "Geschlecht ergänzt",
 	}); err != nil {
 		return fmt.Errorf("seed gender of %s %s: %w", staff.FirstName, staff.LastName, err)

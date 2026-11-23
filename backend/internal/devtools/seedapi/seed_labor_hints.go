@@ -81,9 +81,16 @@ func laborHintStaffID(staffOrder []StaffCredentials, staffIDByEmail map[string]i
 	return candidates[min(2, len(candidates)-1)], true
 }
 
+// laborHintSession is a history block with the version its correction
+// sends back (ADR 0311).
+type laborHintSession struct {
+	id      int64
+	version string
+}
+
 // laborHintWeekSessions returns the block of each weekday Monday to Friday,
 // or nil when a day has none or more than one.
-func laborHintWeekSessions(client *Client, staffID int64, monday time.Time) ([]int64, error) {
+func laborHintWeekSessions(client *Client, staffID int64, monday time.Time) ([]laborHintSession, error) {
 	friday := monday.AddDate(0, 0, 4)
 	resp, err := client.Get(fmt.Sprintf("/api/staff/%d/time-tracking/history?from=%s&to=%s", staffID, toDateKey(monday), toDateKey(friday)))
 	if err != nil {
@@ -92,15 +99,16 @@ func laborHintWeekSessions(client *Client, staffID int64, monday time.Time) ([]i
 	var payload struct {
 		Data struct {
 			Sessions []struct {
-				ID   json.Number `json:"id"`
-				Date string      `json:"date"`
+				ID      json.Number `json:"id"`
+				Date    string      `json:"date"`
+				Version string      `json:"version"`
 			} `json:"sessions"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(resp, &payload); err != nil {
 		return nil, fmt.Errorf("decode history of staff %d: %w", staffID, err)
 	}
-	byDay := make(map[string][]int64)
+	byDay := make(map[string][]laborHintSession)
 	for _, session := range payload.Data.Sessions {
 		id, err := strconv.ParseInt(session.ID.String(), 10, 64)
 		if err != nil {
@@ -110,9 +118,9 @@ func laborHintWeekSessions(client *Client, staffID int64, monday time.Time) ([]i
 		if len(day) > 10 {
 			day = day[:10]
 		}
-		byDay[day] = append(byDay[day], id)
+		byDay[day] = append(byDay[day], laborHintSession{id: id, version: session.Version})
 	}
-	ids := make([]int64, 0, len(laborHintWeekdays))
+	ids := make([]laborHintSession, 0, len(laborHintWeekdays))
 	for offset := range laborHintWeekdays {
 		blocks := byDay[toDateKey(monday.AddDate(0, 0, offset))]
 		if len(blocks) != 1 {
@@ -123,19 +131,21 @@ func laborHintWeekSessions(client *Client, staffID int64, monday time.Time) ([]i
 	return ids, nil
 }
 
-func correctLaborHintWeek(client *Client, staffID int64, monday time.Time, sessionIDs []int64) error {
+func correctLaborHintWeek(client *Client, staffID int64, monday time.Time, sessions []laborHintSession) error {
 	loc := seedBerlinLocation()
 	for offset, plan := range laborHintWeekdays {
 		day := monday.AddDate(0, 0, offset)
 		checkIn := time.Date(day.Year(), day.Month(), day.Day(), plan.checkIn[0], plan.checkIn[1], 0, 0, loc)
 		checkOut := time.Date(day.Year(), day.Month(), day.Day(), plan.checkOut[0], plan.checkOut[1], 0, 0, loc)
-		if _, err := client.Put(fmt.Sprintf("/api/staff/%d/time-tracking/sessions/%d", staffID, sessionIDs[offset]), map[string]any{
-			"check_in_time":  checkIn.Format(time.RFC3339),
-			"check_out_time": checkOut.Format(time.RFC3339),
-			"break_minutes":  plan.breakMinutes,
-			"notes":          "Elternabend und Teamsitzung",
+		session := sessions[offset]
+		if _, err := client.Put(fmt.Sprintf("/api/staff/%d/time-tracking/sessions/%d", staffID, session.id), map[string]any{
+			"check_in_time":    checkIn.Format(time.RFC3339),
+			"check_out_time":   checkOut.Format(time.RFC3339),
+			"break_minutes":    plan.breakMinutes,
+			"notes":            "Elternabend und Teamsitzung",
+			"expected_version": session.version,
 		}); err != nil {
-			return fmt.Errorf("correct session %d of staff %d on %s: %w", sessionIDs[offset], staffID, toDateKey(day), err)
+			return fmt.Errorf("correct session %d of staff %d on %s: %w", session.id, staffID, toDateKey(day), err)
 		}
 	}
 	fmt.Printf("  week of %s for staff %d marked with working-time hints\n", toDateKey(monday), staffID)

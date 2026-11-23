@@ -57,6 +57,7 @@ import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { usePeriodMetrics } from "~/lib/hooks/use-period-metrics";
 import { timeTrackingService } from "~/lib/time-tracking-api";
 import {
+  revalidateOrThrow,
   useInvalidateMatching,
   useLiveRefreshInterval,
   useSWRAuth,
@@ -215,16 +216,17 @@ export function ZeiterfassungTab({
   // Keyed by range only (no "visible" qualifier): usePeriodMetrics asks for the
   // current week under the same scheme, so while the table shows that week SWR
   // dedupes both into one request instead of fetching it twice.
+  const visibleHistoryRead = useSWRAuth<StaffHistoryDetails>(
+    staffTimeKeys.history(staffId, historyFrom, historyTo),
+    () =>
+      staffHistoryService.getHistoryDetails(staffId, historyFrom, historyTo),
+  );
   const {
     data: visibleHistory,
     isLoading: visibleLoading,
     error: visibleSessionsError,
     mutate: mutateVisibleSessions,
-  } = useSWRAuth<StaffHistoryDetails>(
-    staffTimeKeys.history(staffId, historyFrom, historyTo),
-    () =>
-      staffHistoryService.getHistoryDetails(staffId, historyFrom, historyTo),
-  );
+  } = visibleHistoryRead;
   // Absences are loaded in parallel with sessions so the table can show Krank/
   // Urlaub badges next to "Vor Ort"/"Homeoffice" (matches the MA-Sicht).
   const {
@@ -549,6 +551,7 @@ export function ZeiterfassungTab({
                 from={visibleFrom}
                 to={visibleTo}
                 sessions={visibleHistory?.sessions ?? []}
+                reloadSessions={() => revalidateOrThrow(visibleHistoryRead)}
                 laborDays={visibleHistory?.laborDays}
                 weeklySummaries={visibleHistory?.weeklySummaries}
                 absences={visibleAbsences ?? []}

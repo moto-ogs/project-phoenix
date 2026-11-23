@@ -4,7 +4,15 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { StaffHistorySession } from "~/lib/staff-api";
 import { setTestClock } from "~/test/clock";
 
+import { ToastProvider } from "~/contexts/ToastContext";
 import { AdminSessionEditModal } from "./admin-session-edit-modal";
+
+// The read of the shown sessions; it answers (ADR 0311, rule 6).
+const reloadSessions = () => Promise.resolve();
+
+// The dialog shows a changed-since-read refusal as a toast (ADR 0311).
+const renderWithToasts = (ui: Parameters<typeof render>[0]) =>
+  render(ui, { wrapper: ToastProvider });
 
 // Runs in `school-date-dom`: only forked processes apply a runtime TZ change.
 // The admin works from a browser outside Germany; the stamps stay school
@@ -55,8 +63,9 @@ const session: StaffHistorySession = {
 };
 
 function renderModal(mode: "edit" | "nachtragen") {
-  render(
+  renderWithToasts(
     <AdminSessionEditModal
+      onReload={reloadSessions}
       isOpen
       mode={mode}
       staffId="7"

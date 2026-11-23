@@ -25,6 +25,7 @@ const meta = {
     session: null,
     onClose: () => {},
     onSaved: () => {},
+    onReload: () => Promise.resolve(),
   },
 } satisfies Meta<typeof AdminSessionEditModal>;
 

@@ -43,6 +43,7 @@ function regeneration(): OwnAbsenceAllowance {
         expiresOn: "2026-03-31",
       },
       keptByTraeger: false,
+      version: "v-claim",
     },
   };
 }

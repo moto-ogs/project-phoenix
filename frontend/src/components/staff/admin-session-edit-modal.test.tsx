@@ -6,7 +6,15 @@ import type { StaffHistorySession } from "~/lib/staff-api";
 import { setTestClock } from "~/test/clock";
 import { catalogText } from "~/test/error-catalog-text";
 
+import { ToastProvider } from "~/contexts/ToastContext";
 import { AdminSessionEditModal } from "./admin-session-edit-modal";
+
+// The read of the shown sessions; it answers (ADR 0311, rule 6).
+const reloadSessions = () => Promise.resolve();
+
+// The dialog shows a changed-since-read refusal as a toast (ADR 0311).
+const renderWithToasts = (ui: Parameters<typeof render>[0]) =>
+  render(ui, { wrapper: ToastProvider });
 
 vi.mock("~/components/ui/modal", () => ({
   Modal: ({
@@ -67,8 +75,9 @@ const recordedSession: StaffHistorySession = {
 function renderBackfill() {
   const onClose = vi.fn();
   const onSaved = vi.fn();
-  render(
+  renderWithToasts(
     <AdminSessionEditModal
+      onReload={reloadSessions}
       isOpen
       mode="nachtragen"
       staffId="7"
@@ -132,8 +141,9 @@ describe("AdminSessionEditModal", () => {
   it("corrects recorded breaks individually and derives the total", async () => {
     mocks.updateSession.mockResolvedValueOnce(undefined);
     const session = recordedSession;
-    render(
+    renderWithToasts(
       <AdminSessionEditModal
+        onReload={reloadSessions}
         isOpen
         mode="edit"
         staffId="7"
@@ -177,6 +187,89 @@ describe("AdminSessionEditModal", () => {
     );
   });
 
+  // ADR 0311: the correction carries the version of the row it opened
+  // with; a block changed since closes the dialog and reloads the table.
+  it("sends the opened version and reloads after a changed-since-read refusal", async () => {
+    mocks.updateSession.mockRejectedValueOnce(
+      new ApiError("changed since it was read", 409, {
+        code: "general.changed_since_read",
+      }),
+    );
+    const onClose = vi.fn();
+    const onSaved = vi.fn(() => Promise.resolve());
+    renderWithToasts(
+      <AdminSessionEditModal
+        onReload={reloadSessions}
+        isOpen
+        mode="edit"
+        staffId="7"
+        date={new Date(2026, 8, 7)}
+        session={{ ...recordedSession, version: "v-opened" }}
+        onClose={onClose}
+        onSaved={onSaved}
+      />,
+    );
+    fireEvent.change(
+      screen.getByPlaceholderText("z. B. Person hatte vergessen einzustempeln"),
+      { target: { value: "Pause korrigiert" } },
+    );
+    const save = screen.getByRole("button", { name: "Änderungen speichern" });
+    await waitFor(() => expect(save).toBeEnabled());
+    fireEvent.click(save);
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(mocks.updateSession).toHaveBeenCalledWith(
+      "7",
+      "42",
+      expect.objectContaining({ expected_version: "v-opened" }),
+    );
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(
+      await screen.findByText(/Die Arbeitszeit wurde inzwischen geändert/),
+    ).toBeInTheDocument();
+  });
+
+  // ADR 0311, rule 6: when the sessions do not load again after the
+  // refusal, the load error shows instead of the claim that the stored
+  // block is on screen.
+  it("shows the load error when the sessions do not load after a refusal", async () => {
+    mocks.updateSession.mockRejectedValueOnce(
+      new ApiError("changed since it was read", 409, {
+        code: "general.changed_since_read",
+      }),
+    );
+    const onReload = vi.fn(() =>
+      Promise.reject(
+        new ApiError("down", 503, { code: "general.unavailable" }),
+      ),
+    );
+    renderWithToasts(
+      <AdminSessionEditModal
+        onReload={onReload}
+        isOpen
+        mode="edit"
+        staffId="7"
+        date={new Date(2026, 8, 7)}
+        session={{ ...recordedSession, version: "v-opened" }}
+        onClose={vi.fn()}
+        onSaved={vi.fn(() => Promise.resolve())}
+      />,
+    );
+    fireEvent.change(
+      screen.getByPlaceholderText("z. B. Person hatte vergessen einzustempeln"),
+      { target: { value: "Pause korrigiert" } },
+    );
+    const save = screen.getByRole("button", { name: "Änderungen speichern" });
+    await waitFor(() => expect(save).toBeEnabled());
+    fireEvent.click(save);
+
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden\./),
+    ).toBeInTheDocument();
+    expect(onReload).toHaveBeenCalled();
+    expect(screen.queryByText(/wurde inzwischen geändert/)).toBeNull();
+  });
+
   it.each([null, undefined])(
     "explains why a running pause must end before correction (%s)",
     async (endedAt) => {
@@ -193,8 +286,9 @@ describe("AdminSessionEditModal", () => {
           },
         ],
       };
-      render(
+      renderWithToasts(
         <AdminSessionEditModal
+          onReload={reloadSessions}
           isOpen
           mode="edit"
           staffId="7"
@@ -236,8 +330,9 @@ describe("AdminSessionEditModal", () => {
     };
 
     function renderEdit(session: StaffHistorySession) {
-      render(
+      renderWithToasts(
         <AdminSessionEditModal
+          onReload={reloadSessions}
           isOpen
           mode="edit"
           staffId="7"

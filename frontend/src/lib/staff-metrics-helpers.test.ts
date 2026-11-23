@@ -104,6 +104,7 @@ describe("adaptHistorySessionForMetrics", () => {
   const historySession = (
     overrides: Partial<WorkSessionHistory> = {},
   ): WorkSessionHistory => ({
+    version: "v42",
     id: "42",
     staffId: "100",
     date: "2026-07-21",

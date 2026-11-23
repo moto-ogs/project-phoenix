@@ -195,6 +195,10 @@ type PersonSection struct {
 	LastName  string
 	Birthday  *string
 	Gender    *string
+	// ExpectedVersion is the section token of the read the form showed
+	// (ADR 0311). Nil only for a system write that showed nothing (an
+	// employment reset, the invited gender); the routes always set it.
+	ExpectedVersion *string
 }
 
 // ContactSection is the full contact section; nil clears a field.
@@ -206,6 +210,10 @@ type ContactSection struct {
 	Email                 *string
 	EmergencyContactName  *string
 	EmergencyContactPhone *string
+	// ExpectedVersion is the section token of the read the form showed
+	// (ADR 0311). Nil only for a system write that showed nothing (an
+	// employment reset, the invited gender); the routes always set it.
+	ExpectedVersion *string
 }
 
 // ContractSection is the full contract section. EmploymentType lives on the
@@ -216,6 +224,10 @@ type ContractSection struct {
 	ProbationEndDate *string
 	WeeklyHours      *float64
 	EmploymentType   *string
+	// ExpectedVersion is the section token of the read the form showed
+	// (ADR 0311). Nil only for a system write that showed nothing (an
+	// employment reset, the invited gender); the routes always set it.
+	ExpectedVersion *string
 }
 
 // QualificationInput is one row of the submitted qualification list.
@@ -232,6 +244,10 @@ type FinancialSection struct {
 	IBAN                 *string
 	TaxID                *string
 	SocialSecurityNumber *string
+	// ExpectedVersion is the section token of the read the form showed
+	// (ADR 0311). Nil only for a system write that showed nothing (an
+	// employment reset, the invited gender); the routes always set it.
+	ExpectedVersion *string
 }
 
 // NormalizePersonSection checks the calendar day first, then the names and the
@@ -521,6 +537,8 @@ type StaffFinancialMasked struct {
 	// KeptByTraeger is true when the Träger keeps the values in its staff
 	// record (#4705); the school then holds none.
 	KeptByTraeger bool
+	// Version is the section token over the sealed values (ADR 0311).
+	Version string
 }
 
 // MaskFinancial masks stored bank and tax data; nil data masks to nothing.

@@ -517,7 +517,7 @@ func (s *FixedSeeder) retireFormerStaff() error {
 		"kontakt":         {"address_city": "Köln", "phone": "+49 221 4605318", "note": "Frühere Kontaktdaten für die Wiederaufnahme"},
 		"qualifikationen": {"qualifikationen": []map[string]any{{"name": "Erste Hilfe"}}, "note": "Frühere Qualifikation für die Wiederaufnahme"},
 	} {
-		if _, err := s.client.Put(fmt.Sprintf("/api/staff/%d/stammdaten/%s", formerStaffID, section), data); err != nil {
+		if err := putStammdatenSection(s.client, formerStaffID, section, data); err != nil {
 			return fmt.Errorf("seed former staff %s: %w", section, err)
 		}
 	}

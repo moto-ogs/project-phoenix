@@ -708,6 +708,7 @@ export function AbwesenheitenTab({
                       setEditing(null);
                       return afterWrite.refresh({ silent: true });
                     }}
+                    onReload={reload}
                   />
                 ) : null
               }
