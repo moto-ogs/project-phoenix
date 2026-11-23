@@ -75,9 +75,10 @@ const permitted = [
 describe("bff-boundary/no-numeric-identifier", () => {
   it("reports numeric conversions, using the wire type even after a rename", async () => {
     const source = [
-      'import type { StudentResponse, GetStudentsQuery } from "~/lib/contract/students.generated";',
-      'import type { GetTraegerReportsKeyDateQuery } from "~/lib/contract/traeger-reports.generated";',
-      'import type { GetIotQuery } from "~/lib/contract/iot.generated";',
+      'import type { StudentResponse, routes as studentRoutes } from "~/lib/contract/students.generated";',
+      'import type { routes as reportRoutes } from "~/lib/contract/traeger-reports.generated";',
+      'import type { routes as iotRoutes } from "~/lib/contract/iot.generated";',
+      'import type { BffQuery } from "~/lib/bff-fetch";',
       "declare const row: StudentResponse;",
       'declare const projected: { student: StudentResponse["id"] };',
       'type StudentKey = StudentResponse["id"];',
@@ -87,9 +88,9 @@ describe("bff-boundary/no-numeric-identifier", () => {
       "type MaybeKey = (StudentKey | undefined);",
       "declare const parenthesized: MaybeKey;",
       "const pick = { student: row.id };",
-      "declare const query: GetStudentsQuery;",
-      "declare const keyDateQuery: GetTraegerReportsKeyDateQuery;",
-      "declare const iotQuery: GetIotQuery;",
+      'declare const query: BffQuery<typeof studentRoutes["GET /api/students/"]>;',
+      'declare const keyDateQuery: BffQuery<typeof reportRoutes["GET /traeger/reports/key-date"]>;',
+      'declare const iotQuery: BffQuery<typeof iotRoutes["GET /api/iot/"]>;',
       'declare const keys: StudentResponse["id"][];',
       "declare const keysOrTuple: StudentKey[] | readonly [StudentKey];",
       "declare const brandedIndex: number & { readonly brand: unique symbol };",

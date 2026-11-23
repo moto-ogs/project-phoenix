@@ -150,17 +150,6 @@ function createProgram(
     host.readFile = (path) => (isBuffer(path) ? text : diskRead(path));
   }
   host.getSourceFile = (path, languageVersion, ...args) => {
-    // The generated query JSDoc carries the route key, not a TS type tag.
-    if (generatedContractPath.test(path)) {
-      const options =
-        typeof languageVersion === "object"
-          ? languageVersion
-          : { languageVersion };
-      languageVersion = {
-        ...options,
-        jsDocParsingMode: ts.JSDocParsingMode.ParseAll,
-      };
-    }
     if (isBuffer(path))
       return ts.createSourceFile(path, text, languageVersion, true);
     const previous = oldProgram?.getSourceFile(path);
@@ -236,6 +225,17 @@ function contractKind(symbol, checker, seen = new Set()) {
     // Dependencies cannot reference this app's generated contract.
     const path = declaration.getSourceFile().fileName;
     if (path.includes("/node_modules/")) continue;
+    if (generatedContractPath.test(path)) {
+      const kind = generatedQueryKind(declaration);
+      if (kind) return kind;
+      if (
+        ts.isPropertySignature(declaration) &&
+        ts.isInterfaceDeclaration(declaration.parent)
+      ) {
+        const field = generatedFieldKind(declaration.parent, symbol.name);
+        if (field) return field;
+      }
+    }
     if (
       ![
         ts.SyntaxKind.PropertySignature,
@@ -266,16 +266,6 @@ function contractKind(symbol, checker, seen = new Set()) {
       if (inferred) return inferred;
     }
 
-    // The generator emits IDs as string in TS; the matching contract node is
-    // the authoritative distinction from another string on the same object.
-    if (
-      declaration.kind === ts.SyntaxKind.PropertySignature &&
-      generatedContractPath.test(path) &&
-      ts.isInterfaceDeclaration(declaration.parent)
-    ) {
-      const kind = generatedFieldKind(declaration.parent, symbol.name);
-      if (kind) return kind;
-    }
     const annotated = declaredKind(declaration.type, checker, seen);
     if (annotated) return annotated;
   }
@@ -285,9 +275,37 @@ function readContract() {
   return (wireContractText ??= readFileSync(contractFile, "utf8"));
 }
 
+function generatedQueryKind(declaration) {
+  if (!ts.isPropertyAssignment(declaration)) return;
+  const query = declaration.parent.parent;
+  if (
+    !ts.isPropertyAssignment(query) ||
+    !ts.isIdentifier(query.name) ||
+    query.name.text !== "query" ||
+    !ts.isObjectLiteralExpression(declaration.initializer)
+  )
+    return;
+
+  // BffQuery's mapped properties retain the route's parameter declarations.
+  const fields = declaration.initializer.properties;
+  const value = (name) =>
+    fields.find(
+      (field) =>
+        ts.isPropertyAssignment(field) &&
+        ts.isIdentifier(field.name) &&
+        field.name.text === name,
+    )?.initializer;
+  const kind = value("kind");
+  if (!kind || !ts.isStringLiteral(kind)) return;
+  if (kind.text !== "id") return "other";
+  return value("repeated")?.kind === ts.SyntaxKind.TrueKeyword
+    ? "id-list"
+    : "id";
+}
+
 function generatedFieldKind(interfaceNode, field) {
   if (!wireTypes) {
-    const { types, routes } = JSON.parse(readContract());
+    const { types } = JSON.parse(readContract());
     wireTypes = new Map(
       types.map((type) => [
         type.name,
@@ -296,29 +314,8 @@ function generatedFieldKind(interfaceNode, field) {
         ),
       ]),
     );
-    for (const route of routes) {
-      if (route.query)
-        wireTypes.set(
-          `${route.method} ${route.pattern}`,
-          new Map(
-            route.query.map((param) => [
-              param.name,
-              param.kind === "id"
-                ? param.repeated
-                  ? "id-list"
-                  : "id"
-                : "other",
-            ]),
-          ),
-        );
-    }
   }
-  const query = interfaceNode.jsDoc?.[0]?.comment;
-  const key =
-    typeof query === "string" && query.startsWith("Query of ")
-      ? query.slice("Query of ".length)
-      : interfaceNode.name.text;
-  return wireTypes.get(key)?.get(field);
+  return wireTypes.get(interfaceNode.name.text)?.get(field);
 }
 
 const ID_SUFFIX = /(?:Id|Ids|ID|IDs|_id|_ids)$/;
