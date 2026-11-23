@@ -108,6 +108,7 @@ function adjustmentChild(
     first_name: "Lina",
     last_name: "Kind",
     date_of_birth: "2018-01-01",
+    version: "v1",
     status: "approved",
     activation_mode: "scheduled",
     ...overrides,
@@ -576,6 +577,7 @@ describe("ChildOfferingAdjustment", () => {
           first_name: "Lina",
           last_name: "Kind",
           date_of_birth: "2018-01-01",
+          version: "v1",
           status: "approved",
           activation_mode: "scheduled",
         }}
@@ -621,6 +623,7 @@ describe("ChildOfferingAdjustment", () => {
           first_name: "Lina",
           last_name: "Kind",
           date_of_birth: "2018-01-01",
+          version: "v1",
           status: "approved",
           activation_mode: "scheduled",
           offerings: [
@@ -695,6 +698,7 @@ describe("ChildOfferingAdjustment", () => {
           first_name: "Lina",
           last_name: "Kind",
           date_of_birth: "2018-01-01",
+          version: "v1",
           target_grade_level: 3,
           status: "approved",
           activation_mode: "scheduled",
@@ -1095,6 +1099,7 @@ describe("ChildOfferingAdjustment", () => {
           first_name: "Lina",
           last_name: "Kind",
           date_of_birth: "2018-01-01",
+          version: "v1",
           status: "approved",
           activation_mode: "scheduled",
           offerings: [

@@ -24,11 +24,11 @@ func (deletionServiceStub) PreviewChild(context.Context, int64, int64) (*capabil
 	return &capability.DeletionImpact{}, nil
 }
 
-func (deletionServiceStub) DeleteRequest(context.Context, int64, int64, string) (*capability.DeletionImpact, error) {
+func (deletionServiceStub) DeleteRequest(context.Context, int64, int64, string, string) (*capability.DeletionImpact, error) {
 	return &capability.DeletionImpact{}, nil
 }
 
-func (deletionServiceStub) DeleteChild(context.Context, int64, int64, int64, string) (*capability.DeletionImpact, error) {
+func (deletionServiceStub) DeleteChild(context.Context, int64, int64, int64, string, string) (*capability.DeletionImpact, error) {
 	return &capability.DeletionImpact{}, nil
 }
 

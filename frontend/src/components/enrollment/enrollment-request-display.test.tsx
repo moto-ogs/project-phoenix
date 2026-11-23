@@ -168,6 +168,7 @@ describe("ChildExtraFields companion note (#1694)", () => {
       first_name: "Max",
       last_name: "Muster",
       date_of_birth: "2018-05-01",
+      version: "v1",
       status: "submitted",
       activation_mode: "immediate",
       custom_data: custom,

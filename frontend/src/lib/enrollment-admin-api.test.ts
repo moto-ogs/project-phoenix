@@ -51,6 +51,7 @@ function child(overrides: Partial<AdminRequestChild> = {}): AdminRequestChild {
     first_name: "Lina",
     last_name: "Muster",
     date_of_birth: "2018-04-15",
+    version: "v1",
     target_grade_level: 2,
     status: "submitted",
     activation_mode: "manual",

@@ -5,10 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"time"
 
 	enrollmentNative "github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // enrollmentRequestDeliveryType is the related-entity type of a request's
@@ -117,6 +119,7 @@ func (s *Deletions) PreviewRequest(ctx context.Context, requestID int64) (*enrol
 	if err := s.addDeliveryCount(ctx, impact); err != nil {
 		return nil, err
 	}
+	impact.Fingerprint = deletionFingerprint(impact)
 	return impact, nil
 }
 
@@ -147,11 +150,14 @@ func (s *Deletions) PreviewChild(ctx context.Context, requestID, childID int64) 
 	if err := validateDeletableEnrollmentChild(child); err != nil {
 		return nil, err
 	}
+	impact.Fingerprint = deletionFingerprint(impact)
 	return impact, nil
 }
 
-// DeleteRequest deletes a whole request.
-func (s *Deletions) DeleteRequest(ctx context.Context, requestID, actorAccountID int64, reason string) (*enrollmentNative.DeletionImpact, error) {
+// DeleteRequest deletes a whole request. expectedFingerprint is the token of
+// the preview the admin confirmed; a request whose impact changed since is
+// refused with readstate.ErrChanged.
+func (s *Deletions) DeleteRequest(ctx context.Context, requestID, actorAccountID int64, reason, expectedFingerprint string) (*enrollmentNative.DeletionImpact, error) {
 	reason, err := validateEnrollmentDeletionInput(actorAccountID, reason)
 	if err != nil {
 		return nil, err
@@ -162,7 +168,7 @@ func (s *Deletions) DeleteRequest(ctx context.Context, requestID, actorAccountID
 	var impact *enrollmentNative.DeletionImpact
 	err = s.deps.Runtime.Transactions.RunInTx(ctx, func(txCtx context.Context) error {
 		var txErr error
-		impact, txErr = s.deleteRequest(txCtx, requestID, actorAccountID, reason)
+		impact, txErr = s.deleteRequest(txCtx, requestID, actorAccountID, reason, expectedFingerprint)
 		return txErr
 	})
 	if err != nil {
@@ -175,7 +181,7 @@ func (s *Deletions) DeleteRequest(ctx context.Context, requestID, actorAccountID
 	return impact, nil
 }
 
-func (s *Deletions) deleteRequest(ctx context.Context, requestID, actorAccountID int64, reason string) (*enrollmentNative.DeletionImpact, error) {
+func (s *Deletions) deleteRequest(ctx context.Context, requestID, actorAccountID int64, reason, expectedFingerprint string) (*enrollmentNative.DeletionImpact, error) {
 	if err := s.lockRequestForDeletion(ctx, requestID); err != nil {
 		return nil, err
 	}
@@ -189,21 +195,57 @@ func (s *Deletions) deleteRequest(ctx context.Context, requestID, actorAccountID
 	if impact == nil || impact.Counts.Requests != 1 {
 		return nil, enrollmentNative.ErrEnrollmentDeletionNotFound
 	}
-	if len(impact.BlockingStudentIDs) > 0 {
-		return nil, enrollmentNative.ErrEnrollmentDeletionStudentExists
+	if err := s.addDeliveryCount(ctx, impact); err != nil {
+		return nil, err
 	}
-	if err := s.deleteRequestTree(ctx, impact, requestID); err != nil {
+	if err := checkConfirmedImpact(impact, expectedFingerprint); err != nil {
+		return nil, err
+	}
+	if err := s.deleteRequestTree(ctx, requestID); err != nil {
 		return nil, err
 	}
 	return impact, s.auditDeletion(ctx, impact, actorAccountID, reason, DeletionScopeRequest)
 }
 
-// deleteRequestTree counts and cancels the request's delivery intents and
-// deletes the request with everything under it.
-func (s *Deletions) deleteRequestTree(ctx context.Context, impact *enrollmentNative.DeletionImpact, requestID int64) error {
-	if err := s.addDeliveryCount(ctx, impact); err != nil {
+// checkConfirmedImpact compares the impact recomputed under the deletion's
+// locks with the preview the admin confirmed (ADR 0311), then refuses an
+// impact that a created child still blocks.
+func checkConfirmedImpact(impact *enrollmentNative.DeletionImpact, expectedFingerprint string) error {
+	impact.Fingerprint = deletionFingerprint(impact)
+	if err := readstate.Check(expectedFingerprint, impact.Fingerprint); err != nil {
 		return err
 	}
+	if len(impact.BlockingStudentIDs) > 0 {
+		return enrollmentNative.ErrEnrollmentDeletionStudentExists
+	}
+	return nil
+}
+
+// deletionFingerprint is the token of a deletion preview: everything the
+// preview shows, the blocking children in a fixed order.
+func deletionFingerprint(impact *enrollmentNative.DeletionImpact) string {
+	blocking := slices.Clone(impact.BlockingStudentIDs)
+	slices.Sort(blocking)
+	return readstate.Fingerprint(struct {
+		RequestID                     int64
+		ChildID                       *int64
+		DeletesRequest                bool
+		Counts                        enrollmentNative.DeletionCounts
+		BlockingStudentIDs            []int64
+		PreservedGuardianProfiles     int
+		PreservedParentAccounts       int
+		UnlinkedGuardianProfiles      int
+		ParentAccountsWithoutStudents int
+	}{
+		impact.RequestID, impact.ChildID, impact.DeletesRequest, impact.Counts, blocking,
+		impact.PreservedGuardianProfiles, impact.PreservedParentAccounts,
+		impact.UnlinkedGuardianProfiles, impact.ParentAccountsWithoutStudents,
+	})
+}
+
+// deleteRequestTree cancels the request's delivery intents and deletes the
+// request with everything under it.
+func (s *Deletions) deleteRequestTree(ctx context.Context, requestID int64) error {
 	if _, err := s.deps.Delivery.CancelRelatedEmails(ctx, enrollmentRequestDeliveryType, requestID, "enrollment request deleted"); err != nil {
 		return fmt.Errorf("cancel enrollment delivery intents: %w", err)
 	}
@@ -211,8 +253,10 @@ func (s *Deletions) deleteRequestTree(ctx context.Context, impact *enrollmentNat
 }
 
 // DeleteChild deletes one child; deleting the request's only child deletes
-// the request.
-func (s *Deletions) DeleteChild(ctx context.Context, requestID, childID, actorAccountID int64, reason string) (*enrollmentNative.DeletionImpact, error) {
+// the request. expectedFingerprint is the token of the confirmed preview, as
+// for DeleteRequest: a child that became the last one is refused, not
+// deleted together with the request.
+func (s *Deletions) DeleteChild(ctx context.Context, requestID, childID, actorAccountID int64, reason, expectedFingerprint string) (*enrollmentNative.DeletionImpact, error) {
 	reason, err := validateEnrollmentDeletionInput(actorAccountID, reason)
 	if err != nil {
 		return nil, err
@@ -223,7 +267,7 @@ func (s *Deletions) DeleteChild(ctx context.Context, requestID, childID, actorAc
 	var impact *enrollmentNative.DeletionImpact
 	err = s.deps.Runtime.Transactions.RunInTx(ctx, func(txCtx context.Context) error {
 		var txErr error
-		impact, txErr = s.deleteChild(txCtx, requestID, childID, actorAccountID, reason)
+		impact, txErr = s.deleteChild(txCtx, requestID, childID, actorAccountID, reason, expectedFingerprint)
 		return txErr
 	})
 	if err != nil {
@@ -238,7 +282,7 @@ func (s *Deletions) DeleteChild(ctx context.Context, requestID, childID, actorAc
 	return impact, nil
 }
 
-func (s *Deletions) deleteChild(ctx context.Context, requestID, childID, actorAccountID int64, reason string) (*enrollmentNative.DeletionImpact, error) {
+func (s *Deletions) deleteChild(ctx context.Context, requestID, childID, actorAccountID int64, reason, expectedFingerprint string) (*enrollmentNative.DeletionImpact, error) {
 	if err := s.lockRequestForDeletion(ctx, requestID); err != nil {
 		return nil, err
 	}
@@ -260,11 +304,16 @@ func (s *Deletions) deleteChild(ctx context.Context, requestID, childID, actorAc
 	if impact == nil || impact.Counts.RequestChildren != 1 {
 		return nil, enrollmentNative.ErrEnrollmentDeletionNotFound
 	}
-	if len(impact.BlockingStudentIDs) > 0 {
-		return nil, enrollmentNative.ErrEnrollmentDeletionStudentExists
+	if impact.DeletesRequest {
+		if err := s.addDeliveryCount(ctx, impact); err != nil {
+			return nil, err
+		}
+	}
+	if err := checkConfirmedImpact(impact, expectedFingerprint); err != nil {
+		return nil, err
 	}
 	if impact.DeletesRequest {
-		err = s.deleteRequestTree(ctx, impact, requestID)
+		err = s.deleteRequestTree(ctx, requestID)
 	} else {
 		err = s.deps.Children.DeleteRequestChildTree(ctx, requestID, childID)
 	}

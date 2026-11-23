@@ -214,15 +214,20 @@ func (s *Intake) planReplacementContract(ctx context.Context, editReq *SubmitReq
 	if plan.schema, err = s.schemaForEditableRequest(ctx, plan.req); err != nil {
 		return err
 	}
-	plan.signatureRequired = signatureRequired(plan.schema, plan.req.SubmissionSource)
-	if err := s.requireSignature(plan.signatureRequired, editReq.Signature); err != nil {
-		return err
-	}
 	texts, err := s.legalTexts(ctx)
 	if err != nil {
 		return fmt.Errorf("edit replace: resolve legal blocks: %w", err)
 	}
 	plan.legalBlocks = applyTemplateLegalBlocks(texts, plan.schema).Blocks
+	// The edit re-confirms the legal blocks: an edit form read before the
+	// school changed them is refused like a submission (ADR 0311).
+	if err := checkFilledInForm(editReq.ExpectedTermsFingerprint, plan.schema, plan.legalBlocks); err != nil {
+		return err
+	}
+	plan.signatureRequired = signatureRequired(plan.schema, plan.req.SubmissionSource)
+	if err := s.requireSignature(plan.signatureRequired, editReq.Signature); err != nil {
+		return err
+	}
 	gate := storedRequestEligibility(plan.req.SubmissionSource, plan.children)
 	plan.eligibilityEnforced = gate != eligibilityNone
 	if err := s.validateIntakePayload(ctx, editReq, intakePayload{

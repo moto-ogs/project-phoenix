@@ -566,7 +566,7 @@ func seedEnrollmentChangeConversation(rt *Runtime, adminAuth AuthRef, original m
 	children[0]["id"] = strconv.FormatInt(request.ChildIDs[0], 10)
 	body["children"] = children
 	body["parent_note"] = "Wir haben die Angaben ergänzt und bitten um erneute Prüfung."
-	raw, err := rt.Client.PostPublic(fmt.Sprintf("/api/enrollment/requests/%s/change-requests", request.StatusToken), body)
+	raw, err := postEditForm(rt, request.StatusToken, fmt.Sprintf("/api/enrollment/requests/%s/change-requests", request.StatusToken), body)
 	if err != nil {
 		return fmt.Errorf("create enrollment change request: %w", err)
 	}
@@ -583,34 +583,6 @@ func seedEnrollmentChangeConversation(rt *Runtime, adminAuth AuthRef, original m
 		"body": "Die Betreuungstage sind so richtig.",
 	}); err != nil {
 		return fmt.Errorf("reply to enrollment change question: %w", err)
-	}
-	return nil
-}
-
-func (s parentEnrollmentSeedStep) seedEnrollmentDeletion(rt *Runtime, auth AuthRef, phaseID int64, offerings map[string]int64, requestIndex int) error {
-	body := s.enrollmentSubmissionWithDays(
-		phaseID, offerings, "Tilda", "Löschdemo", "2019-08-13", 1,
-		"Mara", "Löschdemo", "mara.loeschdemo@example.test", "deletion-audit",
-		[]int64{offerings["ogs-kurz"]}, map[int64][]string{offerings["ogs-kurz"]: {"wed"}},
-	)
-	raw, err := rt.Client.PostPublicWithHeaders(
-		"/api/enrollment/"+rt.Bootstrap.TenantSlug+"/submit", body, publicEnrollmentSeedHeaders(requestIndex),
-	)
-	if err != nil {
-		return fmt.Errorf("submit enrollment deletion demo: %w", err)
-	}
-	request, err := parseEnrollmentSubmitResponse(raw, "deletion-audit")
-	if err != nil {
-		return err
-	}
-	requestPath := fmt.Sprintf("/api/enrollment/admin/requests/%d", request.RequestID)
-	if _, err := rt.Client.GetWithAuth(auth, requestPath+"/delete-impact"); err != nil {
-		return fmt.Errorf("preview enrollment deletion: %w", err)
-	}
-	if _, err := rt.Client.DeleteWithAuthBody(auth, requestPath, map[string]any{
-		"reason": "Löschung auf Wunsch der Familie",
-	}); err != nil {
-		return fmt.Errorf("delete enrollment demo request: %w", err)
 	}
 	return nil
 }

@@ -26,6 +26,7 @@ const safeImpact: AdminEnrollmentDeletionImpact = {
   preserved_parent_accounts: 1,
   unlinked_guardian_profiles: 1,
   parent_accounts_without_students: 1,
+  fingerprint: "storybook-preview",
 };
 
 function withDeletionImpact(impact: AdminEnrollmentDeletionImpact) {

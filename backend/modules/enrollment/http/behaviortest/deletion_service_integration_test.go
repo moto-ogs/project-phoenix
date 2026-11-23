@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -122,6 +123,21 @@ func (f *deletionTestFixture) sources(auditRepo api.EnrollmentFlowDeletionAudits
 	}
 }
 
+// confirmed previews the deletion as the admin modal does and returns the
+// fingerprint its delete sends; childID 0 previews the whole request.
+func (f *deletionTestFixture) confirmed(requestID, childID int64) string {
+	f.t.Helper()
+	preview, err := tenantCall(f.t, f.db, f.scope.TenantID, func(ctx context.Context) (*enrollmentNative.DeletionImpact, error) {
+		if childID > 0 {
+			return f.service(nil, nil).PreviewChild(ctx, requestID, childID)
+		}
+		return f.service(nil, nil).PreviewRequest(ctx, requestID)
+	})
+	require.NoError(f.t, err)
+	require.NotEmpty(f.t, preview.Fingerprint)
+	return preview.Fingerprint
+}
+
 func tenantCall[T any](t *testing.T, db *bun.DB, tenantID int64, fn func(context.Context) (T, error)) (T, error) {
 	t.Helper()
 	var result T
@@ -186,8 +202,9 @@ func TestEnrollmentDeletion_DeleteChildFromMixedRequestPreservesSharedData(t *te
 	require.NoError(t, testpkg.TenantCommand1(t, f.scope.Context(), db, f.repos.Enrollment().CreateRequestGuardian, guardian))
 	outbox := enqueueTestEnrollmentEmail(t, db, f.scope.TenantID, request.ID, fmt.Sprintf("mixed-%d", request.ID), map[string]any{})
 
+	targetConfirmed := f.confirmed(request.ID, target.ID)
 	impact, err := tenantCall(t, db, f.scope.TenantID, func(ctx context.Context) (*enrollmentNative.DeletionImpact, error) {
-		return f.service(nil, nil).DeleteChild(ctx, request.ID, target.ID, f.actor, "Fehlerhafte Teilanmeldung")
+		return f.service(nil, nil).DeleteChild(ctx, request.ID, target.ID, f.actor, "Fehlerhafte Teilanmeldung", targetConfirmed)
 	})
 	require.NoError(t, err)
 	require.NotNil(t, impact)
@@ -217,8 +234,9 @@ func TestEnrollmentDeletion_DeleteApprovedChildAfterStudentWasRemoved(t *testing
 	target := f.child(request.ID, "ApprovedOrphan", enrollmentNative.ChildStatusApproved, nil)
 	remaining := f.child(request.ID, "Rejected", enrollmentNative.ChildStatusRejected, nil)
 
+	targetConfirmed := f.confirmed(request.ID, target.ID)
 	impact, err := tenantCall(t, db, f.scope.TenantID, func(ctx context.Context) (*enrollmentNative.DeletionImpact, error) {
-		return f.service(nil, nil).DeleteChild(ctx, request.ID, target.ID, f.actor, "Gelöschtes Testkind bereinigen")
+		return f.service(nil, nil).DeleteChild(ctx, request.ID, target.ID, f.actor, "Gelöschtes Testkind bereinigen", targetConfirmed)
 	})
 	require.NoError(t, err)
 	assert.False(t, impact.DeletesRequest)
@@ -280,7 +298,7 @@ func TestEnrollmentDeletion_DeleteRequestCleansDependenciesAndPreservesPeople(t 
 	assert.Equal(t, 1, preview.Counts.RequestChildOfferings)
 
 	impact, err := tenantCall(t, db, f.scope.TenantID, func(ctx context.Context) (*enrollmentNative.DeletionImpact, error) {
-		return f.service(nil, nil).DeleteRequest(ctx, request.ID, f.actor, "Genehmigte Testanmeldung bereinigen")
+		return f.service(nil, nil).DeleteRequest(ctx, request.ID, f.actor, "Genehmigte Testanmeldung bereinigen", preview.Fingerprint)
 	})
 	require.NoError(t, err)
 	assert.Equal(t, preview.Counts, impact.Counts)
@@ -318,14 +336,51 @@ func TestEnrollmentDeletion_DeleteLastChildAlsoDeletesRequest(t *testing.T) {
 	request := f.request("last-child", nil)
 	child := f.child(request.ID, "Withdrawn", enrollmentNative.ChildStatusWithdrawn, nil)
 
+	childConfirmed := f.confirmed(request.ID, child.ID)
 	impact, err := tenantCall(t, db, f.scope.TenantID, func(ctx context.Context) (*enrollmentNative.DeletionImpact, error) {
-		return f.service(nil, nil).DeleteChild(ctx, request.ID, child.ID, f.actor, "Letztes zurückgezogenes Kind")
+		return f.service(nil, nil).DeleteChild(ctx, request.ID, child.ID, f.actor, "Letztes zurückgezogenes Kind", childConfirmed)
 	})
 	require.NoError(t, err)
 	assert.True(t, impact.DeletesRequest)
 	assert.Equal(t, 1, impact.Counts.Requests)
 	assert.Zero(t, tableCount(t, db, "enrollment.requests", "id = ?", request.ID))
 	assert.Equal(t, 1, tableCount(t, db, "audit.enrollment_deletions", "tenant_id = ? AND request_id = ? AND child_id = ?", f.scope.TenantID, request.ID, child.ID))
+}
+
+// A child preview that showed "not the last child" confirms no deletion of
+// the whole request: once the sibling is gone, the delete is refused and
+// deletes nothing; the new preview's fingerprint deletes (ADR 0311).
+func TestEnrollmentDeletion_RefusesAChangedImpact(t *testing.T) {
+	t.Parallel()
+
+	db := testpkg.SetupTestDB(t)
+	f := newDeletionTestFixture(t, db, "changed-impact")
+	request := f.request("changed-impact", nil)
+	target := f.child(request.ID, "Rejected", enrollmentNative.ChildStatusRejected, nil)
+	sibling := f.child(request.ID, "Withdrawn", enrollmentNative.ChildStatusWithdrawn, nil)
+	shown := f.confirmed(request.ID, target.ID)
+
+	siblingConfirmed := f.confirmed(request.ID, sibling.ID)
+	_, err := tenantCall(t, db, f.scope.TenantID, func(ctx context.Context) (*enrollmentNative.DeletionImpact, error) {
+		return f.service(nil, nil).DeleteChild(ctx, request.ID, sibling.ID, f.actor, "Kollegin löscht zuerst", siblingConfirmed)
+	})
+	require.NoError(t, err)
+
+	_, err = tenantCall(t, db, f.scope.TenantID, func(ctx context.Context) (*enrollmentNative.DeletionImpact, error) {
+		return f.service(nil, nil).DeleteChild(ctx, request.ID, target.ID, f.actor, "Veraltete Vorschau", shown)
+	})
+	require.ErrorIs(t, err, readstate.ErrChanged)
+	assert.Equal(t, 1, tableCount(t, db, "enrollment.requests", "id = ?", request.ID))
+	assert.Equal(t, 1, tableCount(t, db, "enrollment.request_children", "id = ?", target.ID))
+	assert.Equal(t, 1, tableCount(t, db, "audit.enrollment_deletions", "tenant_id = ?", f.scope.TenantID))
+
+	current := f.confirmed(request.ID, target.ID)
+	impact, err := tenantCall(t, db, f.scope.TenantID, func(ctx context.Context) (*enrollmentNative.DeletionImpact, error) {
+		return f.service(nil, nil).DeleteChild(ctx, request.ID, target.ID, f.actor, "Aktuelle Vorschau", current)
+	})
+	require.NoError(t, err)
+	assert.True(t, impact.DeletesRequest)
+	assert.Zero(t, tableCount(t, db, "enrollment.requests", "id = ?", request.ID))
 }
 
 func TestEnrollmentDeletion_BlocksExistingStudent(t *testing.T) {
@@ -343,7 +398,7 @@ func TestEnrollmentDeletion_BlocksExistingStudent(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []int64{student.ID}, preview.BlockingStudentIDs)
 	_, err = tenantCall(t, db, f.scope.TenantID, func(ctx context.Context) (*enrollmentNative.DeletionImpact, error) {
-		return f.service(nil, nil).DeleteRequest(ctx, request.ID, f.actor, "Darf nicht gelöscht werden")
+		return f.service(nil, nil).DeleteRequest(ctx, request.ID, f.actor, "Darf nicht gelöscht werden", preview.Fingerprint)
 	})
 	require.ErrorIs(t, err, enrollmentNative.ErrEnrollmentDeletionStudentExists)
 	assert.Equal(t, 1, tableCount(t, db, "enrollment.requests", "id = ?", request.ID))
@@ -367,8 +422,9 @@ func TestEnrollmentDeletion_AuditFailureRollsBackAllDeletes(t *testing.T) {
 	outbox := enqueueTestEnrollmentEmail(t, db, f.scope.TenantID, request.ID, fmt.Sprintf("rollback-%d", request.ID), map[string]any{})
 
 	expected := errors.New("audit unavailable")
+	requestConfirmed := f.confirmed(request.ID, 0)
 	_, err := tenantCall(t, db, f.scope.TenantID, func(ctx context.Context) (*enrollmentNative.DeletionImpact, error) {
-		return f.service(failingDeletionAudit{err: expected}, nil).DeleteRequest(ctx, request.ID, f.actor, "Rollback prüfen")
+		return f.service(failingDeletionAudit{err: expected}, nil).DeleteRequest(ctx, request.ID, f.actor, "Rollback prüfen", requestConfirmed)
 	})
 	require.ErrorIs(t, err, expected)
 	assert.Equal(t, 1, tableCount(t, db, "enrollment.requests", "id = ?", request.ID))
@@ -412,6 +468,7 @@ func TestEnrollmentDeletion_ConcurrentDecisionIsRecheckedUnderLock(t *testing.T)
 	f := newDeletionTestFixture(t, db, "concurrent")
 	request := f.request("concurrent", nil)
 	child := f.child(request.ID, "Rejected", enrollmentNative.ChildStatusRejected, nil)
+	childConfirmed := f.confirmed(request.ID, child.ID)
 
 	decisionTx, err := db.BeginTx(f.scope.Context(), nil)
 	require.NoError(t, err)
@@ -426,7 +483,7 @@ func TestEnrollmentDeletion_ConcurrentDecisionIsRecheckedUnderLock(t *testing.T)
 	finished := make(chan error, 1)
 	go func() {
 		_, deleteErr := tenantCall(t, db, f.scope.TenantID, func(ctx context.Context) (*enrollmentNative.DeletionImpact, error) {
-			return f.service(nil, requestRepo).DeleteChild(ctx, request.ID, child.ID, f.actor, "Parallelentscheidung prüfen")
+			return f.service(nil, requestRepo).DeleteChild(ctx, request.ID, child.ID, f.actor, "Parallelentscheidung prüfen", childConfirmed)
 		})
 		finished <- deleteErr
 	}()

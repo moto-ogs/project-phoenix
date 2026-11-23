@@ -445,7 +445,7 @@ func TestPhaseUpdate_WaitsForConcurrentApproval(t *testing.T) {
 	offering := createSourceOffering(t, env, "Bestaetigt", nil)
 	template := createSourcedTemplate(t, env, "BestaetigtTermin", offering.ID, nil, period.ID)
 	grade := int16(2)
-	submitted, err := testpkg.TenantQuery1(t, ctx, env.db, env.requestSvc.Submit, enrollmentTest.SubmitRequest{
+	submitted, err := testpkg.TenantQuery1(t, ctx, env.db, submitShown(env.requestSvc), enrollmentTest.SubmitRequest{
 		TenantID: testpkg.Tenant(t), PhaseID: env.sourcePhase.ID,
 		GuardianFirstName: "Eltern", GuardianLastName: "Quelle", GuardianEmail: "bestaetigt@example.com",
 		ConsentFlags: consentFlags(t),

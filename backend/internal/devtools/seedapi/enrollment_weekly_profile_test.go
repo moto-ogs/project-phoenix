@@ -298,6 +298,9 @@ func (m *weeklyProfileAPIMock) serve(t *testing.T, w seedHTTPResponseWriter, r *
 		data = []any{}
 	case path == "/api/enrollment/phases":
 		m.phase = body
+	case strings.HasSuffix(path, "/manual-bootstrap") && r.Method == "GET":
+		// The form the seeder fills, with its read-state token (ADR 0311).
+		data = map[string]any{"schema": nil, "terms_fingerprint": "weekly-form"}
 	case strings.HasPrefix(path, "/api/enrollment/phases/"):
 		data = m.phase
 	case strings.HasSuffix(path, "/submit"):

@@ -414,8 +414,9 @@ func (rs *Resource) publishSchema(w http.ResponseWriter, r *http.Request) {
 }
 
 // updateSchema publishes a new version of an existing named schema.
-// PUT /schema/{id} — id refers to any prior version of the schema;
-// the new row inherits its name and is written with version+1.
+// PUT /schema/{id} — id is the version the editor read, which must still
+// be the newest of its lineage (ADR 0311); the new row inherits its name
+// and is written with version+1.
 func (rs *Resource) updateSchema(w http.ResponseWriter, r *http.Request) {
 	if rs.FormSchemaService == nil {
 		common.RenderError(w, r, common.ErrorInternalServer(errors.New("form schema service not configured")))
@@ -474,6 +475,9 @@ func (rs *Resource) updateSchema(w http.ResponseWriter, r *http.Request) {
 // errors keep the 400 contract shared with POST /schema.
 func renderSchemaVersionError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
+	case common.IsBusinessRejection(err):
+		// A version published since the editor read {id} (ADR 0311).
+		common.RenderError(w, r, common.ErrorBusinessRejection(err))
 	case errors.Is(err, capability.ErrFormSchemaNameExists):
 		common.RenderError(w, r, common.ErrorConflictOnField(err, common.CodeEnrollmentSchemaNameExists, "name"))
 	case errors.Is(err, capability.ErrFormSchemaNotFound):
