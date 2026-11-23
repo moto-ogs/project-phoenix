@@ -91,9 +91,13 @@ type PickupScheduleRequest struct {
 }
 
 // BulkPickupScheduleRequest represents a request to update all weekly schedules
+// BulkPickupScheduleRequest replaces the weekly pickup rows. ExpectedVersion
+// is the weekly plan token the rows were read with (weekly_plan_version of
+// GET pickup-schedules, ADR 0311).
 type BulkPickupScheduleRequest struct {
-	Schedules     []PickupScheduleRequest `json:"schedules"`
-	EffectiveDate *calendar.Date          `json:"effective_date,omitempty"`
+	Schedules       []PickupScheduleRequest `json:"schedules"`
+	EffectiveDate   *calendar.Date          `json:"effective_date,omitempty"`
+	ExpectedVersion string                  `json:"expected_version"`
 }
 
 type BulkPickupSchedulePatchRequest struct {
@@ -391,6 +395,9 @@ var (
 	errPersonNotFoundForAccount = errors.New("person not found for account")
 	errUserNotStaff             = errors.New("user is not a staff member")
 	errNoSessionAccount         = errors.New("no valid JWT claims found")
+	// errPickupNoteWeekdayChange refuses a note update that changes the
+	// weekday: weekday notes change with the weekly plan (ADR 0311).
+	errPickupNoteWeekdayChange = errors.New("a note keeps its weekday here; weekday notes change with the weekly plan (PUT pickup-notes)")
 	// errScheduleUpdatePermissionRequired refuses weekly schedules attached to
 	// a new child without the right to edit Betreuungszeiten.
 	errScheduleUpdatePermissionRequired = errors.New("users:update permission required to create student schedules")

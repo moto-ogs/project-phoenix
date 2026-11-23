@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { AccidentReportCreateModal } from "~/components/students/accident-report-create-modal";
@@ -20,6 +27,7 @@ import {
   FormErrorAlert,
   LoadErrorAlert,
 } from "~/components/ui/form-error-alert";
+import type { FormErrorInput } from "~/components/ui/form-error";
 import { SectionCard } from "~/components/ui/section-card";
 import {
   SignaturePad,
@@ -110,7 +118,8 @@ export default function AccidentReportPage() {
     documentsRef.current = documents;
   });
   const reloadReport = useCallback(
-    async () => findReport(await revalidateOrThrow(documentsRef.current), reportId),
+    async () =>
+      findReport(await revalidateOrThrow(documentsRef.current), reportId),
     [reportId],
   );
   const load = useApiLoadError();
@@ -140,8 +149,24 @@ export default function AccidentReportPage() {
   // the save sends that version, a refusal shows the stored report again
   // (ADR 0311).
   const [editing, setEditing] = useState(false);
-  const reportDraft = useDraftOn<StudentDocument, AccidentReportDraft, string, void>(
-    { opening: editing ? reportId : null, data: document, reload: reloadReport },
+  // Signed by someone else while this page edited it: the reload after the
+  // refusal shows the signed report, so the edit state ends and „Korrektur
+  // anlegen“ is offered. The refusal's message lives here, so it outlasts
+  // the form it came from.
+  if (editing && report && report.status !== "open") setEditing(false);
+  const editFormRef = useRef<HTMLFormElement>(null);
+  const editErrors = useApiFormError(editFormRef);
+  const reportDraft = useDraftOn<
+    StudentDocument,
+    AccidentReportDraft,
+    string,
+    void
+  >(
+    {
+      opening: editing ? reportId : null,
+      data: document,
+      reload: reloadReport,
+    },
     {
       token: (doc) => doc.version ?? "",
       toDraft: (doc) =>
@@ -246,18 +271,27 @@ export default function AccidentReportPage() {
               studentId={studentId}
               reportId={reportId}
               reportDraft={reportDraft}
+              formRef={editFormRef}
+              formError={editErrors}
               onDone={() => {
                 setEditing(false);
                 void mutate();
               }}
-              onCancel={() => setEditing(false)}
+              onCancel={() => {
+                editErrors.clear();
+                setEditing(false);
+              }}
             />
           ) : (
             <ReportDetails
               report={report}
+              error={editErrors.error}
               onEdit={
                 canManage && report.status === "open"
-                  ? () => setEditing(true)
+                  ? () => {
+                      editErrors.clear();
+                      setEditing(true);
+                    }
                   : undefined
               }
             />
@@ -270,8 +304,14 @@ export default function AccidentReportPage() {
 
 function ReportDetails({
   report,
+  error,
   onEdit,
-}: Readonly<{ report: AccidentReportDetails; onEdit?: () => void }>) {
+}: Readonly<{
+  report: AccidentReportDetails;
+  /** A refused change whose edit state has ended (signed meanwhile). */
+  error: FormErrorInput;
+  onEdit?: () => void;
+}>) {
   return (
     <SectionCard
       title="Angaben zum Unfall"
@@ -290,6 +330,7 @@ function ReportDetails({
         ) : undefined
       }
     >
+      <FormErrorAlert message={error} />
       <DataGrid>
         <DataField label="Unfallzeitpunkt">
           {stamp(report.occurredAt)}
@@ -326,18 +367,21 @@ function EditReportSection({
   studentId,
   reportId,
   reportDraft,
+  formRef,
+  formError,
   onDone,
   onCancel,
 }: Readonly<{
   studentId: string;
   reportId: string;
   reportDraft: ReadDraft<StudentDocument, AccidentReportDraft, string, void>;
+  formRef: RefObject<HTMLFormElement | null>;
+  /** The page's, so a refusal that ends the edit state stays on screen. */
+  formError: ReturnType<typeof useApiFormError>;
   onDone: () => void;
   onCancel: () => void;
 }>) {
   const [saving, setSaving] = useState(false);
-  const formRef = useRef<HTMLFormElement>(null);
-  const formError = useApiFormError(formRef);
   const loadError = useReadDraftLoadError(reportDraft, "die Unfallanzeige");
   const draft = reportDraft.draft;
 
@@ -479,6 +523,8 @@ function SignatureSection({
           ) : undefined
         }
       >
+        {/* A signature refused because someone else signed first. */}
+        <FormErrorAlert message={formError.error} />
         <div className="flex flex-wrap items-center gap-3">
           <StatusBadge tone="green" label="Unterschrieben" />
           <span className="text-sm text-gray-700">

@@ -88,8 +88,12 @@ func seedLaterWeekdayPickup(rt *Runtime) error {
 		{"weekday": 4, "pickup_time": "16:30", "notes": "Donnerstags länger im Ganztag"},
 		{"weekday": 5, "pickup_time": "14:00", "notes": "Fußballtraining"},
 	}
+	version, err := seedWeeklyPlanVersion(rt, studentID)
+	if err != nil {
+		return err
+	}
 	if _, err := rt.Client.Put(fmt.Sprintf("/api/students/%d/pickup-schedules", studentID), map[string]any{
-		"schedules": schedules,
+		"schedules": schedules, "expected_version": version,
 	}); err != nil {
 		return fmt.Errorf("seed later weekday pickup: %w", err)
 	}

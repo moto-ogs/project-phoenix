@@ -3665,6 +3665,7 @@ export interface PickupNoteUpdateRequest {
 export interface BulkPickupScheduleRequest {
   schedules?: PickupScheduleRequest[] | null;
   effective_date?: string | null;
+  expected_version?: string;
 }
 
 /** Go: studentpresencehttp.PrivacyConsentRequest */

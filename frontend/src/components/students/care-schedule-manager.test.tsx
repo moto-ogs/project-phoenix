@@ -1096,6 +1096,63 @@ describe("CareScheduleManager", () => {
     expect(mockApplyStudentPickupAdjustment).not.toHaveBeenCalled();
   });
 
+  // ADR 0311: the weekly plan token travels in the pickup half of the week
+  // and also guards the arrival rows. A refresh whose arrival half fails
+  // keeps the whole old week, so no newer token sits beside older rows.
+  it("keeps the token of the arrival rows on screen when a refresh fails halfway", async () => {
+    render(<CareScheduleManager studentId="42" statusDays={statusDays} />);
+    await screen.findByText("Betreuungszeiten");
+
+    mockFetchStudentPickupData.mockResolvedValueOnce({
+      ...pickupData,
+      weeklyPlanVersion: "plan-newer",
+    });
+    mockFetchArrivalData.mockRejectedValueOnce(new Error("Netzwerkfehler"));
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent("phoenix:care-schedule-stale"));
+      await Promise.resolve();
+    });
+    await waitFor(() => {
+      expect(mockFetchArrivalData).toHaveBeenCalledTimes(2);
+    });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Wochenplan bearbeiten" }),
+    );
+    fireEvent.click(screen.getByText("Nur Ankunft im Test speichern"));
+
+    await waitFor(() => {
+      expect(mockUpdateArrivalSchedules).toHaveBeenCalledWith(
+        "42",
+        expect.any(Array),
+        expect.objectContaining({ expectedVersion: "plan-read" }),
+      );
+    });
+  });
+
+  it("reads the arrival rows only after the token that guards them", async () => {
+    let releasePickup: (value: PickupData) => void = () => undefined;
+    mockFetchStudentPickupData.mockImplementationOnce(
+      () =>
+        new Promise<PickupData>((resolve) => {
+          releasePickup = resolve;
+        }),
+    );
+    render(<CareScheduleManager studentId="42" statusDays={statusDays} />);
+
+    await waitFor(() => {
+      expect(mockFetchStudentPickupData).toHaveBeenCalledOnce();
+    });
+    expect(mockFetchArrivalData).not.toHaveBeenCalled();
+
+    await act(async () => {
+      releasePickup(pickupData);
+      await Promise.resolve();
+    });
+    await screen.findByText("Betreuungszeiten");
+    expect(mockFetchArrivalData).toHaveBeenCalledOnce();
+  });
+
   // ADR 0311: a colleague saved the plan after this editor opened. The save
   // is refused; the section leaves the edit state, reloads the stored plan
   // and names the refusal without a retry.
@@ -1113,9 +1170,7 @@ describe("CareScheduleManager", () => {
     );
     fireEvent.click(screen.getByText("Nur Ankunft im Test speichern"));
 
-    expect(
-      await screen.findByText(/inzwischen geändert/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/inzwischen geändert/)).toBeInTheDocument();
     expect(mockUpdateArrivalSchedules).toHaveBeenCalledWith(
       "42",
       expect.any(Array),

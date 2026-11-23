@@ -255,30 +255,23 @@ func (s *StudentDocuments) findAccidentReport(ctx context.Context, studentID, do
 	return document, nil
 }
 
-// findOpenAccidentReport is findAccidentReport for a report that may still
-// change.
-func (s *StudentDocuments) findOpenAccidentReport(ctx context.Context, studentID, documentID int64, actor careplan.StudentDocumentActor) (careplan.CareDocument, error) {
-	document, err := s.findAccidentReport(ctx, studentID, documentID, actor)
-	if err != nil {
-		return careplan.CareDocument{}, err
-	}
-	if document.AccidentSignedAt != nil {
-		return careplan.CareDocument{}, careplan.ErrAccidentReportSigned
-	}
-	return document, nil
-}
-
-// findReadAccidentReport is findOpenAccidentReport for a write that acts on
-// what the caller read: the report must still be the one read at
-// expectedVersion. The store's update repeats the comparison on the row, so a
-// change committed between this read and the write is refused as well.
+// findReadAccidentReport is findAccidentReport for a write on an open report
+// that acts on what the caller read: the report must still be the one read at
+// expectedVersion. The token is compared before the signed state, so a report
+// someone signed after the caller read it is a changed read (the caller gets
+// the stored, signed report), while a caller who read it signed is told it is
+// signed. The store's update repeats the comparison on the row, so a change
+// committed between this read and the write is refused as well.
 func (s *StudentDocuments) findReadAccidentReport(ctx context.Context, studentID, documentID int64, expectedVersion string, actor careplan.StudentDocumentActor) (careplan.CareDocument, error) {
-	document, err := s.findOpenAccidentReport(ctx, studentID, documentID, actor)
+	document, err := s.findAccidentReport(ctx, studentID, documentID, actor)
 	if err != nil {
 		return careplan.CareDocument{}, err
 	}
 	if err := readstate.Check(expectedVersion, careplan.AccidentReportVersion(document)); err != nil {
 		return careplan.CareDocument{}, err
+	}
+	if document.AccidentSignedAt != nil {
+		return careplan.CareDocument{}, careplan.ErrAccidentReportSigned
 	}
 	return document, nil
 }

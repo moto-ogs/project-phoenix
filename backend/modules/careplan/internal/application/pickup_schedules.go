@@ -429,10 +429,17 @@ func (s *pickupScheduleService) GetStudentPickupNotesForDate(
 	return s.notesForDate(ctx, studentID, date)
 }
 
+// CreateStudentPickupNote writes under the student lock every weekly plan
+// writer takes: a weekday note is part of the weekly plan, whose save checks
+// its read-state token under that lock (ADR 0311). It runs in the caller's
+// unit (the request transaction of the route).
 func (s *pickupScheduleService) CreateStudentPickupNote(
 	ctx context.Context,
 	row *careplan.PickupNote,
 ) error {
+	if err := s.lockNoteStudent(ctx, row.StudentID); err != nil {
+		return err
+	}
 	return s.createNote(ctx, row)
 }
 
@@ -456,11 +463,26 @@ func (s *pickupScheduleService) UpdateStudentPickupNote(
 	return s.updateNote(ctx, row)
 }
 
+// DeleteStudentPickupNote deletes under the student lock, like
+// CreateStudentPickupNote.
 func (s *pickupScheduleService) DeleteStudentPickupNote(
 	ctx context.Context,
 	noteID int64,
 ) error {
+	stored, err := s.noteByID(ctx, noteID)
+	if err != nil {
+		return err
+	}
+	if err := s.lockNoteStudent(ctx, stored.StudentID); err != nil {
+		return err
+	}
 	return s.deleteNote(ctx, noteID)
+}
+
+// lockNoteStudent takes the student lock of a note write in the caller's
+// unit; the weekly plan save checks its token under the same lock.
+func (s *pickupScheduleService) lockNoteStudent(ctx context.Context, studentID int64) error {
+	return s.tx.LockStudent(ctx, studentID)
 }
 
 func (s *pickupScheduleService) DeleteAllStudentPickupNotes(

@@ -203,6 +203,16 @@ func TestStudentAccidentReports_RefuseAStaleRead(t *testing.T) {
 	}, careplan.AccidentReportVersion(docs[0]), leader)
 	require.NoError(t, err)
 	assert.Equal(t, careplan.AccidentReportStatusSigned, careplan.AccidentReportStatus(signed))
+
+	// Signed by someone else while this caller still edited the open report:
+	// a changed read, so the editor reloads the signed report, not "signed".
+	openRead := careplan.AccidentReportVersion(docs[0])
+	_, err = reports.UpdateStudentAccidentReport(s.ctx, s.studentID, read.ID, mine, openRead, leader)
+	require.ErrorIs(t, err, readstate.ErrChanged, "a report signed meanwhile is a changed read")
+	_, err = reports.SignStudentAccidentReport(s.ctx, s.studentID, read.ID, careplan.AccidentSignatureInput{
+		Method: "drawn", ImagePNG: signaturePNG(t),
+	}, openRead, leader)
+	require.ErrorIs(t, err, readstate.ErrChanged, "a second signer of the open read sees the signed report")
 }
 
 func TestStudentAccidentReports_PermissionsAndValidation(t *testing.T) {

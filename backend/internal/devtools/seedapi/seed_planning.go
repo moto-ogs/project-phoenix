@@ -311,7 +311,13 @@ func seedArrivalSchedules(rt *Runtime, studentIDs []int64) (int, error) {
 // Betreuungsplan editor does (weekly_plan_version of the pickup read, ADR 0311);
 // every save of the weekly plan sends it back.
 func seedWeeklyPlanVersion(rt *Runtime, studentID int64) (string, error) {
-	raw, err := rt.Client.Get(fmt.Sprintf("/api/students/%d/pickup-schedules", studentID))
+	return weeklyPlanVersionVia(rt.Client, studentID)
+}
+
+// weeklyPlanVersionVia is seedWeeklyPlanVersion for a step that holds the
+// client itself.
+func weeklyPlanVersionVia(client *Client, studentID int64) (string, error) {
+	raw, err := client.Get(fmt.Sprintf("/api/students/%d/pickup-schedules", studentID))
 	if err != nil {
 		return "", fmt.Errorf("read weekly plan of student %d: %w", studentID, err)
 	}

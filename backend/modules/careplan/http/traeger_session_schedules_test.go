@@ -213,7 +213,8 @@ func TestTraegerSchoolSessionWritesCarePlanWithMark(t *testing.T) {
 
 	t.Run("weekly_pickup_times", func(t *testing.T) {
 		requireTraegerWrite(t, tc, claims, http.MethodPut, base+"/pickup-schedules", map[string]any{
-			"schedules": []map[string]any{{"weekday": 1, "pickup_time": "15:30"}},
+			"schedules":        []map[string]any{{"weekday": 1, "pickup_time": "15:30"}},
+			"expected_version": weeklyPlanVersion(t, tc, child.ID),
 		}, http.StatusOK)
 		assertTraegerAuthored(t, tc, "student_pickup_schedules", child.ID, nil)
 	})
@@ -324,7 +325,8 @@ func TestTraegerSchoolSessionWritesCarePlanWithMark(t *testing.T) {
 		staffBase := fmt.Sprintf("/%d", staffChild.ID)
 
 		rr := staffExec(http.MethodPut, staffBase+"/pickup-schedules", map[string]any{
-			"schedules": []map[string]any{{"weekday": 2, "pickup_time": "15:00"}},
+			"schedules":        []map[string]any{{"weekday": 2, "pickup_time": "15:00"}},
+			"expected_version": weeklyPlanVersion(t, tc, staffChild.ID),
 		})
 		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 		assertStaffAuthored(t, tc, "student_pickup_schedules", staffChild.ID, teacher.StaffID, nil)
@@ -336,7 +338,8 @@ func TestTraegerSchoolSessionWritesCarePlanWithMark(t *testing.T) {
 		assertStaffAuthored(t, tc, "student_arrival_schedules", staffChild.ID, teacher.StaffID, nil)
 
 		requireTraegerWrite(t, tc, claims, http.MethodPut, staffBase+"/pickup-schedules", map[string]any{
-			"schedules": []map[string]any{{"weekday": 2, "pickup_time": "16:00"}},
+			"schedules":        []map[string]any{{"weekday": 2, "pickup_time": "16:00"}},
+			"expected_version": weeklyPlanVersion(t, tc, staffChild.ID),
 		}, http.StatusOK)
 		assertTraegerAuthored(t, tc, "student_pickup_schedules", staffChild.ID, nil)
 		requireTraegerWrite(t, tc, claims, http.MethodPut, staffBase+"/arrival-schedules", map[string]any{

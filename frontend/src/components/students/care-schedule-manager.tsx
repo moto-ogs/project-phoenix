@@ -334,6 +334,29 @@ const CARE_WEEK_READER = {
   revalidateOnReconnect: false,
 } as const;
 
+/** One child's week in the care schedule: both halves of one read. */
+interface CareWeek {
+  arrival: ArrivalData;
+  pickup: PickupData;
+}
+
+/**
+ * Reads the pickup half first, the arrival half after it. The weekly plan
+ * token travels in the pickup half and also guards the arrival rows: read in
+ * this order, every row shown is at least as new as the token, so a change in
+ * between makes the save refused, never accepted on rows the person did not
+ * see (ADR 0311).
+ */
+async function fetchCareWeek(
+  studentId: string,
+  from: string,
+  to: string,
+): Promise<CareWeek> {
+  const pickup = await fetchStudentPickupData(studentId, { from, to });
+  const arrival = await fetchArrivalData(studentId, from, to);
+  return { arrival, pickup };
+}
+
 const PREVIOUS_WEEK_HINT = "Zeigt die Betreuungszeiten der Woche davor.";
 const NEXT_WEEK_HINT = "Zeigt die Betreuungszeiten der Woche danach.";
 const CURRENT_WEEK_HINT = "Springt zurück zu den Zeiten dieser Woche.";
@@ -408,43 +431,31 @@ export function CareScheduleManager({
   const toISO = lastWeekDay ? formatDateISO(lastWeekDay) : null;
   const weekKnown = fromISO !== null && toISO !== null;
   // Not under the "arrival-data-"/"pickup-data-" prefixes the global SSE hook
-  // revalidates: the editors seed their drafts from these props, so a remote
+  // revalidates: the editors seed their drafts from this read, so a remote
   // change arrives through CARE_SCHEDULE_STALE_EVENT below and waits while one
   // is open. Focus and reconnect would replace the data the same way. Any
-  // other revalidation (the header's „Aktualisieren“) still reaches these
-  // readers; the shown week is held while an editor is open (`heldWeek`).
-  const arrivalWeek = useSWRAuth(
-    weekKnown ? tenantStudentKeys.arrivalWeek(studentId, fromISO, toISO) : null,
-    () => fetchArrivalData(studentId, fromISO ?? "", toISO ?? ""),
-    CARE_WEEK_READER,
-  );
-  const pickupWeek = useSWRAuth(
-    weekKnown ? tenantStudentKeys.pickupWeek(studentId, fromISO, toISO) : null,
-    () =>
-      fetchStudentPickupData(studentId, {
-        from: fromISO ?? "",
-        to: toISO ?? "",
-      }),
+  // other revalidation (the header's „Aktualisieren“) still reaches this
+  // reader; the shown week is held while an editor is open (`heldWeek`).
+  // One read for both halves (`fetchCareWeek`): the weekly plan token comes
+  // with the pickup half and protects the arrival rows too, so both are only
+  // ever adopted together (ADR 0311).
+  const careWeek = useSWRAuth(
+    weekKnown ? tenantStudentKeys.careWeek(studentId, fromISO, toISO) : null,
+    () => fetchCareWeek(studentId, fromISO ?? "", toISO ?? ""),
     CARE_WEEK_READER,
   );
   const arrivalSettings = useSWRAuth(
     tenantStudentKeys.arrivalSettings(),
     fetchArrivalSettings,
   );
-  const { mutate: mutateArrivalWeek } = arrivalWeek;
-  const { mutate: mutatePickupWeek } = pickupWeek;
+  const { mutate: mutateCareWeek } = careWeek;
   const { mutate: mutateArrivalSettings } = arrivalSettings;
   const reloadCareData = useCallback(
-    () =>
-      Promise.all([
-        mutateArrivalWeek(),
-        mutatePickupWeek(),
-        mutateArrivalSettings(),
-      ]),
-    [mutateArrivalWeek, mutatePickupWeek, mutateArrivalSettings],
+    () => Promise.all([mutateCareWeek(), mutateArrivalSettings()]),
+    [mutateCareWeek, mutateArrivalSettings],
   );
   const load = useSwrResourceLoadError(
-    [arrivalWeek, pickupWeek, arrivalSettings],
+    [careWeek, arrivalSettings],
     "die Übersicht der Betreuungszeiten",
     () => {
       clearRefreshError();
@@ -456,31 +467,19 @@ export function CareScheduleManager({
   // its own answer arrives; a different child never shows this one's plan.
   const [shownWeek, setShownWeek] = useState<{
     studentId: string;
-    arrival: ArrivalData;
-    pickup: PickupData;
+    week: CareWeek;
   } | null>(null);
   if (
-    arrivalWeek.data &&
-    pickupWeek.data &&
-    (shownWeek?.studentId !== studentId ||
-      shownWeek.arrival !== arrivalWeek.data ||
-      shownWeek.pickup !== pickupWeek.data)
+    careWeek.data &&
+    (shownWeek?.studentId !== studentId || shownWeek.week !== careWeek.data)
   ) {
-    setShownWeek({
-      studentId,
-      arrival: arrivalWeek.data,
-      pickup: pickupWeek.data,
-    });
+    setShownWeek({ studentId, week: careWeek.data });
   }
-  const previousWeek = shownWeek?.studentId === studentId ? shownWeek : null;
-  const loadedArrival =
-    (pickupWeek.data ? arrivalWeek.data : undefined) ??
-    previousWeek?.arrival ??
-    EMPTY_ARRIVAL_DATA;
-  const loadedPickup =
-    (arrivalWeek.data ? pickupWeek.data : undefined) ??
-    previousWeek?.pickup ??
-    EMPTY_PICKUP_DATA;
+  const loadedWeek =
+    careWeek.data ??
+    (shownWeek?.studentId === studentId ? shownWeek.week : null);
+  const loadedArrival = loadedWeek?.arrival ?? EMPTY_ARRIVAL_DATA;
+  const loadedPickup = loadedWeek?.pickup ?? EMPTY_PICKUP_DATA;
   // An open editor holds an unsaved draft that was seeded from arrivalData /
   // pickupData: the exception slide-over re-reads its day whenever those props
   // change identity, and the weekly edit state measures its removals against
@@ -489,10 +488,7 @@ export function CareScheduleManager({
   // The week the open editor was seeded from. Only the user's own writes
   // replace it (`refreshCareData`); every other answer waits until the editor
   // closes, the same way deferred remote changes do.
-  const [heldWeek, setHeldWeek] = useState<{
-    arrival: ArrivalData;
-    pickup: PickupData;
-  } | null>(null);
+  const [heldWeek, setHeldWeek] = useState<CareWeek | null>(null);
   if (isEditorOpen && heldWeek === null) {
     setHeldWeek({ arrival: loadedArrival, pickup: loadedPickup });
   } else if (!isEditorOpen && heldWeek !== null) {
@@ -518,7 +514,7 @@ export function CareScheduleManager({
   // week shows in its place.
   const isLoading = load.failure
     ? load.error === null
-    : !arrivalWeek.data || !pickupWeek.data || !settings;
+    : !careWeek.data || !settings;
 
   // The edit state needs the care-days source and write access; without either
   // the section stays on its display, so the header never loses its controls.
@@ -643,67 +639,50 @@ export function CareScheduleManager({
     setSelectedDateKey(formatDateISO((today ?? days[0])!.date));
   }, [days, selectedDateKey]);
 
+  // Reads the week again into the cache and into an open editor, which sees
+  // its own write or, after a refusal, the stored state. It rejects when the
+  // read fails (ADR 0311, rule 6): the refusal's message then names the failed
+  // read instead of claiming the stored plan is on screen.
+  const reloadCareWeek = useCallback(async () => {
+    if (fromISO === null || toISO === null) return;
+    const week = await mutateCareWeek(
+      fetchCareWeek(studentId, fromISO, toISO),
+      {
+        revalidate: false,
+      },
+    );
+    if (week) setHeldWeek((held) => (held ? week : held));
+  }, [fromISO, toISO, studentId, mutateCareWeek]);
+
   // After the user's own write: put the fresh week into the cache and show a
   // failed reload (writes have already committed, so its retry only reloads
   // and never repeats the mutation).
   const refreshCareData = useCallback(async () => {
-    if (fromISO !== null && toISO !== null) {
-      try {
-        const [arrival, pickup] = await Promise.all([
-          mutateArrivalWeek(fetchArrivalData(studentId, fromISO, toISO), {
-            revalidate: false,
-          }),
-          mutatePickupWeek(
-            fetchStudentPickupData(studentId, { from: fromISO, to: toISO }),
-            { revalidate: false },
-          ),
-        ]);
-        // An editor still open sees its own write.
-        if (arrival && pickup) {
-          setHeldWeek((held) => (held ? { arrival, pickup } : held));
-        }
-        clearRefreshError();
-      } catch (err) {
-        logger.error("care_schedule_refresh_failed", {
-          error: err instanceof Error ? err.message : String(err),
-          student_id: studentId,
-        });
-        await showRefreshError(err, {
-          object: "die Übersicht der Betreuungszeiten",
-          retry: () => {
-            clearRefreshError();
-            void reloadCareData();
-          },
-        });
-      }
+    try {
+      await reloadCareWeek();
+      clearRefreshError();
+    } catch (err) {
+      logger.error("care_schedule_refresh_failed", {
+        error: err instanceof Error ? err.message : String(err),
+        student_id: studentId,
+      });
+      await showRefreshError(err, {
+        object: "die Übersicht der Betreuungszeiten",
+        retry: () => {
+          clearRefreshError();
+          void reloadCareData();
+        },
+      });
     }
     onUpdate?.();
   }, [
-    fromISO,
-    toISO,
     studentId,
-    mutateArrivalWeek,
-    mutatePickupWeek,
+    reloadCareWeek,
     clearRefreshError,
     showRefreshError,
     reloadCareData,
     onUpdate,
   ]);
-
-  // The read after a refused save (ADR 0311): it rejects when it fails, so
-  // the refusal's message names the failed read instead of claiming the
-  // stored plan is on screen.
-  const reloadCareWeek = useCallback(async () => {
-    if (fromISO === null || toISO === null) return;
-    const [arrival, pickup] = await Promise.all([
-      fetchArrivalData(studentId, fromISO, toISO),
-      fetchStudentPickupData(studentId, { from: fromISO, to: toISO }),
-    ]);
-    await Promise.all([
-      mutateArrivalWeek(arrival, { revalidate: false }),
-      mutatePickupWeek(pickup, { revalidate: false }),
-    ]);
-  }, [fromISO, toISO, studentId, mutateArrivalWeek, mutatePickupWeek]);
 
   // Read through a ref inside the listener so opening/closing a modal does not
   // resubscribe it, and so the check uses the state at event time.
@@ -727,14 +706,10 @@ export function CareScheduleManager({
         student_id: studentId,
       });
     };
-    mutateArrivalWeek(fetchArrivalData(studentId, fromISO, toISO), {
+    mutateCareWeek(fetchCareWeek(studentId, fromISO, toISO), {
       revalidate: onlyWithoutData,
     }).catch(logFailure);
-    mutatePickupWeek(
-      fetchStudentPickupData(studentId, { from: fromISO, to: toISO }),
-      { revalidate: onlyWithoutData },
-    ).catch(logFailure);
-  }, [fromISO, toISO, studentId, mutateArrivalWeek, mutatePickupWeek]);
+  }, [fromISO, toISO, studentId, mutateCareWeek]);
 
   // React to REMOTE arrival/pickup changes, announced on this window event
   // instead of the global SSE invalidation (see the readers above). Re-fetch
@@ -1028,32 +1003,21 @@ export function CareScheduleManager({
     },
     [studentId, refreshCareData],
   );
-  // A note is changed as the open day editor read it (`heldWeek`). Refused
-  // because it changed since: the editor gets the stored note, then the
-  // message (ADR 0311).
-  const refreshOnRefusal = useCallback(
-    async (err: unknown) => {
-      if (isReadStateRefusal(err)) await refreshCareData();
-    },
-    [refreshCareData],
-  );
+  // A note is changed as the open day editor shows it: `version` is the
+  // token of the text on screen. A refusal (ADR 0311) leaves the cache alone
+  // here; the editor shows it with `reloadCareWeek`, which puts the stored
+  // note into the open editor or names the failed read.
   const handleUpdateArrivalNote = useCallback(
-    async (date: string, noteId: string, content: string) => {
-      const read = arrivalData.notes.find((note) => note.id === noteId);
-      try {
-        await updateArrivalNote(
-          studentId,
-          noteId,
-          { note_date: date, content },
-          read?.version ?? "",
-        );
-      } catch (err) {
-        await refreshOnRefusal(err);
-        throw err;
-      }
+    async (date: string, noteId: string, content: string, version: string) => {
+      await updateArrivalNote(
+        studentId,
+        noteId,
+        { note_date: date, content },
+        version,
+      );
       await refreshCareData();
     },
-    [studentId, refreshCareData, refreshOnRefusal, arrivalData.notes],
+    [studentId, refreshCareData],
   );
   const handleDeleteArrivalNote = useCallback(
     async (noteId: string) => {
@@ -1071,23 +1035,17 @@ export function CareScheduleManager({
     [studentId, refreshCareData],
   );
   const handleUpdatePickupNote = useCallback(
-    async (date: string, noteId: string, content: string) => {
-      const read = pickupData.notes.find((note) => note.id === noteId);
-      try {
-        await updateStudentPickupNote(
-          studentId,
-          noteId,
-          { noteDate: date, content },
-          read?.version ?? "",
-        );
-      } catch (err) {
-        await refreshOnRefusal(err);
-        throw err;
-      }
+    async (date: string, noteId: string, content: string, version: string) => {
+      await updateStudentPickupNote(
+        studentId,
+        noteId,
+        { noteDate: date, content },
+        version,
+      );
       await refreshCareData();
       invalidatePickupCaches();
     },
-    [studentId, refreshCareData, refreshOnRefusal, pickupData.notes],
+    [studentId, refreshCareData],
   );
   const handleDeletePickupNote = useCallback(
     async (noteId: string) => {
@@ -1340,6 +1298,7 @@ export function CareScheduleManager({
         onCreatePickupNote={handleCreatePickupNote}
         onUpdatePickupNote={handleUpdatePickupNote}
         onDeletePickupNote={handleDeletePickupNote}
+        reloadAfterRefusal={reloadCareWeek}
         onResetPickupToOffering={
           readOnly ? undefined : handleResetPickupToOffering
         }

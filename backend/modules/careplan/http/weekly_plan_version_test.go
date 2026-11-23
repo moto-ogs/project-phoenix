@@ -1,16 +1,19 @@
 package careplanhttp_test
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
 )
 
 // weeklyPlanVersion reads the token of the child's weekly plan the way the
@@ -286,4 +289,185 @@ func TestCareNoteUpdateRefusesAStaleRead(t *testing.T) {
 			assert.Contains(t, body, "Tante holt ab")
 		})
 	}
+}
+
+// A wholesale replacement of the weekly pickup rows is a save of the weekly
+// plan: it carries the token, a stale or missing one writes nothing (ADR 0311).
+func TestWeeklyPickupReplaceRefusesAStaleRead(t *testing.T) {
+	t.Parallel()
+
+	tc := setupStudentsRoute(t)
+	student := testpkg.CreateTestStudent(t, tc.db, "WeeklyPickup", "Test", "WPR1")
+	_, account := testpkg.CreateTestTeacherWithAccount(t, tc.db, "Weekly", "PickupTeacher")
+	claims := testutil.AdminTestClaims(int(account.ID))
+	put := func(time, version string) (int, string) {
+		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/pickup-schedules", student.ID), map[string]any{
+			"schedules":        []map[string]any{{"weekday": 1, "pickup_time": time}},
+			"expected_version": version,
+		})
+		rr := authExec(t, tc, req, claims, []string{"admin:*"})
+		return rr.Code, rr.Body.String()
+	}
+	storedTime := func() string {
+		var times []string
+		require.NoError(t, tc.db.NewSelect().TableExpr("schedule.student_pickup_schedules").
+			ColumnExpr("to_char(pickup_time, 'HH24:MI')").Where("student_id = ?", student.ID).
+			Scan(testpkg.Ctx(t), &times))
+		require.Len(t, times, 1)
+		return times[0]
+	}
+
+	read := weeklyPlanVersion(t, tc, student.ID)
+	code, body := put("15:30", read)
+	require.Equal(t, http.StatusOK, code, "Body: %s", body)
+	assert.Equal(t, "15:30", storedTime())
+
+	code, body = put("16:00", read)
+	require.Equal(t, http.StatusConflict, code, "Body: %s", body)
+	assert.Contains(t, body, readstate.ChangedCode)
+	code, body = put("16:00", "")
+	require.Equal(t, http.StatusConflict, code, "an empty token is refused. Body: %s", body)
+	assert.Equal(t, "15:30", storedTime(), "a refused replacement keeps the colleague's time")
+
+	code, body = put("16:00", weeklyPlanVersion(t, tc, student.ID))
+	require.Equal(t, http.StatusOK, code, "Body: %s", body)
+	assert.Equal(t, "16:00", storedTime())
+	var saved struct {
+		Data struct {
+			WeeklyPlanVersion string `json:"weekly_plan_version"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal([]byte(body), &saved))
+	assert.Equal(t, weeklyPlanVersion(t, tc, student.ID), saved.Data.WeeklyPlanVersion)
+}
+
+// The single-note route checks one note's token, not the weekly plan's, so
+// it does not move a note into or within the weekly plan (ADR 0311).
+func TestPickupNoteUpdateKeepsItsWeekday(t *testing.T) {
+	t.Parallel()
+
+	tc := setupStudentsRoute(t)
+	student := testpkg.CreateTestStudent(t, tc.db, "NoteWeekday", "Test", "NWD1")
+	_, account := testpkg.CreateTestTeacherWithAccount(t, tc.db, "Note", "WeekdayTeacher")
+	claims := testutil.AdminTestClaims(int(account.ID))
+	exec := func(method, path string, body map[string]any) (int, string) {
+		req := testutil.NewAuthenticatedRequest(t, method, path, body)
+		rr := authExec(t, tc, req, claims, []string{"admin:*"})
+		return rr.Code, rr.Body.String()
+	}
+	create := func(body map[string]any) (string, string) {
+		code, raw := exec("POST", fmt.Sprintf("/%d/pickup-notes", student.ID), body)
+		require.Equal(t, http.StatusCreated, code, "Body: %s", raw)
+		var created struct {
+			Data struct {
+				ID      testpkg.ID `json:"id"`
+				Version string     `json:"version"`
+			} `json:"data"`
+		}
+		require.NoError(t, json.Unmarshal([]byte(raw), &created))
+		return fmt.Sprintf("/%d/pickup-notes/%d", student.ID, created.Data.ID), created.Data.Version
+	}
+
+	dated, datedVersion := create(map[string]any{"note_date": "2026-04-15", "content": "Oma holt ab"})
+	code, body := exec("PUT", dated, map[string]any{"weekday": 1, "content": "Oma holt ab", "expected_version": datedVersion})
+	require.Equal(t, http.StatusBadRequest, code, "a dated note does not become a weekday note. Body: %s", body)
+
+	weekday, weekdayVersion := create(map[string]any{"weekday": 2, "content": "Dienstags bei Oma"})
+	code, body = exec("PUT", weekday, map[string]any{"weekday": 3, "content": "Dienstags bei Oma", "expected_version": weekdayVersion})
+	require.Equal(t, http.StatusBadRequest, code, "a weekday note does not move to another weekday. Body: %s", body)
+
+	notes, err := tc.resource.PickupScheduleService.GetStudentPickupNotes(testpkg.Ctx(t), student.ID)
+	require.NoError(t, err)
+	byWeekday := map[int]string{}
+	for _, note := range notes {
+		byWeekday[note.Weekday] = note.Content
+	}
+	assert.Equal(t, map[int]string{0: "Oma holt ab", 2: "Dienstags bei Oma"}, byWeekday, "a refused move writes nothing")
+
+	code, body = exec("PUT", dated, map[string]any{"note_date": "2026-04-16", "content": "Opa holt ab", "expected_version": datedVersion})
+	require.Equal(t, http.StatusOK, code, "a dated note still moves to another day. Body: %s", body)
+}
+
+// Writing a weekday note one by one changes the weekly plan, so it waits for
+// the student lock under which a plan save checks its token (ADR 0311).
+func TestWeekdayPickupNoteWritesWaitForStudentLock(t *testing.T) {
+	t.Parallel()
+
+	tc := setupStudentsRoute(t)
+	_, account := testpkg.CreateTestTeacherWithAccount(t, tc.db, "Weekday", "NoteLockTeacher")
+	claims := testutil.AdminTestClaims(int(account.ID))
+	exec := func(method, path string, body map[string]any) (int, string) {
+		req := testutil.NewAuthenticatedRequest(t, method, path, body)
+		rr := authExec(t, tc, req, claims, []string{"admin:*"})
+		return rr.Code, rr.Body.String()
+	}
+
+	t.Run("create", func(t *testing.T) {
+		student := testpkg.CreateTestStudent(t, tc.db, "NoteLock", "Create", "NLC1")
+		requireWaitsForStudentLock(t, tc, student.ID, http.StatusCreated, func() int {
+			code, _ := exec("POST", fmt.Sprintf("/%d/pickup-notes", student.ID), map[string]any{"weekday": 1, "content": "Montags bei Oma"})
+			return code
+		})
+	})
+	t.Run("delete", func(t *testing.T) {
+		student := testpkg.CreateTestStudent(t, tc.db, "NoteLock", "Delete", "NLD1")
+		code, body := exec("POST", fmt.Sprintf("/%d/pickup-notes", student.ID), map[string]any{"weekday": 1, "content": "Montags bei Oma"})
+		require.Equal(t, http.StatusCreated, code, "Body: %s", body)
+		var created struct {
+			Data struct {
+				ID testpkg.ID `json:"id"`
+			} `json:"data"`
+		}
+		require.NoError(t, json.Unmarshal([]byte(body), &created))
+		requireWaitsForStudentLock(t, tc, student.ID, http.StatusOK, func() int {
+			code, _ := exec("DELETE", fmt.Sprintf("/%d/pickup-notes/%d", student.ID, created.Data.ID), nil)
+			return code
+		})
+	})
+}
+
+// requireWaitsForStudentLock holds the student row lock in another
+// transaction and requires write to finish only after it is released.
+func requireWaitsForStudentLock(t *testing.T, tc *testContext, studentID int64, want int, write func() int) {
+	t.Helper()
+	locked := make(chan struct{})
+	release := make(chan struct{})
+	lockDone := make(chan error, 1)
+	go func() {
+		lockDone <- testpkg.WithTenantTx(t, context.Background(), tc.db, testpkg.Tenant(t), func(txCtx context.Context, _ bun.Tx) error {
+			if _, err := testpkg.TenantQuery1(t, txCtx, testpkg.SetupTestDB(t), newStudentTestEnrollment(testpkg.NewDatabase(t, tc.db)).Student.FindByIDForUpdate, studentID); err != nil {
+				return err
+			}
+			close(locked)
+			<-release
+			return nil
+		})
+	}()
+	select {
+	case <-locked:
+	case err := <-lockDone:
+		require.NoError(t, err)
+		t.Fatal("student transaction ended before holding the lock")
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out while acquiring the student lock")
+	}
+	released := false
+	releaseLock := func() {
+		if !released {
+			close(release)
+			released = true
+		}
+	}
+	defer releaseLock()
+
+	writeDone := make(chan int, 1)
+	go func() { writeDone <- write() }()
+	select {
+	case code := <-writeDone:
+		t.Fatalf("the write finished with %d while the student lock was held", code)
+	case <-time.After(150 * time.Millisecond):
+	}
+	releaseLock()
+	require.NoError(t, <-lockDone)
+	assert.Equal(t, want, <-writeDone)
 }

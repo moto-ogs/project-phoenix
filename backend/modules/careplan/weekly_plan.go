@@ -4,6 +4,7 @@ import (
 	"context"
 	"sort"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
@@ -21,14 +22,17 @@ type WeeklyPlans interface {
 }
 
 // WeeklyPlanInput changes the weekly plan read at ExpectedVersion.
-// ArrivalSchedules replaces the weekly arrival plan and WeekdayNotes the
-// recurring weekday notes, both in one unit; nil leaves either as it is.
+// ArrivalSchedules replaces the weekly arrival plan, PickupSchedules the
+// weekly pickup rows from PickupEffectiveDate on, and WeekdayNotes the
+// recurring weekday notes, all in one unit; nil leaves each as it is.
 type WeeklyPlanInput struct {
-	StudentID        int64
-	ArrivalSchedules *[]*ArrivalSchedule
-	WeekdayNotes     map[int]string
-	CreatedByStaffID int64
-	ExpectedVersion  string
+	StudentID           int64
+	ArrivalSchedules    *[]*ArrivalSchedule
+	PickupSchedules     *[]*PickupSchedule
+	PickupEffectiveDate calendar.Date
+	WeekdayNotes        map[int]string
+	CreatedByStaffID    int64
+	ExpectedVersion     string
 }
 
 // WeeklyPlanVersion is the read-state token of a child's stored weekly plan:

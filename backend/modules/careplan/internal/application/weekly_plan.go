@@ -30,8 +30,8 @@ func (s *PickupAdjustments) WeeklyPlanVersion(ctx context.Context, studentID int
 	return careplan.WeeklyPlanVersion(arrivals, pickups, notes), nil
 }
 
-// SaveWeeklyPlan replaces the weekly arrival plan and the weekday notes,
-// each when given, in one unit. Under the student lock every plan writer takes,
+// SaveWeeklyPlan replaces the weekly arrival plan, the weekly pickup rows and
+// the weekday notes, each when given, in one unit. Under the student lock every plan writer takes,
 // the stored plan must still be the one read at ExpectedVersion; otherwise
 // nothing is written and readstate.ErrChanged is returned. It answers the
 // token of the saved plan.
@@ -44,6 +44,11 @@ func (s *PickupAdjustments) SaveWeeklyPlan(ctx context.Context, input careplan.W
 		if input.ArrivalSchedules != nil {
 			if err := s.deps.ArrivalSchedules.UpsertBulkStudentArrivalSchedules(txCtx, input.StudentID, *input.ArrivalSchedules); err != nil {
 				return fmt.Errorf("weekly plan: update arrival schedules: %w", err)
+			}
+		}
+		if input.PickupSchedules != nil {
+			if err := s.deps.PickupSchedules.UpsertBulkStudentPickupSchedulesForDate(txCtx, input.StudentID, input.PickupEffectiveDate, *input.PickupSchedules); err != nil {
+				return fmt.Errorf("weekly plan: update pickup schedules: %w", err)
 			}
 		}
 		if err := s.replaceWeekdayNotes(txCtx, input.StudentID, input.CreatedByStaffID, input.WeekdayNotes); err != nil {
