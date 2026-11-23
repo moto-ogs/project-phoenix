@@ -2,6 +2,7 @@
 import { z } from "zod";
 import {
   arr,
+  bool,
   calendarDate,
   instant,
   int64String,
@@ -22,11 +23,15 @@ export type ApplicationContractStatus = (typeof APPLICATION_CONTRACT_STATUS_VALU
 export interface ApplicationContractConclusion {
   method: OpenEnum<ApplicationContractConclusionMethod>;
   at: string;
+  date_unknown: boolean;
+  taken_over: boolean;
 }
 
 export const ApplicationContractConclusionSchema: z.ZodType<ApplicationContractConclusion, unknown> = object<ApplicationContractConclusion>({
   method: str,
   at: instant,
+  date_unknown: bool,
+  taken_over: bool,
 });
 
 /** Go: carecontracthttp.ApplicationContractService */

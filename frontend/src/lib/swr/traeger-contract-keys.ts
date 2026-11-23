@@ -46,6 +46,10 @@ export const traegerContractKeys = {
   // Die Termine für einen Eingangstag.
   noticeOn: (contractId: string, day: string) =>
     `${noticeFamily(contractId)}on-${day}`,
+  // Vorschau „Anmeldungen nachtragen“ einer Schule (#7760): jedes Lesen steht
+  // im Zugriffsprotokoll der Schule, die Seite liest sie je Öffnen neu.
+  enrollmentPreview: (schoolId: string) =>
+    `traeger-care-contract-enrollment-preview-${encodeURIComponent(schoolId)}`,
   // Vertragsbedingungen je Angebot.
   templates: () => "traeger-care-contract-templates",
   // Bisherige Vertragsimporte (#4723): Datei, Zeitpunkt, Konto, Anzahl.

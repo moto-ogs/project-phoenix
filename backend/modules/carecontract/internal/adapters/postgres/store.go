@@ -287,7 +287,7 @@ func (r summaryRow) summary() carecontract.ContractSummary {
 		ModulesText: carecontract.JoinNames(r.ModuleNames),
 		PartyName:   strings.TrimSpace(r.PartyName), PartyEmail: r.PartyEmail, EffectiveFrom: r.EffectiveFrom,
 		CreatedAt: r.CreatedAt, SentAt: r.SentAt, Concluded: r.concluded(), EndsOn: r.EndsOn,
-		Imported: r.Imported, FollowsBookings: r.FollowsBookings,
+		Imported: r.Imported, FollowsBookings: r.FollowsBookings, RequestChildID: (*ident.ID)(r.RequestChildID),
 	}
 }
 

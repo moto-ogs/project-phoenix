@@ -149,7 +149,10 @@ type CareUsageRow struct {
 	GuardianLastName  string            `json:"guardian_last_name"`
 	GuardianEmail     string            `json:"guardian_email"`
 	GuardianPhone     *string           `json:"guardian_phone,omitempty"`
-	SubmittedAt       time.Time         `json:"submitted_at"`
+	// SubmissionSource is the normalized source of the request; a request
+	// of an imported contract has no parents (ADR 0309).
+	SubmissionSource string    `json:"submission_source"`
+	SubmittedAt      time.Time `json:"submitted_at"`
 	// SchedulePickupByDay is the maintained Kind-Gehzeit (manual rows and
 	// rolled-out Angebots-Gehzeiten, #2290) of the student linked to this
 	// request child, when one exists. Display-only enrichment for the

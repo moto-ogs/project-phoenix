@@ -240,8 +240,11 @@ export function RolloverReviewQueue({ phaseID, info }: Props) {
                         {item.first_name} {item.last_name}
                       </h3>
                       <p className="text-xs text-gray-600">
-                        {item.guardian_first_name} {item.guardian_last_name} ·{" "}
-                        {item.guardian_email}
+                        {item.review_reason === "no_guardian"
+                          ? // The enrollment of an imported contract (ADR
+                            // 0309) has no guardian to name.
+                            "Aus importiertem Vertrag, ohne Eltern"
+                          : `${item.guardian_first_name} ${item.guardian_last_name} · ${item.guardian_email}`}
                       </p>
                       <p className="mt-1 text-xs text-gray-500">
                         Vorgemerkt: Klasse {item.target_grade_level ?? "–"}

@@ -38,8 +38,10 @@ const seedChildLinkTries = 5
 // (ADR 0309), so the demo has an imported contract that is linked and bound
 // to an enrollment. A linked contract the run holds back stays as it is and
 // the seed tries the next child, a few times. The four children of the
-// import stay unlinked: they have no child record. A repeated seed finds
-// the contract linked and bound and writes nothing.
+// import stay unlinked: they have no child record. The step does not run
+// twice on one database: a plain second seed stops earlier by design, at
+// the bootstrap of the profile (docs/getting-started.md). Reset the
+// database to seed again.
 func seedCareContractChildLink(rt *Runtime, auth AuthRef, module seedImportModule) (linked, bound int, err error) {
 	if module.module == "" || rt.TenantAuth.Token == "" {
 		return 0, 0, nil

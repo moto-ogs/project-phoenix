@@ -330,6 +330,7 @@ export interface AdminRequestSummary {
   guardian_last_name: string;
   guardian_email: string;
   guardian_phone?: string;
+  submission_source: string;
   submitted_at: string;
   withdrawn_at?: string;
   custom_data?: unknown | null;
@@ -350,6 +351,7 @@ export const AdminRequestSummarySchema: z.ZodType<AdminRequestSummary, unknown> 
   guardian_last_name: str,
   guardian_email: str,
   guardian_phone: optional(str),
+  submission_source: str,
   submitted_at: instant,
   withdrawn_at: optional(instant),
   custom_data: optional(nullable(json)),
@@ -710,6 +712,7 @@ export interface careUsageRowResponse {
   guardian_last_name: string;
   guardian_email: string;
   guardian_phone?: string;
+  submission_source: string;
   submitted_at: string;
 }
 
@@ -730,6 +733,7 @@ export const careUsageRowResponseSchema: z.ZodType<careUsageRowResponse, unknown
   guardian_last_name: str,
   guardian_email: str,
   guardian_phone: optional(str),
+  submission_source: str,
   submitted_at: instant,
 });
 
@@ -865,6 +869,7 @@ export interface AdminRequestDetail {
   guardian_last_name: string;
   guardian_email: string;
   guardian_phone?: string;
+  submission_source: string;
   submitted_at: string;
   withdrawn_at?: string;
   custom_data?: unknown | null;
@@ -892,6 +897,7 @@ export const AdminRequestDetailSchema: z.ZodType<AdminRequestDetail, unknown> = 
   guardian_last_name: str,
   guardian_email: str,
   guardian_phone: optional(str),
+  submission_source: str,
   submitted_at: instant,
   withdrawn_at: optional(instant),
   custom_data: optional(nullable(json)),

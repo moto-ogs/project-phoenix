@@ -126,6 +126,7 @@ const NOT_A_LIST: Readonly<Record<string, string>> = {
   "/vertraege/nachpflege": "Nachpflege aus einer Datei",
   "/vertraege/module-zuordnen": "Import",
   "/vertraege/verknuepfen": "Import",
+  "/vertraege/anmeldungen": "Vorschau",
 };
 
 function collectPages(directory: string): string[] {

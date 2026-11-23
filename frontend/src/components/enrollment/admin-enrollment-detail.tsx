@@ -40,6 +40,7 @@ import {
   type ExistingChildChoice,
   decideAdminChild,
   announceAdminRequestOpened,
+  fromImportedContract,
   getAdminRequest,
   restoreAdminRequest,
 } from "~/lib/enrollment-admin-api";
@@ -114,6 +115,7 @@ import {
   isHeldForChildQuota,
 } from "~/components/enrollment/child-status-badge";
 import { enrollmentsConcept } from "~/lib/concepts/enrollments";
+import { careContractsConcept } from "~/lib/concepts/careContracts";
 import { parentsConcept } from "~/lib/concepts/parents";
 import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 
@@ -559,7 +561,7 @@ export function AdminEnrollmentDetail({ requestId, info }: Props) {
 
   return (
     <TenantPage
-      title={`${data.guardian_first_name} ${data.guardian_last_name}`}
+      title={requestTitle(data)}
       info={info}
       back
       backHref={`/admin/enrollments/phases/${encodeURIComponent(data.phase_id)}`}
@@ -768,6 +770,7 @@ export function AdminEnrollmentDetail({ requestId, info }: Props) {
                   }
                   onDecide={(status) => requestDecision(child, status)}
                   requestGuardian={`${data.guardian_first_name} ${data.guardian_last_name}`}
+                  fromContract={fromImportedContract(data)}
                   onRejectDuplicate={
                     canRejectDuplicate
                       ? () => rejectDuplicate(child)
@@ -809,6 +812,21 @@ export function AdminEnrollmentDetail({ requestId, info }: Props) {
   );
 }
 
+/**
+ * The heading of a request: the guardian who sent it. A request of an
+ * imported contract (ADR 0309) has no guardian; it is named after its
+ * children.
+ */
+function requestTitle(data: AdminRequestSummary): string {
+  const guardian =
+    `${data.guardian_first_name} ${data.guardian_last_name}`.trim();
+  if (guardian !== "" && !fromImportedContract(data)) return guardian;
+  const children = data.children
+    .map((child) => `${child.first_name} ${child.last_name}`.trim())
+    .filter((name) => name !== "");
+  return children.length > 0 ? children.join(", ") : "Anmeldung";
+}
+
 function EnrollmentSummary({
   data,
   submittedAt,
@@ -816,6 +834,34 @@ function EnrollmentSummary({
   data: AdminRequestSummary;
   submittedAt: string;
 }>) {
+  if (fromImportedContract(data)) {
+    return (
+      <InsetPanel as="section" framed padding="md">
+        <div className="flex items-start gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white shadow-sm">
+            <MotoConceptIcon concept={careContractsConcept} size={16} />
+          </span>
+          <div>
+            <h2 className="text-base font-semibold text-gray-900">
+              Aus importiertem Vertrag
+            </h2>
+            <p className="mt-1 text-sm text-gray-600">
+              Das Träger-Büro hat diese Anmeldung aus dem importierten
+              Betreuungsvertrag angelegt. Eltern sind hier nicht hinterlegt.
+            </p>
+          </div>
+        </div>
+        <div className="mt-4">
+          <DataGrid>
+            <DataField label="Phase">
+              {data.phase_name || "Nicht zugeordnet"}
+            </DataField>
+            <DataField label="Angelegt">{submittedAt}</DataField>
+          </DataGrid>
+        </div>
+      </InsetPanel>
+    );
+  }
   return (
     <InsetPanel as="section" framed padding="md">
       <div className="flex items-start gap-3">
@@ -895,6 +941,7 @@ function ChildInformationCard({
   requestId,
   schemaFields,
   weeklyPlanToday,
+  fromContract,
 }: Readonly<{
   actions: ActionDef[];
   busy: boolean;
@@ -914,6 +961,8 @@ function ChildInformationCard({
   reason: string;
   schemaFields?: enrollmentContract.AdminRequestSchemaField[];
   weeklyPlanToday: string | null;
+  /** The booked days came from an imported contract, not from parents. */
+  fromContract: boolean;
 }>) {
   const terminal = isTerminalChildStatus(child.status);
   const canDeleteFromEnrollment =
@@ -1027,6 +1076,7 @@ function ChildInformationCard({
           upcomingOfferings={child.upcoming_offerings}
           unavailable={child.offerings_unavailable}
           phaseName={phaseName}
+          fromContract={fromContract}
         />
         {child.status === "approved" ? (
           <ChildOfferingAdjustment
@@ -1099,7 +1149,11 @@ function ReviewSidebar({
           gehört als description in ihren Kopf. */}
       <SectionCard
         title="Status der Anmeldung"
-        description="Alle Kinder werden einzeln geprüft. Die Statusseite zeigt Eltern den aktuellen Stand der Anmeldung."
+        description={
+          fromImportedContract(data)
+            ? "Alle Kinder werden einzeln geprüft."
+            : "Alle Kinder werden einzeln geprüft. Die Statusseite zeigt Eltern den aktuellen Stand der Anmeldung."
+        }
       >
         <div className="grid grid-cols-3 gap-2">
           <StatCard
@@ -1122,21 +1176,25 @@ function ReviewSidebar({
             <DataField label="Eingegangen">{submittedAt}</DataField>
           </DataGrid>
         </div>
-        <ActionHint text="Öffnet in einem neuen Tab die Statusseite, die die Eltern sehen.">
-          <a
-            href={statusHref}
-            target="_blank"
-            rel="noreferrer"
-            className={buttonClassName({
-              variant: "outline",
-              size: "md",
-              className: "mt-4 w-full gap-2",
-            })}
-          >
-            Statusseite öffnen
-            <ExternalLink className="h-4 w-4" aria-hidden="true" />
-          </a>
-        </ActionHint>
+        {/* A request of an imported contract has no parents who would read
+            a status page. */}
+        {fromImportedContract(data) ? null : (
+          <ActionHint text="Öffnet in einem neuen Tab die Statusseite, die die Eltern sehen.">
+            <a
+              href={statusHref}
+              target="_blank"
+              rel="noreferrer"
+              className={buttonClassName({
+                variant: "outline",
+                size: "md",
+                className: "mt-4 w-full gap-2",
+              })}
+            >
+              Statusseite öffnen
+              <ExternalLink className="h-4 w-4" aria-hidden="true" />
+            </a>
+          </ActionHint>
+        )}
         {onRestoreRequest ? (
           <Button
             type="button"
@@ -1171,9 +1229,14 @@ function ReviewSidebar({
                 <h3 className="truncate text-sm font-semibold text-gray-900">
                   {child.first_name} {child.last_name}
                 </h3>
-                <p className="mt-1 text-xs text-gray-500">
-                  {enrolledClassLabel(child) || "Keine Klassenstufe"}
-                </p>
+                {/* A request of an imported contract keeps no grade of its
+                    own; the class stands in the child record. */}
+                {fromImportedContract(data) &&
+                !enrolledClassLabel(child) ? null : (
+                  <p className="mt-1 text-xs text-gray-500">
+                    {enrolledClassLabel(child) || "Keine Klassenstufe"}
+                  </p>
+                )}
               </div>
               <ChildStatusBadge status={child.status} />
             </div>

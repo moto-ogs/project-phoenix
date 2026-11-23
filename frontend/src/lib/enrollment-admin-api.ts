@@ -226,6 +226,17 @@ export type AdminRequestSummary = Omit<
   children: AdminRequestChild[];
 };
 
+/**
+ * A request the Träger office made from an imported care contract (ADR
+ * 0309): no parents filled it in, none are attached, and no parent status
+ * page belongs to it.
+ */
+export function fromImportedContract(request: {
+  readonly submission_source: string;
+}): boolean {
+  return request.submission_source === "contract_import";
+}
+
 function requestSummaryFromContract(
   summary: enrollmentContract.AdminRequestSummary,
 ): AdminRequestSummary {

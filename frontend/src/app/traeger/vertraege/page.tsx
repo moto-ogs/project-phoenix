@@ -10,6 +10,7 @@ import { bffFile } from "~/lib/bff-fetch";
 // mit dem Recht „Verträge verwalten“ sieht die Seite.
 
 import {
+  ClipboardCheck,
   FilePenLine,
   Link2,
   Plus,
@@ -650,6 +651,14 @@ export default function TraegerVertraegePage() {
             "Öffnet das Verknüpfen importierter Verträge mit der Kinderakte, per CSV-Datei.",
           icon: <Link2 className="h-4 w-4" aria-hidden />,
           href: traegerPath("/traeger/vertraege/verknuepfen"),
+          onClick: () => undefined,
+        },
+        {
+          label: "Anmeldungen nachtragen",
+          description:
+            "Öffnet die Vorschau: Verknüpfte Verträge bekommen die Anmeldung an ihrer Schule.",
+          icon: <ClipboardCheck className="h-4 w-4" aria-hidden />,
+          href: traegerPath("/traeger/vertraege/anmeldungen"),
           onClick: () => undefined,
         },
         {

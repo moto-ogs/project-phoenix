@@ -62,9 +62,14 @@ type ApplicationContractService struct {
 }
 
 // ApplicationContractConclusion is how and when the contract was concluded.
+// A contract taken over from an import (TakenOver) knows at most its day,
+// and DateUnknown tells that the office does not know it: At is then only a
+// stand-in the school must not show as the day of the conclusion (#7767).
 type ApplicationContractConclusion struct {
-	Method string    `json:"method"`
-	At     time.Time `json:"at"`
+	Method      string    `json:"method"`
+	At          time.Time `json:"at"`
+	DateUnknown bool      `json:"date_unknown"`
+	TakenOver   bool      `json:"taken_over"`
 }
 
 // ApplicationContractResponse is the contract of one child of the
@@ -137,7 +142,8 @@ func applicationContractResponse(contract carecontract.ApplicationContract) Appl
 		EffectiveFrom: contract.EffectiveFrom, Services: services,
 	}
 	if contract.Concluded != nil {
-		response.Concluded = &ApplicationContractConclusion{Method: contract.Concluded.Method, At: contract.Concluded.At}
+		response.Concluded = &ApplicationContractConclusion{Method: contract.Concluded.Method, At: contract.Concluded.At,
+			DateUnknown: contract.Concluded.DateUnknown, TakenOver: contract.Concluded.TakenOver}
 	}
 	return response
 }

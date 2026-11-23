@@ -303,6 +303,47 @@ beforeEach(() => {
 });
 
 describe("AdminEnrollmentPhaseDetail", () => {
+  it("marks a request of an imported contract and names no parents (ADR 0309)", async () => {
+    const [first] = report().rows;
+    mocks.getCareUsageReport.mockImplementation(async (filters) =>
+      report({
+        filters,
+        rows: [
+          {
+            ...first,
+            request_id: "128",
+            child_id: "128",
+            child_first_name: "Lina",
+            child_last_name: "Schröder",
+            target_grade_level: undefined,
+            status: "approved",
+            guardian_first_name: "",
+            guardian_last_name: "",
+            guardian_email: "",
+            submission_source: "contract_import",
+            offerings: [
+              {
+                id: "2",
+                name: "OGS Ganztag",
+                days: ["mon", "tue"],
+                days_source: "selected",
+                days_of_week_mode: "parent_choice",
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    await renderPhase();
+    expect(
+      (await screen.findAllByText("Aus importiertem Vertrag")).length,
+    ).toBeGreaterThan(0);
+    expect(screen.getByText("In der Anmeldung keine Eltern")).toBeVisible();
+    expect(screen.getByText("Mo, Di · gebucht")).toBeVisible();
+    // Its class stands in the child record, not in the request.
+    expect(screen.queryByText("Keine Klassenstufe")).not.toBeInTheDocument();
+  });
+
   // Lesestatus pro Person (#3778): markiert an jedem Kind der Anmeldung,
   // umschaltbar über das Menü der Zeile.
   it("markiert ungelesene Anmeldungen und schaltet sie im Zeilenmenü um", async () => {

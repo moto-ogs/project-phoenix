@@ -255,6 +255,7 @@ export const GERMAN_PAGE_TITLES: Readonly<
     "/vertraege/nachpflege": "Vertragsangaben nachpflegen",
     "/vertraege/module-zuordnen": "Module neu zuordnen",
     "/vertraege/verknuepfen": "Verträge mit Kinderakten verknüpfen",
+    "/vertraege/anmeldungen": "Anmeldungen nachtragen",
     "/zeitvergleich": "Länger als gebucht",
   },
   operator: {
