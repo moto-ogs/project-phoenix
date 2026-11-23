@@ -117,8 +117,8 @@ function unpricedNoticeText(children: readonly CareBilledChild[]): string {
       ? "Sein bisheriger Jahresbescheid gilt weiter, auch für Tage eines anderen Vertrags."
       : "Ihre bisherigen Jahresbescheide gelten weiter, auch für Tage anderer Verträge.",
     one
-      ? "Damit kein Tag doppelt abgerechnet wird, bekommt der andere Vertrag keinen neuen Bescheid."
-      : "Damit kein Tag doppelt abgerechnet wird, bekommen die anderen Verträge keinen neuen Bescheid.",
+      ? "Damit dieser Lauf keinen Tag doppelt abrechnet, bekommt der andere Vertrag keinen neuen Bescheid."
+      : "Damit dieser Lauf keinen Tag doppelt abrechnet, bekommen die anderen Verträge keinen neuen Bescheid.",
     "Trage den Preis in der Preisliste ein, dann rechnet diese Vorschau neu.",
   ].join(" ");
 }
@@ -188,7 +188,6 @@ export function CareBilledChildrenCard({
           <ButtonLink
             href={traegerPath("/traeger/abrechnung/preise")}
             variant="surface"
-            size="compact"
             tooltip="Öffnet die Preisliste, dort trägst du die Preise ein."
           >
             Preisliste öffnen

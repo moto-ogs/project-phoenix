@@ -186,7 +186,7 @@ describe("CareBilledChildrenCard", () => {
     if (!card) throw new Error("the price card without its section");
     expect(
       within(card).getByText(
-        "Für einen Vertrag dieses Kindes fehlt ein Preis. Sein bisheriger Jahresbescheid gilt weiter, auch für Tage eines anderen Vertrags. Damit kein Tag doppelt abgerechnet wird, bekommt der andere Vertrag keinen neuen Bescheid. Trage den Preis in der Preisliste ein, dann rechnet diese Vorschau neu.",
+        "Für einen Vertrag dieses Kindes fehlt ein Preis. Sein bisheriger Jahresbescheid gilt weiter, auch für Tage eines anderen Vertrags. Damit dieser Lauf keinen Tag doppelt abrechnet, bekommt der andere Vertrag keinen neuen Bescheid. Trage den Preis in der Preisliste ein, dann rechnet diese Vorschau neu.",
       ),
     ).toBeInTheDocument();
     expect(within(card).queryByText(/musst du nichts tun/)).toBeNull();

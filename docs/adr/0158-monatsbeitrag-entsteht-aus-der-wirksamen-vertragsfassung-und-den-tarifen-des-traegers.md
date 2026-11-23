@@ -511,7 +511,13 @@ Die Einzelheiten (`billedChildHolds`, eine reine Funktion):
   zurück. Verworfen wurde, die behaltene Festsetzung nur für die Tage zu
   behalten, an denen ihr Vertrag heute läuft: Das änderte eine Festsetzung
   ohne Preis und bräuchte eine fachliche Entscheidung. Ein Monatslauf kennt
-  den Grund nicht, `care_run_holds` bleibt unverändert.
+  den Grund nicht, `care_run_holds` bleibt unverändert. Grenze: Hat der
+  andere Vertrag für diese Tage schon eine ausgestellte Monatsrechnung, setzt
+  der Lauf nichts neu fest und hält niemanden zurück; die behaltene
+  Festsetzung und die Rechnung bleiben, wie sie sind. Behält der
+  zurückgehaltene Vertrag selbst eine frühere Festsetzung, bleibt auch sie
+  (S11): Der Lauf setzt nichts zusätzlich fest, behebt eine schon bestehende
+  Doppelung aber erst mit dem Preis.
 
 **Grenzen.** Ein Vertrag außerhalb des Monats ohne Kinderakte und ohne
 Geburtsdatum hat keine Identität (#7863) und hält kein Kind. Haben beide
