@@ -113,7 +113,10 @@ einer Schule, welche Buchungen eine Anmeldung tragen muss:
   deren Module zur nächsten Phase gehören: Sie heißt `planned_change`,
   nicht `two_phases`; heute hat der Vertrag eine Phase. Ausnahme: Trägt eine bestehende Anmeldung
   des Kindes die Änderung schon in ihren Buchungen, wird der Vertrag an sie
-  gebunden; dafür wird nichts geschrieben.
+  gebunden; dafür wird nichts geschrieben. Die geplante Änderung antwortet
+  vor der Prüfung, ob ein Modul aktiv ist, und diese Prüfung gilt nur den
+  Modulen, die der Lauf jetzt buchen würde: Ein deaktiviertes Modul der
+  geplanten Version hält für sich nichts zurück.
 - Hat das Kind in der Phase schon eine angenommene Anmeldung, bekommt es
   keine zweite. Der Vertrag wird an genau diese gebunden, wenn es die
   einzige ist, sie keinen Vertrag hat und ihre eigenen Buchungen den Beweis
@@ -146,7 +149,26 @@ einer Schule, welche Buchungen eine Anmeldung tragen muss:
   späteren Schritt wurde verworfen: Der Beweis gelingt, und die Zeile ginge
   denselben Weg über Bestätigung und Bindung. Eine Anmeldung, die den
   Beweis nicht besteht, hält die Zeile als `has_application` zurück; ohne
-  Anmeldung und nach dem Ende der Phase bleibt es bei `care_ends`.
+  Anmeldung und nach dem Ende der Phase bleibt es bei `care_ends`. Hat der
+  Vertrag eine Version, die erst nach heute beginnt, heißt eine solche
+  Zeile `planned_change`: Das ist es, was der Anmeldung fehlt.
+- **Die Phase des abgebrochenen Laufs kommt aus der gespeicherten
+  Anmeldung.** Nennt die geltende Version auch ein längst beendetes Modul
+  und hat die Schule dessen Phase seither verlängert, laufen heute zwei
+  Phasen unter den Modulen des Vertrags. Der Plan fragt deshalb jede dieser
+  Phasen: Bereit ist die Zeile in der Phase, in der das Kind die Anmeldung
+  hat, die den Beweis besteht. Besteht keine, antwortet die erste Phase mit
+  einer Anmeldung, zurückgehalten. Vorher blieb der Vertrag bei zwei
+  laufenden Phasen für immer `care_ends`.
+- **Eine stille Anmeldung ohne Vertrag wird genannt.** Der Plan liest die
+  Herkunft der angenommenen Anmeldungen (`Application.ContractImport`). Hat
+  die Kinderakte eines Vertrags, der nicht erledigt ist, eine Anmeldung der
+  Herkunft `contract_import` ohne Vertrag, nennt die Zeile sie
+  (`EnrollmentChildID`), in welcher Phase auch immer. Eine bereite Zeile
+  bindet sie. Bleibt die Zeile zurück, kann der Vertrag nicht mehr an sie
+  gebunden werden: Die Phase ist beendet, oder ihre Buchungen bestehen den
+  Beweis nicht mehr. Der Workflow zeigt eine solche Zeile mit eigenem Status
+  (Abschnitt 4, „hängt“).
 - **Ein deaktiviertes Modul hält eine neue Anmeldung zurück**
   (`offering_inactive`), mit demselben Grund wie in der Anmeldung
   (Abschnitt 2). An eine bestehende Anmeldung, die das Modul schon bucht,
@@ -237,6 +259,26 @@ erreicht.
   `changed`, bei einer weiteren Anmeldung des Kindes `has_application`.
   Ändert das Büro zwischen Plan und Anmeldung die Wochentage der Anmeldung,
   ist die Antwort `changed`. Geschrieben wird dafür nichts.
+- **Eine Bestätigung gilt nur für eine aktive Kinderakte.** Bestätigt wird
+  eine Anmeldung, um den Vertrag an sie zu binden. Ist die Kinderakte
+  inzwischen nicht mehr aktiv oder gibt es sie nicht mehr, antwortet die
+  Anmeldung `refused` mit `student_inactive` oder `student_missing` und
+  nennt die Anmeldung, die es gibt, auch für die gespeicherte Anmeldung
+  dieser Herkunft eines abgebrochenen Laufs. An die Anmeldung eines Kindes,
+  das die Schule verlassen hat, wird kein Vertrag gebunden: Das Büro beendet
+  den Vertrag oder die Schule aktiviert die Kinderakte wieder. Sonst
+  wiederholt die Bestätigung nichts, wofür nur eine neue Anmeldung abgelehnt
+  wird (Betreuungsende, OGS-Platz, Roster, Fenster).
+- **Kinderakten werden ohne Sperre gelesen.** Status und Betreuungsende
+  (`enrolled_until`) liest die Anmeldung unter den Sperren der Genehmigung,
+  aber die Kinderakte selbst sperrt sie nicht: People Directory bietet
+  Enrollment dafür keine Sperre, und die übliche Genehmigung hält auch
+  keine. Deaktiviert die Schule die Kinderakte oder trägt sie ein
+  Betreuungsende ein, während der Lauf die Kinder anmeldet, kann ein Kind
+  angemeldet werden, das der Lauf einen Moment später abgelehnt hätte.
+  Bekannte Lücke; das Ergebnis ist dasselbe wie nach einer Genehmigung, auf
+  die ein Betreuungsende folgt, und Care Plan kappt die Roster dann am
+  Betreuungsende.
 - **Eine Schule ohne abgeleitete Betreuung wird abgelehnt**
   (`care_offerings_off`). Ist `enrollment.care_offerings_enabled` für die
   Schule aus, schreibt eine Genehmigung kein Roster; die Anmeldung gäbe dem
@@ -424,14 +466,19 @@ Für den Zustand „beide Ursprünge gesetzt“ gilt:
   bleiben wahr.
 - Die Verknüpfung mit der Kinderakte lässt sich nicht mehr lösen
   (`care_contract.child_link_bound`, 409): Anmeldung und Buchungen gehören zu
-  dieser Kinderakte. **Eine falsche Verknüpfung aus Teil 1 lässt sich nach
-  der Bindung also nicht mehr berichtigen**: Das Lösen ist abgelehnt, und
-  die stille Anmeldung hat keinen Weg zum Löschen. Deshalb zeigt die
-  Vorschau des Workflows (eigener PR) je Zeile das Kind des Vertrags neben
-  der Kinderakte, bevor etwas läuft, und das Büro bestätigt diese Vorschau.
-  Der Weg zurück, die Bindung lösen und die stille Anmeldung zurückziehen,
-  ist ein eigenes Kommando und gehört zum selben PR; bis dahin ruft nichts
-  die Bindung auf.
+  dieser Kinderakte. Eine falsche Verknüpfung aus Teil 1 lässt sich nach
+  der Bindung deshalb nur über den Weg zurück berichtigen: Bindung lösen
+  (siehe „Der Weg zurück“ in Abschnitt 4), dann die Verknüpfung lösen und
+  neu setzen. Damit es selten dazu kommt, zeigt die Vorschau des Workflows
+  je Zeile das Kind des Vertrags neben der Kinderakte, bevor etwas läuft,
+  und das Büro bestätigt diese Vorschau.
+- **`request_child_id` ändert sich nur auf zwei Wegen.** Die Request-Rolle
+  darf die Spalte seit der Bindung setzen. Ein Trigger
+  (`guard_contract_application_child`, Migration `20261123090000`) lässt
+  nur zu, was die Anwendung tut: Ein importierter Vertrag wird gebunden
+  (leer zu einem Wert) oder gelöst (ein Wert zu leer). Das Anmeldekind
+  eines Vertrags aus einer Anmeldung ändert sich nie, und ein gebundener
+  Vertrag wechselt nicht in einem Schritt zu einem anderen Anmeldekind.
 - **Der Vertrag schützt weiter vor einem zweiten Vertrag.** Er zählt für
   die Anmeldung, an die er gebunden ist, über seinen Schlüssel. Für jede
   andere Anmeldung des Kindes, deren Betreuung in seine Laufzeit fällt,
@@ -480,18 +527,132 @@ dem Muster von `traeger-catalog-rollout`:
 Bricht der Lauf zwischen 2 und 3 ab, gibt es die Anmeldung, und der Vertrag
 ist ungebunden. Der nächste Lauf bindet; nichts entsteht doppelt.
 
-- **Ports**: `Contracts` (`carecontract.ContractEnrollments`),
-  `SchoolEnrollments` (`enrollment.ContractEnrollments`), `Access`
-  (Zugriffsprotokoll der Schule), `Schools` (Schulen des Trägers), `Runtime`
-  (Träger- und Tenant-Transaktion, ein exklusiver Abschnitt je Träger).
-- **Routen**: `POST /traeger/contract-enrollments/preview` und
-  `POST /traeger/contract-enrollments/` mit `{school_id, fingerprint}`, Recht
-  „Verträge verwalten“. Ein Lauf betrifft eine Schule und übernimmt nur die
-  bestätigte Vorschau.
+- **Ports** (`workflows/contractenrollment/ports`): `Contracts`
+  (`carecontract.ContractEnrollments`), `SchoolEnrollments`
+  (`enrollment.ContractEnrollments`), `Schools` (die Schulen des Trägers,
+  Organisation & Tenancy), `Children` (die Kinderakten der Schule mit Namen
+  und Geburtsdatum, People Directory), `Access` (Zugriffsprotokoll der
+  Schule), `Runtime` (Träger- und Tenant-Transaktion). Den Fingerabdruck
+  bildet Security Runtime.
+- **Routen** im Träger-Portal, Recht „Verträge verwalten“
+  (`TraegerRightContractsManage`), je Aufruf eine Schule:
+  - `POST /traeger/contract-enrollments/preview` mit `{school_id}`: die
+    Vorschau. Sie schreibt nur den Verlauf des Trägers und das
+    Zugriffsprotokoll der Schule.
+  - `POST /traeger/contract-enrollments/` mit `{school_id, fingerprint}`:
+    der Lauf.
+  - `DELETE /traeger/contract-enrollments/{contractId}?request_child_id=…`:
+    der Weg zurück.
+  Eine Schule eines anderen Trägers wird abgelehnt, bevor eine Transaktion
+  beginnt (`care_contract.school_outside_traeger`, 403).
+- **Transaktionen.** Vorschau: Träger-Transaktion (Verträge lesen, Verlauf),
+  dann Tenant-Transaktion der Schule (Plan, `CheckContractChildren`,
+  Kinderakten, Zugriffsprotokoll). Lauf: dieselben zwei, in der
+  Tenant-Transaktion danach `EnrollContractChildren`, dann eine zweite
+  Träger-Transaktion mit `BindApplications`. Keine ist in eine andere
+  geschachtelt. Einen exklusiven Abschnitt je Träger wie der Katalog-Rollout
+  braucht der Lauf nicht: Zwei Läufe derselben Schule warten an den Sperren
+  der Genehmigung und der Phase, der zweite findet die Anmeldung des ersten
+  (`existing`), und die Bindung unter der Sperre der Verknüpfungen antwortet
+  ihm „schon gebunden“.
+- **Zugriffsprotokoll.** Jede Tenant-Transaktion des Workflows schreibt
+  einen Eintrag in `audit.data_access_log` der Schule: Verträge als
+  Ressource, Ansicht `contract_enrollment`, die gezeigten Verträge und
+  Kinderakten. Lehnt der Lauf die Vorschau ab, rollt der Eintrag mit der
+  Transaktion zurück; die Antwort zeigt dann auch nichts.
+- **Die Vorschau** führt je Vertrag die Antwort des Plans und, für bereite
+  Zeilen, die der Anmeldung zusammen. Eine Zeile trägt: Vertrag, Schule, das
+  Kind, wie der Vertrag es nennt, die Kinderakte mit Kennung, Namen und
+  Geburtsdatum, wie die Schule sie hat, Phase, die Module mit Wochentagen,
+  Beginn und Ende (halboffen) und geplante Änderungen, Status, Grund und die
+  Kennungen der Anmeldung und des Vertrags, dem dieser folgt. Dazu Zähler je
+  Status und der Fingerabdruck über den Plan (mit dem, worauf jede bereite
+  Zeile bewiesen wurde) und die Zeilen samt Kinderakten.
+- **Status einer Zeile**: `ready` (der Lauf handelt: `action` `enroll`
+  meldet an und bindet, `bind` bindet an die Anmeldung, die es gibt), `done`
+  (gebunden; nach einem Lauf sagt `action`, was er getan hat), `unlinked`
+  (ohne Kinderakte), `held` (zurückgehalten, mit dem Grund des Plans oder der
+  Anmeldung), `stuck` (hängt, siehe unten) und `changed` (nur nach einem
+  Lauf: Die Anmeldung oder die Bindung fand Schule oder Vertrag nicht mehr
+  so vor wie der Plan; nichts wurde gebunden). In der Vorschau heißt eine
+  Anmeldung, die nicht mehr ist, was der Plan bewiesen hat, `held` mit dem
+  Grund `changed`: Plan und Prüfung lesen die Schule in einer Transaktion.
+- **Der Lauf übernimmt nur die bestätigte Vorschau.** Er plant in der
+  Tenant-Transaktion neu, bildet den Fingerabdruck und schreibt nichts, wenn
+  er nicht der bestätigte ist (`care_contract.enrollment_preview_changed`,
+  409). Die Antworten der Anmeldung ordnet er den Zeilen über Vertrag und
+  Kinderakte zu, nie über die Position. Ein zweiter Lauf braucht eine neue
+  Vorschau; sie zeigt die Zeilen des ersten als `done`.
+- **Eine hängende stille Anmeldung** (`stuck`). Bricht ein Lauf nach der
+  Anmeldung ab und läuft der nächste erst, nachdem die Betreuung der Phase
+  geendet hat, oder besteht die gespeicherte Anmeldung den Beweis nicht mehr
+  (das Büro hat ihre Buchungen geändert, der Vertrag hat eine neue Version,
+  die Kinderakte ist nicht mehr aktiv), bleibt die Anmeldung ohne Vertrag.
+  Die Zeile heißt dann `stuck` statt `held`, nennt die Anmeldung
+  (`request_child_id`) und behält den Grund, der sie zurückhält. Der Weg
+  heraus liegt bei dem, was der Grund nennt: Das Büro berichtigt den Vertrag,
+  oder die Schule berichtigt die Buchungen der Anmeldung auf dem üblichen
+  Weg, bis sie der Vertrag sind; der nächste Lauf bindet dann. Ist die Phase
+  beendet, bleibt die Anmeldung als angenommene Anmeldung ohne Vertrag
+  stehen. Der Vertrag deckt sie weiter über die Kinderakte (ADR 0307
+  Punkt 6), solange er läuft und verknüpft ist; ein zweiter Vertrag entsteht
+  für sie nicht.
+- **Der Weg zurück: Bindung lösen** (`UnbindApplication`). Das Büro nimmt
+  das Anmeldekind, das es an einem gebundenen importierten Vertrag sieht,
+  wieder ab: in einer Träger-Transaktion, unter der Sperre der
+  Verknüpfungen und der Zeilensperre des Vertrags, mit dem Eintrag `unbind`
+  im Verlauf. Geschrieben wird `request_child_id` und sonst nichts. Der
+  Vertrag ist danach, was er vor der Bindung war: importiert, mit der
+  Kinderakte verknüpft, er folgt den Buchungen nicht mehr, und seine
+  Verknüpfung lässt sich lösen und neu setzen (ADR 0307). Ist der Vertrag
+  nicht (mehr) an das genannte Anmeldekind gebunden, wird abgelehnt
+  (`care_contract.enrollment_binding_changed`, 409); ein Vertrag, der kein
+  importierter des Trägers ist, wird nicht gefunden (404). Das gilt für jede
+  Anmeldung, an die ein importierter Vertrag gebunden ist, nicht nur für die
+  stille: Auch eine falsche Verknüpfung, die an die Anmeldung der Eltern
+  eines anderen Kindes gebunden wurde, muss sich lösen lassen. Versionen,
+  die nach der Bindung aus Buchungsänderungen entstanden sind, bleiben.
+- **Was der Weg zurück nicht tut: die stille Anmeldung zurückziehen.** Die
+  Schule liest und schreibt er nicht. Die Anmeldung der Herkunft
+  `contract_import` bleibt genehmigt, mit Buchungen und Rostern. Geprüft
+  wurde, ob es einen stillen Baustein gibt, der eine genehmigte Anmeldung
+  beendet: Es gibt keinen. Der Rückzug der Eltern lehnt ein genehmigtes Kind
+  ab (`ErrWithdrawNotAllowed`), das Löschen einer Anmeldung lehnt ab, solange
+  die Kinderakte besteht (`ErrEnrollmentDeletionStudentExists`), und das
+  Betreuungsende (`careexit`) gilt der Kinderakte, nicht einer Anmeldung: Es
+  nimmt das Kind von allen Rostern ab einem Tag, auch von denen, die nicht
+  aus dieser Anmeldung stammen. Ein eigener Rückzug nur für diese Anmeldung
+  wäre ein halber Baustein neben dem Betreuungsende und ist deshalb nicht
+  gebaut. Was das Büro stattdessen tut:
+  - Nach dem Lösen zeigt die nächste Vorschau die Zeile als `ready` mit
+    `bind`: Die Anmeldung gibt es noch, ein Lauf bände wieder. War die
+    Verknüpfung richtig, ist das der Weg zurück zum gebundenen Vertrag.
+  - War die Verknüpfung falsch, löst das Büro nach der Bindung auch die
+    Verknüpfung und setzt sie auf die richtige Kinderakte; der nächste Lauf
+    meldet das richtige Kind an. Die stille Anmeldung der falschen
+    Kinderakte bleibt an der Schule und gehört zu keinem Vertrag mehr; in
+    den Listen der Schule heißt sie „Aus importiertem Vertrag“. Die Vorschau
+    des Workflows zeigt sie nicht mehr, weil kein Vertrag auf diese
+    Kinderakte zeigt. Die Schule beendet ihre Betreuung auf einem ihrer
+    üblichen Wege: Sie nimmt in der Anmeldung alle Module heraus (die
+    Korrektur des Büros mit bestätigtem vollständigem Rückzug,
+    `UpdateChildOfferings` mit `CompleteWithdrawalConfirmed`), oder sie trägt
+    für ein Kind, das gar nicht betreut wird, das Betreuungsende der
+    Kinderakte ein. Beide Wege sind nicht still: Der erste endet in der
+    Bekanntgabe an die Erziehungsberechtigten dieser Kinderakte im
+    Elternportal, der zweite gilt der ganzen Kinderakte. Deshalb entscheidet
+    das die Schule und nicht der Weg zurück.
+- **Fehlercodes**: `care_contract.enrollment_preview_changed` und
+  `care_contract.enrollment_binding_changed` (beide 409).
+- **Nutzungsanalyse**: Der Lauf zählt als Kernaktion
+  `contract_children_enrolled`; Vorschau und Weg zurück zählen nicht.
+- **Seed**: Der Seed verknüpft den Vertrag einer Kinderakte der Demo-Schule,
+  ruft Vorschau und Lauf über diese Routen auf und versucht es mit dem
+  nächsten Kind, bis ein Vertrag gebunden ist (höchstens fünf). Die vier
+  importierten Kinder ohne Kinderakte bleiben unverknüpft.
 
-Dieser ADR legt den Owner fest. Workflow, Routen, Oberfläche und Seed-Daten
-folgen in einem eigenen PR; die Fähigkeiten aus den Abschnitten 1 bis 3
-liegen bis dahin vor, ohne dass etwas sie aufruft.
+Die Seite des Büros („Anmeldungen nachtragen“ unter den Verträgen) folgt im
+nächsten PR. Bis dahin sind die Routen nur über die API erreichbar.
 
 ### 5. Der Schritt für die Eltern
 
@@ -516,9 +677,8 @@ Regel: Die Verlängerung einer Anmeldung der Herkunft `contract_import`
 geht in die Prüfung der Schule, denn keine Eltern können sie beantworten.
 Die Regel liest nur die Herkunft. Eine Anmeldung anderer Herkunft, die
 weder Adresse noch Konto der Erziehungsberechtigten nennt, wird verlängert
-wie bisher: Solange der Lauf aus Abschnitt 4 nicht existiert, gibt es keine
-Anmeldung der neuen Herkunft, und für bestehende Schulen ändert sich an der
-Verlängerung nichts.
+wie bisher: Für Schulen ohne Anmeldungen der neuen Herkunft ändert sich an
+der Verlängerung nichts.
 
 - Das neue Kind entsteht in `pending_admin_review` mit dem Grund
   `no_guardian`, in beiden Modi. Die Vorschau der Verlängerung zählt es
@@ -530,12 +690,20 @@ Verlängerung nichts.
   (behalten, entfernen, zurückstellen). Die Liste zeigt den Grund als
   „Keine Erziehungsberechtigten hinterlegt“.
 
-Offen bleibt, was „behalten“ für eine solche Anmeldung tut: Es führt in die
-übliche Genehmigung einer Verlängerung, und die gleicht Erziehungsberechtigte
-und Einwilligungen mit der Anmeldung ab. Für eine Anmeldung ohne
-Erziehungsberechtigte ist das nicht festgelegt. Der Schritt für die Eltern
-(Abschnitt 5) und die Bindung des Folgevertrags gehören zu den Folge-PRs;
-bis dahin gibt es keine Kinder dieser Herkunft.
+Offen bleibt, was „behalten“ für eine solche Anmeldung tut. Nachgelesen:
+„Behalten“ setzt das Kind auf `auto_renewed` (`DecideReview`), die Frist
+befördert es zu `submitted`, und die Schule genehmigt es dann in der
+üblichen Liste. Diese Genehmigung einer Verlängerung gleicht die
+Erziehungsberechtigten der Anmeldung mit der Kinderakte ab
+(`reconcileRenewalGuardian`) und überträgt die Formularfelder samt
+Einwilligungen (`syncRenewalTargetedFields`, eine nicht angekreuzte
+Einwilligung gilt dort als widerrufen). Was das für eine Anmeldung ohne
+Erziehungsberechtigte und ohne Angaben bewirkt, ist nicht festgelegt und in
+diesem PR nicht geändert. Seit dem Lauf aus Abschnitt 4 gibt es Kinder
+dieser Herkunft; die Verlängerung trifft sie erst mit der Phase des nächsten
+Schuljahrs. Die Regel dafür, der Schritt für die Eltern (Abschnitt 5) und die
+Bindung des Folgevertrags gehören zu den Folge-PRs und müssen vor der ersten
+Verlängerung einer Schule mit solchen Kindern entschieden sein.
 
 ## Register
 
@@ -566,10 +734,50 @@ Die Entscheidung ändert diese Register (ADR 0057 Punkt 5, ADR 0070):
 - **Fehlercode**: `care_contract.child_link_bound`.
 - **Prüfgrund der Verlängerung**: `no_guardian` (Abschnitt 6).
 
+Mit dem Workflow (Abschnitt 4) kommen dazu:
+
+- **Policy** (`backend/architecture/policy.json`): Owner
+  `contract-enrollment` (Workflow), `policy_epoch` 106 → 107; neues Fragment
+  `policy/contract-enrollment.json` mit fünf Paketen und 13 Regeln (auf Care
+  Contract, Enrollment, die eigenen Ports, Tenant Runtime und `api/common`).
+- **Compose-Budgets**: neu `workflows/contractenrollment/compose` 0 → 34
+  (Konstruktor und die Laufzeit für Träger- und Tenant-Transaktion).
+- **Pass-through** (`backend/architecture/passthrough/`): drei neue
+  Port-Adapter der Wurzel, 3679 → 3682 Stellen:
+  `api/contractEnrollmentSchools.TraegerSchoolIDs`,
+  `api/contractEnrollmentChildren.SchoolChildren`,
+  `api/contractEnrollmentAccessLog.RecordAccess`; alle übersetzen (ADR 0067,
+  ADR 0075).
+- **Kommando-Effekte**: die Bindung
+  `api.careContractApplications.AcceptedApplications` reicht jetzt die
+  Herkunft der Anmeldung weiter (geänderter Digest, weiter eine Abfrage).
+  Die Ports des Workflows sind die öffentlichen Fähigkeiten selbst und
+  bringen keine neue Bindung.
+- **Query-Budgets**: neu `api.traeger.contract_enrollments.preview`, exakt
+  26 Statements, unabhängig von der Zahl der Verträge; neu
+  `api.traeger.contract_enrollments.run`, 70 Statements für ein Kind ohne
+  kommende Abhol-Ausnahme. Der Test prüft dazu exakt 20 je weiteres Kind
+  (Buchungen 3, Roster des direkt verknüpften Angebots mit seinen Terminen
+  11, Roster mit mehreren Quellen 4, Entschuldigungen 2): der Rest aus
+  Abschnitt 2, in der Zusammensetzung der Route gemessen. Alles andere am
+  Lauf wächst nicht mit den Kindern.
+- **Verlauf**: `chk_contract_events_action` kennt `unbind`; Trigger
+  `guard_contract_application_child` auf `care_contract.contracts`
+  (Migration `20261123090000`).
+- **Fehlercodes**: `care_contract.enrollment_preview_changed`,
+  `care_contract.enrollment_binding_changed`.
+- **Kernaktion**: `contract_children_enrolled`.
+- **Transaktionsgrenzen** (`backend/test/transaction_boundaries.json`,
+  `traeger_transaction.go`): kein neuer Eintrag. Das Register zählt Workflows
+  nicht auf, und Care Contract öffnet für Plan, Bindung und Lösen keine
+  Transaktion selbst.
+
 ## Was sich für bestehende Schulen jetzt ändert
 
-Nichts. Plan, stille Anmeldung und Bindung ruft bis zum Folge-PR nichts auf,
-die Herkunft `contract_import` trägt keine Anmeldung, und die Regel der
+Ohne einen Lauf nichts. Plan, stille Anmeldung und Bindung ruft nur der
+Workflow aus Abschnitt 4 auf, und den löst das Träger-Büro je Schule aus,
+bis zur Seite im nächsten PR nur über die API. Die Herkunft
+`contract_import` trägt erst danach eine Anmeldung, und die Regel der
 Verlängerung (Abschnitt 6) und die der Korrektur ohne Datum (Abschnitt 2)
 greifen nur für diese Herkunft. Care Plan leitet Roster für bestehende
 Kinder unverändert ab.
@@ -664,6 +872,18 @@ in [#7909](https://github.com/moto-ogs/project-phoenix/issues/7909).
   ab.
 - **Kinder der stillen Anmeldung von der Verlängerung ausnehmen.** Sie
   verlören ihre Betreuung im nächsten Jahr, ohne dass es jemand entscheidet.
+- **Beim Lösen der Bindung die stille Anmeldung still zurückziehen.**
+  Enrollment und Care Plan haben keinen Baustein, der eine genehmigte
+  Anmeldung beendet, ohne die Kinderakte zu treffen (Abschnitt 4). Ein
+  eigener wäre ein zweiter, halber Weg neben dem Betreuungsende.
+- **Die Bindung nur für die Herkunft `contract_import` lösen.** Eine falsche
+  Verknüpfung kann auch an die Anmeldung der Eltern eines anderen Kindes
+  gebunden worden sein; gerade dann muss der Vertrag von ihr weg.
+- **Ein exklusiver Abschnitt je Träger für den Lauf.** Die Sperren der
+  Genehmigung, der Phase und der Verknüpfungen reichen (Abschnitt 4).
+- **Den Fingerabdruck nur über den Plan bilden.** Eine Zeile, die die
+  Vorschau wegen der Antwort der Anmeldung zurückhält, könnte der Lauf dann
+  anmelden, ohne dass das Büro es gesehen hat.
 
 ## Folgen
 
@@ -696,6 +916,12 @@ in [#7909](https://github.com/moto-ogs/project-phoenix/issues/7909).
   Buchungen auf direkt verknüpften Rostern beendet (#7908).
 - Korrigiert das Büro die Wochentage eines still angemeldeten Kindes ohne
   Datum, bleibt der erste Tag seiner Buchungen und Roster bestehen.
+- Eine gebundene falsche Verknüpfung lässt sich berichtigen: Bindung lösen,
+  Verknüpfung lösen, neu verknüpfen, neu laufen lassen. Die stille Anmeldung
+  der falschen Kinderakte beendet die Schule.
+- Eine stille Anmeldung, an die sich der Vertrag nicht mehr binden lässt,
+  steht in der Vorschau als „hängt“, mit ihrem Grund.
+- An die Anmeldung einer nicht mehr aktiven Kinderakte wird nicht gebunden.
 - Die Rücknahme der Migration löst die Bindung importierter Verträge wieder;
   die Anmeldungen bleiben an der Schule und heißen dann „von Hand
   eingetragen“.
