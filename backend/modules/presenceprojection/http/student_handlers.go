@@ -146,6 +146,11 @@ func (rs *Resource) buildStudentDetail(r *http.Request, student *peopleModule.St
 		AttendanceLogEnabled:      attendanceLogEnabled,
 		FeedbackEnabled:           feedbackEnabled,
 	}
+	// Only a caller who may save the form gets the token of what it shows
+	// (ADR 0311); it digests fields a reader without full access does not see.
+	if hasWriteAccess {
+		response.Version = peopleModule.StudentRecordVersion(*student, *person)
+	}
 	if err := rs.enrichStudentConsents(r.Context(), &response, student, hasFullAccess); err != nil {
 		return StudentDetailResponse{}, err
 	}

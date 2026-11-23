@@ -133,28 +133,54 @@ func validateCompanionsFingerprint(entries *[]CompanionEntry, fingerprint *strin
 // a companion's NAME is another child's personal data, so this must never be
 // looser than reading the child's own record.
 func (rs *Resource) getStudentCompanions(w http.ResponseWriter, r *http.Request) {
-	student, ok := rs.parseAndGetStudent(w, r)
+	list, ok := rs.readStudentCompanions(w, r)
 	if !ok {
 		return
 	}
+	common.Respond(w, r, http.StatusOK, list.Companions, "Departure companions retrieved")
+}
+
+// StudentCompanionList is the child's Laufgemeinschaft and the fingerprint
+// of the stored links, which a save that replaces or trims them sends back
+// as companions_fingerprint (ADR 0311).
+type StudentCompanionList struct {
+	Companions  []CompanionResponse `json:"companions"`
+	Fingerprint string              `json:"fingerprint"`
+}
+
+// getStudentCompanionList handles GET /students/{id}/companion-links: the
+// links with the fingerprint of the same read, so the edit form saves
+// against exactly what it shows.
+func (rs *Resource) getStudentCompanionList(w http.ResponseWriter, r *http.Request) {
+	list, ok := rs.readStudentCompanions(w, r)
+	if !ok {
+		return
+	}
+	common.Respond(w, r, http.StatusOK, list, "Departure companions retrieved")
+}
+
+func (rs *Resource) readStudentCompanions(w http.ResponseWriter, r *http.Request) (StudentCompanionList, bool) {
+	student, ok := rs.parseAndGetStudent(w, r)
+	if !ok {
+		return StudentCompanionList{}, false
+	}
 	if !rs.checkStudentReadAccess(r, student) {
 		renderError(w, r, common.ErrorForbidden(errors.New("read access required to view departure companions")))
-		return
+		return StudentCompanionList{}, false
 	}
 
 	stored, err := rs.CompanionService.ListCompanions(r.Context(), student.ID)
 	if err != nil {
 		renderError(w, r, common.ErrorInternalServerWrap("failed to load departure companions", err))
-		return
+		return StudentCompanionList{}, false
 	}
 
 	links, err := rs.redactUnreadableCompanionNames(r, peopleCompanionLinks(stored))
 	if err != nil {
 		renderError(w, r, common.ErrorInternalServerWrap("failed to authorize departure companions", err))
-		return
+		return StudentCompanionList{}, false
 	}
-
-	common.Respond(w, r, http.StatusOK, toCompanionResponses(links), "Departure companions retrieved")
+	return StudentCompanionList{Companions: toCompanionResponses(links), Fingerprint: careplan.CompanionLinksFingerprint(stored)}, true
 }
 
 // redactUnreadableCompanionNames strips the name of every linked child the
@@ -478,7 +504,6 @@ func (rs *Resource) applyCompanionUpdate(ctx context.Context, student *peopleMod
 	if err != nil {
 		return false, err
 	}
-	current := peopleCompanionLinks(stored)
 
 	links, err := rs.reconcileCompanions(ctx, student, req, authorizedExtensions)
 	if err != nil {
@@ -487,7 +512,7 @@ func (rs *Resource) applyCompanionUpdate(ctx context.Context, student *peopleMod
 
 	// A widened companion plan counts too: it is that other child's departure
 	// permission, shown on their card, changed by this request.
-	changed := departure.CompanionLinksFingerprint(current) != departure.CompanionLinksFingerprint(links) ||
+	changed := careplan.CompanionLinksFingerprint(stored) != careplan.CompanionLinksFingerprint(carePlanCompanionLinks(links)) ||
 		len(authorizedExtensions) > 0
 	return changed, nil
 }

@@ -138,7 +138,7 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/students/planned-status-days-modal.tsx",
-    lines: [1093],
+    lines: [1163],
     reason: "Kalendertag zum Umschalten: Kalender-/Auswahlzelle",
   },
   {

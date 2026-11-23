@@ -167,11 +167,9 @@ type StudentCompanions interface {
 }
 
 // CompanionLinksFingerprint is an order-independent fingerprint of a
-// companion list: the state a client read, in one comparable string. The
-// format is MIRRORED by companionsFingerprint() in
-// frontend/src/lib/student-companion-api.ts: "<id>:<mon,tue,…>" per link,
-// weekdays in Mon..Fri order, links sorted as strings and joined with "|".
-// Change one and you must change the other.
+// companion list: the state a client read, in one comparable string (ADR
+// 0311). The companion read hands it out beside the list and a write that
+// replaces or trims the links sends it back; the client never builds it.
 func CompanionLinksFingerprint(links []CompanionLink) string {
 	entries := make([]string, 0, len(links))
 	for _, link := range links {

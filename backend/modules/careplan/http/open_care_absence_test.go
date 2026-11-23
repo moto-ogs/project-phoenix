@@ -40,14 +40,14 @@ func TestAbsenceWriterCannotEditStammdaten(t *testing.T) {
 	absencePerms := []string{"users:read", "users:absence"}
 
 	t.Run("stammdaten_stay_forbidden", func(t *testing.T) {
-		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), map[string]any{
+		req := studentUpdateRequest(t, tc, student.ID, map[string]any{
 			"school_class": "3c",
 		})
 		testutil.AssertForbidden(t, authExec(t, tc, req, claims, absencePerms))
 	})
 
 	t.Run("stammdaten_alongside_the_absence_stay_forbidden", func(t *testing.T) {
-		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), map[string]any{
+		req := studentUpdateRequest(t, tc, student.ID, map[string]any{
 			"sick":        true,
 			"health_info": "smuggled",
 		})
@@ -55,7 +55,7 @@ func TestAbsenceWriterCannotEditStammdaten(t *testing.T) {
 	})
 
 	t.Run("the_absence_itself_is_allowed", func(t *testing.T) {
-		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), map[string]any{
+		req := studentUpdateRequest(t, tc, student.ID, map[string]any{
 			"sick": true,
 		})
 		rr := authExec(t, tc, req, claims, absencePerms)
@@ -63,7 +63,7 @@ func TestAbsenceWriterCannotEditStammdaten(t *testing.T) {
 	})
 
 	t.Run("users_update_still_edits_stammdaten", func(t *testing.T) {
-		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), map[string]any{
+		req := studentUpdateRequest(t, tc, student.ID, map[string]any{
 			"school_class": "3c",
 		})
 		rr := authExec(t, tc, req, claims, []string{"users:read", "users:update"})
@@ -105,7 +105,7 @@ func TestAbsenceWriter_DetailFlags(t *testing.T) {
 
 	// The enforced counterpart: without users:update the Stammdaten write stays
 	// refused for the very same caller.
-	stammdaten := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), map[string]any{
+	stammdaten := studentUpdateRequest(t, tc, student.ID, map[string]any{
 		"school_class": "2b",
 	})
 	testutil.AssertForbidden(t, authExec(t, tc, stammdaten, claims, absencePerms))

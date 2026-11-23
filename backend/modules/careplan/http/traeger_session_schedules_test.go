@@ -265,6 +265,7 @@ func TestTraegerSchoolSessionWritesCarePlanWithMark(t *testing.T) {
 
 		requireTraegerWrite(t, tc, claims, http.MethodPut, fmt.Sprintf("%s/partial-absences/%d", base, partialAbsenceResponseID(t, rr.Body.Bytes())), map[string]any{
 			"date": partialAbsenceDay.String(), "from_time": "14:30", "reason": "Späterer Arzttermin",
+			"expected_version": partialAbsenceResponseVersion(t, rr.Body.Bytes()),
 		}, http.StatusOK)
 		assertTraegerExcused(t, tc, child.ID, partialAbsenceDay)
 		assertTraegerAuthored(t, tc, "student_pickup_exceptions", child.ID, onPartialAbsenceDay)

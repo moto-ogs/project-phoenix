@@ -150,6 +150,7 @@ func TestSeedParentEngagementStepUsesParentFacingFlows(t *testing.T) {
 		// A new photo consent needs child photos switched on (#7208): on for
 		// the grant, the parent withdraws, back to the default.
 		"/api/settings/values/operations.student_photos_enabled",
+		"/api/students/44", // reads the version the photo consent save sends (ADR 0311)
 		"/api/students/44",
 		"/parent/me/children/44/consents/photo",
 		"/api/settings/values/operations.student_photos_enabled",

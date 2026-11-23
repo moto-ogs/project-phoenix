@@ -7,6 +7,9 @@ import (
 )
 
 type PrivacyConsentStore interface {
+	// LockPrivacyConsents holds the consents of one student until the
+	// tenant transaction ends, also while the student has none yet.
+	LockPrivacyConsents(context.Context, int64) (Stats, error)
 	RevisePrivacyConsent(context.Context, *studentpresence.PrivacyConsent) (Stats, error)
 	ListAcceptedRetentionSettings(context.Context) ([]studentpresence.StudentRetentionSetting, Stats, error)
 	// ListPrivacyConsents returns the consents of one student, oldest first.

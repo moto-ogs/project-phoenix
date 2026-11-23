@@ -243,6 +243,7 @@ export function mapStudentDetailResponse(row: StudentDetailResponse): Student {
     feedback_enabled: row.feedback_enabled,
     privacy_consent_accepted: row.privacy_consent?.accepted,
     data_retention_days: row.privacy_consent?.data_retention_days,
+    version: row.version,
   };
 }
 
@@ -328,5 +329,8 @@ export function prepareStudentForBackend(student: StudentUpdate) {
     // The backend stamps a false→true change and clears photo and metadata on
     // true→false.
     photo_consent_given: student.photo_consent_given,
+    // The master data the form read (ADR 0311): a save of form fields is
+    // refused when they changed since. A pure absence toggle sends none.
+    expected_version: student.version,
   } satisfies UpdateStudentRequest;
 }

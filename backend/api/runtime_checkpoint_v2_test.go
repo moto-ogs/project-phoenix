@@ -260,6 +260,17 @@ func (w *targetRiskWorkload) link(t *testing.T, subjectID int64, companionIDs ..
 
 func (w *targetRiskWorkload) putStudent(t *testing.T, studentID int64, body string) {
 	t.Helper()
+	// The form saves against the master data the child's page read (ADR 0311).
+	read := checkpointRequest(w.handler, checkpointScenario{Method: http.MethodGet, Path: fmt.Sprintf("/api/students/%d", studentID), Authenticated: true}, w.token)
+	require.Equal(t, http.StatusOK, read.Code, "read student: %s", read.Body.String())
+	var detail struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(read.Body.Bytes(), &detail))
+	require.NotEmpty(t, detail.Data.Version)
+	body = fmt.Sprintf(`{"expected_version":%q,`, detail.Data.Version) + strings.TrimPrefix(body, "{")
 	response := checkpointRequest(w.handler, checkpointScenario{Method: http.MethodPut, Path: fmt.Sprintf("/api/students/%d", studentID), Authenticated: true, Body: body}, w.token)
 	require.Equal(t, http.StatusOK, response.Code, "prepare student plan: %s", response.Body.String())
 }
