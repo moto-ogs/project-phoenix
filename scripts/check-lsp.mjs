@@ -252,6 +252,31 @@ try {
       JSON.stringify(m.params.diagnostics).includes("no-utc-date-extraction"),
   );
   console.log("PASS Oxlint: repository custom date-safety diagnostic");
+
+  // Do not write this file: new editor buffers must still resolve wire types.
+  const unsavedPath = join(root, `frontend/src/lsp-unsaved-${process.pid}.ts`);
+  const unsavedText = [
+    'import type { StudentResponse } from "~/lib/contract/students.generated";',
+    'export const asNumber = (student: StudentResponse["id"]) => Number(student);',
+    "export const send = fetch;",
+    'export { bffJsonUncontracted as uncontracted } from "~/lib/bff-fetch";',
+  ].join("\n");
+  ox.open(unsavedPath, "typescript", unsavedText);
+  await ox.notification(
+    (m) =>
+      m.method === "textDocument/publishDiagnostics" &&
+      m.params.uri === uri(unsavedPath) &&
+      [
+        "no-numeric-identifier",
+        "no-raw-browser-transport",
+        "only-listed-uncontracted",
+      ].every((rule) =>
+        m.params.diagnostics.some((diagnostic) =>
+          String(diagnostic.code).includes(rule),
+        ),
+      ),
+  );
+  console.log("PASS Oxlint: all BFF boundary diagnostics in an unsaved file");
   await ox.close();
 
   const prettier = spawnSync(

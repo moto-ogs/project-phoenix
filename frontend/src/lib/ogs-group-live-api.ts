@@ -6,6 +6,7 @@
 import { ApiError } from "~/lib/api-error";
 import type { TrackingIndicatorsResponse } from "~/lib/active-helpers";
 import { bffJson } from "~/lib/bff-fetch";
+import { isPositiveInt64Id } from "~/lib/compare-ids";
 import { knownEnum } from "~/lib/contract/known-enum";
 import type * as studentsContract from "~/lib/contract/students.generated";
 import type { DepartureMode } from "~/lib/departure-plan";
@@ -73,14 +74,8 @@ function mapTrackingIndicators(
   };
 }
 
-const MAX_INT64 = 9_223_372_036_854_775_807n;
-
 function isValidGroupId(groupId: string | null): groupId is string {
-  return (
-    groupId !== null &&
-    /^[1-9]\d*$/.test(groupId) &&
-    BigInt(groupId) <= MAX_INT64
-  );
+  return groupId !== null && isPositiveInt64Id(groupId);
 }
 
 export function mapOgsGroupLiveResponse(

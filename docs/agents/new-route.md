@@ -66,7 +66,9 @@ Worked example, the same route from Go to the browser:
    keeps numbers and tags them `contract:"number"`, because PyrePortal
    v1.11.5 reads them. `ident.ID` still reads a JSON number in a request:
    that is the one-release compatibility for browser tabs of the previous
-   frontend and goes after the next release (`backend/sharedkernel/ident/id.go`).
+   frontend and goes after the next release (`backend/sharedkernel/ident/id.go`). Keep IDs as strings
+   in browser code, including when filtering or sorting; see
+   [One transport](frontend-api.md#browser-calls).
 3. **Mount.** A new contracts function gets one row in the matching
    `*ContractMounts()` list of `backend/api/route_contracts.go`, e.g.
    `{"/api/activities", timetableActivitiesHTTP.RouteContracts()}`. This
@@ -233,6 +235,11 @@ and route entry, so the route file calls `contractGet` or `contractWrite`
 the catalog proxy never hands a session step's tokens to the browser.
 Example: `SessionRouteContracts` in
 `backend/modules/identityaccess/inbound/account/route_contracts.go`.
+
+Call a JSON route from the browser with `bffJson`, including a named
+`route.ts` whose browser response matches its Go contract. For session
+steps whose response belongs to the BFF, use `bffJsonUncontracted` only in
+the already listed callers. See [One transport](frontend-api.md#browser-calls).
 
 A reshaping, an ID or format check or a second backend call for the same
 screen moves into the Go handler; an aggregation of several reads is a Go

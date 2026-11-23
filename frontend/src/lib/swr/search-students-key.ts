@@ -1,3 +1,5 @@
+import { isPositiveInt64Id } from "../compare-ids";
+
 /**
  * The Kindersuche list cache key and its group scope (#2097).
  *
@@ -34,8 +36,6 @@ const SEARCH_STUDENTS_GROUP_KEY_PREFIX = `${SEARCH_STUDENTS_KEY_PREFIX}g`;
 /** The scope segment of an unfiltered ("Alle Gruppen") Kindersuche view. */
 export const SEARCH_STUDENTS_ALL_GROUPS_KEY = `${SEARCH_STUDENTS_GROUP_KEY_PREFIX}all-`;
 
-const MAX_INT64 = 9_223_372_036_854_775_807n;
-
 /**
  * Mirrors the backend's effective `group_id` filter: only positive signed
  * 64-bit integers filter the list. Canonicalizing here keeps `007` scoped to
@@ -45,8 +45,8 @@ const MAX_INT64 = 9_223_372_036_854_775_807n;
 export function normalizeSearchStudentsGroupId(groupId: string): string {
   if (!/^\+?\d+$/.test(groupId)) return "";
 
-  const parsed = BigInt(groupId);
-  return parsed > 0n && parsed <= MAX_INT64 ? parsed.toString() : "";
+  const canonical = groupId.replace(/^\+?0*/, "");
+  return isPositiveInt64Id(canonical) ? canonical : "";
 }
 
 /**

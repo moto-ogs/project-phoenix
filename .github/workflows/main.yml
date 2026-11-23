@@ -212,8 +212,9 @@ jobs:
             frontend:
               - 'frontend/**'
               - '!frontend/**/*.md'
-            # External inputs read by the frontend error-catalog validator.
+            # Catalogs read by frontend validators and the identifier lint rule.
             frontend-catalog-inputs:
+              - 'backend/api/contract/contract.json'
               - 'error-registry/**'
               - 'scripts/error-registry.mjs'
               - 'backend/modules/delivery/internal/adapters/localization/locales.json'
