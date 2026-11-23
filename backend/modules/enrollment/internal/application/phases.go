@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -256,16 +257,17 @@ func (s *Phases) create(ctx context.Context, phase *enrollment.Phase) (*enrollme
 	return phase, nil
 }
 
-// UpdatePhase validates and writes a phase and resyncs the templates sourcing its
-// offerings when the service window changed.
+// UpdatePhase validates and writes a phase over the version its author read
+// (ADR 0311) and resyncs the templates sourcing its offerings when the
+// service window changed.
 //
 // It reports the confirmed children whose care runs past a shortened end
 // (#6598) and changes none of them.
-func (s *Phases) UpdatePhase(ctx context.Context, phase *enrollment.Phase) (enrollment.PhaseUpdateReport, error) {
+func (s *Phases) UpdatePhase(ctx context.Context, phase *enrollment.Phase, expectedVersion string) (enrollment.PhaseUpdateReport, error) {
 	var report enrollment.PhaseUpdateReport
 	err := s.runInTx(ctx, func(txCtx context.Context) error {
 		var err error
-		report, err = s.update(txCtx, phase)
+		report, err = s.update(txCtx, phase, &expectedVersion)
 		return err
 	})
 	if err != nil {
@@ -274,7 +276,39 @@ func (s *Phases) UpdatePhase(ctx context.Context, phase *enrollment.Phase) (enro
 	return report, nil
 }
 
-func (s *Phases) update(ctx context.Context, phase *enrollment.Phase) (enrollment.PhaseUpdateReport, error) {
+// updateInTx writes a phase a Träger copy command derived; it binds no
+// read of the school.
+func (s *Phases) updateInTx(ctx context.Context, phase *enrollment.Phase) (enrollment.PhaseUpdateReport, error) {
+	var report enrollment.PhaseUpdateReport
+	err := s.runInTx(ctx, func(txCtx context.Context) error {
+		var err error
+		report, err = s.update(txCtx, phase, nil)
+		return err
+	})
+	if err != nil {
+		return enrollment.PhaseUpdateReport{}, err
+	}
+	return report, nil
+}
+
+// checkReadPhase takes the phase's row lock and refuses with
+// readstate.ErrChanged unless the phase is stored as its author read it
+// (ADR 0311). The caller holds the recurrence gate already, which every
+// writer that holds it takes before the row.
+func (s *Phases) checkReadPhase(ctx context.Context, id int64, expectedVersion string) error {
+	stored, err := s.deps.Records.LockPhase(ctx, id)
+	if err != nil {
+		if s.notFound(err) {
+			return fmt.Errorf("%w: phase %d", enrollment.ErrPhaseNotFound, id)
+		}
+		return fmt.Errorf("lock phase %d: %w", id, err)
+	}
+	return readstate.Check(expectedVersion, enrollment.PhaseVersion(stored))
+}
+
+// update writes the phase. expectedVersion binds the write to the version
+// its author read; nil is a Träger copy, which binds none.
+func (s *Phases) update(ctx context.Context, phase *enrollment.Phase, expectedVersion *string) (enrollment.PhaseUpdateReport, error) {
 	var report enrollment.PhaseUpdateReport
 	if phase == nil || phase.ID <= 0 {
 		return report, fmt.Errorf("%w: phase with valid id is required", enrollment.ErrInvalidPhase)
@@ -285,6 +319,11 @@ func (s *Phases) update(ctx context.Context, phase *enrollment.Phase) (enrollmen
 	existing, serviceWindowChanged, err := s.validateCareOfferingPhaseUpdate(ctx, phase)
 	if err != nil {
 		return report, err
+	}
+	if expectedVersion != nil {
+		if err := s.checkReadPhase(ctx, phase.ID, *expectedVersion); err != nil {
+			return report, err
+		}
 	}
 	if err := s.deps.Records.UpdatePhase(ctx, phase); err != nil {
 		return report, s.translatePhaseWriteError(err)

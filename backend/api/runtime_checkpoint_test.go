@@ -209,10 +209,30 @@ func measureRuntimeCheckpoint(t *testing.T, production *Runtime) {
 				require.NoError(t, db.NewRaw("SELECT subdomain FROM platform.schools WHERE id = ?", testpkg.Tenant(t)).Scan(context.Background(), &parentSubdomain))
 				workloadVersion = "enrollment-2694-writes-v8"
 			}
+			// Every update saves over the version it read (ADR 0311). The
+			// workload repeats one update: it is stored once and read, and
+			// each repetition then saves the same state over its version.
+			phasePath := fmt.Sprintf("/api/enrollment/phases/%d", phase.ID)
+			phaseUpdate := fmt.Sprintf(`"name":"Checkpoint Updated Phase","kind":"school_year","service_start_date":%q,"service_end_date":%q,"care_overflow_mode":"waitlist","care_offering_selection_mode":"optional","is_active":true`, phaseStart, phaseEnd)
+			phaseVersion := func() string {
+				read := checkpointRequest(production.Handler(), checkpointScenario{Method: "GET", Path: phasePath, Authenticated: true}, token)
+				require.Equal(t, http.StatusOK, read.Code, read.Body.String())
+				var stored struct {
+					Data struct {
+						Version string `json:"version"`
+					} `json:"data"`
+				}
+				require.NoError(t, json.Unmarshal(read.Body.Bytes(), &stored))
+				return stored.Data.Version
+			}
+			primed := checkpointRequest(production.Handler(), checkpointScenario{
+				Method: "PUT", Path: phasePath, Authenticated: true, Body: fmt.Sprintf(`{%s,"expected_version":%q}`, phaseUpdate, phaseVersion()),
+			}, token)
+			require.Equal(t, http.StatusOK, primed.Code, primed.Body.String())
+			updated := phaseVersion()
 			scenarios = []checkpointScenario{
-				{"enrollment.phase-update", "PUT", fmt.Sprintf("/api/enrollment/phases/%d", phase.ID), 200, true,
-					fmt.Sprintf(`{"name":"Checkpoint Updated Phase","kind":"school_year","service_start_date":%q,"service_end_date":%q,"care_overflow_mode":"waitlist","care_offering_selection_mode":"optional","is_active":true}`, phaseStart, phaseEnd)},
-				{"enrollment.phase-update-invalid", "PUT", fmt.Sprintf("/api/enrollment/phases/%d", phase.ID), 400, true, `{}`},
+				{"enrollment.phase-update", "PUT", phasePath, 200, true, fmt.Sprintf(`{%s,"expected_version":%q}`, phaseUpdate, updated)},
+				{"enrollment.phase-update-invalid", "PUT", phasePath, 400, true, fmt.Sprintf(`{"expected_version":%q}`, updated)},
 				{"enrollment.schema-rename", "PATCH", "/api/enrollment/schema/" + checkpointSchemaID, 200, true, `{"name":"Checkpoint Renamed Schema"}`},
 				{"enrollment.schema-rename-conflict", "PATCH", "/api/enrollment/schema/" + checkpointSchemaID, 409, true, `{"name":"Checkpoint Reserved Schema"}`},
 				{"enrollment.schema-publish-version", "PUT", "/api/enrollment/schema/" + checkpointSchemaID, 201, true, `{"fields":[]}`},

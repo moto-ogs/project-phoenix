@@ -77,6 +77,8 @@ type CollectionSettings interface {
 type PhaseRecords interface {
 	PhaseList
 	Phase(context.Context, int64) (*enrollment.Phase, error)
+	// LockPhase reads the phase under its row lock.
+	LockPhase(context.Context, int64) (*enrollment.Phase, error)
 	PublicOpenPhases(context.Context, time.Time) ([]*enrollment.Phase, error)
 	InsertPhase(context.Context, *enrollment.Phase) error
 	UpdatePhase(context.Context, *enrollment.Phase) error

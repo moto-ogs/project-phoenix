@@ -34,6 +34,10 @@ func (r *boundsPhaseRecords) Phase(context.Context, int64) (*enrollment.Phase, e
 	return &phase, nil
 }
 
+func (r *boundsPhaseRecords) LockPhase(ctx context.Context, id int64) (*enrollment.Phase, error) {
+	return r.Phase(ctx, id)
+}
+
 func (r *boundsPhaseRecords) InsertPhase(_ context.Context, phase *enrollment.Phase) error {
 	r.inserted++
 	phase.ID = 1
@@ -95,6 +99,29 @@ func TestCreatePhase_AppliesTheServicePeriodBounds(t *testing.T) {
 	}
 }
 
+// TestUpdatePhase_RefusesAnotherReadVersion pins ADR 0311 for the school
+// phase: an edit over another version than the stored phase, or over none,
+// is refused before anything is written.
+func TestUpdatePhase_RefusesAnotherReadVersion(t *testing.T) {
+	t.Parallel()
+
+	stored := boundsPhase("2026-08-01", "2027-07-31")
+	stored.ID = 7
+	records := &boundsPhaseRecords{stored: stored}
+	renamed := *stored
+	renamed.Name = "Schuljahr neu"
+	older := *stored
+	older.Name = "Schuljahr alt"
+	for _, expected := range []string{enrollment.PhaseVersion(&older), ""} {
+		_, err := boundsPhases(records).UpdatePhase(context.Background(), &renamed, expected)
+		require.ErrorIs(t, err, readstate.ErrChanged, "expected version %q", expected)
+	}
+	assert.Zero(t, records.updated, "a refused edit writes nothing")
+	_, err := boundsPhases(records).UpdatePhase(context.Background(), &renamed, enrollment.PhaseVersion(stored))
+	require.NoError(t, err)
+	assert.Equal(t, 1, records.updated)
+}
+
 func TestUpdatePhase_KeepsAStoredPeriodBeyondTheBounds(t *testing.T) {
 	t.Parallel()
 
@@ -105,7 +132,7 @@ func TestUpdatePhase_KeepsAStoredPeriodBeyondTheBounds(t *testing.T) {
 	records := &boundsPhaseRecords{stored: stored}
 	renamed := *stored
 	renamed.Name = "Schuljahr neu"
-	_, err := boundsPhases(records).UpdatePhase(context.Background(), &renamed)
+	_, err := boundsPhases(records).UpdatePhase(context.Background(), &renamed, enrollment.PhaseVersion(stored))
 	require.NoError(t, err)
 	assert.Equal(t, 1, records.updated)
 
@@ -122,7 +149,7 @@ func TestUpdatePhase_KeepsAStoredPeriodBeyondTheBounds(t *testing.T) {
 		records := &boundsPhaseRecords{stored: stored}
 		moved := *stored
 		moved.ServiceStartDate, moved.ServiceEndDate = tc.start, tc.end
-		_, err := boundsPhases(records).UpdatePhase(context.Background(), &moved)
+		_, err := boundsPhases(records).UpdatePhase(context.Background(), &moved, enrollment.PhaseVersion(stored))
 		requireBoundsRejection(t, err, enrollment.ErrInvalidPhase, tc.code)
 		assert.Zero(t, records.updated, tc.name)
 	}

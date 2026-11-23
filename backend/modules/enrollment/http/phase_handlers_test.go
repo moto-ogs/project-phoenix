@@ -24,27 +24,28 @@ import (
 )
 
 type mockPhaseService struct {
-	listResult        []*capability.Phase
-	listErr           error
-	listPublicOpenRes []*capability.Phase
-	listPublicOpenErr error
-	getByIDCalls      int
-	getByIDID         int64
-	getByIDResults    []*capability.Phase
-	getByIDErrs       []error
-	getByIDResult     *capability.Phase
-	getByIDErr        error
-	createInput       *capability.Phase
-	createResult      *capability.Phase
-	createErr         error
-	updateInput       *capability.Phase
-	updateReport      capability.PhaseUpdateReport
-	updateErr         error
-	deleteID          int64
-	deleteErr         error
-	deleteImpactID    int64
-	deleteImpactRes   *capability.PhaseDeleteImpact
-	deleteImpactErr   error
+	listResult            []*capability.Phase
+	listErr               error
+	listPublicOpenRes     []*capability.Phase
+	listPublicOpenErr     error
+	getByIDCalls          int
+	getByIDID             int64
+	getByIDResults        []*capability.Phase
+	getByIDErrs           []error
+	getByIDResult         *capability.Phase
+	getByIDErr            error
+	createInput           *capability.Phase
+	createResult          *capability.Phase
+	createErr             error
+	updateInput           *capability.Phase
+	updateExpectedVersion string
+	updateReport          capability.PhaseUpdateReport
+	updateErr             error
+	deleteID              int64
+	deleteErr             error
+	deleteImpactID        int64
+	deleteImpactRes       *capability.PhaseDeleteImpact
+	deleteImpactErr       error
 }
 
 func (m *mockPhaseService) Phases(_ context.Context) ([]*capability.Phase, error) {
@@ -69,8 +70,9 @@ func (m *mockPhaseService) CreatePhase(_ context.Context, phase *capability.Phas
 	m.createInput = phase
 	return m.createResult, m.createErr
 }
-func (m *mockPhaseService) UpdatePhase(_ context.Context, phase *capability.Phase) (capability.PhaseUpdateReport, error) {
+func (m *mockPhaseService) UpdatePhase(_ context.Context, phase *capability.Phase, expectedVersion string) (capability.PhaseUpdateReport, error) {
 	m.updateInput = phase
+	m.updateExpectedVersion = expectedVersion
 	return m.updateReport, m.updateErr
 }
 func (m *mockPhaseService) DeletePhase(_ context.Context, id int64) error {

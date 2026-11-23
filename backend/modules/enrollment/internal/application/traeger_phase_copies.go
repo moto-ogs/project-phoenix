@@ -69,7 +69,9 @@ func (s *TraegerPhaseCopies) ApplyTraegerPhase(ctx context.Context, copy enrollm
 	if err := applyTraegerPhaseValues(phase, merged); err != nil {
 		return enrollment.TraegerPhaseApplied{}, err
 	}
-	report, err := s.phases.UpdatePhase(ctx, phase)
+	// The copy runs under the Träger rollout's own preview fingerprint
+	// (ADR 0195); it checks no read of the school.
+	report, err := s.phases.updateInTx(ctx, phase)
 	if err != nil {
 		return enrollment.TraegerPhaseApplied{}, err
 	}
@@ -119,7 +121,7 @@ func (s *TraegerPhaseCopies) WithdrawTraegerPhase(ctx context.Context, sourceID 
 	}
 	// Only is_active changes: the window stays, so the report is empty.
 	phase.IsActive = false
-	_, err = s.phases.UpdatePhase(ctx, phase)
+	_, err = s.phases.updateInTx(ctx, phase)
 	return enrollment.TraegerWithdrawal{Found: true}, err
 }
 

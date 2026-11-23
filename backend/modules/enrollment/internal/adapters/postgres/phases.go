@@ -71,6 +71,16 @@ func (r *Store) InsertPhase(ctx context.Context, phase *enrollment.Phase) error 
 }
 
 func (r *Store) Phase(ctx context.Context, id int64) (*enrollment.Phase, error) {
+	return r.readPhase(ctx, id, false)
+}
+
+// LockPhase reads one phase under its row lock: an edit compares the
+// version its author read with the phase as stored (ADR 0311).
+func (r *Store) LockPhase(ctx context.Context, id int64) (*enrollment.Phase, error) {
+	return r.readPhase(ctx, id, true)
+}
+
+func (r *Store) readPhase(ctx context.Context, id int64, lock bool) (*enrollment.Phase, error) {
 	tenantID, err := r.tenantID(ctx)
 	if err != nil {
 		return nil, err
@@ -80,12 +90,15 @@ func (r *Store) Phase(ctx context.Context, id int64) (*enrollment.Phase, error) 
 		return nil, err
 	}
 	row := new(phaseRow)
-	err = db.NewSelect().
+	query := db.NewSelect().
 		Model(row).
 		ModelTableExpr(phaseTableExpr).
 		Where(`"phase".tenant_id = ?`, tenantID).
-		Where(`"phase".id = ?`, id).
-		Scan(ctx)
+		Where(`"phase".id = ?`, id)
+	if lock {
+		query = query.For(`UPDATE OF "phase"`)
+	}
+	err = query.Scan(ctx)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("phase %d not found: %w", id, err)

@@ -109,11 +109,11 @@ func withContractEnrollmentForm(rt *Runtime, schemaID int64, submit func() error
 	path := fmt.Sprintf("/api/enrollment/phases/%d", rt.Enrollment.PhaseID)
 	body := maps.Clone(original)
 	body["form_schema_id"] = strconv.FormatInt(schemaID, 10)
-	if _, err := rt.Client.PutWithAuth(rt.TenantAuth, path, body); err != nil {
+	if err := putReadPhase(rt, rt.TenantAuth, path, body); err != nil {
 		return err
 	}
 	defer func() {
-		if _, restoreErr := rt.Client.PutWithAuth(rt.TenantAuth, path, original); restoreErr != nil {
+		if restoreErr := putReadPhase(rt, rt.TenantAuth, path, original); restoreErr != nil {
 			err = errors.Join(err, fmt.Errorf("restore the enrollment form: %w", restoreErr))
 		}
 	}()

@@ -62,10 +62,14 @@ type PhaseResponse struct {
 	Translations enrollmentOwner.Translations `json:"translations,omitempty"`
 	CreatedAt    string                       `json:"created_at"`
 	UpdatedAt    string                       `json:"updated_at"`
+	// Version is the token of the phase as the school edits it; an update
+	// sends it back (ADR 0311).
+	Version string `json:"version"`
 }
 
 func toPhaseResponse(p *enrollmentOwner.Phase) PhaseResponse {
 	resp := PhaseResponse{
+		Version:                   enrollmentOwner.PhaseVersion(p),
 		ID:                        strconv.FormatInt(p.ID, 10),
 		Name:                      p.Name,
 		Kind:                      p.Kind,
@@ -174,6 +178,10 @@ type EnrollmentPhaseRequest struct {
 	// Translations (#3377) follows the same convention: omitted keeps the
 	// stored translations, an explicit {} clears them.
 	Translations *PhaseTranslationsRequest `json:"translations,omitempty"`
+	// ExpectedVersion is the version of the phase the school edits; an
+	// update over a phase changed since is refused (ADR 0311). A new phase
+	// sends none.
+	ExpectedVersion string `json:"expected_version,omitempty"`
 
 	calendarPeriodIDPresent bool
 }
@@ -572,7 +580,7 @@ func (rs *Resource) updatePhase(w http.ResponseWriter, r *http.Request) {
 			}
 			req.hydrateOmittedFields(model, existing)
 			var err error
-			report, err = rs.PhaseService.UpdatePhase(ctx, model)
+			report, err = rs.PhaseService.UpdatePhase(ctx, model, req.ExpectedVersion)
 			return err
 		},
 		func(ctx context.Context, id int64) (*enrollmentOwner.Phase, error) {
