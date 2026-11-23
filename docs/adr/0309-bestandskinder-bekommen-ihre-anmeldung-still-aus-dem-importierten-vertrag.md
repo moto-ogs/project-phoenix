@@ -1031,17 +1031,28 @@ behoben.
    behoben (Abschnitt 2), für alle anderen nicht. Dasselbe gilt für ein
    einzelnes Angebot, das später als die übrigen begann: Die Korrektur
    bucht es ab dem ersten Tag des Kindes.
-3. **Behoben (#7909): Eine Korrektur ohne Datum behält das Ende einer
-   Buchung.** Bleibt ein Angebot gewählt, behält seine Buchung ihr
+3. **Behoben (#7909, #7928): Eine Korrektur ohne Datum und eine Änderung
+   mit Stichtag behalten das Ende einer Buchung.** Bleibt ein Angebot
+   gewählt, behält seine Buchung ihr
    gespeichertes Ende (`keepBookingEnds`); eine Mitbuchung endet mit ihrem
    letzten Auslöser. Ein neu gewähltes Angebot endet mit der Phase oder dem
    früheren Betreuungsende der Kinderakte. Ein Ende, an dem eine andere
    gespeicherte Buchung des Kindes beginnt, ist der Beginn einer geplanten
    Änderung; die Korrektur plant sie neu ein, und sie schließt die Buchung
-   dort. Eine Korrektur, die die Betreuung nicht ändert, erzeugt für einen
-   gebundenen Vertrag keine Version mehr. Offen: Eine Änderung mit Stichtag
-   verwirft das Ende weiterhin
-   ([#7928](https://github.com/moto-ogs/project-phoenix/issues/7928)).
+   dort. Die Änderung mit Stichtag (Korrektur mit `effective_from`,
+   Genehmigung einer Änderungsanfrage der Eltern, direkte Anpassung der
+   Abholzeit) ersetzt geplante spätere Änderungen; ein solches Ende gilt
+   auch hier als ihr Beginn, und die Buchung läuft mit der Phase weiter
+   (Entscheidung des Product Owners vom 23.11.2026,
+   [#7928](https://github.com/moto-ogs/project-phoenix/issues/7928)). Aus
+   den gespeicherten Buchungen lässt sich ein echtes Ende an diesem Tag
+   nicht davon unterscheiden; es wird dann wie vor #7928 verlängert.
+   Kapazitätsprüfung und Vorschau der Änderung mit Stichtag lesen dasselbe
+   Fenster, das die Änderung schreibt (`selectionBookingEnds`): Ein
+   gehaltenes Angebot, das sein Ende behält, braucht keinen Platz danach,
+   und die Warnung zu manueller Planung zählt die Tage danach als ungedeckt.
+   Eine Änderung, die die Betreuung nicht ändert, erzeugt für einen
+   gebundenen Vertrag keine Version, mit oder ohne Datum.
    **Nachtrag (#7929):** Das Büro verlängert ein Ende ausdrücklich. In der
    Korrektur steht unter einem Angebot, dessen Buchung vor der Betreuung des
    Kindes endet, „Gebucht bis …“ und „Bis … verlängern“

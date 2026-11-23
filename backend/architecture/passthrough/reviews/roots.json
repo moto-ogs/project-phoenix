@@ -4567,6 +4567,11 @@
     },
     {
       "decision": "0090",
+      "id": "roots/owners/offeringChangeEnrollment.SelectionHistory",
+      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0090",
       "id": "roots/owners/offeringChangeEnrollment.SelectionsAt",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
