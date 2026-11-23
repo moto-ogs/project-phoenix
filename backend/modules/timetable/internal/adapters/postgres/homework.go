@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/uptrace/bun"
 )
 
@@ -148,6 +149,9 @@ func (s *Store) LockClassHomework(ctx context.Context, ref timetable.HomeworkRef
 	if err != nil {
 		return timetable.HomeworkEntry{}, false, domain.OperationStats{}, err
 	}
+	if err := tenant.OrderLock(ctx, tenant.LockLeaf, "education.class_homework"); err != nil {
+		return timetable.HomeworkEntry{}, false, domain.OperationStats{}, err
+	}
 	row := classHomeworkRow{}
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
@@ -174,6 +178,9 @@ func (s *Store) LockClassHomework(ctx context.Context, ref timetable.HomeworkRef
 func (s *Store) LockHomeworkFeedback(ctx context.Context, studentID int64, date calendar.Date) (*timetable.HomeworkFeedback, domain.OperationStats, error) {
 	db, tenantID, err := s.database(ctx)
 	if err != nil {
+		return nil, domain.OperationStats{}, err
+	}
+	if err := tenant.OrderLock(ctx, tenant.LockLeaf, "advisory:homework-feedback"); err != nil {
 		return nil, domain.OperationStats{}, err
 	}
 	stats := domain.OperationStats{Queries: 2}

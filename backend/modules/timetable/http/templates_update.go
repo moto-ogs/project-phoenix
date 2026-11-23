@@ -376,23 +376,8 @@ func (rs *Resource) updateTemplate(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if err := rs.Templates.ValidateTemplateEducationGroup(ctx, (*int64)(parsed.req.EducationGroupID)); err != nil {
-		if !renderTemplateEducationGroupError(w, r, err) {
-			common.RenderError(w, r, common.ErrorInternalServerWrap("validate education group failed", err))
-		}
-		return
-	}
-	timeframeID, err := rs.Templates.FindOrCreateTimeframe(ctx, parsed.startTime, parsed.endTime, parsed.req.Name)
-	if err != nil {
-		common.RenderError(w, r, common.ErrorInternalServerWrap("resolve timeframe failed", err))
-		return
-	}
-	// The recurrence gate comes after the timeframe, in the order a template
-	// create takes them; the check reads the segment again under it, so a
-	// segment that changed since its editor read it (or since the unlocked
-	// read above) is refused.
-	if !rs.lockTemplateForWrite(w, r) || !rs.checkTemplateReadVersion(w, r, id, parsed.req.ExpectedVersion) {
-		tenant.MarkRollback(ctx)
+	timeframeID, ok := rs.lockedTemplateUpdateTarget(w, r, id, parsed)
+	if !ok {
 		return
 	}
 	command := buildUpdateTemplateInput(id, parsed, timeframeID, gradeLevelMax, rosterValidFrom)
@@ -406,16 +391,48 @@ func (rs *Resource) updateTemplate(w http.ResponseWriter, r *http.Request) {
 		renderUpdateTemplateError(w, r, updateErr)
 		return
 	}
-	templates, err := rs.loadTemplates(ctx, &id, (*int64)(parsed.req.CalendarPeriodID))
+	rs.respondUpdatedTemplate(w, r, id, (*int64)(parsed.req.CalendarPeriodID))
+}
+
+// respondUpdatedTemplate answers the saved series as its editing read shows
+// it, with the version a next save sends (ADR 0311).
+func (rs *Resource) respondUpdatedTemplate(w http.ResponseWriter, r *http.Request, id int64, periodID *int64) {
+	templates, err := rs.loadTemplates(r.Context(), &id, periodID)
 	if err != nil || len(templates) == 0 {
 		common.RenderError(w, r, common.ErrorInternalServerWrap("reload template failed", err))
 		return
 	}
-	if templates[0].Version, err = rs.templateReadVersion(ctx, id); err != nil {
+	if templates[0].Version, err = rs.templateReadVersion(r.Context(), id); err != nil {
 		common.RenderError(w, r, common.ErrorInternalServerWrap("reload template failed", err))
 		return
 	}
 	common.Respond(w, r, http.StatusOK, templates[0], "Template updated")
+}
+
+// lockedTemplateUpdateTarget validates the education group, resolves the
+// timeframe and takes the recurrence gate after it, in the order a template
+// create takes them. Under the gate the segment is read again: one that
+// changed since its editor read it, or since the unlocked read before, is
+// refused (ADR 0311). It returns ok=false after rendering the refusal.
+func (rs *Resource) lockedTemplateUpdateTarget(w http.ResponseWriter, r *http.Request, id int64, parsed *parsedUpdateTemplate) (int64, bool) {
+	ctx := r.Context()
+	if err := rs.Templates.ValidateTemplateEducationGroup(ctx, (*int64)(parsed.req.EducationGroupID)); err != nil {
+		if !renderTemplateEducationGroupError(w, r, err) {
+			common.RenderError(w, r, common.ErrorInternalServerWrap("validate education group failed", err))
+		}
+		return 0, false
+	}
+	timeframeID, err := rs.Templates.FindOrCreateTimeframe(ctx, parsed.startTime, parsed.endTime, parsed.req.Name)
+	if err != nil {
+		common.RenderError(w, r, common.ErrorInternalServerWrap("resolve timeframe failed", err))
+		return 0, false
+	}
+	if !rs.lockTemplateForWrite(w, r) || !rs.checkTemplateReadVersion(w, r, id, parsed.req.ExpectedVersion) {
+		// The timeframe this request may have created goes with the refusal.
+		tenant.MarkRollback(ctx)
+		return 0, false
+	}
+	return timeframeID, true
 }
 
 // loadTemplateForUpdate loads the existing recurrence independently of the
