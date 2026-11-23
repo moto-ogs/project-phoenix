@@ -5315,6 +5315,7 @@
     },
     {
       "adr": "0083",
+      "approval_adr": "0313",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.LockStudentNoKeyUpdate",
       "classification": "unresolved",
       "effect": "unresolved",
@@ -5337,6 +5338,7 @@
     },
     {
       "adr": "0083",
+      "approval_adr": "0313",
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
       "classification": "unresolved",
       "effect": "unresolved",
@@ -10204,6 +10206,7 @@
     },
     {
       "adr": "0083",
+      "approval_adr": "0313",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.LockStudentNoKeyUpdate",
       "classification": "unresolved",
       "effect": "unresolved",
@@ -13977,6 +13980,7 @@
     },
     {
       "adr": "0083",
+      "approval_adr": "0313",
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
       "classification": "unresolved",
       "effect": "unresolved",
@@ -14754,6 +14758,7 @@
     },
     {
       "adr": "0083",
+      "approval_adr": "0313",
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.StudentSnapshotForNoKeyUpdate",
       "classification": "debt",
       "effect": "lock",
@@ -14776,6 +14781,7 @@
     },
     {
       "adr": "0083",
+      "approval_adr": "0313",
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.StudentSnapshotForNoKeyUpdate",
       "classification": "unresolved",
       "effect": "unresolved",
@@ -22998,6 +23004,7 @@
     },
     {
       "adr": "0083",
+      "approval_adr": "0313",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentRecords.StudentSnapshotForNoKeyUpdate",
       "classification": "debt",
       "effect": "lock",
@@ -23020,6 +23027,7 @@
     },
     {
       "adr": "0083",
+      "approval_adr": "0313",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentRecords.StudentSnapshotForNoKeyUpdate",
       "classification": "unresolved",
       "effect": "unresolved",
@@ -23042,6 +23050,7 @@
     },
     {
       "adr": "0083",
+      "approval_adr": "0313",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.OverlappingRosterGroupNames.StudentSnapshotForNoKeyUpdate",
       "classification": "debt",
       "effect": "lock",
@@ -23064,6 +23073,7 @@
     },
     {
       "adr": "0083",
+      "approval_adr": "0313",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.OverlappingRosterGroupNames.StudentSnapshotForNoKeyUpdate",
       "classification": "unresolved",
       "effect": "unresolved",
@@ -23086,6 +23096,7 @@
     },
     {
       "adr": "0083",
+      "approval_adr": "0313",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.groupStudentRepository.StudentSnapshotForNoKeyUpdate",
       "classification": "debt",
       "effect": "lock",
@@ -23108,6 +23119,7 @@
     },
     {
       "adr": "0083",
+      "approval_adr": "0313",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.groupStudentRepository.StudentSnapshotForNoKeyUpdate",
       "classification": "unresolved",
       "effect": "unresolved",
