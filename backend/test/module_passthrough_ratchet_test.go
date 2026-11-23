@@ -279,7 +279,7 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	"modules/schoolcalendar":   13,
 	"modules/schoolmembership": 15,
 	"modules/schoolsetup":      1,
-	"modules/schoolstructure":  42,
+	"modules/schoolstructure":  41, // Lowered by #PRNUM: the retained test group update reads the version itself (-1)
 	"modules/settings":         16,
 	// Raised by ADR 0131: the kiosk count revision read (+1).
 	// Raised by ADR 0133: the kiosk room count revision read (+1).
