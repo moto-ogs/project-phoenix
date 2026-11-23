@@ -46,6 +46,7 @@ export interface TransitionResponse {
   can_modify: boolean;
   can_apply: boolean;
   can_revert: boolean;
+  version: string;
 }
 
 export const TransitionResponseSchema: z.ZodType<TransitionResponse, unknown> = object<TransitionResponse>({
@@ -63,6 +64,7 @@ export const TransitionResponseSchema: z.ZodType<TransitionResponse, unknown> = 
   can_modify: bool,
   can_apply: bool,
   can_revert: bool,
+  version: str,
 });
 
 /** Go: gradetransitionhttp.SuggestedMappingResponse */
@@ -171,6 +173,7 @@ export interface TransitionRequest {
   academic_year?: string;
   notes?: string | null;
   mappings?: TransitionMappingRequest[] | null;
+  expected_version?: string;
 }
 
 /** Go: gradetransitionhttp.TransitionApplyRequest */

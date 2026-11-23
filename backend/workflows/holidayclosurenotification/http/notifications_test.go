@@ -109,6 +109,15 @@ func newClosureWorldIn(t *testing.T, name string, db *bun.DB) closureWorld {
 
 func (w closureWorld) schoolCtx() context.Context { return tenant.WithTenantID(w.ctx, w.school) }
 
+// closingDayVersion reads the stored version an update of the closing day
+// sends back (ADR 0311).
+func (w closureWorld) closingDayVersion(t *testing.T, id int64) string {
+	t.Helper()
+	day, err := w.records.FindClosingDay(w.schoolCtx(), id)
+	require.NoError(t, err)
+	return schoolcalendar.ClosingDayVersion(day)
+}
+
 func (w closureWorld) createClosingDay(t *testing.T, start, end string) schoolcalendar.ClosingDay {
 	t.Helper()
 	day, err := w.records.CreateClosingDay(w.schoolCtx(), schoolcalendar.CreateClosingDay{ClosingDayFields: schoolcalendar.ClosingDayFields{
@@ -297,7 +306,7 @@ func TestMovedAndDeletedClosingDayTellOnceWithBothSections(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, w.mails(t), 2)
 
-	_, err = w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ClosingDayFields: schoolcalendar.ClosingDayFields{
+	_, err = w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ExpectedVersion: w.closingDayVersion(t, day.ID), ClosingDayFields: schoolcalendar.ClosingDayFields{
 		StartDate: "2030-07-11", EndDate: "2030-07-11", Reason: "Pädagogischer Tag",
 	}})
 	require.NoError(t, err)
@@ -362,7 +371,7 @@ func TestStaleClickConfirmsNothing(t *testing.T) {
 	w := newClosureWorld(t, "Träger Hinweis veraltet")
 	day := w.createClosingDay(t, "2030-07-10", "2030-07-10")
 	seen := w.schoolNotices(t)[0]
-	_, err := w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ClosingDayFields: schoolcalendar.ClosingDayFields{
+	_, err := w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ExpectedVersion: w.closingDayVersion(t, day.ID), ClosingDayFields: schoolcalendar.ClosingDayFields{
 		StartDate: "2030-07-09", EndDate: "2030-07-10", Reason: "Pädagogische Tage",
 	}})
 	require.NoError(t, err)
@@ -482,7 +491,7 @@ func TestConfirmedNoticeRequiresTheSameCalendarRevision(t *testing.T) {
 	w := newClosureWorldIn(t, "Träger Kalenderstand bestätigen", testpkg.SetupIsolatedTestDB(t))
 	day := w.createClosingDay(t, "2030-07-08", "2030-07-08")
 	// Widen the command's span by moving Monday to Friday before confirmation.
-	_, err := w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ClosingDayFields: schoolcalendar.ClosingDayFields{
+	_, err := w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ExpectedVersion: w.closingDayVersion(t, day.ID), ClosingDayFields: schoolcalendar.ClosingDayFields{
 		StartDate: "2030-07-12", EndDate: "2030-07-12", Reason: "Pädagogischer Tag",
 	}})
 	require.NoError(t, err)

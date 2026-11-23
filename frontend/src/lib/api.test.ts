@@ -190,18 +190,4 @@ describe("api.ts list clients", () => {
       expect(mapRoomsResponse).not.toHaveBeenCalled();
     });
   });
-
-  describe("roomService.deleteRoom", () => {
-    it("calls fetch with correct URL and method", async () => {
-      fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
-      const { roomService } = await import("./api");
-
-      await roomService.deleteRoom("456");
-
-      expect(fetchMock).toHaveBeenCalledWith(
-        expect.stringContaining("/api/rooms/456"),
-        expect.objectContaining({ method: "DELETE" }),
-      );
-    });
-  });
 });

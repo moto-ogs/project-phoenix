@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 func (s *Service) FindPlanningTrack(ctx context.Context, id int64) (timetable.PlanningTrack, error) {
@@ -79,6 +80,9 @@ func (s *Service) updatePlanningTrack(ctx context.Context, id int64, fields time
 		return timetable.PlanningTrack{}, false, s.reject("update_planning_track", timetable.ErrInvalidPlanningTrack)
 	}
 	err = s.runWrite(ctx, "update_planning_track", true, func(txCtx context.Context, stats *domain.OperationStats) error {
+		if err := s.checkPlanningTrackVersion(txCtx, id, fields.ExpectedVersion, activeOnly, stats); err != nil {
+			return err
+		}
 		value, found, queryStats, updateErr := s.store.UpdatePlanningTrack(txCtx, id, fields, activeOnly)
 		stats.Add(queryStats)
 		result, updated = value, found
@@ -88,6 +92,18 @@ func (s *Service) updatePlanningTrack(ctx context.Context, id int64, fields time
 		return timetable.ErrPlanningTrackNotFound
 	})
 	return result, updated, err
+}
+
+// checkPlanningTrackVersion locks the track an update replaces and refuses
+// it when its editor read another version (ADR 0311). A missing track, and
+// an archived one an active-only update skips, keep their own answer.
+func (s *Service) checkPlanningTrackVersion(ctx context.Context, id int64, expected string, activeOnly bool, stats *domain.OperationStats) error {
+	current, found, queryStats, err := s.store.FindPlanningTrack(ctx, id, "UPDATE")
+	stats.Add(queryStats)
+	if err != nil || !found || (activeOnly && current.IsArchived()) {
+		return err
+	}
+	return readstate.Check(expected, timetable.PlanningTrackVersion(current))
 }
 
 func (s *Service) DeletePlanningTrack(ctx context.Context, id int64) error {

@@ -32,6 +32,7 @@ import {
   SlideOverTitle,
 } from "~/components/ui/slide-over";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import { isChangedSinceRead } from "~/lib/api-error";
 import { calendarPeriodService } from "~/lib/calendar-period-api";
 import {
   type CalendarPeriod,
@@ -192,7 +193,9 @@ export function CalendarPeriodModal({
   const [periodSaveNotified, setPeriodSaveNotified] = useState(false);
 
   const isEdit = Boolean(initial);
-  const persisted = initial ?? savedPeriod;
+  // The latest stored state this dialog knows: after a save, the answer
+  // carries the version the next save sends back (ADR 0311).
+  const persisted = savedPeriod ?? initial;
 
   // Most period links are nullable and get unlinked on delete. The server can
   // still reject the mutation when unpinning would invalidate a care-offering
@@ -305,7 +308,10 @@ export function CalendarPeriodModal({
       let warnings: CalendarPeriodWarning[];
       try {
         ({ period, warnings } = persisted
-          ? await calendarPeriodService.update(persisted.id, body)
+          ? await calendarPeriodService.update(persisted.id, {
+              ...body,
+              expected_version: persisted.version,
+            })
           : await calendarPeriodService.create(body));
       } catch (err) {
         logger.error("period_save_failed", {
@@ -314,10 +320,15 @@ export function CalendarPeriodModal({
         });
         // Protokolliert; eine späte Ablehnung zeigt kein neuerer Vorgang.
         if (!op.isCurrent()) return;
+        // Hat jemand den Zeitraum seit dem Öffnen geändert, zeigt das
+        // Formular dessen Stand; gespeichert wird erst eine neue
+        // Bearbeitung (ADR 0311).
+        const changed = isChangedSinceRead(err);
         void formErrors.show(err, {
           object: "das Speichern des Kalenderzeitraums",
-          retry: () => latestSubmitRef.current(),
+          retry: changed ? undefined : () => latestSubmitRef.current(),
         });
+        if (changed && persisted) await showStoredPeriod(persisted.id, op);
         return;
       }
 
@@ -361,6 +372,22 @@ export function CalendarPeriodModal({
         setSaveWarnings(warnings);
       }
     });
+  };
+
+  // Lädt den gespeicherten Zeitraum ins Formular. Scheitert das Laden,
+  // bleibt die Meldung der Ablehnung stehen.
+  const showStoredPeriod = async (id: string, op: FormModalOperation) => {
+    try {
+      const stored = await calendarPeriodService.get(id);
+      if (!op.isCurrent()) return;
+      setForm(formFromPeriod(stored));
+      setSavedPeriod(stored);
+    } catch (err) {
+      logger.warn("period_reload_failed", {
+        period_id: id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
   };
 
   const isPhaseLinked = (phase: LinkablePhase) =>

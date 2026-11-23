@@ -35,6 +35,7 @@ export interface ClosingDay {
   reason: string;
   school_ids: string[] | null;
   updated_at: string;
+  version: string;
   notified_families: number;
 }
 
@@ -45,6 +46,7 @@ export const ClosingDaySchema: z.ZodType<ClosingDay, unknown> = object<ClosingDa
   reason: str,
   school_ids: nullable(arr(int64String)),
   updated_at: instant,
+  version: str,
   notified_families: safeInt,
 });
 
@@ -103,6 +105,7 @@ export interface TraegerClosingDayRequest {
   reason?: string;
   school_ids?: string[] | null;
   holiday_bookings_token?: string;
+  expected_version?: string;
 }
 
 /** Query of DELETE /traeger/closing-days/{id} */

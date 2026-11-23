@@ -142,6 +142,10 @@ type RoomRequest struct {
 	// as it is". The room form posts a partial payload, so a plain bool
 	// would revoke a standing release on the first unrelated edit.
 	IsOpenRoom *bool `json:"is_open_room,omitempty"`
+	// ExpectedVersion is the version of the room an update edits; an
+	// update of a room changed since is refused (ADR 0311). A create
+	// ignores it.
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 func (req *RoomRequest) Bind(_ *http.Request) error {
@@ -169,6 +173,8 @@ type RoomResponse struct {
 	ArchivedAt      *time.Time `json:"archived_at,omitempty"`
 	CreatedAt       time.Time  `json:"created_at"`
 	UpdatedAt       time.Time  `json:"updated_at"`
+	// Version is the token an update sends back as expected_version.
+	Version string `json:"version"`
 }
 
 func newRoomResponse(view RoomView) RoomResponse {
@@ -178,7 +184,7 @@ func newRoomResponse(view RoomView) RoomResponse {
 		IsOccupied: view.IsOccupied, GroupName: view.GroupName, CategoryName: view.CategoryName,
 		StudentCount: view.StudentCount, SupervisorNames: view.SupervisorNames,
 		IsSystem: view.IsSystem, IsOpenRoom: view.IsOpenRoom, ArchivedAt: view.ArchivedAt,
-		CreatedAt: view.CreatedAt, UpdatedAt: view.UpdatedAt,
+		CreatedAt: view.CreatedAt, UpdatedAt: view.UpdatedAt, Version: facilities.RoomVersion(view.Room),
 	}
 }
 
@@ -283,7 +289,7 @@ func (rs *Resource) updateRoom(w http.ResponseWriter, r *http.Request) {
 	room, err := rs.rooms.UpdateRoom(r.Context(), facilities.UpdateRoom{
 		ID: id, Name: req.Name, Building: req.Building, Floor: req.Floor,
 		Capacity: req.Capacity, Category: req.Category, Color: req.Color,
-		IsOpenRoom: req.IsOpenRoom,
+		IsOpenRoom: req.IsOpenRoom, ExpectedVersion: req.ExpectedVersion,
 	})
 	if err != nil {
 		rs.failure(w, r, err)

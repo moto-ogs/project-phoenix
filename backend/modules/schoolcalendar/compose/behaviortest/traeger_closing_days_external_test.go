@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -109,6 +110,50 @@ func TestTraegerClosingDaysStayWithTheirTraegerBelowRLS(t *testing.T) {
 		assert.Equal(t, "Betriebsausflug", view.ClosingDays[0].Reason, "the other Träger keeps its closing day unchanged")
 		return nil
 	}))
+}
+
+// A change carries the version of the closing day the Büro read (ADR 0311):
+// a colleague's save in between, or no version at all, refuses it before
+// anything is written; the version of the stored closing day saves.
+func TestTraegerClosingDayRefusesAChangeOfAnotherVersion(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	ctx := testpkg.WithTestTenantRuntime(t, context.Background())
+	traeger := newClosingDayTraeger(t, db, "Träger Schließtag Stand", 1)
+	days := schoolCalendarCompose.NewTraegerClosingDays(fixedTraegerSchools{traeger.id: traeger.states()}, noHolidayNotices{})
+	day := calendar.NewDate(2027, 5, 7)
+	read := planClosingDay(t, ctx, days, traeger, day, "Brückentag", traeger.schools[0])
+	change := func(version, reason string) (traegercalendar.ClosingDay, error) {
+		var changed traegercalendar.ClosingDay
+		err := testpkg.WithinTraeger(ctx, traeger.id, func(ctx context.Context) error {
+			var err error
+			changed, err = days.UpdateClosingDay(ctx, traeger.id, read.ID.Int64(), traegercalendar.ClosingDayInput{
+				StartDate: day, EndDate: day, Reason: reason, SchoolIDs: traeger.schools, ExpectedVersion: version,
+			})
+			return err
+		})
+		return changed, err
+	}
+
+	colleague, err := change(read.Version, "Kollegin")
+	require.NoError(t, err)
+	require.NotEqual(t, read.Version, colleague.Version, "every save moves the version")
+	for name, version := range map[string]string{"outdated": read.Version, "missing": ""} {
+		_, err = change(version, "Überschrieben")
+		require.ErrorIs(t, err, readstate.ErrChanged, name)
+	}
+	require.NoError(t, testpkg.WithinTraeger(ctx, traeger.id, func(ctx context.Context) error {
+		view, err := days.Calendar(ctx, traeger.id, calendar.NewDate(2027, 1, 1), calendar.NewDate(2027, 12, 31))
+		require.NoError(t, err)
+		require.Len(t, view.ClosingDays, 1)
+		assert.Equal(t, "Kollegin", view.ClosingDays[0].Reason, "a refused change writes nothing")
+		assert.Equal(t, colleague.Version, view.ClosingDays[0].Version, "the read carries the version of the stored closing day")
+		return nil
+	}))
+
+	changed, err := change(colleague.Version, "Neu gelesen")
+	require.NoError(t, err)
+	assert.Equal(t, "Neu gelesen", changed.Reason)
 }
 
 // A school outside the Träger is refused before anything is written, so the

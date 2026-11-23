@@ -310,6 +310,37 @@ describe("CatalogPage", () => {
     expect(showApiError).not.toHaveBeenCalled();
   });
 
+  // ADR 0311: hat jemand den Eintrag seit dem Lesen geändert, lädt die Seite
+  // ihn neu, das Formular zeigt den gespeicherten Stand und bietet kein
+  // Wiederholen an.
+  it("shows the stored entry after a save refused as changed since read", async () => {
+    const { update, onChanged } = renderPage({ selectedId: "1" });
+    update.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+
+    fireEvent.change(screen.getByDisplayValue("Essen"), {
+      target: { value: "Lernzeit" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "die Kategorie"),
+      ),
+    ).toBeInTheDocument();
+    expect(onChanged).toHaveBeenCalled();
+    expect(await screen.findByDisplayValue("Essen")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        catalogText("general.changed_since_read", "die Kategorie"),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("keeps an edit while the catalog page rerenders", () => {
     renderPage({ selectedId: "1" });
 

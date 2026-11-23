@@ -20,6 +20,9 @@ type bulkCancelRequest struct {
 	// IncludeClosingDaySeries also cancels series planned on closing days on
 	// purpose (holiday care). Off by default.
 	IncludeClosingDaySeries bool `json:"include_closing_day_series"`
+	// ExpectedFingerprint is the fingerprint of the confirmed dry run; a
+	// real run without it or with another one is refused (ADR 0311).
+	ExpectedFingerprint string `json:"expected_fingerprint,omitempty"`
 }
 
 func (req *bulkCancelRequest) Bind(_ *http.Request) error {
@@ -50,7 +53,9 @@ func (rs *Resource) bulkCancelInstances(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	opts := timetable.BulkCancelOptions{DryRun: req.DryRun, IncludeClosingDaySeries: req.IncludeClosingDaySeries}
+	opts := timetable.BulkCancelOptions{
+		DryRun: req.DryRun, IncludeClosingDaySeries: req.IncludeClosingDaySeries, ExpectedFingerprint: req.ExpectedFingerprint,
+	}
 	result, err := rs.InstanceService.BulkCancelPlanned(r.Context(), from, to, opts, sessiontoken.ActorAccountIDFromCtx(r.Context()))
 	if errors.Is(err, timetable.ErrInvalidBulkCancelRange) {
 		common.RenderError(w, r, codedInvalid(err))

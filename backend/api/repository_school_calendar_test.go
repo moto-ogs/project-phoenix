@@ -85,26 +85,6 @@ func TestCalendarPeriodAdapter_KeepsTheLegacyContracts(t *testing.T) {
 		require.EqualError(t, repo.Create(ctx, &noAnchor), "week_cycle_anchor is required when week_cycle_length > 1")
 	})
 
-	t.Run("Update writes and refuses invalid rows", func(t *testing.T) {
-		created.PeriodType = "semester"
-		created.IsActive = false
-		require.NoError(t, repo.Update(ctx, &created))
-		updated, err := repo.FindByID(ctx, created.ID)
-		require.NoError(t, err)
-		assert.Equal(t, "semester", updated.PeriodType)
-		assert.False(t, updated.IsActive)
-
-		require.EqualError(t, repo.Update(ctx, nil), "CalendarPeriod cannot be nil or zero value")
-		broken := created
-		broken.Name = ""
-		require.EqualError(t, repo.Update(ctx, &broken), "name is required")
-		gone := created
-		gone.ID = missingID(created.ID)
-		err = repo.Update(ctx, &gone)
-		require.Error(t, err)
-		assert.True(t, testpkg.IsNotFoundError(err))
-	})
-
 	t.Run("List serves the unfiltered listing", func(t *testing.T) {
 		periods, err := repo.FindByTenantID(ctx)
 		require.NoError(t, err)
@@ -192,10 +172,12 @@ func TestCalendarPeriodAdapter_OverlapFindersKeepTheDateSemantics(t *testing.T) 
 	inactive := testpkg.CreateTestCalendarPeriod(t, db, "Inaktiv", testpkg.Date(2030, time.August, 1), testpkg.Date(2031, time.July, 31))
 	adjacent := testpkg.CreateTestCalendarPeriod(t, db, "Angrenzend", testpkg.Date(2031, time.August, 1), testpkg.Date(2032, time.July, 31))
 	testpkg.SetCalendarPeriodActive(t, db, adjacent, true)
-	semester := readBack(t, ctx, repo.FindByID, testpkg.CreateTestCalendarPeriod(t, db, "Halbjahr", testpkg.Date(2030, time.August, 1), testpkg.Date(2031, time.January, 31)).ID)
-	semester.PeriodType = "semester"
-	semester.IsActive = true
-	require.NoError(t, repo.Update(ctx, semester))
+	semesterRow := testpkg.CreateTestCalendarPeriod(t, db, "Halbjahr", testpkg.Date(2030, time.August, 1), testpkg.Date(2031, time.January, 31))
+	semesterRow.PeriodType = "semester"
+	_, err := db.NewUpdate().Model(semesterRow).Column("period_type").WherePK().Exec(ctx)
+	require.NoError(t, err)
+	testpkg.SetCalendarPeriodActive(t, db, semesterRow, true)
+	semester := readBack(t, ctx, repo.FindByID, semesterRow.ID)
 
 	overlapping, err := repo.FindActiveOverlapping(ctx, "2030-09-01", "2030-10-01", 0)
 	require.NoError(t, err)

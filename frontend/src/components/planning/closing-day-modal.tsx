@@ -24,7 +24,7 @@ import { FormModal } from "~/components/ui/form-modal";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { Input } from "~/components/ui/input";
 import { useApiFormError } from "~/contexts/ToastContext";
-import { ApiError } from "~/lib/api-error";
+import { ApiError, isChangedSinceRead } from "~/lib/api-error";
 import { closingDayService } from "~/lib/closing-day-api";
 import { type ClosingDay } from "~/lib/closing-day-helpers";
 import { createLogger } from "~/lib/logger";
@@ -36,6 +36,7 @@ export function ClosingDayModal({
   isOpen,
   onClose,
   onSaved,
+  onChangedSinceRead,
   initial,
   onOfferCancel,
   onSave,
@@ -51,6 +52,9 @@ export function ClosingDayModal({
   const [endDate, setEndDate] = useState("");
   const [reason, setReason] = useState("");
   const [schoolIds, setSchoolIds] = useState<readonly string[]>([]);
+  // Der Stand, aus dem das Formular stammt: das Speichern schickt ihn mit
+  // (ADR 0311). Ein späteres Nachladen der Liste ändert ihn nicht.
+  const [readVersion, setReadVersion] = useState<string | undefined>();
   const initializedRecord = useRef<string | null>(null);
   const save = useFormModalPending(isOpen);
   const saving = save.pending;
@@ -73,6 +77,7 @@ export function ClosingDayModal({
     setSchoolIds(
       initial?.schoolIds ?? schools?.map((school) => school.id) ?? [],
     );
+    setReadVersion(initial?.version);
     clearErrors();
   }, [isOpen, initial, schools, defaultDate, clearErrors]);
 
@@ -121,9 +126,13 @@ export function ClosingDayModal({
             endDate,
             reason: reason.trim(),
             schoolIds,
+            expectedVersion: initial ? readVersion : undefined,
           });
         } else if (initial) {
-          await closingDayService.update(initial.id, body);
+          await closingDayService.update(initial.id, {
+            ...body,
+            expected_version: readVersion,
+          });
         } else {
           await closingDayService.create(body);
         }
@@ -139,10 +148,22 @@ export function ClosingDayModal({
           error: err instanceof Error ? err.message : String(err),
         });
         if (!op.isCurrent()) return;
+        // Hat jemand den Schließtag seit dem Öffnen geändert, zeigt das
+        // Formular dessen Stand; gespeichert wird erst eine neue
+        // Bearbeitung (ADR 0311).
+        const changed = isChangedSinceRead(err);
         await formErrors.show(err, {
           object: "das Speichern des Schließtags",
-          retry: () => latestSaveRef.current(),
+          retry: changed ? undefined : () => latestSaveRef.current(),
         });
+        if (!changed || !onChangedSinceRead) return;
+        const stored = await onChangedSinceRead();
+        if (!stored || !op.isCurrent()) return;
+        setStartDate(stored.startDate);
+        setEndDate(stored.endDate);
+        setReason(stored.reason);
+        if (stored.schoolIds) setSchoolIds(stored.schoolIds);
+        setReadVersion(stored.version);
       }
     });
   };
@@ -286,12 +307,21 @@ export interface ClosingDayDraft {
   readonly schoolIds: readonly string[];
 }
 
+type StoredClosingDay = ClosingDay & {
+  readonly schoolIds?: readonly string[];
+};
+
 interface ClosingDayModalProps {
   readonly isOpen: boolean;
   readonly onClose: () => void;
   readonly onSaved: () => void;
-  readonly initial:
-    (ClosingDay & { readonly schoolIds?: readonly string[] }) | null;
+  /**
+   * Loads the stored closing days again after a save refused as changed
+   * since it was read (ADR 0311) and answers the stored `initial`, or null
+   * when it is gone. The dialog then shows that state.
+   */
+  readonly onChangedSinceRead?: () => Promise<StoredClosingDay | null>;
+  readonly initial: StoredClosingDay | null;
   readonly schools?: readonly { readonly id: string; readonly name: string }[];
   readonly defaultDate?: string;
   readonly reasonMaxLength?: number;
@@ -301,6 +331,8 @@ interface ClosingDayModalProps {
     endDate: string;
     reason: string;
     schoolIds: readonly string[];
+    /** The version an edit replaces; undefined when creating. */
+    expectedVersion?: string;
   }) => Promise<void>;
   /** Reports the draft as it changes, so the page can show its effects. */
   readonly onDraftChange?: (draft: ClosingDayDraft) => void;

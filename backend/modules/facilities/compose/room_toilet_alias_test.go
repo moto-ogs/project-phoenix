@@ -20,6 +20,6 @@ func TestModuleClassifiesToiletAliasUpdateConflicts(t *testing.T) {
 	room, err := module.CreateRoom(ctx, facilities.CreateRoom{Name: "Igelraum"})
 	require.NoError(t, err)
 
-	_, err = module.UpdateRoom(ctx, facilities.UpdateRoom{ID: room.ID, Name: facilities.WCRoomAliasName})
+	_, err = module.UpdateRoom(ctx, facilities.UpdateRoom{ID: room.ID, Name: facilities.WCRoomAliasName, ExpectedVersion: facilities.RoomVersion(room)})
 	require.ErrorIs(t, err, facilities.ErrDuplicateToiletRoom)
 }

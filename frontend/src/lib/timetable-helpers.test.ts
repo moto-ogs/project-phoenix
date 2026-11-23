@@ -644,6 +644,7 @@ describe("backend mappers", () => {
         days: [{ date: "2026-10-12", count: 3 }],
         kept: 2,
         kept_series: [{ name: "Ferienbetreuung", count: 2 }],
+        fingerprint: "zaehlung",
       }),
     ).toEqual({
       from: "2026-10-12",
@@ -653,6 +654,7 @@ describe("backend mappers", () => {
       days: [{ date: "2026-10-12", count: 3 }],
       kept: 2,
       keptSeries: [{ name: "Ferienbetreuung", count: 2 }],
+      fingerprint: "zaehlung",
     });
     const empty = mapBulkCancelResult({
       from: "2026-10-12",
@@ -662,6 +664,7 @@ describe("backend mappers", () => {
       days: null,
       kept: 0,
       kept_series: null,
+      fingerprint: "",
     });
     expect(empty.days).toEqual([]);
     expect(empty.keptSeries).toEqual([]);

@@ -120,6 +120,14 @@ export function ClosingDaysEditor({
     setNoticesVersion((value) => value + 1);
   }, [invalidateClosingDays, mutate]);
 
+  // Nach einer Ablehnung „inzwischen geändert“ zeigt der Dialog den
+  // gespeicherten Schließtag (ADR 0311).
+  const showStoredClosingDay = useCallback(async () => {
+    const stored = (await mutate())?.find((day) => day.id === editing?.id);
+    if (stored) setEditing(stored);
+    return stored ?? null;
+  }, [editing?.id, mutate]);
+
   const beginCreate = () => {
     setEditing(null);
     setModalOpen(true);
@@ -336,6 +344,7 @@ export function ClosingDaysEditor({
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         onSaved={refreshAfterMutation}
+        onChangedSinceRead={showStoredClosingDay}
         initial={editing}
         onDraftChange={setDraft}
         consequences={

@@ -20,7 +20,6 @@ type CalendarPeriodRecords interface {
 	FindByID(arg0 context.Context, arg1 int64) (*CalendarPeriod, error)
 	FindByName(arg0 context.Context, arg1 string) (*CalendarPeriod, error)
 	FindByTenantID(arg0 context.Context) ([]*CalendarPeriod, error)
-	Update(arg0 context.Context, arg1 *CalendarPeriod) error
 	UsageCounts(arg0 context.Context) (map[int64]CalendarPeriodUsage, error)
 }
 
@@ -81,11 +80,6 @@ func (adapter fromCalendarPeriodRecords) FindByName(arg0 context.Context, arg1 s
 func (adapter fromCalendarPeriodRecords) FindByTenantID(arg0 context.Context) ([]*CalendarPeriod, error) {
 	result0, result1 := adapter.value.FindByTenantID(arg0)
 	return fromNative8(result0), result1
-}
-
-func (adapter fromCalendarPeriodRecords) Update(arg0 context.Context, arg1 *CalendarPeriod) error {
-	result0 := adapter.value.Update(arg0, toNative7(arg1))
-	return result0
 }
 
 func (adapter fromCalendarPeriodRecords) UsageCounts(arg0 context.Context) (map[int64]CalendarPeriodUsage, error) {
@@ -169,17 +163,6 @@ func (adapter intoCalendarPeriodRecords) FindByName(arg0 context.Context, arg1 s
 func (adapter intoCalendarPeriodRecords) FindByTenantID(arg0 context.Context) ([]*records.CalendarPeriod, error) {
 	result0, result1 := adapter.value.FindByTenantID(arg0)
 	return toNative8(result0), result1
-}
-
-func (adapter intoCalendarPeriodRecords) Update(arg0 context.Context, arg1 *records.CalendarPeriod) error {
-	fixtureArg1 := fromNative7(arg1)
-	defer func() {
-		if arg1 != nil {
-			*arg1 = fixtureArg1.CalendarPeriod
-		}
-	}()
-	result0 := adapter.value.Update(arg0, fixtureArg1)
-	return result0
 }
 
 func (adapter intoCalendarPeriodRecords) UsageCounts(arg0 context.Context) (map[int64]records.CalendarPeriodUsage, error) {

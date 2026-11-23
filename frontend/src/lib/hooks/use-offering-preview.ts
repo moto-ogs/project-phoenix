@@ -9,7 +9,7 @@ import type {
   OfferingPreview,
   OfferingSelection,
 } from "~/lib/roster-deviation";
-import { useFreshSWR } from "~/lib/swr";
+import { useSWRAuth } from "~/lib/swr";
 import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import { timetableService } from "~/lib/timetable-api";
 
@@ -18,15 +18,18 @@ import { useSwrResourceLoadError } from "./use-swr-load-error";
 const logger = createLogger({ component: "useOfferingPreview" });
 
 /**
- * Reads the preview of `key`; a null key reads nothing. A failed load is
- * shown where the preview is missing, with a retry.
+ * Reads the preview of `key` through the shared cache; a null key reads
+ * nothing. A failed load is shown where the preview is missing, with a
+ * retry. A write the preview confirms sends its fingerprint (ADR 0311), so a
+ * cached preview never connects other children than it shows; `reload`
+ * reads it again after such a refusal.
  */
 function usePreviewLoad(
   key: string | null,
   load: () => Promise<OfferingPreview>,
   logFields: Record<string, unknown>,
 ) {
-  const { data, error, isLoading, mutate } = useFreshSWR(key, load, {
+  const { data, error, isLoading, mutate } = useSWRAuth(key, load, {
     keepPreviousData: false,
     onError: (err) =>
       logger.error("offering_preview_failed", {
@@ -39,7 +42,12 @@ function usePreviewLoad(
     "die Vorschau der Kinderliste",
     () => mutate(),
   );
-  return { preview: data ?? null, loading: isLoading, error: loadError };
+  return {
+    preview: data ?? null,
+    loading: isLoading,
+    error: loadError,
+    reload: () => void mutate(),
+  };
 }
 
 /**

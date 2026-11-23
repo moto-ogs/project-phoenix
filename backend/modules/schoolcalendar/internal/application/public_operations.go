@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 func (s *Service) FindCalendarPeriod(ctx context.Context, id int64) (result schoolcalendar.CalendarPeriod, err error) {
@@ -87,24 +88,6 @@ func (s *Service) CreateCalendarPeriodIfAbsent(ctx context.Context, input school
 		return err
 	})
 	return result, created, err
-}
-func (s *Service) UpdateCalendarPeriod(ctx context.Context, input schoolcalendar.UpdateCalendarPeriod) (result schoolcalendar.CalendarPeriod, err error) {
-	if input.ID <= 0 {
-		return schoolcalendar.CalendarPeriod{}, invalidPeriod("calendar period ID is required")
-	}
-	if err := validateCalendarPeriodFields(&input.CalendarPeriodFields); err != nil {
-		return schoolcalendar.CalendarPeriod{}, err
-	}
-
-	fields := input.CalendarPeriodFields
-	id := input.ID
-	err = s.run(ctx, "update_calendar_period", func(ctx context.Context, stats *domain.OperationStats) error {
-		var updateStats domain.OperationStats
-		result, updateStats, err = s.store.UpdateCalendarPeriod(ctx, id, fields)
-		stats.Add(updateStats)
-		return err
-	})
-	return result, err
 }
 func (s *Service) DeleteCalendarPeriod(ctx context.Context, id int64) error {
 	if id <= 0 {
@@ -191,6 +174,9 @@ func (s *Service) UpdateClosingDay(ctx context.Context, input schoolcalendar.Upd
 		}
 		if !found {
 			return schoolcalendar.ErrClosingDayNotFound
+		}
+		if err := readstate.Check(input.ExpectedVersion, schoolcalendar.ClosingDayVersion(previous)); err != nil {
+			return err
 		}
 		var updateStats domain.OperationStats
 		result, updateStats, err = s.store.UpdateClosingDay(ctx, id, fields)
@@ -396,7 +382,7 @@ func (s *Service) ChangeCalendarPeriod(ctx context.Context, input schoolcalendar
 	id := input.ID
 	err = s.observeAdministration("change_calendar_period", func(_ context.Context, stats *domain.OperationStats) error {
 		return s.underRecurrenceGate(ctx, func(txCtx context.Context) error {
-			if err := s.ensureChangeAllowed(txCtx, id, fields, stats); err != nil {
+			if err := s.ensureChangeAllowed(txCtx, id, fields, input.ExpectedVersion, stats); err != nil {
 				return err
 			}
 			var updateStats domain.OperationStats

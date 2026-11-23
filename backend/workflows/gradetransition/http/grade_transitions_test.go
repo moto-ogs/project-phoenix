@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	rootAPI "github.com/moto-ogs/project-phoenix/api"
 
 	"github.com/gofrs/uuid"
@@ -424,9 +425,11 @@ func TestGradeTransitionResource_Update(t *testing.T) {
 		transition := testpkg.CreateTestGradeTransition(t, tc.db, "2025-2026", account.ID)
 
 		notes := "Updated notes"
+		read := transitionVersion(t, router, token, transition.ID)
 		body := map[string]interface{}{
-			"academic_year": "2025-2026",
-			"notes":         notes,
+			"academic_year":    "2025-2026",
+			"notes":            notes,
+			"expected_version": read,
 		}
 
 		url := fmt.Sprintf("/%d", transition.ID)
@@ -440,6 +443,17 @@ func TestGradeTransitionResource_Update(t *testing.T) {
 		response := testutil.ParseJSONResponse(t, rr.Body.Bytes())
 		data := response["data"].(map[string]interface{})
 		assert.Equal(t, notes, data["notes"])
+		assert.Equal(t, transitionVersion(t, router, token, transition.ID), data["version"], "the answer carries the stored version")
+
+		// A second editor still holding the first read is refused (ADR 0311).
+		body["notes"] = "Überschrieben"
+		req = testutil.NewAuthenticatedRequest(t, "PUT", url, body, testutil.WithJWTBearer(token))
+		rr = testutil.ExecuteRequest(router, req)
+		require.Equal(t, http.StatusConflict, rr.Code, rr.Body.String())
+		assert.Equal(t, "general.changed_since_read", testutil.ParseJSONResponse(t, rr.Body.Bytes())["code"])
+		var stored string
+		require.NoError(t, tc.db.NewRaw(`SELECT notes FROM education.grade_transitions WHERE id = ?`, transition.ID).Scan(context.Background(), &stored))
+		assert.Equal(t, notes, stored, "the refused save writes nothing")
 	})
 
 	t.Run("update transition mappings", func(t *testing.T) {
@@ -450,6 +464,7 @@ func TestGradeTransitionResource_Update(t *testing.T) {
 			"mappings": []map[string]interface{}{
 				{"from_class": "2a", "to_class": "3a"},
 			},
+			"expected_version": transitionVersion(t, router, token, transition.ID),
 		}
 
 		url := fmt.Sprintf("/%d", transition.ID)
@@ -1033,6 +1048,7 @@ func TestGradeTransitionResource_UpdateDelete_ErrorMapping(t *testing.T) {
 			"mappings": []map[string]interface{}{
 				{"from_class": "3a", "to_class": "3a"},
 			},
+			"expected_version": transitionVersion(t, router, token, transition.ID),
 		}
 		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", transition.ID), body,
 			testutil.WithJWTBearer(token),
@@ -1288,3 +1304,14 @@ func TestToTransitionResponse(t *testing.T) {
 // ============================================================================
 // Helper Functions
 // ============================================================================
+
+// transitionVersion reads the version an editor saves against.
+func transitionVersion(t *testing.T, router chi.Router, token string, id int64) string {
+	t.Helper()
+	req := testutil.NewAuthenticatedRequest(t, "GET", fmt.Sprintf("/%d", id), nil, testutil.WithJWTBearer(token))
+	rr := testutil.ExecuteRequest(router, req)
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	version, _ := testutil.ParseJSONResponse(t, rr.Body.Bytes())["data"].(map[string]interface{})["version"].(string)
+	require.NotEmpty(t, version)
+	return version
+}

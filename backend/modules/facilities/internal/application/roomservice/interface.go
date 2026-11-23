@@ -13,7 +13,6 @@ type Service interface {
 	ListRooms(context.Context) ([]RoomWithOccupancy, error)
 	GetRoomWithOccupancy(context.Context, int64) (RoomWithOccupancy, error)
 	CreateRoom(context.Context, *facilitiesModule.Room) error
-	UpdateRoom(context.Context, *facilitiesModule.Room) error
 	ProjectRoomOccupancy(context.Context, []facilitiesModule.Room) ([]RoomWithOccupancy, error)
 	FindRoomByName(context.Context, string) (*facilitiesModule.Room, error)
 	FindToiletRoom(context.Context, int64) (*facilitiesModule.Room, error)

@@ -592,6 +592,23 @@ export function GradeTransitionsManager({
             setEditorDraft(null);
             setPreviewFor(transition);
           }}
+          onChangedSinceRead={(stale, error) => {
+            void refresh().then((list) => {
+              const stored = list?.find((item) => item.id === stale.id);
+              if (stored?.canModify) {
+                setEditorDraft(stored);
+                return;
+              }
+              // Angewendet oder gelöscht: kein Entwurf mehr zum Bearbeiten.
+              // Die Liste zeigt den gespeicherten Stand, die Meldung sagt
+              // warum.
+              setEditorOpen(false);
+              setEditorDraft(null);
+              void showActionError(error, {
+                object: "das Speichern des Entwurfs",
+              });
+            });
+          }}
         />
       )}
 

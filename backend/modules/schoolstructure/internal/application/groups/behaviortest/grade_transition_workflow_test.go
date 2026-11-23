@@ -286,11 +286,11 @@ func TestGradeTransitionWorkflow_RejectsStalePreviewBeforeAnyMutation(t *testing
 	})
 
 	t.Run("a mapping edited after the preview", func(t *testing.T) {
-		_, err := workflow.UpdateDraft(ctx, scene.transitionID, gradetransition.DraftPatch{Mappings: []gradetransition.Mapping{promote("1a", "2b"), graduate("4a")}})
+		_, err := workflow.UpdateDraft(ctx, scene.transitionID, gradetransition.DraftPatch{ExpectedVersion: draftVersion(t, ctx, workflow, scene.transitionID), Mappings: []gradetransition.Mapping{promote("1a", "2b"), graduate("4a")}})
 		require.NoError(t, err)
 		_, err = workflow.Apply(ctx, scene.transitionID, preview.Fingerprint)
 		require.ErrorIs(t, err, gradetransition.ErrPreviewStale)
-		_, err = workflow.UpdateDraft(ctx, scene.transitionID, gradetransition.DraftPatch{Mappings: []gradetransition.Mapping{promote("1a", "2a"), graduate("4a")}})
+		_, err = workflow.UpdateDraft(ctx, scene.transitionID, gradetransition.DraftPatch{ExpectedVersion: draftVersion(t, ctx, workflow, scene.transitionID), Mappings: []gradetransition.Mapping{promote("1a", "2a"), graduate("4a")}})
 		require.NoError(t, err)
 		assertUntouched(t, ctx, db, scene)
 	})
@@ -453,8 +453,9 @@ func TestGradeTransitionWorkflow_LockOrderSerializesConcurrentWriters(t *testing
 		})
 		<-held
 		result := make(chan error, 1)
+		version := draftVersion(t, ctx, workflow, draftID)
 		go func() {
-			_, err := workflow.UpdateDraft(ctx, draftID, gradetransition.DraftPatch{Mappings: []gradetransition.Mapping{promote("2a", "3b")}})
+			_, err := workflow.UpdateDraft(ctx, draftID, gradetransition.DraftPatch{ExpectedVersion: version, Mappings: []gradetransition.Mapping{promote("2a", "3b")}})
 			result <- err
 		}()
 		awaitBlockedThenDone(t, result, release)
@@ -501,7 +502,7 @@ func TestGradeTransitionWorkflow_IdempotentRetryAndHistoryRetention(t *testing.T
 	assertApplied(t, ctx, db, scene)
 
 	// A draft edit or deletion of the applied transition is refused the same way.
-	_, err = workflow.UpdateDraft(ctx, scene.transitionID, gradetransition.DraftPatch{Notes: testpkg.StrPtr("late edit")})
+	_, err = workflow.UpdateDraft(ctx, scene.transitionID, gradetransition.DraftPatch{ExpectedVersion: draftVersion(t, ctx, workflow, scene.transitionID), Notes: testpkg.StrPtr("late edit")})
 	require.ErrorIs(t, err, gradetransition.ErrTransitionNotDraft)
 	require.ErrorIs(t, workflow.DeleteDraft(ctx, scene.transitionID), gradetransition.ErrTransitionNotDraft)
 

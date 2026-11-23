@@ -84,6 +84,7 @@ const transition: GradeTransition = {
   canModify: false,
   canApply: false,
   canRevert: true,
+  version: "v1",
 };
 
 function entry(

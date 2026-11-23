@@ -673,11 +673,20 @@ func createCalendarPeriodRow(t *testing.T, db *bun.DB, ctx context.Context, peri
 	require.NoError(t, repo.Create(testpkg.WithTenantRuntime(t, ctx, db), period))
 }
 
-// updateCalendarPeriodRow rewrites a period row the same way.
+// updateCalendarPeriodRow rewrites a period row as a fixture. Production
+// edits go through the period administration, which checks the read
+// version (ADR 0311); the scenarios only need the stored row.
 func updateCalendarPeriodRow(t *testing.T, db *bun.DB, ctx context.Context, period *fixtures.CalendarPeriod) {
 	t.Helper()
-	repo := fixtures.FromCalendarPeriodRecords(api.NewCareScheduleSuiteRepositories(testpkg.NewDatabase(t, db)).CalendarPeriod)
-	require.NoError(t, repo.Update(ctx, period))
+	result, err := db.ExecContext(ctx, `UPDATE schedule.calendar_periods
+		SET name = ?, period_type = ?, start_date = ?, end_date = ?, week_cycle_length = ?, week_cycle_anchor = ?, is_active = ?, updated_at = now()
+		WHERE tenant_id = ? AND id = ?`,
+		period.Name, period.PeriodType, period.StartDate, period.EndDate, period.WeekCycleLength, period.WeekCycleAnchor, period.IsActive,
+		period.TenantID, period.ID)
+	require.NoError(t, err)
+	rows, err := result.RowsAffected()
+	require.NoError(t, err)
+	require.EqualValues(t, 1, rows)
 }
 
 // newTestMaterialization composes the Timetable owner's materialization over

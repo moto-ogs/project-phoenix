@@ -123,6 +123,8 @@ func renderConflict(w http.ResponseWriter, r *http.Request, err error, code stri
 		apiCommon.RenderError(w, r, apiCommon.ErrorConflictWithCode(err, apiCommon.CodeRoomsRequiredByCareOffering))
 	case code == "room_archived":
 		apiCommon.RenderError(w, r, apiCommon.ErrorConflictWithCode(err, apiCommon.CodeRoomsArchived))
+	case apiCommon.IsBusinessRejection(err):
+		apiCommon.RenderError(w, r, apiCommon.ErrorBusinessRejection(err))
 	default:
 		apiCommon.RenderError(w, r, apiCommon.ErrorConflict(err))
 	}

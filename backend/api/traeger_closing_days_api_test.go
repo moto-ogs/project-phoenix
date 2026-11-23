@@ -46,6 +46,9 @@ type traegerClosingDayBody struct {
 	EndDate   string   `json:"end_date"`
 	Reason    string   `json:"reason"`
 	SchoolIDs []wireID `json:"school_ids"`
+	// Version is read; an update sends it back as ExpectedVersion (ADR 0311).
+	Version         string `json:"version,omitempty"`
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 type traegerCalendarBody struct {
@@ -111,6 +114,7 @@ func TestTraegerPlansClosingDaysAndSeesEachSchoolsFederalState(t *testing.T) {
 
 	created.SchoolIDs = testpkg.IDsOf[wireID](office.schools)
 	created.EndDate = "2027-05-08"
+	created.ExpectedVersion = created.Version
 	rec = traegerJSON(t, router, office.token, http.MethodPut, traegerClosingDayPath(int64(created.ID)), created)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.ElementsMatch(t, office.schools, testpkg.IDs(traegerCalendarOf(t, router, office).ClosingDays[0].SchoolIDs))
@@ -153,6 +157,7 @@ func TestTraegerClosingDayWritesWakeAffectedSchoolPages(t *testing.T) {
 	assert.Equal(t, []traegerClosingDaySignal{{tenantID: office.schools[0], source: "closing_days"}}, signals.take())
 
 	created.SchoolIDs = []wireID{wireID(office.schools[1])}
+	created.ExpectedVersion = created.Version
 	rec = traegerJSON(t, router, office.token, http.MethodPut, traegerClosingDayPath(int64(created.ID)), created)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.ElementsMatch(t, []traegerClosingDaySignal{

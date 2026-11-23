@@ -53,6 +53,7 @@ export interface PlanningTrack {
   color: string;
   sort_order: number;
   archived_at?: string;
+  version: string;
 }
 
 export const PlanningTrackSchema: z.ZodType<PlanningTrack, unknown> = object<PlanningTrack>({
@@ -64,6 +65,7 @@ export const PlanningTrackSchema: z.ZodType<PlanningTrack, unknown> = object<Pla
   color: str,
   sort_order: safeInt,
   archived_at: optional(instant),
+  version: str,
 });
 
 /** Go: timetablehttp.TemplateArchivedResponse */
@@ -83,6 +85,7 @@ export interface ClosingDayResponse {
   reason: string;
   created_at: string;
   updated_at: string;
+  version: string;
   traeger: boolean;
 }
 
@@ -93,6 +96,7 @@ export const ClosingDayResponseSchema: z.ZodType<ClosingDayResponse, unknown> = 
   reason: str,
   created_at: str,
   updated_at: str,
+  version: str,
   traeger: bool,
 });
 
@@ -768,6 +772,7 @@ export interface offeringPreviewResponse {
   weekdays: offeringPreviewWeekdayResponse[] | null;
   segments: offeringPreviewSegmentResponse[] | null;
   other_offerings: offeringPreviewAlternativeResponse[] | null;
+  fingerprint: string;
 }
 
 export const offeringPreviewResponseSchema: z.ZodType<offeringPreviewResponse, unknown> = object<offeringPreviewResponse>({
@@ -775,6 +780,7 @@ export const offeringPreviewResponseSchema: z.ZodType<offeringPreviewResponse, u
   weekdays: nullable(arr(offeringPreviewWeekdayResponseSchema)),
   segments: nullable(arr(offeringPreviewSegmentResponseSchema)),
   other_offerings: nullable(arr(offeringPreviewAlternativeResponseSchema)),
+  fingerprint: str,
 });
 
 /** Go: timetablehttp.offeringSuggestionResponse */
@@ -845,6 +851,7 @@ export interface CalendarPeriodResponse {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  version: string;
   warnings?: PeriodWarning[];
   enrollment_phase_count: number;
   activity_group_count: number;
@@ -866,6 +873,7 @@ export const CalendarPeriodResponseSchema: z.ZodType<CalendarPeriodResponse, unk
   is_active: bool,
   created_at: str,
   updated_at: str,
+  version: str,
   warnings: optional(arr(PeriodWarningSchema)),
   enrollment_phase_count: safeInt,
   activity_group_count: safeInt,
@@ -1386,6 +1394,7 @@ export interface ClosingDayRequest {
   start_date?: string;
   end_date?: string;
   reason?: string;
+  expected_version?: string;
 }
 
 /** Go: timetablehttp.createInstanceRequest */
@@ -1410,6 +1419,7 @@ export interface bulkCancelRequest {
   to?: string;
   dry_run?: boolean;
   include_closing_day_series?: boolean;
+  expected_fingerprint?: string;
 }
 
 /** Go: timetable.BulkCancelDay */
@@ -1443,6 +1453,7 @@ export interface BulkCancelResult {
   days: BulkCancelDay[] | null;
   kept: number;
   kept_series: BulkCancelKeptSeries[] | null;
+  fingerprint: string;
 }
 
 export const BulkCancelResultSchema: z.ZodType<BulkCancelResult, unknown> = object<BulkCancelResult>({
@@ -1453,6 +1464,7 @@ export const BulkCancelResultSchema: z.ZodType<BulkCancelResult, unknown> = obje
   days: nullable(arr(BulkCancelDaySchema)),
   kept: safeInt,
   kept_series: nullable(arr(BulkCancelKeptSeriesSchema)),
+  fingerprint: str,
 });
 
 /** Go: timetablehttp.replanWeekRequest */
@@ -2023,6 +2035,7 @@ export interface CalendarPeriodRequest {
   week_cycle_length?: number;
   week_cycle_anchor?: string | null;
   is_active?: boolean;
+  expected_version?: string;
 }
 
 /** Go: timetablehttp.bootstrapPeriodsResponse */
@@ -2061,6 +2074,7 @@ export interface planningTrackRequest {
   name?: string;
   color?: string;
   sort_order?: number;
+  expected_version?: string;
 }
 
 /** Go: timetablehttp.schoolVacationAcknowledgementRequest */
@@ -2212,6 +2226,7 @@ export interface offeringConnectionRequest {
   grade_levels?: number[] | null;
   school_classes?: string[] | null;
   effective_date?: string;
+  expected_fingerprint?: string;
 }
 
 /** Go: timetablehttp.offeringConnectionResponse */

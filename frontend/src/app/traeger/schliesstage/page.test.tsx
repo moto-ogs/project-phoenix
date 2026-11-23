@@ -80,6 +80,7 @@ const calendar: TraegerCalendar = {
       endDate: "2026-11-02",
       reason: "Brückentag",
       schoolIds: ["1", "2"],
+      version: "v1",
     },
   ],
   regions: [
@@ -609,6 +610,48 @@ describe("TraegerClosingDaysPage (#4702)", () => {
     expect(api.previewTraegerClosingDayHolidayBookings).toHaveBeenCalledWith(
       expect.objectContaining({ startDate: "2026-11-02" }),
       { closingDay: calendar.closingDays[0], delete: false },
+    );
+  });
+
+  // ADR 0311: eine Änderung trägt den Stand, aus dem das Formular stammt,
+  // neben dem Zeichen der Buchungsvorschau.
+  it("saves a change with the version of the closing day it edits", async () => {
+    session.permissions = ["traeger_overview:read", "traeger_settings:manage"];
+    api.previewTraegerClosingDayHolidayBookings.mockResolvedValue(summerImpact);
+    api.updateTraegerClosingDay.mockResolvedValue({
+      ...calendar.closingDays[0]!,
+      reason: "Betriebsausflug",
+      notifiedFamilies: 0,
+    });
+    render(<TraegerClosingDaysPage />);
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Aktionen für Brückentag" }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Bearbeiten" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Schließtag bearbeiten",
+    });
+    fireEvent.change(within(dialog).getByLabelText("Grund"), {
+      target: { value: "Betriebsausflug" },
+    });
+    fireEvent.click(
+      await within(dialog).findByRole("button", {
+        name: "Speichern und Eltern informieren",
+      }),
+    );
+
+    await vi.waitFor(() =>
+      expect(api.updateTraegerClosingDay).toHaveBeenCalledWith(
+        "9",
+        expect.objectContaining({
+          reason: "Betriebsausflug",
+          expectedVersion: "v1",
+          holidayBookingsToken: "abc123",
+        }),
+      ),
     );
   });
 

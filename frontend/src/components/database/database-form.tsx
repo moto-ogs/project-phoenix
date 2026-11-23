@@ -18,6 +18,7 @@ import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
 import { Button } from "~/components/ui/button";
 import { RemovableChip } from "~/components/ui/removable-chip";
+import { isChangedSinceRead } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import { getDefaultMaxLength } from "~/lib/constants/input-limits";
 import { InsetPanel } from "~/components/ui/inset-panel";
@@ -501,9 +502,13 @@ export function DatabaseForm<T = Record<string, unknown>>({
       logger.error("failed to submit form", {
         error: err instanceof Error ? err.message : String(err),
       });
+      // A save refused as changed since it was read would be refused again:
+      // no retry, the surface shows the stored state (ADR 0311).
       void errorPath.show(err, {
         object: errorObject,
-        retry: () => latestSubmitRef.current(),
+        retry: isChangedSinceRead(err)
+          ? undefined
+          : () => latestSubmitRef.current(),
       });
     } finally {
       if (isMountedRef.current) {

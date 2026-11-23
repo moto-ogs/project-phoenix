@@ -102,11 +102,11 @@ var moduleFacadeMethodSetAllowlist = map[string]int{
 	"modules/peopledirectory/peopledirectory.go:Owner":                                                142, // Lowered by #7808: the test-only cross-tenant visitor reads left.
 	"modules/peopledirectory/peopledirectory.go:Query":                                                60,  // Lowered by #7808: the test-only cross-tenant person read left.
 	"modules/peopledirectory/student_directory.go:StudentDirectoryQuery":                              15,
-	"modules/schoolcalendar/period_administration.go:Calendar":                                        32,
+	"modules/schoolcalendar/period_administration.go:Calendar":                                        31,
 	"modules/schoolcalendar/portal/contract.go:FullService":                                           41,
 	"modules/schoolcalendar/portal/contract.go:Service":                                               22,
-	"modules/schoolcalendar/schoolcalendar.go:Capability":                                             21,
-	"modules/schoolcalendar/schoolcalendar.go:Days":                                                   27,
+	"modules/schoolcalendar/schoolcalendar.go:Capability":                                             20,
+	"modules/schoolcalendar/schoolcalendar.go:Days":                                                   26,
 	"modules/schoolmembership/schoolmembership.go:Capability":                                         59,
 	"modules/schoolmembership/schoolmembership.go:Command":                                            28,
 	"modules/schoolmembership/schoolmembership.go:Owner":                                              60,
