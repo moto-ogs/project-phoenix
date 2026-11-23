@@ -1072,18 +1072,7 @@ func (s *FixedSeeder) seedPickupSchedules(_ context.Context, result *FixedResult
 			schedules = append(schedules, entry)
 		}
 
-		// A save of the weekly plan carries its token (ADR 0311).
-		version, err := weeklyPlanVersionVia(s.client, studentID)
-		if err != nil {
-			return err
-		}
-		path := fmt.Sprintf("/api/students/%d/pickup-schedules", studentID)
-		body := map[string]any{
-			"schedules":        schedules,
-			"expected_version": version,
-		}
-
-		_, err = s.client.Put(path, body)
+		err := putWeeklyPickupSchedules(s.client, studentID, schedules)
 		if err != nil {
 			return fmt.Errorf("seed pickup schedule for student %s %s: %w", student.FirstName, student.LastName, err)
 		}

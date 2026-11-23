@@ -83,7 +83,11 @@ func TestNativePickupSchedulesPersistAndRejectDuplicateStaffEdits(t *testing.T) 
 
 	date := decisionTestToday.AddDays(7)
 	note := &careplan.PickupNote{StudentID: student.ID, NoteDate: careplan.Date(date), Content: "Native note", CreatedBy: staff.ID}
-	require.NoError(t, service.CreateStudentPickupNote(ctx, note))
+	// A note write takes the student lock in the caller's unit, as the route
+	// runs it in its request transaction (ADR 0311).
+	require.NoError(t, testpkg.WithinTenantContext(t, ctx, db, testpkg.Tenant(t), func(txCtx context.Context) error {
+		return service.CreateStudentPickupNote(txCtx, note)
+	}))
 	notes, err := service.GetStudentPickupNotesForDate(ctx, student.ID, date)
 	require.NoError(t, err)
 	require.Len(t, notes, 1)

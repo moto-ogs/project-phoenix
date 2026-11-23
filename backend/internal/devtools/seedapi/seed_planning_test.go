@@ -142,6 +142,8 @@ func TestSeedPlanningDemoStepCreatesRealPlanningFlows(t *testing.T) {
 		"/api/timetable/templates",
 		"/api/timetable/templates",
 		"/api/students/35/pickup-exceptions",
+		// The weekly pickup save reads the weekly plan token first (ADR 0311).
+		"/api/students/37/pickup-schedules",
 		"/api/students/37/pickup-schedules",
 	}, paths)
 	require.Len(t, templates, 9)

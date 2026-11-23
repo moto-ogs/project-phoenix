@@ -315,14 +315,12 @@ func (rs *Resource) updateStudentPickupSchedules(w http.ResponseWriter, r *http.
 		renderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	// Get staff ID from JWT
 	staffID, err := rs.getStaffIDFromJWT(r)
 	if err != nil {
 		renderScheduleAuthorError(w, r, err)
 		return
 	}
 
-	// Convert requests to schedule models
 	schedules := toPickupScheduleModels(r.Context(), req.Schedules, student.ID, staffID)
 	date := rs.todayDate()
 	if req.EffectiveDate != nil {
