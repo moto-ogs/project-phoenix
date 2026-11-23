@@ -79,9 +79,17 @@ import { type Phase, listPhases } from "~/lib/enrollment-phase-api";
 import { calendarPeriodService } from "~/lib/calendar-period-api";
 import type { CalendarPeriod } from "~/lib/calendar-period-helpers";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
-import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useInvalidateMatching, useSWRAuth } from "~/lib/swr";
+import {
+  useReadDraftForm,
+  useSwrResourceLoadError,
+} from "~/lib/hooks/use-swr-load-error";
+import {
+  revalidateOrThrow,
+  useInvalidateMatching,
+  useSWRAuth,
+} from "~/lib/swr";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { databaseKeys } from "~/lib/swr/portal-keys";
 import { createLogger } from "~/lib/logger";
 import { timetableService } from "~/lib/timetable-api";
@@ -502,7 +510,72 @@ export function CareOfferingsEditor({
   const clearDeleteErrors = deleteErrors.clear;
   const showDeleteError = deleteErrors.show;
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<CareOfferingInput | null>(null);
+  // A new offering: no stored state, no version.
+  const [createDraft, setCreateDraft] = useState<CareOfferingInput | null>(
+    null,
+  );
+  // An edit rests on the offering as the list showed it when editing
+  // started (ADR 0311): a newer read refills it only while untouched, the
+  // save sends its version, and after a refusal nothing is sent until the
+  // stored offering was read.
+  const editedId = editingId !== null && editingId !== "new" ? editingId : null;
+  const editor = useDraftOn<
+    CareOffering,
+    CareOfferingInput,
+    string,
+    CareOffering
+  >(
+    {
+      opening: editedId,
+      data: offeringsRead.data?.find((offering) => offering.id === editedId),
+      // undefined: the offering is gone; `save` closes the panel then.
+      reload: async () =>
+        (await revalidateOrThrow(offeringsRead)).find(
+          (offering) => offering.id === editedId,
+        ),
+      // The save's answer carries the new version into the list. Not
+      // awaited: a write after the editor left must not hold back the
+      // save's confirmation.
+      write: (stored) => {
+        void mutateOfferings(
+          (current) =>
+            current?.map((offering) =>
+              offering.id === stored.id ? stored : offering,
+            ),
+          { revalidate: false },
+        );
+        return Promise.resolve();
+      },
+    },
+    {
+      token: (stored) => stored.version ?? "",
+      toDraft: offeringToInput,
+      answer: (saved) => saved,
+    },
+  );
+  const form = useReadDraftForm(
+    editedId ? editor : null,
+    formErrors,
+    "das Betreuungsangebot",
+  );
+  const draft = editingId === "new" ? createDraft : (editor.draft ?? null);
+  const { setDraft: setEditedDraft } = editor;
+  const setDraft = useCallback(
+    (next: CareOfferingInput | null) => {
+      if (editingId === "new") {
+        setCreateDraft(next);
+        return;
+      }
+      if (next !== null) setEditedDraft(next);
+    },
+    [editingId, setEditedDraft],
+  );
+  const draftBlocked =
+    editedId && !editor.canSubmit && editor.status !== "saving"
+      ? editor.status === "loadFailed"
+        ? "Lade zuerst das gespeicherte Betreuungsangebot neu."
+        : "Das gespeicherte Betreuungsangebot wird geladen."
+      : undefined;
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [cloneSource, setCloneSource] = useState<CareOffering | null>(null);
   const panelOpen = Boolean(draft ?? cloneSource);
@@ -615,7 +688,7 @@ export function CareOfferingsEditor({
 
   useEffect(() => {
     if (!accessRefused) return;
-    setDraft(null);
+    setCreateDraft(null);
     setEditingId(null);
     setCloneSource(null);
     setDeleteTarget(null);
@@ -677,7 +750,7 @@ export function CareOfferingsEditor({
 
   const beginCreate = () => {
     if (!selectedPhaseId) return;
-    setDraft(blankInput(selectedPhaseId));
+    setCreateDraft(blankInput(selectedPhaseId));
     setEditingId("new");
     setCloneSource(null);
     clearFormErrors();
@@ -686,7 +759,7 @@ export function CareOfferingsEditor({
   // Stabil, weil die Spaltendefinition der Tabelle (useMemo) darauf zeigt.
   const beginEdit = useCallback(
     (offering: CareOffering) => {
-      setDraft(offeringToInput(offering));
+      setCreateDraft(null);
       setEditingId(offering.id);
       setCloneSource(null);
       clearFormErrors();
@@ -695,14 +768,15 @@ export function CareOfferingsEditor({
   );
 
   const cancelFocusMode = () => {
-    setDraft(null);
+    setCreateDraft(null);
     setEditingId(null);
     setCloneSource(null);
   };
 
   const save = async () => {
-    if (!draft) return;
-    formErrors.clear();
+    // Nothing goes out before the stored offering is read; the shown error
+    // stays.
+    if (!draft || !form.begin()) return;
     if (draft.available_days.length === 0) {
       formErrors.invalid(CARE_OFFERING_DAYS_REQUIRED_MESSAGE);
       return;
@@ -765,9 +839,15 @@ export function CareOfferingsEditor({
             `Das Betreuungsangebot „${savedOffering.name}“ ist angelegt.`,
           );
         } else if (editingId) {
-          const savedOffering = await updateCareOffering(editingId, draft);
+          const result = await editor.submit((version, edited) =>
+            updateCareOffering(editingId, edited, version),
+          );
+          if (!result.ok) {
+            await showRefusedSave(op, result);
+            return;
+          }
           toast.success(
-            `Das Betreuungsangebot „${savedOffering.name}“ ist gespeichert.`,
+            `Das Betreuungsangebot „${result.saved.name}“ ist gespeichert.`,
           );
         }
         if (op.isCurrent()) cancelFocusMode();
@@ -783,6 +863,42 @@ export function CareOfferingsEditor({
           retry: () => void latestSave.current(),
         });
       }
+    });
+  };
+  // A failed save of an edit: changed since it was read, the form shows the
+  // stored offering once it is read, without offering the same save again;
+  // an offering deleted meanwhile closes the panel. Any other failure offers
+  // the save again.
+  const showRefusedSave = async (
+    op: { isCurrent: () => boolean },
+    result: {
+      error: unknown;
+      refused: boolean;
+      reload?: () => Promise<unknown>;
+    },
+  ) => {
+    logger.error("care_offering_save_failed", {
+      error:
+        result.error instanceof Error
+          ? result.error.message
+          : String(result.error),
+    });
+    if (!op.isCurrent()) return;
+    const reread = result.reload;
+    if (result.refused && reread) {
+      await formErrors.show(result.error, {
+        object: "das Betreuungsangebot",
+        reload: async () => {
+          const stored = await reread();
+          if (stored === undefined) cancelFocusMode();
+          return stored;
+        },
+      });
+      return;
+    }
+    await formErrors.show(result.error, {
+      object: "das Betreuungsangebot",
+      retry: () => void latestSave.current(),
     });
   };
   // „Wiederholen“ sendet den aktuellen Entwurf.
@@ -934,7 +1050,7 @@ export function CareOfferingsEditor({
             onEdit={() => beginEdit(offering)}
             onClone={() => {
               setCloneSource(offering);
-              setDraft(null);
+              setCreateDraft(null);
               setEditingId(null);
               clearFormErrors();
             }}
@@ -1019,6 +1135,7 @@ export function CareOfferingsEditor({
                 </SlideOverTitle>
               </SlideOverHeader>
               <SlideOverBody error={formErrors.error}>
+                {cloneSource ? null : <LoadErrorAlert error={form.loadError} />}
                 {cloneSource ? (
                   <CloneOfferingForm
                     source={cloneSource}
@@ -1050,6 +1167,7 @@ export function CareOfferingsEditor({
                     bookingStatsUnavailable={bookingStatsUnavailable}
                     fieldError={formErrors.fieldError}
                     saving={saving}
+                    blockedReason={draftBlocked}
                     onChange={setDraft}
                     onSubmit={handleSave}
                     onCancel={cancelFocusMode}
@@ -1399,6 +1517,8 @@ interface CareOfferingFormProps {
   /** Hint for a field the last save rejected. */
   readonly fieldError: (name: string) => string | undefined;
   readonly saving: boolean;
+  /** Why the save cannot be sent yet (ADR 0311); undefined: it can. */
+  readonly blockedReason?: string;
   readonly onChange: (draft: CareOfferingInput) => void;
   readonly onSubmit: (event: React.FormEvent) => void;
   readonly onCancel: () => void;
@@ -2378,6 +2498,7 @@ function CareOfferingForm({
   bookingStatsUnavailable,
   fieldError,
   saving,
+  blockedReason,
   onChange,
   onSubmit,
   onCancel,
@@ -2400,18 +2521,20 @@ function CareOfferingForm({
     originalActivityGroupID,
     metadataStatus,
   );
-  const submitBlockedReason = offeringSubmitBlockedReason({
-    phaseChosen: Boolean(draft.phase_id),
-    named: Boolean(draft.name.trim()),
-    templateMismatch:
-      linkedTemplatePeriodMismatch || linkedTemplateWeekdayMismatch,
-    unverifiableTemplateChange,
-    availabilityIncomplete:
-      careOfferingAvailabilityRuleError(
-        draft.availability_rule,
-        gradeLevelMax,
-      ) !== null,
-  });
+  const submitBlockedReason =
+    blockedReason ??
+    offeringSubmitBlockedReason({
+      phaseChosen: Boolean(draft.phase_id),
+      named: Boolean(draft.name.trim()),
+      templateMismatch:
+        linkedTemplatePeriodMismatch || linkedTemplateWeekdayMismatch,
+      unverifiableTemplateChange,
+      availabilityIncomplete:
+        careOfferingAvailabilityRuleError(
+          draft.availability_rule,
+          gradeLevelMax,
+        ) !== null,
+    });
 
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-5">
