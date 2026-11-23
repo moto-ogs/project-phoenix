@@ -266,7 +266,6 @@ func BillingTermsRouteContracts() []common.RouteContract {
 // /traeger/family-billing.
 func FamilyBillingRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
-		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: []capability.FamilyBilling{}},
 		{Method: "GET", Pattern: "/contracts/{id}", Portals: traegerPortal, Response: capability.ContractFamilyBilling{}},
 		{Method: "PUT", Pattern: "/", Portals: traegerPortal, Request: FamilyBillingRequest{}, Response: FamilyBillingResponse{}},
 	}

@@ -393,7 +393,6 @@ export const portalRoutes = {
     traegerExportRecipient["POST /traeger/export-recipient/"],
     traegerExportRecipient["PUT /traeger/export-recipient/formats"],
     traegerExportRecipient["PUT /traeger/export-recipient/{id}"],
-    traegerFamilyBilling["GET /traeger/family-billing/"],
     traegerFamilyBilling["GET /traeger/family-billing/contracts/{id}"],
     traegerFamilyBilling["PUT /traeger/family-billing/"],
     traegerFamilyChildren["DELETE /traeger/family-children/{contractId}"],

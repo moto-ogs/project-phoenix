@@ -11615,20 +11615,6 @@
     },
     {
       "method": "GET",
-      "pattern": "/traeger/family-billing/",
-      "portals": [
-        "org"
-      ],
-      "response": {
-        "kind": "array",
-        "elem": {
-          "kind": "ref",
-          "ref": "FamilyBilling"
-        }
-      }
-    },
-    {
-      "method": "GET",
       "pattern": "/traeger/family-billing/contracts/{id}",
       "portals": [
         "org"

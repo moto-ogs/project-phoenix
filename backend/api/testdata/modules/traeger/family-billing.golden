@@ -1,3 +1,2 @@
-GET /traeger/family-billing/ -> basis
 GET /traeger/family-billing/contracts/{id} -> basis
 PUT /traeger/family-billing/ -> basis

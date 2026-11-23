@@ -52,7 +52,6 @@ type paymentTermsReader interface {
 type TermsStore interface {
 	paymentTermsReader
 	ServiceTerms(ctx context.Context, organizationID int64) ([]parentbilling.ServiceTerms, error)
-	FamilyBillings(ctx context.Context, organizationID int64) ([]parentbilling.FamilyBilling, error)
 	SaveServiceTerms(ctx context.Context, organizationID, accountID int64, terms parentbilling.ServiceTerms) error
 	// SaveFamilyBilling inserts or replaces the deviation of its family.
 	SaveFamilyBilling(ctx context.Context, organizationID, accountID int64, family parentbilling.FamilyBilling) (parentbilling.FamilyBilling, error)
@@ -165,21 +164,6 @@ func normalizeServiceTerms(terms parentbilling.ServiceTerms) (parentbilling.Serv
 	}
 	return parentbilling.ServiceTerms{Service: terms.Service, PaymentMethod: terms.PaymentMethod, DueDays: terms.DueDays,
 		BundleWith: terms.BundleWith}, nil
-}
-
-// ListFamilyBilling lists the deviations and records the read of each.
-func (t *BillingTerms) ListFamilyBilling(ctx context.Context, reviewer parentbilling.HolidayReviewer) ([]parentbilling.FamilyBilling, error) {
-	if err := validReviewer(reviewer); err != nil {
-		return nil, err
-	}
-	families, err := t.store.FamilyBillings(ctx, reviewer.OrganizationID)
-	if err != nil {
-		return nil, err
-	}
-	if err := t.store.InsertFamilyBillingEvents(ctx, reviewer.OrganizationID, reviewer.AccountID, familyBillingRead, families); err != nil {
-		return nil, fmt.Errorf("parent billing: record the read of the family billing: %w", err)
-	}
-	return families, nil
 }
 
 // familyOfContract names the party a contract's invoice goes to and the key

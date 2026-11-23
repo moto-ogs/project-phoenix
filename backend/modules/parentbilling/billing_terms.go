@@ -369,8 +369,6 @@ type BillingTerms interface {
 	ServiceTerms(ctx context.Context, organizationID int64) ([]ServiceTerms, error)
 	// SaveServiceTerms sets the terms of one service.
 	SaveServiceTerms(ctx context.Context, reviewer HolidayReviewer, terms ServiceTerms) ([]ServiceTerms, error)
-	// ListFamilyBilling lists the deviations of the families, by family.
-	ListFamilyBilling(ctx context.Context, reviewer HolidayReviewer) ([]FamilyBilling, error)
 	// FamilyBillingOfContract reads the family of a contract with the
 	// deviation it has (#7770). A contract that is none of the Träger is
 	// ErrFamilyUnknown.
