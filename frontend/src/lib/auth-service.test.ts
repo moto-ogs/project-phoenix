@@ -4,6 +4,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type * as sharedContract from "./contract/shared.generated";
 import { authService } from "./auth-service";
+import { plainFetch } from "~/test/mocks/plain-session-fetch";
 
 vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
@@ -50,7 +51,7 @@ function sentInit(): RequestInit {
 describe("authService", () => {
   beforeEach(() => {
     fetchMock.mockReset();
-    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("fetch", vi.fn(plainFetch(fetchMock)));
   });
 
   afterEach(() => {

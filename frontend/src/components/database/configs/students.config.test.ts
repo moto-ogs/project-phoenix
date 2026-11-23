@@ -6,12 +6,11 @@ import { studentsConfig } from "./students.config";
 // The Kinder database page creates children through this service. The create
 // modal's whole Heimweg plan has to reach the BFF: the former legacy-editor
 // mapRequest dropped departure_days from the body.
-// The session gate is sessionFetch's own concern.
-vi.mock("~/lib/session-cache", async () => {
-  const { transportFetch } =
-    await vi.importActual<typeof import("~/lib/api-error")>("~/lib/api-error");
-  return { sessionFetch: transportFetch };
-});
+// The session gate is session-cache's own concern.
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
 
 describe("studentsConfig create", () => {
   afterEach(() => {

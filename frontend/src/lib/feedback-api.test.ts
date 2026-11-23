@@ -1,16 +1,16 @@
 import { ApiError } from "./api-error";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fetchStudentFeedback } from "./feedback-api";
+import { plainFetch } from "~/test/mocks/plain-session-fetch";
 
-const mockSessionFetch = vi.fn();
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
-vi.mock("./session-cache", () => ({
-  sessionFetch: (...args: unknown[]) => mockSessionFetch(...args),
-}));
+const mockAnswer = vi.fn();
 
 describe("fetchStudentFeedback", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal("fetch", vi.fn(plainFetch(mockAnswer)));
   });
 
   it("fetches and maps feedback entries correctly", async () => {
@@ -37,14 +37,14 @@ describe("fetchStudentFeedback", () => {
       },
     ];
 
-    mockSessionFetch.mockResolvedValue({
+    mockAnswer.mockResolvedValue({
       ok: true,
       json: async () => ({ data: backendEntries }),
     });
 
     const result = await fetchStudentFeedback("1");
 
-    expect(mockSessionFetch).toHaveBeenCalledWith("/api/feedback/student/1", {
+    expect(fetch).toHaveBeenCalledWith("/api/feedback/student/1", {
       method: "GET",
     });
 
@@ -64,7 +64,7 @@ describe("fetchStudentFeedback", () => {
   });
 
   it("returns empty array on 404", async () => {
-    mockSessionFetch.mockResolvedValue({
+    mockAnswer.mockResolvedValue({
       ok: false,
       status: 404,
       statusText: "Not Found",
@@ -76,7 +76,7 @@ describe("fetchStudentFeedback", () => {
   });
 
   it("carries the feedback.disabled code of a switched-off feature", async () => {
-    mockSessionFetch.mockResolvedValue(
+    mockAnswer.mockResolvedValue(
       new Response(
         JSON.stringify({
           status: 403,
@@ -96,7 +96,7 @@ describe("fetchStudentFeedback", () => {
   });
 
   it("uses the permission class code for a 403 without a body", async () => {
-    mockSessionFetch.mockResolvedValue({
+    mockAnswer.mockResolvedValue({
       ok: false,
       status: 403,
       statusText: "Forbidden",
@@ -111,7 +111,7 @@ describe("fetchStudentFeedback", () => {
   });
 
   it("throws on non-404 error", async () => {
-    mockSessionFetch.mockResolvedValue({
+    mockAnswer.mockResolvedValue({
       ok: false,
       status: 500,
       statusText: "Internal Server Error",
@@ -123,7 +123,7 @@ describe("fetchStudentFeedback", () => {
   });
 
   it("handles empty data array", async () => {
-    mockSessionFetch.mockResolvedValue({
+    mockAnswer.mockResolvedValue({
       ok: true,
       json: async () => ({ data: [] }),
     });
@@ -133,7 +133,7 @@ describe("fetchStudentFeedback", () => {
   });
 
   it("throws and logs on network error", async () => {
-    mockSessionFetch.mockRejectedValue(new Error("Network error"));
+    mockAnswer.mockRejectedValue(new Error("Network error"));
 
     await expect(fetchStudentFeedback("1")).rejects.toThrow("Network error");
   });

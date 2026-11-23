@@ -1,10 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-const sessionFetch = vi.fn();
-vi.mock("./session-cache", () => ({
-  sessionFetch: (...args: unknown[]) =>
-    (sessionFetch as (...a: unknown[]) => unknown)(...args),
-}));
+const fetchMock = vi.fn();
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
 const downloadBlob = vi.fn();
 vi.mock("./file-download", () => ({
@@ -37,7 +34,8 @@ function jsonResponse(body: unknown, init?: ResponseInit): Response {
 
 describe("guardian-payment-api", () => {
   beforeEach(() => {
-    sessionFetch.mockReset();
+    fetchMock.mockReset();
+    vi.stubGlobal("fetch", fetchMock);
     downloadBlob.mockReset();
   });
 
@@ -46,7 +44,7 @@ describe("guardian-payment-api", () => {
   });
 
   it("maps the masked read", async () => {
-    sessionFetch.mockResolvedValue(
+    fetchMock.mockResolvedValue(
       jsonResponse({
         data: {
           guardian_id: "42",
@@ -61,13 +59,13 @@ describe("guardian-payment-api", () => {
       ibanMasked: "•••• 3000",
       accountHolder: null,
     });
-    expect(sessionFetch).toHaveBeenCalledWith("/api/guardians/42/payment", {
+    expect(fetchMock).toHaveBeenCalledWith("/api/guardians/42/payment", {
       method: "GET",
     });
   });
 
   it("reveals via POST, because the backend logs every unmasked read", async () => {
-    sessionFetch.mockResolvedValue(
+    fetchMock.mockResolvedValue(
       jsonResponse({
         data: {
           guardian_id: "42",
@@ -80,21 +78,21 @@ describe("guardian-payment-api", () => {
     const result = await revealGuardianPayment("42");
 
     expect(result.iban).toBe("DE89370400440532013000");
-    expect(sessionFetch).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/guardians/42/payment/reveal",
       expect.objectContaining({ method: "POST" }),
     );
   });
 
   it("sends the bank fields in snake_case", async () => {
-    sessionFetch.mockResolvedValue(jsonResponse({ data: null }));
+    fetchMock.mockResolvedValue(jsonResponse({ data: null }));
 
     await updateGuardianPayment("42", {
       iban: "DE89370400440532013000",
       accountHolder: null,
     });
 
-    const [, init] = sessionFetch.mock.calls[0] as [string, RequestInit];
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(init.method).toBe("PUT");
     expect(JSON.parse(init.body as string)).toEqual({
       iban: "DE89370400440532013000",
@@ -105,7 +103,7 @@ describe("guardian-payment-api", () => {
   // #2517: the code, field errors and request ID reach the shared error
   // display; the backend sentence is no longer the user's message.
   it("throws an ApiError carrying the wire envelope", async () => {
-    sessionFetch.mockResolvedValue(
+    fetchMock.mockResolvedValue(
       jsonResponse(
         {
           error: "invalid payment value: malformed IBAN",
@@ -131,17 +129,17 @@ describe("guardian-payment-api", () => {
   });
 
   it("clears the payer with a null guardian id", async () => {
-    sessionFetch.mockResolvedValue(jsonResponse({ data: null }));
+    fetchMock.mockResolvedValue(jsonResponse({ data: null }));
 
     await setStudentPayer("7", null);
 
-    const [url, init] = sessionFetch.mock.calls[0] as [string, RequestInit];
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("/api/guardians/students/7/payer");
     expect(JSON.parse(init.body as string)).toEqual({ guardian_id: null });
   });
 
   it("maps overview rows", async () => {
-    sessionFetch.mockResolvedValue(
+    fetchMock.mockResolvedValue(
       jsonResponse({
         data: [
           {
@@ -172,7 +170,7 @@ describe("guardian-payment-api", () => {
   });
 
   it("saves the export under the filename the backend chose", async () => {
-    sessionFetch.mockResolvedValue(
+    fetchMock.mockResolvedValue(
       new Response("binary", {
         status: 200,
         headers: {

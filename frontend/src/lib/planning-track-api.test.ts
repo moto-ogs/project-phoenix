@@ -1,8 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { sessionFetch } = vi.hoisted(() => ({ sessionFetch: vi.fn() }));
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
-vi.mock("./session-cache", () => ({ sessionFetch }));
+const fetchMock = vi.fn();
+beforeEach(() => {
+  vi.stubGlobal("fetch", fetchMock);
+});
 
 import { routes } from "./contract/timetable.generated";
 import { planningTrackService } from "./planning-track-api";
@@ -18,7 +21,7 @@ describe("planningTrackService", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("maps list results and keeps archived tracks available", async () => {
-    sessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       response({
         data: [
           { id: "4", name: "Früh", color: "#5080D8", sort_order: 0 },
@@ -63,7 +66,7 @@ describe("planningTrackService", () => {
   });
 
   it("keeps the backend diagnostic separate when loading fails", async () => {
-    sessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       response({ detail: "Lesen nicht erlaubt" }, 403),
     );
 
@@ -76,7 +79,7 @@ describe("planningTrackService", () => {
   });
 
   it("creates and maps a planning track", async () => {
-    sessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       response({
         data: { id: "8", name: "Nord", color: "#5080D8", sort_order: 3 },
       }),
@@ -95,7 +98,7 @@ describe("planningTrackService", () => {
       sortOrder: 3,
       archivedAt: undefined,
     });
-    expect(sessionFetch).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/timetable/planning-tracks",
       expect.objectContaining({
         method: "POST",
@@ -109,7 +112,7 @@ describe("planningTrackService", () => {
   });
 
   it("updates a planning track and reports a response fallback", async () => {
-    sessionFetch
+    fetchMock
       .mockResolvedValueOnce(
         response({
           data: { id: "8", name: "Süd", color: "#83CD2D", sort_order: 4 },
@@ -137,7 +140,7 @@ describe("planningTrackService", () => {
   });
 
   it("serializes the complete order as string ids", async () => {
-    sessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       response({
         data: [{ id: "12", name: "Spät", color: "#5080D8", sort_order: 0 }],
       }),
@@ -153,7 +156,7 @@ describe("planningTrackService", () => {
       },
     ]);
 
-    expect(sessionFetch).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/timetable/planning-tracks/order",
       expect.objectContaining({
         method: "PUT",
@@ -163,7 +166,7 @@ describe("planningTrackService", () => {
   });
 
   it("reports reorder failures", async () => {
-    sessionFetch.mockResolvedValueOnce(response({}, 409));
+    fetchMock.mockResolvedValueOnce(response({}, 409));
 
     await expect(planningTrackService.reorder(["12"])).rejects.toMatchObject({
       message: "Reihenfolge konnte nicht gespeichert werden",
@@ -172,19 +175,16 @@ describe("planningTrackService", () => {
   });
 
   it("accepts an empty successful archive response from the delete proxy", async () => {
-    sessionFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
 
     await expect(planningTrackService.archive("5")).resolves.toBeUndefined();
-    expect(sessionFetch).toHaveBeenCalledWith(
-      "/api/timetable/planning-tracks/5",
-      { method: "DELETE" },
-    );
+    expect(fetchMock).toHaveBeenCalledWith("/api/timetable/planning-tracks/5", {
+      method: "DELETE",
+    });
   });
 
   it("reports archive failures", async () => {
-    sessionFetch.mockResolvedValueOnce(
-      new Response("invalid", { status: 502 }),
-    );
+    fetchMock.mockResolvedValueOnce(new Response("invalid", { status: 502 }));
 
     await expect(planningTrackService.archive("5")).rejects.toMatchObject({
       message: "Planungsspur konnte nicht archiviert werden",
@@ -193,7 +193,7 @@ describe("planningTrackService", () => {
   });
 
   it("restores and maps an archived planning track", async () => {
-    sessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       response({
         data: { id: "5", name: "Alt", color: "#83CD2D", sort_order: 1 },
       }),
@@ -204,14 +204,14 @@ describe("planningTrackService", () => {
       name: "Alt",
       archivedAt: undefined,
     });
-    expect(sessionFetch).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/timetable/planning-tracks/5/restore",
       { method: "POST" },
     );
   });
 
   it("keeps restore diagnostics separate from the operation message", async () => {
-    sessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       response({ detail: "Name bereits vergeben" }, 409),
     );
 

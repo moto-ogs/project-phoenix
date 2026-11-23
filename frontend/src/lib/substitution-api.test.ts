@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const sessionFetch = vi.hoisted(() => vi.fn());
-vi.mock("./session-cache", () => ({ sessionFetch }));
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
+
+const fetchMock = vi.fn();
+beforeEach(() => {
+  vi.stubGlobal("fetch", fetchMock);
+});
 
 import { substitutionService } from "./substitution-api";
 import { routes } from "./contract/substitutions.generated";
@@ -22,7 +26,7 @@ describe("substitutionService", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("loads only narrow schedule substitutions and staff targets", async () => {
-    sessionFetch.mockResolvedValue({
+    fetchMock.mockResolvedValue({
       ok: true,
       json: async () => ({
         data: {
@@ -58,7 +62,7 @@ describe("substitutionService", () => {
       "2026-09-04",
     );
 
-    expect(sessionFetch).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/substitutions?from=2026-08-31&to=2026-09-04",
       { method: "GET" },
     );
@@ -72,7 +76,7 @@ describe("substitutionService", () => {
   });
 
   it("rejects a missing schedule overview envelope clearly", async () => {
-    sessionFetch.mockResolvedValue({ ok: true, json: async () => ({}) });
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({}) });
 
     await expect(
       substitutionService.fetchScheduleOverview("2026-08-31", "2026-09-04"),
@@ -82,7 +86,7 @@ describe("substitutionService", () => {
   it("preserves string IDs in every appointment-scoped change", async () => {
     const instanceId = "9007199254740993";
     const staffId = "9007199254740995";
-    sessionFetch.mockResolvedValue({
+    fetchMock.mockResolvedValue({
       ok: true,
       json: async () => ({
         data: {
@@ -117,32 +121,30 @@ describe("substitutionService", () => {
       ],
     });
 
-    expect(JSON.parse(sessionFetch.mock.calls[0]?.[1]?.body as string)).toEqual(
-      {
-        type: "schedule_substitution",
-        schedule_substitution: {
-          instance_id: instanceId,
-          understaffed_ack: true,
-          understaffed_note: "Vertretung offen",
-          absences: [
-            { staff_id: staffId, reason: "Krank", instance_ids: [instanceId] },
-          ],
-          substitutions: [
-            {
-              absent_staff_id: staffId,
-              substitute_staff_id: "8",
-              instance_ids: [instanceId, "43"],
-            },
-          ],
-          substitution_removals: [{ staff_id: staffId, instance_ids: ["43"] }],
-          presences: [
-            { staff_id: staffId, instance_ids: [instanceId] },
-            { staff_id: "12", instance_ids: [] },
-            { staff_id: "13" },
-          ],
-        },
+    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual({
+      type: "schedule_substitution",
+      schedule_substitution: {
+        instance_id: instanceId,
+        understaffed_ack: true,
+        understaffed_note: "Vertretung offen",
+        absences: [
+          { staff_id: staffId, reason: "Krank", instance_ids: [instanceId] },
+        ],
+        substitutions: [
+          {
+            absent_staff_id: staffId,
+            substitute_staff_id: "8",
+            instance_ids: [instanceId, "43"],
+          },
+        ],
+        substitution_removals: [{ staff_id: staffId, instance_ids: ["43"] }],
+        presences: [
+          { staff_id: staffId, instance_ids: [instanceId] },
+          { staff_id: "12", instance_ids: [] },
+          { staff_id: "13" },
+        ],
       },
-    );
+    });
   });
 
   it.each([
@@ -154,7 +156,7 @@ describe("substitutionService", () => {
   ])(
     "preserves day-wide string IDs with target $substituteStaffId",
     async ({ substituteStaffId, expectedTarget }) => {
-      sessionFetch.mockResolvedValue({
+      fetchMock.mockResolvedValue({
         ok: true,
         json: async () => ({
           data: {
@@ -170,9 +172,7 @@ describe("substitutionService", () => {
         dates: ["2026-08-31", "2026-09-01"],
       });
 
-      expect(
-        JSON.parse(sessionFetch.mock.calls[0]?.[1]?.body as string),
-      ).toEqual({
+      expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual({
         type: "schedule_substitution",
         schedule_substitution: {
           whole_days: {
@@ -186,7 +186,7 @@ describe("substitutionService", () => {
   );
 
   it("maps the proxy-wrapped overview response", async () => {
-    sessionFetch.mockResolvedValue({
+    fetchMock.mockResolvedValue({
       ok: true,
       json: async () => ({
         data: { group_handovers: [handover], targets: [] },
@@ -208,7 +208,7 @@ describe("substitutionService", () => {
   });
 
   it("loads the central overview through one module request", async () => {
-    sessionFetch.mockResolvedValue({
+    fetchMock.mockResolvedValue({
       ok: true,
       json: async () => ({
         data: {
@@ -233,7 +233,7 @@ describe("substitutionService", () => {
 
     const result = await substitutionService.fetchOverview();
 
-    expect(sessionFetch).toHaveBeenCalledWith("/api/substitutions", {
+    expect(fetchMock).toHaveBeenCalledWith("/api/substitutions", {
       method: "GET",
     });
     expect(result.groups).toEqual([{ id: "12", name: "Robins Gruppe" }]);
@@ -260,7 +260,7 @@ describe("substitutionService", () => {
   // The catalog proxy hands over the backend's answer, which names its
   // shape in `type` (#2352).
   it("maps a group handover from the named shape of the proxy", async () => {
-    sessionFetch.mockResolvedValue({
+    fetchMock.mockResolvedValue({
       ok: true,
       json: async () => ({
         data: { type: "group_handover", group_handover: handover },
@@ -278,7 +278,7 @@ describe("substitutionService", () => {
   });
 
   it("rejects an assignment answer without its named member", async () => {
-    sessionFetch.mockResolvedValue({
+    fetchMock.mockResolvedValue({
       ok: true,
       json: async () => ({ data: handover }),
     });
@@ -294,7 +294,7 @@ describe("substitutionService", () => {
   });
 
   it("maps an added supervisor from the named shape", async () => {
-    sessionFetch.mockResolvedValue({
+    fetchMock.mockResolvedValue({
       ok: true,
       json: async () => ({
         data: {
@@ -315,7 +315,7 @@ describe("substitutionService", () => {
   });
 
   it("maps a schedule substitution from the named shape with string ids", async () => {
-    sessionFetch.mockResolvedValue({
+    fetchMock.mockResolvedValue({
       ok: true,
       json: async () => ({
         data: {
@@ -350,7 +350,7 @@ describe("substitutionService", () => {
   });
 
   it("reads appointment ids the proxy sends as strings", async () => {
-    sessionFetch.mockResolvedValue({
+    fetchMock.mockResolvedValue({
       ok: true,
       json: async () => ({
         data: {
@@ -395,7 +395,7 @@ describe("substitutionService", () => {
   });
 
   it("marks forbidden group-overview access for the page guard", async () => {
-    sessionFetch.mockResolvedValue(
+    fetchMock.mockResolvedValue(
       new Response(
         JSON.stringify({
           status: "error",
@@ -414,7 +414,7 @@ describe("substitutionService", () => {
   });
 
   it("assigns and maps a typed group handover", async () => {
-    sessionFetch.mockResolvedValue({
+    fetchMock.mockResolvedValue({
       ok: true,
       json: async () => ({
         data: { type: "group_handover", group_handover: handover },
@@ -428,7 +428,7 @@ describe("substitutionService", () => {
       "2026-08-30",
     );
 
-    expect(sessionFetch).toHaveBeenCalledWith("/api/substitutions", {
+    expect(fetchMock).toHaveBeenCalledWith("/api/substitutions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -445,7 +445,7 @@ describe("substitutionService", () => {
   });
 
   it("keeps code and request ID of a group-handover creation error", async () => {
-    sessionFetch.mockResolvedValue(
+    fetchMock.mockResolvedValue(
       new Response(
         JSON.stringify({
           status: "error",
@@ -473,7 +473,7 @@ describe("substitutionService", () => {
   });
 
   it("loads one running supervision with its available targets", async () => {
-    sessionFetch.mockResolvedValue({
+    fetchMock.mockResolvedValue({
       ok: true,
       json: async () => ({
         data: {
@@ -497,7 +497,7 @@ describe("substitutionService", () => {
 
     const result = await substitutionService.fetchRunningSupervision("41");
 
-    expect(sessionFetch).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/substitutions?active_group_id=41",
       { method: "GET" },
     );
@@ -513,7 +513,7 @@ describe("substitutionService", () => {
   });
 
   it("keeps the account state and organization of external supervisors and targets (#4573)", async () => {
-    sessionFetch.mockResolvedValue({
+    fetchMock.mockResolvedValue({
       ok: true,
       json: async () => ({
         data: {
@@ -584,7 +584,7 @@ describe("substitutionService", () => {
         },
       },
     }));
-    sessionFetch.mockResolvedValue({
+    fetchMock.mockResolvedValue({
       ok: true,
       json,
     });
@@ -594,7 +594,7 @@ describe("substitutionService", () => {
       "9007199254740995",
     );
 
-    expect(sessionFetch).toHaveBeenCalledWith("/api/substitutions", {
+    expect(fetchMock).toHaveBeenCalledWith("/api/substitutions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -610,7 +610,7 @@ describe("substitutionService", () => {
   });
 
   it("rejects a missing proxy envelope", async () => {
-    sessionFetch.mockResolvedValue({ ok: true, json: async () => ({}) });
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({}) });
 
     await expect(
       substitutionService.fetchSubstitutions(),
@@ -618,11 +618,11 @@ describe("substitutionService", () => {
   });
 
   it("ends a typed group handover", async () => {
-    sessionFetch.mockResolvedValue({ ok: true, status: 204 });
+    fetchMock.mockResolvedValue({ ok: true, status: 204 });
 
     await substitutionService.deleteSubstitution("9007199254740993");
 
-    expect(sessionFetch).toHaveBeenCalledWith("/api/substitutions/end", {
+    expect(fetchMock).toHaveBeenCalledWith("/api/substitutions/end", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -633,7 +633,7 @@ describe("substitutionService", () => {
   });
 
   it("keeps the code of a group-handover cancellation error", async () => {
-    sessionFetch.mockResolvedValue(
+    fetchMock.mockResolvedValue(
       new Response(
         JSON.stringify({
           status: "error",

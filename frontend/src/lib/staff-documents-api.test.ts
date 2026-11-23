@@ -1,43 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mockSessionData } from "~/test/mocks/next-auth";
 
-// Mock session-cache before importing the module under test. sessionFetch is
-// reproduced faithfully enough to assert the headers the client relies on.
-vi.mock("./session-cache", () => {
-  const getCachedSession = vi.fn();
-  return {
-    getCachedSession,
-    clearSessionCache: vi.fn(),
-    // The real sessionFetch's gate and transport, without its renewal.
-    sessionFetch: vi.fn(async (url: string, init?: RequestInit) => {
-      const { ApiError, transportFetch, unavailableApiError } =
-        await vi.importActual<typeof import("./api-error")>("./api-error");
-      let session: { user?: { id?: string }; error?: string } | null;
-      try {
-        session = (await getCachedSession()) as typeof session;
-      } catch (error) {
-        throw error instanceof ApiError ? error : unavailableApiError(error);
-      }
-      if (!session?.user || session.error)
-        throw new ApiError("Authentication required", 401, {
-          code: "general.permission",
-        });
-      return transportFetch(url, {
-        ...init,
-        headers:
-          init?.body instanceof FormData
-            ? init.headers
-            : {
-                "Content-Type": "application/json",
-                ...(init?.headers as Record<string, string> | undefined),
-              },
-      });
-    }),
-  };
-});
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
-import { ApiError } from "./api-error";
-import { getCachedSession } from "./session-cache";
+import { ApiError, unavailableApiError } from "./api-error";
+import * as sessionCache from "./session-cache";
 import {
   formatFileSize,
   staffDocumentCategoryLabels,
@@ -45,7 +11,14 @@ import {
   type StaffDocumentCategory,
 } from "./staff-documents-api";
 
-const mockedGetSession = vi.mocked(getCachedSession);
+/** The staff session gate refuses before any request leaves. */
+function refuseSession(
+  error: unknown = new ApiError("Authentication required", 401, {
+    code: "general.permission",
+  }),
+) {
+  vi.spyOn(sessionCache, "requireTenantSession").mockRejectedValueOnce(error);
+}
 
 function backendDocument(overrides: Record<string, unknown> = {}) {
   return {
@@ -69,7 +42,6 @@ describe("staff-documents-api", () => {
     vi.clearAllMocks();
     originalFetch = globalThis.fetch;
     globalThis.fetch = vi.fn();
-    mockedGetSession.mockResolvedValue(mockSessionData());
   });
 
   afterEach(() => {
@@ -113,11 +85,8 @@ describe("staff-documents-api", () => {
       });
       expect(mockFetch()).toHaveBeenCalledWith(
         "/api/staff/7/documents",
-        expect.objectContaining({
-          headers: expect.not.objectContaining({
-            Authorization: expect.anything(),
-          }),
-        }),
+        // The browser holds no token: no headers at all (#5005).
+        { method: "GET" },
       );
     });
 
@@ -193,7 +162,7 @@ describe("staff-documents-api", () => {
     });
 
     it("rejects without sending when there is no session at all", async () => {
-      mockedGetSession.mockResolvedValue(null);
+      refuseSession();
 
       const failure = staffDocumentsService.upload("7", file, "sonstiges");
       await expect(failure).rejects.toBeInstanceOf(ApiError);
@@ -205,11 +174,8 @@ describe("staff-documents-api", () => {
     });
 
     it("rejects when the callback stripped the session", async () => {
-      mockedGetSession.mockResolvedValue({
-        ...mockSessionData(),
-        user: { id: "1", name: "Test User" },
-        error: "RefreshTokenError",
-      });
+      // The gate refuses a session without access like a missing one.
+      refuseSession();
 
       await expect(
         staffDocumentsService.upload("7", file, "sonstiges"),
@@ -218,7 +184,8 @@ describe("staff-documents-api", () => {
     });
 
     it("normalizes a failed session lookup as unavailable", async () => {
-      mockedGetSession.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+      // The gate turns a failed lookup into general.unavailable.
+      refuseSession(unavailableApiError(new TypeError("Failed to fetch")));
 
       const failure = staffDocumentsService.upload("7", file, "sonstiges");
 
@@ -311,12 +278,8 @@ describe("staff-documents-api", () => {
 
       expect(mockFetch()).toHaveBeenCalledWith(
         "/api/staff/7/documents/42",
-        expect.objectContaining({
-          method: "DELETE",
-          headers: expect.not.objectContaining({
-            Authorization: expect.anything(),
-          }),
-        }),
+        // The browser holds no token: no headers at all (#5005).
+        { method: "DELETE" },
       );
     });
 

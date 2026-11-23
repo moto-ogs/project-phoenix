@@ -12,7 +12,7 @@ import type * as sharedContract from "./contract/shared.generated";
 import { knownEnum } from "./contract/known-enum";
 import { requiredDay } from "./contract/required-day";
 import { bffFile, bffJson } from "./bff-fetch";
-import { ApiError, unavailableApiError } from "./api-error";
+import { ApiError } from "./api-error";
 /**
  * Parent-portal client API. Symmetric to the operator-api / tenant
  * api-helpers split. Every call goes through a Next.js proxy route
@@ -40,7 +40,7 @@ import {
   type MessageAudience,
   type SchoolReaders,
 } from "~/lib/messaging-status";
-import { readEnrollmentError } from "~/lib/enrollment-api-error";
+import { logEnrollmentFailure } from "~/lib/enrollment-api-error";
 import { type SignatureValue, signatureRequestBody } from "~/lib/signature";
 import type { MeProfileResponse } from "~/lib/enrollment-submission-api";
 
@@ -356,43 +356,6 @@ export async function updateParentPortalLocale(
 }
 
 /**
- * `fetch` for the embedded enrollment form: a broken connection becomes
- * `general.unavailable` (#2515), like the public form's client.
- */
-async function fetchEnrollmentEndpoint(
-  input: string,
-  init: RequestInit,
-): Promise<Response> {
-  try {
-    return await fetch(input, init);
-  } catch (cause) {
-    throw unavailableApiError(cause);
-  }
-}
-
-/**
- * The `data` of an enrollment answer. The catalog proxy always answers
- * `{ status, data }`; without `data` the route is broken, a 502 as in
- * bffJson (a write may have happened, so the person reloads first).
- */
-async function readEnrollmentData<T>(
-  response: Response,
-  method: "GET" | "POST",
-): Promise<T> {
-  const answer = (await response.json().catch(() => undefined)) as
-    { data?: T } | undefined;
-  if (answer?.data === undefined || answer.data === null) {
-    throw new ApiError("Antwort konnte nicht gelesen werden", 502, {
-      code:
-        method === "GET"
-          ? "general.unavailable"
-          : "general.write_answer_unreadable",
-    });
-  }
-  return answer.data;
-}
-
-/**
  * Fetches the parent's autofill payload for the embedded enrollment
  * form, scoped to a specific tenant slug. Returns null on 401 so the
  * form can render without prefill rather than failing.
@@ -400,22 +363,23 @@ async function readEnrollmentData<T>(
 export async function fetchParentEnrollmentProfile(
   tenantSlug: string,
 ): Promise<MeProfileResponse | null> {
-  const response = await fetchEnrollmentEndpoint(
-    `/api/parent/enrollments/${encodeURIComponent(tenantSlug)}/profile`,
-    { cache: "no-store" },
-  );
-  if (response.status === 401) {
-    return null;
-  }
-  if (!response.ok) {
-    throw await readEnrollmentError(
-      response,
-      "Profil konnte nicht geladen werden",
-      logger,
-      "parent_profile_request_failed",
+  try {
+    const profile = await bffJson(
+      "parent",
+      "GET /parent/enrollments/{tenantSlug}/profile",
+      {
+        params: { tenantSlug },
+        errorMessage: "Profil konnte nicht geladen werden",
+        // Without a session the form renders without prefill; the class code
+        // of a BFF without session keeps the page (no login redirect).
+        authRefusals: ["general.permission"],
+      },
     );
+    return { ...profile, children: profile.children ?? [] };
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) return null;
+    return logEnrollmentFailure(error, logger, "parent_profile_request_failed");
   }
-  return readEnrollmentData<MeProfileResponse>(response, "GET");
 }
 
 /**
@@ -429,25 +393,12 @@ export async function submitParentEnrollment(
   tenantSlug: string,
   payload: sharedContract.SubmitEnrollmentRequest,
 ): Promise<sharedContract.SubmitEnrollmentResponse> {
-  const response = await fetchEnrollmentEndpoint(
-    `/api/parent/enrollments/${encodeURIComponent(tenantSlug)}/submit`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    },
-  );
-  if (!response.ok) {
-    throw await readEnrollmentError(
-      response,
-      "Anmeldung konnte nicht übermittelt werden",
-      logger,
-      "parent_submit_failed",
-    );
-  }
-  return readEnrollmentData<sharedContract.SubmitEnrollmentResponse>(
-    response,
-    "POST",
+  return bffJson("parent", "POST /parent/enrollments/{tenantSlug}/submit", {
+    params: { tenantSlug },
+    body: payload,
+    errorMessage: "Anmeldung konnte nicht übermittelt werden",
+  }).catch((error: unknown) =>
+    logEnrollmentFailure(error, logger, "parent_submit_failed"),
   );
 }
 

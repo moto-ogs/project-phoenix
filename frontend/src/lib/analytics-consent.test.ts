@@ -27,6 +27,10 @@ type Consent = typeof import("./analytics-consent");
 // vi.waitFor's 50-ms interval. Timeout and assertions stay the same.
 const waitFor = <T>(callback: () => T) => vi.waitFor(callback, { interval: 5 });
 
+// The staff portal sends after its session gate, a few microtasks later; a
+// check that no request went out waits for those first.
+const settle = () => new Promise((done) => setTimeout(done, 0));
+
 function answer(granted: boolean | null, status = 200): Response {
   return new Response(
     status === 200
@@ -90,10 +94,13 @@ describe("analytics consent", () => {
 
       consentModule.startAnalyticsConsent("tenant", "7");
       expect(published()).toEqual([false]);
-      expect(fetchMock).toHaveBeenCalledWith(
-        "/api/analytics-consent",
-        expect.objectContaining({ method: "GET" }),
+      await waitFor(() =>
+        expect(fetchMock).toHaveBeenCalledWith(
+          "/api/analytics-consent",
+          expect.objectContaining({ method: "GET" }),
+        ),
       );
+      expect(published()).toEqual([false]);
 
       reply.resolve(answer(granted));
       await waitFor(() => expect(published()).toEqual([false, consent]));
@@ -108,6 +115,7 @@ describe("analytics consent", () => {
     // Anker: the parents portal on its own host does read.
     fetchMock.mockResolvedValueOnce(answer(true));
     startAnalyticsConsent("parent", "7");
+    await settle();
 
     expect(fetchMock).toHaveBeenCalledOnce();
     expect(fetchMock).toHaveBeenCalledWith(
@@ -143,12 +151,14 @@ describe("analytics consent", () => {
     fetchMock.mockReturnValueOnce(refusal.promise);
     const revoking = decideAnalyticsConsent(false);
     expect(published()).toEqual([false, true, false]);
-    expect(fetchMock).toHaveBeenLastCalledWith(
-      "/api/analytics-consent",
-      expect.objectContaining({
-        method: "PUT",
-        body: JSON.stringify({ granted: false }),
-      }),
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenLastCalledWith(
+        "/api/analytics-consent",
+        expect.objectContaining({
+          method: "PUT",
+          body: JSON.stringify({ granted: false }),
+        }),
+      ),
     );
     refusal.resolve(answer(false));
     await revoking;
@@ -199,13 +209,14 @@ describe("analytics consent", () => {
     // A cleared analytics context of the same session gets the answer back.
     startAnalyticsConsent("tenant", "7");
     expect(published()).toEqual([false, true, true]);
+    await settle();
     expect(fetchMock).toHaveBeenCalledOnce();
 
     stopAnalyticsConsent("tenant");
     expect(published()).toEqual([false, true, true, false]);
     fetchMock.mockResolvedValueOnce(answer(null));
     startAnalyticsConsent("tenant", "8");
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
   });
 
   it("follows a revocation from another tab when the page becomes visible", async () => {
@@ -218,6 +229,7 @@ describe("analytics consent", () => {
     const visibility = vi.spyOn(document, "visibilityState", "get");
     visibility.mockReturnValue("hidden");
     document.dispatchEvent(new Event("visibilitychange"));
+    await settle();
     expect(fetchMock).toHaveBeenCalledOnce();
 
     fetchMock.mockResolvedValueOnce(answer(false));
@@ -234,6 +246,7 @@ describe("analytics consent", () => {
     // Logout stops the re-reads.
     stopAnalyticsConsent("tenant");
     document.dispatchEvent(new Event("visibilitychange"));
+    await settle();
     expect(fetchMock).toHaveBeenCalledTimes(3);
     visibility.mockRestore();
   });

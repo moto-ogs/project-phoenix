@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { plainFetch } from "~/test/mocks/plain-session-fetch";
 
 vi.mock(
   "~/lib/session-cache",
@@ -9,7 +10,7 @@ const { mockFetch } = vi.hoisted(() => ({
   mockFetch: vi.fn(),
 }));
 
-global.fetch = mockFetch as unknown as typeof fetch;
+global.fetch = vi.fn(plainFetch(mockFetch)) as unknown as typeof fetch;
 
 import {
   caregiverCapabilityService,

@@ -1,4 +1,4 @@
-import { bffJson, bffJsonUncontracted } from "~/lib/bff-fetch";
+import { bffJson } from "~/lib/bff-fetch";
 import { ApiError } from "../api-error";
 import { toSettingsSchema, type SettingsSchema } from "~/lib/settings-api";
 import { createLogger } from "~/lib/logger";
@@ -70,11 +70,6 @@ export async function fetchOperatorSettingsSchema(
   }
 }
 
-// The BFF's own route: it writes the value and purges the cached tenant
-// lookup, so it has no catalog key (bff-fetch-uncontracted.test.ts).
-const settingValuePath = (schoolId: string, key: string) =>
-  `/api/operator/provisioning/schools/${encodeURIComponent(schoolId)}/settings/values/${encodeURIComponent(key)}`;
-
 /**
  * Set a setting value for a school. Throws the ApiError of a failed save,
  * which the settings field shows on the shared error path (#2519).
@@ -85,11 +80,15 @@ export async function setOperatorSettingValue(
   value: unknown,
 ): Promise<void> {
   try {
-    await bffJsonUncontracted(
+    // The route file purges the school's cached tenant lookup after the
+    // write, so the school's login page shows the change.
+    await bffJson(
       "platform",
-      "PUT",
-      settingValuePath(schoolId, key),
-      { body: { value } },
+      "PUT /operator/schools/{id}/settings/values/{key}",
+      {
+        params: { id: schoolId, key },
+        body: { value },
+      },
     );
   } catch (error) {
     logger.warn("set_operator_setting_value_failed", {
@@ -108,10 +107,10 @@ export async function resetOperatorSettingValue(
   key: string,
 ): Promise<void> {
   try {
-    await bffJsonUncontracted(
+    await bffJson(
       "platform",
-      "DELETE",
-      settingValuePath(schoolId, key),
+      "DELETE /operator/schools/{id}/settings/values/{key}",
+      { params: { id: schoolId, key } },
     );
   } catch (error) {
     logger.warn("reset_operator_setting_value_failed", {

@@ -2,35 +2,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { StaffRecordResponse } from "./contract/staff.generated";
 import { ApiError } from "./api-error";
 import { suppressConsole } from "~/test/helpers/console";
-import { mockSessionData } from "~/test/mocks/next-auth";
 
-// Mock session-cache before importing the module
-vi.mock("./session-cache", () => {
-  const getCachedSession = vi.fn();
-  return {
-    getCachedSession,
-    clearSessionCache: vi.fn(),
-    sessionFetch: vi.fn(async (url: string, init?: RequestInit) => {
-      // Same gate as the real sessionFetch (hasSessionAccess, #5005).
-      const session = (await getCachedSession()) as {
-        user?: { id?: string };
-        error?: string;
-      } | null;
-      if (!session?.user || session.error)
-        throw new Error("No authentication token available");
-      return fetch(url, {
-        ...init,
-        headers: {
-          "Content-Type": "application/json",
-          ...(init?.headers as Record<string, string> | undefined),
-        },
-      });
-    }),
-  };
-});
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
 // Import after mocks are set up
-import { getCachedSession } from "./session-cache";
+import * as sessionCache from "./session-cache";
 import {
   mapStaffRecord,
   staffAbsenceService,
@@ -46,7 +22,15 @@ import {
 } from "./staff-api";
 
 // Type for mocked functions
-const mockedGetSession = vi.mocked(getCachedSession);
+
+/** The staff session gate refuses before any request leaves. */
+function refuseSession(
+  error: unknown = new ApiError("Authentication required", 401, {
+    code: "general.permission",
+  }),
+) {
+  vi.spyOn(sessionCache, "requireTenantSession").mockRejectedValueOnce(error);
+}
 
 // Staff records as the contract delivers them (#7563): the person nested,
 // ids as decimal strings.
@@ -123,7 +107,6 @@ describe("staff-api", () => {
     globalThis.fetch = vi.fn();
 
     // Default session mock
-    mockedGetSession.mockResolvedValue(mockSessionData());
   });
 
   afterEach(() => {
@@ -152,11 +135,8 @@ describe("staff-api", () => {
       );
       expect(mockFetch).toHaveBeenCalledWith(
         "/api/staff/documents-directory",
-        expect.objectContaining({
-          headers: expect.not.objectContaining({
-            Authorization: expect.anything(),
-          }),
-        }),
+        // The browser holds no token: no headers at all (#5005).
+        { method: "GET" },
       );
     });
 
@@ -194,11 +174,8 @@ describe("staff-api", () => {
 
       expect(mockFetch).toHaveBeenCalledWith(
         "/api/staff/documents-profile/42",
-        expect.objectContaining({
-          headers: expect.not.objectContaining({
-            Authorization: expect.anything(),
-          }),
-        }),
+        // The browser holds no token: no headers at all (#5005).
+        { method: "GET" },
       );
       expect(profile).toMatchObject({
         id: "42",
@@ -261,11 +238,13 @@ describe("staff-api", () => {
     });
 
     it("throws error when no auth token available", async () => {
-      mockedGetSession.mockResolvedValue(null);
+      refuseSession();
 
-      await expect(staffService.getAllStaff()).rejects.toThrow(
-        "No authentication token available",
-      );
+      await expect(staffService.getAllStaff()).rejects.toMatchObject({
+        message: "Authentication required",
+        status: 401,
+        code: "general.permission",
+      });
     });
 
     it("throws error when staff fetch fails", async () => {

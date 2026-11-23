@@ -12,7 +12,7 @@ vi.mock(
   () => import("~/test/mocks/plain-session-fetch"),
 );
 
-import { pagedJson } from "~/test/mocks/plain-session-fetch";
+import { pagedJson, plainResponse } from "~/test/mocks/plain-session-fetch";
 import { ApiError } from "./api-error";
 import {
   createGradeTransition,
@@ -47,7 +47,7 @@ function stubOnce(response: Partial<Response> & { json?: () => unknown }) {
     "fetch",
     vi.fn((url: string, init?: RequestInit) => {
       calls.push({ url, init });
-      return Promise.resolve(response as unknown as Response);
+      return plainResponse(response);
     }),
   );
 }

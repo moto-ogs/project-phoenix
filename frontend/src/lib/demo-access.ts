@@ -2,7 +2,8 @@
 // fragment and leaves the browser only in a POST body, so no server or proxy
 // log records it.
 
-import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";
+import { ApiError } from "~/lib/api-error";
+import { bffJsonUncontracted } from "~/lib/bff-fetch";
 import { parentsPortalUrl } from "~/lib/parent-url";
 import { requiredPortalHostname } from "~/lib/portal-paths";
 
@@ -308,19 +309,12 @@ export const DEMO_RESTART_RUNNING = "Wird vorbereitet …";
 export async function restartDemo(
   role: DemoRole | undefined,
 ): Promise<string | null> {
-  const response = await transportFetch("/api/demo/access/reset", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ role }),
-  });
-  if (response.status === 404 || response.status === 410) return null;
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `demo restart failed: ${response.status}`,
-    );
-  }
-  const body = (await response.json()) as { entry_url?: string };
+  const body = await demoPost<{ entry_url?: string }>(
+    "/api/demo/access/reset",
+    { role },
+    "demo restart failed",
+  );
+  if (body === null) return null;
   if (!body.entry_url?.startsWith("http")) {
     throw new Error("demo restart without a waiting room");
   }
@@ -362,12 +356,30 @@ export function demoHandoffPath(role: DemoRole): string {
   return `/api/demo/access/handoff?role=${encodeURIComponent(role)}`;
 }
 
-async function postToken(path: string, token: string): Promise<Response> {
-  return transportFetch(path, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token }),
-  });
+/**
+ * A demo route of the BFF (no Go contract: the demo routes exist only with
+ * APP_ENV=demo). An unknown or expired link (404, 410) is null; any other
+ * failure is the ApiError.
+ */
+async function demoPost<T>(
+  path: string,
+  body: unknown,
+  errorMessage: string,
+): Promise<T | null> {
+  try {
+    return await bffJsonUncontracted<T>("public", "POST", path, {
+      body,
+      errorMessage,
+    });
+  } catch (error) {
+    if (
+      error instanceof ApiError &&
+      (error.status === 404 || error.status === 410)
+    ) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 interface DemoAccessProgress {
@@ -382,21 +394,12 @@ interface DemoAccessProgress {
 async function fetchDemoAccessProgress(
   token: string,
 ): Promise<DemoAccessProgress> {
-  const response = await postToken("/api/demo/access/status", token);
-  if (response.status === 404 || response.status === 410) {
-    return { status: "invalid" };
-  }
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `demo status failed: ${response.status}`,
-    );
-  }
-  const body = (await response.json()) as {
+  const body = await demoPost<{
     status?: string;
     school_url?: string;
     school_name?: string;
-  };
+  }>("/api/demo/access/status", { token }, "demo status failed");
+  if (body === null) return { status: "invalid" };
   if (body.status === "ready") {
     return {
       status: "ready",
@@ -474,19 +477,7 @@ async function postSession(body: {
   token?: string;
   role: DemoRole;
 }): Promise<DemoSession | null> {
-  const response = await transportFetch("/api/demo/access/sessions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (response.status === 404 || response.status === 410) return null;
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `demo redeem failed: ${response.status}`,
-    );
-  }
-  const payload = (await response.json()) as {
+  const payload = await demoPost<{
     session_created?: boolean;
     demo?: {
       access_id?: string;
@@ -495,7 +486,8 @@ async function postSession(body: {
       fixed_role?: boolean;
       traeger?: boolean;
     };
-  };
+  }>("/api/demo/access/sessions", body, "demo redeem failed");
+  if (payload === null) return null;
   return {
     sessionCreated: payload.session_created === true,
     visit: {

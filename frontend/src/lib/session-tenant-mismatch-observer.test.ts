@@ -54,7 +54,7 @@ afterEach(() => {
 describe("the session tenant refusal reaches TenantGuard from every client", () => {
   it.each([
     ["a plain fetch that reads only ok", () => fetch("/api/students")],
-    ["a sessionFetch client", () => listAvailableTenants()],
+    ["a bffJson client", () => listAvailableTenants()],
     ["the time tracking client", () => timeTrackingService.checkIn("present")],
   ])("%s", async (_client, send) => {
     fetchMock.mockResolvedValue(refusal());
@@ -73,7 +73,7 @@ describe("the session tenant refusal reaches TenantGuard from every client", () 
     });
   });
 
-  it("drops the cached session of a sessionFetch client", async () => {
+  it("drops the cached session of a bffJson client", async () => {
     fetchMock.mockResolvedValue(Response.json({ data: [] }));
     await listAvailableTenants();
     expect(getSessionMock).toHaveBeenCalledTimes(1);
@@ -140,7 +140,7 @@ describe("the tab's account on every request to its own BFF", () => {
       () => fetch("/api/students", { headers: { "X-Other": "1" } }),
     ],
     ["a Request object", () => fetch(new Request(`${location.origin}/api/x`))],
-    ["a sessionFetch client", () => listAvailableTenants()],
+    ["a bffJson client", () => listAvailableTenants()],
   ])("names the bound account on %s", async (_client, send) => {
     bindSessionAccount("7");
     fetchMock.mockResolvedValue(Response.json({ data: [] }));
@@ -182,7 +182,7 @@ describe("the tab's account on every request to its own BFF", () => {
 
   it.each([
     ["a plain fetch that reads only ok", () => fetch("/api/students")],
-    ["a sessionFetch client", () => listAvailableTenants()],
+    ["a bffJson client", () => listAvailableTenants()],
     ["the time tracking client", () => timeTrackingService.checkIn("present")],
   ])(
     "reports the refusal of another account from %s",

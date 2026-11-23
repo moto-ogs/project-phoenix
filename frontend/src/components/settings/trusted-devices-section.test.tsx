@@ -25,7 +25,7 @@ function render(ui: ReactNode) {
 
 const toastSuccess = vi.fn();
 const toastError = vi.fn();
-// The staff portal sends through sessionFetch; the stub passes the answer on.
+// The staff session gate lets the request through; fetch gets the answer on.
 vi.mock(
   "~/lib/session-cache",
   () => import("~/test/mocks/plain-session-fetch"),

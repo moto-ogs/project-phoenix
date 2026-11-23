@@ -1,12 +1,8 @@
-import { ApiError, apiErrorFromBody, transportFetch } from "./api-error";
+import { ApiError } from "./api-error";
 import { bffJson, bffJsonUncontracted } from "./bff-fetch";
 import { requiredEnum } from "./contract/known-enum";
 import type * as sharedContract from "./contract/shared.generated";
-import {
-  portalAuthAnswer,
-  portalAuthPath,
-  type PortalKey,
-} from "./portal-paths";
+import { portalAuthPath, type PortalKey } from "./portal-paths";
 import { signInAnswer, type SignInAnswer } from "./sign-in-answer";
 
 export type LoginScope = PortalKey;
@@ -16,14 +12,20 @@ export interface MFAResult {
 }
 
 /**
- * A sign-in step the BFF answers itself (password, code, enrollment
- * confirmation): every portal's answer is `{ status, data }`. The steps run
- * without a session (`public`); enrollment sends the login's enrollment
- * token as its bearer.
+ * A sign-in step: every portal's route answers `{ status, data }`, whether
+ * the BFF answers it itself (password, code, enrollment confirmation) or
+ * forwards the browser's proof (resend, enrollment start: `authStepProxy`;
+ * the operator's start answers 204, `null`). The steps run without a session
+ * (`public`); enrollment sends the login's enrollment token as its bearer.
  */
 function postSignInStep<T>(
   scope: LoginScope,
-  step: "login" | "mfa/verify" | "mfa/enroll/confirm",
+  step:
+    | "login"
+    | "mfa/verify"
+    | "mfa/resend"
+    | "mfa/enroll/start"
+    | "mfa/enroll/confirm",
   body: unknown,
   bearerToken?: string,
 ): Promise<T> {
@@ -33,46 +35,6 @@ function postSignInStep<T>(
       headers: { Authorization: `Bearer ${bearerToken}` },
     }),
   });
-}
-
-/**
- * The resend and the enrollment start: the BFF forwards the backend's
- * answer as it is, outside the envelope for most portals (`portalAuthAnswer`)
- * and as a 204 for the operator's start. bffJson reads only the envelope, so
- * these two steps keep their own read.
- */
-async function postForwardedStep(
-  url: string,
-  body: unknown,
-  bearerToken?: string,
-): Promise<unknown> {
-  const response = await transportFetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(bearerToken && { Authorization: `Bearer ${bearerToken}` }),
-    },
-    credentials: "include",
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  if (response.status === 204) return undefined;
-  const text = await response.text();
-  let data: unknown = null;
-  try {
-    data = text ? (JSON.parse(text) as unknown) : null;
-  } catch {
-    data = null;
-  }
-  if (!response.ok) {
-    // Callers branch on the envelope's code (identity.mfa_code_invalid,
-    // identity.mfa_blocked, …), never on the diagnostic text.
-    throw apiErrorFromBody(
-      `Request failed (${response.status})`,
-      response.status,
-      data,
-    );
-  }
-  return data ?? undefined;
 }
 
 interface LoginParams {
@@ -134,10 +96,6 @@ interface ResendParams {
   challengeToken: string;
 }
 
-interface ResendResponse {
-  challenge_token: string;
-}
-
 /**
  * resendChallenge re-issues an MFA email code AND returns the renewed
  * challenge JWT. Callers MUST swap their in-flight `challengeToken` for
@@ -150,11 +108,15 @@ export async function resendChallenge(
   scope: LoginScope,
   params: ResendParams,
 ): Promise<string> {
-  const answer = await postForwardedStep(portalAuthPath(scope, "mfa/resend"), {
-    challenge_token: params.challengeToken,
-  });
-  return portalAuthAnswer<ResendResponse>(scope, "mfa/resend", answer)
-    .challenge_token;
+  const answer = await postSignInStep<sharedContract.MFAResendResponse | null>(
+    scope,
+    "mfa/resend",
+    { challenge_token: params.challengeToken },
+  );
+  if (!answer?.challenge_token) {
+    throw new ApiError("MFA resend returned no challenge token", 500);
+  }
+  return answer.challenge_token;
 }
 
 // ----- Enrollment (the login's enrollment token as Bearer) -----
@@ -168,11 +130,13 @@ export async function enrollStart(
   scope: LoginScope,
   bearerToken: string,
 ): Promise<string | null> {
-  const answer = (await postForwardedStep(
-    portalAuthPath(scope, "mfa/enroll/start"),
-    undefined,
-    bearerToken,
-  )) as { challenge_token?: string } | undefined;
+  const answer =
+    await postSignInStep<sharedContract.EnrollStartResponse | null>(
+      scope,
+      "mfa/enroll/start",
+      undefined,
+      bearerToken,
+    );
   if (scope === "operator") return null;
   if (!answer?.challenge_token) {
     throw new ApiError("Enrollment start returned no challenge token", 500);

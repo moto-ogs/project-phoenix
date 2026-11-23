@@ -2,7 +2,7 @@ import { MODULE_SETTING_KEYS } from "./modules";
 
 // Keys whose value rides on /auth/tenant/resolve. The settings PUT/DELETE
 // proxies (tenant-side `/api/settings/values/[key]` and operator-side
-// `/api/operator/provisioning/schools/[id]/settings/values/[key]`) consult
+// `/api/operator/schools/[id]/settings/values/[key]`) consult
 // this set after a successful write and purge the cached layout lookup via
 // `revalidateTag('tenant-${slug}')` + `revalidatePath('/${slug}', 'layout')`.
 // The settings page also calls `router.refresh()` so the RSC tree pulls the

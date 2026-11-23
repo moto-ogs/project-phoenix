@@ -7,64 +7,25 @@ import type { ActivityRequest } from "./contract/activities.generated";
 import { mapActivityResponse } from "./activity-helpers";
 import { buildBackendActivity } from "~/test/fixtures/activities";
 
-// Mock dependencies
-vi.mock("./session-cache", () => {
-  const getCachedSession = vi.fn();
-  return {
-    getCachedSession,
-    clearSessionCache: vi.fn(),
-    sessionFetch: vi.fn(async (url: string, init?: RequestInit) => {
-      // Same gate as the real sessionFetch (hasSessionAccess, #5005).
-      const session = (await getCachedSession()) as {
-        user?: { id?: string };
-        error?: string;
-      } | null;
-      if (!session?.user || session.error)
-        throw new Error("No authentication token available");
-      const response = await fetch(url, {
-        ...init,
-        headers: {
-          "Content-Type": "application/json",
-          ...(init?.headers as Record<string, string> | undefined),
-        },
-      });
-      if (response.status === 401) {
-        const { handleAuthFailure } = (await import("./auth-failure")) as {
-          handleAuthFailure: () => Promise<boolean>;
-        };
-        const refreshed = await handleAuthFailure();
-        if (refreshed) {
-          const freshSession = (await getCachedSession()) as {
-            user?: { id?: string };
-            error?: string;
-          } | null;
-          if (!freshSession?.user || freshSession.error) {
-            throw new Error("Authentication expired");
-          }
-          return fetch(url, {
-            ...init,
-            headers: {
-              "Content-Type": "application/json",
-              ...(init?.headers as Record<string, string> | undefined),
-            },
-          });
-        }
-        throw new Error("Authentication expired");
-      }
-      return response;
-    }),
-  };
-});
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
 vi.mock("./auth-api", () => ({
   handleAuthFailure: vi.fn(),
 }));
 
 // Import after mocks
-import { getCachedSession } from "./session-cache";
+import { ApiError } from "./api-error";
+import * as sessionCache from "./session-cache";
 import * as activityApi from "./activity-api";
 
-const mockedGetSession = vi.mocked(getCachedSession);
+/** The staff session gate refuses before any request leaves. */
+function refuseSession(
+  error: unknown = new ApiError("Authentication required", 401, {
+    code: "general.permission",
+  }),
+) {
+  vi.spyOn(sessionCache, "requireTenantSession").mockRejectedValueOnce(error);
+}
 
 // Sample test data
 const sampleBackendActivity = buildBackendActivity({
@@ -91,10 +52,6 @@ describe("activity-api", () => {
   describe("fetchActivities", () => {
     it("fetches activities in browser context using fetch", async () => {
       vi.stubGlobal("window", {});
-      mockedGetSession.mockResolvedValueOnce({
-        user: { id: "1" },
-        expires: "2099-01-01",
-      });
 
       const mockResponse = {
         ok: true,
@@ -112,10 +69,6 @@ describe("activity-api", () => {
 
     it("returns empty array for empty response", async () => {
       vi.stubGlobal("window", {});
-      mockedGetSession.mockResolvedValueOnce({
-        user: { id: "1" },
-        expires: "2099-01-01",
-      });
       vi.stubGlobal(
         "fetch",
         vi.fn().mockResolvedValueOnce({
@@ -131,11 +84,13 @@ describe("activity-api", () => {
 
     it("throws error when no token available in browser context", async () => {
       vi.stubGlobal("window", {});
-      mockedGetSession.mockResolvedValueOnce(null);
+      refuseSession();
 
-      await expect(activityApi.fetchActivities()).rejects.toThrow(
-        "No authentication token available",
-      );
+      await expect(activityApi.fetchActivities()).rejects.toMatchObject({
+        message: "Authentication required",
+        status: 401,
+        code: "general.permission",
+      });
     });
   });
 
@@ -150,10 +105,6 @@ describe("activity-api", () => {
 
     it("updates activity in browser context", async () => {
       vi.stubGlobal("window", {});
-      mockedGetSession.mockResolvedValueOnce({
-        user: { id: "1" },
-        expires: "2099-01-01",
-      });
 
       const updatedActivity: Activity = {
         id: "1",
@@ -179,10 +130,6 @@ describe("activity-api", () => {
 
     it("maps the contract's activity", async () => {
       vi.stubGlobal("window", {});
-      mockedGetSession.mockResolvedValueOnce({
-        user: { id: "1" },
-        expires: "2099-01-01",
-      });
       vi.stubGlobal(
         "fetch",
         vi.fn().mockResolvedValueOnce({
@@ -203,10 +150,6 @@ describe("activity-api", () => {
   describe("deleteActivity", () => {
     it("deletes activity in browser context", async () => {
       vi.stubGlobal("window", {});
-      mockedGetSession.mockResolvedValueOnce({
-        user: { id: "1" },
-        expires: "2099-01-01",
-      });
 
       vi.stubGlobal(
         "fetch",
@@ -225,10 +168,6 @@ describe("activity-api", () => {
   describe("getCategories", () => {
     it("fetches categories in browser context with wrapped response", async () => {
       vi.stubGlobal("window", {});
-      mockedGetSession.mockResolvedValueOnce({
-        user: { id: "1" },
-        expires: "2099-01-01",
-      });
 
       const frontendCategory = {
         id: "1",
@@ -255,10 +194,6 @@ describe("activity-api", () => {
       // so consumers reading category.shiftTypeId (e.g. the shift-type mapping
       // modal) never matched and could clear links.
       vi.stubGlobal("window", {});
-      mockedGetSession.mockResolvedValueOnce({
-        user: { id: "1" },
-        expires: "2099-01-01",
-      });
 
       const backendShaped = {
         id: 7,
@@ -286,10 +221,6 @@ describe("activity-api", () => {
   describe("getEnrolledStudents", () => {
     it("reads the contract's roster and maps it to the view", async () => {
       vi.stubGlobal("window", {});
-      mockedGetSession.mockResolvedValueOnce({
-        user: { id: "1" },
-        expires: "2099-01-01",
-      });
       const fetchMock = vi.fn().mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -308,10 +239,6 @@ describe("activity-api", () => {
 
     it("throws the API error of a failed read", async () => {
       vi.stubGlobal("window", {});
-      mockedGetSession.mockResolvedValueOnce({
-        user: { id: "1" },
-        expires: "2099-01-01",
-      });
       vi.stubGlobal(
         "fetch",
         vi.fn().mockResolvedValueOnce(

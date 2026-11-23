@@ -2,39 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type * as meContract from "./contract/me.generated";
 import type { Profile, ProfileUpdateRequest } from "./profile-helpers";
 
-// Mock dependencies before importing the module under test
-vi.mock("./session-cache", () => {
-  const getCachedSession = vi.fn();
-  return {
-    getCachedSession,
-    clearSessionCache: vi.fn(),
-    // The real sessionFetch's gate and transport, without its renewal.
-    sessionFetch: vi.fn(async (url: string, init?: RequestInit) => {
-      const { ApiError, transportFetch, unavailableApiError } =
-        await vi.importActual<typeof import("./api-error")>("./api-error");
-      let session: { user?: { id?: string }; error?: string } | null;
-      try {
-        session = (await getCachedSession()) as typeof session;
-      } catch (error) {
-        throw error instanceof ApiError ? error : unavailableApiError(error);
-      }
-      if (!session?.user || session.error)
-        throw new ApiError("Authentication required", 401, {
-          code: "general.permission",
-        });
-      return transportFetch(url, {
-        ...init,
-        headers:
-          init?.body instanceof FormData
-            ? init.headers
-            : {
-                "Content-Type": "application/json",
-                ...(init?.headers as Record<string, string> | undefined),
-              },
-      });
-    }),
-  };
-});
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
 vi.mock("./profile-helpers", () => ({
   mapProfileResponse: vi.fn(),
@@ -42,12 +10,21 @@ vi.mock("./profile-helpers", () => ({
 }));
 
 // Import after mocks are set up
-import { getCachedSession } from "./session-cache";
+import { ApiError } from "./api-error";
+import * as sessionCache from "./session-cache";
 import { mapProfileResponse, mapProfileUpdateRequest } from "./profile-helpers";
 import { fetchProfile, updateProfile, uploadAvatar } from "./profile-api";
 
 // Type-safe mocks
-const mockedGetSession = vi.mocked(getCachedSession);
+
+/** The staff session gate refuses before any request leaves. */
+function refuseSession(
+  error: unknown = new ApiError("Authentication required", 401, {
+    code: "general.permission",
+  }),
+) {
+  vi.spyOn(sessionCache, "requireTenantSession").mockRejectedValueOnce(error);
+}
 const mockedMapProfileResponse = vi.mocked(mapProfileResponse);
 const mockedMapProfileUpdateRequest = vi.mocked(mapProfileUpdateRequest);
 
@@ -98,10 +75,6 @@ describe("profile-api", () => {
       .mockImplementation(() => undefined);
 
     // Default session mock
-    mockedGetSession.mockResolvedValue({
-      user: { id: "1" },
-      expires: "2099-01-01",
-    });
 
     // Default mapper mocks
     mockedMapProfileResponse.mockReturnValue(sampleProfile);
@@ -133,34 +106,27 @@ describe("profile-api", () => {
 
       expect(mockFetch).toHaveBeenCalledWith("/api/me/profile", {
         method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
       });
       expect(mockedMapProfileResponse).toHaveBeenCalledWith(sampleProfileWire);
       expect(result).toEqual(sampleProfile);
     });
 
     it("throws error when no token is available", async () => {
-      mockedGetSession.mockResolvedValue(null);
+      refuseSession();
 
       await expect(fetchProfile()).rejects.toThrow("Authentication required");
     });
 
     it("throws error when session has no user", async () => {
-      mockedGetSession.mockResolvedValue({
-        expires: "2099-01-01",
-      } as never);
+      // The gate refuses a session without access like a missing one.
+      refuseSession();
 
       await expect(fetchProfile()).rejects.toThrow("Authentication required");
     });
 
     it("throws error when the session was stripped", async () => {
-      mockedGetSession.mockResolvedValue({
-        user: { id: "1" },
-        error: "RefreshTokenError",
-        expires: "2099-01-01",
-      } as never);
+      // The gate refuses a session without access like a missing one.
+      refuseSession();
 
       await expect(fetchProfile()).rejects.toThrow("Authentication required");
     });
@@ -226,7 +192,7 @@ describe("profile-api", () => {
     });
 
     it("throws error when no token is available", async () => {
-      mockedGetSession.mockResolvedValue(null);
+      refuseSession();
 
       await expect(updateProfile(sampleUpdateRequest)).rejects.toThrow(
         "Authentication required",
@@ -254,8 +220,8 @@ describe("profile-api", () => {
       const mockFetch = vi.fn().mockRejectedValue(new Error("Network error"));
       global.fetch = mockFetch;
 
-      // The real sessionFetch turns this into general.unavailable; the
-      // client passes it on unchanged.
+      // The transport turns this into general.unavailable; the client
+      // passes it on with the cause's message.
       await expect(updateProfile(sampleUpdateRequest)).rejects.toThrow(
         "Network error",
       );
@@ -303,7 +269,7 @@ describe("profile-api", () => {
     });
 
     it("throws error when no token is available", async () => {
-      mockedGetSession.mockResolvedValue(null);
+      refuseSession();
 
       await expect(uploadAvatar(mockFile)).rejects.toThrow(
         "Authentication required",

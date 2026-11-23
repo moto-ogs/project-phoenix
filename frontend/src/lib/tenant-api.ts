@@ -378,14 +378,6 @@ export async function resolveTenant(slug: string): Promise<TenantInfo> {
   };
 }
 
-/** Public tenant response (no internal IDs) */
-interface PublicTenantBackend {
-  slug: string;
-  name: string;
-  subdomain: string;
-  organization_name: string;
-}
-
 export interface TenantListResult {
   tenants: TenantSummary[];
   /** "ok" = backend responded successfully, "error" = network or server failure */
@@ -407,20 +399,9 @@ export async function listAllTenants(
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      const response = await fetch("/api/auth/tenants");
-      if (!response.ok) {
-        lastError = new Error(`HTTP ${response.status}`);
-        if (attempt < maxAttempts) {
-          await delay(1000 * 2 ** (attempt - 1));
-          continue;
-        }
-        return { tenants: [], status: "error" };
-      }
-
-      const json = (await response.json()) as {
-        data?: PublicTenantBackend[];
-      };
-      const items = json.data ?? [];
+      const items = await bffJson("public", "GET /auth/tenants", {
+        errorMessage: "Tenant list load failed",
+      });
       return {
         tenants: items.map((t) => ({
           tenantId: "",

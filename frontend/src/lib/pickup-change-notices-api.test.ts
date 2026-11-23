@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const sessionFetch = vi.hoisted(() => vi.fn());
-vi.mock("./session-cache", () => ({ sessionFetch }));
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
+
+const fetchMock = vi.fn();
+beforeEach(() => {
+  vi.stubGlobal("fetch", fetchMock);
+});
 
 import { pickupChangeNoticesService } from "./pickup-change-notices-api";
 
@@ -9,7 +13,7 @@ describe("pickupChangeNoticesService", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("maps the unseen changes", async () => {
-    sessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json({
         data: [
           {
@@ -53,14 +57,14 @@ describe("pickupChangeNoticesService", () => {
         informedAt: "2026-09-09T11:00:00Z",
       },
     ]);
-    expect(sessionFetch).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/students/pickup-change-notices",
       expect.anything(),
     );
   });
 
   it("sends the observed requests and exact timestamps", async () => {
-    sessionFetch.mockResolvedValueOnce(Response.json({ data: [] }));
+    fetchMock.mockResolvedValueOnce(Response.json({ data: [] }));
     const informedAt = "2026-09-09T10:00:00.123456Z";
     await expect(
       pickupChangeNoticesService.markRead("42", [
@@ -68,7 +72,7 @@ describe("pickupChangeNoticesService", () => {
       ]),
     ).resolves.toEqual([]);
 
-    expect(sessionFetch).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/students/42/pickup-change-notices/read",
       expect.objectContaining({
         method: "POST",

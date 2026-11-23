@@ -15,7 +15,6 @@ export type EnvelopableAuthStep =
   | "login"
   | "mfa/verify"
   | "mfa/enroll/confirm"
-  | "mfa/resend"
   | "mfa/trusted-devices"
   | "passkeys/login/verify"
   | "refresh";
@@ -54,7 +53,6 @@ const HOSTED_PORTAL_ROUTES = {
       "login",
       "mfa/verify",
       "mfa/enroll/confirm",
-      "mfa/resend",
       "mfa/trusted-devices",
       "refresh",
     ],

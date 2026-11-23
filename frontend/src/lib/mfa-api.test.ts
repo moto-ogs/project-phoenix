@@ -97,7 +97,12 @@ describe("caterer second factor (#4497)", () => {
       .mockResolvedValueOnce(
         Response.json({ status: "success", data: { status: "authenticated" } }),
       )
-      .mockResolvedValueOnce(Response.json({ challenge_token: "renewed" }))
+      .mockResolvedValueOnce(
+        Response.json({
+          status: "success",
+          data: { challenge_token: "renewed" },
+        }),
+      )
       .mockResolvedValueOnce(Response.json({ status: "success", data: [] }))
       .mockResolvedValueOnce(new Response(null, { status: 204 }));
     global.fetch = fetchMock as unknown as typeof global.fetch;

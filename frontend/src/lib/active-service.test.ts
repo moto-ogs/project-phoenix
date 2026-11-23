@@ -92,12 +92,8 @@ describe("active-service", () => {
 
         expect(mockFetch).toHaveBeenCalledWith(
           "/api/active/groups",
-          expect.objectContaining({
-            method: "GET",
-            headers: expect.not.objectContaining({
-              Authorization: expect.anything(),
-            }),
-          }),
+          // No Authorization header: the BFF carries the session cookie.
+          { method: "GET" },
         );
         expect(result).toHaveLength(1);
         expect(result[0]?.id).toBe("1");
@@ -389,12 +385,8 @@ describe("active-service", () => {
 
         expect(mockFetch).toHaveBeenCalledWith(
           "/api/active/schulhof/status",
-          expect.objectContaining({
-            method: "GET",
-            headers: expect.not.objectContaining({
-              Authorization: expect.anything(),
-            }),
-          }),
+          // No Authorization header: the BFF carries the session cookie.
+          { method: "GET" },
         );
         expect(result.exists).toBe(true);
         expect(result.roomId).toBe("42");

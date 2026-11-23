@@ -6,8 +6,7 @@ import { useRouter } from "next/navigation";
 import { MotoBrand } from "~/components/auth/moto-brand";
 import { useTenant } from "~/lib/tenant-context";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
-import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";
-import { sessionFetch } from "~/lib/session-cache";
+import { bffJson } from "~/lib/bff-fetch";
 import { loginImageSrc } from "~/lib/tenant-api";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
@@ -28,22 +27,12 @@ interface LoginImageSetting {
 }
 
 async function fetchLoginImage(): Promise<LoginImageSetting> {
-  const res = await sessionFetch("/api/settings/login-image");
-  if (!res.ok) {
-    throw await apiErrorFromResponse(
-      res,
-      `Login image fetch failed (${res.status})`,
-    );
-  }
-  const json = (await res.json()) as {
-    data?: {
-      login_image_url?: string | null;
-      can_edit?: boolean;
-    };
-  };
+  const data = await bffJson("tenant", "GET /api/settings/login-image", {
+    errorMessage: "Login image fetch failed",
+  });
   return {
-    loginImageUrl: json?.data?.login_image_url ?? null,
-    canEdit: json?.data?.can_edit ?? false,
+    loginImageUrl: data.login_image_url ?? null,
+    canEdit: data.can_edit,
   };
 }
 
@@ -107,22 +96,12 @@ export function PersonalizationTab() {
         const formData = new FormData();
         formData.append("login_image", file);
 
-        const response = await transportFetch("/api/settings/login-image", {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!response.ok) {
-          throw await apiErrorFromResponse(
-            response,
-            `Login image upload failed (${response.status})`,
-          );
-        }
-
-        const result = (await response.json()) as {
-          data: { login_image_url: string };
-        };
-        setCurrentImageUrl(result.data.login_image_url);
+        const result = await bffJson(
+          "tenant",
+          "POST /api/settings/login-image",
+          { body: formData, errorMessage: "Login image upload failed" },
+        );
+        setCurrentImageUrl(result.login_image_url);
         toastSuccess("Das Login-Bild ist hochgeladen.");
 
         // Refresh server components so TenantProvider picks up the new settings
@@ -145,16 +124,9 @@ export function PersonalizationTab() {
   const handleDelete = useCallback(async () => {
     setIsDeleting(true);
     try {
-      const response = await transportFetch("/api/settings/login-image", {
-        method: "DELETE",
+      await bffJson("tenant", "DELETE /api/settings/login-image", {
+        errorMessage: "Login image delete failed",
       });
-
-      if (!response.ok) {
-        throw await apiErrorFromResponse(
-          response,
-          `Login image delete failed (${response.status})`,
-        );
-      }
 
       setCurrentImageUrl(null);
       toastSuccess("Das Login-Bild ist entfernt.");

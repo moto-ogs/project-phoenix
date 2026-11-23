@@ -4,12 +4,16 @@
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { mockFetch } = vi.hoisted(() => ({
-  mockFetch: vi.fn<(url: string, init?: RequestInit) => Promise<Response>>(),
-}));
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
 
-// The session gate and its renewal are sessionFetch's own tests.
-vi.mock("~/lib/session-cache", () => ({ sessionFetch: mockFetch }));
+const fetchMock =
+  vi.fn<(url: string, init?: RequestInit) => Promise<Response>>();
+beforeEach(() => {
+  vi.stubGlobal("fetch", fetchMock);
+});
 
 import { createCrudService } from "./service-factory";
 import type { EntityConfig } from "./types";
@@ -59,17 +63,17 @@ const pagination = {
 };
 
 function call(index = 0) {
-  const [url, init] = mockFetch.mock.calls[index] ?? [];
+  const [url, init] = fetchMock.mock.calls[index] ?? [];
   return { url, init };
 }
 
 beforeEach(() => {
-  mockFetch.mockReset();
+  fetchMock.mockReset();
 });
 
 describe("getList", () => {
   it("keeps the page of a paginated route and maps every row", async () => {
-    mockFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       ok([{ id: "1", name: "A" }], { pagination }),
     );
     const service = createCrudService({
@@ -91,7 +95,7 @@ describe("getList", () => {
   });
 
   it("gives a list without pages one page", async () => {
-    mockFetch.mockResolvedValueOnce(ok([{ id: "1" }, { id: "2" }]));
+    fetchMock.mockResolvedValueOnce(ok([{ id: "1" }, { id: "2" }]));
     const service = createCrudService({
       ...config,
       api: { routes: { list: "GET /api/activities/" } },
@@ -108,7 +112,7 @@ describe("getList", () => {
   });
 
   it("refuses an answer without data instead of showing an empty list", async () => {
-    mockFetch.mockResolvedValueOnce(Response.json({ rooms: [] }));
+    fetchMock.mockResolvedValueOnce(Response.json({ rooms: [] }));
 
     await expect(createCrudService(config).getList()).rejects.toMatchObject({
       status: 502,
@@ -118,7 +122,7 @@ describe("getList", () => {
 
 describe("getOne", () => {
   it("reads the entity's route with its ID", async () => {
-    mockFetch.mockResolvedValueOnce(ok({ id: "7", name: "Aula" }));
+    fetchMock.mockResolvedValueOnce(ok({ id: "7", name: "Aula" }));
 
     await expect(createCrudService(config).getOne("7")).resolves.toEqual({
       id: "7",
@@ -138,13 +142,13 @@ describe("getOne", () => {
       id: "1",
       name: "custom",
     });
-    expect(mockFetch).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
 
 describe("create", () => {
   it("sends the mapped body after beforeCreate and calls afterCreate", async () => {
-    mockFetch.mockResolvedValueOnce(ok({ id: "1", name: "Neu" }));
+    fetchMock.mockResolvedValueOnce(ok({ id: "1", name: "Neu" }));
     const afterCreate = vi.fn(() => Promise.resolve());
     const service = createCrudService({
       ...config,
@@ -175,12 +179,12 @@ describe("create", () => {
 
     await service.create({ name: "c" });
 
-    expect(mockFetch).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
     expect(afterCreate).toHaveBeenCalled();
   });
 
   it("throws the ApiError with code, details and request ID", async () => {
-    mockFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       refusal(409, {
         detail: "quota",
         code: "students.child_quota_reached",
@@ -205,7 +209,7 @@ describe("create", () => {
 
 describe("update", () => {
   it("puts the body to the entity's route after beforeUpdate", async () => {
-    mockFetch.mockResolvedValueOnce(ok({ id: "1", name: "Neu" }));
+    fetchMock.mockResolvedValueOnce(ok({ id: "1", name: "Neu" }));
     const afterUpdate = vi.fn(() => Promise.resolve());
     const service = createCrudService({
       ...config,
@@ -235,7 +239,7 @@ describe("update", () => {
     await service.update("1", { name: "Neu" }, current);
 
     expect(update).toHaveBeenCalledWith("1", { name: "Neu" }, current);
-    expect(mockFetch).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("keeps the body of a refusal for the caller", async () => {
@@ -243,7 +247,7 @@ describe("update", () => {
       detail: "conflict",
       conflicts: [{ student_id: 42, weekdays: ["mon"] }],
     };
-    mockFetch.mockResolvedValueOnce(refusal(409, problem));
+    fetchMock.mockResolvedValueOnce(refusal(409, problem));
 
     const caught = await createCrudService(config)
       .update("1", { name: "x" })
@@ -256,7 +260,7 @@ describe("update", () => {
 
 describe("remove", () => {
   it("deletes through the entity's route and calls the hooks", async () => {
-    mockFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
     const afterDelete = vi.fn(() => Promise.resolve());
     const service = createCrudService({
       ...config,
@@ -276,11 +280,11 @@ describe("remove", () => {
     });
 
     await expect(service.remove("3")).resolves.toBe(false);
-    expect(mockFetch).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("throws the refusal and skips afterDelete", async () => {
-    mockFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       refusal(409, {
         detail: "group has students",
         code: "general.business_rejection",

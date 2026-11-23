@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "./api-error";
 
-vi.mock("./session-cache", () => ({
-  sessionFetch: vi.fn(),
-}));
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
-import { sessionFetch } from "./session-cache";
+const fetchMock = vi.fn();
+beforeEach(() => {
+  vi.stubGlobal("fetch", fetchMock);
+});
+
 import {
   duplicateLohnartNumbers,
   fetchPayrollDispatch,
@@ -19,8 +21,6 @@ import {
   type PayrollStatus,
 } from "./payroll-api";
 import { routes } from "./contract/settings.generated";
-
-const mockedSessionFetch = vi.mocked(sessionFetch);
 
 const backendStatus = {
   categories: [
@@ -83,7 +83,7 @@ describe("fetchPayrollTargetCoverage", () => {
   });
 
   it("fetches the current month's counts without names", async () => {
-    mockedSessionFetch.mockResolvedValue({
+    fetchMock.mockResolvedValue({
       ok: true,
       json: () =>
         Promise.resolve({
@@ -102,7 +102,7 @@ describe("fetchPayrollTargetCoverage", () => {
       staffTotal: 12,
       staffWithoutTarget: 3,
     });
-    expect(mockedSessionFetch).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/staff/time-tracking/target-coverage",
       { method: "GET" },
     );
@@ -115,17 +115,16 @@ describe("fetchPayrollStatus", () => {
   });
 
   it("fetches and maps the payroll status", async () => {
-    mockedSessionFetch.mockResolvedValue({
+    fetchMock.mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ data: backendStatus }),
     } as Response);
 
     const status = await fetchPayrollStatus();
 
-    expect(mockedSessionFetch).toHaveBeenCalledWith(
-      "/api/settings/payroll-status",
-      { method: "GET" },
-    );
+    expect(fetchMock).toHaveBeenCalledWith("/api/settings/payroll-status", {
+      method: "GET",
+    });
     expect(status.categories[0]?.settingKey).toBe(
       "payroll.lohnart_regelarbeit",
     );
@@ -133,7 +132,7 @@ describe("fetchPayrollStatus", () => {
   });
 
   it("reports a failed status request", async () => {
-    mockedSessionFetch.mockResolvedValue({
+    fetchMock.mockResolvedValue({
       ok: false,
       statusText: "Forbidden",
     } as Response);
@@ -207,12 +206,12 @@ describe("savePayrollSetting", () => {
   });
 
   it("sends the value in its schema type", async () => {
-    mockedSessionFetch.mockResolvedValue({ ok: true, status: 204 } as Response);
+    fetchMock.mockResolvedValue({ ok: true, status: 204 } as Response);
 
     await savePayrollSetting("payroll.dispatch_auto", true);
     await savePayrollSetting("payroll.dispatch_channel", "email");
 
-    expect(mockedSessionFetch).toHaveBeenNthCalledWith(
+    expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       "/api/settings/values/payroll.dispatch_auto",
       expect.objectContaining({
@@ -220,7 +219,7 @@ describe("savePayrollSetting", () => {
         body: JSON.stringify({ value: true }),
       }),
     );
-    expect(mockedSessionFetch).toHaveBeenNthCalledWith(
+    expect(fetchMock).toHaveBeenNthCalledWith(
       2,
       "/api/settings/values/payroll.dispatch_channel",
       expect.objectContaining({ body: JSON.stringify({ value: "email" }) }),
@@ -234,7 +233,7 @@ describe("fetchPayrollDispatch", () => {
   });
 
   it("maps the latest dispatch", async () => {
-    mockedSessionFetch.mockResolvedValue({
+    fetchMock.mockResolvedValue({
       ok: true,
       json: () =>
         Promise.resolve({
@@ -261,7 +260,7 @@ describe("fetchPayrollDispatch", () => {
 
     const latest = await fetchPayrollDispatch();
 
-    expect(mockedSessionFetch).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/staff/time-tracking/payroll-dispatch",
       { method: "GET" },
     );
@@ -286,7 +285,7 @@ describe("fetchPayrollDispatch", () => {
   });
 
   it("answers null before the first dispatch", async () => {
-    mockedSessionFetch.mockResolvedValue({
+    fetchMock.mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ data: { latest: null } }),
     } as Response);

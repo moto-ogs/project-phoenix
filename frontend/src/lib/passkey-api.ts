@@ -1,9 +1,4 @@
-import {
-  ApiError,
-  apiErrorFromBody,
-  apiErrorFromResponse,
-  transportFetch,
-} from "./api-error";
+import { ApiError } from "./api-error";
 import { bffJson, bffJsonUncontracted } from "./bff-fetch";
 import type * as sharedContract from "./contract/shared.generated";
 import { portalAuthPath, type PortalKey } from "./portal-paths";
@@ -50,88 +45,19 @@ async function requireSession(): Promise<void> {
 const PASSKEY_ERROR = "Passkey-Anfrage fehlgeschlagen.";
 
 /**
- * The login options: the BFF forwards the backend's answer as it is, outside
- * the envelope, so bffJson cannot read it.
+ * The login options: a step before the session, whose route forwards the
+ * browser's request (`authStepProxy`) and answers `{ status, data }`.
  */
-async function requestLoginOptions(
+function requestLoginOptions(
   scope: PasskeyScope,
   tenantSlug: string,
 ): Promise<sharedContract.PasskeyCeremonyOptions> {
-  // A request that never reaches the API is general.unavailable (#2517);
-  // an AbortError stays an AbortError.
-  const response = await transportFetch(
+  return bffJsonUncontracted<sharedContract.PasskeyCeremonyOptions>(
+    "public",
+    "POST",
     portalAuthPath(scope, "passkeys/login/options"),
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ tenant_slug: tenantSlug }),
-    },
+    { body: { tenant_slug: tenantSlug }, errorMessage: PASSKEY_ERROR },
   );
-  const text = await response.text();
-  let data: unknown = null;
-  try {
-    data = text ? (JSON.parse(text) as unknown) : null;
-  } catch {
-    data = null;
-  }
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Passkey-Anfrage fehlgeschlagen (${response.status}).`,
-      response.status,
-      data,
-    );
-  }
-  return data as sharedContract.PasskeyCeremonyOptions;
-}
-
-/**
- * The operator's registration options. bffJson's operator row sends every 401
- * to the login and takes no `authRefusals` yet (#7806 closing PR), so a wrong
- * code would end at the login instead of the form. Verification below keeps
- * its own call for the same reason when a registration ceremony expires.
- */
-async function operatorRegisterOptions(
-  body: sharedContract.PasskeyRegisterOptionsRequest,
-): Promise<sharedContract.PasskeyCeremonyOptions> {
-  const response = await transportFetch(
-    "/api/operator/auth/passkeys/register/options",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify(body),
-    },
-  );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, PASSKEY_ERROR);
-  }
-  // The catalog proxy has decoded the answer into its envelope.
-  const answer = (await response.json()) as {
-    data: sharedContract.PasskeyCeremonyOptions;
-  };
-  return answer.data;
-}
-
-async function operatorRegisterVerify(
-  body: sharedContract.PasskeyRegisterVerifyRequest,
-): Promise<sharedContract.PasskeyCredentialSummary> {
-  const response = await transportFetch(
-    "/api/operator/auth/passkeys/register/verify",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify(body),
-    },
-  );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, PASSKEY_ERROR);
-  }
-  const answer = (await response.json()) as {
-    data: sharedContract.PasskeyCredentialSummary;
-  };
-  return answer.data;
 }
 
 export function isPasskeyCeremonyIncompleteError(error: unknown): boolean {
@@ -216,7 +142,11 @@ function registerOptions(
     case "tenant":
       return bffJson("tenant", "POST /auth/passkeys/register/options", options);
     case "operator":
-      return operatorRegisterOptions(body);
+      return bffJson(
+        "platform",
+        "POST /operator/auth/passkeys/register/options",
+        options,
+      );
     case "caterer":
       return bffJson(
         "caterer",
@@ -240,7 +170,11 @@ function registerVerify(
     case "tenant":
       return bffJson("tenant", "POST /auth/passkeys/register/verify", options);
     case "operator":
-      return operatorRegisterVerify(body);
+      return bffJson(
+        "platform",
+        "POST /operator/auth/passkeys/register/verify",
+        options,
+      );
     case "caterer":
       return bffJson(
         "caterer",

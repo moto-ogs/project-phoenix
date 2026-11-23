@@ -2,14 +2,14 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { catalogText } from "~/test/error-catalog-text";
-import { sessionFetch } from "~/lib/session-cache";
+import { renewTenantSession } from "~/lib/session-cache";
 import { TenantPasswordChangeModal } from "./tenant-password-change-modal";
 
-// The staff portal sends through sessionFetch; the stub passes the answer on
-// and records which refusals the call names.
+// The staff session gate lets the request through; a spy on the renewal
+// shows whether a 401 was taken for an ended session.
 vi.mock("~/lib/session-cache", async () => {
   const plain = await import("~/test/mocks/plain-session-fetch");
-  return { ...plain, sessionFetch: vi.fn(plain.sessionFetch) };
+  return { ...plain, renewTenantSession: vi.fn(plain.renewTenantSession) };
 });
 
 const originalFetch = global.fetch;
@@ -78,11 +78,11 @@ describe("TenantPasswordChangeModal (#2517)", () => {
     );
     expect(assign).not.toHaveBeenCalled();
     // The refusal leaves the session alone: no renewal, no sign-out.
-    expect(sessionFetch).toHaveBeenCalledWith(
+    expect(global.fetch).toHaveBeenCalledWith(
       "/api/auth/password",
       expect.objectContaining({ method: "POST" }),
-      { authRefusals: ["identity.current_password_wrong"] },
     );
+    expect(renewTenantSession).not.toHaveBeenCalled();
   });
 
   it("still sends an expired session to the login screen", async () => {

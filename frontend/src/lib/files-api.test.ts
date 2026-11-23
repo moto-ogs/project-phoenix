@@ -1,45 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mockSessionData } from "~/test/mocks/next-auth";
 
-// Mock session-cache before importing the module under test.
-vi.mock("./session-cache", () => {
-  const getCachedSession = vi.fn();
-  return {
-    getCachedSession,
-    clearSessionCache: vi.fn(),
-    // The real sessionFetch's gate and transport, without its renewal.
-    sessionFetch: vi.fn(async (url: string, init?: RequestInit) => {
-      const { ApiError, transportFetch, unavailableApiError } =
-        await vi.importActual<typeof import("./api-error")>("./api-error");
-      let session: { user?: { id?: string }; error?: string } | null;
-      try {
-        session = (await getCachedSession()) as typeof session;
-      } catch (error) {
-        throw error instanceof ApiError ? error : unavailableApiError(error);
-      }
-      if (!session?.user || session.error)
-        throw new ApiError("Authentication required", 401, {
-          code: "general.permission",
-        });
-      return transportFetch(url, {
-        ...init,
-        headers:
-          init?.body instanceof FormData
-            ? init.headers
-            : {
-                "Content-Type": "application/json",
-                ...(init?.headers as Record<string, string> | undefined),
-              },
-      });
-    }),
-  };
-});
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
-import { getCachedSession } from "./session-cache";
 import { ApiError } from "./api-error";
 import { filesService } from "./files-api";
-
-const mockedGetSession = vi.mocked(getCachedSession);
 
 // #2517: the client keeps the error identity (code, status, request ID); the
 // screen turns it into the catalog text. No wording is decided here.
@@ -50,7 +14,6 @@ describe("files-api errors", () => {
     vi.clearAllMocks();
     originalFetch = globalThis.fetch;
     globalThis.fetch = vi.fn();
-    mockedGetSession.mockResolvedValue(mockSessionData());
   });
 
   afterEach(() => {
@@ -150,7 +113,6 @@ describe("files-api folder visibility", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     originalFetch = globalThis.fetch;
-    mockedGetSession.mockResolvedValue(mockSessionData());
   });
 
   afterEach(() => {

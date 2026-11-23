@@ -28,10 +28,7 @@ import {
   formLabelsFromContract,
   type EnrollmentFormLabels,
 } from "~/lib/enrollment-change-request-diff";
-import {
-  enrollmentErrorReader,
-  sendEnrollmentRequest,
-} from "~/lib/enrollment-http";
+import { logEnrollmentFailure } from "~/lib/enrollment-api-error";
 import {
   CHILD_STATUSES,
   type ChangeRequestStatus,
@@ -620,32 +617,21 @@ export async function listStudentEnrollmentRequests(
   return requests.map(requestSummaryFromContract);
 }
 
-const readError = enrollmentErrorReader(
-  logger,
-  "enrollment_admin_request_failed",
-);
-
-/**
- * The export takes its format as a body the contract does not describe
- * (#7808), so it goes out as before.
- */
 export async function exportStudentEnrollmentRequests(
   studentId: string,
   format: EnrollmentExportFormat,
 ): Promise<void> {
-  const response = await sendEnrollmentRequest(
-    `/api/enrollment/admin/students/${encodeURIComponent(studentId)}/requests/export`,
+  const response = await bffFile(
+    "tenant",
+    "POST /api/enrollment/admin/students/{studentId}/requests/export",
     {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ format }),
+      params: { studentId },
+      body: { format },
+      errorMessage: "Export konnte nicht erstellt werden",
     },
+  ).catch((error: unknown) =>
+    logEnrollmentFailure(error, logger, "enrollment_admin_request_failed"),
   );
-
-  if (!response.ok) {
-    throw await readError(response, "Export konnte nicht erstellt werden");
-  }
-
   downloadBlob(
     await response.blob(),
     filenameFromDisposition(response) ?? `anmeldungen.${format}`,

@@ -208,7 +208,10 @@ may return a Response as it is. No BFF route invents another success
 envelope (#2353); a sign-in step the BFF answers itself (password, code,
 enrollment confirmation, second factor) answers `successResponse` too (#7806). Public JSON routes use `createPublicJsonProxy`
 (`lib/backend-proxy-route.server.ts`), login steps before a session
-`authStepProxy` (`lib/auth-proxy.server.ts`). Do not move a route across
+`authStepProxy` (`lib/auth-proxy.server.ts`). A route that forwards a
+backend answer without the envelope (`plain`: `authStepProxy`, the demo
+access routes) wraps its success with `envelopedBackendSuccess`
+(`lib/backend-proxy-response.server.ts`); a 204 and an error pass through. Do not move a route across
 portal auth boundaries to share code. Streaming SSE uses its documented
 exception in [the SSE contract](realtime.md).
 
@@ -333,34 +336,49 @@ slash is dropped and each parameter encoded.
   (`/caterer/…` → `/api/caterer/…`), one under `/api` stays as it is.
 - **401:** one table in `bff-fetch.ts` holds where the portals differ. Staff:
   the session gate before the request and one renewal with a retry
-  (`sessionFetch`), then sign-out; `authRefusals` names codes that refuse
+  (`requireTenantSession`, `renewTenantSession` in `lib/session-cache.ts`),
+  then sign-out; `authRefusals` names codes that refuse
   only the operation. Operator: to `/operator/login`. Parents: to
   `/parents/login`, except for the call's explicit `authRefusals` (e.g. a
   wrong MFA confirmation code or current password). Träger, moto schule and
   caterer: the error stays on the page. A parent client that reports refusals
   (`PARENT_ACCESS_REFUSED_EVENT`) catches the `ApiError` itself.
-- **No contract:** a backend route without a contract gets one first
-  (#7808); its client waits until then. A named `route.ts` the contract
-  cannot carry (`settings/values/[key]` purges the cached tenant lookup) is
-  called with `bffJsonUncontracted<T>(portal, method, path, options)`; each
-  caller is listed with its reason in `bff-fetch-uncontracted.test.ts`, and
-  the list only shrinks.
+- **Route files:** a route a named `route.ts` serves (`routeFileRoutes` in
+  `portals.generated.ts`, #7889: a cache purge, a flow cookie) is a route of
+  `bffJson` like a proxied one, with the backend's answer type. Not so the
+  sign-in, second factor, renewal and switch steps: their route file keeps
+  the tokens and answers the BFF's own `{ status, data }` (#7833), so the
+  helper excludes every route whose reason says so (a compile anchor fails
+  once the generator words it differently), and routes without the envelope
+  (`plain`). Such a step, and a BFF route without any Go route, is called
+  with `bffJsonUncontracted<T>(portal, method, path, options)`; each caller
+  is listed with its reason in `bff-fetch-uncontracted.test.ts`, and the
+  list only shrinks.
 - **Wait:** a refusal with `Retry-After` (429, 503) carries the wait as
   `retryAfterSeconds` on the `ApiError` (`apiErrorFromResponse`).
+- **Keepalive cleanup:** `keepalive: true` starts the request immediately.
+  Staff cleanup skips the browser session gate and its 401 renewal, because
+  that lookup cannot outlive an unloading page. The BFF authenticates the
+  cookie as usual; a refusal still reaches the caller as its `ApiError`.
 - **Lists Go writes as `null`:** the generated type says so (`T[] | null`).
   Read it as an empty list where the screen needs one, once, in the client
   (`slot-lists-api.ts` derives `WithLists<…>` from the generated type); do not
   copy the answer into a hand-written type.
-- **Guards:** `fetchWithAuth`, `authFetch` and `operatorFetch` are gone.
-  `old-fetch-helpers.test.ts` lists the files that still import
-  `sessionFetch` for JSON or `traegerRequest`, each with its blocker; a new
-  importer fails, and the list only shrinks. `scripts/backend-wire-types.mjs`
+- **One transport:** `bff-fetch.ts` holds the only `fetch` of browser code
+  that talks to the BFF; nothing else exports a fetch helper. The old
+  helpers (`fetchWithAuth`, `authFetch`, `operatorFetch`, `traegerRequest`,
+  `sessionFetch`, `transportFetch`) are gone. `old-fetch-helpers.test.ts`
+  fails on a raw `fetch(` in browser code outside its infrastructure list
+  (log shipping, the SSE stream, the session renewal, Auth.js endpoints, a
+  static file), each entry with its reason. `scripts/backend-wire-types.mjs`
   finds hand-written wire types by their form (two `snake_case` fields of
   their own, a generated type imported under another name, a type that only
   renames a generated one); its baseline only shrinks.
-- **Tests:** a client test that stubs `fetch` mocks the session gate with
+- **Tests:** a client test stubs the global `fetch` and mocks the session
+  gate with
   `vi.mock("~/lib/session-cache", () => import("~/test/mocks/plain-session-fetch"))`;
-  answers of a paginated route carry `pagination` (`pagedJson`).
+  answers of a paginated route carry `pagination` (`pagedJson`), plain
+  answer objects become Responses through `plainResponse`/`plainFetch`.
 - **Files:** a route registered with `File: true` is called with
   `bffFile(portal, route, options)` from the same module: the same path,
   portal table and ApiError, resolving to the successful `Response` whose

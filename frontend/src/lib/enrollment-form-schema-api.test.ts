@@ -419,9 +419,12 @@ describe("createSchema", () => {
     expect(error.message).not.toContain("duplicate name");
   });
 
-  it("falls back to HTTP status when body has no error string", async () => {
+  it("falls back to the status class when body has no error string", async () => {
     mockFetch(async () => new Response("not json", { status: 500 }));
-    await expect(createSchema("X", [])).rejects.toThrow(/HTTP 500/);
+    await expect(createSchema("X", [])).rejects.toMatchObject({
+      status: 500,
+      code: "general.server",
+    });
   });
 });
 
