@@ -95,10 +95,13 @@ type NewParty struct {
 // ContractRecord is a stored contract with its current version, its parties
 // and its stored document.
 type ContractRecord struct {
-	Summary    carecontract.ContractSummary
-	Version    carecontract.Version
-	Parties    []carecontract.Party
-	DocumentID *int64
+	Summary carecontract.ContractSummary
+	// RequestChildID is the application child the contract follows; nil for
+	// an imported contract that is not bound (ADR 0309).
+	RequestChildID *int64
+	Version        carecontract.Version
+	Parties        []carecontract.Party
+	DocumentID     *int64
 	// Concluded is how and when the contract was concluded; nil before. The
 	// conclusion at acceptance sets it before the PDF is rendered, so the
 	// frozen PDF and the mail say that the contract is concluded.

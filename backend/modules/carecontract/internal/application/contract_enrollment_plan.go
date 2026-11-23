@@ -439,23 +439,27 @@ type boundChildren map[int64]int64
 // children that have a contract.
 //
 // A row that is not settled (ready or held) names the silent enrollment a
-// run made for the child and that has no contract (EnrollmentChildID): the
-// run stopped before the binding. A ready row binds it; for a row that
+// run made for this contract and that has no contract (EnrollmentChildID):
+// the run stopped before the binding. A ready row binds it; for a row that
 // stays held the contract can no longer be bound to it.
 func planEnrollmentRow(read schoolRead, contract carecontract.EnrollmentContract, applications []carecontract.Application,
 	contracted boundChildren, today calendar.Date) carecontract.EnrollmentPlanRow {
 	row := planContractRow(read, contract, applications, contracted, today)
 	if row.Status == carecontract.EnrollmentHeld || row.Status == carecontract.EnrollmentReady {
-		row.EnrollmentChildID = unboundEnrollment(applications, contracted)
+		row.EnrollmentChildID = unboundEnrollment(contract.ID, applications, contracted)
 	}
 	return row
 }
 
 // unboundEnrollment is the accepted application of the source
-// contract_import the child record has without a contract; 0 without one.
-func unboundEnrollment(applications []carecontract.Application, contracted boundChildren) ident.ID {
+// contract_import the school made for this contract and that has no
+// contract; 0 without one. The application names its contract
+// (ImportContractID): the orphaned enrollment of another contract of the
+// child, an earlier one that ended for instance, is not this contract's and
+// makes a held successor no stuck row.
+func unboundEnrollment(contractID int64, applications []carecontract.Application, contracted boundChildren) ident.ID {
 	for _, application := range applications {
-		if _, has := contracted[application.RequestChildID]; application.ContractImport && !has {
+		if _, has := contracted[application.RequestChildID]; application.ContractImport && application.ImportContractID == contractID && !has {
 			return ident.ID(application.RequestChildID)
 		}
 	}

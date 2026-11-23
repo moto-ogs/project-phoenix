@@ -21,7 +21,7 @@ func endedContract() (carecontract.EnrollmentContract, carecontract.Application)
 	contract := enrollableContract()
 	contract.Versions[0].Services[0].LastDay, contract.Versions[0].Services[1].LastDay = date(2031, 6, 30), date(2031, 6, 30)
 	student := plannedStudent
-	return contract, carecontract.Application{RequestChildID: plannedRequestChild, StudentID: &student, ContractImport: true,
+	return contract, carecontract.Application{RequestChildID: plannedRequestChild, StudentID: &student, ContractImport: true, ImportContractID: contract.ID,
 		Bookings: []carecontract.Booking{{CareOfferingID: 1, Days: []string{"mon", "tue"}, ValidFrom: date(2030, 8, 1), ValidUntil: date(2031, 7, 1)}}}
 }
 
@@ -112,4 +112,13 @@ func TestARowNamesTheSilentEnrollmentWithoutAContract(t *testing.T) {
 		"an application of the parents is no silent enrollment")
 	assert.Zero(t, planEnrollmentRow(enrollmentSchool(), contract, []carecontract.Application{stored}, boundChildren{plannedRequestChild: 3},
 		*date(2031, 9, 1)).EnrollmentChildID, "an enrollment that has a contract is not stuck")
+
+	// The child has a second imported contract, which follows this one. The
+	// orphaned enrollment was made for the first: the successor is held, not
+	// stuck with an enrollment that is not its own.
+	successor := contract
+	successor.ID = contract.ID + 1
+	held := planEnrollmentRow(enrollmentSchool(), successor, []carecontract.Application{stored}, boundChildren{}, *date(2031, 9, 1))
+	assert.Equal(t, carecontract.EnrollmentHeld, held.Status)
+	assert.Zero(t, held.EnrollmentChildID, "the enrollment of another contract of the child is not named")
 }

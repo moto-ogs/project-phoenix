@@ -112,7 +112,7 @@ func runningPhases(read schoolRead, version carecontract.Version, today calendar
 			phases = append(phases, offering)
 		}
 	}
-	slices.SortFunc(phases, func(a, b carecontract.Offering) int { return int(a.PhaseID - b.PhaseID) })
+	slices.SortFunc(phases, func(a, b carecontract.Offering) int { return compareIDs(a.PhaseID, b.PhaseID) })
 	return phases
 }
 

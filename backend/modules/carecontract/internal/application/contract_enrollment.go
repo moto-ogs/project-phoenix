@@ -47,7 +47,7 @@ type EnrollmentStore interface {
 // EnrollmentPorts are the root-bound reads of the plan in the school's
 // tenant transaction.
 type EnrollmentPorts struct {
-	Applications carecontract.SchoolApplications
+	Applications carecontract.StudentApplications
 	Bookings     carecontract.SchoolBookings
 }
 
@@ -151,7 +151,9 @@ func contractedChildren(read carecontract.EnrollmentRead) boundChildren {
 
 // readSchool reads the care offerings of the school with their phases and
 // the accepted applications of the child records with their bookings, by
-// child record: a fixed number of reads, however many contracts.
+// child record: a fixed number of reads, however many contracts. Only the
+// applications of the child records the contracts are linked to are read
+// (data minimisation): no other family of the school, and no guardian.
 func (e *ContractEnrollments) readSchool(ctx context.Context, school *schoolRead, students []int64) (map[int64][]carecontract.Application, error) {
 	offerings, err := e.ports.Bookings.Offerings(ctx, nil)
 	if err != nil {
@@ -165,11 +167,13 @@ func (e *ContractEnrollments) readSchool(ctx context.Context, school *schoolRead
 	for _, offering := range offerings {
 		school.offerings[offering.ID] = offering
 	}
-	accepted, err := e.ports.Applications.AcceptedApplications(ctx, nil)
+	accepted, err := e.ports.Applications.AcceptedStudentApplications(ctx, students)
 	if err != nil {
 		return nil, err
 	}
 	ids := []int64{}
+	// The port answers only these child records; an answer for another one
+	// is dropped rather than planned.
 	accepted = slices.DeleteFunc(accepted, func(application carecontract.Application) bool {
 		return application.StudentID == nil || !slices.Contains(students, *application.StudentID)
 	})

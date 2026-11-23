@@ -242,9 +242,9 @@ type EnrollmentPlanRow struct {
 	// application of the child (EnrollmentReasonFollowsContract).
 	FollowsContractID ident.ID `json:"follows_contract_id,omitempty"`
 	// EnrollmentChildID is, for a ready or a held row, the accepted
-	// application of the source contract_import the child record has
-	// without a contract: a run enrolled the child and stopped before the
-	// binding. A ready row binds it. For a row that is held, or that the
+	// application of the source contract_import the school made for this
+	// contract (Application.ImportContractID) and that has no contract: a
+	// run enrolled the child and stopped before the binding. A ready row binds it. For a row that is held, or that the
 	// school's enrollment refuses, the contract can no longer be bound to
 	// that enrollment (the service of its phase ended, or its bookings no
 	// longer pass the proof): the caller shows such a row as stuck.

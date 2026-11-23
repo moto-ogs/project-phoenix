@@ -161,12 +161,18 @@ func replacedID(plan amendmentPlan) any {
 }
 
 // lockedTimeline takes the row lock of the contract, the same lock the
-// conclusion takes (#4680), and tells whether the contract is still active
-// with the timeline the new version was planned on. A contract that ended
-// or got another version meanwhile is left for the next run.
+// conclusion takes (#4680), and tells whether the contract is still active,
+// still follows the application child whose bookings the version was
+// planned from, and has the timeline it was planned on. A contract that
+// ended or got another version meanwhile is left for the next run. So is an
+// imported contract the office took off its application child since the
+// read (UnbindApplication, ADR 0309), or bound to another one: it no longer
+// follows the bookings that were read, and the binding and its way back
+// take this row lock too.
 func (c *Conclusions) lockedTimeline(ctx context.Context, organizationID int64, contract AmendableContract) (bool, error) {
 	record, err := c.intake.store.Contract(ctx, organizationID, contract.ID, true)
-	if err != nil || record.Summary.Status != carecontract.StatusActive {
+	if err != nil || record.Summary.Status != carecontract.StatusActive ||
+		record.RequestChildID == nil || *record.RequestChildID != contract.Key.RequestChildID {
 		return false, err
 	}
 	versions, err := c.intake.store.Versions(ctx, organizationID, contract.ID)

@@ -27,6 +27,19 @@ type enrolledSchool struct {
 	applications []carecontract.Application
 }
 
+// interruptedBookings are the bookings of a school with what happens once
+// they were read, before the contract is written.
+type interruptedBookings struct {
+	carecontract.SchoolBookings
+	then func()
+}
+
+func (b interruptedBookings) Bookings(ctx context.Context, ids []int64) (map[int64][]carecontract.Booking, error) {
+	bookings, err := b.SchoolBookings.Bookings(ctx, ids)
+	b.then()
+	return bookings, err
+}
+
 func (s *enrolledSchool) TraegerSchools(context.Context, int64) ([]carecontract.School, error) {
 	return []carecontract.School{s.school}, nil
 }
@@ -35,6 +48,17 @@ func (s *enrolledSchool) AcceptedApplications(_ context.Context, ids []int64) ([
 	accepted := []carecontract.Application{}
 	for _, application := range s.applications {
 		if len(ids) == 0 || slices.Contains(ids, application.RequestChildID) {
+			application.Bookings = nil
+			accepted = append(accepted, application)
+		}
+	}
+	return accepted, nil
+}
+
+func (s *enrolledSchool) AcceptedStudentApplications(_ context.Context, studentIDs []int64) ([]carecontract.Application, error) {
+	accepted := []carecontract.Application{}
+	for _, application := range s.applications {
+		if application.StudentID != nil && slices.Contains(studentIDs, *application.StudentID) {
 			application.Bookings = nil
 			accepted = append(accepted, application)
 		}
@@ -210,6 +234,54 @@ func TestAnImportedContractIsBoundAndThenFollowsItsBookings(t *testing.T) {
 	require.NoError(t, f.db.NewRaw(`SELECT source FROM care_contract.contract_versions WHERE organization_id = ? AND contract_id = ?
 		AND version_number = 2`, f.org, f.imported).Scan(context.Background(), &source))
 	assert.Equal(t, carecontract.SourceBookingChange, source, "a bound imported contract is amended like every other")
+}
+
+// The amendment read the bound contract and the changed bookings of its
+// application child; before it takes the row lock of the contract, the
+// office takes the binding off. The contract no longer follows these
+// bookings: no version is written from them.
+func TestAnAmendmentWritesNoVersionForAContractUnboundSinceItsRead(t *testing.T) {
+	t.Parallel()
+	f := newEnrollmentFixture(t, "Träger Anpassung nach dem Lösen")
+	row := f.plan(t).Rows[0]
+	require.Equal(t, carecontract.EnrollmentReady, row.Status)
+	f.enroll(row)
+	require.Equal(t, carecontract.BindingBound, f.bind(t, f.binding(row))[0].Status)
+	// The school approved a second weekday from 5 January 2099: the run
+	// would write version 2.
+	changed := calendar.NewDate(2099, 1, 5)
+	f.school.applications[0].Bookings[0].ValidUntil = &changed
+	f.school.applications[0].Bookings = append(f.school.applications[0].Bookings,
+		carecontract.Booking{CareOfferingID: 7, Days: []string{"mon", "tue"}, ValidFrom: &changed})
+	unbound := false
+	interrupted := *f.conclusions
+	intake := *interrupted.intake
+	intake.bookings = interruptedBookings{SchoolBookings: f.school, then: func() {
+		unbound = true
+		require.NoError(t, testpkg.WithinTraeger(f.ctx, f.org, func(txCtx context.Context) error {
+			_, err := f.enrollments.UnbindApplication(txCtx, f.reviewer, f.imported, f.requestChild)
+			return err
+		}))
+	}}
+	interrupted.intake = &intake
+
+	run, err := interrupted.AmendFromBookings(f.ctx, f.org)
+	require.NoError(t, err)
+	require.True(t, unbound, "the office took the binding off between the read and the write")
+	assert.Empty(t, run.Amended, "an unbound contract follows no bookings")
+	assert.Equal(t, 1, f.count(t, `SELECT COUNT(*) FROM care_contract.contract_versions WHERE organization_id = ? AND contract_id = ?`,
+		f.org, f.imported), "no version from bookings the contract no longer follows")
+
+	// Bound again, the same bookings make the version.
+	again := f.plan(t).Rows[0]
+	require.Equal(t, carecontract.EnrollmentHeld, again.Status, "the changed bookings are not the contract's any more")
+	require.NoError(t, testpkg.WithinTraeger(f.ctx, f.org, func(txCtx context.Context) error {
+		_, err := f.store.BindContractApplications(txCtx, f.org, []ports.ApplicationBinding{{ContractID: f.imported, StudentID: f.student, RequestChildID: f.requestChild}})
+		return err
+	}))
+	run, err = f.conclusions.AmendFromBookings(f.ctx, f.org)
+	require.NoError(t, err)
+	assert.Len(t, run.Amended, 1, "a bound contract is amended as before")
 }
 
 // What the bound contract is to the other readers: it keeps its child

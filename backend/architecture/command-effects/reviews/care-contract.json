@@ -353,7 +353,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolApplications.AcceptedApplications",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.ContractApplications.AcceptedContractApplications: reads the accepted application children, original acceptance instant and checksummed consent text in the school transaction, with whether the form required each ticked block (#4682: an optional block records the early start wish, never the conditions). The root only maps values, since #6335 also the number of children the parents stated on the registration with its time, since #6456 whether a rollover renewed the child into its phase, since #7760 whether the school made the application for the child of an imported contract (the source contract_import, ADR 0309); no mutation or scope switch (#4678, #4680, #4682, #6335, #6456, #7760, ADR 0153).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.ContractApplications.AcceptedContractApplications: reads the accepted application children, original acceptance instant and checksummed consent text in the school transaction, with whether the form required each ticked block (#4682: an optional block records the early start wish, never the conditions). The root only maps values, since #6335 also the number of children the parents stated on the registration with its time, since #6456 whether a rollover renewed the child into its phase, since #7760 whether the school made the application for the child of an imported contract (the source contract_import, ADR 0309) and for which contract; no mutation or scope switch (#4678, #4680, #4682, #6335, #6456, #7760, ADR 0153).",
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/enrollment.ContractApplications.AcceptedContractApplications",
       "target_owner": "enrollment"
@@ -611,6 +611,26 @@
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/tokenprimitives.NewOpaqueCapabilityToken",
       "target_owner": "identity-access"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.careContractApplications.AcceptedStudentApplications",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.StudentApplications.AcceptedStudentApplications",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.ContractApplications.AcceptedStudentApplications: reads the accepted application children of the named child records in the school transaction, and of no other (the plan of imported contracts, #7760, ADR 0309 section 1). The root only maps values and passes on the application child, its child record, whether the school made the application for an imported contract and for which one; nothing of the guardians. No mutation, lock or scope switch.",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/enrollment.ContractApplications.AcceptedStudentApplications",
+      "target_owner": "enrollment"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.careContractApplications.NamePhases",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.StudentApplications.NamePhases",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.ContractApplications.ContractPhases: reads the names and inclusive service bounds of the enrollment phases of the school's offerings in its tenant transaction, for the plan of imported contracts (#7760, ADR 0309, as for carecontract.SchoolApplications.NamePhases, #4678).",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/enrollment.ContractApplications.ContractPhases",
+      "target_owner": "enrollment"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.careContractTraeger.ActiveTraegerIDs",
