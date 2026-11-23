@@ -8,6 +8,7 @@ import (
 	"slices"
 
 	enrollmentNative "github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // The writes of the enrollment of the children of imported care contracts
@@ -15,10 +16,10 @@ import (
 //
 // Statements. What Enrollment owns is read and written in sets, so its
 // statements do not grow with the number of children: the gates, per phase
-// its offerings, its applications and the stored bookings of this source,
+// its offerings, its applications and the stored bookings the run compares,
 // the child records with their persons, then one insert each for the
-// requests, the children and the submitted choices, one update for the
-// approvals and one resync of the pickup auto excusals for all children.
+// requests, the children and the submitted choices and one update for the
+// approvals.
 //
 // The care a child's bookings derive is Care Plan's: it records the bookings
 // (RecordCareOfferingBookings), derives the rosters of the approval
@@ -27,18 +28,28 @@ import (
 // application child under that child's booking lock, as every approval calls
 // them. These three calls stay per child. They are the roster writer of the
 // approval, shared with Decide and the rollover; a set-based form is a
-// rewrite of that writer, not a variant of it. Measured with one offering
-// linked to one roster: 15 statements per child (3 for the bookings, 9 for
-// the rosters, 3 for the multi-source rosters), asserted exactly by the
-// query budget services.enrollment.contract_enrollments.enroll.
+// rewrite of that writer, not a variant of it. The resync of the pickup auto
+// excusals is one call for all children, and Care Plan works through it one
+// child at a time too: it locks the child record and re-derives each coming
+// pickup exception under the lock of its day. Measured with one offering
+// linked to one roster and one coming pickup exception that gains an
+// excusal: 31 statements per child (3 for the bookings, 9 for the rosters,
+// 3 for the multi-source rosters, 16 for the excusals; 2 of the 16 without
+// a coming exception), asserted exactly by the query budget
+// services.enrollment.contract_enrollments.enroll.
 
-// EnrollContractChildren enrolls each child that can be enrolled. It takes
-// the approval gates first, then the match lock of each phase in ascending
-// order, before any row lock (ADR 0162).
+// EnrollContractChildren enrolls each child that can be enrolled and
+// confirms each application a row names. It takes the approval gates first,
+// then the match lock of each phase in ascending order, before any row lock
+// (ADR 0162). A school that derives no care from bookings is refused before
+// any of it.
 func (d *Decisions) EnrollContractChildren(ctx context.Context, enrollments []enrollmentNative.ContractEnrollment) (publicResult []enrollmentNative.ContractEnrollmentResult, publicErr error) {
 	defer func() { publicErr = PublicError(publicErr) }()
 	results := make([]enrollmentNative.ContractEnrollmentResult, len(enrollments))
 	if err := d.requireContractEnrollments(enrollments); err != nil || len(enrollments) == 0 {
+		return results, err
+	}
+	if off, err := d.refuseWithoutCareOfferings(ctx, enrollments, results); err != nil || off {
 		return results, err
 	}
 	phases, err := d.lockContractPhases(ctx, enrollments)
@@ -82,10 +93,6 @@ func (d *Decisions) enrollContractChildren(ctx context.Context, pending []*contr
 	if err := d.deps.PhaseHolders.InsertContractEnrollments(ctx, writes, stamp); err != nil {
 		return fmt.Errorf("contract enrollment: create requests: %w", err)
 	}
-	careOfferingsEnabled, err := d.careOfferingsEnabled(ctx)
-	if err != nil {
-		return fmt.Errorf("contract enrollment: resolve care offerings setting: %w", err)
-	}
 	approvals := make([]enrollmentNative.ContractChildApproval, len(pending))
 	students := make([]int64, 0, len(pending))
 	for i, subject := range pending {
@@ -96,10 +103,7 @@ func (d *Decisions) enrollContractChildren(ctx context.Context, pending []*contr
 		if err := d.deps.CareBookings.RecordCareBookings(ctx, subject.write.Child.ID, subject.bookings); err != nil {
 			return fmt.Errorf("contract enrollment: student %d: record care bookings: %w", subject.input.StudentID, err)
 		}
-		if !careOfferingsEnabled {
-			continue
-		}
-		if err := d.materializeEnrollmentsForApproval(ctx, subject.write.Child.ID, subject.input.StudentID, subject.phase.phase); err != nil {
+		if err := d.materializeEnrollmentsForApproval(ctx, subject.write.Child.ID, subject.input.StudentID, subject.careWindow()); err != nil {
 			return fmt.Errorf("contract enrollment: student %d: %w", subject.input.StudentID, err)
 		}
 	}
@@ -109,15 +113,39 @@ func (d *Decisions) enrollContractChildren(ctx context.Context, pending []*contr
 	return d.followContractApprovals(ctx, pending, students)
 }
 
+// careWindow is the phase of the child as Care Plan derives its rosters
+// from it: the phase, starting on the day the child's bookings start. Care
+// Plan reads the bookings of an approval on the first day of the window
+// and starts the roster rows there. A contract that began after the
+// service of the phase books from its first day, so the window starts
+// there too: read at the service start, such a child had no booking and
+// got no roster, and no row may reach back before the contract. For a
+// child booked from the service start it is the phase itself.
+func (s *contractSubject) careWindow() *enrollmentNative.Phase {
+	window := *s.phase.phase
+	if s.careStart.After(calendar.Date(window.ServiceStartDate)) {
+		window.ServiceStartDate = enrollmentNative.Date(s.careStart)
+	}
+	return &window
+}
+
 // followContractApprovals runs what follows the approvals: per child the
 // rosters with several source offerings, and once for all children the
-// pickup auto excusals of the staff, which follow the bookings. The
-// announcement of the pickup projection is left out: it reaches the
-// children's guardians in the parents portal.
+// pickup auto excusals of the staff, which follow the bookings: a coming
+// pickup exception keeps its day, time and reason, and the excusal and the
+// staff task derived from the booked end time are derived again.
+//
+// The announcement of the pickup projection is left out
+// (ReconcileOfferingPickupForStudents): it reaches the children's guardians
+// in the parents portal. Care Plan makes that announcement and the two
+// staff-only ones (the pickup schedule of the school, the hints of the
+// manual student plan, #5498) in one call, and has no capability for the
+// staff part alone. So staff views open during a run show the new children
+// after a reload, not live (ADR 0309).
 func (d *Decisions) followContractApprovals(ctx context.Context, pending []*contractSubject, students []int64) error {
 	for _, subject := range pending {
 		// Care Plan's per-child call of an approval (see the file comment).
-		if err := d.resyncMultiSourceTemplatesForChild(ctx, subject.write.Child.ID, subject.phase.phase); err != nil {
+		if err := d.resyncMultiSourceTemplatesForChild(ctx, subject.write.Child.ID, subject.careWindow()); err != nil {
 			return fmt.Errorf("contract enrollment: student %d: resync multi-source templates: %w", subject.input.StudentID, err)
 		}
 		d.logger().Info("contract enrollment created",

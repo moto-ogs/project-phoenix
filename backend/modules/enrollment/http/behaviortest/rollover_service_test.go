@@ -48,6 +48,9 @@ type rolloverTestEnv struct {
 	outbox          *recordingOutbox
 	sourcePhase     *capability.Phase
 	creatorID       int64
+	// excusalToday pins the day the pickup auto excusals resync from; nil
+	// is the real day, as the root resyncs.
+	excusalToday func() calendar.Date
 }
 
 func setupRolloverTest(t *testing.T) *rolloverTestEnv {

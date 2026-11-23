@@ -18,7 +18,10 @@ import (
 //     account access to the school, and changes neither the child record
 //     nor a guardian, a relationship, a consent or a weekly plan. The
 //     request names no guardian and no address, so no parent finds it in
-//     the parents portal.
+//     the parents portal. What follows from the bookings is derived as
+//     after every approval: a coming pickup exception keeps its day, time
+//     and reason, and its automatic excusal and the staff task of the day
+//     follow the booked end time.
 //   - It writes one request with one approved child per contract, linked to
 //     the child record that exists, with the bookings given and the rosters
 //     an approval derives from them.
@@ -35,16 +38,31 @@ import (
 //     bound to such an application.
 //   - What the plan read of the school is compared again under the locks:
 //     the service of the phase and, per booking, the end times, the
-//     weekdays and the weekday mode of the offering. A child whose phase or
-//     offering changed since the plan is answered as changed and gets no
-//     enrollment.
+//     weekdays and the weekday mode of the offering, and that the offering
+//     still counts as care. A child whose phase or offering changed since
+//     the plan is answered as changed and gets no enrollment.
+//   - It also confirms what the plan proved of an application that exists.
+//     A row that names an approved application child (RequestChildID) is
+//     never enrolled: under the same locks the capability checks that this
+//     child is the only one of the phase that holds the child record and
+//     that its stored bookings are still the ones the plan proved, and
+//     answers existing, else changed or has_application. A contract is
+//     bound only to an application child this capability answered as
+//     enrolled or existing.
+//   - No child is booked before its contract: the bookings of a child start
+//     on one day, the service start of the phase or a later day within it,
+//     and its rosters start on that day.
+//   - A school that derives no care from bookings
+//     (enrollment.care_offerings_enabled off) gets no enrollment: every row
+//     is refused before anything is read, locked or written.
 //   - A row that cannot be enrolled is refused with its reason and writes
 //     nothing; the other rows go on.
 //   - The statements of the capability itself do not grow with the number
 //     of children: it reads and writes its rows in sets. The care a child's
 //     bookings derive (the bookings, the rosters and the multi-source
 //     rosters) is written by Care Plan's building blocks of an approval,
-//     one child at a time (ADR 0309).
+//     one child at a time, and so is the resync of its pickup auto
+//     excusals (ADR 0309).
 
 // What the enrollment did with a child.
 const (
@@ -52,7 +70,10 @@ const (
 	// answers it for a child the call would enroll.
 	ContractEnrollmentEnrolled = "enrolled"
 	// ContractEnrollmentExisting is a child that has the enrollment of this
-	// source in the phase already, with the bookings given.
+	// source in the phase already, with the bookings given; and the
+	// application a row names (ContractEnrollment.RequestChildID) that is
+	// the child record's approved application of the phase with the stored
+	// bookings the plan proved.
 	ContractEnrollmentExisting = "existing"
 	// ContractEnrollmentHasApplication is a child with another application
 	// in the phase; RequestID names it, RequestChildID its child. A contract
@@ -60,8 +81,12 @@ const (
 	ContractEnrollmentHasApplication = "has_application"
 	// ContractEnrollmentChanged is a child whose phase or offering is no
 	// longer what the plan read: the service of the phase moved, or an
-	// offering has other end times, weekdays or another weekday mode. It
-	// writes nothing; the caller plans again.
+	// offering has other end times, weekdays or another weekday mode, or no
+	// longer counts as care. For a row that names an application it is also
+	// an application that is gone, no longer approved or matched by the
+	// office, or whose stored bookings are not the ones the plan proved, as
+	// when the office changed its weekdays after the plan. It writes
+	// nothing; the caller plans again.
 	ContractEnrollmentChanged = "changed"
 	// ContractEnrollmentRefused is a child that is not enrolled; Reason
 	// says why.
@@ -90,10 +115,19 @@ const (
 	// ContractEnrollmentDayUnavailable is a weekday the offering does not
 	// offer, or a subset of the weekdays of an offering with fixed days.
 	ContractEnrollmentDayUnavailable = "day_unavailable"
-	// ContractEnrollmentBookingWindow is a booking that does not start with
-	// the service of the phase, where the roster of an approved child is
-	// read, does not end within it, or names an offering twice.
+	// ContractEnrollmentBookingWindow is a booking that starts before the
+	// service of the phase or on another day than the other bookings of the
+	// child, does not end within the service, or names an offering twice.
 	ContractEnrollmentBookingWindow = "booking_window"
+	// ContractEnrollmentCareOfferingsOff is a school that derives no care
+	// from bookings (enrollment.care_offerings_enabled off): an approval
+	// there writes no roster, so no child is enrolled.
+	ContractEnrollmentCareOfferingsOff = "care_offerings_off"
+	// ContractEnrollmentSharedRoster is a child with two bookings that end
+	// on different days and feed one roster through the direct link of
+	// their offerings. A roster row has one end for all its weekdays, so
+	// the child would stay on the roster after one booking ended.
+	ContractEnrollmentSharedRoster = "shared_roster"
 	// ContractEnrollmentPlannedChange is a contract with a planned version.
 	// A dated change of the bookings of an approved child tells the child's
 	// guardians in the parents portal (Care Plan's offering adjustment), so
@@ -130,16 +164,26 @@ type ContractBookingChange struct {
 }
 
 // ContractEnrollment asks for the enrollment of one child record in a phase:
-// the bookings that hold from the service start of the phase, the planned
-// changes after it, the contract they come from and the account that acts.
-// ServiceStart and ServiceEnd are the first and the last day of the service
-// of the phase as the plan read them.
+// the bookings that hold from the first day the contract promises care in
+// the phase, the planned changes after it, the contract they come from and
+// the account that acts. ServiceStart and ServiceEnd are the first and the
+// last day of the service of the phase as the plan read them.
+//
+// With RequestChildID the row asks for no enrollment but for the
+// confirmation of the approved application the plan proved: Bookings are
+// then the bookings of that application as the plan read them from
+// ProvedOn on (carecontract.EnrollmentPlanRow.ApplicationBookings), and the
+// answer is existing only when they are still the stored ones.
 type ContractEnrollment struct {
-	StudentID      int64
-	PhaseID        int64
-	ContractID     int64
-	ServiceStart   calendar.Date
-	ServiceEnd     calendar.Date
+	StudentID    int64
+	PhaseID      int64
+	ContractID   int64
+	ServiceStart calendar.Date
+	ServiceEnd   calendar.Date
+	// RequestChildID names the approved application child the plan proved;
+	// 0 for a child to enroll. ProvedOn is the day of that plan.
+	RequestChildID int64
+	ProvedOn       calendar.Date
 	Bookings       []ContractBooking
 	Changes        []ContractBookingChange
 	ActorAccountID int64
@@ -168,6 +212,9 @@ type ContractEnrollmentHolder struct {
 	// Created tells that the child is linked to the student as the one it
 	// created (created_student_id), not only matched to it.
 	Created bool
+	// MatchedByOffice tells that the office matched the child to the child
+	// record: no contract is bound to such an application (#6053).
+	MatchedByOffice bool
 }
 
 // ContractEnrollmentWrite is the request of one contract enrollment with its
@@ -211,9 +258,12 @@ type ContractStudent struct {
 // the inputs in their order.
 type ContractEnrollments interface {
 	// CheckContractChildren answers what EnrollContractChildren would do
-	// with each child, and writes and locks nothing.
+	// with each child, and writes and locks nothing. Its answer for a row
+	// that names an application is a preview: only the answer under the
+	// locks of EnrollContractChildren confirms an application for a binding.
 	CheckContractChildren(ctx context.Context, enrollments []ContractEnrollment) ([]ContractEnrollmentResult, error)
-	// EnrollContractChildren enrolls each child that can be enrolled, under
-	// the approval gates of the school and the lock of each phase.
+	// EnrollContractChildren enrolls each child that can be enrolled, and
+	// confirms each application a row names, under the approval gates of
+	// the school and the lock of each phase.
 	EnrollContractChildren(ctx context.Context, enrollments []ContractEnrollment) ([]ContractEnrollmentResult, error)
 }

@@ -62,6 +62,9 @@ func setupContractEnrollment(t *testing.T) *contractEnrollmentEnv {
 		o.ActivityGroupID, o.CountsAsCare, o.PickupTimes = &group.ID, true, carePickupTimes("mon", "tue", "wed", "thu", "fri")
 	})
 	bookings := &countingBookings{TestDecisionBookings: env.bookings}
+	// The pickup auto excusals resync from the day of the harness, so the
+	// coming pickup exception of a case is one on every day the suite runs.
+	env.excusalToday = func() calendar.Date { return decisionTestToday }
 	return &contractEnrollmentEnv{decisionTestEnv: env, bookings: bookings, offering: offering, groupID: group.ID,
 		owner:    newDecisionsForTestWithBookings(t, env.rolloverTestEnv, bookings, nil, nil, nil, nil),
 		contract: testpkg.UniqueTestTenantID(t)}
@@ -117,13 +120,16 @@ func (e *contractEnrollmentEnv) count(t *testing.T, query string, args ...any) i
 
 // silentTables are the rows of the school a silent enrollment must leave as
 // they are: the child record, the person, guardians, their relationships
-// and accesses, consents, the weekly plans, and everything that sends.
+// and accesses, consents, the weekly plans, and everything that sends. The
+// pickup exceptions of a day are not among them: they keep what staff or
+// parents entered, but the excusal derived from the booked end time follows
+// the bookings (asserted where a child has one).
 var silentTables = []string{
 	"users.student_profiles", "users.student_school_memberships", "users.student_care_profiles", "users.persons",
 	"users.guardian_profiles", "users.guardian_phone_numbers", "users.student_guardian_relationships",
 	"auth.guardian_student_access", "auth.account_tenants", "users.privacy_consents", "audit.student_consent_changes",
 	"audit.student_field_edits", "users.student_care_exits", "schedule.student_pickup_schedules",
-	"schedule.student_arrival_schedules", "schedule.student_pickup_exceptions", "platform.email_outbox", "platform.push_outbox",
+	"schedule.student_arrival_schedules", "platform.email_outbox", "platform.push_outbox",
 	"auth.guardian_invitations", "auth.invitation_tokens",
 }
 
@@ -154,6 +160,12 @@ func TestContractEnrollmentEnrollsAnExistingChildSilently(t *testing.T) {
 	guardian := testpkg.CreateTestGuardianProfileNamed(t, e.db, "Erika", "Vertrag", "contract-enrollment-guardian")
 	testpkg.CreateTestStudentGuardianLink(t, e.db, student.ID, guardian.ID, "primary_guardian")
 	account := testpkg.CreateTestAccountWithPassword(t, e.db, *guardian.Email, testpkg.NewTestPassword())
+	// The child has a weekly pickup plan and a pickup exception on a coming
+	// Monday, earlier than the end time the booking brings.
+	staff := testpkg.CreateTestStaff(t, e.db, "Contract", "Pickup")
+	testpkg.CreateTestPickupSchedule(t, e.db, student.ID, 3, staff.ID, "15:00")
+	monday := nextWeekday(calendar.Date(e.sourcePhase.ServiceStartDate), time.Monday)
+	exception := testpkg.CreateTestPickupException(t, e.db, student.ID, monday, staff.ID, "13:00", "Arzttermin")
 	before := e.snapshot(t)
 	mails := len(e.outbox.entries)
 
@@ -204,6 +216,25 @@ func TestContractEnrollmentEnrollsAnExistingChildSilently(t *testing.T) {
 	assert.Equal(t, 1, e.count(t, rosters, testpkg.Tenant(t), student.ID, e.groupID), "the approval derives the roster of the offering")
 
 	assert.Equal(t, before, e.snapshot(t), "the child record, the guardians, the consents, the plans and the outboxes stay as they are")
+	// The pickup exception keeps its day, its time and its reason. What
+	// follows from the bookings is derived again, as after every approval:
+	// the booked end time is the child's end of the day now, so the earlier
+	// pickup of the exception excuses the child from its time on.
+	var kept struct {
+		Day         calendar.Date `bun:"exception_date"`
+		Pickup      string        `bun:"pickup"`
+		Reason      string        `bun:"reason"`
+		ExcusedAuto bool          `bun:"excused_auto"`
+		ExcusedFrom string        `bun:"excused_from"`
+	}
+	require.NoError(t, e.db.NewRaw(`SELECT exception_date, to_char(pickup_time, 'HH24:MI') AS pickup, reason, excused_auto,
+		COALESCE(to_char(excused_from, 'HH24:MI'), '') AS excused_from
+		FROM schedule.student_pickup_exceptions WHERE tenant_id = ? AND id = ?`, testpkg.Tenant(t), exception.ID).Scan(ctx, &kept))
+	assert.Equal(t, monday, kept.Day)
+	assert.Equal(t, "13:00", kept.Pickup)
+	assert.Equal(t, "Arzttermin", kept.Reason)
+	assert.True(t, kept.ExcusedAuto, "the excusal that follows from the booked end time is derived")
+	assert.Equal(t, "13:00", kept.ExcusedFrom)
 	assert.Len(t, e.outbox.entries, mails, "no parent mail")
 	assert.Zero(t, e.bookings.announcements, "no pickup announcement reaches the guardians")
 	assert.Zero(t, e.bookings.adjustments)
@@ -289,8 +320,8 @@ func TestContractEnrollmentRefusesWhatItCannotEnroll(t *testing.T) {
 	foreign.Bookings[0].ValidFrom, foreign.Bookings[0].ValidUntil = calendar.NewDate(2027, 9, 1), calendar.NewDate(2028, 8, 1)
 	unknownPhase := e.input(valid.ID, e.booking("mon"))
 	unknownPhase.PhaseID = testpkg.UniqueTestTenantID(t)
-	late := e.booking("mon")
-	late.ValidFrom = late.ValidFrom.AddDays(30)
+	early := e.booking("mon")
+	early.ValidFrom = early.ValidFrom.AddDays(-1)
 	long := e.booking("mon")
 	long.ValidUntil = long.ValidUntil.AddDays(1)
 	change := e.input(planned.ID, e.booking("mon"))
@@ -300,7 +331,7 @@ func TestContractEnrollmentRefusesWhatItCannotEnroll(t *testing.T) {
 		e.input(enrolled, e.booking("mon")), e.input(testpkg.UniqueTestTenantID(t), e.booking("mon")),
 		e.input(inactive.ID, e.booking("mon")), e.input(withoutPlace.ID, e.booking("mon")), e.input(undated.ID, e.booking("mon")),
 		foreign, unknownPhase, e.input(valid.ID, e.booking("sat")), e.input(valid.ID, e.booking()), e.input(valid.ID),
-		e.input(valid.ID, late), e.input(valid.ID, long), e.input(valid.ID, e.booking("mon"), e.booking("tue")), change,
+		e.input(valid.ID, early), e.input(valid.ID, long), e.input(valid.ID, e.booking("mon"), e.booking("tue")), change,
 	}
 	want := []capability.ContractEnrollmentResult{
 		{Status: capability.ContractEnrollmentHasApplication, RequestID: requestID, RequestChildID: childID},
@@ -402,14 +433,18 @@ func TestContractEnrollmentRefusesAPlanTheSchoolOutgrew(t *testing.T) {
 	assert.Equal(t, stored[0].RequestChildID, again[0].RequestChildID)
 }
 
-// The statements of an enrollment run. What Enrollment owns is read and
-// written in sets: the gates, the phase with its offerings and
+// The statements of an enrollment run, composed as production composes it,
+// with the resync of the pickup auto excusals. What Enrollment owns is read
+// and written in sets: the gates, the phase with its offerings and
 // applications, the child records with their persons, the requests, the
 // children, the choices and the approvals cost the same for one child and
-// for three. Care Plan writes the care of each child with the building
-// blocks of an approval, one child at a time: its bookings, its rosters and
-// its multi-source rosters. That residual is asserted exactly, so a further
-// statement per child fails here.
+// for three. Care Plan writes the care of each child one child at a time:
+// its bookings, its rosters and its multi-source rosters with the building
+// blocks of an approval, and the resync of the child's pickup auto
+// excusals, which locks the child record and reads its coming pickup
+// exceptions. Every child here has one such exception that gains an
+// excusal. That residual is asserted exactly, so a further statement per
+// child fails here.
 func TestContractEnrollmentQueryBudget(t *testing.T) {
 	t.Parallel()
 	e := setupContractEnrollment(t)
@@ -417,11 +452,21 @@ func TestContractEnrollmentQueryBudget(t *testing.T) {
 	// perChildCarePlan is Care Plan's share of one child with one offering
 	// that feeds one roster: 3 statements to record the bookings, 9 to
 	// derive the rosters, 3 to reconcile the multi-source rosters.
-	const perChildCarePlan = 15
+	// perChildExcusal is the resync of the pickup auto excusals of one
+	// child: 2 statements to lock the child record and read its coming
+	// pickup exceptions, and 14 for the one exception here that gains an
+	// excusal (the day lock, the baseline from the bookings, the staff task
+	// of the day, the exception and the blocks it excuses). A child without
+	// a coming pickup exception costs the 2.
+	const perChildCarePlan, perChildExcusal = 15, 16
+	staff := testpkg.CreateTestStaff(t, e.db, "Contract", "Budget")
+	monday := nextWeekday(calendar.Date(e.sourcePhase.ServiceStartDate), time.Monday)
 	run := func(names ...string) testpkg.QueryMeasurement {
 		inputs := make([]capability.ContractEnrollment, len(names))
 		for i, name := range names {
-			inputs[i] = e.input(e.student(t, name).ID, e.booking("mon", "wed"))
+			student := e.student(t, name)
+			testpkg.CreateTestPickupException(t, e.db, student.ID, monday, staff.ID, "13:00", "Arzttermin")
+			inputs[i] = e.input(student.ID, e.booking("mon", "wed"))
 		}
 		counter := testpkg.CaptureQueriesForContext(t, e.db)
 		results, err := testpkg.TenantQuery1(t, counter.Context(ctx), e.db, e.owner.EnrollContractChildren, inputs)
@@ -434,8 +479,11 @@ func TestContractEnrollmentQueryBudget(t *testing.T) {
 	one := run("Ada")
 	three := run("Bea", "Cem", "Dua")
 	t.Logf("contract enrollment: %d statements for one child, %d for three", len(one.Statements), len(three.Statements))
-	assert.Equal(t, 2*perChildCarePlan, len(three.Statements)-len(one.Statements),
+	assert.Equal(t, 2*(perChildCarePlan+perChildExcusal), len(three.Statements)-len(one.Statements),
 		"two further children cost only Care Plan's per-child statements")
+	assert.Equal(t, 46, len(one.Statements), "15 of Enrollment and the transaction, 31 of Care Plan for the child")
+	assert.Equal(t, 4, e.count(t, `SELECT COUNT(*) FROM schedule.student_pickup_exceptions WHERE tenant_id = ? AND excused_auto`, testpkg.Tenant(t)),
+		"the resync ran for every child")
 	querybudgets.AssertQueryBudget(t, "services.enrollment.contract_enrollments.enroll", one)
 }
 

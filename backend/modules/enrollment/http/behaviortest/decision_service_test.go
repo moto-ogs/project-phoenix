@@ -257,6 +257,12 @@ func newDecisionsForTestWithBookings(
 	if t != nil {
 		pickupBaselines := newPickupBaselineService(repoFactoryCare.CarePlan, approvedOfferingTestProjection(repoFactory))
 		pickupAutoExcusal = newPickupExcusal(t, env.db, repoFactoryCare.CarePlan, pickupBaselines, env.timetable, true)
+		if env.excusalToday != nil {
+			var err error
+			pickupAutoExcusal, err = api.NewEnrollmentFlowPickupExcusalOn(testpkg.NewDatabase(t, env.db), repoFactoryCare.CarePlan,
+				pickupBaselines, env.timetable, true, env.excusalToday)
+			require.NoError(t, err)
+		}
 	}
 	studentEnrollment := testStudentEnrollment(env.db)
 	decisionRows := repoFactory.EnrollmentOn(decisionTestClock)
@@ -289,12 +295,23 @@ func newDecisionsForTestWithBookings(
 		LockTemplateRecurrence: lockTemplateRecurrence,
 		FollowClassChanges:     api.MustEnrollmentTestClassFollowUp(testpkg.MustDatabase(env.db)),
 		Pickups: TestWeeklyPickupHooks{
+			ResyncExcusal: resyncPickupExcusals(pickupAutoExcusal),
 			Snapshot:      snapshotPickupWeekdayChanges(pickupAutoExcusal),
 			RecordChanges: recordPickupWeekdayChanges(pickupAutoExcusal),
 		},
 		Logger: slog.Default(),
 		Today:  func() calendar.Date { return decisionTestToday },
 	}, settings, outbox)
+}
+
+// resyncPickupExcusals binds the resync of the pickup auto excusals the way
+// the root binds it (weeklyPickupHooks), so the flows of the suites run it
+// as production does.
+func resyncPickupExcusals(syncer careplan.PickupAutoExcusal) func(context.Context, []int64) error {
+	if syncer == nil {
+		return nil
+	}
+	return syncer.ResyncFutureExceptions
 }
 
 func snapshotPickupWeekdayChanges(syncer careplan.PickupAutoExcusal) func(context.Context, int64, calendar.Date) (map[int]string, error) {

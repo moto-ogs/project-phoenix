@@ -1,6 +1,6 @@
 {
   "scenario": "services.enrollment.contract_enrollments.enroll",
-  "max": 30,
+  "max": 46,
   "exact": false,
-  "description": "The silent enrollment of the children of imported care contracts\n(EnrollContractChildren, #7760, ADR 0309) for one child. Enrollment's own\nstatements stay flat as children grow; Care Plan's per-child approval\nbuilding blocks add an exact residual the test asserts."
+  "description": "The silent enrollment of the children of imported care contracts\n(EnrollContractChildren, #7760, ADR 0309) for one child with one coming\npickup exception, composed with the resync of the pickup auto excusals as in\nproduction. Enrollment's own statements stay flat as children grow; Care\nPlan's per-child approval building blocks and excusal resync add an exact\nresidual the test asserts (31 per child here)."
 }
