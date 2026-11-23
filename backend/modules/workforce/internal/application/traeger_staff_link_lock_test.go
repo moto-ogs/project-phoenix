@@ -31,6 +31,8 @@ type linkLockStore struct {
 	// trail entries.
 	holdAt time.Time
 	trail  []domain.TraegerStaffChange
+	// accesses are the school's access log entries.
+	accesses []domain.DataAccess
 }
 
 func (s *linkLockStore) FindStaffRecord(context.Context, int64, int64, bool) (domain.TraegerStaffRecord, error) {
@@ -66,10 +68,17 @@ func (s *linkLockStore) AppendStaffChanges(_ context.Context, _ int64, changes [
 	return nil
 }
 
-// linkLockRuntime runs every school's and the Träger's transaction inline.
-type linkLockRuntime struct{}
+// linkLockRuntime runs every school's and the Träger's transaction inline;
+// the transaction of failSchool fails before it starts.
+type linkLockRuntime struct{ failSchool int64 }
 
-func (linkLockRuntime) WithinSchool(ctx context.Context, _ int64, fn func(context.Context) error) error {
+// errSchoolDown is the failure of the school a hand-over cannot reach.
+var errSchoolDown = errors.New("school transaction failed")
+
+func (r linkLockRuntime) WithinSchool(ctx context.Context, schoolID int64, fn func(context.Context) error) error {
+	if schoolID == r.failSchool {
+		return errSchoolDown
+	}
 	return fn(ctx)
 }
 
@@ -93,9 +102,18 @@ func (linkLockSubjects) LockStaff(_ context.Context, staffID int64, _ bool) (dom
 	return domain.StaffSubject{ID: staffID}, nil
 }
 
-type linkLockAudit struct{ ports.StaffAdminAudit }
+// linkLockAudit collects the school's access entries.
+type linkLockAudit struct {
+	ports.StaffAdminAudit
+	accesses *[]domain.DataAccess
+}
 
 func (linkLockAudit) RecordMasterDataChange(context.Context, domain.MasterDataChange) error {
+	return nil
+}
+
+func (a linkLockAudit) RecordDataAccess(_ context.Context, access domain.DataAccess) error {
+	*a.accesses = append(*a.accesses, access)
 	return nil
 }
 
@@ -104,7 +122,8 @@ func linkLockService(store *linkLockStore) *TraegerStaff {
 		store:    store,
 		ports:    workforce.TraegerStaffPorts{Employments: linkLockSchool{}, Persons: linkLockSchool{}, Runtime: linkLockRuntime{}},
 		subjects: linkLockSubjects{},
-		audit:    linkLockAudit{},
+		audit:    linkLockAudit{accesses: &store.accesses},
+		clock:    fixedClock{now: linkLockLinkedAt.Add(time.Minute)},
 	}
 }
 
@@ -186,10 +205,16 @@ func TestHandOverKeepsAHeldBankRowOnLaterWrites(t *testing.T) {
 	assert.Equal(t, "DE** **** 4711", domain.Deref(store.trail[0].ValueMasked))
 	require.NotNil(t, store.trail[0].SchoolID)
 	assert.Equal(t, record.Links[0].SchoolID, *store.trail[0].SchoolID)
+	require.Len(t, store.accesses, 1, "the school logs the Träger's read of the masks")
+	assert.Equal(t, workforce.StaffDataAccessFinancialView, store.accesses[0].Resource)
+	assert.Equal(t, int64(10), store.accesses[0].StaffID)
+	assert.Equal(t, actor.AccountID, store.accesses[0].ActorAccountID)
+	assert.Equal(t, actorRoleTraeger, store.accesses[0].ActorRole)
 
 	require.NoError(t, service.handOver(context.Background(), actor, record, nil))
 	assert.False(t, store.deleted, "the held row survives the next write")
 	assert.Len(t, store.trail, 1, "the catch-up adds no entry of its own")
+	assert.Len(t, store.accesses, 1, "the catch-up reads no mask")
 }
 
 // The catch-up still hands over a row from before the link, one a school
@@ -219,4 +244,29 @@ func TestHandOverRefusesALinkWhoseBankRowChanged(t *testing.T) {
 	store = &linkLockStore{bank: read}
 	require.NoError(t, linkLockService(store).handOver(context.Background(), actor, linkLockRecord(), planned))
 	assert.True(t, store.deleted)
+}
+
+// A school that holds a changed row commits the hold in its own transaction.
+// When a later school's hand-over fails, the Träger's trail still names the
+// held values: no later catch-up would add the entry.
+func TestHandOverNamesAHeldRowWhenALaterSchoolFails(t *testing.T) {
+	t.Parallel()
+	actor := workforce.TraegerStaffActor{OrganizationID: 1, AccountID: 9}
+	record := linkLockRecord()
+	record.Links = append(record.Links, domain.TraegerStaffLink{SchoolID: 3, StaffID: 11, LinkedAt: linkLockLinkedAt})
+	store := &linkLockStore{
+		bank:   []domain.StaffFinancialData{{StaffID: 10, IBANSealed: []byte("sealed-new"), IBANMasked: new("DE** **** 4711"), UpdatedAt: linkLockLinkedAt.Add(-time.Second)}},
+		holdAt: linkLockLinkedAt.Add(time.Second),
+	}
+	service := linkLockService(store)
+	service.ports.Runtime = linkLockRuntime{failSchool: 3}
+
+	planned := map[employmentKey]string{{2, 10}: bankRowState(nil)}
+	err := service.handOver(context.Background(), actor, record, planned)
+	require.Error(t, err)
+	assert.NotErrorIs(t, err, readstate.ErrChanged, "the failed school decides the answer")
+	require.Len(t, store.trail, 1, "the held row of school 2 has its trail entry")
+	assert.Equal(t, domain.StaffChangeNotChosen, store.trail[0].Kind)
+	require.NotNil(t, store.trail[0].SchoolID)
+	assert.Equal(t, int64(2), *store.trail[0].SchoolID)
 }

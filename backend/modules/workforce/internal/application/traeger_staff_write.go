@@ -15,6 +15,9 @@ const (
 	noteHandedToTraeger   = "An die Personalakte des Trägers übergeben"
 	noteNumberOfTraeger   = "Personalnummer aus der Personalakte des Trägers"
 	noteReturnedByTraeger = "Personalakte des Trägers aufgelöst, Werte an die Schule zurückgegeben"
+	// actorRoleTraeger is the role of a Träger account in a school's access
+	// log: it holds no role of the school.
+	actorRoleTraeger = "traeger"
 )
 
 // writeLink saves the record, its new Einsatzorte and the trail in the
@@ -139,10 +142,11 @@ func (t *TraegerStaff) replacedValues(actor workforce.TraegerStaffActor, recordI
 // catches up (ADR 0233 section 6). A link names the bank row it read per new
 // employment: a school whose row changed since keeps it, the Träger's trail
 // names the values it kept, and the link is refused as changed (ADR 0311)
-// once every school is through.
+// once every school is through. The trail names a held row right after its
+// school commits the hold, so a later school that fails cannot leave a held
+// row the Träger never learns of: every later catch-up keeps it silently.
 func (t *TraegerStaff) handOver(ctx context.Context, actor workforce.TraegerStaffActor, record domain.TraegerStaffRecord, planned map[employmentKey]string) error {
 	changed := false
-	var held []domain.TraegerStaffChange
 	for _, link := range record.Links {
 		var outcome handOverOutcome
 		err := t.ports.Runtime.WithinSchool(ctx, link.SchoolID, func(ctx context.Context) error {
@@ -155,11 +159,10 @@ func (t *TraegerStaff) handOver(ctx context.Context, actor workforce.TraegerStaf
 		}
 		changed = changed || outcome.changed
 		if outcome.held != nil {
-			held = append(held, heldBankChanges(record.ID, link, actor.AccountID, *outcome.held)...)
+			if err := t.recordHeldBankRows(ctx, actor, heldBankChanges(record.ID, link, actor.AccountID, *outcome.held)); err != nil {
+				return err
+			}
 		}
-	}
-	if err := t.recordHeldBankRows(ctx, actor, held); err != nil {
-		return err
 	}
 	if changed {
 		return readstate.ErrChanged
@@ -177,8 +180,8 @@ func plannedBankRow(planned map[employmentKey]string, link domain.TraegerStaffLi
 	return &expected
 }
 
-// recordHeldBankRows writes the trail entries of the rows schools kept, in
-// the Träger's transaction after every school is through.
+// recordHeldBankRows writes the trail entries of the row a school kept, in
+// the Träger's transaction after that school committed the hold.
 func (t *TraegerStaff) recordHeldBankRows(ctx context.Context, actor workforce.TraegerStaffActor, held []domain.TraegerStaffChange) error {
 	if len(held) == 0 {
 		return nil
@@ -252,12 +255,31 @@ func (t *TraegerStaff) handOverBankRow(ctx context.Context, actor workforce.Trae
 		if err := t.store.HoldSchoolFinancialRow(ctx, link.StaffID); err != nil {
 			return handOverOutcome{}, err
 		}
+		if err := t.logHeldMasks(ctx, actor, link.StaffID, rows[0]); err != nil {
+			return handOverOutcome{}, err
+		}
 		return handOverOutcome{changed: true, held: &rows[0]}, nil
 	}
 	if planned == nil && len(rows) > 0 && rows[0].UpdatedAt.After(link.LinkedAt) {
 		return handOverOutcome{}, nil
 	}
 	return handOverOutcome{}, t.removeSchoolBankRow(ctx, actor, link.StaffID, rows)
+}
+
+// logHeldMasks writes the school's access entry for the masks of a held row
+// that go into the Träger's trail (heldBankChanges), as a masked view by the
+// Träger account: the school sees who read its values, like on a hand-over.
+func (t *TraegerStaff) logHeldMasks(ctx context.Context, actor workforce.TraegerStaffActor, staffID int64, row domain.StaffFinancialData) error {
+	if len(maskedBankValues(staffID, row)) == 0 {
+		return nil
+	}
+	if err := t.audit.RecordDataAccess(ctx, domain.DataAccess{
+		ActorAccountID: actor.AccountID, ActorRole: actorRoleTraeger,
+		Resource: workforce.StaffDataAccessFinancialView, StaffID: staffID, At: t.clock.Now(),
+	}); err != nil {
+		return fmt.Errorf("write held bank row access audit: %w", err)
+	}
+	return nil
 }
 
 // maskedBankValue is one stored mask of a school's bank row.
