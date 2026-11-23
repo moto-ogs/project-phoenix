@@ -33,6 +33,52 @@ import (
 // groupCare applies a join only where the chain sees every part as a child
 // of its own and every invoice issued for a part froze the family of the
 // change (careChain.aligned).
+//
+// A contract only an issued invoice brings into the month (withdrawn, or
+// ended before it) is a part too (#7892): the child, family and school of
+// its invoice stand for it, and it runs on no day of the month. So the child
+// it billed and the child of the contract at the new school are one child
+// for the sibling chain and for "already billed" (billedChildHolds).
+
+// schoolChangeSource is what a school change reads of a contract: in force
+// its versions and family, outside the versions in force the child, family
+// and school of the issued invoice that names it.
+type schoolChangeSource struct {
+	byContract map[int64][]parentbilling.CareContractVersion
+	families   map[int64]string
+	outside    map[int64]outsideContract
+}
+
+// outsideContract is a contract only an issued invoice of the month names.
+type outsideContract struct {
+	child  parentbilling.CareContractChild
+	family string
+	place  parentbilling.CareDuplicateContract
+}
+
+// schoolsOf are the schools a contract lies at.
+func (s schoolChangeSource) schoolsOf(contractID int64) []int64 {
+	if outside, ok := s.outside[contractID]; ok {
+		return []int64{outside.place.SchoolID.Int64()}
+	}
+	var schools []int64
+	for _, version := range s.byContract[contractID] {
+		schools = append(schools, version.SchoolID)
+	}
+	return schools
+}
+
+// meet tells whether two contracts lie at the same school or have versions
+// in force on the same day. A contract outside the versions in force runs on
+// no day of the month.
+func (s schoolChangeSource) meet(left, right int64) bool {
+	for _, school := range s.schoolsOf(left) {
+		if slices.Contains(s.schoolsOf(right), school) {
+			return true
+		}
+	}
+	return versionsMeet(s.byContract[left], s.byContract[right])
+}
 
 // schoolChangePerson is a spelled name with its date of birth, empty
 // without one.
@@ -68,12 +114,11 @@ func contractFamilies(byContract map[int64][]parentbilling.CareContractVersion, 
 // other child keeps its place. joined names the joined children by their
 // place and parts the children each one joins; accept can refuse a join
 // (careChain.accepts).
-func joinSchoolChanges(children [][]int64, byContract map[int64][]parentbilling.CareContractVersion, families map[int64]string,
-	accept func(parts [][]int64) bool,
+func joinSchoolChanges(children [][]int64, source schoolChangeSource, accept func(parts [][]int64) bool,
 ) (result [][]int64, joined []int, parts [][][]int64) {
 	identities := make([]schoolChangePart, len(children))
 	for i, child := range children {
-		identities[i] = schoolChangePartOf(child, byContract, families)
+		identities[i] = schoolChangePartOf(child, source)
 	}
 	result = children
 	for _, bucket := range schoolChangeBuckets(identities) {
@@ -81,7 +126,7 @@ func joinSchoolChanges(children [][]int64, byContract map[int64][]parentbilling.
 		for i, part := range bucket {
 			joining[i] = children[part]
 		}
-		if !bucketJoins(bucket, identities, children, byContract) || !accept(joining) {
+		if !bucketJoins(bucket, identities, children, source) || !accept(joining) {
 			continue
 		}
 		if joined == nil {
@@ -99,30 +144,40 @@ func joinSchoolChanges(children [][]int64, byContract map[int64][]parentbilling.
 }
 
 // schoolChangePartOf reads the names, dates of birth and families of the
-// contracts in force of a child.
-func schoolChangePartOf(child []int64, byContract map[int64][]parentbilling.CareContractVersion, families map[int64]string) schoolChangePart {
+// contracts in force of a child, and of the contracts only an issued invoice
+// names.
+func schoolChangePartOf(child []int64, source schoolChangeSource) schoolChangePart {
 	part := schoolChangePart{complete: true}
 	for _, contractID := range child {
-		versions, inForce := byContract[contractID]
-		if !inForce {
+		identity, family, known := source.identityOf(contractID)
+		if !known {
 			continue
 		}
-		head := versions[0]
-		person := schoolChangePerson{first: schoolChangeName(head.ChildFirstName), last: schoolChangeName(head.ChildLastName)}
-		if head.ChildBirthDate != nil {
-			person.birth = *head.ChildBirthDate
+		person := schoolChangePerson{first: schoolChangeName(identity.FirstName), last: schoolChangeName(identity.LastName)}
+		if identity.BirthDate != nil {
+			person.birth = *identity.BirthDate
 		} else {
 			part.complete = false
 		}
-		part.recorded = part.recorded || head.StudentID != nil
+		part.recorded = part.recorded || identity.StudentID != nil
 		if !slices.Contains(part.persons, person) {
 			part.persons = append(part.persons, person)
 		}
-		if !slices.Contains(part.families, families[contractID]) {
-			part.families = append(part.families, families[contractID])
+		if !slices.Contains(part.families, family) {
+			part.families = append(part.families, family)
 		}
 	}
 	return part
+}
+
+// identityOf is the child and the family of a contract: of its first
+// version in force, else of the issued invoice that names it.
+func (s schoolChangeSource) identityOf(contractID int64) (parentbilling.CareContractChild, string, bool) {
+	if versions, inForce := s.byContract[contractID]; inForce {
+		return childOfVersion(versions[0]), s.families[contractID], true
+	}
+	outside, ok := s.outside[contractID]
+	return outside.child, outside.family, ok
 }
 
 // schoolChangeBuckets groups the children by name and date of birth, in
@@ -172,7 +227,7 @@ func addToBucketsOfName(buckets [][]int, index map[schoolChangePerson]int, name 
 // with a record (without one E1 already decides by the name), one name,
 // one date of birth and one family, all the same family, at different
 // schools and one after the other.
-func bucketJoins(bucket []int, parts []schoolChangePart, children [][]int64, byContract map[int64][]parentbilling.CareContractVersion) bool {
+func bucketJoins(bucket []int, parts []schoolChangePart, children [][]int64, source schoolChangeSource) bool {
 	if len(bucket) < 2 {
 		return false
 	}
@@ -183,7 +238,7 @@ func bucketJoins(bucket []int, parts []schoolChangePart, children [][]int64, byC
 			return false
 		}
 	}
-	return oneAfterAnother(bucket, children, byContract)
+	return oneAfterAnother(bucket, children, source)
 }
 
 // schoolChangeName spells a name so that two schools that wrote it
@@ -198,10 +253,10 @@ func schoolChangeName(name string) string {
 
 // oneAfterAnother tells whether the children lie at different schools and
 // their contracts never run on the same day.
-func oneAfterAnother(parts []int, children [][]int64, byContract map[int64][]parentbilling.CareContractVersion) bool {
+func oneAfterAnother(parts []int, children [][]int64, source schoolChangeSource) bool {
 	for i, a := range parts {
 		for _, b := range parts[i+1:] {
-			if sharesSchoolOrDay(children[a], children[b], byContract) {
+			if sharesSchoolOrDay(children[a], children[b], source) {
 				return false
 			}
 		}
@@ -211,10 +266,10 @@ func oneAfterAnother(parts []int, children [][]int64, byContract map[int64][]par
 
 // sharesSchoolOrDay tells whether two children have a contract at the same
 // school or contracts that run on the same day.
-func sharesSchoolOrDay(a, b []int64, byContract map[int64][]parentbilling.CareContractVersion) bool {
+func sharesSchoolOrDay(a, b []int64, source schoolChangeSource) bool {
 	for _, left := range a {
 		for _, right := range b {
-			if versionsMeet(byContract[left], byContract[right]) {
+			if source.meet(left, right) {
 				return true
 			}
 		}
@@ -236,22 +291,26 @@ func versionsMeet(left, right []parentbilling.CareContractVersion) bool {
 }
 
 // joinedChildren names the children joinSchoolChanges joined, with every
-// contract and its school in the order they begin, for the review.
-func joinedChildren(children [][]int64, joined []int, byContract map[int64][]parentbilling.CareContractVersion) []parentbilling.CareJoinedChild {
-	shown := make([]parentbilling.CareJoinedChild, 0, len(joined))
-	for _, i := range joined {
+// contract and its school in the order they begin, for the review. A
+// contract only an issued invoice names comes first: it runs before the
+// month or not at all.
+func joinedChildren(grouping careGrouping, source schoolChangeSource) []parentbilling.CareJoinedChild {
+	shown := make([]parentbilling.CareJoinedChild, 0, len(grouping.joined))
+	for _, i := range grouping.joined {
 		var contracts []parentbilling.CareDuplicateContract
-		inOrder := slices.Clone(children[i])
+		inOrder := slices.Clone(grouping.joinedContracts[i])
 		slices.SortStableFunc(inOrder, func(a, b int64) int {
-			return firstNonZero(startOf(byContract[a]).Compare(startOf(byContract[b])), compareOrdered(a, b))
+			return firstNonZero(startOf(source.byContract[a]).Compare(startOf(source.byContract[b])), compareOrdered(a, b))
 		})
 		for _, contractID := range inOrder {
-			if versions, inForce := byContract[contractID]; inForce {
+			if versions, inForce := source.byContract[contractID]; inForce {
 				contracts = append(contracts, parentbilling.CareDuplicateContract{ContractID: ident.ID(contractID),
 					SchoolID: ident.ID(versions[0].SchoolID), SchoolName: versions[0].SchoolName})
+			} else if outside, ok := source.outside[contractID]; ok {
+				contracts = append(contracts, outside.place)
 			}
 		}
-		head := byContract[children[i][0]][0]
+		head := source.byContract[grouping.children[i][0]][0]
 		shown = append(shown, parentbilling.CareJoinedChild{ChildFirstName: head.ChildFirstName, ChildLastName: head.ChildLastName,
 			Contracts: contracts})
 	}

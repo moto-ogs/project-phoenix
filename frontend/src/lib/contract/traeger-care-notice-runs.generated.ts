@@ -17,10 +17,12 @@ import {
 } from "./runtime";
 import {
   BillingLetterSeriesSchema,
+  CareBilledChildSchema,
   CareDuplicateSchema,
   CareJoinedChildSchema,
   CareRecipientSchema,
   CareUnpricedSchema,
+  type CareBilledChild,
   type CareDuplicate,
   type CareJoinedChild,
   type CareRecipient,
@@ -211,6 +213,7 @@ export interface CareNoticeRunDetail {
   unpriced: CareUnpriced[] | null;
   duplicates: CareDuplicate[] | null;
   joined_children: CareJoinedChild[] | null;
+  billed_children: CareBilledChild[] | null;
   preview_count: number;
   preview_cents: number;
   preview_delta_cents: number;
@@ -240,6 +243,7 @@ export const CareNoticeRunDetailSchema: z.ZodType<CareNoticeRunDetail, unknown> 
   unpriced: nullable(arr(CareUnpricedSchema)),
   duplicates: nullable(arr(CareDuplicateSchema)),
   joined_children: nullable(arr(CareJoinedChildSchema)),
+  billed_children: nullable(arr(CareBilledChildSchema)),
   preview_count: safeInt,
   preview_cents: safeInt,
   preview_delta_cents: safeInt,

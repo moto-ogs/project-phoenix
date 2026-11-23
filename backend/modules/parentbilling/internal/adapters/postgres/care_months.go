@@ -687,6 +687,7 @@ type careRunHoldRow struct {
 	ChildLastName  string                                `bun:"child_last_name"`
 	Contracts      []parentbilling.CareDuplicateContract `bun:"contracts,type:jsonb"`
 	Slots          []parentbilling.CareHeldSlot          `bun:"slots,type:jsonb"`
+	Invoices       []parentbilling.CareBilledInvoice     `bun:"invoices,type:jsonb"`
 }
 
 // InsertCareRunHolds stores the children a release held back as they are
@@ -707,13 +708,11 @@ func (s *Store) InsertCareRunHolds(ctx context.Context, organizationID, runID in
 				schools = append(schools, contract.SchoolID.Int64())
 			}
 		}
-		slots := hold.Slots
-		if slots == nil {
-			slots = []parentbilling.CareHeldSlot{}
-		}
+		// Both lists are stored as arrays, an empty one too.
 		rows[i] = careRunHoldRow{OrganizationID: organizationID, RunID: runID, Position: hold.Position, Reason: hold.Reason,
 			SchoolIDs: schools, ChildFirstName: hold.ChildFirstName, ChildLastName: hold.ChildLastName,
-			Contracts: hold.Contracts, Slots: slots}
+			Contracts: hold.Contracts, Slots: append([]parentbilling.CareHeldSlot{}, hold.Slots...),
+			Invoices: append([]parentbilling.CareBilledInvoice{}, hold.Invoices...)}
 	}
 	if _, err := db.NewInsert().Model(&rows).Exec(ctx); err != nil {
 		return fmt.Errorf("insert care run holds: %w", err)
@@ -735,7 +734,7 @@ func (s *Store) CareRunHolds(ctx context.Context, organizationID, runID int64) (
 	holds := make([]parentbilling.CareRunHold, len(rows))
 	for i, row := range rows {
 		holds[i] = parentbilling.CareRunHold{Position: row.Position, Reason: row.Reason, ChildFirstName: row.ChildFirstName,
-			ChildLastName: row.ChildLastName, Contracts: row.Contracts, Slots: row.Slots}
+			ChildLastName: row.ChildLastName, Contracts: row.Contracts, Slots: row.Slots, Invoices: row.Invoices}
 	}
 	return holds, nil
 }

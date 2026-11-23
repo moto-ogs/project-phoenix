@@ -473,13 +473,14 @@ func (c *CareBilling) ReleaseCareRun(ctx context.Context, reviewer parentbilling
 	if err != nil {
 		return parentbilling.CareRunDetail{}, err
 	}
-	if err := c.store.InsertCareRunHolds(ctx, reviewer.OrganizationID, run.ID.Int64(), holdSnapshot(month.duplicates)); err != nil {
+	if err := c.store.InsertCareRunHolds(ctx, reviewer.OrganizationID, run.ID.Int64(), releaseSnapshot(month.duplicates, month.billedChildren)); err != nil {
 		return parentbilling.CareRunDetail{}, err
 	}
 	if err := c.store.InsertCareRunEvent(ctx, reviewer.OrganizationID, run.ID.Int64(), reviewer.AccountID, runEventRelease,
 		map[string]any{"document_count": len(month.invoices), "total_cents": month.total(), "month_rule": rule,
 			"free_of_charge":     month.free,
 			"duplicate_children": duplicateChildren(month.duplicates), "issued_on": issuedOn.String(),
+			"billed_children":       len(month.billedChildren),
 			"excluded_contract_ids": excludedContracts(month.excluded),
 			"excluded_invoices":     excludedInvoices(month.excluded)}); err != nil {
 		return parentbilling.CareRunDetail{}, fmt.Errorf("parent billing: record care release: %w", err)
@@ -641,8 +642,8 @@ func (c *CareBilling) issuedCareChildren(ctx context.Context, organizationID int
 // range the release uses.
 func (c *CareBilling) detail(ctx context.Context, reviewer parentbilling.HolidayReviewer, run parentbilling.CareRun) (parentbilling.CareRunDetail, error) {
 	detail := parentbilling.CareRunDetail{CareRun: run, Unpriced: []parentbilling.CareUnpriced{}, Duplicates: []parentbilling.CareDuplicate{},
-		JoinedChildren: []parentbilling.CareJoinedChild{},
-		MealGaps:       []parentbilling.CareMealGap{}, MealUnbilled: []parentbilling.CareMealUnbilled{}, MealChanged: []parentbilling.CareMealChanged{}}
+		JoinedChildren: []parentbilling.CareJoinedChild{}, BilledChildren: []parentbilling.CareBilledChild{},
+		MealGaps: []parentbilling.CareMealGap{}, MealUnbilled: []parentbilling.CareMealUnbilled{}, MealChanged: []parentbilling.CareMealChanged{}}
 	if run.Status == parentbilling.RunDiscarded {
 		return c.discardedDetail(ctx, reviewer.OrganizationID, detail)
 	}
@@ -689,7 +690,7 @@ func (c *CareBilling) releasedDetail(ctx context.Context, organizationID int64, 
 	if err != nil {
 		return err
 	}
-	detail.Duplicates = holdView(holds)
+	detail.Duplicates, detail.BilledChildren = holdView(holds), billedHoldView(holds)
 	detail.DocumentKind = issuedCareDocumentKind(invoices)
 	// The dates of the release, which its invoices copied.
 	payments, err := readInvoicePayments(ctx, c.store, organizationID, detail.ID.Int64(), 0, parentbilling.DebtorNumberScopePayer, false)
@@ -745,7 +746,8 @@ func versionContracts(versions []parentbilling.CareContractVersion) []int64 {
 }
 
 // shownContracts names the contracts whose child a detail shows: on an
-// invoice, without a price, as a duplicate or joined across schools.
+// invoice, without a price, as a duplicate, joined across schools or held
+// for an issued invoice, with the contract of that invoice (#7892).
 func shownContracts(detail parentbilling.CareRunDetail) []int64 {
 	ids := []int64{}
 	for _, invoice := range detail.Invoices {
@@ -762,7 +764,7 @@ func shownContracts(detail parentbilling.CareRunDetail) []int64 {
 	for _, child := range detail.JoinedChildren {
 		ids = appendContracts(ids, child.Contracts)
 	}
-	return ids
+	return appendBilledChildren(ids, detail.BilledChildren)
 }
 
 // appendContracts adds the contracts not named yet.

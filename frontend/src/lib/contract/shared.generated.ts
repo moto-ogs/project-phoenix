@@ -3781,6 +3781,44 @@ export const CareJoinedChildSchema: z.ZodType<CareJoinedChild, unknown> = object
   contracts: nullable(arr(CareDuplicateContractSchema)),
 });
 
+/** Go: parentbilling.CareBilledInvoice */
+export interface CareBilledInvoice {
+  source: string;
+  run_id: string;
+  contract_id: string;
+  school_id: string;
+  school_name: string;
+  number: string;
+  document_kind: string;
+}
+
+export const CareBilledInvoiceSchema: z.ZodType<CareBilledInvoice, unknown> = object<CareBilledInvoice>({
+  source: str,
+  run_id: int64String,
+  contract_id: int64String,
+  school_id: int64String,
+  school_name: str,
+  number: str,
+  document_kind: str,
+});
+
+/** Go: parentbilling.CareBilledChild */
+export interface CareBilledChild {
+  child_first_name: string;
+  child_last_name: string;
+  reason: string;
+  contracts: CareDuplicateContract[] | null;
+  invoices: CareBilledInvoice[] | null;
+}
+
+export const CareBilledChildSchema: z.ZodType<CareBilledChild, unknown> = object<CareBilledChild>({
+  child_first_name: str,
+  child_last_name: str,
+  reason: str,
+  contracts: nullable(arr(CareDuplicateContractSchema)),
+  invoices: nullable(arr(CareBilledInvoiceSchema)),
+});
+
 /** Go: parentbilling.CareSchool */
 export interface CareSchool {
   id: string;

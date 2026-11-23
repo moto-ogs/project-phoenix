@@ -411,7 +411,7 @@ func logoMIME(logo []byte) string {
 func (n *CareFeeNotices) detail(ctx context.Context, organizationID int64, run parentbilling.CareNoticeRun) (parentbilling.CareNoticeRunDetail, error) {
 	detail := parentbilling.CareNoticeRunDetail{CareNoticeRun: run, Notices: []parentbilling.CareNotice{},
 		Unpriced: []parentbilling.CareUnpriced{}, Duplicates: []parentbilling.CareDuplicate{},
-		JoinedChildren: []parentbilling.CareJoinedChild{}}
+		JoinedChildren: []parentbilling.CareJoinedChild{}, BilledChildren: []parentbilling.CareBilledChild{}}
 	if run.Status == parentbilling.RunDiscarded {
 		// A discarded run issued nothing and reads no contract again (#6626).
 		return detail, nil
@@ -429,7 +429,7 @@ func (n *CareFeeNotices) detail(ctx context.Context, organizationID int64, run p
 		}
 		detail.Notices, detail.Unchanged, detail.Billed = preview.notices, preview.unchanged, preview.billed
 		detail.Unpriced, detail.Duplicates = preview.unpriced, preview.duplicates
-		detail.JoinedChildren = preview.joined
+		detail.JoinedChildren, detail.BilledChildren = preview.joined, preview.billedChildren
 		detail.Fingerprint, detail.LegalRemedyMissing = preview.fingerprint, preview.legalRemedyMissing
 	}
 	for _, notice := range detail.Notices {
@@ -463,7 +463,7 @@ func shownNoticeContracts(detail parentbilling.CareNoticeRunDetail) []int64 {
 	for _, child := range detail.JoinedChildren {
 		ids = appendContracts(ids, child.Contracts)
 	}
-	return ids
+	return appendBilledChildren(ids, detail.BilledChildren)
 }
 
 // legalRemedyOf reads the legal remedy of the template of the fee notice:

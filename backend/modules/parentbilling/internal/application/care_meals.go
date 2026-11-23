@@ -527,8 +527,9 @@ func mealChildName(first, last string) string {
 	return normalizedName(first + " " + last)
 }
 
-// heldOrUnpriced names the contracts the preview holds back or leaves out
-// for a missing price.
+// heldOrUnpriced names the contracts the preview holds back, for a
+// duplicate contract or an invoice that already bills their child (#7892),
+// or leaves out for a missing price.
 func heldOrUnpriced(month *careMonth) map[int64]bool {
 	skipped := map[int64]bool{}
 	for _, unpriced := range month.unpriced {
@@ -536,6 +537,11 @@ func heldOrUnpriced(month *careMonth) map[int64]bool {
 	}
 	for _, duplicate := range month.duplicates {
 		for _, contract := range duplicate.Contracts {
+			skipped[contract.ContractID.Int64()] = true
+		}
+	}
+	for _, child := range month.billedChildren {
+		for _, contract := range child.Contracts {
 			skipped[contract.ContractID.Int64()] = true
 		}
 	}
