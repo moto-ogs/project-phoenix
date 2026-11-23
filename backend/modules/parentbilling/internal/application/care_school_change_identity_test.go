@@ -493,3 +493,41 @@ func TestCareNoticeMonthDecidesASchoolChangeOnce(t *testing.T) {
 	assert.Empty(t, final.joined)
 	assert.Len(t, review.unpriced, 2, "both contracts lack a price, so both keep their assessment")
 }
+
+// The chain breaks a tie of price and date of birth by the key, and only a
+// twin could tie with the joining child. A family with a twin of the child
+// that changes its school keeps both apart, so no rank changes against an
+// invoice already issued (#7874).
+func TestCareSchoolChangeLeavesTwinsAsBefore(t *testing.T) {
+	t.Parallel()
+	birth := ptr(day(t, noahBirth))
+	version := func(contract, school, student int64, first, from, until string) parentbilling.CareContractVersion {
+		v := sjrVersion(t, contract, school, 1, from, until, mon1400)
+		v.StudentID, v.ChildFirstName, v.ChildBirthDate = ptr(student), first, birth
+		return v
+	}
+	byContract, order := versionsByContract([]parentbilling.CareContractVersion{
+		version(821, schoolBirkenfeld, 9821, "Noah", billingMonth, "2027-01-14"),
+		version(822, schoolIspringen, 9822, "Noah", "2027-01-15", "2027-01-31"),
+		version(823, schoolBirkenfeld, 9823, "Ida", billingMonth, "2027-01-31"),
+	})
+	recipients := map[int64]parentbilling.CareRecipient{821: {Email: familyEva}, 822: {Email: familyEva}, 823: {Email: familyOther}}
+	apart := groupCare(byContract, order, contractFamilies(byContract, recipients), nil, nil)
+	require.Len(t, apart.joined, 1, "a child of that birthday in another family does not stop the join")
+
+	recipients[823] = parentbilling.CareRecipient{Email: familyEva}
+	twins := groupCare(byContract, order, contractFamilies(byContract, recipients), nil, nil)
+	assert.Empty(t, twins.joined)
+	assert.Equal(t, chainKeys(byContract, chainChildren(byContract, order, nil)), twins.keys)
+
+	// The twin counts as well when only an issued invoice names it.
+	delete(recipients, 823)
+	byContract, order = versionsByContract([]parentbilling.CareContractVersion{
+		version(821, schoolBirkenfeld, 9821, "Noah", billingMonth, "2027-01-14"),
+		version(822, schoolIspringen, 9822, "Noah", "2027-01-15", "2027-01-31"),
+	})
+	issued := map[int64]parentbilling.CareContractChild{824: {StudentID: ptr(int64(9824)), FirstName: "Ida", LastName: "Beispiel", BirthDate: birth}}
+	issuedTwin := groupCare(byContract, order, contractFamilies(byContract, recipients), issued,
+		map[int64]string{824: parentbilling.FamilyKey(familyEva)})
+	assert.Empty(t, issuedTwin.joined)
+}

@@ -124,6 +124,9 @@ type careChain struct {
 	place          map[int64]int
 	families       map[int64]string
 	issuedFamilies map[int64]string
+	// identities are the children the contracts in force and the issued ones
+	// name.
+	identities map[int64]parentbilling.CareContractChild
 }
 
 func newCareChain(byContract map[int64][]parentbilling.CareContractVersion, order []int64, issued map[int64]parentbilling.CareContractChild,
@@ -136,16 +139,26 @@ func newCareChain(byContract map[int64][]parentbilling.CareContractVersion, orde
 			place[contractID] = i
 		}
 	}
+	identities := contractChildrenOf(byContract)
+	for contractID, child := range issued {
+		if _, inForce := identities[contractID]; !inForce {
+			identities[contractID] = child
+		}
+	}
 	return careChain{byContract: byContract, children: children, keys: chainKeys(byContract, children), place: place,
-		families: families, issuedFamilies: issuedFamilies}
+		families: families, issuedFamilies: issuedFamilies, identities: identities}
 }
 
 // accepts tells whether a school change joins: the chain sees every part
 // as a child of its own, every invoice issued for a part froze the family of
-// the change, and at most one part has an issued invoice. Then both
-// groupings change in the same way, no entry of another family changes its
-// key, and the joined child keeps the key an issued invoice ranked it by.
+// the change, at most one part has an issued invoice, and the family has no
+// other child born on the same day. Then both groupings change in the same
+// way, and no entry changes its rank against another: the chain breaks a tie
+// of price and date of birth by the key, and only a twin could tie.
 func (c careChain) accepts(parts [][]int64) bool {
+	if c.hasTwin(parts) {
+		return false
+	}
 	issuedParts := 0
 	for _, part := range parts {
 		aligned, issued := c.aligned(part)
@@ -157,6 +170,27 @@ func (c careChain) accepts(parts [][]int64) bool {
 		}
 	}
 	return issuedParts <= 1
+}
+
+// hasTwin tells whether the family of a school change has another child,
+// in force or issued, born on the day of the joining child.
+func (c careChain) hasTwin(parts [][]int64) bool {
+	family, birth := c.families[parts[0][0]], c.identities[parts[0][0]].BirthDate
+	joining := map[int64]bool{}
+	for _, part := range parts {
+		for _, member := range c.children[c.place[part[0]]] {
+			joining[member] = true
+		}
+	}
+	for contractID, child := range c.identities {
+		if joining[contractID] || child.BirthDate == nil || birth == nil || *child.BirthDate != *birth {
+			continue
+		}
+		if c.families[contractID] == family || c.issuedFamilies[contractID] == family {
+			return true
+		}
+	}
+	return false
 }
 
 // aligned tells whether the chain sees a part as one child of its own whose

@@ -284,10 +284,12 @@ einem anderen Vertrag verbinden oder ihn teilen.
 
 Das zusammengelegte Kind behält den Schlüssel des Teils, für den schon eine
 Rechnung des Monats ausgestellt ist, sonst den seines ersten Teils; haben
-mehrere Teile schon eine, legt moto nicht zusammen (#7892). Kein anderes
-Kind ändert seinen Schlüssel, und gleichrangige Kinder behalten ihre
-Reihenfolge, auch gegenüber Rechnungen, die ein Lauf des Monats schon
-ausgestellt hat. Ein Bescheid-Lauf entscheidet in beiden Rechnungen eines
+mehrere Teile schon eine, legt moto nicht zusammen (#7892). Hat die Familie
+ein weiteres Kind mit demselben Geburtsdatum (einen Zwilling), legt moto
+ebenfalls nicht zusammen: Die Kette entscheidet Gleichstand bei Preis und
+Geburtsdatum nach dem Schlüssel, und nur ein Zwilling könnte mit dem Kind
+gleichstehen. So ändert kein Kind seinen Rang gegenüber einem anderen, auch
+nicht gegenüber Rechnungen, die ein Lauf des Monats schon ausgestellt hat. Ein Bescheid-Lauf entscheidet in beiden Rechnungen eines
 Monats gleich, mit den Familien aller ausgestellten Bescheide und Rechnungen.
 Dieselbe Gruppierung zählt die Kinder einer Familie in der
 Kinderzahl-Übersicht.
