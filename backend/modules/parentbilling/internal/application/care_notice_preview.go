@@ -439,21 +439,39 @@ func noticeFingerprint(run parentbilling.CareNoticeRun, rule string, preview not
 // mergeBilledChildren adds the held children of a month to those of the
 // months before. A child held in several months stands once per reason, with
 // the contracts and documents of every month: the preview counts children,
-// not months. Two entries are one child when they share a contract.
+// not months. Entries that share a contract are one child; an entry that
+// joins two rows merges them into the first, so the order stays stable.
 func mergeBilledChildren(list, entries []parentbilling.CareBilledChild) []parentbilling.CareBilledChild {
 	for _, entry := range entries {
-		at := slices.IndexFunc(list, func(have parentbilling.CareBilledChild) bool {
-			return have.Reason == entry.Reason && slices.ContainsFunc(have.Contracts, func(contract parentbilling.CareDuplicateContract) bool {
-				return slices.Contains(entry.Contracts, contract)
-			})
-		})
+		merged := make([]parentbilling.CareBilledChild, 0, len(list)+1)
+		at := -1
+		for _, have := range list {
+			switch {
+			case have.Reason != entry.Reason || !shareContract(have.Contracts, entry.Contracts):
+				merged = append(merged, have)
+			case at < 0:
+				at = len(merged)
+				merged = append(merged, have)
+			default:
+				merged[at].Contracts = appendNew(merged[at].Contracts, have.Contracts)
+				merged[at].Invoices = appendNew(merged[at].Invoices, have.Invoices)
+			}
+		}
 		if at < 0 {
 			entry.Contracts, entry.Invoices = slices.Clone(entry.Contracts), slices.Clone(entry.Invoices)
-			list = append(list, entry)
-			continue
+			merged = append(merged, entry)
+		} else {
+			merged[at].Contracts = appendNew(merged[at].Contracts, entry.Contracts)
+			merged[at].Invoices = appendNew(merged[at].Invoices, entry.Invoices)
 		}
-		list[at].Contracts = appendNew(list[at].Contracts, entry.Contracts)
-		list[at].Invoices = appendNew(list[at].Invoices, entry.Invoices)
+		list = merged
 	}
 	return list
+}
+
+// shareContract tells whether two entries name a contract in common.
+func shareContract(a, b []parentbilling.CareDuplicateContract) bool {
+	return slices.ContainsFunc(a, func(contract parentbilling.CareDuplicateContract) bool {
+		return slices.ContainsFunc(b, func(other parentbilling.CareDuplicateContract) bool { return other.ContractID == contract.ContractID })
+	})
 }

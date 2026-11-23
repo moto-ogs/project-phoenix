@@ -389,6 +389,29 @@ func TestCareNoticePreviewNamesAHeldChildOnce(t *testing.T) {
 	assert.Len(t, january[0].Invoices, 1, "the months keep their own entries")
 }
 
+// Entries that share a contract are one child, also through a third one:
+// a child held in January on its contract at Birkenfeld, in February on the
+// one at Ispringen and in March on both stands once, in the order of its
+// first month.
+func TestCareNoticePreviewJoinsAHeldChildAcrossMonths(t *testing.T) {
+	t.Parallel()
+	held := func(number string, contracts ...int64) []parentbilling.CareBilledChild {
+		entry := parentbilling.CareBilledChild{ChildFirstName: "Noah", ChildLastName: "Beispiel", Reason: parentbilling.HoldReasonAlreadyBilled,
+			Invoices: []parentbilling.CareBilledInvoice{{Source: parentbilling.BilledByCareRun, ContractID: ident.ID(contractMia), Number: number}}}
+		for _, contract := range contracts {
+			entry.Contracts = append(entry.Contracts, parentbilling.CareDuplicateContract{ContractID: ident.ID(contract)})
+		}
+		return []parentbilling.CareBilledChild{entry}
+	}
+	merged := mergeBilledChildren(nil, held("R-2027-0003", contractNoah))
+	merged = mergeBilledChildren(merged, held("R-2027-0011", contractLea))
+	merged = mergeBilledChildren(merged, held("R-2027-0013", contractLea, contractNoah))
+	require.Len(t, merged, 1, "one child")
+	assert.Equal(t, []int64{contractNoah, contractLea}, heldContractsOf(merged))
+	assert.Equal(t, []string{"R-2027-0003", "R-2027-0011", "R-2027-0013"},
+		[]string{merged[0].Invoices[0].Number, merged[0].Invoices[1].Number, merged[0].Invoices[2].Number})
+}
+
 // A held child and a contract of it whose invoice carries only the Mensa
 // stand in two entries, each with its own reason and documents: the office
 // checks the one and cancels the other (S5). Pro rata, one record: the
