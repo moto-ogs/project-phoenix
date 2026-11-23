@@ -210,6 +210,9 @@ func TestFixedSeeder_RetireFormerStaffRemovesActiveReferences(t *testing.T) {
 		case seedHTTPMethodDelete:
 			retiredPath = r.URL.Path
 			_, _ = w.Write([]byte(`{"status":"success"}`))
+		case seedHTTPMethodGet:
+			require.Equal(t, "/api/staff/11/stammdaten", r.URL.Path)
+			_, _ = w.Write([]byte(`{"data":{"versions":{"kontakt":"k","qualifikationen":"q"}}}`))
 		default:
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}

@@ -142,6 +142,8 @@ export interface WorkSessionHistory extends WorkSession {
   packUpMinutes?: number;
   /** Signed change the rounding made to the block's duration (#6851). */
   roundingMinutes?: number;
+  /** Der Stand des Blocks, den seine Korrektur zurückschickt (ADR 0311). */
+  version: string;
 }
 
 export interface WorkSessionDayMinutes {
@@ -481,6 +483,7 @@ export function mapWorkSessionHistoryResponse(
     auditCount: data.audit_count ?? 0,
     packUpMinutes: data.pack_up_minutes ?? 0,
     roundingMinutes: data.rounding_minutes ?? 0,
+    version: data.version,
   };
 }
 

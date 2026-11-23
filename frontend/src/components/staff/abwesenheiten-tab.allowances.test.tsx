@@ -136,6 +136,7 @@ const allowance = {
   expiredDays: 0,
   bookingDays: 0,
   carriedIn: null,
+  version: "claim-read",
 };
 const regeneration = {
   id: "12",
@@ -305,8 +306,87 @@ describe("AbwesenheitenTab Kontingente (#3256)", () => {
         year,
         entitledDays: 5.5,
         reason: "In den Sommerferien krank",
+        expectedVersion: "claim-read",
       }),
     );
+  });
+
+  // ADR 0311: a claim a colleague changed since the form opened is not
+  // overwritten; the form closes and the card reads the stored claim.
+  it("closes the form and reloads the claim after a changed-since-read refusal", async () => {
+    mocks.setAllowance.mockRejectedValue(
+      new ApiError("changed since it was read", 409, {
+        code: "general.changed_since_read",
+      }),
+    );
+    renderTab();
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Anspruch ändern: Regenerationstag",
+      }),
+    );
+    const loads =
+      mocks.getAbsenceTypes.mock.calls.length +
+      mocks.getAllowance.mock.calls.length;
+    fireEvent.click(screen.getByRole("button", { name: "Einen Tag mehr" }));
+    fireEvent.change(screen.getByLabelText("Begründung"), {
+      target: { value: "In den Sommerferien krank" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() =>
+      expect(actionErrors.show).toHaveBeenCalledWith(
+        expect.objectContaining({ code: "general.changed_since_read" }),
+        expect.objectContaining({
+          object: "die Änderung am Anspruch",
+          reload: expect.any(Function),
+        }),
+      ),
+    );
+    expect(screen.queryByLabelText("Begründung")).toBeNull();
+    const [, options] = actionErrors.show.mock.calls[0] as [
+      unknown,
+      { reload: () => Promise<unknown> },
+    ];
+    await options.reload();
+    await waitFor(() =>
+      expect(
+        mocks.getAbsenceTypes.mock.calls.length +
+          mocks.getAllowance.mock.calls.length,
+      ).toBeGreaterThan(loads),
+    );
+    expect(mocks.setAllowance).toHaveBeenCalledTimes(1);
+  });
+
+  // ADR 0311, rule 6: the read after a refusal rejects when it fails, so
+  // the refusal shows the load error instead of claiming the new claim shows.
+  it("rejects the read after a refusal when the claims do not load", async () => {
+    mocks.setAllowance.mockRejectedValue(
+      new ApiError("changed since it was read", 409, {
+        code: "general.changed_since_read",
+      }),
+    );
+    failSecondLoad(mocks.getAbsences);
+    renderTab();
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Anspruch ändern: Regenerationstag",
+      }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Einen Tag mehr" }));
+    fireEvent.change(screen.getByLabelText("Begründung"), {
+      target: { value: "In den Sommerferien krank" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => expect(actionErrors.show).toHaveBeenCalled());
+    const [, options] = actionErrors.show.mock.calls[0] as [
+      unknown,
+      { reload: () => Promise<unknown> },
+    ];
+    await expect(options.reload()).rejects.toMatchObject({
+      code: "general.unavailable",
+    });
   });
 
   it("keeps a raised claim saved when the reload fails (#6652)", async () => {

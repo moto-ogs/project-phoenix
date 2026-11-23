@@ -850,6 +850,7 @@ export type StaffHistorySession = Pick<
       | "audit_count"
       | "pack_up_minutes"
       | "rounding_minutes"
+      | "version"
     >
   > & {
     status?: "present" | "home_office";
@@ -1677,24 +1678,34 @@ class StaffPayrollNumberService {
     return {
       personnelNumber: number.personnel_number,
       keptByTraeger: number.kept_by_traeger ?? false,
+      version: number.version,
     };
   }
 
+  /** Sends the version the form read (ADR 0311); answers the new one. */
   async update(
     staffId: string,
     personnelNumber: string | null,
     note: string,
-  ): Promise<string | null> {
+    expectedVersion: string,
+  ): Promise<{ personnelNumber: string | null; version: string }> {
     const number = await bffJson(
       "tenant",
       "PUT /api/staff/{id}/payroll-number",
       {
         params: { id: staffId },
-        body: { personnel_number: personnelNumber, note },
+        body: {
+          personnel_number: personnelNumber,
+          note,
+          expected_version: expectedVersion,
+        },
         errorMessage: "Personalnummer konnte nicht gespeichert werden",
       },
     );
-    return number.personnel_number;
+    return {
+      personnelNumber: number.personnel_number,
+      version: number.version,
+    };
   }
 }
 
@@ -1744,6 +1755,15 @@ export interface StaffStammdaten {
   kontakt: StammdatenKontakt;
   arbeitsvertrag: StammdatenArbeitsvertrag;
   qualifikationen: StammdatenQualifikation[];
+  /** Ein Token je Abschnitt; sein Speichern schickt ihn zurück (ADR 0311). */
+  versions: StammdatenVersions;
+}
+
+interface StammdatenVersions {
+  person: string;
+  kontakt: string;
+  arbeitsvertrag: string;
+  qualifikationen: string;
 }
 
 /**
@@ -1754,6 +1774,8 @@ export interface StaffStammdaten {
 interface StaffPayrollNumber {
   personnelNumber: string | null;
   keptByTraeger?: boolean;
+  /** Der Stand der Nummer, den eine Änderung zurückschickt (ADR 0311). */
+  version: string;
 }
 
 interface StaffFinancialMasked {
@@ -1762,12 +1784,19 @@ interface StaffFinancialMasked {
   socialSecurityNumberMasked: string | null;
   /** Der Träger führt die Werte in seiner Personalakte (#4705). */
   keptByTraeger?: boolean;
+  /** Der Stand über die verschlüsselten Werte, nie über den Klartext. */
+  version: string;
 }
 
 export interface StaffFinancialPlain {
   iban: string | null;
   taxId: string | null;
   socialSecurityNumber: string | null;
+}
+
+/** Die aufgedeckten Werte mit dem Stand, den ihr Speichern zurückschickt. */
+interface StaffFinancialRevealed extends StaffFinancialPlain {
+  version: string;
 }
 
 const GENDERS: readonly StammdatenGender[] = ["female", "male", "diverse"];
@@ -1804,6 +1833,12 @@ function mapStammdatenResponse(data: StammdatenResponse): StaffStammdaten {
       acquiredOn: q.acquired_on,
       expiresOn: q.expires_on,
     })),
+    versions: {
+      person: data.versions.person,
+      kontakt: data.versions.kontakt,
+      arbeitsvertrag: data.versions.arbeitsvertrag,
+      qualifikationen: data.versions.qualifikationen,
+    },
   };
 }
 
@@ -1828,23 +1863,29 @@ class StaffStammdatenService {
       | "arbeitsvertrag"
       | "qualifikationen"
       | "bank-steuer",
-    body: Record<string, unknown>,
-  ): Promise<void> {
-    // One route per section; every request type of them takes `note`.
+    body: Record<string, unknown> & { expected_version: string },
+  ): Promise<string> {
+    // One route per section; every request type of them takes `note` and
+    // the section's version of the read the form showed (ADR 0311). The
+    // answer is the section's version as stored now: the next save of the
+    // same editing sends it.
     const route = `PUT /api/staff/{id}/stammdaten/${section}` as const;
-    await bffJson("tenant", route, {
+    const saved = await bffJson("tenant", route, {
       params: { id: staffId },
       body,
       errorMessage: "Stammdaten konnten nicht gespeichert werden",
     });
+    return saved.version;
   }
 
   async updatePerson(
     staffId: string,
     person: StammdatenPerson,
     note: string,
-  ): Promise<void> {
-    await this.putSection(staffId, "person", {
+    expectedVersion: string,
+  ): Promise<string> {
+    return this.putSection(staffId, "person", {
+      expected_version: expectedVersion,
       first_name: person.firstName,
       last_name: person.lastName,
       birthday: person.birthday,
@@ -1857,8 +1898,10 @@ class StaffStammdatenService {
     staffId: string,
     kontakt: StammdatenKontakt,
     note: string,
-  ): Promise<void> {
-    await this.putSection(staffId, "kontakt", {
+    expectedVersion: string,
+  ): Promise<string> {
+    return this.putSection(staffId, "kontakt", {
+      expected_version: expectedVersion,
       address_street: kontakt.addressStreet,
       address_postal_code: kontakt.addressPostalCode,
       address_city: kontakt.addressCity,
@@ -1874,8 +1917,10 @@ class StaffStammdatenService {
     staffId: string,
     vertrag: StammdatenArbeitsvertrag,
     note: string,
-  ): Promise<void> {
-    await this.putSection(staffId, "arbeitsvertrag", {
+    expectedVersion: string,
+  ): Promise<string> {
+    return this.putSection(staffId, "arbeitsvertrag", {
+      expected_version: expectedVersion,
       entry_date: vertrag.entryDate,
       contract_end_date: vertrag.contractEndDate,
       probation_end_date: vertrag.probationEndDate,
@@ -1889,8 +1934,10 @@ class StaffStammdatenService {
     staffId: string,
     qualifikationen: readonly StammdatenQualifikation[],
     note: string,
-  ): Promise<void> {
-    await this.putSection(staffId, "qualifikationen", {
+    expectedVersion: string,
+  ): Promise<string> {
+    return this.putSection(staffId, "qualifikationen", {
+      expected_version: expectedVersion,
       qualifikationen: qualifikationen.map((q) => ({
         ...(q.id !== null ? { id: q.id } : {}),
         type_id: q.typeId,
@@ -1913,11 +1960,12 @@ class StaffStammdatenService {
       taxIdMasked: financial.tax_id_masked,
       socialSecurityNumberMasked: financial.social_security_number_masked,
       keptByTraeger: financial.kept_by_traeger ?? false,
+      version: financial.version,
     };
   }
 
   // POST: the reveal writes a GDPR access-log row server-side.
-  async revealFinancial(staffId: string): Promise<StaffFinancialPlain> {
+  async revealFinancial(staffId: string): Promise<StaffFinancialRevealed> {
     const financial = await bffJson(
       "tenant",
       "POST /api/staff/{id}/stammdaten/bank-steuer/reveal",
@@ -1927,6 +1975,7 @@ class StaffStammdatenService {
       iban: financial.iban,
       taxId: financial.tax_id,
       socialSecurityNumber: financial.social_security_number,
+      version: financial.version,
     };
   }
 
@@ -1934,8 +1983,10 @@ class StaffStammdatenService {
     staffId: string,
     financial: StaffFinancialPlain,
     note: string,
-  ): Promise<void> {
-    await this.putSection(staffId, "bank-steuer", {
+    expectedVersion: string,
+  ): Promise<string> {
+    return this.putSection(staffId, "bank-steuer", {
+      expected_version: expectedVersion,
       iban: financial.iban,
       tax_id: financial.taxId,
       social_security_number: financial.socialSecurityNumber,

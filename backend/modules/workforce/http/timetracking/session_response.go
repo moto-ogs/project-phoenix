@@ -75,6 +75,9 @@ type HistorySessionResponse struct {
 	AuditCount       int                           `json:"audit_count"`
 	PackUpMinutes    int                           `json:"pack_up_minutes"`
 	RoundingMinutes  int                           `json:"rounding_minutes"`
+	// Version is the token a correction of the block sends back as
+	// expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 // HistoryResponse is the history of a range with its weekly sums and the
@@ -103,6 +106,7 @@ func historyResponse(history *workforce.HistoryResponse) HistoryResponse {
 			IsOvertime: row.IsOvertime, IsBreakCompliant: row.IsBreakCompliant,
 			Breaks: row.Breaks, EditCount: row.EditCount, AuditCount: row.AuditCount,
 			PackUpMinutes: row.PackUpMinutes, RoundingMinutes: row.RoundingMinutes,
+			Version: row.Version,
 		})
 	}
 	return out

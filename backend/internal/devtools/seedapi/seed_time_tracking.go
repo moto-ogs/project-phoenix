@@ -608,13 +608,17 @@ func seedCustomAbsenceTypeAllowance(rt *Runtime, absenceTypeID, staffID int64, y
 	); err != nil {
 		return fmt.Errorf("enable custom absence type allowance: %w", err)
 	}
-	if _, err := rt.Client.Put(
-		fmt.Sprintf("/api/absence-types/%d/allowances/%d", absenceTypeID, staffID),
-		map[string]any{
-			"year": year, "entitled_days": days,
-			"reason": reason,
-		},
-	); err != nil {
+	// The change carries the version of the claim it replaces (ADR 0311).
+	allowancePath := fmt.Sprintf("/api/absence-types/%d/allowances/%d", absenceTypeID, staffID)
+	raw, err := rt.Client.Get(fmt.Sprintf("%s?year=%d", allowancePath, year))
+	version, readErr := seedReadToken(raw, "version")
+	if err = errors.Join(err, readErr); err != nil {
+		return fmt.Errorf("read custom absence type allowance for staff %d: %w", staffID, err)
+	}
+	if _, err := rt.Client.Put(allowancePath, map[string]any{
+		"year": year, "entitled_days": days,
+		"reason": reason, "expected_version": version,
+	}); err != nil {
 		return fmt.Errorf("seed custom absence type allowance for staff %d: %w", staffID, err)
 	}
 	return nil

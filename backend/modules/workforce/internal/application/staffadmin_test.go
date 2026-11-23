@@ -329,7 +329,7 @@ func TestPersonnelNumberChangeIsAuditedBeforeItIsWritten(t *testing.T) {
 	t.Parallel()
 
 	f := newAdminFixture()
-	staff, err := f.admin.UpdatePersonnelNumber(t.Context(), 7, ptr(" 4711 "), 3, "  neu vergeben ")
+	staff, err := f.admin.UpdatePersonnelNumber(t.Context(), 7, ptr(" 4711 "), nil, 3, "  neu vergeben ")
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{"begin", "lock staff", "audit personnel number", "set personnel number", "end"}, f.log.events)
@@ -343,7 +343,7 @@ func TestPersonnelNumberNoOpWritesNoAuditRow(t *testing.T) {
 
 	f := newAdminFixture()
 	f.subjects.subject.PersonnelNumber = ptr("4711")
-	_, err := f.admin.UpdatePersonnelNumber(t.Context(), 7, ptr("4711"), 3, "")
+	_, err := f.admin.UpdatePersonnelNumber(t.Context(), 7, ptr("4711"), nil, 3, "")
 	require.NoError(t, err)
 	assert.Empty(t, f.audit.personnel)
 	assert.NotContains(t, f.log.events, "set personnel number")
@@ -353,20 +353,20 @@ func TestPersonnelNumberRefusesWithoutTraceOrWithBadInput(t *testing.T) {
 	t.Parallel()
 
 	f := newAdminFixture()
-	_, err := f.admin.UpdatePersonnelNumber(t.Context(), 7, ptr("4711"), 0, "")
+	_, err := f.admin.UpdatePersonnelNumber(t.Context(), 7, ptr("4711"), nil, 0, "")
 	require.Error(t, err, "the actor is required")
-	_, err = f.admin.UpdatePersonnelNumber(t.Context(), 7, ptr("A1"), 3, "")
+	_, err = f.admin.UpdatePersonnelNumber(t.Context(), 7, ptr("A1"), nil, 3, "")
 	require.ErrorIs(t, err, domain.ErrPersonnelNumberInvalid)
 	assert.Empty(t, f.log.events, "invalid input never opens a transaction")
 
 	f.audit.failing = true
-	_, err = f.admin.UpdatePersonnelNumber(t.Context(), 7, ptr("4711"), 3, "")
+	_, err = f.admin.UpdatePersonnelNumber(t.Context(), 7, ptr("4711"), nil, 3, "")
 	require.ErrorIs(t, err, errAuditDown)
 	assert.NotContains(t, f.log.events, "set personnel number", "no change without a trace")
 
 	f = newAdminFixture()
 	f.subjects.personnelTaken = true
-	_, err = f.admin.UpdatePersonnelNumber(t.Context(), 7, ptr("4711"), 3, "")
+	_, err = f.admin.UpdatePersonnelNumber(t.Context(), 7, ptr("4711"), nil, 3, "")
 	require.ErrorIs(t, err, domain.ErrStaffPersonnelNumberTaken)
 }
 
@@ -374,9 +374,9 @@ func TestSectionWriteRecordsEveryFieldBeforeApplying(t *testing.T) {
 	t.Parallel()
 
 	f := newAdminFixture()
-	err := f.admin.UpdateStaffStammdatenPerson(t.Context(), 7, domain.PersonSection{
+	err := sectionErr(f.admin.UpdateStaffStammdatenPerson(t.Context(), 7, domain.PersonSection{
 		FirstName: "Ada", LastName: "Lovelace", Gender: ptr(domain.GenderFemale),
-	}, 3, "Ersteinrichtung")
+	}, 3, "Ersteinrichtung"))
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{
@@ -392,7 +392,7 @@ func TestSectionWriteWithoutChangesTouchesNothing(t *testing.T) {
 	t.Parallel()
 
 	f := newAdminFixture()
-	err := f.admin.UpdateStaffStammdatenPerson(t.Context(), 7, domain.PersonSection{FirstName: "Ada", LastName: "L"}, 3, "")
+	err := sectionErr(f.admin.UpdateStaffStammdatenPerson(t.Context(), 7, domain.PersonSection{FirstName: "Ada", LastName: "L"}, 3, ""))
 	require.NoError(t, err)
 	assert.Equal(t, []string{"begin", "lock staff", "end"}, f.log.events)
 	assert.Empty(t, f.audit.masterData)
@@ -403,13 +403,13 @@ func TestSectionWriteStopsWhenTheAuditFails(t *testing.T) {
 
 	f := newAdminFixture()
 	f.audit.failing = true
-	err := f.admin.UpdateStaffStammdatenKontakt(t.Context(), 7, domain.ContactSection{Phone: ptr("0123")}, 3, "")
+	err := sectionErr(f.admin.UpdateStaffStammdatenKontakt(t.Context(), 7, domain.ContactSection{Phone: ptr("0123")}, 3, ""))
 	require.ErrorIs(t, err, errAuditDown)
 	assert.Contains(t, err.Error(), "write stammdaten audit")
 	assert.NotContains(t, f.log.events, "create master data")
 	assert.Nil(t, f.store.masterData, "nothing is applied after a failed audit")
 
-	err = f.admin.UpdateStaffStammdatenKontakt(t.Context(), 7, domain.ContactSection{}, 0, "")
+	err = sectionErr(f.admin.UpdateStaffStammdatenKontakt(t.Context(), 7, domain.ContactSection{}, 0, ""))
 	require.Error(t, err, "the actor is required")
 }
 
@@ -417,15 +417,15 @@ func TestContractSectionWritesEmploymentTypeOnlyWhenItChanged(t *testing.T) {
 	t.Parallel()
 
 	f := newAdminFixture()
-	err := f.admin.UpdateStaffStammdatenArbeitsvertrag(t.Context(), 7, domain.ContractSection{
+	err := sectionErr(f.admin.UpdateStaffStammdatenArbeitsvertrag(t.Context(), 7, domain.ContractSection{
 		EmploymentType: ptr(domain.EmploymentTypeFullTime), WeeklyHours: ptr(30.0),
-	}, 3, "")
+	}, 3, ""))
 	require.NoError(t, err)
 	assert.NotContains(t, f.log.events, "set employment type", "the type did not change")
 	assert.Contains(t, f.log.events, "create master data")
 
 	f = newAdminFixture()
-	err = f.admin.UpdateStaffStammdatenArbeitsvertrag(t.Context(), 7, domain.ContractSection{EmploymentType: ptr(domain.EmploymentTypePartTime)}, 3, "")
+	err = sectionErr(f.admin.UpdateStaffStammdatenArbeitsvertrag(t.Context(), 7, domain.ContractSection{EmploymentType: ptr(domain.EmploymentTypePartTime)}, 3, ""))
 	require.NoError(t, err)
 	assert.Contains(t, f.log.events, "set employment type")
 }
@@ -434,7 +434,7 @@ func TestFinancialUpdateAuditsMaskedValuesOnly(t *testing.T) {
 	t.Parallel()
 
 	f := newAdminFixture()
-	err := f.admin.UpdateStaffFinancial(tenant.WithTenantID(t.Context(), 5), 7, domain.FinancialSection{IBAN: ptr("DE89 3704 0044 0532 0130 00")}, 3, "")
+	err := sectionErr(f.admin.UpdateStaffFinancial(tenant.WithTenantID(t.Context(), 5), 7, domain.FinancialSection{IBAN: ptr("DE89 3704 0044 0532 0130 00")}, 3, ""))
 	require.NoError(t, err)
 	require.Len(t, f.audit.masterData, 1)
 	assert.Equal(t, domain.AuditSectionBankSteuer, f.audit.masterData[0].Section)
@@ -488,7 +488,7 @@ func TestReadWithoutStoredFinancialDataServesAnEmptyRecord(t *testing.T) {
 	f := newAdminFixture()
 	masked, err := f.admin.StaffFinancialMasked(t.Context(), 7, 9, "admin")
 	require.NoError(t, err)
-	assert.Equal(t, domain.StaffFinancialMasked{StaffID: 7}, masked)
+	assert.Equal(t, domain.StaffFinancialMasked{StaffID: 7, Version: financialSectionVersion(nil)}, masked)
 	plain, err := f.admin.RevealStaffFinancial(t.Context(), 7, 9, "admin")
 	require.NoError(t, err)
 	assert.Equal(t, domain.StaffFinancialData{StaffID: 7}, plain)
@@ -729,9 +729,9 @@ func TestSchoolChangesNoValueItsTraegerKeeps(t *testing.T) {
 
 	_, err = f.admin.RevealStaffFinancial(t.Context(), 7, 9, "admin")
 	require.ErrorIs(t, err, domain.ErrStaffKeptByTraeger)
-	err = f.admin.UpdateStaffFinancial(tenant.WithTenantID(t.Context(), 5), 7, domain.FinancialSection{IBAN: ptr("DE89 3704 0044 0532 0130 00")}, 3, "")
+	err = sectionErr(f.admin.UpdateStaffFinancial(tenant.WithTenantID(t.Context(), 5), 7, domain.FinancialSection{IBAN: ptr("DE89 3704 0044 0532 0130 00")}, 3, ""))
 	require.ErrorIs(t, err, domain.ErrStaffKeptByTraeger)
-	_, err = f.admin.UpdatePersonnelNumber(t.Context(), 7, ptr("4711"), 3, "")
+	_, err = f.admin.UpdatePersonnelNumber(t.Context(), 7, ptr("4711"), nil, 3, "")
 	require.ErrorIs(t, err, domain.ErrStaffKeptByTraeger)
 
 	assert.Empty(t, f.audit.masterData)

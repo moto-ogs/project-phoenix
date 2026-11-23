@@ -186,7 +186,13 @@ class AbsenceTypeService {
   async setAllowance(
     absenceTypeId: string,
     staffId: string,
-    payload: { year: number; entitledDays: number; reason: string },
+    payload: {
+      year: number;
+      entitledDays: number;
+      reason: string;
+      /** The version of the summary the form showed (ADR 0311). */
+      expectedVersion: string;
+    },
   ): Promise<AbsenceTypeAllowanceSummary> {
     const allowance = await bffJson(
       "tenant",
@@ -197,6 +203,7 @@ class AbsenceTypeService {
           year: payload.year,
           entitled_days: payload.entitledDays,
           reason: payload.reason,
+          expected_version: payload.expectedVersion,
         },
         errorMessage: "Kontingent konnte nicht gespeichert werden",
       },
@@ -245,6 +252,8 @@ export interface AbsenceTypeAllowanceSummary {
    * Schule liest es nur.
    */
   readonly keptByTraeger: boolean;
+  /** Der gespeicherte Anspruch; seine Änderung schickt ihn zurück. */
+  readonly version: string;
 }
 
 export function mapAllowance(
@@ -270,6 +279,7 @@ export function mapAllowance(
         }
       : null,
     keptByTraeger: data.kept_by_traeger,
+    version: data.version,
   };
 }
 

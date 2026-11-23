@@ -100,8 +100,28 @@ func TestOwnTimeTrackingDay_StampsBreaksAbsencesAndVacationThroughTheRoutes(t *t
 	assert.Equal(t, session["id"], started["session_id"])
 	ended := do(http.MethodPost, "/break/end", nil, http.StatusOK)
 	assert.Equal(t, session["id"], ended["id"])
-	noted := do(http.MethodPut, fmt.Sprintf("/%v", session["id"]), map[string]any{"notes": "Elterngespräch"}, http.StatusOK)
+	read := do(http.MethodGet, "/history?from=2026-08-24&to=2026-08-24", nil, http.StatusOK)
+	encoded, encodeErr := json.Marshal(map[string]any{"data": read})
+	require.NoError(t, encodeErr)
+	version := historyVersion(t, encoded, fmt.Sprint(session["id"]))
+	noted := do(http.MethodPut, fmt.Sprintf("/%v", session["id"]), map[string]any{"notes": "Elterngespräch", "expected_version": version}, http.StatusOK)
 	assert.Equal(t, "Elterngespräch", noted["notes"])
+	// A second correction from the same read, or one without a read, is
+	// refused and writes nothing (ADR 0311): the block changed since.
+	for _, stale := range []string{version, ""} {
+		var body bytes.Buffer
+		require.NoError(t, json.NewEncoder(&body).Encode(map[string]any{"notes": "Überschrieben", "expected_version": stale}))
+		req := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/api/time-tracking/%v", session["id"]), &body)
+		req.Header.Set("Authorization", "Bearer "+token)
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusConflict, rec.Code, "token %q: %s", stale, rec.Body.String())
+		assert.Contains(t, rec.Body.String(), "general.changed_since_read")
+	}
+	var storedNotes string
+	require.NoError(t, db.NewRaw(`SELECT notes FROM active.work_sessions WHERE id = ?`, session["id"]).Scan(t.Context(), &storedNotes))
+	assert.Equal(t, "Elterngespräch", storedNotes, "the refused corrections change nothing")
 	advance(4 * time.Hour)
 	left := do(http.MethodPost, "/check-out", nil, http.StatusOK)
 	assert.Equal(t, session["id"], left["id"])

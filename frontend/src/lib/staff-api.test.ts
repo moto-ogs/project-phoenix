@@ -3027,6 +3027,12 @@ describe("staff-api", () => {
   describe("staffStammdatenService", () => {
     const backendStammdaten = {
       staff_id: "7",
+      versions: {
+        person: "v-person",
+        kontakt: "v-kontakt",
+        arbeitsvertrag: "v-vertrag",
+        qualifikationen: "v-quali",
+      },
       person: {
         first_name: "Max",
         last_name: "Mustermann",
@@ -3080,6 +3086,7 @@ describe("staff-api", () => {
         expect.any(Object),
       );
       expect(result.staffId).toBe("7");
+      expect(result.versions.qualifikationen).toBe("v-quali");
       expect(result.person).toEqual({
         firstName: "Max",
         lastName: "Mustermann",
@@ -3143,9 +3150,14 @@ describe("staff-api", () => {
 
     it("writes the person section in the backend wire shape", async () => {
       const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockResolvedValue({ ok: true, status: 204 } as Response);
+      // The section answers its token over the stored values (ADR 0311).
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({ data: { staff_id: "7", version: "v-saved" } }),
+      } as unknown as Response);
 
-      await staffStammdatenService.updatePerson(
+      const answered = await staffStammdatenService.updatePerson(
         "7",
         {
           firstName: "Max",
@@ -3154,7 +3166,9 @@ describe("staff-api", () => {
           gender: "diverse",
         },
         "Namensänderung",
+        "v-read",
       );
+      expect(answered).toBe("v-saved");
 
       const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
       expect(url).toBe("/api/staff/7/stammdaten/person");
@@ -3165,14 +3179,20 @@ describe("staff-api", () => {
         birthday: "1991-06-02",
         gender: "diverse",
         note: "Namensänderung",
+        expected_version: "v-read",
       });
     });
 
     it("writes the kontakt section in the backend wire shape", async () => {
       const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockResolvedValue({ ok: true, status: 204 } as Response);
+      // The section answers its token over the stored values (ADR 0311).
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({ data: { staff_id: "7", version: "v-saved" } }),
+      } as unknown as Response);
 
-      await staffStammdatenService.updateKontakt(
+      const answered = await staffStammdatenService.updateKontakt(
         "7",
         {
           addressStreet: "Musterweg 1",
@@ -3184,7 +3204,9 @@ describe("staff-api", () => {
           emergencyContactPhone: null,
         },
         "Umzug",
+        "v-read",
       );
+      expect(answered).toBe("v-saved");
 
       const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
       expect(url).toBe("/api/staff/7/stammdaten/kontakt");
@@ -3197,14 +3219,20 @@ describe("staff-api", () => {
         emergency_contact_name: "Erika Muster",
         emergency_contact_phone: null,
         note: "Umzug",
+        expected_version: "v-read",
       });
     });
 
     it("writes the arbeitsvertrag section in the backend wire shape", async () => {
       const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockResolvedValue({ ok: true, status: 204 } as Response);
+      // The section answers its token over the stored values (ADR 0311).
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({ data: { staff_id: "7", version: "v-saved" } }),
+      } as unknown as Response);
 
-      await staffStammdatenService.updateArbeitsvertrag(
+      const answered = await staffStammdatenService.updateArbeitsvertrag(
         "7",
         {
           entryDate: "2024-08-01",
@@ -3214,7 +3242,9 @@ describe("staff-api", () => {
           employmentType: "part_time",
         },
         "Vertrag",
+        "v-read",
       );
+      expect(answered).toBe("v-saved");
 
       const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
       expect(url).toBe("/api/staff/7/stammdaten/arbeitsvertrag");
@@ -3225,14 +3255,20 @@ describe("staff-api", () => {
         weekly_hours: 29.5,
         employment_type: "part_time",
         note: "Vertrag",
+        expected_version: "v-read",
       });
     });
 
     it("sends the full qualification list with the row ids and kinds (#4808)", async () => {
       const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockResolvedValue({ ok: true, status: 204 } as Response);
+      // The section answers its token over the stored values (ADR 0311).
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({ data: { staff_id: "7", version: "v-saved" } }),
+      } as unknown as Response);
 
-      await staffStammdatenService.updateQualifikationen(
+      const answered = await staffStammdatenService.updateQualifikationen(
         "7",
         [
           {
@@ -3251,7 +3287,9 @@ describe("staff-api", () => {
           },
         ],
         "Nachweise",
+        "v-read",
       );
+      expect(answered).toBe("v-saved");
 
       const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
       expect(url).toBe("/api/staff/7/stammdaten/qualifikationen");
@@ -3272,6 +3310,7 @@ describe("staff-api", () => {
           },
         ],
         note: "Nachweise",
+        expected_version: "v-read",
       });
     });
 
@@ -3299,6 +3338,7 @@ describe("staff-api", () => {
             gender: null,
           },
           "",
+          "v-read",
         ),
       ).rejects.toMatchObject({ code: "workforce.stammdaten_invalid" });
     });
@@ -3325,6 +3365,7 @@ describe("staff-api", () => {
             emergencyContactPhone: null,
           },
           "",
+          "v-read",
         ),
       ).rejects.toThrow("Stammdaten konnten nicht gespeichert werden");
     });
@@ -3348,6 +3389,7 @@ describe("staff-api", () => {
             employmentType: null,
           },
           "",
+          "v-read",
         ),
       ).rejects.toThrow("Stammdaten konnten nicht gespeichert werden");
     });
@@ -3438,9 +3480,14 @@ describe("staff-api", () => {
 
     it("writes the bank & tax section in the backend wire shape", async () => {
       const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockResolvedValue({ ok: true, status: 204 } as Response);
+      // The section answers its token over the stored values (ADR 0311).
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({ data: { staff_id: "7", version: "v-saved" } }),
+      } as unknown as Response);
 
-      await staffStammdatenService.updateFinancial(
+      const answered = await staffStammdatenService.updateFinancial(
         "7",
         {
           iban: "DE89370400440532013000",
@@ -3448,7 +3495,9 @@ describe("staff-api", () => {
           socialSecurityNumber: null,
         },
         "Lohnbüro",
+        "v-read",
       );
+      expect(answered).toBe("v-saved");
 
       const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
       expect(url).toBe("/api/staff/7/stammdaten/bank-steuer");
@@ -3458,6 +3507,7 @@ describe("staff-api", () => {
         tax_id: "12345678911",
         social_security_number: null,
         note: "Lohnbüro",
+        expected_version: "v-read",
       });
     });
   });

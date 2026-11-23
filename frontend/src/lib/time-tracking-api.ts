@@ -55,6 +55,8 @@ export interface UpdateSessionRequest {
   breakMinutes?: number;
   notes?: string;
   breaks?: Array<{ id: string; durationMinutes: number }>;
+  /** The version of the history row the dialog showed (ADR 0311). */
+  expectedVersion: string;
 }
 
 /**
@@ -205,6 +207,7 @@ class TimeTrackingService {
         break_minutes: updates.breakMinutes,
         status: updates.status,
         notes: updates.notes,
+        expected_version: updates.expectedVersion,
         ...(updates.breaks && updates.breaks.length > 0
           ? {
               breaks: updates.breaks.map((b) => ({

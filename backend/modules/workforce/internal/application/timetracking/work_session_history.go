@@ -144,6 +144,7 @@ func sessionHistoryResponses(sessions []*WorkSession, breaksBySession map[int64]
 			Breaks:           breaks,
 			EditCount:        editCounts[session.ID],
 			AuditCount:       auditCounts[session.ID],
+			Version:          sessionVersion(session, breaks),
 		}
 	}
 

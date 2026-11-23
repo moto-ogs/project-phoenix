@@ -83,11 +83,29 @@ type StammdatenResponse struct {
 	Kontakt         StammdatenKontaktPayload          `json:"kontakt"`
 	Arbeitsvertrag  StammdatenArbeitsvertragPayload   `json:"arbeitsvertrag"`
 	Qualifikationen []StammdatenQualificationResponse `json:"qualifikationen"`
+	// Versions carries one token per section; its PUT sends it back as
+	// expected_version (ADR 0311).
+	Versions StammdatenVersionsResponse `json:"versions"`
+}
+
+// StammdatenVersionsResponse is the token of each section of the read.
+type StammdatenVersionsResponse struct {
+	Person          string `json:"person"`
+	Kontakt         string `json:"kontakt"`
+	Arbeitsvertrag  string `json:"arbeitsvertrag"`
+	Qualifikationen string `json:"qualifikationen"`
+}
+
+// SectionToken is the read token every section PUT carries: the version
+// of the section in the read the form showed.
+type SectionToken struct {
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // StammdatenPersonRequest binds the person section PUT.
 type StammdatenPersonRequest struct {
 	StammdatenPersonPayload
+	SectionToken
 	Note string `json:"note"`
 }
 
@@ -107,6 +125,7 @@ func (r *StammdatenPersonRequest) Bind(_ *http.Request) error {
 // StammdatenKontaktRequest binds the contact section PUT.
 type StammdatenKontaktRequest struct {
 	StammdatenKontaktPayload
+	SectionToken
 	Note string `json:"note"`
 }
 
@@ -115,6 +134,7 @@ func (r *StammdatenKontaktRequest) Bind(_ *http.Request) error { return nil }
 // StammdatenArbeitsvertragRequest binds the contract section PUT.
 type StammdatenArbeitsvertragRequest struct {
 	StammdatenArbeitsvertragPayload
+	SectionToken
 	Note string `json:"note"`
 }
 
@@ -124,7 +144,8 @@ func (r *StammdatenArbeitsvertragRequest) Bind(_ *http.Request) error { return n
 // replace).
 type StammdatenQualifikationenRequest struct {
 	Qualifikationen []StammdatenQualificationPayload `json:"qualifikationen"`
-	Note            string                           `json:"note"`
+	SectionToken
+	Note string `json:"note"`
 }
 
 func (r *StammdatenQualifikationenRequest) Bind(_ *http.Request) error {
@@ -141,7 +162,8 @@ type StammdatenFinancialRequest struct {
 	IBAN                 *string `json:"iban"`
 	TaxID                *string `json:"tax_id"`
 	SocialSecurityNumber *string `json:"social_security_number"`
-	Note                 string  `json:"note"`
+	SectionToken
+	Note string `json:"note"`
 }
 
 func (r *StammdatenFinancialRequest) Bind(_ *http.Request) error { return nil }
@@ -155,6 +177,9 @@ type StammdatenFinancialMaskedResponse struct {
 	// KeptByTraeger is true when the Träger keeps the values in its staff
 	// record (#4705); the school then holds none.
 	KeptByTraeger bool `json:"kept_by_traeger"`
+	// Version is the section token over the sealed values; never a hash
+	// of the plaintext.
+	Version string `json:"version"`
 }
 
 // StammdatenFinancialRevealResponse carries the unmasked values after the
@@ -164,6 +189,8 @@ type StammdatenFinancialRevealResponse struct {
 	IBAN                 *string  `json:"iban"`
 	TaxID                *string  `json:"tax_id"`
 	SocialSecurityNumber *string  `json:"social_security_number"`
+	// Version is the token the bank and tax PUT sends back.
+	Version string `json:"version"`
 }
 
 // --- handlers --------------------------------------------------------------
@@ -196,6 +223,7 @@ func newStammdatenResponse(data *workforce.StaffStammdaten, types []workforce.Qu
 	resp := &StammdatenResponse{
 		StaffID:         ident.ID(data.Staff.ID),
 		Qualifikationen: make([]StammdatenQualificationResponse, 0, len(data.Qualifications)),
+		Versions:        StammdatenVersionsResponse(data.Versions),
 	}
 	typeNames := make(map[int64]string, len(types))
 	for _, kind := range types {
@@ -237,17 +265,24 @@ func newStammdatenResponse(data *workforce.StaffStammdaten, types []workforce.Qu
 	return resp
 }
 
-// StammdatenAck is the uniform PUT response; the tab refetches the section
-// afterwards, so the ack carries no data.
+// StammdatenAck answers a write that shows no read state (a deleted
+// document).
 type StammdatenAck struct {
 	StaffID ident.ID `json:"staff_id"`
+}
+
+// StammdatenSectionAck answers a section write with the section's token over
+// what is stored now (ADR 0311): the next save in the same editing sends it.
+type StammdatenSectionAck struct {
+	StaffID ident.ID `json:"staff_id"`
+	Version string   `json:"version"`
 }
 
 // runStammdatenUpdate is the shared PUT shape for non-financial sections:
 // parse id, resolve the acting staff member, run the section update, classify
 // errors. Financial writers can be external payroll accounts without a staff
 // mapping, so their endpoint resolves its account actor separately.
-func (rs *StaffAdminResource) runStammdatenUpdate(w http.ResponseWriter, r *http.Request, update func(staffID, changedBy int64) error) {
+func (rs *StaffAdminResource) runStammdatenUpdate(w http.ResponseWriter, r *http.Request, update func(staffID, changedBy int64) (string, error)) {
 	id, ok := common.ParseInt64IDWithError(w, r, "id", common.MsgInvalidStaffID)
 	if !ok {
 		return
@@ -257,7 +292,8 @@ func (rs *StaffAdminResource) runStammdatenUpdate(w http.ResponseWriter, r *http
 		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
-	if err := update(id, changedBy); err != nil {
+	version, err := update(id, changedBy)
+	if err != nil {
 		switch {
 		case errors.Is(err, workforce.ErrStaffStammdatenInvalid):
 			common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeWorkforceStammdatenInvalid))
@@ -268,7 +304,7 @@ func (rs *StaffAdminResource) runStammdatenUpdate(w http.ResponseWriter, r *http
 		}
 		return
 	}
-	common.Respond(w, r, http.StatusOK, &StammdatenAck{StaffID: ident.ID(id)}, "Stammdaten updated successfully")
+	common.Respond(w, r, http.StatusOK, &StammdatenSectionAck{StaffID: ident.ID(id), Version: version}, "Stammdaten updated successfully")
 }
 
 func (rs *StaffAdminResource) updateStammdatenPerson(w http.ResponseWriter, r *http.Request) {
@@ -277,12 +313,14 @@ func (rs *StaffAdminResource) updateStammdatenPerson(w http.ResponseWriter, r *h
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	rs.runStammdatenUpdate(w, r, func(staffID, changedBy int64) error {
+	rs.runStammdatenUpdate(w, r, func(staffID, changedBy int64) (string, error) {
 		return rs.PersonService.UpdateStaffStammdatenPerson(r.Context(), staffID, workforce.StammdatenPersonInput{
 			FirstName: req.FirstName,
 			LastName:  req.LastName,
 			Birthday:  optionalDateString(req.Birthday),
 			Gender:    req.Gender,
+
+			ExpectedVersion: &req.ExpectedVersion,
 		}, changedBy, req.Note)
 	})
 }
@@ -293,7 +331,7 @@ func (rs *StaffAdminResource) updateStammdatenKontakt(w http.ResponseWriter, r *
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	rs.runStammdatenUpdate(w, r, func(staffID, changedBy int64) error {
+	rs.runStammdatenUpdate(w, r, func(staffID, changedBy int64) (string, error) {
 		return rs.PersonService.UpdateStaffStammdatenKontakt(r.Context(), staffID, workforce.StammdatenKontaktInput{
 			AddressStreet:         req.AddressStreet,
 			AddressPostalCode:     req.AddressPostalCode,
@@ -302,6 +340,7 @@ func (rs *StaffAdminResource) updateStammdatenKontakt(w http.ResponseWriter, r *
 			Email:                 req.Email,
 			EmergencyContactName:  req.EmergencyContactName,
 			EmergencyContactPhone: req.EmergencyContactPhone,
+			ExpectedVersion:       &req.ExpectedVersion,
 		}, changedBy, req.Note)
 	})
 }
@@ -312,13 +351,14 @@ func (rs *StaffAdminResource) updateStammdatenArbeitsvertrag(w http.ResponseWrit
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	rs.runStammdatenUpdate(w, r, func(staffID, changedBy int64) error {
+	rs.runStammdatenUpdate(w, r, func(staffID, changedBy int64) (string, error) {
 		return rs.PersonService.UpdateStaffStammdatenArbeitsvertrag(r.Context(), staffID, workforce.StammdatenArbeitsvertragInput{
 			EntryDate:        optionalDateString(req.EntryDate),
 			ContractEndDate:  optionalDateString(req.ContractEndDate),
 			ProbationEndDate: optionalDateString(req.ProbationEndDate),
 			WeeklyHours:      req.WeeklyHours,
 			EmploymentType:   req.EmploymentType,
+			ExpectedVersion:  &req.ExpectedVersion,
 		}, changedBy, req.Note)
 	})
 }
@@ -329,7 +369,7 @@ func (rs *StaffAdminResource) updateStammdatenQualifikationen(w http.ResponseWri
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	rs.runStammdatenUpdate(w, r, func(staffID, changedBy int64) error {
+	rs.runStammdatenUpdate(w, r, func(staffID, changedBy int64) (string, error) {
 		inputs := make([]workforce.StammdatenQualificationInput, 0, len(req.Qualifikationen))
 		for _, q := range req.Qualifikationen {
 			var id, typeID *int64
@@ -349,7 +389,7 @@ func (rs *StaffAdminResource) updateStammdatenQualifikationen(w http.ResponseWri
 				ExpiresOn:  optionalDateString(q.ExpiresOn),
 			})
 		}
-		return rs.PersonService.ReplaceStaffQualificationList(r.Context(), staffID, inputs, changedBy, req.Note)
+		return rs.PersonService.ReplaceStaffQualificationList(r.Context(), staffID, inputs, &req.ExpectedVersion, changedBy, req.Note)
 	})
 }
 
@@ -403,6 +443,7 @@ func (rs *StaffAdminResource) getStammdatenFinancial(w http.ResponseWriter, r *h
 		TaxIDMasked:                masked.TaxIDMasked,
 		SocialSecurityNumberMasked: masked.SocialSecurityNumberMasked,
 		KeptByTraeger:              masked.KeptByTraeger,
+		Version:                    masked.Version,
 	}, "Financial data retrieved successfully")
 }
 
@@ -436,6 +477,7 @@ func (rs *StaffAdminResource) revealStammdatenFinancial(w http.ResponseWriter, r
 		IBAN:                 plain.IBAN,
 		TaxID:                plain.TaxID,
 		SocialSecurityNumber: plain.SocialSecurityNumber,
+		Version:              plain.Version,
 	}, "Financial data revealed successfully")
 }
 
@@ -454,11 +496,13 @@ func (rs *StaffAdminResource) updateStammdatenFinancial(w http.ResponseWriter, r
 		common.RenderError(w, r, common.ErrorUnauthorized(err))
 		return
 	}
-	if err := rs.PersonService.UpdateStaffFinancial(r.Context(), staffID, workforce.StammdatenFinancialInput{
+	version, err := rs.PersonService.UpdateStaffFinancial(r.Context(), staffID, workforce.StammdatenFinancialInput{
 		IBAN:                 req.IBAN,
 		TaxID:                req.TaxID,
 		SocialSecurityNumber: req.SocialSecurityNumber,
-	}, accountID, req.Note); err != nil {
+		ExpectedVersion:      &req.ExpectedVersion,
+	}, accountID, req.Note)
+	if err != nil {
 		switch {
 		case errors.Is(err, workforce.ErrStaffStammdatenInvalid):
 			common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeWorkforceStammdatenInvalid))
@@ -471,5 +515,5 @@ func (rs *StaffAdminResource) updateStammdatenFinancial(w http.ResponseWriter, r
 		}
 		return
 	}
-	common.Respond(w, r, http.StatusOK, &StammdatenAck{StaffID: ident.ID(staffID)}, "Stammdaten updated successfully")
+	common.Respond(w, r, http.StatusOK, &StammdatenSectionAck{StaffID: ident.ID(staffID), Version: version}, "Stammdaten updated successfully")
 }

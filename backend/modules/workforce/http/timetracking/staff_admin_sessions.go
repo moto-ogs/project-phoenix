@@ -422,6 +422,11 @@ func (rs *StaffAdminResource) adminUpdateStaffSession(w http.ResponseWriter, r *
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
+	// A correction without the history row's token is refused like an
+	// outdated one (ADR 0311).
+	if updates.ExpectedVersion == nil {
+		updates.ExpectedVersion = new(string)
+	}
 
 	session, err := rs.WorkSessionService.UpdateSessionAsAdmin(r.Context(), editorStaffID, targetStaffID, sessionID, updates)
 	if err != nil {
