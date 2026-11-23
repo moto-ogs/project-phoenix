@@ -252,6 +252,51 @@ describe("removing a price list", () => {
     ).not.toBeInTheDocument();
   });
 
+  // ADR 0311 rule 6: a failed read of the prices after a refused removal
+  // says so instead of claiming the new state shows.
+  it("names a failed read of the prices after a refused removal", async () => {
+    const read: CareTariffs = {
+      ...data,
+      lists: [{ schoolId: "11", validFrom: "2026-01-01", freeMonths: [] }],
+      versions: { "11": "v-1" },
+    };
+    fetchCareTariffs.mockReset().mockResolvedValueOnce(read);
+    fetchCareTariffs.mockRejectedValue(
+      new ApiError("down", 503, { code: "general.unavailable" }),
+    );
+    deleteCarePriceList
+      .mockReset()
+      .mockRejectedValue(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      );
+    fetchCareRules.mockResolvedValue({ rules: [rule] });
+    render(
+      <ToastProvider>
+        <TraegerResourceTestProvider>
+          <TraegerPreislistePage />
+        </TraegerResourceTestProvider>
+      </ToastProvider>,
+    );
+    await screen.findAllByText("Modul A");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Weitere Aktionen: Sonnenhof" }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", {
+        name: /Preise ab Januar 2026 löschen/,
+      }),
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Ja, löschen" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Löschen" }));
+
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Du siehst jetzt den neuen Stand/),
+    ).not.toBeInTheDocument();
+  });
+
   it("removes with the version its dialog opened on, not a newer one read in the background", async () => {
     const read: CareTariffs = {
       ...data,
