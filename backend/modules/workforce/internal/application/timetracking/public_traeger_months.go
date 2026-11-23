@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 type traegerMonthCapability struct {
@@ -35,11 +36,20 @@ func (c traegerMonthCapability) TraegerMonthAccount(ctx context.Context, staffID
 	if later := account.LaterClosed; later != nil {
 		result.LaterClosed = fmt.Sprintf("%04d-%02d", later.Year, later.Month)
 	}
+	result.Version = readstate.Fingerprint(result)
 	return result, nil
 }
 
-func (c traegerMonthCapability) CloseMonthForTraeger(ctx context.Context, staffID, accountID int64, year, month int, reason string) (bool, error) {
-	closed, err := c.closing.CloseMonthForTraeger(ctx, staffID, accountID, year, month, reason)
+// CloseMonthForTraeger reads the month again under the balance lock, with
+// the same read that gave the Träger its Version, and closes only that.
+func (c traegerMonthCapability) CloseMonthForTraeger(ctx context.Context, staffID, accountID int64, year, month int, reason, expectedVersion string) (bool, error) {
+	closed, err := c.closing.CloseMonthForTraeger(ctx, staffID, accountID, year, month, reason, func(ctx context.Context) error {
+		current, err := c.TraegerMonthAccount(ctx, staffID, year, month)
+		if err != nil {
+			return err
+		}
+		return readstate.Check(expectedVersion, current.Version)
+	})
 	return closed, mapTimeTrackingFailure(err)
 }
 

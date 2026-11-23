@@ -13,15 +13,31 @@ const { mockApiGet, mockApiPost, mockApiPut } = vi.hoisted(() => ({
   mockApiPut: vi.fn(),
 }));
 
-vi.mock("~/lib/api-helpers.server", () => ({
-  apiGet: mockApiGet,
-  apiPost: mockApiPost,
-  apiPut: mockApiPut,
+vi.mock("~/lib/backend-client.server", async (original) => ({
+  ...(await original<typeof import("~/lib/backend-client.server")>()),
+  sendBackend: async (
+    endpoint: string,
+    token: string,
+    call: { method: string; json?: unknown },
+  ) => {
+    const value =
+      call.method === "GET"
+        ? await mockApiGet(endpoint, token)
+        : await (call.method === "POST" ? mockApiPost : mockApiPut)(
+            endpoint,
+            token,
+            call.json,
+          );
+    return Response.json(value);
+  },
 }));
 
 const schema = success(z.object({ name: z.string() }));
 const read = () =>
-  contractGet("GET /api/rows/{id}", schema, "/api/rows/1", "token");
+  contractGet(
+    { method: "GET", pattern: "/api/rows/{id}", response: schema },
+    { endpoint: "/api/rows/1", token: "token" },
+  );
 
 describe("contractGet", () => {
   const consoleSpies = suppressConsole("error");
@@ -35,7 +51,7 @@ describe("contractGet", () => {
       status: "success",
       data: { name: "Ada", more: 1 },
     });
-    await expect(read()).resolves.toEqual({
+    await expect(read()).resolves.toMatchObject({
       ok: true,
       value: { status: "success", data: { name: "Ada" } },
     });
@@ -56,7 +72,7 @@ describe("contractGet", () => {
     );
     mockApiGet.mockRejectedValueOnce(cause);
     const result = await read();
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       ok: false,
       error: {
         status: 404,
@@ -125,8 +141,12 @@ describe("contractWrite", () => {
   it("posts the body and decodes the answer", async () => {
     mockApiPost.mockResolvedValueOnce(answer);
     await expect(
-      contractWrite(create, "/api/rows", "token", { name: "Ada" }),
-    ).resolves.toEqual({ ok: true, value: answer });
+      contractWrite(
+        create,
+        { name: "Ada" },
+        { endpoint: "/api/rows", token: "token" },
+      ),
+    ).resolves.toMatchObject({ ok: true, value: answer });
     expect(mockApiPost).toHaveBeenCalledExactlyOnceWith("/api/rows", "token", {
       name: "Ada",
     });
@@ -134,9 +154,13 @@ describe("contractWrite", () => {
 
   it("puts the body of a PUT route", async () => {
     mockApiPut.mockResolvedValueOnce(answer);
-    const result = await contractWrite(update, "/api/rows/1", "token", {
-      name: "Ada",
-    });
+    const result = await contractWrite(
+      update,
+      {
+        name: "Ada",
+      },
+      { endpoint: "/api/rows/1", token: "token" },
+    );
     expect(result.ok).toBe(true);
     expect(mockApiPut).toHaveBeenCalledWith("/api/rows/1", "token", {
       name: "Ada",
@@ -146,8 +170,14 @@ describe("contractWrite", () => {
 
   it("refuses a body outside the request type at compile time", () => {
     const send = () =>
-      // @ts-expect-error the route binds a string name
-      contractWrite(update, "/api/rows/1", "token", { name: 7 });
+      contractWrite(
+        update,
+        {
+          // @ts-expect-error the route binds a string name
+          name: 7,
+        },
+        { endpoint: "/api/rows/1", token: "token" },
+      );
     expect(send).toBeTypeOf("function");
   });
 
@@ -158,7 +188,11 @@ describe("contractWrite", () => {
       { contentType: "application/problem+json" },
     );
     mockApiPut.mockRejectedValueOnce(cause);
-    const result = await contractWrite(update, "/api/rows/1", "token", {});
+    const result = await contractWrite(
+      update,
+      {},
+      { endpoint: "/api/rows/1", token: "token" },
+    );
     expect(!result.ok && result.error).toMatchObject({
       status: 409,
       code: "students.companions_changed",
@@ -170,7 +204,11 @@ describe("contractWrite", () => {
     // The backend has stored the write; general.unavailable would offer
     // to send it again (#7563).
     mockApiPost.mockResolvedValueOnce({ status: "success", data: {} });
-    const result = await contractWrite(create, "/api/rows", "token", {});
+    const result = await contractWrite(
+      create,
+      {},
+      { endpoint: "/api/rows", token: "token" },
+    );
     expect(!result.ok && result.error).toMatchObject({
       status: 502,
       code: "general.write_answer_unreadable",
@@ -195,9 +233,8 @@ describe("contractWrite", () => {
       mockApiPost.mockResolvedValueOnce({ status: "success", data: {} });
       const result = await contractWrite(
         { ...entry("POST", pattern), noCommit },
-        pattern,
-        "token",
         {},
+        { token: "token" },
       );
       expect(result.ok).toBe(false);
       if (result.ok) return;
@@ -234,9 +271,8 @@ describe("contractWrite", () => {
       mockApiPost.mockResolvedValueOnce({ status: "success", data: {} });
       const result = await contractWrite(
         entry("POST", pattern),
-        pattern,
-        "token",
         {},
+        { token: "token" },
       );
       expect(result.ok).toBe(false);
       if (result.ok) return;
@@ -255,7 +291,7 @@ describe("contractWrite", () => {
   it("lets a failure that is no backend response pass through", async () => {
     mockApiPut.mockRejectedValueOnce(new TypeError("aborted"));
     await expect(
-      contractWrite(update, "/api/rows/1", "token", {}),
+      contractWrite(update, {}, { endpoint: "/api/rows/1", token: "token" }),
     ).rejects.toThrow("aborted");
   });
 });

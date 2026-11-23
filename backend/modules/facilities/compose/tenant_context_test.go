@@ -61,7 +61,7 @@ func TestEveryOperationRejectsMissingTenantContext(t *testing.T) {
 			return err
 		}},
 		{name: "delete room", call: func(ctx context.Context, module facilities.Capability) error {
-			_, err := module.DeleteRoom(ctx, id)
+			_, err := module.DeleteRoom(ctx, id, "")
 			return err
 		}},
 	}

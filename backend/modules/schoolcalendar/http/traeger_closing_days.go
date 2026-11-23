@@ -71,13 +71,16 @@ type TraegerClosingDayRequest struct {
 	// HolidayBookingsToken confirms the preview of the affected holiday
 	// bookings (#6434), empty when the preview showed none.
 	HolidayBookingsToken string `json:"holiday_bookings_token"`
+	// ExpectedVersion is the version of the closing day a change replaces
+	// (ADR 0311); a create ignores it.
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 // Bind accepts the body; the Owner validates the closing day.
 func (req *TraegerClosingDayRequest) Bind(*http.Request) error { return nil }
 
 func (req *TraegerClosingDayRequest) input() traegercalendar.ClosingDayInput {
-	return traegercalendar.ClosingDayInput{StartDate: req.StartDate, EndDate: req.EndDate, Reason: req.Reason, SchoolIDs: ident.Int64s(req.SchoolIDs), HolidayBookingsToken: req.HolidayBookingsToken}
+	return traegercalendar.ClosingDayInput{StartDate: req.StartDate, EndDate: req.EndDate, Reason: req.Reason, SchoolIDs: ident.Int64s(req.SchoolIDs), HolidayBookingsToken: req.HolidayBookingsToken, ExpectedVersion: req.ExpectedVersion}
 }
 
 func traegerOf(w http.ResponseWriter, r *http.Request) (int64, bool) {

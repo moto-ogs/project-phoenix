@@ -494,6 +494,8 @@ export interface BulkCancelResult {
   kept: number;
   /** Those series by name, with their count in the range. */
   keptSeries: { name: string; count: number }[];
+  /** Token of the counted selection; the real run sends it back (ADR 0311). */
+  fingerprint: string;
 }
 
 /**

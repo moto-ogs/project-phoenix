@@ -103,6 +103,12 @@ export interface OfferingPreview {
    * means none.
    */
   otherOfferings?: OfferingPreviewAlternative[];
+  /**
+   * Token of this preview; „Mit Angebot verbinden“ sends it back, and the
+   * server refuses when the children changed since (ADR 0311). Empty for
+   * the advisory preview of an unsaved Regeltermin.
+   */
+  fingerprint: string;
 }
 
 const EXCLUSIONS: readonly NonNullable<
@@ -183,6 +189,7 @@ export function mapOfferingPreview(
       name: offering.name,
       childCount: offering.child_count,
     })),
+    fingerprint: raw.fingerprint,
   };
 }
 
@@ -373,13 +380,14 @@ export function previewQuery(
 
 export function connectionBody(
   selection: OfferingSelection,
-  effectiveDate: string,
+  preview: Pick<OfferingPreview, "from" | "fingerprint">,
 ): wire.offeringConnectionRequest {
   return {
     offering_ids: selection.offeringIds,
     grade_levels: selection.gradeLevels,
     school_classes: selection.schoolClasses,
-    effective_date: effectiveDate,
+    effective_date: preview.from,
+    expected_fingerprint: preview.fingerprint,
   };
 }
 

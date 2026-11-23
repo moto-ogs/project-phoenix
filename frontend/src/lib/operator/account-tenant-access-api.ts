@@ -30,6 +30,8 @@ export interface AccountTenantAccess {
   hasPerson: boolean;
   hasStaff: boolean;
   roles: AccountTenantRole[];
+  /** Token of the roles at this school; a role change sends it back. */
+  version: string;
 }
 
 interface GrantAccountTenantAccessRequest {
@@ -62,6 +64,7 @@ function mapAccess(
       baseRole: role.base_role ?? null,
       schoolPortal: role.school_portal,
     })),
+    version: entry.version,
   };
 }
 
@@ -119,17 +122,23 @@ class AccountTenantAccessService {
     return data.map(mapAccess);
   }
 
+  /**
+   * Changes the role at one school. `expectedVersion` is the version of the
+   * entry the operator changed; roles changed there since are refused with
+   * `general.changed_since_read`.
+   */
   async updateRole(
     accountId: string,
     tenantId: string,
     roleId: string,
+    expectedVersion: string,
   ): Promise<AccountTenantAccess[]> {
     const data = await bffJson(
       "platform",
       "PUT /operator/accounts/{accountId}/tenants/{tenantId}",
       {
         params: { accountId, tenantId },
-        body: { role_id: roleId },
+        body: { role_id: roleId, expected_version: expectedVersion },
         errorMessage,
       },
     );

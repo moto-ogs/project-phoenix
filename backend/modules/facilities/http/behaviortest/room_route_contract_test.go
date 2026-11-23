@@ -43,7 +43,9 @@ func TestRoomRoutesAnswerTheirContract(t *testing.T) {
 	code, body = exec(http.MethodGet, fmt.Sprintf("/%d", room.ID), nil)
 	require.Equal(t, http.StatusOK, code, body)
 
-	code, body = exec(http.MethodPut, fmt.Sprintf("/%d", room.ID), map[string]any{"name": "Vertragsraum neu"})
+	code, body = exec(http.MethodPut, fmt.Sprintf("/%d", room.ID), map[string]any{
+		"name": "Vertragsraum neu", "expected_version": storedRoomVersion(t, tc.db, room.ID),
+	})
 	require.Equal(t, http.StatusOK, code, body)
 
 	// A room without sessions answers an empty list, never null: the
@@ -52,7 +54,7 @@ func TestRoomRoutesAnswerTheirContract(t *testing.T) {
 	require.Equal(t, http.StatusOK, code, body)
 	assert.Contains(t, body, `"data":[]`)
 
-	code, body = exec(http.MethodDelete, fmt.Sprintf("/%d", room.ID), nil)
+	code, body = exec(http.MethodDelete, fmt.Sprintf("/%d", room.ID), map[string]any{"expected_fingerprint": readImpact(t, tc, room.ID).Data.Fingerprint})
 	require.Equal(t, http.StatusOK, code, body)
 	assert.Contains(t, body, `"outcome":"delete"`)
 }

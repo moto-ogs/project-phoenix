@@ -108,6 +108,7 @@ function quota(
     year,
     entitled_days: 30,
     carryover_days: 2,
+    version: "quota-1",
     taken_before_days: 0,
     taken_days: 0,
     reserved_days: 0,

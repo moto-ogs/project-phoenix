@@ -87,7 +87,7 @@ describe("POST /api/invitations/accept", () => {
 
     const backendResponse = {
       status: "success",
-      message: "Invitation accepted",
+      data: { account_id: "1", email: "john@example.test" },
     };
 
     vi.mocked(global.fetch).mockResolvedValueOnce(
@@ -197,7 +197,7 @@ describe("POST /api/invitations/accept", () => {
     });
   });
 
-  it("returns an empty 204 response", async () => {
+  it("rejects an empty success outside the generated invitation contract", async () => {
     const requestPayload = {
       token: "invitation-token",
       password: "Test1234!",
@@ -216,11 +216,13 @@ describe("POST /api/invitations/accept", () => {
     });
     const response = await POST(request);
 
-    expect(response.status).toBe(204);
-    await expect(response.text()).resolves.toBe("");
+    expect(response.status).toBe(502);
+    await expect(response.json()).resolves.toMatchObject({
+      code: "general.write_answer_unreadable",
+    });
   });
 
-  it("returns 500 on fetch failure", async () => {
+  it("returns 503 on fetch failure", async () => {
     const requestPayload = {
       token: "invitation-token",
       password: "Test1234!",
@@ -234,8 +236,8 @@ describe("POST /api/invitations/accept", () => {
     });
     const response = await POST(request);
 
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(503);
     const json = await parseJsonResponse<{ detail: string }>(response);
-    expect(json.detail).toBe("Internal Server Error");
+    expect(json.detail).toBe("Service Unavailable");
   });
 });

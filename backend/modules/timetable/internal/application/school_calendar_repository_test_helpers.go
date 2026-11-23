@@ -101,7 +101,12 @@ func (r closingDayCalendarRepository) Update(ctx context.Context, day *scheduleM
 	if err := day.Validate(); err != nil {
 		return err
 	}
-	updated, err := r.calendar.UpdateClosingDay(ctx, schoolcalendar.UpdateClosingDay{ID: day.ID, ClosingDayFields: closingDayFieldsFromLegacy(day)})
+	// The legacy row is the state its caller read: it carries that version
+	// (ADR 0311).
+	updated, err := r.calendar.UpdateClosingDay(ctx, schoolcalendar.UpdateClosingDay{
+		ID: day.ID, ClosingDayFields: closingDayFieldsFromLegacy(day),
+		ExpectedVersion: schoolcalendar.ClosingDayVersion(schoolcalendar.ClosingDay{UpdatedAt: day.UpdatedAt}),
+	})
 	if err != nil {
 		return calendarError("update", err)
 	}

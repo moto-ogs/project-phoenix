@@ -5,7 +5,7 @@ import type {
   InvitationAcceptRequest,
   CreateInvitationRequest,
   PendingInvitation,
-  FormerEmployment,
+  FormerEmploymentAnswer,
 } from "./invitation-helpers";
 import {
   mapFormerEmploymentResponse,
@@ -65,12 +65,13 @@ export async function createInvitation(
 /**
  * Asks whether an invitation to the address would continue a former
  * employment at this school; null when it would not, also for an address
- * without an account. The address goes in the body, never into a URL.
+ * without an account. The answer carries its version either way. The address
+ * goes in the body, never into a URL.
  */
 export async function findFormerEmployment(
   email: string,
   signal?: AbortSignal,
-): Promise<FormerEmployment | null> {
+): Promise<FormerEmploymentAnswer> {
   const data = await bffJson(
     "tenant",
     "POST /auth/invitations/former-employment",
@@ -80,7 +81,10 @@ export async function findFormerEmployment(
       errorMessage: "Frühere Beschäftigung konnte nicht geprüft werden.",
     },
   );
-  return mapFormerEmploymentResponse(data.former_employment);
+  return {
+    formerEmployment: mapFormerEmploymentResponse(data.former_employment),
+    version: data.version,
+  };
 }
 
 export async function listPendingInvitations(): Promise<PendingInvitation[]> {

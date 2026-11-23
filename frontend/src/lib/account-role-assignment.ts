@@ -17,12 +17,17 @@ export interface AccountRoleAssignment {
    * Offboarding und Neuanlage, deshalb ist die Rolle dann nicht änderbar.
    */
   readonly currentIsLehrkraft: boolean;
+  /**
+   * Version der gelesenen Rollen; der Rollenwechsel schickt sie zurück
+   * (ADR 0311).
+   */
+  readonly version: string;
 }
 
 export async function loadAccountRoleAssignment(
   accountId: string,
 ): Promise<AccountRoleAssignment> {
-  const [accountRoles, allRoles] = await Promise.all([
+  const [{ roles: accountRoles, version }, allRoles] = await Promise.all([
     authService.getAccountRoles(accountId),
     authService.getRoles(),
   ]);
@@ -41,6 +46,7 @@ export async function loadAccountRoleAssignment(
     ),
     currentRoleIds: accountRoles.map((role) => role.id),
     currentIsLehrkraft: accountRoles.some((role) => isLehrkraftRole(role)),
+    version,
   };
 }
 
@@ -61,11 +67,17 @@ export function currentSelectableRoleId(
 /**
  * Macht die Zielrolle atomar zur einzigen Systemrolle des Kontos an dieser
  * Schule. Weitere Systemrollen entfernt das Backend; ein Elternzugang
- * (guardian) bleibt bestehen.
+ * (guardian) bleibt bestehen. `expectedVersion` ist die Version der
+ * Rollen, die die Personalakte gelesen hat.
  */
 export async function replaceAccountRole(
   accountId: string,
   targetRoleId: string,
+  expectedVersion: string,
 ): Promise<void> {
-  await authService.replaceAccountRole(accountId, targetRoleId);
+  await authService.replaceAccountRole(
+    accountId,
+    targetRoleId,
+    expectedVersion,
+  );
 }

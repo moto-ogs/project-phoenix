@@ -383,6 +383,14 @@ export default function TraegerClosingDaysPage() {
               void mutate();
               void pendingResponse.mutate();
             }}
+            onChangedSinceRead={async () => {
+              // Der Dialog zeigt den gespeicherten Schließtag (ADR 0311).
+              const stored = (await mutate())?.closingDays.find(
+                (day) => day.id === editing?.id,
+              );
+              if (stored) setEditing(stored);
+              return stored ?? null;
+            }}
             onDraftChange={holiday.onDraftChange}
             consequences={
               <ClosingDayHolidayImpact

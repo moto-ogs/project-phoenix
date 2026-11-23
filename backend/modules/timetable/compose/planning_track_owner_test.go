@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
@@ -31,7 +32,7 @@ func TestModuleOwnsPlanningTrackLifecycle(t *testing.T) {
 	found, err := module.FindPlanningTrackForShare(ctx, second.ID.Int64())
 	require.NoError(t, err)
 	assert.Equal(t, second.ID, found.ID)
-	updated, ok, err := module.UpdateActivePlanningTrack(ctx, second.ID.Int64(), planningTrackInput("Spät", "#83CD2D", 1))
+	updated, ok, err := module.UpdateActivePlanningTrack(ctx, second.ID.Int64(), versioned(planningTrackInput("Spät", "#83CD2D", 1), second))
 	require.NoError(t, err)
 	assert.True(t, ok)
 	assert.Equal(t, "Spät", updated.Name)
@@ -53,6 +54,40 @@ func TestModuleOwnsPlanningTrackLifecycle(t *testing.T) {
 	listed, err := module.ListPlanningTracks(ctx, timetable.PlanningTrackFilter{Ordered: true})
 	require.NoError(t, err)
 	assert.Equal(t, []int64{second.ID.Int64(), first.ID.Int64()}, planningTrackIDs(listed))
+}
+
+// An update carries the version of the track its editor read (ADR 0311): a
+// colleague's rename or new order in between, or no version at all, refuses
+// it and writes nothing; the version of the stored track saves.
+func TestModuleRefusesAPlanningTrackChangedSinceRead(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	module := buildModule(t, db)
+	ctx := testpkg.Ctx(t)
+	read := createOwnedPlanningTrack(t, module, ctx, "Früh", "#5080D8", 0)
+	other := createOwnedPlanningTrack(t, module, ctx, "Spät", "#F78C10", 1)
+
+	renamed, ok, err := module.UpdateActivePlanningTrack(ctx, read.ID.Int64(), versioned(planningTrackInput("Kollegin", "#5080D8", 0), read))
+	require.NoError(t, err)
+	require.True(t, ok)
+	for name, version := range map[string]string{"outdated": read.Version, "missing": ""} {
+		input := planningTrackInput("Überschrieben", "#83CD2D", 0)
+		input.ExpectedVersion = version
+		_, _, err = module.UpdateActivePlanningTrack(ctx, read.ID.Int64(), input)
+		require.ErrorIs(t, err, readstate.ErrChanged, name)
+	}
+	require.NoError(t, module.ReorderPlanningTracks(ctx, []int64{other.ID.Int64(), read.ID.Int64()}))
+	_, _, err = module.UpdateActivePlanningTrack(ctx, read.ID.Int64(), versioned(planningTrackInput("Kollegin", "#5080D8", 0), renamed))
+	require.ErrorIs(t, err, readstate.ErrChanged, "a new order since the read would be undone")
+
+	stored, err := module.FindPlanningTrack(ctx, read.ID.Int64())
+	require.NoError(t, err)
+	assert.Equal(t, "Kollegin", stored.Name, "a refused update writes nothing")
+	assert.Equal(t, 1, stored.SortOrder)
+	updated, ok, err := module.UpdateActivePlanningTrack(ctx, read.ID.Int64(), versioned(planningTrackInput("Neu gelesen", "#5080D8", stored.SortOrder), stored))
+	require.NoError(t, err)
+	require.True(t, ok)
+	assert.Equal(t, "Neu gelesen", updated.Name)
 }
 
 func TestModulePlanningTracksAreTenantIsolated(t *testing.T) {
@@ -114,7 +149,7 @@ func TestModulePlanningTrackWritesParticipateInCallerTransaction(t *testing.T) {
 
 	track := createOwnedPlanningTrack(t, module, ctx, "Stable", "#5080D8", 0)
 	err = tenant.WithinCurrentTenant(ctx, func(txCtx context.Context) error {
-		_, updateErr := module.UpdatePlanningTrack(txCtx, track.ID.Int64(), planningTrackInput("Changed", "#83CD2D", 0))
+		_, updateErr := module.UpdatePlanningTrack(txCtx, track.ID.Int64(), versioned(planningTrackInput("Changed", "#83CD2D", 0), track))
 		if updateErr != nil {
 			return updateErr
 		}
@@ -204,6 +239,12 @@ func createOwnedPlanningTrack(t *testing.T, module timetable.Owner, ctx context.
 	value, err := module.CreatePlanningTrack(ctx, planningTrackInput(name, color, order))
 	require.NoError(t, err)
 	return value
+}
+
+// versioned carries the version of the track an update replaces (ADR 0311).
+func versioned(input timetable.PlanningTrackInput, read timetable.PlanningTrack) timetable.PlanningTrackInput {
+	input.ExpectedVersion = read.Version
+	return input
 }
 
 func planningTrackInput(name, color string, order int) timetable.PlanningTrackInput {

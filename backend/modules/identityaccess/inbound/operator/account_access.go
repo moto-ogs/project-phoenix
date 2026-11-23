@@ -45,6 +45,9 @@ type AccountTenantAccessEntry struct {
 	HasPerson        bool                `json:"has_person"`
 	HasStaff         bool                `json:"has_staff"`
 	Roles            []AccountTenantRole `json:"roles"`
+	// Version is the token of the roles at this school; a role change sends
+	// it back as expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 // RoleOption is the role projection the operator role picker renders.
@@ -77,8 +80,12 @@ func (req *grantAccountTenantAccessRequest) Bind(_ *http.Request) error {
 	return nil
 }
 
+// updateAccountTenantRoleRequest names the new role and the version of the
+// entry the operator changed; roles changed since answer 409
+// general.changed_since_read.
 type updateAccountTenantRoleRequest struct {
-	RoleID ident.ID `json:"role_id"`
+	RoleID          ident.ID `json:"role_id"`
+	ExpectedVersion string   `json:"expected_version"`
 }
 
 func (req *updateAccountTenantRoleRequest) Bind(_ *http.Request) error {
@@ -151,7 +158,7 @@ func (rs *Resource) UpdateAccountTenantRole(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	entries, err := rs.identity.UpdateAccountTenantRole(
-		r.Context(), accountID, schoolID, req.RoleID.Int64(), operatorIDFromContext(r), clientIP(r),
+		r.Context(), accountID, schoolID, req.RoleID.Int64(), operatorIDFromContext(r), clientIP(r), req.ExpectedVersion,
 	)
 	rs.respondAccess(w, r, entries, err, http.StatusOK, "School role updated successfully")
 }
@@ -189,7 +196,7 @@ func accessEntries(entries []identityaccess.AccountTenantAccess) []AccountTenant
 			TenantID: ident.ID(entry.TenantID), SchoolName: entry.SchoolName, SchoolSlug: entry.SchoolSlug, SchoolActive: entry.SchoolActive,
 			OrganizationID: ident.ID(entry.OrganizationID), OrganizationName: entry.OrganizationName, Status: entry.Status,
 			ActivatedAt: entry.ActivatedAt, DeactivatedAt: entry.DeactivatedAt,
-			HasPerson: entry.HasPerson, HasStaff: entry.HasStaff, Roles: roles,
+			HasPerson: entry.HasPerson, HasStaff: entry.HasStaff, Roles: roles, Version: entry.Version,
 		})
 	}
 	return result

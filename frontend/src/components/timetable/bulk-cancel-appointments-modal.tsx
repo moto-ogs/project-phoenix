@@ -11,6 +11,10 @@
  * geplant sind (Ferienbetreuung), bleiben ebenfalls, bis die Person das
  * Häkchen „Auch diese Serien absagen“ setzt; der Dialog nennt sie mit Namen.
  * Eltern bekommen keine Nachricht.
+ *
+ * Die Zählung kommt aus dem gemeinsamen Cache. Bestätigt wird mit ihrem
+ * Fingerabdruck: sagte moto inzwischen andere Termine ab, lehnt der Server
+ * ab (ADR 0311), und der Dialog zählt neu.
  */
 
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
@@ -27,7 +31,8 @@ import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { SCHOOL_VACATION_HINTS_KEY } from "~/lib/school-vacations-api";
-import { useFreshSWR, useTenantMutateMatching } from "~/lib/swr";
+import { isChangedSinceRead } from "~/lib/api-error";
+import { useSWRAuth, useTenantMutateMatching } from "~/lib/swr";
 import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import { timetableService } from "~/lib/timetable-api";
 import type { BulkCancelResult } from "~/lib/timetable-types";
@@ -103,7 +108,7 @@ export function BulkCancelAppointmentsModal({
     data: preview,
     error: countError,
     mutate: recount,
-  } = useFreshSWR(
+  } = useSWRAuth(
     counting
       ? tenantDailyKeys.bulkCancelPreview(from, to, includeSeries)
       : null,
@@ -151,6 +156,7 @@ export function BulkCancelAppointmentsModal({
         to,
         false,
         includeSeries,
+        preview.fingerprint,
       );
     } catch (err) {
       logger.error("bulk_cancel_failed", {
@@ -158,9 +164,13 @@ export function BulkCancelAppointmentsModal({
         to,
         error: err instanceof Error ? err.message : String(err),
       });
+      // Andere Termine als gezählt: der Dialog zählt neu, bestätigt wird die
+      // neue Zählung, nicht dieselbe Anfrage noch einmal.
+      const changed = isChangedSinceRead(err);
+      if (changed) void recount();
       void formErrors.show(err, {
         object: "die Absage der Termine",
-        retry: () => latestConfirmRef.current(),
+        retry: changed ? undefined : () => latestConfirmRef.current(),
       });
       setCancelling(false);
       return;

@@ -559,6 +559,7 @@ export function AggregatedRequestList({
             showSuccess(corrected);
             void feed.reload();
           }}
+          onStale={handleStale}
         />
       )}
       {(hasMore || withdrawalsHaveMore) && (

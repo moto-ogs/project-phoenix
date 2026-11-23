@@ -70,11 +70,12 @@ type Query interface {
 
 // Command owns room lifecycle writes. DeleteRoom deletes a room nothing
 // references and archives one that history names; RoomRemovalImpact
-// previews which of the two happens, or what still blocks it.
+// previews which of the two happens, or what still blocks it. DeleteRoom
+// carries the Fingerprint of the preview its caller confirmed.
 type Command interface {
 	CreateRoom(context.Context, CreateRoom) (Room, error)
 	UpdateRoom(context.Context, UpdateRoom) (Room, error)
-	DeleteRoom(context.Context, int64) (RoomRemoval, error)
+	DeleteRoom(ctx context.Context, id int64, expectedFingerprint string) (RoomRemoval, error)
 	RoomRemovalImpact(context.Context, int64) (RoomRemovalImpact, error)
 }
 
@@ -125,6 +126,24 @@ func ErrorCode(err error) string {
 	case errors.Is(err, ErrRoomArchived):
 		return "room_archived"
 	default:
-		return "internal_error"
+		return rejectionCode(err)
 	}
+}
+
+// businessRejection is the shape of a module's business rejection (ADR
+// 0006), such as readstate.ErrChanged: it names its own registered code.
+type businessRejection interface {
+	error
+	ErrorCode() string
+	ErrorDetails() any
+}
+
+// rejectionCode labels a business rejection outside the table with its own
+// code, so a refusal is not counted as a server error.
+func rejectionCode(err error) string {
+	var rejection businessRejection
+	if errors.As(err, &rejection) {
+		return rejection.ErrorCode()
+	}
+	return "internal_error"
 }

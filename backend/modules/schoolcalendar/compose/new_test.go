@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -136,7 +137,7 @@ func TestModuleRunsTheCalendarPeriodLifecycle(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, created, found)
 
-	updated, err := module.UpdateCalendarPeriod(ctx, schoolcalendar.UpdateCalendarPeriod{ID: created.ID, CalendarPeriodFields: schoolcalendar.CalendarPeriodFields{
+	updated, err := module.ChangeCalendarPeriod(ctx, schoolcalendar.UpdateCalendarPeriod{ID: created.ID, ExpectedVersion: schoolcalendar.CalendarPeriodVersion(found), CalendarPeriodFields: schoolcalendar.CalendarPeriodFields{
 		Name: "Schuljahr 2030/2031", PeriodType: schoolcalendar.PeriodTypeSemester,
 		StartDate: "2030-08-01", EndDate: "2031-01-31", WeekCycleLength: 1, IsActive: false,
 	}})
@@ -156,12 +157,12 @@ func TestModuleRunsTheCalendarPeriodLifecycle(t *testing.T) {
 	_, err = module.FindCalendarPeriod(ctx, created.ID)
 	require.ErrorIs(t, err, schoolcalendar.ErrCalendarPeriodNotFound)
 	require.ErrorIs(t, module.DeleteCalendarPeriod(ctx, created.ID), schoolcalendar.ErrCalendarPeriodNotFound)
-	_, err = module.UpdateCalendarPeriod(ctx, schoolcalendar.UpdateCalendarPeriod{ID: created.ID, CalendarPeriodFields: periodFields("Gone", "2030-08-01", "2031-07-31", false)})
+	_, err = module.ChangeCalendarPeriod(ctx, schoolcalendar.UpdateCalendarPeriod{ID: created.ID, CalendarPeriodFields: periodFields("Gone", "2030-08-01", "2031-07-31", false)})
 	require.ErrorIs(t, err, schoolcalendar.ErrCalendarPeriodNotFound)
 
 	assert.Equal(t, []string{
-		"create_calendar_period", "find_calendar_period", "update_calendar_period", "list_calendar_periods",
-		"delete_calendar_period", "find_calendar_period", "delete_calendar_period", "update_calendar_period",
+		"create_calendar_period", "find_calendar_period", "change_calendar_period", "list_calendar_periods",
+		"delete_calendar_period", "find_calendar_period", "delete_calendar_period", "change_calendar_period",
 	}, log.operations())
 }
 
@@ -278,7 +279,7 @@ func TestModuleTenantIsolationHidesAnotherTenantsCalendar(t *testing.T) {
 	overlapping, err := module.ListCalendarPeriods(otherCtx, schoolcalendar.CalendarPeriodFilter{ActiveOnly: true, OverlappingFrom: "2030-09-01", OverlappingTo: "2030-10-01"})
 	require.NoError(t, err)
 	assert.Equal(t, []int64{foreign.ID}, idsOf(overlapping))
-	_, err = module.UpdateCalendarPeriod(otherCtx, schoolcalendar.UpdateCalendarPeriod{ID: period.ID, CalendarPeriodFields: periodFields("Gekapert", "2030-08-01", "2031-07-31", true)})
+	_, err = module.ChangeCalendarPeriod(otherCtx, schoolcalendar.UpdateCalendarPeriod{ID: period.ID, ExpectedVersion: schoolcalendar.CalendarPeriodVersion(period), CalendarPeriodFields: periodFields("Gekapert", "2030-08-01", "2031-07-31", true)})
 	require.ErrorIs(t, err, schoolcalendar.ErrCalendarPeriodNotFound)
 	require.ErrorIs(t, module.DeleteCalendarPeriod(otherCtx, period.ID), schoolcalendar.ErrCalendarPeriodNotFound)
 
@@ -375,7 +376,7 @@ func TestModuleRefusesWritesWithoutABoundTenant(t *testing.T) {
 
 	_, err := module.CreateCalendarPeriod(unscoped, schoolcalendar.CreateCalendarPeriod{CalendarPeriodFields: periodFields("Unscoped", "2030-08-01", "2031-07-31", true)})
 	require.ErrorContains(t, err, "tenant is required")
-	_, err = module.UpdateCalendarPeriod(unscoped, schoolcalendar.UpdateCalendarPeriod{ID: period.ID, CalendarPeriodFields: periodFields("Unscoped", "2030-08-01", "2031-07-31", true)})
+	_, err = module.ChangeCalendarPeriod(unscoped, schoolcalendar.UpdateCalendarPeriod{ID: period.ID, ExpectedVersion: schoolcalendar.CalendarPeriodVersion(period), CalendarPeriodFields: periodFields("Unscoped", "2030-08-01", "2031-07-31", true)})
 	require.ErrorContains(t, err, "tenant is required")
 	require.ErrorContains(t, module.DeleteCalendarPeriod(unscoped, period.ID), "tenant is required")
 	_, err = module.UpdateClosingDay(unscoped, schoolcalendar.UpdateClosingDay{ID: day.ID, ClosingDayFields: schoolcalendar.ClosingDayFields{StartDate: "2030-11-04", EndDate: "2030-11-08", Reason: "Unscoped"}})
@@ -412,6 +413,36 @@ func TestModuleObservesCalendarOperations(t *testing.T) {
 
 // --- closing days ---
 
+// An update carries the version of the closing day its editor read (ADR
+// 0311): a colleague's save in between, or no version at all, refuses it and
+// writes nothing; the version of the stored closing day saves.
+func TestModuleRefusesAClosingDayChangedSinceRead(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	module := buildModule(t, db)
+	ctx := testpkg.Ctx(t)
+	read := createClosingDay(t, ctx, module, "2030-11-04", "2030-11-04", "Pädagogischer Tag")
+	fields := func(reason string) schoolcalendar.ClosingDayFields {
+		return schoolcalendar.ClosingDayFields{StartDate: "2030-11-04", EndDate: "2030-11-05", Reason: reason}
+	}
+
+	colleague, err := module.UpdateClosingDay(ctx, schoolcalendar.UpdateClosingDay{ID: read.ID, ExpectedVersion: schoolcalendar.ClosingDayVersion(read), ClosingDayFields: fields("Kollegin")})
+	require.NoError(t, err)
+	require.NotEqual(t, schoolcalendar.ClosingDayVersion(read), schoolcalendar.ClosingDayVersion(colleague), "every save moves the version")
+
+	for name, version := range map[string]string{"outdated": schoolcalendar.ClosingDayVersion(read), "missing": ""} {
+		_, err = module.UpdateClosingDay(ctx, schoolcalendar.UpdateClosingDay{ID: read.ID, ExpectedVersion: version, ClosingDayFields: fields("Überschrieben")})
+		require.ErrorIs(t, err, readstate.ErrChanged, name)
+	}
+	stored, err := module.FindClosingDay(ctx, read.ID)
+	require.NoError(t, err)
+	assert.Equal(t, "Kollegin", stored.Reason, "a refused update writes nothing")
+
+	updated, err := module.UpdateClosingDay(ctx, schoolcalendar.UpdateClosingDay{ID: read.ID, ExpectedVersion: schoolcalendar.ClosingDayVersion(stored), ClosingDayFields: fields("Neu gelesen")})
+	require.NoError(t, err)
+	assert.Equal(t, "Neu gelesen", updated.Reason)
+}
+
 func TestModuleRunsTheClosingDayLifecycleAndRangeLookup(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
@@ -427,7 +458,7 @@ func TestModuleRunsTheClosingDayLifecycleAndRangeLookup(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, summer, found)
 
-	updated, err := module.UpdateClosingDay(ctx, schoolcalendar.UpdateClosingDay{ID: summer.ID, ClosingDayFields: schoolcalendar.ClosingDayFields{
+	updated, err := module.UpdateClosingDay(ctx, schoolcalendar.UpdateClosingDay{ID: summer.ID, ExpectedVersion: schoolcalendar.ClosingDayVersion(found), ClosingDayFields: schoolcalendar.ClosingDayFields{
 		StartDate: "2030-07-22", EndDate: "2030-08-16", Reason: "Sommerschließung verlängert",
 	}})
 	require.NoError(t, err)

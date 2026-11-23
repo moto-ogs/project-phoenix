@@ -339,17 +339,24 @@ describe("selection helpers", () => {
     expect(previewQuery(selection).toString()).toBe(
       "offering_ids=3%2C4&school_classes=1b",
     );
-    expect(connectionBody(selection, "2026-10-28")).toEqual({
+    expect(
+      connectionBody(selection, {
+        from: "2026-10-28",
+        fingerprint: "vorschau",
+      }),
+    ).toEqual({
       offering_ids: ["3", "4"],
       grade_levels: [],
       school_classes: ["1b"],
       effective_date: "2026-10-28",
+      expected_fingerprint: "vorschau",
     });
   });
 });
 
 describe("mapOfferingPreview and laterSegmentSentence", () => {
   const preview = mapOfferingPreview({
+    fingerprint: "vorschau",
     other_offerings: null,
     from: "2026-10-28",
     weekdays: [
@@ -394,6 +401,7 @@ describe("mapOfferingPreview and laterSegmentSentence", () => {
 describe("mapOfferingPreview other offerings", () => {
   it("maps the offerings that keep dropped children", () => {
     const preview = mapOfferingPreview({
+      fingerprint: "vorschau",
       weekdays: null,
       segments: null,
       from: "2026-11-04",
@@ -404,6 +412,7 @@ describe("mapOfferingPreview other offerings", () => {
     ]);
     expect(
       mapOfferingPreview({
+        fingerprint: "vorschau",
         weekdays: null,
         segments: null,
         other_offerings: null,
@@ -416,6 +425,7 @@ describe("mapOfferingPreview other offerings", () => {
 describe("dropped children", () => {
   it("maps the days the selection books each dropped child", () => {
     const preview = mapOfferingPreview({
+      fingerprint: "vorschau",
       segments: null,
       other_offerings: null,
       from: "2026-11-10",
@@ -483,6 +493,7 @@ describe("dropped children", () => {
 
 describe("untouchedSegmentSentence", () => {
   const preview = mapOfferingPreview({
+    fingerprint: "vorschau",
     other_offerings: null,
     from: "2026-10-28",
     weekdays: [],

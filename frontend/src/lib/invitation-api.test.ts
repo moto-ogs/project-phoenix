@@ -482,11 +482,15 @@ describe("invitation-api", () => {
     it("forwards cancellation to the former employment lookup", async () => {
       global.fetch = vi.fn().mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ data: { former_employment: null } }),
+        json: async () => ({
+          data: { former_employment: null, version: "none-version" },
+        }),
       });
       const controller = new AbortController();
 
-      await findFormerEmployment("former@example.com", controller.signal);
+      await expect(
+        findFormerEmployment("former@example.com", controller.signal),
+      ).resolves.toEqual({ formerEmployment: null, version: "none-version" });
 
       expect(global.fetch).toHaveBeenCalledWith(
         "/api/auth/invitations/former-employment",

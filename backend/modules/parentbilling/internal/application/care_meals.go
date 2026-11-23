@@ -464,9 +464,11 @@ func placeMeal(month *careMonth, in careMealInput, position parentbilling.CareMe
 			}
 		}
 	}
-	skipped := heldOrUnpriced(month)
+	// A child held for an issued invoice waits as a whole (month.held, S4);
+	// an invoice with only the Mensa (S5) holds no Mensa back.
+	skipped := unpricedOrDuplicate(month)
 	for _, contractID := range contracts {
-		if skipped[contractID] {
+		if skipped[contractID] || month.held[contractID] {
 			return
 		}
 	}
@@ -527,9 +529,22 @@ func mealChildName(first, last string) string {
 	return normalizedName(first + " " + last)
 }
 
-// heldOrUnpriced names the contracts the preview holds back or leaves out
-// for a missing price.
+// heldOrUnpriced names the contracts the preview holds back, for a
+// duplicate contract or an invoice that already bills their child (#7892),
+// or leaves out for a missing price.
 func heldOrUnpriced(month *careMonth) map[int64]bool {
+	skipped := unpricedOrDuplicate(month)
+	for _, child := range month.billedChildren {
+		for _, contract := range child.Contracts {
+			skipped[contract.ContractID.Int64()] = true
+		}
+	}
+	return skipped
+}
+
+// unpricedOrDuplicate names the contracts left out for a missing price or
+// held for a duplicate contract.
+func unpricedOrDuplicate(month *careMonth) map[int64]bool {
 	skipped := map[int64]bool{}
 	for _, unpriced := range month.unpriced {
 		skipped[unpriced.ContractID.Int64()] = true

@@ -55,12 +55,9 @@ async function fetchInvitationServer(
 ): Promise<ValidationOutcome> {
   const route = routes["GET /auth/guardian-invitations/{token}"];
   try {
-    const result = await contractGet(
-      `${route.method} ${route.pattern}`,
-      route.response,
-      `/auth/guardian-invitations/${encodeURIComponent(token)}`,
-      "",
-    );
+    const result = await contractGet(route, {
+      endpoint: `/auth/guardian-invitations/${encodeURIComponent(token)}`,
+    });
     if (!result.ok) {
       const { status, code, requestId } = result.error;
       return {

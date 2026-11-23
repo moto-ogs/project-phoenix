@@ -1,5 +1,4 @@
 import {
-  act,
   fireEvent,
   render as rtlRender,
   screen,
@@ -11,7 +10,6 @@ import { SWRConfig } from "~/lib/swr/testing";
 import type { DateRange } from "react-day-picker";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { deferred } from "~/test/helpers/form-modal-pending";
 import { ApiError } from "~/lib/api-error";
 import type { BulkCancelResult } from "~/lib/timetable-types";
 import { catalogText } from "~/test/error-catalog-text";
@@ -107,6 +105,7 @@ function preview(overrides: Partial<BulkCancelResult>): BulkCancelResult {
     days: [],
     kept: 0,
     keptSeries: [],
+    fingerprint: "zaehlung",
     ...overrides,
   };
 }
@@ -219,6 +218,7 @@ describe("BulkCancelAppointmentsModal", () => {
         "2026-10-25",
         false,
         true,
+        "zaehlung",
       ),
     );
     await waitFor(() =>
@@ -337,62 +337,52 @@ describe("BulkCancelAppointmentsModal", () => {
   });
 });
 
-it("requires a successful fresh preview on reopening and on returning to a cached range", async () => {
-  mockBulkCancel.mockReset().mockResolvedValue(preview({ count: 23 }));
-  const props = {
-    initialFrom: "2026-10-12",
-    initialTo: "2026-10-25",
-    onClose: vi.fn(),
-  };
-  const view = render(<BulkCancelAppointmentsModal {...props} isOpen />);
-  await waitFor(() =>
-    expect(
-      screen.getByRole("button", { name: "Termine absagen" }),
-    ).toBeEnabled(),
+it("zählt neu statt zu wiederholen, wenn sich die Termine seit dem Zählen geändert haben", async () => {
+  mockBulkCancel.mockImplementation(
+    (_from: string, _to: string, dryRun: boolean) =>
+      dryRun
+        ? Promise.resolve(preview({ count: 3, fingerprint: "erste" }))
+        : Promise.reject(
+            new ApiError("changed", 409, {
+              code: "general.changed_since_read",
+            }),
+          ),
   );
-  view.rerender(<BulkCancelAppointmentsModal {...props} isOpen={false} />);
-  const opening = deferred<BulkCancelResult>();
-  mockBulkCancel.mockReturnValue(opening.promise);
-  view.rerender(<BulkCancelAppointmentsModal {...props} isOpen />);
+  renderModal();
+  await screen.findByText(/werden 3 Termine abgesagt/);
+
+  mockBulkCancel.mockImplementation(
+    (_from: string, _to: string, dryRun: boolean) =>
+      dryRun
+        ? Promise.resolve(preview({ count: 5, fingerprint: "zweite" }))
+        : Promise.resolve(preview({ dryRun, count: 5 })),
+  );
+  // Der erste Versuch scheitert noch an der alten Zählung.
+  mockBulkCancel.mockImplementationOnce(() =>
+    Promise.reject(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    ),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Termine absagen" }));
+  fireEvent.click(screen.getByRole("button", { name: "Endgültig absagen" }));
+
   expect(
-    screen.getByRole("button", { name: "Termine absagen" }),
-  ).toBeDisabled();
-  await act(async () => opening.reject(new ApiError("offline", 503)));
+    await screen.findByText(/werden 5 Termine abgesagt/),
+  ).toBeInTheDocument();
+  expect(mockBulkCancel).toHaveBeenCalledWith(
+    "2026-10-12",
+    "2026-10-25",
+    false,
+    false,
+    "erste",
+  );
   expect(
     await screen.findByText(
-      catalogText("general.unavailable", "das Zählen der Termine"),
+      catalogText("general.changed_since_read", "die Absage der Termine"),
     ),
-  ).toBeVisible();
+  ).toBeInTheDocument();
   expect(
-    screen.getByRole("button", { name: "Termine absagen" }),
-  ).toBeDisabled();
-  mockBulkCancel.mockResolvedValue(preview({ count: 24 }));
-  fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
-  await waitFor(() =>
-    expect(
-      screen.getByRole("button", { name: "Termine absagen" }),
-    ).toBeEnabled(),
-  );
-  fireEvent.click(
-    screen.getByRole("button", { name: "Mock Zeitraum 12.–16. Okt." }),
-  );
-  await waitFor(() =>
-    expect(
-      screen.getByRole("button", { name: "Termine absagen" }),
-    ).toBeEnabled(),
-  );
-  const returning = deferred<BulkCancelResult>();
-  mockBulkCancel.mockReturnValue(returning.promise);
-  fireEvent.click(
-    screen.getByRole("button", { name: "Mock Ausgangszeitraum" }),
-  );
-  expect(
-    screen.getByRole("button", { name: "Termine absagen" }),
-  ).toBeDisabled();
-  await act(async () => returning.resolve(preview({ count: 25 })));
-  await waitFor(() =>
-    expect(
-      screen.getByRole("button", { name: "Termine absagen" }),
-    ).toBeEnabled(),
-  );
+    screen.queryByRole("button", { name: "Wiederholen" }),
+  ).not.toBeInTheDocument();
+  expect(mockToastSuccess).not.toHaveBeenCalled();
 });

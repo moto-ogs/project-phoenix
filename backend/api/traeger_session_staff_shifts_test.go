@@ -183,8 +183,17 @@ func TestTraegerSessionWritesTheDienstplan(t *testing.T) {
 		staffSeries := seriesOf(rec)
 		assert.Equal(t, expectStaff, d.author("schedule.staff_shift_series", staffSeries))
 
+		rec = d.send(traeger, http.MethodGet, fmt.Sprintf("/series/%d", staffSeries), nil)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		var read struct {
+			Data struct {
+				Version string `json:"version"`
+			} `json:"data"`
+		}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &read))
 		rec = d.send(traeger, http.MethodPut, fmt.Sprintf("/series/%d/split", staffSeries), map[string]any{
 			"effective_date": "2098-09-15", "start_time": "09:00", "end_time": "12:00", "break_minutes": 0,
+			"expected_version": read.Data.Version,
 		})
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		successor := seriesOf(rec)

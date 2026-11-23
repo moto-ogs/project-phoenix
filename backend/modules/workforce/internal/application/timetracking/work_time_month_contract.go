@@ -132,6 +132,12 @@ type WorkTimeMonthService interface {
 	// balance horizon. The comp-time preview (#2873) subtracts it so already
 	// planned Freizeitausgleiche show up in the projected balance.
 	GetFutureCompTimeCommitmentMinutes(ctx context.Context, staffID int64) (int, error)
+	// AtEndOfToday is the same service with its clock at the end of today:
+	// an open session counts up to its limit for the day, so every result
+	// depends on the stored rows and the day only. A read-state token
+	// (ADR 0311) over a live balance is built with it, so a running
+	// check-in does not change the token every minute.
+	AtEndOfToday() WorkTimeMonthService
 	// GetDailyProjection returns Soll, Gutschrift, Ist and Saldo per calendar
 	// day for the daily table — the same arithmetic the Monatskarte sums.
 	GetDailyProjection(ctx context.Context, staffID int64, from, to calendar.Date) ([]DailyProjection, error)

@@ -14,6 +14,7 @@ import type {
 } from "./contract/portals.generated";
 import type { RequestBody } from "./contract/runtime";
 import type { ErrorCode } from "./error-codes.generated";
+import type { SessionBffRoute } from "./session-bff";
 import { renewTenantSession, requireTenantSession } from "./session-cache";
 
 /**
@@ -39,7 +40,7 @@ type AnyRoute<P extends Portal> =
  * A sign-in, second factor, renewal or switch step: its route file keeps the
  * tokens and answers the BFF's own `{ status, data }` (#7833). The generated
  * answer is the backend's, not the browser's, so these steps are no routes
- * of bffJson; their callers name the BFF's answer (bffJsonUncontracted).
+ * of bffJson under their Go keys; the BFF defines its own browser entries.
  */
 const SESSION_STEP =
   "the answer carries or ends the tokens the portal's route file turns into its session cookie";
@@ -454,6 +455,11 @@ async function call<T>(
  * });
  * ```
  */
+export function bffJson<T>(
+  portal: Portal,
+  route: SessionBffRoute<T>,
+  options?: CallOptions & { body?: unknown },
+): Promise<T>;
 export function bffJson<
   P extends Portal,
   K extends RouteKey<P>,
@@ -462,14 +468,21 @@ export function bffJson<
   portal: P,
   route: K,
   ...[options]: OptionalArg<RouteOf<P, K>, V>
-): Promise<BffResult<RouteOf<P, K>, V>> {
-  const space = route.indexOf(" ");
-  const method = route.slice(0, space) as Method;
+): Promise<BffResult<RouteOf<P, K>, V>>;
+export function bffJson(
+  portal: Portal,
+  route: string | SessionBffRoute<unknown>,
+  options?: CallOptions,
+): Promise<unknown> {
+  const space = typeof route === "string" ? route.indexOf(" ") : -1;
   const opts = (options ?? {}) as CallOptions & {
     body?: unknown;
     params?: Record<string, string>;
     query?: Record<string, QueryValue>;
   };
+  if (typeof route !== "string")
+    return call(portal, route.method, route.path, opts);
+  const method = route.slice(0, space) as Method;
   const url = bffPath(portal, route.slice(space + 1), opts.params, opts.query);
   return call(portal, method, url, opts);
 }
@@ -496,11 +509,10 @@ export async function bffFile<P extends Portal, K extends FileRouteKey<P>>(
 }
 
 /**
- * The same call for a BFF path no Go route registers: a named `route.ts`
- * whose behavior belongs to the BFF (`settings/values/[key]` purges the
- * cached tenant lookup). The caller names the answer's type. Every caller is
- * listed with its reason in the `bff-boundary/only-listed-uncontracted` rule, and the list
- * only shrinks; a backend route without a contract gets one instead (#7808).
+ * The same call for the remaining BFF paths without a shared browser
+ * entry. The caller names the answer's type. The shrink-only exception list
+ * and reasons are in the `bff-boundary/only-listed-uncontracted` rule.
+ * Give a backend route without a contract one instead (#7808).
  */
 export function bffJsonUncontracted<T>(
   portal: Portal,

@@ -44,6 +44,7 @@ import {
   useApiFormError,
   useToast,
 } from "~/contexts/ToastContext";
+import { isChangedSinceRead } from "~/lib/api-error";
 import { canReadSupervisionData, hasPermission } from "~/lib/auth-utils";
 import { useSetBreadcrumb } from "~/lib/breadcrumb-context";
 import { useOptionalSupervision } from "~/lib/supervision-context";
@@ -56,7 +57,12 @@ import { createLogger } from "~/lib/logger";
 import { exportPlan } from "~/lib/plan-export-api";
 import { NO_PLAN_FILTER } from "~/lib/plan-filter";
 import { roomPlanCareDay } from "~/lib/room-plan";
-import { formatFloor, isSystemRoom, type Room } from "~/lib/room-helpers";
+import {
+  formatFloor,
+  isSystemRoom,
+  type Room,
+  withStoredRoomFields,
+} from "~/lib/room-helpers";
 import {
   useTenantMutate,
   useTenantMutateMatching,
@@ -309,7 +315,22 @@ function RoomDetailPageContent() {
         const payload = roomsConfig.form.transformBeforeSubmit
           ? roomsConfig.form.transformBeforeSubmit(data)
           : data;
-        await service.update(room.id, payload);
+        // The save carries the version the form was filled from.
+        const saved = await service.update(room.id, {
+          ...payload,
+          version: room.version,
+        });
+        // The answer carries the new version: the next save sends it even
+        // when the reload below fails (ADR 0311). Occupancy is not part of
+        // the answer and stays as read.
+        await tenantMutate(
+          roomKeys.detailKey(roomId),
+          (current?: { room: Room }) =>
+            current && saved
+              ? { ...current, room: withStoredRoomFields(current.room, saved) }
+              : current,
+          { revalidate: false },
+        );
         const savedName = data.name?.trim() || room.name;
         toastSuccess(`Der Raum „${savedName}“ ist gespeichert.`);
         // A failed reload is a load error above the room, never an error
@@ -323,10 +344,21 @@ function RoomDetailPageContent() {
               ? updateError.message
               : String(updateError),
         });
+        // Someone saved the room since it was read: read it again, the form
+        // then shows the stored state (ADR 0311).
+        if (isChangedSinceRead(updateError)) void refreshRoomLists();
         throw updateError;
       }
     },
-    [roomAfterWrite, room, service, toastSuccess],
+    [
+      refreshRoomLists,
+      roomAfterWrite,
+      room,
+      roomId,
+      service,
+      tenantMutate,
+      toastSuccess,
+    ],
   );
 
   const handleRoomRemoved = useCallback(

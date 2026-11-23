@@ -16,6 +16,8 @@ export const PARENT_PORTAL_ERROR_CODES = [
   "general.business_rejection",
   "general.unavailable",
   "general.server",
+  // A request edit or sharing choice made on an outdated read (ADR 0311).
+  "general.changed_since_read",
   // Parent login, password reset, guardian and staff invitations on the parents host, demo entry.
   "identity.invalid_credentials",
   "identity.session_account_inactive",
@@ -115,7 +117,6 @@ export const PARENT_PORTAL_ERROR_CODES = [
   "meals.invalid_participation",
   // Care exceptions, request edits and care-offering requests.
   "students.care_exception_raced",
-  "students.change_request_stale",
   "students.reason_required",
   "students.care_offerings_disabled",
   "students.offering_changes_no_enrollment",

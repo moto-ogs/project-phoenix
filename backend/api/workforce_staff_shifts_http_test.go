@@ -401,10 +401,11 @@ func TestStaffShiftsRouteSeriesHandlers(t *testing.T) {
 	}
 
 	// A split inherits every omitted field and keeps the lossless occurrence id.
-	response = route.do(t, http.MethodPut, "/series/11/split", `{"effective_date": "2026-10-05", "start_time": "10:00", "end_time": "13:00", "break_minutes": 20, "occurrence_shift_id": "9007199254740993"}`)
+	response = route.do(t, http.MethodPut, "/series/11/split", `{"effective_date": "2026-10-05", "start_time": "10:00", "end_time": "13:00", "break_minutes": 20, "occurrence_shift_id": "9007199254740993", "expected_version": "read-version"}`)
 	body = responseBody(t, response)
 	require.Equal(t, http.StatusOK, response.StatusCode, body)
 	assert.Equal(t, int64(11), split.SeriesID)
+	assert.Equal(t, "read-version", split.ExpectedVersion, "the version the planner read reaches the owner's check")
 	assert.Equal(t, "2026-10-05", split.EffectiveDate)
 	assert.Equal(t, int64(9007199254740993), split.OccurrenceShiftID)
 	assert.Nil(t, split.Weekdays, "omitted weekdays keep the predecessor's")

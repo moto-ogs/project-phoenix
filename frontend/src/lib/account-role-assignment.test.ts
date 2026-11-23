@@ -31,7 +31,10 @@ describe("loadAccountRoleAssignment", () => {
   });
 
   it("keeps a tenant-defined role named lehrkraft selectable", async () => {
-    mockGetAccountRoles.mockResolvedValue([role("4", "lehrkraft", false)]);
+    mockGetAccountRoles.mockResolvedValue({
+      roles: [role("4", "lehrkraft", false)],
+      version: "v1",
+    });
     mockGetRoles.mockResolvedValue([
       role("3", "lehrkraft", true),
       role("4", "lehrkraft", false),
@@ -43,11 +46,12 @@ describe("loadAccountRoleAssignment", () => {
       { id: "4", name: "Lehrkraft", systemName: "lehrkraft" },
     ]);
     expect(assignment.currentIsLehrkraft).toBe(false);
+    expect(assignment.version).toBe("v1");
   });
 
   it("keeps a Lehrkraft copy read-only and out of the choices (#4574)", async () => {
     const copy = { ...role("5", "klassenleitung", false), schoolPortal: true };
-    mockGetAccountRoles.mockResolvedValue([copy]);
+    mockGetAccountRoles.mockResolvedValue({ roles: [copy], version: "v1" });
     mockGetRoles.mockResolvedValue([copy, role("2", "user", true)]);
 
     const assignment = await loadAccountRoleAssignment("7");
@@ -59,7 +63,10 @@ describe("loadAccountRoleAssignment", () => {
   });
 
   it("keeps the system role lehrkraft read-only", async () => {
-    mockGetAccountRoles.mockResolvedValue([role("3", "lehrkraft", true)]);
+    mockGetAccountRoles.mockResolvedValue({
+      roles: [role("3", "lehrkraft", true)],
+      version: "v1",
+    });
     mockGetRoles.mockResolvedValue([role("3", "lehrkraft", true)]);
 
     const assignment = await loadAccountRoleAssignment("7");

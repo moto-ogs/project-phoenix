@@ -28,12 +28,18 @@ export async function fetchRoomRemovalImpact(
   };
 }
 
-/** Löscht oder archiviert den Raum; das Ergebnis sagt, was geschah. */
+/**
+ * Löscht oder archiviert den Raum, wie die bestätigte Vorschau es sagt: ihr
+ * `fingerprint` reist mit, und der Server lehnt ab, wenn sich der Raum seither
+ * geändert hat (ADR 0311). Das Ergebnis sagt, was geschah.
+ */
 export async function removeRoom(
   roomId: string,
+  fingerprint: string,
 ): Promise<Exclude<RoomRemovalOutcome, "blocked">> {
   const result = await bffJson("tenant", "DELETE /api/rooms/{id}", {
     params: { id: roomId },
+    body: { expected_fingerprint: fingerprint },
   });
   return result.outcome === "archive" ? "archive" : "delete";
 }

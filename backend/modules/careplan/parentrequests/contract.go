@@ -38,8 +38,6 @@ var (
 	ErrBulkIneligible = errors.New("parent requests: request is not eligible for bulk approval")
 	// ErrNotFound means a request of the command is no longer open.
 	ErrNotFound = errors.New("parent requests: pending request not found")
-	// ErrStale means a request changed after the list the client decided on.
-	ErrStale = errors.New("parent requests: request version is stale")
 	// ErrDecisionRace means a request was decided by someone else while the
 	// command ran.
 	ErrDecisionRace = errors.New("parent requests: request changed during approval")

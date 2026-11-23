@@ -13,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/masterdatarequests"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/parentrequests"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Correct rewrites a Stammdaten decision staff already took (#2267, stories
@@ -83,8 +84,8 @@ func (s *MasterDataDecisions) loadCorrectableRequest(ctx context.Context, reques
 	if !req.CanCorrect() {
 		return nil, parentrequests.ErrNotDecided
 	}
-	if expectedVersion != "" && careplan.ParentRequestVersion(req.UpdatedAt) != expectedVersion {
-		return nil, parentrequests.ErrStale
+	if err := readstate.Check(expectedVersion, careplan.ParentRequestVersion(req.UpdatedAt)); err != nil {
+		return nil, err
 	}
 	return req, nil
 }

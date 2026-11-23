@@ -291,7 +291,7 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// Raised by ADR 0230: the assignments of several staff members in a date
 	// range, one read for the absence plan gaps (+1).
 	// Lowered by #2353: the single-schedule read left with its route (-1).
-	"modules/timetable": 202,
+	"modules/timetable": 201,
 	// Raised by ADR 0141: the payroll dispatch overview (+1).
 	// Lowered by #6847: approving and withdrawing an absence return their
 	// plan cascade instead of forwarding the write (-2).

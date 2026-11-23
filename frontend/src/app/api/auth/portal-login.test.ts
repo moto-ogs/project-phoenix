@@ -33,7 +33,6 @@ vi.mock("~/server/auth/portal-config", async (original) => {
   };
 });
 
-import { createPortalLoginRoute } from "~/lib/login-route.server";
 import { POST as demo } from "../demo/access/sessions/route";
 import { operatorPortal } from "~/server/auth/operator";
 import { schoolPortal } from "~/server/auth/school";
@@ -43,24 +42,55 @@ import { parentPortal } from "~/server/auth/parent";
 import { tenantPortal } from "~/server/auth";
 import { stubPortalHostEnv } from "~/test/route-test-helpers";
 
+import { POST as operatorLogin } from "../operator/auth/login/route";
+import { POST as operatorVerify } from "../operator/auth/mfa/verify/route";
+import { POST as operatorEnroll } from "../operator/auth/mfa/enroll/confirm/route";
+import { POST as operatorPasskey } from "../operator/auth/passkeys/login/verify/route";
+import { POST as schoolLogin } from "../school/auth/login/route";
+import { POST as schoolVerify } from "../school/auth/mfa/verify/route";
+import { POST as schoolEnroll } from "../school/auth/mfa/enroll/confirm/route";
+import { POST as traegerLogin } from "../traeger/auth/login/route";
+import { POST as traegerVerify } from "../traeger/auth/mfa/verify/route";
+import { POST as traegerEnroll } from "../traeger/auth/mfa/enroll/confirm/route";
+import { POST as catererLogin } from "../caterer/auth/login/route";
+import { POST as catererVerify } from "../caterer/auth/mfa/verify/route";
+import { POST as catererPasskey } from "../caterer/auth/passkeys/login/verify/route";
+
 const LOGIN = {
-  tenant: tenantPortal,
-  operator: operatorPortal,
-  school: schoolPortal,
-  caterer: catererPortal,
-  traeger: traegerPortal,
-};
+  operator: {
+    login: operatorLogin,
+    "mfa/verify": operatorVerify,
+    "mfa/enroll/confirm": operatorEnroll,
+    "passkeys/login/verify": operatorPasskey,
+  },
+  school: {
+    login: schoolLogin,
+    "mfa/verify": schoolVerify,
+    "mfa/enroll/confirm": schoolEnroll,
+  },
+  traeger: {
+    login: traegerLogin,
+    "mfa/verify": traegerVerify,
+    "mfa/enroll/confirm": traegerEnroll,
+  },
+  caterer: {
+    login: catererLogin,
+    "mfa/verify": catererVerify,
+    "passkeys/login/verify": catererPasskey,
+  },
+} as const;
 
 const backend = vi.fn();
 const claims = (scope: string) => ({
-  id: 42,
+  id: "42",
   sub: "local@example.test",
-  tenant_id: 7,
-  org_id: 9,
+  tenant_id: "7",
+  org_id: "9",
   scope,
   exp: Math.floor(Date.now() / 1000) + 900,
 });
 const pair = () => ({
+  status: "authenticated",
   access_token: `e30.${Buffer.from(JSON.stringify(claims(""))).toString("base64url")}.synthetic`,
   refresh_token: "synthetic-server-refresh",
 });
@@ -145,10 +175,9 @@ describe.each(portals)(
             ),
           )
           .mockResolvedValueOnce(Response.json(claims(scope)));
-        const response = await createPortalLoginRoute(
-          LOGIN[portal],
-          step,
-        )(
+        const response = await LOGIN[portal][
+          step as keyof (typeof LOGIN)[typeof portal]
+        ](
           request(
             portal,
             { organization_id: "9" },
@@ -225,10 +254,7 @@ describe.each(portals)(
     it.each([null, "null", "http://other.localhost:3000"])(
       "rejects Origin %s before minting",
       async (origin) => {
-        const response = await createPortalLoginRoute(
-          LOGIN[portal],
-          "login",
-        )(request(portal, {}, origin));
+        const response = await LOGIN[portal].login(request(portal, {}, origin));
         expect(response.status).toBe(403);
         expect(backend).not.toHaveBeenCalled();
         expect(response.headers.getSetCookie()).toEqual([]);
@@ -237,10 +263,7 @@ describe.each(portals)(
     it("preserves wrong-portal refusal from the backend", async () => {
       const problem = { code: "identity.use_parent_portal", status: 403 };
       backend.mockResolvedValueOnce(Response.json(problem, { status: 403 }));
-      const response = await createPortalLoginRoute(
-        LOGIN[portal],
-        "login",
-      )(request(portal));
+      const response = await LOGIN[portal].login(request(portal));
       expect(response.status).toBe(403);
       expect(await response.json()).toEqual(problem);
       expect(response.headers.getSetCookie()).toEqual([]);
@@ -250,10 +273,7 @@ describe.each(portals)(
         .mockResolvedValueOnce(Response.json(wrap(pair())))
         .mockResolvedValueOnce(Response.json(claims("wrong-portal")))
         .mockResolvedValueOnce(new Response(null, { status: 204 }));
-      const response = await createPortalLoginRoute(
-        LOGIN[portal],
-        "login",
-      )(request(portal));
+      const response = await LOGIN[portal].login(request(portal));
       expect(response.status).toBe(500);
       expect(backend.mock.calls[2]?.[0]).toBe(
         `http://server:8080/${portal === "operator" ? "operator/" : ""}auth/logout`,
@@ -287,10 +307,7 @@ describe.each(portals)(
         backend.mockResolvedValueOnce(
           Response.json(wrap({ ...data, extra_token: "must-not-leak" })),
         );
-        const response = await createPortalLoginRoute(
-          LOGIN[portal],
-          "login",
-        )(request(portal));
+        const response = await LOGIN[portal].login(request(portal));
         expect(await response.json()).toEqual({ status: "success", data });
         expect(response.headers.getSetCookie()).toEqual([]);
         expect(backend).toHaveBeenCalledOnce();
@@ -309,10 +326,7 @@ it("gives up on a password step the backend does not answer within the auth-step
       ),
   );
   let settled = false;
-  const pending = createPortalLoginRoute(
-    LOGIN.school,
-    "login",
-  )(request("school")).finally(() => {
+  const pending = LOGIN.school.login(request("school")).finally(() => {
     settled = true;
   });
 
@@ -326,15 +340,12 @@ it("gives up on a password step the backend does not answer within the auth-step
 it("allowlists Träger organization selection without disclosing credentials", async () => {
   backend.mockResolvedValueOnce(
     Response.json({
+      ...pair(),
       status: "organization_selection_required",
       organizations: [{ id: "9", name: "Träger Nord", token: "must-not-leak" }],
-      ...pair(),
     }),
   );
-  const response = await createPortalLoginRoute(
-    LOGIN.traeger,
-    "login",
-  )(request("traeger"));
+  const response = await LOGIN.traeger.login(request("traeger"));
   expect(await response.json()).toEqual({
     status: "success",
     data: {

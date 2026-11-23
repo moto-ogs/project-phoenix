@@ -43,6 +43,7 @@ type traegerClosingDaySaveBody struct {
 	Reason               string   `json:"reason"`
 	SchoolIDs            []wireID `json:"school_ids"`
 	HolidayBookingsToken string   `json:"holiday_bookings_token,omitempty"`
+	ExpectedVersion      string   `json:"expected_version,omitempty"`
 }
 
 // bookHolidayWeek books one child of the family email into a week of a
@@ -143,6 +144,7 @@ func TestTraegerClosingDayTellsTheParentsOfBookedHolidayWeeksOnce(t *testing.T) 
 	created := decodeSchoolPortalData[struct {
 		ID               wireID `json:"id"`
 		NotifiedFamilies int    `json:"notified_families"`
+		Version          string `json:"version"`
 	}](t, rec.Body.Bytes())
 	assert.Equal(t, 2, created.NotifiedFamilies)
 	assert.Equal(t, 2, closureMails(t, db, office.organization), "one mail per family")
@@ -152,6 +154,7 @@ func TestTraegerClosingDayTellsTheParentsOfBookedHolidayWeeksOnce(t *testing.T) 
 	assert.Equal(t, []string{"Träger Ferienschluss", "Träger Ferienschluss"}, senders, "the notice names its Träger (#6437)")
 
 	day.HolidayBookingsToken = ""
+	day.ExpectedVersion = created.Version
 	rec = traegerJSON(t, router, office.token, http.MethodPut, traegerClosingDayPath(int64(created.ID)), day)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), `"notified_families":0`)

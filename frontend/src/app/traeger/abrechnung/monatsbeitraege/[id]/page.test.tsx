@@ -301,6 +301,78 @@ describe("monthly run page letters card", () => {
   });
 });
 
+describe("monthly run page with a child an issued invoice already bills (#7892)", () => {
+  const held = {
+    childFirstName: "Noah",
+    childLastName: "Muster",
+    reason: "already_billed",
+    contracts: [{ contractId: "81", schoolId: "3", schoolName: "OGS Nord" }],
+    invoices: [
+      {
+        source: "care_run",
+        runId: "5",
+        contractId: "82",
+        schoolName: "OGS Süd",
+        number: "MB-0002",
+        documentKind: "invoice",
+      },
+    ],
+  } as const;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    api.fetchCareLetters.mockResolvedValue(letters());
+  });
+
+  it("names the child in the review and in the release question", async () => {
+    api.fetchCareRun.mockResolvedValue({
+      ...RUN,
+      status: "calculated",
+      releasedAt: null,
+      issuedOn: null,
+      billedChildren: [held],
+    });
+    renderPage();
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Kind hat schon eine Rechnung – bitte prüfen",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Rechnung MB-0002 · OGS Süd")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", {
+        name: "Rechnung öffnen: MB-0002, Noah Muster",
+      }),
+    ).toHaveAttribute(
+      "href",
+      "/traeger/abrechnung/monatsbeitraege/5/rechnung/82",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Lauf freigeben" }));
+    const dialog = await screen.findByRole("dialog", {
+      name: "Monatslauf freigeben?",
+    });
+    expect(
+      within(dialog).getByText(
+        "1 Kind hat schon eine Rechnung und bekommt keine weitere.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps the child in sight under the released run", async () => {
+    api.fetchCareRun.mockResolvedValue({ ...RUN, billedChildren: [held] });
+    renderPage();
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Nicht abgerechnet – Kind hatte schon eine Rechnung",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Noah Muster")).toBeInTheDocument();
+  });
+});
+
 describe("monthly run page held by an amended notice", () => {
   beforeEach(() => {
     vi.clearAllMocks();

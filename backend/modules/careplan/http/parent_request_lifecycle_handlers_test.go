@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	careplanhttp "github.com/moto-ogs/project-phoenix/modules/careplan/http"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // lifecycleExcusedFake records the arguments the route forwards and returns a
@@ -130,7 +131,7 @@ func TestMarkParentRequestDone_MapsLifecycleSentinels(t *testing.T) {
 		code string
 		want int
 	}{
-		{"stale version", parentrequests.ErrStale, "students.change_request_stale", http.StatusConflict},
+		{"stale version", readstate.ErrChanged, "general.changed_since_read", http.StatusConflict},
 		{"still in the future", parentrequests.ErrNotPast, "students.request_not_past", http.StatusConflict},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

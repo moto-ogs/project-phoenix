@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -289,6 +290,40 @@ func TestIntegration_UpdateAccountTenantRole_ReplacesAdminKeepsCaregiver(t *test
 	entries, err = service.UpdateAccountTenantRole(ctx, account.ID, accessTargetTenantID(t), userRoleID, operator.ID, testClientIP)
 	require.NoError(t, err)
 	assert.Equal(t, []string{"user"}, roleNamesAt(entries, accessTargetTenantID(t)))
+}
+
+// A role change from a listing older than the school's roles is refused
+// (ADR 0311): it would replace a role another operator gave in between.
+func TestIntegration_UpdateAccountTenantRole_RefusesRolesChangedSinceRead(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+
+	service := buildOperatorAccountAccess(t, db)
+	ctx := context.Background()
+	account, cleanupAccount := setupAccessTestAccount(t, db)
+	defer cleanupAccount()
+	operator := testpkg.CreateTestOperator(t, db)
+	school := accessTargetTenantID(t)
+	adminRoleID := systemRoleID(t, db, "admin")
+	userRoleID := systemRoleID(t, db, "user")
+	_, err := service.GrantAccountTenantAccess(ctx, account.ID, school, accessGrant{RoleID: userRoleID}, operator.ID, testClientIP)
+	require.NoError(t, err)
+	read := service.rolesVersion(ctx, account.ID, school)
+	// Another operator makes the account an admin in between.
+	_, err = service.UpdateAccountTenantRole(ctx, account.ID, school, adminRoleID, operator.ID, testClientIP)
+	require.NoError(t, err)
+
+	for _, expected := range []string{read, ""} {
+		_, err = service.module.UpdateAccountTenantRole(ctx, account.ID, school, userRoleID, operator.ID, testClientIP.String(), expected)
+		require.ErrorIs(t, err, readstate.ErrChanged)
+	}
+	entries, err := service.ListAccountTenantAccess(ctx, account.ID)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"user", "admin"}, roleNamesAt(entries, school), "the refused change keeps the admin role")
+
+	entries, err = service.module.UpdateAccountTenantRole(ctx, account.ID, school, userRoleID, operator.ID, testClientIP.String(), service.rolesVersion(ctx, account.ID, school))
+	require.NoError(t, err)
+	assert.Equal(t, []string{"user"}, roleNamesAt(entries, school))
 }
 
 func TestIntegration_GrantAccountTenantAccess_RejectsLehrkraftForCaregiverProfile(t *testing.T) {

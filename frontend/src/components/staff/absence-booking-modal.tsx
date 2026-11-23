@@ -46,6 +46,7 @@ import {
   useToast,
 } from "~/contexts/ToastContext";
 import { formatDayCount } from "~/lib/absence-helpers";
+import { isChangedSinceRead } from "~/lib/api-error";
 import {
   absenceRequestFor,
   customIdFromOptionValue,
@@ -548,7 +549,11 @@ export function AbsenceBookingModal({
   const [dateEnd, setDateEnd] = useState(initialDate ?? berlinTodayISO());
   const [halfDay, setHalfDay] = useState(false);
   const [note, setNote] = useState("");
-  const [overdraftConfirmed, setOverdraftConfirmed] = useState(false);
+  // The preview the Leitung confirmed the minus on (ADR 0311): a newer
+  // preview needs a new confirmation.
+  const [confirmedFingerprint, setConfirmedFingerprint] = useState<
+    string | null
+  >(null);
   const [saving, setSaving] = useState(false);
   const formErrors = useApiFormError();
   const clearFormErrors = formErrors.clear;
@@ -584,7 +589,7 @@ export function AbsenceBookingModal({
 
   // Eine geänderte Eingabe verwirft Bestätigung und alte Fehlermeldung.
   useEffect(() => {
-    setOverdraftConfirmed(false);
+    setConfirmedFingerprint(null);
     clearFormErrors();
   }, [value, dateStart, effectiveEnd, halfDay, clearFormErrors]);
 
@@ -661,6 +666,8 @@ export function AbsenceBookingModal({
   }
   const isOverdraft =
     isCompTime && preview !== null && preview.projectedBalanceMinutes < 0;
+  const overdraftConfirmed =
+    isOverdraft && confirmedFingerprint === preview?.fingerprint;
   const firstAccount = years.length > 0 ? accounts.get(years[0]!) : undefined;
 
   const disabled =
@@ -673,7 +680,9 @@ export function AbsenceBookingModal({
       (loading || failed || shortfall !== undefined)) ||
     (customTypeId !== null &&
       (allowanceLoading || allowanceFailed || customBlocked)) ||
-    (isCompTime && (previewLoading || (isOverdraft && !overdraftConfirmed)));
+    // Ohne Vorschau gibt es nichts zu bestätigen: der Server fragt nach
+    // genau der Projektion, die der Dialog gezeigt hat.
+    (isCompTime && (preview === null || (isOverdraft && !overdraftConfirmed)));
   // Der Grund am gesperrten Knopf; beim Speichern bleibt er nativ gesperrt.
   const quotaPending =
     (selected?.kind === "quota" && loading) ||
@@ -682,6 +691,7 @@ export function AbsenceBookingModal({
   const quotaFailed =
     (selected?.kind === "quota" && failed) ||
     (customTypeId !== null && allowanceFailed);
+  const previewFailed = isCompTime && preview === null && !previewLoading;
   const blockedReason = saving
     ? undefined
     : !selected
@@ -694,12 +704,14 @@ export function AbsenceBookingModal({
             ? "moto rechnet die verfügbaren Tage noch aus."
             : quotaFailed
               ? "Lade zuerst die verfügbaren Tage oben neu."
-              : (selected.kind === "quota" && shortfall !== undefined) ||
-                  (customTypeId !== null && customBlocked)
-                ? "Ändere zuerst den Anspruch, die Tage reichen nicht."
-                : isOverdraft && !overdraftConfirmed
-                  ? "Bestätige zuerst das Minus im Stundenkonto."
-                  : undefined;
+              : previewFailed
+                ? "Lade zuerst das Stundenkonto oben neu."
+                : (selected.kind === "quota" && shortfall !== undefined) ||
+                    (customTypeId !== null && customBlocked)
+                  ? "Ändere zuerst den Anspruch, die Tage reichen nicht."
+                  : isOverdraft && !overdraftConfirmed
+                    ? "Bestätige zuerst das Minus im Stundenkonto."
+                    : undefined;
 
   const save = async () => {
     if (disabled || !selected) return;
@@ -716,6 +728,11 @@ export function AbsenceBookingModal({
         date_end: effectiveEnd,
         half_day: halfDay || undefined,
         note: note.trim() || undefined,
+        // Der Server rechnet das Stundenkonto unter seiner Sperre neu und
+        // bucht ein Minus nur auf die bestätigte Vorschau (ADR 0311).
+        ...(overdraftConfirmed && confirmedFingerprint
+          ? { expected_fingerprint: confirmedFingerprint }
+          : {}),
       });
       toast.success(`${selected.label} ist eingetragen.`);
     } catch (error) {
@@ -724,10 +741,17 @@ export function AbsenceBookingModal({
         absence_type: value,
         error: error instanceof Error ? error.message : String(error),
       });
-      await formErrors.show(error, {
-        object: "die Abwesenheit",
-        retry: () => void latestSaveRef.current(),
-      });
+      // Das Stundenkonto hat sich seit der Vorschau geändert: der Dialog
+      // zeigt die neue Vorschau, dieselbe Anfrage würde wieder abgelehnt.
+      if (isChangedSinceRead(error)) {
+        reloadPreview();
+        await formErrors.show(error, { object: "die Abwesenheit" });
+      } else {
+        await formErrors.show(error, {
+          object: "die Abwesenheit",
+          retry: () => void latestSaveRef.current(),
+        });
+      }
       setSaving(false);
       return;
     }
@@ -872,7 +896,11 @@ export function AbsenceBookingModal({
                 id="comp-time-overdraft-confirm"
                 checked={overdraftConfirmed}
                 onChange={(event) =>
-                  setOverdraftConfirmed(event.target.checked)
+                  setConfirmedFingerprint(
+                    event.target.checked
+                      ? (preview?.fingerprint ?? null)
+                      : null,
+                  )
                 }
               />
               <span className="text-sm font-medium text-gray-800">

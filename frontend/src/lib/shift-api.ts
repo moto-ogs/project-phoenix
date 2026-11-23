@@ -133,6 +133,9 @@ interface SeriesSplitPayload {
   includeSchoolBreaks?: boolean;
   /** Answer to the working-time warnings of a refused save (#4708). */
   workingTime?: WorkingTimeConfirmation;
+  /** Version of the series the planner read (ADR 0311); the split refuses
+   *  a series changed since. */
+  expectedVersion: string;
 }
 
 /** The stored rule behind a series shift — weekdays, rhythm, window, and
@@ -155,6 +158,8 @@ export interface SeriesRule {
   validUntil: string | null;
   /** Also planned in the Ferien and on closing days (#3820). */
   includeSchoolBreaks: boolean;
+  /** Token of the stored series; an edit sends it back (ADR 0311). */
+  version: string;
 }
 
 export interface SeriesResult {
@@ -182,6 +187,7 @@ function mapSeriesRule(
     validFrom: data.valid_from,
     validUntil: data.valid_until,
     includeSchoolBreaks: data.include_school_breaks,
+    version: data.version,
   };
 }
 
@@ -392,6 +398,7 @@ class StaffShiftSeriesService {
             ? { include_school_breaks: payload.includeSchoolBreaks }
             : {}),
           ...workingTimeBody(payload.workingTime),
+          expected_version: payload.expectedVersion,
         },
         errorMessage: SERIES_SAVE_FAILED,
       }),

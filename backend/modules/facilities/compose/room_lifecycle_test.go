@@ -53,10 +53,11 @@ func TestModulePersistsRoomUpdateAtPublicSeam(t *testing.T) {
 	capacity := 18
 
 	updated, err := module.UpdateRoom(ctx, facilities.UpdateRoom{
-		ID:       created.ID,
-		Name:     "Fuchsbau",
-		Building: "Neubau",
-		Capacity: &capacity,
+		ID:              created.ID,
+		Name:            "Fuchsbau",
+		Building:        "Neubau",
+		Capacity:        &capacity,
+		ExpectedVersion: facilities.RoomVersion(created),
 	})
 
 	require.NoError(t, err)
@@ -80,7 +81,9 @@ func TestModulePersistsRoomDeleteAtPublicSeam(t *testing.T) {
 	created, err := module.CreateRoom(ctx, facilities.CreateRoom{Name: "Igelraum"})
 	require.NoError(t, err)
 
-	_, err = module.DeleteRoom(ctx, created.ID)
+	impact, err := module.RoomRemovalImpact(ctx, created.ID)
+	require.NoError(t, err)
+	_, err = module.DeleteRoom(ctx, created.ID, impact.Fingerprint())
 	require.NoError(t, err)
 
 	_, err = module.FindRoom(ctx, created.ID)
@@ -117,10 +120,10 @@ func TestSystemRoomCannotBeRenamedOrDeleted(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	_, err = module.UpdateRoom(ctx, facilities.UpdateRoom{ID: created.ID, Name: "Garten"})
+	_, err = module.UpdateRoom(ctx, facilities.UpdateRoom{ID: created.ID, Name: "Garten", ExpectedVersion: facilities.RoomVersion(created)})
 	require.ErrorIs(t, err, facilities.ErrSystemRoomProtected)
 
-	_, err = module.DeleteRoom(ctx, created.ID)
+	_, err = module.DeleteRoom(ctx, created.ID, "")
 	require.ErrorIs(t, err, facilities.ErrSystemRoomProtected)
 
 	found, err := module.FindRoom(ctx, created.ID)
@@ -139,7 +142,7 @@ func TestUpdateRoomRejectsCaseInsensitiveDuplicate(t *testing.T) {
 	second, err := module.CreateRoom(ctx, facilities.CreateRoom{Name: "Fuchsbau"})
 	require.NoError(t, err)
 
-	_, err = module.UpdateRoom(ctx, facilities.UpdateRoom{ID: second.ID, Name: "IGELRAUM"})
+	_, err = module.UpdateRoom(ctx, facilities.UpdateRoom{ID: second.ID, Name: "IGELRAUM", ExpectedVersion: facilities.RoomVersion(second)})
 	require.ErrorIs(t, err, facilities.ErrDuplicateRoom)
 
 	unchanged, err := module.FindRoom(ctx, second.ID)
@@ -162,10 +165,10 @@ func TestRoomCommandsPreserveToiletAliasAndColorContracts(t *testing.T) {
 	require.ErrorIs(t, err, facilities.ErrDuplicateToiletRoom)
 
 	changedColor := "#445566"
-	_, err = module.UpdateRoom(ctx, facilities.UpdateRoom{ID: wc.ID, Name: wc.Name, Color: &changedColor})
+	_, err = module.UpdateRoom(ctx, facilities.UpdateRoom{ID: wc.ID, Name: wc.Name, Color: &changedColor, ExpectedVersion: facilities.RoomVersion(wc)})
 	require.ErrorIs(t, err, facilities.ErrSystemRoomProtected)
 
-	updated, err := module.UpdateRoom(ctx, facilities.UpdateRoom{ID: wc.ID, Name: wc.Name, Building: "Altbau"})
+	updated, err := module.UpdateRoom(ctx, facilities.UpdateRoom{ID: wc.ID, Name: wc.Name, Building: "Altbau", ExpectedVersion: facilities.RoomVersion(wc)})
 	require.NoError(t, err)
 	assert.Equal(t, &legacyColor, updated.Color)
 	assert.Equal(t, "Altbau", updated.Building)
@@ -208,7 +211,7 @@ func TestDeleteRoomRunsGuardInsideWriteTransaction(t *testing.T) {
 	created, err := module.CreateRoom(ctx, facilities.CreateRoom{Name: "Igelraum"})
 	require.NoError(t, err)
 
-	_, err = module.DeleteRoom(ctx, created.ID)
+	_, err = module.DeleteRoom(ctx, created.ID, "")
 	require.ErrorIs(t, err, facilities.ErrRoomInUse)
 	assert.True(t, guardCalled)
 

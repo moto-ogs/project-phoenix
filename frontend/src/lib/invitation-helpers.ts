@@ -46,6 +46,12 @@ export interface CreateInvitationRequest {
   position?: string;
   /** Geschlecht für die Stammdaten; fehlt bei „Keine Angabe“. */
   gender?: StammdatenGender;
+  /**
+   * Version der Antwort zur früheren Beschäftigung, auf der die Wahl beruht
+   * (ADR 0311). Fehlt, wenn die Abfrage nicht gelang: dann gilt die Vorgabe
+   * aus ADR 0021.
+   */
+  expectedFormerEmployment?: string;
 }
 
 export interface PendingInvitation {
@@ -132,6 +138,7 @@ export const toCreateInvitationBody = (
     reset_master_data: data.resetMasterData,
     reset_qualifications: data.resetQualifications,
     reset_work_time: data.resetWorkTime,
+    expected_former_employment: data.expectedFormerEmployment,
   };
 };
 
@@ -161,6 +168,16 @@ export interface FormerEmployment {
   endedOn: string;
   resumes: FormerEmploymentPart[];
   notReturning: FormerEmploymentPart[];
+}
+
+/**
+ * Die Antwort zur früheren Beschäftigung einer Adresse samt ihrer Version,
+ * die die Einladung als `expected_former_employment` zurückschickt. Die
+ * Version gibt es auch für „keine frühere Beschäftigung“.
+ */
+export interface FormerEmploymentAnswer {
+  formerEmployment: FormerEmployment | null;
+  version: string;
 }
 
 const isFormerEmploymentPart = (part: string): part is FormerEmploymentPart =>

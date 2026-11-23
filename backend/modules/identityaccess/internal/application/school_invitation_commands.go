@@ -99,6 +99,7 @@ func (s *SchoolInvitation) CreateSchoolInvitation(ctx context.Context, request i
 			ResetMasterData:  request.ResetMasterData, ResetQualifications: request.ResetQualifications, ResetWorkTime: request.ResetWorkTime,
 			PersonID: request.PersonID, CreatedBy: request.CreatedBy, SchoolName: request.SchoolName,
 			ActorPermissions: request.ActorPermissions, OperatorGrant: request.OperatorGrant,
+			ExpectedFormerEmployment: request.ExpectedFormerEmployment,
 		})
 		return PublicSchoolInvitation(invitation), err
 	})
@@ -118,10 +119,15 @@ func (s *SchoolInvitation) ValidateSchoolInvitation(ctx context.Context, token s
 func (s *SchoolInvitation) FindFormerEmployment(ctx context.Context, email string) (identityaccess.FormerEmployment, bool, error) {
 	return runFlow2(ctx, s.flow(), func(ctx context.Context) (identityaccess.FormerEmployment, bool, error) {
 		former, found, err := s.findFormerEmployment(ctx, email)
-		if err != nil || !found {
+		if err != nil {
 			return identityaccess.FormerEmployment{}, false, err
 		}
+		version := formerEmploymentVersion(former, found)
+		if !found {
+			return identityaccess.FormerEmployment{Version: version}, false, nil
+		}
 		return identityaccess.FormerEmployment{
+			Version:   version,
 			StartedOn: former.StartedOn, EndedOn: former.EndedOn,
 			Resumes: []identityaccess.FormerEmploymentPart{
 				identityaccess.FormerEmploymentMasterData,

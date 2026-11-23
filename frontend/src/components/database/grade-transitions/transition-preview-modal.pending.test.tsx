@@ -78,6 +78,7 @@ const transition: GradeTransition = {
   canModify: true,
   canApply: true,
   canRevert: false,
+  version: "v1",
 };
 
 const preview: TransitionPreview = {

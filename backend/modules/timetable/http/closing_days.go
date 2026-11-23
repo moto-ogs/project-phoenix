@@ -27,6 +27,10 @@ type ClosingDayRequest struct {
 	StartDate string `json:"start_date"`
 	EndDate   string `json:"end_date"`
 	Reason    string `json:"reason"`
+	// ExpectedVersion is the version of the closing day an update edits
+	// (ADR 0311); an update of a closing day changed since is refused. A
+	// create ignores it.
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 // Bind validates the request
@@ -56,6 +60,8 @@ type ClosingDayResponse struct {
 	Reason    string   `json:"reason"`
 	CreatedAt string   `json:"created_at"`
 	UpdatedAt string   `json:"updated_at"`
+	// Version is the token an update sends back as expected_version.
+	Version string `json:"version"`
 	// Traeger marks a closing day the school's Träger planned (#4702): it
 	// counts like the school's own, but only the Träger-Büro changes it.
 	Traeger bool `json:"traeger"`
@@ -69,6 +75,7 @@ func mapClosingDayToResponse(d schoolcalendar.ClosingDay) ClosingDayResponse {
 		Reason:    d.Reason,
 		CreatedAt: d.CreatedAt.Format(time.RFC3339),
 		UpdatedAt: d.UpdatedAt.Format(time.RFC3339),
+		Version:   schoolcalendar.ClosingDayVersion(d),
 		Traeger:   d.Traeger,
 	}
 }
@@ -172,7 +179,7 @@ func (rs *Resource) updateClosingDay(w http.ResponseWriter, r *http.Request) {
 		StartDate: startDate.String(),
 		EndDate:   endDate.String(),
 		Reason:    req.Reason,
-	}})
+	}, ExpectedVersion: req.ExpectedVersion})
 	if err != nil {
 		common.RenderError(w, r, closingDayWriteErrorRenderer(err, "Schließtag konnte nicht aktualisiert werden"))
 		return

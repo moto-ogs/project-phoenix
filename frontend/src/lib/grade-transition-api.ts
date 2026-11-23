@@ -42,6 +42,8 @@ export interface GradeTransition {
   canModify: boolean;
   canApply: boolean;
   canRevert: boolean;
+  /** Stand des Entwurfs; eine Änderung schickt ihn mit (ADR 0311). */
+  version: string;
 }
 
 interface MappingPreview {
@@ -124,6 +126,8 @@ export interface CreateTransitionInput {
 }
 
 export interface UpdateTransitionInput {
+  /** Der gelesene Stand; ein seither geänderter Entwurf wird abgelehnt. */
+  expectedVersion: string;
   academicYear?: string;
   notes?: string;
   /** undefined = Mappings unverändert lassen; [] = alle entfernen */
@@ -172,6 +176,7 @@ export function mapTransition(
     canModify: data.can_modify,
     canApply: data.can_apply,
     canRevert: data.can_revert,
+    version: data.version,
   };
 }
 
@@ -380,6 +385,7 @@ export async function updateGradeTransition(
         mappings: input.mappings
           ? toBackendMappings(input.mappings)
           : undefined,
+        expected_version: input.expectedVersion,
       },
     }).catch(statusMessage),
   );

@@ -133,6 +133,7 @@ describe("staffShiftSeriesService", () => {
 
     await expect(
       staffShiftSeriesService.splitSeries("5", {
+        expectedVersion: "series-v3",
         effectiveDate: "2026-10-05",
         startTime: "10:00",
         endTime: "14:00",
@@ -155,6 +156,7 @@ describe("staffShiftSeriesService", () => {
         end_time: "14:00",
         break_minutes: 30,
         shift_type_id: null,
+        expected_version: "series-v3",
       }),
     });
   });
@@ -168,6 +170,7 @@ describe("staffShiftSeriesService", () => {
     );
 
     await staffShiftSeriesService.splitSeries("5", {
+      expectedVersion: "series-v3",
       effectiveDate: "2026-10-05",
       occurrenceShiftId: "42",
       startTime: "10:00",
@@ -192,6 +195,7 @@ describe("staffShiftSeriesService", () => {
       week_pattern: 2,
       valid_until: "2026-11-02",
       include_school_breaks: true,
+      expected_version: "series-v3",
     });
   });
 
@@ -204,6 +208,7 @@ describe("staffShiftSeriesService", () => {
     );
 
     await staffShiftSeriesService.splitSeries("5", {
+      expectedVersion: "series-v3",
       effectiveDate: "2026-10-05",
       occurrenceShiftId: "9223372036854775807",
       startTime: "10:00",
@@ -227,6 +232,7 @@ describe("staffShiftSeriesService", () => {
     );
 
     await staffShiftSeriesService.splitSeries("5", {
+      expectedVersion: "series-v3",
       effectiveDate: "2026-10-05",
       startTime: "10:00",
       endTime: "14:00",
@@ -263,6 +269,7 @@ describe("staffShiftSeriesService", () => {
             valid_from: "2026-09-01",
             valid_until: "2026-10-01",
             include_school_breaks: true,
+            version: "series-v3",
           },
         },
         { status: 200 },
@@ -282,6 +289,7 @@ describe("staffShiftSeriesService", () => {
       validFrom: "2026-09-01",
       validUntil: "2026-10-01",
       includeSchoolBreaks: true,
+      version: "series-v3",
     });
 
     expect(fetchMock).toHaveBeenCalledWith("/api/staff-shifts/series/5", {
@@ -306,6 +314,7 @@ describe("staffShiftSeriesService", () => {
             valid_from: "2026-09-01",
             valid_until: null,
             include_school_breaks: false,
+            version: "series-v3",
           },
         },
         { status: 200 },
@@ -357,6 +366,7 @@ describe("staffShiftSeriesService", () => {
       Response.json({ detail: "invalid shift series" }, { status: 400 }),
     );
     const split = staffShiftSeriesService.splitSeries("5", {
+      expectedVersion: "series-v3",
       effectiveDate: "2026-10-05",
       startTime: "10:00",
       endTime: "14:00",

@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // decisionReason trims the staff reason and checks it against the verdict's
@@ -41,8 +42,8 @@ func (w *ExcusedRequests) lockDecidableRequest(ctx context.Context, input carepl
 	if req.Status != careplan.ExcusedRequestStatusPending {
 		return careplan.ExcusedAbsenceRequest{}, careplan.ReviewStudent{}, careplan.ErrExcusedRequestNotPending
 	}
-	if input.ExpectedVersion != "" && careplan.ParentRequestVersion(req.UpdatedAt) != input.ExpectedVersion {
-		return careplan.ExcusedAbsenceRequest{}, careplan.ReviewStudent{}, careplan.ErrParentRequestStale
+	if err := readstate.Check(input.ExpectedVersion, careplan.ParentRequestVersion(req.UpdatedAt)); err != nil {
+		return careplan.ExcusedAbsenceRequest{}, careplan.ReviewStudent{}, err
 	}
 	req.AbsenceStatus = normalizedAbsenceRequestStatus(req.AbsenceStatus)
 	today := w.today()
@@ -175,8 +176,8 @@ func (w *ExcusedRequests) MarkDone(ctx context.Context, requestID int64, expecte
 	if req.Status != careplan.ExcusedRequestStatusPending {
 		return careplan.ErrExcusedRequestNotPending
 	}
-	if expectedVersion != "" && careplan.ParentRequestVersion(req.UpdatedAt) != expectedVersion {
-		return careplan.ErrParentRequestStale
+	if err := readstate.Check(expectedVersion, careplan.ParentRequestVersion(req.UpdatedAt)); err != nil {
+		return err
 	}
 	if err := w.requireReviewer(ctx, &student); err != nil {
 		return err
@@ -274,8 +275,8 @@ func (w *ExcusedRequests) lockCorrectableRequest(ctx context.Context, requestID 
 	if !isCorrectableExcusedStatus(req.Status) {
 		return careplan.ExcusedAbsenceRequest{}, careplan.ErrParentRequestNotDecided
 	}
-	if expectedVersion != "" && careplan.ParentRequestVersion(req.UpdatedAt) != expectedVersion {
-		return careplan.ExcusedAbsenceRequest{}, careplan.ErrParentRequestStale
+	if err := readstate.Check(expectedVersion, careplan.ParentRequestVersion(req.UpdatedAt)); err != nil {
+		return careplan.ExcusedAbsenceRequest{}, err
 	}
 	req.AbsenceStatus = normalizedAbsenceRequestStatus(req.AbsenceStatus)
 	if err := w.requireReviewer(ctx, &student); err != nil {

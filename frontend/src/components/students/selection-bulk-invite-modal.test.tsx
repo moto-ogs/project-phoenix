@@ -73,6 +73,7 @@ function result(overrides: Partial<BulkInviteResult>): BulkInviteResult {
     alreadyNotified: 0,
     withoutVisibleCare: 0,
     problems: [],
+    fingerprint: "counted",
     ...overrides,
   };
 }
@@ -117,6 +118,7 @@ describe("SelectionBulkInviteModal", () => {
         dryRun: false,
         resendOpen: false,
         notifyActive: false,
+        expectedFingerprint: "counted",
       }),
     );
     expect(
@@ -128,42 +130,33 @@ describe("SelectionBulkInviteModal", () => {
     expect(screen.getByRole("button", { name: "Schließen" })).toBeVisible();
   });
 
-  it("counts again on every opening before offering to send", async () => {
-    let answerSecond!: (value: BulkInviteResult) => void;
+  it("shows the new counts without a retry when the parents changed since counting", async () => {
     bulkInvite
       .mockResolvedValueOnce(result({ invited: 3 }))
-      .mockReturnValueOnce(
-        new Promise<BulkInviteResult>((resolve) => {
-          answerSecond = resolve;
-        }),
-      );
-    const modal = (isOpen: boolean) => (
-      <SelectionBulkInviteModal
-        isOpen={isOpen}
-        onClose={vi.fn()}
-        studentIds={["4", "9"]}
-      />
-    );
-    const { rerender } = render(modal(true));
-    expect(
-      await screen.findByRole("button", { name: "3 Eltern einladen" }),
-    ).toBeEnabled();
+      .mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      )
+      .mockResolvedValueOnce(result({ skippedOpen: 3, fingerprint: "now" }));
+    renderModal();
 
-    rerender(modal(false));
-    rerender(modal(true));
-    // Meanwhile the parents were invited elsewhere.
-    expect(screen.getByRole("button", { name: "Einladen" })).toBeDisabled();
-    answerSecond(result({ skippedOpen: 3 }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "3 Eltern einladen" }),
+    );
+    // Meanwhile the parents were invited elsewhere: the dialog counts again.
     expect(
       await screen.findByText(
         "Für diese Auswahl gibt es niemanden einzuladen.",
       ),
     ).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Einladen" })).toHaveAttribute(
       "aria-disabled",
       "true",
     );
-    expect(bulkInvite).toHaveBeenCalledTimes(2);
+    expect(bulkInvite).toHaveBeenCalledTimes(3);
+    expect(toastSuccess).not.toHaveBeenCalled();
   });
 
   it("allows submitting a preview containing only existing accounts", async () => {
@@ -187,6 +180,7 @@ describe("SelectionBulkInviteModal", () => {
         dryRun: false,
         resendOpen: false,
         notifyActive: false,
+        expectedFingerprint: "counted",
       }),
     );
     expect(
@@ -405,6 +399,7 @@ describe("SelectionBulkInviteModal", () => {
         result({
           invited: 1,
           notified: 2,
+          fingerprint: "counted-with-notice",
           problems: [
             {
               guardianProfileId: "7",
@@ -470,6 +465,8 @@ describe("SelectionBulkInviteModal", () => {
       dryRun: false,
       resendOpen: false,
       notifyActive: true,
+      // The token of the counts with the notice, not of the first preview.
+      expectedFingerprint: "counted-with-notice",
     });
     expect(toastSuccess).toHaveBeenCalledWith(
       "1 Elternteil ist eingeladen. 2 Eltern bekommen die Nachricht.",

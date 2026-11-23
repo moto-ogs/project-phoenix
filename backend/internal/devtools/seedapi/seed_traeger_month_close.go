@@ -27,8 +27,16 @@ func seedTraegerMonthClose(client *Client, auth AuthRef, recordID int64) (bool, 
 	if month.Format("2006-01-02") < seedTraegerContractStart {
 		return false, nil
 	}
-	_, err := client.PostWithAuth(auth, fmt.Sprintf("/traeger/staff-records/%d/time-account/close", recordID), map[string]any{
+	// The close carries the fingerprint of the month it confirms (ADR 0311).
+	path := fmt.Sprintf("/traeger/staff-records/%d/time-account", recordID)
+	raw, err := client.GetWithAuth(auth, fmt.Sprintf("%s?year=%d&month=%d", path, month.Year(), int(month.Month())))
+	fingerprint, readErr := seedReadToken(raw, "fingerprint")
+	if err = errors.Join(err, readErr); err != nil {
+		return false, fmt.Errorf("read a month of a Träger staff record: %w", err)
+	}
+	_, err = client.PostWithAuth(auth, path+"/close", map[string]any{
 		"year": month.Year(), "month": int(month.Month()), "reason": "Monatsabschluss für das Lohnbüro",
+		"expected_fingerprint": fingerprint,
 	})
 	var refused *APIError
 	if errors.As(err, &refused) && (refused.Code == seedCodeTraegerMonthLaterClosed || refused.Code == seedCodeTraegerMonthNotKept) {

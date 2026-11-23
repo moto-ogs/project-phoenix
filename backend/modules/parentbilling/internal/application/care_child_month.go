@@ -72,6 +72,34 @@ func holdSnapshot(duplicates []parentbilling.CareDuplicate) []parentbilling.Care
 	return holds
 }
 
+// releaseSnapshot is everything a release stores of the children it holds
+// back: those with a duplicate contract (holdSnapshot), then those an issued
+// invoice already bills, each with the invoices in its way (#7892).
+func releaseSnapshot(duplicates []parentbilling.CareDuplicate, billed []parentbilling.CareBilledChild) []parentbilling.CareRunHold {
+	holds := holdSnapshot(duplicates)
+	for _, child := range billed {
+		holds = append(holds, parentbilling.CareRunHold{
+			Position: len(holds) + 1, Reason: child.Reason, ChildFirstName: child.ChildFirstName, ChildLastName: child.ChildLastName,
+			Contracts: slices.Clone(child.Contracts), Slots: []parentbilling.CareHeldSlot{}, Invoices: slices.Clone(child.Invoices),
+		})
+	}
+	return holds
+}
+
+// billedHoldView is what a released run shows of the children it held back
+// for an issued invoice: the stored snapshot and nothing else (E5).
+func billedHoldView(holds []parentbilling.CareRunHold) []parentbilling.CareBilledChild {
+	shown := []parentbilling.CareBilledChild{}
+	for _, hold := range holds {
+		if hold.Reason != parentbilling.HoldReasonAlreadyBilled && hold.Reason != parentbilling.HoldReasonMealOnlyInvoice {
+			continue
+		}
+		shown = append(shown, parentbilling.CareBilledChild{ChildFirstName: hold.ChildFirstName, ChildLastName: hold.ChildLastName,
+			Reason: hold.Reason, Contracts: slices.Clone(hold.Contracts), Invoices: append([]parentbilling.CareBilledInvoice{}, hold.Invoices...)})
+	}
+	return shown
+}
+
 // holdView is what a released run shows of the children it held back: the
 // stored snapshot and nothing else (E5), one entry per module and weekday
 // billed twice, as the preview showed it at the release.
@@ -94,25 +122,55 @@ func holdView(holds []parentbilling.CareRunHold) []parentbilling.CareDuplicate {
 // force together with the contracts an issued invoice bills outside them for
 // the sibling chain (#7863), each as before #7874. A child that changed its
 // school with a record at each school is one child in both (joinSchoolChanges);
-// joined names it by its place in children.
+// joined names it by its place in children and joinedContracts every contract
+// of it, those only an issued invoice names included (#7892).
 type careGrouping struct {
-	children [][]int64
-	keys     map[int64]string
-	joined   []int
+	children        [][]int64
+	keys            map[int64]string
+	joined          []int
+	joinedContracts map[int][]int64
 }
 
 // groupCare groups the contracts of a month by child. issuedFamilies are
-// the families the issued invoices of the month froze, by contract.
+// the families the issued invoices of the month froze, by contract. No
+// contract outside the versions in force takes part in a school change.
 func groupCare(byContract map[int64][]parentbilling.CareContractVersion, order []int64, families map[int64]string,
 	issued map[int64]parentbilling.CareContractChild, issuedFamilies map[int64]string,
 ) careGrouping {
+	return groupCareMonth(byContract, order, families, issued, issuedFamilies, nil)
+}
+
+// groupCareMonth is groupCare with the schools of the issued invoices of
+// contracts outside the versions in force (places): such a contract of a
+// child that changed its school joins the child's contract in force (#7892).
+func groupCareMonth(byContract map[int64][]parentbilling.CareContractVersion, order []int64, families map[int64]string,
+	issued map[int64]parentbilling.CareContractChild, issuedFamilies map[int64]string, places map[int64]parentbilling.CareDuplicateContract,
+) careGrouping {
 	chain := newCareChain(byContract, order, issued, families, issuedFamilies)
-	children, joined, parts := joinSchoolChanges(groupCareChildren(contractChildrenOf(byContract), order, nil), byContract, families, chain.accepts)
-	for _, joining := range parts {
-		chain.join(joining)
+	return chain.group(order, chain.schoolChangeSource(places))
+}
+
+// group joins the school changes of the chain and answers both groupings.
+func (c careChain) group(order []int64, source schoolChangeSource) careGrouping {
+	inForce := groupCareChildren(contractChildrenOf(c.byContract), order, nil)
+	all, joined, parts := joinSchoolChanges(c.schoolChangeCandidates(inForce, source), source, c.accepts)
+	grouping := careGrouping{children: make([][]int64, len(inForce)), keys: c.keys, joinedContracts: map[int][]int64{}}
+	for i := range inForce {
+		// The place of a part that joined another child stays empty.
+		grouping.children[i] = slices.DeleteFunc(slices.Clone(all[i]), func(contractID int64) bool {
+			_, inForce := c.byContract[contractID]
+			return !inForce
+		})
 	}
-	slices.Sort(joined)
-	return careGrouping{children: children, keys: chain.keys, joined: joined}
+	for i, joining := range parts {
+		c.join(joining)
+		if joined[i] < len(inForce) {
+			grouping.joined = append(grouping.joined, joined[i])
+			grouping.joinedContracts[joined[i]] = all[joined[i]]
+		}
+	}
+	slices.Sort(grouping.joined)
+	return grouping
 }
 
 // careChain is the grouping of the sibling chain (chainChildren) with its
@@ -127,6 +185,9 @@ type careChain struct {
 	// identities are the children the contracts in force and the issued ones
 	// name.
 	identities map[int64]parentbilling.CareContractChild
+	// recomputed are the contracts whose notice a notice preview computes
+	// again (careMonthInput.recomputed).
+	recomputed map[int64]bool
 }
 
 func newCareChain(byContract map[int64][]parentbilling.CareContractVersion, order []int64, issued map[int64]parentbilling.CareContractChild,
@@ -147,6 +208,76 @@ func newCareChain(byContract map[int64][]parentbilling.CareContractVersion, orde
 	}
 	return careChain{byContract: byContract, children: children, keys: chainKeys(byContract, children), place: place,
 		families: families, issuedFamilies: issuedFamilies, identities: identities}
+}
+
+// schoolChangeSource is what a school change reads of the contracts of the
+// chain. A contract outside the versions in force takes part with the child
+// and the family of its issued invoice, when places names its school.
+func (c careChain) schoolChangeSource(places map[int64]parentbilling.CareDuplicateContract) schoolChangeSource {
+	source := schoolChangeSource{byContract: c.byContract, families: c.families, outside: map[int64]outsideContract{}}
+	for contractID, place := range places {
+		if _, inForce := c.byContract[contractID]; inForce || place.SchoolID == 0 {
+			continue
+		}
+		if family, issued := c.issuedFamilies[contractID]; issued {
+			source.outside[contractID] = outsideContract{child: c.identities[contractID], family: family, place: place}
+		}
+	}
+	return source
+}
+
+// schoolChangeCandidates are the children a school change is decided
+// between: the children in force in their places, then the children only an
+// issued invoice names. An issued contract outside the versions in force that
+// the chain counts to a child in force stands with that child, so its name,
+// family and school count for it like those of a running contract (#7892).
+func (c careChain) schoolChangeCandidates(inForce [][]int64, source schoolChangeSource) [][]int64 {
+	outsideAt, running := c.outsideByPlace(source)
+	candidates := make([][]int64, len(inForce))
+	for i, child := range inForce {
+		candidates[i] = child
+		taken := map[int]bool{}
+		for _, contractID := range child {
+			place := c.place[contractID]
+			if !taken[place] && len(outsideAt[place]) > 0 {
+				candidates[i] = slices.Concat(candidates[i], outsideAt[place])
+			}
+			taken[place] = true
+		}
+	}
+	for place := range c.children {
+		if !running[place] && len(outsideAt[place]) > 0 {
+			candidates = append(candidates, outsideAt[place])
+		}
+	}
+	return candidates
+}
+
+// outsideByPlace names per child of the chain its contracts outside the
+// versions in force that take part in a school change, and the children with
+// a contract in force.
+func (c careChain) outsideByPlace(source schoolChangeSource) (outsideAt map[int][]int64, running map[int]bool) {
+	outsideAt, running = map[int][]int64{}, map[int]bool{}
+	for place, child := range c.children {
+		for _, contractID := range child {
+			if _, outside := source.outside[contractID]; outside {
+				outsideAt[place] = append(outsideAt[place], contractID)
+			}
+			if _, inForce := c.byContract[contractID]; inForce {
+				running[place] = true
+			}
+		}
+	}
+	return outsideAt, running
+}
+
+// familyOf is the family of a contract: of its recipient in force, else the
+// one its issued invoice froze.
+func (c careChain) familyOf(contractID int64) string {
+	if _, inForce := c.byContract[contractID]; inForce {
+		return c.families[contractID]
+	}
+	return c.issuedFamilies[contractID]
 }
 
 // accepts tells whether a school change joins: the chain sees every part
@@ -191,7 +322,7 @@ func (c careChain) hasTwin(parts [][]int64) bool {
 	if len(births) != 1 {
 		return true
 	}
-	family := c.families[parts[0][0]]
+	family := c.familyOf(parts[0][0])
 	for place, child := range c.children {
 		if !joining[place] && c.inFamily(child, family) && slices.Contains(c.birthsOf(child, nil), births[0]) {
 			return true
@@ -226,22 +357,36 @@ func (c careChain) birthsOf(child []int64, births []calendar.Date) []calendar.Da
 }
 
 // aligned tells whether the chain sees a part as one child of its own whose
-// issued invoices all froze its family; issued tells whether it has one.
+// issued invoices all froze its family; issued tells whether it has one. A
+// part is the contracts in force of a child with the issued contracts the
+// chain counts to it, or a child only issued invoices name (#7892). A notice
+// the preview computes again keeps its family in the check but is no issued
+// invoice in that computation.
 func (c careChain) aligned(part []int64) (aligned, issued bool) {
-	group := c.children[c.place[part[0]]]
+	place := c.place[part[0]]
+	family := c.familyOf(part[0])
 	inForce := 0
-	for _, contractID := range group {
+	for _, contractID := range c.children[place] {
 		if _, ok := c.byContract[contractID]; ok {
 			inForce++
 		}
-		if family, ok := c.issuedFamilies[contractID]; ok {
-			if family != c.families[part[0]] {
+		if frozen, ok := c.issuedFamilies[contractID]; ok {
+			if frozen != family {
 				return false, true
 			}
-			issued = true
+			issued = issued || !c.recomputed[contractID]
 		}
 	}
-	return inForce == len(part) && !slices.ContainsFunc(part, func(contractID int64) bool { return c.place[contractID] != c.place[part[0]] }), issued
+	partInForce := 0
+	for _, contractID := range part {
+		if c.place[contractID] != place {
+			return false, issued
+		}
+		if _, ok := c.byContract[contractID]; ok {
+			partInForce++
+		}
+	}
+	return inForce == partInForce, issued
 }
 
 // join gives the chain groups of the parts of a joined child one key: that

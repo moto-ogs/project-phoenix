@@ -107,7 +107,7 @@ func TestPickupChangePills_NameRequestedDayAndTime(t *testing.T) {
 		"date": "2026-09-15", "pickup_time": "14:30", "previous_pickup_time": "15:30",
 	}, created.Payload)
 
-	_, err = testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{
+	_, err = testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, req.ID),
 		RequestID: req.ID, Approve: true, ReviewedBy: f.staffAccount,
 	})
 	require.NoError(t, err)
@@ -125,7 +125,7 @@ func TestPickupChangePills_NameRequestedDayAndTime(t *testing.T) {
 	// and keeps the staff reason.
 	second, err := testpkg.TenantQuery5(t, ctx, f.db, f.svc.CreatePickupChangeRequest, f.chain.StudentID, f.chain.AccountID, date.AddDays(1), pickup, "Oma holt ab")
 	require.NoError(t, err)
-	_, err = testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{
+	_, err = testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, second.ID),
 		RequestID: second.ID, Approve: false, Reason: "passt nicht", ReviewedBy: f.staffAccount,
 	})
 	require.NoError(t, err)
@@ -161,7 +161,7 @@ func TestGetForReview_OpensDecidedAndPendingPickupRequests(t *testing.T) {
 
 	decidedReq, err := testpkg.TenantQuery5(t, ctx, f.db, f.svc.CreatePickupChangeRequest, f.chain.StudentID, f.chain.AccountID, date, pickup, "Arzttermin")
 	require.NoError(t, err)
-	_, err = testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{
+	_, err = testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, decidedReq.ID),
 		RequestID: decidedReq.ID, Approve: false, Reason: "passt nicht", ReviewedBy: f.staffAccount,
 	})
 	require.NoError(t, err)

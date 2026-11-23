@@ -6,6 +6,96 @@ resolution, or response mapping. Paths beginning with `src/` are relative to
 `.claude/`, `frontend/`, and `docs/` paths start at the repository root.
 Env files are relative to `frontend/`.
 
+## Browser calls
+
+Browser JSON calls to routes with a shared entry use
+`bffJson(portal, route, options)` (`lib/bff-fetch.ts`, #7806). `route` is the
+catalog key of a registered route for the portal, or the BFF entry of a
+session step. A catalog entry types `params`, `query`, `body` and the answer. The
+import is type-only, so no decoder reaches the browser bundle: the catalog
+proxy or named route file has decoded the Go answer already.
+
+| Portal | Example | In the code |
+|---|---|---|
+| Staff (`tenant`) | `bffJson("tenant", "GET /api/students/{id}/partial-absences", { params: { id }, query: { from, to } })` | [`guardian-api.ts`](../../frontend/src/lib/guardian-api.ts), [`timetable-api.ts`](../../frontend/src/lib/timetable-api.ts) |
+| Parents (`parent`) | `bffJson("parent", "GET /parent/me/notifications/feed/", { query: { limit, cursor } })` | [`notification-feed-api.ts`](../../frontend/src/lib/notification-feed-api.ts) `parentNotificationFeedApi` |
+| moto schule (`school`) | `bffJson("school", "GET /school/notifications/feed/", { query: { limit, cursor } })` | [`notification-feed-api.ts`](../../frontend/src/lib/notification-feed-api.ts) `schoolNotificationFeedApi` |
+| Träger (`org`) | `bffJson("org", "GET /traeger/notifications/feed/unread-count")` | [`notification-feed-api.ts`](../../frontend/src/lib/notification-feed-api.ts) `traegerNotificationFeedApi` |
+| Caterer (`caterer`) | `bffJson("caterer", "POST /caterer/notifications/feed/{id}/read", { params: { id } })` | [`notification-feed-api.ts`](../../frontend/src/lib/notification-feed-api.ts) `catererNotificationFeedApi` |
+| Operator (`platform`) | `bffJson("platform", "GET /operator/invitations/")` | [`operator-invitation-api.ts`](../../frontend/src/lib/operator/operator-invitation-api.ts) |
+| Ohne Sitzung (`public`) | `bffJson("public", "GET /auth/invitations/{token}", { params: { token } })` | [`invitation-api.ts`](../../frontend/src/lib/invitation-api.ts) `validateInvitation` |
+
+The path is the pattern below the portal's BFF prefix, a route outside the
+portal's mount (`/analytics-policy`) below the prefix as a whole; a trailing
+slash is dropped and each parameter encoded.
+
+- **Answer:** the `data` of the envelope; a paginated list resolves to
+  `{ data, pagination }`; a route without data and a 204 resolve to `null`.
+- **Variants:** a route with response variants (`GET /api/students/`) takes
+  the variant in its query (`query: { view: "names" }`), and the answer has
+  that variant's type; without it the route's default variant.
+- **Missing `data`:** a 2xx answer without a `data` member
+  is an `ApiError` 502, `general.write_answer_unreadable` for a write (as
+  `decodeContract`). There is no fallback value.
+- **Failure:** an `ApiError` with the backend's code, field errors and
+  request ID. `errorMessage` sets its message, so a client keeps its text.
+- **`public`:** the routes without a session (links, password reset,
+  invitations) go without gate and renewal; a pattern names its portal
+  (`/caterer/…` → `/api/caterer/…`), one under `/api` stays as it is.
+- **401:** one table in `bff-fetch.ts` holds where the portals differ. Staff:
+  the session gate before the request and one renewal with a retry
+  (`requireTenantSession`, `renewTenantSession` in `lib/session-cache.ts`),
+  then sign-out; `authRefusals` names codes that refuse
+  only the operation. Operator: to `/operator/login`. Parents: to
+  `/parents/login`, except for the call's explicit `authRefusals` (e.g. a
+  wrong MFA confirmation code or current password). Träger, moto schule and
+  caterer: the error stays on the page. A parent client that reports refusals
+  (`PARENT_ACCESS_REFUSED_EVENT`) catches the `ApiError` itself.
+- **Route files:** use the generated key if the BFF keeps the Go path and
+  envelope. For session steps, use the shared BFF entry from
+  [`session-bff.ts`](../../frontend/src/lib/session-bff.ts), for example
+  `bffJson("public", sessionBff.login(scope), { body })`. The session route
+  and its client share `SignInReply`; the Go session tokens are not part of
+  this type. Use `bffJsonUncontracted` only for the remaining callers and
+  reasons in the [BFF boundary rules](../../frontend/scripts/oxlint-plugin-bff-boundary.mjs).
+  `bff-boundary/only-listed-uncontracted` rejects access outside that list
+  and forwarding the helper, including renamed imports and re-exports.
+  The list only shrinks.
+- **Wait:** a refusal with `Retry-After` (429, 503) carries the wait as
+  `retryAfterSeconds` on the `ApiError` (`apiErrorFromResponse`).
+- **Keepalive cleanup:** `keepalive: true` starts the request immediately.
+  Staff cleanup skips the browser session gate and its 401 renewal, because
+  that lookup cannot outlive an unloading page. The BFF authenticates the
+  cookie as usual; a refusal still reaches the caller as its `ApiError`.
+- **Lists Go writes as `null`:** the generated type says so (`T[] | null`).
+  Read it as an empty list where the screen needs one, once, in the client
+  (`slot-lists-api.ts` derives `WithLists<…>` from the generated type); do not
+  copy the answer into a hand-written type.
+- **One transport:** use `bffJson` for JSON and `bffFile` for files.
+  `bff-boundary/no-raw-browser-transport` rejects access to global `fetch`,
+  `XMLHttpRequest` and `navigator.sendBeacon` outside the same plugin's
+  shrink-only infrastructure list. It also rejects names of retired fetch
+  helpers. `bff-boundary/no-numeric-identifier` rejects coercions such as
+  `Number(room.id)`, `+room.id`, arithmetic and `BigInt(id)`. For generated
+  fields the Go contract's kind wins over the name; where an ordinary string
+  has no contract provenance, ID-shaped names are a fallback. Keep IDs as
+  text and use `compareIds` for ordering decimal IDs without rounding.
+  All three rules run in `pnpm run check`.
+  `scripts/backend-wire-types.mjs`
+  finds hand-written wire types by their form (two `snake_case` fields of
+  their own, a generated type imported under another name, a type that only
+  renames a generated one); its baseline only shrinks.
+- **Tests:** a client test stubs the global `fetch` and mocks the session
+  gate with
+  `vi.mock("~/lib/session-cache", () => import("~/test/mocks/plain-session-fetch"))`;
+  answers of a paginated route carry `pagination` (`pagedJson`), plain
+  answer objects become Responses through `plainResponse`/`plainFetch`.
+- **Files:** a route registered with `File: true` is called with
+  `bffFile(portal, route, options)` from the same module: the same path,
+  portal table and ApiError, resolving to the successful `Response` whose
+  body and `Content-Disposition` the caller reads. A link the browser opens
+  itself (`<a href>`) stays a plain URL.
+
 ## Environment & API URLs — Fail Fast, No Defaults
 
 Required values fail fast through `src/env.js` and `src/lib/env-validation.js`.
@@ -53,17 +143,25 @@ or write a `Backend*` interface for a registered route.
 - A portal forwards its backend routes through one catalog proxy, so a new
   backend route needs no pass-through `route.ts`. `app/api/proxy-routes.test.ts`
   fails on a `route.ts` whose only code is `proxyGet(...)` and its siblings.
-- Read a registered route with `contractGet` (`lib/contract/client.server.ts`).
-  It returns the decoded value or a typed failure with status, registry code
-  and request ID; rethrow `error.cause` so the handler boundary forwards the
-  backend error unchanged. An answer outside the contract is a 502, never an
-  empty value.
-- Write to a registered route with `contractWrite` (same file): it takes the
-  generated route entry, checks the body against the route's request type at
-  compile time and decodes the answer like `contractGet`. A request type has
-  only optional fields, because Go reads an absent key as the zero value;
-  what is required stays Go's `Bind` and reaches the client through the error
-  contract.
+- Read with `contractGet(entry, options)`; write with
+  `contractWrite(entry, body, options)`. Import the entry from its
+  generated resource file. The entry types the write body and decodes the
+  full answer, with or without an envelope. A malformed answer is a 502,
+  never an empty value. A request type has optional fields because Go
+  reads absent keys as zero values; Go's `Bind` still validates the body.
+- Pass `token` when the caller holds the bearer, or omit it for a public
+  or pre-session step. Pass `endpoint` for the path with its parameters
+  filled in, or to add query parameters. For a session-bound route that
+  uses `backendFetch`, hand that transport to the contract helper as
+  `send`; it keeps the portal's renewal policy.
+- Return `contractResponse(reply, request)` for decoded JSON that the BFF
+  forwards. If the route projects the answer, return
+  `contractError(reply, request)` on refusal, then project the decoded
+  value. In a portal handler that owns error handling, rethrow
+  `reply.error.cause`. See
+  [school switching](../../frontend/src/app/api/auth/switch-tenant/route.ts):
+  the route decodes the token pair, installs it and returns only
+  `successResponse(null)`.
 - A portal other than `tenant` uses its own route wrapper with the same
   helpers; the route entry names its portals.
 - A registered enum is typed as its
@@ -111,9 +209,10 @@ The key is the scope claim of the portal's session token
 (`common.PortalScope`).
 
 - The allowlist is `portalRoutes.<key>` in the generated
-  `lib/contract/portals.generated.ts`: the routes whose registration names
-  the portal. A path outside it is a 404 before the session is read and
-  before any backend call.
+  `lib/contract/portals.generated.ts`. It contains only the portal's proxied
+  registrations; named handlers are listed separately in `routeFileRoutes`.
+  A path outside the allowlist is a 404 from the proxy before it reads the
+  session or calls the backend.
 - Only the registered query parameters are forwarded, every path segment is
   encoded again, and the answer is checked against the route's decoder.
   Session, the single 401 renewal, body limit and `Idempotency-Key` come
@@ -125,8 +224,9 @@ The key is the scope claim of the portal's session token
   `/operator/schools`) moves its callers to the backend's path first.
 - Next prefers an existing route file over the proxy. Keep a file only for
   what is specific to the browser: portal policy, session handling, a file
-  or upload with behavior the contract cannot name (reshaping, several
-  backend calls), login/MFA, the SSE pipe, or an aggregation without a Go view.
+  or upload with behavior the contract cannot name, login/MFA, or the SSE
+  pipe. Reshaping or aggregating reads for a screen belongs in a Go view;
+  see [when a route needs its own file](new-route.md#when-a-route-needs-its-own-routets).
 - A file answer registers `File: true`, a multipart upload `Multipart: true`
   with `MaxBodyBytes` and `TooLargeCode` (ADR 0270, addendum 2026-11-19).
   The proxy streams both unread: the file with the headers of
@@ -164,14 +264,14 @@ The key is the scope claim of the portal's session token
   scope middleware.
 - A route file with a dynamic segment wins over the proxy too:
   `billing-families/[id]` answers `billing-families/debtor-number-format`.
-  No route file may stand in front of a registered path, literal or dynamic;
+  No route file may stand in front of a path on the catalog proxy allowlist;
   only the hand-off files below `/api/auth` that pass the request to
   `catalogProxyUnder` do. `app/api/catalog-route-selection.test.ts` fails
   otherwise.
 - A route file that calls the backend itself must name at least one backend
-  path the contract does not register (a sign-in step, a stream, a bundle);
-  `app/api/route-backend-paths.test.ts` fails a file whose backend paths are
-  all registered.
+  path outside the catalog proxy allowlists, such as a `RouteFile` sign-in
+  step or an `Outside` stream. `app/api/route-backend-paths.test.ts` fails a
+  file whose backend paths are all on the allowlists.
 - A route with response variants (`GET /api/students/`) names its
   `variantParam`; the proxy decodes the answer with the variant the query
   asks for, else the default variant.
@@ -206,17 +306,17 @@ session read outside it. Success answers the backend's envelope
 `lib/route-wrapper-utils.server.ts`, type `ApiResponse` in `lib/api-envelope.ts`), a DELETE without a result answers 204, and a handler
 may return a Response as it is. No BFF route invents another success
 envelope (#2353); a sign-in step the BFF answers itself (password, code,
-enrollment confirmation, second factor) answers `successResponse` too (#7806). Public JSON routes use `createPublicJsonProxy`
-(`lib/backend-proxy-route.server.ts`), login steps before a session
-`authStepProxy` (`lib/auth-proxy.server.ts`). A route that forwards a
-backend answer without the envelope (`plain`: `authStepProxy`, the demo
-access routes) wraps its success with `envelopedBackendSuccess`
-(`lib/backend-proxy-response.server.ts`); a 204 and an error pass through. Do not move a route across
+enrollment confirmation, second factor) answers `successResponse` too.
+Pre-session steps that forward a limited proof use `authStepProxy`: it calls
+`contractWrite` with the generated entry and wraps its decoded answer in
+`successResponse`. A 204 stays bodyless. A `RouteFile` JSON answer must
+pass through the generated decoder; `route-backend-paths.test.ts` rejects
+a raw call. The demo access routes have no Go contract and wrap plain
+success with `envelopedBackendSuccess`. Do not move a route across
 portal auth boundaries to share code. Streaming SSE uses its documented
 exception in [the SSE contract](realtime.md).
 
-No route file calls `fetch`; every backend call of a route file goes through
-`sendBackend`. A file a named route answers goes through `fileResponse`
+No route file calls `fetch`; both contract helpers go through `sendBackend`. A file a named route answers goes through `fileResponse`
 (`lib/file-response.server.ts`: streaming, the backend's file headers,
 `nosniff` by default, `no-store` unless the route names a cache policy, a
 backend error as its problem body). An upload the BFF must check before
@@ -234,11 +334,11 @@ Context params are async in Next.js 16: `params: Promise<...>` — always `await
 Every backend call goes through `sendBackend` (`lib/backend-client.server.ts`):
 base URL, bearer, one client identity set (`backendIdentityHeaders`: client
 IP, User-Agent, analytics session, Vorgangskennung, frontend origin),
-`cache: "no-store"`, Idempotency-Key, a header timeout from
-`BACKEND_TIMEOUTS_MS` (90 s by default; login, logout, session upkeep and
-public assets shorter), a refused `.`/`..` path segment, one log line and
-metric. Without a session (`bearer` null: public routes, login steps,
-refresh, token checks) the same path applies. The portal's `backendFetch`
+`cache: "no-store"`, Idempotency-Key, a timeout from `BACKEND_TIMEOUTS_MS`
+(90 s for headers by default; login, logout and public assets shorter;
+session upkeep has 5 s for headers and body), a refused `.`/`..` path
+segment, one log line and metric. Without a session (`bearer` null: public
+routes and login steps) the same path applies. The portal's `backendFetch`
 binds it to the request's session: a backend 401 repeats once with the
 renewed session. No session answers 401 "Unauthorized"; a renewal the backend
 refused (revoked or foreign family, invalid refresh token) answers 401
@@ -250,11 +350,11 @@ backend or a header timeout answers 503 `general.unavailable` everywhere.
 Retry is on by default; every
 route that carries the current password or a code (password change, e-mail
 change, MFA off, confirm code, a declaration with the account password)
-passes `retry: { off: "<reason>" }`, whichever helper sends it;
-`src/app/api/credential-retry.test.ts` proves each sends it once after a 401.
-The JSON of a call goes through `backendJson`: the portal handlers' `api`,
-the catalog proxy and `contractGet`/`contractWrite` build on it and run
-inside a portal route handler, whose retry policy applies. The SSE stream
+sets `NoRetryAfterRenewal` for a catalog route or passes
+`retry: { off: "<reason>" }` to the named route's session transport;
+`src/app/api/credential-retry.test.ts` proves the credential goes out once
+after a 401. `contractGet` and `contractWrite` send once by default. Only a
+portal's session transport or wrapper can renew and repeat the call. The SSE stream
 and the cached tenant resolve call `sendBackend` without that wrapper; the
 stream keeps its connection open past the header timeout. A route
 param in a backend path is encoded (`requirePathSegmentParam`,
@@ -298,99 +398,6 @@ event carries the proxy-assigned `X-Request-ID`. `logger.error` records context
 and a breadcrumb, never an event. Uncaught Next.js exceptions use
 `onRequestError` in `src/instrumentation.ts`.
 
-### Browser calls
-
-Browser JSON calls to registered routes use
-`bffJson(portal, route, options)` (`lib/bff-fetch.ts`, #7806). `route` is the
-catalog key of a registered route; it must be in `portalRoutes[portal]`, and
-its generated entry types `params`, `query`, `body` and the answer. The
-import is type-only, so no decoder reaches the browser bundle: the portal's
-catalog proxy has decoded the answer already.
-
-| Portal | Example | In the code |
-|---|---|---|
-| Staff (`tenant`) | `bffJson("tenant", "GET /api/students/{id}/partial-absences", { params: { id }, query: { from, to } })` | [`guardian-api.ts`](../../frontend/src/lib/guardian-api.ts), [`timetable-api.ts`](../../frontend/src/lib/timetable-api.ts) |
-| Parents (`parent`) | `bffJson("parent", "GET /parent/me/notifications/feed/", { query: { limit, cursor } })` | [`notification-feed-api.ts`](../../frontend/src/lib/notification-feed-api.ts) `parentNotificationFeedApi` |
-| moto schule (`school`) | `bffJson("school", "GET /school/notifications/feed/", { query: { limit, cursor } })` | [`notification-feed-api.ts`](../../frontend/src/lib/notification-feed-api.ts) `schoolNotificationFeedApi` |
-| Träger (`org`) | `bffJson("org", "GET /traeger/notifications/feed/unread-count")` | [`notification-feed-api.ts`](../../frontend/src/lib/notification-feed-api.ts) `traegerNotificationFeedApi` |
-| Caterer (`caterer`) | `bffJson("caterer", "POST /caterer/notifications/feed/{id}/read", { params: { id } })` | [`notification-feed-api.ts`](../../frontend/src/lib/notification-feed-api.ts) `catererNotificationFeedApi` |
-| Operator (`platform`) | `bffJson("platform", "GET /operator/invitations/")` | [`operator-invitation-api.ts`](../../frontend/src/lib/operator/operator-invitation-api.ts) |
-| Ohne Sitzung (`public`) | `bffJson("public", "GET /auth/invitations/{token}", { params: { token } })` | [`invitation-api.ts`](../../frontend/src/lib/invitation-api.ts) `validateInvitation` |
-
-The path is the pattern below the portal's BFF prefix, a route outside the
-portal's mount (`/analytics-policy`) below the prefix as a whole; a trailing
-slash is dropped and each parameter encoded.
-
-- **Answer:** the `data` of the envelope; a paginated list resolves to
-  `{ data, pagination }`; a route without data and a 204 resolve to `null`.
-- **Variants:** a route with response variants (`GET /api/students/`) takes
-  the variant in its query (`query: { view: "names" }`), and the answer has
-  that variant's type; without it the route's default variant.
-- **Missing `data`:** a 2xx answer without a `data` member
-  is an `ApiError` 502, `general.write_answer_unreadable` for a write (as
-  `decodeContract`). There is no fallback value.
-- **Failure:** an `ApiError` with the backend's code, field errors and
-  request ID. `errorMessage` sets its message, so a client keeps its text.
-- **`public`:** the routes without a session (links, password reset,
-  invitations) go without gate and renewal; a pattern names its portal
-  (`/caterer/…` → `/api/caterer/…`), one under `/api` stays as it is.
-- **401:** one table in `bff-fetch.ts` holds where the portals differ. Staff:
-  the session gate before the request and one renewal with a retry
-  (`requireTenantSession`, `renewTenantSession` in `lib/session-cache.ts`),
-  then sign-out; `authRefusals` names codes that refuse
-  only the operation. Operator: to `/operator/login`. Parents: to
-  `/parents/login`, except for the call's explicit `authRefusals` (e.g. a
-  wrong MFA confirmation code or current password). Träger, moto schule and
-  caterer: the error stays on the page. A parent client that reports refusals
-  (`PARENT_ACCESS_REFUSED_EVENT`) catches the `ApiError` itself.
-- **Route files:** a route a named `route.ts` serves (`routeFileRoutes` in
-  `portals.generated.ts`, #7889: a cache purge, a flow cookie) is a route of
-  `bffJson` like a proxied one, with the backend's answer type. Not so the
-  sign-in, second factor, renewal and switch steps: their route file keeps
-  the tokens and answers the BFF's own `{ status, data }` (#7833), so the
-  helper excludes every route whose reason says so (a compile anchor fails
-  once the generator words it differently), and routes without the envelope
-  (`plain`). Such a step, and a BFF route without any Go route, is called
-  with `bffJsonUncontracted<T>(portal, method, path, options)`; each caller
-  is listed with its reason in the [BFF boundary rules](../../frontend/scripts/oxlint-plugin-bff-boundary.mjs).
-  `bff-boundary/only-listed-uncontracted` rejects access outside that list
-  and forwarding the helper, including renamed imports and re-exports.
-  The list only shrinks.
-- **Wait:** a refusal with `Retry-After` (429, 503) carries the wait as
-  `retryAfterSeconds` on the `ApiError` (`apiErrorFromResponse`).
-- **Keepalive cleanup:** `keepalive: true` starts the request immediately.
-  Staff cleanup skips the browser session gate and its 401 renewal, because
-  that lookup cannot outlive an unloading page. The BFF authenticates the
-  cookie as usual; a refusal still reaches the caller as its `ApiError`.
-- **Lists Go writes as `null`:** the generated type says so (`T[] | null`).
-  Read it as an empty list where the screen needs one, once, in the client
-  (`slot-lists-api.ts` derives `WithLists<…>` from the generated type); do not
-  copy the answer into a hand-written type.
-- **One transport:** use `bffJson` for JSON and `bffFile` for files.
-  `bff-boundary/no-raw-browser-transport` rejects access to global `fetch`,
-  `XMLHttpRequest` and `navigator.sendBeacon` outside the same plugin's
-  shrink-only infrastructure list. It also rejects names of retired fetch
-  helpers. `bff-boundary/no-numeric-identifier` rejects coercions such as
-  `Number(room.id)`, `+room.id`, arithmetic and `BigInt(id)`. For generated
-  fields the Go contract's kind wins over the name; where an ordinary string
-  has no contract provenance, ID-shaped names are a fallback. Keep IDs as
-  text and use `compareIds` for ordering decimal IDs without rounding.
-  All three rules run in `pnpm run check`.
-  `scripts/backend-wire-types.mjs`
-  finds hand-written wire types by their form (two `snake_case` fields of
-  their own, a generated type imported under another name, a type that only
-  renames a generated one); its baseline only shrinks.
-- **Tests:** a client test stubs the global `fetch` and mocks the session
-  gate with
-  `vi.mock("~/lib/session-cache", () => import("~/test/mocks/plain-session-fetch"))`;
-  answers of a paginated route carry `pagination` (`pagedJson`), plain
-  answer objects become Responses through `plainResponse`/`plainFetch`.
-- **Files:** a route registered with `File: true` is called with
-  `bffFile(portal, route, options)` from the same module: the same path,
-  portal table and ApiError, resolving to the successful `Response` whose
-  body and `Content-Disposition` the caller reads. A link the browser opens
-  itself (`<a href>`) stays a plain URL.
-
 ### API clients and data mapping
 
 - `lib/{domain}-api.ts` — browser calls to the portal's BFF paths;
@@ -404,4 +411,7 @@ copying a generic mapper. Preserve nullability and date-vs-instant semantics.
 
 ### Auth Token Flow
 
-Login (per portal — see `docs/agents/contracts.md`) returns access + refresh tokens with configured lifetimes; NextAuth stores them in the session; route handlers extract the token and forward it as `Authorization: Bearer`; refresh happens automatically on expiry. MFA can insert a challenge step between credentials and session. Invitation/password-reset token flows live at `app/invite/`, `app/[tenant]/(public)/invite/`, `app/reset-password/`, with API clients in `lib/invitation-api.ts` / `lib/invitation-helpers.ts` — use these instead of hitting backend routes directly.
+Go sends the access and refresh tokens to the BFF, not to the browser.
+Auth.js stores them in the encrypted httpOnly cookie. Server handlers forward
+the bearer to Go and renew it as needed. For password, MFA, and passkey
+steps, see [Login, refresh, and MFA](contracts.md#login-refresh-and-mfa). Invitation/password-reset token flows live at `app/invite/`, `app/[tenant]/(public)/invite/`, `app/reset-password/`, with API clients in `lib/invitation-api.ts` / `lib/invitation-helpers.ts` — use these instead of hitting backend routes directly.

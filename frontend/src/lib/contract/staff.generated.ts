@@ -1026,6 +1026,7 @@ export interface CompTimeBalancePreview {
   future_commitment_minutes: number;
   future_adjustment_minutes: number;
   projected_balance_minutes: number;
+  fingerprint: string;
 }
 
 export const CompTimeBalancePreviewSchema: z.ZodType<CompTimeBalancePreview, unknown> = object<CompTimeBalancePreview>({
@@ -1035,6 +1036,7 @@ export const CompTimeBalancePreviewSchema: z.ZodType<CompTimeBalancePreview, unk
   future_commitment_minutes: safeInt,
   future_adjustment_minutes: safeInt,
   projected_balance_minutes: safeInt,
+  fingerprint: str,
 });
 
 /** Go: timetracking.TraegerProofResponse */
@@ -1222,6 +1224,7 @@ export interface RebookAbsencesBody {
   absence_type_id?: string | null;
   reason?: string;
   dry_run?: boolean;
+  expected_fingerprint?: string;
 }
 
 /** Go: workforce.RebookingAllowanceYear */
@@ -1266,6 +1269,7 @@ export interface AbsenceRebookingResult {
   vacation?: RebookingVacationYear[];
   vacation_exceeded: boolean;
   applied: boolean;
+  fingerprint: string;
 }
 
 export const AbsenceRebookingResultSchema: z.ZodType<AbsenceRebookingResult, unknown> = object<AbsenceRebookingResult>({
@@ -1277,6 +1281,7 @@ export const AbsenceRebookingResultSchema: z.ZodType<AbsenceRebookingResult, unk
   vacation: optional(arr(RebookingVacationYearSchema)),
   vacation_exceeded: bool,
   applied: bool,
+  fingerprint: str,
 });
 
 /** Go: timetracking.StammdatenFinancialRevealResponse */
@@ -1487,6 +1492,7 @@ export interface VacationQuotaRequest {
   entitled_days?: number;
   carryover_days?: number;
   reason?: string;
+  expected_version?: string;
 }
 
 /** Query of DELETE /api/staff/{id}/vacation/opening */

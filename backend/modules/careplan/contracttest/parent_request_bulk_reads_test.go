@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/compose"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/parentrequests"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -140,7 +141,7 @@ func TestBulkApprovalRefusesBeforeLockingAnyRow(t *testing.T) {
 		{"last request stale", func(refs []parentrequests.Ref) []parentrequests.Ref {
 			refs[len(refs)-1].ExpectedVersion = "stale"
 			return refs
-		}, parentrequests.ErrStale},
+		}, readstate.ErrChanged},
 		{"last absence gone", func(refs []parentrequests.Ref) []parentrequests.Ref {
 			refs[len(refs)-1].ID = refs[len(refs)-1].ID + 1_000_000
 			return refs
@@ -174,7 +175,7 @@ func TestBulkApprovalReportsAMissingRequestBeforeAStaleOne(t *testing.T) {
 	refs[2].ID = refs[2].ID + 1_000_000 // Stammdaten of child 2
 	err := f.approve(t, ctx, refs)
 	require.ErrorIs(t, err, parentrequests.ErrNotFound)
-	require.NotErrorIs(t, err, parentrequests.ErrStale)
+	require.NotErrorIs(t, err, readstate.ErrChanged)
 }
 
 // A read that fails in the database fails the approval: no 4xx refusal, no
@@ -207,7 +208,7 @@ func TestBulkApprovalFailedReadFailsTheApproval(t *testing.T) {
 			require.NoError(t, err)
 			approveErr := awaitRequestWriter(t, ctx, done)
 			require.Error(t, approveErr)
-			for _, refusal := range []error{parentrequests.ErrStale, parentrequests.ErrNotFound, parentrequests.ErrBulkIneligible} {
+			for _, refusal := range []error{readstate.ErrChanged, parentrequests.ErrNotFound, parentrequests.ErrBulkIneligible} {
 				require.NotErrorIs(t, approveErr, refusal)
 			}
 			require.NoError(t, holder.Rollback())

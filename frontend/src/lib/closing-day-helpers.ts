@@ -17,6 +17,8 @@ export interface ClosingDay {
   reason: string;
   /** Planned by the school's Träger (#4702): it counts, but the school cannot change it. */
   traeger?: boolean;
+  /** Stored state an edit sends back as `expected_version` (ADR 0311). */
+  version?: string;
 }
 
 /** Create/update payload — matches ClosingDayRequest on the backend. */
@@ -26,6 +28,7 @@ export function mapClosingDay(data: ClosingDayResponse): ClosingDay {
     startDate: data.start_date.slice(0, 10),
     endDate: data.end_date.slice(0, 10),
     reason: data.reason,
+    version: data.version,
     ...(data.traeger ? { traeger: true } : {}),
   };
 }

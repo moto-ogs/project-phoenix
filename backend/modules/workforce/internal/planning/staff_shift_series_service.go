@@ -76,6 +76,9 @@ type SplitSeriesInput struct {
 	// WorkingTime confirms the working-time warnings of the occurrences
 	// (#4708).
 	WorkingTime workforce.WorkingTimeConfirmation
+	// ExpectedVersion is the version of the series the planner read (ADR
+	// 0311), checked under the staff's shift lock.
+	ExpectedVersion string
 }
 
 // StaffShiftSeriesService manages recurring shift series (#1889). Series

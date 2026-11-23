@@ -9,13 +9,11 @@ import { createLogger } from "~/lib/logger";
 import {
   createOperatorPutHandler,
   createOperatorDeleteHandler,
-  operator,
-  operatorApiGet,
-  operatorApiDelete,
 } from "~/lib/operator/route-wrapper.server";
 import { TENANT_RESOLVE_AFFECTING_KEYS } from "~/lib/settings-keys";
 import { bffError } from "~/lib/api-response-error.server";
-import { unwrapEnvelope } from "~/lib/backend-client.server";
+import { contractGet, contractWrite } from "~/lib/contract/client.server";
+import { routes } from "~/lib/contract/operator-schools.generated";
 import type * as sharedContract from "~/lib/contract/shared.generated";
 
 const logger = createLogger({
@@ -34,11 +32,12 @@ async function resolveSchoolSlug(
     // size is bounded (one entry per school in the platform) so a single
     // server-to-server call per write is acceptable for an admin action.
     // Identifiers arrive as strings (ADR 0300).
-    const summaries = await operatorApiGet<sharedContract.SchoolSummary[]>(
-      "/operator/schools/summaries",
-      token,
+    const result = await contractGet(
+      routes["GET /operator/schools/summaries"],
+      { token },
     );
-    const match = summaries.find((s) => s.id === schoolId);
+    if (!result.ok) throw result.error.cause;
+    const match = result.value.data.find((school) => school.id === schoolId);
     return match?.slug ?? null;
   } catch (error) {
     logger.warn("school_slug_lookup_failed", {
@@ -72,8 +71,8 @@ async function revalidateTenantIfNeeded(
 
 export const PUT = createOperatorPutHandler(
   async (
-    _request: NextRequest,
-    body: unknown,
+    request: NextRequest,
+    body: sharedContract.setSchoolSettingRequest,
     token: string,
     params: Record<string, unknown>,
   ) => {
@@ -82,22 +81,25 @@ export const PUT = createOperatorPutHandler(
     if (!VALID_KEY_PATTERN.test(key)) {
       throw bffError(400, "Invalid settings key format");
     }
-    const result = unwrapEnvelope(
-      await operator.api(
-        "PUT",
-        `/operator/schools/${encodePathSegment(id)}/settings/values/${encodePathSegment(key)}`,
+    const result = await contractWrite(
+      routes["PUT /operator/schools/{id}/settings/values/{key}"],
+      body,
+      {
+        endpoint: `/operator/schools/${encodePathSegment(id)}/settings/values/${encodePathSegment(key)}`,
         token,
-        body,
-      ),
+        request,
+      },
     );
-    await revalidateTenantIfNeeded(id, key, token);
-    return result;
+    // Go may have applied the change even if the reply cannot be read.
+    if (result.backend?.ok) await revalidateTenantIfNeeded(id, key, token);
+    if (!result.ok) throw result.error.cause;
+    return result.value.data;
   },
 );
 
 export const DELETE = createOperatorDeleteHandler(
   async (
-    _request: NextRequest,
+    request: NextRequest,
     token: string,
     params: Record<string, unknown>,
   ) => {
@@ -106,11 +108,17 @@ export const DELETE = createOperatorDeleteHandler(
     if (!VALID_KEY_PATTERN.test(key)) {
       throw bffError(400, "Invalid settings key format");
     }
-    const result = await operatorApiDelete(
-      `/operator/schools/${encodePathSegment(id)}/settings/values/${encodePathSegment(key)}`,
-      token,
+    const result = await contractWrite(
+      routes["DELETE /operator/schools/{id}/settings/values/{key}"],
+      undefined,
+      {
+        endpoint: `/operator/schools/${encodePathSegment(id)}/settings/values/${encodePathSegment(key)}`,
+        token,
+        request,
+      },
     );
-    await revalidateTenantIfNeeded(id, key, token);
-    return result;
+    if (result.backend?.ok) await revalidateTenantIfNeeded(id, key, token);
+    if (!result.ok) throw result.error.cause;
+    return result.value.data;
   },
 );

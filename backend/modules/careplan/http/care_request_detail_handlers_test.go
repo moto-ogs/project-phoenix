@@ -110,7 +110,7 @@ func TestCareRequestDetail_OpensPickupChangeBeforeAndAfterDecision(t *testing.T)
 	// Reject through the production decide route.
 	decideReq, err := http.NewRequest(http.MethodPost,
 		fmt.Sprintf("/care-schedule-change-requests/%d/decide", pending.ID),
-		strings.NewReader(`{"approve":false,"reason":"Passt nicht"}`))
+		strings.NewReader(fmt.Sprintf(`{"approve":false,"reason":"Passt nicht","expected_version":%q}`, testpkg.CareRequestVersion(t, pending.ID))))
 	require.NoError(t, err)
 	decideReq.Header.Set("Content-Type", "application/json")
 	rr := authExec(t, tc, decideReq, testutil.AdminTestClaims(int(staffAccount.ID)), []string{"admin:*"})

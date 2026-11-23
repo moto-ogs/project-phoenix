@@ -231,6 +231,46 @@ describe("TraegerCareNoticeRunPage", () => {
     expect(screen.getByText("OGS Nord, dann OGS Süd")).toBeInTheDocument();
   });
 
+  it("names a child whose month an issued invoice already bills (#7892)", async () => {
+    api.fetchCareNoticeRun.mockResolvedValue(
+      run({
+        billedChildren: [
+          {
+            childFirstName: "Noah",
+            childLastName: "Muster",
+            reason: "already_billed",
+            contracts: [
+              { contractId: "81", schoolId: "3", schoolName: "OGS Nord" },
+            ],
+            invoices: [
+              {
+                source: "care_run",
+                runId: "5",
+                contractId: "82",
+                schoolName: "OGS Süd",
+                number: "MB-0002",
+                documentKind: "invoice",
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    renderPage();
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Kind hat schon eine Rechnung – bitte prüfen",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Der Jahreslauf rechnet diesen Monat nicht noch einmal ab\./,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Rechnung MB-0002 · OGS Süd")).toBeInTheDocument();
+  });
+
   it("holds the release back while the legal remedy is missing", async () => {
     api.fetchCareNoticeRun.mockResolvedValue(run({ legalRemedyMissing: true }));
     renderPage();

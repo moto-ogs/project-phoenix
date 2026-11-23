@@ -204,6 +204,10 @@ type CalendarPeriodRequest struct {
 	WeekCycleLength int     `json:"week_cycle_length"`
 	WeekCycleAnchor *string `json:"week_cycle_anchor,omitempty"`
 	IsActive        bool    `json:"is_active"`
+	// ExpectedVersion is the version of the period an update edits (ADR
+	// 0311); an update of a period changed since is refused. A create
+	// ignores it.
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 // Bind validates the request
@@ -252,17 +256,19 @@ const germanDateLayout = "02.01.2006"
 
 // CalendarPeriodResponse represents a calendar period in API responses
 type CalendarPeriodResponse struct {
-	ID              ident.ID        `json:"id"`
-	Name            string          `json:"name"`
-	PeriodType      string          `json:"period_type"`
-	StartDate       string          `json:"start_date"`
-	EndDate         string          `json:"end_date"`
-	WeekCycleLength int             `json:"week_cycle_length"`
-	WeekCycleAnchor *string         `json:"week_cycle_anchor,omitempty"`
-	IsActive        bool            `json:"is_active"`
-	CreatedAt       string          `json:"created_at"`
-	UpdatedAt       string          `json:"updated_at"`
-	Warnings        []PeriodWarning `json:"warnings,omitempty"`
+	ID              ident.ID `json:"id"`
+	Name            string   `json:"name"`
+	PeriodType      string   `json:"period_type"`
+	StartDate       string   `json:"start_date"`
+	EndDate         string   `json:"end_date"`
+	WeekCycleLength int      `json:"week_cycle_length"`
+	WeekCycleAnchor *string  `json:"week_cycle_anchor,omitempty"`
+	IsActive        bool     `json:"is_active"`
+	CreatedAt       string   `json:"created_at"`
+	UpdatedAt       string   `json:"updated_at"`
+	// Version is the token an update sends back as expected_version.
+	Version  string          `json:"version"`
+	Warnings []PeriodWarning `json:"warnings,omitempty"`
 
 	// Reference counts returned by list, detail, and bootstrap reads. The
 	// frontend uses these for the "Verwendung" column and delete-impact warning.
@@ -288,6 +294,7 @@ func mapPeriodToResponse(p schoolcalendar.CalendarPeriod) CalendarPeriodResponse
 		IsActive:        p.IsActive,
 		CreatedAt:       p.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:       p.UpdatedAt.Format(time.RFC3339),
+		Version:         schoolcalendar.CalendarPeriodVersion(p),
 	}
 	if p.WeekCycleAnchor != "" {
 		anchor := p.WeekCycleAnchor
@@ -554,6 +561,7 @@ func (rs *Resource) updatePeriod(w http.ResponseWriter, r *http.Request) {
 
 	updated, err := rs.CalendarPeriods.ChangeCalendarPeriod(r.Context(), schoolcalendar.UpdateCalendarPeriod{
 		ID: existing.ID, CalendarPeriodFields: periodFieldsFromRequest(req, startDate, endDate, anchor),
+		ExpectedVersion: req.ExpectedVersion,
 	})
 	if err != nil {
 		common.RenderError(w, r, calendarPeriodWriteErrorRenderer(r, err, "Kalenderzeitraum konnte nicht aktualisiert werden"))

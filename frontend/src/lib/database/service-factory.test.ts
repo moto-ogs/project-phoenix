@@ -65,8 +65,12 @@ const config: EntityConfig<TestEntity> = {
           body: { name: data.name },
         }),
       ),
+    // The room route confirms its removal preview (ADR 0311).
     delete: (id) =>
-      bffJson("tenant", "DELETE /api/rooms/{id}", { params: { id } }),
+      bffJson("tenant", "DELETE /api/rooms/{id}", {
+        params: { id },
+        body: { expected_fingerprint: "vorschau" },
+      }),
   },
   form: { sections: [] },
   detail: { sections: [] },

@@ -116,7 +116,7 @@ func staffShiftRouteContracts() []common.RouteContract {
 		tenantRoute("PUT", "/{id}/cancellation", staffshiftsHTTP.CancellationRequest{}, staffshiftsHTTP.CancellationResponse{}),
 		tenantRoute("POST", "/series", staffshiftsHTTP.SeriesRequest{}, staffshiftsHTTP.SeriesResponse{}),
 		tenantRoute("GET", "/series/{id}", nil, staffshiftsHTTP.SeriesDetailResponse{}),
-		tenantRoute("PUT", "/series/{id}/split", staffshiftsHTTP.SeriesRequest{}, staffshiftsHTTP.SeriesResponse{}),
+		tenantRoute("PUT", "/series/{id}/split", staffshiftsHTTP.SeriesSplitRequest{}, staffshiftsHTTP.SeriesResponse{}),
 		tenantRoute("DELETE", "/series/{id}", nil, staffshiftsHTTP.SeriesResponse{}, common.QueryParam{Name: "from", Kind: common.QueryDate}),
 		{Method: "POST", Pattern: "/export", Portals: []common.PortalScope{common.PortalTenant}, Request: staffshiftsHTTP.PlanExportRequest{}, File: true},
 	}

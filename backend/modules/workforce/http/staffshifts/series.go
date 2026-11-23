@@ -43,6 +43,14 @@ type SeriesRequest struct {
 	IncludeSchoolBreaks *bool `json:"include_school_breaks"`
 }
 
+// SeriesSplitRequest is the split payload: the series fields plus the
+// version of the series the planner edited (ADR 0311). The split refuses a
+// series changed since that read with general.changed_since_read.
+type SeriesSplitRequest struct {
+	SeriesRequest
+	ExpectedVersion string `json:"expected_version"`
+}
+
 // SeriesResponse is the wire format for series create/split/end results.
 // Skipped dates are days the series left out because an existing shift of
 // the same person would overlap there.
@@ -109,6 +117,9 @@ type SeriesDetailResponse struct {
 	// IncludeSchoolBreaks: the series is also planned in the Ferien and on
 	// closing days (#3820).
 	IncludeSchoolBreaks bool `json:"include_school_breaks"`
+	// Version is the token of the stored series; the split sends it back as
+	// expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 func toSeriesDetailResponse(series workforce.StaffShiftSeries) SeriesDetailResponse {
@@ -127,6 +138,7 @@ func toSeriesDetailResponse(series workforce.StaffShiftSeries) SeriesDetailRespo
 		WeekPattern:         series.WeekPattern,
 		ValidFrom:           series.ValidFrom,
 		IncludeSchoolBreaks: series.IncludeSchoolBreaks,
+		Version:             series.Version,
 	}
 	if series.ValidUntil != "" {
 		until := series.ValidUntil
@@ -259,16 +271,17 @@ func (rs *Resource) splitSeries(w http.ResponseWriter, r *http.Request) {
 		rs.invalid(w, r, err)
 		return
 	}
-	var req SeriesRequest
+	var req SeriesSplitRequest
 	if err := render.DecodeJSON(r.Body, &req); err != nil {
 		rs.invalid(w, r, err)
 		return
 	}
-	input, err := buildSplit(id, req)
+	input, err := buildSplit(id, req.SeriesRequest)
 	if err != nil {
 		rs.invalid(w, r, err)
 		return
 	}
+	input.ExpectedVersion = req.ExpectedVersion
 	actor, ok := rs.actor(w, r)
 	if !ok {
 		return

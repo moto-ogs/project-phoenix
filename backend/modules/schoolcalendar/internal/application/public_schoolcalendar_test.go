@@ -3,11 +3,13 @@ package application
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -190,7 +192,7 @@ func TestCalendarPeriodValidationMirrorsTheLegacyRules(t *testing.T) {
 			assert.EqualError(t, err, tc.message)
 			_, _, err = module.CreateCalendarPeriodIfAbsent(context.Background(), schoolcalendar.CreateCalendarPeriod{CalendarPeriodFields: fields})
 			require.ErrorIs(t, err, schoolcalendar.ErrInvalidCalendarPeriod)
-			_, err = module.UpdateCalendarPeriod(context.Background(), schoolcalendar.UpdateCalendarPeriod{ID: 7, CalendarPeriodFields: fields})
+			_, err = module.ChangeCalendarPeriod(context.Background(), schoolcalendar.UpdateCalendarPeriod{ID: 7, CalendarPeriodFields: fields})
 			require.ErrorIs(t, err, schoolcalendar.ErrInvalidCalendarPeriod)
 			assert.Zero(t, engine.calls, "validation runs before any persistence")
 		})
@@ -297,7 +299,7 @@ func TestIDsMustBePositive(t *testing.T) {
 	_, err := module.FindCalendarPeriod(ctx, 0)
 	require.ErrorIs(t, err, schoolcalendar.ErrInvalidCalendarPeriod)
 	require.ErrorIs(t, module.DeleteCalendarPeriod(ctx, -4), schoolcalendar.ErrInvalidCalendarPeriod)
-	_, err = module.UpdateCalendarPeriod(ctx, schoolcalendar.UpdateCalendarPeriod{CalendarPeriodFields: validPeriod()})
+	_, err = module.ChangeCalendarPeriod(ctx, schoolcalendar.UpdateCalendarPeriod{CalendarPeriodFields: validPeriod()})
 	require.ErrorIs(t, err, schoolcalendar.ErrInvalidCalendarPeriod)
 	_, err = module.FindClosingDay(ctx, 0)
 	require.ErrorIs(t, err, schoolcalendar.ErrInvalidClosingDay)
@@ -319,4 +321,6 @@ func TestErrorCodeLabelsTheStableOutcomes(t *testing.T) {
 	assert.Equal(t, "invalid", schoolcalendar.ErrorCode(&schoolcalendar.InvalidDateframeError{Reason: "x"}))
 	assert.Equal(t, "calendar_period_name_conflict", schoolcalendar.ErrorCode(schoolcalendar.ErrCalendarPeriodNameConflict))
 	assert.Equal(t, "internal_error", schoolcalendar.ErrorCode(errors.New("boom")))
+	assert.Equal(t, readstate.ChangedCode, schoolcalendar.ErrorCode(fmt.Errorf("change period: %w", readstate.ErrChanged)),
+		"a business rejection outside the table is labelled with its own code")
 }

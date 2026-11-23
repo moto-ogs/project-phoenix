@@ -67,7 +67,7 @@ func (l *AccountLifecycle) bulkInviteToStudents(ctx context.Context, req identit
 	candidates, restricted := l.bulkInviteCandidates(links)
 	result := &identityaccess.BulkInviteResult{DryRun: req.DryRun, SkippedRestricted: restricted, Problems: []identityaccess.BulkInviteProblem{}}
 	if len(candidates) == 0 {
-		return result, nil
+		return result, confirmBulkInvite(req, result, bulkInviteFingerprint(req, restricted, nil, nil, nil, nil))
 	}
 
 	profiles, open, err := l.loadBulkInviteProfiles(ctx, req, tenantID, candidates)
@@ -87,6 +87,11 @@ func (l *AccountLifecycle) bulkInviteToStudents(ctx context.Context, req identit
 	}
 	run, err := l.newBulkInviteRun(ctx, req, tenantID, result, profiles, notices, existingAccounts)
 	if err != nil {
+		return nil, err
+	}
+	// The run's profiles are locked: the facts it compares are the ones it
+	// writes on.
+	if err := confirmBulkInvite(req, result, bulkInviteFingerprint(req, restricted, candidates, profiles, open, run)); err != nil {
 		return nil, err
 	}
 	if err := l.processBulkInviteCandidates(ctx, run, candidates, profiles, open); err != nil {

@@ -2,6 +2,7 @@ DELETE /auth/accounts/{accountId}/caregiver-capability -> basis
 DELETE /auth/accounts/{accountId}/mfa/ -> basis
 GET /auth/accounts/{accountId}/caregiver-capability -> basis
 GET /auth/accounts/{accountId}/mfa/ -> basis
+GET /auth/accounts/{accountId}/role-selection/ -> basis
 GET /auth/accounts/{accountId}/roles/ -> basis
 POST /auth/accounts/{accountId}/caregiver-capability -> basis
 PUT /auth/accounts/{accountId}/mfa/override -> basis

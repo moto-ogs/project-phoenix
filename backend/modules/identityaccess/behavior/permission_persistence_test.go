@@ -26,15 +26,15 @@ func TestPermissionAdministrationRollback(t *testing.T) {
 	err := testpkg.WithAdminTx(t, ctx, db, func(txCtx context.Context, _ bun.Tx) error {
 		txCtx = testpkg.ContextForTenant(txCtx, tenantID)
 		require.NoError(t, identity.RemovePermissionFromRole(txCtx, role.ID, roleGrant.ID))
-		permissions, queryErr := identity.GetRolePermissions(txCtx, role.ID)
+		selection, queryErr := identity.GetRolePermissions(txCtx, role.ID)
 		require.NoError(t, queryErr)
-		require.Empty(t, permissions)
+		require.Empty(t, selection.Permissions)
 		return rollback
 	})
 	require.ErrorIs(t, err, rollback)
-	permissions, err := identity.GetRolePermissions(ctx, role.ID)
+	selection, err := identity.GetRolePermissions(ctx, role.ID)
 	require.NoError(t, err)
-	require.Equal(t, []int64{roleGrant.ID}, permissionIDs(permissions))
+	require.Equal(t, []int64{roleGrant.ID}, permissionIDs(selection.Permissions))
 }
 
 func permissionIDs(permissions []identityaccess.Permission) []int64 {

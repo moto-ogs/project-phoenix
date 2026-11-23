@@ -21,12 +21,14 @@ import {
   type CreateInvitationRequest,
   type EmploymentAction,
   type FormerEmployment,
+  type FormerEmploymentAnswer,
   type FormerEmploymentPart,
   type PendingInvitation,
 } from "~/lib/invitation-helpers";
 import { looksLikeEmail } from "~/lib/email-format";
 import { createLogger } from "~/lib/logger";
-import { useFreshSWR, useSWRAuth } from "~/lib/swr";
+import { isChangedSinceRead } from "~/lib/api-error";
+import { useSWRAuth } from "~/lib/swr";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { useDebounce } from "~/lib/use-debounce";
 import type { StammdatenGender } from "~/lib/staff-api";
@@ -53,18 +55,24 @@ const FORMER_EMPLOYMENT_LOOKUP_TIMEOUT_MS = 5_000;
 
 /**
  * The former employment an invitation to the typed address would continue
- * at this school (ADR 0021, #3402), or null. A result belongs to the address
- * it was asked for, so it disappears as soon as the address changes.
+ * at this school (ADR 0021, #3402), or null, and the version of that answer.
+ * A result belongs to the address it was asked for, so it disappears as soon
+ * as the address changes.
  */
 function useFormerEmployment(email: string): {
   formerEmployment: FormerEmployment | null;
+  /** Only after a successful lookup for the current address. */
+  version: string | undefined;
   pending: boolean;
+  refresh: () => Promise<unknown>;
 } {
   const current = email.trim().toLowerCase();
   const address = useDebounce(current, FORMER_EMPLOYMENT_DEBOUNCE_MS);
-  // Each address asks anew, also when the person returns to one: a
-  // Wiederaufnahme must not rest on an earlier answer.
-  const lookup = useFreshSWR(
+  // The answer comes from the shared cache. The invitation sends its
+  // version; the backend refuses it when the former employment differs by
+  // then (general.changed_since_read), and the form asks again. Without a
+  // successful lookup it sends none and the ADR 0021 default applies.
+  const lookup = useSWRAuth<FormerEmploymentAnswer>(
     looksLikeEmail(address) ? enrollmentKeys.formerEmployment(address) : null,
     async () => {
       const controller = new AbortController();
@@ -79,6 +87,8 @@ function useFormerEmployment(email: string): {
       }
     },
     {
+      // An answer belongs to the address it was asked for.
+      keepPreviousData: false,
       shouldRetryOnError: false,
       // Without a successful lookup there is no choice to offer. Keep the
       // existing invitation behavior; sending reports its own form errors.
@@ -89,11 +99,20 @@ function useFormerEmployment(email: string): {
       },
     },
   );
-  const answered = address === current && lookup.fresh;
+  const answered =
+    address === current &&
+    (lookup.data !== undefined || lookup.error !== undefined);
+  // A failed reload keeps the earlier data next to its error (SWR). That
+  // answer is no longer the read the invitation may carry: its version
+  // would be refused again until the address changes.
+  const answer =
+    answered && lookup.error === undefined ? lookup.data : undefined;
 
   return {
-    formerEmployment: answered ? (lookup.data ?? null) : null,
+    formerEmployment: answer?.formerEmployment ?? null,
+    version: answer?.version,
     pending: looksLikeEmail(current) && !answered,
+    refresh: lookup.mutate,
   };
 }
 
@@ -191,9 +210,12 @@ export function InvitationForm({
   const showError = errors.show;
   const clearErrors = errors.clear;
 
-  const { formerEmployment, pending: checkingAddress } = useFormerEmployment(
-    form.email,
-  );
+  const {
+    formerEmployment,
+    version: formerEmploymentVersion,
+    pending: checkingAddress,
+    refresh: refreshFormerEmployment,
+  } = useFormerEmployment(form.email);
 
   const [successInfo, setSuccessInfo] = useState<{
     email: string;
@@ -269,6 +291,9 @@ export function InvitationForm({
         lastName: toOptional(form.lastName),
         position: toOptional(form.position),
         ...(gender === "" ? {} : { gender }),
+        ...(formerEmploymentVersion === undefined
+          ? {}
+          : { expectedFormerEmployment: formerEmploymentVersion }),
         ...(formerEmployment
           ? {
               employmentAction: form.employmentAction ?? "resume",
@@ -297,6 +322,14 @@ export function InvitationForm({
       logger.warn("invitation_create_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
+      if (isChangedSinceRead(err)) {
+        // Die Person war inzwischen hier beschäftigt: Das Formular fragt
+        // nach Wiederaufnahme oder Neuaufnahme, statt dieselbe Einladung
+        // erneut zu senden.
+        await errors.show(err, { object: "die Einladung" });
+        void refreshFormerEmployment();
+        return;
+      }
       await errors.show(err, {
         object: "die Einladung",
         // Erneut absenden: derselbe Weg wie „Einladung senden“, mit den

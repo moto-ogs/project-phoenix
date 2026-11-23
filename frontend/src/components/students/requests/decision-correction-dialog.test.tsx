@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { HistoryRequestList } from "./history-request-list";
+import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { correctRequestDecision } from "~/lib/change-request-list-api";
 import type { AnyItem } from "./case-model";
@@ -38,14 +39,17 @@ function decidedItem(overrides: Record<string, unknown> = {}): AnyItem {
   } as never;
 }
 
-function renderList(item: AnyItem) {
+function renderList(item: AnyItem, onStale: () => void = vi.fn()) {
   return render(
-    <HistoryRequestList
-      items={[item]}
-      withdrawals={[]}
-      reasonRequired
-      onCorrected={vi.fn()}
-    />,
+    <ToastProvider>
+      <HistoryRequestList
+        items={[item]}
+        withdrawals={[]}
+        reasonRequired
+        onCorrected={vi.fn()}
+        onStale={onStale}
+      />
+    </ToastProvider>,
   );
 }
 
@@ -212,5 +216,39 @@ describe("Entscheidung korrigieren", () => {
         expectedVersion: "v9",
       }),
     );
+  });
+
+  // ADR 0311: the dialog carries the version of the list it was opened from.
+  // After a refusal it must not offer „Korrektur speichern“ again, which
+  // would resend the same outdated version.
+  it("schließt bei einem veralteten Stand, lädt die Liste neu und bietet kein Wiederholen an", async () => {
+    const onStale = vi.fn();
+    mockCorrect.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    renderList(decidedItem({ can_correct: true }), onStale);
+
+    fireEvent.click(screen.getAllByRole("button")[0]!);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Entscheidung korrigieren" }),
+    );
+    fireEvent.change(screen.getByLabelText(/Warum korrigierst du\?/), {
+      target: { value: "Falsches Kind" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Korrektur speichern" }),
+    );
+
+    await waitFor(() => expect(onStale).toHaveBeenCalledOnce());
+    expect(
+      await screen.findByRole("alert", { name: /^Fehler:/ }),
+    ).toHaveTextContent(/wurde inzwischen geändert/);
+    expect(
+      screen.queryByRole("button", { name: "Korrektur speichern" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Wiederholen/ }),
+    ).not.toBeInTheDocument();
+    expect(mockCorrect).toHaveBeenCalledOnce();
   });
 });

@@ -262,6 +262,7 @@ func TestSeedTimeTrackingCoverageCreatesQuotaOpeningAndBreak(t *testing.T) {
 	require.NoError(t, seedTimeTrackingCoverage(rt, 17, 2026))
 	assert.Equal(t, []string{
 		"/api/staff/17/vacation/quota",
+		"/api/staff/17/vacation/quota",
 		"/api/staff/17/target-overrides",
 		"/api/staff/17/target-overrides",
 	}, paths)

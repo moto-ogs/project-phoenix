@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 type PlanningTrack struct {
@@ -19,15 +20,30 @@ type PlanningTrack struct {
 	Color      string     `json:"color"`
 	SortOrder  int        `json:"sort_order"`
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
+	// Version is PlanningTrackVersion: the token an edit sends back as
+	// expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 func (p PlanningTrack) IsArchived() bool { return p.ArchivedAt != nil }
 
+// PlanningTrackVersion is the token of a stored planning track (ADR 0311):
+// every write of the row, a new order included, moves updated_at through
+// its trigger.
+func PlanningTrackVersion(p PlanningTrack) string {
+	return readstate.Of(p.UpdatedAt)
+}
+
+// PlanningTrackInput is a track as a write stores it. ExpectedVersion is
+// the PlanningTrackVersion of the track an update replaces, as its editor
+// read it: an update of a track changed since, and one without a version,
+// is refused with readstate.ErrChanged. A create ignores it.
 type PlanningTrackInput struct {
-	Name       string
-	Color      string
-	SortOrder  int
-	ArchivedAt *time.Time
+	Name            string
+	Color           string
+	SortOrder       int
+	ArchivedAt      *time.Time
+	ExpectedVersion string
 }
 
 type PlanningTrackFilter struct {
@@ -66,10 +82,12 @@ var (
 )
 
 // PlanningTrackDraft is the editable part of a planning track.
+// ExpectedVersion is the version of the track an edit replaces (ADR 0311).
 type PlanningTrackDraft struct {
-	Name      string
-	Color     string
-	SortOrder int
+	Name            string
+	Color           string
+	SortOrder       int
+	ExpectedVersion string
 }
 
 // PlanningTrackAdministration is the planning-track editor of the

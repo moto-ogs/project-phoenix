@@ -316,13 +316,7 @@ export async function loadShellBootstrap(
     // type holds at runtime, IDs arrive as strings (#2353).
     optional("profile", async (signal) => {
       const route = meContract.routes["GET /api/me/profile"];
-      const result = await contractGet(
-        `${route.method} ${route.pattern}`,
-        route.response,
-        "/api/me/profile",
-        token,
-        { signal },
-      );
+      const result = await contractGet(route, { token, signal });
       if (!result.ok) throw result.error.cause;
       return mapProfileResponse(result.value.data);
     }),

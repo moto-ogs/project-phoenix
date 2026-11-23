@@ -8,6 +8,8 @@ export interface PlanningTrack {
   color: string;
   sortOrder: number;
   archivedAt?: string;
+  /** Stored state an edit sends back as `expected_version` (ADR 0311). */
+  version?: string;
 }
 
 function mapTrack(track: timetableContract.PlanningTrack): PlanningTrack {
@@ -17,6 +19,7 @@ function mapTrack(track: timetableContract.PlanningTrack): PlanningTrack {
     color: track.color,
     sortOrder: track.sort_order,
     archivedAt: track.archived_at,
+    version: track.version,
   };
 }
 

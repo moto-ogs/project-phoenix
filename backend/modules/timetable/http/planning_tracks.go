@@ -15,6 +15,10 @@ type planningTrackRequest struct {
 	Name      string `json:"name"`
 	Color     string `json:"color"`
 	SortOrder int    `json:"sort_order"`
+	// ExpectedVersion is the version of the track an edit replaces (ADR
+	// 0311); an edit of a track changed since is refused. A create ignores
+	// it.
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 func (req *planningTrackRequest) Bind(_ *http.Request) error {
@@ -90,7 +94,7 @@ func (rs *Resource) updatePlanningTrack(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	track, err := service.EditPlanningTrack(r.Context(), id, timetable.PlanningTrackDraft{
-		Name: req.Name, Color: req.Color, SortOrder: req.SortOrder,
+		Name: req.Name, Color: req.Color, SortOrder: req.SortOrder, ExpectedVersion: req.ExpectedVersion,
 	})
 	if err != nil {
 		renderPlanningTrackError(w, r, err)

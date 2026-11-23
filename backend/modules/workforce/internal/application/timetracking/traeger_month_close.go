@@ -27,7 +27,9 @@ type TraegerMonthStaff interface {
 type TraegerMonthClosing interface {
 	TraegerMonthState(ctx context.Context, staffID int64, year, month int) (*TraegerMonthState, error)
 	// CloseMonthForTraeger reports false when the month was closed already.
-	CloseMonthForTraeger(ctx context.Context, staffID, accountID int64, year, month int, reason string) (bool, error)
+	// unchanged runs under the balance lock, before anything is written: it
+	// refuses a month that changed since the Träger read it.
+	CloseMonthForTraeger(ctx context.Context, staffID, accountID int64, year, month int, reason string, unchanged func(context.Context) error) (bool, error)
 	ReopenMonthForTraeger(ctx context.Context, staffID, accountID int64, year, month int, reason string) error
 }
 
@@ -128,7 +130,7 @@ func (s *staffMonthCloseService) TraegerMonthState(ctx context.Context, staffID 
 	return account, nil
 }
 
-func (s *staffMonthCloseService) CloseMonthForTraeger(ctx context.Context, staffID, accountID int64, year, month int, reason string) (bool, error) {
+func (s *staffMonthCloseService) CloseMonthForTraeger(ctx context.Context, staffID, accountID int64, year, month int, reason string, unchanged func(context.Context) error) (bool, error) {
 	if staffID <= 0 || accountID <= 0 {
 		return false, fmt.Errorf("%w: staff id and account are required", ErrMonthCloseInvalid)
 	}
@@ -151,6 +153,14 @@ func (s *staffMonthCloseService) CloseMonthForTraeger(ctx context.Context, staff
 	}
 	if len(kept) == 0 {
 		return false, fmt.Errorf("%w: %04d-%02d for staff %d", ErrMonthNotKeptByTraeger, year, month, staffID)
+	}
+	// Still under the lock: the balances frozen are the ones the
+	// Personalverwaltung confirmed (ADR 0311).
+	if unchanged == nil {
+		return false, fmt.Errorf("%w: the read the close was confirmed on is required", ErrMonthCloseInvalid)
+	}
+	if err := unchanged(ctx); err != nil {
+		return false, err
 	}
 	closer := monthCloser{accountID: accountID, source: SnapshotSourceTraeger}
 	_, alreadyClosed, err := s.closeStaffMonth(ctx, staffID, closer, key, trimmedReason, s.now(), payrollRules, closedMonths[staffID])

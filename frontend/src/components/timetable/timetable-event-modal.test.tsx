@@ -1390,9 +1390,12 @@ describe("TimetableEventModal", () => {
     );
   });
 
-  it("ignores a stale student failure after the modal is reopened", async () => {
+  // The student list is an option catalog in the shared cache (ADR 0311):
+  // a reopened modal shares the read still running instead of starting a
+  // second one, and its answer fills the roster.
+  it("shares the running student read after the modal is reopened", async () => {
     setupRepeatableReferenceFetch();
-    const staleRequest = deferred<{
+    const running = deferred<{
       students: Array<{
         id: string;
         name: string;
@@ -1400,9 +1403,17 @@ describe("TimetableEventModal", () => {
         group_name: string;
       }>;
     }>();
-    mockFetchStudents
-      .mockImplementationOnce(() => staleRequest.promise)
-      .mockResolvedValueOnce({
+    mockFetchStudents.mockImplementationOnce(() => running.promise);
+
+    const { setOpen } = renderModal();
+    await waitFor(() => expect(mockFetchStudents).toHaveBeenCalledOnce());
+
+    setOpen(false);
+    setOpen(true);
+    await goToStep(3);
+
+    await act(async () => {
+      running.resolve({
         students: [
           {
             id: "22",
@@ -1412,29 +1423,18 @@ describe("TimetableEventModal", () => {
           },
         ],
       });
-
-    const { setOpen } = renderModal();
-    await waitFor(() => expect(mockFetchStudents).toHaveBeenCalledOnce());
-
-    setOpen(false);
-    setOpen(true);
-
-    await goToStep(3);
-    expect(await screen.findByText("Neue Kinderliste")).toBeInTheDocument();
-
-    await act(async () => {
-      staleRequest.reject(new Error("stale student request failed"));
-      await staleRequest.promise.catch(() => undefined);
+      await running.promise;
     });
 
-    expect(screen.getByText("Neue Kinderliste")).toBeInTheDocument();
+    expect(await screen.findByText("Neue Kinderliste")).toBeInTheDocument();
+    expect(mockFetchStudents).toHaveBeenCalledOnce();
     expect(screen.queryByText(STUDENT_LOAD_ERROR_RE)).not.toBeInTheDocument();
     await expectSaveEnabled();
   });
 
-  it("ignores a stale retry after the modal is reopened", async () => {
+  it("shows the list of a retry that answers after the modal is reopened", async () => {
     setupRepeatableReferenceFetch();
-    const staleRetry = deferred<{
+    const retry = deferred<{
       students: Array<{
         id: string;
         name: string;
@@ -1446,17 +1446,7 @@ describe("TimetableEventModal", () => {
       .mockRejectedValueOnce(
         new ApiError("initial student request failed", 503),
       )
-      .mockImplementationOnce(() => staleRetry.promise)
-      .mockResolvedValueOnce({
-        students: [
-          {
-            id: "23",
-            name: "Liste nach Wiederöffnung",
-            school_class: "4a",
-            group_name: "OGS Gelb",
-          },
-        ],
-      });
+      .mockImplementationOnce(() => retry.promise);
 
     const { setOpen } = renderModal();
     await goToStep(3);
@@ -1469,18 +1459,25 @@ describe("TimetableEventModal", () => {
     await act(async () => {
       setOpen(true);
     });
-
     await goToStep(3);
+
+    await act(async () => {
+      retry.resolve({
+        students: [
+          {
+            id: "23",
+            name: "Liste nach Wiederöffnung",
+            school_class: "4a",
+            group_name: "OGS Gelb",
+          },
+        ],
+      });
+      await retry.promise;
+    });
+
     expect(
       await screen.findByText("Liste nach Wiederöffnung"),
     ).toBeInTheDocument();
-
-    await act(async () => {
-      staleRetry.reject(new Error("stale retry failed"));
-      await staleRetry.promise.catch(() => undefined);
-    });
-
-    expect(screen.getByText("Liste nach Wiederöffnung")).toBeInTheDocument();
     expect(screen.queryByText(STUDENT_LOAD_ERROR_RE)).not.toBeInTheDocument();
     await expectSaveEnabled();
   });

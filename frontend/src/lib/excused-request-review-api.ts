@@ -77,8 +77,9 @@ function logFailure(error: unknown): never {
 export function decideExcusedAbsenceRequest(
   requestId: string,
   approve: boolean,
-  reason?: string,
-  expectedVersion?: string,
+  reason: string | undefined,
+  /** Die Fassung der Anfrage aus der Liste (ADR 0311). */
+  expectedVersion: string,
   /** Ersetzt die Teilentschuldigungen der Tage (#5698); nur nach Bestätigung. */
   replacePartialAbsences = false,
 ): Promise<studentsContract.StaffExcusedRequestResponse> {
@@ -90,7 +91,7 @@ export function decideExcusedAbsenceRequest(
       body: {
         approve,
         reason: reason ?? "",
-        ...(expectedVersion ? { expected_version: expectedVersion } : {}),
+        expected_version: expectedVersion,
         ...(replacePartialAbsences ? { replace_partial_absences: true } : {}),
       },
       errorMessage: "Entscheidung konnte nicht gespeichert werden",

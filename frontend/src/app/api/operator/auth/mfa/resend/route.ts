@@ -1,3 +1,4 @@
+import { routes } from "~/lib/contract/operator-auth.generated";
 import { authStepProxy } from "~/lib/auth-proxy.server";
 
-export const POST = authStepProxy("/operator/auth/mfa/resend", "optional-json");
+export const POST = authStepProxy(routes["POST /operator/auth/mfa/resend"]);

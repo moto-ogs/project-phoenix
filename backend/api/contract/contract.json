@@ -337,6 +337,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "RoomRemovalRequest"
+      },
       "response": {
         "kind": "ref",
         "ref": "RoomRemovalResponse"
@@ -7842,10 +7846,22 @@
     },
     {
       "method": "GET",
+      "pattern": "/auth/accounts/{accountId}/role-selection/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "AccountRolesResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/auth/accounts/{accountId}/roles/",
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "response": {
         "kind": "array",
         "elem": {
@@ -7986,10 +8002,22 @@
     },
     {
       "method": "GET",
+      "pattern": "/auth/roles/{roleId}/permission-selection/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "RolePermissionsResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/auth/roles/{roleId}/permissions/",
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "response": {
         "kind": "array",
         "elem": {
@@ -9223,7 +9251,7 @@
       ],
       "response": {
         "kind": "ref",
-        "ref": "requestSharingResponse"
+        "ref": "requestSharingStateResponse"
       }
     },
     {
@@ -21594,7 +21622,7 @@
       ],
       "request": {
         "kind": "ref",
-        "ref": "SeriesRequest"
+        "ref": "SeriesSplitRequest"
       },
       "response": {
         "kind": "ref",
@@ -22408,10 +22436,26 @@
     },
     {
       "method": "PUT",
+      "pattern": "/auth/roles/{roleId}/permission-selection/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ReplaceRolePermissionsRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ReplaceRolePermissionsResponse"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/auth/roles/{roleId}/permissions/",
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "request": {
         "kind": "ref",
         "ref": "ReplaceRolePermissionsRequest"
@@ -22817,7 +22861,7 @@
       },
       "response": {
         "kind": "ref",
-        "ref": "requestSharingResponse"
+        "ref": "requestSharingStateResponse"
       }
     },
     {
@@ -24730,6 +24774,13 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -25017,6 +25068,12 @@
           "name": "applied",
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "fingerprint",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -25765,6 +25822,30 @@
       ]
     },
     {
+      "name": "AccountRolesResponse",
+      "go_type": "account.AccountRolesResponse",
+      "fields": [
+        {
+          "name": "roles",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "nullable": true,
+              "ref": "RoleResponse"
+            }
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "AccountTenantAccessEntry",
       "go_type": "operator.AccountTenantAccessEntry",
       "fields": [
@@ -25845,6 +25926,12 @@
               "kind": "ref",
               "ref": "AccountTenantRole"
             }
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -34296,6 +34383,12 @@
               "ref": "BulkCancelKeptSeries"
             }
           }
+        },
+        {
+          "name": "fingerprint",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -34677,6 +34770,13 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -34741,6 +34841,12 @@
         },
         {
           "name": "updated_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "version",
           "schema": {
             "kind": "string"
           }
@@ -35473,6 +35579,100 @@
         },
         {
           "name": "phase_end",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "CareBilledChild",
+      "go_type": "parentbilling.CareBilledChild",
+      "fields": [
+        {
+          "name": "child_first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child_last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "contracts",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "CareDuplicateContract"
+            }
+          }
+        },
+        {
+          "name": "invoices",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "CareBilledInvoice"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "CareBilledInvoice",
+      "go_type": "parentbilling.CareBilledInvoice",
+      "fields": [
+        {
+          "name": "source",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "run_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "contract_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "number",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "document_kind",
           "schema": {
             "kind": "string"
           }
@@ -38113,6 +38313,17 @@
           }
         },
         {
+          "name": "billed_children",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "CareBilledChild"
+            }
+          }
+        },
+        {
           "name": "preview_count",
           "schema": {
             "kind": "int"
@@ -40183,6 +40394,17 @@
             "elem": {
               "kind": "ref",
               "ref": "CareJoinedChild"
+            }
+          }
+        },
+        {
+          "name": "billed_children",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "CareBilledChild"
             }
           }
         },
@@ -43906,6 +44128,12 @@
           }
         },
         {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "notified_families",
           "schema": {
             "kind": "int"
@@ -43934,6 +44162,13 @@
         },
         {
           "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_version",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -43977,6 +44212,12 @@
         },
         {
           "name": "updated_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "version",
           "schema": {
             "kind": "string"
           }
@@ -44129,6 +44370,12 @@
           "name": "projected_balance_minutes",
           "schema": {
             "kind": "int"
+          }
+        },
+        {
+          "name": "fingerprint",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -47423,6 +47670,13 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "expected_fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -47965,6 +48219,13 @@
         },
         {
           "name": "gender",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_former_employment",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -56014,6 +56275,12 @@
             "kind": "ref",
             "nullable": true,
             "ref": "FormerEmploymentView"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -67648,6 +67915,12 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -75072,6 +75345,12 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -76603,6 +76882,12 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -76650,6 +76935,12 @@
           "name": "submitted_by_self",
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -78204,6 +78495,12 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -79267,6 +79564,12 @@
           "optional": true,
           "schema": {
             "kind": "instant"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -81386,6 +81689,13 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "expected_fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -81998,6 +82308,13 @@
             "kind": "id",
             "nullable": true
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -82040,6 +82357,25 @@
             "elem": {
               "kind": "id"
             }
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ReplaceRolePermissionsResponse",
+      "go_type": "account.ReplaceRolePermissionsResponse",
+      "fields": [
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -82922,6 +83258,29 @@
       ]
     },
     {
+      "name": "RolePermissionsResponse",
+      "go_type": "account.RolePermissionsResponse",
+      "fields": [
+        {
+          "name": "permissions",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "PermissionResponse"
+            }
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "RoleResponse",
       "go_type": "account.RoleResponse",
       "fields": [
@@ -83449,6 +83808,26 @@
             "kind": "ref",
             "ref": "RoomReferencesResponse"
           }
+        },
+        {
+          "name": "fingerprint",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RoomRemovalRequest",
+      "go_type": "httpadapter.RoomRemovalRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "expected_fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -83521,6 +83900,13 @@
           "schema": {
             "kind": "bool",
             "nullable": true
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -83638,6 +84024,12 @@
           "name": "updated_at",
           "schema": {
             "kind": "instant"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -89668,6 +90060,12 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -89842,6 +90240,141 @@
           "name": "skipped_non_working_days",
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SeriesSplitRequest",
+      "go_type": "staffshifts.SeriesSplitRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "working_time_confirmed",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "working_time_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "weekdays",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "start_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "end_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "break_minutes",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "shift_type_id",
+          "optional": true,
+          "schema": {
+            "kind": "id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "notes",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "calendar_period_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "week_pattern",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "valid_from",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "valid_until",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "effective_date",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "occurrence_shift_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "include_school_breaks",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -94110,6 +94643,13 @@
             "elem": {
               "kind": "string"
             }
+          }
+        },
+        {
+          "name": "expected_fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -101118,6 +101658,13 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "expected_fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -101452,6 +101999,12 @@
               "kind": "ref",
               "ref": "TraegerAbsenceSchoolUse"
             }
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -101929,6 +102482,13 @@
         },
         {
           "name": "holiday_bookings_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_version",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -104904,6 +105464,12 @@
               "ref": "TraegerStaffFieldPreview"
             }
           }
+        },
+        {
+          "name": "fingerprint",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -105570,6 +106136,12 @@
               "ref": "TraegerTimeAccountSchool"
             }
           }
+        },
+        {
+          "name": "fingerprint",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -106230,6 +106802,13 @@
               "ref": "TransitionMappingRequest"
             }
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -106329,6 +106908,12 @@
           "name": "can_revert",
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -107452,6 +108037,13 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -107513,6 +108105,12 @@
           "schema": {
             "kind": "ref",
             "ref": "StaffVacationOpening"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -110376,6 +110974,13 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "expected_fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -110467,6 +111072,13 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "expected_fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -110543,6 +111155,12 @@
               "kind": "ref",
               "ref": "bulkInviteProblemResponse"
             }
+          }
+        },
+        {
+          "name": "fingerprint",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -118563,6 +119181,13 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "expected_fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -118840,6 +119465,12 @@
               "kind": "ref",
               "ref": "offeringPreviewAlternativeResponse"
             }
+          }
+        },
+        {
+          "name": "fingerprint",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -121041,6 +121672,13 @@
           "schema": {
             "kind": "int"
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -121992,6 +122630,13 @@
               "kind": "string"
             }
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -122044,6 +122689,35 @@
               "kind": "ref",
               "ref": "requestSharingRecipientResponse"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "requestSharingStateResponse",
+      "go_type": "parent.requestSharingStateResponse",
+      "fields": [
+        {
+          "name": "family_protected",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "recipients",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "requestSharingRecipientResponse"
+            }
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -126619,6 +127293,13 @@
           "optional": true,
           "schema": {
             "kind": "id"
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]

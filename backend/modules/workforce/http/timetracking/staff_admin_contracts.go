@@ -80,6 +80,9 @@ type RebookAbsencesBody struct {
 	AbsenceTypeID *ident.ID  `json:"absence_type_id"`
 	Reason        string     `json:"reason"`
 	DryRun        bool       `json:"dry_run"`
+	// ExpectedFingerprint is the dry run's fingerprint; the write refuses
+	// another effect with general.changed_since_read (ADR 0311).
+	ExpectedFingerprint string `json:"expected_fingerprint"`
 }
 
 // decodeRebookAbsences reads a rebooking body. Every listed absence names
@@ -95,6 +98,7 @@ func decodeRebookAbsences(r *http.Request) (workforce.RebookAbsencesRequest, err
 	return workforce.RebookAbsencesRequest{
 		AbsenceIDs: ident.Int64s(body.AbsenceIDs), AbsenceType: body.AbsenceType,
 		AbsenceTypeID: (*int64)(body.AbsenceTypeID), Reason: body.Reason, DryRun: body.DryRun,
+		ExpectedFingerprint: body.ExpectedFingerprint,
 	}, nil
 }
 

@@ -5,11 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"sort"
 	"strings"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // ErrAbsenceRebookingBlocked marks a rebooking the Leitung has to resolve
@@ -36,6 +39,9 @@ type RebookAbsencesRequest struct {
 	// DryRun computes the effects without writing. An exhausted allowance or
 	// vacation account is then reported in the result instead of as error.
 	DryRun bool
+	// ExpectedFingerprint is the Fingerprint of the dry run the Leitung
+	// confirmed (ADR 0311); the write refuses another effect.
+	ExpectedFingerprint string
 }
 
 // AbsenceRebookingResult is what a rebooking does, before (DryRun) or after
@@ -56,6 +62,9 @@ type AbsenceRebookingResult struct {
 	Vacation         []VacationRebookingYear `json:"vacation,omitempty"`
 	VacationExceeded bool                    `json:"vacation_exceeded"`
 	Applied          bool                    `json:"applied"`
+	// Fingerprint is the token of the effect and of the entries it changes
+	// (ADR 0311): the write sends the dry run's back.
+	Fingerprint string `json:"fingerprint"`
 }
 
 // VacationRebookingYear is the Resturlaub of one year before and after.
@@ -93,10 +102,16 @@ func (s *staffAbsenceService) RebookAbsences(ctx context.Context, req RebookAbse
 	if err != nil {
 		return nil, err
 	}
+	result.Fingerprint = rebookingFingerprint(result, entries)
 
 	if req.DryRun {
 		result.Absences = s.withLabels(ctx, rebookedResponses(entries)...)
 		return result, nil
+	}
+	// The Leitung confirmed the dry run's effect; under the lock it may differ
+	// now (another booking, a changed allowance or entry).
+	if err := readstate.Check(req.ExpectedFingerprint, result.Fingerprint); err != nil {
+		return nil, err
 	}
 	if result.AllowanceExceeded {
 		return nil, fmt.Errorf("%w: rebooking needs more days than the allowance has left", ErrAbsenceTypeAllowanceExceeded)
@@ -111,6 +126,50 @@ func (s *staffAbsenceService) RebookAbsences(ctx context.Context, req RebookAbse
 	result.Absences = s.withLabels(ctx, rebookedResponses(entries)...)
 	s.broadcastTimeTrackingChanged(ctx)
 	return result, nil
+}
+
+// rebookingFingerprint is the token of what a rebooking does and of the
+// stored entries it changes. The dry run and the write compute it from the
+// same state read under the staff's absence lock.
+func rebookingFingerprint(result *AbsenceRebookingResult, entries []rebookedAbsence) string {
+	type entryState struct {
+		ID        int64     `json:"id"`
+		Type      string    `json:"type"`
+		TypeID    *int64    `json:"type_id"`
+		Start     string    `json:"start"`
+		End       string    `json:"end"`
+		HalfDay   bool      `json:"half_day"`
+		StartHalf bool      `json:"start_half"`
+		EndHalf   bool      `json:"end_half"`
+		NewType   string    `json:"new_type"`
+		NewTypeID *int64    `json:"new_type_id"`
+		UpdatedAt time.Time `json:"updated_at"`
+	}
+	states := make([]entryState, 0, len(entries))
+	for _, entry := range entries {
+		before := entry.before
+		states = append(states, entryState{
+			ID: before.ID, Type: before.AbsenceType, TypeID: before.AbsenceTypeID,
+			Start: before.DateStart.String(), End: before.DateEnd.String(),
+			HalfDay: before.HalfDay, StartHalf: before.StartHalfDay, EndHalf: before.EndHalfDay,
+			NewType: entry.after.AbsenceType, NewTypeID: entry.after.AbsenceTypeID,
+			UpdatedAt: before.UpdatedAt.UTC(),
+		})
+	}
+	// The policy keeps cmp to tests (class "test"), so sort orders by ID.
+	sort.Slice(states, func(i, j int) bool { return states[i].ID < states[j].ID })
+	return readstate.Fingerprint(struct {
+		Days              float64                        `json:"days"`
+		BalanceDelta      int                            `json:"balance_delta"`
+		Allowances        []*AbsenceTypeAllowanceSummary `json:"allowances"`
+		AllowanceExceeded bool                           `json:"allowance_exceeded"`
+		Vacation          []VacationRebookingYear        `json:"vacation"`
+		VacationExceeded  bool                           `json:"vacation_exceeded"`
+		Entries           []entryState                   `json:"entries"`
+	}{
+		result.Days, result.BalanceDeltaMinutes, result.Allowances, result.AllowanceExceeded,
+		result.Vacation, result.VacationExceeded, states,
+	})
 }
 
 // resolveRebookingTarget resolves the type the entries are rebooked to, like

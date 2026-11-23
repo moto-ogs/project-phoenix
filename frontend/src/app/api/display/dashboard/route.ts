@@ -1,23 +1,24 @@
-import { createPublicJsonProxy } from "~/lib/backend-proxy-route.server";
-import { problemResponse } from "~/lib/api-helpers.server";
-
-/*
- * Stays (#2352): the display authenticates with its own credential, the
- * opaque `X-Display-Token` header, which this file forwards. The catalog
- * proxy sends only the session's bearer, or nothing on a public route, and
- * forwards no credential of the browser; teaching it a header per route
- * would open a second credential path through every portal's proxy for one
- * route. `GET /api/display/dashboard` is not in the contract either.
- */
+import type { NextRequest } from "next/server";
+import {
+  handleApiError,
+  problemResponse,
+} from "~/lib/api-response-error.server";
+import { contractGet } from "~/lib/contract/client.server";
+import { contractResponse } from "~/lib/contract/route-response.server";
+import { routes } from "~/lib/contract/display.generated";
+import { withPrivateNoStore } from "~/lib/private-no-store";
 
 /** The opaque display header, not a browser session, grants backend access. */
-export const GET = createPublicJsonProxy({
-  method: "GET",
-  path: (request) =>
-    request.headers.get("x-display-token")
-      ? "/api/display/dashboard"
-      : problemResponse(400, "token required", request),
-  additionalHeaders: (request) => ({
-    "X-Display-Token": request.headers.get("x-display-token") ?? "",
-  }),
+export const GET = withPrivateNoStore(async (request: NextRequest) => {
+  const token = request.headers.get("x-display-token");
+  if (!token) return problemResponse(400, "token required", request);
+  try {
+    const reply = await contractGet(routes["GET /api/display/dashboard"], {
+      request,
+      headers: { "X-Display-Token": token },
+    });
+    return contractResponse(reply, request);
+  } catch (error) {
+    return handleApiError(error, request);
+  }
 });

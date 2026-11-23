@@ -423,19 +423,21 @@ class TimetableService {
 
   /**
    * POST /api/timetable/templates/{id}/offering-connection — „Mit Angebot
-   * verbinden“ (#5103) for every period of the series from effectiveDate on.
+   * verbinden“ (#5103) for every period of the series from the confirmed
+   * preview's day on. The preview's fingerprint travels along; the server
+   * refuses when other children would join or leave now (ADR 0311).
    */
   async connectTemplateToOffering(
     templateId: string,
     selection: OfferingSelection,
-    effectiveDate: string,
+    preview: Pick<OfferingPreview, "from" | "fingerprint">,
   ): Promise<void> {
     await bffJson(
       "tenant",
       "POST /api/timetable/templates/{id}/offering-connection",
       {
         params: { id: templateId },
-        body: connectionBody(selection, effectiveDate),
+        body: connectionBody(selection, preview),
       },
     );
   }
@@ -776,13 +778,16 @@ class TimetableService {
    * Cancels and removes the planned appointments in [from, to] from today
    * on, except series planned on closing days on purpose unless
    * `includeClosingDaySeries` is set. Parents are not notified. `dryRun`
-   * only counts them for the confirmation dialog.
+   * only counts them for the confirmation dialog; a real run sends that
+   * count's `fingerprint`, and the server refuses it when other appointments
+   * would be cancelled now (ADR 0311).
    */
   async bulkCancel(
     from: string,
     to: string,
     dryRun: boolean,
     includeClosingDaySeries = false,
+    expectedFingerprint?: string,
   ): Promise<BulkCancelResult> {
     const raw = await bffJson(
       "tenant",
@@ -793,6 +798,7 @@ class TimetableService {
           to,
           dry_run: dryRun,
           include_closing_day_series: includeClosingDaySeries,
+          expected_fingerprint: expectedFingerprint,
         },
       },
     );

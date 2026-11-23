@@ -433,7 +433,7 @@ line, and writes one WARN. It still counts in
 ## Portal session isolation
 
 Each portal has its own NextAuth instance, cookie, and base path.
-Operator, parents, school, and Träger cookies are host-only. The tenant cookie is
+Operator, parents, school, caterer, and Träger cookies are host-only. The tenant cookie is
 domain-scoped to support switching between school subdomains (localhost:
 host-only). The proxy redirects cross-host paths to their canonical subdomain.
 
@@ -746,11 +746,12 @@ old session back; the browser only saves requests.
    keeps the session unchanged, marks it `notBooked` (the session route
    carries the mark, the guards read it), asks again after a minute and
    clears the mark with the next rotation or a live family answer
-   (`token-refresh.ts`). Every other 401/403 of the refresh ends the session
-   and is remembered per process (#2952); a snapshot of a session whose
-   refresh is remembered as refused does not hydrate, so the login page
-   cannot send the browser back to a portal whose requests end it. A family that cannot be
-   read (503) and an expired
+   (`token-refresh.ts`). A refresh 401 or any other 403 with a complete body
+   ends the session and is remembered per process (#2952). An interrupted
+   403 body is retryable because it may have carried `module.not_booked`.
+   A snapshot of a session whose refresh is remembered as refused does not
+   hydrate, so the login page cannot send the browser back to a portal whose
+   requests end it. A family that cannot be read (503) and an expired
    access token, which the backend refuses before it reads the family, leave
    the shown session as it is; its own refresh decides.
 3. **Family check.** `POST /auth/session/validate` without a refresh token
@@ -814,6 +815,17 @@ installed. Other tabs, a tab started during a logout and the public tenant
 pages need no barrier: their answers pass the same server gates.
 
 ### Login, refresh, and MFA
+
+All six portals use generated `RouteFile` entries for session calls to Go.
+`frontend/src/server/auth/portals.ts` selects the login, refresh and
+logout contracts, including which bearer logout takes. Login and factor
+routes decode and install the pair server-side, then answer the browser
+through the shared types in `frontend/src/lib/session-bff.ts`. The only
+proofs sent before sign-in are limited enrollment or challenge proofs,
+never a session pair. These routes do not enter a catalog proxy allowlist.
+For the call syntax and error handling, see
+[Frontend API](frontend-api.md#generated-contract-adr-0270).
+A password or code goes to Go once, not again after session renewal.
 
 Backend paths in this section are relative to `backend/`:
 

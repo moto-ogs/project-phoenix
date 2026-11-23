@@ -44,7 +44,7 @@ describe.concurrent("bff-boundary", () => {
   it("does not let an allowlisted caller forward the helper", async () => {
     const result = await lintSource(
       "import { bffJsonUncontracted as x } from './bff-fetch'; export { x }",
-      "src/lib/mfa-api.ts",
+      "src/lib/demo-access.ts",
     );
     expect(result.output).toContain("bff-boundary(only-listed-uncontracted)");
   });
@@ -53,7 +53,7 @@ describe.concurrent("bff-boundary", () => {
     ["src/lib/probe.server.ts", "fetch('/api/rooms')"],
     ["src/lib/bff-fetch.ts", "fetch('/api/rooms')"],
     [
-      "src/lib/mfa-api.ts",
+      "src/lib/demo-access.ts",
       "import { bffJsonUncontracted as x } from './bff-fetch'; x()",
     ],
     ["src/lib/probe.ts", "const fetch = () => 1; fetch()"],

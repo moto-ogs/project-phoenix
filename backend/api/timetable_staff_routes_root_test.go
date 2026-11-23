@@ -59,6 +59,7 @@ func checkTimetableStaffRoutes(t *testing.T, api *goldenRuntime) {
 			Name       string  `json:"name"`
 			SortOrder  int     `json:"sort_order"`
 			ArchivedAt *string `json:"archived_at"`
+			Version    string  `json:"version"`
 		}
 		var early, late track
 		request(t, http.MethodPost, "/api/timetable/planning-tracks/", `{"name":"Früh","color":"#5080D8","sort_order":0}`, &early)
@@ -66,7 +67,7 @@ func checkTimetableStaffRoutes(t *testing.T, api *goldenRuntime) {
 		require.Equal(t, "Früh", early.Name)
 
 		var renamed track
-		request(t, http.MethodPut, fmt.Sprintf("/api/timetable/planning-tracks/%d", early.ID), `{"name":"Frühdienst","color":"#5080D8","sort_order":0}`, &renamed)
+		request(t, http.MethodPut, fmt.Sprintf("/api/timetable/planning-tracks/%d", early.ID), fmt.Sprintf(`{"name":"Frühdienst","color":"#5080D8","sort_order":0,"expected_version":%q}`, early.Version), &renamed)
 		assert.Equal(t, "Frühdienst", renamed.Name)
 
 		var ordered []track

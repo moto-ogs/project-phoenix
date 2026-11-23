@@ -132,7 +132,7 @@ func TestTraegerStaffPlanningChecksEveryEinsatzort(t *testing.T) {
 	jonas := testpkg.CreateTestStaffForTenant(t, db, south, "Jonas", "Keller")
 	_, northLead := testpkg.CreateTestStaffWithAccountForTenant(t, db, north, "Lea", "Leitung")
 
-	rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/staff-records/", map[string]any{
+	rec := traegerLink(t, router, office.token, map[string]any{
 		"members": []map[string]int64{{"school_id": north, "staff_id": miraNorth.ID}, {"school_id": south, "staff_id": miraSouth.ID}},
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
@@ -375,7 +375,7 @@ func TestTraegerStaffPlanningWeekQueryBudget(t *testing.T) {
 	person := func(last string) int64 {
 		atNorth, account := testpkg.CreateTestStaffWithAccountForTenant(t, db, north, "Mira", last)
 		atSouth := testpkg.CreateTestStaffForExistingAccountInTenant(t, db, south, account.ID, "Mira", last)
-		rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/staff-records/", map[string]any{
+		rec := traegerLink(t, router, office.token, map[string]any{
 			"members": []map[string]int64{{"school_id": north, "staff_id": atNorth.ID}, {"school_id": south, "staff_id": atSouth.ID}},
 		})
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())

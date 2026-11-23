@@ -239,32 +239,61 @@ func (n bulkCareNotices) pendingCareNotices(candidate bulkInviteCandidate) (pend
 	return pending, notifiedBefore
 }
 
-// notifyActiveBulkGuardian decides the care notice of one guardian who
-// already has an account. Nothing owed, an inactive account, or an account
-// that this very run brings back to the school's parents portal: counted as
-// before, and as already notified when the mail went out earlier. A login
-// address the mail cannot reach is listed like a missing invitation
-// address; the contact address of the profile is never used.
-func (l *AccountLifecycle) notifyActiveBulkGuardian(ctx context.Context, run *bulkInviteRun, candidate bulkInviteCandidate, profile domain.GuardianProfile) error {
-	account, found := run.notices.careNoticeAccount(candidate)
-	pending, notifiedBefore := run.notices.pendingCareNotices(candidate)
+// careNoticeDecision is what the care notice decides for one guardian who
+// already has an account. The run acts on it and the preview's fingerprint
+// covers it, so both come from this one function.
+type careNoticeDecision struct {
+	// owed reports a mail is due: an active account that already belongs
+	// to the school's parents portal and at least one pending child.
+	owed bool
+	// pending are the children the mail names, in child order.
+	pending        []int64
+	notifiedBefore bool
+	// problem is why an owed mail would not arrive at the login address.
+	problem string
+	email   string
+	locale  string
+}
+
+// decideCareNotice decides the care notice of one guardian. Nothing owed,
+// an inactive account, or an account that this very run brings back to the
+// school's parents portal: counted as before, and as already notified when
+// the mail went out earlier. A login address the mail cannot reach is a
+// problem like a missing invitation address; the contact address of the
+// profile is never used.
+func (n bulkCareNotices) decideCareNotice(candidate bulkInviteCandidate, mailBlocks map[string]string) careNoticeDecision {
+	account, found := n.careNoticeAccount(candidate)
+	pending, notifiedBefore := n.pendingCareNotices(candidate)
+	decision := careNoticeDecision{pending: pending, notifiedBefore: notifiedBefore}
 	if !found || !account.AccountActive || !account.PortalMember || len(pending) == 0 {
-		if notifiedBefore {
+		return decision
+	}
+	decision.owed = true
+	decision.email, decision.locale = normalizedAddress(account.Email), account.Locale
+	decision.problem = careNoticeAddressProblem(decision.email, mailBlocks[decision.email])
+	return decision
+}
+
+// notifyActiveBulkGuardian applies the care notice decision of one guardian
+// who already has an account.
+func (l *AccountLifecycle) notifyActiveBulkGuardian(ctx context.Context, run *bulkInviteRun, candidate bulkInviteCandidate, profile domain.GuardianProfile) error {
+	decision := run.notices.decideCareNotice(candidate, run.mailBlocks)
+	if !decision.owed {
+		if decision.notifiedBefore {
 			run.result.AlreadyNotified++
 		}
 		run.result.SkippedActive++
 		return nil
 	}
-	email := normalizedAddress(account.Email)
-	if reason := careNoticeAddressProblem(email, run.mailBlocks[email]); reason != "" {
-		run.problem(candidate, profile, reason)
+	if decision.problem != "" {
+		run.problem(candidate, profile, decision.problem)
 		return nil
 	}
 	if run.req.DryRun {
 		run.result.Notified++
 		return nil
 	}
-	if err := l.sendBulkCareNotice(ctx, run, candidate, profile, email, account.Locale, pending); err != nil {
+	if err := l.sendBulkCareNotice(ctx, run, candidate, profile, decision.email, decision.locale, decision.pending); err != nil {
 		return err
 	}
 	run.result.Notified++

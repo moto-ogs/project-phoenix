@@ -172,23 +172,6 @@ func (r calendarPeriodCalendarRepository) FindByID(ctx context.Context, id int64
 	return toLegacyCalendarPeriod(value), nil
 }
 
-func (r calendarPeriodCalendarRepository) Update(ctx context.Context, period *scheduleModels.CalendarPeriod) error {
-	if period == nil {
-		return errors.New("CalendarPeriod cannot be nil or zero value")
-	}
-	if err := period.Validate(); err != nil {
-		return err
-	}
-	updated, err := r.calendar.UpdateCalendarPeriod(ctx, schoolcalendar.UpdateCalendarPeriod{
-		ID: period.ID, CalendarPeriodFields: calendarPeriodFieldsFromLegacy(period),
-	})
-	if err != nil {
-		return calendarError("update", err)
-	}
-	applyCalendarPeriodToLegacy(period, updated)
-	return nil
-}
-
 // Delete stays idempotent like the base repository it replaces; a period
 // still referenced by a non-nullable foreign key keeps its driver error.
 func (r calendarPeriodCalendarRepository) Delete(ctx context.Context, id int64) error {

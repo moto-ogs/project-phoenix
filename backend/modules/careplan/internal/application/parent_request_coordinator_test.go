@@ -13,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/masterdatarequests"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/parentrequests"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 type masterDataBulkStub struct {
@@ -180,7 +181,7 @@ func TestParentRequestCoordinatorValidatesEveryVersionBeforeApplying(t *testing.
 		Reason: "Geprüft", ReviewerID: 99,
 	})
 
-	require.ErrorIs(t, err, parentrequests.ErrStale)
+	require.ErrorIs(t, err, readstate.ErrChanged)
 	assert.Empty(t, master.decided)
 	assert.Empty(t, excused.decided)
 	assert.True(t, rollback.requested)
@@ -236,7 +237,7 @@ func TestParentRequestCoordinatorReportsDecisionRaceAsStale(t *testing.T) {
 		Reason: "Geprüft", ReviewerID: 99,
 	})
 
-	require.ErrorIs(t, err, parentrequests.ErrStale)
+	require.ErrorIs(t, err, readstate.ErrChanged)
 	assert.True(t, rollback.requested)
 }
 
@@ -256,8 +257,8 @@ func TestParentRequestCoordinatorReportsLockRaceAsStale(t *testing.T) {
 		Reason: "Geprüft", ReviewerID: 99,
 	})
 
-	require.ErrorIs(t, err, parentrequests.ErrStale)
-	assert.Equal(t, "parent requests: request version is stale: master_data 1 changed before locking", err.Error(),
+	require.ErrorIs(t, err, readstate.ErrChanged)
+	assert.Equal(t, "changed since it was read: master_data 1 changed before locking", err.Error(),
 		"the students route renders this text verbatim")
 	assert.Empty(t, master.decided)
 	assert.True(t, rollback.requested)

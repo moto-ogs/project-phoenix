@@ -60,6 +60,7 @@ const transition: GradeTransition = {
   canModify: false,
   canApply: false,
   canRevert: true,
+  version: "v1",
 };
 
 const alma: TransitionHistoryEntry = {

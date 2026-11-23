@@ -98,7 +98,7 @@ func TestTraegerStaffContractsCarryTheSollIntoEachSchool(t *testing.T) {
 		VALUES (?, ?, DATE '2026-12-21', DATE '2026-12-23', '{0,0,0,0,0}')`, south, miraSouth.ID)
 	require.NoError(t, err)
 
-	rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/staff-records/", map[string]any{
+	rec := traegerLink(t, router, office.token, map[string]any{
 		"members": []map[string]int64{{"school_id": north, "staff_id": miraNorth.ID}, {"school_id": south, "staff_id": miraSouth.ID}},
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
@@ -303,7 +303,7 @@ func TestTraegerStaffContractKeepsTheTemplateAndGivesItBack(t *testing.T) {
 	_, err = db.ExecContext(ctx, `UPDATE users.staff_employment_profiles SET work_time_model_id = ? WHERE tenant_id = ? AND membership_id = ?`, modelID, north, lea.ID)
 	require.NoError(t, err)
 
-	rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/staff-records/", map[string]any{
+	rec := traegerLink(t, router, office.token, map[string]any{
 		"members": []map[string]int64{{"school_id": north, "staff_id": lea.ID}},
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())

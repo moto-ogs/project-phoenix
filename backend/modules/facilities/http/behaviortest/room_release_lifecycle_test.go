@@ -71,7 +71,7 @@ func TestRevokingAReleaseEndsNeitherVisitsNorSessions(t *testing.T) {
 	req := testutil.NewRequest(
 		"PUT",
 		"/"+itoa(room.ID),
-		bytes.NewReader([]byte(roomReleasePayload(room.Name, false))),
+		bytes.NewReader([]byte(roomReleasePayload(t, tc.db, room.ID, room.Name, false))),
 	)
 	req.Header.Set("Content-Type", "application/json")
 	rr := testutil.ExecuteWithAuthPermissions(

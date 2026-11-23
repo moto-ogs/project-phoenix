@@ -46,8 +46,8 @@ export const roomsConfig = defineEntityConfig<Room>({
           body: prepareRoomForBackend(data),
         }),
       ),
-    delete: (id) =>
-      bffJson("tenant", "DELETE /api/rooms/{id}", { params: { id } }),
+    // Kein `delete`: ein Raum wird nur über RoomRemovalModal entfernt, das
+    // den Fingerabdruck seiner Vorschau mitschickt (ADR 0311).
   },
 
   form: {

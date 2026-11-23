@@ -11,8 +11,8 @@
 import { signOut } from "next-auth/react";
 
 import { createLogger } from "~/lib/logger";
-import { bffJson, bffJsonUncontracted } from "~/lib/bff-fetch";
-import type * as staffPreviewContract from "~/lib/contract/auth-staff-preview.generated";
+import { bffJson } from "~/lib/bff-fetch";
+import { sessionBff } from "~/lib/session-bff";
 import { clearSessionCache } from "~/lib/session-cache";
 
 const logger = createLogger({ component: "StaffPreviewApi" });
@@ -30,13 +30,6 @@ export interface StaffPreviewSession {
   targetAccountId: string;
   targetName: string;
 }
-
-// The answer of /api/auth/staff-preview: the BFF route keeps the token in
-// the session and hands on the rest of the backend's answer.
-type StaffPreviewStartBody = Pick<
-  staffPreviewContract.StaffPreviewStartResponse,
-  "expires_in" | "target_account_id" | "target_name"
->;
 
 type SessionUpdate = (data: Record<string, unknown>) => Promise<unknown>;
 type SwrMutateAll = (
@@ -100,16 +93,10 @@ export async function fetchStaffPreviewCandidates(): Promise<
 async function startStaffPreview(
   accountId: string,
 ): Promise<StaffPreviewSession> {
-  // A sign-in step of the BFF (app/api/auth/staff-preview): no Go contract.
-  const data = await bffJsonUncontracted<StaffPreviewStartBody>(
-    "tenant",
-    "POST",
-    "/api/auth/staff-preview",
-    {
-      body: { account_id: accountId },
-      errorMessage: "Failed to start preview",
-    },
-  );
+  const data = await bffJson("tenant", sessionBff.startPreview, {
+    body: { account_id: accountId },
+    errorMessage: "Failed to start preview",
+  });
   return {
     expiresIn: data.expires_in,
     targetAccountId: data.target_account_id,
@@ -133,19 +120,14 @@ export async function recordStaffPreviewEnd(
 ): Promise<void> {
   signal?.throwIfAborted();
   try {
-    await bffJsonUncontracted<null>(
-      "public",
-      "POST",
-      "/api/auth/staff-preview/end",
-      {
-        body: {},
-        // The end of the preview waits for this call; a stalled request must
-        // not keep the admin in the preview.
-        signal: signal
-          ? AbortSignal.any([signal, AbortSignal.timeout(5000)])
-          : AbortSignal.timeout(5000),
-      },
-    );
+    await bffJson("public", sessionBff.endPreview, {
+      body: {},
+      // The end of the preview waits for this call; a stalled request must
+      // not keep the admin in the preview.
+      signal: signal
+        ? AbortSignal.any([signal, AbortSignal.timeout(5000)])
+        : AbortSignal.timeout(5000),
+    });
   } catch {
     // Audit only — ending the preview must never fail on this call.
   }

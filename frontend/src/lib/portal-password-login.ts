@@ -3,8 +3,8 @@
 // (#4497) and the parents portal (#7051). The browser learns only whether a
 // second step follows. A refusal comes back as an ApiError with its code.
 
-import { bffJsonUncontracted } from "./bff-fetch";
-import { portalAuthPath } from "./portal-paths";
+import { bffJson } from "./bff-fetch";
+import { sessionBff } from "./session-bff";
 import { signInAnswer, type SignInAnswer } from "./sign-in-answer";
 
 /** The caterer's and the parents' sign-in never asks for a setup step. */
@@ -23,12 +23,10 @@ export async function portalPasswordLogin(
   // remembered device skips the code.
   const answer = signInAnswer(
     portal,
-    await bffJsonUncontracted<unknown>(
-      "public",
-      "POST",
-      portalAuthPath(portal, "login"),
-      { body: { email, password }, errorMessage: `${portal} login failed` },
-    ),
+    await bffJson("public", sessionBff.login(portal), {
+      body: { email, password },
+      errorMessage: `${portal} login failed`,
+    }),
   );
   return answer.status === "mfa_required"
     ? answer

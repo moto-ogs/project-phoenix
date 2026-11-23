@@ -99,6 +99,7 @@ const transitionRow: adminContract.TransitionResponse = {
   can_modify: true,
   can_apply: true,
   can_revert: false,
+  version: "v1",
 };
 
 const resultRow: adminContract.TransitionResultResponse = {
@@ -186,20 +187,24 @@ describe("updateGradeTransition", () => {
   it("PUTs to the escaped id and omits mappings when undefined", async () => {
     stubOnce(okData(transitionRow));
 
-    await updateGradeTransition("7", { notes: "neu" });
+    await updateGradeTransition("7", { expectedVersion: "v1", notes: "neu" });
 
     const call = calls[0];
     expect(call?.url).toBe(`${BASE}/7`);
     expect(call?.init?.method).toBe("PUT");
     // `mappings: undefined` must not appear in the payload at all — the backend
     // treats an explicit [] as "remove every mapping".
-    expect(parseBody(call?.init)).toEqual({ notes: "neu" });
+    expect(parseBody(call?.init)).toEqual({
+      notes: "neu",
+      expected_version: "v1",
+    });
   });
 
   it("sends an explicit empty list when mappings are cleared", async () => {
     stubOnce(okData(transitionRow));
 
     await updateGradeTransition("7", {
+      expectedVersion: "v1",
       academicYear: "2027-2028",
       mappings: [],
     });
@@ -207,13 +212,14 @@ describe("updateGradeTransition", () => {
     expect(parseBody(calls[0]?.init)).toEqual({
       academic_year: "2027-2028",
       mappings: [],
+      expected_version: "v1",
     });
   });
 
   it("escapes the id in the URL", async () => {
     stubOnce(okData(transitionRow));
 
-    await updateGradeTransition("a b/c", { notes: "x" });
+    await updateGradeTransition("a b/c", { expectedVersion: "v1", notes: "x" });
 
     expect(calls[0]?.url).toBe(`${BASE}/a%20b%2Fc`);
   });
@@ -227,7 +233,7 @@ describe("updateGradeTransition", () => {
     );
 
     await expect(
-      updateGradeTransition("7", { notes: "x" }),
+      updateGradeTransition("7", { expectedVersion: "v1", notes: "x" }),
     ).rejects.toMatchObject({
       name: "ApiError",
       code: NOT_DRAFT_CODE,

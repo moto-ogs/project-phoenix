@@ -740,6 +740,7 @@ export function mapBulkCancelResult(
       name: series.name,
       count: series.count,
     })),
+    fingerprint: raw.fingerprint,
   };
 }
 

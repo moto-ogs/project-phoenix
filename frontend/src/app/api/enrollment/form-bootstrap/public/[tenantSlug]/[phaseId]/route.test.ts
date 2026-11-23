@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
+import type { PublicEnrollmentFormBootstrapResponse } from "~/lib/contract/shared.generated";
 
 const { mockAuth } = vi.hoisted(() => ({
   mockAuth: vi.fn(),
@@ -38,6 +39,50 @@ function getRequest({
   );
 }
 
+const payload = {
+  status: "success",
+  data: {
+    phase: {
+      id: "5",
+      name: "Schuljahr",
+      kind: "year",
+      service_start_date: "2027-08-01",
+      service_end_date: "2028-07-31",
+      show_status_reason_to_parent: false,
+      care_offering_selection_mode: "none",
+      audience: "public",
+      eligible_grade_levels: null,
+    },
+    schema: null,
+    offerings: [],
+    care_offering_selection_mode: "none",
+    care_required: false,
+    school_class: {
+      collect: false,
+      available_classes: null,
+      require: false,
+      collect_grade_1: false,
+    },
+    collect_grade_level: false,
+    care_offerings_enabled: false,
+    captcha_config: { enabled: false, site_key: "" },
+    legal_texts: {
+      agb: "",
+      agb_document_url: "",
+      agb_display_mode: "text",
+      dsgvo: "",
+      email_contact: "",
+      photo: "",
+      terms_enabled: false,
+      dsgvo_enabled: false,
+      email_contact_enabled: false,
+      photo_enabled: false,
+      blocks: [],
+    },
+    terms_fingerprint: "shown-terms",
+  } satisfies PublicEnrollmentFormBootstrapResponse,
+};
+
 describe("GET /api/enrollment/form-bootstrap/public/[tenantSlug]/[phaseId]", () => {
   const fetchMock = vi.fn();
 
@@ -48,14 +93,6 @@ describe("GET /api/enrollment/form-bootstrap/public/[tenantSlug]/[phaseId]", () 
   });
 
   it("returns anonymous bootstrap payload when optional auth enrichment fails", async () => {
-    const payload = {
-      data: {
-        phase: { id: "5", name: "Schuljahr" },
-        schema: null,
-        offerings: [],
-        legal_texts: { blocks: [] },
-      },
-    };
     fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify(payload), { status: 200 }),
     );
@@ -71,14 +108,6 @@ describe("GET /api/enrollment/form-bootstrap/public/[tenantSlug]/[phaseId]", () 
   });
 
   it("keeps tenant-session profile enrichment for the tenant public form", async () => {
-    const payload = {
-      data: {
-        phase: { id: "5", name: "Schuljahr" },
-        schema: null,
-        offerings: [],
-        legal_texts: { blocks: [] },
-      },
-    };
     const profile = {
       guardian: {
         first_name: "Tina",
@@ -92,7 +121,9 @@ describe("GET /api/enrollment/form-bootstrap/public/[tenantSlug]/[phaseId]", () 
         new Response(JSON.stringify(payload), { status: 200 }),
       )
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ data: profile }), { status: 200 }),
+        new Response(JSON.stringify({ status: "success", data: profile }), {
+          status: 200,
+        }),
       );
     mockAuth.mockResolvedValueOnce({ user: { token: "tenant-token" } });
 
@@ -118,14 +149,6 @@ describe("GET /api/enrollment/form-bootstrap/public/[tenantSlug]/[phaseId]", () 
   });
 
   it("ignores the legacy profile query flag on a tenant host", async () => {
-    const payload = {
-      data: {
-        phase: { id: "5", name: "Schuljahr" },
-        schema: null,
-        offerings: [],
-        legal_texts: { blocks: [] },
-      },
-    };
     const profile = {
       guardian: {
         first_name: "Tina",
@@ -139,7 +162,9 @@ describe("GET /api/enrollment/form-bootstrap/public/[tenantSlug]/[phaseId]", () 
         new Response(JSON.stringify(payload), { status: 200 }),
       )
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ data: profile }), { status: 200 }),
+        new Response(JSON.stringify({ status: "success", data: profile }), {
+          status: 200,
+        }),
       );
     mockAuth.mockResolvedValueOnce({ user: { token: "tenant-token" } });
 

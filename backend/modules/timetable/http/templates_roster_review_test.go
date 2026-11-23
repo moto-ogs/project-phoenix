@@ -338,7 +338,8 @@ func (s *rosterReviewSetup) occurrenceStudents(t *testing.T, instanceID int64) [
 // own boundary.
 func TestTemplateOfferingConnectionCoversEveryFutureSegment(t *testing.T) {
 	t.Parallel()
-	s := buildRosterReviewModule(t, &rosterMaintenanceSources{})
+	sources := &rosterMaintenanceSources{}
+	s := buildRosterReviewModule(t, sources)
 	fixture := s.arrangeTwoSegmentSeries(t)
 	s.booked = fixture.booked
 	effective := rosterReviewMonday.AddDays(2)
@@ -358,9 +359,32 @@ func TestTemplateOfferingConnectionCoversEveryFutureSegment(t *testing.T) {
 
 	announcer := &recordingStaffingAnnouncer{}
 	s.res.Staffing = announcer
-	w = doTemplateJSON(t, s.router, http.MethodPost, fmt.Sprintf("/templates/%d/offering-connection", fixture.segmentB), map[string]any{
-		"offering_ids": []int64{rosterReviewOfferingID}, "school_classes": []string{"2c"}, "effective_date": effective.String(),
-	})
+	connect := func(fingerprint string) *httptest.ResponseRecorder {
+		return doTemplateJSON(t, s.router, http.MethodPost, fmt.Sprintf("/templates/%d/offering-connection", fixture.segmentB), map[string]any{
+			"offering_ids": []int64{rosterReviewOfferingID}, "school_classes": []string{"2c"}, "effective_date": effective.String(),
+			"expected_fingerprint": fingerprint,
+		})
+	}
+
+	// A child booked since the preview joins the series: the confirmed
+	// preview no longer says who comes, so nothing is connected (ADR 0311).
+	sources.bookings = []timetableModule.OfferingWeekdayBooking{{
+		OfferingID: rosterReviewOfferingID, StudentID: fixture.booked[0], SchoolClass: "2c",
+		Weekdays: []int{timetableModule.WeekdayMonday, timetableModule.WeekdayWednesday},
+	}}
+	for _, stale := range []string{preview.Fingerprint, ""} {
+		w = connect(stale)
+		require.Equal(t, http.StatusConflict, w.Code, "body=%s", w.Body.String())
+		assert.Contains(t, w.Body.String(), `"code":"general.changed_since_read"`)
+	}
+	assert.Empty(t, s.resyncs, "a refused connection writes nothing")
+	w = doTemplateJSON(t, s.router, http.MethodGet, fmt.Sprintf(
+		"/templates/%d/offering-preview?offering_ids=%d&school_classes=2c", fixture.segmentB, rosterReviewOfferingID), nil)
+	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
+	current := decodeTemplateData[offeringPreviewResponse](t, w)
+	require.NotEqual(t, preview.Fingerprint, current.Fingerprint)
+
+	w = connect(current.Fingerprint)
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
 	// Open planners and supervision views learn about the rewritten rosters
 	// after the commit (#5017).

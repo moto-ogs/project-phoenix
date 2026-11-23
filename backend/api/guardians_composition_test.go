@@ -12,6 +12,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	usersAPI "github.com/moto-ogs/project-phoenix/modules/peopledirectory/http"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -1032,4 +1034,24 @@ func TestGuardianComposition_BatchValidationIsBadRequestAndWritesNothing(t *test
 	assert.Contains(t, errorText(t, rr.Body.String()), "Notfall-Priorität")
 	assert.Equal(t, 0, ctx.guardianEmailCount(email))
 	assert.Empty(t, ctx.studentGuardians(t, studentID))
+}
+
+// A bulk invitation whose facts changed since its preview is a 409 business
+// rejection (ADR 0311): the composition renders general.changed_since_read
+// and observes a 4xx conflict, never a server error.
+func TestGuardianComposition_BulkInviteRefusesAStalePreviewAsConflict(t *testing.T) {
+	t.Parallel()
+	ctx := setupGuardiansCompositionRoute(t)
+	studentID, _ := ctx.createStudent("Stale", "Preview", "3a")
+	guardianID, _ := ctx.createGuardian("stale-preview")
+	ctx.link(studentID, guardianID, "primary_guardian")
+
+	rr := ctx.do(t, withPerms(testutil.DefaultTestClaims(), "admin:*"), http.MethodPost, "/bulk-invite", map[string]any{
+		"student_ids": []string{fmt.Sprint(studentID)}, "expected_fingerprint": "a-preview-of-another-state",
+	})
+
+	require.Equal(t, http.StatusConflict, rr.Code, rr.Body.String())
+	assert.Equal(t, readstate.ChangedCode, testutil.ParseJSONResponse(t, rr.Body.Bytes())["code"])
+	assert.Equal(t, usersAPI.FailureConflict, guardianFailureKind(ClassifyGuardianInvitationFailure(fmt.Errorf("bulk invite: %w", readstate.ErrChanged))),
+		"the response metric counts the kind's status, 409")
 }

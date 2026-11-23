@@ -108,7 +108,6 @@ var (
 	ErrAbsenceRequestInvalidStatus         = excusedrequests.ErrAbsenceRequestInvalidStatus
 	ErrExcusedRequestRejectReasonRequired  = excusedrequests.ErrExcusedRequestRejectReasonRequired
 	ErrExcusedRequestRejectReasonTooLong   = excusedrequests.ErrExcusedRequestRejectReasonTooLong
-	ErrParentRequestStale                  = excusedrequests.ErrParentRequestStale
 	ErrParentRequestReasonRequired         = excusedrequests.ErrParentRequestReasonRequired
 	ErrParentRequestPast                   = excusedrequests.ErrParentRequestPast
 	ErrParentRequestNotPast                = excusedrequests.ErrParentRequestNotPast
