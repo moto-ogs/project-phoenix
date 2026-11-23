@@ -409,9 +409,12 @@ Die Einzelheiten (`billedChildHolds`, eine reine Funktion):
   das Kind wird zurückgehalten.
 - **S4 Ganzes Kind.** Wie E4 hält der Lauf alle Verträge des Kindes ohne
   Rechnung zurück, auch ihre Mensa und auch einen Vertrag ohne Preis. Auch
-  die Mensa seiner Verträge mit Rechnung oder Jahresbescheid wartet: Sonst
-  bekäme das Kind eine Rechnung nur mit Mensa, die seine Betreuung später
-  sperrt (S5). Eine Rechnung nur mit Mensa allein (S5) hält keine Mensa an. Die
+  die Mensa der Verträge, deren Rechnung oder Jahresbescheid im Weg ist,
+  wartet: Sonst bekäme das Kind eine Rechnung nur mit Mensa, die seine
+  Betreuung später sperrt (S5). Der Eintrag nennt diese Dokumente, darum
+  zeigt ihn auch der Lauf ihrer Schule (S8). Eine Rechnung nur mit Mensa
+  allein (S5) hält keine Mensa an, auch nicht bei einer eigenen
+  Mensa-Rechnung (ADR 0167). Die
   Verträge, die E4 wegen eines doppelten Vertrags zurückhält, bleiben unter
   „Doppelter Vertrag“. Zählt die Geschwisterkette einen weiteren Vertrag zu
   demselben Kind, den E3 nicht erfasst (etwa über den Namen einer
@@ -449,7 +452,8 @@ Die Einzelheiten (`billedChildHolds`, eine reine Funktion):
   je Grund einmal, mit den Verträgen und Rechnungen aller Monate; Einträge mit
   einem gemeinsamen Vertrag sind ein Kind, auch über einen dritten Eintrag. `billed_children` an
   `CareRunDetail` und `CareNoticeRunDetail`, Karte „Kind hat schon eine Rechnung – bitte prüfen“
-  für jeden Lauf mit einer Schule der zurückgehaltenen Verträge, auch im
+  für jeden Lauf mit einer Schule der zurückgehaltenen Verträge oder der
+  genannten Rechnungen, auch im
   leeren Lauf, und eine Zeile je Kind in der Prüfliste. Beide Fingerabdrücke
   enthalten die Liste, wenn sie nicht leer ist. Das Leseprotokoll nennt die
   Verträge der Karte und den Vertrag der Rechnung.
