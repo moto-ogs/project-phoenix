@@ -180,6 +180,10 @@ func TestDeleteRefusesAnOutcomeOtherThanTheConfirmedPreview(t *testing.T) {
 			usage: roomUsage{}, expected: confirmedRemoval(history),
 			steps: []string{"room", "sessions", "offerings", "references"},
 		},
+		"archive confirmed, history changed since": {
+			usage: roomUsage{references: facilities.RoomReferences{PastBlocks: 3}}, expected: confirmedRemoval(history),
+			steps: []string{"room", "sessions", "offerings", "references"},
+		},
 		"delete confirmed, room now has history": {
 			usage: roomUsage{references: history}, expected: confirmedRemoval(facilities.RoomReferences{}),
 			steps: []string{"room", "sessions", "offerings", "references"},

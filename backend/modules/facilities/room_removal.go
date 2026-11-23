@@ -77,17 +77,14 @@ func NewRoomRemovalImpact(activeSession, careOffering bool, references RoomRefer
 	return impact
 }
 
-// Fingerprint is the token of what the preview promises (ADR 0311): the
-// outcome and everything that holds the room. DeleteRoom compares it under
-// its lock, so a confirmed archive never ends as a delete or the other way
-// round. The history counts stay out: they only explain an archive and grow
-// as upcoming blocks pass.
+// Fingerprint is the token of everything the preview shows (ADR 0311): the
+// outcome, what holds the room and the history that turns a removal into an
+// archive. DeleteRoom compares it under its lock, so a confirmed archive
+// never ends as a delete or the other way round. The history counts cannot
+// move on their own while a removal is confirmable: past blocks grow only
+// from upcoming ones, and an upcoming block blocks the removal.
 func (i RoomRemovalImpact) Fingerprint() string {
-	r := i.References
-	return readstate.Fingerprint([]any{
-		i.Outcome, i.ActiveSession, i.CareOffering,
-		r.ActivityGroups, r.UpcomingBlocks, r.EducationGroups, r.Devices,
-	})
+	return readstate.Fingerprint(i)
 }
 
 // RoomStillPlannedError carries the references that block a room removal.
