@@ -953,7 +953,7 @@ func ObserveFeedbackOperation(operation string, duration time.Duration, queries,
 	if err == nil {
 		codeLabel = "none"
 	} else {
-		outcome = "error"
+		outcome, codeLabel = "error", operationCode(codeLabel, err)
 	}
 	feedbackOperations.WithLabelValues(sanitizeLabel(operation), outcome, sanitizeLabel(codeLabel)).Inc()
 	feedbackDuration.WithLabelValues(sanitizeLabel(operation)).Observe(duration.Seconds())
@@ -973,7 +973,7 @@ func ObserveOrganizationTenancyOperation(operation string, duration time.Duratio
 	if err == nil {
 		codeLabel = "none"
 	} else {
-		outcome = "error"
+		outcome, codeLabel = "error", operationCode(codeLabel, err)
 	}
 	operation = sanitizeLabel(operation)
 	organizationTenancyOperations.WithLabelValues(operation, outcome, sanitizeLabel(codeLabel)).Inc()
@@ -997,7 +997,7 @@ func ObservePeopleDirectoryOperation(operation string, duration time.Duration, q
 	if err == nil {
 		codeLabel = "none"
 	} else {
-		outcome = "error"
+		outcome, codeLabel = "error", operationCode(codeLabel, err)
 	}
 	operation = sanitizeLabel(operation)
 	peopleDirectoryOperations.WithLabelValues(operation, outcome, sanitizeLabel(codeLabel)).Inc()
@@ -1021,7 +1021,7 @@ func ObserveIdentityAccessOperation(operation string, duration time.Duration, qu
 	if err == nil {
 		codeLabel = "none"
 	} else {
-		outcome = "error"
+		outcome, codeLabel = "error", operationCode(codeLabel, err)
 	}
 	operation = sanitizeLabel(operation)
 	identityAccessOperations.WithLabelValues(operation, outcome, sanitizeLabel(codeLabel)).Inc()
@@ -1059,7 +1059,7 @@ func ObserveSchoolMembershipOperation(operation string, duration time.Duration, 
 	if err == nil {
 		codeLabel = "none"
 	} else {
-		outcome = "error"
+		outcome, codeLabel = "error", operationCode(codeLabel, err)
 	}
 	operation = sanitizeLabel(operation)
 	schoolMembershipOperations.WithLabelValues(operation, outcome, sanitizeLabel(codeLabel)).Inc()
@@ -1088,7 +1088,7 @@ func ObserveSchoolStructureOperation(operation string, duration time.Duration, q
 	if err == nil {
 		codeLabel = "none"
 	} else {
-		outcome = "error"
+		outcome, codeLabel = "error", operationCode(codeLabel, err)
 	}
 	operation = sanitizeLabel(operation)
 	schoolStructureOperations.WithLabelValues(operation, outcome, sanitizeLabel(codeLabel)).Inc()
@@ -1109,7 +1109,7 @@ func ObserveFacilitiesOperation(operation string, duration time.Duration, querie
 	if err == nil {
 		codeLabel = "none"
 	} else {
-		outcome = "error"
+		outcome, codeLabel = "error", operationCode(codeLabel, err)
 	}
 	operation = sanitizeLabel(operation)
 	facilitiesOperations.WithLabelValues(operation, outcome, sanitizeLabel(codeLabel)).Inc()
@@ -1132,7 +1132,7 @@ func ObserveFileStorageOperation(operation string, duration time.Duration, queri
 	if err == nil {
 		codeLabel = "none"
 	} else {
-		outcome = "error"
+		outcome, codeLabel = "error", operationCode(codeLabel, err)
 	}
 	operation = sanitizeLabel(operation)
 	fileStorageOperations.WithLabelValues(operation, outcome, sanitizeLabel(codeLabel)).Inc()
@@ -1155,7 +1155,7 @@ func ObserveDeviceFleetOperation(operation string, duration time.Duration, queri
 	if err == nil {
 		codeLabel = "none"
 	} else {
-		outcome = "error"
+		outcome, codeLabel = "error", operationCode(codeLabel, err)
 	}
 	operation = sanitizeLabel(operation)
 	deviceFleetOperations.WithLabelValues(operation, outcome, sanitizeLabel(codeLabel)).Inc()
@@ -1176,7 +1176,7 @@ func ObserveTimetableActivitiesOperation(operation string, duration time.Duratio
 	if err == nil {
 		codeLabel = "none"
 	} else {
-		outcome = "error"
+		outcome, codeLabel = "error", operationCode(codeLabel, err)
 	}
 	operation = sanitizeLabel(operation)
 	timetableActivitiesOperations.WithLabelValues(operation, outcome, sanitizeLabel(codeLabel)).Inc()
@@ -1200,7 +1200,7 @@ func ObserveSchoolCalendarOperation(operation string, duration time.Duration, qu
 	if err == nil {
 		codeLabel = "none"
 	} else {
-		outcome = "error"
+		outcome, codeLabel = "error", operationCode(codeLabel, err)
 	}
 	operation = sanitizeLabel(operation)
 	schoolCalendarOperations.WithLabelValues(operation, outcome, sanitizeLabel(codeLabel)).Inc()
@@ -1224,7 +1224,7 @@ func ObserveWorkforceOperation(operation string, duration time.Duration, queries
 	if err == nil {
 		codeLabel = "none"
 	} else {
-		outcome = "error"
+		outcome, codeLabel = "error", operationCode(codeLabel, err)
 	}
 	operation = sanitizeLabel(operation)
 	workforceOperations.WithLabelValues(operation, outcome, sanitizeLabel(codeLabel)).Inc()
@@ -1286,7 +1286,7 @@ func ObserveAppointmentsOperation(operation string, duration time.Duration, quer
 	if err == nil {
 		codeLabel = "none"
 	} else {
-		outcome = "error"
+		outcome, codeLabel = "error", operationCode(codeLabel, err)
 	}
 	operation = sanitizeLabel(operation)
 	appointmentsOperations.WithLabelValues(operation, outcome, sanitizeLabel(codeLabel)).Inc()
@@ -1310,7 +1310,7 @@ func ObserveCommunicationOperation(operation string, duration time.Duration, que
 	if err == nil {
 		codeLabel = "none"
 	} else {
-		outcome = "error"
+		outcome, codeLabel = "error", operationCode(codeLabel, err)
 	}
 	operation = sanitizeLabel(operation)
 	communicationOperations.WithLabelValues(operation, outcome, sanitizeLabel(codeLabel)).Inc()
@@ -1334,7 +1334,7 @@ func ObserveCarePlanOperation(operation string, duration time.Duration, queries,
 	if err == nil {
 		codeLabel = "none"
 	} else {
-		outcome = "error"
+		outcome, codeLabel = "error", operationCode(codeLabel, err)
 	}
 	operation = sanitizeLabel(operation)
 	carePlanOperations.WithLabelValues(operation, outcome, sanitizeLabel(codeLabel)).Inc()

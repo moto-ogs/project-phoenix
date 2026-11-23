@@ -623,7 +623,7 @@ func TestGradeTransitionResource_Apply(t *testing.T) {
 		testpkg.CreateTestGradeTransitionMapping(t, tc.db, transition.ID, fromClass, &toClass)
 
 		url := fmt.Sprintf("/%d/apply", transition.ID)
-		req := testutil.NewAuthenticatedRequest(t, "POST", url, nil,
+		req := testutil.NewAuthenticatedRequest(t, "POST", url, previewedApply(t, router, token, transition.ID),
 			testutil.WithJWTBearer(token),
 		)
 
@@ -676,7 +676,7 @@ func TestGradeTransitionResource_Apply(t *testing.T) {
 		testpkg.CreateTestGradeTransitionMapping(t, tc.db, transition.ID, gradClass, nil) // graduate
 
 		url := fmt.Sprintf("/%d/apply", transition.ID)
-		req := testutil.NewAuthenticatedRequest(t, "POST", url, nil,
+		req := testutil.NewAuthenticatedRequest(t, "POST", url, previewedApply(t, router, token, transition.ID),
 			testutil.WithJWTBearer(token),
 		)
 
@@ -700,12 +700,13 @@ func TestGradeTransitionResource_Apply(t *testing.T) {
 		testpkg.CreateTestGradeTransitionMapping(t, tc.db, transition.ID, fromClass, &toClass)
 
 		url := fmt.Sprintf("/%d/apply", transition.ID)
-		firstRR := testutil.ExecuteRequest(router, testutil.NewAuthenticatedRequest(t, "POST", url, nil,
+		confirmed := previewedApply(t, router, token, transition.ID)
+		firstRR := testutil.ExecuteRequest(router, testutil.NewAuthenticatedRequest(t, "POST", url, confirmed,
 			testutil.WithJWTBearer(token),
 		))
 		require.Equal(t, http.StatusOK, firstRR.Code)
 
-		secondRR := testutil.ExecuteRequest(router, testutil.NewAuthenticatedRequest(t, "POST", url, nil,
+		secondRR := testutil.ExecuteRequest(router, testutil.NewAuthenticatedRequest(t, "POST", url, confirmed,
 			testutil.WithJWTBearer(token),
 		))
 		require.Equal(t, http.StatusConflict, secondRR.Code)
@@ -753,7 +754,7 @@ func TestGradeTransitionResource_Revert(t *testing.T) {
 
 		// Apply first
 		applyURL := fmt.Sprintf("/%d/apply", transition.ID)
-		applyReq := testutil.NewAuthenticatedRequest(t, "POST", applyURL, nil,
+		applyReq := testutil.NewAuthenticatedRequest(t, "POST", applyURL, previewedApply(t, router, token, transition.ID),
 			testutil.WithJWTBearer(token),
 		)
 		applyRR := testutil.ExecuteRequest(router, applyReq)
@@ -815,7 +816,7 @@ func TestGradeTransitionResource_Revert(t *testing.T) {
 		testpkg.CreateTestGradeTransitionMapping(t, tc.db, transition.ID, fromClass, &toClass)
 
 		applyRR := testutil.ExecuteRequest(router, testutil.NewAuthenticatedRequest(t, "POST",
-			fmt.Sprintf("/%d/apply", transition.ID), nil, testutil.WithJWTBearer(token),
+			fmt.Sprintf("/%d/apply", transition.ID), previewedApply(t, router, token, transition.ID), testutil.WithJWTBearer(token),
 		))
 		require.Equal(t, http.StatusOK, applyRR.Code)
 
@@ -936,7 +937,7 @@ func TestGradeTransitionResource_GetHistory(t *testing.T) {
 
 		// Apply transition
 		applyURL := fmt.Sprintf("/%d/apply", transition.ID)
-		applyReq := testutil.NewAuthenticatedRequest(t, "POST", applyURL, nil,
+		applyReq := testutil.NewAuthenticatedRequest(t, "POST", applyURL, previewedApply(t, router, token, transition.ID),
 			testutil.WithJWTBearer(token),
 		)
 		applyRR := testutil.ExecuteRequest(router, applyReq)
@@ -1008,7 +1009,7 @@ func TestGradeTransitionResource_UpdateDelete_ErrorMapping(t *testing.T) {
 		// A mapped class with no students: applies cleanly, moves nobody.
 		testpkg.CreateTestGradeTransitionMapping(t, tc.db, transition.ID, fmt.Sprintf("leer-%s", suffix), nil)
 
-		applyReq := testutil.NewAuthenticatedRequest(t, "POST", fmt.Sprintf("/%d/apply", transition.ID), nil,
+		applyReq := testutil.NewAuthenticatedRequest(t, "POST", fmt.Sprintf("/%d/apply", transition.ID), previewedApply(t, router, token, transition.ID),
 			testutil.WithJWTBearer(token),
 		)
 		require.Equal(t, http.StatusOK, testutil.ExecuteRequest(router, applyReq).Code)
@@ -1083,7 +1084,7 @@ func TestGradeTransitionResource_GetHistory_OmitsRFIDTag(t *testing.T) {
 	transition := testpkg.CreateTestGradeTransition(t, tc.db, "2025-2026", account.ID)
 	testpkg.CreateTestGradeTransitionMapping(t, tc.db, transition.ID, graduateClass, nil)
 
-	applyReq := testutil.NewAuthenticatedRequest(t, "POST", fmt.Sprintf("/%d/apply", transition.ID), nil,
+	applyReq := testutil.NewAuthenticatedRequest(t, "POST", fmt.Sprintf("/%d/apply", transition.ID), previewedApply(t, router, token, transition.ID),
 		testutil.WithJWTBearer(token),
 	)
 	applyRR := testutil.ExecuteRequest(router, applyReq)
@@ -1173,7 +1174,7 @@ func TestToTransitionResponse(t *testing.T) {
 
 		// Apply transition
 		applyURL := fmt.Sprintf("/%d/apply", transition.ID)
-		applyReq := testutil.NewAuthenticatedRequest(t, "POST", applyURL, nil,
+		applyReq := testutil.NewAuthenticatedRequest(t, "POST", applyURL, previewedApply(t, router, token, transition.ID),
 			testutil.WithJWTBearer(token),
 		)
 		applyRR := testutil.ExecuteRequest(router, applyReq)
@@ -1217,7 +1218,7 @@ func TestToTransitionResponse(t *testing.T) {
 
 		// Apply then revert
 		applyURL := fmt.Sprintf("/%d/apply", transition.ID)
-		applyReq := testutil.NewAuthenticatedRequest(t, "POST", applyURL, nil,
+		applyReq := testutil.NewAuthenticatedRequest(t, "POST", applyURL, previewedApply(t, router, token, transition.ID),
 			testutil.WithJWTBearer(token),
 		)
 		testutil.ExecuteRequest(router, applyReq)

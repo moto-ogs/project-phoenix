@@ -61,7 +61,7 @@ func validateDecisionInput(input careplan.OfferingChangeDecisionInput) (string, 
 // unless expectedVersion is its version (ADR 0311).
 func (s *OfferingChanges) lockPendingRow(ctx context.Context, requestID int64, expectedVersion string) (careplan.OfferingChangeRequest, error) {
 	return s.lockOpenRow(ctx, requestID, func(row careplan.OfferingChangeRequest) error {
-		return readstate.Check(expectedVersion, careplan.ParentRequestVersion(row.UpdatedAt))
+		return readstate.Check(expectedVersion, readstate.Of(row.UpdatedAt))
 	})
 }
 

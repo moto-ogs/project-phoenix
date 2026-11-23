@@ -21460,7 +21460,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.RequestLedger.Record",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.ParentRequestEvents.AppendParentRequestEvent; modules/peopledirectory/parent_request_events.go:26. ",
+      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.ParentRequestEvents.AppendParentRequestEvent; modules/peopledirectory/parent_request_events.go:26. Re-reviewed with #7954: the binding stamps the request version with readstate.Of instead of the removed careplan.ParentRequestVersion pass-through; same value, no new effect.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.ParentRequestEvents.AppendParentRequestEvent",
       "target_owner": "people-directory"
@@ -21470,7 +21470,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.RequestLedger.Record",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.ValidateParentRequestEvent; modules/peopledirectory/parent_request_events.go:37. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.ValidateParentRequestEvent; modules/peopledirectory/parent_request_events.go:37. May-bind method surface, not a production-call/liveness claim. Re-reviewed with #7954: the binding stamps the request version with readstate.Of instead of the removed careplan.ParentRequestVersion pass-through; same value, no new effect.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.ValidateParentRequestEvent",
       "target_owner": "people-directory"
@@ -21481,7 +21481,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.RequestLedger.Record",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory/ports.ParentRequestEventRecords.AppendParentRequestEvent; modules/peopledirectory/internal/adapters/peoplepostgres/parent_request_event_snapshots.go:50. ",
+      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory/ports.ParentRequestEventRecords.AppendParentRequestEvent; modules/peopledirectory/internal/adapters/peoplepostgres/parent_request_event_snapshots.go:50. Re-reviewed with #7954: the binding stamps the request version with readstate.Of instead of the removed careplan.ParentRequestVersion pass-through; same value, no new effect.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.ParentRequestEventRecords.AppendParentRequestEvent",
       "target_owner": "people-directory"

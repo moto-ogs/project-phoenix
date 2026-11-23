@@ -242,9 +242,6 @@ func (w *tsWriter) file(routes []Route, shared *tsWriter) string {
 		w.object(&body, w.byName[name])
 		delete(w.pending, name)
 	}
-	for _, route := range routes {
-		w.query(&body, route)
-	}
 	if routes != nil {
 		body.WriteString("\nexport const routes = {\n")
 		for _, route := range routes {
@@ -318,25 +315,23 @@ func (w *tsWriter) object(out *strings.Builder, object Object) {
 	out.WriteString("});\n")
 }
 
-func (w *tsWriter) query(out *strings.Builder, route Route) {
+// writeQuery emits metadata, not validators: the proxy only reads the keys.
+func writeQuery(out *strings.Builder, route Route) {
 	if len(route.Query) == 0 {
 		return
 	}
-	fmt.Fprintf(out, "\n/** Query of %s */\nexport interface %sQuery {\n", route.Key(), upperFirst(operationID(route)))
+	out.WriteString("    query: {\n")
 	for _, param := range route.Query {
-		t := map[string]string{"string": "string", "int": "number", "bool": "boolean", "date": "string", "id": "string"}[param.Kind]
-		if len(param.Values) > 0 {
-			t = strings.Join(strings.Split(quoted(param.Values), ", "), " | ")
-		}
+		fmt.Fprintf(out, "      %q: { kind: %q", param.Name, param.Kind)
 		if param.Repeated {
-			if strings.Contains(t, " ") {
-				t = "(" + t + ")"
-			}
-			t += "[]"
+			out.WriteString(", repeated: true")
 		}
-		fmt.Fprintf(out, "  %s?: %s;\n", param.Name, t)
+		if len(param.Values) > 0 {
+			fmt.Fprintf(out, ", values: [%s]", quoted(param.Values))
+		}
+		out.WriteString(" },\n")
 	}
-	out.WriteString("}\n")
+	out.WriteString("    },\n")
 }
 
 // envelopeHelper names the runtime helper of the route's answer.
@@ -385,13 +380,7 @@ func (w *tsWriter) route(out *strings.Builder, route Route) {
 		out.WriteString("    privateCache: true,\n")
 	}
 	writeRouteFileTraits(out, route)
-	if len(route.Query) > 0 {
-		names := make([]string, len(route.Query))
-		for i, param := range route.Query {
-			names[i] = param.Name
-		}
-		fmt.Fprintf(out, "    query: [%s],\n", quoted(names))
-	}
+	writeQuery(out, route)
 	if route.Multipart {
 		w.helpers["multipart"] = true
 		out.WriteString("    request: multipart,\n")
@@ -443,16 +432,6 @@ func optionalMark(optional bool) string {
 		return "?"
 	}
 	return ""
-}
-
-func operationID(route Route) string {
-	id := strings.ToLower(route.Method)
-	for _, part := range strings.FieldsFunc(route.Pattern, func(r rune) bool { return !unicode.IsLetter(r) && !unicode.IsDigit(r) }) {
-		if part != "api" {
-			id += upperFirst(part)
-		}
-	}
-	return id
 }
 
 func upperFirst(s string) string { return strings.ToUpper(s[:1]) + s[1:] }

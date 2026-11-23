@@ -175,7 +175,7 @@ func TestParentRequestCoordinatorValidatesEveryVersionBeforeApplying(t *testing.
 
 	err := service.BulkApprove(context.Background(), parentrequests.BulkApproveInput{
 		Requests: []parentrequests.Ref{
-			{Kind: parentrequests.KindMasterData, ID: 1, ExpectedVersion: careplan.ParentRequestVersion(bulkNow)},
+			{Kind: parentrequests.KindMasterData, ID: 1, ExpectedVersion: readstate.Of(bulkNow)},
 			{Kind: parentrequests.KindExcused, ID: 2, ExpectedVersion: "stale"},
 		},
 		Reason: "Geprüft", ReviewerID: 99,
@@ -194,8 +194,8 @@ func TestParentRequestCoordinatorMarksRollbackWhenApplyFails(t *testing.T) {
 
 	err := service.BulkApprove(context.Background(), parentrequests.BulkApproveInput{
 		Requests: []parentrequests.Ref{
-			{Kind: parentrequests.KindMasterData, ID: 1, ExpectedVersion: careplan.ParentRequestVersion(bulkNow)},
-			{Kind: parentrequests.KindMasterData, ID: 2, ExpectedVersion: careplan.ParentRequestVersion(bulkNow)},
+			{Kind: parentrequests.KindMasterData, ID: 1, ExpectedVersion: readstate.Of(bulkNow)},
+			{Kind: parentrequests.KindMasterData, ID: 2, ExpectedVersion: readstate.Of(bulkNow)},
 		},
 		Reason: "Geprüft", ReviewerID: 99,
 	})
@@ -231,8 +231,8 @@ func TestParentRequestCoordinatorReportsDecisionRaceAsStale(t *testing.T) {
 
 	err := service.BulkApprove(context.Background(), parentrequests.BulkApproveInput{
 		Requests: []parentrequests.Ref{
-			{Kind: parentrequests.KindMasterData, ID: 1, ExpectedVersion: careplan.ParentRequestVersion(bulkNow)},
-			{Kind: parentrequests.KindMasterData, ID: 2, ExpectedVersion: careplan.ParentRequestVersion(bulkNow)},
+			{Kind: parentrequests.KindMasterData, ID: 1, ExpectedVersion: readstate.Of(bulkNow)},
+			{Kind: parentrequests.KindMasterData, ID: 2, ExpectedVersion: readstate.Of(bulkNow)},
 		},
 		Reason: "Geprüft", ReviewerID: 99,
 	})
@@ -251,8 +251,8 @@ func TestParentRequestCoordinatorReportsLockRaceAsStale(t *testing.T) {
 
 	err := service.BulkApprove(context.Background(), parentrequests.BulkApproveInput{
 		Requests: []parentrequests.Ref{
-			{Kind: parentrequests.KindMasterData, ID: 1, ExpectedVersion: careplan.ParentRequestVersion(bulkNow)},
-			{Kind: parentrequests.KindMasterData, ID: 2, ExpectedVersion: careplan.ParentRequestVersion(bulkNow)},
+			{Kind: parentrequests.KindMasterData, ID: 1, ExpectedVersion: readstate.Of(bulkNow)},
+			{Kind: parentrequests.KindMasterData, ID: 2, ExpectedVersion: readstate.Of(bulkNow)},
 		},
 		Reason: "Geprüft", ReviewerID: 99,
 	})
@@ -271,8 +271,8 @@ func TestParentRequestCoordinatorRejectsMasterDataForAbsenceOnlyReviewer(t *test
 
 	err := service.BulkApprove(context.Background(), parentrequests.BulkApproveInput{
 		Requests: []parentrequests.Ref{
-			{Kind: parentrequests.KindMasterData, ID: 1, ExpectedVersion: careplan.ParentRequestVersion(bulkNow)},
-			{Kind: parentrequests.KindMasterData, ID: 2, ExpectedVersion: careplan.ParentRequestVersion(bulkNow)},
+			{Kind: parentrequests.KindMasterData, ID: 1, ExpectedVersion: readstate.Of(bulkNow)},
+			{Kind: parentrequests.KindMasterData, ID: 2, ExpectedVersion: readstate.Of(bulkNow)},
 		},
 		Reason: "Geprüft", ReviewerID: 99,
 	})
@@ -289,8 +289,8 @@ func TestParentRequestCoordinatorRequiresTheSchoolsReasonForABulkApproval(t *tes
 
 	err := service.BulkApprove(context.Background(), parentrequests.BulkApproveInput{
 		Requests: []parentrequests.Ref{
-			{Kind: parentrequests.KindMasterData, ID: 1, ExpectedVersion: careplan.ParentRequestVersion(bulkNow)},
-			{Kind: parentrequests.KindMasterData, ID: 2, ExpectedVersion: careplan.ParentRequestVersion(bulkNow)},
+			{Kind: parentrequests.KindMasterData, ID: 1, ExpectedVersion: readstate.Of(bulkNow)},
+			{Kind: parentrequests.KindMasterData, ID: 2, ExpectedVersion: readstate.Of(bulkNow)},
 		},
 		Reason: "  ", ReasonRequired: true, ReviewerID: 99,
 	})

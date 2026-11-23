@@ -68,7 +68,9 @@ const api = {
   updateGradeTransition: vi.fn(),
   deleteGradeTransition: vi.fn(),
   previewGradeTransition: vi.fn<(id: string) => Promise<TransitionPreview>>(),
-  applyGradeTransition: vi.fn<(id: string) => Promise<TransitionResult>>(),
+  applyGradeTransition: vi.fn<
+    (id: string, expectedFingerprint: string) => Promise<TransitionResult>
+  >(),
   revertGradeTransition: vi.fn<(id: string) => Promise<TransitionResult>>(),
   fetchTransitionHistory: vi.fn(),
 };
@@ -93,7 +95,7 @@ vi.mock("~/lib/grade-transition-api", async (importOriginal) => {
     previewGradeTransition: (...args: unknown[]) =>
       api.previewGradeTransition(...(args as [string])),
     applyGradeTransition: (...args: unknown[]) =>
-      api.applyGradeTransition(...(args as [string])),
+      api.applyGradeTransition(...(args as [string, string])),
     revertGradeTransition: (...args: unknown[]) =>
       api.revertGradeTransition(...(args as [string])),
     fetchTransitionHistory: (...args: unknown[]) =>

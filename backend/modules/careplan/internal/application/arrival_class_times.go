@@ -7,7 +7,6 @@ import (
 	"maps"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/domain"
@@ -225,10 +224,10 @@ func (s *arrivalScheduleService) GetClassArrivalTimes(
 
 // classArrivalVersion is the read-state token of a class's stored times: the
 // row's updated_at, which its trigger bumps on every update. A class without
-// a row has the token of the zero time, so a first save is bound as well.
+// a row has readstate.Absent, so a first save is bound as well.
 func classArrivalVersion(rows []*ports.ArrivalClassPlan) string {
 	if len(rows) == 0 || rows[0] == nil {
-		return readstate.Of(time.Time{})
+		return readstate.Absent
 	}
 	return readstate.Of(rows[0].UpdatedAt)
 }

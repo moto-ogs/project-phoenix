@@ -3,19 +3,16 @@ import {
   fileAnswer,
 } from "./runtime";
 
-/** Query of GET /caterer/orders/export */
-export interface GetCatererOrdersExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-  from?: string;
-  to?: string;
-}
-
 export const routes = {
   "GET /caterer/orders/export": {
     method: "GET",
     pattern: "/caterer/orders/export",
     portals: ["caterer"],
-    query: ["format", "from", "to"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: fileAnswer,
   },
 } as const;

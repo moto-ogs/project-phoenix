@@ -140,11 +140,6 @@ export interface FolderRequest {
   account_ids?: string[] | null;
 }
 
-/** Query of GET /api/files/folders/{folderId}/files/{fileId}/download */
-export interface GetFilesFoldersFolderIdFilesFileIdDownloadQuery {
-  inline?: string;
-}
-
 export const routes = {
   "DELETE /api/files/folders/{folderId}": {
     method: "DELETE",
@@ -180,7 +175,9 @@ export const routes = {
     method: "GET",
     pattern: "/api/files/folders/{folderId}/files/{fileId}/download",
     portals: ["tenant"],
-    query: ["inline"],
+    query: {
+      "inline": { kind: "string" },
+    },
     response: fileAnswer,
   },
   "POST /api/files/folders": {

@@ -322,6 +322,38 @@ describe("PersonalInfoEditPanel — remote companion changes", () => {
     ).not.toBeInTheDocument();
   });
 
+  // The backend now refuses a stale list with the one read-state code (ADR
+  // 0311). The form reloads the list as for its own code, so a second save
+  // starts from the stored links instead of being refused again.
+  it("shows the stored list when the backend refuses the read as changed", async () => {
+    fetchStudentCompanionsMock.mockResolvedValueOnce(
+      companionList([companion("2")]),
+    );
+    const onSave = vi.fn().mockRejectedValue(
+      new ApiError("changed since it was read", 409, {
+        code: "general.changed_since_read",
+      }),
+    );
+    await renderOpenModal(onSave);
+    await waitFor(() =>
+      expect(screen.getByTestId("companion-count").textContent).toBe("1"),
+    );
+
+    fireEvent.click(screen.getByTestId("edit-companions"));
+    fetchStudentCompanionsMock.mockResolvedValueOnce(
+      companionList([companion("2"), companion("3")]),
+    );
+    fireEvent.click(screen.getByText("Speichern"));
+
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByTestId("companion-count").textContent).toBe("2"),
+    );
+    expect(
+      screen.queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
+  });
+
   // The panel shares its read with the Stammdaten card: a cached first answer
   // is followed by the read in the background, and the card refreshes the
   // same entry. An untouched form shows the newest list, and an edit started

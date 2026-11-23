@@ -180,7 +180,7 @@ export function notifyStudentCompanionDisplayChanged(): void {
  * A child's Laufgemeinschaft as stored, with the fingerprint of exactly this
  * read: a save that replaces or trims the links sends it back as
  * `companions_fingerprint`, and the backend refuses it when someone changed
- * the links since (`students.companions_changed`).
+ * the links since (`general.changed_since_read`, ADR 0311).
  */
 export interface StudentCompanionList {
   companions: StudentCompanion[];

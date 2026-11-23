@@ -561,22 +561,6 @@ export interface PersonnelNumberRequest {
   personnel_number?: string | null;
 }
 
-/** Query of GET /traeger/staff-records/export */
-export interface GetTraegerStaffRecordsExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-}
-
-/** Query of GET /traeger/staff-records/{id}/absence-accounts */
-export interface GetTraegerStaffRecordsIdAbsenceAccountsQuery {
-  year?: number;
-}
-
-/** Query of GET /traeger/staff-records/{id}/time-account */
-export interface GetTraegerStaffRecordsIdTimeAccountQuery {
-  month?: number;
-  year?: number;
-}
-
 export const routes = {
   "DELETE /traeger/staff-records/{id}": {
     method: "DELETE",
@@ -606,7 +590,9 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/staff-records/export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "GET /traeger/staff-records/{id}": {
@@ -619,7 +605,9 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/staff-records/{id}/absence-accounts",
     portals: ["org"],
-    query: ["year"],
+    query: {
+      "year": { kind: "int" },
+    },
     response: success(TraegerAbsenceAccountsSchema),
   },
   "GET /traeger/staff-records/{id}/financial": {
@@ -632,7 +620,10 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/staff-records/{id}/time-account",
     portals: ["org"],
-    query: ["month", "year"],
+    query: {
+      "month": { kind: "int" },
+      "year": { kind: "int" },
+    },
     response: success(TraegerTimeAccountSchema),
   },
   "POST /traeger/staff-records/": {

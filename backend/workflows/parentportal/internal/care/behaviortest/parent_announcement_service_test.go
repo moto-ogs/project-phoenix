@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	parentportalcompose "github.com/moto-ogs/project-phoenix/workflows/parentportal/compose"
 
 	"github.com/moto-ogs/project-phoenix/workflows/parentportal"
@@ -136,7 +137,7 @@ func seedPublishedAnnouncementWithSystemKind(
 	// Re-read so PublishedAt reflects the DB-persisted value (Postgres truncates
 	// TIMESTAMPTZ to microseconds). Callers echo this exact instant back to
 	// MarkRead/Acknowledge; using the in-memory nanosecond `now` would flakily
-	// miss the service's Equal() version guard and surface as ErrAnnouncementStale.
+	// miss the service's Equal() version guard and surface as readstate.ErrChanged.
 	persisted, err := testpkg.TenantQuery1(t, ctx, testpkg.SetupTestDB(t), repo.FindByID, a.ID)
 	require.NoError(t, err)
 	require.NotNil(t, persisted)
@@ -253,7 +254,7 @@ func TestAnnouncementFeed_StaleVersionRejected(t *testing.T) {
 	// stale, not silently recorded.
 	stale := ann.PublishedAt.Add(-time.Hour)
 	err := svc.MarkAnnouncementRead(ctx, chain.AccountID, ann.ID, stale)
-	assert.ErrorIs(t, err, parentportal.ErrAnnouncementStale)
+	assert.ErrorIs(t, err, readstate.ErrChanged)
 }
 
 func TestAnnouncementFeed_AckNotRequired(t *testing.T) {

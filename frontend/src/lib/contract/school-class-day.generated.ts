@@ -533,45 +533,6 @@ export interface MorningAttendanceRequest {
   marks?: MorningAttendanceMarkRequest[] | null;
 }
 
-/** Query of GET /school/class-day/ */
-export interface GetSchoolClassDayQuery {
-  class?: string;
-  date?: string;
-}
-
-/** Query of GET /school/class-day/absence-list */
-export interface GetSchoolClassDayAbsenceListQuery {
-  class?: string;
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /school/class-day/absence-list/export */
-export interface GetSchoolClassDayAbsenceListExportQuery {
-  class?: string;
-  format?: "pdf" | "xlsx";
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /school/class-day/arrival-exceptions */
-export interface GetSchoolClassDayArrivalExceptionsQuery {
-  class?: string;
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /school/class-day/arrival-exceptions/block-start */
-export interface GetSchoolClassDayArrivalExceptionsBlockStartQuery {
-  class?: string;
-  date?: string;
-}
-
-/** Query of GET /school/class-day/school-day */
-export interface GetSchoolClassDaySchoolDayQuery {
-  date?: string;
-}
-
 export const routes = {
   "DELETE /school/class-day/absence-reports/{schoolClass}/{date}/students/{studentId}": {
     method: "DELETE",
@@ -613,35 +574,54 @@ export const routes = {
     method: "GET",
     pattern: "/school/class-day/",
     portals: ["school"],
-    query: ["class", "date"],
+    query: {
+      "class": { kind: "string" },
+      "date": { kind: "date" },
+    },
     response: success(DayReportSchema),
   },
   "GET /school/class-day/absence-list": {
     method: "GET",
     pattern: "/school/class-day/absence-list",
     portals: ["school"],
-    query: ["class", "from", "to"],
+    query: {
+      "class": { kind: "string" },
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(AbsenceListReportSchema),
   },
   "GET /school/class-day/absence-list/export": {
     method: "GET",
     pattern: "/school/class-day/absence-list/export",
     portals: ["school"],
-    query: ["class", "format", "from", "to"],
+    query: {
+      "class": { kind: "string" },
+      "format": { kind: "string", values: ["pdf", "xlsx"] },
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: fileAnswer,
   },
   "GET /school/class-day/arrival-exceptions": {
     method: "GET",
     pattern: "/school/class-day/arrival-exceptions",
     portals: ["school"],
-    query: ["class", "from", "to"],
+    query: {
+      "class": { kind: "string" },
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(ArrivalExceptionListResponseSchema),
   },
   "GET /school/class-day/arrival-exceptions/block-start": {
     method: "GET",
     pattern: "/school/class-day/arrival-exceptions/block-start",
     portals: ["school"],
-    query: ["class", "date"],
+    query: {
+      "class": { kind: "string" },
+      "date": { kind: "date" },
+    },
     response: success(ArrivalExceptionBlockStartResponseSchema),
   },
   "GET /school/class-day/classes": {
@@ -654,7 +634,9 @@ export const routes = {
     method: "GET",
     pattern: "/school/class-day/school-day",
     portals: ["school"],
-    query: ["date"],
+    query: {
+      "date": { kind: "date" },
+    },
     response: success(SchoolDayReportSchema),
   },
   "GET /school/class-day/shared-notes/{schoolClass}/students/{studentId}": {

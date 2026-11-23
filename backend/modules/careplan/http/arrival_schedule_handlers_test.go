@@ -1024,7 +1024,7 @@ func TestBulkUpsertArrivalSchedules(t *testing.T) {
 
 		body := map[string]any{
 			"school_class":     "BAR1",
-			"expected_version": readstate.Of(time.Time{}),
+			"expected_version": readstate.Absent,
 			"schedules": []map[string]any{
 				{"weekday": 1, "expected_arrival": "07:45"},
 				{"weekday": 3, "expected_arrival": "08:15"},
@@ -1046,7 +1046,7 @@ func TestBulkUpsertArrivalSchedules(t *testing.T) {
 			})
 			return authExec(t, tc, req, testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"})
 		}
-		unstored := readstate.Of(time.Time{})
+		unstored := readstate.Absent
 		require.Equal(t, http.StatusOK, save(unstored, "12:00").Code)
 
 		rr := save(unstored, "13:00")

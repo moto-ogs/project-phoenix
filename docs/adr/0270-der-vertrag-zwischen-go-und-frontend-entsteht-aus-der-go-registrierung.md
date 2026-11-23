@@ -451,3 +451,24 @@ Entscheidung:
    eine Route mit Query-Varianten (`GET /api/students/`, Punkt 3) steht dort
    mit Verweis auf diesen ADR. Die Art `legacy_id` verlässt auch die
    Kompatibilitätsprüfung.
+
+## Nachtrag vom 2026-11-23: Query-Typen und Pflichtfelder im Body
+
+Für [#7945](https://github.com/moto-ogs/project-phoenix/issues/7945).
+
+1. **Die Routeneinträge behalten die Art der Query-Parameter.** Der
+   Generator schreibt je Schlüssel die Art, gegebenenfalls die erlaubten
+   Textwerte und ob der Schlüssel sich wiederholen darf. `bffJson` und
+   `bffFile` lesen nur diese Metadaten für ihre Typen, keine Zod-Form.
+   Ein Datum ist ein Text im Format `YYYY-MM-DD`; TypeScript prüft den
+   Texttyp, Go das Format und den Kalendertag. Der Proxy filtert weiterhin
+   nur Namen und reicht jeden Wert unverändert zur Prüfung an Go weiter.
+2. **Alle Felder im erzeugten JSON-Body bleiben freiwillig.** Das ist
+   keine Aussage darüber, ob der Handler eine Anfrage annimmt. Go bindet
+   fehlende Felder als Nullwerte; erst die Prüfung im Handler entscheidet,
+   ob ein Nullwert erlaubt ist. Pflicht kann vom Schreibvorgang oder
+   einem anderen Feld abhängen. Weder `omitempty` noch der Go-Feldtyp
+   bildet das ab. Eine zweite Feldliste für den Generator würde die
+   Prüfung nur teilweise abbilden und könnte davon abweichen. Go bleibt
+   deshalb die einzige Quelle dafür, welche Felder der konkrete Aufruf
+   braucht. Der Client erhält eine Ablehnung über den Fehlervertrag.

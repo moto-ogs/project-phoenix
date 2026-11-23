@@ -275,12 +275,6 @@ export const HolidayPlaceChangeSchema: z.ZodType<HolidayPlaceChange, unknown> = 
   moved_up: nullable(arr(int64String)),
 });
 
-/** Query of GET /traeger/holiday-contributions/{periodId}/registrations/{registrationId} */
-export interface GetTraegerHolidayContributionsPeriodIdRegistrationsRegistrationIdQuery {
-  benefits_exemption?: boolean;
-  cost_bearer_id?: string;
-}
-
 export const routes = {
   "DELETE /traeger/holiday-contributions/{periodId}/sibling-groups/registrations/{registrationId}": {
     method: "DELETE",
@@ -298,7 +292,10 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/holiday-contributions/{periodId}/registrations/{registrationId}",
     portals: ["org"],
-    query: ["benefits_exemption", "cost_bearer_id"],
+    query: {
+      "benefits_exemption": { kind: "bool" },
+      "cost_bearer_id": { kind: "id" },
+    },
     response: success(HolidayContributionResponseSchema),
   },
   "GET /traeger/holiday-contributions/{periodId}/registrations/{registrationId}/family-debtor-number": {

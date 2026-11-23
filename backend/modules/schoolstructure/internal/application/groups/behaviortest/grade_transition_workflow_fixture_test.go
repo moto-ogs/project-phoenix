@@ -88,6 +88,16 @@ func (f *transitionFixture) workflow(t *testing.T) *gradetransition.Workflow {
 	return workflow
 }
 
+// previewed is the fingerprint an admin confirms before an apply: the one the
+// preview answers (ADR 0311), or none where there is no preview to show.
+func previewed(ctx context.Context, workflow *gradetransition.Workflow, transitionID int64) string {
+	preview, err := workflow.Preview(ctx, transitionID)
+	if err != nil {
+		return ""
+	}
+	return preview.Fingerprint
+}
+
 // createDraft stores a draft with the given mappings through the workflow.
 func (f *transitionFixture) createDraft(t *testing.T, ctx context.Context, academicYear string, mappings ...gradetransition.Mapping) int64 {
 	t.Helper()

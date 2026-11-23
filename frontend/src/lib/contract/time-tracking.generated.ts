@@ -222,65 +222,6 @@ export interface UpdateAbsenceRequest {
   note?: string | null;
 }
 
-/** Query of GET /api/time-tracking/absence-allowances */
-export interface GetTimeTrackingAbsenceAllowancesQuery {
-  year?: number;
-}
-
-/** Query of GET /api/time-tracking/absences */
-export interface GetTimeTrackingAbsencesQuery {
-  from?: string;
-  status?: string;
-  to?: string;
-}
-
-/** Query of GET /api/time-tracking/assignments */
-export interface GetTimeTrackingAssignmentsQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/time-tracking/closing-days */
-export interface GetTimeTrackingClosingDaysQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/time-tracking/history */
-export interface GetTimeTrackingHistoryQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/time-tracking/holidays */
-export interface GetTimeTrackingHolidaysQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/time-tracking/month-summary */
-export interface GetTimeTrackingMonthSummaryQuery {
-  month?: number;
-  year?: number;
-}
-
-/** Query of GET /api/time-tracking/schedule-targets */
-export interface GetTimeTrackingScheduleTargetsQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/time-tracking/shifts */
-export interface GetTimeTrackingShiftsQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/time-tracking/vacation/quota */
-export interface GetTimeTrackingVacationQuotaQuery {
-  year?: number;
-}
-
 export const routes = {
   "DELETE /api/time-tracking/absences/{id}": {
     method: "DELETE",
@@ -292,14 +233,20 @@ export const routes = {
     method: "GET",
     pattern: "/api/time-tracking/absence-allowances",
     portals: ["tenant"],
-    query: ["year"],
+    query: {
+      "year": { kind: "int" },
+    },
     response: success(z.array(OwnAllowanceResponseSchema)),
   },
   "GET /api/time-tracking/absences": {
     method: "GET",
     pattern: "/api/time-tracking/absences",
     portals: ["tenant"],
-    query: ["from", "status", "to"],
+    query: {
+      "from": { kind: "date" },
+      "status": { kind: "string" },
+      "to": { kind: "date" },
+    },
     response: success(z.array(StaffAbsenceResponseSchema)),
   },
   "GET /api/time-tracking/absences/mails": {
@@ -312,7 +259,10 @@ export const routes = {
     method: "GET",
     pattern: "/api/time-tracking/assignments",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(z.array(assignmentResponseSchema)),
   },
   "GET /api/time-tracking/breaks/{sessionId}": {
@@ -325,7 +275,10 @@ export const routes = {
     method: "GET",
     pattern: "/api/time-tracking/closing-days",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(z.array(closingDayRangeResponseSchema)),
   },
   "GET /api/time-tracking/config": {
@@ -344,42 +297,59 @@ export const routes = {
     method: "GET",
     pattern: "/api/time-tracking/history",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(HistoryResponseSchema),
   },
   "GET /api/time-tracking/holidays": {
     method: "GET",
     pattern: "/api/time-tracking/holidays",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(z.array(PublicHolidaySchema)),
   },
   "GET /api/time-tracking/month-summary": {
     method: "GET",
     pattern: "/api/time-tracking/month-summary",
     portals: ["tenant"],
-    query: ["month", "year"],
+    query: {
+      "month": { kind: "int" },
+      "year": { kind: "int" },
+    },
     response: success(MonthSummarySchema),
   },
   "GET /api/time-tracking/schedule-targets": {
     method: "GET",
     pattern: "/api/time-tracking/schedule-targets",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(z.array(DailyProjectionSchema)),
   },
   "GET /api/time-tracking/shifts": {
     method: "GET",
     pattern: "/api/time-tracking/shifts",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(z.array(ShiftResponseSchema)),
   },
   "GET /api/time-tracking/vacation/quota": {
     method: "GET",
     pattern: "/api/time-tracking/vacation/quota",
     portals: ["tenant"],
-    query: ["year"],
+    query: {
+      "year": { kind: "int" },
+    },
     response: success(VacationQuotaSummarySchema),
   },
   "GET /api/time-tracking/{id}/edits": {

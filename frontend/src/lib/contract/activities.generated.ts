@@ -221,29 +221,6 @@ export const EnrollmentUpdateResponseSchema: z.ZodType<EnrollmentUpdateResponse,
   students_enrolled: nullable(arr(int64String)),
 });
 
-/** Query of DELETE /api/activities/{id}/supervisors/{supervisorId} */
-export interface DeleteActivitiesIdSupervisorsSupervisorIdQuery {
-  replacement_staff_id?: string;
-}
-
-/** Query of GET /api/activities/ */
-export interface GetActivitiesQuery {
-  category_id?: string;
-  include_system?: boolean;
-}
-
-/** Query of GET /api/activities/categories */
-export interface GetActivitiesCategoriesQuery {
-  include_archived?: boolean;
-  include_system?: boolean;
-  with_usage?: boolean;
-}
-
-/** Query of GET /api/activities/supervisors/available */
-export interface GetActivitiesSupervisorsAvailableQuery {
-  specialization?: string;
-}
-
 export const routes = {
   "DELETE /api/activities/categories/{categoryId}": {
     method: "DELETE",
@@ -267,28 +244,39 @@ export const routes = {
     method: "DELETE",
     pattern: "/api/activities/{id}/supervisors/{supervisorId}",
     portals: ["tenant"],
-    query: ["replacement_staff_id"],
+    query: {
+      "replacement_staff_id": { kind: "id" },
+    },
     response: noData,
   },
   "GET /api/activities/": {
     method: "GET",
     pattern: "/api/activities/",
     portals: ["tenant"],
-    query: ["category_id", "include_system"],
+    query: {
+      "category_id": { kind: "id" },
+      "include_system": { kind: "bool" },
+    },
     response: success(z.array(ActivityResponseSchema)),
   },
   "GET /api/activities/categories": {
     method: "GET",
     pattern: "/api/activities/categories",
     portals: ["tenant"],
-    query: ["include_archived", "include_system", "with_usage"],
+    query: {
+      "include_archived": { kind: "bool" },
+      "include_system": { kind: "bool" },
+      "with_usage": { kind: "bool" },
+    },
     response: success(z.array(ActivityCategoryResponseSchema)),
   },
   "GET /api/activities/supervisors/available": {
     method: "GET",
     pattern: "/api/activities/supervisors/available",
     portals: ["tenant"],
-    query: ["specialization"],
+    query: {
+      "specialization": { kind: "string" },
+    },
     response: success(z.array(ActivitySupervisorResponseSchema)),
   },
   "GET /api/activities/{id}": {

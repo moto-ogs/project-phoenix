@@ -242,7 +242,7 @@ func validateCareCorrection(request carerequests.Request, version string) error 
 	if request.Status != "approved" && request.Status != "rejected" {
 		return careplan.ErrParentRequestNotDecided
 	}
-	if err := readstate.Check(version, careplan.ParentRequestVersion(request.UpdatedAt)); err != nil {
+	if err := readstate.Check(version, readstate.Of(request.UpdatedAt)); err != nil {
 		return err
 	}
 	if request.RequestKind != "pickup_change" && request.RequestKind != carerequests.KindPickupPermission {

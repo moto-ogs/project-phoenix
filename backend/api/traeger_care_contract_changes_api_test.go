@@ -17,6 +17,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -106,7 +107,7 @@ func TestTraegerOfficeDecidesTheParentsChangeOnlyWithTheRightAndForItsOwnTraeger
 	listPath := fmt.Sprintf("/traeger/contract-changes/%d", contract)
 	decidePath := fmt.Sprintf("%s/requests/%d/decide", listPath, review.pending.ID)
 	approve := map[string]any{"approve": true, "effective_from": "2100-03-01",
-		"expected_version": careplan.ParentRequestVersion(review.pending.UpdatedAt)}
+		"expected_version": readstate.Of(review.pending.UpdatedAt)}
 
 	rec := traegerJSON(t, router, f.office.token, http.MethodGet, listPath, nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())

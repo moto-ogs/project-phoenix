@@ -390,26 +390,6 @@ export interface CareNoticeRunRequest {
   notice_date?: string | null;
 }
 
-/** Query of GET /traeger/care-notice-runs/export */
-export interface GetTraegerCareNoticeRunsExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-}
-
-/** Query of GET /traeger/care-notice-runs/{id}/export */
-export interface GetTraegerCareNoticeRunsIdExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-}
-
-/** Query of GET /traeger/care-notice-runs/{id}/letters/export */
-export interface GetTraegerCareNoticeRunsIdLettersExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-}
-
-/** Query of GET /traeger/care-notice-runs/{id}/letters/print */
-export interface GetTraegerCareNoticeRunsIdLettersPrintQuery {
-  only?: "without_email";
-}
-
 export const routes = {
   "GET /traeger/care-notice-runs/": {
     method: "GET",
@@ -421,7 +401,9 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/care-notice-runs/export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "GET /traeger/care-notice-runs/{id}": {
@@ -434,7 +416,9 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/care-notice-runs/{id}/export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "GET /traeger/care-notice-runs/{id}/letters": {
@@ -447,14 +431,18 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/care-notice-runs/{id}/letters/export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "GET /traeger/care-notice-runs/{id}/letters/print": {
     method: "GET",
     pattern: "/traeger/care-notice-runs/{id}/letters/print",
     portals: ["org"],
-    query: ["only"],
+    query: {
+      "only": { kind: "string", values: ["without_email"] },
+    },
     response: fileAnswer,
   },
   "GET /traeger/care-notice-runs/{id}/notices/{contractID}/letter": {

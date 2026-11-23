@@ -340,7 +340,7 @@ func TestGradeTransitionWorkflow_AuthorizationAndTenantIsolation(t *testing.T) {
 		workflow := f.workflow(t)
 		_, err := workflow.Preview(ctx, transitionID)
 		require.ErrorIs(t, err, gradetransition.ErrUnauthorized)
-		_, err = workflow.Apply(ctx, transitionID, "")
+		_, err = workflow.Apply(ctx, transitionID, previewed(ctx, workflow, transitionID))
 		require.ErrorIs(t, err, gradetransition.ErrUnauthorized)
 		_, err = workflow.Revert(ctx, transitionID)
 		require.ErrorIs(t, err, gradetransition.ErrUnauthorized)
@@ -366,7 +366,7 @@ func TestGradeTransitionWorkflow_AuthorizationAndTenantIsolation(t *testing.T) {
 		require.ErrorIs(t, err, gradetransition.ErrTransitionNotFound)
 		_, err = workflow.Preview(ctx, foreignID)
 		require.ErrorIs(t, err, gradetransition.ErrTransitionNotFound)
-		_, err = workflow.Apply(ctx, foreignID, "")
+		_, err = workflow.Apply(ctx, foreignID, previewed(ctx, workflow, foreignID))
 		require.ErrorIs(t, err, gradetransition.ErrTransitionNotFound)
 		_, err = workflow.History(ctx, foreignID)
 		require.ErrorIs(t, err, gradetransition.ErrTransitionNotFound)
@@ -439,7 +439,7 @@ func TestGradeTransitionWorkflow_LockOrderSerializesConcurrentWriters(t *testing
 		<-held
 		result := make(chan error, 1)
 		go func() {
-			_, err := workflow.Apply(ctx, scene.transitionID, "")
+			_, err := workflow.Apply(ctx, scene.transitionID, previewed(ctx, workflow, scene.transitionID))
 			result <- err
 		}()
 		awaitBlockedThenDone(t, result, release)
@@ -547,7 +547,7 @@ func TestGradeTransitionWorkflow_IdempotentRetryAndHistoryRetention(t *testing.T
 	_, err = workflow.Revert(ctx, scene.transitionID)
 	require.ErrorIs(t, err, gradetransition.ErrTransitionNotApplied)
 	assert.ErrorContains(t, err, "transition has already been reverted")
-	_, err = workflow.Apply(ctx, scene.transitionID, "")
+	_, err = workflow.Apply(ctx, scene.transitionID, previewed(ctx, workflow, scene.transitionID))
 	require.ErrorIs(t, err, gradetransition.ErrTransitionNotDraft)
 	assert.ErrorContains(t, err, "transition has been reverted")
 	history, err = workflow.History(ctx, scene.transitionID)

@@ -22,7 +22,7 @@ export const roomsConfig = defineEntityConfig<Room>({
       // Admin view keeps showing system rooms (Schulhof, WC) — they are
       // rendered greyed-out via isSystemRoom instead of hidden.
       const page = await bffJson("tenant", "GET /api/rooms/", {
-        query: { include_system: "true" },
+        query: { include_system: true },
       });
       return {
         data: page.data.map(mapRoomResponse),

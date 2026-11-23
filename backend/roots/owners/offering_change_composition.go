@@ -16,6 +16,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/transactionruntime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // OfferingChangeOwners binds the offering-change review's ports over its
@@ -493,7 +494,7 @@ func (l *ParentRequestLedger) Record(ctx context.Context, entry carePlanCompose.
 		RequestType: entry.RequestType,
 		RequestID:   entry.RequestID,
 		EventType:   entry.EventType,
-		Version:     careplan.ParentRequestVersion(entry.UpdatedAt),
+		Version:     readstate.Of(entry.UpdatedAt),
 	}
 	if entry.Payload != nil {
 		payload, err := json.Marshal(entry.Payload)

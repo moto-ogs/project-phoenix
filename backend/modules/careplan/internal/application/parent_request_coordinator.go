@@ -352,7 +352,7 @@ func bulkCandidateVersion(ref parentrequests.Ref, masters map[int64]*careplan.Ma
 		if !row.BulkEligible {
 			return "", parentrequests.ErrBulkIneligible
 		}
-		return careplan.ParentRequestVersion(row.Request.UpdatedAt), nil
+		return readstate.Of(row.Request.UpdatedAt), nil
 	}
 	row, found := excused[ref.ID]
 	if !found {
@@ -361,5 +361,5 @@ func bulkCandidateVersion(ref parentrequests.Ref, masters map[int64]*careplan.Ma
 	if !row.Eligible {
 		return "", parentrequests.ErrBulkIneligible
 	}
-	return careplan.ParentRequestVersion(row.UpdatedAt), nil
+	return readstate.Of(row.UpdatedAt), nil
 }

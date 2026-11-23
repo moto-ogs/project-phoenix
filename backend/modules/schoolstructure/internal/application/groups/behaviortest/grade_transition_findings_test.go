@@ -92,7 +92,7 @@ func TestGradeTransitionWorkflow_Revert_RestoresOriginalStatus(t *testing.T) {
 
 	id := f.createDraft(t, ctx, "2025-2026", graduate(gradClass))
 
-	_, err = wf.Apply(ctx, id, "")
+	_, err = wf.Apply(ctx, id, previewed(ctx, wf, id))
 	require.NoError(t, err)
 
 	// Graduated -> alumnus (soft-deleted).
@@ -138,11 +138,11 @@ func TestGradeTransitionWorkflow_Revert_EnforcesReverseOrder(t *testing.T) {
 
 	// Apply the OLDER transition first, then a NEWER one on a different class.
 	older := f.createDraft(t, ctx, "2024-2025", promote(classA1, classA2))
-	_, err := wf.Apply(ctx, older, "")
+	_, err := wf.Apply(ctx, older, previewed(ctx, wf, older))
 	require.NoError(t, err)
 
 	newer := f.createDraft(t, ctx, "2025-2026", promote(classB1, classB2))
-	_, err = wf.Apply(ctx, newer, "")
+	_, err = wf.Apply(ctx, newer, previewed(ctx, wf, newer))
 	require.NoError(t, err)
 
 	// Reverting the older one while the newer is still applied is refused.
@@ -180,7 +180,7 @@ func TestGradeTransitionWorkflow_Revert_PreservesLaterClassEdit(t *testing.T) {
 
 	id := f.createDraft(t, ctx, "2025-2026", promote(fromClass, toClass))
 
-	_, err := wf.Apply(ctx, id, "")
+	_, err := wf.Apply(ctx, id, previewed(ctx, wf, id))
 	require.NoError(t, err)
 
 	// Admin manually moves the child to another class after the transition.
@@ -238,7 +238,7 @@ func TestGradeTransitionWorkflow_Apply_RejectsCheckedInGraduate(t *testing.T) {
 
 	id := f.createDraft(t, ctx, "2025-2026", graduate(gradClass))
 
-	_, err := wf.Apply(ctx, id, "")
+	_, err := wf.Apply(ctx, id, previewed(ctx, wf, id))
 	require.ErrorIs(t, err, gradetransition.ErrGraduatesCheckedIn)
 	assert.Contains(t, err.Error(), "checked in")
 	assert.Contains(t, err.Error(), "1 student(s) must be checked out first")

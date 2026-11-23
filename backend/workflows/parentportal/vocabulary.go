@@ -157,7 +157,6 @@ var (
 	ErrAnnouncementAckNotRequired       = messaging.ErrAnnouncementAckNotRequired
 	ErrAnnouncementNotAPoll             = messaging.ErrAnnouncementNotAPoll
 	ErrAnnouncementNotFound             = messaging.ErrAnnouncementNotFound
-	ErrAnnouncementStale                = messaging.ErrAnnouncementStale
 	ErrCannotRemoveOwnAccess            = care.ErrCannotRemoveOwnAccess
 	ErrCannotRemovePayerGuardian        = care.ErrCannotRemovePayerGuardian
 	ErrCannotRemovePrimaryGuardian      = care.ErrCannotRemovePrimaryGuardian

@@ -114,11 +114,6 @@ export interface UpdateAnnouncementRequest {
   target_tenant_ids?: string[] | null;
 }
 
-/** Query of GET /operator/announcements/ */
-export interface GetOperatorAnnouncementsQuery {
-  include_inactive?: boolean;
-}
-
 export const routes = {
   "DELETE /operator/announcements/{id}": {
     method: "DELETE",
@@ -130,7 +125,9 @@ export const routes = {
     method: "GET",
     pattern: "/operator/announcements/",
     portals: ["platform"],
-    query: ["include_inactive"],
+    query: {
+      "include_inactive": { kind: "bool" },
+    },
     response: success(z.array(OperatorAnnouncementResponseSchema)),
   },
   "GET /operator/announcements/{id}": {

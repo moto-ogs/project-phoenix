@@ -101,17 +101,14 @@ export interface NoticeEndRequest {
   ends_on?: string | null;
 }
 
-/** Query of GET /traeger/contract-notices/{id} */
-export interface GetTraegerContractNoticesIdQuery {
-  received_on?: string;
-}
-
 export const routes = {
   "GET /traeger/contract-notices/{id}": {
     method: "GET",
     pattern: "/traeger/contract-notices/{id}",
     portals: ["org"],
-    query: ["received_on"],
+    query: {
+      "received_on": { kind: "date" },
+    },
     response: success(NoticeOptionsSchema),
   },
   "POST /traeger/contract-notices/{id}": {

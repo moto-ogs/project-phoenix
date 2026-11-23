@@ -2668,87 +2668,14 @@ export interface UpdateParentProfileRequest {
   portal_locale?: string;
 }
 
-/** Query of DELETE /parent/me/children/{studentId}/care-exception */
-export interface DeleteParentMeChildrenStudentIdCareExceptionQuery {
-  date?: string;
-}
-
-/** Query of DELETE /parent/me/push/subscriptions */
-export interface DeleteParentMePushSubscriptionsQuery {
-  endpoint?: string;
-}
-
-/** Query of GET /parent/me/calendar */
-export interface GetParentMeCalendarQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /parent/me/calendar/appointments/{appointmentId}/overview */
-export interface GetParentMeCalendarAppointmentsAppointmentIdOverviewQuery {
-  occurrence_date?: string;
-}
-
-/** Query of GET /parent/me/children/{studentId}/care-exception */
-export interface GetParentMeChildrenStudentIdCareExceptionQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /parent/me/children/{studentId}/care-offerings/catalog */
-export interface GetParentMeChildrenStudentIdCareOfferingsCatalogQuery {
-  effective_from?: string;
-}
-
-/** Query of GET /parent/me/children/{studentId}/meal-participation */
-export interface GetParentMeChildrenStudentIdMealParticipationQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /parent/me/children/{studentId}/meal-plan */
-export interface GetParentMeChildrenStudentIdMealPlanQuery {
-  week_start?: string;
-}
-
-/** Query of GET /parent/me/children/{studentId}/sick-note */
-export interface GetParentMeChildrenStudentIdSickNoteQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /parent/me/messages/children/{studentId} */
-export interface GetParentMeMessagesChildrenStudentIdQuery {
-  audience?: string;
-}
-
-/** Query of GET /parent/me/messages/children/{studentId}/attachments/{attachmentId}/download */
-export interface GetParentMeMessagesChildrenStudentIdAttachmentsAttachmentIdDownloadQuery {
-  inline?: string;
-}
-
-/** Query of GET /parent/me/news/{announcementId}/declaration/proof */
-export interface GetParentMeNewsAnnouncementIdDeclarationProofQuery {
-  student_id?: string;
-}
-
-/** Query of GET /parent/me/news/{announcementId}/declaration/proof/pdf */
-export interface GetParentMeNewsAnnouncementIdDeclarationProofPdfQuery {
-  student_id?: string;
-}
-
-/** Query of GET /parent/me/notifications/feed/ */
-export interface GetParentMeNotificationsFeedQuery {
-  cursor?: string;
-  limit?: number;
-}
-
 export const routes = {
   "DELETE /parent/me/children/{studentId}/care-exception": {
     method: "DELETE",
     pattern: "/parent/me/children/{studentId}/care-exception",
     portals: ["parent"],
-    query: ["date"],
+    query: {
+      "date": { kind: "date" },
+    },
     response: noData,
   },
   "DELETE /parent/me/children/{studentId}/consents/photo": {
@@ -2797,14 +2724,19 @@ export const routes = {
     method: "DELETE",
     pattern: "/parent/me/push/subscriptions",
     portals: ["parent"],
-    query: ["endpoint"],
+    query: {
+      "endpoint": { kind: "string" },
+    },
     response: noData,
   },
   "GET /parent/me/calendar": {
     method: "GET",
     pattern: "/parent/me/calendar",
     portals: ["parent"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(ParentCalendarResponseSchema),
   },
   "GET /parent/me/calendar/appointments/{appointmentId}/ics": {
@@ -2817,7 +2749,9 @@ export const routes = {
     method: "GET",
     pattern: "/parent/me/calendar/appointments/{appointmentId}/overview",
     portals: ["parent"],
-    query: ["occurrence_date"],
+    query: {
+      "occurrence_date": { kind: "date" },
+    },
     response: success(AppointmentOverviewSchema),
   },
   "GET /parent/me/calendar/feed": {
@@ -2836,7 +2770,10 @@ export const routes = {
     method: "GET",
     pattern: "/parent/me/children/{studentId}/care-exception",
     portals: ["parent"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(z.array(CareExceptionResponseSchema)),
   },
   "GET /parent/me/children/{studentId}/care-offerings": {
@@ -2849,7 +2786,9 @@ export const routes = {
     method: "GET",
     pattern: "/parent/me/children/{studentId}/care-offerings/catalog",
     portals: ["parent"],
-    query: ["effective_from"],
+    query: {
+      "effective_from": { kind: "date" },
+    },
     response: success(OfferingCatalogResponseSchema),
   },
   "GET /parent/me/children/{studentId}/care-schedule": {
@@ -2904,14 +2843,19 @@ export const routes = {
     method: "GET",
     pattern: "/parent/me/children/{studentId}/meal-participation",
     portals: ["parent"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(MealParticipationResponseSchema),
   },
   "GET /parent/me/children/{studentId}/meal-plan": {
     method: "GET",
     pattern: "/parent/me/children/{studentId}/meal-plan",
     portals: ["parent"],
-    query: ["week_start"],
+    query: {
+      "week_start": { kind: "date" },
+    },
     response: success(z.array(MealPlanEntryResponseSchema)),
   },
   "GET /parent/me/children/{studentId}/parent-conferences": {
@@ -2972,7 +2916,10 @@ export const routes = {
     method: "GET",
     pattern: "/parent/me/children/{studentId}/sick-note",
     portals: ["parent"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(z.array(StatusDayResponseSchema)),
   },
   "GET /parent/me/children/{studentId}/today": {
@@ -3069,14 +3016,18 @@ export const routes = {
     method: "GET",
     pattern: "/parent/me/messages/children/{studentId}",
     portals: ["parent"],
-    query: ["audience"],
+    query: {
+      "audience": { kind: "string" },
+    },
     response: success(ThreadViewResponseSchema),
   },
   "GET /parent/me/messages/children/{studentId}/attachments/{attachmentId}/download": {
     method: "GET",
     pattern: "/parent/me/messages/children/{studentId}/attachments/{attachmentId}/download",
     portals: ["parent"],
-    query: ["inline"],
+    query: {
+      "inline": { kind: "string" },
+    },
     response: fileAnswer,
   },
   "GET /parent/me/messages/children/{studentId}/threads": {
@@ -3131,14 +3082,18 @@ export const routes = {
     method: "GET",
     pattern: "/parent/me/news/{announcementId}/declaration/proof",
     portals: ["parent"],
-    query: ["student_id"],
+    query: {
+      "student_id": { kind: "id" },
+    },
     response: success(declarationProofResponseSchema),
   },
   "GET /parent/me/news/{announcementId}/declaration/proof/pdf": {
     method: "GET",
     pattern: "/parent/me/news/{announcementId}/declaration/proof/pdf",
     portals: ["parent"],
-    query: ["student_id"],
+    query: {
+      "student_id": { kind: "id" },
+    },
     response: fileAnswer,
   },
   "GET /parent/me/news/{announcementId}/survey": {
@@ -3157,7 +3112,10 @@ export const routes = {
     method: "GET",
     pattern: "/parent/me/notifications/feed/",
     portals: ["parent"],
-    query: ["cursor", "limit"],
+    query: {
+      "cursor": { kind: "string" },
+      "limit": { kind: "int" },
+    },
     response: success(notificationFeedPageResponseSchema),
   },
   "GET /parent/me/notifications/feed/unread-count": {

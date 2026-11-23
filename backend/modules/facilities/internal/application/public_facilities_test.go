@@ -3,14 +3,12 @@ package application
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 
 	"github.com/moto-ogs/project-phoenix/modules/facilities"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -153,8 +151,6 @@ func TestErrorCodeIsStable(t *testing.T) {
 	assert.Equal(t, "not_found", facilities.ErrorCode(facilities.ErrRoomNotFound))
 	assert.Equal(t, "invalid", facilities.ErrorCode(facilities.ErrInvalidRoom))
 	assert.Equal(t, "internal_error", facilities.ErrorCode(errors.New("boom")))
-	assert.Equal(t, readstate.ChangedCode, facilities.ErrorCode(fmt.Errorf("update room: %w", readstate.ErrChanged)),
-		"a business rejection outside the table is labelled with its own code")
 }
 
 func TestNewModulePanicsWithoutEngine(t *testing.T) {

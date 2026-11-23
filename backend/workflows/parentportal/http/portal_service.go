@@ -374,7 +374,7 @@ type PortalService interface {
 	// MarkAnnouncementRead records that the guardian opened an announcement.
 	// Refuses one that is not live or outside the guardian's audience, and
 	// rejects a stale request whose expectedPublishedAt no longer matches the
-	// live announcement (ErrAnnouncementStale) so a corrected announcement is
+	// live announcement (readstate.ErrChanged, 409 general.changed_since_read) so a corrected announcement is
 	// not marked read against the retracted wording.
 	MarkAnnouncementRead(ctx context.Context, accountID, announcementID int64, expectedPublishedAt time.Time) error
 

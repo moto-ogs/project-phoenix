@@ -95,7 +95,7 @@ func TestNativeCorrectionReauthorizesAndRollsBackExactExceptionDeletion(t *testi
 	require.ErrorIs(t, correct("stale"), readstate.ErrChanged)
 	require.ErrorIs(t, correct(""), readstate.ErrChanged, "a correction without a read is refused")
 	require.Empty(t, b.calls)
-	version := careplan.ParentRequestVersion(request.UpdatedAt)
+	version := readstate.Of(request.UpdatedAt)
 	require.ErrorIs(t, correct(version), carerequests.ErrCareRequestForbidden)
 	require.Equal(t, []string{"lock_student", "authorize"}, b.calls)
 	b.allowed = true

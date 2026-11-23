@@ -835,7 +835,7 @@ class TimetableService {
           activity_group_id: activityGroupId,
           from,
           to,
-          include_deletions: includeDeletions ? "true" : undefined,
+          include_deletions: includeDeletions || undefined,
         },
       },
     );

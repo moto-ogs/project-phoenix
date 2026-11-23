@@ -56,11 +56,6 @@ export const ReplaceRolePermissionsResponseSchema: z.ZodType<ReplaceRolePermissi
   version: str,
 });
 
-/** Query of GET /auth/roles/ */
-export interface GetAuthRolesQuery {
-  name?: string;
-}
-
 export const routes = {
   "DELETE /auth/roles/{id}/": {
     method: "DELETE",
@@ -72,7 +67,9 @@ export const routes = {
     method: "GET",
     pattern: "/auth/roles/",
     portals: ["tenant"],
-    query: ["name"],
+    query: {
+      "name": { kind: "string" },
+    },
     response: success(z.array(RoleResponseSchema)),
   },
   "GET /auth/roles/{id}/": {

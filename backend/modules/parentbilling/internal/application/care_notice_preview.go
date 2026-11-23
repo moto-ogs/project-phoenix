@@ -2,16 +2,15 @@ package application
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"hash/fnv"
 	"maps"
 	"slices"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // noticePreview is the preview of a calculated notice run: the drafts, the
@@ -409,7 +408,7 @@ func noticeFingerprint(run parentbilling.CareNoticeRun, rule string, preview not
 			Months    []fingerprintInvoice     `json:"months"`
 		}{notice, notice.StudentID, fingerprintInvoices(notice.Months)}
 	}
-	state, err := json.Marshal(struct {
+	return readstate.Fingerprint(struct {
 		Run         int64                         `json:"run"`
 		Schools     []int64                       `json:"schools"`
 		From        calendar.Date                 `json:"from"`
@@ -428,12 +427,6 @@ func noticeFingerprint(run parentbilling.CareNoticeRun, rule string, preview not
 		BilledChildren []parentbilling.CareBilledChild `json:"billed_children,omitempty"`
 	}{run.ID.Int64(), ident.Int64s(run.SchoolIDs), run.PeriodFrom, preview.issuedOn, rule, notices, preview.unchanged, preview.billed,
 		preview.unpriced, preview.duplicates, legalRemedy, preview.joined, preview.billedChildren})
-	if err != nil {
-		return ""
-	}
-	hash := fnv.New128a()
-	_, _ = hash.Write(state)
-	return hex.EncodeToString(hash.Sum(nil))
 }
 
 // mergeBilledChildren adds the held children of a month to those of the

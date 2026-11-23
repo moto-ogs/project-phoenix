@@ -68,16 +68,6 @@
       "target_role": "public"
     },
     {
-      "id": "grade-transition.public.crypto",
-      "description": "The transition preview fingerprint is a SHA-256 digest compared in constant time (#2711).",
-      "scopes": [
-        "production"
-      ],
-      "source_owner": "grade-transition",
-      "source_role": "public",
-      "target_class": "crypto"
-    },
-    {
       "id": "grade-transition.compose.database-binding",
       "description": "Bind owner adapters to the shared database and ambient UnitOfWork; no workflow SQL (#2711).",
       "scopes": [

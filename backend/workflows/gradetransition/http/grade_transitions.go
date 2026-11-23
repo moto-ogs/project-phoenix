@@ -116,12 +116,13 @@ func (req *TransitionRequest) Bind(_ *http.Request) error {
 	return nil
 }
 
-// TransitionApplyRequest carries the fingerprint of the preview the admin confirmed. It is
-// optional (a caller without a preview omits it), but when present the apply is
-// refused with 409 preview_stale unless the current cohort still matches — the
-// confirmation must bind to the children that were actually shown (#405 review).
+// TransitionApplyRequest carries the fingerprint of the preview the admin
+// confirmed. The apply is refused with 409 grade_transition.preview_stale
+// unless the current cohort still matches it, and without it too: the
+// confirmation must bind to the children that were actually shown (#405
+// review, ADR 0311).
 type TransitionApplyRequest struct {
-	ExpectedFingerprint string `json:"expected_fingerprint,omitempty"`
+	ExpectedFingerprint string `json:"expected_fingerprint"`
 }
 
 // TransitionMappingRequest represents a class mapping in a request
@@ -562,12 +563,9 @@ func (rs *GradeTransitionResource) apply(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// The body is optional: an absent or EMPTY one (io.EOF) means "no preview to
-	// check". Anything else must be rejected. A truncated or malformed payload
-	// used to be swallowed, leaving ExpectedFingerprint empty — which the
-	// workflow reads as "caller opted out of the stale-preview check", so a
-	// destructive transition ran unguarded on a cohort that may have changed
-	// since the admin confirmed it (#405 review).
+	// An absent or EMPTY body (io.EOF) carries no fingerprint, which the
+	// workflow refuses as a stale preview. A truncated or malformed payload is
+	// rejected as such instead of being read as an empty one (#405 review).
 	var req TransitionApplyRequest
 	if r.Body != nil {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil && !errors.Is(err, io.EOF) {

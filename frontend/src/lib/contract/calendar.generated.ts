@@ -186,23 +186,6 @@ export interface updateAppointmentRequest {
   send_email?: boolean | null;
 }
 
-/** Query of GET /api/calendar/appointments/{appointmentId}/overview */
-export interface GetCalendarAppointmentsAppointmentIdOverviewQuery {
-  occurrence_date?: string;
-}
-
-/** Query of GET /api/calendar/my */
-export interface GetCalendarMyQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/calendar/recipient-options */
-export interface GetCalendarRecipientOptionsQuery {
-  limit?: number;
-  q?: string;
-}
-
 export const routes = {
   "DELETE /api/calendar/appointments/{appointmentId}": {
     method: "DELETE",
@@ -232,7 +215,9 @@ export const routes = {
     method: "GET",
     pattern: "/api/calendar/appointments/{appointmentId}/overview",
     portals: ["tenant"],
-    query: ["occurrence_date"],
+    query: {
+      "occurrence_date": { kind: "date" },
+    },
     response: success(AppointmentOverviewSchema),
   },
   "GET /api/calendar/feed": {
@@ -245,14 +230,20 @@ export const routes = {
     method: "GET",
     pattern: "/api/calendar/my",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(StaffCalendarResponseSchema),
   },
   "GET /api/calendar/recipient-options": {
     method: "GET",
     pattern: "/api/calendar/recipient-options",
     portals: ["tenant"],
-    query: ["limit", "q"],
+    query: {
+      "limit": { kind: "int" },
+      "q": { kind: "string" },
+    },
     response: success(RecipientOptionsSchema),
   },
   "POST /api/calendar/appointments": {

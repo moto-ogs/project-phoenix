@@ -8,6 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/masterdatarequests"
 	"github.com/moto-ogs/project-phoenix/modules/requestreview"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 func NewMasterDataQueue(query careplan.MasterDataReviewQuery) (requestreview.Queue, error) {
@@ -59,7 +60,7 @@ func masterDataPendingRow(item *masterdatarequests.ReviewItem) requestreview.Row
 		StudentName:          item.FirstName + " " + item.LastName,
 		SubmittedBy:          item.Request.SubmittedBy,
 		Status:               item.Request.Status,
-		Version:              excusedrequests.ParentRequestVersion(item.Request.UpdatedAt),
+		Version:              readstate.Of(item.Request.UpdatedAt),
 		BulkEligible:         item.BulkEligible,
 		BulkIneligibleReason: item.BulkIneligibleReason,
 		BulkIneligibleText:   item.BulkIneligibleText,
@@ -73,7 +74,7 @@ func masterDataHistoryRow(item *masterdatarequests.HistoryItem) requestreview.Ro
 	return requestreview.Row{
 		Type:        requestreview.TypeMasterData,
 		SortTime:    item.Request.UpdatedAt,
-		Version:     excusedrequests.ParentRequestVersion(item.Request.UpdatedAt),
+		Version:     readstate.Of(item.Request.UpdatedAt),
 		ID:          item.Request.ID,
 		StudentID:   item.Request.StudentID,
 		StudentName: item.FirstName + " " + item.LastName,
