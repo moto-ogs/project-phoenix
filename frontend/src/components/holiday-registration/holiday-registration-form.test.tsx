@@ -1775,6 +1775,37 @@ describe("HolidayRegistrationForm questions of the Träger (#5198)", () => {
       screen.getByLabelText(/Ich bin einverstanden, dass der Träger/),
     ).not.toBeChecked();
   });
+  // ADR 0311 rule 6: a failed read of the changed form says so instead of
+  // claiming the parent sees the new form.
+  it("names a failed read of the changed form", async () => {
+    mockSubmit.mockRejectedValue(
+      new ApiError("form changed", 409, {
+        code: "enrollment.holiday_registration_form_changed",
+      }),
+    );
+    const reload = vi
+      .fn()
+      .mockRejectedValue(
+        new ApiError("down", 503, { code: "general.unavailable" }),
+      );
+    renderForm(null, offer, reload);
+    fillRegistration();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Solve captcha" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Verbindlich anmelden" }),
+    );
+
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Der Träger hat das Formular gerade geändert/),
+    ).not.toBeInTheDocument();
+  });
+
   it("requires PDF acknowledgements and shows the accepted and declined blocks in the summary", async () => {
     const shown = {
       ...offer,
