@@ -175,6 +175,16 @@ einer Schule, welche Buchungen eine Anmeldung tragen muss:
   gebunden werden: Die Phase ist beendet, oder ihre Buchungen bestehen den
   Beweis nicht mehr. Der Workflow zeigt eine solche Zeile mit eigenem Status
   (Abschnitt 4, „hängt“).
+- **Ein Vertrag hat eine stille Anmeldung.** Solange die für ihn angelegte
+  Anmeldung ohne Vertrag ist, ist seine Zeile nur bereit, um genau diese
+  Anmeldung zu bestätigen und zu binden. Sie meldet das Kind nie neu an und
+  bindet keine andere Anmeldung. Der Fall: Die Schule hat in Phase A
+  angemeldet, die Bindung blieb aus, und das Büro hat den ungebundenen
+  Vertrag auf ein Modul einer überlappenden Phase B berichtigt. In Phase B
+  hat das Kind keine Anmeldung; der Plan hätte es dort neu angemeldet, und
+  die genehmigte Anmeldung aus Phase A wäre daneben geblieben. Die Zeile
+  bleibt stattdessen zurück (`has_application`), nennt die Anmeldung und
+  hängt, bis das Büro den Vertrag oder die Schule die Anmeldung berichtigt.
 - **Ein deaktiviertes Modul hält eine neue Anmeldung zurück**
   (`offering_inactive`), mit demselben Grund wie in der Anmeldung
   (Abschnitt 2). An eine bestehende Anmeldung, die das Modul schon bucht,
@@ -263,6 +273,17 @@ erreicht.
   die Schule zwischen Plan und Anmeldung etwas davon geändert, schreibt die
   Anmeldung nichts: Die Buchungen wurden gegen eine Schule bewiesen, die es so nicht
   mehr gibt. Der nächste Lauf plant neu.
+- **Angelegt wird die Kinderakte, die das Büro bestätigt hat.** Die stille
+  Anmeldung speichert Vornamen, Nachnamen und Geburtsdatum der Kinderakte
+  in ihrem Anmeldekind. Der Lauf prüft den Fingerabdruck, bevor die
+  Anmeldung die Kinderakte unter ihren Sperren liest; ändert das Personal
+  dazwischen Namen oder Geburtsdatum, stünde die neue Angabe unter der
+  alten Bestätigung. Jede Zeile trägt deshalb die Kinderakte, wie die
+  Vorschau sie zeigte (`ContractEnrollment.Confirmed`), und die Anmeldung
+  vergleicht sie mit der gelesenen. Weicht sie ab, antwortet sie `changed`
+  und schreibt nichts, auch nicht für eine Anmeldung, die sie nur
+  bestätigen würde. Eine Kinderakte, die die Vorschau nicht zeigen konnte,
+  geht als leere Angabe mit, nie als keine.
 - **Eine bewiesene Anmeldung wird bestätigt, nicht angelegt.** Nennt die
   Zeile das Kind einer Anmeldung (`RequestChildID`), prüft die Anmeldung
   unter denselben Sperren: Dieses genehmigte Kind ist das einzige der
@@ -494,6 +515,16 @@ Für den Zustand „beide Ursprünge gesetzt“ gilt:
   Anpassung unter der Sperre das Anmeldekind des Vertrags mit dem, dessen
   Buchungen sie gelesen hat (`lockedTimeline`), und schreibt bei einer
   Abweichung nichts. Bindung und Lösen nehmen dieselbe Zeilensperre.
+  Das Anmeldekind allein zeigt nicht, wenn das Büro dazwischen gelöst und
+  wieder an dasselbe Kind gebunden hat: Die Anpassung hat eine neue
+  Donnerstag-Buchung gelesen, das Büro löst, die Schule nimmt den Donnerstag
+  zurück, das Büro bindet nach dem Beweis neu, und der alte Plan schriebe
+  den Donnerstag doch in eine Version. Die Anpassung vergleicht deshalb
+  unter der Sperre auch den Stand der Vertragszeile (`updated_at`) mit dem,
+  den `AmendableContracts` gelesen hat. Der Trigger der Tabelle setzt ihn
+  bei jeder Änderung der Zeile, und Bindung wie Lösen ändern die Zeile. Bei
+  einer Abweichung schreibt die Anpassung nichts; der nächste Lauf liest
+  neu. Das gilt auch nach jeder anderen Änderung der Zeile dazwischen.
 - Die Verknüpfung mit der Kinderakte lässt sich nicht mehr lösen
   (`care_contract.child_link_bound`, 409): Anmeldung und Buchungen gehören zu
   dieser Kinderakte. Eine falsche Verknüpfung aus Teil 1 lässt sich nach
@@ -509,6 +540,13 @@ Für den Zustand „beide Ursprünge gesetzt“ gilt:
   (leer zu einem Wert) oder gelöst (ein Wert zu leer). Das Anmeldekind
   eines Vertrags aus einer Anmeldung ändert sich nie, und ein gebundener
   Vertrag wechselt nicht in einem Schritt zu einem anderen Anmeldekind.
+  Derselbe Trigger lehnt ein Einfügen mit beiden Ursprüngen ab: Seit
+  `chk_contracts_origin` mindestens einen Ursprung verlangt, hätte die
+  Request-Rolle sonst einen Vertrag anlegen können, der von Anfang an
+  gebunden ist. Der Trigger schützt die Form des Übergangs, nicht welches
+  Anmeldekind genannt wird: Das prüft das Kommando `BindApplications` unter
+  seinen Sperren. Eine Prüfung gegen das Schema der Anmeldung gibt es mit
+  Absicht nicht (Schule und Träger, ADR 0105).
 - **Der Vertrag schützt weiter vor einem zweiten Vertrag.** Er zählt für
   die Anmeldung, an die er gebunden ist, über seinen Schlüssel. Für jede
   andere Anmeldung des Kindes, deren Betreuung in seine Laufzeit fällt,
@@ -623,6 +661,14 @@ ist ungebunden. Der nächste Lauf bindet; nichts entsteht doppelt.
   Kennungen der Anmeldung und des Vertrags, dem dieser folgt. Dazu Zähler je
   Status und der Fingerabdruck über den Plan (mit dem, worauf jede bereite
   Zeile bewiesen wurde) und die Zeilen samt Kinderakten.
+- **Eine Zeile, die bindet, zeigt, woran gebunden wird.** Für eine bereite
+  Zeile mit der Anmeldung, die der Plan bewiesen hat (`bind`), sind die
+  Module der Zeile die gespeicherten Buchungen dieser Anmeldung ab dem Tag
+  des Plans (`ApplicationBookings`), nicht die aus dem Vertrag
+  abgeleiteten: Geschrieben wird für sie nichts, und der Vertrag folgt nach
+  der Bindung genau diesen Buchungen. Eine geplante Änderung steht dann in
+  diesen Buchungen und nicht daneben. Alle anderen Zeilen zeigen die
+  abgeleiteten Buchungen.
 - **Status einer Zeile**: `ready` (der Lauf handelt: `action` `enroll`
   meldet an und bindet, `bind` bindet an die Anmeldung, die es gibt), `done`
   (gebunden; nach einem Lauf sagt `action`, was er getan hat), `unlinked`
@@ -641,6 +687,13 @@ ist ungebunden. Der nächste Lauf bindet; nichts entsteht doppelt.
   Antworten der Anmeldung ordnet er den Zeilen über Vertrag und Kinderakte
   zu, nie über die Position. Ein zweiter Lauf braucht eine neue Vorschau;
   sie zeigt die Zeilen des ersten als `done`.
+- **Eine Vorschau gilt für ihren Tag.** Der Plan rechnet mit dem heutigen
+  Tag, und eine Zeile, die an eine bestehende Anmeldung bindet, trägt ihn
+  (`ProvedOn`) samt den Buchungen ab diesem Tag. Bestätigt das Büro eine
+  solche Vorschau nach Mitternacht, ist der Fingerabdruck ein anderer, und
+  der Lauf antwortet `care_contract.enrollment_preview_changed`. Das ist
+  kein Fehler des Büros: Die Seite lädt die Vorschau dann still neu und
+  zeigt sie zur Bestätigung, ohne Fehlermeldung.
 - **Angemeldet wird nur, was die Vorschau bereit nannte.** An
   `EnrollContractChildren` gehen nur die Zeilen, die in der bestätigten
   Vorschau `ready` waren, zugeordnet über Vertrag und Kinderakte. Eine
