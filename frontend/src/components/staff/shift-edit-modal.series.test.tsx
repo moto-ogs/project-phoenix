@@ -1,5 +1,4 @@
 import {
-  act,
   fireEvent,
   render as renderUi,
   screen,
@@ -8,7 +7,6 @@ import {
 import type { ReactElement, ReactNode } from "react";
 import { SWRConfig } from "~/lib/swr/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { deferred } from "~/test/helpers/form-modal-pending";
 import { ApiError } from "~/lib/api-error";
 import { setTestClock } from "~/test/clock";
 import { catalogText } from "~/test/error-catalog-text";
@@ -170,6 +168,7 @@ const seriesRule = {
   validFrom: "2026-09-01",
   validUntil: null,
   includeSchoolBreaks: false,
+  version: "series-v1",
 };
 
 beforeEach(() => {
@@ -414,7 +413,12 @@ describe("ShiftEditModal series scopes", () => {
       ),
     ).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /Ab jetzt dauerhaft/ }));
+    // The split carries the version of the series rule, so the choice waits
+    // for it (ADR 0311).
+    const following = () =>
+      screen.getByRole("button", { name: /Ab jetzt dauerhaft/ });
+    await waitFor(() => expect(following()).toBeEnabled());
+    fireEvent.click(following());
 
     await waitFor(() => {
       expect(splitSeries).toHaveBeenCalledWith("5", {
@@ -424,6 +428,7 @@ describe("ShiftEditModal series scopes", () => {
         endTime: "12:00",
         breakMinutes: 0,
         shiftTypeId: null,
+        expectedVersion: "series-v1",
       });
     });
     expect(updateShift).not.toHaveBeenCalled();
@@ -545,6 +550,7 @@ describe("ShiftEditModal series rule editing", () => {
         weekPattern: 0,
         validUntil: null,
         includeSchoolBreaks: false,
+        expectedVersion: "series-v1",
       });
     });
     expect(updateShift).not.toHaveBeenCalled();
@@ -774,6 +780,7 @@ describe("ShiftEditModal series rule editing at the end of a segment", () => {
         // Picker is inclusive, the API's valid_until exclusive.
         validUntil: "2027-01-01",
         includeSchoolBreaks: false,
+        expectedVersion: "series-v1",
       });
     });
   });
@@ -939,7 +946,7 @@ describe("ShiftEditModal error display", () => {
   });
 });
 
-it("waits for a fresh series rule on reopening and saves its shortened end", async () => {
+it("shows the cached series rule on reopening and saves with the version it shows", async () => {
   setTestClock("2026-09-01T10:00:00Z");
   getSeries.mockResolvedValue({ ...seriesRule, validUntil: "2027-01-01" });
   splitSeries.mockResolvedValue({
@@ -960,27 +967,91 @@ it("waits for a fresh series rule on reopening and saves its shortened end", asy
   const view = render(<ShiftEditModal {...props} isOpen />);
   await openSeriesEditor();
   view.rerender(<ShiftEditModal {...props} isOpen={false} />);
-  const fresh = deferred<typeof seriesRule>();
-  getSeries.mockReturnValue(fresh.promise);
   view.rerender(<ShiftEditModal {...props} isOpen />);
+  // The cached rule is there at once (ADR 0311): the split sends its
+  // version, and the server refuses a series changed since.
   expect(
     screen.getByRole("button", { name: "Serie bearbeiten" }),
-  ).toBeDisabled();
-  await act(async () => fresh.reject(new ApiError("offline", 503)));
-  expect(
-    await screen.findByText(catalogText("general.unavailable", "die Serie")),
-  ).toBeVisible();
-  expect(
-    screen.getByRole("button", { name: "Serie bearbeiten" }),
-  ).toBeDisabled();
-  getSeries.mockResolvedValue({ ...seriesRule, validUntil: "2026-09-15" });
-  fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+  ).toBeEnabled();
   await openSeriesEditor();
   fireEvent.click(screen.getByRole("button", { name: "Serie speichern" }));
   await waitFor(() =>
     expect(splitSeries).toHaveBeenCalledWith(
       "5",
-      expect.objectContaining({ validUntil: "2026-09-15" }),
+      expect.objectContaining({
+        validUntil: "2027-01-01",
+        expectedVersion: "series-v1",
+      }),
+    ),
+  );
+});
+
+it("shows the stored series again without a retry when a colleague changed it", async () => {
+  splitSeries.mockRejectedValueOnce(
+    new ApiError("changed since it was read", 409, {
+      code: "general.changed_since_read",
+    }),
+  );
+  const onSaved = vi.fn();
+  const onClose = vi.fn();
+  render(
+    <ShiftEditModal
+      isOpen
+      mode="edit"
+      staffId="7"
+      staffName="Ada Lovelace"
+      date="2026-09-07"
+      shift={seriesShift}
+      shiftTypes={[]}
+      onClose={onClose}
+      onSaved={onSaved}
+    />,
+  );
+  await openSeriesEditor();
+  const reads = getSeries.mock.calls.length;
+  getSeries.mockResolvedValue({
+    ...seriesRule,
+    validUntil: "2026-10-01",
+    version: "series-v2",
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Serie speichern" }));
+
+  expect(
+    await screen.findByText(
+      catalogText("general.changed_since_read", "die Serie"),
+    ),
+  ).toBeVisible();
+  // Back on the day with the stored rule; the plan reloads, nothing closes.
+  await waitFor(() =>
+    expect(getSeries.mock.calls.length).toBeGreaterThan(reads),
+  );
+  expect(
+    screen.getByRole("button", { name: "Serie bearbeiten" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "Wiederholen" }),
+  ).not.toBeInTheDocument();
+  expect(onSaved).toHaveBeenCalled();
+  expect(onClose).not.toHaveBeenCalled();
+
+  // The editor opens from the stored rule and saves against its version.
+  splitSeries.mockResolvedValue({
+    seriesId: "6",
+    created: 1,
+    skippedDates: [],
+  });
+  await waitFor(() =>
+    expect(screen.getByText(/bis 30\.09\.2026/)).toBeInTheDocument(),
+  );
+  await openSeriesEditor();
+  fireEvent.click(screen.getByRole("button", { name: "Serie speichern" }));
+  await waitFor(() =>
+    expect(splitSeries).toHaveBeenLastCalledWith(
+      "5",
+      expect.objectContaining({
+        validUntil: "2026-10-01",
+        expectedVersion: "series-v2",
+      }),
     ),
   );
 });

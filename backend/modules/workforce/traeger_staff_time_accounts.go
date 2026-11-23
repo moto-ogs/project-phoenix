@@ -126,6 +126,9 @@ type TraegerTimeAccount struct {
 	// Ended is true once the month is over; only then may it be closed.
 	Ended   bool                       `json:"ended"`
 	Schools []TraegerTimeAccountSchool `json:"schools"`
+	// Fingerprint is the token of the month as shown; the close sends it
+	// back as expected_fingerprint (ADR 0311).
+	Fingerprint string `json:"fingerprint"`
 }
 
 // TraegerMonthChange closes or reopens one month of a record, with the
@@ -134,6 +137,9 @@ type TraegerMonthChange struct {
 	Year   int
 	Month  int
 	Reason string
+	// ExpectedFingerprint is the Fingerprint of the month the close was
+	// confirmed on (ADR 0311); a reopen does not read it.
+	ExpectedFingerprint string
 }
 
 // TraegerStaffTimeAccounts is the Stundenkonto of the Personalakte.

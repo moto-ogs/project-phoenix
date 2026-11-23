@@ -124,6 +124,10 @@ type StaffLinkRequest struct {
 	StaffRecordID *ident.ID                         `json:"staff_record_id"`
 	Members       []workforce.TraegerStaffMemberRef `json:"members"`
 	Choices       map[string]string                 `json:"choices"`
+	// ExpectedFingerprint is the fingerprint of the preview the choices were
+	// made on; the link refuses values changed since with
+	// general.changed_since_read (ADR 0311). The preview ignores it.
+	ExpectedFingerprint string `json:"expected_fingerprint"`
 }
 
 func (req *StaffLinkRequest) Bind(*http.Request) error {
@@ -134,7 +138,10 @@ func (req *StaffLinkRequest) Bind(*http.Request) error {
 }
 
 func (req *StaffLinkRequest) toInput() workforce.TraegerStaffLinkRequest {
-	return workforce.TraegerStaffLinkRequest{RecordID: (*int64)(req.StaffRecordID), Members: req.Members, Choices: req.Choices}
+	return workforce.TraegerStaffLinkRequest{
+		RecordID: (*int64)(req.StaffRecordID), Members: req.Members, Choices: req.Choices,
+		ExpectedFingerprint: req.ExpectedFingerprint,
+	}
 }
 
 func (rs *RecordsResource) preview(w http.ResponseWriter, r *http.Request) {

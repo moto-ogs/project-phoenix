@@ -543,9 +543,51 @@ describe("AbsenceBookingModal", () => {
       await waitFor(() =>
         expect(mocks.createAbsence).toHaveBeenCalledWith(
           "4",
-          expect.objectContaining({ absence_type: "comp_time" }),
+          expect.objectContaining({
+            absence_type: "comp_time",
+            overdraft_confirmed: false,
+          }),
         ),
       );
+    });
+
+    it("shows the new projection without a retry when the server finds a minus", async () => {
+      // The preview showed no minus; under its lock the server finds one
+      // and refuses the unconfirmed booking (ADR 0311).
+      mocks.createAbsence.mockRejectedValueOnce(
+        new ApiError("changed since it was read", 409, {
+          code: "general.changed_since_read",
+        }),
+      );
+      const { onSaved } = renderModal();
+      await screen.findByText("noch 12 Tage");
+      choose("Freizeitausgleich");
+      await waitFor(() => expect(submit()).toBeEnabled());
+      const reads = mocks.getCompTimePreview.mock.calls.length;
+      mocks.getCompTimePreview.mockResolvedValue({
+        currentBalanceMinutes: 120,
+        deductionMinutes: 480,
+        realizedDeductionMinutes: 0,
+        futureCommitmentMinutes: 0,
+        futureAdjustmentMinutes: 0,
+        projectedBalanceMinutes: -360,
+      });
+      fireEvent.click(submit());
+
+      expect(
+        await screen.findByText(
+          catalogText("general.changed_since_read", "die Abwesenheit"),
+        ),
+      ).toBeInTheDocument();
+      expect(
+        await screen.findByText(/fällt damit unter null/),
+      ).toBeInTheDocument();
+      expect(mocks.getCompTimePreview.mock.calls.length).toBeGreaterThan(reads);
+      expect(
+        screen.queryByRole("button", { name: "Wiederholen" }),
+      ).not.toBeInTheDocument();
+      expect(submit()).toHaveAttribute("aria-disabled", "true");
+      expect(onSaved).not.toHaveBeenCalled();
     });
 
     it("requires an explicit confirmation when the projection is negative", async () => {
@@ -578,6 +620,13 @@ describe("AbsenceBookingModal", () => {
         }),
       );
       expect(submit()).toBeEnabled();
+      fireEvent.click(submit());
+      await waitFor(() =>
+        expect(mocks.createAbsence).toHaveBeenCalledWith(
+          "4",
+          expect.objectContaining({ overdraft_confirmed: true }),
+        ),
+      );
     });
 
     it("points to open Kontingente before they expire", async () => {

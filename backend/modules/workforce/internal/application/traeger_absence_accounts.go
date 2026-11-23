@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The Kontingente of a Personalakte in the Träger-Portal (#4710): one
@@ -128,12 +129,32 @@ func (p recordPool) account(value domain.TraegerAbsenceType, year int, today str
 		ReservedDays: summary.ReservedDays, RemainingDays: summary.RemainingDays, ExpiresOn: summary.ExpiresOn,
 		ExpiredDays: summary.ExpiredDays,
 	}
+	account.Version = p.allowanceVersion(value.ID, year)
 	if carried := summary.CarriedIn; carried != nil {
 		account.CarriedIn = &workforce.TraegerAbsenceCarry{
 			Year: carried.Year, RemainingDays: carried.RemainingDays, ExpiredDays: carried.ExpiredDays, ExpiresOn: carried.ExpiresOn,
 		}
 	}
 	return account, nil
+}
+
+// allowanceVersion is the token of the person's claim of the type in year:
+// the standard of the type and the person's own days, if any (ADR 0311).
+// The read of the accounts and the change under the booking lock compute it
+// from the same pool read.
+func (p recordPool) allowanceVersion(typeID int64, year int) string {
+	claim := p.claims[typeID]
+	var individual *float64
+	if days, ok := claim.Individual[year]; ok {
+		individual = &days
+	}
+	return readstate.Fingerprint(struct {
+		Type       int64    `json:"type"`
+		Year       int      `json:"year"`
+		Standard   float64  `json:"standard"`
+		Carryover  string   `json:"carryover"`
+		Individual *float64 `json:"individual"`
+	}{typeID, year, claim.StandardDays, claim.CarryoverUntil, individual})
 }
 
 // schoolUses is what each Einsatzort's bookings take in the calendar year,
@@ -221,6 +242,10 @@ func (t *TraegerStaff) SetAbsenceAllowance(ctx context.Context, actor workforce.
 		}
 		if len(pool.types) == 0 {
 			return errNoAbsenceAllowance
+		}
+		// The claim the form showed is the stored one only under this lock.
+		if err := readstate.Check(input.ExpectedVersion, pool.allowanceVersion(input.AbsenceTypeID, input.Year)); err != nil {
+			return err
 		}
 		previous, err := pool.checkClaim(input, t.today())
 		if err != nil {

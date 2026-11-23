@@ -36,8 +36,10 @@ var ErrVacationQuotaExceeded = errors.New("vacation quota exceeded")
 // Comp_time absences may overdraw the Stundenkonto since #2873: the former
 // ErrCompTimeExceedsBalance overdraft rejection was replaced by the
 // PreviewCompTimeBalance projection, which the frontend shows before the
-// Leitung deliberately confirms a booking into the negative. The overdraft
-// guard on balance ADJUSTMENTS (payout etc.) is unchanged (#1420).
+// Leitung deliberately confirms a booking into the negative. The booking
+// computes the same projection under its lock and refuses a negative one the
+// Leitung did not confirm (ADR 0311). The overdraft guard on balance
+// ADJUSTMENTS (payout etc.) is unchanged (#1420).
 
 // CreateAbsenceRequest defines the request for creating an absence
 type CreateAbsenceRequest struct {
@@ -51,6 +53,10 @@ type CreateAbsenceRequest struct {
 	DateEnd       string `json:"date_end"`
 	HalfDay       bool   `json:"half_day"`
 	Note          string `json:"note"`
+	// OverdraftConfirmed is the Leitung's answer to a Freizeitausgleich the
+	// Stundenkonto preview showed below zero (#2873). Nil: the caller shows
+	// no preview (self-service), so no confirmation is asked.
+	OverdraftConfirmed *bool `json:"-"`
 }
 
 // UpdateAbsenceRequest defines the request for updating an absence

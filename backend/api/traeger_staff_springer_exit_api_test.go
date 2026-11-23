@@ -43,7 +43,7 @@ func TestStaffPoolLastBlockEndsTheSpringerEmployment(t *testing.T) {
 
 	mira, miraAccount := testpkg.CreateTestStaffWithAccountForTenant(t, db, north, "Mira", "Springer")
 	southStaff, southLead := testpkg.CreateTestStaffWithAccountForTenant(t, db, south, "Sina", "Süd")
-	rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/staff-records/", map[string]any{
+	rec := traegerLink(t, router, office.token, map[string]any{
 		"members": []map[string]int64{{"school_id": north, "staff_id": mira.ID}},
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())

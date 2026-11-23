@@ -4,9 +4,11 @@
 // ein Konto über alle Schulen der Person, mit dem, was jede Schule gebucht
 // hat. Die Personalverwaltung ändert hier den Anspruch dieser Person; ohne
 // eigenen Wert gilt der Standard der Art. Jedes Laden steht im
-// Zugriffsprotokoll jeder Schule der Person.
+// Zugriffsprotokoll jeder Schule der Person, deshalb liest die Karte bei
+// jedem Öffnen neu. Das Speichern trägt die Version des gelesenen Anspruchs
+// (ADR 0311).
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { AllowanceCard } from "~/components/staff/allowance-card";
 import { useFreshTraegerResource } from "~/components/traeger/use-traeger-resource";
@@ -26,6 +28,7 @@ import { formatDayCount } from "~/lib/absence-helpers";
 import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
 import { formatDate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
+import { isChangedSinceRead } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import { useInvalidateFamily } from "~/lib/swr";
 import { traegerStaffKeys } from "~/lib/swr/traeger-staff-keys";
@@ -110,11 +113,14 @@ function AllowanceForm({
   account,
   onCancel,
   onSaved,
+  onChanged,
 }: Readonly<{
   recordId: string;
   account: TraegerAbsenceAccount;
   onCancel: () => void;
   onSaved: () => Promise<void>;
+  /** Reads the accounts again after a refusal of a changed claim. */
+  onChanged: () => void;
 }>) {
   const [days, setDays] = useState(formatInput(account.entitledDays));
   const [reason, setReason] = useState("");
@@ -122,6 +128,14 @@ function AllowanceForm({
   const errors = useApiFormError();
   const { success } = useToast();
   const latestSaveRef = useRef<() => Promise<void>>(async () => undefined);
+  // A claim stored since the form opened replaces the days in the form: the
+  // form shows what is stored, the refusal says why (ADR 0311).
+  const shownVersion = useRef(account.version);
+  useEffect(() => {
+    if (shownVersion.current === account.version) return;
+    shownVersion.current = account.version;
+    setDays(formatInput(account.entitledDays));
+  }, [account.version, account.entitledDays]);
   const used = account.takenDays + account.reservedDays;
   const parsed = parseDays(days);
   const id = `traeger-allowance-${account.absenceTypeId}`;
@@ -151,6 +165,7 @@ function AllowanceForm({
         year: account.year,
         entitledDays: parsed,
         reason,
+        expectedVersion: account.version,
       });
       success(
         `Der Anspruch ${account.absenceTypeName} ${account.year} ist gespeichert. Er gilt an allen Schulen der Person.`,
@@ -159,10 +174,17 @@ function AllowanceForm({
       logger.error("traeger_absence_allowance_save_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
-      await errors.show(err, {
-        object: "die Änderung am Anspruch",
-        retry: () => void latestSaveRef.current(),
-      });
+      // Changed since the read: the card shows the stored claim again; the
+      // same request would be refused again, so there is no retry.
+      if (isChangedSinceRead(err)) {
+        onChanged();
+        await errors.show(err, { object: "die Änderung am Anspruch" });
+      } else {
+        await errors.show(err, {
+          object: "die Änderung am Anspruch",
+          retry: () => void latestSaveRef.current(),
+        });
+      }
       setSaving(false);
       return;
     }
@@ -240,7 +262,11 @@ export function StaffAbsenceAccountsCard({
   const today = useBerlinToday();
   const thisYear = Number(today.slice(0, 4));
   const [year, setYear] = useState(thisYear);
-  const { data: accounts, error } = useFreshTraegerResource(
+  const {
+    data: accounts,
+    error,
+    reload,
+  } = useFreshTraegerResource(
     traegerStaffKeys.absenceAccounts(recordId, year),
     () => fetchTraegerAbsenceAccounts(recordId, year),
     "die Kontingente",
@@ -314,6 +340,7 @@ export function StaffAbsenceAccountsCard({
                     recordId={recordId}
                     account={account}
                     onCancel={() => setEditing(null)}
+                    onChanged={reload}
                     onSaved={async () => {
                       setEditing(null);
                       // Der Anspruch eines Jahres ändert den Rest im

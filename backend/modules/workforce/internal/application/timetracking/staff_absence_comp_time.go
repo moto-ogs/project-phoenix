@@ -7,6 +7,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // CompTimeBalancePreview is what the create modal shows before the Leitung
@@ -43,7 +44,35 @@ func (s *staffAbsenceService) PreviewCompTimeBalance(
 	if err := s.validateCompTimePreview(ctx, start, end, halfDay); err != nil {
 		return nil, err
 	}
+	return s.compTimeProjection(ctx, staffID, start, end, halfDay)
+}
 
+// confirmCompTimeOverdraft refuses a Freizeitausgleich that takes the
+// Stundenkonto below zero when the Leitung did not confirm the overdraft.
+// It runs under the absence lock the booking holds, so the projection is the
+// one the booking writes into. A preview showed the Leitung a projection at
+// or above zero, else it would have asked: the account changed since that
+// read (ADR 0311), and the dialog shows the new projection.
+func (s *staffAbsenceService) confirmCompTimeOverdraft(ctx context.Context, staffID int64, start, end calendar.Date, req CreateAbsenceRequest) error {
+	if req.AbsenceType != AbsenceTypeCompTime || req.OverdraftConfirmed == nil || *req.OverdraftConfirmed {
+		return nil
+	}
+	if s.monthService == nil {
+		return fmt.Errorf("comp_time overdraft check requires the month service")
+	}
+	projection, err := s.compTimeProjection(ctx, staffID, start, end, req.HalfDay)
+	if err != nil {
+		return err
+	}
+	if projection.ProjectedBalanceMinutes < 0 {
+		return readstate.ErrChanged
+	}
+	return nil
+}
+
+// compTimeProjection is the Stundenkonto once every day of a planned
+// Freizeitausgleich has passed.
+func (s *staffAbsenceService) compTimeProjection(ctx context.Context, staffID int64, start, end calendar.Date, halfDay bool) (*CompTimeBalancePreview, error) {
 	today := s.today()
 	currentBalance, err := s.currentCompTimeBalance(ctx, staffID, today)
 	if err != nil {

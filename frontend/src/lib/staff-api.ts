@@ -1004,6 +1004,8 @@ export interface AbsenceRebooking {
   vacation: { year: number; remainingBefore: number; remainingAfter: number }[];
   vacationExceeded: boolean;
   applied: boolean;
+  /** Token of the effect; the write sends the dry run's back (ADR 0311). */
+  fingerprint: string;
 }
 
 class StaffAbsenceService {
@@ -1189,9 +1191,10 @@ class StaffAbsenceService {
   }
 
   // Stundenkonto projection for a planned Freizeitausgleich (#2873):
-  // GET /api/staff/{id}/time-tracking/comp-time-preview. Informative only —
-  // a negative projection triggers a confirmation in the modal, the backend
-  // no longer rejects the create for it.
+  // GET /api/staff/{id}/time-tracking/comp-time-preview. A negative
+  // projection asks for a confirmation in the modal; the create sends it as
+  // overdraft_confirmed, and the server refuses an unconfirmed overdraft
+  // under its lock (ADR 0311).
   async getCompTimePreview(
     staffId: string,
     args: { dateStart: string; dateEnd: string; halfDay: boolean },
@@ -1230,6 +1233,8 @@ class StaffAbsenceService {
       absenceTypeId: string | null;
       reason: string;
       dryRun: boolean;
+      /** Fingerprint of the dry run the write was confirmed on (ADR 0311). */
+      expectedFingerprint?: string;
     },
   ): Promise<AbsenceRebooking> {
     const data = await bffJson(
@@ -1243,6 +1248,9 @@ class StaffAbsenceService {
           absence_type_id: args.absenceTypeId,
           reason: args.reason,
           dry_run: args.dryRun,
+          ...(args.expectedFingerprint !== undefined
+            ? { expected_fingerprint: args.expectedFingerprint }
+            : {}),
         },
         errorMessage: "Die Art konnte nicht geändert werden.",
       },
@@ -1267,6 +1275,7 @@ class StaffAbsenceService {
       })),
       vacationExceeded: data.vacation_exceeded,
       applied: data.applied,
+      fingerprint: data.fingerprint,
     };
   }
 

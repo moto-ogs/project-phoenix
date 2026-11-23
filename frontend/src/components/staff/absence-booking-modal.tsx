@@ -46,6 +46,7 @@ import {
   useToast,
 } from "~/contexts/ToastContext";
 import { formatDayCount } from "~/lib/absence-helpers";
+import { isChangedSinceRead } from "~/lib/api-error";
 import {
   absenceRequestFor,
   customIdFromOptionValue,
@@ -716,6 +717,9 @@ export function AbsenceBookingModal({
         date_end: effectiveEnd,
         half_day: halfDay || undefined,
         note: note.trim() || undefined,
+        // Der Server rechnet das Stundenkonto unter seiner Sperre neu und
+        // bucht ein Minus nur bestätigt (ADR 0311).
+        ...(isCompTime ? { overdraft_confirmed: overdraftConfirmed } : {}),
       });
       toast.success(`${selected.label} ist eingetragen.`);
     } catch (error) {
@@ -724,10 +728,17 @@ export function AbsenceBookingModal({
         absence_type: value,
         error: error instanceof Error ? error.message : String(error),
       });
-      await formErrors.show(error, {
-        object: "die Abwesenheit",
-        retry: () => void latestSaveRef.current(),
-      });
+      // Das Stundenkonto hat sich seit der Vorschau geändert: der Dialog
+      // zeigt die neue Vorschau, dieselbe Anfrage würde wieder abgelehnt.
+      if (isChangedSinceRead(error)) {
+        reloadPreview();
+        await formErrors.show(error, { object: "die Abwesenheit" });
+      } else {
+        await formErrors.show(error, {
+          object: "die Abwesenheit",
+          retry: () => void latestSaveRef.current(),
+        });
+      }
       setSaving(false);
       return;
     }

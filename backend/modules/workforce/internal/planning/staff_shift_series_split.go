@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 func (s *staffShiftSeriesService) SplitSeries(ctx context.Context, input SplitSeriesInput) (*SeriesResult, error) {
@@ -31,6 +32,9 @@ func (s *staffShiftSeriesService) SplitSeries(ctx context.Context, input SplitSe
 		return nil, err
 	}
 	if err := s.lockShiftWrites(ctx, old.StaffID); err != nil {
+		return nil, err
+	}
+	if err := s.checkSeriesVersion(ctx, old.ID, input.ExpectedVersion); err != nil {
 		return nil, err
 	}
 	if err := s.boundSuccessorByLineage(ctx, successor, rootID, old.ID, effective); err != nil {
@@ -63,6 +67,21 @@ func (s *staffShiftSeriesService) SplitSeries(ctx context.Context, input SplitSe
 		Series: successor, OldSeriesID: old.ID, Created: run.created, Deleted: deleted,
 		SkippedDates: run.skipped, SkippedNonWorkingDays: run.nonWorkingSkipped,
 	}, nil
+}
+
+// checkSeriesVersion reads the series again under the staff's shift lock and
+// refuses an edit of another version than the planner read (ADR 0311): a
+// colleague's end date, split or edit is not reverted by a stale form.
+// Every write of the row bumps updated_at (trigger
+// update_staff_shift_series_updated_at), so the row's version is that time.
+// A matching version also proves that the series read before the lock was
+// this one.
+func (s *staffShiftSeriesService) checkSeriesVersion(ctx context.Context, seriesID int64, expected string) error {
+	current, err := s.loadSeries(ctx, seriesID)
+	if err != nil {
+		return err
+	}
+	return readstate.Check(expected, readstate.Of(current.UpdatedAt))
 }
 
 // splitSeriesBounds clamps the split's effective date to tomorrow and the

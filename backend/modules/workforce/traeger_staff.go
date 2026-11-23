@@ -217,6 +217,9 @@ type TraegerStaffLinkRequest struct {
 	RecordID *int64
 	Members  []TraegerStaffMemberRef
 	Choices  map[string]string
+	// ExpectedFingerprint is the Fingerprint of the preview the choices were
+	// made on (ADR 0311); the link refuses values changed since.
+	ExpectedFingerprint string
 }
 
 // TraegerStaffFieldOption is one value a source brings for a field. Bank
@@ -241,6 +244,9 @@ type TraegerStaffLinkPreview struct {
 	Record  *TraegerStaffRecordSummary `json:"record,omitempty"`
 	Members []TraegerStaffCandidate    `json:"members"`
 	Fields  []TraegerStaffFieldPreview `json:"fields"`
+	// Fingerprint is the token of every value the preview compares; the
+	// link sends it back as expected_fingerprint (ADR 0311).
+	Fingerprint string `json:"fingerprint"`
 }
 
 // TraegerStaffFinancial is the bank and tax section of a record, masked or,

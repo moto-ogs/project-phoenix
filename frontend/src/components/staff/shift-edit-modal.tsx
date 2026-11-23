@@ -26,6 +26,7 @@ import {
   useFormModalPending,
 } from "~/components/ui/use-form-modal-pending";
 import { useApiFormError } from "~/contexts/ToastContext";
+import { isChangedSinceRead } from "~/lib/api-error";
 import { calendarPeriodService } from "~/lib/calendar-period-api";
 import {
   findPeriodForDate,
@@ -35,7 +36,7 @@ import {
 import { berlinTodayISO, parseISODate, toISODate } from "~/lib/date-helpers";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { useFreshSWR, useSWRAuth } from "~/lib/swr";
+import { useSWRAuth } from "~/lib/swr";
 import { databaseKeys } from "~/lib/swr/portal-keys";
 import { staffTimeKeys } from "~/lib/swr/staff-keys";
 import {
@@ -339,9 +340,11 @@ export function ShiftEditModal({
 
   // The rule behind a series shift (#2028). Loaded on open so the modal can
   // state the rhythm up front — "Diese Schicht ist Teil einer Serie" alone
-  // does not tell the planner what the series actually does.
+  // does not tell the planner what the series actually does. A cached rule
+  // may be older than the stored one: every series edit sends its version,
+  // and the server refuses a series changed since (ADR 0311).
   const seriesId = shift?.seriesId ?? null;
-  const seriesRuleResource = useFreshSWR(
+  const seriesRuleResource = useSWRAuth(
     isOpen && mode === "edit" && seriesId !== null
       ? staffTimeKeys.shiftSeries(seriesId)
       : null,
@@ -582,6 +585,7 @@ export function ShiftEditModal({
               seriesValidUntil === "" ? null : dayAfterISO(seriesValidUntil),
             includeSchoolBreaks: seriesIncludeSchoolBreaks,
             workingTime: workingTime.current(),
+            expectedVersion: seriesRule.version,
           },
         );
         finishSeriesMutation(result, op);
@@ -592,6 +596,7 @@ export function ShiftEditModal({
         });
         // Protokolliert; eine späte Ablehnung zeigt kein neuerer Vorgang.
         if (!op.isCurrent()) return;
+        if (showSeriesChanged(err)) return;
         if (workingTime.intercept(err, () => latestSaveRef.current())) return;
         await formErrors.show(err, {
           object: "die Serie",
@@ -599,6 +604,31 @@ export function ShiftEditModal({
         });
       }
     });
+  };
+
+  /** Back from the series editor to this day, with the day's own draft. */
+  const leaveSeriesEdit = () => {
+    if (occurrenceDraft) {
+      setStartTime(occurrenceDraft.startTime);
+      setEndTime(occurrenceDraft.endTime);
+      setBreakMinutesStr(occurrenceDraft.breakMinutesStr);
+      setShiftTypeId(occurrenceDraft.shiftTypeId);
+    }
+    setSeriesEditOpen(false);
+    setOccurrenceDraft(null);
+  };
+
+  /** A colleague changed the series since it was read (ADR 0311): the modal
+   *  shows the stored rule again (the editor reopens from it), and the plan
+   *  reloads. Resending the same edit would be refused again, so there is no
+   *  retry. */
+  const showSeriesChanged = (err: unknown): boolean => {
+    if (!isChangedSinceRead(err)) return false;
+    if (seriesEditOpen) leaveSeriesEdit();
+    void seriesRuleResource.mutate();
+    onSaved();
+    void formErrors.show(err, { object: "die Serie" });
+    return true;
   };
 
   const toggleWeekday = (value: number) => {
@@ -804,7 +834,8 @@ export function ShiftEditModal({
 
   const splitSeriesFromHere = async () => {
     const seriesId = shift?.seriesId;
-    if (!shift || !seriesId) return;
+    // The choice stays disabled until the rule and its version are loaded.
+    if (!shift || !seriesId || !seriesRule) return;
     await runWrite("save", async (op) => {
       try {
         const result = await staffShiftSeriesService.splitSeries(seriesId, {
@@ -815,6 +846,7 @@ export function ShiftEditModal({
           breakMinutes: breakMinutes ?? 0,
           shiftTypeId: shiftTypeId === "" ? null : shiftTypeId,
           workingTime: workingTime.current(),
+          expectedVersion: seriesRule.version,
         });
         finishSeriesMutation(result, op);
       } catch (err: unknown) {
@@ -825,6 +857,7 @@ export function ShiftEditModal({
         });
         // Protokolliert; eine späte Ablehnung zeigt kein neuerer Vorgang.
         if (!op.isCurrent()) return;
+        if (showSeriesChanged(err)) return;
         if (workingTime.intercept(err, () => latestSaveRef.current())) return;
         await formErrors.show(err, {
           object: "die Serie",
@@ -958,14 +991,7 @@ export function ShiftEditModal({
         variant="outline"
         size="md"
         onClick={() => {
-          if (occurrenceDraft) {
-            setStartTime(occurrenceDraft.startTime);
-            setEndTime(occurrenceDraft.endTime);
-            setBreakMinutesStr(occurrenceDraft.breakMinutesStr);
-            setShiftTypeId(occurrenceDraft.shiftTypeId);
-          }
-          setSeriesEditOpen(false);
-          setOccurrenceDraft(null);
+          leaveSeriesEdit();
           formErrors.clear();
         }}
         disabled={isSaving}
@@ -1612,6 +1638,8 @@ export function ShiftEditModal({
             label: "Ab jetzt dauerhaft",
             description:
               "Die Serie wird ab diesem Datum geteilt und mit den neuen Zeiten fortgeführt.",
+            disabled: seriesRule === null,
+            disabledReason: "Die Serie wird noch geladen.",
           },
         ]}
         onSelect={handleScopeSelect}

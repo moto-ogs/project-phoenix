@@ -199,7 +199,8 @@ func seedTraegerStaffLink(client *Client, auth AuthRef, suggestion seedTraegerSt
 	}
 	var preview struct {
 		Data struct {
-			Fields []struct {
+			Fingerprint string `json:"fingerprint"`
+			Fields      []struct {
 				Field    string `json:"field"`
 				Conflict bool   `json:"conflict"`
 				Options  []struct {
@@ -218,6 +219,8 @@ func seedTraegerStaffLink(client *Client, auth AuthRef, suggestion seedTraegerSt
 		}
 	}
 	body["choices"] = choices
+	// The link carries the fingerprint of the preview it chose on (ADR 0311).
+	body["expected_fingerprint"] = preview.Data.Fingerprint
 	raw, err = client.PostWithAuth(auth, "/traeger/staff-records/", body)
 	if seedTraegerStaffAlreadyLinked(err) {
 		return 0, nil

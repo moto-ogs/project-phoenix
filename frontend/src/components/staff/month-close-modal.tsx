@@ -12,6 +12,7 @@ import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { Modal } from "~/components/ui/modal";
 import { Textarea } from "~/components/ui/textarea";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import { isChangedSinceRead } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "MonthCloseReasonModal" });
@@ -62,10 +63,14 @@ export function MonthCloseReasonModal({
         error: err instanceof Error ? err.message : String(err),
       });
       setSubmitting(false);
-      await formErrors.show(err, {
-        object: errorObject,
-        retry: () => void latestSubmit.current(),
-      });
+      // A month changed since it was read is shown again by the caller; the
+      // same request would be refused again (ADR 0311).
+      await formErrors.show(
+        err,
+        isChangedSinceRead(err)
+          ? { object: errorObject }
+          : { object: errorObject, retry: () => void latestSubmit.current() },
+      );
     }
   };
   // „Wiederholen“ sendet die aktuelle Begründung.

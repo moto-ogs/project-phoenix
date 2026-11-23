@@ -53,7 +53,7 @@ func proofKindByKey(t *testing.T, kinds []workforce.TraegerStaffProofType, key s
 
 func linkSingleRecord(t *testing.T, router http.Handler, token string, members ...map[string]int64) staffRecordBody {
 	t.Helper()
-	rec := traegerJSON(t, router, token, http.MethodPost, "/traeger/staff-records/", map[string]any{"members": members})
+	rec := traegerLink(t, router, token, map[string]any{"members": members})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	return decode[staffRecordBody](t, rec)
 }

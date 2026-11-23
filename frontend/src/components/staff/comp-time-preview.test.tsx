@@ -27,7 +27,9 @@ function Providers({ children }: Readonly<{ children: ReactNode }>) {
 
 describe("useCompTimePreview", () => {
   it.each([false, true])(
-    "withdraws a balance used for confirmation while recalculating (failure=%s)",
+    // The server checks the overdraft under its lock (ADR 0311): a recalculation
+    // keeps the read balance on screen, a failed one withdraws it.
+    "keeps the read balance while recalculating and withdraws it on a failed read (failure=%s)",
     async (failure) => {
       const positive = {
         currentBalanceMinutes: 600,
@@ -57,8 +59,8 @@ describe("useCompTimePreview", () => {
       act(() => {
         result.current.reload();
       });
-      expect(result.current.preview).toBeNull();
-      expect(result.current.loading).toBe(true);
+      expect(result.current.preview).toEqual(positive);
+      expect(result.current.loading).toBe(false);
       await act(async () => {
         if (failure) next.reject(new Error("offline"));
         else next.resolve({ ...positive, projectedBalanceMinutes: -60 });
@@ -96,7 +98,7 @@ describe("useCompTimePreview", () => {
     expect(result.current.error).toBeInstanceOf(Error);
   });
 
-  it("waits for a fresh balance when reopening the same selection", async () => {
+  it("shows the cached balance when reopening the same selection, then the stored one", async () => {
     const positive = {
       currentBalanceMinutes: 600,
       projectedBalanceMinutes: 120,
@@ -122,8 +124,11 @@ describe("useCompTimePreview", () => {
     const pending = deferred<typeof positive>();
     getPreview.mockReturnValueOnce(pending.promise);
     rerender({ enabled: true });
-    expect(result.current.preview).toBeNull();
-    expect(result.current.loading).toBe(true);
+    expect(result.current.preview).toEqual(positive);
+    expect(result.current.loading).toBe(false);
+    act(() => {
+      result.current.reload();
+    });
     await act(async () =>
       pending.resolve({ ...positive, projectedBalanceMinutes: -60 }),
     );

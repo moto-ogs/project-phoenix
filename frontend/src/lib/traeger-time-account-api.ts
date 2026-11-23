@@ -7,7 +7,8 @@ import { bffJson } from "~/lib/bff-fetch";
  * einem Arbeitsvertrag beim Träger schließt die Personalverwaltung den Monat
  * in jeder Schule ab, die der Vertrag abdeckt, und nur sie öffnet ihn wieder.
  * Jedes Laden steht im Zugriffsprotokoll jeder Schule; nichts wird
- * zwischengespeichert.
+ * zwischengespeichert. Der Abschluss trägt den Fingerabdruck des gelesenen
+ * Monats (ADR 0311).
  */
 import type * as traegerStaffRecordsContract from "~/lib/contract/traeger-staff-records.generated";
 import { knownEnum } from "~/lib/contract/known-enum";
@@ -56,6 +57,8 @@ export interface TraegerTimeAccount extends TraegerTimeAccountMinutes {
   /** Der Monat ist vorbei; erst dann lässt er sich abschließen. */
   readonly ended: boolean;
   readonly schools: readonly TraegerTimeAccountSchool[];
+  /** Token of the month as shown; the close sends it back (ADR 0311). */
+  readonly fingerprint: string;
 }
 
 function mapMinutes(
@@ -96,6 +99,7 @@ function mapTraegerTimeAccount(
       driftMinutes: school.drift_minutes,
       laterClosed: school.later_closed ?? null,
     })),
+    fingerprint: data.fingerprint,
   };
 }
 
@@ -115,7 +119,12 @@ export async function fetchTraegerTimeAccount(
 async function changeMonth(
   recordId: string,
   action: "close" | "reopen",
-  input: { year: number; month: number; reason: string },
+  input: {
+    year: number;
+    month: number;
+    reason: string;
+    expectedFingerprint?: string;
+  },
 ): Promise<TraegerTimeAccount> {
   return mapTraegerTimeAccount(
     await bffJson(
@@ -129,16 +138,25 @@ async function changeMonth(
           year: input.year,
           month: input.month,
           reason: input.reason.trim(),
+          ...(input.expectedFingerprint !== undefined
+            ? { expected_fingerprint: input.expectedFingerprint }
+            : {}),
         } satisfies traegerStaffRecordsContract.TimeAccountMonthRequest,
       },
     ),
   );
 }
 
-/** Schließt den Monat in jeder Schule ab, die der Vertrag abdeckt. */
+/** Schließt den Monat in jeder Schule ab, die der Vertrag abdeckt, so wie
+ *  ihn die Personalverwaltung gelesen hat (ADR 0311). */
 export const closeTraegerTimeAccountMonth = (
   recordId: string,
-  input: { year: number; month: number; reason: string },
+  input: {
+    year: number;
+    month: number;
+    reason: string;
+    expectedFingerprint: string;
+  },
 ) => changeMonth(recordId, "close", input);
 
 /** Öffnet den Abschluss des Trägers in jeder Schule wieder. */

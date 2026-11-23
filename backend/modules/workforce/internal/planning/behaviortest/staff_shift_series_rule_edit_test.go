@@ -35,7 +35,7 @@ func TestStaffShiftSeries_SplitAppliesNewWeekdaysFromEffectiveDate(t *testing.T)
 	effective := today.AddDays(1)
 	env.inTx(t, func(ctx context.Context) error {
 		_, err := env.series.SplitSeries(ctx, planning.SplitSeriesInput{
-			SeriesID:      series.ID,
+			SeriesID: series.ID, ExpectedVersion: env.versionIn(ctx, t, series.ID),
 			EffectiveDate: effective,
 			// The planner adds Friday and keeps everything else.
 			Weekdays:     []int16{2, 5},
@@ -79,7 +79,7 @@ func TestStaffShiftSeries_SplitShortensValidityAndDropsLaterShifts(t *testing.T)
 	newEnd := today.AddDays(6)
 	env.inTx(t, func(ctx context.Context) error {
 		_, err := env.series.SplitSeries(ctx, planning.SplitSeriesInput{
-			SeriesID:      series.ID,
+			SeriesID: series.ID, ExpectedVersion: env.versionIn(ctx, t, series.ID),
 			EffectiveDate: today.AddDays(1),
 			StartTime:     series.StartTime,
 			EndTime:       series.EndTime,
@@ -115,7 +115,7 @@ func TestStaffShiftSeries_SplitKeepsStoredValidityWhenUnset(t *testing.T) {
 	env.inTx(t, func(ctx context.Context) error {
 		var err error
 		result, err = env.series.SplitSeries(ctx, planning.SplitSeriesInput{
-			SeriesID:      series.ID,
+			SeriesID: series.ID, ExpectedVersion: env.versionIn(ctx, t, series.ID),
 			EffectiveDate: today.AddDays(1),
 			StartTime:     seriesClock(t, "13:00"),
 			EndTime:       seriesClock(t, "15:00"),
@@ -146,7 +146,7 @@ func TestStaffShiftSeries_SplitRejectsValidityBeyondCalendarPeriod(t *testing.T)
 	tooLate := periodEnd.AddDays(2) // valid_until is exclusive; periodEnd+1 is the limit.
 	err := env.inTxExpectErr(t, func(ctx context.Context) error {
 		_, err := env.series.SplitSeries(ctx, planning.SplitSeriesInput{
-			SeriesID:      series.ID,
+			SeriesID: series.ID, ExpectedVersion: env.versionIn(ctx, t, series.ID),
 			EffectiveDate: today.AddDays(1),
 			StartTime:     series.StartTime,
 			EndTime:       series.EndTime,
@@ -176,7 +176,7 @@ func TestStaffShiftSeries_SplitBoundsEarlierSegmentAtNextSuccessor(t *testing.T)
 	downstreamFrom := today.AddDays(10)
 	env.inTx(t, func(ctx context.Context) error {
 		_, err := env.series.SplitSeries(ctx, planning.SplitSeriesInput{
-			SeriesID:      series.ID,
+			SeriesID: series.ID, ExpectedVersion: env.versionIn(ctx, t, series.ID),
 			EffectiveDate: downstreamFrom,
 			StartTime:     series.StartTime,
 			EndTime:       series.EndTime,
@@ -191,7 +191,7 @@ func TestStaffShiftSeries_SplitBoundsEarlierSegmentAtNextSuccessor(t *testing.T)
 	env.inTx(t, func(ctx context.Context) error {
 		var err error
 		result, err = env.series.SplitSeries(ctx, planning.SplitSeriesInput{
-			SeriesID:      series.ID,
+			SeriesID: series.ID, ExpectedVersion: env.versionIn(ctx, t, series.ID),
 			EffectiveDate: earlierFrom,
 			StartTime:     series.StartTime,
 			EndTime:       series.EndTime,
@@ -226,7 +226,7 @@ func TestStaffShiftSeries_SplitRejectsWhenNextSegmentLeavesNoOccurrence(t *testi
 
 	env.inTx(t, func(ctx context.Context) error {
 		_, err := env.series.SplitSeries(ctx, planning.SplitSeriesInput{
-			SeriesID:      series.ID,
+			SeriesID: series.ID, ExpectedVersion: env.versionIn(ctx, t, series.ID),
 			EffectiveDate: nextFrom,
 			StartTime:     series.StartTime,
 			EndTime:       series.EndTime,
@@ -238,7 +238,7 @@ func TestStaffShiftSeries_SplitRejectsWhenNextSegmentLeavesNoOccurrence(t *testi
 
 	err := env.inTxExpectErr(t, func(ctx context.Context) error {
 		_, err := env.series.SplitSeries(ctx, planning.SplitSeriesInput{
-			SeriesID:      series.ID,
+			SeriesID: series.ID, ExpectedVersion: env.versionIn(ctx, t, series.ID),
 			EffectiveDate: effective,
 			StartTime:     series.StartTime,
 			EndTime:       series.EndTime,
@@ -280,7 +280,7 @@ func TestStaffShiftSeries_SplitRejectsSupersededSegment(t *testing.T) {
 	newEnd := today.AddDays(15)
 	err := env.inTxExpectErr(t, func(ctx context.Context) error {
 		_, err := env.series.SplitSeries(ctx, planning.SplitSeriesInput{
-			SeriesID:      series.ID,
+			SeriesID: series.ID, ExpectedVersion: env.versionIn(ctx, t, series.ID),
 			EffectiveDate: effective,
 			StartTime:     series.StartTime,
 			EndTime:       series.EndTime,
@@ -319,7 +319,7 @@ func TestStaffShiftSeries_SplitExtendsSeriesEndingToday(t *testing.T) {
 	env.inTx(t, func(ctx context.Context) error {
 		var err error
 		result, err = env.series.SplitSeries(ctx, planning.SplitSeriesInput{
-			SeriesID: series.ID,
+			SeriesID: series.ID, ExpectedVersion: env.versionIn(ctx, t, series.ID),
 			// The planner opened an occurrence in the past; the split clamps it
 			// to tomorrow rather than rejecting the edit.
 			EffectiveDate: today.AddDays(-3),
@@ -360,7 +360,7 @@ func TestStaffShiftSeries_SplitRejectsWhenNoOccurrenceRemains(t *testing.T) {
 
 	err := env.inTxExpectErr(t, func(ctx context.Context) error {
 		_, err := env.series.SplitSeries(ctx, planning.SplitSeriesInput{
-			SeriesID:      series.ID,
+			SeriesID: series.ID, ExpectedVersion: env.versionIn(ctx, t, series.ID),
 			EffectiveDate: today.AddDays(-3),
 			StartTime:     seriesClock(t, "13:00"),
 			EndTime:       seriesClock(t, "15:00"),
@@ -394,7 +394,7 @@ func TestStaffShiftSeries_SplitRejectsExtensionWithoutRecurrenceOccurrence(t *te
 
 	err := env.inTxExpectErr(t, func(ctx context.Context) error {
 		_, err := env.series.SplitSeries(ctx, planning.SplitSeriesInput{
-			SeriesID:      series.ID,
+			SeriesID: series.ID, ExpectedVersion: env.versionIn(ctx, t, series.ID),
 			EffectiveDate: effective,
 			StartTime:     series.StartTime,
 			EndTime:       series.EndTime,

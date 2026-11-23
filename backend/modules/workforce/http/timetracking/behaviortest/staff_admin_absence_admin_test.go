@@ -162,6 +162,33 @@ func TestAdminCreateStaffAbsence_CompTimeAllowedForManager(t *testing.T) {
 	assert.Equal(t, absenceStatusRepd, absences[0].Status)
 }
 
+// The server owns the overdraft confirmation (#2873, ADR 0311): a
+// Freizeitausgleich that takes the Stundenkonto below zero books only with
+// overdraft_confirmed. Without it the Leitung saw no minus, so the account
+// changed since the preview: refused, nothing booked.
+func TestAdminCreateStaffAbsence_CompTimeOverdraftNeedsConfirmation(t *testing.T) {
+	t.Parallel()
+
+	tc, token, subjectID, _ := setupAbsenceAdminTest(t)
+	setAccountStart(t, tc, "2026-11-01")
+	for weekday := range 5 {
+		testpkg.CreateTestStaffWorkScheduleForTenant(t, tc.db, testpkg.Tenant(t), subjectID, weekday, 480, testpkg.Date(2026, time.November, 1))
+	}
+	day := absenceAdminDay.AddDays(2)
+	booking := map[string]any{"absence_type": "comp_time", "date_start": day.String(), "date_end": day.String()}
+
+	rec := postAbsence(t, tc, token, subjectID, booking)
+	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+	assert.Contains(t, rec.Body.String(), `"code":"general.changed_since_read"`)
+	absences, err := newWorkforceTestRepositories(t, tc.db).StaffAbsence.ListStaffAbsences(testpkg.Ctx(t), workforce.StaffAbsenceFilter{StaffID: subjectID})
+	require.NoError(t, err)
+	assert.Empty(t, absences)
+
+	booking["overdraft_confirmed"] = true
+	rec = postAbsence(t, tc, token, subjectID, booking)
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+}
+
 func TestAdminCreateStaffAbsence_RejectsMultiDayHalfDayCompTime(t *testing.T) {
 	t.Parallel()
 

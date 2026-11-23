@@ -141,6 +141,10 @@ type AbsenceAllowanceRequest struct {
 	Year         int     `json:"year"`
 	EntitledDays float64 `json:"entitled_days"`
 	Reason       string  `json:"reason"`
+	// ExpectedVersion is the version of the account the form showed; a
+	// claim changed since is refused with general.changed_since_read (ADR
+	// 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 func (req *AbsenceAllowanceRequest) Bind(*http.Request) error { return nil }
@@ -163,6 +167,7 @@ func (rs *RecordsResource) setAbsenceAllowance(w http.ResponseWriter, r *http.Re
 	}
 	err := rs.absences.SetAbsenceAllowance(r.Context(), session, workforce.SetTraegerAbsenceAllowance{
 		RecordID: id, AbsenceTypeID: typeID, Year: req.Year, EntitledDays: req.EntitledDays, Reason: req.Reason,
+		ExpectedVersion: req.ExpectedVersion,
 	})
 	if err != nil {
 		renderAbsenceError(w, r, err)

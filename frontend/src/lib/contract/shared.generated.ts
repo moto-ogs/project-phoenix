@@ -3455,6 +3455,7 @@ export interface CreateAbsenceRequest {
   date_end?: string;
   half_day?: boolean;
   note?: string;
+  overdraft_confirmed?: boolean;
 }
 
 /** Go: workforce.BreakDurationUpdate */

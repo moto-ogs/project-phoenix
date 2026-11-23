@@ -27,6 +27,8 @@ func TestRebookingAndBookingOfTheSameSubjectDoNotDeadlock(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	require.Same(t, f.tc.db, db, "the fixture runs on the package database")
 
+	// The dialog confirmed the dry run before the art row was taken.
+	confirmed := f.confirmed(t, f.body("Umbuchung", false))
 	holder, err := db.BeginTx(ctx, nil)
 	require.NoError(t, err)
 	defer func() { _ = holder.Rollback() }()
@@ -35,7 +37,7 @@ func TestRebookingAndBookingOfTheSameSubjectDoNotDeadlock(t *testing.T) {
 	_, err = holder.ExecContext(ctx, `SELECT id FROM active.staff_absence_types WHERE id = ? FOR UPDATE`, f.typeID)
 	require.NoError(t, err)
 
-	rebook := startRequest(func() *httptest.ResponseRecorder { return f.rebook(t, f.body("Umbuchung", false)) })
+	rebook := startRequest(func() *httptest.ResponseRecorder { return f.post(t, confirmed) })
 	rebookPID := awaitBlockedBy(t, db, rebook, 0, holderPID)
 	friday := testpkg.Date(2026, time.September, 18)
 	book := startRequest(func() *httptest.ResponseRecorder {

@@ -4,7 +4,8 @@
 // Art um, zum Beispiel vergangene Freitage von Freizeitausgleich auf
 // Krank-Urlaubstage. Die Einträge bleiben stehen. Vor dem Speichern zeigt der
 // Dialog, was sich am Stundenkonto und an den Kontingenten ändert; was nicht
-// reicht oder gesperrt ist, lässt sich nicht speichern.
+// reicht oder gesperrt ist, lässt sich nicht speichern. Das Speichern trägt
+// den Fingerabdruck dieser Vorschau (ADR 0311).
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
@@ -41,7 +42,8 @@ import { LOCATION_COLORS } from "~/lib/location-helper";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
 import { staffAbsenceService, type StaffAbsenceRow } from "~/lib/staff-api";
-import { useFreshSWR } from "~/lib/swr";
+import { isChangedSinceRead } from "~/lib/api-error";
+import { useSWRAuth } from "~/lib/swr";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { staffAbsenceKeys } from "~/lib/swr/staff-keys";
 import { InsetPanel } from "~/components/ui/inset-panel";
@@ -60,8 +62,10 @@ function useRebookingPreview(args: {
 }) {
   const { staffId, absenceIds, value } = args;
   // Eine gesperrte Umbuchung (workforce.rebooking_*) ist kein Defekt; sie
-  // steht wie jeder andere Fehler der Vorschau im Dialog.
-  const { data, error, mutate, isValidating } = useFreshSWR(
+  // steht wie jeder andere Fehler der Vorschau im Dialog. Die Vorschau darf
+  // aus dem Cache kommen: das Speichern schickt ihren Fingerabdruck mit, und
+  // der Server lehnt eine inzwischen andere Wirkung ab (ADR 0311).
+  const { data, error, mutate, isValidating } = useSWRAuth(
     value && absenceIds.length > 0
       ? staffAbsenceKeys.rebookingPreview(staffId, absenceIds, value)
       : null,
@@ -77,8 +81,8 @@ function useRebookingPreview(args: {
     },
     { keepPreviousData: false },
   );
-  // A dry run is a save prerequisite, not merely a read-only display.
-  const preview = isValidating || error ? undefined : data;
+  // A failed revalidation shows no older effect as the basis of a save.
+  const preview = error && !isValidating ? undefined : data;
   const load = useSwrResourceLoadError(
     [{ data: preview, error: isValidating ? undefined : error }],
     "die Änderung der Art",
@@ -86,7 +90,12 @@ function useRebookingPreview(args: {
   );
   const loading =
     Boolean(value) && preview === undefined && load.error === null;
-  return { preview: preview ?? null, error: load.error, loading };
+  return {
+    preview: preview ?? null,
+    error: load.error,
+    loading,
+    reload: () => void mutate(),
+  };
 }
 
 function BalanceLine({ minutes }: { readonly minutes: number }) {
@@ -197,6 +206,7 @@ export function AbsenceRebookModal({
     preview,
     error: previewError,
     loading,
+    reload: reloadPreview,
   } = useRebookingPreview({
     staffId: staff.id,
     absenceIds,
@@ -264,7 +274,7 @@ export function AbsenceRebookModal({
       .join(" ") || null;
 
   const save = async () => {
-    if (disabled || !selected) return;
+    if (disabled || !selected || !preview) return;
     if (reason.trim() === "") {
       formErrors.invalid("Bitte prüfe die markierten Felder.", {
         reason: "Bitte kurz sagen, warum sich die Art ändert.",
@@ -281,6 +291,7 @@ export function AbsenceRebookModal({
         absenceTypeId: request.absence_type_id,
         reason: reason.trim(),
         dryRun: false,
+        expectedFingerprint: preview.fingerprint,
       });
       toast.success(
         absences.length === 1
@@ -293,10 +304,17 @@ export function AbsenceRebookModal({
         absence_count: absences.length,
         error: error instanceof Error ? error.message : String(error),
       });
-      await formErrors.show(error, {
-        object: "die Änderung der Art",
-        retry: () => void latestSaveRef.current(),
-      });
+      // Changed since the preview: the dialog shows the new effect, and the
+      // same request would be refused again, so it offers no retry.
+      if (isChangedSinceRead(error)) {
+        reloadPreview();
+        await formErrors.show(error, { object: "die Änderung der Art" });
+      } else {
+        await formErrors.show(error, {
+          object: "die Änderung der Art",
+          retry: () => void latestSaveRef.current(),
+        });
+      }
       setSaving(false);
       return;
     }

@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // A link joins employments of the Träger's schools into one record (ADR
@@ -29,6 +30,40 @@ type linkPlan struct {
 	members []linkSource
 	sources []domain.StaffSource
 	names   map[int64]string
+	// state is what the preview compares, per source, for its fingerprint.
+	state []linkSourceState
+}
+
+// linkSourceState is one source's values in the fingerprint of a link
+// (ADR 0311). The bank and tax values enter sealed: the token carries no
+// digest of an opened IBAN, and a new value is sealed anew.
+type linkSourceState struct {
+	Key    string            `json:"key"`
+	Values map[string]string `json:"values"`
+	Sealed [][]byte          `json:"sealed"`
+}
+
+// fingerprint is the token of the values a link takes its choices from.
+func (plan linkPlan) fingerprint() string {
+	var recordID int64
+	if plan.record != nil {
+		recordID = plan.record.ID
+	}
+	return readstate.Fingerprint(struct {
+		Record  int64             `json:"record"`
+		Sources []linkSourceState `json:"sources"`
+	}{recordID, plan.state})
+}
+
+// sourceState keeps the plain fields of values and the sealed bank values.
+func sourceState(key string, values map[string]string, sealed ...[]byte) linkSourceState {
+	plain := make(map[string]string, len(values))
+	for field, value := range values {
+		if !domain.IsFinancialStaffField(field) {
+			plain[field] = value
+		}
+	}
+	return linkSourceState{Key: key, Values: plain, Sealed: sealed}
 }
 
 // PreviewLink shows the values the employments bring, field by field.
@@ -45,6 +80,7 @@ func (t *TraegerStaff) PreviewLink(ctx context.Context, actor workforce.TraegerS
 	for _, member := range plan.members {
 		preview.Members = append(preview.Members, publicCandidate(member.member, member.ref.SchoolID.Int64(), plan.names))
 	}
+	preview.Fingerprint = plan.fingerprint()
 	for _, field := range domain.PreviewStaffFields(plan.sources) {
 		public := workforce.TraegerStaffFieldPreview{Field: field.Field, Conflict: field.Conflict(), Options: []workforce.TraegerStaffFieldOption{}}
 		for _, option := range field.Options {
@@ -64,6 +100,13 @@ func (t *TraegerStaff) PreviewLink(ctx context.Context, actor workforce.TraegerS
 func (t *TraegerStaff) Link(ctx context.Context, actor workforce.TraegerStaffActor, request workforce.TraegerStaffLinkRequest) (workforce.TraegerStaffRecordDetail, error) {
 	plan, err := t.planLink(ctx, actor, request)
 	if err != nil {
+		return workforce.TraegerStaffRecordDetail{}, err
+	}
+	// The choices were made on the preview's values. The schools are read in
+	// their own transactions (ADR 0105), so this read right before the write
+	// is the check: a value changed since, like a new IBAN, is not taken over
+	// unseen.
+	if err := readstate.Check(request.ExpectedFingerprint, plan.fingerprint()); err != nil {
 		return workforce.TraegerStaffRecordDetail{}, err
 	}
 	resolved, err := domain.ResolveStaffFields(plan.sources, request.Choices)
@@ -188,7 +231,10 @@ func (t *TraegerStaff) collectSources(plan linkPlan, refs []workforce.TraegerSta
 		if err != nil {
 			return linkPlan{}, err
 		}
-		plan.sources = append(plan.sources, staffSource(domain.StaffSourceRecord, 0, "", recordValues(*plan.record, financial)))
+		values := recordValues(*plan.record, financial)
+		plan.sources = append(plan.sources, staffSource(domain.StaffSourceRecord, 0, "", values))
+		record := plan.record
+		plan.state = append(plan.state, sourceState(domain.StaffSourceRecord, values, record.IBANSealed, record.TaxIDSealed, record.SocialSecurityNumberSealed))
 	}
 	for _, ref := range refs {
 		read := reads[ref.SchoolID.Int64()]
@@ -197,7 +243,9 @@ func (t *TraegerStaff) collectSources(plan linkPlan, refs []workforce.TraegerSta
 			return linkPlan{}, &workforce.TraegerStaffLinkError{Field: "members", Reason: "an employment is no longer live at its school"}
 		}
 		source := linkSource{ref: ref, member: member, financial: map[string]string{}}
+		var sealed [][]byte
 		if row, ok := read.financial[ref.StaffID.Int64()]; ok {
+			sealed = [][]byte{row.IBANSealed, row.TaxIDSealed, row.SocialSecurityNumberSealed}
 			opened, err := t.openSchoolFinancial(row)
 			if err != nil {
 				return linkPlan{}, err
@@ -206,7 +254,9 @@ func (t *TraegerStaff) collectSources(plan linkPlan, refs []workforce.TraegerSta
 		}
 		plan.members = append(plan.members, source)
 		values := personValues(member.FirstName, member.LastName, member.Birthday, member.PersonnelNumber, source.financial)
-		plan.sources = append(plan.sources, staffSource(domain.SchoolSourceKey(ref.SchoolID.Int64()), ref.SchoolID.Int64(), plan.names[ref.SchoolID.Int64()], values))
+		key := domain.SchoolSourceKey(ref.SchoolID.Int64())
+		plan.sources = append(plan.sources, staffSource(key, ref.SchoolID.Int64(), plan.names[ref.SchoolID.Int64()], values))
+		plan.state = append(plan.state, sourceState(key, values, sealed...))
 	}
 	return plan, nil
 }

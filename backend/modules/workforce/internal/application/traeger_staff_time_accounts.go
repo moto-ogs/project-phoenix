@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The Stundenkonto of a Personalakte over all schools (#4711, ADR 0243).
@@ -33,6 +34,13 @@ func (t *TraegerStaff) TimeAccount(ctx context.Context, actor workforce.TraegerS
 	return account, err
 }
 
+// timeAccountFingerprint is the token of the month as the Personalverwaltung
+// sees it: every school's balances and close state (ADR 0311).
+func timeAccountFingerprint(account workforce.TraegerTimeAccount) string {
+	account.Fingerprint = ""
+	return readstate.Fingerprint(account)
+}
+
 // monthOrThisMonth reads year 0 and month 0 as the running month.
 func (t *TraegerStaff) monthOrThisMonth(year, month int) (int, int) {
 	if year != 0 || month != 0 {
@@ -51,6 +59,12 @@ func (t *TraegerStaff) monthOrThisMonth(year, month int) (int, int) {
 func (t *TraegerStaff) CloseTimeAccountMonth(ctx context.Context, actor workforce.TraegerStaffActor, recordID int64, change workforce.TraegerMonthChange) (workforce.TraegerTimeAccount, error) {
 	links, account, err := t.readTimeAccount(ctx, actor, recordID, change.Year, change.Month)
 	if err != nil {
+		return workforce.TraegerTimeAccount{}, err
+	}
+	// The close freezes the balances the Personalverwaltung confirmed. Each
+	// school closes in its own transaction (ADR 0105), so no lock spans the
+	// schools: this read right before the first write is the check.
+	if err := readstate.Check(change.ExpectedFingerprint, account.Fingerprint); err != nil {
 		return workforce.TraegerTimeAccount{}, err
 	}
 	if err := closableAccount(account, change.Reason); err != nil {
@@ -146,6 +160,7 @@ func (t *TraegerStaff) readTimeAccount(ctx context.Context, actor workforce.Trae
 		account.Schools = append(account.Schools, schoolMonth(link.SchoolID, names[link.SchoolID], read))
 	}
 	account.TraegerTimeAccountMinutes, account.State = sumTimeAccount(account.Schools)
+	account.Fingerprint = timeAccountFingerprint(account)
 	return links, account, nil
 }
 

@@ -302,6 +302,7 @@ export interface TraegerAbsenceAccount {
   expired_days: number;
   carried_in: TraegerAbsenceCarry | null;
   schools: TraegerAbsenceSchoolUse[] | null;
+  version: string;
 }
 
 export const TraegerAbsenceAccountSchema: z.ZodType<TraegerAbsenceAccount, unknown> = object<TraegerAbsenceAccount>({
@@ -318,6 +319,7 @@ export const TraegerAbsenceAccountSchema: z.ZodType<TraegerAbsenceAccount, unkno
   expired_days: num,
   carried_in: nullable(TraegerAbsenceCarrySchema),
   schools: nullable(arr(TraegerAbsenceSchoolUseSchema)),
+  version: str,
 });
 
 /** Go: workforce.TraegerAbsenceAccounts */
@@ -386,6 +388,7 @@ export interface TraegerTimeAccount {
   state: string;
   ended: boolean;
   schools: TraegerTimeAccountSchool[] | null;
+  fingerprint: string;
 }
 
 export const TraegerTimeAccountSchema: z.ZodType<TraegerTimeAccount, unknown> = object<TraegerTimeAccount>({
@@ -401,6 +404,7 @@ export const TraegerTimeAccountSchema: z.ZodType<TraegerTimeAccount, unknown> = 
   state: str,
   ended: bool,
   schools: nullable(arr(TraegerTimeAccountSchoolSchema)),
+  fingerprint: str,
 });
 
 /** Go: workforce.TraegerStaffMemberRef */
@@ -414,6 +418,7 @@ export interface StaffLinkRequest {
   staff_record_id?: string | null;
   members?: TraegerStaffMemberRef[] | null;
   choices?: Record<string, string> | null;
+  expected_fingerprint?: string;
 }
 
 /** Go: traegerstaff.HireContract */
@@ -473,12 +478,14 @@ export interface TraegerStaffLinkPreview {
   record?: TraegerStaffRecordSummary;
   members: TraegerStaffCandidate[] | null;
   fields: TraegerStaffFieldPreview[] | null;
+  fingerprint: string;
 }
 
 export const TraegerStaffLinkPreviewSchema: z.ZodType<TraegerStaffLinkPreview, unknown> = object<TraegerStaffLinkPreview>({
   record: optional(TraegerStaffRecordSummarySchema),
   members: nullable(arr(TraegerStaffCandidateSchema)),
   fields: nullable(arr(TraegerStaffFieldPreviewSchema)),
+  fingerprint: str,
 });
 
 /** Go: traegerstaff.SiteSollPayload */
@@ -517,6 +524,7 @@ export interface TimeAccountMonthRequest {
   year?: number;
   month?: number;
   reason?: string;
+  expected_fingerprint?: string;
 }
 
 /** Go: traegerstaff.AbsenceAllowanceRequest */
@@ -524,6 +532,7 @@ export interface AbsenceAllowanceRequest {
   year?: number;
   entitled_days?: number;
   reason?: string;
+  expected_version?: string;
 }
 
 /** Go: traegerstaff.UpdateContractRequest */

@@ -1222,6 +1222,7 @@ export interface RebookAbsencesBody {
   absence_type_id?: string | null;
   reason?: string;
   dry_run?: boolean;
+  expected_fingerprint?: string;
 }
 
 /** Go: workforce.RebookingAllowanceYear */
@@ -1266,6 +1267,7 @@ export interface AbsenceRebookingResult {
   vacation?: RebookingVacationYear[];
   vacation_exceeded: boolean;
   applied: boolean;
+  fingerprint: string;
 }
 
 export const AbsenceRebookingResultSchema: z.ZodType<AbsenceRebookingResult, unknown> = object<AbsenceRebookingResult>({
@@ -1277,6 +1279,7 @@ export const AbsenceRebookingResultSchema: z.ZodType<AbsenceRebookingResult, unk
   vacation: optional(arr(RebookingVacationYearSchema)),
   vacation_exceeded: bool,
   applied: bool,
+  fingerprint: str,
 });
 
 /** Go: timetracking.StammdatenFinancialRevealResponse */

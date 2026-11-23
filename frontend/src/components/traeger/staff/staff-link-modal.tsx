@@ -4,7 +4,9 @@
 // Abschnitt 5). Der Dialog zeigt, was jede Schule über die Person weiß. Wo
 // die Schulen sich unterscheiden, wählt die Personalverwaltung den Wert, der
 // gilt; der andere Wert bleibt mit seiner Schule im Verlauf. Bank- und
-// Steuerdaten erscheinen nur maskiert und ziehen in die Akte um.
+// Steuerdaten erscheinen nur maskiert und ziehen in die Akte um. Die Vorschau
+// steht im Zugriffsprotokoll jeder Schule und wird deshalb bei jedem Öffnen
+// neu gelesen; das Verknüpfen trägt ihren Fingerabdruck (ADR 0311).
 
 import { useEffect, useRef, useState } from "react";
 import { useFreshTraegerResource } from "~/components/traeger/use-traeger-resource";
@@ -21,6 +23,7 @@ import { SectionLabel } from "~/components/ui/section-label";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { useApiFormError } from "~/contexts/ToastContext";
+import { isChangedSinceRead } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import { traegerStaffKeys } from "~/lib/swr/traeger-staff-keys";
 import {
@@ -54,7 +57,11 @@ export function StaffLinkModal({
   onLinked: (record: StaffRecordDetail) => void;
 }>) {
   const isOpen = request !== null;
-  const { data: preview, error: previewError } = useFreshTraegerResource(
+  const {
+    data: preview,
+    error: previewError,
+    reload: reloadPreview,
+  } = useFreshTraegerResource(
     request
       ? traegerStaffKeys.linkPreview(request.recordId, request.members)
       : null,
@@ -102,13 +109,23 @@ export function StaffLinkModal({
     }
     await save.run(async (op) => {
       try {
-        const record = await linkStaff({ ...request, choices });
+        const record = await linkStaff({
+          ...request,
+          choices,
+          expectedFingerprint: preview.fingerprint,
+        });
         if (op.isCurrent()) onLinked(record);
       } catch (err) {
         logger.error("traeger_staff_link_failed", {
           error: err instanceof Error ? err.message : String(err),
         });
         if (!op.isCurrent()) return;
+        // A school changed a value since the preview: the dialog shows the
+        // values again and the choices start over.
+        if (isChangedSinceRead(err)) {
+          setChoices({});
+          reloadPreview();
+        }
         void formErrors.show(err, { object: "die Personalakte" });
       }
     });

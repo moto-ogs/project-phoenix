@@ -83,6 +83,9 @@ export interface TraegerAbsenceAccount {
     readonly expiresOn: string;
   } | null;
   readonly schools: readonly TraegerAbsenceSchoolUse[];
+  /** Token of the person's claim; the change of the days sends it back
+   *  (ADR 0311). */
+  readonly version: string;
 }
 
 function mapType(
@@ -121,6 +124,7 @@ function mapAccount(
     remainingDays: data.remaining_days,
     expiresOn: data.expires_on,
     expiredDays: data.expired_days,
+    version: data.version,
     carriedIn: data.carried_in
       ? {
           year: data.carried_in.year,
@@ -199,7 +203,13 @@ export async function fetchTraegerAbsenceAccounts(
 export async function setTraegerAbsenceAllowance(
   recordId: string,
   typeId: string,
-  input: { year: number; entitledDays: number; reason: string },
+  input: {
+    year: number;
+    entitledDays: number;
+    reason: string;
+    /** Version of the account the form was read from (ADR 0311). */
+    expectedVersion: string;
+  },
 ): Promise<void> {
   await bffJson(
     "org",
@@ -210,6 +220,7 @@ export async function setTraegerAbsenceAllowance(
         year: input.year,
         entitled_days: input.entitledDays,
         reason: input.reason.trim(),
+        expected_version: input.expectedVersion,
       } satisfies traegerStaffRecordsContract.AbsenceAllowanceRequest,
     },
   );

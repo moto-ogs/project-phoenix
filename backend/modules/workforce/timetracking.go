@@ -302,6 +302,11 @@ type CreateAbsenceRequest struct {
 	DateEnd       string    `json:"date_end"`
 	HalfDay       bool      `json:"half_day"`
 	Note          string    `json:"note"`
+	// OverdraftConfirmed confirms a Freizeitausgleich that takes the
+	// Stundenkonto below zero (#2873). The Leitung's booking refuses an
+	// unconfirmed overdraft with general.changed_since_read (ADR 0311); a
+	// staff member's own request asks no confirmation and ignores it.
+	OverdraftConfirmed bool `json:"overdraft_confirmed"`
 }
 
 // UpdateAbsenceRequest edits an absence; nil leaves a field untouched.
@@ -408,6 +413,9 @@ type RebookAbsencesRequest struct {
 	AbsenceTypeID *int64
 	Reason        string
 	DryRun        bool
+	// ExpectedFingerprint is the dry run's Fingerprint the write was
+	// confirmed against (ADR 0311).
+	ExpectedFingerprint string
 }
 
 // AbsenceRebookingResult is what a rebooking does: the entries with their new
@@ -421,6 +429,9 @@ type AbsenceRebookingResult struct {
 	Vacation            []RebookingVacationYear  `json:"vacation,omitempty"`
 	VacationExceeded    bool                     `json:"vacation_exceeded"`
 	Applied             bool                     `json:"applied"`
+	// Fingerprint is the token of the effect (ADR 0311): the write sends
+	// the dry run's back as expected_fingerprint.
+	Fingerprint string `json:"fingerprint"`
 }
 
 // RebookingAllowanceYear is the target allowance of one year after the

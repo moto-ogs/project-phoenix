@@ -193,9 +193,15 @@ func TestStaffShiftPlanningRoutesStoreThePlan(t *testing.T) {
 	require.NotEmpty(t, planned.SeriesID)
 	assert.Positive(t, planned.Created, "the series plans its Mondays")
 
+	var read struct {
+		Version string `json:"version"`
+	}
+	send(http.MethodGet, "/staff-shifts/series/"+planned.SeriesID, nil, http.StatusOK, &read)
+	require.NotEmpty(t, read.Version)
 	var split series
 	send(http.MethodPut, "/staff-shifts/series/"+planned.SeriesID+"/split", map[string]any{
 		"effective_date": "2030-05-06", "start_time": "09:00", "end_time": "12:00", "break_minutes": 0, "shift_type_id": nil,
+		"expected_version": read.Version,
 	}, http.StatusOK, &split)
 	assert.Equal(t, planned.SeriesID, split.OldSeriesID)
 	assert.NotEqual(t, planned.SeriesID, split.SeriesID, "the change continues in a successor")

@@ -412,11 +412,13 @@ export function StaffTimeAccountCard({
                 await closeTraegerTimeAccountMonth(recordId, {
                   ...shown,
                   reason,
+                  expectedFingerprint: account.fingerprint,
                 }),
                 { revalidate: false },
               );
             } catch (err) {
-              // Schulen vor dem Fehler sind schon abgeschlossen: neu laden.
+              // Schulen vor dem Fehler sind schon abgeschlossen, oder der
+              // Monat hat sich seit dem Lesen geändert: neu laden.
               reload();
               throw err;
             }
