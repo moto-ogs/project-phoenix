@@ -50,11 +50,16 @@ Yannick Wenger, 22.11.2026 (#7760), wie in ADR 0307 festgehalten:
 Der Plan (`carecontract.ContractEnrollments`) sagt je importiertem Vertrag
 einer Schule, welche Buchungen eine Anmeldung tragen muss:
 
-- Buchungen sind halboffen. Das Roster eines genehmigten Kindes wird am
-  Betreuungsbeginn der Phase gelesen, also beginnt die Buchung der heute
-  geltenden Version dort, egal wann der Vertrag begann. Sie endet mit dem
-  frühesten von: letzter Tag des Moduls, Ende der Version, Ende einer
-  Kündigung, Beginn der nächsten Version, Ende der Phase.
+- Buchungen sind halboffen. **Kein Kind wird vor seinem Vertrag gebucht.**
+  Die Buchung der heute geltenden Version beginnt am ersten Tag, an dem der
+  Vertrag in der Phase Betreuung verspricht: am Betreuungsbeginn der Phase
+  oder, wenn der Vertrag später begann, an seinem ersten Tag (erste
+  wirksame Version). Beginnt die Betreuung der Phase am 10.08. und der
+  Vertrag am 01.01., ist das Kind ab dem 01.01. gebucht und auf dem Roster,
+  nicht ab dem 10.08. Ein Vertrag, der älter ist als die Phase, wird ab dem
+  Betreuungsbeginn gebucht. Die Buchung endet mit dem frühesten von:
+  letzter Tag des Moduls, Ende der Version, Ende einer Kündigung, Beginn
+  der nächsten Version, Ende der Phase.
 - Jede spätere Version ist eine geplante Änderung an ihrem ersten Tag.
   Versionen vor der geltenden werden nicht gebucht.
 - **Der Beweis hat zwei Teile.** Erstens die Vertragsanpassung selbst: Der
@@ -65,16 +70,18 @@ einer Schule, welche Buchungen eine Anmeldung tragen muss:
   (`care_ends` nach dem Ende der Phase), das hält keine Zeile zurück.
   Zweitens der direkte Vergleich: Die Anpassung übernimmt aus den Buchungen
   nur die Module, die sich an einem Tag ändern. Beginnt die geltende Version
-  nach ihrer Buchung (Phase ab 01.08., Version ab 01.10.), gibt es keinen
-  solchen Tag, und eine abweichende Endzeit bliebe unbemerkt. Deshalb
+  eines älteren Vertrags nach ihrer Buchung (Phase ab 01.08., zweite
+  Version ab 01.10.), gibt es keinen solchen Tag, und eine abweichende
+  Endzeit bliebe unbemerkt. Deshalb
   vergleicht der Plan versprochene und gebuchte Betreuung an jedem Tag, an
   dem eine Buchung, eine Version, ein Modul oder der Vertrag beginnt oder
   endet: Wochentag, Modul und Endzeit. Bereit heißt: Die Buchungen sind der
   Vertrag.
 - **Die Vergangenheit zählt, soweit sie gebucht wird.** Abgeleitete
-  Buchungen beginnen am Betreuungsbeginn der Phase und werden von dort an
-  verglichen, vor heute mit der heute geltenden Version: Versionen davor
-  bucht niemand. Die Buchungen einer bestehenden Anmeldung werden ab heute
+  Buchungen werden von ihrem ersten Tag an verglichen, vor heute mit der
+  heute geltenden Version: Versionen davor bucht niemand. Vor dem ersten
+  Tag des Vertrags verspricht er nichts; eine Buchung dort ist nicht die
+  des Vertrags. Die Buchungen einer bestehenden Anmeldung werden ab heute
   verglichen. Was davor liegt, hat die Schule genehmigt, lässt sich nicht
   mehr ändern und erzeugt keine Version.
 - **Abweichende Endzeiten bleiben zurück.** Weicht die Endzeit eines
@@ -84,8 +91,9 @@ einer Schule, welche Buchungen eine Anmeldung tragen muss:
   Die Zeile bleibt zurück (`end_time`), nie eine stille neue Version. Das
   Büro berichtigt den Vertrag oder das Modul.
 - Nicht ableitbar, jeweils mit Grund: Vertrag nicht aktiv, Vertrag noch nicht
-  begonnen, Modul kein Betreuungsangebot der Schule mehr, Module aus zwei
-  Phasen, Phase noch nicht begonnen oder beendet, Modul mit festen Tagen an
+  begonnen, Modul kein Betreuungsangebot der Schule mehr, Module der
+  geltenden Version aus zwei Phasen (`two_phases`), Phase noch nicht
+  begonnen oder beendet, Modul mit festen Tagen an
   anderen Tagen, Tag vom Modul nicht angeboten, Betreuung versprochen ohne
   Buchung in der Phase. Ein Modul der geltenden Version, dessen letzter Tag
   vorbei ist, wird nicht gebucht und entscheidet nichts, auch nicht über
@@ -101,7 +109,9 @@ einer Schule, welche Buchungen eine Anmeldung tragen muss:
   Hat der Vertrag eine Version, die erst nach heute beginnt, zeigt die
   Zeile die abgeleiteten Buchungen und die Änderung, ist aber nicht bereit:
   Die stille Anmeldung schreibt keine datierte Änderung (Abschnitt 2). Plan
-  und Anmeldung sagen dasselbe. Ausnahme: Trägt eine bestehende Anmeldung
+  und Anmeldung sagen dasselbe. Das gilt auch für eine geplante Version,
+  deren Module zur nächsten Phase gehören: Sie heißt `planned_change`,
+  nicht `two_phases`; heute hat der Vertrag eine Phase. Ausnahme: Trägt eine bestehende Anmeldung
   des Kindes die Änderung schon in ihren Buchungen, wird der Vertrag an sie
   gebunden; dafür wird nichts geschrieben.
 - Hat das Kind in der Phase schon eine angenommene Anmeldung, bekommt es
@@ -112,7 +122,16 @@ einer Schule, welche Buchungen eine Anmeldung tragen muss:
   ersten Laufs und bindet. Bewiesen wird, was gespeichert ist, nicht was der
   Plan heute ableiten würde: Ist seit dem ersten Lauf der letzte Tag eines
   Moduls vergangen, bucht die gespeicherte Anmeldung es weiter bis zu diesem
-  Tag, und der Vertrag wird trotzdem gebunden.
+  Tag, und der Vertrag wird trotzdem gebunden. Der Beweis des Plans allein
+  bindet nichts: Die Zeile trägt die Buchungen der Anmeldung ab heute und
+  den Tag des Plans (`ApplicationBookings`, `ProvedOn`), und die Anmeldung
+  der Schule bestätigt sie unter ihren Sperren (Abschnitte 2 und 3).
+- **Zwei importierte Verträge eines Kindes nacheinander in einer Phase.**
+  Vertrag A endet am 31.12. und ist an die Anmeldung des Kindes gebunden,
+  Vertrag B beginnt am 01.01. Ein Kind einer Anmeldung hat einen Vertrag,
+  also bleibt B zurück, mit eigenem Grund: `follows_contract` und der
+  Kennung von A (`FollowsContractID`). Das Büro behandelt den Fall als
+  Vertragsänderung; einen Weg dafür bietet der Folge-PR an.
 - **`has_application` heißt auf beiden Seiten dasselbe, die Anmeldung
   entscheidet.** Der Plan liest nur angenommene Anmeldungen, aus denen ein
   Vertrag entstehen kann. Die Schule sieht mehr: eine Anmeldung, die auf
@@ -123,8 +142,9 @@ einer Schule, welche Buchungen eine Anmeldung tragen muss:
   Bindung, und der Workflow zeigt sie als zurückgehalten.
 - **Die Zeile trägt, worauf sie bewiesen wurde.** Je Buchung die Endzeiten
   des Moduls an den gebuchten Wochentagen, seine angebotenen Tage und ob sie
-  fest sind; je Zeile Betreuungsbeginn und -ende der Phase. Die Anmeldung
-  vergleicht das unter ihren Sperren (Abschnitt 2).
+  fest sind; je Zeile Betreuungsbeginn und -ende der Phase. Der Plan liest
+  nur Angebote, die als Betreuung zählen; jede Buchung der Zeile setzt das
+  voraus. Die Anmeldung vergleicht das unter ihren Sperren (Abschnitt 2).
 - Ein Vertrag ohne Kinderakte wird nur genannt („ohne Kinderakte“); das Büro
   verknüpft ihn zuerst (ADR 0307). Ein gebundener Vertrag gilt als erledigt.
 - Der Plan zeigt dem Träger-Büro Kinderakten und Anmeldungen der Schule. Er
@@ -144,7 +164,13 @@ Zeitpunkt, den der Vertrag als Annahme liest.
 
 Sie ändert weder Kinderakte noch Erziehungsberechtigte, Beziehungen, Konten,
 Einwilligungen oder Wochenpläne und schreibt keine Mail, keinen Push und
-keine Einladung. Weil die Anmeldung keine Adresse trägt, findet sie kein
+keine Einladung. Was aus den Buchungen folgt, wird wie nach jeder
+Genehmigung neu abgeleitet: Eine kommende Abhol-Ausnahme des Kindes behält
+Tag, Zeit und Grund; ihre automatische Entschuldigung, die entschuldigten
+Blöcke und die Aufgabe des Personals für den Tag richten sich danach an der
+gebuchten Endzeit aus (`ResyncFutureExceptions`). Holt jemand das Kind an
+einem Montag um 13:00 ab und endet die Buchung um 14:30, ist es danach ab
+13:00 entschuldigt. Weil die Anmeldung keine Adresse trägt, findet sie kein
 Elternkonto im Elternportal. Sie ruft bewusst nicht auf: die Abgabe
 (`Submit`), die Entscheidung mit Mail und Einladung (`Decide`,
 `DecideAndInvite`), die Verlängerung der Kinderakte, alles zu
@@ -160,14 +186,47 @@ erreicht.
 - **Ein überholter Plan wird abgelehnt** (`changed`). Unter den Sperren der
   Genehmigung vergleicht die Anmeldung, was die Zeile vom Plan mitbringt,
   mit der Schule: Betreuungsbeginn und -ende der Phase, je Buchung
-  Endzeiten, angebotene Tage und Tagesmodus des Moduls. Hat die Schule
-  zwischen Plan und Anmeldung etwas davon geändert, schreibt die Anmeldung
-  nichts: Die Buchungen wurden gegen eine Schule bewiesen, die es so nicht
+  Endzeiten, angebotene Tage und Tagesmodus des Moduls, und dass das Modul
+  noch als Betreuung zählt (`CountsAsCare`): Die Vertragsanpassung liest nur
+  solche Angebote, ein anderes fiele nach der Bindung aus dem Vertrag. Hat
+  die Schule zwischen Plan und Anmeldung etwas davon geändert, schreibt die
+  Anmeldung nichts: Die Buchungen wurden gegen eine Schule bewiesen, die es so nicht
   mehr gibt. Der nächste Lauf plant neu.
+- **Eine bewiesene Anmeldung wird bestätigt, nicht angelegt.** Nennt die
+  Zeile das Kind einer Anmeldung (`RequestChildID`), prüft die Anmeldung
+  unter denselben Sperren: Dieses genehmigte Kind ist das einzige der
+  Phase, das die Kinderakte hält, das Büro hat es nicht zugeordnet, und
+  seine gespeicherten Buchungen ab dem Tag des Plans sind die, die der Plan
+  bewiesen hat (Angebot, Wochentage, Zeitraum, mit Phase und Modul wie
+  gelesen). Dann antwortet sie `existing` mit dieser Kennung, sonst
+  `changed`, bei einer weiteren Anmeldung des Kindes `has_application`.
+  Ändert das Büro zwischen Plan und Anmeldung die Wochentage der Anmeldung,
+  ist die Antwort `changed`. Geschrieben wird dafür nichts.
+- **Eine Schule ohne abgeleitete Betreuung wird abgelehnt**
+  (`care_offerings_off`). Ist `enrollment.care_offerings_enabled` für die
+  Schule aus, schreibt eine Genehmigung kein Roster; die Anmeldung gäbe dem
+  Kind Buchungen, die die tägliche Betreuung nie zeigt.
+  `CheckContractChildren` und `EnrollContractChildren` lehnen dann jede
+  Zeile ab, bevor sie etwas lesen, sperren oder schreiben.
 - Abgelehnt je Zeile, ohne etwas zu schreiben: Kinderakte fehlt, ist nicht
   aktiv, hat keinen Betreuungsplatz oder kein Geburtsdatum; Angebot gehört
-  nicht zur Phase; Tag wird nicht angeboten; Buchung beginnt nicht am
-  Betreuungsbeginn der Phase.
+  nicht zur Phase; Tag wird nicht angeboten; Buchungen beginnen vor dem
+  Betreuungsbeginn der Phase oder nicht am selben Tag (`booking_window`);
+  zwei Buchungen mit verschiedenem Ende auf einem direkt verknüpften Roster
+  (`shared_roster`, siehe unten).
+- **Das Roster beginnt mit der Buchung.** Care Plan liest die Buchungen
+  einer Genehmigung am ersten Tag des Fensters, das es bekommt, und beginnt
+  die Roster-Zeilen dort (`MaterializeApprovedBookings`,
+  `ResyncMultiSourceTemplatesForChild`). Am Betreuungsbeginn der Phase
+  gelesen, hätte ein Kind mit späterem Vertragsbeginn keine Buchung und
+  bekäme kein Roster. Die übliche Genehmigung kennt den Fall nicht: Sie
+  bucht immer die ganze Phase, auch mitten im Jahr, und einen späteren
+  Beginn schreibt nur die Stichtagsänderung (`AdjustOfferings`), die die
+  Erziehungsberechtigten erreicht. Die stille Anmeldung gibt den
+  Bausteinen deshalb die Phase ab dem ersten Tag der Buchungen. Geprüft für
+  beide Wege zum Roster (direkte Verknüpfung und Quellregel): Zeile ab dem
+  ersten Tag des Vertrags, kein Termin davor. Alle Buchungen eines Kindes
+  beginnen deshalb am selben Tag.
 - **Geplante Änderungen bleiben zurück** (`planned_change`). Eine datierte
   Änderung der Buchungen eines genehmigten Kindes läuft über Care Plans
   `AdjustOfferings`, und die endet in der Bekanntgabe an die
@@ -183,17 +242,43 @@ erreicht.
   Roster und seinen Terminen. Das war ein Fehler für jede befristete
   Buchung bei einer Genehmigung und ist in Care Plan behoben
   (`booking_drafts.go`).
+- **Zwei Buchungen auf einem direkt verknüpften Roster.** Nennen zwei
+  Angebote eines Kindes dasselbe Roster und enden an verschiedenen Tagen
+  (Montag im Februar, Mittwoch im Juli), lässt sich das nicht schreiben:
+  Care Plan führt je Kind und Roster eine Zeile mit einem Ende für alle
+  Wochentage. Wochentagsgenaue Fenster wären ein Umbau des Roster-Modells.
+  Entschieden ist das Zweite von zwei Möglichkeiten: Enden beide Buchungen
+  am selben Tag, endet die Zeile dort. Enden sie verschieden, bleibt die
+  Zeile wie vor diesem PR bis zum Ende der Phase offen, statt das spätere
+  Ende für alle Wochentage zu nehmen; und die stille Anmeldung lehnt ein
+  solches Kind vorab ab (`shared_roster`), in `CheckContractChildren` wie
+  im Lauf.
+- **Ansichten des Personals aktualisieren sich nicht von selbst.** Die
+  Bekanntgabe der Abholzeiten (`ReconcileOfferingPickupForStudents`) weckt
+  in einem Aufruf die Erziehungsberechtigten im Elternportal und das
+  Personal (Abholplan der Schule, Hinweise des Tagesplans, #5498). Care
+  Plan hat keine Fähigkeit nur für den Teil des Personals; eine neue wäre
+  eine eigene Schnittstelle samt Bindung und kein kleiner Aufruf. Die
+  stille Anmeldung lässt den Aufruf deshalb ganz weg. Bekannte Grenze:
+  Offene Ansichten des Personals zeigen die neuen Kinder nach dem Neuladen.
 - **Die Zahl der Statements der Anmeldung selbst wächst nicht mit den
   Kindern.** Enrollment liest und schreibt in Mengen: Kinderakten und
   Personen, Angebote, Anmeldungen der Phase und deren Buchungen je einmal;
   Anmeldungen, Kinder und Wahlen in je einem Insert, die Genehmigungen in
-  einem Update, die Entschuldigungen der Abholzeiten in einem Aufruf.
+  einem Update.
   **Rest:** Was aus den Buchungen eines Kindes entsteht, schreibt Care Plan
   mit den Bausteinen einer Genehmigung je Kind: Buchungen
   (`RecordCareOfferingBookings`), Roster (`MaterializeApprovedBookings`) und
-  Roster mit mehreren Quellen (`ResyncMultiSourceTemplatesForChild`).
-  Gemessen mit einem Angebot und einem Roster: 30 Statements für ein Kind,
-  15 je weiteres Kind (3 + 9 + 3). Eine Mengenform wäre ein Umbau des
+  Roster mit mehreren Quellen (`ResyncMultiSourceTemplatesForChild`). Die
+  Entschuldigungen der Abholzeiten sind ein Aufruf für alle Kinder, den
+  Care Plan ebenfalls Kind für Kind abarbeitet: Kinderakte sperren, kommende
+  Abhol-Ausnahmen lesen, jede unter der Sperre ihres Tages neu ableiten.
+  Gemessen in der Zusammensetzung der Produktion (mit
+  `ResyncFutureExceptions`), mit einem Angebot, einem Roster und je Kind
+  einer kommenden Abhol-Ausnahme, die eine Entschuldigung bekommt:
+  46 Statements für ein Kind, 31 je weiteres Kind (3 + 9 + 3 + 16; ohne
+  kommende Ausnahme 2 statt 16). Die erste Fassung dieses ADR nannte 30 und
+  15; ihr Test hatte den Aufruf für die Entschuldigungen nicht gebunden. Eine Mengenform wäre ein Umbau des
   Roster-Schreibers, den auch `Decide` und die Verlängerung nutzen, kein
   Zusatz zu diesem Lauf. Das Query-Budget
   `services.enrollment.contract_enrollments.enroll` hält beide Zahlen fest;
@@ -221,25 +306,37 @@ ungebunden (`changed`). Die Bindung schreibt in den Verlauf
 Versand. Eine wiederholte Bindung ändert nichts. Nennt ein Aufruf einen
 Vertrag zweimal, bekommt jede Zeile ihre Antwort; der Aufruf scheitert nicht.
 
-**Gebunden wird nur, was der Plan bewiesen hat.** Eine Regel sagt, an
-welches Kind einer Anmeldung eine Bindung gehen darf, und das Kennzeichen der
-Plan-Zeile (`Token`) trägt sie mit der Zeitleiste:
+**Gebunden wird nur, was die Anmeldung unter ihren Sperren bestätigt hat.**
+Es gibt eine Regel, keine zwei: Jede Zeile, die gebunden werden soll, geht
+in der Transaktion der Schule durch `EnrollContractChildren`, und
+`BindApplications` bindet nur auf dessen Antwort `enrolled` oder `existing`
+(`ApplicationBinding.Enrollment`). Ohne diese Antwort ist jede Bindung
+`changed`.
 
 - Nennt die Zeile ein Kind einer Anmeldung (die bewiesene bestehende
-  Anmeldung), wird genau an dieses gebunden. Das Kind wird nicht angemeldet.
-- Nennt sie keines, wird an das Kind gebunden, das
-  `EnrollContractChildren` für den Vertrag mit `enrolled` oder `existing`
-  beantwortet hat; die Bindung trägt diese Antwort.
+  Anmeldung), bestätigt die Anmeldung der Schule genau dieses Kind
+  (Abschnitt 2) und antwortet `existing`. Das Kind wird nicht angemeldet.
+  Das Kennzeichen der Zeile (`Token`) hält dieses Kind fest: Eine Bindung an
+  ein anderes ist `changed`.
+- Nennt sie keines, meldet die Anmeldung das Kind an (`enrolled`) oder
+  findet die Anmeldung dieser Herkunft mit denselben Buchungen
+  (`existing`); gebunden wird an das Kind dieser Antwort.
 
-Jede andere Bindung ist `changed`. Auf `has_application`, `changed` oder
-eine Ablehnung der Anmeldung folgt nie eine Bindung. Eine Anmeldung, die auf
+Der Beweis des Plans allein bindet nie: Der Plan liest die Buchungen einer
+Anmeldung in einem früheren Statement, und das Büro kann sie bis zu den
+Sperren der Anmeldung ändern. Auf `has_application`, `changed` oder eine
+Ablehnung der Anmeldung folgt nie eine Bindung. Eine Anmeldung, die auf
 eine Entscheidung wartet, eine später abgelehnte und eine vom Büro
-zugeordnete werden deshalb nie gebunden. Zwischen dem Plan in der
-Tenant-Transaktion und der Bindung in der Träger-Transaktion kann die Schule
-eine bewiesene Anmeldung noch ablehnen; keine Transaktion hält beide Scopes
-(ADR 0105). Der Vertrag stünde dann an einer abgelehnten Anmeldung. Das
-Fenster ist eine Anfrage lang und bleibt als bekannte Lücke stehen; der Weg
-zurück (Bindung lösen, siehe unten) ist auch dafür gedacht.
+zugeordnete werden deshalb nie gebunden.
+
+**Das verbleibende Fenster.** Zwischen der Transaktion der Schule
+(Bestätigung) und der Träger-Transaktion (Bindung) hält keine Transaktion
+beide Scopes (ADR 0105). In dieser einen Anfrage kann die Schule eine
+bestätigte Anmeldung noch ablehnen oder ihre Buchungen ändern. Der Vertrag
+stünde dann an einer abgelehnten Anmeldung, oder die Vertragsanpassung
+schriebe für die geänderten Buchungen eine Version, wie für jede genehmigte
+Buchungsänderung nach der Bindung. Beides bleibt als bekannte Lücke stehen;
+der Weg zurück (Bindung lösen, siehe unten) ist auch dafür gedacht.
 
 Für den Zustand „beide Ursprünge gesetzt“ gilt:
 
@@ -288,14 +385,17 @@ ist das Koordination, kein teilnehmendes Kommando. Der neue Owner
 dem Muster von `traeger-catalog-rollout`:
 
 1. Träger-Transaktion: Verträge lesen (`EnrollmentContracts`).
-2. Tenant-Transaktion der Schule: Plan (`EnrollmentPlans`), Anmeldung der
-   bereiten Kinder ohne bestehende Anmeldung (`EnrollContractChildren`),
-   Eintrag ins Zugriffsprotokoll der Schule (ADR 0084 §7). **Das Protokoll
+2. Tenant-Transaktion der Schule: Plan (`EnrollmentPlans`), dann jede
+   bereite Zeile an `EnrollContractChildren`: Kinder ohne Anmeldung werden
+   angemeldet, eine bewiesene bestehende Anmeldung wird bestätigt (mit
+   `RequestChildID`, `ApplicationBookings` und `ProvedOn` der Zeile). Dazu
+   der Eintrag ins Zugriffsprotokoll der Schule (ADR 0084 §7). **Das Protokoll
    ist Pflicht des Workflows**: Plan und Anmeldung schreiben es nicht selbst,
    und kein Lauf, auch keine Vorschau, liest die Schule ohne den Eintrag in
    derselben Transaktion.
-3. Träger-Transaktion: Bindung (`BindApplications`), nach der Regel aus
-   Abschnitt 3. Der Workflow führt die Antworten von Plan und Anmeldung
+3. Träger-Transaktion: Bindung (`BindApplications`) der Zeilen, die die
+   Anmeldung mit `enrolled` oder `existing` beantwortet hat, nach der Regel
+   aus Abschnitt 3. Der Workflow führt die Antworten von Plan und Anmeldung
    zusammen; die Antwort der Anmeldung geht vor.
 
 Bricht der Lauf zwischen 2 und 3 ab, gibt es die Anmeldung, und der Vertrag
@@ -333,9 +433,13 @@ Angaben der Erziehungsberechtigten kopiert, die Herkunft nicht (also
 das Kind zurückgezogen, weil niemand zugestimmt hat, und im Modus Opt-out
 wäre eine Anmeldung ohne Erziehungsberechtigte ungesehen verlängert worden.
 
-Regel: Eine Verlängerung, die keine Eltern beantworten können, geht in die
-Prüfung der Schule. Das ist jede Anmeldung der Herkunft `contract_import`
-und jede ohne Adresse und ohne Konto der Erziehungsberechtigten.
+Regel: Die Verlängerung einer Anmeldung der Herkunft `contract_import`
+geht in die Prüfung der Schule, denn keine Eltern können sie beantworten.
+Die Regel liest nur die Herkunft. Eine Anmeldung anderer Herkunft, die
+weder Adresse noch Konto der Erziehungsberechtigten nennt, wird verlängert
+wie bisher: Solange der Lauf aus Abschnitt 4 nicht existiert, gibt es keine
+Anmeldung der neuen Herkunft, und für bestehende Schulen ändert sich an der
+Verlängerung nichts.
 
 - Das neue Kind entsteht in `pending_admin_review` mit dem Grund
   `no_guardian`, in beiden Modi. Die Vorschau der Verlängerung zählt es
@@ -368,8 +472,9 @@ Die Entscheidung ändert diese Register (ADR 0057 Punkt 5, ADR 0070):
   (`peopledirectory.ListStudentsByID`, `ListPersonsByID`) über die Bindung
   `EnrollmentContractStudents`, als Abfrage eingestuft.
 - **Query-Budget** (`backend/test/query-budgets/`): neu
-  `services.enrollment.contract_enrollments.enroll`, 30 Statements für ein
-  Kind; der Test prüft dazu exakt 15 je weiteres Kind (Abschnitt 2).
+  `services.enrollment.contract_enrollments.enroll`, 46 Statements für ein
+  Kind mit einer kommenden Abhol-Ausnahme; der Test prüft dazu exakt 31 je
+  weiteres Kind (Abschnitt 2).
 - **Compose-Budgets** (`backend/test/module_legacy_budget_ratchet_test.go`):
   `modules/carecontract/compose` 188 → 195 (Konstruktor
   `NewContractEnrollments` und der Typ seiner Ports). Der Konstruktor baut
@@ -381,6 +486,19 @@ Die Entscheidung ändert diese Register (ADR 0057 Punkt 5, ADR 0070):
   `contract_import` (Migration `20261122202200`).
 - **Fehlercode**: `care_contract.child_link_bound`.
 - **Prüfgrund der Verlängerung**: `no_guardian` (Abschnitt 6).
+
+## Was sich für bestehende Schulen jetzt ändert
+
+Dieser PR ändert für bestehende Schulen genau eine Sache: Die Roster-Zeile
+einer Aktivität, die ein Angebot über die direkte Verknüpfung
+(`ActivityGroupID`) benennt, endet mit einer befristeten Buchung statt mit
+der Phase. Das behebt einen bestehenden Fehler bei jeder Genehmigung mit
+befristeter Buchung. Teilen sich zwei solche Buchungen eines Kindes ein
+Roster und enden verschieden, bleibt die Zeile wie bisher offen.
+
+Sonst ändert sich nichts: Plan, stille Anmeldung und Bindung ruft bis zum
+Folge-PR nichts auf, die Herkunft `contract_import` trägt keine Anmeldung,
+und die Regel der Verlängerung (Abschnitt 6) greift nur für diese Herkunft.
 
 ## Verworfene Optionen
 
@@ -414,6 +532,24 @@ Die Entscheidung ändert diese Register (ADR 0057 Punkt 5, ADR 0070):
 - **Die Roster je Lauf als Menge schreiben.** Verlangt einen zweiten
   Roster-Schreiber neben dem der Genehmigung; der Rest von 15 Statements je
   Kind ist für einen Lauf je Schule tragbar (Abschnitt 2).
+- **Jede Anmeldung ohne Adresse und Konto in die Prüfung der Verlängerung
+  schicken.** So stand es zuerst in Abschnitt 6. Das hätte die Verlängerung
+  bestehender Schulen geändert, bevor es ein Kind der neuen Herkunft gibt.
+- **Buchungen ab dem Betreuungsbeginn der Phase, egal wann der Vertrag
+  begann.** So stand es zuerst hier, weil das Roster am Betreuungsbeginn
+  gelesen wird. Das Kind wäre vor seinem Vertrag gebucht und auf dem Roster
+  gewesen.
+- **Einen späteren Beginn über `AdjustOfferings` schreiben.** Erreicht die
+  Erziehungsberechtigten im Elternportal.
+- **Eine vom Plan bewiesene Anmeldung ohne Anmeldung der Schule binden.**
+  So stand es zuerst in Abschnitt 3 (zwei Regeln). Zwischen Beweis und
+  Bindung konnte das Büro die Buchungen ändern, ohne dass es jemand prüft.
+- **Wochentagsgenaue Roster-Fenster für zwei Buchungen auf einem Roster.**
+  Verlangt mehrere Zeilen je Kind und Roster und damit einen Umbau des
+  Roster-Schreibers und seiner Abgleiche.
+- **Das spätere Ende für alle Wochentage eines geteilten Rosters nehmen.**
+  Lässt das Kind an den Tagen der früher endenden Buchung auf dem Roster
+  und sieht dabei nach einer Befristung aus.
 - **Kinder der stillen Anmeldung von der Verlängerung ausnehmen.** Sie
   verlören ihre Betreuung im nächsten Jahr, ohne dass es jemand entscheidet.
 
@@ -434,6 +570,13 @@ Die Entscheidung ändert diese Register (ADR 0057 Punkt 5, ADR 0070):
   nichts.
 - Kinder der stillen Anmeldung erscheinen bei der Verlängerung in der
   Prüfliste der Schule statt in der Frist der Eltern.
+- Ein Kind, dessen Vertrag in der laufenden Phase begann, ist ab dem ersten
+  Tag des Vertrags gebucht und auf dem Roster, nicht davor.
+- Folgt in einer Phase ein importierter Vertrag auf einen gebundenen,
+  bleibt er zurück (`follows_contract`), bis das Büro ihn als
+  Vertragsänderung behandelt.
+- Eine Schule mit ausgeschalteten Betreuungsangeboten bekommt keine stille
+  Anmeldung.
 - Die Rücknahme der Migration löst die Bindung importierter Verträge wieder;
   die Anmeldungen bleiben an der Schule und heißen dann „von Hand
   eingetragen“.
