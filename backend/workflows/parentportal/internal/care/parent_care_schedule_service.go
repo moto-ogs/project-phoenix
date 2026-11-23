@@ -15,6 +15,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan/absencerecords"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
+	"github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -68,6 +69,8 @@ type PendingCareRequest struct {
 	CreatedAt       time.Time
 	Diff            []carerequests.DiffEntry
 	SubmittedBySelf bool
+	// Version is the request's read-state token (ADR 0311).
+	Version string
 }
 
 // ChildCareSchedule is the parent-facing weekly care plan view.
@@ -288,6 +291,7 @@ func pendingCareRequest(
 		CreatedAt:       pending.CreatedAt,
 		Diff:            diff,
 		SubmittedBySelf: pending.SubmittedBy == accountID,
+		Version:         excusedrequests.ParentRequestVersion(pending.UpdatedAt),
 	}
 }
 

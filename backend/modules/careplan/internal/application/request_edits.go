@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 type RequestEdits struct {
@@ -33,8 +34,8 @@ func (s *RequestEdits) EditRequest(ctx context.Context, input carerequests.EditI
 	if request.Status != "pending" {
 		return nil, careplan.ErrCareScheduleRequestNotPending
 	}
-	if input.ExpectedVersion != "" && careplan.ParentRequestVersion(request.UpdatedAt) != input.ExpectedVersion {
-		return nil, careplan.ErrParentRequestStale
+	if err := readstate.Check(input.ExpectedVersion, careplan.ParentRequestVersion(request.UpdatedAt)); err != nil {
+		return nil, err
 	}
 	payload, err := s.payload(ctx, request, input)
 	if err != nil {

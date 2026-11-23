@@ -9,7 +9,6 @@
  */
 
 import { useState } from "react";
-import { ApiError } from "~/lib/api-error";
 
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
@@ -29,6 +28,7 @@ import {
   markRequestDone,
   type AggregatedOpenRequest,
   type ParentRequestKind,
+  isOutdatedDecision,
 } from "~/lib/change-request-list-api";
 import { hasReviewMetadata, itemKey } from "./case-model";
 import {
@@ -45,6 +45,7 @@ const logger = createLogger({ component: "RequestDecisionRow" });
 function OpenRequestContent({
   request,
   onDecided,
+  onStale,
   onHold,
   held,
   decisionDisabledReason,
@@ -52,6 +53,7 @@ function OpenRequestContent({
 }: Readonly<{
   request: AggregatedOpenRequest;
   onDecided: (notice: string) => void;
+  onStale: () => void;
   onHold?: (decision: HeldOfferingDecision) => void;
   held?: HeldOfferingDecision;
   decisionDisabledReason?: string;
@@ -67,6 +69,7 @@ function OpenRequestContent({
           onDecided={onDecided}
           grouped
           expectedVersion={request.expected_version}
+          onStale={onStale}
           decisionDisabledReason={decisionDisabledReason}
           approveReasonRequired={approveReasonRequired}
         />
@@ -78,6 +81,7 @@ function OpenRequestContent({
           onDecided={onDecided}
           grouped
           expectedVersion={request.expected_version}
+          onStale={onStale}
           decisionDisabledReason={decisionDisabledReason}
           approveReasonRequired={approveReasonRequired}
         />
@@ -91,6 +95,7 @@ function OpenRequestContent({
           held={held}
           grouped
           expectedVersion={request.expected_version}
+          onStale={onStale}
           decisionDisabledReason={decisionDisabledReason}
           approveReasonRequired={approveReasonRequired}
         />
@@ -102,6 +107,7 @@ function OpenRequestContent({
           onDecided={onDecided}
           grouped
           expectedVersion={request.expected_version}
+          onStale={onStale}
           currentStatusByDate={request.current_status_by_date}
           partialAbsenceFromByDate={request.partial_absence_from_by_date}
           decisionDisabledReason={decisionDisabledReason}
@@ -155,6 +161,7 @@ export function RequestDecisionRow({
       <OpenRequestContent
         request={request}
         onDecided={(notice) => onDecided(key, notice)}
+        onStale={onStale}
         onHold={hold}
         held={held}
         approveReasonRequired={approveReasonRequired}
@@ -187,8 +194,7 @@ export function RequestDecisionRow({
       });
       // Eine veraltete Anfrage meldet der Katalog über ihren Code; die Liste
       // lädt dann die neue Fassung, statt einen Wiederholen-Klick anzubieten.
-      const stale =
-        err instanceof ApiError && err.code === "students.change_request_stale";
+      const stale = isOutdatedDecision(err);
       await actionErrors.show(err, {
         object: "die Anfrage",
         retry: stale ? undefined : () => void markDone(),
@@ -261,6 +267,7 @@ export function RequestDecisionRow({
         <OpenRequestContent
           request={request}
           onDecided={(notice) => onDecided(key, notice)}
+          onStale={onStale}
           onHold={hold}
           held={held}
           decisionDisabledReason={disabledReason}

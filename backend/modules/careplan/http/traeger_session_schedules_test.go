@@ -464,7 +464,7 @@ func TestTraegerSchoolSessionApprovesParentWeeklyRequest(t *testing.T) {
 	token, _ := openWeeklyBaseline(t, tc, claims, chain.StudentID, pending.ID)
 
 	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("/care-schedule-change-requests/%d/decide", pending.ID),
-		strings.NewReader(fmt.Sprintf(`{"approve":true,"reason":"Passt so","impact_token":%q}`, token)))
+		strings.NewReader(fmt.Sprintf(`{"approve":true,"reason":"Passt so","impact_token":%q,"expected_version":%q}`, token, testpkg.CareRequestVersion(t, pending.ID))))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	rr := authExec(t, tc, req, claims, []string{"admin:*"})
@@ -491,7 +491,7 @@ func TestSchoolSessionWithoutStaffRecordCannotApproveParentWeeklyRequest(t *test
 	token, _ := openWeeklyBaseline(t, tc, claims, chain.StudentID, pending.ID)
 
 	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("/care-schedule-change-requests/%d/decide", pending.ID),
-		strings.NewReader(fmt.Sprintf(`{"approve":true,"reason":"Passt so","impact_token":%q}`, token)))
+		strings.NewReader(fmt.Sprintf(`{"approve":true,"reason":"Passt so","impact_token":%q,"expected_version":%q}`, token, testpkg.CareRequestVersion(t, pending.ID))))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	rr := authExec(t, tc, req, claims, []string{"admin:*"})

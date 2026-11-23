@@ -14,6 +14,7 @@ import (
 	settingsModule "github.com/moto-ogs/project-phoenix/modules/settings"
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
+	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -130,12 +131,41 @@ func (r writeRig) serveWrite(t *testing.T, ctx context.Context, w childWrite, to
 	}
 }
 
-func sharingWrite(studentID, requestID int64, recipients ...int64) childWrite {
+func sharingWrite(studentID, requestID int64, version string, recipients ...int64) childWrite {
 	ids := make([]string, 0, len(recipients))
 	for _, id := range recipients {
 		ids = append(ids, fmt.Sprint(id))
 	}
-	return childWrite{http.MethodPut, fmt.Sprintf("/parent/me/children/%d/request-sharing/master_data/%d", studentID, requestID), map[string]any{"recipient_guardian_profile_ids": ids}}
+	return childWrite{http.MethodPut, sharingPath(studentID, requestID), map[string]any{"recipient_guardian_profile_ids": ids, "expected_version": version}}
+}
+
+func sharingPath(studentID, requestID int64) string {
+	return fmt.Sprintf("/parent/me/children/%d/request-sharing/master_data/%d", studentID, requestID)
+}
+
+// sharingVersion reads the version of the sharing of the family's open
+// master-data request, as the sharing dialog reads it.
+func (r childReadRig) sharingVersion(t *testing.T, f childReadFamily) string {
+	t.Helper()
+	rec := testutil.ExecuteRequest(r.router, testutil.NewAuthenticatedRequest(t, http.MethodGet, sharingPath(f.StudentID, f.requestID), nil, testutil.WithJWTBearer(f.token)))
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	var read struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &read))
+	require.NotEmpty(t, read.Data.Version)
+	return read.Data.Version
+}
+
+// masterDataVersion is the version the parent list emits for the family's
+// open master-data request.
+func (r childReadRig) masterDataVersion(t *testing.T, f childReadFamily) string {
+	t.Helper()
+	var updatedAt time.Time
+	require.NoError(t, r.db.NewRaw(`SELECT updated_at FROM users.student_data_change_requests WHERE id = ?`, f.requestID).Scan(context.Background(), &updatedAt))
+	return careplan.ParentRequestVersion(updatedAt)
 }
 
 func masterDataEdit(studentID, requestID int64, value, version string) childWrite {
@@ -246,9 +276,10 @@ func TestParentChildWritesAnswerLikeBefore(t *testing.T) {
 			write childWrite
 			want  string
 		}{
-			"foreign child":     {sharingWrite(other.StudentID, other.requestID), "404 care.request_not_found"},
-			"foreign request":   {sharingWrite(f.StudentID, other.requestID), "404 care.request_not_found"},
-			"foreign recipient": {sharingWrite(f.StudentID, f.requestID, other.StudentID+1_000_000), "400 care.request_sharing_invalid"},
+			"foreign child":     {sharingWrite(other.StudentID, other.requestID, ""), "404 care.request_not_found"},
+			"foreign request":   {sharingWrite(f.StudentID, other.requestID, ""), "404 care.request_not_found"},
+			"foreign recipient": {sharingWrite(f.StudentID, f.requestID, "", other.StudentID+1_000_000), "400 care.request_sharing_invalid"},
+			"outdated read":     {sharingWrite(f.StudentID, f.requestID, "outdated"), "409 general.changed_since_read"},
 		} {
 			rec, _ := rig.send(t, c.write, f.token)
 			require.Equal(t, c.want, answer(t, rec), name)
@@ -260,20 +291,20 @@ func TestParentChildWritesAnswerLikeBefore(t *testing.T) {
 		require.NoError(t, rig.db.NewRaw(`SELECT id FROM users.guardian_profiles WHERE account_id = ?`, co.AccountID).Scan(context.Background(), &coProfile))
 		_, err := rig.db.NewRaw(`INSERT INTO users.student_family_protection_events (tenant_id, student_id, enabled, reason, actor_account_id) VALUES (?, ?, true, 'Schutz', ?)`, f.TenantID, f.StudentID, f.AccountID).Exec(context.Background())
 		require.NoError(t, err)
-		rec, _ = rig.send(t, sharingWrite(f.StudentID, f.requestID, coProfile), f.token)
+		rec, _ = rig.send(t, sharingWrite(f.StudentID, f.requestID, rig.sharingVersion(t, f), coProfile), f.token)
 		require.Equal(t, "403 care.family_protection", answer(t, rec))
 		require.Equal(t, before, rig.state(t, f))
 		_, err = rig.db.NewRaw(`INSERT INTO users.student_family_protection_events (tenant_id, student_id, enabled, reason, actor_account_id) VALUES (?, ?, false, 'Ende', ?)`, f.TenantID, f.StudentID, f.AccountID).Exec(context.Background())
 		require.NoError(t, err)
 
-		rec, _ = rig.send(t, sharingWrite(f.StudentID, f.requestID, coProfile), f.token)
+		rec, _ = rig.send(t, sharingWrite(f.StudentID, f.requestID, rig.sharingVersion(t, f), coProfile), f.token)
 		require.Equal(t, "200", answer(t, rec), rec.Body.String())
 		after := rig.state(t, f)
 		require.Equal(t, before.Shares+1, after.Shares)
 		require.Equal(t, before.Ledger+1, after.Ledger)
 
 		rig.revoke(t, f, "parent_portal.master_data.request")
-		rec, _ = rig.send(t, sharingWrite(f.StudentID, f.requestID), f.token)
+		rec, _ = rig.send(t, sharingWrite(f.StudentID, f.requestID, rig.sharingVersion(t, f)), f.token)
 		require.Equal(t, "403 care.guardian_permission_denied", answer(t, rec))
 		require.Equal(t, after, rig.state(t, f))
 	})
@@ -287,15 +318,15 @@ func TestParentChildWritesAnswerLikeBefore(t *testing.T) {
 		}{
 			"foreign child":   {masterDataEdit(other.StudentID, other.requestID, "Paul", ""), "403 care.child_not_linked"},
 			"foreign request": {masterDataEdit(f.StudentID, other.requestID, "Paul", ""), "404 care.request_not_found"},
-			"stale version":   {masterDataEdit(f.StudentID, f.requestID, "Paul", "1"), "409 students.change_request_stale"},
-			"no change":       {masterDataEdit(f.StudentID, f.requestID, "Felix", ""), "400 care.master_data_no_changes"},
+			"stale version":   {masterDataEdit(f.StudentID, f.requestID, "Paul", "1"), "409 general.changed_since_read"},
+			"no change":       {masterDataEdit(f.StudentID, f.requestID, "Felix", rig.masterDataVersion(t, f)), "400 care.master_data_no_changes"},
 		} {
 			rec, _ := rig.send(t, c.write, f.token)
 			require.Equal(t, c.want, answer(t, rec), name)
 			require.Equal(t, before, rig.state(t, f), name)
 		}
 
-		rec, _ := rig.send(t, masterDataEdit(f.StudentID, f.requestID, "Paul", ""), f.token)
+		rec, _ := rig.send(t, masterDataEdit(f.StudentID, f.requestID, "Paul", rig.masterDataVersion(t, f)), f.token)
 		require.Equal(t, "200", answer(t, rec), rec.Body.String())
 		after := rig.state(t, f)
 		require.Equal(t, "Paul", after.Value)
@@ -304,7 +335,7 @@ func TestParentChildWritesAnswerLikeBefore(t *testing.T) {
 		_, err := rig.db.NewRaw(`UPDATE users.student_data_change_requests SET status = 'rejected' WHERE id = ?`, f.requestID).Exec(context.Background())
 		require.NoError(t, err)
 		decided := rig.state(t, f)
-		rec, _ = rig.send(t, masterDataEdit(f.StudentID, f.requestID, "Emil", ""), f.token)
+		rec, _ = rig.send(t, masterDataEdit(f.StudentID, f.requestID, "Emil", rig.masterDataVersion(t, f)), f.token)
 		require.Equal(t, "409 care.request_not_open", answer(t, rec))
 		require.Equal(t, decided, rig.state(t, f))
 
@@ -399,7 +430,7 @@ func (p *photoUnlinks) forPath(path string) []photoUnlink {
 
 // childWrites are one successful request per route for a family whose photo
 // consent is given: D withdraws it, C grants it again.
-func childWrites(f childReadFamily) []struct {
+func childWrites(t *testing.T, rig childReadRig, f childReadFamily) []struct {
 	name  string
 	write childWrite
 } {
@@ -407,8 +438,8 @@ func childWrites(f childReadFamily) []struct {
 		name  string
 		write childWrite
 	}{
-		{"A request sharing", sharingWrite(f.StudentID, f.requestID)},
-		{"B master-data request edit", masterDataEdit(f.StudentID, f.requestID, "Paul", "")},
+		{"A request sharing", sharingWrite(f.StudentID, f.requestID, rig.sharingVersion(t, f))},
+		{"B master-data request edit", masterDataEdit(f.StudentID, f.requestID, "Paul", rig.masterDataVersion(t, f))},
 		{"D photo consent withdrawal", photoConsent(http.MethodDelete, f.StudentID)},
 		{"C photo consent grant", photoConsent(http.MethodPut, f.StudentID)},
 	}
@@ -428,7 +459,7 @@ func TestParentChildWritesAreOneTransaction(t *testing.T) {
 	f := rig.family(t)
 	rig.givePhotoConsent(t, f)
 
-	for _, w := range childWrites(f) {
+	for _, w := range childWrites(t, rig.childReadRig, f) {
 		rec, queries := rig.send(t, w.write, f.token)
 		require.Equal(t, http.StatusOK, rec.Code, "%s: %s", w.name, rec.Body.String())
 		t.Logf("statements %s: %d", w.name, len(queries))
@@ -465,7 +496,7 @@ func TestParentChildWritesStatementCounts(t *testing.T) {
 	rig := newWriteRig(t)
 	f := rig.family(t)
 	rig.givePhotoConsent(t, f)
-	for _, w := range childWrites(f) {
+	for _, w := range childWrites(t, rig.childReadRig, f) {
 		rec, queries := rig.send(t, w.write, f.token)
 		require.Equal(t, http.StatusOK, rec.Code, "%s: %s", w.name, rec.Body.String())
 		t.Logf("statements %s: %d", w.name, len(queries))
@@ -494,7 +525,7 @@ func TestParentChildWritesFailTheirFrameOnce(t *testing.T) {
 	} {
 		f := rig.family(t)
 		rig.givePhotoConsent(t, f)
-		for _, w := range childWrites(f) {
+		for _, w := range childWrites(t, rig.childReadRig, f) {
 			before := rig.state(t, f)
 			begins := fault.Begins()
 			point.arm()
@@ -535,8 +566,8 @@ func TestParentChildWritesKeepTheirAnswerWhenTheRollbackFails(t *testing.T) {
 		write childWrite
 		want  string
 	}{
-		{sharingWrite(f.StudentID, other.requestID), "404 care.request_not_found"},
-		{masterDataEdit(f.StudentID, f.requestID, "Paul", "1"), "409 students.change_request_stale"},
+		{sharingWrite(f.StudentID, other.requestID, ""), "404 care.request_not_found"},
+		{masterDataEdit(f.StudentID, f.requestID, "Paul", "1"), "409 general.changed_since_read"},
 		{photoConsent(http.MethodPut, f.StudentID), "409 care.photo_consent_not_withdrawn"},
 	} {
 		fault.ArmRollback(0)
@@ -560,7 +591,7 @@ func TestParentChildWritesPersistNothingWhenCancelledUnderTheLock(t *testing.T) 
 	f := rig.family(t)
 	rig.givePhotoConsent(t, f)
 
-	for _, w := range childWrites(f) {
+	for _, w := range childWrites(t, rig.childReadRig, f) {
 		before := rig.state(t, f)
 		ctx, cancel := context.WithCancel(context.Background())
 		fault.AfterStatement(lockStatementPrefix, cancel)

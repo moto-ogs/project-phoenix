@@ -143,7 +143,6 @@
     "editedAt": "Zmieniono {date}",
     "saveEdit": "Zapisz zmianę",
     "noteRequired": "Proszę krótko napisać, dlaczego opieka ma się zmienić.",
-    "staleError": "Prośba została w tym czasie rozpatrzona. Proszę odświeżyć stronę.",
     "intro": "Proszę wybrać, na jakie oferty Państwa dziecko ma chodzić i od kiedy zmiana ma obowiązywać. Zespół sprawdzi prośbę.",
     "noOfferings": "W tym okresie nie można zapisać dziecka na opiekę.",
     "effectiveFromLabel": "Zmiana obowiązuje od",

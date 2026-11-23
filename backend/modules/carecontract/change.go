@@ -134,8 +134,6 @@ var (
 	ErrChangeNotFound = errors.New("change request not found")
 	// ErrChangeDecided reports a request somebody decided already.
 	ErrChangeDecided = errors.New("the change request is decided already")
-	// ErrChangeStale reports a request that changed since the office read it.
-	ErrChangeStale = errors.New("the change request changed")
 	// ErrChangePast reports an approval of a day that has passed.
 	ErrChangePast = errors.New("the change request lies in the past")
 	// ErrChangeReasonRequired reports a decision without its reason.

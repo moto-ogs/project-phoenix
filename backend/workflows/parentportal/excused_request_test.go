@@ -158,7 +158,7 @@ func TestSickRequest_ApproveWritesSickStatusAndLiveFlag(t *testing.T) {
 	require.NoError(t, err)
 
 	err = testpkg.WithTenantTx(t, adminCtx(), db, chain.TenantID, func(txCtx context.Context, _ bun.Tx) error {
-		_, decideErr := requests.Decide(txCtx, careplan.ExcusedRequestDecideInput{
+		_, decideErr := requests.Decide(txCtx, careplan.ExcusedRequestDecideInput{ExpectedVersion: testpkg.ExcusedRequestVersion(t, res.PendingRequest.ID),
 			RequestID:  res.PendingRequest.ID,
 			Approve:    true,
 			ReviewedBy: chain.AccountID,
@@ -271,7 +271,7 @@ func TestExcusedRequest_ApproveWritesStatusDays(t *testing.T) {
 
 	// Staff approve inside a tenant transaction (as the middleware would).
 	err = testpkg.WithTenantTx(t, adminCtx(), db, chain.TenantID, func(txCtx context.Context, _ bun.Tx) error {
-		item, derr := excused.Decide(txCtx, careplan.ExcusedRequestDecideInput{
+		item, derr := excused.Decide(txCtx, careplan.ExcusedRequestDecideInput{ExpectedVersion: testpkg.ExcusedRequestVersion(t, requestID),
 			RequestID: requestID,
 			Approve:   true,
 		})
@@ -309,7 +309,7 @@ func TestExcusedRequest_RejectWritesNoStatusDay(t *testing.T) {
 	requestID := res.PendingRequest.ID
 
 	err = testpkg.WithTenantTx(t, adminCtx(), db, chain.TenantID, func(txCtx context.Context, _ bun.Tx) error {
-		_, derr := excused.Decide(txCtx, careplan.ExcusedRequestDecideInput{
+		_, derr := excused.Decide(txCtx, careplan.ExcusedRequestDecideInput{ExpectedVersion: testpkg.ExcusedRequestVersion(t, requestID),
 			RequestID: requestID,
 			Approve:   false,
 			Reason:    "Bitte telefonisch klären",
@@ -356,7 +356,7 @@ func TestListExcusedRequests_ShowsRecentlyRejectedLongPending(t *testing.T) {
 
 	// Staff reject it today — reviewed_at is stamped now, inside the window.
 	err = testpkg.WithTenantTx(t, adminCtx(), db, chain.TenantID, func(txCtx context.Context, _ bun.Tx) error {
-		_, derr := excused.Decide(txCtx, careplan.ExcusedRequestDecideInput{
+		_, derr := excused.Decide(txCtx, careplan.ExcusedRequestDecideInput{ExpectedVersion: testpkg.ExcusedRequestVersion(t, requestID),
 			RequestID: requestID,
 			Approve:   false,
 			Reason:    "Bitte telefonisch klären",
@@ -393,7 +393,7 @@ func TestListExcusedRequests_ShowsApprovedForOutOfWindowDates(t *testing.T) {
 	requestID := res.PendingRequest.ID
 
 	err = testpkg.WithTenantTx(t, adminCtx(), db, chain.TenantID, func(txCtx context.Context, _ bun.Tx) error {
-		_, derr := excused.Decide(txCtx, careplan.ExcusedRequestDecideInput{
+		_, derr := excused.Decide(txCtx, careplan.ExcusedRequestDecideInput{ExpectedVersion: testpkg.ExcusedRequestVersion(t, requestID),
 			RequestID: requestID,
 			Approve:   true,
 		})

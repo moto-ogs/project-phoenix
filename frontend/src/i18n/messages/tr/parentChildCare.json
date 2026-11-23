@@ -103,7 +103,6 @@
     "edit": "Talebi düzenle",
     "saveEdit": "Değişikliği kaydet",
     "editedAt": "{date} tarihinde değiştirildi",
-    "staleError": "Talep bu arada işlendi. Lütfen sayfayı yenileyin.",
     "pendingChange": "saat {from} → {to}",
     "pendingRequested": "Yeni teslim alma saati: {to}",
     "statusPending": "Onay bekliyor",

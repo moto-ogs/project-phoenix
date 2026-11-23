@@ -9,9 +9,8 @@ import (
 	"log/slog"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests"
-
-	"github.com/moto-ogs/project-phoenix/modules/careplan/parentrequests"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // MasterDataFieldChange is one proposed Track B change submitted by a parent.
@@ -371,8 +370,8 @@ func (s *Service) lockEditableMasterDataRequest(ctx context.Context, accountID, 
 	if req.Status != DataChangeStatusPending {
 		return nil, nil, ErrMasterDataRequestNotPending
 	}
-	if expectedVersion != "" && excusedrequests.ParentRequestVersion(req.UpdatedAt) != expectedVersion {
-		return nil, nil, parentrequests.ErrStale
+	if err := readstate.Check(expectedVersion, excusedrequests.ParentRequestVersion(req.UpdatedAt)); err != nil {
+		return nil, nil, err
 	}
 	if student.CareEndedOn(s.todayDate()) {
 		return nil, nil, ErrChildCareEnded

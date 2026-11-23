@@ -11,7 +11,6 @@
  */
 
 import { useLayoutEffect, useRef, useState } from "react";
-import { ApiError } from "~/lib/api-error";
 
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
@@ -32,6 +31,7 @@ import {
   conflictResolutionKind,
   resolveRequestConflict,
   type ParentRequestKind,
+  isOutdatedDecision,
 } from "~/lib/change-request-list-api";
 import type { ConflictGroup, ReviewItem } from "./case-model";
 import {
@@ -297,8 +297,7 @@ export function ConflictDecisionGroup({
       setConfirming(false);
       // Veraltet: der Katalog nennt den Grund, die Liste lädt die neue
       // Fassung. Ein Wiederholen mit dem alten Stand wäre sinnlos.
-      const stale =
-        err instanceof ApiError && err.code === "students.change_request_stale";
+      const stale = isOutdatedDecision(err);
       await errors.show(err, {
         object: "die Entscheidung",
         retry: stale ? undefined : () => void latestSaveRef.current(),

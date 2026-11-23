@@ -47,6 +47,8 @@ type PendingOfferingChange struct {
 	Note            string
 	Diff            []OfferingChangeDiffEntry
 	SubmittedBySelf bool
+	// Version is the request's read-state token (ADR 0311).
+	Version string
 }
 
 // ChildCareOfferings is the parent-facing view of what a child is booked into.
@@ -193,6 +195,7 @@ func pendingOfferingChange(view *OfferingChangeView, accountID int64, visible bo
 		EffectiveFrom:   calendar.Date(view.Request.EffectiveFrom),
 		Diff:            view.Diff,
 		SubmittedBySelf: view.Request.SubmittedBy == accountID,
+		Version:         excusedrequests.ParentRequestVersion(view.Request.UpdatedAt),
 	}
 	if view.Request.ParentNote != nil {
 		pending.Note = *view.Request.ParentNote

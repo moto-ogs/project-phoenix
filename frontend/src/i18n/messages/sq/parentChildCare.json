@@ -103,7 +103,6 @@
     "edit": "Ndrysho kërkesën",
     "saveEdit": "Ruaj ndryshimin",
     "editedAt": "Ndryshuar më {date}",
-    "staleError": "Kërkesa ka ndryshuar ndërkohë. Ju lutemi rifreskoni faqen.",
     "pendingChange": "{from} → {to}",
     "pendingRequested": "Ora e re e marrjes: {to}",
     "statusPending": "Në pritje të konfirmimit",

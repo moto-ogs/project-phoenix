@@ -103,7 +103,6 @@
     "edit": "Изменить заявку",
     "saveEdit": "Сохранить изменение",
     "editedAt": "Изменено {date}",
-    "staleError": "Заявка тем временем изменилась. Обновите страницу.",
     "pendingChange": "{from} → {to}",
     "pendingRequested": "Новое время ухода: {to}",
     "statusPending": "Ожидает подтверждения",

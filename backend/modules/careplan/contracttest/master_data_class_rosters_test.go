@@ -100,7 +100,7 @@ func TestMasterDataReview_ClassApprovalFollowsTargetedTemplates(t *testing.T) {
 	f := newClassRosterFixture(t)
 	row := f.insert(t, peopledirectory.DataChangeTargetStudent, "school_class", `"1a"`, `"2b"`)
 
-	_, err := f.decide(t, f.decisions(t), masterdatarequests.DecideInput{RequestID: row.ID, Approve: true, ReviewedBy: f.chain.AccountID})
+	_, err := f.decide(t, f.decisions(t), masterdatarequests.DecideInput{ExpectedVersion: testpkg.MasterDataRequestVersion(t, row.ID), RequestID: row.ID, Approve: true, ReviewedBy: f.chain.AccountID})
 	require.NoError(t, err)
 
 	f.assertFollowed(t)

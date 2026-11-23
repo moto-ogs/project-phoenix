@@ -1,5 +1,6 @@
 "use client";
 
+import { isOutdatedDecision } from "~/lib/change-request-list-api";
 import { useLayoutEffect, useRef, useState } from "react";
 
 import { ConsentCheckbox } from "~/components/ui/consent-checkbox";
@@ -100,6 +101,7 @@ export function ExcusedRequestReviewItem({
   onDecided,
   grouped = false,
   expectedVersion,
+  onStale,
   currentStatusByDate,
   decisionDisabledReason,
   approveReasonRequired = false,
@@ -109,7 +111,9 @@ export function ExcusedRequestReviewItem({
   onDecided: (notice: string) => void;
   grouped?: boolean;
   /** Fassung, die entschieden werden soll — verhindert Überschreiben (#2267). */
-  expectedVersion?: string;
+  expectedVersion: string;
+  /** Die Anfrage ist seit dem Lesen anders gespeichert: die Liste neu laden. */
+  onStale: () => void;
   /** Aktueller Stand je Tag, damit „Aktuell → Gewünscht" möglich ist (#2267). */
   currentStatusByDate?: Readonly<Record<string, string>>;
   /** Warum hier gerade nicht einzeln entschieden werden kann (#2267). */
@@ -144,30 +148,14 @@ export function ExcusedRequestReviewItem({
     setBusy(true);
     try {
       const replacing = approve && partialDays.length > 0 && replaceConfirmed;
-      // Nur mitschicken, was die Entscheidung trägt: die Fassung, wenn die
-      // Liste eine kennt, und das bestätigte Ersetzen (#5698).
-      if (replacing) {
-        await decideExcusedAbsenceRequest(
-          row.id,
-          approve,
-          trimmed || undefined,
-          expectedVersion,
-          true,
-        );
-      } else if (expectedVersion) {
-        await decideExcusedAbsenceRequest(
-          row.id,
-          approve,
-          trimmed || undefined,
-          expectedVersion,
-        );
-      } else {
-        await decideExcusedAbsenceRequest(
-          row.id,
-          approve,
-          trimmed || undefined,
-        );
-      }
+      // Das Ersetzen nur nach Bestätigung mitschicken (#5698).
+      await decideExcusedAbsenceRequest(
+        row.id,
+        approve,
+        trimmed || undefined,
+        expectedVersion,
+        replacing,
+      );
       onDecided(
         approve
           ? `${decisionSubject(row)} ist bestätigt.`
@@ -181,10 +169,12 @@ export function ExcusedRequestReviewItem({
         request_id: row.id,
         ...(code ? { code } : {}),
       });
+      const stale = isOutdatedDecision(err);
       await showError(err, {
         object: "die Anfrage",
-        retry: () => void decideRef.current(approve),
+        retry: stale ? undefined : () => void decideRef.current(approve),
       });
+      if (stale) onStale();
       setBusy(false);
     }
   };

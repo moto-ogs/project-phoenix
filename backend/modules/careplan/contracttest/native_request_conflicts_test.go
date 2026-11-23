@@ -71,7 +71,7 @@ func TestNativeConflictStaffPickupWritesOnlyRequestedDay(t *testing.T) {
 		if err := conflicts.LockConflictRequest(txCtx, request.ID); err != nil {
 			return err
 		}
-		if err := conflicts.DecideConflictRequest(txCtx, carerequests.DecideInput{
+		if err := conflicts.DecideConflictRequest(txCtx, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, request.ID),
 			RequestID: request.ID, Reason: "Staff alternative", ReviewedBy: reviewer.ID,
 		}); err != nil {
 			return err

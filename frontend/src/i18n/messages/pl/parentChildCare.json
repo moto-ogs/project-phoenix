@@ -103,7 +103,6 @@
     "edit": "Edytuj prośbę",
     "saveEdit": "Zapisz zmianę",
     "editedAt": "Zmieniono {date}",
-    "staleError": "Prośba została w międzyczasie rozpatrzona. Proszę odświeżyć stronę.",
     "pendingChange": "{from} → {to}",
     "pendingRequested": "Nowa godzina odbioru: {to}",
     "statusPending": "Czeka na potwierdzenie",

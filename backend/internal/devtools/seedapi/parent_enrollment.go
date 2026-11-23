@@ -538,12 +538,13 @@ func (s parentEnrollmentSeedStep) seedOfferingChange(rt *Runtime, adminAuth, par
 	if err != nil {
 		return fmt.Errorf("request offering change: %w", err)
 	}
-	changeID, err := parsePendingOfferingRequestID(raw)
+	// The office decides on the request as the family just filed it.
+	changeID, expectedVersion, err := parsePendingOfferingRequest(raw)
 	if err != nil {
 		return fmt.Errorf("parse offering change request: %w", err)
 	}
 	_, err = rt.Client.PostWithAuth(adminAuth, fmt.Sprintf("/api/students/offering-change-requests/%d/decide", changeID), map[string]any{
-		"approve": true, "effective_from": effectiveFrom, "reason": "Wechsel bestätigt.",
+		"approve": true, "effective_from": effectiveFrom, "reason": "Wechsel bestätigt.", "expected_version": expectedVersion,
 	})
 	if err != nil {
 		return fmt.Errorf("approve offering change: %w", err)
@@ -997,27 +998,6 @@ func (s parentEnrollmentSeedStep) loadEnrollmentRequestDetail(rt *Runtime, auth 
 	return detail, nil
 }
 
-func parsePendingOfferingRequestID(raw []byte) (int64, error) {
-	var envelope struct {
-		Data struct {
-			PendingRequest *struct {
-				ID string `json:"id"`
-			} `json:"pending_request"`
-		} `json:"data"`
-	}
-	if err := parseJSON(raw, &envelope); err != nil {
-		return 0, err
-	}
-	if envelope.Data.PendingRequest == nil {
-		return 0, fmt.Errorf("pending_request missing")
-	}
-	id, err := strconv.ParseInt(envelope.Data.PendingRequest.ID, 10, 64)
-	if err != nil || id <= 0 {
-		return 0, fmt.Errorf("invalid pending request id")
-	}
-	return id, nil
-}
-
 func (s parentEnrollmentSeedStep) decideEnrollmentChild(rt *Runtime, auth AuthRef, requestID, childID int64, status, reason string) error {
 	_, err := rt.Client.PostWithAuth(auth, fmt.Sprintf("/api/enrollment/admin/requests/%d/children/%d/decide", requestID, childID), map[string]any{
 		"status": status,
@@ -1246,8 +1226,13 @@ func (s parentEnrollmentSeedStep) shareSeedPickupRequest(
 			continue
 		}
 		path := fmt.Sprintf("/parent/me/children/%d/request-sharing/pickup_change/%d", parent.StudentIDs[0], requestID)
+		version, err := readSeedRequestSharingVersion(rt, parentAuth, path)
+		if err != nil {
+			return err
+		}
 		_, err = rt.Client.PutWithAuth(parentAuth, path, map[string]any{
 			"recipient_guardian_profile_ids": []string{strconv.FormatInt(candidate.GuardianID, 10)},
+			"expected_version":               version,
 		})
 		if err != nil {
 			return fmt.Errorf("share seeded pickup request: %w", err)

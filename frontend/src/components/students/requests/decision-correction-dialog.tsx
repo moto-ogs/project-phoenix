@@ -8,7 +8,6 @@
  */
 
 import { useLayoutEffect, useRef, useState } from "react";
-import { ApiError } from "~/lib/api-error";
 
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { ConfirmationModal } from "~/components/ui/modal";
@@ -20,6 +19,7 @@ import { createLogger } from "~/lib/logger";
 import {
   correctRequestDecision,
   type ParentRequestKind,
+  isOutdatedDecision,
 } from "~/lib/change-request-list-api";
 
 const logger = createLogger({ component: "DecisionCorrectionDialog" });
@@ -96,11 +96,9 @@ export function DecisionCorrectionDialog({
         object: "die Korrektur",
         // Veraltet: erst neu laden, dann neu entscheiden. Ein Wiederholen mit
         // der alten Fassung schlüge wieder fehl.
-        retry:
-          err instanceof ApiError &&
-          err.code === "students.change_request_stale"
-            ? undefined
-            : () => void latestSaveRef.current(),
+        retry: isOutdatedDecision(err)
+          ? undefined
+          : () => void latestSaveRef.current(),
       });
       setSaving(false);
     }

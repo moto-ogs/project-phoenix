@@ -103,7 +103,6 @@
     "edit": "Anfrage bearbeiten",
     "saveEdit": "Änderung speichern",
     "editedAt": "Geändert am {date}",
-    "staleError": "Die Anfrage wurde inzwischen bearbeitet. Bitte lade die Seite neu.",
     "pendingChange": "{from} → {to} Uhr",
     "pendingRequested": "Neue Abholzeit: {to} Uhr",
     "statusPending": "Wartet auf Bestätigung",

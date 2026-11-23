@@ -168,8 +168,8 @@ func childStatusRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: child + "/excused-requests", Portals: portals, Response: []ParentExcusedRequestResponse{}},
 		{Method: "PUT", Pattern: child + "/excused-requests/{requestId}", Portals: portals, Request: EditExcusedRequestBody{}, Response: ParentExcusedRequestResponse{}},
 		{Method: "GET", Pattern: child + "/requests/{requestType}/{requestId}/events", Portals: portals, Response: []ParentRequestEventResponse{}},
-		{Method: "GET", Pattern: sharing, Portals: portals, Response: requestSharingResponse{}},
-		{Method: "PUT", Pattern: sharing, Portals: portals, Request: requestSharingBody{}, Response: requestSharingResponse{}},
+		{Method: "GET", Pattern: sharing, Portals: portals, Response: requestSharingStateResponse{}},
+		{Method: "PUT", Pattern: sharing, Portals: portals, Request: requestSharingBody{}, Response: requestSharingStateResponse{}},
 		{Method: "GET", Pattern: child + "/request-sharing-options", Portals: portals, Response: requestSharingResponse{}},
 		{Method: "GET", Pattern: child + "/parent-conferences", Portals: portals, Response: []calendarService.ParentConferenceOffer{}},
 	}

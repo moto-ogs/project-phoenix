@@ -101,7 +101,7 @@ func TestParentRequestReviewScopeCoversEveryWriteQueue(t *testing.T) {
 	reject := func(actor sessiontoken.AppClaims, path string) int {
 		t.Helper()
 		rr := authExec(t, tc, testutil.NewAuthenticatedRequest(t, "POST", path,
-			map[string]any{"approve": false, "reason": "Bitte im Büro klären"}), actor, perms)
+			map[string]any{"approve": false, "reason": "Bitte im Büro klären", "expected_version": decidePathVersion(t, path)}), actor, perms)
 		return rr.Code
 	}
 	setScope := func(scope string) {

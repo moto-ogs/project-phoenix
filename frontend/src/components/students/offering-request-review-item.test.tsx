@@ -115,8 +115,16 @@ function request(
 function renderItem(
   row: StaffOfferingRequest = request(),
   onDecided: (notice: string) => void = vi.fn(),
+  onStale: () => void = vi.fn(),
 ) {
-  render(<OfferingRequestReviewItem row={row} onDecided={onDecided} />);
+  render(
+    <OfferingRequestReviewItem
+      row={row}
+      onDecided={onDecided}
+      expectedVersion="v1"
+      onStale={onStale}
+    />,
+  );
   fireEvent.click(screen.getByRole("button", { name: /Lara Beispiel/ }));
   return onDecided;
 }
@@ -157,7 +165,12 @@ describe("OfferingRequestReviewItem", () => {
         refresh={vi.fn()}
         openRequestId={row.id}
       >
-        <OfferingRequestReviewItem row={row} onDecided={vi.fn()} />
+        <OfferingRequestReviewItem
+          row={row}
+          onDecided={vi.fn()}
+          expectedVersion="v1"
+          onStale={vi.fn()}
+        />
       </CourseWaitlistProvider>,
     );
 
@@ -210,6 +223,8 @@ describe("OfferingRequestReviewItem", () => {
         undefined,
         [],
         "2027-02-01",
+        false,
+        "v1",
       ),
     );
     expect(onDecided).toHaveBeenCalledWith(
@@ -346,6 +361,8 @@ describe("OfferingRequestReviewItem", () => {
         "Kein Bedarf",
         [],
         undefined,
+        false,
+        "v1",
       ),
     );
     expect(onDecided).toHaveBeenCalledWith(
@@ -584,6 +601,8 @@ describe("OfferingRequestReviewItem", () => {
         undefined,
         ["9"],
         "2027-02-01",
+        false,
+        "v1",
       ),
     );
   });
@@ -618,6 +637,8 @@ describe("OfferingRequestReviewItem", () => {
         "Kein Bedarf",
         [],
         undefined,
+        false,
+        "v1",
       ),
     );
   });
@@ -816,13 +837,19 @@ describe("OfferingRequestReviewItem", () => {
           [],
           "2027-02-01",
           true,
+          "v1",
         ),
       );
     });
 
     it("flags the full withdrawal before the card is expanded", () => {
       render(
-        <OfferingRequestReviewItem row={withdrawal()} onDecided={vi.fn()} />,
+        <OfferingRequestReviewItem
+          row={withdrawal()}
+          onDecided={vi.fn()}
+          expectedVersion="v1"
+          onStale={vi.fn()}
+        />,
       );
 
       expect(screen.getByText("Komplett-Abmeldung")).toBeInTheDocument();
@@ -1024,6 +1051,8 @@ describe("OfferingRequestReviewItem — Gültig ab", () => {
         undefined,
         [],
         "2027-02-01",
+        false,
+        "v1",
       ),
     );
   });
@@ -1053,6 +1082,8 @@ describe("OfferingRequestReviewItem — Gültig ab", () => {
         undefined,
         [],
         "2027-03-01",
+        false,
+        "v1",
       ),
     );
     expect(onDecided).toHaveBeenCalledWith(
@@ -1178,5 +1209,31 @@ describe("OfferingRequestReviewItem — Gültig ab", () => {
     // Liste kommen können.
     expect(screen.getByRole("button", { name: /Ablehnen/ })).toBeEnabled();
     expect(mockDecide).not.toHaveBeenCalled();
+  });
+});
+
+// ADR 0311: a request stored differently since the list was read is refused.
+// The card names it without a retry and the list reloads.
+describe("OfferingRequestReviewItem on an outdated read", () => {
+  it("reloads instead of retrying the decision", async () => {
+    mockDecide.mockRejectedValueOnce(
+      new ApiError("changed since it was read", 409, {
+        code: "general.changed_since_read",
+      }),
+    );
+    const onStale = vi.fn();
+    renderItem(request(), vi.fn(), onStale);
+
+    fireEvent.change(
+      screen.getByPlaceholderText("Begründung (Pflicht bei Ablehnung)"),
+      { target: { value: "Kein Bedarf" } },
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Ablehnen/ }));
+
+    await expectErrorToast(/wurde inzwischen geändert/);
+    expect(onStale).toHaveBeenCalledOnce();
+    expect(
+      screen.queryByRole("button", { name: /Wiederholen/ }),
+    ).not.toBeInTheDocument();
   });
 });

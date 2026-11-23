@@ -75,7 +75,14 @@ describe("ExcusedRequestReviewItem", () => {
   });
 
   it("collapses contiguous days to a range and shows the parent's note", () => {
-    render(<ExcusedRequestReviewItem row={row()} onDecided={vi.fn()} />);
+    render(
+      <ExcusedRequestReviewItem
+        row={row()}
+        onDecided={vi.fn()}
+        expectedVersion="v1"
+        onStale={vi.fn()}
+      />,
+    );
 
     // Summary appears in the collapsed header and again in the expanded panel.
     expect(
@@ -93,6 +100,8 @@ describe("ExcusedRequestReviewItem", () => {
       <ExcusedRequestReviewItem
         row={row({ dates: ["2026-07-01", "2026-07-03"] })}
         onDecided={vi.fn()}
+        expectedVersion="v1"
+        onStale={vi.fn()}
       />,
     );
 
@@ -105,7 +114,14 @@ describe("ExcusedRequestReviewItem", () => {
     mockDecide.mockResolvedValue(decided(row({ status: "rejected" })));
     const onDecided = vi.fn();
 
-    render(<ExcusedRequestReviewItem row={row()} onDecided={onDecided} />);
+    render(
+      <ExcusedRequestReviewItem
+        row={row()}
+        onDecided={onDecided}
+        expectedVersion="v1"
+        onStale={vi.fn()}
+      />,
+    );
 
     expand();
     fireEvent.click(screen.getByRole("button", { name: "Ablehnen" }));
@@ -125,7 +141,13 @@ describe("ExcusedRequestReviewItem", () => {
     fireEvent.click(screen.getByRole("button", { name: "Ablehnen" }));
 
     await waitFor(() =>
-      expect(mockDecide).toHaveBeenCalledWith("300", false, "keine Kapazität"),
+      expect(mockDecide).toHaveBeenCalledWith(
+        "300",
+        false,
+        "keine Kapazität",
+        "v1",
+        false,
+      ),
     );
     expect(onDecided).toHaveBeenCalledWith(
       "Die entschuldigte Abmeldung ist abgelehnt.",
@@ -136,13 +158,26 @@ describe("ExcusedRequestReviewItem", () => {
     mockDecide.mockResolvedValue(decided(row({ status: "approved" })));
     const onDecided = vi.fn();
 
-    render(<ExcusedRequestReviewItem row={row()} onDecided={onDecided} />);
+    render(
+      <ExcusedRequestReviewItem
+        row={row()}
+        onDecided={onDecided}
+        expectedVersion="v1"
+        onStale={vi.fn()}
+      />,
+    );
 
     expand();
     fireEvent.click(screen.getByRole("button", { name: "Freigeben" }));
 
     await waitFor(() =>
-      expect(mockDecide).toHaveBeenCalledWith("300", true, undefined),
+      expect(mockDecide).toHaveBeenCalledWith(
+        "300",
+        true,
+        undefined,
+        "v1",
+        false,
+      ),
     );
     expect(onDecided).toHaveBeenCalledWith(
       "Die entschuldigte Abmeldung ist bestätigt.",
@@ -160,6 +195,7 @@ describe("ExcusedRequestReviewItem", () => {
         expectedVersion="v1"
         currentStatusByDate={{ "2026-07-01": "present" }}
         partialAbsenceFromByDate={{ "2026-07-01": "13:00" }}
+        onStale={vi.fn()}
       />,
     );
 
@@ -202,6 +238,8 @@ describe("ExcusedRequestReviewItem", () => {
       <ExcusedRequestReviewItem
         row={row({ absence_status: "sick" })}
         onDecided={vi.fn()}
+        expectedVersion="v1"
+        onStale={vi.fn()}
       />,
     );
 
@@ -216,7 +254,14 @@ describe("ExcusedRequestReviewItem", () => {
     );
     const onDecided = vi.fn();
 
-    render(<ExcusedRequestReviewItem row={row()} onDecided={onDecided} />);
+    render(
+      <ExcusedRequestReviewItem
+        row={row()}
+        onDecided={onDecided}
+        expectedVersion="v1"
+        onStale={vi.fn()}
+      />,
+    );
 
     expand();
     fireEvent.click(screen.getByRole("button", { name: "Freigeben" }));
@@ -235,3 +280,33 @@ function decided(
 ): studentsContract.StaffExcusedRequestResponse {
   return { ...request, dates: [...request.dates] };
 }
+
+// ADR 0311: a request stored differently since the list was read is refused.
+// The card names it without a retry and the list reloads.
+describe("ExcusedRequestReviewItem on an outdated read", () => {
+  it("reloads instead of retrying the decision", async () => {
+    mockDecide.mockRejectedValueOnce(
+      new ApiError("changed since it was read", 409, {
+        code: "general.changed_since_read",
+      }),
+    );
+    const onStale = vi.fn();
+    render(
+      <ExcusedRequestReviewItem
+        row={row()}
+        onDecided={vi.fn()}
+        expectedVersion="v1"
+        onStale={onStale}
+      />,
+    );
+
+    expand();
+    fireEvent.click(screen.getByRole("button", { name: "Freigeben" }));
+
+    await expectErrorToast(/wurde inzwischen geändert/);
+    expect(onStale).toHaveBeenCalledOnce();
+    expect(
+      screen.queryByRole("button", { name: /Wiederholen/ }),
+    ).not.toBeInTheDocument();
+  });
+});

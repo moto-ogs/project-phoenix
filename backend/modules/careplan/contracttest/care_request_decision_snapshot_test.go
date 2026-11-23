@@ -74,7 +74,7 @@ func TestDecide_FreezesAltNeuDiffInHistory(t *testing.T) {
 	req := f.createPending(t, careWeekdays(
 		map[string]any{"weekday": 1, "pickup": "16:00"},
 	))
-	_, err := testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{
+	_, err := testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, req.ID),
 		RequestID: req.ID, Approve: true, ReviewedBy: f.staffAccount,
 	})
 	require.NoError(t, err)
@@ -105,7 +105,7 @@ func TestDecide_RejectAlsoFreezesDiff(t *testing.T) {
 	req := f.createPending(t, careWeekdays(
 		map[string]any{"weekday": 1, "pickup": "18:00"},
 	))
-	_, err := testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{
+	_, err := testpkg.TenantQuery1(t, ctx, f.db, f.svc.Decide, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, req.ID),
 		RequestID: req.ID, Approve: false, Reason: "zu spät", ReviewedBy: f.staffAccount,
 	})
 	require.NoError(t, err)
@@ -143,7 +143,7 @@ func TestDecide_SkipsSnapshotWhenPickupPlanReadFails(t *testing.T) {
 		map[string]any{"weekday": 1, "pickup": "16:00"},
 	))
 
-	_, err := rejectingService.Decide(f.staffCtx(f.staffAccount), carerequests.DecideInput{
+	_, err := rejectingService.Decide(f.staffCtx(f.staffAccount), carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, req.ID),
 		RequestID: req.ID, Approve: false, Reason: "nicht möglich", ReviewedBy: f.staffAccount,
 	})
 	require.NoError(t, err)
@@ -188,7 +188,7 @@ func TestListHistory_LegacyDecidedRowFallsBackToRequested(t *testing.T) {
 	req := f.createPending(t, careWeekdays(
 		map[string]any{"weekday": 1, "pickup": "16:00"},
 	))
-	_, err := testpkg.TenantQuery1(t, f.staffCtx(f.staffAccount), f.db, f.svc.Decide, carerequests.DecideInput{
+	_, err := testpkg.TenantQuery1(t, f.staffCtx(f.staffAccount), f.db, f.svc.Decide, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, req.ID),
 		RequestID: req.ID, Approve: false, Reason: "passt nicht", ReviewedBy: f.staffAccount,
 	})
 	require.NoError(t, err)
@@ -219,7 +219,7 @@ func TestDecide_PickupChangeFreezesDiff(t *testing.T) {
 	date := calendar.NewDate(2026, 8, 31)
 	req, err := testpkg.TenantQuery5(t, f.staffCtx(f.chain.AccountID), f.db, f.svc.CreatePickupChangeRequest, f.chain.StudentID, f.chain.AccountID, date, time.Date(0, 1, 1, 16, 30, 0, 0, time.UTC), "Arzttermin")
 	require.NoError(t, err)
-	_, err = testpkg.TenantQuery1(t, f.staffCtx(f.staffAccount), f.db, f.svc.Decide, carerequests.DecideInput{
+	_, err = testpkg.TenantQuery1(t, f.staffCtx(f.staffAccount), f.db, f.svc.Decide, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, req.ID),
 		RequestID: req.ID, Approve: true, ReviewedBy: f.staffAccount,
 	})
 	require.NoError(t, err)

@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/parentrequests"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Conflict resolution (#2267, stories 6-10). Two open requests of one child
@@ -81,8 +82,8 @@ func (c *ParentRequestCoordinator) prepareConflictGroup(
 		return lockedConflictGroup{}, err
 	}
 	for i, requestID := range input.RequestIDs {
-		if careplan.ParentRequestVersion(candidates[requestID].UpdatedAt) != input.ExpectedVersions[i] {
-			return lockedConflictGroup{}, parentrequests.ErrStale
+		if err := readstate.Check(input.ExpectedVersions[i], careplan.ParentRequestVersion(candidates[requestID].UpdatedAt)); err != nil {
+			return lockedConflictGroup{}, err
 		}
 	}
 	ordered := append([]int64(nil), input.RequestIDs...)
@@ -90,7 +91,7 @@ func (c *ParentRequestCoordinator) prepareConflictGroup(
 	for _, requestID := range ordered {
 		if lockErr := port.LockConflictRequest(ctx, requestID); lockErr != nil {
 			if isParentRequestRace(lockErr) {
-				return lockedConflictGroup{}, fmt.Errorf("%w: %s %d changed before locking", parentrequests.ErrStale, input.Kind, requestID)
+				return lockedConflictGroup{}, fmt.Errorf("%w: %s %d changed before locking", readstate.ErrChanged, input.Kind, requestID)
 			}
 			return lockedConflictGroup{}, fmt.Errorf("parent requests: lock %s %d: %w", input.Kind, requestID, lockErr)
 		}
@@ -217,7 +218,7 @@ func decideConflictRequest(ctx context.Context, port ports.ConflictPort, input p
 		return nil
 	}
 	if isParentRequestRace(err) {
-		return fmt.Errorf("%w: %s %d changed during resolution", parentrequests.ErrStale, input.Kind, requestID)
+		return fmt.Errorf("%w: %s %d changed during resolution", readstate.ErrChanged, input.Kind, requestID)
 	}
 	return fmt.Errorf("parent requests: resolve %s %d: %w", input.Kind, requestID, err)
 }

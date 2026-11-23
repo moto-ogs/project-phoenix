@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/absencerecords"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -99,6 +100,9 @@ type ParentExcusedRequestResponse struct {
 	// a non-submitter as not-found), so the UI shows the edit action only for
 	// own requests.
 	IsSelf bool `json:"is_self"`
+	// Version is what an edit of this request sends back as
+	// expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 func toParentExcusedRequestResponse(req *parentService.ExcusedAbsenceRequestSnapshot, accountID int64) ParentExcusedRequestResponse {
@@ -117,6 +121,7 @@ func toParentExcusedRequestResponse(req *parentService.ExcusedAbsenceRequestSnap
 		CreatedAt:      req.CreatedAt,
 		ReviewedAt:     req.ReviewedAt,
 		IsSelf:         req.SubmittedBy == accountID,
+		Version:        careplan.ParentRequestVersion(req.UpdatedAt),
 	}
 }
 

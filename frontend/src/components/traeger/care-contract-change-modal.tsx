@@ -17,7 +17,7 @@ import type {
   ContractChangeRequest,
   ContractChanges,
 } from "~/lib/care-contract-changes";
-import { ApiError, wireErrorCode } from "~/lib/api-error";
+import { ApiError, isChangedSinceRead, wireErrorCode } from "~/lib/api-error";
 import { OfferingRequestChanges } from "~/components/students/offering-request-changes";
 import { contractChangeReview } from "~/lib/care-contract-changes";
 import {
@@ -267,7 +267,7 @@ function isChangedRequest(error: unknown): boolean {
   if (!(error instanceof ApiError)) return false;
   const code = wireErrorCode(error.code);
   return (
-    code === "students.change_request_stale" ||
+    isChangedSinceRead(error) ||
     code === "students.change_request_not_pending" ||
     code === "care_contract.change_not_found"
   );

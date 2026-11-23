@@ -93,7 +93,7 @@ func TestEditPickupChangeHonoursSameDayCutoff(t *testing.T) {
 
 	edit := func(t *testing.T, f *careFixture, req *carerequests.Request, date calendar.Date, cutoff careplan.SameDayCutoff) error {
 		t.Helper()
-		_, err := testpkg.TenantQuery1(t, f.staffCtx(f.staffAccount), f.db, f.svc.EditRequest, carerequests.EditInput{
+		_, err := testpkg.TenantQuery1(t, f.staffCtx(f.staffAccount), f.db, f.svc.EditRequest, carerequests.EditInput{ExpectedVersion: testpkg.CareRequestVersion(t, req.ID),
 			RequestID:         req.ID,
 			StudentID:         f.chain.StudentID,
 			GuardianAccountID: f.chain.AccountID,
@@ -158,7 +158,7 @@ func TestStaffDecidesTodaysPickupChangeAfterCutoff(t *testing.T) {
 	req, err := createPickupChangeWithCutoff(t, f, cutoffFixtureToday, cutoffAt(t, 10, 30))
 	require.NoError(t, err)
 
-	decided, err := testpkg.TenantQuery1(t, f.staffCtx(f.staffAccount), f.db, f.svc.Decide, carerequests.DecideInput{
+	decided, err := testpkg.TenantQuery1(t, f.staffCtx(f.staffAccount), f.db, f.svc.Decide, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, req.ID),
 		RequestID:  req.ID,
 		Approve:    true,
 		ReviewedBy: f.staffAccount,

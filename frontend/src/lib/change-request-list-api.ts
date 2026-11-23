@@ -1,4 +1,4 @@
-import { ApiError } from "~/lib/api-error";
+import { ApiError, isChangedSinceRead } from "~/lib/api-error";
 import { bffJson } from "~/lib/bff-fetch";
 import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import { knownEnum, requiredEnum } from "~/lib/contract/known-enum";
@@ -389,14 +389,29 @@ export interface BulkApproveRequestRef {
 }
 
 /**
- * Meldet eine abgelehnte schreibende Anfrage (#2513). Eine veraltete Version
- * (409 `students.change_request_stale`, #2267) erkennt die Oberfläche am
- * Code und lädt neu, statt die Person eine verlorene Entscheidung
- * wiederholen zu lassen; sie ist kein Fehler zum Protokollieren.
+ * Eine Entscheidung, die auf einem veralteten Stand beruht: die Anfrage ist
+ * seit dem Lesen anders gespeichert (`general.changed_since_read`, ADR 0311),
+ * oder der bisherige Wert einer Stammdaten-Anfrage stimmt nicht mehr
+ * (`students.change_request_stale`). Die Liste lädt dann neu; dieselbe
+ * Entscheidung noch einmal zu senden, schlüge wieder fehl.
+ */
+export function isOutdatedDecision(error: unknown): boolean {
+  return (
+    isChangedSinceRead(error) ||
+    (error instanceof ApiError &&
+      error.code === "students.change_request_stale")
+  );
+}
+
+/**
+ * Meldet eine abgelehnte schreibende Anfrage (#2513). Eine veraltete
+ * Entscheidung (`isOutdatedDecision`) erkennt die Oberfläche am Code und lädt
+ * neu, statt die Person eine verlorene Entscheidung wiederholen zu lassen;
+ * sie ist kein Fehler zum Protokollieren.
  */
 function logWriteError(error: unknown): void {
   if (!(error instanceof ApiError)) return;
-  if (error.code === "students.change_request_stale") return;
+  if (isOutdatedDecision(error)) return;
   logger.warn("change_request_write_failed", {
     status: error.status,
     ...(error.code ? { code: error.code } : {}),

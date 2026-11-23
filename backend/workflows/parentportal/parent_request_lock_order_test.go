@@ -28,6 +28,7 @@ func TestParentMasterDataEditLocksChildBeforeRequest(t *testing.T) {
 			}, nil)
 			require.NoError(t, err)
 			require.Len(t, rows, 1)
+			version := testpkg.MasterDataRequestVersion(t, rows[0].ID)
 			people := owners.MustNewPeopleDirectory(testpkg.NewDatabase(t, db))
 			done := make(chan error, 1)
 			err = testpkg.WithTenantTx(t, ctx, db, chain.TenantID, func(lockCtx context.Context, tx bun.Tx) error {
@@ -37,7 +38,7 @@ func TestParentMasterDataEditLocksChildBeforeRequest(t *testing.T) {
 				var pid int
 				require.NoError(t, tx.NewRaw("SELECT pg_backend_pid()").Scan(lockCtx, &pid))
 				go func() {
-					_, err := svc.EditMasterDataRequest(ctx, chain.AccountID, chain.StudentID, rows[0].ID, json.RawMessage(`"Maxi"`), "")
+					_, err := svc.EditMasterDataRequest(ctx, chain.AccountID, chain.StudentID, rows[0].ID, json.RawMessage(`"Maxi"`), version)
 					done <- err
 				}()
 				require.Eventually(t, func() bool {

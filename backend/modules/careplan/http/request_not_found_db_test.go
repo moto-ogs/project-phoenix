@@ -44,14 +44,14 @@ func familyHTTPRows(t *testing.T, tc *testContext) ([]familyHTTPRow, int64) {
 	}, chain.StudentID
 }
 
-func familyHTTPCalls(row familyHTTPRow) []struct{ path, body string } {
+func familyHTTPCalls(row familyHTTPRow, version string) []struct{ path, body string } {
 	calls := []struct{ path, body string }{
-		{fmt.Sprintf("/%s/%d/decide", row.route, row.id), `{"approve":true,"reason":"Reviewed"}`},
-		{fmt.Sprintf("/%s/%d/decide", row.route, row.id), `{"approve":false,"reason":"Reviewed"}`},
-		{fmt.Sprintf("/change-requests/%s/%d/correct", row.kind, row.id), `{"approve":false,"reason":"Corrected"}`},
+		{fmt.Sprintf("/%s/%d/decide", row.route, row.id), fmt.Sprintf(`{"approve":true,"reason":"Reviewed","expected_version":%q}`, version)},
+		{fmt.Sprintf("/%s/%d/decide", row.route, row.id), fmt.Sprintf(`{"approve":false,"reason":"Reviewed","expected_version":%q}`, version)},
+		{fmt.Sprintf("/change-requests/%s/%d/correct", row.kind, row.id), fmt.Sprintf(`{"approve":false,"reason":"Corrected","expected_version":%q}`, version)},
 	}
 	if row.kind != "master_data" {
-		calls = append(calls, struct{ path, body string }{fmt.Sprintf("/change-requests/%s/%d/mark-done", row.kind, row.id), `{}`})
+		calls = append(calls, struct{ path, body string }{fmt.Sprintf("/change-requests/%s/%d/mark-done", row.kind, row.id), fmt.Sprintf(`{"expected_version":%q}`, version)})
 	}
 	return calls
 }
@@ -82,7 +82,7 @@ func TestFamilyRequestNotFoundHTTP(t *testing.T) {
 		for name, id := range map[string]int64{"missing": missing, "foreign": foreign[i].id} {
 			t.Run(row.kind+"/"+name, func(t *testing.T) {
 				row.id = id
-				for _, call := range familyHTTPCalls(row) {
+				for _, call := range familyHTTPCalls(row, testpkg.ParentRequestVersion(t, row.table, row.id)) {
 					rr := authExec(t, tc, testutil.NewRequest(http.MethodPost, call.path, strings.NewReader(call.body)), testutil.AdminTestClaims(int(reviewer.ID)), []string{"admin:*"})
 					requireFamilyNotFoundHTTP(t, rr)
 				}
@@ -95,12 +95,16 @@ func TestFamilyRequestDecisionStateErrorsHTTP(t *testing.T) {
 	t.Parallel()
 	tc := setupStudentsRoute(t, fixedCalendarClock)
 	_, reviewer := testpkg.CreateTestTeacherWithAccount(t, tc.db, "State", "Reviewer")
-	for _, state := range []string{"stale", "not pending"} {
+	for _, state := range []string{"stale", "unread", "not pending"} {
 		rows, _ := familyHTTPRows(t, tc)
 		for _, row := range rows {
 			t.Run(row.kind+"/"+state, func(t *testing.T) {
 				body := `{"approve":false,"reason":"Reviewed","expected_version":"outdated"}`
-				wantCode := "students.change_request_stale"
+				wantCode := "general.changed_since_read"
+				if state == "unread" {
+					// A decision without a version read nothing to compare.
+					body = `{"approve":false,"reason":"Reviewed"}`
+				}
 				if state == "not pending" {
 					_, err := tc.db.NewUpdate().TableExpr(row.table).Set("status = 'rejected'").Where("id = ?", row.id).Exec(t.Context())
 					require.NoError(t, err)
@@ -113,6 +117,11 @@ func TestFamilyRequestDecisionStateErrorsHTTP(t *testing.T) {
 				}
 				require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &problem))
 				require.Equal(t, wantCode, problem.Code)
+				if state != "not pending" {
+					var status string
+					require.NoError(t, tc.db.NewSelect().TableExpr(row.table).Column("status").Where("id = ?", row.id).Scan(t.Context(), &status))
+					require.Equal(t, "pending", status, "a refused decision writes nothing")
+				}
 			})
 		}
 	}
@@ -148,6 +157,8 @@ func familyRequestDeletionHTTP(t *testing.T, deletion string) {
 			}
 			ctx, cancel := context.WithTimeout(testpkg.Ctx(t), 20*time.Second)
 			defer cancel()
+			// The reviewer read the request before the deletion.
+			version := testpkg.ParentRequestVersion(t, row.table, row.id)
 			people := owners.MustNewPeopleDirectory(testpkg.NewDatabase(t, db))
 			done := make(chan *httptest.ResponseRecorder, 1)
 			err := testpkg.WithTenantTx(t, ctx, db, testpkg.Tenant(t), func(deleteCtx context.Context, tx bun.Tx) error {
@@ -163,7 +174,7 @@ func familyRequestDeletionHTTP(t *testing.T, deletion string) {
 				}
 				var pid int
 				require.NoError(t, tx.NewRaw("SELECT pg_backend_pid()").Scan(deleteCtx, &pid))
-				call := familyHTTPCalls(row)[1]
+				call := familyHTTPCalls(row, version)[1]
 				go func() {
 					done <- authExec(t, tc, testutil.NewRequest(http.MethodPost, call.path, strings.NewReader(call.body)).WithContext(ctx), testutil.AdminTestClaims(int(reviewer.ID)), []string{"admin:*"})
 				}()
@@ -248,7 +259,7 @@ func TestBulkRequestDeletedWhileWaitingHTTP(t *testing.T) {
 					Code string `json:"code"`
 				}
 				require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &problem))
-				require.Equal(t, "students.change_request_stale", problem.Code)
+				require.Equal(t, "general.changed_since_read", problem.Code)
 			case <-ctx.Done():
 				t.Fatal("bulk HTTP decision did not finish")
 			}

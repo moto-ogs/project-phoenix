@@ -66,7 +66,7 @@ func TestSickNoteEnvelopeAndRecipientValidation(t *testing.T) {
 }
 
 // TestEditExcusedRequestEndpoint pins the wire contract of the guardian edit
-// (#2267): 200 with the rewritten request, 409 change_request_stale on an
+// (#2267): 200 with the rewritten request, 409 general.changed_since_read on an
 // outdated version, 404 for a request that is not the caller's.
 func TestEditExcusedRequestEndpoint(t *testing.T) {
 	t.Parallel()
@@ -88,12 +88,13 @@ func TestEditExcusedRequestEndpoint(t *testing.T) {
 	var listEnv envelope
 	require.NoError(t, json.Unmarshal(listed.Body.Bytes(), &listEnv))
 	var requests []struct {
-		ID              string   `json:"id"`
-		Dates           []string `json:"dates"`
-		ExpectedVersion string   `json:"expected_version"`
+		ID      string   `json:"id"`
+		Dates   []string `json:"dates"`
+		Version string   `json:"version"`
 	}
 	require.NoError(t, json.Unmarshal(listEnv.Data, &requests))
 	require.Len(t, requests, 1)
+	require.NotEmpty(t, requests[0].Version, "the list carries the version an edit sends back")
 	requestID := requests[0].ID
 
 	corrected := testDayPlus(day, 1)
@@ -101,14 +102,15 @@ func TestEditExcusedRequestEndpoint(t *testing.T) {
 	ok := doRequest(t, router, http.MethodPut, path, token, map[string]any{
 		"dates":            []string{corrected.String()},
 		"note":             "Doch einen Tag später",
-		"expected_version": requests[0].ExpectedVersion,
+		"expected_version": requests[0].Version,
 	})
 	require.Equal(t, http.StatusOK, ok.Code, ok.Body.String())
 	var okEnv envelope
 	require.NoError(t, json.Unmarshal(ok.Body.Bytes(), &okEnv))
 	var edited struct {
-		ID    string   `json:"id"`
-		Dates []string `json:"dates"`
+		ID      string   `json:"id"`
+		Dates   []string `json:"dates"`
+		Version string   `json:"version"`
 	}
 	require.NoError(t, json.Unmarshal(okEnv.Data, &edited))
 	assert.Equal(t, requestID, edited.ID, "the edit keeps the request id")
@@ -122,13 +124,19 @@ func TestEditExcusedRequestEndpoint(t *testing.T) {
 		"expected_version": "2020-01-01T00:00:00Z",
 	})
 	require.Equal(t, http.StatusConflict, stale.Code, stale.Body.String())
-	assert.Contains(t, stale.Body.String(), "students.change_request_stale")
+	assert.Contains(t, stale.Body.String(), "general.changed_since_read")
+	// An edit without a version read nothing to compare and is refused too.
+	unread := doRequest(t, router, http.MethodPut, path, token, map[string]any{
+		"dates": []string{testDayPlus(corrected, 1).String()}, "note": "Nochmal",
+	})
+	require.Equal(t, http.StatusConflict, unread.Code, unread.Body.String())
+	assert.Contains(t, unread.Body.String(), "general.changed_since_read")
 
 	// The request reason policy applies to edits too. A blank replacement must
 	// keep the create path's 400 response instead of surfacing as an internal
 	// error from the Care Plan validation sentinel.
 	emptyNote := doRequest(t, router, http.MethodPut, path, token, map[string]any{
-		"dates": []string{corrected.String()}, "note": "   ",
+		"dates": []string{corrected.String()}, "note": "   ", "expected_version": edited.Version,
 	})
 	require.Equal(t, http.StatusBadRequest, emptyNote.Code, emptyNote.Body.String())
 

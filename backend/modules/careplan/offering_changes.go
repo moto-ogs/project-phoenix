@@ -220,8 +220,8 @@ type OfferingChangeDecisionInput struct {
 	EffectiveFrom *calendar.Date
 	// CompleteWithdrawalConfirmed confirms the fully materialized target.
 	CompleteWithdrawalConfirmed bool
-	// ExpectedVersion pins the row the caller decided on. Empty skips the
-	// check.
+	// ExpectedVersion pins the row the caller decided on; a missing or
+	// different one is refused with readstate.ErrChanged.
 	ExpectedVersion string
 	// ReasonRequired says the school's reason policy asks for a reason on an
 	// approval; a rejection always needs one (#2267).

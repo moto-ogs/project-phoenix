@@ -177,7 +177,6 @@ var careContractChangeErrors = []struct {
 }{
 	{[]error{careplan.ErrOfferingChangeNotFound, careplan.ErrOfferingChangeForbidden}, carecontract.ErrChangeNotFound},
 	{[]error{careplan.ErrOfferingChangeNotPending}, carecontract.ErrChangeDecided},
-	{[]error{parentrequests.ErrStale, careplan.ErrParentRequestStale}, carecontract.ErrChangeStale},
 	{[]error{parentrequests.ErrPast, careplan.ErrParentRequestPast}, carecontract.ErrChangePast},
 	{[]error{parentrequests.ErrReasonRequired, careplan.ErrParentRequestReasonRequired}, carecontract.ErrChangeReasonRequired},
 	{[]error{careplan.ErrCompleteWithdrawalConfirmationRequired}, carecontract.ErrChangeEndsCare},

@@ -83,6 +83,7 @@ func toCareOfferingsResponse(v *parentService.ChildCareOfferings) CareOfferingsR
 			Note:            v.PendingRequest.Note,
 			Diff:            make([]OfferingDiffResponse, 0, len(v.PendingRequest.Diff)),
 			SubmittedBySelf: v.PendingRequest.SubmittedBySelf,
+			Version:         v.PendingRequest.Version,
 		}
 		for _, entry := range v.PendingRequest.Diff {
 			pending.Diff = append(pending.Diff, offeringDiffResponse(entry))
@@ -198,6 +199,9 @@ type PendingOfferingChangeResponse struct {
 	// day keys. The parents portal renders them in the guardian's language.
 	Diff            []OfferingDiffResponse `json:"diff"`
 	SubmittedBySelf bool                   `json:"submitted_by_self"`
+	// Version is what an edit of this request sends back as
+	// expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 // OfferingDecisionResponse is a decided request: what the office decided, when,

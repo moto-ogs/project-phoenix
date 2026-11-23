@@ -55,6 +55,9 @@ type PendingCareRequestResponse struct {
 	CreatedAt       string                          `json:"created_at"`
 	Diff            []ParentCareRequestDiffResponse `json:"diff"`
 	SubmittedBySelf bool                            `json:"submitted_by_self"`
+	// Version is what an edit of this request sends back as
+	// expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 // ParentCareRequestDiffResponse mirrors the messaging diff wire shape so the
@@ -125,6 +128,7 @@ func toCareScheduleResponse(v *parentService.ChildCareSchedule) CareScheduleResp
 			CreatedAt:       v.PendingRequest.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 			Diff:            toCareRequestDiffResponses(v.PendingRequest.Diff),
 			SubmittedBySelf: v.PendingRequest.SubmittedBySelf,
+			Version:         v.PendingRequest.Version,
 		}
 	}
 	return resp

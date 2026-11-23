@@ -96,7 +96,7 @@ export async function getRequestSharing(
   studentId: string,
   requestType: ParentRequestShareType,
   requestId: string,
-): Promise<parentMeContract.requestSharingResponse> {
+): Promise<parentMeContract.requestSharingStateResponse> {
   return parentCall(
     bffJson(
       "parent",
@@ -106,19 +106,28 @@ export async function getRequestSharing(
   );
 }
 
+/**
+ * Replaces who sees the request. `expectedVersion` is the `version` of the
+ * sharing the choice was made on; a changed one answers 409
+ * `general.changed_since_read` (ADR 0311).
+ */
 export async function setRequestSharing(
   studentId: string,
   requestType: ParentRequestShareType,
   requestId: string,
   recipientGuardianProfileIds: string[],
-): Promise<parentMeContract.requestSharingResponse> {
+  expectedVersion: string,
+): Promise<parentMeContract.requestSharingStateResponse> {
   return parentCall(
     bffJson(
       "parent",
       "PUT /parent/me/children/{studentId}/request-sharing/{requestType}/{requestId}",
       {
         params: { studentId, requestType, requestId },
-        body: { recipient_guardian_profile_ids: recipientGuardianProfileIds },
+        body: {
+          recipient_guardian_profile_ids: recipientGuardianProfileIds,
+          expected_version: expectedVersion,
+        },
       },
     ),
   );
@@ -435,8 +444,8 @@ export async function submitSickNote(
 
 /**
  * Changes the guardian's own still-pending absence request. `expectedVersion`
- * comes from the newest entry of the request's event history; the backend
- * answers 409 `students.change_request_stale` when the request moved on meanwhile.
+ * is the `version` of the list row the values came from; the backend answers
+ * 409 `general.changed_since_read` when the request moved on meanwhile.
  */
 export async function updateExcusedRequest(
   studentId: string,

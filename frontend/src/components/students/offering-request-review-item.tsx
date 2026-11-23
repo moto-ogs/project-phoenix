@@ -1,5 +1,6 @@
 "use client";
 
+import { isOutdatedDecision } from "~/lib/change-request-list-api";
 import type * as studentsContract from "~/lib/contract/students.generated";
 import { weekdayShortLabel } from "~/lib/weekdays";
 import type { ErrorCode } from "~/lib/error-codes.generated";
@@ -102,6 +103,7 @@ export function OfferingRequestReviewItem({
   onDecided,
   grouped = false,
   expectedVersion,
+  onStale,
   decisionDisabledReason,
   approveReasonRequired = false,
   held,
@@ -118,7 +120,9 @@ export function OfferingRequestReviewItem({
   held?: HeldOfferingDecision;
   grouped?: boolean;
   /** Fassung, die entschieden werden soll — verhindert Überschreiben (#2267). */
-  expectedVersion?: string;
+  expectedVersion: string;
+  /** Die Anfrage ist seit dem Lesen anders gespeichert: die Liste neu laden. */
+  onStale: () => void;
   /** Warum hier gerade nicht einzeln entschieden werden kann (#2267). */
   decisionDisabledReason?: string;
   approveReasonRequired?: boolean;
@@ -187,28 +191,15 @@ export function OfferingRequestReviewItem({
     confirmErrors.clear();
     const excludedIds = approve ? excluded : [];
     try {
-      const args = [
+      const impactWire = await decideOfferingChangeRequest(
         row.id,
         approve,
         trimmed || undefined,
         excludedIds,
         approve ? effectiveFrom : undefined,
-      ] as const;
-      // Die hinteren Argumente nur anhängen, wenn es sie gibt: eine Anfrage
-      // ohne Komplett-Abmeldung und ohne bekannte Fassung schickt denselben
-      // Aufruf wie vorher.
-      let impactWire: studentsContract.rosterImpactResponse | undefined;
-      if (expectedVersion) {
-        impactWire = await decideOfferingChangeRequest(
-          ...args,
-          confirmWithdrawal,
-          expectedVersion,
-        );
-      } else if (confirmWithdrawal) {
-        impactWire = await decideOfferingChangeRequest(...args, true);
-      } else {
-        impactWire = await decideOfferingChangeRequest(...args);
-      }
+        confirmWithdrawal,
+        expectedVersion,
+      );
       refreshWaitlists();
       const impact = approve ? mapRosterImpact(impactWire) : null;
       const notice = approve
@@ -245,10 +236,14 @@ export function OfferingRequestReviewItem({
       }
       const showDecideError =
         approve && approvalPreview !== null ? confirmErrors.show : showError;
+      const stale = isOutdatedDecision(err);
       await showDecideError(err, {
         object: "die Anfrage",
-        retry: () => void decideRef.current(approve, confirmWithdrawal),
+        retry: stale
+          ? undefined
+          : () => void decideRef.current(approve, confirmWithdrawal),
       });
+      if (stale) onStale();
     }
   };
   useLayoutEffect(() => {

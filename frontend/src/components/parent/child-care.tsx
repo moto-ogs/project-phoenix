@@ -13,7 +13,7 @@ import { LOCATION_COLORS } from "~/lib/location-helper";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { ApiError } from "~/lib/api-error";
+import { ApiError, isChangedSinceRead } from "~/lib/api-error";
 import { useLocale, useTranslations } from "next-intl";
 import { Trash2 } from "lucide-react";
 import type { MotoConcept } from "~/lib/moto-concepts";
@@ -47,7 +47,7 @@ import {
 } from "~/lib/parent-api";
 import {
   RequestEditModal,
-  useRequestVersion,
+  useRequestEditedAt,
 } from "~/components/parent/request-edit-modal";
 import { useChildFeatures } from "~/components/parent/child-requests-context";
 import { CustomSelect } from "~/components/ui/custom-select";
@@ -1267,12 +1267,17 @@ export function PickupTimeModal({
   const canEditRequest =
     pending && studentId !== undefined && request?.is_self !== false;
   const invalidateFamily = useInvalidateFamily();
-  const { version, editedAt } = useRequestVersion(
+  const editedAt = useRequestEditedAt(
     studentId ?? "",
     "pickup_change",
     request?.id ?? "",
     canEditRequest === true,
   );
+  // The version of the request the draft was filled from: an edit sends it
+  // back (ADR 0311). After a refusal, `reloadingVersion` holds the refused
+  // one until the reloaded list brings the stored request.
+  const [draftVersion, setDraftVersion] = useState("");
+  const [reloadingVersion, setReloadingVersion] = useState<string | null>(null);
 
   // The pickup rules this dialog explains with its own context (the child's
   // name, the school's cutoff time). Every other failure goes through the
@@ -1347,23 +1352,36 @@ export function PickupTimeModal({
     ) ?? "";
   const prefillReason = request?.reason ?? existing?.reason ?? "";
   const prefillPerson = request?.pickup_person_guardian_profile_id ?? "";
+  const prefillVersion = request?.version ?? "";
   useEffect(() => {
-    if (editing) return;
+    if (editing && reloadingVersion === null) return;
+    // A refused edit waits for the reloaded request and then shows its
+    // stored values, keeping the refusal on screen.
+    if (reloadingVersion !== null && prefillVersion === reloadingVersion) {
+      return;
+    }
     setPickupTime(prefillTime);
     setDepartureMode(prefillMode);
     setReason(prefillReason);
     setPickupPersonId(prefillPerson);
+    setDraftVersion(prefillVersion);
     setSignature(null);
+    if (reloadingVersion !== null) {
+      setReloadingVersion(null);
+      return;
+    }
     clearForm();
     setInvalidField(null);
   }, [
     clearForm,
     editing,
+    reloadingVersion,
     prefillDate,
     prefillTime,
     prefillMode,
     prefillReason,
     prefillPerson,
+    prefillVersion,
   ]);
 
   // The date remains part of the signed declaration while editing an existing
@@ -1472,18 +1490,18 @@ export function PickupTimeModal({
         pickupTime,
         ...(modeField ? { departureMode } : {}),
         reason: reason.trim(),
-        expectedVersion: version,
+        expectedVersion: draftVersion,
         ...dayPickup,
       });
-      // A reopened dialog must send the new version, not the cached one.
       void invalidateFamily(parentKeys.requestEventsFamily(studentId));
       onClose();
     } catch (err) {
-      if (
-        err instanceof ApiError &&
-        err.code === "students.change_request_stale"
-      ) {
-        form.invalid(t("pickup.staleError"));
+      if (isChangedSinceRead(err)) {
+        // Sending the same version again would be refused again: reload
+        // the request and show what is stored now.
+        void form.show(err, { object: t("pickup.errorObject") });
+        setReloadingVersion(draftVersion);
+        void invalidateFamily(parentKeys.pickupChangeRequestsFamily(studentId));
       } else {
         reportError(form, err, () => latestActionsRef.current.saveEdit());
       }
@@ -1966,8 +1984,11 @@ export function SickStatusSummary({
 }>) {
   const t = useCareTermTranslations("parentChildCare");
   const locale = useLocale();
-  const [editing, setEditing] =
-    useState<parentMeContract.ParentExcusedRequestResponse | null>(null);
+  // The edit follows the row of the current list, so a reload after a
+  // refused save hands the dialog the stored version (ADR 0311).
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const editing =
+    excusedRequests.find((request) => request.id === editingId) ?? null;
 
   // Collapse to a "first – last" range ONLY when the days are actually
   // contiguous; otherwise list them comma-separated. The request endpoint accepts
@@ -2084,7 +2105,7 @@ export function SickStatusSummary({
                 variant="outline"
                 size="md"
                 tooltip={t("requestEditTooltip")}
-                onClick={() => setEditing(r)}
+                onClick={() => setEditingId(r.id)}
               >
                 {t("summary.edit")}
               </Button>
@@ -2134,11 +2155,12 @@ export function SickStatusSummary({
           request={{
             type: "excused",
             id: editing.id,
+            version: editing.version,
             dates: [...(editing.dates ?? [])],
             note: editing.note,
           }}
-          onClose={() => setEditing(null)}
-          onSaved={() => onEdited?.()}
+          onClose={() => setEditingId(null)}
+          onReload={() => onEdited?.()}
         />
       )}
     </div>

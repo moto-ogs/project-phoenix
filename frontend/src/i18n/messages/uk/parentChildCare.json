@@ -103,7 +103,6 @@
     "edit": "Редагувати запит",
     "saveEdit": "Зберегти зміну",
     "editedAt": "Змінено {date}",
-    "staleError": "Запит тим часом уже опрацьовано. Оновіть сторінку.",
     "pendingChange": "{from} → {to}",
     "pendingRequested": "Новий час забирання: {to}",
     "statusPending": "Очікує підтвердження",
