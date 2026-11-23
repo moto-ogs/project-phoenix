@@ -123,6 +123,9 @@ type ParticipationPlan struct {
 	// cancels the meal.
 	Sick SickMode
 	Days []ParticipationDay
+	// Version is the read-state token of every period of the child's
+	// regular days (ADR 0311).
+	Version string
 }
 
 type DailyCandidate struct {

@@ -23,21 +23,19 @@ type recordedMealPlan struct {
 	cleared  []mealplanModule.SchoolChange
 	schedule *mealplanModule.SchoolSchedule
 	replaced []mealplanModule.ReplaceDay
-	emptied  []mealplanModule.ClearDay
 }
 
 func (m *recordedMealPlan) Week(_ context.Context, weekStart mealplanModule.Date) ([]mealplanModule.Entry, error) {
 	return []mealplanModule.Entry{{Date: weekStart, Position: 1, Dish: "Linsensuppe", Allergens: []mealplanModule.Allergen{"A"}}}, nil
 }
 
-func (m *recordedMealPlan) ReplaceDay(_ context.Context, day mealplanModule.ReplaceDay) error {
-	m.replaced = append(m.replaced, day)
-	return nil
+func (m *recordedMealPlan) Days(_ context.Context, weekStart mealplanModule.Date) ([]mealplanModule.Day, error) {
+	return []mealplanModule.Day{{Date: weekStart, Version: "v1", Dishes: []mealplanModule.Dish{{Dish: "Linsensuppe"}}}}, nil
 }
 
-func (m *recordedMealPlan) ClearDay(_ context.Context, day mealplanModule.ClearDay) error {
-	m.emptied = append(m.emptied, day)
-	return nil
+func (m *recordedMealPlan) ReplaceDay(_ context.Context, day mealplanModule.ReplaceDay) (mealplanModule.Day, error) {
+	m.replaced = append(m.replaced, day)
+	return mealplanModule.Day{Date: day.Date, Version: "v2", Dishes: day.Dishes}, nil
 }
 
 func (m *recordedMealPlan) SetParticipationBySchool(_ context.Context, change mealplanModule.SchoolChange) error {
@@ -121,10 +119,11 @@ func TestMealPlanSchoolRoutesHandTheirRequestsOn(t *testing.T) {
 	var changed struct {
 		EffectiveFrom string `json:"effective_from"`
 	}
-	send(http.MethodPut, "/api/meal-plan/participation/42/schedule", map[string]any{"weekdays": []int{1, 3}, "effective_from": "2026-09-07"}, &changed)
+	send(http.MethodPut, "/api/meal-plan/participation/42/schedule", map[string]any{"weekdays": []int{1, 3}, "effective_from": "2026-09-07", "expected_version": "read"}, &changed)
 	assert.Equal(t, "2026-09-07", changed.EffectiveFrom)
 	require.NotNil(t, plan.schedule)
 	assert.Equal(t, []mealplanModule.Weekday{1, 3}, plan.schedule.Weekdays)
+	assert.Equal(t, "read", plan.schedule.ExpectedVersion)
 	var week struct {
 		WeekStart string `json:"week_start"`
 		Days      []struct {
@@ -148,9 +147,23 @@ func TestMealPlanSchoolRoutesHandTheirRequestsOn(t *testing.T) {
 	require.Len(t, plan.replaced, 1)
 	assert.Equal(t, mealplanModule.Date("2026-09-08"), plan.replaced[0].Date)
 	assert.Equal(t, "Nudeln", plan.replaced[0].Dishes[0].Dish)
-	send(http.MethodDelete, "/api/meal-plan/2026-09-08", nil, nil)
-	require.Len(t, plan.emptied, 1)
-	assert.Equal(t, account.ID, plan.emptied[0].AccountID)
+	send(http.MethodDelete, "/api/meal-plan/2026-09-08?expected_version=v1", nil, nil)
+	require.Len(t, plan.replaced, 2)
+	assert.Equal(t, mealplanModule.ReplaceDay{Date: "2026-09-08", ExpectedVersion: "v1", AccountID: account.ID}, plan.replaced[1])
+	var days []struct {
+		Date    string `json:"date"`
+		Version string `json:"version"`
+	}
+	send(http.MethodGet, "/api/meal-plan/days?week_start=2026-09-07", nil, &days)
+	require.Len(t, days, 1)
+	assert.Equal(t, "v1", days[0].Version)
+	var saved struct {
+		Version string `json:"version"`
+	}
+	send(http.MethodPut, "/api/meal-plan/days/2026-09-08", map[string]any{"dishes": []map[string]any{{"dish": "Nudeln"}}, "expected_version": "v1"}, &saved)
+	assert.Equal(t, "v2", saved.Version)
+	require.Len(t, plan.replaced, 3)
+	assert.Equal(t, "v1", plan.replaced[2].ExpectedVersion)
 	assert.Equal(t, "2026-09-07", week.WeekStart)
 	require.Len(t, week.Days, 1)
 	assert.Equal(t, "42", week.Days[0].Participants[0].StudentID)

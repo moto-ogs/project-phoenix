@@ -384,6 +384,61 @@ describe("fetchThread", () => {
     expect(detail.messages).toHaveLength(1);
     expect(detail.messages[0]!.body).toBe("Hallo");
   });
+
+  it("reads enums, payload and attachments the way the parent client does", async () => {
+    const attachment = {
+      id: "9007199254740993",
+      filename: "basteln.png",
+      size_bytes: 4096,
+      content_type: "image/png",
+      width: 640,
+      height: 480,
+    };
+    const wire = (overrides: Record<string, unknown>) => ({
+      id: "m",
+      sender_name: "Anna",
+      body: "",
+      created_at: "2026-01-01T10:00:00Z",
+      kind: "message",
+      ...overrides,
+    });
+    mockFetch(async () =>
+      jsonOk({
+        data: {
+          ...mkDetail(),
+          messages: [
+            wire({
+              id: "m1",
+              sender_kind: "system",
+              kind: "event",
+              event_actor_kind: "staff",
+              request_type: "pickup_change",
+              request_status: "spaeter",
+              payload: { pickup_time: "15:30" },
+            }),
+            wire({
+              id: "m2",
+              sender_kind: "staff",
+              payload: ["not", "an object"],
+              attachments: [attachment],
+            }),
+            wire({ id: "m3", sender_kind: "robot" }),
+          ],
+        },
+      }),
+    );
+    const detail = await fetchThread("t1");
+    expect(detail.messages.map((message) => message.id)).toEqual(["m1", "m2"]);
+    expect(detail.messages[0]).toMatchObject({
+      kind: "event",
+      event_actor_kind: "staff",
+      request_type: "pickup_change",
+      payload: { pickup_time: "15:30" },
+    });
+    expect(detail.messages[0]!.request_status).toBeUndefined();
+    expect(detail.messages[1]!.payload).toBeUndefined();
+    expect(detail.messages[1]!.attachments).toEqual([attachment]);
+  });
 });
 
 // ---------------------------------------------------------------------------

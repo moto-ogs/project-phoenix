@@ -180,7 +180,7 @@ type PortalService interface {
 	MealParticipation(ctx context.Context, accountID, studentID int64, from, to timezone.Date) (parentService.MealParticipationPlan, error)
 	// Meal-participation writes require the relationship-scoped
 	// parent_portal.meal_participation.manage permission.
-	ReplaceMealParticipationSchedule(ctx context.Context, accountID, studentID int64, weekdays []parentService.MealWeekday) (string, error)
+	ReplaceMealParticipationSchedule(ctx context.Context, accountID, studentID int64, weekdays []parentService.MealWeekday, expectedVersion string) (string, error)
 	SetMealParticipationDay(ctx context.Context, accountID, studentID int64, date timezone.Date, participating bool) error
 	SetMealParticipationWeek(ctx context.Context, accountID, studentID int64, date timezone.Date, participating bool) (parentService.MealWeekChange, error)
 	ClearMealParticipationDay(ctx context.Context, accountID, studentID int64, date timezone.Date) error

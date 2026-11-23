@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -93,6 +94,21 @@ func (f *writeFaults) arm(set func(*writeFaults)) {
 	if set != nil {
 		set(f)
 	}
+}
+
+// paused runs fn with no fault armed and keeps nothing it records: a read a
+// client takes before its write is no part of the write under test.
+func (f *writeFaults) paused(fn func()) {
+	f.mu.Lock()
+	armed := f.writeFaultState
+	f.writeFaultState = writeFaultState{}
+	f.mu.Unlock()
+	defer func() {
+		f.mu.Lock()
+		f.writeFaultState = armed
+		f.mu.Unlock()
+	}()
+	fn()
 }
 
 func (f *writeFaults) snapshot() (events []string, begins int) {
@@ -606,6 +622,7 @@ type writeCall struct {
 // call answers w within writeDeadline with the armed faults.
 func (r mealWriteRig) call(t *testing.T, ctx context.Context, w writeCall, token string) *httptest.ResponseRecorder {
 	t.Helper()
+	w = r.asRead(t, w, token)
 	ctx, cancel := context.WithTimeout(ctx, writeDeadline)
 	defer cancel()
 	req := testutil.NewAuthenticatedRequest(t, w.method, w.path, w.body, testutil.WithJWTBearer(token)).WithContext(ctx)
@@ -620,8 +637,40 @@ func (r mealWriteRig) call(t *testing.T, ctx context.Context, w writeCall, token
 	}
 }
 
+// mealSchedule is a parent's change of the regular days; call sends it with
+// the version a read gives just before (asRead).
 func mealSchedule(studentID int64, weekdays ...int) writeCall {
 	return writeCall{http.MethodPut, fmt.Sprintf("/parent/me/children/%d/meal-participation", studentID), map[string]any{"weekdays": weekdays}}
+}
+
+// asRead adds to a change of the regular days the version of the days a
+// parent reads first (ADR 0311), outside the armed faults and the record. A
+// refused read leaves the version empty: the change meets the same refusal.
+func (r mealWriteRig) asRead(t *testing.T, w writeCall, token string) writeCall {
+	t.Helper()
+	body, ok := w.body.(map[string]any)
+	if w.method != http.MethodPut || !strings.HasSuffix(w.path, "/meal-participation") || !ok {
+		return w
+	}
+	if _, set := body["expected_version"]; set {
+		return w
+	}
+	version := ""
+	r.faults.paused(func() {
+		req := testutil.NewAuthenticatedRequest(t, http.MethodGet, fmt.Sprintf("%s?from=%s&to=%s", w.path, childReadToday, childReadToday), nil, testutil.WithJWTBearer(token))
+		rec := testutil.ExecuteRequest(r.router, req)
+		var read struct {
+			Data struct {
+				Version string `json:"version"`
+			} `json:"data"`
+		}
+		if rec.Code == http.StatusOK && json.Unmarshal(rec.Body.Bytes(), &read) == nil {
+			version = read.Data.Version
+		}
+	})
+	withVersion := maps.Clone(body)
+	withVersion["expected_version"] = version
+	return writeCall{w.method, w.path, withVersion}
 }
 
 func mealDay(studentID int64, date calendar.Date, participating bool) writeCall {

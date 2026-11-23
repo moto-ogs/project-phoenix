@@ -2,7 +2,6 @@ import {
   mapParentConferenceOffer,
   type ParentConferenceOffer,
 } from "~/lib/parent-conferences";
-import type { MessageAttachment } from "~/lib/message-attachments";
 import {
   type HolidayRegistrationEntry,
   holidayRegistrationEntriesFromBackend,
@@ -38,7 +37,11 @@ import {
 import {
   type ChatMessage,
   type MessageAudience,
+  type MessageKind,
   type SchoolReaders,
+  chatMessageFieldsOf,
+  knownMessageKind,
+  knownSenderKind,
 } from "~/lib/messaging-status";
 import { logEnrollmentFailure } from "~/lib/enrollment-api-error";
 import { type SignatureValue, signatureRequestBody } from "~/lib/signature";
@@ -590,9 +593,15 @@ export async function getMealParticipation(
   };
 }
 
+/**
+ * Replaces the child's regular days against the `version` of the regular
+ * days the page read (ADR 0311): days changed since are refused with
+ * `general.changed_since_read`.
+ */
 export async function replaceMealParticipationSchedule(
   studentId: string,
   weekdays: number[],
+  expectedVersion: string,
 ): Promise<{ effective_from: string }> {
   return parentCall(
     bffJson(
@@ -600,7 +609,7 @@ export async function replaceMealParticipationSchedule(
       "PUT /parent/me/children/{studentId}/meal-participation",
       {
         params: { studentId },
-        body: { weekdays },
+        body: { weekdays, expected_version: expectedVersion },
       },
     ),
   );
@@ -672,40 +681,27 @@ export async function listSickDays(
 // One message in a conversation. `sender_kind` is "guardian" for the parent's
 // own messages, "staff" for replies from the OGS. For staff messages
 // `sender_name` is the "OGS [Schulname]" label.
-// The wire message shape is shared with the staff client; see ChatMessage.
-export type ParentMessage = ChatMessage & {
-  // The group thread this own message answers (#4784). Only the guardian and
-  // the OGS see the answer.
-  readonly group_thread_id?: string;
-  readonly group_thread_title?: string;
-};
+// The message view is shared with the staff client; see ChatMessage. An own
+// message that answers a group thread (#4784) names it in group_thread_id and
+// group_thread_title; only the guardian and the OGS see the answer.
+export type ParentMessage = ChatMessage;
 
 // One row on the messages landing page: a child's conversation, with the
-// guardian's unread (staff-sent) count and last-activity metadata.
-export interface ThreadSummary {
-  readonly thread_id: string;
-  readonly student_id: string;
-  readonly student_name: string;
-  readonly school_name: string;
-  readonly counterpart_name: string; // "OGS [Schulname]"
-  readonly last_message_at?: string; // ISO timestamp
+// guardian's unread (staff-sent) count and last-activity metadata. The
+// structured fields of the last message let the localized portal preview a
+// request title / decision / withdrawal from fields instead of the German
+// last_message_body (see parentThreadPreviewI18nDescriptor). Empty for plain
+// messages, where last_message_body is the language-neutral written text.
+export type ThreadSummary = Omit<
+  parentMeContract.ThreadSummaryResponse,
+  "last_sender_kind" | "last_message_kind" | "audience" | "readers"
+> & {
   readonly last_sender_kind?: "guardian" | "staff";
-  readonly last_message_body?: string;
-  // Structured fields of the last message so the localized portal previews a
-  // request title / decision / withdrawal from fields instead of the German
-  // last_message_body (see parentThreadPreviewI18nDescriptor). Empty for plain
-  // messages, where last_message_body is the language-neutral written text.
-  readonly last_message_kind?: "message" | "event" | "request";
-  readonly last_event_type?: string;
-  readonly last_request_type?: string;
-  readonly last_request_status?: string;
-  readonly last_message_payload?: Record<string, unknown>;
-  readonly last_message_read_by_staff: boolean;
-  readonly unread: number;
+  readonly last_message_kind?: MessageKind;
   /** Absent means the team conversation. */
   readonly audience?: MessageAudience;
   readonly readers?: ParentReaders;
-}
+};
 
 /**
  * Who can read a conversation (#5200), as the backend reports it. `guardian`
@@ -735,25 +731,25 @@ export type ParentDeclarationState = (typeof PARENT_DECLARATION_STATES)[number];
 
 // A child's full conversation (messages oldest-first). `thread_id` is empty
 // when the guardian has not written about this child yet.
-export interface ThreadView {
-  readonly thread_id: string;
-  readonly student_id: string;
-  readonly student_name: string;
-  readonly school_name: string;
-  readonly counterpart_name: string; // "OGS [Schulname]"
+export type ThreadView = Omit<
+  parentMeContract.ThreadViewResponse,
+  "audience" | "readers" | "leadership_option" | "messages"
+> & {
   readonly audience?: MessageAudience;
   readonly readers?: ParentReaders;
   /**
    * Whether the parent may start a conversation with the leadership only:
    * false while the school has it switched off or has no leadership.
    */
-  readonly leadership_option?: {
-    readonly available: boolean;
+  readonly leadership_option?: Omit<
+    parentMeContract.LeadershipOptionResponse,
+    "names" | "unnamed_count"
+  > & {
     readonly names: readonly string[];
     readonly unnamed_count?: number;
   };
   readonly messages: ParentMessage[];
-}
+};
 
 /**
  * Lists the guardian's conversations: per child the team one and, once
@@ -1145,66 +1141,28 @@ export async function postChildMessage(
 // guardian sees only what reached them, for their own children; an answer
 // goes into the child's conversation with the OGS.
 
-/** One of the guardian's own children a group thread reached. */
-export type GroupThreadChild = parentMeContract.GroupThreadChildResponse;
-
 /** One row of the guardian's group thread list. */
-export interface GroupThreadSummary {
-  readonly id: string;
-  readonly title: string;
-  readonly target_label: string;
-  readonly school_name: string;
-  readonly counterpart_name: string; // "OGS [Schulname]"
-  readonly closed: boolean;
-  readonly last_message_at?: string; // ISO timestamp
-  readonly last_message_body: string;
-  readonly unread: number;
-  readonly children: readonly GroupThreadChild[];
+export type GroupThreadSummary = Omit<
+  parentMeContract.GroupThreadSummaryResponse,
+  "children" | "readers"
+> & {
+  /** The guardian's own children the thread reached; never other families. */
+  readonly children: readonly parentMeContract.GroupThreadChildResponse[];
   /** Who reads the guardian's answer: always the whole OGS team. */
   readonly readers?: ParentReaders;
-}
+};
 
-/** One OGS message of a group thread; the sender is always the OGS. */
-interface GroupThreadMessage {
-  readonly id: string;
-  readonly body: string;
-  readonly created_at: string; // ISO timestamp
-  /** Fotos und Dateien der Nachricht (#6685). */
-  readonly attachments?: readonly MessageAttachment[];
-}
+/**
+ * An opened group thread. Its messages come from the OGS, with their photos
+ * and files (#6685).
+ */
+export type GroupThreadView = GroupThreadSummary & {
+  readonly messages: readonly parentMeContract.GroupMessageResponse[];
+};
 
-/** An opened group thread. */
-export interface GroupThreadView extends GroupThreadSummary {
-  readonly messages: readonly GroupThreadMessage[];
-}
-
-// The messaging answers type attachments and every enum as plain strings
-// (#7808). These readers map them once into the views the conversation UI
-// shares with the staff portal.
-const SENDER_KINDS = [
-  "guardian",
-  "staff",
-  "system",
-] as const satisfies readonly ChatMessage["sender_kind"][];
-const MESSAGE_KINDS = [
-  "message",
-  "event",
-  "request",
-] as const satisfies readonly NonNullable<ChatMessage["kind"]>[];
-const REQUEST_TYPES = [
-  "care_schedule",
-  "pickup_change",
-  "master_data",
-  "excused_absence",
-  "sick_absence",
-  "care_offering",
-] as const satisfies readonly NonNullable<ChatMessage["request_type"]>[];
-const REQUEST_STATUSES = [
-  "offen",
-  "erledigt",
-  "abgelehnt",
-  "zurueckgezogen",
-] as const satisfies readonly NonNullable<ChatMessage["request_status"]>[];
+// The messaging answers type every enum as plain strings (#7808). These
+// readers map them once into the views the conversation UI shares with the
+// staff portal.
 const AUDIENCES = [
   "team",
   "leadership",
@@ -1213,22 +1171,6 @@ const READER_KINDS = [
   "all_staff",
   "leadership",
 ] as const satisfies readonly SchoolReaders["kind"][];
-
-function isAttachment(value: unknown): value is MessageAttachment {
-  if (value === null || typeof value !== "object") return false;
-  const row = value as Record<string, unknown>;
-  return (
-    typeof row.id === "string" &&
-    typeof row.filename === "string" &&
-    typeof row.size_bytes === "number" &&
-    typeof row.content_type === "string"
-  );
-}
-
-/** The attachment list the contract types as unknown; malformed rows drop. */
-function attachmentsOf(raw: unknown): MessageAttachment[] | undefined {
-  return Array.isArray(raw) ? raw.filter(isAttachment) : undefined;
-}
 
 function readersOf(raw: parentMeContract.ParentReadersResponse): ParentReaders {
   return {
@@ -1244,27 +1186,18 @@ function readersOf(raw: parentMeContract.ParentReadersResponse): ParentReaders {
 function parentMessageOf(
   raw: parentMeContract.ParentMessageResponse,
 ): ParentMessage | null {
-  const senderKind = knownEnum(SENDER_KINDS, raw.sender_kind);
-  if (!senderKind) return null;
-  return {
-    ...raw,
-    sender_kind: senderKind,
-    kind: knownEnum(MESSAGE_KINDS, raw.kind),
-    request_type: knownEnum(REQUEST_TYPES, raw.request_type),
-    request_status: knownEnum(REQUEST_STATUSES, raw.request_status),
-    payload: raw.payload,
-    attachments: attachmentsOf(raw.attachments),
-  };
+  const fields = chatMessageFieldsOf(raw);
+  return fields ? { ...raw, ...fields } : null;
 }
 
 function threadSummaryOf(
   raw: parentMeContract.ThreadSummaryResponse,
 ): ThreadSummary {
-  const senderKind = knownEnum(SENDER_KINDS, raw.last_sender_kind);
+  const senderKind = knownSenderKind(raw.last_sender_kind);
   return {
     ...raw,
     last_sender_kind: senderKind === "system" ? undefined : senderKind,
-    last_message_kind: knownEnum(MESSAGE_KINDS, raw.last_message_kind),
+    last_message_kind: knownMessageKind(raw.last_message_kind),
     audience: knownEnum(AUDIENCES, raw.audience),
     readers: readersOf(raw.readers),
   };
@@ -1301,10 +1234,7 @@ function groupThreadViewOf(
 ): GroupThreadView {
   return {
     ...groupThreadSummaryOf(raw),
-    messages: (raw.messages ?? []).map((message) => ({
-      ...message,
-      attachments: attachmentsOf(message.attachments),
-    })),
+    messages: raw.messages ?? [],
   };
 }
 

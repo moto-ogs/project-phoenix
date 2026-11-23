@@ -25,16 +25,16 @@ func TestParticipationLoadsEditableScheduleBeyondDailyWindow(t *testing.T) {
 				rules.OrderRhythm = rhythm
 				if previous {
 					early := buildModuleWithRules(t, db, rules, time.Date(2026, 9, 7, 8, 0, 0, 0, testBerlin))
-					_, err := early.ReplaceParticipationSchedule(ctx, mealplan.ReplaceParticipationSchedule{
+					_, err := early.ReplaceParticipationSchedule(ctx, AsRead(t, early, ctx, mealplan.ReplaceParticipationSchedule{
 						StudentID: student.ID, GuardianAccountID: account.ID, Weekdays: []mealplan.Weekday{mealplan.Monday},
-					})
+					}))
 					require.NoError(t, err)
 				}
 				module := buildModuleWithRules(t, db, rules, time.Date(2026, 9, 7, 10, 0, 0, 0, testBerlin))
 				weekdays := []mealplan.Weekday{mealplan.Tuesday, mealplan.Thursday}
-				effective, err := module.ReplaceParticipationSchedule(ctx, mealplan.ReplaceParticipationSchedule{
+				effective, err := module.ReplaceParticipationSchedule(ctx, AsRead(t, module, ctx, mealplan.ReplaceParticipationSchedule{
 					StudentID: student.ID, GuardianAccountID: account.ID, Weekdays: weekdays,
-				})
+				}))
 				require.NoError(t, err)
 				require.True(t, effective > mealplan.Date("2026-09-07"))
 

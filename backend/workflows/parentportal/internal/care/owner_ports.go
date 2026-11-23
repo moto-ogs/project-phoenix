@@ -38,10 +38,12 @@ type MealWeekChange struct {
 }
 
 // MealParticipationSchedule replaces a child's standing weekday participation.
+// ExpectedVersion is the MealParticipationPlan.Version the parent read.
 type MealParticipationSchedule struct {
 	StudentID         int64
 	GuardianAccountID int64
 	Weekdays          []MealWeekday
+	ExpectedVersion   string
 }
 
 // MealParticipationChange sets or clears one day's participation.

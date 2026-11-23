@@ -6,7 +6,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
-      "reason": "Platform scope protocol through the shared Meal Plan transaction adapter: joins the ambient school unit or starts one for the validated school. ADR 0190 extracts the existing constructor binding without adding a transaction boundary; ADR 0098 classifies this platform participation. Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged.",
+      "reason": "Platform scope protocol through the shared Meal Plan transaction adapter: joins the ambient school unit or starts one for the validated school. ADR 0190 extracts the existing constructor binding without adding a transaction boundary; ADR 0098 classifies this platform participation. Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged. Re-reviewed with #7930: the Meal Plan service's save now checks the read version of a day or of a child's regular days (ADR 0311), with the store's new schedule lock and read; billing calls neither save, and this binding's target and effect are unchanged.",
       "source_owner": "meal-plan",
       "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
       "target_owner": "tenant-runtime"
@@ -16,7 +16,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.Capability.ListStudentNamesByID (people-directory) through *modules/mealplan/internal/application.BillingMonths.BillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.Capability.ListStudentNamesByID (people-directory) through *modules/mealplan/internal/application.BillingMonths.BillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged. Re-reviewed with #7930: the Meal Plan service's save now checks the read version of a day or of a child's regular days (ADR 0311), with the store's new schedule lock and read; billing calls neither save, and this binding's target and effect are unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentNamesByID",
       "target_owner": "people-directory"
@@ -26,7 +26,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.Owner.ListStudentNamesByID (people-directory) through *modules/mealplan/internal/application.BillingMonths.BillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.Owner.ListStudentNamesByID (people-directory) through *modules/mealplan/internal/application.BillingMonths.BillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged. Re-reviewed with #7930: the Meal Plan service's save now checks the read version of a day or of a child's regular days (ADR 0311), with the store's new schedule lock and read; billing calls neither save, and this binding's target and effect are unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentNamesByID",
       "target_owner": "people-directory"
@@ -36,7 +36,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through *modules/mealplan/internal/application.BillingMonths.BillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through *modules/mealplan/internal/application.BillingMonths.BillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged. Re-reviewed with #7930: the Meal Plan service's save now checks the read version of a day or of a child's regular days (ADR 0311), with the store's new schedule lock and read; billing calls neither save, and this binding's target and effect are unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRostersOnDates",
       "target_owner": "people-directory"
@@ -46,7 +46,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through *modules/mealplan/internal/application.BillingMonths.BillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through *modules/mealplan/internal/application.BillingMonths.BillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged. Re-reviewed with #7930: the Meal Plan service's save now checks the read version of a day or of a child's regular days (ADR 0311), with the store's new schedule lock and read; billing calls neither save, and this binding's target and effect are unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate",
       "target_owner": "people-directory"
@@ -56,7 +56,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
-      "reason": "Read-only: the school holiday periods of the month the Mensa-Monatsfreigabe (#4686) leaves out, read in the caller's school transaction; no persistent, lock or scope effect. Re-reviewed #6125 (ADR 0176): the binding evidence now includes the owner composition adapter or owner-internal unit of work this binding enters. Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged.",
+      "reason": "Read-only: the school holiday periods of the month the Mensa-Monatsfreigabe (#4686) leaves out, read in the caller's school transaction; no persistent, lock or scope effect. Re-reviewed #6125 (ADR 0176): the binding evidence now includes the owner composition adapter or owner-internal unit of work this binding enters. Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged. Re-reviewed with #7930: the Meal Plan service's save now checks the read version of a day or of a child's regular days (ADR 0311), with the store's new schedule lock and read; billing calls neither save, and this binding's target and effect are unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
       "target_owner": "school-calendar"
@@ -66,7 +66,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
-      "reason": "Read-only: the closing days and public holidays of the month the Mensa-Monatsfreigabe (#4686) leaves out, read in the caller's school transaction; no persistent, lock or scope effect. Re-reviewed #6125 (ADR 0176): the binding evidence now includes the owner composition adapter or owner-internal unit of work this binding enters. Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged.",
+      "reason": "Read-only: the closing days and public holidays of the month the Mensa-Monatsfreigabe (#4686) leaves out, read in the caller's school transaction; no persistent, lock or scope effect. Re-reviewed #6125 (ADR 0176): the binding evidence now includes the owner composition adapter or owner-internal unit of work this binding enters. Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged. Re-reviewed with #7930: the Meal Plan service's save now checks the read version of a day or of a child's regular days (ADR 0311), with the store's new schedule lock and read; billing calls neither save, and this binding's target and effect are unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
       "target_owner": "school-calendar"
@@ -76,7 +76,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
-      "reason": "Value construction: the holiday filter of the school calendar for the month of the Mensa-Monatsfreigabe (#4686); no persistent, lock or scope effect. Re-reviewed #6125 (ADR 0176): the binding evidence now includes the owner composition adapter or owner-internal unit of work this binding enters. Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged.",
+      "reason": "Value construction: the holiday filter of the school calendar for the month of the Mensa-Monatsfreigabe (#4686); no persistent, lock or scope effect. Re-reviewed #6125 (ADR 0176): the binding evidence now includes the owner composition adapter or owner-internal unit of work this binding enters. Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged. Re-reviewed with #7930: the Meal Plan service's save now checks the read version of a day or of a child's regular days (ADR 0311), with the store's new schedule lock and read; billing calls neither save, and this binding's target and effect are unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
       "target_owner": "school-calendar"
@@ -86,7 +86,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
-      "reason": "Read-only: resolve the school attendance retention window in the caller school transaction before computing or releasing a Mensa month; no write, lock or scope change.",
+      "reason": "Read-only: resolve the school attendance retention window in the caller school transaction before computing or releasing a Mensa month; no write, lock or scope change. Re-reviewed with #7930: the Meal Plan service's save now checks the read version of a day or of a child's regular days (ADR 0311), with the store's new schedule lock and read; billing calls neither save, and this binding's target and effect are unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings.AttendanceRetention.Days",
       "target_owner": "settings-platform"
@@ -96,7 +96,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
-      "reason": "Read-only: Student Presence's first complete attendance day of the school under its retention window, counting what the retention already deleted (active.attendance_retention_marks, #4686, ADR 0168); read in the caller's school transaction so a Mensa month whose attendance may be gone is not counted; no write, lock or scope change.",
+      "reason": "Read-only: Student Presence's first complete attendance day of the school under its retention window, counting what the retention already deleted (active.attendance_retention_marks, #4686, ADR 0168); read in the caller's school transaction so a Mensa month whose attendance may be gone is not counted; no write, lock or scope change. Re-reviewed with #7930: the Meal Plan service's save now checks the read version of a day or of a child's regular days (ADR 0311), with the store's new schedule lock and read; billing calls neither save, and this binding's target and effect are unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.AttendanceCompleteFrom",
       "target_owner": "student-presence"
@@ -107,7 +107,7 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
-      "reason": "Owner-provided conditional locking read: ForUpdate=true requires an ambient transaction and executes SELECT FOR UPDATE; otherwise read-only. The Mensa-Monatsfreigabe (#4686) reads the month without ForUpdate. Classify the complete method surface as lock, not query. Target modules/studentpresence.Owner.ListAttendance. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Owner-provided conditional locking read: ForUpdate=true requires an ambient transaction and executes SELECT FOR UPDATE; otherwise read-only. The Mensa-Monatsfreigabe (#4686) reads the month without ForUpdate. Classify the complete method surface as lock, not query. Target modules/studentpresence.Owner.ListAttendance. May-bind method surface, not a production-call/liveness claim. Re-reviewed with #7930: the Meal Plan service's save now checks the read version of a day or of a child's regular days (ADR 0311), with the store's new schedule lock and read; billing calls neither save, and this binding's target and effect are unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListAttendance",
       "target_owner": "student-presence"
@@ -117,7 +117,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches tenant.TenantFromContext (tenant-runtime) through *modules/mealplan/internal/application.BillingMonths.BillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches tenant.TenantFromContext (tenant-runtime) through *modules/mealplan/internal/application.BillingMonths.BillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged. Re-reviewed with #7930: the Meal Plan service's save now checks the read version of a day or of a child's regular days (ADR 0311), with the store's new schedule lock and read; billing calls neither save, and this binding's target and effect are unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -158,7 +158,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
-      "reason": "Platform scope protocol through the shared Meal Plan transaction adapter: joins the ambient school unit or starts one for the validated school. ADR 0190 extracts the existing constructor binding without adding a transaction boundary; ADR 0098 classifies this platform participation. Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged.",
+      "reason": "Platform scope protocol through the shared Meal Plan transaction adapter: joins the ambient school unit or starts one for the validated school. ADR 0190 extracts the existing constructor binding without adding a transaction boundary; ADR 0098 classifies this platform participation. Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged. Re-reviewed with #7930: the Meal Plan service's save now checks the read version of a day or of a child's regular days (ADR 0311), with the store's new schedule lock and read; billing calls neither save, and this binding's target and effect are unchanged.",
       "source_owner": "meal-plan",
       "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
       "target_owner": "tenant-runtime"
@@ -168,7 +168,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.Capability.ListStudentNamesByID (people-directory) through *modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.Capability.ListStudentNamesByID (people-directory) through *modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged. Re-reviewed with #7930: the Meal Plan service's save now checks the read version of a day or of a child's regular days (ADR 0311), with the store's new schedule lock and read; billing calls neither save, and this binding's target and effect are unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentNamesByID",
       "target_owner": "people-directory"
@@ -178,7 +178,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.Owner.ListStudentNamesByID (people-directory) through *modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.Owner.ListStudentNamesByID (people-directory) through *modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged. Re-reviewed with #7930: the Meal Plan service's save now checks the read version of a day or of a child's regular days (ADR 0311), with the store's new schedule lock and read; billing calls neither save, and this binding's target and effect are unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentNamesByID",
       "target_owner": "people-directory"
@@ -188,7 +188,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through *modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory.StudentRostersOnDates (people-directory) through *modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged. Re-reviewed with #7930: the Meal Plan service's save now checks the read version of a day or of a child's regular days (ADR 0311), with the store's new schedule lock and read; billing calls neither save, and this binding's target and effect are unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRostersOnDates",
       "target_owner": "people-directory"
@@ -198,7 +198,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through *modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) through *modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged. Re-reviewed with #7930: the Meal Plan service's save now checks the read version of a day or of a child's regular days (ADR 0311), with the store's new schedule lock and read; billing calls neither save, and this binding's target and effect are unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate",
       "target_owner": "people-directory"
@@ -208,7 +208,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
-      "reason": "Read-only: the school holiday periods of the month the Mensa-Monatsfreigabe (#4686) leaves out, read in the caller's school transaction; no persistent, lock or scope effect. Re-reviewed #6125 (ADR 0176): the binding evidence now includes the owner composition adapter or owner-internal unit of work this binding enters. Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged.",
+      "reason": "Read-only: the school holiday periods of the month the Mensa-Monatsfreigabe (#4686) leaves out, read in the caller's school transaction; no persistent, lock or scope effect. Re-reviewed #6125 (ADR 0176): the binding evidence now includes the owner composition adapter or owner-internal unit of work this binding enters. Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged. Re-reviewed with #7930: the Meal Plan service's save now checks the read version of a day or of a child's regular days (ADR 0311), with the store's new schedule lock and read; billing calls neither save, and this binding's target and effect are unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
       "target_owner": "school-calendar"
@@ -218,7 +218,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
-      "reason": "Read-only: the closing days and public holidays of the month the Mensa-Monatsfreigabe (#4686) leaves out, read in the caller's school transaction; no persistent, lock or scope effect. Re-reviewed #6125 (ADR 0176): the binding evidence now includes the owner composition adapter or owner-internal unit of work this binding enters. Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged.",
+      "reason": "Read-only: the closing days and public holidays of the month the Mensa-Monatsfreigabe (#4686) leaves out, read in the caller's school transaction; no persistent, lock or scope effect. Re-reviewed #6125 (ADR 0176): the binding evidence now includes the owner composition adapter or owner-internal unit of work this binding enters. Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged. Re-reviewed with #7930: the Meal Plan service's save now checks the read version of a day or of a child's regular days (ADR 0311), with the store's new schedule lock and read; billing calls neither save, and this binding's target and effect are unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
       "target_owner": "school-calendar"
@@ -228,7 +228,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
-      "reason": "Value construction: the holiday filter of the school calendar for the month of the Mensa-Monatsfreigabe (#4686); no persistent, lock or scope effect. Re-reviewed #6125 (ADR 0176): the binding evidence now includes the owner composition adapter or owner-internal unit of work this binding enters. Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged.",
+      "reason": "Value construction: the holiday filter of the school calendar for the month of the Mensa-Monatsfreigabe (#4686); no persistent, lock or scope effect. Re-reviewed #6125 (ADR 0176): the binding evidence now includes the owner composition adapter or owner-internal unit of work this binding enters. Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged. Re-reviewed with #7930: the Meal Plan service's save now checks the read version of a day or of a child's regular days (ADR 0311), with the store's new schedule lock and read; billing calls neither save, and this binding's target and effect are unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
       "target_owner": "school-calendar"
@@ -238,7 +238,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
-      "reason": "Read-only: resolve the school attendance retention window in the caller school transaction before computing or releasing a Mensa month; no write, lock or scope change.",
+      "reason": "Read-only: resolve the school attendance retention window in the caller school transaction before computing or releasing a Mensa month; no write, lock or scope change. Re-reviewed with #7930: the Meal Plan service's save now checks the read version of a day or of a child's regular days (ADR 0311), with the store's new schedule lock and read; billing calls neither save, and this binding's target and effect are unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings.AttendanceRetention.Days",
       "target_owner": "settings-platform"
@@ -248,7 +248,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
-      "reason": "Read-only: Student Presence's first complete attendance day of the school under its retention window, counting what the retention already deleted (active.attendance_retention_marks, #4686, ADR 0168); read in the caller's school transaction so a Mensa month whose attendance may be gone is not counted; no write, lock or scope change.",
+      "reason": "Read-only: Student Presence's first complete attendance day of the school under its retention window, counting what the retention already deleted (active.attendance_retention_marks, #4686, ADR 0168); read in the caller's school transaction so a Mensa month whose attendance may be gone is not counted; no write, lock or scope change. Re-reviewed with #7930: the Meal Plan service's save now checks the read version of a day or of a child's regular days (ADR 0311), with the store's new schedule lock and read; billing calls neither save, and this binding's target and effect are unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.AttendanceCompleteFrom",
       "target_owner": "student-presence"
@@ -259,7 +259,7 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
-      "reason": "Owner-provided conditional locking read: ForUpdate=true requires an ambient transaction and executes SELECT FOR UPDATE; otherwise read-only. The Mensa-Monatsfreigabe (#4686) reads the month without ForUpdate. Classify the complete method surface as lock, not query. Target modules/studentpresence.Owner.ListAttendance. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Owner-provided conditional locking read: ForUpdate=true requires an ambient transaction and executes SELECT FOR UPDATE; otherwise read-only. The Mensa-Monatsfreigabe (#4686) reads the month without ForUpdate. Classify the complete method surface as lock, not query. Target modules/studentpresence.Owner.ListAttendance. May-bind method surface, not a production-call/liveness claim. Re-reviewed with #7930: the Meal Plan service's save now checks the read version of a day or of a child's regular days (ADR 0311), with the store's new schedule lock and read; billing calls neither save, and this binding's target and effect are unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListAttendance",
       "target_owner": "student-presence"
@@ -269,7 +269,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches tenant.TenantFromContext (tenant-runtime) through *modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged.",
+      "reason": "Read-only target already reviewed as query: meal-plan reaches tenant.TenantFromContext (tenant-runtime) through *modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Rechecked for #7145: the Meal Plan application now builds the daily list through dailyListIn, which the menu change notice shares, and its constructor takes the notice port; this binding keeps its target and its effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged. Re-reviewed with #7898: billing reads weeks through the Meal Plan service, whose save now locks and compares the day it was read against before writing; billing calls no save, and this binding's target and effect are unchanged. Re-reviewed with #7930: the Meal Plan service's save now checks the read version of a day or of a child's regular days (ADR 0311), with the store's new schedule lock and read; billing calls neither save, and this binding's target and effect are unchanged.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -372,67 +372,6 @@
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.CatererOrders",
       "reason": "Read-only target already reviewed as query: meal-plan reaches tenant.TenantFromContext (tenant-runtime) through *modules/mealplan/internal/application.Service.CatererOrders. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ClearDay",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearDay",
-      "reason": "Platform scope protocol through the shared Meal Plan transaction adapter: joins the ambient school unit or starts one for the validated school. ADR 0190 extracts the existing constructor binding without adding a transaction boundary; ADR 0098 classifies this platform participation.",
-      "source_owner": "meal-plan",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ClearDay",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearDay",
-      "reason": "Read-only: ClearDay reads who has a meal booked on a changed day through modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate (people-directory) to tell the families (#7145), in the caller's school transaction; no persistent, lock or scope effect. Re-reviewed with #7666: the Meal Plan service now also marks a changed menu; this binding's effect is unchanged.",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindOverlappingWithGroupsOnDate",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ClearDay",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearDay",
-      "reason": "Read-only: ClearDay reads who has a meal booked on a changed day through modules/schoolcalendar.Days.ListCalendarPeriods (school-calendar) to tell the families (#7145), in the caller's school transaction; no persistent, lock or scope effect.",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ClearDay",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearDay",
-      "reason": "Read-only: ClearDay reads who has a meal booked on a changed day through modules/schoolcalendar.Days.NonWorkingDayDates (school-calendar) to tell the families (#7145), in the caller's school transaction; no persistent, lock or scope effect.",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.NonWorkingDayDates",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ClearDay",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearDay",
-      "reason": "Read-only: ClearDay reads who has a meal booked on a changed day through modules/schoolcalendar.HolidaysOverlapping (school-calendar) to tell the families (#7145), in the caller's school transaction; no persistent, lock or scope effect.",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.HolidaysOverlapping",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ClearDay",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearDay",
-      "reason": "Read-only target already reviewed as query: meal-plan reaches tenant.TenantFromContext (tenant-runtime) through *modules/mealplan/internal/application.Service.ClearDay. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -697,6 +636,27 @@
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.DailyList",
       "reason": "Read-only target already reviewed as query: meal-plan reaches tenant.TenantFromContext (tenant-runtime) through *modules/mealplan/internal/application.Service.DailyList. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "source_owner": "meal-plan",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.Days",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.Days",
+      "reason": "Platform scope protocol through the shared Meal Plan transaction adapter: joins the ambient school unit or starts one for the validated school, as Week does. Reviewed with #7930: the week of days with their versions (ADR 0311) adds no transaction boundary.",
+      "source_owner": "meal-plan",
+      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.Days",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.Days",
+      "reason": "Read-only target: meal-plan reaches tenant.TenantFromContext (tenant-runtime) through *modules/mealplan/internal/application.Service.Days, the week read with each day's version (ADR 0311, #7930). No persistent, lock or scope effect.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -2769,6 +2729,16 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/adapters/postgres.Store.FindSchedules",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan/internal/ports.Store.FindSchedules",
+      "reason": "Read-only target: meal-plan reaches tenant.TenantFromContext (tenant-runtime) through modules/mealplan/internal/adapters/postgres.Store.FindSchedules to scope its read of a child's regular days, which a schedule save checks (ADR 0311, #7930). No persistent, lock or scope effect.",
+      "source_owner": "meal-plan",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/adapters/postgres.Store.FindWeek",
       "classification": "query",
       "effect": "query",
@@ -2834,6 +2804,16 @@
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan/internal/ports.Store.LockOrders",
       "reason": "Read-only target: meal-plan reaches tenant.TenantFromContext (tenant-runtime) through modules/mealplan/internal/adapters/postgres.Store.LockOrders. No persistent, lock or scope effect; reviewed with #3873 (ADR 0078).",
+      "source_owner": "meal-plan",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/adapters/postgres.Store.LockSchedule",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan/internal/ports.Store.LockSchedule",
+      "reason": "Read-only target: meal-plan reaches tenant.TenantFromContext (tenant-runtime) through modules/mealplan/internal/adapters/postgres.Store.LockSchedule to key its own lock of a child's regular days (ADR 0311, #7930). No persistent, lock or scope effect on tenant-runtime.",
       "source_owner": "meal-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"

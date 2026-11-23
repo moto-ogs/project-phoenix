@@ -4,7 +4,7 @@
 
 import { defineEntityConfig } from "@/lib/database/types";
 import type { Permission } from "@/lib/auth-helpers";
-import type * as sharedContract from "~/lib/contract/shared.generated";
+import { bffJson } from "~/lib/bff-fetch";
 import { mapPermissionResponse } from "@/lib/auth-helpers";
 import {
   formatPermissionDisplay,
@@ -61,7 +61,10 @@ export const permissionsConfig = defineEntityConfig<Permission>({
   backUrl: "/database",
 
   api: {
-    routes: { list: "GET /auth/permissions/" },
+    list: async () =>
+      (await bffJson("tenant", "GET /auth/permissions/")).map(
+        mapPermissionResponse,
+      ),
   },
 
   form: {
@@ -206,11 +209,6 @@ export const permissionsConfig = defineEntityConfig<Permission>({
         text: (p: Permission) => (p.resource?.[0] ?? "P").toUpperCase(),
       },
     },
-  },
-
-  service: {
-    mapResponse: (data: unknown): Permission =>
-      mapPermissionResponse(data as sharedContract.PermissionResponse),
   },
 
   labels: {

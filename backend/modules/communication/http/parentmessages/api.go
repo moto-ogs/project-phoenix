@@ -158,7 +158,7 @@ type ParentChatMessageResponse struct {
 	GroupThreadID    string `json:"group_thread_id,omitempty"`
 	GroupThreadTitle string `json:"group_thread_title,omitempty"`
 	// Attachments are the photos and files of the message (#6685).
-	Attachments json.RawMessage `json:"attachments,omitempty"`
+	Attachments []ParentMessageAttachmentResponse `json:"attachments,omitempty"`
 }
 
 type ParentChatThreadDetailResponse struct {
@@ -240,7 +240,7 @@ func toMessageResponses(messages []communication.ParentMessage, viewer ...int64)
 			ReadByGuardian:   m.ReadByGuardian,
 			GroupThreadID:    optionalIDString(m.GroupThreadID),
 			GroupThreadTitle: m.GroupThreadTitle,
-			Attachments:      m.Attachments,
+			Attachments:      toAttachmentResponses(m.Attachments),
 		})
 	}
 	return out

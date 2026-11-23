@@ -58,6 +58,27 @@ test("a request identifier may become an id, an answer's may not", () => {
   assert.deepEqual(breakingChanges(model([field("id", "string")]), model([field("id", "id")])), ["GET /api/rows/[].id: string became id"]);
 });
 
+test("an answer's json may gain a type, a request's json may not", () => {
+  const attachments = (kind) => kind === "json"
+    ? { kind: "json", nullable: true }
+    : { kind: "array", elem: { kind: "ref", ref: "Attachment" } };
+  const answer = (kind) => ({
+    ...model([field("id", "id"), { name: "attachments", schema: attachments(kind), optional: true }]),
+    types: [
+      { name: "Row", go_type: "rows.Row", fields: [field("id", "id"), { name: "attachments", schema: attachments(kind), optional: true }] },
+      { name: "Attachment", go_type: "rows.Attachment", fields: [field("id", "id"), field("filename", "string")] },
+    ],
+  });
+  assert.deepEqual(breakingChanges(answer("json"), answer("typed")), [], "a reader of json reads every shape");
+  assert.deepEqual(breakingChanges(answer("typed"), answer("json")), ["GET /api/rows/[].attachments: array<object> became json"]);
+  const body = (kind) => {
+    const route = model([field("payload", kind)], { method: "POST", request: { kind: "ref", ref: "Row" }, response: undefined, no_data: true });
+    route.types[0].request = true;
+    return route;
+  };
+  assert.deepEqual(breakingChanges(body("json"), body("string")), ["POST /api/rows/ request.payload: json became string"]);
+});
+
 test("a deprecated route may leave and a variant may not", () => {
   assert.deepEqual(breakingChanges(model(base.types[0].fields, { deprecated: true }), { ...base, routes: [] }), []);
   const variants = (cases) => model(base.types[0].fields, { response: undefined, variants: { query_param: "view", default: "full", cases } });
