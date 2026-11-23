@@ -53,6 +53,8 @@ export function useCompTimePreview({
       }),
     token: (preview) => preview.fingerprint,
     toDraft: () => false,
+    // The dialog closes after a booking: no read of the old projection.
+    answer: (_saved, shown) => shown,
   });
   // Der Block zeigt den Ladefehler (das Panel); ohne Vorschau bucht der
   // Dialog keinen Freizeitausgleich, denn der Server prüft genau die gezeigte
