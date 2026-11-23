@@ -21,6 +21,9 @@ type Options struct {
 	// and no entry stops the generator; the root names them like the
 	// identifier types.
 	Readers map[reflect.Type]string
+	// Values names transparent JSON wrappers whose wire shape is their Value
+	// field in both directions. The mode is TypedValue or LegacyValue.
+	Values map[reflect.Type]string
 	// Dates names the day types beside calendar.Date that travel as
 	// "YYYY-MM-DD" and render their zero value as null. The root names them.
 	Dates []reflect.Type
@@ -35,6 +38,10 @@ const (
 	// ReadsValue: the type is a wrapper that reads one JSON value, null
 	// included, into its field Value and notes that the key was present.
 	ReadsValue = "value"
+	// TypedValue writes its type; LegacyValue also preserves old JSON that
+	// does not fit that type, so each field using it must explain the fallback.
+	TypedValue  = "typed"
+	LegacyValue = "legacy"
 )
 
 // Registration is one route as the root hands it over: the owner's

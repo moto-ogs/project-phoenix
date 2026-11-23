@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
@@ -74,10 +75,31 @@ type ParentCareRequestDiffResponse struct {
 
 // CareScheduleRequestBody is the wire shape for POST .../care-schedule/requests.
 type CareScheduleRequestBody struct {
-	Payload map[string]any `json:"payload"`
+	Payload common.DeferredJSON[*carerequests.WeeklyChange] `json:"payload" contract_refines:"The care-plan parser already validates this weekly change document"`
 	// Signature is needed when a weekday lets the child walk home alone
 	// (#4780).
 	Signature *declarationSignatureRequest `json:"signature,omitempty"`
+}
+
+// Pass the typed weekly document to the existing workflow boundary. If a
+// nested value fails to decode, let the workflow return its established
+// request error. A non-object still fails HTTP body decoding as before.
+func weeklyPayload(w http.ResponseWriter, r *http.Request, input common.DeferredJSON[*carerequests.WeeklyChange]) (map[string]any, bool) {
+	raw := input.Invalid
+	if raw == nil {
+		var err error
+		raw, err = json.Marshal(input.Value)
+		if err != nil {
+			common.RenderError(w, r, common.ErrorInternalServerWrap("encode weekly care request", err))
+			return nil, false
+		}
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
+		return nil, false
+	}
+	return payload, true
 }
 
 func toCareRequestDiffResponses(entries []parentService.CareRequestDiffEntry) []ParentCareRequestDiffResponse {
@@ -167,7 +189,11 @@ func (rs *Resource) createCareScheduleRequest(w http.ResponseWriter, r *http.Req
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}
-	view, err := rs.ParentService.CreateSignedCareScheduleRequest(r.Context(), accountID, studentID, body.Payload, body.Signature.pickupInput())
+	payload, ok := weeklyPayload(w, r, body.Payload)
+	if !ok {
+		return
+	}
+	view, err := rs.ParentService.CreateSignedCareScheduleRequest(r.Context(), accountID, studentID, payload, body.Signature.pickupInput())
 	if err != nil {
 		renderParentWriteError(w, r, err)
 		return

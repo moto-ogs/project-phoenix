@@ -33,7 +33,7 @@ func TestBuildServiceRequest_CopiesGuardianFields(t *testing.T) {
 		GuardianLastName:  "Beispiel",
 		GuardianEmail:     "anna@example.test",
 		GuardianPhone:     &phone,
-		ConsentFlags:      map[string]any{"photo": true},
+		ConsentFlags:      ConsentFlagsInput{Value: map[string]*bool{"photo": new(true)}},
 		CustomData:        map[string]any{"notes": "n"},
 		Children: []SubmitChildRequest{
 			{FirstName: "Lara", LastName: "Beispiel", DateOfBirth: "2018-03-04"},

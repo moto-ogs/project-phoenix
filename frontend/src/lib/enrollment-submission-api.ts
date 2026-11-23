@@ -49,11 +49,6 @@ const CHANGE_REQUEST_ORIGINS = ["parent", "admin"] as const;
 const MESSAGE_AUTHORS = ["parent", "staff", "system"] as const;
 
 /** An object answer the contract carries as unknown (form answers, consents). */
-function record(value: unknown): Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
-}
 
 /**
  * Concrete-class config for a phase (#1833): whether the tenant collects a
@@ -443,7 +438,9 @@ export type EnrollmentEditDraft = Omit<
   enrollmentContract.EditDraftResponse,
   "consent_flags" | "custom_data" | "children"
 > & {
-  consent_flags: Record<string, unknown>;
+  consent_flags: NonNullable<
+    enrollmentContract.EditDraftResponse["consent_flags"]
+  >;
   custom_data: Record<string, unknown>;
   children: EnrollmentEditDraftChild[];
 };
@@ -497,12 +494,12 @@ export async function fetchEnrollmentEditBootstrap(
     ),
     draft: {
       ...draft,
-      consent_flags: record(draft.consent_flags),
-      custom_data: record(draft.custom_data),
+      consent_flags: draft.consent_flags ?? {},
+      custom_data: draft.custom_data ?? {},
       children: (draft.children ?? []).map(
         ({ offering_days: days, ...child }) => ({
           ...child,
-          custom_data: record(child.custom_data),
+          custom_data: child.custom_data ?? {},
           offering_ids: child.offering_ids ?? [],
           ...(days && {
             offering_days: days.map((day) => ({
@@ -549,9 +546,13 @@ export type EnrollmentChangeRequest = Omit<
   /** undefined: an origin this build does not know. */
   origin: (typeof CHANGE_REQUEST_ORIGINS)[number] | undefined;
   status: ChangeRequestStatus;
-  base_snapshot: Record<string, unknown>;
-  proposed_snapshot: Record<string, unknown>;
-  diff: Record<string, unknown>;
+  base_snapshot: NonNullable<
+    enrollmentContract.ChangeRequestResponse["base_snapshot"]
+  >;
+  proposed_snapshot: NonNullable<
+    enrollmentContract.ChangeRequestResponse["proposed_snapshot"]
+  >;
+  diff: NonNullable<enrollmentContract.ChangeRequestResponse["diff"]>;
   messages?: EnrollmentChangeRequestMessage[];
 };
 
@@ -567,9 +568,9 @@ export function changeRequestFromContract(
       request.status,
       "EnrollmentChangeRequest.status",
     ),
-    base_snapshot: record(request.base_snapshot),
-    proposed_snapshot: record(request.proposed_snapshot),
-    diff: record(request.diff),
+    base_snapshot: request.base_snapshot ?? {},
+    proposed_snapshot: request.proposed_snapshot ?? {},
+    diff: request.diff ?? {},
     ...(messages && {
       messages: messages.map((message) => ({
         ...message,

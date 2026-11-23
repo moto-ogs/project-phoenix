@@ -210,5 +210,5 @@ func TestToAdminRequestSummary_PreservesCustomDataMap(t *testing.T) {
 	}
 	out := toAdminRequestSummary(in)
 	require.Len(t, out.Children, 1)
-	assert.Equal(t, "Nüsse", formValue(out.Children[0].CustomData, "allergies"))
+	assert.Equal(t, "Nüsse", out.Children[0].CustomData["allergies"])
 }

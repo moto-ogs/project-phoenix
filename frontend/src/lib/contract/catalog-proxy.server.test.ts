@@ -329,6 +329,40 @@ describe("makeCatalogProxy", () => {
     expect(await data(response)).toEqual(request);
   });
 
+  it("keeps legacy snapshot rows and consent values beside typed ones", async () => {
+    api.mockResolvedValueOnce({
+      status: "success",
+      data: {
+        id: "change-1",
+        request_id: "request-1",
+        origin: "parent",
+        status: "pending",
+        base_snapshot: {
+          consent_flags: { photo: "true", trips: false },
+          children: [
+            "legacy child",
+            { first_name: "Anna", previous_group: "1a" },
+          ],
+        },
+        proposed_snapshot: null,
+        diff: null,
+        created_at: TEST_CLOCK_INSTANT.toISOString(),
+        updated_at: TEST_CLOCK_INSTANT.toISOString(),
+      },
+    });
+    const reply = await callTenant("enrollment/admin/change-requests/change-1");
+    expect(reply.status).toBe(200);
+    expect(await data(reply)).toMatchObject({
+      base_snapshot: {
+        consent_flags: { photo: "true", trips: false },
+        children: [
+          "legacy child",
+          { first_name: "Anna", previous_group: "1a" },
+        ],
+      },
+    });
+  });
+
   it.each([
     ["enrollment/admin/change-requests/list", { items: [{}] }],
     ["enrollment/admin/change-requests/pending-count", { pending_count: "3" }],

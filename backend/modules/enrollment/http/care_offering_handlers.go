@@ -215,7 +215,7 @@ type CareOfferingRequest struct {
 	PickupTimes map[string]string `json:"pickup_times,omitempty"`
 	// Translations of Name and Description (#3377). The editor always sends
 	// the full document; the service validates it.
-	Translations json.RawMessage `json:"translations,omitempty"`
+	Translations common.DeferredJSON[capability.Translations] `json:"translations,omitzero" contract_refines:"The catalog already rejects values that are not translation documents"`
 }
 
 // Bind satisfies render.Binder. Field-level validation runs in the
@@ -273,6 +273,13 @@ func (req *CareOfferingRequest) toModel(existingID int64) (*CareOffering, error)
 	if err != nil {
 		return nil, err
 	}
+	translations := req.Translations.Invalid
+	if req.Translations.Present && translations == nil {
+		translations, err = json.Marshal(req.Translations.Value)
+		if err != nil {
+			return nil, err
+		}
+	}
 	o := &CareOffering{
 		PhaseID:                   req.PhaseID.Int64(),
 		ActivityGroupID:           (*int64)(req.ActivityGroupID),
@@ -293,7 +300,7 @@ func (req *CareOfferingRequest) toModel(existingID int64) (*CareOffering, error)
 		SelectionGroup:            req.SelectionGroup,
 		SelectionRule:             req.SelectionRule,
 		PickupTimes:               req.PickupTimes,
-		Translations:              req.Translations,
+		Translations:              translations,
 		AutoAddTriggerOfferingIDs: triggerIDs,
 	}
 	o.ID = existingID
@@ -483,7 +490,7 @@ func (rs *Resource) updateCareOffering(w http.ResponseWriter, r *http.Request) {
 		func(ctx context.Context, model *CareOffering) error {
 			// Older callers do not send translations. Preserve their document;
 			// an explicit {} still reaches normalization and clears it.
-			if req.Translations == nil {
+			if !req.Translations.Present {
 				existing, err := rs.CareOfferingService.GetByID(ctx, model.ID)
 				if err != nil {
 					return err

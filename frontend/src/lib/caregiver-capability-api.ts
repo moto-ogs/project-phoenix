@@ -1,5 +1,6 @@
 import { ApiError } from "./api-error";
 import { bffJson } from "./bff-fetch";
+import type * as sharedContract from "./contract/shared.generated";
 import type * as authAccountsContract from "./contract/auth-accounts.generated";
 
 export interface BlockerSupervision {
@@ -59,7 +60,7 @@ function formatCount(count: number, singular: string, plural: string): string {
 
 function translateCapabilityBlocker(
   blocker: string,
-  state?: authAccountsContract.CaregiverCapabilityState,
+  state?: sharedContract.CaregiverCapabilityState,
 ): string {
   switch (blocker) {
     case "missing_usable_role":
@@ -118,7 +119,7 @@ export class CaregiverCapabilityApiError extends ApiError {
 }
 
 function mapCapabilityState(
-  state: authAccountsContract.CaregiverCapabilityState,
+  state: sharedContract.CaregiverCapabilityState,
 ): CaregiverCapabilityState {
   return {
     accountId: state.account_id,
@@ -193,27 +194,15 @@ function capabilityError(error: unknown): never {
 
 const FAILED = "Betreuung konnte nicht geändert werden";
 
-function tenant(
-  answer: Promise<authAccountsContract.CaregiverCapabilityState>,
+function mapCapabilityAnswer(
+  answer: Promise<sharedContract.CaregiverCapabilityState>,
 ): Promise<CaregiverCapabilityState> {
   return answer.then(mapCapabilityState, capabilityError);
 }
 
-// The operator routes carry no answer type in their contract (`z.unknown()`);
-// Go answers with the same CaregiverCapabilityState as the tenant route.
-function operator(answer: Promise<unknown>): Promise<CaregiverCapabilityState> {
-  return answer.then(
-    (state) =>
-      mapCapabilityState(
-        state as authAccountsContract.CaregiverCapabilityState,
-      ),
-    capabilityError,
-  );
-}
-
 class CaregiverCapabilityService {
   getTenantAccountCapability(accountId: string) {
-    return tenant(
+    return mapCapabilityAnswer(
       bffJson("tenant", "GET /auth/accounts/{accountId}/caregiver-capability", {
         params: { accountId },
         errorMessage: FAILED,
@@ -225,7 +214,7 @@ class CaregiverCapabilityService {
     accountId: string,
     body: authAccountsContract.EnableCaregiverCapabilityRequest,
   ) {
-    return tenant(
+    return mapCapabilityAnswer(
       bffJson(
         "tenant",
         "POST /auth/accounts/{accountId}/caregiver-capability",
@@ -235,7 +224,7 @@ class CaregiverCapabilityService {
   }
 
   disableTenantAccountCapability(accountId: string) {
-    return tenant(
+    return mapCapabilityAnswer(
       bffJson(
         "tenant",
         "DELETE /auth/accounts/{accountId}/caregiver-capability",
@@ -245,7 +234,7 @@ class CaregiverCapabilityService {
   }
 
   getOperatorAccountCapability(schoolId: string, accountId: string) {
-    return operator(
+    return mapCapabilityAnswer(
       bffJson(
         "platform",
         "GET /operator/schools/{id}/accounts/{accountId}/caregiver-capability/",
@@ -259,7 +248,7 @@ class CaregiverCapabilityService {
     accountId: string,
     body: authAccountsContract.EnableCaregiverCapabilityRequest,
   ) {
-    return operator(
+    return mapCapabilityAnswer(
       bffJson(
         "platform",
         "POST /operator/schools/{id}/accounts/{accountId}/caregiver-capability/",
@@ -269,7 +258,7 @@ class CaregiverCapabilityService {
   }
 
   disableOperatorAccountCapability(schoolId: string, accountId: string) {
-    return operator(
+    return mapCapabilityAnswer(
       bffJson(
         "platform",
         "DELETE /operator/schools/{id}/accounts/{accountId}/caregiver-capability/",

@@ -4,7 +4,7 @@
 // Gate:     permissions.SchedulesManage (registered at the router level in api.go)
 //
 // The handler accepts a partial update (status / substatus / note). Pointer-
-// and RawMessage-based request parsing distinguishes three JSON states for
+// and presence-aware request parsing distinguishes three JSON states for
 // each nullable field:
 //
 //	MISSING  — leave column untouched
@@ -31,17 +31,12 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
-// PatchAttendanceRequest is the wire shape. Status uses *string (nullable-ish
-// via pointer-is-nil means "missing"), while Substatus and Note use
-// json.RawMessage so the handler can distinguish "missing" from "explicit
-// null" — both columns are nullable and each state is meaningful.
-//
-// Reviewer focus: look for {note: null} handling. The tri-state resolution
-// lives in parseAttendancePatchRequest.
+// PatchAttendanceRequest preserves the distinction between an omitted
+// substatus or note and an explicit null that clears the stored value.
 type PatchAttendanceRequest struct {
-	Status    *string         `json:"status,omitempty"`
-	Substatus json.RawMessage `json:"substatus,omitempty"`
-	Note      json.RawMessage `json:"note,omitempty"`
+	Status    *string                      `json:"status,omitempty"`
+	Substatus common.DeferredJSON[*string] `json:"substatus,omitzero" contract_refines:"The previous attendance parser rejected values other than strings and null"`
+	Note      common.DeferredJSON[*string] `json:"note,omitzero" contract_refines:"The previous attendance parser rejected values other than strings and null"`
 }
 
 // fieldError is a package-local alias for common.FieldError so test tables
@@ -220,57 +215,21 @@ func parseAttendancePatchRequest(req *PatchAttendanceRequest) (timetable.Attenda
 		patch.Status = &s
 	}
 
-	if sub, parseErr := decodeNullableString(req.Substatus); parseErr != nil {
-		errs = append(errs, fieldError{Field: "substatus", Reason: parseErr.Error()})
-	} else if sub.present {
-		if sub.isNull {
-			patch.SubstatusClear = true
-		} else {
-			v := sub.value
-			patch.Substatus = &v
-		}
+	if sub := req.Substatus; sub.Invalid != nil {
+		errs = append(errs, fieldError{Field: "substatus", Reason: "must be a string or null"})
+	} else if sub.Present {
+		patch.Substatus = sub.Value
+		patch.SubstatusClear = sub.Value == nil
 	}
 
-	if note, parseErr := decodeNullableString(req.Note); parseErr != nil {
-		errs = append(errs, fieldError{Field: "note", Reason: parseErr.Error()})
-	} else if note.present {
-		if note.isNull {
-			patch.NoteClear = true
-		} else {
-			v := note.value
-			patch.Note = &v
-		}
+	if note := req.Note; note.Invalid != nil {
+		errs = append(errs, fieldError{Field: "note", Reason: "must be a string or null"})
+	} else if note.Present {
+		patch.Note = note.Value
+		patch.NoteClear = note.Value == nil
 	}
 
 	return patch, errs
-}
-
-// nullableString is the decoded tri-state for a nullable JSON string field:
-//
-//	{present: false}                    → field missing from body
-//	{present: true, isNull: true}       → field is JSON null
-//	{present: true, isNull: false, ...} → field is a JSON string
-type nullableString struct {
-	present bool
-	isNull  bool
-	value   string
-}
-
-// decodeNullableString parses a json.RawMessage into nullableString.
-// Non-string, non-null JSON values are rejected with an error.
-func decodeNullableString(raw json.RawMessage) (nullableString, error) {
-	if len(raw) == 0 {
-		return nullableString{present: false}, nil
-	}
-	// json.RawMessage preserves the null literal as the 4-byte string "null".
-	if string(raw) == "null" {
-		return nullableString{present: true, isNull: true}, nil
-	}
-	var s string
-	if err := json.Unmarshal(raw, &s); err != nil {
-		return nullableString{}, errors.New("must be a string or null")
-	}
-	return nullableString{present: true, value: s}, nil
 }
 
 // validateAttendancePatch enforces business rules. Called ONCE the current

@@ -1761,8 +1761,8 @@ export const StartInstanceResponseSchema: z.ZodType<StartInstanceResponse, unkno
 /** Go: timetablehttp.CorrectAttendanceRequest */
 export interface CorrectAttendanceRequest {
   status?: string | null;
-  substatus?: unknown | null;
-  note?: unknown | null;
+  substatus?: string | null;
+  note?: string | null;
   reason?: string;
 }
 

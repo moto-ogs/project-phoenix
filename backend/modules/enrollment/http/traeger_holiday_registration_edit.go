@@ -29,7 +29,7 @@ type HolidayRegistrationEditRequest struct {
 	Children          []holidayChildEditRequest   `json:"children"`
 	EmergencyContacts *[]holidayContactRequest    `json:"emergency_contacts"`
 	PickupPersons     []holidayContactRequest     `json:"pickup_persons"`
-	CustomData        *map[string]json.RawMessage `json:"custom_data"`
+	CustomData        *map[string]json.RawMessage `json:"custom_data" contract_json:"Answer values follow the school's versioned form schema"`
 }
 
 type holidayChildEditRequest struct {
@@ -39,7 +39,7 @@ type holidayChildEditRequest struct {
 	BirthDate       calendar.Date             `json:"birth_date"`
 	HomeSchoolID    ident.ID                  `json:"home_school_id"`
 	GuestSchoolName string                    `json:"guest_school_name"`
-	CustomData      capability.HolidayAnswers `json:"custom_data"`
+	CustomData      capability.HolidayAnswers `json:"custom_data" contract_json:"Answer values follow the school's versioned form schema"`
 }
 
 // Bind accepts the body; the Owner validates the details.

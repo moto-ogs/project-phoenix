@@ -8,9 +8,7 @@ import "github.com/moto-ogs/project-phoenix/api/common"
 // moto schule. A Lehrkraft writes class letters only; changing a draft, polls,
 // the scheduled reminder and the Kinderakte belong to the staff portal.
 //
-// The PDF and CSV downloads answer a file and keep their route files. The
-// body of PUT /{announcementId}/reminder keeps reminder_at as raw JSON, so
-// the handler tells an omitted reminder_at from an explicit null.
+// The PDF and CSV downloads answer a file and keep their route files.
 func RouteContracts(portal common.PortalScope) []common.RouteContract {
 	portals := []common.PortalScope{portal}
 	tenant := portal == common.PortalTenant

@@ -145,7 +145,7 @@ type ParentChatMessageResponse struct {
 	EventActorKind  string          `json:"event_actor_kind,omitempty"`
 	RequestType     string          `json:"request_type,omitempty"`
 	RequestStatus   string          `json:"request_status,omitempty"`
-	Payload         json.RawMessage `json:"payload,omitempty"`
+	Payload         json.RawMessage `json:"payload,omitempty" contract_json:"The message kind selects an extensible event payload, including historical kinds"`
 	RefTable        string          `json:"ref_table,omitempty"`
 	RefID           string          `json:"ref_id,omitempty"`
 	AppliedAt       *time.Time      `json:"applied_at,omitempty"`

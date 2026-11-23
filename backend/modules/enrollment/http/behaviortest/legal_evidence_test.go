@@ -1,6 +1,7 @@
 package enrollmenthttp_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -64,7 +65,11 @@ func TestApprovedChangeKeepsTheConsentWordingFromTheProposal(t *testing.T) {
 	submission.ConsentFlags = testFormValues(map[string]any{"photo": true})
 	created, err := service.Create(ctx, result.Request.StatusToken, enrollmentAPI.CreateChangeRequestInput{Submission: submission})
 	require.NoError(t, err)
-	require.NotContains(t, created.ChangeRequest.ProposedSnapshot, "_legal_evidence")
+	snapshot, err := json.Marshal(created.ChangeRequest.ProposedSnapshot)
+	require.NoError(t, err)
+	var publicSnapshot map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(snapshot, &publicSnapshot))
+	require.NotContains(t, publicSnapshot, "_legal_evidence")
 
 	before, _, err := env.svc.GetByStatusToken(ctx, result.Request.StatusToken)
 	require.NoError(t, err)

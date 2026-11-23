@@ -146,7 +146,7 @@ type Item struct {
 	// Data is the projection of the open list under the old member name; the
 	// typed members below replace it, and the history has its own path.
 	// Deprecated for one release (#7808).
-	Data any `json:"data"`
+	Data any `json:"data" contract_json:"The originating request owner supplies a different DTO for each inbox item kind"`
 	// MasterData, CareSchedule, Offering and Excused carry the projection
 	// of the open list: the member named like RequestType is set.
 	MasterData   *MasterDataChangeRequestResponse `json:"master_data,omitempty"`
