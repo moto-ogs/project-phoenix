@@ -11,7 +11,7 @@ import {
   type ReactNode,
 } from "react";
 
-import { ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 
 import {
   AT_LEAST_MD,
@@ -21,6 +21,7 @@ import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
 import { Button } from "~/components/ui/button";
 import { useKitDefault } from "~/components/ui/kit-locale";
 import { Checkbox } from "~/components/ui/checkbox";
+import { InsetPanel } from "~/components/ui/inset-panel";
 import { Skeleton } from "~/components/ui/skeleton";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
@@ -60,7 +61,10 @@ export interface DataTableColumn<T> {
   // Role this column plays in the stacked phone layout (`stackedOnMobile`).
   // A "field" whose render returns null for a row has no line in that row.
   // "title" is the headline of a stacked row, "meta" the muted value beside
-  // it, "field" a labelled line below, "hidden" is dropped on phones.
+  // it, "field" a labelled line below (in the "row" layout: in the card's
+  // details, #7911). No layout drops a column. "hidden" leaves it out of
+  // the card and is allowed only for content the card already shows
+  // elsewhere, e.g. a value folded into another column's `stackedRender`.
   // Defaults to "field".
   stacked?: "title" | "meta" | "field" | "hidden";
   // Extra classes for the cell in the "row" phone line, e.g. to lay a
@@ -123,6 +127,8 @@ export interface DataTableHeading {
  * which row is open and draws the chevron in the first column. Rows without
  * `canExpand` stay plain: nothing to reveal, no pointer, no hover. On a row
  * that can open, a click opens it; `onRowClick` applies only to the others.
+ * On a phone the card's details button opens it; `rowLabel` names that
+ * button (#7911).
  */
 interface DataTableExpandable<T> {
   readonly canExpand?: (row: T) => boolean;
@@ -204,7 +210,9 @@ interface DataTableProps<T> {
   stackedOnMobile?: boolean;
   // "lines" (default) gives every field its own labelled line; "row" shows
   // one entry per line with title, meta and the stackedDetailKey column
-  // under the title, so a phone still reads a list (#3834). "form" is for
+  // under the title, so a phone still reads a list (#3834); its other
+  // columns open below the line through the card's details button (#7911).
+  // In every layout the "actions" column stands top right. "form" is for
   // rows whose fields are controls: the title with the meta value (a row
   // menu) beside it, then every field with its label above and the control
   // at full width, so all controls share one left and one right edge
@@ -227,10 +235,11 @@ interface DataTableProps<T> {
   activeRowKey?: string | number | null;
   expandable?: DataTableExpandable<T>;
   // Rows under a table row: always there (blocks of a day) or only while it is
-  // open (`expanded`). Table layout only, the stacked phone rows leave them out.
+  // open (`expanded`). The stacked phone card shows all of them in its opened
+  // details (#7911).
   renderSubRows?: (row: T, expanded: boolean) => readonly DataTableExtraRow[];
-  // A summary after a row and its sub rows, e.g. the sum closing a week. Table
-  // layout only.
+  // A summary after a row and its sub rows, e.g. the sum closing a week. On a
+  // phone it is a card of its own after the row's card (#7911).
   summaryRow?: (row: T) => DataTableExtraRow | null;
   rowTone?: (row: T) => DataTableRowTone | null;
   // Narrower cells for a table with many columns.
@@ -435,18 +444,28 @@ function StackedField({
 function FormStackedRow<T>({
   row,
   headline,
+  headlineId,
   meta,
+  end,
   fields,
 }: Readonly<{
   row: T;
   headline: ReactNode;
+  headlineId: string;
   meta: DataTableColumn<T> | undefined;
+  end: ReactNode;
   fields: DataTableColumn<T>[];
 }>) {
   return (
     <>
-      <div className="flex min-h-8 items-center justify-between gap-3">
-        <span className="min-w-0 font-medium break-words text-gray-900">
+      <div
+        data-stacked-head=""
+        className="flex min-h-8 items-center justify-between gap-3"
+      >
+        <span
+          id={headlineId}
+          className="min-w-0 font-medium break-words text-gray-900"
+        >
           {headline}
         </span>
         {meta ? (
@@ -454,6 +473,7 @@ function FormStackedRow<T>({
             {meta.render(row)}
           </span>
         ) : null}
+        {end}
       </div>
       {fields.length > 0 && (
         <dl className="mt-3 space-y-3 text-sm">
@@ -484,9 +504,12 @@ const STACKED_ROW_PADDING: Record<"lines" | "row" | "form", string> = {
 const FORM_LIST_EDGES =
   "[&>li:first-child>div]:pt-0 [&>li:last-child>div]:pb-0";
 
-// A control inside a stacked row (the selection checkbox) that must not
-// also trigger the row's own click.
+// A control inside a stacked row (the selection checkbox, the row menu, the
+// details toggle) that must not also trigger the row's own click.
 const STACKED_ROW_CONTROL = "[data-row-control]";
+
+const DETAILS_OPEN_TOOLTIP = "Zeigt die übrigen Angaben dieses Eintrags.";
+const DETAILS_CLOSE_TOOLTIP = "Blendet die übrigen Angaben wieder aus.";
 
 /**
  * The checkbox of a phone row. The row ignores clicks from this label
@@ -519,31 +542,140 @@ function StackedRowCheckbox<T>({
 }
 
 /**
+ * The top right of a phone card (#7911): the details toggle, then the row
+ * menu, in every layout. Neither control opens the row.
+ */
+function StackedRowEnd({
+  toggle,
+  menu,
+}: Readonly<{ toggle: ReactNode; menu: ReactNode }>) {
+  if (toggle === null && menu === null) return null;
+  return (
+    <span
+      data-row-control=""
+      className="-my-1.5 flex shrink-0 items-center gap-1 self-start"
+    >
+      {toggle}
+      {menu}
+    </span>
+  );
+}
+
+/** The button that opens the fields a card does not show (#7911). */
+function StackedDetailsToggle({
+  open,
+  onToggle,
+  label,
+  labelledBy,
+  controls,
+}: Readonly<{
+  open: boolean;
+  onToggle: () => void;
+  // Own name of an `expandable` row; otherwise the name is „Details zu“
+  // followed by the card's title (`labelledBy`).
+  label: string | undefined;
+  labelledBy: string;
+  controls: string;
+}>) {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      aria-expanded={open}
+      aria-controls={open ? controls : undefined}
+      aria-label={label}
+      aria-labelledby={label === undefined ? labelledBy : undefined}
+      tooltip={open ? DETAILS_CLOSE_TOOLTIP : DETAILS_OPEN_TOOLTIP}
+      onClick={onToggle}
+    >
+      <ChevronDown
+        aria-hidden="true"
+        className={`h-4 w-4 text-gray-500 transition-transform ${open ? "rotate-180" : ""}`}
+      />
+    </Button>
+  );
+}
+
+/** One labelled field of a stacked row, or the full-width value without it. */
+function StackedFieldLine<T>({
+  col,
+  value,
+}: Readonly<{ col: DataTableColumn<T>; value: ReactNode }>) {
+  // Without its label a field takes the full width (an invoice's positions
+  // with their amounts); screen readers keep the label.
+  if (col.stackedLabel === false) {
+    return (
+      <div>
+        <dt className="sr-only">{col.header}</dt>
+        <dd className="min-w-0">{value}</dd>
+      </div>
+    );
+  }
+  return <StackedField label={col.header}>{value}</StackedField>;
+}
+
+/**
+ * A sub or summary row on a phone: a spanning `content` as it is, `cells`
+ * as labelled lines under their column's header.
+ */
+function StackedExtraRow<T>({
+  row,
+  columns,
+}: Readonly<{
+  row: DataTableExtraRow;
+  columns: readonly DataTableColumn<T>[];
+}>) {
+  if ("content" in row) return <div>{row.content}</div>;
+  const cells = row.cells.filter(
+    (cell) => cell.content !== null && cell.content !== undefined,
+  );
+  if (cells.length === 0) return null;
+  return (
+    <dl className="space-y-1">
+      {cells.map((cell) => (
+        <StackedField
+          key={cell.columnKey}
+          label={columns.find((c) => c.key === cell.columnKey)?.header ?? ""}
+        >
+          {cell.content}
+        </StackedField>
+      ))}
+    </dl>
+  );
+}
+
+/**
  * The phone list row (#3834): one entry per line. Optional checkbox, the
- * title with one chosen detail column under it, the meta value at the
- * right. Every other column stays off the phone: a list that grows back
- * into several lines per entry reads like cards again.
+ * title with one chosen detail column under it, the meta value and the
+ * row's controls at the right. Every other column opens below the line
+ * through the details toggle (#7911): a list that grows back into several
+ * lines per entry reads like cards again.
  */
 function RowStackedRow<T>({
   row,
   rowKey,
   title,
+  titleId,
   meta,
   detail,
   selection,
+  end,
 }: Readonly<{
   row: T;
   rowKey: string;
   title: DataTableColumn<T> | undefined;
+  titleId: string;
   meta: DataTableColumn<T> | undefined;
   detail: DataTableColumn<T> | undefined;
   selection?: DataTableSelection<T>;
+  end: ReactNode;
 }>) {
   const detailValue = detail
     ? (detail.stackedRender ?? detail.render)(row)
     : null;
   return (
-    <div className="flex min-h-8 items-center gap-3">
+    <div data-stacked-head="" className="flex min-h-8 items-center gap-3">
       {selection ? (
         <StackedRowCheckbox row={row} rowKey={rowKey} selection={selection} />
       ) : null}
@@ -553,6 +685,7 @@ function RowStackedRow<T>({
           rather than being cut. */}
       <div className="min-w-20 flex-1">
         <span
+          id={titleId}
           className={
             title?.stackedClamp === false
               ? "break-words"
@@ -579,6 +712,7 @@ function RowStackedRow<T>({
           {(meta.stackedRender ?? meta.render)(row)}
         </span>
       ) : null}
+      {end}
     </div>
   );
 }
@@ -607,10 +741,6 @@ function SurfaceHeading({ heading }: Readonly<{ heading: DataTableHeading }>) {
   );
 }
 
-/**
- * The phone layout of DataTable: the same sorted, paged rows rendered stacked
- * inside one surface. Enabled per call site via `stackedOnMobile`.
- */
 /** The label of `pageSize`'s button, with the rows' noun when given. */
 function loadMoreLabel(shown: number, total: number, noun?: string): string {
   return noun
@@ -618,6 +748,11 @@ function loadMoreLabel(shown: number, total: number, noun?: string): string {
     : `Mehr laden (${shown} von ${total})`;
 }
 
+/**
+ * The phone layout of DataTable: the same sorted, paged rows rendered stacked
+ * inside one surface. Enabled per call site via `stackedOnMobile`. Every
+ * column stands on the card or in its details (#7911).
+ */
 function StackedRows<T>({
   columns,
   rows,
@@ -641,6 +776,9 @@ function StackedRows<T>({
   detail,
   heading,
   activeRowKey,
+  expandable,
+  renderSubRows,
+  summaryRow,
 }: Readonly<{
   columns: DataTableColumn<T>[];
   rows: T[];
@@ -664,25 +802,49 @@ function StackedRows<T>({
   detail?: DataTableColumn<T>;
   heading?: DataTableHeading;
   activeRowKey?: string | number | null;
+  expandable?: DataTableExpandable<T>;
+  renderSubRows?: (row: T, expanded: boolean) => readonly DataTableExtraRow[];
+  summaryRow?: (row: T) => DataTableExtraRow | null;
 }>) {
+  const idBase = useId();
+  // Several cards may stand open at once: unlike the table, a phone shows
+  // one card's details right under it, without pushing the others away.
+  const [openKeys, setOpenKeys] = useState<ReadonlySet<string | number>>(
+    () => new Set(),
+  );
+  const toggleOpen = useCallback((key: string | number) => {
+    setOpenKeys((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(key)) next.add(key);
+      return next;
+    });
+  }, []);
+
   const title =
     layout === "form" && stackedTitle
       ? undefined
       : (columns.find((c) => c.stacked === "title") ?? columns[0]);
   const meta = columns.find((c) => c.stacked === "meta");
-  // The row menu stands in the title row, top right, also beside a meta
-  // value: in the "lines" layout it never falls among the labelled fields.
-  const rowMenu =
-    layout === "lines"
-      ? columns.find(
-          (c) =>
-            c.key === PINNED_COLUMN_KEY && c !== meta && c.stacked !== "hidden",
-        )
-      : undefined;
-
+  // The row menu stands in the card's first line, top right, in every layout
+  // (#7911); it never falls among the fields or into the details.
+  const rowMenu = columns.find(
+    (c) =>
+      c.key === PINNED_COLUMN_KEY &&
+      c !== meta &&
+      c !== title &&
+      c.stacked !== "hidden",
+  );
   const fields = columns.filter(
     (c) => c !== title && c !== meta && c !== rowMenu && c.stacked !== "hidden",
   );
+  // "row" shows one chosen field on the card; every other one opens in the
+  // details, so no column is lost on a phone (#7911).
+  const detailFields =
+    layout === "row" ? fields.filter((c) => c !== detail) : [];
+  const shownDetail =
+    layout === "row" && detail && detail !== title && detail !== meta
+      ? detail
+      : undefined;
   const clickable = Boolean(onRowClick);
   if (isLoading) {
     return (
@@ -712,153 +874,239 @@ function StackedRows<T>({
     );
   }
 
+  const renderRow = (row: T, index: number) => {
+    const rowKey = getRowKey(row);
+    const active = activeRowKey != null && rowKey === activeRowKey;
+    const canExpand =
+      expandable !== undefined && (expandable.canExpand?.(row) ?? true);
+    // As in the table, a row that expands does not also open (#5600).
+    const rowClickable =
+      clickable && !canExpand && (canClickRow?.(row) ?? true);
+    const open = openKeys.has(rowKey);
+    const hiddenValues = detailFields
+      .map((col) => ({ col, value: col.render(row) }))
+      .filter((entry) => entry.value !== null);
+    // Sub rows stand in the details, also those the table always shows.
+    const subRows = renderSubRows?.(row, true) ?? [];
+    const hasDetails = hiddenValues.length > 0 || subRows.length > 0;
+    const menu = rowMenu ? rowMenu.render(row) : null;
+    const titleId = `${idBase}-title-${index}`;
+    const detailsId = `${idBase}-details-${index}`;
+    const toggleTextId = `${idBase}-toggle-${index}`;
+    const toggle = hasDetails ? (
+      <>
+        <span id={toggleTextId} className="sr-only">
+          Details zu
+        </span>
+        <StackedDetailsToggle
+          open={open}
+          onToggle={() => toggleOpen(rowKey)}
+          label={canExpand ? expandable?.rowLabel(row, open) : undefined}
+          labelledBy={`${toggleTextId} ${titleId}`}
+          controls={detailsId}
+        />
+      </>
+    ) : null;
+    const end = <StackedRowEnd toggle={toggle} menu={menu ?? null} />;
+    const callerControls =
+      typeof rowHasInteractiveControls === "function"
+        ? rowHasInteractiveControls(row)
+        : rowHasInteractiveControls;
+    const rowHasControls =
+      Boolean(callerControls) || menu != null || hasDetails;
+    const rowKeyboardClickable =
+      rowClickable && !rowHasControls && selection === undefined;
+    // A card with its own controls is no button itself; the keyboard opens
+    // it through a button named by its title, as in the table (#7112).
+    const rowAction =
+      onRowClick && rowClickable && !rowKeyboardClickable ? (
+        <button
+          type="button"
+          data-row-control=""
+          aria-labelledby={titleId}
+          onClick={() => onRowClick(row)}
+          className="sr-only"
+        />
+      ) : null;
+    // The <li> stays a list item and keeps the handlers; a row that
+    // is a button itself puts its role and tab stop on the wrapper
+    // inside, or the list would lose its items (axe "list").
+    return (
+      <li
+        key={rowKey}
+        aria-current={active ? "true" : undefined}
+        onClick={
+          onRowClick && rowClickable
+            ? (event) => {
+                if (
+                  event.target instanceof Element &&
+                  event.target.closest(STACKED_ROW_CONTROL)
+                ) {
+                  return;
+                }
+                onRowClick(row);
+              }
+            : undefined
+        }
+        onKeyDown={
+          rowKeyboardClickable
+            ? (event) => {
+                // Only the row's own focus stop, not a control in it.
+                if (event.target !== event.currentTarget.firstElementChild) {
+                  return;
+                }
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onRowClick?.(row);
+                }
+              }
+            : undefined
+        }
+      >
+        <div
+          className={`${STACKED_ROW_PADDING[layout]} ${rowClickable ? "cursor-pointer" : ""} ${active ? ACTIVE_ROW_CLASS : ""} ${rowClassName ? rowClassName(row) : ""}`}
+          tabIndex={rowKeyboardClickable ? 0 : undefined}
+          role={rowKeyboardClickable ? "button" : undefined}
+        >
+          {rowAction}
+          {layout === "form" ? (
+            <FormStackedRow
+              row={row}
+              headline={stackedTitle ? stackedTitle(row) : title?.render(row)}
+              headlineId={titleId}
+              meta={meta}
+              end={end}
+              fields={fields}
+            />
+          ) : layout === "row" ? (
+            <RowStackedRow
+              row={row}
+              rowKey={String(rowKey)}
+              title={title}
+              titleId={titleId}
+              meta={meta}
+              detail={shownDetail}
+              selection={selection}
+              end={end}
+            />
+          ) : (
+            <>
+              <div
+                data-stacked-head=""
+                className="flex items-baseline justify-between gap-3"
+              >
+                {selection ? (
+                  <StackedRowCheckbox
+                    row={row}
+                    rowKey={String(rowKey)}
+                    selection={selection}
+                  />
+                ) : null}
+                <span id={titleId} className="min-w-0 flex-1">
+                  {title?.render(row)}
+                </span>
+                {meta ? (
+                  <span
+                    className={
+                      meta.stackedTone === "figure"
+                        ? "shrink-0 text-sm font-semibold text-gray-900 tabular-nums"
+                        : "shrink-0 text-xs text-gray-500"
+                    }
+                  >
+                    {meta.render(row)}
+                  </span>
+                ) : null}
+                {end}
+              </div>
+              {fields.length > 0 && (
+                <dl className="mt-2 space-y-1 text-sm">
+                  {fields.map((col) => {
+                    // A cell without a value for this row (null) drops
+                    // its line instead of showing a bare label.
+                    const value = col.render(row);
+                    if (value === null) return null;
+                    return (
+                      <StackedFieldLine key={col.key} col={col} value={value} />
+                    );
+                  })}
+                </dl>
+              )}
+            </>
+          )}
+          {hasDetails && open ? (
+            <div
+              id={detailsId}
+              className="mt-2 space-y-2 border-t border-gray-100 pt-2 text-sm"
+            >
+              {hiddenValues.length > 0 ? (
+                <dl className="space-y-1">
+                  {hiddenValues.map(({ col, value }) => (
+                    <StackedFieldLine key={col.key} col={col} value={value} />
+                  ))}
+                </dl>
+              ) : null}
+              {subRows.map((subRow) => (
+                <InsetPanel
+                  key={subRow.key}
+                  padding="compact"
+                  className="text-xs text-gray-600"
+                >
+                  <StackedExtraRow row={subRow} columns={columns} />
+                </InsetPanel>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </li>
+    );
+  };
+
+  // A summary closes the rows before it as a card of its own (#7911); the
+  // rows after it continue in a new list surface.
+  const segments: { items: ReactNode[]; summary: DataTableExtraRow | null }[] =
+    [{ items: [], summary: null }];
+  rows.forEach((row, index) => {
+    const current = segments[segments.length - 1]!;
+    current.items.push(renderRow(row, index));
+    const summary = summaryRow?.(row) ?? null;
+    if (summary) {
+      current.summary = summary;
+      segments.push({ items: [], summary: null });
+    }
+  });
+  const shownSegments = segments.filter((segment) => segment.items.length > 0);
+
   return (
     // A flex column that grows: as the last surface of a page the phone list
     // reaches the bottom edge like the desktop table (`.moto-tenant-body`).
     <div className="flex grow flex-col gap-3">
-      {/* The form rows stand in the card that holds them, like its other
-          fields; a second frame inside the card only costs width (#4807). */}
-      <div className={layout === "form" ? "" : `${surfaceClass} grow`}>
-        {heading ? <SurfaceHeading heading={heading} /> : null}
-        <ul
-          className={`divide-y divide-gray-100 ${layout === "form" ? FORM_LIST_EDGES : ""}`}
-        >
-          {rows.map((row) => {
-            const active =
-              activeRowKey != null && getRowKey(row) === activeRowKey;
-            const rowClickable = clickable && (canClickRow?.(row) ?? true);
-            const rowHasControls =
-              typeof rowHasInteractiveControls === "function"
-                ? rowHasInteractiveControls(row)
-                : rowHasInteractiveControls;
-            const rowKeyboardClickable =
-              clickable &&
-              !rowHasControls &&
-              selection === undefined &&
-              rowClickable;
-            // The <li> stays a list item and keeps the handlers; a row that
-            // is a button itself puts its role and tab stop on the wrapper
-            // inside, or the list would lose its items (axe "list").
-            return (
-              <li
-                key={getRowKey(row)}
-                aria-current={active ? "true" : undefined}
-                onClick={
-                  onRowClick && rowClickable
-                    ? (event) => {
-                        if (
-                          event.target instanceof Element &&
-                          event.target.closest(STACKED_ROW_CONTROL)
-                        ) {
-                          return;
-                        }
-                        onRowClick(row);
-                      }
-                    : undefined
-                }
-                onKeyDown={
-                  rowKeyboardClickable
-                    ? (event) => {
-                        // Only the row's own focus stop, not a control in it.
-                        if (
-                          event.target !== event.currentTarget.firstElementChild
-                        ) {
-                          return;
-                        }
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          onRowClick?.(row);
-                        }
-                      }
-                    : undefined
-                }
-              >
-                <div
-                  className={`${STACKED_ROW_PADDING[layout]} ${rowClickable ? "cursor-pointer" : ""} ${active ? ACTIVE_ROW_CLASS : ""} ${rowClassName ? rowClassName(row) : ""}`}
-                  tabIndex={rowKeyboardClickable ? 0 : undefined}
-                  role={rowKeyboardClickable ? "button" : undefined}
-                >
-                  {layout === "form" ? (
-                    <FormStackedRow
-                      row={row}
-                      headline={
-                        stackedTitle ? stackedTitle(row) : title?.render(row)
-                      }
-                      meta={meta}
-                      fields={fields}
-                    />
-                  ) : layout === "row" ? (
-                    <RowStackedRow
-                      row={row}
-                      rowKey={String(getRowKey(row))}
-                      title={title}
-                      meta={meta}
-                      detail={detail}
-                      selection={selection}
-                    />
-                  ) : (
-                    <>
-                      <div className="flex items-baseline justify-between gap-3">
-                        {selection ? (
-                          <StackedRowCheckbox
-                            row={row}
-                            rowKey={String(getRowKey(row))}
-                            selection={selection}
-                          />
-                        ) : null}
-                        <span className="min-w-0 flex-1">
-                          {title?.render(row)}
-                        </span>
-                        {meta ? (
-                          <span
-                            className={
-                              meta.stackedTone === "figure"
-                                ? "shrink-0 text-sm font-semibold text-gray-900 tabular-nums"
-                                : "shrink-0 text-xs text-gray-500"
-                            }
-                          >
-                            {meta.render(row)}
-                          </span>
-                        ) : null}
-                        {rowMenu ? (
-                          <span className="shrink-0" data-row-control="">
-                            {rowMenu.render(row)}
-                          </span>
-                        ) : null}
-                      </div>
-                      {fields.length > 0 && (
-                        <dl className="mt-2 space-y-1 text-sm">
-                          {fields.map((col) => {
-                            // A cell without a value for this row (null) drops
-                            // its line instead of showing a bare label.
-                            const value = col.render(row);
-                            if (value === null) return null;
-                            // Without its label a field takes the full width
-                            // (an invoice's positions with their amounts).
-                            if (col.stackedLabel === false) {
-                              return (
-                                <div key={col.key}>
-                                  <dt className="sr-only">{col.header}</dt>
-                                  <dd className="min-w-0">{value}</dd>
-                                </div>
-                              );
-                            }
-                            return (
-                              <StackedField key={col.key} label={col.header}>
-                                {value}
-                              </StackedField>
-                            );
-                          })}
-                        </dl>
-                      )}
-                    </>
-                  )}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
+      {shownSegments.map((segment, index) => (
+        <Fragment key={index}>
+          {/* The form rows stand in the card that holds them, like its other
+              fields; a second frame inside the card only costs width (#4807). */}
+          <div
+            className={
+              layout === "form"
+                ? ""
+                : `${surfaceClass} ${index === shownSegments.length - 1 && !segment.summary ? "grow" : ""}`
+            }
+          >
+            {heading && index === 0 ? (
+              <SurfaceHeading heading={heading} />
+            ) : null}
+            <ul
+              className={`divide-y divide-gray-100 ${layout === "form" ? FORM_LIST_EDGES : ""}`}
+            >
+              {segment.items}
+            </ul>
+          </div>
+          {segment.summary ? (
+            <InsetPanel framed padding="md" className="text-sm font-medium">
+              <StackedExtraRow row={segment.summary} columns={columns} />
+            </InsetPanel>
+          ) : null}
+        </Fragment>
+      ))}
       {hasMore && (
         <Button
           type="button"
@@ -1142,6 +1390,9 @@ export function DataTable<T>({
             detail={stackedDetail}
             heading={heading}
             activeRowKey={activeRowKey}
+            expandable={expandable}
+            renderSubRows={renderSubRows}
+            summaryRow={summaryRow}
           />
         </div>
       )}
