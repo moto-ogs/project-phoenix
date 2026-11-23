@@ -441,6 +441,15 @@ describe("bffJson", () => {
     });
   });
 
+  it("keeps an AbortError that is not an Error instance", async () => {
+    const abort = { name: "AbortError", message: "Request aborted" };
+    mockFetch.mockRejectedValueOnce(abort);
+
+    await expect(bffJson("org", "GET /traeger/absence-types/")).rejects.toBe(
+      abort,
+    );
+  });
+
   it("keeps a cancelled request an AbortError", async () => {
     const abort = new DOMException("aborted", "AbortError");
     mockFetch.mockRejectedValueOnce(abort);

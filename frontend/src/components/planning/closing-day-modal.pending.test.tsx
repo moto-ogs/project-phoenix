@@ -1,7 +1,7 @@
 // #6533: Schließen während des Speicherns ist gesperrt, eine späte Antwort
 // schließt keinen anderen Dialog. Mit dem echten FormModal.
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { unavailableApiError } from "~/lib/api-error";
 import {
@@ -53,6 +53,11 @@ function renderModal() {
 }
 
 describe("ClosingDayModal pending lock (#6533)", () => {
+  // Wait for the real error presenter before testing the dialog's save lock.
+  beforeAll(async () => {
+    await import("~/lib/error-presentation");
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });

@@ -17,8 +17,8 @@ import { PushInstallSteps } from "~/components/settings/push-install-steps";
 import {
   fetchNotificationPreferences,
   setNotificationPreference,
-  type NotificationPreferenceType,
 } from "~/lib/notification-preferences-api";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { trackOnboardingSurface } from "~/lib/analytics";
 import { createLogger } from "~/lib/logger";
@@ -121,7 +121,7 @@ export function NotificationSetupDialog({
   // Shared with the session sync and the settings card: one read per page.
   const pushKey = usePushPublicKey(portal);
   const [mode, setMode] = useState<SetupMode | null>(null);
-  const [types, setTypes] = useState<NotificationPreferenceType[]>([]);
+  const [types, setTypes] = useState<sharedContract.PreferenceState[]>([]);
   const [check, setCheck] = useState<PreferencesCheck | null>(null);
   // The same cached read as the settings card: on the settings page both
   // share one request instead of one each (#7429 did the same for the key).

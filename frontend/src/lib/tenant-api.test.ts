@@ -778,7 +778,7 @@ describe("tenant-api", () => {
   });
 
   // --------------------------------------------------------------------------
-  // listAvailableTenants (uses sessionFetch, requires auth)
+  // listAvailableTenants (staff portal, behind the session gate)
   // --------------------------------------------------------------------------
 
   describe("listAvailableTenants", () => {

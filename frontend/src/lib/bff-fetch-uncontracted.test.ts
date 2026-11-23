@@ -33,10 +33,10 @@ const UNCONTRACTED_CALLERS: Readonly<Record<string, string>> = {
     "POST auth/switch-tenant: the session switch of the BFF (ADR 0270, sign-in steps)",
   "lib/traeger-api.ts":
     "POST traeger/auth/login, traeger/auth/mfa/step-up/verify: sign-in and session steps of the BFF, no backend route of their own",
+  "lib/push-api.ts":
+    "DELETE …/push/subscriptions during logout: the family is revoked and the sign-out must stay the last cookie change, so the call goes through the portal without a session (no gate, renewal or login redirect)",
   "lib/operator/provisioning-api.ts":
     "POST operator/provisioning/revalidate-tenant: the route purges the cached tenant lookup and the ISR pages, no backend route",
-  "lib/operator/operator-settings-api.ts":
-    "PUT/DELETE operator/provisioning/schools/[id]/settings/values/[key]: the route purges the cached tenant lookup",
 };
 
 const SRC = join(import.meta.dirname, "..");

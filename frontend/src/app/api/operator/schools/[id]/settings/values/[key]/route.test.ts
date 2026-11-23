@@ -36,7 +36,7 @@ global.fetch = mockFetch as unknown as typeof fetch;
 
 import { PUT, DELETE } from "./route";
 
-describe("PUT /api/operator/provisioning/schools/[id]/settings/values/[key]", () => {
+describe("PUT /api/operator/schools/[id]/settings/values/[key]", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -50,7 +50,7 @@ describe("PUT /api/operator/provisioning/schools/[id]/settings/values/[key]", ()
     });
 
     const request = new NextRequest(
-      "http://localhost:3000/api/operator/provisioning/schools/10/settings/values/operations.session_end_time",
+      "http://localhost:3000/api/operator/schools/10/settings/values/operations.session_end_time",
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -76,7 +76,7 @@ describe("PUT /api/operator/provisioning/schools/[id]/settings/values/[key]", ()
     mockAuth.mockResolvedValue(null);
 
     const request = new NextRequest(
-      "http://localhost:3000/api/operator/provisioning/schools/10/settings/values/foo.bar",
+      "http://localhost:3000/api/operator/schools/10/settings/values/foo.bar",
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -95,7 +95,7 @@ describe("PUT /api/operator/provisioning/schools/[id]/settings/values/[key]", ()
     mockAuth.mockResolvedValue({ user: { token: "valid-token" } });
 
     const request = new NextRequest(
-      "http://localhost:3000/api/operator/provisioning/schools/10/settings/values/BAD.KEY",
+      "http://localhost:3000/api/operator/schools/10/settings/values/BAD.KEY",
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -115,7 +115,7 @@ describe("PUT /api/operator/provisioning/schools/[id]/settings/values/[key]", ()
     mockAuth.mockResolvedValue({ user: { token: "valid-token" } });
 
     const request = new NextRequest(
-      "http://localhost:3000/api/operator/provisioning/schools/10/settings/values/foo.bar",
+      "http://localhost:3000/api/operator/schools/10/settings/values/foo.bar",
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -163,7 +163,7 @@ describe("PUT /api/operator/provisioning/schools/[id]/settings/values/[key]", ()
         });
 
       const request = new NextRequest(
-        `http://localhost:3000/api/operator/provisioning/schools/${schoolId}/settings/values/${key}`,
+        `http://localhost:3000/api/operator/schools/${schoolId}/settings/values/${key}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -212,7 +212,7 @@ describe("PUT /api/operator/provisioning/schools/[id]/settings/values/[key]", ()
       });
 
     const request = new NextRequest(
-      "http://localhost:3000/api/operator/provisioning/schools/10/settings/values/enrollment.grade_level_max",
+      "http://localhost:3000/api/operator/schools/10/settings/values/enrollment.grade_level_max",
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -244,7 +244,7 @@ describe("PUT /api/operator/provisioning/schools/[id]/settings/values/[key]", ()
     });
 
     const request = new NextRequest(
-      "http://localhost:3000/api/operator/provisioning/schools/10/settings/values/operations.session_end_time",
+      "http://localhost:3000/api/operator/schools/10/settings/values/operations.session_end_time",
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -281,7 +281,7 @@ describe("PUT /api/operator/provisioning/schools/[id]/settings/values/[key]", ()
       });
 
     const request = new NextRequest(
-      "http://localhost:3000/api/operator/provisioning/schools/10/settings/values/operations.student_photos_enabled",
+      "http://localhost:3000/api/operator/schools/10/settings/values/operations.student_photos_enabled",
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -302,7 +302,7 @@ describe("PUT /api/operator/provisioning/schools/[id]/settings/values/[key]", ()
   });
 });
 
-describe("DELETE /api/operator/provisioning/schools/[id]/settings/values/[key]", () => {
+describe("DELETE /api/operator/schools/[id]/settings/values/[key]", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -315,7 +315,7 @@ describe("DELETE /api/operator/provisioning/schools/[id]/settings/values/[key]",
     });
 
     const request = new NextRequest(
-      "http://localhost:3000/api/operator/provisioning/schools/10/settings/values/foo.bar",
+      "http://localhost:3000/api/operator/schools/10/settings/values/foo.bar",
       { method: "DELETE" },
     );
     const context: RouteContext = {
@@ -334,7 +334,7 @@ describe("DELETE /api/operator/provisioning/schools/[id]/settings/values/[key]",
     mockAuth.mockResolvedValue(null);
 
     const request = new NextRequest(
-      "http://localhost:3000/api/operator/provisioning/schools/10/settings/values/foo.bar",
+      "http://localhost:3000/api/operator/schools/10/settings/values/foo.bar",
       { method: "DELETE" },
     );
     const context: RouteContext = {
@@ -349,7 +349,7 @@ describe("DELETE /api/operator/provisioning/schools/[id]/settings/values/[key]",
     mockAuth.mockResolvedValue({ user: { token: "valid-token" } });
 
     const request = new NextRequest(
-      "http://localhost:3000/api/operator/provisioning/schools/10/settings/values/bad key",
+      "http://localhost:3000/api/operator/schools/10/settings/values/bad key",
       { method: "DELETE" },
     );
     const context: RouteContext = {
@@ -365,7 +365,7 @@ describe("DELETE /api/operator/provisioning/schools/[id]/settings/values/[key]",
     mockAuth.mockResolvedValue({ user: { token: "valid-token" } });
 
     const request = new NextRequest(
-      "http://localhost:3000/api/operator/provisioning/schools/10/settings/values/foo.bar",
+      "http://localhost:3000/api/operator/schools/10/settings/values/foo.bar",
       { method: "DELETE" },
     );
     const context: RouteContext = {
@@ -402,7 +402,7 @@ describe("DELETE /api/operator/provisioning/schools/[id]/settings/values/[key]",
         });
 
       const request = new NextRequest(
-        `http://localhost:3000/api/operator/provisioning/schools/${schoolId}/settings/values/${key}`,
+        `http://localhost:3000/api/operator/schools/${schoolId}/settings/values/${key}`,
         { method: "DELETE" },
       );
       const context: RouteContext = {
@@ -426,7 +426,7 @@ describe("DELETE /api/operator/provisioning/schools/[id]/settings/values/[key]",
     mockFetch.mockResolvedValue({ ok: true, status: 204 });
 
     const request = new NextRequest(
-      "http://localhost:3000/api/operator/provisioning/schools/10/settings/values/foo.bar",
+      "http://localhost:3000/api/operator/schools/10/settings/values/foo.bar",
       { method: "DELETE" },
     );
     const context: RouteContext = {

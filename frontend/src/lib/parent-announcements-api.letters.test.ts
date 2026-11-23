@@ -7,6 +7,11 @@ import {
   previewLetter,
 } from "./parent-announcements-api";
 
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 const downloadBlobMock = vi.hoisted(() => vi.fn());
 vi.mock("~/lib/file-download", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/file-download")>()),
@@ -42,7 +47,7 @@ describe("Serienbriefe in the staff client (#4813)", () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/school/parent-letters/42/letters-pdf",
-      undefined,
+      expect.objectContaining({ method: "GET" }),
     );
     expect(downloadBlobMock).toHaveBeenCalledWith(
       expect.any(Blob),

@@ -66,8 +66,9 @@ function portalFor(api: StaffMessagesApi): TeamChatPortal {
     kind: "school",
     api,
     attachments: {
-      uploadUrl: "/upload",
+      upload: vi.fn(),
       downloadUrl: (id: string) => `/files/${id}`,
+      loadFile: vi.fn(),
     },
     cacheScope: "test",
     inboxHref: "/nachrichten",
@@ -99,7 +100,10 @@ const thread = {
   thread_id: "t1",
   counterpart_account_id: "9",
   counterpart_name: "Anna Beispiel",
-  counterpart_role_kind: "staff" as const,
+  counterpart_role_kind: "staff",
+  kind: "direct",
+  can_manage: false,
+  members: [],
   messages: [
     {
       id: "m1",
@@ -107,6 +111,7 @@ const thread = {
       sender_name: "Anna Beispiel",
       body: "Hallo",
       created_at: "2026-09-09T10:00:00Z",
+      reader_count: 0,
     },
   ],
 };
@@ -220,6 +225,7 @@ describe("TeamChatThread (#2517)", () => {
         sender_name: "Ich",
         body: "Bin unterwegs",
         created_at: "2026-09-09T10:05:00Z",
+        reader_count: 0,
       });
     render(
       <TeamChatThread
@@ -301,6 +307,7 @@ describe("TeamChatThread optimistic send (#5011)", () => {
       sender_name: "Ich",
       body: "Bin unterwegs",
       created_at: "2026-09-09T10:05:00Z",
+      reader_count: 0,
     };
     api.postMessage.mockReturnValue(
       new Promise((resolve) => {
@@ -372,6 +379,7 @@ describe("TeamChatThread optimistic send (#5011)", () => {
         sender_name: "Ich",
         body: "Danke",
         created_at: "2026-09-09T10:05:00Z",
+        reader_count: 0,
         client_message_id: firstKey,
       };
       api.fetchThread.mockResolvedValue({
@@ -444,6 +452,7 @@ describe("TeamChatThread optimistic send (#5011)", () => {
           sender_name: "Ich",
           body: "Danke",
           created_at: "2026-09-09T10:05:00Z",
+          reader_count: 0,
           client_message_id: key,
         },
       ],

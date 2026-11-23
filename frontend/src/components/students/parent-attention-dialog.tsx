@@ -8,10 +8,7 @@ import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { InsetPanel } from "~/components/ui/inset-panel";
 import { Modal } from "~/components/ui/modal";
 import { MessageAttachments } from "~/components/ui/message-attachments";
-import {
-  PARENT_MESSAGE_ATTACHMENTS,
-  fetchMessageAttachmentFile,
-} from "~/lib/message-attachments";
+import { PARENT_MESSAGE_ATTACHMENTS } from "~/lib/message-attachments";
 import { ListSkeleton, SkeletonRegion } from "~/components/ui/page-skeletons";
 import { SectionCard } from "~/components/ui/section-card";
 import { SectionLabel } from "~/components/ui/section-label";
@@ -89,7 +86,7 @@ function ConversationCard({
               <MessageAttachments
                 attachments={message.attachments}
                 downloadUrl={PARENT_MESSAGE_ATTACHMENTS.downloadUrl}
-                loadFile={fetchMessageAttachmentFile}
+                loadFile={PARENT_MESSAGE_ATTACHMENTS.loadFile}
               />
             ) : null}
           </InsetPanel>

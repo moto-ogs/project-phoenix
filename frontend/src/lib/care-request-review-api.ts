@@ -7,10 +7,9 @@
 import { ApiError } from "./api-error";
 import { bffFile, bffJson } from "./bff-fetch";
 import type * as studentsContract from "./contract/students.generated";
-import { knownEnum, requiredEnum } from "./contract/known-enum";
+import { requiredEnum } from "./contract/known-enum";
 import { createLogger } from "~/lib/logger";
 import { downloadBlob, filenameFromDisposition } from "~/lib/file-download";
-import type { RequestDiffEntry } from "~/lib/messaging-status";
 
 const logger = createLogger({ component: "CareRequestReviewAPI" });
 
@@ -32,20 +31,6 @@ const CARE_REQUEST_STATUSES = [
 ] as const;
 type CareRequestStatus = (typeof CARE_REQUEST_STATUSES)[number];
 
-const CARE_KINDS = [
-  "arrival",
-  "pickup",
-  "departure_mode",
-  "pickup_person",
-] as const;
-
-/** A diff row; an unknown `care_kind` falls back to the German `label`. */
-function diffEntry(
-  entry: studentsContract.CareRequestDiffResponse,
-): RequestDiffEntry {
-  return { ...entry, care_kind: knownEnum(CARE_KINDS, entry.care_kind) };
-}
-
 /**
  * One care-schedule change request in the staff queue: the generated
  * response with its closed status and kind, and its lists Go may send as
@@ -57,7 +42,7 @@ export type StaffCareRequest = Omit<
 > & {
   readonly status: CareRequestStatus;
   readonly request_kind: CareRequestKind;
-  readonly diff: readonly RequestDiffEntry[];
+  readonly diff: readonly studentsContract.CareRequestDiffResponse[];
   readonly affected_blocks: readonly studentsContract.AffectedCareBlock[];
 };
 
@@ -73,7 +58,7 @@ export function toStaffCareRequest(
       request.request_kind,
       "request_kind",
     ),
-    diff: (request.diff ?? []).map(diffEntry),
+    diff: request.diff ?? [],
     affected_blocks: request.affected_blocks ?? [],
   };
 }
@@ -132,9 +117,9 @@ export type StaffCareRequestHistoryEntry = Omit<
 > & {
   readonly status: CareRequestStatus;
   readonly request_kind: CareRequestKind;
-  readonly requested: readonly RequestDiffEntry[];
+  readonly requested: readonly studentsContract.CareRequestDiffResponse[];
   /** Frozen decision-time diff; absent without a snapshot. */
-  readonly diff?: readonly RequestDiffEntry[];
+  readonly diff?: readonly studentsContract.CareRequestDiffResponse[];
 };
 
 export function toStaffCareRequestHistoryEntry(
@@ -149,8 +134,8 @@ export function toStaffCareRequestHistoryEntry(
       entry.request_kind,
       "request_kind",
     ),
-    requested: (entry.requested ?? []).map(diffEntry),
-    ...(diff ? { diff: diff.map(diffEntry) } : {}),
+    requested: entry.requested ?? [],
+    ...(diff ? { diff } : {}),
   };
 }
 

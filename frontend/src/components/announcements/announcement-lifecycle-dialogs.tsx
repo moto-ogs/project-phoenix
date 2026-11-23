@@ -14,6 +14,7 @@ import {
   publishAnnouncement,
   unpublishAnnouncement,
 } from "~/lib/parent-announcements-api";
+import type { AnnouncementApiBase } from "~/lib/parent-announcements-api";
 import type { Announcement } from "~/lib/parent-announcements-api";
 import { isClassLetter, withApiBase } from "~/lib/parent-announcements-api";
 import { summarizeTargets } from "./announcement-meta";
@@ -32,7 +33,7 @@ interface LifecycleDialogProps {
   /** Läuft nach dem erfolgreichen Aufruf, vor dem Schließen (Listen neu laden). */
   readonly onDone: () => Promise<void> | void;
   /** Die Routen des Portals, das die Mitteilung zeigt; sonst die der OGS. */
-  readonly apiBase?: string;
+  readonly apiBase?: AnnouncementApiBase;
 }
 
 /**

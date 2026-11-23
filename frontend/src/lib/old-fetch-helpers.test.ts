@@ -38,24 +38,6 @@ const RAW_FETCH: Readonly<Record<string, string>> = {
     "a static file (the help search index), no BFF route",
 };
 
-/**
- * Files of the #7806 slices that have not merged yet. Empty when the final
- * wave lands; a file leaves the list in the change that moves it.
- */
-const PENDING: Readonly<Record<string, string>> = {
-  "lib/message-attachments.ts": "c3 #7880",
-  "lib/notification-api.ts": "c3 #7880",
-  "lib/notification-preferences-api.ts": "c3 #7880",
-  "lib/parent-announcements-api.ts": "c3 #7880",
-  "lib/parent-group-threads-api.ts": "c3 #7880",
-  "lib/parent-messages-api.ts": "c3 #7880",
-  "lib/push-api.ts": "c3 #7880",
-  "lib/staff-messages-api.ts": "c3 #7880",
-  "lib/staff-notices-api.ts": "c3 #7880",
-  "lib/surveys-api.ts": "c3 #7880",
-  "lib/api-error.ts": "transportFetch definition, removed when the slices land",
-};
-
 const SRC = join(import.meta.dirname, "..");
 
 function isBrowserFile(path: string): boolean {
@@ -91,7 +73,6 @@ describe("one way from the browser to the BFF", () => {
   it("names none of the old fetch helpers", () => {
     const named = FILES.filter(({ text }) => OLD_NAME.test(text))
       .map(({ path }) => path)
-      .filter((path) => !(path in PENDING))
       .sort();
 
     expect(named).toEqual([]);
@@ -100,20 +81,8 @@ describe("one way from the browser to the BFF", () => {
   it("calls fetch itself only in the listed infrastructure", () => {
     const callers = FILES.filter(({ text }) => RAW_FETCH_CALL.test(text))
       .map(({ path }) => path)
-      .filter((path) => !(path in PENDING))
       .sort();
 
     expect(callers).toEqual(Object.keys(RAW_FETCH).sort());
-  });
-
-  it("keeps no pending file that already moved", () => {
-    const stale = Object.keys(PENDING).filter((path) => {
-      const file = FILES.find((candidate) => candidate.path === path);
-      return (
-        !file || (!OLD_NAME.test(file.text) && !RAW_FETCH_CALL.test(file.text))
-      );
-    });
-
-    expect(stale).toEqual([]);
   });
 });

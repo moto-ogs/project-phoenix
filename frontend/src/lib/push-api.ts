@@ -1,4 +1,6 @@
-import { ApiError, apiErrorFromBody, transportFetch } from "./api-error";
+import { ApiError } from "./api-error";
+import { bffJson, bffJsonUncontracted, bffPath } from "./bff-fetch";
+import type * as sharedContract from "./contract/shared.generated";
 /**
  * Web Push client (#2003): service worker registration, permission +
  * subscription lifecycle, and the proxy-route calls that persist the
@@ -14,17 +16,6 @@ export type PushPortal = "tenant" | "parent" | "school";
 /** Identifies the expected backend response when VAPID is not configured. */
 export function isPushConfigurationMissing(error: unknown): boolean {
   return error instanceof ApiError && error.status === 404;
-}
-
-function basePath(portal: PushPortal): string {
-  switch (portal) {
-    case "parent":
-      return "/api/parent/me/push";
-    case "school":
-      return "/api/school/notifications/push";
-    default:
-      return "/api/notifications/push";
-  }
 }
 
 /** True when this browser can register for Web Push at all. */
@@ -59,38 +50,28 @@ export function needsIOSInstall(): boolean {
   return isAppleMobile && !isStandaloneApp();
 }
 
-async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
-  // A request that never reaches the API is general.unavailable (#2517).
-  const response = await transportFetch(url, {
-    credentials: "include",
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...init?.headers,
-    },
-  });
-  if (response.status === 204) return undefined as T;
+const PUSH_FAILED = "Push-Anfrage fehlgeschlagen.";
 
-  const text = await response.text();
-  let data: unknown = null;
-  try {
-    data = text ? (JSON.parse(text) as unknown) : null;
-  } catch {
-    data = null;
+function loadPublicKey(
+  portal: PushPortal,
+): Promise<sharedContract.pushPublicKeyResponse> {
+  const options = { errorMessage: PUSH_FAILED };
+  switch (portal) {
+    case "parent":
+      return bffJson("parent", "GET /parent/me/push/public-key", options);
+    case "school":
+      return bffJson(
+        "school",
+        "GET /school/notifications/push/public-key",
+        options,
+      );
+    default:
+      return bffJson(
+        "tenant",
+        "GET /api/notifications/push/public-key",
+        options,
+      );
   }
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Push-Anfrage fehlgeschlagen (${response.status}).`,
-      response.status,
-      data,
-    );
-  }
-  return data as T;
-}
-
-interface PublicKeyResponse {
-  data?: { public_key?: string };
-  public_key?: string;
 }
 
 /** The server's uncompressed P-256 VAPID public key. */
@@ -112,16 +93,14 @@ export function pushConfigurationMissing(): ApiError {
 export async function fetchPushPublicKey(
   portal: PushPortal,
 ): Promise<PushPublicKey | null> {
-  let response: PublicKeyResponse;
+  let response: sharedContract.pushPublicKeyResponse;
   try {
-    response = await requestJson<PublicKeyResponse>(
-      `${basePath(portal)}/public-key`,
-    );
+    response = await loadPublicKey(portal);
   } catch (error) {
     if (isPushConfigurationMissing(error)) return null;
     throw error;
   }
-  const key = response.data?.public_key ?? response.public_key;
+  const key = response.public_key;
   if (!key) return null;
   try {
     const decoded = urlBase64ToUint8Array(key);
@@ -215,10 +194,86 @@ async function syncSubscription(
   portal: PushPortal,
   subscription: PushSubscription,
 ): Promise<void> {
-  await requestJson<void>(`${basePath(portal)}/subscriptions`, {
-    method: "POST",
-    body: JSON.stringify(subscription.toJSON()),
-  });
+  const { endpoint, keys } = subscription.toJSON();
+  const options = {
+    body: {
+      endpoint,
+      keys: { p256dh: keys?.p256dh, auth: keys?.auth },
+    },
+    errorMessage: PUSH_FAILED,
+  };
+  switch (portal) {
+    case "parent":
+      await bffJson("parent", "POST /parent/me/push/subscriptions", options);
+      return;
+    case "school":
+      await bffJson(
+        "school",
+        "POST /school/notifications/push/subscriptions",
+        options,
+      );
+      return;
+    default:
+      await bffJson(
+        "tenant",
+        "POST /api/notifications/push/subscriptions",
+        options,
+      );
+  }
+}
+
+/** The DELETE pattern of the portal's push subscriptions. */
+const SUBSCRIPTIONS: Readonly<Record<PushPortal, string>> = {
+  parent: "/parent/me/push/subscriptions",
+  school: "/school/notifications/push/subscriptions",
+  tenant: "/api/notifications/push/subscriptions",
+};
+
+/**
+ * Removes this device's server-side registration. With a live session it is
+ * the portal's call, its 401 handling included. During a logout the session
+ * family is already revoked and the sign-out must stay the last cookie
+ * change, so the call goes out plain: no session gate, no renewal, no login
+ * redirect (bff-fetch-uncontracted.test.ts).
+ */
+async function deleteServerSubscription(
+  portal: PushPortal,
+  endpoint: string,
+  signal: AbortSignal | undefined,
+  duringLogout: boolean,
+): Promise<void> {
+  const options = {
+    ...(signal ? { signal } : {}),
+    errorMessage: PUSH_FAILED,
+  };
+  if (duringLogout) {
+    await bffJsonUncontracted<null>(
+      "public",
+      "DELETE",
+      bffPath(portal, SUBSCRIPTIONS[portal], {}, { endpoint }),
+      options,
+    );
+    return;
+  }
+  const query = { query: { endpoint }, ...options };
+  switch (portal) {
+    case "parent":
+      await bffJson("parent", "DELETE /parent/me/push/subscriptions", query);
+      return;
+    case "school":
+      await bffJson(
+        "school",
+        "DELETE /school/notifications/push/subscriptions",
+        query,
+      );
+      return;
+    default:
+      await bffJson(
+        "tenant",
+        "DELETE /api/notifications/push/subscriptions",
+        query,
+      );
+  }
 }
 
 /**
@@ -248,15 +303,18 @@ export async function syncExistingPushSubscription(
 export async function unsubscribePush(
   portal: PushPortal,
   signal?: AbortSignal,
+  duringLogout = false,
 ): Promise<void> {
   signal?.throwIfAborted();
   const subscription = await getExistingSubscription();
   signal?.throwIfAborted();
   if (!subscription) return;
   try {
-    await requestJson<void>(
-      `${basePath(portal)}/subscriptions?endpoint=${encodeURIComponent(subscription.endpoint)}`,
-      { method: "DELETE", ...(signal ? { signal } : {}) },
+    await deleteServerSubscription(
+      portal,
+      subscription.endpoint,
+      signal,
+      duringLogout,
     );
   } finally {
     // Neither a late lookup nor a late response may start device cleanup
@@ -279,7 +337,7 @@ export async function unsubscribePushSilently(
   let abort: (() => void) | undefined;
   try {
     if (!deadline || !controller) {
-      await unsubscribePush(portal);
+      await unsubscribePush(portal, undefined, true);
       return;
     }
     const ended = new Promise<void>((resolve) => {
@@ -292,7 +350,10 @@ export async function unsubscribePushSilently(
     });
     // Browser Push APIs cannot be aborted. Stop waiting for them too, while
     // unsubscribePush's signal guards prevent their late continuations.
-    await Promise.race([unsubscribePush(portal, controller.signal), ended]);
+    await Promise.race([
+      unsubscribePush(portal, controller.signal, true),
+      ended,
+    ]);
   } catch {
     // A server row left behind after browser cleanup is pruned on 404/410.
   } finally {
