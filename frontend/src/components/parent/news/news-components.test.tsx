@@ -9,12 +9,12 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { NewsCard, NewsDetailModal, isOpenPoll } from "./news-components";
-import type { ParentAnnouncement } from "~/lib/parent-api";
 import * as parentApi from "~/lib/parent-api";
 import { catalogText } from "~/test/error-catalog-text";
 import * as dateHelpers from "~/lib/date-helpers";
 import { BELOW_SM } from "~/lib/hooks/use-media-query";
 import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 vi.unmock("swr");
 
@@ -26,7 +26,9 @@ const render: typeof baseRender = ((ui: React.ReactElement) =>
 // flags that an answer is due. The detail view is where it is given, one row
 // per child, saved explicitly, and refused once the poll is closed.
 
-function poll(overrides: Partial<ParentAnnouncement> = {}): ParentAnnouncement {
+function poll(
+  overrides: Partial<parentMeContract.AnnouncementResponse> = {},
+): parentMeContract.AnnouncementResponse {
   return {
     delivery_mode: "informational",
     id: "42",
@@ -56,8 +58,8 @@ function poll(overrides: Partial<ParentAnnouncement> = {}): ParentAnnouncement {
 }
 
 function announcement(
-  overrides: Partial<ParentAnnouncement> = {},
-): ParentAnnouncement {
+  overrides: Partial<parentMeContract.AnnouncementResponse> = {},
+): parentMeContract.AnnouncementResponse {
   return {
     ...poll({
       title: "Infos zum Sommerfest",
@@ -71,8 +73,8 @@ function announcement(
 }
 
 function declaration(
-  overrides: Partial<ParentAnnouncement> = {},
-): ParentAnnouncement {
+  overrides: Partial<parentMeContract.AnnouncementResponse> = {},
+): parentMeContract.AnnouncementResponse {
   return announcement({
     title: "Einverständnis für den Ausflug",
     delivery_mode: "declaration",

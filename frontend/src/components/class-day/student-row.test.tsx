@@ -1,12 +1,14 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import type { ClassDayRow } from "~/lib/class-day-api";
 import { StudentRow } from "./student-row";
+import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 
 const NOW = new Date("2026-08-24T10:00:00Z");
 
-function row(overrides: Partial<ClassDayRow> = {}): ClassDayRow {
+function row(
+  overrides: Partial<schoolClassDayContract.DayRow> = {},
+): schoolClassDayContract.DayRow {
   return {
     student_id: "1",
     first_name: "Emilia",
@@ -18,7 +20,7 @@ function row(overrides: Partial<ClassDayRow> = {}): ClassDayRow {
   };
 }
 
-function renderRow(overrides: Partial<ClassDayRow> = {}) {
+function renderRow(overrides: Partial<schoolClassDayContract.DayRow> = {}) {
   return render(
     <ul>
       <StudentRow row={row(overrides)} enrollmentKnown now={NOW} />

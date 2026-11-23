@@ -10,10 +10,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DeclarationProofPage } from "./declaration-proof-page";
 import * as parentApi from "~/lib/parent-api";
-import { type ParentDeclarationProof } from "~/lib/parent-api";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { catalogText } from "~/test/error-catalog-text";
 import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 vi.unmock("swr");
 
@@ -34,7 +34,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }),
 }));
 
-const proof: ParentDeclarationProof = {
+const proof: parentMeContract.declarationProofResponse = {
   title: "Ausflug in den Zoo",
   school_name: "OGS Am Berg",
   child_name: "Mia Muster",
@@ -243,7 +243,7 @@ describe("Nachweis eines Einverständnisses im Eltern-Portal (#3430)", () => {
 });
 
 describe("Nachweis mit Unterschrift (#4785)", () => {
-  const signed: ParentDeclarationProof = {
+  const signed: parentMeContract.declarationProofResponse = {
     ...proof,
     method_label:
       "Einfache elektronische Signatur mit gezeichneter Unterschrift im angemeldeten Eltern-Konto",

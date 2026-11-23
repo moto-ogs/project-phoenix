@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
-import type { ChildToday } from "~/lib/parent-api";
 import type { MotoConcept } from "~/lib/moto-concepts";
 import { parentPath } from "~/lib/parent-url";
 import { childrenConcept } from "~/lib/concepts/children";
@@ -12,6 +11,7 @@ import { unknownConcept } from "~/lib/concepts/unknown";
 import { presentConcept } from "~/lib/concepts/present";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
 import { useParentCareTerms } from "~/lib/parent-care-term";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 /**
  * Die Auswahlseite fuer mehrere Kinder.
@@ -26,10 +26,12 @@ export interface ChildSwitcherItem {
   readonly firstName: string;
   readonly lastName: string;
   readonly schoolClass?: string;
-  readonly today: ChildToday;
+  readonly today: parentMeContract.TodayStatusResponse;
 }
 
-function statusConcept(today: ChildToday): MotoConcept {
+function statusConcept(
+  today: parentMeContract.TodayStatusResponse,
+): MotoConcept {
   if (today.at_ogs === null) return unknownConcept;
   return today.at_ogs ? presentConcept : homeConcept;
 }

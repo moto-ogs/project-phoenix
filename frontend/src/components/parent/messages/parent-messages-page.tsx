@@ -13,7 +13,6 @@ import { SharedParentFeaturesProvider } from "~/components/parent/child-requests
 import { OgsConversation } from "~/components/parent/ogs-conversation";
 import { GroupThreadsSection } from "~/components/parent/messages/group-threads-section";
 import {
-  type Child,
   type ThreadSummary,
   listGroupThreads,
   listMessageThreads,
@@ -36,6 +35,7 @@ import { ListSkeleton } from "~/components/ui/page-skeletons";
 import { messagesConcept } from "~/lib/concepts/messages";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
 import { ParentChildCareTermScope } from "~/lib/parent-care-term";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 /**
  * Nachrichten mit der OGS.
@@ -45,7 +45,7 @@ import { ParentChildCareTermScope } from "~/lib/parent-care-term";
  * Ungelesen-Zaehler.
  */
 
-const EMPTY_CHILDREN: Child[] = [];
+const EMPTY_CHILDREN: parentMeContract.ChildResponse[] = [];
 
 interface ChildConversation {
   readonly studentId: string;
@@ -66,7 +66,7 @@ interface ChildConversation {
 }
 
 function buildRows(
-  children: readonly Child[],
+  children: readonly parentMeContract.ChildResponse[],
   threads: readonly ThreadSummary[],
 ): ChildConversation[] {
   // Je Kind die Team-Unterhaltung, auch noch ohne Nachricht, und die mit der
@@ -78,7 +78,10 @@ function buildRows(
     else teamByStudent.set(thread.student_id, thread);
   }
   const childById = new Map(children.map((child) => [child.student_id, child]));
-  const entries: { child: Child; thread?: ThreadSummary }[] = [
+  const entries: {
+    child: parentMeContract.ChildResponse;
+    thread?: ThreadSummary;
+  }[] = [
     ...children.map((child) => ({
       child,
       thread: teamByStudent.get(child.student_id),

@@ -1,8 +1,4 @@
-import type {
-  ActiveGroupWire,
-  VisitWire,
-  SupervisorWire,
-} from "~/lib/active-helpers";
+import type * as activeContract from "~/lib/contract/active.generated";
 
 let activeGroupIdCounter = 0;
 let visitIdCounter = 0;
@@ -24,8 +20,8 @@ function nextSupervisorId() {
  * Builds a ActiveGroupWire with sensible defaults.
  */
 export function buildBackendActiveSession(
-  overrides?: Partial<ActiveGroupWire>,
-): ActiveGroupWire {
+  overrides?: Partial<activeContract.ActiveGroupResponse>,
+): activeContract.ActiveGroupResponse {
   const id = overrides?.id ?? String(nextActiveGroupId());
   return {
     id,
@@ -46,7 +42,9 @@ export function buildBackendActiveSession(
 /**
  * Builds a VisitWire with sensible defaults.
  */
-export function buildBackendVisit(overrides?: Partial<VisitWire>): VisitWire {
+export function buildBackendVisit(
+  overrides?: Partial<activeContract.VisitResponse>,
+): activeContract.VisitResponse {
   const id = overrides?.id ?? String(nextVisitId());
   return {
     id,
@@ -67,8 +65,8 @@ export function buildBackendVisit(overrides?: Partial<VisitWire>): VisitWire {
  * Builds a SupervisorWire with sensible defaults.
  */
 export function buildBackendSupervisor(
-  overrides?: Partial<SupervisorWire>,
-): SupervisorWire {
+  overrides?: Partial<activeContract.SupervisorResponse>,
+): activeContract.SupervisorResponse {
   const id = overrides?.id ?? String(nextSupervisorId());
   return {
     id,

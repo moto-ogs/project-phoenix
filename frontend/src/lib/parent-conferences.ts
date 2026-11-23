@@ -10,18 +10,14 @@ import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 import type * as schoolCalendarContract from "~/lib/contract/school-calendar.generated";
 import type * as sharedContract from "~/lib/contract/shared.generated";
 
-export type ParentConferenceWindow = sharedContract.ParentConferenceWindow;
-
-export type ParentConferenceSlot = schoolCalendarContract.ParentConferenceSlot;
-
 /** Ein Sprechtag, wie ihn die Lehrkraft sieht: mit Belegung. */
 export type ParentConference = Omit<
   schoolCalendarContract.ParentConferenceView,
   "date" | "breaks" | "slots"
 > & {
   readonly date: string;
-  readonly breaks: readonly ParentConferenceWindow[];
-  readonly slots: readonly ParentConferenceSlot[];
+  readonly breaks: readonly sharedContract.ParentConferenceWindow[];
+  readonly slots: readonly schoolCalendarContract.ParentConferenceSlot[];
 };
 
 export interface SchoolParentConferenceList {
@@ -35,7 +31,7 @@ export type ParentConferenceOffer = Omit<
   "date" | "free_slots"
 > & {
   readonly date: string;
-  readonly free_slots: readonly ParentConferenceWindow[];
+  readonly free_slots: readonly sharedContract.ParentConferenceWindow[];
 };
 
 /** What the form sends: the generated request with every field it fills. */
@@ -129,7 +125,7 @@ export interface ParentConferenceDraft {
   readonly breakStart: string;
   readonly breakEnd: string;
   // The form edits the first break; retain further API-created breaks on save.
-  readonly additionalBreaks: readonly ParentConferenceWindow[];
+  readonly additionalBreaks: readonly sharedContract.ParentConferenceWindow[];
   readonly location: string;
 }
 
@@ -226,7 +222,7 @@ export function parentConferenceRequest(
 
 /** „14:15–14:30 Uhr“ */
 export function parentConferenceWindowLabel(
-  window: ParentConferenceWindow,
+  window: sharedContract.ParentConferenceWindow,
 ): string {
   return `${window.start_time}–${window.end_time} Uhr`;
 }

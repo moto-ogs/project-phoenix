@@ -41,9 +41,6 @@ import { useSWRAuth } from "~/lib/swr";
 import { parentKeys } from "~/lib/swr/parent-keys";
 import { createLogger } from "~/lib/logger";
 import {
-  type ChildFeatures,
-  type ChildMasterData,
-  type MasterDataChange,
   type MasterDataChangeInput,
   getChildMasterData,
   submitMasterDataRequest,
@@ -70,6 +67,7 @@ import { sickConcept } from "~/lib/concepts/sick";
 import { SpinnerIcon } from "~/components/ui/icons";
 import { FormFieldset } from "~/components/ui/form-fieldset";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 const logger = createLogger({ component: "ChildMasterData" });
 
@@ -125,12 +123,14 @@ interface Props {
 }
 
 export interface ChildMasterDataState {
-  readonly data: ChildMasterData | null;
-  readonly features: ChildFeatures | null;
+  readonly data: parentMeContract.MasterDataResponse | null;
+  readonly features: parentMeContract.ChildFeaturesResponse | null;
   readonly loading: boolean;
   /** A failed load from the shared error path (#2518), with retry. */
   readonly error: FormError | null;
-  readonly setData: Dispatch<SetStateAction<ChildMasterData | null>>;
+  readonly setData: Dispatch<
+    SetStateAction<parentMeContract.MasterDataResponse | null>
+  >;
 }
 
 /**
@@ -212,7 +212,9 @@ export function useChildMasterData(
     t("errorObject"),
     () => reloadFeatures(),
   );
-  const setData = useCallback<Dispatch<SetStateAction<ChildMasterData | null>>>(
+  const setData = useCallback<
+    Dispatch<SetStateAction<parentMeContract.MasterDataResponse | null>>
+  >(
     (next) =>
       void mutate(
         (current) =>
@@ -243,19 +245,19 @@ function ChildMasterDataContent({
   studentId: string;
   childName: string;
   area: "details" | "departure" | "contact";
-  data: ChildMasterData;
-  features: ChildFeatures;
-  onApplied: (next: ChildMasterData) => void;
+  data: parentMeContract.MasterDataResponse;
+  features: parentMeContract.ChildFeaturesResponse;
+  onApplied: (next: parentMeContract.MasterDataResponse) => void;
   onDirectApplied: (
     target: string,
     field: string,
-    next: ChildMasterData,
+    next: parentMeContract.MasterDataResponse,
   ) => void;
 }>) {
   const t = useCareTermTranslations("parentMasterData");
   const visibilityT = useCareTermTranslations("parentVisibility");
   const pendingByField = useMemo(() => {
-    const map = new Map<string, MasterDataChange>();
+    const map = new Map<string, parentMeContract.MasterDataChangeResponse>();
     for (const c of data.pending_changes ?? []) {
       if (c.status === "pending") map.set(`${c.target}/${c.field_key}`, c);
     }
@@ -439,10 +441,10 @@ function IdentitySection({
   onApplied,
 }: Readonly<{
   studentId: string;
-  data: ChildMasterData;
-  features: ChildFeatures;
-  pendingByField: Map<string, MasterDataChange>;
-  onApplied: (next: ChildMasterData) => void;
+  data: parentMeContract.MasterDataResponse;
+  features: parentMeContract.ChildFeaturesResponse;
+  pendingByField: Map<string, parentMeContract.MasterDataChangeResponse>;
+  onApplied: (next: parentMeContract.MasterDataResponse) => void;
 }>) {
   const t = useCareTermTranslations("parentMasterData");
   const locale = useLocale();
@@ -592,7 +594,7 @@ function IdentityFact({
   studentId: string;
   label: string;
   value: string;
-  pending?: MasterDataChange;
+  pending?: parentMeContract.MasterDataChangeResponse;
   /** Zeigt den beantragten Rohwert so an wie den gültigen Wert. */
   formatRequested?: (raw: string) => string;
   onEdited?: () => void;
@@ -680,10 +682,10 @@ function DepartureSection({
 }: Readonly<{
   studentId: string;
   childName: string;
-  data: ChildMasterData;
-  features: ChildFeatures;
-  pending?: MasterDataChange;
-  onApplied: (next: ChildMasterData) => void;
+  data: parentMeContract.MasterDataResponse;
+  features: parentMeContract.ChildFeaturesResponse;
+  pending?: parentMeContract.MasterDataChangeResponse;
+  onApplied: (next: parentMeContract.MasterDataResponse) => void;
 }>) {
   const t = useCareTermTranslations("parentMasterData");
   const [modes, setModes] = useState(() =>
@@ -1329,11 +1331,11 @@ function AutoSaveSelect({
 }
 
 function mergeDirectMasterDataField(
-  current: ChildMasterData,
-  next: ChildMasterData,
+  current: parentMeContract.MasterDataResponse,
+  next: parentMeContract.MasterDataResponse,
   target: string,
   field: string,
-): ChildMasterData {
+): parentMeContract.MasterDataResponse {
   if (target === "student" && field === "health_info") {
     return { ...current, health_info: next.health_info };
   }
@@ -1365,11 +1367,11 @@ function mergeDirectMasterDataField(
 }
 
 function mergePendingChanges(
-  current: readonly MasterDataChange[],
-  submitted: readonly MasterDataChange[],
-): MasterDataChange[] {
+  current: readonly parentMeContract.MasterDataChangeResponse[],
+  submitted: readonly parentMeContract.MasterDataChangeResponse[],
+): parentMeContract.MasterDataChangeResponse[] {
   if (submitted.length === 0) return [...current];
-  const byKey = new Map<string, MasterDataChange>();
+  const byKey = new Map<string, parentMeContract.MasterDataChangeResponse>();
   for (const change of current) {
     byKey.set(`${change.target}/${change.field_key}`, change);
   }

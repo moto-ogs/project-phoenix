@@ -5,23 +5,28 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import deMessages from "~/i18n/messages/de.generated";
 import * as parentApi from "~/lib/parent-api";
-import type { Child, ChildCareSchedule, ChildFeatures } from "~/lib/parent-api";
 import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
 import { useChildCare } from "./child-care";
 import { useChildMasterData } from "./child-master-data";
 import { BookedCareSection } from "./child/booked-care-section";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 vi.unmock("swr");
 vi.mock("~/lib/parent-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/parent-api")>()),
 }));
 
-const features = { sick_note_enabled: true } as unknown as ChildFeatures;
+const features = {
+  sick_note_enabled: true,
+} as unknown as parentMeContract.ChildFeaturesResponse;
 const schedule = {
   weekdays: [],
   today_absent: false,
-} as unknown as ChildCareSchedule;
-const child = { student_id: "42", tenant_id: "1" } as Child;
+} as unknown as parentMeContract.CareScheduleResponse;
+const child = {
+  student_id: "42",
+  tenant_id: "1",
+} as parentMeContract.ChildResponse;
 
 function withProvider({ children }: { children: ReactNode }) {
   return (
@@ -50,7 +55,7 @@ beforeEach(() => {
 // (#4994).
 describe("shared child requests (#4994)", () => {
   it("liefert beiden Betreuungsabschnitten nach einer Änderung frische Daten", async () => {
-    const oldSchedule = deferred<ChildCareSchedule>();
+    const oldSchedule = deferred<parentMeContract.CareScheduleResponse>();
     const previousSchedule = {
       ...schedule,
       can_request: false,
@@ -66,7 +71,7 @@ describe("shared child requests (#4994)", () => {
       weekdays: [
         { weekday: 1, status: "scheduled", pickup: "16:30", modes: ["pickup"] },
       ],
-    } as ChildCareSchedule;
+    } as parentMeContract.CareScheduleResponse;
     const getSchedule = vi
       .spyOn(parentApi, "getChildCareSchedule")
       .mockReturnValueOnce(oldSchedule.promise)

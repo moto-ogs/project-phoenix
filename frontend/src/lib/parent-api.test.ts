@@ -33,14 +33,11 @@ import {
   fetchAnnouncementsUnreadCount,
   markAnnouncementRead,
   acknowledgeAnnouncement,
-  type Child,
-  type StatusDay,
-  type ChildMasterData,
   type ThreadSummary,
   type ThreadView,
-  type ParentAnnouncement,
 } from "./parent-api";
 
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 import type * as sharedContract from "~/lib/contract/shared.generated";
 
 const originalFetch = globalThis.fetch;
@@ -67,7 +64,10 @@ afterEach(() => {
   globalThis.fetch = originalFetch;
 });
 
-function mkChild(id: string, schoolName: string): Child {
+function mkChild(
+  id: string,
+  schoolName: string,
+): parentMeContract.ChildResponse {
   return {
     care_ended: false,
     student_id: id,
@@ -653,7 +653,7 @@ describe("submitParentEnrollment", () => {
 
 // --- Stammdaten master-data helpers ---------------------------------
 
-function mkMasterData(): ChildMasterData {
+function mkMasterData(): parentMeContract.MasterDataResponse {
   return {
     student_id: "42",
     first_name: "Lara",
@@ -821,7 +821,10 @@ describe("updateParentPortalLocale", () => {
 
 // --- sick notes ------------------------------------------------------
 
-function mkStatusDay(date: string, note?: string): StatusDay {
+function mkStatusDay(
+  date: string,
+  note?: string,
+): parentMeContract.StatusDayResponse {
   return {
     id: "1",
     student_id: "84",
@@ -1345,8 +1348,8 @@ describe("postChildMessage", () => {
 });
 
 function mkAnnouncement(
-  overrides: Partial<ParentAnnouncement> = {},
-): ParentAnnouncement {
+  overrides: Partial<parentMeContract.AnnouncementResponse> = {},
+): parentMeContract.AnnouncementResponse {
   return {
     delivery_mode: "informational",
     id: "5",

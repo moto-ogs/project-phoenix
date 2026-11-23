@@ -155,13 +155,18 @@ export type AggregatedHistoryRequest =
  */
 export type RequestReviewAccess = "admin" | "team" | "group_leader" | "none";
 
-export interface AggregatedRequestPage<T> {
+/**
+ * Eine Seite der Liste: die Zeilen als Sichttypen, `next_cursor` fehlt auf
+ * der letzten Seite und gilt nur für denselben Filtersatz, `review_access`
+ * kommt nur mit der offenen Liste.
+ */
+export type AggregatedRequestPage<T> = Pick<
+  studentsContract.Page,
+  "next_cursor"
+> & {
   readonly items: readonly T[];
-  /** Fehlt auf der letzten Seite. Nur für denselben Filtersatz gültig. */
-  readonly next_cursor?: string;
-  /** Nur in der offenen Liste. */
   readonly review_access?: RequestReviewAccess;
-}
+};
 
 export interface AggregatedRequestParams {
   readonly search?: string;

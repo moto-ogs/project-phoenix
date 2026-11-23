@@ -7,6 +7,7 @@ import { bffJson } from "~/lib/bff-fetch";
 import type {
   Child,
   ChildStatus,
+  DayAppointment,
   DayNotice,
   Entry,
   Kind,
@@ -74,6 +75,21 @@ export interface DayChangeNotice {
   readonly acknowledged: boolean;
 }
 
+/**
+ * Ein Termin aus dem eigenen Kalender, der heute anders ist (#7663). Titel
+ * und Ort schreibt, wer den Termin angelegt hat; die neue Uhrzeit steht in
+ * `startsAt` und `endsAt` des Eintrags.
+ */
+interface DayChangeAppointment {
+  readonly id: string;
+  readonly occurrenceDate: string | null;
+  readonly title: string;
+  /** Der Ort, an dem der Termin heute stattfindet. */
+  readonly location: string | null;
+  readonly locationChanged: boolean;
+  readonly timeChanged: boolean;
+}
+
 export interface DayChange {
   readonly kind: Kind | (string & {});
   readonly section: Section | (string & {});
@@ -120,6 +136,8 @@ export interface DayChange {
     readonly time: string | null;
     readonly children: number;
   } | null;
+  /** Nur bei den Arten `appointment_cancelled` und `appointment_changed`. */
+  readonly appointment?: DayChangeAppointment | null;
 }
 
 export interface DayChangesOverview {
@@ -183,6 +201,20 @@ function mapNotice(notice: DayNotice | null): DayChangeNotice | null {
   };
 }
 
+function mapAppointment(
+  appointment: DayAppointment | null,
+): DayChangeAppointment | null {
+  if (!appointment) return null;
+  return {
+    id: appointment.id,
+    occurrenceDate: appointment.occurrence_date,
+    title: appointment.title,
+    location: appointment.location,
+    locationChanged: appointment.location_changed,
+    timeChanged: appointment.time_changed,
+  };
+}
+
 function mapEntry(entry: Entry, day: string): DayChange {
   return {
     kind: entry.kind,
@@ -221,6 +253,7 @@ function mapEntry(entry: Entry, day: string): DayChange {
           children: entry.class.children,
         }
       : null,
+    appointment: mapAppointment(entry.appointment ?? null),
   };
 }
 

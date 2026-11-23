@@ -20,7 +20,7 @@ import {
 import { knownEnum } from "~/lib/contract/known-enum";
 import { LOCATION_COLORS } from "~/lib/location-helper";
 import { dayHintAuthorSuffix } from "~/lib/class-day-api";
-import type { ClassDayRow, MorningAttendanceStatus } from "~/lib/class-day-api";
+import type { MorningAttendanceStatus } from "~/lib/class-day-api";
 import { reportedTodayLabel } from "./day-changes";
 import {
   missingWithoutReport,
@@ -28,8 +28,12 @@ import {
   type MorningAttendanceDraft,
 } from "./morning-attendance";
 import { statusColor, statusLabel } from "./status-labels";
+import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 
-function rowDetailLine(row: ClassDayRow, enrollmentKnown: boolean): string {
+function rowDetailLine(
+  row: schoolClassDayContract.DayRow,
+  enrollmentKnown: boolean,
+): string {
   // Klassenlisteneintrag (#2382): "Keine Betreuung" ist die ganze Aussage —
   // das Badge rechts trägt sie, die Detailzeile bleibt leer (keine erfundene
   // Gehregel, keine Abholzeit).
@@ -59,7 +63,7 @@ const MORNING_ITEMS: readonly SegmentedControlItem<MorningAttendanceStatus>[] =
 export interface StudentRowMorning {
   readonly draft: MorningAttendanceDraft;
   readonly onChange?: (
-    row: ClassDayRow,
+    row: schoolClassDayContract.DayRow,
     status: MorningAttendanceStatus,
   ) => void;
   readonly disabled?: boolean;
@@ -69,7 +73,9 @@ export interface StudentRowMorning {
  * Adresse der Beobachtungen der OGS zu einem Kind (#4797), nur für die
  * Lehrkraft der Klasse. Ohne Adresse zeigt die Zeile keinen Link.
  */
-export type SharedNotesHref = (row: ClassDayRow) => string | undefined;
+export type SharedNotesHref = (
+  row: schoolClassDayContract.DayRow,
+) => string | undefined;
 
 export function StudentRow({
   row,
@@ -78,7 +84,7 @@ export function StudentRow({
   morning,
   sharedNotesHref,
 }: {
-  readonly row: ClassDayRow;
+  readonly row: schoolClassDayContract.DayRow;
   readonly enrollmentKnown: boolean;
   readonly now: Date;
   readonly morning?: StudentRowMorning;
@@ -257,7 +263,7 @@ export function Section({
 }: Readonly<{
   title: string;
   count: number;
-  rows: ClassDayRow[];
+  rows: schoolClassDayContract.DayRow[];
   enrollmentKnown?: boolean;
   now: Date;
   morning?: StudentRowMorning;

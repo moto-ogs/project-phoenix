@@ -1,12 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import type { CareException, StatusDay } from "~/lib/parent-api";
 import {
   PickupTimeModal,
   SickNoteModal,
   SickStatusSummary,
 } from "./child-care";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
-const CARE_EXCEPTIONS: CareException[] = [
+const CARE_EXCEPTIONS: parentMeContract.CareExceptionResponse[] = [
   {
     date: "2026-07-10",
     pickup_time: "15:30",
@@ -16,7 +16,7 @@ const CARE_EXCEPTIONS: CareException[] = [
   },
 ];
 
-const SICK_DAYS: StatusDay[] = [
+const SICK_DAYS: parentMeContract.StatusDayResponse[] = [
   {
     id: "1",
     student_id: "1",
