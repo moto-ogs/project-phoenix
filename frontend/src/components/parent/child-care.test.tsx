@@ -20,11 +20,6 @@ import {
   SickStatusSummary,
   useChildCare,
 } from "./child-care";
-import type {
-  CareException,
-  ExcusedRequest,
-  StatusDay,
-} from "~/lib/parent-api";
 import * as parentApi from "~/lib/parent-api";
 import deMessages from "~/i18n/messages/de.generated";
 import { ApiError } from "~/lib/api-error";
@@ -36,6 +31,7 @@ import {
   todayISO,
   toISODate,
 } from "~/lib/date-helpers";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 vi.unmock("swr");
 
@@ -68,8 +64,8 @@ beforeEach(() => {
   // These reads also run in nested controls. Keep them local unless a test
   // supplies its own recipients, contacts or request history.
   vi.spyOn(parentApi, "listMyChildren").mockResolvedValue([
-    { student_id: "1", tenant_id: "1" } as parentApi.Child,
-    { student_id: "2", tenant_id: "1" } as parentApi.Child,
+    { student_id: "1", tenant_id: "1" } as parentMeContract.ChildResponse,
+    { student_id: "2", tenant_id: "1" } as parentMeContract.ChildResponse,
   ]);
   vi.spyOn(parentApi, "listChildGuardians").mockResolvedValue([]);
   vi.spyOn(parentApi, "getRequestSharingOptions").mockResolvedValue({
@@ -99,7 +95,9 @@ function de(iso: string): string {
   return `${d}.${m}.${y}`;
 }
 
-function makeRequest(over: Partial<ExcusedRequest>): ExcusedRequest {
+function makeRequest(
+  over: Partial<parentMeContract.ParentExcusedRequestResponse>,
+): parentMeContract.ParentExcusedRequestResponse {
   return {
     id: "1",
     student_id: "1",
@@ -113,7 +111,9 @@ function makeRequest(over: Partial<ExcusedRequest>): ExcusedRequest {
   };
 }
 
-function makeStatusDay(over: Partial<StatusDay>): StatusDay {
+function makeStatusDay(
+  over: Partial<parentMeContract.StatusDayResponse>,
+): parentMeContract.StatusDayResponse {
   return {
     id: "1",
     student_id: "1",
@@ -361,7 +361,7 @@ describe("PickupTimeModal — failed preload guard", () => {
   });
 
   it("submits only the pickup change when an arrival override exists", () => {
-    const existing: CareException = {
+    const existing: parentMeContract.CareExceptionResponse = {
       date: "2026-03-17",
       pickup_time: "15:00",
       arrival_time: "08:30",
@@ -496,7 +496,7 @@ describe("PickupTimeModal — failed preload guard", () => {
   });
 
   it("keeps typed pickup fields when a focus refetch replaces records with equal values", () => {
-    const entry: CareException = {
+    const entry: parentMeContract.CareExceptionResponse = {
       date: todayISO(),
       pickup_time: "14:30",
       reason: "original",
@@ -715,7 +715,7 @@ describe("PickupTimeModal — failed preload guard", () => {
 // for the day. The footer button only opens the ConfirmDeleteModal; the
 // override is removed after the two-step confirmation inside the dialog.
 describe("PickupTimeModal — Änderung zurücknehmen", () => {
-  const guardianOverride: CareException = {
+  const guardianOverride: parentMeContract.CareExceptionResponse = {
     date: todayISO(),
     pickup_time: "15:00",
     source: "guardian",
@@ -894,7 +894,7 @@ describe("PickupTimeModal — Änderungsfrist für heute", () => {
     ).toHaveAttribute("aria-disabled", "true");
   });
 
-  const todayGuardianChange: CareException = {
+  const todayGuardianChange: parentMeContract.CareExceptionResponse = {
     date: todayISO(),
     pickup_time: "14:00",
     source: "guardian",
@@ -1408,7 +1408,7 @@ describe("SickNoteModal — Teil-Abwesenheit der Schule", () => {
   const schoolPartial = (
     date: string,
     excusedFrom = "13:00",
-  ): CareException => ({
+  ): parentMeContract.CareExceptionResponse => ({
     date,
     pickup_time: excusedFrom,
     excused_from: excusedFrom,
@@ -1786,7 +1786,9 @@ describe("resolveTodayPickup", () => {
   // day the suite runs on.
   const TODAY_WD = ((parseISODate(TODAY).getDay() + 6) % 7) + 1;
 
-  function makeException(over: Partial<CareException>): CareException {
+  function makeException(
+    over: Partial<parentMeContract.CareExceptionResponse>,
+  ): parentMeContract.CareExceptionResponse {
     return {
       date: TODAY,
       source: "guardian",
@@ -2156,8 +2158,8 @@ describe("useChildCare studentId switch", () => {
     vi.spyOn(parentApi, "listCareExceptions").mockImplementation((id: string) =>
       // Child A resolves; child B hangs so we observe the pre-fetch window.
       id === "1"
-        ? Promise.resolve([] as CareException[])
-        : new Promise<CareException[]>(() => {
+        ? Promise.resolve([] as parentMeContract.CareExceptionResponse[])
+        : new Promise<parentMeContract.CareExceptionResponse[]>(() => {
             /* never resolves */
           }),
     );
@@ -2224,7 +2226,7 @@ describe("useChildCare studentId switch", () => {
     vi.spyOn(parentApi, "listExcusedRequests").mockResolvedValue([]);
     vi.spyOn(parentApi, "listPickupChangeRequests").mockResolvedValue([]);
     vi.spyOn(parentApi, "listCareExceptions").mockResolvedValue(
-      [] as CareException[],
+      [] as parentMeContract.CareExceptionResponse[],
     );
     // Both children load a real (non-absent) pickup, so a stray setTodayAbsent
     // would visibly flip the tile to "absent".
@@ -2254,7 +2256,7 @@ describe("useChildCare studentId switch", () => {
     // Defer the sick-note resolution so we can switch children mid-submit.
     let resolveSubmit!: (v: {
       pending_request: null;
-      status_days: StatusDay[];
+      status_days: parentMeContract.StatusDayResponse[];
     }) => void;
     vi.spyOn(parentApi, "submitSickNote").mockReturnValue(
       new Promise((res) => {
@@ -2553,7 +2555,7 @@ describe("PickupTimeModal, Abholperson an einem Tag", () => {
           is_emergency_contact: false,
           phones: [],
           is_self: false,
-        } as unknown as parentApi.ChildGuardian,
+        } as unknown as parentMeContract.childGuardianResponse,
       ]);
     const { onSubmit, dateInput, reasonInput } = renderModal({
       studentId: "1",
@@ -2628,7 +2630,7 @@ describe("PickupTimeModal, Abholperson an einem Tag", () => {
           is_emergency_contact: false,
           phones: [],
           is_self: false,
-        } as unknown as parentApi.ChildGuardian,
+        } as unknown as parentMeContract.childGuardianResponse,
       ]);
     renderModal({ studentId: "1" });
 
@@ -2748,7 +2750,7 @@ describe("PickupTimeModal, Abholperson an einem Tag", () => {
           phones: [],
           is_self: false,
         },
-      ] as unknown as parentApi.ChildGuardian[]);
+      ] as unknown as parentMeContract.childGuardianResponse[]);
     renderModal({ studentId: "1" });
 
     fireEvent.click(
@@ -2781,7 +2783,7 @@ describe("PickupTimeModal, Abholperson an einem Tag", () => {
           is_emergency_contact: false,
           phones: [],
           is_self: false,
-        } as unknown as parentApi.ChildGuardian,
+        } as unknown as parentMeContract.childGuardianResponse,
       ]);
     render(
       <PickupTimeModal
@@ -2825,7 +2827,7 @@ describe("PickupTimeModal, Abholperson an einem Tag", () => {
       .mockRejectedValue(new Error("contacts unavailable"));
     const update = vi
       .spyOn(parentApi, "updatePickupChangeRequest")
-      .mockResolvedValue({} as parentApi.PickupChangeRequest);
+      .mockResolvedValue({} as parentMeContract.PickupChangeRequestResponse);
     render(
       <PickupTimeModal
         studentId="1"

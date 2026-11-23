@@ -2176,7 +2176,10 @@ describe("Aggregate fetcher error contract", () => {
     render(<MeinRaumPage />);
     await waitFor(() => expect(getFetcher()).toBeDefined());
 
-    await expect(getFetcher()!()).rejects.toThrow("BFF request failed: 500");
+    await expect(getFetcher()!()).rejects.toMatchObject({
+      message: "BFF request failed",
+      status: 500,
+    });
 
     // The former admin fallback fan-out endpoints must never be contacted:
     // silently-empty partial payloads are the failure mode #2096 removed.
@@ -2207,7 +2210,10 @@ describe("Aggregate fetcher error contract", () => {
     render(<MeinRaumPage />);
     await waitFor(() => expect(getFetcher()).toBeDefined());
 
-    await expect(getFetcher()!()).rejects.toThrow("BFF request failed: 500");
+    await expect(getFetcher()!()).rejects.toMatchObject({
+      message: "BFF request failed",
+      status: 500,
+    });
   });
 });
 

@@ -5,21 +5,20 @@ import { ActionHint } from "~/components/ui/action-hint";
 import { Button, buttonClassName } from "~/components/ui/button";
 import { useKitDefault } from "~/components/ui/kit-locale";
 import { FileTypeIcon } from "~/components/ui/file-type-icon";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import { formatBytes, isViewableInBrowser } from "~/lib/file-format";
 import { cn } from "~/lib/utils";
 
 /**
- * One attached file, in the shape both the staff and the parents side use.
- * Deliberately not exported: both callers pass their own domain type, which
- * matches structurally — exporting a third name for the same shape would only
- * invite it to drift.
+ * One attached file, in the shape both the staff and the parents side use:
+ * the fields of the generated attachment answer the list reads. Deliberately
+ * not exported: both callers pass their own domain type, which matches
+ * structurally.
  */
-interface AttachmentListItem {
-  id: string;
-  filename: string;
-  size_bytes: number;
-  content_type: string;
-}
+type AttachmentListItem = Pick<
+  sharedContract.AnnouncementAttachmentResponse,
+  "id" | "filename" | "size_bytes" | "content_type"
+>;
 
 interface AttachmentListProps {
   attachments: readonly AttachmentListItem[];

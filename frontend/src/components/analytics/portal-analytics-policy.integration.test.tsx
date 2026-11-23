@@ -22,6 +22,11 @@ const mocks = vi.hoisted(() => ({
   setConfig: vi.fn(),
 }));
 
+// The staff portal sends through sessionFetch; the stub passes the answer on.
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
   useSearchParams: () => new URLSearchParams(),
@@ -505,7 +510,7 @@ describe("embedded enrollment analytics policy", () => {
       });
       expect(fetch).toHaveBeenCalledWith(
         "/api/auth/tenant/resolve?slug=school-a",
-        undefined,
+        expect.objectContaining({ method: "GET" }),
       );
       await initializePostHog();
       capturePostHog("login_failed");
@@ -660,11 +665,11 @@ describe("embedded enrollment analytics policy", () => {
       act(() => document.dispatchEvent(new Event("visibilitychange")));
       expect(fetch).toHaveBeenCalledWith(
         "/api/auth/tenant/resolve?slug=school-a",
-        undefined,
+        expect.objectContaining({ method: "GET" }),
       );
       expect(fetch).toHaveBeenCalledWith(
         "/api/auth/tenant/resolve?slug=school-b",
-        undefined,
+        expect.objectContaining({ method: "GET" }),
       );
       await act(async () =>
         resolveHost(
@@ -771,7 +776,7 @@ describe("embedded enrollment analytics policy", () => {
       // Initial resolution must not depend on a settings or visibility event.
       expect(fetch).toHaveBeenCalledWith(
         "/api/auth/tenant/resolve?slug=school-b",
-        undefined,
+        expect.objectContaining({ method: "GET" }),
       );
       capturePostHog("login_failed");
       expect(mocks.capture).toHaveBeenCalledTimes(enabled ? 1 : 0);
@@ -843,7 +848,7 @@ describe("embedded enrollment analytics policy", () => {
       );
       expect(fetch).toHaveBeenCalledWith(
         "/api/auth/tenant/resolve?slug=school-c",
-        undefined,
+        expect.objectContaining({ method: "GET" }),
       );
       capturePostHog("login_failed");
       expect(mocks.capture).not.toHaveBeenCalled();

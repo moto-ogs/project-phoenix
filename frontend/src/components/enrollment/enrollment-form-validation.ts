@@ -18,7 +18,6 @@ import {
   type PublicFormSchema,
   type PublicLegalBlock,
 } from "~/lib/enrollment-form-schema-api";
-import type { PublicCareOffering } from "~/lib/enrollment-submission-api";
 import type { CareOfferingSelectionMode } from "~/lib/enrollment-phase-api";
 import { HEALTH_CONSENT_KEY } from "~/lib/enrollment-legal-blocks";
 import { selectionGroupLabel } from "~/lib/enrollment-translations";
@@ -49,6 +48,7 @@ import {
   type FormField,
   type TranslationFn,
 } from "./enrollment-form-shared";
+import type { CareOffering } from "~/lib/care-offering-api";
 
 export interface EnrollmentFormValues {
   guardian: GuardianDraft;
@@ -66,7 +66,7 @@ export interface EnrollmentFormValues {
 export interface EnrollmentFormRules {
   schema: PublicFormSchema | null;
   /** The whole catalog as displayed; empty when the phase has none. */
-  offerings: readonly PublicCareOffering[];
+  offerings: readonly CareOffering[];
   careOfferingSelectionMode: CareOfferingSelectionMode;
   collectGradeLevel: boolean;
   schoolClassRequired: boolean;
@@ -449,7 +449,7 @@ function offeringProblems(
 // backend re-checks it in validateOfferingGroupRules.
 function offeringGroupRuleError(
   care: Pick<MaterializedCareSelection, "offeringIds" | "offeringDays">,
-  offerings: readonly PublicCareOffering[],
+  offerings: readonly CareOffering[],
   tr: EnrollmentFormTranslator,
   locale: string,
 ): string | null {
@@ -492,7 +492,7 @@ function offeringGroupRuleError(
 // to change without the form changing it for them (#4514).
 export function dayConflictMessage(
   conflict: CareOfferingDayConflict,
-  offerings: readonly PublicCareOffering[],
+  offerings: readonly CareOffering[],
   tr: EnrollmentFormTranslator,
   locale: string,
 ): string {

@@ -1,10 +1,10 @@
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { SWRConfig } from "~/lib/swr/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type {
-  StaffInboxThread,
   StaffMessagesApi,
   StaffThreadDetail,
 } from "~/lib/staff-messages-api";
@@ -54,8 +54,9 @@ function portalFor(
     kind,
     api,
     attachments: {
-      uploadUrl: "/upload",
+      upload: vi.fn(),
       downloadUrl: (id: string) => `/files/${id}`,
+      loadFile: vi.fn(),
     },
     cacheScope: `test-${kind}`,
     inboxHref: "/team-chat",
@@ -256,7 +257,7 @@ describe("Team-Chat groups (#4776)", () => {
 });
 
 describe("Team-Chat inbox with groups (#4776)", () => {
-  const groupRow: StaffInboxThread = {
+  const groupRow: sharedContract.InboxThreadResponse = {
     thread_id: "g1",
     counterpart_account_id: "",
     counterpart_name: "",

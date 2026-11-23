@@ -5,23 +5,30 @@
  * lands in one place.
  */
 
-export type ChildStatus =
-  | "submitted"
-  | "under_review"
-  | "approved"
-  | "waitlisted"
-  | "rejected"
-  | "withdrawn"
-  | "pending_renewal"
-  | "auto_renewed"
-  | "pending_admin_review";
+// Go does not register this set; the contract types it as string.
+export const CHILD_STATUSES = [
+  "submitted",
+  "under_review",
+  "approved",
+  "waitlisted",
+  "rejected",
+  "withdrawn",
+  "pending_renewal",
+  "auto_renewed",
+  "pending_admin_review",
+] as const;
 
-export type ChangeRequestStatus =
-  | "pending_review"
-  | "needs_parent_response"
-  | "approved"
-  | "rejected"
-  | "cancelled";
+export type ChildStatus = (typeof CHILD_STATUSES)[number];
+
+export const CHANGE_REQUEST_STATUSES = [
+  "pending_review",
+  "needs_parent_response",
+  "approved",
+  "rejected",
+  "cancelled",
+] as const;
+
+export type ChangeRequestStatus = (typeof CHANGE_REQUEST_STATUSES)[number];
 
 const TERMINAL_CHILD_STATUSES: ReadonlySet<string> = new Set<ChildStatus>([
   "approved",

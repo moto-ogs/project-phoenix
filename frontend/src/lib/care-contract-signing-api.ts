@@ -3,11 +3,11 @@
 // „Dokumente“. Das Backend liefert Vertrag, Prüfsumme des PDFs und
 // Widerrufsbelehrung; die Unterschrift schließt den Vertrag ab.
 
-import { apiErrorFromResponse, transportFetch } from "./api-error";
+import { bffFile, bffJson, bffPath } from "./bff-fetch";
 import { knownEnum } from "./contract/known-enum";
+import type * as publicCareContractSigningContract from "./contract/public-care-contract-signing.generated";
 import { requiredDay } from "./contract/required-day";
-import type { SignRequest as WireSignRequest } from "./contract/public-care-contract-signing.generated";
-import type { SigningView as WireSigningView } from "./contract/shared.generated";
+import type * as sharedContract from "./contract/shared.generated";
 import type { SignatureValue } from "./signature";
 import type { CareContractStatus, Weekday } from "./traeger-care-contracts-api";
 
@@ -67,7 +67,7 @@ export interface SigningView {
   readonly signature: SigningSignature | null;
 }
 
-function mapSigningView(raw: WireSigningView): SigningView {
+function mapSigningView(raw: sharedContract.SigningView): SigningView {
   const version = raw.version;
   return {
     status: knownEnum(STATUS_VALUES, raw.status),
@@ -116,7 +116,9 @@ interface SigningInput {
   readonly earlyStart: boolean;
 }
 
-function signBody(input: SigningInput): WireSignRequest {
+function signBody(
+  input: SigningInput,
+): publicCareContractSigningContract.SignRequest {
   return {
     method: input.signature.method,
     image_png: input.signature.imagePngBase64,
@@ -128,21 +130,7 @@ function signBody(input: SigningInput): WireSignRequest {
   };
 }
 
-async function request(url: string, init: RequestInit): Promise<SigningView> {
-  const response = await transportFetch(url, {
-    ...init,
-    cache: "no-store",
-    headers: { "Content-Type": "application/json" },
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Care contract signing failed: ${response.status}`,
-    );
-  }
-  const body = (await response.json()) as { data: WireSigningView };
-  return mapSigningView(body.data);
-}
+const errorMessage = "Care contract signing failed";
 
 /** Where a contract to sign comes from: the mail link or the inbox. */
 export type SigningSource =
@@ -153,33 +141,97 @@ export type SigningSource =
       readonly contractId: string;
     };
 
-function basePath(source: SigningSource): string {
-  return source.kind === "link"
-    ? `/api/public/care-contract-signing/${encodeURIComponent(source.link)}`
-    : `/api/parent/me/documents/${encodeURIComponent(source.organizationId)}/contracts/${encodeURIComponent(source.contractId)}`;
-}
-
 /** Reads the contract. Reading never uses the mail link up. */
-export function fetchSigningView(source: SigningSource): Promise<SigningView> {
-  const url =
-    source.kind === "link" ? basePath(source) : `${basePath(source)}/signing`;
-  return request(url, { method: "GET" });
+export async function fetchSigningView(
+  source: SigningSource,
+): Promise<SigningView> {
+  return mapSigningView(
+    source.kind === "link"
+      ? await bffJson("public", "GET /public/care-contract-signing/{link}", {
+          params: { link: source.link },
+          errorMessage,
+        })
+      : await bffJson(
+          "parent",
+          "GET /parent/me/documents/{organizationId}/contracts/{contractId}/signing",
+          {
+            params: {
+              organizationId: source.organizationId,
+              contractId: source.contractId,
+            },
+            errorMessage,
+          },
+        ),
+  );
 }
 
 /** Signs the contract; the mail link is closed afterwards. */
-export function signContract(
+export async function signContract(
   source: SigningSource,
   input: SigningInput,
 ): Promise<SigningView> {
-  return request(`${basePath(source)}/sign`, {
-    method: "POST",
-    body: JSON.stringify(signBody(input)),
-  });
+  const body = signBody(input);
+  return mapSigningView(
+    source.kind === "link"
+      ? await bffJson(
+          "public",
+          "POST /public/care-contract-signing/{link}/sign",
+          { params: { link: source.link }, body, errorMessage },
+        )
+      : await bffJson(
+          "parent",
+          "POST /parent/me/documents/{organizationId}/contracts/{contractId}/sign",
+          {
+            params: {
+              organizationId: source.organizationId,
+              contractId: source.contractId,
+            },
+            body,
+            errorMessage,
+          },
+        ),
+  );
 }
 
-/** The address of the frozen PDF the parents sign. */
+/**
+ * The address of the frozen PDF the parents sign, for the link the browser
+ * opens itself („PDF öffnen“).
+ */
 export function signingDocumentUrl(source: SigningSource): string {
   return source.kind === "link"
-    ? `${basePath(source)}/document`
-    : `${basePath(source)}/pdf`;
+    ? bffPath("public", "/public/care-contract-signing/{link}/document", {
+        link: source.link,
+      })
+    : bffPath(
+        "parent",
+        "/parent/me/documents/{organizationId}/contracts/{contractId}/pdf",
+        {
+          organizationId: source.organizationId,
+          contractId: source.contractId,
+        },
+      );
+}
+
+/** The frozen PDF the parents sign, for the preview. */
+export async function fetchSigningDocument(
+  source: SigningSource,
+): Promise<Blob> {
+  const response =
+    source.kind === "link"
+      ? await bffFile(
+          "public",
+          "GET /public/care-contract-signing/{link}/document",
+          { params: { link: source.link } },
+        )
+      : await bffFile(
+          "parent",
+          "GET /parent/me/documents/{organizationId}/contracts/{contractId}/pdf",
+          {
+            params: {
+              organizationId: source.organizationId,
+              contractId: source.contractId,
+            },
+          },
+        );
+  return response.blob();
 }

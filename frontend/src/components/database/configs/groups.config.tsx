@@ -1,10 +1,11 @@
 // Group Entity Configuration
 
 import { defineEntityConfig } from "@/lib/database/types";
-import type { Group, GroupWire } from "@/lib/group-helpers";
+import type { Group } from "@/lib/group-helpers";
 import { mapGroupResponse } from "@/lib/group-helpers";
 import { bffJson } from "~/lib/bff-fetch";
 import { groupsConcept } from "~/lib/concepts/groups";
+import type * as groupsContract from "~/lib/contract/groups.generated";
 
 export const groupsConfig = defineEntityConfig<Group>({
   name: {
@@ -206,7 +207,8 @@ export const groupsConfig = defineEntityConfig<Group>({
   },
 
   service: {
-    mapResponse: (data: unknown): Group => mapGroupResponse(data as GroupWire),
+    mapResponse: (data: unknown): Group =>
+      mapGroupResponse(data as groupsContract.GroupResponse),
 
     mapRequest: (data: Partial<Group>) => {
       const mapped: Record<string, unknown> = {

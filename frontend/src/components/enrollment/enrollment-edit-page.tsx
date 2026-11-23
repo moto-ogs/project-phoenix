@@ -15,7 +15,6 @@ import {
   fetchEnrollmentEditBootstrap,
   updateEnrollmentRequest,
   type EnrollmentEditBootstrap,
-  type SubmitEnrollmentPayload,
 } from "~/lib/enrollment-submission-api";
 import { createLogger } from "~/lib/logger";
 import { useApiLoadError, useToast } from "~/contexts/ToastContext";
@@ -28,6 +27,7 @@ import {
   useCareTermTranslations,
   useProvideCareFacilityTerm,
 } from "~/lib/care-facility-term";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 
 const logger = createLogger({ component: "EnrollmentEditPage" });
 
@@ -128,7 +128,7 @@ function EnrollmentEditPageContent({ params, adjustOnly = false }: Props) {
   ]);
 
   const submitter = useCallback(
-    async (payload: SubmitEnrollmentPayload) => {
+    async (payload: sharedContract.SubmitEnrollmentRequest) => {
       if (bootstrap?.edit_mode === "change_request") {
         const changeRequest = await createEnrollmentChangeRequest(
           token,

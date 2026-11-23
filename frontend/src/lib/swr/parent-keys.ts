@@ -1,6 +1,8 @@
-import type { Child } from "~/lib/parent-api";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
-function relationships(children: readonly Child[]): string {
+function relationships(
+  children: readonly parentMeContract.ChildResponse[],
+): string {
   return children
     .map(
       (child) =>
@@ -74,10 +76,13 @@ export const parentKeys = {
   isNewsResource: (key: string) => key === "parent-announcements",
   isResource: (key: string) =>
     key.startsWith("parent-") && !key.startsWith("parent-profile"),
-  relationshipSet: (children: readonly Child[]) => relationships(children),
-  features: (children: readonly Child[], day: string) =>
-    `parent-features-${relationships(children)}-${day}`,
-  today: (children: readonly Child[], day: string) =>
+  relationshipSet: (children: readonly parentMeContract.ChildResponse[]) =>
+    relationships(children),
+  features: (
+    children: readonly parentMeContract.ChildResponse[],
+    day: string,
+  ) => `parent-features-${relationships(children)}-${day}`,
+  today: (children: readonly parentMeContract.ChildResponse[], day: string) =>
     `parent-today-${relationships(children)}-${day}`,
   /** Appointments from `day` over `days` days; the start page reads 90. */
   calendar: (day: string, days = 90) => `parent-calendar-${day}-${days}`,

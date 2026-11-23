@@ -1,24 +1,13 @@
 // lib/active-helpers.ts
 // Type definitions for active entities
 
-import type {
-  ActiveGroupResponse,
-  SchulhofStatusResponse,
-  SupervisorResponse,
-  VisitResponse,
-} from "~/lib/contract/active.generated";
+import type * as activeContract from "~/lib/contract/active.generated";
 
 // Tracking indicators response from POST /api/active/tracking-indicators
 export interface TrackingIndicatorsResponse {
   labels: string[];
   results: Record<string, boolean[]>; // student_id → [matched1, matched2, ...]
 }
-
-// Wire types: the decoded responses of the catalog proxy (#2353).
-export type ActiveGroupWire = ActiveGroupResponse;
-export type VisitWire = VisitResponse;
-export type SupervisorWire = SupervisorResponse;
-export type SchulhofStatusWire = SchulhofStatusResponse;
 
 // Frontend types
 // groupId: string | null — mirrors the nullable backend contract (WP-B6).
@@ -77,7 +66,7 @@ export interface Supervisor {
 
 // Transformation functions
 export function mapActiveGroupResponse(
-  backendActiveGroup: ActiveGroupWire,
+  backendActiveGroup: activeContract.ActiveGroupResponse,
 ): ActiveGroup {
   return {
     id: backendActiveGroup.id,
@@ -97,7 +86,9 @@ export function mapActiveGroupResponse(
   };
 }
 
-export function mapVisitResponse(backendVisit: VisitWire): Visit {
+export function mapVisitResponse(
+  backendVisit: activeContract.VisitResponse,
+): Visit {
   return {
     id: backendVisit.id,
     studentId: backendVisit.student_id,
@@ -115,7 +106,7 @@ export function mapVisitResponse(backendVisit: VisitWire): Visit {
 }
 
 export function mapSupervisorResponse(
-  backendSupervisor: SupervisorWire,
+  backendSupervisor: activeContract.SupervisorResponse,
 ): Supervisor {
   return {
     id: backendSupervisor.id,
@@ -155,7 +146,7 @@ interface SchulhofSupervisor {
 }
 
 export function mapSchulhofStatusResponse(
-  backend: SchulhofStatusWire,
+  backend: activeContract.SchulhofStatusResponse,
 ): SchulhofStatus {
   return {
     exists: backend.exists,

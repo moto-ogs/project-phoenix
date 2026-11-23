@@ -256,6 +256,8 @@ func renderMandateError(w http.ResponseWriter, r *http.Request, err error, inval
 		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeParentBillingFamilyUnknown))
 	case errors.Is(err, capability.ErrSEPAMandateInForce):
 		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeParentBillingSepaMandateInForce))
+	case errors.Is(err, capability.ErrSEPAMandateContractDraft):
+		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeParentBillingSepaMandateContractDraft))
 	case errors.Is(err, capability.ErrSEPAMandateReferenceTaken):
 		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeParentBillingSepaMandateReferenceTaken))
 	case errors.Is(err, capability.ErrSEPACreditorMissing):

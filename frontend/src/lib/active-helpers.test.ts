@@ -4,16 +4,13 @@ import {
   mapVisitResponse,
   mapSupervisorResponse,
   mapSchulhofStatusResponse,
-  type ActiveGroupWire,
-  type VisitWire,
-  type SupervisorWire,
-  type SchulhofStatusWire,
 } from "./active-helpers";
 import {
   buildBackendActiveSession,
   buildBackendVisit,
   buildBackendSupervisor,
 } from "~/test/fixtures/sessions";
+import type * as activeContract from "~/lib/contract/active.generated";
 
 // Decoded responses of the catalog proxy: identifiers arrive as strings.
 const sampleBackendActiveGroup = buildBackendActiveSession({
@@ -73,7 +70,7 @@ describe("active-helpers", () => {
     });
 
     it("handles undefined optional fields", () => {
-      const minimalGroup: ActiveGroupWire = {
+      const minimalGroup: activeContract.ActiveGroupResponse = {
         id: "1",
         group_id: "10",
         room_id: "5",
@@ -116,7 +113,7 @@ describe("active-helpers", () => {
     });
 
     it("handles undefined optional fields", () => {
-      const minimalVisit: VisitWire = {
+      const minimalVisit: activeContract.VisitResponse = {
         id: "100",
         student_id: "50",
         active_group_id: "1",
@@ -149,7 +146,7 @@ describe("active-helpers", () => {
     });
 
     it("handles undefined optional fields", () => {
-      const minimalSupervisor: SupervisorWire = {
+      const minimalSupervisor: activeContract.SupervisorResponse = {
         id: "200",
         staff_id: "30",
         active_group_id: "1",
@@ -169,7 +166,7 @@ describe("active-helpers", () => {
 
   describe("mapSchulhofStatusResponse", () => {
     it("maps all fields correctly with complete data", () => {
-      const backendStatus: SchulhofStatusWire = {
+      const backendStatus: activeContract.SchulhofStatusResponse = {
         exists: true,
         room_id: "42",
         room_name: "Schulhof",
@@ -222,7 +219,7 @@ describe("active-helpers", () => {
     });
 
     it("handles non-existent Schulhof with minimal data", () => {
-      const backendStatus: SchulhofStatusWire = {
+      const backendStatus: activeContract.SchulhofStatusResponse = {
         exists: false,
         room_name: "",
         is_user_supervising: false,
@@ -246,7 +243,7 @@ describe("active-helpers", () => {
     });
 
     it("handles undefined optional fields as null", () => {
-      const backendStatus: SchulhofStatusWire = {
+      const backendStatus: activeContract.SchulhofStatusResponse = {
         exists: true,
         room_name: "Schulhof",
         is_user_supervising: false,
@@ -279,7 +276,7 @@ describe("active-helpers", () => {
     });
 
     it("maps supervisor array correctly", () => {
-      const backendStatus: SchulhofStatusWire = {
+      const backendStatus: activeContract.SchulhofStatusResponse = {
         exists: true,
         room_name: "Schulhof",
         is_user_supervising: false,
@@ -309,7 +306,7 @@ describe("active-helpers", () => {
     });
 
     it("handles empty supervisors array", () => {
-      const backendStatus: SchulhofStatusWire = {
+      const backendStatus: activeContract.SchulhofStatusResponse = {
         exists: true,
         room_name: "Schulhof",
         is_user_supervising: false,

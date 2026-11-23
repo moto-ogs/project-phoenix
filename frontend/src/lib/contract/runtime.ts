@@ -51,6 +51,9 @@ const pagination = z.object({
   total_records: safeInt,
 });
 
+/** The page of a paginated list (`common.Pagination`). */
+export type Pagination = z.infer<typeof pagination>;
+
 /**
  * z.object for a generated schema. The generator writes the interface and
  * the shape from one model, so the type checker is handed the interface

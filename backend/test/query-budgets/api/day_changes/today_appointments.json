@@ -1,0 +1,7 @@
+{
+  "scenario": "api.day_changes.today_appointments",
+  "max": 15,
+  "exact": false,
+  "description": "GET /day-changes/today (#7663) with the Termine source for a staff member with calendar:own: the Personal reads of api.day_changes.today, plus the caller's visible calendar appointments of the day, the occurrence overrides of the dates that may reach today and the recurrence rules of cancelled series, each in one batched read inside the savepoint the sources share. TestDayChangesAppointmentSource compares the read before and after one more weekly appointment with a cancelled date.",
+  "route": "GET /api/day-changes/today"
+}

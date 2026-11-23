@@ -10,12 +10,14 @@ import { StatusBadge } from "~/components/ui/status-badge";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import type { CareOffering } from "~/lib/care-offering-api";
 import {
-  type CareOfferingBookingStats,
   type OfferingOccupancy,
   offeringOccupancy,
 } from "~/lib/care-offering-booking-stats";
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 
-type StatsById = Readonly<Record<string, CareOfferingBookingStats>>;
+type StatsById = Readonly<
+  Record<string, enrollmentContract.CareOfferingBookingStatsResponse>
+>;
 
 /** „7 von 10“ und „3 frei“; ohne Kapazitätsgrenze nur die Belegung. */
 export function OfferingOccupancyCell({

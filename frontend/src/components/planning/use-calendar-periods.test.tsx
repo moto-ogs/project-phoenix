@@ -58,7 +58,7 @@ const period: CalendarPeriod = {
 const phase = {
   id: "7",
   name: "Demo Anmeldung",
-  calendar_period_id: null,
+  calendar_period_id: undefined,
   is_active: true,
 } as Phase;
 

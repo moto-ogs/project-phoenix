@@ -7,6 +7,10 @@ import { ToastProvider } from "~/contexts/ToastContext";
 import AnnouncementDetailPage from "./page";
 
 vi.unmock("swr");
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
 vi.mock("~/lib/activity-api", () => ({
   fetchActivities: () => new Promise(() => {}),
 }));
@@ -68,16 +72,16 @@ it.each(["none", "single_choice"])(
     expect(screen.queryByText("Geheime Antwort")).not.toBeInTheDocument();
     expect(fetch).toHaveBeenCalledWith(
       "/api/parent-announcements/4",
-      undefined,
+      expect.objectContaining({ method: "GET" }),
     );
     if (response_type !== "none") {
       expect(fetch).toHaveBeenCalledWith(
         "/api/parent-announcements/4/poll-results",
-        undefined,
+        expect.objectContaining({ method: "GET" }),
       );
       expect(fetch).toHaveBeenCalledWith(
         "/api/parent-announcements/4/poll-children",
-        undefined,
+        expect.objectContaining({ method: "GET" }),
       );
     }
   },
@@ -122,16 +126,17 @@ it("loads evaluation before detail and reuses it only after detail confirms the 
         },
       });
     if (url.endsWith("/poll-children")) return Response.json({ data: [] });
-    return pending;
+    // Every other read gets its own copy of the one detail answer.
+    return pending.then((response) => response.clone());
   });
   render(<AnnouncementDetailPage />, { wrapper });
   expect(fetch).toHaveBeenCalledWith(
     "/api/parent-announcements/4/poll-results",
-    undefined,
+    expect.objectContaining({ method: "GET" }),
   );
   expect(fetch).toHaveBeenCalledWith(
     "/api/parent-announcements/4/poll-children",
-    undefined,
+    expect.objectContaining({ method: "GET" }),
   );
   // Anker: die bekannte Identität steht im Kopf, die bereits geladenen Ergebnisse noch nicht.
   expect(
@@ -199,7 +204,8 @@ it.each([true, false])(
         return Promise.reject(new Error("Auswertung offline"));
       if (url.endsWith("/poll-children"))
         return Promise.resolve(Response.json({ data: [] }));
-      return pending;
+      // Every other read gets its own copy of the one detail answer.
+      return pending.then((response) => response.clone());
     });
     render(<AnnouncementDetailPage />, { wrapper });
     if (seeded) {

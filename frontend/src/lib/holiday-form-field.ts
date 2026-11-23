@@ -14,7 +14,7 @@ import {
 import {
   formFieldFromContract,
   translationsFromContract,
-} from "./form-field-contract";
+} from "./enrollment-form-schema-api";
 
 /**
  * A question of the holiday form: a form field of the online registration
@@ -168,18 +168,10 @@ function holidayLegalBlocksFromContract(
   });
 }
 
-/** The parts of a version every holiday form answer carries. */
-interface WireHolidayFormVersion {
-  readonly legal_blocks: readonly sharedContract.FormLegalBlock[] | null;
-  readonly version: number;
-  readonly fields: readonly sharedContract.HolidayFormField[] | null;
-  readonly address_requirement: string;
-  readonly health_requirement: string;
-}
-
 /** One version of the holiday form; `at` names it in a read error. */
 export function holidayFormVersionFromContract(
-  form: WireHolidayFormVersion,
+  // The parts of a version every holiday form answer carries.
+  form: Omit<sharedContract.HolidayPeriodForm, "created_at">,
   at: string,
 ): Required<HolidayFormVersion> {
   return {

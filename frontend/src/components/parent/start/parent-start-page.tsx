@@ -24,10 +24,6 @@ import {
   fetchParentProfile,
   listAnnouncements,
   listMessageThreads,
-  type Child,
-  type ChildFeatures,
-  type ChildToday,
-  type ParentAnnouncement,
   type ThreadSummary,
 } from "~/lib/parent-api";
 import { childConversationPath } from "~/lib/messaging-status";
@@ -58,6 +54,7 @@ import {
   useParentToday,
   PARENT_RESOURCE_OPTIONS,
 } from "~/lib/hooks/use-parent-resources";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 /** Wie weit nach vorn Termineinladungen fuer "Zu erledigen" gesucht werden. */
 
@@ -154,9 +151,13 @@ function greetingKey(hour: number): "morning" | "day" | "evening" {
 }
 
 interface StartData {
-  readonly children: readonly Child[];
-  readonly features: Readonly<Record<string, ChildFeatures>>;
-  readonly today: Readonly<Record<string, ChildToday>>;
+  readonly children: readonly parentMeContract.ChildResponse[];
+  readonly features: Readonly<
+    Record<string, parentMeContract.ChildFeaturesResponse>
+  >;
+  readonly today: Readonly<
+    Record<string, parentMeContract.TodayStatusResponse>
+  >;
   readonly firstName: string;
 }
 
@@ -270,9 +271,9 @@ function StartChildCard({
   today,
   features,
 }: Readonly<{
-  child: Child;
-  today: ChildToday;
-  features?: ChildFeatures;
+  child: parentMeContract.ChildResponse;
+  today: parentMeContract.TodayStatusResponse;
+  features?: parentMeContract.ChildFeaturesResponse;
 }>) {
   const pickupAside =
     today.at_ogs === true && today.pickup_time ? (
@@ -356,7 +357,7 @@ function StartChildCardSkeleton() {
 }
 
 interface TodoSources {
-  readonly announcements: readonly ParentAnnouncement[];
+  readonly announcements: readonly parentMeContract.AnnouncementResponse[];
   readonly threads: readonly ThreadSummary[];
   readonly appointments: readonly CalendarEvent[];
 }
@@ -426,7 +427,7 @@ function StartTodoSection() {
 
   const { mutate: mutateAnnouncements } = announcements;
   const applyAnnouncementPatch = useCallback(
-    (id: string, patch: Partial<ParentAnnouncement>) => {
+    (id: string, patch: Partial<parentMeContract.AnnouncementResponse>) => {
       void mutateAnnouncements(
         (current) =>
           current?.map((item) =>
@@ -513,7 +514,7 @@ function buildTodoItems(
   );
   // An open Einverständnis (#3430) or Umfrage mit Fragebogen (#4781) is as
   // urgent as an open poll: the school waits for an answer until a deadline.
-  const isUrgent = (item: ParentAnnouncement) =>
+  const isUrgent = (item: parentMeContract.AnnouncementResponse) =>
     isOpenPoll(item) || isOpenDeclaration(item) || isOpenSurvey(item);
   const polls = openAnnouncements.filter(isUrgent);
   const notices = openAnnouncements.filter((item) => !isUrgent(item));
@@ -551,7 +552,7 @@ function buildTodoItems(
 }
 
 function todoFromAnnouncement(
-  item: ParentAnnouncement,
+  item: parentMeContract.AnnouncementResponse,
   locale: string,
   t: StartTranslator,
   poll: boolean,

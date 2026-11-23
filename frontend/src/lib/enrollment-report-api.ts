@@ -1,9 +1,11 @@
 import { createLogger } from "~/lib/logger";
-import type { ChildStatus } from "~/lib/enrollment-status";
+import { requiredEnum } from "~/lib/contract/known-enum";
+import { CHILD_STATUSES, type ChildStatus } from "~/lib/enrollment-status";
 import { downloadBlob, filenameFromDisposition } from "~/lib/file-download";
+import { bffJson } from "~/lib/bff-fetch";
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import {
   enrollmentErrorReader,
-  readEnrollmentJSON,
   sendEnrollmentRequest,
 } from "~/lib/enrollment-http";
 
@@ -19,88 +21,91 @@ export type EnrollmentExportFormat = "pdf" | "docx" | "xlsx";
  */
 export type EnrollmentReportLayout = "detailed" | "compact";
 
-export interface CareUsageFilters {
+/**
+ * The filters of the care-usage report (#2215), sent as its query and as the
+ * `filters` of its export. An empty `care_offering_ids` asks for children
+ * without any offering.
+ */
+export type CareUsageFilters = Omit<
+  enrollmentContract.GetEnrollmentAdminReportsCareUsageQuery,
+  "care_offering_id" | "phase_id" | "status"
+> & {
   phase_id: string;
   status?: EnrollmentReportStatus;
-  care_offering_ids?: string[];
-  day_count?: number;
-  grade_level?: number;
-  weekday?: string;
-  pickup_time?: string;
-  search?: string;
-}
+};
 
-export interface CareUsageReport {
-  phase: {
-    id: string;
-    name: string;
-  };
-  filters: {
-    phase_id: string;
-    status: EnrollmentReportStatus;
-    care_offering_ids: string[];
-    day_count?: number;
-    grade_level?: number;
-    weekday?: string;
-    pickup_time?: string;
-    search?: string;
-  };
+type CareUsageRowOffering = Omit<
+  enrollmentContract.careUsageRowOfferingResponse,
+  "days"
+> & { days: string[] };
+
+/** A child of the report, with the lists Go may write as null read as empty. */
+export type CareUsageRow = Omit<
+  enrollmentContract.careUsageRowResponse,
+  "status" | "offerings" | "effective_days" | "pickup_by_day"
+> & {
+  status: ChildStatus;
+  offerings: CareUsageRowOffering[];
+  effective_days: string[];
+  pickup_by_day: Record<string, string>;
+};
+
+/** The report, with the lists Go may write as null read as empty. */
+export type CareUsageReport = Omit<
+  enrollmentContract.CareUsageReportResponse,
+  "totals" | "by_offering" | "filter_options" | "rows"
+> & {
   totals: {
     children: number;
     by_day_count: Record<string, number>;
     by_weekday_pickup_time: Record<string, Record<string, number>>;
   };
-  by_offering: CareUsageOfferingStat[];
+  by_offering: (Omit<
+    enrollmentContract.careUsageOfferingStatResponse,
+    "by_day_count"
+  > & { by_day_count: Record<string, number> })[];
   filter_options: {
-    offerings: CareUsageOfferingOption[];
+    offerings: enrollmentContract.careUsageOfferingOptionResponse[];
     grade_levels: number[];
     pickup_times: string[];
   };
   rows: CareUsageRow[];
-}
+};
 
-interface CareUsageOfferingOption {
-  id: string;
-  name: string;
-  counts_as_care: boolean;
-}
-
-interface CareUsageOfferingStat {
-  offering_id: string;
-  offering_name: string;
-  children: number;
-  by_day_count: Record<string, number>;
-}
-
-export interface CareUsageRow {
-  request_id: string;
-  child_id: string;
-  child_first_name: string;
-  child_last_name: string;
-  date_of_birth: string;
-  target_grade_level?: number;
-  /** Concrete future class (e.g. "2a") when collected (#1833). */
-  target_school_class?: string;
-  status: ChildStatus;
-  offerings: CareUsageRowOffering[];
-  effective_days: string[];
-  day_count: number;
-  pickup_by_day: Record<string, string>;
-  guardian_first_name: string;
-  guardian_last_name: string;
-  guardian_email: string;
-  guardian_phone?: string | null;
-  submitted_at: string;
-}
-
-interface CareUsageRowOffering {
-  id: string;
-  name: string;
-  days: string[];
-  days_source: "selected" | "available";
-  days_of_week_mode: string;
-  manual_selected_days?: string[];
-  automatic_selected_days?: string[];
+function careUsageReportFromContract(
+  report: enrollmentContract.CareUsageReportResponse,
+): CareUsageReport {
+  return {
+    ...report,
+    totals: {
+      children: report.totals.children,
+      by_day_count: report.totals.by_day_count ?? {},
+      by_weekday_pickup_time: Object.fromEntries(
+        Object.entries(report.totals.by_weekday_pickup_time ?? {}).map(
+          ([day, times]) => [day, times ?? {}],
+        ),
+      ),
+    },
+    by_offering: (report.by_offering ?? []).map((stat) => ({
+      ...stat,
+      by_day_count: stat.by_day_count ?? {},
+    })),
+    filter_options: {
+      offerings: report.filter_options.offerings ?? [],
+      grade_levels: report.filter_options.grade_levels ?? [],
+      pickup_times: report.filter_options.pickup_times ?? [],
+    },
+    rows: (report.rows ?? []).map((row) => ({
+      ...row,
+      status: requiredEnum(CHILD_STATUSES, row.status, "CareUsageRow.status"),
+      offerings: (row.offerings ?? []).map((offering) => ({
+        ...offering,
+        days: offering.days ?? [],
+      })),
+      effective_days: row.effective_days ?? [],
+      pickup_by_day: row.pickup_by_day ?? {},
+    })),
+  };
 }
 
 const readError = enrollmentErrorReader(
@@ -111,18 +116,23 @@ const readError = enrollmentErrorReader(
 export async function getCareUsageReport(
   filters: CareUsageFilters,
 ): Promise<CareUsageReport> {
-  const url = new URL(
-    "/api/enrollment/admin/reports/care-usage",
-    globalThis.window?.location.origin ?? "http://localhost",
+  const ids = filters.care_offering_ids;
+  return careUsageReportFromContract(
+    await bffJson("tenant", "GET /api/enrollment/admin/reports/care-usage", {
+      query: {
+        phase_id: filters.phase_id,
+        status: filters.status,
+        // An empty list travels as one empty value: no offering at all.
+        care_offering_ids: ids?.length === 0 ? "" : ids,
+        day_count: filters.day_count,
+        grade_level: filters.grade_level || undefined,
+        weekday: filters.weekday || undefined,
+        pickup_time: filters.pickup_time || undefined,
+        search: filters.search?.trim() || undefined,
+      },
+      errorMessage: "Auswertung konnte nicht geladen werden",
+    }),
   );
-  appendCareUsageParams(url, filters);
-  const response = await sendEnrollmentRequest(`${url.pathname}${url.search}`, {
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    throw await readError(response, "Auswertung konnte nicht geladen werden");
-  }
-  return readEnrollmentJSON<CareUsageReport>(response);
 }
 
 export async function exportCareUsageReport(
@@ -188,35 +198,6 @@ export async function exportPhaseClassRoster(
     filenameFromDisposition(response) ??
       (schoolClass ? `klassenliste.${format}` : `klassenlisten.${format}`),
   );
-}
-
-function appendCareUsageParams(url: URL, filters: CareUsageFilters) {
-  url.searchParams.set("phase_id", String(filters.phase_id));
-  if (filters.status) url.searchParams.set("status", filters.status);
-  if (filters.care_offering_ids !== undefined) {
-    if (filters.care_offering_ids.length === 0) {
-      url.searchParams.set("care_offering_ids", "");
-    } else {
-      for (const id of filters.care_offering_ids) {
-        url.searchParams.append("care_offering_ids", String(id));
-      }
-    }
-  }
-  if (filters.day_count !== undefined) {
-    url.searchParams.set("day_count", String(filters.day_count));
-  }
-  if (filters.grade_level) {
-    url.searchParams.set("grade_level", String(filters.grade_level));
-  }
-  if (filters.weekday) {
-    url.searchParams.set("weekday", filters.weekday);
-  }
-  if (filters.pickup_time) {
-    url.searchParams.set("pickup_time", filters.pickup_time);
-  }
-  if (filters.search?.trim()) {
-    url.searchParams.set("search", filters.search.trim());
-  }
 }
 
 /**

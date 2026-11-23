@@ -25,13 +25,9 @@ export async function fetchClassDayClassesSchool(): Promise<ClassDayClasses> {
   return { ...data, classes: data.classes ?? [] };
 }
 
-export type SchoolDayTotals = schoolClassDayContract.SchoolDayTotals;
-export type SchoolDayChild = schoolClassDayContract.SchoolDayChild;
-export type SchoolDayReport = schoolClassDayContract.SchoolDayReport;
-
 export async function fetchSchoolDaySchool(
   date: string,
-): Promise<SchoolDayReport> {
+): Promise<schoolClassDayContract.SchoolDayReport> {
   return bffJson("school", "GET /school/class-day/school-day", {
     query: { date },
   });
@@ -152,9 +148,6 @@ export function classTripConflictsFromError(
   return conflicts.length > 0 ? { conflicts, total } : null;
 }
 
-/** Was eine Meldung geschrieben hat (#4799). */
-export type ClassTripReportResult = schoolClassDayContract.ClassTripResult;
-
 /**
  * Ausflug oder Klassenfahrt einer zugewiesenen Klasse melden (#4799). Ohne
  * Rückkehrzeit gilt jeder Tag als Klassenfahrt; mit Rückkehrzeit (nur ein
@@ -163,7 +156,7 @@ export type ClassTripReportResult = schoolClassDayContract.ClassTripResult;
 export async function reportClassTripSchool(
   schoolClass: string,
   input: ClassTripReportInput,
-): Promise<ClassTripReportResult> {
+): Promise<schoolClassDayContract.ClassTripResult> {
   return bffJson("school", "POST /school/class-day/class-trips/{schoolClass}", {
     params: { schoolClass },
     body: {
@@ -323,22 +316,13 @@ export async function withdrawClassHandoverSchool(
 }
 
 /**
- * Eine Notiz, die die OGS für die Schule freigegeben hat (#4797). Die
- * Lehrkraft liest sie nur; Sichtbarkeit und Bezug bleiben Sache der OGS.
- */
-export type SharedNote = schoolClassDayContract.SharedNote;
-
-/** Die freigegebenen Notizen zu einem Kind der Klasse, neueste zuerst. */
-export type StudentSharedNotes = schoolClassDayContract.StudentSharedNotes;
-
-/**
  * Freigegebene Notizen der OGS zu einem Kind (#4797). Nur die Lehrkraft der
  * Klasse bekommt eine Antwort; jeder Abruf wird protokolliert.
  */
 export async function fetchSharedNotesSchool(
   schoolClass: string,
   studentId: string,
-): Promise<StudentSharedNotes> {
+): Promise<schoolClassDayContract.StudentSharedNotes> {
   return bffJson(
     "school",
     "GET /school/class-day/shared-notes/{schoolClass}/students/{studentId}",

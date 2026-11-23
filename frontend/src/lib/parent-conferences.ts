@@ -10,18 +10,14 @@ import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 import type * as schoolCalendarContract from "~/lib/contract/school-calendar.generated";
 import type * as sharedContract from "~/lib/contract/shared.generated";
 
-export type ParentConferenceWindow = sharedContract.ParentConferenceWindow;
-
-export type ParentConferenceSlot = schoolCalendarContract.ParentConferenceSlot;
-
 /** Ein Sprechtag, wie ihn die Lehrkraft sieht: mit Belegung. */
 export type ParentConference = Omit<
   schoolCalendarContract.ParentConferenceView,
   "date" | "breaks" | "slots"
 > & {
   readonly date: string;
-  readonly breaks: readonly ParentConferenceWindow[];
-  readonly slots: readonly ParentConferenceSlot[];
+  readonly breaks: readonly sharedContract.ParentConferenceWindow[];
+  readonly slots: readonly schoolCalendarContract.ParentConferenceSlot[];
 };
 
 export interface SchoolParentConferenceList {
@@ -35,19 +31,20 @@ export type ParentConferenceOffer = Omit<
   "date" | "free_slots"
 > & {
   readonly date: string;
-  readonly free_slots: readonly ParentConferenceWindow[];
+  readonly free_slots: readonly sharedContract.ParentConferenceWindow[];
 };
 
-/** What the form sends; the backend reads it as ParentConferenceRequest. */
-export interface ParentConferenceRequest {
-  readonly school_class: string;
-  readonly date: string;
-  readonly start_time: string;
-  readonly end_time: string;
-  readonly slot_minutes: number;
-  readonly breaks: readonly ParentConferenceWindow[];
-  readonly location?: string;
-}
+/** What the form sends: the generated request with every field it fills. */
+export type ParentConferenceRequest = Required<
+  Pick<
+    schoolCalendarContract.ParentConferenceRequest,
+    "school_class" | "start_time" | "end_time" | "slot_minutes"
+  >
+> & {
+  date: string;
+  breaks: sharedContract.ParentConferenceWindow[];
+  location?: string;
+};
 
 // Go always sets the day of a Sprechtag; the contract types calendar.Date as
 // nullable.
@@ -90,7 +87,7 @@ export async function createSchoolParentConference(
 ): Promise<ParentConference> {
   return mapConference(
     await bffJson("school", "POST /school/calendar/parent-conferences", {
-      body: { ...request, breaks: [...request.breaks] },
+      body: request,
     }),
   );
 }
@@ -105,7 +102,7 @@ export async function updateSchoolParentConference(
       "PUT /school/calendar/parent-conferences/{conferenceId}",
       {
         params: { conferenceId: id },
-        body: { ...request, breaks: [...request.breaks] },
+        body: request,
       },
     ),
   );
@@ -128,7 +125,7 @@ export interface ParentConferenceDraft {
   readonly breakStart: string;
   readonly breakEnd: string;
   // The form edits the first break; retain further API-created breaks on save.
-  readonly additionalBreaks: readonly ParentConferenceWindow[];
+  readonly additionalBreaks: readonly sharedContract.ParentConferenceWindow[];
   readonly location: string;
 }
 
@@ -225,7 +222,7 @@ export function parentConferenceRequest(
 
 /** „14:15–14:30 Uhr“ */
 export function parentConferenceWindowLabel(
-  window: ParentConferenceWindow,
+  window: sharedContract.ParentConferenceWindow,
 ): string {
   return `${window.start_time}–${window.end_time} Uhr`;
 }

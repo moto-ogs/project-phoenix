@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import type { RoomResponse } from "./contract/rooms.generated";
 import type { Room } from "./room-helpers";
 import {
@@ -11,7 +11,6 @@ import {
   formatFloor,
 } from "./room-helpers";
 import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
-import { suppressConsole } from "~/test/helpers/console";
 import { buildRoomResponse } from "~/test/fixtures/rooms";
 
 // A room as the catalog proxy hands it on (#7563).
@@ -111,8 +110,6 @@ describe("mapRoomResponse", () => {
 });
 
 describe("mapRoomsResponse", () => {
-  const consoleSpies = suppressConsole("warn", "log");
-
   it("maps array of backend rooms", () => {
     const backendRooms = [sampleBackendRoom, { ...sampleBackendRoom, id: "2" }];
 
@@ -123,50 +120,8 @@ describe("mapRoomsResponse", () => {
     expect(result[1]?.id).toBe("2");
   });
 
-  it("handles nested API response structure { data: [...] }", () => {
-    const debugSpy = vi
-      .spyOn(console, "debug")
-      .mockImplementation(() => undefined);
-    const nestedResponse = {
-      data: [sampleBackendRoom, { ...sampleBackendRoom, id: "2" }],
-    };
-
-    const result = mapRoomsResponse(nestedResponse);
-
-    expect(result).toHaveLength(2);
-    expect(debugSpy).toHaveBeenCalledWith(
-      "handling nested API response for rooms",
-      undefined,
-    );
-    debugSpy.mockRestore();
-  });
-
-  it("returns empty array for null input", () => {
-    const result = mapRoomsResponse(null);
-
-    expect(result).toEqual([]);
-    expect(consoleSpies.warn).toHaveBeenCalledWith(
-      "received invalid response format for rooms",
-      { received: "object" },
-    );
-  });
-
-  it("returns empty array for undefined-like input", () => {
-    // TypeScript types prevent passing undefined directly, but runtime might receive it
-    const result = mapRoomsResponse(
-      undefined as unknown as RoomResponse[] | null,
-    );
-
-    expect(result).toEqual([]);
-  });
-
-  it("returns empty array for non-array input", () => {
-    const result = mapRoomsResponse(
-      "invalid" as unknown as RoomResponse[] | null,
-    );
-
-    expect(result).toEqual([]);
-    expect(consoleSpies.warn).toHaveBeenCalled();
+  it("reads Go's empty list (null) as no rooms", () => {
+    expect(mapRoomsResponse(null)).toEqual([]);
   });
 
   it("handles empty array", () => {

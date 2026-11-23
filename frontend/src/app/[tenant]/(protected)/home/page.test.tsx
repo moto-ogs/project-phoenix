@@ -122,9 +122,6 @@ vi.mock("~/components/home/roster-deviation-todos", () => ({
 vi.mock("~/components/home/booking-leftover-todos", () => ({
   BookingLeftoverTodos: () => null,
 }));
-vi.mock("~/components/home/staff-notices-block", () => ({
-  StaffNoticesBlock: () => <div data-testid="staff-notices-block" />,
-}));
 vi.mock("~/components/home/day-changes-block", () => ({
   DayChangesBlock: () => <div data-testid="day-changes-block" />,
 }));
@@ -566,14 +563,13 @@ const HIDDEN_DEFAULTS: HomeLayoutOverrides = {
   "section.birthdays": false,
   "section.staff_today": false,
   "section.messages": false,
-  "section.day_changes": false,
 };
 describe("Startseite anpassen", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     layoutState.blocks = [
       { key: "tile.students_present", span: 1, col: 0, row: 0 },
-      { key: "section.staff_notices", span: 2, col: 1, row: 0 },
+      { key: "section.day_changes", span: 2, col: 1, row: 0 },
     ];
     // Der Rest der Standardansicht ist bereits entfernt, damit diese Fläche
     // genau zwei Karten hat und die Erwartungen unten lesbar bleiben.
@@ -604,16 +600,16 @@ describe("Startseite anpassen", () => {
 
   it("zeigt im Anpassen-Modus die Anordnung statt der Inhalte", () => {
     render(<HomePage />);
-    expect(screen.getByTestId("staff-notices-block")).toBeInTheDocument();
+    expect(screen.getByTestId("day-changes-block")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Anpassen" }));
 
     // Die Karten weichen Platzhaltern mit Name und Breite; gearbeitet wird
     // hier an der Anordnung, nicht am Inhalt.
-    expect(screen.queryByTestId("staff-notices-block")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("day-changes-block")).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", {
-        name: /^Hinweise der Leitung auswählen, Spalte 2, Zeile 1, Breit/,
+        name: /^Heute anders auswählen, Spalte 2, Zeile 1, Breit/,
       }),
     ).toBeInTheDocument();
     // Der Weg zu allen weiteren Bausteinen steht in der Leiste, nicht unter
@@ -643,7 +639,7 @@ describe("Startseite anpassen", () => {
       }),
     );
     startEditing();
-    select("Hinweise der Leitung");
+    select("Heute anders");
     fireEvent.click(screen.getByRole("button", { name: "Volle Breite" }));
     fireEvent.click(screen.getByRole("button", { name: "Fertig" }));
 
@@ -660,7 +656,7 @@ describe("Startseite anpassen", () => {
 
   it("ändert die Breite der ausgewählten Karte und speichert sie", async () => {
     startEditing();
-    select("Hinweise der Leitung");
+    select("Heute anders");
 
     fireEvent.click(screen.getByRole("button", { name: "Volle Breite" }));
     fireEvent.click(screen.getByRole("button", { name: "Fertig" }));
@@ -669,7 +665,7 @@ describe("Startseite anpassen", () => {
     // Über die volle Breite passt die Karte nur ab Spalte 1; die Kennzahl,
     // die dort lag, rückt unter sie.
     expect(save.mock.calls[0]?.[1]).toEqual([
-      { key: "section.staff_notices", span: 4, col: 0, row: 0 },
+      { key: "section.day_changes", span: 4, col: 0, row: 0 },
       { key: "tile.students_present", span: 1, col: 0, row: 2 },
     ]);
   });
@@ -705,12 +701,12 @@ describe("Startseite anpassen", () => {
   it("sortiert eine gezogene Karte an den Platz um, auf dem sie landet", async () => {
     startEditing();
 
-    const source = screen.getByTestId("home-block-section.staff_notices");
+    const source = screen.getByTestId("home-block-section.day_changes");
     const target = screen.getByTestId("home-block-tile.students_present");
     // Wo eine Kachel hingehört, entscheidet die Zelle unter ihrer linken
     // oberen Ecke, gerechnet aus dem Weg des Zeigers. Die Testumgebung kennt
     // kein Layout, also bekommen die Zellen ihre Lage hier: die Kennzahl in
-    // Spalte 1, die Tagesinformationen daneben (eine Zelle ist 300 breit,
+    // Spalte 1, „Heute anders“ daneben (eine Zelle ist 300 breit,
     // die Lücke 16).
     const cell = (
       element: HTMLElement,
@@ -744,7 +740,7 @@ describe("Startseite anpassen", () => {
     await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
     // Die Karte liegt jetzt auf der Zelle der Kennzahl; die rückt unter sie.
     expect(save.mock.calls[0]?.[1]).toEqual([
-      { key: "section.staff_notices", span: 2, col: 0, row: 0 },
+      { key: "section.day_changes", span: 2, col: 0, row: 0 },
       { key: "tile.students_present", span: 1, col: 0, row: 2 },
     ]);
   });
@@ -755,7 +751,7 @@ describe("Startseite anpassen", () => {
     startEditing();
 
     fireEvent.keyDown(
-      screen.getByRole("button", { name: /^Hinweise der Leitung auswählen/ }),
+      screen.getByRole("button", { name: /^Heute anders auswählen/ }),
       { key: "ArrowLeft" },
     );
     expect(
@@ -767,7 +763,7 @@ describe("Startseite anpassen", () => {
     // Pfeil links tauscht mit dem Nachbarn davor; der findet neben der
     // breiten Karte keinen Platz mehr und rückt unter sie.
     expect(save.mock.calls[0]?.[1]).toEqual([
-      { key: "section.staff_notices", span: 2, col: 0, row: 0 },
+      { key: "section.day_changes", span: 2, col: 0, row: 0 },
       { key: "tile.students_present", span: 1, col: 0, row: 2 },
     ]);
   });
@@ -788,12 +784,12 @@ describe("Startseite anpassen", () => {
     });
     // Die Karte rückt in die Lücke, die die Kennzahl lässt.
     expect(save.mock.calls[0]?.[1]).toEqual([
-      { key: "section.staff_notices", span: 2, col: 0, row: 0 },
+      { key: "section.day_changes", span: 2, col: 0, row: 0 },
     ]);
   });
 
   it("bewahrt vorübergehend nicht verfügbare gespeicherte Bausteine", async () => {
-    layoutState.policies = { "section.staff_notices": "disabled" };
+    layoutState.policies = { "section.day_changes": "disabled" };
     startEditing();
     select("Kinder anwesend");
 
@@ -802,7 +798,7 @@ describe("Startseite anpassen", () => {
 
     await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
     expect(save.mock.calls[0]?.[1]).toEqual([
-      { key: "section.staff_notices", span: 2, col: 1, row: 0 },
+      { key: "section.day_changes", span: 2, col: 1, row: 0 },
     ]);
   });
 
@@ -815,7 +811,7 @@ describe("Startseite anpassen", () => {
 
     await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
     // Ans Ende heißt: in die freien Zellen der untersten Zeilen, sonst in
-    // eine neue Zeile darunter — hier ist neben den Tagesinformationen kein
+    // eine neue Zeile darunter — hier ist neben „Heute anders“ kein
     // Platz für eine breite Karte.
     expect(save.mock.calls[0]?.[1]?.at(-1)).toEqual({
       key: "section.birthdays",

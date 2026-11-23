@@ -1,5 +1,6 @@
 // lib/usercontext-helpers.ts
 
+import type * as studentsContract from "~/lib/contract/students.generated";
 import type * as meContract from "./contract/me.generated";
 import type { EducationalGroup } from "./user-context-types";
 
@@ -16,11 +17,11 @@ export interface ActiveGroup {
   };
 }
 
-interface Person {
-  id: string;
-  first_name: string;
-  last_name: string;
-}
+/** The name of the staff member as the navigation shows it. */
+type Person = Pick<
+  meContract.DirectoryPersonSnapshot,
+  "id" | "first_name" | "last_name"
+>;
 
 /**
  * The staff record of the signed-in account. The contract sends no phone,
@@ -30,17 +31,6 @@ export interface Staff {
   id: string;
   person_id: string;
   person?: Person;
-}
-
-export interface NavigationEducationalGroup {
-  id: string;
-  name: string;
-  via_substitution?: boolean;
-  is_personal?: boolean;
-  room_id?: string;
-  room_name?: string;
-  /** Namen der Gruppenleitung, nur wenn eine zugeordnet ist (#4351). */
-  leaders?: string[];
 }
 
 // Helper functions to transform backend data to frontend types
@@ -57,7 +47,7 @@ export function mapEducationalGroupResponse(
 }
 
 export function mapNavigationEducationalGroupResponse(
-  data: NavigationEducationalGroup,
+  data: studentsContract.NavigationGroup,
 ): EducationalGroup {
   return {
     id: data.id,

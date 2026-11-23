@@ -3,28 +3,17 @@
  * Type definitions and mapping functions for IoT device management
  */
 
-import type {
-  DeviceCreationResponse,
-  DeviceRequest,
-  DeviceResponse,
-} from "~/lib/contract/iot.generated";
+import type * as iotContract from "~/lib/contract/iot.generated";
 import { LOCATION_COLORS } from "~/lib/location-helper";
 
-// Device interface matching backend structure
-export interface Device {
-  id: string;
-  device_id: string;
-  device_type: string;
-  name?: string;
+/**
+ * A device of the contract with its status narrowed to the known values;
+ * `api_key` only right after creation (`DeviceCreationResponse`).
+ */
+export type Device = Omit<iotContract.DeviceResponse, "status"> & {
   status: "active" | "inactive" | "maintenance" | "offline";
-  last_seen?: string;
-  registered_by_id?: string;
-  room_name?: string;
-  is_online: boolean;
-  created_at: string;
-  updated_at: string;
-  api_key?: string; // Only present during creation
-}
+  api_key?: string;
+};
 
 /**
  * Maps a device of the contract (`DeviceResponse`; at creation
@@ -32,7 +21,7 @@ export interface Device {
  * Identifiers arrive as decimal strings through the catalog proxy.
  */
 export function mapDeviceResponse(
-  data: DeviceResponse | DeviceCreationResponse,
+  data: iotContract.DeviceResponse | iotContract.DeviceCreationResponse,
 ): Device {
   if (!data || typeof data !== "object") {
     throw new Error("Invalid device data provided to mapper");
@@ -43,16 +32,13 @@ export function mapDeviceResponse(
   }
 
   return {
-    id: String(data.id),
+    id: data.id,
     device_id: data.device_id,
     device_type: data.device_type,
     name: data.name,
     status: data.status as Device["status"],
     last_seen: data.last_seen,
-    registered_by_id:
-      data.registered_by_id === undefined
-        ? undefined
-        : String(data.registered_by_id),
+    registered_by_id: data.registered_by_id,
     room_name: data.room_name,
     is_online: data.is_online ?? false,
     created_at: data.created_at,
@@ -66,14 +52,14 @@ export function mapDeviceResponse(
  * a new device starts active, and only Sperren/Entsperren change it
  * (#2317), so a form opened before a block cannot undo it on save.
  */
-export function prepareDeviceForBackend(data: Partial<Device>): DeviceRequest {
+export function prepareDeviceForBackend(
+  data: Partial<Device>,
+): iotContract.DeviceRequest {
   return {
     device_id: data.device_id!,
     device_type: data.device_type!,
     name: data.name,
-    registered_by_id: data.registered_by_id
-      ? data.registered_by_id
-      : undefined,
+    registered_by_id: data.registered_by_id ? data.registered_by_id : undefined,
   };
 }
 

@@ -1081,3 +1081,82 @@ describe("Abwesenheit und Vertretung bei Terminen (#7675)", () => {
     );
   });
 });
+
+describe("Termine aus dem eigenen Kalender (#7663)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    phone.value = false;
+    setTestClock("2026-09-09T12:00:00+02:00");
+  });
+
+  const appointment = (
+    kind: string,
+    title: string,
+    extra: Partial<NonNullable<DayChange["appointment"]>> = {},
+    entry: Partial<DayChange> = {},
+  ) =>
+    change({
+      kind,
+      section: "you",
+      link: { target: "calendar", staffId: null },
+      startsAt: "2026-09-09T15:00:00+02:00",
+      endsAt: "2026-09-09T16:00:00+02:00",
+      appointment: {
+        id: title,
+        occurrenceDate: "2026-09-09",
+        title,
+        location: "Raum 1",
+        locationChanged: false,
+        timeChanged: false,
+        ...extra,
+      },
+      ...entry,
+    });
+
+  it("zeigt Absage, anderen Ort und andere Zeit unter „Betrifft dich“", () => {
+    serve({
+      entries: [
+        appointment("appointment_cancelled", "Teamsitzung"),
+        appointment("appointment_changed", "AG-Treffen", {
+          location: "Raum 12",
+          locationChanged: true,
+        }),
+        appointment("appointment_changed", "Planung", {
+          locationChanged: true,
+          timeChanged: true,
+          location: null,
+        }),
+        appointment("appointment_changed", "  ", { timeChanged: true }),
+      ],
+    });
+    render(<DayChangesBlock />);
+
+    const mine = screen.getByRole("region", { name: "Betrifft dich" });
+    expect(rowTexts(mine)).toEqual([
+      "„Teamsitzung“ fällt heute aus.15:00 bis 16:00 Uhr",
+      "„AG-Treffen“ ist heute an einem anderen Ort. Neuer Ort: Raum 12.15:00 bis 16:00 Uhr",
+      "„Planung“ ist heute zu einer anderen Zeit und an einem anderen Ort.15:00 bis 16:00 Uhr",
+      "Ein Termin ist heute zu einer anderen Zeit.15:00 bis 16:00 Uhr",
+    ]);
+    const link = screen.getByRole("link", {
+      name: /„Teamsitzung“ fällt heute aus\./,
+    });
+    expect(link).toHaveAttribute("href", "/schule/calendar");
+
+    fireEvent.click(link);
+    expect(trackEvent).toHaveBeenCalledWith("day_changes_entry_clicked", {
+      day_change_kind: "appointment_cancelled",
+    });
+  });
+
+  it("nennt ausgefallene Termine und zeigt keine Entwarnung", () => {
+    serve({ failedSources: ["appointments"] });
+    render(<DayChangesBlock />);
+    expect(
+      screen.getByText("Deine Termine konnten gerade nicht geladen werden."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Heute läuft alles wie geplant."),
+    ).not.toBeInTheDocument();
+  });
+});

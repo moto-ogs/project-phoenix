@@ -1,4 +1,6 @@
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import type { Translations } from "~/lib/enrollment-translations";
+import { translationsFromContract } from "~/lib/enrollment-form-schema-api";
 import { WEEKDAY_CODES, weekdayShortLabel } from "~/lib/weekdays";
 
 export interface EnrollmentChangeRequestDiffInput {
@@ -38,6 +40,32 @@ interface EnrollmentFormLabelLegalBlock {
 export interface EnrollmentFormLabels {
   readonly fields: EnrollmentFormLabelField[];
   readonly legal_blocks: EnrollmentFormLabelLegalBlock[];
+}
+
+/** The form labels of the contract, translations without null languages. */
+export function formLabelsFromContract(
+  labels: enrollmentContract.FormLabelsResponse,
+): EnrollmentFormLabels {
+  return {
+    fields: (labels.fields ?? []).map(
+      ({ options, translations, ...field }) => ({
+        ...field,
+        ...(options && {
+          options: options.map(({ translations: texts, ...option }) => ({
+            ...option,
+            translations: translationsFromContract(texts),
+          })),
+        }),
+        translations: translationsFromContract(translations),
+      }),
+    ),
+    legal_blocks: (labels.legal_blocks ?? []).map(
+      ({ translations, ...block }) => ({
+        ...block,
+        translations: translationsFromContract(translations),
+      }),
+    ),
+  };
 }
 
 interface EnrollmentChangeRequestDiffRow {

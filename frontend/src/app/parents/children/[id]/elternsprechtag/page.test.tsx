@@ -12,11 +12,11 @@ import {
   listMyChildren,
   getChildFeatures,
 } from "~/lib/parent-api";
-import type { Child, ChildFeatures } from "~/lib/parent-api";
 import type { ParentConferenceOffer } from "~/lib/parent-conferences";
 import { catalogText } from "~/test/error-catalog-text";
 import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
 import ParentConferencePage from "./page";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 vi.unmock("swr");
 vi.mock("~/lib/parent-api", () => ({
@@ -62,9 +62,9 @@ describe("Elternsprechtag in der Eltern-App (#4801)", () => {
     vi.resetAllMocks();
     vi.mocked(getChildFeatures).mockResolvedValue({
       conference_book_allowed: true,
-    } as ChildFeatures);
+    } as parentMeContract.ChildFeaturesResponse);
     vi.mocked(listMyChildren).mockResolvedValue([
-      { student_id: "42", first_name: "Mia" } as Child,
+      { student_id: "42", first_name: "Mia" } as parentMeContract.ChildResponse,
     ]);
   });
 
@@ -104,7 +104,7 @@ describe("Elternsprechtag in der Eltern-App (#4801)", () => {
     async (booked) => {
       vi.mocked(getChildFeatures).mockResolvedValue({
         conference_book_allowed: false,
-      } as ChildFeatures);
+      } as parentMeContract.ChildFeaturesResponse);
       vi.mocked(fetchChildParentConferences).mockResolvedValue([
         {
           ...offer,
@@ -170,15 +170,17 @@ describe("Elternsprechtag in der Eltern-App (#4801)", () => {
 
   it("keeps this child's page when only a sibling's features fail", async () => {
     vi.mocked(listMyChildren).mockResolvedValue([
-      { student_id: "42", first_name: "Mia" } as Child,
-      { student_id: "43", first_name: "Ben" } as Child,
+      { student_id: "42", first_name: "Mia" } as parentMeContract.ChildResponse,
+      { student_id: "43", first_name: "Ben" } as parentMeContract.ChildResponse,
     ]);
     vi.mocked(getChildFeatures).mockImplementation((studentId) =>
       studentId === "43"
         ? Promise.reject(
             new ApiError("offline", 503, { code: "general.unavailable" }),
           )
-        : Promise.resolve({ conference_book_allowed: true } as ChildFeatures),
+        : Promise.resolve({
+            conference_book_allowed: true,
+          } as parentMeContract.ChildFeaturesResponse),
     );
     vi.mocked(fetchChildParentConferences).mockResolvedValue([offer]);
     await renderPage();

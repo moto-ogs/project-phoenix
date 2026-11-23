@@ -17,7 +17,7 @@ import {
 import type {
   AdminRequestChild,
   AdminRequestChildOffering,
-  AdminRequestSchemaField,
+  AdminRequestDetail,
   AdminRequestSummary,
 } from "~/lib/enrollment-admin-api";
 import { formatOfferingPrice } from "~/lib/care-offering-format";
@@ -26,6 +26,7 @@ import { formatCalendarDate } from "~/lib/localized-date-format";
 import { childrenConcept } from "~/lib/concepts/children";
 import { parentsConcept } from "~/lib/concepts/parents";
 import { weekdayShortList } from "~/lib/weekdays";
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 
 export function formatDateTime(
   value: string,
@@ -51,7 +52,10 @@ const CONSENT_LABELS: Record<string, string> = {
 
 export function RequestExtraSection({
   request,
-}: Readonly<{ request: AdminRequestSummary }>) {
+}: Readonly<{
+  request: AdminRequestSummary &
+    Partial<Pick<AdminRequestDetail, "uploads" | "can_view_uploads">>;
+}>) {
   const guardianFields = (request.schema_fields ?? []).filter(
     (f) => !f.applies_to_child,
   );
@@ -282,7 +286,7 @@ export function ChildExtraFields({
   schemaFields,
 }: Readonly<{
   child: AdminRequestChild;
-  schemaFields?: AdminRequestSchemaField[];
+  schemaFields?: enrollmentContract.AdminRequestSchemaField[];
 }>) {
   const childFields = (schemaFields ?? []).filter((f) => f.applies_to_child);
   const filled = childFields

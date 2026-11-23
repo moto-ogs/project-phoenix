@@ -67,12 +67,12 @@ export interface SupervisionDashboardOptions {
 export function releasedRoomTargetedByUrl(options: {
   readonly sessionParam: string | null;
   readonly roomParam: string | null;
-  readonly rooms: readonly Pick<ActiveSupervisionRoom, "id" | "room_id">[];
+  readonly rooms: readonly Pick<ActiveSupervisionRoom, "id" | "roomId">[];
   readonly openRoomIds: ReadonlySet<string>;
 }): string | null {
   const { sessionParam, roomParam, rooms, openRoomIds } = options;
   if (sessionParam) {
-    const roomId = rooms.find((room) => room.id === sessionParam)?.room_id;
+    const roomId = rooms.find((room) => room.id === sessionParam)?.roomId;
     return roomId && openRoomIds.has(roomId) ? roomId : null;
   }
   return roomParam && openRoomIds.has(roomParam) ? roomParam : null;
@@ -449,8 +449,8 @@ export function useSupervisionDashboard(
     }
     if (!roomParam) return false;
     return (
-      allRoomsBase.some((room) => room.room_id === roomParam) &&
-      resolvedRoom?.room_id !== roomParam
+      allRoomsBase.some((room) => room.roomId === roomParam) &&
+      resolvedRoom?.roomId !== roomParam
     );
   }, [
     allRoomsBase,
@@ -498,8 +498,8 @@ export function useSupervisionDashboard(
     if (!resolvedRoom) return [];
     if (selectedRoomId && selectedRoomId !== resolvedRoom.id) return [];
     return mapVisitsToSupervisionStudents(snapshot.firstRoomVisits, {
-      roomName: resolvedRoom.room_name,
-      roomColor: resolvedRoom.room_color,
+      roomName: resolvedRoom.roomName,
+      roomColor: resolvedRoom.roomColor,
       groupNameToId: groupNameToIdMap,
       teacherHints: teacherHintsByStudent,
     });
@@ -522,7 +522,7 @@ export function useSupervisionDashboard(
       return allRoomsBase;
     return allRoomsBase.map((room) =>
       room.id === resolvedRoom.id
-        ? { ...room, student_count: students.length }
+        ? { ...room, studentCount: students.length }
         : room,
     );
   }, [
@@ -574,10 +574,10 @@ export function useSupervisionDashboard(
     }
     if (!roomParam) return false;
     return (
-      allRooms.some((room) => room.room_id === roomParam) &&
+      allRooms.some((room) => room.roomId === roomParam) &&
       // A selected session inside the named room settles a room-keyed URL —
       // parallel sessions share the room, so never wait for a "better" match.
-      currentRoom?.room_id !== roomParam
+      currentRoom?.roomId !== roomParam
     );
   })();
 
@@ -814,8 +814,8 @@ export function useSupervisionDashboard(
       const firstRoom = allRoomsBase[0];
       if (firstRoom && ownRooms) {
         memory.write("supervision-last-session", firstRoom.id);
-        if (firstRoom.room_id) {
-          memory.write("sidebar-last-room", firstRoom.room_id);
+        if (firstRoom.roomId) {
+          memory.write("sidebar-last-room", firstRoom.roomId);
         }
       }
     }

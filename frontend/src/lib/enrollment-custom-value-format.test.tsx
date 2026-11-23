@@ -1,8 +1,8 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import type { AdminRequestSchemaField } from "~/lib/enrollment-admin-api";
 import { formatCustomValue } from "./enrollment-custom-value-format";
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 
 describe("formatCustomValue", () => {
   it("drops empty values and formats primitive answers", () => {
@@ -166,8 +166,8 @@ describe("formatCustomValue", () => {
 describe("formatCustomValue on the admin review page", () => {
   const field = (
     type: string,
-    overrides: Partial<AdminRequestSchemaField> = {},
-  ): AdminRequestSchemaField => ({
+    overrides: Partial<enrollmentContract.AdminRequestSchemaField> = {},
+  ): enrollmentContract.AdminRequestSchemaField => ({
     key: "student.pickup_status",
     label: "Abholregelung",
     type,

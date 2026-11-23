@@ -40,8 +40,8 @@ import {
   fetchSurveys,
   fetchSurveysToAnswer,
   type Survey,
-  type SurveyToAnswer,
 } from "~/lib/surveys-api";
+import type * as surveysContract from "~/lib/contract/surveys.generated";
 import { useTenantRouter } from "~/lib/tenant-router";
 import { pollsConcept } from "~/lib/concepts/polls";
 
@@ -82,10 +82,11 @@ function SurveysContent() {
   const view = viewFromParam(searchParams.get("ansicht"), canManage);
 
   const [creating, setCreating] = useState(false);
-  const [answering, setAnswering] = useState<SurveyToAnswer | null>(null);
+  const [answering, setAnswering] =
+    useState<surveysContract.surveyToAnswerResponse | null>(null);
   const [action, setAction] = useState<LifecycleAction>(null);
 
-  const toAnswer = useSWRAuth<SurveyToAnswer[]>(
+  const toAnswer = useSWRAuth<surveysContract.surveyToAnswerResponse[]>(
     tenantAdminKeys.surveysToAnswer(),
     fetchSurveysToAnswer,
     { revalidateOnFocus: false, keepPreviousData: true },

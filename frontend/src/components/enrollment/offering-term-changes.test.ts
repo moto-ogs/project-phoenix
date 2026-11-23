@@ -11,6 +11,8 @@ function offering(
     offering_id: "7",
     offering_name: "Ganztag",
     days_of_week_mode: "fixed",
+    includes_lunch: false,
+    includes_holiday_care: false,
     submitted_terms: {
       name: "Ganztag",
       days_of_week_mode: "fixed",

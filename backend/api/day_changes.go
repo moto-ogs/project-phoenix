@@ -114,8 +114,10 @@ type DayChangesSources struct {
 	// ClassArrivals is Timetable's class arrival query; its day read gives
 	// the class-wide arrival exceptions of the day (#7681).
 	ClassArrivals timetable.ClassArrivalQuery
-	Today         func() calendar.Date
-	Logger        *slog.Logger
+	// Appointments is Appointments' read of the own calendar (#7663).
+	Appointments dayChangesAppointmentReads
+	Today        func() calendar.Date
+	Logger       *slog.Logger
 }
 
 // NewDayChanges binds the sources to the projection's ports.
@@ -138,6 +140,9 @@ func NewDayChanges(sources DayChangesSources) (daychangesview.Query, error) {
 	if sources.Assignments == nil || sources.ClassArrivals == nil {
 		return nil, fmt.Errorf("%w: class sources", daychangesview.ErrDependencies)
 	}
+	if sources.Appointments == nil {
+		return nil, fmt.Errorf("%w: appointment source", daychangesview.ErrDependencies)
+	}
 	classDay, err := timetable.ClassArrivalDayOf(sources.ClassArrivals)
 	if err != nil {
 		return nil, err
@@ -145,15 +150,16 @@ func NewDayChanges(sources DayChangesSources) (daychangesview.Query, error) {
 	// One name read per request for the sources that name staff (#7675).
 	sources.Names = memoStaffNames{inner: sources.Names}
 	return daychangesview.New(daychangesview.Dependencies{
-		Today:      sources.Today,
-		Isolation:  dayChangesSavepoints{},
-		Staff:      dayChangesStaff{sources: sources},
-		Children:   dayChangesChildren{sources: sources},
-		Notices:    dayChangesNotices{reads: sources.Notices},
-		Closing:    dayChangesClosingDays{reads: sources.ClosingDays},
-		Activities: dayChangesActivities{sources: sources},
-		Classes:    dayChangesClasses{sources: sources, classDay: classDay},
-		Logger:     sources.Logger,
+		Today:        sources.Today,
+		Isolation:    dayChangesSavepoints{},
+		Staff:        dayChangesStaff{sources: sources},
+		Children:     dayChangesChildren{sources: sources},
+		Notices:      dayChangesNotices{reads: sources.Notices},
+		Closing:      dayChangesClosingDays{reads: sources.ClosingDays},
+		Activities:   dayChangesActivities{sources: sources},
+		Classes:      dayChangesClasses{sources: sources, classDay: classDay},
+		Appointments: dayChangesAppointments{caller: sources.Caller, reads: sources.Appointments},
+		Logger:       sources.Logger,
 	})
 }
 

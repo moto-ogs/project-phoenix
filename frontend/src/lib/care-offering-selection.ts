@@ -6,16 +6,22 @@
  * this copy only previews them while a form is being filled in.
  */
 
-export interface SelectableOffering {
-  readonly id: string;
-  readonly days_of_week_mode: "fixed" | "parent_choice";
-  readonly available_days: readonly string[];
-  readonly is_required: boolean;
-  readonly includes_lunch: boolean;
-  readonly counts_as_care?: boolean;
-  readonly auto_add_grade_levels?: readonly number[];
-  readonly auto_add_trigger_offering_ids?: readonly string[];
-}
+import type { CareOffering } from "./care-offering-api";
+
+/** The parts of an offering its selection rules read. */
+export type SelectableOffering = Readonly<
+  Pick<
+    CareOffering,
+    | "id"
+    | "days_of_week_mode"
+    | "available_days"
+    | "is_required"
+    | "includes_lunch"
+    | "counts_as_care"
+    | "auto_add_grade_levels"
+    | "auto_add_trigger_offering_ids"
+  >
+>;
 
 export interface CareSelection {
   readonly offeringIds: ReadonlySet<string>;

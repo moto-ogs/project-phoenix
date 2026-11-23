@@ -123,7 +123,7 @@ describe("tenant-api", () => {
 
       expect(global.fetch).toHaveBeenCalledWith(
         "/api/auth/tenant/resolve?slug=demo-school",
-        undefined,
+        { method: "GET", credentials: "include", cache: "no-store" },
       );
       expect(result).toEqual({
         careFacilityTerm: "OGS",
