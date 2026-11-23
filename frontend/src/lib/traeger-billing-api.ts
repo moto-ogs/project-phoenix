@@ -213,6 +213,8 @@ export interface BillingRunDetail extends BillingRun {
   readonly letters: BillingLetters | null;
   /** The due dates of the run per payment method (#4689). */
   readonly dueDates?: readonly RunDueDate[];
+  /** The read-state token of `dueDates` a change sends back (ADR 0311). */
+  readonly dueDatesVersion?: string;
   /**
    * The kind of document the run issues (#4688): before the release the
    * kind the release would freeze, after it the frozen one.
@@ -430,6 +432,7 @@ function detailFromBackend(
     numberRangeSet: run.number_range_set,
     letters: run.letters ? lettersFromBackend(run.letters) : null,
     dueDates: runDueDatesFromBackend(run.due_dates),
+    dueDatesVersion: run.due_dates_version,
     documentKind: run.document_kind,
     legalRemedyMissing: run.legal_remedy_missing,
     fingerprint: run.fingerprint,

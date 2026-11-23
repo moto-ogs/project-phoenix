@@ -38,6 +38,7 @@ export default function TraegerSollMappingPage() {
     loading,
     error: loadError,
     mutate,
+    reloadOrThrow,
   } = useTraegerResource(
     traegerBillingKeys.exportSettings(),
     fetchExportSettings,
@@ -120,6 +121,7 @@ export default function TraegerSollMappingPage() {
               key={version}
               settings={settings}
               mapping={settings.mapping}
+              reload={reloadOrThrow}
               onCancel={() => router.push(traegerPath(EXPORTS_PATH))}
               onSaved={(saved) => {
                 setSettings(saved);

@@ -56,6 +56,9 @@ type CostBearer struct {
 	Active        bool      `json:"active"`
 	InUse         bool      `json:"in_use"`
 	UpdatedAt     time.Time `json:"updated_at"`
+	// Version is the read-state token of the cost bearer (ADR 0311): a
+	// change sends it back as expected_version.
+	Version string `json:"version"`
 }
 
 // CostBearerInput is a cost bearer as the Abrechnung writes it.

@@ -13,7 +13,10 @@ import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { Input } from "~/components/ui/input";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { berlinTodayISO } from "~/lib/date-helpers";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import {
   type CareEvidence,
   type CareEvidenceContract,
@@ -49,56 +52,90 @@ export interface EvidenceTarget {
   readonly evidence: CareEvidence | null;
 }
 
+/** The form of an evidence; a new one starts today. */
+function draftOf(evidence: CareEvidence | null, today: string): Draft {
+  return {
+    ruleId: evidence?.ruleId ?? "",
+    evidence: evidence?.evidence ?? "",
+    checkedOn: evidence?.checkedOn ?? today,
+    validFrom: evidence?.validFrom ?? today,
+    validUntil: evidence?.validUntil ?? "",
+  };
+}
+
 export function CareEvidenceModal({
   data,
   target,
+  reload,
   onClose,
   onSaved,
 }: Readonly<{
   data: CareEvidenceSet;
   /** The contract, kind and evidence to change; null keeps it closed. */
   target: EvidenceTarget | null;
+  /** Reads the evidences again; rejects when the read fails (ADR 0311). */
+  reload: () => Promise<CareEvidenceSet>;
   onClose: () => void;
   onSaved: (data: CareEvidenceSet) => void;
 }>) {
   const today = berlinTodayISO();
-  const [draft, setDraft] = useState<Draft>({
-    ruleId: "",
-    evidence: "",
-    checkedOn: today,
-    validFrom: today,
-    validUntil: "",
-  });
+  const [created, setCreated] = useState<Draft>(() => draftOf(null, today));
+  // A change rests on the evidence as it was read (ADR 0311): a newer read
+  // refills the form only while untouched, the save sends its version, and
+  // after a refusal the stored evidence shows.
+  const changedId = target?.evidence?.id ?? null;
+  const evidenceIn = (set: CareEvidenceSet) =>
+    set.contracts
+      .flatMap((contract) => contract.evidences)
+      .find((evidence) => evidence.id === changedId);
+  const stored = useDraftOn<CareEvidence, Draft, string, CareEvidenceSet>(
+    {
+      opening: changedId,
+      data: evidenceIn(data),
+      reload: async () => {
+        const found = evidenceIn(await reload());
+        if (!found) throw new Error("care evidence is gone");
+        return found;
+      },
+    },
+    {
+      token: (evidence) => evidence.version,
+      toDraft: (evidence) => draftOf(evidence, today),
+      answer: (saved) => evidenceIn(saved),
+    },
+  );
+  const draft = changedId ? (stored.draft ?? created) : created;
   const save = useFormModalPending(target !== null);
   const saving = save.pending;
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
   const { clear: clearErrors } = formErrors;
+  const form = useReadDraftForm(
+    changedId ? stored : null,
+    formErrors,
+    "den Nachweis",
+  );
   const { success } = useToast();
 
   useEffect(() => {
     if (!target) return;
-    const evidence = target.evidence;
-    setDraft({
-      ruleId: evidence?.ruleId ?? "",
-      evidence: evidence?.evidence ?? "",
-      checkedOn: evidence?.checkedOn ?? today,
-      validFrom: evidence?.validFrom ?? today,
-      validUntil: evidence?.validUntil ?? "",
-    });
+    setCreated(draftOf(null, today));
     clearErrors();
   }, [target, today, clearErrors]);
 
   const set = (patch: Partial<Draft>) =>
-    setDraft((current) => ({ ...current, ...patch }));
+    changedId
+      ? stored.setDraft((current) => ({ ...current, ...patch }))
+      : setCreated((current) => ({ ...current, ...patch }));
   const income = target?.kind === "income_level";
   const child = target
     ? `${target.contract.childFirstName} ${target.contract.childLastName}`
     : "";
 
   const submit = async () => {
-    if (!target) return;
-    formErrors.clear();
+    // Enter submits too: nothing goes out before the stored state is
+    // read, and the shown error stays.
+    if (!target || !form.begin()) return;
     const fieldErrors: Record<string, string> = {};
     if (income && !draft.ruleId) {
       fieldErrors.rule_id = "Bitte eine Stufe wählen.";
@@ -115,26 +152,42 @@ export function CareEvidenceModal({
       formErrors.invalid("Bitte prüfe die markierten Felder.", fieldErrors);
       return;
     }
+    const input = {
+      contractId: target.contract.contractId,
+      kind: target.kind,
+      ruleId: income ? draft.ruleId : null,
+      evidence: draft.evidence.trim(),
+      checkedOn: draft.checkedOn,
+      validFrom: draft.validFrom,
+      validUntil: draft.validUntil || null,
+    };
     await save.run(async (op) => {
-      try {
-        const result = await saveCareEvidence(target.evidence?.id ?? null, {
-          contractId: target.contract.contractId,
-          kind: target.kind,
-          ruleId: income ? draft.ruleId : null,
-          evidence: draft.evidence.trim(),
-          checkedOn: draft.checkedOn,
-          validFrom: draft.validFrom,
-          validUntil: draft.validUntil || null,
-        });
-        if (op.isCurrent()) onSaved(result);
+      const result = changedId
+        ? await stored.submit((version) =>
+            saveCareEvidence(changedId, input, version),
+          )
+        : await saveCareEvidence(null, input).then(
+            (saved) => ({ ok: true, saved }) as const,
+            (error: unknown) => ({ ok: false, error, refused: false }) as const,
+          );
+      if (result.ok) {
+        if (op.isCurrent()) onSaved(result.saved);
         success(`Der Nachweis für ${child} ist gespeichert.`);
-      } catch (err) {
-        logger.error("care_evidence_save_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (!op.isCurrent()) return;
-        void formErrors.show(err, { object: "die Angabe zum Nachweis" });
+        return;
       }
+      logger.error("care_evidence_save_failed", {
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
+      });
+      if (!op.isCurrent()) return;
+      // Changed since it was read: `reload` shows the stored evidence
+      // instead of the draft, without a retry (ADR 0311).
+      void formErrors.show(result.error, {
+        object: "die Angabe zum Nachweis",
+        reload: "reload" in result ? result.reload : undefined,
+      });
     });
   };
 
@@ -166,6 +219,7 @@ export function CareEvidenceModal({
           void submit();
         }}
       >
+        <LoadErrorAlert error={form.loadError} />
         {income ? (
           <CustomSelect
             id="care-evidence-level"

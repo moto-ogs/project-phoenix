@@ -389,7 +389,9 @@ function EditReportSection({
   const draft = reportDraft.draft;
 
   const save = async () => {
-    if (!draft) return;
+    // Enter submits past the blocked button: nothing goes out before the
+    // stored report is read, and the shown error stays (ADR 0311).
+    if (!draft || !reportDraft.canSubmit) return;
     const errors = accidentReportDraftErrors(draft);
     if (Object.keys(errors).length > 0) {
       formError.invalid("Bitte fülle die markierten Felder aus.", errors);

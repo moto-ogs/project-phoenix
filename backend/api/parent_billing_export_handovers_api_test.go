@@ -316,7 +316,7 @@ func TestNumberedSollstellungRepeatsTheSameContent(t *testing.T) {
 	contract := careContract(t, f.db, f.office.organization, f.office.schools[0], "Ben", sepaDebitMonth, sjrServices()...)
 	createMandate(t, f, mandateBody(contract, "SJR-H-BEN"))
 	run := releaseDebitRun(t, f, sepaDebitMonth)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, financeExportsPath+"/settings/sollstellung", map[string]any{
+	rec := putSollstellung(t, f.traeger, f.office.token, map[string]any{
 		"columns":   []map[string]any{{"field": "invoice_number", "header": "Nr"}, {"field": "file_number", "header": "Datei"}},
 		"delimiter": ";", "decimal_separator": ",", "date_format": "dd.mm.yyyy", "encoding": "utf-8", "header_row": true,
 		"file_name_pattern": "soll-{NR}.csv",

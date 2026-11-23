@@ -358,7 +358,8 @@ func TestCareContractImportTakesTheOGSConnectMasterDataBeforeItsMandates(t *test
 	// contract import kept and stores the mandate for that contract.
 	billing := traegerColleague(t, f.reviewFixture, identityaccess.TraegerRoleBilling)
 	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, sepaCreditorPath,
-		map[string]any{"creditor_id": sepaCreditorID, "prenotification_days": 14, "missing_mandate": "transfer"})
+		withVersion(map[string]any{"creditor_id": sepaCreditorID, "prenotification_days": 14, "missing_mandate": "transfer"},
+			creditorVersion(t, f.traeger, billing)))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	rec = importForm(t, f.traeger, billing, sepaImportPreviewPath, "csv-export-stammdaten.csv", file, ogsConnectMapping())
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())

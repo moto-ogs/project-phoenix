@@ -16,6 +16,7 @@ export interface SEPACreditor {
   prenotification_days: number;
   missing_mandate: string;
   updated_at: string | null;
+  version: string;
 }
 
 export const SEPACreditorSchema: z.ZodType<SEPACreditor, unknown> = object<SEPACreditor>({
@@ -23,6 +24,7 @@ export const SEPACreditorSchema: z.ZodType<SEPACreditor, unknown> = object<SEPAC
   prenotification_days: safeInt,
   missing_mandate: str,
   updated_at: nullable(instant),
+  version: str,
 });
 
 /** Go: parentbillinghttp.SEPACreditorRequest */
@@ -30,6 +32,7 @@ export interface SEPACreditorRequest {
   creditor_id?: string;
   prenotification_days?: number;
   missing_mandate?: string;
+  expected_version?: string;
 }
 
 export const routes = {

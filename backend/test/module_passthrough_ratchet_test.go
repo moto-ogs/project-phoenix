@@ -271,7 +271,7 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// retention, which validate and evaluate the Träger again (+2).
 	// Raised by ADR 0209: the billing lock B of the holiday allocation
 	// workflow, which validates the Träger and maps the lock error (+1).
-	"modules/parentbilling":    12,
+	"modules/parentbilling":    11,
 	"modules/peopledirectory":  192, // #7904: the single phone edits fold into one guardian entry save (-3); #6840: DeletePerson checks live profiles (-1); #7104: the rosters and the retention read the owner's clock (-2); #2352: dead guardian lists removed (-2); #7808: the group routes read no persons (-2); Lowered by #7808: the test-only cross-tenant visitor reads left (-3)
 	"modules/requestreview":    15,
 	"modules/schedulerruntime": 4,

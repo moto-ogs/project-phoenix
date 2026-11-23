@@ -17,6 +17,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -87,6 +88,8 @@ func (r ruleRow) rule() parentbilling.ContributionRule {
 		CountsFamilyChildren: r.CountsFamilyChildren,
 		TariffSiblingPrice:   r.TariffSiblingPrice,
 		SiblingAllChildren:   r.SiblingAllChildren,
+		// A trigger stamps updated_at on every change of the row.
+		Version: readstate.Of(r.UpdatedAt),
 	}
 }
 
@@ -136,6 +139,25 @@ func (s *Store) InsertContributionRule(ctx context.Context, organizationID int64
 	row := newRuleRow(organizationID, input)
 	if _, err := db.NewInsert().Model(row).Returning("id, updated_at").Exec(ctx); err != nil {
 		return parentbilling.ContributionRule{}, ruleWriteError(err)
+	}
+	return row.rule(), nil
+}
+
+// LockContributionRule reads a rule of one service under a row lock until
+// the transaction ends; a missing one is ErrContributionRuleNotFound.
+func (s *Store) LockContributionRule(ctx context.Context, organizationID, ruleID int64, service string) (parentbilling.ContributionRule, error) {
+	db, err := traegerDB(ctx, organizationID)
+	if err != nil {
+		return parentbilling.ContributionRule{}, err
+	}
+	var row ruleRow
+	if err := db.NewSelect().Model(&row).
+		Where("id = ?", ruleID).Where("organization_id = ?", organizationID).Where("service = ?", service).
+		For("UPDATE").Scan(ctx); err != nil {
+		if isNoRows(err) {
+			return parentbilling.ContributionRule{}, parentbilling.ErrContributionRuleNotFound
+		}
+		return parentbilling.ContributionRule{}, fmt.Errorf("lock contribution rule: %w", err)
 	}
 	return row.rule(), nil
 }

@@ -54,6 +54,9 @@ func (rs *FamilyChildrenResource) Router(protectedTraegerRoutes func(chi.Router,
 // FamilyChildrenRequest is the body of PUT /traeger/family-children.
 type FamilyChildrenRequest struct {
 	capability.FamilyChildrenInput
+	// ExpectedVersion is the version of the family's numbers as they were
+	// read (ADR 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // Bind accepts the body; the Owner validates it.
@@ -85,7 +88,7 @@ func (rs *FamilyChildrenResource) confirm(w http.ResponseWriter, r *http.Request
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeParentBillingFamilyChildrenInvalid))
 		return
 	}
-	set, err := rs.office.ConfirmFamilyChildren(r.Context(), reviewer, req.FamilyChildrenInput)
+	set, err := rs.office.ConfirmFamilyChildren(r.Context(), reviewer, req.FamilyChildrenInput, req.ExpectedVersion)
 	if err != nil {
 		tenant.MarkRollback(r.Context())
 		renderFamilyChildrenError(w, r, err)

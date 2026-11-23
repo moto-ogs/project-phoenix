@@ -31,6 +31,7 @@ const evidence = (
   from: string,
   until: string | null,
 ): CareEvidence => ({
+  version: "v1",
   id,
   contractId: "1",
   kind: "single_parent",

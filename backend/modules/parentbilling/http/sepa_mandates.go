@@ -74,6 +74,9 @@ type SEPACreditorRequest struct {
 	CreditorID          string `json:"creditor_id"`
 	PrenotificationDays int    `json:"prenotification_days"`
 	MissingMandate      string `json:"missing_mandate"`
+	// ExpectedVersion is the version of the creditor as it was read (ADR
+	// 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // Bind accepts the body; the Owner validates the creditor.
@@ -128,7 +131,7 @@ func (rs *SEPAMandateResource) saveCreditor(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	creditor, err := rs.mandates.SaveSEPACreditor(r.Context(), reviewer, capability.SEPACreditor{CreditorID: req.CreditorID,
-		PrenotificationDays: req.PrenotificationDays, MissingMandate: req.MissingMandate})
+		PrenotificationDays: req.PrenotificationDays, MissingMandate: req.MissingMandate}, req.ExpectedVersion)
 	if err != nil {
 		tenant.MarkRollback(r.Context())
 		renderMandateError(w, r, err, common.CodeParentBillingSepaCreditorInvalid)

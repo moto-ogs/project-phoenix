@@ -1,6 +1,8 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
+import { ApiError } from "~/lib/api-error";
+import { catalogText } from "~/test/error-catalog-text";
 import type { CareRule, CareRuleSet } from "~/lib/traeger-care-reductions-api";
 import { CareRuleModal } from "./care-rule-modal";
 
@@ -8,6 +10,7 @@ const { saveCareRule } = vi.hoisted(() => ({ saveCareRule: vi.fn() }));
 vi.mock("~/lib/traeger-care-reductions-api", () => ({ saveCareRule }));
 
 const rule: CareRule = {
+  version: "v1",
   id: "7",
   kind: "sibling",
   name: "Geschwister",
@@ -38,6 +41,7 @@ describe("CareRuleModal", () => {
           data={data}
           open={{ kind: "sibling", rule }}
           currentMonth="2026-09-01"
+          reload={async () => data}
           onClose={vi.fn()}
           onSaved={vi.fn()}
         />
@@ -54,6 +58,7 @@ describe("CareRuleModal", () => {
           name: "Geschwister neu",
           careOfferingIds: ["999"],
         }),
+        "v1",
       ),
     );
   });
@@ -73,6 +78,7 @@ describe("CareRuleModal", () => {
             },
           }}
           currentMonth="2026-09-01"
+          reload={async () => data}
           onClose={vi.fn()}
           onSaved={vi.fn()}
         />
@@ -92,6 +98,7 @@ describe("CareRuleModal", () => {
           tariffSiblingPrice: true,
           discountBasisPoints: null,
         }),
+        "v1",
       ),
     );
   });
@@ -103,6 +110,7 @@ describe("CareRuleModal", () => {
           data={data}
           open={{ kind: "sibling", rule }}
           currentMonth="2026-09-01"
+          reload={async () => data}
           onClose={vi.fn()}
           onSaved={vi.fn()}
         />
@@ -121,6 +129,7 @@ describe("CareRuleModal", () => {
           siblingFromChild: 2,
           siblingAllChildren: false,
         }),
+        "v1",
       ),
     );
   });
@@ -133,6 +142,7 @@ describe("CareRuleModal", () => {
           data={data}
           open={{ kind: "sibling", rule }}
           currentMonth="2026-09-01"
+          reload={async () => data}
           onClose={vi.fn()}
           onSaved={vi.fn()}
         />
@@ -166,6 +176,7 @@ describe("CareRuleModal", () => {
           siblingAllChildren: true,
           countsFamilyChildren: true,
         }),
+        "v1",
       ),
     );
   });
@@ -180,6 +191,7 @@ describe("CareRuleModal", () => {
             rule: { ...rule, siblingFromChild: 3, siblingAllChildren: true },
           }}
           currentMonth="2026-09-01"
+          reload={async () => data}
           onClose={vi.fn()}
           onSaved={vi.fn()}
         />
@@ -207,6 +219,7 @@ describe("CareRuleModal", () => {
           data={twoSchools}
           open={{ kind: "sibling", rule }}
           currentMonth="2026-09-01"
+          reload={async () => data}
           onClose={vi.fn()}
           onSaved={vi.fn()}
         />
@@ -239,6 +252,7 @@ describe("CareRuleModal", () => {
             rule: { ...rule, countSchoolIds: ["11", "12"] },
           }}
           currentMonth="2026-09-01"
+          reload={async () => data}
           onClose={vi.fn()}
           onSaved={vi.fn()}
         />
@@ -252,6 +266,7 @@ describe("CareRuleModal", () => {
       expect(saveCareRule).toHaveBeenCalledWith(
         "7",
         expect.objectContaining({ schoolIds: ["11"], countSchoolIds: ["12"] }),
+        "v1",
       ),
     );
   });
@@ -263,6 +278,7 @@ describe("CareRuleModal", () => {
           data={data}
           open={{ kind: "sibling", rule }}
           currentMonth="2026-09-01"
+          reload={async () => data}
           onClose={vi.fn()}
           onSaved={vi.fn()}
         />
@@ -276,5 +292,56 @@ describe("CareRuleModal", () => {
         "Die Schulen der Regel zählen immer. Es gibt keine weitere Schule.",
       ),
     ).toBeInTheDocument();
+  });
+
+  // ADR 0311: a colleague changed the rule since the list was read. The
+  // save sent the version the form started from, is refused, and the rule
+  // is read again: the form shows the colleague's rule instead of the
+  // draft, and the next save sends the new version.
+  it("shows the rule a colleague saved since instead of keeping the draft", async () => {
+    saveCareRule.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    const stored: CareRuleSet = {
+      ...data,
+      rules: [{ ...rule, name: "Geschwister Kollegin", version: "v2" }],
+    };
+    const reload = vi.fn(() => Promise.resolve(stored));
+    const modal = (rules: CareRuleSet) => (
+      <ToastProvider>
+        <CareRuleModal
+          data={rules}
+          open={{ kind: "sibling", rule }}
+          currentMonth="2026-09-01"
+          reload={reload}
+          onClose={vi.fn()}
+          onSaved={vi.fn()}
+        />
+      </ToastProvider>
+    );
+    const { rerender } = render(modal(data));
+    fireEvent.change(screen.getByLabelText(/Name auf der Rechnung/), {
+      target: { value: "Geschwister neu" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Regel speichern" }));
+
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "die Regel"),
+      ),
+    ).toBeInTheDocument();
+    expect(saveCareRule.mock.calls.at(-1)?.[2]).toBe("v1");
+    expect(reload).toHaveBeenCalledTimes(1);
+
+    // The page reads the rules again; they arrive as `data` as well.
+    rerender(modal(stored));
+    await waitFor(() =>
+      expect(screen.getByLabelText(/Name auf der Rechnung/)).toHaveValue(
+        "Geschwister Kollegin",
+      ),
+    );
+    saveCareRule.mockResolvedValueOnce(stored);
+    fireEvent.click(screen.getByRole("button", { name: "Regel speichern" }));
+    await waitFor(() => expect(saveCareRule.mock.calls.at(-1)?.[2]).toBe("v2"));
   });
 });

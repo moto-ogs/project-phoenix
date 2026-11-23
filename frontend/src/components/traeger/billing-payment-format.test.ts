@@ -100,6 +100,7 @@ function terms(...entries: Partial<ServiceTerms>[]): BillingTerms {
   return {
     services: [],
     terms: entries.map((entry) => ({
+      version: "v1",
       service: "care",
       paymentMethod: "transfer",
       dueDays: 14,

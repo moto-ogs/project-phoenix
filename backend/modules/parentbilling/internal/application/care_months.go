@@ -697,7 +697,7 @@ func (c *CareBilling) releasedDetail(ctx context.Context, organizationID int64, 
 	if err != nil {
 		return err
 	}
-	detail.DueDates = payments.run.InPaymentOrder()
+	detail.DueDates, detail.DueDatesVersion = payments.run.InPaymentOrder(), runDueDatesVersion(payments.run)
 	cancellations, err := c.store.CareRunCancellations(ctx, organizationID, detail.ID.Int64())
 	if err != nil {
 		return err

@@ -54,6 +54,9 @@ type TermsStore interface {
 	ServiceTerms(ctx context.Context, organizationID int64) ([]parentbilling.ServiceTerms, error)
 	FamilyBillings(ctx context.Context, organizationID int64) ([]parentbilling.FamilyBilling, error)
 	SaveServiceTerms(ctx context.Context, organizationID, accountID int64, terms parentbilling.ServiceTerms) error
+	// LockBillingSetting holds one setting of the Abrechnung of the Träger
+	// until the transaction ends.
+	LockBillingSetting(ctx context.Context, organizationID int64, setting string) error
 	// SaveFamilyBilling inserts or replaces the deviation of its family.
 	SaveFamilyBilling(ctx context.Context, organizationID, accountID int64, family parentbilling.FamilyBilling) (parentbilling.FamilyBilling, error)
 	// DeleteFamilyBilling removes a deviation by its ID or, with id zero, by
@@ -111,9 +114,26 @@ func termsList(stored []parentbilling.ServiceTerms) []parentbilling.ServiceTerms
 	set := termsSetOf(stored)
 	list := make([]parentbilling.ServiceTerms, 0, len(parentbilling.BillingServices))
 	for _, service := range parentbilling.BillingServices {
-		list = append(list, set.Of(service.Service))
+		terms := set.Of(service.Service)
+		terms.Version = serviceTermsVersion(terms)
+		list = append(list, terms)
 	}
 	return list
+}
+
+// settingServiceTerms names the lock of the service terms.
+const settingServiceTerms = "service_terms"
+
+// serviceTermsVersion is the read-state token of the terms of one service
+// (ADR 0311): what the form shows, the defaults where the Träger set none.
+func serviceTermsVersion(terms parentbilling.ServiceTerms) string {
+	return readstate.Fingerprint(struct {
+		Service       string `json:"service"`
+		PaymentMethod string `json:"payment_method"`
+		DueDays       int    `json:"due_days"`
+		BundleWith    string `json:"bundle_with"`
+		Custom        bool   `json:"custom"`
+	}{terms.Service, terms.PaymentMethod, terms.DueDays, terms.BundleWith, terms.Custom})
 }
 
 // termsSetOf keys the stored terms of a Träger by service.
@@ -126,13 +146,27 @@ func termsSetOf(stored []parentbilling.ServiceTerms) parentbilling.TermsSet {
 	return set
 }
 
-// SaveServiceTerms validates and stores the terms of one service.
-func (t *BillingTerms) SaveServiceTerms(ctx context.Context, reviewer parentbilling.HolidayReviewer, terms parentbilling.ServiceTerms) ([]parentbilling.ServiceTerms, error) {
+// SaveServiceTerms validates and stores the terms of one service as the
+// Abrechnung read them: under the lock of the terms, terms changed since
+// expectedVersion are refused with readstate.ErrChanged (ADR 0311).
+func (t *BillingTerms) SaveServiceTerms(ctx context.Context, reviewer parentbilling.HolidayReviewer, terms parentbilling.ServiceTerms,
+	expectedVersion string,
+) ([]parentbilling.ServiceTerms, error) {
 	if err := validReviewer(reviewer); err != nil {
 		return nil, err
 	}
 	normalized, err := normalizeServiceTerms(terms)
 	if err != nil {
+		return nil, err
+	}
+	if err := t.store.LockBillingSetting(ctx, reviewer.OrganizationID, settingServiceTerms); err != nil {
+		return nil, fmt.Errorf("parent billing: hold the service terms: %w", err)
+	}
+	before, err := t.store.ServiceTerms(ctx, reviewer.OrganizationID)
+	if err != nil {
+		return nil, fmt.Errorf("parent billing: read the service terms: %w", err)
+	}
+	if err := readstate.Check(expectedVersion, serviceTermsVersion(termsSetOf(before).Of(normalized.Service))); err != nil {
 		return nil, err
 	}
 	if err := t.store.SaveServiceTerms(ctx, reviewer.OrganizationID, reviewer.AccountID, normalized); err != nil {
@@ -477,69 +511,6 @@ func normalizeAddress(errs validation.Errors, field string, address *parentbilli
 		errs[field+".city"] = errors.New("is required, at most 100 characters")
 	}
 	return normalized
-}
-
-// SetCareRunDueDates replaces the due dates of a calculated monthly run.
-func (t *BillingTerms) SetCareRunDueDates(ctx context.Context, reviewer parentbilling.HolidayReviewer, runID int64, dates parentbilling.RunDueDates) (parentbilling.RunDueDates, error) {
-	if err := validReviewer(reviewer); err != nil {
-		return nil, err
-	}
-	if err := validDueDates(dates); err != nil {
-		return nil, err
-	}
-	if runID <= 0 {
-		return nil, parentbilling.ErrCareRunNotFound
-	}
-	run, err := t.store.CareRun(ctx, reviewer.OrganizationID, runID, true)
-	if err != nil {
-		return nil, err
-	}
-	if run.Status != parentbilling.RunCalculated {
-		return nil, closedRunError(run.Status)
-	}
-	if err := t.store.ReplaceRunDueDates(ctx, reviewer.OrganizationID, reviewer.AccountID, run.ID.Int64(), 0, dates); err != nil {
-		return nil, err
-	}
-	return dates, nil
-}
-
-// SetHolidayRunDueDates replaces the due dates of a calculated holiday run.
-func (t *BillingTerms) SetHolidayRunDueDates(ctx context.Context, reviewer parentbilling.HolidayReviewer, runID int64, dates parentbilling.RunDueDates) (parentbilling.RunDueDates, error) {
-	if err := validReviewer(reviewer); err != nil {
-		return nil, err
-	}
-	if err := validDueDates(dates); err != nil {
-		return nil, err
-	}
-	if runID <= 0 {
-		return nil, parentbilling.ErrBillingRunNotFound
-	}
-	run, err := t.store.LockBillingRun(ctx, reviewer.OrganizationID, runID)
-	if err != nil {
-		return nil, err
-	}
-	if run.Status != parentbilling.RunCalculated {
-		return nil, closedRunError(run.Status)
-	}
-	if err := t.store.ReplaceRunDueDates(ctx, reviewer.OrganizationID, reviewer.AccountID, 0, run.ID.Int64(), dates); err != nil {
-		return nil, err
-	}
-	return dates, nil
-}
-
-func validDueDates(dates parentbilling.RunDueDates) error {
-	errs := validation.Errors{}
-	for method, due := range dates {
-		if !slices.Contains(parentbilling.PaymentMethods, method) {
-			errs[method] = errors.New("is no payment method")
-		} else if due.IsZero() {
-			errs[method] = errors.New("must be a date")
-		}
-	}
-	if len(errs) > 0 {
-		return errs
-	}
-	return nil
 }
 
 // invoicePayments is what decides the payment and the recipient of the

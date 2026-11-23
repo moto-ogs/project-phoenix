@@ -100,3 +100,45 @@ export function useReadDraftLoadError(
 ) {
   return useSwrLoadError(draft.error, object, draft.retryLoad);
 }
+
+/**
+ * The error path of a form on a draft of `~/lib/swr/read-draft` (ADR 0311,
+ * rules 4 and 6), so that no form orders it wrong:
+ *
+ * - `begin()` starts a save: while nothing can be sent (`canSubmit`) it
+ *   returns false and leaves the shown error in place, a failed read with
+ *   its retry included; otherwise it clears the form's error.
+ * - `loadError` is the draft's failed read for `LoadErrorAlert`, null while
+ *   the form's own alert shows an error (it already names that read).
+ *
+ * `draft` null: the form creates, no stored state is read, `begin` only
+ * clears.
+ */
+export function useReadDraftForm(
+  draft: {
+    readonly error: unknown;
+    readonly retryLoad: () => void;
+    readonly canSubmit: boolean;
+  } | null,
+  formErrors: { readonly error: unknown; readonly clear: () => void },
+  object: string,
+) {
+  const shown = useSwrLoadError(
+    draft?.error,
+    object,
+    draft?.retryLoad ?? noRetry,
+  );
+  const begin = () => {
+    if (draft !== null && !draft.canSubmit) return false;
+    formErrors.clear();
+    return true;
+  };
+  return {
+    begin,
+    loadError: draft?.error && !formErrors.error ? shown : null,
+  };
+}
+
+function noRetry() {
+  // A creating form reads nothing: there is no read to retry.
+}

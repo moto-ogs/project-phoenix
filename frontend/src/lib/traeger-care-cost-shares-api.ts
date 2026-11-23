@@ -44,11 +44,13 @@ export interface CareCostShare {
   readonly reference: string;
   readonly checkedOn: string;
   readonly status: CareCostShareStatus | undefined;
+  /** The read-state token a change sends back (ADR 0311). */
+  readonly version: string;
 }
 
 export type CareCostShareInput = Omit<
   CareCostShare,
-  "id" | "costBearerName" | "status"
+  "id" | "costBearerName" | "status" | "version"
 >;
 
 export interface CareCostShareContract {
@@ -93,6 +95,7 @@ function shareFromBackend(
     reference: share.reference,
     checkedOn: requiredDay(share.checked_on, "care_cost_share.checked_on"),
     status: knownEnum(STATUS_VALUES, share.status),
+    version: share.version,
   };
 }
 
@@ -142,16 +145,20 @@ export async function fetchCareCostShares(): Promise<CareCostShareSet> {
   );
 }
 
-/** Creates a share without `shareId`, changes that one otherwise. */
+/**
+ * Creates a share without `shareId`, changes that one otherwise, from the
+ * `version` it was read at (ADR 0311).
+ */
 export async function saveCareCostShare(
   shareId: string | null,
   input: CareCostShareInput,
+  version = "",
 ): Promise<CareCostShareSet> {
   return costShareSetFromBackend(
     await (shareId
       ? bffJson("org", "PUT /traeger/care-cost-shares/{id}", {
           params: { id: shareId },
-          body: shareBody(input),
+          body: { ...shareBody(input), expected_version: version },
         })
       : bffJson("org", "POST /traeger/care-cost-shares/", {
           body: shareBody(input),

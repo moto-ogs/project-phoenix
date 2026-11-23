@@ -93,7 +93,7 @@ func (c *CareBilling) DiscardCareRun(ctx context.Context, reviewer parentbilling
 // without a preview, so it reads no contract and no person again.
 func (c *CareBilling) discardedDetail(ctx context.Context, organizationID int64, detail parentbilling.CareRunDetail) (parentbilling.CareRunDetail, error) {
 	detail.Invoices = []parentbilling.CareInvoice{}
-	detail.DueDates = []parentbilling.RunDueDate{}
+	detail.DueDates, detail.DueDatesVersion = []parentbilling.RunDueDate{}, runDueDatesVersion(nil)
 	detail.CostBearers = []parentbilling.CareCostBearerTotal{}
 	schools, err := c.runSchoolNames(ctx, organizationID, ident.Int64s(detail.SchoolIDs))
 	if err != nil {
@@ -199,5 +199,5 @@ func (b *BillingRuns) DiscardBillingRun(ctx context.Context, reviewer parentbill
 // a preview, so it reads no registration and no person again.
 func discardedHolidayDetail(detail *parentbilling.BillingRunDetail) {
 	detail.Documents = []parentbilling.BillingDocument{}
-	detail.DueDates = []parentbilling.RunDueDate{}
+	detail.DueDates, detail.DueDatesVersion = []parentbilling.RunDueDate{}, runDueDatesVersion(nil)
 }

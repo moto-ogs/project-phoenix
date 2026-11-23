@@ -127,6 +127,9 @@ type SEPACreditor struct {
 	PrenotificationDays int        `json:"prenotification_days"`
 	MissingMandate      string     `json:"missing_mandate"`
 	UpdatedAt           *time.Time `json:"updated_at"`
+	// Version is the read-state token of the creditor (ADR 0311): a change
+	// sends it back as expected_version.
+	Version string `json:"version"`
 }
 
 // DefaultSEPACreditor is the creditor of a Träger that set nothing.
@@ -340,7 +343,9 @@ type SEPAMandates interface {
 	SEPACreditor(ctx context.Context, organizationID int64) (SEPACreditor, error)
 	// SaveSEPACreditor sets the creditor identifier, the pre-notification
 	// days and the choice for a direct debit without a mandate.
-	SaveSEPACreditor(ctx context.Context, reviewer HolidayReviewer, creditor SEPACreditor) (SEPACreditor, error)
+	// A creditor changed since expectedVersion is refused with
+	// readstate.ErrChanged (ADR 0311).
+	SaveSEPACreditor(ctx context.Context, reviewer HolidayReviewer, creditor SEPACreditor, expectedVersion string) (SEPACreditor, error)
 	// ListSEPAMandates lists the mandates, newest first; contractID > 0
 	// keeps those of the family of that contract.
 	ListSEPAMandates(ctx context.Context, reviewer HolidayReviewer, contractID int64) ([]SEPAMandate, error)

@@ -112,7 +112,7 @@ func ContributionRuleRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: []capability.ContributionRule{}},
 		{Method: "POST", Pattern: "/", Portals: traegerPortal, Request: ContributionRuleRequest{}, Response: capability.ContributionRule{}},
-		{Method: "PUT", Pattern: "/{id}", Portals: traegerPortal, Request: ContributionRuleRequest{}, Response: capability.ContributionRule{}},
+		{Method: "PUT", Pattern: "/{id}", Portals: traegerPortal, Request: ContributionRuleUpdateRequest{}, Response: capability.ContributionRule{}},
 		{Method: "DELETE", Pattern: "/{id}", Portals: traegerPortal, NoData: true},
 	}
 }
@@ -145,7 +145,8 @@ func CareMealTariffRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: capability.CareMealTariffs{}},
 		{Method: "PUT", Pattern: "/", Portals: traegerPortal, Request: CareMealPriceRequest{}, Response: capability.CareMealTariffs{}},
-		{Method: "DELETE", Pattern: "/{schoolID}/{validFrom}", Portals: traegerPortal, Response: capability.CareMealTariffs{}},
+		{Method: "DELETE", Pattern: "/{schoolID}/{validFrom}", Portals: traegerPortal,
+			Query: []common.QueryParam{{Name: "expected_version", Kind: common.QueryString}}, Response: capability.CareMealTariffs{}},
 	}
 }
 

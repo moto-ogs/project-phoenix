@@ -253,6 +253,9 @@ type BillingRunDetail struct {
 	Letters                         *BillingLetters   `json:"letters"`
 	// DueDates are the due dates of the run per payment method (#4689).
 	DueDates []RunDueDate `json:"due_dates"`
+	// DueDatesVersion is the read-state token of DueDates (ADR 0311): a
+	// change of the dates sends it back as expected_version.
+	DueDatesVersion string `json:"due_dates_version"`
 	// DocumentKindState is the kind the run issues (#4688).
 	DocumentKindState
 	// Fingerprint names the content of the preview of a calculated run; the

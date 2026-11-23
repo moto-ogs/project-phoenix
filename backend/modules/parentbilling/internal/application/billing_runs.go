@@ -643,7 +643,7 @@ func (b *BillingRuns) releasedDetail(ctx context.Context, organizationID int64, 
 	if err != nil {
 		return err
 	}
-	detail.DueDates = payments.run.InPaymentOrder()
+	detail.DueDates, detail.DueDatesVersion = payments.run.InPaymentOrder(), runDueDatesVersion(payments.run)
 	return nil
 }
 
@@ -658,6 +658,7 @@ func (b *BillingRuns) previewDetail(ctx context.Context, reviewer parentbilling.
 	}
 	detail.Fingerprint = fingerprint
 	detail.Documents, detail.Unbilled, detail.DueDates = current.documents, current.unbilled, current.dueDates.InPaymentOrder()
+	detail.DueDatesVersion = runDueDatesVersion(current.dueDates)
 	detail.DocumentKindState = kind
 	for i := range detail.Documents {
 		detail.Documents[i].DocumentKind = kind.DocumentKind
