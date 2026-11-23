@@ -1123,8 +1123,8 @@ describe("ClassDayClass homework (#4796)", () => {
     return report({
       can_write_homework: true,
       homework: [
-        { id: "11", subject: "Mathe", description: "Seite 12" },
-        { id: "12", description: "Lesen" },
+        { id: "11", subject: "Mathe", description: "Seite 12", version: "v11" },
+        { id: "12", description: "Lesen", version: "v12" },
       ],
       rows: [
         {
@@ -1193,11 +1193,71 @@ describe("ClassDayClass homework (#4796)", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
 
     await waitFor(() =>
-      expect(homework.change).toHaveBeenCalledWith("4a", "12", {
-        subject: null,
-        description: "Lesen, Seite 4",
-      }),
+      expect(homework.change).toHaveBeenCalledWith(
+        "4a",
+        "12",
+        {
+          subject: null,
+          description: "Lesen, Seite 4",
+        },
+        "v12",
+      ),
     );
+  });
+
+  it("keeps a change's refusal visible when the entry was deleted meanwhile", async () => {
+    const homework = {
+      ...api(),
+      change: vi.fn(() =>
+        Promise.reject(
+          new ApiError("changed", 409, { code: "general.changed_since_read" }),
+        ),
+      ),
+    };
+    const fetchClassDay = vi
+      .fn()
+      .mockResolvedValueOnce(homeworkReport())
+      .mockResolvedValue(
+        homeworkReport({
+          homework: [
+            {
+              id: "11",
+              subject: "Mathe",
+              description: "Seite 12",
+              version: "v11",
+            },
+          ],
+        }),
+      );
+    render(
+      <ClassDayClass
+        schoolClass="4a"
+        fetchClassDay={fetchClassDay}
+        homework={homework}
+      />,
+    );
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Aktionen zur Hausaufgabe" }),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Ändern" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("Was ist zu tun?"), {
+      target: { value: "Lesen, Seite 4" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
+
+    // ADR 0311: the refusal is never silent. The dialog stays open with it,
+    // and the deleted entry cannot be saved again.
+    expect(
+      await within(dialog).findByText(
+        catalogText("general.changed_since_read", "die Hausaufgabe"),
+      ),
+    ).toBeInTheDocument();
+    const blocked = within(dialog).getByRole("button", { name: "Speichern" });
+    expect(blocked).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(blocked);
+    expect(homework.change).toHaveBeenCalledTimes(1);
   });
 
   it("deletes an entry that another Lehrkraft of the class entered", async () => {

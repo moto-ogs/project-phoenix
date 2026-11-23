@@ -44,15 +44,19 @@ func (s *operations) applyRosterHomework(ctx context.Context, inst *scheduleMode
 		key := classArrivalKeys([]string{entry.SchoolClass})[0]
 		byClass[key] = append(byClass[key], timetable.OperationRosterHomework{Subject: entry.Subject, Description: entry.Description})
 	}
-	byStudent := make(map[int64]*timetable.OperationHomeworkFeedback, len(feedback))
-	for _, entry := range feedback {
-		byStudent[entry.StudentID] = &timetable.OperationHomeworkFeedback{Status: entry.Status, Note: entry.Note}
+	byStudent := make(map[int64]*timetable.HomeworkFeedback, len(feedback))
+	for i := range feedback {
+		byStudent[feedback[i].StudentID] = &feedback[i]
 	}
 	for i := range rows {
 		if keys := classArrivalKeys([]string{rows[i].SchoolClass}); len(keys) > 0 {
 			rows[i].Homework = byClass[keys[0]]
 		}
-		rows[i].HomeworkFeedback = byStudent[rows[i].StudentID.Int64()]
+		stored := byStudent[rows[i].StudentID.Int64()]
+		if stored != nil {
+			rows[i].HomeworkFeedback = &timetable.OperationHomeworkFeedback{Status: stored.Status, Note: stored.Note}
+		}
+		rows[i].HomeworkFeedbackVersion = timetable.HomeworkFeedbackVersion(stored)
 	}
 	return nil
 }

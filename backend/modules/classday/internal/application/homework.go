@@ -15,6 +15,8 @@ type HomeworkEntry struct {
 	ID          int64
 	Subject     *string
 	Description string
+	// Version is the owner's read-state token of the entry (ADR 0311).
+	Version string
 }
 
 // HomeworkFeedbackEntry is the OGS feedback of one child on one day.
@@ -152,7 +154,7 @@ func (h homework) applyFeedback(ctx context.Context, report *classday.DayReport,
 }
 
 func dayHomework(entry HomeworkEntry) *classday.DayHomework {
-	out := &classday.DayHomework{ID: ident.ID(entry.ID), Description: entry.Description}
+	out := &classday.DayHomework{ID: ident.ID(entry.ID), Description: entry.Description, Version: entry.Version}
 	if entry.Subject != nil {
 		out.Subject = *entry.Subject
 	}

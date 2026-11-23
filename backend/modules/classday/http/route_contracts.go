@@ -34,7 +34,7 @@ func RouteContracts() []common.RouteContract {
 		{Method: "DELETE", Pattern: "/day-hints/{schoolClass}/{date}/students/{studentId}", Portals: portals, NoData: true},
 		{Method: "PUT", Pattern: "/morning-attendance/{schoolClass}/{date}", Portals: portals, Request: MorningAttendanceRequest{}, NoData: true},
 		{Method: "POST", Pattern: "/homework/{schoolClass}", Portals: portals, Request: HomeworkRequest{}, Response: classday.DayHomework{}},
-		{Method: "PUT", Pattern: "/homework/{schoolClass}/{homeworkId}", Portals: portals, Request: HomeworkRequest{}, Response: classday.DayHomework{}},
+		{Method: "PUT", Pattern: "/homework/{schoolClass}/{homeworkId}", Portals: portals, Request: HomeworkChangeRequest{}, Response: classday.DayHomework{}},
 		{Method: "DELETE", Pattern: "/homework/{schoolClass}/{homeworkId}", Portals: portals, NoData: true},
 		{Method: "PUT", Pattern: "/handover/{schoolClass}/{date}", Portals: portals, Request: ClassHandoverRequest{}, NoData: true},
 		{Method: "DELETE", Pattern: "/handover/{schoolClass}/{date}", Portals: portals, NoData: true},

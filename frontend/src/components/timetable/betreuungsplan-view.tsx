@@ -1046,6 +1046,27 @@ function TimetablesContent() {
   }, [calendarPeriods, dayISO, pinnedPeriodID]);
   const templatePeriodID = visiblePeriod?.id ?? assignedPeriods[0]?.id;
   const focusedPeriodID = templatePeriodID ?? null;
+  // A series edit starts from the series' editing read: it answers the
+  // version the save sends back (ADR 0311), which the list does not carry.
+  const openTemplateEdit = async (template: TimetableTemplate) => {
+    const periodID =
+      resolveTemplateCalendarPeriodId(template) ?? templatePeriodID;
+    if (!periodID) return;
+    try {
+      const detail = await timetableService.getTemplate(template.id, periodID);
+      setEditingInstance(null);
+      setConvertingInstance(null);
+      setEditingTemplate(detail);
+      setEventDefaultRepeat("weekly");
+      setEventModalOpen(true);
+    } catch (err) {
+      logger.error("template_edit_read_failed", {
+        template_id: template.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      void showActionError(err, { object: "der Regeltermin" });
+    }
+  };
   const {
     data: templateData,
     error: templatesError,
@@ -2785,13 +2806,7 @@ function TimetablesContent() {
           templates={templates}
           canManage={canManageSchedules}
           onCreate={openSeriesCreate}
-          onEdit={(template) => {
-            setEditingInstance(null);
-            setConvertingInstance(null);
-            setEditingTemplate(template);
-            setEventDefaultRepeat("weekly");
-            setEventModalOpen(true);
-          }}
+          onEdit={(template) => void openTemplateEdit(template)}
           onApply={(template) => void handleApplyTemplate(template)}
           onArchive={openArchiveConfirm}
           deviations={rosterDeviations}

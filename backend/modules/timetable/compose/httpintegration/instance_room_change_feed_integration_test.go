@@ -113,7 +113,8 @@ func (f *roomFeedFixture) editOn(t *testing.T, instanceID int64, actor feedPerso
 	require.NoError(t, f.s.db.NewRaw(`SELECT staff_id FROM schedule.instance_staff WHERE instance_id = ?`, instanceID).Scan(context.Background(), &staffIDs))
 	require.NoError(t, f.s.db.NewRaw(`SELECT student_id FROM schedule.instance_students WHERE instance_id = ?`, instanceID).Scan(context.Background(), &studentIDs))
 	_, err := f.svc.UpdatePlanned(f.s.ctx, instanceID, timetable.UpdateInstanceInput{
-		Date: row.Date, StartTime: row.StartTime, EndTime: row.EndTime, Title: title, RoomID: roomID,
+		ExpectedVersion: plannerVersion(t, f.s.ctx, f.s.timetableData.Data, instanceID),
+		Date:            row.Date, StartTime: row.StartTime, EndTime: row.EndTime, Title: title, RoomID: roomID,
 		StaffIDs: staffIDs, StudentIDs: studentIDs,
 	}, &actor.accountID)
 	require.NoError(t, err)

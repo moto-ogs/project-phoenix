@@ -29,6 +29,8 @@ type updateInstanceRequest struct {
 	// omitted/null clears the pin (inherit the template override, else derive
 	// from the Betreuungsschlüssel), a value = pin for this occurrence.
 	RequiredStaff *int `json:"required_staff,omitempty"`
+	// ExpectedVersion is the block's version its editor read (ADR 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 func (req *updateInstanceRequest) Bind(_ *http.Request) error {
@@ -91,6 +93,7 @@ func (rs *Resource) updateInstance(w http.ResponseWriter, r *http.Request) {
 		StaffIDs:        ident.Int64s(req.StaffIDs),
 		StudentIDs:      ident.Int64s(req.StudentIDs),
 		RequiredStaff:   normalizeRequiredStaff(req.RequiredStaff),
+		ExpectedVersion: req.ExpectedVersion,
 	}, sessiontoken.ActorAccountIDFromCtx(r.Context()))
 	if err != nil {
 		renderInstanceLifecycleError(w, r, err)

@@ -358,6 +358,7 @@ export interface enrichedInstance {
   can_reopen?: boolean;
   can_complete: boolean;
   complete_available_at: string;
+  version: string;
 }
 
 export const enrichedInstanceSchema: z.ZodType<enrichedInstance, unknown> = object<enrichedInstance>({
@@ -405,6 +406,7 @@ export const enrichedInstanceSchema: z.ZodType<enrichedInstance, unknown> = obje
   can_reopen: optional(bool),
   can_complete: bool,
   complete_available_at: str,
+  version: str,
 });
 
 /** Go: timetablehttp.weeklyInstancesResponse */
@@ -1214,6 +1216,7 @@ export interface templateResponse {
   protected_student_assignments: templateProtectedStudentAssignmentResponse[] | null;
   roster_maintenance?: templateRosterMaintenanceResponse;
   manual_roster_confirmed: boolean;
+  version?: string;
 }
 
 export const templateResponseSchema: z.ZodType<templateResponse, unknown> = object<templateResponse>({
@@ -1260,6 +1263,7 @@ export const templateResponseSchema: z.ZodType<templateResponse, unknown> = obje
   protected_student_assignments: nullable(arr(templateProtectedStudentAssignmentResponseSchema)),
   roster_maintenance: optional(templateRosterMaintenanceResponseSchema),
   manual_roster_confirmed: bool,
+  version: optional(str),
 });
 
 /** Go: timetablehttp.listTemplatesResponse */
@@ -1589,6 +1593,7 @@ export interface convertInstanceToSeriesRequest {
   primary_staff_id?: string | null;
   weekday_assignments?: weekdayAssignmentRequest[] | null;
   instance_notes?: string | null;
+  expected_version?: string;
 }
 
 /** Go: timetablehttp.convertInstanceToSeriesResponse */
@@ -2266,6 +2271,7 @@ export interface splitTemplateRequest {
   staff_ids?: string[] | null;
   primary_staff_id?: string | null;
   weekday_assignments?: weekdayAssignmentRequest[] | null;
+  expected_version?: string;
   series_roster_from?: string | null;
   series_roster_scope_student_ids?: string[] | null;
   series_roster_scope_staff_ids?: string[] | null;
@@ -2332,6 +2338,7 @@ export interface updateInstanceRequest {
   staff_ids?: string[] | null;
   student_ids?: string[] | null;
   required_staff?: number | null;
+  expected_version?: string;
 }
 
 /** Go: timetablehttp.offeringGapAckRequest */
@@ -2385,6 +2392,7 @@ export interface updateTemplateRequest {
   staff_ids?: string[] | null;
   primary_staff_id?: string | null;
   weekday_assignments?: weekdayAssignmentRequest[] | null;
+  expected_version?: string;
   series_roster_from?: string | null;
   series_roster_scope_student_ids?: string[] | null;
   series_roster_scope_staff_ids?: string[] | null;

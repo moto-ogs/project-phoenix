@@ -80,6 +80,7 @@ describe("TodayNoticesCard", () => {
           weekdays: [],
           week_pattern: 0,
           requires_acknowledgement: false,
+          version: "v1",
           active: true,
         },
       ],

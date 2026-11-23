@@ -71,7 +71,7 @@ func (b ClassDayHomework) AddHomework(ctx context.Context, in classday.HomeworkW
 
 func (b ClassDayHomework) ChangeHomework(ctx context.Context, in classday.HomeworkChange) (classdayCompose.HomeworkEntry, error) {
 	entry, err := b.Book.ChangeHomework(ctx, timetable.HomeworkChange{
-		ID: in.ID, SchoolClass: in.SchoolClass, Subject: in.Subject, Description: in.Description,
+		ID: in.ID, SchoolClass: in.SchoolClass, Subject: in.Subject, Description: in.Description, ExpectedVersion: in.ExpectedVersion,
 	})
 	if err != nil {
 		return classdayCompose.HomeworkEntry{}, classDayHomeworkError(err)
@@ -84,7 +84,7 @@ func (b ClassDayHomework) DeleteHomework(ctx context.Context, id int64, schoolCl
 }
 
 func classDayHomeworkEntry(entry timetable.HomeworkEntry) classdayCompose.HomeworkEntry {
-	return classdayCompose.HomeworkEntry{ID: entry.ID, Subject: entry.Subject, Description: entry.Description}
+	return classdayCompose.HomeworkEntry{ID: entry.ID, Subject: entry.Subject, Description: entry.Description, Version: timetable.HomeworkVersion(entry)}
 }
 
 // classDayHomeworkError pairs Timetable's refusals with the projection's

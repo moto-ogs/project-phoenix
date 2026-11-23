@@ -99,7 +99,7 @@ func (s *instanceSeriesConversion) convertLocked(ctx context.Context, in timetab
 		ListKind:         in.Template.ListKind,
 		StaffIDs:         assignments.StaffIDs,
 		StudentIDs:       assignments.StudentIDs,
-		RequiredStaff:    nil,
+		ExpectedVersion:  in.ExpectedVersion, // the seed as its editor read it
 	}, in.ActorAccountID); err != nil {
 		return none, err
 	}

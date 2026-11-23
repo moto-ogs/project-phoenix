@@ -23,7 +23,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (b ClassDayHomework) ChangeHomework(ctx context.Context, in classday.HomeworkChange) (classdayCompose.HomeworkEntry, error) {\n\tentry, err := b.Book.ChangeHomework(ctx, timetable.HomeworkChange{ID: in.ID, SchoolClass: in.SchoolClass, Subject: in.Subject, Description: in.Description})\n\tif err != nil {\n\t\treturn classdayCompose.HomeworkEntry{}, classDayHomeworkError(err)\n\t}\n\treturn classDayHomeworkEntry(entry), nil\n}",
+      "evidence": "func (b ClassDayHomework) ChangeHomework(ctx context.Context, in classday.HomeworkChange) (classdayCompose.HomeworkEntry, error) {\n\tentry, err := b.Book.ChangeHomework(ctx, timetable.HomeworkChange{ID: in.ID, SchoolClass: in.SchoolClass, Subject: in.Subject, Description: in.Description, ExpectedVersion: in.ExpectedVersion})\n\tif err != nil {\n\t\treturn classdayCompose.HomeworkEntry{}, classDayHomeworkError(err)\n\t}\n\treturn classDayHomeworkEntry(entry), nil\n}",
       "form": "unclassified-evidence",
       "id": "api/ClassDayHomework.ChangeHomework",
       "owner": "roots"

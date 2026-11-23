@@ -198,14 +198,16 @@ export async function createStaffNotice(
   );
 }
 
+/** Saves a change of the notice read with `expectedVersion` (ADR 0311). */
 export async function updateStaffNotice(
   id: string,
   input: StaffNoticeInput,
+  expectedVersion: string,
 ): Promise<StaffNotice> {
   return toStaffNotice(
     await bffJson("tenant", "PUT /api/staff-notices/{noticeId}", {
       params: { noticeId: id },
-      body: input,
+      body: { ...input, expected_version: expectedVersion },
       errorMessage: "Tagesinformation konnte nicht gespeichert werden",
     }),
   );

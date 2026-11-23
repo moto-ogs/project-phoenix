@@ -42,6 +42,7 @@ function notice(overrides: Partial<StaffNotice>): StaffNotice {
     weekdays: [],
     week_pattern: 0,
     requires_acknowledgement: false,
+    version: "v1",
     active: true,
     ...overrides,
   };
@@ -102,6 +103,7 @@ describe("useStaffNoticesPending", () => {
         notice({
           id: "2",
           requires_acknowledgement: true,
+          version: "v1",
           acknowledged_at: "2026-09-09T08:00:00Z",
         }),
         notice({ id: "3", requires_acknowledgement: false }),

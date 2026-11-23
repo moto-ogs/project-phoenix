@@ -176,7 +176,20 @@ func TestConvertInstanceToSeries_LinksExistingOccurrenceAndRejectsRetry(t *testi
 	body["calendar_period_id"] = period.ID
 	body["start_date"] = date.String()
 	body["weekdays"] = []int{timetableModule.WeekdayMonday}
+	read := instanceReadVersion(t, router, date, instance.ID)
 
+	// ADR 0311: a conversion that names no read block, or one read before a
+	// change, is refused and creates no series.
+	stale := testpkg.CreateTestStudent(t, s.db, "Tpl", fmt.Sprintf("Convert-Late-%d", instance.ID), "3a")
+	body["expected_version"] = read
+	testpkg.CreateTestInstanceStudent(t, s.db, instance.ID, stale.ID, timetableModule.SlotAttendanceExpected)
+	refusedW := doTemplateJSON(t, router, http.MethodPost,
+		fmt.Sprintf("/instances/%d/convert-to-series", instance.ID), body)
+	assert.Equal(t, http.StatusConflict, refusedW.Code, "body=%s", refusedW.Body.String())
+	assert.Contains(t, refusedW.Body.String(), "general.changed_since_read")
+	assertNoTemplateNamed(t, router, "Tpl-Convert-Atomic")
+
+	body["expected_version"] = instanceReadVersion(t, router, date, instance.ID)
 	createdW := doTemplateJSON(t, router, http.MethodPost,
 		fmt.Sprintf("/instances/%d/convert-to-series", instance.ID), body)
 	require.Equal(t, http.StatusCreated, createdW.Code, "body=%s", createdW.Body.String())
@@ -279,6 +292,7 @@ func TestConvertInstanceToSeries_UsesOfferingRosterForExistingSeed(t *testing.T)
 	body["target_group_type"] = timetableModule.TargetGroupTypeOffering
 	body["source_care_offering_ids"] = []int64{17}
 	body["student_ids"] = []int64{}
+	body["expected_version"] = instanceReadVersion(t, router, date, instance.ID)
 
 	createdW := doTemplateJSON(t, router, http.MethodPost,
 		fmt.Sprintf("/instances/%d/convert-to-series", instance.ID), body)
@@ -419,4 +433,13 @@ func TestConvertInstanceToSeries_MarksRollbackOnServiceError(t *testing.T) {
 	w := doTemplateJSON(t, router, http.MethodPost, "/instances/71/convert-to-series", body)
 	assert.Equal(t, http.StatusConflict, w.Code, "body=%s", w.Body.String())
 	assert.True(t, sawRollback, "convert service errors must mark the ambient tenant tx for rollback")
+}
+
+func assertNoTemplateNamed(t *testing.T, router http.Handler, name string) {
+	t.Helper()
+	w := doTemplateJSON(t, router, http.MethodGet, "/templates", nil)
+	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
+	for _, candidate := range decodeTemplateData[listTemplatesResponse](t, w).Templates {
+		assert.NotEqual(t, name, candidate.Name, "a refused conversion creates no series")
+	}
 }

@@ -20,9 +20,13 @@ import { EmptyState } from "~/components/ui/empty-state";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { Loading } from "~/components/ui/loading";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import {
+  useApiErrorDisplay,
+  useApiFormError,
+  useToast,
+} from "~/contexts/ToastContext";
 import { hasEffectiveAdminScope } from "~/lib/auth-utils";
-import { ApiError } from "~/lib/api-error";
+import { ApiError, isReadStateRefusal } from "~/lib/api-error";
 import { formatDate } from "~/lib/date-helpers";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
@@ -37,7 +41,7 @@ import {
   updateStaffNotice,
 } from "~/lib/staff-notices-api";
 import type { StaffNotice, StaffNoticeInput } from "~/lib/staff-notices-api";
-import { useSWRAuth } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
 import { staffNoticeKeys } from "~/lib/swr/staff-keys";
 
 const NOTICES_INFO =
@@ -64,29 +68,26 @@ function TagesinformationenContent() {
   // Kontowechsel im selben Tenant darf keinen fremden Stand anzeigen.
   const accountId = session?.user?.id ?? "";
 
-  const {
-    data: todayData,
-    error: todayError,
-    isLoading: todayLoading,
-    mutate: mutateToday,
-  } = useSWRAuth<StaffNotice[]>(
+  const todayRead = useSWRAuth<StaffNotice[]>(
     staffNoticeKeys.today(accountId),
     fetchTodaysNotices,
     {
       revalidateOnFocus: false,
     },
   );
-
   const {
-    data,
-    error: noticesError,
-    isLoading,
-    mutate,
-  } = useSWRAuth<StaffNotice[]>(
+    data: todayData,
+    error: todayError,
+    isLoading: todayLoading,
+    mutate: mutateToday,
+  } = todayRead;
+
+  const noticesRead = useSWRAuth<StaffNotice[]>(
     isAdmin ? staffNoticeKeys.all(accountId) : null,
     fetchStaffNotices,
     { revalidateOnFocus: false },
   );
+  const { data, error: noticesError, isLoading, mutate } = noticesRead;
 
   // Ein Eintrag in der Glocke verlinkt seinen Hinweis (#7143). Gilt er
   // heute nicht, steht er nicht unter „Heute“: die Seite lädt ihn einzeln.
@@ -116,6 +117,8 @@ function TagesinformationenContent() {
   const [showingAcks, setShowingAcks] = useState<StaffNotice | null>(null);
   // Löschfehler bleiben im Bestätigungsdialog (#2517).
   const deleteErrors = useApiFormError();
+  // A save refused as changed since read closes the dialog and says so.
+  const refusalErrors = useApiErrorDisplay();
   const [deletePending, setDeletePending] = useState(false);
   const toast = useToast();
 
@@ -175,7 +178,8 @@ function TagesinformationenContent() {
 
   const save = async (input: StaffNoticeInput) => {
     if (editing) {
-      await updateStaffNotice(editing.id, input);
+      // The notice as the dialog opened it (ADR 0311).
+      await updateStaffNotice(editing.id, input, editing.version);
     } else {
       await createStaffNotice(input);
     }
@@ -263,7 +267,18 @@ function TagesinformationenContent() {
                 logger.error("staff_notice_save_failed", {
                   error: err instanceof Error ? err.message : String(err),
                 });
-                throw err;
+                if (!isReadStateRefusal(err)) throw err;
+                // Someone changed the notice since the dialog opened: the
+                // list shows it as stored, and editing starts from there.
+                setModalOpen(false);
+                void refusalErrors.show(err, {
+                  object: "der Hinweis",
+                  reload: () =>
+                    Promise.all([
+                      revalidateOrThrow(noticesRead),
+                      revalidateOrThrow(todayRead),
+                    ]),
+                });
               }
             }}
           />

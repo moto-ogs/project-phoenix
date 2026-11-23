@@ -63,6 +63,15 @@ func moveInput(s *scenarioSetup, inst *testpkg.ActivityInstance, date calendar.D
 	}
 }
 
+// readMoveInput is moveInput with the version the planner read of the block
+// answers now (ADR 0311).
+func readMoveInput(t *testing.T, s *scenarioSetup, inst *testpkg.ActivityInstance, date calendar.Date, startShiftHours int) timetable.UpdateInstanceInput {
+	t.Helper()
+	in := moveInput(s, inst, date, startShiftHours)
+	in.ExpectedVersion = plannerVersion(t, s.ctx, s.timetableData.Data, inst.ID)
+	return in
+}
+
 func TestUpdatePlanned_DateMove_WritesExceptionAndBlocksRematerialization(t *testing.T) {
 	t.Parallel()
 
@@ -79,7 +88,7 @@ func TestUpdatePlanned_DateMove_WritesExceptionAndBlocksRematerialization(t *tes
 
 	// Move the occurrence to Tuesday, keeping times and template binding.
 	newDate := origDate.AddDays(1)
-	_, err = s.instance.UpdatePlanned(s.ctx, inst.ID, moveInput(s, inst, newDate, 0), nil)
+	_, err = s.instance.UpdatePlanned(s.ctx, inst.ID, readMoveInput(t, s, inst, newDate, 0), nil)
 	require.NoError(t, err)
 
 	excs := loadExceptions(t, s, s.template.ID)
@@ -140,7 +149,7 @@ func TestUpdatePlanned_StartTimeOnlyMove_WritesException(t *testing.T) {
 	inst := rows[0]
 
 	// Same date, start shifted by one hour.
-	_, err = s.instance.UpdatePlanned(s.ctx, inst.ID, moveInput(s, inst, origDate, 1), nil)
+	_, err = s.instance.UpdatePlanned(s.ctx, inst.ID, readMoveInput(t, s, inst, origDate, 1), nil)
 	require.NoError(t, err)
 
 	excs := loadExceptions(t, s, s.template.ID)
@@ -174,7 +183,7 @@ func TestUpdatePlanned_NoDateOrTimeChange_WritesNothing(t *testing.T) {
 	inst := rows[0]
 
 	// Title and end_time change only — the (template, date, start) key stays.
-	in := moveInput(s, inst, origDate, 0)
+	in := readMoveInput(t, s, inst, origDate, 0)
 	in.Title = fmt.Sprintf("Umbenannt-%d", time.Now().UnixNano())
 	in.EndTime = clockInput(inst.EndTime, 1)
 	_, err = s.instance.UpdatePlanned(s.ctx, inst.ID, in, nil)
@@ -195,7 +204,9 @@ func TestUpdatePlanned_SpontaneousMove_WritesNothing(t *testing.T) {
 	spontaneousID := splitInsertInstance(t, s, nil, origDate, fixtures.InstanceStatusPlanned(), true, 9)
 	inst := testpkg.ActivityInstanceByID(t, s.ctx, s.db, spontaneousID)
 
-	_, err := s.instance.UpdatePlanned(s.ctx, spontaneousID, moveInput(s, inst, origDate.AddDays(1), 0), nil)
+	in := moveInput(s, inst, origDate.AddDays(1), 0)
+	in.ExpectedVersion = plannerVersion(t, s.ctx, s.timetableData.Data, spontaneousID)
+	_, err := s.instance.UpdatePlanned(s.ctx, spontaneousID, in, nil)
 	require.NoError(t, err)
 
 	var count int

@@ -534,3 +534,15 @@ func suiteClock(clocks []func() time.Time) func() time.Time {
 	}
 	return time.Now
 }
+
+// plannerVersion is the version the planner's read answers for a block now
+// (ADR 0311): the scheduled block and its rows through the owner's read
+// that GET /instances projects.
+func plannerVersion(t *testing.T, ctx context.Context, data timetable.TimetableDataCapability, instanceID int64) string {
+	t.Helper()
+	inst, err := data.FindScheduledInstance(ctx, instanceID)
+	require.NoError(t, err)
+	rows, err := data.ListScheduledInstanceRows(ctx, []timetable.ScheduledInstance{inst})
+	require.NoError(t, err)
+	return timetable.ScheduledInstanceVersion(inst, rows.Staff[instanceID], rows.Participants[instanceID])
+}

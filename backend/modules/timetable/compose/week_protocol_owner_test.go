@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
@@ -383,7 +384,7 @@ func TestWeekProtocolOfAnOpenCareSchoolCountsChildrenWithoutGroup(t *testing.T) 
 	}, friday.Missing)
 
 	pdfs := &weekProtocolPDFs{}
-	_, err = module.CloseWeekProtocol(ctx, weekProtocolLeadership, protocol.ID, timetable.WeekProtocolActor{AccountID: 1, Name: "Lea Leitung"}, pdfs)
+	_, err = module.CloseWeekProtocol(ctx, weekProtocolLeadership, protocol.ID, timetable.WeekProtocolVersion(protocol), timetable.WeekProtocolActor{AccountID: 1, Name: "Lea Leitung"}, pdfs)
 	require.NoError(t, err)
 	require.Equal(t, 1, pdfs.rendered)
 	var fridaySection *timetable.WeekProtocolReportSection
@@ -421,11 +422,15 @@ func TestWeekProtocolNotesReachAndTenantBoundary(t *testing.T) {
 	_, err := module.OpenWeekProtocol(ctx, stranger, draft.ID)
 	require.ErrorIs(t, err, timetable.ErrWeekProtocolNotFound, "staff of another group do not see it")
 	member := timetable.WeekProtocolReach{Staff: true, GroupIDs: []int64{9008}}
-	_, err = module.SaveWeekProtocolNotes(ctx, member, draft.ID, timetable.WeekProtocolNotes{Days: map[calendar.Date]string{weekProtocolMonday.AddDays(7): "x"}})
+	read := timetable.WeekProtocolVersion(draft)
+	_, err = module.SaveWeekProtocolNotes(ctx, member, draft.ID, timetable.WeekProtocolNotes{Days: map[calendar.Date]string{weekProtocolMonday.AddDays(7): "x"}, ExpectedVersion: read})
 	require.ErrorIs(t, err, timetable.ErrWeekProtocolInvalid, "a day of another week is refused")
+	_, err = module.SaveWeekProtocolNotes(ctx, member, draft.ID, timetable.WeekProtocolNotes{WeekNote: "ohne Stand"})
+	require.ErrorIs(t, err, readstate.ErrChanged, "notes without the read protocol are refused")
 
 	saved, err := module.SaveWeekProtocolNotes(ctx, member, draft.ID, timetable.WeekProtocolNotes{
 		WeekNote: "  Ruhige Woche  ", Days: map[calendar.Date]string{weekProtocolFriday: "Ausflug", weekProtocolMonday: "Elternabend"},
+		ExpectedVersion: read,
 	})
 	require.NoError(t, err)
 	assert.Equal(t, "Ruhige Woche", saved.WeekNote)
@@ -441,12 +446,24 @@ func TestWeekProtocolNotesReachAndTenantBoundary(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, foreignList)
 
+	// ADR 0311: a second editor who read the draft before these notes saves
+	// nothing and closes nothing; the stored protocol keeps the first notes.
+	_, err = module.SaveWeekProtocolNotes(ctx, member, draft.ID, timetable.WeekProtocolNotes{WeekNote: "Überschrieben", ExpectedVersion: read})
+	require.ErrorIs(t, err, readstate.ErrChanged, "notes over a protocol read before a change are refused")
 	pdfs := &weekProtocolPDFs{}
-	closed, err := module.CloseWeekProtocol(ctx, member, draft.ID, timetable.WeekProtocolActor{AccountID: 1, Name: "Lea Leitung"}, pdfs)
+	_, err = module.CloseWeekProtocol(ctx, member, draft.ID, read, timetable.WeekProtocolActor{AccountID: 1, Name: "Lea Leitung"}, pdfs)
+	require.ErrorIs(t, err, readstate.ErrChanged, "closing a protocol read before a change is refused")
+	assert.Zero(t, pdfs.rendered)
+	stored := weekProtocolOfGroup(t, module, ctx, 9008)
+	assert.Equal(t, timetable.WeekProtocolStatusDraft, stored.Status)
+	assert.Equal(t, "Ruhige Woche", stored.WeekNote)
+	require.Equal(t, timetable.WeekProtocolVersion(saved), timetable.WeekProtocolVersion(stored), "the save answers the stored version")
+
+	closed, err := module.CloseWeekProtocol(ctx, member, draft.ID, timetable.WeekProtocolVersion(saved), timetable.WeekProtocolActor{AccountID: 1, Name: "Lea Leitung"}, pdfs)
 	require.NoError(t, err)
 	assert.Equal(t, timetable.WeekProtocolStatusClosed, closed.Status)
 	assert.Equal(t, "Lea Leitung", closed.ClosedByName)
-	_, err = module.CloseWeekProtocol(ctx, member, draft.ID, timetable.WeekProtocolActor{AccountID: 1, Name: "Lea Leitung"}, pdfs)
+	_, err = module.CloseWeekProtocol(ctx, member, draft.ID, timetable.WeekProtocolVersion(closed), timetable.WeekProtocolActor{AccountID: 1, Name: "Lea Leitung"}, pdfs)
 	require.ErrorIs(t, err, timetable.ErrWeekProtocolNotDraft)
 	saturday := weekProtocolFriday.AddDays(1)
 	sources.days[saturday] = []timetable.WeekProtocolGroupDay{{GroupID: 9008, Present: 2}}
@@ -521,12 +538,12 @@ func TestWeekProtocolStoresItsPDFWhenClosed(t *testing.T) {
 	_, _, err := module.OpenWeekProtocolPDF(ctx, weekProtocolLeadership, foxes.ID)
 	require.ErrorIs(t, err, timetable.ErrWeekProtocolNotClosed, "a draft has no PDF yet")
 
-	_, err = module.CloseWeekProtocol(ctx, weekProtocolLeadership, foxes.ID, actor, &weekProtocolPDFs{fail: true})
+	_, err = module.CloseWeekProtocol(ctx, weekProtocolLeadership, foxes.ID, timetable.WeekProtocolVersion(foxes), actor, &weekProtocolPDFs{fail: true})
 	require.Error(t, err)
 	assert.Equal(t, timetable.WeekProtocolStatusDraft, weekProtocolOfGroup(t, module, ctx, 9010).Status, "a failed rendering leaves the draft")
 
 	pdfs := &weekProtocolPDFs{}
-	_, err = module.CloseWeekProtocol(ctx, weekProtocolLeadership, foxes.ID, actor, pdfs)
+	_, err = module.CloseWeekProtocol(ctx, weekProtocolLeadership, foxes.ID, timetable.WeekProtocolVersion(foxes), actor, pdfs)
 	require.NoError(t, err)
 	protocol, file, err := module.OpenWeekProtocolPDF(ctx, weekProtocolLeadership, foxes.ID)
 	require.NoError(t, err)
