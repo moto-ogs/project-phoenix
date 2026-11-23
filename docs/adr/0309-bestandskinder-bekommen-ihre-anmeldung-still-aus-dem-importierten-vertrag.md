@@ -161,10 +161,16 @@ einer Schule, welche Buchungen eine Anmeldung tragen muss:
   einer Anmeldung, zurückgehalten. Vorher blieb der Vertrag bei zwei
   laufenden Phasen für immer `care_ends`.
 - **Eine stille Anmeldung ohne Vertrag wird genannt.** Der Plan liest die
-  Herkunft der angenommenen Anmeldungen (`Application.ContractImport`). Hat
-  die Kinderakte eines Vertrags, der nicht erledigt ist, eine Anmeldung der
-  Herkunft `contract_import` ohne Vertrag, nennt die Zeile sie
-  (`EnrollmentChildID`), in welcher Phase auch immer. Eine bereite Zeile
+  Herkunft der angenommenen Anmeldungen (`Application.ContractImport`) und
+  den Vertrag, für den die stille Anmeldung angelegt wurde
+  (`Application.ImportContractID`; die Anmeldung speichert ihn in
+  `source_metadata.contract_id`). Hat die Kinderakte eines Vertrags, der
+  nicht erledigt ist, eine Anmeldung der Herkunft `contract_import` ohne
+  Vertrag, **die für genau diesen Vertrag angelegt wurde**, nennt die Zeile
+  sie (`EnrollmentChildID`), in welcher Phase auch immer. Die verwaiste
+  Anmeldung eines anderen Vertrags des Kindes zählt nicht: Ein
+  zurückgehaltener Folgevertrag heißt nicht „hängt“, weil die Anmeldung
+  seines Vorgängers ohne Vertrag geblieben ist. Eine bereite Zeile
   bindet sie. Bleibt die Zeile zurück, kann der Vertrag nicht mehr an sie
   gebunden werden: Die Phase ist beendet, oder ihre Buchungen bestehen den
   Beweis nicht mehr. Der Workflow zeigt eine solche Zeile mit eigenem Status
@@ -198,6 +204,14 @@ einer Schule, welche Buchungen eine Anmeldung tragen muss:
   läuft nur in der Tenant-Transaktion genau dieser Schule (ein Lesen einer
   anderen Schule wird abgelehnt), und der Workflow schreibt das Lesen in
   derselben Transaktion ins Zugriffsprotokoll der Schule (ADR 0084 §7).
+- **Der Plan liest nur, was er braucht.** Er fragt Enrollment nach den
+  angenommenen Anmeldungen der Kinderakten, mit denen die ungebundenen
+  Verträge verknüpft sind (`AcceptedStudentApplications`), und nach keiner
+  anderen: Die Anmeldungen der übrigen Familien der Schule werden nicht
+  geladen. Die Bindung im Root reicht davon das Anmeldekind, die Kinderakte
+  und die Herkunft weiter, keine Angabe der Erziehungsberechtigten. Die
+  erste Fassung las alle angenommenen Anmeldungen der Schule samt
+  Erziehungsberechtigten und filterte danach.
 
 ### 2. Die stille Anmeldung (Enrollment)
 
@@ -397,6 +411,15 @@ erreicht.
   Zusatz zu diesem Lauf. Das Query-Budget
   `services.enrollment.contract_enrollments.enroll` hält beide Zahlen fest;
   der Rest ist dort exakt geprüft.
+  **Dazu kommt ein Glied je Phase**, nicht je Kind: Jede Phase eines Aufrufs
+  wird gesperrt (`AcquireExistingStudentMatchLock`), und ihre Angebote und
+  die Anmeldungen, die ihre Kinder halten, werden je Phase einmal gelesen.
+  Gemessen: 2 Statements je weitere Phase in `CheckContractChildren`
+  (Angebote, Halter), 3 in `EnrollContractChildren` (dazu die Sperre); hat
+  eine Phase Halter, deren Buchungen verglichen werden, kommt deren Lesen
+  dazu. Der Test des Budgets prüft beide Zahlen mit zwei Phasen. Bereit ist
+  eine Zeile nur in einer Phase, deren Betreuung heute läuft; eine Schule
+  hat davon selten mehr als eine.
 - **Buchungen einer bestehenden Anmeldung werden nicht überschrieben**
   (`bookings_differ`). Die Roster eines genehmigten Kindes werden einmal
   abgeleitet; das Büro ändert die Buchungen auf dem üblichen Weg.
@@ -464,6 +487,13 @@ Für den Zustand „beide Ursprünge gesetzt“ gilt:
 - Der Vertrag folgt seinen Buchungen (`AmendableContracts`); die
   Zusammenfassung sagt es (`follows_bookings`). `imported` und `taken_over`
   bleiben wahr.
+- **Die Vertragsanpassung folgt keinen Buchungen, von denen der Vertrag
+  gelöst wurde.** `AmendFromBookings` liest die gebundenen Verträge, dann
+  die Buchungen der Schule, und schreibt erst danach unter der Zeilensperre
+  des Vertrags. Löst das Büro die Bindung dazwischen, vergleicht die
+  Anpassung unter der Sperre das Anmeldekind des Vertrags mit dem, dessen
+  Buchungen sie gelesen hat (`lockedTimeline`), und schreibt bei einer
+  Abweichung nichts. Bindung und Lösen nehmen dieselbe Zeilensperre.
 - Die Verknüpfung mit der Kinderakte lässt sich nicht mehr lösen
   (`care_contract.child_link_bound`, 409): Anmeldung und Buchungen gehören zu
   dieser Kinderakte. Eine falsche Verknüpfung aus Teil 1 lässt sich nach
@@ -529,8 +559,9 @@ ist ungebunden. Der nächste Lauf bindet; nichts entsteht doppelt.
 
 - **Ports** (`workflows/contractenrollment/ports`): `Contracts`
   (`carecontract.ContractEnrollments`), `SchoolEnrollments`
-  (`enrollment.ContractEnrollments`), `Schools` (die Schulen des Trägers,
-  Organisation & Tenancy), `Children` (die Kinderakten der Schule mit Namen
+  (`enrollment.ContractEnrollments`), `Schools` (die Schulen des Trägers
+  und das Halten einer Schule in ihrer Transaktion, Organisation &
+  Tenancy), `Children` (die Kinderakten der Schule mit Namen
   und Geburtsdatum, People Directory), `Access` (Zugriffsprotokoll der
   Schule), `Runtime` (Träger- und Tenant-Transaktion). Den Fingerabdruck
   bildet Security Runtime.
@@ -545,6 +576,30 @@ ist ungebunden. Der nächste Lauf bindet; nichts entsteht doppelt.
     der Weg zurück.
   Eine Schule eines anderen Trägers wird abgelehnt, bevor eine Transaktion
   beginnt (`care_contract.school_outside_traeger`, 403).
+- **Die Schule gehört dem Träger, solange ihre Transaktion läuft.** Die
+  Prüfung vor der ersten Transaktion reicht nicht: Die Tenant-Transaktion
+  ist nur über die Schule gebunden, und ein Operator kann die Schule
+  inzwischen einem anderen Träger geben (`UpdateSchool`). Der Workflow hält
+  die Schule deshalb als Erstes in ihrer Tenant-Transaktion unter der
+  Lesesperre von Organisation & Tenancy (`FindSchoolForShare`,
+  `platform.lock_tenant_school_for_share`, #6305) und prüft dort ihren
+  Träger, in Vorschau und Lauf; sonst dieselbe Ablehnung, und nichts von
+  der Schule wird gelesen, protokolliert oder geschrieben. Der Wechsel des
+  Trägers schreibt dieselbe Zeile und wartet auf das Ende der Transaktion.
+  Das ist das Protokoll des Katalog-Rollouts (`lockSchool`,
+  `workflows/traegercatalog/internal/application/school.go:123-137`,
+  aufgerufen in `rollout.go:140-144` und `preview.go:87-89`).
+  **Rest, wie dort:** Zwischen der Transaktion der Schule und der
+  Träger-Transaktion der Bindung hält keine Sperre. Wechselt die Schule
+  genau dann den Träger, bindet der frühere Träger noch seinen eigenen
+  Vertrag: Die Bindung läuft unter seiner RLS und schreibt nur
+  `request_child_id` seines Vertrags und seinen Verlauf, nichts an der
+  Schule. Der Vertrag bleibt ohnehin bei ihm, wie jeder seiner Verträge an
+  dieser Schule nach einem Wechsel; er zeigt dann auf eine Anmeldung, die
+  die Schule in seiner Zeit angelegt hat. Der Katalog-Rollout schreibt nach
+  dem Commit der Schule ebenso weiter (Tarife und Vorlagen,
+  `rollout.go:137-139`). Ein Schloss über beide Owner, das dieses Fenster
+  schlösse, gibt es nicht und ist hier nicht gebaut.
 - **Transaktionen.** Vorschau: Träger-Transaktion (Verträge lesen, Verlauf),
   dann Tenant-Transaktion der Schule (Plan, `CheckContractChildren`,
   Kinderakten, Zugriffsprotokoll). Lauf: dieselben zwei, in der
@@ -578,11 +633,41 @@ ist ungebunden. Der nächste Lauf bindet; nichts entsteht doppelt.
   Anmeldung, die nicht mehr ist, was der Plan bewiesen hat, `held` mit dem
   Grund `changed`: Plan und Prüfung lesen die Schule in einer Transaktion.
 - **Der Lauf übernimmt nur die bestätigte Vorschau.** Er plant in der
-  Tenant-Transaktion neu, bildet den Fingerabdruck und schreibt nichts, wenn
-  er nicht der bestätigte ist (`care_contract.enrollment_preview_changed`,
-  409). Die Antworten der Anmeldung ordnet er den Zeilen über Vertrag und
-  Kinderakte zu, nie über die Position. Ein zweiter Lauf braucht eine neue
-  Vorschau; sie zeigt die Zeilen des ersten als `done`.
+  Tenant-Transaktion neu, bildet den Fingerabdruck und schreibt nichts an
+  der Schule, wenn er nicht der bestätigte ist
+  (`care_contract.enrollment_preview_changed`, 409). Der Eintrag im Verlauf
+  des Trägers über das Lesen der Verträge bleibt, wie nach einer Vorschau;
+  der Eintrag im Zugriffsprotokoll der Schule rollt mit zurück. Die
+  Antworten der Anmeldung ordnet er den Zeilen über Vertrag und Kinderakte
+  zu, nie über die Position. Ein zweiter Lauf braucht eine neue Vorschau;
+  sie zeigt die Zeilen des ersten als `done`.
+- **Angemeldet wird nur, was die Vorschau bereit nannte.** An
+  `EnrollContractChildren` gehen nur die Zeilen, die in der bestätigten
+  Vorschau `ready` waren, zugeordnet über Vertrag und Kinderakte. Eine
+  Zeile, die der Plan bereit nennt, die Prüfung der Anmeldung aber
+  zurückgehalten hat (`held`), geht nicht mit: Die Prüfung liest ohne
+  Sperren, die Anmeldung danach unter Sperren. Lehnt die Schule dazwischen
+  eine wartende Anmeldung ab oder aktiviert sie eine Kinderakte wieder,
+  hätte der Lauf sonst ein Kind angemeldet und gebunden, das das Büro in
+  der Vorschau als zurückgehalten gesehen hat. Die Zeile bleibt in der
+  Antwort, wie die Vorschau sie zeigte; die nächste Vorschau nennt sie
+  bereit.
+- **Ein Fehler einer Zeile bricht den Lauf der Schule ab.** Ablehnungen
+  sind Antworten je Zeile. Ein Fehler dagegen (ein Baustein von Care Plan
+  scheitert an den Daten eines Kindes) rollt die Tenant-Transaktion der
+  Schule zurück: Kein Kind der Schule ist angemeldet, nichts wird gebunden,
+  die Antwort ist ein Fehler. Der Weg heraus: Das Büro löst die Verknüpfung
+  dieses Vertrags (ADR 0307); die Zeile ist dann `unlinked`, und der Lauf
+  nimmt die übrigen mit.
+- **Scheitert die Bindung nach der Anmeldung, antwortet der Lauf mit einem
+  Fehler, obwohl die Schule geschrieben hat.** Die Transaktion der Schule
+  ist dann abgeschlossen: Die Kinder sind angemeldet, die Verträge
+  ungebunden. Das ist der Zustand eines abgebrochenen Laufs; nichts ist
+  verloren und nichts entsteht doppelt. Die nächste Vorschau zeigt die
+  Zeilen als `ready` mit `bind`, der nächste Lauf bindet. Die Seite des
+  Büros im nächsten PR muss das sagen: Nach einem Fehler des Laufs zeigt
+  sie die neue Vorschau und nennt, dass Kinder schon angemeldet sein
+  können und der Lauf wiederholt werden muss.
 - **Eine hängende stille Anmeldung** (`stuck`). Bricht ein Lauf nach der
   Anmeldung ab und läuft der nächste erst, nachdem die Betreuung der Phase
   geendet hat, oder besteht die gespeicherte Anmeldung den Beweis nicht mehr
@@ -645,7 +730,14 @@ ist ungebunden. Der nächste Lauf bindet; nichts entsteht doppelt.
 - **Fehlercodes**: `care_contract.enrollment_preview_changed` und
   `care_contract.enrollment_binding_changed` (beide 409).
 - **Nutzungsanalyse**: Der Lauf zählt als Kernaktion
-  `contract_children_enrolled`; Vorschau und Weg zurück zählen nicht.
+  `contract_children_enrolled`, wenn er etwas geschrieben hat: Die Schule
+  hat mindestens ein Kind angemeldet, oder mindestens ein Vertrag wurde
+  gebunden (`changed` in der Antwort). Ein Lauf, der alles erledigt
+  vorfindet, zählt nicht. Die Antwort nennt jeden Vertrag der Schule und
+  wird damit länger als die 64 KiB, die die Middleware von einer Antwort
+  hält; `changed` steht deshalb vor den Zeilen und wird für diese Route
+  aus dem Anfang der Antwort gelesen (`leadingFlagEvent`). Vorschau und Weg
+  zurück zählen nicht.
 - **Seed**: Der Seed verknüpft den Vertrag einer Kinderakte der Demo-Schule,
   ruft Vorschau und Lauf über diese Routen auf und versucht es mit dem
   nächsten Kind, bis ein Vertrag gebunden ist (höchstens fünf). Die vier
@@ -721,7 +813,8 @@ Die Entscheidung ändert diese Register (ADR 0057 Punkt 5, ADR 0070):
 - **Query-Budget** (`backend/test/query-budgets/`): neu
   `services.enrollment.contract_enrollments.enroll`, 46 Statements für ein
   Kind mit einer kommenden Abhol-Ausnahme; der Test prüft dazu exakt 31 je
-  weiteres Kind (Abschnitt 2).
+  weiteres Kind und je weitere Phase 2 (Prüfung) und 3 (Lauf)
+  (Abschnitt 2).
 - **Compose-Budgets** (`backend/test/module_legacy_budget_ratchet_test.go`):
   `modules/carecontract/compose` 188 → 195 (Konstruktor
   `NewContractEnrollments` und der Typ seiner Ports). Der Konstruktor baut
@@ -742,31 +835,36 @@ Mit dem Workflow (Abschnitt 4) kommen dazu:
   Contract, Enrollment, die eigenen Ports, Tenant Runtime und `api/common`).
 - **Compose-Budgets**: neu `workflows/contractenrollment/compose` 0 → 34
   (Konstruktor und die Laufzeit für Träger- und Tenant-Transaktion).
-- **Pass-through** (`backend/architecture/passthrough/`): drei neue
-  Port-Adapter der Wurzel, 3679 → 3682 Stellen:
+- **Pass-through** (`backend/architecture/passthrough/`): vier neue
+  Port-Adapter der Wurzel, 3679 → 3683 Stellen:
   `api/contractEnrollmentSchools.TraegerSchoolIDs`,
+  `api/contractEnrollmentSchools.HoldTraegerSchool`,
   `api/contractEnrollmentChildren.SchoolChildren`,
   `api/contractEnrollmentAccessLog.RecordAccess`; alle übersetzen (ADR 0067,
   ADR 0075).
 - **Kommando-Effekte**: die Bindung
   `api.careContractApplications.AcceptedApplications` reicht jetzt die
-  Herkunft der Anmeldung weiter (geänderter Digest, weiter eine Abfrage).
+  Herkunft der Anmeldung und den Vertrag weiter, für den sie angelegt wurde
+  (geänderter Digest, weiter eine Abfrage). Neu für den Plan die Bindungen
+  `api.careContractApplications.AcceptedStudentApplications` und
+  `NamePhases` über `carecontract.StudentApplications`, beide Abfragen.
   Die Ports des Workflows sind die öffentlichen Fähigkeiten selbst und
   bringen keine neue Bindung.
 - **Query-Budgets**: neu `api.traeger.contract_enrollments.preview`, exakt
-  26 Statements, unabhängig von der Zahl der Verträge; neu
-  `api.traeger.contract_enrollments.run`, 70 Statements für ein Kind ohne
-  kommende Abhol-Ausnahme. Der Test prüft dazu exakt 20 je weiteres Kind
-  (Buchungen 3, Roster des direkt verknüpften Angebots mit seinen Terminen
-  11, Roster mit mehreren Quellen 4, Entschuldigungen 2): der Rest aus
-  Abschnitt 2, in der Zusammensetzung der Route gemessen. Alles andere am
+  28 Statements, unabhängig von der Zahl der Verträge; neu
+  `api.traeger.contract_enrollments.run`, 72 Statements für ein Kind ohne
+  kommende Abhol-Ausnahme. Beide enthalten das Halten der Schule (Sperre
+  und Lesen, 2 Statements); ohne es waren es 26 und 70. Der Test prüft
+  dazu exakt 20 je weiteres Kind (Buchungen 3, Roster des direkt
+  verknüpften Angebots mit seinen Terminen 11, Roster mit mehreren
+  Quellen 4, Entschuldigungen 2): der Rest aus Abschnitt 2, in der Zusammensetzung der Route gemessen. Alles andere am
   Lauf wächst nicht mit den Kindern.
 - **Verlauf**: `chk_contract_events_action` kennt `unbind`; Trigger
   `guard_contract_application_child` auf `care_contract.contracts`
   (Migration `20261123090000`).
 - **Fehlercodes**: `care_contract.enrollment_preview_changed`,
   `care_contract.enrollment_binding_changed`.
-- **Kernaktion**: `contract_children_enrolled`.
+- **Kernaktion**: `contract_children_enrolled`, nur bei `changed`.
 - **Transaktionsgrenzen** (`backend/test/transaction_boundaries.json`,
   `traeger_transaction.go`): kein neuer Eintrag. Das Register zählt Workflows
   nicht auf, und Care Contract öffnet für Plan, Bindung und Lösen keine
