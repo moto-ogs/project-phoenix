@@ -2,6 +2,7 @@ package groups
 
 import (
 	"context"
+	"errors"
 	"maps"
 	"slices"
 	"sort"
@@ -12,6 +13,10 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
+
+// errStaffLockUnwired names a composition whose staff checks cannot lock
+// the staff row; the class write refuses rather than write unguarded.
+var errStaffLockUnwired = errors.New("education: staff row lock is not wired")
 
 // requireStaff resolves the staff existence check shared by both class
 // operations. Only a genuine no-row outcome becomes ErrStaffNotFound (the API
@@ -94,7 +99,10 @@ func (s *service) SetStaffSchoolClasses(ctx context.Context, staffID int64, clas
 	if err := s.requireStaff(ctx, op, staffID); err != nil {
 		return err
 	}
-	if err := s.staff.LockStaff(ctx, staffID); err != nil {
+	if s.staffLock == nil {
+		return &EducationError{Op: op, Err: errStaffLockUnwired}
+	}
+	if err := s.staffLock.LockStaff(ctx, staffID); err != nil {
 		return &EducationError{Op: op, Err: err}
 	}
 

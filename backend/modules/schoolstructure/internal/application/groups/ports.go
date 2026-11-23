@@ -83,12 +83,9 @@ type RoomDirectory interface {
 }
 
 // StaffDirectory answers whether a staff member exists. A missing staff
-// member is (false, nil); a failed read keeps its error. LockStaff locks
-// the staff row until the transaction ends: the class assignments of one
-// person are replaced under it (ADR 0311).
+// member is (false, nil); a failed read keeps its error.
 type StaffDirectory interface {
 	StaffExists(ctx context.Context, id int64) (bool, error)
-	StaffLockStore
 }
 
 // StudentCounter counts the children of each group.
