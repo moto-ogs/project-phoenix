@@ -1,5 +1,6 @@
 "use client";
 
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import { messageKeys } from "~/lib/swr/portal-keys";
 
 import {
@@ -27,7 +28,6 @@ import { NewTeamGroupModal } from "~/components/messaging/team-group-modals";
 import { useMessagesActivity } from "~/lib/hooks/use-messages-activity";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import {
-  type StaffInboxThread,
   isGroupThread,
   isStaffMessagingDisabled,
   staffRoleKindLabel,
@@ -101,7 +101,7 @@ export function TeamChatInbox({
   });
 
   const filteredThreads = useMemo(() => {
-    const list: StaffInboxThread[] = threads ?? [];
+    const list: sharedContract.InboxThreadResponse[] = threads ?? [];
     if (!searchTerm) return list;
     const term = foldForSearch(searchTerm);
     return list.filter((thread) =>
@@ -349,7 +349,7 @@ export function TeamChatInbox({
 }
 
 /** Name in der Liste: das Gegenüber, bei einer Gruppe ihr Name (#4776). */
-function threadTitle(thread: StaffInboxThread): string {
+function threadTitle(thread: sharedContract.InboxThreadResponse): string {
   return isGroupThread(thread)
     ? (thread.group_name ?? "Gruppenchat")
     : thread.counterpart_name;
@@ -360,7 +360,7 @@ function memberCountLabel(count: number): string {
 }
 
 /** „Du: “ vor der eigenen Nachricht, in einer Gruppe der Vorname sonst. */
-function previewSender(thread: StaffInboxThread): string {
+function previewSender(thread: sharedContract.InboxThreadResponse): string {
   if (thread.last_message_mine) return "Du: ";
   if (isGroupThread(thread) && thread.last_sender_name) {
     return `${thread.last_sender_name.split(" ")[0]}: `;

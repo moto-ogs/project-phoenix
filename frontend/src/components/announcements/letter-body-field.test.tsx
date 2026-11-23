@@ -6,10 +6,10 @@ import {
   LetterBodyField,
   type LetterPreviewChildren,
 } from "./letter-body-field";
-import type { LetterPlaceholder } from "~/lib/parent-announcements-api";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import { unavailableApiError } from "~/lib/api-error";
 
-const PLACEHOLDERS: LetterPlaceholder[] = [
+const PLACEHOLDERS: sharedContract.letterPlaceholderResponse[] = [
   { name: "vorname", label: "Vorname des Kindes", example: "Lina" },
   { name: "gruppe", label: "Gruppe", example: "Füchse" },
 ];

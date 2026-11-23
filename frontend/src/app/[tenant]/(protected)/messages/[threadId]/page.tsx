@@ -690,7 +690,7 @@ function MessageThreadContent() {
                         createdAt={message.created_at}
                         pending={send.stateOf(message.id)}
                         attachments={message.attachments}
-                        attachmentUrl={PARENT_MESSAGE_ATTACHMENTS.downloadUrl}
+                        attachmentFiles={PARENT_MESSAGE_ATTACHMENTS}
                         readReceiptLabel={
                           message.sender_kind === "staff" &&
                           message.read_by_guardian
@@ -752,7 +752,7 @@ function MessageThreadContent() {
                 sending={isSending}
                 disabled={snapshotUnavailable}
                 attachments={{
-                  uploadUrl: PARENT_MESSAGE_ATTACHMENTS.uploadUrl,
+                  upload: PARENT_MESSAGE_ATTACHMENTS.upload,
                 }}
                 sendHint={`Schickt die Nachricht sofort an ${thread?.guardian_name ?? "die Eltern"}.`}
                 placeholder="Nachricht an die Eltern schreiben…"

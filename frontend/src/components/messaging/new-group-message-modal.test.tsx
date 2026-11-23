@@ -15,7 +15,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import type { GroupChild } from "~/lib/parent-group-threads-api";
+import type * as messagesContract from "~/lib/contract/messages.generated";
 import type { ReactNode } from "react";
 import { SWRConfig } from "~/lib/swr/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -117,9 +117,9 @@ describe("Neue Gruppennachricht", () => {
     });
     await pickGroup("Bären");
     await screen.findByText(/Mia Ohne/);
-    let release!: (children: GroupChild[]) => void;
+    let release!: (children: messagesContract.GroupChildResponse[]) => void;
     mocks.fetchGroupAudience.mockReturnValueOnce(
-      new Promise<GroupChild[]>((resolve) => {
+      new Promise<messagesContract.GroupChildResponse[]>((resolve) => {
         release = resolve;
       }),
     );

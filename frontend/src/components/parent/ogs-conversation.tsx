@@ -643,7 +643,7 @@ export function OgsConversation({
                     }
                     tone="parent"
                     attachments={message.attachments}
-                    attachmentUrl={attachmentRoutes.downloadUrl}
+                    attachmentFiles={attachmentRoutes}
                     attachmentLabels={attachmentLabels.bubble}
                     pending={send.stateOf(message.id)}
                     pendingLabel={
@@ -771,7 +771,7 @@ export function OgsConversation({
                 }}
                 sending={sending}
                 attachments={{
-                  uploadUrl: attachmentRoutes.uploadUrl,
+                  upload: attachmentRoutes.upload,
                   labels: attachmentLabels.composer,
                 }}
                 placeholder={tm(

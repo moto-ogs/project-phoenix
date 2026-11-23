@@ -18,6 +18,11 @@ import {
   type AnnouncementInput,
 } from "./parent-announcements-api";
 
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 const originalFetch = globalThis.fetch;
 
 function announcement(overrides: Partial<Announcement> = {}): Announcement {
@@ -95,8 +100,9 @@ describe("fetchAnnouncements", () => {
 
     await expect(fetchAnnouncements()).resolves.toStrictEqual(expected);
     expect(seenURL).toBe("/api/parent-announcements?include_inactive=true");
-    // A GET carries no init.
-    expect(seenInit).toBeUndefined();
+    // A GET carries no body.
+    expect(seenInit).toMatchObject({ method: "GET" });
+    expect(seenInit?.body).toBeUndefined();
   });
 
   it("omits the query string when inactive announcements are excluded", async () => {
@@ -110,9 +116,13 @@ describe("fetchAnnouncements", () => {
     expect(seenURL).toBe("/api/parent-announcements");
   });
 
-  it("returns an empty list when the backend omits the data field", async () => {
+  // #7806: an answer without data is a broken route, not an empty list.
+  it("rejects an answer without a data field", async () => {
     mockFetch(async () => jsonResponse({}));
-    await expect(fetchAnnouncements()).resolves.toEqual([]);
+    await expect(fetchAnnouncements()).rejects.toMatchObject({
+      message: "Elternmitteilungen konnten nicht geladen werden",
+      status: 502,
+    });
   });
 });
 
@@ -171,7 +181,9 @@ describe("updateAnnouncement", () => {
 
 describe("deleteAnnouncement", () => {
   it("sends a DELETE and resolves without a value on success", async () => {
-    const fetchFn = mockFetch(async () => jsonResponse({ status: "ok" }));
+    const fetchFn = mockFetch(async () =>
+      jsonResponse({ data: { deleted: true } }),
+    );
 
     await expect(deleteAnnouncement("7")).resolves.toBeUndefined();
     const [url, init] = fetchFn.mock.calls[0]!;
@@ -190,18 +202,16 @@ describe("deleteAnnouncement", () => {
 });
 
 describe("publishAnnouncement", () => {
-  it("POSTs an empty body to the publish path", async () => {
+  // The route takes no request body (#7806).
+  it("POSTs without a body to the publish path", async () => {
     const published = announcement({ status: "published" });
     const fetchFn = mockFetch(async () => jsonResponse({ data: published }));
 
     await expect(publishAnnouncement("7")).resolves.toStrictEqual(published);
     const [url, init] = fetchFn.mock.calls[0]!;
     expect(url).toBe("/api/parent-announcements/7/publish");
-    expect(init).toMatchObject({
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: "{}",
-    });
+    expect(init).toMatchObject({ method: "POST" });
+    expect((init as RequestInit).body).toBeUndefined();
   });
 
   it("throws the publish fallback when the backend returns no announcement", async () => {
@@ -213,14 +223,15 @@ describe("publishAnnouncement", () => {
 });
 
 describe("unpublishAnnouncement", () => {
-  it("POSTs an empty body to the unpublish path", async () => {
+  it("POSTs without a body to the unpublish path", async () => {
     const retracted = announcement({ status: "draft" });
     const fetchFn = mockFetch(async () => jsonResponse({ data: retracted }));
 
     await expect(unpublishAnnouncement("7")).resolves.toStrictEqual(retracted);
     const [url, init] = fetchFn.mock.calls[0]!;
     expect(url).toBe("/api/parent-announcements/7/unpublish");
-    expect((init as RequestInit).body).toBe("{}");
+    expect(init).toMatchObject({ method: "POST" });
+    expect((init as RequestInit).body).toBeUndefined();
   });
 
   it("throws the retract fallback when data is missing", async () => {
@@ -246,12 +257,11 @@ describe("fetchAnnouncementStats", () => {
     });
   });
 
-  it("falls back to a zeroed stats object when data is absent", async () => {
+  it("rejects an answer without stats", async () => {
     mockFetch(async () => jsonResponse({}));
-    await expect(fetchAnnouncementStats("7")).resolves.toEqual({
-      target_count: 0,
-      read_count: 0,
-      acknowledged_count: 0,
+    await expect(fetchAnnouncementStats("7")).rejects.toMatchObject({
+      message: "Statistik konnte nicht geladen werden",
+      status: 502,
     });
   });
 });
@@ -271,9 +281,12 @@ describe("fetchAnnouncementRecipients", () => {
     await expect(fetchAnnouncementRecipients("7")).resolves.toEqual(recipients);
   });
 
-  it("returns an empty list when the backend omits recipients", async () => {
+  it("rejects an answer without recipients", async () => {
     mockFetch(async () => jsonResponse({}));
-    await expect(fetchAnnouncementRecipients("7")).resolves.toEqual([]);
+    await expect(fetchAnnouncementRecipients("7")).rejects.toMatchObject({
+      message: "Empfängerliste konnte nicht geladen werden",
+      status: 502,
+    });
   });
 });
 
@@ -345,7 +358,7 @@ describe("poll endpoints", () => {
     expect(isPoll(announcement())).toBe(false);
   });
 
-  it("fetches the tally and falls back to empty results", async () => {
+  it("fetches the tally and reads a null option list as empty", async () => {
     const expected = {
       child_count: 12,
       target_child_count: 14,
@@ -361,7 +374,17 @@ describe("poll endpoints", () => {
     await expect(fetchPollResults("7")).resolves.toStrictEqual(expected);
     expect(seenURL).toBe("/api/parent-announcements/7/poll-results");
 
-    mockFetch(async () => jsonResponse({}));
+    // Go writes an empty list as null.
+    mockFetch(async () =>
+      jsonResponse({
+        data: {
+          child_count: 0,
+          target_child_count: 0,
+          answered_count: 0,
+          options: null,
+        },
+      }),
+    );
     await expect(fetchPollResults("7")).resolves.toStrictEqual({
       child_count: 0,
       target_child_count: 0,

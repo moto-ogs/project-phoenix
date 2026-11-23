@@ -5,7 +5,7 @@ import { useCallback, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Modal } from "~/components/ui/modal";
 import { fetchSurveyForm, submitSurveyAnswers } from "~/lib/surveys-api";
-import type { SurveyToAnswer } from "~/lib/surveys-api";
+import type * as surveysContract from "~/lib/contract/surveys.generated";
 import { SurveyAnswerPanel } from "./survey-questionnaire";
 
 /**
@@ -18,7 +18,7 @@ export function SurveyAnswerModal({
   onClose,
   onSubmitted,
 }: Readonly<{
-  survey: SurveyToAnswer;
+  survey: surveysContract.surveyToAnswerResponse;
   onClose: () => void;
   onSubmitted: () => void;
 }>) {

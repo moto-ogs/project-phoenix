@@ -6,6 +6,8 @@
  * kein Log, kein Analyseereignis und keine Adresse.
  */
 
+import type * as surveysContract from "~/lib/contract/surveys.generated";
+
 export type SurveyQuestionKind = "single" | "multiple" | "scale" | "text";
 
 interface SurveyOption {
@@ -35,15 +37,12 @@ export interface SurveyForm {
   readonly participated: boolean;
 }
 
-interface SurveyAnswer {
-  readonly question_id: string;
-  readonly option_ids?: string[];
-  readonly scale_value?: number;
-  readonly text?: string;
-}
-
+/**
+ * Der Rumpf einer Antwort. Beide Portale nehmen dieselbe Form an; die des
+ * Mitarbeiterportals steht für beide.
+ */
 export interface SurveyAnswersRequest {
-  readonly answers: SurveyAnswer[];
+  readonly answers: surveysContract.surveyAnswerRequest[];
 }
 
 /** Die Skala ist fest 1 bis 5. */
@@ -144,7 +143,7 @@ export function buildSurveyAnswers(
   questions: readonly SurveyQuestion[],
   draft: SurveyDraft,
 ): SurveyAnswersRequest {
-  const answers: SurveyAnswer[] = [];
+  const answers: surveysContract.surveyAnswerRequest[] = [];
   for (const question of questions) {
     const answer = draftAnswer(draft, question.id);
     if (!isAnswered(question, answer)) continue;

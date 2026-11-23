@@ -1,5 +1,6 @@
 "use client";
 
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Modal } from "~/components/ui/modal";
 import { formErrorMessage } from "~/components/ui/form-error";
@@ -10,7 +11,6 @@ import {
 import { Input } from "~/components/ui/input";
 import { useApiFormError } from "~/contexts/ToastContext";
 import {
-  type MessageableStaff,
   type StaffMessagesApi,
   staffRoleKindLabel,
 } from "~/lib/staff-messages-api";
@@ -23,7 +23,7 @@ import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
 
 const logger = createLogger({ component: "NewTeamMessageModal" });
 
-const NO_PEOPLE: readonly MessageableStaff[] = [];
+const NO_PEOPLE: readonly sharedContract.RecipientResponse[] = [];
 
 /**
  * The colleagues the reader may write to, shared by the new-message and the
@@ -81,9 +81,9 @@ export function NewTeamMessageModal({
   // Opening a chat fails in the alert above the list (#2517).
   const [openingId, setOpeningId] = useState<string | null>(null);
   const openError = useApiFormError();
-  const latestPickRef = useRef<(person: MessageableStaff) => void>(
-    () => undefined,
-  );
+  const latestPickRef = useRef<
+    (person: sharedContract.RecipientResponse) => void
+  >(() => undefined);
 
   const filtered = useMemo(() => {
     const term = foldForSearch(query.trim());
@@ -91,7 +91,7 @@ export function NewTeamMessageModal({
     return people.filter((person) => foldForSearch(person.name).includes(term));
   }, [people, query]);
 
-  const handlePick = async (person: MessageableStaff) => {
+  const handlePick = async (person: sharedContract.RecipientResponse) => {
     if (openingId) return;
     setOpeningId(person.account_id);
     openError.clear();
