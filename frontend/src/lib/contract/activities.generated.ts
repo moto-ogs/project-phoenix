@@ -191,7 +191,7 @@ export const QuickActivityResponseSchema: z.ZodType<QuickActivityResponse, unkno
 export interface ActivityUpdateRequest {
   name?: string;
   max_participants?: number | null;
-  is_open?: boolean | null;
+  is_open?: boolean;
   category_id?: string;
   planned_room_id?: string | null;
   schedules?: ScheduleRequest[] | null;

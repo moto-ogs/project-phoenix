@@ -120,12 +120,29 @@ type ActivityRequest struct {
 type ActivityUpdateRequest struct {
 	Name            string             `json:"name"`
 	MaxParticipants *int               `json:"max_participants"`
-	IsOpen          *bool              `json:"is_open,omitempty"`
+	IsOpen          OptionalOpen       `json:"is_open"`
 	CategoryID      ident.ID           `json:"category_id"`
 	PlannedRoomID   OptionalRoomID     `json:"planned_room_id"`
 	Schedules       *[]ScheduleRequest `json:"schedules,omitempty"`
 	SupervisorIDs   *[]ident.ID        `json:"supervisor_ids,omitempty"`
 	ExpectedVersion string             `json:"expected_version"`
+}
+
+// OptionalOpen tells an omitted is_open (keep the opening) apart from a
+// value (set it).
+type OptionalOpen struct {
+	Set   bool
+	Value bool
+}
+
+// UnmarshalJSON notes that the key was present and reads its value; null
+// keeps the opening like an omitted key.
+func (o *OptionalOpen) UnmarshalJSON(b []byte) error {
+	if string(b) == "null" {
+		return nil
+	}
+	o.Set = true
+	return json.Unmarshal(b, &o.Value)
 }
 
 // OptionalRoomID tells an omitted planned_room_id (keep the room) apart
@@ -170,9 +187,12 @@ func (req *ActivityUpdateRequest) Bind(_ *http.Request) error {
 func (req *ActivityUpdateRequest) groupEdit(id int64) activityContract.GroupEdit {
 	edit := activityContract.GroupEdit{
 		ID: id, Name: req.Name, MaxParticipants: participantLimit(req.MaxParticipants),
-		CategoryID: req.CategoryID.Int64(), IsOpen: req.IsOpen,
+		CategoryID:     req.CategoryID.Int64(),
 		SetPlannedRoom: req.PlannedRoomID.Set, PlannedRoomID: (*int64)(req.PlannedRoomID.Value),
 		ExpectedVersion: req.ExpectedVersion,
+	}
+	if req.IsOpen.Set {
+		edit.IsOpen = &req.IsOpen.Value
 	}
 	if req.SupervisorIDs != nil {
 		edit.ReplaceSupervisors, edit.SupervisorIDs = true, ident.Int64s(*req.SupervisorIDs)

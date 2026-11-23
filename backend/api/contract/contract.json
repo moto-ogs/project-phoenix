@@ -26696,8 +26696,7 @@
           "name": "is_open",
           "optional": true,
           "schema": {
-            "kind": "bool",
-            "nullable": true
+            "kind": "bool"
           }
         },
         {
