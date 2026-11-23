@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
+import type { PublicEnrollmentFormBootstrapResponse } from "~/lib/contract/shared.generated";
 
 const { mockAuth } = vi.hoisted(() => ({
   mockAuth: vi.fn(),
@@ -78,8 +79,9 @@ const payload = {
       photo_enabled: false,
       blocks: [],
     },
-  },
-} as const;
+    terms_fingerprint: "shown-terms",
+  } satisfies PublicEnrollmentFormBootstrapResponse,
+};
 
 describe("GET /api/enrollment/form-bootstrap/public/[tenantSlug]/[phaseId]", () => {
   const fetchMock = vi.fn();
