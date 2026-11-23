@@ -25,10 +25,16 @@ import (
 //   - The binding changes request_child_id and nothing else: no version, no
 //     document, no party. It sends nothing. A repeated binding answers the
 //     contract as bound.
-//   - A contract is bound only to the application child its plan row stands
-//     for (ApplicationBinding): the accepted application the row proved, or
-//     the enrollment the school made for the row. No other application of
-//     the child is ever bound, whatever its state.
+//   - A contract is bound only to an application child the school's
+//     enrollment confirmed under its gates (ApplicationBinding). Every row
+//     that is to be bound goes through that enrollment in the school's
+//     transaction, also a row whose accepted application the plan proved:
+//     the plan proposes, the enrollment confirms, and the binding takes
+//     nothing but a confirmation. No other application of the child is
+//     ever bound, whatever its state.
+//   - No child is booked before its contract: the derived bookings start on
+//     the later of the service start of the phase and the first day of the
+//     contract.
 //   - The plan reads the accepted applications a contract may come from. The
 //     school's enrollment sees more: an application that waits for a
 //     decision, or one the office matched to the child record. Its answer
@@ -45,8 +51,9 @@ import (
 const (
 	// EnrollmentReady is a contract whose child gets the bookings of the row
 	// and that is bound then; with RequestChildID the child has an accepted
-	// application whose own bookings are the contract's already and is only
-	// bound, to that application.
+	// application whose own bookings are the contract's already, and the
+	// contract is bound to that application once the school's enrollment
+	// confirmed it.
 	EnrollmentReady = "ready"
 	// EnrollmentDone is a contract bound to an application child already.
 	EnrollmentDone = "done"
@@ -69,8 +76,9 @@ const (
 	// EnrollmentReasonOfferingGone is a module the school no longer has as a
 	// care offering, or one without an enrollment phase.
 	EnrollmentReasonOfferingGone = "offering_gone"
-	// EnrollmentReasonTwoPhases is a contract whose modules belong to two
-	// enrollment phases: one enrollment has one phase.
+	// EnrollmentReasonTwoPhases is a contract whose modules of the version in
+	// force belong to two enrollment phases: one enrollment has one phase. A
+	// planned version in another phase is EnrollmentReasonPlannedChange.
 	EnrollmentReasonTwoPhases = "two_phases"
 	// EnrollmentReasonPhaseNotBegun and EnrollmentReasonPhaseEnded are a
 	// phase whose service has not started, or is over.
@@ -98,21 +106,30 @@ const (
 	// enrollment answers the same for every other application of the child
 	// in the phase the plan does not read (ContractEnrollments).
 	EnrollmentReasonHasApplication = "has_application"
+	// EnrollmentReasonFollowsContract is a child whose accepted application
+	// in the phase has the earlier imported contract of the child already
+	// (FollowsContractID): this contract follows that one in the same phase,
+	// as when one ends on 31 December and the next starts on 1 January. An
+	// application child has one contract, so the row stays held; the office
+	// handles it as a change of the contract.
+	EnrollmentReasonFollowsContract = "follows_contract"
 	// EnrollmentReasonPlannedChange is a contract with a version that starts
-	// after today. The silent enrollment writes no dated change of bookings
+	// after today, in its phase or in a later one. The silent enrollment writes no dated change of bookings
 	// (it would tell the guardians in the parents portal), so the child is
 	// enrolled once the planned version holds. A child whose accepted
 	// application carries the change already is bound all the same.
 	EnrollmentReasonPlannedChange = "planned_change"
 )
 
-// What the school's enrollment answered for a ready row without an
-// application child, as a binding names it.
+// What the school's enrollment answered for a ready row, as a binding names
+// it. Only these two answers bind.
 const (
 	// EnrollmentAnswerEnrolled is a child the enrollment enrolled.
 	EnrollmentAnswerEnrolled = "enrolled"
-	// EnrollmentAnswerExisting is a child that had the enrollment of this
-	// source with the bookings of the row already.
+	// EnrollmentAnswerExisting is a child the enrollment found and confirmed:
+	// the accepted application the row proved, with its stored bookings
+	// unchanged since the plan, or the enrollment of this source with the
+	// bookings of the row.
 	EnrollmentAnswerExisting = "existing"
 )
 
@@ -126,7 +143,8 @@ const (
 	// BindingChanged is a contract that is no longer what the plan saw:
 	// another child record, another timeline, another application child than
 	// the one its row stands for, no longer active, or an application child
-	// that has another contract. It is not bound; the office looks again.
+	// that has another contract; and a binding without the confirmation of
+	// the school's enrollment. It is not bound; the office looks again.
 	BindingChanged = "changed"
 )
 
@@ -208,10 +226,23 @@ type EnrollmentPlanRow struct {
 	// (done), the accepted application a ready row is bound to without a new
 	// enrollment, or the application that holds the row back.
 	RequestChildID ident.ID `json:"request_child_id,omitempty"`
-	// Bookings is what the child books from the service start of the phase;
-	// Changes are the planned versions after it, in order.
+	// FollowsContractID is the earlier imported contract that has the
+	// application of the child (EnrollmentReasonFollowsContract).
+	FollowsContractID ident.ID `json:"follows_contract_id,omitempty"`
+	// Bookings is what the child books from the first day the contract
+	// promises care in the phase: the service start of the phase, or the
+	// first day of the contract when that is later. Changes are the planned
+	// versions after it, in order.
 	Bookings []EnrollmentBooking `json:"bookings"`
 	Changes  []EnrollmentChange  `json:"changes"`
+	// ApplicationBookings are, for a ready row that names an accepted
+	// application (RequestChildID), the bookings of that application as they
+	// hold from ProvedOn on, with what the plan read of each module: what
+	// the proof stands on. The school's enrollment compares them with the
+	// stored bookings under its gates and confirms the application only
+	// when nothing changed.
+	ApplicationBookings []EnrollmentBooking `json:"application_bookings,omitempty"`
+	ProvedOn            calendar.Date       `json:"proved_on,omitempty"`
 	// Token names what a ready row was proved on: the effective versions of
 	// the contract, and the application child the binding is for
 	// (RequestChildID), or that the row has none and the school enrolls the
@@ -237,25 +268,31 @@ type EnrollmentPlan struct {
 
 // ApplicationBinding binds one imported contract to an application child.
 // The child record and the token are those of the ready plan row. One rule
-// says which application child a binding may name:
+// says which application child a binding may name: the one the school's
+// enrollment (enrollment.ContractEnrollments) confirmed for the row under
+// its gates, with the status enrolled or existing, which Enrollment carries.
 //
-//   - A row with RequestChildID is bound to exactly that application child,
-//     the accepted application the plan proved. The child is not enrolled.
-//   - A row without one is bound to the application child the school's
-//     enrollment (enrollment.ContractEnrollments) answered for the contract
-//     with the status enrolled or existing, and Enrollment carries that
-//     status. Any other answer of the enrollment (has_application, changed,
-//     refused) binds nothing.
+//   - A row with RequestChildID names the accepted application the plan
+//     proved. The caller hands it to the enrollment with ApplicationBookings
+//     and ProvedOn; the enrollment checks that this approved child is the
+//     child record's in the phase and that its stored bookings are still
+//     the ones the plan proved, and answers existing. The child gets no new
+//     enrollment.
+//   - A row without one is enrolled, and the enrollment answers enrolled, or
+//     existing for the enrollment of this source it finds.
 //
-// The token of the row carries which of the two holds, so a binding that
-// names another application child is answered as BindingChanged.
+// Any other answer of the enrollment (has_application, changed, refused)
+// binds nothing, and neither does a binding without an answer. The token of
+// the row pins the application child a row with RequestChildID is for, so a
+// binding that names another one is answered as BindingChanged.
 type ApplicationBinding struct {
 	ContractID     ident.ID `json:"contract_id"`
 	StudentID      ident.ID `json:"student_id"`
 	RequestChildID ident.ID `json:"request_child_id"`
 	Token          string   `json:"token"`
-	// Enrollment is EnrollmentAnswerEnrolled or EnrollmentAnswerExisting for
-	// a row without an application child, empty for a row that names one.
+	// Enrollment is the answer of the school's enrollment for the row:
+	// EnrollmentAnswerEnrolled or EnrollmentAnswerExisting. Without it the
+	// binding is BindingChanged.
 	Enrollment string `json:"enrollment,omitempty"`
 }
 
@@ -270,8 +307,9 @@ type ApplicationBindingResult struct {
 // contracts of one school and binds the contracts to it. It opens no
 // transaction. The caller runs the steps one after the other, each in its
 // own unit (ADR 0105): the read in the Träger transaction, the plan in the
-// school's tenant transaction, where it also enrolls the ready children
-// (Enrollment), and the binding in a Träger transaction again.
+// school's tenant transaction, where it also hands every ready row to the
+// school's enrollment (Enrollment), and the binding of the rows that
+// enrollment confirmed in a Träger transaction again.
 type ContractEnrollments interface {
 	// EnrollmentContracts reads, in the Träger transaction of the reviewer,
 	// the imported contracts of the school with their timelines and records
@@ -290,16 +328,20 @@ type ContractEnrollments interface {
 	//
 	// The plan reads only the accepted applications a contract may come
 	// from. A ready row is therefore a proposal the school's enrollment
-	// confirms under its locks; where both answer, the enrollment's answer
-	// goes first (has_application, changed, refused).
+	// confirms under its locks, whether the child is to be enrolled or has
+	// the accepted application the row names; where both answer, the
+	// enrollment's answer goes first (has_application, changed, refused).
 	EnrollmentPlans(ctx context.Context, read EnrollmentRead) (EnrollmentPlan, error)
 	// BindApplications binds each contract to its application child, in the
 	// Träger transaction of the reviewer: under the lock of the Träger's
 	// links and the row locks of the contracts it checks again that each is
 	// an imported, active, unbound contract of the school with the child
 	// record and the token of its plan row, and that the binding names the
-	// application child the row stands for (ApplicationBinding), binds it
-	// and records it in the trail. A contract that changed is answered as
+	// application child the row stands for and carries the confirmation of
+	// the school's enrollment (ApplicationBinding), binds it and records it
+	// in the trail. It reads nothing of the school: what the enrollment
+	// confirmed in the school's transaction may change before this
+	// transaction runs, and no transaction holds both (ADR 0105, ADR 0309). A contract that changed is answered as
 	// BindingChanged and stays as it is, and so is a second binding of one
 	// contract in a call that names another application child; an
 	// application child that got a contract past the lock is

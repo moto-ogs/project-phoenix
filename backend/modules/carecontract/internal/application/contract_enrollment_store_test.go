@@ -306,11 +306,24 @@ func TestARunCutShortBeforeTheBindingIsFinishedByTheNext(t *testing.T) {
 	rerun := f.plan(t).Rows[0]
 	require.Equal(t, carecontract.EnrollmentReady, rerun.Status)
 	assert.Equal(t, ident.ID(f.requestChild), rerun.RequestChildID, "the row names the enrollment the first run made")
+	assert.Equal(t, coverToday, rerun.ProvedOn)
+	assert.Equal(t, []carecontract.EnrollmentBooking{{CareOfferingID: 7, ModuleName: "Ganztag", Days: []string{"mon"},
+		ValidFrom: coverToday, ValidUntil: calendar.NewDate(2099, 8, 1), EndTimes: map[string]string{"mon": "16:00"},
+		AvailableDays: []string{"mon", "tue", "wed", "thu", "fri"}, DaysOfWeekMode: "parent_choice"}}, rerun.ApplicationBookings,
+		"the row carries the stored bookings from today on: the school's enrollment compares them under its gates")
 	binding := carecontract.ApplicationBinding{ContractID: rerun.ContractID, StudentID: rerun.StudentID,
-		RequestChildID: rerun.RequestChildID, Token: rerun.Token}
+		RequestChildID: rerun.RequestChildID, Token: rerun.Token, Enrollment: carecontract.EnrollmentAnswerExisting}
 	other := binding
 	other.RequestChildID++
 	assert.Equal(t, carecontract.BindingChanged, f.bind(t, other)[0].Status, "only the application the row proved is bound")
+	// The proof of the plan alone binds nothing: the school's enrollment
+	// confirms the application under its gates first, and an application it
+	// found changed, or one it could only have enrolled anew, is not bound.
+	for _, answer := range []string{"", "changed", "has_application", carecontract.EnrollmentAnswerEnrolled} {
+		unconfirmed := binding
+		unconfirmed.Enrollment = answer
+		assert.Equal(t, carecontract.BindingChanged, f.bind(t, unconfirmed)[0].Status, "enrollment answer %q", answer)
+	}
 	assert.Equal(t, carecontract.BindingBound, f.bind(t, binding)[0].Status)
 	assert.Equal(t, 1, f.count(t, `SELECT COUNT(*) FROM care_contract.contracts WHERE organization_id = ? AND request_child_id = ?`,
 		f.org, f.requestChild))
@@ -333,9 +346,9 @@ func TestAContractThatChangedSinceThePlanIsNotBound(t *testing.T) {
 	moved := f.binding(row)
 	moved.Token = "1:wirksam|new"
 	assert.Equal(t, carecontract.BindingChanged, f.bind(t, moved)[0].Status, "another timeline")
-	// A row without an application child is bound only to what the school's
-	// enrollment answered as enrolled or existing: never to an application
-	// it only named (has_application), refused or found changed.
+	// A row is bound only to what the school's enrollment answered as
+	// enrolled or existing: never to an application it only named
+	// (has_application), refused or found changed.
 	for _, answer := range []string{"", "has_application", "changed", "refused"} {
 		unconfirmed := f.binding(row)
 		unconfirmed.Enrollment = answer

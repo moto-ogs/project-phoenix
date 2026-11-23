@@ -116,10 +116,7 @@ func (e *ContractEnrollments) EnrollmentPlans(ctx context.Context, read carecont
 			return plan, fmt.Errorf("care contract: read school %d: %w", read.SchoolID, err)
 		}
 	}
-	contracted := make(map[int64]bool, len(read.ContractedChildren))
-	for _, child := range read.ContractedChildren {
-		contracted[child] = true
-	}
+	contracted := contractedChildren(read)
 	today := e.today()
 	for _, contract := range read.Contracts {
 		var of []carecontract.Application
@@ -131,6 +128,21 @@ func (e *ContractEnrollments) EnrollmentPlans(ctx context.Context, read carecont
 		plan.Rows = append(plan.Rows, row)
 	}
 	return plan, nil
+}
+
+// contractedChildren names the application children of the read that have
+// a contract, each with the imported contract bound to it.
+func contractedChildren(read carecontract.EnrollmentRead) boundChildren {
+	contracted := make(boundChildren, len(read.ContractedChildren))
+	for _, child := range read.ContractedChildren {
+		contracted[child] = 0
+	}
+	for _, contract := range read.Contracts {
+		if contract.RequestChildID != nil {
+			contracted[*contract.RequestChildID] = contract.ID
+		}
+	}
+	return contracted
 }
 
 // readSchool reads the care offerings of the school with their phases and
@@ -278,7 +290,8 @@ func newBindingCheck(contracts []carecontract.EnrollmentContract, children []por
 // application child already, changed for one that is no longer the imported,
 // active, unbound contract with the child record and the timeline of the
 // plan, whose binding names another application child than the one its row
-// stands for, or whose application child has another contract, else bound.
+// stands for or carries no confirmation of the school's enrollment, or
+// whose application child has another contract, else bound.
 // A contract the call bound is bound for its later rows too: a second row
 // of it is done or changed, never a second write.
 func (c *bindingCheck) decide(binding carecontract.ApplicationBinding) string {
@@ -300,14 +313,19 @@ func (c *bindingCheck) decide(binding carecontract.ApplicationBinding) string {
 	return carecontract.BindingBound
 }
 
-// plannedFor tells whether the binding names the application child the plan
-// row of the contract stands for, on the timeline the contract still has:
-// the accepted application the row proved, or, for a row without one, the
-// enrollment the school answered as enrolled or existing.
+// plannedFor tells whether the binding is one the plan and the school's
+// enrollment both stand for, on the timeline the contract still has. The
+// enrollment confirmed the application child under its gates (enrolled or
+// existing), and the token of the row names it: the accepted application
+// the row proved, which the enrollment can only answer as existing, or no
+// application, for the child the enrollment made or found.
 func plannedFor(contract carecontract.EnrollmentContract, binding carecontract.ApplicationBinding) bool {
-	if binding.Token == planToken(contract.Versions, binding.RequestChildID.Int64()) {
-		return true
+	switch binding.Enrollment {
+	case carecontract.EnrollmentAnswerExisting:
+		return binding.Token == planToken(contract.Versions, binding.RequestChildID.Int64()) ||
+			binding.Token == planToken(contract.Versions, 0)
+	case carecontract.EnrollmentAnswerEnrolled:
+		return binding.Token == planToken(contract.Versions, 0)
 	}
-	return binding.Token == planToken(contract.Versions, 0) &&
-		(binding.Enrollment == carecontract.EnrollmentAnswerEnrolled || binding.Enrollment == carecontract.EnrollmentAnswerExisting)
+	return false
 }
