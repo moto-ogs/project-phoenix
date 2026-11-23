@@ -271,7 +271,16 @@ func (s *Service) UpdateGuardianEntry(ctx context.Context, edit peopledirectory.
 			}
 		}
 	}
-	return guardianCommand(s, "update_guardian_entry", func(p peopledirectory.GuardianProvider) error { return p.UpdateGuardianEntry(ctx, edit) })
+	// The save joins the caller's unit: the locks it takes and the version it
+	// checks hold until the caller commits, and a refusal rolls back with it.
+	if err := s.tx.RequireTransaction(ctx); err != nil {
+		return err
+	}
+	provider, err := s.guardianProvider()
+	if err != nil {
+		return err
+	}
+	return provider.UpdateGuardianEntry(ctx, edit)
 }
 
 func (s *Service) RemoveGuardianFromStudent(ctx context.Context, input peopledirectory.RemoveGuardian) error {

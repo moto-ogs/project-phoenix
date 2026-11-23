@@ -76,8 +76,7 @@ func (s *Service) updateGuardianContactInTx(ctx context.Context, child *Child, a
 	before := snapshotGuardianContact(profile, oldPhones)
 	// The form saves back the contact it showed (ADR 0311): a correction by
 	// the school or another parent since the read refuses the edit.
-	isSelf := profile.AccountID != nil && *profile.AccountID == accountID
-	if err := readstate.Check(input.ExpectedVersion, guardianContactVersion(profile, oldPhones, isSelf)); err != nil {
+	if err := readstate.Check(input.ExpectedVersion, guardianContactVersion(profile, oldPhones, isOwnProfile(profile, accountID))); err != nil {
 		return nil, err
 	}
 
@@ -96,7 +95,7 @@ func (s *Service) updateGuardianContactInTx(ctx context.Context, child *Child, a
 		return nil, err
 	}
 
-	applyOwnSalutation(profile, input.Salutation, profile.AccountID != nil && *profile.AccountID == accountID)
+	applyOwnSalutation(profile, input.Salutation, isOwnProfile(profile, accountID))
 	if err := s.writeGuardianContact(ctx, profile, input, before.email); err != nil {
 		return nil, err
 	}
@@ -117,6 +116,11 @@ func (s *Service) updateGuardianContactInTx(ctx context.Context, child *Child, a
 		child.HasPermission(GuardianPermissionPickupManage), false, s.GuardianPolicy.IsFullRole)
 	s.broadcastProfileChildrenAfterCommit(ctx, child.TenantID, target.profileLinks)
 	return result, nil
+}
+
+// isOwnProfile reports whether the profile belongs to the calling account.
+func isOwnProfile(profile *GuardianProfile, accountID int64) bool {
+	return profile.AccountID != nil && *profile.AccountID == accountID
 }
 
 // applyOwnSalutation stores the form of address the caller chose for their
@@ -176,7 +180,7 @@ func (s *Service) lockEditableGuardianContact(ctx context.Context, accountID, st
 	if err != nil {
 		return editableGuardianContact{}, err
 	}
-	isSelf := profile.AccountID != nil && *profile.AccountID == accountID
+	isSelf := isOwnProfile(profile, accountID)
 	if err := refuseContactEdit(profile, link, isSelf, s.GuardianPolicy.IsFullRole); err != nil {
 		return editableGuardianContact{}, err
 	}

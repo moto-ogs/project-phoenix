@@ -275,14 +275,13 @@ func (p *GuardianDirectory) UpdateGuardianLink(ctx context.Context, linkID int64
 	}))
 }
 
-// UpdateGuardianEntry checks the version of the locked entry with the
+// UpdateGuardianEntry runs in the caller's unit (the owner capability
+// requires it) and checks the version of the locked entry with the
 // projection the guardian list reads, so read and check share one token.
 func (p *GuardianDirectory) UpdateGuardianEntry(ctx context.Context, edit peopledirectory.GuardianEntryEdit) error {
-	return mapGuardianError(p.inTenantTx(ctx, func(txCtx context.Context) error {
-		return p.guardians.UpdateGuardianEntry(txCtx, edit, func(profile *peopledirectory.GuardianProfileSnapshot, link *peopledirectory.GuardianRelationshipSnapshot) error {
-			stored := peopledirectory.GuardianWithLink{Guardian: toDirectoryGuardian(profile), Link: toDirectoryLink(link, p.permissionGranted)}
-			return readstate.Check(edit.ExpectedVersion, peopledirectory.GuardianEntryVersion(stored))
-		})
+	return mapGuardianError(p.guardians.UpdateGuardianEntry(ctx, edit, func(profile *peopledirectory.GuardianProfileSnapshot, link *peopledirectory.GuardianRelationshipSnapshot) error {
+		stored := peopledirectory.GuardianWithLink{Guardian: toDirectoryGuardian(profile), Link: toDirectoryLink(link, p.permissionGranted)}
+		return readstate.Check(edit.ExpectedVersion, peopledirectory.GuardianEntryVersion(stored))
 	}))
 }
 

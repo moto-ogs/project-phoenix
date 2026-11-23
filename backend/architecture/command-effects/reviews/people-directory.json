@@ -2173,30 +2173,6 @@
       "target_owner": ""
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.DeleteGuardianPhone",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.DeleteGuardianPhone",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/peopledirectory/internal/application.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.DeleteGuardianPhone",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.DeleteGuardianPhone",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/peopledirectory/internal/application.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
       "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.DeleteGuardianPhoneRecord",
       "classification": "platform",
@@ -2631,30 +2607,6 @@
       "classification": "unresolved",
       "effect": "unresolved",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindGuardianLink",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/peopledirectory/internal/application.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.FindGuardianPhone",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindGuardianPhone",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/peopledirectory/internal/application.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.FindGuardianPhone",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindGuardianPhone",
       "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/peopledirectory/internal/application.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
       "source_owner": "people-directory",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
@@ -6427,30 +6379,6 @@
       "target_owner": ""
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.SetPrimaryGuardianPhone",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetPrimaryGuardianPhone",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/peopledirectory/internal/application.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.SetPrimaryGuardianPhone",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetPrimaryGuardianPhone",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/peopledirectory/internal/application.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
       "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.SetSchoolDayHint",
       "classification": "platform",
@@ -6815,6 +6743,50 @@
       "target_owner": ""
     },
     {
+      "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.UpdateGuardianEntry",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianEntry",
+      "reason": "Guarded Identity invitation invalidation joins the contact edit's existing school transaction, refuses a missing transaction/school, and updates only Identity-owned live unaccepted links. No separate commit, scope switch, foreign-state check or new coordinated lock protocol; errors abort the outer contact edit (ADR 0067 command participation). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged. Reviewed for #7904: UpdateGuardianEntry saves profile, link and phone list of the staff form in one owner command in the caller's unit against the read version (ADR 0311); it runs the same guarded contact edit, link update and phone writes as the former single routes.",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.NewGuardianInvitationInvalidation",
+      "target_owner": "identity-access"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.UpdateGuardianEntry",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianEntry",
+      "reason": "Platform protocol participation (scope): people-directory reaches tenant.RequireTransaction (tenant-runtime) through *modules/peopledirectory/compose.Directory.UpdateGuardianEntry. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #7904: UpdateGuardianEntry saves profile, link and phone list of the staff form in one owner command in the caller's unit against the read version (ADR 0311); it runs the same guarded contact edit, link update and phone writes as the former single routes.",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RequireTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardianEntry",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianEntry",
+      "reason": "Guarded Identity invitation invalidation joins the contact edit's existing school transaction, refuses a missing transaction/school, and updates only Identity-owned live unaccepted links. No separate commit, scope switch, foreign-state check or new coordinated lock protocol; errors abort the outer contact edit (ADR 0067 command participation). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged. Reviewed for #7904: UpdateGuardianEntry saves profile, link and phone list of the staff form in one owner command in the caller's unit against the read version (ADR 0311); it runs the same guarded contact edit, link update and phone writes as the former single routes.",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.NewGuardianInvitationInvalidation",
+      "target_owner": "identity-access"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardianEntry",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianEntry",
+      "reason": "Platform protocol participation (scope): people-directory reaches tenant.RequireTransaction (tenant-runtime) through modules/peopledirectory.Owner.UpdateGuardianEntry. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #7904: UpdateGuardianEntry saves profile, link and phone list of the staff form in one owner command in the caller's unit against the read version (ADR 0311); it runs the same guarded contact edit, link update and phone writes as the former single routes.",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RequireTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "adr": "0083",
       "approval_adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.UpdateGuardianLink",
@@ -6879,30 +6851,6 @@
       "classification": "unresolved",
       "effect": "unresolved",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianPayment",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/peopledirectory/internal/application.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.UpdateGuardianPhone",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianPhone",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/peopledirectory/internal/application.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardianPhone",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianPhone",
       "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/peopledirectory/internal/application.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
       "source_owner": "people-directory",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
@@ -7429,6 +7377,17 @@
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.GuardianProvider.UpdateGuardian",
       "reason": "Guarded Identity invitation invalidation joins the contact edit's existing school transaction, refuses a missing transaction/school, and updates only Identity-owned live unaccepted links. No separate commit, scope switch, foreign-state check or new coordinated lock protocol; errors abort the outer contact edit (ADR 0067 command participation). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.NewGuardianInvitationInvalidation",
+      "target_owner": "identity-access"
+    },
+    {
+      "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.GuardianDirectory.UpdateGuardianEntry",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.GuardianProvider.UpdateGuardianEntry",
+      "reason": "Guarded Identity invitation invalidation joins the contact edit's existing school transaction, refuses a missing transaction/school, and updates only Identity-owned live unaccepted links. No separate commit, scope switch, foreign-state check or new coordinated lock protocol; errors abort the outer contact edit (ADR 0067 command participation). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged. Reviewed for #7904: UpdateGuardianEntry saves profile, link and phone list of the staff form in one owner command in the caller's unit against the read version (ADR 0311); it runs the same guarded contact edit, link update and phone writes as the former single routes.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.NewGuardianInvitationInvalidation",
       "target_owner": "identity-access"
@@ -8560,18 +8519,6 @@
       "target_owner": ""
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.DeleteGuardianPhone",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.DeleteGuardianPhone",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/peopledirectory/internal/application.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
       "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.DeleteGuardianPhoneRecord",
       "classification": "platform",
@@ -8786,18 +8733,6 @@
       "classification": "unresolved",
       "effect": "unresolved",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.FindGuardianLink",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/peopledirectory/internal/application.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.FindGuardianPhone",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.FindGuardianPhone",
       "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/peopledirectory/internal/application.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
       "source_owner": "people-directory",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
@@ -10710,18 +10645,6 @@
       "target_owner": ""
     },
     {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.SetPrimaryGuardianPhone",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.SetPrimaryGuardianPhone",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/peopledirectory/internal/application.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
       "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.SetSchoolDayHint",
       "classification": "platform",
@@ -10904,6 +10827,28 @@
       "target_owner": ""
     },
     {
+      "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.UpdateGuardianEntry",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardianEntry",
+      "reason": "Guarded Identity invitation invalidation joins the contact edit's existing school transaction, refuses a missing transaction/school, and updates only Identity-owned live unaccepted links. No separate commit, scope switch, foreign-state check or new coordinated lock protocol; errors abort the outer contact edit (ADR 0067 command participation). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged. Reviewed for #7904: UpdateGuardianEntry saves profile, link and phone list of the staff form in one owner command in the caller's unit against the read version (ADR 0311); it runs the same guarded contact edit, link update and phone writes as the former single routes.",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.NewGuardianInvitationInvalidation",
+      "target_owner": "identity-access"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.UpdateGuardianEntry",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardianEntry",
+      "reason": "Platform protocol participation (scope): people-directory reaches tenant.RequireTransaction (tenant-runtime) through *modules/peopledirectory/internal/application.Service.UpdateGuardianEntry. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #7904: UpdateGuardianEntry saves profile, link and phone list of the staff form in one owner command in the caller's unit against the read version (ADR 0311); it runs the same guarded contact edit, link update and phone writes as the former single routes.",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RequireTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "adr": "0083",
       "approval_adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.UpdateGuardianLink",
@@ -10933,18 +10878,6 @@
       "classification": "unresolved",
       "effect": "unresolved",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardianPayment",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/peopledirectory/internal/application.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.UpdateGuardianPhone",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardianPhone",
       "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/peopledirectory/internal/application.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
       "source_owner": "people-directory",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
@@ -11461,30 +11394,6 @@
       "classification": "unresolved",
       "effect": "unresolved",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.FindGuardianLink",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/peopledirectory/internal/application.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.FindGuardianPhone",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.FindGuardianPhone",
-      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/peopledirectory/internal/application.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
-      "adr": "0083",
-      "approval_adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindGuardianPhone",
-      "classification": "unresolved",
-      "effect": "unresolved",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.FindGuardianPhone",
       "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Callable variable or parameter with a value the scan cannot follow (no caller in the typed build, typically a testhooks helper fed only by _test.go, or a non-static expression). Exact boundary: unresolved:callable:modules/peopledirectory/internal/application.observe. Exposed by #4836 callable resolution (ADR 0098); a changed value or closure needs a fresh approval ADR.",
       "source_owner": "people-directory",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
@@ -18218,6 +18127,17 @@
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.GuardianService.UpdateGuardian",
       "reason": "Guarded Identity invitation invalidation joins the contact edit's existing school transaction, refuses a missing transaction/school, and updates only Identity-owned live unaccepted links. No separate commit, scope switch, foreign-state check or new coordinated lock protocol; errors abort the outer contact edit (ADR 0067 command participation). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged.",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.NewGuardianInvitationInvalidation",
+      "target_owner": "identity-access"
+    },
+    {
+      "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.RetainedGuardianService.UpdateGuardianEntry",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.GuardianService.UpdateGuardianEntry",
+      "reason": "Guarded Identity invitation invalidation joins the contact edit's existing school transaction, refuses a missing transaction/school, and updates only Identity-owned live unaccepted links. No separate commit, scope switch, foreign-state check or new coordinated lock protocol; errors abort the outer contact edit (ADR 0067 command participation). Re-reviewed for #7104: Identity \u0026 Access code or root wiring on this binding's trace changed only in how the clock reaches it (ADR 0261); effect and classification are unchanged. Reviewed for #7904: UpdateGuardianEntry saves profile, link and phone list of the staff form in one owner command in the caller's unit against the read version (ADR 0311); it runs the same guarded contact edit, link update and phone writes as the former single routes.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.NewGuardianInvitationInvalidation",
       "target_owner": "identity-access"

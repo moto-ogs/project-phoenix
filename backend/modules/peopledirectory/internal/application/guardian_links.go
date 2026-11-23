@@ -282,12 +282,8 @@ func (s *RetainedGuardianService) UpdateStudentGuardianRelationship(ctx context.
 	if err != nil {
 		return guardianLookupFailure(peopleValues.ErrGuardianLinkNotFound, fmt.Errorf("relationship not found: %w", err))
 	}
-	return s.updateRelationship(ctx, relationship, req)
-}
 
-// updateRelationship applies the non-nil fields to the read relationship and
-// writes the columns a relationship edit owns.
-func (s *RetainedGuardianService) updateRelationship(ctx context.Context, relationship *peopleValues.GuardianRelationshipSnapshot, req peoplePorts.StudentGuardianUpdateRequest) error {
+	// Update fields if provided
 	if req.RelationshipType != nil {
 		relationship.RelationshipType = *req.RelationshipType
 	}
@@ -337,7 +333,7 @@ func (s *RetainedGuardianService) updateRelationship(ctx context.Context, relati
 		return err
 	}
 	if updated == 0 {
-		return guardianLookupFailure(peopleValues.ErrGuardianLinkNotFound, fmt.Errorf("relationship not found: %d", relationship.ID))
+		return guardianLookupFailure(peopleValues.ErrGuardianLinkNotFound, fmt.Errorf("relationship not found: %d", relationshipID))
 	}
 	return nil
 }

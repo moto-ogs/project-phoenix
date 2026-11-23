@@ -40,7 +40,8 @@ func (s *RetainedGuardianService) UpdateGuardianEntry(ctx context.Context, edit 
 	if err := s.updateGuardian(ctx, profile, toGuardianCreateRequest(edit.Profile.Apply(stored))); err != nil {
 		return err
 	}
-	if err := s.updateRelationship(ctx, link, peoplePorts.StudentGuardianUpdateRequest{
+	// The link stays locked by this unit; the update reads it again by ID.
+	if err := s.UpdateStudentGuardianRelationship(ctx, link.ID, peoplePorts.StudentGuardianUpdateRequest{
 		RelationshipType: edit.Link.RelationshipType, GuardianRole: edit.Link.GuardianRole,
 		IsPrimary: edit.Link.IsPrimary, IsEmergencyContact: edit.Link.IsEmergencyContact, CanPickup: edit.Link.CanPickup,
 		PickupNotes: edit.Link.PickupNotes, EmergencyPriority: edit.Link.EmergencyPriority,

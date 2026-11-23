@@ -1,7 +1,6 @@
 package peopledirectory
 
 import (
-	"cmp"
 	"slices"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
@@ -128,6 +127,6 @@ func GuardianEntryVersion(entry GuardianWithLink) string {
 	for _, p := range guardian.PhoneNumbers {
 		current.Phones = append(current.Phones, phone{ID: p.ID, Number: p.PhoneNumber, Type: p.PhoneType, Label: text(p.Label), Primary: p.IsPrimary})
 	}
-	slices.SortFunc(current.Phones, func(a, b phone) int { return cmp.Compare(a.ID, b.ID) })
+	slices.SortFunc(current.Phones, func(a, b phone) int { return int(min(max(a.ID-b.ID, -1), 1)) })
 	return readstate.Fingerprint(current)
 }

@@ -313,9 +313,30 @@ type seedPrimaryGuardian struct {
 // primaryGuardianOf reads the child's primary guardian. The booking names
 // that guardian, so the approval links no second one.
 func primaryGuardianOf(rt *Runtime, auth AuthRef, studentID int64) (seedPrimaryGuardian, error) {
+	rows, err := studentGuardianRows(rt, auth, studentID)
+	if err != nil {
+		return seedPrimaryGuardian{}, err
+	}
+	for _, row := range rows {
+		if row.IsPrimary && row.Email != "" {
+			return row.seedPrimaryGuardian, nil
+		}
+	}
+	return seedPrimaryGuardian{}, fmt.Errorf("child %d has no primary guardian with an e-mail address", studentID)
+}
+
+// studentGuardianRow is one guardian of a child as the staff list shows it.
+type studentGuardianRow struct {
+	seedPrimaryGuardian
+	IsPrimary bool
+}
+
+// studentGuardianRows reads the child's guardians with the version each
+// staff form saves back.
+func studentGuardianRows(rt *Runtime, auth AuthRef, studentID int64) ([]studentGuardianRow, error) {
 	raw, err := rt.Client.GetWithAuth(auth, fmt.Sprintf("/api/guardians/students/%d/guardians", studentID))
 	if err != nil {
-		return seedPrimaryGuardian{}, fmt.Errorf("load guardians of child %d: %w", studentID, err)
+		return nil, fmt.Errorf("load guardians of child %d: %w", studentID, err)
 	}
 	var response struct {
 		Data []struct {
@@ -332,18 +353,21 @@ func primaryGuardianOf(rt *Runtime, auth AuthRef, studentID int64) (seedPrimaryG
 		} `json:"data"`
 	}
 	if err := parseJSON(raw, &response); err != nil {
-		return seedPrimaryGuardian{}, fmt.Errorf("parse guardians of child %d: %w", studentID, err)
+		return nil, fmt.Errorf("parse guardians of child %d: %w", studentID, err)
 	}
+	rows := make([]studentGuardianRow, 0, len(response.Data))
 	for _, row := range response.Data {
-		if row.IsPrimary && row.Guardian.Email != nil && *row.Guardian.Email != "" {
-			return seedPrimaryGuardian{
-				FirstName: row.Guardian.FirstName, LastName: row.Guardian.LastName, Email: *row.Guardian.Email,
-				GuardianID: int64(row.Guardian.ID), RelationshipID: int64(row.RelationshipID), RelationshipType: row.RelationshipType,
-				Version: row.Version,
-			}, nil
+		email := ""
+		if row.Guardian.Email != nil {
+			email = *row.Guardian.Email
 		}
+		rows = append(rows, studentGuardianRow{IsPrimary: row.IsPrimary, seedPrimaryGuardian: seedPrimaryGuardian{
+			FirstName: row.Guardian.FirstName, LastName: row.Guardian.LastName, Email: email,
+			GuardianID: int64(row.Guardian.ID), RelationshipID: int64(row.RelationshipID), RelationshipType: row.RelationshipType,
+			Version: row.Version,
+		}})
 	}
-	return seedPrimaryGuardian{}, fmt.Errorf("child %d has no primary guardian with an e-mail address", studentID)
+	return rows, nil
 }
 
 // restoreGuardianRelationship sets the relationship type back, which the
@@ -354,12 +378,18 @@ func restoreGuardianRelationship(rt *Runtime, auth AuthRef, studentID int64, gua
 	if guardian.RelationshipType == "" || guardian.RelationshipType == "guardian" {
 		return nil
 	}
-	approved, err := primaryGuardianOf(rt, auth, studentID)
+	rows, err := studentGuardianRows(rt, auth, studentID)
 	if err != nil {
 		return err
 	}
-	if approved.RelationshipID != guardian.RelationshipID {
-		return fmt.Errorf("restore guardian relationship %d: child %d now has primary link %d", guardian.RelationshipID, studentID, approved.RelationshipID)
+	var approved *studentGuardianRow
+	for i := range rows {
+		if rows[i].RelationshipID == guardian.RelationshipID {
+			approved = &rows[i]
+		}
+	}
+	if approved == nil {
+		return fmt.Errorf("restore guardian relationship %d: child %d no longer has it", guardian.RelationshipID, studentID)
 	}
 	if _, err := rt.Client.PutWithAuth(auth, fmt.Sprintf("/api/guardians/students/%d/guardians/%d", studentID, approved.GuardianID), map[string]any{
 		"relationship":     map[string]any{"relationship_type": guardian.RelationshipType},

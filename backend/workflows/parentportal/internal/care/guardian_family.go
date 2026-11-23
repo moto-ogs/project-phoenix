@@ -1,10 +1,10 @@
 package care
 
 import (
-	"cmp"
 	"context"
 	"errors"
 	"slices"
+	"strings"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
@@ -224,8 +224,15 @@ func guardianContactVersion(profile *GuardianProfile, phones []*GuardianPhoneNum
 	}
 	sorted := slices.Clone(shown.Phones)
 	slices.SortFunc(sorted, func(a, b GuardianPhone) int {
-		return cmp.Or(cmp.Compare(a.PhoneNumber, b.PhoneNumber), cmp.Compare(a.PhoneType, b.PhoneType),
-			cmp.Compare(a.Label, b.Label), primaryRank(a)-primaryRank(b))
+		for _, order := range []int{
+			strings.Compare(a.PhoneNumber, b.PhoneNumber), strings.Compare(a.PhoneType, b.PhoneType),
+			strings.Compare(a.Label, b.Label), primaryRank(a) - primaryRank(b),
+		} {
+			if order != 0 {
+				return order
+			}
+		}
+		return 0
 	})
 	if sorted == nil {
 		sorted = []GuardianPhone{}

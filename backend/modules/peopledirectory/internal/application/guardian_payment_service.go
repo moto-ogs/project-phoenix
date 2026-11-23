@@ -132,18 +132,8 @@ func (s *RetainedGuardianService) updateGuardianPaymentInTx(ctx context.Context,
 		return nil
 	}
 
-	trimmedNote := strings.TrimSpace(note)
-	for _, change := range changes {
-		if err := s.GuardianFinancialAudit.RecordGuardianFinancialChange(ctx, peoplePorts.GuardianFinancialChange{
-			GuardianProfileID: guardianProfileID,
-			ChangedBy:         changedByAccountID,
-			Field:             change.field,
-			OldValue:          change.oldValue,
-			NewValue:          change.newValue,
-			Note:              trimmedNote,
-		}); err != nil {
-			return fmt.Errorf("write guardian payment audit: %w", err)
-		}
+	if err := s.recordGuardianPaymentChanges(ctx, guardianProfileID, changes, changedByAccountID, note); err != nil {
+		return err
 	}
 
 	// The guardian's school binds the sealed values; the composite key
@@ -159,6 +149,24 @@ func (s *RetainedGuardianService) updateGuardianPaymentInTx(ctx context.Context,
 		return err
 	}
 	return s.GuardianFinancialRepo.Update(ctx, data)
+}
+
+// recordGuardianPaymentChanges writes one audit row per changed field.
+func (s *RetainedGuardianService) recordGuardianPaymentChanges(ctx context.Context, guardianProfileID int64, changes []stammdatenChange, changedByAccountID int64, note string) error {
+	trimmedNote := strings.TrimSpace(note)
+	for _, change := range changes {
+		if err := s.GuardianFinancialAudit.RecordGuardianFinancialChange(ctx, peoplePorts.GuardianFinancialChange{
+			GuardianProfileID: guardianProfileID,
+			ChangedBy:         changedByAccountID,
+			Field:             change.field,
+			OldValue:          change.oldValue,
+			NewValue:          change.newValue,
+			Note:              trimmedNote,
+		}); err != nil {
+			return fmt.Errorf("write guardian payment audit: %w", err)
+		}
+	}
+	return nil
 }
 
 // guardianPaymentChanges diffs the stored bank section against the new one.
