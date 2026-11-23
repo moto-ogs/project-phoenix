@@ -18,6 +18,7 @@ require (
 	github.com/k3a/html2text v1.5.1
 	github.com/lestrrat-go/jwx/v3 v3.4.0
 	github.com/makiuchi-d/gozxing v0.1.1
+	github.com/minio/minio-go/v7 v7.4.1
 	github.com/pkg/sftp v1.13.12
 	github.com/prometheus/client_golang v1.25.0
 	github.com/samber/slog-chi v1.19.1
@@ -40,7 +41,7 @@ require (
 	golang.org/x/sys v0.50.0
 	golang.org/x/text v0.44.0
 	golang.org/x/time v0.16.0
-	golang.org/x/tools v0.52.0
+	golang.org/x/tools v0.53.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -92,7 +93,6 @@ require (
 	github.com/mattn/go-runewidth v0.0.24 // indirect
 	github.com/minio/crc64nvme v1.1.1 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
-	github.com/minio/minio-go/v7 v7.4.1 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/olekukonko/cat v0.0.0-20250911104152-50322a0618f6 // indirect
 	github.com/olekukonko/errors v1.2.0 // indirect
@@ -132,9 +132,9 @@ require (
 	go.opentelemetry.io/otel v1.47.0 // indirect
 	go.opentelemetry.io/otel/trace v1.47.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	golang.org/x/mod v0.42.0 // indirect
-	golang.org/x/net v0.62.0 // indirect
-	golang.org/x/telemetry v0.0.0-20261009151841-97e8ea77aa2a // indirect
+	golang.org/x/mod v0.43.0 // indirect
+	golang.org/x/net v0.63.0 // indirect
+	golang.org/x/telemetry v0.0.0-20261116191925-e77a43154acb // indirect
 	golang.org/x/term v0.48.0 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
