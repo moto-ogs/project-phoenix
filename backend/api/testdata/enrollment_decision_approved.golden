@@ -10,7 +10,8 @@
     "reviewed_by": "REVIEWER_ACCOUNT_ID",
     "status": "approved",
     "status_reason": "Contract approval",
-    "target_grade_level": 2
+    "target_grade_level": 2,
+    "version": "f0f95d2f9895d52784d4a12180b1eb5b"
   },
   "message": "Decision applied",
   "status": "success"
