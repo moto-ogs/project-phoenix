@@ -204,7 +204,7 @@ func TestBookingAccountsQueryBudgetStaysFlatAsAssignmentsGrow(t *testing.T) {
 			for j, price := range prices["prices"].([]map[string]any) {
 				price["care_offering_id"] = int64(10000 + 2*i + j%2)
 			}
-			rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, prices)
+			rec := putCarePriceList(t, f.traeger, f.office.token, prices)
 			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 			for j := range 2 {
 				rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, bookingAccountsPath+"/revenue-accounts",

@@ -77,7 +77,7 @@ func TestChildDebtorNumbersReachTheMonthlyInvoiceOfEachChild(t *testing.T) {
 	f := newCareBillingFixture(t, "Träger Nummer je Kind")
 	school := f.office.schools[0]
 	mia, noah, family := siblingContracts(t, f, school)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, careMonth, 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, careMonth, 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, debtorNumberFormatPath, nil)

@@ -81,6 +81,7 @@ const read: ContractFamilyBilling = {
   partyName: "Anna Muster",
   partyLastName: "Muster",
   family,
+  version: "v-7",
 };
 const terms: BillingTerms = {
   services: [],
@@ -139,6 +140,7 @@ describe("TraegerFamilyPaymentPage (#7770)", () => {
     );
     expect(form.props).toMatchObject({
       existing: family,
+      version: "v-7",
       target: {
         contractId: "42",
         applicantName: "Anna Muster",
@@ -192,6 +194,27 @@ describe("TraegerFamilyPaymentPage (#7770)", () => {
       expect(nav.push).toHaveBeenCalledWith(target);
     },
   );
+
+  // ADR 0311: a save refused as changed since makes the page read the
+  // family again; the form gets the new state and its version.
+  it("reads the family again when a save was refused as changed", async () => {
+    api.fetchContractFamilyBilling
+      .mockResolvedValueOnce(read)
+      .mockResolvedValueOnce({
+        ...read,
+        family: { ...family, payerFirstName: "Dora" },
+        version: "v-8",
+      });
+    renderPage();
+    expect(await screen.findByTestId("billing-form")).toHaveTextContent(
+      "Carla",
+    );
+    const props = form.props as { onChangedSinceRead: () => void };
+    act(() => props.onChangedSinceRead());
+    expect(await screen.findByText("Dora")).toBeInTheDocument();
+    expect(api.fetchContractFamilyBilling).toHaveBeenCalledTimes(2);
+    expect(form.props).toMatchObject({ version: "v-8" });
+  });
 
   it("shows the load error and no form when the read fails", async () => {
     api.fetchContractFamilyBilling.mockRejectedValue(

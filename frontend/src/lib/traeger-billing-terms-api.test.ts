@@ -5,7 +5,7 @@ import type {
 } from "./contract/traeger-family-billing.generated";
 import {
   fetchContractFamilyBilling,
-  fetchFamilyBillings,
+  saveFamilyBilling,
 } from "./traeger-billing-terms-api";
 
 const request = vi.hoisted(() => vi.fn());
@@ -38,6 +38,7 @@ const CONTRACT: WireContractFamilyBilling = {
   party_first_name: " Anna",
   party_last_name: "Muster ",
   family: null,
+  version: "v-3",
 };
 
 describe("fetchContractFamilyBilling (#7770)", () => {
@@ -50,6 +51,7 @@ describe("fetchContractFamilyBilling (#7770)", () => {
       partyName: "Anna Muster",
       partyLastName: "Muster ",
       family: null,
+      version: "v-3",
     });
     // The typed client encodes the path parameter.
     expect(request).toHaveBeenCalledWith(
@@ -59,7 +61,7 @@ describe("fetchContractFamilyBilling (#7770)", () => {
     );
   });
 
-  it("names a party without first name and maps a stored deviation like the list", async () => {
+  it("names a party without first name and maps a stored deviation", async () => {
     request.mockResolvedValueOnce({
       ...CONTRACT,
       party_first_name: "",
@@ -67,11 +69,8 @@ describe("fetchContractFamilyBilling (#7770)", () => {
       family: STORED,
     });
     const read = await fetchContractFamilyBilling("42");
-    request.mockResolvedValueOnce([STORED]);
-    const [listed] = await fetchFamilyBillings();
 
     expect(read.partyName).toBe("Muster");
-    expect(read.family).toEqual(listed);
     expect(read.family).toEqual({
       id: "5",
       familyEmail: "anna@example.org",
@@ -100,5 +99,38 @@ describe("fetchContractFamilyBilling (#7770)", () => {
       contractId: "",
       paymentMethod: undefined,
     });
+  });
+});
+
+describe("saveFamilyBilling (ADR 0311)", () => {
+  it("saves over the version the form read", async () => {
+    request.mockResolvedValue({ family: null });
+    await saveFamilyBilling(
+      {
+        contractId: "42",
+        recipientKind: "applicant",
+        secondFirstName: "",
+        secondLastName: "",
+        payerFirstName: "",
+        payerLastName: "",
+        payerEmail: "",
+        payerAddress: null,
+        paymentMethod: "transfer",
+        dueDay: null,
+        debtorNumber: "",
+      },
+      "v-3",
+    );
+    expect(request).toHaveBeenCalledWith(
+      "org",
+      "PUT /traeger/family-billing/",
+      {
+        body: expect.objectContaining({
+          contract_id: "42",
+          payment_method: "transfer",
+          expected_version: "v-3",
+        }),
+      },
+    );
   });
 });

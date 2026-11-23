@@ -82,7 +82,7 @@ func TestCareRunWithContentIsNeverDiscarded(t *testing.T) {
 	require.NotEmpty(t, f.run(t, int64(run.ID)).Unpriced)
 	refused("a booking without a price waits for its price")
 
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	require.Len(t, f.run(t, int64(run.ID)).Invoices, 1)
 	refused("an invoice")
@@ -100,7 +100,7 @@ func TestCareRunDiscardWaitsForAChangeOfTheMonthlyBilling(t *testing.T) {
 	t.Parallel()
 	f := newCareBillingFixture(t, "Träger Verwerfen wartet")
 	school := f.office.schools[0]
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	run := f.startRun(t, careMonth)
 	require.Empty(t, f.run(t, int64(run.ID)).Invoices)

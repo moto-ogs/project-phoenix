@@ -67,7 +67,7 @@ func (f careBillingFixture) review(t *testing.T, id int64) careReviewBody {
 func pricedSchools(t *testing.T, f careBillingFixture) {
 	t.Helper()
 	for _, school := range f.office.schools[:2] {
-		rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+		rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	}
 }

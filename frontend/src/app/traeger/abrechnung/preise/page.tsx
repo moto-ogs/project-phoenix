@@ -28,7 +28,12 @@ import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { EmptyState } from "~/components/ui/empty-state";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
-import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import {
+  useApiErrorDisplay,
+  useApiFormError,
+  useToast,
+} from "~/contexts/ToastContext";
+import { isChangedSinceRead } from "~/lib/api-error";
 import { fetchCareRules } from "~/lib/traeger-care-reductions-api";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { createLogger } from "~/lib/logger";
@@ -74,11 +79,14 @@ function PriceListPage() {
   );
   const [shown, setShown] = useState<Record<string, string>>({});
   const [editing, setEditing] = useState<SchoolRef | null>(null);
+  // The removal confirms what the dialog showed: the version is taken when
+  // it opens, so a background refresh cannot hand it a newer one (ADR 0311).
   const [deleting, setDeleting] = useState<
-    (SchoolRef & { validFrom: string }) | null
+    (SchoolRef & { validFrom: string; version: string }) | null
   >(null);
   const [busy, setBusy] = useState(false);
   const deleteErrors = useApiFormError();
+  const changedErrors = useApiErrorDisplay();
   const { success } = useToast();
 
   // The sibling rules decide whether the list's sibling prices are charged;
@@ -114,9 +122,14 @@ function PriceListPage() {
     setBusy(true);
     deleteErrors.clear();
     try {
-      await mutate(await deleteCarePriceList(deleting.id, deleting.validFrom), {
-        revalidate: false,
-      });
+      await mutate(
+        await deleteCarePriceList(
+          deleting.id,
+          deleting.validFrom,
+          deleting.version,
+        ),
+        { revalidate: false },
+      );
       setShown(({ [deleting.id]: _removed, ...rest }) => rest);
       success(
         `Die Preise ab ${formatMonth(deleting.validFrom)} sind gelöscht.`,
@@ -126,7 +139,15 @@ function PriceListPage() {
       logger.error("care_price_list_delete_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
-      void deleteErrors.show(err, { object: "die Preisliste" });
+      if (isChangedSinceRead(err)) {
+        // A colleague changed the prices since: the dialog closes and the
+        // page shows them, so a second „Löschen“ cannot remove them unseen.
+        setDeleting(null);
+        void changedErrors.show(err, { object: "die Preisliste" });
+        void mutate();
+      } else {
+        void deleteErrors.show(err, { object: "die Preisliste" });
+      }
     } finally {
       setBusy(false);
     }
@@ -190,6 +211,7 @@ function PriceListPage() {
                 void mutate(next, { revalidate: false });
                 setEditing(null);
               }}
+              onChangedSinceRead={() => void mutate()}
             />
             <ConfirmDeleteModal
               isOpen={deleting !== null}
@@ -253,7 +275,11 @@ function PriceListPage() {
                   }
                   onEdit={() => setEditing(school)}
                   onDelete={(validFrom) =>
-                    setDeleting({ ...school, validFrom })
+                    setDeleting({
+                      ...school,
+                      validFrom,
+                      version: data.versions?.[school.id] ?? "",
+                    })
                   }
                   siblingPricesApply={(careOfferingId) =>
                     siblingRules === null ||

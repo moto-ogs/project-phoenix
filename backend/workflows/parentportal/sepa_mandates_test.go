@@ -125,11 +125,11 @@ func TestParentsGiveTheSEPAMandateOnlyForTheirOwnFamily(t *testing.T) {
 	assert.Equal(t, f.chain.AccountID, stored.Account, "the proof names the account")
 	assert.Equal(t, granted.Mandate.Proof.TextSHA256, stored.Hash)
 
-	revoked, err := f.portal.RevokeSEPAMandate(ctx, f.chain.AccountID, f.organization, own)
+	revoked, err := f.portal.RevokeSEPAMandate(ctx, f.chain.AccountID, f.organization, own, granted.Mandate.Version)
 	require.NoError(t, err)
 	require.NotNil(t, revoked.Mandate)
 	assert.NotNil(t, revoked.Mandate.RevokedOn, "the revocation ends the mandate for the next run")
-	_, err = f.portal.RevokeSEPAMandate(ctx, f.chain.AccountID, f.organization, own)
+	_, err = f.portal.RevokeSEPAMandate(ctx, f.chain.AccountID, f.organization, own, granted.Mandate.Version)
 	assert.ErrorIs(t, err, parentService.ErrSEPAMandateNotFound)
 
 	var trail []string
@@ -175,7 +175,7 @@ func TestSEPAMandateSwitchedOffDoesNothing(t *testing.T) {
 	assert.ErrorIs(t, err, parentService.ErrOnlineMandateDisabled)
 	_, err = f.portal.GrantSEPAMandate(ctx, f.chain.AccountID, f.organization, own, mandateInput())
 	assert.ErrorIs(t, err, parentService.ErrOnlineMandateDisabled)
-	_, err = f.portal.RevokeSEPAMandate(ctx, f.chain.AccountID, f.organization, own)
+	_, err = f.portal.RevokeSEPAMandate(ctx, f.chain.AccountID, f.organization, own, "")
 	assert.ErrorIs(t, err, parentService.ErrOnlineMandateDisabled)
 
 	var revoked, events int
