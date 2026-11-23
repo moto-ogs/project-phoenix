@@ -107,11 +107,14 @@ function mealOnlyText(
   yearly: boolean,
 ): string {
   const one = children.length === 1;
+  // A Storno can bring an older invoice to light that still holds the
+  // child, so no text promises the invoice (ADR 0158, S5).
+  const them = one ? "das Kind" : "die Kinder";
   const next = yearly
-    ? "Dann nimmt diese Vorschau den Monat auf."
+    ? "Danach rechnet diese Vorschau den Monat neu und zeigt, was noch offen ist."
     : released
-      ? "Dann rechnet ein neuer Monatslauf Betreuung und Mensa ab."
-      : "Dann rechnet dieser Lauf Betreuung und Mensa ab.";
+      ? `Danach rechnet ein neuer Monatslauf ${them} neu und zeigt, was noch offen ist.`
+      : `Danach rechnet dieser Lauf ${them} neu und zeigt, was noch offen ist.`;
   return [
     one
       ? "Die Rechnung dieses Kindes enthält nur die Mensa."

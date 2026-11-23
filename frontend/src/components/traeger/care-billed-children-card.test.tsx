@@ -75,7 +75,7 @@ describe("CareBilledChildrenCard", () => {
     if (!card) throw new Error("the Mensa card without its section");
     expect(
       within(card).getByText(
-        "Die Rechnung dieses Kindes enthält nur die Mensa. Die Betreuung ist noch nicht abgerechnet. Storniere die Rechnung. Dann rechnet dieser Lauf Betreuung und Mensa ab.",
+        "Die Rechnung dieses Kindes enthält nur die Mensa. Die Betreuung ist noch nicht abgerechnet. Storniere die Rechnung. Danach rechnet dieser Lauf das Kind neu und zeigt, was noch offen ist.",
       ),
     ).toBeInTheDocument();
     expect(within(card).getByText("Kind 2 Beispiel")).toBeInTheDocument();
@@ -103,7 +103,7 @@ describe("CareBilledChildrenCard", () => {
     );
     expect(
       screen.getByText(
-        "Die Rechnungen dieser Kinder enthalten nur die Mensa. Die Betreuung ist noch nicht abgerechnet. Storniere die Rechnungen. Dann rechnet ein neuer Monatslauf Betreuung und Mensa ab.",
+        "Die Rechnungen dieser Kinder enthalten nur die Mensa. Die Betreuung ist noch nicht abgerechnet. Storniere die Rechnungen. Danach rechnet ein neuer Monatslauf die Kinder neu und zeigt, was noch offen ist.",
       ),
     ).toBeInTheDocument();
     // Anker: only the Mensa card is left, nothing says the month is billed.

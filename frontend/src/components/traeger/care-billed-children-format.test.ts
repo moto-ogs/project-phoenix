@@ -46,7 +46,7 @@ describe("texts about children a run holds back for an issued invoice", () => {
         child("meal_only_invoice"),
       ]),
     ).toBe(
-      "Für Januar 2027 gibt es keine neue Rechnung. Ein Kind ist schon abgerechnet, siehe unten. Bei einem Kind ist die Betreuung noch nicht abgerechnet, siehe unten. Storniere die Rechnung. Dann rechnet dieser Lauf Betreuung und Mensa ab.",
+      "Für Januar 2027 gibt es keine neue Rechnung. Ein Kind ist schon abgerechnet, siehe unten. Bei einem Kind ist die Betreuung noch nicht abgerechnet, siehe unten. Storniere die Rechnung. Danach rechnet dieser Lauf das Kind neu und zeigt, was noch offen ist.",
     );
     expect(
       emptyNoticeRunText(2027, [
@@ -54,7 +54,7 @@ describe("texts about children a run holds back for an issued invoice", () => {
         child("meal_only_invoice"),
       ]),
     ).toBe(
-      "Für das Jahr 2027 gibt es keinen neuen Bescheid. Bei 2 Kindern ist die Betreuung noch nicht abgerechnet, siehe unten. Storniere die Rechnungen. Dann nimmt diese Vorschau den Monat auf.",
+      "Für das Jahr 2027 gibt es keinen neuen Bescheid. Bei 2 Kindern ist die Betreuung noch nicht abgerechnet, siehe unten. Storniere die Rechnungen. Danach rechnet diese Vorschau den Monat neu und zeigt, was noch offen ist.",
     );
   });
 

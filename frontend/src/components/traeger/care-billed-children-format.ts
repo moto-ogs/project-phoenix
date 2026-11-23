@@ -24,7 +24,7 @@ export function splitBilledChildren(children: readonly CareBilledChild[]): {
 function heldSentences(
   children: readonly CareBilledChild[],
   billedText: (one: boolean, count: number) => string,
-  afterCancel: string,
+  afterCancel: (one: boolean) => string,
 ): string[] {
   const { billed, mealOnly } = splitBilledChildren(children);
   const sentences: string[] = [];
@@ -35,7 +35,7 @@ function heldSentences(
     const one = mealOnly.length === 1;
     sentences.push(
       `${one ? "Bei einem Kind" : `Bei ${mealOnly.length} Kindern`} ist die Betreuung noch nicht abgerechnet, siehe unten.`,
-      `Storniere ${one ? "die Rechnung" : "die Rechnungen"}. ${afterCancel}`,
+      `Storniere ${one ? "die Rechnung" : "die Rechnungen"}. ${afterCancel(one)}`,
     );
   } else if (billed.length > 0) {
     // Only when every held child is billed already is nothing left to do.
@@ -53,7 +53,8 @@ export function emptyCareRunText(
     children,
     (one, count) =>
       `${one ? "Ein Kind ist" : `${count} Kinder sind`} schon abgerechnet, siehe unten.`,
-    "Dann rechnet dieser Lauf Betreuung und Mensa ab.",
+    (one) =>
+      `Danach rechnet dieser Lauf ${one ? "das Kind" : "die Kinder"} neu und zeigt, was noch offen ist.`,
   );
   if (held.length === 0) {
     return `Für ${month} gibt es keine Rechnung. Es fehlt auch kein Preis. Du kannst den Lauf verwerfen. Danach ist der Monat frei für einen neuen Lauf.`;
@@ -70,7 +71,8 @@ export function emptyNoticeRunText(
     children,
     (one, count) =>
       `${one ? "Für ein Kind ist" : `Für ${count} Kinder ist`} ein Monat schon abgerechnet, siehe unten.`,
-    "Dann nimmt diese Vorschau den Monat auf.",
+    () =>
+      "Danach rechnet diese Vorschau den Monat neu und zeigt, was noch offen ist.",
   );
   if (held.length === 0) {
     return `Für das Jahr ${year} gibt es keinen Bescheid. Es fehlt auch kein Preis. Du kannst den Lauf verwerfen. Danach ist das Jahr frei für einen neuen Lauf.`;

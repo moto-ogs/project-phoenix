@@ -270,7 +270,7 @@ describe("discarding an empty monthly run", () => {
 
     expect(
       await screen.findByText(
-        /gibt es keine neue Rechnung\. Bei einem Kind ist die Betreuung noch nicht abgerechnet, siehe unten\. Storniere die Rechnung\. Dann rechnet dieser Lauf Betreuung und Mensa ab\.$/,
+        /gibt es keine neue Rechnung\. Bei einem Kind ist die Betreuung noch nicht abgerechnet, siehe unten\. Storniere die Rechnung\. Danach rechnet dieser Lauf das Kind neu und zeigt, was noch offen ist\.$/,
       ),
     ).toBeInTheDocument();
     expect(
