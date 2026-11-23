@@ -123,23 +123,34 @@ There is no runtime registry.
 
 ## Reading and saving (ADR 0311)
 
-Three ways to read, and nothing else:
+A surface reads stored state in one of three ways:
 
-1. **A read** goes through the shared cache: `useSWRAuth` (Träger:
+1. **A read for display** goes through the shared cache: `useSWRAuth` or a
+   hook built on it (`useImmutableSWR`, `useConfirmedSWR`; Träger:
    `useTraegerResource`).
-2. **An edit or a preview a save confirms** goes through `useReadDraft`
-   (`~/lib/swr/read-draft`); a draft on a read the surface already holds (a
-   list row) through `useDraftOn`. They read per opening, keep the token
-   from the moment editing starts, refill only an untouched draft, read the
-   stored state after a refusal, send nothing until it is there, take the
-   token of a save's answer (or read again), and report a failed reload as
-   a load error.
+2. **An edit of stored state, or a preview a write confirms with its
+   token,** goes through `useReadDraft` (`~/lib/swr/read-draft`); a draft
+   on a read the surface already holds (a list row) through `useDraftOn`.
+   They read per opening, keep the token from the moment editing starts,
+   refill only an untouched draft (a preview confirm with `follow: false`
+   holds the preview it opened with), read the stored state after a
+   refusal, send nothing until a read of it succeeded, take the token of a
+   save's answer (or read again), and report a failed read as a load error
+   (`status` `loadFailed`, `error`) that the surface shows also over a
+   draft on screen (`useReadDraftLoadError`).
 3. **A read the server logs or authorizes on every opening** (an access
    log entry per read) goes through `useOpeningRead(key, fetcher, {
-   showCached: false })` (Träger: `useFreshTraegerResource`): nothing shows
-   until this opening's own read answered, and that answer is held. Focus,
-   reconnect and key changes start no read; an invalidation of the key
-   does.
+showCached: false })` (Träger: `useFreshTraegerResource`): nothing shows
+   until this opening's own read answered. Focus, reconnect and key
+   changes start no read; an invalidation of the key does, and its answer
+   replaces the shown one. Such a read is one more log entry: a write
+   hands its answer to `mutate(answer, { revalidate: false })` instead of
+   invalidating the key.
+
+Not covered: a preview of an uploaded file (`useCsvFilePreview`, the
+Träger imports) answers a POST, and its token comes with that answer.
+Surfaces that still hold a hand-rolled draft move onto `useReadDraft`
+under #7904; a new one starts there.
 
 A write that depends on what was read sends its token (`expected_version`,
 `expected_fingerprint`); the server refuses a changed state with 409

@@ -11,6 +11,8 @@ import { AccountTenantAccessModal } from "./account-tenant-access-modal";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
+import { useTenantMutateMatching } from "~/lib/swr";
+import { operatorProvisioningKeys } from "~/lib/swr/portal-keys";
 import { SWRConfig } from "~/lib/swr/testing";
 
 // The modal reads through the shared cache; each render gets its own, under
@@ -541,6 +543,47 @@ describe("AccountTenantAccessModal", () => {
     await waitFor(() =>
       expect(mockUpdateRole).toHaveBeenCalledWith("42", "2", "2", "roles-v1"),
     );
+  });
+
+  // The server logs every read of the list (operator read audit): a role
+  // save hands its answer to the dialog, and the page's reload of the
+  // account lists does not touch the audited key. One entry per opening.
+  it("reads the audited list once per opening, also across a role save and the page's reload", async () => {
+    mockUpdateRole.mockResolvedValue([
+      access({
+        roles: [{ id: "2", name: "user", isSystem: false, baseRole: null }],
+        version: "roles-v2",
+      }),
+    ]);
+    const refreshed = vi.fn();
+    function WithPageReload() {
+      const refreshFamily = useTenantMutateMatching(
+        operatorProvisioningKeys.accountFamilies,
+      );
+      return (
+        <AccountTenantAccessModal
+          isOpen={true}
+          onClose={vi.fn()}
+          accountId="42"
+          accountLabel="Ada Lovelace"
+          accountEmail="ada@example.com"
+          onUpdated={async () => {
+            await refreshFamily();
+            refreshed();
+            return true;
+          }}
+        />
+      );
+    }
+    render(<WithPageReload />);
+
+    const roleSelect = await screen.findByLabelText("Rolle an OGS Nord");
+    fireEvent.change(roleSelect, { target: { value: "2" } });
+    await waitFor(() => expect(refreshed).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(screen.getByLabelText("Rolle an OGS Nord")).toHaveValue("2"),
+    );
+    expect(mockList).toHaveBeenCalledTimes(1);
   });
 
   it("reads the list again without a retry when the roles changed since reading", async () => {

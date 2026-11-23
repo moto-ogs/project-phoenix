@@ -117,6 +117,7 @@ describe("useOpeningRead (showCached: false)", () => {
       act(() => {
         refresh = result.current.mutate();
       });
+      expect(result.current.isValidating).toBe(true);
       expect(result.current.data).toBe("confirmed");
       expect(result.current.settled).toBe(true);
       expect(result.current.isLoading).toBe(false);

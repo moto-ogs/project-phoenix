@@ -13,7 +13,7 @@ import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { ClassArrivalExceptionPanel } from "./class-arrival-exception-panel";
 import type { Student } from "~/lib/student-helpers";
 import { createLogger } from "~/lib/logger";
-import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useReadDraftLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useSWRAuth } from "~/lib/swr";
 import { useReadDraft } from "~/lib/swr/read-draft";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
@@ -189,12 +189,13 @@ export function FilteredBulkArrivalModal({
     toDraft: draftFromClassTimes,
     same: sameDraft,
   });
-  const classTimesLoad = useSwrResourceLoadError(
-    [{ data: classTimes.base, error: classTimes.error }],
+  // Also over a cached draft: nothing is sent until a read succeeded.
+  const classTimesLoadError = useReadDraftLoadError(
+    classTimes,
     "die Klassenzeit",
-    classTimes.retryLoad,
   );
-  const classTimesError = classTimesLoad.failure !== undefined;
+  const classTimesError =
+    schoolClass !== null && classTimes.status === "loadFailed";
   const classTimesLoading =
     schoolClass !== null && !classTimes.canSubmit && !classTimesError;
   const draft: DraftState = schoolClass
@@ -414,8 +415,10 @@ export function FilteredBulkArrivalModal({
             {classTimesLoading ? (
               <Alert type="info" message="Klassenzeiten werden geladen." />
             ) : null}
-            {classTimesError ? (
-              <LoadErrorAlert error={classTimesLoad.error} />
+            {/* After a refusal the form's alert already names the failed
+                read, with its retry. */}
+            {classTimesError && !formErrors.error ? (
+              <LoadErrorAlert error={classTimesLoadError} />
             ) : null}
             {collisionCount > 0 ? (
               <Alert type="info" message={collisionMessage} />

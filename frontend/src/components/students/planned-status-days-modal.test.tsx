@@ -506,6 +506,66 @@ describe("PlannedStatusDaysModal", () => {
     );
   });
 
+  it("names a failed read of the stored entry after a refusal", async () => {
+    let offline = false;
+    // Refused, and from then on the stored entries cannot be read.
+    const onSubmitPartialAbsence = vi.fn(() => {
+      offline = true;
+      return Promise.reject(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      );
+    });
+    render(
+      <PlannedStatusDaysModal
+        isOpen
+        status="excused"
+        studentName="Kevin Anders"
+        isSubmitting={false}
+        existingDays={[]}
+        existingPartialAbsences={[existingPartialAbsence]}
+        onClose={vi.fn()}
+        loadExistingDays={loadNoExistingDays}
+        loadPartialAbsences={() =>
+          offline
+            ? Promise.reject(
+                new ApiError("offline", 503, { code: "general.unavailable" }),
+              )
+            : Promise.resolve([])
+        }
+        loadCarePlanDay={vi.fn().mockResolvedValue({
+          studentId: "42",
+          date: "2026-05-27",
+          weekday: 3,
+          arrival: { expectedTime: null, source: "none" },
+          pickup: { expectedTime: "13:30", source: "exception" },
+          instances: [],
+        })}
+        onSubmit={vi.fn()}
+        onSubmitPartialAbsence={onSubmitPartialAbsence}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Ab Uhrzeit" }));
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Aktionen für Teilentschuldigung vom Mittwoch, 27. Mai 2026",
+      }),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Bearbeiten" }));
+    fireEvent.change(screen.getByLabelText("Entschuldigt ab"), {
+      target: { value: "14:00" },
+    });
+    await clickEnabledButton("Entschuldigung aktualisieren");
+
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Du siehst jetzt den neuen Stand/),
+    ).not.toBeInTheDocument();
+    expect(onSubmitPartialAbsence).toHaveBeenCalledTimes(1);
+  });
+
   // A newer stored entry fills the form only while nobody typed; the save
   // then goes out with the read version and is refused, and the refusal
   // shows the stored entry.

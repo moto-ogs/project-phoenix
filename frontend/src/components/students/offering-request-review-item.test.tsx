@@ -1325,4 +1325,59 @@ describe("OfferingRequestReviewItem on a newer version of the request", () => {
       screen.queryByRole("button", { name: "Änderung freigeben" }),
     ).not.toBeInTheDocument();
   });
+
+  it("names a failed list reload after a refusal and recovers with the next list", async () => {
+    mockDecide.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    const onStale = vi.fn(async () => {
+      throw networkError();
+    });
+    const props = { onDecided: vi.fn(), onStale };
+    const view = render(
+      <OfferingRequestReviewItem
+        row={request()}
+        expectedVersion="v1"
+        {...props}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Lara Beispiel/ }));
+    await confirmApproval();
+    await expectErrorToast(/Der neue Stand konnte nicht geladen werden/);
+
+    // The card says why it cannot be decided and offers the read again.
+    expect(
+      await screen.findByText(
+        "Lade zuerst den neuen Stand der Anfrage, dann kannst du entscheiden.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /^Freigeben$/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getAllByText(catalogText("general.unavailable", "die Anfrage"))
+        .length,
+    ).toBeGreaterThan(0);
+
+    // A later successful list reload hands in the stored version.
+    view.rerender(
+      <OfferingRequestReviewItem
+        row={request({ effective_from: "2027-03-01" })}
+        expectedVersion="v2"
+        {...props}
+      />,
+    );
+    await confirmApproval();
+    await waitFor(() =>
+      expect(mockDecide).toHaveBeenLastCalledWith(
+        "77",
+        true,
+        undefined,
+        [],
+        "2027-03-01",
+        false,
+        "v2",
+      ),
+    );
+  });
 });

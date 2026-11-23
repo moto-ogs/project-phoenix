@@ -389,11 +389,12 @@ export interface BulkApproveRequestRef {
 }
 
 /**
- * Eine Entscheidung, die auf einem veralteten Stand beruht: die Anfrage ist
- * seit dem Lesen anders gespeichert (`general.changed_since_read`, ADR 0311),
- * oder der bisherige Wert einer Stammdaten-Anfrage stimmt nicht mehr
- * (`students.change_request_stale`). Dieselbe Prüfung wie
- * `isReadStateRefusal`.
+ * Eine Entscheidung, die auf einem veralteten Stand beruht: ein anderer
+ * Name für `isReadStateRefusal`, also `general.changed_since_read` (ADR
+ * 0311) und jeder ältere Modulcode derselben Bedeutung (ADR 0311 §6). Bei
+ * den Anfragen sind das die seit dem Lesen geänderte Anfrage und ein nicht
+ * mehr stimmender bisheriger Wert einer Stammdaten-Anfrage
+ * (`students.change_request_stale`).
  */
 export const isOutdatedDecision = isReadStateRefusal;
 

@@ -564,6 +564,63 @@ describe("FilteredBulkArrivalModal", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     expect(mockBulkUpsert).toHaveBeenCalledTimes(1);
+    // A load error, not a load that never ends.
+    expect(
+      screen.queryByText("Klassenzeiten werden geladen."),
+    ).not.toBeInTheDocument();
+  });
+
+  it("names a failed opening read over cached class times and saves nothing until a retry", async () => {
+    mockFetchClassArrivalTimes
+      .mockResolvedValueOnce({
+        school_class: "3a",
+        times: { mon: "11:45" },
+        version: "v1",
+      })
+      .mockRejectedValueOnce(
+        new ApiError("offline", 503, { code: "general.unavailable" }),
+      )
+      .mockResolvedValueOnce({
+        school_class: "3a",
+        times: { mon: "12:00" },
+        version: "v2",
+      });
+    mockBulkUpsert.mockResolvedValue(undefined);
+    const modal = (isOpen: boolean) => (
+      <FilteredBulkArrivalModal
+        isOpen={isOpen}
+        onClose={vi.fn()}
+        filter={{ type: "school_class", schoolClass: "3a" }}
+        filterLabel="3a"
+        studentsInFilter={[makeStudent("1")]}
+      />
+    );
+    const { rerender } = render(modal(true));
+    await waitFor(() =>
+      expect(screen.getByLabelText("Montag")).toHaveValue("11:45"),
+    );
+    rerender(modal(false));
+    rerender(modal(true));
+
+    // The cached times show, the failed read of this opening is named.
+    expect(
+      await screen.findByText(
+        "Die Klassenzeit ist gerade nicht erreichbar. Bitte versuche es erneut.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Klassenzeiten werden geladen."),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(mockBulkUpsert).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+    await waitFor(() =>
+      expect(screen.getByLabelText("Montag")).toHaveValue("12:00"),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(mockBulkUpsert).toHaveBeenCalledTimes(1));
+    expect(mockBulkUpsert.mock.calls[0]?.[2]).toBe("v2");
   });
 
   it("cancel button calls onClose", () => {

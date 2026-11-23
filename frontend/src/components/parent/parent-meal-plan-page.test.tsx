@@ -1505,6 +1505,57 @@ describe("ParentMealPlanPage", () => {
       ).not.toBeInTheDocument();
     });
 
+    it("keeps the regular days unsendable after a failed reload until a read succeeds", async () => {
+      mocks.getMealParticipation
+        .mockResolvedValueOnce(PARTICIPATION)
+        .mockRejectedValueOnce(unavailable())
+        .mockResolvedValue({
+          ...PARTICIPATION,
+          weekdays: [2],
+          version: "v-new",
+        });
+      mocks.replaceMealParticipationSchedule
+        .mockRejectedValueOnce(
+          new ApiError("changed", 409, { code: "general.changed_since_read" }),
+        )
+        .mockResolvedValue({
+          effective_from: PARTICIPATION.effective_from,
+        } as never);
+
+      render(<ParentMealPlanPage />);
+
+      fireEvent.click(await screen.findByRole("button", { name: "Ändern" }));
+      fireEvent.click(screen.getByRole("checkbox", { name: "Dienstag" }));
+      fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+      expect(
+        await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+      ).toBeInTheDocument();
+
+      // Cancelling drops the input, not the refusal: reopened, the save
+      // waits for a read and the panel names the failed one.
+      fireEvent.click(screen.getByRole("button", { name: "Abbrechen" }));
+      fireEvent.click(await screen.findByRole("button", { name: "Ändern" }));
+      const save = screen.getByRole("button", { name: "Speichern" });
+      expect(save).toHaveAttribute("aria-disabled", "true");
+      fireEvent.click(save);
+      expect(mocks.replaceMealParticipationSchedule).toHaveBeenCalledTimes(1);
+
+      fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+      await waitFor(() =>
+        expect(
+          screen.getByRole("checkbox", { name: "Dienstag" }),
+        ).toBeChecked(),
+      );
+      fireEvent.click(screen.getByRole("checkbox", { name: "Mittwoch" }));
+      fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+      await waitFor(() =>
+        expect(mocks.replaceMealParticipationSchedule).toHaveBeenCalledTimes(2),
+      );
+      expect(mocks.replaceMealParticipationSchedule.mock.calls[1]).toContain(
+        "v-new",
+      );
+    });
+
     it("retries a failed day change with the current draft", async () => {
       mocks.getMealParticipation.mockResolvedValue(PARTICIPATION);
       mocks.setMealParticipationDay

@@ -44,7 +44,10 @@ import {
   type MealPlanEntry,
 } from "~/lib/parent-api";
 import { useMealParticipation } from "~/lib/hooks/use-meal-participation";
-import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import {
+  useReadDraftLoadError,
+  useSwrResourceLoadError,
+} from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { usedMealAllergens } from "~/lib/meal-allergens";
 import {
@@ -306,6 +309,8 @@ function MealParticipationEditActions({
   onCancel,
   onSave,
   saveTooltip,
+  saveDisabled = false,
+  saveDisabledReason,
   align = "end",
   className = "",
 }: Readonly<{
@@ -313,6 +318,9 @@ function MealParticipationEditActions({
   onCancel: () => void;
   onSave: () => void;
   saveTooltip: string;
+  /** Saving waits for something else, e.g. a read of the stored days. */
+  saveDisabled?: boolean;
+  saveDisabledReason?: string;
   align?: "start" | "end";
   className?: string;
 }>) {
@@ -337,10 +345,11 @@ function MealParticipationEditActions({
         variant="primary"
         size="md"
         onClick={onSave}
-        disabled={saving}
+        disabled={saving || saveDisabled}
         isLoading={saving}
         loadingText={t("saving")}
         tooltip={saveTooltip}
+        disabledReason={saving ? undefined : saveDisabledReason}
       >
         {t("save")}
       </Button>
@@ -491,6 +500,12 @@ function ParticipationWeek({
       token: (read) => read.version,
       toDraft: (read) => read.weekdays,
     },
+  );
+  // A failed read after a refused or saved change: the stored days are
+  // unknown, so saving waits for a read (ADR 0311, rules 4 and 6).
+  const regularLoadError = useReadDraftLoadError(
+    regular,
+    t("errorObjectParticipation"),
   );
   const weekdays = regular.draft ?? participation?.weekdays ?? NO_WEEKDAYS;
 
@@ -826,11 +841,22 @@ function ParticipationWeek({
               </div>
               <p className="mt-3 text-xs text-gray-500">{t("finishEdit")}</p>
               <FormErrorAlert message={saveError} className="mt-3" />
+              {/* After a refusal the save's alert already names the failed
+                  read, with its retry; otherwise it stands here. */}
+              {regularLoadError && !saveError ? (
+                <LoadErrorAlert error={regularLoadError} className="mt-3" />
+              ) : null}
               <MealParticipationEditActions
                 saving={saving}
                 onCancel={cancelRegularDaysEdit}
                 onSave={() => void saveRegularDays()}
                 saveTooltip={t("saveRegularDaysTooltip")}
+                saveDisabled={!regular.canSubmit}
+                saveDisabledReason={
+                  regular.status === "loadFailed"
+                    ? t("saveAfterReload")
+                    : undefined
+                }
                 className="mt-4"
               />
             </fieldset>

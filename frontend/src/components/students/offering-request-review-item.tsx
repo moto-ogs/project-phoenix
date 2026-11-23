@@ -6,6 +6,7 @@ import type { ErrorCode } from "~/lib/error-codes.generated";
 import { ApiError, isChangedSinceRead, wireErrorCode } from "~/lib/api-error";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useDraftOn } from "~/lib/swr/read-draft";
+import { useReadDraftLoadError } from "~/lib/hooks/use-swr-load-error";
 
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
@@ -28,7 +29,10 @@ import {
   useOpenedFromWaitlist,
 } from "~/components/students/course-waitlist";
 import { useApiErrorDisplay, useApiFormError } from "~/contexts/ToastContext";
-import { FormErrorAlert } from "~/components/ui/form-error-alert";
+import {
+  FormErrorAlert,
+  LoadErrorAlert,
+} from "~/components/ui/form-error-alert";
 import { Checkbox } from "~/components/ui/checkbox";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { ConfirmationModal } from "~/components/ui/modal";
@@ -195,6 +199,10 @@ export function OfferingRequestReviewItem({
       }),
     },
   );
+  // Scheitert das Neuladen nach einer Ablehnung, steht der Ladefehler in
+  // der Karte, und entschieden wird erst auf einem neu gelesenen Stand.
+  const decisionLoadError = useReadDraftLoadError(decision, "die Anfrage");
+  const decisionLoadFailed = decision.status === "loadFailed";
   const effectiveFrom = decision.draft?.effectiveFrom ?? row.effective_from;
   const excluded = decision.draft?.excluded ?? NO_EXCLUSIONS;
   const setEffectiveFrom = (iso: string) =>
@@ -482,10 +490,18 @@ export function OfferingRequestReviewItem({
       approveDisabled={blocked !== null}
       approveDisabledReason={blocked ?? undefined}
       approveReasonRequired={approveReasonRequired}
-      decisionDisabledReason={decisionDisabledReason}
+      decisionDisabledReason={
+        decisionDisabledReason ??
+        (decisionLoadFailed
+          ? "Lade zuerst den neuen Stand der Anfrage, dann kannst du entscheiden."
+          : undefined)
+      }
       onApprove={() => void prepareApproval()}
       onReject={() => void decide(false)}
     >
+      {decisionLoadError ? (
+        <LoadErrorAlert error={decisionLoadError} className="mt-3" />
+      ) : null}
       {fullWithdrawal && (
         <div className="mt-3">
           <Alert

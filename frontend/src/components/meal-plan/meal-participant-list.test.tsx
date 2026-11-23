@@ -474,6 +474,63 @@ describe("MealParticipantList", () => {
     expect(screen.getByRole("button", { name: "Speichern" })).toBeDisabled();
   });
 
+  it("names a failed opening read over cached regular days and saves nothing", async () => {
+    mocks.getChildMealSchedule
+      .mockReset()
+      .mockResolvedValueOnce({ weekdays: [1, 3], version: "v-read" })
+      .mockRejectedValueOnce(
+        new ApiError("offline", 503, { code: "general.unavailable" }),
+      )
+      .mockResolvedValueOnce({ weekdays: [2], version: "v-new" });
+    const modal = (isOpen: boolean) => (
+      <MealRegistrationChangeModal
+        isOpen={isOpen}
+        date="2026-09-07"
+        participants={[
+          {
+            studentId: "42",
+            firstName: "Mia",
+            lastName: "Muster",
+            schoolClass: "2a",
+          },
+        ]}
+        others={[]}
+        initialStudentId="42"
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />
+    );
+    const { rerender } = render(modal(true));
+    fireEvent.click(screen.getByRole("button", { name: "Feste Tage" }));
+    await waitFor(() =>
+      expect(screen.getByRole("checkbox", { name: "Montag" })).toBeChecked(),
+    );
+    rerender(modal(false));
+    rerender(modal(true));
+    fireEvent.click(screen.getByRole("button", { name: "Feste Tage" }));
+
+    expect(
+      await screen.findByText(
+        catalogText("general.unavailable", "die festen Tage"),
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Speichern" })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+    await waitFor(() =>
+      expect(screen.getByRole("checkbox", { name: "Dienstag" })).toBeChecked(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(mocks.replaceChildMealSchedule).toHaveBeenCalledWith(
+        "42",
+        [2],
+        expect.any(String),
+        "v-new",
+      ),
+    );
+  });
+
   // #3873: seeing the list opens no change of a registration.
   it("offers no change and loads no other children without the right to register", async () => {
     render(<MealParticipantList canRegister={false} />);

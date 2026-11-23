@@ -160,8 +160,12 @@ export function PersonalInfoEditPanel({
     touchedRef.current = touched;
     editedIdRef.current = editedStudent.id;
   });
-  // From a refusal until the stored state is shown again, nothing is sent.
-  const [reloadingStored, setReloadingStored] = useState(false);
+  // From a refusal until a read of the stored state succeeded, nothing is
+  // sent: the draft still carries the refused version (ADR 0311, rule 4).
+  // "failed": that read failed; the error's retry reads again.
+  const [storedRead, setStoredRead] = useState<
+    "current" | "reloading" | "failed"
+  >("current");
   const [isSaving, setIsSaving] = useState(false);
   // Foto (#3115): bis zum Speichern nur im Browser. Eine Datei zu wählen oder
   // „Foto entfernen" zu klicken ist wie jedes andere Feld ein Entwurf; erst
@@ -751,19 +755,25 @@ export function PersonalInfoEditPanel({
         refusedStudentRef.current = student;
         setPrivacyConsentChanged(false);
         setTouched(false);
-        setReloadingStored(true);
-        try {
-          await errors.show(err, {
-            object: "das Kind",
-            reload: () =>
-              Promise.all([
+        setStoredRead("reloading");
+        await errors.show(err, {
+          object: "das Kind",
+          // Also the read of the error's retry: only a successful one frees
+          // the save again.
+          reload: async () => {
+            setStoredRead("reloading");
+            try {
+              await Promise.all([
                 revalidateOrThrow(consentRead),
                 onStudentReload ? onStudentReload() : onStudentRefresh?.(),
-              ]),
-          });
-        } finally {
-          setReloadingStored(false);
-        }
+              ]);
+            } catch (readError) {
+              setStoredRead("failed");
+              throw readError;
+            }
+            setStoredRead("current");
+          },
+        });
         return;
       }
       // The backend saw what the announcement bus could not: another browser
@@ -844,13 +854,17 @@ export function PersonalInfoEditPanel({
         size="md"
         onClick={() => void handleSave()}
         disabled={
-          isSaving || reloadingStored || privacyConsentStatus !== "ready"
+          isSaving ||
+          storedRead !== "current" ||
+          privacyConsentStatus !== "ready"
         }
         tooltip="Speichert die geänderten Angaben des Kindes."
         disabledReason={
-          privacyConsentStatus === "error"
-            ? "Lade zuerst die Einwilligung neu."
-            : undefined
+          storedRead === "failed"
+            ? "Lade zuerst den gespeicherten Stand neu."
+            : privacyConsentStatus === "error"
+              ? "Lade zuerst die Einwilligung neu."
+              : undefined
         }
       >
         {isSaving ? "Wird gespeichert…" : "Speichern"}

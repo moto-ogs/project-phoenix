@@ -16,7 +16,7 @@ vi.mock("~/lib/tenant-context", () => ({
 }));
 
 import { ApiError } from "~/lib/api-error";
-import { useSWRAuth } from "./hooks";
+import { useInvalidateMatching, useSWRAuth } from "./hooks";
 import { useDraftOn, useReadDraft, type ReadDraftResult } from "./read-draft";
 import { resetSWRScope } from "./scope";
 
@@ -225,6 +225,161 @@ describe("useReadDraft", () => {
     expect(result.current.error).toMatchObject({ message: "offline" });
   });
 
+  it("binds the draft to the key's data generation: a clear drops it", async () => {
+    let answerNext!: (stored: Stored) => void;
+    const fetcher = vi
+      .fn<() => Promise<Stored>>()
+      .mockResolvedValueOnce({ version: "1", name: "Anna" })
+      .mockImplementationOnce(
+        () =>
+          new Promise<Stored>((resolve) => {
+            answerNext = resolve;
+          }),
+      );
+    const { result } = renderHook(() => ({
+      draft: useNameDraft("draft-generation", fetcher),
+      invalidate: useInvalidateMatching(),
+    }));
+    await waitFor(() => expect(result.current.draft.draft).toBe("Anna"));
+    act(() => result.current.draft.setDraft("Hanna"));
+
+    await act(async () => {
+      await result.current.invalidate((key) => key === "draft-generation", {
+        clear: true,
+      });
+    });
+    // The old generation's draft is gone and cannot be sent.
+    expect(result.current.draft.draft).toBeUndefined();
+    expect(result.current.draft.canSubmit).toBe(false);
+    const send = vi.fn(async () => ({ version: "9", name: "x" }));
+    await act(async () => {
+      await result.current.draft.submit(send);
+    });
+    expect(send).not.toHaveBeenCalled();
+
+    await act(async () => {
+      answerNext({ version: "2", name: "Anne" });
+    });
+    await waitFor(() => expect(result.current.draft.draft).toBe("Anne"));
+    expect(result.current.draft.token).toBe("2");
+    expect(result.current.draft.touched).toBe(false);
+  });
+
+  it("shows a failed opening read over a cached draft as its load error", async () => {
+    const offline = new Error("offline");
+    const fetcher = answering({ version: "1", name: "Anna" }, offline, {
+      version: "2",
+      name: "Anne",
+    });
+    const list = renderHook(() =>
+      useSWRAuth("draft-open-failed", fetcher, { shouldRetryOnError: false }),
+    );
+    await waitFor(() => expect(list.result.current.data).toBeDefined());
+    const { result } = renderHook(() =>
+      useNameDraft("draft-open-failed", fetcher),
+    );
+    await waitFor(() => expect(result.current.status).toBe("loadFailed"));
+    // The cached draft is on screen, the failure is not hidden behind it.
+    expect(result.current.base).toEqual({ version: "1", name: "Anna" });
+    expect(result.current.error).toBe(offline);
+
+    act(() => result.current.retryLoad());
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current.error).toBeUndefined();
+    expect(result.current.draft).toBe("Anne");
+    expect(result.current.token).toBe("2");
+  });
+
+  it("reports a failed read after a save and sends nothing until a read succeeds", async () => {
+    const offline = new Error("offline");
+    const fetcher = answering({ version: "1", name: "Anna" }, offline, {
+      version: "2",
+      name: "Hanna",
+    });
+    const { result } = renderHook(() => useNameDraft("draft-saved", fetcher));
+    await waitFor(() => expect(result.current.draft).toBe("Anna"));
+    act(() => result.current.setDraft("Hanna"));
+    let outcome!: ReadDraftResult<Stored>;
+    await act(async () => {
+      outcome = await result.current.submit(async () => ({
+        version: "2",
+        name: "Hanna",
+      }));
+    });
+    expect(outcome.ok).toBe(true);
+    expect(result.current.status).toBe("loadFailed");
+    expect(result.current.error).toBe(offline);
+    expect(result.current.canSubmit).toBe(false);
+
+    act(() => result.current.retryLoad());
+    await waitFor(() => expect(result.current.token).toBe("2"));
+    expect(result.current.canSubmit).toBe(true);
+  });
+
+  it("keeps the input a rebase kept when the retry of a failed reload succeeds", async () => {
+    const offline = new Error("offline");
+    const fetcher = answering({ version: "1", name: "Anna" }, offline, {
+      version: "2",
+      name: "Anne",
+    });
+    const { result } = renderHook(() =>
+      useNameDraft("draft-retry-rebase", fetcher, { rebase: (draft) => draft }),
+    );
+    await waitFor(() => expect(result.current.draft).toBe("Anna"));
+    act(() => result.current.setDraft("Hanna"));
+    await act(async () => {
+      const outcome = await result.current.submit(() =>
+        Promise.reject(changed()),
+      );
+      if (!outcome.ok) await outcome.reload?.()?.catch(() => undefined);
+    });
+    expect(result.current.status).toBe("loadFailed");
+
+    act(() => result.current.retryLoad());
+    await waitFor(() => expect(result.current.token).toBe("2"));
+    expect(result.current.draft).toBe("Hanna");
+    expect(result.current.touched).toBe(true);
+  });
+
+  it("holds the preview shown at the opening when follow is false", async () => {
+    let answerOwn!: (stored: Stored) => void;
+    const fetcher = vi
+      .fn<() => Promise<Stored>>()
+      .mockResolvedValueOnce({ version: "1", name: "Anna" })
+      .mockImplementationOnce(
+        () =>
+          new Promise<Stored>((resolve) => {
+            answerOwn = resolve;
+          }),
+      );
+    // An earlier view left the preview in the cache.
+    const list = renderHook(() =>
+      useSWRAuth("draft-preview", fetcher, { shouldRetryOnError: false }),
+    );
+    await waitFor(() => expect(list.result.current.data).toBeDefined());
+    list.unmount();
+    const { result } = renderHook(() =>
+      useReadDraft<Stored, Stored, string, unknown>({
+        key: "draft-preview",
+        fetcher,
+        token: (read) => read.version,
+        follow: false,
+      }),
+    );
+    await waitFor(() => expect(result.current.token).toBe("1"));
+    await act(async () => {
+      answerOwn({ version: "2", name: "Anne" });
+    });
+    await waitFor(() => expect(result.current.newer).toBe(true));
+    // The confirm sends the token of the preview on screen.
+    expect(result.current.base).toEqual({ version: "1", name: "Anna" });
+    const send = vi.fn(async () => undefined);
+    await act(async () => {
+      await result.current.submit(send);
+    });
+    expect(send).toHaveBeenCalledWith("1", { version: "1", name: "Anna" });
+  });
+
   it("waits for a newer row of a list the caller reloads (useDraftOn)", async () => {
     const reload = vi.fn(async () => undefined);
     const { result, rerender } = renderHook(
@@ -249,5 +404,42 @@ describe("useReadDraft", () => {
     expect(result.current.draft).toBe("Anne");
     expect(result.current.token).toBe("2");
     expect(result.current.canSubmit).toBe(true);
+  });
+  it("leaves a failed reload of the list only through a newer row (useDraftOn)", async () => {
+    const offline = new Error("offline");
+    const reload = vi.fn(async () => {
+      throw offline;
+    });
+    const { result, rerender } = renderHook(
+      ({ row }: { row: Stored }) =>
+        useDraftOn<Stored, string, string, unknown>(
+          { opening: "row-2", data: row, reload },
+          { token: (read) => read.version, toDraft: (read) => read.name },
+        ),
+      { initialProps: { row: { version: "1", name: "Anna" } } },
+    );
+    act(() => result.current.setDraft("Hanna"));
+    await act(async () => {
+      const outcome = await result.current.submit(() =>
+        Promise.reject(changed()),
+      );
+      if (!outcome.ok) await outcome.reload?.()?.catch(() => undefined);
+    });
+    expect(result.current.status).toBe("loadFailed");
+    expect(result.current.error).toBe(offline);
+
+    // Dropping the input does not make the refused version sendable.
+    act(() => result.current.discard());
+    expect(result.current.draft).toBe("Anna");
+    expect(result.current.canSubmit).toBe(false);
+    rerender({ row: { version: "1", name: "Anna" } });
+    expect(result.current.canSubmit).toBe(false);
+
+    // A later successful reload of the list brings the stored row.
+    rerender({ row: { version: "2", name: "Anne" } });
+    expect(result.current.status).toBe("ready");
+    expect(result.current.draft).toBe("Anne");
+    expect(result.current.token).toBe("2");
+    expect(result.current.error).toBeUndefined();
   });
 });

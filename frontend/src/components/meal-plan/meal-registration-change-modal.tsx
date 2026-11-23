@@ -17,7 +17,7 @@ import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { formatDate, parseISODate, toISODate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { useLocalizedDatePicker } from "~/lib/hooks/use-localized-date-picker";
-import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useReadDraftLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useReadDraft } from "~/lib/swr/read-draft";
 import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
 import { createLogger } from "~/lib/logger";
@@ -119,19 +119,18 @@ export function MealRegistrationChangeModal({
     token: (read) => read.version,
     toDraft: (read): readonly number[] => read.weekdays,
   });
-  const { error: scheduleError, failure: scheduleFailure } =
-    useSwrResourceLoadError(
-      [{ data: schedule.base, error: schedule.error }],
-      t("errorObjectSchedule"),
-      schedule.retryLoad,
-    );
+  // Auch über gemerkten Tagen: bis ein Lesen gelingt, geht nichts raus.
+  const scheduleError = useReadDraftLoadError(
+    schedule,
+    t("errorObjectSchedule"),
+  );
   const scheduleState: ScheduleState =
     scheduleKey === null
       ? "idle"
-      : schedule.base && schedule.canSubmit
-        ? "loaded"
-        : scheduleFailure !== undefined
-          ? "failed"
+      : schedule.status === "loadFailed"
+        ? "failed"
+        : schedule.base && schedule.canSubmit
+          ? "loaded"
           : "loading";
   const weekdays = schedule.draft ?? NO_WEEKDAYS;
   const toggleWeekday = (weekday: number) => {
@@ -289,7 +288,11 @@ export function MealRegistrationChangeModal({
           />
         ) : (
           <div className="space-y-3">
-            {scheduleError ? <LoadErrorAlert error={scheduleError} /> : null}
+            {/* Nach einer Ablehnung nennt die Meldung oben das gescheiterte
+                Lesen schon, mit „Wiederholen“. */}
+            {scheduleError && !(scope === "regular" && error) ? (
+              <LoadErrorAlert error={scheduleError} />
+            ) : null}
             <fieldset disabled={scheduleState !== "loaded"}>
               <legend className="text-sm font-medium text-gray-700">
                 {t("regularDays")}

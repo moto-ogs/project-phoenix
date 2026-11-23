@@ -1115,6 +1115,52 @@ describe("PersonalInfoEditPanel", () => {
       );
     });
 
+    it("keeps saving locked after a refusal until a read of the stored child succeeds", async () => {
+      mockOnSave.mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      );
+      const onStudentReload = vi
+        .fn<() => Promise<unknown>>()
+        .mockRejectedValueOnce(
+          new ApiError("offline", 503, { code: "general.unavailable" }),
+        )
+        .mockResolvedValue(undefined);
+      render(
+        <PersonalInfoEditPanel
+          onCancel={mockOnCancel}
+          student={createMockStudent({ version: "record-v1" })}
+          onSave={mockOnSave}
+          onStudentReload={onStudentReload}
+        />,
+      );
+      await consentLoaded();
+      fireEvent.change(screen.getByLabelText("Vorname"), {
+        target: { value: "Mia" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Der neue Stand konnte nicht geladen werden.",
+      );
+
+      // The draft still carries the refused version: no save until a read.
+      // Blocked with its reason (`aria-disabled`), the click is swallowed.
+      const save = screen.getByRole("button", { name: "Speichern" });
+      await waitFor(() =>
+        expect(save).toHaveAttribute("aria-disabled", "true"),
+      );
+      fireEvent.click(save);
+      expect(mockOnSave).toHaveBeenCalledTimes(1);
+
+      fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: "Speichern" }),
+        ).not.toHaveAttribute("aria-disabled"),
+      );
+      expect(screen.getByRole("button", { name: "Speichern" })).toBeEnabled();
+      expect(onStudentReload).toHaveBeenCalledTimes(2);
+    });
+
     it("does not mark loaded privacy consent as changed for an unrelated save", async () => {
       mockOnSave.mockResolvedValue(undefined);
       fetchStudentPrivacyConsentMock.mockResolvedValue({

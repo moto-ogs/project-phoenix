@@ -84,6 +84,7 @@
   "lastMealPlanWeekReason": "Na dalsze tygodnie nie ma jeszcze jadłospisu.",
   "editRegularDaysTooltip": "Otwiera wybór dni, w które Twoje dziecko zawsze je.",
   "saveRegularDaysTooltip": "Zapisuje nowe stałe dni dla Twojego dziecka.",
+  "saveAfterReload": "Najpierw załaduj zgłoszenie ponownie, potem możesz zapisać.",
   "saveDayTooltip": "Zapisuje zgłoszenie na ten dzień.",
   "registerWeekTooltip": "Od razu zapisuje dziecko na wszystkie jeszcze zmienialne dni tego tygodnia.",
   "cancelWeekTooltip": "Wypisuje dziecko na ten tydzień. moto najpierw zapyta.",

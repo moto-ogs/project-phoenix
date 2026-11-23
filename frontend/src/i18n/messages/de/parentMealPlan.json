@@ -84,6 +84,7 @@
   "lastMealPlanWeekReason": "Weiter im Voraus gibt es noch keinen Speiseplan.",
   "editRegularDaysTooltip": "Öffnet die Auswahl der Tage, an denen dein Kind immer isst.",
   "saveRegularDaysTooltip": "Speichert die neuen festen Tage für dein Kind.",
+  "saveAfterReload": "Lade zuerst die Anmeldung neu, dann kannst du speichern.",
   "saveDayTooltip": "Speichert die Anmeldung für diesen Tag.",
   "registerWeekTooltip": "Meldet dein Kind sofort an allen noch änderbaren Tagen dieser Woche an.",
   "cancelWeekTooltip": "Meldet dein Kind für diese Woche ab. moto fragt vorher nach.",

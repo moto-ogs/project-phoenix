@@ -652,10 +652,18 @@ export interface OpeningReadOptions<T> {
 /** One opening of a surface and the read it is filled on (ADR 0311). */
 export interface OpeningRead<T> {
   /**
-   * This opening's answer, held: a later read of another view does not
-   * replace it. Before the answer: the cache with `showCached`, else
-   * undefined. Undefined after a failed first read and while the server
-   * refuses the read (401, 403).
+   * The opening: the key under the session's scope and the key's data
+   * generation; null while closed. State that belongs to one opening (a
+   * draft) keys on it, so a scope or generation bump drops it.
+   */
+  readonly opening: string | null;
+  /**
+   * With `showCached`: this opening's answer, held; a later read of the
+   * key (another view's, an invalidation's) does not replace it and shows
+   * in `latest`. Before the answer: the cache. Without `showCached`:
+   * nothing until this opening's own read answered, then the newest read
+   * of the key: an invalidation's read replaces it. Undefined after a
+   * failed first read and while the server refuses the read (401, 403).
    */
   readonly data: T | undefined;
   /**
@@ -953,6 +961,7 @@ export function useOpeningRead<T>(
   );
 
   return {
+    opening,
     data:
       refusal !== undefined
         ? undefined

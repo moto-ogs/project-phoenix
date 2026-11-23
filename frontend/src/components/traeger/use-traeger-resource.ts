@@ -46,8 +46,10 @@ export function useTraegerResource<T>(
  * `useTraegerResource` for a read the server logs or authorizes on every
  * opening (`useOpeningRead`, `showCached: false`): person data that stands
  * in the schools' access logs. `data` stays null until this opening's own
- * request answered and is held then; focus, reconnect and invalidations
- * do not read again. `reload()` reads again.
+ * request answered. Focus, reconnect and key changes read nothing; an
+ * invalidation of the key reads again (one more access-log entry) and its
+ * answer replaces `data`, so a write invalidates the key only when it
+ * changed what the card shows. `reload()` reads again.
  */
 export function useFreshTraegerResource<T>(
   key: string | null,
