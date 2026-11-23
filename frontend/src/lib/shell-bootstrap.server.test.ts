@@ -96,6 +96,7 @@ describe("loadShellBootstrap", () => {
           last_login: null,
           created_at: "2026-01-01T00:00:00Z",
           updated_at: "2026-01-01T00:00:00Z",
+          version: "2026-01-01T00:00:00Z",
         },
       },
       "/auth/account/tenants": {
