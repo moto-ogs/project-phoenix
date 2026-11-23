@@ -122,11 +122,11 @@ func TestDeleteRoomValidatesIdentifierAtPublicSeam(t *testing.T) {
 	engine := &lifecycleEngine{}
 	module := newTestModule(engine)
 
-	_, err := module.DeleteRoom(testpkg.TenantContext(42), 0)
+	_, err := module.DeleteRoom(testpkg.TenantContext(42), 0, "")
 	require.ErrorIs(t, err, facilities.ErrInvalidRoom)
 	assert.Zero(t, engine.calls)
 
-	_, err = module.DeleteRoom(testpkg.TenantContext(42), 41)
+	_, err = module.DeleteRoom(testpkg.TenantContext(42), 41, facilities.NewRoomRemovalImpact(false, false, facilities.RoomReferences{}).Fingerprint())
 	require.NoError(t, err)
 	assert.Equal(t, int64(41), engine.deleted)
 	assert.Equal(t, 1, engine.calls)

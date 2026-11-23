@@ -23,7 +23,8 @@ export const roomsConfig = defineEntityConfig<Room>({
       get: "GET /api/rooms/{id}",
       create: "POST /api/rooms/",
       update: "PUT /api/rooms/{id}",
-      delete: "DELETE /api/rooms/{id}",
+      // Kein `delete`: ein Raum wird nur über RoomRemovalModal entfernt, das
+      // den Fingerabdruck seiner Vorschau mitschickt (ADR 0311).
     },
     // Admin view keeps showing system rooms (Schulhof, WC) — they are
     // rendered greyed-out via isSystemRoom instead of hidden.

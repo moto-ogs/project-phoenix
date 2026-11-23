@@ -7,6 +7,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 type roomNotFoundError struct{}
@@ -70,11 +72,12 @@ type Query interface {
 
 // Command owns room lifecycle writes. DeleteRoom deletes a room nothing
 // references and archives one that history names; RoomRemovalImpact
-// previews which of the two happens, or what still blocks it.
+// previews which of the two happens, or what still blocks it. DeleteRoom
+// carries the Fingerprint of the preview its caller confirmed.
 type Command interface {
 	CreateRoom(context.Context, CreateRoom) (Room, error)
 	UpdateRoom(context.Context, UpdateRoom) (Room, error)
-	DeleteRoom(context.Context, int64) (RoomRemoval, error)
+	DeleteRoom(ctx context.Context, id int64, expectedFingerprint string) (RoomRemoval, error)
 	RoomRemovalImpact(context.Context, int64) (RoomRemovalImpact, error)
 }
 
@@ -124,6 +127,8 @@ func ErrorCode(err error) string {
 		return "room_still_planned"
 	case errors.Is(err, ErrRoomArchived):
 		return "room_archived"
+	case errors.Is(err, readstate.ErrChanged):
+		return "changed_since_read"
 	default:
 		return "internal_error"
 	}

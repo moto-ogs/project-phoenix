@@ -3,6 +3,8 @@ package facilities
 import (
 	"errors"
 	"fmt"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 var (
@@ -73,6 +75,19 @@ func NewRoomRemovalImpact(activeSession, careOffering bool, references RoomRefer
 		impact.Outcome = RoomRemovalDelete
 	}
 	return impact
+}
+
+// Fingerprint is the token of what the preview promises (ADR 0311): the
+// outcome and everything that holds the room. DeleteRoom compares it under
+// its lock, so a confirmed archive never ends as a delete or the other way
+// round. The history counts stay out: they only explain an archive and grow
+// as upcoming blocks pass.
+func (i RoomRemovalImpact) Fingerprint() string {
+	r := i.References
+	return readstate.Fingerprint([]any{
+		i.Outcome, i.ActiveSession, i.CareOffering,
+		r.ActivityGroups, r.UpcomingBlocks, r.EducationGroups, r.Devices,
+	})
 }
 
 // RoomStillPlannedError carries the references that block a room removal.

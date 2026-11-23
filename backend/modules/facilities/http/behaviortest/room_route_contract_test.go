@@ -52,7 +52,7 @@ func TestRoomRoutesAnswerTheirContract(t *testing.T) {
 	require.Equal(t, http.StatusOK, code, body)
 	assert.Contains(t, body, `"data":[]`)
 
-	code, body = exec(http.MethodDelete, fmt.Sprintf("/%d", room.ID), nil)
+	code, body = exec(http.MethodDelete, fmt.Sprintf("/%d", room.ID), map[string]any{"expected_fingerprint": readImpact(t, tc, room.ID).Data.Fingerprint})
 	require.Equal(t, http.StatusOK, code, body)
 	assert.Contains(t, body, `"outcome":"delete"`)
 }

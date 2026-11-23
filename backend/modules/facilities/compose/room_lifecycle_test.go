@@ -80,7 +80,9 @@ func TestModulePersistsRoomDeleteAtPublicSeam(t *testing.T) {
 	created, err := module.CreateRoom(ctx, facilities.CreateRoom{Name: "Igelraum"})
 	require.NoError(t, err)
 
-	_, err = module.DeleteRoom(ctx, created.ID)
+	impact, err := module.RoomRemovalImpact(ctx, created.ID)
+	require.NoError(t, err)
+	_, err = module.DeleteRoom(ctx, created.ID, impact.Fingerprint())
 	require.NoError(t, err)
 
 	_, err = module.FindRoom(ctx, created.ID)
@@ -120,7 +122,7 @@ func TestSystemRoomCannotBeRenamedOrDeleted(t *testing.T) {
 	_, err = module.UpdateRoom(ctx, facilities.UpdateRoom{ID: created.ID, Name: "Garten"})
 	require.ErrorIs(t, err, facilities.ErrSystemRoomProtected)
 
-	_, err = module.DeleteRoom(ctx, created.ID)
+	_, err = module.DeleteRoom(ctx, created.ID, "")
 	require.ErrorIs(t, err, facilities.ErrSystemRoomProtected)
 
 	found, err := module.FindRoom(ctx, created.ID)
@@ -208,7 +210,7 @@ func TestDeleteRoomRunsGuardInsideWriteTransaction(t *testing.T) {
 	created, err := module.CreateRoom(ctx, facilities.CreateRoom{Name: "Igelraum"})
 	require.NoError(t, err)
 
-	_, err = module.DeleteRoom(ctx, created.ID)
+	_, err = module.DeleteRoom(ctx, created.ID, "")
 	require.ErrorIs(t, err, facilities.ErrRoomInUse)
 	assert.True(t, guardCalled)
 

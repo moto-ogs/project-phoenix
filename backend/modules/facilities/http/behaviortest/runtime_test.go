@@ -338,9 +338,7 @@ func TestDeleteRoom(t *testing.T) {
 		// Create room specifically for deletion
 		room := testpkg.CreateTestRoom(t, tc.db, "Delete Room Test")
 
-		req := testutil.NewRequest("DELETE", fmt.Sprintf("/%d", room.ID), nil)
-
-		rr := testutil.ExecuteWithAuth(t, tc.router, req, testutil.AdminTestClaims(1))
+		rr := removeRoom(t, tc, room.ID, readImpact(t, tc, room.ID).Data.Fingerprint)
 
 		// The answer names the outcome: an unused room is deleted (#6845).
 		assert.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())

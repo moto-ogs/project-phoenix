@@ -14,6 +14,11 @@ import {
   success,
 } from "./runtime";
 
+/** Go: httpadapter.RoomRemovalRequest */
+export interface RoomRemovalRequest {
+  expected_fingerprint?: string;
+}
+
 /** Go: httpadapter.RoomRemovalResponse */
 export interface RoomRemovalResponse {
   outcome: string;
@@ -112,6 +117,7 @@ export interface RoomRemovalImpactResponse {
   active_session: boolean;
   care_offering: boolean;
   references: RoomReferencesResponse;
+  fingerprint: string;
 }
 
 export const RoomRemovalImpactResponseSchema: z.ZodType<RoomRemovalImpactResponse, unknown> = object<RoomRemovalImpactResponse>({
@@ -119,6 +125,7 @@ export const RoomRemovalImpactResponseSchema: z.ZodType<RoomRemovalImpactRespons
   active_session: bool,
   care_offering: bool,
   references: RoomReferencesResponseSchema,
+  fingerprint: str,
 });
 
 /** Go: httpadapter.RoomRequest */
@@ -166,6 +173,7 @@ export const routes = {
     method: "DELETE",
     pattern: "/api/rooms/{id}",
     portals: ["tenant"],
+    request: requestBody<RoomRemovalRequest>(),
     response: success(RoomRemovalResponseSchema),
   },
   "GET /api/rooms/": {

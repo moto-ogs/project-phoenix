@@ -2,8 +2,10 @@ package httpadapter
 
 import (
 	"errors"
+	"io"
 	"net/http"
 
+	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/modules/facilities"
 )
 
@@ -24,13 +26,24 @@ type RoomReferencesResponse struct {
 	HasSessionHistory      bool `json:"has_session_history"`
 }
 
-// RoomRemovalImpactResponse previews DELETE /rooms/{id}.
+// RoomRemovalImpactResponse previews DELETE /rooms/{id}. Fingerprint is the
+// token the confirmed DELETE sends back (ADR 0311).
 type RoomRemovalImpactResponse struct {
 	Outcome       facilities.RoomRemovalOutcome `json:"outcome"`
 	ActiveSession bool                          `json:"active_session"`
 	CareOffering  bool                          `json:"care_offering"`
 	References    RoomReferencesResponse        `json:"references"`
+	Fingerprint   string                        `json:"fingerprint"`
 }
+
+// RoomRemovalRequest confirms the preview whose fingerprint it carries.
+type RoomRemovalRequest struct {
+	ExpectedFingerprint string `json:"expected_fingerprint"`
+}
+
+// Bind leaves an empty fingerprint to the owner, which refuses it as a
+// changed preview.
+func (*RoomRemovalRequest) Bind(*http.Request) error { return nil }
 
 func newRoomReferencesResponse(references facilities.RoomReferences) RoomReferencesResponse {
 	return RoomReferencesResponse{
@@ -47,7 +60,13 @@ func (rs *Resource) deleteRoom(w http.ResponseWriter, r *http.Request) {
 		rs.runtime.Failure(w, r, FailureInvalid, errors.New("invalid room ID"), "invalid_request")
 		return
 	}
-	removal, err := rs.rooms.DeleteRoom(r.Context(), id)
+	// A DELETE without a body confirms no preview; the owner refuses it.
+	req := &RoomRemovalRequest{}
+	if err := render.Bind(r, req); err != nil && !errors.Is(err, io.EOF) {
+		rs.runtime.Failure(w, r, FailureInvalid, err, "invalid_request")
+		return
+	}
+	removal, err := rs.rooms.DeleteRoom(r.Context(), id, req.ExpectedFingerprint)
 	if err != nil {
 		rs.failure(w, r, err)
 		return
@@ -72,6 +91,6 @@ func (rs *Resource) roomRemovalImpact(w http.ResponseWriter, r *http.Request) {
 	}
 	rs.runtime.Success(w, r, http.StatusOK, RoomRemovalImpactResponse{
 		Outcome: impact.Outcome, ActiveSession: impact.ActiveSession, CareOffering: impact.CareOffering,
-		References: newRoomReferencesResponse(impact.References),
+		References: newRoomReferencesResponse(impact.References), Fingerprint: impact.Fingerprint(),
 	}, "Room removal impact retrieved")
 }

@@ -5,6 +5,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/facilities"
 	"github.com/moto-ogs/project-phoenix/modules/facilities/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // DeleteRoom removes a room (#6845). A room a session runs in, a care
@@ -13,7 +14,12 @@ import (
 // room only past records name is archived, so the history keeps its room.
 // A room nothing references is deleted. The database decides between the
 // last two: every reference to facilities.rooms is a NO ACTION key.
-func (s *Service) DeleteRoom(ctx context.Context, id int64) (result facilities.RoomRemoval, err error) {
+// expectedFingerprint is the preview the caller confirmed (ADR 0311): a
+// preview other than the one the stored state gives now is refused with
+// readstate.ErrChanged before the write. A confirmed archive that the
+// database would turn into a delete is refused too; the other way round
+// keeps more than promised and stands.
+func (s *Service) DeleteRoom(ctx context.Context, id int64, expectedFingerprint string) (result facilities.RoomRemoval, err error) {
 	if err := s.requireTenant(ctx, "delete_room"); err != nil {
 		return facilities.RoomRemoval{}, err
 	}
@@ -43,7 +49,14 @@ func (s *Service) DeleteRoom(ctx context.Context, id int64) (result facilities.R
 		if references.Live() {
 			return &facilities.RoomStillPlannedError{References: references}
 		}
+		confirmed := facilities.NewRoomRemovalImpact(false, false, references)
+		if err := readstate.Check(expectedFingerprint, confirmed.Fingerprint()); err != nil {
+			return err
+		}
 		result, err = s.removeRoom(txCtx, existing, stats)
+		if err == nil && confirmed.Outcome == facilities.RoomRemovalArchive && result.Outcome != confirmed.Outcome {
+			return readstate.ErrChanged
+		}
 		return err
 	})
 	return result, err

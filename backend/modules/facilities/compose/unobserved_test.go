@@ -15,7 +15,9 @@ func TestDefaultFacilitiesDeletesRoomWithoutGuard(t *testing.T) {
 	rooms, err := NewUnobserved(db)
 	require.NoError(t, err)
 
-	_, err = rooms.DeleteRoom(testpkg.Ctx(t), room.ID)
+	impact, err := rooms.RoomRemovalImpact(testpkg.Ctx(t), room.ID)
+	require.NoError(t, err)
+	_, err = rooms.DeleteRoom(testpkg.Ctx(t), room.ID, impact.Fingerprint())
 	require.NoError(t, err)
 	_, err = rooms.FindRoom(testpkg.Ctx(t), room.ID)
 	require.Error(t, err)

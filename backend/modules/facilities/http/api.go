@@ -16,6 +16,7 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation"
 	"github.com/moto-ogs/project-phoenix/modules/facilities"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 type Middleware = func(http.Handler) http.Handler
@@ -413,7 +414,7 @@ func classifyFailure(err error) (FailureKind, string) {
 	case errors.Is(err, facilities.ErrDuplicateRoom), errors.Is(err, facilities.ErrDuplicateToiletRoom),
 		errors.Is(err, facilities.ErrRoomColorAlreadyInUse), errors.Is(err, facilities.ErrRoomInUse),
 		errors.Is(err, facilities.ErrRoomRequiredByOffering), errors.Is(err, facilities.ErrRoomStillPlanned),
-		errors.Is(err, facilities.ErrRoomArchived):
+		errors.Is(err, facilities.ErrRoomArchived), errors.Is(err, readstate.ErrChanged):
 		kind = FailureConflict
 	}
 	return kind, code

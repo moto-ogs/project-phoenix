@@ -93,24 +93,17 @@ const { removalImpact } = vi.hoisted(() => ({
       archived_activity_groups: 0,
       has_session_history: false,
     },
+    fingerprint: "vorschau-1",
   },
 }));
 
 vi.mock("~/lib/swr", () => ({
-  useSWRAuth: () => ({
-    data: undefined,
-    error: undefined,
-    isLoading: false,
-    isValidating: false,
-    mutate: () => Promise.resolve(undefined),
-  }),
-  // Der Löschdialog liest die Vorschau je Öffnen neu.
-  useFreshSWR: (key: string | null) => ({
+  // Der Löschdialog liest seine Vorschau aus dem gemeinsamen Cache.
+  useSWRAuth: (key: string | null) => ({
     data: key?.startsWith("room-removal-impact-") ? removalImpact : undefined,
     error: undefined,
     isLoading: false,
     isValidating: false,
-    fresh: true,
     mutate: () => Promise.resolve(undefined),
   }),
   useSWRSeedFrom: () => () => undefined,
@@ -129,11 +122,6 @@ vi.mock("~/lib/database/service-factory", () => ({
 vi.mock("~/lib/room-removal-api", () => ({
   fetchRoomRemovalImpact: () => Promise.resolve(removalImpact),
   removeRoom: serviceDeleteMock,
-}));
-
-vi.mock("~/lib/api", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/lib/api")>()),
-  roomService: { deleteRoom: serviceDeleteMock },
 }));
 
 vi.mock("~/components/rooms/room-detail-content", () => ({
@@ -468,7 +456,7 @@ describe("RoomDetailPage", () => {
     // Die Vorschau lädt, bevor die Rückfrage den Raum entfernt (#6845).
     await waitFor(() => {
       fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
-      expect(serviceDeleteMock).toHaveBeenCalledWith("7");
+      expect(serviceDeleteMock).toHaveBeenCalledWith("7", "vorschau-1");
     });
     await waitFor(() => {
       expect(pushMock).toHaveBeenCalledWith("/database/rooms?groupBy=floor");

@@ -330,6 +330,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "RoomRemovalRequest"
+      },
       "response": {
         "kind": "ref",
         "ref": "RoomRemovalResponse"
@@ -83133,6 +83137,26 @@
           "schema": {
             "kind": "ref",
             "ref": "RoomReferencesResponse"
+          }
+        },
+        {
+          "name": "fingerprint",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RoomRemovalRequest",
+      "go_type": "httpadapter.RoomRemovalRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "expected_fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]

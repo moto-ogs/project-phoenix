@@ -48,6 +48,11 @@ func (r *Repository) Delete(ctx context.Context, rawID any) error {
 	if err != nil {
 		return err
 	}
-	_, err = r.DeleteRoom(ctx, id)
+	// A fixture removes the room as its preview says.
+	impact, err := r.RoomRemovalImpact(ctx, id)
+	if err != nil {
+		return err
+	}
+	_, err = r.DeleteRoom(ctx, id, impact.Fingerprint())
 	return err
 }

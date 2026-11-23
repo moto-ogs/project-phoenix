@@ -23,7 +23,7 @@ func RouteContracts() []apiCommon.RouteContract {
 		{Method: "GET", Pattern: "/by-category", Portals: portals, Query: category, Response: []RoomResponse{}, Deprecated: true},
 		{Method: "GET", Pattern: "/{id}", Portals: portals, Response: RoomResponse{}},
 		{Method: "PUT", Pattern: "/{id}", Portals: portals, Request: RoomRequest{}, Response: RoomResponse{}},
-		{Method: "DELETE", Pattern: "/{id}", Portals: portals, Response: RoomRemovalResponse{}},
+		{Method: "DELETE", Pattern: "/{id}", Portals: portals, Request: RoomRemovalRequest{}, Response: RoomRemovalResponse{}},
 		{Method: "GET", Pattern: "/{id}/history", Portals: portals, Query: window, Response: []RoomSessionEntry{}},
 		{Method: "GET", Pattern: "/{id}/removal-impact", Portals: portals, Response: RoomRemovalImpactResponse{}},
 		{Method: "POST", Pattern: "/export", Portals: portals, Request: roomSnapshotExportRequest{}, File: true},
