@@ -9,6 +9,7 @@ import { FormModal } from "~/components/ui/form-modal";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { Skeleton } from "~/components/ui/skeleton";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import { isChangedSinceRead } from "~/lib/api-error";
 import {
   bulkInviteGuardians,
   type BulkInviteProblem,
@@ -16,7 +17,7 @@ import {
 } from "~/lib/guardian-bulk-invite-api";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { useFreshSWR } from "~/lib/swr";
+import { useSWRAuth } from "~/lib/swr";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 
 const logger = createLogger({ component: "SelectionBulkInviteModal" });
@@ -81,10 +82,13 @@ export function SelectionBulkInviteModal({
   const latestSendRef = useRef<() => Promise<void>>(async () => undefined);
 
   // The dry run only counts; nothing is sent until the click below. The
-  // button names the counts of this opening's own dry run, never a cached one.
-  const previewRead = useFreshSWR(
+  // send carries the fingerprint of the counts on screen: when the guardians
+  // changed since, the backend refuses (general.changed_since_read) and the
+  // dialog shows the new counts.
+  const previewRead = useSWRAuth(
     isOpen ? tenantStudentKeys.bulkInvitePreview(studentIds, resendOpen) : null,
     () => bulkInviteGuardians(studentIds, { dryRun: true, resendOpen }),
+    { keepPreviousData: false },
   );
   const { mutate: mutatePreview } = previewRead;
   // A failed dry run shows its error, not the counts of an earlier one.
@@ -112,6 +116,7 @@ export function SelectionBulkInviteModal({
         const result = await bulkInviteGuardians(studentIds, {
           dryRun: false,
           resendOpen,
+          expectedFingerprint: preview?.fingerprint ?? "",
         });
         if (op.isCurrent()) {
           setSent(result);
@@ -128,6 +133,13 @@ export function SelectionBulkInviteModal({
           error: err instanceof Error ? err.message : String(err),
         });
         if (!op.isCurrent()) return;
+        if (isChangedSinceRead(err)) {
+          // Die Eltern der Auswahl haben sich geändert: Der Dialog zählt neu,
+          // die Person entscheidet mit den neuen Zahlen.
+          await errors.show(err, { object: "die Einladung" });
+          void mutatePreview();
+          return;
+        }
         await errors.show(err, {
           object: "die Einladung",
           retry: () => void latestSendRef.current(),

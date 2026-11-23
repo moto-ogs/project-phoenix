@@ -42,6 +42,7 @@ func TestBulkInviteToStudents_InvitesEachGuardianOnce(t *testing.T) {
 	assert.Equal(t, 1, counted.Invited)
 	assert.Empty(t, outbox.Requests(), "the preview mails nobody")
 
+	req.ExpectedFingerprint = counted.Fingerprint
 	result, err := env.service.BulkInviteToStudents(ctx, req)
 	require.NoError(t, err)
 	assert.Equal(t, 1, result.Invited)
@@ -53,14 +54,14 @@ func TestBulkInviteToStudents_InvitesEachGuardianOnce(t *testing.T) {
 	assert.Equal(t, parent.ID, outbox.Requests()[1].RelatedEntityID)
 	assert.False(t, testpkg.StudentGuardianLinkGrantsPortalAccess(t, env.db, grandmaLink.ID), "the pickup-only contact is not upgraded")
 
-	again, err := env.service.BulkInviteToStudents(ctx, req)
+	again, err := env.service.BulkInviteToStudents(ctx, previewedBulkInvite(t, env.service, req))
 	require.NoError(t, err)
 	assert.Zero(t, again.Invited)
 	assert.Equal(t, 1, again.SkippedOpen)
 	assert.Len(t, outbox.Requests(), 2, "a repeated run does not mail again")
 
 	req.ResendOpen = true
-	resent, err := env.service.BulkInviteToStudents(ctx, req)
+	resent, err := env.service.BulkInviteToStudents(ctx, previewedBulkInvite(t, env.service, req))
 	require.NoError(t, err)
 	assert.Equal(t, 1, resent.Resent)
 	mailed := outbox.Requests()
@@ -106,7 +107,7 @@ func TestBulkInviteToStudents_DeadLinksGetANewInvitation(t *testing.T) {
 			current, err := testpkg.TenantQuery1(t, ctx, env.db, env.repos.GuardianProfile.FindByID, profile.ID)
 			require.NoError(t, err)
 
-			result, err := env.service.BulkInviteToStudents(ctx, identityaccess.BulkInviteRequest{StudentIDs: []int64{student.ID}, CreatedBy: creator})
+			result, err := env.service.BulkInviteToStudents(ctx, previewedBulkInvite(t, env.service, identityaccess.BulkInviteRequest{StudentIDs: []int64{student.ID}, CreatedBy: creator}))
 			require.NoError(t, err)
 			assert.Zero(t, result.SkippedOpen, "a dead link is no open invitation")
 			assert.Equal(t, 1, result.Invited)
@@ -116,4 +117,21 @@ func TestBulkInviteToStudents_DeadLinksGetANewInvitation(t *testing.T) {
 			assert.Equal(t, *current.Email, preview.Email)
 		})
 	}
+}
+
+// bulkInviter is the bulk run the dialog drives.
+type bulkInviter interface {
+	BulkInviteToStudents(ctx context.Context, req identityaccess.BulkInviteRequest) (*identityaccess.BulkInviteResult, error)
+}
+
+// previewedBulkInvite is req as the dialog sends it: with the fingerprint of
+// the preview it showed just before (ADR 0311).
+func previewedBulkInvite(t *testing.T, service bulkInviter, req identityaccess.BulkInviteRequest) identityaccess.BulkInviteRequest {
+	t.Helper()
+	preview := req
+	preview.DryRun = true
+	counted, err := service.BulkInviteToStudents(testpkg.Ctx(t), preview)
+	require.NoError(t, err)
+	req.ExpectedFingerprint = counted.Fingerprint
+	return req
 }

@@ -40,7 +40,8 @@ func TestBulkInviteOnlyPassesActiveChildrenOfTheSchool(t *testing.T) {
 	h.permitted["users:create"] = true
 	h.bulkResult = usersHTTP.GuardianBulkInviteResult{
 		Invited: 2, SkippedOpen: 1,
-		Problems: []usersHTTP.GuardianBulkInviteProblem{{GuardianProfileID: 9, GuardianName: "Katharina Brenner", Reason: "missing_email"}},
+		Problems:    []usersHTTP.GuardianBulkInviteProblem{{GuardianProfileID: 9, GuardianName: "Katharina Brenner", Reason: "missing_email"}},
+		Fingerprint: "preview-token",
 	}
 
 	recorder := h.do(t, http.MethodPost, "/guardians/bulk-invite", map[string]any{
@@ -54,8 +55,25 @@ func TestBulkInviteOnlyPassesActiveChildrenOfTheSchool(t *testing.T) {
 	assert.JSONEq(t, `{
 		"dry_run": true, "invited": 2, "linked_existing_account": 0, "resent": 0,
 		"skipped_active": 0, "skipped_open": 1, "skipped_restricted": 0,
-		"problems": [{"guardian_profile_id": "9", "guardian_name": "Katharina Brenner", "student_names": [], "reason": "missing_email"}]
+		"problems": [{"guardian_profile_id": "9", "guardian_name": "Katharina Brenner", "student_names": [], "reason": "missing_email"}],
+		"fingerprint": "preview-token"
 	}`, string(decode(t, recorder).Data))
+}
+
+// The run hands the preview's fingerprint to the owner, which compares it
+// (ADR 0311).
+func TestBulkInvitePassesThePreviewFingerprintToTheRun(t *testing.T) {
+	t.Parallel()
+	h := newGuardianHarness(t, bulkInviteDirectory())
+	h.permitted["users:create"] = true
+
+	recorder := h.do(t, http.MethodPost, "/guardians/bulk-invite", map[string]any{
+		"student_ids": []int64{3}, "expected_fingerprint": "preview-token",
+	})
+
+	require.Equal(t, http.StatusOK, recorder.Code)
+	require.Len(t, h.bulkInvites, 1)
+	assert.Equal(t, "preview-token", h.bulkInvites[0].ExpectedFingerprint)
 }
 
 func TestBulkInviteRejectsSelectionsWithoutAnActiveChild(t *testing.T) {

@@ -215,6 +215,7 @@ func bulkInviteGuardians(runtime GuardianDirectoryRuntime) func(context.Context,
 	return func(ctx context.Context, input usersAPI.GuardianBulkInvite) (usersAPI.GuardianBulkInviteResult, error) {
 		result, err := runtime.BulkInviteGuardians(ctx, GuardianBulkInviteRequest{
 			StudentIDs: input.StudentIDs, CreatedBy: input.ActorAccountID, ResendOpen: input.ResendOpen, DryRun: input.DryRun,
+			ExpectedFingerprint: input.ExpectedFingerprint,
 		})
 		if err != nil {
 			return usersAPI.GuardianBulkInviteResult{}, err
@@ -226,7 +227,7 @@ func bulkInviteGuardians(runtime GuardianDirectoryRuntime) func(context.Context,
 		return usersAPI.GuardianBulkInviteResult{
 			Invited: result.Invited, LinkedExistingAccount: result.LinkedExistingAccount, Resent: result.Resent,
 			SkippedActive: result.SkippedActive, SkippedOpen: result.SkippedOpen,
-			SkippedRestricted: result.SkippedRestricted, Problems: problems,
+			SkippedRestricted: result.SkippedRestricted, Problems: problems, Fingerprint: result.Fingerprint,
 		}, nil
 	}
 }

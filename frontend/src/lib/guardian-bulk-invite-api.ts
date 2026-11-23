@@ -35,6 +35,8 @@ export interface BulkInviteResult {
   skippedOpen: number;
   skippedRestricted: number;
   problems: BulkInviteProblem[];
+  /** Set on a dry run: the run that confirms it sends it back (ADR 0311). */
+  fingerprint: string;
 }
 
 /**
@@ -44,13 +46,19 @@ export interface BulkInviteResult {
  */
 export async function bulkInviteGuardians(
   studentIds: string[],
-  options: { dryRun: boolean; resendOpen: boolean },
+  options: {
+    dryRun: boolean;
+    resendOpen: boolean;
+    /** The fingerprint of the dry run a real run confirms. */
+    expectedFingerprint?: string;
+  },
 ): Promise<BulkInviteResult> {
   const data = await bffJson("tenant", "POST /api/guardians/bulk-invite", {
     body: {
       student_ids: studentIds,
       dry_run: options.dryRun,
       resend_open: options.resendOpen,
+      expected_fingerprint: options.expectedFingerprint,
     },
     errorMessage: "Failed to bulk invite guardians",
   }).catch((error: unknown) => {
@@ -74,5 +82,6 @@ export async function bulkInviteGuardians(
       // A reason this build does not know reads as "not sent".
       reason: knownEnum(PROBLEM_REASONS, problem.reason) ?? "email_not_queued",
     })),
+    fingerprint: data.fingerprint,
   };
 }

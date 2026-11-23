@@ -66,12 +66,14 @@ type GuardianInviteResult struct {
 }
 
 // GuardianBulkInvite invites the guardians of many children in one run
-// (#3378). DryRun only counts; ResendOpen mails open invitations again.
+// (#3378). DryRun only counts; ResendOpen mails open invitations again. A
+// run sends the preview's fingerprint as ExpectedFingerprint (ADR 0311).
 type GuardianBulkInvite struct {
-	StudentIDs     []int64
-	ActorAccountID int64
-	ResendOpen     bool
-	DryRun         bool
+	StudentIDs          []int64
+	ActorAccountID      int64
+	ResendOpen          bool
+	DryRun              bool
+	ExpectedFingerprint string
 }
 
 // GuardianBulkInviteProblem is one guardian the run could not reach.
@@ -91,6 +93,8 @@ type GuardianBulkInviteResult struct {
 	SkippedOpen           int
 	SkippedRestricted     int
 	Problems              []GuardianBulkInviteProblem
+	// Fingerprint is set on a preview: the token its run sends back.
+	Fingerprint string
 }
 
 // GuardianPendingApproval is one parent-initiated request awaiting staff.

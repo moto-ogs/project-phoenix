@@ -7940,10 +7940,22 @@
     },
     {
       "method": "GET",
+      "pattern": "/auth/roles/{roleId}/permission-selection/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "RolePermissionsResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/auth/roles/{roleId}/permissions/",
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "response": {
         "kind": "array",
         "elem": {
@@ -25778,6 +25790,12 @@
               "kind": "ref",
               "ref": "AccountTenantRole"
             }
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -81726,6 +81744,13 @@
               "kind": "id"
             }
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -82602,6 +82627,29 @@
           "name": "school_portal",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RolePermissionsResponse",
+      "go_type": "account.RolePermissionsResponse",
+      "fields": [
+        {
+          "name": "permissions",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "PermissionResponse"
+            }
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -110056,6 +110104,13 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "expected_fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -110114,6 +110169,12 @@
               "kind": "ref",
               "ref": "bulkInviteProblemResponse"
             }
+          }
+        },
+        {
+          "name": "fingerprint",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -126190,6 +126251,13 @@
           "optional": true,
           "schema": {
             "kind": "id"
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]

@@ -1065,6 +1065,7 @@ export const portalRoutes = {
     authRoles["DELETE /auth/roles/{id}/"],
     authRoles["GET /auth/roles/"],
     authRoles["GET /auth/roles/{id}/"],
+    authRoles["GET /auth/roles/{roleId}/permission-selection/"],
     authRoles["GET /auth/roles/{roleId}/permissions/"],
     authRoles["POST /auth/roles/"],
     authRoles["PUT /auth/roles/{id}/"],

@@ -28,6 +28,11 @@ func TestParentPinApprovalAndBulkInvitationInTheSameSchool(t *testing.T) {
 	require.NoError(t, err)
 	ctx, cancel := context.WithTimeout(testpkg.Ctx(t), renewalDeadline)
 	defer cancel()
+	// The run confirms a preview read before the approval starts (ADR 0311).
+	preview, err := bulk.BulkInviteToStudents(ctx, identityaccess.BulkInviteRequest{
+		StudentIDs: []int64{rig.f.studentID}, CreatedBy: rig.creatorID, DryRun: true,
+	})
+	require.NoError(t, err)
 	blocker := newRenewalGate()
 	blocker.armed.Store(true)
 	t.Cleanup(blocker.open)
@@ -47,7 +52,7 @@ func TestParentPinApprovalAndBulkInvitationInTheSameSchool(t *testing.T) {
 	invited := make(chan error, 1)
 	go func() {
 		result, err := bulk.BulkInviteToStudents(ctx, identityaccess.BulkInviteRequest{
-			StudentIDs: []int64{rig.f.studentID}, CreatedBy: rig.creatorID,
+			StudentIDs: []int64{rig.f.studentID}, CreatedBy: rig.creatorID, ExpectedFingerprint: preview.Fingerprint,
 		})
 		if err == nil {
 			assert.Equal(t, 1, result.SkippedActive)

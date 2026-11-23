@@ -21,12 +21,16 @@ const (
 // BulkInviteRequest invites the guardians of the given children to the
 // parents portal in one run (#3378). DryRun classifies without writing or
 // mailing. ResendOpen mails guardians with an open invitation again and
-// restarts its expiry window; without it they are skipped.
+// restarts its expiry window; without it they are skipped. A run sends the
+// Fingerprint of the preview it confirms as ExpectedFingerprint; a run that
+// would decide on other guardians, addresses or invitations than the
+// preview counted is refused with readstate.ErrChanged (ADR 0311).
 type BulkInviteRequest struct {
-	StudentIDs []int64
-	CreatedBy  int64
-	ResendOpen bool
-	DryRun     bool
+	StudentIDs          []int64
+	CreatedBy           int64
+	ResendOpen          bool
+	DryRun              bool
+	ExpectedFingerprint string
 }
 
 // BulkInviteProblem names one guardian the run could not reach and why.
@@ -51,4 +55,6 @@ type BulkInviteResult struct {
 	SkippedOpen           int
 	SkippedRestricted     int
 	Problems              []BulkInviteProblem
+	// Fingerprint is set on a preview: the token its run sends back.
+	Fingerprint string
 }

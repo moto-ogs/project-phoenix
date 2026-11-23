@@ -13,16 +13,20 @@ import (
 // Bulk invitation (#3378): a school whose children and contacts already
 // exist invites the guardians of many children to the parents portal in one
 // run. The same route serves the preview (dry_run) the confirmation dialog
-// shows before anything is mailed.
+// shows before anything is mailed. The preview answers a fingerprint of the
+// guardians it counted; the run sends it back as expected_fingerprint and is
+// refused with 409 general.changed_since_read when it would mail another set
+// (ADR 0311).
 
 // bulkInviteMaxStudents mirrors the application cap. It protects the
 // tenant-wide student read before the request reaches the application layer.
 const bulkInviteMaxStudents = 2000
 
 type bulkInviteRequest struct {
-	StudentIDs []ident.ID `json:"student_ids"`
-	ResendOpen bool       `json:"resend_open"`
-	DryRun     bool       `json:"dry_run"`
+	StudentIDs          []ident.ID `json:"student_ids"`
+	ResendOpen          bool       `json:"resend_open"`
+	DryRun              bool       `json:"dry_run"`
+	ExpectedFingerprint string     `json:"expected_fingerprint"`
 }
 
 type bulkInviteProblemResponse struct {
@@ -41,6 +45,8 @@ type bulkInviteResponse struct {
 	SkippedOpen           int                         `json:"skipped_open"`
 	SkippedRestricted     int                         `json:"skipped_restricted"`
 	Problems              []bulkInviteProblemResponse `json:"problems"`
+	// Fingerprint is set on a preview: the run sends it back.
+	Fingerprint string `json:"fingerprint"`
 }
 
 // bulkInviteGuardians applies the single invite's gate to the whole
@@ -80,6 +86,7 @@ func (rs *GuardianResource) bulkInviteGuardians(w http.ResponseWriter, r *http.R
 	}
 	result, err := rs.runtime.BulkInviteGuardians(r.Context(), GuardianBulkInvite{
 		StudentIDs: studentIDs, ActorAccountID: accountID, ResendOpen: body.ResendOpen, DryRun: body.DryRun,
+		ExpectedFingerprint: body.ExpectedFingerprint,
 	})
 	if err != nil {
 		rs.fail(w, r, rs.runtime.InviteFailureKind(err), err)
@@ -106,6 +113,7 @@ func newBulkInviteResponse(dryRun bool, result GuardianBulkInviteResult) bulkInv
 		DryRun: dryRun, Invited: result.Invited, LinkedExistingAccount: result.LinkedExistingAccount,
 		Resent: result.Resent, SkippedActive: result.SkippedActive, SkippedOpen: result.SkippedOpen,
 		SkippedRestricted: result.SkippedRestricted, Problems: make([]bulkInviteProblemResponse, 0, len(result.Problems)),
+		Fingerprint: result.Fingerprint,
 	}
 	for _, problem := range result.Problems {
 		names := problem.StudentNames
