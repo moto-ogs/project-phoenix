@@ -34,11 +34,7 @@ func NewPickupAdjustments(
 	if err != nil {
 		return nil, nil, err
 	}
-	weeklyPlans, err := carePlanCompose.NewWeeklyPlans(deps)
-	if err != nil {
-		return nil, nil, err
-	}
-	return adjustments, weeklyPlans, nil
+	return adjustments, adjustments, nil
 }
 
 // pickupAdjustmentStudents locks the People Directory students a pickup

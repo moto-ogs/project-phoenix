@@ -442,19 +442,18 @@ func (s *pickupScheduleService) UpdateStudentPickupNote(
 	expectedVersion string,
 ) error {
 	// Under the student lock the note must still be the one the caller read.
-	return s.tx.WithinTenant(ctx, func(txCtx context.Context) error {
-		if err := s.tx.LockStudent(txCtx, row.StudentID); err != nil {
-			return err
-		}
-		stored, err := s.noteByID(txCtx, row.ID)
-		if err != nil {
-			return err
-		}
-		if err := readstate.Check(expectedVersion, careplan.PickupNoteVersion(*stored)); err != nil {
-			return err
-		}
-		return s.updateNote(txCtx, row)
-	})
+	// It runs in the caller's unit (the request transaction of the route).
+	if err := s.tx.LockStudent(ctx, row.StudentID); err != nil {
+		return err
+	}
+	stored, err := s.noteByID(ctx, row.ID)
+	if err != nil {
+		return err
+	}
+	if err := readstate.Check(expectedVersion, careplan.PickupNoteVersion(*stored)); err != nil {
+		return err
+	}
+	return s.updateNote(ctx, row)
 }
 
 func (s *pickupScheduleService) DeleteStudentPickupNote(

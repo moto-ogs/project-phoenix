@@ -389,7 +389,7 @@ func TestPickupAdjustmentProtectedRouterRollsBackKnownErrorAfterOfferingWrite(t 
 	body["resolution"] = "offering"
 	realCoordinator, ok := tc.resource.OfferingChangeService.(careplan.DirectOfferingAdjustments)
 	require.True(t, ok)
-	failing, err := tc.newPickupAdjustments(failAfterOfferingWriteCoordinator{realCoordinator})
+	failing, _, err := tc.newPickupAdjustments(failAfterOfferingWriteCoordinator{realCoordinator})
 	require.NoError(t, err)
 	tc.resource.PickupAdjustmentService = failing
 

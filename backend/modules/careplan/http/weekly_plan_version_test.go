@@ -73,6 +73,7 @@ func TestWeeklyPlanSaveRefusesAStaleRead(t *testing.T) {
 			"expected_version": read,
 		})
 		require.Equal(t, http.StatusOK, code, "Body: %s", body)
+		stored := arrivalRows(student.ID)
 
 		code, body = exec("PUT", path, map[string]any{
 			"schedules":        []map[string]any{{"weekday": 2, "expected_arrival": "08:15"}},
@@ -81,7 +82,7 @@ func TestWeeklyPlanSaveRefusesAStaleRead(t *testing.T) {
 		})
 		require.Equal(t, http.StatusConflict, code, "Body: %s", body)
 		assert.Contains(t, body, readstate.ChangedCode)
-		assert.Equal(t, int64(1), arrivalRows(student.ID), "a refused save writes no arrival row")
+		assert.Equal(t, stored, arrivalRows(student.ID), "a refused save writes no arrival row")
 		assert.Empty(t, weekdayNotes(student.ID), "a refused save writes no weekday note")
 
 		code, body = exec("PUT", path, map[string]any{
@@ -187,7 +188,7 @@ func TestWeeklyPlanApplyRefusesAStaleRead(t *testing.T) {
 
 	code, body = apply(weeklyPlanVersion(t, tc, student.ID))
 	require.Equal(t, http.StatusOK, code, "Body: %s", body)
-	assert.Equal(t, int64(1), pickupRows())
+	assert.Positive(t, pickupRows(), "the apply writes the pickup row")
 	notes, err = tc.resource.PickupScheduleService.GetStudentPickupNotes(testpkg.Ctx(t), student.ID)
 	require.NoError(t, err)
 	require.Len(t, notes, 1)

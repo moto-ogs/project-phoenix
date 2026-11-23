@@ -59,7 +59,7 @@ type StudentTestModule struct {
 	// NewPickupAdjustments rebinds the pickup adjustment to the caller's
 	// offering adjustments, so a route test can fail an apply after the
 	// offering write.
-	NewPickupAdjustments func(careplan.DirectOfferingAdjustments) (careplan.PickupAdjustments, error)
+	NewPickupAdjustments func(careplan.DirectOfferingAdjustments) (careplan.PickupAdjustments, careplan.WeeklyPlans, error)
 }
 
 // BindStudentTestPeople hands out the active graph's person directory with
@@ -333,17 +333,13 @@ func newStudentTestModule(db transactionruntime.Database, unit tenant.UnitOfWork
 	if err != nil {
 		return StudentTestModule{}, ActiveTestModule{}, StudentTestPeople{}, nil, nil, nil, err
 	}
-	newPickupPlanningFor := func(offerings careplan.DirectOfferingAdjustments) (careplan.PickupAdjustments, careplan.WeeklyPlans, error) {
+	newPickupAdjustmentsFor := func(offerings careplan.DirectOfferingAdjustments) (careplan.PickupAdjustments, careplan.WeeklyPlans, error) {
 		return owners.NewPickupAdjustments(
 			students.CarePlan, pickupScheduleService, arrivalScheduleService, pickupBaselines, offerings,
 			settingsService, studentAuditService, repos.Student, today,
 		)
 	}
-	newPickupAdjustmentsFor := func(offerings careplan.DirectOfferingAdjustments) (careplan.PickupAdjustments, error) {
-		adjustments, _, err := newPickupPlanningFor(offerings)
-		return adjustments, err
-	}
-	pickupAdjustments, weeklyPlans, err := newPickupPlanningFor(offeringChanges)
+	pickupAdjustments, weeklyPlans, err := newPickupAdjustmentsFor(offeringChanges)
 	if err != nil {
 		return StudentTestModule{}, ActiveTestModule{}, StudentTestPeople{}, nil, nil, nil, err
 	}

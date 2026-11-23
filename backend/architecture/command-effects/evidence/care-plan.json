@@ -8249,14 +8249,6 @@
       "target_owner": "people-directory"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.UpdateStudentPickupNote",
-      "binding_digest": "1264168024de8f2749f9d67e69e5128f",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupScheduleService.UpdateStudentPickupNote",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithTenantTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.UpsertBulkStudentPickupSchedules",
       "binding_digest": "d31c24c0bf100f0d565a66aeac94c590",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupScheduleService.UpsertBulkStudentPickupSchedules",

@@ -91,16 +91,27 @@ func (s *PickupAdjustments) applyPickupAdjustment(
 	if err != nil {
 		return nil, err
 	}
-	if err := s.applyPickupArrivalSchedules(ctx, input, resolution, today); err != nil {
-		return nil, err
-	}
-	if err := s.replaceWeekdayNotes(ctx, input.StudentID, input.CreatedByStaffID, input.WeekdayNotes); err != nil {
-		return nil, err
-	}
-	if result.Version, err = s.WeeklyPlanVersion(ctx, input.StudentID); err != nil {
+	if result.Version, err = s.completeWeeklyPlan(ctx, input, resolution, today); err != nil {
 		return nil, err
 	}
 	return result, nil
+}
+
+// completeWeeklyPlan writes the arrival rows and the weekday notes of the
+// weekly plan the adjustment belongs to and answers the plan's new token.
+func (s *PickupAdjustments) completeWeeklyPlan(
+	ctx context.Context,
+	input careplan.PickupAdjustmentApplyInput,
+	resolution string,
+	today calendar.Date,
+) (string, error) {
+	if err := s.applyPickupArrivalSchedules(ctx, input, resolution, today); err != nil {
+		return "", err
+	}
+	if err := s.replaceWeekdayNotes(ctx, input.StudentID, input.CreatedByStaffID, input.WeekdayNotes); err != nil {
+		return "", err
+	}
+	return s.WeeklyPlanVersion(ctx, input.StudentID)
 }
 
 // applyPickupArrivalSchedules writes the arrival rows of a lasting exception

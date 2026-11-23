@@ -174,10 +174,11 @@ func (rs *Resource) updateStudentArrivalSchedules(w http.ResponseWriter, r *http
 	tenant.RegisterAfterCommit(r.Context(), func() {
 		rs.broadcastArrivalScheduleChanged(tenantID, student.ID)
 		rs.wakeChildGuardians(tenantID, student.ID)
-		if req.WeekdayNotes != nil {
-			rs.broadcastPickupScheduleChanged(tenantID, student.ID)
-		}
 	})
+	if req.WeekdayNotes != nil {
+		// The weekday notes ride along in the pickup data the tiles render.
+		rs.registerPartialAbsenceBroadcasts(r, student.ID)
+	}
 	response := buildArrivalDataResponse(data)
 	response.WeeklyPlanVersion = version
 	common.Respond(w, r, http.StatusOK, response, "Arrival schedules updated successfully")
