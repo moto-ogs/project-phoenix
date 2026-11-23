@@ -39,6 +39,7 @@ func TestWeekdayPickupNoteWithoutPickupTime(t *testing.T) {
 			ID       testpkg.ID `json:"id"`
 			Weekday  int        `json:"weekday"`
 			NoteDate string     `json:"note_date"`
+			Version  string     `json:"version"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &created))
@@ -65,7 +66,7 @@ func TestWeekdayPickupNoteWithoutPickupTime(t *testing.T) {
 
 	t.Run("update_keeps_it_recurring", func(t *testing.T) {
 		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/pickup-notes/%d", student.ID, created.Data.ID),
-			map[string]any{"weekday": 1, "content": "Montags bei Oma"})
+			map[string]any{"weekday": 1, "content": "Montags bei Oma", "expected_version": created.Data.Version})
 		rr := authExec(t, tc, req, claims, []string{"admin:*"})
 		require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
 		assert.Contains(t, rr.Body.String(), `"weekday":1`)

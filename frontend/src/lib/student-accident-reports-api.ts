@@ -104,18 +104,23 @@ class StudentAccidentReportsService {
     return report.id;
   }
 
-  /** Changes an open report. */
+  /**
+   * Changes an open report. `expectedVersion` is the version of the report
+   * the change was made on; the backend refuses the change with
+   * `general.changed_since_read` when the report changed since (ADR 0311).
+   */
   async update(
     studentId: string,
     reportIdValue: string,
     fields: AccidentReportFields,
+    expectedVersion: string,
   ): Promise<void> {
     await bffJson(
       "tenant",
       "PUT /api/students/{id}/accident-reports/{documentId}",
       {
         params: { id: studentId, documentId: reportIdValue },
-        body: requestBody(fields),
+        body: { ...requestBody(fields), expected_version: expectedVersion },
       },
     );
   }
@@ -137,28 +142,36 @@ class StudentAccidentReportsService {
     return report.id;
   }
 
+  /** Signs the report as read at `expectedVersion`. */
   async sign(
     studentId: string,
     reportIdValue: string,
     signature: SignatureValue,
+    expectedVersion: string,
   ): Promise<void> {
     await bffJson(
       "tenant",
       "POST /api/students/{id}/accident-reports/{documentId}/signature",
       {
         params: { id: studentId, documentId: reportIdValue },
-        body: signatureRequestBody(signature),
+        body: {
+          ...signatureRequestBody(signature),
+          expected_version: expectedVersion,
+        },
       },
     );
   }
 
+  /** Signs the report as read at `expectedVersion` with its paper copy. */
   async uploadPaperCopy(
     studentId: string,
     reportIdValue: string,
     file: File,
+    expectedVersion: string,
   ): Promise<void> {
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("expected_version", expectedVersion);
     await bffJson(
       "tenant",
       "POST /api/students/{id}/accident-reports/{documentId}/paper-copy",

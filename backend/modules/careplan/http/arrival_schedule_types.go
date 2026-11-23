@@ -53,6 +53,9 @@ type ArrivalNoteResponse struct {
 	CreatedBy ident.ID `json:"created_by"`
 	CreatedAt string   `json:"created_at"`
 	UpdatedAt string   `json:"updated_at"`
+	// Version is the note's read-state token (careplan.ArrivalNoteVersion);
+	// a change sends it back as expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 // ArrivalDataResponse represents combined arrival data
@@ -90,10 +93,23 @@ type StudentArrivalExceptionRequest struct {
 	Reason               *string `json:"reason,omitempty"`
 }
 
-// ArrivalNoteRequest represents a request to create/update an arrival note
+// ArrivalNoteRequest represents a request to create an arrival note
 type ArrivalNoteRequest struct {
 	NoteDate string `json:"note_date"` // YYYY-MM-DD format
 	Content  string `json:"content"`
+}
+
+// ArrivalNoteUpdateRequest changes an arrival note read at ExpectedVersion
+// (version of the note in the read, ADR 0311).
+type ArrivalNoteUpdateRequest struct {
+	NoteDate        string `json:"note_date"` // YYYY-MM-DD format
+	Content         string `json:"content"`
+	ExpectedVersion string `json:"expected_version"`
+}
+
+// Bind implements render.Binder.
+func (r *ArrivalNoteUpdateRequest) Bind(_ *http.Request) error {
+	return validateCareNoteRequest(r.NoteDate, r.Content)
 }
 
 const maxArrivalScheduleDateRangeDays = 7
@@ -294,6 +310,7 @@ func mapArrivalNoteToResponse(n *careplan.ArrivalNote) ArrivalNoteResponse {
 		CreatedBy: ident.ID(n.CreatedBy),
 		CreatedAt: n.CreatedAt.Format(time.RFC3339),
 		UpdatedAt: n.UpdatedAt.Format(time.RFC3339),
+		Version:   careplan.ArrivalNoteVersion(*n),
 	}
 }
 

@@ -197,6 +197,7 @@ func TestTraegerSchoolSessionWritesCarePlanWithMark(t *testing.T) {
 
 		requireTraegerWrite(t, tc, claims, http.MethodPut, fmt.Sprintf("%s/arrival-notes/%d", base, arrivalNoteID), map[string]any{
 			"note_date": noteDay.String(), "content": "Kommt mit dem späteren Bus",
+			"expected_version": arrivalNoteVersion(t, tc, child.ID, arrivalNoteID, noteDay.String()),
 		}, http.StatusOK)
 		assertTraegerAuthored(t, tc, "student_arrival_notes", child.ID, nil)
 	})
@@ -248,6 +249,7 @@ func TestTraegerSchoolSessionWritesCarePlanWithMark(t *testing.T) {
 
 		requireTraegerWrite(t, tc, claims, http.MethodPut, fmt.Sprintf("%s/pickup-notes/%d", base, pickupNoteID), map[string]any{
 			"note_date": noteDay.String(), "content": "Opa holt ab",
+			"expected_version": pickupNoteVersion(t, tc, child.ID, pickupNoteID, noteDay.String()),
 		}, http.StatusOK)
 		assertTraegerAuthored(t, tc, "student_pickup_notes", child.ID, onDate("note_date", noteDay))
 
@@ -301,12 +303,14 @@ func TestTraegerSchoolSessionWritesCarePlanWithMark(t *testing.T) {
 		require.Positive(t, arrivalNoteID)
 		rr := staffExec(http.MethodPut, fmt.Sprintf("%s/pickup-notes/%d", base, pickupNoteID), map[string]any{
 			"note_date": noteDay.String(), "content": "Tante holt ab",
+			"expected_version": pickupNoteVersion(t, tc, child.ID, pickupNoteID, noteDay.String()),
 		})
 		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 		assertTraegerAuthored(t, tc, "student_pickup_notes", child.ID, onDate("note_date", noteDay))
 
 		rr = staffExec(http.MethodPut, fmt.Sprintf("%s/arrival-notes/%d", base, arrivalNoteID), map[string]any{
 			"note_date": noteDay.String(), "content": "Kommt zu Fuß",
+			"expected_version": arrivalNoteVersion(t, tc, child.ID, arrivalNoteID, noteDay.String()),
 		})
 		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 		assertTraegerAuthored(t, tc, "student_arrival_notes", child.ID, nil)

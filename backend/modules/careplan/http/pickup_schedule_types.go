@@ -58,6 +58,9 @@ type PickupNoteResponse struct {
 	CreatedBy ident.ID `json:"created_by"`
 	CreatedAt string   `json:"created_at"`
 	UpdatedAt string   `json:"updated_at"`
+	// Version is the note's read-state token (careplan.PickupNoteVersion);
+	// a change sends it back as expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 // PickupDataResponse represents combined pickup data
@@ -166,6 +169,24 @@ func validateWeekdayPickupNotes(notes []PickupNoteRequest) error {
 		}
 	}
 	return nil
+}
+
+// PickupNoteUpdateRequest changes a pickup note read at ExpectedVersion
+// (version of the note in the read, ADR 0311).
+type PickupNoteUpdateRequest struct {
+	NoteDate        string `json:"note_date"` // YYYY-MM-DD format
+	Weekday         int    `json:"weekday"`   // 1 (Monday) to 5 (Friday)
+	Content         string `json:"content"`
+	ExpectedVersion string `json:"expected_version"`
+}
+
+func (r *PickupNoteUpdateRequest) note() *PickupNoteRequest {
+	return &PickupNoteRequest{NoteDate: r.NoteDate, Weekday: r.Weekday, Content: r.Content}
+}
+
+// Bind implements render.Binder.
+func (r *PickupNoteUpdateRequest) Bind(req *http.Request) error {
+	return r.note().Bind(req)
 }
 
 // Bind implements render.Binder
@@ -332,6 +353,7 @@ func mapNoteToResponse(n *careplan.PickupNote) PickupNoteResponse {
 		CreatedBy: ident.ID(n.CreatedBy),
 		CreatedAt: n.CreatedAt.Format(time.RFC3339),
 		UpdatedAt: n.UpdatedAt.Format(time.RFC3339),
+		Version:   careplan.PickupNoteVersion(*n),
 	}
 }
 

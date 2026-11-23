@@ -24,7 +24,12 @@ import {
 } from "~/components/ui/signature-pad";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
-import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import {
+  useApiErrorDisplay,
+  useApiFormError,
+  useApiLoadError,
+} from "~/contexts/ToastContext";
+import { isChangedSinceRead } from "~/lib/api-error";
 import { fetchStudent } from "~/lib/student-api";
 import { useStudentHistoryBreadcrumb } from "~/lib/breadcrumb-context";
 import { hasPermission } from "~/lib/auth-utils";
@@ -112,8 +117,39 @@ export default function AccidentReportPage() {
     referrer: "/students/search",
   });
 
-  const [editing, setEditing] = useState<AccidentReportDraft | null>(null);
+  // The draft holds the version of the report it was opened on: the save
+  // sends that one, not the version of a later read (ADR 0311).
+  const [editing, setEditing] = useState<{
+    draft: AccidentReportDraft;
+    version: string;
+  } | null>(null);
   const [correcting, setCorrecting] = useState(false);
+  const refusal = useApiErrorDisplay();
+
+  // After a refusal (the report changed since it was read) the page shows the
+  // stored report: a failed reload rejects, so the caller shows the load
+  // error instead of claiming the new state is on screen.
+  const reloadReport = async (): Promise<StudentDocument | null> => {
+    const fresh = await studentDocumentsService.list(studentId);
+    await mutate(fresh, { revalidate: false });
+    return (
+      fresh.documents.find((doc) => doc.id === reportId && doc.accidentReport) ??
+      null
+    );
+  };
+  const refillAfterRefusal = async (err: unknown) => {
+    const stored = await reloadReport();
+    if (stored?.accidentReport?.status === "open") {
+      setEditing({
+        draft: draftFromReport(stored.accidentReport),
+        version: stored.version ?? "",
+      });
+      return;
+    }
+    // Signed or gone in the meantime: nothing is left to change.
+    setEditing(null);
+    await refusal.show(err, { object: "die Unfallanzeige" });
+  };
 
   return (
     <TenantPage
@@ -203,14 +239,21 @@ export default function AccidentReportPage() {
             report={report}
             canManage={canManage && !editing}
             onSigned={() => void mutate()}
+            onRefused={async () => {
+              await reloadReport();
+            }}
             onCorrect={() => setCorrecting(true)}
           />
           {editing ? (
             <EditReportSection
               studentId={studentId}
               reportId={reportId}
-              draft={editing}
-              onDraftChange={setEditing}
+              draft={editing.draft}
+              version={editing.version}
+              onDraftChange={(draft) =>
+                setEditing((current) => (current ? { ...current, draft } : current))
+              }
+              onRefused={refillAfterRefusal}
               onDone={() => {
                 setEditing(null);
                 void mutate();
@@ -222,7 +265,11 @@ export default function AccidentReportPage() {
               report={report}
               onEdit={
                 canManage && report.status === "open"
-                  ? () => setEditing(draftFromReport(report))
+                  ? () =>
+                      setEditing({
+                        draft: draftFromReport(report),
+                        version: document.version ?? "",
+                      })
                   : undefined
               }
             />
@@ -291,14 +338,19 @@ function EditReportSection({
   studentId,
   reportId,
   draft,
+  version,
   onDraftChange,
+  onRefused,
   onDone,
   onCancel,
 }: Readonly<{
   studentId: string;
   reportId: string;
   draft: AccidentReportDraft;
+  version: string;
   onDraftChange: (draft: AccidentReportDraft) => void;
+  /** Shows the stored report after a refusal; rejects when it cannot load. */
+  onRefused: (err: unknown) => Promise<void>;
   onDone: () => void;
   onCancel: () => void;
 }>) {
@@ -319,6 +371,7 @@ function EditReportSection({
         studentId,
         reportId,
         fieldsFromDraft(draft),
+        version,
       );
       onDone();
     } catch (err) {
@@ -327,6 +380,15 @@ function EditReportSection({
         report_id: reportId,
         error: err instanceof Error ? err.message : String(err),
       });
+      if (isChangedSinceRead(err)) {
+        try {
+          // The form now holds the stored report; the message says so.
+          await onRefused(err);
+        } catch (loadErr) {
+          await formError.show(loadErr, { object: "die Unfallanzeige" });
+          return;
+        }
+      }
       await formError.show(err, { object: "die Unfallanzeige" });
     } finally {
       setSaving(false);
@@ -363,6 +425,7 @@ function SignatureSection({
   report,
   canManage,
   onSigned,
+  onRefused,
   onCorrect,
 }: Readonly<{
   studentId: string;
@@ -371,6 +434,8 @@ function SignatureSection({
   report: AccidentReportDetails;
   canManage: boolean;
   onSigned: () => void;
+  /** Shows the stored report after a refusal; rejects when it cannot load. */
+  onRefused: () => Promise<void>;
   onCorrect: () => void;
 }>) {
   const [signature, setSignature] = useState<SignatureValue | null>(null);
@@ -392,6 +457,17 @@ function SignatureSection({
         report_id: reportId,
         error: err instanceof Error ? err.message : String(err),
       });
+      if (isChangedSinceRead(err)) {
+        // The report changed since it was read: the signature is dropped,
+        // and the page shows the stored report to be read and signed again.
+        setSignature(null);
+        try {
+          await onRefused();
+        } catch (loadErr) {
+          await formError.show(loadErr, { object: "die Unfallanzeige" });
+          return;
+        }
+      }
       await formError.show(err, { object: "die Unterschrift" });
     } finally {
       setBusy(false);
@@ -488,6 +564,7 @@ function SignatureSection({
                         studentId,
                         reportId,
                         signature,
+                        document.version ?? "",
                       ),
                     "accident_report_sign_failed",
                   );
@@ -527,6 +604,7 @@ function SignatureSection({
                         studentId,
                         reportId,
                         file,
+                        document.version ?? "",
                       ),
                     "accident_report_paper_upload_failed",
                   );

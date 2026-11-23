@@ -650,13 +650,13 @@ func (rs *Resource) updateStudentPickupNote(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	req := &PickupNoteRequest{}
+	req := &PickupNoteUpdateRequest{}
 	if err := render.Bind(r, req); err != nil {
 		renderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
 
-	note := req.toModel(student.ID, existingNote.CreatedBy) // Preserve original creator
+	note := req.note().toModel(student.ID, existingNote.CreatedBy) // Preserve original creator
 	note.EnteredByTraeger = existingNote.EnteredByTraeger
 	note.ID = noteID
 	note.CreatedAt = existingNote.CreatedAt // Preserve original creation timestamp
@@ -664,7 +664,7 @@ func (rs *Resource) updateStudentPickupNote(w http.ResponseWriter, r *http.Reque
 
 	tenantID := tenant.FromContext(r.Context())
 	if err := withinTenant(r.Context(), tenantID, func(ctx context.Context) error {
-		return rs.PickupScheduleService.UpdateStudentPickupNote(ctx, note)
+		return rs.PickupScheduleService.UpdateStudentPickupNote(ctx, note, req.ExpectedVersion)
 	}); err != nil {
 		renderError(w, r, common.ErrorInternalServer(err))
 		return

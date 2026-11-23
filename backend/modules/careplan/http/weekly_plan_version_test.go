@@ -200,3 +200,89 @@ func TestWeeklyPlanApplyRefusesAStaleRead(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(body), &saved))
 	assert.Equal(t, weeklyPlanVersion(t, tc, student.ID), saved.Data.WeeklyPlanVersion)
 }
+
+// careNoteVersion reads the token of one arrival or pickup note from the read
+// the day editor uses (ADR 0311); query names the day the note is on.
+func careNoteVersion(t *testing.T, tc *testContext, studentID, noteID int64, read, query string) string {
+	t.Helper()
+	_, account := testpkg.CreateTestTeacherWithAccount(t, tc.db, "Note", fmt.Sprintf("Reader%d", noteID))
+	req := testutil.NewAuthenticatedRequest(t, "GET", fmt.Sprintf("/%d/%s?%s", studentID, read, query), nil)
+	rr := authExec(t, tc, req, testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"})
+	require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
+	var body struct {
+		Data struct {
+			Notes []struct {
+				ID      testpkg.ID `json:"id"`
+				Version string     `json:"version"`
+			} `json:"notes"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &body))
+	for _, note := range body.Data.Notes {
+		if int64(note.ID) == noteID {
+			require.NotEmpty(t, note.Version)
+			return note.Version
+		}
+	}
+	t.Fatalf("note %d is not in the read %s?%s", noteID, read, query)
+	return ""
+}
+
+func arrivalNoteVersion(t *testing.T, tc *testContext, studentID, noteID int64, date string) string {
+	t.Helper()
+	return careNoteVersion(t, tc, studentID, noteID, "arrival-schedules", "date="+date)
+}
+
+func pickupNoteVersion(t *testing.T, tc *testContext, studentID, noteID int64, date string) string {
+	t.Helper()
+	return careNoteVersion(t, tc, studentID, noteID, "pickup-schedules", "from="+date+"&to="+date)
+}
+
+// A single note is edited from the day the editor read. A colleague's change
+// in between makes the read stale: the change is refused and the stored text
+// stays; the current version saves (ADR 0311).
+func TestCareNoteUpdateRefusesAStaleRead(t *testing.T) {
+	t.Parallel()
+
+	tc := setupStudentsRoute(t)
+	_, account := testpkg.CreateTestTeacherWithAccount(t, tc.db, "Note", "StaleTeacher")
+	claims := testutil.AdminTestClaims(int(account.ID))
+	exec := func(method, path string, body map[string]any) (int, string) {
+		req := testutil.NewAuthenticatedRequest(t, method, path, body)
+		rr := authExec(t, tc, req, claims, []string{"admin:*"})
+		return rr.Code, rr.Body.String()
+	}
+	for _, kind := range []struct{ notes, read string }{{"arrival-notes", "arrival"}, {"pickup-notes", "pickup"}} {
+		t.Run(kind.notes, func(t *testing.T) {
+			student := testpkg.CreateTestStudent(t, tc.db, "NoteStale", kind.read, "NS1")
+			code, body := exec("POST", fmt.Sprintf("/%d/%s", student.ID, kind.notes), map[string]any{
+				"note_date": "2026-04-15", "content": "Oma holt ab",
+			})
+			require.Equal(t, http.StatusCreated, code, "Body: %s", body)
+			var created struct {
+				Data struct {
+					ID      testpkg.ID `json:"id"`
+					Version string     `json:"version"`
+				} `json:"data"`
+			}
+			require.NoError(t, json.Unmarshal([]byte(body), &created))
+			read := created.Data.Version
+			path := fmt.Sprintf("/%d/%s/%d", student.ID, kind.notes, created.Data.ID)
+
+			code, body = exec("PUT", path, map[string]any{"note_date": "2026-04-15", "content": "Opa holt ab", "expected_version": read})
+			require.Equal(t, http.StatusOK, code, "Body: %s", body)
+			code, body = exec("PUT", path, map[string]any{"note_date": "2026-04-15", "content": "Tante holt ab", "expected_version": read})
+			require.Equal(t, http.StatusConflict, code, "Body: %s", body)
+			assert.Contains(t, body, readstate.ChangedCode)
+
+			current := arrivalNoteVersion
+			if kind.read == "pickup" {
+				current = pickupNoteVersion
+			}
+			version := current(t, tc, student.ID, int64(created.Data.ID), "2026-04-15")
+			code, body = exec("PUT", path, map[string]any{"note_date": "2026-04-15", "content": "Tante holt ab", "expected_version": version})
+			require.Equal(t, http.StatusOK, code, "Body: %s", body)
+			assert.Contains(t, body, "Tante holt ab")
+		})
+	}
+}

@@ -35,7 +35,11 @@ import {
   CareWeeklyPlanEditForm,
 } from "./care-weekly-plan-editor";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
-import { LoadErrorAlert } from "~/components/ui/form-error-alert";
+import {
+  FormErrorAlert,
+  LoadErrorAlert,
+} from "~/components/ui/form-error-alert";
+import { isChangedSinceRead } from "~/lib/api-error";
 import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useSWRAuth } from "~/lib/swr";
@@ -76,7 +80,6 @@ import {
   fetchStudentPickupData,
   applyStudentPickupAdjustment,
   previewStudentPickupAdjustment,
-  replaceStudentWeekdayPickupNotes,
   resetStudentPickupToOffering,
   updateStudentPickupException,
   updateStudentPickupNote,
@@ -137,6 +140,10 @@ function weeklyArrivalPayload(data: CarePlanWeeklySubmit) {
   }));
 }
 
+function weeklyNotesPayload(data: CarePlanWeeklySubmit) {
+  return data.weekdayNotes ? { weekday_notes: [...data.weekdayNotes] } : {};
+}
+
 function weeklyPickupAdjustmentPayload(
   data: CarePlanWeeklySubmit,
   adjustment: CarePlanWeeklyAdjustment | undefined,
@@ -155,11 +162,21 @@ function weeklyPickupAdjustmentPayload(
   };
 }
 
+/**
+ * Applies the weekly plan with a pickup change. The apply carries the weekly
+ * plan token the editor started from and the weekday notes, so the whole plan
+ * is written in one request or not at all (ADR 0311); the preview reads
+ * neither.
+ */
 async function applyWeeklyPickupAdjustment(
   studentId: string,
   payload: studentsContract.pickupAdjustmentRequest & {
     effective_from: string;
   },
+  plan: Pick<
+    studentsContract.pickupAdjustmentRequest,
+    "expected_version" | "weekday_notes"
+  >,
   adjustment?: CarePlanWeeklyAdjustment,
   onRosterImpact?: (impact: RosterImpact | null) => void,
 ): Promise<studentsContract.pickupAdjustmentPreviewResponse | undefined> {
@@ -175,6 +192,7 @@ async function applyWeeklyPickupAdjustment(
   }
   const applied = await applyStudentPickupAdjustment(studentId, {
     ...payload,
+    ...plan,
     preview_token: preview.preview_token,
     resolution: adjustment?.resolution ?? "exception",
     ...(adjustment?.reason ? { reason: adjustment.reason } : {}),
@@ -338,6 +356,9 @@ export function CareScheduleManager({
   const refreshLoad = useApiLoadError();
   const { show: showRefreshError, clear: clearRefreshError } = refreshLoad;
   const deleteErrors = useApiFormError();
+  // A weekly plan save refused because the plan changed since it was read:
+  // the section shows the stored plan again with this message (ADR 0311).
+  const planErrors = useApiFormError();
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
   // The day exception slide-over. null = closed; { date } = opened from a day
   // card for that date.
@@ -729,19 +750,6 @@ export function CareScheduleManager({
     refreshFromRemote();
   }, [isEditorOpen, refreshFromRemote]);
 
-  /**
-   * Bring the recurring weekday notes in line with the saved plan (#3369). They
-   * live beside the pickup rows, not on them: a row would mark the child as
-   * expected, and these notes are for the days it is not.
-   */
-  const syncWeekdayNotes = useCallback(
-    async (next: CarePlanWeeklySubmit["weekdayNotes"]) => {
-      if (!next) return;
-      await replaceStudentWeekdayPickupNotes(studentId, next);
-    },
-    [studentId],
-  );
-
   const handleUpdateWeeklyPlan = useCallback(
     async (
       data: CarePlanWeeklySubmit,
@@ -755,10 +763,28 @@ export function CareScheduleManager({
         data.arrivalSchedules.map((schedule) => schedule.weekday),
         arrivalData.schedules.map((schedule) => schedule.weekday),
       );
+      // The token of the plan the editor started from (`heldWeek`); after the
+      // user's own save `refreshCareData` puts the saved plan and its token
+      // there. The recurring weekday notes (#3369) travel in the same request:
+      // they live beside the pickup rows, not on them, because a row would
+      // mark the child as expected and these notes are for the days it is not.
+      const expectedVersion = pickupData.weeklyPlanVersion ?? "";
+      const showRefusal = (err: unknown) => {
+        if (!isChangedSinceRead(err)) return;
+        // The draft was made on a plan that changed since: back to the stored
+        // plan, which `refreshCareData` reads below, with the message.
+        setIsEditingWeekly(false);
+        void planErrors.show(err, { object: "die Änderung am Wochenplan" });
+      };
       if (!pickupChanged && !careDaysChanged && !adjustment) {
         try {
-          await updateArrivalSchedules(studentId, weeklyArrivalPayload(data));
-          await syncWeekdayNotes(data.weekdayNotes);
+          await updateArrivalSchedules(studentId, weeklyArrivalPayload(data), {
+            expectedVersion,
+            weekdayNotes: data.weekdayNotes,
+          });
+        } catch (err) {
+          showRefusal(err);
+          throw err;
         } finally {
           await refreshCareData();
           invalidatePickupCaches();
@@ -780,16 +806,18 @@ export function CareScheduleManager({
       }
 
       try {
-        const pending = await applyWeeklyPickupAdjustment(
+        // A returned preview means the plan still waits for a decision, so
+        // nothing is written yet, the notes included.
+        return await applyWeeklyPickupAdjustment(
           studentId,
           basePayload,
+          { expected_version: expectedVersion, ...weeklyNotesPayload(data) },
           adjustment,
           setRosterImpact,
         );
-        // A returned preview means the plan still waits for a decision, so
-        // nothing is written yet, the notes included.
-        if (!pending) await syncWeekdayNotes(data.weekdayNotes);
-        return pending;
+      } catch (err) {
+        showRefusal(err);
+        throw err;
       } finally {
         await refreshCareData();
         invalidatePickupCaches();
@@ -798,8 +826,9 @@ export function CareScheduleManager({
     [
       studentId,
       refreshCareData,
-      syncWeekdayNotes,
+      planErrors,
       pickupData.schedules,
+      pickupData.weeklyPlanVersion,
       arrivalData.schedules,
       weekDays,
     ],
@@ -975,12 +1004,32 @@ export function CareScheduleManager({
     },
     [studentId, refreshCareData],
   );
+  // A note is changed as the open day editor read it (`heldWeek`). Refused
+  // because it changed since: the editor gets the stored note, then the
+  // message (ADR 0311).
+  const refreshOnRefusal = useCallback(
+    async (err: unknown) => {
+      if (isChangedSinceRead(err)) await refreshCareData();
+    },
+    [refreshCareData],
+  );
   const handleUpdateArrivalNote = useCallback(
     async (date: string, noteId: string, content: string) => {
-      await updateArrivalNote(studentId, noteId, { note_date: date, content });
+      const read = arrivalData.notes.find((note) => note.id === noteId);
+      try {
+        await updateArrivalNote(
+          studentId,
+          noteId,
+          { note_date: date, content },
+          read?.version ?? "",
+        );
+      } catch (err) {
+        await refreshOnRefusal(err);
+        throw err;
+      }
       await refreshCareData();
     },
-    [studentId, refreshCareData],
+    [studentId, refreshCareData, refreshOnRefusal, arrivalData.notes],
   );
   const handleDeleteArrivalNote = useCallback(
     async (noteId: string) => {
@@ -999,14 +1048,22 @@ export function CareScheduleManager({
   );
   const handleUpdatePickupNote = useCallback(
     async (date: string, noteId: string, content: string) => {
-      await updateStudentPickupNote(studentId, noteId, {
-        noteDate: date,
-        content,
-      });
+      const read = pickupData.notes.find((note) => note.id === noteId);
+      try {
+        await updateStudentPickupNote(
+          studentId,
+          noteId,
+          { noteDate: date, content },
+          read?.version ?? "",
+        );
+      } catch (err) {
+        await refreshOnRefusal(err);
+        throw err;
+      }
       await refreshCareData();
       invalidatePickupCaches();
     },
-    [studentId, refreshCareData],
+    [studentId, refreshCareData, refreshOnRefusal, pickupData.notes],
   );
   const handleDeletePickupNote = useCallback(
     async (noteId: string) => {
@@ -1110,6 +1167,7 @@ export function CareScheduleManager({
                 tooltip="Öffnet die festen Zeiten jeder Woche zum Ändern."
                 onClick={() => {
                   setRosterImpact(null);
+                  planErrors.clear();
                   setIsEditingWeekly(true);
                 }}
               >
@@ -1171,6 +1229,9 @@ export function CareScheduleManager({
       )}
 
       <div className="compact:mt-4 mt-5 border-t border-gray-100 p-3 max-sm:mt-4 sm:p-4">
+        {!isEditingWeeklyView && planErrors.error ? (
+          <FormErrorAlert message={planErrors.error} className="mb-3" />
+        ) : null}
         {rosterImpact && !isEditingWeeklyView ? (
           <div className="mb-3">
             <CarePlanImpact impact={rosterImpact} studentId={studentId} />

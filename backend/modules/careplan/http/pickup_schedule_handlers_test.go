@@ -882,8 +882,9 @@ func TestUpdateStudentPickupNote(t *testing.T) {
 		})
 
 		body := map[string]any{
-			"note_date": "2026-04-15",
-			"content":   "Updated content",
+			"note_date":        "2026-04-15",
+			"content":          "Updated content",
+			"expected_version": pickupNoteVersion(t, tc, student.ID, note.ID, "2026-04-15"),
 		}
 		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/pickup-notes/%d", student.ID, note.ID), body)
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"})

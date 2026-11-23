@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 type arrivalScheduleService struct {
@@ -522,8 +523,22 @@ func (s *arrivalScheduleService) CreateStudentArrivalNote(
 func (s *arrivalScheduleService) UpdateStudentArrivalNote(
 	ctx context.Context,
 	row *careplan.ArrivalNote,
+	expectedVersion string,
 ) error {
-	return s.updateNote(ctx, row)
+	// Under the student lock the note must still be the one the caller read.
+	return s.tx.WithinTenant(ctx, func(txCtx context.Context) error {
+		if err := s.lockArrivalStudent(txCtx, row.StudentID); err != nil {
+			return err
+		}
+		stored, err := s.noteByID(txCtx, row.ID)
+		if err != nil {
+			return err
+		}
+		if err := readstate.Check(expectedVersion, careplan.ArrivalNoteVersion(*stored)); err != nil {
+			return err
+		}
+		return s.updateNote(txCtx, row)
+	})
 }
 
 func (s *arrivalScheduleService) DeleteStudentArrivalNote(

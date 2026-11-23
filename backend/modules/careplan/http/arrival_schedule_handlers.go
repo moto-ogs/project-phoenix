@@ -379,7 +379,7 @@ func (rs *Resource) updateStudentArrivalNote(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	req := &ArrivalNoteRequest{}
+	req := &ArrivalNoteUpdateRequest{}
 	if err := render.Bind(r, req); err != nil {
 		renderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -398,7 +398,7 @@ func (rs *Resource) updateStudentArrivalNote(w http.ResponseWriter, r *http.Requ
 
 	tenantID := tenant.FromContext(r.Context())
 	if err := withinTenant(r.Context(), tenantID, func(ctx context.Context) error {
-		return rs.ArrivalScheduleService.UpdateStudentArrivalNote(ctx, note)
+		return rs.ArrivalScheduleService.UpdateStudentArrivalNote(ctx, note, req.ExpectedVersion)
 	}); err != nil {
 		renderError(w, r, common.ErrorInternalServer(err))
 		return

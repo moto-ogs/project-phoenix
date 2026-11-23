@@ -67,7 +67,9 @@ type ArrivalNotes interface {
 	GetStudentArrivalNotes(ctx context.Context, studentID int64) ([]*ArrivalNote, error)
 	GetStudentArrivalNotesForDate(ctx context.Context, studentID int64, date calendar.Date) ([]*ArrivalNote, error)
 	CreateStudentArrivalNote(ctx context.Context, note *ArrivalNote) error
-	UpdateStudentArrivalNote(ctx context.Context, note *ArrivalNote) error
+	// UpdateStudentArrivalNote changes a note read at expectedVersion
+	// (ArrivalNoteVersion); a changed note is refused with readstate.ErrChanged.
+	UpdateStudentArrivalNote(ctx context.Context, note *ArrivalNote, expectedVersion string) error
 	DeleteStudentArrivalNote(ctx context.Context, noteID int64) error
 	DeleteAllStudentArrivalNotes(ctx context.Context, studentID int64) error
 }
