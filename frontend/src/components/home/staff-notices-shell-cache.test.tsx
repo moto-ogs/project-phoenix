@@ -70,6 +70,7 @@ const PENDING: StaffNotice = {
   weekdays: [],
   week_pattern: 0,
   requires_acknowledgement: true,
+  version: "v1",
   active: true,
 };
 

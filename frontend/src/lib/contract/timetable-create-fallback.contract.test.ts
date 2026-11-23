@@ -41,6 +41,7 @@ const createdWithoutEnrichment = {
     conflict_warnings: null,
     can_complete: false,
     complete_available_at: "",
+    version: "",
   },
   message: "Instance created (without enrichment)",
 };

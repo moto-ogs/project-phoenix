@@ -98,6 +98,10 @@ func (f noticeBudgetFixture) create(t *testing.T, ctx context.Context, index int
 	_, err = f.db.NewUpdate().Table("users.staff_notices").Set("created_at = ?", created).
 		Where("tenant_id = ?", testpkg.TenantIDFromContext(ctx)).Where("id = ?", notice.ID).Exec(ctx)
 	require.NoError(t, err)
+	// That write moved the stored change time, so the read answers the
+	// notice as stored now.
+	notice, err = f.service.FindStaffNotice(ctx, notice.ID)
+	require.NoError(t, err)
 	return notice
 }
 
@@ -119,7 +123,8 @@ func noticeBudgetDTO(notice timetable.StaffNotice, management bool, ack bool) ma
 	out := map[string]any{"id": strconv.FormatInt(notice.ID, 10), "title": notice.Title, "body": notice.Body,
 		"priority": notice.Priority, "audience": notice.Audience, "valid_from": notice.ValidFrom,
 		"weekdays": weekdays, "week_pattern": float64(notice.WeekPattern),
-		"requires_acknowledgement": notice.RequiresAcknowledgement, "active": notice.Active}
+		"requires_acknowledgement": notice.RequiresAcknowledgement, "active": notice.Active,
+		"version": timetable.StaffNoticeVersion(notice)}
 	if notice.ValidUntil != "" {
 		out["valid_until"] = notice.ValidUntil
 	}

@@ -70,6 +70,7 @@ func TestDutyWithoutRoomCanBeMoved(t *testing.T) {
 	require.NoError(t, err)
 
 	updated, err := s.svc.UpdatePlanned(s.ctx, instance.ID, timetable.UpdateInstanceInput{
+		ExpectedVersion: plannerVersion(t, s.ctx, s.timetableData.Data, instance.ID),
 		Date:            calendar.Date(instance.Date),
 		StartTime:       instance.StartTime.Add(30 * time.Minute),
 		EndTime:         instance.EndTime.Add(30 * time.Minute),

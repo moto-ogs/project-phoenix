@@ -61,7 +61,7 @@ import {
 } from "~/lib/school-class-day-api";
 import { schoolClassLabel } from "~/lib/school-class-label";
 import { schoolPath } from "~/lib/school-url";
-import { useSWRAuth } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
 import { schoolPortalKeys } from "~/lib/swr/portal-keys";
 import { normalizeSchoolClass } from "~/lib/timetable-helpers";
 import { ClassTripBulkStatusModal } from "~/components/students/class-trip-bulk-status-modal";
@@ -294,12 +294,7 @@ export function ClassDayClass({
   const weekend = weekendDay && !weekendOpen;
 
   const classReportKey = schoolPortalKeys.classDayReport(schoolClass, dateISO);
-  const {
-    data: report,
-    error,
-    isLoading,
-    mutate: refetchReport,
-  } = useSWRAuth(
+  const reportRead = useSWRAuth(
     schoolClass && !weekend ? classReportKey : null,
     async () => {
       try {
@@ -318,6 +313,7 @@ export function ClassDayClass({
       keepPreviousData: false,
     },
   );
+  const { data: report, error, isLoading, mutate: refetchReport } = reportRead;
 
   const discardRefusedReport = useSchoolReportRefusal(error, classReportKey);
 
@@ -601,6 +597,8 @@ export function ClassDayClass({
     schoolClass,
     dateISO,
     onChanged: reportAfterWrite.refresh,
+    reloadAfterRefusal: async () =>
+      (await revalidateOrThrow(reportRead)).homework ?? [],
   });
   // Übergabe an die OGS (#4794): bestätigt wird je Klasse, Ausnahmen je Kind.
   const canHandOver =
@@ -757,6 +755,12 @@ export function ClassDayClass({
                   onCancel={homeworkForm.close}
                   onSave={() => void homeworkForm.save()}
                   saving={homeworkForm.saving}
+                  disabled={homeworkForm.draft?.gone === true}
+                  disabledReason={
+                    homeworkForm.draft?.gone === true
+                      ? "Die Hausaufgabe gibt es nicht mehr."
+                      : undefined
+                  }
                 />
               }
             >

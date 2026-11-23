@@ -637,6 +637,7 @@ export function mapInstance(
 
   return {
     id: raw.id,
+    version: raw.version,
     date: raw.date,
     startTime: raw.start_time,
     endTime: raw.end_time,
@@ -1202,6 +1203,8 @@ function mapRosterMaintenance(
 function mapTemplate(template: WireTemplate): TimetableTemplate {
   return {
     id: template.id,
+    // The editing read answers it; the list carries none (ADR 0311).
+    version: template.version || undefined,
     name: template.name,
     type: knownEnum(ACTIVITY_TYPE_VALUES, template.type),
     listKind: knownEnum(LIST_KIND_VALUES, template.list_kind),

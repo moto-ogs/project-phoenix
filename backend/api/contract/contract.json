@@ -16852,6 +16852,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "weekProtocolCloseRequest"
+      },
       "response": {
         "kind": "ref",
         "ref": "weekProtocolResponse"
@@ -21597,7 +21601,7 @@
       ],
       "request": {
         "kind": "ref",
-        "ref": "noticeRequest"
+        "ref": "noticeUpdateRequest"
       },
       "response": {
         "kind": "ref",
@@ -23063,7 +23067,7 @@
       ],
       "request": {
         "kind": "ref",
-        "ref": "HomeworkRequest"
+        "ref": "HomeworkChangeRequest"
       },
       "response": {
         "kind": "ref",
@@ -50440,6 +50444,12 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -66000,6 +66010,42 @@
       ]
     },
     {
+      "name": "HomeworkChangeRequest",
+      "go_type": "classdayhttp.HomeworkChangeRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "subject",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "description",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "HomeworkFeedbackRequest",
       "go_type": "timetablehttp.HomeworkFeedbackRequest",
       "request": true,
@@ -66017,6 +66063,13 @@
           "schema": {
             "kind": "string",
             "nullable": true
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -66046,6 +66099,12 @@
         {
           "name": "note",
           "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "version",
           "schema": {
             "kind": "string"
           }
@@ -73591,6 +73650,13 @@
           "schema": {
             "kind": "ref",
             "ref": "OperationHomeworkFeedback"
+          }
+        },
+        {
+          "name": "homework_feedback_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -114314,6 +114380,13 @@
             "kind": "string",
             "nullable": true
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -117151,6 +117224,12 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -119864,6 +119943,102 @@
           "optional": true,
           "schema": {
             "kind": "int"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "noticeUpdateRequest",
+      "go_type": "timetablehttp.noticeUpdateRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "title",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "body",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "priority",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "audience",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "valid_from",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "valid_until",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "weekdays",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "week_pattern",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "requires_acknowledgement",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "active",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -125238,6 +125413,13 @@
           }
         },
         {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "series_roster_from",
           "optional": true,
           "schema": {
@@ -127952,6 +128134,13 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -128642,6 +128831,13 @@
             "kind": "int",
             "nullable": true
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -129007,6 +129203,13 @@
           }
         },
         {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "series_roster_from",
           "optional": true,
           "schema": {
@@ -129082,6 +129285,20 @@
           "optional": true,
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "weekProtocolCloseRequest",
+      "go_type": "timetablehttp.weekProtocolCloseRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -129261,6 +129478,13 @@
               "ref": "weekProtocolDayNoteInput"
             }
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -129365,6 +129589,13 @@
               "kind": "ref",
               "ref": "weekProtocolDayResponse"
             }
+          }
+        },
+        {
+          "name": "version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]

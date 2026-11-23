@@ -13,6 +13,7 @@ import {
   type FormModalOperation,
 } from "~/components/ui/use-form-modal-pending";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import { isReadStateRefusal } from "~/lib/api-error";
 import type { ActivityCategory } from "~/lib/activity-helpers";
 import {
   findPeriodForDate,
@@ -180,6 +181,26 @@ function saveErrorObject(isSeries: boolean, isCreate: boolean): string {
       : "die Änderung des Regeltermins";
   }
   return isCreate ? "das Anlegen des Termins" : "die Änderung des Termins";
+}
+
+/** What a refusal as changed since read names: the block or the series. */
+function changedObject(isSeries: boolean): string {
+  return isSeries ? "der Regeltermin" : "der Termin";
+}
+
+/**
+ * The block as the planner reads it now; rejects when it is gone, since
+ * nothing stored is left to show.
+ */
+async function readStoredBlock(
+  instance: EnrichedInstance,
+): Promise<EnrichedInstance> {
+  const week = await timetableService.getWeek(instance.date, instance.date);
+  const found = week.instances.find(
+    (candidate) => candidate.id === instance.id,
+  );
+  if (!found) throw new Error(`instance ${instance.id} is no longer planned`);
+  return found;
 }
 
 function sameIDSelection(left: string[], right: string[]): boolean {
@@ -405,9 +426,9 @@ export function useEventForm({
   calendarPeriods,
   planningPeriods,
   defaultCalendarPeriodId,
-  initialInstance,
-  initialSeries,
-  convertInstance,
+  initialInstance: openedInstance,
+  initialSeries: openedSeries,
+  convertInstance: openedConvertInstance,
   onDeleteSeries,
   defaultRepeat,
   variant,
@@ -419,6 +440,25 @@ export function useEventForm({
 }: UseEventFormParams) {
   const { tenant } = useTenant();
   const { success: toastSuccess, warning: toastWarning } = useToast();
+  // After a save refused as changed since read (ADR 0311) the panel shows
+  // the block and the series as stored now: they replace what the panel was
+  // opened with, until it opens with something else.
+  const [stored, setStored] = useState<{
+    readonly opened: readonly unknown[];
+    readonly instance: EnrichedInstance | null;
+    readonly series: TimetableTemplate | null;
+    readonly convert: EnrichedInstance | null;
+  } | null>(null);
+  const opened = [openedInstance, openedSeries, openedConvertInstance, isOpen];
+  const reread =
+    stored?.opened.every((value, index) => value === opened[index]) === true
+      ? stored
+      : null;
+  const initialInstance = reread ? reread.instance : openedInstance;
+  const initialSeries = reread ? reread.series : openedSeries;
+  const convertInstance = reread ? reread.convert : openedConvertInstance;
+  // Set by that reread: its new seeding keeps the refusal on screen.
+  const reseedKeepsError = useRef(false);
   const [form, setForm] = useState<EventFormState>(() =>
     emptyForm(
       defaultDate,
@@ -872,7 +912,11 @@ export function useEventForm({
     createIdempotencyFingerprint.current = null;
     setForm(nextForm);
     initialFormSnapshot.current = nextForm;
-    clearFormError();
+    if (reseedKeepsError.current) {
+      reseedKeepsError.current = false;
+    } else {
+      clearFormError();
+    }
     setFieldErrors({});
     setDeleteConfirmOpen(false);
     setDeleteEffectiveDate(berlinTodayISO());
@@ -2034,6 +2078,18 @@ export function useEventForm({
   };
 
   /**
+   * The series form's body for a scope edit whose form was seeded from the
+   * loaded series, with that series' read version (ADR 0311).
+   */
+  const scopedSeriesBody = (
+    roomId: string,
+    template: TimetableTemplate,
+  ): UpdateTemplateBody => ({
+    ...seriesBody(roomId, form.categoryId),
+    expected_version: template.version ?? "",
+  });
+
+  /**
    * Maps the fetched template plus the fields the instance-edit form
    * actually edits (title, times, room, people) onto an update/split body.
    * Weekdays, category, period and week pattern come from the template —
@@ -2088,6 +2144,8 @@ export function useEventForm({
           : form.primaryStaffId || template.primaryStaffId
         : template.primaryStaffId;
     return {
+      // The series as this edit read it (ADR 0311).
+      expected_version: template.version ?? "",
       name: form.title.trim(),
       type: template.type,
       // This builder runs only for occurrence-scope edits ("Alle Termine" /
@@ -2348,10 +2406,10 @@ export function useEventForm({
       if (selectedInstanceScope === "single") {
         try {
           await checkCoverageBeforeSave(coverageProbes);
-          const saved = await timetableService.update(
-            initialInstance.id,
-            instanceBody(parsed.roomId, initialInstance.activityGroupId),
-          );
+          const saved = await timetableService.update(initialInstance.id, {
+            ...instanceBody(parsed.roomId, initialInstance.activityGroupId),
+            expected_version: initialInstance.version ?? "",
+          });
           toastSuccess("Der Termin ist gespeichert.");
           reportSaved(op, { kind: "instance", instance: saved });
           if (op.isCurrent()) onClose();
@@ -2373,7 +2431,11 @@ export function useEventForm({
         );
         let saved: EnrichedInstance;
         if (initialInstance) {
-          saved = await timetableService.update(initialInstance.id, body);
+          // The block as the panel opened it (ADR 0311).
+          saved = await timetableService.update(initialInstance.id, {
+            ...body,
+            expected_version: initialInstance.version ?? "",
+          });
         } else {
           const createFingerprint = JSON.stringify(body);
           if (createIdempotencyFingerprint.current !== createFingerprint) {
@@ -2415,6 +2477,8 @@ export function useEventForm({
         const runSeriesEdit = async (seriesOp: FormModalOperation) => {
           await timetableService.updateTemplate(seriesId, {
             ...seriesBody(parsed.roomId, categoryId),
+            // The series as the panel opened it (ADR 0311).
+            expected_version: initialSeries.version ?? "",
             ...(notesOnly ? { propagate_notes_to_predecessors: true } : {}),
             // #6838: the server rebuilds the future occurrences in the same
             // transaction. A notes-only save and a start-only pull keep them.
@@ -2508,6 +2572,8 @@ export function useEventForm({
           seriesSeedInstance.id,
           {
             ...seriesBody(parsed.roomId, parsed.categoryId),
+            // The one-off block as the panel opened it (ADR 0311).
+            expected_version: seriesSeedInstance.version ?? "",
             // #2135: the repeated instance's date is the series start.
             start_date: form.date,
             // #3594: optional last day of the series.
@@ -2557,11 +2623,14 @@ export function useEventForm({
       // Steht oben im Panel (SlideOverBody `error`), nicht als Toast:
       // Bauart 2 Regel 5.
       void showFormError(err, {
-        object: saveErrorObject(
-          isSeriesFlow,
-          isSeriesFlow ? !initialSeries : !initialInstance,
-        ),
+        object: isReadStateRefusal(err)
+          ? changedObject(isSeriesFlow)
+          : saveErrorObject(
+              isSeriesFlow,
+              isSeriesFlow ? !initialSeries : !initialInstance,
+            ),
         retry: retrySave,
+        reload: reloadAfterRefusal,
       });
     }
   };
@@ -2690,6 +2759,28 @@ export function useEventForm({
     };
   };
 
+  /**
+   * The read after a save refused as changed since read (ADR 0311): the
+   * block and the series the panel edits, as stored now. The panel then
+   * starts from them with their tokens; a scope chosen before is asked
+   * again. Rejects when a read fails, so the refusal says that instead.
+   */
+  const reloadAfterRefusal = async () => {
+    const seriesPeriod = initialSeries
+      ? (resolveTemplateCalendarPeriodId(initialSeries) ??
+        form.calendarPeriodId)
+      : "";
+    const [instance, series, convert] = await Promise.all([
+      initialInstance ? readStoredBlock(initialInstance) : null,
+      initialSeries
+        ? timetableService.getTemplate(initialSeries.id, seriesPeriod)
+        : null,
+      convertInstance ? readStoredBlock(convertInstance) : null,
+    ]);
+    reseedKeepsError.current = true;
+    setStored({ opened, instance, series, convert });
+  };
+
   const handleScopeError = (
     op: FormModalOperation,
     scope: string,
@@ -2707,8 +2798,11 @@ export function useEventForm({
     // Speicherfehler des Serienumfangs: oben im Panel, nicht als Toast. Die
     // Rückfragen davor sind geschlossen, das Panel ist die offene Fläche.
     void showFormError(err, {
-      object: saveErrorObject(scope !== "single", false),
+      object: isReadStateRefusal(err)
+        ? changedObject(scope !== "single")
+        : saveErrorObject(scope !== "single", false),
       retry: retrySave,
+      reload: reloadAfterRefusal,
     });
   };
 
@@ -2754,7 +2848,7 @@ export function useEventForm({
       ? chainPreservedScalars(template)
       : { preserved: {}, edited: false };
     const body = scopedSeries
-      ? seriesBody(roomId, form.categoryId)
+      ? scopedSeriesBody(roomId, template)
       : chainResolved
         ? {
             ...templateBodyFromForm(template, roomId),
@@ -3083,10 +3177,10 @@ export function useEventForm({
     if (scope === "single") {
       try {
         await checkCoverageBeforeSave(coverageProbes);
-        const saved = await timetableService.update(
-          initialInstance.id,
-          instanceBody(pending.roomId, groupId),
-        );
+        const saved = await timetableService.update(initialInstance.id, {
+          ...instanceBody(pending.roomId, groupId),
+          expected_version: initialInstance.version ?? "",
+        });
         toastSuccess("Der Termin ist gespeichert.");
         reportSaved(op, { kind: "instance", instance: saved });
         if (!op.isCurrent()) return;
@@ -3120,7 +3214,7 @@ export function useEventForm({
         findPeriod(templateCalendarPeriodId)?.endDate ??
         findPeriod(form.calendarPeriodId)?.endDate;
       const body = scopedSeries
-        ? seriesBody(pending.roomId, form.categoryId)
+        ? scopedSeriesBody(pending.roomId, template)
         : templateBodyFromForm(template, pending.roomId);
       const scopeFrom =
         typedScope === "following" ? initialInstance.date : berlinTodayISO();

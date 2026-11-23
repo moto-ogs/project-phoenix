@@ -159,11 +159,17 @@ func (s *Store) CreateStaffNotice(ctx context.Context, row *StaffNotice) error {
 	if row.TenantID == 0 {
 		row.TenantID = tenantID
 	}
-	_, err = db.NewInsert().Model(row).ModelTableExpr("users.staff_notices").Exec(ctx)
+	// The stored change time comes back with the row: it is the notice's
+	// read-state token (ADR 0311).
+	_, err = db.NewInsert().Model(row).ModelTableExpr("users.staff_notices").Returning("id, created_at, updated_at").Exec(ctx)
 	return err
 }
 
-// UpdateStaffNotice rewrites the row and returns the number of changed rows.
+// UpdateStaffNotice rewrites the row while it still carries the change time
+// the row was read with, and returns the number of changed rows. The update
+// takes the row lock and re-checks that time after any wait, so a change in
+// between leaves zero rows (ADR 0311). The trigger's new change time is read
+// back into row.
 func (s *Store) UpdateStaffNotice(ctx context.Context, row *StaffNotice) (int64, error) {
 	db, tenantID, err := s.database(ctx)
 	if err != nil {
@@ -174,6 +180,8 @@ func (s *Store) UpdateStaffNotice(ctx context.Context, row *StaffNotice) (int64,
 		ModelTableExpr(staffNoticeTable).
 		WherePK().
 		Where(`"staff_notice".tenant_id = ?`, tenantID).
+		Where(`"staff_notice".updated_at = ?`, row.UpdatedAt).
+		Returning(`"staff_notice".updated_at`).
 		Exec(ctx)
 	if err != nil {
 		return 0, err

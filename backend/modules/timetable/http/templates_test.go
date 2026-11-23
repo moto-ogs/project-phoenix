@@ -197,6 +197,7 @@ func buildTemplateModule(t *testing.T, mat timetable.MaterializationCapability, 
 		Templates:              data,
 		TemplateSeries:         repoFactory.Timetable,
 		TimetableData:          data.TimetableData(),
+		RecurrenceLock:         data.RecurrenceLock(),
 		CalendarPeriods:        repoFactory.SchoolCalendar(),
 		CalendarPeriodUsage:    calendarPeriodUsageFor(repoFactory.CalendarPeriodUsage()),
 		MaterializationService: mat,
@@ -308,6 +309,7 @@ func templateRouter(parentCtx context.Context, res *Resource, db *bun.DB) chi.Ro
 
 func doTemplateJSON(t *testing.T, router http.Handler, method, path string, body any) *httptest.ResponseRecorder {
 	t.Helper()
+	body = withTemplateReadVersion(t, router, method, path, body)
 	var reader *bytes.Reader
 	if body == nil {
 		reader = bytes.NewReader(nil)

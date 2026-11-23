@@ -84,6 +84,7 @@ function spontaneous(
 function renderSpontaneous(status: "active" | "completed" | "cancelled") {
   render(
     <TimetableRosterContent
+      reloadAfterRefusal={vi.fn().mockResolvedValue(null)}
       addStudentSearch=""
       attendanceWebEnabled={false}
       isAddingStudent={false}

@@ -70,8 +70,18 @@ func TestFlowJ_TemplateUpdateReplansTheWholePeriod(t *testing.T) {
 	rr = s.do("POST", fmt.Sprintf("/instances/%d/deviations", farBefore.ID), devReq, s.primaryAdminClaims())
 	require.Equal(t, http.StatusOK, rr.Code, "deviations body=%s", rr.Body.String())
 
+	// The editor saves back the series it read (ADR 0311).
+	rr = s.do("GET", fmt.Sprintf("/templates/%d?period_id=%d", created.TemplateID, period.ID), nil, s.primaryAdminClaims())
+	require.Equal(t, http.StatusOK, rr.Code, "read template body=%s", rr.Body.String())
+	var opened struct {
+		Version string `json:"version"`
+	}
+	decodeResponse(t, rr, &opened)
+	require.NotEmpty(t, opened.Version)
+
 	update := body("15:00", "16:00")
 	update["replan_future"] = true
+	update["expected_version"] = opened.Version
 	rr = s.do("PUT", fmt.Sprintf("/templates/%d", created.TemplateID), update, s.primaryAdminClaims())
 	require.Equal(t, http.StatusOK, rr.Code, "update template body=%s", rr.Body.String())
 

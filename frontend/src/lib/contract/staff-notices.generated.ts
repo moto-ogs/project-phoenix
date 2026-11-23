@@ -38,6 +38,21 @@ export interface noticeRequest {
   active?: boolean | null;
 }
 
+/** Go: timetablehttp.noticeUpdateRequest */
+export interface noticeUpdateRequest {
+  title?: string;
+  body?: string;
+  priority?: string;
+  audience?: string;
+  valid_from?: string;
+  valid_until?: string | null;
+  weekdays?: number[] | null;
+  week_pattern?: number;
+  requires_acknowledgement?: boolean;
+  active?: boolean | null;
+  expected_version?: string;
+}
+
 export const routes = {
   "DELETE /api/staff-notices/{noticeId}": {
     method: "DELETE",
@@ -86,7 +101,7 @@ export const routes = {
     method: "PUT",
     pattern: "/api/staff-notices/{noticeId}",
     portals: ["tenant"],
-    request: requestBody<noticeRequest>(),
+    request: requestBody<noticeUpdateRequest>(),
     response: success(noticeResponseSchema),
   },
 } as const;

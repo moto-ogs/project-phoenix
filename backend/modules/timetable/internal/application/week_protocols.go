@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The weekly protocols of #4769 for the staff and the leadership: every read
@@ -63,6 +64,11 @@ func (s *Service) SaveWeekProtocolNotes(ctx context.Context, reach timetable.Wee
 		if validateErr != nil {
 			return validateErr
 		}
+		// The draft is read under its row lock; the notes save back the
+		// protocol its editor read (ADR 0311).
+		if checkErr := readstate.Check(notes.ExpectedVersion, timetable.WeekProtocolVersion(protocol)); checkErr != nil {
+			return checkErr
+		}
 		if saveErr := s.store.SaveWeekProtocolNotes(txCtx, id, cleaned); saveErr != nil {
 			return saveErr
 		}
@@ -72,7 +78,7 @@ func (s *Service) SaveWeekProtocolNotes(ctx context.Context, reach timetable.Wee
 	return result, err
 }
 
-func (s *Service) CloseWeekProtocol(ctx context.Context, reach timetable.WeekProtocolReach, id int64, actor timetable.WeekProtocolActor, renderer timetable.WeekProtocolRenderer) (result timetable.WeekProtocol, err error) {
+func (s *Service) CloseWeekProtocol(ctx context.Context, reach timetable.WeekProtocolReach, id int64, expectedVersion string, actor timetable.WeekProtocolActor, renderer timetable.WeekProtocolRenderer) (result timetable.WeekProtocol, err error) {
 	if actor.AccountID <= 0 {
 		return timetable.WeekProtocol{}, fmt.Errorf("%w: closing needs the acting account", timetable.ErrWeekProtocolInvalid)
 	}
@@ -80,8 +86,14 @@ func (s *Service) CloseWeekProtocol(ctx context.Context, reach timetable.WeekPro
 		return timetable.WeekProtocol{}, errors.New("close week protocol: the renderer is required")
 	}
 	err = s.runWrite(ctx, "close_week_protocol", true, func(txCtx context.Context, _ *domain.OperationStats) error {
-		if _, findErr := s.visibleWeekProtocolDraft(txCtx, reach, id); findErr != nil {
+		draft, findErr := s.visibleWeekProtocolDraft(txCtx, reach, id)
+		if findErr != nil {
 			return findErr
+		}
+		// Closing confirms the protocol the person read, under its row lock
+		// (ADR 0311): a later evening or note is not closed unseen.
+		if checkErr := readstate.Check(expectedVersion, timetable.WeekProtocolVersion(draft)); checkErr != nil {
+			return checkErr
 		}
 		if closeErr := s.store.CloseWeekProtocol(txCtx, id, actor, s.now()); closeErr != nil {
 			return closeErr

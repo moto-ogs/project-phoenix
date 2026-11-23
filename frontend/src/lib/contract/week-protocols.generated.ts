@@ -106,6 +106,7 @@ export interface weekProtocolResponse {
   closed_by_name?: string;
   closed_automatically: boolean;
   days?: weekProtocolDayResponse[];
+  version?: string;
 }
 
 export const weekProtocolResponseSchema: z.ZodType<weekProtocolResponse, unknown> = object<weekProtocolResponse>({
@@ -124,7 +125,13 @@ export const weekProtocolResponseSchema: z.ZodType<weekProtocolResponse, unknown
   closed_by_name: optional(str),
   closed_automatically: bool,
   days: optional(arr(weekProtocolDayResponseSchema)),
+  version: optional(str),
 });
+
+/** Go: timetablehttp.weekProtocolCloseRequest */
+export interface weekProtocolCloseRequest {
+  expected_version?: string;
+}
 
 /** Go: timetablehttp.weekProtocolDayNoteInput */
 export interface weekProtocolDayNoteInput {
@@ -136,6 +143,7 @@ export interface weekProtocolDayNoteInput {
 export interface weekProtocolNotesRequest {
   week_note?: string;
   days?: weekProtocolDayNoteInput[] | null;
+  expected_version?: string;
 }
 
 export const routes = {
@@ -164,6 +172,7 @@ export const routes = {
     method: "POST",
     pattern: "/api/week-protocols/{protocolId}/close",
     portals: ["tenant"],
+    request: requestBody<weekProtocolCloseRequest>(),
     response: success(weekProtocolResponseSchema),
   },
   "PUT /api/week-protocols/{protocolId}/notes": {

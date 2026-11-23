@@ -111,6 +111,13 @@ type noticeRequest struct {
 	Active                  *bool   `json:"active,omitempty"`
 }
 
+// noticeUpdateRequest is the body of a change: the notice as edited and the
+// version its editor read (ADR 0311).
+type noticeUpdateRequest struct {
+	noticeRequest
+	ExpectedVersion string `json:"expected_version"`
+}
+
 type noticeResponse struct {
 	ID                      string  `json:"id"`
 	Title                   string  `json:"title"`
@@ -125,6 +132,9 @@ type noticeResponse struct {
 	Active                  bool    `json:"active"`
 	AcknowledgedAt          *string `json:"acknowledged_at,omitempty"`
 	AcknowledgedCount       *int    `json:"acknowledged_count,omitempty"`
+	// Version is the notice's read-state token (ADR 0311); a change sends it
+	// back as expected_version.
+	Version string `json:"version"`
 }
 
 // noticeFields is the wire-relevant projection of a Tagesinformation plus
@@ -145,6 +155,7 @@ type noticeFields struct {
 	Active                  bool
 	AcknowledgedAt          *time.Time
 	AcknowledgedCount       int
+	Version                 string
 }
 
 // noticeFieldsOf projects a notice of the public contract onto the wire
@@ -162,6 +173,7 @@ func noticeFieldsOf(notice timetable.StaffNotice) noticeFields {
 		WeekPattern:             notice.WeekPattern,
 		RequiresAcknowledgement: notice.RequiresAcknowledgement,
 		Active:                  notice.Active,
+		Version:                 timetable.StaffNoticeVersion(notice),
 	}
 }
 
@@ -186,6 +198,7 @@ func toNoticeResponse(view noticeFields, includeAcknowledgedCount bool) noticeRe
 		WeekPattern:             view.WeekPattern,
 		RequiresAcknowledgement: view.RequiresAcknowledgement,
 		Active:                  view.Active,
+		Version:                 view.Version,
 	}
 	if includeAcknowledgedCount {
 		count := view.AcknowledgedCount
@@ -376,7 +389,8 @@ func noticeIDFromURL(r *http.Request) (int64, error) {
 }
 
 func decodeNoticeInput(r *http.Request) (timetable.StaffNoticeInput, error) {
-	var req noticeRequest
+	// A new notice has no read state: its expected_version stays unused.
+	var req noticeUpdateRequest
 	if err := render.DecodeJSON(r.Body, &req); err != nil {
 		return timetable.StaffNoticeInput{}, errors.New("invalid request body")
 	}
@@ -396,6 +410,7 @@ func decodeNoticeInput(r *http.Request) (timetable.StaffNoticeInput, error) {
 		WeekPattern:             req.WeekPattern,
 		RequiresAcknowledgement: req.RequiresAcknowledgement,
 		Active:                  true,
+		ExpectedVersion:         req.ExpectedVersion,
 	}
 	if req.Active != nil {
 		in.Active = *req.Active

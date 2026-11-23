@@ -30,6 +30,7 @@ const roster: TimetableRoster = {
 function renderHead(occupancy?: Occupancy) {
   render(
     <TimetableRosterContent
+      reloadAfterRefusal={vi.fn().mockResolvedValue(null)}
       addStudentSearch=""
       attendanceWebEnabled={false}
       isAddingStudent={false}
