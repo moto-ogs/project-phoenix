@@ -106,6 +106,8 @@ type FamilyBillingRequest struct {
 	PaymentMethod   string                `json:"payment_method"`
 	DueDay          *int                  `json:"due_day"`
 	DebtorNumber    string                `json:"debtor_number"`
+	// ExpectedVersion is the version of GET /contracts/{id} the form read.
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // Bind accepts the body; the Owner validates the deviation.
@@ -116,6 +118,7 @@ func (req *FamilyBillingRequest) input() capability.FamilyBillingInput {
 		ContractID: req.ContractID.Int64(), RecipientKind: req.RecipientKind, SecondFirstName: req.SecondFirstName, SecondLastName: req.SecondLastName,
 		PayerFirstName: req.PayerFirstName, PayerLastName: req.PayerLastName, PayerEmail: req.PayerEmail,
 		PayerAddress: (*capability.PostalAddress)(req.PayerAddress), PaymentMethod: req.PaymentMethod, DueDay: req.DueDay, DebtorNumber: req.DebtorNumber,
+		ExpectedVersion: req.ExpectedVersion,
 	}
 }
 

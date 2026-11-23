@@ -44,8 +44,12 @@ export const tenantStudentKeys = {
   /** Whether the reader has an RSS link for new parent requests (`getRequestFeedStatus`). */
   requestFeedStatus: () => "request-feed-status",
   /** The dry run of a parent-portal invitation for these children (`bulkInviteGuardians`). */
-  bulkInvitePreview: (studentIds: readonly string[], resendOpen: boolean) =>
-    `bulk-invite-preview-${resendOpen ? "resend" : "new"}-${encodeURIComponent([...studentIds].sort().join(","))}`,
+  bulkInvitePreview: (
+    studentIds: readonly string[],
+    resendOpen: boolean,
+    notifyActive: boolean,
+  ) =>
+    `bulk-invite-preview-${resendOpen ? "resend" : "new"}-${notifyActive ? "notify" : "quiet"}-${encodeURIComponent([...studentIds].sort().join(","))}`,
   /** What deleting one child would remove (`fetchStudentDeletionImpact`). */
   deletionImpact: (studentId: string, completionId?: string) =>
     `student-deletion-impact-${encodeURIComponent(studentId)}-${encodeURIComponent(completionId ?? "")}`,

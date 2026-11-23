@@ -10,8 +10,8 @@ import (
 )
 
 // capacityCheck is the booking an approval reserves: the offerings the
-// materialization books from the effective date through the end of the care
-// period, next to the ones the child already holds.
+// materialization books from the effective date through the end the change
+// writes (selectionBookingEnds), next to the ones the child already holds.
 type capacityCheck struct {
 	in                selectionMaterialization
 	studentID         int64
@@ -20,12 +20,15 @@ type capacityCheck struct {
 	replacementIDs    []int64
 	lockedByID        map[int64]*careplan.CareOffering
 	phaseEndExclusive calendar.Date
+	// bookingEnds is the exclusive end the change books each offering to.
+	bookingEnds map[int64]calendar.Date
 }
 
 // assertCapacityAvailable refuses an approval that would overbook an
 // offering. It counts every selected offering after removing this child's
-// old intervals, then reserves one replacement interval through the end of
-// the care period.
+// old intervals, then reserves one replacement interval through the end the
+// change books it to: an offering that stays chosen keeps the end of its
+// booking (#7928), any other runs to the end of the care period.
 func (s *OfferingChanges) assertCapacityAvailable(
 	ctx context.Context,
 	in selectionMaterialization,
@@ -45,7 +48,7 @@ func (s *OfferingChanges) assertCapacityAvailable(
 	// offerings cannot deadlock.
 	if err := s.assertCourseCapacitiesAvailable(ctx, courseCapacityCheck{
 		studentID: studentID, requestChildID: in.requestChildID, offerings: courseOfferings,
-		from: in.effectiveFrom, until: check.phaseEndExclusive, pending: pending,
+		from: in.effectiveFrom, until: check.latestBookingEnd(courseOfferings), pending: pending,
 		child: selectionFactsChild(in.facts),
 	}); err != nil {
 		return err
@@ -84,9 +87,15 @@ func (s *OfferingChanges) lockCapacityOfferings(ctx context.Context, in selectio
 	if err != nil {
 		return nil, fmt.Errorf("offering change: lock offering capacity: %w", err)
 	}
+	lockedByID, phaseEnd := offeringsByID(locked), in.phase.ServiceEnd.AddDays(1)
+	stored, err := s.storedBookingsAt(ctx, in.facts, in.requestChildID, current, phaseEnd)
+	if err != nil {
+		return nil, err
+	}
 	return &capacityCheck{
 		in: in, studentID: studentID, current: current, held: held, replacementIDs: replacementIDs,
-		lockedByID: offeringsByID(locked), phaseEndExclusive: in.phase.ServiceEnd.AddDays(1),
+		lockedByID: lockedByID, phaseEndExclusive: phaseEnd,
+		bookingEnds: selectionBookingEnds(materialized, current, stored, lockedByID, phaseEnd),
 	}, nil
 }
 
@@ -99,7 +108,7 @@ func (c *capacityCheck) courseCandidates() ([]*careplan.CareOffering, error) {
 		if offering == nil || (!c.held[offeringID] && !offering.IsActive) {
 			return nil, fmt.Errorf("%w: care offering %d is unavailable", careplan.ErrOfferingChangeInvalid, offeringID)
 		}
-		if heldOfferingCoversRange(c.current, offeringID, c.phaseEndExclusive) {
+		if heldOfferingCoversRange(c.current, offeringID, c.bookingEnd(offeringID)) {
 			continue
 		}
 		offerings = append(offerings, offering)
@@ -113,11 +122,12 @@ func (c *capacityCheck) courseCandidates() ([]*careplan.CareOffering, error) {
 func (s *OfferingChanges) assertOfferingCapacities(ctx context.Context, check *capacityCheck) error {
 	for _, offeringID := range check.replacementIDs {
 		offering := check.lockedByID[offeringID]
-		if heldOfferingCoversRange(check.current, offeringID, check.phaseEndExclusive) || offering.Capacity == nil {
+		until := check.bookingEnd(offeringID)
+		if heldOfferingCoversRange(check.current, offeringID, until) || offering.Capacity == nil {
 			continue
 		}
 		taken, err := s.deps.Enrollment.CapacityPeak(
-			ctx, offering.ID, []int64{check.in.requestChildID}, check.in.effectiveFrom, check.phaseEndExclusive,
+			ctx, offering.ID, []int64{check.in.requestChildID}, check.in.effectiveFrom, until,
 		)
 		if err != nil {
 			return fmt.Errorf("offering change: count offering occupancy: %w", err)
@@ -127,4 +137,50 @@ func (s *OfferingChanges) assertOfferingCapacities(ctx context.Context, check *c
 		}
 	}
 	return nil
+}
+
+// bookingEnd is the exclusive end the change books the offering to.
+func (c *capacityCheck) bookingEnd(offeringID int64) calendar.Date {
+	if end, ok := c.bookingEnds[offeringID]; ok {
+		return end
+	}
+	return c.phaseEndExclusive
+}
+
+// latestBookingEnd is the latest end the change books one of the offerings
+// to: the AG check counts one window for all of them and stays on the safe
+// side of each.
+func (c *capacityCheck) latestBookingEnd(offerings []*careplan.CareOffering) calendar.Date {
+	var latest calendar.Date
+	for _, offering := range offerings {
+		if end := c.bookingEnd(offering.ID); latest.IsZero() || end.After(latest) {
+			latest = end
+		}
+	}
+	if latest.IsZero() {
+		return c.phaseEndExclusive
+	}
+	return latest
+}
+
+// storedBookingsAt reads the child's stored bookings when one in effect ends
+// before the phase (endsBeforePhase); a projection with preloaded facts
+// reads them once for all its alternatives.
+func (s *OfferingChanges) storedBookingsAt(ctx context.Context, facts *directSelectionFacts, requestChildID int64,
+	current []*careplan.BookedOffering, phaseEnd calendar.Date) ([]*careplan.BookedOffering, error) {
+	if facts != nil && facts.storedLoaded {
+		return facts.stored, nil
+	}
+	var stored []*careplan.BookedOffering
+	if endsBeforePhase(current, phaseEnd) {
+		history, err := s.deps.Enrollment.SelectionHistory(ctx, requestChildID)
+		if err != nil {
+			return nil, fmt.Errorf("offering change: list stored offerings: %w", err)
+		}
+		stored = bookedOfferingPointers(history)
+	}
+	if facts != nil {
+		facts.stored, facts.storedLoaded = stored, true
+	}
+	return stored, nil
 }

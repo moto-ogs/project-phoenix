@@ -40,6 +40,7 @@ const READ: ContractFamilyBilling = {
   partyName: "Anna Muster",
   partyLastName: "Muster",
   family: STORED,
+  version: "v-1",
 };
 
 function renderCard() {

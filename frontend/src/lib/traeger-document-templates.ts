@@ -174,6 +174,11 @@ export interface DocumentTemplatePlaceholder {
 }
 
 export interface DocumentTemplateDetail {
+  /**
+   * Read-state token of the current template: a save sends back the one
+   * its draft started from (ADR 0311).
+   */
+  readonly version: string;
   readonly current: DocumentTemplateVersion;
   readonly standardTemplate: DocumentTemplateText;
   readonly placeholders: readonly DocumentTemplatePlaceholder[];
@@ -289,6 +294,7 @@ export async function fetchDocumentTemplate(
     { params: { kind } },
   );
   return {
+    version: data.version,
     current: mapVersion(data.current, kind),
     standardTemplate: mapText(data.standard_template),
     placeholders: data.placeholders ?? [],
@@ -296,16 +302,25 @@ export async function fetchDocumentTemplate(
   };
 }
 
-/** Speichert die Vorlage als neue Version. Wirft bei Ablehnung einen ApiError. */
+/**
+ * Speichert die Vorlage als neue Version über dem Stand `version`, von dem
+ * der Entwurf ausging. Eine inzwischen gespeicherte Version lehnt das
+ * Backend mit `general.changed_since_read` ab (ADR 0311). Wirft bei
+ * Ablehnung einen ApiError.
+ */
 export async function saveDocumentTemplate(
   kind: DocumentTemplateKind,
   text: DocumentTemplateText,
+  version: string,
 ): Promise<DocumentTemplateVersion> {
   return mapVersion(
     await bffJson(
       "org",
       "POST /traeger/master-data/document-templates/{kind}/versions",
-      { params: { kind }, body: requestBody(text) },
+      {
+        params: { kind },
+        body: { ...requestBody(text), expected_version: version },
+      },
     ),
     kind,
   );

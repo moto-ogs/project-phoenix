@@ -118,7 +118,7 @@ func TestFeeNoticeNeedsTheLegalRemedyAndKeepsItsKindAfterTheRelease(t *testing.T
 		},
 		LegalRemedy: "Gegen diesen Bescheid kann innerhalb eines Monats nach Bekanntgabe Widerspruch bei {{traeger}} erhoben werden.",
 	}
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, documentTemplatesPath+"/bescheid/versions", notice)
+	rec = postTemplateVersion(t, f.traeger, f.office.token, "bescheid", notice)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	assert.True(t, documentKinds(t, f.traeger, billing).LegalRemedySet)
 	assert.False(t, kindRun(t, f.traeger, billing, billingRunPath(int64(run.ID), "")).LegalRemedyMissing)
@@ -237,7 +237,7 @@ func TestCareFeeNoticeNeedsTheLegalRemedyAndItsKindChangesTheReviewedState(t *te
 	f := newCareBillingFixture(t, "Träger Monatsbescheid")
 	school := f.office.schools[0]
 	careContract(t, f.db, f.office.organization, school, "Mia", careMonth, sjrServices()...)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	run := f.startRun(t, careMonth)
 	reviewed := f.run(t, int64(run.ID))
@@ -266,7 +266,7 @@ func TestCareFeeNoticeNeedsTheLegalRemedyAndItsKindChangesTheReviewedState(t *te
 			Body: "für {{kinder}} setzen wir für {{zeitraum}} fest:\n{{positionen}}"},
 		LegalRemedy: "Gegen diesen Bescheid ist innerhalb eines Monats Widerspruch möglich.",
 	}
-	rec = traegerJSON(t, f.traeger, answer.AccessToken, http.MethodPost, documentTemplatesPath+"/bescheid/versions", notice)
+	rec = postTemplateVersion(t, f.traeger, answer.AccessToken, "bescheid", notice)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(f.run(t, int64(run.ID))))
@@ -288,7 +288,7 @@ func TestCareReleaseRefusesALegalRemedyChangedSinceTheReview(t *testing.T) {
 	f := newCareBillingFixture(t, "Träger Belehrung Prüfung")
 	school := f.office.schools[0]
 	careContract(t, f.db, f.office.organization, school, "Mia", careMonth, sjrServices()...)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	setDocumentKind(t, f.traeger, f.office.token, "care", "fee_notice")
 
@@ -303,13 +303,13 @@ func TestCareReleaseRefusesALegalRemedyChangedSinceTheReview(t *testing.T) {
 			Body: "für {{kinder}} setzen wir für {{zeitraum}} fest:\n{{positionen}}"},
 		LegalRemedy: "Gegen diesen Bescheid ist innerhalb eines Monats Widerspruch möglich.",
 	}
-	rec = traegerJSON(t, f.traeger, answer.AccessToken, http.MethodPost, documentTemplatesPath+"/bescheid/versions", notice)
+	rec = postTemplateVersion(t, f.traeger, answer.AccessToken, "bescheid", notice)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 
 	run := f.startRun(t, careMonth)
 	reviewed := f.run(t, int64(run.ID))
 	notice.LegalRemedy = "Gegen diesen Bescheid ist innerhalb von zwei Wochen Widerspruch möglich."
-	rec = traegerJSON(t, f.traeger, answer.AccessToken, http.MethodPost, documentTemplatesPath+"/bescheid/versions", notice)
+	rec = postTemplateVersion(t, f.traeger, answer.AccessToken, "bescheid", notice)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(reviewed))

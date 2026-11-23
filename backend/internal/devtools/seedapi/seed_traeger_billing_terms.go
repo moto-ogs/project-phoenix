@@ -84,11 +84,34 @@ func seedFamilyBilling(client *Client, auth AuthRef, invoices []seedRunInvoice) 
 		if deviation["recipient_kind"] == "both" {
 			deviation["second_last_name"] = invoices[i].Recipient.LastName
 		}
+		version, err := familyBillingVersion(client, auth, invoices[i].ContractID)
+		if err != nil {
+			return err
+		}
+		deviation["expected_version"] = version
 		if _, err := client.PutWithAuth(auth, "/traeger/family-billing/", deviation); err != nil {
 			return fmt.Errorf("keep the deviation of a family: %w", err)
 		}
 	}
 	return nil
+}
+
+// familyBillingVersion reads the version of the deviation of a contract's
+// family, which its save sends back (ADR 0311).
+func familyBillingVersion(client *Client, auth AuthRef, contractID ident.ID) (string, error) {
+	raw, err := client.GetWithAuth(auth, fmt.Sprintf("/traeger/family-billing/contracts/%s", contractID))
+	if err != nil {
+		return "", fmt.Errorf("read the deviation of a family: %w", err)
+	}
+	var envelope struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(raw, &envelope); err != nil {
+		return "", fmt.Errorf("read the deviation of a family: %w", err)
+	}
+	return envelope.Data.Version, nil
 }
 
 // seedSEPAMandates gives the demo Träger its creditor identifier (the

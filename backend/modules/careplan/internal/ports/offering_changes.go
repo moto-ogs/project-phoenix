@@ -71,6 +71,9 @@ type OfferingChangeEnrollment interface {
 	Phase(ctx context.Context, id int64) (*BookingPhase, error)
 	// SelectionsAt lists the child's selections in force on the date.
 	SelectionsAt(ctx context.Context, childID int64, on calendar.Date) ([]careplan.BookedOffering, error)
+	// SelectionHistory lists every dated selection of the child. The capacity
+	// check reads the end a change keeps from it, as the change does.
+	SelectionHistory(ctx context.Context, childID int64) ([]careplan.BookedOffering, error)
 	// EffectiveSelectionsAt lists the selections in force on each child's
 	// date.
 	EffectiveSelectionsAt(ctx context.Context, dates map[int64]calendar.Date) ([]careplan.BookedOffering, error)

@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
@@ -34,8 +35,9 @@ func (f *fakeParentService) GrantSEPAMandate(_ context.Context, accountID, organ
 	return f.sepaView, f.sepaErr
 }
 
-func (f *fakeParentService) RevokeSEPAMandate(_ context.Context, accountID, organizationID, contractID int64) (parentService.SEPAMandateView, error) {
+func (f *fakeParentService) RevokeSEPAMandate(_ context.Context, accountID, organizationID, contractID int64, expectedVersion string) (parentService.SEPAMandateView, error) {
 	f.gotDocumentsAccount, f.gotDocumentOrganization, f.gotDocumentID, f.gotSEPACall = accountID, organizationID, contractID, "revoke"
+	f.gotSEPAVersion = expectedVersion
 	return f.sepaView, f.sepaErr
 }
 
@@ -89,6 +91,36 @@ func TestSEPAMandateRoutes_ReachTheirOperation(t *testing.T) {
 		require.Equal(t, http.StatusOK, w.Code, tc.suffix)
 		assert.Equal(t, tc.call, parent.gotSEPACall)
 	}
+}
+
+// The revocation names the mandate the parents read: its version travels
+// to the service, and a mandate given since answers 409
+// general.changed_since_read (ADR 0311).
+func TestRevokeSEPAMandate_SendsTheReadVersion(t *testing.T) {
+	t.Parallel()
+	testpkg.SetupTestDB(t)
+	parent := &fakeParentService{}
+	path := "/parent/me/documents/4/contracts/31/sepa-mandate/revoke"
+	w := serveSEPAMandate(t, &Resource{ParentService: parent}, http.MethodPost, path, `{"expected_version":"v-5"}`, 7301)
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	assert.Equal(t, "v-5", parent.gotSEPAVersion)
+
+	w = serveSEPAMandate(t, &Resource{ParentService: &fakeParentService{sepaErr: readstate.ErrChanged}}, http.MethodPost, path,
+		`{"expected_version":"v-4"}`, 7301)
+	assert.Equal(t, http.StatusConflict, w.Code)
+	assert.Contains(t, w.Body.String(), `"code":"general.changed_since_read"`)
+
+	w = serveSEPAMandate(t, &Resource{ParentService: &fakeParentService{}}, http.MethodPost, path, `{"expected_version":`, 7301)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	// An older page revokes without a body: the service sees an empty
+	// token and refuses it like a changed read, never as invalid input.
+	empty := &fakeParentService{sepaErr: readstate.ErrChanged, gotSEPAVersion: "unset"}
+	w = serveSEPAMandate(t, &Resource{ParentService: empty}, http.MethodPost, path, "", 7301)
+	assert.Equal(t, http.StatusConflict, w.Code, w.Body.String())
+	assert.Contains(t, w.Body.String(), `"code":"general.changed_since_read"`)
+	assert.Equal(t, "revoke", empty.gotSEPACall)
+	assert.Empty(t, empty.gotSEPAVersion, "no body is an empty token")
 }
 
 // Every refusal answers its registered code, and none repeats the IBAN of

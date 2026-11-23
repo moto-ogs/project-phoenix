@@ -19,6 +19,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // fakeParentMandateStore keeps the mandates, proofs and trail of one Träger
@@ -32,6 +33,9 @@ type fakeParentMandateStore struct {
 	events       []string
 	listCalls    int
 	consentReads int
+	// beforeLock runs before SEPAMandate locks a row: a write of another
+	// request that commits between finding a mandate and locking it.
+	beforeLock func()
 }
 
 func (s *fakeParentMandateStore) SEPACreditor(context.Context, int64) (*parentbilling.SEPACreditor, error) {
@@ -49,7 +53,10 @@ func (s *fakeParentMandateStore) SEPAMandates(_ context.Context, _ int64, family
 	return out, nil
 }
 
-func (s *fakeParentMandateStore) SEPAMandate(_ context.Context, _ int64, id int64, _ bool) (parentbilling.SEPAMandate, error) {
+func (s *fakeParentMandateStore) SEPAMandate(_ context.Context, _ int64, id int64, lock bool) (parentbilling.SEPAMandate, error) {
+	if lock && s.beforeLock != nil {
+		s.beforeLock()
+	}
 	for _, mandate := range s.mandates {
 		if mandate.ID == ident.ID(id) {
 			return mandate, nil
@@ -362,7 +369,7 @@ func TestParentMandateSwitchAndRevocation(t *testing.T) {
 	view, err := mandates.ParentSEPAMandate(ctx, 3, mandateReader)
 	require.NoError(t, err)
 	assert.Equal(t, parentbilling.ParentMandate{}, view)
-	_, err = mandates.RevokeParentSEPAMandate(ctx, 3, mandateReader)
+	_, err = mandates.RevokeParentSEPAMandate(ctx, 3, mandateReader, "")
 	require.ErrorIs(t, err, parentbilling.ErrOnlineMandateDisabled)
 	_, err = mandates.PreviewParentSEPAMandate(ctx, 3, mandateReader, input)
 	require.ErrorIs(t, err, parentbilling.ErrOnlineMandateDisabled)
@@ -373,7 +380,7 @@ func TestParentMandateSwitchAndRevocation(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, view.Mandate)
 	assert.Equal(t, "Eva Muster", view.Mandate.AccountHolder)
-	revoked, err := mandates.RevokeParentSEPAMandate(ctx, 3, mandateReader)
+	revoked, err := mandates.RevokeParentSEPAMandate(ctx, 3, mandateReader, view.Mandate.Version)
 	require.NoError(t, err)
 	require.NotNil(t, revoked.Mandate.RevokedOn)
 	assert.Equal(t, mandateDay, *revoked.Mandate.RevokedOn)
@@ -381,8 +388,80 @@ func TestParentMandateSwitchAndRevocation(t *testing.T) {
 
 	other := mandateReader
 	other.Email = "andere@example.org"
-	_, err = mandates.RevokeParentSEPAMandate(ctx, 3, other)
+	_, err = mandates.RevokeParentSEPAMandate(ctx, 3, other, view.Mandate.Version)
 	require.ErrorIs(t, err, parentbilling.ErrSEPAMandateNotFound, "another family has no mandate here")
+}
+
+// grantParentMandate previews and gives a mandate for the reader.
+func grantParentMandate(t *testing.T, mandates *ParentMandates, reader parentbilling.ParentMandateReader) parentbilling.ParentMandate {
+	t.Helper()
+	ctx := context.Background()
+	input := parentInput()
+	text, err := mandates.PreviewParentSEPAMandate(ctx, 3, reader, input)
+	require.NoError(t, err)
+	input.Reference, input.TextSHA256, input.AccountToken = text.Reference, text.TextSHA256, text.AccountToken
+	granted, err := mandates.GrantParentSEPAMandate(ctx, 3, reader, input)
+	require.NoError(t, err)
+	require.NotNil(t, granted.Mandate)
+	return granted
+}
+
+// A parent revokes the mandate they read (ADR 0311): when another member of
+// the family revoked it and gave a new one since, the revocation is refused
+// and the new mandate stays in force; with the version of the new mandate
+// it goes through.
+func TestParentMandateRevocationNeedsTheReadMandate(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	mandates, store, _ := newParentMandatesForTest()
+	grantParentMandate(t, mandates, mandateReader)
+	read, err := mandates.ParentSEPAMandate(ctx, 3, mandateReader)
+	require.NoError(t, err)
+	require.NotNil(t, read.Mandate)
+	require.NotEmpty(t, read.Mandate.Version)
+
+	partner := mandateReader
+	partner.AccountID = mandateReader.AccountID + 1
+	_, err = mandates.RevokeParentSEPAMandate(ctx, 3, partner, read.Mandate.Version)
+	require.NoError(t, err)
+	replaced := grantParentMandate(t, mandates, partner)
+	require.NotEqual(t, read.Mandate.Version, replaced.Mandate.Version)
+	events := slices.Clone(store.events)
+
+	for name, expected := range map[string]string{"read before the replacement": read.Mandate.Version, "no version": ""} {
+		_, err = mandates.RevokeParentSEPAMandate(ctx, 3, mandateReader, expected)
+		require.ErrorIs(t, err, readstate.ErrChanged, name)
+	}
+	assert.Equal(t, events, store.events, "a refused revocation records nothing")
+	require.Nil(t, store.mandates[1].RevokedOn, "the new mandate stays in force")
+
+	revoked, err := mandates.RevokeParentSEPAMandate(ctx, 3, mandateReader, replaced.Mandate.Version)
+	require.NoError(t, err)
+	require.NotNil(t, revoked.Mandate.RevokedOn)
+	assert.Equal(t, replaced.Mandate.ID, revoked.Mandate.ID)
+}
+
+// Two revocations of the same read race: the second locks the row after
+// the first committed. The row keeps its identity, so it is refused as
+// changed since the read (409), not as a missing mandate, and records
+// nothing.
+func TestParentMandateRevocationRacingAnotherIsChanged(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	mandates, store, _ := newParentMandatesForTest()
+	grantParentMandate(t, mandates, mandateReader)
+	read, err := mandates.ParentSEPAMandate(ctx, 3, mandateReader)
+	require.NoError(t, err)
+	require.NotNil(t, read.Mandate)
+	events := slices.Clone(store.events)
+	store.beforeLock = func() {
+		revokedOn := mandateDay
+		store.mandates[0].RevokedOn = &revokedOn
+	}
+
+	_, err = mandates.RevokeParentSEPAMandate(ctx, 3, mandateReader, read.Mandate.Version)
+	require.ErrorIs(t, err, readstate.ErrChanged)
+	assert.Equal(t, events, store.events, "a refused revocation records nothing")
 }
 
 func TestParentMandateProofSurvivesAccountChanges(t *testing.T) {
@@ -437,7 +516,7 @@ func TestParentMandateShowsCollectionEligibility(t *testing.T) {
 			require.NotNil(t, view.Mandate)
 			assert.Equal(t, name == "eligible", view.Mandate.CollectionEligible)
 			assert.Equal(t, text.Text, view.Mandate.Proof.Text)
-			_, err = mandates.RevokeParentSEPAMandate(ctx, 3, mandateReader)
+			_, err = mandates.RevokeParentSEPAMandate(ctx, 3, mandateReader, view.Mandate.Version)
 			require.NoError(t, err, "ineligible mandates can still be revoked")
 		})
 	}

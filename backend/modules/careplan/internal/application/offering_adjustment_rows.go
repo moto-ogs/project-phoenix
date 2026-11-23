@@ -21,18 +21,28 @@ type scheduledOfferingReplacement struct {
 }
 
 func (m *BookingMaterialization) persistOfferingAdjustment(ctx context.Context, work *offeringAdjustmentWork) error {
-	history, err := m.correctedSelectionHistory(ctx, work)
-	if err != nil {
-		return err
+	phaseEnd := work.phase.ServiceEnd.AddDays(1)
+	var stored []*careplan.BookedOffering
+	// An undated correction schedules the stored later changes again; a
+	// change with a date reads them only for an end it may keep.
+	if work.effectiveFrom == nil || endsBeforePhase(work.beforeLinks, phaseEnd) {
+		history, err := m.deps.Enrollment.SelectionHistory(ctx, work.child.ID)
+		if err != nil {
+			return fmt.Errorf("decision: list stored child offerings: %w", err)
+		}
+		stored = bookedOfferingPointers(history)
 	}
-	if work.effectiveFrom == nil {
-		keepBookingEnds(work.replacement, work.beforeLinks, history, work.offeringByID, work.phase.ServiceEnd.AddDays(1))
-	}
-	scheduled := scheduledOfferingReplacements(history, work.selectionDate)
+	// A change with a date extends nothing (validateOfferingAdjustmentInput),
+	// so it keeps every end it finds.
+	work.keptEnds = keepUnextendedBookingEnds(work, stored)
 	phase := work.phase.OfferingPhase
-	if start := correctionStart(work, history); len(scheduled) == 0 && start.After(phase.ServiceStart) {
-		phase.ServiceStart = start
-		work.replacement = replacementFrom(work.replacement, start)
+	var scheduled []scheduledOfferingReplacement
+	if work.effectiveFrom == nil {
+		scheduled = scheduledOfferingReplacements(stored, work.selectionDate)
+		if start := correctionStart(work, stored); len(scheduled) == 0 && start.After(phase.ServiceStart) {
+			phase.ServiceStart = start
+			work.replacement = replacementFrom(work.replacement, start)
+		}
 	}
 	if err := m.persistOfferingBookings(ctx, work, scheduled, phase); err != nil {
 		return err
@@ -42,7 +52,7 @@ func (m *BookingMaterialization) persistOfferingAdjustment(ctx context.Context, 
 		materializeFrom = &work.selectionDate
 	}
 	studentID := *work.child.CreatedStudentID
-	adjusted := adjustedRoster{requestChildID: work.child.ID, studentID: studentID, phase: phase, toBookingEnd: work.effectiveFrom == nil}
+	adjusted := adjustedRoster{requestChildID: work.child.ID, studentID: studentID, phase: phase, toBookingEnd: true}
 	if err := m.rematerializeAdjustedEnrollments(ctx, adjusted, work.beforeLinks, work.replacement, materializeFrom); err != nil {
 		return err
 	}
@@ -51,201 +61,6 @@ func (m *BookingMaterialization) persistOfferingAdjustment(ctx context.Context, 
 	for _, future := range scheduled {
 		if err := m.splitAdjustedEnrollments(ctx, adjusted, future.Rows, future.EffectiveFrom); err != nil {
 			return err
-		}
-	}
-	return nil
-}
-
-// correctedSelectionHistory reads every dated selection of the child before
-// an undated staff correction rewrites the current one; a dated switch reads
-// none.
-func (m *BookingMaterialization) correctedSelectionHistory(ctx context.Context, work *offeringAdjustmentWork) ([]*careplan.BookedOffering, error) {
-	if work.effectiveFrom != nil {
-		return nil, nil
-	}
-	history, err := m.deps.Enrollment.SelectionHistory(ctx, work.child.ID)
-	if err != nil {
-		return nil, fmt.Errorf("decision: list scheduled child offerings: %w", err)
-	}
-	return bookedOfferingPointers(history), nil
-}
-
-// keepBookingEnds gives an offering that stays chosen in an undated
-// correction the end its booking has (#7909): the correction changes what
-// the office changed, and an offering booked until February is not booked
-// to the end of the phase because a weekday changed. The end is the last
-// day of the offering's stored bookings that follow each other from the one
-// in effect. An end on which another stored booking of the child starts is
-// not the end of the care but the start of a scheduled change, which the
-// correction schedules again and which closes the booking there; the
-// offering is then booked as a new one. An offering the correction adds is
-// booked as before. A dated switch keeps its own rules (#7928: its
-// capacity check reads the phase end). The care end of the child record,
-// set on the rows already, still wins when it is earlier.
-//
-// A row of automatic days only (a co-booking or the required lunch) ends
-// with the last of the rows that add its days (coBookingEnds), and keeps its
-// own end only when no row of the selection adds one.
-func keepBookingEnds(replacement, before, stored []*careplan.BookedOffering, offerings map[int64]*careplan.CareOffering, phaseEnd calendar.Date) {
-	ends := storedBookingEnds(before, stored, phaseEnd)
-	for _, row := range replacement {
-		if end, ok := ends[row.CareOfferingID]; ok && !automaticOnly(row) {
-			endAtMost(row, end)
-		}
-	}
-	coBooked := coBookingEnds(replacement, offerings)
-	for _, row := range replacement {
-		if !automaticOnly(row) {
-			continue
-		}
-		if end, derived := coBooked[row]; derived {
-			if end != nil {
-				endAtMost(row, *end)
-			}
-		} else if end, ok := ends[row.CareOfferingID]; ok {
-			endAtMost(row, end)
-		}
-	}
-}
-
-// storedBookingEnds is the end of each booking in effect that ends before
-// the phase does.
-func storedBookingEnds(before, stored []*careplan.BookedOffering, phaseEnd calendar.Date) map[int64]calendar.Date {
-	ends := make(map[int64]calendar.Date, len(before))
-	for _, link := range before {
-		if end, ok := bookingEnd(link, stored); ok && end.Before(phaseEnd) {
-			ends[link.CareOfferingID] = end
-		}
-	}
-	return ends
-}
-
-func automaticOnly(row *careplan.BookedOffering) bool {
-	return len(row.ManualSelectedDays) == 0 && len(row.AutomaticSelectedDays) > 0
-}
-
-// coBookingEnds is the end of each row of automatic days only: the latest
-// end of the rows that add one of its days, by the rules of the selection
-// engine (a trigger's days, or the care days of a required lunch). A nil
-// end is open. The ends grow from none, so co-bookings that only add each
-// other's days hold nothing; a row nothing adds a day to is left out.
-func coBookingEnds(replacement []*careplan.BookedOffering, offerings map[int64]*careplan.CareOffering) map[*careplan.BookedOffering]*calendar.Date {
-	sources := make(map[*careplan.BookedOffering][]*careplan.BookedOffering)
-	for _, row := range replacement {
-		if automaticOnly(row) {
-			sources[row] = addingRows(row, replacement, offerings)
-		}
-	}
-	ends := make(map[*careplan.BookedOffering]*calendar.Date, len(sources))
-	for range len(sources) + 1 {
-		for _, row := range replacement {
-			if from, ok := sources[row]; ok {
-				if end, covered := latestEnd(from, sources, ends); covered {
-					ends[row] = end
-				}
-			}
-		}
-	}
-	return ends
-}
-
-// addingRows are the rows of the selection that add one of row's days.
-func addingRows(row *careplan.BookedOffering, rows []*careplan.BookedOffering, offerings map[int64]*careplan.CareOffering) []*careplan.BookedOffering {
-	target := offerings[row.CareOfferingID]
-	if target == nil {
-		return nil
-	}
-	lunch := target.IsRequired && target.IncludesLunch && target.DaysOfWeekMode == daysOfWeekModeParentChoice
-	var result []*careplan.BookedOffering
-	for _, other := range rows {
-		source := offerings[other.CareOfferingID]
-		if other == row || source == nil {
-			continue
-		}
-		adds := slices.Contains(target.AutoAddTriggerOfferingIDs, other.CareOfferingID) || (lunch && source.CountsAsCare)
-		if adds && daysOverlap(contributedDays(source, other), target.AvailableDays) {
-			result = append(result, other)
-		}
-	}
-	return result
-}
-
-// contributedDays are the days a selected offering passes on to a rule.
-func contributedDays(offering *careplan.CareOffering, row *careplan.BookedOffering) []string {
-	if offering.DaysOfWeekMode == daysOfWeekModeFixed {
-		return offering.AvailableDays
-	}
-	return row.SelectedDays
-}
-
-func daysOverlap(days, available []string) bool {
-	for _, day := range days {
-		if slices.Contains(available, day) {
-			return true
-		}
-	}
-	return false
-}
-
-// latestEnd is the last end of the rows that cover any day yet: a row of
-// its own days by its end, a co-booking by the end found so far. Open wins.
-func latestEnd(rows []*careplan.BookedOffering, sources map[*careplan.BookedOffering][]*careplan.BookedOffering,
-	found map[*careplan.BookedOffering]*calendar.Date) (*calendar.Date, bool) {
-	var latest *calendar.Date
-	covered := false
-	for _, row := range rows {
-		end, ok := row.ValidUntil, true
-		if _, derived := sources[row]; derived {
-			end, ok = found[row]
-		}
-		if !ok {
-			continue
-		}
-		if end == nil {
-			return nil, true
-		}
-		if !covered || end.After(*latest) {
-			latest = end
-		}
-		covered = true
-	}
-	return latest, covered
-}
-
-func endAtMost(row *careplan.BookedOffering, end calendar.Date) {
-	if row.ValidUntil == nil || end.Before(*row.ValidUntil) {
-		row.ValidUntil = &end
-	}
-}
-
-// bookingEnd follows the offering's stored bookings from link to the last
-// one that continues it and reports where that one ends, unless the care
-// goes on there with another booking of the child.
-func bookingEnd(link *careplan.BookedOffering, stored []*careplan.BookedOffering) (calendar.Date, bool) {
-	if link == nil || link.ValidUntil == nil {
-		return "", false
-	}
-	end := *link.ValidUntil
-	for {
-		next := startingOn(stored, end, func(row *careplan.BookedOffering) bool { return row.CareOfferingID == link.CareOfferingID })
-		if next == nil {
-			break
-		}
-		if next.ValidUntil == nil {
-			return "", false
-		}
-		end = *next.ValidUntil
-	}
-	if startingOn(stored, end, func(*careplan.BookedOffering) bool { return true }) != nil {
-		return "", false
-	}
-	return end, true
-}
-
-func startingOn(rows []*careplan.BookedOffering, day calendar.Date, match func(*careplan.BookedOffering) bool) *careplan.BookedOffering {
-	for _, row := range rows {
-		if row != nil && row.ValidFrom != nil && *row.ValidFrom == day && match(row) {
-			return row
 		}
 	}
 	return nil
@@ -389,8 +204,9 @@ type adjustedRoster struct {
 	studentID      int64
 	phase          careplan.OfferingPhase
 	// toBookingEnd lets a kept row follow a booking that ends earlier: set
-	// for the selection of an undated correction, whose ends are those of
-	// the bookings (keepBookingEnds), not the start of a later change.
+	// for the selection of a change, whose ends are those of the bookings
+	// (keepBookingEnds), not for a change an undated correction schedules
+	// again, whose end is the start of the next one.
 	toBookingEnd bool
 }
 
@@ -682,9 +498,9 @@ func (m *BookingMaterialization) reconcileAdjustedEnrollment(
 // draft itself may reach — the phase end, clamped by the sourced segment's
 // envelope and the offering-link window (#2147 review). Extending a capped
 // split predecessor back to the phase end would restore coverage past the
-// split and overlap its successor. In an undated correction it is shortened
-// to a booking that ends before the phase (#7909): a co-booking whose
-// trigger ends earlier ends there on the roster too.
+// split and overlap its successor. For the selection of a change it is
+// shortened to a booking that ends before the phase (#7909, #7928): a
+// co-booking whose trigger ends earlier ends there on the roster too.
 func (m *BookingMaterialization) retainAdjustedEnrollment(ctx context.Context, row ports.RosterEnrollment, draft *careEnrollmentDraft, adjusted adjustedRoster) error {
 	phase := adjusted.phase
 	draftEndExclusive := careDraftValidUntil(draft, phase)

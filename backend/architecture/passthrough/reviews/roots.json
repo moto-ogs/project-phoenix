@@ -4367,11 +4367,6 @@
     },
     {
       "decision": "0090",
-      "id": "roots/owners/guardianDirectory.FindStudents",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "roots/owners/guardianDirectory.LinkGuardianProfileToAccount",
       "reason": "Finite named forwarding debt under ADR 0090, not a new floor; removal/deepening pending."
     },
@@ -4563,6 +4558,11 @@
     {
       "decision": "0090",
       "id": "roots/owners/offeringChangeEnrollment.Request",
+      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0090",
+      "id": "roots/owners/offeringChangeEnrollment.SelectionHistory",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {

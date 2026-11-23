@@ -32,6 +32,10 @@ type offeringAdjustmentWork struct {
 	overridden                             []careplan.OfferingOverride
 	authoritative, afterHasCareDays        bool
 	isCompleteWithdrawal                   bool
+	// keptEnds are the stored ends a change found before the office's
+	// extensions (#7929; only an undated correction extends); see
+	// keepUnextendedBookingEnds.
+	keptEnds map[int64]calendar.Date
 }
 
 func (m *BookingMaterialization) AdjustOfferings(ctx context.Context, in careplan.OfferingAdjustment) (*careplan.OfferingAdjustmentResult, error) {
@@ -44,6 +48,9 @@ func (m *BookingMaterialization) AdjustOfferings(ctx context.Context, in carepla
 		return nil, err
 	}
 	if err := m.persistOfferingAdjustment(ctx, work); err != nil {
+		return nil, err
+	}
+	if err := recordExtendedEnds(work); err != nil {
 		return nil, err
 	}
 	adjustmentID, err := m.recordOfferingAdjustment(ctx, work)
@@ -104,6 +111,9 @@ func (m *BookingMaterialization) validateOfferingAdjustmentInput(ctx context.Con
 	reason := strings.TrimSpace(in.Reason)
 	if reason == "" {
 		return "", fmt.Errorf("%w: reason is required", careplan.ErrOfferingAdjustmentInvalid)
+	}
+	if in.EffectiveFrom != nil && len(extendedOfferings(in.Offerings)) > 0 {
+		return "", fmt.Errorf("%w: ein Ende lässt sich nur in einer Korrektur ohne Datum verlängern", careplan.ErrOfferingAdjustmentInvalid)
 	}
 	return reason, nil
 }
@@ -210,7 +220,7 @@ func (m *BookingMaterialization) loadOfferingAdjustmentCatalog(ctx context.Conte
 		beforeOfferingByID = offeringsByID(beforeOfferings)
 		addOfferingMap(offeringByID, beforeOfferingByID)
 	}
-	beforeJSON, err := adjustmentSnapshotJSON(beforeLinks, offeringByID)
+	beforeJSON, err := adjustmentSnapshotJSON(beforeLinks, offeringByID, nil)
 	if err != nil {
 		return err
 	}

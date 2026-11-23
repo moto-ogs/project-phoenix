@@ -183,6 +183,7 @@ export const PlaceholderSchema: z.ZodType<Placeholder, unknown> = object<Placeho
 
 /** Go: organizationtenancy.TraegerDocumentTemplateDetail */
 export interface TraegerDocumentTemplateDetail {
+  version: string;
   current: TraegerDocumentTemplate;
   standard_template: Template;
   placeholders: Placeholder[] | null;
@@ -190,6 +191,7 @@ export interface TraegerDocumentTemplateDetail {
 }
 
 export const TraegerDocumentTemplateDetailSchema: z.ZodType<TraegerDocumentTemplateDetail, unknown> = object<TraegerDocumentTemplateDetail>({
+  version: str,
   current: TraegerDocumentTemplateSchema,
   standard_template: TemplateSchema,
   placeholders: nullable(arr(PlaceholderSchema)),
@@ -220,6 +222,7 @@ export interface TemplateRequest {
   closing?: string;
   invoice?: InvoiceLayoutRequest;
   legal_remedy?: string;
+  expected_version?: string;
 }
 
 /** Go: templates.Row */

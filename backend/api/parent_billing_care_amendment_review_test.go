@@ -87,7 +87,7 @@ func TestCareRemovalOfALongModuleIsStoredExportedAndKept(t *testing.T) {
 			price["module_name"] = long
 		}
 	}
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, prices)
+	rec := putCarePriceList(t, f.traeger, f.office.token, prices)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	run := f.startRun(t, careMonth)
 	monday := amendedInvoice(t, f.amended(t, int64(run.ID)), mia).Positions[0]

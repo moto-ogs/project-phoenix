@@ -52,8 +52,14 @@ function record(value: unknown): Record<string, unknown> {
 export type DecisionStatus =
   "approved" | "waitlisted" | "rejected" | "under_review";
 
+/** One offering of a correction; `extend_to_phase_end` extends a limited booking (#7929). */
+export type AdminOfferingChoice = Omit<
+  enrollmentContract.AdminUpdateOfferingSelection,
+  "offering_id" | "selected_days"
+> & { offering_id: string; selected_days?: string[] };
+
 export interface UpdateAdminChildOfferingsInput {
-  offerings: Array<{ offering_id: string; selected_days?: string[] }>;
+  offerings: AdminOfferingChoice[];
   reason: string;
   completeWithdrawalConfirmed?: boolean;
 }
@@ -109,6 +115,8 @@ interface AdminOfferingAdjustmentSnapshot {
   manual_selected_days?: string[];
   automatic_selected_days?: string[];
   available_days?: string[];
+  /** Last booked day of an offering the office extended (#7929), after snapshot only. */
+  extended_until?: string;
 }
 
 export type AdminOfferingAdjustment = Omit<

@@ -66,7 +66,7 @@ func TestFamilyChildrenImportAddsTheNumbersOfAFile(t *testing.T) {
 	// Ida and Max are siblings with one address.
 	_, err = f.db.ExecContext(ctx, `UPDATE care_contract.contract_parties SET email = 'ida.max@example.org' WHERE contract_id IN (?, ?)`, ida, max)
 	require.NoError(t, err)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	f.saveRule(t, careRule("sibling", "Geschwister mit Familie", []int64{school},
 		map[string]any{"sibling_from_child": 2, "discount_basis_points": 5000, "counts_family_children": true}))

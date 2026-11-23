@@ -122,3 +122,164 @@ func (s *Store) SetGuardianStudentPermissions(ctx context.Context, tenantID, rel
 	stats.Rows, _ = result.RowsAffected()
 	return stats.Rows > 0, stats, nil
 }
+
+// guardianCareNoticeRow is the parent step of one relationship (#7760).
+type guardianCareNoticeRow struct {
+	RelationshipID int64   `bun:"relationship_id"`
+	Notified       bool    `bun:"notified"`
+	PortalAccess   bool    `bun:"portal_access"`
+	AccountActive  bool    `bun:"account_active"`
+	PortalMember   bool    `bun:"portal_member"`
+	Email          *string `bun:"email"`
+	PortalLocale   *string `bun:"portal_locale"`
+}
+
+// guardianCareNoticesQuery reads the parent step of the relationships in one
+// statement. parent_portal.access counts only as stored true, as the parent
+// announcements read it. The account is a member of the school's parents
+// portal when its mapping is active and it holds the guardian role there,
+// the condition of the parents portal's sign-in (guardianMembershipsQuery).
+// An erased account reads as inactive and without address.
+const guardianCareNoticesQuery = `SELECT gsa.relationship_id, gsa.care_notice_sent_at IS NOT NULL AS notified,
+		gsa.permissions @> '{"parent_portal.access": true}'::jsonb AS portal_access,
+		COALESCE(a.active AND a.personal_data_erased_at IS NULL, false) AS account_active,
+		EXISTS (SELECT 1 FROM auth.account_tenants at
+			JOIN auth.account_roles ar ON ar.account_id = at.account_id AND ar.tenant_id = at.tenant_id
+			JOIN auth.roles r ON r.id = ar.role_id AND LOWER(r.name) = 'guardian'
+			WHERE at.account_id = gsa.account_id AND at.tenant_id = gsa.tenant_id AND at.status = 'active') AS portal_member,
+		CASE WHEN a.personal_data_erased_at IS NULL THEN a.email END AS email, a.portal_locale
+	FROM auth.guardian_student_access gsa
+	LEFT JOIN auth.accounts a ON a.id = gsa.account_id
+	WHERE gsa.tenant_id = ? AND gsa.relationship_id IN (?)
+	ORDER BY gsa.relationship_id`
+
+// guardianCareNoticesLockedQuery holds the access rows until the caller's
+// transaction ends.
+const guardianCareNoticesLockedQuery = guardianCareNoticesQuery + ` FOR SHARE OF gsa`
+
+// ListGuardianCareNotices reads the parent step of the relationships of the
+// school in scope in one statement. lock takes a share lock of the access
+// rows until the caller's transaction ends: a concurrent permission change
+// waits for the run, or the run reads it once committed.
+func (s *Store) ListGuardianCareNotices(ctx context.Context, relationshipIDs []int64, lock bool) (map[int64]domain.GuardianCareNoticeState, error) {
+	states := make(map[int64]domain.GuardianCareNoticeState, len(relationshipIDs))
+	if len(relationshipIDs) == 0 {
+		return states, nil
+	}
+	tenantID := s.scope(ctx).TenantID
+	db, err := s.guardianStudentAccessDatabase(ctx, tenantID, "list guardian care notices")
+	if err != nil {
+		return nil, err
+	}
+	var rows []guardianCareNoticeRow
+	if lock {
+		err = db.NewRaw(guardianCareNoticesLockedQuery, tenantID, bun.List(relationshipIDs)).Scan(ctx, &rows)
+	} else {
+		err = db.NewRaw(guardianCareNoticesQuery, tenantID, bun.List(relationshipIDs)).Scan(ctx, &rows)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("identity access postgres: list guardian care notices: %w", err)
+	}
+	for _, row := range rows {
+		state := domain.GuardianCareNoticeState{
+			RelationshipID: row.RelationshipID, Notified: row.Notified, PortalAccess: row.PortalAccess,
+			AccountActive: row.AccountActive, PortalMember: row.PortalMember,
+		}
+		if row.Email != nil {
+			state.Email = *row.Email
+		}
+		if row.PortalLocale != nil {
+			state.Locale = *row.PortalLocale
+		}
+		states[row.RelationshipID] = state
+	}
+	return states, nil
+}
+
+// bulkInviteAccountsLockQuery locks the accounts a bulk invitation may grant
+// access to, in id order, in the mode the grant's restoration of a school
+// mapping takes (EnsureActiveTenantMapping: FOR NO KEY UPDATE). Holding it
+// from the start, the run never upgrades a weaker hold on an account; a run
+// of another school that shares the account waits for this one. The lock
+// still admits the KEY SHARE holds of the parent guards. Accounts are also
+// found by the profiles' addresses at the moment of the lock, so an account
+// registered after the run read the addresses is locked here, in order, and
+// not later inside the loop.
+const bulkInviteAccountsLockQuery = `SELECT id FROM auth.accounts
+	WHERE (id IN (?) OR LOWER(email) IN (?)) AND personal_data_erased_at IS NULL
+	ORDER BY id FOR NO KEY UPDATE`
+
+// LockBulkInviteAccounts locks the accounts, by id and by address, until the
+// caller's transaction ends.
+func (s *Store) LockBulkInviteAccounts(ctx context.Context, accountIDs []int64, emails []string) error {
+	if len(accountIDs) == 0 && len(emails) == 0 {
+		return nil
+	}
+	if len(accountIDs) == 0 {
+		accountIDs = []int64{0}
+	}
+	if len(emails) == 0 {
+		emails = []string{""}
+	}
+	db, err := s.database(ctx)
+	if err != nil {
+		return err
+	}
+	var ids []int64
+	if err := db.NewRaw(bulkInviteAccountsLockQuery, bun.List(accountIDs), bun.List(emails)).Scan(ctx, &ids); err != nil {
+		return fmt.Errorf("identity access postgres: lock bulk invitation accounts: %w", err)
+	}
+	return nil
+}
+
+// guardianNoticeMembershipLockQuery pins the school's active mapping and the
+// guardian role rows of the accounts: what portal_member reads (#7760). A
+// revocation that removes the role and deactivates the mapping waits for the
+// run; an account without them is not eligible and has nothing to pin. The
+// grant later in the run writes neither row: it holds an active mapping
+// FOR SHARE (held already) and inserts a missing role, leaving an existing
+// one alone.
+const guardianNoticeMembershipLockQuery = `SELECT at.account_id FROM auth.account_tenants at
+	JOIN auth.account_roles ar ON ar.account_id = at.account_id AND ar.tenant_id = at.tenant_id
+	JOIN auth.roles r ON r.id = ar.role_id AND LOWER(r.name) = 'guardian'
+	WHERE at.account_id IN (?) AND at.tenant_id = ? AND at.status = 'active'
+	ORDER BY at.account_id, ar.role_id FOR SHARE OF at, ar`
+
+// LockGuardianNoticeMemberships pins the accounts' membership of the
+// school's parents portal until the caller's transaction ends (#7760).
+func (s *Store) LockGuardianNoticeMemberships(ctx context.Context, accountIDs []int64) error {
+	if len(accountIDs) == 0 {
+		return nil
+	}
+	tenantID := s.scope(ctx).TenantID
+	db, err := s.guardianStudentAccessDatabase(ctx, tenantID, "lock guardian notice memberships")
+	if err != nil {
+		return err
+	}
+	var ids []int64
+	if err := db.NewRaw(guardianNoticeMembershipLockQuery, bun.List(accountIDs), tenantID).Scan(ctx, &ids); err != nil {
+		return fmt.Errorf("identity access postgres: lock guardian notice memberships: %w", err)
+	}
+	return nil
+}
+
+// MarkGuardianCareNoticesSent stamps the relationships of the school in
+// scope whose care notice the caller's transaction queued. A stamp already
+// set stays: it records the first notice.
+func (s *Store) MarkGuardianCareNoticesSent(ctx context.Context, relationshipIDs []int64) error {
+	if len(relationshipIDs) == 0 {
+		return nil
+	}
+	tenantID := s.scope(ctx).TenantID
+	db, err := s.guardianStudentAccessDatabase(ctx, tenantID, "mark guardian care notices sent")
+	if err != nil {
+		return err
+	}
+	_, err = db.NewRaw(`UPDATE auth.guardian_student_access SET care_notice_sent_at = `+databaseClock+`
+		WHERE tenant_id = ? AND relationship_id IN (?) AND care_notice_sent_at IS NULL`,
+		tenantID, bun.List(relationshipIDs)).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("identity access postgres: mark guardian care notices sent: %w", err)
+	}
+	return nil
+}

@@ -24,10 +24,12 @@ import (
 const opGuardianBulkInvite = "bulk invite guardians"
 
 // bulkInviteCandidate is one guardian profile with a full role on at least
-// one selected child.
+// one selected child. relationships names the relationship of each of those
+// children; the care notice (#7760) decides on them under the profile locks.
 type bulkInviteCandidate struct {
-	profileID  int64
-	studentIDs []int64
+	profileID     int64
+	studentIDs    []int64
+	relationships map[int64]int64
 }
 
 // BulkInviteToStudents classifies the guardians of the given children and,
@@ -72,7 +74,18 @@ func (l *AccountLifecycle) bulkInviteToStudents(ctx context.Context, req identit
 	if err != nil {
 		return nil, err
 	}
-	run, err := l.newBulkInviteRun(ctx, req, tenantID, result, profiles)
+	existingAccounts, err := l.bulkInviteExistingAccounts(ctx, profiles)
+	if err != nil {
+		return nil, err
+	}
+	if err := l.lockBulkInviteAccounts(ctx, req, profiles, existingAccounts); err != nil {
+		return nil, err
+	}
+	notices, err := l.loadBulkCareNotices(ctx, req, candidates, profiles)
+	if err != nil {
+		return nil, err
+	}
+	run, err := l.newBulkInviteRun(ctx, req, tenantID, result, profiles, notices, existingAccounts)
 	if err != nil {
 		return nil, err
 	}
@@ -107,22 +120,21 @@ func (l *AccountLifecycle) loadBulkInviteProfiles(ctx context.Context, req ident
 	return profiles, open, nil
 }
 
-func (l *AccountLifecycle) newBulkInviteRun(ctx context.Context, req identityaccess.BulkInviteRequest, tenantID int64, result *identityaccess.BulkInviteResult, profiles map[int64]domain.GuardianProfile) (*bulkInviteRun, error) {
-	run := &bulkInviteRun{req: req, tenantID: tenantID, result: result, seenEmails: map[string]bool{}, existingAccounts: map[string]domain.Account{}}
+func (l *AccountLifecycle) newBulkInviteRun(ctx context.Context, req identityaccess.BulkInviteRequest, tenantID int64, result *identityaccess.BulkInviteResult, profiles map[int64]domain.GuardianProfile, notices bulkCareNotices, existingAccounts map[string]domain.Account) (*bulkInviteRun, error) {
+	run := &bulkInviteRun{req: req, tenantID: tenantID, result: result, seenEmails: map[string]bool{}, existingAccounts: existingAccounts, notices: notices}
+	result.WithoutVisibleCare = notices.withoutVisibleCare
 	addresses := make([]string, 0, len(profiles))
 	for _, profile := range profiles {
 		addresses = append(addresses, profile.Email)
 	}
+	// The care notice goes to the login address of the account; its holds
+	// are read in the same statements as the contact addresses'.
+	addresses = append(addresses, notices.addresses()...)
 	blocks, err := l.delivery.GuardianMailBlocks(ctx, tenantID, addresses)
 	if err != nil {
 		return nil, failed(opGuardianBulkInvite, err)
 	}
 	run.mailBlocks = blocks
-	existingAccounts, err := l.bulkInviteExistingAccounts(ctx, profiles)
-	if err != nil {
-		return nil, err
-	}
-	run.existingAccounts = existingAccounts
 	return run, nil
 }
 
@@ -171,6 +183,9 @@ func (l *AccountLifecycle) logBulkInvite(req identityaccess.BulkInviteRequest, r
 		slog.Int("invited", result.Invited),
 		slog.Int("linked_existing_account", result.LinkedExistingAccount),
 		slog.Int("resent", result.Resent),
+		slog.Bool("notify_active", req.NotifyActive),
+		slog.Int("notified", result.Notified),
+		slog.Int("already_notified", result.AlreadyNotified),
 		slog.Int("problems", len(result.Problems)),
 	)
 }
@@ -181,6 +196,45 @@ func (l *AccountLifecycle) lockBulkInviteProfiles(ctx context.Context, tenantID 
 		if err := l.runtime.AcquireLock(ctx, key); err != nil {
 			return failed(opGuardianBulkInvite, fmt.Errorf("lock guardian profile %d: %w", profileID, err))
 		}
+	}
+	return nil
+}
+
+// lockBulkInviteAccounts takes, before anything else touches them, the lock
+// a run may later need on every account it can grant access to: the
+// accounts of the profiles, the accounts whose address a profile carries
+// (also one registered since the addresses were read), and the sender's
+// account, which each new invitation references (created_by) and a parent's
+// own invitation locks together with the invitee's. One statement, ascending by account, FOR NO KEY UPDATE, the mode the
+// grant's restoration of a school mapping takes (EnsureActiveTenantMapping).
+// The restoration then asks for a lock the run already holds instead of
+// upgrading a weaker one, and two runs of different schools that share an
+// account wait for each other instead of deadlocking. The care notice
+// (#7760) also decides on these locked rows. A preview locks nothing.
+func (l *AccountLifecycle) lockBulkInviteAccounts(ctx context.Context, req identityaccess.BulkInviteRequest, profiles map[int64]domain.GuardianProfile, existing map[string]domain.Account) error {
+	if req.DryRun {
+		return nil
+	}
+	accountIDs := make([]int64, 0, len(profiles)+len(existing)+1)
+	emails := make([]string, 0, len(profiles))
+	if req.CreatedBy > 0 {
+		accountIDs = append(accountIDs, req.CreatedBy)
+	}
+	for _, profile := range profiles {
+		if profile.AccountID != nil {
+			accountIDs = append(accountIDs, *profile.AccountID)
+		}
+		if email := normalizeEmail(profile.Email); email != "" {
+			emails = append(emails, email)
+		}
+	}
+	for _, account := range existing {
+		accountIDs = append(accountIDs, account.ID)
+	}
+	slices.Sort(accountIDs)
+	slices.Sort(emails)
+	if err := l.invitations.LockBulkInviteAccounts(ctx, slices.Compact(accountIDs), slices.Compact(emails)); err != nil {
+		return failed(opGuardianBulkInvite, err)
 	}
 	return nil
 }
@@ -222,17 +276,25 @@ func validateBulkInvite(req identityaccess.BulkInviteRequest) error {
 // bulk run never upgrades it (#2172), it only counts the contact.
 func (l *AccountLifecycle) bulkInviteCandidates(links []domain.StudentGuardianLink) ([]bulkInviteCandidate, int) {
 	full := map[int64][]int64{}
+	relationships := map[int64]map[int64]int64{}
 	seen := map[int64]bool{}
 	for _, link := range links {
 		seen[link.GuardianProfileID] = true
-		if l.guardians.GuardianRoleClass(link.GuardianRole) == domain.GuardianRoleFull {
-			full[link.GuardianProfileID] = append(full[link.GuardianProfileID], link.StudentID)
+		if l.guardians.GuardianRoleClass(link.GuardianRole) != domain.GuardianRoleFull {
+			continue
 		}
+		full[link.GuardianProfileID] = append(full[link.GuardianProfileID], link.StudentID)
+		if relationships[link.GuardianProfileID] == nil {
+			relationships[link.GuardianProfileID] = map[int64]int64{}
+		}
+		relationships[link.GuardianProfileID][link.StudentID] = link.ID
 	}
 	candidates := make([]bulkInviteCandidate, 0, len(full))
 	for profileID, studentIDs := range full {
 		slices.Sort(studentIDs)
-		candidates = append(candidates, bulkInviteCandidate{profileID: profileID, studentIDs: slices.Compact(studentIDs)})
+		candidates = append(candidates, bulkInviteCandidate{
+			profileID: profileID, studentIDs: slices.Compact(studentIDs), relationships: relationships[profileID],
+		})
 	}
 	slices.SortFunc(candidates, func(a, b bulkInviteCandidate) int {
 		if a.profileID < b.profileID {
@@ -268,6 +330,9 @@ type bulkInviteRun struct {
 	// problemStudents keeps the children per problem, in result order, until
 	// the names are resolved in one read.
 	problemStudents [][]int64
+	// notices is what the care notice (#7760) read before the loop, under
+	// the profile locks; empty without NotifyActive.
+	notices bulkCareNotices
 }
 
 func (r *bulkInviteRun) problem(candidate bulkInviteCandidate, profile domain.GuardianProfile, reason string) {
@@ -338,6 +403,9 @@ func (l *AccountLifecycle) handleActiveBulkGuardian(ctx context.Context, run *bu
 	}
 	if email != "" {
 		run.seenEmails[email] = true
+	}
+	if run.req.NotifyActive {
+		return true, l.notifyActiveBulkGuardian(ctx, run, candidate, profile)
 	}
 	run.result.SkippedActive++
 	return true, nil

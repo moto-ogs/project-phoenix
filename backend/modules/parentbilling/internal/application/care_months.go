@@ -145,7 +145,12 @@ func (c *CareBilling) CareTariffs(ctx context.Context, reviewer parentbilling.Ho
 			modules[i].SchoolName = names[modules[i].SchoolID.Int64()]
 		}
 	}
-	return parentbilling.CareTariffs{Schools: schools, Modules: modules, Tariffs: withValidity(tariffs), Lists: heads, BilledUntil: billed}, nil
+	listVersions := make(map[int64]string, len(schools))
+	for _, school := range schools {
+		listVersions[school.ID.Int64()] = priceListsVersion(school.ID.Int64(), tariffs, heads)
+	}
+	return parentbilling.CareTariffs{Schools: schools, Modules: modules, Tariffs: withValidity(tariffs), Lists: heads, BilledUntil: billed,
+		Versions: listVersions}, nil
 }
 
 // bookedVersions reads the versions in force in the year before and the
@@ -246,7 +251,9 @@ func (b moduleBook) addVersion(version parentbilling.CareContractVersion) {
 
 // SaveCarePriceList sets the prices of a school from a month on. A month an
 // issued invoice of the school already bills keeps its prices: the list
-// starts after it.
+// starts after it. The office saves over the price lists of the school it
+// read: under the lock of the monthly billing, lists changed since are
+// refused with readstate.ErrChanged (ADR 0311).
 func (c *CareBilling) SaveCarePriceList(ctx context.Context, reviewer parentbilling.HolidayReviewer, list parentbilling.CarePriceList) (parentbilling.CareTariffs, error) {
 	if err := validReviewer(reviewer); err != nil {
 		return parentbilling.CareTariffs{}, err
@@ -261,7 +268,7 @@ func (c *CareBilling) SaveCarePriceList(ctx context.Context, reviewer parentbill
 		}
 		return parentbilling.CareTariffs{}, validation.Errors{"school_id": errors.New("is no school of the Träger")}
 	}
-	if err := c.keepBilledPrices(ctx, reviewer.OrganizationID, list.SchoolID, list.ValidFrom, &list); err != nil {
+	if err := c.keepBilledPrices(ctx, reviewer.OrganizationID, list.SchoolID, list.ValidFrom, &list, list.ExpectedVersion); err != nil {
 		return parentbilling.CareTariffs{}, err
 	}
 	if err := c.store.ReplaceCarePrices(ctx, reviewer.OrganizationID, reviewer.AccountID, list); err != nil {
@@ -324,7 +331,9 @@ func moduleBatchSchool(modules []parentbilling.CareModulePriceList) (int64, erro
 
 // DeleteCarePriceList removes the prices of a school that start on a month
 // no invoice bills yet.
-func (c *CareBilling) DeleteCarePriceList(ctx context.Context, reviewer parentbilling.HolidayReviewer, schoolID int64, validFrom calendar.Date) (parentbilling.CareTariffs, error) {
+func (c *CareBilling) DeleteCarePriceList(ctx context.Context, reviewer parentbilling.HolidayReviewer, schoolID int64, validFrom calendar.Date,
+	expectedVersion string,
+) (parentbilling.CareTariffs, error) {
 	if err := validReviewer(reviewer); err != nil {
 		return parentbilling.CareTariffs{}, err
 	}
@@ -337,7 +346,7 @@ func (c *CareBilling) DeleteCarePriceList(ctx context.Context, reviewer parentbi
 		}
 		return parentbilling.CareTariffs{}, parentbilling.ErrCareTariffNotFound
 	}
-	if err := c.keepBilledPrices(ctx, reviewer.OrganizationID, schoolID, validFrom, nil); err != nil {
+	if err := c.keepBilledPrices(ctx, reviewer.OrganizationID, schoolID, validFrom, nil, expectedVersion); err != nil {
 		return parentbilling.CareTariffs{}, err
 	}
 	deleted, err := c.store.DeleteCarePrices(ctx, reviewer.OrganizationID, schoolID, validFrom)

@@ -305,7 +305,7 @@ func (f contractEnrollmentFixture) openCareMonth(t *testing.T) (string, int64) {
 	for _, weekday := range []string{"mon", "tue", "wed"} {
 		prices = append(prices, map[string]any{"care_offering_id": f.offering, "module_name": "Offene Ganztagsschule", "weekday": weekday, "monthly_cents": 3200})
 	}
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, careTariffsPath, map[string]any{"school_id": f.school, "valid_from": "2027-08-01", "prices": prices})
+	rec = putCarePriceList(t, f.traeger, billing, map[string]any{"school_id": f.school, "valid_from": "2027-08-01", "prices": prices})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, careRunsPath, map[string]any{"billing_month": "2027-10-01"})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())

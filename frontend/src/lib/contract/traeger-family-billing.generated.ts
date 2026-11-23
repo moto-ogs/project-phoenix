@@ -65,6 +65,7 @@ export interface ContractFamilyBilling {
   party_first_name: string;
   party_last_name: string;
   family: FamilyBilling | null;
+  version: string;
 }
 
 export const ContractFamilyBillingSchema: z.ZodType<ContractFamilyBilling, unknown> = object<ContractFamilyBilling>({
@@ -73,6 +74,7 @@ export const ContractFamilyBillingSchema: z.ZodType<ContractFamilyBilling, unkno
   party_first_name: str,
   party_last_name: str,
   family: nullable(FamilyBillingSchema),
+  version: str,
 });
 
 /** Go: parentbillinghttp.FamilyBillingRequest */
@@ -88,6 +90,7 @@ export interface FamilyBillingRequest {
   payment_method?: string;
   due_day?: number | null;
   debtor_number?: string;
+  expected_version?: string;
 }
 
 /** Go: parentbillinghttp.FamilyBillingResponse */
@@ -104,6 +107,7 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/family-billing/",
     portals: ["org"],
+    deprecated: true,
     response: success(z.array(FamilyBillingSchema)),
   },
   "GET /traeger/family-billing/contracts/{id}": {

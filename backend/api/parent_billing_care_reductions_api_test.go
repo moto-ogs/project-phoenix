@@ -124,7 +124,7 @@ func TestCareReductionsRunTheWholeChainThroughTheRoutes(t *testing.T) {
 	mia := careContract(t, f.db, f.office.organization, school, "Mia", careReductionStart, sjrServices()...)
 	noah := careContract(t, f.db, f.office.organization, school, "Noah", careReductionStart, sjrServices()[0])
 	sameFamily(t, f, noah, mia)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	set := f.saveRule(t, careRule("income_level", "Stufe 2", []int64{school}, map[string]any{"discount_basis_points": 2000}))
@@ -209,7 +209,7 @@ func TestCareSiblingRulesPriceScopeAndCount(t *testing.T) {
 	sameFamily(t, f, noah, mia)
 	sameFamily(t, f, lea, mia)
 	for _, school := range []int64{ispringen, birkenfeld} {
-		rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+		rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	}
 	// Ispringen: the second child pays a fixed 25,00 €. Birkenfeld: 10,00 €
