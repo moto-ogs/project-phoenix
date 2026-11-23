@@ -172,47 +172,51 @@ func (c careChain) accepts(parts [][]int64) bool {
 	return issuedParts <= 1
 }
 
-// hasTwin tells whether the family of a school change has another child,
-// in force or issued, born on the day of the joining child, as the chain
-// ranks them: a missing date of birth is the one knownBirthDates gives its
-// child, and an issued entry counts under its frozen family (familyOf).
+// hasTwin tells whether the family of a school change has another child
+// of the chain born on the day of the joining child. The chain fills a
+// missing date of birth from any contract or issued entry of the same child
+// (knownBirthDates, shareBirthDates) and ranks an issued entry under its
+// frozen family (familyOf), so a child counts as a twin when any of its
+// contracts belongs to the family and any of them names that day.
 func (c careChain) hasTwin(parts [][]int64) bool {
 	family, birth := c.families[parts[0][0]], c.identities[parts[0][0]].BirthDate
 	if birth == nil {
 		return false
 	}
-	joining := map[int64]bool{}
+	joining := map[int]bool{}
 	for _, part := range parts {
-		for _, member := range c.children[c.place[part[0]]] {
-			joining[member] = true
-		}
+		joining[c.place[part[0]]] = true
 	}
-	for contractID, child := range c.identities {
-		if joining[contractID] {
-			continue
-		}
-		born := child.BirthDate
-		if born == nil {
-			born = c.groupBirth(c.place[contractID])
-		}
-		if born != nil && *born == *birth && (c.families[contractID] == family || c.issuedFamilies[contractID] == family) {
+	for place, child := range c.children {
+		if !joining[place] && c.inFamily(child, family) && c.bornOn(child, *birth) {
 			return true
 		}
 	}
 	return false
 }
 
-// groupBirth is the date of birth knownBirthDates gives a child of the
-// chain without one: the first a version of its contracts in force names.
-func (c careChain) groupBirth(place int) *calendar.Date {
-	for _, contractID := range slices.Sorted(slices.Values(c.children[place])) {
+// inFamily tells whether a contract of a chain child belongs to the family,
+// now or by an issued invoice.
+func (c careChain) inFamily(child []int64, family string) bool {
+	return slices.ContainsFunc(child, func(contractID int64) bool {
+		return c.families[contractID] == family || c.issuedFamilies[contractID] == family
+	})
+}
+
+// bornOn tells whether a contract or issued entry of a chain child names
+// the day as its date of birth.
+func (c careChain) bornOn(child []int64, birth calendar.Date) bool {
+	for _, contractID := range child {
+		if born := c.identities[contractID].BirthDate; born != nil && *born == birth {
+			return true
+		}
 		for _, version := range c.byContract[contractID] {
-			if version.ChildBirthDate != nil {
-				return version.ChildBirthDate
+			if version.ChildBirthDate != nil && *version.ChildBirthDate == birth {
+				return true
 			}
 		}
 	}
-	return nil
+	return false
 }
 
 // aligned tells whether the chain sees a part as one child of its own whose

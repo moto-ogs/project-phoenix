@@ -550,4 +550,16 @@ func TestCareSchoolChangeLeavesTwinsAsBefore(t *testing.T) {
 	recipients[825], recipients[826] = parentbilling.CareRecipient{Email: familyEva}, parentbilling.CareRecipient{Email: familyOther}
 	inherited := groupCare(byContract, order, contractFamilies(byContract, recipients), nil, nil)
 	assert.Empty(t, inherited.joined)
+
+	// Here only an issued invoice of Ida's record names the day, frozen to
+	// another family (shareBirthDates gives it to her draft).
+	byContract, order = versionsByContract([]parentbilling.CareContractVersion{
+		version(821, schoolBirkenfeld, 9821, "Noah", billingMonth, "2027-01-14"),
+		version(822, schoolIspringen, 9822, "Noah", "2027-01-15", "2027-01-31"),
+		noBirth,
+	})
+	fromIssued := groupCare(byContract, order, contractFamilies(byContract, recipients),
+		map[int64]parentbilling.CareContractChild{827: {StudentID: ptr(int64(9825)), FirstName: "Ida", LastName: "Beispiel", BirthDate: birth}},
+		map[int64]string{827: parentbilling.FamilyKey(familyOther)})
+	assert.Empty(t, fromIssued.joined)
 }
