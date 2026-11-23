@@ -149,11 +149,6 @@ export default function AccidentReportPage() {
   // the save sends that version, a refusal shows the stored report again
   // (ADR 0311).
   const [editing, setEditing] = useState(false);
-  // Signed by someone else while this page edited it: the reload after the
-  // refusal shows the signed report, so the edit state ends and „Korrektur
-  // anlegen“ is offered. The refusal's message lives here, so it outlasts
-  // the form it came from.
-  if (editing && report && report.status !== "open") setEditing(false);
   const editFormRef = useRef<HTMLFormElement>(null);
   const editErrors = useApiFormError(editFormRef);
   const reportDraft = useDraftOn<
@@ -173,6 +168,14 @@ export default function AccidentReportPage() {
         draftFromReport(doc.accidentReport as AccidentReportDetails),
     },
   );
+  // Signed by someone else while this page edited it: once the draft holds
+  // nothing typed (after the refusal's reload, or an untouched draft), the
+  // edit state ends and „Korrektur anlegen“ is offered. Typed input is never
+  // dropped silently; its save is refused and the reload ends the edit then.
+  // The refusal's message lives here, so it outlasts the form it came from.
+  if (editing && report && report.status !== "open" && !reportDraft.touched) {
+    setEditing(false);
+  }
   const [correcting, setCorrecting] = useState(false);
 
   return (
