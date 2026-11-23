@@ -124,7 +124,7 @@ func TestUpdateChildOfferings_DatedSwitchKeepsMixedPeriodTemplate(t *testing.T) 
 	before := loadTemplateEnrollments(t, f.env, f.template.ID)[0]
 	switchDate := calendar.Date(f.env.sourcePhase.ServiceStartDate).AddDays(60)
 
-	_, err := testpkg.TenantQuery1(t, ctx, f.env.db, f.env.decision.UpdateChildOfferings, enrollmentTest.UpdateChildOfferingsInput{
+	_, err := testpkg.TenantQuery1(t, ctx, f.env.db, correctOverRead(f.env.decision), enrollmentTest.UpdateChildOfferingsInput{
 		RequestID:      f.requestID,
 		ChildID:        f.childID,
 		ActorAccountID: f.env.creatorID,

@@ -24,6 +24,16 @@ func readOfferingsVersion(ctx context.Context, decisions enrollmentTest.PublicDe
 	return sets[childID].Version
 }
 
+// correctOverRead is the office's correction as the editor sends it: over
+// the offerings_version a read of the request right before answers (ADR
+// 0311).
+func correctOverRead(decisions enrollmentTest.PublicDecisions) func(context.Context, enrollmentTest.UpdateChildOfferingsInput) (*enrollmentTest.ChildOfferingsUpdate, error) {
+	return func(ctx context.Context, input enrollmentTest.UpdateChildOfferingsInput) (*enrollmentTest.ChildOfferingsUpdate, error) {
+		input.ExpectedVersion = readOfferingsVersion(ctx, decisions, input.RequestID, input.ChildID)
+		return decisions.UpdateChildOfferings(ctx, input)
+	}
+}
+
 // Two office members correct one child's bookings from the same read: the
 // second correction is refused under the student lock and writes nothing,
 // the first one stays (ADR 0311).

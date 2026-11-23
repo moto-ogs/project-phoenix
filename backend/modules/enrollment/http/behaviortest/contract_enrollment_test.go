@@ -287,7 +287,7 @@ func TestContractEnrollmentEnrollsAnExistingChildSilently(t *testing.T) {
 	assert.Equal(t, result.RequestChildID, differs[0].RequestChildID)
 
 	// The office changes the bookings of this child as of any other.
-	update, err := testpkg.TenantQuery1(t, ctx, e.db, e.owner.UpdateChildOfferings, enrollmentAPI.UpdateChildOfferingsInput{
+	update, err := testpkg.TenantQuery1(t, ctx, e.db, correctOverRead(e.owner), enrollmentAPI.UpdateChildOfferingsInput{
 		RequestID: result.RequestID, ChildID: result.RequestChildID, ActorAccountID: e.creatorID, ActorRole: "admin",
 		Reason: "Zusätzlicher Tag", Offerings: []enrollmentAPI.OfferingAdjustmentSelection{
 			{OfferingID: e.offering.ID, SelectedDays: []string{"mon", "tue", "wed"}}},

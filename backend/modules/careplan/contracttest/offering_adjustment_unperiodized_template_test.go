@@ -97,7 +97,7 @@ func TestUpdateChildOfferings_UndatedCorrectionKeepsTemplateWithoutPeriod(t *tes
 	replacement := createAdjustmentCareOfferingWith(t, f.env, "Fruehbetreuung", nil)
 
 	// Correct only the other offering; the template's source stays booked.
-	_, err := testpkg.TenantQuery1(t, ctx, f.env.db, f.env.decision.UpdateChildOfferings, enrollmentTest.UpdateChildOfferingsInput{
+	_, err := testpkg.TenantQuery1(t, ctx, f.env.db, correctOverRead(f.env.decision), enrollmentTest.UpdateChildOfferingsInput{
 		RequestID:      f.requestID,
 		ChildID:        f.childID,
 		ActorAccountID: f.env.creatorID,
@@ -127,7 +127,7 @@ func TestUpdateChildOfferings_DatedSwitchKeepsTemplateWithoutPeriod(t *testing.T
 	before := loadTemplateEnrollments(t, f.env, f.template.ID)[0]
 	switchDate := calendar.Date(f.env.sourcePhase.ServiceStartDate).AddDays(60)
 
-	_, err := testpkg.TenantQuery1(t, ctx, f.env.db, f.env.decision.UpdateChildOfferings, enrollmentTest.UpdateChildOfferingsInput{
+	_, err := testpkg.TenantQuery1(t, ctx, f.env.db, correctOverRead(f.env.decision), enrollmentTest.UpdateChildOfferingsInput{
 		RequestID:      f.requestID,
 		ChildID:        f.childID,
 		ActorAccountID: f.env.creatorID,
