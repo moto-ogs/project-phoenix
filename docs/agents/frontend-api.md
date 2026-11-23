@@ -356,6 +356,10 @@ slash is dropped and each parameter encoded.
   list only shrinks.
 - **Wait:** a refusal with `Retry-After` (429, 503) carries the wait as
   `retryAfterSeconds` on the `ApiError` (`apiErrorFromResponse`).
+- **Keepalive cleanup:** `keepalive: true` starts the request immediately.
+  Staff cleanup skips the browser session gate and its 401 renewal, because
+  that lookup cannot outlive an unloading page. The BFF authenticates the
+  cookie as usual; a refusal still reaches the caller as its `ApiError`.
 - **Lists Go writes as `null`:** the generated type says so (`T[] | null`).
   Read it as an empty list where the screen needs one, once, in the client
   (`slot-lists-api.ts` derives `WithLists<…>` from the generated type); do not

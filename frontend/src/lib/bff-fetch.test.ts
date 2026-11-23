@@ -353,6 +353,50 @@ describe("bffJson", () => {
     );
   });
 
+  it("starts a tenant keepalive cleanup before a pending session lookup can finish", async () => {
+    let finishLookup!: () => void;
+    mockRequireSession.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        finishLookup = resolve;
+      }),
+    );
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+    const cleanup = bffJson(
+      "tenant",
+      "DELETE /api/enrollment/legal-documents/{filename}",
+      { params: { filename: "draft.pdf" }, keepalive: true },
+    );
+    const callsBeforeUnload = [...mockFetch.mock.calls];
+    finishLookup();
+    await cleanup;
+
+    expect(callsBeforeUnload).toEqual([
+      [
+        "/api/enrollment/legal-documents/draft.pdf",
+        { method: "DELETE", keepalive: true },
+      ],
+    ]);
+    expect(mockRequireSession).not.toHaveBeenCalled();
+  });
+
+  it("surfaces a refused keepalive cleanup without a session renewal or retry", async () => {
+    mockFetch.mockResolvedValueOnce(
+      Response.json({ code: "general.permission" }, { status: 401 }),
+    );
+
+    await expect(
+      bffJson("tenant", "DELETE /api/enrollment/legal-documents/{filename}", {
+        params: { filename: "draft.pdf" },
+        keepalive: true,
+      }),
+    ).rejects.toMatchObject({ status: 401, code: "general.permission" });
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockRequireSession).not.toHaveBeenCalled();
+    expect(mockRenewSession).not.toHaveBeenCalled();
+  });
+
   it("passes the signal to the request", async () => {
     const controller = new AbortController();
     mockFetch.mockResolvedValueOnce(ok([]));

@@ -193,7 +193,8 @@ interface CallOptions {
   authRefusals?: readonly ErrorCode[];
   /**
    * Lets the request outlive the page (`fetch` keepalive): a cleanup sent
-   * from `pagehide`, such as deleting a draft's upload.
+   * from `pagehide`, such as deleting a draft's upload. Starts immediately
+   * without a browser session lookup or renewal; the BFF authenticates it.
    */
   keepalive?: boolean;
 }
@@ -260,14 +261,17 @@ const sendPlain = (url: string, init: RequestInit) =>
 
 /**
  * Staff: the session gate before the request, then on a 401 one renewal and
- * one retry. An operation-specific refusal (`authRefusals`) leaves the
- * session as it is and reaches the caller as its ApiError.
+ * one retry. Keepalive cleanup goes out immediately: a session lookup or
+ * renewal cannot outlive an unloading page; the BFF still authenticates it.
+ * An operation-specific refusal (`authRefusals`) leaves the session as it is
+ * and reaches the caller as its ApiError.
  */
 async function sendTenant(
   url: string,
   init: RequestInit,
   { authRefusals }: CallOptions,
 ): Promise<Response> {
+  if (init.keepalive) return transport(url, init);
   await requireTenantSession();
   const response = await transport(url, init);
   if (response.status !== 401) return response;
