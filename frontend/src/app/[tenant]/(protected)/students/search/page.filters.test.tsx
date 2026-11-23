@@ -599,7 +599,7 @@ describe("StudentSearchPage — room_id deep-link (#1323)", () => {
     let reload!: () => Promise<unknown>;
     function Probe() {
       const { mutate } = useSWRAuth(
-        tenantListKeys.enrollmentAnswerFilters(),
+        tenantListKeys.enrollmentAnswerFilters(berlinTodayISO()),
         fetchEnrollmentAnswerFilters,
       );
       reload = () => mutate();
@@ -957,6 +957,21 @@ describe("StudentSearchPage — registration answer counts (#7645)", () => {
     expect(listKeys().size).toBe(1);
   });
 
+  it("shows no number while the server applies an answer no longer offered", async () => {
+    // The loaded rows are already narrowed by that answer, so the page cannot
+    // count the others; a day total would promise children it does not show.
+    currentSearch = new URLSearchParams({
+      enrollment_answer: "seepferdchen=vielleicht",
+    });
+
+    render(<StudentSearchPage />, { wrapper: FreshSwrCache });
+
+    expect(
+      await screen.findByRole("button", { name: /: Ja$/ }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /: Nein$/ })).toBeVisible();
+  });
+
   it("asks for the answers of the list's planning day", async () => {
     const day = toISODate(
       new Date(parseISODate(berlinTodayISO()).getTime() + 86_400_000),
@@ -966,12 +981,13 @@ describe("StudentSearchPage — registration answer counts (#7645)", () => {
     render(<StudentSearchPage />, { wrapper: FreshSwrCache });
 
     await waitFor(() => expect(mockFetchAnswerFilters).toHaveBeenCalled());
-    const days = mockFetchAnswerFilters.mock.calls.map((call) => call[0]);
-    // A day beyond the planning horizon falls back to today, whose answers
-    // the page reads without a day.
-    expect(days.every((value) => value === day || value === undefined)).toBe(
-      true,
+    // Tomorrow lies beyond the planning horizon on a Sunday; then the page
+    // shows today and reads today's answers without a day.
+    const plannedList = mockGetStudents.mock.calls.some(
+      (call) => (call[0] as Record<string, unknown>).date === day,
     );
+    const days = mockFetchAnswerFilters.mock.calls.map((call) => call[0]);
+    expect(days).toEqual([plannedList ? day : undefined]);
   });
 });
 

@@ -1663,19 +1663,20 @@ function SearchPageContent() {
   // the server granted it, and a refused (403) account loses a filter from a
   // saved link or state instead of a whole list refused for it.
   const mayAskEnrollmentAnswers = hasPermission(session, "users:read");
-  // A session that is still loading names no permissions yet: deciding now
-  // would refuse the account and drop its saved filter.
   // The answers name the children in care on the list's planning day
   // (#7645). A new day waits for its own answers: the previous day's would
-  // filter and count the new day's children.
+  // filter and count the new day's children. The key names today's date too,
+  // so a tab open across midnight reads the new day's answers.
   const enrollmentAnswerDay = isToday ? undefined : selectedDate;
   const fetchEnrollmentAnswersOfDay = useCallback(
     () => fetchEnrollmentAnswerFilters(enrollmentAnswerDay),
     [enrollmentAnswerDay],
   );
+  // A session that is still loading names no permissions yet: deciding now
+  // would refuse the account and drop its saved filter.
   const enrollmentAnswerFilters = useSWRAuth(
     status !== "loading" && mayAskEnrollmentAnswers
-      ? tenantListKeys.enrollmentAnswerFilters(enrollmentAnswerDay)
+      ? tenantListKeys.enrollmentAnswerFilters(enrollmentAnswerDay ?? todayIso)
       : null,
     fetchEnrollmentAnswersOfDay,
   );
@@ -2310,8 +2311,9 @@ function SearchPageContent() {
   // "Seepferdchen vorhanden: Ja (12)". The number is the children the list
   // would show with that answer under its other filters (#7645). Until the
   // rows are loaded, or while the server applies an answer it no longer
-  // offers, it is the day's total. An active answer the list no longer offers
-  // (no child gave it any more) stays selectable so it can be undone.
+  // offers, the page cannot count that and shows no number. An active answer
+  // the list no longer offers (no child gave it any more) stays selectable so
+  // it can be undone.
   const enrollmentAnswerOptions = useMemo(() => {
     const shown =
       rowsLoaded && serverEnrollmentAnswer === ""
@@ -2323,13 +2325,13 @@ function SearchPageContent() {
         : null;
     const options = enrollmentAnswerQuestions.flatMap((question) =>
       question.options.map((option) => {
-        const count = shown
-          ? option.studentIds.filter((id) => shown.has(id)).length
-          : option.count;
+        const answer = `${answerQuestionLabel(question.label)}: ${option.label}`;
         return {
           value: enrollmentAnswerValue(question, option),
-          label: `${answerQuestionLabel(question.label)}: ${option.label} (${count})`,
-          chip: `${answerQuestionLabel(question.label)}: ${option.label}`,
+          label: shown
+            ? `${answer} (${option.studentIds.filter((id) => shown.has(id)).length})`
+            : answer,
+          chip: answer,
         };
       }),
     );
