@@ -8,7 +8,7 @@ Env files are relative to `frontend/`.
 
 ## Browser calls
 
-Every JSON call of the browser to the BFF goes through one helper,
+Browser JSON calls to routes with a shared entry use
 `bffJson(portal, route, options)` (`lib/bff-fetch.ts`, #7806). `route` is the
 catalog key of a registered route for the portal, or the BFF entry of a
 session step. A catalog entry types `params`, `query`, `body` and the answer. The
@@ -64,7 +64,10 @@ slash is dropped and each parameter encoded.
   `bffJson("public", sessionBff.login(scope), { body })`. The session route
   and its client share `SignInReply`; the Go session tokens are not part of
   this type. Use `bffJsonUncontracted` only for the remaining callers and
-  reasons in `bff-fetch-uncontracted.test.ts`.
+  reasons in the [BFF boundary rules](../../frontend/scripts/oxlint-plugin-bff-boundary.mjs).
+  `bff-boundary/only-listed-uncontracted` rejects access outside that list
+  and forwarding the helper, including renamed imports and re-exports.
+  The list only shrinks.
 - **Wait:** a refusal with `Retry-After` (429, 503) carries the wait as
   `retryAfterSeconds` on the `ApiError` (`apiErrorFromResponse`).
 - **Keepalive cleanup:** `keepalive: true` starts the request immediately.
@@ -75,16 +78,17 @@ slash is dropped and each parameter encoded.
   Read it as an empty list where the screen needs one, once, in the client
   (`slot-lists-api.ts` derives `WithLists<…>` from the generated type); do not
   copy the answer into a hand-written type.
-- **One transport:** `bff-fetch.ts` is the one transport of browser code to
-  the BFF; nothing else exports a fetch helper. `old-fetch-helpers.test.ts`
-  fails on a call of the global `fetch` (also as `window.fetch`,
-  `globalThis.fetch` or `self.fetch`) or a replacement of it in browser code
-  outside its infrastructure list (log shipping, the SSE stream, the session
-  renewal, Auth.js endpoints, the wall display, a static file, the two
-  wrappers of the global fetch that add the session account and the 429
-  wait), each entry with its reason, and on any name of the deleted helpers.
-  `identifier-text.test.ts` fails on a conversion of an identifier to a
-  number (`Number(room.id)`). `scripts/backend-wire-types.mjs`
+- **One transport:** use `bffJson` for JSON and `bffFile` for files.
+  `bff-boundary/no-raw-browser-transport` rejects access to global `fetch`,
+  `XMLHttpRequest` and `navigator.sendBeacon` outside the same plugin's
+  shrink-only infrastructure list. It also rejects names of retired fetch
+  helpers. `bff-boundary/no-numeric-identifier` rejects coercions such as
+  `Number(room.id)`, `+room.id`, arithmetic and `BigInt(id)`. For generated
+  fields the Go contract's kind wins over the name; where an ordinary string
+  has no contract provenance, ID-shaped names are a fallback. Keep IDs as
+  text and use `compareIds` for ordering decimal IDs without rounding.
+  All three rules run in `pnpm run check`.
+  `scripts/backend-wire-types.mjs`
   finds hand-written wire types by their form (two `snake_case` fields of
   their own, a generated type imported under another name, a type that only
   renames a generated one); its baseline only shrinks.

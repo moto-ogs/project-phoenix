@@ -145,7 +145,7 @@ export const routes = {
     portals: ["tenant"],
     query: {
       "device_type": { kind: "string" },
-      "registered_by_id": { kind: "string" },
+      "registered_by_id": { kind: "id" },
       "search": { kind: "string" },
       "status": { kind: "string" },
     },
