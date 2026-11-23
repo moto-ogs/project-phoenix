@@ -165,6 +165,7 @@ func computeNoticeMonth(in careMonthInput, invoiced map[int64]parentbilling.Care
 		}
 	}
 	in.invoiced = issued
+	in.frozenFamilies = invoiceFamilies(invoiced)
 	computed, err := buildCareMonth(in)
 	if err != nil {
 		return reviewedMonth{}, careMonth{}, err

@@ -26,6 +26,11 @@ type careMonthInput struct {
 	// issuedChildren identifies issued contracts outside the versions in
 	// force; a notice preview may compute a month with only some of them.
 	issuedChildren map[int64]parentbilling.CareContractChild
+	// frozenFamilies are the families of every invoice issued for the
+	// month, those a notice preview computes again included, so both of its
+	// computations decide a school change alike (#7874); nil reads them from
+	// invoiced.
+	frozenFamilies map[int64]string
 	// rules and evidences feed the rule chain (#4685); without them every
 	// invoice is its base price.
 	rules     []parentbilling.ContributionRule
@@ -185,8 +190,16 @@ func buildCareMonth(in careMonthInput) (careMonth, error) {
 // issuedFamilies are the families the issued invoices of the month froze,
 // by contract.
 func (in careMonthInput) issuedFamilies() map[int64]string {
-	families := make(map[int64]string, len(in.invoiced))
-	for contractID, invoice := range in.invoiced {
+	if in.frozenFamilies != nil {
+		return in.frozenFamilies
+	}
+	return invoiceFamilies(in.invoiced)
+}
+
+// invoiceFamilies are the families the invoices froze, by contract.
+func invoiceFamilies(invoiced map[int64]parentbilling.CareInvoice) map[int64]string {
+	families := make(map[int64]string, len(invoiced))
+	for contractID, invoice := range invoiced {
 		families[contractID] = invoice.FamilyEmail
 	}
 	return families

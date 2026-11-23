@@ -107,10 +107,11 @@ func groupCare(byContract map[int64][]parentbilling.CareContractVersion, order [
 	issued map[int64]parentbilling.CareContractChild, issuedFamilies map[int64]string,
 ) careGrouping {
 	chain := newCareChain(byContract, order, issued, families, issuedFamilies)
-	children, joined := joinSchoolChanges(groupCareChildren(contractChildrenOf(byContract), order), byContract, families, chain.aligned)
-	for _, first := range joined {
-		chain.join(children[first])
+	children, joined, parts := joinSchoolChanges(groupCareChildren(contractChildrenOf(byContract), order), byContract, families, chain.accepts)
+	for _, joining := range parts {
+		chain.join(joining)
 	}
+	slices.Sort(joined)
 	return careGrouping{children: children, keys: chain.keys, joined: joined}
 }
 
@@ -139,29 +140,55 @@ func newCareChain(byContract map[int64][]parentbilling.CareContractVersion, orde
 		families: families, issuedFamilies: issuedFamilies}
 }
 
-// aligned tells whether the chain sees a part of a school change as one
-// child of its own and every invoice issued for it froze the family of the
-// change: then both groupings change in the same way, and no entry of
-// another family changes its key.
-func (c careChain) aligned(part []int64) bool {
+// accepts tells whether a school change joins: the chain sees every part
+// as a child of its own, every invoice issued for a part froze the family of
+// the change, and at most one part has an issued invoice. Then both
+// groupings change in the same way, no entry of another family changes its
+// key, and the joined child keeps the key an issued invoice ranked it by.
+func (c careChain) accepts(parts [][]int64) bool {
+	issuedParts := 0
+	for _, part := range parts {
+		aligned, issued := c.aligned(part)
+		if !aligned {
+			return false
+		}
+		if issued {
+			issuedParts++
+		}
+	}
+	return issuedParts <= 1
+}
+
+// aligned tells whether the chain sees a part as one child of its own whose
+// issued invoices all froze its family; issued tells whether it has one.
+func (c careChain) aligned(part []int64) (aligned, issued bool) {
 	group := c.children[c.place[part[0]]]
 	inForce := 0
 	for _, contractID := range group {
 		if _, ok := c.byContract[contractID]; ok {
 			inForce++
 		}
-		if family, ok := c.issuedFamilies[contractID]; ok && family != c.families[part[0]] {
-			return false
+		if family, ok := c.issuedFamilies[contractID]; ok {
+			if family != c.families[part[0]] {
+				return false, true
+			}
+			issued = true
 		}
 	}
-	return inForce == len(part) && !slices.ContainsFunc(part, func(contractID int64) bool { return c.place[contractID] != c.place[part[0]] })
+	return inForce == len(part) && !slices.ContainsFunc(part, func(contractID int64) bool { return c.place[contractID] != c.place[part[0]] }), issued
 }
 
-// join gives the chain groups of a joined child the key of its first part.
-func (c careChain) join(child []int64) {
-	key := c.keys[child[0]]
-	for _, contractID := range child {
-		for _, member := range c.children[c.place[contractID]] {
+// join gives the chain groups of the parts of a joined child one key: that
+// of the part with an issued invoice, else that of the first part.
+func (c careChain) join(parts [][]int64) {
+	key := c.keys[parts[0][0]]
+	for _, part := range parts {
+		if _, issued := c.aligned(part); issued {
+			key = c.keys[part[0]]
+		}
+	}
+	for _, part := range parts {
+		for _, member := range c.children[c.place[part[0]]] {
 			c.keys[member] = key
 		}
 	}

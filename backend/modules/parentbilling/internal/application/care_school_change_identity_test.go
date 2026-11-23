@@ -456,4 +456,40 @@ func TestCareSchoolChangeKeepsTheKeysOfAnotherFamilysInvoices(t *testing.T) {
 	other := groupCare(byContract, order, families, nil, map[int64]string{811: parentbilling.FamilyKey(familyOther)})
 	assert.Empty(t, other.joined, "an invoice of another family keeps the child apart")
 	assert.Equal(t, chainKeys(byContract, chainChildren(byContract, order, nil)), other.keys)
+
+	// The joined child keeps the key its issued invoice was ranked by, so
+	// its order against its siblings' invoices stays.
+	issuedLater := groupCare(byContract, order, families, nil, map[int64]string{812: parentbilling.FamilyKey(familyEva)})
+	require.Len(t, issuedLater.joined, 1)
+	assert.Equal(t, "child:1", issuedLater.keys[811])
+	assert.Equal(t, "child:1", issuedLater.keys[812])
+	both := groupCare(byContract, order, families, nil,
+		map[int64]string{811: parentbilling.FamilyKey(familyEva), 812: parentbilling.FamilyKey(familyEva)})
+	assert.Empty(t, both.joined, "two parts with an issued invoice each stay apart (#7892)")
+}
+
+// Both computations of a notice month decide a school change alike: a part
+// whose notice froze another family stays apart in the first computation
+// too, where its notice is computed again (#7874).
+func TestCareNoticeMonthDecidesASchoolChangeOnce(t *testing.T) {
+	t.Parallel()
+	unpriced := booked("mon", 999, "Ohne Preis", "16:00")
+	in := careMonthInput{month: day(t, billingMonth), rule: parentbilling.MonthRuleVersionOnFirst, tariffs: chainTariffs(t),
+		recipients: map[int64]parentbilling.CareRecipient{contractNoah: {Email: familyEva}, contractLea: {Email: familyEva}}}
+	for _, contract := range []identityContract{
+		noahAt(contractNoah, schoolBirkenfeld, noahBirkenfeldRecord, billingMonth, "2027-01-14", unpriced),
+		noahAt(contractLea, schoolIspringen, noahIspringenRecord, "2027-01-15", "2027-01-31", unpriced),
+	} {
+		version := sjrVersion(t, contract.contract, contract.school, 1, contract.from, contract.until, contract.booked...)
+		version.StudentID, version.ChildFirstName, version.ChildBirthDate = ptr(contract.student), contract.first, ptr(day(t, contract.birth))
+		in.versions = append(in.versions, version)
+	}
+	invoiced := map[int64]parentbilling.CareInvoice{contractNoah: {ContractID: ident.ID(contractNoah), SchoolID: ident.ID(schoolBirkenfeld),
+		FamilyEmail: parentbilling.FamilyKey(familyOther), DocumentKind: parentbilling.DocumentKindFeeNotice,
+		Positions: []parentbilling.CarePosition{{CareOfferingID: ident.ID(moduleUntil1400), AmountCents: 4500, PayableCents: 4500}}}}
+	review, final, err := computeNoticeMonth(in, invoiced, map[int64]bool{contractNoah: true, contractLea: true}, []int64{schoolBirkenfeld, schoolIspringen})
+	require.NoError(t, err)
+	assert.Empty(t, review.joined, "the first computation keeps the parts apart")
+	assert.Empty(t, final.joined)
+	assert.Len(t, review.unpriced, 2, "both contracts lack a price, so both keep their assessment")
 }

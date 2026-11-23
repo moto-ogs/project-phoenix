@@ -280,11 +280,17 @@ des Wechsels festhält; dann ändert sich in beiden dasselbe, und kein Eintrag
 einer anderen Familie ändert seinen Schlüssel. Punkt 5 zählt die Kinder mit laufendem Vertrag;
 Verträge, die nur eine ausgestellte Rechnung in den Monat bringen, verhindern
 das Zusammenlegen nur, wenn sie einen Teil in der Gruppierung der Kette mit
-einem anderen Vertrag verbinden oder ihn teilen. Das zusammengelegte
-Kind behält den Schlüssel seines ersten Teils, kein anderes Kind ändert seinen
-Schlüssel, und gleichrangige Kinder behalten ihre Reihenfolge, auch gegenüber
-Rechnungen, die ein Lauf des Monats schon ausgestellt hat. Dieselbe Gruppierung zählt die Kinder einer Familie
-in der Kinderzahl-Übersicht.
+einem anderen Vertrag verbinden oder ihn teilen.
+
+Das zusammengelegte Kind behält den Schlüssel des Teils, für den schon eine
+Rechnung des Monats ausgestellt ist, sonst den seines ersten Teils; haben
+mehrere Teile schon eine, legt moto nicht zusammen (#7892). Kein anderes
+Kind ändert seinen Schlüssel, und gleichrangige Kinder behalten ihre
+Reihenfolge, auch gegenüber Rechnungen, die ein Lauf des Monats schon
+ausgestellt hat. Ein Bescheid-Lauf entscheidet in beiden Rechnungen eines
+Monats gleich, mit den Familien aller ausgestellten Bescheide und Rechnungen.
+Dieselbe Gruppierung zählt die Kinder einer Familie in der
+Kinderzahl-Übersicht.
 
 **Sichtbar.** Hier entscheidet der Name, nicht eine Kinderakte. Die Prüfung
 eines berechneten Monatslaufs und die Vorschau eines Bescheid-Laufs (ADR 0182,
