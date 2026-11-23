@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
@@ -62,21 +63,59 @@ func assertReviewGrowth(t *testing.T, db *bun.DB, query GrowthQuery, n int) {
 		}
 		return nil
 	}))
+	assertHistoryGrowth(t, db, query, ctx, byStudent)
+}
+
+// assertHistoryGrowth reuses the open page's children: every request is
+// decided and the office corrects each child's offerings directly, so the
+// history lists one row of each of its five types per child.
+func assertHistoryGrowth(t *testing.T, db *bun.DB, query GrowthQuery, ctx context.Context, byStudent map[string]testpkg.RequestReviewSchool) {
+	t.Helper()
+	n := len(byStudent)
+	decidedAt := time.Date(2026, 9, 14, 9, 0, 0, 0, time.UTC)
+	for _, school := range byStudent {
+		for table, id := range school.Rows {
+			_, err := db.NewRaw("UPDATE ? SET status = 'rejected', reviewed_by = ?, reviewed_at = ? WHERE id = ?",
+				bun.Ident(table), school.AccountID, decidedAt, id).Exec(testpkg.Ctx(t))
+			require.NoError(t, err)
+		}
+		testpkg.CreateTestOfferingCorrection(t, db, school.StudentID, "direct", decidedAt)
+	}
+	counter := testpkg.CaptureQueriesForContext(t, db)
+	require.NoError(t, testpkg.WithTenantTx(t, counter.Context(ctx), db, testpkg.Tenant(t), func(txCtx context.Context, _ bun.Tx) error {
+		page, err := query.ListRequests(txCtx, GrowthListQuery{History: true, Search: "ReviewRLS", Limit: GrowthMaxLimit})
+		require.NoError(t, err)
+		require.Len(t, page.Items, 5*n)
+		require.Empty(t, page.NextCursor)
+		assertGrowthTypesPerChild(t, page, byStudent, GrowthHistoryTypes())
+		if n == 3 {
+			querybudgets.AssertQueryBudget(t, "modules.requestreview.history_page.three_children", counter.Measurement(counter.Queries()))
+		} else {
+			querybudgets.AssertQueryBudget(t, "modules.requestreview.history_page.eight_children", counter.Measurement(counter.Queries()))
+		}
+		return nil
+	}))
 }
 
 func assertReviewGrowthPage(t *testing.T, page GrowthPage, byStudent map[string]testpkg.RequestReviewSchool) {
 	t.Helper()
+	assertGrowthTypesPerChild(t, page, byStudent, GrowthRequestTypes())
+	for _, item := range page.Items {
+		require.Equal(t, byStudent[item.StudentID].GroupName, item.GroupName)
+	}
+}
+
+func assertGrowthTypesPerChild(t *testing.T, page GrowthPage, byStudent map[string]testpkg.RequestReviewSchool, types []string) {
+	t.Helper()
 	counts := make(map[string]int)
 	for _, item := range page.Items {
-		school, ok := byStudent[item.StudentID]
+		_, ok := byStudent[item.StudentID]
 		require.True(t, ok, "the page must not include another tenant's child")
-		require.Equal(t, school.GroupName, item.GroupName)
 		counts[item.StudentID+":"+item.RequestType]++
 	}
 	for id := range byStudent {
-		for _, typ := range GrowthRequestTypes() {
-			require.Equal(t, 1, counts[id+":"+typ])
+		for _, typ := range types {
+			require.Equal(t, 1, counts[id+":"+typ], "%s of child %s", typ, id)
 		}
 	}
-
 }
