@@ -32,7 +32,10 @@ vi.mock("~/components/database/database-form", () => ({
         <span data-testid="form-name">{initialData?.name}</span>
         <button
           type="button"
-          onClick={() => void onSubmit({ name: "Updated Room" })}
+          // The real form shows a refused save on its error path.
+          onClick={() =>
+            void onSubmit({ name: "Updated Room" }).catch(() => undefined)
+          }
         >
           Save
         </button>
