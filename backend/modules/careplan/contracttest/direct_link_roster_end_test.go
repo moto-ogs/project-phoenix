@@ -10,6 +10,7 @@ import (
 	enrollmentTest "github.com/moto-ogs/project-phoenix/modules/enrollment/enrollmenttest"
 	offeringContract "github.com/moto-ogs/project-phoenix/modules/enrollment/offeringcontract"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	timetableCompose "github.com/moto-ogs/project-phoenix/modules/timetable/compose"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -214,4 +215,51 @@ func TestDecide_DirectLinksOnOneRosterEndEachWeekdayWithItsBooking(t *testing.T)
 	assert.Equal(t, rosterSpan{Weekdays: []int{1, 2}, From: start, Until: end}, rosterSpans(byStudent[together])[0])
 	require.NotNil(t, byStudent[together][0].CalendarPeriodID)
 	assert.Equal(t, periodID, *byStudent[together][0].CalendarPeriodID)
+}
+
+// Two offerings name a roster through the direct link (Monday ends in
+// January, Tuesday runs on); the roster also takes its children from two
+// source offerings, one of which the child books on Tuesday. A dated change
+// in March books another offering and keeps Tuesday. The Tuesday row that
+// began when Monday ended stays and runs on: the union resync after the
+// switch must not cap it because the new direct Tuesday booking only begins
+// at the switch.
+func TestUpdateChildOfferings_DatedChangeKeepsDirectRowBesideMultiSourceRoster(t *testing.T) {
+	t.Parallel()
+	env := setupDecisionTest(t)
+	ctx := testpkg.Ctx(t)
+	periodID := directLinkPeriod(t, env)
+	firstSource := directLinkOffering(t, env, "MehrquelleEins", nil, "tue")
+	secondSource := directLinkOffering(t, env, "MehrquelleZwei", nil, "tue")
+	roster := createSourcedTemplate(t, env, "DirektUndMehrquellen", firstSource.ID, nil, periodID)
+	roster.SourceCareOfferingIDs = []int64{firstSource.ID, secondSource.ID}
+	require.NoError(t, timetableCompose.NativeGroupRecords(testTimetableRepositories(env.db).Timetable).Update(ctx, roster))
+	createCareOfferingTemplateSchedule(t, env.db, roster.ID, timetable.WeekdayTuesday, &periodID)
+	monday := directLinkOffering(t, env, "DirektMontag", &roster.ID, "mon")
+	tuesday := directLinkOffering(t, env, "DirektDienstag", &roster.ID, "tue")
+	other := directLinkOffering(t, env, "AnderesModul", nil, "wed")
+
+	_, childID := approveDirectLinkChild(t, env, "Ole", []int64{monday.ID, tuesday.ID, firstSource.ID}, monday.ID)
+
+	start, end := string(calendar.Date(env.sourcePhase.ServiceStartDate)), string(calendar.Date(env.sourcePhase.ServiceEndDate).AddDays(1))
+	approved := loadTemplateEnrollments(t, env, roster.ID)
+	require.ElementsMatch(t, []rosterSpan{
+		{Weekdays: []int{1, 2}, From: start, Until: string(directLinkBookingEnd)},
+		{Weekdays: []int{2}, From: string(directLinkBookingEnd), Until: end},
+	}, rosterSpans(approved), "sanity: Monday ends with its booking, Tuesday runs on")
+
+	var requestID int64
+	require.NoError(t, env.db.NewRaw(`SELECT request_id FROM enrollment.request_children WHERE tenant_id = ? AND id = ?`,
+		testpkg.Tenant(t), childID).Scan(ctx, &requestID))
+	switchDate := calendar.NewDate(2027, 3, 1)
+	_, err := testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentTest.UpdateChildOfferingsInput{
+		RequestID: requestID, ChildID: childID, ActorAccountID: env.creatorID, ActorRole: "admin", Reason: "Mittwoch dazu",
+		EffectiveFrom: &switchDate,
+		Offerings: []enrollmentTest.OfferingAdjustmentSelection{
+			{OfferingID: tuesday.ID}, {OfferingID: firstSource.ID}, {OfferingID: other.ID},
+		},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, rosterSpansByID(approved), rosterSpansByID(loadTemplateEnrollments(t, env, roster.ID)),
+		"the kept Tuesday row runs on to the end of the phase")
 }
