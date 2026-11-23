@@ -1097,6 +1097,14 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/adapters/postgres.FolderStore.FindByIDForUpdate",
+      "binding_digest": "35f6440ee54ec4bd85fc5bb2873ff541",
+      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage/internal/ports.FolderStore.FindByIDForUpdate",
+      "source_owner": "file-storage",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/adapters/postgres.FolderStore.GetAudience",
       "binding_digest": "35f6440ee54ec4bd85fc5bb2873ff541",
       "port": "github.com/moto-ogs/project-phoenix/modules/filestorage/internal/ports.FolderStore.GetAudience",

@@ -639,7 +639,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p *parentAnnouncements) PublishParentAnnouncement(ctx context.Context, id int64) (*communication.ParentAnnouncement, error) {\n\trow, err := p.service.Publish(ctx, id)\n\treturn mapParentAnnouncement(row), mapParentAnnouncementError(err)\n}",
+      "evidence": "func (p *parentAnnouncements) PublishParentAnnouncement(ctx context.Context, id int64, expectedVersion string) (*communication.ParentAnnouncement, error) {\n\trow, err := p.service.Publish(ctx, id, expectedVersion)\n\treturn mapParentAnnouncement(row), mapParentAnnouncementError(err)\n}",
       "form": "unclassified-evidence",
       "id": "modules/communication/internal/application/parentAnnouncements.PublishParentAnnouncement",
       "owner": "modules/communication"
@@ -688,7 +688,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p *parentAnnouncements) UpdateParentAnnouncementReminder(ctx context.Context, id int64, input communication.ParentAnnouncementReminderInput) (*communication.ParentAnnouncement, error) {\n\trow, err := p.service.UpdateReminder(ctx, id, ReminderInput{ReminderAt: input.ReminderAt, ReminderText: input.ReminderText})\n\treturn mapParentAnnouncement(row), mapParentAnnouncementError(err)\n}",
+      "evidence": "func (p *parentAnnouncements) UpdateParentAnnouncementReminder(ctx context.Context, id int64, input communication.ParentAnnouncementReminderInput) (*communication.ParentAnnouncement, error) {\n\trow, err := p.service.UpdateReminder(ctx, id, ReminderInput{ReminderAt: input.ReminderAt, ReminderText: input.ReminderText, ExpectedVersion: input.ExpectedVersion})\n\treturn mapParentAnnouncement(row), mapParentAnnouncementError(err)\n}",
       "form": "unclassified-evidence",
       "id": "modules/communication/internal/application/parentAnnouncements.UpdateParentAnnouncementReminder",
       "owner": "modules/communication"

@@ -1416,6 +1416,16 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/adapters/postgres.FolderStore.FindByIDForUpdate",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/filestorage/internal/ports.FolderStore.FindByIDForUpdate",
+      "reason": "Reviewed with the communication/filestorage read-state PR (#7904, ADR 0311): file-storage reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/filestorage/internal/adapters/postgres.FolderStore.FindByIDForUpdate only to take the request's tenant transaction, as FindByID does. The row lock is the owner's own documents.folders statement inside the caller's unit; no persistent or scope effect on the tenant runtime.",
+      "source_owner": "file-storage",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/filestorage/internal/adapters/postgres.FolderStore.GetAudience",
       "classification": "query",
       "effect": "query",
