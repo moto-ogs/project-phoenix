@@ -741,11 +741,12 @@ old session back; the browser only saves requests.
    keeps the session unchanged, marks it `notBooked` (the session route
    carries the mark, the guards read it), asks again after a minute and
    clears the mark with the next rotation or a live family answer
-   (`token-refresh.ts`). Every other 401/403 of the refresh ends the session
-   and is remembered per process (#2952); a snapshot of a session whose
-   refresh is remembered as refused does not hydrate, so the login page
-   cannot send the browser back to a portal whose requests end it. A family that cannot be
-   read (503) and an expired
+   (`token-refresh.ts`). A refresh 401 or any other 403 with a complete body
+   ends the session and is remembered per process (#2952). An interrupted
+   403 body is retryable because it may have carried `module.not_booked`.
+   A snapshot of a session whose refresh is remembered as refused does not
+   hydrate, so the login page cannot send the browser back to a portal whose
+   requests end it. A family that cannot be read (503) and an expired
    access token, which the backend refuses before it reads the family, leave
    the shown session as it is; its own refresh decides.
 3. **Family check.** `POST /auth/session/validate` without a refresh token
