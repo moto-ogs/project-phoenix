@@ -43,7 +43,7 @@ func TestStudentAuthorization_NonAdminAccess(t *testing.T) {
 		body := map[string]interface{}{
 			"first_name": "Updated",
 		}
-		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), body)
+		req := studentUpdateRequest(t, tc, student.ID, body)
 
 		claims := testutil.TeacherTestClaims(int(otherAccount.ID))
 		rr := authExec(t, tc, req, claims, []string{"users:update"})
@@ -59,7 +59,7 @@ func TestStudentAuthorization_NonAdminAccess(t *testing.T) {
 		body := map[string]interface{}{
 			"first_name": "GuestUpdated",
 		}
-		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), body)
+		req := studentUpdateRequest(t, tc, student.ID, body)
 
 		claims := testutil.TeacherTestClaims(int(guest.ID))
 		rr := authExec(t, tc, req, claims, []string{"users:update"})
@@ -97,7 +97,7 @@ func TestStudentAuthorization_StudentWithoutGroup(t *testing.T) {
 		body := map[string]interface{}{
 			"first_name": "Updated",
 		}
-		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), body)
+		req := studentUpdateRequest(t, tc, student.ID, body)
 
 		claims := testutil.TeacherTestClaims(int(account.ID))
 		rr := authExec(t, tc, req, claims, []string{"users:update"})
@@ -109,7 +109,7 @@ func TestStudentAuthorization_StudentWithoutGroup(t *testing.T) {
 		body := map[string]interface{}{
 			"first_name": "AdminUpdated",
 		}
-		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), body)
+		req := studentUpdateRequest(t, tc, student.ID, body)
 
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 

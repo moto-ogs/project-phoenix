@@ -68,17 +68,30 @@ describe("student-partial-absences-api", () => {
       "13:30",
       "Arzttermin",
     );
-    await saveStudentPartialAbsence("42", "9", "2026-05-27", "14:00");
+    await saveStudentPartialAbsence(
+      "42",
+      { id: "9", version: "read-version" },
+      "2026-05-27",
+      "14:00",
+    );
 
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       "/api/students/42/partial-absences",
       expect.objectContaining({ method: "POST" }),
     );
+    // An update sends the version of the entry the form read (ADR 0311).
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
       "/api/students/42/partial-absences/9",
-      expect.objectContaining({ method: "PUT" }),
+      expect.objectContaining({
+        method: "PUT",
+        body: JSON.stringify({
+          date: "2026-05-27",
+          from_time: "14:00",
+          expected_version: "read-version",
+        }),
+      }),
     );
   });
 

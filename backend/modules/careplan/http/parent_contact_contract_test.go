@@ -34,7 +34,7 @@ func TestStudentAPIRejectsRetiredContactFields(t *testing.T) {
 	// 400s above come from the retired field and not from the rest of the body.
 	t.Run("PUT/without_retired_field", func(t *testing.T) {
 		body := map[string]any{"first_name": "Contact", "last_name": "Contract", "school_class": "1a"}
-		req := testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/%d", student.ID), body)
+		req := studentUpdateRequest(t, tc, student.ID, body)
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 	})

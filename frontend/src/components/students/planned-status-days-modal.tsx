@@ -37,7 +37,8 @@ import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useFreshSWR, useSWRAuth } from "~/lib/swr";
+import { isChangedSinceRead } from "~/lib/api-error";
+import { useSWRAuth } from "~/lib/swr";
 import { studentKeys } from "~/lib/swr/portal-keys";
 import {
   SegmentedControl,
@@ -103,13 +104,21 @@ interface PlannedStatusDaysModalProps {
   ) => Promise<void>;
   readonly onDeleteStatusDay?: (statusDayId: string) => Promise<void>;
   readonly canDeleteStatusDay?: (day: StudentStatusDay) => boolean;
+  /** editing names the partial absence being changed and the version the
+   *  form was filled from (ADR 0311); null creates one. */
   readonly onSubmitPartialAbsence?: (
-    partialAbsenceId: string | null,
+    editing: EditedPartialAbsence | null,
     date: string,
     fromTime: string,
     reason?: string,
   ) => Promise<void>;
   readonly onDeletePartialAbsence?: (partialAbsenceId: string) => Promise<void>;
+}
+
+/** The partial absence a save changes, as the form read it. */
+export interface EditedPartialAbsence {
+  readonly id: string;
+  readonly version: string;
 }
 
 const WEEKDAY_LABELS = ["Mo", "Di", "Mi", "Do", "Fr"];
@@ -184,6 +193,10 @@ export function PlannedStatusDaysModal({
   const [editingPartialAbsenceId, setEditingPartialAbsenceId] = useState<
     string | null
   >(null);
+  // The version of the partial absence the form was filled from; an update
+  // sends it back and is refused when the entry changed since (ADR 0311).
+  const [editingPartialAbsenceVersion, setEditingPartialAbsenceVersion] =
+    useState<string | null>(null);
   const [partialAbsencePendingDeletion, setPartialAbsencePendingDeletion] =
     useState<StudentPartialAbsence | null>(null);
   const [statusDayPendingDeletion, setStatusDayPendingDeletion] = useState<{
@@ -253,12 +266,20 @@ export function PlannedStatusDaysModal({
   useEffect(() => {
     if (!isOpen || !isPartialExcusal || selectedDates.length !== 1) return;
     const existing = partialAbsenceByDate.get(toISODate(selectedDates[0]!));
-    if (!existing || existing.id === editingPartialAbsenceId) return;
+    // A newer stored state of the same entry fills the form again.
+    if (
+      !existing ||
+      (existing.id === editingPartialAbsenceId &&
+        existing.version === editingPartialAbsenceVersion)
+    )
+      return;
     setEditingPartialAbsenceId(existing.id);
+    setEditingPartialAbsenceVersion(existing.version);
     setFromTime(existing.fromTime);
     setReason(existing.reason ?? "");
   }, [
     editingPartialAbsenceId,
+    editingPartialAbsenceVersion,
     isOpen,
     isPartialExcusal,
     partialAbsenceByDate,
@@ -316,9 +337,10 @@ export function PlannedStatusDaysModal({
   const hasSelectionTooWide = hasRangeTooLong || hasIndividualSelectionTooWide;
   const hasInvalidRangeOrder =
     rangeStart !== "" && rangeEnd !== "" && rangeEnd < rangeStart;
-  // The existing entries of the selected span, read fresh for every span and
-  // every opening: a save decides against this answer, never against one an
-  // earlier opening left in the cache.
+  // The existing entries of the selected span, through the shared cache
+  // (ADR 0311): the backend checks every status-day write under its lock and
+  // answers a day taken since with 409, so a cached answer only names a
+  // conflict early. A partial-absence update sends the version it read.
   const checkFrom = candidateDateKeys[0] ?? "";
   const checkTo = candidateDateKeys[candidateDateKeys.length - 1] ?? "";
   const hasCheckRange =
@@ -327,20 +349,24 @@ export function PlannedStatusDaysModal({
     checkTo !== "" &&
     !hasInvalidRangeOrder &&
     !hasSelectionTooWide;
-  const existingDaysCheck = useFreshSWR(
+  // Every opening and span reads again in the background (no
+  // deduplication); saving waits for that answer.
+  const existingDaysCheck = useSWRAuth(
     hasCheckRange
       ? studentKeys.statusDays(studentId, checkFrom, checkTo)
       : null,
     () => fetchStudentStatusDays(studentId, checkFrom, checkTo),
+    { dedupingInterval: 0 },
   );
   // The partial-excusal read needs users:read. For a full-day status it
   // only names a blocking day early: without it the save still answers
   // with the partial-absence conflict, so a failed read must not block.
-  const partialAbsencesCheck = useFreshSWR(
+  const partialAbsencesCheck = useSWRAuth(
     hasCheckRange
       ? studentKeys.partialAbsences(studentId, checkFrom, checkTo)
       : null,
     () => fetchStudentPartialAbsences(studentId, checkFrom, checkTo),
+    { dedupingInterval: 0 },
   );
   const conflictCheckError =
     existingDaysCheck.error ??
@@ -413,11 +439,20 @@ export function PlannedStatusDaysModal({
       : undefined;
   useEffect(() => {
     if (!checkedPartialAbsence) return;
-    if (checkedPartialAbsence.id === editingPartialAbsenceId) return;
+    if (
+      checkedPartialAbsence.id === editingPartialAbsenceId &&
+      checkedPartialAbsence.version === editingPartialAbsenceVersion
+    )
+      return;
     setEditingPartialAbsenceId(checkedPartialAbsence.id);
+    setEditingPartialAbsenceVersion(checkedPartialAbsence.version);
     setFromTime(checkedPartialAbsence.fromTime);
     setReason(checkedPartialAbsence.reason ?? "");
-  }, [checkedPartialAbsence, editingPartialAbsenceId]);
+  }, [
+    checkedPartialAbsence,
+    editingPartialAbsenceId,
+    editingPartialAbsenceVersion,
+  ]);
   // Best-effort only: the timetable care-plan endpoint needs schedules:read.
   // Staff who may edit the student but lack that permission must still save
   // a partial excusal; overlapping-block warnings are skipped when the plan
@@ -576,6 +611,7 @@ export function PlannedStatusDaysModal({
       setExcusalScope("full_day");
       setFromTime("");
       setEditingPartialAbsenceId(null);
+      setEditingPartialAbsenceVersion(null);
       setPartialAbsencePendingDeletion(null);
       clearPartialDeleteError();
       setStatusDayPendingDeletion(null);
@@ -639,6 +675,7 @@ export function PlannedStatusDaysModal({
         ? partialAbsenceByDate.get(selectedDate)
         : undefined;
       setEditingPartialAbsenceId(existing?.id ?? null);
+      setEditingPartialAbsenceVersion(existing?.version ?? null);
       setFromTime(existing?.fromTime ?? "");
       setReason(existing?.reason ?? "");
     }
@@ -656,6 +693,7 @@ export function PlannedStatusDaysModal({
     setFromTime("");
     setReason("");
     setEditingPartialAbsenceId(null);
+    setEditingPartialAbsenceVersion(null);
     setPartialAbsencePendingDeletion(null);
     clearPartialDeleteError();
   };
@@ -665,6 +703,7 @@ export function PlannedStatusDaysModal({
     setSelectionMode("individual");
     setSelectedDates([parseISODate(absence.date)]);
     setEditingPartialAbsenceId(absence.id);
+    setEditingPartialAbsenceVersion(absence.version);
     setFromTime(absence.fromTime);
     setReason(absence.reason ?? "");
   };
@@ -749,6 +788,7 @@ export function PlannedStatusDaysModal({
       if (editingPartialAbsenceId === partialAbsenceId) {
         setSelectedDates([]);
         setEditingPartialAbsenceId(null);
+        setEditingPartialAbsenceVersion(null);
         setFromTime("");
         setReason("");
       }
@@ -781,7 +821,12 @@ export function PlannedStatusDaysModal({
       await save.run(async (op) => {
         try {
           await submitPartialAbsence(
-            editingPartialAbsenceId,
+            editingPartialAbsenceId && editingPartialAbsenceVersion !== null
+              ? {
+                  id: editingPartialAbsenceId,
+                  version: editingPartialAbsenceVersion,
+                }
+              : null,
             dateKeys[0]!,
             fromTime,
             trimmedReason || undefined,
@@ -789,12 +834,19 @@ export function PlannedStatusDaysModal({
         } catch (error) {
           // Eine späte Ablehnung gehört nicht in einen neueren Vorgang.
           if (!op.isCurrent()) return;
+          recheckConflicts();
+          // Someone changed this entry since the form was filled: the check
+          // above reads it again and fills the form with the stored state.
+          // The same save would be refused again, so no retry (ADR 0311).
+          if (isChangedSinceRead(error)) {
+            await submitErrors.show(error, { object: "die Entschuldigung" });
+            return;
+          }
           // The caller logs the failure; the person reads it here, at the form.
           await submitErrors.show(error, {
             object: "die Entschuldigung",
             retry: () => void latestSubmitRef.current(),
           });
-          recheckConflicts();
           return;
         }
         // Closing belongs to this session: a late answer must not close a

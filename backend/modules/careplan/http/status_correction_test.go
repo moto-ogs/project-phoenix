@@ -3,7 +3,6 @@ package careplanhttp_test
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -39,10 +38,9 @@ func TestUpdateStudent_ConflictsWithFlagFreeStatusDays(t *testing.T) {
 				if oldStatus == newStatus {
 					newStatus = "sick"
 				}
-				path := fmt.Sprintf("/%d", student.ID)
 				claims := testutil.AdminTestClaims(1)
 				perms := []string{"admin:*"}
-				rr := authExec(t, tc, testutil.NewAuthenticatedRequest(t, "PUT", path,
+				rr := authExec(t, tc, studentUpdateRequest(t, tc, student.ID,
 					map[string]any{newStatus: true, "last_name": "Teilwrite"}), claims, perms)
 				require.Equal(t, http.StatusConflict, rr.Code, rr.Body.String())
 				var failure struct {
@@ -59,7 +57,7 @@ func TestUpdateStudent_ConflictsWithFlagFreeStatusDays(t *testing.T) {
 				assert.Equal(t, oldStatus, rows[0].Status)
 				assert.Equal(t, source, rows[0].Source)
 
-				rr = authExec(t, tc, testutil.NewAuthenticatedRequest(t, "PUT", path,
+				rr = authExec(t, tc, studentUpdateRequest(t, tc, student.ID,
 					map[string]any{oldStatus: false, newStatus: true}), claims, perms)
 				require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 				var response struct {
@@ -103,7 +101,7 @@ func TestUpdateStudent_StatusDayCommittedWhileProfileWaits(t *testing.T) {
 	ctx, cancel := context.WithTimeout(testpkg.Ctx(t), 20*time.Second)
 	defer cancel()
 	done := make(chan *httptest.ResponseRecorder, 1)
-	req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), map[string]any{"excused": true})
+	req := studentUpdateRequest(t, tc, student.ID, map[string]any{"excused": true})
 	req = req.WithContext(ctx)
 	claims := testutil.AdminTestClaims(1)
 	claims.Permissions = []string{"admin:*"}

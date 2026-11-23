@@ -16,6 +16,21 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// consentVersion reads the version a save of the child's consent sends back.
+func consentVersion(t *testing.T, tc *testContext, studentID int64) string {
+	t.Helper()
+	rr := authExec(t, tc, testutil.NewRequest("GET", fmt.Sprintf("/%d/privacy-consent", studentID), nil), testutil.AdminTestClaims(1), []string{"admin:*"})
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	var read struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &read))
+	require.NotEmpty(t, read.Data.Version)
+	return read.Data.Version
+}
+
 func TestGetStudentPrivacyConsent(t *testing.T) {
 	t.Parallel()
 
@@ -63,6 +78,7 @@ func TestUpdateStudentPrivacyConsent(t *testing.T) {
 			"policy_version":      "1.0",
 			"accepted":            true,
 			"data_retention_days": 30,
+			"expected_version":    consentVersion(t, tc, student.ID),
 		}
 		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/privacy-consent", student.ID), body)
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
@@ -108,6 +124,7 @@ func TestPrivacyConsent_Extended(t *testing.T) {
 			"policy_version":      "1.0",
 			"accepted":            true,
 			"data_retention_days": 30,
+			"expected_version":    consentVersion(t, tc, student.ID),
 		}
 		req1 := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/privacy-consent", student.ID), body1)
 		rr1 := authExec(t, tc, req1, testutil.AdminTestClaims(1), []string{"admin:*"})
@@ -118,6 +135,7 @@ func TestPrivacyConsent_Extended(t *testing.T) {
 			"policy_version":      "2.0",
 			"accepted":            true,
 			"data_retention_days": 31,
+			"expected_version":    consentVersion(t, tc, student.ID),
 		}
 		req2 := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/privacy-consent", student.ID), body2)
 		rr2 := authExec(t, tc, req2, testutil.AdminTestClaims(1), []string{"admin:*"})
@@ -132,6 +150,7 @@ func TestPrivacyConsent_Extended(t *testing.T) {
 			"accepted":            true,
 			"duration_days":       365,
 			"data_retention_days": 30,
+			"expected_version":    consentVersion(t, tc, student.ID),
 		}
 		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/privacy-consent", student.ID), body)
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
@@ -147,6 +166,7 @@ func TestPrivacyConsent_Extended(t *testing.T) {
 			"policy_version":      "1.0",
 			"accepted":            true,
 			"data_retention_days": 30,
+			"expected_version":    consentVersion(t, tc, student.ID),
 			"details": map[string]interface{}{
 				"consent_given_by": "guardian",
 				"method":           "form",
@@ -182,21 +202,33 @@ func TestPrivacyConsent_EdgeCases(t *testing.T) {
 		student := testpkg.CreateTestStudent(t, tc.db, "Privacy", "SameVersion", "PSV1")
 
 		// Create first consent
+		opened := consentVersion(t, tc, student.ID)
 		body := map[string]interface{}{
 			"policy_version":      "1.0",
 			"accepted":            true,
 			"data_retention_days": 30,
+			"expected_version":    opened,
 		}
 		req1 := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/privacy-consent", student.ID), body)
 		rr1 := authExec(t, tc, req1, testutil.AdminTestClaims(1), []string{"admin:*"})
 		assert.Equal(t, http.StatusOK, rr1.Code)
 
+		// A second form opened on the defaults must not overwrite it (ADR 0311).
+		body["accepted"] = false
+		stale := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/privacy-consent", student.ID), body)
+		rrStale := authExec(t, tc, stale, testutil.AdminTestClaims(1), []string{"admin:*"})
+		require.Equal(t, http.StatusConflict, rrStale.Code, rrStale.Body.String())
+		assert.Contains(t, rrStale.Body.String(), `"code":"general.changed_since_read"`)
+
 		// Update same version (should update existing)
+		body["accepted"] = true
 		body["data_retention_days"] = 15
+		body["expected_version"] = consentVersion(t, tc, student.ID)
 		req2 := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/privacy-consent", student.ID), body)
 		rr2 := authExec(t, tc, req2, testutil.AdminTestClaims(1), []string{"admin:*"})
 
 		assert.Equal(t, http.StatusOK, rr2.Code, "Should update existing consent")
+		assert.Contains(t, rr2.Body.String(), `"data_retention_days":15`)
 	})
 
 	t.Run("update_privacy_consent_forbidden", func(t *testing.T) {

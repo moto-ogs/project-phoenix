@@ -93,8 +93,19 @@ vi.mock("./student-form-fields", () => ({
 }));
 
 import { PersonalInfoEditPanel } from "./personal-info-edit-panel";
-import { notifyStudentCompanionsChanged } from "~/lib/student-companion-api";
+import {
+  companionListKey,
+  notifyStudentCompanionsChanged,
+  type StudentCompanion,
+  type StudentCompanionList,
+} from "~/lib/student-companion-api";
 import type { Student } from "~/lib/student-helpers";
+
+// The read answers the list with the fingerprint of the same read (ADR 0311);
+// these tests give it the list's own key, so a save is seen to send it back.
+function companionList(companions: StudentCompanion[]): StudentCompanionList {
+  return { companions, fingerprint: companionListKey(companions) };
+}
 
 vi.unmock("swr");
 
@@ -144,8 +155,8 @@ const accompaniedStudent = {
   },
 } as Student;
 
-function companion(id: string) {
-  return { companion_student_id: id, weekdays: ["mon"] as const };
+function companion(id: string): StudentCompanion {
+  return { companion_student_id: id, weekdays: ["mon"] };
 }
 
 async function renderOpenModal(
@@ -176,17 +187,18 @@ describe("PersonalInfoEditPanel — remote companion changes", () => {
   });
 
   it("refetches the links when nothing has been edited yet", async () => {
-    fetchStudentCompanionsMock.mockResolvedValueOnce([companion("2")]);
+    fetchStudentCompanionsMock.mockResolvedValueOnce(
+      companionList([companion("2")]),
+    );
     await renderOpenModal();
     await waitFor(() =>
       expect(screen.getByTestId("companion-count").textContent).toBe("1"),
     );
 
     // Someone else added a second child to the Laufgemeinschaft.
-    fetchStudentCompanionsMock.mockResolvedValueOnce([
-      companion("2"),
-      companion("3"),
-    ]);
+    fetchStudentCompanionsMock.mockResolvedValueOnce(
+      companionList([companion("2"), companion("3")]),
+    );
     act(() => {
       notifyStudentCompanionsChanged();
     });
@@ -197,7 +209,9 @@ describe("PersonalInfoEditPanel — remote companion changes", () => {
   });
 
   it("blocks the save instead of overwriting a remote change with an in-progress edit", async () => {
-    fetchStudentCompanionsMock.mockResolvedValueOnce([companion("2")]);
+    fetchStudentCompanionsMock.mockResolvedValueOnce(
+      companionList([companion("2")]),
+    );
     const onSave = await renderOpenModal();
     await waitFor(() =>
       expect(screen.getByTestId("companion-count").textContent).toBe("1"),
@@ -207,10 +221,9 @@ describe("PersonalInfoEditPanel — remote companion changes", () => {
 
     // The remote change lands while the user is still editing — refetching now
     // would silently throw their draft away, so the modal asks instead.
-    fetchStudentCompanionsMock.mockResolvedValueOnce([
-      companion("2"),
-      companion("3"),
-    ]);
+    fetchStudentCompanionsMock.mockResolvedValueOnce(
+      companionList([companion("2"), companion("3")]),
+    );
     act(() => {
       notifyStudentCompanionsChanged();
     });
@@ -244,7 +257,12 @@ describe("PersonalInfoEditPanel — remote companion changes", () => {
   // stored list it replaces — a second editor starting from the same snapshot
   // would otherwise silently delete the first one's link.
   it("submits the fingerprint of the list it loaded", async () => {
-    fetchStudentCompanionsMock.mockResolvedValueOnce([companion("2")]);
+    // The token is the server's and opaque (ADR 0311): the form sends back
+    // what the read returned, it never builds one.
+    fetchStudentCompanionsMock.mockResolvedValueOnce({
+      companions: [companion("2")],
+      fingerprint: "server-token-of-the-read",
+    });
     const onSave = await renderOpenModal();
     await waitFor(() =>
       expect(screen.getByTestId("companion-count").textContent).toBe("1"),
@@ -256,7 +274,7 @@ describe("PersonalInfoEditPanel — remote companion changes", () => {
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     expect(onSave.mock.calls[0]?.[0]).toMatchObject({
       companions: [{ companion_student_id: "9", weekdays: ["mon"] }],
-      companions_fingerprint: "2:mon",
+      companions_fingerprint: "server-token-of-the-read",
     });
   });
 
@@ -264,7 +282,9 @@ describe("PersonalInfoEditPanel — remote companion changes", () => {
   // 409 is the only signal there — and it has to leave the form in the same
   // state a local announcement would: draft kept, save blocked, reload offered.
   it("blocks the form when the backend reports the list as stale", async () => {
-    fetchStudentCompanionsMock.mockResolvedValueOnce([companion("2")]);
+    fetchStudentCompanionsMock.mockResolvedValueOnce(
+      companionList([companion("2")]),
+    );
     const staleError = new ApiError("companions changed", 409, {
       code: "students.companions_changed",
     });
@@ -296,7 +316,9 @@ describe("PersonalInfoEditPanel — remote companion changes", () => {
   // edited list does. Refetching here would make the other person's brand-new
   // Tuesday link this save's own baseline — and then trim it away.
   it("blocks the save when only the departure plan was narrowed", async () => {
-    fetchStudentCompanionsMock.mockResolvedValueOnce([companion("2")]);
+    fetchStudentCompanionsMock.mockResolvedValueOnce(
+      companionList([companion("2")]),
+    );
     const onSave = await renderOpenModal(
       vi.fn().mockResolvedValue(undefined),
       accompaniedStudent,
@@ -308,10 +330,9 @@ describe("PersonalInfoEditPanel — remote companion changes", () => {
     fireEvent.click(screen.getByTestId("narrow-plan"));
 
     // Someone else adds a link on the weekday this draft is about to drop.
-    fetchStudentCompanionsMock.mockResolvedValueOnce([
-      companion("2"),
-      companion("3"),
-    ]);
+    fetchStudentCompanionsMock.mockResolvedValueOnce(
+      companionList([companion("2"), companion("3")]),
+    );
     act(() => {
       notifyStudentCompanionsChanged();
     });
@@ -332,7 +353,9 @@ describe("PersonalInfoEditPanel — remote companion changes", () => {
   });
 
   it("does not flag itself stale for the announcement its own save makes", async () => {
-    fetchStudentCompanionsMock.mockResolvedValueOnce([companion("2")]);
+    fetchStudentCompanionsMock.mockResolvedValueOnce(
+      companionList([companion("2")]),
+    );
     const onSave = vi.fn().mockImplementation(async () => {
       // updateStudent announces on the same bus during the save.
       notifyStudentCompanionsChanged();
@@ -343,7 +366,9 @@ describe("PersonalInfoEditPanel — remote companion changes", () => {
     );
 
     fireEvent.click(screen.getByTestId("edit-companions"));
-    fetchStudentCompanionsMock.mockResolvedValue([companion("9")]);
+    fetchStudentCompanionsMock.mockResolvedValue(
+      companionList([companion("9")]),
+    );
     fireEvent.click(screen.getByText("Speichern"));
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));

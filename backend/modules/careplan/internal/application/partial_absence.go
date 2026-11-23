@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"errors"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"slices"
 	"strings"
 
@@ -140,6 +141,9 @@ func (s *partialAbsenceService) UpdatePartialAbsence(ctx context.Context, except
 		}
 		row, err := s.findOwned(txCtx, exceptionID, input.StudentID)
 		if err != nil {
+			return err
+		}
+		if err := readstate.Check(input.ExpectedVersion, careplan.PartialAbsenceVersion(*row)); err != nil {
 			return err
 		}
 		if err := s.updatePartial(txCtx, row, input); err != nil {

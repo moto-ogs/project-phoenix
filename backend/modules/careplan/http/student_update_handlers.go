@@ -4,6 +4,7 @@ import (
 	context "context"
 	errors "errors"
 	fmt "fmt"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	http "net/http"
 	time "time"
 
@@ -197,7 +198,27 @@ func (rs *Resource) lockStudentForUpdate(ctx context.Context, student *peopleMod
 		return nil, errSickExcusedConflict
 	}
 
+	if err := rs.checkStudentRecordVersion(ctx, fresh, req); err != nil {
+		return nil, err
+	}
 	return fresh, nil
+}
+
+// checkStudentRecordVersion refuses a form save built on master data that
+// changed since it was read (ADR 0311). The form sends every field back, so
+// without it a stale save would put back a colleague's change. The person is
+// read again here, under the child's row lock: the copy staged before the
+// transaction already carries this request's own changes. A pure absence
+// report reads no form and carries no version.
+func (rs *Resource) checkStudentRecordVersion(ctx context.Context, fresh *peopleModule.StudentState, req *UpdateStudentRequest) error {
+	if req.isAbsenceOnly() {
+		return nil
+	}
+	stored, err := rs.findPerson(ctx, fresh.PersonID)
+	if err != nil {
+		return err
+	}
+	return readstate.Check(req.ExpectedVersion, peopleModule.StudentRecordVersion(*fresh, *stored))
 }
 
 // acquirePreRowLockGates takes the advisory locks that must precede ANY

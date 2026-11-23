@@ -38,8 +38,12 @@ func (seedEnrollmentPlacementStep) Run(_ context.Context, rt *Runtime) error {
 		if groupID == 0 {
 			return fmt.Errorf("group %s not available for class %s", option.groupKey, option.class)
 		}
+		version, err := readDataVersion(rt.Client.Get, "/api/students/"+student.ID.String())
+		if err != nil {
+			return err
+		}
 		if _, err := rt.Client.Put("/api/students/"+student.ID.String(), map[string]any{
-			"school_class": option.class, "group_id": groupID,
+			"school_class": option.class, "group_id": groupID, "expected_version": version,
 		}); err != nil {
 			return fmt.Errorf("place admitted child %s in %s: %w", student.ID, option.class, err)
 		}

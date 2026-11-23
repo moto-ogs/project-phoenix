@@ -268,12 +268,8 @@ func (s *FixedSeeder) seedClassArrivalTimes(_ context.Context, result *FixedResu
 		{"weekday": 5, "expected_arrival": "11:45"},
 	}
 	for _, class := range classNames {
-		_, err := s.client.Post("/api/students/arrival-schedules/bulk", map[string]any{
-			"school_class": class,
-			"schedules":    schedules,
-		})
-		if err != nil {
-			return fmt.Errorf("seed class arrival times for %s: %w", class, err)
+		if err := s.saveClassArrivalTimes(class, schedules); err != nil {
+			return err
 		}
 		result.ClassArrivalTimeCount++
 	}

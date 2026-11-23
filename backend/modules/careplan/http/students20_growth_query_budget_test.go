@@ -165,22 +165,26 @@ func TestStudents20CompanionsGrowthQueryBudget(t *testing.T) {
 		}
 		putStudent(t, tc, child.ID, accompaniedPlanBody(map[string]any{"companions": entries, "companions_fingerprint": mondayLinkFingerprint(previous...)}))
 		counter.Reset()
-		req := testutil.NewRequest(http.MethodGet, fmt.Sprintf("/%d/companions", child.ID), nil)
+		req := testutil.NewRequest(http.MethodGet, fmt.Sprintf("/%d/companion-links", child.ID), nil)
 		req = req.WithContext(counter.Context(req.Context()))
 		rr := students20Exec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 		var body struct {
-			Data []companion `json:"data"`
+			Data struct {
+				Companions  []companion `json:"companions"`
+				Fingerprint string      `json:"fingerprint"`
+			} `json:"data"`
 		}
 		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &body))
-		require.Equal(t, expected, body.Data)
+		require.Equal(t, expected, body.Data.Companions)
+		require.Equal(t, mondayLinkFingerprint(ids...), body.Data.Fingerprint)
 		require.NotContains(t, rr.Body.String(), "Unrelated")
 		require.Zero(t, counter.WriteRows())
 		assertStudents20CareplanBudget(t, "companions", n, counter.Measurement(counter.Queries()))
 		t.Logf("students20 companions N%d SQL=%d", n, counter.Total())
 	}
 	guest := testpkg.CreateTestAccount(t, tc.db, "s20-companion-guest@example.com")
-	rr := students20Exec(t, tc, testutil.NewRequest(http.MethodGet, fmt.Sprintf("/%d/companions", child.ID), nil), testutil.TeacherTestClaims(int(guest.ID)), []string{"users:read"})
+	rr := students20Exec(t, tc, testutil.NewRequest(http.MethodGet, fmt.Sprintf("/%d/companion-links", child.ID), nil), testutil.TeacherTestClaims(int(guest.ID)), []string{"users:read"})
 	require.Equal(t, http.StatusForbidden, rr.Code, rr.Body.String())
 }
 

@@ -322,8 +322,12 @@ describe("single reads", () => {
 });
 
 /** The stored consent the backend answers after a write. */
-function consentAnswer(accepted: boolean, days: number): Response {
-  return ok({ accepted, data_retention_days: days });
+function consentAnswer(
+  accepted: boolean,
+  days: number,
+  version = "v",
+): Response {
+  return ok({ accepted, data_retention_days: days, version });
 }
 
 describe("createStudent", () => {
@@ -362,6 +366,7 @@ describe("createStudent", () => {
   it("writes the changed consent after the child and carries no marker", async () => {
     fetchMock
       .mockResolvedValueOnce(ok(created, 201))
+      .mockResolvedValueOnce(consentAnswer(false, 30, "nothing-recorded"))
       .mockResolvedValueOnce(ok(null))
       .mockResolvedValueOnce(consentAnswer(true, 14));
 
@@ -373,9 +378,14 @@ describe("createStudent", () => {
       data_retention_days: 14,
     });
 
+    // The new child's consent is written against the state read right after
+    // creating it (ADR 0311).
     expect(calledUrl(1)).toBe("/api/students/55/privacy-consent");
-    expect(calledInit(1)).toMatchObject({ method: "PUT" });
-    expect(JSON.parse(String(calledInit(1).body))).toEqual({
+    expect(calledInit(1).method ?? "GET").toBe("GET");
+    expect(calledUrl(2)).toBe("/api/students/55/privacy-consent");
+    expect(calledInit(2)).toMatchObject({ method: "PUT" });
+    expect(JSON.parse(String(calledInit(2).body))).toEqual({
+      expected_version: "nothing-recorded",
       policy_version: "1.0",
       accepted: true,
       data_retention_days: 14,
@@ -390,6 +400,7 @@ describe("createStudent", () => {
   it("answers the child with the stored consent when the consent write fails", async () => {
     fetchMock
       .mockResolvedValueOnce(ok(created, 201))
+      .mockResolvedValueOnce(consentAnswer(false, 30))
       .mockResolvedValueOnce(
         problem(500, { status: 500, code: "general.internal" }),
       )
@@ -476,14 +487,21 @@ describe("updateStudent", () => {
       first_name: "Max",
       privacy_consent_accepted: true,
       data_retention_days: 21,
+      privacy_consent_version: "consent-read",
+      version: "record-read",
     });
 
+    // Each write carries the version of the read it was built on (ADR 0311).
     expect(calledUrl(0)).toBe("/api/students/1/privacy-consent");
     expect(calledInit(0)).toMatchObject({ method: "PUT" });
+    expect(JSON.parse(String(calledInit(0).body))).toMatchObject({
+      expected_version: "consent-read",
+    });
     expect(calledUrl(1)).toBe("/api/students/1");
     // The consent pair does not travel with the child.
     expect(JSON.parse(String(calledInit(1).body))).toEqual({
       first_name: "Max",
+      expected_version: "record-read",
     });
     expect(result).toMatchObject({
       privacy_consent_accepted: true,

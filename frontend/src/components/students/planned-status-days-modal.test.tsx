@@ -248,6 +248,7 @@ const existingPartialAbsence: StudentPartialAbsence = {
   pickupTime: "13:30",
   createdBy: "5",
   createdAt: "2026-05-20T08:00:00Z",
+  version: "pa-v1",
   updatedAt: "2026-05-20T08:00:00Z",
 };
 
@@ -433,10 +434,75 @@ describe("PlannedStatusDaysModal", () => {
     });
     await clickEnabledButton("Entschuldigung aktualisieren");
     expect(onSubmitPartialAbsence).toHaveBeenCalledWith(
-      "9",
+      { id: "9", version: "pa-v1" },
       "2026-05-27",
       "14:00",
       "Arzttermin",
+    );
+  });
+
+  // ADR 0311: an update goes out with the version of the entry the form was
+  // filled from; refused as changed since, the form shows the stored entry.
+  it("fills the form with the stored entry when it changed since it was read", async () => {
+    const onSubmitPartialAbsence = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      );
+    const panel = (absence: StudentPartialAbsence) => (
+      <PlannedStatusDaysModal
+        isOpen
+        status="excused"
+        studentName="Kevin Anders"
+        isSubmitting={false}
+        existingDays={[]}
+        existingPartialAbsences={[absence]}
+        onClose={vi.fn()}
+        loadExistingDays={loadNoExistingDays}
+        loadCarePlanDay={vi.fn().mockResolvedValue({
+          studentId: "42",
+          date: "2026-05-27",
+          weekday: 3,
+          arrival: { expectedTime: null, source: "none" },
+          pickup: { expectedTime: "13:30", source: "exception" },
+          instances: [],
+        })}
+        onSubmit={vi.fn()}
+        onSubmitPartialAbsence={onSubmitPartialAbsence}
+      />
+    );
+    const { rerender } = render(panel(existingPartialAbsence));
+
+    fireEvent.click(screen.getByRole("button", { name: "Ab Uhrzeit" }));
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Aktionen für Teilentschuldigung vom Mittwoch, 27. Mai 2026",
+      }),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Bearbeiten" }));
+    fireEvent.change(screen.getByLabelText("Entschuldigt ab"), {
+      target: { value: "14:00" },
+    });
+    await clickEnabledButton("Entschuldigung aktualisieren");
+
+    expect(onSubmitPartialAbsence).toHaveBeenCalledWith(
+      { id: "9", version: "pa-v1" },
+      "2026-05-27",
+      "14:00",
+      "Arzttermin",
+    );
+    expect(
+      await screen.findByText(/Du siehst jetzt den neuen Stand/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
+
+    rerender(
+      panel({ ...existingPartialAbsence, fromTime: "15:15", version: "pa-v2" }),
+    );
+    await waitFor(() =>
+      expect(screen.getByLabelText("Entschuldigt ab")).toHaveValue("15:15"),
     );
   });
 
@@ -482,7 +548,7 @@ describe("PlannedStatusDaysModal", () => {
     });
     await clickEnabledButton("Entschuldigung aktualisieren");
     expect(onSubmitPartialAbsence).toHaveBeenCalledWith(
-      "9",
+      { id: "9", version: "pa-v1" },
       "2026-05-27",
       "15:00",
       "Arzttermin",
@@ -594,6 +660,7 @@ describe("PlannedStatusDaysModal", () => {
         createdBy: "5",
         createdAt: "2026-05-20T08:00:00Z",
         updatedAt: "2026-05-20T08:00:00Z",
+        version: "outside-v1",
       },
     ]);
 
@@ -603,7 +670,7 @@ describe("PlannedStatusDaysModal", () => {
     });
     await clickEnabledButton("Entschuldigung aktualisieren");
     expect(onSubmitPartialAbsence).toHaveBeenCalledWith(
-      "outside-window",
+      { id: "outside-window", version: "outside-v1" },
       "2026-05-27",
       "13:45",
       "Therapie",
@@ -1362,7 +1429,10 @@ describe("PlannedStatusDaysModal", () => {
     expect(onSubmit).toHaveBeenCalledTimes(1);
   });
 
-  it("starts a reopened panel from a fresh check, not from the earlier answer", async () => {
+  // ADR 0311: the check reads through the shared cache. A reopened panel may
+  // show the earlier answer, reads again at once and saves only after that
+  // answer; the backend refuses a day taken since under its lock anyway.
+  it("checks a reopened panel again before it saves", async () => {
     const sickDay: StudentStatusDay = {
       ...existingDays[1]!,
       id: "7",
@@ -1410,9 +1480,6 @@ describe("PlannedStatusDaysModal", () => {
     expect(
       screen.getByText("Vorhandene Status-Tage werden geprüft…"),
     ).toBeInTheDocument();
-    expect(
-      screen.queryByText(/27\.05\.2026 \(krank\)/),
-    ).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Entschuldigen" }),
     ).toBeDisabled();

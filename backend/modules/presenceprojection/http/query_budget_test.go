@@ -55,8 +55,9 @@ func TestStudentRequestsNoInformationSchemaQueries(t *testing.T) {
 	exec(t, "GET", "/?page_size=50", nil)
 	exec(t, "GET", fmt.Sprintf("/%d", student.ID), nil)
 	exec(t, "PUT", fmt.Sprintf("/%d", student.ID), map[string]interface{}{
-		"first_name": "Budget",
-		"bus_days":   map[string]bool{"mon": true, "fri": true},
+		"first_name":       "Budget",
+		"bus_days":         map[string]bool{"mon": true, "fri": true},
+		"expected_version": detailVersion(t, tc, student.ID),
 	})
 
 	// Student requests must not run schema-detection queries in the request

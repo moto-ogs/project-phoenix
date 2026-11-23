@@ -455,9 +455,10 @@ func (rs *Resource) bulkUpsertArrivalSchedules(w http.ResponseWriter, r *http.Re
 	result, err := rs.ArrivalScheduleService.BulkUpsertArrivalSchedules(
 		r.Context(),
 		careplan.ArrivalScheduleBulkFilter{
-			SchoolClass: req.SchoolClass,
-			GroupID:     req.GroupID.Int64(),
-			StudentIDs:  ident.Int64s(req.StudentIDs),
+			SchoolClass:     req.SchoolClass,
+			ExpectedVersion: req.ExpectedVersion,
+			GroupID:         req.GroupID.Int64(),
+			StudentIDs:      ident.Int64s(req.StudentIDs),
 			Authorize: func(ctx context.Context, student careplan.ScheduleStudent) (bool, error) {
 				return securityruntime.CanUpdateStudent(ctx, sessiontoken.PermissionsFromCtx(r.Context()), student, rs.UserContextService)
 			},
@@ -538,6 +539,8 @@ type ClassArrivalTimesResponse struct {
 	SchoolClass string            `json:"school_class"`
 	Times       map[string]string `json:"times"`
 	UpdatedAt   *string           `json:"updated_at,omitempty"`
+	// Version is what a class save sends back as expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 // getClassArrivalTimes handles GET /students/class-arrival-times/{schoolClass}.
@@ -550,7 +553,7 @@ func (rs *Resource) getClassArrivalTimes(w http.ResponseWriter, r *http.Request)
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
-	resp := ClassArrivalTimesResponse{SchoolClass: times.SchoolClass, Times: times.Times}
+	resp := ClassArrivalTimesResponse{SchoolClass: times.SchoolClass, Times: times.Times, Version: times.Version}
 	if times.UpdatedAt != nil {
 		formatted := times.UpdatedAt.Format(time.RFC3339)
 		resp.UpdatedAt = &formatted
