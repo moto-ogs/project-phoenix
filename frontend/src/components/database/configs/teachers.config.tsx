@@ -8,7 +8,7 @@ import type { Teacher, TeacherWithCredentials } from "@/lib/teacher-api";
 import { teacherService } from "@/lib/teacher-api";
 import { displayEmail } from "~/lib/demo-build";
 
-import type { StaffRecordResponse } from "~/lib/contract/staff.generated";
+import { bffJson } from "~/lib/bff-fetch";
 import { mapTeacherResponse } from "~/lib/teacher-helpers";
 import { staffConcept } from "~/lib/concepts/staff";
 
@@ -43,14 +43,48 @@ export const teachersConfig = defineEntityConfig<Teacher>({
 
   backUrl: "/database",
 
+  // The list and the record answer staff records of the contract (#7563).
   api: {
-    routes: {
-      list: "GET /api/staff/",
-      get: "GET /api/staff/{id}",
-      create: "POST /api/staff/",
-      update: "PUT /api/staff/{id}",
-      delete: "DELETE /api/staff/{id}",
+    list: async () =>
+      (await bffJson("tenant", "GET /api/staff/")).map(mapTeacherResponse),
+    get: async (id) =>
+      mapTeacherResponse(
+        await bffJson("tenant", "GET /api/staff/{id}", { params: { id } }),
+      ),
+    // Custom create handler for teacher-specific flow
+    create: async (data) => {
+      // Staff creation is account + identity in one request (the backend
+      // provisions person and staff with it, #2222) plus the staff details.
+      // The teacher service owns that sequence.
+      const teacherData = data as Partial<Teacher> & {
+        password?: string;
+        linkExisting?: boolean;
+      };
+      logger.debug("teacher_create_started", {
+        link_existing: Boolean(teacherData.linkExisting),
+      });
+      const result = await teacherService.createTeacher(
+        teacherData as Omit<
+          Teacher,
+          "id" | "name" | "created_at" | "updated_at"
+        > & { password?: string; linkExisting?: boolean },
+      );
+      if (result.status === "account_exists") {
+        // Return the result as-is — the modal will handle the confirmation flow
+        return result as unknown as Teacher;
+      }
+      return result.data;
     },
+
+    // Custom update handler for teacher-specific flow
+    update: async (id, data, current) => {
+      // Teacher update requires updating both person and staff records
+      if (!current) throw new Error("Staff record is not loaded");
+      const result = await teacherService.updateTeacher(id, data, current);
+      return result;
+    },
+    delete: (id) =>
+      bffJson("tenant", "DELETE /api/staff/{id}", { params: { id } }),
   },
 
   form: {
@@ -339,45 +373,6 @@ export const teachersConfig = defineEntityConfig<Teacher>({
           return initials || "L";
         },
       },
-    },
-  },
-
-  service: {
-    // The list and the record answer staff records of the contract (#7563).
-    mapResponse: (data) => mapTeacherResponse(data as StaffRecordResponse),
-    mapRequest: prepareTeacherForBackend,
-
-    // Custom create handler for teacher-specific flow
-    create: async (data) => {
-      // Staff creation is account + identity in one request (the backend
-      // provisions person and staff with it, #2222) plus the staff details.
-      // The teacher service owns that sequence.
-      const teacherData = data as Partial<Teacher> & {
-        password?: string;
-        linkExisting?: boolean;
-      };
-      logger.debug("teacher_create_started", {
-        link_existing: Boolean(teacherData.linkExisting),
-      });
-      const result = await teacherService.createTeacher(
-        teacherData as Omit<
-          Teacher,
-          "id" | "name" | "created_at" | "updated_at"
-        > & { password?: string; linkExisting?: boolean },
-      );
-      if (result.status === "account_exists") {
-        // Return the result as-is — the modal will handle the confirmation flow
-        return result as unknown as Teacher;
-      }
-      return result.data;
-    },
-
-    // Custom update handler for teacher-specific flow
-    update: async (id, data, current) => {
-      // Teacher update requires updating both person and staff records
-      if (!current) throw new Error("Staff record is not loaded");
-      const result = await teacherService.updateTeacher(id, data, current);
-      return result;
     },
   },
 
