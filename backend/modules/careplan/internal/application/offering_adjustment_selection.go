@@ -268,7 +268,8 @@ func buildOfferingAdjustmentReplacement(work *offeringAdjustmentWork) error {
 }
 
 // capOfferingReplacementAtCareEnd bounds the new selection by the child's
-// last care day. A replacement that would start after it plans nothing.
+// last care day, and by the phase when care goes on past it. A replacement
+// that would start after it plans nothing.
 func capOfferingReplacementAtCareEnd(
 	rows []*careplan.BookedOffering,
 	lastCareDay *calendar.Date,
@@ -283,6 +284,9 @@ func capOfferingReplacementAtCareEnd(
 		validFrom = *effectiveFrom
 	}
 	validUntil := lastCareDay.AddDays(1)
+	if phaseEnd := phase.ServiceEnd.AddDays(1); phaseEnd.Before(validUntil) {
+		validUntil = phaseEnd
+	}
 	if !validFrom.Before(validUntil) {
 		return nil
 	}

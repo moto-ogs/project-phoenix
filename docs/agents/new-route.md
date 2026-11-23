@@ -22,8 +22,9 @@ Proxy rules, file flags and the session path in detail:
 Go is the source of every response shape. A type the frontend writes by hand
 for a registered route (`Backend*`) is a second, unchecked copy; import the
 generated type instead. `frontend/scripts/backend-wire-types.node-test.mjs`
-(part of `pnpm run check`) fails on a `Backend*` type with `snake_case`
-fields; a copy under another name is just as wrong.
+(part of `pnpm run check`) finds such a copy by its form, whatever its name:
+two `snake_case` fields of its own (a `Backend*` name: one), a generated type
+imported under another name, or a type that only renames a generated one.
 
 ## Read route
 
@@ -137,7 +138,10 @@ Same steps; the contract names the body type, and the client sends it typed
   request type has only optional fields and repeats no rule.
 - Every route whose handler reads a body names its type in `Request`, a
   file export too. A test that reaches a handler reading a body its contract
-  does not type fails the answer check (`api/common/answer_contract_test_helpers.go`).
+  does not type fails the answer check (`api/common/answer_contract_test_helpers.go`),
+  through the whole router or a route-sized one whose pattern fits one
+  registered route. A file answer does not pass that check, so its `Request`
+  rests on this rule and review.
   A Go type that a body and an answer both carry is generated twice: the
   answer keeps its name, the body is `<Name>Input` with optional fields.
 - A route without an answer body registers `NoData: true`.

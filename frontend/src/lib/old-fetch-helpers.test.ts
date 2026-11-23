@@ -2,8 +2,10 @@
 // (lib/bff-fetch.ts, #7806). This guard keeps it that way:
 // - the old helpers are gone, and none of their names comes back, neither as
 //   an import nor as a definition of its own;
-// - browser code calls `fetch` itself only in the infrastructure listed
-//   below, each file with the reason bffJson cannot carry it.
+// - browser code calls `fetch` itself (also as `window.fetch`,
+//   `globalThis.fetch` or `self.fetch`) or replaces it only in the
+//   infrastructure listed below, each file with the reason bffJson cannot
+//   carry it.
 // Server code (src/app/api, src/server, *.server.ts) talks to the backend
 // through sendBackend and is not browser code.
 import { readdirSync, readFileSync } from "node:fs";
@@ -36,6 +38,10 @@ const RAW_FETCH: Readonly<Record<string, string>> = {
     "the wall display: a device token in a header, no session, and an answer without the envelope (`plain`); no portal of bffJson fits",
   "components/search/school-search-help.ts":
     "a static file (the help search index), no BFF route",
+  "lib/session-tenant-mismatch-observer.ts":
+    "wraps the global fetch once: names this tab's account on every own BFF call, passes the session-end barrier and reports a foreign-session refusal (docs/agents/contracts.md)",
+  "lib/rate-limit-backoff.ts":
+    "wraps the global fetch once: holds BFF calls while a 429 wait runs and records the wait",
 };
 
 const SRC = join(import.meta.dirname, "..");
@@ -67,7 +73,10 @@ const FILES = sourceFiles(SRC)
   .filter(({ path }) => isBrowserFile(path));
 
 const OLD_NAME = new RegExp(String.raw`\b(?:${OLD_HELPERS.join("|")})\b`);
-const RAW_FETCH_CALL = /(?<![\w.$])fetch\(/;
+// A call of the global fetch, also through window/globalThis/self, and a
+// replacement of it (`window.fetch = …`).
+const RAW_FETCH_CALL =
+  /(?<![\w.$])(?:(?:window|globalThis|self)\.)?fetch\(|(?<![\w.$])(?:window|globalThis|self)\.fetch\s*=(?!=)/;
 
 describe("one way from the browser to the BFF", () => {
   it("names none of the old fetch helpers", () => {

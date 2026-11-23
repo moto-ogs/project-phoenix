@@ -307,7 +307,7 @@ export interface ParentChatMessageResponse {
   read_by_guardian?: boolean;
   group_thread_id?: string;
   group_thread_title?: string;
-  attachments?: unknown | null;
+  attachments?: ParentMessageAttachmentResponse[];
 }
 
 export const ParentChatMessageResponseSchema: z.ZodType<ParentChatMessageResponse, unknown> = object<ParentChatMessageResponse>({
@@ -332,7 +332,7 @@ export const ParentChatMessageResponseSchema: z.ZodType<ParentChatMessageRespons
   read_by_guardian: optional(bool),
   group_thread_id: optional(str),
   group_thread_title: optional(str),
-  attachments: optional(nullable(json)),
+  attachments: optional(arr(ParentMessageAttachmentResponseSchema)),
 });
 
 /** Go: messaging.ParentChatThreadDetailResponse */

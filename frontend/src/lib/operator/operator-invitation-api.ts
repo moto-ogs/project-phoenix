@@ -1,7 +1,7 @@
 import { bffJson, bffJsonUncontracted } from "~/lib/bff-fetch";
+import type { OperatorInvitationValidationResponse } from "~/lib/contract/operator-auth.generated";
 import type * as operatorInvitationsContract from "~/lib/contract/operator-invitations.generated";
 import type {
-  InvitationValidationBody,
   CreateOperatorInvitationRequest,
   AcceptOperatorInvitationRequest,
   PendingOperatorInvitation,
@@ -98,7 +98,7 @@ export async function validateOperatorInvitation(
 ): Promise<OperatorInvitationValidation> {
   // The operator backend answers in the shared error envelope (#2507).
   return mapInvitationValidation(
-    await bffJsonUncontracted<InvitationValidationBody>(
+    await bffJsonUncontracted<OperatorInvitationValidationResponse>(
       "public",
       "POST",
       "/api/operator/auth/invitations/validate",

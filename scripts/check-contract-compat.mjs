@@ -17,9 +17,13 @@ const describe = (schema) => schema.elem ? `${schema.kind}<${describe(schema.ele
 // Naming the form of a string narrows the type, not the wire. In a request,
 // Go reads an id as a decimal string or a number, so a string identifier may
 // become an id; so may a lax_id, the request kind a base from before #7808
-// still names (ADR 0300).
+// still names (ADR 0300). An answer typed json (Go's json.RawMessage) is read
+// as any value, so typing it later narrows the type, not what a client of the
+// base can read (#7806); a request typed json may not, an older client sends
+// whatever it sent before.
 const sameKind = (before, after, request) => before.kind === after.kind
   || (before.kind === "string" && ["enum", "date", "clock"].includes(after.kind))
+  || (!request && before.kind === "json")
   || (request && after.kind === "id" && ["string", "lax_id"].includes(before.kind));
 
 export function breakingChanges(base, head) {

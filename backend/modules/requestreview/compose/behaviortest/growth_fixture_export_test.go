@@ -50,6 +50,12 @@ func GrowthRequestTypes() []string {
 	return []string{requestreview.TypeMasterData, requestreview.TypeCareSchedule, requestreview.TypeOffering, requestreview.TypeExcused}
 }
 
+// GrowthHistoryTypes are the types the history lists: the four request
+// kinds plus the office's direct corrections.
+func GrowthHistoryTypes() []string {
+	return append(GrowthRequestTypes(), requestreview.TypeDirectCorrection)
+}
+
 // WithGrowthQuery binds the existing typed root proof before handing its query
 // to the external DB contract test.
 func WithGrowthQuery(t *testing.T, check func(*bun.DB, GrowthQuery)) {

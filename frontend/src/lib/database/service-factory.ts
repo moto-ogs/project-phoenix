@@ -1,33 +1,16 @@
-// Generic CRUD service of the Datenverwaltung. Every call goes through
-// bffJson with the entity's registered routes (#7806): the route decides
-// whether a list is paginated, and an answer without `data` is an error.
+// Generic CRUD service of the Datenverwaltung. Each entity's config calls
+// bffJson with its registered routes and their generated types (#7806); the
+// factory adds the hooks, the logging and one page for an unpaginated list.
 
-import { bffJson } from "~/lib/bff-fetch";
 import { createLogger } from "~/lib/logger";
-import type { CrudService, EntityConfig, PaginatedResponse } from "./types";
+import type {
+  CrudService,
+  EntityApi,
+  EntityConfig,
+  PaginatedResponse,
+} from "./types";
 
 const logger = createLogger({ component: "ServiceFactory" });
-
-type QueryValue = string | number | boolean;
-
-/**
- * bffJson without its per-route types: the factory serves every entity, and
- * each config names its routes as typed keys.
- */
-const callRoute = bffJson as unknown as (
-  portal: "tenant",
-  route: string,
-  options?: {
-    params?: Record<string, string>;
-    query?: Record<string, QueryValue>;
-    body?: unknown;
-  },
-) => Promise<unknown>;
-
-function requireRoute(entity: string, operation: string, route?: string) {
-  if (!route) throw new Error(`${entity}: no ${operation} route`);
-  return route;
-}
 
 function onePage(length: number): PaginatedResponse<never>["pagination"] {
   return {
@@ -38,41 +21,22 @@ function onePage(length: number): PaginatedResponse<never>["pagination"] {
   };
 }
 
-function listQuery(
-  listParams: Record<string, string> | undefined,
-  filters: Record<string, unknown> | undefined,
-): Record<string, QueryValue> {
-  const query: Record<string, QueryValue> = { ...listParams };
-  for (const [key, value] of Object.entries(filters ?? {})) {
-    if (value === undefined || value === null) continue;
-    query[key] =
-      typeof value === "object" ? JSON.stringify(value) : (value as QueryValue);
-  }
-  return query;
-}
-
 export function createCrudService<T>(config: EntityConfig<T>): CrudService<T> {
-  const { api, service } = config;
+  const { api, hooks } = config;
   const entity = config.name.singular;
-  const map = (item: unknown): T =>
-    service?.mapResponse ? service.mapResponse(item) : (item as T);
-  const body = (data: Partial<T>) =>
-    service?.mapRequest ? service.mapRequest(data) : data;
+
+  function missing(operation: keyof EntityApi<T>): never {
+    throw new Error(`${entity}: no ${operation} route`);
+  }
 
   return {
-    async getList(
-      filters?: Record<string, unknown>,
-    ): Promise<PaginatedResponse<T>> {
+    async getList(): Promise<PaginatedResponse<T>> {
       try {
-        const answer = await callRoute("tenant", api.routes.list, {
-          query: listQuery(api.listParams, filters),
-        });
+        const answer = await api.list();
         // A paginated route answers its page beside the data (#2353).
-        if (Array.isArray(answer)) {
-          return { data: answer.map(map), pagination: onePage(answer.length) };
-        }
-        const page = answer as PaginatedResponse<unknown>;
-        return { data: page.data.map(map), pagination: page.pagination };
+        return Array.isArray(answer)
+          ? { data: answer, pagination: onePage(answer.length) }
+          : answer;
       } catch (error) {
         logger.error("error fetching entities", {
           entity: config.name.plural,
@@ -84,11 +48,7 @@ export function createCrudService<T>(config: EntityConfig<T>): CrudService<T> {
 
     async getOne(id: string): Promise<T> {
       try {
-        if (service?.customMethods?.getOne) {
-          return (await service.customMethods.getOne(id)) as T;
-        }
-        const route = requireRoute(entity, "get", api.routes.get);
-        return map(await callRoute("tenant", route, { params: { id } }));
+        return await (api.get ?? missing("get"))(id);
       } catch (error) {
         logger.error("error fetching entity", {
           entity,
@@ -101,17 +61,11 @@ export function createCrudService<T>(config: EntityConfig<T>): CrudService<T> {
 
     async create(data: Partial<T>): Promise<T> {
       try {
-        let result: T;
-        if (service?.create) {
-          result = await service.create(data);
-        } else {
-          const input = config.hooks?.beforeCreate
-            ? await config.hooks.beforeCreate(data)
-            : data;
-          const route = requireRoute(entity, "create", api.routes.create);
-          result = map(await callRoute("tenant", route, { body: body(input) }));
-        }
-        if (config.hooks?.afterCreate) await config.hooks.afterCreate(result);
+        const input = hooks?.beforeCreate
+          ? await hooks.beforeCreate(data)
+          : data;
+        const result = await (api.create ?? missing("create"))(input);
+        if (hooks?.afterCreate) await hooks.afterCreate(result);
         return result;
       } catch (error) {
         logger.error("error creating entity", {
@@ -122,27 +76,17 @@ export function createCrudService<T>(config: EntityConfig<T>): CrudService<T> {
       }
     },
 
-    async update(id: string, data: Partial<T>, current?: T): Promise<T> {
+    async update(id: string, data: Partial<T>, current?: T): Promise<T | null> {
       try {
-        let result: T;
-        if (service?.update) {
-          result =
-            current === undefined
-              ? await service.update(id, data)
-              : await service.update(id, data, current);
-        } else {
-          const input = config.hooks?.beforeUpdate
-            ? await config.hooks.beforeUpdate(id, data)
-            : data;
-          const route = requireRoute(entity, "update", api.routes.update);
-          result = map(
-            await callRoute("tenant", route, {
-              params: { id },
-              body: body(input),
-            }),
-          );
-        }
-        if (config.hooks?.afterUpdate) await config.hooks.afterUpdate(result);
+        const input = hooks?.beforeUpdate
+          ? await hooks.beforeUpdate(id, data)
+          : data;
+        const result = await (api.update ?? missing("update"))(
+          id,
+          input,
+          current,
+        );
+        if (hooks?.afterUpdate) await hooks.afterUpdate(result);
         return result;
       } catch (error) {
         logger.error("error updating entity", {
@@ -155,13 +99,12 @@ export function createCrudService<T>(config: EntityConfig<T>): CrudService<T> {
     },
 
     async remove(id: string): Promise<boolean> {
-      if (config.hooks?.beforeDelete) {
-        const shouldDelete = await config.hooks.beforeDelete(id);
+      if (hooks?.beforeDelete) {
+        const shouldDelete = await hooks.beforeDelete(id);
         if (!shouldDelete) return false;
       }
       try {
-        const route = requireRoute(entity, "delete", api.routes.delete);
-        await callRoute("tenant", route, { params: { id } });
+        await (api.delete ?? missing("delete"))(id);
       } catch (error) {
         logger.warn("entity_delete_failed", {
           entity,
@@ -170,7 +113,7 @@ export function createCrudService<T>(config: EntityConfig<T>): CrudService<T> {
         });
         throw error;
       }
-      if (config.hooks?.afterDelete) await config.hooks.afterDelete(id);
+      if (hooks?.afterDelete) await hooks.afterDelete(id);
       return true;
     },
   };

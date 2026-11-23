@@ -1,12 +1,13 @@
 // Student entity configuration. The Kinder database page creates children
-// through StudentCreateModal and edits them on the child page, so the config
-// carries only the API path, the names and the list title the page reads.
+// through StudentCreateModal (`createStudent`) and edits them on the child
+// page, so the config carries only the names and the list title the page
+// reads, and no calls.
 
-import { defineEntityConfig } from "@/lib/database/types";
+import type { EntityConfig } from "@/lib/database/types";
 import type { Student } from "~/lib/student-helpers";
 import { childrenConcept } from "~/lib/concepts/children";
 
-export const studentsConfig = defineEntityConfig<Student>({
+export const studentsConfig: Omit<EntityConfig<Student>, "api"> = {
   name: {
     singular: "Kinder",
     plural: "Kinder",
@@ -15,16 +16,6 @@ export const studentsConfig = defineEntityConfig<Student>({
   concept: childrenConcept,
 
   backUrl: "/database",
-
-  api: {
-    routes: {
-      list: "GET /api/students/",
-      get: "GET /api/students/{id}",
-      create: "POST /api/students/",
-      update: "PUT /api/students/{id}",
-      delete: "DELETE /api/students/{id}",
-    },
-  },
 
   form: { sections: [] },
 
@@ -45,4 +36,4 @@ export const studentsConfig = defineEntityConfig<Student>({
     detailModalTitle: "Kinddetails",
     deleteConfirmation: "Bist du sicher, dass du dieses Kind löschen möchtest?",
   },
-});
+};
