@@ -368,9 +368,10 @@ describe("Personalverwaltung: externe Personen", () => {
     fireEvent.click(
       screen.getAllByRole("button", { name: /Personal hinzufügen$/ })[1]!,
     );
-    // Die Einrichtungs-Tour zeigt auf diesen Eintrag (setup-tours.ts).
+    // Die Einrichtungs-Tour zeigt auf diesen Eintrag (setup-tours.ts). Das
+    // Blatt lädt am Handy nach (responsive-panel.tsx), daher `findByRole`.
     expect(
-      screen.getByRole("menuitem", { name: "Personal einladen" }),
+      await screen.findByRole("menuitem", { name: "Personal einladen" }),
     ).toHaveAttribute("data-setup-tour", "invite-create");
     fireEvent.click(
       screen.getByRole("menuitem", { name: "Externe Person anlegen" }),
