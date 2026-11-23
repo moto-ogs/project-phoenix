@@ -32,5 +32,7 @@
   "child_link_changed": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "child_link_not_imported": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "child_link_refused": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
-  "child_link_bound": "{object} değiştirilemedi. Güncel durumu kontrol edin."
+  "child_link_bound": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "enrollment_preview_changed": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "enrollment_binding_changed": "{object} değiştirilemedi. Güncel durumu kontrol edin."
 }

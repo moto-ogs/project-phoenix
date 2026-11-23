@@ -85,6 +85,18 @@
       "legacy": "care_contract.contract_not_signable"
     },
     {
+      "code": "care_contract.enrollment_binding_changed",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "care_contract.enrollment_binding_changed"
+    },
+    {
+      "code": "care_contract.enrollment_preview_changed",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "care_contract.enrollment_preview_changed"
+    },
+    {
       "code": "care_contract.field_invalid",
       "class": "input",
       "parameters": [],

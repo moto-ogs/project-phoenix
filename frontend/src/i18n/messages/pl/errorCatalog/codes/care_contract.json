@@ -32,5 +32,7 @@
   "child_link_changed": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "child_link_not_imported": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "child_link_refused": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
-  "child_link_bound": "Nie udało się zmienić: {object}. Sprawdź aktualny stan."
+  "child_link_bound": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
+  "enrollment_preview_changed": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
+  "enrollment_binding_changed": "Nie udało się zmienić: {object}. Sprawdź aktualny stan."
 }

@@ -15,6 +15,8 @@ const CodeCareContractContractNotDraft = "care_contract.contract_not_draft"
 const CodeCareContractContractNotEndable = "care_contract.contract_not_endable"
 const CodeCareContractContractNotFound = "care_contract.contract_not_found"
 const CodeCareContractContractNotSignable = "care_contract.contract_not_signable"
+const CodeCareContractEnrollmentBindingChanged = "care_contract.enrollment_binding_changed"
+const CodeCareContractEnrollmentPreviewChanged = "care_contract.enrollment_preview_changed"
 const CodeCareContractFieldInvalid = "care_contract.field_invalid"
 const CodeCareContractImportChanged = "care_contract.import_changed"
 const CodeCareContractImportFileInvalid = "care_contract.import_file_invalid"
@@ -51,6 +53,8 @@ var errorCodeClassesCareContract = []errorCodeClass{
 	{CodeCareContractContractNotEndable, "business_rejection"},
 	{CodeCareContractContractNotFound, "business_rejection"},
 	{CodeCareContractContractNotSignable, "business_rejection"},
+	{CodeCareContractEnrollmentBindingChanged, "business_rejection"},
+	{CodeCareContractEnrollmentPreviewChanged, "business_rejection"},
 	{CodeCareContractFieldInvalid, "input"},
 	{CodeCareContractImportChanged, "business_rejection"},
 	{CodeCareContractImportFileInvalid, "input"},

@@ -32,5 +32,7 @@
   "child_link_changed": "The details have changed since the check. Please check them again.",
   "child_link_not_imported": "Only imported contracts can be linked here. This contract belongs to the child of its application.",
   "child_link_refused": "The contract cannot be linked to this child record like this. Please check the details again.",
-  "child_link_bound": "The contract is already bound to the child’s enrollment. The link to the child record can no longer be removed."
+  "child_link_bound": "The contract is already bound to the child’s enrollment. The link to the child record can no longer be removed.",
+  "enrollment_preview_changed": "The contracts or the school have changed since the preview. Reload the preview and check it again.",
+  "enrollment_binding_changed": "The contract is no longer bound to this enrollment. Reload the page and check the current state."
 }

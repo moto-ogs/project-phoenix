@@ -1,0 +1,236 @@
+package application
+
+import (
+	"slices"
+
+	"github.com/moto-ogs/project-phoenix/modules/carecontract"
+	"github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/workflows/contractenrollment"
+	"github.com/moto-ogs/project-phoenix/workflows/contractenrollment/ports"
+)
+
+// The merge of the plan of Care Contract and the answers of the school's
+// enrollment into the rows the office reads (ADR 0309 section 4). Where both
+// answer, the enrollment's answer goes first. Nothing here reads or writes.
+
+// rowKey relates an answer of the school's enrollment to its row: by the
+// contract and the child record it names, never by its position.
+type rowKey struct {
+	contractID int64
+	studentID  int64
+}
+
+type enrollmentAnswers map[rowKey]enrollment.ContractEnrollmentResult
+
+func answersOf(results []enrollment.ContractEnrollmentResult) enrollmentAnswers {
+	answers := make(enrollmentAnswers, len(results))
+	for _, result := range results {
+		answers[rowKey{contractID: result.ContractID, studentID: result.StudentID}] = result
+	}
+	return answers
+}
+
+func (a enrollmentAnswers) of(row carecontract.EnrollmentPlanRow) (enrollment.ContractEnrollmentResult, bool) {
+	answer, ok := a[rowKey{contractID: row.ContractID.Int64(), studentID: row.StudentID.Int64()}]
+	return answer, ok
+}
+
+// enrollmentInputs are the ready rows of the plan as the school's
+// enrollment takes them. A row that names an accepted application asks for
+// its confirmation, with the bookings the plan proved of it; any other asks
+// for the enrollment with the derived bookings.
+func enrollmentInputs(plan carecontract.EnrollmentPlan, accountID int64) []enrollment.ContractEnrollment {
+	inputs := []enrollment.ContractEnrollment{}
+	for _, row := range plan.Rows {
+		if row.Status != carecontract.EnrollmentReady {
+			continue
+		}
+		input := enrollment.ContractEnrollment{StudentID: row.StudentID.Int64(), PhaseID: row.PhaseID.Int64(),
+			ContractID: row.ContractID.Int64(), ServiceStart: row.PhaseStart, ServiceEnd: row.PhaseEnd, ActorAccountID: accountID}
+		if row.RequestChildID != 0 {
+			input.RequestChildID, input.ProvedOn = row.RequestChildID.Int64(), row.ProvedOn
+			input.Bookings = contractBookings(row.ApplicationBookings)
+		} else {
+			input.Bookings = contractBookings(row.Bookings)
+			for _, change := range row.Changes {
+				input.Changes = append(input.Changes, enrollment.ContractBookingChange{EffectiveFrom: change.EffectiveFrom,
+					Bookings: contractBookings(change.Bookings)})
+			}
+		}
+		inputs = append(inputs, input)
+	}
+	return inputs
+}
+
+func contractBookings(planned []carecontract.EnrollmentBooking) []enrollment.ContractBooking {
+	bookings := make([]enrollment.ContractBooking, len(planned))
+	for i, booking := range planned {
+		bookings[i] = enrollment.ContractBooking{CareOfferingID: booking.CareOfferingID.Int64(), Days: booking.Days,
+			ValidFrom: booking.ValidFrom, ValidUntil: booking.ValidUntil, EndTimes: booking.EndTimes,
+			AvailableDays: booking.AvailableDays, DaysOfWeekMode: booking.DaysOfWeekMode}
+	}
+	return bookings
+}
+
+// planSubjects are the contracts of the plan and the child records its rows
+// name, each once and in order.
+func planSubjects(plan carecontract.EnrollmentPlan) (contracts, students []int64) {
+	contracts, students = make([]int64, 0, len(plan.Rows)), []int64{}
+	for _, row := range plan.Rows {
+		contracts = append(contracts, row.ContractID.Int64())
+		if id := row.StudentID.Int64(); id > 0 && !slices.Contains(students, id) {
+			students = append(students, id)
+		}
+	}
+	slices.Sort(students)
+	return contracts, students
+}
+
+// previewRows are the rows of the plan with what the school's enrollment
+// would do with each ready one.
+func previewRows(plan carecontract.EnrollmentPlan, answers enrollmentAnswers, children map[int64]ports.Child) []contractenrollment.EnrollmentRow {
+	rows := make([]contractenrollment.EnrollmentRow, len(plan.Rows))
+	for i, planned := range plan.Rows {
+		row := plannedRow(plan.SchoolID, planned, children)
+		if planned.Status == carecontract.EnrollmentReady {
+			answer, ok := answers.of(planned)
+			answered(&row, answer, ok)
+			if row.Status == contractenrollment.RowChanged {
+				// Plan and check read the school in one transaction: the
+				// application is not what the plan proved, and stays so.
+				row.Status, row.Reason = contractenrollment.RowHeld, contractenrollment.ReasonChanged
+			}
+		}
+		rows[i] = stuck(row, planned)
+	}
+	return rows
+}
+
+// plannedRow is the row of the plan before the school's enrollment answers.
+func plannedRow(schoolID ident.ID, planned carecontract.EnrollmentPlanRow, children map[int64]ports.Child) contractenrollment.EnrollmentRow {
+	row := contractenrollment.EnrollmentRow{ContractID: planned.ContractID, SchoolID: schoolID, Reason: planned.Reason,
+		ContractChild: contractenrollment.ContractChildName{FirstName: planned.ChildFirstName, LastName: planned.ChildLastName},
+		PhaseID:       planned.PhaseID, PhaseName: planned.PhaseName, Bookings: planned.Bookings, Changes: planned.Changes,
+		RequestChildID: planned.RequestChildID, FollowsContractID: planned.FollowsContractID}
+	if len(row.Bookings) == 0 && len(planned.ApplicationBookings) > 0 {
+		row.Bookings = planned.ApplicationBookings
+	}
+	if row.Bookings == nil {
+		row.Bookings = []carecontract.EnrollmentBooking{}
+	}
+	if row.Changes == nil {
+		row.Changes = []carecontract.EnrollmentChange{}
+	}
+	if child, known := children[planned.StudentID.Int64()]; known {
+		row.Student = &contractenrollment.ChildRecord{StudentID: ident.ID(child.StudentID), FirstName: child.FirstName,
+			LastName: child.LastName, BirthDate: child.BirthDate}
+	}
+	switch planned.Status {
+	case carecontract.EnrollmentDone:
+		row.Status = contractenrollment.RowDone
+	case carecontract.EnrollmentUnlinked:
+		row.Status = contractenrollment.RowUnlinked
+	case carecontract.EnrollmentReady:
+		row.Status = contractenrollment.RowReady
+	default:
+		row.Status = contractenrollment.RowHeld
+	}
+	return row
+}
+
+// answered puts the answer of the school's enrollment for a ready row into
+// it. Without an answer for the contract and its child record, and with the
+// answer changed, the row is changed.
+func answered(row *contractenrollment.EnrollmentRow, answer enrollment.ContractEnrollmentResult, ok bool) {
+	switch {
+	case !ok || answer.Status == enrollment.ContractEnrollmentChanged:
+		row.Status, row.Action = contractenrollment.RowChanged, ""
+	case answer.Status == enrollment.ContractEnrollmentEnrolled:
+		row.Status, row.Action = contractenrollment.RowReady, contractenrollment.ActionEnroll
+	case answer.Status == enrollment.ContractEnrollmentExisting:
+		row.Status, row.Action, row.RequestChildID = contractenrollment.RowReady, contractenrollment.ActionBind, ident.ID(answer.RequestChildID)
+	case answer.Status == enrollment.ContractEnrollmentHasApplication:
+		row.Status, row.Reason = contractenrollment.RowHeld, carecontract.EnrollmentReasonHasApplication
+		row.RequestChildID = ident.ID(answer.RequestChildID)
+	default:
+		row.Status, row.Reason = contractenrollment.RowHeld, answer.Reason
+	}
+}
+
+// stuck turns a held row into a stuck one when the child has the silent
+// enrollment of an earlier run without a contract, and names it.
+func stuck(row contractenrollment.EnrollmentRow, planned carecontract.EnrollmentPlanRow) contractenrollment.EnrollmentRow {
+	if row.Status == contractenrollment.RowHeld && planned.EnrollmentChildID != 0 {
+		row.Status, row.RequestChildID = contractenrollment.RowStuck, planned.EnrollmentChildID
+	}
+	return row
+}
+
+// bindingsOf are the bindings of the rows the school's enrollment answered
+// as enrolled or existing, each with the child record and the application
+// child of that answer and the token of its plan row.
+func bindingsOf(plan carecontract.EnrollmentPlan, answers enrollmentAnswers) []carecontract.ApplicationBinding {
+	bindings := []carecontract.ApplicationBinding{}
+	for _, row := range plan.Rows {
+		answer, ok := answers.of(row)
+		if !ok || row.Status != carecontract.EnrollmentReady || !confirmed(answer) {
+			continue
+		}
+		bindings = append(bindings, carecontract.ApplicationBinding{ContractID: row.ContractID, StudentID: ident.ID(answer.StudentID),
+			RequestChildID: ident.ID(answer.RequestChildID), Token: row.Token, Enrollment: answer.Status})
+	}
+	return bindings
+}
+
+func confirmed(answer enrollment.ContractEnrollmentResult) bool {
+	return answer.Status == enrollment.ContractEnrollmentEnrolled || answer.Status == enrollment.ContractEnrollmentExisting
+}
+
+// runRows are the rows after a run: a row that was not ready stays what the
+// preview showed; a ready row says what the school's enrollment and the
+// binding did with it.
+func runRows(seen look, answers enrollmentAnswers, bound map[int64]string) []contractenrollment.EnrollmentRow {
+	rows := make([]contractenrollment.EnrollmentRow, len(seen.rows))
+	for i, row := range seen.rows {
+		planned := seen.plan.Rows[i]
+		if planned.Status != carecontract.EnrollmentReady {
+			rows[i] = row
+			continue
+		}
+		answer, ok := answers.of(planned)
+		answered(&row, answer, ok)
+		if row.Status == contractenrollment.RowReady {
+			row.RequestChildID = ident.ID(answer.RequestChildID)
+			switch bound[planned.ContractID.Int64()] {
+			case carecontract.BindingBound, carecontract.BindingDone:
+				row.Status = contractenrollment.RowDone
+			default:
+				row.Status, row.Action = contractenrollment.RowChanged, ""
+			}
+		}
+		rows[i] = stuck(row, planned)
+	}
+	return rows
+}
+
+func countRows(rows []contractenrollment.EnrollmentRow) contractenrollment.EnrollmentRowCounts {
+	var counts contractenrollment.EnrollmentRowCounts
+	for _, row := range rows {
+		switch row.Status {
+		case contractenrollment.RowReady:
+			counts.Ready++
+		case contractenrollment.RowDone:
+			counts.Done++
+		case contractenrollment.RowUnlinked:
+			counts.Unlinked++
+		case contractenrollment.RowHeld:
+			counts.Held++
+		case contractenrollment.RowStuck:
+			counts.Stuck++
+		case contractenrollment.RowChanged:
+			counts.Changed++
+		}
+	}
+	return counts
+}

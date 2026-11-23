@@ -391,6 +391,10 @@ var moduleComposeBudgets = map[string]int{
 	// Added by ADR 0215: the Träger catalog rollout and its runtime (ADR 0195).
 	"workflows/traegercatalog/compose":  38,
 	"workflows/studentdeletion/compose": 74,
+	// Added by ADR 0309 (#7760): the enrollment of the children of imported
+	// contracts and its runtime (Träger and school transaction), no retained
+	// logic.
+	"workflows/contractenrollment/compose": 34,
 }
 
 // moduleLegacyBudgets maps a legacy tree to its production LOC on 2026-09-18.

@@ -263,15 +263,19 @@ func newStudentTestModule(db transactionruntime.Database, unit tenant.UnitOfWork
 	}
 	enrollmentDecisionService := enrollmentCompose.PublicDecisions(owners.NewEnrollmentDecisions(enrollmentCompose.DecisionDependencies{
 		Now: time.Now, Requests: repos.Enrollment(),
-		Children:       repos.Enrollment(),
-		Guardians:      repos.Enrollment(),
-		LateInvites:    repos.Enrollment(),
-		Phases:         repos.Enrollment(),
-		Schemas:        repos.Enrollment(),
-		Offerings:      enrollmentCompose.NewCareOfferingRecords(students.CarePlan),
-		Notifications:  owners.NewEnrollmentNotifications(repos.Enrollment(), settingsService, owners.OutboxEnqueuer{Outbox: emailOutboxService}, owners.EnrollmentSchoolDirectory{Schools: reposSchools.School}),
-		Bookings:       careBookings,
-		GuardianAccess: guardianAccess, GuardianAuthorizer: repos.StudentGuardian, GuardianHold: owners.NewEnrollmentGuardianHold(db, repos.StudentGuardian, repos.Student, repos.GuardianProfile, nil),
+		Children:      repos.Enrollment(),
+		Guardians:     repos.Enrollment(),
+		LateInvites:   repos.Enrollment(),
+		Phases:        repos.Enrollment(),
+		Schemas:       repos.Enrollment(),
+		Offerings:     enrollmentCompose.NewCareOfferingRecords(students.CarePlan),
+		Notifications: owners.NewEnrollmentNotifications(repos.Enrollment(), settingsService, owners.OutboxEnqueuer{Outbox: emailOutboxService}, owners.EnrollmentSchoolDirectory{Schools: reposSchools.School}),
+		Bookings:      careBookings,
+		// The enrollment of the children of imported contracts (ADR 0309), as
+		// the root binds it.
+		ContractStudents: owners.EnrollmentContractStudents{People: persons},
+		CareBookings:     owners.EnrollmentCareBookingsBinding{Owner: students.CarePlan},
+		GuardianAccess:   guardianAccess, GuardianAuthorizer: repos.StudentGuardian, GuardianHold: owners.NewEnrollmentGuardianHold(db, repos.StudentGuardian, repos.Student, repos.GuardianProfile, nil),
 		People: owners.EnrollmentDecisionPeopleDirectory(
 			repos.Person, repos.Staff, repos.Student, repos.StudentGuardian, repos.GuardianProfile, repos.GuardianPhoneNumber, persons,
 		),

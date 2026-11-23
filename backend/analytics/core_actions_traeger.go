@@ -253,6 +253,13 @@ var traegerCoreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/traeger/contract-child-links/{contractId}/preview"}: notCaptured,
 	{http.MethodPut, "/traeger/contract-child-links/{contractId}"}:          notCaptured,
 	{http.MethodDelete, "/traeger/contract-child-links/{contractId}"}:       notCaptured,
+	// The enrollment of the children of imported contracts (#7760, ADR
+	// 0309): a run that enrolled the children of a school is the core
+	// action; the preview stores nothing, and taking a binding off again is
+	// a correction of the Träger.
+	{http.MethodPost, "/traeger/contract-enrollments/preview"}:        notCaptured,
+	{http.MethodPost, "/traeger/contract-enrollments/"}:               event("contract_children_enrolled"),
+	{http.MethodDelete, "/traeger/contract-enrollments/{contractId}"}: notCaptured,
 	// Withdrawal and termination (#4682): the Träger-Büro records a
 	// declaration it received and sets the end of an extraordinary
 	// termination it checked; the parents' own one in the parents portal.
