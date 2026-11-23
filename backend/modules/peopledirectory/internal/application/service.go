@@ -116,15 +116,21 @@ func (s *Service) findOne(ctx context.Context, operation string, query func(cont
 }
 
 func (s *Service) requireLocked(ctx context.Context, id int64, stats *domain.OperationStats) error {
+	_, err := s.lockedPerson(ctx, id, stats)
+	return err
+}
+
+// lockedPerson locks a live person row and answers it as stored.
+func (s *Service) lockedPerson(ctx context.Context, id int64, stats *domain.OperationStats) (peopledirectory.Person, error) {
 	person, found, queryStats, err := s.store.FindByID(ctx, id, "UPDATE")
 	stats.Add(queryStats)
 	if err != nil {
-		return err
+		return peopledirectory.Person{}, err
 	}
 	if !found || !peopledirectory.PersonIsLive(person.DeletedAt) {
-		return peopledirectory.ErrPersonNotFound
+		return peopledirectory.Person{}, peopledirectory.ErrPersonNotFound
 	}
-	return nil
+	return person, nil
 }
 
 func (s *Service) runWrite(ctx context.Context, operation string, fn func(context.Context, *domain.OperationStats) error) error {

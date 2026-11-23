@@ -25,6 +25,7 @@ import (
 	"github.com/uptrace/bun"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 )
@@ -37,12 +38,17 @@ type masterDataBankAccount struct {
 	BIC           string `json:"bic"`
 	BankName      string `json:"bank_name"`
 	IsDefault     bool   `json:"is_default"`
+	// Version is what a read answers, ExpectedVersion what a change sends
+	// back (ADR 0311).
+	Version         string `json:"version,omitempty"`
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 type masterDataContact struct {
-	Name  string `json:"name"`
-	Phone string `json:"phone"`
-	Email string `json:"email"`
+	Name            string `json:"name"`
+	Phone           string `json:"phone"`
+	Email           string `json:"email"`
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 type masterDataLogo struct {
@@ -53,8 +59,9 @@ type masterDataLogo struct {
 }
 
 type masterDataWithdrawal struct {
-	Phone string `json:"phone"`
-	Email string `json:"email"`
+	Phone           string `json:"phone"`
+	Email           string `json:"email"`
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 type masterDataProfile struct {
@@ -62,6 +69,19 @@ type masterDataProfile struct {
 	Withdrawal   masterDataWithdrawal    `json:"withdrawal"`
 	Logo         *masterDataLogo         `json:"logo"`
 	BankAccounts []masterDataBankAccount `json:"bank_accounts"`
+	// The read state of each section (ADR 0311).
+	ContactVersion    string `json:"contact_version"`
+	WithdrawalVersion string `json:"withdrawal_version"`
+}
+
+// savedVersion is the version a section's save answered.
+func savedVersion(t *testing.T, rec *httptest.ResponseRecorder) string {
+	t.Helper()
+	version := decodeSchoolPortalData[struct {
+		Version string `json:"version"`
+	}](t, rec.Body.Bytes()).Version
+	require.NotEmpty(t, version, rec.Body.String())
+	return version
 }
 
 // newMasterDataPortal mounts /traeger as the serving root does.
@@ -153,8 +173,9 @@ func TestTraegerBankAccountsKeepOneDefault(t *testing.T) {
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	first := decodeSchoolPortalData[masterDataBankAccount](t, rec.Body.Bytes())
+	assert.NotEmpty(t, first.Version, "the answer carries the account's version")
 	assert.Equal(t, masterDataBankAccount{ID: first.ID, Label: "Elternbeiträge", AccountHolder: "Träger Bissendorf e.V.", IBAN: traegerTestIBAN,
-		BIC: "COBADEFFXXX", BankName: "Commerzbank", IsDefault: true}, first, "the first bank account is the default; IBAN and BIC are compacted")
+		BIC: "COBADEFFXXX", BankName: "Commerzbank", IsDefault: true, Version: first.Version}, first, "the first bank account is the default; IBAN and BIC are compacted")
 
 	rec = traegerJSON(t, router, office.token, http.MethodPost, "/traeger/master-data/bank-accounts", masterDataBankAccount{
 		Label: "Ferien", AccountHolder: "Träger Bissendorf e.V.", IBAN: traegerOtherIBAN,
@@ -163,9 +184,17 @@ func TestTraegerBankAccountsKeepOneDefault(t *testing.T) {
 	second := decodeSchoolPortalData[masterDataBankAccount](t, rec.Body.Bytes())
 	assert.False(t, second.IsDefault)
 
-	second.IsDefault = true
+	second.IsDefault, second.ExpectedVersion = true, second.Version
 	rec = traegerJSON(t, router, office.token, http.MethodPut, bankAccountPath(int64(second.ID)), second)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	saved := savedVersion(t, rec)
+	// A change on the version before that save is refused and writes
+	// nothing (ADR 0311).
+	stale := second
+	stale.BankName = "Volksbank"
+	rec = traegerJSON(t, router, office.token, http.MethodPut, bankAccountPath(int64(second.ID)), stale)
+	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+	assert.Equal(t, readstate.ChangedCode, refusalOf(t, rec).Code)
 	profile = masterDataProfileOf(t, router, office)
 	require.Len(t, profile.BankAccounts, 2)
 	assert.Equal(t, second.ID, profile.BankAccounts[0].ID, "the default comes first")
@@ -176,6 +205,7 @@ func TestTraegerBankAccountsKeepOneDefault(t *testing.T) {
 	// another one instead.
 	second.IsDefault = false
 	second.BankName = "Sparkasse"
+	second.ExpectedVersion = saved
 	rec = traegerJSON(t, router, office.token, http.MethodPut, bankAccountPath(int64(second.ID)), second)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.True(t, decodeSchoolPortalData[masterDataBankAccount](t, rec.Body.Bytes()).IsDefault)
@@ -246,6 +276,7 @@ func TestTraegerMasterDataRefusesInvalidInput(t *testing.T) {
 
 	rec = traegerJSON(t, router, office.token, http.MethodPut, "/traeger/master-data/contact", masterDataContact{
 		Name: " Frau Beispiel ", Phone: "+49 5402 123-45", Email: "Buero@Traeger-Beispiel.de",
+		ExpectedVersion: masterDataProfileOf(t, router, office).ContactVersion,
 	})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, masterDataContact{Name: "Frau Beispiel", Phone: "+49 5402 123-45", Email: "buero@traeger-beispiel.de"},
@@ -272,7 +303,8 @@ func TestTraegerWithdrawalContactIsCheckedKeptAndLogged(t *testing.T) {
 	}
 	assert.ElementsMatch(t, []string{"phone", "email"}, fields)
 
-	rec = traegerJSON(t, router, office.token, http.MethodPut, path, masterDataWithdrawal{Phone: " 0800 123 45 ", Email: "Widerruf@Traeger.example"})
+	rec = traegerJSON(t, router, office.token, http.MethodPut, path, masterDataWithdrawal{Phone: " 0800 123 45 ", Email: "Widerruf@Traeger.example",
+		ExpectedVersion: masterDataProfileOf(t, router, office).WithdrawalVersion})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	saved := masterDataWithdrawal{Phone: "0800 123 45", Email: "widerruf@traeger.example"}
 	assert.Equal(t, saved, decodeSchoolPortalData[masterDataWithdrawal](t, rec.Body.Bytes()))
@@ -280,14 +312,54 @@ func TestTraegerWithdrawalContactIsCheckedKeptAndLogged(t *testing.T) {
 	assert.Equal(t, saved, profile.Withdrawal)
 	assert.Equal(t, masterDataContact{}, profile.Contact, "the contact person stays as it was")
 
-	require.Equal(t, http.StatusOK, traegerJSON(t, router, office.token, http.MethodPut, path, masterDataWithdrawal{}).Code)
+	require.Equal(t, http.StatusOK, traegerJSON(t, router, office.token, http.MethodPut, path, masterDataWithdrawal{ExpectedVersion: profile.WithdrawalVersion}).Code)
 	assert.Equal(t, masterDataWithdrawal{}, masterDataProfileOf(t, router, office).Withdrawal, "an empty save takes the contact person's again")
-	assert.Equal(t, []string{"withdrawal:set", "master_data:read", "withdrawal:set", "master_data:read"},
+	assert.Equal(t, []string{"master_data:read", "withdrawal:set", "master_data:read", "withdrawal:set", "master_data:read"},
 		masterDataLog(t, db, office.organization))
 
 	reader := newMasterDataOffice(t, db, router, "Träger Widerrufskontakt Lesen", identityaccess.TraegerRoleReadOnly)
 	assert.Equal(t, http.StatusForbidden, traegerJSON(t, router, reader.token, http.MethodPut, path, saved).Code,
 		"only the right „Einstellungen“ changes it")
+}
+
+// The contact person and the withdrawal contact share one row but carry a
+// version each (ADR 0311): a save of one section leaves the other's version
+// as it was, a save on a stale or missing version of its own section is
+// refused with general.changed_since_read and writes nothing, and the
+// answer's version saves the section again.
+func TestTraegerMasterDataSectionsCarryTheirOwnVersion(t *testing.T) {
+	t.Parallel()
+	db, router := newMasterDataPortal(t)
+	office := newMasterDataOffice(t, db, router, "Träger Abschnitte Stand", identityaccess.TraegerRoleAdministration)
+	read := masterDataProfileOf(t, router, office)
+	require.NotEmpty(t, read.ContactVersion)
+	require.NotEmpty(t, read.WithdrawalVersion)
+
+	rec := traegerJSON(t, router, office.token, http.MethodPut, "/traeger/master-data/contact",
+		masterDataContact{Name: "Frau Kern", ExpectedVersion: read.ContactVersion})
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	contactVersion := savedVersion(t, rec)
+	rec = traegerJSON(t, router, office.token, http.MethodPut, "/traeger/master-data/withdrawal-contact",
+		masterDataWithdrawal{Phone: "0800 1", ExpectedVersion: read.WithdrawalVersion})
+	require.Equal(t, http.StatusOK, rec.Code, "the contact save left the withdrawal version as read: %s", rec.Body.String())
+
+	for _, stale := range []string{read.ContactVersion, ""} {
+		rec = traegerJSON(t, router, office.token, http.MethodPut, "/traeger/master-data/contact",
+			masterDataContact{Name: "Herr Alt", ExpectedVersion: stale})
+		require.Equal(t, http.StatusConflict, rec.Code, "version %q: %s", stale, rec.Body.String())
+		assert.Equal(t, readstate.ChangedCode, refusalOf(t, rec).Code)
+	}
+	rec = traegerJSON(t, router, office.token, http.MethodPut, "/traeger/master-data/withdrawal-contact",
+		masterDataWithdrawal{Phone: "0800 2", ExpectedVersion: read.WithdrawalVersion})
+	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+	stored := masterDataProfileOf(t, router, office)
+	assert.Equal(t, masterDataContact{Name: "Frau Kern"}, stored.Contact, "the refused saves wrote nothing")
+	assert.Equal(t, masterDataWithdrawal{Phone: "0800 1"}, stored.Withdrawal)
+	assert.Equal(t, contactVersion, stored.ContactVersion, "the read gives the token the save answered")
+
+	rec = traegerJSON(t, router, office.token, http.MethodPut, "/traeger/master-data/contact",
+		masterDataContact{Name: "Frau Kern-Brandt", ExpectedVersion: contactVersion})
+	require.Equal(t, http.StatusOK, rec.Code, "the answer's version saves again: %s", rec.Body.String())
 }
 
 func TestTraegerLogoUploadChecksTypeSizeAndContent(t *testing.T) {
@@ -404,7 +476,8 @@ func TestTraegerMasterDataStaysWithItsTraeger(t *testing.T) {
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	account := decodeSchoolPortalData[masterDataBankAccount](t, rec.Body.Bytes())
 	require.Equal(t, http.StatusOK, uploadLogo(t, router, own.token, "logo", "logo.png", pngLogo(t, 8, 8)).Code)
-	require.Equal(t, http.StatusOK, traegerJSON(t, router, own.token, http.MethodPut, "/traeger/master-data/contact", masterDataContact{Name: "Frau Hardt"}).Code)
+	require.Equal(t, http.StatusOK, traegerJSON(t, router, own.token, http.MethodPut, "/traeger/master-data/contact",
+		masterDataContact{Name: "Frau Hardt", ExpectedVersion: masterDataProfileOf(t, router, own).ContactVersion}).Code)
 
 	profile := masterDataProfileOf(t, router, other)
 	assert.Empty(t, profile.BankAccounts)
@@ -413,7 +486,7 @@ func TestTraegerMasterDataStaysWithItsTraeger(t *testing.T) {
 	rec = traegerJSON(t, router, other.token, http.MethodGet, "/traeger/master-data/logo", nil)
 	assert.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 
-	account.Label = "Übernommen"
+	account.Label, account.ExpectedVersion = "Übernommen", account.Version
 	rec = traegerJSON(t, router, other.token, http.MethodPut, bankAccountPath(int64(account.ID)), account)
 	require.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 	assert.Equal(t, "traeger.bank_account_not_found", refusalOf(t, rec).Code)

@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	peoplePorts "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -207,6 +208,39 @@ func TestModuleCreatesReadsUpdatesAndSoftDeletesOneTenant(t *testing.T) {
 	byIDs, err := module.ListPersonsByID(ctx, []int64{created.ID})
 	require.NoError(t, err)
 	assert.Empty(t, byIDs, "soft-deleted persons stay out of every listing")
+}
+
+// TestModuleUpdatePersonRefusesAPersonChangedSinceItWasRead pins ADR 0311 on
+// the person update: the version of the read goes back with the save, under
+// the person's row lock a person saved meanwhile refuses it and keeps what
+// was stored, an empty version too. A writer that showed nothing passes nil.
+func TestModuleUpdatePersonRefusesAPersonChangedSinceItWasRead(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	module := buildModule(t, db)
+	ctx := testpkg.Ctx(t)
+
+	created, err := module.CreatePerson(ctx, peopledirectory.CreatePerson{FirstName: "Gelesen", LastName: "Person"})
+	require.NoError(t, err)
+	shown, err := module.FindPerson(ctx, created.ID)
+	require.NoError(t, err)
+	version := func(person peopledirectory.Person) *string {
+		token := peopledirectory.PersonVersion(person.UpdatedAt)
+		return &token
+	}
+	saved, err := module.UpdatePerson(ctx, peopledirectory.UpdatePerson{ID: created.ID, FirstName: "Kollegin", LastName: "Person", ExpectedVersion: version(shown)})
+	require.NoError(t, err)
+
+	for name, expected := range map[string]*string{"stale": version(shown), "empty": new(string)} {
+		_, err = module.UpdatePerson(ctx, peopledirectory.UpdatePerson{ID: created.ID, FirstName: "Älter", LastName: "Person", ExpectedVersion: expected})
+		require.ErrorIs(t, err, readstate.ErrChanged, name)
+	}
+	stored, err := module.FindPerson(ctx, created.ID)
+	require.NoError(t, err)
+	assert.Equal(t, "Kollegin", stored.FirstName, "the refused saves wrote nothing")
+
+	_, err = module.UpdatePerson(ctx, peopledirectory.UpdatePerson{ID: created.ID, FirstName: "Wieder", LastName: "Person", ExpectedVersion: version(saved)})
+	require.NoError(t, err, "the save's answer carries the next save")
 }
 
 // The import decides "no such child" and "ambiguous" over every namesake, so

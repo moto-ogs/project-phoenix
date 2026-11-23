@@ -255,4 +255,89 @@ describe("KlassenTab", () => {
       screen.queryByText(catalogText("general.unavailable", OBJECT)),
     ).not.toBeInTheDocument();
   });
+
+  it("saves on the classes it read and shows the stored ones after a refusal", async () => {
+    // ADR 0311: der Entwurf ruht auf den gelesenen Klassen. Hat sie jemand
+    // inzwischen geändert, lehnt der Server ab; der Reiter zeigt die
+    // gespeicherten Klassen mit der Meldung, ohne „Wiederholen“.
+    let stored = { school_classes: ["1a"], version: "v1" };
+    mockFetchSchoolClasses.mockResolvedValue([]);
+    mockBffJson.mockImplementation((_portal: string, route: string) => {
+      if (route.startsWith("PUT ")) {
+        stored = { school_classes: ["1a", "2b"], version: "v2" };
+        return Promise.reject(
+          new ApiError("changed", 409, { code: "general.changed_since_read" }),
+        );
+      }
+      return Promise.resolve({ staff_id: "7", ...stored });
+    });
+    render(<KlassenTab staffId="7" canEdit />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Bearbeiten" }));
+    fireEvent.change(screen.getByLabelText("Klassenname"), {
+      target: { value: "3c" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Hinzufügen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => expect(putCalls()).toHaveLength(1));
+    expect(putCalls()[0]?.[1]).toMatchObject({
+      body: { school_classes: ["1a", "3c"], expected_version: "v1" },
+    });
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", OBJECT),
+        { exact: false },
+      ),
+    ).toBeInTheDocument();
+    expect(await screen.findByText("Klasse 2b")).toBeInTheDocument();
+    expect(screen.queryByText("Klasse 3c")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps Speichern locked when the stored classes do not load after a refusal", async () => {
+    let refused = false;
+    mockFetchSchoolClasses.mockResolvedValue([]);
+    mockBffJson.mockImplementation((_portal: string, route: string) => {
+      if (route.startsWith("PUT ")) {
+        refused = true;
+        return Promise.reject(
+          new ApiError("changed", 409, { code: "general.changed_since_read" }),
+        );
+      }
+      if (refused) {
+        return Promise.reject(
+          new ApiError("down", 503, { code: "general.unavailable" }),
+        );
+      }
+      return Promise.resolve({
+        staff_id: "7",
+        school_classes: ["1a"],
+        version: "v1",
+      });
+    });
+    render(<KlassenTab staffId="7" canEdit />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Bearbeiten" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Klasse 1a entfernen" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(
+      await screen.findByText("Der neue Stand konnte nicht geladen werden.", {
+        exact: false,
+      }),
+    ).toBeInTheDocument();
+    // Ein zweites Speichern sendet nichts, bis der Stand gelesen ist.
+    fireEvent.change(screen.getByLabelText("Klassenname"), {
+      target: { value: "4d" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Hinzufügen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(putCalls()).toHaveLength(1);
+  });
 });

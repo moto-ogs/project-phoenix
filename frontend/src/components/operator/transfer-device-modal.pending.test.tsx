@@ -110,6 +110,7 @@ const device: OperatorDevice = {
 
 function school(id: string, name: string, organizationId = "5"): School {
   return {
+    version: "v-1",
     id,
     organizationId,
     name,

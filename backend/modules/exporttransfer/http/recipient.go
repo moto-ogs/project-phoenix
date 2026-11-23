@@ -69,10 +69,20 @@ type RecipientRequest struct {
 // Bind accepts the body; the capability validates the values.
 func (req *RecipientRequest) Bind(*http.Request) error { return nil }
 
+// RecipientSaveRequest is the body of PUT /{id}: the recipient with the
+// version it was read with (ADR 0311).
+type RecipientSaveRequest struct {
+	RecipientRequest
+	ExpectedVersion string `json:"expected_version"`
+}
+
 // FormatsRequest is the body of PUT /formats: the recipient of each named
 // format, null for the download.
 type FormatsRequest struct {
 	Assignments []AssignmentRequest `json:"assignments"`
+	// ExpectedVersion is the assignments_version the assignments were read
+	// with (ADR 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // AssignmentRequest is one format of the body and its recipient, null for
@@ -208,11 +218,13 @@ func (rs *RecipientResource) save(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	input, ok := bindRecipient(w, r)
-	if !ok {
+	req := &RecipientSaveRequest{}
+	if err := render.Bind(r, req); err != nil {
+		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeParentBillingExportRecipientInvalid))
 		return
 	}
-	recipient, err := rs.transfers.SaveRecipient(r.Context(), organizationID, accountID, id, input)
+	recipient, err := rs.transfers.SaveRecipient(r.Context(), organizationID, accountID, id,
+		exporttransfer.TraegerRecipientInput(req.RecipientRequest), req.ExpectedVersion)
 	if err != nil {
 		renderError(w, r, err)
 		return
@@ -247,7 +259,7 @@ func (rs *RecipientResource) assign(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeParentBillingExportFormatsInvalid))
 		return
 	}
-	page, err := rs.transfers.AssignFormats(r.Context(), organizationID, accountID, req.assignments())
+	page, err := rs.transfers.AssignFormats(r.Context(), organizationID, accountID, req.assignments(), req.ExpectedVersion)
 	if err != nil {
 		renderError(w, r, err)
 		return

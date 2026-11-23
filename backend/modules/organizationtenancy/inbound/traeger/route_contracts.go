@@ -26,10 +26,10 @@ func MasterDataRouteContracts() []common.RouteContract {
 			MaxBodyBytes: maxLogoBody, TooLargeCode: common.CodeTraegerLogoTooLarge, Response: organizationtenancy.TraegerLogo{},
 		},
 		{Method: "DELETE", Pattern: "/logo", Portals: traegerPortal, NoData: true},
-		{Method: "PUT", Pattern: "/contact", Portals: traegerPortal, Request: ContactRequest{}, Response: organizationtenancy.TraegerContact{}},
-		{Method: "PUT", Pattern: "/withdrawal-contact", Portals: traegerPortal, Request: WithdrawalContactRequest{}, Response: organizationtenancy.TraegerWithdrawalContact{}},
+		{Method: "PUT", Pattern: "/contact", Portals: traegerPortal, Request: ContactRequest{}, Response: organizationtenancy.TraegerSavedContact{}},
+		{Method: "PUT", Pattern: "/withdrawal-contact", Portals: traegerPortal, Request: WithdrawalContactRequest{}, Response: organizationtenancy.TraegerSavedWithdrawalContact{}},
 		{Method: "POST", Pattern: "/bank-accounts", Portals: traegerPortal, Request: BankAccountRequest{}, Response: organizationtenancy.TraegerBankAccount{}},
-		{Method: "PUT", Pattern: "/bank-accounts/{id}", Portals: traegerPortal, Request: BankAccountRequest{}, Response: organizationtenancy.TraegerBankAccount{}},
+		{Method: "PUT", Pattern: "/bank-accounts/{id}", Portals: traegerPortal, Request: BankAccountUpdateRequest{}, Response: organizationtenancy.TraegerBankAccount{}},
 		{Method: "DELETE", Pattern: "/bank-accounts/{id}", Portals: traegerPortal, NoData: true},
 		{Method: "GET", Pattern: "/document-templates", Portals: traegerPortal, Response: []organizationtenancy.TraegerDocumentTemplateSummary{}},
 		{Method: "GET", Pattern: "/document-templates/export", Portals: traegerPortal, Query: []common.QueryParam{common.ListFormatQuery}, File: true},
@@ -63,7 +63,7 @@ func ReportTemplateRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: []organizationtenancy.TraegerReportTemplate{}},
 		{Method: "POST", Pattern: "/", Portals: traegerPortal, Request: ReportTemplateRequest{}, Response: organizationtenancy.TraegerReportTemplate{}},
-		{Method: "PUT", Pattern: "/{id}", Portals: traegerPortal, Request: ReportTemplateRequest{}, Response: organizationtenancy.TraegerReportTemplate{}},
+		{Method: "PUT", Pattern: "/{id}", Portals: traegerPortal, Request: ReportTemplateReplaceRequest{}, Response: organizationtenancy.TraegerReportTemplate{}},
 		{Method: "DELETE", Pattern: "/{id}", Portals: traegerPortal, NoData: true},
 	}
 }

@@ -1679,6 +1679,7 @@ export interface Organization {
   deleted_at?: string;
   settings?: string;
   test_system: boolean;
+  version: string;
 }
 
 export const OrganizationSchema: z.ZodType<Organization, unknown> = object<Organization>({
@@ -1691,6 +1692,7 @@ export const OrganizationSchema: z.ZodType<Organization, unknown> = object<Organ
   deleted_at: optional(instant),
   settings: optional(str),
   test_system: bool,
+  version: str,
 });
 
 /** Go: organizationtenancy.OperatorPerson */
@@ -1752,6 +1754,7 @@ export interface SchoolSummary {
   child_quota_bundle_size: number;
   child_quota_count: number;
   device_slots: number | null;
+  version: string;
 }
 
 export const SchoolSummarySchema: z.ZodType<SchoolSummary, unknown> = object<SchoolSummary>({
@@ -1779,6 +1782,7 @@ export const SchoolSummarySchema: z.ZodType<SchoolSummary, unknown> = object<Sch
   child_quota_bundle_size: safeInt,
   child_quota_count: safeInt,
   device_slots: nullable(safeInt),
+  version: str,
 });
 
 /** Go: workforce.TraegerStaffRelease */
@@ -1944,6 +1948,7 @@ export interface School {
   child_quota_bundle_size: number;
   device_slots: number | null;
   organization?: Organization;
+  version: string;
 }
 
 export const SchoolSchema: z.ZodType<School, unknown> = object<School>({
@@ -1967,6 +1972,7 @@ export const SchoolSchema: z.ZodType<School, unknown> = object<School>({
   child_quota_bundle_size: safeInt,
   device_slots: nullable(safeInt),
   organization: optional(OrganizationSchema),
+  version: str,
 });
 
 /** Go: operator.setSchoolSettingRequest */
@@ -3575,17 +3581,6 @@ export const VacationQuotaSummarySchema: z.ZodType<VacationQuotaSummary, unknown
   opening: optional(StaffVacationOpeningSchema),
   version: str,
 });
-
-/** Go: workforce.CreateAbsenceRequest */
-export interface CreateAbsenceRequest {
-  absence_type?: string;
-  absence_type_id?: string | null;
-  date_start?: string;
-  date_end?: string;
-  half_day?: boolean;
-  note?: string;
-  expected_fingerprint?: string;
-}
 
 /** Go: workforce.BreakDurationUpdate */
 export interface BreakDurationUpdate {

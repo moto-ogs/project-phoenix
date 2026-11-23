@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -20,6 +21,22 @@ const (
 	dayMonday  = 0
 	dayTuesday = 1
 )
+
+// scheduleVersion reads the schedule form's version, as the Dienstplan tab
+// does before it saves (ADR 0311).
+func scheduleVersion(t *testing.T, ctx *testContext, token string, staffID int64) string {
+	t.Helper()
+	rr := testutil.ExecuteRequest(ctx.router, testutil.NewAuthenticatedRequest(t, http.MethodGet, fmt.Sprintf("/staff/%d/schedule", staffID), nil, testutil.WithJWTBearer(token)))
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	var answer struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &answer))
+	require.NotEmpty(t, answer.Data.Version)
+	return answer.Data.Version
+}
 
 func TestUpdateSchedule_SaveAsTemplateMaterializesAssignedSnapshot(t *testing.T) {
 	t.Parallel()
@@ -49,6 +66,7 @@ func TestUpdateSchedule_SaveAsTemplateMaterializesAssignedSnapshot(t *testing.T)
 		"rotation_length":      1,
 		"rotation_anchor_date": "2026-06-01",
 		"save_as_template":     fmt.Sprintf("Saved schedule template clean %d", staff.ID),
+		"expected_version":     scheduleVersion(t, ctx, token, staff.ID),
 		"entries": []map[string]any{
 			{
 				"week_index":     0,
@@ -229,6 +247,7 @@ func TestUpdateSchedule_FirstScheduleStartsOnValidFrom(t *testing.T) {
 			"entries": []map[string]any{
 				{"week_index": 0, "day_of_week": dayMonday, "target_minutes": 480},
 			},
+			"expected_version": scheduleVersion(t, ctx, token, staff.ID),
 		}
 		req := testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/staff/%d/schedule", staff.ID), body, testutil.WithJWTBearer(token))
 		return testutil.ExecuteRequest(ctx.router, req).Code
@@ -278,6 +297,7 @@ func TestUpdateSchedule_RejectsFutureValidFromForEmptyCustomSchedule(t *testing.
 
 			body := map[string]any{
 				"mode": "custom", "rotation_length": 1, "valid_from": "2999-01-04", "entries": test.entries,
+				"expected_version": scheduleVersion(t, ctx, token, staff.ID),
 			}
 			req := testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/staff/%d/schedule", staff.ID), body, testutil.WithJWTBearer(token))
 			rr := testutil.ExecuteRequest(ctx.router, req)
@@ -311,7 +331,7 @@ func TestUpdateSchedule_ArchivedTemplateOnlyKeepsExistingAssignees(t *testing.T)
 	claims.Permissions = []string{"time_tracking:manage"}
 	token := testutil.MintTestJWT(t, claims)
 	assign := func(staffID int64) *http.Response {
-		body := map[string]any{"mode": "template", "model_id": model.ID}
+		body := map[string]any{"mode": "template", "model_id": model.ID, "expected_version": scheduleVersion(t, ctx, token, staffID)}
 		req := testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/staff/%d/schedule", staffID), body, testutil.WithJWTBearer(token))
 		return testutil.ExecuteRequest(ctx.router, req).Result()
 	}
@@ -339,4 +359,51 @@ func TestUpdateSchedule_ArchivedTemplateOnlyKeepsExistingAssignees(t *testing.T)
 	_, err = catalog.RestoreWorkTimeModel(testpkg.Ctx(t), model.ID)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, assign(newcomer.ID).StatusCode, "a restored template is offered again")
+}
+
+// TestUpdateSchedule_RefusesAScheduleChangedSinceItWasRead pins ADR 0311 on
+// PUT /staff/{id}/schedule: a schedule saved after the form read it refuses
+// the save with general.changed_since_read and keeps the stored rows, an
+// empty version too; the save's answer carries the next save.
+func TestUpdateSchedule_RefusesAScheduleChangedSinceItWasRead(t *testing.T) {
+	t.Parallel()
+
+	ctx := setupStaffRoute(t)
+	staff := testpkg.CreateTestStaff(t, ctx.db, "ScheduleRead", "Stale")
+	capability := newWorkforceCapability(t, ctx.db)
+	claims := testutil.DefaultTestClaims()
+	claims.Permissions = []string{"time_tracking:manage"}
+	token := testutil.MintTestJWT(t, claims)
+	put := func(minutes int, version string) *httptest.ResponseRecorder {
+		t.Helper()
+		body := map[string]any{
+			"mode": "custom", "rotation_length": 1, "expected_version": version,
+			"entries": []map[string]any{{"week_index": 0, "day_of_week": dayMonday, "target_minutes": minutes}},
+		}
+		return testutil.ExecuteRequest(ctx.router, testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/staff/%d/schedule", staff.ID), body, testutil.WithJWTBearer(token)))
+	}
+
+	shown := scheduleVersion(t, ctx, token, staff.ID)
+	saved := put(300, scheduleVersion(t, ctx, token, staff.ID))
+	require.Equal(t, http.StatusOK, saved.Code, saved.Body.String())
+
+	for name, version := range map[string]string{"stale": shown, "empty": ""} {
+		refused := put(480, version)
+		require.Equal(t, http.StatusConflict, refused.Code, "%s: %s", name, refused.Body.String())
+		assert.Contains(t, refused.Body.String(), "general.changed_since_read", name)
+	}
+	rows, err := capability.CurrentStaffSchedule(testpkg.Ctx(t), staff.ID)
+	require.NoError(t, err)
+	require.Len(t, rows, 1)
+	assert.Equal(t, 300, rows[0].TargetMinutes, "the refused saves wrote nothing")
+
+	var answer struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(saved.Body.Bytes(), &answer))
+	assert.Equal(t, scheduleVersion(t, ctx, token, staff.ID), answer.Data.Version, "the save answers the version of what it stored")
+	again := put(360, answer.Data.Version)
+	require.Equal(t, http.StatusOK, again.Code, again.Body.String())
 }

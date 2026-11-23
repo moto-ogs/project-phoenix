@@ -29,11 +29,21 @@ func seedSchedulesViaAPI(rt *Runtime, staff []StaffCredentials, staffIDByEmail m
 		}
 		staffID := staffIDByEmail[cred.Email]
 		path := fmt.Sprintf("/api/staff/%d/schedule", staffID)
+		// The schedule the tab would show goes back with the save (ADR 0311).
+		read, err := rt.Client.Get(path)
+		if err != nil {
+			return count, fmt.Errorf("read schedule for staff %d: %w", staffID, err)
+		}
+		version, err := seedReadToken(read, "version")
+		if err != nil {
+			return count, err
+		}
 		body := map[string]any{
-			"mode":            "custom",
-			"rotation_length": 1,
-			"valid_from":      toDateKey(validFrom),
-			"entries":         entries,
+			"mode":             "custom",
+			"rotation_length":  1,
+			"valid_from":       toDateKey(validFrom),
+			"entries":          entries,
+			"expected_version": version,
 		}
 		if _, err := rt.Client.Put(path, body); err != nil {
 			return count, fmt.Errorf("put schedule for staff %d: %w", staffID, err)

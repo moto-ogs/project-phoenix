@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // ProvisioningDependencies are the owners operator provisioning (#3253)
@@ -147,6 +148,11 @@ func (p *Provisioning) UpdateOrganization(ctx context.Context, id int64, changes
 		}
 		if existing.IsDeleted() {
 			return nil, &organizationtenancy.OrganizationAlreadyDeletedError{OrganizationID: id}
+		}
+		// The organisation as the operator read it, under its row lock
+		// (ADR 0311): the form sends every field back.
+		if err := readstate.Check(changes.ExpectedVersion, organizationtenancy.OrganizationVersion(existing)); err != nil {
+			return nil, err
 		}
 		if err := p.guardReactivation(adminCtx, existing, changes.Active); err != nil {
 			return nil, err

@@ -16,6 +16,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/carecontract/internal/adapters/postgres"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -140,8 +141,9 @@ func (f noticeFixture) declare(input carecontract.NoticeInput) func(context.Cont
 }
 
 var (
+	// terminate holds to the end the office was shown (ADR 0311).
 	terminate = carecontract.NoticeInput{Kind: carecontract.NoticeTermination, TerminationKind: carecontract.TerminationOrdinary,
-		ReceivedOn: calendar.NewDate(2026, 11, 10)}
+		ReceivedOn: calendar.NewDate(2026, 11, 10), ExpectedEndsOn: calendar.NewDate(2026, 12, 31)}
 	withdraw = carecontract.NoticeInput{Kind: carecontract.NoticeWithdrawal, ReceivedOn: calendar.NewDate(2026, 11, 10)}
 )
 
@@ -458,12 +460,22 @@ func TestWithdrawalRejectsDispatchAfterReceiptAndChangedTerminationDate(t *testi
 	for _, raw := range []string{
 		`{"kind":"widerruf","received_on":"2026-11-10","dispatched_on":"2026-11-11"}`,
 		`{"kind":"widerruf","received_on":"2026-11-10","dispatched_on":"2026-11-05"}`,
-		`{"kind":"kuendigung","termination_kind":"ordentlich","received_on":"2026-11-10","expected_ends_on":"2026-11-30"}`,
 	} {
 		var input carecontract.NoticeInput
 		require.NoError(t, json.Unmarshal([]byte(raw), &input))
 		var invalid *carecontract.ValidationError
 		assert.ErrorAs(t, testpkg.WithinTraeger(f.ctx, f.org, f.declare(input)), &invalid)
+		assert.Equal(t, carecontract.StatusActive, f.state(t).status)
+	}
+	// A termination to another end than the one shown, or to none, is
+	// refused as a changed read state (ADR 0311).
+	for _, raw := range []string{
+		`{"kind":"kuendigung","termination_kind":"ordentlich","received_on":"2026-11-10","expected_ends_on":"2026-11-30"}`,
+		`{"kind":"kuendigung","termination_kind":"ordentlich","received_on":"2026-11-10"}`,
+	} {
+		var input carecontract.NoticeInput
+		require.NoError(t, json.Unmarshal([]byte(raw), &input))
+		assert.ErrorIs(t, testpkg.WithinTraeger(f.ctx, f.org, f.declare(input)), readstate.ErrChanged, raw)
 		assert.Equal(t, carecontract.StatusActive, f.state(t).status)
 	}
 	assert.Empty(t, f.post.mails)

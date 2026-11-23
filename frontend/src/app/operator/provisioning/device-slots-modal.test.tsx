@@ -34,6 +34,7 @@ import { DeviceSlotsModal } from "./device-slots-modal";
 import type { SchoolSummary } from "~/lib/operator/provisioning-helpers";
 
 const school: SchoolSummary = {
+  version: "v-1",
   id: "10",
   organizationId: "1",
   organizationName: "Test Org",

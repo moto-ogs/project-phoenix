@@ -18,7 +18,7 @@ import (
 func TestCareContractVersionsAreListedAndEachHasItsPDFForTheTraegerOnly(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertrag Versionen")
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, "/traeger/contracts", map[string]any{"contracts": []any{f.key()}})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	contract := decodeSchoolPortalData[careContractCreateBody](t, rec.Body.Bytes()).Created[0]

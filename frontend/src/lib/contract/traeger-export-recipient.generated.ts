@@ -59,6 +59,7 @@ export interface TraegerRecipient {
   formats: string[] | null;
   last_handover?: TraegerTransferEntry;
   updated_at: string;
+  version: string;
 }
 
 export const TraegerRecipientSchema: z.ZodType<TraegerRecipient, unknown> = object<TraegerRecipient>({
@@ -76,6 +77,7 @@ export const TraegerRecipientSchema: z.ZodType<TraegerRecipient, unknown> = obje
   formats: nullable(arr(str)),
   last_handover: optional(TraegerTransferEntrySchema),
   updated_at: instant,
+  version: str,
 });
 
 /** Go: exporttransfer.TraegerAssignment */
@@ -94,12 +96,14 @@ export interface TraegerRecipientsPage {
   recipients: TraegerRecipient[] | null;
   assignments: TraegerAssignment[] | null;
   handovers: TraegerTransferEntry[] | null;
+  assignments_version: string;
 }
 
 export const TraegerRecipientsPageSchema: z.ZodType<TraegerRecipientsPage, unknown> = object<TraegerRecipientsPage>({
   recipients: nullable(arr(TraegerRecipientSchema)),
   assignments: nullable(arr(TraegerAssignmentSchema)),
   handovers: nullable(arr(TraegerTransferEntrySchema)),
+  assignments_version: str,
 });
 
 /** Go: exporttransfer.TraegerRecipientPage */
@@ -134,6 +138,20 @@ export interface AssignmentRequest {
 /** Go: exporttransferhttp.FormatsRequest */
 export interface FormatsRequest {
   assignments?: AssignmentRequest[] | null;
+  expected_version?: string;
+}
+
+/** Go: exporttransferhttp.RecipientSaveRequest */
+export interface RecipientSaveRequest {
+  name?: string;
+  enabled?: boolean;
+  host?: string;
+  port?: number;
+  username?: string;
+  password?: string | null;
+  remote_directory?: string;
+  host_key_fingerprint?: string;
+  expected_version?: string;
 }
 
 export const routes = {
@@ -173,7 +191,7 @@ export const routes = {
     method: "PUT",
     pattern: "/traeger/export-recipient/{id}",
     portals: ["org"],
-    request: requestBody<RecipientRequest>(),
+    request: requestBody<RecipientSaveRequest>(),
     response: success(TraegerRecipientSchema),
   },
 } as const;

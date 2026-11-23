@@ -35,6 +35,7 @@ export default function TraegerExportRecipientsPage() {
     loading,
     error,
     mutate,
+    reloadOrThrow,
   } = useTraegerResource(
     traegerBillingKeys.exportRecipients(),
     fetchExportRecipients,
@@ -89,12 +90,13 @@ export default function TraegerExportRecipientsPage() {
         <>
           <ExportFormatAssignmentCard
             page={page}
-            onSave={async (assignments) => {
-              await mutate(await assignExportFormats(assignments), {
-                revalidate: false,
-              });
+            reload={reloadOrThrow}
+            onSave={async (assignments, version) => {
+              const saved = await assignExportFormats(assignments, version);
+              await mutate(saved, { revalidate: false });
               // Each recipient's page names the files it gets.
               void invalidate(traegerBillingKeys.exportRecipientsFamily);
+              return saved;
             }}
           />
           <ExportRecipientListCard recipients={page.recipients} />

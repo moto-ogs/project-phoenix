@@ -52,7 +52,7 @@ func TestContractSendPushesOncePerAddress(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertrag Push")
 	token := f.office.token
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, token, f.school, f.offering, careContractTemplate).Code)
 	rec := traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts", map[string]any{"contracts": []any{f.key()}})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	id := decodeSchoolPortalData[careContractCreateBody](t, rec.Body.Bytes()).Created[0].ID

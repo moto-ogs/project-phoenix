@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useSWRAuth } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
 import { fetchReportTemplates } from "~/lib/traeger-reports-api";
 
@@ -23,5 +23,7 @@ export function useReportTemplates() {
     templates: response.data ?? null,
     error,
     mutate: response.mutate,
+    /** Liest neu und scheitert laut (ADR 0311, Regel 6). */
+    reload: () => revalidateOrThrow(response),
   };
 }

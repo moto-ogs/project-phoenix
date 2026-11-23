@@ -31,6 +31,7 @@ vi.mock("~/lib/traeger-export-handovers-api", async (importOriginal) => ({
 vi.mock("~/lib/traeger-url", () => ({ traegerPath: (path: string) => path }));
 
 const KAEMMEREI: ExportRecipient = {
+  version: "v-1",
   id: "7",
   name: "Kämmerei",
   enabled: true,
@@ -69,6 +70,7 @@ const STEUERBUERO: ExportRecipient = {
 };
 
 const PAGE: ExportRecipientsPage = {
+  assignmentsVersion: "a-1",
   recipients: [KAEMMEREI, STEUERBUERO],
   assignments: [
     { format: "sollstellung", recipientId: "7" },
@@ -116,17 +118,22 @@ it("sends a file that has no recipient to one, as a whole", async () => {
   const card = (await screen.findByText("Welche Datei geht wohin")).closest(
     "section",
   )!;
-  const save = within(card).getByRole("button", { name: "Speichern" });
-  expect(save).toBeDisabled();
+  const save = () => within(card).getByRole("button", { name: "Speichern" });
+  // Blocked with its reason: nothing changed yet.
+  expect(save()).toHaveAttribute("aria-disabled", "true");
   fireEvent.click(within(card).getByRole("combobox", { name: "DATEV-Datei" }));
   fireEvent.click(await screen.findByRole("option", { name: "Steuerbüro" }));
-  fireEvent.click(save);
+  fireEvent.click(save());
   await waitFor(() =>
-    expect(api.assignExportFormats).toHaveBeenCalledWith([
-      { format: "sollstellung", recipientId: "7" },
-      { format: "datev", recipientId: "8" },
-      { format: "pain008", recipientId: "7" },
-    ]),
+    expect(api.assignExportFormats).toHaveBeenCalledWith(
+      [
+        { format: "sollstellung", recipientId: "7" },
+        { format: "datev", recipientId: "8" },
+        { format: "pain008", recipientId: "7" },
+      ],
+      // The assignments as the page read them (ADR 0311).
+      "a-1",
+    ),
   );
   expect(
     await screen.findByText("Die Zuordnung ist gespeichert."),

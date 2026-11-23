@@ -50,5 +50,7 @@ export function mapTeacherResponse(data: StaffRecordResponse): Teacher {
     staff_id: data.id,
     teacher_id: data.teacher_id,
     person,
+    version: data.version,
+    person_version: person?.version,
   };
 }

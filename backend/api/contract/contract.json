@@ -16240,7 +16240,7 @@
       ],
       "request": {
         "kind": "ref",
-        "ref": "CreateAbsenceRequest"
+        "ref": "OwnAbsenceRequest"
       },
       "response": {
         "kind": "ref",
@@ -23526,7 +23526,7 @@
       ],
       "request": {
         "kind": "ref",
-        "ref": "RecipientRequest"
+        "ref": "RecipientSaveRequest"
       },
       "response": {
         "kind": "ref",
@@ -23766,7 +23766,7 @@
       ],
       "request": {
         "kind": "ref",
-        "ref": "BankAccountRequest"
+        "ref": "BankAccountUpdateRequest"
       },
       "response": {
         "kind": "ref",
@@ -23785,7 +23785,7 @@
       },
       "response": {
         "kind": "ref",
-        "ref": "TraegerContact"
+        "ref": "TraegerSavedContact"
       }
     },
     {
@@ -23814,7 +23814,7 @@
       },
       "response": {
         "kind": "ref",
-        "ref": "TraegerWithdrawalContact"
+        "ref": "TraegerSavedWithdrawalContact"
       }
     },
     {
@@ -23870,7 +23870,7 @@
       ],
       "request": {
         "kind": "ref",
-        "ref": "ReportTemplateRequest"
+        "ref": "ReportTemplateReplaceRequest"
       },
       "response": {
         "kind": "ref",
@@ -31748,6 +31748,62 @@
           "optional": true,
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "BankAccountUpdateRequest",
+      "go_type": "traeger.BankAccountUpdateRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "label",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "account_holder",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "iban",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "bic",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "bank_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_default",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -45425,6 +45481,13 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -47407,6 +47470,13 @@
         },
         {
           "name": "contract_partner",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_version",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -52059,6 +52129,13 @@
           "optional": true,
           "schema": {
             "kind": "id"
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -57125,6 +57202,13 @@
               "kind": "ref",
               "ref": "AssignmentRequest"
             }
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -72788,6 +72872,12 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -74926,6 +75016,12 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -75101,6 +75197,12 @@
           "name": "personen_count",
           "schema": {
             "kind": "int"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -75423,6 +75525,56 @@
         },
         {
           "name": "new_time",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnAbsenceRequest",
+      "go_type": "timetracking.OwnAbsenceRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "absence_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "absence_type_id",
+          "optional": true,
+          "schema": {
+            "kind": "id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "date_start",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "date_end",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "half_day",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "note",
+          "optional": true,
           "schema": {
             "kind": "string"
           }
@@ -78542,6 +78694,12 @@
           "name": "updated_at",
           "schema": {
             "kind": "instant"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -83285,6 +83443,77 @@
       ]
     },
     {
+      "name": "RecipientSaveRequest",
+      "go_type": "exporttransferhttp.RecipientSaveRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "enabled",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "host",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "port",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "username",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "password",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "remote_directory",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "host_key_fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "RecurrenceRequest",
       "go_type": "portal.RecurrenceRequest",
       "request": true,
@@ -83737,6 +83966,64 @@
         },
         {
           "name": "district",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ReportTemplateReplaceRequest",
+      "go_type": "traeger.ReportTemplateReplaceRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "sections",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "key_date_month",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "key_date_day",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "districts",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ReportDistrictRequest"
+            }
+          }
+        },
+        {
+          "name": "expected_version",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -87783,6 +88070,12 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -88033,6 +88326,13 @@
         },
         {
           "name": "valid_from",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_version",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -88459,6 +88759,12 @@
             "kind": "ref",
             "ref": "Organization"
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -88848,6 +89154,13 @@
               "kind": "string"
             }
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -88869,6 +89182,12 @@
             "elem": {
               "kind": "string"
             }
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -90273,6 +90592,12 @@
           "schema": {
             "kind": "int",
             "nullable": true
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -96278,6 +96603,12 @@
           "schema": {
             "kind": "instant"
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -96706,6 +97037,13 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -96848,6 +97186,13 @@
         },
         {
           "name": "qualifications",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_version",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -103821,6 +104166,12 @@
           "schema": {
             "kind": "instant"
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -106252,6 +106603,18 @@
               "ref": "TraegerBankAccount"
             }
           }
+        },
+        {
+          "name": "contact_version",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "withdrawal_version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -106401,6 +106764,12 @@
           "schema": {
             "kind": "instant"
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -106463,6 +106832,12 @@
               "kind": "ref",
               "ref": "TraegerTransferEntry"
             }
+          }
+        },
+        {
+          "name": "assignments_version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -106539,6 +106914,12 @@
           "schema": {
             "kind": "instant"
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -106556,6 +106937,60 @@
             "elem": {
               "kind": "string"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerSavedContact",
+      "go_type": "organizationtenancy.TraegerSavedContact",
+      "fields": [
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "phone",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerSavedWithdrawalContact",
+      "go_type": "organizationtenancy.TraegerSavedWithdrawalContact",
+      "fields": [
+        {
+          "name": "phone",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -110367,6 +110802,13 @@
         },
         {
           "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_version",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -129476,6 +129918,13 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -129568,6 +130017,13 @@
             "kind": "ref",
             "nullable": true,
             "ref": "childQuotaRequest"
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]

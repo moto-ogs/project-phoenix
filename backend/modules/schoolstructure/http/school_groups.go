@@ -23,5 +23,5 @@ type GroupService interface {
 	GetTeachersForGroups(ctx context.Context, groupIDs []int64) (map[int64][]*education.Teacher, error)
 	GetTeacherGroups(ctx context.Context, teacherID int64) ([]*education.Group, error)
 	GetStaffSchoolClasses(ctx context.Context, staffID int64) ([]string, error)
-	SetStaffSchoolClasses(ctx context.Context, staffID int64, classes []string, changedBy int64) error
+	SetStaffSchoolClasses(ctx context.Context, staffID int64, classes []string, expectedVersion string, changedBy int64) error
 }

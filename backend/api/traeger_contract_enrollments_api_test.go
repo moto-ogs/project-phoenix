@@ -157,7 +157,7 @@ func newContractEnrollmentFixtureWithAmendments(t *testing.T, name string) (cont
 	care := careContractFixture{reviewFixture: reviewFixture{holidayRegistrationFixture: holidayRegistrationFixture{db: db, traeger: traeger}, office: office},
 		school: school, phase: phaseID, offering: offering.ID}
 	setTraegerLetterhead(t, care.reviewFixture, traegerTestLetterhead)
-	require.Equal(t, http.StatusOK, traegerJSON(t, traeger, office.token, http.MethodPut, templatePath(school, offering.ID), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, traeger, office.token, school, offering.ID, careContractTemplate).Code)
 	rec := applyContractImport(t, care, office.token, "bestand.csv", contractImportFile(contractImportSchoolName(t, care),
 		"Mia;Beispiel;03.05.2019;{school};Offene Ganztagsschule;01.08.2027;Eva Beispiel;eva.beispiel@example.org;",
 		"Ben;Beispiel;11.11.2020;{school};Offene Ganztagsschule;01.09.2027;Eva Beispiel;eva.beispiel@example.org;",

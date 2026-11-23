@@ -82,13 +82,14 @@ func (rs *Resource) updateStaff(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result, err := rs.runtime.UpdateStaff(ctx, UpdateStaffInput{
-		StaffID:        staff.ID,
-		PersonID:       req.PersonID.Int64(),
-		StaffNotes:     req.StaffNotes,
-		IsTeacher:      req.IsTeacher,
-		Specialization: req.Specialization,
-		Role:           req.Role,
-		Qualifications: req.Qualifications,
+		StaffID:         staff.ID,
+		PersonID:        req.PersonID.Int64(),
+		StaffNotes:      req.StaffNotes,
+		IsTeacher:       req.IsTeacher,
+		Specialization:  req.Specialization,
+		Role:            req.Role,
+		Qualifications:  req.Qualifications,
+		ExpectedVersion: req.ExpectedVersion,
 	})
 	if err != nil {
 		rs.runtime.WriteFailure(w, r, err)

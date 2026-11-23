@@ -111,7 +111,7 @@ func TestCareContractImportTakesOverExistingContractsOnce(t *testing.T) {
 	assert.Equal(t, "module", preview.Rows[0].Problems[0].Field)
 	assert.Equal(t, "conditions_missing", preview.Rows[0].Problems[0].Code)
 	assert.Equal(t, "payer", preview.DebtorNumberScope)
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, token, f.school, f.offering, careContractTemplate).Code)
 
 	rec = importForm(t, f.traeger, token, contractImportPreviewPath, "kinder.csv", file, nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -202,7 +202,7 @@ func TestCareContractImportTakesOverExistingContractsOnce(t *testing.T) {
 func TestCareContractImportNeedsTheRightAndStaysWithTheTraeger(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertragsimport Grenze")
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	file := contractImportFile(contractImportSchoolName(t, f),
 		"Mia;Beispiel;03.05.2019;{school};Offene Ganztagsschule;01.08.2027;Beispiel;eva.beispiel@example.org;")
 
@@ -260,7 +260,7 @@ func TestCareContractImportLogQueryBudgetIsFlat(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertragsimport Budget")
 	token := f.office.token
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, token, f.school, f.offering, careContractTemplate).Code)
 	school := contractImportSchoolName(t, f)
 	measure := func() testpkg.QueryMeasurement {
 		counter := testpkg.CaptureQueriesForContext(t, f.db)
@@ -312,7 +312,7 @@ func TestCareContractImportTakesTheOGSConnectMasterDataBeforeItsMandates(t *test
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Stammdaten OGS Connect")
 	ctx := context.Background()
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	file := ogsConnectMasterFile()
 
 	rec := importForm(t, f.traeger, f.office.token, contractImportPreviewPath, "csv-export-stammdaten.csv", file, nil)
@@ -384,7 +384,7 @@ func TestCareContractImportTakesTheOGSConnectMasterDataBeforeItsMandates(t *test
 func TestCareContractImportKeepsTheChildrenOfTheFamily(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertragsimport Kinderzahl")
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	school := contractImportSchoolName(t, f)
 	lines := []string{"Vorname Kind;Nachname Kind;Schule;Modul;Vertragsbeginn;Zahler;E-Mail;Kinder in der Familie",
 		"Mia;Beispiel;{school};Offene Ganztagsschule;01.08.2027;Eva Beispiel;eva.beispiel@example.org;3",

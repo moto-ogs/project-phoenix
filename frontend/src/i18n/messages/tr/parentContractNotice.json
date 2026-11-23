@@ -59,5 +59,7 @@
   "endNoticeTitle": "Kurumun sözleşme sonu hakkındaki bildirimi",
   "submitTerminationTooltip": "Feshi hemen kuruma gönderir.",
   "submitWithdrawalTooltip": "Cayma beyanını hemen kuruma gönderir.",
-  "submitDisabledReason": "Önce yukarıdan bir seçenek seçin."
+  "submitDisabledReason": "Önce yukarıdan bir seçenek seçin.",
+  "reloadingReason": "Güncel tarihler hâlâ yükleniyor.",
+  "reloadFailedReason": "Güncel tarihler yüklenemedi. Yukarıdaki mesajda „Yeniden dene” öğesine dokunun."
 }

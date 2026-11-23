@@ -55,11 +55,8 @@ func (seedTraegerMasterDataStep) Run(_ context.Context, rt *Runtime) error {
 			return fmt.Errorf("set the Träger value of %s: %w", setting.key, err)
 		}
 	}
-	if _, err := rt.Client.PutWithAuth(auth, "/traeger/master-data/contact", seedTraegerContact); err != nil {
-		return fmt.Errorf("set the Träger contact person: %w", err)
-	}
-	if _, err := rt.Client.PutWithAuth(auth, "/traeger/master-data/withdrawal-contact", seedTraegerWithdrawalContact); err != nil {
-		return fmt.Errorf("set the Träger withdrawal contact: %w", err)
+	if err := seedTraegerContactsOnce(rt.Client, auth); err != nil {
+		return err
 	}
 	logo, err := seedTraegerLogo()
 	if err != nil {
@@ -76,6 +73,68 @@ func (seedTraegerMasterDataStep) Run(_ context.Context, rt *Runtime) error {
 	}
 	fmt.Println("  Träger master data: letterhead, logo, contact person, two bank accounts and the template of the confirmation letter")
 	return nil
+}
+
+// seedTraegerContactsOnce sets the contact person and the withdrawal
+// contact over the version of each section the read gave (ADR 0311). Several
+// demo schools seed the same Träger at once: a section that already holds
+// the demo values is left as it is, and a save refused as changed since the
+// read reads again once.
+func seedTraegerContactsOnce(client *Client, auth AuthRef) error {
+	for attempt := 0; ; attempt++ {
+		err := seedTraegerContactsAttempt(client, auth)
+		var refused *APIError
+		if errors.As(err, &refused) && refused.Code == readstate.ChangedCode && attempt == 0 {
+			continue
+		}
+		return err
+	}
+}
+
+func seedTraegerContactsAttempt(client *Client, auth AuthRef) error {
+	raw, err := client.GetWithAuth(auth, "/traeger/master-data/")
+	if err != nil {
+		return fmt.Errorf("read the Träger master data: %w", err)
+	}
+	var envelope struct {
+		Data struct {
+			Contact           map[string]any `json:"contact"`
+			Withdrawal        map[string]any `json:"withdrawal"`
+			ContactVersion    string         `json:"contact_version"`
+			WithdrawalVersion string         `json:"withdrawal_version"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(raw, &envelope); err != nil {
+		return fmt.Errorf("read the Träger contacts: %w", err)
+	}
+	sections := []struct {
+		path, what, version string
+		stored, seed        map[string]any
+	}{
+		{"/traeger/master-data/contact", "contact person", envelope.Data.ContactVersion, envelope.Data.Contact, seedTraegerContact},
+		{"/traeger/master-data/withdrawal-contact", "withdrawal contact", envelope.Data.WithdrawalVersion, envelope.Data.Withdrawal, seedTraegerWithdrawalContact},
+	}
+	for _, section := range sections {
+		if seedSameValues(section.stored, section.seed) {
+			continue
+		}
+		body := maps.Clone(section.seed)
+		body["expected_version"] = section.version
+		if _, err := client.PutWithAuth(auth, section.path, body); err != nil {
+			return fmt.Errorf("set the Träger %s: %w", section.what, err)
+		}
+	}
+	return nil
+}
+
+// seedSameValues tells whether stored holds every value of seed.
+func seedSameValues(stored, seed map[string]any) bool {
+	for key, value := range seed {
+		if fmt.Sprint(stored[key]) != fmt.Sprint(value) {
+			return false
+		}
+	}
+	return true
 }
 
 // seedTraegerBankAccountsOnce adds the bank accounts the Träger does not

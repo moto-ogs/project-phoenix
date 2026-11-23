@@ -12,6 +12,7 @@ import (
 
 	peopleValues "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 
 	"github.com/moto-ogs/project-phoenix/api"
 	peoplePorts "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
@@ -1364,7 +1365,8 @@ func TestPersonService_UpdateStaffWithTeacher_RefusesCaregiverProfileForLehrkraf
 	require.NoError(t, err)
 
 	// ACT
-	teacher, action, err := service.UpdateStaffWithTeacher(ctx, staffRecord, true, "Betreuung", "", "")
+	readVersion := peopleValues.StaffRecordVersion(staffRecord.PersonID.Int64(), staffRecord.StaffNotes, nil)
+	teacher, action, err := service.UpdateStaffWithTeacher(ctx, staffRecord, true, "Betreuung", "", "", readVersion)
 
 	// ASSERT
 	require.ErrorIs(t, err, peoplePorts.ErrStaffLehrkraftCaregiverProfile)
@@ -1377,6 +1379,47 @@ func TestPersonService_UpdateStaffWithTeacher_RefusesCaregiverProfileForLehrkraf
 		Count(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, int64(0), count)
+}
+
+// The record form saves on the state it read (ADR 0311): the writer compares
+// the token under its staff row lock and writes nothing for a stale or
+// missing one; the stored state's token saves.
+func TestPersonService_UpdateStaffWithTeacher_RefusesARecordChangedSinceItWasRead(t *testing.T) {
+	t.Parallel()
+
+	db := testpkg.SetupTestDB(t)
+	service := setupServiceFactory(t, db).Users
+	ctx := testpkg.Ctx(t)
+	staffRepo := api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db)).Staff
+
+	staffFixture := testpkg.CreateTestStaff(t, db, "Konto", "Stand")
+	read, err := testpkg.TenantQuery1(t, ctx, db, staffRepo.FindWithPerson, staffFixture.ID)
+	require.NoError(t, err)
+	readVersion := peopleValues.StaffRecordVersion(read.PersonID.Int64(), read.StaffNotes, nil)
+
+	// A colleague saves the notes after the form was read.
+	colleague := *read
+	colleague.StaffNotes = "Notiz der Kollegin"
+	_, _, err = service.UpdateStaffWithTeacher(ctx, &colleague, false, "", "", "", readVersion)
+	require.NoError(t, err)
+
+	for name, expected := range map[string]string{"stale": readVersion, "empty": ""} {
+		stale := *read
+		stale.StaffNotes = "Meine Notiz"
+		_, _, err = service.UpdateStaffWithTeacher(ctx, &stale, true, "Betreuung", "", "", expected)
+		require.ErrorIs(t, err, readstate.ErrChanged, name)
+	}
+	stored, err := testpkg.TenantQuery1(t, ctx, db, staffRepo.FindWithPerson, staffFixture.ID)
+	require.NoError(t, err)
+	assert.Equal(t, "Notiz der Kollegin", stored.StaffNotes, "a refused save writes nothing")
+	teachers, err := db.NewSelect().TableExpr(`users.teachers`).Where(`staff_id = ?`, staffFixture.ID).Count(ctx)
+	require.NoError(t, err)
+	assert.Zero(t, teachers, "a refused save creates no caregiver profile")
+
+	current := *stored
+	current.StaffNotes = "Meine Notiz"
+	_, _, err = service.UpdateStaffWithTeacher(ctx, &current, false, "", "", "", peopleValues.StaffRecordVersion(stored.PersonID.Int64(), stored.StaffNotes, nil))
+	require.NoError(t, err, "the stored state's token saves")
 }
 
 // A staff member without an account cannot be a Lehrkraft, so the guard must

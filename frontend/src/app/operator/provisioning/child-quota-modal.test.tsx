@@ -39,6 +39,7 @@ import { ChildQuotaModal } from "./child-quota-modal";
 import type { SchoolSummary } from "~/lib/operator/provisioning-helpers";
 
 const school: SchoolSummary = {
+  version: "v-1",
   id: "10",
   organizationId: "1",
   organizationName: "Test Org",
@@ -102,6 +103,8 @@ function schoolFieldsOf(target: SchoolSummary) {
     email: target.email,
     active: target.active,
     hidden: target.hidden,
+    // The school as the modal opened it (ADR 0311).
+    expected_version: target.version,
   };
 }
 
@@ -239,30 +242,134 @@ describe("ChildQuotaModal", () => {
     expect(mockUpdateSchool).not.toHaveBeenCalled();
   });
 
-  it("saves on the freshly loaded school so a concurrent edit survives", async () => {
-    const renamed = { ...school, name: "OGS Am Park (neu)", active: false };
-    const { onClose, loadCurrentSchool } = renderModal(school, renamed);
+  // ADR 0311 (replaces the fresh read before saving, #7780): the save
+  // carries the version the modal opened with; a school changed since is
+  // refused, not overwritten, and the modal shows the stored school.
+  it("refuses a save over a school changed since it opened and shows it", async () => {
+    const changed = {
+      ...school,
+      name: "OGS Am Park (neu)",
+      childQuotaBundles: 3,
+      version: "v-2",
+    };
+    mockUpdateSchool.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    const onClose = vi.fn();
+    const loadCurrentSchool = vi.fn().mockResolvedValue(changed);
+    const modal = (shown: SchoolSummary) => (
+      <ChildQuotaModal
+        isOpen
+        onClose={onClose}
+        school={shown}
+        loadCurrentSchool={loadCurrentSchool}
+        onUpdated={vi.fn().mockResolvedValue(undefined)}
+      />
+    );
+    const view = render(modal(school));
 
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
-    await waitFor(() => expect(onClose).toHaveBeenCalled());
-    expect(loadCurrentSchool).toHaveBeenCalledTimes(1);
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", SAVE_OBJECT),
+      ),
+    ).toBeInTheDocument();
     expect(mockUpdateSchool).toHaveBeenCalledWith("10", {
+      ...schoolFieldsOf(school),
+      child_quota: { bundles: 2, bundle_size: 50 },
+    });
+    expect(loadCurrentSchool).toHaveBeenCalledTimes(1);
+    expect(onClose).not.toHaveBeenCalled();
+    // The page's read brings the stored school.
+    view.rerender(modal(changed));
+    expect(await screen.findByLabelText("Anzahl Bundles")).toHaveValue("3");
+
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(mockUpdateSchool).toHaveBeenLastCalledWith("10", {
+      ...schoolFieldsOf(changed),
+      child_quota: { bundles: 3, bundle_size: 50 },
+    });
+  });
+
+  // A refusal for a rename keeps the quota typed here when the stored quota
+  // did not change; the next save goes out on the stored school.
+  it("keeps the typed quota over a school renamed since it opened", async () => {
+    const renamed = { ...school, name: "OGS Am Park (neu)", version: "v-2" };
+    mockUpdateSchool.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    const onClose = vi.fn();
+    const loadCurrentSchool = vi.fn().mockResolvedValue(renamed);
+    render(
+      <ChildQuotaModal
+        isOpen
+        onClose={onClose}
+        school={school}
+        loadCurrentSchool={loadCurrentSchool}
+        onUpdated={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Anzahl Bundles"), {
+      target: { value: "4" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", SAVE_OBJECT),
+      ),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Speichern" })).toBeEnabled(),
+    );
+    expect(screen.getByLabelText("Anzahl Bundles")).toHaveValue("4");
+
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(mockUpdateSchool).toHaveBeenLastCalledWith("10", {
       ...schoolFieldsOf(renamed),
+      child_quota: { bundles: 4, bundle_size: 50 },
+    });
+  });
+
+  // Rule 5 of ADR 0311: the save's answer is the new base, so a second save
+  // in the same opening is not refused for the first one.
+  it("saves a second time on the version the first save answered", async () => {
+    mockUpdateSchool.mockResolvedValue({
+      ...school,
+      organization: undefined,
+      version: "v-2",
+    });
+    const { onClose } = renderModal();
+
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(2));
+
+    expect(mockUpdateSchool).toHaveBeenLastCalledWith("10", {
+      ...schoolFieldsOf({ ...school, version: "v-2" }),
       child_quota: { bundles: 2, bundle_size: 50 },
     });
   });
 
-  it("does not save from stale school data when refreshing the school fails", async () => {
+  it("keeps saving locked when the read after a refusal fails", async () => {
+    mockUpdateSchool.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
     const { onClose, loadCurrentSchool } = renderModal();
     loadCurrentSchool.mockRejectedValue(new ApiError("refresh failed", 503));
 
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     expect(
-      await screen.findByText(catalogText("general.unavailable", SAVE_OBJECT)),
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden\./),
     ).toBeInTheDocument();
-    expect(mockUpdateSchool).not.toHaveBeenCalled();
+    expect(mockUpdateSchool).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: "Speichern" })).toBeDisabled();
     expect(onClose).not.toHaveBeenCalled();
   });
 
@@ -287,6 +394,41 @@ describe("ChildQuotaModal", () => {
       "child_quota_refresh_failed",
       expect.objectContaining({ school_id: "10" }),
     );
+  });
+
+  it("reopens on the saved quota while the page still shows the replaced one", async () => {
+    mockUpdateSchool.mockResolvedValue({ ...unlimited, version: "v-2" });
+    const onClose = vi.fn();
+    const onUpdated = vi
+      .fn()
+      .mockRejectedValue(new ApiError("refresh failed", 500));
+    const modal = (isOpen: boolean) => (
+      <ChildQuotaModal
+        isOpen={isOpen}
+        onClose={onClose}
+        school={unlimited}
+        loadCurrentSchool={vi.fn().mockResolvedValue(unlimited)}
+        onUpdated={onUpdated}
+      />
+    );
+    const { rerender } = render(modal(true));
+    expect(
+      screen.queryByRole("button", { name: "Entfernen" }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Anzahl Bundles"), {
+      target: { value: "2" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+
+    // The page could not read the school again: it still hands over the
+    // school without a quota. The dialog shows the stored one, in the
+    // fields and in what it offers to remove.
+    rerender(modal(false));
+    rerender(modal(true));
+    expect(screen.getByLabelText("Anzahl Bundles")).toHaveValue("2");
+    expect(screen.getByRole("button", { name: "Entfernen" })).toBeEnabled();
   });
 
   it("asks for a reload when the school changed underneath", async () => {

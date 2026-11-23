@@ -16,7 +16,7 @@ func RecipientRouteContracts() []common.RouteContract {
 		{Method: "POST", Pattern: "/", Portals: portals, Request: RecipientRequest{}, Response: exporttransfer.TraegerRecipient{}},
 		{Method: "PUT", Pattern: "/formats", Portals: portals, Request: FormatsRequest{}, Response: exporttransfer.TraegerRecipientsPage{}},
 		{Method: "GET", Pattern: "/{id}", Portals: portals, Response: exporttransfer.TraegerRecipientPage{}},
-		{Method: "PUT", Pattern: "/{id}", Portals: portals, Request: RecipientRequest{}, Response: exporttransfer.TraegerRecipient{}},
+		{Method: "PUT", Pattern: "/{id}", Portals: portals, Request: RecipientSaveRequest{}, Response: exporttransfer.TraegerRecipient{}},
 		{Method: "DELETE", Pattern: "/{id}", Portals: portals, Response: exporttransfer.TraegerRecipientsPage{}},
 	}
 }

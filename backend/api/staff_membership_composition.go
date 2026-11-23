@@ -9,6 +9,7 @@ import (
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	peoplePorts "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure"
@@ -35,6 +36,8 @@ type StaffDirectoryPerson struct {
 	AccountID *int64
 	CreatedAt time.Time
 	UpdatedAt time.Time
+	// Version is the person's token (peopledirectory.PersonVersion).
+	Version string
 }
 
 // StaffRoleRow is one staff member selected by account role.
@@ -75,6 +78,8 @@ type StaffUpdateInput struct {
 	Specialization string
 	Role           string
 	Qualifications string
+	// ExpectedVersion is the record's version the form showed (ADR 0311).
+	ExpectedVersion string
 }
 
 // StaffTeacherAction mirrors peoplePorts.TeacherAction as a stable string.
@@ -137,7 +142,7 @@ type StaffMembershipRuntime struct {
 	AccountsHoldingRole func(context.Context, []int64, string) (map[int64]bool, error)
 
 	SchoolClasses    func(context.Context, int64) ([]string, error)
-	SetSchoolClasses func(context.Context, int64, []string, int64) error
+	SetSchoolClasses func(context.Context, int64, []string, string, int64) error
 	ActiveCaregivers func(context.Context) ([]StaffRoleRow, error)
 	StaffByRoles     func(context.Context, []string) ([]StaffRoleRow, error)
 
@@ -324,7 +329,7 @@ func staffDirectoryWrites(users peoplePorts.PersonDirectory) (func(context.Conte
 		}
 		staff.StaffNotes = input.StaffNotes
 		staff.PersonID = ident.ID(input.PersonID)
-		teacher, action, err := users.UpdateStaffWithTeacher(ctx, staff, input.IsTeacher, input.Specialization, input.Role, input.Qualifications)
+		teacher, action, err := users.UpdateStaffWithTeacher(ctx, staff, input.IsTeacher, input.Specialization, input.Role, input.Qualifications, input.ExpectedVersion)
 		if err != nil {
 			return StaffUpdateResult{}, err
 		}
@@ -380,7 +385,7 @@ func ClassifyStaffSchoolClassFailure(err error) (StaffFailureKind, error) {
 }
 
 func toStaffDirectoryPerson(id int64, firstName, lastName string, tagID *string, accountID *int64, createdAt, updatedAt time.Time) StaffDirectoryPerson {
-	person := StaffDirectoryPerson{ID: id, FirstName: firstName, LastName: lastName, AccountID: accountID, CreatedAt: createdAt, UpdatedAt: updatedAt}
+	person := StaffDirectoryPerson{ID: id, FirstName: firstName, LastName: lastName, AccountID: accountID, CreatedAt: createdAt, UpdatedAt: updatedAt, Version: peopledirectory.PersonVersion(updatedAt)}
 	if tagID != nil {
 		person.TagID = *tagID
 	}

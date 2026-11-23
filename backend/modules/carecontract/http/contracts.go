@@ -311,6 +311,9 @@ func (rs *Resource) templates(w http.ResponseWriter, r *http.Request) {
 
 type ContractTemplateRequest struct {
 	carecontract.TemplateInput
+	// ExpectedVersion is the template's version the form was read with
+	// (ADR 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // Bind accepts the body; the owner validates the template.
@@ -336,7 +339,7 @@ func (rs *Resource) saveTemplate(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	saved, err := rs.intake.SaveTemplate(r.Context(), reviewer, schoolID, offeringID, req.TemplateInput)
+	saved, err := rs.intake.SaveTemplate(r.Context(), reviewer, schoolID, offeringID, req.TemplateInput, req.ExpectedVersion)
 	if err != nil {
 		renderError(w, r, err)
 		return

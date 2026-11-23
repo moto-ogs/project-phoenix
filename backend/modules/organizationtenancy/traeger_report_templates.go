@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Report templates of a Träger (#4716, spec #4611 user stories 115 and 116,
@@ -74,6 +75,14 @@ type TraegerReportTemplate struct {
 	KeyDateDay   int                     `json:"key_date_day"`
 	Districts    []TraegerReportDistrict `json:"districts"`
 	UpdatedAt    time.Time               `json:"updated_at"`
+	// Version is the read state a replace sends back (ADR 0311).
+	Version string `json:"version"`
+}
+
+// TraegerReportTemplateVersion is the read-state token of a template: its
+// updated_at, which the row's trigger bumps on every update.
+func TraegerReportTemplateVersion(template TraegerReportTemplate) string {
+	return readstate.Of(template.UpdatedAt)
 }
 
 // TraegerReportTemplates lets the Träger-Büro keep the report templates of
@@ -88,8 +97,11 @@ type TraegerReportTemplates interface {
 	// AddReportTemplate stores a new template.
 	AddReportTemplate(ctx context.Context, organizationID, accountID int64, input TraegerReportTemplateInput) (TraegerReportTemplate, error)
 	// ReplaceReportTemplate overwrites a template; another Träger's or an unknown one is
-	// ErrTraegerReportTemplateNotFound.
-	ReplaceReportTemplate(ctx context.Context, organizationID, accountID, templateID int64, input TraegerReportTemplateInput) (TraegerReportTemplate, error)
+	// ErrTraegerReportTemplateNotFound. A template that differs from
+	// expectedVersion, the version it was read with, is readstate.ErrChanged
+	// (ADR 0311).
+	ReplaceReportTemplate(ctx context.Context, organizationID, accountID, templateID int64, input TraegerReportTemplateInput,
+		expectedVersion string) (TraegerReportTemplate, error)
 	// RemoveReportTemplate removes a template; another Träger's or an unknown one is
 	// ErrTraegerReportTemplateNotFound.
 	RemoveReportTemplate(ctx context.Context, organizationID, accountID, templateID int64) error

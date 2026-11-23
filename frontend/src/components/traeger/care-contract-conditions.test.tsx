@@ -7,6 +7,8 @@ import {
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
+import { ApiError } from "~/lib/api-error";
+import { catalogText } from "~/test/error-catalog-text";
 import type { OfferingTemplate } from "~/lib/traeger-care-contracts-api";
 import { usePhoneViewport } from "~/test/helpers/viewport";
 
@@ -29,10 +31,17 @@ const OPEN: OfferingTemplate = {
   template: null,
   termText: "",
   noticeText: "",
+  version: "absent",
 };
 
+/** The page's read of the offerings; rejects only where a case says so. */
+const reload = vi.fn();
+
 describe("CareContractConditions", () => {
-  beforeEach(() => api.saveContractTemplate.mockReset());
+  beforeEach(() => {
+    api.saveContractTemplate.mockReset();
+    reload.mockReset().mockResolvedValue([OPEN]);
+  });
 
   it("shows the saved enrollment text read-only, separate from unsaved conditions", () => {
     render(
@@ -60,6 +69,7 @@ describe("CareContractConditions", () => {
           ]}
           selectedKey={null}
           onSelect={vi.fn()}
+          reload={reload}
           onSaved={vi.fn()}
         />
       </ToastProvider>,
@@ -84,6 +94,7 @@ describe("CareContractConditions", () => {
           offerings={[OPEN]}
           selectedKey={null}
           onSelect={vi.fn()}
+          reload={reload}
           onSaved={onSaved}
         />
       </ToastProvider>,
@@ -101,6 +112,7 @@ describe("CareContractConditions", () => {
         "3",
         "5",
         expect.objectContaining({ termKind: "fixed_months", termMonths: 6 }),
+        "absent",
       ),
     );
   });
@@ -120,6 +132,7 @@ describe("CareContractConditions", () => {
           offerings={[OPEN]}
           selectedKey={null}
           onSelect={vi.fn()}
+          reload={reload}
           onSaved={onSaved}
         />
       </ToastProvider>,
@@ -159,6 +172,7 @@ describe("CareContractConditions", () => {
           specialTermination: true,
           specialTerminationNote: "Bei Umzug",
         }),
+        "absent",
       ),
     );
     expect(onSaved).toHaveBeenCalled();
@@ -177,6 +191,7 @@ describe("CareContractConditions", () => {
           offerings={[OPEN, other]}
           selectedKey="3-6"
           onSelect={onSelect}
+          reload={reload}
           onSaved={vi.fn()}
         />
       </ToastProvider>,
@@ -208,6 +223,7 @@ describe("CareContractConditions", () => {
           offerings={[OPEN, other]}
           selectedKey="3-5"
           onSelect={onSelect}
+          reload={reload}
           onSaved={vi.fn()}
         />
       </ToastProvider>,
@@ -254,6 +270,7 @@ describe("CareContractConditions", () => {
           offerings={[done, OPEN]}
           selectedKey={null}
           onSelect={onSelect}
+          reload={reload}
           onSaved={vi.fn()}
         />
       </ToastProvider>,
@@ -262,6 +279,92 @@ describe("CareContractConditions", () => {
     // which offering lacks conditions, cannot move the form elsewhere.
     expect(onSelect).toHaveBeenCalledTimes(1);
     expect(onSelect).toHaveBeenCalledWith("3-5");
+  });
+
+  // ADR 0311: conditions a colleague saved since are not overwritten; the
+  // form shows them with the refusal and saves over their version.
+  it("shows the conditions a colleague saved since instead of overwriting them", async () => {
+    const terms = {
+      termKind: "school_year" as const,
+      termMonths: null,
+      noticeMonths: 1,
+      noticeTo: "month_end" as const,
+      contractPartner: "Träger",
+      specialTermination: false,
+      specialTerminationNote: "",
+      statuteRequired: false,
+      statuteTitle: "",
+      statuteUrl: "",
+    };
+    const read: OfferingTemplate = {
+      ...OPEN,
+      version: "v-1",
+      template: { ...terms, id: "7", updatedAt: "2026-09-09T10:00:00Z" },
+    };
+    const stored: OfferingTemplate = {
+      ...read,
+      version: "v-2",
+      template: { ...read.template!, contractPartner: "Kollegin" },
+    };
+    reload.mockResolvedValue([stored]);
+    api.saveContractTemplate.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    const page = (offering: OfferingTemplate) => (
+      <ToastProvider>
+        <CareContractConditions
+          offerings={[offering]}
+          selectedKey={null}
+          onSelect={vi.fn()}
+          reload={reload}
+          onSaved={vi.fn()}
+        />
+      </ToastProvider>
+    );
+    const view = render(page(read));
+    fireEvent.change(screen.getByLabelText("Vertragspartner"), {
+      target: { value: "Ich" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Bedingungen speichern" }),
+    );
+
+    expect(
+      await screen.findByText(
+        catalogText(
+          "general.changed_since_read",
+          "die Änderung der Vertragsbedingungen",
+        ),
+      ),
+    ).toBeInTheDocument();
+    expect(api.saveContractTemplate).toHaveBeenCalledWith(
+      "3",
+      "5",
+      expect.objectContaining({ contractPartner: "Ich" }),
+      "v-1",
+    );
+    expect(reload).toHaveBeenCalledTimes(1);
+    // The page's reload brings the stored conditions as props.
+    view.rerender(page(stored));
+    expect(await screen.findByLabelText("Vertragspartner")).toHaveValue(
+      "Kollegin",
+    );
+
+    api.saveContractTemplate.mockResolvedValueOnce(stored);
+    fireEvent.change(screen.getByLabelText("Vertragspartner"), {
+      target: { value: "Kollegin und Ich" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Bedingungen speichern" }),
+    );
+    await waitFor(() =>
+      expect(api.saveContractTemplate).toHaveBeenLastCalledWith(
+        "3",
+        "5",
+        expect.objectContaining({ contractPartner: "Kollegin und Ich" }),
+        "v-2",
+      ),
+    );
   });
 
   describe("on a phone", () => {
@@ -275,6 +378,7 @@ describe("CareContractConditions", () => {
             offerings={[OPEN]}
             selectedKey={null}
             onSelect={onSelect}
+            reload={reload}
             onSaved={vi.fn()}
           />
         </ToastProvider>,

@@ -59,6 +59,7 @@ export interface OrganizationSummary {
   konten_count: number;
   geraete_count: number;
   personen_count: number;
+  version: string;
 }
 
 export const OrganizationSummarySchema: z.ZodType<OrganizationSummary, unknown> = object<OrganizationSummary>({
@@ -75,6 +76,7 @@ export const OrganizationSummarySchema: z.ZodType<OrganizationSummary, unknown> 
   konten_count: safeInt,
   geraete_count: safeInt,
   personen_count: safeInt,
+  version: str,
 });
 
 /** Go: parentbilling.RetentionInstruction */
@@ -425,6 +427,7 @@ export interface updateOrganizationRequest {
   name?: string;
   slug?: string;
   active?: boolean;
+  expected_version?: string;
 }
 
 /** Go: operator.recordTraegerErasureOrderRecordsRequest */
