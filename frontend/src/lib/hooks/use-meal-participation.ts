@@ -134,10 +134,13 @@ export function useMealParticipation(
       change(
         (data) => ({ ...data, weekdays }),
         () => replaceMealParticipationSchedule(studentId, weekdays, version),
+        // The answer's version is the stored days': a second save right
+        // after this one sends it and is not refused as changed (ADR 0311).
         (data, result) => ({
           ...data,
           weekdays,
           effective_from: result.effective_from,
+          version: result.version,
         }),
       ),
   };

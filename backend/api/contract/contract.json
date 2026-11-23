@@ -20989,7 +20989,7 @@
       ],
       "request": {
         "kind": "ref",
-        "ref": "ActivityRequest"
+        "ref": "ActivityUpdateRequest"
       },
       "response": {
         "kind": "ref",
@@ -21209,7 +21209,7 @@
       ],
       "request": {
         "kind": "ref",
-        "ref": "GroupRequest"
+        "ref": "GroupUpdateRequest"
       },
       "response": {
         "kind": "ref",
@@ -26584,6 +26584,13 @@
           "schema": {
             "kind": "instant"
           }
+        },
+        {
+          "name": "version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -26661,6 +26668,80 @@
         },
         {
           "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ActivityUpdateRequest",
+      "go_type": "httpadapter.ActivityUpdateRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "max_participants",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "is_open",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "category_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "planned_room_id",
+          "optional": true,
+          "schema": {
+            "kind": "id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "schedules",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ScheduleRequest"
+            }
+          }
+        },
+        {
+          "name": "supervisor_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "id"
+            }
+          }
+        },
+        {
+          "name": "expected_version",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -43977,6 +44058,13 @@
               "kind": "id"
             }
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -50465,6 +50553,13 @@
           "schema": {
             "kind": "ref",
             "ref": "DayHandover"
+          }
+        },
+        {
+          "name": "handover_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         },
         {
@@ -57288,6 +57383,13 @@
           "schema": {
             "kind": "instant"
           }
+        },
+        {
+          "name": "version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -57772,6 +57874,46 @@
               "kind": "ref",
               "ref": "GroupMessageResponse"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "GroupUpdateRequest",
+      "go_type": "schoolstructurehttp.GroupUpdateRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_id",
+          "optional": true,
+          "schema": {
+            "kind": "id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "teacher_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "id"
+            }
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -68731,6 +68873,12 @@
       "fields": [
         {
           "name": "effective_from",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "version",
           "schema": {
             "kind": "string"
           }

@@ -3,7 +3,11 @@
  * Tests emoji matching, config structure, and form sections
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { activitiesConfig, toActivityRequest } from "./activities.config";
+import {
+  activitiesConfig,
+  toActivityRequest,
+  toActivityUpdateRequest,
+} from "./activities.config";
 import {
   mapActivityResponse,
   type Activity,
@@ -169,6 +173,54 @@ describe("activitiesConfig", () => {
       category_id: "9007199254740993",
       supervisor_ids: ["9007199254740995"],
     });
+  });
+
+  // The database form shows name, limit, category and primary supervisor
+  // only. Its save names nothing else, so the route keeps the opening, the
+  // planned room and the schedules, and sends the version read (ADR 0311).
+  it("saves only the shown fields against the version read", () => {
+    const read = {
+      name: "Fußball AG",
+      max_participant: 12,
+      ag_category_id: "3",
+      is_open_ags: true,
+      planned_room_id: "9",
+      supervisor_id: "42",
+      supervisors: [
+        { id: "1", staff_id: "42", is_primary: true },
+        { id: "2", staff_id: "43", is_primary: false },
+      ],
+      version: "v1",
+    } as Partial<Activity>;
+
+    expect(toActivityUpdateRequest(read)).toEqual({
+      name: "Fußball AG",
+      max_participants: 12,
+      category_id: "3",
+      expected_version: "v1",
+    });
+  });
+
+  it("keeps the co-supervisors when the primary supervisor changes", () => {
+    const edited = {
+      name: "Fußball AG",
+      max_participant: 12,
+      ag_category_id: "3",
+      supervisor_id: "44",
+      supervisors: [
+        { id: "1", staff_id: "42", is_primary: true },
+        { id: "2", staff_id: "43", is_primary: false },
+      ],
+      version: "v1",
+    } as Partial<Activity>;
+
+    expect(toActivityUpdateRequest(edited).supervisor_ids).toEqual([
+      "44",
+      "43",
+    ]);
+    expect(
+      toActivityUpdateRequest({ ...edited, supervisor_id: "" }).supervisor_ids,
+    ).toEqual(["43"]);
   });
 
   it("maps an empty participant limit to null", () => {

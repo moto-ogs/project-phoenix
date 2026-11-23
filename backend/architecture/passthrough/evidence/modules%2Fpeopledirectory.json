@@ -1451,6 +1451,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (s *Service) LockStudentNoKeyUpdate(ctx context.Context, id int64) error {\n\tif id \u003c= 0 {\n\t\treturn invalidStudent(\"student ID is required\")\n\t}\n\treturn MapError(s.students.LockNoKeyUpdate(ctx, id))\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/peopledirectory/internal/application/Service.LockStudentNoKeyUpdate",
+      "owner": "modules/peopledirectory"
+    },
+    {
+      "build": "production",
       "evidence": "func (s *Service) LockStudentPhotoFeature(ctx context.Context) error {\n\treturn mapPhotoError(s.studentPhotos.LockFeature(ctx))\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/Service.LockStudentPhotoFeature",
@@ -1692,13 +1699,6 @@
       "evidence": "func (r *StudentRecords) FindByID(ctx context.Context, id any) (*peopleModule.StudentState, error) {\n\tstudentID, ok := studentIDOf(id)\n\tif !ok || studentID \u003c= 0 {\n\t\treturn nil, peoplePorts.MissingStudentError(\"find by id\")\n\t}\n\trecord, err := r.directory.FindRecord(ctx, studentID, \"\")\n\tif err != nil {\n\t\treturn nil, RetainedStudentReadError(\"find by id\", MapError(err))\n\t}\n\treturn peopleModule.StudentStateFromRecord(peopleModule.StudentRecord(record)), nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/StudentRecords.FindByID",
-      "owner": "modules/peopledirectory"
-    },
-    {
-      "build": "production",
-      "evidence": "func (r *StudentRecords) FindByIDForUpdate(ctx context.Context, id int64) (*peopleModule.StudentState, error) {\n\tif id \u003c= 0 {\n\t\treturn nil, peoplePorts.MissingStudentError(\"find by id for update\")\n\t}\n\trecord, err := r.directory.FindRecord(ctx, id, \"UPDATE\")\n\tif err != nil {\n\t\treturn nil, RetainedStudentReadError(\"find by id for update\", MapError(err))\n\t}\n\treturn peopleModule.StudentStateFromRecord(peopleModule.StudentRecord(record)), nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/peopledirectory/internal/application/StudentRecords.FindByIDForUpdate",
       "owner": "modules/peopledirectory"
     },
     {

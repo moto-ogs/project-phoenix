@@ -72,12 +72,13 @@ func TestUpdateGroupTeachers_BroadcastsGroupAccessChanged(t *testing.T) {
 
 	teacher := testpkg.CreateTestTeacher(t, tc.db, "SSEAssigned", "Teacher")
 
-	body := map[string]interface{}{
-		"name":        fmt.Sprintf("SSEGroupTeachers-%d", group.ID),
-		"teacher_ids": []int64{teacher.ID},
-	}
 	claims := testutil.DefaultTestClaims()
 	claims.TenantID = testpkg.RebaseTenantID(t, claims.TenantID)
+	body := map[string]interface{}{
+		"name":             fmt.Sprintf("SSEGroupTeachers-%d", group.ID),
+		"teacher_ids":      []int64{teacher.ID},
+		"expected_version": groupVersion(t, router, group.ID, claims),
+	}
 	req := newReq(t, "PUT", fmt.Sprintf("/groups/%d", group.ID), body, claims, "groups:update")
 
 	rr := testutil.ExecuteRequest(router, req)
@@ -99,8 +100,9 @@ func TestUpdateGroupTeachers_Unchanged_BroadcastsNothing(t *testing.T) {
 	require.Len(t, teachers, 1)
 
 	body := map[string]interface{}{
-		"name":        fmt.Sprintf("SSESameTeachers-renamed-%d", groupID),
-		"teacher_ids": []int64{teachers[0].ID},
+		"name":             fmt.Sprintf("SSESameTeachers-renamed-%d", groupID),
+		"teacher_ids":      []int64{teachers[0].ID},
+		"expected_version": groupVersion(t, router, groupID, testutil.DefaultTestClaims()),
 	}
 	req := newReq(t, "PUT", fmt.Sprintf("/groups/%d", groupID), body, testutil.DefaultTestClaims(), "groups:update")
 
@@ -133,8 +135,9 @@ func TestUpdateGroupTeachers_PartialFailureRollsBack(t *testing.T) {
 	missingID := testpkg.ReserveMissingTeacherID(t, tc.db)
 
 	body := map[string]interface{}{
-		"name":        fmt.Sprintf("SSETeacherRollback-renamed-%d", groupID),
-		"teacher_ids": []int64{candidate.ID, missingID},
+		"name":             fmt.Sprintf("SSETeacherRollback-renamed-%d", groupID),
+		"teacher_ids":      []int64{candidate.ID, missingID},
+		"expected_version": groupVersion(t, router, groupID, testutil.DefaultTestClaims()),
 	}
 	req := newReq(t, "PUT", fmt.Sprintf("/groups/%d", groupID), body, testutil.DefaultTestClaims(), "groups:update")
 

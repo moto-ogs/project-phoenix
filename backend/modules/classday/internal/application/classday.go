@@ -88,6 +88,10 @@ func NewClassDay(deps ClassDayDependencies) classday.ClassDay {
 	morning.after = absence.afterMorningMarks
 	reports := newDayReports(deps)
 	reports.hints = hints
+	// The handover checks its version against the children the report
+	// lists as staying, projected the same way (ADR 0311).
+	handover := newClassHandover(deps)
+	handover.dayRows = reports.handoverDayRows
 	return &classDayService{
 		Caller:     deps.Caller,
 		caller:     deps.Caller,
@@ -103,7 +107,7 @@ func NewClassDay(deps ClassDayDependencies) classday.ClassDay {
 		dayHints:          hints,
 		morningAttendance: morning,
 		homework:          newHomework(deps),
-		classHandover:     newClassHandover(deps),
+		classHandover:     handover,
 		sharedNotes:       newSharedNotes(deps),
 		absenceReports:    absence,
 		absenceList:       absenceList{deps: deps.AbsenceList, today: morning.today, now: deps.clock()},

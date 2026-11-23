@@ -10,4 +10,7 @@ export const groupKeys = {
   liveFamily: "ogs-students-",
   live: (id: string | null) => `ogs-students-${id ?? "auto"}`,
   key: (params: GroupFilters = {}) => resourceKey("groups-list-", params),
+  /** The named groups, each read on its own (any number, no list page). */
+  byIds: (ids: readonly string[]) =>
+    resourceKey("groups-by-id-", { ids: [...ids].sort() }),
 } as const;
