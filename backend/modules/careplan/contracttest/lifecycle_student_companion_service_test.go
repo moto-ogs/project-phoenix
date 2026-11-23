@@ -703,6 +703,13 @@ func TestStudentService_ReplaceCompanions_RefusesStaleList(t *testing.T) {
 	})
 	assert.ErrorIs(t, err, readstate.ErrChanged)
 
+	// A replacement that names no read is refused too: no caller skips the
+	// check (ADR 0311).
+	_, err = testpkg.TenantQuery2(t, ctx, db, service.ReplaceCompanions, subject.ID, careplan.CompanionUpdate{
+		Links: []careplan.CompanionLink{{CompanionStudentID: second.ID, Weekdays: []string{"mon"}}},
+	})
+	assert.ErrorIs(t, err, readstate.ErrChanged)
+
 	// Reloading makes the same edit succeed.
 	reloaded, err := testpkg.TenantQuery1(t, ctx, db, service.ListCompanions, subject.ID)
 	require.NoError(t, err)
