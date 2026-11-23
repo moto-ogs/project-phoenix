@@ -381,7 +381,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalog.UpdateOffering",
-      "reason": "Catalog command owns validation and its recurrence/linked-template guard (care_offering_catalog.go, care_offering_rollover.go). Enrollment exposes its native catalog interface via care_offering_rows.go; the may-bind surface includes unused supplied methods. Target-local gates alone do not introduce an additional caller protocol. This is not a liveness claim or approval of new ordering.",
+      "reason": "Re-reviewed with #7985: the save now carries the version its author read (ADR 0311); Care Plan locks the offering row after the recurrence gate, the order of every catalog write (ADR 0195 section 5), and refuses another version before it validates or writes. Effect, classification and caller protocol unchanged. Catalog command owns validation and its recurrence/linked-template guard (care_offering_catalog.go, care_offering_rollover.go). Enrollment exposes its native catalog interface via care_offering_rows.go; the may-bind surface includes unused supplied methods. Target-local gates alone do not introduce an additional caller protocol. This is not a liveness claim or approval of new ordering.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.UpdateOffering",
       "target_owner": "care-plan"
@@ -392,7 +392,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalog.UpdateOffering",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/careplan.CareOfferingCapability.UpdateOffering; modules/careplan.CareOfferingCapability (supplied contract method). ",
+      "reason": "Re-reviewed with #7985: the save now carries the version its author read (ADR 0311); Care Plan locks the offering row after the recurrence gate, the order of every catalog write (ADR 0195 section 5), and refuses another version before it validates or writes. Effect, classification and caller protocol unchanged. Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/careplan.CareOfferingCapability.UpdateOffering; modules/careplan.CareOfferingCapability (supplied contract method). ",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.UpdateOffering",
       "target_owner": "care-plan"
@@ -403,7 +403,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalog.UpdateOffering",
-      "reason": "Catalog command owns validation and its recurrence/linked-template guard (care_offering_catalog.go, care_offering_rollover.go). Enrollment exposes its native catalog interface via care_offering_rows.go; the may-bind surface includes unused supplied methods. Target-local gates alone do not introduce an additional caller protocol. This is not a liveness claim or approval of new ordering.",
+      "reason": "Re-reviewed with #7985: the save now carries the version its author read (ADR 0311); Care Plan locks the offering row after the recurrence gate, the order of every catalog write (ADR 0195 section 5), and refuses another version before it validates or writes. Effect, classification and caller protocol unchanged. Catalog command owns validation and its recurrence/linked-template guard (care_offering_catalog.go, care_offering_rollover.go). Enrollment exposes its native catalog interface via care_offering_rows.go; the may-bind surface includes unused supplied methods. Target-local gates alone do not introduce an additional caller protocol. This is not a liveness claim or approval of new ordering.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalog.UpdateOffering",
       "target_owner": "care-plan"
