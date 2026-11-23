@@ -14,7 +14,11 @@ import {
 
 import { Drawer, DrawerContent, DrawerNested, DrawerTitle } from "./drawer";
 import { FOCUSABLE_SELECTOR } from "./hooks/useScrollRegion";
-import { SCROLL_AREA_PROPS, useOverlay } from "./overlay-stack";
+import {
+  SCROLL_AREA_PROPS,
+  SHEET_SCOPE_PROPS,
+  useOverlay,
+} from "./overlay-stack";
 
 export interface ResponsivePanelSheetProps {
   readonly id: string;
@@ -96,6 +100,9 @@ export function ResponsivePanelSheet({
         id={id}
         ref={sheetRef}
         layer="popover"
+        // Vauls Fokusfalle wie im Slide-over: Kalender und Popover im Blatt
+        // erkennen sie daran und bleiben per Tastatur erreichbar.
+        {...SHEET_SCOPE_PROPS}
         // Name aus dem Titel, keine Beschreibung.
         aria-describedby={undefined}
         className="pb-[env(safe-area-inset-bottom)]"
