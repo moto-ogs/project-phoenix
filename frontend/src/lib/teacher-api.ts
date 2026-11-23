@@ -61,6 +61,14 @@ function buildStaffRequestBody<F extends object>(
 // Define Teacher interface aligned with staff API response structure
 export type { Teacher } from "./teacher-types";
 
+/**
+ * The person as a person write stored it: the record read with the written
+ * fields and the version the write answered (undefined without an answer).
+ */
+export type SavedPerson = Readonly<
+  Pick<Teacher, "first_name" | "last_name" | "tag_id" | "person_version">
+>;
+
 export interface TeacherWithCredentials extends Teacher {
   temporaryCredentials?: {
     email: string;
@@ -250,6 +258,14 @@ class TeacherService {
     id: string,
     teacherData: Partial<Teacher>,
     currentTeacher: Teacher,
+    options: {
+      /**
+       * The person write went through; the staff write follows and may
+       * still fail. Its answer is the person's new state (ADR 0311): a
+       * retry rests on it instead of resending the old version.
+       */
+      readonly onPersonSaved?: (person: SavedPerson) => void;
+    } = {},
   ): Promise<Teacher> {
     // The caller already loaded this record. Keep its IDs, profile state and
     // unchanged fields: the staff PUT replaces fields rather than patching them.
@@ -257,14 +273,12 @@ class TeacherService {
       throw new Error("Cannot update teacher - current record ID mismatch");
     }
 
-    // Update person record if name/tag fields changed
-    const needsPersonUpdate =
-      teacherData.first_name !== undefined ||
-      teacherData.last_name !== undefined ||
-      teacherData.tag_id !== undefined;
-
-    if (needsPersonUpdate) {
-      await this.updatePersonRecord(currentTeacher, teacherData);
+    // The person is written only when a name or the tag differs from the
+    // record read: every person write moves its version, so an unchanged
+    // name sent along would refuse the next save of the same form.
+    if (this.personFieldsChanged(currentTeacher, teacherData)) {
+      const person = await this.updatePersonRecord(currentTeacher, teacherData);
+      options.onPersonSaved?.(person);
     }
 
     // Update staff record
@@ -272,11 +286,26 @@ class TeacherService {
     return this.updateStaffRecord(id, staffData);
   }
 
+  /** Whether the update names a person field other than the record read. */
+  private personFieldsChanged(
+    currentTeacher: Teacher,
+    teacherData: Partial<Teacher>,
+  ): boolean {
+    return (
+      (teacherData.first_name !== undefined &&
+        teacherData.first_name !== currentTeacher.first_name) ||
+      (teacherData.last_name !== undefined &&
+        teacherData.last_name !== currentTeacher.last_name) ||
+      (teacherData.tag_id !== undefined &&
+        (teacherData.tag_id ?? "") !== (currentTeacher.tag_id ?? ""))
+    );
+  }
+
   /** Updates person record for teacher */
   private async updatePersonRecord(
     currentTeacher: Teacher,
     teacherData: Partial<Teacher>,
-  ): Promise<void> {
+  ): Promise<SavedPerson> {
     if (!currentTeacher.person_id) {
       throw new Error("Cannot update person fields - person_id not found");
     }
@@ -293,7 +322,7 @@ class TeacherService {
     // so the update names only the person fields (#2352).
     const personData = this.buildPersonUpdateData(teacherData);
 
-    await bffJson("tenant", "PUT /api/users/{id}", {
+    const saved = await bffJson("tenant", "PUT /api/users/{id}", {
       params: { id: personId },
       // The person as the form read it (ADR 0311).
       body: {
@@ -302,6 +331,15 @@ class TeacherService {
       },
       errorMessage: "Failed to update person",
     });
+    return {
+      first_name: personData.first_name ?? currentTeacher.first_name,
+      last_name: personData.last_name ?? currentTeacher.last_name,
+      tag_id:
+        personData.tag_id === undefined
+          ? currentTeacher.tag_id
+          : personData.tag_id || null,
+      person_version: saved?.version,
+    };
   }
 
   /** Builds person update payload from teacher data */

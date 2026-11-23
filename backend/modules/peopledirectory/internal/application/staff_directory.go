@@ -8,6 +8,7 @@ import (
 	peopleValues "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/domain/userscontract"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 
 	peoplePorts "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
@@ -302,13 +303,14 @@ func (s *staffMembershipDirectory) ensureTeacherForStaff(ctx context.Context, st
 // UpdateStaffWithTeacher applies the mutable directory fields to a freshly
 // locked staff row, reloads it with person data, and applies the requested
 // teacher-record change. Teacher-record failures are non-fatal; the staff
-// update always persists.
-func (s *staffMembershipDirectory) UpdateStaffWithTeacher(ctx context.Context, staff *peopleValues.Staff, isTeacher bool, specialization, role, qualifications string) (*peopleValues.Teacher, peoplePorts.TeacherAction, error) {
+// update always persists. A record changed since the form read it
+// (expectedVersion) is refused before anything is written (ADR 0311).
+func (s *staffMembershipDirectory) UpdateStaffWithTeacher(ctx context.Context, staff *peopleValues.Staff, isTeacher bool, specialization, role, qualifications, expectedVersion string) (*peopleValues.Teacher, peoplePorts.TeacherAction, error) {
 	var teacher *peopleValues.Teacher
 	action := peoplePorts.TeacherActionNone
 
 	if err := s.runtime.InTenantTx(ctx, func(ctx context.Context) error {
-		if err := s.updateStaffRecord(ctx, staff, isTeacher); err != nil {
+		if err := s.updateStaffRecord(ctx, staff, isTeacher, expectedVersion); err != nil {
 			return err
 		}
 		teacher, action = s.applyTeacherChange(ctx, staff.ID.Int64(), isTeacher, specialization, role, qualifications)
@@ -322,9 +324,12 @@ func (s *staffMembershipDirectory) UpdateStaffWithTeacher(ctx context.Context, s
 
 // updateStaffRecord writes the mutable directory fields onto the freshly
 // locked staff row and reloads it with its person into staff.
-func (s *staffMembershipDirectory) updateStaffRecord(ctx context.Context, staff *peopleValues.Staff, isTeacher bool) error {
+func (s *staffMembershipDirectory) updateStaffRecord(ctx context.Context, staff *peopleValues.Staff, isTeacher bool, expectedVersion string) error {
 	currentStaff, err := s.staff.FindByIDForUpdate(ctx, staff.ID.Int64())
 	if err != nil {
+		return err
+	}
+	if err := s.checkStaffRecordRead(ctx, currentStaff, expectedVersion); err != nil {
 		return err
 	}
 
@@ -350,6 +355,27 @@ func (s *staffMembershipDirectory) updateStaffRecord(ctx context.Context, staff 
 		}
 	}
 	return nil
+}
+
+// checkStaffRecordRead compares the locked record and its caregiver profile
+// with the token the form showed (ADR 0311). The profile shares the staff
+// row's lock: every write of it runs behind that lock in this directory.
+func (s *staffMembershipDirectory) checkStaffRecordRead(ctx context.Context, locked *peopleValues.Staff, expected string) error {
+	teacher, err := s.teachers.FindByStaffID(ctx, locked.ID.Int64())
+	if err != nil && !errors.Is(err, transactionruntime.ErrNoRows) {
+		return err
+	}
+	return readstate.Check(expected, staffRecordVersionOf(locked, teacher))
+}
+
+// staffRecordVersionOf is peopledirectory.StaffRecordVersion over a stored
+// staff row and its caregiver profile (nil or retired: none).
+func staffRecordVersionOf(staff *peopleValues.Staff, teacher *peopleValues.Teacher) string {
+	var profile *peopleValues.StaffRecordProfile
+	if teacher != nil && teacher.DeletedAt == nil {
+		profile = &peopleValues.StaffRecordProfile{Specialization: teacher.Specialization, Role: teacher.Role, Qualifications: teacher.Qualifications}
+	}
+	return peopleValues.StaffRecordVersion(staff.PersonID.Int64(), staff.StaffNotes, profile)
 }
 
 // applyTeacherChange applies the requested teacher-record change after the

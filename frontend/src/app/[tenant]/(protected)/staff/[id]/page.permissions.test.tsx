@@ -953,6 +953,7 @@ describe("StaffDetailContent permissions", () => {
           first_name: "Mila",
           last_name: "Muster",
         }),
+        { onPersonSaved: expect.any(Function) },
       );
     });
     expect(mockRecordUpdate).not.toHaveBeenCalled();

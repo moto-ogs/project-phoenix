@@ -563,6 +563,75 @@ describe("teacher-api", () => {
       },
     );
 
+    it("sends no person write when the names equal the record read", async () => {
+      // Jede Personenschreibung bewegt deren Stand (ADR 0311): ein
+      // unveränderter Name ginge sonst bei jedem Speichern mit und lehnte
+      // das nächste Speichern desselben Formulars ab.
+      const mockFetch = vi.mocked(globalThis.fetch);
+      mockFetch.mockImplementation(() =>
+        Promise.resolve(
+          new Response(JSON.stringify({ data: sampleStaffRecord })),
+        ),
+      );
+      const onPersonSaved = vi.fn();
+
+      await teacherService.updateTeacher(
+        "1",
+        {
+          first_name: "Max",
+          last_name: "Mustermann",
+          tag_id: "TAG001",
+          staff_notes: "Neu",
+        },
+        sampleTeacher,
+        { onPersonSaved },
+      );
+
+      expect(
+        mockFetch.mock.calls.map(([url, init]) => [url, init?.method]),
+      ).toEqual([["/api/staff/1", "PUT"]]);
+      expect(onPersonSaved).not.toHaveBeenCalled();
+    });
+
+    it("reports the saved person with its new version before the staff write", async () => {
+      const mockFetch = vi.mocked(globalThis.fetch);
+      mockFetch
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              data: {
+                ...sampleStaffRecord.person!,
+                first_name: "Milena",
+                version: "person-v2",
+              },
+            }),
+          ),
+        )
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({ code: "general.unavailable", status: 503 }),
+            { status: 503 },
+          ),
+        );
+      const onPersonSaved = vi.fn();
+
+      await expect(
+        teacherService.updateTeacher(
+          "1",
+          { first_name: "Milena", last_name: "Mustermann" },
+          sampleTeacher,
+          { onPersonSaved },
+        ),
+      ).rejects.toMatchObject({ status: 503 });
+
+      expect(onPersonSaved).toHaveBeenCalledWith({
+        first_name: "Milena",
+        last_name: "Mustermann",
+        tag_id: "TAG001",
+        person_version: "person-v2",
+      });
+    });
+
     it.each([null, "", "TAG002"])(
       "preserves tag removal/change: %j",
       async (tag_id) => {

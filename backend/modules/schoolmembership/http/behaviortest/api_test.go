@@ -347,6 +347,7 @@ func newHarness(t *testing.T, membership *fakeMembership) *harness {
 			h.updated = input
 			return h.updateResult, h.updateErr
 		},
+		RecordVersion: func(staff schoolmembership.Staff, _ *schoolmembership.Teacher) string { return "r:" + staff.StaffNotes },
 		Offboard: func(_ context.Context, staffID int64, username string) error {
 			h.offboarded, h.offboardedBy = staffID, username
 			return h.offboardErr

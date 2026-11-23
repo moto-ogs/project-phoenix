@@ -94,6 +94,28 @@ type UpdatePerson struct {
 // its last change, which a trigger moves on every update of the row.
 func PersonVersion(updatedAt time.Time) string { return readstate.Of(updatedAt) }
 
+// StaffRecordProfile is the caregiver profile part of a staff record token.
+type StaffRecordProfile struct {
+	Specialization string
+	Role           string
+	Qualifications string
+}
+
+// StaffRecordVersion is the token of what the staff record form shows and
+// PUT /api/staff/{id} writes back whole (ADR 0311): the person the record
+// names, the notes and the live caregiver profile (nil for none; a retired
+// profile counts as none, as the record read leaves it out). The other
+// columns of the staff row (employment, schedule binding, exit) have their
+// own forms and do not refuse this one. UpdateStaffWithTeacher compares it
+// under the staff row lock it writes under.
+func StaffRecordVersion(personID int64, notes string, profile *StaffRecordProfile) string {
+	state := []any{personID, notes, nil}
+	if profile != nil {
+		state[2] = []string{profile.Specialization, profile.Role, profile.Qualifications}
+	}
+	return readstate.Fingerprint(state)
+}
+
 // PersonFilter narrows a directory search. Every field is optional; the
 // prefix, contains and equals matches are case-insensitive, and the equals
 // matches also ignore surrounding whitespace and canonical Unicode form on

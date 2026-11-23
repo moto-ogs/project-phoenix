@@ -134,8 +134,8 @@ type UpdateStaffInput struct {
 	Role           string
 	Qualifications string
 	// ExpectedVersion is the record's version the form showed (ADR 0311,
-	// schoolmembership.StaffRecordVersion); checked under the staff row
-	// lock before the write. Empty is refused.
+	// Runtime.RecordVersion); the writer checks it under the staff row lock
+	// before the write. Empty is refused.
 	ExpectedVersion string
 }
 
@@ -239,7 +239,10 @@ type Runtime struct {
 
 	CreateStaff func(context.Context, CreateStaffInput) (CreateStaffResult, error)
 	UpdateStaff func(context.Context, UpdateStaffInput) (UpdateStaffResult, error)
-	Offboard    func(context.Context, int64, string) error
+	// RecordVersion is the token of the record form (ADR 0311), the function
+	// UpdateStaff's writer compares under its lock.
+	RecordVersion func(schoolmembership.Staff, *schoolmembership.Teacher) string
+	Offboard      func(context.Context, int64, string) error
 	// PlanExit and WithdrawExit enter, move and withdraw a planned exit
 	// (#4809) with the acting username; ExitFailure renders (and observes)
 	// their refusals: invalid day -> 400, day in the past -> 400, unknown
@@ -277,7 +280,7 @@ func NewResource(membership schoolmembership.Capability, runtime Runtime) *Resou
 		runtime.RetryQueuedDocumentCleanups == nil ||
 		runtime.SchoolClasses == nil || runtime.SchoolClassesVersion == nil || runtime.SetSchoolClasses == nil ||
 		runtime.ActiveCaregivers == nil || runtime.StaffByRoles == nil ||
-		runtime.CreateStaff == nil || runtime.UpdateStaff == nil || runtime.Offboard == nil ||
+		runtime.CreateStaff == nil || runtime.UpdateStaff == nil || runtime.RecordVersion == nil || runtime.Offboard == nil ||
 		runtime.PlanExit == nil || runtime.WithdrawExit == nil || runtime.ExitFailure == nil ||
 		runtime.ParseIDParam == nil || runtime.Log == nil {
 		panic("staff HTTP: all dependencies are required")

@@ -332,6 +332,7 @@ describe("StaffDetailContent: Personal-Datensatz (#4993)", () => {
         first_name: "Mila",
         staff_notes: null,
       }),
+      { onPersonSaved: expect.any(Function) },
     );
   });
 });

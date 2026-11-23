@@ -39,7 +39,11 @@ import {
 } from "~/lib/staff-api";
 import type { Staff } from "~/lib/staff-api";
 import type { StaffRecordResponse } from "~/lib/contract/staff.generated";
-import { teacherService, type Teacher } from "~/lib/teacher-api";
+import {
+  teacherService,
+  type SavedPerson,
+  type Teacher,
+} from "~/lib/teacher-api";
 import { mapTeacherResponse } from "~/lib/teacher-helpers";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { ApiError, isChangedSinceRead } from "~/lib/api-error";
@@ -85,6 +89,7 @@ import { ArbeitszeitmodellTab } from "~/components/staff/arbeitszeitmodell-tab";
 import { DokumenteTab } from "~/components/staff/dokumente-tab";
 import { KlassenTab } from "~/components/staff/klassen-tab";
 import {
+  KontoNameSavedError,
   KontoRoleSaveError,
   KontoTab,
   type KontoDraft,
@@ -341,7 +346,7 @@ export default function StaffDetailContent() {
     recordReadRef.current = recordRequest;
   });
   const reloadRecordOrThrow = useCallback(
-    () => revalidateOrThrow(recordReadRef.current),
+    async () => mapTeacherResponse(await revalidateOrThrow(recordReadRef.current)),
     [],
   );
   const reloadRecord = useCallback(async () => {
@@ -375,18 +380,34 @@ export default function StaffDetailContent() {
         ...recordData
       } = draft;
       const hasRecordChanges = Object.keys(recordData).length > 0;
+      let saved: Teacher | undefined;
       if (hasRecordChanges) {
+        // Der Name geht vor Position und Notizen. Scheitert danach der
+        // Datensatz, ist der Name schon gespeichert: das sagt die Meldung,
+        // und ein „Wiederholen“ ruht auf dem neuen Stand der Person.
+        let savedPerson: SavedPerson | undefined;
         try {
-          // Der Datensatz, den der Entwurf beim Öffnen las: seine Stände
-          // gehen mit (ADR 0311), nicht die einer späteren Lesung.
+          // Der Datensatz, auf dem der Entwurf ruht: seine Stände gehen mit
+          // (ADR 0311), nicht die einer späteren Lesung.
           const base = readRecord ?? record;
           if (!base) throw new Error("Staff record is not loaded");
-          await teacherService.updateTeacher(staffId, recordData, base);
+          saved = await teacherService.updateTeacher(staffId, recordData, base, {
+            onPersonSaved: (person) => {
+              savedPerson = person;
+            },
+          });
         } catch (err) {
           logger.error("failed to update staff record", {
             staff_id: staffId,
             error: err instanceof Error ? err.message : String(err),
           });
+          if (savedPerson) {
+            await refreshRecord();
+            toastSuccess(
+              "Der Name ist gespeichert, Position und Notizen noch nicht.",
+            );
+            throw new KontoNameSavedError(err, savedPerson);
+          }
           throw err;
         }
       }
@@ -413,12 +434,13 @@ export default function StaffDetailContent() {
           if (hasRecordChanges) {
             toastSuccess("Name, Position und Notizen sind gespeichert.");
           }
-          throw new KontoRoleSaveError(err);
+          throw new KontoRoleSaveError(err, saved);
         }
         await tenantMutate(staffAccessKeys.roleAssignment(accountId));
       }
       toastSuccess("Die Änderungen sind gespeichert.");
       await refreshRecord();
+      return saved;
     },
     [accountId, record, refreshRecord, staffId, tenantMutate, toastSuccess],
   );

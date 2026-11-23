@@ -34,8 +34,8 @@ type payrollScenario struct {
 	svc                   workforce.StaffRecordAdmin
 	ctx                   context.Context
 	// updateStaff runs the staff directory's directory-field update without a
-	// teacher-record change.
-	updateStaff func(context.Context, *peopleValues.Staff) error
+	// teacher-record change, on the record token the caller read.
+	updateStaff func(context.Context, *peopleValues.Staff, string) error
 }
 
 type serializingStaffRepo struct {
@@ -82,8 +82,8 @@ func newPayrollScenario(t *testing.T) *payrollScenario {
 		MayManageStaff: api.StaffAdministrationPermitted,
 	})
 
-	updateStaff := func(ctx context.Context, staff *peopleValues.Staff) error {
-		_, _, err := dir.UpdateStaffWithTeacher(ctx, staff, false, "", "", "")
+	updateStaff := func(ctx context.Context, staff *peopleValues.Staff, expectedVersion string) error {
+		_, _, err := dir.UpdateStaffWithTeacher(ctx, staff, false, "", "", "", expectedVersion)
 		return err
 	}
 
@@ -285,8 +285,11 @@ func TestUpdateStaffWithTeacher_PreservesConcurrentPersonnelNumber(t *testing.T)
 	_, err = testpkg.TenantQuery5(t, s.ctx, s.db, s.svc.UpdatePersonnelNumber, staff.ID, &value, (*string)(nil), actor.ID, "Ersteinrichtung")
 	require.NoError(t, err)
 
+	// The personnel number is not part of the record form's token: the
+	// form read before the number changed still saves.
+	readVersion := peopleValues.StaffRecordVersion(staleStaff.PersonID.Int64(), staleStaff.StaffNotes, nil)
 	staleStaff.StaffNotes = "Aktualisierte Notiz"
-	err = s.updateStaff(s.ctx, staleStaff)
+	err = s.updateStaff(s.ctx, staleStaff, readVersion)
 	require.NoError(t, err)
 
 	reloaded, err := s.reposPeople.Staff.FindByID(s.ctx, staff.ID)

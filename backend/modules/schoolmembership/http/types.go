@@ -100,10 +100,10 @@ type StaffRecordResponse struct {
 
 // recordVersion is the record's token for a caller of the notes tier.
 func recordVersion(access staffFieldAccess, staff schoolmembership.Staff, teacher *schoolmembership.Teacher) string {
-	if !access.notes {
+	if !access.notes || access.recordVersion == nil {
 		return ""
 	}
-	return schoolmembership.StaffRecordVersion(staff, teacher)
+	return access.recordVersion(staff, teacher)
 }
 
 // StaffWithRoleResponse represents a staff member with role information.
@@ -251,10 +251,16 @@ type staffFieldAccess struct {
 	// plannedExit lets the person who may change an exit see its state without
 	// opening the rest of the personnel file.
 	plannedExit bool
+	// recordVersion is Runtime.RecordVersion, set for the notes tier only.
+	recordVersion func(schoolmembership.Staff, *schoolmembership.Teacher) string
 }
 
 func (rs *Resource) fieldAccess(ctx context.Context) staffFieldAccess {
-	return fieldAccessFor(rs.runtime.HasPermission, rs.runtime.Permissions(ctx))
+	access := fieldAccessFor(rs.runtime.HasPermission, rs.runtime.Permissions(ctx))
+	if access.notes {
+		access.recordVersion = rs.runtime.RecordVersion
+	}
+	return access
 }
 
 // fieldAccessFor is the tier mapping on a plain permission list. The matcher

@@ -428,6 +428,26 @@ export function AbwesenheitenTab({
     [quotaResource],
   );
 
+  // The read of one own claim (ADR 0311): reads the claims again and rejects
+  // on failure, and takes the stored claim a save answered.
+  const allowanceRead = useCallback(
+    (typeId: string) => ({
+      reload: async () =>
+        (await revalidateOrThrow(allowancesResource)).find(
+          (entry) => entry.type.id === typeId,
+        )?.summary,
+      write: (stored: AbsenceTypeAllowanceSummary) =>
+        allowancesResource.mutate(
+          (entries) =>
+            entries?.map((entry) =>
+              entry.type.id === typeId ? { ...entry, summary: stored } : entry,
+            ),
+          { revalidate: false },
+        ),
+    }),
+    [allowancesResource],
+  );
+
   // The reload after a write fetches anew and rejects on failure, so
   // useRefreshAfterWrite can say that the change is saved (#6652).
   const reload = useCallback(async () => {
@@ -703,12 +723,12 @@ export function AbwesenheitenTab({
                     year={year}
                     type={entry.type}
                     summary={entry.summary}
+                    read={allowanceRead(entry.type.id)}
                     onCancel={() => setEditing(null)}
                     onSaved={() => {
                       setEditing(null);
                       return afterWrite.refresh({ silent: true });
                     }}
-                    onReload={reload}
                   />
                 ) : null
               }

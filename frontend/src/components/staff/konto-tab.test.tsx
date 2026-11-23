@@ -11,6 +11,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { Teacher } from "~/lib/teacher-api";
 import { ApiError } from "~/lib/api-error";
 import {
+  KontoNameSavedError,
   KontoRoleSaveError,
   KontoTab,
   type KontoDraft,
@@ -461,20 +462,33 @@ describe("KontoTab", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("closes the draft and shows the stored record when the record changed since reading", async () => {
+  it("keeps the draft open on the stored record when the record changed since reading", async () => {
     // ADR 0311: Name, Position und Notizen ruhen auf dem Datensatz beim
-    // Öffnen. Lehnt der Server ab, schließt der Entwurf, der Reiter liest
-    // den gespeicherten Stand und meldet es ohne „Wiederholen“.
-    const reload = vi.fn(() => Promise.resolve());
-    const editing = editingProps({
-      reload,
-      onSave: vi.fn(() =>
-        Promise.reject(
-          new ApiError("changed", 409, { code: "general.changed_since_read" }),
-        ),
-      ),
-    });
-    render(<KontoTab teacher={teacher} editing={editing} />);
+    // Öffnen. Lehnt der Server ab, bleibt der Entwurf offen und zeigt den
+    // gespeicherten Stand mit der Meldung, ohne „Wiederholen“; Speichern
+    // sendet danach den neuen Stand.
+    const stored: Teacher = {
+      ...teacher,
+      staff_notes: "Notiz der Kollegin",
+      version: "record-v2",
+      person_version: "person-v1",
+    };
+    let answerReload: (record: Teacher) => void = () => undefined;
+    const reload = vi.fn(
+      () =>
+        new Promise<Teacher>((resolve) => {
+          answerReload = resolve;
+        }),
+    );
+    const onSave = vi
+      .fn<KontoEditing["onSave"]>()
+      .mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      )
+      .mockResolvedValueOnce(stored);
+    const editing = editingProps({ reload, onSave });
+    const read = { ...teacher, version: "record-v1", person_version: "person-v1" };
+    const view = render(<KontoTab teacher={read} editing={editing} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
     fireEvent.change(screen.getByLabelText("Notizen der Leitung"), {
@@ -483,18 +497,89 @@ describe("KontoTab", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
-    expect(editing.onSave).toHaveBeenCalledWith(
-      expect.objectContaining({ record: teacher, staff_notes: "Ältere Notiz" }),
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ record: read, staff_notes: "Ältere Notiz" }),
+    );
+    // Bis der gespeicherte Stand gelesen ist, geht nichts raus.
+    expect(
+      screen.queryByRole("button", { name: "Speichern" }),
+    ).not.toBeInTheDocument();
+    expect(onSave).toHaveBeenCalledTimes(1);
+
+    // Die Lesung der Seite liefert den gespeicherten Stand.
+    answerReload(stored);
+    view.rerender(<KontoTab teacher={stored} editing={editing} />);
+    await waitFor(() =>
+      expect(screen.getByLabelText("Notizen der Leitung")).toHaveValue(
+        "Notiz der Kollegin",
+      ),
     );
     expect(
-      await screen.findByRole("button", { name: "Bearbeiten" }),
+      await screen.findByText(/inzwischen geändert/),
     ).toBeInTheDocument();
-    expect(
-      screen.queryByLabelText("Notizen der Leitung"),
-    ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Wiederholen" }),
     ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(2));
+    expect(onSave).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        record: stored,
+        staff_notes: "Notiz der Kollegin",
+      }),
+    );
+  });
+
+  it("retries on the saved name after the record step failed, never on the old person version", async () => {
+    // Der Name ging durch, Position und Notizen nicht (5xx). „Wiederholen“
+    // ruht auf dem gespeicherten Namen und dessen Stand: der Name geht
+    // nicht noch einmal mit dem alten Stand raus, der eigene Schreibvorgang
+    // wird nicht als fremde Änderung abgelehnt.
+    const read = { ...teacher, version: "record-v1", person_version: "person-v1" };
+    const onSave = vi
+      .fn<KontoEditing["onSave"]>()
+      .mockRejectedValueOnce(
+        new KontoNameSavedError(
+          new ApiError("unavailable", 503, { code: "general.unavailable" }),
+          {
+            first_name: "Milena",
+            last_name: "Muster",
+            tag_id: "ABC123",
+            person_version: "person-v2",
+          },
+        ),
+      )
+      .mockResolvedValueOnce(undefined);
+    const editing = editingProps({ onSave });
+    render(<KontoTab teacher={read} editing={editing} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    fireEvent.change(screen.getByLabelText("Vorname"), {
+      target: { value: "Milena" },
+    });
+    fireEvent.change(screen.getByLabelText("Notizen der Leitung"), {
+      target: { value: "Neue Notiz" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    const retry = await screen.findByRole("button", { name: "Wiederholen" });
+    expect(screen.getByLabelText("Notizen der Leitung")).toHaveValue(
+      "Neue Notiz",
+    );
+    fireEvent.click(retry);
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(2));
+    expect(onSave).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        first_name: "Milena",
+        staff_notes: "Neue Notiz",
+        record: expect.objectContaining({
+          first_name: "Milena",
+          person_version: "person-v2",
+          version: "record-v1",
+        }),
+      }),
+    );
   });
 
   it("sends the new system role only when it differs from the current one", async () => {

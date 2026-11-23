@@ -18,7 +18,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/realtime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/workflows/staffoffboarding"
 	offboardingcompose "github.com/moto-ogs/project-phoenix/workflows/staffoffboarding/compose"
 )
@@ -324,24 +323,13 @@ func staffDirectoryWrites(users peoplePorts.PersonDirectory) (func(context.Conte
 		return StaffCreateResult{Staff: legacyStaffToMembership(staff), Teacher: legacyTeacherToMembership(teacher), TeacherCreationFailed: teacherCreationFailed}, nil
 	}
 	updateStaff := func(ctx context.Context, input StaffUpdateInput) (StaffUpdateResult, error) {
-		// The staff row lock UpdateStaffWithTeacher writes under, taken
-		// first in the request transaction: the record is compared with
-		// what the form showed before anything is written (ADR 0311).
-		staff, err := users.StaffRows().FindByIDForUpdate(ctx, input.StaffID)
+		staff, err := users.StaffRows().FindByID(ctx, input.StaffID)
 		if err != nil {
-			return StaffUpdateResult{}, err
-		}
-		teacher, err := users.TeacherRows().FindByStaffID(ctx, input.StaffID)
-		if err != nil {
-			return StaffUpdateResult{}, err
-		}
-		stored := schoolmembership.StaffRecordVersion(legacyStaffToMembership(staff), legacyTeacherToMembership(teacher))
-		if err := readstate.Check(input.ExpectedVersion, stored); err != nil {
 			return StaffUpdateResult{}, err
 		}
 		staff.StaffNotes = input.StaffNotes
 		staff.PersonID = ident.ID(input.PersonID)
-		teacher, action, err := users.UpdateStaffWithTeacher(ctx, staff, input.IsTeacher, input.Specialization, input.Role, input.Qualifications)
+		teacher, action, err := users.UpdateStaffWithTeacher(ctx, staff, input.IsTeacher, input.Specialization, input.Role, input.Qualifications, input.ExpectedVersion)
 		if err != nil {
 			return StaffUpdateResult{}, err
 		}
