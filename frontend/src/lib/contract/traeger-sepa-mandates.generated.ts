@@ -274,29 +274,23 @@ export interface SEPAMandateRevokeRequest {
   revoked_on?: string | null;
 }
 
-/** Query of GET /traeger/sepa-mandates/ */
-export interface GetTraegerSepaMandatesQuery {
-  contract_id?: string;
-}
-
-/** Query of GET /traeger/sepa-mandates/export */
-export interface GetTraegerSepaMandatesExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-}
-
 export const routes = {
   "GET /traeger/sepa-mandates/": {
     method: "GET",
     pattern: "/traeger/sepa-mandates/",
     portals: ["org"],
-    query: ["contract_id"],
+    query: {
+      "contract_id": { kind: "id" },
+    },
     response: success(z.array(SEPAMandateSchema)),
   },
   "GET /traeger/sepa-mandates/export": {
     method: "GET",
     pattern: "/traeger/sepa-mandates/export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "GET /traeger/sepa-mandates/imports": {

@@ -54,19 +54,16 @@ export interface resolveUnregisteredTagScanRequest {
   note?: string;
 }
 
-/** Query of GET /operator/unregistered-tag-scans/ */
-export interface GetOperatorUnregisteredTagScansQuery {
-  organization_id?: string;
-  resolved?: string;
-  school_id?: string;
-}
-
 export const routes = {
   "GET /operator/unregistered-tag-scans/": {
     method: "GET",
     pattern: "/operator/unregistered-tag-scans/",
     portals: ["platform"],
-    query: ["organization_id", "resolved", "school_id"],
+    query: {
+      "organization_id": { kind: "id" },
+      "resolved": { kind: "string" },
+      "school_id": { kind: "id" },
+    },
     response: success(z.array(scanResponseSchema)),
   },
   "POST /operator/unregistered-tag-scans/{id}/resolve": {

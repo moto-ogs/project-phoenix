@@ -748,46 +748,6 @@ export interface CareInvoiceDateRequest {
   invoice_date?: string | null;
 }
 
-/** Query of GET /traeger/care-billing-runs/export */
-export interface GetTraegerCareBillingRunsExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-}
-
-/** Query of GET /traeger/care-billing-runs/schools */
-export interface GetTraegerCareBillingRunsSchoolsQuery {
-  month?: string;
-}
-
-/** Query of GET /traeger/care-billing-runs/{id}/cost-shares/{costBearerID}/export */
-export interface GetTraegerCareBillingRunsIdCostSharesCostBearerIDExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-}
-
-/** Query of GET /traeger/care-billing-runs/{id}/invoices/export */
-export interface GetTraegerCareBillingRunsIdInvoicesExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-}
-
-/** Query of GET /traeger/care-billing-runs/{id}/invoices/{invoiceID}/letter */
-export interface GetTraegerCareBillingRunsIdInvoicesInvoiceIDLetterQuery {
-  kind?: string;
-}
-
-/** Query of GET /traeger/care-billing-runs/{id}/letters/print */
-export interface GetTraegerCareBillingRunsIdLettersPrintQuery {
-  only?: "without_email";
-}
-
-/** Query of GET /traeger/care-billing-runs/{id}/review-export */
-export interface GetTraegerCareBillingRunsIdReviewExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-}
-
-/** Query of POST /traeger/care-billing-runs/{id}/invoices/{invoiceID}/mail */
-export interface PostTraegerCareBillingRunsIdInvoicesInvoiceIDMailQuery {
-  kind?: string;
-}
-
 export const routes = {
   "GET /traeger/care-billing-runs/": {
     method: "GET",
@@ -799,14 +759,18 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/care-billing-runs/export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "GET /traeger/care-billing-runs/schools": {
     method: "GET",
     pattern: "/traeger/care-billing-runs/schools",
     portals: ["org"],
-    query: ["month"],
+    query: {
+      "month": { kind: "date" },
+    },
     response: success(z.array(CareRunSchoolSchema)),
   },
   "GET /traeger/care-billing-runs/{id}": {
@@ -819,21 +783,27 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/care-billing-runs/{id}/cost-shares/{costBearerID}/export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "GET /traeger/care-billing-runs/{id}/invoices/export": {
     method: "GET",
     pattern: "/traeger/care-billing-runs/{id}/invoices/export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "GET /traeger/care-billing-runs/{id}/invoices/{invoiceID}/letter": {
     method: "GET",
     pattern: "/traeger/care-billing-runs/{id}/invoices/{invoiceID}/letter",
     portals: ["org"],
-    query: ["kind"],
+    query: {
+      "kind": { kind: "string" },
+    },
     response: fileAnswer,
   },
   "GET /traeger/care-billing-runs/{id}/letters": {
@@ -846,14 +816,18 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/care-billing-runs/{id}/letters/print",
     portals: ["org"],
-    query: ["only"],
+    query: {
+      "only": { kind: "string", values: ["without_email"] },
+    },
     response: fileAnswer,
   },
   "GET /traeger/care-billing-runs/{id}/review-export": {
     method: "GET",
     pattern: "/traeger/care-billing-runs/{id}/review-export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "POST /traeger/care-billing-runs/": {
@@ -901,7 +875,9 @@ export const routes = {
     method: "POST",
     pattern: "/traeger/care-billing-runs/{id}/invoices/{invoiceID}/mail",
     portals: ["org"],
-    query: ["kind"],
+    query: {
+      "kind": { kind: "string" },
+    },
     response: success(CareLetterMailingSchema),
   },
   "POST /traeger/care-billing-runs/{id}/letters": {

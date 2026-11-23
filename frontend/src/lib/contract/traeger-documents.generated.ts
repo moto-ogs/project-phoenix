@@ -109,11 +109,6 @@ export interface ReleaseRequest {
   group_id?: string | null;
 }
 
-/** Query of GET /traeger/documents/export */
-export interface GetTraegerDocumentsExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-}
-
 export const routes = {
   "DELETE /traeger/documents/{id}": {
     method: "DELETE",
@@ -155,7 +150,9 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/documents/export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "GET /traeger/documents/{id}/file": {

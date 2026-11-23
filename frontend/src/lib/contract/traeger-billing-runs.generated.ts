@@ -430,22 +430,6 @@ export interface BillingCarriedCorrectionRequest {
   reason?: string;
 }
 
-/** Query of GET /traeger/billing-runs/export */
-export interface GetTraegerBillingRunsExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-  holiday_period_id?: string;
-}
-
-/** Query of GET /traeger/billing-runs/{id}/cost-takeovers/{costBearerId}/export */
-export interface GetTraegerBillingRunsIdCostTakeoversCostBearerIdExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-}
-
-/** Query of GET /traeger/billing-runs/{id}/export */
-export interface GetTraegerBillingRunsIdExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-}
-
 export const routes = {
   "DELETE /traeger/billing-runs/{id}/carried-corrections/{positionID}": {
     method: "DELETE",
@@ -463,7 +447,10 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/billing-runs/export",
     portals: ["org"],
-    query: ["format", "holiday_period_id"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "holiday_period_id": { kind: "id" },
+    },
     response: fileAnswer,
   },
   "GET /traeger/billing-runs/periods": {
@@ -482,7 +469,9 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/billing-runs/{id}/cost-takeovers/{costBearerId}/export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "GET /traeger/billing-runs/{id}/documents/{documentID}/letter": {
@@ -495,7 +484,9 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/billing-runs/{id}/export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "GET /traeger/billing-runs/{id}/letters/print": {

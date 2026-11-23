@@ -15,17 +15,14 @@ import {
   unreadCountResponseSchema,
 } from "./shared.generated";
 
-/** Query of GET /school/staff-messages/ */
-export interface GetSchoolStaffMessagesQuery {
-  only_unread?: boolean;
-}
-
 export const routes = {
   "GET /school/staff-messages/": {
     method: "GET",
     pattern: "/school/staff-messages/",
     portals: ["school"],
-    query: ["only_unread"],
+    query: {
+      "only_unread": { kind: "bool" },
+    },
     response: success(z.array(InboxThreadResponseSchema)),
   },
   "GET /school/staff-messages/recipients": {

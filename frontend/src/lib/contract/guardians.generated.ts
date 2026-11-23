@@ -458,19 +458,6 @@ export interface PhoneNumberUpdateRequest {
   priority?: number | null;
 }
 
-/** Query of DELETE /api/guardians/{id} */
-export interface DeleteGuardiansIdQuery {
-  expected_link_ids?: string;
-  force?: string;
-}
-
-/** Query of GET /api/guardians/search */
-export interface GetGuardiansSearchQuery {
-  page?: number;
-  page_size?: number;
-  q?: string;
-}
-
 export const routes = {
   "DELETE /api/guardians/students/{studentId}/guardians/{guardianId}": {
     method: "DELETE",
@@ -482,7 +469,10 @@ export const routes = {
     method: "DELETE",
     pattern: "/api/guardians/{id}",
     portals: ["tenant"],
-    query: ["expected_link_ids", "force"],
+    query: {
+      "expected_link_ids": { kind: "string" },
+      "force": { kind: "string" },
+    },
     response: noData,
   },
   "DELETE /api/guardians/{id}/email-block": {
@@ -519,7 +509,11 @@ export const routes = {
     method: "GET",
     pattern: "/api/guardians/search",
     portals: ["tenant"],
-    query: ["page", "page_size", "q"],
+    query: {
+      "page": { kind: "int" },
+      "page_size": { kind: "int" },
+      "q": { kind: "string" },
+    },
     response: paginated(z.array(GuardianPickerResponseSchema)),
   },
   "GET /api/guardians/students/{studentId}/email-status": {

@@ -249,21 +249,6 @@ export const FamilyDebtorNumberSchema: z.ZodType<FamilyDebtorNumber, unknown> = 
   debtor_number: str,
 });
 
-/** Query of GET /traeger/billing-families/children */
-export interface GetTraegerBillingFamiliesChildrenQuery {
-  numbers?: boolean;
-}
-
-/** Query of GET /traeger/billing-families/export */
-export interface GetTraegerBillingFamiliesExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-}
-
-/** Query of GET /traeger/billing-families/{id}/export */
-export interface GetTraegerBillingFamiliesIdExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-}
-
 export const routes = {
   "GET /traeger/billing-families/": {
     method: "GET",
@@ -275,7 +260,9 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/billing-families/children",
     portals: ["org"],
-    query: ["numbers"],
+    query: {
+      "numbers": { kind: "bool" },
+    },
     response: success(z.array(FamilyChildNumbersSchema)),
   },
   "GET /traeger/billing-families/debtor-number-format": {
@@ -288,7 +275,9 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/billing-families/export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "GET /traeger/billing-families/{id}": {
@@ -301,7 +290,9 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/billing-families/{id}/export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "PUT /traeger/billing-families/child-debtor-number": {

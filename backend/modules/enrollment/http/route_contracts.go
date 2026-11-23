@@ -13,7 +13,7 @@ var staffPortal = []common.PortalScope{common.PortalTenant}
 // routes (ADR 0270), with patterns relative to /api/enrollment/phases.
 func PhaseRouteContracts() []common.RouteContract {
 	portals := staffPortal
-	bumps := []common.QueryParam{{Name: "bumps_grade", Kind: common.QueryString}}
+	bumps := []common.QueryParam{{Name: "bumps_grade", Kind: common.QueryBool}}
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: portals, Response: []PhaseResponse{}},
 		{Method: "POST", Pattern: "/", Portals: portals, Request: EnrollmentPhaseRequest{}, Response: PhaseResponse{}},

@@ -140,6 +140,11 @@ describe("bffFile", () => {
     const checks = () => {
       // @ts-expect-error: a JSON route goes through bffJson
       void bffFile("tenant", "GET /api/activities/categories");
+      const exportOrders = "GET /api/meal-plan/orders/month/export";
+      // @ts-expect-error: month is a string, not a number
+      void bffFile("tenant", exportOrders, { query: { month: 202609 } });
+      // @ts-expect-error: the route registers only pdf and xlsx
+      void bffFile("tenant", exportOrders, { query: { format: "csv" } });
     };
     expect(checks).toBeTypeOf("function");
   });
@@ -615,6 +620,31 @@ describe("bffJson", () => {
       void bffJson("tenant", "GET /api/display/dashboard");
       // @ts-expect-error: the path parameter is missing
       void bffJson("tenant", "DELETE /api/activities/{id}");
+      const partialAbsences = "GET /api/students/{id}/partial-absences";
+      const student = { id: "7" };
+      void bffJson("tenant", partialAbsences, {
+        params: student,
+        query: { from: "2026-09-01", to: "2026-09-30" },
+      });
+      void bffJson("tenant", partialAbsences, {
+        params: student,
+        // @ts-expect-error: from is a date string, not a number
+        query: { from: 5 },
+      });
+      const groups = "GET /api/groups/";
+      // @ts-expect-error: page is a number, not pre-serialized text
+      void bffJson("tenant", groups, { query: { page: "1" } });
+      const rooms = "GET /api/rooms/";
+      // @ts-expect-error: is_open_room is a boolean, not pre-serialized text
+      void bffJson("tenant", rooms, { query: { is_open_room: "true" } });
+      const careUsage = "GET /api/enrollment/admin/reports/care-usage";
+      void bffJson("tenant", careUsage, {
+        query: { phase_id: "7", care_offering_ids: ["1", "2"] },
+      });
+      // @ts-expect-error: IDs are strings
+      void bffJson("tenant", careUsage, { query: { phase_id: 7 } });
+      // @ts-expect-error: a repeated parameter takes an array
+      void bffJson("tenant", careUsage, { query: { care_offering_ids: "1" } });
       const getCategories = "GET /api/activities/categories";
       // @ts-expect-error: the route reads no such query parameter
       void bffJson("tenant", getCategories, { query: { name: "x" } });

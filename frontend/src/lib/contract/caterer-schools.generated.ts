@@ -121,12 +121,6 @@ export const SchoolOrdersResponseSchema: z.ZodType<SchoolOrdersResponse, unknown
   days: nullable(arr(DayResponseSchema)),
 });
 
-/** Query of GET /caterer/schools/{schoolId}/orders */
-export interface GetCatererSchoolsSchoolIdOrdersQuery {
-  from?: string;
-  to?: string;
-}
-
 export const routes = {
   "GET /caterer/schools": {
     method: "GET",
@@ -138,7 +132,10 @@ export const routes = {
     method: "GET",
     pattern: "/caterer/schools/{schoolId}/orders",
     portals: ["caterer"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(SchoolOrdersResponseSchema),
   },
   "POST /caterer/schools/{schoolId}/orders/{orderId}/confirm": {

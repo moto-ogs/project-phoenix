@@ -12,22 +12,14 @@ import {
   type SubmitEnrollmentRequest,
 } from "./shared.generated";
 
-/** Query of GET /parent/enrollments/{tenantSlug}/bootstrap/{phaseId} */
-export interface GetParentEnrollmentsTenantSlugBootstrapPhaseIdQuery {
-  late_invite?: string;
-}
-
-/** Query of POST /parent/enrollments/{tenantSlug}/submit */
-export interface PostParentEnrollmentsTenantSlugSubmitQuery {
-  late_invite?: string;
-}
-
 export const routes = {
   "GET /parent/enrollments/{tenantSlug}/bootstrap/{phaseId}": {
     method: "GET",
     pattern: "/parent/enrollments/{tenantSlug}/bootstrap/{phaseId}",
     portals: ["parent"],
-    query: ["late_invite"],
+    query: {
+      "late_invite": { kind: "string" },
+    },
     response: success(PublicEnrollmentFormBootstrapResponseSchema),
   },
   "GET /parent/enrollments/{tenantSlug}/profile": {
@@ -40,7 +32,9 @@ export const routes = {
     method: "POST",
     pattern: "/parent/enrollments/{tenantSlug}/submit",
     portals: ["parent"],
-    query: ["late_invite"],
+    query: {
+      "late_invite": { kind: "string" },
+    },
     request: requestBody<SubmitEnrollmentRequest>(),
     response: success(SubmitEnrollmentResponseSchema),
   },

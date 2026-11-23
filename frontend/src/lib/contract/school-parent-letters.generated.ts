@@ -20,12 +20,6 @@ import {
   type letterPreviewRequest,
 } from "./shared.generated";
 
-/** Query of GET /school/parent-letters/{announcementId}/declaration-export */
-export interface GetSchoolParentLettersAnnouncementIdDeclarationExportQuery {
-  format?: "csv" | "pdf";
-  student_id?: string;
-}
-
 export const routes = {
   "DELETE /school/parent-letters/{announcementId}": {
     method: "DELETE",
@@ -55,7 +49,10 @@ export const routes = {
     method: "GET",
     pattern: "/school/parent-letters/{announcementId}/declaration-export",
     portals: ["school"],
-    query: ["format", "student_id"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf"] },
+      "student_id": { kind: "id" },
+    },
     response: fileAnswer,
   },
   "GET /school/parent-letters/{announcementId}/declaration-status": {

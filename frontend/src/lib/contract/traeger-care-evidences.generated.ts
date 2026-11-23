@@ -83,11 +83,6 @@ export interface CareEvidenceRequest {
   checked_on?: string | null;
 }
 
-/** Query of GET /traeger/care-evidences/export */
-export interface GetTraegerCareEvidencesExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-}
-
 export const routes = {
   "DELETE /traeger/care-evidences/{id}": {
     method: "DELETE",
@@ -105,7 +100,9 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/care-evidences/export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "POST /traeger/care-evidences/": {

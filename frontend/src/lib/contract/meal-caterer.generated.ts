@@ -85,13 +85,6 @@ export interface inviteRequest {
   delivery_address?: string;
 }
 
-/** Query of GET /api/meal-caterer/orders/export */
-export interface GetMealCatererOrdersExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-  from?: string;
-  to?: string;
-}
-
 export const routes = {
   "DELETE /api/meal-caterer/invitations/{invitationId}": {
     method: "DELETE",
@@ -115,7 +108,11 @@ export const routes = {
     method: "GET",
     pattern: "/api/meal-caterer/orders/export",
     portals: ["tenant"],
-    query: ["format", "from", "to"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: fileAnswer,
   },
   "POST /api/meal-caterer/invitations": {
