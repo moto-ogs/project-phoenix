@@ -442,7 +442,8 @@ function isArrayIndex(index, checker) {
   if (
     types.some(
       (part) =>
-        checker.isTypeAssignableTo(part, checker.getNumberType()) ||
+        (!(part.flags & (ts.TypeFlags.Any | ts.TypeFlags.Never)) &&
+          checker.isTypeAssignableTo(part, checker.getNumberType())) ||
         (part.isStringLiteral() && /^(?:0|[1-9]\d*)$/.test(part.value)),
     )
   )
@@ -450,13 +451,28 @@ function isArrayIndex(index, checker) {
 
   // TypeScript also allows an array's for-in key as an index, although
   // the variable's public type is string.
-  const declaration = checker.getSymbolAtLocation(index)?.valueDeclaration;
-  return (
-    declaration &&
-    ts.isVariableDeclaration(declaration) &&
-    ts.isForInStatement(declaration.parent.parent) &&
-    isArray(declaration.parent.parent.expression, checker)
-  );
+  const key = ts.skipParentheses(index);
+  if (!ts.isIdentifier(key)) return false;
+  const symbol = checker.getSymbolAtLocation(key);
+  if (!symbol) return false;
+  for (
+    let child = index, parent = index.parent;
+    parent;
+    child = parent, parent = parent.parent
+  ) {
+    if (!ts.isForInStatement(parent) || child !== parent.statement) continue;
+    const initializer = parent.initializer;
+    const target = ts.isVariableDeclarationList(initializer)
+      ? initializer.declarations[0]?.name
+      : initializer;
+    if (!target || !ts.isIdentifier(target)) continue;
+    if (checker.getSymbolAtLocation(target) !== symbol) continue;
+    const collection = checker.getTypeAtLocation(parent.expression);
+    const indexes = checker.getIndexInfosOfType(collection);
+    if (indexes.length === 1 && indexes[0].keyType === checker.getNumberType())
+      return true;
+  }
+  return false;
 }
 
 function expressionKind(node, checker, seen = new Set()) {
