@@ -84,12 +84,21 @@ export async function getMealPlanWeek(
   return entries.map(mapEntry);
 }
 
-/** Replace all dishes for one day (empty list clears the day). */
-export async function setDay(date: string, dishes: DishInput[]): Promise<void> {
+/**
+ * Replace all dishes for one day (empty list clears the day). `expected` is
+ * the day as this page read it: when someone stored it differently since,
+ * the backend refuses the save with `meals.day_changed` instead of
+ * overwriting their change.
+ */
+export async function setDay(
+  date: string,
+  dishes: DishInput[],
+  expected: DishInput[],
+): Promise<void> {
   try {
     await bffJson("tenant", "PUT /api/meal-plan/{date}", {
       params: { date },
-      body: { dishes },
+      body: { dishes, expected },
       errorMessage: "meal plan day save failed",
     });
   } catch (error) {

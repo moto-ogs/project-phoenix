@@ -137,6 +137,24 @@ func (s *Store) ClearDay(ctx context.Context, date domain.Date) (domain.Operatio
 	return deleteDay(ctx, db, tenantID, date)
 }
 
+// LockDay takes the transaction lock of the school's day; it needs the
+// caller's transaction, which releases it.
+func (s *Store) LockDay(ctx context.Context, date domain.Date) (domain.OperationStats, error) {
+	db, tenantID, err := s.database(ctx)
+	if err != nil {
+		return domain.OperationStats{}, err
+	}
+	stats := domain.OperationStats{Queries: 1}
+	started := time.Now()
+	_, err = db.NewRaw(`SELECT pg_advisory_xact_lock(hashtextextended(?, 0))`,
+		fmt.Sprintf("meal_plan.day:%d:%s", tenantID, date.String())).Exec(ctx)
+	stats.StatementDuration = time.Since(started)
+	if err != nil {
+		return stats, fmt.Errorf("meal plan postgres: lock day: %w", err)
+	}
+	return stats, nil
+}
+
 func deleteDay(ctx context.Context, db bun.IDB, tenantID int64, date domain.Date) (domain.OperationStats, error) {
 	stats := domain.OperationStats{Queries: 1}
 	query := db.NewDelete().Model((*row)(nil)).

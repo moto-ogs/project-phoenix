@@ -133,7 +133,7 @@ describe("getMealPlanWeek", () => {
 });
 
 describe("setDay", () => {
-  it("PUTs the day with the dishes payload", async () => {
+  it("PUTs the day with the dishes and the day as read", async () => {
     let seenURL = "";
     let seenInit: RequestInit | undefined;
     fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
@@ -142,11 +142,16 @@ describe("setDay", () => {
       return jsonResponse({ status: "success", data: null });
     });
 
-    await setDay("2026-07-06", [{ dish: "Nudeln", note: "vegetarisch" }]);
+    await setDay(
+      "2026-07-06",
+      [{ dish: "Nudeln", note: "vegetarisch" }],
+      [{ dish: "Suppe", note: null }],
+    );
     expect(seenURL).toContain("/api/meal-plan/2026-07-06");
     expect(seenInit?.method).toBe("PUT");
     expect(JSON.parse(seenInit?.body as string)).toEqual({
       dishes: [{ dish: "Nudeln", note: "vegetarisch" }],
+      expected: [{ dish: "Suppe", note: null }],
     });
   });
 
@@ -161,7 +166,7 @@ describe("setDay", () => {
         { status: 400, statusText: "Bad Request" },
       ),
     );
-    await expect(setDay("2026-07-06", [])).rejects.toMatchObject({
+    await expect(setDay("2026-07-06", [], [])).rejects.toMatchObject({
       name: "ApiError",
       status: 400,
       code: "meals.invalid_dishes",

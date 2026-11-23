@@ -314,13 +314,18 @@ describe("Speiseplan: Allergene je Gericht (#4777)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     await waitFor(() => expect(setDay).toHaveBeenCalledTimes(1));
-    expect(setDay).toHaveBeenCalledWith("2026-10-05", [
-      {
-        dish: "Fischstäbchen",
-        note: null,
-        allergens: ["gluten", "fish", "milk"],
-      },
-    ]);
+    // The day goes out with the day as the page read it (meals.day_changed).
+    expect(setDay).toHaveBeenCalledWith(
+      "2026-10-05",
+      [
+        {
+          dish: "Fischstäbchen",
+          note: null,
+          allergens: ["gluten", "fish", "milk"],
+        },
+      ],
+      [{ dish: "Fischstäbchen", note: null, allergens: ["gluten", "fish"] }],
+    );
   });
 });
 
@@ -428,9 +433,9 @@ describe("reload after a write (#6652)", () => {
   });
 });
 
-// Saving compares against the plan this visit read: a week reopened from
-// the cache stays locked until its own read answered, and a failed read
-// shows the error instead of the cached week.
+// A week reopened from the cache shows at once and stays editable while it
+// is read again; the save sends the day as read, so the backend refuses a
+// day someone changed since (meals.day_changed) instead of the page waiting.
 describe("Speiseplan: Woche aus dem Cache beim erneuten Öffnen", () => {
   const stored = {
     date: "2026-10-05",
@@ -474,19 +479,22 @@ describe("Speiseplan: Woche aus dem Cache beim erneuten Öffnen", () => {
     render(page, { wrapper: SharedCache });
   }
 
-  it("keeps the week locked until this visit's read answered", async () => {
+  it("shows the cached week at once and takes the newer read", async () => {
     const pending = deferred<(typeof stored)[]>();
     getMealPlanWeek.mockReturnValueOnce(pending.promise);
 
     await visitTwice();
 
+    // Anker: the cached week is editable while it is read again.
+    expect(screen.getByDisplayValue("Fischstäbchen")).not.toHaveAttribute(
+      "readonly",
+    );
     await waitFor(() => expect(getMealPlanWeek).toHaveBeenCalledTimes(2));
     expect(
-      screen.getByRole("status", {
+      screen.queryByRole("status", {
         name: "Der Bereich „Speiseplan“ wird geladen…",
       }),
-    ).toBeInTheDocument();
-    expect(screen.queryByDisplayValue("Fischstäbchen")).not.toBeInTheDocument();
+    ).not.toBeInTheDocument();
 
     pending.resolve([{ ...stored, dish: "Nudeln" }]);
     expect(await screen.findByDisplayValue("Nudeln")).not.toHaveAttribute(
@@ -528,18 +536,146 @@ describe("Speiseplan: Woche aus dem Cache beim erneuten Öffnen", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("shows the load error instead of the cached week when the read fails", async () => {
+  it("keeps the cached week when its background read fails", async () => {
     getMealPlanWeek.mockRejectedValueOnce(
       new ApiError("down", 503, { code: "general.unavailable" }),
     );
 
     await visitTwice();
 
+    await waitFor(() => expect(getMealPlanWeek).toHaveBeenCalledTimes(2));
+    expect(screen.getByDisplayValue("Fischstäbchen")).not.toHaveAttribute(
+      "readonly",
+    );
+    expect(
+      screen.queryByText(
+        catalogText("general.unavailable", "die Woche im Speiseplan"),
+      ),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps the drafts when someone changed the day since it was read", async () => {
+    const colleague = { ...stored, dish: "Eintopf" };
+    getMealPlanWeek.mockReset().mockResolvedValueOnce([stored]);
+    getMealPlanWeek.mockResolvedValue([colleague]);
+    setDay
+      .mockReset()
+      .mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "meals.day_changed" }),
+      )
+      .mockResolvedValue(undefined);
+    renderPage();
+    fireEvent.change(await screen.findByDisplayValue("Fischstäbchen"), {
+      target: { value: "Nudeln" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(
+      await screen.findByText(
+        catalogText("meals.day_changed", "die Woche im Speiseplan"),
+      ),
+    ).toBeInTheDocument();
+    expect(setDay).toHaveBeenLastCalledWith(
+      "2026-10-05",
+      [{ dish: "Nudeln", note: null, allergens: [] }],
+      [{ dish: "Fischstäbchen", note: null, allergens: [] }],
+    );
+    // The draft stays; the next save is checked against the stored day.
+    expect(screen.getByDisplayValue("Nudeln")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(setDay).toHaveBeenCalledTimes(2));
+    expect(setDay).toHaveBeenLastCalledWith(
+      "2026-10-05",
+      [{ dish: "Nudeln", note: null, allergens: [] }],
+      [{ dish: "Eintopf", note: null, allergens: [] }],
+    );
+  });
+
+  it("shows a colleague's other days after a conflict instead of saving them back", async () => {
+    const tuesday = { ...stored, date: "2026-10-06", dish: "Linsen" };
+    getMealPlanWeek.mockReset().mockResolvedValueOnce([stored, tuesday]);
+    getMealPlanWeek.mockResolvedValue([
+      { ...stored, dish: "Eintopf" },
+      { ...tuesday, dish: "Reis" },
+    ]);
+    setDay
+      .mockReset()
+      .mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "meals.day_changed" }),
+      )
+      .mockResolvedValue(undefined);
+    renderPage();
+    fireEvent.change(await screen.findByDisplayValue("Fischstäbchen"), {
+      target: { value: "Nudeln" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await screen.findByText(
+      catalogText("meals.day_changed", "die Woche im Speiseplan"),
+    );
+
+    // Only the edited day keeps its draft; Tuesday shows the stored change.
+    expect(await screen.findByDisplayValue("Reis")).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("Linsen")).not.toBeInTheDocument();
+    expect(screen.getByDisplayValue("Nudeln")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(setDay).toHaveBeenCalledTimes(2));
+    expect(setDay).toHaveBeenLastCalledWith(
+      "2026-10-05",
+      [{ dish: "Nudeln", note: null, allergens: [] }],
+      [{ dish: "Eintopf", note: null, allergens: [] }],
+    );
+  });
+
+  it("shows the failed read after a conflict, not an old week to discard to", async () => {
+    getMealPlanWeek
+      .mockReset()
+      .mockResolvedValueOnce([stored])
+      .mockRejectedValueOnce(
+        new ApiError("week exploded", 503, { code: "general.unavailable" }),
+      )
+      .mockResolvedValue([{ ...stored, dish: "Eintopf" }]);
+    setDay
+      .mockReset()
+      .mockRejectedValue(
+        new ApiError("changed", 409, { code: "meals.day_changed" }),
+      );
+    renderPage();
+    fireEvent.change(await screen.findByDisplayValue("Fischstäbchen"), {
+      target: { value: "Nudeln" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
     expect(
       await screen.findByText(
         catalogText("general.unavailable", "die Woche im Speiseplan"),
       ),
     ).toBeInTheDocument();
-    expect(screen.queryByDisplayValue("Fischstäbchen")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        catalogText("meals.day_changed", "die Woche im Speiseplan"),
+      ),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows the stored day after a conflict when the person discards", async () => {
+    getMealPlanWeek.mockReset().mockResolvedValueOnce([stored]);
+    getMealPlanWeek.mockResolvedValue([{ ...stored, dish: "Eintopf" }]);
+    setDay
+      .mockReset()
+      .mockRejectedValue(
+        new ApiError("changed", 409, { code: "meals.day_changed" }),
+      );
+    renderPage();
+    fireEvent.change(await screen.findByDisplayValue("Fischstäbchen"), {
+      target: { value: "Nudeln" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await screen.findByText(
+      catalogText("meals.day_changed", "die Woche im Speiseplan"),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Verwerfen" }));
+    expect(await screen.findByDisplayValue("Eintopf")).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("Nudeln")).not.toBeInTheDocument();
   });
 });

@@ -7,6 +7,12 @@
       "legacy": "meals.child_not_enrolled"
     },
     {
+      "code": "meals.day_changed",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "meals.day_changed"
+    },
+    {
       "code": "meals.day_closed",
       "class": "business_rejection",
       "parameters": [],

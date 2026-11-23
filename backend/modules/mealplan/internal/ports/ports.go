@@ -14,6 +14,9 @@ type Store interface {
 	// changed after it was published (#7666), nil a day as first published.
 	ReplaceDay(context.Context, domain.Date, []mealplan.Dish, *time.Time) (domain.OperationStats, error)
 	ClearDay(context.Context, domain.Date) (domain.OperationStats, error)
+	// LockDay holds a day of the school's plan until the transaction ends,
+	// so a save's check of the stored day and its write stay together.
+	LockDay(context.Context, domain.Date) (domain.OperationStats, error)
 	FindParticipation(context.Context, int64, domain.Date, domain.Date) (domain.ParticipationData, domain.OperationStats, error)
 	InsertParticipationSchedule(context.Context, int64, int64, domain.Date, []domain.Weekday) (domain.OperationStats, error)
 	UpsertParticipationOverride(context.Context, int64, int64, domain.Date, bool) (domain.OperationStats, error)
