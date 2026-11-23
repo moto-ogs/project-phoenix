@@ -411,6 +411,8 @@ export function useGlobalSSE(): SSEHookState {
   const hasPendingStaffNoticesEvent = useRef(false);
   // An appointment of the school was written (#7693).
   const hasPendingCalendarAppointmentsEvent = useRef(false);
+  // The menu of a day was saved or cleared (#7666).
+  const hasPendingMealPlanEvent = useRef(false);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Per-burst flush state (#2057): jitter drawn once when a burst starts, and
   // the burst's start time for the MAX_FLUSH_WAIT_MS cap.
@@ -441,6 +443,7 @@ export function useGlobalSSE(): SSEHookState {
     hasPendingGroupSubscriptionRefresh.current = false;
     hasPendingStaffNoticesEvent.current = false;
     hasPendingCalendarAppointmentsEvent.current = false;
+    hasPendingMealPlanEvent.current = false;
     burstScopeRef.current = null;
   }, []);
 
@@ -987,7 +990,8 @@ export function useGlobalSSE(): SSEHookState {
       hasPendingStudentUpdateEvent.current ||
       hasPendingPickupScheduleEvent.current ||
       hasPendingStaffNoticesEvent.current ||
-      hasPendingCalendarAppointmentsEvent.current
+      hasPendingCalendarAppointmentsEvent.current ||
+      hasPendingMealPlanEvent.current
     ) {
       mutate(
         (key) =>
@@ -1324,6 +1328,14 @@ export function useGlobalSSE(): SSEHookState {
           break;
         }
 
+        // Speiseplan (#7666): „Heute anders“ shows whether today's menu
+        // changed. The event carries no dish.
+        case "meal_plan_changed": {
+          hasPendingMealPlanEvent.current = true;
+          scheduleFlush();
+          break;
+        }
+
         case "staff_time_tracking_changed": {
           hasPendingStaffTimeTrackingEvent.current = true;
           scheduleFlush();
@@ -1614,6 +1626,7 @@ export function useGlobalSSE(): SSEHookState {
     hasPendingGroupAccessEvent.current = true;
     hasPendingStaffNoticesEvent.current = true;
     hasPendingCalendarAppointmentsEvent.current = true;
+    hasPendingMealPlanEvent.current = true;
     const openStudentId = currentStudentDetailId();
     if (openStudentId) pendingOpenStudentIds.current.add(openStudentId);
     // One flush for the gap and any burst that was still waiting.

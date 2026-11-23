@@ -23,3 +23,11 @@ type MenuChange struct {
 type MenuChangeNotices interface {
 	NotifyMenuChanged(ctx context.Context, change MenuChange) error
 }
+
+// MenuChanges reads whether the menu of a day changed after it was published
+// (#7666): the same change the families hear about. It names no dish; the
+// menu itself stays on the meal plan page behind its permission. It reads in
+// the caller's transaction.
+type MenuChanges interface {
+	MenuChangedOn(ctx context.Context, date Date) (bool, error)
+}

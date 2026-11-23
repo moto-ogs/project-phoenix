@@ -51,6 +51,10 @@ type Runtime struct {
 	// Allowed reports whether the caller passes an access level, for a
 	// response part only some readers see.
 	Allowed func(context.Context, Access) bool
+	// MenuChanged wraps the writes of a day outside their transaction, so it
+	// sees the committed answer: the root binds it to the content-free
+	// meal_plan_changed signal (#7666). Nil sends none.
+	MenuChanged Middleware
 }
 
 type Resource struct {
@@ -65,13 +69,21 @@ func NewResource(module mealplanModule.Capability, runtime Runtime) *Resource {
 	return &Resource{module: module, runtime: runtime}
 }
 
+// menuChanged is the root's signal around a write of a day, or a pass-through.
+func (rs *Resource) menuChanged() Middleware {
+	if rs.runtime.MenuChanged == nil {
+		return func(next http.Handler) http.Handler { return next }
+	}
+	return rs.runtime.MenuChanged
+}
+
 func (rs *Resource) Router() chi.Router {
 	router := chi.NewRouter()
 	router.Use(render.SetContentType(render.ContentTypeJSON))
 	rs.runtime.Protected(router, func(protected chi.Router, withTx Middleware) {
 		protected.With(rs.runtime.Permission(AccessRead), withTx).Get("/", rs.getWeek)
-		protected.With(rs.runtime.Permission(AccessWrite), withTx).Put("/{date}", rs.setDay)
-		protected.With(rs.runtime.Permission(AccessWrite), withTx).Delete("/{date}", rs.deleteDay)
+		protected.With(rs.runtime.Permission(AccessWrite), rs.menuChanged(), withTx).Put("/{date}", rs.setDay)
+		protected.With(rs.runtime.Permission(AccessWrite), rs.menuChanged(), withTx).Delete("/{date}", rs.deleteDay)
 		protected.With(rs.runtime.Permission(AccessDailyParticipants), withTx).Get("/participants", rs.getParticipants)
 		protected.With(rs.runtime.Permission(AccessParticipants), withTx).Get("/participants/export", rs.exportParticipants)
 		protected.With(rs.runtime.Permission(AccessParticipants), withTx).Get("/participants/week", rs.getWeeklyParticipants)
