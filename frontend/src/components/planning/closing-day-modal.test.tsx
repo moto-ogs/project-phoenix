@@ -343,13 +343,13 @@ describe("ClosingDayModal", () => {
       reason: "Betriebsferien",
       version: "v2",
     };
-    const onChangedSinceRead = vi.fn(() => Promise.resolve(stored));
+    const reload = vi.fn(() => Promise.resolve(stored));
     render(
       <ClosingDayModal
         isOpen
         onClose={vi.fn()}
         onSaved={vi.fn()}
-        onChangedSinceRead={onChangedSinceRead}
+        reload={reload}
         initial={existingClosingDay}
       />,
     );
@@ -384,6 +384,41 @@ describe("ClosingDayModal", () => {
         }),
       ),
     );
+  });
+
+  // ADR 0311 rule 6: a failed read of the stored closing day after a
+  // refusal is a load error, and the refused version is not sent again.
+  it("names a failed read of the stored closing day after a refusal", async () => {
+    mockUpdate.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    render(
+      <ClosingDayModal
+        isOpen
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+        reload={() =>
+          Promise.reject(
+            new ApiError("down", 503, { code: "general.unavailable" }),
+          )
+        }
+        initial={existingClosingDay}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText("Grund"), {
+      target: { value: "Weihnachtsferien" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Du siehst jetzt den neuen Stand/),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Speichern" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(mockUpdate).toHaveBeenCalledTimes(1);
   });
 
   it("marks the field the server names", async () => {
