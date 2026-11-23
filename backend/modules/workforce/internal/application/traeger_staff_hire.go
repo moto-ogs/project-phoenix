@@ -103,7 +103,7 @@ func (t *TraegerStaff) handOverHire(ctx context.Context, actor workforce.Traeger
 	var failed []int64
 	for _, link := range record.Links {
 		err := t.ports.Runtime.WithinSchool(ctx, link.SchoolID, func(ctx context.Context) error {
-			_, err := t.handOverSchool(ctx, actor, link.StaffID, record.PersonnelNumber, nil)
+			_, err := t.handOverSchool(ctx, actor, link, record.PersonnelNumber, nil)
 			return err
 		})
 		if err != nil {

@@ -137,10 +137,12 @@ func (t *TraegerStaff) replacedValues(actor workforce.TraegerStaffActor, recordI
 // no bank row of the school, because the record keeps the values (decision
 // E1). Every write of the record repeats it, so a school that failed before
 // catches up (ADR 0233 section 6). A link names the bank row it read per new
-// employment: a school whose row changed since keeps it, and the link is
-// refused as changed (ADR 0311) once every school is through.
+// employment: a school whose row changed since keeps it, the Träger's trail
+// names the values it kept, and the link is refused as changed (ADR 0311)
+// once every school is through.
 func (t *TraegerStaff) handOver(ctx context.Context, actor workforce.TraegerStaffActor, record domain.TraegerStaffRecord, planned map[employmentKey]string) error {
 	changed := false
+	var held []domain.TraegerStaffChange
 	for _, link := range record.Links {
 		err := t.ports.Runtime.WithinSchool(ctx, link.SchoolID, func(ctx context.Context) error {
 			expected, read := planned[employmentKey{link.SchoolID, link.StaffID}]
@@ -148,12 +150,25 @@ func (t *TraegerStaff) handOver(ctx context.Context, actor workforce.TraegerStaf
 			if read {
 				plannedRow = &expected
 			}
-			kept, err := t.handOverSchool(ctx, actor, link.StaffID, record.PersonnelNumber, plannedRow)
-			changed = changed || kept
-			return err
+			outcome, err := t.handOverSchool(ctx, actor, link, record.PersonnelNumber, plannedRow)
+			if err != nil {
+				return err
+			}
+			changed = changed || outcome.changed
+			if outcome.held != nil {
+				held = append(held, heldBankChanges(record.ID, link, actor.AccountID, *outcome.held)...)
+			}
+			return nil
 		})
 		if err != nil {
 			return publicTraegerStaffError(fmt.Errorf("hand over to school %d: %w", link.SchoolID, err))
+		}
+	}
+	if len(held) > 0 {
+		if err := t.released(ctx, actor, func(ctx context.Context) error {
+			return t.store.AppendStaffChanges(ctx, actor.OrganizationID, held)
+		}); err != nil {
+			return publicTraegerStaffError(err)
 		}
 	}
 	if changed {
@@ -162,40 +177,94 @@ func (t *TraegerStaff) handOver(ctx context.Context, actor workforce.TraegerStaf
 	return nil
 }
 
-// handOverSchool reports whether it kept a bank row that differs from the
-// planned one; without a plan every row goes to the record.
-func (t *TraegerStaff) handOverSchool(ctx context.Context, actor workforce.TraegerStaffActor, staffID int64, number *string, planned *string) (bool, error) {
+// handOverOutcome is what one school's hand-over left: whether its bank row
+// differs from the one the link read, and the row it held back for that.
+type handOverOutcome struct {
+	changed bool
+	held    *domain.StaffFinancialData
+}
+
+// handOverSchool moves the school's bank row to the record. With a plan it
+// holds back a row that differs from the planned one; without a plan it
+// holds back a row written after the link, which is one a link held back:
+// the school cannot write a row the Träger keeps (refuseKeptByTraeger).
+func (t *TraegerStaff) handOverSchool(ctx context.Context, actor workforce.TraegerStaffActor, link domain.TraegerStaffLink, number *string, planned *string) (handOverOutcome, error) {
+	staffID := link.StaffID
 	live, err := t.schoolStaff(ctx, []int64{staffID})
 	if err != nil || len(live) == 0 {
-		return false, err
+		return handOverOutcome{}, err
 	}
 	// The school writes its bank row under the same lock and refuses one the
 	// Träger keeps, so the row read below stays until this transaction ends.
 	subject, err := t.subjects.LockStaff(ctx, staffID, false)
 	if err != nil {
-		return false, err
+		return handOverOutcome{}, err
 	}
 	if oldNumber, newNumber := domain.Deref(subject.PersonnelNumber), domain.Deref(number); oldNumber != newNumber {
 		if err := t.audit.RecordMasterDataChange(ctx, domain.MasterDataChange{
 			StaffID: staffID, ChangedBy: actor.AccountID, Section: domain.AuditSectionArbeitsvertrag,
 			Field: domain.StaffFieldPersonnelNumber, OldValue: oldNumber, NewValue: newNumber, Note: noteNumberOfTraeger,
 		}); err != nil {
-			return false, fmt.Errorf("write personnel number audit: %w", err)
+			return handOverOutcome{}, fmt.Errorf("write personnel number audit: %w", err)
 		}
 		if err := t.subjects.SetPersonnelNumber(ctx, staffID, number); err != nil {
-			return false, err
+			return handOverOutcome{}, err
 		}
 	}
 	rows, err := t.store.SchoolFinancialRows(ctx, []int64{staffID})
 	if err != nil {
-		return false, err
+		return handOverOutcome{}, err
 	}
 	if planned != nil && bankRowState(rows) != *planned {
 		// A value the Personalverwaltung has not seen, like a new IBAN, is
 		// neither taken over nor deleted.
-		return true, nil
+		if len(rows) == 0 {
+			return handOverOutcome{changed: true}, nil
+		}
+		// The hold stamps the row after the link, so the next write's
+		// catch-up keeps it as well.
+		if err := t.store.HoldSchoolFinancialRow(ctx, staffID); err != nil {
+			return handOverOutcome{}, err
+		}
+		return handOverOutcome{changed: true, held: &rows[0]}, nil
 	}
-	return false, t.removeSchoolBankRow(ctx, actor, staffID, rows)
+	if planned == nil && len(rows) > 0 && rows[0].UpdatedAt.After(link.LinkedAt) {
+		return handOverOutcome{}, nil
+	}
+	return handOverOutcome{}, t.removeSchoolBankRow(ctx, actor, staffID, rows)
+}
+
+// maskedBankValue is one stored mask of a school's bank row.
+type maskedBankValue struct{ field, mask string }
+
+// maskedBankValues lists the masks of the values a bank row holds; nothing
+// is opened.
+func maskedBankValues(staffID int64, row domain.StaffFinancialData) []maskedBankValue {
+	masked := domain.MaskFinancial(staffID, &row)
+	var values []maskedBankValue
+	for _, value := range []maskedBankValue{
+		{domain.StaffFieldIBAN, domain.Deref(masked.IBANMasked)},
+		{domain.StaffFieldTaxID, domain.Deref(masked.TaxIDMasked)},
+		{domain.StaffFieldSocialSecurityNumber, domain.Deref(masked.SocialSecurityNumberMasked)},
+	} {
+		if value.mask != "" {
+			values = append(values, value)
+		}
+	}
+	return values
+}
+
+// heldBankChanges are the trail entries of a bank row a school kept: like a
+// value the link did not choose, with its school and its mask.
+func heldBankChanges(recordID int64, link domain.TraegerStaffLink, accountID int64, row domain.StaffFinancialData) []domain.TraegerStaffChange {
+	var changes []domain.TraegerStaffChange
+	for _, value := range maskedBankValues(link.StaffID, row) {
+		changes = append(changes, domain.TraegerStaffChange{
+			RecordID: recordID, Kind: domain.StaffChangeNotChosen, Field: value.field,
+			ValueMasked: new(value.mask), SchoolID: new(link.SchoolID), AccountID: accountID,
+		})
+	}
+	return changes
 }
 
 // removeSchoolBankRow deletes the school's bank row of an employment the
@@ -205,17 +274,10 @@ func (t *TraegerStaff) removeSchoolBankRow(ctx context.Context, actor workforce.
 	if len(rows) == 0 {
 		return nil
 	}
-	masked := domain.MaskFinancial(staffID, &rows[0])
-	for field, value := range map[string]*string{
-		domain.StaffFieldIBAN: masked.IBANMasked, domain.StaffFieldTaxID: masked.TaxIDMasked,
-		domain.StaffFieldSocialSecurityNumber: masked.SocialSecurityNumberMasked,
-	} {
-		if value == nil || *value == "" {
-			continue
-		}
+	for _, value := range maskedBankValues(staffID, rows[0]) {
 		if err := t.audit.RecordMasterDataChange(ctx, domain.MasterDataChange{
-			StaffID: staffID, ChangedBy: actor.AccountID, Section: domain.AuditSectionBankSteuer, Field: field,
-			OldValue: *value, NewValue: "", Note: noteHandedToTraeger,
+			StaffID: staffID, ChangedBy: actor.AccountID, Section: domain.AuditSectionBankSteuer, Field: value.field,
+			OldValue: value.mask, NewValue: "", Note: noteHandedToTraeger,
 		}); err != nil {
 			return fmt.Errorf("write bank hand-over audit: %w", err)
 		}
