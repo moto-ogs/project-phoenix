@@ -2,17 +2,14 @@ package gradetransition
 
 import (
 	"context"
-	"crypto/sha256"
-	"crypto/subtle"
-	"encoding/hex"
 	"fmt"
 	"regexp"
 	"sort"
 	"strconv"
-	"strings"
 
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // cohortStudent is one child of a mapped class as resolved for a preview or
@@ -157,33 +154,21 @@ func fingerprintOf(mappings []schoolstructure.TransitionMapping, cohort []cohort
 		parts = append(parts, fmt.Sprintf("s|%d|%s", student.StudentID, strconv.Quote(student.SchoolClass)))
 	}
 	sort.Strings(parts)
-	sum := sha256.Sum256([]byte(strings.Join(parts, "\n")))
-	return hex.EncodeToString(sum[:])
+	return readstate.Fingerprint(parts)
 }
 
 // ensureFingerprintMatches compares the caller's previewed cohort against
-// the one resolved under the locks. An empty expectation means the caller
-// has no preview to be stale and skips the check.
+// the one resolved under the locks (readstate.Check, ADR 0311). An apply
+// without a preview has confirmed nothing and is refused like a stale one;
+// the refusal keeps its own code (grade_transition.preview_stale).
 func ensureFingerprintMatches(expected string, mappings []schoolstructure.TransitionMapping, promotions, graduates []cohortStudent) error {
-	if strings.TrimSpace(expected) == "" {
-		return nil
-	}
 	current := make([]cohortStudent, 0, len(promotions)+len(graduates))
 	current = append(current, promotions...)
 	current = append(current, graduates...)
-	if !equalFingerprint(fingerprintOf(mappings, current), expected) {
+	if readstate.Check(expected, fingerprintOf(mappings, current)) != nil {
 		return ErrPreviewStale
 	}
 	return nil
-}
-
-func equalFingerprint(actual, expected string) bool {
-	actualBytes, actualErr := hex.DecodeString(actual)
-	expectedBytes, expectedErr := hex.DecodeString(strings.TrimSpace(expected))
-	if actualErr != nil || expectedErr != nil || len(actualBytes) != len(expectedBytes) {
-		return false
-	}
-	return subtle.ConstantTimeCompare(actualBytes, expectedBytes) == 1
 }
 
 // classPattern matches an optional prefix, a grade number and optional

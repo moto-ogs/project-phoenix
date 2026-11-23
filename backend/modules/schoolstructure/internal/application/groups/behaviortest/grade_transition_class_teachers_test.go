@@ -77,7 +77,7 @@ func TestGradeTransitionWorkflow_Apply_RemapsClassTeachers(t *testing.T) {
 	transitionID := f.createDraft(t, ctx, "2026-2027",
 		promote(class1, class2), promote(class2, class3), graduate(class3))
 
-	_, err := wf.Apply(ctx, transitionID, "")
+	_, err := wf.Apply(ctx, transitionID, previewed(ctx, wf, transitionID))
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{class2, class3}, staffClassNames(t, db, ctx, chainTeacher.ID),
@@ -123,7 +123,7 @@ func TestGradeTransitionWorkflow_ClassTeachersWithDescendingStaffIDs(t *testing.
 	testpkg.CreateTestClassTeacher(t, db, higher.ID, class2)
 
 	transitionID := f.createDraft(t, ctx, "2026-2027", promote(class1, class2), promote(class2, class3))
-	_, err := wf.Apply(ctx, transitionID, "")
+	_, err := wf.Apply(ctx, transitionID, previewed(ctx, wf, transitionID))
 	require.NoError(t, err)
 	assert.Equal(t, []string{class2, class3}, staffClassNames(t, db, ctx, higher.ID))
 	assert.Equal(t, []string{class3}, staffClassNames(t, db, ctx, lower.ID))
@@ -162,7 +162,7 @@ func TestGradeTransitionWorkflow_Apply_MatchesClassTeachersExactlyLikeStudents(t
 
 	transitionID := f.createDraft(t, ctx, "2026-2027", promote(classLower, classTarget))
 
-	_, err := wf.Apply(ctx, transitionID, "")
+	_, err := wf.Apply(ctx, transitionID, previewed(ctx, wf, transitionID))
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{classUpper}, staffClassNames(t, db, ctx, teacher.ID),
@@ -193,7 +193,7 @@ func TestGradeTransitionWorkflow_Revert_SkipsOffboardedStaff(t *testing.T) {
 
 	transitionID := f.createDraft(t, ctx, "2026-2027", promote(class1, class2))
 
-	_, err := wf.Apply(ctx, transitionID, "")
+	_, err := wf.Apply(ctx, transitionID, previewed(ctx, wf, transitionID))
 	require.NoError(t, err)
 	require.Equal(t, []string{class2}, staffClassNames(t, db, ctx, teacher.ID))
 
@@ -239,7 +239,7 @@ func TestGradeTransitionWorkflow_Revert_RespectsAdminRemovalAfterApply(t *testin
 
 	transitionID := f.createDraft(t, ctx, "2026-2027", promote(class1, class2))
 
-	_, err := wf.Apply(ctx, transitionID, "")
+	_, err := wf.Apply(ctx, transitionID, previewed(ctx, wf, transitionID))
 	require.NoError(t, err)
 	require.Equal(t, []string{class2}, staffClassNames(t, db, ctx, teacher.ID))
 
@@ -314,7 +314,7 @@ func TestGradeTransitionWorkflow_Revert_ChainAdminRemovedMiddleClass(t *testing.
 
 	teacherID, transitionID, _, class2, class3 := setupChainTeacherTransition(t, ctx, db, f)
 
-	_, err := wf.Apply(ctx, transitionID, "")
+	_, err := wf.Apply(ctx, transitionID, previewed(ctx, wf, transitionID))
 	require.NoError(t, err)
 	require.Equal(t, []string{class2, class3}, staffClassNames(t, db, ctx, teacherID))
 
@@ -346,7 +346,7 @@ func TestGradeTransitionWorkflow_Revert_ChainAdminRemovedEndClass(t *testing.T) 
 
 	teacherID, transitionID, class1, class2, class3 := setupChainTeacherTransition(t, ctx, db, f)
 
-	_, err := wf.Apply(ctx, transitionID, "")
+	_, err := wf.Apply(ctx, transitionID, previewed(ctx, wf, transitionID))
 	require.NoError(t, err)
 	require.Equal(t, []string{class2, class3}, staffClassNames(t, db, ctx, teacherID))
 
@@ -391,7 +391,7 @@ func TestGradeTransitionWorkflow_Revert_TouchesOnlyLedgeredClassTeachers(t *test
 
 	transitionID := f.createDraft(t, ctx, "2026-2027", promote(class1, class2))
 
-	_, err := wf.Apply(ctx, transitionID, "")
+	_, err := wf.Apply(ctx, transitionID, previewed(ctx, wf, transitionID))
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{class2}, staffClassNames(t, db, ctx, mergeTeacher.ID),

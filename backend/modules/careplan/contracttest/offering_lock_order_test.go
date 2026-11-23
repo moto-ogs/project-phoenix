@@ -45,7 +45,7 @@ func TestOfferingCorrectionAndGradeTransitionDoNotDeadlock(t *testing.T) {
 	// Use the production principal middleware rather than importing another
 	// owner's authorization internals from this contract suite.
 	claimsCtx := context.WithValue(offeringChangeAdminContext(t), sessiontoken.CtxClaims, sessiontoken.AppClaims{
-		ID: int(env.creatorID), TenantID: testpkg.Tenant(t), Permissions: []string{"grade_transitions:apply"},
+		ID: int(env.creatorID), TenantID: testpkg.Tenant(t), Permissions: []string{"grade_transitions:read", "grade_transitions:apply"},
 	})
 	var authorizedCtx context.Context
 	api.SecurityPrincipalMiddleware(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
@@ -54,6 +54,13 @@ func TestOfferingCorrectionAndGradeTransitionDoNotDeadlock(t *testing.T) {
 	require.NotNil(t, authorizedCtx)
 	ctx, cancel := context.WithTimeout(authorizedCtx, 20*time.Second)
 	defer cancel()
+	// The apply confirms the preview an admin was shown (ADR 0311).
+	var confirmed string
+	require.NoError(t, testpkg.WithTenantTx(t, ctx, env.db, testpkg.Tenant(t), func(previewCtx context.Context, _ bun.Tx) error {
+		preview, previewErr := grade.GradeTransition.Preview(previewCtx, transition.ID)
+		confirmed = preview.Fingerprint
+		return previewErr
+	}))
 	done := make(chan error, 1)
 	gradeErr := testpkg.WithTenantTx(t, ctx, env.db, testpkg.Tenant(t), func(gradeCtx context.Context, tx bun.Tx) error {
 		if err := membership.LockStudentClassWrites(gradeCtx, true); err != nil {
@@ -77,7 +84,7 @@ func TestOfferingCorrectionAndGradeTransitionDoNotDeadlock(t *testing.T) {
     AND NOT l.granted AND ? = ANY(pg_blocking_pids(l.pid)))`, int32(0x636c6173), testpkg.Tenant(t), pid).Scan(gradeCtx, &waiting)
 			return err == nil && waiting
 		}, 5*time.Second, 10*time.Millisecond, "correction must wait on the class gate")
-		_, err := grade.GradeTransition.Apply(gradeCtx, transition.ID, "")
+		_, err := grade.GradeTransition.Apply(gradeCtx, transition.ID, confirmed)
 		return err
 	})
 	var correctionErr error

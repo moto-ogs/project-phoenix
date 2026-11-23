@@ -122,7 +122,7 @@ func TestStudentService_LockCompanionGraph_CoversEverySubjectsFarEnds(t *testing
 
 	setAccompaniedDepartureDays(t, ctx, studentPlans(db), secondSubject.ID, "mon")
 	setAccompaniedDepartureDays(t, ctx, studentPlans(db), farEnd.ID, "mon")
-	conflicts, err := testpkg.TenantQuery2(t, ctx, db, service.ReplaceCompanions, secondSubject.ID, careplan.CompanionUpdate{
+	conflicts, err := testpkg.TenantQuery2(t, ctx, db, asRead(service, service.ReplaceCompanions), secondSubject.ID, careplan.CompanionUpdate{
 		Links: []careplan.CompanionLink{
 			{CompanionStudentID: farEnd.ID, Weekdays: []string{"mon"}},
 		},
