@@ -123,7 +123,7 @@ func (rs *GuardianResource) createGuardian(w http.ResponseWriter, r *http.Reques
 // state, so a tab opened before the release is refused and shows the stored
 // state; the routes go after one release (ADR 0270, #7953).
 func (rs *GuardianResource) refuseUnversionedEdit(w http.ResponseWriter, r *http.Request) {
-	rs.fail(w, r, FailureInternal, readstate.ErrChanged)
+	rs.fail(w, r, FailureConflict, readstate.ErrChanged)
 }
 
 // guardianFullDeleteWarning describes what a full delete WOULD do, so it

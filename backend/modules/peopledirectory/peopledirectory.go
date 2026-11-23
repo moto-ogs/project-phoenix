@@ -12,6 +12,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -275,6 +276,8 @@ func ErrorCode(err error) string {
 		return "invalid"
 	case errors.Is(err, ErrGuardianStillLinked), errors.Is(err, ErrGuardianLinkConflict):
 		return "guardian_linked"
+	case errors.Is(err, readstate.ErrChanged):
+		return "changed_since_read"
 	case errors.Is(err, ErrGuardianForceDeleteRequiresAdmin), errors.Is(err, ErrPayerRemovalRequiresFinancial):
 		return "forbidden"
 	case errors.Is(err, ErrGuardianProviderUnbound):

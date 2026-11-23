@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The guardian adapter serves /api/guardians (#2663): contact persons, their
@@ -315,7 +316,8 @@ func classifyGuardianError(err error) FailureKind {
 		return FailureInvalidRequest
 	case errors.Is(err, peopledirectory.ErrGuardianForceDeleteRequiresAdmin), errors.Is(err, peopledirectory.ErrPayerRemovalRequiresFinancial):
 		return FailureForbidden
-	case errors.Is(err, peopledirectory.ErrGuardianStillLinked), errors.Is(err, peopledirectory.ErrGuardianLinkConflict):
+	case errors.Is(err, peopledirectory.ErrGuardianStillLinked), errors.Is(err, peopledirectory.ErrGuardianLinkConflict),
+		errors.Is(err, readstate.ErrChanged):
 		return FailureConflict
 	default:
 		return FailureInternal
