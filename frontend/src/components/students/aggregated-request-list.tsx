@@ -262,9 +262,11 @@ export function AggregatedRequestList({
   // Eine Anfrage wurde zwischenzeitlich geändert: die Zeile bleibt stehen und
   // wird neu geladen, statt eine Entscheidung vorzutäuschen, die nicht galt.
   // Den Grund hat die Stelle gemeldet, an der entschieden wurde.
-  const handleStale = useCallback(() => {
-    void reloadFeed();
-  }, [reloadFeed]);
+  const reloadFeedOrThrow = feed.reloadOrThrow;
+  const handleStale = useCallback(
+    () => reloadFeedOrThrow(),
+    [reloadFeedOrThrow],
+  );
 
   // Gezählt werden nur offene Anfragen; gezeigt werden auch die gehaltenen.
   const shownItems = useMemo(() => {

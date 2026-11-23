@@ -110,7 +110,7 @@ export function HistoryRequestList({
   reasonRequired: boolean;
   onCorrected: (notice: string) => void;
   /** Lädt die Liste neu, wenn eine Korrektur auf einem veralteten Stand lag. */
-  onStale: () => void;
+  onStale: () => Promise<unknown>;
 }>) {
   const [target, setTarget] = useState<CorrectionTarget | null>(null);
   return (
@@ -149,7 +149,7 @@ export function HistoryRequestList({
           }}
           onStale={() => {
             setTarget(null);
-            onStale();
+            return onStale();
           }}
         />
       )}

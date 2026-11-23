@@ -67,7 +67,7 @@ export function RequestCaseDetail({
   /** Gehaltene Freigaben nach Anfrage-Schlüssel. */
   held?: ReadonlyMap<string, HeldOfferingDecision>;
   onProtectionChanged: (studentID: string, enabled: boolean) => void;
-  onReload: () => void;
+  onReload: () => Promise<unknown>;
   onNotice: (notice: string) => void;
   finishWithdrawal: (row: CareWithdrawalCompletion) => void;
   removeWithdrawal: (row: CareWithdrawalCompletion) => void;
@@ -145,7 +145,7 @@ export function RequestCaseDetail({
                 group={group}
                 onResolved={(notice: string) => {
                   onNotice(notice);
-                  onReload();
+                  void onReload();
                 }}
                 onStale={onReload}
               />

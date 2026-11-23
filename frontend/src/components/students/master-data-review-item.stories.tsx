@@ -23,7 +23,7 @@ const meta = {
     row,
     onDecided: () => undefined,
     expectedVersion: "2026-06-24T12:00:00Z",
-    onStale: () => undefined,
+    onStale: () => Promise.resolve(),
   },
 } satisfies Meta<typeof MasterDataReviewItem>;
 

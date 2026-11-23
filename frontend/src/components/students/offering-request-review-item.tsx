@@ -1,6 +1,5 @@
 "use client";
 
-import { isOutdatedDecision } from "~/lib/change-request-list-api";
 import type * as studentsContract from "~/lib/contract/students.generated";
 import { weekdayShortLabel } from "~/lib/weekdays";
 import type { ErrorCode } from "~/lib/error-codes.generated";
@@ -122,7 +121,7 @@ export function OfferingRequestReviewItem({
   /** Fassung, die entschieden werden soll — verhindert Überschreiben (#2267). */
   expectedVersion: string;
   /** Die Anfrage ist seit dem Lesen anders gespeichert: die Liste neu laden. */
-  onStale: () => void;
+  onStale: () => Promise<unknown>;
   /** Warum hier gerade nicht einzeln entschieden werden kann (#2267). */
   decisionDisabledReason?: string;
   approveReasonRequired?: boolean;
@@ -236,14 +235,11 @@ export function OfferingRequestReviewItem({
       }
       const showDecideError =
         approve && approvalPreview !== null ? confirmErrors.show : showError;
-      const stale = isOutdatedDecision(err);
       await showDecideError(err, {
         object: "die Anfrage",
-        retry: stale
-          ? undefined
-          : () => void decideRef.current(approve, confirmWithdrawal),
+        retry: () => void decideRef.current(approve, confirmWithdrawal),
+        reload: onStale,
       });
-      if (stale) onStale();
     }
   };
   useLayoutEffect(() => {

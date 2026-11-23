@@ -59,8 +59,11 @@ export interface DraftSource<T> {
   readonly data: T | undefined;
   /** The read failed and no confirmed state is there: nothing is sent. */
   readonly error?: unknown;
-  /** Reads the stored state again; rejects on failure (rule 6). */
-  readonly reload: () => Promise<T>;
+  /**
+   * Reads the stored state again; rejects on failure (rule 6). Undefined:
+   * the new state arrives through `data` (a list the caller reloaded).
+   */
+  readonly reload: () => Promise<T | undefined>;
   /** Hands a save's stored answer to the read (rule 5). */
   readonly write?: (stored: T) => Promise<unknown>;
 }
@@ -202,8 +205,19 @@ export function useDraftOn<T, D = T, K = unknown, A = unknown>(
   );
 
   const settle = useCallback(
-    (forKey: string, read: T, from?: { draft: D; base: T }) => {
+    (forKey: string, read: T | undefined, from?: { draft: D; base: T }) => {
       const { options: given, toDraft: draftOf, same: equal } = latest.current;
+      if (read === undefined) {
+        // Untouched on the old base: the newest `data` refills it (rule 2).
+        update(forKey, (prev) => ({
+          ...prev,
+          draft: draftOf(prev.base),
+          touched: false,
+          phase: "ready",
+          loadError: undefined,
+        }));
+        return;
+      }
       const stored = draftOf(read);
       const draft =
         from && given.rebase

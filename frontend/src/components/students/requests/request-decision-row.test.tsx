@@ -50,7 +50,7 @@ function renderRow(
   request: AggregatedOpenRequest,
   handlers: Partial<{
     onDecided: (key: string, notice: string) => void;
-    onStale: () => void;
+    onStale: () => Promise<unknown>;
     inConflict: boolean;
   }> = {},
 ) {
@@ -64,7 +64,7 @@ function renderRow(
         inConflict={handlers.inConflict ?? false}
         onSelectionChange={vi.fn()}
         onDecided={handlers.onDecided ?? vi.fn()}
-        onStale={handlers.onStale ?? vi.fn()}
+        onStale={handlers.onStale ?? vi.fn(async () => undefined)}
       />
     </ToastProvider>,
   );

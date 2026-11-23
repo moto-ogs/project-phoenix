@@ -578,6 +578,18 @@ export function loginUrl(host: string, path: string): string {
   return "/?error=SessionExpired";
 }
 
+/** The outcome of the read after a read-state refusal, never a rejection. */
+async function settleReload(
+  reload: () => Promise<unknown>,
+): Promise<{ failed: false } | { failed: true; error: unknown }> {
+  try {
+    await reload();
+    return { failed: false };
+  } catch (error) {
+    return { failed: true, error };
+  }
+}
+
 /** What one failed action shows, in a toast or in the form's alert. */
 interface DisplayedError {
   message: string;
@@ -699,15 +711,7 @@ function useApiErrorCore(
       // state is read at once, while the catalog loads.
       const readState = isReadStateRefusal(error);
       const reloaded =
-        readState && options.reload
-          ? options.reload().then(
-              () => ({ failed: false as const }),
-              (reloadError: unknown) => ({
-                failed: true as const,
-                error: reloadError,
-              }),
-            )
-          : undefined;
+        readState && options.reload ? settleReload(options.reload) : undefined;
       // The presenter remains a separate chunk. The mounted error path starts
       // its load ahead of time, and concurrent failures share that request.
       let presenter: typeof import("~/lib/error-presentation");

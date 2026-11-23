@@ -115,7 +115,7 @@ function request(
 function renderItem(
   row: StaffOfferingRequest = request(),
   onDecided: (notice: string) => void = vi.fn(),
-  onStale: () => void = vi.fn(),
+  onStale: () => Promise<unknown> = vi.fn(async () => undefined),
 ) {
   render(
     <OfferingRequestReviewItem
