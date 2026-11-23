@@ -320,7 +320,8 @@ func TestUpdateGroup_Success(t *testing.T) {
 	// Use unique name for update
 	uniqueNewName := fmt.Sprintf("UpdatedGroup-%d", group.ID)
 	body := map[string]interface{}{
-		"name": uniqueNewName,
+		"name":             uniqueNewName,
+		"expected_version": groupVersion(t, router, group.ID, testutil.DefaultTestClaims()),
 	}
 
 	req := newReq(t, "PUT", fmt.Sprintf("/groups/%d", group.ID), body, testutil.DefaultTestClaims(), "groups:update")
@@ -521,8 +522,9 @@ func TestUpdateGroup_WithRoom(t *testing.T) {
 	room := testpkg.CreateTestRoom(t, tc.db, "UpdateTestRoom")
 
 	body := map[string]interface{}{
-		"name":    fmt.Sprintf("UpdatedWithRoom-%d", group.ID),
-		"room_id": room.ID,
+		"name":             fmt.Sprintf("UpdatedWithRoom-%d", group.ID),
+		"room_id":          room.ID,
+		"expected_version": groupVersion(t, router, group.ID, testutil.DefaultTestClaims()),
 	}
 
 	req := newReq(t, "PUT", fmt.Sprintf("/groups/%d", group.ID), body, testutil.DefaultTestClaims(), "groups:update")

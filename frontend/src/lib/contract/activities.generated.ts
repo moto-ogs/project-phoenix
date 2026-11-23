@@ -96,6 +96,7 @@ export interface ActivityResponse {
   enrollment_count?: number;
   created_at: string;
   updated_at: string;
+  version?: string;
 }
 
 export const ActivityResponseSchema: z.ZodType<ActivityResponse, unknown> = object<ActivityResponse>({
@@ -115,6 +116,7 @@ export const ActivityResponseSchema: z.ZodType<ActivityResponse, unknown> = obje
   enrollment_count: optional(safeInt),
   created_at: instant,
   updated_at: instant,
+  version: optional(str),
 });
 
 /** Go: httpadapter.EnrolledStudentResponse */
@@ -184,6 +186,18 @@ export const QuickActivityResponseSchema: z.ZodType<QuickActivityResponse, unkno
   message: str,
   created_at: instant,
 });
+
+/** Go: httpadapter.ActivityUpdateRequest */
+export interface ActivityUpdateRequest {
+  name?: string;
+  max_participants?: number | null;
+  is_open?: boolean;
+  category_id?: string;
+  planned_room_id?: string | null;
+  schedules?: ScheduleRequest[] | null;
+  supervisor_ids?: string[] | null;
+  expected_version?: string;
+}
 
 /** Go: httpadapter.BatchEnrollmentRequest */
 export interface BatchEnrollmentRequest {
@@ -315,7 +329,7 @@ export const routes = {
     method: "PUT",
     pattern: "/api/activities/{id}",
     portals: ["tenant"],
-    request: requestBody<ActivityRequest>(),
+    request: requestBody<ActivityUpdateRequest>(),
     response: success(ActivityResponseSchema),
   },
   "PUT /api/activities/{id}/students": {

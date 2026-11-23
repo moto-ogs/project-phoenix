@@ -30,9 +30,12 @@ type GroupQuery interface {
 	FindGroupWithRoom(context.Context, int64) (*Group, error)
 }
 
+// GroupCommand creates, edits and deletes groups. UpdateGroup refuses an
+// edit of a group changed since its editor read it with
+// readstate.ErrChanged (ADR 0311).
 type GroupCommand interface {
 	CreateGroup(context.Context, *Group) error
-	UpdateGroup(context.Context, *Group) error
+	UpdateGroup(context.Context, GroupEdit) error
 	DeleteGroup(context.Context, int64) error
 }
 

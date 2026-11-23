@@ -227,12 +227,16 @@ func (r *StudentRecords) ListSchoolClasses(ctx context.Context) ([]string, error
 // takes the shared class-writes gate first, which is what keeps the
 // acquisition order gate-then-rows for every writer.
 func (r *StudentRecords) FindByIDForUpdate(ctx context.Context, id int64) (*peopleModule.StudentState, error) {
+	return r.findByIDLocked(ctx, id, "UPDATE", "find by id for update")
+}
+
+func (r *StudentRecords) findByIDLocked(ctx context.Context, id int64, lock, operation string) (*peopleModule.StudentState, error) {
 	if id <= 0 {
-		return nil, peoplePorts.MissingStudentError("find by id for update")
+		return nil, peoplePorts.MissingStudentError(operation)
 	}
-	record, err := r.directory.FindRecord(ctx, id, "UPDATE")
+	record, err := r.directory.FindRecord(ctx, id, lock)
 	if err != nil {
-		return nil, RetainedStudentReadError("find by id for update", MapError(err))
+		return nil, RetainedStudentReadError(operation, MapError(err))
 	}
 	return peopleModule.StudentStateFromRecord(peopleModule.StudentRecord(record)), nil
 }

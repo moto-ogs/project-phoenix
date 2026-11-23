@@ -14,7 +14,7 @@ func RouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/", Portals: portals, Query: list, Response: []GroupResponse{}, Paginated: true},
 		{Method: "POST", Pattern: "/", Portals: portals, Request: GroupRequest{}, Response: GroupResponse{}},
 		{Method: "GET", Pattern: "/{id}", Portals: portals, Response: GroupResponse{}},
-		{Method: "PUT", Pattern: "/{id}", Portals: portals, Request: GroupRequest{}, Response: GroupResponse{}},
+		{Method: "PUT", Pattern: "/{id}", Portals: portals, Request: GroupUpdateRequest{}, Response: GroupResponse{}},
 		{Method: "DELETE", Pattern: "/{id}", Portals: portals, NoData: true},
 	}
 }

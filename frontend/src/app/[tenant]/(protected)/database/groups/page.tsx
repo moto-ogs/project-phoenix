@@ -1,7 +1,7 @@
 "use client";
 
 import { isAccessRefusal } from "~/lib/access-refusal";
-import { ApiError } from "~/lib/api-error";
+import { ApiError, isChangedSinceRead } from "~/lib/api-error";
 import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
 import { groups as groupsKeys } from "~/lib/swr/groups";
 import {
@@ -261,13 +261,33 @@ function GroupsPageContent() {
       const payload = groupsConfig.form.transformBeforeSubmit
         ? groupsConfig.form.transformBeforeSubmit(data)
         : data;
-      await service.update(selectedGroup.id, payload);
+      let saved: Group | null;
+      try {
+        saved = await service.update(selectedGroup.id, payload);
+      } catch (err) {
+        // Jemand hat die Gruppe seit dem Lesen geändert: das Formular zeigt
+        // den gespeicherten Stand, sobald er gelesen ist (ADR 0311).
+        if (isChangedSinceRead(err)) void afterWrite.refresh();
+        throw err;
+      }
       toastSuccess(
         `Die Gruppe „${data.name ?? selectedGroup.name}“ ist gespeichert.`,
       );
+      // Die Antwort trägt den gespeicherten Stand: ein zweites Speichern
+      // schickt ihn, auch wenn das Nachladen fehlschlägt.
+      if (saved) {
+        const stored = saved;
+        await mutateGroups(
+          (groups) =>
+            groups?.map((group) =>
+              group.id === stored.id ? { ...group, ...stored } : group,
+            ),
+          { revalidate: false },
+        );
+      }
       await afterWrite.refresh();
     },
-    [selectedGroup, service, afterWrite, toastSuccess],
+    [selectedGroup, service, afterWrite, toastSuccess, mutateGroups],
   );
 
   const handleDeleteGroup = useCallback(async () => {

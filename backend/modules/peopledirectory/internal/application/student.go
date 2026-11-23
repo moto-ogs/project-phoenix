@@ -132,13 +132,23 @@ func (s *StudentService) ListByStatusFlag(ctx context.Context, status string) (r
 }
 
 func (s *StudentService) Lock(ctx context.Context, id int64) error {
-	return s.run(ctx, "lock_student", func(ctx context.Context, fn func(context.Context) error) error {
+	return s.lock(ctx, "lock_student", id, s.store.Lock)
+}
+
+// LockNoKeyUpdate takes the student row without refusing the key share of
+// a row referencing the child (FOR NO KEY UPDATE).
+func (s *StudentService) LockNoKeyUpdate(ctx context.Context, id int64) error {
+	return s.lock(ctx, "lock_student_no_key_update", id, s.store.LockNoKeyUpdate)
+}
+
+func (s *StudentService) lock(ctx context.Context, operation string, id int64, lock func(context.Context, int64) (bool, domain.OperationStats, error)) error {
+	return s.run(ctx, operation, func(ctx context.Context, fn func(context.Context) error) error {
 		if err := s.tx.RequireTransaction(ctx); err != nil {
 			return err
 		}
 		return fn(ctx)
 	}, func(txCtx context.Context, stats *domain.OperationStats) error {
-		found, lockStats, err := s.store.Lock(txCtx, id)
+		found, lockStats, err := lock(txCtx, id)
 		stats.Add(lockStats)
 		if err != nil {
 			return err

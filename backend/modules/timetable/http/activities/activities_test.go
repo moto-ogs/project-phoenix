@@ -295,6 +295,7 @@ func TestUpdateActivity_Success(t *testing.T) {
 		"max_participants": 25,
 		"is_open":          false,
 		"category_id":      activity.CategoryID,
+		"expected_version": activityVersion(t, ctx, activity.ID),
 	}
 
 	// Admin claims carry admin:* which has full access and bypasses ownership checks
@@ -313,6 +314,7 @@ func TestUpdateActivity_DetailReadFailureRollsBackAndRetries(t *testing.T) {
 	body := map[string]interface{}{
 		"name": "After detail failure", "max_participants": 25,
 		"is_open": false, "category_id": activity.CategoryID,
+		"expected_version": activityVersion(t, ctx, activity.ID),
 	}
 	wantErr := errors.New("detail read failed")
 	ctx.resource.ActivityService = failingDetailActivityService{ActivityService: originalService, err: wantErr}

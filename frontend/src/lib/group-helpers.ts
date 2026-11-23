@@ -29,6 +29,8 @@ export type Group = Pick<
     };
     supervisors?: Array<{ id: string; name: string }>;
     teacher_ids?: string[];
+    /** The stored state as read (ADR 0311); a save sends it back. */
+    version?: string;
   };
 
 // Mapping functions
@@ -47,6 +49,7 @@ export function mapGroupResponse(
     student_count: backendGroup.student_count,
     created_at: backendGroup.created_at,
     updated_at: backendGroup.updated_at,
+    version: backendGroup.version,
   };
 
   // Map the representative if available

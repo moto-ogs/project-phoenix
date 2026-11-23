@@ -18,6 +18,17 @@ type ParticipantDaysFinder func(context.Context, []string) (map[string][]Partici
 // StudentNameFinder names children by ID, enrolled or not, for past orders.
 type StudentNameFinder func(context.Context, []int64) ([]ParticipantCandidate, error)
 
+// StudentLock takes the child's student row FOR NO KEY UPDATE in the
+// caller's tenant transaction, as the parent portal's child guard holds it
+// for a meal write already. Every write of a child's meal participation
+// takes it before its own locks, so the school's writes cannot deadlock
+// against a parent's (lock order student → schedule → orders). The mode
+// lets the holder of the order lock (the worker, another child's write)
+// insert order lines and changes of the child, whose foreign key takes a
+// key share on the row, while the write waits for that lock. It reports
+// false when the school has no such child.
+type StudentLock func(context.Context, int64) (bool, error)
+
 // HolidayPeriod is one school holiday period as the school calendar keeps
 // it: YYYY-MM-DD dates, both ends inclusive.
 type HolidayPeriod struct {

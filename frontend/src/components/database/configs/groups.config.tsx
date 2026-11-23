@@ -22,6 +22,22 @@ export function toGroupRequest(
   };
 }
 
+/**
+ * The body of a group save from the form: the name, the room (null clears
+ * it, the route keeps a room the body does not name), the teachers, and the
+ * `version` the form was filled from (ADR 0311).
+ */
+export function toGroupUpdateRequest(
+  data: Partial<Group>,
+): groupsContract.GroupUpdateRequest {
+  return {
+    name: data.name,
+    room_id: data.room_id || null,
+    teacher_ids: data.teacher_ids,
+    expected_version: data.version,
+  };
+}
+
 export const groupsConfig = defineEntityConfig<Group>({
   name: {
     singular: "Gruppe",
@@ -54,7 +70,7 @@ export const groupsConfig = defineEntityConfig<Group>({
       mapGroupResponse(
         await bffJson("tenant", "PUT /api/groups/{id}", {
           params: { id },
-          body: toGroupRequest(data),
+          body: toGroupUpdateRequest(data),
         }),
       ),
     delete: (id) =>

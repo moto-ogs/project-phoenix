@@ -36,6 +36,11 @@ export type Activity = Pick<
   updated_at: Date;
   participant_count?: number;
   times?: ActivitySchedule[];
+  /**
+   * The stored state of the detail read (ADR 0311); a save sends it back.
+   * The list carries none.
+   */
+  version?: string;
 };
 
 export type ActivityCategory = Pick<
@@ -221,6 +226,7 @@ export function mapActivityResponse(
       ? String(backendActivity.planned_room_id)
       : undefined,
     category_name: backendActivity.category?.name,
+    version: backendActivity.version,
   };
 }
 

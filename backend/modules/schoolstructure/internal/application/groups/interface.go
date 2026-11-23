@@ -4,6 +4,7 @@ package groups
 import (
 	"context"
 
+	"github.com/moto-ogs/project-phoenix/modules/schoolstructure"
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/domain"
 )
 
@@ -12,6 +13,8 @@ type Service interface {
 	// Group operations
 	CreateGroup(ctx context.Context, group *domain.Group) error
 	UpdateGroup(ctx context.Context, group *domain.Group) error
+	// EditGroup applies an edit read at its ExpectedVersion (ADR 0311).
+	EditGroup(ctx context.Context, edit schoolstructure.GroupEdit) error
 	DeleteGroup(ctx context.Context, id int64) error
 
 	// Group-Teacher operations

@@ -30,6 +30,13 @@ type MealPlan interface {
 	ClearParticipationForDay(context.Context, MealParticipationChange) error
 }
 
+// MealScheduleSaved answers a save of the regular days: the day they apply
+// from and the version of the regular days stored (ADR 0311).
+type MealScheduleSaved struct {
+	EffectiveFrom string
+	Version       string
+}
+
 // MealWeekChange lists the days a week change changed and the days whose
 // deadline had already passed.
 type MealWeekChange struct {
