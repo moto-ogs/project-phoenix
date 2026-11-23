@@ -60,8 +60,11 @@ func (s *TraegerPhaseCopies) ApplyTraegerPhase(ctx context.Context, copy enrollm
 	if err != nil {
 		return enrollment.TraegerPhaseApplied{}, err
 	}
-	// The copy merges into the phase as it read it: a school edit saved
-	// meanwhile refuses the copy instead of being overwritten (ADR 0311).
+	// The copy read the phase under the row lock TraegerPhaseCopyState took,
+	// so no school edit lands between this read and the write: the version
+	// passes UpdatePhase's check (ADR 0311) and never refuses the copy. A
+	// school edit saved before keeps its values through the deviations:
+	// mergeTraegerValues keeps every field the school changed.
 	read := enrollment.PhaseVersion(phase)
 	deviations := []string{}
 	if phase.Traeger != nil {

@@ -99,18 +99,24 @@ describe("HolidayPeriodForm", () => {
       name: "Von der Kollegin",
       version: "colleague",
     };
-    const reload = vi.fn().mockResolvedValue(colleague);
-    render(
+    // The page's reload reads the period into its shared read, which hands
+    // it to the form.
+    const form = (period: typeof stored) => (
       <ToastProvider>
         <HolidayPeriodForm
-          period={stored}
+          period={period}
           schools={schools}
           onSaved={vi.fn()}
           onCancel={vi.fn()}
           reload={reload}
         />
-      </ToastProvider>,
+      </ToastProvider>
     );
+    const reload = vi.fn(async () => {
+      view.rerender(form(colleague));
+      return colleague;
+    });
+    const view = render(form(stored));
     fireEvent.change(screen.getByLabelText("Name des Ferienzeitraums"), {
       target: { value: "Mein Name" },
     });
@@ -177,6 +183,8 @@ describe("HolidayPeriodForm", () => {
         ...stored,
         name: "Aktueller Servername",
         notes: "Neue Hinweise",
+        // A newer read carries a newer version (ADR 0311).
+        version: "period-refreshed",
       };
       view.rerender(
         <ToastProvider>

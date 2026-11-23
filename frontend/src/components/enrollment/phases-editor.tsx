@@ -39,6 +39,7 @@ import { CheckboxCard } from "~/components/ui/checkbox-card";
 import { TranslationsSection } from "~/components/enrollment/translations-section";
 import {
   type Phase,
+  type UpdatedPhase,
   type PhaseAudience,
   type PhaseInput,
   type PhaseKind,
@@ -72,9 +73,13 @@ import {
 } from "~/lib/enrollment-form-schema-api";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
-import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import {
+  useReadDraftForm,
+  useSwrResourceLoadError,
+} from "~/lib/hooks/use-swr-load-error";
 import { revalidateOrThrow, useInvalidateFamily, useSWRAuth } from "~/lib/swr";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { databaseKeys } from "~/lib/swr/portal-keys";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { isReadStateRefusal } from "~/lib/api-error";
@@ -309,11 +314,8 @@ export function PhasesEditor({ info }: { readonly info?: string }) {
   const { show: showActionError, showMessage } = useApiErrorDisplay();
 
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<PhaseInput | null>(null);
-  // The version the draft rests on, taken when editing starts (ADR 0311).
-  const [draftVersion, setDraftVersion] = useState("");
-  // After a refused save nothing is sent until the phase was read again.
-  const refusedSave = useRef(false);
+  // A new phase: no stored state, no version.
+  const [createDraft, setCreateDraft] = useState<PhaseInput | null>(null);
   const [schemaSource, setSchemaSource] = useState<SchemaSource>("base");
   // Aktivieren/Ausschalten aus der Liste, außerhalb des Panels.
   const [togglingActive, setTogglingActive] = useState(false);
@@ -353,14 +355,6 @@ export function PhasesEditor({ info }: { readonly info?: string }) {
   const canEndCare = hasPermission(session, "users:delete");
   const [highlightFormSection, setHighlightFormSection] = useState(false);
   const [highlightActions, setHighlightActions] = useState(false);
-  const panelOpen = Boolean((editingId && draft) ?? rolloverSource);
-  // Saving a phase or creating a rollover locks the panel (#6593); a late
-  // answer must not close or fill the panel for another phase.
-  const panelSave = useFormModalPending(
-    panelOpen,
-    rolloverSource ? `rollover-${rolloverSource.id}` : editingId,
-  );
-  const saving = panelSave.pending || togglingActive;
   const { tenantSlug, tenant } = useTenant();
   const resolvedGradeLevelMax = tenant?.gradeLevelMax;
   const gradeLevelMax = supportedGradeLevelMax(resolvedGradeLevelMax);
@@ -374,6 +368,65 @@ export function PhasesEditor({ info }: { readonly info?: string }) {
     () => latestSchemas.find((schema) => schema.id === assignFormId) ?? null,
     [assignFormId, latestSchemas],
   );
+  // An edit rests on the phase as read when editing starts (ADR 0311): a
+  // newer read of the list refills it only while untouched, the save sends
+  // its version, and after a refusal nothing is sent until the stored phase
+  // was read.
+  const editedId = editingId !== null && editingId !== "new" ? editingId : null;
+  const assignSchemaId = assignSchema?.id;
+  const editor = useDraftOn<Phase, PhaseInput, string, UpdatedPhase>(
+    {
+      opening: editedId,
+      data: phasesRead.data?.find((phase) => phase.id === editedId),
+      // undefined: the phase is gone; `save` closes the panel then.
+      reload: async () =>
+        (await revalidateOrThrow(phasesRead)).find(
+          (phase) => phase.id === editedId,
+        ),
+    },
+    {
+      token: (stored) => stored.version,
+      toDraft: (stored) => ({
+        ...phaseToInput(stored),
+        form_schema_id: assignSchemaId ?? stored.form_schema_id ?? null,
+      }),
+      answer: (saved) => saved,
+    },
+  );
+  const form = useReadDraftForm(
+    editedId ? editor : null,
+    formErrors,
+    "die Anmeldephase",
+  );
+  const draft = editingId === "new" ? createDraft : (editor.draft ?? null);
+  const { setDraft: setEditedDraft } = editor;
+  const setDraft = useCallback(
+    (next: React.SetStateAction<PhaseInput | null>) => {
+      if (editingId === "new") {
+        setCreateDraft(next);
+        return;
+      }
+      setEditedDraft(
+        (current) =>
+          (typeof next === "function" ? next(current) : next) ?? current,
+      );
+    },
+    [editingId, setEditedDraft],
+  );
+  const draftBlocked =
+    editedId && !editor.canSubmit && editor.status !== "saving"
+      ? editor.status === "loadFailed"
+        ? "Lade zuerst die gespeicherte Anmeldephase neu."
+        : "Die gespeicherte Anmeldephase wird geladen."
+      : undefined;
+  const panelOpen = Boolean((editingId && draft) ?? rolloverSource);
+  // Saving a phase or creating a rollover locks the panel (#6593); a late
+  // answer must not close or fill the panel for another phase.
+  const panelSave = useFormModalPending(
+    panelOpen,
+    rolloverSource ? `rollover-${rolloverSource.id}` : editingId,
+  );
+  const saving = panelSave.pending || togglingActive;
   const schemaNameById = useMemo(() => {
     const names = new Map<string, string>();
     for (const schema of schemas) {
@@ -420,7 +473,7 @@ export function PhasesEditor({ info }: { readonly info?: string }) {
 
   const startCreate = useCallback(() => {
     setEditingId("new");
-    setDraft({
+    setCreateDraft({
       ...blankInput(),
       form_schema_id: assignSchema?.id ?? null,
     });
@@ -432,12 +485,7 @@ export function PhasesEditor({ info }: { readonly info?: string }) {
   const startEdit = useCallback(
     (phase: Phase, forceFormHighlight = false) => {
       setEditingId(phase.id);
-      setDraftVersion(phase.version);
-      refusedSave.current = false;
-      setDraft({
-        ...phaseToInput(phase),
-        form_schema_id: assignSchema?.id ?? phase.form_schema_id ?? null,
-      });
+      setCreateDraft(null);
       setSchemaSource(assignSchema || phase.form_schema_id ? "reuse" : "base");
       setHighlightFormSection(Boolean(assignSchema) || forceFormHighlight);
       clearFormErrors();
@@ -447,12 +495,13 @@ export function PhasesEditor({ info }: { readonly info?: string }) {
 
   const cancelEdit = () => {
     setEditingId(null);
-    setDraft(null);
+    setCreateDraft(null);
   };
 
   const save = async () => {
-    if (!draft) return;
-    formErrors.clear();
+    // Nothing goes out before the stored phase is read; the shown error
+    // stays.
+    if (!draft || !form.begin()) return;
     // Normalise schema_source to form_schema_id.
     const payload: PhaseInput = {
       ...draft,
@@ -554,14 +603,50 @@ export function PhasesEditor({ info }: { readonly info?: string }) {
           const created = await createPhase(payload);
           toast.success(`Die Anmeldephase „${created.name}“ ist angelegt.`);
         } else if (editingId) {
-          if (refusedSave.current) return;
-          const updated = await updatePhase(editingId, payload, draftVersion);
-          toast.success(`Die Anmeldephase „${updated.name}“ ist gespeichert.`);
-          if (updated.careBeyondEnd?.length) {
+          const result = await editor.submit((version) =>
+            updatePhase(editingId, payload, version),
+          );
+          if (!result.ok) {
+            logger.error("phase_save_failed", {
+              error:
+                result.error instanceof Error
+                  ? result.error.message
+                  : String(result.error),
+            });
+            if (!op.isCurrent()) return;
+            const reread = result.reload;
+            if (result.refused && reread) {
+              // Changed since it was read: the form shows the stored phase
+              // once it is read, without offering the same save again. A
+              // phase deleted meanwhile closes the panel.
+              await formErrors.show(result.error, {
+                object: "die Anmeldephase",
+                reload: async () => {
+                  const stored = await reread();
+                  if (stored === undefined) {
+                    cancelEdit();
+                    await showActionError(result.error, {
+                      object: "die Anmeldephase",
+                    });
+                  }
+                  return stored;
+                },
+              });
+              return;
+            }
+            await formErrors.show(result.error, {
+              object: "die Anmeldephase",
+              retry: () => void latestSave.current(),
+            });
+            return;
+          }
+          const saved = result.saved;
+          toast.success(`Die Anmeldephase „${saved.name}“ ist gespeichert.`);
+          if (saved.careBeyondEnd?.length) {
             setCareBeyondEnd({
-              phaseName: updated.name,
-              phaseEnd: updated.service_end_date,
-              students: updated.careBeyondEnd,
+              phaseName: saved.name,
+              phaseEnd: saved.service_end_date,
+              students: saved.careBeyondEnd,
             });
           }
         }
@@ -574,24 +659,6 @@ export function PhasesEditor({ info }: { readonly info?: string }) {
         });
         // Protokolliert; eine späte Ablehnung zeigt kein neuerer Vorgang.
         if (!op.isCurrent()) return;
-        if (isReadStateRefusal(err) && editingId && editingId !== "new") {
-          // Changed since it was read: the form shows the stored phase once
-          // it is read; until then nothing is sent, and the same save is
-          // not offered again.
-          refusedSave.current = true;
-          const refusedId = editingId;
-          await formErrors.show(err, {
-            object: "die Anmeldephase",
-            reload: async () => {
-              const stored = (await revalidateOrThrow(phasesRead)).find(
-                (phase) => phase.id === refusedId,
-              );
-              if (stored) startEdit(stored);
-              return stored;
-            },
-          });
-          return;
-        }
         await formErrors.show(err, {
           object: "die Anmeldephase",
           retry: () => void latestSave.current(),
@@ -697,7 +764,7 @@ export function PhasesEditor({ info }: { readonly info?: string }) {
     (phase: Phase) => {
       setRolloverSource(phase);
       setEditingId(null);
-      setDraft(null);
+      setCreateDraft(null);
       clearFormErrors();
     },
     [clearFormErrors],
@@ -1083,6 +1150,9 @@ export function PhasesEditor({ info }: { readonly info?: string }) {
                 </SlideOverTitle>
               </SlideOverHeader>
               <SlideOverBody error={rolloverSource ? null : formErrors.error}>
+                {rolloverSource ? null : (
+                  <LoadErrorAlert error={form.loadError} />
+                )}
                 {rolloverSource ? (
                   <RolloverForm
                     source={rolloverSource}
@@ -1110,6 +1180,7 @@ export function PhasesEditor({ info }: { readonly info?: string }) {
                     onSubmit={handleSave}
                     onCancel={cancelEdit}
                     fieldError={formErrors.fieldError}
+                    blockedReason={draftBlocked}
                   />
                 ) : null}
               </SlideOverBody>
@@ -1268,7 +1339,7 @@ export function PhasesEditor({ info }: { readonly info?: string }) {
 
 interface PhaseFormProps {
   readonly draft: PhaseInput;
-  readonly setDraft: React.Dispatch<React.SetStateAction<PhaseInput | null>>;
+  readonly setDraft: (next: React.SetStateAction<PhaseInput | null>) => void;
   readonly periods: CalendarPeriod[];
   readonly schemas: FormSchema[];
   readonly schemaSource: SchemaSource;
@@ -1287,6 +1358,8 @@ interface PhaseFormProps {
   readonly onCancel: () => void;
   /** Hint for a field the last save or local check rejected. */
   readonly fieldError: (name: string) => string | undefined;
+  /** Why the save cannot be sent yet (ADR 0311); undefined: it can. */
+  readonly blockedReason?: string;
 }
 
 // Löschen geht erst mit geladener Vorschau und nur ohne Anmeldungen (#6836).
@@ -1640,6 +1713,7 @@ function PhaseForm(props: PhaseFormProps) {
     onSubmit,
     onCancel,
     fieldError,
+    blockedReason,
   } = props;
   const formSectionRef = useRef<HTMLFieldSetElement>(null);
 
@@ -2177,7 +2251,10 @@ function PhaseForm(props: PhaseFormProps) {
           type="submit"
           variant="primary"
           size="md"
-          disabled={saving}
+          disabled={saving || blockedReason !== undefined}
+          {...(blockedReason && !saving
+            ? { disabledReason: blockedReason }
+            : {})}
           tooltip={
             editing
               ? "Speichert die Änderungen an der Anmeldephase."

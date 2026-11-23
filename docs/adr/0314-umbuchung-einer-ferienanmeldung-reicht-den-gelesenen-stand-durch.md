@@ -42,11 +42,38 @@ Die Bindung reicht den Token unverändert durch:
 Sperrreihenfolge, Transaktion, Effekte und Neufestschreibung bleiben, wie
 ADR 0206 sie festlegt.
 
+Der Token einer Anmeldung (`holidayRegistrationVersion`) umfasst neben Status,
+Angaben und gebuchten Wochen auch die Platzierung jeder Buchung (Platz,
+Warteliste, Entscheidung offen). Die Karte der Umbuchung zeigt sie, und das
+Büro entscheidet nach ihr, etwa wenn es eine Woche streicht, die es für einen
+Wartelistenplatz hält. Rückt eine Buchung nach dem Lesen von der Warteliste
+nach oder bekommt sie ihren Platz durch die Vergabe, lehnt Enrollment die
+Umbuchung mit 409 `general.changed_since_read` ab, und das Büro sieht die neue
+Platzierung. Jeder Schreiber einer Platzierung (Einreichung, Umbuchung,
+Stornierung, Kapazität, Vergabe) hält die Sperre des Zeitraums, unter der
+Enrollment prüft. Die Position auf der Warteliste gehört nicht zum Token: Sie
+verschiebt sich mit anderen Anmeldungen, und keine Umbuchung dieser Anmeldung
+entscheidet über sie. Lesen, Antwort eines Speicherns und Prüfung nehmen den
+Token aus derselben Funktion über denselben gespeicherten Stand.
+
+Die geänderte Bindung nennt diese ADR als `approval_adr`; Wirkung und
+Einordnung bleiben die aus ADR 0206.
+
+| Port | Bindung | Ziel | Digest |
+|---|---|---|---|
+| `parentbilling/http.HolidayPlaceChanges.RebookHolidayChild` | `api.parentBillingPlaceChanges.RebookHolidayChild` | `holidayallocation.Workflow.RebookHolidayChild` | `5f1ce720c2a5bd7be1b3f32069d7c987` |
+
+Liegt diese ADR in der Basis, kann sie keine weitere Änderung der Bindung
+genehmigen. Ein anderer Digest braucht eine neue Genehmigung.
+
 ## Folgen
 
 - `api.TestTraegerFreezesReopensAndRebooksHolidayRegistrations` weist die
   Ablehnung eines veralteten und eines leeren Tokens nach;
   `api.TestHolidayAllocationWorkflowTakesTheBillingLockBeforeThePeriod`
   weist die unveränderte Sperrreihenfolge nach.
+- `TestHolidayRebookingRefusesAReadBeforeAMoveUp` weist nach, dass eine
+  Umbuchung über einen vor dem Nachrücken gelesenen Token abgelehnt wird und
+  nichts schreibt.
 - Ein Client, der keinen Token schickt, bekommt 409
   `general.changed_since_read`. Das Träger-Portal und der Seeder schicken ihn.

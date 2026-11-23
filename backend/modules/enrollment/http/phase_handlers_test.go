@@ -20,6 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -364,6 +365,25 @@ func TestUpdatePhaseHandler_HappyPathRefetchesAfterUpdate(t *testing.T) {
 	require.NotNil(t, mock.updateInput)
 	assert.Equal(t, int64(1234), mock.updateInput.ID, "ID from URL must be stamped onto the model")
 	assert.Equal(t, int64(1234), mock.getByIDID, "refetch must call GetByID after the update")
+}
+
+// A save over an outdated version answers 409 general.changed_since_read
+// (ADR 0311): the route hands the read version to the service and renders
+// its refusal unchanged.
+func TestUpdatePhaseHandler_OutdatedVersionReturns409(t *testing.T) {
+	t.Parallel()
+
+	mock := &mockPhaseService{getByIDResult: makePhaseModel(1234, "Updated"), updateErr: readstate.ErrChanged}
+	body := validPhaseBody("Updated")
+	body["expected_version"] = "older"
+	w := executePhaseJSON(t, buildPhaseRouter(mock), http.MethodPut, "/enrollment/phases/1234", body)
+	require.Equal(t, http.StatusConflict, w.Code, w.Body.String())
+	assert.Equal(t, "older", mock.updateExpectedVersion)
+	var problem struct {
+		Code string `json:"code"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &problem))
+	assert.Equal(t, "general.changed_since_read", problem.Code)
 }
 
 // A shortened phase names the confirmed children whose care now runs past

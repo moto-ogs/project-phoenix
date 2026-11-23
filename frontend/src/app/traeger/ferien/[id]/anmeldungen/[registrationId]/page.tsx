@@ -346,8 +346,10 @@ function HolidayRegistrationContent() {
   // must freeze the amount the card shows.
   const [previewPending, setPreviewPending] = useState(false);
   const latestContribution = useRef(0);
-  // The card in its edit state: "guardians", "contacts", "answers" or
-  // "child:<id>"; one at a time.
+  // The open draft of the registration: an edit state "guardians",
+  // "contacts", "answers" or "child:<id>", or the rebooking "rebook:<id>".
+  // One at a time: each draft opens on the answer of the save before it,
+  // so a second save is never refused for the first one (ADR 0311).
   const [editing, setEditing] = useState<string | null>(null);
   const {
     schools,
@@ -403,6 +405,7 @@ function HolidayRegistrationContent() {
         mutateConfirmation(loadedConfirmation, fresh),
         mutateFamily(loadedFamilyDebtorNumber, fresh),
       ]);
+      return loadedRegistration;
     } catch (error) {
       if (error instanceof ApiError && error.status === 404) {
         complete(() => {
@@ -639,6 +642,10 @@ function HolidayRegistrationContent() {
             knownSchoolId={known.get(child.id)}
             onChanged={changed}
             reload={fetchRegistration}
+            rebookBlocked={editing !== null && editing !== `rebook:${child.id}`}
+            onRebookingChange={(open) =>
+              setEditing(open ? `rebook:${child.id}` : null)
+            }
             onEdit={
               cancelled || editing
                 ? undefined

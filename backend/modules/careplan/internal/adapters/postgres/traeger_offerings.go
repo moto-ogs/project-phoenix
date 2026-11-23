@@ -92,7 +92,11 @@ const traegerOfferingSelect = `SELECT offering.id, offering.organization_id, off
 const (
 	traegerOfferingsOfPhaseSelect = traegerOfferingSelect + ` AND offering.traeger_phase_id = ? ORDER BY offering.id`
 	traegerOfferingByIDSelect     = traegerOfferingSelect + ` AND offering.id = ?`
-	traegerOfferingByIDLockSelect = traegerOfferingByIDSelect + ` FOR UPDATE OF offering`
+	// traegerOfferingByIDLockSelect holds the row FOR NO KEY UPDATE: the
+	// draft save under it changes no key column. Every other writer of the
+	// row still waits for it; only the key share of an insert that refers to
+	// the offering (a released version) passes.
+	traegerOfferingByIDLockSelect = traegerOfferingByIDSelect + ` FOR NO KEY UPDATE OF offering`
 )
 
 // ListTraegerOfferings returns the offerings of one Träger phase with their

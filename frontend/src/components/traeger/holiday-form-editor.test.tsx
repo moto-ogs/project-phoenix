@@ -90,13 +90,12 @@ function renderEditor(initial: HolidayForm = form()) {
   return onSaved;
 }
 
-// Mirrors the page: the editor remounts with each saved version.
+// Mirrors the page: the saved version becomes the read the editor gets.
 function RemountingPage({ initial }: Readonly<{ initial: HolidayForm }>) {
   const [current, setCurrent] = useState(initial);
   return (
     <HolidayFormEditor
       reload={vi.fn()}
-      key={current.version}
       periodId="5"
       form={current}
       onSaved={setCurrent}
@@ -152,6 +151,54 @@ describe("HolidayFormEditor (#5198)", () => {
     expect(mockSavedVersion).toHaveBeenCalledWith(1);
     expect(reload).toHaveBeenCalledTimes(1);
     expect(mockSave).toHaveBeenCalledTimes(1);
+  });
+
+  // ADR 0311, rule 2: a newer version refills an untouched editor; once
+  // something is typed the draft keeps its input and the version it rests
+  // on, so a save never carries a version the person did not see.
+  it("follows a newer version only while untouched and keeps typed input", async () => {
+    mockSave.mockResolvedValue({ ...form(), version: 4 });
+    const colleague = (version: number, label: string): HolidayForm => ({
+      ...form([
+        {
+          key: `frage_${version}`,
+          label,
+          type: "text",
+          applies_to_child: false,
+          sort_order: 0,
+        },
+      ]),
+      version,
+    });
+    const editor = (current: HolidayForm) => (
+      <ToastProvider>
+        <HolidayFormEditor
+          reload={vi.fn()}
+          periodId="5"
+          form={current}
+          onSaved={vi.fn()}
+        />
+      </ToastProvider>
+    );
+    const view = render(editor(form()));
+
+    view.rerender(editor(colleague(2, "Von der Kollegin")));
+    expect(questionInputs().map((input) => input.value)).toEqual([
+      "Von der Kollegin",
+    ]);
+
+    fireEvent.change(questionInputs()[0]!, {
+      target: { value: "Mein Entwurf" },
+    });
+    view.rerender(editor(colleague(3, "Noch eine Änderung")));
+    expect(questionInputs().map((input) => input.value)).toEqual([
+      "Mein Entwurf",
+    ]);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Als neue Version speichern" }),
+    );
+    await waitFor(() => expect(mockSave).toHaveBeenCalledTimes(1));
+    expect(mockSavedVersion).toHaveBeenCalledWith(2);
   });
 
   it("builds the editor like the OGS form editor: one card, one plus per add button (#7412)", () => {

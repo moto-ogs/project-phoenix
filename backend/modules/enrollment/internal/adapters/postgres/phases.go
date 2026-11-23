@@ -96,6 +96,9 @@ func (r *Store) readPhase(ctx context.Context, id int64, lock bool) (*enrollment
 		Where(`"phase".tenant_id = ?`, tenantID).
 		Where(`"phase".id = ?`, id)
 	if lock {
+		// FOR UPDATE, not NO KEY UPDATE: an edit may rename the phase, and
+		// the name is a key column (UNIQUE (tenant_id, name)), so the UPDATE
+		// would need the stronger lock anyway.
 		query = query.For(`UPDATE OF "phase"`)
 	}
 	err = query.Scan(ctx)

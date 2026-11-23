@@ -10,6 +10,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
@@ -143,4 +144,67 @@ func TestHolidayRegistrationEditWithoutChangeWritesNothing(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 1, store.written)
 	assert.Equal(t, []string{enrollment.HolidayAuditEdit}, store.audited)
+}
+
+// rebookReviewStore is the registration of editReviewStore whose child books
+// week 5 with time model 6; placement is what the week's places gave that
+// booking.
+type rebookReviewStore struct {
+	*editReviewStore
+	placement string
+	replaced  int
+}
+
+func (s *rebookReviewStore) ReadHolidayReview(ctx context.Context, organizationID, periodID, registrationID int64) ([]enrollment.HolidayRegistrationDetail, map[int64]string, error) {
+	read, overrides, err := s.editReviewStore.ReadHolidayReview(ctx, organizationID, periodID, registrationID)
+	read[0].Children[0].Bookings = []enrollment.HolidayRegistrationBooking{{WeekID: 5, TimeModelID: 6, Placement: s.placement}}
+	return read, overrides, err
+}
+
+func (s *rebookReviewStore) ReplaceHolidayChildBookings(context.Context, int64, int64, int64, []enrollment.HolidayBookingInput, string) ([]int64, error) {
+	s.replaced++
+	return nil, nil
+}
+
+type rebookPeriodStore struct{ HolidayPeriodStore }
+
+func (rebookPeriodStore) FindHolidayPeriod(context.Context, int64, int64, bool) (enrollment.HolidayPeriod, bool, error) {
+	monday := calendar.NewDate(2027, 7, 19)
+	return enrollment.HolidayPeriod{ID: 3, RegistrationClosesOn: calendar.NewDate(2099, 1, 1), Weeks: []enrollment.HolidayWeek{{
+		ID: 5, StartsOn: monday, EndsOn: monday.AddDays(4), HostSchoolID: ident.ID(careDayHostSchool),
+		TimeModels: []enrollment.HolidayTimeModel{{ID: 6, Name: "bis 13 Uhr", StartsAt: "08:00", EndsAt: "13:00", PriceCents: 4500}},
+	}}}, true, nil
+}
+
+// TestHolidayRebookingRefusesAReadBeforeAMoveUp pins the placement in the
+// registration's version (ADR 0311, ADR 0314): the Büro decides a rebooking
+// on the placement its card shows, so a booking that moved up from the
+// waiting list since the read refuses the rebooking and writes nothing; the
+// version read after the move up rebooks.
+func TestHolidayRebookingRefusesAReadBeforeAMoveUp(t *testing.T) {
+	t.Parallel()
+	store := &rebookReviewStore{editReviewStore: &editReviewStore{}, placement: enrollment.HolidayPlacementWaitlisted}
+	review, _, _, _ := NewHolidayRegistrationReview(store, rebookPeriodStore{}, editFormStore{}, editCipher{},
+		func() calendar.Date { return calendar.NewDate(2026, 11, 3) }, nil, nil, careDaySchoolCalendar{}, nil)
+	period, _, _ := rebookPeriodStore{}.FindHolidayPeriod(t.Context(), 1, 3, false)
+	versionNow := func() string {
+		detail, err := review.editedDetail(t.Context(), 1, period, 7)
+		require.NoError(t, err)
+		return detail.Version
+	}
+	waiting := versionNow()
+	store.placement = enrollment.HolidayPlacementPlaced
+	reviewer := enrollment.HolidayReviewer{OrganizationID: 1, AccountID: 2}
+	bookings := []enrollment.HolidayBookingInput{{WeekID: 5, TimeModelID: 6, Lunch: false}}
+
+	_, err := review.RebookHolidayChild(t.Context(), reviewer, 3, 7, 11, waiting, bookings)
+	require.ErrorIs(t, err, readstate.ErrChanged, "the move up changed what the Büro read")
+	assert.Zero(t, store.replaced, "a refused rebooking writes nothing")
+	assert.Empty(t, store.audited)
+
+	placed := versionNow()
+	detail, err := review.RebookHolidayChild(t.Context(), reviewer, 3, 7, 11, placed, bookings)
+	require.NoError(t, err)
+	assert.Equal(t, 1, store.replaced)
+	assert.Equal(t, placed, detail.Version, "the answer carries the version of the stored placement")
 }

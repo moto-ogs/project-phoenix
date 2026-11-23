@@ -96,7 +96,6 @@ export default function TraegerHolidayFormPage() {
     >
       {period && form ? (
         <HolidayFormEditor
-          key={form.version}
           periodId={id}
           form={form}
           onSaved={(saved) => void mutate(saved, { revalidate: false })}

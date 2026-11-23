@@ -30,7 +30,10 @@ import { CustomSelect } from "~/components/ui/custom-select";
 import { EditActions } from "~/components/ui/edit-actions";
 import { FieldErrorHint } from "~/components/ui/field-error-hint";
 import { FieldLabel } from "~/components/ui/field-label";
-import { FormErrorAlert } from "~/components/ui/form-error-alert";
+import {
+  FormErrorAlert,
+  LoadErrorAlert,
+} from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
 import { SectionCard } from "~/components/ui/section-card";
 import { useApiErrorDisplay, useApiFormError } from "~/contexts/ToastContext";
@@ -39,8 +42,9 @@ import {
   type ConditionContext,
 } from "~/lib/enrollment-field-visibility";
 import type { HolidayFormField } from "~/lib/holiday-form-field";
-import { isReadStateRefusal } from "~/lib/api-error";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import type { TraegerSchool } from "~/lib/traeger-api";
 import {
   editHolidayRegistration,
@@ -112,72 +116,104 @@ export interface HolidayRegistrationEditorProps {
    * Reads the registration again and rejects when that fails: after a
    * refused edit the card shows the stored details (ADR 0311).
    */
-  readonly reload: () => Promise<unknown>;
+  readonly reload: () => Promise<HolidayRegistrationDetail | undefined>;
 }
 
-/** One edit state: the hint, the error at the top, the fields, the footer. */
-function EditForm({
+type SetDraft<D> = (next: D | ((current: D) => D)) => void;
+
+/**
+ * One edit state: the hint, the error at the top, the fields, the footer.
+ * The draft rests on the registration as read when the edit opened
+ * (ADR 0311): a newer read refills it only while untouched, the save sends
+ * that version, and after a refusal nothing is sent until the stored
+ * registration was read.
+ */
+function EditForm<D>({
   periodId,
   registration,
   onSaved,
   onCancel,
   reload,
   description,
+  draftOf,
+  same,
+  prepare,
   edit,
   children,
 }: HolidayRegistrationEditorProps &
   Readonly<{
     /** Der Bereich, den dieser Bearbeiten-Zustand ändert. */
     description: string;
-    edit: () => HolidayRegistrationEdit;
-    children: (fieldError: (name: string) => string | undefined) => ReactNode;
+    /** The editable part of a read registration. */
+    draftOf: (registration: HolidayRegistrationDetail) => D;
+    /** Whether two drafts hold the same input; default: equal as JSON. */
+    same?: (a: D, b: D) => boolean;
+    /** Tidies the draft before it is sent; the form shows the tidied one. */
+    prepare?: (draft: D) => D;
+    edit: (draft: D) => HolidayRegistrationEdit;
+    children: (
+      draft: D,
+      setDraft: SetDraft<D>,
+      fieldError: (name: string) => string | undefined,
+    ) => ReactNode;
   }>) {
   const formRef = useRef<HTMLFormElement>(null);
   const errors = useApiFormError(formRef);
   const refusal = useApiErrorDisplay();
-  // The edit rests on the version read when it opened (ADR 0311).
-  const [version] = useState(registration.version);
-  // After a refused edit nothing is sent until the registration was read.
-  const [refused, setRefused] = useState(false);
+  const editor = useDraftOn<
+    HolidayRegistrationDetail,
+    D,
+    string,
+    HolidayRegistrationDetail
+  >(
+    { opening: registration.id, data: registration, reload },
+    {
+      token: (stored) => stored.version,
+      toDraft: draftOf,
+      ...(same ? { same } : {}),
+      answer: (saved) => saved,
+    },
+  );
+  const form = useReadDraftForm(editor, errors, "die Angaben");
+  const draft = editor.draft ?? draftOf(registration);
   const [saving, setSaving] = useState(false);
   const fieldError = (name: string) => errors.fieldError(name) ?? undefined;
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (refused) return;
+    if (!form.begin()) return;
+    const sent = prepare ? prepare(draft) : draft;
+    if (sent !== draft) editor.setDraft(sent);
     setSaving(true);
-    errors.clear();
-    try {
-      onSaved(
-        await editHolidayRegistration(
-          periodId,
-          registration.id,
-          edit(),
-          version,
-        ),
-      );
-    } catch (err) {
-      logger.error("holiday_registration_edit_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      if (isReadStateRefusal(err)) {
-        // Changed since it was read: the message stays as a toast while the
-        // edit closes on the stored details, once they are read. A failed
-        // read keeps the edit locked and offers to read again.
-        setRefused(true);
-        void refusal.show(err, {
-          object: "die Angaben",
-          reload: async () => {
-            await reload();
-            onCancel();
-          },
-        });
-        return;
-      }
-      void errors.show(err, { object: "die Angaben" });
-    } finally {
-      setSaving(false);
+    const result = await editor.submit((version) =>
+      editHolidayRegistration(periodId, registration.id, edit(sent), version),
+    );
+    setSaving(false);
+    if (result.ok) {
+      onSaved(result.saved);
+      return;
     }
+    logger.error("holiday_registration_edit_failed", {
+      error:
+        result.error instanceof Error
+          ? result.error.message
+          : String(result.error),
+    });
+    const reread = result.reload;
+    if (result.refused && reread) {
+      // Changed since it was read: the message stays as a toast while the
+      // edit closes on the stored details, once they are read. A failed
+      // read keeps the edit locked and offers to read again.
+      void refusal.show(result.error, {
+        object: "die Angaben",
+        reload: async () => {
+          await reread();
+          onCancel();
+        },
+      });
+      return;
+    }
+    void errors.show(result.error, { object: "die Angaben" });
   };
 
   return (
@@ -193,10 +229,13 @@ function EditForm({
             }}
             saving={saving}
             saveLabel="Änderung speichern"
-            {...(refused
+            {...(!editor.canSubmit && editor.status !== "saving"
               ? {
                   disabled: true,
-                  disabledReason: "Die gespeicherten Angaben werden geladen.",
+                  disabledReason:
+                    editor.status === "loadFailed"
+                      ? "Lade zuerst die gespeicherten Angaben neu."
+                      : "Die gespeicherten Angaben werden geladen.",
                 }
               : {})}
           />
@@ -204,8 +243,9 @@ function EditForm({
       >
         <div className="space-y-4">
           <FormErrorAlert message={errors.error} />
+          <LoadErrorAlert error={form.loadError} />
           <p className="text-sm text-gray-700">{EDIT_HINT}</p>
-          {children(fieldError)}
+          {children(draft, editor.setDraft, fieldError)}
         </div>
       </SectionCard>
     </form>
@@ -335,28 +375,42 @@ function AddressSection({
 
 /** The parent who registered with the postal address, and the optional
  * second guardian. */
+interface GuardiansDraft {
+  readonly guardian: HolidayRegistrationPersonEdit;
+  readonly address: AddressDraft;
+  readonly second: HolidayRegistrationPersonEdit | null;
+}
+
+function guardiansDraft(
+  registration: HolidayRegistrationDetail,
+): GuardiansDraft {
+  return {
+    guardian: {
+      firstName: registration.guardianFirstName,
+      lastName: registration.guardianLastName,
+      email: registration.guardianEmail,
+      phone: registration.guardianPhone,
+    },
+    address: registration.guardianAddress ?? {
+      street: "",
+      postalCode: "",
+      city: "",
+    },
+    second: registration.secondGuardian,
+  };
+}
+
 export function GuardiansEditor(
   props: HolidayRegistrationEditorProps & Readonly<{ invoiced?: boolean }>,
 ) {
   const { registration, invoiced = false } = props;
   const addressRequirement = registration.form.addressRequirement ?? "off";
-  const [address, setAddress] = useState<AddressDraft>(
-    registration.guardianAddress ?? { street: "", postalCode: "", city: "" },
-  );
-  const [guardian, setGuardian] = useState<HolidayRegistrationPersonEdit>({
-    firstName: registration.guardianFirstName,
-    lastName: registration.guardianLastName,
-    email: registration.guardianEmail,
-    phone: registration.guardianPhone,
-  });
-  const [second, setSecond] = useState<HolidayRegistrationPersonEdit | null>(
-    registration.secondGuardian,
-  );
   return (
     <EditForm
       {...props}
       description="Eltern"
-      edit={() => ({
+      draftOf={guardiansDraft}
+      edit={({ guardian, address, second }) => ({
         guardians: {
           guardian,
           // An empty address is no address, as in the public form.
@@ -371,66 +425,74 @@ export function GuardiansEditor(
         },
       })}
     >
-      {(fieldError) => (
-        <>
-          <fieldset className="space-y-3">
-            <legend className="text-sm font-semibold text-gray-900">
-              Elternteil
-            </legend>
-            <PersonFields
-              prefix="guardian"
-              person={guardian}
-              optionalContact={false}
-              fieldError={fieldError}
-              onChange={setGuardian}
-            />
-          </fieldset>
-          {addressRequirement === "off" ? null : (
-            <AddressSection
-              address={address}
-              required={addressRequirement === "required"}
-              invoiced={invoiced}
-              fieldError={fieldError}
-              onChange={setAddress}
-            />
-          )}
-          <fieldset className="space-y-3">
-            <legend className="text-sm font-semibold text-gray-900">
-              Zweite sorgeberechtigte Person
-            </legend>
-            {second ? (
-              <>
-                <PersonFields
-                  prefix="second_guardian"
-                  person={second}
-                  optionalContact
-                  fieldError={fieldError}
-                  onChange={setSecond}
-                />
+      {({ guardian, address, second }, setDraft, fieldError) => {
+        const setGuardian = (next: HolidayRegistrationPersonEdit) =>
+          setDraft((current) => ({ ...current, guardian: next }));
+        const setAddress = (next: AddressDraft) =>
+          setDraft((current) => ({ ...current, address: next }));
+        const setSecond = (next: HolidayRegistrationPersonEdit | null) =>
+          setDraft((current) => ({ ...current, second: next }));
+        return (
+          <>
+            <fieldset className="space-y-3">
+              <legend className="text-sm font-semibold text-gray-900">
+                Elternteil
+              </legend>
+              <PersonFields
+                prefix="guardian"
+                person={guardian}
+                optionalContact={false}
+                fieldError={fieldError}
+                onChange={setGuardian}
+              />
+            </fieldset>
+            {addressRequirement === "off" ? null : (
+              <AddressSection
+                address={address}
+                required={addressRequirement === "required"}
+                invoiced={invoiced}
+                fieldError={fieldError}
+                onChange={setAddress}
+              />
+            )}
+            <fieldset className="space-y-3">
+              <legend className="text-sm font-semibold text-gray-900">
+                Zweite sorgeberechtigte Person
+              </legend>
+              {second ? (
+                <>
+                  <PersonFields
+                    prefix="second_guardian"
+                    person={second}
+                    optionalContact
+                    fieldError={fieldError}
+                    onChange={setSecond}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline_danger"
+                    size="md"
+                    tooltip="Nimmt die zweite Person aus dem Formular, wirksam erst nach dem Speichern."
+                    onClick={() => setSecond(null)}
+                  >
+                    Zweite Person entfernen
+                  </Button>
+                </>
+              ) : (
                 <Button
                   type="button"
-                  variant="outline_danger"
+                  variant="outline"
                   size="md"
-                  tooltip="Nimmt die zweite Person aus dem Formular, wirksam erst nach dem Speichern."
-                  onClick={() => setSecond(null)}
+                  tooltip="Zeigt Felder für eine zweite sorgeberechtigte Person."
+                  onClick={() => setSecond(EMPTY_PERSON)}
                 >
-                  Zweite Person entfernen
+                  Zweite Person hinzufügen
                 </Button>
-              </>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                size="md"
-                tooltip="Zeigt Felder für eine zweite sorgeberechtigte Person."
-                onClick={() => setSecond(EMPTY_PERSON)}
-              >
-                Zweite Person hinzufügen
-              </Button>
-            )}
-          </fieldset>
-        </>
-      )}
+              )}
+            </fieldset>
+          </>
+        );
+      }}
     </EditForm>
   );
 }
@@ -534,25 +596,34 @@ function ContactFields({
   );
 }
 
+interface ContactsDraft {
+  readonly emergency: readonly ContactDraft[];
+  readonly pickup: readonly ContactDraft[];
+}
+
+const plainContacts = (contacts: readonly ContactDraft[]) =>
+  contacts.map(({ name, phone, relationship }) => ({
+    name,
+    phone,
+    relationship,
+  }));
+
 /** The emergency contacts and the persons allowed to collect the children. */
 export function ContactsEditor(props: HolidayRegistrationEditorProps) {
   const counter = useRef(0);
   const nextKey = () => ++counter.current;
-  const drafts = (kind: "emergency" | "pickup") =>
-    props.registration.contacts
-      .filter((contact) => contact.kind === kind)
-      .map((contact) => ({
-        key: nextKey(),
-        name: contact.name,
-        phone: contact.phone,
-        relationship: contact.relationship,
-      }));
-  const [emergency, setEmergency] = useState<readonly ContactDraft[]>(() =>
-    drafts("emergency"),
-  );
-  const [pickup, setPickup] = useState<readonly ContactDraft[]>(() =>
-    drafts("pickup"),
-  );
+  const draftOf = (registration: HolidayRegistrationDetail): ContactsDraft => {
+    const drafts = (kind: "emergency" | "pickup") =>
+      registration.contacts
+        .filter((contact) => contact.kind === kind)
+        .map((contact) => ({
+          key: nextKey(),
+          name: contact.name,
+          phone: contact.phone,
+          relationship: contact.relationship,
+        }));
+    return { emergency: drafts("emergency"), pickup: drafts("pickup") };
+  };
   // An entry with every field empty is removed. The form keeps the
   // remaining entries, so a refused field lands at its row.
   const filled = (contacts: readonly ContactDraft[]) =>
@@ -562,30 +633,35 @@ export function ContactsEditor(props: HolidayRegistrationEditorProps) {
         contact.phone.trim() !== "" ||
         contact.relationship.trim() !== "",
     );
-  const plain = (contacts: readonly ContactDraft[]) =>
-    contacts.map(({ name, phone, relationship }) => ({
-      name,
-      phone,
-      relationship,
-    }));
   return (
     <EditForm
       {...props}
       description="Notfallkontakte und Abholung"
-      edit={() => {
-        const keptEmergency = filled(emergency);
-        const keptPickup = filled(pickup);
-        setEmergency(keptEmergency);
-        setPickup(keptPickup);
-        return {
-          contacts: {
-            emergency: plain(keptEmergency),
-            pickup: plain(keptPickup),
-          },
-        };
+      draftOf={draftOf}
+      // The row keys only tell the rows apart; the input is the same.
+      same={(a, b) =>
+        JSON.stringify([
+          plainContacts(a.emergency),
+          plainContacts(a.pickup),
+        ]) ===
+        JSON.stringify([plainContacts(b.emergency), plainContacts(b.pickup)])
+      }
+      prepare={(draft) => {
+        const emergency = filled(draft.emergency);
+        const pickup = filled(draft.pickup);
+        return emergency.length === draft.emergency.length &&
+          pickup.length === draft.pickup.length
+          ? draft
+          : { emergency, pickup };
       }}
+      edit={({ emergency, pickup }) => ({
+        contacts: {
+          emergency: plainContacts(emergency),
+          pickup: plainContacts(pickup),
+        },
+      })}
     >
-      {(fieldError) => (
+      {({ emergency, pickup }, setDraft, fieldError) => (
         <>
           <p className="text-sm text-gray-700">
             Einen Eintrag entfernst du, indem du alle seine Felder leerst.
@@ -598,7 +674,9 @@ export function ContactsEditor(props: HolidayRegistrationEditorProps) {
             max={MAX_EMERGENCY_CONTACTS}
             phoneRequired
             fieldError={fieldError}
-            onChange={setEmergency}
+            onChange={(next) =>
+              setDraft((current) => ({ ...current, emergency: next }))
+            }
             nextKey={nextKey}
           />
           <ContactFields
@@ -609,7 +687,9 @@ export function ContactsEditor(props: HolidayRegistrationEditorProps) {
             max={MAX_PICKUP_PERSONS}
             phoneRequired={false}
             fieldError={fieldError}
-            onChange={setPickup}
+            onChange={(next) =>
+              setDraft((current) => ({ ...current, pickup: next }))
+            }
             nextKey={nextKey}
           />
         </>
@@ -678,16 +758,14 @@ function Questions({
 export function FamilyAnswersEditor(props: HolidayRegistrationEditorProps) {
   const { registration } = props;
   const fields = registration.form.fields;
-  const [answers, setAnswers] = useState<Record<string, unknown>>({
-    ...registration.answers,
-  });
   return (
-    <EditForm
+    <EditForm<Record<string, unknown>>
       {...props}
       description="Allgemeine Angaben"
-      edit={() => ({ answers })}
+      draftOf={(stored) => ({ ...stored.answers })}
+      edit={(answers) => ({ answers })}
     >
-      {(fieldError) => (
+      {(answers, setAnswers, fieldError) => (
         <Questions
           questions={editableQuestions(fields, false)}
           answers={answers}
@@ -704,6 +782,15 @@ export function FamilyAnswersEditor(props: HolidayRegistrationEditorProps) {
   );
 }
 
+interface ChildDraft {
+  readonly firstName: string;
+  readonly lastName: string;
+  readonly birthDate: string;
+  readonly school: string;
+  readonly guestSchoolName: string;
+  readonly answers: Record<string, unknown>;
+}
+
 /** One child: names, date of birth, school and its answers. */
 export function ChildEditor(
   props: HolidayRegistrationEditorProps &
@@ -718,137 +805,148 @@ export function ChildEditor(
   );
   const prefix = `children.${index}`;
   const fields = registration.form.fields;
-  const [draft, setDraft] = useState({
-    firstName: child.firstName,
-    lastName: child.lastName,
-    birthDate: child.birthDate,
-    school: child.homeSchoolId ?? GUEST,
-    guestSchoolName: child.guestSchoolName,
-  });
-  const [answers, setAnswers] = useState<Record<string, unknown>>({
-    ...registration.childAnswers[child.id],
-  });
-  const set = (patch: Partial<typeof draft>) =>
-    setDraft((current) => ({ ...current, ...patch }));
-  const guest = draft.school === GUEST;
+  const draftOf = (stored: HolidayRegistrationDetail): ChildDraft => {
+    const read =
+      stored.children.find((entry) => entry.id === child.id) ?? child;
+    return {
+      firstName: read.firstName,
+      lastName: read.lastName,
+      birthDate: read.birthDate,
+      school: read.homeSchoolId ?? GUEST,
+      guestSchoolName: read.guestSchoolName,
+      answers: { ...stored.childAnswers[child.id] },
+    };
+  };
   return (
     <EditForm
       {...props}
       description={`${props.child.firstName} ${props.child.lastName}`}
-      edit={() => ({
-        child: {
-          id: child.id,
-          firstName: draft.firstName,
-          lastName: draft.lastName,
-          birthDate: draft.birthDate,
-          homeSchoolId: guest ? null : draft.school,
-          guestSchoolName: guest ? draft.guestSchoolName : "",
-          answers,
-        },
-      })}
+      draftOf={draftOf}
+      edit={(draft) => {
+        const guest = draft.school === GUEST;
+        return {
+          child: {
+            id: child.id,
+            firstName: draft.firstName,
+            lastName: draft.lastName,
+            birthDate: draft.birthDate,
+            homeSchoolId: guest ? null : draft.school,
+            guestSchoolName: guest ? draft.guestSchoolName : "",
+            answers: draft.answers,
+          },
+        };
+      }}
     >
-      {(fieldError) => (
-        <>
-          <p className="text-sm text-gray-700">
-            Die Wochen änderst du mit „Umbuchen“. Gesundheitsangaben lassen sich
-            hier nicht ändern.
-          </p>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Input
-              controlSize="compact"
-              name={`${prefix}.first_name`}
-              label="Vorname"
-              required
-              maxLength={100}
-              value={draft.firstName}
-              error={fieldError(`${prefix}.first_name`)}
-              onChange={(event) => set({ firstName: event.target.value })}
-            />
-            <Input
-              controlSize="compact"
-              name={`${prefix}.last_name`}
-              label="Nachname"
-              required
-              maxLength={100}
-              value={draft.lastName}
-              error={fieldError(`${prefix}.last_name`)}
-              onChange={(event) => set({ lastName: event.target.value })}
-            />
-          </div>
-          <div className="space-y-2">
-            <FieldLabel id={`${prefix}-birth-date-label`} required>
-              Geburtsdatum
-            </FieldLabel>
-            <DateOfBirthPicker
-              value={draft.birthDate}
-              onChange={(birthDate) => set({ birthDate })}
-              error={fieldError(`${prefix}.birth_date`)}
-              tr={germanText}
-              name={`${prefix}.birth_date`}
-              errorId={`${prefix}-birth-date-error`}
-            />
-          </div>
-          <div className="space-y-2">
-            <FieldLabel id={`${prefix}-school-label`} required>
-              Schule
-            </FieldLabel>
-            <CustomSelect
-              name={`${prefix}.home_school_id`}
-              ariaLabelledBy={`${prefix}-school-label`}
-              value={draft.school}
-              placeholder="Schule wählen"
-              invalid={Boolean(fieldError(`${prefix}.home_school_id`))}
-              ariaDescribedBy={`${prefix}-school-error`}
-              options={[
-                ...schools.map((school) => ({
-                  value: school.id,
-                  label: school.name,
-                })),
-                ...(child.homeSchoolId !== null &&
-                !schools.some((school) => school.id === child.homeSchoolId)
-                  ? [
-                      {
-                        value: child.homeSchoolId,
-                        label: "Bisherige Schule (gelöscht)",
-                      },
-                    ]
-                  : []),
-                { value: GUEST, label: "Andere Schule (Feriengast)" },
-              ]}
-              onChange={(school) => set({ school })}
-            />
-            <FieldErrorHint
-              id={`${prefix}-school-error`}
-              message={fieldError(`${prefix}.home_school_id`)}
-            />
-            {guest ? (
+      {(draft, setDraft, fieldError) => {
+        const set = (patch: Partial<ChildDraft>) =>
+          setDraft((current) => ({ ...current, ...patch }));
+        const setAnswers = (answers: Record<string, unknown>) =>
+          set({ answers });
+        const { answers } = draft;
+        const guest = draft.school === GUEST;
+        return (
+          <>
+            <p className="text-sm text-gray-700">
+              Die Wochen änderst du mit „Umbuchen“. Gesundheitsangaben lassen
+              sich hier nicht ändern.
+            </p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Input
                 controlSize="compact"
-                name={`${prefix}.guest_school_name`}
-                label="Name der eigenen Schule (freiwillig)"
-                maxLength={120}
-                value={draft.guestSchoolName}
-                error={fieldError(`${prefix}.guest_school_name`)}
-                onChange={(event) =>
-                  set({ guestSchoolName: event.target.value })
-                }
+                name={`${prefix}.first_name`}
+                label="Vorname"
+                required
+                maxLength={100}
+                value={draft.firstName}
+                error={fieldError(`${prefix}.first_name`)}
+                onChange={(event) => set({ firstName: event.target.value })}
               />
-            ) : null}
-          </div>
-          <Questions
-            questions={editableQuestions(fields, true)}
-            answers={answers}
-            context={{
-              guardianAnswers: { ...registration.answers },
-              childAnswers: answers,
-              fieldsByKey: buildFieldsByKey(fields),
-            }}
-            prefix={`${prefix}.`}
-            fieldError={fieldError}
-            onChange={setAnswers}
-          />
-        </>
-      )}
+              <Input
+                controlSize="compact"
+                name={`${prefix}.last_name`}
+                label="Nachname"
+                required
+                maxLength={100}
+                value={draft.lastName}
+                error={fieldError(`${prefix}.last_name`)}
+                onChange={(event) => set({ lastName: event.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <FieldLabel id={`${prefix}-birth-date-label`} required>
+                Geburtsdatum
+              </FieldLabel>
+              <DateOfBirthPicker
+                value={draft.birthDate}
+                onChange={(birthDate) => set({ birthDate })}
+                error={fieldError(`${prefix}.birth_date`)}
+                tr={germanText}
+                name={`${prefix}.birth_date`}
+                errorId={`${prefix}-birth-date-error`}
+              />
+            </div>
+            <div className="space-y-2">
+              <FieldLabel id={`${prefix}-school-label`} required>
+                Schule
+              </FieldLabel>
+              <CustomSelect
+                name={`${prefix}.home_school_id`}
+                ariaLabelledBy={`${prefix}-school-label`}
+                value={draft.school}
+                placeholder="Schule wählen"
+                invalid={Boolean(fieldError(`${prefix}.home_school_id`))}
+                ariaDescribedBy={`${prefix}-school-error`}
+                options={[
+                  ...schools.map((school) => ({
+                    value: school.id,
+                    label: school.name,
+                  })),
+                  ...(child.homeSchoolId !== null &&
+                  !schools.some((school) => school.id === child.homeSchoolId)
+                    ? [
+                        {
+                          value: child.homeSchoolId,
+                          label: "Bisherige Schule (gelöscht)",
+                        },
+                      ]
+                    : []),
+                  { value: GUEST, label: "Andere Schule (Feriengast)" },
+                ]}
+                onChange={(school) => set({ school })}
+              />
+              <FieldErrorHint
+                id={`${prefix}-school-error`}
+                message={fieldError(`${prefix}.home_school_id`)}
+              />
+              {guest ? (
+                <Input
+                  controlSize="compact"
+                  name={`${prefix}.guest_school_name`}
+                  label="Name der eigenen Schule (freiwillig)"
+                  maxLength={120}
+                  value={draft.guestSchoolName}
+                  error={fieldError(`${prefix}.guest_school_name`)}
+                  onChange={(event) =>
+                    set({ guestSchoolName: event.target.value })
+                  }
+                />
+              ) : null}
+            </div>
+            <Questions
+              questions={editableQuestions(fields, true)}
+              answers={answers}
+              context={{
+                guardianAnswers: { ...registration.answers },
+                childAnswers: answers,
+                fieldsByKey: buildFieldsByKey(fields),
+              }}
+              prefix={`${prefix}.`}
+              fieldError={fieldError}
+              onChange={setAnswers}
+            />
+          </>
+        );
+      }}
     </EditForm>
   );
 }

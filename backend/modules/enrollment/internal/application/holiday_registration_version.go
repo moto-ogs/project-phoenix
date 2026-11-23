@@ -40,16 +40,28 @@ func (h *HolidayRegistrationReview) editedDetail(ctx context.Context, organizati
 
 // holidayRegistrationVersion is the token of a registration as the Büro
 // edits and rebooks it: its status, the details an edit replaces and every
-// child's booked weeks, time models, days and lunch. The placement of a
-// booking is left out: the places decide it, not the Büro's input, and a
-// booking moving up from the waiting list changes no choice the Büro made.
+// child's booked weeks, time models, days, lunch and placement. The Büro's
+// card shows the placement and the Büro rebooks on it, for example drops a
+// week it reads as a waiting place (ADR 0314): a booking that moved up from
+// the waiting list or got its place by allocation since the read refuses the
+// save. Every writer of a placement holds the period lock the check holds.
+// The position on the waiting list is left out: it moves with other
+// registrations and no rebooking of this one decides on it.
 func holidayRegistrationVersion(detail enrollment.HolidayRegistrationDetail) string {
 	stored := holidayStoredFromDetail(detail)
+	placements := make([][]string, len(detail.Children))
+	for i, child := range detail.Children {
+		placements[i] = make([]string, len(child.Bookings))
+		for j, booking := range child.Bookings {
+			placements[i][j] = booking.Placement
+		}
+	}
 	return readstate.Fingerprint(struct {
-		Status   string
-		Input    enrollment.HolidayRegistrationInput
-		ChildIDs []int64
-	}{detail.Status, stored.input, stored.childIDs})
+		Status     string
+		Input      enrollment.HolidayRegistrationInput
+		ChildIDs   []int64
+		Placements [][]string
+	}{detail.Status, stored.input, stored.childIDs, placements})
 }
 
 // checkReadRegistration refuses with readstate.ErrChanged unless expected
