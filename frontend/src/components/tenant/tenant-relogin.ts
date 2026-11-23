@@ -1,5 +1,6 @@
 import { ApiError } from "~/lib/api-error";
-import { bffJsonUncontracted } from "~/lib/bff-fetch";
+import { bffJson } from "~/lib/bff-fetch";
+import { sessionBff } from "~/lib/session-bff";
 import { clearSessionCache, DELIBERATE_LOGOUT_KEY } from "~/lib/session-cache";
 import { clearPersonalStorage } from "~/lib/personal-storage";
 import { mutate } from "~/lib/swr";
@@ -32,7 +33,7 @@ async function endSessionAndNavigate(
   // A session step of the BFF: through `public`, so a 401 neither renews the
   // session nor opens the login.
   try {
-    await bffJsonUncontracted<null>("public", "POST", "/api/auth/logout", {
+    await bffJson("public", sessionBff.logout("tenant"), {
       signal: AbortSignal.any([signal, AbortSignal.timeout(5000)]),
       errorMessage: "Tenant logout failed",
     });

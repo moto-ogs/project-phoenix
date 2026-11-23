@@ -102,8 +102,11 @@ async function redeem(request: NextRequest, portal: DemoPortal) {
       // The entry page hands fixed-role links to the right portal. Revoke
       // this unused session family before returning only redirect metadata.
       await revokeMintedSession(
-        request,
-        logoutRollback(minted.portal.backend.logout, mintedPair(payload)),
+        logoutRollback(
+          request,
+          minted.portal.backend.logout,
+          mintedPair(payload),
+        ),
       );
     }
     const response = NextResponse.json(

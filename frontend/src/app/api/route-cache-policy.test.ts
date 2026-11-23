@@ -124,7 +124,6 @@ const POLICY_FACTORIES: Record<string, readonly string[]> = {
     "catalogProxyUnder",
     "traeger.jsonProxy",
   ],
-  "~/lib/backend-proxy-route.server": ["createPublicJsonProxy"],
   "~/lib/auth-proxy.server": ["authStepProxy"],
   "~/lib/file-upload-wrapper.server": ["createFileUploadHandler"],
 };

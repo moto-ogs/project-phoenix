@@ -72,7 +72,9 @@ function pathsIn(file: string, text: string): string[] {
         node.head.text +
         node.templateSpans.map((span) => `{}${span.literal.text}`).join("");
     }
-    const pathname = value?.split(/[?#]/, 1)[0];
+    const pathname = value
+      ?.replace(/^(?:GET|POST|PUT|PATCH|DELETE) /, "")
+      .split(/[?#]/, 1)[0];
     if (pathname?.startsWith("/")) found.push(pathname);
     ts.forEachChild(node, visit);
   };
@@ -153,10 +155,15 @@ function classify(file: string, text: string) {
 
 const routeFiles = readdirSync(apiDir, { recursive: true, encoding: "utf8" })
   .filter((file) => path.basename(file) === "route.ts")
-  .map((file) => ({
-    route: path.dirname(file),
-    ...classify(file, readFileSync(path.join(apiDir, file), "utf8")),
-  }))
+  .map((file) => {
+    const source = readFileSync(path.join(apiDir, file), "utf8");
+    return {
+      file,
+      source,
+      route: path.dirname(file),
+      ...classify(file, source),
+    };
+  })
   .sort((a, b) => a.route.localeCompare(b.route));
 
 /** "METHOD /pattern" of every route a portal's own route file serves. */
@@ -170,18 +177,22 @@ const routeFileKeys = Object.values(routeFileRoutes).flatMap((routes) =>
  * catch-all route file serves them.
  */
 const authJsPaths = Object.values(PORTALS).flatMap((portal) => [
-  `${portal.backend.authPrefix}/login`,
-  portal.backend.refresh.path,
-  portal.backend.logout.path,
+  portal.backend.login.pattern,
+  portal.backend.refresh.pattern,
+  portal.backend.logout.route.pattern,
 ]);
 
 /** The server modules beside the route files that call the backend. */
 const serverAuthDir = path.resolve(apiDir, "../../server/auth");
-const serverAuthPaths = readdirSync(serverAuthDir, { encoding: "utf8" })
+const serverAuthSources = readdirSync(serverAuthDir, { encoding: "utf8" })
   .filter((file) => file.endsWith(".ts") && !file.includes(".test."))
-  .flatMap((file) =>
-    pathsIn(file, readFileSync(path.join(serverAuthDir, file), "utf8")),
-  );
+  .map((file) => ({
+    file,
+    source: readFileSync(path.join(serverAuthDir, file), "utf8"),
+  }));
+const serverAuthPaths = serverAuthSources.flatMap(({ file, source }) =>
+  pathsIn(file, source),
+);
 
 /** Catalog rows some route file, or Auth.js through the portal table, names. */
 const named = new Set(
@@ -252,5 +263,234 @@ describe("route file with backend calls of its own", () => {
     expect(classify("route.ts", text).unregistered).toEqual([
       "/api/display/dashboard",
     ]);
+  });
+});
+
+// Named JSON routes and the Auth.js session modules must use the generated
+// entry, not make a second raw call to the same Go path (#7942).
+const namedKeys = new Set(routeFileKeys);
+const knownContractCall = new Set([
+  "contractGet",
+  "contractWrite",
+  "createPortalLoginRoute",
+  "authStepProxy",
+]);
+const rawCalls =
+  /^(?:fetch|sendBackend|readBackendJson|backendJson|backendFetch|forwardToBackend|forwardJsonRequest|create(?:Tenant|Parent|Caterer|Operator|Public)JsonProxy|jsonProxy|(?:operatorApi|api|proxy)(?:Get|Post|Put|Patch|Delete)|postForm|api)$/;
+
+function handlerCalls(file: string, text: string) {
+  const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
+  const generated = new Set<string>();
+  const namespaces = new Set<string>();
+  const bindings = new Map<string, string>();
+  const decoderBindings = new Set<string>();
+  const methods = new Set<string>();
+  for (const statement of source.statements) {
+    if (
+      ts.canHaveModifiers(statement) &&
+      ts
+        .getModifiers(statement)
+        ?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)
+    ) {
+      if (ts.isFunctionDeclaration(statement) && statement.name)
+        methods.add(statement.name.text);
+      if (ts.isVariableStatement(statement)) {
+        for (const declaration of statement.declarationList.declarations) {
+          if (ts.isIdentifier(declaration.name))
+            methods.add(declaration.name.text);
+        }
+      }
+    }
+  }
+  for (const binding of source.statements) {
+    if (
+      !ts.isImportDeclaration(binding) ||
+      !ts.isStringLiteral(binding.moduleSpecifier)
+    )
+      continue;
+    const imports = binding.importClause?.namedBindings;
+    if (!imports) continue;
+    const isGenerated = binding.moduleSpecifier.text.endsWith(".generated");
+    if (ts.isNamespaceImport(imports)) {
+      if (isGenerated) namespaces.add(imports.name.text);
+      continue;
+    }
+    for (const imported of imports.elements) {
+      const name = (imported.propertyName ?? imported.name).text;
+      bindings.set(imported.name.text, name);
+      if (isGenerated && name === "routes") generated.add(imported.name.text);
+      if (
+        binding.moduleSpecifier.text.endsWith("/contract/client.server") &&
+        (name === "contractGet" || name === "contractWrite")
+      ) {
+        decoderBindings.add(imported.name.text);
+      }
+    }
+  }
+  const isGeneratedRoutes = (expression: ts.Expression) =>
+    (ts.isIdentifier(expression) && generated.has(expression.text)) ||
+    (ts.isPropertyAccessExpression(expression) &&
+      expression.name.text === "routes" &&
+      ts.isIdentifier(expression.expression) &&
+      namespaces.has(expression.expression.text));
+
+  const callee = ({ expression }: ts.CallExpression) => {
+    if (ts.isIdentifier(expression))
+      return bindings.get(expression.text) ?? expression.text;
+    if (ts.isPropertyAccessExpression(expression)) return expression.name.text;
+    return "";
+  };
+
+  // backendFetch can supply the transport, but does not return the raw
+  // response to the route. Only the contract helper gets it.
+  function isContractTransport(node: ts.CallExpression): boolean {
+    const arrow = node.parent;
+    if (!ts.isArrowFunction(arrow)) return false;
+    const property = arrow.parent;
+    if (
+      !ts.isPropertyAssignment(property) ||
+      property.name.getText(source) !== "send"
+    )
+      return false;
+    const call = property.parent.parent;
+    return (
+      ts.isCallExpression(call) &&
+      ["contractGet", "contractWrite"].includes(callee(call))
+    );
+  }
+
+  const entries = new Set<string>();
+  const calls = new Set<string>();
+  const bypasses = new Set<string>();
+  let callsDecoder = false;
+  const visit = (node: ts.Node) => {
+    if (ts.isCallExpression(node)) {
+      const name = callee(node);
+      calls.add(name);
+      if (
+        ts.isIdentifier(node.expression) &&
+        decoderBindings.has(node.expression.text)
+      ) {
+        callsDecoder = true;
+      }
+      if (rawCalls.test(name) && !isContractTransport(node)) bypasses.add(name);
+    }
+    if (
+      ts.isElementAccessExpression(node) &&
+      isGeneratedRoutes(node.expression) &&
+      ts.isStringLiteral(node.argumentExpression)
+    ) {
+      const owner = node.parent;
+      if (
+        (ts.isCallExpression(owner) && knownContractCall.has(callee(owner))) ||
+        (ts.isPropertyAssignment(owner) &&
+          (file === "portals.ts" ||
+            (owner.name.getText(source) === "route" &&
+              ts.isCallExpression(owner.parent.parent) &&
+              callee(owner.parent.parent) === "createFactorConfirmRoute"))) ||
+        (file === "portals.ts" && ts.isVariableDeclaration(owner))
+      ) {
+        const [method, pattern] = node.argumentExpression.text.split(" ");
+        if (method && pattern) entries.add(key(method, segmentsOf(pattern)));
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return { entries, calls, bypasses, methods, callsDecoder };
+}
+
+const portalFactories = new Map<string, string>(
+  Object.values(PORTALS).flatMap(
+    (portal) =>
+      [
+        [`${portal.basePath.slice(5)}/login`, "createPortalLoginRoute"],
+        [`${portal.basePath.slice(5)}/logout`, "createLogoutRoute"],
+      ] as const,
+  ),
+);
+
+function missingDecoders(file: string, source: string): string[] {
+  const { entries, calls, methods } = handlerCalls(file, source);
+  const factory = portalFactories.get(path.dirname(file));
+  if (factory) return calls.has(factory) ? [] : [factory];
+  return [
+    ...new Set(
+      placeOf(file).flatMap((name) =>
+        reached(name).map(({ method, pattern }) =>
+          methods.has(method) ? key(method, pattern) : "",
+        ),
+      ),
+    ),
+  ].filter((entry) => namedKeys.has(entry) && !entries.has(entry));
+}
+
+describe("RouteFile response decoding", () => {
+  it("uses every generated entry in a named handler or its portal's session table", () => {
+    const missing = routeFiles.flatMap(({ file, source }) =>
+      missingDecoders(file, source).map((entry) => `${file}: ${entry}`),
+    );
+    const entries = new Set(
+      [...routeFiles, ...serverAuthSources].flatMap(({ file, source }) => [
+        ...handlerCalls(file, source).entries,
+      ]),
+    );
+    expect([
+      ...missing,
+      ...[...namedKeys].filter((entry) => !entries.has(entry)),
+    ]).toEqual([]);
+  });
+
+  it("keeps shared handlers on the generated decoder and rejects raw transport calls", () => {
+    const authHelpers = [
+      "auth-proxy.server.ts",
+      "factor-routes.server.ts",
+      "login-route.server.ts",
+      "logout-route.server.ts",
+      "session-transition.server.ts",
+    ].map((file) => ({
+      file,
+      source: readFileSync(path.resolve(apiDir, "../../lib", file), "utf8"),
+    }));
+    expect(
+      authHelpers
+        .filter(({ file, source }) => !handlerCalls(file, source).callsDecoder)
+        .map(({ file }) => file),
+    ).toEqual([]);
+
+    const namedPaths = new Set(
+      [...namedKeys].map((entry) => entry.split(" ")[1]),
+    );
+    const owners = routeFiles.filter(
+      ({ file, source }) =>
+        portalFactories.has(path.dirname(file)) ||
+        [...placeOf(file), ...pathsIn(file, source)].some((name) =>
+          reached(name).some(({ pattern }) =>
+            namedPaths.has(`/${pattern.join("/")}`),
+          ),
+        ),
+    );
+    const bypasses = [...owners, ...serverAuthSources, ...authHelpers].flatMap(
+      ({ file, source }) =>
+        [...handlerCalls(file, source).bypasses].map(
+          (call) => `${file}: ${call}`,
+        ),
+    );
+    expect(bypasses).toEqual([]);
+  });
+
+  it("rejects an aliased raw call even when another handler uses that entry", () => {
+    const file = "auth/staff-preview/end/route.ts";
+    const previous = `
+      import { sendBackend as send } from "~/lib/backend-client.server";
+      export async function POST() {
+        const response = await send("/auth/staff-preview/end", null, { method: "POST" });
+        return Response.json(await response.json());
+      }
+    `;
+    expect(missingDecoders(file, previous)).toEqual([
+      "POST /auth/staff-preview/end",
+    ]);
+    expect([...handlerCalls(file, previous).bypasses]).toEqual(["sendBackend"]);
   });
 });

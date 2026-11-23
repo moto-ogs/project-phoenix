@@ -1,4 +1,4 @@
-import { bffFile, bffJson, bffJsonUncontracted } from "~/lib/bff-fetch";
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the Träger portal ("moto träger", #4649). Talks to the BFF
  * routes under /api/traeger, which forward to the backend with the Träger
@@ -17,7 +17,7 @@ import type * as traegerProfileContract from "./contract/traeger-profile.generat
 import type * as traegerSchoolsContract from "./contract/traeger-schools.generated";
 import { toSettingsSchema, type SettingsSchema } from "./settings-api";
 import { filenameFromDisposition } from "./file-download";
-import { portalAuthPath } from "./portal-paths";
+import { sessionBff } from "./session-bff";
 import { signInAnswer, type SignInAnswer } from "./sign-in-answer";
 import type { TraegerListFormat } from "./traeger-list-export";
 import { type TraegerRole, traegerRoles } from "./traeger-roles";
@@ -134,12 +134,10 @@ export async function traegerLogin(input: {
     body.organization_id = input.organizationId;
   }
   // A sign-in step of the BFF without a session (ADR 0270).
-  const data = await bffJsonUncontracted<unknown>(
-    "public",
-    "POST",
-    portalAuthPath("traeger", "login"),
-    { body, errorMessage: "Request failed" },
-  );
+  const data = await bffJson("public", sessionBff.login("traeger"), {
+    body,
+    errorMessage: "Request failed",
+  });
   return signInAnswer("traeger", data);
 }
 
@@ -263,12 +261,9 @@ export async function verifyTraegerCodeStep(
   challengeToken: string,
   code: string,
 ): Promise<boolean> {
-  const data = await bffJsonUncontracted<{ session_renewed: boolean }>(
-    "org",
-    "POST",
-    "/api/traeger/auth/mfa/step-up/verify",
-    { body: { challenge_token: challengeToken, code } },
-  );
+  const data = await bffJson("org", sessionBff.verifyTraegerStepUp, {
+    body: { challenge_token: challengeToken, code },
+  });
   return data.session_renewed;
 }
 

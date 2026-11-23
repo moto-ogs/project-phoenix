@@ -1,24 +1,15 @@
 import "server-only";
 import type { CredentialsSignin } from "next-auth";
-import { sendBackend } from "~/lib/backend-client.server";
-import { portalAuthAnswer } from "~/lib/portal-paths";
+import { contractWrite } from "~/lib/contract/client.server";
+import type { ContractBody } from "~/lib/contract/client.server";
+import type { TokenResponse } from "~/lib/contract/shared.generated";
 import { authLogger } from "./jwt-claims";
 import { LOGIN_RATE_LIMITED, type LoginRefusalCode } from "~/lib/login-refusal";
 import type { PasswordLogin, PortalDescriptor } from "./portals";
-import type { TokenPair } from "./token-refresh";
 
 export type LoginOutcome =
-  | { ok: true; tokens: TokenPair }
+  | { ok: true; tokens: TokenResponse }
   | { ok: false; status?: number; code?: string };
-
-async function errorCode(response: Response): Promise<string | undefined> {
-  try {
-    const body = JSON.parse(await response.text()) as { code?: unknown };
-    return typeof body.code === "string" ? body.code : undefined;
-  } catch {
-    return undefined; // a gateway error page carries no code
-  }
-}
 
 /**
  * The password login of a portal's Credentials provider. Only status and
@@ -27,32 +18,29 @@ async function errorCode(response: Response): Promise<string | undefined> {
  */
 export async function loginAtBackend(
   portal: PortalDescriptor,
-  body: Record<string, string>,
+  body: ContractBody<PortalDescriptor["backend"]["login"]>,
   request: Request | undefined,
 ): Promise<LoginOutcome> {
   try {
-    const response = await sendBackend(
-      `${portal.backend.authPrefix}/login`,
-      null,
-      {
-        method: "POST",
-        json: body,
-        request,
-        timeout: "login",
-      },
-    );
-    if (!response.ok) {
-      const code = await errorCode(response);
+    const reply = await contractWrite(portal.backend.login, body, {
+      request,
+      timeout: "login",
+    });
+    if (!reply.ok) {
+      if (!reply.backend && reply.error.status === 503) {
+        authLogger.error("portal_login_unavailable", { portal: portal.key });
+        return { ok: false };
+      }
+      const { status, code } = reply.error;
       authLogger.warn("portal_login_refused", {
         portal: portal.key,
-        status: response.status,
+        status,
         code,
       });
-      return { ok: false, status: response.status, code };
+      return { ok: false, status, code };
     }
-    const data = portalAuthAnswer<
-      (Partial<TokenPair> & { status?: unknown }) | undefined
-    >(portal.key, "login", await response.json());
+    const data = "data" in reply.value ? reply.value.data : reply.value;
+    const status = reply.backend?.status;
     // A login that answers 200 with a further step is no session here.
     if (
       (typeof data?.status === "string" && data.status !== "authenticated") ||
@@ -62,10 +50,10 @@ export async function loginAtBackend(
       const code = typeof data?.status === "string" ? data.status : undefined;
       authLogger.warn("portal_login_refused", {
         portal: portal.key,
-        status: response.status,
+        status,
         code,
       });
-      return { ok: false, status: response.status, code };
+      return { ok: false, status, code };
     }
     return {
       ok: true,

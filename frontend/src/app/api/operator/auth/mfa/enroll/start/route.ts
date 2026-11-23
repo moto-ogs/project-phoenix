@@ -1,3 +1,6 @@
+import { routes } from "~/lib/contract/operator-auth.generated";
 import { authStepProxy } from "~/lib/auth-proxy.server";
 
-export const POST = authStepProxy("/operator/auth/mfa/enroll/start", "none");
+export const POST = authStepProxy(
+  routes["POST /operator/auth/mfa/enroll/start"],
+);

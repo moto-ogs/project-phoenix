@@ -27,6 +27,8 @@ export class ApiResponseError extends Error {
   readonly bodyText: string;
   readonly retryAfter: string | null;
   readonly contentType: string | null;
+  /** Headers arrived, but the response stream did not finish. */
+  readonly bodyInterrupted: boolean;
   // Memoized parse result — `null` means "not JSON". Lazy so callers that
   // only check status never pay the JSON.parse cost.
   private parsedBody: JsonBody | null = null;
@@ -38,6 +40,7 @@ export class ApiResponseError extends Error {
     options?: ErrorOptions & {
       retryAfter?: string | null;
       contentType?: string | null;
+      bodyInterrupted?: boolean;
     },
   ) {
     super(`API error (${status}): ${bodyText}`, options);
@@ -46,6 +49,7 @@ export class ApiResponseError extends Error {
     this.bodyText = bodyText;
     this.retryAfter = options?.retryAfter ?? null;
     this.contentType = options?.contentType ?? null;
+    this.bodyInterrupted = options?.bodyInterrupted ?? false;
   }
 
   /** Returns the parsed JSON body, or `null` if the body isn't valid JSON. */

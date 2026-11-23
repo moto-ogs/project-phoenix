@@ -132,7 +132,7 @@ beforeEach(() => {
   backend.mockReset();
   backend.mockImplementation(async (url) =>
     String(url).endsWith("/auth/session/validate")
-      ? Response.json({ id: 7 }, { status: familyStatus })
+      ? Response.json({ id: "7" }, { status: familyStatus })
       : new Response(null, { status: 404 }),
   );
   vi.stubGlobal("fetch", backend);

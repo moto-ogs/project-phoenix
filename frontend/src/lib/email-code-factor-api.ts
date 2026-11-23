@@ -1,7 +1,8 @@
+import { sessionBff } from "./session-bff";
 // Client-side API of a second factor a person switches on in their own
 // account: the caterer's (#4497) and the parents' (#7051).
 
-import { bffJson, bffJsonUncontracted } from "./bff-fetch";
+import { bffJson } from "./bff-fetch";
 
 /** The second factor as the account settings show it. */
 interface EmailCodeFactorStatus {
@@ -53,12 +54,7 @@ const catererFactor: EmailCodeFactorApi = {
     };
   },
   confirm: (challengeToken, code) =>
-    confirmFactor(
-      "caterer",
-      "/api/caterer/account/mfa/confirm",
-      challengeToken,
-      code,
-    ),
+    confirmFactor("caterer", challengeToken, code),
   async disable(currentPassword) {
     await bffJson("caterer", "POST /caterer/account/mfa/disable", {
       body: { current_password: currentPassword },
@@ -84,7 +80,7 @@ const parentFactor: EmailCodeFactorApi = {
     };
   },
   confirm: (challengeToken, code) =>
-    confirmFactor("parent", "/api/parent/me/mfa/confirm", challengeToken, code),
+    confirmFactor("parent", challengeToken, code),
   async disable(currentPassword) {
     await bffJson("parent", "POST /parent/me/mfa/disable", {
       body: { current_password: currentPassword },
@@ -97,14 +93,14 @@ const parentFactor: EmailCodeFactorApi = {
 // (createFactorConfirmRoute), so it has no catalog contract.
 async function confirmFactor(
   portal: "caterer" | "parent",
-  path: string,
   challengeToken: string,
   code: string,
 ): Promise<{ sessionRenewed: boolean }> {
-  const data = await bffJsonUncontracted<{ session_renewed: boolean }>(
+  const data = await bffJson(
     portal,
-    "POST",
-    path,
+    portal === "caterer"
+      ? sessionBff.confirmCatererFactor
+      : sessionBff.confirmParentFactor,
     {
       body: { challenge_token: challengeToken, code },
       authRefusals: ["identity.mfa_code_invalid"],

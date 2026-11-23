@@ -1026,7 +1026,11 @@ describe("authConfig", () => {
         ok: true,
         json: async () => ({
           status: "success",
-          data: { access_token: "op-access", refresh_token: "op-refresh" },
+          data: {
+            status: "authenticated",
+            access_token: "op-access",
+            refresh_token: "op-refresh",
+          },
         }),
       });
 
@@ -1050,6 +1054,7 @@ describe("authConfig", () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
+          status: "authenticated",
           access_token: "teacher-access",
           refresh_token: "teacher-refresh",
         }),
@@ -1331,6 +1336,7 @@ describe("authConfig", () => {
         json: async () => ({
           status: "success",
           data: {
+            status: "authenticated",
             access_token: PARENT_JWT,
             refresh_token: "parent-refresh-token",
           },
@@ -1353,6 +1359,7 @@ describe("authConfig", () => {
         json: async () => ({
           status: "success",
           data: {
+            status: "authenticated",
             access_token: PARENT_JWT,
             refresh_token: "parent-refresh-token",
           },
@@ -1565,7 +1572,7 @@ describe("authConfig", () => {
 
       // Resolve with failure
       await vi.waitFor(() => expect(mockFetch).toHaveBeenCalledOnce());
-      resolveRefresh!({ ok: false, status: 401 });
+      resolveRefresh!(new Response(null, { status: 401 }));
 
       const [r1, r2] = await Promise.all([p1, p2]);
 
@@ -1630,6 +1637,7 @@ describe("authConfig", () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
+          status: "success",
           data: {
             access_token: "new-op-access",
             refresh_token: newOperatorRefreshToken,

@@ -2,18 +2,28 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import type * as operatorInvitationsContract from "~/lib/contract/operator-invitations.generated";
 import { ApiError } from "~/lib/api-error";
 import type { OperatorInvitationValidationResponse } from "~/lib/contract/operator-auth.generated";
+import type { SessionBffRoute } from "~/lib/session-bff";
 
 // Hoist mocks
 const { mockBffJson } = vi.hoisted(() => ({
   mockBffJson: vi.fn(),
 }));
 
-// The invitation steps without a session call the real bffJsonUncontracted
-// against the stubbed fetch.
-vi.mock("~/lib/bff-fetch", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/lib/bff-fetch")>()),
-  bffJson: mockBffJson,
-}));
+// Keep the public steps on real bffJson against the stubbed fetch.
+vi.mock("~/lib/bff-fetch", async (importOriginal) => {
+  const original = await importOriginal<typeof import("~/lib/bff-fetch")>();
+  return {
+    ...original,
+    bffJson: (
+      portal: "public",
+      route: string | SessionBffRoute<unknown>,
+      options?: { body?: unknown },
+    ) =>
+      typeof route === "string"
+        ? mockBffJson(portal, route, options)
+        : original.bffJson(portal, route, options),
+  };
+});
 
 // Must import after mocks
 import {
