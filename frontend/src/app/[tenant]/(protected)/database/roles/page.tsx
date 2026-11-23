@@ -271,19 +271,38 @@ function RolesPageContent() {
   );
 
   const handleUpdateRole = useCallback(
-    async (data: Partial<Role>) => {
-      if (!selectedRole) return;
-      // Ein Fehler bleibt im Formular (errorPath im Stammdaten-Reiter).
-      await service.update(selectedRole.id, data);
-      toastSuccess(
-        `Die Rolle „${getRoleDisplayName(data.name ?? selectedRole.name)}“ ist gespeichert.`,
+    async (data: Partial<Role>, base: Role) => {
+      // Ein Fehler bleibt im Formular (errorPath im Stammdaten-Reiter); eine
+      // Ablehnung eines geänderten Stands liest die Rolle dort neu.
+      const saved = await service.update(base.id, data, base);
+      if (!saved) throw new Error("role update answered without the role");
+      // Die Antwort trägt die neue Version und keine Rechte: die nächste
+      // Bearbeitung sendet sie, auch wenn das Neuladen unten scheitert
+      // (ADR 0311).
+      const stored: Role = { ...saved, permissionNames: base.permissionNames };
+      await reloadDetail(
+        (current) =>
+          current && { ...stored, permissionNames: current.permissionNames },
+        { revalidate: false },
       );
-      // Liste und Detail neu laden.
-      void reloadDetail();
+      toastSuccess(
+        `Die Rolle „${getRoleDisplayName(saved.name)}“ ist gespeichert.`,
+      );
+      // Die Liste neu laden; ein Fehler dabei steht über der Liste.
       await refreshRoles();
+      return stored;
     },
-    [selectedRole, service, refreshRoles, reloadDetail, toastSuccess],
+    [service, refreshRoles, reloadDetail, toastSuccess],
   );
+
+  // Liest die gewählte Rolle neu und legt sie in den Cache; scheitert das
+  // Lesen, lehnt es ab, statt mit dem alten Stand aufzulösen (ADR 0311).
+  const reloadRole = useCallback(async () => {
+    if (!selectedRoleId) throw new Error("no role is selected");
+    const fresh = await service.getOne(selectedRoleId);
+    await reloadDetail(fresh, { revalidate: false });
+    return fresh;
+  }, [service, reloadDetail, selectedRoleId]);
 
   const handleDeleteRole = useCallback(async () => {
     if (!selectedRole) return;
@@ -459,6 +478,7 @@ function RolesPageContent() {
             canManagePermissions={canManagePermissions}
             onSelect={handleSelectRole}
             onSaveRole={handleUpdateRole}
+            onReloadRole={reloadRole}
             onDeleteClick={handleDeleteClick}
             onPermissionsSaved={handlePermissionsSaved}
           />

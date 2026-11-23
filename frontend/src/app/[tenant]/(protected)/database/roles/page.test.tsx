@@ -280,9 +280,12 @@ vi.mock("@/components/roles/roles-master-detail", () => ({
   }: {
     roles: Array<{ id: string; name: string }>;
     selectedId: string | null;
-    selectedRole?: { name: string } | null;
+    selectedRole?: { id: string; name: string; version?: string } | null;
     onSelect: (id: string | null) => void;
-    onSaveRole: (data: { name: string }) => Promise<void>;
+    onSaveRole: (
+      data: { name: string },
+      base: { id: string; name: string; version?: string },
+    ) => Promise<unknown>;
     onDeleteClick: () => void;
     onPermissionsSaved: () => void | Promise<void>;
     canManagePermissions?: boolean;
@@ -291,7 +294,8 @@ vi.mock("@/components/roles/roles-master-detail", () => ({
     const [error, setError] = useState<string | null>(null);
     const submit = () => {
       setError(null);
-      void onSaveRole({ name: "Updated" })
+      // The form saves over the role it was opened on (ADR 0311).
+      void onSaveRole({ name: "Updated" }, selectedRole!)
         .then(() => setEditing(false))
         .catch((err: unknown) => {
           setError(err instanceof Error ? err.message : String(err));
@@ -372,6 +376,19 @@ vi.mock("@/components/roles/roles-master-detail", () => ({
   },
 }));
 
+// The master-data save answers the stored role with its new version.
+const savedRole = {
+  id: "1",
+  name: "Updated",
+  description: "Vertritt im Krankheitsfall",
+  isSystem: false,
+  baseRole: "teacher",
+  createdAt: "2026-01-01",
+  updatedAt: "2026-01-03",
+  version: "v2",
+  permissionNames: [],
+};
+
 const mockRoles = [
   {
     id: "1",
@@ -381,6 +398,7 @@ const mockRoles = [
     baseRole: "teacher",
     createdAt: "2026-01-01",
     updatedAt: "2026-01-02",
+    version: "v1",
     permissions: [],
   },
   {
@@ -748,7 +766,7 @@ describe("RolesPage", () => {
 
   it("calls update service when saving the inline edit form", async () => {
     setSelectedRole("1");
-    mockUpdate.mockResolvedValueOnce(undefined);
+    mockUpdate.mockResolvedValueOnce(savedRole);
 
     render(<RolesPage />);
 
@@ -767,13 +785,42 @@ describe("RolesPage", () => {
       expect(mockUpdate).toHaveBeenCalledWith(
         "1",
         expect.objectContaining({ name: "Updated" }),
+        expect.objectContaining({ id: "1", version: "v1" }),
       );
     });
   });
 
+  // ADR 0311 rule 5: the next edit saves over the version the save
+  // answered, also when the reload after it fails.
+  it("saves the next edit over the version the save answered", async () => {
+    setSelectedRole("1");
+    mockUpdate
+      .mockResolvedValueOnce(savedRole)
+      .mockResolvedValueOnce({ ...savedRole, version: "v3" });
+    render(<RolesPage />);
+    await screen.findByTestId("role-detail-panel");
+    const down = () =>
+      new ApiError("down", 503, { code: "general.unavailable" });
+    mockGetList.mockRejectedValue(down());
+    mockGetOne.mockRejectedValue(down());
+
+    fireEvent.click(screen.getByTestId("trigger-edit"));
+    fireEvent.click(await screen.findByTestId("submit-edit"));
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
+    fireEvent.click(await screen.findByTestId("trigger-edit"));
+    fireEvent.click(await screen.findByTestId("submit-edit"));
+
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(2));
+    expect(mockUpdate).toHaveBeenLastCalledWith(
+      "1",
+      expect.anything(),
+      expect.objectContaining({ version: "v2" }),
+    );
+  });
+
   it("refreshes the roles of the invitation form after saving a role", async () => {
     setSelectedRole("1");
-    mockUpdate.mockResolvedValueOnce(undefined);
+    mockUpdate.mockResolvedValueOnce(savedRole);
     const readInvitationRoles = vi.fn(() => Promise.resolve([]));
     function InvitationRoles() {
       useSWRAuth(enrollmentKeys.roles(), readInvitationRoles);
@@ -932,7 +979,7 @@ describe("RolesPage", () => {
 
     it("keeps an updated role when the reload fails", async () => {
       setSelectedRole("1");
-      mockUpdate.mockResolvedValueOnce(undefined);
+      mockUpdate.mockResolvedValueOnce(savedRole);
       render(<RolesPage />);
       await screen.findByTestId("role-detail-panel");
       mockGetList.mockClear();

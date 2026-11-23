@@ -118,6 +118,14 @@ export default function TraegerAccountsPage() {
     },
   );
 
+  // Reads the people again for a refused role change; rejects when the read
+  // fails, where SWR would resolve with the old list (ADR 0311).
+  const reloadMembers = async () => {
+    const fresh = await fetchTraegerBuero();
+    await mutate(fresh, { revalidate: false });
+    return fresh.members;
+  };
+
   const closeConfirm = () => {
     setPending(null);
     confirmErrors.clear();
@@ -385,7 +393,9 @@ export default function TraegerAccountsPage() {
           <ChangeTraegerRolesModal
             member={refused ? null : editing}
             members={buero.members}
+            reload={reloadMembers}
             onClose={() => setEditing(null)}
+            onSaved={showSavedMember}
             onChanged={afterWrite.refresh}
           />
           <ChangeTraegerMemberNameModal

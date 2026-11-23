@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports"
 	identityPorts "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // TraegerAccounts is the Träger-Büro account management (ADR 0084 section 4,
@@ -429,7 +430,15 @@ func (t *TraegerAccounts) RevokeTraegerInvitation(ctx context.Context, actor ide
 // person (#5474). An added role reaches the person's session at its next
 // refresh; a withdrawn role ends the person's Träger sessions at once, since
 // the access token still carries its rights (#6850).
-func (t *TraegerAccounts) ChangeTraegerRoles(ctx context.Context, actor identityaccess.TraegerActor, accountID int64, roles []string) (identityaccess.TraegerMember, error) {
+//
+// The set is replaced only over the one the caller read (expectedVersion,
+// ADR 0311): the member's account row is locked before the roles are read,
+// the lock the invitation acceptance and the operator's grant take before
+// they add a role, so the check and the replacement see the same set. The
+// Leitung rows are locked first, as in every command of the Träger-Büro;
+// the acceptance and the grant only insert roles, which never waits on
+// them.
+func (t *TraegerAccounts) ChangeTraegerRoles(ctx context.Context, actor identityaccess.TraegerActor, accountID int64, roles []string, expectedVersion string) (identityaccess.TraegerMember, error) {
 	roles, err := normalizeTraegerRoles(roles)
 	if err != nil {
 		return identityaccess.TraegerMember{}, err
@@ -440,7 +449,7 @@ func (t *TraegerAccounts) ChangeTraegerRoles(ctx context.Context, actor identity
 		if !ok {
 			return identityaccess.ErrTraegerMemberNotFound
 		}
-		before, _, err := t.store.ListTraegerRoles(txCtx, actor.OrganizationID, accountID)
+		before, err := t.lockedTraegerRoles(txCtx, actor.OrganizationID, accountID, expectedVersion)
 		if err != nil {
 			return err
 		}
@@ -461,6 +470,25 @@ func (t *TraegerAccounts) ChangeTraegerRoles(ctx context.Context, actor identity
 		return t.notifyAndRecord(txCtx, actor, unit, identityaccess.TraegerAccountRolesChanged, accounts[0], before, roles)
 	})
 	return result, err
+}
+
+// lockedTraegerRoles locks the member's account row, reads its roles at the
+// Träger and refuses a set other than the one the caller read
+// (readstate.ErrChanged). An erased account is no member any more.
+func (t *TraegerAccounts) lockedTraegerRoles(ctx context.Context, organizationID, accountID int64, expectedVersion string) ([]string, error) {
+	if _, found, _, err := t.store.FindLoginAccount(ctx, accountID, true); err != nil {
+		return nil, err
+	} else if !found {
+		return nil, identityaccess.ErrTraegerMemberNotFound
+	}
+	roles, _, err := t.store.ListTraegerRoles(ctx, organizationID, accountID)
+	if err != nil {
+		return nil, err
+	}
+	if err := readstate.Check(expectedVersion, identityaccess.TraegerRolesVersion(roles)); err != nil {
+		return nil, err
+	}
+	return roles, nil
 }
 
 // replaceTraegerRoles grants the member the roles after in place of before.

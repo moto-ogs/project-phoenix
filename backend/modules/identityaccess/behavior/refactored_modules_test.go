@@ -78,13 +78,11 @@ func TestAuthService_UpdateRole_SystemRoleProtection(t *testing.T) {
 	t.Run("returns error when updating a system role", func(t *testing.T) {
 		// ARRANGE
 		systemRole := testpkg.CreateTestSystemRole(t, db, "test-system")
-		update := identityaccess.Role{
-			ID: systemRole.ID, TenantID: systemRole.TenantID, Name: systemRole.Name,
-			Description: "attempted update", IsSystem: systemRole.IsSystem, BaseRole: systemRole.BaseRole,
-		}
+		read, err := rbac.GetRole(ctx, systemRole.ID)
+		require.NoError(t, err)
 
 		// ACT
-		err := rbac.UpdateRole(ctx, update)
+		_, err = rbac.UpdateRole(ctx, systemRole.ID, identityaccess.RoleChange{Name: systemRole.Name, Description: "attempted update"}, identityaccess.RoleVersion(read))
 
 		// ASSERT
 		require.Error(t, err)

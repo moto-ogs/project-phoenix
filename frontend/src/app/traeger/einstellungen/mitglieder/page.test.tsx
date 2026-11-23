@@ -71,12 +71,14 @@ const BUERO = {
       email: "leitung@traeger.example",
       name: "Lea Leitung",
       roles: ["leadership", "administration"],
+      version: "r1",
     },
     {
       accountId: "2",
       email: "kasse@traeger.example",
       name: "",
       roles: ["billing"],
+      version: "r2",
     },
   ],
   invitations: [
@@ -88,6 +90,18 @@ const BUERO = {
     },
   ],
 };
+
+/** The role change answers the person as saved, with a new version. */
+function savedRoles(accountId: string, roles: readonly string[]) {
+  const member = BUERO.members.find((one) => one.accountId === accountId);
+  return Promise.resolve({
+    accountId,
+    email: member?.email ?? "",
+    name: member?.name ?? "",
+    roles,
+    version: `${accountId}-saved`,
+  });
+}
 
 const HISTORY = {
   entries: [
@@ -327,7 +341,7 @@ describe("TraegerAccountsPage", () => {
   });
 
   it("changes the roles of a person", async () => {
-    api.changeTraegerRoles.mockResolvedValue(undefined);
+    api.changeTraegerRoles.mockImplementation(savedRoles);
     renderPage();
 
     await openMenu("kasse@traeger.example");
@@ -343,17 +357,18 @@ describe("TraegerAccountsPage", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
 
     await waitFor(() =>
-      expect(api.changeTraegerRoles).toHaveBeenCalledWith("2", [
-        "billing",
-        "personnel",
-      ]),
+      expect(api.changeTraegerRoles).toHaveBeenCalledWith(
+        "2",
+        ["billing", "personnel"],
+        "r2",
+      ),
     );
   });
 
   // #5992: the role Dokumente has its own row with a plain description. A
   // person who holds it keeps it when someone changes their other roles.
   it("shows the role Dokumente and keeps it when roles change", async () => {
-    api.changeTraegerRoles.mockResolvedValue(undefined);
+    api.changeTraegerRoles.mockImplementation(savedRoles);
     api.fetchTraegerBuero.mockResolvedValue({
       ...BUERO,
       members: [
@@ -363,6 +378,7 @@ describe("TraegerAccountsPage", () => {
           name: "",
           email: "verwaltung@traeger.example",
           roles: ["administration", "documents"],
+          version: "r3",
         },
       ],
     });
@@ -387,16 +403,16 @@ describe("TraegerAccountsPage", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
 
     await waitFor(() =>
-      expect(api.changeTraegerRoles).toHaveBeenCalledWith("3", [
-        "administration",
-        "documents",
-        "personnel",
-      ]),
+      expect(api.changeTraegerRoles).toHaveBeenCalledWith(
+        "3",
+        ["administration", "documents", "personnel"],
+        "r3",
+      ),
     );
   });
 
   it("keeps Leitung for its only holder and says why", async () => {
-    api.changeTraegerRoles.mockResolvedValue(undefined);
+    api.changeTraegerRoles.mockImplementation(savedRoles);
     renderPage();
 
     await openMenu("leitung@traeger.example");
@@ -418,12 +434,90 @@ describe("TraegerAccountsPage", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
 
     await waitFor(() =>
-      expect(api.changeTraegerRoles).toHaveBeenCalledWith("1", [
-        "leadership",
-        "administration",
-        "school_access",
-      ]),
+      expect(api.changeTraegerRoles).toHaveBeenCalledWith(
+        "1",
+        ["leadership", "administration", "school_access"],
+        "r1",
+      ),
     );
+  });
+
+  // ADR 0311: the change rests on the roles as read. A refusal shows the
+  // stored roles, and the next save goes out over their version.
+  it("shows the stored roles after a refusal and saves over their version", async () => {
+    const changed = new ApiError("changed", 409, {
+      code: "general.changed_since_read",
+    });
+    api.changeTraegerRoles
+      .mockRejectedValueOnce(changed)
+      .mockImplementation(savedRoles);
+    api.fetchTraegerBuero.mockResolvedValueOnce(BUERO).mockResolvedValue({
+      ...BUERO,
+      members: [
+        BUERO.members[0]!,
+        {
+          ...BUERO.members[1]!,
+          roles: ["billing", "read_only"],
+          version: "r2b",
+        },
+      ],
+    });
+    renderPage();
+
+    await openMenu("kasse@traeger.example");
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Rollen bearbeiten" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("checkbox", { name: /Personal/ }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() =>
+      expect(
+        within(dialog).getByRole("checkbox", { name: /Nur lesen/ }),
+      ).toBeChecked(),
+    );
+    expect(
+      within(dialog).getByRole("checkbox", { name: /Personal/ }),
+    ).not.toBeChecked();
+    expect(api.changeTraegerRoles).toHaveBeenLastCalledWith(
+      "2",
+      ["billing", "personnel"],
+      "r2",
+    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(api.changeTraegerRoles).toHaveBeenLastCalledWith(
+        "2",
+        ["billing", "read_only"],
+        "r2b",
+      ),
+    );
+  });
+
+  // ADR 0311 rule 6: after a refusal whose read fails, nothing is sent.
+  it("sends no role change after a refusal until the stored roles are read", async () => {
+    api.changeTraegerRoles.mockRejectedValue(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    api.fetchTraegerBuero
+      .mockResolvedValueOnce(BUERO)
+      .mockRejectedValue(
+        new ApiError("down", 503, { code: "general.unavailable" }),
+      );
+    renderPage();
+
+    await openMenu("kasse@traeger.example");
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Rollen bearbeiten" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(api.fetchTraegerBuero).toHaveBeenCalledTimes(2));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => expect(api.fetchTraegerBuero).toHaveBeenCalledTimes(2));
+    expect(api.changeTraegerRoles).toHaveBeenCalledTimes(1);
   });
 
   it("lets Leitung pass on once another person holds it", async () => {
@@ -735,7 +829,7 @@ describe("TraegerAccountsPage", () => {
   );
 
   it("reads the history again after a change", async () => {
-    api.changeTraegerRoles.mockResolvedValue(undefined);
+    api.changeTraegerRoles.mockImplementation(savedRoles);
     renderPage();
     await waitFor(() =>
       expect(api.fetchTraegerAccountHistory).toHaveBeenCalledTimes(1),
@@ -853,7 +947,7 @@ describe("TraegerAccountsPage", () => {
     });
 
     it("keeps changed roles and the list shown when the reload fails", async () => {
-      api.changeTraegerRoles.mockResolvedValue(undefined);
+      api.changeTraegerRoles.mockImplementation(savedRoles);
       renderPage();
 
       await openMenu("kasse@traeger.example");

@@ -28,6 +28,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	identityaccessCompose "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose"
 	authAPI "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account"
+	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/settings"
 	transactionFailures "github.com/moto-ogs/project-phoenix/modules/transactionruntime"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -991,8 +992,9 @@ func TestRoleManagement_BaseRole(t *testing.T) {
 
 		// Update name only — no base_role in payload
 		body := map[string]string{
-			"name":        fmt.Sprintf("renamed-%d", time.Now().UnixNano()),
-			"description": "Updated desc",
+			"name":             fmt.Sprintf("renamed-%d", time.Now().UnixNano()),
+			"description":      "Updated desc",
+			"expected_version": readRoleVersion(t, router, adminClaims, role.ID),
 		}
 		req := testutil.NewJSONRequest(t, "PUT", fmt.Sprintf("/auth/roles/%d", role.ID), body)
 		rr := testutil.ExecuteWithAuthPermissions(t, router, req, adminClaims, []string{"roles:update"})
@@ -1045,9 +1047,10 @@ func TestRoleManagement_BaseRole(t *testing.T) {
 
 		// Update to a different base_role
 		body := map[string]string{
-			"name":        fmt.Sprintf("changed-%d", time.Now().UnixNano()),
-			"description": "Changed base_role",
-			"base_role":   "guardian",
+			"name":             fmt.Sprintf("changed-%d", time.Now().UnixNano()),
+			"description":      "Changed base_role",
+			"base_role":        "guardian",
+			"expected_version": readRoleVersion(t, router, adminClaims, role.ID),
 		}
 		req := testutil.NewJSONRequest(t, "PUT", fmt.Sprintf("/auth/roles/%d", role.ID), body)
 		rr := testutil.ExecuteWithAuthPermissions(t, router, req, adminClaims, []string{"roles:update"})
@@ -1107,8 +1110,9 @@ func TestRoleUpdate(t *testing.T) {
 		role := testpkg.CreateTestRole(t, tc.db, "UpdateTestRole")
 
 		body := map[string]string{
-			"name":        fmt.Sprintf("updated-role-%d", time.Now().UnixNano()),
-			"description": "Updated description",
+			"name":             fmt.Sprintf("updated-role-%d", time.Now().UnixNano()),
+			"description":      "Updated description",
+			"expected_version": readRoleVersion(t, router, adminClaims, role.ID),
 		}
 
 		req := testutil.NewJSONRequest(t, "PUT", fmt.Sprintf("/auth/roles/%d", role.ID), body)
@@ -1140,6 +1144,61 @@ func TestRoleUpdate(t *testing.T) {
 
 		testutil.AssertForbidden(t, rr)
 	})
+
+	// ADR 0311: an edit saves only over the role it was read from. A stale
+	// or missing version is refused and writes nothing; the version the
+	// master-data PUT answers saves the next edit without a read. The
+	// permission selection carries its own version, so saving it refuses no
+	// following edit of the master data.
+	t.Run("update saves only over the read version", func(t *testing.T) {
+		role := testpkg.CreateTestRole(t, tc.db, "VersionedRole")
+		read := readRoleVersion(t, router, adminClaims, role.ID)
+		path := fmt.Sprintf("/auth/roles/%d/master-data/", role.ID)
+		edit := func(name, version string) *httptest.ResponseRecorder {
+			body := map[string]string{"name": name, "description": "Stand", "expected_version": version}
+			return testutil.ExecuteWithAuthPermissions(t, router, testutil.NewJSONRequest(t, "PUT", path, body), adminClaims, []string{"roles:update"})
+		}
+
+		first := fmt.Sprintf("first-%d", time.Now().UnixNano())
+		rr := edit(first, read)
+		testutil.AssertSuccessResponse(t, rr, http.StatusOK)
+		saved := testutil.ParseJSONResponse(t, rr.Body.Bytes())["data"].(map[string]interface{})
+		assert.Equal(t, first, saved["name"])
+		answered, _ := saved["version"].(string)
+		require.NotEmpty(t, answered)
+		require.NotEqual(t, read, answered, "the save answers the stored version")
+
+		for name, version := range map[string]string{"older version": read, "no version": ""} {
+			rr = edit(fmt.Sprintf("stale-%d", time.Now().UnixNano()), version)
+			assert.Equal(t, http.StatusConflict, rr.Code, name)
+			assert.Contains(t, rr.Body.String(), "general.changed_since_read", name)
+		}
+		getRr := testutil.ExecuteWithAuthPermissions(t, router, testutil.NewJSONRequest(t, "GET", fmt.Sprintf("/auth/roles/%d", role.ID), nil), adminClaims, []string{"roles:read"})
+		testutil.AssertSuccessResponse(t, getRr, http.StatusOK)
+		assert.Equal(t, first, testutil.ParseJSONResponse(t, getRr.Body.Bytes())["data"].(map[string]interface{})["name"], "a refused edit writes nothing")
+
+		selectionPath := fmt.Sprintf("/auth/roles/%d/permission-selection/", role.ID)
+		selectionRr := testutil.ExecuteWithAuthPermissions(t, router, testutil.NewJSONRequest(t, "GET", selectionPath, nil), adminClaims, []string{"roles:manage"})
+		testutil.AssertSuccessResponse(t, selectionRr, http.StatusOK)
+		selection := testutil.ParseJSONResponse(t, selectionRr.Body.Bytes())["data"].(map[string]interface{})
+		replaceRr := testutil.ExecuteWithAuthPermissions(t, router, testutil.NewJSONRequest(t, "PUT", selectionPath,
+			map[string]any{"permission_ids": []string{}, "expected_version": selection["version"]}), adminClaims, []string{"roles:manage"})
+		testutil.AssertSuccessResponse(t, replaceRr, http.StatusOK)
+
+		rr = edit(fmt.Sprintf("second-%d", time.Now().UnixNano()), answered)
+		testutil.AssertSuccessResponse(t, rr, http.StatusOK)
+	})
+}
+
+// readRoleVersion reads the role's version the way the edit form does.
+func readRoleVersion(t *testing.T, router chi.Router, claims sessiontoken.AppClaims, roleID int64) string {
+	t.Helper()
+	req := testutil.NewJSONRequest(t, "GET", fmt.Sprintf("/auth/roles/%d", roleID), nil)
+	rr := testutil.ExecuteWithAuthPermissions(t, router, req, claims, []string{"roles:read"})
+	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
+	version, _ := testutil.ParseJSONResponse(t, rr.Body.Bytes())["data"].(map[string]interface{})["version"].(string)
+	require.NotEmpty(t, version, "the role read carries its version")
+	return version
 }
 
 // TestRolePermissionAssignment tests role permission assignment endpoints

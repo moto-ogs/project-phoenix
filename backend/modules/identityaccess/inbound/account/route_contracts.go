@@ -48,6 +48,10 @@ func AdminRouteContracts(caregiverState any) []common.RouteContract {
 	// version a role change sends back.
 	deprecatedAccountRoles := route("GET", "/accounts/{accountId}/roles/", nil, []RoleResponse{})
 	deprecatedAccountRoles.Deprecated = true
+	// Deprecated for one release (ADR 0270): the master-data PUT answers the
+	// stored role with its version.
+	deprecatedUpdateRole := route("PUT", "/roles/{id}/", UpdateRoleRequest{}, nil)
+	deprecatedUpdateRole.Deprecated = true
 	listRoles.Query = []common.QueryParam{{Name: "name", Kind: common.QueryString}}
 	listPermissions := route("GET", "/permissions/", nil, []PermissionResponse{})
 	listPermissions.Query = []common.QueryParam{
@@ -58,7 +62,8 @@ func AdminRouteContracts(caregiverState any) []common.RouteContract {
 		listRoles,
 		route("POST", "/roles/", CreateRoleRequest{}, RoleResponse{}),
 		route("GET", "/roles/{id}/", nil, RoleResponse{}),
-		route("PUT", "/roles/{id}/", UpdateRoleRequest{}, nil),
+		deprecatedUpdateRole,
+		route("PUT", "/roles/{id}/master-data/", UpdateRoleRequest{}, RoleResponse{}),
 		route("DELETE", "/roles/{id}/", nil, nil),
 		deprecatedRolePermissions,
 		route("GET", "/roles/{roleId}/permission-selection/", nil, RolePermissionsResponse{}),

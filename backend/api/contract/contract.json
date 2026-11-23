@@ -22467,11 +22467,27 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "request": {
         "kind": "ref",
         "ref": "UpdateRoleRequest"
       },
       "no_data": true
+    },
+    {
+      "method": "PUT",
+      "pattern": "/auth/roles/{id}/master-data/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "UpdateRoleRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "RoleResponse"
+      }
     },
     {
       "method": "PUT",
@@ -84560,6 +84576,12 @@
           }
         },
         {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "permissions",
           "optional": true,
           "schema": {
@@ -105041,6 +105063,12 @@
             "kind": "instant",
             "nullable": true
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -106479,6 +106507,13 @@
             "elem": {
               "kind": "string"
             }
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -108862,6 +108897,13 @@
           "schema": {
             "kind": "string",
             "nullable": true
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]

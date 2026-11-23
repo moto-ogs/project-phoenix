@@ -1137,10 +1137,11 @@ func TestAuthService_UpdateRole(t *testing.T) {
 		role, err := rbac.CreateRole(ctx, name, "original description", testpkg.StrPtr("user"))
 		require.NoError(t, err)
 
-		role.Description = "updated description"
+		read, err := rbac.GetRole(ctx, role.ID)
+		require.NoError(t, err)
 
 		// ACT
-		err = rbac.UpdateRole(ctx, role)
+		_, err = rbac.UpdateRole(ctx, role.ID, identityaccess.RoleChange{Name: role.Name, Description: "updated description", BaseRole: role.BaseRole}, identityaccess.RoleVersion(read))
 
 		// ASSERT
 		require.NoError(t, err)

@@ -76,12 +76,19 @@ export function toCreateRoleRequest(data: RoleForm): CreateRoleRequest {
   };
 }
 
-/** A system role keeps its base_role. */
-export function toUpdateRoleRequest(data: Partial<Role>): UpdateRoleRequest {
+/**
+ * A system role keeps its base_role. The edit carries the version of the
+ * role it was made from (ADR 0311); a role changed since is refused.
+ */
+export function toUpdateRoleRequest(
+  data: Partial<Role>,
+  current?: Pick<Role, "version">,
+): UpdateRoleRequest {
   return {
     name: data.name,
     description: data.description,
     ...(!data.isSystem && { base_role: data.baseRole }),
+    expected_version: current?.version,
   };
 }
 
@@ -108,12 +115,15 @@ export const rolesConfig = defineEntityConfig<Role>({
           body: toCreateRoleRequest(data),
         }),
       ),
-    // The route answers without the role; the page reloads it.
-    update: (id, data) =>
-      bffJson("tenant", "PUT /auth/roles/{id}/", {
-        params: { id },
-        body: toUpdateRoleRequest(data),
-      }),
+    // Answers the stored role with its new version: the next edit sends it
+    // without a read. It carries no permissions.
+    update: async (id, data, current) =>
+      mapRoleResponse(
+        await bffJson("tenant", "PUT /auth/roles/{id}/master-data/", {
+          params: { id },
+          body: toUpdateRoleRequest(data, current),
+        }),
+      ),
     delete: (id) =>
       bffJson("tenant", "DELETE /auth/roles/{id}/", { params: { id } }),
   },
