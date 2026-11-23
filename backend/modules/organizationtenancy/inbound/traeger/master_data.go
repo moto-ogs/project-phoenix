@@ -97,6 +97,9 @@ type ContactRequest struct {
 	Name  string `json:"name"`
 	Phone string `json:"phone"`
 	Email string `json:"email"`
+	// ExpectedVersion is the section's contact_version the form was read
+	// with (ADR 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // Bind accepts the body; the Owner validates it.
@@ -107,6 +110,9 @@ func (req *ContactRequest) Bind(*http.Request) error { return nil }
 type WithdrawalContactRequest struct {
 	Phone string `json:"phone"`
 	Email string `json:"email"`
+	// ExpectedVersion is the section's withdrawal_version the form was
+	// read with (ADR 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // Bind accepts the body; the Owner validates it.
@@ -128,6 +134,14 @@ func (req *BankAccountRequest) Bind(*http.Request) error { return nil }
 
 func (req *BankAccountRequest) input() organizationtenancy.TraegerBankAccountInput {
 	return organizationtenancy.TraegerBankAccountInput(*req)
+}
+
+// BankAccountUpdateRequest is the body of PUT
+// /traeger/master-data/bank-accounts/{id}: the account with the version it
+// was read with (ADR 0311).
+type BankAccountUpdateRequest struct {
+	BankAccountRequest
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // session returns the Träger and the account of the session, or renders 401.
@@ -276,7 +290,8 @@ func (rs *MasterDataResource) updateContact(w http.ResponseWriter, r *http.Reque
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	contact, err := rs.masterData.UpdateContact(r.Context(), organizationID, accountID, organizationtenancy.TraegerContact(*req))
+	contact, err := rs.masterData.UpdateContact(r.Context(), organizationID, accountID,
+		organizationtenancy.TraegerContact{Name: req.Name, Phone: req.Phone, Email: req.Email}, req.ExpectedVersion)
 	if err != nil {
 		renderMasterDataError(w, r, err)
 		return
@@ -294,7 +309,8 @@ func (rs *MasterDataResource) updateWithdrawalContact(w http.ResponseWriter, r *
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	contact, err := rs.masterData.UpdateWithdrawalContact(r.Context(), organizationID, accountID, organizationtenancy.TraegerWithdrawalContact(*req))
+	contact, err := rs.masterData.UpdateWithdrawalContact(r.Context(), organizationID, accountID,
+		organizationtenancy.TraegerWithdrawalContact{Phone: req.Phone, Email: req.Email}, req.ExpectedVersion)
 	if err != nil {
 		renderMasterDataError(w, r, err)
 		return
@@ -330,12 +346,12 @@ func (rs *MasterDataResource) updateBankAccount(w http.ResponseWriter, r *http.R
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	req := &BankAccountRequest{}
+	req := &BankAccountUpdateRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	account, err := rs.masterData.UpdateBankAccount(r.Context(), organizationID, accountID, bankAccountID, req.input())
+	account, err := rs.masterData.UpdateBankAccount(r.Context(), organizationID, accountID, bankAccountID, req.input(), req.ExpectedVersion)
 	if err != nil {
 		renderMasterDataError(w, r, err)
 		return

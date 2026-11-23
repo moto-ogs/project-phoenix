@@ -11,6 +11,7 @@ import (
 
 type seedContractNoticeOptions struct {
 	ReinterpretedEndsOn *calendar.Date `json:"reinterpreted_ends_on"`
+	OrdinaryEndsOn      *calendar.Date `json:"ordinary_ends_on"`
 	Notice              *struct {
 		TerminationKind string `json:"termination_kind"`
 		EndDecision     string `json:"end_decision"`
@@ -133,6 +134,24 @@ func seedNoticeOptions(raw []byte) (seedContractNoticeOptions, error) {
 	return envelope.Data, err
 }
 
+// seedOrdinaryEnd reads the end an ordinary termination received on day
+// holds to: the termination sends it back as the end the office was shown
+// (ADR 0311).
+func seedOrdinaryEnd(client *Client, auth AuthRef, path string, day calendar.Date) (string, error) {
+	raw, err := client.GetWithAuth(auth, path+"?received_on="+day.String())
+	if err != nil {
+		return "", fmt.Errorf("read the notice options: %w", err)
+	}
+	options, err := seedNoticeOptions(raw)
+	if err != nil {
+		return "", err
+	}
+	if options.OrdinaryEndsOn == nil {
+		return "", fmt.Errorf("no ordinary end")
+	}
+	return options.OrdinaryEndsOn.String(), nil
+}
+
 func seedNoticeCase(client *Client, auth AuthRef, contract seedNoticeContract, decision string) error {
 	id := contract.ID
 	if contract.NeedsSignature {
@@ -142,10 +161,16 @@ func seedNoticeCase(client *Client, auth AuthRef, contract seedNoticeContract, d
 	}
 	today := calendar.TodayDate()
 	body := map[string]any{"kind": "kuendigung", "termination_kind": "ordentlich", "received_on": today.String()}
+	path := seedNoticePath(int64(id))
 	if decision != "ordentlich" {
 		body["termination_kind"], body["reason"] = "ausserordentlich", "Wir ziehen um."
+	} else {
+		ends, err := seedOrdinaryEnd(client, auth, path, today)
+		if err != nil {
+			return fmt.Errorf("contract %d: %w", id, err)
+		}
+		body["expected_ends_on"] = ends
 	}
-	path := seedNoticePath(int64(id))
 	raw, err := client.PostWithAuth(auth, path, body)
 	if err != nil {
 		return fmt.Errorf("record the %s termination: %w", decision, err)

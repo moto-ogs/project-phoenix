@@ -16,6 +16,8 @@ const initial: TraegerMasterData = {
   contact: { name: "Petra Lindner", phone: "", email: "alt@example.test" },
   withdrawal: { phone: "", email: "alt@example.test" },
   logo: null,
+  contactVersion: "c-1",
+  withdrawalVersion: "w-1",
   bankAccounts: [],
 };
 

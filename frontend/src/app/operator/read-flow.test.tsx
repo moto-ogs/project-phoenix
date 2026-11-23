@@ -110,6 +110,7 @@ vi.mock("~/components/operator/delete-person-modal", () => ({
 }));
 
 const org: OrganizationSummary = {
+  version: "v-1",
   id: "1",
   name: "Träger A",
   slug: "org-a",
@@ -124,6 +125,7 @@ const org: OrganizationSummary = {
   personenCount: 0,
 };
 const school: SchoolSummary = {
+  version: "v-1",
   id: "10",
   organizationId: "1",
   organizationName: org.name,

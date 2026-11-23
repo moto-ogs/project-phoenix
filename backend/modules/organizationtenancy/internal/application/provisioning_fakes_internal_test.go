@@ -1229,3 +1229,20 @@ func int64Ptr(value int64) *int64 { return &value }
 func (d *fakeDashboard) AllSchoolsPWAUsage(ctx context.Context, window time.Duration) ([]organizationtenancy.DashboardPWAUsage, error) {
 	return d.PWAUsage(ctx, 0, window)
 }
+
+// updateSchool updates a school as the operator's form does: with the
+// version of the school as stored, unless the case sets its own (ADR 0311).
+func (h *provisioningHarness) updateSchool(ctx context.Context, id int64, changes organizationtenancy.SchoolChanges, operatorID int64, ip net.IP) (*organizationtenancy.School, error) {
+	if school, ok := h.engine.schools[id]; ok && changes.ExpectedVersion == "" {
+		changes.ExpectedVersion = organizationtenancy.SchoolVersion(*school)
+	}
+	return h.svc.UpdateSchool(ctx, id, changes, operatorID, ip)
+}
+
+// updateOrganization updates an organisation as the operator's form does.
+func (h *provisioningHarness) updateOrganization(ctx context.Context, id int64, changes organizationtenancy.OrganizationChanges, operatorID int64, ip net.IP) (*organizationtenancy.Organization, error) {
+	if organization, ok := h.engine.orgs[id]; ok && changes.ExpectedVersion == "" {
+		changes.ExpectedVersion = organizationtenancy.OrganizationVersion(*organization)
+	}
+	return h.svc.UpdateOrganization(ctx, id, changes, operatorID, ip)
+}

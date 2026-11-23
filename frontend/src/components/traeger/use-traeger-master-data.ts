@@ -13,6 +13,8 @@ const EMPTY: TraegerMasterData = {
   withdrawal: { phone: "", email: "" },
   logo: null,
   bankAccounts: [],
+  contactVersion: "",
+  withdrawalVersion: "",
 };
 
 /**
@@ -34,6 +36,25 @@ export function useTraegerMasterData(object: string, enabled = true) {
     await mutate(fetchTraegerMasterData(), { revalidate: false });
   }, [mutate]);
 
+  /**
+   * Reads again after a refused save and answers the stored master data;
+   * rejects when the read fails (ADR 0311, rule 6).
+   */
+  const reload = useCallback(async () => {
+    const next = await fetchTraegerMasterData();
+    await mutate(next, { revalidate: false });
+    return next;
+  }, [mutate]);
+
+  /** Hands a section's save answer to the read (ADR 0311, rule 5). */
+  const write = useCallback(
+    (change: Partial<TraegerMasterData>) =>
+      mutate((current) => (current ? { ...current, ...change } : current), {
+        revalidate: false,
+      }),
+    [mutate],
+  );
+
   // SWR drops the answer of an overtaken read but rejects with its failure;
   // only the latest refresh may report one.
   const latest = useRef(0);
@@ -54,6 +75,8 @@ export function useTraegerMasterData(object: string, enabled = true) {
     failure: resource.failure,
     error: resource.error,
     read,
+    reload,
+    write,
     refresh,
   };
 }

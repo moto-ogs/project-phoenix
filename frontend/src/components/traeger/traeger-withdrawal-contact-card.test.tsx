@@ -5,6 +5,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
@@ -37,11 +38,42 @@ function card(
   return (
     <ToastProvider>
       <TraegerWithdrawalContactCard
+        version="w-1"
+        reload={vi.fn()}
         withdrawal={withdrawal}
         contact={contact}
         letterheadText={LETTERHEAD}
         canEdit={canEdit}
         onSaved={() => Promise.resolve()}
+      />
+    </ToastProvider>
+  );
+}
+
+const resolved = () => Promise.resolve();
+
+/** The page: its read takes the save's answer (ADR 0311, rule 5). */
+function Page({
+  onSaved = resolved,
+}: Readonly<{ onSaved?: () => Promise<unknown> }>) {
+  const [read, setRead] = useState({
+    value: { phone: "", email: "" },
+    version: "w-1",
+  });
+  return (
+    <ToastProvider>
+      <TraegerWithdrawalContactCard
+        withdrawal={read.value}
+        version={read.version}
+        reload={vi.fn()}
+        write={(saved) => {
+          setRead(saved);
+          return Promise.resolve();
+        }}
+        contact={CONTACT}
+        letterheadText={LETTERHEAD}
+        canEdit
+        onSaved={onSaved}
       />
     </ToastProvider>
   );
@@ -115,10 +147,10 @@ describe("TraegerWithdrawalContactCard", () => {
 
   it("saves and shows the values as the backend keeps them", async () => {
     mockSave.mockResolvedValue({
-      phone: "",
-      email: "widerruf@traeger.example",
+      value: { phone: "", email: "widerruf@traeger.example" },
+      version: "w-2",
     });
-    render(card());
+    render(<Page />);
     fireEvent.change(screen.getByLabelText("E-Mail für Widerrufe"), {
       target: { value: " Widerruf@Traeger.Example " },
     });
@@ -129,11 +161,14 @@ describe("TraegerWithdrawalContactCard", () => {
         "widerruf@traeger.example",
       ),
     );
-    expect(mockSave).toHaveBeenCalledWith({
-      phone: "",
-      // An e-mail field drops the spaces itself; the backend lowers the case.
-      email: "Widerruf@Traeger.Example",
-    });
+    expect(mockSave).toHaveBeenCalledWith(
+      {
+        phone: "",
+        // An e-mail field drops the spaces itself; the backend lowers the case.
+        email: "Widerruf@Traeger.Example",
+      },
+      "w-1",
+    );
     expect(
       screen.queryByRole("button", { name: "Speichern" }),
     ).not.toBeInTheDocument();
@@ -151,8 +186,8 @@ describe("TraegerWithdrawalContactCard", () => {
   it("keeps the saved values when the page reload fails", async () => {
     mockSave.mockClear();
     mockSave.mockResolvedValue({
-      phone: "",
-      email: "widerruf@traeger.example",
+      value: { phone: "", email: "widerruf@traeger.example" },
+      version: "w-2",
     });
     const onSaved = vi
       .fn()
@@ -160,17 +195,7 @@ describe("TraegerWithdrawalContactCard", () => {
         new ApiError("down", 503, { code: "general.unavailable" }),
       )
       .mockResolvedValue(undefined);
-    render(
-      <ToastProvider>
-        <TraegerWithdrawalContactCard
-          withdrawal={{ phone: "", email: "" }}
-          contact={CONTACT}
-          letterheadText={LETTERHEAD}
-          canEdit
-          onSaved={onSaved}
-        />
-      </ToastProvider>,
-    );
+    render(<Page onSaved={onSaved} />);
     fireEvent.change(screen.getByLabelText("E-Mail für Widerrufe"), {
       target: { value: "widerruf@traeger.example" },
     });

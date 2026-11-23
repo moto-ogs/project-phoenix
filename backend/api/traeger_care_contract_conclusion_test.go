@@ -97,7 +97,7 @@ func TestCareContractIsConcludedAtTheAcceptanceWhereTheSchoolSaysSo(t *testing.T
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertrag Abschluss")
 	token := f.office.token
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, token, f.school, f.offering, careContractTemplate).Code)
 
 	// Weg a is the default: the run leaves the child to the Träger-Büro.
 	run := careContractConclusionRun(t, f)
@@ -221,7 +221,7 @@ func TestCareContractConclusionHoldsBackAChildItCannotConcludeYet(t *testing.T) 
 
 	// Without the parents' address the contract cannot reach them: the
 	// whole Träger transaction rolls back, so no draft blocks a later run.
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	recordCareContractAcceptance(t, f)
 	_, err := f.db.ExecContext(context.Background(), `UPDATE enrollment.requests SET guardian_email = ''
 		WHERE id = (SELECT request_id FROM enrollment.request_children WHERE id = ?)`, f.child)
@@ -279,7 +279,7 @@ func TestCareContractConclusionModesNameTheWayOfEverySchool(t *testing.T) {
 func TestCareContractConclusionRequiresTheTickedConditions(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertrag Nachweis")
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	setTraegerConclusionMode(t, f, carecontract.ModeOnAcceptance)
 	assert.Equal(t, carecontract.SkipAcceptanceMissing, candidateAcceptanceIssue(t, f))
 	run := careContractConclusionRun(t, f)
@@ -303,7 +303,7 @@ func TestCareContractConclusionRequiresTheTickedConditions(t *testing.T) {
 func TestCareContractAutomaticModeRefusesManualDrafts(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertrag Keine Entwürfe")
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	setTraegerConclusionMode(t, f, carecontract.ModeOnAcceptance)
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, "/traeger/contracts", map[string]any{"contracts": []any{f.key()}})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
@@ -316,9 +316,9 @@ func TestCareContractAutomaticModeRefusesManualDrafts(t *testing.T) {
 func TestCareContractConclusionKeepsConsentAfterAnUnchangedTemplateSave(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertrag Unveränderte Bedingungen")
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	recordCareContractAcceptance(t, f)
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	setTraegerConclusionMode(t, f, carecontract.ModeOnAcceptance)
 	assert.Empty(t, candidateAcceptanceIssue(t, f))
 	run := careContractConclusionRun(t, f)
@@ -369,7 +369,7 @@ func recordCareContractTextAcceptance(t *testing.T, f careContractFixture, text 
 func TestCareContractConclusionRejectsUnrelatedConsent(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertrag Fremde Zustimmung")
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	recordCareContractTextAcceptance(t, f, "Ich stimme der Schulordnung zu.")
 	setTraegerConclusionMode(t, f, carecontract.ModeOnAcceptance)
 	assert.Equal(t, carecontract.SkipAcceptanceMissing, candidateAcceptanceIssue(t, f))
@@ -387,14 +387,14 @@ func TestCareContractConclusionRejectsUnrelatedConsent(t *testing.T) {
 func TestCareContractConclusionRefusesChangedConditions(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertrag Geänderte Bedingungen")
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	recordCareContractAcceptance(t, f)
 	changed := map[string]any{}
 	for key, value := range careContractTemplate {
 		changed[key] = value
 	}
 	changed["notice_months"] = 3
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), changed).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, changed).Code)
 	setTraegerConclusionMode(t, f, carecontract.ModeOnAcceptance)
 	assert.Equal(t, carecontract.SkipAcceptanceChanged, candidateAcceptanceIssue(t, f),
 		"the office sees why the contract does not come about")
@@ -434,7 +434,7 @@ func candidateMailBlock(t *testing.T, f careContractFixture) string {
 func TestCareContractCandidatesNameTheHeldMailTheConclusionWaitsFor(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertrag Gesperrte Adresse")
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	recordCareContractAcceptance(t, f)
 	_, err := f.db.ExecContext(context.Background(), `INSERT INTO platform.email_suppressions (tenant_id, address, reason)
   VALUES (?, 'erika.muster@example.org', 'failed')`, f.school)

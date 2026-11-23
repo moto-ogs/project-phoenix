@@ -165,9 +165,17 @@ func TestCareNoticeOriginalStaysByteIdenticalAfterEveryLaterChange(t *testing.T)
 	var accountID int64
 	require.NoError(t, f.db.NewRaw(`SELECT id FROM platform.traeger_bank_accounts WHERE organization_id = ? ORDER BY id LIMIT 1`,
 		f.office.organization).Scan(ctx, &accountID))
+	// The office changes the account as it read it (ADR 0311).
+	var version string
+	for _, account := range masterDataProfileOf(t, f.traeger, administration).BankAccounts {
+		if int64(account.ID) == accountID {
+			version = account.Version
+		}
+	}
 	rec = traegerJSON(t, f.traeger, administration.token, http.MethodPut,
 		"/traeger/master-data/bank-accounts/"+strconv.FormatInt(accountID, 10), masterDataBankAccount{
 			Label: "Elternbeiträge", AccountHolder: "Neuer Träger e.V.", IBAN: traegerTestIBAN, BankName: "Andere Bank", IsDefault: true,
+			ExpectedVersion: version,
 		})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 

@@ -997,6 +997,8 @@ export interface TraegerBankAccountInput {
 /** A bank account of the Träger; exactly one is the default. */
 export interface TraegerBankAccount extends TraegerBankAccountInput {
   readonly id: string;
+  /** The read state a change sends back (ADR 0311). */
+  readonly version: string;
 }
 
 /** The master data of the Träger (#4653). */
@@ -1005,6 +1007,18 @@ export interface TraegerMasterData {
   readonly withdrawal: TraegerWithdrawalContact;
   readonly logo: TraegerLogo | null;
   readonly bankAccounts: readonly TraegerBankAccount[];
+  /**
+   * The read state of each section (ADR 0311): both share one row, so each
+   * has its own token and a save of one leaves the other's as it was.
+   */
+  readonly contactVersion: string;
+  readonly withdrawalVersion: string;
+}
+
+/** A section of the master data as stored, with its read state. */
+export interface TraegerSection<T> {
+  readonly value: T;
+  readonly version: string;
 }
 
 function mapTraegerLogo(
@@ -1030,6 +1044,7 @@ function mapTraegerBankAccount(
     bic: account.bic,
     bankName: account.bank_name,
     isDefault: account.is_default,
+    version: account.version,
   };
 }
 
@@ -1061,23 +1076,26 @@ export async function fetchTraegerMasterData(): Promise<TraegerMasterData> {
     withdrawal: { ...data.withdrawal },
     logo: data.logo ? mapTraegerLogo(data.logo) : null,
     bankAccounts: (data.bank_accounts ?? []).map(mapTraegerBankAccount),
+    contactVersion: data.contact_version,
+    withdrawalVersion: data.withdrawal_version,
   };
 }
 
 /**
- * Stores the contact person and returns it as the backend keeps it: trimmed,
- * the e-mail address in lower case. Throws an ApiError on failure.
+ * Stores the contact person over the version it was read with (ADR 0311) and
+ * returns it as the backend keeps it: trimmed, the e-mail address in lower
+ * case, with its new version. Throws an ApiError on failure.
  */
 export async function saveTraegerContact(
   contact: TraegerContact,
-): Promise<TraegerContact> {
+  expectedVersion: string,
+): Promise<TraegerSection<TraegerContact>> {
   const saved = await bffJson("org", "PUT /traeger/master-data/contact", {
-    body: contact,
+    body: { ...contact, expected_version: expectedVersion },
   });
   return {
-    name: saved?.name ?? contact.name,
-    phone: saved?.phone ?? contact.phone,
-    email: saved?.email ?? contact.email,
+    value: { name: saved.name, phone: saved.phone, email: saved.email },
+    version: saved.version,
   };
 }
 
@@ -1087,15 +1105,16 @@ export async function saveTraegerContact(
  */
 export async function saveTraegerWithdrawalContact(
   contact: TraegerWithdrawalContact,
-): Promise<TraegerWithdrawalContact> {
+  expectedVersion: string,
+): Promise<TraegerSection<TraegerWithdrawalContact>> {
   const saved = await bffJson(
     "org",
     "PUT /traeger/master-data/withdrawal-contact",
-    { body: contact },
+    { body: { ...contact, expected_version: expectedVersion } },
   );
   return {
-    phone: saved?.phone ?? contact.phone,
-    email: saved?.email ?? contact.email,
+    value: { phone: saved.phone, email: saved.email },
+    version: saved.version,
   };
 }
 
@@ -1124,15 +1143,19 @@ export async function createTraegerBankAccount(
   );
 }
 
-/** Changes a bank account. Throws an ApiError on failure. */
+/**
+ * Changes a bank account over the version it was read with (ADR 0311).
+ * Throws an ApiError on failure.
+ */
 export async function updateTraegerBankAccount(
   id: string,
   input: TraegerBankAccountInput,
+  expectedVersion: string,
 ): Promise<TraegerBankAccount> {
   return mapTraegerBankAccount(
     await bffJson("org", "PUT /traeger/master-data/bank-accounts/{id}", {
       params: { id },
-      body: backendBankAccount(input),
+      body: { ...backendBankAccount(input), expected_version: expectedVersion },
     }),
   );
 }

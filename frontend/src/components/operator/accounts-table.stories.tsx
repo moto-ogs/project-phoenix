@@ -59,6 +59,7 @@ const orgAccounts: OrgAccount[] = schoolAccounts.map((account, index) => ({
 }));
 
 const selectedSchool: School = {
+  version: "v-1",
   id: "school-0",
   organizationId: "org-1",
   name: "Grundschule Musterstadt",

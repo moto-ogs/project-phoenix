@@ -265,6 +265,7 @@ export default function TraegerAbrechnungsvorgabenPage() {
             accounts={master.masterData.bankAccounts}
             canEdit={canEditBank}
             onChanged={afterBankWrite.refresh}
+            reload={async () => (await master.reload()).bankAccounts}
           />
         </>
       ) : null}

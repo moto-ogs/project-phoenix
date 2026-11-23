@@ -55,6 +55,7 @@ function schoolSummary(id: string, slug: string) {
     child_quota_bundle_size: 20,
     child_quota_count: 0,
     device_slots: null,
+    version: "v-1",
   };
 }
 

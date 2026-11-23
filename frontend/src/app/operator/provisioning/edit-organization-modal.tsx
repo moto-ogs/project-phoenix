@@ -9,36 +9,71 @@ import { isValidSlug } from "~/lib/operator/provisioning-helpers";
 import type { Organization } from "~/lib/operator/provisioning-helpers";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { FieldWarning } from "./provisioning-shared";
 
 const logger = createLogger({ component: "EditOrganizationModal" });
+
+interface OrganizationDraft {
+  readonly name: string;
+  readonly slug: string;
+}
+
+function organizationDraftOf(organization: Organization): OrganizationDraft {
+  return { name: organization.name, slug: organization.slug };
+}
 
 export function EditOrganizationModal({
   isOpen,
   onClose,
   organization,
   onUpdated,
+  reload,
 }: {
   readonly isOpen: boolean;
   readonly onClose: () => void;
   readonly organization: Organization | null;
   /** Reloads the Träger; never rejects (#6652). */
   readonly onUpdated: RefreshAfterWrite;
+  /** Reads the Träger again after a refused save; rejects on failure. */
+  readonly reload: () => Promise<Organization>;
 }) {
-  const [orgName, setOrgName] = useState("");
-  const [orgSlug, setOrgSlug] = useState("");
+  // The fields rest on the Träger as the modal opened it (ADR 0311): a newer
+  // read refills them only while untouched, a refused save shows the stored
+  // Träger, and nothing goes out until it was read.
+  const edit = useDraftOn<
+    Organization,
+    OrganizationDraft,
+    string,
+    Organization
+  >(
+    {
+      opening:
+        isOpen && organization ? `organization:${organization.id}` : null,
+      data: organization ?? undefined,
+      reload,
+    },
+    {
+      token: (read) => read.version,
+      toDraft: organizationDraftOf,
+      // The modal closes; the page reads the Träger again itself.
+      answer: (saved) => saved,
+    },
+  );
+  const orgName = edit.draft?.name ?? organization?.name ?? "";
+  const orgSlug = edit.draft?.slug ?? organization?.slug ?? "";
+  const setOrgName = (name: string) =>
+    edit.setDraft((current) => ({ ...current, name }));
+  const setOrgSlug = (slug: string) =>
+    edit.setDraft((current) => ({ ...current, slug }));
   const [orgSaving, setOrgSaving] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
   const { show: showError, invalid, clear: clearError } = formErrors;
 
   useEffect(() => {
-    if (isOpen && organization) {
-      setOrgName(organization.name);
-      setOrgSlug(organization.slug);
-      clearError();
-    }
-  }, [isOpen, organization, clearError]);
+    if (isOpen) clearError();
+  }, [isOpen, clearError]);
 
   const handleUpdate = useCallback(
     async (e: React.FormEvent) => {
@@ -50,19 +85,30 @@ export function EditOrganizationModal({
         invalid("Bitte prüfe die markierten Felder.", { slug: hint });
         return;
       }
+      const opened = edit.base;
+      if (!opened || !edit.canSubmit) return;
       setOrgSaving(true);
       clearError();
-      try {
-        await operatorProvisioningService.updateOrganization(organization.id, {
+      const result = await edit.submit((version) =>
+        operatorProvisioningService.updateOrganization(opened.id, {
           name: orgName.trim(),
           slug: orgSlug.trim(),
-          active: organization.active,
-        });
-      } catch (error) {
+          active: opened.active,
+          expected_version: version,
+        }),
+      );
+      if (!result.ok) {
         logger.error("organization_update_failed", {
-          error: error instanceof Error ? error.message : String(error),
+          error:
+            result.error instanceof Error
+              ? result.error.message
+              : String(result.error),
         });
-        void showError(error, { object: "die Änderung am Träger" });
+        // Someone changed the Träger since: `reload` shows it here.
+        void showError(result.error, {
+          object: "die Änderung am Träger",
+          reload: result.reload,
+        });
         setOrgSaving(false);
         return;
       }
@@ -72,6 +118,7 @@ export function EditOrganizationModal({
     },
     [
       organization,
+      edit,
       orgName,
       orgSlug,
       onClose,
@@ -101,7 +148,9 @@ export function EditOrganizationModal({
           <Button
             type="button"
             onClick={(e) => void handleUpdate(e)}
-            disabled={orgSaving || !orgName.trim() || !orgSlug.trim()}
+            disabled={
+              orgSaving || !edit.canSubmit || !orgName.trim() || !orgSlug.trim()
+            }
             variant="primary"
             size="md"
             className="flex-1"

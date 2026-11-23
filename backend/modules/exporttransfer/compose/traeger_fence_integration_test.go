@@ -202,7 +202,10 @@ func TestTraegerHandoverLogsNoPasswordAnEchoingCounterpartReturns(t *testing.T) 
 	require.NoError(t, err)
 	recipient, err := transfers.CreateRecipient(f.ctx, f.org, 0, f.readyInput())
 	require.NoError(t, err)
-	_, err = transfers.AssignFormats(f.ctx, f.org, 0, []exporttransfer.TraegerAssignment{{Format: "sollstellung", RecipientID: &recipient.ID}})
+	read, err := transfers.Recipients(f.ctx, f.org, 1)
+	require.NoError(t, err)
+	_, err = transfers.AssignFormats(f.ctx, f.org, 0, []exporttransfer.TraegerAssignment{{Format: "sollstellung", RecipientID: &recipient.ID}},
+		read.AssignmentsVersion)
 	require.NoError(t, err)
 	var settled []exporttransfer.Outcome
 	outcome, err := transfers.Transfer(f.ctx, financeRequest(f.org, "echo.csv", &settled))

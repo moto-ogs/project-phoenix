@@ -68,8 +68,18 @@ func ProvisioningErrorRenderer(err error) render.Renderer {
 	case errors.As(err, &schoolNotDeleted):
 		return common.OperatorRejection(http.StatusConflict, common.CodeProvisioningSchoolNotDeleted, "School is not deleted")
 	default:
-		return common.OperatorInternal(internalErrorMessage)
+		return unclassifiedRenderer(err)
 	}
+}
+
+// unclassifiedRenderer answers an error no rule names: a refusal with its own
+// registered code, such as an edit on a changed state (readstate.ErrChanged,
+// ADR 0311), keeps its 409; anything else is an internal error.
+func unclassifiedRenderer(err error) render.Renderer {
+	if common.IsBusinessRejection(err) {
+		return common.ErrorBusinessRejection(err)
+	}
+	return common.OperatorInternal(internalErrorMessage)
 }
 
 // personErrorRenderer maps the outcomes of a person deletion; ok is false for

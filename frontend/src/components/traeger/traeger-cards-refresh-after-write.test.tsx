@@ -124,6 +124,7 @@ describe("Träger cards reload after a confirmed write", () => {
     bic: "BYLADEM1001",
     bankName: "Bank",
     isDefault: false,
+    version: "v-1",
   };
 
   it("keeps a new default bank account when the reload fails", async () => {
@@ -134,6 +135,7 @@ describe("Träger cards reload after a confirmed write", () => {
         accounts={[account]}
         canEdit
         onChanged={onChanged}
+        reload={vi.fn()}
       />,
       { wrapper: ToastProvider },
     );
@@ -163,6 +165,7 @@ describe("Träger cards reload after a confirmed write", () => {
         accounts={[account]}
         canEdit
         onChanged={onChanged}
+        reload={vi.fn()}
       />,
       { wrapper: ToastProvider },
     );
