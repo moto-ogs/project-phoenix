@@ -539,7 +539,8 @@ Kinder unverändert ab.
 ## Bekannte Grenze: befristete Buchungen und späte erste Buchungen in Care Plan
 
 Zwei Fehler in Care Plan bestehen vor diesem PR und bleiben bestehen. Beide
-gehören in ein Folge-Issue (legt der Product Owner an).
+gehören in das Folge-Issue
+[#7908](https://github.com/moto-ogs/project-phoenix/issues/7908).
 
 1. **Die Roster-Zeile eines direkt verknüpften Angebots endet nicht mit der
    Buchung.** `booking_drafts.go` verwirft für Angebote mit
@@ -646,7 +647,7 @@ gehören in ein Folge-Issue (legt der Product Owner an).
   mit einem Betreuungsende vor dem Ende ihrer Buchungen oder mit einem
   Zeitraum ohne einen gebuchten Wochentag bleiben zurück, bis das Büro
   Vertrag, Kinderakte oder Angebot berichtigt oder Care Plan befristete
-  Buchungen auf direkt verknüpften Rostern beendet (Folge-Issue).
+  Buchungen auf direkt verknüpften Rostern beendet (#7908).
 - Korrigiert das Büro die Wochentage eines still angemeldeten Kindes ohne
   Datum, bleibt der erste Tag seiner Buchungen und Roster bestehen.
 - Die Rücknahme der Migration löst die Bindung importierter Verträge wieder;
