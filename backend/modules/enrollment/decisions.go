@@ -184,6 +184,11 @@ type ChildOfferingRow struct {
 	// approved change scheduled for a future date. Those rows are
 	// informational: they describe what will be booked, not what is.
 	StartsLater bool
+	// ExtendsUntil is the last day an undated correction books this current
+	// booking to when the office extends it (#7929): the end of the phase or
+	// the child's earlier care end. Nil when the booking runs to there
+	// already, or when its end starts a scheduled change.
+	ExtendsUntil *calendar.Date
 	// SubmittedTerms are the catalog terms the parents submitted this
 	// offering under, nil without a snapshot (#6837). ChangedTerms names the
 	// booking-relevant terms the catalog changed since (OfferingTerm*); an
@@ -210,6 +215,9 @@ type ChildOfferingSet struct {
 type OfferingAdjustmentSelection struct {
 	OfferingID   int64
 	SelectedDays []string
+	// ExtendToPhaseEnd books a limited offering to the end of the phase, or
+	// to the earlier care end (#7929). Only an undated correction accepts it.
+	ExtendToPhaseEnd bool
 }
 
 // ChildOfferingsUpdate is a corrected child with the effect of the
