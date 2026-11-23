@@ -160,3 +160,45 @@ func (Store) BindContractApplications(ctx context.Context, organizationID int64,
 	}
 	return bound, nil
 }
+
+// boundContractSQL reads the school and the application child of one
+// imported contract and takes its row lock.
+const boundContractSQL = `SELECT c.school_id, c.request_child_id FROM care_contract.contracts AS c
+	WHERE c.organization_id = ? AND c.id = ? AND c.import_origin IS NOT NULL FOR UPDATE OF c`
+
+// LockImportedContract locks one imported contract of the Träger and
+// answers its school and the application child it is bound to;
+// ErrContractNotFound for any other contract.
+func (Store) LockImportedContract(ctx context.Context, organizationID, contractID int64) (int64, *int64, error) {
+	db, err := traegerDB(ctx, organizationID)
+	if err != nil {
+		return 0, nil, err
+	}
+	var head struct {
+		SchoolID       int64  `bun:"school_id"`
+		RequestChildID *int64 `bun:"request_child_id"`
+	}
+	err = db.NewRaw(boundContractSQL, organizationID, contractID).Scan(ctx, &head)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, nil, carecontract.ErrContractNotFound
+	}
+	if err != nil {
+		return 0, nil, fmt.Errorf("care contract postgres: lock the imported contract: %w", err)
+	}
+	return head.SchoolID, head.RequestChildID, nil
+}
+
+// UnbindContractApplication takes the application child off one imported
+// contract. It writes request_child_id only; the trigger of the table
+// stamps updated_at.
+func (Store) UnbindContractApplication(ctx context.Context, organizationID, contractID int64) error {
+	db, err := traegerDB(ctx, organizationID)
+	if err != nil {
+		return err
+	}
+	if _, err := db.NewRaw(`UPDATE care_contract.contracts SET request_child_id = NULL
+		WHERE organization_id = ? AND id = ? AND import_origin IS NOT NULL`, organizationID, contractID).Exec(ctx); err != nil {
+		return fmt.Errorf("care contract postgres: unbind the contract: %w", err)
+	}
+	return nil
+}

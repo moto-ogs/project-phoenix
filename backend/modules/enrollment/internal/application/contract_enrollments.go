@@ -290,14 +290,17 @@ func (r *contractRun) check(index int, input enrollmentNative.ContractEnrollment
 	}
 	if input.RequestChildID > 0 {
 		confirmProvenApplication(phase, input, result)
+		r.refuseGoneRecord(input, result)
 		return
 	}
 	bookings, reason, guard := contractBookings(phase, input)
 	// An application of the phase answers first: it names what the child
-	// has, whatever the child record says by now. What only guards a new
-	// enrollment (guard) does not count for it: nothing is written.
+	// has. What only guards a new enrollment (guard) does not count for it:
+	// nothing is written. Only a child record that is gone or no longer
+	// active refuses it (refuseGoneRecord).
 	if holder, held := contractHolder(phase.holders[input.StudentID]); held {
 		answerContractHolder(holder, phase, input, reason, result)
+		r.refuseGoneRecord(input, result)
 		return
 	}
 	if reason == "" {

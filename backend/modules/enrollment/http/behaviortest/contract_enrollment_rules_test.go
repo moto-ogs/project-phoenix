@@ -228,3 +228,31 @@ func TestContractEnrollmentRefusesCareTheSchoolDoesNotDerive(t *testing.T) {
 	assert.Zero(t, e.count(t, written, testpkg.Tenant(t), testpkg.Tenant(t), student.ID))
 	assert.Equal(t, before, e.snapshot(t))
 }
+
+// A run enrolled the child and stopped before the binding; since then the
+// child left the school. The repeated call finds the stored enrollment but
+// does not confirm it: a confirmation leads to the binding, and no contract
+// is bound to the enrollment of a child record that is no longer active.
+// The same holds for an application a row names. Nothing is written.
+func TestContractEnrollmentConfirmsNoEnrollmentOfAnInactiveChildRecord(t *testing.T) {
+	t.Parallel()
+	e := setupContractEnrollment(t)
+	ctx := testpkg.Ctx(t)
+	student := e.student(t, "Nele")
+	input := e.input(student.ID, e.booking("mon"))
+	made := e.enroll(t, input)
+	require.Equal(t, capability.ContractEnrollmentEnrolled, made[0].Status)
+	require.Equal(t, capability.ContractEnrollmentExisting, e.enroll(t, input)[0].Status, "while the child record is active the run is repeatable")
+
+	_, err := e.db.ExecContext(ctx, `UPDATE users.student_school_memberships SET status = 'inactive'
+		WHERE tenant_id = ? AND student_profile_id = ?`, testpkg.Tenant(t), student.ID)
+	require.NoError(t, err)
+	refused := []capability.ContractEnrollmentResult{{ContractID: e.contract, StudentID: student.ID, Status: capability.ContractEnrollmentRefused,
+		Reason: capability.ContractEnrollmentStudentInactive, RequestID: made[0].RequestID, RequestChildID: made[0].RequestChildID}}
+	assert.Equal(t, refused, e.check(t, input))
+	assert.Equal(t, refused, e.enroll(t, input), "the answer names the enrollment that stays unbound")
+
+	named := input
+	named.RequestChildID, named.ProvedOn = made[0].RequestChildID, calendar.Date(e.sourcePhase.ServiceStartDate)
+	assert.Equal(t, refused, e.enroll(t, named), "an application the row names is not confirmed either")
+}

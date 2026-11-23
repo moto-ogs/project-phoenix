@@ -124,6 +124,6 @@ func (r contractApplicationRow) application(fingerprint func([]byte) string) enr
 		GuardianFirstName: r.GuardianFirstName, GuardianLastName: r.GuardianLastName, GuardianEmail: r.GuardianEmail,
 		GuardianAccountID: r.GuardianAccountID, PhaseID: r.PhaseID, PhaseName: r.PhaseName,
 		ServiceStartDate: r.ServiceStartDate, ActivateOn: r.ActivateOn,
-		FamilyChildren: r.FamilyChildren, FamilyChildrenStatedAt: r.FamilyStatedAt, Renewal: r.Renewal,
+		FamilyChildren: r.FamilyChildren, FamilyChildrenStatedAt: r.FamilyStatedAt, Renewal: r.Renewal, Source: r.SubmissionSource,
 	}
 }

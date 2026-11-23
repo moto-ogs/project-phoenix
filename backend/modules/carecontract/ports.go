@@ -53,6 +53,10 @@ type Application struct {
 	// Renewal tells that the application renews care into a new phase, whose
 	// conditions the parents accept on their own (#6456).
 	Renewal bool
+	// ContractImport tells that the school made the application for the
+	// child of an imported contract (the source contract_import, ADR 0309):
+	// no parent submitted it.
+	ContractImport bool
 }
 
 // Offering is a care offering of one school. A contract books it as a

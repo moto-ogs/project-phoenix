@@ -38,6 +38,10 @@ type EnrollmentStore interface {
 	// that has a contract.
 	BindContractApplications(ctx context.Context, organizationID int64, bindings []ports.ApplicationBinding) ([]int64, error)
 	InsertEvents(ctx context.Context, organizationID int64, events []Event) error
+	// LockImportedContract locks one imported contract and answers its
+	// school and its application child; ErrContractNotFound for any other.
+	LockImportedContract(ctx context.Context, organizationID, contractID int64) (schoolID int64, requestChildID *int64, err error)
+	UnbindContractApplication(ctx context.Context, organizationID, contractID int64) error
 }
 
 // EnrollmentPorts are the root-bound reads of the plan in the school's
@@ -338,4 +342,29 @@ func plannedFor(contract carecontract.EnrollmentContract, binding carecontract.A
 		return binding.Token == planToken(contract.Versions, 0)
 	}
 	return false
+}
+
+// UnbindApplication takes the application child off a bound imported
+// contract under the lock of the Träger's links and records it.
+func (e *ContractEnrollments) UnbindApplication(ctx context.Context, reviewer carecontract.Reviewer, contractID, requestChildID int64) (int64, error) {
+	if err := checkReviewer(reviewer); err != nil {
+		return 0, err
+	}
+	// The lock of a link run and of a binding: neither reads the contract
+	// as bound or unbound until this transaction ends.
+	if err := e.store.LockChildLinks(ctx, reviewer.OrganizationID); err != nil {
+		return 0, err
+	}
+	schoolID, bound, err := e.store.LockImportedContract(ctx, reviewer.OrganizationID, contractID)
+	if err != nil {
+		return 0, err
+	}
+	if bound == nil || requestChildID <= 0 || *bound != requestChildID {
+		return schoolID, carecontract.ErrBindingChanged
+	}
+	if err := e.store.UnbindContractApplication(ctx, reviewer.OrganizationID, contractID); err != nil {
+		return schoolID, err
+	}
+	return schoolID, trail(ctx, e.store, reviewer.OrganizationID, reviewer.AccountID, contractID, schoolID, ports.ActionUnbindApplication,
+		map[string]any{"request_child_id": requestChildID})
 }

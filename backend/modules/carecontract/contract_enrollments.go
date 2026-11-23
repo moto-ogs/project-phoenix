@@ -2,6 +2,7 @@ package carecontract
 
 import (
 	"context"
+	"errors"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
@@ -240,6 +241,14 @@ type EnrollmentPlanRow struct {
 	// FollowsContractID is the earlier imported contract that has the
 	// application of the child (EnrollmentReasonFollowsContract).
 	FollowsContractID ident.ID `json:"follows_contract_id,omitempty"`
+	// EnrollmentChildID is, for a ready or a held row, the accepted
+	// application of the source contract_import the child record has
+	// without a contract: a run enrolled the child and stopped before the
+	// binding. A ready row binds it. For a row that is held, or that the
+	// school's enrollment refuses, the contract can no longer be bound to
+	// that enrollment (the service of its phase ended, or its bookings no
+	// longer pass the proof): the caller shows such a row as stuck.
+	EnrollmentChildID ident.ID `json:"enrollment_child_id,omitempty"`
 	// Bookings is what the child books from the first day the contract
 	// promises care in the phase: the service start of the phase, or the
 	// first day of the contract when that is later. Changes are the planned
@@ -372,4 +381,21 @@ type ContractEnrollments interface {
 	// application child that got a contract past the lock is
 	// ErrContractExists.
 	BindApplications(ctx context.Context, reviewer Reviewer, schoolID int64, bindings []ApplicationBinding) ([]ApplicationBindingResult, error)
+	// UnbindApplication takes the application child off a bound imported
+	// contract again, in the Träger transaction of the reviewer and under
+	// the lock of the Träger's links: the contract is an imported one linked
+	// to its child record, as before the binding, no longer follows the
+	// bookings, and its link can be removed and set again (ADR 0307). It
+	// writes request_child_id and the trail (unbind) and nothing
+	// else: no version, no document, no mail, and nothing at the school,
+	// where the enrollment and its bookings stay as they are. It answers
+	// the school of the contract. requestChildID is the application child
+	// the office saw the contract bound to; a contract that is not bound, or
+	// bound to another one, is ErrBindingChanged, a contract that is not an
+	// imported one of the Träger ErrContractNotFound.
+	UnbindApplication(ctx context.Context, reviewer Reviewer, contractID, requestChildID int64) (schoolID int64, err error)
 }
+
+// ErrBindingChanged refuses to take the application child off a contract
+// that is not bound to the one the office saw.
+var ErrBindingChanged = errors.New("the contract is not bound to this application child")

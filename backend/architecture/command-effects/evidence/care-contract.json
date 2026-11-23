@@ -266,7 +266,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.careContractApplications.AcceptedApplications",
-      "binding_digest": "99aabd966f7c279ead02b2f2538d2f65",
+      "binding_digest": "b3f8abedf19589586fe7619afc7f3501",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolApplications.AcceptedApplications",
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/enrollment.ContractApplications.AcceptedContractApplications",

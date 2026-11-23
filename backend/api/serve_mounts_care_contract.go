@@ -199,6 +199,7 @@ func (a careContractApplications) AcceptedApplications(ctx context.Context, requ
 			GuardianLastName: application.GuardianLastName, GuardianEmail: application.GuardianEmail,
 			GuardianAccountID: application.GuardianAccountID, PhaseName: application.PhaseName,
 			ServiceStartDate: application.ServiceStartDate, ActivateOn: application.ActivateOn, Renewal: application.Renewal,
+			ContractImport: application.Source == enrollment.RequestSourceContractImport,
 		}
 		if application.FamilyChildren != nil && application.FamilyChildrenStatedAt != nil {
 			result[i].FamilyChildren = &carecontract.FamilyStatement{Children: *application.FamilyChildren, StatedAt: *application.FamilyChildrenStatedAt}

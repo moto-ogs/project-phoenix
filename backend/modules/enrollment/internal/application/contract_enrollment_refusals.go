@@ -44,6 +44,26 @@ func contractChildRefusal(student enrollmentNative.ContractStudent, known bool, 
 	return ""
 }
 
+// refuseGoneRecord refuses an application the run would confirm (existing)
+// when its child record is gone or no longer active. A confirmation leads
+// to the binding of the contract, and a contract is not bound to the
+// enrollment of a child that left the school: the office ends the contract
+// or reactivates the child record first. Nothing else about the child
+// record refuses a confirmation; the school approved that application
+// itself.
+func (r *contractRun) refuseGoneRecord(input enrollmentNative.ContractEnrollment, result *enrollmentNative.ContractEnrollmentResult) {
+	if result.Status != enrollmentNative.ContractEnrollmentExisting {
+		return
+	}
+	student, known := r.students[input.StudentID]
+	switch {
+	case !known:
+		result.Status, result.Reason = enrollmentNative.ContractEnrollmentRefused, enrollmentNative.ContractEnrollmentStudentMissing
+	case student.Status != studentStatusActive:
+		result.Status, result.Reason = enrollmentNative.ContractEnrollmentRefused, enrollmentNative.ContractEnrollmentStudentInactive
+	}
+}
+
 // careEndsEarlier tells whether the child record names a last care day
 // before the last day of a booking. The bookings would promise care the
 // child record has ended: Care Plan cuts the roster rows at the care end,

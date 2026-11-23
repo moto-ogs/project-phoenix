@@ -36,6 +36,10 @@ type ContractApplication struct {
 	// acceptance of the new phase comes only from the parents' confirmation
 	// of its terms (#6456).
 	Renewal bool
+	// Source is the submission source of the request (RequestSource...):
+	// contract_import for the enrollment the school made for the child of
+	// an imported care contract (ADR 0309).
+	Source string
 }
 
 // ContractPhase is an offering phase's name and inclusive service window.

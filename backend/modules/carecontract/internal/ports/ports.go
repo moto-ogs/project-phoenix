@@ -151,6 +151,9 @@ const (
 	// ActionBindApplication records the binding of an imported contract to
 	// the application child of its child (#7760, ADR 0309).
 	ActionBindApplication = "bind_application"
+	// ActionUnbindApplication records that the application child was taken
+	// off a bound imported contract again (ADR 0309).
+	ActionUnbindApplication = "unbind"
 )
 
 // VersionsDetail is the detail of a template entry of the trail with the

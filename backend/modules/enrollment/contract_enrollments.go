@@ -54,9 +54,15 @@ import (
 //     bound only to an application child this capability answered as
 //     enrolled or existing. The confirmation compares the application, its
 //     phase and its offerings only. It does not repeat what a new
-//     enrollment is refused for (the child record and its care end, the
-//     rosters of the offerings, the length of the window): the school
-//     approved that application itself, and nothing is written for it.
+//     enrollment is refused for (the care end and the OGS place of the
+//     child record, the rosters of the offerings, the length of the
+//     window): the school approved that application itself, and nothing is
+//     written for it. One thing about the child record does refuse it: a
+//     child record that is gone or no longer active (student_missing,
+//     student_inactive). A confirmation leads to the binding of the
+//     contract, and no contract is bound to the enrollment of a child that
+//     left the school. The same holds for the stored enrollment of this
+//     source a repeated call finds.
 //   - No child is booked before its contract: the bookings of a child start
 //     on one day, the service start of the phase or a later day within it,
 //     and its rosters start on that day. That day is never after today: the
