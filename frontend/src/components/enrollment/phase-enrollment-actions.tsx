@@ -54,7 +54,7 @@ import { fetchCareOfferingBookingStats } from "~/lib/care-offering-booking-stats
 import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { useFreshSWR, useInvalidateFamily, useSWRAuth } from "~/lib/swr";
+import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { withLateInviteQuery } from "~/lib/enrollment-http";
 import { Loading } from "~/components/ui/loading";
@@ -226,13 +226,25 @@ export function ManualApprovedEnrollmentModal({
   phase: Phase;
   gradeLevelMax: number | null;
 }>) {
-  // The form reads its template once when it mounts: every opening waits for
-  // its own answer, so no deleted offering or outdated template is offered.
-  const bootstrapRead = useFreshSWR(
+  // A reopened panel shows the cached template while it reads again. The
+  // server checks the entry against the current offerings, and refuses a
+  // form version the school replaced meanwhile (ADR 0311); the form then
+  // shows the current one.
+  const bootstrapRead = useSWRAuth(
     isOpen ? enrollmentKeys.manualEnrollmentBootstrap(phase.id) : null,
     () => fetchManualEnrollmentBootstrap(phase.id),
   );
-  // A failed load of this opening shows the error, not an earlier template.
+  const loadCurrentForm = async () => {
+    try {
+      await bootstrapRead.mutate();
+    } catch (err) {
+      // The refusal stays on the form; reopening the panel reads it again.
+      logger.warn("manual_enrollment_form_reload_failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  };
+  // A failed load shows the error, not the earlier template.
   const bootstrap = bootstrapRead.error ? undefined : bootstrapRead.data;
   const prefetchedData = useMemo<EnrollmentFormPrefetchedData | null>(
     () => (bootstrap ? toManualPrefetchedData(bootstrap) : null),
@@ -469,6 +481,7 @@ export function ManualApprovedEnrollmentModal({
               onSubmitted={(url) => setStatusUrl(url)}
               prefetchedData={prefetchedData}
               submitter={submitter}
+              onFormChanged={loadCurrentForm}
               skipCaptcha
               lockChildStructure
               withoutSignature

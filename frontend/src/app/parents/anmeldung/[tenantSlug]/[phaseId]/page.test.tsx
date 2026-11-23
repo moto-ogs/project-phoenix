@@ -62,6 +62,7 @@ vi.mock("~/components/enrollment/enrollment-form", () => ({
   EnrollmentForm: (props: {
     gradeLevelMax: number;
     prefetchedData: { profile: unknown };
+    onFormChanged?: () => Promise<void>;
   }) => {
     mocks.enrollmentForm(props);
     return (
@@ -222,6 +223,38 @@ describe("ParentEnrollFormPage", () => {
     expect(
       screen.getByText("Anmeldung für die OGS-Betreuung"),
     ).toBeInTheDocument();
+  });
+
+  // ADR 0311: the parent fills the version the opening read. When the
+  // school published another one, the refused submit loads it, and the form
+  // gets the current version handed in.
+  it("loads the current form after a refused outdated version", async () => {
+    const published = { id: "schema-2", fields: [], legal_blocks: [] };
+    await act(async () => {
+      render(
+        <Suspense fallback={null}>
+          <ParentEnrollFormPage
+            params={Promise.resolve({ tenantSlug: "demo", phaseId: "5" })}
+          />
+        </Suspense>,
+        { wrapper: Providers },
+      );
+    });
+    await screen.findByTestId("parent-enrollment-form");
+    const shown = mocks.enrollmentForm.mock.lastCall?.[0] as {
+      prefetchedData: { schema: unknown };
+      onFormChanged: () => Promise<void>;
+    };
+    expect(shown.prefetchedData.schema).toBeNull();
+
+    mocks.fetchBootstrap.mockResolvedValue({ ...bootstrap, schema: published });
+    await act(() => shown.onFormChanged());
+
+    expect(mocks.enrollmentForm.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        prefetchedData: expect.objectContaining({ schema: published }),
+      }),
+    );
   });
 
   it("shows an error instead of falling back when tenant metadata is unavailable", async () => {

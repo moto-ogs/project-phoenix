@@ -526,14 +526,20 @@ export async function getAdminChildDeleteImpact(
   );
 }
 
+/**
+ * Deletes a request as its preview showed it: `expectedFingerprint` is the
+ * preview's fingerprint; a changed impact is refused with
+ * `general.changed_since_read` (ADR 0311).
+ */
 export async function deleteAdminRequest(
   requestId: string,
   reason: string,
+  expectedFingerprint: string,
 ): Promise<AdminEnrollmentDeletionImpact> {
   return deletionImpactFromContract(
     await bffJson("tenant", "DELETE /api/enrollment/admin/requests/{id}/", {
       params: { id: requestId },
-      body: { reason },
+      body: { reason, expected_fingerprint: expectedFingerprint },
       errorMessage: "Anmeldung konnte nicht gelöscht werden",
     }),
   );
@@ -555,10 +561,12 @@ export async function restoreAdminRequest(
   });
 }
 
+/** Deletes one child as its preview showed it; see deleteAdminRequest. */
 export async function deleteAdminChild(
   requestId: string,
   childId: string,
   reason: string,
+  expectedFingerprint: string,
 ): Promise<AdminEnrollmentDeletionImpact> {
   return deletionImpactFromContract(
     await bffJson(
@@ -566,7 +574,7 @@ export async function deleteAdminChild(
       "DELETE /api/enrollment/admin/requests/{id}/children/{childId}",
       {
         params: { id: requestId, childId },
-        body: { reason },
+        body: { reason, expected_fingerprint: expectedFingerprint },
         errorMessage: "Kind konnte nicht aus der Anmeldung gelöscht werden",
       },
     ),

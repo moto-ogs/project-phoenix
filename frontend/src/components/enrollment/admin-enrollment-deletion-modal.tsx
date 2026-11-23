@@ -11,6 +11,7 @@ import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
 import NavigationLink from "~/components/ui/navigation-link";
 import { useApiFormError } from "~/contexts/ToastContext";
+import { isChangedSinceRead } from "~/lib/api-error";
 import {
   type AdminEnrollmentDeletionImpact,
   deleteAdminChild,
@@ -20,7 +21,7 @@ import {
 } from "~/lib/enrollment-admin-api";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { useFreshSWR } from "~/lib/swr";
+import { useSWRAuth } from "~/lib/swr";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 
 const logger = createLogger({ component: "AdminEnrollmentDeletionModal" });
@@ -67,8 +68,10 @@ export function AdminEnrollmentDeletionModal({
   // „Wiederholen“ löscht mit dem aktuellen Grund, nicht dem vom Fehler.
   const latestDeleteRef = useRef<() => Promise<void>>(async () => undefined);
 
-  // Confirmed against this opening's own preview, never an earlier one.
-  const impactRead = useFreshSWR(
+  // A reopened dialog may show the cached preview while it reads again; the
+  // deletion sends the fingerprint of the preview on screen, and the server
+  // refuses it when the impact changed meanwhile (ADR 0311).
+  const impactRead = useSWRAuth(
     isOpen
       ? childId
         ? enrollmentKeys.childDeleteImpact(requestId, childId)
@@ -79,7 +82,7 @@ export function AdminEnrollmentDeletionModal({
         ? getAdminChildDeleteImpact(requestId, childId)
         : getAdminRequestDeleteImpact(requestId),
   );
-  // A failed load of this opening shows the error, not an earlier preview.
+  // A failed load shows the error, not the earlier preview.
   const impact = impactRead.error ? undefined : impactRead.data;
   const previewError = useSwrResourceLoadError(
     [{ data: impact, error: impactRead.error }],
@@ -117,19 +120,37 @@ export function AdminEnrollmentDeletionModal({
     errors.clear();
     try {
       const result = childId
-        ? await deleteAdminChild(requestId, childId, trimmedReason)
-        : await deleteAdminRequest(requestId, trimmedReason);
+        ? await deleteAdminChild(
+            requestId,
+            childId,
+            trimmedReason,
+            impact.fingerprint,
+          )
+        : await deleteAdminRequest(
+            requestId,
+            trimmedReason,
+            impact.fingerprint,
+          );
       onDeleted(result);
     } catch (deleteError) {
+      // The impact changed since the preview: the dialog shows the new one
+      // and the error says so; deleting again confirms the new preview.
+      const changed = isChangedSinceRead(deleteError);
+      if (changed) await impactRead.mutate();
       logger.error("enrollment_delete_failed", {
         error: deleteError instanceof Error ? deleteError.message : "unknown",
         request_id: requestId,
         child_id: childId,
       });
-      await errors.show(deleteError, {
-        object: "die Löschung",
-        retry: () => void latestDeleteRef.current(),
-      });
+      await errors.show(
+        deleteError,
+        changed
+          ? { object: "die Vorschau der Löschung" }
+          : {
+              object: "die Löschung",
+              retry: () => void latestDeleteRef.current(),
+            },
+      );
     } finally {
       setDeleting(false);
     }
@@ -155,8 +176,9 @@ export function AdminEnrollmentDeletionModal({
             {targetLabel}
           </span>
           <span className="mt-1 block">
-            Diese Löschung lässt sich nicht rückgängig machen. Die Vorschau wird
-            beim Löschen in derselben Transaktion erneut geprüft.
+            Diese Löschung lässt sich nicht rückgängig machen. Hat sich seit der
+            Vorschau etwas geändert, löscht moto nichts und zeigt dir die neue
+            Vorschau.
           </span>
         </>
       }

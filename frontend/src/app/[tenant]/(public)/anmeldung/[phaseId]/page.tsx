@@ -34,6 +34,9 @@ import { calendarConcept } from "~/lib/concepts/calendar";
 import { permissionsConcept } from "~/lib/concepts/permissions";
 import { FormSkeleton, SkeletonRegion } from "~/components/ui/page-skeletons";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
+import { createLogger } from "~/lib/logger";
+
+const logger = createLogger({ component: "PublicEnrollmentFormPage" });
 
 interface PageProps {
   readonly params: Promise<{ tenant: string; phaseId: string }>;
@@ -128,6 +131,24 @@ function EnrollPhaseFormPageContent({ params }: PageProps) {
     [bootstrap],
   );
 
+  // The family fills the version it opened. A refused submit of an outdated
+  // version (ADR 0311) loads the current form in place: the form keeps the
+  // answers, the page stays mounted.
+  const loadCurrentForm = async () => {
+    try {
+      setBootstrap(
+        await fetchPublicEnrollmentBootstrap(tenantSlug, phaseId, {
+          lateInviteToken,
+        }),
+      );
+    } catch (err) {
+      // The refusal stays on the form; reloading the page reads it again.
+      logger.error("public_enrollment_form_reload_failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  };
+
   const handleSubmitted = (statusURL: string) => {
     try {
       const u = new URL(statusURL);
@@ -176,6 +197,7 @@ function EnrollPhaseFormPageContent({ params }: PageProps) {
               onSubmitted={handleSubmitted}
               prefetchedData={prefetchedData}
               lateInviteToken={lateInviteToken ?? undefined}
+              onFormChanged={loadCurrentForm}
               localizedCopy
             />
           )}
