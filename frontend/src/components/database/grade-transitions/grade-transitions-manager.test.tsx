@@ -68,9 +68,10 @@ const api = {
   updateGradeTransition: vi.fn(),
   deleteGradeTransition: vi.fn(),
   previewGradeTransition: vi.fn<(id: string) => Promise<TransitionPreview>>(),
-  applyGradeTransition: vi.fn<
-    (id: string, expectedFingerprint: string) => Promise<TransitionResult>
-  >(),
+  applyGradeTransition:
+    vi.fn<
+      (id: string, expectedFingerprint: string) => Promise<TransitionResult>
+    >(),
   revertGradeTransition: vi.fn<(id: string) => Promise<TransitionResult>>(),
   fetchTransitionHistory: vi.fn(),
 };
