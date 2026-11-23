@@ -142,7 +142,7 @@ type UppercaseLetter =
  * reason is a sentence („Zahlenreihen je Monat zum Vergleichen“): the type
  * refuses a missing or empty one at compile time.
  */
-export interface DataTableMobileScroll {
+interface DataTableMobileScroll {
   readonly reason: `${UppercaseLetter}${string}`;
 }
 
