@@ -70,6 +70,7 @@ const sourceTestExceptions = [
   ...fixtureExceptions('durable_side_effects_ratchet_test.go', [
     'TestSideEffectScannerFindsNestedAndPackageLevelOperations',
     'TestSideEffectNoticeRegisterRejectsEqualSizedReplacements',
+    'TestSharedTenantSignalSiteAllowsOnlyItself',
   ]),
   ...fixtureExceptions('gdpr_log_pii_ratchet_test.go', [
     'TestGDPRLogPIIRatchetCoversExplicitLevelsAndFullNames',
