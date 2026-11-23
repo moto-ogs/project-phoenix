@@ -986,6 +986,8 @@ export interface CompTimeBalancePreview {
   // Reset) that are booked but not yet part of the current balance.
   futureAdjustmentMinutes: number;
   projectedBalanceMinutes: number;
+  /** Token of this projection (ADR 0311); confirming a minus sends it. */
+  fingerprint: string;
 }
 
 // Was eine Umbuchung bewirkt (#3258), vorher als Vorschau (dry run) oder
@@ -1004,6 +1006,8 @@ export interface AbsenceRebooking {
   vacation: { year: number; remainingBefore: number; remainingAfter: number }[];
   vacationExceeded: boolean;
   applied: boolean;
+  /** Token of the effect; the write sends the dry run's back (ADR 0311). */
+  fingerprint: string;
 }
 
 class StaffAbsenceService {
@@ -1042,6 +1046,8 @@ class StaffAbsenceService {
       carryover_days: number;
       /** Pflicht: erscheint im Änderungsprotokoll (#3256). */
       reason: string;
+      /** Version des gelesenen Anspruchs (ADR 0311). */
+      expected_version: string;
     },
   ): Promise<sharedContract.VacationQuotaSummary> {
     const quota = await bffJson(
@@ -1189,9 +1195,10 @@ class StaffAbsenceService {
   }
 
   // Stundenkonto projection for a planned Freizeitausgleich (#2873):
-  // GET /api/staff/{id}/time-tracking/comp-time-preview. Informative only —
-  // a negative projection triggers a confirmation in the modal, the backend
-  // no longer rejects the create for it.
+  // GET /api/staff/{id}/time-tracking/comp-time-preview. A negative
+  // projection asks for a confirmation in the modal; the create sends the
+  // fingerprint of the confirmed preview as expected_fingerprint, and the
+  // server books a minus only on that projection, under its lock (ADR 0311).
   async getCompTimePreview(
     staffId: string,
     args: { dateStart: string; dateEnd: string; halfDay: boolean },
@@ -1216,6 +1223,7 @@ class StaffAbsenceService {
       futureCommitmentMinutes: preview.future_commitment_minutes,
       futureAdjustmentMinutes: preview.future_adjustment_minutes,
       projectedBalanceMinutes: preview.projected_balance_minutes,
+      fingerprint: preview.fingerprint,
     };
   }
 
@@ -1230,6 +1238,8 @@ class StaffAbsenceService {
       absenceTypeId: string | null;
       reason: string;
       dryRun: boolean;
+      /** Fingerprint of the dry run the write was confirmed on (ADR 0311). */
+      expectedFingerprint?: string;
     },
   ): Promise<AbsenceRebooking> {
     const data = await bffJson(
@@ -1243,6 +1253,9 @@ class StaffAbsenceService {
           absence_type_id: args.absenceTypeId,
           reason: args.reason,
           dry_run: args.dryRun,
+          ...(args.expectedFingerprint !== undefined
+            ? { expected_fingerprint: args.expectedFingerprint }
+            : {}),
         },
         errorMessage: "Die Art konnte nicht geändert werden.",
       },
@@ -1267,6 +1280,7 @@ class StaffAbsenceService {
       })),
       vacationExceeded: data.vacation_exceeded,
       applied: data.applied,
+      fingerprint: data.fingerprint,
     };
   }
 

@@ -3,6 +3,8 @@
 // Stundenkonto-Vorschau für einen geplanten Freizeitausgleich (#2873).
 // Informiert vor dem Eintragen; ein negativer Stand wird bestätigt, nicht
 // verhindert. Seit #3256 Teil des gemeinsamen Dialogs „Abwesenheit eintragen".
+// Die Bestätigung prüft der Server unter seiner Sperre (ADR 0311): eine
+// Vorschau aus dem Cache, die kein Minus zeigte, bucht kein Minus.
 
 import { useCallback, useEffect } from "react";
 
@@ -10,7 +12,7 @@ import { formatSignedDuration } from "~/components/staff/staff-time-views";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useApiLoadError } from "~/contexts/ToastContext";
-import { useFreshSWR } from "~/lib/swr";
+import { useSWRAuth } from "~/lib/swr";
 import { staffAbsenceKeys } from "~/lib/swr/staff-keys";
 import {
   staffAbsenceService,
@@ -36,7 +38,7 @@ export function useCompTimePreview({
   error: unknown;
   reload: () => void;
 } {
-  const { data, error, mutate, fresh, isValidating } = useFreshSWR(
+  const { data, error, mutate, isValidating } = useSWRAuth(
     enabled && dateStart && dateEnd
       ? staffAbsenceKeys.compTimePreview(staffId, dateStart, dateEnd, halfDay)
       : null,
@@ -46,16 +48,16 @@ export function useCompTimePreview({
         dateEnd,
         halfDay,
       }),
-    // Die alte Projektion darf während des Nachladens weder angezeigt werden
-    // noch eine Buchung ohne Bestätigung durchlassen.
+    // Ein anderer Zeitraum zeigt nicht die Projektion des vorigen.
     { keepPreviousData: false },
   );
   const reload = useCallback(() => void mutate(), [mutate]);
-  // Rein informativ: der Block zeigt den Ladefehler (das Panel), die Buchung
-  // selbst bleibt möglich und meldet ihre eigenen Fehler. Ein gescheitertes
-  // Auffrischen zeigt keine alte Projektion als Grundlage einer Bestätigung.
-  const failure = fresh && !isValidating ? error : undefined;
-  const preview = isValidating || failure ? null : (data ?? null);
+  // Der Block zeigt den Ladefehler (das Panel); ohne Vorschau bucht der
+  // Dialog keinen Freizeitausgleich, denn der Server prüft genau die gezeigte
+  // Projektion. Ein gescheitertes Auffrischen zeigt keine alte Projektion als
+  // Grundlage einer Bestätigung.
+  const failure = isValidating ? undefined : error;
+  const preview = failure ? null : (data ?? null);
   const active = enabled && Boolean(dateStart && dateEnd);
   return {
     preview,

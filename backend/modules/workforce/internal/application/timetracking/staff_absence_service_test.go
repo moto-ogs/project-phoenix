@@ -3430,6 +3430,9 @@ func (m *absMonthServiceMock) GetBalanceAdjustmentMinutes(context.Context, int64
 	return m.futureAdjustment, nil
 }
 
+// AtEndOfToday is the mock itself: its numbers do not move with the clock.
+func (m *absMonthServiceMock) AtEndOfToday() WorkTimeMonthService { return m }
+
 // #2873: a comp_time absence deducting more daily-target minutes than the
 // Stundenkonto holds is created anyway — the balance goes negative, the
 // Leitung confirmed the projection in the frontend.

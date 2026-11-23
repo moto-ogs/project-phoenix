@@ -69,6 +69,10 @@ type TimeAccountMonthRequest struct {
 	Year   int    `json:"year"`
 	Month  int    `json:"month"`
 	Reason string `json:"reason"`
+	// ExpectedFingerprint is the fingerprint of the month the close was
+	// confirmed on; a month changed since is refused with
+	// general.changed_since_read (ADR 0311). The reopen ignores it.
+	ExpectedFingerprint string `json:"expected_fingerprint"`
 }
 
 var errReasonRequired = errors.New("a reason is required")
@@ -106,7 +110,7 @@ func (rs *RecordsResource) changeTimeAccountMonth(w http.ResponseWriter, r *http
 		}
 		return
 	}
-	account, err := change(r.Context(), session, id, workforce.TraegerMonthChange{Year: req.Year, Month: req.Month, Reason: req.Reason})
+	account, err := change(r.Context(), session, id, workforce.TraegerMonthChange{Year: req.Year, Month: req.Month, Reason: req.Reason, ExpectedFingerprint: req.ExpectedFingerprint})
 	if err != nil {
 		renderTimeAccountError(w, r, err)
 		return

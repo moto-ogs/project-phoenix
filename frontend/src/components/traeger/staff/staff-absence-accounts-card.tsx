@@ -4,7 +4,9 @@
 // ein Konto über alle Schulen der Person, mit dem, was jede Schule gebucht
 // hat. Die Personalverwaltung ändert hier den Anspruch dieser Person; ohne
 // eigenen Wert gilt der Standard der Art. Jedes Laden steht im
-// Zugriffsprotokoll jeder Schule der Person.
+// Zugriffsprotokoll jeder Schule der Person, deshalb liest die Karte bei
+// jedem Öffnen neu. Das Speichern trägt die Version des gelesenen Anspruchs
+// (ADR 0311).
 
 import { useLayoutEffect, useRef, useState } from "react";
 
@@ -26,6 +28,7 @@ import { formatDayCount } from "~/lib/absence-helpers";
 import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
 import { formatDate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
+import { isChangedSinceRead } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import { useInvalidateFamily } from "~/lib/swr";
 import { traegerStaffKeys } from "~/lib/swr/traeger-staff-keys";
@@ -105,23 +108,53 @@ function SchoolShares({
   );
 }
 
+/** The values a stored claim fills the allowance form with. */
+function allowanceDraftBase(account: TraegerAbsenceAccount) {
+  return {
+    version: account.version,
+    days: formatInput(account.entitledDays),
+  };
+}
+
 function AllowanceForm({
   recordId,
   account,
   onCancel,
   onSaved,
+  onChanged,
 }: Readonly<{
   recordId: string;
   account: TraegerAbsenceAccount;
   onCancel: () => void;
   onSaved: () => Promise<void>;
+  /** Reads the accounts again after a refusal of a changed claim. */
+  onChanged: () => void;
 }>) {
-  const [days, setDays] = useState(formatInput(account.entitledDays));
+  // The claim the form opened from (ADR 0311): its version goes out with the
+  // save, its days tell whether the person has typed since.
+  const [base, setBase] = useState(() => allowanceDraftBase(account));
+  const [days, setDays] = useState(base.days);
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
+  // After a refusal the form shows the stored claim, also over typed days.
+  const [showStored, setShowStored] = useState(false);
   const errors = useApiFormError();
   const { success } = useToast();
   const latestSaveRef = useRef<() => Promise<void>>(async () => undefined);
+  // A newer read refills the form only while nothing is typed; typed days
+  // stay and the save keeps the version they were typed over, so the server
+  // refuses it instead of storing them over a claim the person has not seen.
+  const untouched = days === base.days && reason === "";
+  const newer =
+    account.version !== base.version && (untouched || showStored)
+      ? allowanceDraftBase(account)
+      : null;
+  // Adjusted while rendering: setting base ends the condition.
+  if (newer) {
+    setBase(newer);
+    setDays(newer.days);
+    setShowStored(false);
+  }
   const used = account.takenDays + account.reservedDays;
   const parsed = parseDays(days);
   const id = `traeger-allowance-${account.absenceTypeId}`;
@@ -151,6 +184,7 @@ function AllowanceForm({
         year: account.year,
         entitledDays: parsed,
         reason,
+        expectedVersion: base.version,
       });
       success(
         `Der Anspruch ${account.absenceTypeName} ${account.year} ist gespeichert. Er gilt an allen Schulen der Person.`,
@@ -159,10 +193,18 @@ function AllowanceForm({
       logger.error("traeger_absence_allowance_save_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
-      await errors.show(err, {
-        object: "die Änderung am Anspruch",
-        retry: () => void latestSaveRef.current(),
-      });
+      // Changed since the read: the card shows the stored claim again; the
+      // same request would be refused again, so there is no retry.
+      if (isChangedSinceRead(err)) {
+        setShowStored(true);
+        onChanged();
+        await errors.show(err, { object: "die Änderung am Anspruch" });
+      } else {
+        await errors.show(err, {
+          object: "die Änderung am Anspruch",
+          retry: () => void latestSaveRef.current(),
+        });
+      }
       setSaving(false);
       return;
     }
@@ -240,7 +282,11 @@ export function StaffAbsenceAccountsCard({
   const today = useBerlinToday();
   const thisYear = Number(today.slice(0, 4));
   const [year, setYear] = useState(thisYear);
-  const { data: accounts, error } = useFreshTraegerResource(
+  const {
+    data: accounts,
+    error,
+    reload,
+  } = useFreshTraegerResource(
     traegerStaffKeys.absenceAccounts(recordId, year),
     () => fetchTraegerAbsenceAccounts(recordId, year),
     "die Kontingente",
@@ -314,6 +360,7 @@ export function StaffAbsenceAccountsCard({
                     recordId={recordId}
                     account={account}
                     onCancel={() => setEditing(null)}
+                    onChanged={reload}
                     onSaved={async () => {
                       setEditing(null);
                       // Der Anspruch eines Jahres ändert den Rest im

@@ -185,6 +185,9 @@ type SplitStaffShiftSeries struct {
 	// WorkingTime confirms the working-time warnings of the occurrences
 	// (#4708).
 	WorkingTime WorkingTimeConfirmation
+	// ExpectedVersion is the version of the series the planner edited (ADR
+	// 0311); a series changed since is not written.
+	ExpectedVersion string
 }
 
 // StaffShiftSeriesResult reports what a series write materialized; the

@@ -302,6 +302,12 @@ type CreateAbsenceRequest struct {
 	DateEnd       string    `json:"date_end"`
 	HalfDay       bool      `json:"half_day"`
 	Note          string    `json:"note"`
+	// ExpectedFingerprint confirms a Freizeitausgleich that takes the
+	// Stundenkonto below zero (#2873): the Fingerprint of the preview the
+	// Leitung confirmed. The Leitung's booking refuses an overdraft whose
+	// projection differs with general.changed_since_read (ADR 0311); a staff
+	// member's own request asks no confirmation and ignores it.
+	ExpectedFingerprint string `json:"expected_fingerprint"`
 }
 
 // UpdateAbsenceRequest edits an absence; nil leaves a field untouched.
@@ -379,6 +385,9 @@ type VacationQuotaSummary struct {
 	ReservedDays    float64               `json:"reserved_days"`
 	RemainingDays   float64               `json:"remaining_days"`
 	Opening         *StaffVacationOpening `json:"opening,omitempty"`
+	// Version is the token of the stored claim (entitled and carryover
+	// days); the change sends it back as expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 // SetVacationOpeningRequest carries the vacation takeover: the Resturlaub as
@@ -398,6 +407,9 @@ type CompTimeBalancePreview struct {
 	FutureCommitmentMinutes  int `json:"future_commitment_minutes"`
 	FutureAdjustmentMinutes  int `json:"future_adjustment_minutes"`
 	ProjectedBalanceMinutes  int `json:"projected_balance_minutes"`
+	// Fingerprint is the token of this projection (ADR 0311): a booking that
+	// confirms an overdraft sends it back as expected_fingerprint.
+	Fingerprint string `json:"fingerprint"`
 }
 
 // RebookAbsencesRequest moves stored absences of one staff member to another
@@ -408,6 +420,9 @@ type RebookAbsencesRequest struct {
 	AbsenceTypeID *int64
 	Reason        string
 	DryRun        bool
+	// ExpectedFingerprint is the dry run's Fingerprint the write was
+	// confirmed against (ADR 0311).
+	ExpectedFingerprint string
 }
 
 // AbsenceRebookingResult is what a rebooking does: the entries with their new
@@ -421,6 +436,9 @@ type AbsenceRebookingResult struct {
 	Vacation            []RebookingVacationYear  `json:"vacation,omitempty"`
 	VacationExceeded    bool                     `json:"vacation_exceeded"`
 	Applied             bool                     `json:"applied"`
+	// Fingerprint is the token of the effect (ADR 0311): the write sends
+	// the dry run's back as expected_fingerprint.
+	Fingerprint string `json:"fingerprint"`
 }
 
 // RebookingAllowanceYear is the target allowance of one year after the
@@ -674,6 +692,9 @@ type VacationQuotaChange struct {
 	CarryoverDays float64
 	Reason        string
 	ChangedBy     int64
+	// ExpectedVersion is the Version of the summary the form was read from
+	// (ADR 0311); a claim changed since is not overwritten.
+	ExpectedVersion string
 }
 
 // MonthCloseStaff is one staff member a school-wide month close may cover.

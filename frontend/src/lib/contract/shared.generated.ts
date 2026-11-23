@@ -3436,6 +3436,7 @@ export interface VacationQuotaSummary {
   reserved_days: number;
   remaining_days: number;
   opening?: StaffVacationOpening;
+  version: string;
 }
 
 export const VacationQuotaSummarySchema: z.ZodType<VacationQuotaSummary, unknown> = object<VacationQuotaSummary>({
@@ -3448,6 +3449,7 @@ export const VacationQuotaSummarySchema: z.ZodType<VacationQuotaSummary, unknown
   reserved_days: num,
   remaining_days: num,
   opening: optional(StaffVacationOpeningSchema),
+  version: str,
 });
 
 /** Go: workforce.CreateAbsenceRequest */
@@ -3458,6 +3460,7 @@ export interface CreateAbsenceRequest {
   date_end?: string;
   half_day?: boolean;
   note?: string;
+  expected_fingerprint?: string;
 }
 
 /** Go: workforce.BreakDurationUpdate */

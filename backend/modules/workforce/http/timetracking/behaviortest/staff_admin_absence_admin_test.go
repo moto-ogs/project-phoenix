@@ -18,6 +18,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -162,6 +163,76 @@ func TestAdminCreateStaffAbsence_CompTimeAllowedForManager(t *testing.T) {
 	assert.Equal(t, absenceStatusRepd, absences[0].Status)
 }
 
+// compTimePreview reads the projection of a one-day Freizeitausgleich and
+// returns it with its fingerprint; a failed read fails the test.
+func compTimePreview(t *testing.T, tc *testContext, token string, staffID int64, day calendar.Date) (int, string) {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf(
+		"/staff/%d/time-tracking/comp-time-preview?date_start=%s&date_end=%s&half_day=false", staffID, day.String(), day.String(),
+	), nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+	tc.router.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	var body struct {
+		Data struct {
+			ProjectedBalanceMinutes int    `json:"projected_balance_minutes"`
+			Fingerprint             string `json:"fingerprint"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	require.NotEmpty(t, body.Data.Fingerprint)
+	return body.Data.ProjectedBalanceMinutes, body.Data.Fingerprint
+}
+
+// The server owns the overdraft confirmation (#2873, ADR 0311): a
+// Freizeitausgleich that takes the Stundenkonto below zero books only on the
+// projection the Leitung confirmed, its preview's fingerprint. Without one,
+// or with one whose minus grew since, nothing is booked.
+func TestAdminCreateStaffAbsence_CompTimeOverdraftNeedsConfirmation(t *testing.T) {
+	t.Parallel()
+
+	tc, token, subjectID, _ := setupAbsenceAdminTest(t)
+	setAccountStart(t, tc, "2026-11-01")
+	for weekday := range 5 {
+		testpkg.CreateTestStaffWorkScheduleForTenant(t, tc.db, testpkg.Tenant(t), subjectID, weekday, 480, testpkg.Date(2026, time.November, 1))
+	}
+	day, other := absenceAdminDay.AddDays(2), absenceAdminDay.AddDays(3)
+	booking := map[string]any{"absence_type": "comp_time", "date_start": day.String(), "date_end": day.String()}
+	assertNothingBookedOn := func(day calendar.Date) {
+		t.Helper()
+		absences, err := newWorkforceTestRepositories(t, tc.db).StaffAbsence.ListStaffAbsences(testpkg.Ctx(t), workforce.StaffAbsenceFilter{StaffID: subjectID, OverlapFrom: day.String(), OverlapTo: day.String()})
+		require.NoError(t, err)
+		assert.Empty(t, absences)
+	}
+
+	rec := postAbsence(t, tc, token, subjectID, booking)
+	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+	assert.Contains(t, rec.Body.String(), `"code":"general.changed_since_read"`)
+	assertNothingBookedOn(day)
+
+	// The Leitung confirms −8 h; a colleague then books another day, and the
+	// same booking would take the account to −16 h.
+	projected, confirmed := compTimePreview(t, tc, token, subjectID, day)
+	require.Negative(t, projected)
+	_, otherFingerprint := compTimePreview(t, tc, token, subjectID, other)
+	rec = postAbsence(t, tc, token, subjectID, map[string]any{
+		"absence_type": "comp_time", "date_start": other.String(), "date_end": other.String(), "expected_fingerprint": otherFingerprint,
+	})
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+	booking["expected_fingerprint"] = confirmed
+	rec = postAbsence(t, tc, token, subjectID, booking)
+	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+	assert.Contains(t, rec.Body.String(), `"code":"general.changed_since_read"`)
+	assertNothingBookedOn(day)
+
+	grown, current := compTimePreview(t, tc, token, subjectID, day)
+	assert.Less(t, grown, projected)
+	booking["expected_fingerprint"] = current
+	rec = postAbsence(t, tc, token, subjectID, booking)
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+}
+
 func TestAdminCreateStaffAbsence_RejectsMultiDayHalfDayCompTime(t *testing.T) {
 	t.Parallel()
 
@@ -229,11 +300,52 @@ func TestAdminCreateStaffAbsence_UnknownStaff(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, rec.Code)
 }
 
+// putVacationQuota sets the claim as the quota form does: with the version
+// of the summary it read (ADR 0311).
 func putVacationQuota(t *testing.T, tc *testContext, token string, staffID int64, year int, days float64) *httptest.ResponseRecorder {
+	t.Helper()
+	return putVacationQuotaAt(t, tc, token, staffID, year, days, vacationQuotaVersion(t, tc, token, staffID, year))
+}
+
+func putVacationQuotaAt(t *testing.T, tc *testContext, token string, staffID int64, year int, days float64, version string) *httptest.ResponseRecorder {
 	t.Helper()
 	return testutil.ExecuteRequest(tc.router, testutil.NewAuthenticatedRequest(
 		t, http.MethodPut, fmt.Sprintf("/staff/%d/vacation/quota", staffID),
-		map[string]any{"year": year, "entitled_days": days, "reason": "Stellenumfang"}, testutil.WithJWTBearer(token)))
+		map[string]any{"year": year, "entitled_days": days, "reason": "Stellenumfang", "expected_version": version}, testutil.WithJWTBearer(token)))
+}
+
+func vacationQuotaVersion(t *testing.T, tc *testContext, token string, staffID int64, year int) string {
+	t.Helper()
+	rec := testutil.ExecuteRequest(tc.router, testutil.NewAuthenticatedRequest(
+		t, http.MethodGet, fmt.Sprintf("/staff/%d/vacation/quota?year=%d", staffID, year), nil, testutil.WithJWTBearer(token)))
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	var read struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &read))
+	return read.Data.Version
+}
+
+// The Leitung changes the claim the form showed (ADR 0311): a second form of
+// the same read, or one without a read, is refused and the first change
+// stays.
+func TestSetVacationQuota_RefusesAClaimChangedSinceTheRead(t *testing.T) {
+	t.Parallel()
+	tc, token, subjectID, _ := setupAbsenceAdminTest(t)
+	read := vacationQuotaVersion(t, tc, token, subjectID, 2027)
+	rec := putVacationQuotaAt(t, tc, token, subjectID, 2027, 25, read)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	for _, stale := range []string{read, ""} {
+		rec = putVacationQuotaAt(t, tc, token, subjectID, 2027, 28, stale)
+		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+		assert.Contains(t, rec.Body.String(), `"code":"general.changed_since_read"`)
+	}
+	var entitled float64
+	require.NoError(t, tc.db.NewRaw(`SELECT entitled_days FROM active.staff_vacation_quota WHERE tenant_id = ? AND staff_id = ? AND year = 2027`,
+		testpkg.Tenant(t), subjectID).Scan(testpkg.Ctx(t), &entitled))
+	assert.Equal(t, 25.0, entitled)
 }
 
 // #3256: the Leitung books vacation directly, without a request, and never

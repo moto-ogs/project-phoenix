@@ -21598,7 +21598,7 @@
       ],
       "request": {
         "kind": "ref",
-        "ref": "SeriesRequest"
+        "ref": "SeriesSplitRequest"
       },
       "response": {
         "kind": "ref",
@@ -24734,6 +24734,13 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -25021,6 +25028,12 @@
           "name": "applied",
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "fingerprint",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -44172,6 +44185,12 @@
           "schema": {
             "kind": "int"
           }
+        },
+        {
+          "name": "fingerprint",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -47461,6 +47480,13 @@
         },
         {
           "name": "note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_fingerprint",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -81434,6 +81460,13 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "expected_fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -89749,6 +89782,12 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -89923,6 +89962,141 @@
           "name": "skipped_non_working_days",
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SeriesSplitRequest",
+      "go_type": "staffshifts.SeriesSplitRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "working_time_confirmed",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "working_time_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "weekdays",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "start_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "end_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "break_minutes",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "shift_type_id",
+          "optional": true,
+          "schema": {
+            "kind": "id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "notes",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "calendar_period_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "week_pattern",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "valid_from",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "valid_until",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "effective_date",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "occurrence_shift_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "include_school_breaks",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -94191,6 +94365,13 @@
             "elem": {
               "kind": "string"
             }
+          }
+        },
+        {
+          "name": "expected_fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -101199,6 +101380,13 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "expected_fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -101533,6 +101721,12 @@
               "kind": "ref",
               "ref": "TraegerAbsenceSchoolUse"
             }
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -104992,6 +105186,12 @@
               "ref": "TraegerStaffFieldPreview"
             }
           }
+        },
+        {
+          "name": "fingerprint",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -105657,6 +105857,12 @@
               "kind": "ref",
               "ref": "TraegerTimeAccountSchool"
             }
+          }
+        },
+        {
+          "name": "fingerprint",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -107553,6 +107759,13 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -107614,6 +107827,12 @@
           "schema": {
             "kind": "ref",
             "ref": "StaffVacationOpening"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]

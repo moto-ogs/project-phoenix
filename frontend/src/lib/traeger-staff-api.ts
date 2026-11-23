@@ -253,6 +253,9 @@ export interface StaffLinkPreview {
   readonly record: StaffRecordSummary | null;
   readonly members: readonly StaffCandidate[];
   readonly fields: readonly StaffFieldPreview[];
+  /** Token of every value the preview compares; the link sends it back
+   *  (ADR 0311). */
+  readonly fingerprint: string;
 }
 
 interface StaffMemberRef {
@@ -264,6 +267,8 @@ export interface StaffLinkInput {
   readonly recordId: string | null;
   readonly members: readonly StaffMemberRef[];
   readonly choices: Readonly<Partial<Record<StaffRecordField, string>>>;
+  /** Fingerprint of the preview the choices were made on (ADR 0311). */
+  readonly expectedFingerprint?: string;
 }
 
 function mapSummary(
@@ -412,6 +417,9 @@ function linkBody(
       staff_id: member.staffId,
     })),
     choices: input.choices,
+    ...(input.expectedFingerprint !== undefined
+      ? { expected_fingerprint: input.expectedFingerprint }
+      : {}),
   };
 }
 
@@ -463,6 +471,7 @@ export async function previewStaffLink(
         },
       ];
     }),
+    fingerprint: data.fingerprint,
   };
 }
 

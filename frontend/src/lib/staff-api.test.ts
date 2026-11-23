@@ -1908,6 +1908,7 @@ describe("staff-api", () => {
         entitled_days: 30,
         carryover_days: 1,
         reason: "Tarif",
+        expected_version: "quota-1",
       };
       const result = await staffAbsenceService.setVacationQuota("1", payload);
 
@@ -2029,6 +2030,7 @@ describe("staff-api", () => {
         entitled_days: 30,
         carryover_days: 1,
         reason: "Tarif",
+        expected_version: "quota-1",
       };
 
       await expect(
@@ -2389,6 +2391,7 @@ describe("staff-api", () => {
               future_commitment_minutes: 240,
               future_adjustment_minutes: -60,
               projected_balance_minutes: -660,
+              fingerprint: "preview-1",
             },
           }),
       } as Response);
@@ -2410,6 +2413,7 @@ describe("staff-api", () => {
         futureCommitmentMinutes: 240,
         futureAdjustmentMinutes: -60,
         projectedBalanceMinutes: -660,
+        fingerprint: "preview-1",
       });
     });
 

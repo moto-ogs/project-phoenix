@@ -110,7 +110,7 @@ func TestStaffPoolLetsEverySchoolBlockASpringerOnce(t *testing.T) {
 	_, southLead := testpkg.CreateTestStaffWithAccountForTenant(t, db, south, "Sina", "Süd")
 	_, westLead := testpkg.CreateTestStaffWithAccountForTenant(t, db, west, "Wim", "West")
 	record := func(staffID int64, pool bool) int64 {
-		rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/staff-records/", map[string]any{
+		rec := traegerLink(t, router, office.token, map[string]any{
 			"members": []map[string]int64{{"school_id": north, "staff_id": staffID}},
 		})
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
@@ -327,7 +327,7 @@ func TestStaffPoolWeekQueryBudget(t *testing.T) {
 	_, southLead := testpkg.CreateTestStaffWithAccountForTenant(t, db, south, "Sina", "Süd")
 	springer := func(last, date string) {
 		member := testpkg.CreateTestStaffForTenant(t, db, north, "Mira", last)
-		rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/staff-records/", map[string]any{
+		rec := traegerLink(t, router, office.token, map[string]any{
 			"members": []map[string]int64{{"school_id": north, "staff_id": member.ID}},
 		})
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())

@@ -350,7 +350,7 @@ func (rs *StaffAdminResource) setStaffVacationQuota(w http.ResponseWriter, r *ht
 	}
 	if err := rs.StaffAbsenceService.SetVacationQuota(r.Context(), workforce.VacationQuotaChange{
 		StaffID: staffID, Year: body.Year, EntitledDays: body.EntitledDays, CarryoverDays: body.CarryoverDays,
-		Reason: body.Reason, ChangedBy: changedBy,
+		Reason: body.Reason, ChangedBy: changedBy, ExpectedVersion: body.ExpectedVersion,
 	}); err != nil {
 		if errors.Is(err, workforce.ErrVacationQuotaInvalid) {
 			common.RenderError(w, r, common.ErrorInvalidRequest(err))

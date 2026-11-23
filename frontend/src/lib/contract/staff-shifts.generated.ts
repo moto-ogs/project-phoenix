@@ -175,6 +175,7 @@ export interface SeriesDetailResponse {
   valid_from: string;
   valid_until: string | null;
   include_school_breaks: boolean;
+  version: string;
 }
 
 export const SeriesDetailResponseSchema: z.ZodType<SeriesDetailResponse, unknown> = object<SeriesDetailResponse>({
@@ -191,6 +192,7 @@ export const SeriesDetailResponseSchema: z.ZodType<SeriesDetailResponse, unknown
   valid_from: str,
   valid_until: nullable(str),
   include_school_breaks: bool,
+  version: str,
 });
 
 /** Go: staffshifts.ShiftRequest */
@@ -236,6 +238,27 @@ export interface SeriesRequest {
   effective_date?: string;
   occurrence_shift_id?: string;
   include_school_breaks?: boolean | null;
+}
+
+/** Go: staffshifts.SeriesSplitRequest */
+export interface SeriesSplitRequest {
+  working_time_confirmed?: boolean;
+  working_time_reason?: string;
+  staff_id?: string;
+  weekdays?: number[] | null;
+  start_time?: string;
+  end_time?: string;
+  break_minutes?: number;
+  shift_type_id?: string | null;
+  notes?: string | null;
+  calendar_period_id?: string;
+  week_pattern?: number | null;
+  valid_from?: string;
+  valid_until?: string | null;
+  effective_date?: string;
+  occurrence_shift_id?: string;
+  include_school_breaks?: boolean | null;
+  expected_version?: string;
 }
 
 /** Go: staffshifts.ReplacementRequest */
@@ -361,7 +384,7 @@ export const routes = {
     method: "PUT",
     pattern: "/api/staff-shifts/series/{id}/split",
     portals: ["tenant"],
-    request: requestBody<SeriesRequest>(),
+    request: requestBody<SeriesSplitRequest>(),
     response: success(SeriesResponseSchema),
   },
   "PUT /api/staff-shifts/{id}": {

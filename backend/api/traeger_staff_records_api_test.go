@@ -253,7 +253,7 @@ func TestTraegerStaffRecordsLinkThePeopleOfAllSchools(t *testing.T) {
 		assert.Nil(t, overview.Release)
 		assert.Len(t, overview.Schools, 2)
 		assert.Empty(t, overview.Suggestions)
-		rec = traegerJSON(t, router, office.token, http.MethodPost, "/traeger/staff-records/", map[string]any{
+		rec = traegerLink(t, router, office.token, map[string]any{
 			"members": []map[string]int64{{"school_id": north, "staff_id": miraNorth.ID}},
 		})
 		assertStaffRefusal(t, rec, http.StatusConflict, "workforce.traeger_staff_not_released")
@@ -302,13 +302,13 @@ func TestTraegerStaffRecordsLinkThePeopleOfAllSchools(t *testing.T) {
 		}
 		assert.True(t, conflicts["last_name"])
 		assert.False(t, conflicts["first_name"])
-		rec = traegerJSON(t, router, office.token, http.MethodPost, "/traeger/staff-records/", map[string]any{"members": members})
+		rec = traegerLink(t, router, office.token, map[string]any{"members": members})
 		assertStaffRefusal(t, rec, http.StatusBadRequest, "workforce.traeger_staff_link_invalid")
 	})
 
 	t.Run("a number another person of a school holds is refused before anything moves", func(t *testing.T) {
 		staffSetPersonnelNumber(t, db, south, jonas.ID, "70001")
-		rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/staff-records/", map[string]any{
+		rec := traegerLink(t, router, office.token, map[string]any{
 			"members": members, "choices": map[string]string{"last_name": strconv.FormatInt(south, 10)},
 		})
 		assertStaffRefusal(t, rec, http.StatusConflict, "workforce.personnel_number_taken")
@@ -318,9 +318,32 @@ func TestTraegerStaffRecordsLinkThePeopleOfAllSchools(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("a link takes no value that changed since its preview", func(t *testing.T) {
+		stale, ok := readToken(t, traegerJSON(t, router, office.token, http.MethodPost, "/traeger/staff-records/link-preview", map[string]any{"members": members}), "fingerprint")
+		require.True(t, ok)
+		reseal := func(iban string) {
+			cipher, err := BankDataCipher(viper.GetString("bank_data_keys"), "")
+			require.NoError(t, err)
+			sealed, err := cipher.Seal([]byte(iban), []byte("users.staff_financial_data.iban|"+strconv.FormatInt(south, 10)+"|"+strconv.FormatInt(miraSouth.ID, 10)))
+			require.NoError(t, err)
+			_, err = db.ExecContext(context.Background(), `UPDATE users.staff_financial_data SET iban_sealed = ? WHERE tenant_id = ? AND staff_id = ?`, sealed, south, miraSouth.ID)
+			require.NoError(t, err)
+		}
+		// The school enters another IBAN behind the same mask.
+		reseal("DE02120300000000203000")
+		for _, fingerprint := range []string{stale, ""} {
+			rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/staff-records/", map[string]any{
+				"members": members, "choices": map[string]string{"last_name": strconv.FormatInt(south, 10)}, "expected_fingerprint": fingerprint,
+			})
+			assertStaffRefusal(t, rec, http.StatusConflict, "general.changed_since_read")
+		}
+		assert.Zero(t, staffSchoolValue(t, db, `SELECT COUNT(*) FROM workforce.staff_records WHERE organization_id = ?`, office.organization), "no record was written")
+		reseal("DE89370400440532013000")
+	})
+
 	var record staffRecordBody
 	t.Run("the link takes the chosen values and the bank values of the schools", func(t *testing.T) {
-		rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/staff-records/", map[string]any{
+		rec := traegerLink(t, router, office.token, map[string]any{
 			"members": members, "choices": map[string]string{"last_name": strconv.FormatInt(south, 10)},
 		})
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
@@ -347,7 +370,7 @@ func TestTraegerStaffRecordsLinkThePeopleOfAllSchools(t *testing.T) {
 			"no school keeps a copy of the bank values")
 		assert.Equal(t, 1, staffSchoolValue(t, db, `SELECT COUNT(*) FROM users.staff_employment_profiles WHERE tenant_id = ? AND membership_id = ? AND personnel_number = '70001'`, south, miraSouth.ID),
 			"every Einsatzort carries the Träger's personnel number")
-		rec = traegerJSON(t, router, office.token, http.MethodPost, "/traeger/staff-records/", map[string]any{"members": members[:1]})
+		rec = traegerLink(t, router, office.token, map[string]any{"members": members[:1]})
 		assertStaffRefusal(t, rec, http.StatusConflict, "workforce.traeger_staff_already_linked")
 		_, err := db.ExecContext(context.Background(), `UPDATE users.staff_employment_profiles SET personnel_number = '70077' WHERE membership_id = ?`, miraSouth.ID)
 		require.Error(t, err, "no path of the school, the import included, writes another number than the Träger's")
@@ -425,7 +448,7 @@ func TestTraegerStaffRecordsLinkThePeopleOfAllSchools(t *testing.T) {
 		rec = traegerJSON(t, router, office.token, http.MethodPut, fmt.Sprintf("/traeger/staff-records/%d/personnel-number", record.ID), map[string]any{"personnel_number": "70005"})
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		assert.Equal(t, 2, staffSchoolValue(t, db, `SELECT COUNT(*) FROM users.staff_employment_profiles WHERE membership_id IN (?, ?) AND personnel_number = '70005'`, miraNorth.ID, miraSouth.ID))
-		jonasRecord := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/staff-records/", map[string]any{
+		jonasRecord := traegerLink(t, router, office.token, map[string]any{
 			"members": []map[string]int64{{"school_id": south, "staff_id": jonas.ID}},
 		})
 		require.Equal(t, http.StatusCreated, jonasRecord.Code, jonasRecord.Body.String())
@@ -558,7 +581,7 @@ func TestTraegerStaffOverviewQueryBudget(t *testing.T) {
 			for _, school := range office.schools {
 				staff := testpkg.CreateTestStaffForTenant(t, db, school, "Kraft", fmt.Sprintf("Nummer %d", i))
 				if i == 0 {
-					rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/staff-records/", map[string]any{
+					rec := traegerLink(t, router, office.token, map[string]any{
 						"members": []map[string]int64{{"school_id": school, "staff_id": staff.ID}},
 					})
 					require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
