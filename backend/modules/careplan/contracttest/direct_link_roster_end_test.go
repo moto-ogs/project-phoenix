@@ -263,3 +263,35 @@ func TestUpdateChildOfferings_DatedChangeKeepsDirectRowBesideMultiSourceRoster(t
 	assert.Equal(t, rosterSpansByID(approved), rosterSpansByID(loadTemplateEnrollments(t, env, roster.ID)),
 		"the kept Tuesday row runs on to the end of the phase")
 }
+
+// The Klassen filter of a roster's source applies on approval as it does in
+// the resync: a child outside the filter gets no source row, neither beside
+// the direct link of another offering nor on a roster that only names the
+// source.
+func TestDecide_SourceClassFilterAppliesOnApproval(t *testing.T) {
+	t.Parallel()
+	env := setupDecisionTest(t)
+	ctx := testpkg.Ctx(t)
+	periodID := directLinkPeriod(t, env)
+	source := directLinkOffering(t, env, "QuelleNur2a", nil, "tue")
+	classFiltered := func(name string) *timetable.Group {
+		roster := createSourcedTemplate(t, env, name, source.ID, nil, periodID)
+		roster.SourceSchoolClasses = []string{"2a"}
+		require.NoError(t, timetableCompose.NativeGroupRecords(testTimetableRepositories(env.db).Timetable).Update(ctx, roster))
+		createCareOfferingTemplateSchedule(t, env.db, roster.ID, timetable.WeekdayTuesday, &periodID)
+		return roster
+	}
+	mixed, sourceOnly := classFiltered("KlasseGemischt"), classFiltered("KlasseNurQuelle")
+	direct := directLinkOffering(t, env, "DirektMontagAlle", &mixed.ID, "mon")
+
+	studentID, _ := approveDirectLinkChild(t, env, "Kai", []int64{direct.ID, source.ID})
+	var class string
+	require.NoError(t, env.db.NewRaw(`SELECT school_class FROM users.student_school_memberships
+		WHERE student_profile_id = ? AND deleted_at IS NULL`, studentID).Scan(ctx, &class))
+	require.NotEqual(t, "2a", class, "sanity: the child is outside the filter")
+
+	start, end := string(calendar.Date(env.sourcePhase.ServiceStartDate)), string(calendar.Date(env.sourcePhase.ServiceEndDate).AddDays(1))
+	assert.Equal(t, []rosterSpan{{Weekdays: []int{1}, From: start, Until: end}}, rosterSpans(loadTemplateEnrollments(t, env, mixed.ID)),
+		"the direct link plans Monday, the filtered source plans no Tuesday")
+	assert.Empty(t, loadTemplateEnrollments(t, env, sourceOnly.ID), "the filtered source plans nothing")
+}

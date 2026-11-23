@@ -63,7 +63,7 @@ func (m *BookingMaterialization) buildCareEnrollmentDrafts(
 	phase careplan.OfferingPhase,
 ) (map[int64][]*careEnrollmentDraft, map[int64]ports.SourcedTemplate, error) {
 	offeringByID := offeringsByID(offerings)
-	gradeLevel, studentValidUntil, err := m.studentCareDraftBounds(ctx, studentID)
+	student, studentValidUntil, err := m.studentCareDraftBounds(ctx, studentID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -86,7 +86,7 @@ func (m *BookingMaterialization) buildCareEnrollmentDrafts(
 		if err := m.addLegacyLinkedGroupDrafts(ctx, plan.legacy, offering, link, phase); err != nil {
 			return nil, nil, err
 		}
-		feed := sourcedDraftFeed{offering: offering, link: link, phase: phase, gradeLevel: gradeLevel}
+		feed := sourcedDraftFeed{offering: offering, link: link, phase: phase, gradeLevel: student.GradeLevel, schoolClass: student.SchoolClass}
 		if err := m.addSourcedTemplateDrafts(ctx, plan.sourced, multiSource, feed, sources); err != nil {
 			return nil, nil, err
 		}
@@ -129,25 +129,26 @@ func sourcedTemplatesByOffering(templates []ports.SourcedTemplate) map[int64][]p
 	return result
 }
 
-// studentCareDraftBounds derives the child's grade filter and exclusive care
-// end. A missing row yields open bounds for legacy compatibility.
-func (m *BookingMaterialization) studentCareDraftBounds(ctx context.Context, studentID int64) (*int16, *calendar.Date, error) {
+// studentCareDraftBounds reads the child's Jahrgang and school class the
+// sources' filters match on, and derives its exclusive care end. A missing
+// row yields open bounds for legacy compatibility.
+func (m *BookingMaterialization) studentCareDraftBounds(ctx context.Context, studentID int64) (ports.BookingStudent, *calendar.Date, error) {
 	if studentID <= 0 {
-		return nil, nil, nil
+		return ports.BookingStudent{}, nil, nil
 	}
 	student, err := m.deps.Students.Student(ctx, studentID, false)
 	if err != nil {
 		if errors.Is(err, ports.ErrBookingRowNotFound) {
-			return nil, nil, nil
+			return ports.BookingStudent{}, nil, nil
 		}
-		return nil, nil, fmt.Errorf("decision: load student for care draft bounds: %w", err)
+		return ports.BookingStudent{}, nil, fmt.Errorf("decision: load student for care draft bounds: %w", err)
 	}
 	var validUntil *calendar.Date
 	if student.EnrolledUntil != nil {
 		end := student.EnrolledUntil.AddDays(1)
 		validUntil = &end
 	}
-	return student.GradeLevel, validUntil, nil
+	return student, validUntil, nil
 }
 
 // addLegacyLinkedGroupDrafts is the pre-#2137 offering→template feed: the one
@@ -313,15 +314,16 @@ func careDraftTarget(draft *careEnrollmentDraft, phase careplan.OfferingPhase) *
 // sourcedDraftFeed is one booking link feeding the templates that source its
 // offering.
 type sourcedDraftFeed struct {
-	offering   *careplan.CareOffering
-	link       *careplan.BookedOffering
-	phase      careplan.OfferingPhase
-	gradeLevel *int16
+	offering    *careplan.CareOffering
+	link        *careplan.BookedOffering
+	phase       careplan.OfferingPhase
+	gradeLevel  *int16
+	schoolClass string
 }
 
 // addSourcedTemplateDrafts is the #2137 feed: every template that declares
 // this offering as its roster source pulls the child in when the template's
-// Jahrgang filter matches. Misconfigured templates (no schedules, no
+// Jahrgang or Klassen filter matches. Misconfigured templates (no schedules, no
 // resolvable period, period drifted away from the phase) are skipped with a
 // warning instead of failing the approval — the editor surfaces the mismatch,
 // and blocking every approval on one broken template would be worse.
@@ -348,7 +350,9 @@ func (m *BookingMaterialization) addSourcedTemplateDrafts(
 		return fmt.Errorf("decision: resolve selected days for care offering %d: %w", feed.link.CareOfferingID, err)
 	}
 	for _, tmpl := range templates {
-		if !gradeFilterMatches(tmpl.SourceGradeLevels, feed.gradeLevel) {
+		// The two filters are mutually exclusive by validation, as in the
+		// resync (wantedSourcedRosterTargets).
+		if !gradeFilterMatches(tmpl.SourceGradeLevels, feed.gradeLevel) || !sourceClassFilterMatches(tmpl.SourceSchoolClasses, feed.schoolClass) {
 			continue
 		}
 		if len(tmpl.SourceCareOfferingIDs) > 1 {
