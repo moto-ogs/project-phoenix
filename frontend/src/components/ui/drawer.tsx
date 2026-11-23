@@ -128,6 +128,8 @@ type DrawerContentProps = OmitEach<
   readonly fullScreen?: boolean;
   /** Ebene von Blatt und Abdunklung; ohne Angabe `sheet`. */
   readonly layer?: DrawerLayer;
+  /** Die Abdunklung, etwa als Fläche des Blatts auf dem Overlay-Stapel. */
+  readonly overlayRef?: React.Ref<HTMLDivElement>;
 };
 
 const DrawerContent = React.forwardRef<
@@ -140,6 +142,7 @@ const DrawerContent = React.forwardRef<
       children,
       fullScreen = false,
       layer: layerProp,
+      overlayRef,
       ...props
     }: DrawerContentProps,
     ref,
@@ -152,7 +155,7 @@ const DrawerContent = React.forwardRef<
     useSheetAboveKeyboard(sheetRef, direction === "bottom");
     return (
       <DrawerPortal>
-        <DrawerOverlay layer={layer} />
+        <DrawerOverlay ref={overlayRef} layer={layer} />
         <DrawerPrimitive.Content
           ref={(node: HTMLDivElement | null) => {
             sheetRef.current = node;

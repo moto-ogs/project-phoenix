@@ -62,6 +62,10 @@ export function ResponsivePanelSheet({
   children,
 }: ResponsivePanelSheetProps) {
   const sheetRef = useRef<HTMLDivElement | null>(null);
+  const overlayRef = useRef<HTMLDivElement | null>(null);
+  // Die Abdunklung gehört zum Blatt: Ein Tipp darauf schließt nur das Blatt,
+  // nicht auch den Kalender oder das Popover, aus dem es aufging.
+  const surfaces = useMemo(() => [sheetRef, overlayRef], []);
   const parent = useContext(ParentSheetContext);
   // In einem offenen Blatt: ein zweites Blatt darüber (vaul `NestedRoot`).
   const Root = parent === null ? Drawer : DrawerNested;
@@ -90,7 +94,7 @@ export function ResponsivePanelSheet({
   // Auf dem Stapel der Overlays: Ein Popover, das im Blatt aufgeht, gehört
   // zu ihm, und ein Dialog darüber verdrängt es wie jedes Popover.
   const { isTopmost } = useOverlay(open, "popover", {
-    elementRef: sheetRef,
+    elementRef: surfaces,
     onCovered: () => onOpenChange(false),
   });
 
@@ -99,6 +103,7 @@ export function ResponsivePanelSheet({
       <DrawerContent
         id={id}
         ref={sheetRef}
+        overlayRef={overlayRef}
         layer="popover"
         // Vauls Fokusfalle wie im Slide-over: Kalender und Popover im Blatt
         // erkennen sie daran und bleiben per Tastatur erreichbar.
