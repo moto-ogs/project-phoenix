@@ -2,6 +2,7 @@
 import { z } from "zod";
 import {
   arr,
+  bool,
   calendarDate,
   int64String,
   noData,
@@ -136,12 +137,14 @@ export const EnrollmentRowSchema: z.ZodType<EnrollmentRow, unknown> = object<Enr
 /** Go: contractenrollment.EnrollmentRun */
 export interface EnrollmentRun {
   school_id: string;
+  changed: boolean;
   counts: EnrollmentRowCounts;
   rows: EnrollmentRow[] | null;
 }
 
 export const EnrollmentRunSchema: z.ZodType<EnrollmentRun, unknown> = object<EnrollmentRun>({
   school_id: int64String,
+  changed: bool,
   counts: EnrollmentRowCountsSchema,
   rows: nullable(arr(EnrollmentRowSchema)),
 });

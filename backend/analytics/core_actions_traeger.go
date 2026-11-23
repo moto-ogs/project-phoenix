@@ -254,11 +254,13 @@ var traegerCoreActions = map[RouteKey]CoreAction{
 	{http.MethodPut, "/traeger/contract-child-links/{contractId}"}:          notCaptured,
 	{http.MethodDelete, "/traeger/contract-child-links/{contractId}"}:       notCaptured,
 	// The enrollment of the children of imported contracts (#7760, ADR
-	// 0309): a run that enrolled the children of a school is the core
-	// action; the preview stores nothing, and taking a binding off again is
-	// a correction of the Träger.
+	// 0309): a run that enrolled a child or bound a contract is the core
+	// action. A run that found everything done answers changed=false and
+	// counts nothing. The answer lists every contract of the school after
+	// the flag, so the flag is read from its start. The preview stores
+	// nothing, and taking a binding off again is a correction of the Träger.
 	{http.MethodPost, "/traeger/contract-enrollments/preview"}:        notCaptured,
-	{http.MethodPost, "/traeger/contract-enrollments/"}:               event("contract_children_enrolled"),
+	{http.MethodPost, "/traeger/contract-enrollments/"}:               leadingFlagEvent("contract_children_enrolled", "changed"),
 	{http.MethodDelete, "/traeger/contract-enrollments/{contractId}"}: notCaptured,
 	// Withdrawal and termination (#4682): the Träger-Büro records a
 	// declaration it received and sets the end of an extraordinary

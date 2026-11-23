@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -13,6 +14,7 @@ import (
 	enrollmentOwner "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	peopleDirectoryCompose "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
@@ -32,7 +34,7 @@ const contractEnrollmentAccessView = "contract_enrollment"
 // /traeger/contract-enrollments behind the right "Verträge verwalten". The
 // workflow plans and binds through Care Contract and enrolls through the
 // school's Enrollment decisions; today and now are the root's clocks.
-func mountContractEnrollmentRoutes(root chi.Router, organizations HolidayOrganizations, schoolEnrollments enrollmentOwner.ContractEnrollments,
+func mountContractEnrollmentRoutes(root chi.Router, organizations ContractEnrollmentOrganizations, schoolEnrollments enrollmentOwner.ContractEnrollments,
 	accessLog owners.DataAccessAppender, today func() calendar.Date, now func() time.Time) error {
 	enrollments, err := contractEnrollmentCompose.New(ports.Dependencies{
 		Contracts: careContractCompose.NewContractEnrollments(careContractCompose.EnrollmentPorts{
@@ -53,9 +55,33 @@ func mountContractEnrollmentRoutes(root chi.Router, organizations HolidayOrganiz
 	return nil
 }
 
-// contractEnrollmentSchools names the undeleted schools of the Träger.
+// ContractEnrollmentOrganizations are the reads of Organisation & Tenancy
+// the enrollment of contract children needs: the schools of a Träger, and
+// one school under a share lock.
+type ContractEnrollmentOrganizations interface {
+	ListSchoolsByOrganization(context.Context, int64) ([]organizationtenancy.School, error)
+	FindSchoolForShare(context.Context, int64) (organizationtenancy.School, error)
+}
+
+// contractEnrollmentSchools names the undeleted schools of the Träger and
+// holds one of them.
 type contractEnrollmentSchools struct {
-	organizations HolidayOrganizations
+	organizations ContractEnrollmentOrganizations
+}
+
+// HoldTraegerSchool reads the school under the share lock of its own tenant
+// transaction, the lock the catalog rollout holds too (#6305): a change of
+// the school's Träger waits for it. A school that is gone, deleted or
+// another Träger's is not held.
+func (s contractEnrollmentSchools) HoldTraegerSchool(ctx context.Context, organizationID, schoolID int64) (bool, error) {
+	school, err := s.organizations.FindSchoolForShare(ctx, schoolID)
+	if errors.Is(err, organizationtenancy.ErrSchoolNotFound) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return school.OrganizationID.Int64() == organizationID && !school.IsDeleted(), nil
 }
 
 func (s contractEnrollmentSchools) TraegerSchoolIDs(ctx context.Context, organizationID int64) ([]int64, error) {

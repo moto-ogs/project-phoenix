@@ -137,7 +137,7 @@ Every POST, PUT, PATCH, or DELETE route of the portal routers (`/api`,
    write counts for the school in its route (`catererEvent("…")`, route with
    `{schoolId}`). An idempotent write whose response reports whether it
    changed something counts only a real change (`createdEvent`,
-   `endedEvent`); one that does not report it (an order confirmation)
+   `endedEvent`, `leadingFlagEvent`); one that does not report it (an order confirmation)
    counts every 2xx, so its dashboards count days, not events.
 2. Name a new event in snake_case after what succeeded (`group_created`).
    Properties are fixed: `school_id`, `surface`, `role`, `deployment`,

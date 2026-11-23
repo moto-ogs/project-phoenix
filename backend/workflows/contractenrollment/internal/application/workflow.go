@@ -67,11 +67,12 @@ func (w *Workflow) Preview(ctx context.Context, actor contractenrollment.Actor, 
 	return preview, nil
 }
 
-// Run plans again in the school's tenant transaction, hands every ready row
-// of the confirmed preview to the school's enrollment there, and binds what
-// it confirmed in a Träger transaction of its own. A run that stops between
-// the two leaves the children enrolled and the contracts unbound; the next
-// run finds the enrollments and binds.
+// Run plans again in the school's tenant transaction, hands every row the
+// confirmed preview showed as ready to the school's enrollment there, and
+// binds what it confirmed in a Träger transaction of its own. A row the
+// preview held back is not handed over, also when the plan calls it ready.
+// A run that stops between the two leaves the children enrolled and the
+// contracts unbound; the next run finds the enrollments and binds.
 func (w *Workflow) Run(ctx context.Context, actor contractenrollment.Actor, schoolID int64, fingerprint string) (contractenrollment.EnrollmentRun, error) {
 	run := contractenrollment.EnrollmentRun{SchoolID: ident.ID(schoolID), Rows: []contractenrollment.EnrollmentRow{}}
 	read, err := w.contracts(ctx, actor, schoolID)
@@ -88,10 +89,13 @@ func (w *Workflow) Run(ctx context.Context, actor contractenrollment.Actor, scho
 		if fingerprint == "" || seen.print != fingerprint {
 			return contractenrollment.ErrPreviewChanged
 		}
-		if len(seen.inputs) == 0 {
+		// Only what the confirmed preview showed as ready: a row the check
+		// refused there stays unwritten, whatever the school changed since.
+		inputs := confirmedInputs(seen)
+		if len(inputs) == 0 {
 			return nil
 		}
-		results, err := w.deps.SchoolEnrollments.EnrollContractChildren(ctx, seen.inputs)
+		results, err := w.deps.SchoolEnrollments.EnrollContractChildren(ctx, inputs)
 		answers = answersOf(results)
 		return err
 	})
@@ -102,6 +106,7 @@ func (w *Workflow) Run(ctx context.Context, actor contractenrollment.Actor, scho
 	if err != nil {
 		return run, err
 	}
+	run.Changed = committed(answers, bound)
 	run.Rows = runRows(seen, answers, bound)
 	run.Counts = countRows(run.Rows)
 	return run, nil
@@ -139,7 +144,20 @@ func (w *Workflow) contracts(ctx context.Context, actor contractenrollment.Actor
 // caller holds, asks the school's enrollment what it would do with each
 // ready row, reads the child records the rows name and writes the read into
 // the access log of the school.
+//
+// It first holds the school as one of the Träger. The check before the
+// Träger transaction (contracts) is not enough: an operator may give the
+// school to another Träger before this transaction begins, and the tenant
+// transaction is scoped by the school alone. Held, the school keeps its
+// Träger until this transaction ends, the enrollment of a run included.
 func (w *Workflow) look(ctx context.Context, actor contractenrollment.Actor, read carecontract.EnrollmentRead) (look, error) {
+	held, err := w.deps.Schools.HoldTraegerSchool(ctx, actor.OrganizationID, read.SchoolID)
+	if err != nil {
+		return look{}, err
+	}
+	if !held {
+		return look{}, carecontract.ErrSchoolOutsideTraeger
+	}
 	plan, err := w.deps.Contracts.EnrollmentPlans(ctx, read)
 	if err != nil {
 		return look{}, err

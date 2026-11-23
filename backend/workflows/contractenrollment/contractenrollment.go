@@ -12,11 +12,17 @@
 //     transaction for the contracts, the tenant transaction of the school
 //     for the plan and the enrollment, the Träger transaction for the
 //     binding. The caller holds no transaction.
+//   - The school is one of the Träger for as long as its tenant transaction
+//     runs: the workflow holds it there under a share lock before it reads
+//     or writes anything of the school (carecontract.ErrSchoolOutsideTraeger
+//     otherwise). Between that transaction and the binding no lock holds.
 //   - Every read of the school writes the access log of the school in the
 //     same tenant transaction (ADR 0084 section 7), the preview included.
 //   - The run takes only the preview the office confirmed: it plans again
-//     in the school's transaction and writes nothing when the rows are no
-//     longer the previewed ones (ErrPreviewChanged).
+//     in the school's transaction and writes nothing of the school when the
+//     rows are no longer the previewed ones (ErrPreviewChanged). It enrolls
+//     only the rows that preview showed as ready; a row it showed as held
+//     is not handed to the school's enrollment.
 //   - A contract is bound only on the answer of the school's enrollment for
 //     its row (enrolled or existing), related to the row by contract and
 //     child record, never by its position in the call.
@@ -153,9 +159,15 @@ type EnrollmentPreview struct {
 
 // EnrollmentRun is what a run did at one school, per contract.
 type EnrollmentRun struct {
-	SchoolID ident.ID            `json:"school_id"`
-	Counts   EnrollmentRowCounts `json:"counts"`
-	Rows     []EnrollmentRow     `json:"rows"`
+	SchoolID ident.ID `json:"school_id"`
+	// Changed tells that the run committed something: the school's
+	// enrollment enrolled at least one child, or at least one contract was
+	// bound. A run that found every row done or held changed nothing. It
+	// stands before Rows: the usage analytics reads it from the start of
+	// the answer (contract_children_enrolled).
+	Changed bool                `json:"changed"`
+	Counts  EnrollmentRowCounts `json:"counts"`
+	Rows    []EnrollmentRow     `json:"rows"`
 }
 
 // Enrollments previews and runs the enrollment of the children of the
@@ -166,8 +178,11 @@ type Enrollments interface {
 	// Träger and nothing else. A school of another Träger is
 	// carecontract.ErrSchoolOutsideTraeger.
 	Preview(ctx context.Context, actor Actor, schoolID int64) (EnrollmentPreview, error)
-	// Run enrolls and binds the ready rows of the preview with the
-	// fingerprint, or answers ErrPreviewChanged and writes nothing.
+	// Run enrolls and binds the rows the preview with the fingerprint showed
+	// as ready, or answers ErrPreviewChanged. A refused run has enrolled and
+	// bound nothing and left no entry in the access log of the school (it
+	// rolls back with the school's transaction); the entry of its read of
+	// the contracts in the trail of the Träger stays, as after a preview.
 	Run(ctx context.Context, actor Actor, schoolID int64, fingerprint string) (EnrollmentRun, error)
 	// Unbind takes the application child the office saw off a bound
 	// imported contract, in a Träger transaction

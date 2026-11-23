@@ -19,9 +19,15 @@ type Contracts = carecontract.ContractEnrollments
 // tenant transaction.
 type SchoolEnrollments = enrollment.ContractEnrollments
 
-// Schools lists the undeleted schools of a Träger (Organisation & Tenancy).
+// Schools lists the undeleted schools of a Träger and holds one of them
+// (Organisation & Tenancy).
 type Schools interface {
 	TraegerSchoolIDs(ctx context.Context, organizationID int64) ([]int64, error)
+	// HoldTraegerSchool tells, in the tenant transaction of the school,
+	// whether it is an undeleted school of the Träger, and holds it under a
+	// share lock until that transaction ends: a change of its Träger waits
+	// for the lock.
+	HoldTraegerSchool(ctx context.Context, organizationID, schoolID int64) (bool, error)
 }
 
 // Child is a child record as the school has it.

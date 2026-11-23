@@ -758,6 +758,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (s contractEnrollmentSchools) HoldTraegerSchool(ctx context.Context, organizationID, schoolID int64) (bool, error) {\n\tschool, err := s.organizations.FindSchoolForShare(ctx, schoolID)\n\tif errors.Is(err, organizationtenancy.ErrSchoolNotFound) {\n\t\treturn false, nil\n\t}\n\tif err != nil {\n\t\treturn false, err\n\t}\n\treturn school.OrganizationID.Int64() == organizationID \u0026\u0026 !school.IsDeleted(), nil\n}",
+      "form": "unclassified-evidence",
+      "id": "api/contractEnrollmentSchools.HoldTraegerSchool",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
       "evidence": "func (s contractEnrollmentSchools) TraegerSchoolIDs(ctx context.Context, organizationID int64) ([]int64, error) {\n\tschools, err := s.organizations.ListSchoolsByOrganization(ctx, organizationID)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tids := make([]int64, 0, len(schools))\n\tfor _, school := range schools {\n\t\tif !school.IsDeleted() {\n\t\t\tids = append(ids, school.ID.Int64())\n\t\t}\n\t}\n\treturn ids, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/contractEnrollmentSchools.TraegerSchoolIDs",

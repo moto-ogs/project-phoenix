@@ -52301,6 +52301,12 @@
           }
         },
         {
+          "name": "changed",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "counts",
           "schema": {
             "kind": "ref",

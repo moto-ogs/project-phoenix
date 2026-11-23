@@ -63,6 +63,27 @@ func enrollmentInputs(plan carecontract.EnrollmentPlan, accountID int64) []enrol
 	return inputs
 }
 
+// confirmedInputs are the inputs of the rows the preview showed as ready,
+// related by contract and child record. A row of the plan that the check of
+// the school's enrollment held back is not among them: the office confirmed
+// a preview that writes nothing for it, and the enrollment reads the school
+// again under its locks, where it may answer otherwise by then.
+func confirmedInputs(seen look) []enrollment.ContractEnrollment {
+	ready := map[rowKey]bool{}
+	for i, row := range seen.rows {
+		if row.Status == contractenrollment.RowReady {
+			ready[rowKey{contractID: row.ContractID.Int64(), studentID: seen.plan.Rows[i].StudentID.Int64()}] = true
+		}
+	}
+	inputs := []enrollment.ContractEnrollment{}
+	for _, input := range seen.inputs {
+		if ready[rowKey{contractID: input.ContractID, studentID: input.StudentID}] {
+			inputs = append(inputs, input)
+		}
+	}
+	return inputs
+}
+
 func contractBookings(planned []carecontract.EnrollmentBooking) []enrollment.ContractBooking {
 	bookings := make([]enrollment.ContractBooking, len(planned))
 	for i, booking := range planned {
@@ -147,9 +168,10 @@ func answered(row *contractenrollment.EnrollmentRow, answer enrollment.ContractE
 	case !ok || answer.Status == enrollment.ContractEnrollmentChanged:
 		row.Status, row.Action = contractenrollment.RowChanged, ""
 	case answer.Status == enrollment.ContractEnrollmentEnrolled:
-		row.Status, row.Action = contractenrollment.RowReady, contractenrollment.ActionEnroll
+		row.Status, row.Action, row.Reason = contractenrollment.RowReady, contractenrollment.ActionEnroll, ""
 	case answer.Status == enrollment.ContractEnrollmentExisting:
-		row.Status, row.Action, row.RequestChildID = contractenrollment.RowReady, contractenrollment.ActionBind, ident.ID(answer.RequestChildID)
+		row.Status, row.Action, row.Reason = contractenrollment.RowReady, contractenrollment.ActionBind, ""
+		row.RequestChildID = ident.ID(answer.RequestChildID)
 	case answer.Status == enrollment.ContractEnrollmentHasApplication:
 		row.Status, row.Reason = contractenrollment.RowHeld, carecontract.EnrollmentReasonHasApplication
 		row.RequestChildID = ident.ID(answer.RequestChildID)
@@ -187,14 +209,32 @@ func confirmed(answer enrollment.ContractEnrollmentResult) bool {
 	return answer.Status == enrollment.ContractEnrollmentEnrolled || answer.Status == enrollment.ContractEnrollmentExisting
 }
 
-// runRows are the rows after a run: a row that was not ready stays what the
-// preview showed; a ready row says what the school's enrollment and the
-// binding did with it.
+// committed tells whether a run wrote something that stays: the school's
+// enrollment enrolled a child, or the binding bound a contract. An
+// enrollment it only found (existing) and a contract that was bound already
+// (done) are no change.
+func committed(answers enrollmentAnswers, bound map[int64]string) bool {
+	for _, answer := range answers {
+		if answer.Status == enrollment.ContractEnrollmentEnrolled {
+			return true
+		}
+	}
+	for _, status := range bound {
+		if status == carecontract.BindingBound {
+			return true
+		}
+	}
+	return false
+}
+
+// runRows are the rows after a run: a row the preview did not show as ready
+// stays what the preview showed, nothing was asked or written for it; a
+// ready row says what the school's enrollment and the binding did with it.
 func runRows(seen look, answers enrollmentAnswers, bound map[int64]string) []contractenrollment.EnrollmentRow {
 	rows := make([]contractenrollment.EnrollmentRow, len(seen.rows))
 	for i, row := range seen.rows {
 		planned := seen.plan.Rows[i]
-		if planned.Status != carecontract.EnrollmentReady {
+		if row.Status != contractenrollment.RowReady {
 			rows[i] = row
 			continue
 		}
@@ -204,7 +244,7 @@ func runRows(seen look, answers enrollmentAnswers, bound map[int64]string) []con
 			row.RequestChildID = ident.ID(answer.RequestChildID)
 			switch bound[planned.ContractID.Int64()] {
 			case carecontract.BindingBound, carecontract.BindingDone:
-				row.Status = contractenrollment.RowDone
+				row.Status, row.Reason = contractenrollment.RowDone, ""
 			default:
 				row.Status, row.Action = contractenrollment.RowChanged, ""
 			}

@@ -542,6 +542,11 @@
     },
     {
       "decision": "0309",
+      "id": "api/contractEnrollmentSchools.HoldTraegerSchool",
+      "reason": "Consumer-port adapter of the contract enrollment workflow (#7760, ADR 0309 section 4, ADR 0067): it reads the school under Organisation \u0026 Tenancy's share lock in the school's tenant transaction and answers whether it is an undeleted school of the Träger, a missing school as not held; no forwarding without translation."
+    },
+    {
+      "decision": "0309",
       "id": "api/contractEnrollmentSchools.TraegerSchoolIDs",
       "reason": "Consumer-port adapter of the contract enrollment workflow (#7760, ADR 0309 section 4, ADR 0067): it lists the schools of the Träger at Organisation \u0026 Tenancy and keeps the identifiers of the undeleted ones; no forwarding without translation."
     },

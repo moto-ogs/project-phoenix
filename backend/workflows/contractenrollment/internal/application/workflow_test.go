@@ -37,14 +37,21 @@ type fakeOwners struct {
 	plan                carecontract.EnrollmentPlan
 	// answer is what the school's enrollment answers per contract; the
 	// answers come back in reverse order of the rows asked for.
-	answer   map[int64]enrollment.ContractEnrollmentResult
-	enrolled []enrollment.ContractEnrollment
-	bindings []carecontract.ApplicationBinding
+	answer map[int64]enrollment.ContractEnrollmentResult
+	// lockedAnswer is what the enrollment answers per contract under its
+	// locks when the school changed since the check; the check's answer
+	// when it names none.
+	lockedAnswer map[int64]enrollment.ContractEnrollmentResult
+	enrolled     []enrollment.ContractEnrollment
+	bindings     []carecontract.ApplicationBinding
 	// bindingStatus is what the binding answers per contract, bound when
 	// it names none.
 	bindingStatus map[int64]string
 	access        []ports.SchoolRead
 	unbound       [2]int64
+	// transferred tells that an operator gave the school to another Träger
+	// after the list of the Träger's schools was read.
+	transferred bool
 }
 
 func (f *fakeOwners) note(format string, args ...any) {
@@ -73,6 +80,11 @@ func (f *fakeOwners) WithinSchool(ctx context.Context, schoolID int64, fn func(c
 
 func (f *fakeOwners) TraegerSchoolIDs(context.Context, int64) ([]int64, error) {
 	return []int64{fakeSchool}, nil
+}
+
+func (f *fakeOwners) HoldTraegerSchool(_ context.Context, organizationID, schoolID int64) (bool, error) {
+	f.note("hold in school %d", f.inSchool)
+	return !f.transferred && organizationID == fakeOrganization && schoolID == fakeSchool, nil
 }
 
 func (f *fakeOwners) EnrollmentContracts(_ context.Context, _ carecontract.Reviewer, schoolID int64) (carecontract.EnrollmentRead, error) {
@@ -105,10 +117,13 @@ func (f *fakeOwners) UnbindApplication(_ context.Context, _ carecontract.Reviewe
 	return fakeSchool, nil
 }
 
-func (f *fakeOwners) answers(inputs []enrollment.ContractEnrollment) []enrollment.ContractEnrollmentResult {
+func (f *fakeOwners) answers(inputs []enrollment.ContractEnrollment, locked bool) []enrollment.ContractEnrollmentResult {
 	results := []enrollment.ContractEnrollmentResult{}
 	for _, input := range slices.Backward(inputs) {
 		result := f.answer[input.ContractID]
+		if later, changed := f.lockedAnswer[input.ContractID]; locked && changed {
+			result = later
+		}
 		result.ContractID, result.StudentID = input.ContractID, input.StudentID
 		results = append(results, result)
 	}
@@ -117,13 +132,13 @@ func (f *fakeOwners) answers(inputs []enrollment.ContractEnrollment) []enrollmen
 
 func (f *fakeOwners) CheckContractChildren(_ context.Context, inputs []enrollment.ContractEnrollment) ([]enrollment.ContractEnrollmentResult, error) {
 	f.note("check in school %d", f.inSchool)
-	return f.answers(inputs), nil
+	return f.answers(inputs, false), nil
 }
 
 func (f *fakeOwners) EnrollContractChildren(_ context.Context, inputs []enrollment.ContractEnrollment) ([]enrollment.ContractEnrollmentResult, error) {
 	f.note("enroll in school %d", f.inSchool)
 	f.enrolled = inputs
-	return f.answers(inputs), nil
+	return f.answers(inputs, true), nil
 }
 
 func (f *fakeOwners) SchoolChildren(_ context.Context, studentIDs []int64) ([]ports.Child, error) {
@@ -204,7 +219,7 @@ func TestPreviewMergesPlanAndEnrollmentAndLogsTheRead(t *testing.T) {
 	preview, err := f.workflow(t).Preview(context.Background(), fakeActor, fakeSchool)
 	require.NoError(t, err)
 
-	assert.Equal(t, []string{"träger 1", "contracts in träger 1", "school 10", "plan in school 10", "check in school 10",
+	assert.Equal(t, []string{"träger 1", "contracts in träger 1", "school 10", "hold in school 10", "plan in school 10", "check in school 10",
 		"children in school 10", "access in school 10"}, f.trail, "the Träger transaction ends before the school's begins")
 	assert.Empty(t, f.enrolled, "a preview enrolls nobody")
 	assert.Empty(t, f.bindings, "a preview binds nothing")
@@ -269,11 +284,12 @@ func TestRunEnrollsInTheSchoolAndBindsWhatTheEnrollmentAnswered(t *testing.T) {
 
 	run, err := workflow.Run(context.Background(), fakeActor, fakeSchool, preview.Fingerprint)
 	require.NoError(t, err)
-	assert.Equal(t, []string{"träger 1", "contracts in träger 1", "school 10", "plan in school 10", "check in school 10",
+	assert.Equal(t, []string{"träger 1", "contracts in träger 1", "school 10", "hold in school 10", "plan in school 10", "check in school 10",
 		"children in school 10", "access in school 10", "enroll in school 10", "träger 1", "bind in träger 1"}, f.trail,
 		"read, school and binding are three transactions, one after the other")
 
-	require.Len(t, f.enrolled, 3, "every ready row of the plan goes through the school's enrollment")
+	require.Len(t, f.enrolled, 2, "only the rows the preview showed as ready go through the school's enrollment")
+	assert.Equal(t, contractMia, f.enrolled[0].ContractID)
 	assert.Equal(t, enrollment.ContractEnrollment{StudentID: studentBen, PhaseID: 7, ContractID: contractBen,
 		ServiceStart: calendar.NewDate(2027, 8, 1), ServiceEnd: calendar.NewDate(2028, 7, 31), RequestChildID: childBen,
 		ProvedOn: calendar.NewDate(2027, 9, 6), ActorAccountID: fakeAccount,
@@ -299,6 +315,84 @@ func TestRunEnrollsInTheSchoolAndBindsWhatTheEnrollmentAnswered(t *testing.T) {
 	assert.Equal(t, contractenrollment.RowHeld, rowOf(t, run.Rows, contractLia).Status)
 	assert.Equal(t, contractenrollment.RowStuck, rowOf(t, run.Rows, contractOle).Status)
 	assert.Equal(t, contractenrollment.EnrollmentRowCounts{Done: 2, Unlinked: 1, Held: 1, Stuck: 1, Changed: 1}, run.Counts)
+	assert.True(t, run.Changed, "the run enrolled a child and bound a contract")
+}
+
+// A run changed something when the school enrolled a child or a contract
+// was bound; finding an enrollment and a binding that exist is no change.
+func TestARunSaysWhetherItCommittedSomething(t *testing.T) {
+	t.Parallel()
+	for name, tc := range map[string]struct {
+		mia     string
+		binding string
+		changed bool
+	}{
+		"enrolled, the binding refused": {enrollment.ContractEnrollmentEnrolled, carecontract.BindingChanged, true},
+		"found and bound":               {enrollment.ContractEnrollmentExisting, carecontract.BindingBound, true},
+		"found, bound before":           {enrollment.ContractEnrollmentExisting, carecontract.BindingDone, false},
+		"found, the binding refused":    {enrollment.ContractEnrollmentExisting, carecontract.BindingChanged, false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			f := newFakeOwners()
+			f.answer[contractMia] = enrollment.ContractEnrollmentResult{Status: tc.mia, RequestChildID: enrolledMia}
+			f.bindingStatus[contractMia], f.bindingStatus[contractBen] = tc.binding, carecontract.BindingDone
+			workflow := f.workflow(t)
+			preview, err := workflow.Preview(context.Background(), fakeActor, fakeSchool)
+			require.NoError(t, err)
+			run, err := workflow.Run(context.Background(), fakeActor, fakeSchool, preview.Fingerprint)
+			require.NoError(t, err)
+			assert.Equal(t, tc.changed, run.Changed)
+		})
+	}
+}
+
+// The plan calls Lia ready, the check of the school's enrollment held her
+// back (a pending application), and the office confirmed that preview. The
+// school rejects the application before the enrollment reads it under its
+// locks: there it would enroll her now. The run must not ask.
+func TestRunNeverEnrollsARowThePreviewHeldBack(t *testing.T) {
+	t.Parallel()
+	f := newFakeOwners()
+	workflow := f.workflow(t)
+	preview, err := workflow.Preview(context.Background(), fakeActor, fakeSchool)
+	require.NoError(t, err)
+	require.Equal(t, contractenrollment.RowHeld, rowOf(t, preview.Rows, contractLia).Status)
+	f.lockedAnswer = map[int64]enrollment.ContractEnrollmentResult{
+		contractLia: {Status: enrollment.ContractEnrollmentEnrolled, RequestChildID: 499}}
+
+	run, err := workflow.Run(context.Background(), fakeActor, fakeSchool, preview.Fingerprint)
+	require.NoError(t, err)
+	for _, input := range f.enrolled {
+		assert.NotEqual(t, contractLia, input.ContractID, "a row held in the preview is never passed to the enrollment")
+	}
+	for _, binding := range f.bindings {
+		assert.NotEqual(t, ident.ID(contractLia), binding.ContractID, "and never bound")
+	}
+	assert.Equal(t, rowOf(t, preview.Rows, contractLia), rowOf(t, run.Rows, contractLia), "the row stays what the preview showed")
+	mia := rowOf(t, run.Rows, contractMia)
+	assert.Equal(t, contractenrollment.RowDone, mia.Status)
+	assert.Empty(t, mia.Reason, "a done row carries no reason")
+}
+
+// With every ready row held back by the check, the run asks the enrollment
+// for nothing and binds nothing.
+func TestRunWithoutAReadyPreviewRowWritesNothing(t *testing.T) {
+	t.Parallel()
+	f := newFakeOwners()
+	refused := enrollment.ContractEnrollmentResult{Status: enrollment.ContractEnrollmentRefused, Reason: enrollment.ContractEnrollmentRosterBound}
+	f.answer[contractMia], f.answer[contractBen] = refused, refused
+	workflow := f.workflow(t)
+	preview, err := workflow.Preview(context.Background(), fakeActor, fakeSchool)
+	require.NoError(t, err)
+	f.trail = nil
+
+	run, err := workflow.Run(context.Background(), fakeActor, fakeSchool, preview.Fingerprint)
+	require.NoError(t, err)
+	assert.NotContains(t, f.trail, "enroll in school 10")
+	assert.NotContains(t, f.trail, "bind in träger 1")
+	assert.Equal(t, preview.Rows, run.Rows)
+	assert.False(t, run.Changed)
 }
 
 func TestRunRefusesAPreviewThatChanged(t *testing.T) {
@@ -327,6 +421,29 @@ func TestASchoolOfAnotherTraegerIsRefusedBeforeAnythingIsRead(t *testing.T) {
 	_, err = f.workflow(t).Run(context.Background(), fakeActor, fakeSchool+1, "x")
 	require.ErrorIs(t, err, carecontract.ErrSchoolOutsideTraeger)
 	assert.Empty(t, f.trail, "no transaction opens for a school of another Träger")
+}
+
+// The school was the Träger's when the request began and is another
+// Träger's when its tenant transaction opens: nothing of the school is read,
+// logged or written.
+func TestASchoolGivenAwayDuringTheRequestIsRefusedInItsTransaction(t *testing.T) {
+	t.Parallel()
+	f := newFakeOwners()
+	workflow := f.workflow(t)
+	preview, err := workflow.Preview(context.Background(), fakeActor, fakeSchool)
+	require.NoError(t, err)
+	f.trail, f.access, f.transferred = nil, nil, true
+
+	_, err = workflow.Preview(context.Background(), fakeActor, fakeSchool)
+	require.ErrorIs(t, err, carecontract.ErrSchoolOutsideTraeger)
+	_, err = workflow.Run(context.Background(), fakeActor, fakeSchool, preview.Fingerprint)
+	require.ErrorIs(t, err, carecontract.ErrSchoolOutsideTraeger)
+	assert.Equal(t, []string{"träger 1", "contracts in träger 1", "school 10", "hold in school 10",
+		"träger 1", "contracts in träger 1", "school 10", "hold in school 10"}, f.trail,
+		"the school is held first in its transaction, and nothing follows")
+	assert.Empty(t, f.access)
+	assert.Empty(t, f.enrolled)
+	assert.Empty(t, f.bindings)
 }
 
 func TestUnbindRunsInOneTraegerTransaction(t *testing.T) {
