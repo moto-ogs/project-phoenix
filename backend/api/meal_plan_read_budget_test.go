@@ -155,6 +155,24 @@ func checkStaffMealPlanReadBudgets(t *testing.T, api *goldenRuntime) {
 		}
 		counts["api.mealplan.week"] = len(queries.Statements)
 		recorded["api.mealplan.week"] = queries
+		response, queries = get("/api/meal-plan/days?week_start=" + monday.String())
+		var days struct {
+			Data []struct {
+				Date    string `json:"date"`
+				Version string `json:"version"`
+				Dishes  []struct {
+					Dish string `json:"dish"`
+				} `json:"dishes"`
+			} `json:"data"`
+		}
+		require.NoError(t, json.Unmarshal(response.Body.Bytes(), &days))
+		require.Len(t, days.Data, 5, "Monday to Friday, empty days included")
+		require.Len(t, days.Data[0].Dishes, children)
+		for _, day := range days.Data {
+			assert.NotEmpty(t, day.Version, day.Date)
+		}
+		counts["api.mealplan.days"] = len(queries.Statements)
+		recorded["api.mealplan.days"] = queries
 		response, queries = get("/api/meal-plan/participants?date=" + monday.String() + "&include=all")
 		var daily struct {
 			Data struct {
@@ -274,6 +292,7 @@ func checkStaffMealPlanReadBudgets(t *testing.T, api *goldenRuntime) {
 	large := run(8)
 	assert.Equal(t, small, large, "children-N is separate from date-N")
 	querybudgets.AssertQueryBudget(t, "api.mealplan.week", recorded["api.mealplan.week"])
+	querybudgets.AssertQueryBudget(t, "api.mealplan.days", recorded["api.mealplan.days"])
 	querybudgets.AssertQueryBudget(t, "api.mealplan.participants", recorded["api.mealplan.participants"])
 	querybudgets.AssertQueryBudget(t, "api.mealplan.child_participation", recorded["api.mealplan.child_participation"])
 	querybudgets.AssertQueryBudget(t, "api.mealplan.participants.export", recorded["api.mealplan.participants.export"])

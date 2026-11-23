@@ -51,6 +51,9 @@ type MealParticipationPlan struct {
 	ScheduleChangeable bool
 	SickCancels        bool
 	Days               []MealParticipationDay
+	// Version is the read-state token of the child's regular days (ADR
+	// 0311); a change of them sends it back.
+	Version string
 }
 
 // ChildFeatureFlags reports the resolved per-tenant parent-portal feature

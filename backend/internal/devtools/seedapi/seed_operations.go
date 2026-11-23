@@ -86,9 +86,18 @@ var demoMeals = [10][]map[string]any{
 // just ended; that is the week the meal plan opens on.
 func seedMealPlan(rt *Runtime, today seedDate) error {
 	monday := seedDate{Time: mostRecentWeekday(today.Time, time.Monday)}
+	var versions map[string]string
 	for index, dishes := range demoMeals {
-		day := monday.AddDays(index + 2*(index/5)).String()
-		if _, err := rt.Client.Put("/api/meal-plan/"+day, map[string]any{"dishes": dishes}); err != nil {
+		date := monday.AddDays(index + 2*(index/5))
+		if index%5 == 0 {
+			read, err := mealPlanVersions(rt, date)
+			if err != nil {
+				return err
+			}
+			versions = read
+		}
+		day := date.String()
+		if err := saveMealPlanDay(rt, day, versions[day], dishes); err != nil {
 			return fmt.Errorf("seed meal plan %s: %w", day, err)
 		}
 	}

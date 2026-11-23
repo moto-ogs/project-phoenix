@@ -766,6 +766,7 @@ export interface MealParticipationResponse {
   schedule_changeable: boolean;
   sick_cancels_after_deadline: boolean;
   days: MealParticipationDayResponse[] | null;
+  version: string;
 }
 
 export const MealParticipationResponseSchema: z.ZodType<MealParticipationResponse, unknown> = object<MealParticipationResponse>({
@@ -776,6 +777,7 @@ export const MealParticipationResponseSchema: z.ZodType<MealParticipationRespons
   schedule_changeable: bool,
   sick_cancels_after_deadline: bool,
   days: nullable(arr(MealParticipationDayResponseSchema)),
+  version: str,
 });
 
 /** Go: parent.MealPlanEntryResponse */
@@ -2555,6 +2557,7 @@ export interface EditMasterDataRequestBody {
 /** Go: parent.ReplaceMealParticipationRequest */
 export interface ReplaceMealParticipationRequest {
   weekdays?: number[] | null;
+  expected_version?: string;
 }
 
 /** Go: parent.MealPlanSavedResponse */
