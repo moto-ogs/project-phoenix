@@ -1410,6 +1410,7 @@ export interface bulkCancelRequest {
   to?: string;
   dry_run?: boolean;
   include_closing_day_series?: boolean;
+  expected_fingerprint?: string;
 }
 
 /** Go: timetable.BulkCancelDay */
@@ -1443,6 +1444,7 @@ export interface BulkCancelResult {
   days: BulkCancelDay[] | null;
   kept: number;
   kept_series: BulkCancelKeptSeries[] | null;
+  fingerprint: string;
 }
 
 export const BulkCancelResultSchema: z.ZodType<BulkCancelResult, unknown> = object<BulkCancelResult>({
@@ -1453,6 +1455,7 @@ export const BulkCancelResultSchema: z.ZodType<BulkCancelResult, unknown> = obje
   days: nullable(arr(BulkCancelDaySchema)),
   kept: safeInt,
   kept_series: nullable(arr(BulkCancelKeptSeriesSchema)),
+  fingerprint: str,
 });
 
 /** Go: timetablehttp.replanWeekRequest */

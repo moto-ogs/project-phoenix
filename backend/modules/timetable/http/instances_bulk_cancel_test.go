@@ -19,6 +19,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	timetableModule "github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // bulkCancelStub records the bulk cancellation the handler asks for (#3594).
@@ -130,6 +131,22 @@ func TestBulkCancelRoute_IncludesClosingDaySeriesOnRequest(t *testing.T) {
 	require.Len(t, envelope.Data.KeptSeries, 2)
 	assert.Equal(t, "Ferienbetreuung", envelope.Data.KeptSeries[0].Name)
 	assert.Equal(t, 5, envelope.Data.KeptSeries[0].Count)
+}
+
+// A real run hands the fingerprint of its confirmed dry run to the owner,
+// which refuses a changed selection with 409 general.changed_since_read.
+func TestBulkCancelRoute_ConfirmsTheDryRun(t *testing.T) {
+	t.Parallel()
+
+	stub := &bulkCancelStub{mockInstanceService: &mockInstanceService{}, err: readstate.ErrChanged}
+	router := bulkCancelRouter(t, stub)
+
+	response := postBulkCancel(t, router, `{"from":"2026-10-12","to":"2026-10-16","expected_fingerprint":"vorschau"}`,
+		[]string{permissions.SchedulesManage})
+
+	assert.Equal(t, timetableModule.BulkCancelOptions{ExpectedFingerprint: "vorschau"}, stub.opts)
+	require.Equal(t, http.StatusConflict, response.Code, "body=%s", response.Body.String())
+	assert.Contains(t, response.Body.String(), `"code":"general.changed_since_read"`)
 }
 
 func TestBulkCancelRoute_RejectsInvalidRanges(t *testing.T) {

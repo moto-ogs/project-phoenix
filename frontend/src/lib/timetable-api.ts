@@ -776,13 +776,16 @@ class TimetableService {
    * Cancels and removes the planned appointments in [from, to] from today
    * on, except series planned on closing days on purpose unless
    * `includeClosingDaySeries` is set. Parents are not notified. `dryRun`
-   * only counts them for the confirmation dialog.
+   * only counts them for the confirmation dialog; a real run sends that
+   * count's `fingerprint`, and the server refuses it when other appointments
+   * would be cancelled now (ADR 0311).
    */
   async bulkCancel(
     from: string,
     to: string,
     dryRun: boolean,
     includeClosingDaySeries = false,
+    expectedFingerprint?: string,
   ): Promise<BulkCancelResult> {
     const raw = await bffJson(
       "tenant",
@@ -793,6 +796,7 @@ class TimetableService {
           to,
           dry_run: dryRun,
           include_closing_day_series: includeClosingDaySeries,
+          expected_fingerprint: expectedFingerprint,
         },
       },
     );

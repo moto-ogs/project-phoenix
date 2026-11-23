@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // MaxBulkCancelDays bounds one bulk cancellation (#3594) to a school year,
@@ -38,6 +39,10 @@ type BulkCancelOptions struct {
 	// IncludeClosingDaySeries also cancels occurrences of series planned on
 	// closing days on purpose (holiday care). Off by default.
 	IncludeClosingDaySeries bool
+	// ExpectedFingerprint is the Fingerprint of the dry run the caller
+	// confirmed (ADR 0311). A real run refuses with readstate.ErrChanged
+	// when the occurrences it selects under its locks differ.
+	ExpectedFingerprint string
 }
 
 // BulkCancelKeptSeries names one series whose occurrences stay in the plan
@@ -66,6 +71,9 @@ type BulkCancelResult struct {
 	Kept int `json:"kept"`
 	// KeptSeries lists those series by name, ordered by name.
 	KeptSeries []BulkCancelKeptSeries `json:"kept_series"`
+	// Fingerprint names the selected occurrences and the series that stay;
+	// the real run sends it back as ExpectedFingerprint.
+	Fingerprint string `json:"fingerprint"`
 }
 
 // ValidateBulkCancelRange accepts two "YYYY-MM-DD" dates, from <= to, at
@@ -137,6 +145,7 @@ func SelectBulkCancel(candidates []BulkCancelCandidate, from, to, today string, 
 	// The cancellation locks each block in turn: ascending id is the
 	// canonical order every multi-block writer shares (#6232).
 	slices.Sort(ids)
+	result.Fingerprint = readstate.Fingerprint([]any{ids, result.KeptSeries})
 	return ids, result
 }
 

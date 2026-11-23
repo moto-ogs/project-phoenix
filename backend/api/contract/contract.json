@@ -34180,6 +34180,12 @@
               "ref": "BulkCancelKeptSeries"
             }
           }
+        },
+        {
+          "name": "fingerprint",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -109995,6 +110001,13 @@
           "optional": true,
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "expected_fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
