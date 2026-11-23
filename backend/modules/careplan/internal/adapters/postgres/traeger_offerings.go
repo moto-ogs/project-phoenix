@@ -12,6 +12,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -91,6 +92,7 @@ const traegerOfferingSelect = `SELECT offering.id, offering.organization_id, off
 const (
 	traegerOfferingsOfPhaseSelect = traegerOfferingSelect + ` AND offering.traeger_phase_id = ? ORDER BY offering.id`
 	traegerOfferingByIDSelect     = traegerOfferingSelect + ` AND offering.id = ?`
+	traegerOfferingByIDLockSelect = traegerOfferingByIDSelect + ` FOR UPDATE OF offering`
 )
 
 // ListTraegerOfferings returns the offerings of one Träger phase with their
@@ -109,12 +111,21 @@ func (s *TraegerOfferingStore) ListTraegerOfferings(ctx context.Context, organiz
 
 // TraegerOffering returns one offering of the Träger.
 func (s *TraegerOfferingStore) TraegerOffering(ctx context.Context, organizationID, id int64) (careplan.TraegerOffering, error) {
+	return s.readTraegerOffering(ctx, organizationID, id, traegerOfferingByIDSelect)
+}
+
+// LockTraegerOffering returns one offering of the Träger under its row lock.
+func (s *TraegerOfferingStore) LockTraegerOffering(ctx context.Context, organizationID, id int64) (careplan.TraegerOffering, error) {
+	return s.readTraegerOffering(ctx, organizationID, id, traegerOfferingByIDLockSelect)
+}
+
+func (s *TraegerOfferingStore) readTraegerOffering(ctx context.Context, organizationID, id int64, query string) (careplan.TraegerOffering, error) {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {
 		return careplan.TraegerOffering{}, err
 	}
 	var rows []traegerOfferingRow
-	if err := db.NewRaw(traegerOfferingByIDSelect, organizationID, id).Scan(ctx, &rows); err != nil {
+	if err := db.NewRaw(query, organizationID, id).Scan(ctx, &rows); err != nil {
 		return careplan.TraegerOffering{}, fmt.Errorf("care plan postgres: read träger care offering: %w", err)
 	}
 	offerings, err := s.withSchools(ctx, db, organizationID, rows)
@@ -188,6 +199,7 @@ func (row traegerOfferingRow) value() (careplan.TraegerOffering, error) {
 	offering := careplan.TraegerOffering{
 		ID: ident.ID(row.ID), OrganizationID: ident.ID(row.OrganizationID), TraegerPhaseID: ident.ID(row.TraegerPhaseID),
 		ReleasedVersion: row.ReleasedVersion, WithdrawnAt: row.WithdrawnAt, UpdatedAt: row.UpdatedAt,
+		Version: readstate.Of(row.UpdatedAt),
 	}
 	if err := json.Unmarshal(row.Draft, &offering.Draft); err != nil {
 		return offering, fmt.Errorf("care plan postgres: decode träger care offering draft: %w", err)

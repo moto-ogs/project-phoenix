@@ -11,6 +11,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The phase writes apply the service period bounds (#5658) when a phase is
@@ -210,7 +211,8 @@ func TestTraegerPhases_ApplyTheServicePeriodBounds(t *testing.T) {
 
 	// A stored draft beyond the bounds saves while its period stays.
 	legacy := traegerBoundsInput("2026-08-01", "5000-07-31")
-	store.current = enrollment.TraegerPhase{ID: 9, Draft: legacy.Fields}
+	store.current = enrollment.TraegerPhase{ID: 9, Draft: legacy.Fields, Version: "read"}
+	legacy.ExpectedVersion = "read"
 	renamed := legacy
 	renamed.Fields.Name = "Schuljahr neu"
 	_, err = phases.UpdateTraegerPhase(context.Background(), 3, 9, renamed)
@@ -220,5 +222,27 @@ func TestTraegerPhases_ApplyTheServicePeriodBounds(t *testing.T) {
 	moved.Fields.ServiceEndDate = "4000-07-31"
 	_, err = phases.UpdateTraegerPhase(context.Background(), 3, 9, moved)
 	requireBoundsRejection(t, err, enrollment.ErrInvalidPhase, enrollment.CodePhaseServicePeriodTooLong)
+	assert.Equal(t, 1, store.updated)
+}
+
+// TestTraegerPhases_UpdateRefusesAnotherReadVersion pins ADR 0311 for the
+// Träger phase: a draft saved over another version than the stored one, or
+// over none, is refused before anything is written.
+func TestTraegerPhases_UpdateRefusesAnotherReadVersion(t *testing.T) {
+	t.Parallel()
+
+	store := &boundsTraegerStore{}
+	phases := NewTraegerPhases(store, func() calendar.Date { return boundsToday })
+	input := traegerBoundsInput("2026-08-01", "2027-07-31")
+	store.current = enrollment.TraegerPhase{ID: 9, Draft: input.Fields, Version: "stored"}
+	for _, expected := range []string{"older", ""} {
+		input.ExpectedVersion = expected
+		_, err := phases.UpdateTraegerPhase(context.Background(), 3, 9, input)
+		require.ErrorIs(t, err, readstate.ErrChanged, "expected version %q", expected)
+	}
+	assert.Zero(t, store.updated, "a refused save writes nothing")
+	input.ExpectedVersion = "stored"
+	_, err := phases.UpdateTraegerPhase(context.Background(), 3, 9, input)
+	require.NoError(t, err)
 	assert.Equal(t, 1, store.updated)
 }
