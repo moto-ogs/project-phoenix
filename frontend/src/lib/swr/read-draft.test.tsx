@@ -17,7 +17,7 @@ vi.mock("~/lib/tenant-context", () => ({
 
 import { ApiError } from "~/lib/api-error";
 import { useSWRAuth } from "./hooks";
-import { useReadDraft, type ReadDraftResult } from "./read-draft";
+import { useDraftOn, useReadDraft, type ReadDraftResult } from "./read-draft";
 import { resetSWRScope } from "./scope";
 
 interface Stored {
@@ -223,5 +223,31 @@ describe("useReadDraft", () => {
     await waitFor(() => expect(result.current.status).toBe("loadFailed"));
     expect(result.current.canSubmit).toBe(false);
     expect(result.current.error).toMatchObject({ message: "offline" });
+  });
+
+  it("waits for a newer row of a list the caller reloads (useDraftOn)", async () => {
+    const reload = vi.fn(async () => undefined);
+    const { result, rerender } = renderHook(
+      ({ row }: { row: Stored }) =>
+        useDraftOn<Stored, string, string, unknown>(
+          { opening: "row-1", data: row, reload },
+          { token: (read) => read.version, toDraft: (read) => read.name },
+        ),
+      { initialProps: { row: { version: "1", name: "Anna" } } },
+    );
+    act(() => result.current.setDraft("Hanna"));
+    await act(async () => {
+      const outcome = await result.current.submit(() =>
+        Promise.reject(changed()),
+      );
+      if (!outcome.ok) await outcome.reload?.();
+    });
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect(result.current.canSubmit).toBe(false);
+
+    rerender({ row: { version: "2", name: "Anne" } });
+    expect(result.current.draft).toBe("Anne");
+    expect(result.current.token).toBe("2");
+    expect(result.current.canSubmit).toBe(true);
   });
 });

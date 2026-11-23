@@ -118,6 +118,11 @@ interface DraftState<T, D> {
   readonly touched: boolean;
   readonly phase: Phase;
   readonly loadError?: unknown;
+  /**
+   * After a refusal whose read arrives through `data`: the refused draft,
+   * until a read with another token replaces it (rule 4 holds till then).
+   */
+  readonly awaiting?: { readonly draft: D; readonly base: T };
 }
 
 const asJSON = (value: unknown) => JSON.stringify(value);
@@ -175,6 +180,24 @@ export function useDraftOn<T, D = T, K = unknown, A = unknown>(
     if (current !== state) setState(current);
   } else if (
     newest !== undefined &&
+    current.awaiting !== undefined &&
+    !sameJSON(token(newest), token(current.base))
+  ) {
+    // Rule 3: the stored state a refusal waited for arrived.
+    const stored = toDraft(newest);
+    const draft = options.rebase
+      ? options.rebase(current.awaiting.draft, current.awaiting.base, newest)
+      : stored;
+    current = {
+      key: current.key,
+      base: newest,
+      draft,
+      touched: !same(draft, stored),
+      phase: "ready",
+    };
+    setState(current);
+  } else if (
+    newest !== undefined &&
     !current.touched &&
     current.phase === "ready" &&
     !sameJSON(token(newest), token(current.base))
@@ -208,13 +231,13 @@ export function useDraftOn<T, D = T, K = unknown, A = unknown>(
     (forKey: string, read: T | undefined, from?: { draft: D; base: T }) => {
       const { options: given, toDraft: draftOf, same: equal } = latest.current;
       if (read === undefined) {
-        // Untouched on the old base: the newest `data` refills it (rule 2).
+        // The read arrives through `data`: wait for it (above), sending
+        // nothing until then.
         update(forKey, (prev) => ({
           ...prev,
-          draft: draftOf(prev.base),
-          touched: false,
-          phase: "ready",
+          phase: "reloading",
           loadError: undefined,
+          awaiting: from ?? { draft: prev.draft, base: prev.base },
         }));
         return;
       }

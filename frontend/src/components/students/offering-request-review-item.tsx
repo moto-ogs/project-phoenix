@@ -3,7 +3,7 @@
 import type * as studentsContract from "~/lib/contract/students.generated";
 import { weekdayShortLabel } from "~/lib/weekdays";
 import type { ErrorCode } from "~/lib/error-codes.generated";
-import { ApiError, wireErrorCode } from "~/lib/api-error";
+import { ApiError, isChangedSinceRead, wireErrorCode } from "~/lib/api-error";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useDraftOn } from "~/lib/swr/read-draft";
 
@@ -186,6 +186,8 @@ export function OfferingRequestReviewItem({
       },
     },
     {
+      // Only a changed version brings a new row to wait for.
+      isRefusal: isChangedSinceRead,
       token: (current) => current.version,
       toDraft: (current) => ({
         effectiveFrom: current.row.effective_from,
@@ -292,7 +294,7 @@ export function OfferingRequestReviewItem({
       await showDecideError(err, {
         object: "die Anfrage",
         retry: () => void decideRef.current(approve, confirmWithdrawal),
-        reload: result.reload,
+        reload: result.reload ?? onStale,
       });
     }
   };
