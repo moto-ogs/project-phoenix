@@ -47,6 +47,7 @@ const RETIRED_HELPERS = new Set([
   "operatorFetch",
 ]);
 const GLOBAL_OBJECTS = new Set(["window", "self", "globalThis"]);
+const FRAME_WINDOWS = new Set(["top", "parent", "opener", "frames"]);
 const NAVIGATOR = "navigator";
 const RAW_GLOBALS = new Set(["fetch", "XMLHttpRequest"]);
 const UNCONTRACTED_HELPER = "bffJsonUncontracted";
@@ -176,7 +177,7 @@ const noRawBrowserTransport = {
           writes.length === 1 &&
           assignment?.type === "AssignmentExpression" &&
           assignment.left === writes[0].identifier &&
-          assignment.operator === "=" &&
+          ["=", "??=", "||="].includes(assignment.operator) &&
           assignment.range[1] <= node.range[0]
         )
           return owner(assignment.right);
@@ -196,7 +197,7 @@ const noRawBrowserTransport = {
     }
 
     function childOwner(key) {
-      if (GLOBAL_OBJECTS.has(key)) return "global";
+      if (GLOBAL_OBJECTS.has(key) || FRAME_WINDOWS.has(key)) return "global";
       if (key === NAVIGATOR || key === "document") return key;
     }
 

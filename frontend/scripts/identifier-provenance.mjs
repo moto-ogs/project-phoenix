@@ -370,30 +370,62 @@ const arrayCallbacks = new Set([
   "map",
   "some",
 ]);
+const arrayComparators = new Set(["sort", "toSorted"]);
+const arrayElementMethods = new Set(["at", "find", "findLast", "pop", "shift"]);
+const arraySubsetMethods = new Set([
+  "filter",
+  "reverse",
+  "slice",
+  "sort",
+  "toReversed",
+  "toSorted",
+]);
+
+function methodName(method) {
+  if (ts.isPropertyAccessExpression(method)) return method.name.text;
+  if (
+    ts.isElementAccessExpression(method) &&
+    ts.isStringLiteralLike(method.argumentExpression)
+  )
+    return method.argumentExpression.text;
+}
+
+function isArray(collection, checker) {
+  return checker.isArrayType(
+    checker.getNonNullableType(checker.getTypeAtLocation(collection)),
+  );
+}
 
 function callbackElementKind(parameter, checker, seen) {
   const callback = parameter.parent;
   if (!ts.isArrowFunction(callback) && !ts.isFunctionExpression(callback))
     return;
   const call = callback.parent;
-  if (
-    !ts.isCallExpression(call) ||
-    call.arguments[0] !== callback ||
-    callback.parameters[0] !== parameter
-  )
-    return;
+  if (!ts.isCallExpression(call)) return;
   const method = call.expression;
+  const name = methodName(method);
+  if (!name) return;
+  const receiver = method.expression;
   if (
-    !ts.isPropertyAccessExpression(method) ||
-    !arrayCallbacks.has(method.name.text)
+    name === "from" &&
+    call.arguments[1] === callback &&
+    callback.parameters[0] === parameter &&
+    ts.isIdentifier(receiver) &&
+    receiver.text === "Array" &&
+    checker.getSymbolAtLocation(receiver) ===
+      checker.resolveName("Array", undefined, ts.SymbolFlags.Value, false)
   )
-    return;
-  const collection = method.expression;
-  const type = checker.getNonNullableType(
-    checker.getTypeAtLocation(collection),
-  );
-  if (!checker.isArrayType(type)) return;
-  return collectionElementKind(collection, checker, seen);
+    return collectionElementKind(call.arguments[0], checker, seen);
+
+  if (
+    call.arguments[0] === callback &&
+    ((arrayCallbacks.has(name) && callback.parameters[0] === parameter) ||
+      (arrayComparators.has(name) &&
+        (callback.parameters[0] === parameter ||
+          callback.parameters[1] === parameter))) &&
+    isArray(receiver, checker)
+  )
+    return collectionElementKind(receiver, checker, seen);
 }
 
 function collectionElementKind(collection, checker, seen, rest = false) {
@@ -437,6 +469,20 @@ function expressionKind(node, checker, seen = new Set()) {
     expressionKind(node.expression, checker, seen) === "id-list"
   )
     return "id";
+  if (ts.isCallExpression(node)) {
+    const method = node.expression;
+    const name = methodName(method);
+    if (
+      (arrayElementMethods.has(name) || arraySubsetMethods.has(name)) &&
+      isArray(method.expression, checker)
+    )
+      return collectionElementKind(
+        method.expression,
+        checker,
+        seen,
+        arraySubsetMethods.has(name),
+      );
+  }
 
   const name = ts.isPropertyAccessExpression(node)
     ? node.name
@@ -451,8 +497,21 @@ function expressionKind(node, checker, seen = new Set()) {
   // string. Follow local aliases back to the schema, not their spelling.
   if (ts.isIdentifier(node)) {
     const declaration = symbol?.valueDeclaration;
-    if (declaration && ts.isParameter(declaration) && !declaration.type) {
+    if (declaration && ts.isParameter(declaration)) {
       const element = callbackElementKind(declaration, checker, seen);
+      if (element) return element;
+    }
+    if (
+      declaration &&
+      ts.isVariableDeclaration(declaration) &&
+      declaration.parent.flags & ts.NodeFlags.Const &&
+      ts.isForOfStatement(declaration.parent.parent)
+    ) {
+      const element = collectionElementKind(
+        declaration.parent.parent.expression,
+        checker,
+        seen,
+      );
       if (element) return element;
     }
     if (
