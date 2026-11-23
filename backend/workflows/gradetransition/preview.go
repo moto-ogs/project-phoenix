@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure"
@@ -160,12 +161,13 @@ func fingerprintOf(mappings []schoolstructure.TransitionMapping, cohort []cohort
 // ensureFingerprintMatches compares the caller's previewed cohort against
 // the one resolved under the locks (readstate.Check, ADR 0311). An apply
 // without a preview has confirmed nothing and is refused like a stale one;
-// the refusal keeps its own code (grade_transition.preview_stale).
+// whitespace around the token is ignored, as for the student deletion. The
+// refusal keeps its own code (grade_transition.preview_stale).
 func ensureFingerprintMatches(expected string, mappings []schoolstructure.TransitionMapping, promotions, graduates []cohortStudent) error {
 	current := make([]cohortStudent, 0, len(promotions)+len(graduates))
 	current = append(current, promotions...)
 	current = append(current, graduates...)
-	if readstate.Check(expected, fingerprintOf(mappings, current)) != nil {
+	if readstate.Check(strings.TrimSpace(expected), fingerprintOf(mappings, current)) != nil {
 		return ErrPreviewStale
 	}
 	return nil

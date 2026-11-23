@@ -33,6 +33,10 @@ import {
 } from "./grade-transition-api";
 
 const BASE = "/api/admin/grade-transitions";
+// Read-state tokens as the backend mints them (readstate.Fingerprint, ADR
+// 0311): opaque hex digests the client carries back unchanged.
+const FINGERPRINT = "3f2a9c41d07e8b6a5c19e4f0b27d6a83";
+const OLDER_FINGERPRINT = "a81b44e09c3d27f6b5e01c9d8f2a7b64";
 
 interface FetchCall {
   url: string;
@@ -287,7 +291,7 @@ describe("previewGradeTransition", () => {
     ],
     unmapped_classes: null,
     warnings: null,
-    fingerprint: "sha256:abc",
+    fingerprint: FINGERPRINT,
   };
 
   it("GETs the preview uncached and carries the fingerprint through", async () => {
@@ -299,7 +303,7 @@ describe("previewGradeTransition", () => {
     // Uncached: the catalog proxy answers `private, no-store`
     // (catalog-proxy.server.test.ts).
     expect(calls[0]?.init?.method).toBe("GET");
-    expect(p.fingerprint).toBe("sha256:abc");
+    expect(p.fingerprint).toBe(FINGERPRINT);
     expect(p.unmappedClasses).toEqual([]);
     expect(p.warnings).toEqual([]);
   });
@@ -324,12 +328,12 @@ describe("applyGradeTransition", () => {
   it("binds the call to the confirmed preview via expected_fingerprint", async () => {
     stubOnce(okData(resultRow));
 
-    const r = await applyGradeTransition("7", "sha256:abc");
+    const r = await applyGradeTransition("7", FINGERPRINT);
 
     expect(calls[0]?.url).toBe(`${BASE}/7/apply`);
     expect(calls[0]?.init?.method).toBe("POST");
     expect(parseBody(calls[0]?.init)).toEqual({
-      expected_fingerprint: "sha256:abc",
+      expected_fingerprint: FINGERPRINT,
     });
     expect(r.studentsPromoted).toBe(40);
     expect(r.studentsGraduated).toBe(10);
@@ -341,7 +345,7 @@ describe("applyGradeTransition", () => {
     stubOnce(okBare(resultRow));
 
     // A write may have happened: the person reloads before trying again.
-    await expect(applyGradeTransition("7", "sha256:abc")).rejects.toMatchObject({
+    await expect(applyGradeTransition("7", FINGERPRINT)).rejects.toMatchObject({
       status: 502,
       code: "general.write_answer_unreadable",
     });
@@ -355,7 +359,9 @@ describe("applyGradeTransition", () => {
       }),
     );
 
-    const err = await applyGradeTransition("7", "sha256:abc").catch((e: unknown) => e);
+    const err = await applyGradeTransition("7", FINGERPRINT).catch(
+      (e: unknown) => e,
+    );
     expect(err).toBeInstanceOf(ApiError);
     expect((err as ApiError).code).toBe(
       "grade_transition.graduates_checked_in",
@@ -367,7 +373,7 @@ describe("applyGradeTransition", () => {
       fail(409, { detail: "preview is stale", code: PREVIEW_STALE_CODE }),
     );
 
-    const err = await applyGradeTransition("7", "sha256:old").catch(
+    const err = await applyGradeTransition("7", OLDER_FINGERPRINT).catch(
       (e: unknown) => e,
     );
     expect((err as ApiError).code).toBe(PREVIEW_STALE_CODE);
@@ -376,7 +382,9 @@ describe("applyGradeTransition", () => {
   it("falls back to the status line when the error body is unreadable", async () => {
     stubOnce(failUnparseable(500));
 
-    const err = await applyGradeTransition("7", "sha256:abc").catch((e: unknown) => e);
+    const err = await applyGradeTransition("7", FINGERPRINT).catch(
+      (e: unknown) => e,
+    );
     expect((err as ApiError).message).toBe("HTTP 500");
     expect((err as ApiError).code).toBe("general.server");
   });

@@ -30,6 +30,23 @@ func TestCheckAcceptsOnlyTheStoredToken(t *testing.T) {
 	}
 }
 
+// TestAnUnloadedChangeTimeIsNoToken pins that a projection which failed to
+// load updated_at cannot pass the check against itself: a zero time has the
+// empty token, which Check refuses. A row not stored yet has Absent instead.
+func TestAnUnloadedChangeTimeIsNoToken(t *testing.T) {
+	t.Parallel()
+	unloaded := readstate.Of(time.Time{})
+	if !errors.Is(readstate.Check(unloaded, unloaded), readstate.ErrChanged) {
+		t.Fatalf("zero time token %q passed the check", unloaded)
+	}
+	if err := readstate.Check(readstate.Absent, readstate.Absent); err != nil {
+		t.Fatalf("Absent against Absent: %v", err)
+	}
+	if readstate.Absent == readstate.Of(time.Date(2026, 11, 23, 9, 0, 0, 0, time.UTC)) {
+		t.Fatal("Absent is the token of a stored row")
+	}
+}
+
 func TestOfIsTheSameInstantInAnyZone(t *testing.T) {
 	t.Parallel()
 	instant := time.Date(2026, 11, 23, 8, 30, 0, 5000, time.UTC)

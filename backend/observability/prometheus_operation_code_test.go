@@ -18,40 +18,69 @@ import (
 func TestOperationMetricsLabelARefusalWithItsCode(t *testing.T) {
 	t.Parallel()
 	refusal := fmt.Errorf("save: %w", readstate.ErrChanged)
+	// Every observer that labels an owner failure (15): a new one belongs here.
 	observers := map[string]struct {
 		counter *prometheus.CounterVec
-		observe func(operation string, err error)
+		observe func(operation, label string, err error)
 	}{
-		"care plan": {carePlanOperations, func(operation string, err error) {
-			ObserveCarePlanOperation(operation, time.Millisecond, 1, 0, 0, 0, "internal_error", err)
+		"feedback": {feedbackOperations, func(operation, label string, err error) {
+			ObserveFeedbackOperation(operation, time.Millisecond, 1, 0, 0, label, err)
 		}},
-		"timetable": {timetableActivitiesOperations, func(operation string, err error) {
-			ObserveTimetableActivitiesOperation(operation, time.Millisecond, 1, 0, 0, 0, "internal_error", err)
+		"organization tenancy": {organizationTenancyOperations, func(operation, label string, err error) {
+			ObserveOrganizationTenancyOperation(operation, time.Millisecond, 1, 0, 0, label, err)
 		}},
-		"workforce": {workforceOperations, func(operation string, err error) {
-			ObserveWorkforceOperation(operation, time.Millisecond, 1, 0, 0, "internal_error", err)
+		"people directory": {peopleDirectoryOperations, func(operation, label string, err error) {
+			ObservePeopleDirectoryOperation(operation, time.Millisecond, 1, 0, 0, label, err)
 		}},
-		"organization tenancy": {organizationTenancyOperations, func(operation string, err error) {
-			ObserveOrganizationTenancyOperation(operation, time.Millisecond, 1, 0, 0, "internal_error", err)
+		"identity access": {identityAccessOperations, func(operation, label string, err error) {
+			ObserveIdentityAccessOperation(operation, time.Millisecond, 1, 0, 0, label, err)
 		}},
-		"facilities": {facilitiesOperations, func(operation string, err error) {
-			ObserveFacilitiesOperation(operation, time.Millisecond, 1, 0, 0, "internal_error", err)
+		"school membership": {schoolMembershipOperations, func(operation, label string, err error) {
+			ObserveSchoolMembershipOperation(operation, time.Millisecond, 1, 0, 0, label, err)
 		}},
-		"school calendar": {schoolCalendarOperations, func(operation string, err error) {
-			ObserveSchoolCalendarOperation(operation, time.Millisecond, 1, 0, 0, "internal_error", err)
+		"school structure": {schoolStructureOperations, func(operation, label string, err error) {
+			ObserveSchoolStructureOperation(operation, time.Millisecond, 1, 0, 0, label, err)
 		}},
-		"file storage": {fileStorageOperations, func(operation string, err error) {
-			ObserveFileStorageOperation(operation, time.Millisecond, 1, 0, 0, "internal", err)
+		"facilities": {facilitiesOperations, func(operation, label string, err error) {
+			ObserveFacilitiesOperation(operation, time.Millisecond, 1, 0, 0, label, err)
+		}},
+		"file storage": {fileStorageOperations, func(operation, label string, err error) {
+			ObserveFileStorageOperation(operation, time.Millisecond, 1, 0, 0, label, err)
+		}},
+		"device fleet": {deviceFleetOperations, func(operation, label string, err error) {
+			ObserveDeviceFleetOperation(operation, time.Millisecond, 1, 0, 0, label, err)
+		}},
+		"school calendar": {schoolCalendarOperations, func(operation, label string, err error) {
+			ObserveSchoolCalendarOperation(operation, time.Millisecond, 1, 0, 0, label, err)
+		}},
+		"workforce": {workforceOperations, func(operation, label string, err error) {
+			ObserveWorkforceOperation(operation, time.Millisecond, 1, 0, 0, label, err)
+		}},
+		"timetable": {timetableActivitiesOperations, func(operation, label string, err error) {
+			ObserveTimetableActivitiesOperation(operation, time.Millisecond, 1, 0, 0, 0, label, err)
+		}},
+		"appointments": {appointmentsOperations, func(operation, label string, err error) {
+			ObserveAppointmentsOperation(operation, time.Millisecond, 1, 0, 0, 0, label, err)
+		}},
+		"communication": {communicationOperations, func(operation, label string, err error) {
+			ObserveCommunicationOperation(operation, time.Millisecond, 1, 0, 0, 0, label, err)
+		}},
+		"care plan": {carePlanOperations, func(operation, label string, err error) {
+			ObserveCarePlanOperation(operation, time.Millisecond, 1, 0, 0, 0, label, err)
 		}},
 	}
 	for name, observer := range observers {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			operation := "operation_code_test_" + sanitizeLabel(name)
+			label := "internal_error"
+			if name == "file storage" {
+				label = "internal"
+			}
 			refused := observer.counter.WithLabelValues(operation, "error", readstate.ChangedCode)
-			internal := observer.counter.WithLabelValues(operation, "error", "internal_error")
+			internal := observer.counter.WithLabelValues(operation, "error", label)
 			refusedBefore, internalBefore := testutil.ToFloat64(refused), testutil.ToFloat64(internal)
-			observer.observe(operation, refusal)
+			observer.observe(operation, label, refusal)
 			assert.Equal(t, refusedBefore+1, testutil.ToFloat64(refused))
 			assert.Equal(t, internalBefore, testutil.ToFloat64(internal))
 		})

@@ -316,7 +316,8 @@ func (s *Service) RespondToAnnouncement(ctx context.Context, accountID, announce
 // The write then re-evaluates liveness, version, deadline and the poll's
 // audience inside the same transaction, so a change between the checks above
 // and the write cannot let a late or stale answer through. A refusal there
-// is a 409, never a silent 200, as before the guard.
+// is a 409, never a silent 200, as before the guard; a permission withdrawn
+// meanwhile stays the 404 of ErrChildNotAnswerable.
 func (s *Service) writeChildAnswer(ctx context.Context, announcementTenantID, announcementID, accountID, studentID int64, optionIDs []int64, expectedPublishedAt time.Time) error {
 	child, err := s.resolvePermittedChild(ctx, accountID, studentID, care.GuardianPermissionPollResponse)
 	if errors.Is(err, care.ErrGuardianPermissionDenied) || errors.Is(err, care.ErrChildNotLinked) {
@@ -334,8 +335,10 @@ func (s *Service) writeChildAnswer(ctx context.Context, announcementTenantID, an
 	})
 	if errors.Is(err, care.ErrGuardianPermissionDenied) || errors.Is(err, care.ErrChildNotLinked) {
 		// The guard found the relationship, its permission or the school
-		// membership withdrawn since the check above.
-		return readstate.ErrChanged
+		// membership withdrawn since the check above: the same 404 as that
+		// check, never a 409 that would confirm the poll to a guardian who
+		// may no longer answer for the child.
+		return ErrChildNotAnswerable
 	}
 	return err
 }

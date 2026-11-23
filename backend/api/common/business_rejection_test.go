@@ -69,7 +69,6 @@ func TestCodelessFallbackDoesNotSwallowABusinessRejection(t *testing.T) {
 	for name, renderer := range map[string]render.Renderer{
 		"invalid request": common.ErrorInvalidRequest(refusal),
 		"conflict":        common.ErrorConflict(refusal),
-		"not found":       common.ErrorNotFound(refusal),
 	} {
 		w := httptest.NewRecorder()
 		common.RenderError(w, httptest.NewRequest(http.MethodPost, "/", nil), renderer)
@@ -81,6 +80,25 @@ func TestCodelessFallbackDoesNotSwallowABusinessRejection(t *testing.T) {
 	common.RenderError(w, httptest.NewRequest(http.MethodPost, "/", nil), common.ErrorNotFoundWithCode(refusal, common.CodeEnrollmentSchemaNotFound))
 	assert.Equal(t, http.StatusNotFound, w.Code, "a classified answer keeps its status")
 	assert.Contains(t, w.Body.String(), `"code":"`+common.CodeEnrollmentSchemaNotFound+`"`)
+}
+
+// TestHidingAnswerIsNeverUpgradedToARejection pins that a 401, 403 or 404
+// keeps its status and code-less class even with a rejection in its chain:
+// such an answer may hide that the resource exists (a parent portal collapses
+// a revoked permission to 404), and the rejection's 409 would reveal it.
+func TestHidingAnswerIsNeverUpgradedToARejection(t *testing.T) {
+	t.Parallel()
+	refusal := fmt.Errorf("read: %w", quotaRejection{})
+	for status, renderer := range map[int]render.Renderer{
+		http.StatusUnauthorized: common.ErrorUnauthorized(refusal),
+		http.StatusForbidden:    common.ErrorForbidden(refusal),
+		http.StatusNotFound:     common.ErrorNotFound(refusal),
+	} {
+		w := httptest.NewRecorder()
+		common.RenderError(w, httptest.NewRequest(http.MethodGet, "/", nil), renderer)
+		assert.Equal(t, status, w.Code)
+		assert.NotContains(t, w.Body.String(), "students.child_quota_reached", status)
+	}
 }
 
 // TestBusinessRejectionRollsBackTheRequest pins that a 409 rejection never

@@ -61,8 +61,11 @@ func RenderError(w http.ResponseWriter, r *http.Request, renderer render.Rendere
 }
 
 // unclassifiedRejection reports whether errResp carries a BusinessRejection
-// its handler did not classify: as a server error, or as a 4xx without a code
-// of its own. An input rejection keeps its 400.
+// its handler did not classify: as a server error, or as a code-less 400 or
+// 409 fallback (ErrorInvalidRequest, ErrorConflict). An input rejection keeps
+// its 400. Every other 4xx is the handler's answer: a 401, 403 or 404 may
+// hide that the resource exists (a parent portal collapses to 404), so it
+// never turns into the rejection's 409 and code.
 func unclassifiedRejection(errResp *ErrResponse) bool {
 	if !IsBusinessRejection(errResp.Err) {
 		return false
@@ -70,7 +73,8 @@ func unclassifiedRejection(errResp *ErrResponse) bool {
 	if errResp.HTTPStatusCode >= 500 {
 		return true
 	}
-	return errResp.HTTPStatusCode >= 400 && errResp.Code == "" && !HasInputRejection(errResp.Err)
+	fallback := errResp.HTTPStatusCode == http.StatusBadRequest || errResp.HTTPStatusCode == http.StatusConflict
+	return fallback && errResp.Code == "" && !HasInputRejection(errResp.Err)
 }
 
 // ClientCanceled reports whether err is the cancellation of a request the
