@@ -534,7 +534,7 @@ describe("teacher-api", () => {
 
         await teacherService.updateTeacher(
           "1",
-          { first_name: "Milena", expected_version: "person-v1" },
+          { first_name: "Milena" },
           { ...sampleTeacher, ...profile },
         );
 
@@ -635,7 +635,7 @@ describe("teacher-api", () => {
         await expect(
           teacherService.updateTeacher(
             "1",
-            { first_name: "Milena", expected_version: "person-v1" },
+            { first_name: "Milena" },
             sampleTeacher,
           ),
         ).rejects.toMatchObject({
