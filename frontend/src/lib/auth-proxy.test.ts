@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { POST as resend } from "~/app/api/auth/mfa/resend/route";
 import { authStepProxy } from "./auth-proxy.server";
 import { routes } from "./contract/auth-mfa.generated";
 import { routes as operatorRoutes } from "./contract/operator-auth.generated";
@@ -30,8 +31,6 @@ const sent = () => {
   const [url, init] = fetchMock.mock.calls[0]!;
   return { url, init: init!, headers: new Headers(init!.headers) };
 };
-
-const resend = authStepProxy(routes["POST /auth/mfa/resend"]);
 
 beforeEach(() => {
   fetchMock.mockReset();

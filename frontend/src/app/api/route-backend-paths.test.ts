@@ -283,6 +283,7 @@ function handlerCalls(file: string, text: string) {
   const generated = new Set<string>();
   const namespaces = new Set<string>();
   const bindings = new Map<string, string>();
+  const decoderBindings = new Set<string>();
   const methods = new Set<string>();
   for (const statement of source.statements) {
     if (
@@ -318,6 +319,12 @@ function handlerCalls(file: string, text: string) {
       const name = (imported.propertyName ?? imported.name).text;
       bindings.set(imported.name.text, name);
       if (isGenerated && name === "routes") generated.add(imported.name.text);
+      if (
+        binding.moduleSpecifier.text.endsWith("/contract/client.server") &&
+        (name === "contractGet" || name === "contractWrite")
+      ) {
+        decoderBindings.add(imported.name.text);
+      }
     }
   }
   const isGeneratedRoutes = (expression: ts.Expression) =>
@@ -355,10 +362,17 @@ function handlerCalls(file: string, text: string) {
   const entries = new Set<string>();
   const calls = new Set<string>();
   const bypasses = new Set<string>();
+  let callsDecoder = false;
   const visit = (node: ts.Node) => {
     if (ts.isCallExpression(node)) {
       const name = callee(node);
       calls.add(name);
+      if (
+        ts.isIdentifier(node.expression) &&
+        decoderBindings.has(node.expression.text)
+      ) {
+        callsDecoder = true;
+      }
       if (rawCalls.test(name) && !isContractTransport(node)) bypasses.add(name);
     }
     if (
@@ -383,7 +397,7 @@ function handlerCalls(file: string, text: string) {
     ts.forEachChild(node, visit);
   };
   visit(source);
-  return { entries, calls, bypasses, methods };
+  return { entries, calls, bypasses, methods, callsDecoder };
 }
 
 const portalFactories = new Map<string, string>(
@@ -427,7 +441,7 @@ describe("RouteFile response decoding", () => {
     ]).toEqual([]);
   });
 
-  it("does not read a RouteFile answer through the raw transport", () => {
+  it("keeps shared handlers on the generated decoder and rejects raw transport calls", () => {
     const authHelpers = [
       "auth-proxy.server.ts",
       "factor-routes.server.ts",
@@ -438,6 +452,12 @@ describe("RouteFile response decoding", () => {
       file,
       source: readFileSync(path.resolve(apiDir, "../../lib", file), "utf8"),
     }));
+    expect(
+      authHelpers
+        .filter(({ file, source }) => !handlerCalls(file, source).callsDecoder)
+        .map(({ file }) => file),
+    ).toEqual([]);
+
     const namedPaths = new Set(
       [...namedKeys].map((entry) => entry.split(" ")[1]),
     );

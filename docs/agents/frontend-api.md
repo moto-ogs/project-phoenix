@@ -259,14 +259,14 @@ The key is the scope claim of the portal's session token
   scope middleware.
 - A route file with a dynamic segment wins over the proxy too:
   `billing-families/[id]` answers `billing-families/debtor-number-format`.
-  No route file may stand in front of a registered path, literal or dynamic;
+  No route file may stand in front of a path on the catalog proxy allowlist;
   only the hand-off files below `/api/auth` that pass the request to
   `catalogProxyUnder` do. `app/api/catalog-route-selection.test.ts` fails
   otherwise.
 - A route file that calls the backend itself must name at least one backend
-  path the contract does not register (a sign-in step, a stream, a bundle);
-  `app/api/route-backend-paths.test.ts` fails a file whose backend paths are
-  all registered.
+  path outside the catalog proxy allowlists, such as a `RouteFile` sign-in
+  step or an `Outside` stream. `app/api/route-backend-paths.test.ts` fails a
+  file whose backend paths are all on the allowlists.
 - A route with response variants (`GET /api/students/`) names its
   `variantParam`; the proxy decodes the answer with the variant the query
   asks for, else the default variant.
@@ -329,11 +329,11 @@ Context params are async in Next.js 16: `params: Promise<...>` — always `await
 Every backend call goes through `sendBackend` (`lib/backend-client.server.ts`):
 base URL, bearer, one client identity set (`backendIdentityHeaders`: client
 IP, User-Agent, analytics session, Vorgangskennung, frontend origin),
-`cache: "no-store"`, Idempotency-Key, a header timeout from
-`BACKEND_TIMEOUTS_MS` (90 s by default; login, logout, session upkeep and
-public assets shorter), a refused `.`/`..` path segment, one log line and
-metric. Without a session (`bearer` null: public routes, login steps,
-refresh, token checks) the same path applies. The portal's `backendFetch`
+`cache: "no-store"`, Idempotency-Key, a timeout from `BACKEND_TIMEOUTS_MS`
+(90 s for headers by default; login, logout and public assets shorter;
+session upkeep has 5 s for headers and body), a refused `.`/`..` path
+segment, one log line and metric. Without a session (`bearer` null: public
+routes and login steps) the same path applies. The portal's `backendFetch`
 binds it to the request's session: a backend 401 repeats once with the
 renewed session. No session answers 401 "Unauthorized"; a renewal the backend
 refused (revoked or foreign family, invalid refresh token) answers 401

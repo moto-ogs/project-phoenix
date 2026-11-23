@@ -211,6 +211,62 @@ describe("gateSessionCookieWrites", () => {
     expect(written(answer)).toEqual([]);
   });
 
+  it.each([
+    [200, "unknown"],
+    [401, "ended"],
+  ] as const)(
+    "bounds a stalled %s family response body",
+    async (status, state) => {
+      const { sessionFamilyState } =
+        await import("~/server/auth/token-validation");
+      vi.useFakeTimers();
+      // Node's native timeout signal uses an internal timer. Drive it with
+      // the test clock while preserving Fetch's abort of the response body.
+      const timeout = vi
+        .spyOn(AbortSignal, "timeout")
+        .mockImplementation((ms) => {
+          const deadline = new AbortController();
+          setTimeout(() => deadline.abort(), ms);
+          return deadline.signal;
+        });
+      const close = new AbortController();
+      backend.mockImplementationOnce(async (_url, init) => {
+        const signal = init?.signal
+          ? AbortSignal.any([init.signal, close.signal])
+          : close.signal;
+        return new Response(
+          new ReadableStream({
+            start(controller) {
+              signal.addEventListener("abort", () =>
+                controller.error(signal.reason),
+              );
+            },
+          }),
+          { status },
+        );
+      });
+
+      const now = Math.floor(Date.now() / 1000);
+      const answer = sessionFamilyState(
+        jwt({ id: 7, exp: now + 600 }),
+        "parent",
+      );
+      const observed = vi.fn();
+      void answer.then(observed);
+      try {
+        await vi.advanceTimersByTimeAsync(4_999);
+        expect(familyChecks()).toHaveLength(1);
+        expect(observed).not.toHaveBeenCalled();
+        await vi.advanceTimersByTimeAsync(1);
+        expect(observed).toHaveBeenCalledWith(state);
+      } finally {
+        close.abort();
+        await answer;
+        timeout.mockRestore();
+      }
+    },
+  );
+
   // #6187: an unbooked module ends no session; the gate writes as for a
   // live family.
   it("keeps a rotated session whose module is not booked", async () => {

@@ -37,7 +37,7 @@ export const POST = withPrivateNoStore(async (request: NextRequest) => {
       { request },
     );
     const response = contractResponse(reply, request);
-    if (reply.ok) {
+    if (reply.backend?.ok) {
       response.cookies.set(
         operatorInvitationCookieName(operatorInvitationFlowID(request)),
         "",

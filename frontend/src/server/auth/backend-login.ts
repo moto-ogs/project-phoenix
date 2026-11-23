@@ -27,7 +27,10 @@ export async function loginAtBackend(
       timeout: "login",
     });
     if (!reply.ok) {
-      if (!reply.backend && reply.error.status === 503) return { ok: false };
+      if (!reply.backend && reply.error.status === 503) {
+        authLogger.error("portal_login_unavailable", { portal: portal.key });
+        return { ok: false };
+      }
       const { status, code } = reply.error;
       authLogger.warn("portal_login_refused", {
         portal: portal.key,

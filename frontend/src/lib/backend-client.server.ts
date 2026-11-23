@@ -26,7 +26,8 @@ const logger = createLogger({ component: "BackendClient" });
 
 /**
  * How long the backend may take until its response headers arrive, per kind
- * of call. A body still streaming (a large export) is not cut off.
+ * of call. Session upkeep also needs the body within that budget. Other
+ * bodies, such as streaming exports, are not cut off.
  */
 const BACKEND_TIMEOUTS_MS = {
   /** Below Cloudflare's 100 s origin timeout, so the BFF answers 503 first. */
@@ -114,8 +115,8 @@ function contentLength(response: Response): number | null {
 
 /**
  * The one request path to the backend for every portal: base URL, bearer,
- * client identity, `cache: "no-store"`, Idempotency-Key, a header timeout,
- * and one log line and metric per call.
+ * client identity, `cache: "no-store"`, Idempotency-Key, a timeout, and one
+ * log line and metric per call.
  */
 export async function sendBackend(
   path: string,
@@ -124,11 +125,17 @@ export async function sendBackend(
 ): Promise<Response> {
   assertNoDotSegments(path);
   const method = call.method ?? "GET";
-  const timeout = new AbortController();
-  const timer = setTimeout(
-    () => timeout.abort(new Error("backend did not answer in time")),
-    BACKEND_TIMEOUTS_MS[call.timeout ?? "default"],
-  );
+  const timeoutMs = BACKEND_TIMEOUTS_MS[call.timeout ?? "default"];
+  const headerTimeout =
+    call.timeout === "session" ? undefined : new AbortController();
+  const timer =
+    headerTimeout &&
+    setTimeout(
+      () => headerTimeout.abort(new Error("backend did not answer in time")),
+      timeoutMs,
+    );
+  // Keep the session deadline attached to Fetch while its body is read.
+  const deadline = headerTimeout?.signal ?? AbortSignal.timeout(timeoutMs);
   const body = call.json === undefined ? call.body : JSON.stringify(call.json);
   const contentType =
     call.json === undefined ? call.contentType : "application/json";
@@ -152,9 +159,7 @@ export async function sendBackend(
       // A streamed upload (catalog proxy, #2352) leaves while it is read.
       ...(body instanceof ReadableStream && { duplex: "half" }),
       cache: "no-store",
-      signal: call.signal
-        ? AbortSignal.any([call.signal, timeout.signal])
-        : timeout.signal,
+      signal: call.signal ? AbortSignal.any([call.signal, deadline]) : deadline,
     });
     status = response.status;
     responseBytes = contentLength(response);

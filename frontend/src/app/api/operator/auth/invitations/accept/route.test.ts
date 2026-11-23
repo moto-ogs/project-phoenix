@@ -1,11 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
-// Smoke test only — full proxy behavior (body parsing, 429 handling, non-JSON
-// fallback, error forwarding, etc.) is covered by the helper tests in
-// src/lib/operator/route-wrapper.test.ts. This file exists to pin the exact
-// backend endpoint string and HTTP method that route.ts wires to, so a typo
-// or method swap is caught by CI.
 const { mockFetch, mockGetServerApiUrl } = vi.hoisted(() => ({
   mockFetch: vi.fn(),
   mockGetServerApiUrl: vi.fn(() => "http://localhost:8080"),
@@ -27,51 +22,59 @@ describe("POST /api/operator/auth/invitations/accept", () => {
     vi.clearAllMocks();
   });
 
-  it("wires POST to /operator/auth/invitations/accept", async () => {
-    mockFetch.mockResolvedValue({
-      ok: true,
-      status: 200,
-      headers: new Headers({ "content-type": "application/json" }),
-      json: async () => ({
+  it.each([
+    {
+      answer: "decodable",
+      body: {
         status: "success",
         data: { id: "1", email: "operator@example.test", display_name: "Test" },
-      }),
-    });
-
-    const request = new NextRequest(
-      "http://localhost:3000/api/operator/auth/invitations/accept",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-operator-invitation-flow": FLOW_A,
-        },
-        body: JSON.stringify({
-          display_name: "Test",
-          password: "Str0ng!Pass",
-          confirm_password: "Str0ng!Pass",
-        }),
       },
-    );
-    request.cookies.set(`operator.invitation-token.${FLOW_A}`, "token-a");
-    request.cookies.set(`operator.invitation-token.${FLOW_B}`, "token-b");
-    const response = await POST(request);
+      status: 200,
+    },
+    { answer: "undecodable", body: {}, status: 502 },
+  ])(
+    "ends only the accepted flow with a $answer reply",
+    async ({ body, status }) => {
+      mockFetch.mockResolvedValueOnce(Response.json(body));
 
-    expect(mockFetch).toHaveBeenCalledWith(
-      "http://localhost:8080/operator/auth/invitations/accept",
-      expect.objectContaining({
-        method: "POST",
-        body: JSON.stringify({
-          display_name: "Test",
-          password: "Str0ng!Pass",
-          confirm_password: "Str0ng!Pass",
-          token: "token-a",
+      const request = new NextRequest(
+        "http://localhost:3000/api/operator/auth/invitations/accept",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-operator-invitation-flow": FLOW_A,
+          },
+          body: JSON.stringify({
+            display_name: "Test",
+            password: "Str0ng!Pass",
+            confirm_password: "Str0ng!Pass",
+          }),
+        },
+      );
+      request.cookies.set(`operator.invitation-token.${FLOW_A}`, "token-a");
+      request.cookies.set(`operator.invitation-token.${FLOW_B}`, "token-b");
+      const response = await POST(request);
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        "http://localhost:8080/operator/auth/invitations/accept",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({
+            display_name: "Test",
+            password: "Str0ng!Pass",
+            confirm_password: "Str0ng!Pass",
+            token: "token-a",
+          }),
         }),
-      }),
-    );
-    expect(response.headers.get("set-cookie")).toContain(
-      `operator.invitation-token.${FLOW_A}=`,
-    );
-    expect(response.headers.get("set-cookie")).not.toContain(FLOW_B);
-  });
+      );
+      expect(response.status).toBe(status);
+      expect(
+        response.cookies.get(`operator.invitation-token.${FLOW_A}`),
+      ).toEqual(expect.objectContaining({ value: "", maxAge: 0 }));
+      expect(response.cookies.has(`operator.invitation-token.${FLOW_B}`)).toBe(
+        false,
+      );
+    },
+  );
 });

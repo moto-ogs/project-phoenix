@@ -218,8 +218,8 @@ Only for what belongs to the browser and cannot live in Go:
   `app/api/school/sse/events`) and the client log routes;
 - a BFF cache or cookie the write must change: `settings/values/[key]`
   purges the cached tenant lookup, `demo/access/sessions` sets the demo cookie;
-- a hand-off for a registered path that Next would give to a neighbouring
-  route file (`catalogProxyUnder`); `app/api/catalog-route-selection.test.ts`
+- a hand-off for a path on the catalog proxy allowlist that Next would give
+  to a neighbouring route file (`catalogProxyUnder`); `app/api/catalog-route-selection.test.ts`
   fails when one is missing.
 
 Such a JSON route stays typed: its `common.RouteContract` names `RouteFile`,
