@@ -126,6 +126,11 @@ export interface ContractFamilyBilling {
   readonly partyLastName: string;
   /** null while the family has the terms of the contract and the services. */
   readonly family: FamilyBilling | null;
+  /**
+   * Read-state token of the family's deviation, also of none: the save
+   * sends it back (ADR 0311).
+   */
+  readonly version: string;
 }
 
 export interface FamilyBillingInput {
@@ -301,15 +306,10 @@ export async function saveServiceTerms(
   );
 }
 
-/** The deviations of the families of the Träger. */
-export async function fetchFamilyBillings(): Promise<FamilyBilling[]> {
-  const families = await bffJson("org", "GET /traeger/family-billing/");
-  return families.map(familyFromBackend);
-}
-
 /**
- * The family of a contract with its deviation, read fresh for the form
- * that sets it. A sibling's contract answers the same deviation.
+ * The family of a contract with its deviation, read on every opening: the
+ * backend records each read of a deviation in its trail. A sibling's
+ * contract answers the same deviation; the save writes exactly this one.
  */
 export async function fetchContractFamilyBilling(
   contractId: string,
@@ -325,6 +325,7 @@ export async function fetchContractFamilyBilling(
     partyName: `${body.party_first_name} ${body.party_last_name}`.trim(),
     partyLastName: body.party_last_name,
     family: body.family ? familyFromBackend(body.family) : null,
+    version: body.version,
   };
 }
 
@@ -357,14 +358,17 @@ export function familyBillingBody(
 }
 
 /**
- * Sets the deviation of the family of a contract. Null when nothing
- * deviates any more: then the family has no deviation.
+ * Sets the deviation of the family of a contract over the `version` the
+ * form read; a deviation saved since is refused with
+ * `general.changed_since_read` (ADR 0311). Null when nothing deviates any
+ * more: then the family has no deviation.
  */
 export async function saveFamilyBilling(
   input: FamilyBillingInput,
+  version: string,
 ): Promise<FamilyBilling | null> {
   const body = await bffJson("org", "PUT /traeger/family-billing/", {
-    body: familyBillingBody(input),
+    body: { ...familyBillingBody(input), expected_version: version },
   });
   return body.family ? familyFromBackend(body.family) : null;
 }

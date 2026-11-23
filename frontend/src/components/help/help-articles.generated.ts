@@ -2993,6 +2993,8 @@ export const enrollmentReviewTopic =
         "Mit `Statusseite öffnen` siehst du, was die Eltern sehen.",
         // #5102: Auswirkung nach einer Korrektur unter `Nachbearbeitung`.
         "Angebote eines bestätigten Kindes änderst du unter `Nachbearbeitung` mit `Bearbeiten`. Danach steht dort `Auswirkung auf den Betreuungsplan`.",
+        // #7929: ein befristetes Angebot verlängern.
+        "Eine Korrektur behält das Ende einer Buchung. Endet ein Angebot früher, als die Betreuung des Kindes läuft, steht darunter `Gebucht bis`. Setze den Haken bei `Bis … verlängern`. Dann gilt das Angebot bis zu dem Tag, der dort steht: dem Ende der Phase, dem Betreuungsende des Kindes oder dem Tag vor einer geplanten Änderung.",
         "Unter `Automatisch angepasst` stehen Regeltermine, die moto selbst geändert hat.",
         "Unter `Nicht angepasst, weil von Hand gepflegt` steht das Kind an abgemeldeten Tagen weiter im Plan. Mit `Dort auch entfernen` nimmst du es dort ab diesem Datum heraus. Vergangene Termine bleiben.",
         "Unter `Abholzeit weicht von der Buchung ab` gilt an einem Tag noch eine von Hand eingetragene Abholzeit. Mit `Gebuchte Zeiten übernehmen` gilt die gebuchte Zeit. Steht ein Datum dabei, gilt sie erst ab diesem Tag.",

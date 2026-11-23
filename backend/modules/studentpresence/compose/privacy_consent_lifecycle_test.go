@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/compose"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
@@ -75,41 +76,83 @@ func TestPrivacyConsentLifecycle(t *testing.T) {
 	require.False(t, found[0].Accepted)
 
 	now := presenceClock()
-	expires := now.AddDate(1, 0, 0)
-	consent.Accepted = true
-	consent.AcceptedAt = &now
-	consent.ExpiresAt = &expires
-	consent.RenewalRequired = true
-	consent.DataRetentionDays = 15
-	var revised studentpresence.PrivacyConsent
-	require.NoError(t, tenant.WithinCurrentTenant(ctx, func(txCtx context.Context) error {
-		revised, err = module.RevisePrivacyConsent(txCtx, consent)
-		return err
-	}))
+	duration := 365
+	saved, err := reviseConsent(ctx, module, studentpresence.PrivacyConsentRevision{
+		StudentID: student.ID, ExpectedVersion: studentpresence.PrivacyConsentVersion(found), PolicyVersion: "v1.0",
+		Accepted: true, DurationDays: &duration, DataRetentionDays: 15,
+	})
+	require.NoError(t, err)
+	require.Equal(t, consent.ID, saved.Consent.ID, "a save of the same policy version revises its consent")
 	found, err = module.ListPrivacyConsents(ctx, student.ID)
 	require.NoError(t, err)
 	require.Len(t, found, 1)
 	// The update trigger owns updated_at; the revision returns the stored value.
-	require.True(t, revised.UpdatedAt.Equal(found[0].UpdatedAt), "returned %s, stored %s", revised.UpdatedAt, found[0].UpdatedAt)
+	require.True(t, saved.Consent.UpdatedAt.Equal(found[0].UpdatedAt), "returned %s, stored %s", saved.Consent.UpdatedAt, found[0].UpdatedAt)
+	require.Equal(t, studentpresence.PrivacyConsentVersion(found), saved.Version)
 	require.True(t, found[0].Accepted)
 	require.NotNil(t, found[0].AcceptedAt)
 	require.WithinDuration(t, now, *found[0].AcceptedAt, time.Microsecond)
 	require.NotNil(t, found[0].ExpiresAt)
-	require.WithinDuration(t, expires, *found[0].ExpiresAt, time.Microsecond)
-	require.True(t, found[0].RenewalRequired)
+	require.WithinDuration(t, now.AddDate(0, 0, duration), *found[0].ExpiresAt, time.Microsecond)
 	require.Equal(t, 15, found[0].DataRetentionDays)
 
-	consent.Accepted = false
-	require.NoError(t, tenant.WithinCurrentTenant(ctx, func(txCtx context.Context) error {
-		_, err := module.RevisePrivacyConsent(txCtx, consent)
-		return err
-	}))
+	_, err = reviseConsent(ctx, module, studentpresence.PrivacyConsentRevision{
+		StudentID: student.ID, ExpectedVersion: saved.Version, PolicyVersion: "v1.0", DataRetentionDays: 15,
+	})
+	require.NoError(t, err)
 	found, err = module.ListPrivacyConsents(ctx, student.ID)
 	require.NoError(t, err)
 	require.False(t, found[0].Accepted)
 }
 
-func TestPrivacyConsentKeepsExpiryAndRejectsMissingRevision(t *testing.T) {
+func reviseConsent(ctx context.Context, module studentpresence.Owner, save studentpresence.PrivacyConsentRevision) (saved studentpresence.RevisedPrivacyConsent, err error) {
+	err = tenant.WithinCurrentTenant(ctx, func(txCtx context.Context) error {
+		saved, err = module.RevisePrivacyConsent(txCtx, save)
+		return err
+	})
+	return saved, err
+}
+
+// TestPrivacyConsentSaveRefusesConsentsChangedSinceRead pins ADR 0311 for
+// the consent form: it always sends the accepted flag and the retention, so
+// a save against an older read would put back what a colleague changed.
+func TestPrivacyConsentSaveRefusesConsentsChangedSinceRead(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	module, err := compose.New(compose.Dependencies{DB: db, Observe: func(compose.Observation) {}, Now: presenceClock})
+	require.NoError(t, err)
+	ctx := testpkg.Ctx(t)
+	student := testpkg.CreateTestStudent(t, db, "Consent", "Stale", "1a")
+	nothingRecorded, err := module.ListPrivacyConsents(ctx, student.ID)
+	require.NoError(t, err)
+	opened := studentpresence.PrivacyConsentVersion(nothingRecorded)
+
+	// A colleague records the consent after the form opened on the defaults.
+	_, err = reviseConsent(ctx, module, studentpresence.PrivacyConsentRevision{
+		StudentID: student.ID, ExpectedVersion: opened, PolicyVersion: "1.0", Accepted: true, DataRetentionDays: 7,
+	})
+	require.NoError(t, err)
+
+	stale := studentpresence.PrivacyConsentRevision{StudentID: student.ID, PolicyVersion: "1.0", DataRetentionDays: 30}
+	for name, expected := range map[string]string{"older read": opened, "no read": ""} {
+		stale.ExpectedVersion = expected
+		_, err = reviseConsent(ctx, module, stale)
+		require.ErrorIs(t, err, readstate.ErrChanged, name)
+		stored, listErr := module.ListPrivacyConsents(ctx, student.ID)
+		require.NoError(t, listErr)
+		require.Len(t, stored, 1, name)
+		require.True(t, stored[0].Accepted, name)
+		require.Equal(t, 7, stored[0].DataRetentionDays, name)
+	}
+
+	reread, err := module.ListPrivacyConsents(ctx, student.ID)
+	require.NoError(t, err)
+	stale.ExpectedVersion = studentpresence.PrivacyConsentVersion(reread)
+	_, err = reviseConsent(ctx, module, stale)
+	require.NoError(t, err)
+}
+
+func TestPrivacyConsentKeepsExpiry(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	module, err := compose.New(compose.Dependencies{DB: db, Observe: func(compose.Observation) {}, Now: presenceClock})
@@ -122,10 +165,6 @@ func TestPrivacyConsentKeepsExpiryAndRejectsMissingRevision(t *testing.T) {
 		StudentID: student.ID, PolicyVersion: "v1.0", Accepted: true,
 		AcceptedAt: &now, ExpiresAt: &expires, DataRetentionDays: 30,
 	}
-	require.Error(t, tenant.WithinCurrentTenant(ctx, func(txCtx context.Context) error {
-		_, err := module.RevisePrivacyConsent(txCtx, value)
-		return err
-	}))
 	var recorded studentpresence.PrivacyConsent
 	require.NoError(t, tenant.WithinCurrentTenant(ctx, func(txCtx context.Context) error {
 		recorded, err = module.RecordPrivacyConsent(txCtx, value)

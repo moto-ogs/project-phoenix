@@ -327,7 +327,7 @@ func TestHolidayInvoiceTakesTheDebtorNumberOfTheFamily(t *testing.T) {
 	_, err := f.db.ExecContext(t.Context(), `UPDATE care_contract.contract_parties SET email = 'EVA.Muster@example.org'
 		WHERE contract_id = ?`, contract)
 	require.NoError(t, err)
-	rec := traegerJSON(t, f.traeger, billing, http.MethodPut, familyBillingPath,
+	rec := putFamilyBilling(t, f.traeger, billing,
 		map[string]any{"contract_id": contract, "recipient_kind": "applicant", "debtor_number": "20 815"})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 

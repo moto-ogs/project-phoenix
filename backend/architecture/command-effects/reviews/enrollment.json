@@ -1456,6 +1456,28 @@
       "target_owner": ""
     },
     {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.Decisions.ListChildOfferings",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.Decisions.ListChildOfferings",
+      "reason": "Platform protocol participation (scope): enrollment reaches tenant.WithSavepoint (tenant-runtime) through modules/enrollment/internal/application.Decisions.ListChildOfferings. The optional read of the care ends behind a booking extension (#7929) runs in a savepoint so a failed read leaves the detail usable; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithSavepoint",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/enrollmenttest.enrollmentDecisionFixtureRoot.ListChildOfferings",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.Decisions.ListChildOfferings",
+      "reason": "Platform protocol participation (scope): enrollment reaches tenant.WithSavepoint (tenant-runtime) through modules/enrollment/enrollmenttest.enrollmentDecisionFixtureRoot.ListChildOfferings. The optional read of the care ends behind a booking extension (#7929) runs in a savepoint so a failed read leaves the detail usable; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithSavepoint",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.Decisions.RestoreWithdrawn",
       "classification": "query",
       "effect": "query",
@@ -4825,6 +4847,17 @@
       "source_owner": "enrollment",
       "target": "unresolved:interface{Field(byte) string; error}.Field",
       "target_owner": ""
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.decisionService.ListChildOfferings",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.DecisionService.ListChildOfferings",
+      "reason": "Platform protocol participation (scope): enrollment reaches tenant.WithSavepoint (tenant-runtime) through modules/enrollment/http.decisionService.ListChildOfferings. The optional read of the care ends behind a booking extension (#7929) runs in a savepoint so a failed read leaves the detail usable; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithSavepoint",
+      "target_owner": "tenant-runtime"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.decisionService.RestoreWithdrawn",

@@ -480,6 +480,29 @@ describe("Länger als gebucht", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows the figures without names of a month seen before at once (ADR 0311)", async () => {
+    // Without names no child is named: the shared cache shows the month
+    // again while it is read anew.
+    mockUseSession.mockReturnValue(session(["traeger_reports:read"]));
+    api.fetchOverrunSummary.mockResolvedValueOnce(EVALUATION);
+    renderPage();
+    expect(
+      (await screen.findAllByText("OGS Am Lindenhof")).length,
+    ).toBeGreaterThan(0);
+    api.fetchOverrunSummary.mockReturnValue(
+      new Promise<OverrunEvaluation>(() => undefined),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Monat davor" }));
+    await waitFor(() =>
+      expect(api.fetchOverrunSummary).toHaveBeenCalledTimes(2),
+    );
+    api.fetchOverrunSummary.mockResolvedValue(EVALUATION);
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Monat danach" }),
+    );
+    expect(screen.getAllByText("OGS Am Lindenhof").length).toBeGreaterThan(0);
+  });
+
   it("drops the figures of the previous Träger when the session switches", async () => {
     mockUseSession.mockReturnValue(session(["traeger_reports:read"], 7));
     api.fetchOverrunSummary.mockResolvedValueOnce(EVALUATION);

@@ -81,7 +81,6 @@ const REASONS: readonly EnrollmentReason[] = [
   "offering_phase",
   "booking_window",
   "care_offerings_off",
-  "roster_bound",
   "care_ends_earlier",
   "window_too_short",
   "enrolled_elsewhere",

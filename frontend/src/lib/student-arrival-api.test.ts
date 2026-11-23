@@ -317,12 +317,13 @@ describe("student-arrival-api", () => {
   });
 
   describe("bulkUpsertArrivalSchedules", () => {
-    it("posts school class and schedules", async () => {
+    it("posts school class, schedules and the version the form read", async () => {
       fetchMock.mockResolvedValueOnce(wrapped({}));
 
       await bulkUpsertArrivalSchedules(
         { type: "school_class", schoolClass: "3a" },
         [{ weekday: 1, expected_arrival: "08:00" }],
+        "read-version",
       );
 
       expect(fetchMock).toHaveBeenCalledWith(
@@ -332,6 +333,7 @@ describe("student-arrival-api", () => {
           body: JSON.stringify({
             schedules: [{ weekday: 1, expected_arrival: "08:00" }],
             school_class: "3a",
+            expected_version: "read-version",
           }),
         }),
       );

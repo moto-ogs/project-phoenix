@@ -12841,22 +12841,6 @@
       "target_owner": ""
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordPrivacyConsent",
-      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/http.PrivacyConsentCapability.RecordPrivacyConsent",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RecordPrivacyConsent",
-      "binding_digest": "afade5fb4199e0ad403df633e85b1607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/http.PrivacyConsentCapability.RecordPrivacyConsent",
-      "source_owner": "student-presence",
-      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RevisePrivacyConsent",
       "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/http.PrivacyConsentCapability.RevisePrivacyConsent",
@@ -19092,6 +19076,14 @@
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.LockOpenVisits",
       "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.LockOpenVisits",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.LockPrivacyConsents",
+      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.LockPrivacyConsents",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
       "target_owner": "tenant-runtime"

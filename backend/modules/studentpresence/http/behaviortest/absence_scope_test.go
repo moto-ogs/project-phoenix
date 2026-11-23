@@ -59,6 +59,9 @@ func TestDirectAbsenceScope(t *testing.T) {
 					if scope == settings.StudentAbsenceEditScopeAdmins {
 						want = http.StatusForbidden
 					}
+					if _, edit := payload["school_class"]; edit {
+						payload = map[string]any{"sick": value, "school_class": "2b", "expected_version": detailVersion(t, tc, student.ID)}
+					}
 					rr := authExec(t, tc, testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID), payload), claims, perms)
 					require.Equal(t, want, rr.Code, rr.Body.String())
 				}
@@ -118,7 +121,7 @@ func TestDirectAbsenceScopeRestrictsExistingReportsOnNextRequest(t *testing.T) {
 	require.Empty(t, rows, "denied bulk write must not partially commit")
 
 	// Admin rights and ordinary child edits remain independent of direct reports.
-	rr = authExec(t, tc, testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", other.ID), map[string]any{"school_class": "2b"}), claims, perms)
+	rr = authExec(t, tc, testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", other.ID), map[string]any{"school_class": "2b", "expected_version": detailVersion(t, tc, other.ID)}), claims, perms)
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 	rr = authExec(t, tc, testutil.NewRequest("DELETE", fmt.Sprintf("/%d/status-days/%d", student.ID, statusIDs["sick"]), nil), testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"})
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
@@ -168,4 +171,20 @@ func TestDirectAbsenceScopeFailsClosed(t *testing.T) {
 			require.Empty(t, rows)
 		})
 	}
+}
+
+// detailVersion is the master-data version the child's page reads and its
+// edit form sends back (ADR 0311).
+func detailVersion(t *testing.T, tc *testContext, studentID int64) string {
+	t.Helper()
+	rr := authExec(t, tc, testutil.NewRequest("GET", fmt.Sprintf("/%d", studentID), nil), testutil.AdminTestClaims(1), []string{"admin:*"})
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	var detail struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &detail))
+	require.NotEmpty(t, detail.Data.Version)
+	return detail.Data.Version
 }

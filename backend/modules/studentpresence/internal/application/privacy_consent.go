@@ -3,9 +3,11 @@ package application
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 const (
@@ -96,25 +98,99 @@ func validPrivacyConsent(row *studentpresence.PrivacyConsent) bool {
 		(row.ExpiresAt == nil || row.AcceptedAt == nil || !row.ExpiresAt.Before(*row.AcceptedAt))
 }
 
-// RevisePrivacyConsent revises one consent row inside the caller's tenant
-// transaction; the store keeps the row's tenant and timestamps.
-func (s *Service) RevisePrivacyConsent(ctx context.Context, value studentpresence.PrivacyConsent) (studentpresence.PrivacyConsent, error) {
-	row := studentpresence.PrivacyConsent{
-		ID: value.ID, StudentID: value.StudentID, PolicyVersion: value.PolicyVersion, Accepted: value.Accepted,
-		AcceptedAt: value.AcceptedAt, ExpiresAt: value.ExpiresAt, DurationDays: value.DurationDays,
-		RenewalRequired: value.RenewalRequired, DataRetentionDays: value.DataRetentionDays, Details: value.Details,
-	}
-	err := s.run("revise_privacy_consent", func() (ports.Stats, error) {
-		if !validPrivacyConsent(&row) || row.ID <= 0 {
+// RevisePrivacyConsent is the staff edit of a child's consent: it records or
+// revises the consent of the saved policy version inside the caller's tenant
+// transaction, under the student's consent lock. It is refused with
+// readstate.ErrChanged when the student's consents differ from the version
+// the editor read: the form always sends the accepted flag and the retention
+// together, so a stale save would put back what a colleague changed.
+func (s *Service) RevisePrivacyConsent(ctx context.Context, revision studentpresence.PrivacyConsentRevision) (studentpresence.RevisedPrivacyConsent, error) {
+	var revised studentpresence.RevisedPrivacyConsent
+	err := s.run("revise_privacy_consent", func() (stats ports.Stats, err error) {
+		if revision.StudentID <= 0 {
 			return ports.Stats{}, studentpresence.ErrInvalidPrivacyConsent
 		}
 		if err := s.tx.Require(ctx); err != nil {
 			return ports.Stats{}, err
 		}
-		return s.store.RevisePrivacyConsent(ctx, &row)
+		revised, stats, err = s.reviseUnderLock(ctx, revision)
+		return stats, err
 	})
 	if err != nil {
-		return studentpresence.PrivacyConsent{}, err
+		return studentpresence.RevisedPrivacyConsent{}, err
 	}
-	return row, nil
+	return revised, nil
+}
+
+// reviseUnderLock takes the student's consent lock, compares the stored
+// consents with the version read, and records or revises the one consent.
+func (s *Service) reviseUnderLock(ctx context.Context, revision studentpresence.PrivacyConsentRevision) (studentpresence.RevisedPrivacyConsent, ports.Stats, error) {
+	stats, err := s.store.LockPrivacyConsents(ctx, revision.StudentID)
+	if err != nil {
+		return studentpresence.RevisedPrivacyConsent{}, stats, err
+	}
+	consents, listStats, err := s.store.ListPrivacyConsents(ctx, revision.StudentID)
+	addStats(&stats, listStats)
+	if err != nil {
+		return studentpresence.RevisedPrivacyConsent{}, stats, err
+	}
+	if err := readstate.Check(revision.ExpectedVersion, studentpresence.PrivacyConsentVersion(consents)); err != nil {
+		return studentpresence.RevisedPrivacyConsent{}, stats, err
+	}
+	row := revisedPolicyConsent(consents, revision, s.now())
+	if !validPrivacyConsent(&row) {
+		return studentpresence.RevisedPrivacyConsent{}, stats, studentpresence.ErrInvalidPrivacyConsent
+	}
+	writeStats, err := s.writeConsent(ctx, &row)
+	addStats(&stats, writeStats)
+	if err != nil {
+		return studentpresence.RevisedPrivacyConsent{}, stats, err
+	}
+	consents = upsertConsent(consents, row)
+	return studentpresence.RevisedPrivacyConsent{Consent: row, Version: studentpresence.PrivacyConsentVersion(consents)}, stats, nil
+}
+
+// writeConsent records a consent that has no row yet and revises the others.
+func (s *Service) writeConsent(ctx context.Context, row *studentpresence.PrivacyConsent) (ports.Stats, error) {
+	if row.ID == 0 {
+		return s.store.RecordPrivacyConsent(ctx, row)
+	}
+	return s.store.RevisePrivacyConsent(ctx, row)
+}
+
+// revisedPolicyConsent is the newest consent of the saved policy version
+// with the edit applied, or a new one. Acceptance stamping and expiry derivation
+// are the owner's consent lifecycle (issue #586, Rule 12).
+func revisedPolicyConsent(consents []studentpresence.PrivacyConsent, save studentpresence.PrivacyConsentRevision, now time.Time) studentpresence.PrivacyConsent {
+	consent := studentpresence.PrivacyConsent{StudentID: save.StudentID}
+	var newest *studentpresence.PrivacyConsent
+	for i, c := range consents {
+		if c.PolicyVersion == save.PolicyVersion && (newest == nil || c.CreatedAt.After(newest.CreatedAt)) {
+			newest = &consents[i]
+		}
+	}
+	if newest != nil {
+		consent = *newest
+	}
+	consent.PolicyVersion = save.PolicyVersion
+	consent.Accepted = save.Accepted
+	consent.DurationDays = save.DurationDays
+	consent.DataRetentionDays = save.DataRetentionDays
+	consent.Details = save.Details
+	if save.Accepted && consent.AcceptedAt == nil {
+		return studentpresence.AcceptPrivacyConsent(consent, now)
+	}
+	return studentpresence.DerivePrivacyConsentExpiry(consent)
+}
+
+// upsertConsent is the list with row in place of the stored row of its ID,
+// or added when it is new.
+func upsertConsent(consents []studentpresence.PrivacyConsent, row studentpresence.PrivacyConsent) []studentpresence.PrivacyConsent {
+	for i := range consents {
+		if consents[i].ID == row.ID {
+			consents[i] = row
+			return consents
+		}
+	}
+	return append(consents, row)
 }

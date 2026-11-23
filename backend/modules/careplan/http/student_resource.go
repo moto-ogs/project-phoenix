@@ -112,6 +112,7 @@ func (rs *Resource) Register(r chi.Router, withTx common.Middleware) {
 	r.With(common.RequiresPermission(permissions.UsersDelete), withTx).Post("/{id}/care-end/resume", rs.resumeCare)
 	r.With(common.RequiresPermission(permissions.UsersDelete), withTx).Get("/ended-care", rs.listEndedCare)
 	r.With(common.RequiresPermission(permissions.UsersRead), withTx).Get("/{id}/companions", rs.getStudentCompanions)
+	r.With(common.RequiresPermission(permissions.UsersRead), withTx).Get("/{id}/companion-links", rs.getStudentCompanionList)
 	r.With(common.RequiresPermission(permissions.UsersRead), withTx).Get("/{id}/pickup-schedules", rs.getStudentPickupSchedules)
 	r.With(common.RequiresPermission(permissions.UsersRead), withTx).Get("/{id}/partial-absences", rs.getStudentPartialAbsences)
 	r.With(common.RequiresPermission(permissions.UsersUpdate), withTx).Put("/{id}/pickup-schedules", rs.updateStudentPickupSchedules)

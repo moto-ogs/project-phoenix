@@ -176,10 +176,12 @@ type BookingEnrollment interface {
 
 // BookingStudent is the part of a student's record the materialization
 // bounds rosters with. GradeLevel is the Jahrgang School Structure derives
-// from the school class (nil without a grade number); EnrolledUntil is the
-// last care day (inclusive).
+// from the school class (nil without a grade number), SchoolClass is what a
+// source's Klassen filter matches on; EnrolledUntil is the last care day
+// (inclusive).
 type BookingStudent struct {
 	ID            int64
+	SchoolClass   string
 	GradeLevel    *int16
 	EnrolledUntil *calendar.Date
 }

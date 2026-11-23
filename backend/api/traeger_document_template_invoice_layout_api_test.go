@@ -36,7 +36,7 @@ func TestTraegerDocumentTemplatesKeepTheInvoiceLayoutWithTheVersion(t *testing.T
 	db, router := newMasterDataPortal(t)
 	office := newMasterDataOffice(t, db, router, "Träger Melle Rechnungstabelle", identityaccess.TraegerRoleAdministration)
 	save := func(body documentTemplateWithLayout) layoutVersion {
-		rec := traegerJSON(t, router, office.token, http.MethodPost, documentTemplatesPath+"/bestaetigung/versions", body)
+		rec := postTemplateVersion(t, router, office.token, "bestaetigung", body)
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		return decodeSchoolPortalData[layoutVersion](t, rec.Body.Bytes())
 	}

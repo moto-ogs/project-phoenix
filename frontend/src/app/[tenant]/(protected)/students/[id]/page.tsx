@@ -20,7 +20,7 @@ import {
   FormErrorAlert,
   LoadErrorAlert,
 } from "~/components/ui/form-error-alert";
-import { ApiError } from "~/lib/api-error";
+import { ApiError, isChangedSinceRead } from "~/lib/api-error";
 import { ConfirmationModal, Modal } from "~/components/ui/modal";
 import { useTenantRouter } from "~/lib/tenant-router";
 import {
@@ -104,6 +104,7 @@ import { CareExitModal } from "~/components/students/care-exit-modal";
 import {
   PlannedStatusDaysModal,
   type PlannedStatusSubmitOptions,
+  type EditedPartialAbsence,
 } from "~/components/students/planned-status-days-modal";
 import { fetchStudentPickupData } from "~/lib/pickup-schedule-api";
 import { StudentPickupChanges } from "~/components/students/pickup-change-alert";
@@ -1084,8 +1085,12 @@ function StudentDetailPageContent() {
         ? {
             privacy_consent_accepted: editedStudent.privacy_consent_accepted,
             data_retention_days: editedStudent.data_retention_days,
+            privacy_consent_version: editedStudent.privacy_consent_version,
           }
         : {}),
+      // Der Stand der Stammdaten, aus dem das Formular gefüllt wurde
+      // (ADR 0311): hat ihn inzwischen jemand geändert, lehnt das Backend ab.
+      version: editedStudent.version,
       // Nur mitschicken, wenn der Entwurf den Wert kennt: `undefined` lässt
       // das Backend die Einwilligung unangetastet, `false` nimmt sie zurück.
       ...(editedStudent.photo_consent_given === undefined
@@ -1397,17 +1402,18 @@ function StudentDetailPageContent() {
   };
 
   const handleSavePartialAbsence = async (
-    partialAbsenceId: string | null,
+    editing: EditedPartialAbsence | null,
     date: string,
     fromTime: string,
     reason?: string,
   ) => {
     if (!student) return;
+    const partialAbsenceId = editing?.id ?? null;
     setPlannedStatusLoading(true);
     try {
       await saveStudentPartialAbsence(
         studentId,
-        partialAbsenceId,
+        editing,
         date,
         fromTime,
         reason,
@@ -1429,6 +1435,9 @@ function StudentDetailPageContent() {
         partial_absence_id: partialAbsenceId,
         error: err instanceof Error ? err.message : String(err),
       });
+      // Changed since it was read: the page's window shows the stored entry
+      // again, the modal fills its form from it (ADR 0311).
+      if (isChangedSinceRead(err)) void mutatePartialAbsences();
       // The modal shows the failure in its error slot (Bauart 2 Regel 5).
       throw err;
     } finally {

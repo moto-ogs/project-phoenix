@@ -1318,6 +1318,12 @@
       "portals": [
         "org"
       ],
+      "query": [
+        {
+          "name": "expected_version",
+          "kind": "string"
+        }
+      ],
       "response": {
         "kind": "ref",
         "ref": "CareTariffs"
@@ -6379,10 +6385,22 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/students/{id}/companion-links",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "StudentCompanionList"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/students/{id}/companions",
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "response": {
         "kind": "array",
         "elem": {
@@ -11643,6 +11661,7 @@
       "portals": [
         "org"
       ],
+      "deprecated": true,
       "response": {
         "kind": "array",
         "elem": {
@@ -18550,6 +18569,10 @@
       "portals": [
         "parent"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "ParentSEPAMandateRevokeRequest"
+      },
       "response": {
         "kind": "ref",
         "ref": "SEPAMandateView"
@@ -27981,6 +28004,13 @@
           }
         },
         {
+          "name": "extends_until",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "submitted_terms",
           "optional": true,
           "schema": {
@@ -28685,6 +28715,13 @@
             "elem": {
               "kind": "string"
             }
+          }
+        },
+        {
+          "name": "extend_to_phase_end",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -34499,6 +34536,13 @@
           }
         },
         {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "group_id",
           "optional": true,
           "schema": {
@@ -39050,6 +39094,13 @@
               "ref": "CarePriceRequest"
             }
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -40731,6 +40782,16 @@
             "elem": {
               "kind": "date",
               "nullable": true
+            }
+          }
+        },
+        {
+          "name": "versions",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
             }
           }
         }
@@ -43255,6 +43316,12 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -45134,6 +45201,12 @@
             "kind": "ref",
             "nullable": true,
             "ref": "FamilyBilling"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -53894,6 +53967,13 @@
         },
         {
           "name": "debtor_number",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_version",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -75431,6 +75511,20 @@
       ]
     },
     {
+      "name": "ParentSEPAMandateRevokeRequest",
+      "go_type": "parent.ParentSEPAMandateRevokeRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "ParentSchoolReadersResponse",
       "go_type": "parent.ParentSchoolReadersResponse",
       "fields": [
@@ -75479,6 +75573,13 @@
         },
         {
           "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_version",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -75548,6 +75649,12 @@
         },
         {
           "name": "updated_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "version",
           "schema": {
             "kind": "string"
           }
@@ -79768,6 +79875,13 @@
               "nullable": true
             }
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -79853,6 +79967,12 @@
           "name": "updated_at",
           "schema": {
             "kind": "instant"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -85336,6 +85456,12 @@
           "name": "id",
           "schema": {
             "kind": "id"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         },
         {
@@ -96645,6 +96771,29 @@
       ]
     },
     {
+      "name": "StudentCompanionList",
+      "go_type": "careplanhttp.StudentCompanionList",
+      "fields": [
+        {
+          "name": "companions",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "CompanionResponse"
+            }
+          }
+        },
+        {
+          "name": "fingerprint",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "StudentConsentResponse",
       "go_type": "presenceprojectionhttp.StudentConsentResponse",
       "fields": [
@@ -97179,6 +97328,13 @@
           "name": "has_write_access",
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         },
         {
@@ -100443,6 +100599,13 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -102259,6 +102422,12 @@
       "name": "TraegerDocumentTemplateDetail",
       "go_type": "organizationtenancy.TraegerDocumentTemplateDetail",
       "fields": [
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
+        },
         {
           "name": "current",
           "schema": {
@@ -106813,6 +106982,13 @@
       "go_type": "careplanhttp.UpdateStudentRequest",
       "request": true,
       "fields": [
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
         {
           "name": "first_name",
           "optional": true,

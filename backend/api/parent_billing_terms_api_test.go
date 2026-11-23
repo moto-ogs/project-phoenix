@@ -94,6 +94,27 @@ func termsRelease(run termsRunBody) map[string]any {
 	return map[string]any{"document_count": run.PreviewCount, "total_cents": run.PreviewCents, "fingerprint": run.Fingerprint}
 }
 
+// putFamilyBilling saves the deviation of the body's contract over the
+// version the office reads of it first, as the form does (ADR 0311).
+func putFamilyBilling(t *testing.T, router http.Handler, token string, body map[string]any) *httptest.ResponseRecorder {
+	t.Helper()
+	body["expected_version"] = familyBillingVersionOf(t, router, token, body["contract_id"])
+	return traegerJSON(t, router, token, http.MethodPut, familyBillingPath, body)
+}
+
+// familyBillingVersionOf reads the version of a contract's family, "" when
+// the office may not read it.
+func familyBillingVersionOf(t *testing.T, router http.Handler, token string, contract any) string {
+	t.Helper()
+	rec := traegerJSON(t, router, token, http.MethodGet, fmt.Sprintf("%s/contracts/%v", familyBillingPath, contract), nil)
+	if rec.Code != http.StatusOK {
+		return ""
+	}
+	return decodeSchoolPortalData[struct {
+		Version string `json:"version"`
+	}](t, rec.Body.Bytes()).Version
+}
+
 func setTerms(t *testing.T, router http.Handler, token, service string, body map[string]any) {
 	t.Helper()
 	rec := traegerJSON(t, router, token, http.MethodPut, billingTermsPath+"/"+service, body)
@@ -116,6 +137,41 @@ func partyEmailOf(t *testing.T, f careBillingFixture, contract int64) string {
 	require.NoError(t, f.db.NewRaw(`SELECT email FROM care_contract.contract_parties WHERE contract_id = ?`, contract).
 		Scan(context.Background(), &email))
 	return email
+}
+
+func TestHolidayDirectDebitReleaseKeepsTheAnnouncedAccount(t *testing.T) {
+	t.Parallel()
+	f := newReviewFixture(t, "Träger Ferien-Lastschrift")
+	billing := traegerColleague(t, f, identityaccess.TraegerRoleBilling)
+	testpkg.OwnTraegerCareContracts(t, f.db, f.office.organization)
+	care := careBillingFixture{db: f.db, traeger: f.traeger, office: traegerOffice{
+		organization: f.office.organization, schools: f.office.schools, token: billing,
+	}}
+	setNumberRange(t, f, billing, "FE-{NNNN}")
+	setTerms(t, f.traeger, billing, "holiday", map[string]any{"payment_method": "direct_debit", "due_days": 14})
+
+	contract := careContract(t, f.db, f.office.organization, f.office.schools[0], "Lia", careMonth, sjrServices()...)
+	ctx := context.Background()
+	_, err := f.db.ExecContext(ctx, `UPDATE care_contract.contract_parties SET email = 'EVA.Muster@example.org' WHERE contract_id = ?`, contract)
+	require.NoError(t, err)
+	saveCreditor(t, care, map[string]any{"creditor_id": sepaCreditorID, "prenotification_days": 2, "missing_mandate": "transfer"})
+	mandate := createMandate(t, care, mandateBody(contract, "SEPA-FERIEN"))
+
+	require.Equal(t, http.StatusOK, f.act(t, f.siblings, "confirm").Code)
+	run := startBillingRun(t, f, billing, int64(f.period.ID))
+	preview := billingRun(t, f, billing, int64(run.ID))
+	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(preview))
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	var sameAccount bool
+	require.NoError(t, f.db.NewRaw(`SELECT invoice.account_holder_sealed = debit.account_holder_sealed
+			AND invoice.debtor_iban_masked = mandate.iban_masked AND debit.iban_sealed = mandate.iban_sealed
+		FROM parent_billing.documents AS invoice
+		JOIN parent_billing.sepa_debits AS debit ON debit.organization_id = invoice.organization_id AND debit.document_id = invoice.id
+		JOIN parent_billing.sepa_mandates AS mandate ON mandate.organization_id = debit.organization_id AND mandate.id = debit.mandate_id
+		WHERE invoice.organization_id = ? AND invoice.run_id = ? AND mandate.id = ?`,
+		f.office.organization, run.ID, mandate.ID).Scan(ctx, &sameAccount))
+	assert.True(t, sameAccount)
 }
 
 // The SJR case of #4689: one Träger bills the monthly care by direct debit
@@ -169,7 +225,7 @@ func TestCareByDirectDebitAndHolidayByTransferStaySeparateInvoices(t *testing.T)
 	_, err := f.db.ExecContext(context.Background(), `UPDATE care_contract.contract_parties SET email = 'EVA.Muster@example.org'
 		WHERE contract_id = ?`, contract)
 	require.NoError(t, err)
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec = putCarePriceList(t, f.traeger, billing, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	// A direct debit needs the creditor identifier and the family's
 	// mandate (#4695); without them the invoice goes as a transfer.
@@ -295,7 +351,7 @@ func TestFamilyDeviationReachesTheNextReleaseOnly(t *testing.T) {
 	school := f.office.schools[0]
 	contract := careContract(t, f.db, f.office.organization, school, "Mia", careMonth, sjrServices()...)
 	family := partyEmailOf(t, f, contract)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	first := f.startRun(t, careMonth)
@@ -325,7 +381,7 @@ func TestFamilyDeviationReachesTheNextReleaseOnly(t *testing.T) {
 		assert.Equal(t, "parent_billing.family_billing_invalid", code)
 	}
 	day := 15
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyBillingPath, map[string]any{
+	rec = putFamilyBilling(t, f.traeger, f.office.token, map[string]any{
 		"contract_id": contract, "recipient_kind": "payer", "payer_first_name": "Oma", "payer_last_name": "Muster",
 		"payer_email": "oma@example.org", "payer_address": map[string]any{"street": "Amtsweg 2", "postal_code": "75175", "city": "Pforzheim"},
 		"payment_method": "direct_debit", "due_day": day,
@@ -385,7 +441,7 @@ func TestFamilyDeviationReachesTheNextReleaseOnly(t *testing.T) {
 	assert.Contains(t, rec.Body.String(), `"recipient_kind":"payer"`)
 
 	// Back to the registration: the deviation goes away.
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyBillingPath, map[string]any{"contract_id": contract, "recipient_kind": "applicant"})
+	rec = putFamilyBilling(t, f.traeger, f.office.token, map[string]any{"contract_id": contract, "recipient_kind": "applicant"})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), `"family":null`)
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, familyBillingPath, nil)
@@ -407,7 +463,7 @@ func TestBillingTermsNeedTheRightAndStayWithTheirTraeger(t *testing.T) {
 	school := f.office.schools[0]
 	contract := careContract(t, f.db, f.office.organization, school, "Mia", careMonth, sjrServices()...)
 	run := f.startRun(t, careMonth)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyBillingPath, map[string]any{
+	rec := putFamilyBilling(t, f.traeger, f.office.token, map[string]any{
 		"contract_id": contract, "recipient_kind": "both", "second_first_name": "Jan", "second_last_name": "Beispiel"})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	deviation := decodeSchoolPortalData[struct {
@@ -484,7 +540,7 @@ func TestBillingTermsQueryBudgetIsFlat(t *testing.T) {
 	}
 	deviate := func(child string) {
 		contract := careContract(t, f.db, f.office.organization, f.office.schools[0], child, careMonth, sjrServices()...)
-		rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyBillingPath, map[string]any{
+		rec := putFamilyBilling(t, f.traeger, f.office.token, map[string]any{
 			"contract_id": contract, "recipient_kind": "applicant", "payment_method": "direct_debit"})
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	}
@@ -553,7 +609,7 @@ func TestFamilyPaymentMethodIsSetBeforeTheFirstInvoice(t *testing.T) {
 	assert.Nil(t, familyOf(f.office.token, contract).Family, "the mandate sets no payment method")
 	assert.Empty(t, listed(), "a family with a mandate only has nothing of its own to show")
 
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyBillingPath, map[string]any{
+	rec := putFamilyBilling(t, f.traeger, f.office.token, map[string]any{
 		"contract_id": contract, "recipient_kind": "applicant", "payment_method": "direct_debit"})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
@@ -583,7 +639,7 @@ func TestFamilyPaymentMethodIsSetBeforeTheFirstInvoice(t *testing.T) {
 	// sibling's is signed and starts later (the unit test of
 	// bindingContractOf covers running contracts). A draft is refused:
 	// discarded, it would take the deviation along.
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyBillingPath, map[string]any{
+	rec = putFamilyBilling(t, f.traeger, f.office.token, map[string]any{
 		"contract_id": sibling, "recipient_kind": "applicant", "payment_method": "direct_debit", "due_day": 10})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	families = listed()
@@ -616,7 +672,7 @@ func TestFamilyPaymentMethodIsSetBeforeTheFirstInvoice(t *testing.T) {
 	assert.False(t, revoked, "the mandate stays in force")
 
 	// Back to the terms: the mandate stays, the family leaves the list.
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyBillingPath, map[string]any{
+	rec = putFamilyBilling(t, f.traeger, f.office.token, map[string]any{
 		"contract_id": sibling, "recipient_kind": "applicant", "payment_method": ""})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Nil(t, familyOf(f.office.token, contract).Family)
@@ -637,6 +693,65 @@ func TestFamilyPaymentMethodIsSetBeforeTheFirstInvoice(t *testing.T) {
 	assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
 }
 
+// The office saves over the deviation it read (ADR 0311): a save over a
+// version another save replaced, or without one, is refused with 409
+// general.changed_since_read and writes nothing, also while the family had
+// no deviation yet; the version read again goes through.
+func TestFamilyBillingSaveNeedsTheReadVersion(t *testing.T) {
+	t.Parallel()
+	f := newCareBillingFixture(t, "Träger Zahlung gelesener Stand")
+	contract := careContract(t, f.db, f.office.organization, f.office.schools[0], "Mia", careMonth, sjrServices()...)
+	none := familyBillingVersionOf(t, f.traeger, f.office.token, contract)
+	require.NotEmpty(t, none)
+	save := func(version, method string) *httptest.ResponseRecorder {
+		return traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyBillingPath, map[string]any{
+			"contract_id": contract, "recipient_kind": "applicant", "payment_method": method, "expected_version": version})
+	}
+	require.Equal(t, http.StatusOK, save(none, "direct_debit").Code)
+	stored := func() (method string, events int) {
+		t.Helper()
+		require.NoError(t, f.db.NewRaw(`SELECT family.payment_method,
+			(SELECT count(*) FROM parent_billing.family_billing_events AS event WHERE event.family_billing_id = family.id AND event.action = 'save')
+			FROM parent_billing.family_billing AS family WHERE family.organization_id = ?`, f.office.organization).
+			Scan(context.Background(), &method, &events))
+		return method, events
+	}
+
+	for name, version := range map[string]string{"the version before the first save": none, "no version": ""} {
+		rec := save(version, "transfer")
+		require.Equal(t, http.StatusConflict, rec.Code, "%s: %s", name, rec.Body.String())
+		code, _ := registrationRefusalOf(t, rec)
+		assert.Equal(t, "general.changed_since_read", code, name)
+		method, saves := stored()
+		assert.Equal(t, "direct_debit", method, "%s writes nothing", name)
+		assert.Equal(t, 1, saves, "%s records no save", name)
+	}
+
+	current := familyBillingVersionOf(t, f.traeger, f.office.token, contract)
+	assert.NotEqual(t, none, current)
+	require.Equal(t, http.StatusOK, save(current, "transfer").Code)
+	method, _ := stored()
+	assert.Equal(t, "transfer", method)
+
+	// The version names the family: when the contract's party moves to
+	// another family without a deviation, the version read for the first
+	// one does not save for the second.
+	other := careContract(t, f.db, f.office.organization, f.office.schools[0], "Ben", careMonth, sjrServices()...)
+	before := familyBillingVersionOf(t, f.traeger, f.office.token, other)
+	_, err := f.db.ExecContext(context.Background(), `UPDATE care_contract.contract_parties SET email = ? WHERE contract_id = ?`,
+		"andere-familie@example.org", other)
+	require.NoError(t, err)
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyBillingPath, map[string]any{
+		"contract_id": other, "recipient_kind": "applicant", "payment_method": "transfer", "expected_version": before})
+	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+	code, _ := registrationRefusalOf(t, rec)
+	assert.Equal(t, "general.changed_since_read", code)
+	var families int
+	require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM parent_billing.family_billing WHERE organization_id = ?`,
+		f.office.organization).Scan(context.Background(), &families))
+	assert.Equal(t, 1, families, "the other family gets no deviation")
+}
+
 // The choice „Lastschrift“ replaces no mandate (#7770): a family that chose
 // it without a mandate in force gets an invoice to transfer, and the run
 // names the gap.
@@ -645,10 +760,10 @@ func TestDirectDebitChoiceWithoutMandateStaysATransfer(t *testing.T) {
 	f := newCareBillingFixture(t, "Träger Lastschrift ohne Mandat")
 	school := f.office.schools[0]
 	contract := careContract(t, f.db, f.office.organization, school, "Mia", careMonth, sjrServices()...)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	saveCreditor(t, f, map[string]any{"creditor_id": sepaCreditorID, "prenotification_days": 1, "missing_mandate": "transfer"})
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyBillingPath, map[string]any{
+	rec = putFamilyBilling(t, f.traeger, f.office.token, map[string]any{
 		"contract_id": contract, "recipient_kind": "applicant", "payment_method": "direct_debit"})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
@@ -676,7 +791,7 @@ func TestListedFamilyNamesTheContractOfItsMonthlyInvoice(t *testing.T) {
 	f := newCareBillingFixture(t, "Träger Familie Vertrag")
 	school := f.office.schools[0]
 	contract := careContract(t, f.db, f.office.organization, school, "Mia", careMonth, sjrServices()...)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	run := f.startRun(t, careMonth)
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"),

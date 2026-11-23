@@ -118,6 +118,7 @@ func BuildEnrollmentDecisions(
 		StudentAudit:           EnrollmentDecisionStudentAudit(services.StudentAudit),
 		StudentConsents:        EnrollmentDecisionStudentConsents(services.StudentConsents),
 		CareWithdrawal:         schedules.Lifecycle,
+		CareStudents:           NewEnrollmentPhaseCareStudents(persons),
 		Broadcasts:             EnrollmentDecisionBroadcasts(hub),
 		ParentsURL:             EnrollmentDecisionParentsURL(env.Links.ParentsURL, env.Links.FrontendURL),
 		Settings:               EnrollmentDecisionSettingValues(settings),

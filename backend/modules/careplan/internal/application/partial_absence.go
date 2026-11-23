@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 type partialAbsenceService struct {
@@ -140,6 +141,9 @@ func (s *partialAbsenceService) UpdatePartialAbsence(ctx context.Context, except
 		}
 		row, err := s.findOwned(txCtx, exceptionID, input.StudentID)
 		if err != nil {
+			return err
+		}
+		if err := readstate.Check(input.ExpectedVersion, careplan.PartialAbsenceVersion(*row)); err != nil {
 			return err
 		}
 		if err := s.updatePartial(txCtx, row, input); err != nil {

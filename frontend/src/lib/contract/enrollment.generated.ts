@@ -228,6 +228,7 @@ export interface AdminRequestChildOffering {
   valid_from?: string;
   valid_until?: string;
   starts_later?: boolean;
+  extends_until?: string;
   submitted_terms?: AdminSubmittedOfferingTerms;
   changed_terms?: string[];
 }
@@ -246,6 +247,7 @@ export const AdminRequestChildOfferingSchema: z.ZodType<AdminRequestChildOfferin
   valid_from: optional(str),
   valid_until: optional(str),
   starts_later: optional(bool),
+  extends_until: optional(str),
   submitted_terms: optional(AdminSubmittedOfferingTermsSchema),
   changed_terms: optional(arr(str)),
 });
@@ -1906,6 +1908,7 @@ export interface AdminChildDataCorrectionRequest {
 export interface AdminUpdateOfferingSelection {
   offering_id?: string;
   selected_days?: string[] | null;
+  extend_to_phase_end?: boolean;
 }
 
 /** Go: enrollmenthttp.AdminUpdateOfferingsRequest */

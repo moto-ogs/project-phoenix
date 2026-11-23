@@ -45,8 +45,11 @@ type TraegerDocumentTemplateSummary struct {
 }
 
 // TraegerDocumentTemplateDetail is the current template of a kind with its
-// placeholders and its versions, the newest first.
+// placeholders and its versions, the newest first. Version is the
+// read-state token of the current template (ADR 0311): a save sends it
+// back, so it never replaces a version saved since the editor opened.
 type TraegerDocumentTemplateDetail struct {
+	Version      string                    `json:"version"`
 	Current      TraegerDocumentTemplate   `json:"current"`
 	Standard     templates.Template        `json:"standard_template"`
 	Placeholders []templates.Placeholder   `json:"placeholders"`
@@ -63,8 +66,11 @@ type TraegerDocumentTemplates interface {
 	Detail(ctx context.Context, organizationID int64, kind templates.Kind) (TraegerDocumentTemplateDetail, error)
 	// AddVersion checks the template and stores it as the next version. Unknown
 	// placeholders are refused as *templates.UnknownPlaceholdersError, a
-	// missing or too long part as validation errors by field.
-	AddVersion(ctx context.Context, organizationID, accountID int64, kind templates.Kind, template templates.Template) (TraegerDocumentTemplate, error)
+	// missing or too long part as validation errors by field. expectedVersion
+	// is the Version of the detail the editor started from; a version saved
+	// since is refused with readstate.ErrChanged.
+	AddVersion(ctx context.Context, organizationID, accountID int64, kind templates.Kind, template templates.Template,
+		expectedVersion string) (TraegerDocumentTemplate, error)
 	// Preview checks the template like AddVersion and fills it with the sample
 	// document of its kind, with address field and numbers; it stores nothing.
 	Preview(ctx context.Context, organizationID int64, kind templates.Kind, template templates.Template) (templates.SampleLetter, error)

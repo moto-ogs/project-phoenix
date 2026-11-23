@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/realtime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -1021,7 +1023,8 @@ func TestBulkUpsertArrivalSchedules(t *testing.T) {
 		_, account := testpkg.CreateTestTeacherWithAccount(t, tc.db, "BulkArr", "Teacher")
 
 		body := map[string]any{
-			"school_class": "BAR1",
+			"school_class":     "BAR1",
+			"expected_version": readstate.Of(time.Time{}),
 			"schedules": []map[string]any{
 				{"weekday": 1, "expected_arrival": "07:45"},
 				{"weekday": 3, "expected_arrival": "08:15"},
@@ -1031,6 +1034,26 @@ func TestBulkUpsertArrivalSchedules(t *testing.T) {
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"})
 
 		assert.Equal(t, http.StatusOK, rr.Code, "Expected 200 OK. Body: %s", rr.Body.String())
+	})
+
+	t.Run("class_save_against_an_outdated_read_is_refused", func(t *testing.T) {
+		testpkg.CreateTestStudent(t, tc.db, "BulkArrivalStale", "Test", "BAR2")
+		_, account := testpkg.CreateTestTeacherWithAccount(t, tc.db, "BulkArrStale", "Teacher")
+		save := func(version string, clock string) *httptest.ResponseRecorder {
+			req := testutil.NewAuthenticatedRequest(t, "POST", "/arrival-schedules/bulk", map[string]any{
+				"school_class": "BAR2", "expected_version": version,
+				"schedules": []map[string]any{{"weekday": 2, "expected_arrival": clock}},
+			})
+			return authExec(t, tc, req, testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"})
+		}
+		unstored := readstate.Of(time.Time{})
+		require.Equal(t, http.StatusOK, save(unstored, "12:00").Code)
+
+		rr := save(unstored, "13:00")
+		require.Equal(t, http.StatusConflict, rr.Code, rr.Body.String())
+		assert.Contains(t, rr.Body.String(), `"code":"general.changed_since_read"`)
+		read := authExec(t, tc, testutil.NewRequest("GET", "/class-arrival-times/BAR2", nil), testutil.AdminTestClaims(1), []string{"users:read"})
+		assert.Contains(t, read.Body.String(), `"tue":"12:00"`)
 	})
 
 	t.Run("success_with_group_filter", func(t *testing.T) {
