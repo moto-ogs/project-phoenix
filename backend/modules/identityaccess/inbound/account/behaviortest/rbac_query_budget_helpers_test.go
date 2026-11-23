@@ -108,8 +108,9 @@ func (f *rbacBudgetFixture) state(t *testing.T) rbacBudgetState {
 	require.NoError(t, err)
 	state.Mappings = make(map[int64][]identityaccess.Permission)
 	for id, ctx := range f.roleContexts {
-		state.Mappings[id], err = f.module.AccountAuthentication.GetRolePermissions(ctx, id)
+		selection, err := f.module.AccountAuthentication.GetRolePermissions(ctx, id)
 		require.NoError(t, err)
+		state.Mappings[id] = selection.Permissions
 	}
 	return state
 }

@@ -321,6 +321,12 @@ func (rs *Resource) mountAdminRoutes(r chi.Router) {
 		r.With(common.RequiresPermission(permRolesManage)).Get("/", rs.getRolePermissions)
 		r.With(common.RequiresPermission(permRolesManage)).Put("/", rs.replaceRolePermissions)
 	})
+	// The selection with its version (ADR 0311); the list above goes after
+	// one release.
+	r.Route("/roles/{roleId}/permission-selection", func(r chi.Router) {
+		r.With(common.RequiresPermission(permRolesManage)).Get("/", rs.getRolePermissionSelection)
+		r.With(common.RequiresPermission(permRolesManage)).Put("/", rs.replaceRolePermissionSelection)
+	})
 
 	rs.mountInvitationRoutes(r)
 }
@@ -366,6 +372,9 @@ func (rs *Resource) mountTransactionalAccountRoutes(r chi.Router) {
 	r.Route("/roles", func(r chi.Router) {
 		r.With(common.RequiresPermission(permUsersManage)).Get("/", rs.getAccountRoles)
 		r.With(common.RequiresPermission(permUsersManage)).Put("/", rs.replaceAccountRole)
+	})
+	r.Route("/role-selection", func(r chi.Router) {
+		r.With(common.RequiresPermission(permUsersManage)).Get("/", rs.getAccountRoleSelection)
 	})
 
 	// MFA admin override ("Godmode") — issue #1308 Phase 6.

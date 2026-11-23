@@ -613,7 +613,9 @@ describe("CaregiverCapabilityModal", () => {
     });
   });
 
-  it("starts the name fields of a reopened dialog from this opening's answer", async () => {
+  // The operator portal logs every read of this state, so each opening reads
+  // anew (ADR 0311); the school reads through the shared cache.
+  it("starts the name fields of a reopened operator dialog from this opening's answer", async () => {
     const withoutPerson = (firstName: string) =>
       createState({
         firstName,
@@ -628,7 +630,7 @@ describe("CaregiverCapabilityModal", () => {
         isActiveCaregiver: false,
       });
     let answerSecond!: (value: unknown) => void;
-    mockGetTenantAccountCapability
+    mockGetOperatorAccountCapability
       .mockResolvedValueOnce(withoutPerson("Ada"))
       .mockReturnValueOnce(
         new Promise((resolve) => {
@@ -639,9 +641,11 @@ describe("CaregiverCapabilityModal", () => {
       <CaregiverCapabilityModal
         isOpen={isOpen}
         onClose={vi.fn()}
-        scope="tenant"
+        scope="operator"
         accountId="42"
         accountLabel="Ada Lovelace"
+        schoolId="7"
+        schoolName="Phoenix Schule"
       />
     );
     const { rerender } = render(modal(true));

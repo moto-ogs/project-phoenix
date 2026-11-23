@@ -5,6 +5,7 @@ import {
   bool,
   int64String,
   noData,
+  nullable,
   object,
   optional,
   requestBody,
@@ -13,6 +14,7 @@ import {
 } from "./runtime";
 import {
   RoleResponseSchema,
+  type RoleResponse,
 } from "./shared.generated";
 
 /** Go: peopledirectory.BlockerSupervision */
@@ -138,6 +140,17 @@ export const AccountMFAAdminStateResponseSchema: z.ZodType<AccountMFAAdminStateR
   override: str,
 });
 
+/** Go: account.AccountRolesResponse */
+export interface AccountRolesResponse {
+  roles: (RoleResponse | null)[] | null;
+  version: string;
+}
+
+export const AccountRolesResponseSchema: z.ZodType<AccountRolesResponse, unknown> = object<AccountRolesResponse>({
+  roles: nullable(arr(nullable(RoleResponseSchema))),
+  version: str,
+});
+
 /** Go: account.EnableCaregiverCapabilityRequest */
 export interface EnableCaregiverCapabilityRequest {
   first_name?: string;
@@ -154,6 +167,7 @@ export interface AccountMFAAdminOverrideSetRequest {
 /** Go: account.ReplaceAccountRoleRequest */
 export interface ReplaceAccountRoleRequest {
   role_id?: string | null;
+  expected_version?: string;
 }
 
 export const routes = {
@@ -182,10 +196,17 @@ export const routes = {
     portals: ["tenant"],
     response: success(AccountMFAAdminStateResponseSchema),
   },
+  "GET /auth/accounts/{accountId}/role-selection/": {
+    method: "GET",
+    pattern: "/auth/accounts/{accountId}/role-selection/",
+    portals: ["tenant"],
+    response: success(AccountRolesResponseSchema),
+  },
   "GET /auth/accounts/{accountId}/roles/": {
     method: "GET",
     pattern: "/auth/accounts/{accountId}/roles/",
     portals: ["tenant"],
+    deprecated: true,
     response: success(z.array(RoleResponseSchema)),
   },
   "POST /auth/accounts/{accountId}/caregiver-capability": {

@@ -140,6 +140,13 @@ type SchoolInvitationRequest struct {
 	PersonID            *int64
 	CreatedBy           int64
 	SchoolName          string
+	// ExpectedFormerEmployment is the FormerEmployment.Version the Einladen
+	// dialog read for the address and decided on (ADR 0021, ADR 0311). The
+	// invitation is refused with readstate.ErrChanged when the former
+	// employment differs by now, also when the dialog read "none". Empty
+	// means no answer was read (a failed lookup, the staff import, external
+	// care, the operator): the ADR 0021 default applies.
+	ExpectedFormerEmployment string
 	// ActorPermissions are the inviting account's permissions; the empty set
 	// grants nothing beyond the user tier.
 	ActorPermissions []string
@@ -189,6 +196,10 @@ type InvitationPreview struct {
 // erased it. StartedOn and EndedOn are the days the membership was created
 // and retired.
 type FormerEmployment struct {
+	// Version is the read-state token of the answer, set also when no former
+	// employment was found; an invitation sends it back as
+	// SchoolInvitationRequest.ExpectedFormerEmployment.
+	Version      string
 	StartedOn    calendar.Date
 	EndedOn      calendar.Date
 	Resumes      []FormerEmploymentPart
@@ -229,7 +240,8 @@ type SchoolInvitations interface {
 	// FindFormerEmployment reports the former employment an invitation to the
 	// address would continue at the school in context. Found is false for an
 	// address without an account and for one without a former employment
-	// here alike, so the answer never tells whether an account exists.
+	// here alike, so the answer never tells whether an account exists. The
+	// Version is set in both cases.
 	FindFormerEmployment(ctx context.Context, email string) (FormerEmployment, bool, error)
 	// AcceptSchoolInvitation returns the account the invitee signs in with.
 	AcceptSchoolInvitation(ctx context.Context, token string, registration InvitationRegistration) (Account, error)

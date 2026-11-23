@@ -1381,7 +1381,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (r *RoleAdministration) ReplaceAccountRole(ctx context.Context, accountID, roleID int64) error {\n\treturn runFlowErr(ctx, r.flow(), func(ctx context.Context) error {\n\t\treturn r.runtime.RunInTx(ctx, func(txCtx context.Context) error {\n\t\t\treturn r.replaceAccountRoleInTx(txCtx, accountID, roleID)\n\t\t})\n\t})\n}",
+      "evidence": "func (r *RoleAdministration) ReplaceAccountRole(ctx context.Context, accountID, roleID int64, expectedVersion string) error {\n\treturn runFlowErr(ctx, r.flow(), func(ctx context.Context) error {\n\t\treturn r.runtime.RunInTx(ctx, func(txCtx context.Context) error {\n\t\t\treturn r.replaceAccountRoleInTx(txCtx, accountID, roleID, expectedVersion)\n\t\t})\n\t})\n}",
       "form": "unclassified-evidence",
       "id": "modules/identityaccess/internal/application/RoleAdministration.ReplaceAccountRole",
       "owner": "modules/identityaccess"

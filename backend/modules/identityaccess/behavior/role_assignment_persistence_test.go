@@ -52,7 +52,7 @@ func TestNativeRoleAssignmentPersistenceLifecycle(t *testing.T) {
 	rollback := errors.New("roll back role replacement")
 	err = testpkg.WithAdminTx(t, ctx, db, func(txCtx context.Context, _ bun.Tx) error {
 		txCtx = testpkg.ContextForTenant(txCtx, home)
-		require.NoError(t, roles.ReplaceAccountRole(txCtx, account.ID, second.ID))
+		require.NoError(t, roles.ReplaceAccountRole(txCtx, account.ID, second.ID, identityaccess.AccountRolesVersion(current)))
 		inside, readErr := roles.GetAccountRoles(txCtx, account.ID)
 		require.NoError(t, readErr)
 		require.Len(t, inside, 1)
@@ -73,7 +73,7 @@ func TestNativeRoleAssignmentPersistenceLifecycle(t *testing.T) {
 	peerRoles, err := roles.GetAccountRoles(ctx, peer.ID)
 	require.NoError(t, err)
 	require.Len(t, peerRoles, 1, "removing one account's role must not affect another account")
-	require.NoError(t, roles.ReplaceAccountRole(ctx, account.ID, first.ID))
+	require.NoError(t, roles.ReplaceAccountRole(ctx, account.ID, first.ID, identityaccess.AccountRolesVersion(current)))
 	current, err = roles.GetAccountRoles(ctx, account.ID)
 	require.NoError(t, err)
 	require.Len(t, current, 1)

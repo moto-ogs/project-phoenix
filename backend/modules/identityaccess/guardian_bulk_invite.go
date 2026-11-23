@@ -25,13 +25,17 @@ const (
 // mails guardians who already use the parents portal one notice that the
 // care of the selected children they may see and whose care runs today is
 // now visible there, once per guardian and child (#7760, ADR 0309 section
-// 5); without it they are only counted.
+// 5); without it they are only counted. A run sends the Fingerprint of the
+// preview it confirms as ExpectedFingerprint; a run that would decide on
+// other guardians, addresses, invitations or notices than the preview
+// counted is refused with readstate.ErrChanged (ADR 0311).
 type BulkInviteRequest struct {
-	StudentIDs   []int64
-	CreatedBy    int64
-	ResendOpen   bool
-	DryRun       bool
-	NotifyActive bool
+	StudentIDs          []int64
+	CreatedBy           int64
+	ResendOpen          bool
+	DryRun              bool
+	NotifyActive        bool
+	ExpectedFingerprint string
 }
 
 // BulkInviteProblem names one guardian the run could not reach and why.
@@ -66,4 +70,6 @@ type BulkInviteResult struct {
 	AlreadyNotified       int
 	WithoutVisibleCare    int
 	Problems              []BulkInviteProblem
+	// Fingerprint is set on a preview: the token its run sends back.
+	Fingerprint string
 }

@@ -245,6 +245,7 @@ export interface bulkInviteRequest {
   resend_open?: boolean;
   dry_run?: boolean;
   notify_active?: boolean;
+  expected_fingerprint?: string;
 }
 
 /** Go: users.bulkInviteProblemResponse */
@@ -275,6 +276,7 @@ export interface bulkInviteResponse {
   already_notified: number;
   without_visible_care: number;
   problems: bulkInviteProblemResponse[] | null;
+  fingerprint: string;
 }
 
 export const bulkInviteResponseSchema: z.ZodType<bulkInviteResponse, unknown> = object<bulkInviteResponse>({
@@ -289,6 +291,7 @@ export const bulkInviteResponseSchema: z.ZodType<bulkInviteResponse, unknown> = 
   already_notified: safeInt,
   without_visible_care: safeInt,
   problems: nullable(arr(bulkInviteProblemResponseSchema)),
+  fingerprint: str,
 });
 
 /** Go: users.PaymentExportRequest */

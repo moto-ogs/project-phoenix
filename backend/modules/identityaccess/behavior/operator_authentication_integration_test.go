@@ -309,8 +309,25 @@ func (a operatorAccountAccess) GrantAccountTenantAccess(ctx context.Context, acc
 	})
 }
 
+// UpdateAccountTenantRole changes the role as an operator who just read the
+// listing: it sends the version of the school's entry (ADR 0311).
 func (a operatorAccountAccess) UpdateAccountTenantRole(ctx context.Context, accountID, schoolID, roleID, operatorID int64, clientIP net.IP) ([]identityaccess.AccountTenantAccess, error) {
-	return a.module.UpdateAccountTenantRole(ctx, accountID, schoolID, roleID, operatorID, clientIP.String())
+	return a.module.UpdateAccountTenantRole(ctx, accountID, schoolID, roleID, operatorID, clientIP.String(), a.rolesVersion(ctx, accountID, schoolID))
+}
+
+// rolesVersion is the version the listing shows for the account's entry at
+// the school; empty when the listing fails or names no such entry.
+func (a operatorAccountAccess) rolesVersion(ctx context.Context, accountID, schoolID int64) string {
+	entries, err := a.module.ListAccountTenantAccess(ctx, accountID)
+	if err != nil {
+		return ""
+	}
+	for _, entry := range entries {
+		if entry.TenantID == schoolID {
+			return entry.Version
+		}
+	}
+	return ""
 }
 
 func (a operatorAccountAccess) RevokeAccountTenantAccess(ctx context.Context, accountID, schoolID, operatorID int64, clientIP net.IP) ([]identityaccess.AccountTenantAccess, error) {

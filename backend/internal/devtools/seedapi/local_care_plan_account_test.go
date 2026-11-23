@@ -101,6 +101,8 @@ func assertLocalCarePlanAccountRole(t *testing.T, scope string) {
 			assert.Equal(t, "user", role["base_role"])
 			createdRoles++
 			_, _ = fmt.Fprint(w, `{"data":{"id":"7300"}}`)
+		case "GET /auth/roles/7300/permission-selection":
+			_, _ = fmt.Fprint(w, `{"data":{"permissions":[],"version":"empty"}}`)
 		case "PUT /auth/roles/7300/permissions":
 			var body struct {
 				IDs []string `json:"permission_ids"`

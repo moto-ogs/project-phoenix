@@ -1168,19 +1168,57 @@ func TestRolePermissionAssignment(t *testing.T) {
 		role := testpkg.CreateTestRole(t, tc.db, "ReplacePermRole")
 		permission := testpkg.CreateTestPermission(t, tc.db, "ReplaceRolePermission", "test", "read")
 
-		req := testutil.NewJSONRequest(t, "PUT", fmt.Sprintf("/auth/roles/%d/permissions", role.ID), map[string][]string{
-			"permission_ids": {fmt.Sprintf("%d", permission.ID)},
+		read := testutil.NewJSONRequest(t, "GET", fmt.Sprintf("/auth/roles/%d/permission-selection", role.ID), nil)
+		selection := testutil.ExecuteWithAuthPermissions(t, router, read, adminClaims, []string{"roles:manage"})
+		require.Equal(t, http.StatusOK, selection.Code, selection.Body.String())
+		var body struct {
+			Data struct {
+				Version string `json:"version"`
+			} `json:"data"`
+		}
+		require.NoError(t, json.Unmarshal(selection.Body.Bytes(), &body))
+
+		req := testutil.NewJSONRequest(t, "PUT", fmt.Sprintf("/auth/roles/%d/permission-selection", role.ID), map[string]any{
+			"permission_ids":   []string{fmt.Sprintf("%d", permission.ID)},
+			"expected_version": body.Data.Version,
 		})
 		rr := testutil.ExecuteWithAuthPermissions(t, router, req, adminClaims, []string{"roles:manage"})
 
-		assert.Equal(t, http.StatusNoContent, rr.Code, "Replace failed: %s", rr.Body.String())
+		require.Equal(t, http.StatusOK, rr.Code, "Replace failed: %s", rr.Body.String())
+		// The answer carries the stored selection's version: the next save
+		// sends it without reading again (ADR 0311).
+		var stored struct {
+			Data struct {
+				Version string `json:"version"`
+			} `json:"data"`
+		}
+		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &stored))
+		reread := testutil.ExecuteWithAuthPermissions(t, router, testutil.NewJSONRequest(t, "GET", fmt.Sprintf("/auth/roles/%d/permission-selection", role.ID), nil), adminClaims, []string{"roles:manage"})
+		require.NoError(t, json.Unmarshal(reread.Body.Bytes(), &body))
+		assert.Equal(t, body.Data.Version, stored.Data.Version)
+
+		// The deprecated PUT keeps its empty answer for one release (ADR 0270).
+		legacy := testutil.NewJSONRequest(t, "PUT", fmt.Sprintf("/auth/roles/%d/permissions", role.ID), map[string]any{
+			"permission_ids":   []string{},
+			"expected_version": stored.Data.Version,
+		})
+		legacyRR := testutil.ExecuteWithAuthPermissions(t, router, legacy, adminClaims, []string{"roles:manage"})
+		assert.Equal(t, http.StatusNoContent, legacyRR.Code, "Replace failed: %s", legacyRR.Body.String())
 	})
 
 	t.Run("rejects an unknown permission while replacing permissions", func(t *testing.T) {
 		role := testpkg.CreateTestRole(t, tc.db, "ReplacePermMissing")
+		read := testutil.ExecuteWithAuthPermissions(t, router, testutil.NewJSONRequest(t, "GET", fmt.Sprintf("/auth/roles/%d/permission-selection", role.ID), nil), adminClaims, []string{"roles:manage"})
+		var selection struct {
+			Data struct {
+				Version string `json:"version"`
+			} `json:"data"`
+		}
+		require.NoError(t, json.Unmarshal(read.Body.Bytes(), &selection))
 
-		req := testutil.NewJSONRequest(t, "PUT", fmt.Sprintf("/auth/roles/%d/permissions", role.ID), map[string][]int64{
-			"permission_ids": {99999},
+		req := testutil.NewJSONRequest(t, "PUT", fmt.Sprintf("/auth/roles/%d/permissions", role.ID), map[string]any{
+			"permission_ids":   []int64{99999},
+			"expected_version": selection.Data.Version,
 		})
 		rr := testutil.ExecuteWithAuthPermissions(t, router, req, adminClaims, []string{"roles:manage"})
 
@@ -1230,8 +1268,27 @@ func TestAccountRoleAssignment(t *testing.T) {
 			require.NoError(t, err)
 		}
 
+		read := readAccountRoleSelection(t, router, adminClaims, account.ID)
+		// A colleague drops the extra role after this editor read the roles:
+		// the change on the old read is refused and writes nothing.
+		_, err := tc.db.ExecContext(context.Background(), "DELETE FROM auth.account_roles WHERE account_id = ? AND role_id = ?", account.ID, extraRole.ID)
+		require.NoError(t, err)
+		stale := testutil.NewJSONRequest(t, "PUT", fmt.Sprintf("/auth/accounts/%d/roles", account.ID), map[string]string{
+			"role_id": fmt.Sprintf("%d", role.ID), "expected_version": read,
+		})
+		refused := testutil.ExecuteWithAuthPermissions(t, router, stale, adminClaims, []string{"users:manage"})
+		require.Equal(t, http.StatusConflict, refused.Code, refused.Body.String())
+		assert.Equal(t, "general.changed_since_read", decodeErrorCode(t, refused))
+		var unchanged []int64
+		require.NoError(t, tc.db.NewSelect().TableExpr("auth.account_roles").Column("role_id").
+			Where("account_id = ?", account.ID).Scan(context.Background(), &unchanged))
+		assert.ElementsMatch(t, []int64{oldRole.ID}, unchanged, "a refused change writes nothing")
+		_, err = tc.db.ExecContext(context.Background(),
+			"INSERT INTO auth.account_roles (account_id, role_id, tenant_id) VALUES (?, ?, ?)", account.ID, extraRole.ID, testpkg.Tenant(t))
+		require.NoError(t, err)
+
 		req := testutil.NewJSONRequest(t, "PUT", fmt.Sprintf("/auth/accounts/%d/roles", account.ID), map[string]string{
-			"role_id": fmt.Sprintf("%d", role.ID),
+			"role_id": fmt.Sprintf("%d", role.ID), "expected_version": readAccountRoleSelection(t, router, adminClaims, account.ID),
 		})
 		rr := testutil.ExecuteWithAuthPermissions(t, router, req, adminClaims, []string{"users:manage"})
 
@@ -2003,4 +2060,27 @@ func TestListRoles_UserManagementPermissionsReadNamesOnly(t *testing.T) {
 
 		testutil.AssertForbidden(t, rr)
 	})
+}
+
+// readAccountRoleSelection reads the version of the account's roles the way
+// the staff file does before a role change (ADR 0311).
+func readAccountRoleSelection(t *testing.T, router chi.Router, claims testutil.Claims, accountID int64) string {
+	t.Helper()
+	req := testutil.NewJSONRequest(t, "GET", fmt.Sprintf("/auth/accounts/%d/role-selection", accountID), nil)
+	rr := testutil.ExecuteWithAuthPermissions(t, router, req, claims, []string{"users:manage"})
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	var body struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &body))
+	require.NotEmpty(t, body.Data.Version)
+	return body.Data.Version
+}
+
+// decodeErrorCode is the registered code of an error response.
+func decodeErrorCode(t *testing.T, rr *httptest.ResponseRecorder) any {
+	t.Helper()
+	return testutil.ParseJSONResponse(t, rr.Body.Bytes())["code"]
 }
