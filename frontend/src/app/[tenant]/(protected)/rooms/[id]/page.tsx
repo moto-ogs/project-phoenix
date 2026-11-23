@@ -326,7 +326,7 @@ function RoomDetailPageContent() {
         await tenantMutate(
           roomKeys.detailKey(roomId),
           (current?: { room: Room }) =>
-            current
+            current && saved
               ? { ...current, room: withStoredRoomFields(current.room, saved) }
               : current,
           { revalidate: false },

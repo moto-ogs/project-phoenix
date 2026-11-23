@@ -1,6 +1,6 @@
 /**
- * The generic CRUD service of the Datenverwaltung: every operation calls the
- * entity's registered route through bffJson (#7806).
+ * The generic CRUD service of the Datenverwaltung: every operation runs the
+ * entity's call, which reaches its registered route through bffJson (#7806).
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -18,6 +18,7 @@ beforeEach(() => {
 import { createCrudService } from "./service-factory";
 import type { EntityConfig } from "./types";
 import { ApiError } from "~/lib/api-error";
+import { bffJson } from "~/lib/bff-fetch";
 import { childrenConcept } from "~/lib/concepts/children";
 
 interface TestEntity {
@@ -31,19 +32,45 @@ const ok = (data: unknown, extra: object = {}) =>
 const refusal = (status: number, body: object) =>
   Response.json(body, { status });
 
+const entity = (room: { id: string; name: string }): TestEntity => ({
+  id: room.id,
+  name: room.name,
+});
+
 const config: EntityConfig<TestEntity> = {
   name: { singular: "Raum", plural: "Räume" },
   concept: childrenConcept,
   labels: {},
   api: {
-    routes: {
-      list: "GET /api/rooms/",
-      get: "GET /api/rooms/{id}",
-      create: "POST /api/rooms/",
-      update: "PUT /api/rooms/{id}",
-      delete: "DELETE /api/rooms/{id}",
+    list: async () => {
+      const page = await bffJson("tenant", "GET /api/rooms/", {
+        query: { include_system: "true" },
+      });
+      return { data: page.data.map(entity), pagination: page.pagination };
     },
-    listParams: { include_system: "true" },
+    get: async (id) =>
+      entity(
+        await bffJson("tenant", "GET /api/rooms/{id}", { params: { id } }),
+      ),
+    create: async (data) =>
+      entity(
+        await bffJson("tenant", "POST /api/rooms/", {
+          body: { name: data.name },
+        }),
+      ),
+    update: async (id, data) =>
+      entity(
+        await bffJson("tenant", "PUT /api/rooms/{id}", {
+          params: { id },
+          body: { name: data.name },
+        }),
+      ),
+    // The room route confirms its removal preview (ADR 0311).
+    delete: (id) =>
+      bffJson("tenant", "DELETE /api/rooms/{id}", {
+        params: { id },
+        body: { expected_fingerprint: "vorschau" },
+      }),
   },
   form: { sections: [] },
   detail: { sections: [] },
@@ -74,31 +101,26 @@ beforeEach(() => {
 describe("getList", () => {
   it("keeps the page of a paginated route and maps every row", async () => {
     fetchMock.mockResolvedValueOnce(
-      ok([{ id: "1", name: "A" }], { pagination }),
+      ok([{ id: "1", name: "A", building: "Alt" }], { pagination }),
     );
-    const service = createCrudService({
-      ...config,
-      service: {
-        mapResponse: (row) => ({ ...(row as TestEntity), name: "mapped" }),
-      },
-    });
 
-    await expect(
-      service.getList({ page: 2, building: "Alt" }),
-    ).resolves.toEqual({
-      data: [{ id: "1", name: "mapped" }],
+    await expect(createCrudService(config).getList()).resolves.toEqual({
+      data: [{ id: "1", name: "A" }],
       pagination,
     });
-    expect(call().url).toBe(
-      "/api/rooms?include_system=true&page=2&building=Alt",
-    );
+    expect(call().url).toBe("/api/rooms?include_system=true");
   });
 
   it("gives a list without pages one page", async () => {
-    fetchMock.mockResolvedValueOnce(ok([{ id: "1" }, { id: "2" }]));
     const service = createCrudService({
       ...config,
-      api: { routes: { list: "GET /api/activities/" } },
+      api: {
+        list: () =>
+          Promise.resolve([
+            { id: "1", name: "A" },
+            { id: "2", name: "B" },
+          ]),
+      },
     });
 
     const result = await service.getList();
@@ -130,20 +152,6 @@ describe("getOne", () => {
     });
     expect(call().url).toBe("/api/rooms/7");
   });
-
-  it("uses a custom getOne instead", async () => {
-    const getOne = vi.fn().mockResolvedValue({ id: "1", name: "custom" });
-    const service = createCrudService({
-      ...config,
-      service: { customMethods: { getOne } },
-    });
-
-    await expect(service.getOne("1")).resolves.toEqual({
-      id: "1",
-      name: "custom",
-    });
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
 });
 
 describe("create", () => {
@@ -152,7 +160,6 @@ describe("create", () => {
     const afterCreate = vi.fn(() => Promise.resolve());
     const service = createCrudService({
       ...config,
-      service: { mapRequest: (data) => ({ room_name: data.name }) },
       hooks: {
         beforeCreate: (data) => Promise.resolve({ ...data, name: "Neu" }),
         afterCreate,
@@ -163,24 +170,24 @@ describe("create", () => {
 
     expect(call().init).toMatchObject({
       method: "POST",
-      body: JSON.stringify({ room_name: "Neu" }),
+      body: JSON.stringify({ name: "Neu" }),
     });
     expect(afterCreate).toHaveBeenCalledWith({ id: "1", name: "Neu" });
   });
 
-  it("uses a custom create and still calls afterCreate", async () => {
+  it("hands the result of a custom create call to afterCreate", async () => {
     const create = vi.fn().mockResolvedValue({ id: "1", name: "c" });
     const afterCreate = vi.fn(() => Promise.resolve());
     const service = createCrudService({
       ...config,
-      service: { create },
+      api: { ...config.api, create },
       hooks: { afterCreate },
     });
 
     await service.create({ name: "c" });
 
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(afterCreate).toHaveBeenCalled();
+    expect(afterCreate).toHaveBeenCalledWith({ id: "1", name: "c" });
   });
 
   it("throws the ApiError with code, details and request ID", async () => {
@@ -234,7 +241,10 @@ describe("update", () => {
   it("passes the loaded record to a custom update without a request", async () => {
     const current = { id: "1", name: "Alt" };
     const update = vi.fn().mockResolvedValue({ ...current, name: "Neu" });
-    const service = createCrudService({ ...config, service: { update } });
+    const service = createCrudService({
+      ...config,
+      api: { ...config.api, update },
+    });
 
     await service.update("1", { name: "Neu" }, current);
 
@@ -307,7 +317,7 @@ describe("remove", () => {
   it("refuses an operation the entity has no route for", async () => {
     const service = createCrudService({
       ...config,
-      api: { routes: { list: "GET /api/rooms/" } },
+      api: { list: config.api.list },
     });
 
     await expect(service.remove("1")).rejects.toThrow("no delete route");
