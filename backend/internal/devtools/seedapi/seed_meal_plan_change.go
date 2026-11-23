@@ -25,7 +25,7 @@ func (seedMealPlanChangeStep) Run(_ context.Context, rt *Runtime) error {
 		{"dish": "Gemüsereis mit Rührei", "note": "Geändert: Der Fisch wurde nicht geliefert.", "allergens": []string{"eggs"}},
 		{"dish": "Obst", "note": "Äpfel und Birnen"},
 	}
-	if _, err := rt.Client.Put("/api/meal-plan/"+day.String(), map[string]any{"dishes": dishes}); err != nil {
+	if err := replaceMealDays(rt, day, dishes); err != nil {
 		return fmt.Errorf("change meal plan %s: %w", day, err)
 	}
 	fmt.Printf("  meal plan of %s changed; the families with lunch booked that day are told\n", day)
@@ -43,7 +43,7 @@ func seedTodaysMenuChange(rt *Runtime, today seedDate) error {
 	dishes := []map[string]any{
 		{"dish": "Kartoffelpuffer mit Apfelmus", "note": "Geändert: Die Lieferung kam heute nicht.", "allergens": []string{"eggs", "gluten"}},
 	}
-	if _, err := rt.Client.Put("/api/meal-plan/"+today.String(), map[string]any{"dishes": dishes}); err != nil {
+	if err := replaceMealDays(rt, today, dishes); err != nil {
 		return fmt.Errorf("change today's meal plan %s: %w", today, err)
 	}
 	fmt.Printf("  meal plan of today (%s) changed; „Heute anders“ shows it\n", today)

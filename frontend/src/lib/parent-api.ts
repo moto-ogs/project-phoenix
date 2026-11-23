@@ -593,9 +593,15 @@ export async function getMealParticipation(
   };
 }
 
+/**
+ * Replaces the child's regular days against the `version` of the regular
+ * days the page read (ADR 0311): days changed since are refused with
+ * `general.changed_since_read`.
+ */
 export async function replaceMealParticipationSchedule(
   studentId: string,
   weekdays: number[],
+  expectedVersion: string,
 ): Promise<{ effective_from: string }> {
   return parentCall(
     bffJson(
@@ -603,7 +609,7 @@ export async function replaceMealParticipationSchedule(
       "PUT /parent/me/children/{studentId}/meal-participation",
       {
         params: { studentId },
-        body: { weekdays },
+        body: { weekdays, expected_version: expectedVersion },
       },
     ),
   );

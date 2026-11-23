@@ -119,9 +119,14 @@ the rule does not need. Träger pages and cards use `useTraegerResource`
 (`components/traeger/use-traeger-resource.ts`): Träger session gate, refusal
 rules and load error in one return shape. A read the access log records on a
 person's explicit click (`utilization-children.tsx`) stays a click handler.
-A read that must be new each time its surface opens (the preview of a
-deletion, the version an edit saves against, a form's template) uses
-`useFreshSWR`: it shows nothing of an earlier opening. There is no
+Reads go through the shared cache, also for an edit, a preview or a form's
+template (ADR 0311). A cached answer cannot cause a silent overwrite: a
+write that depends on what was read sends its token (`expected_version`,
+`expected_fingerprint`), and the server refuses a changed state with 409
+`general.changed_since_read` (`isChangedSinceRead` in `~/lib/api-error`);
+the surface then shows the stored state again. `useFreshSWR` is a
+transition (#7904): only a read the server logs or authorizes on every
+opening keeps reading anew each time. There is no
 runtime registry. Direct package imports outside this boundary and new free
 hook keys fail oxlint; both baselines are empty and take no new entry. A free key is
 anything at a `useSWRAuth` or `useImmutableSWR` call that is

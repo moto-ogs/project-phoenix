@@ -88,6 +88,7 @@ const meals: MealParticipation = {
   model: "ongoing_single",
   schedule_changeable: true,
   sick_cancels_after_deadline: false,
+  version: "v1",
   days: [
     {
       date: "2026-09-09",

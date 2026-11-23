@@ -7,6 +7,12 @@
       "legacy": "general.business_rejection"
     },
     {
+      "code": "general.changed_since_read",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "general.changed_since_read"
+    },
+    {
       "code": "general.input",
       "class": "input",
       "parameters": [],

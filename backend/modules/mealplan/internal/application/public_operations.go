@@ -31,32 +31,47 @@ func (s *Service) Week(ctx context.Context, weekStart mealplan.Date) ([]mealplan
 	return result, nil
 }
 
-func (s *Service) ReplaceDay(ctx context.Context, command mealplan.ReplaceDay) error {
+// Days returns Monday to Friday of the week of weekStart, each with its
+// version.
+func (s *Service) Days(ctx context.Context, weekStart mealplan.Date) ([]mealplan.Day, error) {
+	date, err := calendar.ParseDate(string(weekStart))
+	if err != nil {
+		return nil, mealplan.ErrInvalidMealDate
+	}
+	days, err := s.weekDays(ctx, date.StartOfISOWeek())
+	return days, mapPublicError(err)
+}
+
+func (s *Service) ReplaceDay(ctx context.Context, command mealplan.ReplaceDay) (mealplan.Day, error) {
 	date, err := calendar.ParseDate(string(command.Date))
 	if err != nil {
-		return mealplan.ErrInvalidMealDate
+		return mealplan.Day{}, mealplan.ErrInvalidMealDate
 	}
 	if date.Weekday() == time.Saturday || date.Weekday() == time.Sunday {
-		return mealplan.ErrInvalidMealDate
+		return mealplan.Day{}, mealplan.ErrInvalidMealDate
 	}
 
 	dishes, err := normalizeDishes(command.Dishes)
 	if err != nil {
-		return err
+		return mealplan.Day{}, err
 	}
-	var expected *[]mealplan.Dish
-	if command.Expected != nil {
-		read, err := normalizeDishes(*command.Expected)
+	expected := command.ExpectedVersion
+	if expected == "" && command.ExpectedDishes != nil {
+		read, err := normalizeDishes(*command.ExpectedDishes)
 		if err != nil {
-			return err
+			return mealplan.Day{}, err
 		}
-		expected = &read
+		expected = dayVersion(read)
 	}
-	return mapPublicError(s.replace(ctx, date, dishes, expected, command.AccountID))
+	version, err := s.replace(ctx, date, dishes, expected, command.AccountID)
+	if err != nil {
+		return mealplan.Day{}, mapPublicError(err)
+	}
+	return mealplan.Day{Date: mealplan.Date(date.String()), Version: version, Dishes: dishes}, nil
 }
 
 // normalizeDishes trims the dishes as they are stored and drops the blank
-// ones; the read day of a save compares in the same form.
+// ones, so their version is the one the week read gives once stored.
 func normalizeDishes(inputs []mealplan.Dish) ([]mealplan.Dish, error) {
 	dishes := make([]mealplan.Dish, 0, len(inputs))
 	for _, input := range inputs {
@@ -71,14 +86,6 @@ func normalizeDishes(inputs []mealplan.Dish) ([]mealplan.Dish, error) {
 		dishes = append(dishes, mealplan.Dish{Dish: dish, Note: trimOptional(input.Note), Allergens: allergens})
 	}
 	return dishes, nil
-}
-
-func (s *Service) ClearDay(ctx context.Context, command mealplan.ClearDay) error {
-	parsed, err := calendar.ParseDate(string(command.Date))
-	if err != nil {
-		return mealplan.ErrInvalidMealDate
-	}
-	return mapPublicError(s.replace(ctx, parsed, nil, nil, command.AccountID))
 }
 
 func (s *Service) RegistrationAvailable(ctx context.Context) (bool, error) {
@@ -117,7 +124,7 @@ func (s *Service) ReplaceParticipationSchedule(ctx context.Context, command meal
 	if !ok {
 		return "", mealplan.ErrInvalidParticipation
 	}
-	return s.publicSchedule(ctx, command.StudentID, command.GuardianAccountID, weekdays, "")
+	return s.publicSchedule(ctx, command.StudentID, command.GuardianAccountID, weekdays, "", command.ExpectedVersion)
 }
 
 // ReplaceScheduleBySchool sets a child's regular days for the school.
@@ -127,17 +134,17 @@ func (s *Service) ReplaceScheduleBySchool(ctx context.Context, command mealplan.
 	if command.StudentID <= 0 || command.StaffAccountID <= 0 || !ok || err != nil {
 		return "", mealplan.ErrInvalidParticipation
 	}
-	return s.publicSchedule(ctx, command.StudentID, command.StaffAccountID, weekdays, effectiveFrom)
+	return s.publicSchedule(ctx, command.StudentID, command.StaffAccountID, weekdays, effectiveFrom, command.ExpectedVersion)
 }
 
 // publicSchedule replaces the regular days. The empty effective date is a
 // parent's change; a set one is the school's.
-func (s *Service) publicSchedule(ctx context.Context, studentID, accountID int64, weekdays []mealplan.Weekday, schoolFrom domain.Date) (mealplan.Date, error) {
+func (s *Service) publicSchedule(ctx context.Context, studentID, accountID int64, weekdays []mealplan.Weekday, schoolFrom domain.Date, expected string) (mealplan.Date, error) {
 	values := make([]domain.Weekday, 0, len(weekdays))
 	for _, weekday := range weekdays {
 		values = append(values, domain.Weekday(weekday))
 	}
-	from, err := s.replaceSchedule(ctx, studentID, accountID, values, schoolFrom)
+	from, err := s.replaceSchedule(ctx, studentID, accountID, values, schoolFrom, expected)
 	return mealplan.Date(from.String()), mapPublicError(err)
 }
 
@@ -370,7 +377,7 @@ func publicOrderDay(day domain.OrderDay, names map[int64]domain.DailyCandidate) 
 }
 
 func publicParticipationPlan(plan domain.ParticipationPlan) mealplan.ParticipationPlan {
-	result := mealplan.ParticipationPlan{EffectiveFrom: mealplan.Date(plan.EffectiveFrom.String()), CutoffTime: plan.CutoffTime, Model: mealplan.RegistrationModel(plan.Model), ScheduleChangeable: plan.ScheduleChangeable, SickCancels: plan.Sick == domain.SickCancelled, Weekdays: make([]mealplan.Weekday, 0, len(plan.Weekdays)), Days: make([]mealplan.ParticipationDay, 0, len(plan.Days))}
+	result := mealplan.ParticipationPlan{EffectiveFrom: mealplan.Date(plan.EffectiveFrom.String()), CutoffTime: plan.CutoffTime, Model: mealplan.RegistrationModel(plan.Model), ScheduleChangeable: plan.ScheduleChangeable, SickCancels: plan.Sick == domain.SickCancelled, Version: plan.Version, Weekdays: make([]mealplan.Weekday, 0, len(plan.Weekdays)), Days: make([]mealplan.ParticipationDay, 0, len(plan.Days))}
 	for _, weekday := range plan.Weekdays {
 		result.Weekdays = append(result.Weekdays, mealplan.Weekday(weekday))
 	}
@@ -392,7 +399,6 @@ var publicErrors = []struct{ from, to error }{
 	{ErrCutoffPassed, mealplan.ErrParticipationCutoff},
 	{ErrPastDay, mealplan.ErrPastDay},
 	{ErrDayClosed, mealplan.ErrDayClosed},
-	{ErrDayChanged, mealplan.ErrDayChanged},
 	{ErrStudentNotFound, mealplan.ErrStudentNotFound},
 	{ErrNotEnrolled, mealplan.ErrChildNotEnrolled},
 	{ErrInvalidCutoff, mealplan.ErrInvalidParticipation},

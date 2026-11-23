@@ -54,6 +54,18 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * The server refused a write because what it depends on changed since it was
+ * read (`general.changed_since_read`, ADR 0311). The caller shows the stored
+ * state again, never offers to resend the same request: that would be
+ * refused again.
+ */
+export function isChangedSinceRead(error: unknown): boolean {
+  return (
+    error instanceof ApiError && error.code === "general.changed_since_read"
+  );
+}
+
 /** Mirrors backend/api/common.ErrorClassCode until generated contracts include it. */
 export function errorClassCode(status: number): ErrorCode {
   if (status === 401 || status === 403) return "general.permission";

@@ -145,10 +145,7 @@ func registerMealChildren(rt *Runtime, day seedDate, list *mealDay, count int) (
 	picked := pickAcrossClasses(bookableMealChildren(rt, list.others), count)
 	for index, child := range picked {
 		weekdays := mealWeekdaysWith(index, day.Weekday())
-		if _, err := rt.Client.Put(fmt.Sprintf("/api/meal-plan/participation/%d/schedule", child.id), map[string]any{
-			"weekdays":       weekdays,
-			"effective_from": day.String(),
-		}); err != nil {
+		if err := schoolMealSchedule(rt, nil, child.id, weekdays, day); err != nil {
 			return index, fmt.Errorf("register child %d for lunch: %w", child.id, err)
 		}
 		recordRegularLunchDays(rt, child.id, weekdays)

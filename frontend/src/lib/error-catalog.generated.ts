@@ -727,6 +727,8 @@ export const ERROR_CATALOG = {
         "Es gibt schon einen Ordner mit diesem Namen. Bitte wähle einen anderen Namen.",
       "files.quota_exceeded":
         "Der Speicherplatz der Dateiablage ist voll. Bitte lösche Dateien, die du nicht mehr brauchst.",
+      "general.changed_since_read":
+        "{object} wurde inzwischen geändert. Du siehst jetzt den neuen Stand. Prüfe ihn und versuche es dann noch einmal.",
       "general.request_too_large":
         "{object} konnte nicht bearbeitet werden. Bitte lösche im Browser die Cookies dieser Seite. Melde dich danach neu an.",
       "general.route_not_found":
@@ -2660,6 +2662,8 @@ export const ERROR_CATALOG = {
         "A child without an OGS place gets its place through an enrollment for the school year.",
       "files.file_name_invalid":
         "This file name is not allowed. Please choose the file again.",
+      "general.changed_since_read":
+        "{object} has been changed in the meantime. You now see the current state. Check it, then try again.",
       "general.request_too_large":
         "{object} could not be processed. Please delete the cookies of this site in your browser. Then sign in again.",
       "general.route_not_found":
@@ -3387,6 +3391,8 @@ export const ERROR_CATALOG = {
         "Ребёнок без места в OGS получает место через запись на учебный год.",
       "files.file_name_invalid":
         "Имя файла недопустимо. Выберите файл ещё раз.",
+      "general.changed_since_read":
+        "Данные изменились: {object}. Сейчас показано текущее состояние. Проверьте его и попробуйте снова.",
       "general.request_too_large":
         "Не удалось обработать: {object}. Удалите в браузере файлы cookie этого сайта. Затем войдите снова.",
       "general.route_not_found":
@@ -4046,6 +4052,8 @@ export const ERROR_CATALOG = {
         "Një fëmijë pa vend në OGS e merr vendin me një regjistrim për vitin shkollor.",
       "files.file_name_invalid":
         "Emri i skedarit nuk lejohet. Ju lutemi zgjidhni skedarin përsëri.",
+      "general.changed_since_read":
+        "Ndërkohë është ndryshuar: {object}. Tani shihni gjendjen aktuale. Kontrollojeni dhe provoni përsëri.",
       "general.request_too_large":
         "Nuk u përpunua: {object}. Fshini në shfletues cookies e kësaj faqeje. Pastaj hyni përsëri.",
       "general.route_not_found":
@@ -4695,6 +4703,8 @@ export const ERROR_CATALOG = {
         "Dziecko bez miejsca w OGS otrzymuje miejsce poprzez zapis na rok szkolny.",
       "files.file_name_invalid":
         "Nazwa pliku jest niedozwolona. Wybierz plik ponownie.",
+      "general.changed_since_read":
+        "W międzyczasie zmieniono: {object}. Teraz widzisz aktualny stan. Sprawdź go i spróbuj ponownie.",
       "general.request_too_large":
         "Nie udało się przetworzyć: {object}. Usuń w przeglądarce pliki cookie tej strony. Następnie zaloguj się ponownie.",
       "general.route_not_found":
@@ -5349,6 +5359,8 @@ export const ERROR_CATALOG = {
         "OGS yeri olmayan bir çocuk, yerini okul yılı kaydıyla alır.",
       "files.file_name_invalid":
         "Dosya adı kabul edilmiyor. Lütfen dosyayı yeniden seçin.",
+      "general.changed_since_read":
+        "{object} bu arada değiştirildi. Şimdi güncel durumu görüyorsunuz. Kontrol edin ve tekrar deneyin.",
       "general.request_too_large":
         "{object} işlenemedi. Lütfen tarayıcınızda bu sitenin çerezlerini silin. Ardından yeniden giriş yapın.",
       "general.route_not_found":
@@ -5996,6 +6008,8 @@ export const ERROR_CATALOG = {
         "Дитина без місця в OGS отримує місце через запис на навчальний рік.",
       "files.file_name_invalid":
         "Назва файлу не дозволена. Виберіть файл ще раз.",
+      "general.changed_since_read":
+        "Дані змінилися: {object}. Зараз показано поточний стан. Перевірте його і спробуйте знову.",
       "general.request_too_large":
         "Не вдалося обробити: {object}. Видаліть у браузері файли cookie цього сайту. Потім увійдіть знову.",
       "general.route_not_found":

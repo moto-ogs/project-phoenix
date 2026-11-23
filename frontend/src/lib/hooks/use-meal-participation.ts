@@ -124,7 +124,12 @@ export function useMealParticipation(
     saveSchedule: (weekdays: number[]) =>
       change(
         (data) => ({ ...data, weekdays }),
-        () => replaceMealParticipationSchedule(studentId, weekdays),
+        () =>
+          replaceMealParticipationSchedule(
+            studentId,
+            weekdays,
+            reader.data?.version ?? "",
+          ),
         (data, result) => ({
           ...data,
           weekdays,

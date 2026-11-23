@@ -81,7 +81,7 @@ describe("getWeeklyMealParticipants", () => {
 });
 
 describe("getMealPlanWeek", () => {
-  it("requests the week and maps backend entries, trimming empty notes to null", async () => {
+  it("requests the days and maps their versions and dishes, trimming empty notes to null", async () => {
     let seenURL = "";
     fetchMock.mockImplementation(async (url: string) => {
       seenURL = url;
@@ -89,25 +89,33 @@ describe("getMealPlanWeek", () => {
         data: [
           {
             date: "2026-07-06",
-            position: 0,
-            dish: "Nudeln",
-            note: "  vegetarisch  ",
+            version: "v-mon",
+            dishes: [
+              { dish: "Nudeln", note: "  vegetarisch  " },
+              { dish: "Salat", note: "   " },
+            ],
           },
-          { date: "2026-07-06", position: 1, dish: "Salat", note: "   " },
-          { date: "2026-07-07", position: 0, dish: "Suppe", note: null },
+          {
+            date: "2026-07-07",
+            version: "v-tue",
+            dishes: [{ dish: "Suppe" }],
+          },
+          { date: "2026-07-08", version: "v-wed", dishes: null },
         ],
       });
     });
 
     const out = await getMealPlanWeek("2026-07-06");
-    expect(seenURL).toContain("/api/meal-plan?week_start=2026-07-06");
-    expect(out).toHaveLength(3);
+    expect(seenURL).toContain("/api/meal-plan/days?week_start=2026-07-06");
+    expect(out.map((day) => day.version)).toEqual(["v-mon", "v-tue", "v-wed"]);
     // A note with content is preserved verbatim (untrimmed value kept).
-    expect(out[0]?.note).toBe("  vegetarisch  ");
+    expect(out[0]?.dishes[0]?.note).toBe("  vegetarisch  ");
     // A whitespace-only note collapses to null.
-    expect(out[1]?.note).toBeNull();
-    // A null note stays null.
-    expect(out[2]?.note).toBeNull();
+    expect(out[0]?.dishes[1]?.note).toBeNull();
+    // A missing note stays null.
+    expect(out[1]?.dishes[0]?.note).toBeNull();
+    // An empty day has no dishes, but its version.
+    expect(out[2]?.dishes).toEqual([]);
   });
 
   it("throws an ApiError with the status class on a non-OK response", async () => {
@@ -133,26 +141,34 @@ describe("getMealPlanWeek", () => {
 });
 
 describe("setDay", () => {
-  it("PUTs the day with the dishes and the day as read", async () => {
+  it("PUTs the day with the dishes and the version as read, and answers the stored day", async () => {
     let seenURL = "";
     let seenInit: RequestInit | undefined;
     fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
       seenURL = url;
       seenInit = init;
-      return jsonResponse({ status: "success", data: null });
+      return jsonResponse({
+        status: "success",
+        data: {
+          date: "2026-07-06",
+          version: "v-saved",
+          dishes: [{ dish: "Nudeln", note: "vegetarisch", allergens: [] }],
+        },
+      });
     });
 
-    await setDay(
+    const saved = await setDay(
       "2026-07-06",
       [{ dish: "Nudeln", note: "vegetarisch" }],
-      [{ dish: "Suppe", note: null }],
+      "v-read",
     );
-    expect(seenURL).toContain("/api/meal-plan/2026-07-06");
+    expect(seenURL).toContain("/api/meal-plan/days/2026-07-06");
     expect(seenInit?.method).toBe("PUT");
     expect(JSON.parse(seenInit?.body as string)).toEqual({
       dishes: [{ dish: "Nudeln", note: "vegetarisch" }],
-      expected: [{ dish: "Suppe", note: null }],
+      expected_version: "v-read",
     });
+    expect(saved.version).toBe("v-saved");
   });
 
   it("keeps code, field errors and request id of a refused save", async () => {
@@ -166,7 +182,7 @@ describe("setDay", () => {
         { status: 400, statusText: "Bad Request" },
       ),
     );
-    await expect(setDay("2026-07-06", [], [])).rejects.toMatchObject({
+    await expect(setDay("2026-07-06", [], "v-read")).rejects.toMatchObject({
       name: "ApiError",
       status: 400,
       code: "meals.invalid_dishes",
