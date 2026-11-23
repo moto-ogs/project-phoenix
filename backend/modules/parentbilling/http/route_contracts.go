@@ -134,7 +134,8 @@ func CareTariffRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: capability.CareTariffs{}},
 		{Method: "PUT", Pattern: "/", Portals: traegerPortal, Request: CarePriceListRequest{}, Response: capability.CareTariffs{}},
-		{Method: "DELETE", Pattern: "/{schoolID}/{validFrom}", Portals: traegerPortal, Response: capability.CareTariffs{}},
+		{Method: "DELETE", Pattern: "/{schoolID}/{validFrom}", Portals: traegerPortal,
+			Query: []common.QueryParam{{Name: "expected_version", Kind: common.QueryString}}, Response: capability.CareTariffs{}},
 	}
 }
 

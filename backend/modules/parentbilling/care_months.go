@@ -149,6 +149,9 @@ type CareTariffs struct {
 	Tariffs     []CareTariff            `json:"tariffs"`
 	Lists       []CarePriceListHead     `json:"lists"`
 	BilledUntil map[int64]calendar.Date `json:"billed_until"`
+	// Versions is per school the read-state token of its price lists: a
+	// save or removal of one of them sends it back (ADR 0311).
+	Versions map[int64]string `json:"versions"`
 }
 
 // CareBilledPrice is a weekday of a module an issued invoice of a school
@@ -182,6 +185,9 @@ type CarePriceList struct {
 	ValidFrom  calendar.Date
 	FreeMonths []int
 	Prices     []CarePrice
+	// ExpectedVersion is the version of the school's price lists the
+	// office read (CareTariffs.Versions).
+	ExpectedVersion string
 }
 
 // CareRun is a monthly run as the list shows it. DocumentCount, TotalCents
@@ -566,7 +572,7 @@ type CareModulePrices interface {
 type CareBilling interface {
 	CareTariffs(ctx context.Context, reviewer HolidayReviewer) (CareTariffs, error)
 	SaveCarePriceList(ctx context.Context, reviewer HolidayReviewer, list CarePriceList) (CareTariffs, error)
-	DeleteCarePriceList(ctx context.Context, reviewer HolidayReviewer, schoolID int64, validFrom calendar.Date) (CareTariffs, error)
+	DeleteCarePriceList(ctx context.Context, reviewer HolidayReviewer, schoolID int64, validFrom calendar.Date, expectedVersion string) (CareTariffs, error)
 	ListCareRuns(ctx context.Context, organizationID int64) (CareRunList, error)
 	StartCareRun(ctx context.Context, reviewer HolidayReviewer, start CareRunStart) (CareRun, error)
 	CareRun(ctx context.Context, reviewer HolidayReviewer, runID int64) (CareRunDetail, error)

@@ -1318,6 +1318,12 @@
       "portals": [
         "org"
       ],
+      "query": [
+        {
+          "name": "expected_version",
+          "kind": "string"
+        }
+      ],
       "response": {
         "kind": "ref",
         "ref": "CareTariffs"
@@ -38970,6 +38976,13 @@
               "ref": "CarePriceRequest"
             }
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -40651,6 +40664,16 @@
             "elem": {
               "kind": "date",
               "nullable": true
+            }
+          }
+        },
+        {
+          "name": "versions",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
             }
           }
         }

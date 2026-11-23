@@ -237,7 +237,7 @@ func TestCareFeeNoticeNeedsTheLegalRemedyAndItsKindChangesTheReviewedState(t *te
 	f := newCareBillingFixture(t, "Träger Monatsbescheid")
 	school := f.office.schools[0]
 	careContract(t, f.db, f.office.organization, school, "Mia", careMonth, sjrServices()...)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	run := f.startRun(t, careMonth)
 	reviewed := f.run(t, int64(run.ID))
@@ -288,7 +288,7 @@ func TestCareReleaseRefusesALegalRemedyChangedSinceTheReview(t *testing.T) {
 	f := newCareBillingFixture(t, "Träger Belehrung Prüfung")
 	school := f.office.schools[0]
 	careContract(t, f.db, f.office.organization, school, "Mia", careMonth, sjrServices()...)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	setDocumentKind(t, f.traeger, f.office.token, "care", "fee_notice")
 

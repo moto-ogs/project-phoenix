@@ -190,7 +190,7 @@ func TestCareByDirectDebitAndHolidayByTransferStaySeparateInvoices(t *testing.T)
 	_, err := f.db.ExecContext(context.Background(), `UPDATE care_contract.contract_parties SET email = 'EVA.Muster@example.org'
 		WHERE contract_id = ?`, contract)
 	require.NoError(t, err)
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec = putCarePriceList(t, f.traeger, billing, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	// A direct debit needs the creditor identifier and the family's
 	// mandate (#4695); without them the invoice goes as a transfer.
@@ -316,7 +316,7 @@ func TestFamilyDeviationReachesTheNextReleaseOnly(t *testing.T) {
 	school := f.office.schools[0]
 	contract := careContract(t, f.db, f.office.organization, school, "Mia", careMonth, sjrServices()...)
 	family := partyEmailOf(t, f, contract)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	first := f.startRun(t, careMonth)
@@ -722,7 +722,7 @@ func TestDirectDebitChoiceWithoutMandateStaysATransfer(t *testing.T) {
 	f := newCareBillingFixture(t, "Träger Lastschrift ohne Mandat")
 	school := f.office.schools[0]
 	contract := careContract(t, f.db, f.office.organization, school, "Mia", careMonth, sjrServices()...)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	saveCreditor(t, f, map[string]any{"creditor_id": sepaCreditorID, "prenotification_days": 1, "missing_mandate": "transfer"})
 	rec = putFamilyBilling(t, f.traeger, f.office.token, map[string]any{
@@ -753,7 +753,7 @@ func TestListedFamilyNamesTheContractOfItsMonthlyInvoice(t *testing.T) {
 	f := newCareBillingFixture(t, "Träger Familie Vertrag")
 	school := f.office.schools[0]
 	contract := careContract(t, f.db, f.office.organization, school, "Mia", careMonth, sjrServices()...)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	run := f.startRun(t, careMonth)
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"),

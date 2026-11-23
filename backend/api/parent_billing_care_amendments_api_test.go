@@ -115,7 +115,7 @@ func amendableRun(t *testing.T, f careBillingFixture, children ...string) (careR
 	for _, child := range children {
 		contracts[child] = careContract(t, f.db, f.office.organization, school, child, careMonth, sjrServices()...)
 	}
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	return f.startRun(t, careMonth), contracts
 }
@@ -271,7 +271,7 @@ func TestCareAmendmentInConflictBlocksTheReleaseUntilRevoked(t *testing.T) {
 	require.Equal(t, http.StatusOK, code)
 	entry := amendedInvoice(t, review, mia).Amendments[0]
 
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(f.office.schools[0], "2029-09-01", 3500))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(f.office.schools[0], "2029-09-01", 3500))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	review = f.amended(t, int64(run.ID))
 	invoice := amendedInvoice(t, review, mia)
