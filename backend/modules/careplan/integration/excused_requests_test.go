@@ -276,7 +276,7 @@ func TestExcusedRequestDecideGuards(t *testing.T) {
 	assert.ErrorIs(t, err, readstate.ErrChanged)
 	assert.Empty(t, f.activeStatusDays(t), "a refused decision writes nothing")
 
-	_, err = f.decide(t, careplan.ExcusedRequestDecideInput{ExpectedVersion: testpkg.ExcusedRequestVersion(t, pending.ID+999999), RequestID: pending.ID + 999999, Approve: true})
+	_, err = f.decide(t, careplan.ExcusedRequestDecideInput{ExpectedVersion: testpkg.MissingRequestVersion, RequestID: pending.ID + 999999, Approve: true})
 	assert.ErrorIs(t, err, careplan.ErrExcusedRequestNotFound)
 
 	f.approve(t, pending.ID)

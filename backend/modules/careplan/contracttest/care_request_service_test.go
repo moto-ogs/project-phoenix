@@ -1116,7 +1116,7 @@ func TestDecide_BogusIDNotFound(t *testing.T) {
 	req := f.createPending(t, careWeekdays(map[string]any{"weekday": 1, "arrival": "08:00"}))
 	bogusID := req.ID + 1_000_000
 
-	_, err := testpkg.TenantQuery1(t, f.staffCtx(f.staffAccount), f.db, f.svc.Decide, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, bogusID),
+	_, err := testpkg.TenantQuery1(t, f.staffCtx(f.staffAccount), f.db, f.svc.Decide, carerequests.DecideInput{ExpectedVersion: testpkg.MissingRequestVersion,
 		RequestID: bogusID, Approve: true, ReviewedBy: f.staffAccount,
 	})
 	require.ErrorIs(t, err, carerequests.ErrNotFound,

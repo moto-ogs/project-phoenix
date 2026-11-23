@@ -20,6 +20,10 @@ func ParentRequestVersion(t testing.TB, table string, id int64) string {
 	return ParentRequestVersionIn(t, SetupTestDB(t), table, id)
 }
 
+// MissingRequestVersion is the token a test of a missing request sends: no
+// row has a version, and any non-empty token reaches the not-found answer.
+const MissingRequestVersion = "no-request-has-this-version"
+
 // ParentRequestVersionIn is ParentRequestVersion read from db, for rigs that
 // hold their own isolated database.
 func ParentRequestVersionIn(t testing.TB, db bun.IDB, table string, id int64) string {

@@ -82,7 +82,11 @@ func TestFamilyRequestNotFoundHTTP(t *testing.T) {
 		for name, id := range map[string]int64{"missing": missing, "foreign": foreign[i].id} {
 			t.Run(row.kind+"/"+name, func(t *testing.T) {
 				row.id = id
-				for _, call := range familyHTTPCalls(row, testpkg.ParentRequestVersion(t, row.table, row.id)) {
+				version := testpkg.MissingRequestVersion
+				if name == "foreign" {
+					version = testpkg.ParentRequestVersion(t, row.table, row.id)
+				}
+				for _, call := range familyHTTPCalls(row, version) {
 					rr := authExec(t, tc, testutil.NewRequest(http.MethodPost, call.path, strings.NewReader(call.body)), testutil.AdminTestClaims(int(reviewer.ID)), []string{"admin:*"})
 					requireFamilyNotFoundHTTP(t, rr)
 				}

@@ -423,9 +423,7 @@ func TestMasterDataReview_ListPendingEmptyAndInvalidRequestID(t *testing.T) {
 	})
 	assert.ErrorIs(t, err, masterdatarequests.ErrReviewNotFound)
 
-	// A missing request has no version; any non-empty token reaches the
-	// not-found answer.
-	_, err = f.decide(t, svc, masterdatarequests.DecideInput{ExpectedVersion: "no-request-has-this-version", RequestID: 999_999_999, Approve: true})
+	_, err = f.decide(t, svc, masterdatarequests.DecideInput{ExpectedVersion: testpkg.MissingRequestVersion, RequestID: 999_999_999, Approve: true})
 	assert.ErrorIs(t, err, masterdatarequests.ErrReviewNotFound)
 }
 
