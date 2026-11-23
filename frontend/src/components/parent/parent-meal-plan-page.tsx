@@ -35,7 +35,7 @@ import { ChoiceTile } from "~/components/ui/choice-tile";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { ParentPage, ParentPageHeader } from "~/components/parent/parent-page";
 import { ParentSubsection } from "~/components/parent/shell/parent-section";
-import { isChangedSinceRead } from "~/lib/api-error";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { isValidISODate, parseISODate, toISODate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import {
@@ -69,6 +69,7 @@ const logger = createLogger({ component: "ParentMealPlanPage" });
 
 const NO_ENTRIES: MealPlanEntry[] = [];
 const NO_SCHOOLS: ChildOption[] = [];
+const NO_WEEKDAYS: readonly number[] = [];
 
 // One school the parent has a child at, with a representative child used for the
 // per-child (school-scoped) backend calls.
@@ -387,7 +388,6 @@ function ParticipationWeek({
   const weekDishes = weekDates.flatMap((date) => dishesByDate.get(date) ?? []);
   const hasDishes = weekDishes.length > 0;
   const weekAllergens = usedMealAllergens(weekDishes);
-  const [weekdays, setWeekdays] = useState<number[]>([]);
   const [editingRegularDays, setEditingRegularDays] = useState(false);
   const [editingDate, setEditingDate] = useState<string | null>(null);
   const [dayChange, setDayChange] = useState<DraftDayChange | null>(null);
@@ -477,10 +477,22 @@ function ParticipationWeek({
     t("errorObjectParticipation"),
     () => meal.mutate(),
   );
-  useEffect(() => {
-    if (participation && !editingRegularDays)
-      setWeekdays(participation.weekdays);
-  }, [participation, editingRegularDays]);
+  // The regular days a family edits rest on the version they saw (ADR
+  // 0311): a newer read refills them only while untouched, the save sends
+  // that version, and after a refusal the stored days show again.
+  const regular = useDraftOn<MealParticipation, number[], string, unknown>(
+    {
+      opening: studentId ? `${schoolId}:${studentId}` : null,
+      data: participation,
+      error: participation ? undefined : meal.error,
+      reload: meal.reloadOrThrow,
+    },
+    {
+      token: (read) => read.version,
+      toDraft: (read) => read.weekdays,
+    },
+  );
+  const weekdays = regular.draft ?? participation?.weekdays ?? NO_WEEKDAYS;
 
   // Ist in dieser Woche kein Tag mehr änderbar (Wochenende, Freitag nach
   // Annahmeschluss), öffnet die Seite einmalig die nächste Woche: Nur dort
@@ -506,7 +518,7 @@ function ParticipationWeek({
   }, [onWeekChange, participation, today, weekFromLink, weekOffset]);
 
   function toggleWeekday(weekday: number) {
-    setWeekdays((current) =>
+    regular.setDraft((current) =>
       current.includes(weekday)
         ? current.filter((value) => value !== weekday)
         : [...current, weekday].sort((a, b) => a - b),
@@ -516,38 +528,38 @@ function ParticipationWeek({
   async function saveRegularDays() {
     setSaving(true);
     clearSaveError();
-    try {
-      const outcome = await meal.saveSchedule(weekdays);
+    let discarded = false;
+    let accessRefused = false;
+    const result = await regular.submit(async (version, days) => {
+      const outcome = await meal.saveSchedule(days, version);
       if (outcome.status === "discarded") {
-        setSaving(false);
-        return;
+        discarded = true;
+        return outcome;
       }
       if (outcome.status === "failed") {
-        if (outcome.refused) setEditingRegularDays(false);
+        accessRefused = outcome.refused;
         throw outcome.error;
       }
-    } catch (err) {
+      return outcome;
+    });
+    if (discarded) {
+      setSaving(false);
+      return;
+    }
+    if (!result.ok) {
+      const err = result.error;
+      if (accessRefused) setEditingRegularDays(false);
       logger.error("parent_meal_participation_schedule_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
       // The regular days changed since they were read: the open draft
-      // shows the stored days again, without a retry of the same request
-      // (ADR 0311).
-      const changedElsewhere = isChangedSinceRead(err);
-      if (changedElsewhere) {
-        void meal.mutate().then((stored) => {
-          if (stored) setWeekdays(stored.weekdays);
-        });
-      }
-      void showSaveError(
-        err,
-        changedElsewhere
-          ? { object: t("errorObjectParticipation") }
-          : {
-              object: t("errorObjectParticipation"),
-              retry: () => retrySaveRef.current(),
-            },
-      );
+      // shows the stored days again; the message waits for them and offers
+      // no retry of the same request (ADR 0311).
+      void showSaveError(err, {
+        object: t("errorObjectParticipation"),
+        retry: () => retrySaveRef.current(),
+        reload: result.reload,
+      });
       setSaving(false);
       return;
     }
@@ -564,7 +576,7 @@ function ParticipationWeek({
 
   function cancelRegularDaysEdit() {
     clearSaveError();
-    setWeekdays(participation?.weekdays ?? []);
+    regular.discard();
     setEditingRegularDays(false);
   }
 
