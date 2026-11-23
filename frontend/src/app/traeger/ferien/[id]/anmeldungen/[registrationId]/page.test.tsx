@@ -62,6 +62,7 @@ const {
   mockHealth,
   mockConfirm,
   mockEdit,
+  mockEditVersion,
   mockConfirmationSettings,
   sessionPermissions,
   mockDownloadPdf,
@@ -74,6 +75,7 @@ const {
   mockConfirm: vi.fn(),
   mockHealth: vi.fn(),
   mockEdit: vi.fn(),
+  mockEditVersion: vi.fn(),
   mockConfirmationSettings: vi.fn(),
   sessionPermissions: { current: [] as string[] },
   mockDownloadPdf: vi.fn(),
@@ -86,7 +88,16 @@ vi.mock("~/lib/traeger-holiday-registrations-api", async (importOriginal) => ({
   >()),
   fetchHolidayRegistration: () => mockRegistration(),
   fetchHolidayRegistrationHealth: () => mockHealth(),
-  editHolidayRegistration: (...args: unknown[]) => mockEdit(...args),
+  // The version goes to its own spy: the edit sends the one it read.
+  editHolidayRegistration: (
+    periodId: string,
+    registrationId: string,
+    edit: unknown,
+    version: string,
+  ) => {
+    mockEditVersion(version);
+    return mockEdit(periodId, registrationId, edit);
+  },
   fetchHolidayConfirmationSettings: () => mockConfirmationSettings(),
   downloadHolidayRegistrationPdf: (...args: unknown[]) =>
     mockDownloadPdf(...args),
@@ -2047,6 +2058,8 @@ describe("TraegerHolidayRegistrationPage, Angaben ändern (#5629)", () => {
         },
       }),
     );
+    // The edit sends the version it read when it opened (ADR 0311).
+    expect(mockEditVersion).toHaveBeenCalledWith("registration-read");
   });
 
   it.each([

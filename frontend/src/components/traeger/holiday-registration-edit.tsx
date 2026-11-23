@@ -33,12 +33,13 @@ import { FieldLabel } from "~/components/ui/field-label";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
 import { SectionCard } from "~/components/ui/section-card";
-import { useApiFormError } from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useApiFormError } from "~/contexts/ToastContext";
 import {
   buildFieldsByKey,
   type ConditionContext,
 } from "~/lib/enrollment-field-visibility";
 import type { HolidayFormField } from "~/lib/holiday-form-field";
+import { isReadStateRefusal } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import type { TraegerSchool } from "~/lib/traeger-api";
 import {
@@ -107,6 +108,11 @@ export interface HolidayRegistrationEditorProps {
   readonly registration: HolidayRegistrationDetail;
   readonly onSaved: (registration: HolidayRegistrationDetail) => void;
   readonly onCancel: () => void;
+  /**
+   * Reads the registration again and rejects when that fails: after a
+   * refused edit the card shows the stored details (ADR 0311).
+   */
+  readonly reload: () => Promise<unknown>;
 }
 
 /** One edit state: the hint, the error at the top, the fields, the footer. */
@@ -115,6 +121,7 @@ function EditForm({
   registration,
   onSaved,
   onCancel,
+  reload,
   description,
   edit,
   children,
@@ -127,19 +134,46 @@ function EditForm({
   }>) {
   const formRef = useRef<HTMLFormElement>(null);
   const errors = useApiFormError(formRef);
+  const refusal = useApiErrorDisplay();
+  // The edit rests on the version read when it opened (ADR 0311).
+  const [version] = useState(registration.version);
+  // After a refused edit nothing is sent until the registration was read.
+  const [refused, setRefused] = useState(false);
   const [saving, setSaving] = useState(false);
   const fieldError = (name: string) => errors.fieldError(name) ?? undefined;
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (refused) return;
     setSaving(true);
     errors.clear();
     try {
-      onSaved(await editHolidayRegistration(periodId, registration.id, edit()));
+      onSaved(
+        await editHolidayRegistration(
+          periodId,
+          registration.id,
+          edit(),
+          version,
+        ),
+      );
     } catch (err) {
       logger.error("holiday_registration_edit_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
+      if (isReadStateRefusal(err)) {
+        // Changed since it was read: the message stays as a toast while the
+        // edit closes on the stored details, once they are read. A failed
+        // read keeps the edit locked and offers to read again.
+        setRefused(true);
+        void refusal.show(err, {
+          object: "die Angaben",
+          reload: async () => {
+            await reload();
+            onCancel();
+          },
+        });
+        return;
+      }
       void errors.show(err, { object: "die Angaben" });
     } finally {
       setSaving(false);
@@ -159,6 +193,12 @@ function EditForm({
             }}
             saving={saving}
             saveLabel="Änderung speichern"
+            {...(refused
+              ? {
+                  disabled: true,
+                  disabledReason: "Die gespeicherten Angaben werden geladen.",
+                }
+              : {})}
           />
         }
       >

@@ -19,7 +19,7 @@ import { FieldErrorHint } from "~/components/ui/field-error-hint";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { SectionCard } from "~/components/ui/section-card";
 import { childrenConcept } from "~/lib/concepts/children";
-import { useApiFormError } from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useApiFormError } from "~/contexts/ToastContext";
 import { WeekdayToggleGroup } from "~/components/ui/weekday-toggle-group";
 import { formatDate } from "~/lib/date-helpers";
 import {
@@ -28,6 +28,7 @@ import {
   holidayDayList,
   holidayWeekdayShort,
 } from "~/lib/holiday-days";
+import { isReadStateRefusal } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import type { HolidayPeriod } from "~/lib/traeger-api";
 import {
@@ -84,6 +85,7 @@ export function HolidayRegistrationChildCard({
   names,
   knownSchoolId,
   onChanged,
+  reload,
   onEdit,
   editor,
 }: Readonly<{
@@ -100,12 +102,22 @@ export function HolidayRegistrationChildCard({
   /** The school of the Träger that knows the child (#6683), if one does. */
   knownSchoolId?: string;
   onChanged: (registration: HolidayRegistrationDetail) => void;
+  /**
+   * Reads the registration again and rejects when that fails: after a
+   * refused rebooking the card shows the stored weeks (ADR 0311).
+   */
+  reload: () => Promise<unknown>;
   /** Opens the edit of the child's details; absent, the card offers none. */
   onEdit?: () => void;
   /** The edit state of the child's details, in place of the card's body. */
   editor?: ReactNode;
 }>) {
   const [draft, setDraft] = useState<HolidayRebookingDraft | null>(null);
+  // The rebooking rests on the version read when it opened (ADR 0311).
+  const [draftVersion, setDraftVersion] = useState(registration.version);
+  // After a refused rebooking nothing is sent until the registration was read.
+  const [refused, setRefused] = useState(false);
+  const refusal = useApiErrorDisplay();
   const [draftDays, setDraftDays] = useState<HolidayRebookingDays>({});
   const [draftLunch, setDraftLunch] = useState<HolidayRebookingLunch>({});
   const [saving, setSaving] = useState(false);
@@ -122,7 +134,7 @@ export function HolidayRegistrationChildCard({
   );
 
   const save = async () => {
-    if (!draft) return;
+    if (!draft || refused) return;
     setSaving(true);
     saveErrors.clear();
     try {
@@ -132,6 +144,7 @@ export function HolidayRegistrationChildCard({
           registration.id,
           child.id,
           rebookingBookings(period, draft, draftDays, draftLunch),
+          draftVersion,
         ),
       );
       setDraft(null);
@@ -139,6 +152,21 @@ export function HolidayRegistrationChildCard({
       logger.error("holiday_child_rebook_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
+      if (isReadStateRefusal(err)) {
+        // Changed since it was read: the message stays as a toast while the
+        // card closes the rebooking on the stored weeks, once they are read.
+        // A failed read keeps the rebooking locked and offers to read again.
+        setRefused(true);
+        void refusal.show(err, {
+          object: "die Wochen des Kindes",
+          reload: async () => {
+            await reload();
+            setRefused(false);
+            setDraft(null);
+          },
+        });
+        return;
+      }
       void saveErrors.show(err, { object: "die Wochen des Kindes" });
     } finally {
       setSaving(false);
@@ -156,6 +184,7 @@ export function HolidayRegistrationChildCard({
         size="md"
         tooltip="Öffnet die gebuchten Wochen des Kindes zum Umbuchen."
         onClick={() => {
+          setDraftVersion(registration.version);
           setDraft(rebookingDraft(period, child));
           setDraftDays(rebookingDays(child));
           setDraftLunch(rebookingLunch(child));
@@ -202,11 +231,15 @@ export function HolidayRegistrationChildCard({
             onSave={() => void save()}
             saving={saving}
             disabled={
+              refused ||
               bookings.length === 0 ||
               rebookingMissesDays(bookings) ||
               !rebookingChanged(child, bookings) ||
               (draft !== null && weeksOverlap(period, draft))
             }
+            {...(refused
+              ? { disabledReason: "Die gespeicherten Wochen werden geladen." }
+              : {})}
           />
         ) : undefined
       }

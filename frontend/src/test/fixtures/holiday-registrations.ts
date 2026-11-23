@@ -71,6 +71,7 @@ export const HOLIDAY_PERIOD: HolidayPeriod = {
 
 export const HOLIDAY_REGISTRATION: HolidayRegistrationDetail = {
   id: "7",
+  version: "registration-read",
   status: "received",
   frozen: false,
   submittedAt: "2026-09-03T08:00:00Z",

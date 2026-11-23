@@ -576,6 +576,7 @@ function HolidayRegistrationContent() {
         registration,
         onSaved: saved,
         onCancel: () => setEditing(null),
+        reload: fetchRegistration,
       }
     : null;
 
@@ -637,6 +638,7 @@ function HolidayRegistrationContent() {
             names={names}
             knownSchoolId={known.get(child.id)}
             onChanged={changed}
+            reload={fetchRegistration}
             onEdit={
               cancelled || editing
                 ? undefined
