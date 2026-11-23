@@ -838,6 +838,7 @@ function MeinRaumPageContent() {
             onConfirmExpected={actions.handleConfirmExpectedStudents}
             onRosterAction={actions.handleRosterAction}
             onSaveHomeworkFeedback={actions.handleSaveHomeworkFeedback}
+            reloadAfterRefusal={actions.reloadRosterAfterRefusal}
             onExcuseRestOfDay={
               hasPermission(session, "users:update")
                 ? actions.handleExcuseRestOfDay

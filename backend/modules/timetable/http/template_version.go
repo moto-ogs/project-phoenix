@@ -54,12 +54,10 @@ type templateTargetState struct {
 	EducationGroupID *ident.ID `json:"education_group_id"`
 }
 
-// templateVersion is the read-state token of a template segment (ADR 0311).
-// It is always taken over the segment's period-free read (loadTemplates with
-// no period): the editor's read is scoped to a planning period and the save
-// may move the series to another one, so only the unscoped read is the same
-// stored state on both sides. The rosters of that read are kept to the
-// school day, so a token read before midnight is refused once after it.
+// templateVersion is the read-state token of a template segment (ADR 0311),
+// taken over templateTokenState on the read and the check side alike.
+// The rosters of that state are kept to the school day, so a token read
+// before midnight is refused once after it.
 func templateVersion(t templateResponse) string {
 	state := templateState{
 		ID: t.ID, Name: t.Name, Type: t.Type, CategoryID: t.CategoryID, PlanningTrackID: t.PlanningTrackID,
@@ -84,17 +82,44 @@ func templateVersion(t templateResponse) string {
 	return readstate.Fingerprint(state)
 }
 
-// templateReadVersion loads the segment period-free and answers its token.
-// A segment the unscoped read no longer returns has the token of no state.
-func (rs *Resource) templateReadVersion(ctx context.Context, templateID int64) (string, error) {
+// templateTokenState loads the stored segment its token covers. The
+// segment's fields, schedules and combined roster come from its period-free
+// read: the editor's read is scoped to a planning period and the save may
+// move the series to another one, so only the unscoped read is the same
+// stored state on both sides. That read keeps only the period-free weekday
+// rows, while a save writes them under the series' planning period: for a
+// series in a period its weekday roster, protected children and per-weekday
+// Hauptbetreuung are read in that period, as its editor shows them. It
+// answers nil for a segment the unscoped read no longer returns.
+func (rs *Resource) templateTokenState(ctx context.Context, templateID int64) (*templateResponse, error) {
 	templates, err := rs.loadTemplates(ctx, &templateID, nil)
+	if err != nil || len(templates) == 0 {
+		return nil, err
+	}
+	state := templates[0]
+	if state.CalendarPeriodID == nil {
+		return &state, nil
+	}
+	weekdayRoster, err := rs.TimetableData.ListTemplateWeekdayRoster(ctx, &templateID, (*int64)(state.CalendarPeriodID))
+	if err != nil {
+		return nil, err
+	}
+	state.WeekdayAssignments = buildTemplateWeekdayAssignments(weekdayRoster)[templateID]
+	state.ProtectedStudentAssignments = buildTemplateProtectedStudentAssignments(weekdayRoster)[templateID]
+	return &state, nil
+}
+
+// templateReadVersion answers the segment's token. A segment the unscoped
+// read no longer returns has the token of no state.
+func (rs *Resource) templateReadVersion(ctx context.Context, templateID int64) (string, error) {
+	state, err := rs.templateTokenState(ctx, templateID)
 	if err != nil {
 		return "", err
 	}
-	if len(templates) == 0 {
+	if state == nil {
 		return readstate.Fingerprint(nil), nil
 	}
-	return templateVersion(templates[0]), nil
+	return templateVersion(*state), nil
 }
 
 // lockTemplateForWrite takes the tenant recurrence gate every template write
@@ -118,15 +143,15 @@ func (rs *Resource) lockTemplateForWrite(w http.ResponseWriter, r *http.Request)
 // A segment the read does not find passes: the write itself answers that it
 // is gone, as it did before the check.
 func (rs *Resource) checkTemplateReadVersion(w http.ResponseWriter, r *http.Request, templateID int64, expected string) bool {
-	templates, err := rs.loadTemplates(r.Context(), &templateID, nil)
+	state, err := rs.templateTokenState(r.Context(), templateID)
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInternalServerWrap("load template failed", err))
 		return false
 	}
-	if len(templates) == 0 {
+	if state == nil {
 		return true
 	}
-	if err := readstate.Check(expected, templateVersion(templates[0])); err != nil {
+	if err := readstate.Check(expected, templateVersion(*state)); err != nil {
 		common.RenderError(w, r, common.ErrorBusinessRejection(err))
 		return false
 	}

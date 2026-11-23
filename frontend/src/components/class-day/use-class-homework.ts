@@ -32,11 +32,15 @@ export interface ClassHomeworkApi {
   readonly remove: (schoolClass: string, homeworkId: string) => Promise<void>;
 }
 
-/** Der Entwurf im Dialog; `editing` ist der geänderte Eintrag. */
+/**
+ * Der Entwurf im Dialog; `editing` ist der geänderte Eintrag. `gone`: der
+ * Eintrag ist nach einer Ablehnung nicht mehr gespeichert.
+ */
 interface HomeworkDraft {
   readonly editing: schoolClassDayContract.DayHomework | null;
   readonly subject: string;
   readonly description: string;
+  readonly gone?: boolean;
 }
 
 export function useClassHomework({
@@ -88,7 +92,7 @@ export function useClassHomework({
     setDraft((current) => (current ? { ...current, [field]: value } : current));
 
   const save = async () => {
-    if (!api || !draft) return;
+    if (!api || !draft || draft.gone) return;
     const description = draft.description.trim();
     if (description === "") {
       formErrors.invalid("Bitte schreibe, was zu tun ist.", {
@@ -124,18 +128,20 @@ export function useClassHomework({
           object: "die Hausaufgabe",
           retry: () => void save(),
           // Someone changed the entry since the dialog opened: the dialog
-          // shows it as stored, with its token; a deleted entry closes it.
+          // shows it as stored, with its token. A deleted entry keeps the
+          // dialog open: its alert carries the refusal, which a closed
+          // dialog would swallow, and saving is blocked with the reason.
           reload: async () => {
             const entries = await reloadAfterRefusal();
             const fresh = entries.find((entry) => entry.id === editedId);
-            setDraft(
+            setDraft((current) =>
               fresh
                 ? {
                     editing: fresh,
                     subject: fresh.subject ?? "",
                     description: fresh.description,
                   }
-                : null,
+                : current && { ...current, gone: true },
             );
           },
         });

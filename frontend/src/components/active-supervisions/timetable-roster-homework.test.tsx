@@ -81,7 +81,9 @@ function renderRoster(
     row: TimetableRosterRow,
     body: HomeworkFeedbackBody,
   ) => Promise<void>,
-  reloadAfterRefusal?: () => Promise<TimetableRoster | null>,
+  reloadAfterRefusal: () => Promise<TimetableRoster | null> = vi
+    .fn()
+    .mockResolvedValue(value),
 ) {
   render(
     <TimetableRosterContent
@@ -193,6 +195,39 @@ describe("Hausaufgaben in der Lernzeit (#4796)", () => {
         expected_version: "v2",
       }),
     );
+  });
+
+  it("keeps the refusal visible when the child left the block meanwhile", async () => {
+    const save = vi
+      .fn()
+      .mockRejectedValue(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      );
+    const reload = vi
+      .fn()
+      .mockResolvedValue({ ...roster, rows: [withoutHomework] });
+    renderRoster(roster, save, reload);
+    fireEvent.click(screen.getByRole("button", { name: "Hausaufgaben" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "War schwer" }));
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Rückmeldung speichern" }),
+    );
+
+    // ADR 0311: the refusal is never silent. The dialog stays open with it,
+    // and there is nothing left to save for the child.
+    expect(
+      await within(dialog).findByText(
+        catalogText("general.changed_since_read", "die Rückmeldung"),
+      ),
+    ).toBeInTheDocument();
+    expect(reload).toHaveBeenCalledTimes(1);
+    const blocked = within(dialog).getByRole("button", {
+      name: "Rückmeldung speichern",
+    });
+    expect(blocked).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(blocked);
+    expect(save).toHaveBeenCalledTimes(1);
   });
 
   it("retries homework feedback using the edited answer and note", async () => {

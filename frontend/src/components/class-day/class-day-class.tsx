@@ -755,6 +755,12 @@ export function ClassDayClass({
                   onCancel={homeworkForm.close}
                   onSave={() => void homeworkForm.save()}
                   saving={homeworkForm.saving}
+                  disabled={homeworkForm.draft?.gone === true}
+                  disabledReason={
+                    homeworkForm.draft?.gone === true
+                      ? "Die Hausaufgabe gibt es nicht mehr."
+                      : undefined
+                  }
                 />
               }
             >
