@@ -703,7 +703,11 @@ describe("TraegerClosingDaysPage (#4702)", () => {
     expect(api.deleteTraegerClosingDay).toHaveBeenCalledWith("9", "del456");
   });
 
-  it("waits for a new preview each time the delete dialog opens (#6457)", async () => {
+  // ADR 0311 replaces the wait of #6457: the preview comes from the shared
+  // cache, the delete confirms the preview on screen with its token, and the
+  // server refuses a changed one (traeger.closing_day_bookings_changed, see
+  // above).
+  it("confirms the cached preview with its token when the delete dialog opens again", async () => {
     session.permissions = ["traeger_overview:read", "traeger_settings:manage"];
     let finish!: (impact: HolidayClosureImpact) => void;
     api.previewTraegerClosingDayHolidayBookings
@@ -737,16 +741,11 @@ describe("TraegerClosingDaysPage (#4702)", () => {
     );
 
     dialog = await openDelete();
-    await waitFor(() =>
-      expect(api.previewTraegerClosingDayHolidayBookings).toHaveBeenCalledTimes(
-        2,
-      ),
-    );
     expect(
-      within(dialog).getByRole("button", { name: "Ja, löschen" }),
-    ).toBeDisabled();
-
-    finish({ ...summerImpact, token: "second" });
+      await within(dialog).findByText(
+        "3 Familien bekommen nach dem Löschen eine E-Mail",
+      ),
+    ).toBeInTheDocument();
     await waitFor(() =>
       expect(
         within(dialog).getByRole("button", { name: "Ja, löschen" }),
@@ -759,8 +758,9 @@ describe("TraegerClosingDaysPage (#4702)", () => {
       await within(dialog).findByRole("button", { name: "Endgültig löschen" }),
     );
     await waitFor(() =>
-      expect(api.deleteTraegerClosingDay).toHaveBeenCalledWith("9", "second"),
+      expect(api.deleteTraegerClosingDay).toHaveBeenCalledWith("9", "first"),
     );
+    finish({ ...summerImpact, token: "second" });
   });
 
   it("refreshes pending notices when their closing day is deleted", async () => {

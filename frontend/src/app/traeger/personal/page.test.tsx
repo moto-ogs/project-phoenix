@@ -328,6 +328,12 @@ describe("TraegerStaffRecordsPage", () => {
         choices: {},
       }),
     );
+    // The preview of this opening has to be on screen before it is confirmed.
+    await vi.waitFor(() =>
+      expect(
+        within(dialog).getByRole("button", { name: "Akte anlegen" }),
+      ).toBeEnabled(),
+    );
     fireEvent.click(
       within(dialog).getByRole("button", { name: "Akte anlegen" }),
     );
