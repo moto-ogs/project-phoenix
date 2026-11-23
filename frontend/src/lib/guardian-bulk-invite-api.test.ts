@@ -41,6 +41,7 @@ describe("bulkInviteGuardians", () => {
             reason: "missing_email",
           },
         ],
+        fingerprint: "counted",
       },
     });
 
@@ -81,6 +82,7 @@ describe("bulkInviteGuardians", () => {
           reason: "missing_email",
         },
       ],
+      fingerprint: "counted",
     });
   });
 

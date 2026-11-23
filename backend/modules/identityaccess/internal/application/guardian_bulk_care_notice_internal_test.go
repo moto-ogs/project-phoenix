@@ -8,6 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -94,14 +95,15 @@ func TestBulkCareNotice_OneMailPerGuardianAtTheLoginAddress(t *testing.T) {
 	parent := f.accountHolder("login@example.test", "tr", 11, 12)
 	invitee := f.bulkGuardian("ohne-konto@example.test", roleLegal, 11)
 
-	preview, err := f.lifecycle.BulkInviteToStudents(tenantContext(), notifyRequest(true, 11, 12))
+	preview, err := f.bulkRun(notifyRequest(true, 11, 12))
 	require.NoError(t, err)
-	assert.Equal(t, identityaccess.BulkInviteResult{DryRun: true, Invited: 1, Notified: 1, Problems: []identityaccess.BulkInviteProblem{}}, *preview)
+	assert.NotEmpty(t, preview.Fingerprint, "the preview hands its run the token")
+	assert.Equal(t, identityaccess.BulkInviteResult{DryRun: true, Invited: 1, Notified: 1, Problems: []identityaccess.BulkInviteProblem{}, Fingerprint: preview.Fingerprint}, *preview)
 	assert.Empty(t, f.delivery.careNotices, "a preview mails nobody")
 	assert.Empty(t, f.invitations.marked, "a preview stamps nothing")
 	assert.Equal(t, []bool{false}, f.invitations.careNoticeLocks, "a preview locks no access row")
 
-	result, err := f.lifecycle.BulkInviteToStudents(tenantContext(), notifyRequest(false, 11, 12))
+	result, err := f.bulkRun(notifyRequest(false, 11, 12))
 	require.NoError(t, err)
 	assert.Equal(t, 1, result.Notified)
 	assert.Equal(t, 1, result.Invited, "a guardian without an account still gets the invitation")
@@ -116,9 +118,9 @@ func TestBulkCareNotice_OneMailPerGuardianAtTheLoginAddress(t *testing.T) {
 	assert.Equal(t, "OGS Musterschule", notice.SchoolName)
 	require.Len(t, f.invitations.marked, 1, "both relationships are stamped in one write")
 	assert.Len(t, f.invitations.marked[0], 2)
-	assert.Equal(t, []bool{false, true}, f.invitations.careNoticeLocks, "the run reads the access rows under a share lock")
+	assert.Equal(t, []bool{false, false, true}, f.invitations.careNoticeLocks, "the run's preview reads unlocked, the run under a share lock")
 
-	again, err := f.lifecycle.BulkInviteToStudents(tenantContext(), notifyRequest(false, 11, 12))
+	again, err := f.bulkRun(notifyRequest(false, 11, 12))
 	require.NoError(t, err)
 	assert.Zero(t, again.Notified, "a second run mails nobody twice")
 	assert.Equal(t, 1, again.AlreadyNotified)
@@ -149,7 +151,9 @@ func TestBulkCareNotice_OnlyChildrenWithRunningCare(t *testing.T) {
 	sibling := f.accountHolder("geschwister@example.test", "de", 11, 12)
 	waiting := f.accountHolder("wartet@example.test", "de", 13, 14, 15, 16, 17, 18)
 
-	result, err := f.lifecycle.BulkInviteToStudents(tenantContext(), notifyRequest(false, 11, 12, 13, 14, 15, 16, 17, 18))
+	req := f.previewed(notifyRequest(false, 11, 12, 13, 14, 15, 16, 17, 18))
+	f.guardians.bookedDays = nil
+	result, err := f.lifecycle.BulkInviteToStudents(tenantContext(), req)
 
 	require.NoError(t, err)
 	assert.Equal(t, 1, result.Notified)
@@ -163,7 +167,7 @@ func TestBulkCareNotice_OnlyChildrenWithRunningCare(t *testing.T) {
 
 	f.guardians.carePeriods = append(f.guardians.carePeriods, identityaccess.ChildCarePeriod{StudentID: 13, RequestChildID: 1013, Start: runningPeriod[0], End: runningPeriod[1]})
 	f.guardians.booked[1013] = true
-	later, err := f.lifecycle.BulkInviteToStudents(tenantContext(), notifyRequest(false, 13))
+	later, err := f.bulkRun(notifyRequest(false, 13))
 	require.NoError(t, err)
 	assert.Equal(t, 1, later.Notified, "once the care runs, a later run mails")
 	require.Len(t, f.delivery.careNotices, 2)
@@ -196,7 +200,7 @@ func TestBulkCareNotice_SkipsWhoMayNotSeeTheChildNow(t *testing.T) {
 	restricted.AccountID, restricted.HasAccount = &restrictedAccount, true
 	f.guardians.profiles[restricted.ID] = restricted
 
-	result, err := f.lifecycle.BulkInviteToStudents(tenantContext(), notifyRequest(false, 11))
+	result, err := f.bulkRun(notifyRequest(false, 11))
 
 	require.NoError(t, err)
 	assert.Equal(t, identityaccess.BulkInviteResult{SkippedActive: 3, SkippedRestricted: 1, Problems: []identityaccess.BulkInviteProblem{}}, *result)
@@ -213,7 +217,7 @@ func TestBulkCareNotice_ListsALoginAddressTheMailCannotReach(t *testing.T) {
 	f.delivery.mailBlocks = map[string]string{"gesperrt@example.test": domain.GuardianMailBlockAddress}
 	malformed := f.accountHolder("kein-at-zeichen", "de", 11)
 
-	result, err := f.lifecycle.BulkInviteToStudents(tenantContext(), notifyRequest(true, 11))
+	result, err := f.bulkRun(notifyRequest(true, 11))
 
 	require.NoError(t, err)
 	assert.Zero(t, result.Notified)
@@ -234,7 +238,7 @@ func TestBulkCareNotice_WithoutTheOptionNothingChanges(t *testing.T) {
 	f.child(11, "Mia", runningPeriod)
 	f.accountHolder("konto@example.test", "de", 11)
 
-	result, err := f.lifecycle.BulkInviteToStudents(tenantContext(), bulkRequest(11))
+	result, err := f.bulkRun(bulkRequest(11))
 
 	require.NoError(t, err)
 	assert.Equal(t, identityaccess.BulkInviteResult{SkippedActive: 1, Problems: []identityaccess.BulkInviteProblem{}}, *result)
@@ -250,7 +254,7 @@ func TestBulkCareNotice_AnUnqueuedMailListsTheGuardianAndStampsNothing(t *testin
 	f.accountHolder("konto@example.test", "de", 11)
 	f.delivery.careNoticeErr = errors.New("outbox down")
 
-	result, err := f.lifecycle.BulkInviteToStudents(tenantContext(), notifyRequest(false, 11))
+	result, err := f.bulkRun(notifyRequest(false, 11))
 
 	require.NoError(t, err)
 	assert.Zero(t, result.Notified)
@@ -281,19 +285,91 @@ func TestBulkCareNotice_PinsTheAccountsBeforeTheDecision(t *testing.T) {
 	accounts := [][]int64{{relativeActor, smaller, *later.AccountID}}
 	slices.Sort(accounts[0])
 
-	_, err := f.lifecycle.BulkInviteToStudents(tenantContext(), notifyRequest(true, 11, 12))
+	_, err := f.bulkRun(notifyRequest(true, 11, 12))
 	require.NoError(t, err)
 	assert.Empty(t, f.invitations.lockedAccounts, "a preview locks nothing")
 	assert.Empty(t, f.invitations.lockedMemberships)
 
-	_, err = f.lifecycle.BulkInviteToStudents(tenantContext(), bulkRequest(11, 12))
+	_, err = f.bulkRun(bulkRequest(11, 12))
 	require.NoError(t, err)
 	assert.Equal(t, accounts, f.invitations.lockedAccounts, "the plain invitation locks the sender and the accounts up front, ascending")
 	assert.Empty(t, f.invitations.lockedMemberships, "without the option no membership is pinned")
 
-	_, err = f.lifecycle.BulkInviteToStudents(tenantContext(), notifyRequest(false, 11, 12))
+	_, err = f.bulkRun(notifyRequest(false, 11, 12))
 	require.NoError(t, err)
 	assert.Equal(t, append(accounts, accounts...), f.invitations.lockedAccounts)
 	assert.Equal(t, holders, f.invitations.lockedMemberships, "only account holders are members to pin")
-	assert.Equal(t, []bool{false, true}, f.invitations.careNoticeLocks)
+	assert.Equal(t, []bool{false, false, true}, f.invitations.careNoticeLocks, "the previews read unlocked, the run under the lock")
+}
+
+// A run confirms the care notices its preview counted, not only the
+// invitations (ADR 0311): when the preview was counted without the option,
+// or since then another child of the guardian may be named, a mail went out
+// elsewhere, or the login address no longer takes mail, the run is refused
+// and mails and stamps nothing. A fresh preview lets it through.
+func TestBulkCareNotice_RefusesARunThatDiffersFromItsPreview(t *testing.T) {
+	t.Parallel()
+	for name, change := range map[string]func(f *lifecycleFixture, parent domain.GuardianProfile) identityaccess.BulkInviteRequest{
+		"preview without the option": func(f *lifecycleFixture, _ domain.GuardianProfile) identityaccess.BulkInviteRequest {
+			return f.previewed(bulkRequest(11, 12))
+		},
+		"care booked since": func(f *lifecycleFixture, _ domain.GuardianProfile) identityaccess.BulkInviteRequest {
+			read := f.previewed(notifyRequest(false, 11, 12))
+			f.guardians.booked[1012] = true
+			return read
+		},
+		"access granted since": func(f *lifecycleFixture, parent domain.GuardianProfile) identityaccess.BulkInviteRequest {
+			f.changeCareNotices(parent.ID, func(state *domain.GuardianCareNoticeState) { state.PortalAccess = false })
+			read := f.previewed(notifyRequest(false, 11, 12))
+			f.changeCareNotices(parent.ID, func(state *domain.GuardianCareNoticeState) { state.PortalAccess = true })
+			return read
+		},
+		"notified elsewhere since": func(f *lifecycleFixture, parent domain.GuardianProfile) identityaccess.BulkInviteRequest {
+			read := f.previewed(notifyRequest(false, 11, 12))
+			f.changeCareNotices(parent.ID, func(state *domain.GuardianCareNoticeState) { state.Notified = true })
+			return read
+		},
+		"login address blocked since": func(f *lifecycleFixture, _ domain.GuardianProfile) identityaccess.BulkInviteRequest {
+			read := f.previewed(notifyRequest(false, 11, 12))
+			f.delivery.mailBlocks = map[string]string{"login@example.test": domain.GuardianMailBlockAddress}
+			return read
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			f := newLifecycleFixture(t)
+			f.child(11, "Mia", runningPeriod)
+			f.childWithoutBooking(12, "Ben", runningPeriod)
+			parent := f.accountHolder("login@example.test", "de", 11, 12)
+
+			read := change(f, parent)
+			req := notifyRequest(false, 11, 12)
+			req.ExpectedFingerprint = read.ExpectedFingerprint
+			_, err := f.lifecycle.BulkInviteToStudents(tenantContext(), req)
+
+			require.ErrorIs(t, err, readstate.ErrChanged)
+			assert.Empty(t, f.delivery.careNotices, "nobody is mailed a set the school did not see")
+			assert.Empty(t, f.invitations.marked)
+			_, err = f.bulkRun(notifyRequest(false, 11, 12))
+			require.NoError(t, err, "a fresh preview confirms the run")
+		})
+	}
+}
+
+// The school does not see the login address of an account, and the token is
+// an unkeyed hash it could test guesses against: the address decides the
+// token only through whether the mail reaches it.
+func TestBulkInviteFingerprint_HidesTheLoginAddress(t *testing.T) {
+	t.Parallel()
+	fingerprint := func(login string) string {
+		f := newLifecycleFixture(t)
+		f.child(11, "Mia", runningPeriod)
+		parent := f.accountHolder(login, "de", 11)
+		parent.Email = "kontakt@example.test"
+		f.guardians.profiles[parent.ID] = parent
+		return f.previewed(notifyRequest(false, 11)).ExpectedFingerprint
+	}
+
+	assert.Equal(t, fingerprint("eins@example.test"), fingerprint("zwei@example.test"))
+	assert.NotEqual(t, fingerprint("eins@example.test"), fingerprint(""), "an address the mail cannot reach is a problem instead of a mail")
 }

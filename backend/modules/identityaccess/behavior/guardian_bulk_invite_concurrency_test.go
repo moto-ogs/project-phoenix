@@ -52,7 +52,15 @@ func TestBulkInviteToStudents_TwoSchoolsShareAnAccountWithoutDeadlock(t *testing
 					VALUES (?, ?, 'inactive', NOW()) ON CONFLICT (account_id, tenant_id) DO UPDATE SET status = 'inactive', deactivated_at = NOW()`,
 					account.ID, school).Exec(ctx)
 				require.NoError(t, err)
-				requests[school] = identityaccess.BulkInviteRequest{StudentIDs: []int64{student.ID}, CreatedBy: creator, NotifyActive: notify[i]}
+				req := identityaccess.BulkInviteRequest{StudentIDs: []int64{student.ID}, CreatedBy: creator, NotifyActive: notify[i]}
+				// Each run confirms its preview (ADR 0311); a preview locks
+				// nothing and is read before the blocker.
+				preview := req
+				preview.DryRun = true
+				counted, err := env.service.BulkInviteToStudents(testpkg.WithTestTenantRuntime(t, testpkg.TenantContext(school)), preview)
+				require.NoError(t, err)
+				req.ExpectedFingerprint = counted.Fingerprint
+				requests[school] = req
 			}
 
 			blocker, err := env.db.BeginTx(ctx, nil)

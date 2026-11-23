@@ -47,6 +47,7 @@ export const Editable: Story = {
           { id: "2", name: "Betreuung", systemName: "user" },
         ],
         currentRoleIds: ["2"],
+        version: "roles-v1",
         currentIsLehrkraft: false,
       },
       onEditingChange: () => undefined,

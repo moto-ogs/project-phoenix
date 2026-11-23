@@ -1963,6 +1963,10 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 		if r.URL.Path == "/api/staff" && r.Method == seedHTTPMethodPost && len(planningStaffIDs) < 2 {
 			planningStaffIDs = append(planningStaffIDs, map[string]any{"staff_id": idCounter})
 		}
+		if strings.HasPrefix(r.URL.Path, "/auth/roles/") && strings.HasSuffix(r.URL.Path, "/permission-selection") {
+			_, _ = fmt.Fprint(w, `{"data":{"permissions":[],"version":"empty"}}`)
+			return
+		}
 		if strings.HasPrefix(r.URL.Path, "/auth/roles/") && strings.HasSuffix(r.URL.Path, "/permissions") {
 			w.WriteHeader(seedHTTPStatusNoContent)
 			return

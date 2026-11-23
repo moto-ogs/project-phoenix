@@ -42,7 +42,7 @@ import type { StaffRecordResponse } from "~/lib/contract/staff.generated";
 import { teacherService, type Teacher } from "~/lib/teacher-api";
 import { mapTeacherResponse } from "~/lib/teacher-helpers";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
-import { ApiError } from "~/lib/api-error";
+import { ApiError, isChangedSinceRead } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import {
   employmentTypeLabels,
@@ -357,7 +357,11 @@ export default function StaffDetailContent() {
   // sagt die Meldung, was schon gespeichert ist.
   const handleSaveKonto = useCallback(
     async (draft: KontoDraft) => {
-      const { role_id: targetRoleId, ...recordData } = draft;
+      const {
+        role_id: targetRoleId,
+        role_version: roleVersion,
+        ...recordData
+      } = draft;
       const hasRecordChanges = Object.keys(recordData).length > 0;
       if (hasRecordChanges) {
         try {
@@ -373,7 +377,9 @@ export default function StaffDetailContent() {
       }
       if (targetRoleId !== undefined) {
         try {
-          await replaceAccountRole(accountId, targetRoleId);
+          // Die Version der Rollen, die die Person beim Wählen sah
+          // (ADR 0311), nicht die des inzwischen nachgeladenen Stands.
+          await replaceAccountRole(accountId, targetRoleId, roleVersion ?? "");
         } catch (err) {
           logger.error("failed to update account role", {
             staff_id: staffId,
@@ -382,6 +388,11 @@ export default function StaffDetailContent() {
             error: err instanceof Error ? err.message : String(err),
           });
           await refreshRecord();
+          // Haben sich die Rollen inzwischen geändert, zeigt das Feld die
+          // gespeicherte Rolle; der Reiter bietet kein „Wiederholen“ an.
+          if (isChangedSinceRead(err)) {
+            await tenantMutate(staffAccessKeys.roleAssignment(accountId));
+          }
           // Der Datensatz ist gespeichert; das sagt eine Erfolgsmeldung,
           // der Fehler im Formular nennt nur die Systemrolle.
           if (hasRecordChanges) {

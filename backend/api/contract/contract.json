@@ -7846,10 +7846,22 @@
     },
     {
       "method": "GET",
+      "pattern": "/auth/accounts/{accountId}/role-selection/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "AccountRolesResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/auth/accounts/{accountId}/roles/",
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "response": {
         "kind": "array",
         "elem": {
@@ -7990,10 +8002,22 @@
     },
     {
       "method": "GET",
+      "pattern": "/auth/roles/{roleId}/permission-selection/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "RolePermissionsResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/auth/roles/{roleId}/permissions/",
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "response": {
         "kind": "array",
         "elem": {
@@ -22412,10 +22436,26 @@
     },
     {
       "method": "PUT",
+      "pattern": "/auth/roles/{roleId}/permission-selection/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ReplaceRolePermissionsRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ReplaceRolePermissionsResponse"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/auth/roles/{roleId}/permissions/",
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "request": {
         "kind": "ref",
         "ref": "ReplaceRolePermissionsRequest"
@@ -25782,6 +25822,30 @@
       ]
     },
     {
+      "name": "AccountRolesResponse",
+      "go_type": "account.AccountRolesResponse",
+      "fields": [
+        {
+          "name": "roles",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "nullable": true,
+              "ref": "RoleResponse"
+            }
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "AccountTenantAccessEntry",
       "go_type": "operator.AccountTenantAccessEntry",
       "fields": [
@@ -25862,6 +25926,12 @@
               "kind": "ref",
               "ref": "AccountTenantRole"
             }
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -48153,6 +48223,13 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "expected_former_employment",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -56198,6 +56275,12 @@
             "kind": "ref",
             "nullable": true,
             "ref": "FormerEmploymentView"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -82225,6 +82308,13 @@
             "kind": "id",
             "nullable": true
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -82267,6 +82357,25 @@
             "elem": {
               "kind": "id"
             }
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ReplaceRolePermissionsResponse",
+      "go_type": "account.ReplaceRolePermissionsResponse",
+      "fields": [
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -83144,6 +83253,29 @@
           "name": "school_portal",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RolePermissionsResponse",
+      "go_type": "account.RolePermissionsResponse",
+      "fields": [
+        {
+          "name": "permissions",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "PermissionResponse"
+            }
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -110940,6 +111072,13 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "expected_fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -111016,6 +111155,12 @@
               "kind": "ref",
               "ref": "bulkInviteProblemResponse"
             }
+          }
+        },
+        {
+          "name": "fingerprint",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -127148,6 +127293,13 @@
           "optional": true,
           "schema": {
             "kind": "id"
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]

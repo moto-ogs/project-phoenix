@@ -323,6 +323,7 @@ describe("KontoTab", () => {
           { id: "2", name: "Betreuung", systemName: "user" },
         ],
         currentRoleIds: ["2"],
+        version: "roles-v1",
         currentIsLehrkraft: false,
       },
       onSave: vi.fn(() =>
@@ -372,6 +373,7 @@ describe("KontoTab", () => {
           { id: "2", name: "Betreuung", systemName: "user" },
         ],
         currentRoleIds: ["2"],
+        version: "roles-v1",
         currentIsLehrkraft: false,
       },
       onSave,
@@ -402,7 +404,45 @@ describe("KontoTab", () => {
         role_id: "1",
       }),
     );
-    expect(onSave).toHaveBeenLastCalledWith({ role_id: "1" });
+    expect(onSave).toHaveBeenLastCalledWith({
+      role_id: "1",
+      role_version: "roles-v1",
+    });
+  });
+
+  it("shows the stored role without a retry when the roles changed since reading", async () => {
+    const editing = editingProps({
+      canEditRole: true,
+      roleAssignment: {
+        options: [
+          { id: "1", name: "Administration", systemName: "admin" },
+          { id: "2", name: "Betreuung", systemName: "user" },
+        ],
+        currentRoleIds: ["2"],
+        version: "roles-v1",
+        currentIsLehrkraft: false,
+      },
+      onSave: vi.fn(() =>
+        Promise.reject(
+          new KontoRoleSaveError(
+            new ApiError("changed", 409, {
+              code: "general.changed_since_read",
+            }),
+          ),
+        ),
+      ),
+    });
+    render(<KontoTab teacher={teacher} editing={editing} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    const role = screen.getByLabelText("Rolle");
+    fireEvent.change(role, { target: { value: "1" } });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => expect(role).toHaveValue("2"));
+    expect(
+      screen.queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
   });
 
   it("sends the new system role only when it differs from the current one", async () => {
@@ -414,6 +454,7 @@ describe("KontoTab", () => {
           { id: "2", name: "Betreuung", systemName: "user" },
         ],
         currentRoleIds: ["2"],
+        version: "roles-v1",
         currentIsLehrkraft: false,
       },
     });
@@ -457,6 +498,7 @@ describe("KontoTab", () => {
           { id: "2", name: "Betreuung", systemName: "user" },
         ],
         currentRoleIds: ["2", "1"],
+        version: "roles-v1",
         currentIsLehrkraft: false,
       },
     });
@@ -479,7 +521,10 @@ describe("KontoTab", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await waitFor(() => {
-      expect(editing.onSave).toHaveBeenLastCalledWith({ role_id: "1" });
+      expect(editing.onSave).toHaveBeenLastCalledWith({
+        role_id: "1",
+        role_version: "roles-v1",
+      });
     });
   });
 
@@ -497,6 +542,7 @@ describe("KontoTab", () => {
           { id: "2", name: "Betreuung", systemName: "user" },
         ],
         currentRoleIds: ["9", "2"],
+        version: "roles-v1",
         currentIsLehrkraft: false,
       },
     });
@@ -519,7 +565,10 @@ describe("KontoTab", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await waitFor(() => {
-      expect(editing.onSave).toHaveBeenLastCalledWith({ role_id: "1" });
+      expect(editing.onSave).toHaveBeenLastCalledWith({
+        role_id: "1",
+        role_version: "roles-v1",
+      });
     });
   });
 
@@ -534,6 +583,7 @@ describe("KontoTab", () => {
           { id: "2", name: "Betreuung", systemName: "user" },
         ],
         currentRoleIds: ["2"],
+        version: "roles-v1",
         currentIsLehrkraft: false,
       },
     });
@@ -552,7 +602,57 @@ describe("KontoTab", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     await waitFor(() => {
-      expect(editing.onSave).toHaveBeenCalledWith({ role_id: "1" });
+      expect(editing.onSave).toHaveBeenCalledWith({
+        role_id: "1",
+        role_version: "roles-v1",
+      });
+    });
+  });
+
+  // ADR 0311: Die Rollen laden im Hintergrund neu, während die Person
+  // bearbeitet (eine Kollegin vergab inzwischen eine Rolle). Das Speichern
+  // trägt den Stand, den die Person beim Wählen sah, damit der Server den
+  // Wechsel ablehnt, statt die neue Rolle still zu entfernen.
+  it("sends the role version seen when the role was picked, not a later reload", async () => {
+    const assignment = (version: string, currentRoleIds: string[]) => ({
+      options: [
+        { id: "1", name: "Administration", systemName: "admin" },
+        { id: "2", name: "Betreuung", systemName: "user" },
+      ],
+      currentRoleIds,
+      version,
+      currentIsLehrkraft: false,
+    });
+    const editing = editingProps({
+      canEditPersonFields: false,
+      canEditStaffFields: false,
+      canEditRole: true,
+      roleAssignment: assignment("roles-v1", ["2"]),
+    });
+    const { rerender } = render(
+      <KontoTab teacher={teacher} editing={editing} />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    fireEvent.change(screen.getByLabelText("Rolle"), {
+      target: { value: "1" },
+    });
+    rerender(
+      <KontoTab
+        teacher={teacher}
+        editing={{
+          ...editing,
+          roleAssignment: assignment("roles-v2", ["2", "3"]),
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => {
+      expect(editing.onSave).toHaveBeenCalledWith({
+        role_id: "1",
+        role_version: "roles-v1",
+      });
     });
   });
 
@@ -566,6 +666,7 @@ describe("KontoTab", () => {
           roleAssignment: {
             options: [{ id: "1", name: "Administration", systemName: "admin" }],
             currentRoleIds: ["3"],
+            version: "roles-v1",
             currentIsLehrkraft: true,
           },
         })}

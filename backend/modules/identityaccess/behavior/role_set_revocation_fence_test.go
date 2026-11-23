@@ -96,8 +96,9 @@ func TestReplaceAccountRoleRevokesASessionMintedBeforeItsLock(t *testing.T) {
 		a.accountID, testpkg.Tenant(t), sha256Hex(fmt.Sprintf("fence-minted-%d", a.accountID)), fmt.Sprintf("fence-family-%d", a.accountID))
 	require.NoError(t, err)
 
+	version := accountRolesVersion(t, testpkg.Ctx(t), rbac, a.accountID)
 	done := make(chan error, 1)
-	go func() { done <- rbac.ReplaceAccountRole(testpkg.Ctx(t), a.accountID, a.target) }()
+	go func() { done <- rbac.ReplaceAccountRole(testpkg.Ctx(t), a.accountID, a.target, version) }()
 	waitForLockWaiters(t, db, 1)
 	require.NoError(t, mint.Commit())
 
@@ -126,8 +127,9 @@ func TestReplaceAccountRoleRefusesARenewalWaitingForItsLock(t *testing.T) {
 	_, err = holder.ExecContext(ctx, `SELECT 1 FROM auth.account_roles WHERE account_id = ? AND role_id = ? FOR UPDATE`, a.accountID, a.second)
 	require.NoError(t, err)
 
+	version := accountRolesVersion(t, testpkg.Ctx(t), rbac, a.accountID)
 	replaced := make(chan error, 1)
-	go func() { replaced <- rbac.ReplaceAccountRole(testpkg.Ctx(t), a.accountID, a.target) }()
+	go func() { replaced <- rbac.ReplaceAccountRole(testpkg.Ctx(t), a.accountID, a.target, version) }()
 	waitForLockWaiters(t, db, 1)
 	renewed := make(chan error, 1)
 	go func() {

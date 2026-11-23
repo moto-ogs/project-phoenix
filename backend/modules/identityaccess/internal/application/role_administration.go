@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // RoleAdministration runs role and permission management (#3314): role and
@@ -258,23 +259,34 @@ func (r *RoleAdministration) AssignRoleToAccount(ctx context.Context, accountID,
 // may revoke.
 //
 // The target is assigned first so the account never temporarily loses its
-// staff role; a later failure rolls back the complete exchange.
-func (r *RoleAdministration) ReplaceAccountRole(ctx context.Context, accountID, roleID int64) error {
+// staff role; a later failure rolls back the complete exchange. Roles
+// changed since the caller read expectedVersion are refused with
+// readstate.ErrChanged (ADR 0311): the exchange would otherwise remove a
+// role a colleague assigned meanwhile.
+func (r *RoleAdministration) ReplaceAccountRole(ctx context.Context, accountID, roleID int64, expectedVersion string) error {
 	return runFlowErr(ctx, r.flow(), func(ctx context.Context) error {
 		return r.runtime.RunInTx(ctx, func(txCtx context.Context) error {
-			return r.replaceAccountRoleInTx(txCtx, accountID, roleID)
+			return r.replaceAccountRoleInTx(txCtx, accountID, roleID, expectedVersion)
 		})
 	})
 }
 
 // replaceAccountRoleInTx assigns the role and removes the account's other
 // school roles inside the caller's transaction.
-func (r *RoleAdministration) replaceAccountRoleInTx(txCtx context.Context, accountID, roleID int64) error {
+func (r *RoleAdministration) replaceAccountRoleInTx(txCtx context.Context, accountID, roleID int64, expectedVersion string) error {
+	const op = "replace account role"
 	// Take the same account lock as single-role mutations before changing
 	// an assignment. This serializes replacements with individual
 	// assignments and removals for the same account.
-	if err := r.lockManageableAccount(txCtx, accountID, "replace account role"); err != nil {
+	if err := r.lockManageableAccount(txCtx, accountID, op); err != nil {
 		return err
+	}
+	read, err := r.store.ListAccountRoles(txCtx, accountID)
+	if err != nil {
+		return failed(op, err)
+	}
+	if err := readstate.Check(expectedVersion, identityaccess.AccountRolesVersion(publicRoles(read))); err != nil {
+		return failed(op, err)
 	}
 
 	if err := r.AssignRoleToAccount(txCtx, accountID, roleID); err != nil {
@@ -285,7 +297,7 @@ func (r *RoleAdministration) replaceAccountRoleInTx(txCtx context.Context, accou
 	// schools are never in it and never removed here.
 	current, err := r.store.ListAccountRoles(txCtx, accountID)
 	if err != nil {
-		return failed("replace account role", err)
+		return failed(op, err)
 	}
 	others := make([]int64, 0, len(current))
 	for _, role := range current {

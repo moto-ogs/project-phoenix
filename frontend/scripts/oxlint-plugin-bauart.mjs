@@ -1634,7 +1634,7 @@ const EDIT_OVERLAY_BASELINE = new Map(
       "Zwei-Faktor-Authentifizierung verwalten@328",
     ],
     "src/components/teachers/caregiver-capability-modal.tsx": [
-      "resolve Zuordnungen auflösen: Betreuung verwalten:@338",
+      "resolve Zuordnungen auflösen: Betreuung verwalten:@348",
     ],
   }),
 );

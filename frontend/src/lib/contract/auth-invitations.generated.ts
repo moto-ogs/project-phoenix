@@ -103,6 +103,7 @@ export interface CreateSchoolInvitationRequest {
   last_name?: string;
   position?: string;
   gender?: string;
+  expected_former_employment?: string;
 }
 
 /** Go: account.FormerEmploymentRequest */
@@ -128,10 +129,12 @@ export const FormerEmploymentViewSchema: z.ZodType<FormerEmploymentView, unknown
 /** Go: account.FormerEmploymentResponse */
 export interface FormerEmploymentResponse {
   former_employment: FormerEmploymentView | null;
+  version: string;
 }
 
 export const FormerEmploymentResponseSchema: z.ZodType<FormerEmploymentResponse, unknown> = object<FormerEmploymentResponse>({
   former_employment: nullable(FormerEmploymentViewSchema),
+  version: str,
 });
 
 /** Go: account.InvitationResendResponse */

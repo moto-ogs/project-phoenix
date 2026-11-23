@@ -159,7 +159,7 @@ func TestReplaceAccountRole_RejectsReplacingLehrkraftAccount(t *testing.T) {
 	testpkg.EnsureAccountTenant(t, db, account.ID, testpkg.Tenant(t))
 	require.NoError(t, admin.AssignRoleToAccount(ctx, account.ID, lehrkraftRoleID(t, db)))
 
-	err := admin.ReplaceAccountRole(ctx, account.ID, adminRoleID(t, db))
+	err := admin.ReplaceAccountRole(ctx, account.ID, adminRoleID(t, db), accountRolesVersion(t, ctx, admin, account.ID))
 	require.ErrorIs(t, err, identityaccess.ErrLehrkraftRoleImmutable)
 
 	roles, err := admin.GetAccountRoles(ctx, account.ID)
@@ -317,4 +317,15 @@ func TestRoleAdministration_GetAccountEmails(t *testing.T) {
 		assert.Len(t, result, 1)
 		assert.Equal(t, account.Email, result[account.ID])
 	})
+}
+
+// accountRolesVersion reads the version of the account's roles at the
+// school in ctx, as the staff file does before a role change (ADR 0311).
+func accountRolesVersion(t *testing.T, ctx context.Context, roles interface {
+	GetAccountRoles(context.Context, int64) ([]identityaccess.Role, error)
+}, accountID int64) string {
+	t.Helper()
+	held, err := roles.GetAccountRoles(ctx, accountID)
+	require.NoError(t, err)
+	return identityaccess.AccountRolesVersion(held)
 }

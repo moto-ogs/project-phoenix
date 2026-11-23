@@ -190,6 +190,7 @@ function access(overrides: Record<string, unknown> = {}) {
     hasPerson: true,
     hasStaff: true,
     roles: [{ id: "1", name: "admin", isSystem: true, baseRole: null }],
+    version: "roles-v1",
     ...overrides,
   };
 }
@@ -538,8 +539,33 @@ describe("AccountTenantAccessModal", () => {
     fireEvent.change(roleSelect, { target: { value: "2" } });
 
     await waitFor(() =>
-      expect(mockUpdateRole).toHaveBeenCalledWith("42", "2", "2"),
+      expect(mockUpdateRole).toHaveBeenCalledWith("42", "2", "2", "roles-v1"),
     );
+  });
+
+  it("reads the list again without a retry when the roles changed since reading", async () => {
+    mockUpdateRole.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    renderModal();
+    const roleSelect = await screen.findByLabelText("Rolle an OGS Nord");
+    mockList.mockResolvedValue([
+      access({
+        roles: [{ id: "2", name: "user", isSystem: false, baseRole: null }],
+        version: "roles-v2",
+      }),
+    ]);
+    fireEvent.change(roleSelect, { target: { value: "2" } });
+
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "die Rolle an OGS Nord"),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
+    await waitFor(() => expect(mockList).toHaveBeenCalledTimes(2));
   });
 
   it("warns that revoking the last school access deactivates the account", async () => {
