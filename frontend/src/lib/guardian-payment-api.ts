@@ -26,11 +26,15 @@ export interface GuardianPaymentPlain {
   guardianId: string;
   iban: string | null;
   accountHolder: string | null;
+  /** The token the edit that starts from this reveal saves back (ADR 0311). */
+  version: string;
 }
 
 export interface GuardianPaymentInput {
   iban: string | null;
   accountHolder: string | null;
+  /** The version of the revealed state the edit started from. */
+  expectedVersion: string;
 }
 
 export interface PaymentOverviewRow {
@@ -78,6 +82,7 @@ export async function revealGuardianPayment(
     guardianId: payment.guardian_id,
     iban: payment.iban,
     accountHolder: payment.account_holder,
+    version: payment.version,
   };
 }
 
@@ -87,7 +92,11 @@ export async function updateGuardianPayment(
 ): Promise<void> {
   await bffJson("tenant", "PUT /api/guardians/{id}/payment", {
     params: { id: guardianId },
-    body: { iban: input.iban, account_holder: input.accountHolder },
+    body: {
+      iban: input.iban,
+      account_holder: input.accountHolder,
+      expected_version: input.expectedVersion,
+    },
     errorMessage: "update guardian payment failed",
   });
 }

@@ -148,6 +148,9 @@ export interface GuardianWithRelationship extends Guardian {
   // mapGuardianWithRelationshipResponse), but omittable in test fixtures and
   // older payloads. Consumers default a missing value to "none".
   accountStatus?: GuardianAccountStatus;
+  // The token a save of the staff form sends back (ADR 0311); missing in
+  // test fixtures, where the server refuses the save as it would an empty one.
+  version?: string;
 }
 
 // Guardian Create/Update Request
@@ -306,6 +309,7 @@ export function mapGuardianWithRelationshipResponse(
     accountStatus:
       knownEnum(ACCOUNT_STATUSES, data.account_status) ??
       (guardian.has_account ? "active" : "none"),
+    version: data.version,
   };
 }
 

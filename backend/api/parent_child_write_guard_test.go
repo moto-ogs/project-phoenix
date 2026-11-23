@@ -851,7 +851,9 @@ func guardedWrites() []guardedWrite {
 			permissions: []string{permGuardianEdit},
 			prepare: func(t *testing.T, r *guardRig, f childReadFamily) childWrite {
 				r.set(t, map[string]any{"operations.parent_guardian_management_enabled": true})
-				return childWrite{http.MethodPut, childPath(f, fmt.Sprintf("/guardians/%d/contact", f.GuardianProfileID)), map[string]any{"first_name": "Sabine", "last_name": "Geändert", "phones": []any{}}}
+				return childWrite{http.MethodPut, childPath(f, fmt.Sprintf("/guardians/%d/contact", f.GuardianProfileID)), map[string]any{
+					"first_name": "Sabine", "last_name": "Geändert", "phones": []any{}, "expected_version": r.contactVersion(t, f),
+				}}
 			},
 		},
 		{

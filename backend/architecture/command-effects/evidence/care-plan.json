@@ -18569,38 +18569,6 @@
       "target_owner": "people-directory"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.DeleteGuardianPhone",
-      "binding_digest": "26582c87d8c4149f15e995e1d8ad260c",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.DeleteGuardianPhone",
-      "source_owner": "care-plan",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.DeleteGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.DeleteGuardianPhone",
-      "binding_digest": "b15084503e98d0866d279d7ad4e8c3e6",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.DeleteGuardianPhone",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.DeleteGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.DeleteGuardianPhone",
-      "binding_digest": "de8d9280b6b2a920e0493f121354acf1",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.DeleteGuardianPhone",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.DeleteGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.DeleteGuardianPhone",
-      "binding_digest": "de8d9280b6b2a920e0493f121354acf1",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.DeleteGuardianPhone",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.DeleteGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.DeleteGuardianPhoneRecord",
       "binding_digest": "9e4f4dfbc985f901f11a3542c3642407",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.DeleteGuardianPhoneRecord",
@@ -18950,38 +18918,6 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindGuardianLink",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.FindGuardianLink",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.FindGuardianPhone",
-      "binding_digest": "f3fb021db21cc688bb1eccba501600e9",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindGuardianPhone",
-      "source_owner": "care-plan",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.FindGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindGuardianPhone",
-      "binding_digest": "1cf0fa7677fe46b4ad7bb3e49f791d6b",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindGuardianPhone",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindGuardianPhone",
-      "binding_digest": "e27365882178f062628e26cbf5c3fbee",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindGuardianPhone",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.FindGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.FindGuardianPhone",
-      "binding_digest": "e27365882178f062628e26cbf5c3fbee",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindGuardianPhone",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.FindGuardianPhone",
       "target_owner": "people-directory"
     },
     {
@@ -21577,38 +21513,6 @@
       "target_owner": "people-directory"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.SetPrimaryGuardianPhone",
-      "binding_digest": "61cd82bdf8527f5518be03607609dbd1",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetPrimaryGuardianPhone",
-      "source_owner": "care-plan",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.SetPrimaryGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetPrimaryGuardianPhone",
-      "binding_digest": "6dea2d60296af4825f719eed8bad05af",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetPrimaryGuardianPhone",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetPrimaryGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetPrimaryGuardianPhone",
-      "binding_digest": "0055191a2d321c26c7215307aec12040",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetPrimaryGuardianPhone",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.SetPrimaryGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.SetPrimaryGuardianPhone",
-      "binding_digest": "0055191a2d321c26c7215307aec12040",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetPrimaryGuardianPhone",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.SetPrimaryGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.SetSchoolDayHint",
       "binding_digest": "d81ea02c788ec8e84caf08c1ee24c7b0",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetSchoolDayHint",
@@ -21865,6 +21769,38 @@
       "target_owner": "people-directory"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.UpdateGuardianEntry",
+      "binding_digest": "ec9ee336bdee2cf4823d976eef7844e1",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianEntry",
+      "source_owner": "care-plan",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.UpdateGuardianEntry",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianEntry",
+      "binding_digest": "db75515d87cbb7168829dd8351399def",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianEntry",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianEntry",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianEntry",
+      "binding_digest": "e830e83de5a8d0d9e84a5b7aaf3688b4",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianEntry",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardianEntry",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardianEntry",
+      "binding_digest": "e830e83de5a8d0d9e84a5b7aaf3688b4",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianEntry",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardianEntry",
+      "target_owner": "people-directory"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.UpdateGuardianLink",
       "binding_digest": "b8a45bf70cf919b4a3a744fccdf1c98b",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianLink",
@@ -21926,38 +21862,6 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianPayment",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardianPayment",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.UpdateGuardianPhone",
-      "binding_digest": "e7e3108e51e824b0d848f70c20d471dd",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianPhone",
-      "source_owner": "care-plan",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.UpdateGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianPhone",
-      "binding_digest": "fc5f95c530d98b65b99d495a66a1cd87",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianPhone",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianPhone",
-      "binding_digest": "c8e9f4525e23f86df1a13eab8a155ca6",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianPhone",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardianPhone",
-      "binding_digest": "c8e9f4525e23f86df1a13eab8a155ca6",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianPhone",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardianPhone",
       "target_owner": "people-directory"
     },
     {

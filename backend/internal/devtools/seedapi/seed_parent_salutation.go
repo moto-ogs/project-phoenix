@@ -5,7 +5,8 @@ import "fmt"
 // seedParentSalutation lets the demo parent choose a form of address for
 // their own profile (#7362), so the start page and the mails of the demo
 // greet with "Frau" and the last name. The contact write replaces the
-// profile's contact fields, so it sends back what the profile holds.
+// profile's contact fields, so it sends back what the profile holds, with the
+// version it read (ADR 0311).
 func seedParentSalutation(rt *Runtime, auth AuthRef, studentID int64) error {
 	raw, err := rt.Client.GetWithAuth(auth, fmt.Sprintf("/parent/me/children/%d/guardians", studentID))
 	if err != nil {
@@ -21,7 +22,7 @@ func seedParentSalutation(rt *Runtime, auth AuthRef, studentID int64) error {
 		if self, _ := guardian["is_self"].(bool); !self {
 			continue
 		}
-		body := map[string]any{"salutation": "ms", "phones": []any{}}
+		body := map[string]any{"salutation": "ms", "phones": []any{}, "expected_version": guardian["version"]}
 		for _, key := range []string{"first_name", "last_name", "email", "address_street", "address_city", "address_postal_code", "phones"} {
 			if value, ok := guardian[key]; ok {
 				body[key] = value

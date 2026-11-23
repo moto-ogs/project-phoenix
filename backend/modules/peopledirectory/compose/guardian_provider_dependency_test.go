@@ -6,17 +6,18 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	peoplePorts "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
-type primaryPhoneGuardians struct {
+type linkUpdateGuardians struct {
 	peoplePorts.GuardianService
 	primary *[]int64
 }
 
-func (s primaryPhoneGuardians) SetPrimaryPhone(_ context.Context, phoneID int64) error {
-	*s.primary = append(*s.primary, phoneID)
+func (s linkUpdateGuardians) UpdateStudentGuardianRelationship(_ context.Context, relationshipID int64, _ peoplePorts.StudentGuardianUpdateRequest) error {
+	*s.primary = append(*s.primary, relationshipID)
 	return nil
 }
 
@@ -38,17 +39,17 @@ func TestNew_TakesTheGuardianProvider(t *testing.T) {
 	var primary []int64
 	runs := 0
 	deps.GuardianProvider = &GuardianDirectoryProvider{
-		Guardians: primaryPhoneGuardians{primary: &primary}, Runtime: directTenantTx{runs: &runs},
+		Guardians: linkUpdateGuardians{primary: &primary}, Runtime: directTenantTx{runs: &runs},
 		PermissionGranted: func(any) bool { return true },
 	}
 	module, err := New(deps, nil)
 	require.NoError(t, err)
-	phoneID := int64(len(t.Name()))
-	require.NoError(t, module.SetPrimaryGuardianPhone(context.Background(), phoneID))
-	require.Equal(t, []int64{phoneID}, primary)
+	linkID := int64(len(t.Name()))
+	require.NoError(t, module.UpdateGuardianLink(context.Background(), linkID, peopledirectory.GuardianLinkUpdate{}))
+	require.Equal(t, []int64{linkID}, primary)
 	require.Equal(t, 1, runs)
 
-	deps.GuardianProvider = &GuardianDirectoryProvider{Guardians: primaryPhoneGuardians{primary: &primary}, Runtime: directTenantTx{runs: &runs}}
+	deps.GuardianProvider = &GuardianDirectoryProvider{Guardians: linkUpdateGuardians{primary: &primary}, Runtime: directTenantTx{runs: &runs}}
 	_, err = New(deps, nil)
 	require.ErrorContains(t, err, "guardian provider needs")
 }
