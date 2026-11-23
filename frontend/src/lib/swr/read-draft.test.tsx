@@ -515,4 +515,43 @@ describe("useReadDraft", () => {
     expect(result.current.status).toBe("ready");
     expect(result.current.token).toBe("3");
   });
+
+  // Input typed after a save whose read failed rests on the saved draft:
+  // a read that brings exactly that draft keeps it; any other stored state
+  // replaces it.
+  it("keeps input typed after a save when the read brings what was saved", async () => {
+    const reload = vi.fn(async () => {
+      throw new Error("offline");
+    });
+    const { result, rerender } = renderHook(
+      ({ row }: { row: Stored }) =>
+        useDraftOn<Stored, string, string, unknown>(
+          { opening: "row-5", data: row, reload },
+          { token: (read) => read.version, toDraft: (read) => read.name },
+        ),
+      { initialProps: { row: { version: "1", name: "Anna" } } },
+    );
+    act(() => result.current.setDraft("Hanna"));
+    await act(async () => {
+      await result.current.submit(async () => undefined);
+    });
+    expect(result.current.status).toBe("loadFailed");
+    act(() => result.current.setDraft("Hannah"));
+
+    rerender({ row: { version: "2", name: "Hanna" } });
+    expect(result.current.status).toBe("ready");
+    expect(result.current.token).toBe("2");
+    expect(result.current.draft).toBe("Hannah");
+    expect(result.current.touched).toBe(true);
+
+    // A colleague's state instead of the saved one replaces the input.
+    act(() => result.current.setDraft("Hanna B."));
+    await act(async () => {
+      await result.current.submit(async () => undefined);
+    });
+    act(() => result.current.setDraft("Hanna C."));
+    rerender({ row: { version: "3", name: "Anne" } });
+    expect(result.current.draft).toBe("Anne");
+    expect(result.current.touched).toBe(false);
+  });
 });
