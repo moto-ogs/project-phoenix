@@ -22,7 +22,7 @@ func TestCareMonthlyRunHoldsAChildAnIssuedInvoiceAlreadyBills(t *testing.T) {
 	f := newCareBillingFixture(t, "Träger Monatsbeitrag Schon abgerechnet")
 	school := f.office.schools[0]
 	withdrawn := careContract(t, f.db, f.office.organization, school, "Noah", careMonth, sjrServices()...)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	first := f.startRun(t, careMonth)
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(first.ID), "/release"), careRelease(f.run(t, int64(first.ID))))
@@ -131,7 +131,7 @@ func TestCareMonthlyRunHoldsAChildAJahresbescheidOfItsOldSchoolBills(t *testing.
 			record, f.office.organization, contract).Exec(ctx)
 		require.NoError(t, err)
 	}
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(next, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(next, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunsPath,
