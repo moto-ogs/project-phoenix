@@ -1042,6 +1042,7 @@ export const portalRoutes = {
     authAccounts["DELETE /auth/accounts/{accountId}/mfa/"],
     authAccounts["GET /auth/accounts/{accountId}/caregiver-capability"],
     authAccounts["GET /auth/accounts/{accountId}/mfa/"],
+    authAccounts["GET /auth/accounts/{accountId}/role-selection/"],
     authAccounts["GET /auth/accounts/{accountId}/roles/"],
     authAccounts["POST /auth/accounts/{accountId}/caregiver-capability"],
     authAccounts["PUT /auth/accounts/{accountId}/mfa/override"],

@@ -127,11 +127,13 @@ func TestInvitationEmploymentChoice(t *testing.T) {
 	}
 }
 
-// TestInvitationDialogWithoutChoiceRefusesAFormerEmployment: the Einladen
-// dialog sends no choice when its read found no former employment. If one
-// exists by the time it saves, the invitation is refused (ADR 0311) instead
-// of resuming the employment with every reset off.
-func TestInvitationDialogWithoutChoiceRefusesAFormerEmployment(t *testing.T) {
+// TestInvitationDialogChecksTheFormerEmploymentItRead: the Einladen dialog
+// sends the version of the former-employment answer it decided on. An answer
+// that changed since (here: "none" read, a former employment by now) refuses
+// the invitation (ADR 0311) instead of resuming the employment unasked. An
+// invitation without a version, because the lookup failed or timed out,
+// keeps the ADR 0021 default and goes through.
+func TestInvitationDialogChecksTheFormerEmploymentItRead(t *testing.T) {
 	t.Parallel()
 	testpkg.OwnTenant(t)
 	db := testpkg.SetupTestDB(t)
@@ -140,6 +142,20 @@ func TestInvitationDialogWithoutChoiceRefusesAFormerEmployment(t *testing.T) {
 	require.NoError(t, err)
 	invitations := module.Invitation
 	former, account := testpkg.CreateTestStaffWithAccount(t, db, "Returning", "Member")
+	lookup := func() (identityaccess.FormerEmployment, bool) {
+		t.Helper()
+		var answer identityaccess.FormerEmployment
+		var found bool
+		require.NoError(t, testpkg.WithinTenantContext(t, ctx, db, testpkg.Tenant(t), func(txCtx context.Context) error {
+			var findErr error
+			answer, found, findErr = invitations.FindFormerEmployment(txCtx, account.Email)
+			return findErr
+		}))
+		require.NotEmpty(t, answer.Version, "every answer carries its version")
+		return answer, found
+	}
+	none, found := lookup()
+	require.False(t, found, "an active employment is not a former one")
 	_, err = db.ExecContext(ctx, `UPDATE users.staff_school_memberships SET deleted_at = now() WHERE id = ?`, former.ID)
 	require.NoError(t, err)
 	_, err = db.ExecContext(ctx, `UPDATE auth.account_tenants SET status = 'inactive', deactivated_at = now() WHERE account_id = ? AND tenant_id = ?`, account.ID, testpkg.Tenant(t))
@@ -147,7 +163,7 @@ func TestInvitationDialogWithoutChoiceRefusesAFormerEmployment(t *testing.T) {
 	role := testpkg.CreateTestRole(t, db, "returning-dialog")
 	creator := testpkg.CreateTestAccount(t, db, "dialog-inviter")
 	request := identityaccess.SchoolInvitationRequest{
-		Email: account.Email, RoleID: role.ID, CreatedBy: creator.ID, FormerEmploymentAsked: true,
+		Email: account.Email, RoleID: role.ID, CreatedBy: creator.ID, ExpectedFormerEmployment: none.Version,
 		ActorPermissions: []string{usersManagePermission},
 	}
 
@@ -157,8 +173,17 @@ func TestInvitationDialogWithoutChoiceRefusesAFormerEmployment(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, pending, "a refused invitation leaves no link behind")
 
-	request.EmploymentAction = identityaccess.EmploymentActionResume
+	request.ExpectedFormerEmployment = ""
 	invitation, err := invitations.CreateSchoolInvitation(ctx, request)
-	require.NoError(t, err)
+	require.NoError(t, err, "without a read answer the dialog can still invite")
 	require.Equal(t, identityaccess.EmploymentActionResume, invitation.EmploymentAction)
+
+	current, found := lookup()
+	require.True(t, found)
+	require.NotEqual(t, none.Version, current.Version)
+	request.ExpectedFormerEmployment = current.Version
+	request.EmploymentAction = identityaccess.EmploymentActionNew
+	invitation, err = invitations.CreateSchoolInvitation(ctx, request)
+	require.NoError(t, err)
+	require.Equal(t, identityaccess.EmploymentActionNew, invitation.EmploymentAction)
 }

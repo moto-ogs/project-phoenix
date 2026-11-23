@@ -19,6 +19,7 @@ import {
 } from "~/lib/account-role-assignment";
 import { getRoleDisplayName } from "~/lib/auth-helpers";
 import { useApiFormError } from "~/contexts/ToastContext";
+import { isChangedSinceRead } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import { displayEmail } from "~/lib/demo-build";
 import { useClipboardCopy } from "~/lib/use-clipboard-copy";
@@ -219,7 +220,16 @@ export function KontoTab({ teacher, editing }: KontoTabProps) {
         error: err instanceof Error ? err.message : String(err),
       });
       const roleOnly = err instanceof KontoRoleSaveError;
-      await errors.show(roleOnly ? err.cause : err, {
+      const cause = roleOnly ? err.cause : err;
+      if (roleOnly && isChangedSinceRead(cause)) {
+        // Die Rollen haben sich seit dem Lesen geändert (ADR 0311): Das Feld
+        // zeigt wieder die gespeicherte Rolle, die die Seite neu liest. Ein
+        // „Wiederholen“ schickte nur denselben veralteten Stand.
+        patchDraft({ roleId: "" });
+        await errors.show(cause, { object: "die Rolle" });
+        return;
+      }
+      await errors.show(cause, {
         object: roleOnly ? "die Rolle" : "das Konto",
         // Der Datensatz ist bei KontoRoleSaveError bereits gespeichert. Der
         // aktuelle Rollenentwurf geht noch einmal raus, ohne Name, Position

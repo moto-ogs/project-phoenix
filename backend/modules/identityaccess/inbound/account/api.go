@@ -372,6 +372,9 @@ func (rs *Resource) mountTransactionalAccountRoutes(r chi.Router) {
 		r.With(common.RequiresPermission(permUsersManage)).Get("/", rs.getAccountRoles)
 		r.With(common.RequiresPermission(permUsersManage)).Put("/", rs.replaceAccountRole)
 	})
+	r.Route("/role-selection", func(r chi.Router) {
+		r.With(common.RequiresPermission(permUsersManage)).Get("/", rs.getAccountRoleSelection)
+	})
 
 	// MFA admin override ("Godmode") — issue #1308 Phase 6.
 	// users:manage at the route layer; the service does its own

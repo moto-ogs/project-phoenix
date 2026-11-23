@@ -1322,7 +1322,7 @@ func TestAuthService_ReplaceAccountRole(t *testing.T) {
 	require.NoError(t, rbac.AssignRoleToAccount(ctx, account.ID, oldRole.ID))
 	require.NoError(t, rbac.AssignRoleToAccount(ctx, account.ID, extraRole.ID))
 
-	require.NoError(t, rbac.ReplaceAccountRole(ctx, account.ID, newRole.ID))
+	require.NoError(t, rbac.ReplaceAccountRole(ctx, account.ID, newRole.ID, accountRolesVersion(t, ctx, rbac, account.ID)))
 
 	roles, err := rbac.GetAccountRoles(ctx, account.ID)
 	require.NoError(t, err)
@@ -1331,15 +1331,16 @@ func TestAuthService_ReplaceAccountRole(t *testing.T) {
 	// Replacing with a role the account already holds keeps that role and
 	// still drops every other staff role.
 	require.NoError(t, rbac.AssignRoleToAccount(ctx, account.ID, extraRole.ID))
-	require.NoError(t, rbac.ReplaceAccountRole(ctx, account.ID, newRole.ID))
+	require.NoError(t, rbac.ReplaceAccountRole(ctx, account.ID, newRole.ID, accountRolesVersion(t, ctx, rbac, account.ID)))
 
 	roles, err = rbac.GetAccountRoles(ctx, account.ID)
 	require.NoError(t, err)
 	assert.ElementsMatch(t, []int64{guardianRole.ID, newRole.ID}, roleIDs(roles))
 
 	sentinelErr := errors.New("force outer rollback")
+	version := accountRolesVersion(t, ctx, rbac, account.ID)
 	err = testpkg.RunInTenantTransaction(ctx, func(txCtx context.Context) error {
-		if err := rbac.ReplaceAccountRole(txCtx, account.ID, oldRole.ID); err != nil {
+		if err := rbac.ReplaceAccountRole(txCtx, account.ID, oldRole.ID, version); err != nil {
 			return err
 		}
 		return sentinelErr
@@ -1543,7 +1544,8 @@ func TestAuthService_ReplaceRolePermissions(t *testing.T) {
 
 	read, err := rbac.GetRolePermissions(ctx, role.ID)
 	require.NoError(t, err)
-	require.NoError(t, rbac.ReplaceRolePermissions(ctx, role.ID, []int64{newPermission.ID}, read.Version))
+	_, err = rbac.ReplaceRolePermissions(ctx, role.ID, []int64{newPermission.ID}, read.Version)
+	require.NoError(t, err)
 
 	selection, err := rbac.GetRolePermissions(ctx, role.ID)
 	require.NoError(t, err)
@@ -1553,7 +1555,7 @@ func TestAuthService_ReplaceRolePermissions(t *testing.T) {
 
 	sentinelErr := errors.New("force outer rollback")
 	err = testpkg.RunInTenantTransaction(ctx, func(txCtx context.Context) error {
-		if err := rbac.ReplaceRolePermissions(txCtx, role.ID, []int64{oldPermission.ID}, selection.Version); err != nil {
+		if _, err := rbac.ReplaceRolePermissions(txCtx, role.ID, []int64{oldPermission.ID}, selection.Version); err != nil {
 			return err
 		}
 		return sentinelErr

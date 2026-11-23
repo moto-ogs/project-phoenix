@@ -47,7 +47,10 @@ const {
   mockGetRolePermissions: vi.fn((): Promise<RolePermissions> =>
     Promise.resolve({ permissions: [], version: "v0" }),
   ),
-  mockReplaceRolePermissions: vi.fn(() => Promise.resolve()),
+  mockReplaceRolePermissions: vi.fn(
+    (_roleId: string, _ids: readonly string[], _version: string) =>
+      Promise.resolve("v-saved"),
+  ),
 }));
 
 vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
@@ -414,6 +417,47 @@ describe("RolePermissionsTab", () => {
     expect(screen.getByLabelText("rooms:read")).toBeEnabled();
     expect(mockReplaceRolePermissions).toHaveBeenCalledTimes(1);
     expect(onSaved).toHaveBeenCalledOnce();
+  });
+
+  it("saves again on the version the save answered when the reload fails", async () => {
+    mockGetRolePermissions
+      .mockReset()
+      .mockResolvedValueOnce(selection([allPermissions[0]!]))
+      .mockRejectedValue(
+        new ApiError("down", 503, { code: "general.unavailable" }),
+      );
+    render(
+      <RolePermissionsTab
+        role={role}
+        editing
+        onSaved={onSaved}
+        onCancelEdit={onCancelEdit}
+      />,
+    );
+    await screen.findByText("1 von 3 Berechtigungen ausgewählt.");
+    fireEvent.click(screen.getByLabelText("rooms:read"));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(
+      await screen.findByText(
+        `${catalogText("general.unavailable", "die Anzeige der Berechtigungen")} ${SAVED_BUT_STALE_SUFFIX}`,
+      ),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByLabelText("students:update")).toBeEnabled(),
+    );
+
+    // The reload failed, so the cache holds the version the save answered,
+    // never an empty one that the next save would send into a false 409.
+    fireEvent.click(screen.getByLabelText("students:update"));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(mockReplaceRolePermissions).toHaveBeenCalledTimes(2),
+    );
+    expect(mockReplaceRolePermissions).toHaveBeenLastCalledWith(
+      role.id,
+      ["p1", "p2", "p3"],
+      "v-saved",
+    );
   });
 
   it("toggles a whole resource group and filters by search", async () => {

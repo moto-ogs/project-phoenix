@@ -210,25 +210,51 @@ func (rs *Resource) listRoles(w http.ResponseWriter, r *http.Request) {
 	common.Respond(w, r, http.StatusOK, responses, "Roles retrieved successfully")
 }
 
-// getAccountRoles handles getting roles for an account
+// getAccountRoles answers the account's roles as a list. Deprecated for one
+// release (ADR 0270): the role selection carries the version a replacement
+// needs.
 func (rs *Resource) getAccountRoles(w http.ResponseWriter, r *http.Request) {
-	accountID, ok := common.ParseIntIDWithError(w, r, "accountId", common.MsgInvalidAccountID)
+	roles, ok := rs.readAccountRoles(w, r)
 	if !ok {
 		return
 	}
+	common.Respond(w, r, http.StatusOK, toRoleResponses(roles), "Account roles retrieved successfully")
+}
 
+// getAccountRoleSelection answers the account's roles at this school with
+// the version PUT /accounts/{accountId}/roles/ sends back as
+// expected_version (ADR 0311).
+func (rs *Resource) getAccountRoleSelection(w http.ResponseWriter, r *http.Request) {
+	roles, ok := rs.readAccountRoles(w, r)
+	if !ok {
+		return
+	}
+	common.Respond(w, r, http.StatusOK, AccountRolesResponse{
+		Roles: toRoleResponses(roles), Version: identityaccess.AccountRolesVersion(roles),
+	}, "Account roles retrieved successfully")
+}
+
+// readAccountRoles reads the roles of the account in the route; a failure is
+// answered.
+func (rs *Resource) readAccountRoles(w http.ResponseWriter, r *http.Request) ([]identityaccess.Role, bool) {
+	accountID, ok := common.ParseIntIDWithError(w, r, "accountId", common.MsgInvalidAccountID)
+	if !ok {
+		return nil, false
+	}
 	roles, err := rs.Sessions.GetAccountRoles(r.Context(), int64(accountID))
 	if err != nil {
 		common.RenderError(w, r, accountRoleErrorRenderer(err))
-		return
+		return nil, false
 	}
+	return roles, true
+}
 
+func toRoleResponses(roles []identityaccess.Role) []*RoleResponse {
 	responses := make([]*RoleResponse, 0, len(roles))
 	for _, role := range roles {
 		responses = append(responses, toRoleResponse(role))
 	}
-
-	common.Respond(w, r, http.StatusOK, responses, "Account roles retrieved successfully")
+	return responses
 }
 
 // replaceAccountRole makes one approved target role the account's only staff
@@ -250,7 +276,7 @@ func (rs *Resource) replaceAccountRole(w http.ResponseWriter, r *http.Request) {
 	if abort {
 		return
 	}
-	if err := rs.Sessions.ReplaceAccountRole(r.Context(), int64(accountID), *approvedRoleID); err != nil {
+	if err := rs.Sessions.ReplaceAccountRole(r.Context(), int64(accountID), *approvedRoleID, req.ExpectedVersion); err != nil {
 		rs.renderAccountRoleMutationError(w, r, err)
 		return
 	}
@@ -355,11 +381,13 @@ func (rs *Resource) replaceRolePermissions(w http.ResponseWriter, r *http.Reques
 	for i, permissionID := range req.PermissionIDs {
 		permissionIDs[i] = permissionID.Int64()
 	}
-	if err := rs.Sessions.ReplaceRolePermissions(r.Context(), int64(roleID), permissionIDs, req.ExpectedVersion); err != nil {
+	version, err := rs.Sessions.ReplaceRolePermissions(r.Context(), int64(roleID), permissionIDs, req.ExpectedVersion)
+	if err != nil {
 		rs.markRollback(r.Context())
 		common.RenderError(w, r, renderRoleMutationError(err))
 		return
 	}
-
-	common.RespondNoContent(w, r)
+	// The stored selection's version lets the next save follow without a
+	// fresh read, even when the reload after this save fails.
+	common.Respond(w, r, http.StatusOK, ReplaceRolePermissionsResponse{Version: version}, "Role permissions replaced successfully")
 }

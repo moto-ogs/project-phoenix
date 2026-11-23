@@ -41,7 +41,8 @@ func TestRoleChangesRevokeEveryHolderSession(t *testing.T) {
 					if err != nil {
 						return err
 					}
-					return rbac.ReplaceRolePermissions(ctx, role.ID, nil, read.Version)
+					_, err = rbac.ReplaceRolePermissions(ctx, role.ID, nil, read.Version)
+					return err
 				default:
 					return rbac.RemovePermissionFromRole(ctx, role.ID, permission.ID)
 				}

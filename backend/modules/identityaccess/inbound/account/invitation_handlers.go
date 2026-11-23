@@ -36,6 +36,11 @@ type CreateSchoolInvitationRequest struct {
 	Position            string                          `json:"position"`
 	// Gender is the optional Stammdaten gender; empty leaves it unset.
 	Gender string `json:"gender"`
+	// ExpectedFormerEmployment is the version of the former-employment
+	// answer the dialog decided on; the invitation is refused with
+	// general.changed_since_read when the answer differs by now. Empty when
+	// no lookup succeeded: the ADR 0021 default applies.
+	ExpectedFormerEmployment string `json:"expected_former_employment,omitempty"`
 }
 
 func (req *CreateSchoolInvitationRequest) Bind(_ *http.Request) error {
@@ -145,11 +150,9 @@ func (rs *Resource) createInvitation(w http.ResponseWriter, r *http.Request) {
 // copying the optional name/position fields.
 func (rs *Resource) buildInvitationRequest(r *http.Request, req *CreateSchoolInvitationRequest, claims sessiontoken.AppClaims) identityaccess.SchoolInvitationRequest {
 	invitationReq := identityaccess.SchoolInvitationRequest{
-		// The Einladen dialog asks for the choice whenever its read found a
-		// former employment; an empty choice says it found none.
-		FormerEmploymentAsked: true,
-		EmploymentAction:      req.EmploymentAction,
-		ResetMasterData:       req.ResetMasterData, ResetQualifications: req.ResetQualifications, ResetWorkTime: req.ResetWorkTime,
+		ExpectedFormerEmployment: strings.TrimSpace(req.ExpectedFormerEmployment),
+		EmploymentAction:         req.EmploymentAction,
+		ResetMasterData:          req.ResetMasterData, ResetQualifications: req.ResetQualifications, ResetWorkTime: req.ResetWorkTime,
 		Email:            req.Email,
 		RoleID:           req.RoleID.Int64(),
 		CreatedBy:        int64(claims.ID),
@@ -259,9 +262,11 @@ func (req *FormerEmploymentRequest) Bind(_ *http.Request) error {
 }
 
 // FormerEmploymentResponse answers the Einladen dialog (#3402): the former
-// employment an invitation would continue, or null.
+// employment an invitation would continue, or null, and the version of that
+// answer, which the invitation sends back as expected_former_employment.
 type FormerEmploymentResponse struct {
 	FormerEmployment *FormerEmploymentView `json:"former_employment"`
+	Version          string                `json:"version"`
 }
 
 // FormerEmploymentView is a former employment on the wire; the parts are
@@ -289,7 +294,7 @@ func (rs *Resource) findFormerEmployment(w http.ResponseWriter, r *http.Request)
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
-	response := FormerEmploymentResponse{}
+	response := FormerEmploymentResponse{Version: former.Version}
 	if found {
 		response.FormerEmployment = &FormerEmploymentView{
 			StartedOn: former.StartedOn.String(), EndedOn: former.EndedOn.String(),

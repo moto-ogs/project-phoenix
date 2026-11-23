@@ -323,6 +323,7 @@ describe("KontoTab", () => {
           { id: "2", name: "Betreuung", systemName: "user" },
         ],
         currentRoleIds: ["2"],
+        version: "roles-v1",
         currentIsLehrkraft: false,
       },
       onSave: vi.fn(() =>
@@ -372,6 +373,7 @@ describe("KontoTab", () => {
           { id: "2", name: "Betreuung", systemName: "user" },
         ],
         currentRoleIds: ["2"],
+        version: "roles-v1",
         currentIsLehrkraft: false,
       },
       onSave,
@@ -405,6 +407,41 @@ describe("KontoTab", () => {
     expect(onSave).toHaveBeenLastCalledWith({ role_id: "1" });
   });
 
+  it("shows the stored role without a retry when the roles changed since reading", async () => {
+    const editing = editingProps({
+      canEditRole: true,
+      roleAssignment: {
+        options: [
+          { id: "1", name: "Administration", systemName: "admin" },
+          { id: "2", name: "Betreuung", systemName: "user" },
+        ],
+        currentRoleIds: ["2"],
+        version: "roles-v1",
+        currentIsLehrkraft: false,
+      },
+      onSave: vi.fn(() =>
+        Promise.reject(
+          new KontoRoleSaveError(
+            new ApiError("changed", 409, {
+              code: "general.changed_since_read",
+            }),
+          ),
+        ),
+      ),
+    });
+    render(<KontoTab teacher={teacher} editing={editing} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    const role = screen.getByLabelText("Rolle");
+    fireEvent.change(role, { target: { value: "1" } });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => expect(role).toHaveValue("2"));
+    expect(
+      screen.queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("sends the new system role only when it differs from the current one", async () => {
     const editing = editingProps({
       canEditRole: true,
@@ -414,6 +451,7 @@ describe("KontoTab", () => {
           { id: "2", name: "Betreuung", systemName: "user" },
         ],
         currentRoleIds: ["2"],
+        version: "roles-v1",
         currentIsLehrkraft: false,
       },
     });
@@ -457,6 +495,7 @@ describe("KontoTab", () => {
           { id: "2", name: "Betreuung", systemName: "user" },
         ],
         currentRoleIds: ["2", "1"],
+        version: "roles-v1",
         currentIsLehrkraft: false,
       },
     });
@@ -497,6 +536,7 @@ describe("KontoTab", () => {
           { id: "2", name: "Betreuung", systemName: "user" },
         ],
         currentRoleIds: ["9", "2"],
+        version: "roles-v1",
         currentIsLehrkraft: false,
       },
     });
@@ -534,6 +574,7 @@ describe("KontoTab", () => {
           { id: "2", name: "Betreuung", systemName: "user" },
         ],
         currentRoleIds: ["2"],
+        version: "roles-v1",
         currentIsLehrkraft: false,
       },
     });
@@ -566,6 +607,7 @@ describe("KontoTab", () => {
           roleAssignment: {
             options: [{ id: "1", name: "Administration", systemName: "admin" }],
             currentRoleIds: ["3"],
+            version: "roles-v1",
             currentIsLehrkraft: true,
           },
         })}

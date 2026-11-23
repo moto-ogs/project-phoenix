@@ -44,9 +44,11 @@ func TestRolePermissionPersistence(t *testing.T) {
 	// leaves its existing grants intact.
 	read, err := rbac.GetRolePermissions(ctx, first.ID)
 	require.NoError(t, err)
-	require.Error(t, rbac.ReplaceRolePermissions(ctx, first.ID, []int64{0}, read.Version))
+	_, err = rbac.ReplaceRolePermissions(ctx, first.ID, []int64{0}, read.Version)
+	require.Error(t, err)
 	assertPermissions(first.ID, shared.ID, kept.ID)
-	require.NoError(t, rbac.ReplaceRolePermissions(ctx, first.ID, []int64{kept.ID}, read.Version))
+	_, err = rbac.ReplaceRolePermissions(ctx, first.ID, []int64{kept.ID}, read.Version)
+	require.NoError(t, err)
 	assertPermissions(first.ID, kept.ID)
 	assertPermissions(second.ID, shared.ID)
 	require.NoError(t, rbac.AssignPermissionToRole(ctx, first.ID, shared.ID))

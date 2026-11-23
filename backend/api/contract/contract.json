@@ -7796,10 +7796,22 @@
     },
     {
       "method": "GET",
+      "pattern": "/auth/accounts/{accountId}/role-selection/",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "AccountRolesResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/auth/accounts/{accountId}/roles/",
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "response": {
         "kind": "array",
         "elem": {
@@ -22361,7 +22373,10 @@
         "kind": "ref",
         "ref": "ReplaceRolePermissionsRequest"
       },
-      "no_data": true
+      "response": {
+        "kind": "ref",
+        "ref": "ReplaceRolePermissionsResponse"
+      }
     },
     {
       "method": "PUT",
@@ -25705,6 +25720,30 @@
           "schema": {
             "kind": "ref",
             "ref": "SchoolIdentityResponse"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AccountRolesResponse",
+      "go_type": "account.AccountRolesResponse",
+      "fields": [
+        {
+          "name": "roles",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "nullable": true,
+              "ref": "RoleResponse"
+            }
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -47811,6 +47850,13 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "expected_former_employment",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -55843,6 +55889,12 @@
             "kind": "ref",
             "nullable": true,
             "ref": "FormerEmploymentView"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -81708,6 +81760,13 @@
             "kind": "id",
             "nullable": true
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -81748,6 +81807,18 @@
         {
           "name": "expected_version",
           "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ReplaceRolePermissionsResponse",
+      "go_type": "account.ReplaceRolePermissionsResponse",
+      "fields": [
+        {
+          "name": "version",
           "schema": {
             "kind": "string"
           }

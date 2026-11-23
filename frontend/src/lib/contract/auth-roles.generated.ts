@@ -47,6 +47,15 @@ export interface ReplaceRolePermissionsRequest {
   expected_version?: string;
 }
 
+/** Go: account.ReplaceRolePermissionsResponse */
+export interface ReplaceRolePermissionsResponse {
+  version: string;
+}
+
+export const ReplaceRolePermissionsResponseSchema: z.ZodType<ReplaceRolePermissionsResponse, unknown> = object<ReplaceRolePermissionsResponse>({
+  version: str,
+});
+
 /** Query of GET /auth/roles/ */
 export interface GetAuthRolesQuery {
   name?: string;
@@ -104,6 +113,6 @@ export const routes = {
     pattern: "/auth/roles/{roleId}/permissions/",
     portals: ["tenant"],
     request: requestBody<ReplaceRolePermissionsRequest>(),
-    response: noData,
+    response: success(ReplaceRolePermissionsResponseSchema),
   },
 } as const;

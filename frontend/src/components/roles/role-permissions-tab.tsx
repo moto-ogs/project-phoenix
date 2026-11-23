@@ -293,8 +293,9 @@ export function RolePermissionsTab({
       .map((permission) => permission.id);
     setSaving(true);
     clearSaveError();
+    let storedSelectionVersion: string;
     try {
-      await authService.replaceRolePermissions(
+      storedSelectionVersion = await authService.replaceRolePermissions(
         role.id,
         permissionIds,
         draft?.version ?? storedVersion,
@@ -324,15 +325,15 @@ export function RolePermissionsTab({
       setSaving(false);
       return;
     }
-    // The write confirms this selection even if the following reads fail;
-    // its version is unknown until the reload below.
+    // The write confirms this selection and answers its version, so the
+    // next save holds a real token even if the following reads fail.
     setDraft(null);
     await mutateAssigned(
       {
         permissions: allPermissions.filter(
           (permission) => draftMap[permission.id] === true,
         ),
-        version: "",
+        version: storedSelectionVersion,
       },
       { revalidate: false },
     );

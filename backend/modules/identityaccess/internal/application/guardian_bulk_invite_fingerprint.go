@@ -28,7 +28,7 @@ type bulkInviteGuardianState struct {
 	Missing         bool                       `json:"missing,omitempty"`
 	Email           string                     `json:"email,omitempty"`
 	HasAccount      bool                       `json:"has_account,omitempty"`
-	ExistingAccount int64                      `json:"existing_account,omitempty"`
+	ExistingAccount bool                       `json:"existing_account,omitempty"`
 	MailBlock       string                     `json:"mail_block,omitempty"`
 	Open            []bulkInviteOpenInvitation `json:"open,omitempty"`
 }
@@ -56,7 +56,10 @@ func bulkInviteFingerprint(req identityaccess.BulkInviteRequest, restricted int,
 		email := strings.ToLower(strings.TrimSpace(profile.Email))
 		guardian.Email, guardian.HasAccount = email, profile.HasAccount
 		if run != nil {
-			guardian.ExistingAccount = run.existingAccounts[email].ID
+			// The run decides on whether the address has an account, never on
+			// which one. The token is an unkeyed hash the school can test
+			// guesses against, so a global account ID stays out of it.
+			_, guardian.ExistingAccount = run.existingAccounts[email]
 			guardian.MailBlock = run.mailBlocks[email]
 		}
 		for _, invitation := range open[profile.ID] {

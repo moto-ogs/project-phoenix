@@ -21,6 +21,7 @@ import {
   type CreateInvitationRequest,
   type EmploymentAction,
   type FormerEmployment,
+  type FormerEmploymentAnswer,
   type FormerEmploymentPart,
   type PendingInvitation,
 } from "~/lib/invitation-helpers";
@@ -54,20 +55,24 @@ const FORMER_EMPLOYMENT_LOOKUP_TIMEOUT_MS = 5_000;
 
 /**
  * The former employment an invitation to the typed address would continue
- * at this school (ADR 0021, #3402), or null. A result belongs to the address
- * it was asked for, so it disappears as soon as the address changes.
+ * at this school (ADR 0021, #3402), or null, and the version of that answer.
+ * A result belongs to the address it was asked for, so it disappears as soon
+ * as the address changes.
  */
 function useFormerEmployment(email: string): {
   formerEmployment: FormerEmployment | null;
+  /** Only after a successful lookup for the current address. */
+  version: string | undefined;
   pending: boolean;
   refresh: () => Promise<unknown>;
 } {
   const current = email.trim().toLowerCase();
   const address = useDebounce(current, FORMER_EMPLOYMENT_DEBOUNCE_MS);
-  // The answer comes from the shared cache. Without a choice the invitation
-  // says it found no former employment; the backend refuses it when one
-  // exists by then (general.changed_since_read), and the form asks again.
-  const lookup = useSWRAuth(
+  // The answer comes from the shared cache. The invitation sends its
+  // version; the backend refuses it when the former employment differs by
+  // then (general.changed_since_read), and the form asks again. Without a
+  // successful lookup it sends none and the ADR 0021 default applies.
+  const lookup = useSWRAuth<FormerEmploymentAnswer>(
     looksLikeEmail(address) ? enrollmentKeys.formerEmployment(address) : null,
     async () => {
       const controller = new AbortController();
@@ -97,9 +102,11 @@ function useFormerEmployment(email: string): {
   const answered =
     address === current &&
     (lookup.data !== undefined || lookup.error !== undefined);
+  const answer = answered ? lookup.data : undefined;
 
   return {
-    formerEmployment: answered ? (lookup.data ?? null) : null,
+    formerEmployment: answer?.formerEmployment ?? null,
+    version: answer?.version,
     pending: looksLikeEmail(current) && !answered,
     refresh: lookup.mutate,
   };
@@ -201,6 +208,7 @@ export function InvitationForm({
 
   const {
     formerEmployment,
+    version: formerEmploymentVersion,
     pending: checkingAddress,
     refresh: refreshFormerEmployment,
   } = useFormerEmployment(form.email);
@@ -279,6 +287,9 @@ export function InvitationForm({
         lastName: toOptional(form.lastName),
         position: toOptional(form.position),
         ...(gender === "" ? {} : { gender }),
+        ...(formerEmploymentVersion === undefined
+          ? {}
+          : { expectedFormerEmployment: formerEmploymentVersion }),
         ...(formerEmployment
           ? {
               employmentAction: form.employmentAction ?? "resume",

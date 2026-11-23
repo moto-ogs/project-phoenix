@@ -4,12 +4,15 @@ package account_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 	"github.com/stretchr/testify/require"
@@ -32,7 +35,7 @@ func TestIdentityAccountRolesBoundedQueryBudget(t *testing.T) {
 	guardian := testpkg.CreateTestRole(t, f.db, "bounded-guardian")
 	_, err := f.db.ExecContext(context.Background(), "UPDATE auth.roles SET base_role = 'guardian' WHERE id = ?", guardian.ID)
 	require.NoError(t, err)
-	require.NoError(t, f.module.AccountAuthentication.ReplaceAccountRole(testpkg.Ctx(t), account.ID, staff.ID))
+	require.NoError(t, f.module.AccountAuthentication.ReplaceAccountRole(testpkg.Ctx(t), account.ID, staff.ID, identityaccess.AccountRolesVersion(nil)))
 	want := []map[string]any{}
 	addRole := func(id int64) {
 		role, err := f.module.AccountAuthentication.GetRole(testpkg.Ctx(t), id)
@@ -41,13 +44,20 @@ func TestIdentityAccountRolesBoundedQueryBudget(t *testing.T) {
 	}
 	addRole(staff.ID)
 	path := fmt.Sprintf("/auth/accounts/%d/roles/", account.ID)
-	rr, queries := f.get(t, path, token)
+	// The deprecated list shares the read; the budget sits on the selection
+	// that stays (ADR 0270).
+	rr, _ := f.get(t, path, token)
 	rbacBudgetCollection(t, rr, "Account roles retrieved successfully", want)
-	querybudgets.AssertQueryBudget(t, "api.auth.accounts.roles.bounded_positive", queries)
+	version := assertRoleSelection(t, f, account.ID, token, want)
 	// Guardian assignment is a relationship fixture, not a staff-role assignment.
 	_, err = f.db.ExecContext(context.Background(), "INSERT INTO auth.account_roles (account_id,role_id,tenant_id) VALUES (?,?,?)", account.ID, guardian.ID, testpkg.Tenant(t))
 	require.NoError(t, err)
-	require.NoError(t, f.module.AccountAuthentication.ReplaceAccountRole(testpkg.Ctx(t), account.ID, replacement.ID))
+	// The guardian row was written outside the staff file's read: its
+	// version is refused, a read after it goes through.
+	require.ErrorIs(t, f.module.AccountAuthentication.ReplaceAccountRole(testpkg.Ctx(t), account.ID, replacement.ID, version), readstate.ErrChanged)
+	withGuardian, err := f.module.AccountAuthentication.GetAccountRoles(testpkg.Ctx(t), account.ID)
+	require.NoError(t, err)
+	require.NoError(t, f.module.AccountAuthentication.ReplaceAccountRole(testpkg.Ctx(t), account.ID, replacement.ID, identityaccess.AccountRolesVersion(withGuardian)))
 	roles, err := f.module.AccountAuthentication.GetAccountRoles(testpkg.Ctx(t), account.ID)
 	require.NoError(t, err)
 	require.Len(t, roles, 2)
@@ -64,7 +74,26 @@ func TestIdentityAccountRolesBoundedQueryBudget(t *testing.T) {
 	want = nil
 	addRole(replacement.ID)
 	addRole(guardian.ID)
-	rr, queries = f.get(t, path, token)
+	rr, _ = f.get(t, path, token)
 	rbacBudgetCollection(t, rr, "Account roles retrieved successfully", want)
+	require.Equal(t, identityaccess.AccountRolesVersion(roles), assertRoleSelection(t, f, account.ID, token, want))
+}
+
+// assertRoleSelection reads the role selection the staff file reads: the same
+// roles within the same budget, plus the version a role change sends back.
+func assertRoleSelection(t *testing.T, f *rbacBudgetFixture, accountID int64, token string, want []map[string]any) string {
+	t.Helper()
+	rr, queries := f.get(t, fmt.Sprintf("/auth/accounts/%d/role-selection/", accountID), token)
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 	querybudgets.AssertQueryBudget(t, "api.auth.accounts.roles.bounded_positive", queries)
+	var envelope struct {
+		Data struct {
+			Roles   []map[string]any `json:"roles"`
+			Version string           `json:"version"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &envelope))
+	require.ElementsMatch(t, want, envelope.Data.Roles)
+	require.NotEmpty(t, envelope.Data.Version)
+	return envelope.Data.Version
 }

@@ -60,6 +60,11 @@ func renderPeopleDirectoryFailure(w http.ResponseWriter, r *http.Request, kind u
 	case usersAPI.FailureNotFound:
 		apiCommon.RenderError(w, r, apiCommon.ErrorNotFound(err))
 	case usersAPI.FailureConflict:
+		// A business rejection keeps its own code (general.changed_since_read).
+		if apiCommon.IsBusinessRejection(err) {
+			apiCommon.RenderError(w, r, apiCommon.ErrorBusinessRejection(err))
+			return
+		}
 		apiCommon.RenderError(w, r, apiCommon.ErrorConflict(err))
 	default:
 		apiCommon.RenderError(w, r, apiCommon.ErrorInternalServer(err))

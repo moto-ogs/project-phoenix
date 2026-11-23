@@ -179,7 +179,7 @@ func (s *OperatorAccountAccess) UpdateAccountTenantRole(ctx context.Context, acc
 			}
 			// The account row is locked: the roles read for the facts are the
 			// ones the change replaces.
-			if err := readstate.Check(expectedVersion, domain.TenantRolesVersion(facts.current)); err != nil {
+			if err := readstate.Check(expectedVersion, tenantRolesVersion(facts.current)); err != nil {
 				return err
 			}
 			result, err = s.changeTenantRoleInAdmin(adminCtx, accountID, schoolID, operatorID, clientIP, facts)
@@ -499,7 +499,7 @@ func (s *OperatorAccountAccess) loadTenantAccess(ctx context.Context, accountID 
 		if roles != nil {
 			entries[index].Roles = roles
 		}
-		entries[index].Version = domain.TenantRolesVersion(roles)
+		entries[index].Version = tenantRolesVersion(roles)
 	}
 	return entries, nil
 }
@@ -674,4 +674,15 @@ func accountTenantAccess(values []domain.AccountTenantAccess) []identityaccess.A
 		})
 	}
 	return result
+}
+
+// tenantRolesVersion is the read-state token of the roles an account holds
+// at one school, the same token the school's own role read answers
+// (identityaccess.IDSetVersion, ADR 0311).
+func tenantRolesVersion(roles []domain.AccountTenantRole) string {
+	ids := make([]int64, 0, len(roles))
+	for _, role := range roles {
+		ids = append(ids, role.ID)
+	}
+	return identityaccess.IDSetVersion(ids)
 }

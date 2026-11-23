@@ -2,7 +2,6 @@ package application
 
 import (
 	"context"
-	"slices"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/domain"
@@ -89,21 +88,19 @@ func (r *RoleAdministration) lockMutableRole(ctx context.Context, roleID int64, 
 // A reserved permission the role does not hold yet is refused (#4574); one it
 // already holds may stay or be removed, so a role from before the rule stays
 // editable. A selection changed since the caller read expectedVersion is
-// refused with readstate.ErrChanged (ADR 0311): the replacement would
-// otherwise revert a colleague's change, and a removal revokes sessions.
-func (r *RoleAdministration) ReplaceRolePermissions(ctx context.Context, roleID int64, permissionIDs []int64, expectedVersion string) error {
-	return runFlowErr(ctx, r.flow(), func(ctx context.Context) error {
+// refused with readstate.ErrChanged (ADR 0311) before the request is
+// validated: the replacement would otherwise revert a colleague's change, a
+// removal revokes sessions, and a stale request naming a permission deleted
+// since is a stale read, not an invalid input. It answers the version of the
+// stored selection, so the caller never has to read it again to save again.
+func (r *RoleAdministration) ReplaceRolePermissions(ctx context.Context, roleID int64, permissionIDs []int64, expectedVersion string) (version string, err error) {
+	err = runFlowErr(ctx, r.flow(), func(ctx context.Context) error {
 		const op = "replace role permissions"
 		return r.runtime.RunInTx(ctx, func(txCtx context.Context) error {
 			// The role row serializes full replacements and the one-at-a-time
 			// mutations. Lock it before loading mappings so each operation observes
 			// the preceding committed selection.
 			if err := r.lockMutableRole(txCtx, roleID, op); err != nil {
-				return err
-			}
-
-			desired, err := r.desiredRolePermissions(txCtx, permissionIDs)
-			if err != nil {
 				return err
 			}
 			current, err := r.rolePermissions(txCtx, roleID, op)
@@ -113,12 +110,28 @@ func (r *RoleAdministration) ReplaceRolePermissions(ctx context.Context, roleID 
 			if err := readstate.Check(expectedVersion, rolePermissionsVersion(current)); err != nil {
 				return failed(op, err)
 			}
+			desired, err := r.desiredRolePermissions(txCtx, permissionIDs)
+			if err != nil {
+				return err
+			}
 			if err := requireNoNewReservedPermission(desired, current, op); err != nil {
 				return err
 			}
-			return r.applyRolePermissionSelection(txCtx, roleID, desired, current, op)
+			if err := r.applyRolePermissionSelection(txCtx, roleID, desired, current, op); err != nil {
+				return err
+			}
+			stored := make([]int64, 0, len(desired))
+			for id := range desired {
+				stored = append(stored, id)
+			}
+			version = identityaccess.IDSetVersion(stored)
+			return nil
 		})
 	})
+	if err != nil {
+		return "", err
+	}
+	return version, nil
 }
 
 // applyRolePermissionSelection removes the current permissions the selection
@@ -203,16 +216,15 @@ func (r *RoleAdministration) GetRolePermissions(ctx context.Context, roleID int6
 	return
 }
 
-// rolePermissionsVersion is the read-state token of a role's selection: the
-// fingerprint of its sorted permission IDs. The read and the replacement's
-// check derive it here from the same mapping rows.
+// rolePermissionsVersion is the read-state token of a role's selection
+// (identityaccess.IDSetVersion over its permission IDs). The read, the
+// replacement's check and its answer derive it from the same mapping rows.
 func rolePermissionsVersion(permissions []domain.ManagedPermission) string {
 	ids := make([]int64, 0, len(permissions))
 	for _, permission := range permissions {
 		ids = append(ids, permission.ID)
 	}
-	slices.Sort(ids)
-	return readstate.Fingerprint(ids)
+	return identityaccess.IDSetVersion(ids)
 }
 
 func (r *RoleAdministration) desiredRolePermissions(txCtx context.Context, permissionIDs []int64) (map[int64]domain.ManagedPermission, error) {

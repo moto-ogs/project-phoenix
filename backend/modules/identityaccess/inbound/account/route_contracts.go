@@ -40,6 +40,10 @@ func AdminRouteContracts(caregiverState any) []common.RouteContract {
 	// permission selection carries the version a replacement sends back.
 	deprecatedRolePermissions := route("GET", "/roles/{roleId}/permissions/", nil, []PermissionResponse{})
 	deprecatedRolePermissions.Deprecated = true
+	// Deprecated for one release (ADR 0270): the role selection carries the
+	// version a role change sends back.
+	deprecatedAccountRoles := route("GET", "/accounts/{accountId}/roles/", nil, []RoleResponse{})
+	deprecatedAccountRoles.Deprecated = true
 	listRoles.Query = []common.QueryParam{{Name: "name", Kind: common.QueryString}}
 	listPermissions := route("GET", "/permissions/", nil, []PermissionResponse{})
 	listPermissions.Query = []common.QueryParam{
@@ -54,9 +58,10 @@ func AdminRouteContracts(caregiverState any) []common.RouteContract {
 		route("DELETE", "/roles/{id}/", nil, nil),
 		deprecatedRolePermissions,
 		route("GET", "/roles/{roleId}/permission-selection/", nil, RolePermissionsResponse{}),
-		route("PUT", "/roles/{roleId}/permissions/", ReplaceRolePermissionsRequest{}, nil),
+		route("PUT", "/roles/{roleId}/permissions/", ReplaceRolePermissionsRequest{}, ReplaceRolePermissionsResponse{}),
 		listPermissions,
-		route("GET", "/accounts/{accountId}/roles/", nil, []RoleResponse{}),
+		deprecatedAccountRoles,
+		route("GET", "/accounts/{accountId}/role-selection/", nil, AccountRolesResponse{}),
 		route("PUT", "/accounts/{accountId}/roles/", ReplaceAccountRoleRequest{}, nil),
 		route("GET", "/accounts/{accountId}/mfa/", nil, AccountMFAAdminStateResponse{}),
 		route("DELETE", "/accounts/{accountId}/mfa/", MFAAdminOverrideRequest{}, nil),

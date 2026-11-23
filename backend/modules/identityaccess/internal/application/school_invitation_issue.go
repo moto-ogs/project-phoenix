@@ -19,7 +19,7 @@ func (s *SchoolInvitation) issueInvitation(ctx context.Context, invitation domai
 	if err := s.ensureTargetAllowed(ctx, invitation.Email, request); err != nil {
 		return domain.SchoolInvitation{}, err
 	}
-	if err := s.requireEmploymentChoice(ctx, invitation.Email, request); err != nil {
+	if err := s.checkFormerEmploymentRead(ctx, invitation.Email, request.ExpectedFormerEmployment); err != nil {
 		return domain.SchoolInvitation{}, err
 	}
 	if _, _, err := s.store.RevokeSchoolInvitationsForEmail(ctx, invitation.Email); err != nil {
@@ -44,24 +44,39 @@ func (s *SchoolInvitation) issueInvitation(ctx context.Context, invitation domai
 	return stored, nil
 }
 
-// requireEmploymentChoice refuses an invitation from the Einladen dialog
-// without a choice while the address has a former employment at the school.
-// The dialog asks only when its read found one, so the person decided on a
-// state that is no longer true; resuming by default would continue the
-// employment with every reset off, unasked (ADR 0021, ADR 0311). It runs
-// after the address's account row is locked.
-func (s *SchoolInvitation) requireEmploymentChoice(ctx context.Context, email string, request domain.SchoolInvitationRequest) error {
-	if !request.FormerEmploymentAsked || request.EmploymentAction != "" {
+// checkFormerEmploymentRead refuses an invitation whose Einladen dialog
+// decided on a former-employment answer that is no longer true: one found
+// since it read "none" would resume unasked with every reset off, one gone
+// or replaced makes the choice void (ADR 0021, ADR 0311). Without a token no
+// answer was read and the ADR 0021 default applies. It runs after the
+// address's account row is locked, the lock acceptance writes under.
+func (s *SchoolInvitation) checkFormerEmploymentRead(ctx context.Context, email, expected string) error {
+	if expected == "" {
 		return nil
 	}
-	_, found, err := s.findFormerEmployment(ctx, email)
+	former, found, err := s.findFormerEmployment(ctx, email)
 	if err != nil {
 		return err
 	}
-	if found {
-		return failed(opCreateInvitation, readstate.ErrChanged)
+	if err := readstate.Check(expected, formerEmploymentVersion(former, found)); err != nil {
+		return failed(opCreateInvitation, err)
 	}
 	return nil
+}
+
+// formerEmploymentVersion is the read-state token of a former-employment
+// answer, "none" included. The lookup returns it and the invitation checks
+// it with the same function over the same read.
+func formerEmploymentVersion(former domain.FormerEmployment, found bool) string {
+	if !found {
+		former = domain.FormerEmployment{}
+	}
+	return readstate.Fingerprint(struct {
+		Found     bool   `json:"found"`
+		StaffID   int64  `json:"staff_id"`
+		StartedOn string `json:"started_on"`
+		EndedOn   string `json:"ended_on"`
+	}{found, former.StaffID, former.StartedOn.String(), former.EndedOn.String()})
 }
 
 // mailed hands the delivery an invitation just issued for s.expiry with its

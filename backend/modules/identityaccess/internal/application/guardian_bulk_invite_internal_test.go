@@ -389,3 +389,22 @@ func TestBulkInvite_RefusesARunThatDiffersFromItsPreview(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 2, result.Invited)
 }
+
+// The bulk invitation's fingerprint is an unkeyed hash the school reads. It
+// says whether an address has an account, never which one: two different
+// accounts give one token, no account another.
+func TestBulkInviteFingerprint_HidesWhichAccountAnAddressHas(t *testing.T) {
+	t.Parallel()
+	candidates := []bulkInviteCandidate{{profileID: 7, studentIDs: []int64{1}}}
+	profiles := map[int64]domain.GuardianProfile{7: {ID: 7, Email: "parent@example.com"}}
+	runWith := func(accounts map[string]domain.Account) *bulkInviteRun {
+		return &bulkInviteRun{existingAccounts: accounts, mailBlocks: map[string]string{}}
+	}
+	fingerprint := func(run *bulkInviteRun) string {
+		return bulkInviteFingerprint(identityaccess.BulkInviteRequest{}, 0, candidates, profiles, nil, run)
+	}
+
+	first := fingerprint(runWith(map[string]domain.Account{"parent@example.com": {ID: 41}}))
+	assert.Equal(t, first, fingerprint(runWith(map[string]domain.Account{"parent@example.com": {ID: 9001}})))
+	assert.NotEqual(t, first, fingerprint(runWith(map[string]domain.Account{})))
+}

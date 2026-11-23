@@ -42,7 +42,7 @@ import type { StaffRecordResponse } from "~/lib/contract/staff.generated";
 import { teacherService, type Teacher } from "~/lib/teacher-api";
 import { mapTeacherResponse } from "~/lib/teacher-helpers";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
-import { ApiError } from "~/lib/api-error";
+import { ApiError, isChangedSinceRead } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import {
   employmentTypeLabels,
@@ -373,7 +373,12 @@ export default function StaffDetailContent() {
       }
       if (targetRoleId !== undefined) {
         try {
-          await replaceAccountRole(accountId, targetRoleId);
+          // Die Version der Rollen, die das Feld zeigt (ADR 0311).
+          await replaceAccountRole(
+            accountId,
+            targetRoleId,
+            roleAssignment?.version ?? "",
+          );
         } catch (err) {
           logger.error("failed to update account role", {
             staff_id: staffId,
@@ -382,6 +387,11 @@ export default function StaffDetailContent() {
             error: err instanceof Error ? err.message : String(err),
           });
           await refreshRecord();
+          // Haben sich die Rollen inzwischen geändert, zeigt das Feld die
+          // gespeicherte Rolle; der Reiter bietet kein „Wiederholen“ an.
+          if (isChangedSinceRead(err)) {
+            await tenantMutate(staffAccessKeys.roleAssignment(accountId));
+          }
           // Der Datensatz ist gespeichert; das sagt eine Erfolgsmeldung,
           // der Fehler im Formular nennt nur die Systemrolle.
           if (hasRecordChanges) {
@@ -394,7 +404,15 @@ export default function StaffDetailContent() {
       toastSuccess("Die Änderungen sind gespeichert.");
       await refreshRecord();
     },
-    [accountId, record, refreshRecord, staffId, tenantMutate, toastSuccess],
+    [
+      accountId,
+      record,
+      refreshRecord,
+      roleAssignment?.version,
+      staffId,
+      tenantMutate,
+      toastSuccess,
+    ],
   );
 
   const handleDeleteRecord = useCallback(async () => {
