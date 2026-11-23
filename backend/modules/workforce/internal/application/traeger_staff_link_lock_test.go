@@ -185,7 +185,7 @@ func TestHandOverKeepsAHeldBankRowOnLaterWrites(t *testing.T) {
 	assert.Equal(t, domain.StaffFieldIBAN, store.trail[0].Field)
 	assert.Equal(t, "DE** **** 4711", domain.Deref(store.trail[0].ValueMasked))
 	require.NotNil(t, store.trail[0].SchoolID)
-	assert.Equal(t, int64(2), *store.trail[0].SchoolID)
+	assert.Equal(t, record.Links[0].SchoolID, *store.trail[0].SchoolID)
 
 	require.NoError(t, service.handOver(context.Background(), actor, record, nil))
 	assert.False(t, store.deleted, "the held row survives the next write")
