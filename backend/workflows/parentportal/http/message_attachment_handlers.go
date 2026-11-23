@@ -78,6 +78,20 @@ type messageAttachmentResponse struct {
 	Height      int      `json:"height,omitempty"`
 }
 
+// toMessageAttachmentResponses reads the snapshot a message stores, which has
+// the upload answer's form (communication.MessageAttachment). A message
+// without files has none, so its JSON omits the member as before.
+func toMessageAttachmentResponses(snapshot json.RawMessage) []messageAttachmentResponse {
+	if len(snapshot) == 0 {
+		return nil
+	}
+	var out []messageAttachmentResponse
+	if err := json.Unmarshal(snapshot, &out); err != nil || len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
 // downloadChildMessageAttachment streams one file of the guardian's
 // conversations about the child. A file of another family answers 404.
 func (rs *Resource) downloadChildMessageAttachment(w http.ResponseWriter, r *http.Request) {

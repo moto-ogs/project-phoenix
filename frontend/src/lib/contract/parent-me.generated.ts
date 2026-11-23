@@ -1492,6 +1492,25 @@ export const LeadershipOptionResponseSchema: z.ZodType<LeadershipOptionResponse,
   unnamed_count: safeInt,
 });
 
+/** Go: parent.messageAttachmentResponse */
+export interface messageAttachmentResponse {
+  id: string;
+  filename: string;
+  size_bytes: number;
+  content_type: string;
+  width?: number;
+  height?: number;
+}
+
+export const messageAttachmentResponseSchema: z.ZodType<messageAttachmentResponse, unknown> = object<messageAttachmentResponse>({
+  id: int64String,
+  filename: str,
+  size_bytes: safeInt,
+  content_type: str,
+  width: optional(safeInt),
+  height: optional(safeInt),
+});
+
 /** Go: parent.ParentMessageResponse */
 export interface ParentMessageResponse {
   client_message_id?: string;
@@ -1512,7 +1531,7 @@ export interface ParentMessageResponse {
   read_by_staff?: boolean;
   group_thread_id?: string;
   group_thread_title?: string;
-  attachments?: unknown | null;
+  attachments?: messageAttachmentResponse[];
 }
 
 export const ParentMessageResponseSchema: z.ZodType<ParentMessageResponse, unknown> = object<ParentMessageResponse>({
@@ -1534,7 +1553,7 @@ export const ParentMessageResponseSchema: z.ZodType<ParentMessageResponse, unkno
   read_by_staff: optional(bool),
   group_thread_id: optional(str),
   group_thread_title: optional(str),
-  attachments: optional(nullable(json)),
+  attachments: optional(arr(messageAttachmentResponseSchema)),
 });
 
 /** Go: parent.ThreadViewResponse */
@@ -1609,14 +1628,14 @@ export interface GroupMessageResponse {
   id: string;
   body: string;
   created_at: string;
-  attachments?: unknown | null;
+  attachments?: messageAttachmentResponse[];
 }
 
 export const GroupMessageResponseSchema: z.ZodType<GroupMessageResponse, unknown> = object<GroupMessageResponse>({
   id: str,
   body: str,
   created_at: instant,
-  attachments: optional(nullable(json)),
+  attachments: optional(arr(messageAttachmentResponseSchema)),
 });
 
 /** Go: parent.GroupThreadViewResponse */
@@ -2390,25 +2409,6 @@ export interface PostMessageRequest {
   group_thread_id?: string;
   audience?: string;
 }
-
-/** Go: parent.messageAttachmentResponse */
-export interface messageAttachmentResponse {
-  id: string;
-  filename: string;
-  size_bytes: number;
-  content_type: string;
-  width?: number;
-  height?: number;
-}
-
-export const messageAttachmentResponseSchema: z.ZodType<messageAttachmentResponse, unknown> = object<messageAttachmentResponse>({
-  id: int64String,
-  filename: str,
-  size_bytes: safeInt,
-  content_type: str,
-  width: optional(safeInt),
-  height: optional(safeInt),
-});
 
 /** Go: parentauth.ParentMFAChallengeResponse */
 export interface ParentMFAChallengeResponse {
