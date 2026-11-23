@@ -133,9 +133,10 @@ func lookupState(keys []string, state string) map[string]string {
 
 // ResolveManyForTenants resolves all tenant/key pairs in one privileged query.
 // Registry defaults are filled independently for every requested tenant.
-// Deliberately NOT request-cached: its only callers are the scheduler (which
-// owns the minute snapshot) and other admin-tx batch paths that already
-// coalesce their reads.
+// A school whose keys the request cache already holds is answered from it
+// and stays out of the query; the read itself fills no cache. It joins an
+// ambient administrative transaction, so it is the read for a caller inside
+// one: ResolveManyForTenant would open a school transaction there (#7967).
 func (s *settingsService) ResolveManyForTenants(ctx context.Context, tenantIDs []int64, keys []string) (map[int64]*config.SettingsSnapshot, error) {
 	if err := s.checkSchoolReadContext(ctx); err != nil {
 		return nil, err
@@ -144,7 +145,7 @@ func (s *settingsService) ResolveManyForTenants(ctx context.Context, tenantIDs [
 	uniqueTenantIDs, seenTenantIDs := uniqueSettingsTenants(tenantIDs)
 
 	result := make(map[int64]*config.SettingsSnapshot, len(uniqueTenantIDs))
-	if len(uniqueTenantIDs) == 0 {
+	if uniqueTenantIDs = s.answerFromRequestCache(ctx, uniqueTenantIDs, keys, result); len(uniqueTenantIDs) == 0 {
 		return result, nil
 	}
 
@@ -439,6 +440,24 @@ func (s *settingsService) cachedTenantSnapshot(ctx context.Context, tenantID int
 		}
 	}
 	return nil, nil
+}
+
+// answerFromRequestCache puts the snapshot of every school whose keys the
+// request cache holds into result and returns the schools still to read.
+func (s *settingsService) answerFromRequestCache(ctx context.Context, tenantIDs []int64, keys []string, result map[int64]*config.SettingsSnapshot) []int64 {
+	cache := config.RequestCacheFromContext(ctx)
+	if cache == nil || len(keys) == 0 {
+		return tenantIDs
+	}
+	uncached := make([]int64, 0, len(tenantIDs))
+	for _, tenantID := range tenantIDs {
+		if cached, missing := cache.Lookup(tenantID, keys); len(missing) == 0 {
+			result[tenantID] = cached
+			continue
+		}
+		uncached = append(uncached, tenantID)
+	}
+	return uncached
 }
 
 func uniqueSettingsTenants(tenantIDs []int64) ([]int64, map[int64]struct{}) {
