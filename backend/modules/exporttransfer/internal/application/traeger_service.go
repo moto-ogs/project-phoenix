@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/exporttransfer/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/exporttransfer/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // TraegerService is the Träger scope of Export Transfer (ADR 0218, ADR
@@ -80,6 +81,7 @@ func (s *TraegerService) view(recipient domain.StoredRecipient) exporttransfer.T
 		Host: recipient.Host, Port: recipient.Port, Username: recipient.Username,
 		RemoteDirectory: recipient.RemoteDirectory, HostKeyFingerprint: recipient.HostKeyFingerprint,
 		PasswordSet: opens, MissingFields: missing, Formats: recipient.Formats, UpdatedAt: recipient.UpdatedAt,
+		Version: recipientVersion(recipient),
 	}
 	if view.Formats == nil {
 		view.Formats = []string{}
@@ -89,6 +91,30 @@ func (s *TraegerService) view(recipient domain.StoredRecipient) exporttransfer.T
 		view.LastHandover = &last
 	}
 	return view
+}
+
+// recipientVersion is the read-state token of the values the recipient form
+// shows and saves back (ADR 0311): a fingerprint, since the row has no
+// trigger on updated_at. Whether a password is stored counts, its ciphertext
+// does not, so a rekey refuses no form; the formats have a token of their own.
+func recipientVersion(recipient domain.StoredRecipient) string {
+	return readstate.Fingerprint(struct {
+		Name               string `json:"name"`
+		Enabled            bool   `json:"enabled"`
+		Host               string `json:"host"`
+		Port               int    `json:"port"`
+		Username           string `json:"username"`
+		RemoteDirectory    string `json:"remote_directory"`
+		HostKeyFingerprint string `json:"host_key_fingerprint"`
+		PasswordSet        bool   `json:"password_set"`
+	}{recipient.Name, recipient.Enabled, recipient.Host, recipient.Port, recipient.Username, recipient.RemoteDirectory,
+		recipient.HostKeyFingerprint, len(recipient.SealedPassword) > 0})
+}
+
+// assignmentsVersion is the read-state token of the recipient of every
+// format, in the order of domain.Formats.
+func assignmentsVersion(assignments []exporttransfer.TraegerAssignment) string {
+	return readstate.Fingerprint(assignments)
 }
 
 func journalLimitOf(limit int) int {
@@ -120,22 +146,32 @@ func (s *TraegerService) recipientsPage(ctx context.Context, organizationID int6
 		return exporttransfer.TraegerRecipientsPage{}, err
 	}
 	page := exporttransfer.TraegerRecipientsPage{Recipients: make([]exporttransfer.TraegerRecipient, 0, len(recipients)),
-		Assignments: make([]exporttransfer.TraegerAssignment, 0, len(domain.Formats)), Handovers: journalEntries(rows)}
-	receiver := map[string]int64{}
+		Assignments: assignmentsOf(recipients), Handovers: journalEntries(rows)}
 	for _, recipient := range recipients {
 		page.Recipients = append(page.Recipients, s.view(recipient))
+	}
+	page.AssignmentsVersion = assignmentsVersion(page.Assignments)
+	return page, nil
+}
+
+// assignmentsOf is the recipient of every format, in the order of
+// domain.Formats; a format without one goes to the download.
+func assignmentsOf(recipients []domain.StoredRecipient) []exporttransfer.TraegerAssignment {
+	receiver := map[string]int64{}
+	for _, recipient := range recipients {
 		for _, format := range recipient.Formats {
 			receiver[format] = recipient.ID
 		}
 	}
+	assignments := make([]exporttransfer.TraegerAssignment, 0, len(domain.Formats))
 	for _, format := range domain.Formats {
 		assignment := exporttransfer.TraegerAssignment{Format: format}
 		if id, ok := receiver[format]; ok {
 			assignment.RecipientID = (*ident.ID)(&id)
 		}
-		page.Assignments = append(page.Assignments, assignment)
+		assignments = append(assignments, assignment)
 	}
-	return page, nil
+	return assignments
 }
 
 // Recipient answers one recipient of the Träger with its own handovers.
@@ -217,22 +253,19 @@ func (s *TraegerService) CreateRecipient(ctx context.Context, organizationID, ac
 // destination: changing address, port, user or fingerprint requires it
 // again, so nobody can send the saved secret to a server of their own.
 func (s *TraegerService) SaveRecipient(ctx context.Context, organizationID, actorAccountID, recipientID int64, input exporttransfer.TraegerRecipientInput,
-) (exporttransfer.TraegerRecipient, error) {
+	expectedVersion string) (exporttransfer.TraegerRecipient, error) {
 	values, err := validValues(input)
 	if err != nil {
 		return exporttransfer.TraegerRecipient{}, err
 	}
 	var view exporttransfer.TraegerRecipient
 	err = s.within(ctx, organizationID, func(txCtx context.Context) error {
-		existing, found, err := s.recipients.LockRecipient(txCtx, organizationID, recipientID)
+		existing, err := s.lockedRecipientAsRead(txCtx, organizationID, recipientID, expectedVersion)
 		if err != nil {
 			return err
 		}
-		if !found {
-			return exporttransfer.ErrRecipientNotFound
-		}
 		next := storedOf(organizationID, recipientID, values)
-		if next.SealedPassword, err = s.sealedPassword(existing, found, next, values.Password); err != nil {
+		if next.SealedPassword, err = s.sealedPassword(existing, true, next, values.Password); err != nil {
 			return err
 		}
 		if _, err := s.recipients.UpdateRecipient(txCtx, next, actorAccountID); err != nil {
@@ -255,6 +288,36 @@ func (s *TraegerService) SaveRecipient(ctx context.Context, organizationID, acto
 		return nil
 	})
 	return view, err
+}
+
+// lockedRecipientAsRead takes the recipient's row lock and answers it as its
+// author read it (ADR 0311); a recipient changed since is readstate.ErrChanged.
+func (s *TraegerService) lockedRecipientAsRead(ctx context.Context, organizationID, recipientID int64, expectedVersion string,
+) (domain.StoredRecipient, error) {
+	existing, found, err := s.recipients.LockRecipient(ctx, organizationID, recipientID)
+	if err != nil {
+		return domain.StoredRecipient{}, err
+	}
+	if !found {
+		return domain.StoredRecipient{}, exporttransfer.ErrRecipientNotFound
+	}
+	if err := readstate.Check(expectedVersion, recipientVersion(existing)); err != nil {
+		return domain.StoredRecipient{}, err
+	}
+	return existing, nil
+}
+
+// lockFormatsAsRead takes the lock every change of the format assignments
+// takes and refuses assignments changed since their author read them.
+func (s *TraegerService) lockFormatsAsRead(ctx context.Context, organizationID int64, expectedVersion string) error {
+	if err := s.recipients.LockFormats(ctx, organizationID); err != nil {
+		return err
+	}
+	current, err := s.recipients.Recipients(ctx, organizationID)
+	if err != nil {
+		return err
+	}
+	return readstate.Check(expectedVersion, assignmentsVersion(assignmentsOf(current)))
 }
 
 // sealedPassword seals a new password, or keeps the stored one when the
@@ -282,6 +345,10 @@ func (s *TraegerService) sealedPassword(existing domain.StoredRecipient, found b
 func (s *TraegerService) DeleteRecipient(ctx context.Context, organizationID, recipientID int64) (exporttransfer.TraegerRecipientsPage, error) {
 	var page exporttransfer.TraegerRecipientsPage
 	err := s.within(ctx, organizationID, func(txCtx context.Context) error {
+		// Its formats go back to the download: a change of the assignments.
+		if err := s.recipients.LockFormats(txCtx, organizationID); err != nil {
+			return err
+		}
 		deleted, err := s.recipients.DeleteRecipient(txCtx, organizationID, recipientID)
 		if err != nil {
 			return err
@@ -312,12 +379,16 @@ func validAssignments(assignments []exporttransfer.TraegerAssignment) bool {
 // AssignFormats sends each named format to its recipient or to the
 // download, all or none, and answers the page afterwards.
 func (s *TraegerService) AssignFormats(ctx context.Context, organizationID, actorAccountID int64, assignments []exporttransfer.TraegerAssignment,
-) (exporttransfer.TraegerRecipientsPage, error) {
+	expectedVersion string) (exporttransfer.TraegerRecipientsPage, error) {
 	if !validAssignments(assignments) {
 		return exporttransfer.TraegerRecipientsPage{}, exporttransfer.ErrAssignmentInvalid
 	}
 	var page exporttransfer.TraegerRecipientsPage
 	err := s.within(ctx, organizationID, func(txCtx context.Context) error {
+		// The assignments as their author read them (ADR 0311).
+		if err := s.lockFormatsAsRead(txCtx, organizationID, expectedVersion); err != nil {
+			return err
+		}
 		for _, assignment := range assignments {
 			var recipientID int64
 			if assignment.RecipientID != nil {

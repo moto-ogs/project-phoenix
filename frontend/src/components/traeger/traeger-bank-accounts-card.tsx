@@ -16,6 +16,11 @@ import {
 } from "~/contexts/ToastContext";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import {
+  readStateWaitReason,
+  useReadDraftLoadError,
+} from "~/lib/hooks/use-swr-load-error";
+import { useActionOn } from "~/lib/swr/read-draft";
 import { createLogger } from "~/lib/logger";
 import {
   deleteTraegerBankAccount,
@@ -38,10 +43,13 @@ export function TraegerBankAccountsCard({
   accounts,
   canEdit,
   onChanged,
+  reload,
 }: Readonly<{
   accounts: readonly TraegerBankAccount[];
   canEdit: boolean;
   onChanged: () => Promise<unknown>;
+  /** Reads the accounts again after a refused change; rejects on failure. */
+  reload: () => Promise<readonly TraegerBankAccount[]>;
 }>) {
   const [edit, setEdit] = useState<BankAccountEdit | null>(null);
   const [deleting, setDeleting] = useState<TraegerBankAccount | null>(null);
@@ -56,17 +64,42 @@ export function TraegerBankAccountsCard({
     onChanged,
   );
 
+  // From a refusal until the stored accounts are read, the rows still
+  // carry the refused versions: nothing is sent (ADR 0311, rule 4). Any
+  // read with other versions lifts that, also after a failed read.
+  const makeDefaultAction = useActionOn(
+    { opening: "traeger-bank-accounts", data: accounts, reload },
+    {
+      token: (rows) => rows.map((account) => [account.id, account.version]),
+    },
+  );
+  const makeDefaultLoadError = useReadDraftLoadError(
+    makeDefaultAction,
+    "die Anzeige der Bankverbindungen",
+  );
+  const makeDefaultWait = readStateWaitReason(makeDefaultAction.status);
   const makeDefault = async (account: TraegerBankAccount) => {
-    try {
-      await updateTraegerBankAccount(account.id, {
-        ...account,
-        isDefault: true,
-      });
-    } catch (err) {
+    // The row as shown, with its version (ADR 0311): a colleague's change
+    // since is refused, and `reload` shows it in the table.
+    const result = await makeDefaultAction.submit(() =>
+      updateTraegerBankAccount(
+        account.id,
+        { ...account, isDefault: true },
+        account.version,
+      ),
+    );
+    if (!result.ok) {
+      if (result.skipped) return;
       logger.error("traeger_bank_account_default_failed", {
-        error: err instanceof Error ? err.message : String(err),
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
       });
-      void showError(err, { object: "die Bankverbindung" });
+      void showError(result.error, {
+        object: "die Bankverbindung",
+        reload: result.reload,
+      });
       return;
     }
     success(`„${account.label}“ ist jetzt der Standard.`);
@@ -160,8 +193,11 @@ export function TraegerBankAccountsCard({
               : [
                   {
                     label: "Als Standard festlegen",
-                    description: "Gilt sofort für Briefe und Rechnungen.",
+                    description:
+                      makeDefaultWait ??
+                      "Gilt sofort für Briefe und Rechnungen.",
                     icon: <Star className="size-4" aria-hidden />,
+                    disabled: !makeDefaultAction.canSubmit,
                     onClick: () => void makeDefault(account),
                   },
                 ]),
@@ -202,6 +238,7 @@ export function TraegerBankAccountsCard({
       }
     >
       <LoadErrorAlert error={afterWrite.error} className="mb-4" />
+      <LoadErrorAlert error={makeDefaultLoadError} className="mb-4" />
       <DataTable
         columns={columns}
         rows={[...accounts]}
@@ -219,6 +256,8 @@ export function TraegerBankAccountsCard({
       />
       <TraegerBankAccountModal
         edit={edit}
+        accounts={accounts}
+        reload={reload}
         onClose={() => setEdit(null)}
         onSaved={afterWrite.refresh}
       />

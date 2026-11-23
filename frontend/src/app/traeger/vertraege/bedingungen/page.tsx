@@ -39,6 +39,7 @@ function VertragsbedingungenContent() {
     loading,
     error,
     mutate,
+    reloadOrThrow,
   } = useTraegerResource(
     traegerContractKeys.templates(),
     fetchContractTemplates,
@@ -77,6 +78,7 @@ function VertragsbedingungenContent() {
           offerings={offerings}
           selectedKey={searchParams.get(OFFERING_PARAM)}
           onSelect={selectOffering}
+          reload={reloadOrThrow}
           onSaved={(saved) => {
             void mutate(
               offerings.map((offering) =>

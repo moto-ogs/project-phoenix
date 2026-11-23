@@ -33,6 +33,7 @@ export interface TraegerReportTemplate {
   key_date_day: number;
   districts: TraegerReportDistrict[] | null;
   updated_at: string;
+  version: string;
 }
 
 export const TraegerReportTemplateSchema: z.ZodType<TraegerReportTemplate, unknown> = object<TraegerReportTemplate>({
@@ -43,6 +44,7 @@ export const TraegerReportTemplateSchema: z.ZodType<TraegerReportTemplate, unkno
   key_date_day: safeInt,
   districts: nullable(arr(TraegerReportDistrictSchema)),
   updated_at: instant,
+  version: str,
 });
 
 /** Go: traeger.ReportDistrictRequest */
@@ -58,6 +60,16 @@ export interface ReportTemplateRequest {
   key_date_month?: number;
   key_date_day?: number;
   districts?: ReportDistrictRequest[] | null;
+}
+
+/** Go: traeger.ReportTemplateReplaceRequest */
+export interface ReportTemplateReplaceRequest {
+  name?: string;
+  sections?: string[] | null;
+  key_date_month?: number;
+  key_date_day?: number;
+  districts?: ReportDistrictRequest[] | null;
+  expected_version?: string;
 }
 
 export const routes = {
@@ -84,7 +96,7 @@ export const routes = {
     method: "PUT",
     pattern: "/traeger/report-templates/{id}",
     portals: ["org"],
-    request: requestBody<ReportTemplateRequest>(),
+    request: requestBody<ReportTemplateReplaceRequest>(),
     response: success(TraegerReportTemplateSchema),
   },
 } as const;

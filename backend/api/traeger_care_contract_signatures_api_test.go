@@ -123,7 +123,7 @@ func TestCareContractSigningPageNamesTheTraegersPhoneAndEmail(t *testing.T) {
 		(organization_id, contact_name, contact_phone, contact_email, withdrawal_email)
 		VALUES (?, 'Frau Beispiel', '0211 123 45', 'frau.beispiel@traeger.example', 'widerruf@traeger.example')`, f.office.organization)
 	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	_, link := sentCareContract(t, f, f.child)
 
 	rec := publicSigning(t, f.traeger, http.MethodGet, link, nil)
@@ -146,7 +146,7 @@ func TestCareContractSigningPageNamesTheTraegersPhoneAndEmail(t *testing.T) {
 func TestCareContractMailLinkSignsOnceOnlyItsContract(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertrag Unterschrift")
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	contract, link := sentCareContract(t, f, f.child)
 	sibling := careContractApplication(t, f.db, f.school, f.phase, f.offering, "Ben", "erika.muster@example.org")
 	other, otherLink := sentCareContract(t, f, sibling)
@@ -268,7 +268,7 @@ func paperUpload(t *testing.T, f careContractFixture, token string, id int64, fi
 func TestCareContractSignedOnPaperNeedsAPDFAndTheRight(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertrag Papier")
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, "/traeger/contracts", map[string]any{"contracts": []any{f.key()}})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	draft := decodeSchoolPortalData[careContractCreateBody](t, rec.Body.Bytes()).Created[0].ID
@@ -356,7 +356,7 @@ func (missingReminderSender) TraegerLetterhead(context.Context, int64) (string, 
 func TestCareContractRemindersFollowTheTraegersDays(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertrag Erinnerung")
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	waiting, _ := sentCareContract(t, f, f.child)
 	sibling := careContractApplication(t, f.db, f.school, f.phase, f.offering, "Ben", "erika.muster@example.org")
 	signed, signedLink := sentCareContract(t, f, sibling)
@@ -411,7 +411,7 @@ func TestCareContractRemindersFollowTheTraegersDays(t *testing.T) {
 func TestCareContractReminderWithoutALetterheadIsNotSent(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertrag Erinnerung ohne Briefkopf")
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	contract, _ := sentCareContract(t, f, f.child)
 	ctx := testpkg.WithPackageTenantRuntime(context.Background())
 	_, err := f.db.ExecContext(ctx, `UPDATE care_contract.contract_mailings SET sent_at = ? WHERE contract_id = ?`, holidayFixtureNow().Add(-8*24*time.Hour), contract)
@@ -480,7 +480,7 @@ func assertConcludedBySignature(t *testing.T, f careContractFixture, contractID 
 func TestCareContractSignedByMailLinkIsConcludedElectronically(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertrag Abschluss Link")
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	contract, link := sentCareContract(t, f, f.child)
 	rec := publicSigning(t, f.traeger, http.MethodPost, link+"/sign",
 		map[string]any{"method": "drawn", "image_png": signatureImage(t), "withdrawal_notice_acknowledged": true})
@@ -494,7 +494,7 @@ func TestCareContractSignedByMailLinkIsConcludedElectronically(t *testing.T) {
 func TestCareContractSignedOnPaperIsConcludedOnPaper(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertrag Abschluss Papier")
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, "/traeger/contracts", map[string]any{"contracts": []any{f.key()}})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	draft := decodeSchoolPortalData[careContractCreateBody](t, rec.Body.Bytes()).Created[0].ID
@@ -508,7 +508,7 @@ func TestCareContractSignedOnPaperIsConcludedOnPaper(t *testing.T) {
 func TestCareContractSignatureSurvivesAFutureAmendment(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertrag Geplante Änderung")
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	contract, link := sentCareContract(t, f, f.child)
 	rec := publicSigning(t, f.traeger, http.MethodPost, link+"/sign",
 		map[string]any{"method": "drawn", "image_png": signatureImage(t), "withdrawal_notice_acknowledged": true})
@@ -552,7 +552,7 @@ func TestCareContractRemindersRecheckMailingsAfterCandidateSelection(t *testing.
 		t.Run(fmt.Sprintf("fresh=%t", fresh), func(t *testing.T) {
 			testpkg.OwnTenant(t)
 			f := newCareContractFixture(t, "Träger Vertrag Erinnerung Adresskorrektur")
-			require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+			require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 			contract, _ := sentCareContract(t, f, f.child)
 			ctx := testpkg.WithPackageTenantRuntime(context.Background())
 			// Mailings carry the owner clock of Care Contract, the fixture's
@@ -610,7 +610,7 @@ func signingStatus(t *testing.T, f careContractFixture, contractID int64) (strin
 func TestCareContractUsedLinkNeverOpensAgain(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertrag Link benutzt")
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	contract, link := sentCareContract(t, f, f.child)
 	_, err := f.db.ExecContext(context.Background(), `UPDATE care_contract.contract_signing_links SET used_at = NOW() WHERE contract_id = ?`, contract)
 	require.NoError(t, err)
@@ -638,7 +638,7 @@ func TestCareContractChangedAfterTheSendIsNotSigned(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			f := newCareContractFixture(t, "Träger Vertrag geändert "+name)
-			require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+			require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 			contract, link := sentCareContract(t, f, f.child)
 			_, err := f.db.ExecContext(context.Background(), change, contract)
 			require.NoError(t, err)
@@ -659,7 +659,7 @@ func TestCareContractChangedAfterTheSendIsNotSigned(t *testing.T) {
 func TestCareContractSigningWithoutALetterheadIsNotSent(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertrag Signatur ohne Briefkopf")
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	contract, link := sentCareContract(t, f, f.child)
 	setTraegerLetterhead(t, f.reviewFixture, " \n")
 

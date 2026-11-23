@@ -260,11 +260,13 @@ func (s *Store) setDeleted(ctx context.Context, id int64, deleted bool) (domain.
 }
 
 func toDomain(row organizationRow) organizationtenancy.Organization {
-	return organizationtenancy.Organization{
+	organization := organizationtenancy.Organization{
 		ID: ident.ID(row.ID), CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
 		Name: row.Name, Slug: row.Slug, Active: row.Active,
 		DeletedAt: row.DeletedAt, Settings: row.Settings, TestSystem: row.TestSystem,
 	}
+	organization.Version = organizationtenancy.OrganizationVersion(organization)
+	return organization
 }
 
 func isIntegrityViolation(err error) bool {

@@ -9,6 +9,15 @@ import (
 
 // NewEmploymentScheduleReset ends the live schedule, preserving its versions,
 // and clears the template binding with its previous value in the audit trail.
+//
+// The profile is read and saved whole without a lock of its own. That is safe
+// only because the reset runs in the accepting invitation's transaction after
+// School Membership's ReinstateStaff locked the staff row FOR UPDATE
+// (lockRetiredStaff), the lock every writer of the profile's other fields
+// (staff notes, contract, personnel number) takes first, and while the
+// membership is still retired for every other transaction. The invitation
+// reset is its only caller; requireEmploymentResetTransaction only checks that
+// a tenant transaction runs, so a new caller must take that lock first.
 func NewEmploymentScheduleReset(capability workforce.Capability, employment workforce.StaffEmployments, audit workforce.StaffAdminAudit) func(context.Context, int64, string) error {
 	return func(ctx context.Context, staffID int64, today string) error {
 		profiles, err := employment.StaffEmployments(ctx, []int64{staffID})

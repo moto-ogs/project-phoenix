@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Master data of a Träger (#4653, spec #4611 user story 9, ADR 0112): its
@@ -86,6 +87,8 @@ type TraegerBankAccount struct {
 	BankName      string    `json:"bank_name"`
 	IsDefault     bool      `json:"is_default"`
 	UpdatedAt     time.Time `json:"updated_at"`
+	// Version is the read state a change sends back (ADR 0311).
+	Version string `json:"version"`
 }
 
 // TraegerBankAccountInput is a bank account as the Träger-Büro writes it.
@@ -106,6 +109,43 @@ type TraegerProfile struct {
 	Withdrawal   TraegerWithdrawalContact `json:"withdrawal"`
 	Logo         *TraegerLogo             `json:"logo"`
 	BankAccounts []TraegerBankAccount     `json:"bank_accounts"`
+	// ContactVersion and WithdrawalVersion are the read state of each
+	// section (ADR 0311): the sections share one row, so each has its own
+	// token and a save of one does not refuse the other.
+	ContactVersion    string `json:"contact_version"`
+	WithdrawalVersion string `json:"withdrawal_version"`
+}
+
+// TraegerSavedContact is the stored contact person with its new version.
+type TraegerSavedContact struct {
+	TraegerContact
+	Version string `json:"version"`
+}
+
+// TraegerSavedWithdrawalContact is the stored withdrawal contact with its
+// new version.
+type TraegerSavedWithdrawalContact struct {
+	TraegerWithdrawalContact
+	Version string `json:"version"`
+}
+
+// TraegerContactVersion is the read-state token of the contact person: a
+// fingerprint of the stored values, since the row's updated_at moves with
+// every section.
+func TraegerContactVersion(contact TraegerContact) string {
+	return readstate.Fingerprint(contact)
+}
+
+// TraegerWithdrawalVersion is the read-state token of the withdrawal
+// contact, like TraegerContactVersion.
+func TraegerWithdrawalVersion(contact TraegerWithdrawalContact) string {
+	return readstate.Fingerprint(contact)
+}
+
+// TraegerBankAccountVersion is the read-state token of one bank account:
+// its updated_at, which the row's trigger bumps on every update.
+func TraegerBankAccountVersion(account TraegerBankAccount) string {
+	return readstate.Of(account.UpdatedAt)
 }
 
 // TraegerNames reads the name of a Träger in its Träger transaction, for a
@@ -146,13 +186,16 @@ type TraegerMasterData interface {
 	ReplaceLogo(ctx context.Context, organizationID, accountID int64, data []byte) (TraegerLogo, error)
 	// RemoveLogo deletes the logo.
 	RemoveLogo(ctx context.Context, organizationID, accountID int64) error
-	// UpdateContact stores the contact person; empty fields clear it.
-	UpdateContact(ctx context.Context, organizationID, accountID int64, contact TraegerContact) (TraegerContact, error)
+	// UpdateContact stores the contact person; empty fields clear it. The
+	// update and the ones below refuse with readstate.ErrChanged when the
+	// stored state differs from expectedVersion, the version it was read
+	// with (ADR 0311).
+	UpdateContact(ctx context.Context, organizationID, accountID int64, contact TraegerContact, expectedVersion string) (TraegerSavedContact, error)
 	// UpdateWithdrawalContact stores the withdrawal contact; empty fields
 	// take the contact person's again.
-	UpdateWithdrawalContact(ctx context.Context, organizationID, accountID int64, contact TraegerWithdrawalContact) (TraegerWithdrawalContact, error)
+	UpdateWithdrawalContact(ctx context.Context, organizationID, accountID int64, contact TraegerWithdrawalContact, expectedVersion string) (TraegerSavedWithdrawalContact, error)
 	CreateBankAccount(ctx context.Context, organizationID, accountID int64, input TraegerBankAccountInput) (TraegerBankAccount, error)
-	UpdateBankAccount(ctx context.Context, organizationID, accountID, bankAccountID int64, input TraegerBankAccountInput) (TraegerBankAccount, error)
+	UpdateBankAccount(ctx context.Context, organizationID, accountID, bankAccountID int64, input TraegerBankAccountInput, expectedVersion string) (TraegerBankAccount, error)
 	// DeleteBankAccount deletes a bank account. Deleting the default makes
 	// the oldest remaining one the default.
 	DeleteBankAccount(ctx context.Context, organizationID, accountID, bankAccountID int64) error

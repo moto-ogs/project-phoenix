@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // ---------------------------------------------------------------------------
@@ -96,6 +97,9 @@ func (s *workSessionService) SaveCustomScheduleAsTemplate(ctx context.Context, s
 }
 
 func (s *workSessionService) UpdateSchedule(ctx context.Context, staff *StaffScheduleBinding, in ScheduleUpdateInput) error {
+	if err := s.checkScheduleRead(ctx, staff, in.ExpectedVersion); err != nil {
+		return err
+	}
 	mode := in.Mode
 	if mode == "" {
 		// Backwards compatibility: missing mode + flat entries means the
@@ -156,4 +160,55 @@ func (s *workSessionService) applyCustomSchedule(ctx context.Context, staff *Sta
 	}
 
 	return s.ApplyCustomScheduleRows(ctx, staff, entries, anchor, calendar.Date(in.ValidFrom))
+}
+
+// checkScheduleRead takes the staff member's balance gate, which every
+// schedule writer holds, reads the binding and the running schedule under
+// it and refuses a save whose author read another schedule (ADR 0311). The
+// binding the caller read before the gate is replaced by the stored one,
+// so the write starts from what was compared.
+func (s *workSessionService) checkScheduleRead(ctx context.Context, staff *StaffScheduleBinding, expected string) error {
+	if err := s.lockStaffBalanceWrites(ctx, staff.ID); err != nil {
+		return err
+	}
+	assignment, err := s.staffRepo.ScheduleAssignment(ctx, staff.ID)
+	if err != nil {
+		return fmt.Errorf("read schedule binding: %w", err)
+	}
+	if assignment != nil {
+		staff.WorkTimeModelID = assignment.WorkTimeModelID
+		staff.RotationAnchorDate = assignment.RotationAnchorDate
+	}
+	rows, err := s.scheduleRepo.GetCurrentByStaffID(ctx, staff.ID)
+	if err != nil {
+		return fmt.Errorf("read running schedule: %w", err)
+	}
+	return readstate.Check(expected, storedScheduleVersion(*staff, rows))
+}
+
+// storedScheduleVersion is workforce.ScheduleVersion over the binding and
+// the running rows as the schedule GET shows them.
+func storedScheduleVersion(staff StaffScheduleBinding, rows []*WorkScheduleRow) string {
+	canonical := make([]workforce.ScheduleVersionRow, 0, len(rows))
+	for _, row := range rows {
+		if row == nil {
+			continue
+		}
+		version := workforce.ScheduleVersionRow{
+			WeekIndex: row.WeekIndex, RotationLength: row.RotationLength, DayOfWeek: row.DayOfWeek,
+			TargetMinutes: row.TargetMinutes, ValidFrom: row.ValidFrom.String(),
+		}
+		if row.StartTime != nil {
+			version.StartTime = row.StartTime.Format(workforce.ClockLayout)
+		}
+		if row.RotationAnchorDate != nil {
+			version.RotationAnchorDate = row.RotationAnchorDate.String()
+		}
+		canonical = append(canonical, version)
+	}
+	anchor := ""
+	if staff.RotationAnchorDate != nil {
+		anchor = staff.RotationAnchorDate.String()
+	}
+	return workforce.ScheduleVersion(staff.WorkTimeModelID, anchor, canonical)
 }

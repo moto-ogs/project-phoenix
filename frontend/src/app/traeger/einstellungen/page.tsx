@@ -264,6 +264,8 @@ function TraegerSettingsContent() {
           <TraegerContactSection
             masterData={contact.masterData}
             letterheadText={letterheadText(schema)}
+            reload={contact.reload}
+            write={contact.write}
             onSaved={afterContactWrite.refresh}
           />
         </div>

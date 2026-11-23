@@ -106,6 +106,7 @@ export function CareContractNoticeCard({
     error,
     mutate,
     reload,
+    reloadOrThrow,
   } = useTraegerResource(
     traegerContractKeys.notice(contractId),
     () => fetchContractNoticeOptions(contractId),
@@ -204,6 +205,7 @@ export function CareContractNoticeCard({
           reason={notice.reason ?? ""}
           receivedOn={notice.receivedOn}
           endsOn={options.reinterpretedEndsOn}
+          reload={reloadOrThrow}
           onRejected={(next: ContractNoticeOptions) => {
             void mutate(next, { revalidate: false });
             setRejectOpen(false);

@@ -11,8 +11,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { RejectReasonModal } from "./care-contract-notice-modal";
 import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
+import { catalogText } from "~/test/error-catalog-text";
 import type { ContractNoticeOptions } from "~/lib/care-contract-notices";
-import { unavailableApiError } from "~/lib/api-error";
+import { ApiError, unavailableApiError } from "~/lib/api-error";
 
 function render(ui: React.ReactElement) {
   return renderPlain(ui, { wrapper: TraegerResourceTestProvider });
@@ -502,6 +503,90 @@ describe("RejectReasonModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
+
+  // ADR 0311: the end moved since the office saw it; the refusal says so,
+  // reads the options again and records nothing.
+  it("reads the options again when the shown end changed", async () => {
+    mocks.rejectContractNoticeReason.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    const reload = vi.fn().mockResolvedValue(undefined);
+    const onRejected = vi.fn();
+    render(
+      <RejectReasonModal
+        reload={reload}
+        isOpen
+        onClose={vi.fn()}
+        contractId="25"
+        reason="Wir ziehen um."
+        receivedOn="2026-11-07"
+        endsOn="2026-12-31"
+        onRejected={onRejected}
+      />,
+    );
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Grund nicht anerkennen" }),
+    );
+
+    expect(
+      await within(dialog).findByText(
+        catalogText("general.changed_since_read", "die Entscheidung"),
+      ),
+    ).toBeInTheDocument();
+    expect(mocks.rejectContractNoticeReason).toHaveBeenCalledWith(
+      "25",
+      "2026-12-31",
+    );
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect(onRejected).not.toHaveBeenCalled();
+  });
+  // ADR 0311, rule 4: until the new end is read nothing is sent again; a
+  // failed read keeps the lock and its „Wiederholen“ lifts it.
+  it("sends nothing until the read after a refusal succeeded", async () => {
+    mocks.rejectContractNoticeReason.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    const reload = vi
+      .fn()
+      .mockRejectedValueOnce(unavailableApiError())
+      .mockResolvedValue(undefined);
+    render(
+      <RejectReasonModal
+        reload={reload}
+        isOpen
+        onClose={vi.fn()}
+        contractId="25"
+        reason="Wir ziehen um."
+        receivedOn="2026-11-07"
+        endsOn="2026-12-31"
+        onRejected={vi.fn()}
+      />,
+    );
+    const dialog = await screen.findByRole("dialog");
+    const confirm = () =>
+      within(dialog).getByRole("button", { name: "Grund nicht anerkennen" });
+    fireEvent.click(confirm());
+
+    expect(
+      await within(dialog).findByText(
+        /Der neue Stand konnte nicht geladen werden\./,
+      ),
+    ).toBeInTheDocument();
+    expect(confirm()).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(confirm());
+    expect(mocks.rejectContractNoticeReason).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Wiederholen" }),
+    );
+    await waitFor(() =>
+      expect(confirm()).not.toHaveAttribute("aria-disabled", "true"),
+    );
+    expect(confirm()).toBeEnabled();
+    expect(reload).toHaveBeenCalledTimes(2);
+  });
+
   it("locks dismissal while saving and displays a failed decision inline", async () => {
     let refuse!: (error: Error) => void;
     mocks.rejectContractNoticeReason.mockReturnValue(
@@ -513,6 +598,7 @@ describe("RejectReasonModal", () => {
     const onRejected = vi.fn();
     render(
       <RejectReasonModal
+        reload={vi.fn()}
         isOpen
         onClose={onClose}
         contractId="25"

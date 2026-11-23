@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // defaultActivityCategories are the categories every operator-provisioned
@@ -178,12 +179,9 @@ func (p *Provisioning) UpdateSchool(ctx context.Context, id int64, changes organ
 		}
 	}
 	return adminValue(ctx, p, func(adminCtx context.Context) (*organizationtenancy.School, error) {
-		existing, err := p.findSchool(adminCtx, id)
+		existing, err := p.lockedSchoolAsRead(adminCtx, id, changes.ExpectedVersion)
 		if err != nil {
 			return nil, err
-		}
-		if existing.IsDeleted() {
-			return nil, &organizationtenancy.SchoolAlreadyDeletedError{SchoolID: id}
 		}
 		diff, err := p.schoolChangeSet(adminCtx, existing, changes)
 		if err != nil {
@@ -203,6 +201,26 @@ func (p *Provisioning) UpdateSchool(ctx context.Context, id int64, changes organ
 		}
 		return p.finishSchoolUpdate(adminCtx, existing, updated, changes, diff, operatorID, clientIP)
 	})
+}
+
+// lockedSchoolAsRead takes the school's row lock and answers the live school
+// as the operator read it (ADR 0311): every edit form sends all fields back,
+// so a school changed since that read is readstate.ErrChanged.
+func (p *Provisioning) lockedSchoolAsRead(ctx context.Context, id int64, expectedVersion string) (organizationtenancy.School, error) {
+	existing, err := p.organizations.FindSchoolForMutation(ctx, id)
+	if errors.Is(err, organizationtenancy.ErrSchoolNotFound) || errors.Is(err, organizationtenancy.ErrInvalidSchool) {
+		return organizationtenancy.School{}, &organizationtenancy.SchoolNotFoundError{SchoolID: id}
+	}
+	if err != nil {
+		return organizationtenancy.School{}, err
+	}
+	if existing.IsDeleted() {
+		return organizationtenancy.School{}, &organizationtenancy.SchoolAlreadyDeletedError{SchoolID: id}
+	}
+	if err := readstate.Check(expectedVersion, organizationtenancy.SchoolVersion(existing)); err != nil {
+		return organizationtenancy.School{}, err
+	}
+	return existing, nil
 }
 
 // schoolContactEmailChange checks a changed contact address. Only a change

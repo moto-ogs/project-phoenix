@@ -280,6 +280,7 @@ export interface updateSchoolRequest {
   active?: boolean;
   hidden?: boolean;
   child_quota?: childQuotaRequest | null;
+  expected_version?: string;
 }
 
 /** Go: operator.deviceSlotsRequest */

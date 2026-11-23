@@ -14,6 +14,7 @@ import { operatorProvisioningService } from "./provisioning-api";
 const NOW = "2026-03-15T10:00:00Z";
 
 const mockBackendOrg: sharedContract.Organization = {
+  version: "v-1",
   test_system: false,
   id: "5",
   name: "Stadt Köln",
@@ -26,6 +27,7 @@ const mockBackendOrg: sharedContract.Organization = {
 };
 
 const mockBackendSchool: sharedContract.School = {
+  version: "v-1",
   child_quota_bundles: null,
   child_quota_bundle_size: 0,
   device_slots: null,
@@ -130,7 +132,12 @@ describe("OperatorProvisioningService", () => {
     it("calls correct endpoint with PUT method", async () => {
       mockBffJson.mockResolvedValue(mockBackendOrg);
 
-      const updateData = { name: "Updated", slug: "updated", active: true };
+      const updateData = {
+        name: "Updated",
+        slug: "updated",
+        active: true,
+        expected_version: "v-1",
+      };
       await operatorProvisioningService.updateOrganization("5", updateData);
 
       expect(mockBffJson).toHaveBeenCalledWith(
@@ -147,6 +154,7 @@ describe("OperatorProvisioningService", () => {
         name: "Stadt Köln",
         slug: "stadt-koeln",
         active: true,
+        expected_version: "v-1",
       });
 
       expect(result).toEqual({
@@ -158,6 +166,7 @@ describe("OperatorProvisioningService", () => {
         updatedAt: NOW,
         deletedAt: null,
         testSystem: false,
+        version: "v-1",
       });
     });
   });
@@ -226,6 +235,7 @@ describe("OperatorProvisioningService", () => {
         email: "school@example.com",
         active: true,
         hidden: false,
+        expected_version: "v-1",
       };
       await operatorProvisioningService.updateSchool("10", updateData);
 
@@ -251,6 +261,7 @@ describe("OperatorProvisioningService", () => {
         email: "info@ggs-europa.de",
         active: true,
         hidden: false,
+        expected_version: "v-1",
       });
 
       expect(result).toEqual({
@@ -270,6 +281,7 @@ describe("OperatorProvisioningService", () => {
         createdAt: NOW,
         updatedAt: NOW,
         organization: undefined,
+        version: "v-1",
       });
     });
   });

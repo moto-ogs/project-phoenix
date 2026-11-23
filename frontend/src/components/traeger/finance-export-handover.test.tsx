@@ -51,6 +51,7 @@ const RUN: ExportRun = {
 };
 
 const READY: ExportRecipient = {
+  version: "v-1",
   id: "7",
   name: "Kämmerei",
   enabled: true,
@@ -70,6 +71,7 @@ const READY: ExportRecipient = {
 /** Every format goes to the given recipient. */
 function pageOf(...recipients: ExportRecipient[]): ExportRecipientsPage {
   return {
+    assignmentsVersion: "a-1",
     recipients,
     assignments: (["sollstellung", "datev", "pain008"] as const).map(
       (format) => ({

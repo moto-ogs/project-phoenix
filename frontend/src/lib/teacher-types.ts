@@ -44,4 +44,11 @@ export type Teacher = Pick<staffContract.StaffRecordResponse, "id"> &
     person?: unknown; // For nested person object
     /** The record id again, under the name the staff forms send. */
     staff_id?: string;
+    /**
+     * Version of the record form (ADR 0311), for staff:manage only: the
+     * staff PUT sends it back as expected_version.
+     */
+    version?: string;
+    /** Version of the person: the name change sends it back. */
+    person_version?: string;
   };

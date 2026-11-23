@@ -59,5 +59,7 @@
   "endNoticeTitle": "Message from the provider about the end of the contract",
   "submitTerminationTooltip": "Sends the termination to the provider right away.",
   "submitWithdrawalTooltip": "Sends the withdrawal to the provider right away.",
-  "submitDisabledReason": "First choose one of the options above."
+  "submitDisabledReason": "First choose one of the options above.",
+  "reloadingReason": "The current dates are still loading.",
+  "reloadFailedReason": "The current dates could not be loaded. Tap “Try again” in the message above."
 }

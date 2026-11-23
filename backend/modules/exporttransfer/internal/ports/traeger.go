@@ -49,6 +49,9 @@ type RecipientStore interface {
 	// AssignFormat sends the format to the recipient, or to the download for
 	// recipientID 0; a recipient of another Träger answers false.
 	AssignFormat(ctx context.Context, organizationID int64, format string, recipientID, actorAccountID int64) (bool, error)
+	// LockFormats holds the format assignments of the Träger for the rest of
+	// the transaction: every change of them takes it first.
+	LockFormats(ctx context.Context, organizationID int64) error
 }
 
 // TraegerJournal is the journal of the handovers of a Träger with the

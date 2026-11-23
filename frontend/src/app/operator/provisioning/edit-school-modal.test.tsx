@@ -61,6 +61,7 @@ import { EditSchoolModal } from "./edit-school-modal";
 import type { Organization, School } from "~/lib/operator/provisioning-helpers";
 
 const mockOrg: Organization = {
+  version: "v-1",
   id: "1",
   name: "Test Org",
   slug: "test-org",
@@ -72,6 +73,7 @@ const mockOrg: Organization = {
 };
 
 const mockSchool: School = {
+  version: "v-1",
   id: "10",
   organizationId: "1",
   name: "Test School",
@@ -105,6 +107,7 @@ describe("EditSchoolModal", () => {
   it("renders visibility toggle with Sichtbar when school is not hidden", () => {
     render(
       <EditSchoolModal
+        reload={vi.fn()}
         isOpen={true}
         onClose={onClose}
         school={mockSchool}
@@ -123,6 +126,7 @@ describe("EditSchoolModal", () => {
     const hiddenSchool = { ...mockSchool, hidden: true };
     render(
       <EditSchoolModal
+        reload={vi.fn()}
         isOpen={true}
         onClose={onClose}
         school={hiddenSchool}
@@ -138,6 +142,7 @@ describe("EditSchoolModal", () => {
   it("toggles visibility state when switch is clicked", () => {
     render(
       <EditSchoolModal
+        reload={vi.fn()}
         isOpen={true}
         onClose={onClose}
         school={mockSchool}
@@ -161,6 +166,7 @@ describe("EditSchoolModal", () => {
 
     render(
       <EditSchoolModal
+        reload={vi.fn()}
         isOpen={true}
         onClose={onClose}
         school={mockSchool}
@@ -202,6 +208,7 @@ describe("EditSchoolModal", () => {
 
     render(
       <EditSchoolModal
+        reload={vi.fn()}
         isOpen={true}
         onClose={onClose}
         school={mockSchool}
@@ -226,6 +233,7 @@ describe("EditSchoolModal", () => {
     mockUpdateSchool.mockResolvedValue(mockSchool);
     render(
       <EditSchoolModal
+        reload={vi.fn()}
         isOpen={true}
         onClose={onClose}
         school={mockSchool}
@@ -254,6 +262,7 @@ describe("EditSchoolModal", () => {
 
       render(
         <EditSchoolModal
+          reload={vi.fn()}
           isOpen={true}
           onClose={onClose}
           school={{ ...mockSchool, email: "" }}
@@ -291,6 +300,7 @@ describe("EditSchoolModal", () => {
   it("warns at the email field while the reply address is missing (#7174)", () => {
     render(
       <EditSchoolModal
+        reload={vi.fn()}
         isOpen={true}
         onClose={onClose}
         school={{ ...mockSchool, email: "" }}
@@ -318,6 +328,7 @@ describe("EditSchoolModal", () => {
   it("keeps the plain hint for a school whose replies arrive", () => {
     render(
       <EditSchoolModal
+        reload={vi.fn()}
         isOpen={true}
         onClose={onClose}
         school={mockSchool}
@@ -338,6 +349,7 @@ describe("EditSchoolModal", () => {
 
     render(
       <EditSchoolModal
+        reload={vi.fn()}
         isOpen={true}
         onClose={onClose}
         school={mockSchool}

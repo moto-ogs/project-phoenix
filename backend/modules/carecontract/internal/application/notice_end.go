@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/modules/carecontract/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The trail actions of the decided end of an extraordinary termination.
@@ -130,8 +131,9 @@ func (n *Notices) decideEnd(ctx context.Context, reviewer carecontract.Reviewer,
 			return carecontract.NoticeOptions{}, carecontract.ErrNoticeEndNotOpen
 		}
 		endsOn = reinterpretedEnd(record, state)
-		if !decision.expected.IsZero() && decision.expected != endsOn {
-			return carecontract.NoticeOptions{}, &carecontract.ValidationError{Fields: map[string]string{"expected_ends_on": "changed"}}
+		// The end the office was shown (ADR 0311); none is refused too.
+		if err := readstate.Check(decision.expected.String(), endsOn.String()); err != nil {
+			return carecontract.NoticeOptions{}, err
 		}
 	} else if _, err := openEnd(record, state.Notice, endsOn); err != nil {
 		return carecontract.NoticeOptions{}, err
