@@ -38,13 +38,16 @@ type CostBearerRequest struct {
 	Address       string `json:"address"`
 	FileReference string `json:"file_reference"`
 	Active        bool   `json:"active"`
+	// ExpectedVersion is the version of the cost bearer as it was read; a
+	// change sends it (ADR 0311).
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 // Bind accepts the body; the Owner validates the cost bearer.
 func (req *CostBearerRequest) Bind(*http.Request) error { return nil }
 
 func (req *CostBearerRequest) input() capability.CostBearerInput {
-	return capability.CostBearerInput(*req)
+	return capability.CostBearerInput{Name: req.Name, Address: req.Address, FileReference: req.FileReference, Active: req.Active}
 }
 
 func (rs *RuleResource) listCostBearers(w http.ResponseWriter, r *http.Request) {
@@ -76,7 +79,7 @@ func (rs *RuleResource) saveCostBearer(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	bearer, err := rs.rules.SaveCostBearer(r.Context(), organizationID, bearerID, req.input())
+	bearer, err := rs.rules.SaveCostBearer(r.Context(), organizationID, bearerID, req.input(), req.ExpectedVersion)
 	if err != nil {
 		renderCostBearerError(w, r, err)
 		return

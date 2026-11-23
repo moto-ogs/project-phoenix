@@ -73,6 +73,7 @@ export interface FamilyChildren {
   count: FamilyChildCount | null;
   status: string;
   differing: boolean;
+  version: string;
 }
 
 export const FamilyChildrenSchema: z.ZodType<FamilyChildren, unknown> = object<FamilyChildren>({
@@ -84,6 +85,7 @@ export const FamilyChildrenSchema: z.ZodType<FamilyChildren, unknown> = object<F
   count: nullable(FamilyChildCountSchema),
   status: str,
   differing: bool,
+  version: str,
 });
 
 /** Go: parentbilling.FamilyChildrenSet */
@@ -225,6 +227,7 @@ export interface FamilyChildrenRequest {
   children?: number;
   valid_from?: string | null;
   valid_until?: string | null;
+  expected_version?: string;
 }
 
 export const routes = {

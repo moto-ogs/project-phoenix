@@ -74,7 +74,8 @@ func TestTraegerRequiredDetailsNameOnlyWhatTheBookedModulesNeed(t *testing.T) {
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	billing := traegerColleague(t, reviewFixture{holidayRegistrationFixture: f, office: office}, identityaccess.TraegerRoleBilling)
 	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, "/traeger/sepa-creditor",
-		map[string]any{"creditor_id": "DE98ZZZ09999999999", "prenotification_days": 14, "missing_mandate": "transfer"})
+		withVersion(map[string]any{"creditor_id": "DE98ZZZ09999999999", "prenotification_days": 14, "missing_mandate": "transfer"},
+			creditorVersion(t, f.traeger, billing)))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, "/traeger/number-ranges/holiday", map[string]any{"pattern": "FE-{NNNN}"})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())

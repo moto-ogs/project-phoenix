@@ -137,7 +137,10 @@ A surface reads stored state in one of three ways:
    refusal, send nothing until a read of it succeeded, take the token of a
    save's answer (or read again), and report a failed read as a load error
    (`status` `loadFailed`, `error`) that the surface shows also over a
-   draft on screen (`useReadDraftLoadError`).
+   draft on screen (`useReadDraftLoadError`). A form with its own
+   `FormErrorAlert` takes `useReadDraftForm`: its `begin()` refuses to send
+   while `canSubmit` is false without clearing the shown error, and its
+   `loadError` shows the failed read.
 3. **A read the server logs or authorizes on every opening** (an access
    log entry per read) goes through
    `useOpeningRead(key, fetcher, { showCached: false })` (Träger:

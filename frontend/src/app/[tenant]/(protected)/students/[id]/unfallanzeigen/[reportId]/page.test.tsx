@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // ADR 0311 on the real SWR cache: a refusal reads the stored report again.
@@ -161,5 +167,39 @@ describe("AccidentReportPage", () => {
     });
     expect(screen.queryByRole("button", { name: "Speichern" })).toBeNull();
     expect(screen.getByText("Unterschrieben")).toBeInTheDocument();
+  });
+
+  // ADR 0311, rule 4: between a refusal and the read of the stored report
+  // nothing is sent; Enter in a field (the button is blocked) leaves the
+  // refusal's message to come instead of replacing it.
+  it("sends nothing on Enter while the refusal reads the stored report", async () => {
+    let answer: (list: StudentDocumentList) => void = () => undefined;
+    list.mockResolvedValueOnce(reportList("open", "read")).mockReturnValueOnce(
+      new Promise<StudentDocumentList>((resolve) => {
+        answer = resolve;
+      }),
+    );
+    update.mockRejectedValue(
+      new ApiError("changed since it was read", 409, {
+        code: "general.changed_since_read",
+      }),
+    );
+    render(<AccidentReportPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Ändern" }));
+    const save = await screen.findByRole("button", { name: "Speichern" });
+    const form = save.closest("form");
+    if (!form) throw new Error("no form");
+    fireEvent.click(save);
+    await waitFor(() => expect(list).toHaveBeenCalledTimes(2));
+
+    fireEvent.submit(form);
+    await act(async () => {
+      answer(reportList("open", "stored"));
+      await Promise.resolve();
+    });
+
+    expect(await screen.findByText(/inzwischen geändert/)).toBeInTheDocument();
+    expect(update).toHaveBeenCalledTimes(1);
   });
 });

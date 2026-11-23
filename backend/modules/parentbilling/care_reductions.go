@@ -127,6 +127,9 @@ type CareEvidence struct {
 	Evidence   string         `json:"evidence"`
 	CheckedOn  calendar.Date  `json:"checked_on"`
 	UpdatedAt  time.Time      `json:"updated_at"`
+	// Version is the read-state token of the evidence (ADR 0311): a
+	// change sends it back as expected_version.
+	Version string `json:"version"`
 }
 
 // CareEvidenceInput is an evidence as the Abrechnung writes it; RuleID
@@ -195,13 +198,16 @@ type CareReduction struct {
 type CareReductions interface {
 	CareRules(ctx context.Context, reviewer HolidayReviewer) (CareRuleSet, error)
 	// SaveCareRule creates a rule when ruleID is zero and changes that one
-	// otherwise.
-	SaveCareRule(ctx context.Context, reviewer HolidayReviewer, ruleID int64, input CareRuleInput) (CareRuleSet, error)
+	// otherwise, as the Abrechnung read it: a rule changed since
+	// expectedVersion is refused with readstate.ErrChanged (ADR 0311).
+	SaveCareRule(ctx context.Context, reviewer HolidayReviewer, ruleID int64, input CareRuleInput, expectedVersion string) (CareRuleSet, error)
 	DeleteCareRule(ctx context.Context, reviewer HolidayReviewer, ruleID int64) (CareRuleSet, error)
 	CareEvidences(ctx context.Context, reviewer HolidayReviewer) (CareEvidenceSet, error)
 	// SaveCareEvidence creates an evidence when evidenceID is zero and
-	// changes that one otherwise.
-	SaveCareEvidence(ctx context.Context, reviewer HolidayReviewer, evidenceID int64, input CareEvidenceInput) (CareEvidenceSet, error)
+	// changes that one otherwise, as the Abrechnung read it: an evidence
+	// changed since expectedVersion is refused with readstate.ErrChanged
+	// (ADR 0311).
+	SaveCareEvidence(ctx context.Context, reviewer HolidayReviewer, evidenceID int64, input CareEvidenceInput, expectedVersion string) (CareEvidenceSet, error)
 	DeleteCareEvidence(ctx context.Context, reviewer HolidayReviewer, evidenceID int64) (CareEvidenceSet, error)
 	CareCostShares
 	// The Abrechnung checks the children of the families (#5918).

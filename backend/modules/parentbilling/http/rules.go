@@ -49,9 +49,8 @@ func (rs *RuleResource) TraegerRouter(protectedTraegerRoutes func(chi.Router, fu
 	return r
 }
 
-// ContributionRuleRequest is the body of POST /traeger/contribution-rules
-// and PUT /traeger/contribution-rules/{id}. Amounts are whole cent, shares
-// basis points (10000 = 100 %).
+// ContributionRuleRequest is the body of POST /traeger/contribution-rules.
+// Amounts are whole cent, shares basis points (10000 = 100 %).
 type ContributionRuleRequest struct {
 	Service             string         `json:"service"`
 	Kind                string         `json:"kind"`
@@ -68,6 +67,14 @@ func (req *ContributionRuleRequest) Bind(*http.Request) error { return nil }
 
 func (req *ContributionRuleRequest) input() capability.ContributionRuleInput {
 	return capability.ContributionRuleInput(*req)
+}
+
+// ContributionRuleUpdateRequest is the body of PUT
+// /traeger/contribution-rules/{id}: the rule and the version of the rule
+// as it was read (ADR 0311).
+type ContributionRuleUpdateRequest struct {
+	ContributionRuleRequest
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // traegerOf returns the Träger of the session, or renders 401.
@@ -121,12 +128,12 @@ func (rs *RuleResource) update(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	req := &ContributionRuleRequest{}
+	req := &ContributionRuleUpdateRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	rule, err := rs.rules.UpdateContributionRule(r.Context(), organizationID, ruleID, req.input())
+	rule, err := rs.rules.UpdateContributionRule(r.Context(), organizationID, ruleID, req.input(), req.ExpectedVersion)
 	if err != nil {
 		renderRuleError(w, r, err)
 		return

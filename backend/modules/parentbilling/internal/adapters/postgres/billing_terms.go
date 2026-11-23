@@ -155,6 +155,20 @@ func (s *Store) SaveServiceTerms(ctx context.Context, organizationID, accountID 
 	return nil
 }
 
+// LockBillingSetting holds one setting of the Abrechnung of the Träger (the
+// terms, the creditor, the Sollstellung mapping) until the transaction
+// ends, so a change checks the stored setting it replaces (ADR 0311). The
+// setting may have no row yet: the lock names it, not a row.
+func (s *Store) LockBillingSetting(ctx context.Context, organizationID int64, setting string) error {
+	db, err := traegerDB(ctx, organizationID)
+	if err != nil {
+		return err
+	}
+	_, err = db.NewRaw(`SELECT pg_advisory_xact_lock(hashtextextended('parent_billing.setting:' || ? || ':' || ?::text, 0))`,
+		setting, organizationID).Exec(ctx)
+	return err
+}
+
 // FamilyBillings reads the deviations of the families, by family.
 func (s *Store) FamilyBillings(ctx context.Context, organizationID int64) ([]parentbilling.FamilyBilling, error) {
 	db, err := traegerDB(ctx, organizationID)

@@ -75,6 +75,7 @@ const data: CareTariffs = {
 };
 
 const rule: CareRule = {
+  version: "v1",
   id: "1",
   kind: "sibling",
   name: "Geschwisterpreise",

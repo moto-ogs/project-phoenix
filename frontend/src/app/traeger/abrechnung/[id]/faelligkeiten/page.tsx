@@ -29,6 +29,7 @@ export default function TraegerHolidayRunDueDatesPage() {
     loading,
     error,
     reload,
+    reloadOrThrow,
   } = useTraegerResource(
     runId ? traegerBillingKeys.holidayRun(runId) : null,
     () => fetchBillingRun(runId),
@@ -62,6 +63,14 @@ export default function TraegerHolidayRunDueDatesPage() {
           kind="holiday"
           runId={run.id}
           dueDates={run.dueDates ?? []}
+          version={run.dueDatesVersion ?? ""}
+          reload={async () => {
+            const stored = await reloadOrThrow();
+            return {
+              dueDates: stored.dueDates ?? [],
+              version: stored.dueDatesVersion ?? "",
+            };
+          }}
           debitItems={holidayDebitItems(run.documents)}
           prenotificationDays={prenotificationDays}
           onCancel={() => router.push(runHref)}

@@ -21,6 +21,7 @@ import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { ISODatePicker } from "~/components/ui/date-picker";
 import { FieldLabel } from "~/components/ui/field-label";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
 import {
   SlideOver,
@@ -43,6 +44,7 @@ import {
   formatPeriodUsage,
   formatShiftSeriesCount,
 } from "~/lib/calendar-period-helpers";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { useDraftOn } from "~/lib/swr/read-draft";
 import { useTenantAwarePath } from "~/lib/tenant-path";
@@ -222,6 +224,13 @@ export function CalendarPeriodModal({
       toDraft: formFromPeriod,
       answer: (saved) => saved.period,
     },
+  );
+  // A failed read of the stored period stays visible with its retry, also
+  // after an edit cleared the form's error (ADR 0311, rule 6).
+  const readForm = useReadDraftForm(
+    persisted ? edit : null,
+    formErrors,
+    "den Kalenderzeitraum",
   );
   const form = persisted
     ? (edit.draft ?? formFromPeriod(persisted))
@@ -504,6 +513,7 @@ export function CalendarPeriodModal({
               onSubmit={(e) => void handleSubmit(e)}
               className="flex flex-col gap-4"
             >
+              <LoadErrorAlert error={readForm.loadError} />
               <Field label="Bezeichnung" htmlFor="name" required>
                 <Input
                   id="name"

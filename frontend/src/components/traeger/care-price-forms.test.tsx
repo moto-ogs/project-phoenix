@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CareTariffs } from "~/lib/traeger-care-billing-api";
 import { ToastProvider } from "~/contexts/ToastContext";
@@ -272,6 +278,46 @@ describe("CarePriceListModal", () => {
     await waitFor(() =>
       expect(screen.getByRole("textbox", { name: label })).toHaveValue("48,00"),
     );
+  });
+
+  // ADR 0311, rule 4: the lock after a refusal holds over another start
+  // month, which would otherwise start a new draft on the refused version.
+  it("sends nothing in another month until the stored prices are read", async () => {
+    saveCarePriceList.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    // The read after the refusal is still on its way.
+    const reload = vi.fn(() => new Promise<CareTariffs>(() => undefined));
+    render(
+      <ToastProvider>
+        <CarePriceListModal
+          data={{ ...data, versions: { "12": "v-1" } }}
+          school={{ id: "12", name: "Grundschule Birkenfeld" }}
+          currentMonth="2027-01-01"
+          onClose={() => undefined}
+          onSaved={() => undefined}
+          reload={reload}
+        />
+      </ToastProvider>,
+    );
+    const save = await screen.findByRole("button", {
+      name: "Preise speichern",
+    });
+    fireEvent.click(save);
+    await waitFor(() => expect(reload).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Gültig ab" }));
+    fireEvent.click(
+      await screen.findByRole("option", { name: "Februar 2027" }),
+    );
+    expect(
+      screen.getByRole("combobox", { name: "Gültig ab" }),
+    ).toHaveTextContent("Februar 2027");
+    // The refusal's message waits for that read; the click runs at once.
+    await act(async () => {
+      fireEvent.click(save);
+    });
+    expect(saveCarePriceList).toHaveBeenCalledTimes(1);
   });
 
   // A background read of the list while the form is open: an untouched

@@ -4,6 +4,7 @@ import type { CareRule, CareRuleSet } from "~/lib/traeger-care-reductions-api";
 import { CareRulesCard } from "./care-rules-card";
 
 const rule: CareRule = {
+  version: "v1",
   id: "7",
   kind: "sibling",
   name: "Geschwister",

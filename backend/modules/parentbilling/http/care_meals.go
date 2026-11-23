@@ -50,6 +50,9 @@ type CareMealPriceRequest struct {
 	ValidFrom   calendar.Date `json:"valid_from"`
 	Mode        string        `json:"mode"`
 	AmountCents int64         `json:"amount_cents" contract:"number"`
+	// ExpectedVersion is the version of the school's Mensa prices as they
+	// were read (versions of the price list, ADR 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // Bind accepts the body; the Owner validates the price.
@@ -102,7 +105,7 @@ func (rs *CareMealTariffResource) delete(w http.ResponseWriter, r *http.Request)
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeParentBillingCareMealTariffInvalid))
 		return
 	}
-	tariffs, err := rs.billing.DeleteCareMealTariff(r.Context(), reviewer, schoolID, validFrom)
+	tariffs, err := rs.billing.DeleteCareMealTariff(r.Context(), reviewer, schoolID, validFrom, r.URL.Query().Get("expected_version"))
 	if err != nil {
 		tenant.MarkRollback(r.Context())
 		renderCareMealError(w, r, err)

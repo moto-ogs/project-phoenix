@@ -21,7 +21,9 @@ type seedFamilyChild struct {
 type seedFamilyChildrenSet struct {
 	Families []struct {
 		Children []seedFamilyChild `json:"children"`
-		Count    *struct {
+		// Version is the read-state token a confirmation sends back.
+		Version string `json:"version"`
+		Count   *struct {
 			ID ident.ID `json:"id"`
 		} `json:"count"`
 	} `json:"families"`
@@ -55,6 +57,7 @@ func seedFamilyChildren(client *Client, auth AuthRef, own []int64, month calenda
 		}
 		body := numbers[kept]
 		body["contract_id"] = family.Children[child].ContractID
+		body["expected_version"] = family.Version
 		if _, err := client.PutWithAuth(auth, "/traeger/family-children/", body); err != nil {
 			return kept, fmt.Errorf("confirm the children of a family: %w", err)
 		}

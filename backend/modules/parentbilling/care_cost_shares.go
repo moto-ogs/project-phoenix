@@ -110,6 +110,9 @@ type CareCostShare struct {
 	CheckedOn        calendar.Date `json:"checked_on"`
 	Status           string        `json:"status"`
 	UpdatedAt        time.Time     `json:"updated_at"`
+	// Version is the read-state token of the share (ADR 0311): a change
+	// sends it back as expected_version.
+	Version string `json:"version"`
 }
 
 // CareCostShareInput is a share as the Abrechnung writes it.
@@ -203,6 +206,8 @@ type CareCostShares interface {
 	CareCostShares(ctx context.Context, reviewer HolidayReviewer) (CareCostShareSet, error)
 	// SaveCareCostShare creates a share when shareID is zero and changes
 	// that one otherwise.
-	SaveCareCostShare(ctx context.Context, reviewer HolidayReviewer, shareID int64, input CareCostShareInput) (CareCostShareSet, error)
+	// A share changed since expectedVersion is refused with
+	// readstate.ErrChanged (ADR 0311).
+	SaveCareCostShare(ctx context.Context, reviewer HolidayReviewer, shareID int64, input CareCostShareInput, expectedVersion string) (CareCostShareSet, error)
 	DeleteCareCostShare(ctx context.Context, reviewer HolidayReviewer, shareID int64) (CareCostShareSet, error)
 }

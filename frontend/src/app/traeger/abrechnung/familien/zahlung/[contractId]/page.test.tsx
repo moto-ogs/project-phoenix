@@ -87,6 +87,7 @@ const terms: BillingTerms = {
   services: [],
   terms: [
     {
+      version: "v1",
       service: "care",
       paymentMethod: "transfer",
       dueDays: 14,

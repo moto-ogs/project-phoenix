@@ -75,6 +75,9 @@ type CareMealTariffs struct {
 	Schools     []CareSchool            `json:"schools"`
 	Tariffs     []CareMealTariff        `json:"tariffs"`
 	BilledUntil map[int64]calendar.Date `json:"billed_until"`
+	// Versions is per school the read-state token of its Mensa prices
+	// (ADR 0311): a change sends it back as expected_version.
+	Versions map[int64]string `json:"versions"`
 }
 
 // CareMealPrice sets the Mensa of a school from ValidFrom on.
@@ -83,6 +86,9 @@ type CareMealPrice struct {
 	ValidFrom   calendar.Date
 	Mode        string
 	AmountCents int64
+	// ExpectedVersion is the version of the school's Mensa prices the
+	// office read (CareMealTariffs.Versions).
+	ExpectedVersion string
 }
 
 // CareMealPosition is one Mensa month of a child on an invoice.
@@ -199,5 +205,7 @@ type CareMeals interface {
 type CareMealBilling interface {
 	CareMealTariffs(ctx context.Context, reviewer HolidayReviewer) (CareMealTariffs, error)
 	SaveCareMealTariff(ctx context.Context, reviewer HolidayReviewer, price CareMealPrice) (CareMealTariffs, error)
-	DeleteCareMealTariff(ctx context.Context, reviewer HolidayReviewer, schoolID int64, validFrom calendar.Date) (CareMealTariffs, error)
+	// Prices of the school changed since expectedVersion are refused with
+	// readstate.ErrChanged (ADR 0311), on a change as on a removal.
+	DeleteCareMealTariff(ctx context.Context, reviewer HolidayReviewer, schoolID int64, validFrom calendar.Date, expectedVersion string) (CareMealTariffs, error)
 }

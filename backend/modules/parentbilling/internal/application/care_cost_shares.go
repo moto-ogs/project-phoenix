@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The cost bearer shares of the contracts (#4687, ADR 0169). The share page
@@ -120,7 +121,9 @@ func costShareStatus(share parentbilling.CareCostShare, all []parentbilling.Care
 
 // SaveCareCostShare validates and stores a share under the lock of the
 // monthly billing and records the change.
-func (c *CareReductions) SaveCareCostShare(ctx context.Context, reviewer parentbilling.HolidayReviewer, shareID int64, input parentbilling.CareCostShareInput) (parentbilling.CareCostShareSet, error) {
+func (c *CareReductions) SaveCareCostShare(ctx context.Context, reviewer parentbilling.HolidayReviewer, shareID int64, input parentbilling.CareCostShareInput,
+	expectedVersion string,
+) (parentbilling.CareCostShareSet, error) {
 	if err := validReviewer(reviewer); err != nil {
 		return parentbilling.CareCostShareSet{}, err
 	}
@@ -135,6 +138,9 @@ func (c *CareReductions) SaveCareCostShare(ctx context.Context, reviewer parentb
 		return parentbilling.CareCostShareSet{}, err
 	}
 	if err := c.bearerOffered(ctx, reviewer.OrganizationID, shareID, input); err != nil {
+		return parentbilling.CareCostShareSet{}, err
+	}
+	if err := c.costShareAsRead(ctx, reviewer.OrganizationID, shareID, input.ContractID.Int64(), expectedVersion); err != nil {
 		return parentbilling.CareCostShareSet{}, err
 	}
 	action := evidenceEventCreate
@@ -153,6 +159,25 @@ func (c *CareReductions) SaveCareCostShare(ctx context.Context, reviewer parentb
 		return parentbilling.CareCostShareSet{}, fmt.Errorf("parent billing: record cost share change: %w", err)
 	}
 	return c.CareCostShares(ctx, reviewer)
+}
+
+// costShareAsRead refuses a change of a share changed since the Abrechnung
+// read it at expectedVersion (ADR 0311). Every writer of the shares holds
+// the lock of the monthly billing, which the caller holds. A new share
+// (shareID zero) has no read state.
+func (c *CareReductions) costShareAsRead(ctx context.Context, organizationID, shareID, contractID int64, expectedVersion string) error {
+	if shareID == 0 {
+		return nil
+	}
+	stored, err := c.store.CareCostShares(ctx, organizationID, []int64{contractID})
+	if err != nil {
+		return err
+	}
+	index := slices.IndexFunc(stored, func(share parentbilling.CareCostShare) bool { return share.ID == ident.ID(shareID) })
+	if index < 0 {
+		return parentbilling.ErrCareCostShareNotFound
+	}
+	return readstate.Check(expectedVersion, stored[index].Version)
 }
 
 // bearerOffered holds the cost bearer of the Träger the share names under a

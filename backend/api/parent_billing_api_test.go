@@ -213,7 +213,8 @@ func TestContributionRulesAreKeptPerTraegerBehindTheBillingRight(t *testing.T) {
 	limited := siblingHalf()
 	limited["valid_until"], limited["discount_basis_points"] = "2027-05-31", nil
 	limited["discount_cents"] = 1500
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, fmt.Sprintf("%s/%d", contributionRulesPath, sibling.ID), limited)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, fmt.Sprintf("%s/%d", contributionRulesPath, sibling.ID),
+		withVersion(limited, contributionRuleVersion(t, f.traeger, billing, int64(sibling.ID))))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	changed := decodeSchoolPortalData[contributionRuleBody](t, rec.Body.Bytes())
 	assert.Nil(t, changed.DiscountBasisPoints)
@@ -330,7 +331,8 @@ func TestConfirmationFreezesTheContributionAgainstLaterPriceAndRuleChanges(t *te
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	lower := siblingHalf()
 	lower["discount_basis_points"] = 1000
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, fmt.Sprintf("%s/%d", contributionRulesPath, rule.ID), lower)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, fmt.Sprintf("%s/%d", contributionRulesPath, rule.ID),
+		withVersion(lower, contributionRuleVersion(t, f.traeger, billing, int64(rule.ID))))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	frozen := f.contribution(t, f.siblings)

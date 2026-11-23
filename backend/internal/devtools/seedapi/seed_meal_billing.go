@@ -78,6 +78,8 @@ func seedMealPrices(client *Client, auth AuthRef, month calendar.Date) (int, err
 			Tariffs []struct {
 				SchoolID ident.ID `json:"school_id"`
 			} `json:"tariffs"`
+			// Versions is per school the read-state token of its prices.
+			Versions map[string]string `json:"versions"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil {
@@ -94,6 +96,7 @@ func seedMealPrices(client *Client, auth AuthRef, month calendar.Date) (int, err
 		}
 		if _, err := client.PutWithAuth(auth, "/traeger/care-meal-tariffs/", map[string]any{
 			"school_id": school.ID, "valid_from": month.String(), "mode": "per_meal", "amount_cents": seedMealPriceCents,
+			"expected_version": envelope.Data.Versions[school.ID.String()],
 		}); err != nil {
 			return saved, fmt.Errorf("set the Mensa price of school %d: %w", school.ID, err)
 		}

@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Actions of the evidence trail.
@@ -112,8 +113,12 @@ func (c *CareReductions) CareRules(ctx context.Context, reviewer parentbilling.H
 
 // SaveCareRule validates a care rule as a whole and stores it under the
 // lock of the monthly billing, so a release computes with the rules before
-// or after the change, never with half of it.
-func (c *CareReductions) SaveCareRule(ctx context.Context, reviewer parentbilling.HolidayReviewer, ruleID int64, input parentbilling.CareRuleInput) (parentbilling.CareRuleSet, error) {
+// or after the change, never with half of it. Every writer of the care
+// rules holds that lock, so a change of a rule read at expectedVersion is
+// checked against the stored rule (ADR 0311).
+func (c *CareReductions) SaveCareRule(ctx context.Context, reviewer parentbilling.HolidayReviewer, ruleID int64, input parentbilling.CareRuleInput,
+	expectedVersion string,
+) (parentbilling.CareRuleSet, error) {
 	if err := validReviewer(reviewer); err != nil {
 		return parentbilling.CareRuleSet{}, err
 	}
@@ -135,8 +140,14 @@ func (c *CareReductions) SaveCareRule(ctx context.Context, reviewer parentbillin
 	if err != nil {
 		return parentbilling.CareRuleSet{}, fmt.Errorf("parent billing: list care rules: %w", err)
 	}
-	if ruleID > 0 && !slices.ContainsFunc(rules, func(rule parentbilling.ContributionRule) bool { return rule.ID == ident.ID(ruleID) }) {
-		return parentbilling.CareRuleSet{}, parentbilling.ErrContributionRuleNotFound
+	if ruleID > 0 {
+		index := slices.IndexFunc(rules, func(rule parentbilling.ContributionRule) bool { return rule.ID == ident.ID(ruleID) })
+		if index < 0 {
+			return parentbilling.CareRuleSet{}, parentbilling.ErrContributionRuleNotFound
+		}
+		if err := readstate.Check(expectedVersion, rules[index].Version); err != nil {
+			return parentbilling.CareRuleSet{}, err
+		}
 	}
 	if overlapsCareRule(rules, ruleID, input) {
 		return parentbilling.CareRuleSet{}, parentbilling.ErrContributionRuleOverlap
@@ -288,7 +299,9 @@ func evidenceContracts(versions []parentbilling.CareContractVersion) []parentbil
 }
 
 // SaveCareEvidence validates and stores an evidence and records the change.
-func (c *CareReductions) SaveCareEvidence(ctx context.Context, reviewer parentbilling.HolidayReviewer, evidenceID int64, input parentbilling.CareEvidenceInput) (parentbilling.CareEvidenceSet, error) {
+func (c *CareReductions) SaveCareEvidence(ctx context.Context, reviewer parentbilling.HolidayReviewer, evidenceID int64, input parentbilling.CareEvidenceInput,
+	expectedVersion string,
+) (parentbilling.CareEvidenceSet, error) {
 	if err := validReviewer(reviewer); err != nil {
 		return parentbilling.CareEvidenceSet{}, err
 	}
@@ -309,6 +322,9 @@ func (c *CareReductions) SaveCareEvidence(ctx context.Context, reviewer parentbi
 	if err := c.levelFitsSchool(ctx, reviewer.OrganizationID, input, rules); err != nil {
 		return parentbilling.CareEvidenceSet{}, err
 	}
+	if err := c.evidenceAsRead(ctx, reviewer.OrganizationID, evidenceID, input.ContractID.Int64(), expectedVersion); err != nil {
+		return parentbilling.CareEvidenceSet{}, err
+	}
 	action := evidenceEventCreate
 	var contractID int64
 	if evidenceID == 0 {
@@ -325,6 +341,25 @@ func (c *CareReductions) SaveCareEvidence(ctx context.Context, reviewer parentbi
 		return parentbilling.CareEvidenceSet{}, fmt.Errorf("parent billing: record evidence change: %w", err)
 	}
 	return c.CareEvidences(ctx, reviewer)
+}
+
+// evidenceAsRead refuses a change of an evidence changed since the
+// Abrechnung read it at expectedVersion (ADR 0311). Every writer of the
+// evidences holds the lock of the monthly billing, which the caller holds.
+// A new evidence (evidenceID zero) has no read state.
+func (c *CareReductions) evidenceAsRead(ctx context.Context, organizationID, evidenceID, contractID int64, expectedVersion string) error {
+	if evidenceID == 0 {
+		return nil
+	}
+	stored, err := c.store.CareEvidences(ctx, organizationID, []int64{contractID})
+	if err != nil {
+		return err
+	}
+	index := slices.IndexFunc(stored, func(evidence parentbilling.CareEvidence) bool { return evidence.ID == ident.ID(evidenceID) })
+	if index < 0 {
+		return parentbilling.ErrCareEvidenceNotFound
+	}
+	return readstate.Check(expectedVersion, stored[index].Version)
 }
 
 // levelFitsSchool refuses an income level that does not apply at the school

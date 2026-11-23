@@ -43,7 +43,9 @@ func TestSeedCareRunReviewsAChangedPreviewBeforeReleasing(t *testing.T) {
 				case "PUT /traeger/billing-terms/care", "PUT /traeger/billing-terms/meal", "PUT /traeger/billing-terms/holiday":
 					terms++
 					_, _ = fmt.Fprint(w, `{"data":{}}`)
-				case "PUT /traeger/billing-run-due-dates/care/5", "PUT /traeger/sepa-creditor/":
+				case "PUT /traeger/billing-run-due-dates/care/5", "PUT /traeger/sepa-creditor/",
+					// The versions a change sends back (ADR 0311).
+					"GET /traeger/billing-terms/", "GET /traeger/sepa-creditor/":
 					_, _ = fmt.Fprint(w, `{"data":{}}`)
 				case "GET /traeger/care-billing-runs/5":
 					reads++

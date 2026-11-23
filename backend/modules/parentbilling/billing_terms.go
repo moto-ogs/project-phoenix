@@ -121,6 +121,9 @@ type ServiceTerms struct {
 	BundleWith    string     `json:"bundle_with"`
 	Custom        bool       `json:"custom"`
 	UpdatedAt     *time.Time `json:"updated_at"`
+	// Version is the read-state token of the terms (ADR 0311): a change
+	// sends it back as expected_version.
+	Version string `json:"version"`
 }
 
 // DefaultServiceTerms are the terms of a service the Träger did not set:
@@ -367,8 +370,10 @@ func ContractOfFamily(key string) (contractID int64, ok bool) {
 type BillingTerms interface {
 	// ServiceTerms answers the terms of every service of BillingServices.
 	ServiceTerms(ctx context.Context, organizationID int64) ([]ServiceTerms, error)
-	// SaveServiceTerms sets the terms of one service.
-	SaveServiceTerms(ctx context.Context, reviewer HolidayReviewer, terms ServiceTerms) ([]ServiceTerms, error)
+	// SaveServiceTerms sets the terms of one service as the Abrechnung
+	// read them: terms changed since expectedVersion are refused with
+	// readstate.ErrChanged (ADR 0311).
+	SaveServiceTerms(ctx context.Context, reviewer HolidayReviewer, terms ServiceTerms, expectedVersion string) ([]ServiceTerms, error)
 	// ListFamilyBilling lists the deviations of the families, by family.
 	ListFamilyBilling(ctx context.Context, reviewer HolidayReviewer) ([]FamilyBilling, error)
 	// FamilyBillingOfContract reads the family of a contract with the
@@ -382,6 +387,8 @@ type BillingTerms interface {
 	SaveFamilyBilling(ctx context.Context, reviewer HolidayReviewer, input FamilyBillingInput) (*FamilyBilling, error)
 	// SetCareRunDueDates and SetHolidayRunDueDates replace the due dates of a
 	// calculated run; a released run is ErrBillingRunReleased.
-	SetCareRunDueDates(ctx context.Context, reviewer HolidayReviewer, runID int64, dates RunDueDates) (RunDueDates, error)
-	SetHolidayRunDueDates(ctx context.Context, reviewer HolidayReviewer, runID int64, dates RunDueDates) (RunDueDates, error)
+	// Dates changed since expectedVersion, the DueDatesVersion of the run
+	// as it was read, are refused with readstate.ErrChanged (ADR 0311).
+	SetCareRunDueDates(ctx context.Context, reviewer HolidayReviewer, runID int64, dates RunDueDates, expectedVersion string) (RunDueDates, error)
+	SetHolidayRunDueDates(ctx context.Context, reviewer HolidayReviewer, runID int64, dates RunDueDates, expectedVersion string) (RunDueDates, error)
 }

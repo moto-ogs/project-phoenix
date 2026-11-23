@@ -106,6 +106,7 @@ export default function TraegerNachweisePage() {
     loading,
     error: loadError,
     mutate,
+    reloadOrThrow,
   } = useTraegerResource(
     traegerBillingKeys.careEvidences(),
     fetchCareEvidences,
@@ -304,6 +305,7 @@ export default function TraegerNachweisePage() {
             <CareEvidenceModal
               data={data}
               target={target}
+              reload={reloadOrThrow}
               onClose={() => setTarget(null)}
               onSaved={(next) => {
                 void mutate(next, { revalidate: false });

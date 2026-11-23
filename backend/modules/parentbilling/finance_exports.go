@@ -270,6 +270,9 @@ type SollstellungSettings struct {
 	Mapping   SollstellungMapping `json:"mapping"`
 	Custom    bool                `json:"custom"`
 	UpdatedAt *time.Time          `json:"updated_at"`
+	// Version is the read-state token of the mapping (ADR 0311): a change
+	// sends it back as expected_version.
+	Version string `json:"version"`
 }
 
 // ExportFileNumbers is the state of the file numbers of a Träger: the
@@ -608,7 +611,10 @@ type InvoiceHistory struct {
 // which the caller opens and rolls back when an operation fails.
 type FinanceExports interface {
 	ExportSettings(ctx context.Context, reviewer HolidayReviewer) (ExportSettings, error)
-	SaveSollstellungMapping(ctx context.Context, reviewer HolidayReviewer, mapping SollstellungMapping) (ExportSettings, error)
+	// SaveSollstellungMapping stores the mapping as the Abrechnung read it:
+	// a mapping changed since expectedVersion is refused with
+	// readstate.ErrChanged (ADR 0311).
+	SaveSollstellungMapping(ctx context.Context, reviewer HolidayReviewer, mapping SollstellungMapping, expectedVersion string) (ExportSettings, error)
 	ResetSollstellungMapping(ctx context.Context, reviewer HolidayReviewer) (ExportSettings, error)
 	SetExportFileNumberStart(ctx context.Context, reviewer HolidayReviewer, start int64) (ExportSettings, error)
 	ExportRuns(ctx context.Context, reviewer HolidayReviewer, page ExportPage) (ExportRunPage, error)

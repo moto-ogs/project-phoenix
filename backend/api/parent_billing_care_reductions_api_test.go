@@ -176,7 +176,8 @@ func TestCareReductionsRunTheWholeChainThroughTheRoutes(t *testing.T) {
 	}
 	// A later change of a rule never reaches the issued invoice.
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careRulesPath+"/"+strconv.FormatInt(level, 10),
-		careRule("income_level", "Stufe 2 neu", []int64{school}, map[string]any{"discount_basis_points": 9000}))
+		withVersion(careRule("income_level", "Stufe 2 neu", []int64{school}, map[string]any{"discount_basis_points": 9000}),
+			careRuleVersion(t, f.traeger, f.office.token, level)))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	again := decodeSchoolPortalData[careReductionRunBody](t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet,
 		careRunPath(int64(run.ID), ""), nil).Body.Bytes())
@@ -294,14 +295,17 @@ func TestCareReductionsAreCheckedBeforeTheyAreSaved(t *testing.T) {
 	assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "parent_billing.care_rule_in_use")
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careRulesPath+"/"+strconv.FormatInt(level, 10),
-		careRule("single_parent", "Stufe 1", []int64{school}, map[string]any{"discount_cents": 100}))
+		withVersion(careRule("single_parent", "Stufe 1", []int64{school}, map[string]any{"discount_cents": 100}),
+			careRuleVersion(t, f.traeger, f.office.token, level)))
 	assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "parent_billing.care_rule_in_use")
 
 	// The evidence is changed in place and deleted; then its level goes too.
 	evidencePath := careEvidencesPath + "/" + strconv.FormatInt(evidenceOf(t, decodeSchoolPortalData[careEvidenceSetBody](t, created.Body.Bytes()), contract), 10)
 	changed := careEvidence(contract, "single_parent", nil)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, evidencePath, changed)
+	evidenceID := evidenceOf(t, decodeSchoolPortalData[careEvidenceSetBody](t, created.Body.Bytes()), contract)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, evidencePath,
+		withVersion(changed, evidenceVersion(t, f.traeger, f.office.token, evidenceID)))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, []string{"single_parent"}, evidenceKinds(decodeSchoolPortalData[careEvidenceSetBody](t, rec.Body.Bytes()), contract))
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodDelete, evidencePath, nil)

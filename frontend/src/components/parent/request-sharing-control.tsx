@@ -20,7 +20,10 @@ import {
 import { Modal } from "~/components/ui/modal";
 import { useSharingOptions } from "~/components/parent/sharing-options-context";
 import { useApiFormError } from "~/contexts/ToastContext";
-import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import {
+  useReadDraftLoadError,
+  useSwrResourceLoadError,
+} from "~/lib/hooks/use-swr-load-error";
 import { useDraftOn } from "~/lib/swr/read-draft";
 import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
 import { parentKeys } from "~/lib/swr/parent-keys";
@@ -161,6 +164,12 @@ function useSharingState(
       answer: (saved) => saved,
     },
   );
+  // A failed read after a refusal stays until a read succeeds, also over a
+  // reopened dialog: nothing is sent until then (ADR 0311, rule 6).
+  const draftLoadError = useReadDraftLoadError(
+    draft,
+    t("errorObjectRecipients"),
+  );
   const toggle = (id: string) =>
     draft.setDraft((current) =>
       current.includes(id)
@@ -178,6 +187,7 @@ function useSharingState(
     loading: enabled && !data && !resource.error,
     reloading: resource.isLoading || isValidating,
     loadError,
+    draftLoadError,
   };
 }
 
@@ -399,6 +409,11 @@ function SharingDialog({
           </p>
         ) : null}
         <LoadErrorAlert error={sharing.loadError} />
+        {/* After a refusal the form's alert already names the failed read,
+            with its retry. */}
+        {control.saveError ? null : (
+          <LoadErrorAlert error={sharing.draftLoadError} />
+        )}
         <FormErrorAlert message={control.saveError} />
         {sharing.state && !sharing.reloading && !sharing.loadError ? (
           <SharingRecipients

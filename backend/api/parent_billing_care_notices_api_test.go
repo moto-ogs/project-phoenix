@@ -463,7 +463,7 @@ func TestCareNoticeAllowsMealOnlyInvoicesWithoutBillingCareAgain(t *testing.T) {
 	writeLegalRemedy(t, f.db, f.office.organization)
 	f.releaseNoticeRun(t, f.noticeRun(t, int64(f.startNoticeRun(t, "2030-09-01", "2030-09-01").ID)))
 	school := f.office.schools[0]
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careMealTariffsPath, mealPrice(school, "2030-08-01", "per_meal", 480))
+	rec := putMealPrice(t, f.traeger, f.office.token, mealPrice(school, "2030-08-01", "per_meal", 480))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	student := testpkg.UniqueTestTenantID(t)
 	releaseMealMonth(t, f.db, f.office.organization, school, student, "2030-09-01", "Mia", 3)

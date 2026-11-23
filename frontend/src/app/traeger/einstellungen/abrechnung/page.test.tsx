@@ -113,6 +113,7 @@ vi.mock("next-auth/react", () => ({
 import TraegerAbrechnungsvorgabenPage from "./page";
 
 const SIBLING: ContributionRule = {
+  version: "v1",
   id: "3",
   kind: "sibling",
   validFrom: "2026-08-01",
@@ -124,6 +125,7 @@ const SIBLING: ContributionRule = {
 };
 
 const YOUTH_OFFICE: CostBearer = {
+  version: "v1",
   id: "4",
   name: "Fachdienst Jugend des Landkreises Musterstadt",
   address: "Am Kreishaus 1\n12345 Musterstadt",
@@ -375,10 +377,11 @@ describe("TraegerAbrechnungsvorgabenPage", () => {
     fireEvent.click(screen.getByRole("menuitem", { name: "Ausschalten" }));
 
     await waitFor(() =>
-      expect(api.saveCostBearer).toHaveBeenCalledWith("4", {
-        ...YOUTH_OFFICE,
-        active: false,
-      }),
+      expect(api.saveCostBearer).toHaveBeenCalledWith(
+        "4",
+        { ...YOUTH_OFFICE, active: false },
+        "v1",
+      ),
     );
   });
 
@@ -386,6 +389,7 @@ describe("TraegerAbrechnungsvorgabenPage", () => {
   // card, filled with the row's values, each opening with its own.
   it("changes a cost bearer in the dialog of adding one, filled with its values", async () => {
     const social: CostBearer = {
+      version: "v1",
       id: "5",
       name: "Sozialamt Musterstadt",
       address: "",
@@ -442,6 +446,7 @@ describe("TraegerAbrechnungsvorgabenPage", () => {
           fileReference: "FJ 51-2027",
           active: true,
         }),
+        "v1",
       ),
     );
     await waitFor(() => expect(api.fetchCostBearers).toHaveBeenCalledTimes(2));
@@ -449,6 +454,101 @@ describe("TraegerAbrechnungsvorgabenPage", () => {
       expect(
         screen.queryByRole("dialog", { name: "Kostenträger ändern" }),
       ).toBeNull(),
+    );
+  });
+
+  // ADR 0311, rule 5: the save's answer reaches the read even when reading
+  // all defaults again fails, so the next change sends the new version.
+  it("changes a cost bearer twice when reading the defaults after the first save fails", async () => {
+    api.fetchCostBearers.mockResolvedValue([YOUTH_OFFICE]);
+    api.saveCostBearer
+      .mockResolvedValueOnce({
+        ...YOUTH_OFFICE,
+        name: "Jugendamt",
+        version: "v2",
+      })
+      .mockResolvedValueOnce({
+        ...YOUTH_OFFICE,
+        name: "Jugendamt Nord",
+        version: "v3",
+      });
+    renderPage();
+    await screen.findAllByText(YOUTH_OFFICE.name);
+    billingApi.fetchHolidayNumberRange.mockRejectedValueOnce(
+      new ApiError("down", 503),
+    );
+
+    const change = async (name: string) => {
+      fireEvent.click(
+        screen.getAllByRole("button", { name: /^Aktionen für / }).at(-1)!,
+      );
+      fireEvent.click(
+        await screen.findByRole("menuitem", { name: "Bearbeiten" }),
+      );
+      const dialog = await screen.findByRole("dialog", {
+        name: "Kostenträger ändern",
+      });
+      fireEvent.change(within(dialog).getByLabelText(/^Name/), {
+        target: { value: name },
+      });
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: "Speichern" }),
+      );
+      await waitFor(() =>
+        expect(
+          screen.queryByRole("dialog", { name: "Kostenträger ändern" }),
+        ).toBeNull(),
+      );
+    };
+
+    await change("Jugendamt");
+    expect(
+      (await screen.findAllByText(new RegExp(SAVED_BUT_STALE_SUFFIX)))[0],
+    ).toBeInTheDocument();
+    await change("Jugendamt Nord");
+    expect(api.saveCostBearer).toHaveBeenLastCalledWith(
+      "4",
+      expect.objectContaining({ name: "Jugendamt Nord" }),
+      "v2",
+    );
+  });
+
+  // ADR 0311, rule 4: after a refused switch the row carries the refused
+  // version until the stored cost bearer is read.
+  it("locks the switch of a cost bearer until the read after its refusal settled", async () => {
+    api.fetchCostBearers.mockResolvedValue([YOUTH_OFFICE]);
+    renderPage();
+    await screen.findAllByText(YOUTH_OFFICE.name);
+    const read = deferred<CostBearer[]>();
+    api.fetchCostBearers.mockReturnValueOnce(read.promise);
+    api.saveCostBearer.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    const openMenu = async () => {
+      fireEvent.click(
+        screen.getAllByRole("button", {
+          name: `Aktionen für ${YOUTH_OFFICE.name}`,
+        })[0]!,
+      );
+      return screen.findByRole("menuitem", { name: "Ausschalten" });
+    };
+
+    fireEvent.click(await openMenu());
+    await waitFor(() => expect(api.saveCostBearer).toHaveBeenCalledTimes(1));
+    const locked = await openMenu();
+    expect(locked).toBeDisabled();
+    fireEvent.click(locked);
+    expect(api.saveCostBearer).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      read.resolve([{ ...YOUTH_OFFICE, version: "v2" }]);
+      await read.promise;
+    });
+    // The menu stayed open: the same entry unlocks.
+    await waitFor(() =>
+      expect(
+        screen.getByRole("menuitem", { name: "Ausschalten" }),
+      ).toBeEnabled(),
     );
   });
 

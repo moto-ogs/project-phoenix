@@ -33,6 +33,7 @@ import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { hasPermission } from "~/lib/auth-utils";
 import { formatDate } from "~/lib/date-helpers";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import type { ResolvedSetting } from "~/lib/settings-api";
 import { useInvalidateFamily } from "~/lib/swr";
@@ -196,6 +197,10 @@ function TemplateEditorPage({
           : templateTextOf(to.current),
     },
   );
+  // A failed read of the stored template stays visible with its retry,
+  // also after the preview, a loaded text or Abbrechen cleared the form's
+  // error (ADR 0311, rule 6).
+  const form = useReadDraftForm(editor, formErrors, "die Vorlage");
   const error =
     template.error ?? master.error ?? savedPreview.error ?? schemaError;
   const draft = editor.draft ?? current;
@@ -401,6 +406,11 @@ function TemplateEditorPage({
                   }}
                 >
                   <FormErrorAlert message={formErrors.error} />
+                  {/* A failed read after the save stands above as
+                      `afterSave`, saying the text is saved. */}
+                  {afterSave.error ? null : (
+                    <LoadErrorAlert error={form.loadError} />
+                  )}
                   <Input
                     controlSize="compact"
                     id="template-subject"

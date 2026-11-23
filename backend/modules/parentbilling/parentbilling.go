@@ -90,6 +90,9 @@ type ContributionRule struct {
 	// the first too.
 	SiblingAllChildren bool      `json:"sibling_all_children"`
 	UpdatedAt          time.Time `json:"updated_at"`
+	// Version is the read-state token of the rule (ADR 0311): a change
+	// sends it back as expected_version.
+	Version string `json:"version"`
 }
 
 // ContributionRuleInput is a rule as the Abrechnung writes it.
@@ -111,14 +114,18 @@ type ContributionRuleInput struct {
 type ContributionRules interface {
 	ListContributionRules(ctx context.Context, organizationID int64) ([]ContributionRule, error)
 	CreateContributionRule(ctx context.Context, organizationID int64, input ContributionRuleInput) (ContributionRule, error)
-	UpdateContributionRule(ctx context.Context, organizationID, ruleID int64, input ContributionRuleInput) (ContributionRule, error)
+	// UpdateContributionRule changes the rule as the Abrechnung read it:
+	// a rule changed since expectedVersion is refused with
+	// readstate.ErrChanged (ADR 0311).
+	UpdateContributionRule(ctx context.Context, organizationID, ruleID int64, input ContributionRuleInput, expectedVersion string) (ContributionRule, error)
 	DeleteContributionRule(ctx context.Context, organizationID, ruleID int64) error
 	// ListCostBearers lists the cost bearers by name, each with whether a
 	// frozen contribution or an invoice names it.
 	ListCostBearers(ctx context.Context, organizationID int64) ([]CostBearer, error)
 	// SaveCostBearer creates a cost bearer when costBearerID is zero and
-	// changes that one otherwise; a missing one is ErrCostBearerNotFound.
-	SaveCostBearer(ctx context.Context, organizationID, costBearerID int64, input CostBearerInput) (CostBearer, error)
+	// changes that one otherwise; a missing one is ErrCostBearerNotFound, one
+	// changed since expectedVersion readstate.ErrChanged (ADR 0311).
+	SaveCostBearer(ctx context.Context, organizationID, costBearerID int64, input CostBearerInput, expectedVersion string) (CostBearer, error)
 	// DeleteCostBearer deletes a cost bearer nothing names; otherwise it is
 	// ErrCostBearerInUse.
 	DeleteCostBearer(ctx context.Context, organizationID, costBearerID int64) error

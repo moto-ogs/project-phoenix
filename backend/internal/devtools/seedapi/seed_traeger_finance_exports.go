@@ -35,7 +35,20 @@ func seedHolidayRunDownloads(client *Client, auth AuthRef, runID, costBearerID i
 // run once, so the export page and the protocol show a file with its number
 // and the invoice its history.
 func seedSollstellung(client *Client, auth AuthRef, runID int64) error {
+	raw, err := client.GetWithAuth(auth, "/traeger/finance-exports/settings")
+	if err != nil {
+		return fmt.Errorf("read the Sollstellung mapping: %w", err)
+	}
+	settings, err := seedReadData[struct {
+		Sollstellung struct {
+			Version string `json:"version"`
+		} `json:"sollstellung"`
+	}](raw, "Sollstellung mapping")
+	if err != nil {
+		return err
+	}
 	if _, err := client.PutWithAuth(auth, "/traeger/finance-exports/settings/sollstellung", map[string]any{
+		"expected_version": settings.Sollstellung.Version,
 		"columns": []map[string]any{
 			{"field": "debtor_number", "header": "Debitor"},
 			{"field": "invoice_number", "header": "Belegnummer"},
