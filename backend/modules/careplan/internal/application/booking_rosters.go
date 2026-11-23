@@ -259,6 +259,9 @@ func (m *BookingMaterialization) persistCareEnrollmentDrafts(
 		groupIDs = append(groupIDs, groupID)
 	}
 	slices.Sort(groupIDs)
+	// One statement writes every row of the child, however many rows its
+	// bookings cut (#7908).
+	var rows []ports.RosterEnrollment
 	for _, groupID := range groupIDs {
 		for _, draft := range drafts[groupID] {
 			row := rosterRowFromCareDraft(requestChildID, studentID, phase, draft, startFrom)
@@ -271,10 +274,14 @@ func (m *BookingMaterialization) persistCareEnrollmentDrafts(
 			if err := validateRosterRow(row); err != nil {
 				return fmt.Errorf("decision: validate enrollment: %w", err)
 			}
-			if err := m.deps.Rosters.CreateEnrollment(ctx, row); err != nil {
-				return fmt.Errorf("decision: create enrollment: %w", err)
-			}
+			rows = append(rows, row)
 		}
+	}
+	if len(rows) == 0 {
+		return nil
+	}
+	if err := m.deps.Rosters.SaveRosterChanges(ctx, ports.RosterChanges{Create: rows}); err != nil {
+		return fmt.Errorf("decision: create enrollments: %w", err)
 	}
 	return nil
 }

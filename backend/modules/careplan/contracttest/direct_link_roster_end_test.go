@@ -1,6 +1,8 @@
 package contracttest_test
 
 import (
+	"context"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -81,7 +83,11 @@ func directLinkOffering(t *testing.T, env *decisionTestEnv, name string, roster 
 // bookings named in ends on directLinkBookingEnd and approves the child.
 func approveDirectLinkChild(t *testing.T, env *decisionTestEnv, firstName string, offeringIDs []int64, ends ...int64) (studentID, childID int64) {
 	t.Helper()
-	ctx := testpkg.Ctx(t)
+	return approveDirectLinkChildIn(testpkg.Ctx(t), t, env, firstName, offeringIDs, ends...)
+}
+
+func approveDirectLinkChildIn(ctx context.Context, t *testing.T, env *decisionTestEnv, firstName string, offeringIDs []int64, ends ...int64) (studentID, childID int64) {
+	t.Helper()
 	grade := int16(2)
 	submitted, err := testpkg.TenantQuery1(t, ctx, env.db, env.requestSvc.Submit, enrollmentTest.SubmitRequest{
 		TenantID: testpkg.Tenant(t), PhaseID: env.sourcePhase.ID,
@@ -294,4 +300,27 @@ func TestDecide_SourceClassFilterAppliesOnApproval(t *testing.T) {
 	assert.Equal(t, []rosterSpan{{Weekdays: []int{1}, From: start, Until: end}}, rosterSpans(loadTemplateEnrollments(t, env, mixed.ID)),
 		"the direct link plans Monday, the filtered source plans no Tuesday")
 	assert.Empty(t, loadTemplateEnrollments(t, env, sourceOnly.ID), "the filtered source plans nothing")
+}
+
+// The approval writes all roster rows of a child in one statement, however
+// many rows its bookings cut (#7908).
+func TestDecide_WritesTheRosterRowsOfAChildInOneStatement(t *testing.T) {
+	t.Parallel()
+	env := setupDecisionTest(t)
+	periodID := directLinkPeriod(t, env)
+	first, second := directLinkRoster(t, env, "ZeilenEins", periodID), directLinkRoster(t, env, "ZeilenZwei", periodID)
+	offerings := []int64{}
+	for _, roster := range []int64{first.ID, second.ID} {
+		offerings = append(offerings, directLinkOffering(t, env, "Montag", &roster, "mon").ID, directLinkOffering(t, env, "Dienstag", &roster, "tue").ID)
+	}
+	counter := testpkg.CaptureQueriesForContext(t, env.db)
+
+	approveDirectLinkChildIn(counter.Context(testpkg.Ctx(t)), t, env, "Zora", offerings, offerings[0], offerings[2])
+
+	require.Len(t, loadTemplateEnrollments(t, env, first.ID), 2, "sanity: the bookings cut two rows per roster")
+	require.Len(t, loadTemplateEnrollments(t, env, second.ID), 2)
+	inserts := counter.Matching(func(sql string) bool {
+		return strings.HasPrefix(sql, "insert into activities.student_enrollments") || strings.HasPrefix(sql, `insert into "activities"."student_enrollments"`)
+	})
+	assert.Len(t, inserts, 1, "one statement writes every roster row of the child")
 }
