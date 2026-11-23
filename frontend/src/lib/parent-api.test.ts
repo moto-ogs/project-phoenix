@@ -37,8 +37,8 @@ import {
   type ThreadView,
 } from "./parent-api";
 
-import type { SubmitEnrollmentPayload } from "./enrollment-submission-api";
 import type * as parentMeContract from "~/lib/contract/parent-me.generated";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 
 const originalFetch = globalThis.fetch;
 
@@ -541,8 +541,8 @@ describe("fetchParentEnrollmentProfile", () => {
 
 // --- submitParentEnrollment ----------------------------------------
 
-const validPayload: SubmitEnrollmentPayload = {
-  phase_id: 42,
+const validPayload: sharedContract.SubmitEnrollmentRequest = {
+  phase_id: "42",
   guardian_first_name: "Anna",
   guardian_last_name: "Beispiel",
   guardian_email: "a@b.c",
@@ -569,7 +569,7 @@ describe("submitParentEnrollment", () => {
     expect(out.request_id).toBe("1234");
     expect(out.status_url).toBe("/status/tok");
     expect(seenURL).toContain("/api/parent/enrollments/school/submit");
-    expect(seenBody).toContain(`"phase_id":42`);
+    expect(seenBody).toContain(`"phase_id":"42"`);
   });
 
   it("URL-encodes the tenant slug", async () => {

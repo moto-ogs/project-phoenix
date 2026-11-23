@@ -42,11 +42,7 @@ import {
 } from "~/lib/messaging-status";
 import { readEnrollmentError } from "~/lib/enrollment-api-error";
 import { type SignatureValue, signatureRequestBody } from "~/lib/signature";
-import type {
-  MeProfileResponse,
-  SubmitEnrollmentPayload,
-  SubmitEnrollmentResult,
-} from "~/lib/enrollment-submission-api";
+import type { MeProfileResponse } from "~/lib/enrollment-submission-api";
 
 import { boundSessionAccount } from "~/lib/session-account";
 import {
@@ -431,8 +427,8 @@ export async function fetchParentEnrollmentProfile(
  */
 export async function submitParentEnrollment(
   tenantSlug: string,
-  payload: SubmitEnrollmentPayload,
-): Promise<SubmitEnrollmentResult> {
+  payload: sharedContract.SubmitEnrollmentRequest,
+): Promise<sharedContract.SubmitEnrollmentResponse> {
   const response = await fetchEnrollmentEndpoint(
     `/api/parent/enrollments/${encodeURIComponent(tenantSlug)}/submit`,
     {
@@ -449,7 +445,10 @@ export async function submitParentEnrollment(
       "parent_submit_failed",
     );
   }
-  return readEnrollmentData<SubmitEnrollmentResult>(response, "POST");
+  return readEnrollmentData<sharedContract.SubmitEnrollmentResponse>(
+    response,
+    "POST",
+  );
 }
 
 /**
