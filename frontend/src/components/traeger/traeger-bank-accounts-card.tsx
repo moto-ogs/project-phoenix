@@ -15,8 +15,12 @@ import {
   useToast,
 } from "~/contexts/ToastContext";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
-import { useReadStateLock } from "~/lib/hooks/use-read-state-lock";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import {
+  readStateWaitReason,
+  useReadDraftLoadError,
+} from "~/lib/hooks/use-swr-load-error";
+import { useActionOn } from "~/lib/swr/read-draft";
 import { createLogger } from "~/lib/logger";
 import {
   deleteTraegerBankAccount,
@@ -61,31 +65,46 @@ export function TraegerBankAccountsCard({
   );
 
   // From a refusal until the stored accounts are read, the rows still
-  // carry the refused versions: nothing is sent (ADR 0311, rule 4).
-  const defaultLock = useReadStateLock();
-  const makeDefault = (account: TraegerBankAccount) =>
-    defaultLock.run(async () => {
-      try {
-        // The row as shown, with its version (ADR 0311): a colleague's change
-        // since is refused, and `reload` shows it in the table.
-        await updateTraegerBankAccount(
-          account.id,
-          { ...account, isDefault: true },
-          account.version,
-        );
-      } catch (err) {
-        logger.error("traeger_bank_account_default_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        void showError(err, {
-          object: "die Bankverbindung",
-          reload: defaultLock.guard(reload),
-        });
-        return;
-      }
-      success(`„${account.label}“ ist jetzt der Standard.`);
-      await afterWrite.refresh();
-    });
+  // carry the refused versions: nothing is sent (ADR 0311, rule 4). Any
+  // read with other versions lifts that, also after a failed read.
+  const makeDefaultAction = useActionOn(
+    { opening: "traeger-bank-accounts", data: accounts, reload },
+    {
+      token: (rows) => rows.map((account) => [account.id, account.version]),
+    },
+  );
+  const makeDefaultLoadError = useReadDraftLoadError(
+    makeDefaultAction,
+    "die Anzeige der Bankverbindungen",
+  );
+  const makeDefaultWait = readStateWaitReason(makeDefaultAction.status);
+  const makeDefault = async (account: TraegerBankAccount) => {
+    // The row as shown, with its version (ADR 0311): a colleague's change
+    // since is refused, and `reload` shows it in the table.
+    const result = await makeDefaultAction.submit(() =>
+      updateTraegerBankAccount(
+        account.id,
+        { ...account, isDefault: true },
+        account.version,
+      ),
+    );
+    if (!result.ok) {
+      if (result.skipped) return;
+      logger.error("traeger_bank_account_default_failed", {
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
+      });
+      void showError(result.error, {
+        object: "die Bankverbindung",
+        reload: result.reload,
+      });
+      return;
+    }
+    success(`„${account.label}“ ist jetzt der Standard.`);
+    await afterWrite.refresh();
+  };
 
   const remove = async () => {
     if (!deleting) return;
@@ -175,10 +194,10 @@ export function TraegerBankAccountsCard({
                   {
                     label: "Als Standard festlegen",
                     description:
-                      defaultLock.reason ??
+                      makeDefaultWait ??
                       "Gilt sofort für Briefe und Rechnungen.",
                     icon: <Star className="size-4" aria-hidden />,
-                    disabled: defaultLock.busy,
+                    disabled: !makeDefaultAction.canSubmit,
                     onClick: () => void makeDefault(account),
                   },
                 ]),
@@ -219,6 +238,7 @@ export function TraegerBankAccountsCard({
       }
     >
       <LoadErrorAlert error={afterWrite.error} className="mb-4" />
+      <LoadErrorAlert error={makeDefaultLoadError} className="mb-4" />
       <DataTable
         columns={columns}
         rows={[...accounts]}

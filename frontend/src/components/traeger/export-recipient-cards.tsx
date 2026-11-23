@@ -36,7 +36,6 @@ import { StatusBadge } from "~/components/ui/status-badge";
 import { SwitchRow } from "~/components/ui/switch";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { formatBerlinDate, formatBerlinTime } from "~/lib/date-helpers";
-import { readStateWaitReason } from "~/lib/hooks/use-read-state-lock";
 import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { useDraftOn } from "~/lib/swr/read-draft";
@@ -301,9 +300,7 @@ export function ExportRecipientFormCard({
             loadingText="Speichert…"
             disabled={recipient !== null && (!changed || !change.canSubmit)}
             disabledReason={
-              changed
-                ? readStateWaitReason(change.status)
-                : "Du hast noch nichts geändert."
+              changed ? form.waitReason : "Du hast noch nichts geändert."
             }
             noTooltip="Ein reines Speichern ohne Folgen."
           >
@@ -534,9 +531,7 @@ export function ExportFormatAssignmentCard({
           saving={saving}
           disabled={!changed || !assignment.canSubmit}
           disabledReason={
-            changed
-              ? readStateWaitReason(assignment.status)
-              : "Du hast noch nichts geändert."
+            changed ? form.waitReason : "Du hast noch nichts geändert."
           }
           cancelDisabled={!changed || saving}
         />

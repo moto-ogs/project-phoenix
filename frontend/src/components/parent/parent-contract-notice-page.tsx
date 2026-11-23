@@ -32,9 +32,12 @@ import { StatusBadge } from "~/components/ui/status-badge";
 import { Textarea } from "~/components/ui/textarea";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { PARENT_RESOURCE_OPTIONS } from "~/lib/hooks/use-parent-resources";
-import { useReadStateLock } from "~/lib/hooks/use-read-state-lock";
-import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import {
+  useReadDraftForm,
+  useSwrResourceLoadError,
+} from "~/lib/hooks/use-swr-load-error";
 import { revalidateOrThrow, useInvalidateFamily, useSWRAuth } from "~/lib/swr";
+import { useActionOn } from "~/lib/swr/read-draft";
 import { parentInboxKeys } from "~/lib/swr/parent-inbox-keys";
 import type {
   ContractNotice,
@@ -241,19 +244,24 @@ function NoticeForm({
   const form = useRef<HTMLFormElement>(null);
   const errors = useApiFormError(form);
   // From a refusal until the new dates are read, nothing is sent: the
-  // shown end date would be refused again (ADR 0311, rule 4).
-  const lock = useReadStateLock();
+  // shown end date would be refused again (ADR 0311, rule 4). Other dates
+  // lift that, also after a failed read.
+  const declare = useActionOn(
+    { opening: contractId, data: options, reload: onReload },
+    { token: (read) => [read.ordinaryEndsOn, read.specialEndsOn] },
+  );
+  const readForm = useReadDraftForm(declare, errors, t("declareErrorObject"));
   const lockReason =
-    lock.status === "reloading"
+    declare.status === "reloading"
       ? t("reloadingReason")
-      : lock.status === "loadFailed"
+      : declare.status === "loadFailed"
         ? t("reloadFailedReason")
         : undefined;
   const date = (iso: string | null) =>
     iso ? formatDate(iso, false, locale) : "–";
 
   const submit = async () => {
-    if (sending || choice === null || lock.locked) return;
+    if (sending || choice === null || !declare.canSubmit) return;
     if (berlinTodayISO() !== optionsDay) {
       await onRefresh();
       return;
@@ -265,39 +273,40 @@ function NoticeForm({
       return;
     }
     setReasonError(undefined);
-    errors.clear();
+    if (!readForm.begin()) return;
     setSending(true);
-    try {
-      onDeclared(
-        await declareMyContractNotice(
-          organizationId,
-          contractId,
-          choice === "widerruf"
-            ? { kind: "widerruf" }
-            : choice === "ausserordentlich"
-              ? {
-                  kind: "kuendigung",
-                  terminationKind: choice,
-                  reason: reason.trim(),
-                }
-              : {
-                  kind: "kuendigung",
-                  terminationKind: choice,
-                  expectedEndsOn: endsOn ?? undefined,
-                },
-        ),
-      );
+    const result = await declare.submit(() =>
+      declareMyContractNotice(
+        organizationId,
+        contractId,
+        choice === "widerruf"
+          ? { kind: "widerruf" }
+          : choice === "ausserordentlich"
+            ? {
+                kind: "kuendigung",
+                terminationKind: choice,
+                reason: reason.trim(),
+              }
+            : {
+                kind: "kuendigung",
+                terminationKind: choice,
+                expectedEndsOn: endsOn ?? undefined,
+              },
+      ),
+    );
+    setSending(false);
+    if (result.ok) {
+      onDeclared(result.saved);
       window.scrollTo({ top: 0 });
-    } catch (err) {
-      // The end date moved since it was shown (ADR 0311): the new dates
-      // arrive with `reload`, and changed ones ask for a choice again.
-      void errors.show(err, {
-        object: t("declareErrorObject"),
-        reload: lock.guard(onReload),
-      });
-    } finally {
-      setSending(false);
+      return;
     }
+    if (result.skipped) return;
+    // The end date moved since it was shown (ADR 0311): the new dates
+    // arrive with `reload`, and changed ones ask for a choice again.
+    void errors.show(result.error, {
+      object: t("declareErrorObject"),
+      reload: result.reload,
+    });
   };
 
   const endsOn =
@@ -350,6 +359,7 @@ function NoticeForm({
         <ParentSection level={2} title={t("chooseTitle")}>
           <div className="space-y-4">
             <FormErrorAlert message={errors.error} />
+            <LoadErrorAlert error={readForm.loadError} />
             {choice === null ? (
               <Alert type="warning" message={t("datesChanged")} />
             ) : null}
@@ -419,7 +429,7 @@ function NoticeForm({
                 variant="danger"
                 size="base"
                 className="w-full sm:w-auto"
-                disabled={sending || choice === null || lock.locked}
+                disabled={sending || choice === null || !declare.canSubmit}
                 disabledReason={lockReason ?? t("submitDisabledReason")}
                 isLoading={sending}
                 loadingText={t("sending")}

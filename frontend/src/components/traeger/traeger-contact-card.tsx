@@ -8,7 +8,6 @@ import { SectionCard } from "~/components/ui/section-card";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
-import { readStateWaitReason } from "~/lib/hooks/use-read-state-lock";
 import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { useDraftOn } from "~/lib/swr/read-draft";
@@ -173,7 +172,7 @@ export function TraegerContactCard({
             saving={saving}
             saveType="submit"
             disabled={!form.canSubmit}
-            disabledReason={readStateWaitReason(form.status)}
+            disabledReason={readForm.waitReason}
           />
         ) : null}
       </form>

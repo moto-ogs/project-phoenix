@@ -18,7 +18,6 @@ import { Input } from "~/components/ui/input";
 import { SectionCard } from "~/components/ui/section-card";
 import { SuggestInput } from "~/components/ui/suggest-input";
 import { useApiFormError } from "~/contexts/ToastContext";
-import { readStateWaitReason } from "~/lib/hooks/use-read-state-lock";
 import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { useDraftOn } from "~/lib/swr/read-draft";
@@ -263,7 +262,7 @@ export function ReportTemplateForm({
           saving={saving}
           saveLabel={saveLabel}
           disabled={stored !== undefined && !change.canSubmit}
-          disabledReason={readStateWaitReason(change.status)}
+          disabledReason={form.waitReason}
         />
       }
     >

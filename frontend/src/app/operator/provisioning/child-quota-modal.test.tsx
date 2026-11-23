@@ -396,6 +396,41 @@ describe("ChildQuotaModal", () => {
     );
   });
 
+  it("reopens on the saved quota while the page still shows the replaced one", async () => {
+    mockUpdateSchool.mockResolvedValue({ ...unlimited, version: "v-2" });
+    const onClose = vi.fn();
+    const onUpdated = vi
+      .fn()
+      .mockRejectedValue(new ApiError("refresh failed", 500));
+    const modal = (isOpen: boolean) => (
+      <ChildQuotaModal
+        isOpen={isOpen}
+        onClose={onClose}
+        school={unlimited}
+        loadCurrentSchool={vi.fn().mockResolvedValue(unlimited)}
+        onUpdated={onUpdated}
+      />
+    );
+    const { rerender } = render(modal(true));
+    expect(
+      screen.queryByRole("button", { name: "Entfernen" }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Anzahl Bundles"), {
+      target: { value: "2" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+
+    // The page could not read the school again: it still hands over the
+    // school without a quota. The dialog shows the stored one, in the
+    // fields and in what it offers to remove.
+    rerender(modal(false));
+    rerender(modal(true));
+    expect(screen.getByLabelText("Anzahl Bundles")).toHaveValue("2");
+    expect(screen.getByRole("button", { name: "Entfernen" })).toBeEnabled();
+  });
+
   it("asks for a reload when the school changed underneath", async () => {
     mockUpdateSchool.mockRejectedValue(
       new ApiError("conflict", 409, { code: "general.business_rejection" }),

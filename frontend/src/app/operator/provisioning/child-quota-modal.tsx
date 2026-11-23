@@ -164,7 +164,7 @@ export function ChildQuotaModal({
       answer: (saved, opened) => storedAfterSave(opened, saved),
     },
   );
-  const { bundles, bundleSize } = quota.draft ?? quotaDraftOf(school);
+  const { bundles, bundleSize } = quota.draft ?? quotaDraftOf(shown);
   const setBundles = (value: string) =>
     quota.setDraft((current) => ({ ...current, bundles: value }));
   const setBundleSize = (value: string) =>
@@ -177,8 +177,8 @@ export function ChildQuotaModal({
   const [confirmRemove, setConfirmRemove] = useState(false);
 
   const currentLimit = childQuotaLimit({
-    bundles: school.childQuotaBundles,
-    bundleSize: school.childQuotaBundleSize,
+    bundles: shown.childQuotaBundles,
+    bundleSize: shown.childQuotaBundleSize,
   });
 
   useEffect(() => {

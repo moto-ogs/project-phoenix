@@ -8,7 +8,6 @@ import { FormModal } from "~/components/ui/form-modal";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { Input } from "~/components/ui/input";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
-import { readStateWaitReason } from "~/lib/hooks/use-read-state-lock";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
@@ -203,9 +202,7 @@ export function TraegerBankAccountModal({
           onSave={() => formRef.current?.requestSubmit()}
           saving={saving}
           disabled={changing !== undefined && !change.canSubmit}
-          disabledReason={
-            changing ? readStateWaitReason(change.status) : undefined
-          }
+          disabledReason={form.waitReason}
         />
       }
     >

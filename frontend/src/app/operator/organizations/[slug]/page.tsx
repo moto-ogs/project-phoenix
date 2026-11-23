@@ -3,6 +3,7 @@
 import { isAccessRefusal } from "~/lib/access-refusal";
 import { ApiError } from "~/lib/api-error";
 import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
+import { useActionOn } from "~/lib/swr/read-draft";
 import { useAccessControlledData } from "~/lib/hooks/use-access-controlled-data";
 import { operatorProvisioningKeys } from "~/lib/swr/portal-keys";
 
@@ -55,8 +56,11 @@ import { CaregiverCapabilityModal } from "~/components/teachers/caregiver-capabi
 import { useSetBreadcrumb } from "~/lib/breadcrumb-context";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
-import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useReadStateLock } from "~/lib/hooks/use-read-state-lock";
+import {
+  readStateWaitReason,
+  useReadDraftLoadError,
+  useSwrLoadError,
+} from "~/lib/hooks/use-swr-load-error";
 import {
   STALE_DATA_SUFFIX,
   useRefreshAfterWrite,
@@ -635,44 +639,49 @@ function OperatorOrganizationDetailPageContent({ params }: PageProps) {
   );
 
   // From a refusal until the stored Träger is read, the badge sends
-  // nothing: it still carries the refused version (ADR 0311, rule 4).
-  const toggleLock = useReadStateLock();
-  const { run: runToggle, guard: guardToggleRead } = toggleLock;
+  // nothing: it still carries the refused version (ADR 0311, rule 4). Any
+  // read of another version lifts that, also after a failed read.
+  const toggle = useActionOn(
+    { opening: slug, data: organization, reload: readOrganizations },
+    { token: (read) => read.version },
+  );
+  const toggleLoadError = useReadDraftLoadError(
+    toggle,
+    "die Anzeige des Trägers",
+  );
+  const toggleWait = readStateWaitReason(toggle.status);
+  const { submit: submitToggle } = toggle;
   const handleToggleOrgActive = useCallback(async () => {
     if (!organization) return;
-    await runToggle(async () => {
-      try {
-        // The Träger as shown, with its version (ADR 0311): a change since
-        // is refused instead of undone.
-        await operatorProvisioningService.updateOrganization(organization.id, {
-          name: organization.name,
-          slug: organization.slug,
-          active: !organization.active,
-          expected_version: organization.version,
-        });
-      } catch (error) {
-        logger.warn("organization_toggle_active_failed", {
-          error: error instanceof Error ? error.message : String(error),
-        });
-        // The retry sets the same target state, so it is safe to repeat; a
-        // refusal of a changed Träger offers none and shows the stored one.
-        void showToggleError(error, {
-          object: "die Änderung des Status",
-          retry: () => void handleToggleOrgActive(),
-          reload: guardToggleRead(readOrganizations),
-        });
-        return;
-      }
-      await statusAfterWrite.refresh();
-    });
-  }, [
-    organization,
-    readOrganizations,
-    runToggle,
-    guardToggleRead,
-    showToggleError,
-    statusAfterWrite,
-  ]);
+    // The Träger as shown, with its version (ADR 0311): a change since is
+    // refused instead of undone.
+    const result = await submitToggle(() =>
+      operatorProvisioningService.updateOrganization(organization.id, {
+        name: organization.name,
+        slug: organization.slug,
+        active: !organization.active,
+        expected_version: organization.version,
+      }),
+    );
+    if (!result.ok) {
+      if (result.skipped) return;
+      logger.warn("organization_toggle_active_failed", {
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
+      });
+      // The retry sets the same target state, so it is safe to repeat; a
+      // refusal of a changed Träger offers none and shows the stored one.
+      void showToggleError(result.error, {
+        object: "die Änderung des Status",
+        retry: () => void handleToggleOrgActive(),
+        reload: result.reload,
+      });
+      return;
+    }
+    await statusAfterWrite.refresh();
+  }, [organization, submitToggle, showToggleError, statusAfterWrite]);
 
   const orgDelete = useSoftDeletable<OrganizationSummary>({
     softDeleteFn: operatorProvisioningService.softDeleteOrganization,
@@ -761,11 +770,10 @@ function OperatorOrganizationDetailPageContent({ params }: PageProps) {
               ? setDeactivateOpen(true)
               : void handleToggleOrgActive()
           }
-          disabled={toggleLock.busy}
+          disabled={!toggle.canSubmit}
           className="cursor-pointer disabled:cursor-not-allowed"
           title={
-            toggleLock.reason ??
-            (organization?.active ? "Deaktivieren" : "Aktivieren")
+            toggleWait ?? (organization?.active ? "Deaktivieren" : "Aktivieren")
           }
           aria-label={organization?.active ? "Deaktivieren" : "Aktivieren"}
         >
@@ -797,8 +805,8 @@ function OperatorOrganizationDetailPageContent({ params }: PageProps) {
       handleToggleOrgActive,
       orgDelete,
       organization,
-      toggleLock.busy,
-      toggleLock.reason,
+      toggle.canSubmit,
+      toggleWait,
     ],
   );
 
@@ -1152,6 +1160,7 @@ function OperatorOrganizationDetailPageContent({ params }: PageProps) {
       <LoadErrorAlert error={organizationAfterWrite.error} />
       <LoadErrorAlert error={editAfterWrite.error} />
       <LoadErrorAlert error={statusAfterWrite.error} />
+      <LoadErrorAlert error={toggleLoadError} />
 
       {activeTab === "uebersicht" ? (
         <>

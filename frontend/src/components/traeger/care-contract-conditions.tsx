@@ -43,7 +43,6 @@ import {
   useResolvedMediaQuery,
 } from "~/lib/hooks/use-media-query";
 import { careContractsConcept } from "~/lib/concepts/careContracts";
-import { readStateWaitReason } from "~/lib/hooks/use-read-state-lock";
 import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { useDraftOn } from "~/lib/swr/read-draft";
 import { createLogger } from "~/lib/logger";
@@ -461,7 +460,7 @@ function ConditionsForm({
           disabledReason={
             form.canSubmit
               ? "Du hast noch nichts geändert."
-              : readStateWaitReason(form.status)
+              : readForm.waitReason
           }
           saveLabel="Bedingungen speichern"
           // A phone keeps both buttons on one line under the legal texts.

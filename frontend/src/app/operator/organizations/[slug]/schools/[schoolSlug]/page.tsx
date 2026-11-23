@@ -2,6 +2,7 @@
 
 import { useAccessControlledData } from "~/lib/hooks/use-access-controlled-data";
 import { operatorProvisioningKeys } from "~/lib/swr/portal-keys";
+import { useActionOn } from "~/lib/swr/read-draft";
 
 import {
   Suspense,
@@ -56,8 +57,11 @@ import { MFAAdminOverrideModal } from "~/components/auth/mfa-admin-override-moda
 import { useSetBreadcrumb } from "~/lib/breadcrumb-context";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
-import { useReadStateLock } from "~/lib/hooks/use-read-state-lock";
-import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import {
+  readStateWaitReason,
+  useReadDraftLoadError,
+  useSwrLoadError,
+} from "~/lib/hooks/use-swr-load-error";
 import {
   STALE_DATA_SUFFIX,
   useRefreshAfterWrite,
@@ -497,54 +501,61 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
   );
 
   // From a refusal until the stored school is read, the badge sends
-  // nothing: it still carries the refused version (ADR 0311, rule 4).
-  const toggleLock = useReadStateLock();
-  const { run: runToggle, guard: guardToggleRead } = toggleLock;
+  // nothing: it still carries the refused version (ADR 0311, rule 4). Any
+  // read of another version lifts that, also after a failed read.
+  const toggle = useActionOn(
+    {
+      opening: school?.id ?? null,
+      data: school,
+      reload: () => readCurrentSchool(school?.id ?? ""),
+    },
+    { token: (read) => read.version },
+  );
+  const toggleLoadError = useReadDraftLoadError(
+    toggle,
+    "die Anzeige der Schule",
+  );
+  const toggleWait = readStateWaitReason(toggle.status);
+  const { submit: submitToggle } = toggle;
   const handleToggleSchoolActive = useCallback(async () => {
     if (!school) return;
-    await runToggle(async () => {
-      let subdomain: string;
-      try {
-        // The route replaces every field: the toggle sends the school as shown
-        // with its version (ADR 0311), so a change since is refused, never
-        // undone, and the refusal shows the stored school.
-        await operatorProvisioningService.updateSchool(school.id, {
-          organization_id: school.organizationId,
-          name: school.name,
-          slug: school.slug,
-          subdomain: school.subdomain,
-          address: school.address,
-          city: school.city,
-          zip: school.zip,
-          phone: school.phone,
-          email: school.email,
-          active: !school.active,
-          hidden: school.hidden,
-          expected_version: school.version,
-        });
-        subdomain = school.subdomain;
-      } catch (error) {
-        logger.warn("school_toggle_active_failed", {
-          error: error instanceof Error ? error.message : String(error),
-        });
-        // No retry: a repeat after an unknown outcome could switch the school
-        // back.
-        void showToggleError(error, {
-          object: "die Änderung des Status",
-          reload: guardToggleRead(() => readCurrentSchool(school.id)),
-        });
-        return;
-      }
-      await statusAfterWrite.refresh(subdomain);
-    });
-  }, [
-    readCurrentSchool,
-    runToggle,
-    guardToggleRead,
-    school,
-    showToggleError,
-    statusAfterWrite,
-  ]);
+    // The route replaces every field: the toggle sends the school as shown
+    // with its version (ADR 0311), so a change since is refused, never
+    // undone, and the refusal shows the stored school.
+    const result = await submitToggle(() =>
+      operatorProvisioningService.updateSchool(school.id, {
+        organization_id: school.organizationId,
+        name: school.name,
+        slug: school.slug,
+        subdomain: school.subdomain,
+        address: school.address,
+        city: school.city,
+        zip: school.zip,
+        phone: school.phone,
+        email: school.email,
+        active: !school.active,
+        hidden: school.hidden,
+        expected_version: school.version,
+      }),
+    );
+    if (!result.ok) {
+      if (result.skipped) return;
+      logger.warn("school_toggle_active_failed", {
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
+      });
+      // No retry: a repeat after an unknown outcome could switch the school
+      // back.
+      void showToggleError(result.error, {
+        object: "die Änderung des Status",
+        reload: result.reload,
+      });
+      return;
+    }
+    await statusAfterWrite.refresh(school.subdomain);
+  }, [school, submitToggle, showToggleError, statusAfterWrite]);
 
   const schoolDelete = useSoftDeletable<SchoolSummary>({
     softDeleteFn: operatorProvisioningService.softDeleteSchool,
@@ -640,12 +651,9 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
         <button
           type="button"
           onClick={() => void handleToggleSchoolActive()}
-          disabled={toggleLock.busy}
+          disabled={!toggle.canSubmit}
           className="cursor-pointer disabled:cursor-not-allowed"
-          title={
-            toggleLock.reason ??
-            (school?.active ? "Deaktivieren" : "Aktivieren")
-          }
+          title={toggleWait ?? (school?.active ? "Deaktivieren" : "Aktivieren")}
           aria-label={school?.active ? "Deaktivieren" : "Aktivieren"}
         >
           <DataTableStatusBadge active={school?.active ?? false} />
@@ -698,8 +706,8 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
       handleToggleSchoolActive,
       school,
       schoolDelete,
-      toggleLock.busy,
-      toggleLock.reason,
+      toggle.canSubmit,
+      toggleWait,
       schoolSlug,
       slug,
     ],
@@ -1018,6 +1026,7 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
       <LoadErrorAlert error={requiredDetailsLoadError} />
       <LoadErrorAlert error={schoolDelete.reloadError} />
       <LoadErrorAlert error={statusAfterWrite.error} />
+      <LoadErrorAlert error={toggleLoadError} />
       <LoadErrorAlert error={editAfterWrite.error} />
 
       {activeTab === "uebersicht" ? (
