@@ -362,6 +362,40 @@ describe("TraegerCareInvoiceAmendPage", () => {
     expect(amend.amendCareInvoice).toHaveBeenCalledTimes(1);
   });
 
+  // ADR 0311 rule 6: a run read before the refusal does not end the failed
+  // read, also when typing renders the dialog again.
+  it("keeps a failed read after a refusal while the change is typed further", async () => {
+    api.fetchCareRun.mockResolvedValue(run());
+    amend.amendCareInvoice.mockRejectedValue(
+      new ApiError("changed", 409, {
+        code: "parent_billing.billing_run_changed",
+      }),
+    );
+    renderPage();
+    const dialog = await openAddPosition();
+    // A reload of the run arrives under the typed change.
+    api.fetchCareRun.mockResolvedValue(run({ fingerprint: "f2" }));
+    await act(revalidateAll);
+    api.fetchCareRun.mockRejectedValue(
+      new ApiError("down", 503, { code: "general.unavailable" }),
+    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "Hinzufügen" }));
+    expect(
+      await within(dialog).findByText(
+        /Der neue Stand konnte nicht geladen werden/,
+      ),
+    ).toBeInTheDocument();
+
+    fireEvent.change(within(dialog).getByLabelText(/Grund/), {
+      target: { value: "Elternbrief vom 4.1." },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Hinzufügen" }));
+    expect(
+      within(dialog).getByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeInTheDocument();
+    expect(amend.amendCareInvoice).toHaveBeenCalledTimes(1);
+  });
+
   it("confirms the effective care deduction after reductions", async () => {
     api.fetchCareRun.mockResolvedValue(
       run({

@@ -372,7 +372,7 @@ describe("StudentDeletionModal", () => {
     // Out of the deleting state: the button carries its label again, not
     // „Wird gelöscht…“. (The acknowledgement belonged to the deleted
     // impact, so a second deletion stays locked.)
-    expect(await screen.findByRole("button", { name: CONFIRM })).toBeVisible();
+    expect(await screen.findByRole("button", { name: CONFIRM })).toBeDisabled();
     expect(mockDeleteStudent).toHaveBeenCalledTimes(1);
   });
 });

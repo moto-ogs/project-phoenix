@@ -341,6 +341,45 @@ describe("FamilyBillingForm and the family's debtor number", () => {
     expect(saveFamilyBilling).toHaveBeenCalledTimes(1);
   });
 
+  // ADR 0311 rule 6: a state read before the refusal does not end the
+  // failed read, also when typing renders the form again.
+  it("keeps a failed read after a refusal while the form is edited further", async () => {
+    saveFamilyBilling.mockRejectedValue(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    const form = (version: string) => (
+      <ToastProvider>
+        <FamilyBillingForm
+          target={target}
+          existing={STORED}
+          version={version}
+          reload={() =>
+            Promise.reject(
+              new ApiError("down", 503, { code: "general.unavailable" }),
+            )
+          }
+          onCancel={vi.fn()}
+          onSaved={vi.fn()}
+        />
+      </ToastProvider>
+    );
+    const view = render(form("v-1"));
+    fireEvent.click(screen.getByRole("radio", { name: "Überweisung" }));
+    // A newer read arrives under the touched draft.
+    view.rerender(form("v-2"));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("radio", { name: "Lastschrift" }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(
+      screen.getByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeInTheDocument();
+    expect(saveFamilyBilling).toHaveBeenCalledTimes(1);
+  });
+
   it("refuses a number in another format of the Träger (#6675)", async () => {
     render(
       <ToastProvider>

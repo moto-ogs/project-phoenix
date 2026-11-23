@@ -9,7 +9,7 @@
 // „Wieder wie im Vertrag“ lässt sie stehen (#6692), und sie hat das Format
 // des Trägers (#6675).
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { ChoiceTile } from "~/components/ui/choice-tile";
@@ -285,10 +285,13 @@ export function FamilyBillingForm({
   // version (ADR 0311): a newer read refills it only while untouched; after
   // a refused save the stored state shows, and nothing is sent until it is
   // read.
+  // One object per read: a fresh one each render would count as a new read
+  // and end a failed read after a refusal with the state read before it.
+  const opened = useMemo(() => ({ existing, version }), [existing, version]);
   const edit = useDraftOn<StoredFamily, FamilyBillingDraft, string, unknown>(
     {
       opening: target.contractId,
-      data: { existing, version },
+      data: opened,
       reload,
     },
     {
@@ -298,7 +301,7 @@ export function FamilyBillingForm({
       answer: (_saved, shown) => shown,
     },
   );
-  const base = edit.base ?? { existing, version };
+  const base = edit.base ?? opened;
   const draft = edit.draft ?? draftOf(existing);
   const setDraft = edit.setDraft;
   const [saving, setSaving] = useState(false);

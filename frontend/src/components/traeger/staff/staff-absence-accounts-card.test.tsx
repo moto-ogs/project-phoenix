@@ -214,6 +214,42 @@ describe("StaffAbsenceAccountsCard", () => {
     expect(api.setTraegerAbsenceAllowance).toHaveBeenCalledTimes(1);
   });
 
+  // ADR 0311 rule 6: the claim is saved, its read failed; the card says so
+  // over the old figures and reads again on „Wiederholen“.
+  it("names a failed read after a saved claim over the shown figures", async () => {
+    api.setTraegerAbsenceAllowance.mockResolvedValueOnce(undefined);
+    renderCard();
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Anspruch ändern: Regenerationstag",
+      }),
+    );
+    api.fetchTraegerAbsenceAccounts.mockRejectedValue(
+      new ApiError("down", 503, { code: "general.unavailable" }),
+    );
+    fireEvent.change(screen.getByLabelText(`Anspruch ${YEAR} in Tagen`), {
+      target: { value: "4" },
+    });
+    fireEvent.change(screen.getByLabelText("Begründung"), {
+      target: { value: "Vertrag" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(
+      await screen.findByText(/Deine Änderung ist gespeichert/),
+    ).toBeInTheDocument();
+    api.fetchTraegerAbsenceAccounts.mockResolvedValue([
+      { ...ACCOUNT, entitledDays: 4, remainingDays: 2, version: "claim-2" },
+    ]);
+    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+    await vi.waitFor(() =>
+      expect(
+        screen.queryByText(/Deine Änderung ist gespeichert/),
+      ).not.toBeInTheDocument(),
+    );
+    expect(api.setTraegerAbsenceAllowance).toHaveBeenCalledTimes(1);
+  });
+
   it("keeps typed days and their version when a colleague's claim arrives", async () => {
     renderCard();
     fireEvent.click(

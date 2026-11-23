@@ -29,6 +29,7 @@ import { formatDayCount } from "~/lib/absence-helpers";
 import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
 import { formatDate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
+import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
 import { useInvalidateFamily } from "~/lib/swr";
 import { traegerStaffKeys } from "~/lib/swr/traeger-staff-keys";
@@ -309,6 +310,10 @@ export function StaffAbsenceAccountsCard({
   );
   const [editing, setEditing] = useState<string | null>(null);
   const invalidateFamily = useInvalidateFamily();
+  // A saved claim whose read failed: the card says it is saved and that
+  // the figures may be old; „Wiederholen“ reads again (ADR 0311 rule 6).
+  const afterSave = useRefreshAfterWrite("die Kontingente", reloadOrThrow);
+  const readFailed = useRef(false);
 
   return (
     <SectionCard
@@ -321,6 +326,7 @@ export function StaffAbsenceAccountsCard({
           value={String(year)}
           onChange={(next) => {
             setEditing(null);
+            afterSave.clear();
             setYear(Number(next));
           }}
           items={[thisYear, thisYear + 1].map((value) => ({
@@ -351,6 +357,13 @@ export function StaffAbsenceAccountsCard({
         />
       ) : accounts ? (
         <div className="grid gap-4 lg:grid-cols-2">
+          {afterSave.error ? (
+            <LoadErrorAlert
+              error={afterSave.error}
+              actionLayout="responsive"
+              className="lg:col-span-2"
+            />
+          ) : null}
           {accounts.map((account) => (
             <AllowanceCard
               key={account.absenceTypeId}
@@ -378,16 +391,22 @@ export function StaffAbsenceAccountsCard({
                     // Liest die Kontingente neu (ein Eintrag im
                     // Zugriffsprotokoll) und lehnt ab, wenn das scheitert.
                     reload={async () => {
+                      readFailed.current = true;
                       const stored = (await reloadOrThrow()).find(
                         (entry) =>
                           entry.absenceTypeId === account.absenceTypeId,
                       );
                       if (!stored) throw new Error("account is gone");
+                      readFailed.current = false;
                       return stored;
                     }}
                     onCancel={() => setEditing(null)}
                     onSaved={async () => {
                       setEditing(null);
+                      // The form read the stored claim after the save; a
+                      // failure would leave the old figures unexplained.
+                      if (readFailed.current) void afterSave.refresh();
+                      else afterSave.clear();
                       // Den gespeicherten Stand hat das Formular schon
                       // gelesen; der Anspruch eines Jahres ändert den Rest
                       // im Folgejahr.

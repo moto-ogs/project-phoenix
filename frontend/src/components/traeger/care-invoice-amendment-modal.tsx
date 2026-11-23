@@ -5,7 +5,7 @@
 // Änderung zurücknehmen. Jede Änderung braucht einen Grund. Die Seite der
 // Rechnung lädt diese Datei, die Seite des Laufs nicht.
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   type GuardianAddressDraft,
   GuardianAddressFields,
@@ -256,10 +256,13 @@ export function CareInvoiceAmendmentModal({
   // reload of the run (focus, another tab) refills the fields only while
   // untouched and keeps the fingerprint they were typed over; after a
   // refusal the stored run shows, and nothing is sent until it is read.
+  // One object per read: a fresh one each render would count as a new read
+  // and end a failed read after a refusal with the run read before it.
+  const opened = useMemo(() => ({ run, invoice }), [run, invoice]);
   const edit = useDraftOn<AmendedInvoice, Fields, string, CareRunDetail>(
     {
       opening: draft ? openingOf(draft, invoice) : null,
-      data: { run, invoice },
+      data: opened,
       reload,
     },
     {
