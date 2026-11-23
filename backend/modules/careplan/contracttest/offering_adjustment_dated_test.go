@@ -43,7 +43,7 @@ func submitApprovedAdjustmentChild(
 		})
 	}
 
-	submitted, err := testpkg.TenantQuery1(t, ctx, env.db, env.requestSvc.Submit, enrollmentTest.SubmitRequest{
+	submitted, err := testpkg.TenantQuery1(t, ctx, env.db, submitShown(env.requestSvc), enrollmentTest.SubmitRequest{
 		TenantID:          testpkg.Tenant(t),
 		PhaseID:           env.sourcePhase.ID,
 		GuardianFirstName: "Eltern",
@@ -522,6 +522,7 @@ func TestChangeRequestService_ApproveKeepsAppliedOfferingSwitch(t *testing.T) {
 		},
 	}
 
+	require.NoError(t, enrollmentTest.ShowEditForm(ctx, env.requestSvc, requestRow.StatusToken, &proposed))
 	changeRequests := newChangeRequestServiceWithDecisionForTest(t, env)
 	created, err := changeRequests.Propose(ctx, requestRow.StatusToken, enrollmentTest.CreateChangeRequestInput{
 		Submission: proposed,

@@ -574,13 +574,24 @@ func consentFlags(t *testing.T) enrollmentTest.FormValues {
 	})
 }
 
+// submitShown submits from the form the phase shows now, with its token
+// (ADR 0311), as the form page does.
+func submitShown(intake *enrollmentTest.Intake) func(context.Context, enrollmentTest.SubmitRequest) (*enrollmentTest.SubmitResult, error) {
+	return func(ctx context.Context, req enrollmentTest.SubmitRequest) (*enrollmentTest.SubmitResult, error) {
+		if err := enrollmentTest.ShowPhaseForm(ctx, intake, &req); err != nil {
+			return nil, err
+		}
+		return intake.Submit(ctx, req)
+	}
+}
+
 // submitOneChild submits a single-child enrollment in the source phase and
 // returns the resulting request + child ids so tests can drive Decide
 // against a known row.
 func submitOneChild(t *testing.T, env *decisionTestEnv, guardianEmail, childFirst, childLast string) (requestID, childID int64) {
 	t.Helper()
 	grade := int16(2)
-	res, err := testpkg.TenantQuery1(t, testpkg.Ctx(t), env.db, env.requestSvc.Submit, enrollmentTest.SubmitRequest{
+	res, err := testpkg.TenantQuery1(t, testpkg.Ctx(t), env.db, submitShown(env.requestSvc), enrollmentTest.SubmitRequest{
 		TenantID:          testpkg.Tenant(t),
 		PhaseID:           env.sourcePhase.ID,
 		GuardianFirstName: "Eltern",

@@ -10,6 +10,7 @@
     "popupBlocked": "Please allow a new window to open."
   },
   "errorObject": "the enrollment",
+  "errorObjectForm": "the enrollment form",
   "loading": "Loading form…",
   "legalGermanNotice": "These legal texts are legally binding in German.",
   "fixMarked": "Some fields show a note. Please correct these fields.",

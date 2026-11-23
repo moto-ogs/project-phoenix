@@ -69,3 +69,7 @@ func (UnsentGuardianMail) EnqueueExistingAccountEmail(context.Context, identityP
 
 func (UnsentGuardianMail) EnqueueWelcomeEmail(context.Context, identityPorts.GuardianProfile, int64, string, int64) {
 }
+
+func (UnsentGuardianMail) EnqueueCareVisibleEmail(context.Context, identityaccess.GuardianCareNotice) error {
+	return nil
+}

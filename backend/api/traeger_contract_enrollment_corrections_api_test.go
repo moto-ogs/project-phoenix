@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	enrollmentOwner "github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -14,9 +15,10 @@ import (
 // A bound imported contract follows its bookings (ADR 0309). Mia's contract
 // has the all-day care to the end of the phase and, until January, a late
 // care on Thursday; a version of the contract names the last day of the late
-// care. The office then corrects the same offerings without a date.
+// care. The office then corrects the same offerings, without a date unless
+// a case says otherwise.
 //
-//   - Keeping them makes no version (#7909). Before the fix the correction
+//   - Keeping them makes no version (#7909), with a date too (#7928). Before the fix the correction
 //     booked the late care to the end of the phase, and the amendment made a
 //     version nobody decided.
 //   - Extending the late care to the end of the phase (#7929) is a change the
@@ -24,7 +26,17 @@ import (
 //     late care runs with the contract.
 func TestAnUndatedCorrectionOfABoundContract(t *testing.T) {
 	t.Parallel()
-	for name, extend := range map[string]bool{"keeping the care makes no version": false, "an extension makes a version": true} {
+	dated := calendar.NewDate(2027, 11, 8)
+	for name, c := range map[string]struct {
+		extend        bool
+		effectiveFrom *calendar.Date
+	}{
+		"keeping the care makes no version": {}, "an extension makes a version": {extend: true},
+		// A change with a date keeps the end too (#7928): from November the
+		// office confirms the same offerings.
+		"a dated change keeping the care makes no version": {effectiveFrom: &dated},
+	} {
+		extend := c.extend
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			f, conclusion := newContractEnrollmentFixtureWithAmendments(t, "Träger Korrektur "+name)
@@ -61,7 +73,8 @@ func TestAnUndatedCorrectionOfABoundContract(t *testing.T) {
 			require.NoError(t, tenant.WithinTenant(ctx, schoolID, func(ctx context.Context) error {
 				_, err := decisions.UpdateChildOfferings(ctx, enrollmentOwner.UpdateChildOfferingsInput{
 					RequestID: requestID, ChildID: miaChild, ActorAccountID: actor.ID, ActorRole: "admin", Reason: "Korrektur",
-					Offerings: []enrollmentOwner.OfferingAdjustmentSelection{{OfferingID: f.offering}, {OfferingID: late.ID, ExtendToPhaseEnd: extend}},
+					Offerings:     []enrollmentOwner.OfferingAdjustmentSelection{{OfferingID: f.offering}, {OfferingID: late.ID, ExtendToPhaseEnd: extend}},
+					EffectiveFrom: c.effectiveFrom,
 				})
 				return err
 			}))

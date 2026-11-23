@@ -6113,13 +6113,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (d guardianDirectory) FindStudents(ctx context.Context, ids []int64) (map[int64]identityPorts.Student, error) {\n\tstudents, err := d.repos.Students.FindByIDs(ctx, ids)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make(map[int64]identityPorts.Student, len(students))\n\tfor id, student := range students {\n\t\tif student != nil {\n\t\t\tresult[id] = identityPorts.Student{ID: student.ID, PersonID: student.PersonID}\n\t\t}\n\t}\n\treturn result, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/guardianDirectory.FindStudents",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
       "evidence": "func (d guardianDirectory) LinkGuardianProfileToAccount(ctx context.Context, profileID, accountID int64) error {\n\treturn d.repos.People.LinkGuardianProfileToAccount(ctx, profileID, accountID)\n}",
       "form": "forward-debt",
       "id": "roots/owners/guardianDirectory.LinkGuardianProfileToAccount",
@@ -6389,6 +6382,13 @@
       "evidence": "func (e offeringChangeEnrollment) Request(ctx context.Context, id int64) (*carePlanCompose.BookingRequest, error) {\n\trequest, err := e.owner.RequestByID(ctx, id, false)\n\tif err != nil || request == nil {\n\t\treturn nil, err\n\t}\n\treturn \u0026carePlanCompose.BookingRequest{ID: request.ID, PhaseID: request.PhaseID}, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/offeringChangeEnrollment.Request",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
+      "evidence": "func (e offeringChangeEnrollment) SelectionHistory(ctx context.Context, childID int64) ([]careplan.BookedOffering, error) {\n\tvalues, err := e.owner.RequestChildOfferingHistory(ctx, childID)\n\treturn BookedOfferings(values), err\n}",
+      "form": "unclassified-evidence",
+      "id": "roots/owners/offeringChangeEnrollment.SelectionHistory",
       "owner": "roots"
     },
     {

@@ -109,6 +109,12 @@ func (s *OfferingChanges) manualPlanningConflicts(ctx context.Context, studentID
 	if err != nil {
 		return nil, fmt.Errorf("offering change: list manual planning conflicts: %w", err)
 	}
+	if len(occurrences) == 0 {
+		return []careplan.ManualPlanningConflict{}, nil
+	}
+	if diff.bookingEnds, err = s.proposedBookingEnds(ctx, diff); err != nil {
+		return nil, err
+	}
 	for _, occurrence := range occurrences {
 		if calendar.IsWeekend(calendar.Date(occurrence.Date)) {
 			if diff.weekendFollowsFriday, err = calendar.WeekendFollowsFriday(ctx); err != nil {
@@ -120,6 +126,26 @@ func (s *OfferingChanges) manualPlanningConflicts(ctx context.Context, studentID
 	return aggregateManualPlanningConflicts(occurrences, diff), nil
 }
 
+// proposedBookingEnds is the end the change books each selected offering
+// to (selectionBookingEnds): a kept end leaves the days after it uncovered.
+func (s *OfferingChanges) proposedBookingEnds(ctx context.Context, diff *offeringDecisionDiff) (map[int64]calendar.Date, error) {
+	phaseEnd := diff.phase.ServiceEnd.AddDays(1)
+	if !endsBeforePhase(diff.current, phaseEnd) {
+		return nil, nil
+	}
+	var requestChildID int64
+	for _, link := range diff.current {
+		if link != nil {
+			requestChildID = link.RequestChildID
+		}
+	}
+	stored, err := s.storedBookingsAt(ctx, diff.selectionFacts, requestChildID, diff.current, phaseEnd)
+	if err != nil {
+		return nil, err
+	}
+	return selectionBookingEnds(diff.selected, diff.current, stored, diff.offeringByID, phaseEnd), nil
+}
+
 func proposedCareCoversOccurrence(diff *offeringDecisionDiff, occurrence ports.ManualPlanningOccurrence) bool {
 	for _, selected := range diff.selected {
 		if proposedSelectionCoversOccurrence(diff, selected, occurrence) {
@@ -129,9 +155,15 @@ func proposedCareCoversOccurrence(diff *offeringDecisionDiff, occurrence ports.M
 	return false
 }
 
+// proposedSelectionCoversOccurrence reports whether the selection covers the
+// occurrence's day. A kept booking end ends the cover (#7928): the roster
+// rows of the offering end there too (#7908).
 func proposedSelectionCoversOccurrence(diff *offeringDecisionDiff, selected careplan.OfferingSelection, occurrence ports.ManualPlanningOccurrence) bool {
 	date := calendar.Date(occurrence.Date)
 	if diff == nil || diff.phase == nil || date.Before(diff.effectiveFrom) || date.After(diff.phase.ServiceEnd) {
+		return false
+	}
+	if end, ok := diff.bookingEnds[selected.OfferingID]; ok && !date.Before(end) {
 		return false
 	}
 	offering := diff.offeringByID[selected.OfferingID]

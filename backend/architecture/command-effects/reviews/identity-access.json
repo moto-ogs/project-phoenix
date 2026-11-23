@@ -4290,6 +4290,17 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.BulkInviteToStudents",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.GuardianRelativeAccess.BulkInviteToStudents",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/compose.EmailOutbox.Enqueue (delivery-platform) through modules/identityaccess.Owner.BulkInviteToStudents. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Added for #7760 (ADR 0309 section 5): with NotifyActive the bulk invitation queues one care notice per account holder, naming every child it covers, in that guardian's savepoint, beside the stamp care_notice_sent_at on Identity \u0026 Access's own access row; an outbox refusal rolls back both for that guardian (#4602). The mail is sent after commit.",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/compose.EmailOutbox.Enqueue",
+      "target_owner": "delivery-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.BulkInviteToStudents",
       "classification": "query",
       "effect": "query",
@@ -4298,6 +4309,26 @@
       "source_owner": "identity-access",
       "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/contract.ProviderBlockBudget.Attempt",
       "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.BulkInviteToStudents",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.GuardianRelativeAccess.BulkInviteToStudents",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.BookingProjection.EffectiveOfferingSelectionsAtDates: the Care Plan bookings in force on a day for many request children in one statement. Added for #7760 (ADR 0309 section 5): the care notice of the bulk invitation names a child only with a booking in force today, as the parents portal lists it under Betreuung \u0026 Wochenplan. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/enrollment.BookingProjection.EffectiveOfferingSelectionsAtDates",
+      "target_owner": "enrollment"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.BulkInviteToStudents",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.GuardianRelativeAccess.BulkInviteToStudents",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.BookingProjection.StudentCarePeriodsByStudentIDs (Enrollment's approved care periods of many children in one statement). Added for #7760 (ADR 0309 section 5): the parent step of the bulk invitation names only children whose care the parents portal shows as running today. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/enrollment.BookingProjection.StudentCarePeriodsByStudentIDs",
+      "target_owner": "enrollment"
     },
     {
       "adr": "0098",
@@ -6525,6 +6556,17 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.BulkInviteToStudents",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.BulkInviteToStudents",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/compose.EmailOutbox.Enqueue (delivery-platform) through modules/identityaccess/internal/application.engine.BulkInviteToStudents. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Added for #7760 (ADR 0309 section 5): with NotifyActive the bulk invitation queues one care notice per account holder, naming every child it covers, in that guardian's savepoint, beside the stamp care_notice_sent_at on Identity \u0026 Access's own access row; an outbox refusal rolls back both for that guardian (#4602). The mail is sent after commit.",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/compose.EmailOutbox.Enqueue",
+      "target_owner": "delivery-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.BulkInviteToStudents",
       "classification": "query",
       "effect": "query",
@@ -6533,6 +6575,26 @@
       "source_owner": "identity-access",
       "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/contract.ProviderBlockBudget.Attempt",
       "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.BulkInviteToStudents",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.BulkInviteToStudents",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.BookingProjection.EffectiveOfferingSelectionsAtDates: the Care Plan bookings in force on a day for many request children in one statement. Added for #7760 (ADR 0309 section 5): the care notice of the bulk invitation names a child only with a booking in force today, as the parents portal lists it under Betreuung \u0026 Wochenplan. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/enrollment.BookingProjection.EffectiveOfferingSelectionsAtDates",
+      "target_owner": "enrollment"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.BulkInviteToStudents",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.BulkInviteToStudents",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.BookingProjection.StudentCarePeriodsByStudentIDs (Enrollment's approved care periods of many children in one statement). Added for #7760 (ADR 0309 section 5): the parent step of the bulk invitation names only children whose care the parents portal shows as running today. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/enrollment.BookingProjection.StudentCarePeriodsByStudentIDs",
+      "target_owner": "enrollment"
     },
     {
       "adr": "0098",
@@ -22020,6 +22082,26 @@
       "target_owner": "audit-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.GuardianDirectory.ApprovedCarePeriods",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.GuardianDirectory.ApprovedCarePeriods",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.BookingProjection.StudentCarePeriodsByStudentIDs (Enrollment's approved care periods of many children in one statement). Added for #7760 (ADR 0309 section 5): the parent step of the bulk invitation names only children whose care the parents portal shows as running today. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/enrollment.BookingProjection.StudentCarePeriodsByStudentIDs",
+      "target_owner": "enrollment"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.GuardianDirectory.CareBookingsInForce",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.GuardianDirectory.CareBookingsInForce",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.BookingProjection.EffectiveOfferingSelectionsAtDates: the Care Plan bookings in force on a day for many request children in one statement. Added for #7760 (ADR 0309 section 5): the care notice of the bulk invitation names a child only with a booking in force today, as the parents portal lists it under Betreuung \u0026 Wochenplan. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/enrollment.BookingProjection.EffectiveOfferingSelectionsAtDates",
+      "target_owner": "enrollment"
+    },
+    {
       "adr": "0067",
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.GuardianDirectory.DeleteGuardianProfile",
       "classification": "leaf",
@@ -22117,6 +22199,17 @@
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.PromoteGuardianLinkToLegalGuardian",
       "target_owner": "people-directory"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.GuardianInvitationDelivery.EnqueueCareVisibleEmail",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.GuardianInvitationDelivery.EnqueueCareVisibleEmail",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/compose.EmailOutbox.Enqueue (delivery-platform) through modules/identityaccess/internal/application.GuardianInvitationDelivery.EnqueueCareVisibleEmail. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Added for #7760 (ADR 0309 section 5): with NotifyActive the bulk invitation queues one care notice per account holder, naming every child it covers, in that guardian's savepoint, beside the stamp care_notice_sent_at on Identity \u0026 Access's own access row; an outbox refusal rolls back both for that guardian (#4602). The mail is sent after commit.",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/compose.EmailOutbox.Enqueue",
+      "target_owner": "delivery-platform"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.GuardianInvitationDelivery.GuardianMailBlocks",
@@ -25867,6 +25960,26 @@
       "target_owner": "people-directory"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.guardianDirectory.ApprovedCarePeriods",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.GuardianDirectory.ApprovedCarePeriods",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.BookingProjection.StudentCarePeriodsByStudentIDs (Enrollment's approved care periods of many children in one statement). Added for #7760 (ADR 0309 section 5): the parent step of the bulk invitation names only children whose care the parents portal shows as running today. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/enrollment.BookingProjection.StudentCarePeriodsByStudentIDs",
+      "target_owner": "enrollment"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.guardianDirectory.CareBookingsInForce",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.GuardianDirectory.CareBookingsInForce",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.BookingProjection.EffectiveOfferingSelectionsAtDates: the Care Plan bookings in force on a day for many request children in one statement. Added for #7760 (ADR 0309 section 5): the care notice of the bulk invitation names a child only with a booking in force today, as the parents portal lists it under Betreuung \u0026 Wochenplan. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/enrollment.BookingProjection.EffectiveOfferingSelectionsAtDates",
+      "target_owner": "enrollment"
+    },
+    {
       "adr": "0067",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.guardianDirectory.CreateGuardianProfile",
       "classification": "leaf",
@@ -26019,7 +26132,17 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.GuardianDirectory.FindStudents",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.StudentRepository.FindByIDs; modules/peopledirectory/ports/repository_contracts.go:87. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed pure value method; no query, mutation or lock. Target modules/peopledirectory.StudentState.IsAlumnus derives the graduated state from the read row. Added for #7760: the care notice names no alumnus. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.guardianDirectory.FindStudents",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.GuardianDirectory.FindStudents",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.StudentRepository.FindByIDs; modules/peopledirectory/ports/repository_contracts.go:87. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7760: the binding also passes the child's OGS place and last care day on to the parent step of the bulk invitation; still one read, no lock, no write.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -26156,6 +26279,17 @@
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/rows.EnrollmentRequestRepository.BackfillGuardianAccountID",
       "target_owner": "care-plan"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.guardianInvitationDelivery.EnqueueCareVisibleEmail",
+      "classification": "platform",
+      "effect": "durable",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.GuardianInvitationDelivery.EnqueueCareVisibleEmail",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/compose.EmailOutbox.Enqueue (delivery-platform) through roots/owners.guardianInvitationDelivery.EnqueueCareVisibleEmail. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Added for #7760 (ADR 0309 section 5): with NotifyActive the bulk invitation queues one care notice per account holder, naming every child it covers, in that guardian's savepoint, beside the stamp care_notice_sent_at on Identity \u0026 Access's own access row; an outbox refusal rolls back both for that guardian (#4602). The mail is sent after commit.",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/compose.EmailOutbox.Enqueue",
+      "target_owner": "delivery-platform"
     },
     {
       "adr": "0098",

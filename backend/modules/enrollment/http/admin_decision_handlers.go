@@ -122,6 +122,9 @@ type AdminRequestChild struct {
 	DateOfBirth       string  `json:"date_of_birth"`
 	TargetGradeLevel  *int16  `json:"target_grade_level,omitempty"`
 	TargetSchoolClass *string `json:"target_school_class,omitempty"`
+	// Version is the token of the child's data a staff correction sends
+	// back as expected_version (ADR 0311).
+	Version string `json:"version"`
 	// HolidayCareWish is the parents' answer to the holiday care question
 	// when the form asked it (#4703).
 	HolidayCareWish  *bool      `json:"holiday_care_wish,omitempty"`
@@ -233,6 +236,7 @@ func toAdminRequestSummary(s *RequestSummary) AdminRequestSummary {
 			DateOfBirth:       string(c.DateOfBirth),
 			TargetGradeLevel:  c.TargetGradeLevel,
 			TargetSchoolClass: c.TargetSchoolClass,
+			Version:           capability.ChildDataVersion(c),
 			HolidayCareWish:   c.HolidayCareWish,
 			Status:            c.Status,
 			StatusReason:      c.StatusReason,
@@ -740,6 +744,7 @@ func newAdminRequestChild(child *capability.RequestChild) AdminRequestChild {
 		DateOfBirth:       string(child.DateOfBirth),
 		TargetGradeLevel:  child.TargetGradeLevel,
 		TargetSchoolClass: child.TargetSchoolClass,
+		Version:           capability.ChildDataVersion(child),
 		HolidayCareWish:   child.HolidayCareWish,
 		Status:            child.Status,
 		StatusReason:      child.StatusReason,

@@ -32,8 +32,9 @@ type offeringAdjustmentWork struct {
 	overridden                             []careplan.OfferingOverride
 	authoritative, afterHasCareDays        bool
 	isCompleteWithdrawal                   bool
-	// keptEnds are the stored ends an undated correction found before the
-	// office's extensions (#7929); see keepUnextendedBookingEnds.
+	// keptEnds are the stored ends a change found before the office's
+	// extensions (#7929; only an undated correction extends); see
+	// keepUnextendedBookingEnds.
 	keptEnds map[int64]calendar.Date
 }
 

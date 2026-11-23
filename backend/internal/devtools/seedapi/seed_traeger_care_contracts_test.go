@@ -59,6 +59,8 @@ func TestSeedConclusionSubmitsConditionsBeforeApproval(t *testing.T) {
 						return
 					}
 					_, _ = fmt.Fprint(w, `{"data":{"request_id":"91","status_url":"/status/token"}}`)
+				case "GET /api/enrollment/phases/61/manual-bootstrap":
+					_, _ = fmt.Fprint(w, `{"data":{"schema":{"id":"60"},"terms_fingerprint":"form-60"}}`)
 				case "GET /api/enrollment/admin/requests/91":
 					_, _ = fmt.Fprint(w, `{"data":{"children":[{"id":"92"}]}}`)
 				case "POST /api/enrollment/admin/requests/91/children/92/decide":
@@ -99,6 +101,7 @@ func TestSeedConclusionSubmitsConditionsBeforeApproval(t *testing.T) {
 				"GET /traeger/contract-templates/",
 				"POST /api/enrollment/schema/",
 				"PUT /api/enrollment/phases/61",
+				"GET /api/enrollment/phases/61/manual-bootstrap",
 				"POST /api/enrollment/demo/submit",
 			}
 			if !refuseSubmission {

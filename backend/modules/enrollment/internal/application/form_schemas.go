@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // defaultSchemaName is the fallback name for legacy callers that don't
@@ -144,6 +145,15 @@ func (s *FormSchemas) lockedSource(ctx context.Context, id int64) (*enrollment.F
 	if err != nil {
 		return nil, fmt.Errorf("load source schema: %w", err)
 	}
+	// The editor saves over the version it read (ADR 0311): a version of
+	// the lineage published since is refused, not silently reverted.
+	next, err := s.records.NextSchemaVersionForName(ctx, source.Name)
+	if err != nil {
+		return nil, fmt.Errorf("check newest schema version: %w", err)
+	}
+	if source.Version+1 != next {
+		return nil, readstate.ErrChanged
+	}
 	return source, nil
 }
 
@@ -208,6 +218,12 @@ func (s *FormSchemas) PublishForm(ctx context.Context, in enrollment.PublishForm
 		return s.createNamedSchema(ctx, in.Name, in)
 	}
 
+	// Lock before reading the active schema: a version published between
+	// this read and the lineage check would otherwise refuse a save that
+	// never read anything (ADR 0311 guards reads, not this legacy path).
+	if err := s.records.LockSchemaLineages(ctx); err != nil {
+		return nil, err
+	}
 	active, err := s.GetActive(ctx)
 	if err == nil {
 		return s.updateSchemaFromInput(ctx, active.ID, in)

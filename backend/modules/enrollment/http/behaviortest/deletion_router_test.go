@@ -55,7 +55,23 @@ func TestEnrollmentDeletionRoutes_DeleteChildThenRequest(t *testing.T) {
 	require.NoError(t, json.Unmarshal(mails.Body.Bytes(), &mailBody))
 	assert.NotNil(t, mailBody.Data, "the mails answer a list, also without mails")
 
-	child := call(http.MethodDelete, fmt.Sprintf("%s/children/%d", base, target.ID), `{"reason":"Doppelte Anmeldung"}`)
+	// Each deletion confirms the preview it read: its fingerprint (ADR 0311).
+	preview := func(path string) string {
+		rec := call(http.MethodGet, path+"/delete-impact", "")
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		var impact struct {
+			Data enrollmentHTTP.AdminEnrollmentDeletionImpact `json:"data"`
+		}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &impact))
+		require.NotEmpty(t, impact.Data.Fingerprint)
+		return impact.Data.Fingerprint
+	}
+	confirm := func(reason, fingerprint string) string {
+		return fmt.Sprintf(`{"reason":%q,"expected_fingerprint":%q}`, reason, fingerprint)
+	}
+	shownBeforeChild := preview(base)
+
+	child := call(http.MethodDelete, fmt.Sprintf("%s/children/%d", base, target.ID), confirm("Doppelte Anmeldung", preview(fmt.Sprintf("%s/children/%d", base, target.ID))))
 	require.Equal(t, http.StatusOK, child.Code, child.Body.String())
 	var childImpact struct {
 		Data enrollmentHTTP.AdminEnrollmentDeletionImpact `json:"data"`
@@ -66,7 +82,13 @@ func TestEnrollmentDeletionRoutes_DeleteChildThenRequest(t *testing.T) {
 	assert.Zero(t, tableCount(t, db, "enrollment.request_children", "id = ?", target.ID))
 	assert.Equal(t, 1, tableCount(t, db, "enrollment.request_children", "id = ?", remaining.ID))
 
-	whole := call(http.MethodDelete, base+"/", `{"reason":"Anmeldung zurückgezogen"}`)
+	// The preview read before the child went counts two children: refused.
+	stale := call(http.MethodDelete, base+"/", confirm("Anmeldung zurückgezogen", shownBeforeChild))
+	require.Equal(t, http.StatusConflict, stale.Code, stale.Body.String())
+	assert.Contains(t, stale.Body.String(), `"code":"general.changed_since_read"`)
+	assert.Equal(t, 1, tableCount(t, db, "enrollment.requests", "id = ?", request.ID))
+
+	whole := call(http.MethodDelete, base+"/", confirm("Anmeldung zurückgezogen", preview(base)))
 	require.Equal(t, http.StatusOK, whole.Code, whole.Body.String())
 	var requestImpact struct {
 		Data enrollmentHTTP.AdminEnrollmentDeletionImpact `json:"data"`

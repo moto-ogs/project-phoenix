@@ -125,3 +125,16 @@ func TestKeepBookingEnds(t *testing.T) {
 		[]*careplan.BookedOffering{stored(care, august, &march)}, offerings, phaseEnd)
 	assert.Equal(t, careEnd, *capped.ValidUntil)
 }
+
+// The AG check of a change counts to the latest end the change books one of
+// its new courses to (#7928, council round 1).
+func TestLatestBookingEndOfTheCoursesOfAChange(t *testing.T) {
+	t.Parallel()
+	february, may, phaseEnd := calendar.NewDate(2027, 3, 1), calendar.NewDate(2027, 5, 1), calendar.NewDate(2027, 8, 1)
+	check := &capacityCheck{phaseEndExclusive: phaseEnd, bookingEnds: map[int64]calendar.Date{1: february, 2: may}}
+	early, late := &careplan.CareOffering{ID: 1}, &careplan.CareOffering{ID: 2}
+
+	assert.Equal(t, february, check.latestBookingEnd([]*careplan.CareOffering{early}), "one course counts to its booking end")
+	assert.Equal(t, may, check.latestBookingEnd([]*careplan.CareOffering{early, late}), "several count to the latest end")
+	assert.Equal(t, phaseEnd, check.latestBookingEnd(nil), "no course: the end of the phase")
+}

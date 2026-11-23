@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/selection"
 	enrollmentNative "github.com/moto-ogs/project-phoenix/modules/enrollment"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -160,12 +161,21 @@ func (s *Intake) planSubmissionContract(ctx context.Context, req *SubmitRequest,
 		return fmt.Errorf("submit: load schema: %w", err)
 	}
 	plan.schema = schema
+	if plan.legalBlocks, err = s.resolveSubmissionLegalBlocks(ctx, schema); err != nil {
+		return fmt.Errorf("submit: resolve legal blocks: %w", err)
+	}
+	// A form whose version or legal texts changed since it was read is
+	// refused before its answers are checked against the current one: the
+	// family reloads and sees what is asked now, a signature field too.
+	// Without enrollment the validation refuses.
+	if s.isEnrollmentEnabled(ctx) {
+		if err := checkFilledInForm(req.ExpectedTermsFingerprint, schema, plan.legalBlocks); err != nil {
+			return err
+		}
+	}
 	plan.signatureRequired = signatureRequired(schema, plan.submissionSource)
 	if err := s.requireSignature(plan.signatureRequired, req.Signature); err != nil {
 		return err
-	}
-	if plan.legalBlocks, err = s.resolveSubmissionLegalBlocks(ctx, schema); err != nil {
-		return fmt.Errorf("submit: resolve legal blocks: %w", err)
 	}
 	plan.eligibility = submissionEligibility(*req)
 	if err := s.validateIntakePayload(ctx, req, intakePayload{
@@ -311,8 +321,19 @@ func (s *Intake) lockSubmissionPhase(ctx context.Context, req *SubmitRequest, pl
 	if !req.AllowClosedPhase && !phase.EnrollmentWindowOpen(plan.now) {
 		return enrollmentNative.ErrEnrollmentWindowClosed
 	}
+	// The form the pre-check validated against must still be the phase's.
+	if !ptrInt64Equal(plan.phase.FormSchemaID, phase.FormSchemaID) {
+		return readstate.ErrChanged
+	}
 	plan.phase, plan.locked = phase, locked
 	return nil
+}
+
+// checkFilledInForm refuses a write of a form whose version or legal
+// blocks are no longer the ones in force (ADR 0311), so a consent to an
+// outdated text is never recorded as given to the current one.
+func checkFilledInForm(expected string, schema *enrollmentNative.FormSchema, blocks []enrollmentNative.LegalBlock) error {
+	return readstate.Check(expected, enrollmentNative.FormTermsFingerprint(schema, blocks))
 }
 
 // submissionLateInvite resolves and locks the late invite of a submission
