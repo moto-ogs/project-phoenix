@@ -816,6 +816,7 @@ export function PhasesEditor({ info }: { readonly info?: string }) {
     [
       afterWrite,
       mutatePhases,
+      phasesRead,
       refreshPhaseExpiryWarnings,
       showActionError,
       toast,
