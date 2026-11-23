@@ -1,14 +1,7 @@
 import { hash } from "node:crypto";
-import {
-  mkdirSync,
-  readFileSync,
-  realpathSync,
-  renameSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { dirname, resolve, sep } from "node:path";
+import { resolve, sep } from "node:path";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
@@ -26,16 +19,11 @@ let config;
 let project;
 let wireTypes;
 let wireContractText;
-let diskCache;
 let editorSnapshot;
 
-const cacheFile = resolve(
-  frontend,
-  "node_modules/.cache/identifier-provenance.json",
-);
-// Never use persisted CLI results in CI or the language server.
 const inEditor = process.argv.includes("--lsp");
-const reuseDiskResults = !process.env.CI && !inEditor;
+const generatedContractPath =
+  /[\\/]lib[\\/]contract[\\/][^\\/]+\.generated\.ts$/;
 
 // Checking just the files in the program misses module resolution changes.
 // Record the compiler's directory listings, symlink resolutions and failed
@@ -49,10 +37,6 @@ const compilerInputs = [
   "realpath",
   "getEnvironmentVariable",
 ];
-
-function fingerprint(value) {
-  return hash("sha256", JSON.stringify(value));
-}
 
 function inputValue(method, result) {
   if (method === "readFile" && result !== undefined)
@@ -116,56 +100,6 @@ function currentEditorInputs() {
   return (editorSnapshot ??= { inputs: new Map(), changed: false });
 }
 
-function loadCache() {
-  let version;
-  try {
-    version = fingerprint([
-      process.cwd(),
-      process.version,
-      ts.sys.useCaseSensitiveFileNames,
-      realpathSync(ts.sys.getExecutingFilePath()),
-      hash("sha256", readFileSync(require.resolve("typescript"))),
-      hash("sha256", readFileSync(new URL(import.meta.url))),
-      readContract(),
-    ]);
-    const previous = JSON.parse(readFileSync(cacheFile, "utf8"));
-    if (previous.version === version && inputsStillMatch(previous.inputs)) {
-      return { version, results: new Map(previous.results) };
-    }
-  } catch {
-    // A missing, unreadable or outdated cache never disables the rule.
-  }
-  return { version, results: new Map() };
-}
-
-function saveCache(snapshot) {
-  process.once("exit", () => {
-    if (!diskCache.version || snapshot.changed) return;
-    const temporary = `${cacheFile}.${process.pid}.tmp`;
-    try {
-      mkdirSync(dirname(cacheFile), { recursive: true });
-      writeFileSync(
-        temporary,
-        JSON.stringify({
-          version: diskCache.version,
-          inputs: [...snapshot.inputs].map(([method, values]) => [
-            method,
-            [...values],
-          ]),
-          results: [...diskCache.results],
-        }),
-      );
-      renameSync(temporary, cacheFile);
-    } catch {
-      try {
-        rmSync(temporary, { force: true });
-      } catch {
-        // A cache write is optional.
-      }
-    }
-  });
-}
-
 function lintConfig(snapshot) {
   const host = {
     ...ts.sys,
@@ -202,24 +136,37 @@ function createProgram(
 ) {
   const options = config.options;
   const host = ts.createCompilerHost(options);
+  host.jsDocParsingMode = ts.JSDocParsingMode.ParseForTypeInfo;
   if (snapshot) observeInputs(host, snapshot);
+  const diskSource = host.getSourceFile.bind(host);
+  const isBuffer = (path) =>
+    filename !== undefined && resolve(path) === filename;
   if (filename) {
     // LSP buffers may not be saved yet. Supply the exact linted text as a
     // root; imports still resolve against the normal project.
-    const isBuffer = (path) => resolve(path) === filename;
     const diskExists = host.fileExists.bind(host);
     const diskRead = host.readFile.bind(host);
-    const diskSource = host.getSourceFile.bind(host);
     host.fileExists = (path) => isBuffer(path) || diskExists(path);
     host.readFile = (path) => (isBuffer(path) ? text : diskRead(path));
-    host.getSourceFile = (path, languageVersion, ...args) => {
-      if (isBuffer(path))
-        return ts.createSourceFile(path, text, languageVersion, true);
-      const previous = oldProgram?.getSourceFile(path);
-      if (previous && previous.text === diskRead(path)) return previous;
-      return diskSource(path, languageVersion, ...args);
-    };
   }
+  host.getSourceFile = (path, languageVersion, ...args) => {
+    // The generated query JSDoc carries the route key, not a TS type tag.
+    if (generatedContractPath.test(path)) {
+      const options =
+        typeof languageVersion === "object"
+          ? languageVersion
+          : { languageVersion };
+      languageVersion = {
+        ...options,
+        jsDocParsingMode: ts.JSDocParsingMode.ParseAll,
+      };
+    }
+    if (isBuffer(path))
+      return ts.createSourceFile(path, text, languageVersion, true);
+    const previous = oldProgram?.getSourceFile(path);
+    if (previous && previous.text === host.readFile(path)) return previous;
+    return diskSource(path, languageVersion, ...args);
+  };
   return ts.createProgram({ rootNames, options, host, oldProgram });
 }
 
@@ -323,7 +270,7 @@ function contractKind(symbol, checker, seen = new Set()) {
     // the authoritative distinction from another string on the same object.
     if (
       declaration.kind === ts.SyntaxKind.PropertySignature &&
-      /[\\/]lib[\\/]contract[\\/][^\\/]+\.generated\.ts$/.test(path) &&
+      generatedContractPath.test(path) &&
       ts.isInterfaceDeclaration(declaration.parent)
     ) {
       const kind = generatedFieldKind(declaration.parent, symbol.name);
@@ -506,50 +453,15 @@ export function numericIdentifiers(file, text, operands) {
   ts ??= require("typescript");
   const inProject = filename.startsWith(sourceRoot);
   const editorInputs = inProject ? currentEditorInputs() : undefined;
-  const canCache = inProject && reuseDiskResults;
-  const request =
-    canCache &&
-    fingerprint([text, [...operands.values()].map((node) => node.range)]);
-  if (request) {
-    diskCache ??= loadCache();
-    const saved = diskCache.results.get(filename);
-    if (
-      saved?.[0] === request &&
-      Array.isArray(saved[1]) &&
-      saved[1].every((start) => operands.has(start))
-    )
-      return saved[1].map((start) => operands.get(start));
-  }
   if (!project && inProject && ts.sys.readFile(filename) === text) {
-    // Use the in-process checker. Starting a compiler child from a lint
-    // plugin can fail on memory-constrained CI workers.
-    const snapshot = canCache
-      ? { inputs: new Map(), changed: false }
-      : editorInputs;
-    config = lintConfig(snapshot);
-    project = createProgram(config.roots, { snapshot });
-    if (canCache) {
-      // Keep results from one compiler snapshot. Files can change after a
-      // cache hit but before a later request needs to open a new program.
-      diskCache.results.clear();
-      saveCache(snapshot);
-    }
+    // The in-process checker avoids spawning a compiler from the plugin.
+    config = lintConfig(editorInputs);
+    project = createProgram(config.roots, { snapshot: editorInputs });
   }
   config ??= lintConfig(editorInputs);
   const source = project?.getSourceFile(filename);
-  if (source?.text === text) {
-    const identifiers = findIdentifiers(
-      source,
-      project.getTypeChecker(),
-      operands,
-    );
-    if (request)
-      diskCache.results.set(filename, [
-        request,
-        identifiers.map((node) => node.range[0]),
-      ]);
-    return identifiers;
-  }
+  if (source?.text === text)
+    return findIdentifiers(source, project.getTypeChecker(), operands);
 
   // Preserve project-wide module augmentations for editor buffers. A
   // standalone test fixture needs only its own dependency graph.
@@ -560,7 +472,7 @@ export function numericIdentifiers(file, text, operands) {
     oldProgram: inProject ? project : undefined,
     snapshot: editorInputs,
   });
-  if (inProject && !canCache) project = buffer;
+  if (inProject) project = buffer;
   return findIdentifiers(
     buffer.getSourceFile(filename),
     buffer.getTypeChecker(),

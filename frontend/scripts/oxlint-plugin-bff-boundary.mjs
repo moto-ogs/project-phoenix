@@ -2,7 +2,7 @@ import { posix } from "node:path";
 import { numericIdentifiers } from "./identifier-provenance.mjs";
 
 // Infrastructure that cannot use its own transport. Remove entries as callers migrate.
-const RAW_TRANSPORT = {
+export const RAW_TRANSPORT = {
   "lib/bff-fetch.ts": "the one transport of bffJson and bffFile",
   "lib/auth-failure.ts":
     "the session renewal of bffJson itself (POST /api/auth/token); going through bffJson would renew recursively",
@@ -25,7 +25,7 @@ const RAW_TRANSPORT = {
 };
 
 // Named route files whose browser-facing response is not the Go contract.
-const UNCONTRACTED = {
+export const UNCONTRACTED = {
   "lib/invitation-api.ts":
     "POST invitations/accept: a new account accepts without a session, an existing one with the owner's; the route's contract names only the tenant portal",
   "lib/enrollment-submission-api.ts":
