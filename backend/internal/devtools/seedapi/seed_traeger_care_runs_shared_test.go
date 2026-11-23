@@ -40,7 +40,9 @@ func (f *seedSharedTraegerRuns) serve(t *testing.T) func(w seedHTTPResponseWrite
 		switch {
 		case r.Method == http.MethodPut && (strings.HasPrefix(r.URL.Path, "/traeger/billing-terms/") ||
 			strings.HasPrefix(r.URL.Path, "/traeger/billing-run-due-dates/") || strings.HasPrefix(r.URL.Path, "/traeger/settings/values/") ||
-			r.URL.Path == "/traeger/sepa-creditor/" || strings.HasSuffix(r.URL.Path, "/invoice-date")):
+			r.URL.Path == "/traeger/sepa-creditor/" || strings.HasSuffix(r.URL.Path, "/invoice-date")),
+			// The versions a change sends back (ADR 0311).
+			path == "GET /traeger/billing-terms/", path == "GET /traeger/sepa-creditor/":
 			_, _ = fmt.Fprint(w, `{"data":{}}`)
 		case path == "GET /traeger/care-billing-runs/":
 			require.NoError(t, json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"runs": f.runs}}))

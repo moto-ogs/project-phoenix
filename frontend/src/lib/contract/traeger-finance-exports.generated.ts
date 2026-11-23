@@ -125,12 +125,14 @@ export interface SollstellungSettings {
   mapping: SollstellungMapping;
   custom: boolean;
   updated_at: string | null;
+  version: string;
 }
 
 export const SollstellungSettingsSchema: z.ZodType<SollstellungSettings, unknown> = object<SollstellungSettings>({
   mapping: SollstellungMappingSchema,
   custom: bool,
   updated_at: nullable(instant),
+  version: str,
 });
 
 /** Go: parentbilling.ExportFileNumbers */
@@ -410,6 +412,7 @@ export interface SollstellungMappingRequest {
   encoding?: string;
   header_row?: boolean;
   file_name_pattern?: string;
+  expected_version?: string;
 }
 
 export const routes = {

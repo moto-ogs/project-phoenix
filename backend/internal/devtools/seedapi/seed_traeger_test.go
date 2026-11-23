@@ -272,7 +272,9 @@ func TestSeedTraegerHolidayPeriodStepPublishesAPeriodAtTheTraegerSchools(t *test
 		"POST /traeger/billing-runs/9/release Bearer traeger-token",
 		"GET /traeger/billing-runs/9/export Bearer traeger-token",
 		"GET /traeger/billing-runs/9/cost-takeovers/7/export Bearer traeger-token",
-		// The Abrechnung maps and downloads the Sollstellung (#4693).
+		// The Abrechnung maps and downloads the Sollstellung (#4693), on
+		// the mapping it read (ADR 0311).
+		"GET /traeger/finance-exports/settings Bearer traeger-token",
 		"PUT /traeger/finance-exports/settings/sollstellung Bearer traeger-token",
 		"GET /traeger/finance-exports/runs/holiday-runs/9/sollstellung Bearer traeger-token",
 		// It enters two recipients, sends each format to one of them and

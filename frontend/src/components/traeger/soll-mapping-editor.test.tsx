@@ -11,6 +11,7 @@ vi.mock("~/lib/traeger-finance-exports-api", async (importOriginal) => ({
 }));
 
 const settings: ExportSettings = {
+  version: "v1",
   mapping: {
     columns: [
       { field: "invoice_number", header: "Rechnungsnummer", value: "" },
@@ -36,6 +37,7 @@ describe("SollMappingEditor", () => {
         <SollMappingEditor
           settings={settings}
           mapping={settings.mapping!}
+          reload={async () => settings}
           onCancel={vi.fn()}
           onSaved={vi.fn()}
         />

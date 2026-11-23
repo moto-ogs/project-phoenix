@@ -1302,6 +1302,12 @@
       "portals": [
         "org"
       ],
+      "query": [
+        {
+          "name": "expected_version",
+          "kind": "string"
+        }
+      ],
       "response": {
         "kind": "ref",
         "ref": "CareMealTariffs"
@@ -23451,7 +23457,7 @@
       ],
       "request": {
         "kind": "ref",
-        "ref": "ContributionRuleRequest"
+        "ref": "ContributionRuleUpdateRequest"
       },
       "response": {
         "kind": "ref",
@@ -34055,6 +34061,12 @@
           }
         },
         {
+          "name": "due_dates_version",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "document_kind",
           "schema": {
             "kind": "string"
@@ -36136,6 +36148,12 @@
           "schema": {
             "kind": "instant"
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -36264,6 +36282,13 @@
           "schema": {
             "kind": "date",
             "nullable": true
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -36434,6 +36459,12 @@
           "schema": {
             "kind": "instant"
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -36540,6 +36571,13 @@
           "schema": {
             "kind": "date",
             "nullable": true
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -37537,6 +37575,13 @@
           "schema": {
             "kind": "int"
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -37624,6 +37669,16 @@
             "elem": {
               "kind": "date",
               "nullable": true
+            }
+          }
+        },
+        {
+          "name": "versions",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
             }
           }
         }
@@ -40453,6 +40508,13 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -40850,6 +40912,12 @@
               "kind": "ref",
               "ref": "RunDueDate"
             }
+          }
+        },
+        {
+          "name": "due_dates_version",
+          "schema": {
+            "kind": "string"
           }
         },
         {
@@ -47458,6 +47526,12 @@
           "schema": {
             "kind": "instant"
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -47522,6 +47596,81 @@
         },
         {
           "name": "note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContributionRuleUpdateRequest",
+      "go_type": "parentbillinghttp.ContributionRuleUpdateRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "service",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "kind",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "valid_from",
+          "optional": true,
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "valid_until",
+          "optional": true,
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "sibling_from_child",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "discount_basis_points",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "discount_cents",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_version",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -47614,6 +47763,12 @@
           "schema": {
             "kind": "instant"
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -47666,6 +47821,13 @@
           "optional": true,
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -55073,6 +55235,12 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -55424,6 +55592,13 @@
           "schema": {
             "kind": "date",
             "nullable": true
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -85420,6 +85595,13 @@
               "ref": "RunDueDateRequest"
             }
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -85576,6 +85758,12 @@
             "kind": "instant",
             "nullable": true
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -85600,6 +85788,13 @@
         },
         {
           "name": "missing_mandate",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_version",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -91540,6 +91735,12 @@
             "kind": "instant",
             "nullable": true
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -91564,6 +91765,13 @@
         },
         {
           "name": "bundle_with",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_version",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -94298,6 +94506,13 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -94323,6 +94538,12 @@
           "schema": {
             "kind": "instant",
             "nullable": true
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]

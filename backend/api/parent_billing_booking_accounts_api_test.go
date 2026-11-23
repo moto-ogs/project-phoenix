@@ -112,7 +112,7 @@ func TestBookingAccountsAreFrozenOntoTheIssuedPositions(t *testing.T) {
 	// still writes the accounts of the release.
 	require.Equal(t, http.StatusOK, put("offering", int64(offering.CareOfferingID), "4999"))
 	require.Equal(t, http.StatusCreated, addCenter("school", f.office.schools[0], "2029-03-01", "NEU"))
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, financeExportsPath+"/settings/sollstellung", map[string]any{
+	rec := putSollstellung(t, f.traeger, f.office.token, map[string]any{
 		"columns": []map[string]any{{"field": "invoice_number", "header": "Nr"}, {"field": "revenue_account", "header": "Konto"},
 			{"field": "cost_center", "header": "KOST1"}},
 		"delimiter": ";", "decimal_separator": ",", "date_format": "dd.mm.yyyy", "encoding": "utf-8", "header_row": true,

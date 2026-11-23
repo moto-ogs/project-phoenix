@@ -31,6 +31,7 @@ export interface ServiceTerms {
   bundle_with: string;
   custom: boolean;
   updated_at: string | null;
+  version: string;
 }
 
 export const ServiceTermsSchema: z.ZodType<ServiceTerms, unknown> = object<ServiceTerms>({
@@ -40,6 +41,7 @@ export const ServiceTermsSchema: z.ZodType<ServiceTerms, unknown> = object<Servi
   bundle_with: str,
   custom: bool,
   updated_at: nullable(instant),
+  version: str,
 });
 
 /** Go: parentbillinghttp.BillingTermsResponse */
@@ -58,6 +60,7 @@ export interface ServiceTermsRequest {
   payment_method?: string;
   due_days?: number;
   bundle_with?: string;
+  expected_version?: string;
 }
 
 export const routes = {

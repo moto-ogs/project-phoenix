@@ -513,6 +513,9 @@ type CareRunDetail struct {
 	MealChanged []CareMealChanged `json:"meal_changed"`
 	// DueDates are the due dates of the run per payment method (#4689).
 	DueDates []RunDueDate `json:"due_dates"`
+	// DueDatesVersion is the read-state token of DueDates (ADR 0311): a
+	// change of the dates sends it back as expected_version.
+	DueDatesVersion string `json:"due_dates_version"`
 	// CostBearers are what each cost bearer pays of the invoices (#4687).
 	CostBearers []CareCostBearerTotal `json:"cost_bearers"`
 	// CareRunReviewState is the review of a calculated run (#5916).

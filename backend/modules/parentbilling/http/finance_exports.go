@@ -92,6 +92,9 @@ type SollstellungMappingRequest struct {
 	Encoding         string                      `json:"encoding"`
 	HeaderRow        bool                        `json:"header_row"`
 	FileNamePattern  string                      `json:"file_name_pattern"`
+	// ExpectedVersion is the version of the mapping as it was read (ADR
+	// 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // SollstellungColumnRequest is one column of the mapping.
@@ -163,7 +166,7 @@ func (rs *FinanceExportResource) saveMapping(w http.ResponseWriter, r *http.Requ
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeParentBillingExportMappingInvalid))
 		return
 	}
-	settings, err := rs.exports.SaveSollstellungMapping(r.Context(), reviewer, req.mapping())
+	settings, err := rs.exports.SaveSollstellungMapping(r.Context(), reviewer, req.mapping(), req.ExpectedVersion)
 	if err != nil {
 		tenant.MarkRollback(r.Context())
 		renderExportError(w, r, err)

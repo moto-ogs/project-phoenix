@@ -187,8 +187,11 @@ describe("Träger cards reload after a confirmed write", () => {
     render(
       <ContributionRulesCard
         kind="benefits_exemption"
+        reload={async () => []}
+        write={async () => undefined}
         rules={[
           {
+            version: "v1",
             id: "1",
             kind: "benefits_exemption",
             validFrom: "2026-01-01",
@@ -227,14 +230,23 @@ describe("Träger cards reload after a confirmed write", () => {
     fileReference: "",
     active: true,
     inUse: true,
+    version: "v1",
   };
 
   it("keeps a switched-off cost bearer switched off when the reload fails", async () => {
     api.saveCostBearer.mockResolvedValue(undefined);
     const onChanged = failingReload();
-    render(<CostBearersCard bearers={[bearer]} onChanged={onChanged} />, {
-      wrapper: ToastProvider,
-    });
+    render(
+      <CostBearersCard
+        bearers={[bearer]}
+        onChanged={onChanged}
+        reload={async () => [bearer]}
+        write={async () => undefined}
+      />,
+      {
+        wrapper: ToastProvider,
+      },
+    );
 
     await chooseMenuItem("Aktionen für Jugendamt", "Ausschalten");
 
@@ -251,6 +263,8 @@ describe("Träger cards reload after a confirmed write", () => {
     render(
       <CostBearersCard
         bearers={[{ ...bearer, inUse: false }]}
+        reload={async () => [bearer]}
+        write={async () => undefined}
         onChanged={onChanged}
       />,
       { wrapper: ToastProvider },

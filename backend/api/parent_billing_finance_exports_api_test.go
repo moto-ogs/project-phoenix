@@ -266,7 +266,7 @@ func TestFinanceExportsRightsAndTraeger(t *testing.T) {
 		f.office.organization, other.office.organization).Scan(context.Background(), &files))
 	assert.Zero(t, files, "a refused download leaves no protocol entry")
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, financeExportsPath+"/settings/sollstellung", map[string]any{
+	rec = putSollstellung(t, f.traeger, f.office.token, map[string]any{
 		"columns": []map[string]any{{"field": "iban", "header": "IBAN"}}, "delimiter": ";", "decimal_separator": ",",
 		"date_format": "dd.mm.yyyy", "encoding": "utf-8", "header_row": true, "file_name_pattern": "s.csv",
 	})

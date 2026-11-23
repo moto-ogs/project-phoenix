@@ -88,7 +88,7 @@ func sepaDebitFixture(t *testing.T, name string) careBillingFixture {
 func releaseDebitRun(t *testing.T, f careBillingFixture, month string) int64 {
 	t.Helper()
 	run := f.startRun(t, month)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, runDueDatesPathOf("care", int64(run.ID)),
+	rec := putRunDueDates(t, f.traeger, f.office.token, "care", int64(run.ID),
 		dueDates(month[:8]+"02", month[:8]+"04"))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	preview := f.run(t, int64(run.ID))

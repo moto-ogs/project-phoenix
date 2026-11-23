@@ -31,7 +31,10 @@ import { CustomSelect } from "~/components/ui/custom-select";
 import { EditActions } from "~/components/ui/edit-actions";
 import { FieldErrorHint } from "~/components/ui/field-error-hint";
 import { FieldLabel } from "~/components/ui/field-label";
-import { FormErrorAlert } from "~/components/ui/form-error-alert";
+import {
+  FormErrorAlert,
+  LoadErrorAlert,
+} from "~/components/ui/form-error-alert";
 import { InsetPanel } from "~/components/ui/inset-panel";
 import { Input } from "~/components/ui/input";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
@@ -39,7 +42,9 @@ import { SectionCard } from "~/components/ui/section-card";
 import { SegmentedControl } from "~/components/ui/segmented-control";
 import { SwitchRow } from "~/components/ui/switch";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { traegerPath } from "~/lib/traeger-url";
 import {
   type ExportSettings,
@@ -330,19 +335,35 @@ function ColumnRow({
 export function SollMappingEditor({
   settings,
   mapping,
+  reload,
   onCancel,
   onSaved,
 }: Readonly<{
   settings: ExportSettings;
   /** The stored mapping; the page shows a hint instead when it is null. */
   mapping: SollMapping;
+  /** Reads the settings again; rejects when the read fails (ADR 0311). */
+  reload: () => Promise<ExportSettings>;
   onCancel: () => void;
   onSaved: (settings: ExportSettings) => void;
 }>) {
-  const [draft, setDraft] = useState<SollMapping>(mapping);
+  // The mapping rests on the one read (ADR 0311): a newer read refills it
+  // only while untouched, the save sends its version, and after a refusal
+  // the stored mapping shows.
+  const edit = useDraftOn<ExportSettings, SollMapping, string, ExportSettings>(
+    { opening: "sollstellung", data: settings, reload },
+    {
+      token: (read) => read.version,
+      toDraft: (read) => read.mapping ?? mapping,
+      answer: (saved) => saved,
+    },
+  );
+  const draft = edit.draft ?? mapping;
+  const setDraft = edit.setDraft;
   const [saving, setSaving] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
+  const form = useReadDraftForm(edit, formErrors, "die Feldzuordnung");
   const { success } = useToast();
   const fieldError = (name: string) => formErrors.fieldError(name) ?? undefined;
   const decimalError = fieldError("decimal_separator");
@@ -356,28 +377,39 @@ export function SollMappingEditor({
     }));
 
   const submit = async () => {
-    formErrors.clear();
+    // Enter submits too: nothing goes out before the stored state is
+    // read, and the shown error stays.
+    if (!form.begin()) return;
     const errors = sollMappingErrors(draft);
     if (Object.keys(errors).length > 0) {
       formErrors.invalid("Bitte prüfe die markierten Felder.", errors);
       return;
     }
     setSaving(true);
-    try {
-      const saved = await saveSollMapping({
-        ...draft,
-        fileNamePattern: draft.fileNamePattern.trim(),
-      });
+    const result = await edit.submit((version) =>
+      saveSollMapping(
+        { ...draft, fileNamePattern: draft.fileNamePattern.trim() },
+        version,
+      ),
+    );
+    setSaving(false);
+    if (result.ok) {
       success("Die Feldzuordnung ist gespeichert.");
-      onSaved(saved);
-    } catch (err) {
-      logger.error("soll_mapping_save_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      void formErrors.show(err, { object: "die Feldzuordnung" });
-    } finally {
-      setSaving(false);
+      onSaved(result.saved);
+      return;
     }
+    logger.error("soll_mapping_save_failed", {
+      error:
+        result.error instanceof Error
+          ? result.error.message
+          : String(result.error),
+    });
+    // Changed since it was read: `reload` shows the stored mapping instead
+    // of the draft, without a retry (ADR 0311).
+    void formErrors.show(result.error, {
+      object: "die Feldzuordnung",
+      reload: result.reload,
+    });
   };
 
   const preview = sollPreview(draft, settings.nextFileNumber);
@@ -571,6 +603,7 @@ export function SollMappingEditor({
       </SectionCard>
 
       <FormErrorAlert message={formErrors.error} />
+      <LoadErrorAlert error={form.loadError} />
       <EditActions onCancel={onCancel} saving={saving} />
     </form>
   );

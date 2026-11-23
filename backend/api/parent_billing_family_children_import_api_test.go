@@ -71,7 +71,7 @@ func TestFamilyChildrenImportAddsTheNumbersOfAFile(t *testing.T) {
 	f.saveRule(t, careRule("sibling", "Geschwister mit Familie", []int64{school},
 		map[string]any{"sibling_from_child": 2, "discount_basis_points": 5000, "counts_family_children": true}))
 	for contractID, children := range map[int64]int{noah: 2, lia: 3} {
-		rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyChildrenPath, familyChildren(contractID, children, "2026-09-01"))
+		rec = confirmFamily(t, f.traeger, f.office.token, familyChildren(contractID, children, "2026-09-01"))
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	}
 

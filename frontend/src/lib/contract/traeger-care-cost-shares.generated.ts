@@ -34,6 +34,7 @@ export interface CareCostShare {
   checked_on: string | null;
   status: string;
   updated_at: string;
+  version: string;
 }
 
 export const CareCostShareSchema: z.ZodType<CareCostShare, unknown> = object<CareCostShare>({
@@ -51,6 +52,7 @@ export const CareCostShareSchema: z.ZodType<CareCostShare, unknown> = object<Car
   checked_on: nullable(calendarDate),
   status: str,
   updated_at: instant,
+  version: str,
 });
 
 /** Go: parentbilling.CareCostShareContract */
@@ -99,6 +101,7 @@ export interface CareCostShareRequest {
   valid_until?: string | null;
   reference?: string;
   checked_on?: string | null;
+  expected_version?: string;
 }
 
 export const routes = {

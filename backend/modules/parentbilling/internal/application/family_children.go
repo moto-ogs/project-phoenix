@@ -13,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // FamilyChildrenStore persists the numbers of the families of a Träger and
@@ -150,6 +151,7 @@ func groupFamilies(versions []parentbilling.CareContractVersion, recipients map[
 	families := make([]parentbilling.FamilyChildren, 0, len(grouped.order))
 	for _, key := range grouped.order {
 		found := grouped.byKey[key]
+		found.Version = familyNumbersVersion(grouped.numbers[key])
 		if found.Status == "" {
 			found.Status = familyChildrenStatus(found.Count, today)
 		}
@@ -172,6 +174,8 @@ type familyGroups struct {
 	recipients map[int64]parentbilling.CareRecipient
 	byKey      map[string]*parentbilling.FamilyChildren
 	order      []string
+	// numbers are the stored numbers by family, for the read-state token.
+	numbers map[string]*familyNumbers
 }
 
 // family answers the family of a key; a new one is named by the contract
@@ -213,6 +217,7 @@ func (g *familyGroups) addContracts(versions []parentbilling.CareContractVersion
 // child with a contract yet.
 func (g *familyGroups) addNumbers(counts []parentbilling.FamilyChildCount, today calendar.Date) {
 	numbers, order := numbersByFamily(counts, g.recipients)
+	g.numbers = numbers
 	for _, key := range order {
 		count, differing := numbers[key].countOn(today)
 		if count == nil && !differing {
@@ -314,7 +319,9 @@ func (f *FamilyNumbers) recordFamilyReads(ctx context.Context, reviewer parentbi
 
 // ConfirmFamilyChildren confirms or changes the number of the family of the
 // input's contract under the lock of the monthly billing.
-func (f *FamilyNumbers) ConfirmFamilyChildren(ctx context.Context, reviewer parentbilling.HolidayReviewer, input parentbilling.FamilyChildrenInput) (parentbilling.FamilyChildrenSet, error) {
+func (f *FamilyNumbers) ConfirmFamilyChildren(ctx context.Context, reviewer parentbilling.HolidayReviewer, input parentbilling.FamilyChildrenInput,
+	expectedVersion string,
+) (parentbilling.FamilyChildrenSet, error) {
 	if err := validReviewer(reviewer); err != nil {
 		return parentbilling.FamilyChildrenSet{}, err
 	}
@@ -331,6 +338,9 @@ func (f *FamilyNumbers) ConfirmFamilyChildren(ctx context.Context, reviewer pare
 	if err := f.store.LockCareBilling(ctx, reviewer.OrganizationID); err != nil {
 		return parentbilling.FamilyChildrenSet{}, fmt.Errorf("parent billing: hold the monthly billing: %w", err)
 	}
+	if err := f.numbersAsRead(ctx, reviewer.OrganizationID, family, expectedVersion); err != nil {
+		return parentbilling.FamilyChildrenSet{}, err
+	}
 	id, err := f.store.ConfirmFamilyChildren(ctx, reviewer.OrganizationID, reviewer.AccountID, family, input)
 	if err != nil {
 		return parentbilling.FamilyChildrenSet{}, err
@@ -342,6 +352,43 @@ func (f *FamilyNumbers) ConfirmFamilyChildren(ctx context.Context, reviewer pare
 		return parentbilling.FamilyChildrenSet{}, fmt.Errorf("parent billing: record family child count change: %w", err)
 	}
 	return f.FamilyChildren(ctx, reviewer)
+}
+
+// numbersAsRead refuses a confirmation of the numbers of a family that
+// changed since the office read them at expectedVersion, for example a
+// number the parents stated since (ADR 0311). Every writer of the numbers
+// holds the lock of the monthly billing, which the caller holds.
+func (f *FamilyNumbers) numbersAsRead(ctx context.Context, organizationID int64, family, expectedVersion string) error {
+	counts, err := f.store.FamilyChildCounts(ctx, organizationID)
+	if err != nil {
+		return err
+	}
+	recipients, err := f.contracts.Recipients(ctx, organizationID, familyRecipientContracts(nil, counts))
+	if err != nil {
+		return fmt.Errorf("parent billing: read the contract parties: %w", err)
+	}
+	numbers, _ := numbersByFamily(counts, recipients)
+	return readstate.Check(expectedVersion, familyNumbersVersion(numbers[family]))
+}
+
+// familyNumbersVersion is the read-state token of the numbers of a family
+// (ADR 0311): every stored number with its confirmations, by ID; none for a
+// family without one.
+func familyNumbersVersion(numbers *familyNumbers) string {
+	type number struct {
+		ID            ident.ID                                `json:"id"`
+		Key           string                                  `json:"key"`
+		Count         parentbilling.FamilyChildCount          `json:"count"`
+		Confirmations []parentbilling.FamilyChildConfirmation `json:"confirmations"`
+	}
+	state := []number{}
+	if numbers != nil {
+		for _, count := range numbers.all() {
+			state = append(state, number{ID: count.ID, Key: count.FamilyEmail, Count: *count, Confirmations: count.Confirmations})
+		}
+	}
+	slices.SortFunc(state, func(a, b number) int { return compareOrdered(a.ID, b.ID) })
+	return readstate.Fingerprint(state)
 }
 
 // RemoveFamilyChildren removes the number of the family of a contract; the

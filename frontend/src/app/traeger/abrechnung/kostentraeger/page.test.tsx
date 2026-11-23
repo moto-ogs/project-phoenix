@@ -27,6 +27,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 const share = (overrides: Partial<CareCostShare>): CareCostShare => ({
+  version: "v1",
   id: "1",
   contractId: "1",
   kind: "youth_office",

@@ -41,9 +41,11 @@ export interface ContributionRule {
   readonly discountCents: number | null;
   /** Exemption: the note the contribution shows. */
   readonly note: string;
+  /** The read-state token a change sends back (ADR 0311). */
+  readonly version: string;
 }
 
-export type ContributionRuleInput = Omit<ContributionRule, "id">;
+export type ContributionRuleInput = Omit<ContributionRule, "id" | "version">;
 
 /** A rule of a kind this build does not know is left out of the list. */
 function rulesFromBackend(
@@ -68,6 +70,7 @@ function ruleFromBackend(
     discountBasisPoints: rule.discount_basis_points,
     discountCents: rule.discount_cents,
     note: rule.note,
+    version: rule.version,
   };
 }
 
@@ -101,13 +104,15 @@ export async function createContributionRule(
   return ruleFromBackend(saved, rule.kind);
 }
 
+/** Changes a rule from the `version` it was read at (ADR 0311). */
 export async function updateContributionRule(
   id: string,
   rule: ContributionRuleInput,
+  version: string,
 ): Promise<ContributionRule> {
   const saved = await bffJson("org", "PUT /traeger/contribution-rules/{id}", {
     params: { id },
-    body: ruleToBackend(rule),
+    body: { ...ruleToBackend(rule), expected_version: version },
   });
   return ruleFromBackend(saved, rule.kind);
 }
@@ -130,9 +135,11 @@ export interface CostBearer {
   readonly fileReference: string;
   readonly active: boolean;
   readonly inUse: boolean;
+  /** The read-state token a change sends back (ADR 0311). */
+  readonly version: string;
 }
 
-export type CostBearerInput = Omit<CostBearer, "id" | "inUse">;
+export type CostBearerInput = Omit<CostBearer, "id" | "inUse" | "version">;
 
 function costBearerFromBackend(bearer: sharedContract.CostBearer): CostBearer {
   return {
@@ -142,6 +149,7 @@ function costBearerFromBackend(bearer: sharedContract.CostBearer): CostBearer {
     fileReference: bearer.file_reference,
     active: bearer.active,
     inUse: bearer.in_use,
+    version: bearer.version,
   };
 }
 
@@ -162,16 +170,20 @@ function costBearerBody(
   };
 }
 
-/** Creates a cost bearer, or changes the one id names. */
+/**
+ * Creates a cost bearer, or changes the one id names from the `version` it
+ * was read at (ADR 0311).
+ */
 export async function saveCostBearer(
   id: string | null,
   bearer: CostBearerInput,
+  version = "",
 ): Promise<CostBearer> {
   return costBearerFromBackend(
     await (id
       ? bffJson("org", "PUT /traeger/cost-bearers/{id}", {
           params: { id },
-          body: costBearerBody(bearer),
+          body: { ...costBearerBody(bearer), expected_version: version },
         })
       : bffJson("org", "POST /traeger/cost-bearers/", {
           body: costBearerBody(bearer),

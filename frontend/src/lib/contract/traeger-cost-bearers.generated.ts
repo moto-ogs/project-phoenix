@@ -15,6 +15,7 @@ export interface CostBearerRequest {
   address?: string;
   file_reference?: string;
   active?: boolean;
+  expected_version?: string;
 }
 
 export const routes = {
