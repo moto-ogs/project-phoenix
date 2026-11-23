@@ -33,6 +33,7 @@ import type {
   ConflictCheckParams,
   ConflictCheckResult,
   CreateInstanceBody,
+  UpdateInstanceBody,
   CreateTemplateBody,
   CreateTemplateResult,
   ConvertInstanceToSeriesBody,
@@ -603,7 +604,7 @@ class TimetableService {
 
   async update(
     instanceId: string,
-    body: CreateInstanceBody,
+    body: UpdateInstanceBody,
   ): Promise<EnrichedInstance> {
     const raw = await bffJson("tenant", "PUT /api/timetable/instances/{id}", {
       params: { id: instanceId },

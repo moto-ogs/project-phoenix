@@ -33,7 +33,7 @@ func TestUpdatePersonnelNumber_AppearsInAuditFeed(t *testing.T) {
 	actor := testpkg.CreateTestStaff(t, db, "Payroll", "FeedAktor")
 
 	value := "90030"
-	_, err = svc.UpdatePersonnelNumber(ctx, staff.ID, &value, actor.ID, "Feed-Test")
+	_, err = svc.UpdatePersonnelNumber(ctx, staff.ID, &value, nil, actor.ID, "Feed-Test")
 	require.NoError(t, err)
 
 	entries, err := testpkg.TenantQuery1(t, ctx, db, owners.NewTestAuditPersistence(testpkg.NewDatabase(t, db), nil).TimeTrackingAuditLog.ListEntries, auditModels.TimeTrackingAuditLogFilter{

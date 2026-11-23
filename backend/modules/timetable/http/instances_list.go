@@ -153,6 +153,9 @@ type enrichedInstance struct {
 	CanReopen             bool                                `json:"can_reopen,omitempty"`
 	CanComplete           bool                                `json:"can_complete"`
 	CompleteAvailableAt   string                              `json:"complete_available_at"`
+	// Version is the block's read-state token (ADR 0311): the edit sends it
+	// back as expected_version.
+	Version string `json:"version"`
 }
 
 type emptyRosterReason struct {
@@ -540,6 +543,7 @@ func (rs *Resource) enrichInstance(
 		RoomName:               metadata.RoomName,
 		GroupName:              metadata.GroupName,
 		Staff:                  staff,
+		Version:                timetable.ScheduledInstanceVersion(inst, staffRows, studentRows),
 		StudentIDs:             ident.IDs(attendance.studentIDs),
 		Students:               attendance.students,
 		StaffCount:             len(staffRows),

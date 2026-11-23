@@ -17,6 +17,9 @@ import { setTestClock } from "~/test/clock";
 import { SWRConfig } from "~/lib/swr/testing";
 import { catalogText } from "~/test/error-catalog-text";
 
+// The read of the shown sessions; it answers (ADR 0311, rule 6).
+const reloadSessions = () => Promise.resolve();
+
 // The table invalidates the cache of the signed-in session after a save;
 // these tests render it without a SessionProvider. The expanded edit
 // history reads through real SWR with a fresh cache.
@@ -99,6 +102,7 @@ describe("staff-session-table.targets", () => {
   }) {
     return render(
       <StaffSessionTable
+        reloadSessions={reloadSessions}
         staffId="1"
         from={from}
         to={to}
@@ -187,6 +191,7 @@ describe("staff-session-table.targets", () => {
       const retry = vi.fn();
       render(
         <StaffSessionTable
+          reloadSessions={reloadSessions}
           staffId="1"
           from={from}
           to={to}
@@ -409,6 +414,7 @@ describe("staff-session-table.targets", () => {
     function WeekendTable(props: WeekendTableProps) {
       return (
         <StaffSessionTable
+          reloadSessions={reloadSessions}
           staffId="1"
           from={from}
           to={to}
@@ -506,6 +512,7 @@ describe("staff-session-table.targets", () => {
     it("zeigt für eine zukünftige Session keinen Saldo", () => {
       render(
         <StaffSessionTable
+          reloadSessions={reloadSessions}
           staffId="1"
           from={new Date(2026, 0, 10)}
           to={new Date(2026, 0, 10)}
@@ -572,6 +579,7 @@ describe("staff-session-table.targets", () => {
     }) {
       return render(
         <StaffSessionTable
+          reloadSessions={reloadSessions}
           staffId="1"
           from={from}
           to={to}
@@ -821,6 +829,7 @@ describe("staff-session-table.blocks", () => {
   function tableElement(props?: TableProps) {
     return (
       <StaffSessionTable
+        reloadSessions={reloadSessions}
         staffId="1"
         from={props?.from ?? from}
         to={props?.to ?? to}
@@ -1103,6 +1112,7 @@ describe("staff-session-table.blocks", () => {
           .mockResolvedValueOnce([]);
         render(
           <StaffSessionTable
+            reloadSessions={reloadSessions}
             staffId="1"
             from={new Date(2026, 0, 5)}
             to={new Date(2026, 0, 5)}
@@ -1243,6 +1253,7 @@ describe("staff-session-table.edit", () => {
   }) {
     return render(
       <StaffSessionTable
+        reloadSessions={reloadSessions}
         staffId="1"
         from={from}
         to={to}
@@ -1415,6 +1426,7 @@ describe("staff-session-table.backfill", () => {
   }) {
     return render(
       <StaffSessionTable
+        reloadSessions={reloadSessions}
         staffId="1"
         from={props.from ?? from}
         to={props.to ?? to}
@@ -1564,6 +1576,7 @@ describe("staff-session-table.override", () => {
     );
     return render(
       <StaffSessionTable
+        reloadSessions={reloadSessions}
         staffId="1"
         from={new Date(2026, 0, 5)}
         to={new Date(2026, 0, 9)}
@@ -1688,6 +1701,7 @@ describe("staff-session-table.credit", () => {
   function renderCredit(session: StaffHistorySession) {
     return render(
       <StaffSessionTable
+        reloadSessions={reloadSessions}
         staffId="1"
         from={new Date(2026, 0, 5)}
         to={new Date(2026, 0, 11)}

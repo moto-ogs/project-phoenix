@@ -312,6 +312,7 @@ export function OwnSupervisionView() {
             onConfirmExpected={actions.handleConfirmExpectedStudents}
             onRosterAction={actions.handleRosterAction}
             onSaveHomeworkFeedback={actions.handleSaveHomeworkFeedback}
+            reloadAfterRefusal={actions.reloadRosterAfterRefusal}
             onSearchChange={actions.handleAddStudentSearchChange}
           />
         </>

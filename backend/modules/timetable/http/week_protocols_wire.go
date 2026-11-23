@@ -26,6 +26,9 @@ type weekProtocolResponse struct {
 	ClosedByName        string                    `json:"closed_by_name,omitempty"`
 	ClosedAutomatically bool                      `json:"closed_automatically"`
 	Days                []weekProtocolDayResponse `json:"days,omitempty"`
+	// Version is the protocol's read-state token (ADR 0311), answered with
+	// the days; the notes and the closing send it back as expected_version.
+	Version string `json:"version,omitempty"`
 }
 
 type weekProtocolDayResponse struct {
@@ -67,6 +70,7 @@ func weekProtocolResponseOf(protocol timetable.WeekProtocol, withDays bool) week
 	}
 	if withDays {
 		out.Days = weekProtocolDaysResponse(protocol)
+		out.Version = timetable.WeekProtocolVersion(protocol)
 	}
 	return out
 }

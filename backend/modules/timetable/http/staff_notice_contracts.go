@@ -13,7 +13,7 @@ func StaffNoticeRouteContracts() []common.RouteContract {
 		{Method: "POST", Pattern: "/", Portals: portals, Request: noticeRequest{}, Response: notice},
 		{Method: "GET", Pattern: "/today", Portals: portals, Response: []noticeResponse{}},
 		{Method: "GET", Pattern: "/{noticeId}", Portals: portals, Response: notice},
-		{Method: "PUT", Pattern: "/{noticeId}", Portals: portals, Request: noticeRequest{}, Response: notice},
+		{Method: "PUT", Pattern: "/{noticeId}", Portals: portals, Request: noticeUpdateRequest{}, Response: notice},
 		{Method: "DELETE", Pattern: "/{noticeId}", Portals: portals, NoData: true},
 		{Method: "POST", Pattern: "/{noticeId}/acknowledge", Portals: portals, NoData: true},
 		{Method: "GET", Pattern: "/{noticeId}/acknowledgements", Portals: portals, Response: []acknowledgerResponse{}},

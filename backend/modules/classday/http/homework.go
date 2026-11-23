@@ -28,6 +28,13 @@ type HomeworkRequest struct {
 	Description string  `json:"description"`
 }
 
+// HomeworkChangeRequest is the body of a change: the entry as edited and
+// the version its editor read (ADR 0311).
+type HomeworkChangeRequest struct {
+	HomeworkRequest
+	ExpectedVersion string `json:"expected_version"`
+}
+
 // Bind implements render.Binder. The length limits are checked behind the
 // projection and answer 400 like this check.
 func (r *HomeworkRequest) Bind(_ *http.Request) error {
@@ -46,22 +53,22 @@ var homeworkErrorRenderer = common.RulesRenderer([]common.ErrorRule{
 
 // homeworkWriteTarget runs the gates the homework writes with a body share:
 // the class reach and the body.
-func (rs *Resource) homeworkWriteTarget(w http.ResponseWriter, r *http.Request) (string, *HomeworkRequest, bool) {
+func (rs *Resource) homeworkWriteTarget(w http.ResponseWriter, r *http.Request, req render.Binder) (string, bool) {
 	class, ok := rs.requireAssignedClass(w, r, chi.URLParam(r, "schoolClass"))
 	if !ok {
-		return "", nil, false
+		return "", false
 	}
-	req := &HomeworkRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
-		return "", nil, false
+		return "", false
 	}
-	return class, req, true
+	return class, true
 }
 
 // postHomework handles POST /school/class-day/homework/{schoolClass}.
 func (rs *Resource) postHomework(w http.ResponseWriter, r *http.Request) {
-	class, req, ok := rs.homeworkWriteTarget(w, r)
+	req := &HomeworkRequest{}
+	class, ok := rs.homeworkWriteTarget(w, r, req)
 	if !ok {
 		return
 	}
@@ -89,12 +96,13 @@ func (rs *Resource) putHomework(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	class, req, ok := rs.homeworkWriteTarget(w, r)
+	req := &HomeworkChangeRequest{}
+	class, ok := rs.homeworkWriteTarget(w, r, req)
 	if !ok {
 		return
 	}
 	entry, err := rs.ClassDay.ChangeHomework(r.Context(), classday.HomeworkChange{
-		ID: id, SchoolClass: class, Subject: req.Subject, Description: req.Description,
+		ID: id, SchoolClass: class, Subject: req.Subject, Description: req.Description, ExpectedVersion: req.ExpectedVersion,
 	})
 	if err != nil {
 		common.RenderError(w, r, homeworkErrorRenderer(err))

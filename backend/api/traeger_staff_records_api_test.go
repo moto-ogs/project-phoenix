@@ -419,7 +419,7 @@ func TestTraegerStaffRecordsLinkThePeopleOfAllSchools(t *testing.T) {
 		assert.True(t, keptIn(miraSouth.ID))
 		assert.False(t, keptIn(jonas.ID))
 		number := "70099"
-		_, err := admin.UpdatePersonnelNumber(staffInSchool(t, unit, south), miraSouth.ID, &number, jonas.ID, "")
+		_, err := admin.UpdatePersonnelNumber(staffInSchool(t, unit, south), miraSouth.ID, &number, nil, jonas.ID, "")
 		require.ErrorIs(t, err, workforce.ErrStaffKeptByTraeger)
 	})
 

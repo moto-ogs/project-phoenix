@@ -142,12 +142,14 @@ export interface DayHomework {
   id: string;
   subject?: string;
   description: string;
+  version: string;
 }
 
 export const DayHomeworkSchema: z.ZodType<DayHomework, unknown> = object<DayHomework>({
   id: int64String,
   subject: optional(str),
   description: str,
+  version: str,
 });
 
 /** Go: classday.DayHandover */
@@ -521,6 +523,14 @@ export interface ClassHandoverRequest {
   expected_version?: string;
 }
 
+/** Go: classdayhttp.HomeworkChangeRequest */
+export interface HomeworkChangeRequest {
+  date?: string;
+  subject?: string | null;
+  description?: string;
+  expected_version?: string;
+}
+
 /** Go: classdayhttp.MorningAttendanceMarkRequest */
 export interface MorningAttendanceMarkRequest {
   student_id?: string;
@@ -698,7 +708,7 @@ export const routes = {
     method: "PUT",
     pattern: "/school/class-day/homework/{schoolClass}/{homeworkId}",
     portals: ["school"],
-    request: requestBody<HomeworkRequest>(),
+    request: requestBody<HomeworkChangeRequest>(),
     response: success(DayHomeworkSchema),
   },
   "PUT /school/class-day/morning-attendance/{schoolClass}/{date}": {

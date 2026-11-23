@@ -45,6 +45,7 @@ export interface OwnAllowanceResponse {
   booking_days: number;
   carried_in: AllowanceCarryResponse | null;
   kept_by_traeger: boolean;
+  version: string;
 }
 
 export const OwnAllowanceResponseSchema: z.ZodType<OwnAllowanceResponse, unknown> = object<OwnAllowanceResponse>({
@@ -61,6 +62,7 @@ export const OwnAllowanceResponseSchema: z.ZodType<OwnAllowanceResponse, unknown
   booking_days: num,
   carried_in: nullable(AllowanceCarryResponseSchema),
   kept_by_traeger: bool,
+  version: str,
 });
 
 /** Go: timetracking.AbsenceRequestMailsResponse */

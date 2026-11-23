@@ -1055,6 +1055,12 @@ interface TimetableRosterContentProps {
     body: HomeworkFeedbackBody,
   ) => Promise<void>;
   /**
+   * Reads the roster again after a feedback refused as changed since read
+   * (ADR 0311) and answers it; rejects when that read fails. Required: a
+   * refusal shows the stored feedback, never the dialog's old token.
+   */
+  readonly reloadAfterRefusal: () => Promise<TimetableRoster | null>;
+  /**
    * Adresse der Kinderseite für den Knopf „Profil ansehen“ (#4356). Nur wer
    * die Kinderseite öffnen darf (`users:read`), bekommt sie; ohne sie fehlt
    * der Knopf.
@@ -1166,6 +1172,7 @@ export function TimetableRosterContent({
   onExcuseRestOfDay,
   onOpenStudent,
   onSaveHomeworkFeedback,
+  reloadAfterRefusal,
   studentProfileHref,
   onSearchChange,
   rowFilter = null,
@@ -1265,19 +1272,41 @@ export function TimetableRosterContent({
   );
   const savingHomework = homeworkSave.pending;
   const homeworkErrors = useApiFormError();
+  // The child left the block since the dialog opened: nothing to save for
+  // it any more, but the dialog stays open with the refusal.
+  const [homeworkGone, setHomeworkGone] = useState(false);
+  // After a feedback refused as changed since read (ADR 0311) the dialog
+  // shows the child's stored feedback with its token. A child no longer on
+  // the roster keeps the dialog open: its alert carries the refusal, which
+  // a closed dialog would swallow, and saving is blocked with the reason.
+  const reloadHomework = async (studentId: string) => {
+    const fresh = await reloadAfterRefusal();
+    const row = fresh?.rows.find(
+      (candidate) => candidate.studentId === studentId,
+    );
+    if (!row) {
+      setHomeworkGone(true);
+      return;
+    }
+    setHomeworkRow(row);
+    setHomeworkStatus(row.homeworkFeedback?.status ?? null);
+    setHomeworkNote(row.homeworkFeedback?.note ?? "");
+  };
   const openHomework = (row: TimetableRosterRow) => {
     homeworkErrors.clear();
+    setHomeworkGone(false);
     setHomeworkRow(row);
     setHomeworkStatus(row.homeworkFeedback?.status ?? null);
     setHomeworkNote(row.homeworkFeedback?.note ?? "");
   };
   const closeHomework = () => {
     homeworkErrors.clear();
+    setHomeworkGone(false);
     setHomeworkRow(null);
   };
   const retrySaveRef = useRef<() => Promise<void>>(async () => undefined);
   const saveHomework = async () => {
-    if (!homeworkRow || !onSaveHomeworkFeedback) return;
+    if (!homeworkRow || !onSaveHomeworkFeedback || homeworkGone) return;
     if (!homeworkStatus) {
       homeworkErrors.invalid("Bitte wähle eine Antwort.");
       return;
@@ -1288,15 +1317,19 @@ export function TimetableRosterContent({
         await onSaveHomeworkFeedback(homeworkRow, {
           status: homeworkStatus,
           note: homeworkNote.trim() === "" ? null : homeworkNote.trim(),
+          // The feedback as the dialog opened it (ADR 0311).
+          expected_version: homeworkRow.homeworkFeedbackVersion ?? "",
         });
         // Eine späte Antwort schließt nicht die Rückmeldung eines anderen
         // Kindes (#6533).
         if (op.isCurrent()) setHomeworkRow(null);
       } catch (cause) {
         if (!op.isCurrent()) return;
+        const studentId = homeworkRow.studentId;
         void homeworkErrors.show(cause, {
           object: "die Rückmeldung",
           retry: () => void retrySaveRef.current(),
+          reload: () => reloadHomework(studentId),
         });
       }
     });
@@ -1439,6 +1472,12 @@ export function TimetableRosterContent({
               onSave={() => void saveHomework()}
               saving={savingHomework}
               saveLabel="Rückmeldung speichern"
+              disabled={homeworkGone}
+              disabledReason={
+                homeworkGone
+                  ? "Das Kind ist nicht mehr in diesem Block."
+                  : undefined
+              }
             />
           }
         >

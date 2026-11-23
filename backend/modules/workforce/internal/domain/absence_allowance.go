@@ -19,6 +19,8 @@ type SetAbsenceTypeAllowance struct {
 	EntitledDays           float64
 	Reason                 string
 	ChangedBy              int64
+	// ExpectedVersion is the claim's token of the read the form showed.
+	ExpectedVersion *string
 }
 
 func (input SetAbsenceTypeAllowance) Validate() error {

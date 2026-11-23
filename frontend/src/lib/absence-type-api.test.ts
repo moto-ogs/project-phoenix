@@ -220,6 +220,7 @@ describe("absenceTypeService allowances", () => {
       year: 2026,
       entitledDays: 2.5,
       reason: "Tariflicher Anspruch",
+      expectedVersion: "v-claim",
     });
 
     expect(result).toEqual(
@@ -237,6 +238,7 @@ describe("absenceTypeService allowances", () => {
           year: 2026,
           entitled_days: 2.5,
           reason: "Tariflicher Anspruch",
+          expected_version: "v-claim",
         }),
       }),
     );

@@ -59,7 +59,7 @@ const externalCaregiverGenderNote = "Angabe beim Anlegen als externe Person"
 // like an edit in the personnel record: attributed to the acting staff
 // member, names as just recorded, no birthday yet.
 func externalCaregiverStammdaten(
-	updatePerson func(context.Context, int64, workforceModule.StammdatenPersonInput, int64, string) error, editor func(context.Context) (int64, error),
+	updatePerson func(context.Context, int64, workforceModule.StammdatenPersonInput, int64, string) (string, error), editor func(context.Context) (int64, error),
 ) externalcaregiver.Stammdaten {
 	return func(ctx context.Context, in externalcaregiver.StaffGender) error {
 		changedBy, err := editor(ctx)
@@ -67,7 +67,8 @@ func externalCaregiverStammdaten(
 			return err
 		}
 		gender := in.Gender
-		return updatePerson(ctx, in.StaffID, workforceModule.StammdatenPersonInput{FirstName: in.FirstName, LastName: in.LastName, Gender: &gender}, changedBy, externalCaregiverGenderNote)
+		_, err = updatePerson(ctx, in.StaffID, workforceModule.StammdatenPersonInput{FirstName: in.FirstName, LastName: in.LastName, Gender: &gender}, changedBy, externalCaregiverGenderNote)
+		return err
 	}
 }
 

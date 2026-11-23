@@ -24,6 +24,7 @@ export function buildEnrichedInstance(
     activity_type: "care",
     room_id: "1",
     room_name: "",
+    version: "v1",
     staff: [],
     student_ids: [],
     students: [],

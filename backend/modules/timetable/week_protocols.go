@@ -3,9 +3,12 @@ package timetable
 import (
 	"context"
 	"errors"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Wochenprotokoll (#4769): je OGS-Gruppe und Woche (Montag bis Sonntag) ein
@@ -177,6 +180,41 @@ type WeekProtocolFilter struct {
 type WeekProtocolNotes struct {
 	WeekNote string
 	Days     map[calendar.Date]string
+	// ExpectedVersion is the WeekProtocolVersion its editor read (ADR 0311).
+	ExpectedVersion string
+}
+
+// weekProtocolState is the canonical form of what a protocol's page shows
+// and its notes and closing act on: the status, the notes and every
+// recorded evening.
+type weekProtocolState struct {
+	Status   string                 `json:"status"`
+	WeekNote string                 `json:"week_note"`
+	Days     []weekProtocolDayState `json:"days"`
+}
+
+type weekProtocolDayState struct {
+	Date       string                `json:"date"`
+	CapturedAt *time.Time            `json:"captured_at"`
+	Facts      *WeekProtocolDayFacts `json:"facts"`
+	Note       string                `json:"note"`
+}
+
+// WeekProtocolVersion is the read-state token of a protocol (ADR 0311). The
+// notes, the status and the recorded evenings live in rows of their own, so
+// it is a fingerprint over all of them, by day.
+func WeekProtocolVersion(protocol WeekProtocol) string {
+	state := weekProtocolState{Status: protocol.Status, WeekNote: protocol.WeekNote, Days: make([]weekProtocolDayState, 0, len(protocol.Days))}
+	for _, day := range protocol.Days {
+		var captured *time.Time
+		if day.CapturedAt != nil {
+			at := day.CapturedAt.UTC()
+			captured = &at
+		}
+		state.Days = append(state.Days, weekProtocolDayState{Date: day.Date.String(), CapturedAt: captured, Facts: day.Facts, Note: day.Note})
+	}
+	slices.SortFunc(state.Days, func(a, b weekProtocolDayState) int { return strings.Compare(a.Date, b.Date) })
+	return readstate.Fingerprint(state)
 }
 
 // WeekProtocolTarget nennt das Protokoll, zu dem ein festgehaltener Tag
@@ -200,7 +238,9 @@ type WeekProtocols interface {
 	SaveWeekProtocolNotes(ctx context.Context, reach WeekProtocolReach, id int64, notes WeekProtocolNotes) (WeekProtocol, error)
 	// CloseWeekProtocol schließt den Entwurf ab und legt in derselben
 	// Transaktion sein PDF ab, das renderer erzeugt.
-	CloseWeekProtocol(ctx context.Context, reach WeekProtocolReach, id int64, actor WeekProtocolActor, renderer WeekProtocolRenderer) (WeekProtocol, error)
+	// expectedVersion is the WeekProtocolVersion the closing person read
+	// (ADR 0311).
+	CloseWeekProtocol(ctx context.Context, reach WeekProtocolReach, id int64, expectedVersion string, actor WeekProtocolActor, renderer WeekProtocolRenderer) (WeekProtocol, error)
 	// OpenWeekProtocolPDF liefert das abgelegte PDF eines abgeschlossenen
 	// Protokolls mit dem Protokoll, unverändert seit dem Abschließen.
 	OpenWeekProtocolPDF(ctx context.Context, reach WeekProtocolReach, id int64) (WeekProtocol, WeekProtocolReportFile, error)

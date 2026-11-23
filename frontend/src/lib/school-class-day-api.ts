@@ -253,16 +253,23 @@ export async function addHomeworkSchool(
   });
 }
 
-/** Ändert einen eigenen Hausaufgaben-Eintrag. */
+/**
+ * Ändert einen Hausaufgaben-Eintrag der Klasse, wie er mit
+ * `expectedVersion` gelesen wurde (ADR 0311).
+ */
 export async function changeHomeworkSchool(
   schoolClass: string,
   homeworkId: string,
   input: HomeworkInput,
+  expectedVersion: string,
 ): Promise<void> {
   await bffJson(
     "school",
     "PUT /school/class-day/homework/{schoolClass}/{homeworkId}",
-    { params: { schoolClass, homeworkId }, body: input },
+    {
+      params: { schoolClass, homeworkId },
+      body: { ...input, expected_version: expectedVersion },
+    },
   );
 }
 

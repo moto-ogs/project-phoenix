@@ -53,17 +53,20 @@ describe("staffPayrollNumberService", () => {
   });
 
   it("updates the personnel number and note", async () => {
-    fetchMock.mockResolvedValue(jsonResponse({ personnel_number: "90002" }));
+    fetchMock.mockResolvedValue(
+      jsonResponse({ personnel_number: "90002", version: "v-new" }),
+    );
 
     await expect(
-      staffPayrollNumberService.update("42", "90002", "Korrektur"),
-    ).resolves.toBe("90002");
+      staffPayrollNumberService.update("42", "90002", "Korrektur", "v-read"),
+    ).resolves.toEqual({ personnelNumber: "90002", version: "v-new" });
     expect(fetchMock).toHaveBeenCalledWith("/api/staff/42/payroll-number", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         personnel_number: "90002",
         note: "Korrektur",
+        expected_version: "v-read",
       }),
     });
   });
@@ -86,7 +89,7 @@ describe("staffPayrollNumberService", () => {
   ])("keeps the update error code %s", async (code) => {
     fetchMock.mockResolvedValue(errorResponse(code));
 
-    const failure = staffPayrollNumberService.update("42", "90002", "");
+    const failure = staffPayrollNumberService.update("42", "90002", "", "v-read");
     await expect(failure).rejects.toBeInstanceOf(ApiError);
     await expect(failure).rejects.toMatchObject({ code });
   });
@@ -95,7 +98,7 @@ describe("staffPayrollNumberService", () => {
     fetchMock.mockResolvedValue(errorResponse("other"));
 
     await expect(
-      staffPayrollNumberService.update("42", "90002", ""),
+      staffPayrollNumberService.update("42", "90002", "", "v-read"),
     ).rejects.toThrow("Personalnummer konnte nicht gespeichert werden");
   });
 });

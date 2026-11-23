@@ -96,12 +96,13 @@ func TestInstance_UpdateSpontaneous_PreservesExternalCaregiver(t *testing.T) {
 	require.NoError(t, err)
 
 	updated, err := s.svc.UpdatePlanned(s.ctx, instance.ID, timetable.UpdateInstanceInput{
-		Date:      calendar.Date(instance.Date),
-		StartTime: instance.StartTime,
-		EndTime:   instance.EndTime,
-		Title:     "Spontane Musik-AG geändert",
-		RoomID:    s.roomID,
-		StaffIDs:  []int64{external.StaffID},
+		ExpectedVersion: plannerVersion(t, s.ctx, s.timetableData.Data, instance.ID),
+		Date:            calendar.Date(instance.Date),
+		StartTime:       instance.StartTime,
+		EndTime:         instance.EndTime,
+		Title:           "Spontane Musik-AG geändert",
+		RoomID:          s.roomID,
+		StaffIDs:        []int64{external.StaffID},
 	}, nil)
 
 	require.NoError(t, err)
@@ -127,6 +128,7 @@ func TestInstance_UpdateSpontaneousToPlanned_KeepsExternalCaregiver(t *testing.T
 	require.NoError(t, err)
 
 	updated, err := s.svc.UpdatePlanned(s.ctx, instance.ID, timetable.UpdateInstanceInput{
+		ExpectedVersion:  plannerVersion(t, s.ctx, s.timetableData.Data, instance.ID),
 		Date:             calendar.Date(instance.Date),
 		StartTime:        instance.StartTime,
 		EndTime:          instance.EndTime,

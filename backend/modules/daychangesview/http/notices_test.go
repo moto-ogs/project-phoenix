@@ -85,6 +85,14 @@ func writeNotice(t *testing.T, router chi.Router, path string, accountID, tenant
 
 func sendNotice(t *testing.T, router chi.Router, method, path string, accountID, tenantID int64, payload any, perms ...string) string {
 	t.Helper()
+	id, _ := sendNoticeForVersion(t, router, method, path, accountID, tenantID, payload, perms...)
+	return id
+}
+
+// sendNoticeForVersion answers the written notice's ID and the version a
+// change of it sends back as expected_version (ADR 0311).
+func sendNoticeForVersion(t *testing.T, router chi.Router, method, path string, accountID, tenantID int64, payload any, perms ...string) (string, string) {
+	t.Helper()
 	raw, err := json.Marshal(payload)
 	require.NoError(t, err)
 	req := httptest.NewRequest(method, path, bytes.NewReader(raw))
@@ -94,11 +102,12 @@ func sendNotice(t *testing.T, router chi.Router, method, path string, accountID,
 	require.Less(t, rec.Code, 300, rec.Body.String())
 	var envelope struct {
 		Data struct {
-			ID string `json:"id"`
+			ID      string `json:"id"`
+			Version string `json:"version"`
 		} `json:"data"`
 	}
 	_ = json.Unmarshal(rec.Body.Bytes(), &envelope)
-	return envelope.Data.ID
+	return envelope.Data.ID, envelope.Data.Version
 }
 
 type noticeInput struct {
@@ -111,6 +120,7 @@ type noticeInput struct {
 	Weekdays                []int16 `json:"weekdays"`
 	RequiresAcknowledgement bool    `json:"requires_acknowledgement"`
 	Active                  bool    `json:"active"`
+	ExpectedVersion         string  `json:"expected_version,omitempty"`
 }
 
 func until(days int) *string {
@@ -130,7 +140,7 @@ func TestDayChangesNoticeSource(t *testing.T) {
 	_, carerAccount := testpkg.CreateTestStaffWithAccount(t, db, "Anna", "Betreuung")
 	_, plainAccount := testpkg.CreateTestStaffWithAccount(t, db, "Zoe", "Ohne")
 	notices, signals := api.NewDayChangesNoticeTestRouter(testpkg.NewDatabase(t, db), tenantID, day)
-	create := func(input noticeInput) string {
+	createForVersion := func(input noticeInput) (string, string) {
 		input.Active = true
 		if input.Audience == "" {
 			input.Audience = "all"
@@ -138,7 +148,11 @@ func TestDayChangesNoticeSource(t *testing.T) {
 		if input.Priority == "" {
 			input.Priority = "info"
 		}
-		return writeNotice(t, notices, "/api/staff-notices/", leadAccount.ID, tenantID, input, "admin:*")
+		return sendNoticeForVersion(t, notices, http.MethodPost, "/api/staff-notices/", leadAccount.ID, tenantID, input, "admin:*")
+	}
+	create := func(input noticeInput) string {
+		id, _ := createForVersion(input)
+		return id
 	}
 
 	// 2026-09-09 is a Wednesday (ISO weekday 3).
@@ -148,8 +162,9 @@ func TestDayChangesNoticeSource(t *testing.T) {
 	create(noticeInput{Title: "Abgelaufen", ValidFrom: day.AddDays(-5).String(), ValidUntil: until(-1)})
 	create(noticeInput{Title: "Donnerstags", ValidFrom: day.AddDays(-7).String(), Weekdays: []int16{4}})
 	teachersOnly := noticeInput{Title: "Nur Lehrkräfte", ValidFrom: day.String(), Audience: "lehrkraft"}
-	teachersID := create(teachersOnly)
+	teachersID, teachersVersion := createForVersion(teachersOnly)
 	teachersOnly.Active, teachersOnly.Priority, teachersOnly.Body = true, "info", "Geändert"
+	teachersOnly.ExpectedVersion = teachersVersion
 	sendNotice(t, notices, http.MethodPut, "/api/staff-notices/"+teachersID, leadAccount.ID, tenantID, teachersOnly, "admin:*")
 	sendNotice(t, notices, http.MethodDelete, "/api/staff-notices/"+teachersID, leadAccount.ID, tenantID, nil, "admin:*")
 	t.Run("other school", func(t *testing.T) {

@@ -32,7 +32,8 @@ import {
 } from "~/lib/date-helpers";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { useSWRAuth } from "~/lib/swr";
+import { isReadStateRefusal } from "~/lib/api-error";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
 import { weekProtocolKeys } from "~/lib/swr/portal-keys";
 import {
   weekProtocolsPath,
@@ -72,6 +73,8 @@ function notesOf(protocol: WeekProtocol): WeekProtocolNotes {
   return {
     weekNote: protocol.weekNote,
     days: Object.fromEntries(protocol.days.map((day) => [day.date, day.note])),
+    // The protocol the person starts editing (ADR 0311).
+    expectedVersion: protocol.version,
   };
 }
 
@@ -130,14 +133,17 @@ function dayTileValue(day: WeekProtocolDay): string {
 function WeekProtocolContent() {
   const params = useParams();
   const protocolId = params.protocolId as string;
-  const { data, error, isLoading, mutate } = useSWRAuth<WeekProtocol>(
+  const read = useSWRAuth<WeekProtocol>(
     weekProtocolKeys.detail(protocolId),
     () => weekProtocolsService.get(protocolId),
   );
+  const { data, error, isLoading, mutate } = read;
   const loadError = useSwrLoadError(error, "das Wochenprotokoll", mutate);
   const [notes, setNotes] = useState<WeekProtocolNotes | null>(null);
   const [saving, setSaving] = useState(false);
-  const [confirmClose, setConfirmClose] = useState(false);
+  // The version of the protocol on screen when the closing was asked for:
+  // the closing confirms that one (ADR 0311). null: no confirm is open.
+  const [confirmClose, setConfirmClose] = useState<string | null>(null);
   const [closing, setClosing] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const formError = useApiFormError(formRef);
@@ -164,25 +170,41 @@ function WeekProtocolContent() {
         protocol_id: protocolId,
         error: err instanceof Error ? err.message : String(err),
       });
-      await formError.show(err, { object: "die Ergänzungen" });
+      if (isReadStateRefusal(err)) {
+        // Someone changed the protocol since editing started: the stored
+        // protocol shows again, the notes typed on the old one go.
+        setNotes(null);
+      }
+      await formError.show(err, {
+        object: isReadStateRefusal(err)
+          ? "das Wochenprotokoll"
+          : "die Ergänzungen",
+        reload: () => revalidateOrThrow(read),
+      });
     } finally {
       setSaving(false);
     }
   };
 
-  const close = async () => {
+  const close = async (expectedVersion: string) => {
     setClosing(true);
     try {
-      const closed = await weekProtocolsService.close(protocolId);
+      const closed = await weekProtocolsService.close(
+        protocolId,
+        expectedVersion,
+      );
       await mutate(closed, { revalidate: false });
-      setConfirmClose(false);
+      setConfirmClose(null);
     } catch (err) {
       logger.error("week_protocol_close_failed", {
         protocol_id: protocolId,
         error: err instanceof Error ? err.message : String(err),
       });
-      setConfirmClose(false);
-      await actionError.show(err, { object: "das Wochenprotokoll" });
+      setConfirmClose(null);
+      await actionError.show(err, {
+        object: "das Wochenprotokoll",
+        reload: () => revalidateOrThrow(read),
+      });
     } finally {
       setClosing(false);
     }
@@ -210,15 +232,17 @@ function WeekProtocolContent() {
             protocol={protocol}
             editing={editing}
             onEdit={() => setNotes(notesOf(protocol))}
-            onClose={() => setConfirmClose(true)}
+            onClose={() => setConfirmClose(protocol.version)}
           />
         ) : undefined
       }
       overlays={
         <ConfirmationModal
-          isOpen={confirmClose}
-          onClose={() => setConfirmClose(false)}
-          onConfirm={() => void close()}
+          isOpen={confirmClose !== null}
+          onClose={() => setConfirmClose(null)}
+          onConfirm={() => {
+            if (confirmClose !== null) void close(confirmClose);
+          }}
           title="Wochenprotokoll abschließen?"
           confirmText="Abschließen"
           isConfirmLoading={closing}

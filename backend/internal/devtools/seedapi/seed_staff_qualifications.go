@@ -45,8 +45,7 @@ func (seedStaffQualificationsStep) Run(_ context.Context, rt *Runtime) error {
 		{row(firstAid, -300, 430)}, // no certificate: shows as missing
 	}
 	for index, list := range lists {
-		path := fmt.Sprintf("/api/staff/%d/stammdaten/qualifikationen", staffIDs[index])
-		if _, err := rt.Client.Put(path, map[string]any{"qualifikationen": list, "note": "Nachweise erfasst"}); err != nil {
+		if err := putStammdatenSection(rt.Client, staffIDs[index], "qualifikationen", map[string]any{"qualifikationen": list, "note": "Nachweise erfasst"}); err != nil {
 			return fmt.Errorf("seed staff qualifications: %w", err)
 		}
 	}

@@ -2728,6 +2728,7 @@ export interface noticeResponse {
   active: boolean;
   acknowledged_at?: string;
   acknowledged_count?: number;
+  version: string;
 }
 
 export const noticeResponseSchema: z.ZodType<noticeResponse, unknown> = object<noticeResponse>({
@@ -2744,6 +2745,7 @@ export const noticeResponseSchema: z.ZodType<noticeResponse, unknown> = object<n
   active: bool,
   acknowledged_at: optional(str),
   acknowledged_count: optional(safeInt),
+  version: str,
 });
 
 /** Go: timetable.OperationRosterWarning */
@@ -2840,6 +2842,7 @@ export interface OperationRosterRow {
   teacher_hints?: OperationTeacherHint[];
   homework?: OperationRosterHomework[];
   homework_feedback?: OperationHomeworkFeedback;
+  homework_feedback_version?: string;
 }
 
 export const OperationRosterRowSchema: z.ZodType<OperationRosterRow, unknown> = object<OperationRosterRow>({
@@ -2864,6 +2867,7 @@ export const OperationRosterRowSchema: z.ZodType<OperationRosterRow, unknown> = 
   teacher_hints: optional(arr(OperationTeacherHintSchema)),
   homework: optional(arr(OperationRosterHomeworkSchema)),
   homework_feedback: optional(OperationHomeworkFeedbackSchema),
+  homework_feedback_version: optional(str),
 });
 
 /** Go: timetable.InstanceConflictWarning */
@@ -3141,6 +3145,7 @@ export const startOperationResponseSchema: z.ZodType<startOperationResponse, unk
 export interface HomeworkFeedbackRequest {
   status?: string;
   note?: string | null;
+  expected_version?: string;
 }
 
 /** Go: timetablehttp.HomeworkFeedbackResponse */
@@ -3149,6 +3154,7 @@ export interface HomeworkFeedbackResponse {
   date: string;
   status: string;
   note?: string;
+  version: string;
 }
 
 export const HomeworkFeedbackResponseSchema: z.ZodType<HomeworkFeedbackResponse, unknown> = object<HomeworkFeedbackResponse>({
@@ -3156,6 +3162,7 @@ export const HomeworkFeedbackResponseSchema: z.ZodType<HomeworkFeedbackResponse,
   date: str,
   status: str,
   note: optional(str),
+  version: str,
 });
 
 /** Go: settingshttp.setValueRequest */
@@ -3266,6 +3273,7 @@ export interface HistorySessionResponse {
   audit_count: number;
   pack_up_minutes: number;
   rounding_minutes: number;
+  version: string;
 }
 
 export const HistorySessionResponseSchema: z.ZodType<HistorySessionResponse, unknown> = object<HistorySessionResponse>({
@@ -3292,6 +3300,7 @@ export const HistorySessionResponseSchema: z.ZodType<HistorySessionResponse, unk
   audit_count: safeInt,
   pack_up_minutes: safeInt,
   rounding_minutes: safeInt,
+  version: str,
 });
 
 /** Go: workforce.WorkWeekSummary */
@@ -3585,6 +3594,7 @@ export interface SessionUpdateRequest {
   status?: string | null;
   notes?: string | null;
   breaks?: BreakDurationUpdate[] | null;
+  expected_version?: string | null;
 }
 
 /** Go: workforce.PoolProofStatus */

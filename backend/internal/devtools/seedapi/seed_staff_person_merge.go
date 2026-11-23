@@ -42,7 +42,7 @@ func (seedStaffPersonMergeStep) Run(_ context.Context, rt *Runtime) error {
 	if err != nil {
 		return fmt.Errorf("decode duplicate employment: %w", err)
 	}
-	if _, err := rt.Client.Put(fmt.Sprintf("/api/staff/%d/stammdaten/kontakt", id), map[string]any{"address_city": "Osnabrück", "note": "Historie bleibt bei der Personen-Zusammenführung erhalten"}); err != nil {
+	if err := putStammdatenSection(rt.Client, id, "kontakt", map[string]any{"address_city": "Osnabrück", "note": "Historie bleibt bei der Personen-Zusammenführung erhalten"}); err != nil {
 		return fmt.Errorf("record duplicate history: %w", err)
 	}
 	if _, err := rt.Client.Delete(fmt.Sprintf("/api/staff/%d", id)); err != nil {

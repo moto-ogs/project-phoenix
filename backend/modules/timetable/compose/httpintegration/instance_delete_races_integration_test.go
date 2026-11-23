@@ -120,6 +120,7 @@ func TestDeleteCancelled_RefusesBlockMovedAfterItsRead(t *testing.T) {
 	from, to := calendar.Date(ai.Date), calendar.Date(ai.Date).AddDays(1)
 
 	_, err := s.svc.UpdatePlanned(s.ctx, ai.ID, timetable.UpdateInstanceInput{
+		ExpectedVersion: plannerVersion(t, s.ctx, s.timetableData.Data, ai.ID),
 		Date:            to,
 		StartTime:       time.Date(2000, 1, 1, 14, 0, 0, 0, time.UTC),
 		EndTime:         time.Date(2000, 1, 1, 15, 0, 0, 0, time.UTC),

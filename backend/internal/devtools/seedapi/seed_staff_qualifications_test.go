@@ -18,6 +18,7 @@ func TestSeedStaffQualificationsUsesStringQualificationTypeIDs(t *testing.T) {
 	const certificateID = "9007199254740994"
 	const hygieneID = "9007199254740995"
 	var qualificationTypeIDs []string
+	var sentVersions []any
 
 	srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
 		w.Header().Set("Content-Type", "application/json")
@@ -28,13 +29,17 @@ func TestSeedStaffQualificationsUsesStringQualificationTypeIDs(t *testing.T) {
 			_, _ = fmt.Fprint(w, `{"data":{}}`)
 		case r.Method == http.MethodPost && r.URL.Path == "/api/staff/qualification-types":
 			_, _ = fmt.Fprintf(w, `{"data":{"id":"%s","name":"Hygieneschulung","validity_months":12}}`, hygieneID)
-		case r.Method == http.MethodPut && strings.HasPrefix(r.URL.Path, "/api/staff/"):
+		case r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/stammdaten"):
+			_, _ = fmt.Fprintf(w, `{"data":{"versions":{"qualifikationen":"read-%s"}}}`, strings.Split(r.URL.Path, "/")[3])
+		case r.Method == http.MethodPut && strings.HasSuffix(r.URL.Path, "/stammdaten/qualifikationen"):
 			var body struct {
 				Qualifications []struct {
 					TypeID *string `json:"type_id"`
 				} `json:"qualifikationen"`
+				ExpectedVersion any `json:"expected_version"`
 			}
 			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+			sentVersions = append(sentVersions, body.ExpectedVersion)
 			for _, qualification := range body.Qualifications {
 				if qualification.TypeID != nil {
 					qualificationTypeIDs = append(qualificationTypeIDs, *qualification.TypeID)
@@ -60,4 +65,7 @@ func TestSeedStaffQualificationsUsesStringQualificationTypeIDs(t *testing.T) {
 		firstAidID, certificateID, firstAidID, certificateID, hygieneID,
 		firstAidID, certificateID, firstAidID, certificateID, firstAidID,
 	}, qualificationTypeIDs)
+	// Each list carries the version of the staff member's read (ADR 0311):
+	// without it the route refuses the save and the demo seed stops.
+	assert.Equal(t, []any{"read-1", "read-2", "read-3", "read-4", "read-5", "read-6"}, sentVersions)
 }

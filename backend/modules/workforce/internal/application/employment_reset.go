@@ -39,7 +39,8 @@ func (r EmploymentResetter) ResetEmployment(ctx context.Context, in workforce.Em
 		}
 	}
 	if in.Qualifications {
-		return r.Admin.ReplaceStaffQualificationList(ctx, in.StaffID, nil, in.StaffID, note)
+		_, err := r.Admin.ReplaceStaffQualificationList(ctx, in.StaffID, nil, nil, in.StaffID, note)
+		return err
 	}
 	return nil
 }
@@ -53,13 +54,13 @@ func (r EmploymentResetter) resetMasterData(ctx context.Context, in workforce.Em
 		return err
 	}
 	subject := data.Staff
-	if err := a.UpdateStaffStammdatenPerson(ctx, in.StaffID, workforce.StammdatenPersonInput{FirstName: subject.FirstName, LastName: subject.LastName, Birthday: optionalString(subject.Birthday)}, in.StaffID, note); err != nil {
+	if _, err := a.UpdateStaffStammdatenPerson(ctx, in.StaffID, workforce.StammdatenPersonInput{FirstName: subject.FirstName, LastName: subject.LastName, Birthday: optionalString(subject.Birthday)}, in.StaffID, note); err != nil {
 		return err
 	}
-	if err := a.UpdateStaffStammdatenKontakt(ctx, in.StaffID, workforce.StammdatenKontaktInput{}, in.StaffID, note); err != nil {
+	if _, err := a.UpdateStaffStammdatenKontakt(ctx, in.StaffID, workforce.StammdatenKontaktInput{}, in.StaffID, note); err != nil {
 		return err
 	}
-	if err := a.UpdateStaffStammdatenArbeitsvertrag(ctx, in.StaffID, workforce.StammdatenArbeitsvertragInput{}, in.StaffID, note); err != nil {
+	if _, err := a.UpdateStaffStammdatenArbeitsvertrag(ctx, in.StaffID, workforce.StammdatenArbeitsvertragInput{}, in.StaffID, note); err != nil {
 		return err
 	}
 	if subject.PersonnelNumber == nil && in.PreviousPersonnelNumber != nil {
@@ -67,7 +68,7 @@ func (r EmploymentResetter) resetMasterData(ctx context.Context, in workforce.Em
 			return err
 		}
 	}
-	_, err = a.UpdatePersonnelNumber(ctx, in.StaffID, nil, in.StaffID, note)
+	_, err = a.UpdatePersonnelNumber(ctx, in.StaffID, nil, nil, in.StaffID, note)
 	return err
 }
 
@@ -88,7 +89,8 @@ func (r EmploymentResetter) ApplyInvitedGender(ctx context.Context, in workforce
 	subject := data.Staff
 	gender := in.Gender
 	note := fmt.Sprintf("Angabe aus Einladung %d", in.InvitationID)
-	return r.Admin.UpdateStaffStammdatenPerson(ctx, in.StaffID, workforce.StammdatenPersonInput{FirstName: subject.FirstName, LastName: subject.LastName, Birthday: optionalString(subject.Birthday), Gender: &gender}, in.StaffID, note)
+	_, err = r.Admin.UpdateStaffStammdatenPerson(ctx, in.StaffID, workforce.StammdatenPersonInput{FirstName: subject.FirstName, LastName: subject.LastName, Birthday: optionalString(subject.Birthday), Gender: &gender}, in.StaffID, note)
+	return err
 }
 
 func optionalString(value string) *string {

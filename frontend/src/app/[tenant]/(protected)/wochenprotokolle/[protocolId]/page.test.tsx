@@ -5,6 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
 import type { WeekProtocol } from "~/lib/week-protocols-api";
 
+import { ApiError } from "~/lib/api-error";
+import { catalogText } from "~/test/error-catalog-text";
 import WeekProtocolPage from "./page";
 
 const state = vi.hoisted(() => ({
@@ -27,6 +29,8 @@ vi.mock("~/components/auth/role-guard", () => ({
 
 vi.mock("~/lib/swr", () => ({
   useTenantMutate: () => vi.fn(),
+  revalidateOrThrow: (read: { mutate: () => Promise<unknown> }) =>
+    read.mutate(),
   useSWRAuth: () => ({
     data: state.protocol ?? undefined,
     error: undefined,
@@ -89,6 +93,7 @@ function protocol(overrides: Partial<WeekProtocol> = {}): WeekProtocol {
     groupName: "Bären",
     weekStart: "2026-09-07",
     weekEnd: "2026-09-13",
+    version: "v1",
     status: "draft",
     draftFrom: "2026-09-11",
     autoCloseOn: "2026-09-21",
@@ -193,6 +198,7 @@ describe("WeekProtocolPage", () => {
           "2026-09-10": "",
           "2026-09-11": "",
         },
+        expectedVersion: "v1",
       }),
     );
     await waitFor(() =>
@@ -223,8 +229,36 @@ describe("WeekProtocolPage", () => {
           "2026-09-11": "",
           "2026-09-12": "Sommerfest",
         },
+        expectedVersion: "v1",
       }),
     );
+  });
+
+  it("shows the stored protocol after notes refused as changed", async () => {
+    state.saveNotes.mockRejectedValue(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: "Ergänzen" }));
+    fireEvent.change(screen.getByLabelText("Ergänzung für die Woche"), {
+      target: { value: "Ruhig" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    // ADR 0311: the protocol is read again and shown as stored, the notes
+    // on the old one go, and the message says so without a retry.
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "das Wochenprotokoll"),
+      ),
+    ).toBeInTheDocument();
+    expect(state.mutate).toHaveBeenCalled();
+    expect(
+      screen.queryByRole("button", { name: "Speichern" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
   });
 
   it("closes only after the confirmation", async () => {
@@ -237,7 +271,7 @@ describe("WeekProtocolPage", () => {
     ).toBeInTheDocument();
     const buttons = screen.getAllByRole("button", { name: "Abschließen" });
     fireEvent.click(buttons[buttons.length - 1]!);
-    await waitFor(() => expect(state.close).toHaveBeenCalledWith("41"));
+    await waitFor(() => expect(state.close).toHaveBeenCalledWith("41", "v1"));
   });
 
   it("offers the PDF of a closed protocol and nothing to change", () => {

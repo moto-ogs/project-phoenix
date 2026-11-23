@@ -837,3 +837,61 @@ func findTemplateSeries(ctx context.Context, groups timetableModule.ActivityGrou
 	isTemplate := true
 	return groups.ListGroups(ctx, timetableModule.GroupFilter{IsTemplate: &isTemplate, ActiveOnly: true, SeriesForGroupID: &groupID, OrderByID: true})
 }
+
+// ADR 0311: a series edit and a split save back the series their editor
+// read. A version read before another edit, or none, is refused on both
+// routes and writes nothing; the version of the update's answer, which
+// GET /templates/{id} answers as well, saves again.
+func TestTemplateWritesRefuseASeriesChangedSinceItsRead(t *testing.T) {
+	t.Parallel()
+
+	mat := &mockMaterializationService{result: &timetableModule.MaterializationResult{}}
+	s := buildTemplateModule(t, mat, fixedTemplateClock)
+	defer s.cleanupFn()
+	s.res.Templates = splitTemplateAdministration(s, mat, acceptCareOfferingSeries)
+	router := splitRouter(s.ctx, s.res, s.db, []string{permissions.SchedulesManage})
+	created := createSourceTemplate(t, router, s, "Tpl-Stand-Quelle")
+	path := fmt.Sprintf("/templates/%d", created.TemplateID)
+	read := withTemplateReadVersion(t, router, http.MethodPut, path, createTemplateBody(s, "x")).(map[string]any)["expected_version"].(string)
+	require.NotEmpty(t, read)
+
+	first := createTemplateBody(s, "Tpl-Stand-Erste")
+	first["expected_version"] = read
+	w := doTemplateJSON(t, router, http.MethodPut, path, first)
+	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
+	answered := decodeTemplateData[templateResponse](t, w).Version
+	require.NotEmpty(t, answered)
+	assert.NotEqual(t, read, answered)
+
+	effective := fixedTemplateToday.AddDays(7)
+	for name, version := range map[string]string{"stale": read, "none": ""} {
+		update := createTemplateBody(s, "Tpl-Stand-Überschrieben")
+		update["expected_version"] = version
+		w = doTemplateJSON(t, router, http.MethodPut, path, update)
+		assert.Equal(t, http.StatusConflict, w.Code, "update %s: %s", name, w.Body.String())
+		assert.Contains(t, w.Body.String(), "general.changed_since_read")
+
+		split := splitBody(s, "Tpl-Stand-Nachfolger", effective)
+		split["expected_version"] = version
+		w = doTemplateJSON(t, router, http.MethodPost, path+"/split", split)
+		assert.Equal(t, http.StatusConflict, w.Code, "split %s: %s", name, w.Body.String())
+		assert.Contains(t, w.Body.String(), "general.changed_since_read")
+	}
+	listW := doTemplateJSON(t, router, http.MethodGet, "/templates", nil)
+	require.Equal(t, http.StatusOK, listW.Code, "body=%s", listW.Body.String())
+	names := []string{}
+	for _, template := range decodeTemplateData[listTemplatesResponse](t, listW).Templates {
+		names = append(names, template.Name)
+	}
+	assert.Equal(t, []string{"Tpl-Stand-Erste"}, names, "the refused writes changed nothing and split nothing off")
+
+	second := createTemplateBody(s, "Tpl-Stand-Zweite")
+	second["expected_version"] = answered
+	w = doTemplateJSON(t, router, http.MethodPut, path, second)
+	require.Equal(t, http.StatusOK, w.Code, "the answer's version saves again: %s", w.Body.String())
+
+	split := splitBody(s, "Tpl-Stand-Nachfolger", effective)
+	split["expected_version"] = decodeTemplateData[templateResponse](t, w).Version
+	w = doTemplateJSON(t, router, http.MethodPost, path+"/split", split)
+	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
+}

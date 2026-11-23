@@ -18,6 +18,10 @@ func TestSeedVisitorDayStepFillsTheVisitorsDay(t *testing.T) {
 	var personPath string
 	srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
 		w.Header().Set("Content-Type", "application/json")
+		if r.Method == seedHTTPMethodGet {
+			_, _ = fmt.Fprint(w, `{"status":"success","data":{"versions":{"person":"read-person"}}}`)
+			return
+		}
 		var body map[string]any
 		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
 		switch r.URL.Path {

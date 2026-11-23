@@ -108,7 +108,7 @@ func TestCustomAllowanceCarriesTheRestIntoTheNextYear(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, workforce.AbsenceTypeAllowanceSummary{
 		StaffID: staff.ID, AbsenceTypeID: typ.ID, Year: 2026,
-		EntitledDays: 2, TakenDays: 2, RemainingDays: 0, ExpiresOn: "2027-03-31",
+		EntitledDays: 2, TakenDays: 2, RemainingDays: 0, ExpiresOn: "2027-03-31", Version: old.Version,
 	}, old)
 	current, err := svc.AllowanceSummary(ctx, staff.ID, typ.ID, 2027)
 	require.NoError(t, err)

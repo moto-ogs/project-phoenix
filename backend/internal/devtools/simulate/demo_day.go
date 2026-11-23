@@ -96,6 +96,9 @@ type demoBlock struct {
 		StudentID ident.ID `json:"student_id"`
 		Status    string   `json:"status"`
 	} `json:"students"`
+	// Version is the block's read-state token; the move sends it back
+	// (ADR 0311).
+	Version string `json:"version"`
 }
 
 // demoTimes are a child's effective arrival and pickup today, in minutes
@@ -619,6 +622,7 @@ func (block demoBlock) updateBody(start, end int) map[string]any {
 		"date": block.Date, "start_time": clockOf(start), "end_time": clockOf(end),
 		"title":     block.Title,
 		"staff_ids": staffIDs, "student_ids": block.StudentIDs,
+		"expected_version": block.Version,
 	}
 	if block.RoomID != 0 {
 		body["room_id"] = block.RoomID
