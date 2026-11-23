@@ -114,9 +114,13 @@ var ErrMealParticipationManageDenied = errors.New("parent: meal participation ma
 
 // mealParticipationWriteAccess holds the manage permission of a meal
 // participation change until it commits (#6529); its refusal stays
-// ErrMealParticipationManageDenied (mapMealParticipationError).
+// ErrMealParticipationManageDenied (mapMealParticipationError). The child's
+// row is held FOR NO KEY UPDATE.
 func mealParticipationWriteAccess(access *ChildWriteAccess) {
 	access.Permissions = append(access.Permissions, GuardianPermissionMealParticipationManage)
+	// The write waits under the child's lock for the school's order lock,
+	// whose holder inserts order lines of the child (#7956).
+	access.NoKeyUpdate = true
 }
 
 // mealParticipationWriter is the between of a meal participation write: the
@@ -137,7 +141,7 @@ func mealParticipationWriter(child *Child) error {
 func (s *Service) ReplaceMealParticipationSchedule(ctx context.Context, accountID, studentID int64, weekdays []MealWeekday, expectedVersion string) (MealScheduleSaved, error) {
 	var saved MealScheduleSaved
 	err := s.WithPermittedChildForWrite(ctx, accountID, studentID, GuardianPermissionPortalAccess, mealParticipationWriter, func(txCtx context.Context, _ *Child) error {
-		if err := s.RequireCareRunningForUpdate(txCtx, studentID); err != nil {
+		if err := s.requireCareRunningForMealWrite(txCtx, studentID); err != nil {
 			return err
 		}
 		effectiveFrom, writeErr := s.MealPlan.ReplaceParticipationSchedule(txCtx, MealParticipationSchedule{StudentID: studentID, GuardianAccountID: accountID, Weekdays: weekdays, ExpectedVersion: expectedVersion})
@@ -177,7 +181,7 @@ func (s *Service) SetMealParticipationWeek(ctx context.Context, accountID, stude
 		}
 		return nil
 	}, func(txCtx context.Context, _ *Child) error {
-		if err := s.RequireCareRunningForUpdate(txCtx, studentID); err != nil {
+		if err := s.requireCareRunningForMealWrite(txCtx, studentID); err != nil {
 			return err
 		}
 		var writeErr error
@@ -214,7 +218,7 @@ func (s *Service) changeMealParticipationDay(ctx context.Context, accountID, stu
 		}
 		return nil
 	}, func(txCtx context.Context, _ *Child) error {
-		if err := s.RequireCareRunningForUpdate(txCtx, studentID); err != nil {
+		if err := s.requireCareRunningForMealWrite(txCtx, studentID); err != nil {
 			return err
 		}
 		change := MealParticipationChange{StudentID: studentID, GuardianAccountID: accountID, Date: date}

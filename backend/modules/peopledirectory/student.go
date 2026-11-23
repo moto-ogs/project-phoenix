@@ -161,6 +161,13 @@ type StudentCommand interface {
 	// every care-day writer. ErrStudentNotFound when the tenant has no such
 	// row.
 	LockStudent(context.Context, int64) error
+	// LockStudentNoKeyUpdate takes the student row FOR NO KEY UPDATE: it
+	// waits for LockStudent and every update of the row, but not for the key
+	// share a row referencing the child takes, so a writer that holds the
+	// row while it waits for a lock whose holder inserts such rows cannot
+	// deadlock with it (the meal registration writes and the school's order
+	// lock). ErrStudentNotFound when the tenant has no such row.
+	LockStudentNoKeyUpdate(context.Context, int64) error
 }
 
 // StudentStatusFlagCapability is the narrow owner capability for the legacy

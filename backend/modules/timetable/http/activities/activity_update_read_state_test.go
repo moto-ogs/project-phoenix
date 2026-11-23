@@ -103,3 +103,35 @@ func TestUpdateActivity_KeepsUnsentPartsAndRefusesStaleVersion(t *testing.T) {
 	}))
 	assert.Len(t, activityDetail(t, ctx, id)["supervisors"], 1)
 }
+
+// A save that changes the category and the supervisors together pins the
+// category before it locks the staff rows (canonical lock order, #6702)
+// and stores both.
+func TestUpdateActivity_ChangesCategoryAndSupervisorsTogether(t *testing.T) {
+	t.Parallel()
+	ctx := setupActivitiesRoute(t)
+	before := testpkg.CreateTestActivityCategory(t, ctx.db, "Vorher")
+	after := testpkg.CreateTestActivityCategory(t, ctx.db, "Nachher")
+	first := testpkg.CreateTestStaff(t, ctx.db, "Erste", "Leitung")
+	second := testpkg.CreateTestStaff(t, ctx.db, "Zweite", "Leitung")
+
+	create := testutil.NewAuthenticatedRequest(t, http.MethodPost, "/activities/", map[string]any{
+		"name": "Schach AG", "max_participants": 10, "category_id": before.ID,
+		"supervisor_ids": []int64{first.ID},
+	})
+	created := testutil.ExecuteWithAuth(t, ctx.router, create, traegerActivityClaims(t, ctx))
+	require.Equal(t, http.StatusCreated, created.Code, created.Body.String())
+	id := testutil.ParseJSONResponse(t, created.Body.Bytes())["data"].(map[string]any)["id"]
+
+	req := testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/activities/%v", id), map[string]any{
+		"name": "Schach AG", "max_participants": 10, "category_id": after.ID,
+		"supervisor_ids": []int64{second.ID}, "expected_version": activityVersion(t, ctx, id),
+	})
+	rr := testutil.ExecuteWithAuth(t, ctx.router, req, testutil.DefaultTestClaims())
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	stored := activityDetail(t, ctx, id)
+	assert.Equal(t, fmt.Sprint(after.ID), fmt.Sprint(stored["category_id"]))
+	supervisors := stored["supervisors"].([]any)
+	require.Len(t, supervisors, 1)
+	assert.Equal(t, fmt.Sprint(second.ID), fmt.Sprint(supervisors[0].(map[string]any)["staff_id"]))
+}

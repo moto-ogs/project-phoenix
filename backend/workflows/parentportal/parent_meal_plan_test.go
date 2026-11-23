@@ -298,8 +298,9 @@ func TestReplaceMealParticipationSchedule_PassesTheReadVersion(t *testing.T) {
 }
 
 // The save answers the version of the regular days it stored, read in its
-// own unit after the write (ADR 0311): the page's next save sends it and is
-// not refused as changed.
+// own unit after the write (ADR 0311). That the page's next save with it is
+// not refused as changed, against the real Meal Plan, proves
+// api.TestReplaceMealParticipationSchedule_AnsweredVersionPassesTheNextSave.
 func TestReplaceMealParticipationSchedule_AnswersTheStoredVersion(t *testing.T) {
 	t.Parallel()
 

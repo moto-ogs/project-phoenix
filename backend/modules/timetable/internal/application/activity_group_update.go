@@ -20,9 +20,9 @@ import (
 // Clients now get the error and unchanged state instead of a silent
 // partial write.
 //
-// The group row comes first, then, for a new supervisor set, the staff rows
-// of the current and requested supervisors (the canonical lock order,
-// #6702); under them the edit is refused with readstate.ErrChanged unless
+// The group row comes first, then a newly chosen category, then, for a new
+// supervisor set, the staff rows of the current and requested supervisors
+// (the canonical lock order, #6702); under them the edit is refused with readstate.ErrChanged unless
 // the activity is still stored as its editor read it (ADR 0311).
 func (s *ActivityService) UpdateGroupWithDetails(ctx context.Context, edit activityContract.GroupEdit, requestingStaffID int64, hasManagePermission bool) (*activityContract.Group, error) {
 	group, err := s.lockedGroupForEdit(ctx, edit, requestingStaffID, hasManagePermission)
@@ -51,11 +51,19 @@ func (s *ActivityService) UpdateGroupWithDetails(ctx context.Context, edit activ
 // lockedGroupForEdit takes the locks of an edit, checks that the caller may
 // change the activity and that it is stored as read, and returns it.
 func (s *ActivityService) lockedGroupForEdit(ctx context.Context, edit activityContract.GroupEdit, requestingStaffID int64, hasManagePermission bool) (*activityContract.Group, error) {
-	if _, err := findLegacyGroupForUpdate(ctx, s.timetable, edit.ID); err != nil {
+	stored, err := findLegacyGroupForUpdate(ctx, s.timetable, edit.ID)
+	if err != nil {
 		if isRepositoryNotFound(err) {
 			return nil, &activityContract.ActivityError{Op: "update group", Err: activityContract.ErrGroupNotFound}
 		}
 		return nil, &activityContract.ActivityError{Op: "update group", Err: err}
+	}
+	if edit.CategoryID > 0 && edit.CategoryID != stored.CategoryID {
+		// A new category is a catalogue row the update pins; it comes
+		// before the staff rows, so UpdateGroup re-takes a lock it holds.
+		if _, err := s.timetable.FindCategoryForAssignment(ctx, edit.CategoryID); err != nil {
+			return nil, categoryActivityError("validate category", err)
+		}
 	}
 	if edit.ReplaceSupervisors {
 		// The supervisor writers hold these rows; the check below then

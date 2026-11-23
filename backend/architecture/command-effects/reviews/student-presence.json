@@ -4094,6 +4094,50 @@
     },
     {
       "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.LockStudentNoKeyUpdate",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
+      "reason": "Owner-provided locking read/gate, never labelled query. Caller scope and target-local guard remain required; no separate source-defined cohort protocol established for this binding. Target modules/peopledirectory/compose.Directory.LockStudentNoKeyUpdate; modules/peopledirectory/internal/application/capability_student.go:70.  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here. Re-reviewed with #7956: the FOR NO KEY UPDATE variant of the student row lock; it serializes the same writers, while the holder of the school's meal order lock may still insert order lines and changes referencing the child (their foreign key's key share), so a meal write waiting for that lock under the child's row cannot deadlock with it.",
+      "source_owner": "student-presence",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.LockStudentNoKeyUpdate",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
+      "reason": "Owner-provided locking read/gate, never labelled query. Caller scope and target-local guard remain required; no separate source-defined cohort protocol established for this binding. Target modules/peopledirectory.Capability.LockStudentNoKeyUpdate; modules/peopledirectory.Capability (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here. Re-reviewed with #7956: the FOR NO KEY UPDATE variant of the student row lock; it serializes the same writers, while the holder of the school's meal order lock may still insert order lines and changes referencing the child (their foreign key's key share), so a meal write waiting for that lock under the child's row cannot deadlock with it.",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
+      "reason": "Owner-provided locking read/gate, never labelled query. Caller scope and target-local guard remain required; no separate source-defined cohort protocol established for this binding. Target modules/peopledirectory.Owner.LockStudentNoKeyUpdate; modules/peopledirectory.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here. Re-reviewed with #7956: the FOR NO KEY UPDATE variant of the student row lock; it serializes the same writers, while the holder of the school's meal order lock may still insert order lines and changes referencing the child (their foreign key's key share), so a meal write waiting for that lock under the child's row cannot deadlock with it.",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
+      "reason": "Owner-provided locking read/gate, never labelled query. Caller scope and target-local guard remain required; no separate source-defined cohort protocol established for this binding. Target modules/peopledirectory.Owner.LockStudentNoKeyUpdate; modules/peopledirectory.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here. Re-reviewed with #7956: the FOR NO KEY UPDATE variant of the student row lock; it serializes the same writers, while the holder of the school's meal order lock may still insert order lines and changes referencing the child (their foreign key's key share), so a meal write waiting for that lock under the child's row cannot deadlock with it.",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0067",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.LockStudentPhotoFeature",
       "classification": "leaf",
       "effect": "lock",

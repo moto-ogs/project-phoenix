@@ -105,7 +105,7 @@ func (h classHandover) ChangeClassHandover(ctx context.Context, in classday.Clas
 	_, err = h.store.ChangeClassHandover(ctx, studentpresence.ClassHandoverChange{
 		SchoolClass: in.SchoolClass, Date: date, HandedOverBy: in.HandedOverBy,
 		PresentStudentIDs: in.PresentStudentIDs, AbsentStudentIDs: in.AbsentStudentIDs,
-		ExpectedVersion: in.ExpectedVersion,
+		ExpectedVersion: in.ExpectedVersion, ClassStudentIDs: handoverClassStudentIDs(roster),
 	})
 	if errors.Is(err, studentpresence.ErrClassHandoverInvalid) {
 		return fmt.Errorf("%w: %w", classday.ErrClassHandoverInvalid, err)
@@ -163,6 +163,39 @@ func (h classHandover) announce(ctx context.Context) {
 	}
 }
 
+// handoverClassStudentIDs are the children with an OGS record on the roster
+// of the day, whose morning absence marks the handover's version covers.
+func handoverClassStudentIDs(roster *DayRoster) []int64 {
+	if roster == nil {
+		return nil
+	}
+	ids := make([]int64, 0, len(roster.Rows))
+	for _, row := range roster.Rows {
+		if !row.NoCare() && row.StudentID > 0 {
+			ids = append(ids, row.StudentID)
+		}
+	}
+	return ids
+}
+
+// handoverMorningAbsent are the report's children with an OGS record whose
+// stored morning mark is "absent": the prefill of the handover dialog and,
+// with the stored handover, its version. It reads the rows after the
+// morning attendance filled them in.
+func handoverMorningAbsent(rows []classday.DayRow) []int64 {
+	var ids []int64
+	for _, row := range rows {
+		mark := row.MorningAttendance
+		if row.NoCare() || row.StudentID.Int64() <= 0 || mark == nil {
+			continue
+		}
+		if mark.Source == classday.MorningAttendanceSourceTeacher && mark.Status == classday.MorningAttendanceAbsent {
+			ids = append(ids, row.StudentID.Int64())
+		}
+	}
+	return ids
+}
+
 // checkHandoverChildren refuses a child without an OGS record on the roster
 // of the day.
 func checkHandoverChildren(roster *DayRoster, present, absent []int64) error {
@@ -196,7 +229,7 @@ func (h classHandover) applyClassHandover(ctx context.Context, report *classday.
 		if err != nil {
 			return err
 		}
-		report.HandoverVersion = studentpresence.ClassHandoverVersion(stored)
+		report.HandoverVersion = studentpresence.ClassHandoverVersion(stored, handoverMorningAbsent(report.Rows))
 		if stored != nil {
 			handover, err := h.dayHandover(ctx, stored)
 			if err != nil {

@@ -51,7 +51,7 @@ func testStudentNames(ctx context.Context, ids []int64) ([]mealplan.ParticipantC
 	return result, err
 }
 
-// testStudentLock takes the child's student row FOR UPDATE in the test
+// testStudentLock takes the child's student row FOR NO KEY UPDATE in the test
 // database, as the People Directory's binding does.
 func testStudentLock(ctx context.Context, studentID int64) (bool, error) {
 	transaction, ok := tenant.TransactionFromContext(ctx)
@@ -63,7 +63,7 @@ func testStudentLock(ctx context.Context, studentID int64) (bool, error) {
 		return false, fmt.Errorf("test student lock: unsupported transaction %T", transaction)
 	}
 	var ids []int64
-	err := tx.NewSelect().Table("users.student_profiles").Column("id").Where("id = ?", studentID).For("UPDATE").Scan(ctx, &ids)
+	err := tx.NewSelect().Table("users.student_profiles").Column("id").Where("id = ?", studentID).For("NO KEY UPDATE").Scan(ctx, &ids)
 	return len(ids) == 1, err
 }
 

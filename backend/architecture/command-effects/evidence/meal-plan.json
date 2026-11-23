@@ -18,10 +18,10 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.BillingMonth",
-      "binding_digest": "73e6923b301bb0dbc1f5363324c36d2f",
+      "binding_digest": "7554af3ad2d759e4dd0c5f6ce252e02d",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -34,10 +34,10 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.BillingMonth",
-      "binding_digest": "051dad2adb146b16cc86822854930190",
+      "binding_digest": "5a57daba56e1aa14df98272f53aea732",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -154,10 +154,10 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth",
-      "binding_digest": "73e6923b301bb0dbc1f5363324c36d2f",
+      "binding_digest": "7554af3ad2d759e4dd0c5f6ce252e02d",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -170,10 +170,10 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth",
-      "binding_digest": "051dad2adb146b16cc86822854930190",
+      "binding_digest": "5a57daba56e1aa14df98272f53aea732",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -346,10 +346,10 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ClearParticipationBySchool",
-      "binding_digest": "ef197ee17724d15c3f0ad3569cf9986c",
+      "binding_digest": "2ef8d1b42f35bde99a53a0005f8cf6c8",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearParticipationBySchool",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -362,10 +362,10 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ClearParticipationBySchool",
-      "binding_digest": "67e16bd47e2bee47445be111a33f6a21",
+      "binding_digest": "5ec017e92cd4793cac7adebd9eda0181",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearParticipationBySchool",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -434,10 +434,10 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ClearParticipationForDay",
-      "binding_digest": "ef197ee17724d15c3f0ad3569cf9986c",
+      "binding_digest": "2ef8d1b42f35bde99a53a0005f8cf6c8",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearParticipationForDay",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -450,10 +450,10 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ClearParticipationForDay",
-      "binding_digest": "67e16bd47e2bee47445be111a33f6a21",
+      "binding_digest": "5ec017e92cd4793cac7adebd9eda0181",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearParticipationForDay",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -810,10 +810,10 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ReplaceParticipationSchedule",
-      "binding_digest": "ef197ee17724d15c3f0ad3569cf9986c",
+      "binding_digest": "2ef8d1b42f35bde99a53a0005f8cf6c8",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceParticipationSchedule",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -826,10 +826,10 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ReplaceParticipationSchedule",
-      "binding_digest": "67e16bd47e2bee47445be111a33f6a21",
+      "binding_digest": "5ec017e92cd4793cac7adebd9eda0181",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceParticipationSchedule",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -898,10 +898,10 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ReplaceScheduleBySchool",
-      "binding_digest": "ef197ee17724d15c3f0ad3569cf9986c",
+      "binding_digest": "2ef8d1b42f35bde99a53a0005f8cf6c8",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceScheduleBySchool",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -914,10 +914,10 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ReplaceScheduleBySchool",
-      "binding_digest": "67e16bd47e2bee47445be111a33f6a21",
+      "binding_digest": "5ec017e92cd4793cac7adebd9eda0181",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceScheduleBySchool",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -986,10 +986,10 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.SetParticipationBySchool",
-      "binding_digest": "ef197ee17724d15c3f0ad3569cf9986c",
+      "binding_digest": "2ef8d1b42f35bde99a53a0005f8cf6c8",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationBySchool",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -1002,10 +1002,10 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.SetParticipationBySchool",
-      "binding_digest": "67e16bd47e2bee47445be111a33f6a21",
+      "binding_digest": "5ec017e92cd4793cac7adebd9eda0181",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationBySchool",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -1074,10 +1074,10 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.SetParticipationForDay",
-      "binding_digest": "ef197ee17724d15c3f0ad3569cf9986c",
+      "binding_digest": "2ef8d1b42f35bde99a53a0005f8cf6c8",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationForDay",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -1090,10 +1090,10 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.SetParticipationForDay",
-      "binding_digest": "67e16bd47e2bee47445be111a33f6a21",
+      "binding_digest": "5ec017e92cd4793cac7adebd9eda0181",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationForDay",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -1154,18 +1154,18 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.SetParticipationForWeek",
-      "binding_digest": "ef197ee17724d15c3f0ad3569cf9986c",
+      "binding_digest": "2ef8d1b42f35bde99a53a0005f8cf6c8",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationForWeek",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.SetParticipationForWeek",
-      "binding_digest": "67e16bd47e2bee47445be111a33f6a21",
+      "binding_digest": "5ec017e92cd4793cac7adebd9eda0181",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationForWeek",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -1442,10 +1442,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearParticipationBySchool",
-      "binding_digest": "ef197ee17724d15c3f0ad3569cf9986c",
+      "binding_digest": "2ef8d1b42f35bde99a53a0005f8cf6c8",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ClearParticipationBySchool",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -1458,10 +1458,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearParticipationBySchool",
-      "binding_digest": "67e16bd47e2bee47445be111a33f6a21",
+      "binding_digest": "5ec017e92cd4793cac7adebd9eda0181",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ClearParticipationBySchool",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -1530,10 +1530,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearParticipationForDay",
-      "binding_digest": "ef197ee17724d15c3f0ad3569cf9986c",
+      "binding_digest": "2ef8d1b42f35bde99a53a0005f8cf6c8",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ClearParticipationForDay",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -1546,10 +1546,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearParticipationForDay",
-      "binding_digest": "67e16bd47e2bee47445be111a33f6a21",
+      "binding_digest": "5ec017e92cd4793cac7adebd9eda0181",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ClearParticipationForDay",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -1754,10 +1754,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceParticipationSchedule",
-      "binding_digest": "ef197ee17724d15c3f0ad3569cf9986c",
+      "binding_digest": "2ef8d1b42f35bde99a53a0005f8cf6c8",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ReplaceParticipationSchedule",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -1770,10 +1770,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceParticipationSchedule",
-      "binding_digest": "67e16bd47e2bee47445be111a33f6a21",
+      "binding_digest": "5ec017e92cd4793cac7adebd9eda0181",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ReplaceParticipationSchedule",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -1842,10 +1842,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceScheduleBySchool",
-      "binding_digest": "ef197ee17724d15c3f0ad3569cf9986c",
+      "binding_digest": "2ef8d1b42f35bde99a53a0005f8cf6c8",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ReplaceScheduleBySchool",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -1858,10 +1858,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceScheduleBySchool",
-      "binding_digest": "67e16bd47e2bee47445be111a33f6a21",
+      "binding_digest": "5ec017e92cd4793cac7adebd9eda0181",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ReplaceScheduleBySchool",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -1930,10 +1930,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationBySchool",
-      "binding_digest": "ef197ee17724d15c3f0ad3569cf9986c",
+      "binding_digest": "2ef8d1b42f35bde99a53a0005f8cf6c8",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.SetParticipationBySchool",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -1946,10 +1946,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationBySchool",
-      "binding_digest": "67e16bd47e2bee47445be111a33f6a21",
+      "binding_digest": "5ec017e92cd4793cac7adebd9eda0181",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.SetParticipationBySchool",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -2018,10 +2018,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationForDay",
-      "binding_digest": "ef197ee17724d15c3f0ad3569cf9986c",
+      "binding_digest": "2ef8d1b42f35bde99a53a0005f8cf6c8",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.SetParticipationForDay",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -2034,10 +2034,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationForDay",
-      "binding_digest": "67e16bd47e2bee47445be111a33f6a21",
+      "binding_digest": "5ec017e92cd4793cac7adebd9eda0181",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.SetParticipationForDay",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -2098,18 +2098,18 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationForWeek",
-      "binding_digest": "ef197ee17724d15c3f0ad3569cf9986c",
+      "binding_digest": "2ef8d1b42f35bde99a53a0005f8cf6c8",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.SetParticipationForWeek",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationForWeek",
-      "binding_digest": "67e16bd47e2bee47445be111a33f6a21",
+      "binding_digest": "5ec017e92cd4793cac7adebd9eda0181",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.SetParticipationForWeek",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -2306,18 +2306,18 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.participantDirectory.LockStudent",
-      "binding_digest": "ef197ee17724d15c3f0ad3569cf9986c",
+      "binding_digest": "2ef8d1b42f35bde99a53a0005f8cf6c8",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan/internal/ports.Directory.LockStudent",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.participantDirectory.LockStudent",
-      "binding_digest": "67e16bd47e2bee47445be111a33f6a21",
+      "binding_digest": "5ec017e92cd4793cac7adebd9eda0181",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan/internal/ports.Directory.LockStudent",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {

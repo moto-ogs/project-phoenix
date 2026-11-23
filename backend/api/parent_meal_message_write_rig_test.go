@@ -332,6 +332,16 @@ type mealWriteRig struct {
 	setSetting func(ctx context.Context, key string, value any) error
 }
 
+// rigMealPlans keeps each rig's Meal Plan, the parent routes' one, for the
+// school's writes beside the parents'; keyed by the rig's faults.
+var rigMealPlans sync.Map
+
+// meals is the rig's Meal Plan.
+func (r mealWriteRig) meals() mealplan.Capability {
+	meals, _ := rigMealPlans.Load(r.faults)
+	return meals.(mealplan.Capability)
+}
+
 func newMealWriteRig(t *testing.T) mealWriteRig {
 	t.Helper()
 	// The faults need a pool of their own, not a database of their own: every
@@ -373,6 +383,8 @@ func newMealWriteRig(t *testing.T) mealWriteRig {
 		deps.MessageAttachments = owners.BindParentMessageAttachments(communicationCompose.NewPortalMessageAttachments(pool))
 	})
 	require.NoError(t, settings.Settings.SetValue(testpkg.Ctx(t), settingsModule.KeyParentMessageLeadershipEnabled, true, nil, nil))
+	rigMealPlans.Store(faults, meals)
+	t.Cleanup(func() { rigMealPlans.Delete(faults) })
 	return mealWriteRig{
 		childReadRig: rig, super: super, faults: faults, readSnapshot: prepareMealWriteSnapshot(t, super),
 		broadcasts: func() int { return len(broadcaster.Calls()) },
@@ -445,7 +457,7 @@ func newMealPlanAt(db transactionruntime.Database, settings *mealplanCompose.Set
 		},
 		// The People Directory's student row lock, as owners.BuildServeMealPlan binds it.
 		LockStudent: func(ctx context.Context, studentID int64) (bool, error) {
-			err := names.LockStudent(ctx, studentID)
+			err := names.LockStudentNoKeyUpdate(ctx, studentID)
 			if errors.Is(err, peopledirectory.ErrStudentNotFound) {
 				return false, nil
 			}

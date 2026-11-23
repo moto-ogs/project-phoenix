@@ -31,6 +31,10 @@ type EnrollmentRequestReads interface {
 type StudentReads interface {
 	FindByID(ctx context.Context, id int64) (*PortalStudent, error)
 	FindByIDForUpdate(ctx context.Context, id int64) (*PortalStudent, error)
+	// FindByIDForNoKeyUpdate locks the child's row without refusing the key
+	// share of a row referencing the child (meal writes, see
+	// ChildWriteAccess.NoKeyUpdate).
+	FindByIDForNoKeyUpdate(ctx context.Context, id int64) (*PortalStudent, error)
 }
 
 // PersonReads reads the child's person row.

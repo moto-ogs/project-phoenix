@@ -16,8 +16,10 @@ import (
 // PresentStudentIDs and AbsentStudentIDs are the children with an OGS record
 // she handed over "da" and "nicht da"; either list may be empty.
 // ExpectedVersion is the ClassHandoverVersion of the class and date its
-// Lehrkraft read: a handover over another stored handover is refused with
-// readstate.ErrChanged (ADR 0311). A withdrawal takes no version.
+// Lehrkraft read: a handover over another stored handover, or after another
+// morning absence mark of ClassStudentIDs (the class's children with an OGS
+// record on the date, whose "fehlt" marks prefill "nicht da"), is refused
+// with readstate.ErrChanged (ADR 0311). A withdrawal takes no version.
 type ClassHandoverChange struct {
 	SchoolClass       string
 	Date              calendar.Date
@@ -26,6 +28,7 @@ type ClassHandoverChange struct {
 	AbsentStudentIDs  []int64
 	Withdraw          bool
 	ExpectedVersion   string
+	ClassStudentIDs   []int64
 }
 
 // classHandoverState is the canonical form of the stored handover of one
@@ -36,13 +39,19 @@ type classHandoverState struct {
 	HandedOverByStaffID int64   `json:"handed_over_by_staff_id"`
 	PresentStudentIDs   []int64 `json:"present_student_ids"`
 	AbsentStudentIDs    []int64 `json:"absent_student_ids"`
+	MorningAbsentIDs    []int64 `json:"morning_absent_student_ids"`
 }
 
 // ClassHandoverVersion is the read-state token of the handover of one class
-// and day (ADR 0311); nil is a class not handed over yet. A new handover,
-// another moment or another child "da" or "nicht da" changes it.
-func ClassHandoverVersion(handover *ClassHandover) string {
-	state := classHandoverState{PresentStudentIDs: []int64{}, AbsentStudentIDs: []int64{}}
+// and day (ADR 0311); nil is a class not handed over yet. morningAbsent are
+// the class's children with an OGS record whose stored morning mark of the
+// day is "absent": the handover dialog prefills them "nicht da". A new
+// handover, another moment, another child "da" or "nicht da" or another
+// morning absence mark changes it.
+func ClassHandoverVersion(handover *ClassHandover, morningAbsent []int64) string {
+	state := classHandoverState{PresentStudentIDs: []int64{}, AbsentStudentIDs: []int64{}, MorningAbsentIDs: append([]int64{}, morningAbsent...)}
+	slices.Sort(state.MorningAbsentIDs)
+	state.MorningAbsentIDs = slices.Compact(state.MorningAbsentIDs)
 	if handover != nil {
 		state.HandedOver = true
 		state.HandedOverAt = handover.HandedOverAt.UTC().Format(time.RFC3339Nano)

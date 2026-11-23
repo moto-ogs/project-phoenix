@@ -27,6 +27,11 @@ func (p *nativeStudentReadProbe) StudentSnapshotForUpdate(_ context.Context, id 
 	p.ids = append(p.ids, id)
 	return p.row, p.err
 }
+func (p *nativeStudentReadProbe) StudentSnapshotForNoKeyUpdate(_ context.Context, id int64) (*peopledirectory.StudentSnapshot, error) {
+	p.calls = append(p.calls, "lock no key update")
+	p.ids = append(p.ids, id)
+	return p.row, p.err
+}
 
 func TestParentStudentReadsPreserveLockAndErrorPaths(t *testing.T) {
 	t.Parallel()
@@ -42,8 +47,11 @@ func TestParentStudentReadsPreserveLockAndErrorPaths(t *testing.T) {
 	row, err = reads.FindByIDForUpdate(ctx, id)
 	require.ErrorIs(t, err, failure)
 	require.Nil(t, row)
-	require.Equal(t, []string{"read", "lock"}, source.calls)
-	require.Equal(t, []int64{id, id}, source.ids)
+	row, err = reads.FindByIDForNoKeyUpdate(ctx, id)
+	require.ErrorIs(t, err, failure)
+	require.Nil(t, row)
+	require.Equal(t, []string{"read", "lock", "lock no key update"}, source.calls)
+	require.Equal(t, []int64{id, id, id}, source.ids)
 }
 
 func TestParentStudentSnapshotRetainsDepartureAndPersonRelations(t *testing.T) {

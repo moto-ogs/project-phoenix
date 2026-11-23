@@ -1,4 +1,5 @@
 import {
+  act,
   fireEvent,
   render as renderRaw,
   screen,
@@ -105,36 +106,28 @@ function noData() {
   };
 }
 
-/** GET /api/groups/: the blocking group as stored, with its version. */
+/** GET /api/groups/14: the blocking group as stored, with its version. */
 function storedGroups(teacherIds: string[], version = "v14") {
   return {
     ok: true,
     json: () =>
       Promise.resolve({
         status: "success",
-        data: [
-          {
-            id: "14",
-            name: "Gruppe Gelb",
-            student_count: 0,
-            created_at: "2026-09-01T08:00:00Z",
-            updated_at: "2026-09-01T08:00:00Z",
-            version,
-            teachers: teacherIds.map((id) => ({
-              id,
-              staff_id: `s${id}`,
-              first_name: "Lea",
-              last_name: `Leitung ${id}`,
-              specialization: "",
-              full_name: `Lea Leitung ${id}`,
-            })),
-          },
-        ],
-        pagination: {
-          current_page: 1,
-          page_size: 500,
-          total_pages: 1,
-          total_records: 1,
+        data: {
+          id: "14",
+          name: "Gruppe Gelb",
+          student_count: 0,
+          created_at: "2026-09-01T08:00:00Z",
+          updated_at: "2026-09-01T08:00:00Z",
+          version,
+          teachers: teacherIds.map((id) => ({
+            id,
+            staff_id: `s${id}`,
+            first_name: "Lea",
+            last_name: `Leitung ${id}`,
+            specialization: "",
+            full_name: `Lea Leitung ${id}`,
+          })),
         },
       }),
   };
@@ -467,7 +460,7 @@ describe("CaregiverBlockerResolutionPanel", () => {
     fireEvent.click(screen.getByRole("menuitem", { name: "Entfernen" }));
     expect(mockFetch).not.toHaveBeenCalledWith(
       "/api/groups/14",
-      expect.anything(),
+      expect.objectContaining({ method: "PUT" }),
     );
     fireEvent.click(screen.getByRole("button", { name: "Ja, entfernen" }));
     fireEvent.click(
@@ -606,10 +599,93 @@ describe("CaregiverBlockerResolutionPanel", () => {
     const groupReads = () =>
       mockFetch.mock.calls.filter(
         ([url, init]) =>
-          String(url).startsWith("/api/groups?") &&
+          String(url) === "/api/groups/14" &&
           ((init as RequestInit | undefined)?.method ?? "GET") === "GET",
       ).length;
     await waitFor(() => expect(groupReads()).toBeGreaterThan(1));
+  });
+
+  // The read after a refusal answers late: until then the group's actions
+  // wait, and the next save sends the version of that read, not the one
+  // refused (ADR 0311).
+  it("saves a refused Stammgruppe again only with the version read after the refusal", async () => {
+    let reads = 0;
+    let answerReread: () => void = () => undefined;
+    let puts = 0;
+    mockFetch.mockImplementation((url: string, init?: RequestInit) => {
+      if ((init?.method ?? "GET") === "GET" && url === "/api/groups/14") {
+        reads += 1;
+        if (reads === 1) return Promise.resolve(storedGroups(["30", "31"]));
+        return new Promise((resolve) => {
+          answerReread = () => resolve(storedGroups(["30", "31", "33"], "v15"));
+        });
+      }
+      puts += 1;
+      return Promise.resolve(
+        puts === 1
+          ? {
+              ok: false,
+              status: 409,
+              text: async () =>
+                JSON.stringify({ code: "general.changed_since_read" }),
+            }
+          : noData(),
+      );
+    });
+
+    render(
+      <CaregiverBlockerResolutionPanel
+        active
+        state={createState({
+          groupAssignments: [
+            {
+              id: "10",
+              groupId: "14",
+              groupName: "Gruppe Gelb",
+              teacherId: "30",
+              teacherIds: ["30", "31"],
+            },
+          ],
+        })}
+      />,
+    );
+    const remove = async () => {
+      fireEvent.click(screen.getByRole("button", { name: /^Aktionen für/ }));
+      await waitFor(() =>
+        expect(
+          screen.getByRole("menuitem", { name: "Entfernen" }),
+        ).toBeEnabled(),
+      );
+      fireEvent.click(screen.getByRole("menuitem", { name: "Entfernen" }));
+      fireEvent.click(screen.getByRole("button", { name: "Ja, entfernen" }));
+      fireEvent.click(
+        screen.getByRole("button", { name: "Ohne Ersatz entfernen" }),
+      );
+    };
+    const putBodies = () =>
+      mockFetch.mock.calls
+        .filter(
+          ([, init]) => (init as RequestInit | undefined)?.method === "PUT",
+        )
+        .map(([, init]) => JSON.parse(String((init as RequestInit).body)));
+
+    await remove();
+    await waitFor(() => expect(putBodies()).toHaveLength(1));
+    await waitFor(() => expect(reads).toBe(2));
+    fireEvent.click(screen.getByRole("button", { name: /^Aktionen für/ }));
+    expect(screen.getByRole("menuitem", { name: "Entfernen" })).toBeDisabled();
+    fireEvent.keyDown(document.activeElement ?? document.body, {
+      key: "Escape",
+    });
+
+    act(() => answerReread());
+    await remove();
+    await waitFor(() => expect(putBodies()).toHaveLength(2));
+    expect(putBodies()[1]).toEqual({
+      name: "Gruppe Gelb",
+      teacher_ids: ["31", "33"],
+      expected_version: "v15",
+    });
   });
 
   it("weist auf den Rückweg hin, sobald nichts mehr offen ist", () => {

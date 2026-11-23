@@ -75,6 +75,14 @@ func (s *Service) LockStudent(ctx context.Context, id int64) error {
 	return MapError(s.students.Lock(ctx, id))
 }
 
+func (s *Service) LockStudentNoKeyUpdate(ctx context.Context, id int64) error {
+	if id <= 0 {
+		return invalidStudent("student ID is required")
+	}
+
+	return MapError(s.students.LockNoKeyUpdate(ctx, id))
+}
+
 func (s *Service) ListStudentsWithStatusFlag(ctx context.Context, status string) ([]peopledirectory.Student, error) {
 	if status != "sick" && status != "excused" {
 		return nil, invalidStudent("student status flag is invalid")

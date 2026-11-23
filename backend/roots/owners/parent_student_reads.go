@@ -27,6 +27,13 @@ func NewParentStudentReads(source peopledirectory.StudentSnapshotReads) parentpo
 			}
 			return parentStudentSnapshot(row)
 		},
+		LockNoKeyUpdate: func(ctx context.Context, id int64) (*parentportal.StudentSnapshot, error) {
+			row, err := source.StudentSnapshotForNoKeyUpdate(ctx, id)
+			if err != nil {
+				return nil, err
+			}
+			return parentStudentSnapshot(row)
+		},
 	})
 }
 

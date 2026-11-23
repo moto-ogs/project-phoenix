@@ -88,7 +88,34 @@ func (s *Service) checkClassHandover(ctx context.Context, in studentpresence.Cla
 			stored = &handovers[i]
 		}
 	}
-	return stats, readstate.Check(in.ExpectedVersion, studentpresence.ClassHandoverVersion(stored))
+	morningAbsent, markStats, err := s.morningAbsentOf(ctx, in.Date, in.ClassStudentIDs)
+	stats.Queries += markStats.Queries
+	stats.Rows += markStats.Rows
+	stats.StatementDuration += markStats.StatementDuration
+	if err != nil {
+		return stats, err
+	}
+	return stats, readstate.Check(in.ExpectedVersion, studentpresence.ClassHandoverVersion(stored, morningAbsent))
+}
+
+// morningAbsentOf lists the children among studentIDs whose stored morning
+// mark of date is "absent".
+func (s *Service) morningAbsentOf(ctx context.Context, date calendar.Date, studentIDs []int64) ([]int64, ports.Stats, error) {
+	studentIDs = distinctIDs(studentIDs)
+	if len(studentIDs) == 0 {
+		return nil, ports.Stats{}, nil
+	}
+	entries, stats, err := s.store.ListMorningAttendance(ctx, date, date, studentIDs, nil)
+	if err != nil {
+		return nil, stats, err
+	}
+	absent := make([]int64, 0, len(entries))
+	for _, entry := range entries {
+		if entry.Child.StudentID > 0 && entry.Status == studentpresence.MorningAttendanceAbsent {
+			absent = append(absent, entry.Child.StudentID)
+		}
+	}
+	return absent, stats, nil
 }
 
 // validHandoverChildren accepts positive IDs, each child either "da" or

@@ -86,6 +86,8 @@ interface StoredGroup {
   readonly name: string;
   readonly teacherIds: string[];
   readonly version?: string;
+  /** The answer of the read it comes from. */
+  readonly readFrom: unknown;
 }
 
 // The route keeps the group's room: the body names no room (ADR 0311).
@@ -104,8 +106,6 @@ async function updateGroupTeachers(
     errorMessage: "Update group teachers failed",
   });
 }
-
-const GROUP_LIST = { page: 1, pageSize: 500 } as const;
 
 function buildUpdatedTeacherIds(
   group: BlockerGroup,
@@ -167,35 +167,50 @@ export function CaregiverBlockerResolutionPanel({
     Record<string, string>
   >({});
 
-  // The groups as stored when the step opened: a resolution keeps their
-  // other leads and sends the version read (ADR 0311). A group read again
-  // after a refusal starts from the stored state.
-  const storedGroupList = useSWRAuth(
-    active && state.groupAssignments.length > 0
-      ? groupsKeys.key(GROUP_LIST)
+  // The groups as stored when the step opened, each read on its own: a
+  // resolution keeps their other leads and sends the version read (ADR
+  // 0311). A group refused as changed starts again from a read answered
+  // after the refusal, never from the read it was refused under.
+  const blockerGroupIds = useMemo(
+    () => [...new Set(state.groupAssignments.map((g) => g.groupId))],
+    [state.groupAssignments],
+  );
+  const storedGroupReads = useSWRAuth(
+    active && blockerGroupIds.length > 0
+      ? groupsKeys.byIds(blockerGroupIds)
       : null,
-    () => groupsKeys.fetcher(GROUP_LIST),
+    () => groupsKeys.byIdsFetcher(blockerGroupIds),
   );
   const { error: groupLoadError } = useSwrResourceLoadError(
-    [{ data: storedGroupList.data, error: storedGroupList.error }],
+    [{ data: storedGroupReads.data, error: storedGroupReads.error }],
     "die Stammgruppen",
-    () => storedGroupList.mutate(),
+    () => storedGroupReads.mutate(),
   );
   const [storedGroups, setStoredGroups] = useState<Record<string, StoredGroup>>(
     {},
   );
-  const unread = storedGroupList.data
-    ? groups.filter((item) => !(item.groupId in storedGroups))
+  // Per refused group the read its refused version came from.
+  const [refusedUnder, setRefusedUnder] = useState<
+    Readonly<Record<string, unknown>>
+  >({});
+  const readGroups = storedGroupReads.data;
+  const unread = readGroups
+    ? groups.filter(
+        (item) =>
+          !(item.groupId in storedGroups) &&
+          refusedUnder[item.groupId] !== readGroups,
+      )
     : [];
-  if (storedGroupList.data && unread.length > 0) {
+  if (readGroups && unread.length > 0) {
     const next = { ...storedGroups };
     for (const item of unread) {
-      const group = storedGroupList.data.find((g) => g.id === item.groupId);
+      const group = readGroups.find((g) => g.id === item.groupId);
       if (group)
         next[item.groupId] = {
           name: group.name,
           teacherIds: group.teacher_ids ?? [],
           version: group.version,
+          readFrom: readGroups,
         };
     }
     if (Object.keys(next).length > Object.keys(storedGroups).length)
@@ -441,12 +456,14 @@ export function CaregiverBlockerResolutionPanel({
       // would be refused again, so no retry (ADR 0311).
       const changed = isChangedSinceRead(error);
       if (changed) {
+        const refused = storedGroups[item.groupId]?.readFrom;
         setStoredGroups((prev) => {
           const next = { ...prev };
           delete next[item.groupId];
           return next;
         });
-        void storedGroupList.mutate();
+        setRefusedUnder((prev) => ({ ...prev, [item.groupId]: refused }));
+        void storedGroupReads.mutate();
       }
       void actionErrors.show(error, {
         object: `die Gruppenleitung für „${item.groupName}“`,

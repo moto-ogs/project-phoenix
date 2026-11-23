@@ -227,13 +227,15 @@ func BuildServeMealPlan(db transactionruntime.Database, settings *mealplanCompos
 }
 
 // mealPlanStudentLock binds the Meal Plan's first lock to the People
-// Directory's student row lock, the one every care-day writer and the
-// parent portal's child guard take first.
+// Directory's student row lock FOR NO KEY UPDATE, the one the parent
+// portal's child guard takes for a meal write: it serializes the writes of
+// one child, and the holder of the school's order lock may still insert
+// order lines of the child meanwhile.
 func mealPlanStudentLock(students interface {
-	LockStudent(context.Context, int64) error
+	LockStudentNoKeyUpdate(context.Context, int64) error
 }) mealplanModule.StudentLock {
 	return func(ctx context.Context, studentID int64) (bool, error) {
-		err := students.LockStudent(ctx, studentID)
+		err := students.LockStudentNoKeyUpdate(ctx, studentID)
 		if errors.Is(err, peopledirectory.ErrStudentNotFound) {
 			return false, nil
 		}

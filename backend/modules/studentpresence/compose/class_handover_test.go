@@ -229,10 +229,10 @@ func handoverVersion(t *testing.T, ctx context.Context, module interface {
 	require.NoError(t, err)
 	for i := range handovers {
 		if strings.EqualFold(strings.TrimSpace(handovers[i].SchoolClass), class) {
-			return studentpresence.ClassHandoverVersion(&handovers[i])
+			return studentpresence.ClassHandoverVersion(&handovers[i], nil)
 		}
 	}
-	return studentpresence.ClassHandoverVersion(nil)
+	return studentpresence.ClassHandoverVersion(nil, nil)
 }
 
 // A Lehrkraft whose class view was read before another handover of her class
