@@ -47,6 +47,8 @@ const (
 	// SourceAppointments is Termine im Kalender: today's exceptions of the
 	// caller's calendar appointments (#7663).
 	SourceAppointments Source = "appointments"
+	// SourceMealPlan is Essen: whether today's menu changed (#7666).
+	SourceMealPlan Source = "meal_plan"
 )
 
 // SourceState says whether a source answered. A source the caller lacks the
@@ -128,6 +130,9 @@ const (
 	// KindAppointmentChanged: today's date of a calendar appointment of the
 	// caller takes place at another location or another time (#7663).
 	KindAppointmentChanged Kind = "appointment_changed"
+	// KindMealPlanChanged: today's menu changed after it was published
+	// (#7666). Never the dishes; the meal plan page shows them.
+	KindMealPlanChanged Kind = "meal_plan_changed"
 )
 
 // ChildStatus is the status of an absent child, as on the detail page.
@@ -181,6 +186,8 @@ const (
 	LinkSubstitutionPlan LinkTarget = "substitution_plan"
 	// LinkCalendar is the caller's own calendar ("Mein Kalender", #7663).
 	LinkCalendar LinkTarget = "calendar"
+	// LinkMealPlan is the meal plan page of the week.
+	LinkMealPlan LinkTarget = "meal_plan"
 )
 
 // Person is somebody an entry names. The ID is the staff record.
@@ -446,6 +453,12 @@ type AppointmentChanges interface {
 	AppointmentChanges(ctx context.Context, day calendar.Date) ([]SourceEntry, error)
 }
 
+// MealPlanChanges is the Essen port: whether the menu of the day changed,
+// for every staff account of the school (#7666). It carries no dish.
+type MealPlanChanges interface {
+	MealPlanChanges(ctx context.Context, day calendar.Date) ([]SourceEntry, error)
+}
+
 // Isolation runs source reads so that a failure leaves the request's
 // transaction usable (a savepoint). It returns the source's own error
 // unchanged and reports a failure of the isolation itself as fatal.
@@ -474,7 +487,9 @@ type Dependencies struct {
 	Classes ClassChanges
 	// Appointments is the Termine source (#7663).
 	Appointments AppointmentChanges
-	Logger       *slog.Logger
+	// MealPlan is the Essen source (#7666).
+	MealPlan MealPlanChanges
+	Logger   *slog.Logger
 }
 
 // Query reads the overview of the session's school.
@@ -499,7 +514,7 @@ type view struct {
 
 // New builds the projection.
 func New(deps Dependencies) (Query, error) {
-	if deps.Today == nil || deps.Isolation == nil || deps.Staff == nil || deps.Children == nil || deps.Notices == nil || deps.Closing == nil || deps.Activities == nil || deps.Classes == nil || deps.Appointments == nil {
+	if deps.Today == nil || deps.Isolation == nil || deps.Staff == nil || deps.Children == nil || deps.Notices == nil || deps.Closing == nil || deps.Activities == nil || deps.Classes == nil || deps.Appointments == nil || deps.MealPlan == nil {
 		return nil, ErrDependencies
 	}
 	logger := deps.Logger
@@ -519,6 +534,7 @@ func New(deps Dependencies) (Query, error) {
 			{source: SourceActivities, read: deps.Activities.ActivityChanges},
 			{source: SourceClasses, read: deps.Classes.ClassChanges},
 			{source: SourceAppointments, read: deps.Appointments.AppointmentChanges},
+			{source: SourceMealPlan, read: deps.MealPlan.MealPlanChanges},
 		},
 	}, nil
 }

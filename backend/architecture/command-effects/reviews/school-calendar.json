@@ -4218,6 +4218,17 @@
       "target_owner": "identity-access"
     },
     {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CalendarAppointmentChanges.Announce",
+      "classification": "platform",
+      "effect": "notice",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal/internal/ports.AppointmentChanges.Announce",
+      "reason": "Platform protocol participation (notice, #7693): every appointment write of the calendar announces the change inside its own unit; Delivery's shared after-commit site for tenant-wide signals without content (ADR 0310) sends calendar_appointments_changed with empty data to the school's staff sessions after the commit, and a rollback drops it. It writes nothing and carries no appointment; transaction and after-commit correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "school-calendar",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/application/realtimeevents.BoundTenantSignal.Announce",
+      "target_owner": "delivery-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CalendarAppointmentMails.AppointmentMails",
       "classification": "query",
       "effect": "query",

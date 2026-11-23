@@ -9,39 +9,39 @@ import type {
   EnrolledStudentResponse,
 } from "./contract/activities.generated";
 
-// Frontend supervisor type
-export interface ActivitySupervisor {
-  id: string;
-  staff_id: string;
-  is_primary: boolean;
-  first_name?: string;
-  last_name?: string;
+/** A supervisor of an activity, with the name the lists show. */
+export type ActivitySupervisor = ActivitySupervisorResponse & {
   full_name?: string;
-}
+};
 
-// Frontend types
-export interface Activity {
-  id: string;
-  name: string;
-  max_participant: number | null;
-  is_open_ags: boolean;
+/**
+ * The activity as the browser holds it. The fields the screens and forms
+ * name differently from the contract (`max_participant`, `is_open_ags`,
+ * `ag_category_id`) are mapped once, in mapActivityResponse.
+ */
+export type Activity = Pick<
+  ActivityResponse,
+  "id" | "name" | "planned_room_id"
+> & {
+  max_participant: ActivityResponse["max_participants"];
+  is_open_ags: ActivityResponse["is_open"];
+  /** The primary supervisor's staff id, empty without one. */
   supervisor_id: string;
   supervisor_name?: string;
   supervisors?: ActivitySupervisor[];
-  ag_category_id: string;
+  ag_category_id: ActivityResponse["category_id"];
   category_name?: string;
-  planned_room_id?: string;
+  // Parsed instants.
   created_at: Date;
   updated_at: Date;
   participant_count?: number;
   times?: ActivitySchedule[];
-}
+};
 
-export interface ActivityCategory {
-  id: string;
-  name: string;
-  description?: string;
-  color?: string;
+export type ActivityCategory = Pick<
+  ActivityCategoryResponse,
+  "id" | "name" | "description" | "color"
+> & {
   /** Optional Dienstplan-Schichtart this category maps to (#1837 follow-up). */
   shiftTypeId?: string;
   /**
@@ -60,18 +60,22 @@ export interface ActivityCategory {
    * list endpoint reports it.
    */
   usageCount?: number;
+  // Parsed instants.
   created_at: Date;
   updated_at: Date;
-}
+};
 
-interface ActivitySchedule {
-  id: string;
+type ActivitySchedule = Pick<
+  ActivityScheduleResponse,
+  "id" | "timeframe_id"
+> & {
+  /** The backend's activity_group_id. */
   activity_id: string;
+  /** The weekday number as text, as the forms hold it. */
   weekday: string;
-  timeframe_id?: string;
   created_at: Date;
   updated_at: Date;
-}
+};
 
 /** A student enrolled in an activity, as the activity's roster lists them. */
 export interface ActivityParticipant {
@@ -124,11 +128,10 @@ export function formatSupervisorList(
 }
 
 // Helper: Extract supervisor info from backend activity
-type SupervisorInfo = {
-  supervisor_id: string;
-  supervisor_name?: string;
-  supervisors?: ActivitySupervisor[];
-};
+type SupervisorInfo = Pick<
+  Activity,
+  "supervisor_id" | "supervisor_name" | "supervisors"
+>;
 
 function extractSupervisorInfo(
   backendActivity: ActivityResponse,

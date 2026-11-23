@@ -2,6 +2,6 @@
   "scenario": "api.day_changes.today_activities",
   "max": 20,
   "exact": false,
-  "description": "GET /day-changes/today (#7662) for the lead with the Stundenplan source: besides the Personal reads, the caller's staff record and overview setting, the day's blocks, their staff, their series, the day's protocol, the room names and the staff names, each in one batched read, inside the savepoint the sources share. TestDayChangesActivityQueryBudget compares one with four changed blocks.",
+  "description": "GET /day-changes/today (#7662, #7666) for the lead with the Stundenplan source: besides the Personal reads, the caller's staff record and overview setting, the day's blocks, their staff (shared with the Personal source's block read), their series, the day's protocol, the room names and the staff names, each in one batched read, inside the savepoint the sources share. TestDayChangesActivityQueryBudget compares one with four changed blocks.",
   "route": "GET /api/day-changes/today"
 }

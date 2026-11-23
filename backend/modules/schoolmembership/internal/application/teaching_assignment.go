@@ -89,6 +89,7 @@ func (s *Service) ListGroupAssignments(ctx context.Context, filter schoolmembers
 	filter.GroupIDs = uniquePositive(filter.GroupIDs)
 	filter.TeacherIDs = uniquePositive(filter.TeacherIDs)
 	filter.TeacherStaffIDs = uniquePositive(filter.TeacherStaffIDs)
+	filter.GroupsOfTeacherStaffIDs = uniquePositive(filter.GroupsOfTeacherStaffIDs)
 	err = s.runRead(ctx, "list_group_assignments", func(txCtx context.Context, stats *domain.OperationStats) error {
 		var queryStats domain.OperationStats
 		result, queryStats, err = s.store.ListGroupAssignments(txCtx, filter, false)

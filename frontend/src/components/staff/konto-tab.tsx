@@ -36,14 +36,12 @@ const logger = createLogger({ component: "StaffKontoTab" });
  * ändern darf, sind gesetzt: ohne users:update fehlen Vorname und Nachname,
  * ohne Betreuungsprofil die Position, ohne Rollenwechsel `role_id`.
  */
-export interface KontoDraft {
-  readonly first_name?: string;
-  readonly last_name?: string;
-  readonly role?: string | null;
-  readonly staff_notes?: string;
+export type KontoDraft = Readonly<
+  Partial<Pick<Teacher, "first_name" | "last_name" | "role" | "staff_notes">>
+> & {
   /** Neue Systemrolle, nur wenn sie sich von der aktuellen unterscheidet. */
   readonly role_id?: string;
-}
+};
 
 /** Der Bearbeiten-Zustand des Reiters. */
 export interface KontoEditing {

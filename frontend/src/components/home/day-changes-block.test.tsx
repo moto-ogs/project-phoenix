@@ -455,6 +455,47 @@ describe("DayChangesBlock", () => {
   });
 });
 
+describe("DayChangesBlock: Speiseplan (#7666)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    phone.value = false;
+  });
+
+  it("zeigt nur die Kurzinfo mit Link zum Speiseplan und erfasst nur die Art", () => {
+    serve({
+      entries: [
+        change({
+          kind: "meal_plan_changed",
+          link: { target: "meal_plan", staffId: null },
+        }),
+      ],
+    });
+    render(<DayChangesBlock />);
+
+    const link = screen.getByRole("link", {
+      name: "Der Speiseplan für heute wurde geändert.",
+    });
+    expect(link).toHaveAttribute("href", "/schule/meal-plan");
+    fireEvent.click(link);
+    expect(trackEvent).toHaveBeenCalledWith("day_changes_entry_clicked", {
+      day_change_kind: "meal_plan_changed",
+    });
+  });
+
+  it("nennt eine ausgefallene Quelle Speiseplan und gibt keine Entwarnung", () => {
+    serve({ failedSources: ["meal_plan"] });
+    render(<DayChangesBlock />);
+    expect(
+      screen.getByText(
+        "Änderungen am Speiseplan konnten gerade nicht geladen werden.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Heute läuft alles wie geplant."),
+    ).not.toBeInTheDocument();
+  });
+});
+
 describe("DayChangesBlock über den Tag (#7660)", () => {
   beforeEach(() => {
     vi.clearAllMocks();

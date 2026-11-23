@@ -3,7 +3,10 @@
  * Tests rendering and functionality of mobile filter panel
  */
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { useRef, useState } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { finishSheetClosing } from "~/test/helpers/sheet";
+import { usePhoneViewport } from "~/test/helpers/viewport";
 import { FilterPanel } from "./FilterPanel";
 import type { FilterConfig } from "./types";
 
@@ -840,6 +843,122 @@ describe("FilterPanel", () => {
 
       // Both "year" and "room" belong to the Organisation section.
       expect(screen.getByText("Organisation")).toBeInTheDocument();
+    });
+  });
+
+  describe("am Telefon (#7800)", () => {
+    usePhoneViewport();
+
+    function PhoneFilters() {
+      const [open, setOpen] = useState(false);
+      const [status, setStatus] = useState("active");
+      const [room, setRoom] = useState("all");
+      const anchorRef = useRef<HTMLDivElement>(null);
+      const filters: FilterConfig[] = [
+        {
+          id: "status",
+          label: "Status",
+          type: "buttons",
+          value: status,
+          onChange: (next) => setStatus(next as string),
+          options: [
+            { value: "active", label: "Aktiv" },
+            { value: "inactive", label: "Inaktiv" },
+          ],
+        },
+        {
+          id: "room",
+          label: "Raum",
+          type: "dropdown",
+          value: room,
+          onChange: (next) => setRoom(next as string),
+          options: [
+            { value: "all", label: "Alle Räume" },
+            { value: "101", label: "Raum 101" },
+          ],
+        },
+      ];
+      return (
+        <>
+          <div ref={anchorRef}>
+            <button type="button" onClick={() => setOpen(!open)}>
+              Filter
+            </button>
+          </div>
+          <FilterPanel
+            isOpen={open}
+            onClose={() => {
+              mockOnClose();
+              setOpen(false);
+            }}
+            filters={filters}
+            onApply={mockOnApply}
+            onReset={mockOnReset}
+            anchorRef={anchorRef}
+          />
+        </>
+      );
+    }
+
+    it("öffnet als Blatt; eine Auswahlliste darin öffnet gestapelt und lässt die Filter stehen", async () => {
+      render(<PhoneFilters />);
+      const trigger = screen.getByRole("button", { name: "Filter" });
+      fireEvent.click(trigger);
+
+      const filterSheet = await screen.findByRole("dialog", {
+        name: "Filter",
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Inaktiv" }));
+      expect(screen.getByRole("button", { name: "Inaktiv" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+
+      const roomTrigger = screen.getByRole("combobox", { name: "Raum" });
+      fireEvent.click(roomTrigger);
+      const roomSheet = await screen.findByRole("dialog", { name: "Raum" });
+      expect(roomSheet).not.toBe(filterSheet);
+      expect(filterSheet).not.toContainElement(roomSheet);
+
+      fireEvent.click(screen.getByRole("option", { name: "Raum 101" }));
+      await finishSheetClosing("Raum");
+      expect(screen.getByRole("dialog", { name: "Filter" })).toBe(filterSheet);
+      expect(roomTrigger).toHaveTextContent("Raum 101");
+      expect(roomTrigger).toHaveFocus();
+      // Die übrigen Filter bleiben, wie sie gesetzt waren.
+      expect(screen.getByRole("button", { name: "Inaktiv" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+      expect(mockOnClose).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole("button", { name: "Zurücksetzen" }));
+      expect(mockOnReset).toHaveBeenCalledTimes(1);
+      fireEvent.click(screen.getByRole("button", { name: "Anwenden" }));
+      expect(mockOnApply).toHaveBeenCalledTimes(1);
+      await finishSheetClosing("Filter");
+      expect(trigger).toHaveFocus();
+    });
+
+    it("schließt ein gestapeltes Blatt mit Escape, das Filter-Blatt bleibt offen", async () => {
+      render(<PhoneFilters />);
+      fireEvent.click(screen.getByRole("button", { name: "Filter" }));
+      await screen.findByRole("dialog", { name: "Filter" });
+
+      fireEvent.click(screen.getByRole("combobox", { name: "Raum" }));
+      const roomSheet = await screen.findByRole("dialog", { name: "Raum" });
+      await waitFor(() =>
+        expect(
+          screen.getByRole("option", { name: "Alle Räume" }),
+        ).toHaveFocus(),
+      );
+      fireEvent.keyDown(roomSheet, { key: "Escape" });
+      await finishSheetClosing("Raum");
+
+      expect(
+        screen.getByRole("dialog", { name: "Filter" }),
+      ).toBeInTheDocument();
+      expect(mockOnClose).not.toHaveBeenCalled();
     });
   });
 });

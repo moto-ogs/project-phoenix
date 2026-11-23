@@ -1,5 +1,11 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
-import type { FormEvent } from "react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { useState, type FormEvent } from "react";
 import { flushSync } from "react-dom";
 import {
   afterEach,
@@ -11,7 +17,10 @@ import {
   vi,
 } from "vitest";
 import { releaseFakeTimers } from "~/test/clock";
+import { finishSheetClosing } from "~/test/helpers/sheet";
+import { usePhoneViewport } from "~/test/helpers/viewport";
 import { CustomSelect } from "./custom-select";
+import { Modal } from "./modal";
 
 const options = [
   { value: "", label: "Bitte wählen" },
@@ -1141,6 +1150,67 @@ describe("CustomSelect", () => {
 
       expect(onChange).toHaveBeenCalledWith("second");
       expect(screen.queryByRole("listbox")).toBeNull();
+    });
+  });
+
+  describe("am Telefon (#7800)", () => {
+    usePhoneViewport();
+
+    function Controlled({ onChange }: { readonly onChange: Mock }) {
+      const [value, setValue] = useState("first");
+      return (
+        <CustomSelect
+          value={value}
+          options={options}
+          onChange={(next) => {
+            onChange(next);
+            setValue(next);
+          }}
+          ariaLabel="Auswahl"
+        />
+      );
+    }
+
+    it("öffnet als Blatt mit Fokus auf dem gewählten Wert; Tippen setzt den Wert und schließt", async () => {
+      const onChange = vi.fn();
+      render(<Controlled onChange={onChange} />);
+      const trigger = screen.getByRole("combobox", { name: "Auswahl" });
+      expect(trigger).toHaveAttribute("aria-haspopup", "dialog");
+      fireEvent.click(trigger);
+
+      const sheet = await screen.findByRole("dialog", { name: "Auswahl" });
+      expect(sheet).toContainElement(screen.getByRole("listbox"));
+      await waitFor(() =>
+        expect(
+          screen.getByRole("option", { name: "Erste Option" }),
+        ).toHaveFocus(),
+      );
+
+      fireEvent.click(screen.getByRole("option", { name: "Zweite Option" }));
+      expect(onChange).toHaveBeenCalledWith("second");
+      await finishSheetClosing("Auswahl");
+      expect(trigger).toHaveTextContent("Zweite Option");
+      expect(trigger).toHaveFocus();
+    });
+
+    it("schließt in einem Modal nur das Blatt, nicht das Modal", async () => {
+      const onClose = vi.fn();
+      const onChange = vi.fn();
+      render(
+        <Modal isOpen onClose={onClose} title="Kind bearbeiten">
+          <Controlled onChange={onChange} />
+        </Modal>,
+      );
+      fireEvent.click(screen.getByRole("combobox", { name: "Auswahl" }));
+      await screen.findByRole("dialog", { name: "Auswahl" });
+
+      fireEvent.click(screen.getByRole("option", { name: "Zweite Option" }));
+      await finishSheetClosing("Auswahl");
+      expect(onChange).toHaveBeenCalledWith("second");
+      expect(onClose).not.toHaveBeenCalled();
+      expect(
+        screen.getByRole("dialog", { name: "Kind bearbeiten" }),
+      ).toBeInTheDocument();
     });
   });
 });

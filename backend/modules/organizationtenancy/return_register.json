@@ -30361,6 +30361,12 @@
           "type": "ARRAY",
           "udt": "_text",
           "nullable": false
+        },
+        {
+          "name": "menu_changed_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
         }
       ],
       "relationships": [

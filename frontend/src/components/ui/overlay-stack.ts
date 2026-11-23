@@ -316,7 +316,10 @@ export function useOverlay(
  * so the dialog's focus trap keeps them reachable.
  */
 const MODAL_SCOPE_ATTRIBUTE = "data-modal-focus-scope";
-/** Marks the panel of a `SlideOver`, the portal target inside the panel. */
+/**
+ * Marks the panel of a `SlideOver` and the phone sheet of `ResponsivePanel`,
+ * the portal target inside the panel.
+ */
 const SHEET_SCOPE_ATTRIBUTE = "data-date-picker-focus-trap";
 /**
  * Marks a surface that may scroll while the page scroll is locked: the

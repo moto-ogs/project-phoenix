@@ -9,7 +9,9 @@ import {
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useRef } from "react";
 import { describe, expect, it, vi } from "vitest";
+import { usePhoneViewport } from "~/test/helpers/viewport";
 
 vi.mock("react-day-picker", () => ({
   DayPicker: ({ month }: { month: Date }) => (
@@ -24,6 +26,7 @@ import { DateRangePicker, RangeCalendarInline } from "./date-range-picker";
 import { CustomSelect } from "./custom-select";
 import { MultiSelect } from "./multi-select";
 import { Modal } from "./modal";
+import { ResponsivePanel } from "./responsive-panel";
 import { SlideOver, SlideOverContent } from "./slide-over";
 import { AnchoredPopover } from "./anchored-popover";
 import { usePhoneViewport } from "~/test/helpers/viewport";
@@ -441,6 +444,57 @@ describe("DateRangePicker in a dialog", () => {
     await user.tab();
 
     expect(previousMonth).toHaveFocus();
+  });
+
+  describe("in a phone sheet (#7800)", () => {
+    usePhoneViewport();
+
+    function InSheet() {
+      const triggerRef = useRef<HTMLButtonElement>(null);
+      return (
+        <ResponsivePanel
+          open
+          onOpenChange={vi.fn()}
+          label="Filter"
+          returnFocusRef={triggerRef}
+          trigger={null}
+        >
+          {() => (
+            <DateRangePicker
+              value={undefined}
+              onChange={vi.fn()}
+              presets={[
+                {
+                  label: "Letzte 7 Tage",
+                  range: () => ({
+                    from: new Date(2026, 8, 3),
+                    to: new Date(2026, 8, 9),
+                  }),
+                },
+              ]}
+            />
+          )}
+        </ResponsivePanel>
+      );
+    }
+
+    it("keeps the calendar reachable by Tab inside the sheet's focus trap", async () => {
+      const user = userEvent.setup();
+      render(<InSheet />);
+      await screen.findByRole("dialog", { name: "Filter" });
+      await user.click(screen.getByRole("button", { name: "Zeitraum wählen" }));
+      const preset = await screen.findByRole("button", {
+        name: "Letzte 7 Tage",
+      });
+      const previousMonth = screen.getByRole("button", {
+        name: "Vorheriger Monat",
+      });
+
+      await waitFor(() => expect(preset).toHaveFocus());
+      await user.tab();
+
+      expect(previousMonth).toHaveFocus();
+    });
   });
 
   it("keeps its portaled panel clickable inside a slide-over", async () => {

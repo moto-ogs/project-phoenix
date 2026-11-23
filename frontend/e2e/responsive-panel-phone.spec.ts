@@ -80,3 +80,50 @@ test.describe("Drei-Punkte-Menü am Handy", () => {
     ).toBeVisible();
   });
 });
+
+// Auswahlliste im Filter-Blatt (#7800): Sie öffnet als zweites Blatt darüber.
+// Nach dem Schließen bleibt das Filter-Blatt mit seinen Werten stehen.
+test.describe("Filter mit Auswahlliste am Handy", () => {
+  test.skip(seedAccess === null, MISSING_SEED_ACCESS);
+
+  test("öffnet die Gruppe als gestapeltes Blatt über dem Filter-Blatt", async ({
+    page,
+  }) => {
+    await loginToTenant(page, seedAccess!);
+    await page.goto(`${tenantBase}/database/students`, {
+      waitUntil: "domcontentloaded",
+    });
+    const filterButton = page.getByTestId("mobile-filter-button");
+    await expect(filterButton).toBeVisible({ timeout: 60_000 });
+    await filterButton.tap();
+    const filterSheet = page.getByRole("dialog", { name: "Filter" });
+    await expect(filterSheet).toBeVisible();
+
+    const groupTrigger = filterSheet.getByRole("combobox", { name: "Gruppe" });
+    const groupSheet = page.getByRole("dialog", { name: "Gruppe" });
+
+    // Tastatur: Fokus auf dem gewählten Wert, Escape schließt nur das obere.
+    await groupTrigger.tap();
+    await expect(groupSheet).toBeVisible();
+    await expect(
+      groupSheet.getByRole("option", { name: "Alle Gruppen" }),
+    ).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(groupSheet).toBeHidden();
+    await expect(filterSheet).toBeVisible();
+    await expect(groupTrigger).toBeFocused();
+
+    // Tippen auf einen Eintrag setzt ihn und landet wieder im Filter-Blatt.
+    await groupTrigger.tap();
+    const option = groupSheet.getByRole("option").nth(1);
+    const chosen = (await option.getAttribute("aria-label")) ?? "";
+    await option.tap();
+    await expect(groupSheet).toBeHidden();
+    await expect(filterSheet).toBeVisible();
+    await expect(groupTrigger).toContainText(chosen);
+
+    // Anwenden schließt das Filter-Blatt.
+    await filterSheet.getByRole("button", { name: "Anwenden" }).tap();
+    await expect(filterSheet).toBeHidden();
+  });
+});
