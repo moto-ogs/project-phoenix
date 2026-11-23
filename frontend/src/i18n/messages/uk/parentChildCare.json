@@ -124,6 +124,7 @@
     "errorStaffConflictGeneric": "{careTerm} уже внесла зміну на цей день. Зверніться до команди.",
     "submitting": "Надсилання …",
     "savingEdit": "Збереження …",
+    "reloadingEdit": "Завантажується збережена версія …",
     "resetTooltip": "Прибирає вашу зміну на цей день. moto спершу перепитає.",
     "saveEditTooltip": "Змінює ваш відкритий запит. {careTerm} ще має його підтвердити.",
     "submitTooltip": "Одразу надсилає запит до {careTerm} на підтвердження.",

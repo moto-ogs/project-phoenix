@@ -250,6 +250,11 @@ describe("RequestEditModal", () => {
     ).not.toBeInTheDocument();
     expect(onReload).toHaveBeenCalledTimes(1);
     expect(onClose).not.toHaveBeenCalled();
+    // Until the stored request arrives, saving would resend the refused
+    // version: the button is locked.
+    expect(
+      screen.getByRole("button", { name: /Lädt den gespeicherten Stand/ }),
+    ).toBeDisabled();
 
     // The reloaded list brings the stored request with its new version.
     view.rerender(
@@ -261,6 +266,128 @@ describe("RequestEditModal", () => {
       />,
     );
     expect(screen.getByLabelText("Vorname")).toHaveValue("Lina");
+    expect(
+      within(dialog).getByText(
+        catalogText("general.changed_since_read", "die Anfrage"),
+      ),
+    ).toBeInTheDocument();
+    updateMasterData.mockResolvedValueOnce({
+      version: "row-3",
+      is_self: true,
+      id: "md-1",
+      target: "person",
+      field_key: "first_name",
+      new_value: "Lina",
+      status: "pending",
+      created_at: "2026-08-20T08:00:00Z",
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Änderung speichern" }));
+    await waitFor(() =>
+      expect(updateMasterData).toHaveBeenLastCalledWith("1", "md-1", {
+        newValue: "Lina",
+        expectedVersion: "row-2",
+      }),
+    );
+  });
+
+  // ADR 0311: a background revalidation must not replace what the parent
+  // typed. The draft keeps the version it was filled from; only the refusal
+  // of that version shows the stored state.
+  it("keeps typed input when a newer version arrives and sends the version it started from", async () => {
+    const onReload = vi.fn();
+    updateMasterData.mockRejectedValueOnce(
+      new ApiError("changed since it was read", 409, {
+        code: "general.changed_since_read",
+      }),
+    );
+    const request = {
+      type: "master_data" as const,
+      id: "md-1",
+      version: "row-1",
+      label: "Vorname",
+      value: "Lena",
+    };
+    const view = renderParent(
+      <RequestEditModal
+        studentId="1"
+        request={request}
+        onClose={vi.fn()}
+        onReload={onReload}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Vorname"), {
+      target: { value: "Lea" },
+    });
+    view.rerender(
+      <RequestEditModal
+        studentId="1"
+        request={{ ...request, version: "row-2", value: "Lina" }}
+        onClose={vi.fn()}
+        onReload={onReload}
+      />,
+    );
+    expect(screen.getByLabelText("Vorname")).toHaveValue("Lea");
+
+    fireEvent.click(screen.getByRole("button", { name: "Änderung speichern" }));
+    await waitFor(() =>
+      expect(updateMasterData).toHaveBeenCalledWith("1", "md-1", {
+        newValue: "Lea",
+        expectedVersion: "row-1",
+      }),
+    );
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "die Anfrage"),
+      ),
+    ).toBeInTheDocument();
+    expect(onReload).toHaveBeenCalledTimes(1);
+    expect(screen.getByLabelText("Vorname")).toHaveValue("Lina");
+  });
+
+  it("refills an untouched draft from a newer read and sends that version", async () => {
+    const request = {
+      type: "master_data" as const,
+      id: "md-1",
+      version: "row-1",
+      label: "Vorname",
+      value: "Lena",
+    };
+    updateMasterData.mockResolvedValue({
+      version: "row-3",
+      is_self: true,
+      id: "md-1",
+      target: "person",
+      field_key: "first_name",
+      new_value: "Lina",
+      status: "pending",
+      created_at: "2026-08-20T08:00:00Z",
+    });
+    const view = renderParent(
+      <RequestEditModal
+        studentId="1"
+        request={request}
+        onClose={vi.fn()}
+        onReload={vi.fn()}
+      />,
+    );
+    view.rerender(
+      <RequestEditModal
+        studentId="1"
+        request={{ ...request, version: "row-2", value: "Lina" }}
+        onClose={vi.fn()}
+        onReload={vi.fn()}
+      />,
+    );
+    expect(screen.getByLabelText("Vorname")).toHaveValue("Lina");
+
+    fireEvent.click(screen.getByRole("button", { name: "Änderung speichern" }));
+    await waitFor(() =>
+      expect(updateMasterData).toHaveBeenCalledWith("1", "md-1", {
+        newValue: "Lina",
+        expectedVersion: "row-2",
+      }),
+    );
   });
 
   it("checks an empty value before sending and marks the field", async () => {

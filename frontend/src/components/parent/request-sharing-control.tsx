@@ -135,20 +135,52 @@ function useSharingState(
     t("errorObjectRecipients"),
     () => mutate(),
   );
-  // The selection is a draft of the dialog, reset by every new answer.
-  const [selected, setSelected] = useState<string[]>(() =>
-    selectedRecipients(data),
-  );
-  const [draftSource, setDraftSource] = useState(data);
-  if (draftSource !== data) {
-    setDraftSource(data);
-    setSelected(selectedRecipients(data));
+  // The selection is a draft of the dialog with the version it was drawn
+  // from; saving sends that version. A newer read replaces the draft only
+  // while it is untouched, or after the server refused its version.
+  const [draft, setDraft] = useState(() => ({
+    selected: selectedRecipients(data),
+    version: data?.version ?? "",
+    touched: false,
+    refused: false,
+  }));
+  const storedVersion = data?.version ?? "";
+  if (storedVersion !== draft.version && (!draft.touched || draft.refused)) {
+    setDraft({
+      selected: selectedRecipients(data),
+      version: storedVersion,
+      touched: false,
+      refused: false,
+    });
   }
+  const toggle = (id: string) =>
+    setDraft((current) => ({
+      ...current,
+      touched: true,
+      selected: current.selected.includes(id)
+        ? current.selected.filter((item) => item !== id)
+        : [...current.selected, id],
+    }));
+  // Opening the dialog starts a new draft from the stored sharing.
+  const restart = () =>
+    setDraft({
+      selected: selectedRecipients(data),
+      version: storedVersion,
+      touched: false,
+      refused: false,
+    });
+  const refuse = useCallback(
+    () => setDraft((current) => ({ ...current, refused: true })),
+    [],
+  );
   return {
     state: data ?? null,
     mutate,
-    selected,
-    setSelected,
+    selected: draft.selected,
+    version: draft.version,
+    toggle,
+    restart,
+    refuse,
     loading: enabled && !data && !resource.error,
     reloading: resource.isLoading || isValidating,
     loadError,
@@ -306,7 +338,7 @@ function useRequestSharingControl(props: RequestSharingControlProps) {
     show: showSaveError,
     clear: clearSaveError,
   } = useApiFormError();
-  const { mutate } = sharing;
+  const { mutate, refuse } = sharing;
   const saved = useCallback(
     (next: parentMeContract.requestSharingStateResponse) => {
       void mutate(next, { revalidate: false });
@@ -323,6 +355,7 @@ function useRequestSharingControl(props: RequestSharingControlProps) {
         // refused again. Reading it again shows the stored recipients and
         // resets the selection to them.
         void showSaveError(err, { object: t("errorObjectSelection") });
+        refuse();
         void mutate();
         return;
       }
@@ -331,14 +364,14 @@ function useRequestSharingControl(props: RequestSharingControlProps) {
         retry: () => void saveRef.current(),
       });
     },
-    [mutate, showSaveError, t],
+    [mutate, refuse, showSaveError, t],
   );
   const { save, saving } = useSharingSave({
     studentId,
     requestType,
     requestId,
     selected: sharing.selected,
-    version: sharing.state?.version ?? "",
+    version: sharing.version,
     saved,
     failed,
     enabled:
@@ -350,15 +383,10 @@ function useRequestSharingControl(props: RequestSharingControlProps) {
   useLayoutEffect(() => {
     saveRef.current = save;
   });
-  const toggle = (id: string) =>
-    sharing.setSelected((current) =>
-      current.includes(id)
-        ? current.filter((item) => item !== id)
-        : [...current, id],
-    );
+  const toggle = sharing.toggle;
   const show = () => {
     clearSaveError();
-    sharing.setSelected(selectedRecipients(sharing.state ?? undefined));
+    sharing.restart();
     setOpen(true);
   };
   return { open, setOpen, sharing, save, saving, saveError, toggle, show };

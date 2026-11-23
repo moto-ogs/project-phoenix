@@ -24,7 +24,6 @@ import (
 	"github.com/uptrace/bun"
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
-	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/communication"
 	mealplanModule "github.com/moto-ogs/project-phoenix/modules/mealplan"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
@@ -726,10 +725,7 @@ func (r *guardRig) do(t *testing.T, w childWrite, token string) *httptest.Respon
 
 // rowVersion is the version the parent lists emit for one request row.
 func (r *guardRig) rowVersion(t *testing.T, table string, id int64) string {
-	t.Helper()
-	var updatedAt time.Time
-	require.NoError(t, r.db.NewRaw(`SELECT updated_at FROM ? WHERE id = ?`, bun.Ident(table), id).Scan(context.Background(), &updatedAt))
-	return careplan.ParentRequestVersion(updatedAt)
+	return testpkg.ParentRequestVersionIn(t, r.db, table, id)
 }
 
 func (r *guardRig) scalar(t *testing.T, query string, args ...any) int64 {

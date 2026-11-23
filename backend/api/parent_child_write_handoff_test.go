@@ -14,7 +14,6 @@ import (
 	settingsModule "github.com/moto-ogs/project-phoenix/modules/settings"
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
-	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -162,10 +161,7 @@ func (r childReadRig) sharingVersion(t *testing.T, f childReadFamily) string {
 // masterDataVersion is the version the parent list emits for the family's
 // open master-data request.
 func (r childReadRig) masterDataVersion(t *testing.T, f childReadFamily) string {
-	t.Helper()
-	var updatedAt time.Time
-	require.NoError(t, r.db.NewRaw(`SELECT updated_at FROM users.student_data_change_requests WHERE id = ?`, f.requestID).Scan(context.Background(), &updatedAt))
-	return careplan.ParentRequestVersion(updatedAt)
+	return testpkg.ParentRequestVersionIn(t, r.db, "users.student_data_change_requests", f.requestID)
 }
 
 func masterDataEdit(studentID, requestID int64, value, version string) childWrite {

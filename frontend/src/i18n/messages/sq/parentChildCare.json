@@ -124,6 +124,7 @@
     "errorStaffConflictGeneric": "{careTerm}-ja ka regjistruar tashmë një ndryshim për këtë ditë. Ju lutemi kontaktoni ekipin.",
     "submitting": "Po dërgohet …",
     "savingEdit": "Po ruhet …",
+    "reloadingEdit": "Po ngarkohet versioni i ruajtur …",
     "resetTooltip": "E heq ndryshimin tuaj për këtë ditë. moto pyet më parë.",
     "saveEditTooltip": "Ndryshon kërkesën tuaj të hapur. {careTerm} duhet ta konfirmojë ende.",
     "submitTooltip": "E dërgon kërkesën menjëherë te {careTerm} për konfirmim.",

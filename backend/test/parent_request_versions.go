@@ -2,8 +2,6 @@ package test
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"testing"
 	"time"
 
@@ -15,18 +13,20 @@ import (
 
 // ParentRequestVersion is the version a reader of one parent-request row
 // sends back as expected_version (ADR 0311): the token of its stored
-// updated_at, as the lists emit it. A row that does not exist has no
-// version; its token is only non-empty, so the write reaches its not-found
-// answer.
+// updated_at, as the lists emit it. The row must exist: a missing row has
+// no version, and a test of a missing row sends its own token.
 func ParentRequestVersion(t testing.TB, table string, id int64) string {
 	t.Helper()
+	return ParentRequestVersionIn(t, SetupTestDB(t), table, id)
+}
+
+// ParentRequestVersionIn is ParentRequestVersion read from db, for rigs that
+// hold their own isolated database.
+func ParentRequestVersionIn(t testing.TB, db bun.IDB, table string, id int64) string {
+	t.Helper()
 	var updatedAt time.Time
-	err := SetupTestDB(t).NewRaw(`SELECT updated_at FROM ? WHERE id = ?`, bun.Ident(table), id).
-		Scan(context.Background(), &updatedAt)
-	if errors.Is(err, sql.ErrNoRows) {
-		return "missing-row"
-	}
-	require.NoError(t, err, "read the version of %s %d", table, id)
+	require.NoError(t, db.NewRaw(`SELECT updated_at FROM ? WHERE id = ?`, bun.Ident(table), id).
+		Scan(context.Background(), &updatedAt), "read the version of %s %d", table, id)
 	return readstate.Of(updatedAt)
 }
 

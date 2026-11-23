@@ -1275,9 +1275,16 @@ export function PickupTimeModal({
   );
   // The version of the request the draft was filled from: an edit sends it
   // back (ADR 0311). After a refusal, `reloadingVersion` holds the refused
-  // one until the reloaded list brings the stored request.
+  // one until the reloaded list brings the stored request. A newer read
+  // refills an edit only while the parent has not typed (`draftTouchedRef`;
+  // a ref, so typing itself never triggers a refill).
   const [draftVersion, setDraftVersion] = useState("");
   const [reloadingVersion, setReloadingVersion] = useState<string | null>(null);
+  const draftTouchedRef = useRef(false);
+  const draftVersionRef = useRef("");
+  const touchDraft = () => {
+    draftTouchedRef.current = true;
+  };
 
   // The pickup rules this dialog explains with its own context (the child's
   // name, the school's cutoff time). Every other failure goes through the
@@ -1341,7 +1348,8 @@ export function PickupTimeModal({
   };
 
   // Refetches replace record objects even when their values have not changed.
-  // Keep an active edit attached to its request and never refill its draft.
+  // Keep an active edit attached to its request and never refill what the
+  // parent typed; an untouched edit follows a newer read with its version.
   // Saved values belong to their date; empty days keep the current draft.
   const prefillDate = request || existing ? date : "";
   const prefillTime = request?.pickup_time ?? existing?.pickup_time ?? "";
@@ -1354,7 +1362,13 @@ export function PickupTimeModal({
   const prefillPerson = request?.pickup_person_guardian_profile_id ?? "";
   const prefillVersion = request?.version ?? "";
   useEffect(() => {
-    if (editing && reloadingVersion === null) return;
+    if (
+      editing &&
+      reloadingVersion === null &&
+      (draftTouchedRef.current || prefillVersion === draftVersionRef.current)
+    ) {
+      return;
+    }
     // A refused edit waits for the reloaded request and then shows its
     // stored values, keeping the refusal on screen.
     if (reloadingVersion !== null && prefillVersion === reloadingVersion) {
@@ -1365,6 +1379,8 @@ export function PickupTimeModal({
     setReason(prefillReason);
     setPickupPersonId(prefillPerson);
     setDraftVersion(prefillVersion);
+    draftVersionRef.current = prefillVersion;
+    draftTouchedRef.current = false;
     setSignature(null);
     if (reloadingVersion !== null) {
       setReloadingVersion(null);
@@ -1493,6 +1509,9 @@ export function PickupTimeModal({
         expectedVersion: draftVersion,
         ...dayPickup,
       });
+      // The list carries the version of the next edit: without its reload
+      // a second edit would send the version this save just replaced.
+      void invalidateFamily(parentKeys.pickupChangeRequestsFamily(studentId));
       void invalidateFamily(parentKeys.requestEventsFamily(studentId));
       onClose();
     } catch (err) {
@@ -1605,8 +1624,14 @@ export function PickupTimeModal({
               disabled={submitting || todayLocked}
               tooltip={t("pickup.saveEditTooltip")}
               disabledReason={todayLocked ? cutoffClosedText : undefined}
-              isLoading={submitting}
-              loadingText={t("pickup.savingEdit")}
+              // After a refusal the refused version would go out again
+              // until the stored request has arrived.
+              isLoading={submitting || reloadingVersion !== null}
+              loadingText={
+                reloadingVersion === null
+                  ? t("pickup.savingEdit")
+                  : t("pickup.reloadingEdit")
+              }
             >
               {t("pickup.saveEdit")}
             </Button>
@@ -1789,6 +1814,7 @@ export function PickupTimeModal({
                   })),
                 ]}
                 onChange={(next) => {
+                  touchDraft();
                   setDepartureMode(next as DayDepartureMode | "");
                   setSignature(null);
                   if (next !== "" && next !== "pickup") setPickupPersonId("");
@@ -1817,6 +1843,7 @@ export function PickupTimeModal({
                   })),
                 ]}
                 onChange={(next) => {
+                  touchDraft();
                   setPickupPersonId(next);
                   setSignature(null);
                   if (invalidField === "pickupTime") {
@@ -1830,6 +1857,7 @@ export function PickupTimeModal({
               inputRef={pickupTimeRef}
               value={pickupTime}
               onChange={(next) => {
+                touchDraft();
                 setPickupTime(next);
                 if (invalidField === "pickupTime") {
                   setInvalidField(null);
@@ -1859,6 +1887,7 @@ export function PickupTimeModal({
               ref={reasonRef}
               value={reason}
               onChange={(e) => {
+                touchDraft();
                 setReason(e.target.value);
                 if (invalidField === "reason") {
                   setInvalidField(null);
@@ -1879,6 +1908,7 @@ export function PickupTimeModal({
                 statement={dayStatement}
                 value={signature}
                 onChange={(next) => {
+                  touchDraft();
                   setSignature(next);
                   if (next) form.clear();
                 }}

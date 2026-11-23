@@ -20,6 +20,8 @@ import {
   RequestSharingSelector,
 } from "./request-sharing-control";
 import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
+import { useInvalidateFamily } from "~/lib/swr";
+import { parentKeys } from "~/lib/swr/parent-keys";
 
 vi.unmock("swr");
 
@@ -206,6 +208,93 @@ describe("RequestSharingControl", () => {
         [],
         "v2",
       ),
+    );
+  });
+
+  // ADR 0311: a newer read arriving while the dialog is open must not
+  // replace the parent's ticks. The choice keeps the version it was made on;
+  // its refusal then shows the stored recipients.
+  it("keeps a touched selection when a newer read arrives and sends its own version", async () => {
+    const recipient = {
+      guardian_profile_id: "7",
+      first_name: "Mara",
+      last_name: "Muster",
+    };
+    const newer = {
+      version: "v2",
+      family_protected: false,
+      // A changed name shows when the newer read has arrived.
+      recipients: [{ ...recipient, first_name: "Marta", selected: false }],
+    };
+    getSharing
+      .mockResolvedValueOnce({
+        version: "v1",
+        family_protected: false,
+        recipients: [{ ...recipient, selected: false }],
+      })
+      .mockResolvedValue(newer);
+    setSharing.mockRejectedValueOnce(
+      new ApiError("changed since it was read", 409, {
+        code: "general.changed_since_read",
+      }),
+    );
+    function BackgroundRead() {
+      const invalidate = useInvalidateFamily();
+      return (
+        <button
+          type="button"
+          onClick={() =>
+            void invalidate(parentKeys.requestSharing("42", "excused", "9"))
+          }
+        >
+          background read
+        </button>
+      );
+    }
+    renderParent(
+      <ModalProvider>
+        <BackgroundRead />
+        <RequestSharingControl
+          studentId="42"
+          requestType="excused"
+          requestId="9"
+          isSelf
+        />
+      </ModalProvider>,
+    );
+    fireEvent.click(await screen.findByText("Anfrage teilen"));
+    const dialog = await screen.findByRole("dialog");
+    const checkbox = await within(dialog).findByRole("checkbox", {
+      name: "Mara Muster",
+    });
+    fireEvent.click(checkbox);
+    expect(checkbox).toBeChecked();
+    fireEvent.click(screen.getByText("background read"));
+    // The newer read did not overwrite the tick.
+    expect(
+      await within(dialog).findByRole("checkbox", { name: "Marta Muster" }),
+    ).toBeChecked();
+
+    fireEvent.click(within(dialog).getByText("Auswahl speichern"));
+    await waitFor(() =>
+      expect(setSharing).toHaveBeenCalledWith(
+        "42",
+        "excused",
+        "9",
+        ["7"],
+        "v1",
+      ),
+    );
+    expect(
+      await within(dialog).findByText(
+        catalogText("general.changed_since_read", "die Auswahl"),
+      ),
+    ).toBeInTheDocument();
+    // After the refusal the dialog shows the stored sharing.
+    await waitFor(() =>
+      expect(
+        within(dialog).getByRole("checkbox", { name: "Marta Muster" }),
+      ).not.toBeChecked(),
     );
   });
 

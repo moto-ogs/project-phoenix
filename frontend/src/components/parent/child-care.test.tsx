@@ -9,7 +9,7 @@ import {
   type RenderHookOptions,
   type RenderOptions,
 } from "@testing-library/react";
-import type { ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
 import { waitFor } from "~/test/wait-for-state";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -628,6 +628,171 @@ describe("PickupTimeModal — failed preload guard", () => {
     );
   });
 
+  // ADR 0311: an edit follows a newer read only while the parent has not
+  // typed; typed input stays and keeps the version it started from.
+  it.each([
+    { typed: false, reason: "changed elsewhere", version: "v2" },
+    { typed: true, reason: "my draft", version: "v1" },
+  ])(
+    "refills an edit from a newer read only while untouched (typed: $typed)",
+    async ({ typed, reason: expectedReason, version }) => {
+      const update = vi
+        .spyOn(parentApi, "updatePickupChangeRequest")
+        .mockImplementation(async () => ({ ...stored, version: "v3" }));
+      const stored = {
+        version: "v1",
+        departure_mode: null,
+        is_self: true,
+        signed: false,
+        id: "request-edit",
+        date: todayISO(),
+        pickup_time: "14:30",
+        reason: "appointment",
+        status: "pending",
+        created_at: "2026-09-09T08:00:00Z",
+      };
+      const props = {
+        studentId: "1",
+        careExceptions: [],
+        careExceptionsLoaded: true,
+        pickupChangeEnabled: true,
+        onClose: vi.fn(),
+        onSubmit: vi.fn(),
+        onRemove: vi.fn(),
+      };
+      const { rerender } = render(
+        <PickupTimeModal {...props} pickupChangeRequests={[stored]} />,
+      );
+      fireEvent.click(
+        screen.getByRole("button", { name: "Anfrage bearbeiten" }),
+      );
+      const reason = screen.getByRole("textbox", { name: /Grund/ });
+      if (typed) fireEvent.change(reason, { target: { value: "my draft" } });
+      rerender(
+        <PickupTimeModal
+          {...props}
+          pickupChangeRequests={[
+            { ...stored, version: "v2", reason: "changed elsewhere" },
+          ]}
+        />,
+      );
+      expect(reason).toHaveValue(expectedReason);
+
+      fireEvent.click(
+        screen.getByRole("button", { name: "Änderung speichern" }),
+      );
+      await waitFor(() =>
+        expect(update).toHaveBeenCalledWith(
+          "1",
+          "request-edit",
+          expect.objectContaining({
+            reason: expectedReason,
+            expectedVersion: version,
+          }),
+        ),
+      );
+    },
+  );
+
+  // ADR 0311: the next edit takes its version from the cached list. A save
+  // must reload that list, or a second edit of the same request would send
+  // the version the first save replaced and be refused.
+  it("edits the same pickup request twice with the version of each save", async () => {
+    const stored = {
+      version: "v1",
+      departure_mode: null,
+      is_self: true,
+      signed: false,
+      id: "request-edit",
+      date: todayISO(),
+      pickup_time: "14:30",
+      reason: "appointment",
+      status: "pending",
+      created_at: "2026-09-09T08:00:00Z",
+    };
+    let current = stored;
+    vi.spyOn(parentApi, "listSickDays").mockResolvedValue([]);
+    vi.spyOn(parentApi, "listExcusedRequests").mockResolvedValue([]);
+    vi.spyOn(parentApi, "listCareExceptions").mockResolvedValue([]);
+    vi.spyOn(parentApi, "getChildCareSchedule").mockRejectedValue(
+      new Error("no schedule"),
+    );
+    vi.spyOn(parentApi, "getChildFeatures").mockRejectedValue(
+      new Error("no features"),
+    );
+    const list = vi
+      .spyOn(parentApi, "listPickupChangeRequests")
+      .mockImplementation(async () => [current]);
+    const update = vi
+      .spyOn(parentApi, "updatePickupChangeRequest")
+      .mockImplementation(async (_student, _id, input) => {
+        current = {
+          ...current,
+          reason: input.reason,
+          version: current.version === "v1" ? "v2" : "v3",
+        };
+        return current;
+      });
+    function Page() {
+      const care = useChildCare("1");
+      const [open, setOpen] = useState(true);
+      if (!care.pickupChangeRequestsLoaded) return null;
+      return open ? (
+        <PickupTimeModal
+          studentId="1"
+          careExceptions={care.careExceptions}
+          careExceptionsLoaded
+          pickupChangeRequests={care.pickupChangeRequests}
+          pickupChangeRequestsLoaded
+          pickupChangeEnabled
+          onClose={() => setOpen(false)}
+          onSubmit={vi.fn()}
+          onRemove={vi.fn()}
+        />
+      ) : (
+        <button type="button" onClick={() => setOpen(true)}>
+          Wieder öffnen
+        </button>
+      );
+    }
+    render(<Page />);
+
+    const edit = async (reason: string) => {
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Anfrage bearbeiten" }),
+      );
+      fireEvent.change(screen.getByRole("textbox", { name: /Grund/ }), {
+        target: { value: reason },
+      });
+      fireEvent.click(
+        screen.getByRole("button", { name: "Änderung speichern" }),
+      );
+    };
+    await edit("first edit");
+    await waitFor(() =>
+      expect(update).toHaveBeenLastCalledWith(
+        "1",
+        "request-edit",
+        expect.objectContaining({ expectedVersion: "v1" }),
+      ),
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Wieder öffnen" }),
+    );
+    await waitFor(() => expect(list).toHaveBeenCalledTimes(2));
+    await edit("second edit");
+    await waitFor(() =>
+      expect(update).toHaveBeenLastCalledWith(
+        "1",
+        "request-edit",
+        expect.objectContaining({
+          reason: "second edit",
+          expectedVersion: "v2",
+        }),
+      ),
+    );
+  });
+
   // ADR 0311: an edit carries the version of the request its draft was
   // filled from. A request stored differently since is refused: the dialog
   // names it without a retry, reloads and then shows the stored values, and
@@ -680,6 +845,10 @@ describe("PickupTimeModal — failed preload guard", () => {
     expect(
       screen.queryByRole("button", { name: "Erneut versuchen" }),
     ).not.toBeInTheDocument();
+    // Until the stored request arrives, saving would resend "v1".
+    expect(
+      screen.getByRole("button", { name: /Lädt den gespeicherten Stand/ }),
+    ).toBeDisabled();
 
     rerender(
       <PickupTimeModal

@@ -85,8 +85,8 @@ async function saveRequest(
   studentId: string,
   request: EditableRequest,
   draft: Draft,
+  version: string,
 ): Promise<void> {
-  const version = request.version;
   switch (request.type) {
     case "excused":
       await updateExcusedRequest(studentId, request.id, {
@@ -177,12 +177,18 @@ export function RequestEditModal({
   const locale = useLocale();
   const datePicker = useLocalizedDatePicker();
   const [draft, setDraft] = useState<Draft>(() => initialDraft(request));
-  // Eine neue Fassung der Anfrage (nach einer Ablehnung neu geladen) zeigt
-  // ihre gespeicherten Werte; der Entwurf gehört zur alten Fassung.
+  // The version the draft was filled from; saving sends it (ADR 0311). A
+  // newer read refills the draft only while it is untouched, so typed input
+  // is never replaced silently. After a refusal, `reloading` waits for the
+  // stored request and then shows its values with the refusal message.
   const [draftVersion, setDraftVersion] = useState(request.version);
-  if (draftVersion !== request.version) {
+  const [touched, setTouched] = useState(false);
+  const [reloading, setReloading] = useState(false);
+  if (draftVersion !== request.version && (!touched || reloading)) {
     setDraftVersion(request.version);
     setDraft(initialDraft(request));
+    setTouched(false);
+    setReloading(false);
   }
   const [saving, setSaving] = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
@@ -195,8 +201,10 @@ export function RequestEditModal({
   );
   const invalidateFamily = useInvalidateFamily();
 
-  const set = (patch: Partial<Draft>) =>
+  const set = (patch: Partial<Draft>) => {
+    setTouched(true);
     setDraft((current) => ({ ...current, ...patch }));
+  };
 
   const submit = async () => {
     const fieldHint = tError("actions.fieldCheck");
@@ -215,7 +223,7 @@ export function RequestEditModal({
     setSaving(true);
     clear();
     try {
-      await saveRequest(studentId, request, draft);
+      await saveRequest(studentId, request, draft, draftVersion);
       void invalidateFamily(parentKeys.requestEventsFamily(studentId));
       onReload();
       onClose();
@@ -227,8 +235,10 @@ export function RequestEditModal({
       if (isChangedSinceRead(err)) {
         // The request was stored differently since the list was read:
         // sending the same version again would be refused again. The list
-        // reloads, and the new version brings its stored values.
+        // reloads, and the new version replaces the draft with its stored
+        // values; until then the save stays locked.
         void show(err, { object: t("errorObject") });
+        setReloading(true);
         onReload();
         return;
       }
@@ -273,8 +283,8 @@ export function RequestEditModal({
             type="button"
             size="md"
             className="w-full sm:w-auto"
-            isLoading={saving}
-            loadingText={t("saving")}
+            isLoading={saving || reloading}
+            loadingText={reloading ? t("reloading") : t("saving")}
             tooltip={t("submitTooltip")}
             onClick={() => void submit()}
           >
