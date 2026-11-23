@@ -129,7 +129,8 @@ func narrowMonth(month careMonth, schoolIDs []int64, exclusions map[parentbillin
 
 // narrowChildren keeps the held and the joined children with a contract at
 // a school of the run; a child an issued invoice already bills (#7892) with
-// one of the contracts the run holds back.
+// one of the contracts the run holds back or one of the invoices in their
+// way, whose Mensa waits too.
 func narrowChildren(review *reviewedMonth, month careMonth, inRun func(int64) bool) {
 	atRunSchool := func(contract parentbilling.CareDuplicateContract) bool { return inRun(contract.SchoolID.Int64()) }
 	for _, duplicate := range month.duplicates {
@@ -143,7 +144,8 @@ func narrowChildren(review *reviewedMonth, month careMonth, inRun func(int64) bo
 		}
 	}
 	for _, child := range month.billedChildren {
-		if slices.ContainsFunc(child.Contracts, atRunSchool) {
+		if slices.ContainsFunc(child.Contracts, atRunSchool) ||
+			slices.ContainsFunc(child.Invoices, func(invoice parentbilling.CareBilledInvoice) bool { return inRun(invoice.SchoolID.Int64()) }) {
 			review.billedChildren = append(review.billedChildren, child)
 		}
 	}

@@ -464,6 +464,8 @@ func TestCareMonthHoldsTheMensaOfAHeldChild(t *testing.T) {
 		tariffs:  []parentbilling.CareMealTariff{{SchoolID: ident.ID(schoolIspringen), ValidFrom: day(t, "2026-01-01"), Mode: parentbilling.MealModePerMeal, AmountCents: 480}},
 		releases: []parentbilling.CareMealRelease{release}, versions: in.versions, invoiced: in.invoiced})
 	assert.Empty(t, draftTotals(month), "no invoice for the held child, not even for its Mensa")
+	// The run of Ispringen holds back the Mensa, so it names the child too.
+	assert.Len(t, narrowMonth(month, []int64{schoolIspringen}, nil).billedChildren, 1, "the run of the school of the notice names Noah")
 }
 
 // An invoice with only the Mensa (S5) holds no Mensa back: the child is not
