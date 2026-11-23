@@ -167,7 +167,7 @@ func (m *weeklyProfileAPIMock) serve(t *testing.T, w seedHTTPResponseWriter, r *
 		data = []any{}
 	case path == "/traeger/holiday-periods/criteria":
 		// The criteria of the allocation as stored (#4700).
-		data = map[string]any{"criteria": []map[string]any{{"id": 71}, {"id": 72}, {"id": 73}, {"id": 74}}, "periods": []any{}}
+		data = map[string]any{"criteria": []map[string]any{{"id": 71}, {"id": 72}, {"id": 73}, {"id": 74}}, "periods": []any{}, "version": "criteria-read"}
 	case strings.HasPrefix(path, "/traeger/holiday-periods/") && strings.HasSuffix(path, "/allocation"):
 		// The allocation list with its first pending child (#4700).
 		data = map[string]any{"weeks": []map[string]any{{"pending": []map[string]any{{"booking_id": 81, "proposal": "placed"}}}}}

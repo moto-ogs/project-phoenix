@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Holiday periods of a Träger (#4659). The caller runs every operation in the
@@ -135,14 +136,17 @@ func (h *HolidayPeriods) CreateHolidayPeriod(ctx context.Context, organizationID
 }
 
 // UpdateHolidayPeriod replaces the period's fields, weeks and time models
-// under the lock of its row and returns it as stored. A published period
-// stays published.
+// under the lock of its row, over the version the Büro read (ADR 0311), and
+// returns it as stored. A published period stays published.
 func (h *HolidayPeriods) UpdateHolidayPeriod(ctx context.Context, organizationID, periodID int64, input enrollment.HolidayPeriodInput) (enrollment.HolidayPeriod, error) {
 	if err := holidayPeriodKey(organizationID, periodID); err != nil {
 		return enrollment.HolidayPeriod{}, err
 	}
 	current, err := foundHolidayPeriod(h.store.FindHolidayPeriod(ctx, organizationID, periodID, true))
 	if err != nil {
+		return enrollment.HolidayPeriod{}, err
+	}
+	if err := readstate.Check(input.ExpectedVersion, current.Version); err != nil {
 		return enrollment.HolidayPeriod{}, err
 	}
 	input = keepArchivedHolidayTimeModels(normalizeHolidayPeriod(input), current)

@@ -17,7 +17,8 @@
     "service_end_date": "2031-07-31",
     "service_start_date": "2030-08-01",
     "show_status_reason_to_parent": false,
-    "updated_at": "TIMESTAMP"
+    "updated_at": "TIMESTAMP",
+    "version": "VERSION"
   },
   "message": "Phase retrieved",
   "status": "success"

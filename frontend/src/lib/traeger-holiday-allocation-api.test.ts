@@ -128,26 +128,32 @@ describe("traeger holiday allocation api (#4700)", () => {
       ],
     });
 
-    fetchMock.mockResolvedValue(jsonResponse(200, { data: { criteria: [] } }));
-    await saveHolidayCriteria([
-      {
-        id: "",
-        name: "Neu",
-        question: "Trifft das zu?",
-        scope: "child",
-        active: true,
-      },
-      {
-        id: "4",
-        name: "Alt",
-        question: "Und das?",
-        scope: "family",
-        active: false,
-      },
-    ]);
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, { data: { criteria: [], version: "saved" } }),
+    );
+    await saveHolidayCriteria(
+      [
+        {
+          id: "",
+          name: "Neu",
+          question: "Trifft das zu?",
+          scope: "child",
+          active: true,
+        },
+        {
+          id: "4",
+          name: "Alt",
+          question: "Und das?",
+          scope: "family",
+          active: false,
+        },
+      ],
+      "criteria-read",
+    );
     const [, saveInit] = fetchMock.mock.calls[1]!;
     expect(saveInit?.method).toBe("PUT");
     expect(JSON.parse(String(saveInit?.body))).toEqual({
+      expected_version: "criteria-read",
       criteria: [
         {
           id: "0",

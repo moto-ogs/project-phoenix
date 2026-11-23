@@ -231,7 +231,9 @@ func TestSeedTraegerHolidayPeriodStepPublishesAPeriodAtTheTraegerSchools(t *test
 		"PUT /traeger/settings/values/parent_billing.debtor_number_digits_only Bearer traeger-token",
 		"PUT /traeger/settings/values/parent_billing.debtor_number_min_digits Bearer traeger-token",
 		"PUT /traeger/settings/values/parent_billing.debtor_number_max_digits Bearer traeger-token",
-		// The Träger-Büro corrects the confirmed registration (#5629).
+		// The Träger-Büro corrects the confirmed registration (#5629) over
+		// the version it read (ADR 0311).
+		"GET /traeger/holiday-periods/5/registrations/9 Bearer traeger-token",
 		"PUT /traeger/holiday-periods/5/registrations/9/details Bearer traeger-token",
 		"POST /traeger/cost-bearers/ Bearer traeger-token",
 		"POST /traeger/holiday-contributions/5/registrations/10/confirm Bearer traeger-token",

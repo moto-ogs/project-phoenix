@@ -370,6 +370,8 @@ export interface HolidayPeriod extends HolidayPeriodInput {
   readonly registrationCount: number;
   /** The period has a registration, so its allocation stays (#4700). */
   readonly allocationModeLocked?: boolean;
+  /** Token of the period as the Büro edits it; a save sends it (ADR 0311). */
+  readonly version: string;
 }
 
 function noCareDaysFromBackend(
@@ -407,6 +409,7 @@ function holidayPeriodFromBackend(
     maxDaysPerChild: period.max_days_per_child,
     allocationMode: knownEnum(ALLOCATION_MODE_VALUES, period.allocation_mode),
     allocationModeLocked: period.allocation_mode_locked,
+    version: period.version,
     weeks: (period.weeks ?? []).map((week) => ({
       id: week.id,
       startsOn: requiredDay(week.starts_on, "holiday_week.starts_on"),
@@ -737,15 +740,20 @@ export async function createHolidayPeriod(
   );
 }
 
-/** Saves the whole period; weeks and time models left out are removed. */
+/**
+ * Saves the whole period over the version its draft rests on; weeks and
+ * time models left out are removed. A period changed since is refused
+ * (ADR 0311).
+ */
 export async function updateHolidayPeriod(
   id: string,
   input: HolidayPeriodInput,
+  version: string,
 ): Promise<HolidayPeriod> {
   return holidayPeriodFromBackend(
     await bffJson("org", "PUT /traeger/holiday-periods/{id}", {
       params: { id },
-      body: holidayPeriodToBackend(input),
+      body: { ...holidayPeriodToBackend(input), expected_version: version },
     }),
   );
 }

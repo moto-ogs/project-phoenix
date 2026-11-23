@@ -102,13 +102,13 @@ func withPhaseAudience(rt *Runtime, auth AuthRef, phaseID int64, phaseBody map[s
 	path := fmt.Sprintf("/api/enrollment/phases/%d", phaseID)
 	temporary := maps.Clone(phaseBody)
 	temporary["audience"] = audience
-	if _, err := rt.Client.PutWithAuth(auth, path, temporary); err != nil {
+	if err := putReadPhase(rt, auth, path, temporary); err != nil {
 		return fmt.Errorf("set phase audience %s: %w", audience, err)
 	}
 	defer func() {
 		restored := maps.Clone(phaseBody)
 		restored["audience"] = "open"
-		if _, restoreErr := rt.Client.PutWithAuth(auth, path, restored); restoreErr != nil {
+		if restoreErr := putReadPhase(rt, auth, path, restored); restoreErr != nil {
 			err = errors.Join(err, fmt.Errorf("open phase to everyone again: %w", restoreErr))
 		}
 	}()

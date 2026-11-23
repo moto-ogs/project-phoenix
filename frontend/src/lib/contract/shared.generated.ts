@@ -4498,6 +4498,7 @@ export interface HolidayRegistrationDetail {
   criteria: HolidayRegistrationCriterion[] | null;
   mails?: RequestMailOutcome[];
   promotions?: HolidayPromotion[];
+  version: string;
 }
 
 export const HolidayRegistrationDetailSchema: z.ZodType<HolidayRegistrationDetail, unknown> = object<HolidayRegistrationDetail>({
@@ -4535,6 +4536,7 @@ export const HolidayRegistrationDetailSchema: z.ZodType<HolidayRegistrationDetai
   criteria: nullable(arr(HolidayRegistrationCriterionSchema)),
   mails: optional(arr(RequestMailOutcomeSchema)),
   promotions: optional(arr(HolidayPromotionSchema)),
+  version: str,
 });
 
 /** Go: enrollment.HolidayNoCareDay */

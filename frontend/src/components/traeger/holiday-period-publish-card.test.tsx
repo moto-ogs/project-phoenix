@@ -36,6 +36,7 @@ const complete: HolidayPeriod = {
   publishedAt: null,
   publicToken: "abc123",
   registrationCount: 0,
+  version: "period-read",
   weeks: [
     {
       id: "7",
@@ -194,6 +195,7 @@ describe("HolidayPeriodPublishCard", () => {
           status: "published",
           publishedAt: "2026-10-25T09:00:00Z",
           registrationCount: 3,
+          version: "period-read",
         }}
         unsavedChanges={false}
       />,

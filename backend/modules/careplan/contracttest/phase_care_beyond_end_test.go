@@ -32,8 +32,11 @@ func activate(t *testing.T, env *decisionTestEnv, c *sourcedChild) {
 
 func shortenPhase(t *testing.T, env *decisionTestEnv, endDays int) enrollmentTest.PhaseUpdateReport {
 	t.Helper()
+	phases := boundsPhases(t, env, recurrenceGate(t, env))
 	report, err := testpkg.TenantQuery1(t, testpkg.Ctx(t), env.db,
-		boundsPhases(t, env, recurrenceGate(t, env)).UpdatePhase, movedSourcePhase(env, 0, endDays))
+		func(ctx context.Context, moved *enrollmentTest.Phase) (enrollmentTest.PhaseUpdateReport, error) {
+			return phases.UpdatePhase(ctx, moved, readPhaseVersion(ctx, phases, moved.ID))
+		}, movedSourcePhase(env, 0, endDays))
 	require.NoError(t, err)
 	return report
 }
@@ -152,7 +155,8 @@ func TestPhaseShortening_OpenEditNamesTheChildAndTheCareEndFollows(t *testing.T)
 	phases := boundsPhases(t, env, recurrenceGate(t, env))
 	done := make(chan error, 1)
 	holdErr := testpkg.WithTenantTx(t, ctx, env.db, testpkg.Tenant(t), func(holdCtx context.Context, tx bun.Tx) error {
-		if report, err = phases.UpdatePhase(holdCtx, movedSourcePhase(env, 0, -31)); err != nil {
+		moved := movedSourcePhase(env, 0, -31)
+		if report, err = phases.UpdatePhase(holdCtx, moved, readPhaseVersion(holdCtx, phases, moved.ID)); err != nil {
 			return err
 		}
 		pid := backendPID(t, holdCtx, tx)
@@ -204,7 +208,8 @@ func editWhileHolding(t *testing.T, env *decisionTestEnv, ctx context.Context, e
 			var r result
 			r.err = testpkg.WithinTenantContext(t, ctx, env.db, testpkg.Tenant(t), func(editCtx context.Context) error {
 				var err error
-				r.report, err = phases.UpdatePhase(editCtx, movedSourcePhase(env, 0, endDays))
+				moved := movedSourcePhase(env, 0, endDays)
+				r.report, err = phases.UpdatePhase(editCtx, moved, readPhaseVersion(editCtx, phases, moved.ID))
 				return err
 			})
 			edit <- r

@@ -137,6 +137,7 @@ describe("holiday period model", () => {
       publishedAt: null,
       publicToken: "token",
       registrationCount: 0,
+      version: "period-read",
     };
     expect(holidayPeriodComplete({ ...base, weeks: [] })).toBe(false);
     const week = {

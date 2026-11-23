@@ -174,10 +174,12 @@ export async function setPhaseCalendarPeriod(
   periodId: string | null,
 ): Promise<Phase> {
   const fresh = await getPhase(phase.id);
-  return updatePhase(phase.id, {
-    ...phaseToInput(fresh),
-    calendar_period_id: periodId,
-  });
+  return updatePhase(
+    phase.id,
+    { ...phaseToInput(fresh), calendar_period_id: periodId },
+    // The link goes onto the phase as just read (ADR 0311).
+    fresh.version,
+  );
 }
 
 export async function getPhase(id: string): Promise<Phase> {
@@ -236,16 +238,21 @@ export interface CareBeyondPhaseEnd {
 /** The saved phase; `careBeyondEnd` lists the children a shortened end left in care. */
 export type UpdatedPhase = Phase & { careBeyondEnd?: CareBeyondPhaseEnd[] };
 
+/**
+ * Saves the whole phase over the version its draft rests on; the backend
+ * refuses a phase changed since (ADR 0311).
+ */
 export async function updatePhase(
   id: string,
   input: PhaseInput,
+  version: string,
 ): Promise<UpdatedPhase> {
   const { care_beyond_end: careBeyondEnd, ...phase } = await bffJson(
     "tenant",
     "PUT /api/enrollment/phases/{id}/",
     {
       params: { id },
-      body: input,
+      body: { ...input, expected_version: version },
       errorMessage: "Phase konnte nicht gespeichert werden",
     },
   );

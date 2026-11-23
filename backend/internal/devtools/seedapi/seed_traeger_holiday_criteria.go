@@ -71,7 +71,12 @@ func (seedTraegerHolidayCriteriaStep) Run(_ context.Context, rt *Runtime) error 
 // parents first, single parents second, a sibling in the OGS third, and a
 // hardship case switched off. It returns their IDs in this order.
 func seedHolidayCriteria(rt *Runtime, auth AuthRef) ([]int64, error) {
-	raw, err := rt.Client.PutWithAuth(auth, "/traeger/holiday-periods/criteria", map[string]any{"criteria": []map[string]any{
+	// The save carries the version of the criteria it replaces (ADR 0311).
+	version, err := readSeedVersion(rt, auth, "/traeger/holiday-periods/criteria", "the holiday criteria")
+	if err != nil {
+		return nil, err
+	}
+	raw, err := rt.Client.PutWithAuth(auth, "/traeger/holiday-periods/criteria", map[string]any{"expected_version": version, "criteria": []map[string]any{
 		{"name": "Beide Eltern berufstätig", "question": "Sind beide Eltern berufstätig?", "scope": "family", "active": true},
 		{"name": "Alleinerziehend und berufstätig", "question": "Sind Sie alleinerziehend und berufstätig?", "scope": "family", "active": true},
 		{"name": "Geschwisterkind in der OGS", "question": "Geht ein Geschwisterkind schon in die OGS?", "scope": "child", "active": true},

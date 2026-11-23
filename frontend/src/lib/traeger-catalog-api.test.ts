@@ -19,6 +19,7 @@ const offeringWire: traegerCatalogContract.TraegerOffering = {
   organization_id: "2",
   traeger_phase_id: "7",
   updated_at: "2026-11-11T10:00:00Z",
+  version: "offering-read",
   draft: {
     fields: {
       name: "Frühbetreuung",
@@ -62,6 +63,7 @@ const offeringWire: traegerCatalogContract.TraegerOffering = {
 
 const backendPhase: traegerCatalogContract.PhaseDetail = {
   id: "7",
+  version: "phase-read",
   organization_id: "2",
   draft: {
     name: "Schuljahr 2027/28",
@@ -109,12 +111,16 @@ describe("Träger catalog requests (#4704)", () => {
       expect(phase.draft.isActive).toBe(isActive);
       expect(phase.released?.isActive).toBe(isActive);
 
-      await updateTraegerPhase(phase.id, {
-        ...phase.draft,
-        name: "Umbenannt",
-        allSchools: phase.allSchools,
-        schoolIds: ["11", "12"],
-      });
+      await updateTraegerPhase(
+        phase.id,
+        {
+          ...phase.draft,
+          name: "Umbenannt",
+          allSchools: phase.allSchools,
+          schoolIds: ["11", "12"],
+        },
+        phase.version,
+      );
 
       const [, route, init] = request.mock.lastCall!;
       expect(route).toBe("PUT /traeger/catalog/phases/{id}");
@@ -145,10 +151,14 @@ describe("Träger catalog requests (#4704)", () => {
       expect(offering.released?.fields.isActive).toBe(isActive);
 
       request.mockResolvedValueOnce(rawOffering);
-      await updateTraegerOffering(offering.id, {
-        ...offering.draft,
-        fields: { ...offering.draft.fields, name: "Umbenannt" },
-      });
+      await updateTraegerOffering(
+        offering.id,
+        {
+          ...offering.draft,
+          fields: { ...offering.draft.fields, name: "Umbenannt" },
+        },
+        offering.version,
+      );
 
       const [, route, init] = request.mock.lastCall!;
       expect(route).toBe("PUT /traeger/catalog/offerings/{id}");
@@ -222,10 +232,12 @@ describe("Träger catalog requests (#4704)", () => {
       allSchools: false,
       schoolIds: ["11", "12"],
     };
-    await updateTraegerPhase("7", input);
-    await updateTraegerPhase("7", { ...input, allSchools: true });
+    await updateTraegerPhase("7", input, "phase-read");
+    await updateTraegerPhase("7", { ...input, allSchools: true }, "phase-read");
 
     const [first, second] = request.mock.calls.map(([, , init]) => init.body);
+    // The save sends the version its draft rests on (ADR 0311).
+    expect(first).toMatchObject({ expected_version: "phase-read" });
     expect(first).toMatchObject({
       name: "Schuljahr",
       all_schools: false,
@@ -351,11 +363,15 @@ describe("Träger catalog round trip (#2353)", () => {
       })),
     );
     const phase = await fetchTraegerPhase("7");
-    await updateTraegerPhase("7", {
-      ...phase.draft,
-      allSchools: phase.allSchools,
-      schoolIds: ["11"],
-    });
+    await updateTraegerPhase(
+      "7",
+      {
+        ...phase.draft,
+        allSchools: phase.allSchools,
+        schoolIds: ["11"],
+      },
+      phase.version,
+    );
 
     expect(request.mock.calls[1]![2].body.is_active).toBe(false);
   });
@@ -377,7 +393,11 @@ describe("Träger catalog round trip (#2353)", () => {
     );
     const phase = await fetchTraegerPhase("7");
     request.mockResolvedValue(offeringWire);
-    await updateTraegerOffering("31", phase.offerings[0]!.draft);
+    await updateTraegerOffering(
+      "31",
+      phase.offerings[0]!.draft,
+      phase.offerings[0]!.version,
+    );
 
     expect(request.mock.calls[1]![2].body.fields.is_active).toBe(false);
   });

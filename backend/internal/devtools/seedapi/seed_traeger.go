@@ -226,6 +226,7 @@ func seedHolidayAddressForm(client *Client, auth AuthRef, periodID int64) error 
 	}
 	var form struct {
 		Data struct {
+			Version     int             `json:"version"`
 			Fields      json.RawMessage `json:"fields"`
 			LegalBlocks json.RawMessage `json:"legal_blocks"`
 		} `json:"data"`
@@ -237,7 +238,8 @@ func seedHolidayAddressForm(client *Client, auth AuthRef, periodID int64) error 
 	if len(fields) == 0 {
 		fields = json.RawMessage(`[]`)
 	}
-	body := map[string]any{"fields": fields, "address_requirement": "optional"}
+	// The save carries the version it replaces (ADR 0311).
+	body := map[string]any{"fields": fields, "address_requirement": "optional", "expected_version": form.Data.Version}
 	if len(form.Data.LegalBlocks) > 0 {
 		body["legal_blocks"] = form.Data.LegalBlocks
 	}
@@ -387,8 +389,14 @@ func seedHolidayRegistrationEdit(rt *Runtime, auth AuthRef, periodID, registrati
 		maps.Copy(guardian, registered)
 	}
 	guardian["phone"] = "0151 0000009"
-	path := fmt.Sprintf("/traeger/holiday-periods/%d/registrations/%d/details", periodID, registrationID)
-	if _, err := rt.Client.PutWithAuth(auth, path, map[string]any{
+	// The edit carries the version of the registration it read (ADR 0311).
+	read := fmt.Sprintf("/traeger/holiday-periods/%d/registrations/%d", periodID, registrationID)
+	version, err := readSeedVersion(rt, auth, read, "the holiday registration")
+	if err != nil {
+		return err
+	}
+	if _, err := rt.Client.PutWithAuth(auth, read+"/details", map[string]any{
+		"expected_version": version,
 		"guardian":         guardian,
 		"guardian_address": registration["guardian_address"],
 		"second_guardian":  registration["second_guardian"],

@@ -13,7 +13,7 @@ import { useTraegerCatalogPhase } from "~/components/traeger/use-traeger-catalog
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { useToast } from "~/contexts/ToastContext";
-import { useInvalidateFamily } from "~/lib/swr";
+import { revalidateOrThrow, useInvalidateFamily } from "~/lib/swr";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
 import { updateTraegerOffering } from "~/lib/traeger-catalog-api";
 import { traegerPath } from "~/lib/traeger-url";
@@ -23,7 +23,8 @@ export default function TraegerCatalogOfferingPage() {
   const params = useParams<{ id: string; offeringId: string }>();
   const id = params?.id ?? "";
   const offeringId = params?.offeringId ?? "";
-  const { data: phase, loadError } = useTraegerCatalogPhase(id);
+  const phaseRead = useTraegerCatalogPhase(id);
+  const { data: phase, loadError } = phaseRead;
   const invalidate = useInvalidateFamily();
   const { success } = useToast();
   const phaseHref = traegerPath(`/traeger/anmeldephasen/${id}`);
@@ -60,9 +61,19 @@ export default function TraegerCatalogOfferingPage() {
       {phase && offering && editable ? (
         <CatalogOfferingForm
           key={offering.id}
-          offering={offering}
+          source={{
+            opening: offering.id,
+            data: offering,
+            // Reads the phase again and rejects when that fails (ADR 0311).
+            reload: async () =>
+              (await revalidateOrThrow(phaseRead)).offerings.find(
+                (entry) => entry.id === offering.id,
+              ),
+          }}
           saveLabel="Speichern"
-          onSave={(draft) => updateTraegerOffering(offering.id, draft)}
+          onSave={(draft, version) =>
+            updateTraegerOffering(offering.id, draft, version ?? "")
+          }
           onCancel={() => router.push(phaseHref)}
           onSaved={() => {
             void invalidate(traegerKeys.catalogFamily);

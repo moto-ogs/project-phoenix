@@ -82,8 +82,8 @@ func TestHolidayWeekByDaysLeavesOutOnlyItsDaysWithoutCare(t *testing.T) {
 	assert.Equal(t, "closing_day", stored.NoCareDays[1].Kind)
 
 	model := stored.TimeModels[0].ID
-	noCareDay(traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayPeriodPath(int64(created.ID)), period(week(int64(stored.ID), int64(model), "week"))))
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayPeriodPath(int64(created.ID)), period(week(int64(stored.ID), int64(model), "day")))
+	noCareDay(putHolidayPeriod(t, f.traeger, office.token, holidayPeriodPath(int64(created.ID)), period(week(int64(stored.ID), int64(model), "week"))))
+	rec = putHolidayPeriod(t, f.traeger, office.token, holidayPeriodPath(int64(created.ID)), period(week(int64(stored.ID), int64(model), "day")))
 	require.Equal(t, http.StatusOK, rec.Code, "the week by days stays writable: %s", rec.Body.String())
 	rec = traegerJSON(t, f.traeger, office.token, http.MethodPost, holidayPeriodPath(int64(created.ID))+"/publish", nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())

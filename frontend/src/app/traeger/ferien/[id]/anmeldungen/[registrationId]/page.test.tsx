@@ -62,6 +62,9 @@ const {
   mockHealth,
   mockConfirm,
   mockEdit,
+  mockEditVersion,
+  mockRebook,
+  mockRebookVersion,
   mockConfirmationSettings,
   sessionPermissions,
   mockDownloadPdf,
@@ -74,6 +77,9 @@ const {
   mockConfirm: vi.fn(),
   mockHealth: vi.fn(),
   mockEdit: vi.fn(),
+  mockEditVersion: vi.fn(),
+  mockRebook: vi.fn(),
+  mockRebookVersion: vi.fn(),
   mockConfirmationSettings: vi.fn(),
   sessionPermissions: { current: [] as string[] },
   mockDownloadPdf: vi.fn(),
@@ -86,7 +92,20 @@ vi.mock("~/lib/traeger-holiday-registrations-api", async (importOriginal) => ({
   >()),
   fetchHolidayRegistration: () => mockRegistration(),
   fetchHolidayRegistrationHealth: () => mockHealth(),
-  editHolidayRegistration: (...args: unknown[]) => mockEdit(...args),
+  // The version goes to its own spy: the edit sends the one it read.
+  editHolidayRegistration: (
+    periodId: string,
+    registrationId: string,
+    edit: unknown,
+    version: string,
+  ) => {
+    mockEditVersion(version);
+    return mockEdit(periodId, registrationId, edit);
+  },
+  rebookHolidayChild: (...args: unknown[]) => {
+    mockRebookVersion(args[4]);
+    return mockRebook(...args.slice(0, 4));
+  },
   fetchHolidayConfirmationSettings: () => mockConfirmationSettings(),
   downloadHolidayRegistrationPdf: (...args: unknown[]) =>
     mockDownloadPdf(...args),
@@ -161,6 +180,9 @@ describe("TraegerHolidayRegistrationPage", () => {
     mockHealth.mockReset();
     mockHealth.mockResolvedValue(HOLIDAY_REGISTRATION_HEALTH);
     mockEdit.mockReset();
+    mockEditVersion.mockReset();
+    mockRebook.mockReset();
+    mockRebookVersion.mockReset();
     sessionPermissions.current = [];
     vi.stubEnv("NEXT_PUBLIC_TRAEGER_HOSTNAME", "traeger.localhost:3000");
     // The Träger portal has no school: no TenantProvider above the page.
@@ -2047,6 +2069,8 @@ describe("TraegerHolidayRegistrationPage, Angaben ändern (#5629)", () => {
         },
       }),
     );
+    // The edit sends the version it read when it opened (ADR 0311).
+    expect(mockEditVersion).toHaveBeenCalledWith("registration-read");
   });
 
   it.each([
@@ -2094,6 +2118,69 @@ describe("TraegerHolidayRegistrationPage, Angaben ändern (#5629)", () => {
       );
     },
   );
+
+  // ADR 0311, rule 5: one open draft per registration. A rebooking and an
+  // edit open at once would each rest on the version read when they opened,
+  // and the second save would be refused for the first one. Each draft opens
+  // on the answer of the save before it.
+  it("keeps one draft open per registration and opens the next on the saved answer", async () => {
+    onTab("kind");
+    mockRebook.mockResolvedValueOnce({
+      ...HOLIDAY_REGISTRATION,
+      version: "after-rebook",
+    });
+    mockEdit.mockResolvedValueOnce({
+      ...HOLIDAY_REGISTRATION,
+      version: "after-edit",
+    });
+    render(
+      <ToastProvider>
+        <TraegerHolidayRegistrationPage />
+      </ToastProvider>,
+    );
+    const rebook = await screen.findAllByRole("button", { name: "Umbuchen" });
+    expect(rebook).toHaveLength(2);
+    fireEvent.click(rebook[1]!);
+
+    // Ben's rebooking is open: no second draft of the registration opens.
+    expect(
+      screen.queryByRole("button", { name: "Umbuchen" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: "Notfallkontakte und Abholung bearbeiten",
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /^Angaben von .* bearbeiten$/ }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("combobox", {
+        name: "Zeitmodell 04.01. bis 08.01.2027, OGS Nord",
+      }),
+    );
+    fireEvent.click(await screen.findByRole("option", { name: "bis 16 Uhr" }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(mockRebookVersion).toHaveBeenCalledWith("registration-read"),
+    );
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Notfallkontakte und Abholung bearbeiten",
+      }),
+    );
+    expect(
+      screen.queryByRole("button", { name: "Umbuchen" }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Änderung speichern" }),
+    );
+    await waitFor(() =>
+      expect(mockEditVersion).toHaveBeenCalledWith("after-rebook"),
+    );
+  });
 
   it("drops a contact entry whose fields are all empty", async () => {
     onTab("kind");

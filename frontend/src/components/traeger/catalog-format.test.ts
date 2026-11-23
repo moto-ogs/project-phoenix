@@ -61,6 +61,7 @@ function offering(patch: Partial<TraegerOffering> = {}): TraegerOffering {
         errorCode: null,
       },
     ],
+    version: "offering-read",
     ...patch,
   };
 }
@@ -75,6 +76,7 @@ function phase(patch: Partial<TraegerPhaseDetail> = {}): TraegerPhaseDetail {
     withdrawnAt: null,
     schools: [school("11")],
     updatedAt: "2026-11-11T10:00:00Z",
+    version: "phase-read",
     offerings: [offering()],
     ...patch,
   };

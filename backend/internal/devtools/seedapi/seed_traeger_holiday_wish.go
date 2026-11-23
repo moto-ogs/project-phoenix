@@ -30,6 +30,8 @@ func seedHolidayWishes(rt *Runtime, auth AuthRef, token string, periodID int64, 
 		return fmt.Errorf("decode the holiday period: %w", err)
 	}
 	period.Data["holiday_wish_rule"] = true
+	// The save carries the version of the period it changes (ADR 0311).
+	period.Data["expected_version"] = period.Data["version"]
 	if _, err := rt.Client.PutWithAuth(auth, path, period.Data); err != nil {
 		return fmt.Errorf("switch on the holiday care wish of the period: %w", err)
 	}

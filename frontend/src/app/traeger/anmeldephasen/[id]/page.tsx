@@ -26,7 +26,7 @@ import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { createLogger } from "~/lib/logger";
-import { useTenantMutateMatching } from "~/lib/swr";
+import { revalidateOrThrow, useTenantMutateMatching } from "~/lib/swr";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
   type TraegerPhaseDetail,
@@ -40,12 +40,13 @@ const logger = createLogger({ component: "TraegerCatalogPhasePage" });
 export default function TraegerCatalogPhasePage() {
   const params = useParams<{ id: string }>();
   const id = params?.id ?? "";
+  const phaseRead = useTraegerCatalogPhase(id);
   const {
     data: phase,
     loadError: phaseError,
     error: phaseFailure,
     mutate,
-  } = useTraegerCatalogPhase(id);
+  } = phaseRead;
   const {
     schools,
     error: schoolsError,
@@ -204,10 +205,18 @@ export default function TraegerCatalogPhasePage() {
           {withdrawn ? null : (
             <CatalogPhaseForm
               key={`${phase.id}-${formKey}`}
-              phase={phase}
+              source={{
+                opening: phase.id,
+                data: phase,
+                // Reads the phase again and rejects when that fails.
+                reload: () => revalidateOrThrow(phaseRead),
+                write: (stored) => mutate(stored, { revalidate: false }),
+              }}
               schools={schools}
               saveLabel="Speichern"
-              onSave={(input) => updateTraegerPhase(id, input)}
+              onSave={(input, version) =>
+                updateTraegerPhase(id, input, version ?? "")
+              }
               onSaved={(next) => {
                 saved(next);
                 success(

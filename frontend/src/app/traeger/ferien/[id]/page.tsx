@@ -47,6 +47,7 @@ export default function TraegerHolidayPeriodPage() {
     loadError: periodError,
     error: periodFailure,
     mutate,
+    reloadOrThrow,
   } = useTraegerHolidayPeriod(id);
   const billingHref = useHolidayPeriodBillingHref(period);
   const invalidatePeriods = useTenantMutateMatching([
@@ -59,7 +60,7 @@ export default function TraegerHolidayPeriodPage() {
     fetchError: schoolsFailure,
   } = useTraegerSchools();
   const listHref = traegerPath("/traeger/ferien");
-  const { data: criteria } = useTraegerHolidayCriteria();
+  const criteria = useTraegerHolidayCriteria().data?.criteria;
 
   const saved = useCallback(
     (next: HolidayPeriod) => {
@@ -133,6 +134,7 @@ export default function TraegerHolidayPeriodPage() {
             onDirtyChange={setDirty}
             onCancel={() => router.push(listHref)}
             onSaved={saved}
+            reload={reloadOrThrow}
           />
         </>
       ) : null}

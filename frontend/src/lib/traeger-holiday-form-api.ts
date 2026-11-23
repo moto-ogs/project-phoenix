@@ -65,9 +65,14 @@ export async function fetchHolidayForm(periodId: string): Promise<HolidayForm> {
   );
 }
 
-/** Saves the questions as a new version of the form. */
+/**
+ * Saves the questions as a new version of the form, over the version the
+ * editor read; the backend refuses once another version is current
+ * (ADR 0311).
+ */
 export async function saveHolidayForm(
   periodId: string,
+  expectedVersion: number,
   fields: readonly HolidayFormField[],
   legalBlocks: readonly FormLegalBlock[] = [],
   addressRequirement: HolidayAddressRequirement = "off",
@@ -77,6 +82,7 @@ export async function saveHolidayForm(
     await bffJson("org", "PUT /traeger/holiday-periods/{id}/form", {
       params: { id: periodId },
       body: {
+        expected_version: expectedVersion,
         fields: [...fields],
         address_requirement: addressRequirement,
         health_requirement: healthRequirement,

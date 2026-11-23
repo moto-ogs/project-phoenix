@@ -102,6 +102,7 @@ type Store interface {
 	AccountRequests(context.Context, int64, string) ([]enrollment.AccountRequest, error)
 	InsertPhase(ctx context.Context, phase *enrollment.Phase) error
 	Phase(ctx context.Context, id int64) (*enrollment.Phase, error)
+	LockPhase(ctx context.Context, id int64) (*enrollment.Phase, error)
 	PhasesByID(ctx context.Context, ids []int64) ([]*enrollment.Phase, error)
 	UpdatePhase(ctx context.Context, phase *enrollment.Phase) error
 	DeletePhase(ctx context.Context, id int64) error
