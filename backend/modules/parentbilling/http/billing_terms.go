@@ -87,6 +87,9 @@ type ServiceTermsRequest struct {
 	PaymentMethod string `json:"payment_method"`
 	DueDays       int    `json:"due_days"`
 	BundleWith    string `json:"bundle_with"`
+	// ExpectedVersion is the version of the terms as they were read (ADR
+	// 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // Bind accepts the body; the Owner validates the terms.
@@ -133,6 +136,9 @@ type FamilyBillingResponse struct {
 // payment method; a method without a date falls back to the payment term.
 type RunDueDatesRequest struct {
 	DueDates []RunDueDateRequest `json:"due_dates"`
+	// ExpectedVersion is the due_dates_version of the run as it was read
+	// (ADR 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // RunDueDateRequest is the due date of one payment method.
@@ -183,7 +189,7 @@ func (rs *BillingTermsResource) saveServiceTerms(w http.ResponseWriter, r *http.
 	}
 	terms, err := rs.terms.SaveServiceTerms(r.Context(), reviewer, capability.ServiceTerms{
 		Service: chi.URLParam(r, "service"), PaymentMethod: req.PaymentMethod, DueDays: req.DueDays, BundleWith: req.BundleWith,
-	})
+	}, req.ExpectedVersion)
 	if err != nil {
 		tenant.MarkRollback(r.Context())
 		renderTermsError(w, r, err, common.CodeParentBillingBillingTermsInvalid)
@@ -261,7 +267,8 @@ func (rs *BillingTermsResource) setHolidayDueDates(w http.ResponseWriter, r *htt
 	rs.setDueDates(w, r, rs.terms.SetHolidayRunDueDates)
 }
 
-type dueDateSetter func(ctx context.Context, reviewer capability.HolidayReviewer, runID int64, dates capability.RunDueDates) (capability.RunDueDates, error)
+type dueDateSetter func(ctx context.Context, reviewer capability.HolidayReviewer, runID int64, dates capability.RunDueDates,
+	expectedVersion string) (capability.RunDueDates, error)
 
 func (rs *BillingTermsResource) setDueDates(w http.ResponseWriter, r *http.Request, set dueDateSetter) {
 	reviewer, runID, ok := runKey(w, r)
@@ -273,7 +280,7 @@ func (rs *BillingTermsResource) setDueDates(w http.ResponseWriter, r *http.Reque
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeParentBillingDueDatesInvalid))
 		return
 	}
-	dates, err := set(r.Context(), reviewer, runID, req.dates())
+	dates, err := set(r.Context(), reviewer, runID, req.dates(), req.ExpectedVersion)
 	if err != nil {
 		tenant.MarkRollback(r.Context())
 		renderTermsError(w, r, err, common.CodeParentBillingDueDatesInvalid)

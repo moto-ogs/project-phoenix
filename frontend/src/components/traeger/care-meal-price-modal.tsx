@@ -14,6 +14,7 @@ import { Input } from "~/components/ui/input";
 import { SegmentedControl } from "~/components/ui/segmented-control";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { createLogger } from "~/lib/logger";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import {
   type CareMealMode,
   type CareMealTariffs,
@@ -35,10 +36,29 @@ const MODE_HINTS: Record<CareMealMode, string> = {
   flat: "Eltern zahlen jeden Monat denselben Betrag. Das gilt für jedes Kind, das in dem Monat zum Essen angemeldet war.",
 };
 
+interface MealPriceDraft {
+  readonly mode: CareMealMode;
+  readonly amount: string;
+}
+
+/** The price a school's Mensa has in a month, as the form shows it. */
+function mealPriceDraft(
+  data: CareMealTariffs,
+  schoolId: string,
+  month: string,
+): MealPriceDraft {
+  const holding = mealTariffOn(data.tariffs, schoolId, month);
+  return {
+    mode: holding?.mode ?? "per_meal",
+    amount: holding ? centsToEuroInput(holding.amountCents) : "",
+  };
+}
+
 export function CareMealPriceModal({
   data,
   school,
   currentMonth,
+  reload,
   onClose,
   onSaved,
 }: Readonly<{
@@ -47,12 +67,15 @@ export function CareMealPriceModal({
   school: { id: string; name: string } | null;
   /** The current month, "YYYY-MM-01". */
   currentMonth: string;
+  /**
+   * Reads the prices again after a save refused because the school's
+   * prices changed since they were read; rejects when the read fails.
+   */
+  reload: () => Promise<CareMealTariffs>;
   onClose: () => void;
   onSaved: (data: CareMealTariffs) => void;
 }>) {
-  const [month, setMonth] = useState(currentMonth);
-  const [mode, setMode] = useState<CareMealMode>("per_meal");
-  const [amount, setAmount] = useState("");
+  const [month, setMonth] = useState("");
   const save = useFormModalPending(school !== null);
   const saving = save.pending;
   const formRef = useRef<HTMLFormElement>(null);
@@ -69,18 +92,48 @@ export function CareMealPriceModal({
     [currentMonth],
   );
 
-  // Open with the next month the school has not billed yet and its price.
+  // Open with the next month the school has not billed yet. The school by
+  // its id: a caller that passes a new object or a newer read for the same
+  // school does not open the form again.
+  const schoolId = school?.id ?? null;
+  const billedUntil = schoolId ? data.billedUntil[schoolId] : undefined;
   useEffect(() => {
-    if (!school) return;
-    const billed = data.billedUntil[school.id];
-    const start =
-      billed && billed >= currentMonth ? addMonths(billed, 1) : currentMonth;
-    const holding = mealTariffOn(data.tariffs, school.id, start);
-    setMonth(start);
-    setMode(holding?.mode ?? "per_meal");
-    setAmount(holding ? centsToEuroInput(holding.amountCents) : "");
+    if (!schoolId) return;
+    setMonth(
+      billedUntil && billedUntil >= currentMonth
+        ? addMonths(billedUntil, 1)
+        : currentMonth,
+    );
     clearErrors();
-  }, [school, data, currentMonth, clearErrors]);
+  }, [schoolId, billedUntil, currentMonth, clearErrors]);
+
+  // The price of the chosen month rests on the school's version (ADR
+  // 0311): a newer read refills it only while untouched, the save confirms
+  // what the form showed, and after a refusal the stored price shows.
+  const edit = useDraftOn<
+    CareMealTariffs,
+    MealPriceDraft,
+    string,
+    CareMealTariffs
+  >(
+    {
+      opening: schoolId && month ? `${schoolId}:${month}` : null,
+      data,
+      reload,
+    },
+    {
+      token: (read) => (schoolId ? (read.versions[schoolId] ?? "") : ""),
+      toDraft: (read) => mealPriceDraft(read, schoolId ?? "", month),
+      // The dialog closes after a save; the page takes the answer.
+      answer: (saved) => saved,
+    },
+  );
+  const { mode, amount } =
+    edit.draft ?? mealPriceDraft(data, schoolId ?? "", month);
+  const setMode = (next: CareMealMode) =>
+    edit.setDraft((current) => ({ ...current, mode: next }));
+  const setAmount = (next: string) =>
+    edit.setDraft((current) => ({ ...current, amount: next }));
 
   const submit = async () => {
     if (!school) return;
@@ -92,23 +145,32 @@ export function CareMealPriceModal({
       });
       return;
     }
+    if (!edit.canSubmit) return;
     await save.run(async (op) => {
-      try {
-        const result = await saveCareMealTariff({
-          schoolId: school.id,
-          validFrom: month,
-          mode,
-          amountCents: cents,
-        });
-        if (op.isCurrent()) onSaved(result);
+      const result = await edit.submit((version) =>
+        saveCareMealTariff(
+          { schoolId: school.id, validFrom: month, mode, amountCents: cents },
+          version,
+        ),
+      );
+      if (result.ok) {
+        if (op.isCurrent()) onSaved(result.saved);
         success(`Der Mensa-Preis gilt ab ${formatMonth(month)}.`);
-      } catch (err) {
-        logger.error("care_meal_price_save_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (!op.isCurrent()) return;
-        void formErrors.show(err, { object: "die Preisangabe für die Mensa" });
+        return;
       }
+      logger.error("care_meal_price_save_failed", {
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
+      });
+      if (!op.isCurrent()) return;
+      // A colleague changed the prices since: `reload` shows them instead
+      // of the draft, so no second „Speichern“ replaces them unseen.
+      void formErrors.show(result.error, {
+        object: "die Preisangabe für die Mensa",
+        reload: result.reload,
+      });
     });
   };
 

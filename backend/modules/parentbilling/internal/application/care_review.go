@@ -507,7 +507,7 @@ func (c *CareBilling) reviewDetail(ctx context.Context, reviewer parentbilling.H
 	if err := recordChildNumberReads(ctx, c.store, reviewer, review.childNumbers); err != nil {
 		return err
 	}
-	detail.DueDates = review.dueDates.InPaymentOrder()
+	detail.DueDates, detail.DueDatesVersion = review.dueDates.InPaymentOrder(), runDueDatesVersion(review.dueDates)
 	detail.MonthRule, detail.Unpriced, detail.Billed = rule, review.unpriced, review.billed
 	detail.FreeOfCharge = review.free
 	detail.Duplicates, detail.MealGaps, detail.MealUnbilled = review.duplicates, review.mealGaps, review.mealUnbilled

@@ -79,11 +79,6 @@
       "decision": "0115",
       "id": "modules/parentbilling/internal/application/Rules.ListContributionRules",
       "reason": "ADR 0115 (#4664): lists the holiday rules of the session's Träger after refusing a missing Träger; the Träger transaction is the caller's."
-    },
-    {
-      "decision": "0115",
-      "id": "modules/parentbilling/internal/application/Rules.UpdateContributionRule",
-      "reason": "ADR 0115 (#4664): checks the Träger and the rule ID and validates the rule as a whole before the store changes it; a frozen contribution keeps what it froze."
     }
   ]
 }

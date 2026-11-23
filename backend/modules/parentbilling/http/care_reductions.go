@@ -64,18 +64,22 @@ func (rs *CareReductionResource) EvidenceRouter(protectedTraegerRoutes func(chi.
 }
 
 // CareRuleRequest is the body of POST /traeger/care-rules and PUT
-// /traeger/care-rules/{id}. Amounts are whole cent, shares basis points.
+// /traeger/care-rules/{id}. Amounts are whole cent, shares basis points. A
+// change sends the version of the rule as it was read (ADR 0311).
 type CareRuleRequest struct {
 	capability.CareRuleInput
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 // Bind accepts the body; the Owner validates the rule as a whole.
 func (req *CareRuleRequest) Bind(*http.Request) error { return nil }
 
 // CareEvidenceRequest is the body of POST /traeger/care-evidences and PUT
-// /traeger/care-evidences/{id}.
+// /traeger/care-evidences/{id}. A change sends the version of the evidence
+// as it was read (ADR 0311).
 type CareEvidenceRequest struct {
 	capability.CareEvidenceInput
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 // Bind accepts the body; the Owner validates the evidence.
@@ -117,7 +121,7 @@ func (rs *CareReductionResource) saveRule(w http.ResponseWriter, r *http.Request
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeParentBillingContributionRuleInvalid))
 		return
 	}
-	set, err := rs.reductions.SaveCareRule(r.Context(), reviewer, ruleID, req.CareRuleInput)
+	set, err := rs.reductions.SaveCareRule(r.Context(), reviewer, ruleID, req.CareRuleInput, req.ExpectedVersion)
 	if err != nil {
 		tenant.MarkRollback(r.Context())
 		renderCareReductionError(w, r, err, common.CodeParentBillingContributionRuleInvalid)
@@ -184,7 +188,7 @@ func (rs *CareReductionResource) saveEvidence(w http.ResponseWriter, r *http.Req
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeParentBillingCareEvidenceInvalid))
 		return
 	}
-	set, err := rs.reductions.SaveCareEvidence(r.Context(), reviewer, evidenceID, req.CareEvidenceInput)
+	set, err := rs.reductions.SaveCareEvidence(r.Context(), reviewer, evidenceID, req.CareEvidenceInput, req.ExpectedVersion)
 	if err != nil {
 		tenant.MarkRollback(r.Context())
 		renderCareReductionError(w, r, err, common.CodeParentBillingCareEvidenceInvalid)

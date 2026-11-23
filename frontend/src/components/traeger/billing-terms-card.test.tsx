@@ -26,6 +26,7 @@ const data: BillingTerms = {
   ],
   terms: [
     {
+      version: "v1",
       service: "care",
       paymentMethod: "direct_debit",
       dueDays: 10,
@@ -34,6 +35,7 @@ const data: BillingTerms = {
       updatedAt: "2026-09-01T10:00:00Z",
     },
     {
+      version: "v1",
       service: "meal",
       paymentMethod: "transfer",
       dueDays: 14,
@@ -42,6 +44,7 @@ const data: BillingTerms = {
       updatedAt: null,
     },
     {
+      version: "v1",
       service: "holiday",
       paymentMethod: "transfer",
       dueDays: 14,
@@ -56,7 +59,11 @@ function renderCard() {
   const onChanged = vi.fn(() => Promise.resolve());
   render(
     <ToastProvider>
-      <BillingTermsCard data={data} onChanged={onChanged} />
+      <BillingTermsCard
+        data={data}
+        onChanged={onChanged}
+        reload={async () => data}
+      />
     </ToastProvider>,
   );
   // The table renders a stacked copy for phones; read the desktop table.
@@ -99,11 +106,11 @@ describe("BillingTermsCard", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await waitFor(() =>
-      expect(saveServiceTerms).toHaveBeenCalledWith("meal", {
-        paymentMethod: "transfer",
-        dueDays: 30,
-        bundleWith: "",
-      }),
+      expect(saveServiceTerms).toHaveBeenCalledWith(
+        "meal",
+        { paymentMethod: "transfer", dueDays: 30, bundleWith: "" },
+        "v1",
+      ),
     );
     await waitFor(() => expect(onChanged).toHaveBeenCalled());
   });

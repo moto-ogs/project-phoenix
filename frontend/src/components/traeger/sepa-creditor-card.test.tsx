@@ -8,6 +8,7 @@ import { SepaCreditorCard } from "./sepa-creditor-card";
 vi.mock("~/lib/traeger-url", () => ({ traegerPath: (path: string) => path }));
 
 const creditor: SepaCreditor = {
+  version: "v1",
   creditorId: "DE98ZZZ09999999999",
   prenotificationDays: 14,
   missingMandate: "transfer",
@@ -18,6 +19,7 @@ function renderCard(onlineMandate: boolean | null) {
   return render(
     <SepaCreditorCard
       creditor={creditor}
+      reload={async () => creditor}
       onlineMandate={onlineMandate}
       onChanged={vi.fn()}
     />,

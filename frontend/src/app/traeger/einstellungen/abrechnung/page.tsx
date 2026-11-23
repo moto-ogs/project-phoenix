@@ -166,6 +166,16 @@ function useBillingDefaults(enabled: boolean) {
     failure: readers.find((reader) => reader.failure)?.failure,
     error: readers.find((reader) => reader.error)?.error ?? null,
     read,
+    /**
+     * Read one default again and reject when the read fails, for a save
+     * the server refused as changed since it was read (ADR 0311).
+     */
+    reload: {
+      rules: rules.reloadOrThrow,
+      bearers: bearers.reloadOrThrow,
+      terms: terms.reloadOrThrow,
+      creditor: creditor.reloadOrThrow,
+    },
   };
 }
 
@@ -245,9 +255,11 @@ export default function TraegerAbrechnungsvorgabenPage() {
           <BillingTermsCard
             data={billing.data.terms}
             onChanged={afterBillingWrite.refresh}
+            reload={billing.reload.terms}
           />
           <SepaCreditorCard
             creditor={billing.data.creditor}
+            reload={billing.reload.creditor}
             onlineMandate={
               typeof onlineMandate === "boolean" ? onlineMandate : null
             }
@@ -266,6 +278,7 @@ export default function TraegerAbrechnungsvorgabenPage() {
             kind="sibling"
             rules={billing.data.rules.filter((rule) => rule.kind === "sibling")}
             onChanged={afterBillingWrite.refresh}
+            reload={billing.reload.rules}
           />
           <ContributionRulesCard
             kind="benefits_exemption"
@@ -273,10 +286,12 @@ export default function TraegerAbrechnungsvorgabenPage() {
               (rule) => rule.kind === "benefits_exemption",
             )}
             onChanged={afterBillingWrite.refresh}
+            reload={billing.reload.rules}
           />
           <CostBearersCard
             bearers={billing.data.bearers}
             onChanged={afterBillingWrite.refresh}
+            reload={billing.reload.bearers}
           />
         </>
       ) : null}

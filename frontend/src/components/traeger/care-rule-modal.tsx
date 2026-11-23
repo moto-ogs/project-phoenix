@@ -19,6 +19,7 @@ import { SegmentedControl } from "~/components/ui/segmented-control";
 import { SwitchRow } from "~/components/ui/switch";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { createLogger } from "~/lib/logger";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import {
   type CareRule,
   type CareRuleInput,
@@ -182,6 +183,7 @@ export function CareRuleModal({
   data,
   open,
   currentMonth,
+  reload,
   onClose,
   onSaved,
 }: Readonly<{
@@ -189,13 +191,44 @@ export function CareRuleModal({
   /** The kind and the rule to change; null keeps the modal closed. */
   open: { kind: CareRuleKind; rule: CareRule | null } | null;
   currentMonth: string;
+  /** Reads the rules again; rejects when the read fails (ADR 0311). */
+  reload: () => Promise<CareRuleSet>;
   onClose: () => void;
   onSaved: (data: CareRuleSet) => void;
 }>) {
   const kind = open?.kind ?? "sibling";
-  const [draft, setDraft] = useState<Draft>(() =>
+  const [created, setCreated] = useState<Draft>(() =>
     draftOf(null, kind, currentMonth, data.schools),
   );
+  // A change rests on the rule as it was read (ADR 0311): a newer read
+  // refills the form only while untouched, the save sends its version, and
+  // after a refusal the stored rule shows.
+  const changedId = open?.rule?.id ?? null;
+  const ruleIn = (set: CareRuleSet) =>
+    set.rules.find((rule) => rule.id === changedId);
+  // The rule the dialog opened with, until the list holds a newer version.
+  const listed = ruleIn(data);
+  const shown =
+    listed && listed.version !== open?.rule?.version
+      ? listed
+      : (open?.rule ?? undefined);
+  const stored = useDraftOn<CareRule, Draft, string, CareRuleSet>(
+    {
+      opening: changedId,
+      data: shown,
+      reload: async () => {
+        const found = ruleIn(await reload());
+        if (!found) throw new Error("care rule is gone");
+        return found;
+      },
+    },
+    {
+      token: (rule) => rule.version,
+      toDraft: (rule) => draftOf(rule, rule.kind, currentMonth, data.schools),
+      answer: (saved) => ruleIn(saved),
+    },
+  );
+  const draft = changedId ? (stored.draft ?? created) : created;
   const save = useFormModalPending(open !== null);
   const saving = save.pending;
   const formRef = useRef<HTMLFormElement>(null);
@@ -209,7 +242,7 @@ export function CareRuleModal({
 
   useEffect(() => {
     if (!open) return;
-    setDraft(draftOf(open.rule, open.kind, currentMonth, data.schools));
+    setCreated(draftOf(null, open.kind, currentMonth, data.schools));
     clearErrors();
   }, [open, currentMonth, data.schools, clearErrors]);
 
@@ -260,7 +293,9 @@ export function CareRuleModal({
   );
   const effects = KIND_EFFECTS[kind];
   const set = (patch: Partial<Draft>) =>
-    setDraft((current) => ({ ...current, ...patch }));
+    changedId
+      ? stored.setDraft((current) => ({ ...current, ...patch }))
+      : setCreated((current) => ({ ...current, ...patch }));
 
   const submit = async () => {
     if (!open) return;
@@ -316,18 +351,34 @@ export function CareRuleModal({
       capCents: kind === "cap" ? cents : null,
       tariffSiblingPrice: kind === "sibling" && draft.effect === "tariff",
     };
+    if (changedId && !stored.canSubmit) return;
     await save.run(async (op) => {
-      try {
-        const result = await saveCareRule(open.rule?.id ?? null, input);
-        if (op.isCurrent()) onSaved(result);
+      const result = changedId
+        ? await stored.submit((version) =>
+            saveCareRule(changedId, input, version),
+          )
+        : await saveCareRule(null, input).then(
+            (saved) => ({ ok: true, saved }) as const,
+            (error: unknown) => ({ ok: false, error, refused: false }) as const,
+          );
+      if (result.ok) {
+        if (op.isCurrent()) onSaved(result.saved);
         success(`Die Regel „${input.name}“ ist gespeichert.`);
-      } catch (err) {
-        logger.error("care_rule_save_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (!op.isCurrent()) return;
-        void formErrors.show(err, { object: "die Regel" });
+        return;
       }
+      logger.error("care_rule_save_failed", {
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
+      });
+      if (!op.isCurrent()) return;
+      // Changed since it was read: `reload` shows the stored rule instead
+      // of the draft, without a retry (ADR 0311).
+      void formErrors.show(result.error, {
+        object: "die Regel",
+        reload: "reload" in result ? result.reload : undefined,
+      });
     });
   };
 

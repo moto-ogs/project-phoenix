@@ -595,6 +595,8 @@ export interface CareRunDetail extends CareRun {
   readonly mealChanged: readonly CareMealChanged[];
   /** The due dates of the run per payment method (#4689). */
   readonly dueDates?: readonly RunDueDate[];
+  /** The read-state token of `dueDates` a change sends back (ADR 0311). */
+  readonly dueDatesVersion?: string;
   /** The review of a calculated run (#5916). */
   readonly schools: readonly CareSchool[];
   readonly excludedCount: number;
@@ -908,6 +910,7 @@ export function detailFromBackend(
     mealUnbilled: mealUnbilledFromBackend(detail.meal_unbilled),
     mealChanged: mealChangedFromBackend(detail.meal_changed),
     dueDates: runDueDatesFromBackend(detail.due_dates),
+    dueDatesVersion: detail.due_dates_version,
     schools: (detail.schools ?? []).map(schoolFromBackend),
     excludedCount: detail.excluded_count,
     excludedCents: detail.excluded_cents,

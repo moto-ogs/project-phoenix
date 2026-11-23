@@ -4,7 +4,7 @@
 // zählt alle Kinder der Familie, auch Geschwister ohne Betreuungsvertrag.
 // moto speichert nur die Zahl, keine Namen dieser Geschwister.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Alert } from "~/components/ui/alert";
 import { ISODatePicker } from "~/components/ui/date-picker";
 import { DataField, DataGrid } from "~/components/ui/data-field";
@@ -17,6 +17,7 @@ import { NumberStepper } from "~/components/ui/number-stepper";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { berlinTodayISO } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import {
   confirmFamilyChildren,
   type FamilyChildren,
@@ -51,24 +52,37 @@ function startingNumber(family: FamilyChildren): number {
   return count.confirmedChildren ?? count.statedChildren ?? contracts;
 }
 
+/** The form of a family's number as stored. */
+function draftOf(family: FamilyChildren, monthStart: string): Draft {
+  const count = family.count;
+  const expired =
+    family.status === "expired" || count?.validFrom === null || !count;
+  return {
+    children: startingNumber(family),
+    validFrom: expired ? monthStart : (count?.validFrom ?? monthStart),
+    validUntil: expired ? "" : (count?.validUntil ?? ""),
+  };
+}
+
 export function FamilyChildrenModal({
-  family,
+  family: opened,
+  data,
+  reload,
   onClose,
   onSaved,
 }: Readonly<{
   /** The family to check; null keeps the dialog closed. */
   family: FamilyChildren | null;
+  /** The families as the page shows them; null while not read. */
+  data: FamilyChildrenSet | null;
+  /** Reads the families again; rejects when the read fails (ADR 0311). */
+  reload: () => Promise<FamilyChildrenSet>;
   onClose: () => void;
   onSaved: (data: FamilyChildrenSet) => void;
 }>) {
   const today = berlinTodayISO();
   const monthStart = `${today.slice(0, 8)}01`;
-  const [draft, setDraft] = useState<Draft>({
-    children: 1,
-    validFrom: monthStart,
-    validUntil: "",
-  });
-  const save = useFormModalPending(family !== null);
+  const save = useFormModalPending(opened !== null);
   const saving = save.pending;
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
@@ -76,20 +90,40 @@ export function FamilyChildrenModal({
   const { success } = useToast();
 
   useEffect(() => {
-    if (!family) return;
-    const count = family.count;
-    const expired =
-      family.status === "expired" || count?.validFrom === null || !count;
-    setDraft({
-      children: startingNumber(family),
-      validFrom: expired ? monthStart : (count?.validFrom ?? monthStart),
-      validUntil: expired ? "" : (count?.validUntil ?? ""),
-    });
-    clearErrors();
-  }, [family, monthStart, clearErrors]);
+    if (opened) clearErrors();
+  }, [opened, clearErrors]);
 
+  // The confirmation rests on the family's numbers as they were read (ADR
+  // 0311): a newer read refills the form only while untouched, the save
+  // sends their version, and after a refusal (a number the parents stated
+  // since) the stored numbers show.
+  const familyId = opened?.contractId ?? null;
+  const familyIn = (set: FamilyChildrenSet | null) =>
+    set?.families.find((entry) => entry.contractId === familyId);
+  const edit = useDraftOn<FamilyChildren, Draft, string, FamilyChildrenSet>(
+    {
+      opening: familyId,
+      data: familyIn(data),
+      reload: async () => {
+        const found = familyIn(await reload());
+        if (!found) throw new Error("family is gone");
+        return found;
+      },
+    },
+    {
+      token: (read) => read.version,
+      toDraft: (read) => draftOf(read, monthStart),
+      answer: (saved) => familyIn(saved),
+    },
+  );
+  const family = opened ? (edit.base ?? opened) : null;
+  const draft =
+    edit.draft ??
+    (family
+      ? draftOf(family, monthStart)
+      : { children: 1, validFrom: monthStart, validUntil: "" });
   const set = (patch: Partial<Draft>) =>
-    setDraft((current) => ({ ...current, ...patch }));
+    edit.setDraft((current) => ({ ...current, ...patch }));
   const withContract = family?.children.length ?? 0;
   const name = family ? familyName(family) : "";
 
@@ -106,23 +140,37 @@ export function FamilyChildrenModal({
       return;
     }
     const contract = family.count?.contractId ?? family.contractId;
+    if (!edit.canSubmit) return;
     await save.run(async (op) => {
-      try {
-        const result = await confirmFamilyChildren({
-          contractId: contract,
-          children: draft.children,
-          validFrom: draft.validFrom,
-          validUntil: draft.validUntil || null,
-        });
-        if (op.isCurrent()) onSaved(result);
+      const result = await edit.submit((version) =>
+        confirmFamilyChildren(
+          {
+            contractId: contract,
+            children: draft.children,
+            validFrom: draft.validFrom,
+            validUntil: draft.validUntil || null,
+          },
+          version,
+        ),
+      );
+      if (result.ok) {
+        if (op.isCurrent()) onSaved(result.saved);
         success(`Die Kinderzahl von ${name} ist bestätigt.`);
-      } catch (err) {
-        logger.error("family_children_confirm_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (!op.isCurrent()) return;
-        void formErrors.show(err, { object: "die Kinderzahl" });
+        return;
       }
+      logger.error("family_children_confirm_failed", {
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
+      });
+      if (!op.isCurrent()) return;
+      // Changed since it was read (the parents stated a number): `reload`
+      // shows the stored numbers instead of the draft, without a retry.
+      void formErrors.show(result.error, {
+        object: "die Kinderzahl",
+        reload: result.reload,
+      });
     });
   };
 

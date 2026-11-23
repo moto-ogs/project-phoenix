@@ -113,6 +113,7 @@ vi.mock("next-auth/react", () => ({
 import TraegerAbrechnungsvorgabenPage from "./page";
 
 const SIBLING: ContributionRule = {
+  version: "v1",
   id: "3",
   kind: "sibling",
   validFrom: "2026-08-01",
@@ -124,6 +125,7 @@ const SIBLING: ContributionRule = {
 };
 
 const YOUTH_OFFICE: CostBearer = {
+  version: "v1",
   id: "4",
   name: "Fachdienst Jugend des Landkreises Musterstadt",
   address: "Am Kreishaus 1\n12345 Musterstadt",
@@ -375,10 +377,11 @@ describe("TraegerAbrechnungsvorgabenPage", () => {
     fireEvent.click(screen.getByRole("menuitem", { name: "Ausschalten" }));
 
     await waitFor(() =>
-      expect(api.saveCostBearer).toHaveBeenCalledWith("4", {
-        ...YOUTH_OFFICE,
-        active: false,
-      }),
+      expect(api.saveCostBearer).toHaveBeenCalledWith(
+        "4",
+        { ...YOUTH_OFFICE, active: false },
+        "v1",
+      ),
     );
   });
 
@@ -386,6 +389,7 @@ describe("TraegerAbrechnungsvorgabenPage", () => {
   // card, filled with the row's values, each opening with its own.
   it("changes a cost bearer in the dialog of adding one, filled with its values", async () => {
     const social: CostBearer = {
+      version: "v1",
       id: "5",
       name: "Sozialamt Musterstadt",
       address: "",
@@ -442,6 +446,7 @@ describe("TraegerAbrechnungsvorgabenPage", () => {
           fileReference: "FJ 51-2027",
           active: true,
         }),
+        "v1",
       ),
     );
     await waitFor(() => expect(api.fetchCostBearers).toHaveBeenCalledTimes(2));

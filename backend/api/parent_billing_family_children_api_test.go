@@ -56,7 +56,7 @@ func TestFamilyChildrenCountInTheSiblingRuleThroughTheRoutes(t *testing.T) {
 		map[string]any{"sibling_from_child": 2, "discount_basis_points": 5000, "counts_family_children": true}))
 	require.Len(t, rules.Rules, 1)
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyChildrenPath, familyChildren(mia, 3, "2026-09-01"))
+	rec = confirmFamily(t, f.traeger, f.office.token, familyChildren(mia, 3, "2026-09-01"))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	set := decodeSchoolPortalData[familyChildrenSetBody](t, rec.Body.Bytes())
 	require.Len(t, set.Families, 1)
@@ -77,7 +77,7 @@ func TestFamilyChildrenCountInTheSiblingRuleThroughTheRoutes(t *testing.T) {
 	assert.Equal(t, 3, *invoice.Reductions[0].FamilyChildren, "of three")
 
 	// A future confirmation must not remove the current draft's discount.
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyChildrenPath, familyChildren(mia, 2, "2030-02-01"))
+	rec = confirmFamily(t, f.traeger, f.office.token, familyChildren(mia, 2, "2030-02-01"))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	preview = decodeSchoolPortalData[careReductionRunBody](t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet,
 		careRunPath(int64(run.ID), ""), nil).Body.Bytes())
@@ -89,7 +89,7 @@ func TestFamilyChildrenCountInTheSiblingRuleThroughTheRoutes(t *testing.T) {
 	// Correcting the successor's end must not revive either open interval.
 	correction := familyChildren(mia, 2, "2030-02-01")
 	correction["valid_until"] = "2030-02-28"
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyChildrenPath, correction)
+	rec = confirmFamily(t, f.traeger, f.office.token, correction)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	marchRun := f.startRun(t, "2030-03-01")
 	march := decodeSchoolPortalData[careReductionRunBody](t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet,
@@ -135,7 +135,7 @@ func TestFamilySizeSiblingRuleReducesEveryChildThroughTheRoutes(t *testing.T) {
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careRulesPath, nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), `"sibling_all_children":true`, "the rule keeps its mode")
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyChildrenPath, familyChildren(mia, 2, "2026-09-01"))
+	rec = confirmFamily(t, f.traeger, f.office.token, familyChildren(mia, 2, "2026-09-01"))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	run := f.startRun(t, careMonth)
@@ -173,17 +173,17 @@ func TestFamilyChildrenAreCheckedNeedTheRightAndAreRecorded(t *testing.T) {
 		{"contract_id": mia, "children": 3, "valid_from": "2026-09-01", "valid_until": "2026-08-31"},
 		{"contract_id": mia, "children": 2.5, "valid_from": "2026-09-01"},
 	} {
-		rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyChildrenPath, body)
+		rec := confirmFamily(t, f.traeger, f.office.token, body)
 		assert.Equal(t, http.StatusBadRequest, rec.Code, "%v: %s", body, rec.Body.String())
 		assert.Contains(t, rec.Body.String(), "parent_billing.family_children_invalid")
 	}
 	foreign := newTraegerOffice(t, f.db, f.traeger, "Träger Kinderzahl Prüfung Fremd", identityaccess.TraegerRoleBilling)
 	testpkg.OwnTraegerCareContracts(t, f.db, foreign.organization)
-	rec := traegerJSON(t, f.traeger, foreign.token, http.MethodPut, familyChildrenPath, familyChildren(mia, 2, "2026-09-01"))
+	rec := confirmFamily(t, f.traeger, foreign.token, familyChildren(mia, 2, "2026-09-01"))
 	assert.Equal(t, http.StatusNotFound, rec.Code, "another Träger finds no family of the contract: %s", rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "parent_billing.family_children_not_found")
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyChildrenPath, familyChildren(mia, 2, "2026-09-01"))
+	rec = confirmFamily(t, f.traeger, f.office.token, familyChildren(mia, 2, "2026-09-01"))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	rec = traegerJSON(t, f.traeger, foreign.token, http.MethodDelete, familyChildrenPath+"/"+strconv.FormatInt(mia, 10), nil)
 	assert.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
@@ -256,7 +256,7 @@ func TestFamilyChildrenOfContractsWithoutAMailAddressThroughTheRoutes(t *testing
 	f.saveRule(t, careRule("sibling", "Geschwister mit Familie", []int64{school},
 		map[string]any{"sibling_from_child": 2, "discount_basis_points": 5000, "counts_family_children": true}))
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyChildrenPath, familyChildren(mia, 2, "2026-09-01"))
+	rec = confirmFamily(t, f.traeger, f.office.token, familyChildren(mia, 2, "2026-09-01"))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	set := decodeSchoolPortalData[familyChildrenSetBody](t, rec.Body.Bytes())
 	require.Len(t, set.Families, 2, "each contract without an address is a family of its own")
@@ -321,12 +321,12 @@ func TestFamilyChildrenListQueryBudgetIsFlat(t *testing.T) {
 		return counter.Measurement(counter.Queries())
 	}
 	first := careContract(t, f.db, f.office.organization, school, "Mia", careReductionStart, sjrServices()...)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyChildrenPath, familyChildren(first, 2, "2026-09-01"))
+	rec := confirmFamily(t, f.traeger, f.office.token, familyChildren(first, 2, "2026-09-01"))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	measured := list()
 	for _, child := range []string{"Noah", "Lea"} {
 		contract := careContract(t, f.db, f.office.organization, f.office.schools[1], child, careReductionStart, sjrServices()...)
-		rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyChildrenPath, familyChildren(contract, 3, "2026-09-01"))
+		rec := confirmFamily(t, f.traeger, f.office.token, familyChildren(contract, 3, "2026-09-01"))
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	}
 	assert.Len(t, list().Statements, len(measured.Statements), "the page reads the same statements for any number of families")

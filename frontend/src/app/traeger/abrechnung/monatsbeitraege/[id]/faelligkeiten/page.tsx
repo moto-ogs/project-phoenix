@@ -30,6 +30,7 @@ export default function TraegerCareRunDueDatesPage() {
     loading,
     error,
     reload,
+    reloadOrThrow,
   } = useTraegerResource(
     runId ? traegerBillingRunKeys.careRun(runId) : null,
     () => fetchCareRun(runId),
@@ -63,6 +64,14 @@ export default function TraegerCareRunDueDatesPage() {
           kind="care"
           runId={run.id}
           dueDates={run.dueDates ?? []}
+          version={run.dueDatesVersion ?? ""}
+          reload={async () => {
+            const stored = await reloadOrThrow();
+            return {
+              dueDates: stored.dueDates ?? [],
+              version: stored.dueDatesVersion ?? "",
+            };
+          }}
           debitItems={careDebitItems(run.invoices)}
           prenotificationDays={prenotificationDays}
           issuedOn={run.invoiceDate}

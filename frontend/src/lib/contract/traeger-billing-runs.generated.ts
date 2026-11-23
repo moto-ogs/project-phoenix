@@ -253,6 +253,7 @@ export interface BillingRunDetail {
   billed_in_advance: boolean;
   letters: BillingLetters | null;
   due_dates: RunDueDate[] | null;
+  due_dates_version: string;
   document_kind: string;
   legal_remedy_missing: boolean;
   fingerprint: string;
@@ -283,6 +284,7 @@ export const BillingRunDetailSchema: z.ZodType<BillingRunDetail, unknown> = obje
   billed_in_advance: bool,
   letters: nullable(BillingLettersSchema),
   due_dates: nullable(arr(RunDueDateSchema)),
+  due_dates_version: str,
   document_kind: str,
   legal_remedy_missing: bool,
   fingerprint: str,

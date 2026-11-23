@@ -63,10 +63,13 @@ export function ContributionRulesCard({
   kind,
   rules,
   onChanged,
+  reload,
 }: Readonly<{
   kind: ContributionRuleKind;
   rules: readonly ContributionRule[];
   onChanged: () => Promise<unknown>;
+  /** Reads the rules again; rejects when the read fails (ADR 0311). */
+  reload: () => Promise<readonly ContributionRule[]>;
 }>) {
   const [edit, setEdit] = useState<ContributionRuleEdit | null>(null);
   const [deleting, setDeleting] = useState<ContributionRule | null>(null);
@@ -180,6 +183,8 @@ export function ContributionRulesCard({
       />
       <ContributionRuleModal
         edit={edit}
+        rules={rules}
+        reload={reload}
         onClose={() => setEdit(null)}
         onSaved={afterWrite.refresh}
       />

@@ -21,6 +21,19 @@ export interface ContributionRuleRequest {
   note?: string;
 }
 
+/** Go: parentbillinghttp.ContributionRuleUpdateRequest */
+export interface ContributionRuleUpdateRequest {
+  service?: string;
+  kind?: string;
+  valid_from?: string | null;
+  valid_until?: string | null;
+  sibling_from_child?: number | null;
+  discount_basis_points?: number | null;
+  discount_cents?: number | null;
+  note?: string;
+  expected_version?: string;
+}
+
 export const routes = {
   "DELETE /traeger/contribution-rules/{id}": {
     method: "DELETE",
@@ -45,7 +58,7 @@ export const routes = {
     method: "PUT",
     pattern: "/traeger/contribution-rules/{id}",
     portals: ["org"],
-    request: requestBody<ContributionRuleRequest>(),
+    request: requestBody<ContributionRuleUpdateRequest>(),
     response: success(ContributionRuleSchema),
   },
 } as const;

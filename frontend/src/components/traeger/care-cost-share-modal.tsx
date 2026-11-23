@@ -18,6 +18,7 @@ import { SegmentedControl } from "~/components/ui/segmented-control";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { berlinTodayISO } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import type {
   CareCostShareKind,
   CareCostShareScope,
@@ -114,8 +115,7 @@ function schoolYearEnd(day: string): string {
   return `${month >= 8 ? year + 1 : year}-07-31`;
 }
 
-function draftOf(target: CostShareTarget, today: string): Draft {
-  const share = target.share;
+function draftOf(share: CareCostShare | null, today: string): Draft {
   if (!share) {
     const from = monthStart(today);
     return {
@@ -152,17 +152,45 @@ function draftOf(target: CostShareTarget, today: string): Draft {
 export function CareCostShareModal({
   data,
   target,
+  reload,
   onClose,
   onSaved,
 }: Readonly<{
   data: CareCostShareSet;
   /** The contract and share to change; null keeps it closed. */
   target: CostShareTarget | null;
+  /** Reads the shares again; rejects when the read fails (ADR 0311). */
+  reload: () => Promise<CareCostShareSet>;
   onClose: () => void;
   onSaved: (data: CareCostShareSet) => void;
 }>) {
   const today = berlinTodayISO();
-  const [draft, setDraft] = useState<Draft | null>(null);
+  const [created, setCreated] = useState<Draft | null>(null);
+  // A change rests on the share as it was read (ADR 0311): a newer read
+  // refills the form only while untouched, the save sends its version, and
+  // after a refusal the stored share shows.
+  const changedId = target?.share?.id ?? null;
+  const shareIn = (set: CareCostShareSet) =>
+    set.contracts
+      .flatMap((contract) => contract.shares)
+      .find((share) => share.id === changedId);
+  const stored = useDraftOn<CareCostShare, Draft, string, CareCostShareSet>(
+    {
+      opening: changedId,
+      data: shareIn(data),
+      reload: async () => {
+        const found = shareIn(await reload());
+        if (!found) throw new Error("care cost share is gone");
+        return found;
+      },
+    },
+    {
+      token: (share) => share.version,
+      toDraft: (share) => draftOf(share, today),
+      answer: (saved) => shareIn(saved),
+    },
+  );
+  const draft = changedId ? (stored.draft ?? null) : created;
   const save = useFormModalPending(target !== null);
   const saving = save.pending;
   const formRef = useRef<HTMLFormElement>(null);
@@ -172,12 +200,14 @@ export function CareCostShareModal({
 
   useEffect(() => {
     if (!target) return;
-    setDraft(draftOf(target, today));
+    setCreated(target.share ? null : draftOf(null, today));
     clearErrors();
   }, [target, today, clearErrors]);
 
   const set = (patch: Partial<Draft>) =>
-    setDraft((current) => (current ? { ...current, ...patch } : current));
+    changedId
+      ? stored.setDraft((current) => ({ ...current, ...patch }))
+      : setCreated((current) => (current ? { ...current, ...patch } : current));
   const child = target
     ? `${target.contract.childFirstName} ${target.contract.childLastName}`
     : "";
@@ -220,30 +250,46 @@ export function CareCostShareModal({
       formErrors.invalid("Bitte prüfe die markierten Felder.", fieldErrors);
       return;
     }
-    const kind = draft.kind;
+    const input = {
+      contractId: target.contract.contractId,
+      kind: draft.kind,
+      costBearerId: draft.costBearerId,
+      shareBasisPoints: basisPoints,
+      shareCents: cents,
+      scope: draft.scope,
+      validFrom: draft.validFrom,
+      validUntil: draft.validUntil,
+      reference: draft.reference.trim(),
+      checkedOn: draft.checkedOn,
+    };
+    if (changedId && !stored.canSubmit) return;
     await save.run(async (op) => {
-      try {
-        const result = await saveCareCostShare(target.share?.id ?? null, {
-          contractId: target.contract.contractId,
-          kind,
-          costBearerId: draft.costBearerId,
-          shareBasisPoints: basisPoints,
-          shareCents: cents,
-          scope: draft.scope,
-          validFrom: draft.validFrom,
-          validUntil: draft.validUntil,
-          reference: draft.reference.trim(),
-          checkedOn: draft.checkedOn,
-        });
-        if (op.isCurrent()) onSaved(result);
+      const result = changedId
+        ? await stored.submit((version) =>
+            saveCareCostShare(changedId, input, version),
+          )
+        : await saveCareCostShare(null, input).then(
+            (saved) => ({ ok: true, saved }) as const,
+            (error: unknown) => ({ ok: false, error, refused: false }) as const,
+          );
+      if (result.ok) {
+        if (op.isCurrent()) onSaved(result.saved);
         success(`Der Anteil für ${child} ist gespeichert.`);
-      } catch (err) {
-        logger.error("care_cost_share_save_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (!op.isCurrent()) return;
-        void formErrors.show(err, { object: "die Kostenübernahme" });
+        return;
       }
+      logger.error("care_cost_share_save_failed", {
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
+      });
+      if (!op.isCurrent()) return;
+      // Changed since it was read: `reload` shows the stored share instead
+      // of the draft, without a retry (ADR 0311).
+      void formErrors.show(result.error, {
+        object: "die Kostenübernahme",
+        reload: "reload" in result ? result.reload : undefined,
+      });
     });
   };
 

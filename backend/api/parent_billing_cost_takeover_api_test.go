@@ -135,7 +135,8 @@ func TestCostBearersAreKeptPerTraegerAndNamedOnesOnlySwitchOff(t *testing.T) {
 	assert.Equal(t, "parent_billing.cost_bearer_in_use", refusalCode(t, rec), "a frozen contribution names it")
 	switchedOff := youthOffice()
 	switchedOff["active"] = false
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, costBearerPath(int64(office.ID)), switchedOff)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, costBearerPath(int64(office.ID)),
+		withVersion(switchedOff, costBearerVersion(t, f.traeger, billing, int64(office.ID))))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.False(t, decodeSchoolPortalData[costBearerBody](t, rec.Body.Bytes()).Active)
 
@@ -235,7 +236,8 @@ func TestCostTakeoverFreezesTheRestAfterTheSiblingDiscount(t *testing.T) {
 
 	renamed := youthOffice()
 	renamed["name"] = "Jugendamt Musterstadt"
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, costBearerPath(int64(office.ID)), renamed)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, costBearerPath(int64(office.ID)),
+		withVersion(renamed, costBearerVersion(t, f.traeger, billing, int64(office.ID))))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	rec = f.takeoverPreview(t, f.siblings, "")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -265,7 +267,8 @@ func TestCostTakeoverShowsInTheRunTheOverviewAndTheReimbursementList(t *testing.
 
 	renamed := youthOffice()
 	renamed["name"] = "Jugendamt Musterstadt"
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, costBearerPath(int64(office.ID)), renamed)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, costBearerPath(int64(office.ID)),
+		withVersion(renamed, costBearerVersion(t, f.traeger, billing, int64(office.ID))))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(int64(run.ID), "/export?format=csv"), nil)

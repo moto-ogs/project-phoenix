@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/sepa"
 )
 
@@ -39,6 +40,9 @@ type MandateStore interface {
 	// SEPACreditor reads the creditor of the Träger, nil without one.
 	SEPACreditor(ctx context.Context, organizationID int64) (*parentbilling.SEPACreditor, error)
 	SaveSEPACreditor(ctx context.Context, organizationID, accountID int64, creditor parentbilling.SEPACreditor) error
+	// LockBillingSetting holds one setting of the Abrechnung of the Träger
+	// until the transaction ends.
+	LockBillingSetting(ctx context.Context, organizationID int64, setting string) error
 	// SEPAMandates reads the mandates of a family (familyEmail) or of every
 	// family (empty), newest first.
 	SEPAMandates(ctx context.Context, organizationID int64, familyEmail string) ([]parentbilling.SEPAMandate, error)
@@ -125,14 +129,35 @@ func creditorOf(ctx context.Context, store MandateStore, organizationID int64) (
 	if err != nil {
 		return parentbilling.SEPACreditor{}, err
 	}
-	if stored == nil {
-		return parentbilling.DefaultSEPACreditor(), nil
+	creditor := parentbilling.DefaultSEPACreditor()
+	if stored != nil {
+		creditor = *stored
 	}
-	return *stored, nil
+	creditor.Version = creditorVersion(creditor)
+	return creditor, nil
 }
 
-// SaveSEPACreditor validates and stores the creditor.
-func (m *SEPAMandates) SaveSEPACreditor(ctx context.Context, reviewer parentbilling.HolidayReviewer, creditor parentbilling.SEPACreditor) (parentbilling.SEPACreditor, error) {
+// settingSEPACreditor names the lock of the creditor.
+const settingSEPACreditor = "sepa_creditor"
+
+// creditorVersion is the read-state token of the creditor (ADR 0311): the
+// fields the form shows, the defaults while the Träger set none. The
+// creditor carries no bank account.
+func creditorVersion(creditor parentbilling.SEPACreditor) string {
+	return readstate.Fingerprint(struct {
+		CreditorID          string `json:"creditor_id"`
+		PrenotificationDays int    `json:"prenotification_days"`
+		MissingMandate      string `json:"missing_mandate"`
+		Set                 bool   `json:"set"`
+	}{creditor.CreditorID, creditor.PrenotificationDays, creditor.MissingMandate, creditor.UpdatedAt != nil})
+}
+
+// SaveSEPACreditor validates and stores the creditor as the Abrechnung read
+// it: under the lock of the creditor, one changed since expectedVersion is
+// refused with readstate.ErrChanged (ADR 0311).
+func (m *SEPAMandates) SaveSEPACreditor(ctx context.Context, reviewer parentbilling.HolidayReviewer, creditor parentbilling.SEPACreditor,
+	expectedVersion string,
+) (parentbilling.SEPACreditor, error) {
 	if err := validReviewer(reviewer); err != nil {
 		return parentbilling.SEPACreditor{}, err
 	}
@@ -150,6 +175,16 @@ func (m *SEPAMandates) SaveSEPACreditor(ctx context.Context, reviewer parentbill
 	}
 	if len(errs) > 0 {
 		return parentbilling.SEPACreditor{}, errs
+	}
+	if err := m.store.LockBillingSetting(ctx, reviewer.OrganizationID, settingSEPACreditor); err != nil {
+		return parentbilling.SEPACreditor{}, fmt.Errorf("parent billing: hold the SEPA creditor: %w", err)
+	}
+	before, err := creditorOf(ctx, m.store, reviewer.OrganizationID)
+	if err != nil {
+		return parentbilling.SEPACreditor{}, err
+	}
+	if err := readstate.Check(expectedVersion, before.Version); err != nil {
+		return parentbilling.SEPACreditor{}, err
 	}
 	if err := m.store.SaveSEPACreditor(ctx, reviewer.OrganizationID, reviewer.AccountID, normalized); err != nil {
 		return parentbilling.SEPACreditor{}, err

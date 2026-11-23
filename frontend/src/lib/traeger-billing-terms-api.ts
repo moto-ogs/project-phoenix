@@ -66,6 +66,8 @@ export interface ServiceTerms {
   /** False while the Träger keeps the defaults. */
   readonly custom: boolean;
   readonly updatedAt: string | null;
+  /** The read-state token a change sends back (ADR 0311). */
+  readonly version: string;
 }
 
 interface BillingServiceOption {
@@ -217,6 +219,7 @@ function termsFromBackend(
           bundleWith: terms.bundle_with,
           custom: terms.custom,
           updatedAt: terms.updated_at,
+          version: terms.version,
         },
       ];
     }),
@@ -289,10 +292,14 @@ export async function fetchBillingTerms(): Promise<BillingTerms> {
   return termsFromBackend(await bffJson("org", "GET /traeger/billing-terms/"));
 }
 
-/** Sets the terms of one service; answers the terms of every service. */
+/**
+ * Sets the terms of one service from the `version` they were read at (ADR
+ * 0311); answers the terms of every service.
+ */
 export async function saveServiceTerms(
   service: BillingService,
   input: ServiceTermsInput,
+  version: string,
 ): Promise<BillingTerms> {
   return termsFromBackend(
     await bffJson("org", "PUT /traeger/billing-terms/{service}", {
@@ -301,6 +308,7 @@ export async function saveServiceTerms(
         payment_method: input.paymentMethod,
         due_days: input.dueDays,
         bundle_with: input.bundleWith,
+        expected_version: version,
       } satisfies traegerBillingTermsContract.ServiceTermsRequest,
     }),
   );
@@ -374,13 +382,15 @@ export async function saveFamilyBilling(
 }
 
 /**
- * Replaces the due dates of a calculated run; a payment method without a
- * date falls back to the payment term of the service.
+ * Replaces the due dates of a calculated run, read at `version` (the run's
+ * `dueDatesVersion`, ADR 0311); a payment method without a date falls back
+ * to the payment term of the service.
  */
 export async function saveRunDueDates(
   kind: "care" | "holiday",
   runId: string,
   dates: readonly RunDueDate[],
+  version: string,
 ): Promise<RunDueDate[]> {
   const body = await bffJson(
     "org",
@@ -394,6 +404,7 @@ export async function saveRunDueDates(
           payment_method: due.paymentMethod,
           due_on: due.dueOn,
         })),
+        expected_version: version,
       } satisfies traegerBillingRunDueDatesContract.RunDueDatesRequest,
     },
   );

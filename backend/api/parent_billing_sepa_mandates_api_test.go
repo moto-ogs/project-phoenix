@@ -82,7 +82,7 @@ func sepaRun(t *testing.T, f careBillingFixture, id int64) sepaRunBody {
 
 func saveCreditor(t *testing.T, f careBillingFixture, body map[string]any) {
 	t.Helper()
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, sepaCreditorPath, body)
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, sepaCreditorPath, withVersion(body, creditorVersion(t, f.traeger, f.office.token)))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 }
 
@@ -173,7 +173,7 @@ func TestSEPAMandateReachesTheInvoiceAsPrenotification(t *testing.T) {
 	assert.Contains(t, rec.Body.String(), "parent_billing.sepa_mandate_reference_taken")
 
 	run := f.startRun(t, careMonth)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, runDueDatesPathOf("care", int64(run.ID)), dueDates("2030-01-02", "2030-01-04"))
+	rec = putRunDueDates(t, f.traeger, f.office.token, "care", int64(run.ID), dueDates("2030-01-02", "2030-01-04"))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	preview := sepaRun(t, f, int64(run.ID))
 	var lia *sepaPaymentBody
@@ -240,8 +240,10 @@ func TestSEPAMandateReachesTheInvoiceAsPrenotification(t *testing.T) {
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, fmt.Sprintf("%s/%d/history", sepaMandatesPath, mandate.ID), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	// The list after the revocation and the trail itself are reads of the
-	// bank data, each with its own entry.
-	assert.Equal(t, []string{"create:office", "read:run", "revoke:office", "read:office", "read:office"}, mandateEvents(t, f, int64(mandate.ID)))
+	// bank data, each with its own entry; so are the two reads of the run,
+	// before its due dates change (ADR 0311) and for its preview.
+	assert.Equal(t, []string{"create:office", "read:run", "read:run", "revoke:office", "read:office", "read:office"},
+		mandateEvents(t, f, int64(mandate.ID)))
 	require.NoError(t, f.db.NewRaw(`SELECT mandate_reference FROM parent_billing.care_invoices WHERE run_id = ? AND care_contract_id = ?`,
 		run.ID, contract).Scan(context.Background(), &copied))
 	assert.Equal(t, "SJR-2026-0001", copied)
@@ -260,7 +262,7 @@ func TestDirectDebitWithoutMandateFallsBackToTransferOrBlocksTheRelease(t *testi
 	setTerms(t, f.traeger, f.office.token, "care", map[string]any{"payment_method": "direct_debit", "due_days": 10})
 	saveCreditor(t, f, map[string]any{"creditor_id": sepaCreditorID, "prenotification_days": 14, "missing_mandate": "transfer"})
 	run := f.startRun(t, careMonth)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, runDueDatesPathOf("care", int64(run.ID)), dueDates("2030-01-02", "2030-01-04"))
+	rec = putRunDueDates(t, f.traeger, f.office.token, "care", int64(run.ID), dueDates("2030-01-02", "2030-01-04"))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	preview := sepaRun(t, f, int64(run.ID))
@@ -420,7 +422,7 @@ func TestSEPAMandateStaysBoundToItsCreditor(t *testing.T) {
 	assert.False(t, listed[0].CreditorCurrent, "the list shows that the mandate needs renewing")
 
 	run := f.startRun(t, careMonth)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, runDueDatesPathOf("care", int64(run.ID)), dueDates("2030-01-02", "2030-01-04"))
+	rec = putRunDueDates(t, f.traeger, f.office.token, "care", int64(run.ID), dueDates("2030-01-02", "2030-01-04"))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	preview := sepaRun(t, f, int64(run.ID))
 	require.Len(t, preview.Invoices, 1)

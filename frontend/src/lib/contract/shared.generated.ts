@@ -3970,6 +3970,7 @@ export interface CostBearer {
   active: boolean;
   in_use: boolean;
   updated_at: string;
+  version: string;
 }
 
 export const CostBearerSchema: z.ZodType<CostBearer, unknown> = object<CostBearer>({
@@ -3980,6 +3981,7 @@ export const CostBearerSchema: z.ZodType<CostBearer, unknown> = object<CostBeare
   active: bool,
   in_use: bool,
   updated_at: instant,
+  version: str,
 });
 
 /** Go: parentbilling.ContributionRule */
@@ -4003,6 +4005,7 @@ export interface ContributionRule {
   counts_family_children: boolean;
   sibling_all_children: boolean;
   updated_at: string;
+  version: string;
 }
 
 export const ContributionRuleSchema: z.ZodType<ContributionRule, unknown> = object<ContributionRule>({
@@ -4025,6 +4028,7 @@ export const ContributionRuleSchema: z.ZodType<ContributionRule, unknown> = obje
   counts_family_children: bool,
   sibling_all_children: bool,
   updated_at: instant,
+  version: str,
 });
 
 /** Go: parentbilling.CareModule */

@@ -526,6 +526,7 @@ export interface CareRunDetail {
   meal_unbilled: CareMealUnbilled[] | null;
   meal_changed: CareMealChanged[] | null;
   due_dates: RunDueDate[] | null;
+  due_dates_version: string;
   cost_bearers: CareCostBearerTotal[] | null;
   schools: CareSchool[] | null;
   excluded_count: number;
@@ -570,6 +571,7 @@ export const CareRunDetailSchema: z.ZodType<CareRunDetail, unknown> = object<Car
   meal_unbilled: nullable(arr(CareMealUnbilledSchema)),
   meal_changed: nullable(arr(CareMealChangedSchema)),
   due_dates: nullable(arr(RunDueDateSchema)),
+  due_dates_version: str,
   cost_bearers: nullable(arr(CareCostBearerTotalSchema)),
   schools: nullable(arr(CareSchoolSchema)),
   excluded_count: safeInt,

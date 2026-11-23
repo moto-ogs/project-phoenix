@@ -158,6 +158,9 @@ type FamilyChildren struct {
 	// Differing tells that the family's contracts brought different
 	// confirmed numbers and Count is none of them.
 	Differing bool `json:"differing"`
+	// Version is the read-state token of the family's stored numbers (ADR
+	// 0311): a confirmation sends it back as expected_version.
+	Version string `json:"version"`
 }
 
 // FamilyChildrenSet is what the page shows: every family with a contract in
@@ -184,7 +187,9 @@ type FamilyChildrenOffice interface {
 	FamilyChildren(ctx context.Context, reviewer HolidayReviewer) (FamilyChildrenSet, error)
 	// ConfirmFamilyChildren confirms or changes the number of the family of
 	// the input's contract.
-	ConfirmFamilyChildren(ctx context.Context, reviewer HolidayReviewer, input FamilyChildrenInput) (FamilyChildrenSet, error)
+	// Numbers changed since expectedVersion are refused with
+	// readstate.ErrChanged (ADR 0311).
+	ConfirmFamilyChildren(ctx context.Context, reviewer HolidayReviewer, input FamilyChildrenInput, expectedVersion string) (FamilyChildrenSet, error)
 	// RemoveFamilyChildren removes the number of the family of a contract.
 	RemoveFamilyChildren(ctx context.Context, reviewer HolidayReviewer, contractID int64) (FamilyChildrenSet, error)
 }

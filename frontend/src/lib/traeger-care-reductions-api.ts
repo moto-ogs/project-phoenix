@@ -65,9 +65,11 @@ export interface CareRule {
    * the first too. Otherwise the children from that rank on.
    */
   readonly siblingAllChildren?: boolean;
+  /** The read-state token a change sends back (ADR 0311). */
+  readonly version: string;
 }
 
-export type CareRuleInput = Omit<CareRule, "id">;
+export type CareRuleInput = Omit<CareRule, "id" | "version">;
 
 export interface CareRuleSet {
   readonly rules: readonly CareRule[];
@@ -84,9 +86,11 @@ export interface CareEvidence {
   readonly validUntil: string | null;
   readonly evidence: string;
   readonly checkedOn: string;
+  /** The read-state token a change sends back (ADR 0311). */
+  readonly version: string;
 }
 
-export type CareEvidenceInput = Omit<CareEvidence, "id">;
+export type CareEvidenceInput = Omit<CareEvidence, "id" | "version">;
 
 export interface CareEvidenceContract {
   readonly contractId: string;
@@ -138,6 +142,7 @@ function ruleFromBackend(
     tariffSiblingPrice: rule.tariff_sibling_price,
     countsFamilyChildren: rule.counts_family_children,
     siblingAllChildren: rule.sibling_all_children,
+    version: rule.version,
   };
 }
 
@@ -168,6 +173,7 @@ function evidencesFromBackend(
         validUntil: evidence.valid_until,
         evidence: evidence.evidence,
         checkedOn: requiredDay(evidence.checked_on, "care_evidence.checked_on"),
+        version: evidence.version,
       },
     ];
   });
@@ -229,16 +235,20 @@ export async function fetchCareRules(): Promise<CareRuleSet> {
   return ruleSetFromBackend(await bffJson("org", "GET /traeger/care-rules/"));
 }
 
-/** Creates a rule without `ruleId`, changes that one otherwise. */
+/**
+ * Creates a rule without `ruleId`, changes that one otherwise, from the
+ * `version` it was read at (ADR 0311).
+ */
 export async function saveCareRule(
   ruleId: string | null,
   input: CareRuleInput,
+  version = "",
 ): Promise<CareRuleSet> {
   return ruleSetFromBackend(
     await (ruleId
       ? bffJson("org", "PUT /traeger/care-rules/{id}", {
           params: { id: ruleId },
-          body: ruleBody(input),
+          body: { ...ruleBody(input), expected_version: version },
         })
       : bffJson("org", "POST /traeger/care-rules/", { body: ruleBody(input) })),
   );
@@ -259,15 +269,20 @@ export async function fetchCareEvidences(): Promise<CareEvidenceSet> {
   );
 }
 
+/**
+ * Creates an evidence without `evidenceId`, changes that one otherwise,
+ * from the `version` it was read at (ADR 0311).
+ */
 export async function saveCareEvidence(
   evidenceId: string | null,
   input: CareEvidenceInput,
+  version = "",
 ): Promise<CareEvidenceSet> {
   return evidenceSetFromBackend(
     await (evidenceId
       ? bffJson("org", "PUT /traeger/care-evidences/{id}", {
           params: { id: evidenceId },
-          body: evidenceBody(input),
+          body: { ...evidenceBody(input), expected_version: version },
         })
       : bffJson("org", "POST /traeger/care-evidences/", {
           body: evidenceBody(input),
