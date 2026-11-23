@@ -119,15 +119,37 @@ the rule does not need. Träger pages and cards use `useTraegerResource`
 (`components/traeger/use-traeger-resource.ts`): Träger session gate, refusal
 rules and load error in one return shape. A read the access log records on a
 person's explicit click (`utilization-children.tsx`) stays a click handler.
-Reads go through the shared cache, also for an edit, a preview or a form's
-template (ADR 0311). A cached answer cannot cause a silent overwrite: a
-write that depends on what was read sends its token (`expected_version`,
-`expected_fingerprint`), and the server refuses a changed state with 409
-`general.changed_since_read` (`isChangedSinceRead` in `~/lib/api-error`);
-the surface then shows the stored state again. `useFreshSWR` is a
-transition (#7904): only a read the server logs or authorizes on every
-opening keeps reading anew each time. There is no
-runtime registry. Direct package imports outside this boundary and new free
+There is no runtime registry.
+
+## Reading and saving (ADR 0311)
+
+Three ways to read, and nothing else:
+
+1. **A read** goes through the shared cache: `useSWRAuth` (Träger:
+   `useTraegerResource`).
+2. **An edit or a preview a save confirms** goes through `useReadDraft`
+   (`~/lib/swr/read-draft`); a draft on a read the surface already holds (a
+   list row) through `useDraftOn`. They read per opening, keep the token
+   from the moment editing starts, refill only an untouched draft, read the
+   stored state after a refusal, send nothing until it is there, take the
+   token of a save's answer (or read again), and report a failed reload as
+   a load error.
+3. **A read the server logs or authorizes on every opening** (an access
+   log entry per read) goes through `useOpeningRead(key, fetcher, {
+   showCached: false })` (Träger: `useFreshTraegerResource`): nothing shows
+   until this opening's own read answered, and that answer is held. Focus,
+   reconnect and key changes start no read; an invalidation of the key
+   does.
+
+A write that depends on what was read sends its token (`expected_version`,
+`expected_fingerprint`); the server refuses a changed state with 409
+`general.changed_since_read` or an older module code of the same meaning
+(`isReadStateRefusal` in `~/lib/api-error`). Show it with
+`show(error, { reload })` of the error path: it offers no retry or action,
+waits for the reload and, when that read fails, shows the load error with
+„Der neue Stand konnte nicht geladen werden.“ and a retry of the read
+alone. `revalidateOrThrow(read)` turns a `useSWRAuth` read into such a
+reload; SWR's own `mutate()` resolves with the old data when it fails. Direct package imports outside this boundary and new free
 hook keys fail oxlint; both baselines are empty and take no new entry. A free key is
 anything at a `useSWRAuth` or `useImmutableSWR` call that is
 not built by an export of `~/lib/swr` (directly, through a local constant or
@@ -140,7 +162,7 @@ After the server refuses a read (401 or 403 as an access decision,
 no data and the data leaves the cache. It shows again only after a read of
 the key succeeded: a later 5xx, a network failure or a cache write does not
 bring it back. Logout and an account switch lift every refusal. This holds
-for `useSWRAuth`, `useImmutableSWR` and `useFreshSWR` without anything at the
+for `useSWRAuth`, `useImmutableSWR` and `useOpeningRead` without anything at the
 call site; a page shows the error because its data is gone. A 404, or a
 refusal that has to remove other keys too (a child a guardian lost), stays
 with `useConfirmedSWR`, `useTraegerResource` or `useDiscardRefusedEntity`.
