@@ -126,9 +126,15 @@ func TestStaffSendPhotosToGuardiansAndReadThemWithTheMessages(t *testing.T) {
 	require.Equal(t, http.StatusOK, detail.Code, detail.Body.String())
 	require.NoError(t, json.Unmarshal(detail.Body.Bytes(), &thread))
 	require.Len(t, thread.Data.Messages, 1)
-	var carried []attachmentWire
-	require.NoError(t, json.Unmarshal(thread.Data.Messages[0].Attachments, &carried))
-	require.Equal(t, []attachmentWire{photo}, carried)
+	var carried struct {
+		Data struct {
+			Messages []struct {
+				Attachments []attachmentWire `json:"attachments"`
+			} `json:"messages"`
+		}
+	}
+	require.NoError(t, json.Unmarshal(detail.Body.Bytes(), &carried))
+	require.Equal(t, []attachmentWire{photo}, carried.Data.Messages[0].Attachments)
 
 	// Whoever reads the conversation reads its photo; the route's right
 	// keeps everybody else out.

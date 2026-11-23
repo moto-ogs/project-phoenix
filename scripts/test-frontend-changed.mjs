@@ -139,6 +139,7 @@ const guards = [
   "src/lib/analytics-routes.test.ts",
   "src/lib/help-topics.test.ts",
   "src/lib/page-info.test.ts",
+  "src/lib/identifier-text.test.ts",
   "src/lib/loading-boundaries.test.ts",
   "src/lib/navigation-sync.test.ts",
   "src/lib/page-titles.test.ts",

@@ -529,12 +529,14 @@ export default function MealPlanPage() {
   };
 
   // Someone stored a day differently since this page read it: take the
-  // stored week as the new read state. Only the days still unsaved keep
-  // their drafts and stay marked; every other day shows the stored plan, so
-  // „Speichern“ cannot send back an old day the person never edited.
-  // „Verwerfen“ then shows the stored plan, „Speichern“ replaces the kept
-  // days. Answers the read's error, or null.
-  const adoptStoredWeek = async (unsaved: string[]): Promise<unknown> => {
+  // stored week as the new read state. A day keeps its draft only while it
+  // is unsaved and stored as this page read it; every other day, the refused
+  // one included, shows the stored plan, so „Speichern“ never replaces a
+  // change the person has not seen. Answers the read's error, or null.
+  const adoptStoredWeek = async (
+    unsaved: string[],
+    readVersions: Record<string, string>,
+  ): Promise<unknown> => {
     if (!weekKey) return null;
     try {
       const days = await week.mutate(getMealPlanWeek(mondayISO), {
@@ -545,12 +547,16 @@ export default function MealPlanPage() {
       const stored = draftsFromDays(days, weekDates);
       const orig: Record<string, DishDraft[]> = {};
       for (const date of weekDates) orig[date] = normalizeDay(stored[date]!);
+      const storedVersions = versionsFromDays(days);
       setOriginals(orig);
-      setVersions(versionsFromDays(days));
+      setVersions(storedVersions);
       setDrafts((prev) => {
         const next = { ...prev };
         for (const date of weekDates) {
-          if (!unsaved.includes(date)) next[date] = stored[date]!;
+          const keep =
+            unsaved.includes(date) &&
+            storedVersions[date] === readVersions[date];
+          if (!keep) next[date] = stored[date]!;
         }
         return next;
       });
@@ -598,6 +604,7 @@ export default function MealPlanPage() {
       const readError = changedElsewhere
         ? await adoptStoredWeek(
             changedDays.filter((date) => !(date in persisted)),
+            { ...versions, ...saved },
           )
         : null;
       // A changed day needs the person's decision, not the same request

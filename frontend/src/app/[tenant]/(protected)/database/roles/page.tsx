@@ -101,7 +101,7 @@ function RolesPageContent() {
   const service = useMemo(() => createCrudService(rolesConfig), []);
 
   const readRoles = useCallback(async () => {
-    const data = await service.getList({ page: 1, pageSize: 500 });
+    const data = await service.getList();
     return Array.isArray(data.data) ? data.data : [];
   }, [service]);
   const {

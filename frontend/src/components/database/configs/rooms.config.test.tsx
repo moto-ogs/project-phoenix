@@ -21,10 +21,6 @@ describe("roomsConfig", () => {
     });
   });
 
-  it("has correct API configuration", () => {
-    expect(roomsConfig.api.routes.list).toBe("GET /api/rooms/");
-  });
-
   it("has form sections configured", () => {
     expect(roomsConfig.form.sections).toHaveLength(1);
     expect(roomsConfig.form.sections[0]?.title).toBe("Raumdetails");

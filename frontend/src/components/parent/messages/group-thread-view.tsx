@@ -44,11 +44,8 @@ import { useConfirmedSWR } from "~/lib/hooks/use-confirmed-resource";
 import { useInvalidateFamily } from "~/lib/swr";
 import { parentInboxKeys } from "~/lib/swr/parent-inbox-keys";
 import { parentKeys } from "~/lib/swr/parent-keys";
-import {
-  type GroupThreadChild,
-  getGroupThread,
-  postChildMessage,
-} from "~/lib/parent-api";
+import type { GroupThreadChildResponse } from "~/lib/contract/parent-me.generated";
+import { getGroupThread, postChildMessage } from "~/lib/parent-api";
 import { createLogger } from "~/lib/logger";
 import {
   childConversationPath,
@@ -67,7 +64,7 @@ function nudgeUnreadBadge(): void {
   }
 }
 
-function childName(child: GroupThreadChild): string {
+function childName(child: GroupThreadChildResponse): string {
   return `${child.first_name} ${child.last_name}`.trim();
 }
 

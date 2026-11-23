@@ -1,15 +1,7 @@
+import type { OperatorInvitationValidationResponse } from "~/lib/contract/operator-auth.generated";
 import type * as operatorInvitationsContract from "~/lib/contract/operator-invitations.generated";
 import type * as sharedContract from "~/lib/contract/shared.generated";
 
-/**
- * Answer of POST /api/operator/auth/invitations/validate. The route is
- * public and outside the contract catalog, so its type stays handwritten.
- */
-export interface InvitationValidationBody {
-  email: string;
-  display_name?: string | null;
-  expires_at: string;
-}
 
 // --- Frontend types (camelCase) ---
 
@@ -94,7 +86,7 @@ export function mapOperatorInfo(
 }
 
 export function mapInvitationValidation(
-  data: InvitationValidationBody,
+  data: OperatorInvitationValidationResponse,
 ): OperatorInvitationValidation {
   return {
     email: data.email,

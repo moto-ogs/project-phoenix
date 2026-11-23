@@ -7,6 +7,11 @@ import { afterEach, describe, it, expect, vi } from "vitest";
 import { teachersConfig } from "./teachers.config";
 import type { Teacher } from "@/lib/teacher-api";
 
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 // Mock teacher-api
 vi.mock("@/lib/teacher-api", () => ({
   teacherService: {
@@ -18,6 +23,7 @@ vi.mock("@/lib/teacher-api", () => ({
 describe("teachersConfig", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
   });
 
   it("exports a valid entity config", () => {
@@ -26,10 +32,6 @@ describe("teachersConfig", () => {
       singular: "Personal",
       plural: "Personal",
     });
-  });
-
-  it("has correct API configuration", () => {
-    expect(teachersConfig.api.routes.list).toBe("GET /api/staff/");
   });
 
   it("has form sections configured", () => {
@@ -216,7 +218,7 @@ describe("teachersConfig", () => {
         },
       });
 
-      const result = await teachersConfig.service!.create!({
+      const result = await teachersConfig.api.create!({
         first_name: "Test",
         last_name: "Teacher",
         password: "SecurePass123!",
@@ -245,7 +247,7 @@ describe("teachersConfig", () => {
         email: "exists@example.com",
       });
 
-      const result = await teachersConfig.service!.create!({
+      const result = await teachersConfig.api.create!({
         first_name: "Exists",
         last_name: "User",
         password: "SecurePass123!",
@@ -260,8 +262,8 @@ describe("teachersConfig", () => {
 
   // The list and the record answer staff records of the contract (#7563);
   // the person is nested and ids are decimal strings.
-  it("maps the nested person of a contract record including avatar and account id", () => {
-    const mapped = teachersConfig.service?.mapResponse?.({
+  it("maps the nested person of a contract record including avatar and account id", async () => {
+    const record = {
       started_on: "2024-09-02",
       ended_on: null,
       id: "42",
@@ -283,7 +285,13 @@ describe("teachersConfig", () => {
         created_at: "2024-01-01T00:00:00Z",
         updated_at: "2024-01-01T00:00:00Z",
       },
-    }) as Teacher;
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(Response.json({ data: record }))),
+    );
+
+    const mapped = await teachersConfig.api.get!("42");
 
     expect(mapped).toMatchObject({
       id: "42",
@@ -317,7 +325,7 @@ describe("teachersConfig", () => {
       person_id: "9007199254740993",
       is_teacher: false,
     };
-    const result = await teachersConfig.service!.update!(
+    const result = await teachersConfig.api.update!(
       "7",
       {
         first_name: "Updated",
