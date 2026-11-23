@@ -1505,6 +1505,8 @@ describe("PhasesEditor", () => {
           eligible_school_classes: ["3b"],
           require_school_class: true,
         }),
+        // The save sends the version it read (ADR 0311).
+        "phase-read",
       );
     });
   });
@@ -1541,6 +1543,8 @@ describe("PhasesEditor", () => {
           eligible_school_classes: [],
           require_school_class: false,
         }),
+        // The save sends the version it read (ADR 0311).
+        "phase-read",
       );
     });
   });
@@ -1624,6 +1628,8 @@ describe("PhasesEditor", () => {
           eligible_school_classes: ["3b"],
           require_school_class: true,
         }),
+        // The save sends the version it read (ADR 0311).
+        "phase-read",
       );
     });
   });
@@ -1662,6 +1668,8 @@ describe("PhasesEditor", () => {
           audience: "open",
           eligible_school_classes: [],
         }),
+        // The save sends the version it read (ADR 0311).
+        "phase-read",
       );
     });
   });

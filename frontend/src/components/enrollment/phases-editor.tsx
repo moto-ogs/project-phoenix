@@ -73,10 +73,11 @@ import {
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
+import { revalidateOrThrow, useInvalidateFamily, useSWRAuth } from "~/lib/swr";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { databaseKeys } from "~/lib/swr/portal-keys";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
+import { isReadStateRefusal } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import { RolloverForm } from "./rollover-form";
 import {
@@ -309,6 +310,10 @@ export function PhasesEditor({ info }: { readonly info?: string }) {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<PhaseInput | null>(null);
+  // The version the draft rests on, taken when editing starts (ADR 0311).
+  const [draftVersion, setDraftVersion] = useState("");
+  // After a refused save nothing is sent until the phase was read again.
+  const refusedSave = useRef(false);
   const [schemaSource, setSchemaSource] = useState<SchemaSource>("base");
   // Aktivieren/Ausschalten aus der Liste, außerhalb des Panels.
   const [togglingActive, setTogglingActive] = useState(false);
@@ -427,6 +432,8 @@ export function PhasesEditor({ info }: { readonly info?: string }) {
   const startEdit = useCallback(
     (phase: Phase, forceFormHighlight = false) => {
       setEditingId(phase.id);
+      setDraftVersion(phase.version);
+      refusedSave.current = false;
       setDraft({
         ...phaseToInput(phase),
         form_schema_id: assignSchema?.id ?? phase.form_schema_id ?? null,
@@ -547,7 +554,8 @@ export function PhasesEditor({ info }: { readonly info?: string }) {
           const created = await createPhase(payload);
           toast.success(`Die Anmeldephase „${created.name}“ ist angelegt.`);
         } else if (editingId) {
-          const updated = await updatePhase(editingId, payload);
+          if (refusedSave.current) return;
+          const updated = await updatePhase(editingId, payload, draftVersion);
           toast.success(`Die Anmeldephase „${updated.name}“ ist gespeichert.`);
           if (updated.careBeyondEnd?.length) {
             setCareBeyondEnd({
@@ -566,6 +574,24 @@ export function PhasesEditor({ info }: { readonly info?: string }) {
         });
         // Protokolliert; eine späte Ablehnung zeigt kein neuerer Vorgang.
         if (!op.isCurrent()) return;
+        if (isReadStateRefusal(err) && editingId && editingId !== "new") {
+          // Changed since it was read: the form shows the stored phase once
+          // it is read; until then nothing is sent, and the same save is
+          // not offered again.
+          refusedSave.current = true;
+          const refusedId = editingId;
+          await formErrors.show(err, {
+            object: "die Anmeldephase",
+            reload: async () => {
+              const stored = (await revalidateOrThrow(phasesRead)).find(
+                (phase) => phase.id === refusedId,
+              );
+              if (stored) startEdit(stored);
+              return stored;
+            },
+          });
+          return;
+        }
         await formErrors.show(err, {
           object: "die Anmeldephase",
           retry: () => void latestSave.current(),
@@ -748,10 +774,12 @@ export function PhasesEditor({ info }: { readonly info?: string }) {
     async (phase: Phase) => {
       setTogglingActive(true);
       try {
-        const updated = await updatePhase(phase.id, {
-          ...phaseToInput(phase),
-          is_active: !phase.is_active,
-        });
+        const updated = await updatePhase(
+          phase.id,
+          { ...phaseToInput(phase), is_active: !phase.is_active },
+          // The switch acts on the phase as the list shows it (ADR 0311).
+          phase.version,
+        );
         void mutatePhases(
           (current) =>
             current?.map((item) => (item.id === updated.id ? updated : item)),
@@ -768,6 +796,15 @@ export function PhasesEditor({ info }: { readonly info?: string }) {
         logger.error("phase_toggle_active_failed", {
           error: err instanceof Error ? err.message : String(err),
         });
+        if (isReadStateRefusal(err)) {
+          // Changed since the list was read: show the stored phase, never
+          // the same switch again.
+          await showActionError(err, {
+            object: "die Anmeldephase",
+            reload: () => revalidateOrThrow(phasesRead),
+          });
+          return;
+        }
         await showActionError(err, {
           object: "die Anmeldephase",
           retry: () => void latestToggleActive.current(phase),
