@@ -85,7 +85,7 @@ func (c *boundedOfferingChange) submit(t *testing.T) *careplan.OfferingChangeReq
 func (c *boundedOfferingChange) approve(t *testing.T, row *careplan.OfferingChangeRequest) error {
 	t.Helper()
 	return testpkg.TenantCommand1(t, offeringChangeAdminContext(t), testpkg.SetupTestDB(t), decidesOfferingChange(c.svc), careplan.OfferingChangeDecisionInput{
-		RequestID: row.ID, Approve: true, ReviewedBy: c.env.creatorID,
+		RequestID: row.ID, Approve: true, ReviewedBy: c.env.creatorID, ExpectedVersion: careplan.ParentRequestVersion(row.UpdatedAt),
 	})
 }
 
