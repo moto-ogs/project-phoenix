@@ -2,12 +2,14 @@ package compose_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/compose"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -31,7 +33,7 @@ func TestClassHandoverReplacesAndWithdraws(t *testing.T) {
 	day := calendar.NewDate(2099, 3, 2)
 
 	existed, err := module.ChangeClassHandover(ctx, studentpresence.ClassHandoverChange{
-		SchoolClass: " 3c ", Date: day, HandedOverBy: staff.ID,
+		SchoolClass: " 3c ", Date: day, HandedOverBy: staff.ID, ExpectedVersion: handoverVersion(t, ctx, module, "3c", day),
 		PresentStudentIDs: []int64{second.ID}, AbsentStudentIDs: []int64{first.ID, first.ID},
 	})
 	require.NoError(t, err)
@@ -47,6 +49,7 @@ func TestClassHandoverReplacesAndWithdraws(t *testing.T) {
 
 	existed, err = module.ChangeClassHandover(ctx, studentpresence.ClassHandoverChange{
 		SchoolClass: "3C", Date: day, HandedOverBy: staff.ID, AbsentStudentIDs: []int64{second.ID},
+		ExpectedVersion: handoverVersion(t, ctx, module, "3c", day),
 	})
 	require.NoError(t, err)
 	assert.True(t, existed, "the same class in another spelling")
@@ -98,6 +101,7 @@ func TestClassHandoverStaysInItsSchool(t *testing.T) {
 	day := calendar.NewDate(2099, 3, 2)
 	_, err = module.ChangeClassHandover(ctx, studentpresence.ClassHandoverChange{
 		SchoolClass: "4a", Date: day, HandedOverBy: staff.ID, AbsentStudentIDs: []int64{student.ID},
+		ExpectedVersion: handoverVersion(t, ctx, module, "4a", day),
 	})
 	require.NoError(t, err)
 
@@ -131,6 +135,7 @@ func TestMorningAttendanceRetentionDeletesClassHandovers(t *testing.T) {
 	for _, day := range []calendar.Date{expired, kept} {
 		_, err := module.ChangeClassHandover(ctx, studentpresence.ClassHandoverChange{
 			SchoolClass: "1b", Date: day, HandedOverBy: staff.ID, AbsentStudentIDs: []int64{student.ID},
+			ExpectedVersion: handoverVersion(t, ctx, module, "1b", day),
 		})
 		require.NoError(t, err)
 	}
@@ -148,8 +153,10 @@ func TestMorningAttendanceRetentionDeletesClassHandovers(t *testing.T) {
 	assert.Len(t, left, 1)
 }
 
-// A second submission must replace even an uncommitted first handover,
-// including its entire absence list, without a unique-constraint error.
+// A second submission read before an uncommitted first handover waits for
+// it under the class and day's lock and is then refused as read before that
+// handover (ADR 0311), without a unique-constraint error; the first handover
+// and its absence list stay.
 func TestClassHandoverConcurrentReplacement(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupIsolatedTestDB(t)
@@ -166,10 +173,12 @@ func TestClassHandoverConcurrentReplacement(t *testing.T) {
 		replaced bool
 		err      error
 	}
+	before := handoverVersion(t, ctx, module, "3c", day)
 	completed := make(chan result, 1)
 	err = testpkg.WithTenantTx(t, ctx, db, testpkg.Tenant(t), func(txCtx context.Context, tx bun.Tx) error {
 		_, changeErr := module.ChangeClassHandover(txCtx, studentpresence.ClassHandoverChange{
 			SchoolClass: "3c", Date: day, HandedOverBy: firstStaff.ID, AbsentStudentIDs: []int64{first.ID},
+			ExpectedVersion: before,
 		})
 		require.NoError(t, changeErr)
 		var holderPID int
@@ -177,6 +186,7 @@ func TestClassHandoverConcurrentReplacement(t *testing.T) {
 		go func() {
 			replaced, changeErr := module.ChangeClassHandover(ctx, studentpresence.ClassHandoverChange{
 				SchoolClass: " 3C ", Date: day, HandedOverBy: secondStaff.ID, AbsentStudentIDs: []int64{second.ID},
+				ExpectedVersion: before,
 			})
 			completed <- result{replaced, changeErr}
 		}()
@@ -196,17 +206,70 @@ func TestClassHandoverConcurrentReplacement(t *testing.T) {
 	require.NoError(t, err)
 	select {
 	case replacement := <-completed:
-		require.NoError(t, replacement.err)
-		assert.True(t, replacement.replaced)
+		require.ErrorIs(t, replacement.err, readstate.ErrChanged)
+		assert.False(t, replacement.replaced)
 	case <-ctx.Done():
 		t.Fatal("concurrent handover did not finish", ctx.Err())
 	}
 	handovers, err := module.ClassHandoversOn(ctx, day)
 	require.NoError(t, err)
 	require.Len(t, handovers, 1)
-	assert.Equal(t, secondStaff.ID, handovers[0].HandedOverByStaffID)
-	assert.Equal(t, []int64{second.ID}, handovers[0].AbsentStudentIDs)
-	assert.Empty(t, handovers[0].PresentStudentIDs, "the replacement's children only")
+	assert.Equal(t, firstStaff.ID, handovers[0].HandedOverByStaffID)
+	assert.Equal(t, []int64{first.ID}, handovers[0].AbsentStudentIDs)
+	assert.Empty(t, handovers[0].PresentStudentIDs, "the first handover's children only")
+}
+
+// handoverVersion is the version of the class's handover on day as the
+// class view reads it now.
+func handoverVersion(t *testing.T, ctx context.Context, module interface {
+	ClassHandoversOn(context.Context, calendar.Date) ([]studentpresence.ClassHandover, error)
+}, class string, day calendar.Date) string {
+	t.Helper()
+	handovers, err := module.ClassHandoversOn(ctx, day)
+	require.NoError(t, err)
+	for i := range handovers {
+		if strings.EqualFold(strings.TrimSpace(handovers[i].SchoolClass), class) {
+			return studentpresence.ClassHandoverVersion(&handovers[i])
+		}
+	}
+	return studentpresence.ClassHandoverVersion(nil)
+}
+
+// A Lehrkraft whose class view was read before another handover of her class
+// cannot mark the child that handover has "nicht da" as "da" again (ADR
+// 0311): her save is refused and writes nothing.
+func TestClassHandoverRefusesStaleVersion(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	ctx := testpkg.Ctx(t)
+	module, err := compose.New(compose.Dependencies{DB: db, Observe: func(compose.Observation) {}})
+	require.NoError(t, err)
+	absent := testpkg.CreateTestStudent(t, db, "Fehlt", "Heute", "2b")
+	staff := testpkg.CreateTestStaff(t, db, "Lehr", "Kraft")
+	day := calendar.NewDate(2099, 3, 2)
+	read := handoverVersion(t, ctx, module, "2b", day)
+
+	_, err = module.ChangeClassHandover(ctx, studentpresence.ClassHandoverChange{
+		SchoolClass: "2b", Date: day, HandedOverBy: staff.ID, AbsentStudentIDs: []int64{absent.ID}, ExpectedVersion: read,
+	})
+	require.NoError(t, err)
+
+	for name, expected := range map[string]string{"read before": read, "no version": ""} {
+		_, err = module.ChangeClassHandover(ctx, studentpresence.ClassHandoverChange{
+			SchoolClass: "2B", Date: day, HandedOverBy: staff.ID, PresentStudentIDs: []int64{absent.ID}, ExpectedVersion: expected,
+		})
+		require.ErrorIs(t, err, readstate.ErrChanged, name)
+	}
+	handovers, err := module.ClassHandoversOn(ctx, day)
+	require.NoError(t, err)
+	require.Len(t, handovers, 1)
+	assert.Equal(t, []int64{absent.ID}, handovers[0].AbsentStudentIDs, "the child stays nicht da")
+
+	_, err = module.ChangeClassHandover(ctx, studentpresence.ClassHandoverChange{
+		SchoolClass: "2b", Date: day, HandedOverBy: staff.ID, PresentStudentIDs: []int64{absent.ID},
+		ExpectedVersion: handoverVersion(t, ctx, module, "2b", day),
+	})
+	require.NoError(t, err, "the current version replaces the handover")
 }
 
 // Parents and children must share one statement snapshot so a concurrent
@@ -225,10 +288,11 @@ func TestClassHandoversReadSingleSnapshot(t *testing.T) {
 	_, err = module.ChangeClassHandover(ctx, studentpresence.ClassHandoverChange{
 		SchoolClass: "3c", Date: day, HandedOverBy: staff.ID,
 		PresentStudentIDs: []int64{second.ID, first.ID}, AbsentStudentIDs: []int64{third.ID},
+		ExpectedVersion: handoverVersion(t, ctx, module, "3c", day),
 	})
 	require.NoError(t, err)
 	_, err = module.ChangeClassHandover(ctx, studentpresence.ClassHandoverChange{
-		SchoolClass: "4a", Date: day, HandedOverBy: staff.ID,
+		SchoolClass: "4a", Date: day, HandedOverBy: staff.ID, ExpectedVersion: handoverVersion(t, ctx, module, "4a", day),
 	})
 	require.NoError(t, err)
 

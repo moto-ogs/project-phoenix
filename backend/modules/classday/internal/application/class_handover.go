@@ -105,6 +105,7 @@ func (h classHandover) ChangeClassHandover(ctx context.Context, in classday.Clas
 	_, err = h.store.ChangeClassHandover(ctx, studentpresence.ClassHandoverChange{
 		SchoolClass: in.SchoolClass, Date: date, HandedOverBy: in.HandedOverBy,
 		PresentStudentIDs: in.PresentStudentIDs, AbsentStudentIDs: in.AbsentStudentIDs,
+		ExpectedVersion: in.ExpectedVersion,
 	})
 	if errors.Is(err, studentpresence.ErrClassHandoverInvalid) {
 		return fmt.Errorf("%w: %w", classday.ErrClassHandoverInvalid, err)
@@ -195,6 +196,7 @@ func (h classHandover) applyClassHandover(ctx context.Context, report *classday.
 		if err != nil {
 			return err
 		}
+		report.HandoverVersion = studentpresence.ClassHandoverVersion(stored)
 		if stored != nil {
 			handover, err := h.dayHandover(ctx, stored)
 			if err != nil {

@@ -19033,6 +19033,14 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.LockClassHandover",
+      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.LockClassHandover",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.LockGroup",
       "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.LockGroup",

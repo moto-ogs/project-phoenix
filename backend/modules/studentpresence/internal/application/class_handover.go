@@ -8,6 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // ClassHandoversOn returns the handovers of date (#4794), each assembled with
@@ -51,11 +52,43 @@ func (s *Service) ChangeClassHandover(ctx context.Context, in studentpresence.Cl
 			existed = stats.Rows > 0
 			return stats, err
 		}
-		var stats ports.Stats
-		existed, stats, err = s.store.ReplaceClassHandover(txCtx, in, class, s.now())
+		stats, err := s.checkClassHandover(txCtx, in, class)
+		if err != nil {
+			return stats, err
+		}
+		var replaceStats ports.Stats
+		existed, replaceStats, err = s.store.ReplaceClassHandover(txCtx, in, class, s.now())
+		stats.Queries += replaceStats.Queries
+		stats.Rows += replaceStats.Rows
+		stats.StatementDuration += replaceStats.StatementDuration
 		return stats, err
 	})
 	return existed, err
+}
+
+// checkClassHandover takes the lock of the class and day and refuses a
+// handover over another stored handover than the one its Lehrkraft read
+// (ADR 0311): a stale save would mark a child the class now has "nicht da"
+// as "da" again.
+func (s *Service) checkClassHandover(ctx context.Context, in studentpresence.ClassHandoverChange, class string) (ports.Stats, error) {
+	stats, err := s.store.LockClassHandover(ctx, class, in.Date)
+	if err != nil {
+		return stats, err
+	}
+	handovers, listStats, err := s.store.ListClassHandovers(ctx, in.Date)
+	stats.Queries += listStats.Queries
+	stats.Rows += listStats.Rows
+	stats.StatementDuration += listStats.StatementDuration
+	if err != nil {
+		return stats, err
+	}
+	var stored *studentpresence.ClassHandover
+	for i := range handovers {
+		if strings.ToLower(strings.TrimSpace(handovers[i].SchoolClass)) == class {
+			stored = &handovers[i]
+		}
+	}
+	return stats, readstate.Check(in.ExpectedVersion, studentpresence.ClassHandoverVersion(stored))
 }
 
 // validHandoverChildren accepts positive IDs, each child either "da" or

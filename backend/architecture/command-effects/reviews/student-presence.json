@@ -25580,6 +25580,16 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.LockClassHandover",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.LockClassHandover",
+      "reason": "Read-only target: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/adapters/postgres.Store.LockClassHandover to run its own advisory lock of the class and day in the caller's tenant transaction. The lock moved out of DeleteClassHandover so the handover's read-state check reads under it (ADR 0311, #7904); no persistent or scope effect.",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.LockGroup",
       "classification": "query",
       "effect": "query",
