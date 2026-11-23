@@ -163,8 +163,11 @@ func computeNoticeMonth(in careMonthInput, invoiced map[int64]parentbilling.Care
 	schoolIDs []int64,
 ) (reviewedMonth, careMonth, error) {
 	issued := make(map[int64]parentbilling.CareInvoice, len(invoiced))
+	in.assessed = map[int64]parentbilling.CareInvoice{}
 	for contractID, invoice := range invoiced {
-		if !noticed[contractID] {
+		if noticed[contractID] {
+			in.assessed[contractID] = invoice
+		} else {
 			issued[contractID] = invoice
 		}
 	}

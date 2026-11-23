@@ -398,10 +398,13 @@ const HoldReasonDuplicateContract = "duplicate_contract"
 // invoice or Jahresbescheid of another contract of the child bills days the
 // run would bill again. HoldReasonMealOnlyInvoice: the issued invoice of
 // the contract itself carries only its Mensa, so its care cannot be billed
-// until that invoice is cancelled.
+// until that invoice is cancelled. HoldReasonUnpricedNotice, only in a run of
+// Jahresbescheide: another contract of the child has no price, so it keeps
+// its assessment, which bills days the run would assess again (#7952).
 const (
 	HoldReasonAlreadyBilled   = "already_billed"
 	HoldReasonMealOnlyInvoice = "meal_only_invoice"
+	HoldReasonUnpricedNotice  = "unpriced_notice"
 )
 
 // Where an issued document that bills a month comes from: a monthly run or
