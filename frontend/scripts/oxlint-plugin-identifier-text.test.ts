@@ -1,4 +1,15 @@
-import { resolve } from "node:path";
+import { spawnSync } from "node:child_process";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { lintSource, removeProbeDirectories } from "./oxlint-probe";
 
@@ -77,5 +88,113 @@ describe("bff-boundary/no-numeric-identifier", () => {
     expect(reported, result.output).toEqual(
       regressions.map((line) => `void (${line});`),
     );
+  });
+
+  it("rechecks unchanged operands after changes to resolution or the wire contract", () => {
+    const root = mkdtempSync(join(tmpdir(), "identifier-lint-"));
+    try {
+      const frontend = join(root, "frontend");
+      const write = (path: string, text: string) => {
+        const file = join(frontend, path);
+        mkdirSync(dirname(file), { recursive: true });
+        writeFileSync(file, text);
+      };
+      const contract = (kind: "id" | "string") => {
+        write(
+          "../backend/api/contract/contract.json",
+          JSON.stringify({
+            routes: [],
+            types: [
+              { name: "Row", fields: [{ name: "id", schema: { kind } }] },
+            ],
+          }),
+        );
+      };
+      mkdirSync(join(frontend, "scripts"), { recursive: true });
+      for (const script of [
+        "identifier-provenance.mjs",
+        "oxlint-plugin-bff-boundary.mjs",
+      ]) {
+        copyFileSync(
+          resolve("scripts", script),
+          join(frontend, "scripts", script),
+        );
+      }
+      mkdirSync(join(frontend, "node_modules"));
+      symlinkSync(
+        resolve("node_modules/typescript"),
+        join(frontend, "node_modules/typescript"),
+        "dir",
+      );
+      write(
+        ".oxlintrc.json",
+        JSON.stringify({
+          jsPlugins: ["./scripts/oxlint-plugin-bff-boundary.mjs"],
+          rules: { "bff-boundary/no-numeric-identifier": "error" },
+        }),
+      );
+      write(
+        "tsconfig.json",
+        JSON.stringify({
+          compilerOptions: {
+            module: "ESNext",
+            moduleResolution: "Bundler",
+            noLib: true,
+            types: [],
+            paths: { "#key": ["./types/preferred", "./types/fallback"] },
+          },
+          // A new module outside the roots can still change resolution.
+          include: ["src/probe.ts"],
+        }),
+      );
+      write(
+        "src/probe.ts",
+        'import type { Key } from "#key";\ndeclare const key: Key;\nvoid Number(key);',
+      );
+      write(
+        "src/lib/contract/probe.generated.ts",
+        "export interface Row { id: string }",
+      );
+      const key =
+        'import type { Row } from "../src/lib/contract/probe.generated";\nexport type Key = Row["id"];';
+      write("types/fallback.ts", key);
+      contract("id");
+
+      const lint = (expectedStatus: number) => {
+        const result = spawnSync(
+          resolve("node_modules/.bin/oxlint"),
+          ["-f", "json", "src/probe.ts"],
+          {
+            cwd: frontend,
+            encoding: "utf8",
+            env: { ...process.env, CI: "" },
+          },
+        );
+        expect(result.status, result.stderr || result.stdout).toBe(
+          expectedStatus,
+        );
+        const { diagnostics } = JSON.parse(result.stdout) as {
+          diagnostics: { code: string }[];
+        };
+        expect(diagnostics.map(({ code }) => code)).toEqual(
+          expectedStatus ? [RULE] : [],
+        );
+      };
+      lint(1);
+      expect(
+        existsSync(
+          join(frontend, "node_modules/.cache/identifier-provenance.json"),
+        ),
+      ).toBe(true);
+      lint(1);
+      write("types/preferred.ts", "export type Key = string;");
+      lint(0);
+      write("types/preferred.ts", key);
+      lint(1);
+      contract("string");
+      lint(0);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
