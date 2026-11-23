@@ -136,7 +136,7 @@ const REVIEWED_EXPORTS: Record<string, string[]> = {
   mutate: ["mutate"],
   "config-boundaries": ["IsolatedSWRCache", "SWRSeedBoundary"],
   "scope-boundary": ["SWRScopeBoundary"],
-  "read-draft": ["useReadDraft"],
+  "read-draft": ["useDraftOn", "useReadDraft"],
   "course-waitlist-keys": ["activityWaitlistKeys", "courseWaitlistKeys"],
   "portal-keys": [
     "STUDENT_KEY_FAMILIES",
