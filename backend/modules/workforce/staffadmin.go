@@ -211,13 +211,13 @@ type StaffLookups interface {
 type StaffRecordAdmin interface {
 	UpdatePersonnelNumber(ctx context.Context, staffID int64, value, expectedVersion *string, changedByStaffID int64, note string) (*StaffProfile, error)
 	StaffStammdaten(ctx context.Context, staffID int64) (*StaffStammdaten, error)
-	UpdateStaffStammdatenPerson(ctx context.Context, staffID int64, input StammdatenPersonInput, changedByStaffID int64, note string) error
-	UpdateStaffStammdatenKontakt(ctx context.Context, staffID int64, input StammdatenKontaktInput, changedByStaffID int64, note string) error
-	UpdateStaffStammdatenArbeitsvertrag(ctx context.Context, staffID int64, input StammdatenArbeitsvertragInput, changedByStaffID int64, note string) error
-	ReplaceStaffQualificationList(ctx context.Context, staffID int64, inputs []StammdatenQualificationInput, expectedVersion *string, changedByStaffID int64, note string) error
+	UpdateStaffStammdatenPerson(ctx context.Context, staffID int64, input StammdatenPersonInput, changedByStaffID int64, note string) (string, error)
+	UpdateStaffStammdatenKontakt(ctx context.Context, staffID int64, input StammdatenKontaktInput, changedByStaffID int64, note string) (string, error)
+	UpdateStaffStammdatenArbeitsvertrag(ctx context.Context, staffID int64, input StammdatenArbeitsvertragInput, changedByStaffID int64, note string) (string, error)
+	ReplaceStaffQualificationList(ctx context.Context, staffID int64, inputs []StammdatenQualificationInput, expectedVersion *string, changedByStaffID int64, note string) (string, error)
 	StaffFinancialMasked(ctx context.Context, staffID, actorAccountID int64, actorRole string) (*StaffFinancialMasked, error)
 	RevealStaffFinancial(ctx context.Context, staffID, actorAccountID int64, actorRole string) (*StaffFinancialPlain, error)
-	UpdateStaffFinancial(ctx context.Context, staffID int64, input StammdatenFinancialInput, changedByAccountID int64, note string) error
+	UpdateStaffFinancial(ctx context.Context, staffID int64, input StammdatenFinancialInput, changedByAccountID int64, note string) (string, error)
 }
 
 // StaffDirectory resolves staff members and administers their personnel

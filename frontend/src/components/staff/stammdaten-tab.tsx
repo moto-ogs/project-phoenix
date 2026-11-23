@@ -181,14 +181,15 @@ export function StammdatenTab({
 
   // Die maskierten Werte werden nur mit staff:financial angefragt: ohne die
   // Berechtigung bleibt der Schlüssel null und es geht keine Anfrage raus.
+  const financialRead = useSWRAuth(
+    canViewFinancial ? staffKeys.stammdatenFinancial(staffId) : null,
+    () => staffStammdatenService.getFinancial(staffId),
+  );
   const {
     data: financial,
     error: financialError,
     mutate: mutateFinancial,
-  } = useSWRAuth(
-    canViewFinancial ? staffKeys.stammdatenFinancial(staffId) : null,
-    () => staffStammdatenService.getFinancial(staffId),
-  );
+  } = financialRead;
 
   // Anzeigen-Zustand der Bankdaten (Lesemodus).
   const [revealed, setRevealed] = useState<StaffFinancialPlain | null>(null);
@@ -221,7 +222,8 @@ export function StammdatenTab({
   // Der gelesene Stand je Abschnitt, auf dem der Entwurf ruht (ADR 0311):
   // genommen, wenn das Bearbeiten beginnt, und mit dem Speichern gesendet.
   // Ein späteres Neuladen ändert ihn nicht; der Server lehnt einen
-  // inzwischen geänderten Abschnitt ab.
+  // inzwischen geänderten Abschnitt ab. Nach einem Speichern gilt der Stand,
+  // den der Server dafür antwortet.
   const tokensRef = useRef(new Map<string, string>());
   // Ladefehler stehen dort, wo die Daten fehlen, mit Wiederholen (#2514).
   const payrollLoadError = useSwrLoadError(
@@ -410,8 +412,6 @@ export function StammdatenTab({
   const handleSave = async () => {
     if (!draft) return;
     const reason = note.trim();
-    // Der Rückgabewert der einzelnen Dienste ist hier ohne Belang — gespeichert
-    // wird der Reiter als Ganzes, und die Fläche lädt danach ohnehin neu.
     const steps: {
       label: string;
       /** Was die Meldung nennt, mit Artikel (ADR 0006). */
@@ -419,7 +419,8 @@ export function StammdatenTab({
       event: string;
       /** Der gesendete Stand, gemerkt nach Erfolg. */
       saved: string;
-      run: () => Promise<unknown>;
+      /** Speichert und antwortet den gespeicherten Stand (ADR 0311). */
+      run: () => Promise<string>;
     }[] = [];
     const section = (label: string) => `die Änderung an „${label}“`;
     const token = (label: string) => tokensRef.current.get(label) ?? "";
@@ -503,8 +504,7 @@ export function StammdatenTab({
             reason,
             token("Personalnummer"),
           );
-          // Ein zweites Speichern ruht auf der gespeicherten Nummer.
-          tokensRef.current.set("Personalnummer", saved.version);
+          return saved.version;
         },
       });
     }
@@ -546,12 +546,12 @@ export function StammdatenTab({
     // Änderungen bleiben im offenen Entwurf, und nichts scheitert still.
     let failure: { label: string; object: string; error: unknown } | null =
       null;
-    const savedNow: string[] = [];
     for (const step of steps) {
       try {
-        await step.run();
+        // Ein zweites Speichern im selben Bearbeiten ruht auf dem Stand,
+        // den der Server für diesen Abschnitt antwortet.
+        tokensRef.current.set(step.label, await step.run());
         savedSectionsRef.current.set(step.label, step.saved);
-        savedNow.push(step.label);
       } catch (err) {
         logger.error(step.event, {
           error: err instanceof Error ? err.message : String(err),
@@ -576,7 +576,7 @@ export function StammdatenTab({
           Promise.all([
             canViewSections ? revalidateOrThrow(stammdatenRead) : null,
             canManagePayroll ? revalidateOrThrow(payrollRead) : null,
-            canViewFinancial ? mutateFinancial() : null,
+            canViewFinancial ? revalidateOrThrow(financialRead) : null,
           ]),
       });
       return;
@@ -587,29 +587,7 @@ export function StammdatenTab({
     void mutatePayroll();
     void mutateFinancial();
     setRevealed(null);
-    const stored = Promise.resolve(mutateStammdaten());
-    if (failure && savedNow.length > 0) {
-      // Der Entwurf bleibt offen. Ein gespeicherter Abschnitt ruht danach
-      // auf dem neu gelesenen Stand, solange der genau das Gespeicherte
-      // zeigt; hat ihn inzwischen jemand anders geändert, bleibt der alte
-      // Stand und ein erneutes Speichern wird abgelehnt.
-      void stored.then((fresh) => {
-        if (!fresh) return;
-        const read = buildDraft(fresh, personnelNumber);
-        const shown: Record<string, [unknown, string]> = {
-          Person: [toPersonPayload(read), fresh.versions.person],
-          Kontakt: [toKontaktPayload(read), fresh.versions.kontakt],
-          Arbeitsvertrag: [toArbeitsvertragPayload(read), fresh.versions.arbeitsvertrag],
-          Qualifikationen: [toQualifikationenPayload(read), fresh.versions.qualifikationen],
-        };
-        for (const label of savedNow) {
-          const entry = shown[label];
-          if (entry && JSON.stringify(entry[0]) === savedSectionsRef.current.get(label)) {
-            tokensRef.current.set(label, entry[1]);
-          }
-        }
-      });
-    }
+    void mutateStammdaten();
 
     if (failure) {
       await formErrors.show(failure.error, {

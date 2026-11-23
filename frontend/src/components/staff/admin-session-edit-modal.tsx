@@ -49,6 +49,11 @@ interface AdminSessionEditModalProps {
   readonly onClose: () => void;
   /** Reloads the table; resolves when it was read again. */
   readonly onSaved: () => unknown;
+  /**
+   * Reads the sessions the dialog edits again after a refusal; rejects when
+   * the read fails, so the refusal shows the load error (ADR 0311, rule 6).
+   */
+  readonly onReload: () => Promise<unknown>;
 }
 
 export function AdminSessionEditModal({
@@ -59,6 +64,7 @@ export function AdminSessionEditModal({
   session,
   onClose,
   onSaved,
+  onReload,
 }: AdminSessionEditModalProps) {
   const breaks = useMemo(
     () =>
@@ -254,7 +260,7 @@ export function AdminSessionEditModal({
         await refusals.show(err, {
           object: "die Arbeitszeit",
           reload: async () => {
-            await onSaved();
+            await Promise.all([onReload(), onSaved()]);
           },
         });
         return;

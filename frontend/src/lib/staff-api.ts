@@ -1702,7 +1702,10 @@ class StaffPayrollNumberService {
         errorMessage: "Personalnummer konnte nicht gespeichert werden",
       },
     );
-    return { personnelNumber: number.personnel_number, version: number.version };
+    return {
+      personnelNumber: number.personnel_number,
+      version: number.version,
+    };
   }
 }
 
@@ -1861,15 +1864,18 @@ class StaffStammdatenService {
       | "qualifikationen"
       | "bank-steuer",
     body: Record<string, unknown> & { expected_version: string },
-  ): Promise<void> {
+  ): Promise<string> {
     // One route per section; every request type of them takes `note` and
-    // the section's version of the read the form showed (ADR 0311).
+    // the section's version of the read the form showed (ADR 0311). The
+    // answer is the section's version as stored now: the next save of the
+    // same editing sends it.
     const route = `PUT /api/staff/{id}/stammdaten/${section}` as const;
-    await bffJson("tenant", route, {
+    const saved = await bffJson("tenant", route, {
       params: { id: staffId },
       body,
       errorMessage: "Stammdaten konnten nicht gespeichert werden",
     });
+    return saved.version;
   }
 
   async updatePerson(
@@ -1877,8 +1883,8 @@ class StaffStammdatenService {
     person: StammdatenPerson,
     note: string,
     expectedVersion: string,
-  ): Promise<void> {
-    await this.putSection(staffId, "person", {
+  ): Promise<string> {
+    return this.putSection(staffId, "person", {
       expected_version: expectedVersion,
       first_name: person.firstName,
       last_name: person.lastName,
@@ -1893,8 +1899,8 @@ class StaffStammdatenService {
     kontakt: StammdatenKontakt,
     note: string,
     expectedVersion: string,
-  ): Promise<void> {
-    await this.putSection(staffId, "kontakt", {
+  ): Promise<string> {
+    return this.putSection(staffId, "kontakt", {
       expected_version: expectedVersion,
       address_street: kontakt.addressStreet,
       address_postal_code: kontakt.addressPostalCode,
@@ -1912,8 +1918,8 @@ class StaffStammdatenService {
     vertrag: StammdatenArbeitsvertrag,
     note: string,
     expectedVersion: string,
-  ): Promise<void> {
-    await this.putSection(staffId, "arbeitsvertrag", {
+  ): Promise<string> {
+    return this.putSection(staffId, "arbeitsvertrag", {
       expected_version: expectedVersion,
       entry_date: vertrag.entryDate,
       contract_end_date: vertrag.contractEndDate,
@@ -1929,8 +1935,8 @@ class StaffStammdatenService {
     qualifikationen: readonly StammdatenQualifikation[],
     note: string,
     expectedVersion: string,
-  ): Promise<void> {
-    await this.putSection(staffId, "qualifikationen", {
+  ): Promise<string> {
+    return this.putSection(staffId, "qualifikationen", {
       expected_version: expectedVersion,
       qualifikationen: qualifikationen.map((q) => ({
         ...(q.id !== null ? { id: q.id } : {}),
@@ -1978,8 +1984,8 @@ class StaffStammdatenService {
     financial: StaffFinancialPlain,
     note: string,
     expectedVersion: string,
-  ): Promise<void> {
-    await this.putSection(staffId, "bank-steuer", {
+  ): Promise<string> {
+    return this.putSection(staffId, "bank-steuer", {
       expected_version: expectedVersion,
       iban: financial.iban,
       tax_id: financial.taxId,

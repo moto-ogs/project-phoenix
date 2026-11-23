@@ -1467,6 +1467,17 @@ export interface StammdatenArbeitsvertragRequest {
   note?: string;
 }
 
+/** Go: timetracking.StammdatenSectionAck */
+export interface StammdatenSectionAck {
+  staff_id: string;
+  version: string;
+}
+
+export const StammdatenSectionAckSchema: z.ZodType<StammdatenSectionAck, unknown> = object<StammdatenSectionAck>({
+  staff_id: int64String,
+  version: str,
+});
+
 /** Go: timetracking.StammdatenFinancialRequest */
 export interface StammdatenFinancialRequest {
   iban?: string | null;
@@ -2192,35 +2203,35 @@ export const routes = {
     pattern: "/api/staff/{id}/stammdaten/arbeitsvertrag",
     portals: ["tenant"],
     request: requestBody<StammdatenArbeitsvertragRequest>(),
-    response: success(StammdatenAckSchema),
+    response: success(StammdatenSectionAckSchema),
   },
   "PUT /api/staff/{id}/stammdaten/bank-steuer": {
     method: "PUT",
     pattern: "/api/staff/{id}/stammdaten/bank-steuer",
     portals: ["tenant"],
     request: requestBody<StammdatenFinancialRequest>(),
-    response: success(StammdatenAckSchema),
+    response: success(StammdatenSectionAckSchema),
   },
   "PUT /api/staff/{id}/stammdaten/kontakt": {
     method: "PUT",
     pattern: "/api/staff/{id}/stammdaten/kontakt",
     portals: ["tenant"],
     request: requestBody<StammdatenKontaktRequest>(),
-    response: success(StammdatenAckSchema),
+    response: success(StammdatenSectionAckSchema),
   },
   "PUT /api/staff/{id}/stammdaten/person": {
     method: "PUT",
     pattern: "/api/staff/{id}/stammdaten/person",
     portals: ["tenant"],
     request: requestBody<StammdatenPersonRequest>(),
-    response: success(StammdatenAckSchema),
+    response: success(StammdatenSectionAckSchema),
   },
   "PUT /api/staff/{id}/stammdaten/qualifikationen": {
     method: "PUT",
     pattern: "/api/staff/{id}/stammdaten/qualifikationen",
     portals: ["tenant"],
     request: requestBody<StammdatenQualifikationenRequest>(),
-    response: success(StammdatenAckSchema),
+    response: success(StammdatenSectionAckSchema),
   },
   "PUT /api/staff/{id}/time-tracking/sessions/{sessionId}": {
     method: "PUT",

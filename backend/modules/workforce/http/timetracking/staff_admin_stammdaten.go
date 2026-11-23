@@ -265,17 +265,24 @@ func newStammdatenResponse(data *workforce.StaffStammdaten, types []workforce.Qu
 	return resp
 }
 
-// StammdatenAck is the uniform PUT response; the tab refetches the section
-// afterwards, so the ack carries no data.
+// StammdatenAck answers a write that shows no read state (a deleted
+// document).
 type StammdatenAck struct {
 	StaffID ident.ID `json:"staff_id"`
+}
+
+// StammdatenSectionAck answers a section write with the section's token over
+// what is stored now (ADR 0311): the next save in the same editing sends it.
+type StammdatenSectionAck struct {
+	StaffID ident.ID `json:"staff_id"`
+	Version string   `json:"version"`
 }
 
 // runStammdatenUpdate is the shared PUT shape for non-financial sections:
 // parse id, resolve the acting staff member, run the section update, classify
 // errors. Financial writers can be external payroll accounts without a staff
 // mapping, so their endpoint resolves its account actor separately.
-func (rs *StaffAdminResource) runStammdatenUpdate(w http.ResponseWriter, r *http.Request, update func(staffID, changedBy int64) error) {
+func (rs *StaffAdminResource) runStammdatenUpdate(w http.ResponseWriter, r *http.Request, update func(staffID, changedBy int64) (string, error)) {
 	id, ok := common.ParseInt64IDWithError(w, r, "id", common.MsgInvalidStaffID)
 	if !ok {
 		return
@@ -285,7 +292,8 @@ func (rs *StaffAdminResource) runStammdatenUpdate(w http.ResponseWriter, r *http
 		common.RenderError(w, r, ownStaffError(err))
 		return
 	}
-	if err := update(id, changedBy); err != nil {
+	version, err := update(id, changedBy)
+	if err != nil {
 		switch {
 		case errors.Is(err, workforce.ErrStaffStammdatenInvalid):
 			common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeWorkforceStammdatenInvalid))
@@ -296,7 +304,7 @@ func (rs *StaffAdminResource) runStammdatenUpdate(w http.ResponseWriter, r *http
 		}
 		return
 	}
-	common.Respond(w, r, http.StatusOK, &StammdatenAck{StaffID: ident.ID(id)}, "Stammdaten updated successfully")
+	common.Respond(w, r, http.StatusOK, &StammdatenSectionAck{StaffID: ident.ID(id), Version: version}, "Stammdaten updated successfully")
 }
 
 func (rs *StaffAdminResource) updateStammdatenPerson(w http.ResponseWriter, r *http.Request) {
@@ -305,7 +313,7 @@ func (rs *StaffAdminResource) updateStammdatenPerson(w http.ResponseWriter, r *h
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	rs.runStammdatenUpdate(w, r, func(staffID, changedBy int64) error {
+	rs.runStammdatenUpdate(w, r, func(staffID, changedBy int64) (string, error) {
 		return rs.PersonService.UpdateStaffStammdatenPerson(r.Context(), staffID, workforce.StammdatenPersonInput{
 			FirstName: req.FirstName,
 			LastName:  req.LastName,
@@ -323,7 +331,7 @@ func (rs *StaffAdminResource) updateStammdatenKontakt(w http.ResponseWriter, r *
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	rs.runStammdatenUpdate(w, r, func(staffID, changedBy int64) error {
+	rs.runStammdatenUpdate(w, r, func(staffID, changedBy int64) (string, error) {
 		return rs.PersonService.UpdateStaffStammdatenKontakt(r.Context(), staffID, workforce.StammdatenKontaktInput{
 			AddressStreet:         req.AddressStreet,
 			AddressPostalCode:     req.AddressPostalCode,
@@ -343,7 +351,7 @@ func (rs *StaffAdminResource) updateStammdatenArbeitsvertrag(w http.ResponseWrit
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	rs.runStammdatenUpdate(w, r, func(staffID, changedBy int64) error {
+	rs.runStammdatenUpdate(w, r, func(staffID, changedBy int64) (string, error) {
 		return rs.PersonService.UpdateStaffStammdatenArbeitsvertrag(r.Context(), staffID, workforce.StammdatenArbeitsvertragInput{
 			EntryDate:        optionalDateString(req.EntryDate),
 			ContractEndDate:  optionalDateString(req.ContractEndDate),
@@ -361,7 +369,7 @@ func (rs *StaffAdminResource) updateStammdatenQualifikationen(w http.ResponseWri
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	rs.runStammdatenUpdate(w, r, func(staffID, changedBy int64) error {
+	rs.runStammdatenUpdate(w, r, func(staffID, changedBy int64) (string, error) {
 		inputs := make([]workforce.StammdatenQualificationInput, 0, len(req.Qualifikationen))
 		for _, q := range req.Qualifikationen {
 			var id, typeID *int64
@@ -488,12 +496,13 @@ func (rs *StaffAdminResource) updateStammdatenFinancial(w http.ResponseWriter, r
 		common.RenderError(w, r, common.ErrorUnauthorized(err))
 		return
 	}
-	if err := rs.PersonService.UpdateStaffFinancial(r.Context(), staffID, workforce.StammdatenFinancialInput{
+	version, err := rs.PersonService.UpdateStaffFinancial(r.Context(), staffID, workforce.StammdatenFinancialInput{
 		IBAN:                 req.IBAN,
 		TaxID:                req.TaxID,
 		SocialSecurityNumber: req.SocialSecurityNumber,
 		ExpectedVersion:      &req.ExpectedVersion,
-	}, accountID, req.Note); err != nil {
+	}, accountID, req.Note)
+	if err != nil {
 		switch {
 		case errors.Is(err, workforce.ErrStaffStammdatenInvalid):
 			common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeWorkforceStammdatenInvalid))
@@ -506,5 +515,5 @@ func (rs *StaffAdminResource) updateStammdatenFinancial(w http.ResponseWriter, r
 		}
 		return
 	}
-	common.Respond(w, r, http.StatusOK, &StammdatenAck{StaffID: ident.ID(staffID)}, "Stammdaten updated successfully")
+	common.Respond(w, r, http.StatusOK, &StammdatenSectionAck{StaffID: ident.ID(staffID), Version: version}, "Stammdaten updated successfully")
 }

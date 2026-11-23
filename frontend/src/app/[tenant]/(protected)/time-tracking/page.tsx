@@ -113,6 +113,7 @@ import {
   type PeriodMetrics,
 } from "~/lib/hooks/use-period-metrics";
 import {
+  revalidateOrThrow,
   useLiveRefreshInterval,
   useSWRAuth,
   useTenantMutate,
@@ -1586,7 +1587,10 @@ function OwnZeiterfassungSection({
     date: Date,
     session: WorkSessionHistory | null,
     absence: StaffAbsence | null,
-    laborDay?: WorkDayLaborHint,
+    laborDay: WorkDayLaborHint | undefined,
+    /** Liest die Tabelle neu, aus der der Block stammt; scheitert das
+     *  Lesen, lehnt es ab (ADR 0311, Regel 6). */
+    reloadDay: () => Promise<unknown>,
   ) => void;
   /** Ein offener Block verändert Tages- und Wochensummen fortlaufend. */
   readonly isSessionOpen: boolean;
@@ -1653,12 +1657,7 @@ function OwnZeiterfassungSection({
   // Dedicated table-range fetches. Independent from the WeekChart's
   // 10-workday history fetch, so navigating the table (especially in
   // month mode) does not enlarge the chart's data window.
-  const {
-    data: tableData,
-    isLoading: tableLoading,
-    error: tableError,
-    mutate: mutateTable,
-  } = useSWRAuth<HistoryResult>(
+  const tableRead = useSWRAuth<HistoryResult>(
     timeTrackingKeys.table(tableHistoryFromKey, tableHistoryToKey),
     () =>
       timeTrackingService.getHistory(tableHistoryFromKey, tableHistoryToKey),
@@ -1668,6 +1667,12 @@ function OwnZeiterfassungSection({
       refreshInterval: isSessionOpen ? openMonthRefreshMs : 0,
     },
   );
+  const {
+    data: tableData,
+    isLoading: tableLoading,
+    error: tableError,
+    mutate: mutateTable,
+  } = tableRead;
   const tableHistory = useMemo(() => tableData?.sessions ?? [], [tableData]);
 
   const {
@@ -1897,7 +1902,9 @@ function OwnZeiterfassungSection({
     const laborDay = (tableData?.laborDays ?? []).find(
       (day) => day.date === workday,
     );
-    onEditDay(date, session, absence, laborDay);
+    onEditDay(date, session, absence, laborDay, () =>
+      revalidateOrThrow(tableRead),
+    );
   };
 
   return (
@@ -1937,6 +1944,7 @@ function OwnZeiterfassungSection({
               from={visibleFrom}
               to={visibleTo}
               sessions={adaptedSessions}
+              reloadSessions={() => revalidateOrThrow(tableRead)}
               absences={adaptedAbsences}
               absencesUnresolved={
                 tableAbsencesLoading ||
@@ -3283,6 +3291,8 @@ function TimeTrackingContent() {
     session: WorkSessionHistory | null;
     absence: StaffAbsence | null;
     laborDay?: WorkDayLaborHint;
+    /** Die Lesung, aus der der Block stammt (ADR 0311, Regel 6). */
+    reloadDay: () => Promise<unknown>;
   } | null>(null);
   const [absenceModalOpen, setAbsenceModalOpen] = useState(false);
   const handleCloseEditModal = useCallback(() => setEditModal(null), []);
@@ -4113,8 +4123,12 @@ function TimeTrackingContent() {
             session={editModal?.session ?? null}
             date={editModal?.date ?? null}
             onSave={handleEditSave}
+            // Nach einer Ablehnung: die Tabelle, aus der der Block stammt,
+            // lehnt ab, wenn sie nicht neu lädt; die übrigen Ansichten
+            // laden mit.
             onReload={() =>
               Promise.all([
+                editModal?.reloadDay(),
                 mutateCurrentSession(),
                 mutateHistory(),
                 refreshTableData(),
@@ -4348,8 +4362,8 @@ function TimeTrackingContent() {
             ? tenantPath(workTimeModelPath(ownStaffId))
             : undefined
         }
-        onEditDay={(date, session, absence, laborDay) =>
-          setEditModal({ date, session, absence, laborDay })
+        onEditDay={(date, session, absence, laborDay, reloadDay) =>
+          setEditModal({ date, session, absence, laborDay, reloadDay })
         }
       />
     </TenantPage>

@@ -15,8 +15,7 @@ func (seedStaffMasterDataStep) Run(_ context.Context, rt *Runtime) error {
 		return fmt.Errorf("staff master-data prerequisites not available")
 	}
 	rt.Client.BindAuth(rt.TenantAuth)
-	path := fmt.Sprintf("/api/staff/%d/stammdaten/kontakt", staffIDs[0])
-	if _, err := rt.Client.Put(path, map[string]any{
+	if err := putStammdatenSection(rt.Client, staffIDs[0], "kontakt", map[string]any{
 		"address_street":          "Musterweg 12",
 		"address_postal_code":     "49074",
 		"address_city":            "Osnabrück",

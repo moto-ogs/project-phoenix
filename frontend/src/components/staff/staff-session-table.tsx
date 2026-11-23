@@ -269,6 +269,7 @@ export function StaffSessionTable({
   fetchEdits,
   laborDays,
   weeklySummaries,
+  reloadSessions,
 }: {
   readonly staffId: string;
   readonly from: Date;
@@ -335,6 +336,10 @@ export function StaffSessionTable({
   // read together. Omitted on the staff self-view. Does NOT feed the Soll/Saldo
   // math (that stays the Arbeitszeitmodell, #1842).
   readonly plannedShifts?: readonly StaffShift[];
+  // Reads `sessions` again and rejects when that read fails: after a refused
+  // correction in the bundled dialog the table shows the stored block, or
+  // the load error (ADR 0311, rule 6).
+  readonly reloadSessions: () => Promise<unknown>;
   // Optional external edit handler. When provided, the SquarePen click
   // delegates to the caller instead of opening the bundled
   // AdminSessionEditModal. Used by /time-tracking where the MA-side modal
@@ -1259,6 +1264,7 @@ export function StaffSessionTable({
           session={editModal.session}
           onClose={() => setEditModal(null)}
           onSaved={handleSaved}
+          onReload={reloadSessions}
         />
       )}
     </div>

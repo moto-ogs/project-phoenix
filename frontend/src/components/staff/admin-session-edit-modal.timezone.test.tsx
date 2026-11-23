@@ -7,6 +7,9 @@ import { setTestClock } from "~/test/clock";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { AdminSessionEditModal } from "./admin-session-edit-modal";
 
+// The read of the shown sessions; it answers (ADR 0311, rule 6).
+const reloadSessions = () => Promise.resolve();
+
 // The dialog shows a changed-since-read refusal as a toast (ADR 0311).
 const renderWithToasts = (ui: Parameters<typeof render>[0]) =>
   render(ui, { wrapper: ToastProvider });
@@ -62,6 +65,7 @@ const session: StaffHistorySession = {
 function renderModal(mode: "edit" | "nachtragen") {
   renderWithToasts(
     <AdminSessionEditModal
+      onReload={reloadSessions}
       isOpen
       mode={mode}
       staffId="7"

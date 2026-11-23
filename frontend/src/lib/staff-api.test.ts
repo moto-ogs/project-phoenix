@@ -3150,9 +3150,14 @@ describe("staff-api", () => {
 
     it("writes the person section in the backend wire shape", async () => {
       const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockResolvedValue({ ok: true, status: 204 } as Response);
+      // The section answers its token over the stored values (ADR 0311).
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({ data: { staff_id: "7", version: "v-saved" } }),
+      } as unknown as Response);
 
-      await staffStammdatenService.updatePerson(
+      const answered = await staffStammdatenService.updatePerson(
         "7",
         {
           firstName: "Max",
@@ -3163,6 +3168,7 @@ describe("staff-api", () => {
         "Namensänderung",
         "v-read",
       );
+      expect(answered).toBe("v-saved");
 
       const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
       expect(url).toBe("/api/staff/7/stammdaten/person");
@@ -3179,9 +3185,14 @@ describe("staff-api", () => {
 
     it("writes the kontakt section in the backend wire shape", async () => {
       const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockResolvedValue({ ok: true, status: 204 } as Response);
+      // The section answers its token over the stored values (ADR 0311).
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({ data: { staff_id: "7", version: "v-saved" } }),
+      } as unknown as Response);
 
-      await staffStammdatenService.updateKontakt(
+      const answered = await staffStammdatenService.updateKontakt(
         "7",
         {
           addressStreet: "Musterweg 1",
@@ -3195,6 +3206,7 @@ describe("staff-api", () => {
         "Umzug",
         "v-read",
       );
+      expect(answered).toBe("v-saved");
 
       const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
       expect(url).toBe("/api/staff/7/stammdaten/kontakt");
@@ -3213,9 +3225,14 @@ describe("staff-api", () => {
 
     it("writes the arbeitsvertrag section in the backend wire shape", async () => {
       const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockResolvedValue({ ok: true, status: 204 } as Response);
+      // The section answers its token over the stored values (ADR 0311).
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({ data: { staff_id: "7", version: "v-saved" } }),
+      } as unknown as Response);
 
-      await staffStammdatenService.updateArbeitsvertrag(
+      const answered = await staffStammdatenService.updateArbeitsvertrag(
         "7",
         {
           entryDate: "2024-08-01",
@@ -3227,6 +3244,7 @@ describe("staff-api", () => {
         "Vertrag",
         "v-read",
       );
+      expect(answered).toBe("v-saved");
 
       const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
       expect(url).toBe("/api/staff/7/stammdaten/arbeitsvertrag");
@@ -3243,9 +3261,14 @@ describe("staff-api", () => {
 
     it("sends the full qualification list with the row ids and kinds (#4808)", async () => {
       const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockResolvedValue({ ok: true, status: 204 } as Response);
+      // The section answers its token over the stored values (ADR 0311).
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({ data: { staff_id: "7", version: "v-saved" } }),
+      } as unknown as Response);
 
-      await staffStammdatenService.updateQualifikationen(
+      const answered = await staffStammdatenService.updateQualifikationen(
         "7",
         [
           {
@@ -3266,6 +3289,7 @@ describe("staff-api", () => {
         "Nachweise",
         "v-read",
       );
+      expect(answered).toBe("v-saved");
 
       const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
       expect(url).toBe("/api/staff/7/stammdaten/qualifikationen");
@@ -3456,9 +3480,14 @@ describe("staff-api", () => {
 
     it("writes the bank & tax section in the backend wire shape", async () => {
       const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockResolvedValue({ ok: true, status: 204 } as Response);
+      // The section answers its token over the stored values (ADR 0311).
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({ data: { staff_id: "7", version: "v-saved" } }),
+      } as unknown as Response);
 
-      await staffStammdatenService.updateFinancial(
+      const answered = await staffStammdatenService.updateFinancial(
         "7",
         {
           iban: "DE89370400440532013000",
@@ -3468,6 +3497,7 @@ describe("staff-api", () => {
         "Lohnbüro",
         "v-read",
       );
+      expect(answered).toBe("v-saved");
 
       const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
       expect(url).toBe("/api/staff/7/stammdaten/bank-steuer");

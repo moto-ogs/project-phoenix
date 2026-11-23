@@ -51,6 +51,7 @@ export function CustomAllowanceEditForm({
   summary,
   onCancel,
   onSaved,
+  onReload,
 }: {
   readonly staffId: string;
   readonly year: number;
@@ -59,6 +60,11 @@ export function CustomAllowanceEditForm({
   readonly onCancel: () => void;
   /** Closes the form and reloads; never rejects (#6652). */
   readonly onSaved: RefreshAfterWrite;
+  /**
+   * Reads the stored claims again after a refusal; rejects when the read
+   * fails, so the refusal shows the load error (ADR 0311, rule 6).
+   */
+  readonly onReload: () => Promise<unknown>;
 }) {
   const [days, setDays] = useState(formatInput(summary.entitledDays));
   // Der Anspruch, den das Formular beim Öffnen zeigte (ADR 0311); ein
@@ -121,7 +127,7 @@ export function CustomAllowanceEditForm({
         onCancel();
         await refusals.show(cause, {
           object: "die Änderung am Anspruch",
-          reload: () => onSaved(),
+          reload: onReload,
         });
         return;
       }

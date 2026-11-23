@@ -22,11 +22,11 @@ func TestStaffQualificationsRefuseAStaleRead(t *testing.T) {
 	require.NoError(t, err)
 
 	// A colleague records a proof after the read.
-	err = testpkg.TenantCommand5(t, s.ctx, s.db, s.svc.ReplaceStaffQualificationList, staff.ID,
+	_, err = testpkg.TenantQuery5(t, s.ctx, s.db, s.svc.ReplaceStaffQualificationList, staff.ID,
 		[]workforce.StammdatenQualificationInput{{Name: "Erste Hilfe"}}, (*string)(nil), actor.ID, "Kollegin")
 	require.NoError(t, err)
 	for _, stale := range []string{read.Versions.Qualifikationen, ""} {
-		err = testpkg.TenantCommand5(t, s.ctx, s.db, s.svc.ReplaceStaffQualificationList, staff.ID,
+		_, err = testpkg.TenantQuery5(t, s.ctx, s.db, s.svc.ReplaceStaffQualificationList, staff.ID,
 			[]workforce.StammdatenQualificationInput{{Name: "Schwimmschein"}}, &stale, actor.ID, "Ich")
 		require.ErrorIs(t, err, readstate.ErrChanged, "token %q", stale)
 	}
@@ -36,7 +36,31 @@ func TestStaffQualificationsRefuseAStaleRead(t *testing.T) {
 	assert.Equal(t, "Erste Hilfe", current.Qualifications[0].Name, "nothing is written")
 	require.Len(t, s.auditRows(t, staff.ID), 1)
 
-	err = testpkg.TenantCommand5(t, s.ctx, s.db, s.svc.ReplaceStaffQualificationList, staff.ID,
+	_, err = testpkg.TenantQuery5(t, s.ctx, s.db, s.svc.ReplaceStaffQualificationList, staff.ID,
 		[]workforce.StammdatenQualificationInput{{Name: "Schwimmschein"}}, &current.Versions.Qualifikationen, actor.ID, "Ich")
 	require.NoError(t, err)
+}
+
+// A saved list answers the token of the rows as stored, with the ids the new
+// rows got (ADR 0311, rule 5): the next save of the same editing sends it and
+// is not refused.
+func TestStaffQualificationsAnswerTheStoredToken(t *testing.T) {
+	t.Parallel()
+
+	s := newStammdatenScenario(t)
+	staff := testpkg.CreateTestStaff(t, s.db, "Stamm", "Antwort")
+	actor := testpkg.CreateTestStaff(t, s.db, "Stamm", "Leitung")
+	read, err := testpkg.TenantQuery1(t, s.ctx, s.db, s.svc.StaffStammdaten, staff.ID)
+	require.NoError(t, err)
+
+	answered, err := testpkg.TenantQuery5(t, s.ctx, s.db, s.svc.ReplaceStaffQualificationList, staff.ID,
+		[]workforce.StammdatenQualificationInput{{Name: " Erste Hilfe "}}, &read.Versions.Qualifikationen, actor.ID, "Neu")
+	require.NoError(t, err)
+	stored, err := testpkg.TenantQuery1(t, s.ctx, s.db, s.svc.StaffStammdaten, staff.ID)
+	require.NoError(t, err)
+	assert.Equal(t, stored.Versions.Qualifikationen, answered, "the answer covers the stored row with its new id")
+
+	_, err = testpkg.TenantQuery5(t, s.ctx, s.db, s.svc.ReplaceStaffQualificationList, staff.ID,
+		[]workforce.StammdatenQualificationInput{{Name: "Erste Hilfe"}, {Name: "Schwimmschein"}}, &answered, actor.ID, "Dazu")
+	require.NoError(t, err, "the second save rests on the answer")
 }

@@ -21847,7 +21847,7 @@
       },
       "response": {
         "kind": "ref",
-        "ref": "StammdatenAck"
+        "ref": "StammdatenSectionAck"
       }
     },
     {
@@ -21862,7 +21862,7 @@
       },
       "response": {
         "kind": "ref",
-        "ref": "StammdatenAck"
+        "ref": "StammdatenSectionAck"
       }
     },
     {
@@ -21877,7 +21877,7 @@
       },
       "response": {
         "kind": "ref",
-        "ref": "StammdatenAck"
+        "ref": "StammdatenSectionAck"
       }
     },
     {
@@ -21892,7 +21892,7 @@
       },
       "response": {
         "kind": "ref",
-        "ref": "StammdatenAck"
+        "ref": "StammdatenSectionAck"
       }
     },
     {
@@ -21907,7 +21907,7 @@
       },
       "response": {
         "kind": "ref",
-        "ref": "StammdatenAck"
+        "ref": "StammdatenSectionAck"
       }
     },
     {
@@ -97316,6 +97316,24 @@
           "schema": {
             "kind": "ref",
             "ref": "StammdatenVersionsResponse"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StammdatenSectionAck",
+      "go_type": "timetracking.StammdatenSectionAck",
+      "fields": [
+        {
+          "name": "staff_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
