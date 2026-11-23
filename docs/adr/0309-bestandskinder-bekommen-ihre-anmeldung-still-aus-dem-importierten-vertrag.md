@@ -404,7 +404,7 @@ erreicht.
   Der Plan hält solche Zeilen selbst zurück (Abschnitt 1); die Anmeldung
   lehnt sie zusätzlich ab.
 - **Eine befristete Buchung auf einem direkt verknüpften Roster bleibt
-  zurück** (`roster_bound`; aufgehoben durch ADR 0311, #7908). Benennt ein Angebot sein Roster über die
+  zurück** (`roster_bound`; aufgehoben durch ADR 0312, #7908). Benennt ein Angebot sein Roster über die
   direkte Verknüpfung `ActivityGroupID`, schreibt Care Plan die Roster-Zeile
   des Kindes bis zum Ende der Phase, auch wenn die Buchung früher endet
   (Modul mit letztem Tag, Vertrag mit Ende). Das Kind bliebe auf dem Roster
@@ -1023,7 +1023,7 @@ behoben.
    Wege, die es speisen, und damit einen Umbau der Roster-Entwürfe, der
    jede Genehmigung bestehender Schulen ändert. Die stille Anmeldung meidet
    den Fehler, statt ihn zu beheben: `roster_bound` (Abschnitt 2).
-   Behoben durch [ADR 0311](0311-gruppenliste-folgt-jeder-buchung-mit-ihrem-ende.md)
+   Behoben durch [ADR 0312](0312-gruppenliste-folgt-jeder-buchung-mit-ihrem-ende.md)
    (#7908); `roster_bound` entfällt seitdem.
 2. **Eine Korrektur ohne Datum bucht ab dem Betreuungsbeginn der Phase**,
    auch wenn die erste Buchung des Kindes später begann (Stichtagsänderung
@@ -1150,7 +1150,7 @@ behoben.
 - Eine Schule mit ausgeschalteten Betreuungsangeboten bekommt keine stille
   Anmeldung.
 - Kinder mit einer befristeten Buchung auf einem direkt verknüpften Roster
-  (bis ADR 0311, #7908),
+  (bis ADR 0312, #7908),
   mit einem Betreuungsende vor dem Ende ihrer Buchungen oder mit einem
   Zeitraum ohne einen gebuchten Wochentag bleiben zurück, bis das Büro
   Vertrag, Kinderakte oder Angebot berichtigt oder Care Plan befristete
