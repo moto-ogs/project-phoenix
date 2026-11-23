@@ -19,6 +19,7 @@
 
 // Re-export hooks
 export {
+  revalidateOrThrow,
   useOpeningRead,
   useSWRAuth,
   useSWRCacheKey,

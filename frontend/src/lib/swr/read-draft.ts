@@ -23,10 +23,7 @@ import { useOpeningRead } from "./hooks";
  * Built on `useOpeningRead` with `showCached: true`: each opening reads
  * anew, a cached answer shows until then.
  */
-export interface ReadDraftOptions<T, D, K, A> {
-  /** The read's key of `~/lib/swr`; `null` closes the surface. */
-  readonly key: string | null;
-  readonly fetcher: () => Promise<T>;
+export interface DraftOptions<T, D, K, A> {
   /** The read state's token: a version, a fingerprint, a list or map of them. */
   readonly token: (read: T) => K;
   /** The editable draft of a read; omitted, the read itself (a preview). */
@@ -43,6 +40,29 @@ export interface ReadDraftOptions<T, D, K, A> {
   readonly answer?: (saved: A, base: T) => T | undefined;
   /** The refusal of a changed state; default `isReadStateRefusal`. */
   readonly isRefusal?: (error: unknown) => boolean;
+}
+
+export interface ReadDraftOptions<T, D, K, A> extends DraftOptions<T, D, K, A> {
+  /** The read's key of `~/lib/swr`; `null` closes the surface. */
+  readonly key: string | null;
+  readonly fetcher: () => Promise<T>;
+}
+
+/**
+ * The read a draft rests on, for `useDraftOn`: a list row, a shared read.
+ * `useReadDraft` supplies its own opening read.
+ */
+export interface DraftSource<T> {
+  /** One surface opening (a key, a row id); `null` closes it. */
+  readonly opening: string | null;
+  /** The newest read; a change of its token refills an untouched draft. */
+  readonly data: T | undefined;
+  /** The read failed and no confirmed state is there: nothing is sent. */
+  readonly error?: unknown;
+  /** Reads the stored state again; rejects on failure (rule 6). */
+  readonly reload: () => Promise<T>;
+  /** Hands a save's stored answer to the read (rule 5). */
+  readonly write?: (stored: T) => Promise<unknown>;
 }
 
 export type ReadDraftStatus =
@@ -103,11 +123,33 @@ const sameJSON = (a: unknown, b: unknown) => asJSON(a) === asJSON(b);
 export function useReadDraft<T, D = T, K = unknown, A = unknown>(
   options: ReadDraftOptions<T, D, K, A>,
 ): ReadDraft<T, D, K, A> {
-  const { key, token } = options;
+  const opened = useOpeningRead(options.key, options.fetcher, {
+    showCached: true,
+  });
+  return useDraftOn(
+    {
+      opening: options.key,
+      data: opened.latest ?? opened.data,
+      // A failed opening read counts also over a cached draft: the server
+      // would refuse a token it cannot confirm.
+      error: opened.data === undefined ? opened.error : undefined,
+      reload: opened.reload,
+      write: (stored) => opened.mutate(stored, { revalidate: false }),
+    },
+    options,
+  );
+}
+
+/** The rules of `useReadDraft` on a read the caller owns. */
+export function useDraftOn<T, D = T, K = unknown, A = unknown>(
+  source: DraftSource<T>,
+  options: DraftOptions<T, D, K, A>,
+): ReadDraft<T, D, K, A> {
+  const { token } = options;
+  const key = source.opening;
   const toDraft = options.toDraft ?? ((read: T) => read as unknown as D);
   const same = options.same ?? sameJSON;
-  const opened = useOpeningRead(key, options.fetcher, { showCached: true });
-  const newest = opened.latest ?? opened.data;
+  const newest = source.data;
 
   const [state, setState] = useState<DraftState<T, D> | null>(null);
   let current = state;
@@ -144,9 +186,9 @@ export function useReadDraft<T, D = T, K = unknown, A = unknown>(
     newest !== undefined &&
     !sameJSON(token(newest), token(current.base));
 
-  const latest = useRef({ state: current, options, opened, toDraft, same });
+  const latest = useRef({ state: current, options, source, toDraft, same });
   useLayoutEffect(() => {
-    latest.current = { state: current, options, opened, toDraft, same };
+    latest.current = { state: current, options, source, toDraft, same };
   });
 
   /** Moves the state of `forKey` only; a new opening keeps its own. */
@@ -183,7 +225,7 @@ export function useReadDraft<T, D = T, K = unknown, A = unknown>(
     async (forKey: string, from?: { draft: D; base: T }) => {
       update(forKey, (prev) => ({ ...prev, phase: "reloading" }));
       try {
-        const read = await latest.current.opened.reload();
+        const read = await latest.current.source.reload();
         settle(forKey, read, from);
         return read;
       } catch (error) {
@@ -237,7 +279,7 @@ export function useReadDraft<T, D = T, K = unknown, A = unknown>(
       }
       const stored = given.answer?.(saved, base);
       if (stored !== undefined) {
-        await latest.current.opened.mutate(stored, { revalidate: false });
+        await latest.current.source.write?.(stored);
         settle(forKey, stored);
       } else {
         await readAgain(forKey).catch(() => undefined);
@@ -270,24 +312,19 @@ export function useReadDraft<T, D = T, K = unknown, A = unknown>(
   );
 
   const retryLoad = useCallback(() => {
-    const { state: now, opened: read } = latest.current;
-    if (now?.phase === "loadFailed" && read.data !== undefined) {
-      void readAgain(now.key).catch(() => undefined);
-      return;
-    }
-    read.retry();
+    const { state: now } = latest.current;
+    if (now !== null) void readAgain(now.key).catch(() => undefined);
+    else void latest.current.source.reload().catch(() => undefined);
   }, [readAgain]);
 
   const discard = useCallback(() => {
-    const { state: now, opened: read } = latest.current;
-    const stored = read.latest ?? read.data ?? now?.base;
+    const { state: now, source: read } = latest.current;
+    const stored = read.data ?? now?.base;
     if (now === null || stored === undefined) return;
     settle(now.key, stored);
   }, [settle]);
 
-  // A failed opening read counts also over a cached draft: the server would
-  // refuse a token it cannot confirm.
-  const openFailed = opened.error !== undefined && opened.data === undefined;
+  const openFailed = source.error !== undefined;
   const phase: ReadDraftStatus = openFailed
     ? "loadFailed"
     : (current?.phase ?? "loading");
@@ -301,7 +338,7 @@ export function useReadDraft<T, D = T, K = unknown, A = unknown>(
     status: phase,
     canSubmit: phase === "ready",
     error: openFailed
-      ? opened.error
+      ? source.error
       : current?.phase === "loadFailed"
         ? current.loadError
         : undefined,

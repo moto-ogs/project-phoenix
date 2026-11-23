@@ -975,6 +975,24 @@ export function useOpeningRead<T>(
 }
 
 /**
+ * Reads a `useSWRAuth` key again and rejects when that read fails. SWR's
+ * `mutate()` resolves with the old data instead, so a reload after a
+ * refused write would claim the new state shows (ADR 0311, rule 6). For
+ * `show(error, { reload })` and `useDraftOn`.
+ */
+export async function revalidateOrThrow<T>(
+  read: Pick<ScopedSWRResponse<T, unknown>, "mutate" | "readCurrent">,
+): Promise<T> {
+  const answered = await read.mutate();
+  const current = read.readCurrent?.();
+  if (current?.error !== undefined) throw current.error;
+  const data = current ? current.data : answered;
+  // A scope or data bump dropped the read: nothing confirmed to show.
+  if (data === undefined) throw new DiscardedAnswer();
+  return data;
+}
+
+/**
  * The cache key useSWRAuth reads for `key` under the session's scope; null
  * while the session grants no access. For state the readers of one key
  * share, e.g. a single refresh for all of them.

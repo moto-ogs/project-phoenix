@@ -96,6 +96,7 @@ const REVIEWED_EXPORTS: Record<string, string[]> = {
     // A session boundary listener; it hands out neither cache nor mutate
     // (#4675: the tab-wide refusals of use-traeger-confirmed-resource).
     "onSWRScopeReset",
+    "revalidateOrThrow",
     "scopedSWRKey",
     "stampSWRSeeds",
     "tenantSWRScope",
@@ -118,6 +119,7 @@ const REVIEWED_EXPORTS: Record<string, string[]> = {
   hooks: [
     "MUTATION_OPTION_KEYS",
     "READER_OPTION_KEYS",
+    "revalidateOrThrow",
     "useDiscardRefusedEntity",
     "useImmutableSWR",
     "useInvalidateFamily",
