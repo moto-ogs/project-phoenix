@@ -55,8 +55,17 @@ func RenderError(w http.ResponseWriter, r *http.Request, renderer render.Rendere
 		)
 		noteServerError(r.Context(), errResp.Err, errResp.Code)
 	}
+	noteRefusal(r, renderer)
 	if err := render.Render(w, r, renderer); err != nil {
 		slog.Default().Error("error rendering error response", slog.String("error", err.Error()))
+	}
+}
+
+// noteRefusal hands a refusal (a 4xx) to the test build's observer.
+func noteRefusal(r *http.Request, renderer render.Renderer) {
+	errResp, ok := renderer.(*ErrResponse)
+	if ok && refusalObserver != nil && errResp.HTTPStatusCode >= 400 && errResp.HTTPStatusCode < 500 {
+		refusalObserver(r)
 	}
 }
 

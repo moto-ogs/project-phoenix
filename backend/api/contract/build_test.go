@@ -229,6 +229,8 @@ func TestBuildRejects(t *testing.T) {
 	commitsOnPut := post(body{})
 	commitsOnPut.Method = "PUT"
 	commitsOnPut.NoCommit = "a PUT changes"
+	refusesForGood := post(body{})
+	refusesForGood.Refuses = "a route that stays"
 	strayCode := post(body{})
 	strayCode.TooLargeCode = "files.file_too_large"
 	jsonCache := get("/api/rows/", inner{})
@@ -286,6 +288,7 @@ func TestBuildRejects(t *testing.T) {
 		"an upload on a GET":                         {[]Registration{uploadOnGet}, Options{Identifiers: identifiers}, "is a POST, PUT or PATCH"},
 		"an upload that names a retry":               {[]Registration{uploadRetry}, Options{Identifiers: identifiers}, "is sent once"},
 		"a PUT that claims to commit nothing":        {[]Registration{commitsOnPut}, Options{Identifiers: identifiers}, "only a POST names NoCommit"},
+		"a route that stays and only refuses":        {[]Registration{refusesForGood}, Options{Identifiers: identifiers}, "only a Deprecated route names Refuses"},
 		"a too large code without an upload":         {[]Registration{strayCode}, Options{Identifiers: identifiers}, "TooLargeCode belongs to a multipart upload"},
 		"a private cache trait on a JSON route":      {[]Registration{jsonCache}, Options{Identifiers: identifiers}, "PrivateCache belongs to a file route of a session portal"},
 		"a cache trait on a public file":             {[]Registration{publicCache}, Options{Identifiers: identifiers}, "PrivateCache belongs to a file route of a session portal"},

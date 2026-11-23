@@ -169,6 +169,10 @@ Same steps; the contract names the body type, and the client sends it typed
 - Renaming or removing a registered field or route takes one release marked
   `Deprecated` / `DeprecatedFields`; `scripts/check-contract-compat.mjs` fails
   otherwise.
+- A deprecated write that refuses every request for its last release (an old
+  save without read state, ADR 0311) names why in `Refuses`. A test that sees
+  its refusal through the route's full path answers it for
+  `TestEveryRegisteredRouteIsAnsweredInATest`.
 
 ### Registers a write route touches
 
