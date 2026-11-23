@@ -27,6 +27,11 @@ import {
   CareDuplicatesCard,
   CareUnpricedCard,
 } from "~/components/traeger/care-run-invoices";
+import { CareBilledChildrenCard } from "~/components/traeger/care-billed-children-card";
+import {
+  emptyCareRunText,
+  releaseBilledLines,
+} from "~/components/traeger/care-billed-children-format";
 import { CareJoinedChildrenCard } from "~/components/traeger/care-joined-children-card";
 import { CareUncountedCard } from "~/components/traeger/care-uncounted-card";
 import {
@@ -565,6 +570,11 @@ export default function TraegerCareRunPage() {
                 neuen Lauf nach, wenn ein Vertrag beendet ist.
               </p>
             ) : null}
+            {releaseBilledLines(run.billedChildren ?? []).map((line) => (
+              <p key={line} className="mt-3 text-sm text-gray-700">
+                {line}
+              </p>
+            ))}
             <ReleaseOpenPoints points={releaseOpenPoints} />
           </ConfirmationModal>
         ) : null
@@ -595,7 +605,10 @@ export default function TraegerCareRunPage() {
             description={
               discarded
                 ? `Er hatte nichts abzurechnen und hat nichts ausgestellt. Für ${formatMonth(run.billingMonth)} kannst du einen neuen Lauf starten.`
-                : `Für ${formatMonth(run.billingMonth)} gibt es keine Rechnung. Es fehlt auch kein Preis. Du kannst den Lauf verwerfen. Danach ist der Monat frei für einen neuen Lauf.`
+                : emptyCareRunText(
+                    formatMonth(run.billingMonth),
+                    run.billedChildren ?? [],
+                  )
             }
             createdAt={run.createdAt}
             discardedAt={run.discardedAt}
@@ -611,6 +624,11 @@ export default function TraegerCareRunPage() {
               the empty run says why it has no invoice here. */}
           {empty ? (
             <CareJoinedChildrenCard childrenJoined={run.joinedChildren} />
+          ) : null}
+          {/* A child whose month an issued invoice already bills (#7892):
+              the empty run says why it has no invoice for it. */}
+          {empty ? (
+            <CareBilledChildrenCard childrenBilled={run.billedChildren ?? []} />
           ) : null}
           {/* Mensa months a school has not released yet come with a later
               run; the empty run still names them. */}
@@ -866,6 +884,10 @@ export default function TraegerCareRunPage() {
             />
           ) : null}
           <CareDuplicatesCard duplicates={run.duplicates} released={!preview} />
+          <CareBilledChildrenCard
+            childrenBilled={run.billedChildren ?? []}
+            released={!preview}
+          />
           {preview ? (
             <CareJoinedChildrenCard childrenJoined={run.joinedChildren} />
           ) : null}

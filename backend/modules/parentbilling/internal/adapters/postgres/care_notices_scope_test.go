@@ -111,6 +111,12 @@ func TestCareNoticeFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 		assert.Equal(t, own.noticeNumber, invoiced[noticeContract].Number)
 		require.Len(t, invoiced[noticeContract].Positions, 1)
 		assert.Equal(t, int64(3200), invoiced[noticeContract].Positions[0].PayableCents)
+		// The Jahresbescheid behind the month (#7892); its position keeps no
+		// days here, which reads as the whole month.
+		assert.Equal(t, []parentbilling.CareBilledInvoice{{Source: parentbilling.BilledByNoticeRun, RunID: ident.ID(own.noticeRun),
+			ContractID: noticeContract, SchoolID: ident.ID(own.school), SchoolName: "Schule", Number: own.noticeNumber,
+			DocumentKind: parentbilling.DocumentKindFeeNotice}}, invoiced[noticeContract].BilledBy)
+		assert.True(t, invoiced[noticeContract].Positions[0].ServiceFrom.IsZero())
 
 		// The parts a cost bearer already took (ADR 0169): the notice month
 		// carries its 20,00 € fixed share, the monthly invoice its 12,00 €.

@@ -35516,6 +35516,100 @@
       ]
     },
     {
+      "name": "CareBilledChild",
+      "go_type": "parentbilling.CareBilledChild",
+      "fields": [
+        {
+          "name": "child_first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child_last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "contracts",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "CareDuplicateContract"
+            }
+          }
+        },
+        {
+          "name": "invoices",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "CareBilledInvoice"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "CareBilledInvoice",
+      "go_type": "parentbilling.CareBilledInvoice",
+      "fields": [
+        {
+          "name": "source",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "run_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "contract_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "number",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "document_kind",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "CareCancellationRequest",
       "go_type": "parentbillinghttp.CareCancellationRequest",
       "request": true,
@@ -38149,6 +38243,17 @@
           }
         },
         {
+          "name": "billed_children",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "CareBilledChild"
+            }
+          }
+        },
+        {
           "name": "preview_count",
           "schema": {
             "kind": "int"
@@ -40219,6 +40324,17 @@
             "elem": {
               "kind": "ref",
               "ref": "CareJoinedChild"
+            }
+          }
+        },
+        {
+          "name": "billed_children",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "CareBilledChild"
             }
           }
         },

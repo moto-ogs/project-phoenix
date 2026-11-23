@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -68,4 +69,29 @@ func TestSeedSchoolChangeRunsOnce(t *testing.T) {
 		require.NoError(t, err, name)
 		assert.Equal(t, name == "repeated seed", done, name)
 	}
+}
+
+// The run of the month after the change stays open at the new school: the
+// Jahresbescheid of the old school assesses that month, so the run holds the
+// child back (#7892). In December no notice assesses a next month.
+func TestSeedSchoolChangeLeavesTheNextMonthOpen(t *testing.T) {
+	t.Parallel()
+	var started []string
+	srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
+		w.Header().Set("Content-Type", "application/json")
+		require.Equal(t, "/traeger/care-billing-runs/", r.URL.Path)
+		if r.Method == http.MethodGet {
+			_, _ = fmt.Fprint(w, `{"data":{"runs":[{"id":3,"billing_month":"2026-11-01","status":"calculated","school_ids":[6]}]}}`)
+			return
+		}
+		started = append(started, r.Method)
+		_, _ = fmt.Fprint(w, `{"data":{"id":4}}`)
+	})
+	defer srv.Close()
+	client := newTestClient(srv.URL, false)
+
+	require.NoError(t, seedSchoolChangeHeldRun(client, AuthRef{}, 6, calendar.NewDate(2026, 12, 1)))
+	assert.Empty(t, started, "a change in December starts no run of January")
+	require.NoError(t, seedSchoolChangeHeldRun(client, AuthRef{}, 6, calendar.NewDate(2026, 11, 1)))
+	assert.Equal(t, []string{http.MethodPost}, started, "the run of December is started for the school")
 }

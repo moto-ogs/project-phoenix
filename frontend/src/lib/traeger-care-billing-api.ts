@@ -482,6 +482,63 @@ export function joinedChildrenFromBackend(
   }));
 }
 
+const BILLED_REASON_VALUES = ["already_billed", "meal_only_invoice"] as const;
+const BILLED_SOURCE_VALUES = ["care_run", "care_notice_run"] as const;
+const DOCUMENT_KIND_VALUES = ["invoice", "fee_notice"] as const;
+
+/**
+ * An issued monthly invoice or a month of a Jahresbescheid that already
+ * bills a child's month (#7892), with the run that issued it.
+ */
+export interface CareBilledInvoice {
+  /** A monthly run or a run of Jahresbescheide; undefined: unknown. */
+  readonly source: (typeof BILLED_SOURCE_VALUES)[number] | undefined;
+  /** Empty when the run is not known. */
+  readonly runId: string;
+  readonly contractId: string;
+  readonly schoolName: string;
+  readonly number: string;
+  readonly documentKind: (typeof DOCUMENT_KIND_VALUES)[number] | undefined;
+}
+
+/**
+ * A child a run holds back because an issued invoice of the month already
+ * bills it (ADR 0158, Nachtrag #7892): another contract of the child billed
+ * the month, or the invoice of the contract itself carries only its Mensa.
+ * `contracts` get no invoice in this run, `invoices` are in their way.
+ */
+export interface CareBilledChild {
+  readonly childFirstName: string;
+  readonly childLastName: string;
+  readonly reason: (typeof BILLED_REASON_VALUES)[number] | undefined;
+  readonly contracts: CareDuplicate["contracts"];
+  readonly invoices: readonly CareBilledInvoice[];
+}
+
+/** Maps the children a monthly or notice run holds for an issued invoice. */
+export function billedChildrenFromBackend(
+  children: readonly sharedContract.CareBilledChild[] | null | undefined,
+): CareBilledChild[] {
+  return (children ?? []).map((child) => ({
+    childFirstName: child.child_first_name,
+    childLastName: child.child_last_name,
+    reason: knownEnum(BILLED_REASON_VALUES, child.reason),
+    contracts: (child.contracts ?? []).map((contract) => ({
+      contractId: id(contract.contract_id),
+      schoolId: id(contract.school_id),
+      schoolName: contract.school_name,
+    })),
+    invoices: (child.invoices ?? []).map((invoice) => ({
+      source: knownEnum(BILLED_SOURCE_VALUES, invoice.source),
+      runId: invoice.run_id === "0" ? "" : id(invoice.run_id),
+      contractId: id(invoice.contract_id),
+      schoolName: invoice.school_name,
+      number: invoice.number,
+      documentKind: knownEnum(DOCUMENT_KIND_VALUES, invoice.document_kind),
+    })),
+  }));
+}
+
 /**
  * An invoice of a monthly run whose family has no confirmed number of
  * children for the month (#7356): the sibling rule counts its children with
@@ -504,6 +561,11 @@ export interface CareRunDetail extends CareRun {
   readonly duplicateChildren: number;
   /** Children of a calculated run joined by their name across schools. */
   readonly joinedChildren: readonly CareJoinedChild[];
+  /**
+   * Children the run holds back because an issued invoice of the month
+   * already bills them (#7892); a released run shows those it stored.
+   */
+  readonly billedChildren?: readonly CareBilledChild[];
   /**
    * Families a sibling rule that counts the family ranks without a
    * confirmed number for the month (#5918); it counts their children with a
@@ -821,6 +883,7 @@ export function detailFromBackend(
     })),
     duplicateChildren: detail.duplicate_children,
     joinedChildren: joinedChildrenFromBackend(detail.joined_children),
+    billedChildren: billedChildrenFromBackend(detail.billed_children),
     uncountedFamilies: detail.uncounted_families,
     uncountedContracts: (detail.uncounted_contracts ?? []).map((contract) => ({
       contractId: id(contract.contract_id),

@@ -43,7 +43,9 @@ var _ parentbilling.CareRunDiscard = (*CareBilling)(nil)
 // emptyCareReview tells whether the preview of a monthly run has nothing to
 // issue and nothing to settle: no invoice, also no excluded one, no contract
 // of a free month the release would keep, no booking without a price and no
-// child held back for a duplicate contract.
+// child held back for a duplicate contract. A child held back because an
+// issued invoice already bills its month (#7892) settles nothing in this run:
+// that invoice may be right, so the run can still be discarded.
 func emptyCareReview(review reviewedMonth) bool {
 	return len(review.invoices) == 0 && len(review.excluded) == 0 && review.free == 0 &&
 		len(review.unpriced) == 0 && len(review.duplicates) == 0

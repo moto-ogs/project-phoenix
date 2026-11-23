@@ -605,7 +605,11 @@ func TestCareMonthlyPreviewCountsAnIssuedChildWithoutAStudentRecordOnce(t *testi
 	for _, invoice := range preview.Invoices {
 		totals[int64(invoice.ContractID)] = invoice.TotalCents
 	}
-	assert.Equal(t, map[int64]int64{mia: 8000, early: 3450}, totals, "two children do not qualify at the three-child threshold")
+	// Noah's January has the invoice of his ended contract, so the run holds
+	// his contract at the other school back instead of billing the month
+	// again (#7892, TestCareMonthlyRunHoldsAChildAnIssuedInvoiceAlreadyBills).
+	// He still counts once.
+	assert.Equal(t, map[int64]int64{mia: 8000}, totals, "two children do not qualify at the three-child threshold")
 
 	notices := f.noticeRun(t, int64(f.startNoticeRun(t, careMonth, "2030-01-02").ID))
 	for _, notice := range notices.Notices {
