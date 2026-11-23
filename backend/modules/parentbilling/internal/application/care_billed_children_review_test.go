@@ -226,7 +226,10 @@ func TestCareNoticeMonthSecondComputationHoldsNobodyNew(t *testing.T) {
 		{
 			// The contract without a price runs the 1st to the 14th today;
 			// its notice assessed the whole month, 40,00 €. The new contract
-			// bills the 15th to the 31st: 60,00 € * 17/31 = 32,90 €.
+			// bills the 15th to the 31st: 60,00 € * 17/31 = 32,90 €. A known
+			// limit, as before #7892 (ADR 0158, Grenzen): the kept
+			// assessment still bills those days too, 40,00 € * 17/31 =
+			// 21,94 €, until a price lets the run assess the old contract.
 			name: "the new contract for the rest of the month keeps its draft",
 			contracts: []identityContract{
 				noahAt(contractNoah, schoolBirkenfeld, noahBirkenfeldRecord, billingMonth, "2027-01-14", unpriced),
