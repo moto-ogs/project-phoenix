@@ -359,6 +359,27 @@ describe("createStudent", () => {
     expect(student).not.toHaveProperty("privacy_consent_saved");
   });
 
+  // The create modal's whole Heimweg plan has to reach the BFF: a former
+  // mapRequest dropped departure_days from the body.
+  it("sends the departure plan of the create modal", async () => {
+    fetchMock
+      .mockResolvedValueOnce(ok(created, 201))
+      .mockResolvedValueOnce(consentAnswer(false, 30));
+
+    await createStudent({
+      first_name: "Mia",
+      second_name: "Muster",
+      school_class: "2b",
+      departure_days: { mon: "pickup", tue: "bus" },
+      allowed_departure_modes: { mon: ["pickup"], tue: ["bus", "alone"] },
+    });
+
+    expect(JSON.parse(String(calledInit(0).body))).toMatchObject({
+      departure_days: { mon: "pickup", tue: "bus" },
+      allowed_departure_modes: { mon: ["pickup"], tue: ["alone", "bus"] },
+    });
+  });
+
   it("writes the changed consent after the child and carries no marker", async () => {
     fetchMock
       .mockResolvedValueOnce(ok(created, 201))

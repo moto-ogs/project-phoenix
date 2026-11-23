@@ -40,7 +40,7 @@ type ParentMessageResponse struct {
 	GroupThreadID    string `json:"group_thread_id,omitempty"`
 	GroupThreadTitle string `json:"group_thread_title,omitempty"`
 	// Attachments are the photos and files of the message (#6685).
-	Attachments json.RawMessage `json:"attachments,omitempty"`
+	Attachments []messageAttachmentResponse `json:"attachments,omitempty"`
 }
 
 // ThreadSummaryResponse is one row on the parent thread list. counterpart_name
@@ -264,7 +264,7 @@ func toMessageResponses(messages []*parentService.ParentMessage, counterpart str
 			ReadByStaff:      m.ReadByStaff,
 			GroupThreadID:    groupThreadIDString(m.GroupThreadID),
 			GroupThreadTitle: m.GroupThreadTitle,
-			Attachments:      m.Attachments,
+			Attachments:      toMessageAttachmentResponses(m.Attachments),
 		})
 	}
 	return out

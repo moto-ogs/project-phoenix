@@ -289,6 +289,13 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
+      "query": [
+        {
+          "name": "expected_version",
+          "kind": "string"
+        }
+      ],
       "no_data": true
     },
     {
@@ -3493,6 +3500,7 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "query": [
         {
           "name": "week_start",
@@ -3504,6 +3512,26 @@
         "elem": {
           "kind": "ref",
           "ref": "MealPlanWeekEntryResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/meal-plan/days",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "week_start",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "MealPlanDayResponse"
         }
       }
     },
@@ -21271,6 +21299,21 @@
     },
     {
       "method": "PUT",
+      "pattern": "/api/meal-plan/days/{date}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "SaveDayRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "MealPlanDayResponse"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/api/meal-plan/participation/{studentId}/days/{date}",
       "portals": [
         "tenant"
@@ -21302,6 +21345,7 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "request": {
         "kind": "ref",
         "ref": "SetDayRequest"
@@ -42827,6 +42871,12 @@
               "ref": "ChildDayResponse"
             }
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -43031,6 +43081,13 @@
           "optional": true,
           "schema": {
             "kind": "date"
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -56315,8 +56372,11 @@
           "name": "attachments",
           "optional": true,
           "schema": {
-            "kind": "json",
-            "nullable": true
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "messageAttachmentResponse"
+            }
           }
         }
       ]
@@ -67796,6 +67856,70 @@
               "ref": "MealParticipationDayResponse"
             }
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "MealPlanDayResponse",
+      "go_type": "mealplan.MealPlanDayResponse",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "dishes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "MealPlanDishResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "MealPlanDishResponse",
+      "go_type": "mealplan.MealPlanDishResponse",
+      "fields": [
+        {
+          "name": "dish",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "allergens",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
         }
       ]
     },
@@ -74403,8 +74527,11 @@
           "name": "attachments",
           "optional": true,
           "schema": {
-            "kind": "json",
-            "nullable": true
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "ParentMessageAttachmentResponse"
+            }
           }
         }
       ]
@@ -75128,8 +75255,11 @@
           "name": "attachments",
           "optional": true,
           "schema": {
-            "kind": "json",
-            "nullable": true
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "messageAttachmentResponse"
+            }
           }
         }
       ]
@@ -81785,6 +81915,13 @@
               "kind": "int"
             }
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -85458,6 +85595,32 @@
           "name": "failed_count",
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SaveDayRequest",
+      "go_type": "mealplan.SaveDayRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "dishes",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "DishRequest"
+            }
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]

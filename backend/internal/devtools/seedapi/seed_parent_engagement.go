@@ -56,9 +56,7 @@ func (seedParentEngagementStep) Run(ctx context.Context, rt *Runtime) error {
 // the first day still open for changes; the portal opens that day's week.
 func seedParentMealParticipation(rt *Runtime, auth AuthRef, studentID int64) error {
 	basePath := fmt.Sprintf("/parent/me/children/%d/meal-participation", studentID)
-	raw, err := rt.Client.PutWithAuth(auth, basePath, map[string]any{
-		"weekdays": []int{1, 2, 3, 4},
-	})
+	raw, err := parentMealSchedule(rt, auth, studentID, []int{1, 2, 3, 4})
 	if err != nil {
 		return fmt.Errorf("seed regular meal participation: %w", err)
 	}

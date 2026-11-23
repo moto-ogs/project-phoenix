@@ -1,0 +1,6 @@
+{
+  "scenario": "modules.requestreview.history_page.eight_children",
+  "max": 26,
+  "exact": false,
+  "description": "Request Review history page (GET /api/students/change-requests/history), N=8 distinct children, each with one decided (rejected) request of every kind and one direct offering correction, measured inside a tenant transaction (BEGIN and scope included, trailing COMMIT excluded). Each of the five sources reads its rows and their children, names and reviewers by ID set; the submitter names follow. Equal at N=3 and N=8: the offering queue's requested-offering names load in one catalog read for the page (#7808; before, one catalog read per row without a decision snapshot)."
+}

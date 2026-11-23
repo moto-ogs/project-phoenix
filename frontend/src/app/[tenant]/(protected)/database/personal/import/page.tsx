@@ -146,7 +146,7 @@ export default function StaffImportPage() {
   const rolesService = useMemo(() => createCrudService(rolesConfig), []);
   // Without the list the hint is missing; the import still works.
   const { data: roles } = useSWRAuth(tenantAdminKeys.roles(), async () => {
-    const response = await rolesService.getList({ page: 1, pageSize: 500 });
+    const response = await rolesService.getList();
     return Array.isArray(response.data) ? response.data : [];
   });
   const availableRoles = useMemo(

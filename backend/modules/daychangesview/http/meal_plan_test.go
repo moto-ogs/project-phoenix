@@ -1,6 +1,7 @@
 package daychangesviewhttp_test
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -44,11 +46,36 @@ func TestDayChangesMealPlanSource(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, rig.Enable(testpkg.Ctx(t)))
 	rig.Listen(tenantID)
-	save := func(accountID, tenantID int64, date, dishes string) int {
-		req := httptest.NewRequest(http.MethodPut, "/api/meal-plan/"+date, strings.NewReader(`{"dishes":[`+dishes+`]}`))
+	send := func(accountID, tenantID int64, method, path, body string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(method, path, strings.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", "Bearer "+testutil.MintTestJWT(t, testutil.TenantUserTestClaims(int(accountID), tenantID, "admin:*")))
-		return testutil.ExecuteRequestForTest(t, rig.Router, req).Code
+		return testutil.ExecuteRequestForTest(t, rig.Router, req)
+	}
+	// version is the token the kitchen's page reads for the day; a day
+	// outside the plan's week (Saturday) has none.
+	version := func(accountID, tenantID int64, date calendar.Date) string {
+		response := send(accountID, tenantID, http.MethodGet, "/api/meal-plan/days?week_start="+date.StartOfISOWeek().String(), "")
+		require.Equal(t, http.StatusOK, response.Code, response.Body.String())
+		var week struct {
+			Data []struct {
+				Date    string `json:"date"`
+				Version string `json:"version"`
+			} `json:"data"`
+		}
+		require.NoError(t, json.Unmarshal(response.Body.Bytes(), &week))
+		for _, read := range week.Data {
+			if read.Date == date.String() {
+				return read.Version
+			}
+		}
+		return ""
+	}
+	save := func(accountID, tenantID int64, date, dishes string) int {
+		parsed, err := calendar.ParseDate(date)
+		require.NoError(t, err)
+		body := `{"dishes":[` + dishes + `],"expected_version":"` + version(accountID, tenantID, parsed) + `"}`
+		return send(accountID, tenantID, http.MethodPut, "/api/meal-plan/days/"+date, body).Code
 	}
 	router := newRouter(t, db, day)
 

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 	"testing"
 
@@ -10,11 +11,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// checkMealPlanStaleSave drives the save of a meal plan day against the day
-// as the saver read it through the production router: a day stored
-// differently since answers 409 with its registered code and keeps the
-// stored dishes; a matching read state, compared in stored form, saves; a
-// save without a read state stays unchecked.
+// checkMealPlanStaleSave drives the save of a meal plan day against the
+// version its saver read (ADR 0311) through the production router: the week
+// read and the save's answer give the same version for the stored day, an
+// outdated or missing version answers 409 with its registered code and keeps
+// the stored dishes, and the deprecated save with the day as read checks it
+// in stored form.
 func checkMealPlanStaleSave(t *testing.T, api *goldenRuntime) {
 	t.Helper()
 	testpkg.OwnTenant(t)
@@ -27,24 +29,49 @@ func checkMealPlanStaleSave(t *testing.T, api *goldenRuntime) {
 		response := checkpointRequest(api, checkpointScenario{Method: method, Path: path, Authenticated: true, Body: body}, token)
 		return response.Code, response.Body.String()
 	}
-	const day = "/api/meal-plan/2030-01-08"
-	const week = "/api/meal-plan/?week_start=2030-01-07"
+	type day struct {
+		Date    string `json:"date"`
+		Version string `json:"version"`
+		Dishes  []struct {
+			Dish string `json:"dish"`
+		} `json:"dishes"`
+	}
+	read := func() day {
+		status, body := send(http.MethodGet, "/api/meal-plan/days?week_start=2030-01-07", "")
+		require.Equal(t, http.StatusOK, status, body)
+		var response struct{ Data []day }
+		require.NoError(t, json.Unmarshal([]byte(body), &response))
+		require.Len(t, response.Data, 5)
+		require.Equal(t, "2030-01-08", response.Data[1].Date)
+		require.NotEmpty(t, response.Data[1].Version, "an empty day has a version too")
+		return response.Data[1]
+	}
+	const path = "/api/meal-plan/days/2030-01-08"
 
-	status, body := send(http.MethodPut, day, `{"dishes":[{"dish":"Suppe","note":"mit Brot","allergens":["milk","gluten"]}],"expected":[]}`)
-	require.Equal(t, http.StatusOK, status, "an empty day read as empty saves: %s", body)
+	empty := read()
+	status, body := send(http.MethodPut, path, `{"dishes":[{"dish":" Suppe ","note":"mit Brot ","allergens":["milk","gluten","milk"]},{"dish":"  "}],"expected_version":"`+empty.Version+`"}`)
+	require.Equal(t, http.StatusOK, status, "the version of the empty day as read saves: %s", body)
+	var saved struct{ Data day }
+	require.NoError(t, json.Unmarshal([]byte(body), &saved))
+	stored := read()
+	assert.Equal(t, stored.Version, saved.Data.Version, "the save answers the version the next read gives for the stored day")
+	assert.NotEqual(t, empty.Version, stored.Version)
 
-	status, body = send(http.MethodPut, day, `{"dishes":[{"dish":"Nudeln"}],"expected":[]}`)
-	require.Equal(t, http.StatusConflict, status, body)
-	assert.Contains(t, body, `"code":"general.changed_since_read"`)
-	_, body = send(http.MethodGet, week, "")
-	assert.Contains(t, body, "Suppe", "the refused save keeps the stored day")
-	assert.NotContains(t, body, "Nudeln")
+	for name, version := range map[string]string{"outdated": empty.Version, "missing": ""} {
+		status, body = send(http.MethodPut, path, `{"dishes":[{"dish":"Nudeln"}],"expected_version":"`+version+`"}`)
+		require.Equal(t, http.StatusConflict, status, "%s version: %s", name, body)
+		assert.Contains(t, body, `"code":"general.changed_since_read"`)
+		assert.Equal(t, stored.Version, read().Version, "the refused save keeps the stored day")
+	}
 
-	status, body = send(http.MethodPut, day, `{"dishes":[{"dish":"Nudeln"}],"expected":[{"dish":" Suppe ","note":"mit Brot ","allergens":["gluten","milk","gluten"]},{"dish":"  "}]}`)
-	require.Equal(t, http.StatusOK, status, "the read state compares in stored form: %s", body)
+	status, body = send(http.MethodPut, path, `{"dishes":[{"dish":"Nudeln"}],"expected_version":"`+saved.Data.Version+`"}`)
+	require.Equal(t, http.StatusOK, status, "the answered version saves the same day again: %s", body)
 
-	status, body = send(http.MethodPut, day, `{"dishes":[{"dish":"Eintopf"}]}`)
-	require.Equal(t, http.StatusOK, status, "a save without a read state stays unchecked: %s", body)
-	_, body = send(http.MethodGet, week, "")
-	assert.Contains(t, body, "Eintopf")
+	status, body = send(http.MethodPut, "/api/meal-plan/2030-01-08", `{"dishes":[{"dish":"Eintopf"}],"expected":[{"dish":"Suppe"}]}`)
+	require.Equal(t, http.StatusConflict, status, "the deprecated save checks the day as read: %s", body)
+	status, body = send(http.MethodPut, "/api/meal-plan/2030-01-08", `{"dishes":[{"dish":"Eintopf"}]}`)
+	require.Equal(t, http.StatusConflict, status, "the deprecated save without the day as read is refused: %s", body)
+	status, body = send(http.MethodPut, "/api/meal-plan/2030-01-08", `{"dishes":[{"dish":"Eintopf"}],"expected":[{"dish":" Nudeln "},{"dish":""}]}`)
+	require.Equal(t, http.StatusOK, status, "the deprecated day as read compares in stored form: %s", body)
+	assert.Equal(t, "Eintopf", read().Dishes[0].Dish)
 }

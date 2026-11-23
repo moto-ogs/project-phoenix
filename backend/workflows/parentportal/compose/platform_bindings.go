@@ -27,7 +27,7 @@ func newMealPlan(provider MealPlanProvider) care.MealPlan {
 		Plan: func(row mealplanModule.ParticipationPlan) (care.MealParticipationPlan, []mealplanModule.Weekday, []mealplanModule.ParticipationDay) {
 			return care.MealParticipationPlan{
 				EffectiveFrom: string(row.EffectiveFrom), CutoffTime: row.CutoffTime, Model: string(row.Model),
-				ScheduleChangeable: row.ScheduleChangeable, SickCancels: row.SickCancels,
+				ScheduleChangeable: row.ScheduleChangeable, SickCancels: row.SickCancels, Version: row.Version,
 			}, row.Weekdays, row.Days
 		},
 		ParticipationDay: func(row mealplanModule.ParticipationDay) care.MealParticipationDay {
@@ -39,8 +39,8 @@ func newMealPlan(provider MealPlanProvider) care.MealPlan {
 		Week: func(ctx context.Context, change care.MealParticipationChange) (care.MealWeekChange, error) {
 			return mealWeek(ctx, provider, change)
 		},
-		Schedule: func(studentID, guardianID int64, weekdays []mealplanModule.Weekday) mealplanModule.ReplaceParticipationSchedule {
-			return mealplanModule.ReplaceParticipationSchedule{StudentID: studentID, GuardianAccountID: guardianID, Weekdays: weekdays}
+		Schedule: func(studentID, guardianID int64, weekdays []mealplanModule.Weekday, expectedVersion string) mealplanModule.ReplaceParticipationSchedule {
+			return mealplanModule.ReplaceParticipationSchedule{StudentID: studentID, GuardianAccountID: guardianID, Weekdays: weekdays, ExpectedVersion: expectedVersion}
 		},
 		Change: func(studentID, guardianID int64, day mealplanModule.Date, participating bool) mealplanModule.SetParticipationDay {
 			return mealplanModule.SetParticipationDay{StudentID: studentID, GuardianAccountID: guardianID, Date: day, Participating: participating}

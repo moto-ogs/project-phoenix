@@ -22,7 +22,7 @@ const menuChangePushDays = 14
 // leaves the menu as it was tell nobody, and so does a school without meal
 // registration, where no child has a meal booked.
 func (s *Service) noticeMenuChange(txCtx context.Context, date domain.Date, before []domain.Entry, after []mealplan.Dish, actorAccountID int64) (domain.OperationStats, error) {
-	if s.notices == nil || len(before) == 0 || sameMenu(before, after) {
+	if s.notices == nil || len(before) == 0 || dayVersion(storedDishes(before)) == dayVersion(after) {
 		return domain.OperationStats{}, nil
 	}
 	today := domain.DateFromInstant(s.now())
@@ -65,31 +65,4 @@ func (s *Service) bookedOn(txCtx context.Context, date domain.Date) ([]int64, do
 	}
 	slices.Sort(booked)
 	return slices.Compact(booked), stats, nil
-}
-
-// sameMenu reports whether a save keeps the stored dishes of the day, in
-// order, with their notes and allergens.
-func sameMenu(before []domain.Entry, after []mealplan.Dish) bool {
-	if len(before) != len(after) {
-		return false
-	}
-	for i, entry := range before {
-		dish := after[i]
-		if entry.Dish != dish.Dish || optionalText(entry.Note) != optionalText(dish.Note) || len(entry.Allergens) != len(dish.Allergens) {
-			return false
-		}
-		for j, allergen := range dish.Allergens {
-			if entry.Allergens[j] != string(allergen) {
-				return false
-			}
-		}
-	}
-	return true
-}
-
-func optionalText(value *string) string {
-	if value == nil {
-		return ""
-	}
-	return *value
 }

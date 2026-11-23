@@ -1,11 +1,11 @@
 import { describe, it, expect } from "vitest";
+import type { OperatorInvitationValidationResponse } from "~/lib/contract/operator-auth.generated";
 import type * as operatorInvitationsContract from "~/lib/contract/operator-invitations.generated";
 import type * as sharedContract from "~/lib/contract/shared.generated";
 import {
   mapPendingInvitation,
   mapOperatorInfo,
   mapInvitationValidation,
-  type InvitationValidationBody,
 } from "./operator-invitation-helpers";
 
 const sampleInvitation: operatorInvitationsContract.PendingOperatorInvitationResponse =
@@ -32,7 +32,7 @@ const sampleOperator: sharedContract.OperatorListItem = {
   is_self: false,
 };
 
-const sampleValidation: InvitationValidationBody = {
+const sampleValidation: OperatorInvitationValidationResponse = {
   email: "invited@example.com",
   display_name: "Invited User",
   expires_at: "2026-04-06T12:00:00Z",
@@ -140,14 +140,6 @@ describe("mapInvitationValidation", () => {
       displayName: "Invited User",
       expiresAt: "2026-04-06T12:00:00Z",
     });
-  });
-
-  it("converts null display_name to undefined", () => {
-    const result = mapInvitationValidation({
-      ...sampleValidation,
-      display_name: null,
-    });
-    expect(result.displayName).toBeUndefined();
   });
 
   it("handles missing display_name", () => {
