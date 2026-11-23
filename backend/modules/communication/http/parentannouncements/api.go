@@ -137,12 +137,12 @@ type announcementRequest struct {
 	declarationSettingsRequest
 }
 
-// reminderRequest is the post-publish reminder edit. The raw value preserves
+// reminderRequest is the post-publish reminder edit. Presence distinguishes
 // the distinction between an omitted reminder_at (invalid PUT body) and an
 // explicit null (remove the reminder).
 type reminderRequest struct {
-	ReminderAt   json.RawMessage `json:"reminder_at"`
-	ReminderText *string         `json:"reminder_text,omitempty"`
+	ReminderAt   common.DeferredJSON[*time.Time] `json:"reminder_at" contract_refines:"The reminder handler already requires an RFC 3339 instant or null"`
+	ReminderText *string                         `json:"reminder_text,omitempty"`
 }
 
 // optionResponse is one answer option of a poll.
@@ -409,17 +409,16 @@ func (rs *Resource) updateReminder(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}
-	if len(req.ReminderAt) == 0 {
+	if !req.ReminderAt.Present {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("reminder_at is required")))
 		return
 	}
-	var reminderAt *time.Time
-	if err := json.Unmarshal(req.ReminderAt, &reminderAt); err != nil {
+	if req.ReminderAt.Invalid != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid reminder_at")))
 		return
 	}
 	a, err := rs.Service.UpdateParentAnnouncementReminder(r.Context(), id, announcementService.ParentAnnouncementReminderInput{
-		ReminderAt: reminderAt, ReminderText: req.ReminderText,
+		ReminderAt: req.ReminderAt.Value, ReminderText: req.ReminderText,
 	})
 	if err != nil {
 		renderAnnouncementError(w, r, err)

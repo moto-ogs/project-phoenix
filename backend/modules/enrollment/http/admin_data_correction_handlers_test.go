@@ -27,7 +27,7 @@ func (s *correctionChangeRequestService) CorrectApprovedChildData(_ context.Cont
 	at := time.Date(2026, 9, 2, 10, 0, 0, 0, time.UTC)
 	return &ChangeRequestAggregate{ChangeRequest: &ChangeRequest{
 		ID: 31, RequestID: input.RequestID, RequestChildID: &input.ChildID, Origin: "admin", Status: "approved",
-		Diff: map[string]any{"changed": []any{"children"}}, CreatedAt: at, UpdatedAt: at,
+		Diff: &ChangeRequestDiff{Changed: []string{"children"}}, CreatedAt: at, UpdatedAt: at,
 	}}, nil
 }
 

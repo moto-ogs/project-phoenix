@@ -513,6 +513,10 @@ func (w *tsWriter) tsType(s Schema, request bool) string {
 	case KindRef:
 		t = s.Ref
 	}
+	if s.LegacyJSON {
+		w.helpers["type LegacyJSON"] = true
+		return t + " | LegacyJSON"
+	}
 	if s.Nullable {
 		t += " | null"
 	}
@@ -562,6 +566,9 @@ func (w *tsWriter) field(s Schema) string {
 	}
 	if s.Nullable {
 		z = helper("nullable") + "(" + z + ")"
+	}
+	if s.LegacyJSON {
+		return helper("legacyJSON") + "(" + z + ")"
 	}
 	return z
 }

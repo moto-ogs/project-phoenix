@@ -437,7 +437,7 @@ export interface AuditLogEvent {
   staff?: AuditLogPerson;
   actor: AuditLogActor;
   reason: string;
-  detail: unknown | null;
+  detail: Record<string, unknown | null> | null;
 }
 
 export const AuditLogEventSchema: z.ZodType<AuditLogEvent, unknown> = object<AuditLogEvent>({
@@ -447,7 +447,7 @@ export const AuditLogEventSchema: z.ZodType<AuditLogEvent, unknown> = object<Aud
   staff: optional(AuditLogPersonSchema),
   actor: AuditLogActorSchema,
   reason: str,
-  detail: nullable(json),
+  detail: nullable(rec(nullable(json))),
 });
 
 /** Go: workforce.AuditLogPage */

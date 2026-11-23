@@ -134,6 +134,10 @@ func careOfferingInput(o *CareOffering) (*capability.CareOffering, error) {
 
 // formValues copies the answers a wire request decoded into the owner's
 // values.
+func formAnswerMap(values capability.FormValues) map[string]any {
+	return maps.Collect(values.All())
+}
+
 func formValues(values map[string]any) capability.FormValues {
 	return capability.CollectFormValues(maps.All(values))
 }

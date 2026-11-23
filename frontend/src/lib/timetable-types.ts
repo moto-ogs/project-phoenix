@@ -6,6 +6,7 @@
  * mappers in timetable-helpers.ts.
  */
 
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import type * as timetableContract from "~/lib/contract/timetable.generated";
 
 export type InstanceStatus = "planned" | "active" | "completed" | "cancelled";
@@ -595,11 +596,13 @@ export interface GuardianNoticeReach {
   familyCount: number;
 }
 
-export interface AttendancePatchBody {
+export type AttendancePatchBody = Omit<
+  sharedContract.PatchAttendanceRequest,
+  "status" | "substatus"
+> & {
   status?: InstanceAttendanceStatus;
   substatus?: InstanceAttendanceSubstatus | null;
-  note?: string | null;
-}
+};
 
 export interface AttendanceResponse {
   id: string;

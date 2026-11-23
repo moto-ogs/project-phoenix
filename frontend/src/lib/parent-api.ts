@@ -1614,14 +1614,11 @@ export async function getChildCareSchedule(
   );
 }
 
-export interface CareScheduleRequestInput {
-  readonly weekdays: ReadonlyArray<{
-    readonly weekday: number;
-    readonly scheduled?: boolean;
-    readonly pickup?: string;
-    readonly mode?: string;
-  }>;
-}
+export type CareScheduleRequestInput = {
+  readonly weekdays: ReadonlyArray<
+    parentMeContract.WeekdayChange & { readonly weekday: number }
+  >;
+};
 
 /**
  * Submits a permanent change request for the child's standard weekly plan.
@@ -1640,7 +1637,7 @@ export async function submitCareScheduleRequest(
       {
         params: { studentId },
         body: {
-          payload: { ...payload },
+          payload: { weekdays: [...payload.weekdays] },
           ...(signature
             ? { signature: signatureRequestBody(signature, signatureStatement) }
             : {}),

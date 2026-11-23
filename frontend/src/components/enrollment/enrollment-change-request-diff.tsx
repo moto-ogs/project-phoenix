@@ -15,9 +15,9 @@ import { SectionLabel } from "~/components/ui/section-label";
 import { cn } from "~/lib/utils";
 
 interface EnrollmentChangeRequestDiffProps {
-  readonly baseSnapshot: Record<string, unknown>;
-  readonly proposedSnapshot: Record<string, unknown>;
-  readonly diff: Record<string, unknown>;
+  readonly baseSnapshot: object | null;
+  readonly proposedSnapshot: object | null;
+  readonly diff: object | null;
   readonly beforeLabel?: string;
   readonly afterLabel?: string;
   readonly emptyMessage?: string;

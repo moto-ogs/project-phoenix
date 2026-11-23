@@ -104,7 +104,7 @@ export interface UpdateAbsenceTypeRequest {
   carryover_until?: string | null;
   requestable?: boolean | null;
   offered?: boolean | null;
-  school_limit_days?: unknown | null;
+  school_limit_days?: number | null;
 }
 
 /** Go: absencetypes.SetAllowanceRequest */

@@ -2,7 +2,6 @@ package enrollmenthttp
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -42,8 +41,8 @@ type AdminRequestSummary struct {
 	SubmissionSource string                    `json:"submission_source"`
 	SubmittedAt      time.Time                 `json:"submitted_at"`
 	WithdrawnAt      *time.Time                `json:"withdrawn_at,omitempty"`
-	CustomData       capability.FormValues     `json:"custom_data,omitzero"`
-	ConsentFlags     capability.FormValues     `json:"consent_flags,omitzero"`
+	CustomData       map[string]any            `json:"custom_data,omitempty" contract_json:"Answer values follow the school's versioned form schema"`
+	ConsentFlags     ConsentFlags              `json:"consent_flags,omitempty" contract_json:"Preserve the recorded value of historical non-boolean checkbox answers"`
 	SchemaFields     []AdminRequestSchemaField `json:"schema_fields,omitempty"`
 	// SchemaLegalBlocks carries key→title pairs from the pinned schema's
 	// legal blocks so the detail UI can label custom consent flags (e.g.
@@ -153,8 +152,8 @@ type AdminRequestChild struct {
 	// WeeklyPlanOn is the day the approved weekly plan of a renewal applies
 	// when the child's care was still running at approval (#6043). Until
 	// then the running pickup times, care days and Heimweg stay.
-	WeeklyPlanOn string                `json:"weekly_plan_on,omitempty"`
-	CustomData   capability.FormValues `json:"custom_data,omitzero"`
+	WeeklyPlanOn string         `json:"weekly_plan_on,omitempty"`
+	CustomData   map[string]any `json:"custom_data,omitempty" contract_json:"Answer values follow the school's versioned form schema"`
 	// Offerings is the per-child Betreuungsangebote selection that is on
 	// file RIGHT NOW — exactly the set a correction replaces. Populated
 	// only on the detail endpoint (listing endpoints leave it empty to
@@ -197,18 +196,31 @@ type AdminCandidatePhaseRequest struct {
 }
 
 type AdminOfferingAdjustment struct {
-	ID                 string          `json:"id"`
-	RequestID          string          `json:"request_id"`
-	RequestChildID     string          `json:"request_child_id"`
-	StudentID          string          `json:"student_id"`
-	ActorAccountID     string          `json:"actor_account_id"`
-	ActorRole          string          `json:"actor_role"`
-	ActorNameSnapshot  *string         `json:"actor_name_snapshot,omitempty"`
-	ActorEmailSnapshot *string         `json:"actor_email_snapshot,omitempty"`
-	Reason             string          `json:"reason"`
-	Before             json.RawMessage `json:"before"`
-	After              json.RawMessage `json:"after"`
-	ChangedAt          time.Time       `json:"changed_at"`
+	ID                 string                            `json:"id"`
+	RequestID          string                            `json:"request_id"`
+	RequestChildID     string                            `json:"request_child_id"`
+	StudentID          string                            `json:"student_id"`
+	ActorAccountID     string                            `json:"actor_account_id"`
+	ActorRole          string                            `json:"actor_role"`
+	ActorNameSnapshot  *string                           `json:"actor_name_snapshot,omitempty"`
+	ActorEmailSnapshot *string                           `json:"actor_email_snapshot,omitempty"`
+	Reason             string                            `json:"reason"`
+	Before             []AdminOfferingAdjustmentSnapshot `json:"before"`
+	After              []AdminOfferingAdjustmentSnapshot `json:"after"`
+	ChangedAt          time.Time                         `json:"changed_at"`
+}
+
+// AdminOfferingAdjustmentSnapshot is a booked offering as recorded in an
+// adjustment. The name and mode are optional for historical audit rows.
+type AdminOfferingAdjustmentSnapshot struct {
+	OfferingID            string   `json:"offering_id"`
+	OfferingName          *string  `json:"offering_name,omitempty"`
+	DaysOfWeekMode        *string  `json:"days_of_week_mode,omitempty"`
+	SelectedDays          []string `json:"selected_days,omitempty"`
+	ManualSelectedDays    []string `json:"manual_selected_days,omitempty"`
+	AutomaticSelectedDays []string `json:"automatic_selected_days,omitempty"`
+	AvailableDays         []string `json:"available_days,omitempty"`
+	ExtendedUntil         string   `json:"extended_until,omitempty" contract:"date"`
 }
 
 func toAdminRequestSummary(s *RequestSummary) AdminRequestSummary {
@@ -247,7 +259,7 @@ func toAdminRequestSummary(s *RequestSummary) AdminRequestSummary {
 			MatchedStudentID:  optionalInt64String(c.MatchedStudentID),
 			ReviewReason:      c.ReviewReason,
 			WeeklyPlanOn:      optionalDateString(c.WeeklyPlanOn),
-			CustomData:        c.CustomData,
+			CustomData:        formAnswerMap(c.CustomData),
 		})
 	}
 	out.AdditionalGuardians = make([]AdminRequestGuardian, 0, len(s.Guardians))
@@ -427,8 +439,8 @@ func (rs *Resource) toAdminRequestDetailSummary(ctx context.Context, summary *Re
 	if summary == nil || summary.Request == nil {
 		return detail
 	}
-	detail.CustomData = summary.Request.CustomData
-	detail.ConsentFlags = summary.Request.ConsentFlags
+	detail.CustomData = formAnswerMap(summary.Request.CustomData)
+	detail.ConsentFlags = consentFlagsFromOwner(summary.Request.ConsentFlags)
 
 	if rs.FormSchemaService != nil && summary.Request.SchemaID != nil {
 		if fs, err := rs.FormSchemaService.SchemaVersion(ctx, *summary.Request.SchemaID); err == nil && fs != nil {

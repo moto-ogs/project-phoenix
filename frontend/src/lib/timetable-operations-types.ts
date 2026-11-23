@@ -2,7 +2,7 @@ import {
   HOMEWORK_FEEDBACK_STATUSES,
   type HomeworkFeedbackStatus,
 } from "./homework-feedback";
-import type { CareDayStatus } from "./timetable-types";
+import type { AttendancePatchBody, CareDayStatus } from "./timetable-types";
 import { knownEnum } from "./contract/known-enum";
 import type * as sharedContract from "./contract/shared.generated";
 
@@ -259,11 +259,7 @@ export interface HomeworkFeedbackBody {
   note: string | null;
 }
 
-export interface AttendancePatchBody {
-  status?: RosterRowStatus;
-  substatus?: RosterRowSubstatus | null;
-  note?: string | null;
-}
+export type { AttendancePatchBody };
 
 /** An ID of the contract that may be absent; null when it is. */
 function optionalId(value: string | undefined): string | null {

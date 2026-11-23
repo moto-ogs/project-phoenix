@@ -2231,9 +2231,23 @@ export interface OfferingChangeRequestBody {
   recipient_guardian_profile_ids?: string[] | null;
 }
 
+/** Go: carerequests.WeekdayChange */
+export interface WeekdayChange {
+  weekday?: number;
+  scheduled?: boolean | null;
+  mode?: string;
+  arrival?: string;
+  pickup?: string;
+}
+
+/** Go: carerequests.WeeklyChange */
+export interface WeeklyChange {
+  weekdays?: WeekdayChange[] | null;
+}
+
 /** Go: parent.CareScheduleRequestBody */
 export interface CareScheduleRequestBody {
-  payload?: Record<string, unknown | null> | null;
+  payload?: WeeklyChange | null;
   signature?: declarationSignatureRequest | null;
 }
 
@@ -2554,7 +2568,7 @@ export interface EditOfferingChangeRequestBody {
 
 /** Go: parent.EditCareScheduleRequestBody */
 export interface EditCareScheduleRequestBody {
-  payload?: Record<string, unknown | null> | null;
+  payload?: WeeklyChange | null;
   expected_version?: string;
   signature?: declarationSignatureRequest | null;
 }

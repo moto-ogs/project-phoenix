@@ -132,7 +132,7 @@ export const pollResultsResponseSchema: z.ZodType<pollResultsResponse, unknown> 
 
 /** Go: announcement.reminderRequest */
 export interface reminderRequest {
-  reminder_at?: unknown | null;
+  reminder_at?: string | null;
   reminder_text?: string | null;
 }
 

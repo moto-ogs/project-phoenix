@@ -8,6 +8,7 @@ import {
   instant,
   int64String,
   json,
+  legacyJSON,
   multipart,
   noData,
   nullable,
@@ -18,6 +19,7 @@ import {
   safeInt,
   str,
   success,
+  type LegacyJSON,
   type OpenEnum,
 } from "./runtime";
 import {
@@ -124,6 +126,95 @@ export const AdminEnrollmentDeletionImpactSchema: z.ZodType<AdminEnrollmentDelet
   unlinked_guardian_profiles: safeInt,
   parent_accounts_without_students: safeInt,
   fingerprint: str,
+});
+
+/** Go: enrollmenthttp.ChangeRequestGuardian */
+export interface ChangeRequestGuardian {
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+}
+
+export const ChangeRequestGuardianSchema: z.ZodType<ChangeRequestGuardian, unknown> = object<ChangeRequestGuardian>({
+  first_name: optional(nullable(str)),
+  last_name: optional(nullable(str)),
+  email: optional(nullable(str)),
+  phone: optional(nullable(str)),
+});
+
+/** Go: enrollmenthttp.ChangeRequestOfferingDays */
+export interface ChangeRequestOfferingDays {
+  offering_id: string;
+  selected_days: string[] | null;
+}
+
+export const ChangeRequestOfferingDaysSchema: z.ZodType<ChangeRequestOfferingDays, unknown> = object<ChangeRequestOfferingDays>({
+  offering_id: str,
+  selected_days: nullable(arr(str)),
+});
+
+/** Go: enrollmenthttp.ChangeRequestChildSnapshot */
+export interface ChangeRequestChildSnapshot {
+  id?: string;
+  status?: string;
+  first_name?: string;
+  last_name?: string;
+  date_of_birth?: string;
+  target_grade_level?: number | null;
+  target_school_class?: string;
+  holiday_care_wish?: boolean;
+  custom_data?: Record<string, unknown | null> | null;
+  offering_ids?: string[] | null;
+  offering_days?: ChangeRequestOfferingDays[] | null;
+}
+
+export const ChangeRequestChildSnapshotSchema: z.ZodType<ChangeRequestChildSnapshot, unknown> = object<ChangeRequestChildSnapshot>({
+  id: optional(str),
+  status: optional(str),
+  first_name: optional(str),
+  last_name: optional(str),
+  date_of_birth: optional(str),
+  target_grade_level: optional(nullable(safeInt)),
+  target_school_class: optional(str),
+  holiday_care_wish: optional(bool),
+  custom_data: optional(nullable(rec(nullable(json)))),
+  offering_ids: optional(nullable(arr(str))),
+  offering_days: optional(nullable(arr(ChangeRequestOfferingDaysSchema))),
+});
+
+/** Go: enrollmenthttp.ChangeRequestSnapshot */
+export interface ChangeRequestSnapshot {
+  phase_id?: string;
+  guardian_first_name?: string;
+  guardian_last_name?: string;
+  guardian_email?: string | null;
+  guardian_phone?: string | null;
+  consent_flags?: Record<string, boolean | LegacyJSON> | null;
+  custom_data?: Record<string, unknown | null> | null;
+  additional_guardians?: (ChangeRequestGuardian | LegacyJSON)[] | null;
+  children?: (ChangeRequestChildSnapshot | LegacyJSON)[] | null;
+}
+
+export const ChangeRequestSnapshotSchema: z.ZodType<ChangeRequestSnapshot, unknown> = object<ChangeRequestSnapshot>({
+  phase_id: optional(str),
+  guardian_first_name: optional(str),
+  guardian_last_name: optional(str),
+  guardian_email: optional(nullable(str)),
+  guardian_phone: optional(nullable(str)),
+  consent_flags: optional(nullable(rec(legacyJSON(nullable(bool))))),
+  custom_data: optional(nullable(rec(nullable(json)))),
+  additional_guardians: optional(nullable(arr(legacyJSON(ChangeRequestGuardianSchema)))),
+  children: optional(nullable(arr(legacyJSON(ChangeRequestChildSnapshotSchema)))),
+});
+
+/** Go: enrollmenthttp.ChangeRequestDiff */
+export interface ChangeRequestDiff {
+  changed?: string[] | null;
+}
+
+export const ChangeRequestDiffSchema: z.ZodType<ChangeRequestDiff, unknown> = object<ChangeRequestDiff>({
+  changed: optional(nullable(arr(str))),
 });
 
 /** Go: enrollmenthttp.AdminRequestSchemaFieldOption */
@@ -277,7 +368,7 @@ export interface AdminRequestChild {
   existing_child_only?: boolean;
   review_reason?: string;
   weekly_plan_on?: string;
-  custom_data?: unknown | null;
+  custom_data?: Record<string, unknown | null>;
   offerings?: AdminRequestChildOffering[];
   upcoming_offerings?: AdminRequestChildOffering[];
   offerings_unavailable?: boolean;
@@ -304,7 +395,7 @@ export const AdminRequestChildSchema: z.ZodType<AdminRequestChild, unknown> = ob
   existing_child_only: optional(bool),
   review_reason: optional(str),
   weekly_plan_on: optional(str),
-  custom_data: optional(nullable(json)),
+  custom_data: optional(rec(nullable(json))),
   offerings: optional(arr(AdminRequestChildOfferingSchema)),
   upcoming_offerings: optional(arr(AdminRequestChildOfferingSchema)),
   offerings_unavailable: optional(bool),
@@ -340,8 +431,8 @@ export interface AdminRequestSummary {
   submission_source: string;
   submitted_at: string;
   withdrawn_at?: string;
-  custom_data?: unknown | null;
-  consent_flags?: unknown | null;
+  custom_data?: Record<string, unknown | null>;
+  consent_flags?: Record<string, boolean | LegacyJSON>;
   schema_fields?: AdminRequestSchemaField[];
   schema_legal_blocks?: AdminRequestSchemaLegalBlock[];
   children: AdminRequestChild[] | null;
@@ -361,8 +452,8 @@ export const AdminRequestSummarySchema: z.ZodType<AdminRequestSummary, unknown> 
   submission_source: str,
   submitted_at: instant,
   withdrawn_at: optional(instant),
-  custom_data: optional(nullable(json)),
-  consent_flags: optional(nullable(json)),
+  custom_data: optional(rec(nullable(json))),
+  consent_flags: optional(rec(legacyJSON(nullable(bool)))),
   schema_fields: optional(arr(AdminRequestSchemaFieldSchema)),
   schema_legal_blocks: optional(arr(AdminRequestSchemaLegalBlockSchema)),
   children: nullable(arr(AdminRequestChildSchema)),
@@ -476,9 +567,9 @@ export interface ChangeRequestResponse {
   status: string;
   parent_note?: string;
   admin_decision_note?: string;
-  base_snapshot: Record<string, unknown | null> | null;
-  proposed_snapshot: Record<string, unknown | null> | null;
-  diff: Record<string, unknown | null> | null;
+  base_snapshot: ChangeRequestSnapshot | null;
+  proposed_snapshot: ChangeRequestSnapshot | null;
+  diff: ChangeRequestDiff | null;
   created_at: string;
   updated_at: string;
   reviewed_at?: string;
@@ -495,9 +586,9 @@ export const ChangeRequestResponseSchema: z.ZodType<ChangeRequestResponse, unkno
   status: str,
   parent_note: optional(str),
   admin_decision_note: optional(str),
-  base_snapshot: nullable(rec(nullable(json))),
-  proposed_snapshot: nullable(rec(nullable(json))),
-  diff: nullable(rec(nullable(json))),
+  base_snapshot: nullable(ChangeRequestSnapshotSchema),
+  proposed_snapshot: nullable(ChangeRequestSnapshotSchema),
+  diff: nullable(ChangeRequestDiffSchema),
   created_at: instant,
   updated_at: instant,
   reviewed_at: optional(instant),
@@ -532,9 +623,9 @@ export interface ChangeRequestReviewEntry {
   guardian_name?: string;
   parent_note?: string;
   decision_note?: string;
-  base_snapshot: Record<string, unknown | null> | null;
-  proposed_snapshot: Record<string, unknown | null> | null;
-  diff: Record<string, unknown | null> | null;
+  base_snapshot: ChangeRequestSnapshot | null;
+  proposed_snapshot: ChangeRequestSnapshot | null;
+  diff: ChangeRequestDiff | null;
   created_at: string;
   decided_at?: string;
   decided_by_name?: string;
@@ -551,9 +642,9 @@ export const ChangeRequestReviewEntrySchema: z.ZodType<ChangeRequestReviewEntry,
   guardian_name: optional(str),
   parent_note: optional(str),
   decision_note: optional(str),
-  base_snapshot: nullable(rec(nullable(json))),
-  proposed_snapshot: nullable(rec(nullable(json))),
-  diff: nullable(rec(nullable(json))),
+  base_snapshot: nullable(ChangeRequestSnapshotSchema),
+  proposed_snapshot: nullable(ChangeRequestSnapshotSchema),
+  diff: nullable(ChangeRequestDiffSchema),
   created_at: instant,
   decided_at: optional(instant),
   decided_by_name: optional(str),
@@ -808,7 +899,7 @@ export interface AdminLegalEvidenceEntry {
   wording_unavailable?: boolean;
   snapshot_at: string;
   blocks: LegalBlockSnapshot[] | null;
-  consent_flags: unknown | null;
+  consent_flags: Record<string, boolean | LegacyJSON> | null;
   version_unknown?: boolean;
   version_mismatch?: boolean;
   staff_recorded?: boolean;
@@ -819,7 +910,7 @@ export const AdminLegalEvidenceEntrySchema: z.ZodType<AdminLegalEvidenceEntry, u
   wording_unavailable: optional(bool),
   snapshot_at: instant,
   blocks: nullable(arr(LegalBlockSnapshotSchema)),
-  consent_flags: nullable(json),
+  consent_flags: nullable(rec(legacyJSON(nullable(bool)))),
   version_unknown: optional(bool),
   version_mismatch: optional(bool),
   staff_recorded: optional(bool),
@@ -879,8 +970,8 @@ export interface AdminRequestDetail {
   submission_source: string;
   submitted_at: string;
   withdrawn_at?: string;
-  custom_data?: unknown | null;
-  consent_flags?: unknown | null;
+  custom_data?: Record<string, unknown | null>;
+  consent_flags?: Record<string, boolean | LegacyJSON>;
   schema_fields?: AdminRequestSchemaField[];
   schema_legal_blocks?: AdminRequestSchemaLegalBlock[];
   children: AdminRequestChild[] | null;
@@ -907,8 +998,8 @@ export const AdminRequestDetailSchema: z.ZodType<AdminRequestDetail, unknown> = 
   submission_source: str,
   submitted_at: instant,
   withdrawn_at: optional(instant),
-  custom_data: optional(nullable(json)),
-  consent_flags: optional(nullable(json)),
+  custom_data: optional(rec(nullable(json))),
+  consent_flags: optional(rec(legacyJSON(nullable(bool)))),
   schema_fields: optional(arr(AdminRequestSchemaFieldSchema)),
   schema_legal_blocks: optional(arr(AdminRequestSchemaLegalBlockSchema)),
   children: nullable(arr(AdminRequestChildSchema)),
@@ -923,6 +1014,29 @@ export const AdminRequestDetailSchema: z.ZodType<AdminRequestDetail, unknown> = 
   signature: optional(RequestSignatureResponseSchema),
 });
 
+/** Go: enrollmenthttp.AdminOfferingAdjustmentSnapshot */
+export interface AdminOfferingAdjustmentSnapshot {
+  offering_id: string;
+  offering_name?: string;
+  days_of_week_mode?: string;
+  selected_days?: string[];
+  manual_selected_days?: string[];
+  automatic_selected_days?: string[];
+  available_days?: string[];
+  extended_until?: string;
+}
+
+export const AdminOfferingAdjustmentSnapshotSchema: z.ZodType<AdminOfferingAdjustmentSnapshot, unknown> = object<AdminOfferingAdjustmentSnapshot>({
+  offering_id: str,
+  offering_name: optional(str),
+  days_of_week_mode: optional(str),
+  selected_days: optional(arr(str)),
+  manual_selected_days: optional(arr(str)),
+  automatic_selected_days: optional(arr(str)),
+  available_days: optional(arr(str)),
+  extended_until: optional(calendarDate),
+});
+
 /** Go: enrollmenthttp.AdminOfferingAdjustment */
 export interface AdminOfferingAdjustment {
   id: string;
@@ -934,8 +1048,8 @@ export interface AdminOfferingAdjustment {
   actor_name_snapshot?: string;
   actor_email_snapshot?: string;
   reason: string;
-  before: unknown | null;
-  after: unknown | null;
+  before: AdminOfferingAdjustmentSnapshot[] | null;
+  after: AdminOfferingAdjustmentSnapshot[] | null;
   changed_at: string;
 }
 
@@ -949,8 +1063,8 @@ export const AdminOfferingAdjustmentSchema: z.ZodType<AdminOfferingAdjustment, u
   actor_name_snapshot: optional(str),
   actor_email_snapshot: optional(str),
   reason: str,
-  before: nullable(json),
-  after: nullable(json),
+  before: nullable(arr(AdminOfferingAdjustmentSnapshotSchema)),
+  after: nullable(arr(AdminOfferingAdjustmentSnapshotSchema)),
   changed_at: instant,
 });
 
@@ -1356,7 +1470,7 @@ export interface EditDraftChildResponse {
   target_grade_level?: number;
   target_school_class?: string;
   holiday_care_wish?: boolean;
-  custom_data: unknown | null;
+  custom_data: Record<string, unknown | null> | null;
   offering_ids: string[] | null;
   offering_days?: EditDraftOfferingDayResponse[];
   locked: boolean;
@@ -1370,7 +1484,7 @@ export const EditDraftChildResponseSchema: z.ZodType<EditDraftChildResponse, unk
   target_grade_level: optional(safeInt),
   target_school_class: optional(str),
   holiday_care_wish: optional(bool),
-  custom_data: nullable(json),
+  custom_data: nullable(rec(nullable(json))),
   offering_ids: nullable(arr(str)),
   offering_days: optional(arr(EditDraftOfferingDayResponseSchema)),
   locked: bool,
@@ -1387,8 +1501,8 @@ export interface EditDraftResponse {
   guardian_last_name: string;
   guardian_email: string;
   guardian_phone?: string;
-  consent_flags: unknown | null;
-  custom_data: unknown | null;
+  consent_flags: Record<string, boolean | LegacyJSON> | null;
+  custom_data: Record<string, unknown | null> | null;
   additional_guardians?: EditDraftGuardianResponse[];
   children: EditDraftChildResponse[] | null;
 }
@@ -1403,8 +1517,8 @@ export const EditDraftResponseSchema: z.ZodType<EditDraftResponse, unknown> = ob
   guardian_last_name: str,
   guardian_email: str,
   guardian_phone: optional(str),
-  consent_flags: nullable(json),
-  custom_data: nullable(json),
+  consent_flags: nullable(rec(legacyJSON(nullable(bool)))),
+  custom_data: nullable(rec(nullable(json))),
   additional_guardians: optional(arr(EditDraftGuardianResponseSchema)),
   children: nullable(arr(EditDraftChildResponseSchema)),
 });
@@ -1529,7 +1643,7 @@ export interface EditPatchRequest {
   guardian_first_name?: string | null;
   guardian_last_name?: string | null;
   guardian_phone?: string | null;
-  consent_flags?: Record<string, unknown | null> | null;
+  consent_flags?: Record<string, boolean | null> | null;
   custom_data?: Record<string, unknown | null> | null;
 }
 
@@ -1667,7 +1781,7 @@ export interface CareOfferingRequest {
   selection_group?: string;
   selection_rule?: string;
   pickup_times?: Record<string, string> | null;
-  translations?: unknown | null;
+  translations?: Record<string, Record<string, TranslatedTextInput> | null> | null;
 }
 
 /** Go: enrollmenthttp.CloneCareOfferingRequest */
@@ -1754,7 +1868,7 @@ export interface AdminManualApprovedEnrollmentRequest {
   guardian_email?: string;
   guardian_phone?: string | null;
   additional_guardians?: SubmitGuardianRequest[] | null;
-  consent_flags?: Record<string, unknown | null> | null;
+  consent_flags?: Record<string, boolean | null> | null;
   form_schema_id?: string;
   expected_terms_fingerprint?: string;
   custom_data?: Record<string, unknown | null> | null;
@@ -1842,7 +1956,7 @@ export interface CreateChangeRequestRequest {
   guardian_email?: string;
   guardian_phone?: string | null;
   additional_guardians?: SubmitGuardianRequest[] | null;
-  consent_flags?: Record<string, unknown | null> | null;
+  consent_flags?: Record<string, boolean | null> | null;
   form_schema_id?: string;
   expected_terms_fingerprint?: string;
   custom_data?: Record<string, unknown | null> | null;
@@ -1855,7 +1969,7 @@ export interface CreateChangeRequestRequest {
 
 /** Go: enrollmenthttp.ConfirmRenewalRequest */
 export interface ConfirmRenewalRequest {
-  consent_flags?: Record<string, unknown | null> | null;
+  consent_flags?: Record<string, boolean | null> | null;
   form_schema_id?: string;
   terms_fingerprint?: string;
 }
@@ -1951,7 +2065,7 @@ export interface AdminChildOfferingsResponse {
   existing_child_only?: boolean;
   review_reason?: string;
   weekly_plan_on?: string;
-  custom_data?: unknown | null;
+  custom_data?: Record<string, unknown | null>;
   offerings?: AdminRequestChildOffering[];
   upcoming_offerings?: AdminRequestChildOffering[];
   offerings_unavailable?: boolean;
@@ -1979,7 +2093,7 @@ export const AdminChildOfferingsResponseSchema: z.ZodType<AdminChildOfferingsRes
   existing_child_only: optional(bool),
   review_reason: optional(str),
   weekly_plan_on: optional(str),
-  custom_data: optional(nullable(json)),
+  custom_data: optional(rec(nullable(json))),
   offerings: optional(arr(AdminRequestChildOfferingSchema)),
   upcoming_offerings: optional(arr(AdminRequestChildOfferingSchema)),
   offerings_unavailable: optional(bool),

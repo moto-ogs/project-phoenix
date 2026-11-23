@@ -39,7 +39,7 @@ type PasskeyEnrollmentChallenge struct {
 // the browser passes to the authenticator.
 type PasskeyCeremonyOptions struct {
 	SessionID string `json:"session_id"`
-	Options   any    `json:"options"`
+	Options   any    `json:"options" contract_json:"The WebAuthn library owns the ceremony-specific browser options"`
 }
 
 // PasskeyLoginResult is the token pair a completed login ceremony minted.

@@ -67,6 +67,8 @@ Worked example, the same route from Go to the browser:
    v1.11.5 reads them. `ident.ID` still reads a JSON number in a request:
    that is the one-release compatibility for browser tabs of the previous
    frontend and goes after the next release (`backend/sharedkernel/ident/id.go`).
+   Give each Go field a concrete wire type; the generator rejects free JSON
+   unless the field carries `contract_json:"<why its shape is open>"`.
 3. **Mount.** A new contracts function gets one row in the matching
    `*ContractMounts()` list of `backend/api/route_contracts.go`, e.g.
    `{"/api/activities", timetableActivitiesHTTP.RouteContracts()}`. This

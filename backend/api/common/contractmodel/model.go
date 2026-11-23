@@ -23,19 +23,22 @@ const (
 
 // Schema is one value on the wire.
 type Schema struct {
-	Kind     string  `json:"kind"`
-	Nullable bool    `json:"nullable,omitempty"`
-	Elem     *Schema `json:"elem,omitempty"`
+	Kind       string  `json:"kind"`
+	Nullable   bool    `json:"nullable,omitempty"`
+	LegacyJSON bool    `json:"legacy_json,omitempty"`
+	Elem       *Schema `json:"elem,omitempty"`
 	// Ref names the object of a KindRef or the enum of a KindEnum.
 	Ref string `json:"ref,omitempty"`
 }
 
 // Field is one member of an object. Optional means the key may be absent.
 type Field struct {
-	Name       string `json:"name"`
-	Optional   bool   `json:"optional,omitempty"`
-	Deprecated bool   `json:"deprecated,omitempty"`
-	Schema     Schema `json:"schema"`
+	Name        string `json:"name"`
+	Optional    bool   `json:"optional,omitempty"`
+	Deprecated  bool   `json:"deprecated,omitempty"`
+	JSONReason  string `json:"json_reason,omitempty"`
+	RefinesJSON string `json:"refines_json,omitempty"`
+	Schema      Schema `json:"schema"`
 }
 
 // Object is one Go struct as it renders.

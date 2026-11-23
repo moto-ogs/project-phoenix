@@ -94,13 +94,13 @@ type AuditLogActor struct {
 
 // AuditLogEvent is one feed entry: common envelope plus source-typed detail.
 type AuditLogEvent struct {
-	OccurredAt time.Time       `json:"occurred_at"`
-	Source     string          `json:"source"`
-	EntryID    ident.ID        `json:"entry_id"`
-	Staff      *AuditLogPerson `json:"staff,omitempty"`
-	Actor      AuditLogActor   `json:"actor"`
-	Reason     string          `json:"reason"`
-	Detail     json.RawMessage `json:"detail"`
+	OccurredAt time.Time                  `json:"occurred_at"`
+	Source     string                     `json:"source"`
+	EntryID    ident.ID                   `json:"entry_id"`
+	Staff      *AuditLogPerson            `json:"staff,omitempty"`
+	Actor      AuditLogActor              `json:"actor"`
+	Reason     string                     `json:"reason"`
+	Detail     map[string]json.RawMessage `json:"detail" contract_json:"The audit source selects the recorded fields, including historical deletion payloads"`
 }
 
 // AuditLogPage is one keyset page; NextCursor is empty on the last page.

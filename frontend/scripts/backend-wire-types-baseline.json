@@ -2,7 +2,6 @@
   "components/enrollment/enrollment-child-derivation.ts shape ChildDraft",
   "components/enrollment/enrollment-form-shared.ts shape ContactEntryValue",
   "components/enrollment/enrollment-form-shared.ts shape PhoneEntry",
-  "lib/enrollment-admin-api.ts shape AdminOfferingAdjustmentSnapshot",
   "lib/enrollment-uploads.ts shape StoredUploadValue",
   "lib/error-log.ts shape ErrorLogFields",
   "lib/import-batch-result.ts shape ImportBatchResult",

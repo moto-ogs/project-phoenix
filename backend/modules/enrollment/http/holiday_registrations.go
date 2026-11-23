@@ -182,7 +182,7 @@ type holidayChildRequest struct {
 	Medication      string                    `json:"medication"`
 	HealthNotes     string                    `json:"health_notes"`
 	Bookings        []holidayBookingRequest   `json:"bookings"`
-	CustomData      capability.HolidayAnswers `json:"custom_data"`
+	CustomData      capability.HolidayAnswers `json:"custom_data" contract_json:"Answer values follow the school's versioned form schema"`
 	// WishProof is the sealed statement of the holiday care wish from the
 	// prefill of a parent with an account (#4703).
 	WishProof string `json:"wish_proof"`
@@ -222,7 +222,7 @@ type HolidayRegistrationRequest struct {
 	BenefitsProofs    []string                  `json:"benefits_proof_tokens"`
 	CaptchaToken      string                    `json:"captcha_token"`
 	FormVersion       int                       `json:"form_version"`
-	CustomData        capability.HolidayAnswers `json:"custom_data"`
+	CustomData        capability.HolidayAnswers `json:"custom_data" contract_json:"Answer values follow the school's versioned form schema"`
 	LegalAcceptances  map[string]bool           `json:"legal_acceptances"`
 	ConsentVersion    int                       `json:"consent_version"`
 	// RetentionDays are the days the privacy text the parent agreed to

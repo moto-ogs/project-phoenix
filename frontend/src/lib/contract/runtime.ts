@@ -77,6 +77,17 @@ export const str: Field = z.string();
 export const bool: Field = z.boolean();
 export const num: Field = z.number();
 export const json: Field = z.unknown();
+// The Go field names the typed form and documents why historical values
+// must still travel. An open fallback is JSON, not an unchecked JS value.
+const historicalJSON = z.json();
+export type LegacyJSON = z.output<typeof historicalJSON>;
+export const legacyJSON = (current: Field): Field =>
+  // Keep the original value: a current object decoder can accept a
+  // historical row but strip keys the review screen still displays.
+  z.custom(
+    (raw) =>
+      current.safeParse(raw).success || historicalJSON.safeParse(raw).success,
+  );
 export const arr = (item: Field): Field => z.array(item);
 export const rec = (value: Field): Field => z.record(z.string(), value);
 export const nullable = (value: Field): Field => value.nullable();
