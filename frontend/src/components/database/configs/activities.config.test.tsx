@@ -3,7 +3,7 @@
  * Tests emoji matching, config structure, and form sections
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { activitiesConfig } from "./activities.config";
+import { activitiesConfig, toActivityRequest } from "./activities.config";
 import {
   mapActivityResponse,
   type Activity,
@@ -23,6 +23,12 @@ vi.mock("next-auth/react", () => ({
 // Mock global fetch
 global.fetch = vi.fn();
 
+// The session gate is session-cache's own concern.
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 describe("activitiesConfig", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -34,10 +40,6 @@ describe("activitiesConfig", () => {
       singular: "Aktivität",
       plural: "Aktivitäten",
     });
-  });
-
-  it("has correct API configuration", () => {
-    expect(activitiesConfig.api.routes.list).toBe("GET /api/activities/");
   });
 
   it("has form sections configured", () => {
@@ -130,7 +132,7 @@ describe("activitiesConfig", () => {
       ag_category_id: "3",
     };
 
-    const mapped = activitiesConfig.service?.mapRequest?.(data);
+    const mapped = toActivityRequest(data);
     expect(mapped).toEqual({
       name: "Test Activity",
       max_participants: 25,
@@ -146,7 +148,7 @@ describe("activitiesConfig", () => {
       supervisor_id: "42",
     };
 
-    const mapped = activitiesConfig.service?.mapRequest?.(data);
+    const mapped = toActivityRequest(data);
     expect(mapped).toEqual({
       name: "Test Activity",
       max_participants: 25,
@@ -163,7 +165,7 @@ describe("activitiesConfig", () => {
       supervisor_id: "9007199254740995",
     };
 
-    expect(activitiesConfig.service?.mapRequest?.(data)).toMatchObject({
+    expect(toActivityRequest(data)).toMatchObject({
       category_id: "9007199254740993",
       supervisor_ids: ["9007199254740995"],
     });
@@ -176,7 +178,7 @@ describe("activitiesConfig", () => {
       ag_category_id: "3",
     } as unknown as Partial<Activity>;
 
-    const mapped = activitiesConfig.service?.mapRequest?.(data);
+    const mapped = toActivityRequest(data);
     expect(mapped).toEqual({
       name: "Test Activity",
       max_participants: null,
@@ -184,16 +186,20 @@ describe("activitiesConfig", () => {
     });
   });
 
-  it("maps the contract's activity once", () => {
+  it("maps the contract's activity once", async () => {
     const responseData = buildBackendActivity({
       id: "1",
       name: "Test Activity",
     });
 
-    const mapped = activitiesConfig.service?.mapResponse?.(responseData);
+    vi.mocked(global.fetch).mockResolvedValueOnce(
+      Response.json({ data: responseData }),
+    );
+
+    const mapped = await activitiesConfig.api.get!("1");
     expect(mapped).toEqual(mapActivityResponse(responseData));
-    expect(mapped?.max_participant).toBe(20);
-    expect(mapped?.is_open_ags).toBe(true);
+    expect(mapped.max_participant).toBe(20);
+    expect(mapped.is_open_ags).toBe(true);
   });
 
   it("has list configuration", () => {

@@ -163,7 +163,7 @@ function DevicesPageContent() {
     error: devicesError,
     mutate: mutateDevices,
   } = useSWRAuth(tenantAdminKeys.devices(), async () => {
-    const data = await service.getList({ page: 1, pageSize: 500 });
+    const data = await service.getList();
     return Array.isArray(data.data) ? data.data : [];
   });
 
@@ -346,7 +346,8 @@ function DevicesPageContent() {
       const payload = devicesConfig.form.transformBeforeSubmit
         ? devicesConfig.form.transformBeforeSubmit(data)
         : data;
-      const updatedDevice = await service.update(selectedDevice.id, payload);
+      const updatedDevice =
+        (await service.update(selectedDevice.id, payload)) ?? selectedDevice;
       // Editing closes the api_key flash — the snapshot would otherwise
       // overlay the freshly-edited list values on the next render.
       setCreatedDevice(null);

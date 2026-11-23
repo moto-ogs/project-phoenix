@@ -62,7 +62,7 @@ function PermissionsPageContent() {
     error: permissionsError,
     mutate,
   } = useSWRAuth(tenantAdminKeys.permissions(), async () => {
-    const response = await service.getList({ page: 1, pageSize: 500 });
+    const response = await service.getList();
     return Array.isArray(response.data) ? response.data : [];
   });
   const permissions = data ?? NO_PERMISSIONS;

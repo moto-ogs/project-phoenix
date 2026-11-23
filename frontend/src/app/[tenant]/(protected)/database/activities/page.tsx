@@ -106,7 +106,7 @@ function ActivitiesPageContent() {
     error: activitiesError,
     mutate: mutateActivities,
   } = useSWRAuth(tenantAdminKeys.activities(), async () => {
-    const data = await service.getList({ page: 1, pageSize: 500 });
+    const data = await service.getList();
     return Array.isArray(data.data) ? data.data : [];
   });
 
