@@ -6883,7 +6883,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (m parentSEPAMandates) RevokeSEPAMandate(ctx context.Context, organizationID int64, reader parentportal.SEPAMandateReader) (parentportal.SEPAMandateView, error) {\n\tview, err := m.mandates.RevokeParentSEPAMandate(ctx, organizationID, parentbilling.ParentMandateReader(reader))\n\treturn parentMandateView(view), parentMandateError(err)\n}",
+      "evidence": "func (m parentSEPAMandates) RevokeSEPAMandate(ctx context.Context, organizationID int64, reader parentportal.SEPAMandateReader, expectedVersion string) (parentportal.SEPAMandateView, error) {\n\tview, err := m.mandates.RevokeParentSEPAMandate(ctx, organizationID, parentbilling.ParentMandateReader(reader), expectedVersion)\n\treturn parentMandateView(view), parentMandateError(err)\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/parentSEPAMandates.RevokeSEPAMandate",
       "owner": "roots"

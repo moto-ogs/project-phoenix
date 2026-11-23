@@ -140,7 +140,7 @@ func TestContractFormChecksTheFormatAndKeepsTheHolidayFamily(t *testing.T) {
 	}
 	save := func(body map[string]any) *httptest.ResponseRecorder {
 		body["contract_id"] = contract
-		return traegerJSON(t, f.traeger, billing, http.MethodPut, familyBillingPath, body)
+		return putFamilyBilling(t, f.traeger, billing, body)
 	}
 
 	fiveDigits(t, f)
@@ -258,7 +258,7 @@ func TestContractFormPreservesLegacyNumbersAndClearsChangedProvenance(t *testing
 	require.Equal(t, http.StatusOK, f.confirmWith(t, f.siblings, map[string]any{"debtor_number": "LEGACY 1"}).Code)
 	fiveDigits(t, f)
 	save := func(number string) *httptest.ResponseRecorder {
-		return traegerJSON(t, f.traeger, billing, http.MethodPut, familyBillingPath,
+		return putFamilyBilling(t, f.traeger, billing,
 			map[string]any{"contract_id": contract, "recipient_kind": "applicant", "payment_method": "direct_debit", "due_day": 15, "debtor_number": number})
 	}
 	rec := save(" LEGACY 1 ")

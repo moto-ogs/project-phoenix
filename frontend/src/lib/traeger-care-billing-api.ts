@@ -173,6 +173,11 @@ export interface CareTariffs {
   readonly lists?: readonly CarePriceListHead[];
   /** Per school ID the last month an issued invoice bills ("YYYY-MM-01"). */
   readonly billedUntil: Readonly<Record<string, string>>;
+  /**
+   * Per school ID the read-state token of its price lists: a save or
+   * removal sends back the one it started from (ADR 0311).
+   */
+  readonly versions?: Readonly<Record<string, string>>;
 }
 
 export interface CarePriceInput {
@@ -671,6 +676,7 @@ function tariffsFromBackend(
       freeMonths: list.free_months ?? [],
     })),
     billedUntil: billedUntilFromBackend(body.billed_until),
+    versions: { ...body.versions },
   };
 }
 
@@ -860,12 +866,16 @@ export async function fetchCareTariffs(): Promise<CareTariffs> {
   return tariffsFromBackend(await bffJson("org", "GET /traeger/care-tariffs/"));
 }
 
-/** Sets the prices of a school from `validFrom` (the 1st of a month) on. */
+/**
+ * Sets the prices of a school from `validFrom` (the 1st of a month) on,
+ * over the version of the school's price lists the form started from.
+ */
 export async function saveCarePriceList(
   schoolId: string,
   validFrom: string,
   prices: readonly CarePriceInput[],
-  freeMonths: readonly number[] = [],
+  freeMonths: readonly number[],
+  expectedVersion: string,
 ): Promise<CareTariffs> {
   return tariffsFromBackend(
     await bffJson("org", "PUT /traeger/care-tariffs/", {
@@ -873,6 +883,7 @@ export async function saveCarePriceList(
         school_id: schoolId,
         valid_from: validFrom,
         free_months: [...freeMonths],
+        expected_version: expectedVersion,
         prices: prices.map((price) => ({
           care_offering_id: price.careOfferingId,
           module_name: price.moduleName,
@@ -887,16 +898,23 @@ export async function saveCarePriceList(
   );
 }
 
-/** Removes the prices of a school that start on `validFrom`. */
+/**
+ * Removes the prices of a school that start on `validFrom`, over the
+ * version of the school's price lists the page showed.
+ */
 export async function deleteCarePriceList(
   schoolId: string,
   validFrom: string,
+  expectedVersion: string,
 ): Promise<CareTariffs> {
   return tariffsFromBackend(
     await bffJson(
       "org",
       "DELETE /traeger/care-tariffs/{schoolID}/{validFrom}",
-      { params: { schoolID: schoolId, validFrom } },
+      {
+        params: { schoolID: schoolId, validFrom },
+        query: { expected_version: expectedVersion },
+      },
     ),
   );
 }
