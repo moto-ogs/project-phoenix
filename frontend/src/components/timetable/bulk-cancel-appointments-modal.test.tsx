@@ -386,3 +386,37 @@ it("zählt neu statt zu wiederholen, wenn sich die Termine seit dem Zählen geä
   ).not.toBeInTheDocument();
   expect(mockToastSuccess).not.toHaveBeenCalled();
 });
+
+// ADR 0311 rule 6: a failed recount after a refusal says so, and the
+// refused count is not confirmed again.
+it("nennt ein gescheitertes Neuzählen nach einer Ablehnung und sagt nichts ab", async () => {
+  mockBulkCancel.mockReset();
+  mockBulkCancel.mockResolvedValue(preview({ count: 3, fingerprint: "erste" }));
+  renderModal();
+  await screen.findByText(/werden 3 Termine abgesagt/);
+  mockBulkCancel.mockImplementation(
+    (_from: string, _to: string, dryRun: boolean) =>
+      Promise.reject(
+        dryRun
+          ? new ApiError("down", 503, { code: "general.unavailable" })
+          : new ApiError("changed", 409, {
+              code: "general.changed_since_read",
+            }),
+      ),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Termine absagen" }));
+  fireEvent.click(screen.getByRole("button", { name: "Endgültig absagen" }));
+
+  expect(
+    await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByText(/Du siehst jetzt den neuen Stand/),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByText(/werden 3 Termine abgesagt/),
+  ).not.toBeInTheDocument();
+  expect(
+    mockBulkCancel.mock.calls.filter(([, , dryRun]) => dryRun === false),
+  ).toHaveLength(1);
+});

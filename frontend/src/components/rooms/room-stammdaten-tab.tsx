@@ -1,21 +1,29 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
   DatabaseForm,
+  draftSubmitBlock,
+  formValuesFor,
   type DatabaseFormErrorPath,
 } from "~/components/database/database-form";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { isChangedSinceRead } from "~/lib/api-error";
 import { isSystemRoom, type Room } from "~/lib/room-helpers";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { buildRoomFormSections } from "./room-form-sections";
 
 interface RoomStammdatenTabProps {
   readonly room: Room;
   readonly showOccupancy: boolean;
-  readonly onSave: (data: Partial<Room>) => Promise<void>;
+  /** Saves with the version the form rests on; answers the stored room. */
+  readonly onSave: (
+    data: Partial<Room>,
+    version: string | undefined,
+  ) => Promise<Room>;
+  /** Reads the room again; rejects when the read fails (ADR 0311). */
+  readonly reload: () => Promise<Room>;
   /** Shared error path (#2517): catalog text, field errors at the field. */
   readonly errorPath: DatabaseFormErrorPath;
 }
@@ -24,32 +32,46 @@ interface RoomStammdatenTabProps {
  * Der Reiter „Stammdaten" der Raumseite (#3115): das Formular, das vorher im
  * Pane der Datenverwaltung lag. Ein Speichern unten, das Formular setzt sich
  * nach dem Speichern, beim Abbrechen und beim Raumwechsel auf den
- * gespeicherten Stand zurück, damit kein alter Entwurf stehen bleibt.
+ * gespeicherten Stand zurück, damit kein alter Entwurf stehen bleibt. Ein
+ * Live-Neuladen des Raums (Belegung) lässt einen Entwurf stehen (ADR 0311).
  */
 export function RoomStammdatenTab({
   room,
   showOccupancy,
   onSave,
+  reload,
   errorPath,
 }: RoomStammdatenTabProps) {
-  const [formResetCounter, setFormResetCounter] = useState(0);
   const sections = useMemo(() => buildRoomFormSections(room), [room]);
-  // A save refused because the room changed since it was read (ADR 0311)
-  // waits for the stored room; once it arrives the form shows it.
-  const [refusedVersion, setRefusedVersion] = useState<string | null>(null);
-  if (refusedVersion !== null && room.version !== refusedVersion) {
-    setRefusedVersion(null);
-    setFormResetCounter((n) => n + 1);
-  }
+  // The form rests on the room's version (ADR 0311): a newer read refills it
+  // only while untouched, after a refusal the stored room shows, and nothing
+  // is sent until it is read.
+  const edit = useDraftOn<
+    Room,
+    Record<string, unknown>,
+    string | undefined,
+    Room
+  >(
+    { opening: room.id, data: room, reload },
+    {
+      token: (stored) => stored.version,
+      toDraft: (stored) => formValuesFor(buildRoomFormSections(stored), stored),
+      answer: (saved) => saved,
+    },
+  );
 
   const handleSave = async (data: Partial<Room>) => {
-    try {
-      await onSave(data);
-    } catch (err) {
-      if (isChangedSinceRead(err)) setRefusedVersion(room.version ?? "");
-      throw err;
-    }
-    setFormResetCounter((n) => n + 1);
+    if (!edit.canSubmit) return;
+    const result = await edit.submit((version) => onSave(data, version));
+    if (result.ok) return;
+    // Seit dem Lesen geändert: `reload` zeigt den gespeicherten Raum, ohne
+    // Wiederholen derselben Version. Jeder andere Fehler geht an das
+    // Formular, das ihn mit Wiederholen zeigt.
+    if (!result.refused) throw result.error;
+    void errorPath.show(result.error, {
+      object: "das Speichern des Raums",
+      reload: result.reload,
+    });
   };
 
   return (
@@ -86,11 +108,19 @@ export function RoomStammdatenTab({
 
       <SectionCard title="Stammdaten">
         <DatabaseForm
-          key={`${room.id}:${formResetCounter}`}
           sections={sections}
+          draft={
+            edit.draft
+              ? {
+                  values: edit.draft,
+                  setValues: edit.setDraft,
+                  blocked: draftSubmitBlock(edit),
+                }
+              : undefined
+          }
           initialData={room}
           onSubmit={handleSave}
-          onCancel={() => setFormResetCounter((n) => n + 1)}
+          onCancel={edit.discard}
           submitLabel="Speichern"
           stickyActions
           sectionLevel={3}

@@ -10,6 +10,7 @@ import {
 import {
   type ReaderOptions,
   type SWRResponse,
+  revalidateOrThrow,
   useOpeningRead,
   useSWRAuth,
 } from "~/lib/swr";
@@ -39,7 +40,15 @@ export function useTraegerResource<T>(
     ...options,
     ...guard.callbacks,
   });
-  return useTraegerResult(scoped, response, guard, object);
+  return {
+    ...useTraegerResult(scoped, response, guard, object),
+    /**
+     * Reads again and rejects when the read fails (ADR 0311, rule 6): for
+     * `show(error, { reload })` and the drafts of `~/lib/swr/read-draft`.
+     * `reload` and `mutate()` resolve with the old data instead.
+     */
+    reloadOrThrow: () => revalidateOrThrow(response),
+  };
 }
 
 /**
@@ -68,7 +77,11 @@ export function useFreshTraegerResource<T>(
     error: opened.error,
     mutate: opened.mutate,
   };
-  return useTraegerResult(scoped, response, guard, object);
+  return {
+    ...useTraegerResult(scoped, response, guard, object),
+    /** Reads again and rejects when the read fails (ADR 0311, rule 6). */
+    reloadOrThrow: opened.reload,
+  };
 }
 
 /** The key only for a Träger session, with its refusal guard. */

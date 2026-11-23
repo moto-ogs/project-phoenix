@@ -300,6 +300,43 @@ describe("AbsenceRebookModal", () => {
     );
   });
 
+  // ADR 0311 rule 6: a failed read of the new effect after a refusal says
+  // so, and the refused fingerprint is not sent again.
+  it("names a failed read of the effect after a refusal", async () => {
+    mocks.rebookAbsences.mockResolvedValue(rebooking());
+    const onSaved = renderModal();
+    fireEvent.click(screen.getByRole("radio", { name: /Krank-Urlaubstag/ }));
+    expect(await screen.findByText("+16h")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Grund (Pflicht)"), {
+      target: { value: "Kontingent angelegt" },
+    });
+    mocks.rebookAbsences
+      .mockRejectedValueOnce(
+        new ApiError("changed since it was read", 409, {
+          code: "general.changed_since_read",
+        }),
+      )
+      .mockRejectedValue(
+        new ApiError("down", 503, { code: "general.unavailable" }),
+      );
+    fireEvent.click(submitButton());
+
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Du siehst jetzt den neuen Stand/),
+    ).not.toBeInTheDocument();
+    expect(submitButton()).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(submitButton());
+    expect(
+      mocks.rebookAbsences.mock.calls.filter(
+        ([, body]) => (body as { dryRun: boolean }).dryRun === false,
+      ),
+    ).toHaveLength(1);
+    expect(onSaved).not.toHaveBeenCalled();
+  });
+
   it("blocks saving when the allowance is too small", async () => {
     mocks.rebookAbsences.mockResolvedValue(
       rebooking({

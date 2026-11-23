@@ -440,3 +440,44 @@ it("shows the new preview instead of a retry when the children changed since it 
   );
   await waitFor(() => expect(onConnected).toHaveBeenCalled());
 });
+
+// ADR 0311 rule 6: a failed read of the new preview after a refusal says
+// so, and the refused preview is not confirmed again.
+it("names a failed read of the preview after a refusal and connects nothing", async () => {
+  mockPreview
+    .mockReset()
+    .mockResolvedValueOnce(preview)
+    .mockRejectedValue(
+      new ApiError("down", 503, { code: "general.unavailable" }),
+    );
+  mockConnect
+    .mockReset()
+    .mockRejectedValue(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+  render(
+    <ConnectOfferingModal
+      isOpen
+      templateName="RDST 1b"
+      deviation={deviation}
+      onClose={vi.fn()}
+      onConnected={vi.fn()}
+    />,
+    { wrapper: SWRTestCache },
+  );
+  expect(await screen.findByText("Bleibt (4)")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Verbinden" }));
+
+  expect(
+    await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByText(/Du siehst jetzt den neuen Stand/),
+  ).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Verbinden" })).toHaveAttribute(
+    "aria-disabled",
+    "true",
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Verbinden" }));
+  expect(mockConnect).toHaveBeenCalledTimes(1);
+});

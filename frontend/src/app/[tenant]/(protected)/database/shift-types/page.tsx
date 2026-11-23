@@ -44,7 +44,7 @@ import {
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { ApiError } from "~/lib/api-error";
 import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
-import { useSWRAuth, useTenantMutate } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth, useTenantMutate } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { useModuleBooked } from "~/lib/tenant-context";
 import { staffPlanConcept } from "~/lib/concepts/staffPlan";
@@ -164,15 +164,11 @@ function ShiftTypesPageContent() {
   const [seeding, setSeeding] = useState(false);
 
   const discardRefused = useDiscardRefusedEntity();
-  const {
-    data: cachedData,
-    isLoading,
-    error: swrError,
-    mutate,
-  } = useSWRAuth<ShiftType[]>(CACHE_KEY, () =>
+  const list = useSWRAuth<ShiftType[]>(CACHE_KEY, () =>
     // Die Zahlen sagen der Rückfrage, ob gelöscht oder archiviert wird.
     shiftTypeService.getShiftTypes({ withUsage: true }),
   );
+  const { data: cachedData, isLoading, error: swrError, mutate } = list;
   const accessRefused =
     swrError instanceof ApiError && isAccessRefusal(swrError);
   const data = accessRefused ? undefined : cachedData;
@@ -202,11 +198,15 @@ function ShiftTypesPageContent() {
   >(CATEGORY_CACHE_KEY, () => categoryService.getManagedCategories());
   const categoriesReady = categories !== undefined && !categoriesError;
 
-  const onChanged = useCallback(
-    () =>
-      Promise.all([tenantMutate(CACHE_KEY), tenantMutate(CATEGORY_CACHE_KEY)]),
-    [tenantMutate],
-  );
+  // Lehnt ab, wenn das Lesen scheitert (ADR 0311), mit der Liste als
+  // Antwort.
+  const onChanged = useCallback(async () => {
+    const [stored] = await Promise.all([
+      revalidateOrThrow(list),
+      tenantMutate(CATEGORY_CACHE_KEY),
+    ]);
+    return stored;
+  }, [list, tenantMutate]);
 
   const items = useMemo(
     () =>
