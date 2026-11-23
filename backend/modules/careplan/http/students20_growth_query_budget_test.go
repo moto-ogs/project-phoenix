@@ -67,6 +67,11 @@ func TestStudents20ArrivalGrowthQueryBudget(t *testing.T) {
 		}
 		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &body))
 		require.Equal(t, expectedExceptions, body.Data.Exceptions)
+		for i := range body.Data.Notes {
+			// The read-state token is opaque (ADR 0311): present, not rebuilt.
+			require.NotEmpty(t, body.Data.Notes[i].Version)
+			body.Data.Notes[i].Version = ""
+		}
 		require.Equal(t, expectedNotes, body.Data.Notes)
 		require.Equal(t, expectedSchedules, body.Data.Schedules)
 		require.Zero(t, counter.WriteRows())

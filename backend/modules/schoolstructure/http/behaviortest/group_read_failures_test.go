@@ -42,10 +42,11 @@ func TestUpdateGroup_ReadBackFailureRollsBack(t *testing.T) {
 	t.Parallel()
 	tc, router := setupProtectedRouter(t)
 	group := testpkg.CreateTestEducationGroup(t, tc.db, "ReadBackFailure")
+	version := groupVersion(t, router, group.ID, testutil.DefaultTestClaims())
 	tc.resource.People = failingGroupChildren{GroupPeople: tc.resource.People}
 
 	rr := testutil.ExecuteRequest(router, newReq(t, http.MethodPut,
-		fmt.Sprintf("/groups/%d", group.ID), map[string]any{"name": fmt.Sprintf("Renamed-%d", group.ID)},
+		fmt.Sprintf("/groups/%d", group.ID), map[string]any{"name": fmt.Sprintf("Renamed-%d", group.ID), "expected_version": version},
 		testutil.DefaultTestClaims(), "groups:update"))
 	testutil.AssertErrorResponse(t, rr, http.StatusInternalServerError)
 

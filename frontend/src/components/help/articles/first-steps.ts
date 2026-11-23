@@ -41,6 +41,9 @@ export function firstStepsTopic(): HelpTopic {
       "Deine OGS nutzt die Eltern-App nicht? Dann überspringe `Erste Eltern einladen`.",
       "Der Stand gilt für die ganze OGS. Andere Leitungen sehen denselben Stand.",
     ],
+    differences: [
+      "In einem Chat ist `Erste Schritte` ausgeblendet, damit `Senden` frei bleibt. Auf jeder anderen Seite ist es wieder da.",
+    ],
     troubleshootingDetails: [
       "Die Tour ist plötzlich weg? Sie endet, wenn du eine andere Seite öffnest. Mit `Zeig es mir` startest du sie neu.",
       "Du hast `Nicht mehr anzeigen` gewählt? Die Checkliste kommt nicht wieder. Die Anleitungen zu jedem Schritt stehen hier in der Hilfe, zum Beispiel unter `Weitere Themen`.",

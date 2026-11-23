@@ -772,13 +772,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (p *GuardianDirectory) DeleteGuardianPhone(ctx context.Context, phoneID int64) error {\n\treturn mapGuardianPhoneError(p.inTenantTx(ctx, func(txCtx context.Context) error {\n\t\treturn p.guardians.DeletePhoneNumber(txCtx, phoneID)\n\t}))\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/peopledirectory/internal/application/GuardianDirectory.DeleteGuardianPhone",
-      "owner": "modules/peopledirectory"
-    },
-    {
-      "build": "production",
       "evidence": "func (p *GuardianDirectory) EvaluateGuardianDelete(ctx context.Context, id int64, force, isAdmin bool) (bool, error) {\n\thasLinks, err := p.guardians.EvaluateGuardianDelete(ctx, id, force, isAdmin)\n\treturn hasLinks, mapGuardianError(err)\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/GuardianDirectory.EvaluateGuardianDelete",
@@ -807,14 +800,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p *GuardianDirectory) FindGuardianPhone(ctx context.Context, phoneID int64) (peopledirectory.GuardianPhone, error) {\n\tphone, err := p.guardians.GuardianPhoneNumbers().FindByID(ctx, phoneID)\n\tif err != nil {\n\t\treturn peopledirectory.GuardianPhone{}, mapGuardianPhoneError(err)\n\t}\n\treturn toDirectoryPhone(phone), nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/peopledirectory/internal/application/GuardianDirectory.FindGuardianPhone",
-      "owner": "modules/peopledirectory"
-    },
-    {
-      "build": "production",
-      "evidence": "func (p *GuardianDirectory) GuardianPaymentMasked(ctx context.Context, guardianID int64, actor peopledirectory.GuardianPaymentActor) (peopledirectory.GuardianPayment, error) {\n\tmasked, err := p.guardians.GetGuardianPaymentMasked(ctx, guardianID, actor.AccountID, actor.Role)\n\tif err != nil {\n\t\treturn peopledirectory.GuardianPayment{}, mapGuardianPaymentError(err)\n\t}\n\treturn peopledirectory.GuardianPayment{GuardianProfileID: masked.GuardianProfileID, IBAN: masked.IBANMasked, AccountHolder: masked.AccountHolder}, nil\n}",
+      "evidence": "func (p *GuardianDirectory) GuardianPaymentMasked(ctx context.Context, guardianID int64, actor peopledirectory.GuardianPaymentActor) (peopledirectory.GuardianPayment, error) {\n\tmasked, err := p.guardians.GetGuardianPaymentMasked(ctx, guardianID, actor.AccountID, actor.Role)\n\tif err != nil {\n\t\treturn peopledirectory.GuardianPayment{}, mapGuardianPaymentError(err)\n\t}\n\treturn peopledirectory.GuardianPayment{GuardianProfileID: masked.GuardianProfileID, IBAN: masked.IBANMasked, AccountHolder: masked.AccountHolder, Version: masked.Version}, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/GuardianDirectory.GuardianPaymentMasked",
       "owner": "modules/peopledirectory"
@@ -863,7 +849,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p *GuardianDirectory) RevealGuardianPayment(ctx context.Context, guardianID int64, actor peopledirectory.GuardianPaymentActor) (peopledirectory.GuardianPayment, error) {\n\tplain, err := p.guardians.RevealGuardianPayment(ctx, guardianID, actor.AccountID, actor.Role)\n\tif err != nil {\n\t\treturn peopledirectory.GuardianPayment{}, mapGuardianPaymentError(err)\n\t}\n\treturn peopledirectory.GuardianPayment{GuardianProfileID: plain.GuardianProfileID, IBAN: plain.IBAN, AccountHolder: plain.AccountHolder}, nil\n}",
+      "evidence": "func (p *GuardianDirectory) RevealGuardianPayment(ctx context.Context, guardianID int64, actor peopledirectory.GuardianPaymentActor) (peopledirectory.GuardianPayment, error) {\n\tplain, err := p.guardians.RevealGuardianPayment(ctx, guardianID, actor.AccountID, actor.Role)\n\tif err != nil {\n\t\treturn peopledirectory.GuardianPayment{}, mapGuardianPaymentError(err)\n\t}\n\treturn peopledirectory.GuardianPayment{GuardianProfileID: plain.GuardianProfileID, IBAN: plain.IBAN, AccountHolder: plain.AccountHolder, Version: plain.Version}, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/GuardianDirectory.RevealGuardianPayment",
       "owner": "modules/peopledirectory"
@@ -873,13 +859,6 @@
       "evidence": "func (p *GuardianDirectory) SearchGuardians(ctx context.Context, text string, limit int) ([]peopledirectory.GuardianMatch, error) {\n\tmatches, err := p.guardians.SearchGuardiansForPicker(ctx, text, limit)\n\tif err != nil {\n\t\treturn nil, mapGuardianError(err)\n\t}\n\tresult := make([]peopledirectory.GuardianMatch, 0, len(matches))\n\tfor _, match := range matches {\n\t\tresult = append(result, peopledirectory.GuardianMatch{Guardian: toDirectoryGuardian(match.Profile), LinkedChildrenCount: len(match.Children)})\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/GuardianDirectory.SearchGuardians",
-      "owner": "modules/peopledirectory"
-    },
-    {
-      "build": "production",
-      "evidence": "func (p *GuardianDirectory) SetPrimaryGuardianPhone(ctx context.Context, phoneID int64) error {\n\treturn mapGuardianPhoneError(p.inTenantTx(ctx, func(txCtx context.Context) error {\n\t\treturn p.guardians.SetPrimaryPhone(txCtx, phoneID)\n\t}))\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/peopledirectory/internal/application/GuardianDirectory.SetPrimaryGuardianPhone",
       "owner": "modules/peopledirectory"
     },
     {
@@ -898,6 +877,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (p *GuardianDirectory) UpdateGuardianEntry(ctx context.Context, edit peopledirectory.GuardianEntryEdit) error {\n\treturn mapGuardianError(p.guardians.UpdateGuardianEntry(ctx, edit, func(profile *peopledirectory.GuardianProfileSnapshot, link *peopledirectory.GuardianRelationshipSnapshot) error {\n\t\tstored := peopledirectory.GuardianWithLink{Guardian: toDirectoryGuardian(profile), Link: toDirectoryLink(link, p.permissionGranted)}\n\t\treturn readstate.Check(edit.ExpectedVersion, peopledirectory.GuardianEntryVersion(stored))\n\t}))\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/peopledirectory/internal/application/GuardianDirectory.UpdateGuardianEntry",
+      "owner": "modules/peopledirectory"
+    },
+    {
+      "build": "production",
       "evidence": "func (p *GuardianDirectory) UpdateGuardianLink(ctx context.Context, linkID int64, input peopledirectory.GuardianLinkUpdate) error {\n\treturn mapGuardianLinkError(p.inTenantTx(ctx, func(txCtx context.Context) error {\n\t\treturn p.guardians.UpdateStudentGuardianRelationship(txCtx, linkID, peoplePorts.StudentGuardianUpdateRequest{RelationshipType: input.RelationshipType, GuardianRole: input.GuardianRole, IsPrimary: input.IsPrimary, IsEmergencyContact: input.IsEmergencyContact, CanPickup: input.CanPickup, PickupNotes: input.PickupNotes, EmergencyPriority: input.EmergencyPriority})\n\t}))\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/GuardianDirectory.UpdateGuardianLink",
@@ -905,16 +891,9 @@
     },
     {
       "build": "production",
-      "evidence": "func (p *GuardianDirectory) UpdateGuardianPayment(ctx context.Context, guardianID int64, input peopledirectory.GuardianPaymentInput) error {\n\treturn mapGuardianPaymentError(p.guardians.UpdateGuardianPayment(ctx, guardianID, peoplePorts.GuardianPaymentInput{IBAN: input.IBAN, AccountHolder: input.AccountHolder}, input.ActorAccountID, input.Note))\n}",
+      "evidence": "func (p *GuardianDirectory) UpdateGuardianPayment(ctx context.Context, guardianID int64, input peopledirectory.GuardianPaymentInput) error {\n\treturn mapGuardianPaymentError(p.guardians.UpdateGuardianPayment(ctx, guardianID, peoplePorts.GuardianPaymentInput{IBAN: input.IBAN, AccountHolder: input.AccountHolder, ExpectedVersion: input.ExpectedVersion}, input.ActorAccountID, input.Note))\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/GuardianDirectory.UpdateGuardianPayment",
-      "owner": "modules/peopledirectory"
-    },
-    {
-      "build": "production",
-      "evidence": "func (p *GuardianDirectory) UpdateGuardianPhone(ctx context.Context, phoneID int64, input peopledirectory.GuardianPhoneUpdate) error {\n\treturn mapGuardianPhoneError(p.inTenantTx(ctx, func(txCtx context.Context) error {\n\t\treturn p.guardians.UpdatePhoneNumber(txCtx, phoneID, peoplePorts.PhoneNumberUpdateRequest{PhoneNumber: input.PhoneNumber, PhoneType: input.PhoneType, Label: input.Label, IsPrimary: input.IsPrimary, Priority: input.Priority})\n\t}))\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/peopledirectory/internal/application/GuardianDirectory.UpdateGuardianPhone",
       "owner": "modules/peopledirectory"
     },
     {
@@ -1451,6 +1430,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (s *Service) LockStudentNoKeyUpdate(ctx context.Context, id int64) error {\n\tif id \u003c= 0 {\n\t\treturn invalidStudent(\"student ID is required\")\n\t}\n\treturn MapError(s.students.LockNoKeyUpdate(ctx, id))\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/peopledirectory/internal/application/Service.LockStudentNoKeyUpdate",
+      "owner": "modules/peopledirectory"
+    },
+    {
+      "build": "production",
       "evidence": "func (s *Service) LockStudentPhotoFeature(ctx context.Context) error {\n\treturn mapPhotoError(s.studentPhotos.LockFeature(ctx))\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/Service.LockStudentPhotoFeature",
@@ -1692,13 +1678,6 @@
       "evidence": "func (r *StudentRecords) FindByID(ctx context.Context, id any) (*peopleModule.StudentState, error) {\n\tstudentID, ok := studentIDOf(id)\n\tif !ok || studentID \u003c= 0 {\n\t\treturn nil, peoplePorts.MissingStudentError(\"find by id\")\n\t}\n\trecord, err := r.directory.FindRecord(ctx, studentID, \"\")\n\tif err != nil {\n\t\treturn nil, RetainedStudentReadError(\"find by id\", MapError(err))\n\t}\n\treturn peopleModule.StudentStateFromRecord(peopleModule.StudentRecord(record)), nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/StudentRecords.FindByID",
-      "owner": "modules/peopledirectory"
-    },
-    {
-      "build": "production",
-      "evidence": "func (r *StudentRecords) FindByIDForUpdate(ctx context.Context, id int64) (*peopleModule.StudentState, error) {\n\tif id \u003c= 0 {\n\t\treturn nil, peoplePorts.MissingStudentError(\"find by id for update\")\n\t}\n\trecord, err := r.directory.FindRecord(ctx, id, \"UPDATE\")\n\tif err != nil {\n\t\treturn nil, RetainedStudentReadError(\"find by id for update\", MapError(err))\n\t}\n\treturn peopleModule.StudentStateFromRecord(peopleModule.StudentRecord(record)), nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/peopledirectory/internal/application/StudentRecords.FindByIDForUpdate",
       "owner": "modules/peopledirectory"
     },
     {

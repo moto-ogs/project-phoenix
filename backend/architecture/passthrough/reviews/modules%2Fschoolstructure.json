@@ -67,11 +67,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/schoolstructure/compose/legacyGroupManagement.UpdateGroup",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/schoolstructure/compose/legacyGroupManagement.UpdateGroupTeachers",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },

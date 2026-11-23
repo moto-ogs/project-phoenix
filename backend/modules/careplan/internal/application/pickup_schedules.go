@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 type pickupScheduleService struct {
@@ -428,25 +429,60 @@ func (s *pickupScheduleService) GetStudentPickupNotesForDate(
 	return s.notesForDate(ctx, studentID, date)
 }
 
+// CreateStudentPickupNote writes under the student lock every weekly plan
+// writer takes: a weekday note is part of the weekly plan, whose save checks
+// its read-state token under that lock (ADR 0311). It runs in the caller's
+// unit (the request transaction of the route).
 func (s *pickupScheduleService) CreateStudentPickupNote(
 	ctx context.Context,
 	row *careplan.PickupNote,
 ) error {
+	if err := s.lockNoteStudent(ctx, row.StudentID); err != nil {
+		return err
+	}
 	return s.createNote(ctx, row)
 }
 
 func (s *pickupScheduleService) UpdateStudentPickupNote(
 	ctx context.Context,
 	row *careplan.PickupNote,
+	expectedVersion string,
 ) error {
+	// Under the student lock the note must still be the one the caller read.
+	// It runs in the caller's unit (the request transaction of the route).
+	if err := s.tx.LockStudent(ctx, row.StudentID); err != nil {
+		return err
+	}
+	stored, err := s.noteByID(ctx, row.ID)
+	if err != nil {
+		return err
+	}
+	if err := readstate.Check(expectedVersion, careplan.PickupNoteVersion(*stored)); err != nil {
+		return err
+	}
 	return s.updateNote(ctx, row)
 }
 
+// DeleteStudentPickupNote deletes under the student lock, like
+// CreateStudentPickupNote.
 func (s *pickupScheduleService) DeleteStudentPickupNote(
 	ctx context.Context,
 	noteID int64,
 ) error {
+	stored, err := s.noteByID(ctx, noteID)
+	if err != nil {
+		return err
+	}
+	if err := s.lockNoteStudent(ctx, stored.StudentID); err != nil {
+		return err
+	}
 	return s.deleteNote(ctx, noteID)
+}
+
+// lockNoteStudent takes the student lock of a note write in the caller's
+// unit; the weekly plan save checks its token under the same lock.
+func (s *pickupScheduleService) lockNoteStudent(ctx context.Context, studentID int64) error {
+	return s.tx.LockStudent(ctx, studentID)
 }
 
 func (s *pickupScheduleService) DeleteAllStudentPickupNotes(

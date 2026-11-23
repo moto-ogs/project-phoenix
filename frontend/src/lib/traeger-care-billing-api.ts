@@ -482,7 +482,11 @@ export function joinedChildrenFromBackend(
   }));
 }
 
-const BILLED_REASON_VALUES = ["already_billed", "meal_only_invoice"] as const;
+const BILLED_REASON_VALUES = [
+  "already_billed",
+  "meal_only_invoice",
+  "unpriced_notice",
+] as const;
 const BILLED_SOURCE_VALUES = ["care_run", "care_notice_run"] as const;
 const DOCUMENT_KIND_VALUES = ["invoice", "fee_notice"] as const;
 
@@ -505,6 +509,8 @@ export interface CareBilledInvoice {
  * A child a run holds back because an issued invoice of the month already
  * bills it (ADR 0158, Nachtrag #7892): another contract of the child billed
  * the month, or the invoice of the contract itself carries only its Mensa.
+ * In a Jahreslauf also: a contract of the child without a price keeps its
+ * notice, which assesses days another contract would assess (#7952).
  * `contracts` get no invoice in this run, `invoices` are in their way.
  */
 export interface CareBilledChild {

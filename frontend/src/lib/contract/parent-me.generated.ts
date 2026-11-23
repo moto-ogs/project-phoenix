@@ -639,6 +639,7 @@ export interface childGuardianResponse {
   contact_locked_shared: boolean;
   contact_locked_social_worker: boolean;
   contact_locked_full_guardian: boolean;
+  version?: string;
 }
 
 export const childGuardianResponseSchema: z.ZodType<childGuardianResponse, unknown> = object<childGuardianResponse>({
@@ -666,6 +667,7 @@ export const childGuardianResponseSchema: z.ZodType<childGuardianResponse, unkno
   contact_locked_shared: bool,
   contact_locked_social_worker: bool,
   contact_locked_full_guardian: bool,
+  version: optional(str),
 });
 
 /** Go: parent.MasterDataChangeResponse */
@@ -2590,6 +2592,7 @@ export interface updateGuardianContactRequest {
   address_city?: string | null;
   address_postal_code?: string | null;
   phones?: guardianPhoneRequest[] | null;
+  expected_version?: string;
 }
 
 /** Go: parent.EditMasterDataRequestBody */
@@ -2607,10 +2610,12 @@ export interface ReplaceMealParticipationRequest {
 /** Go: parent.MealPlanSavedResponse */
 export interface MealPlanSavedResponse {
   effective_from: string;
+  version: string;
 }
 
 export const MealPlanSavedResponseSchema: z.ZodType<MealPlanSavedResponse, unknown> = object<MealPlanSavedResponse>({
   effective_from: str,
+  version: str,
 });
 
 /** Go: parent.SetMealParticipationDayRequest */

@@ -298,6 +298,13 @@ describe("TraegerClosingDaysPage (#4702)", () => {
     });
     const row = actions.closest("li")!;
     expect(within(row).getByText("OGS Pforzheim")).toBeInTheDocument();
+    // The stacked row mounts its menu before the menu's own media query
+    // reports the phone width: until then it is a popover menu, and a click
+    // in that moment opens a popover that the switch to the sheet closes
+    // again. Click once the trigger opens the sheet, as on a real phone.
+    await waitFor(() =>
+      expect(actions).toHaveAttribute("aria-haspopup", "dialog"),
+    );
     fireEvent.click(actions);
     expect(
       await screen.findByRole("menuitem", { name: "Bearbeiten" }),

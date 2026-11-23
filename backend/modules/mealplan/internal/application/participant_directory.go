@@ -11,14 +11,27 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-func NewParticipantDirectory(find mealplan.ParticipantFinder, names mealplan.StudentNameFinder, days mealplan.ParticipantDaysFinder) participantDirectory {
-	return participantDirectory{find: find, names: names, days: days}
+func NewParticipantDirectory(find mealplan.ParticipantFinder, names mealplan.StudentNameFinder, days mealplan.ParticipantDaysFinder, lock mealplan.StudentLock) participantDirectory {
+	return participantDirectory{find: find, names: names, days: days, lock: lock}
 }
 
 type participantDirectory struct {
 	find  mealplan.ParticipantFinder
 	names mealplan.StudentNameFinder
 	days  mealplan.ParticipantDaysFinder
+	lock  mealplan.StudentLock
+}
+
+// LockStudent takes the child's student row; ErrStudentNotFound when the
+// school has no such child.
+func (d participantDirectory) LockStudent(ctx context.Context, studentID int64) (domain.OperationStats, error) {
+	started := time.Now()
+	found, err := d.lock(ctx, studentID)
+	stats := domain.OperationStats{Queries: 1, StatementDuration: time.Since(started)}
+	if err == nil && !found {
+		err = ErrStudentNotFound
+	}
+	return stats, err
 }
 
 func (d participantDirectory) FindStudentNames(ctx context.Context, ids []int64) (map[int64]domain.DailyCandidate, domain.OperationStats, error) {

@@ -287,8 +287,8 @@ func (f *fakeParentService) MealPlanWeek(context.Context, int64, int64, timezone
 func (f *fakeParentService) MealParticipation(context.Context, int64, int64, timezone.Date, timezone.Date) (parentService.MealParticipationPlan, error) {
 	return f.mealParticipation, f.mealParticipationErr
 }
-func (f *fakeParentService) ReplaceMealParticipationSchedule(context.Context, int64, int64, []parentService.MealWeekday, string) (string, error) {
-	return "2026-09-07", f.mealParticipationWriteErr
+func (f *fakeParentService) ReplaceMealParticipationSchedule(context.Context, int64, int64, []parentService.MealWeekday, string) (parentService.MealScheduleSaved, error) {
+	return parentService.MealScheduleSaved{EffectiveFrom: "2026-09-07", Version: "saved-version"}, f.mealParticipationWriteErr
 }
 func (f *fakeParentService) SetMealParticipationDay(context.Context, int64, int64, timezone.Date, bool) error {
 	return f.mealParticipationWriteErr

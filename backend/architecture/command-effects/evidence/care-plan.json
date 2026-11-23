@@ -153,6 +153,22 @@
       "target_owner": "enrollment"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.arrivalScheduleService.UpdateStudentArrivalNote",
+      "binding_digest": "60228a17e10815df5354ef2acb2a911f",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ArrivalScheduleService.UpdateStudentArrivalNote",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindStudentRecordForMutation",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.arrivalScheduleService.UpdateStudentArrivalNote",
+      "binding_digest": "2fb9269b680af1829679a1add16e2e90",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ArrivalScheduleService.UpdateStudentArrivalNote",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.FindStudentRecordForMutation",
+      "target_owner": "people-directory"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.arrivalScheduleService.UpsertBulkStudentArrivalSchedules",
       "binding_digest": "d31c24c0bf100f0d565a66aeac94c590",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ArrivalScheduleService.UpsertBulkStudentArrivalSchedules",
@@ -7817,6 +7833,30 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.CreateStudentPickupNote",
+      "binding_digest": "89fb12c46e2e94ac5fafd7867987e57f",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupScheduleService.CreateStudentPickupNote",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.CreateStudentPickupNote",
+      "binding_digest": "a920a504e7483898316c71190aa242fa",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupScheduleService.CreateStudentPickupNote",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.CreateStudentPickupNote",
+      "binding_digest": "388dd6287d37045226ed71e495309c9e",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupScheduleService.CreateStudentPickupNote",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.CareStudentLock",
+      "target_owner": "people-directory"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.DeleteAllStudentPickupSchedules",
       "binding_digest": "d31c24c0bf100f0d565a66aeac94c590",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupScheduleService.DeleteAllStudentPickupSchedules",
@@ -7983,6 +8023,30 @@
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithTenantTx",
       "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.DeleteStudentPickupNote",
+      "binding_digest": "89fb12c46e2e94ac5fafd7867987e57f",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupScheduleService.DeleteStudentPickupNote",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.DeleteStudentPickupNote",
+      "binding_digest": "a920a504e7483898316c71190aa242fa",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupScheduleService.DeleteStudentPickupNote",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.DeleteStudentPickupNote",
+      "binding_digest": "388dd6287d37045226ed71e495309c9e",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupScheduleService.DeleteStudentPickupNote",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.CareStudentLock",
+      "target_owner": "people-directory"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.DeleteStudentPickupSchedule",
@@ -8207,6 +8271,30 @@
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithTenantTx",
       "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.UpdateStudentPickupNote",
+      "binding_digest": "89fb12c46e2e94ac5fafd7867987e57f",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupScheduleService.UpdateStudentPickupNote",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.UpdateStudentPickupNote",
+      "binding_digest": "a920a504e7483898316c71190aa242fa",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupScheduleService.UpdateStudentPickupNote",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.UpdateStudentPickupNote",
+      "binding_digest": "388dd6287d37045226ed71e495309c9e",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupScheduleService.UpdateStudentPickupNote",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.CareStudentLock",
+      "target_owner": "people-directory"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.UpsertBulkStudentPickupSchedules",
@@ -8847,6 +8935,118 @@
       "source_owner": "care-plan",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferingCatalogDependencies.LockTemplateRecurrence",
       "target_owner": ""
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "binding_digest": "d31c24c0bf100f0d565a66aeac94c590",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "source_owner": "care-plan",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/enrollment/compose.ApprovedOfferingProjection.ListApprovedByStudentIDsInRange",
+      "target_owner": "enrollment"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "binding_digest": "60228a17e10815df5354ef2acb2a911f",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindStudentRecordForMutation",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "binding_digest": "7f5bf22ded903c20e25f5497c2735777",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "binding_digest": "2fb9269b680af1829679a1add16e2e90",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.FindStudentRecordForMutation",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "binding_digest": "a5676f128c5234d0b35485c4f0f84502",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "binding_digest": "9d49ded4afa61239935cad557e484a36",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.CareStudentLock",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "binding_digest": "09a2d3952209ab0581f1f1225f02a0f4",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.DisplaySettingsSource.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "binding_digest": "130739ffbeb7b87cc260727fab667288",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.Resolver.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "binding_digest": "9296e34018c9fc5e7439152e111b525c",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "binding_digest": "4e2690988359fb67f1982a84568b277e",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "binding_digest": "848b7286f6d6744ed1e4844d1f263175",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence/http.TenantSettings.ResolveBool",
+      "target_owner": "student-presence"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "binding_digest": "810d9ea7184819c7ae4a59b54b34c58e",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "binding_digest": "2eddb0b6c2578271cc30b607788f898d",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.MarkRollback",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "binding_digest": "f87332011358085cab5d8c7f2fe459b2",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithTenantTx",
+      "target_owner": "tenant-runtime"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.RequestCorrections.Correct",
@@ -10303,38 +10503,6 @@
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveString",
       "target_owner": "settings-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.Capability.ReplaceWeekdayPickupNotes",
-      "binding_digest": "54031e4a924237a16ac93fe961099ffe",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.WeekdayPickupNoteReplacer.ReplaceWeekdayPickupNotes",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.Capability.ReplaceWeekdayPickupNotes",
-      "binding_digest": "777a32ec8af0216ee3412043eae94b81",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.WeekdayPickupNoteReplacer.ReplaceWeekdayPickupNotes",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.Capability.ReplaceWeekdayPickupNotes",
-      "binding_digest": "546147a004e0b7b82ca9c34ac084e2cf",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.WeekdayPickupNoteReplacer.ReplaceWeekdayPickupNotes",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.CareStudentLock",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.Capability.ReplaceWeekdayPickupNotes",
-      "binding_digest": "116f64c508cc92711ef3d1138f480102",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.WeekdayPickupNoteReplacer.ReplaceWeekdayPickupNotes",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenant",
-      "target_owner": "tenant-runtime"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.IdentityAccountDirectory.AccountEmail",
@@ -14729,6 +14897,38 @@
       "target_owner": "student-presence"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.Capability.ReplaceWeekdayPickupNotes",
+      "binding_digest": "54031e4a924237a16ac93fe961099ffe",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.PickupAdjustmentSchedules.ReplaceWeekdayPickupNotes",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.Capability.ReplaceWeekdayPickupNotes",
+      "binding_digest": "777a32ec8af0216ee3412043eae94b81",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.PickupAdjustmentSchedules.ReplaceWeekdayPickupNotes",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.Capability.ReplaceWeekdayPickupNotes",
+      "binding_digest": "546147a004e0b7b82ca9c34ac084e2cf",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.PickupAdjustmentSchedules.ReplaceWeekdayPickupNotes",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.CareStudentLock",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.Capability.ReplaceWeekdayPickupNotes",
+      "binding_digest": "116f64c508cc92711ef3d1138f480102",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.PickupAdjustmentSchedules.ReplaceWeekdayPickupNotes",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeSettings.PickupOfferingReviewRequired",
       "binding_digest": "f2a6e4bc5782803efb8ce9c34cac0648",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.PickupAdjustmentSettings.PickupOfferingReviewRequired",
@@ -18369,38 +18569,6 @@
       "target_owner": "people-directory"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.DeleteGuardianPhone",
-      "binding_digest": "26582c87d8c4149f15e995e1d8ad260c",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.DeleteGuardianPhone",
-      "source_owner": "care-plan",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.DeleteGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.DeleteGuardianPhone",
-      "binding_digest": "b15084503e98d0866d279d7ad4e8c3e6",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.DeleteGuardianPhone",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.DeleteGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.DeleteGuardianPhone",
-      "binding_digest": "de8d9280b6b2a920e0493f121354acf1",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.DeleteGuardianPhone",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.DeleteGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.DeleteGuardianPhone",
-      "binding_digest": "de8d9280b6b2a920e0493f121354acf1",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.DeleteGuardianPhone",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.DeleteGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.DeleteGuardianPhoneRecord",
       "binding_digest": "9e4f4dfbc985f901f11a3542c3642407",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.DeleteGuardianPhoneRecord",
@@ -18750,38 +18918,6 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindGuardianLink",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.FindGuardianLink",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.FindGuardianPhone",
-      "binding_digest": "f3fb021db21cc688bb1eccba501600e9",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindGuardianPhone",
-      "source_owner": "care-plan",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.FindGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindGuardianPhone",
-      "binding_digest": "1cf0fa7677fe46b4ad7bb3e49f791d6b",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindGuardianPhone",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindGuardianPhone",
-      "binding_digest": "e27365882178f062628e26cbf5c3fbee",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindGuardianPhone",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.FindGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.FindGuardianPhone",
-      "binding_digest": "e27365882178f062628e26cbf5c3fbee",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindGuardianPhone",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.FindGuardianPhone",
       "target_owner": "people-directory"
     },
     {
@@ -21377,38 +21513,6 @@
       "target_owner": "people-directory"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.SetPrimaryGuardianPhone",
-      "binding_digest": "61cd82bdf8527f5518be03607609dbd1",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetPrimaryGuardianPhone",
-      "source_owner": "care-plan",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.SetPrimaryGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetPrimaryGuardianPhone",
-      "binding_digest": "6dea2d60296af4825f719eed8bad05af",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetPrimaryGuardianPhone",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetPrimaryGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetPrimaryGuardianPhone",
-      "binding_digest": "0055191a2d321c26c7215307aec12040",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetPrimaryGuardianPhone",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.SetPrimaryGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.SetPrimaryGuardianPhone",
-      "binding_digest": "0055191a2d321c26c7215307aec12040",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetPrimaryGuardianPhone",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.SetPrimaryGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.SetSchoolDayHint",
       "binding_digest": "d81ea02c788ec8e84caf08c1ee24c7b0",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetSchoolDayHint",
@@ -21665,6 +21769,38 @@
       "target_owner": "people-directory"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.UpdateGuardianEntry",
+      "binding_digest": "ec9ee336bdee2cf4823d976eef7844e1",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianEntry",
+      "source_owner": "care-plan",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.UpdateGuardianEntry",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianEntry",
+      "binding_digest": "db75515d87cbb7168829dd8351399def",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianEntry",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianEntry",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianEntry",
+      "binding_digest": "e830e83de5a8d0d9e84a5b7aaf3688b4",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianEntry",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardianEntry",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardianEntry",
+      "binding_digest": "e830e83de5a8d0d9e84a5b7aaf3688b4",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianEntry",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardianEntry",
+      "target_owner": "people-directory"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.UpdateGuardianLink",
       "binding_digest": "b8a45bf70cf919b4a3a744fccdf1c98b",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianLink",
@@ -21726,38 +21862,6 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianPayment",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardianPayment",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.UpdateGuardianPhone",
-      "binding_digest": "e7e3108e51e824b0d848f70c20d471dd",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianPhone",
-      "source_owner": "care-plan",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.UpdateGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianPhone",
-      "binding_digest": "fc5f95c530d98b65b99d495a66a1cd87",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianPhone",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianPhone",
-      "binding_digest": "c8e9f4525e23f86df1a13eab8a155ca6",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianPhone",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardianPhone",
-      "binding_digest": "c8e9f4525e23f86df1a13eab8a155ca6",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianPhone",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardianPhone",
       "target_owner": "people-directory"
     },
     {

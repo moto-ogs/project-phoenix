@@ -31,6 +31,11 @@ export interface StudentDocument {
   /** False for an accident report without a paper copy (#4771). */
   hasFile: boolean;
   accidentReport: AccidentReportDetails | null;
+  /**
+   * The read-state token of an accident report (ADR 0311): changing, signing
+   * and the paper copy send it back. Empty for other documents.
+   */
+  version?: string;
 }
 
 export interface StudentDocumentList {
@@ -53,6 +58,7 @@ function mapDocument(data: wire.StudentDocumentResponse): StudentDocument {
     accidentReport: data.accident_report
       ? mapAccidentReport(data.accident_report)
       : null,
+    ...(data.version ? { version: data.version } : {}),
   };
 }
 

@@ -562,7 +562,7 @@ var moduleFuncLenAllowlist = map[string]int{
 	// ADR 0087.
 	"internal/devtools/seedapi/stammdaten.go:(*FixedSeeder).seedGroups": 65,
 	// ADR 0087.
-	"internal/devtools/seedapi/stammdaten.go:(*FixedSeeder).seedPickupSchedules": 123,
+	"internal/devtools/seedapi/stammdaten.go:(*FixedSeeder).seedPickupSchedules": 118,
 	// ADR 0087.
 	"internal/devtools/seedapi/stammdaten.go:(*FixedSeeder).seedStaffAccounts": 129,
 	// ADR 0087.

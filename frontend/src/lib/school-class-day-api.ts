@@ -278,10 +278,15 @@ export async function deleteHomeworkSchool(
   );
 }
 
-/** Die übergebenen Kinder, die in die OGS gehen: „da“ und „nicht da“. */
+/**
+ * Die übergebenen Kinder, die in die OGS gehen: „da“ und „nicht da“, und der
+ * `handover_version` der Klassenansicht, aus der sie gewählt wurden (ADR
+ * 0311): eine inzwischen gespeicherte andere Übergabe weist die Übergabe ab.
+ */
 export interface ClassHandoverChildren {
   readonly present: readonly string[];
   readonly absent: readonly string[];
+  readonly expectedVersion: string;
 }
 
 /** Übergibt eine zugewiesene Klasse heute an die OGS (#4794). */
@@ -298,6 +303,7 @@ export async function handOverClassSchool(
       body: {
         present_student_ids: [...children.present],
         absent_student_ids: [...children.absent],
+        expected_version: children.expectedVersion,
       },
     },
   );

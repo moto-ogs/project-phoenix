@@ -118,6 +118,23 @@ func (s *Store) ReplaceClassHandover(ctx context.Context, in studentpresence.Cla
 	return replaced, stats, nil
 }
 
+// LockClassHandover takes the advisory lock of the class's handover on date
+// until the surrounding tenant transaction ends; it is re-entrant.
+func (s *Store) LockClassHandover(ctx context.Context, normalizedClass string, date ports.Date) (ports.Stats, error) {
+	db, tenantID, err := s.database(ctx)
+	if err != nil {
+		return ports.Stats{}, err
+	}
+	key := fmt.Sprintf("class-handover:%d:%s:%s", tenantID, date, normalizedClass)
+	started := time.Now()
+	_, err = db.ExecContext(ctx, "SELECT pg_advisory_xact_lock(hashtextextended(?, 0))", key)
+	stats := ports.Stats{Queries: 1, StatementDuration: time.Since(started)}
+	if err != nil {
+		return stats, fmt.Errorf("lock class handover: %w", err)
+	}
+	return stats, nil
+}
+
 // DeleteClassHandover deletes the handover; its children go with it through
 // ON DELETE CASCADE.
 func (s *Store) DeleteClassHandover(ctx context.Context, normalizedClass string, date ports.Date) (ports.Stats, error) {
@@ -128,14 +145,11 @@ func (s *Store) DeleteClassHandover(ctx context.Context, normalizedClass string,
 	// Lock before DELETE even when no row exists yet. Replacements call this
 	// method too, so both replacement and withdrawal hold the same lock until
 	// their surrounding tenant transaction commits or rolls back.
-	key := fmt.Sprintf("class-handover:%d:%s:%s", tenantID, date, normalizedClass)
-	started := time.Now()
-	_, err = db.ExecContext(ctx, "SELECT pg_advisory_xact_lock(hashtextextended(?, 0))", key)
-	stats := ports.Stats{Queries: 1, StatementDuration: time.Since(started)}
+	stats, err := s.LockClassHandover(ctx, normalizedClass, date)
 	if err != nil {
-		return stats, fmt.Errorf("lock class handover: %w", err)
+		return stats, err
 	}
-	started = time.Now()
+	started := time.Now()
 	result, err := db.NewDelete().Model((*classHandoverRow)(nil)).
 		Where("class_handover.tenant_id = ?", tenantID).
 		Where(classHandoverClassMatch, normalizedClass).

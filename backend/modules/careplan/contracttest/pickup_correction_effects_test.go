@@ -376,7 +376,7 @@ func TestPickupCorrectionRefusesStaffEditedCollectorNote(t *testing.T) {
 	// The handler's model: the request body plus the preserved identity.
 	edited := &careplan.PickupNote{ID: notes[0].ID, TenantID: notes[0].TenantID, StudentID: f.chain.StudentID,
 		NoteDate: careplan.Date(date), Content: "Abholung durch Oma Erika", CreatedBy: notes[0].CreatedBy, CreatedAt: notes[0].CreatedAt}
-	require.NoError(t, testpkg.TenantCommand1(t, ctx, f.db, f.schedules.Pickups.UpdateStudentPickupNote, edited))
+	require.NoError(t, testpkg.TenantCommand2(t, ctx, f.db, f.schedules.Pickups.UpdateStudentPickupNote, edited, careplan.PickupNoteVersion(notes[0])))
 
 	err = correctPickup(ctx, t, f, currentCorrectionRequest(t, f, row.ID), false)
 	require.ErrorContains(t, err, "die Abholnotiz am 26.08.2026 wurde nach der Entscheidung geändert")

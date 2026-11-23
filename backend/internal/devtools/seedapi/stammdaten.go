@@ -941,26 +941,6 @@ func (s *FixedSeeder) seedGuardianPayments(_ context.Context, result *FixedResul
 	return nil
 }
 
-// storeDemoBankDetails stores the IBAN of the payer DemoGuardians[index]. A
-// guardian of several children stores it with the first child only.
-func (s *FixedSeeder) storeDemoBankDetails(index int, guardian DemoGuardian, guardianID int64, ibanIndex int) (bool, error) {
-	if guardian.StudentIndex%4 == 3 || demoGuardianFirstIndex(guardian) != index {
-		// Payer known, bank details still missing.
-		return false, nil
-	}
-	body := map[string]any{"iban": demoIBAN(ibanIndex)}
-	if guardian.StudentIndex%5 == 2 {
-		// A Kontoinhaber that differs from the guardian: the account runs
-		// on the partner's name.
-		body["account_holder"] = fmt.Sprintf("%s %s", guardian.FirstName, guardian.LastName+"-Berger")
-	}
-	paymentPath := fmt.Sprintf("/api/guardians/%d/payment", guardianID)
-	if _, err := s.client.Put(paymentPath, body); err != nil {
-		return false, fmt.Errorf("store bank details for guardian %s: %w", demoGuardianKey(guardian), err)
-	}
-	return true, nil
-}
-
 // seedPickupSchedules creates the weekly Gehzeiten. Children with "Wird abgeholt"
 // status get a varied but deterministic pickup pattern: different times per weekday
 // to simulate realistic family schedules (e.g. earlier on Tuesdays due to
@@ -1072,12 +1052,7 @@ func (s *FixedSeeder) seedPickupSchedules(_ context.Context, result *FixedResult
 			schedules = append(schedules, entry)
 		}
 
-		path := fmt.Sprintf("/api/students/%d/pickup-schedules", studentID)
-		body := map[string]any{
-			"schedules": schedules,
-		}
-
-		_, err := s.client.Put(path, body)
+		err := putWeeklyPickupSchedules(s.client, studentID, schedules)
 		if err != nil {
 			return fmt.Errorf("seed pickup schedule for student %s %s: %w", student.FirstName, student.LastName, err)
 		}

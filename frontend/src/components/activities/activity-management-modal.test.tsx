@@ -22,8 +22,19 @@ vi.mock("./activity-waitlist-section", () => ({
 }));
 
 vi.mock("~/lib/activity-api", () => ({
+  fetchActivity: vi.fn(),
   updateActivity: vi.fn(),
   deleteActivity: vi.fn(),
+}));
+// The dialog reads the activity it saves (ADR 0311); the test answers with
+// the stored state of the row and its version.
+const { detailMutate } = vi.hoisted(() => ({ detailMutate: vi.fn() }));
+vi.mock("~/lib/swr", () => ({
+  useSWRAuth: vi.fn((key: string | null) => ({
+    data: key ? storedActivity : undefined,
+    error: undefined,
+    mutate: detailMutate,
+  })),
 }));
 
 // The real hook returns a stable setForm (useState); the modal's reset effect
@@ -122,6 +133,7 @@ const mockActivity: Activity = {
     },
   ],
 };
+const storedActivity: Activity = { ...mockActivity, version: "v1" };
 
 describe("ActivityManagementModal", () => {
   const mockOnClose = vi.fn();
@@ -357,6 +369,57 @@ describe("ActivityManagementModal", () => {
     expect(
       await screen.findByText(catalogText("general.server", "die Aktivität")),
     ).toBeInTheDocument();
+    expect(mockOnClose).not.toHaveBeenCalled();
+  });
+
+  // ADR 0311: the save names only what the dialog shows, so the route keeps
+  // the opening, the room, the schedules and the supervisors, and it carries
+  // the version the dialog read.
+  it("saves the shown fields against the version it read", async () => {
+    vi.mocked(updateActivity).mockResolvedValueOnce(storedActivity);
+    render(
+      <ActivityManagementModal
+        isOpen={true}
+        onClose={mockOnClose}
+        activity={mockActivity}
+      />,
+    );
+
+    fireEvent.submit(screen.getByLabelText(/Aktivitätsname/).closest("form")!);
+
+    await waitFor(() =>
+      expect(updateActivity).toHaveBeenCalledWith("1", {
+        name: "Test Activity",
+        category_id: "1",
+        max_participants: 15,
+        expected_version: "v1",
+      }),
+    );
+  });
+
+  it("reads the stored state after a refusal and offers no retry", async () => {
+    vi.mocked(updateActivity).mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    render(
+      <ActivityManagementModal
+        isOpen={true}
+        onClose={mockOnClose}
+        activity={mockActivity}
+      />,
+    );
+
+    fireEvent.submit(screen.getByLabelText(/Aktivitätsname/).closest("form")!);
+
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "die Aktivität"),
+      ),
+    ).toBeInTheDocument();
+    expect(detailMutate).toHaveBeenCalledWith();
+    expect(
+      screen.queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
     expect(mockOnClose).not.toHaveBeenCalled();
   });
 

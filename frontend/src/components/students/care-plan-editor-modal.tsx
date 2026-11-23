@@ -19,6 +19,7 @@ import { ConfirmationModal } from "~/components/ui/modal";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import { isReadStateRefusal } from "~/lib/api-error";
 import {
   type ArrivalDayData,
   formatShortDate,
@@ -114,10 +115,12 @@ interface CarePlanEditorModalProps {
     date: string,
     content: string,
   ) => Promise<void>;
+  /** `version` is the token of the note as the editor shows it (ADR 0311). */
   readonly onUpdateArrivalNote?: (
     date: string,
     noteId: string,
     content: string,
+    version: string,
   ) => Promise<void>;
   readonly onDeleteArrivalNote?: (noteId: string) => Promise<void>;
   readonly onCreatePickupNote?: (
@@ -128,8 +131,14 @@ interface CarePlanEditorModalProps {
     date: string,
     noteId: string,
     content: string,
+    version: string,
   ) => Promise<void>;
   readonly onDeletePickupNote?: (noteId: string) => Promise<void>;
+  /**
+   * Reads the stored day again after a note change was refused because the
+   * note changed since it was read (ADR 0311); rejects when that read fails.
+   */
+  readonly reloadAfterRefusal?: () => Promise<unknown>;
 }
 
 const TIME_PATTERN = /^([01]?\d|2[0-3]):[0-5]\d$/;
@@ -149,6 +158,7 @@ export function CarePlanEditorModal({
   onCreatePickupNote = noopNoteAction,
   onUpdatePickupNote = noopNoteAction,
   onDeletePickupNote = noopNoteAction,
+  reloadAfterRefusal,
 }: CarePlanEditorModalProps) {
   const toast = useToast();
   const isException = arrivalDay !== null && pickupDay !== null;
@@ -279,14 +289,18 @@ export function CarePlanEditorModal({
     setFormVisible(true);
   };
 
-  const handleNoteError = (err: unknown) => {
-    void errors.show(err, { object: "die Notiz" });
+  // A note changed since it was read (ADR 0311): its draft goes, the editor
+  // shows the stored note after the reload, and the message waits for it.
+  const handleNoteError = (err: unknown, onRefusal?: () => void) => {
+    if (isReadStateRefusal(err)) onRefusal?.();
+    void errors.show(err, { object: "die Notiz", reload: reloadAfterRefusal });
   };
 
-  const runNoteMutation = (
-    mutation: () => Promise<void>,
-    onSuccess?: () => void,
-  ): Promise<void> =>
+  const runNoteMutation: NoteMutationRunner = (
+    mutation,
+    onSuccess,
+    onRefusal,
+  ) =>
     save
       .run(async (op) => {
         setRunningAction(null);
@@ -294,7 +308,7 @@ export function CarePlanEditorModal({
           await mutation();
           if (op.isCurrent()) onSuccess?.();
         } catch (err) {
-          if (op.isCurrent()) handleNoteError(err);
+          if (op.isCurrent()) handleNoteError(err, onRefusal);
         }
       })
       .then(() => undefined);
@@ -570,7 +584,11 @@ export function CarePlanEditorModal({
                 isMutationPending={save.pending}
                 noteDrafts={noteDrafts}
                 onNoteDraftChange={(key, content) =>
-                  setNoteDrafts((drafts) => ({ ...drafts, [key]: content }))
+                  setNoteDrafts((drafts) => {
+                    if (content !== null) return { ...drafts, [key]: content };
+                    const { [key]: _dropped, ...rest } = drafts;
+                    return rest;
+                  })
                 }
                 onRequestDelete={(target) => {
                   setFormVisible(false);
@@ -722,7 +740,17 @@ function LegSection({
 type NoteMutationRunner = (
   mutation: () => Promise<void>,
   onSuccess?: () => void,
+  /** Runs when the note changed since it was read (ADR 0311). */
+  onRefusal?: () => void,
 ) => Promise<void>;
+
+/** A dated note as the day editor shows and changes it. */
+interface EditableNote {
+  readonly id: string;
+  readonly content: string;
+  /** The note's read-state token (ADR 0311). */
+  readonly version?: string;
+}
 
 function DayNotesEditor({
   date,
@@ -741,13 +769,14 @@ function DayNotesEditor({
   onRequestDelete,
 }: {
   readonly date: string;
-  readonly arrivalNotes: readonly { id: string; content: string }[];
-  readonly pickupNotes: readonly { id: string; content: string }[];
+  readonly arrivalNotes: readonly EditableNote[];
+  readonly pickupNotes: readonly EditableNote[];
   readonly onCreateArrival: (date: string, content: string) => Promise<void>;
   readonly onUpdateArrival: (
     date: string,
     id: string,
     content: string,
+    version: string,
   ) => Promise<void>;
   readonly onDeleteArrival: (id: string) => Promise<void>;
   readonly onCreatePickup: (date: string, content: string) => Promise<void>;
@@ -755,12 +784,14 @@ function DayNotesEditor({
     date: string,
     id: string,
     content: string,
+    version: string,
   ) => Promise<void>;
   readonly onDeletePickup: (id: string) => Promise<void>;
   readonly runMutation: NoteMutationRunner;
   readonly isMutationPending: boolean;
   readonly noteDrafts: Readonly<Record<string, string>>;
-  readonly onNoteDraftChange: (key: string, content: string) => void;
+  /** `null` drops the draft, so the field shows the stored note again. */
+  readonly onNoteDraftChange: (key: string, content: string | null) => void;
   readonly onRequestDelete: (target: NoteDeletionTarget) => void;
 }) {
   return (
@@ -778,7 +809,9 @@ function DayNotesEditor({
         onCreate={() =>
           onCreateArrival(date, noteDrafts[`${date}:new:Ankunft`] ?? "")
         }
-        onUpdate={(id, content) => onUpdateArrival(date, id, content)}
+        onUpdate={(id, content, version) =>
+          onUpdateArrival(date, id, content, version)
+        }
         onDelete={onDeleteArrival}
         runMutation={runMutation}
         isMutationPending={isMutationPending}
@@ -796,7 +829,9 @@ function DayNotesEditor({
         onCreate={() =>
           onCreatePickup(date, noteDrafts[`${date}:new:Abholung`] ?? "")
         }
-        onUpdate={(id, content) => onUpdatePickup(date, id, content)}
+        onUpdate={(id, content, version) =>
+          onUpdatePickup(date, id, content, version)
+        }
         onDelete={onDeletePickup}
         runMutation={runMutation}
         isMutationPending={isMutationPending}
@@ -823,37 +858,46 @@ function NoteList({
   onRequestDelete,
 }: {
   readonly label: string;
-  readonly notes: readonly { id: string; content: string }[];
+  readonly notes: readonly EditableNote[];
   readonly draft: string;
   readonly setDraft: (value: string) => void;
   readonly onCreate: () => Promise<void>;
-  readonly onUpdate: (id: string, content: string) => Promise<void>;
+  readonly onUpdate: (
+    id: string,
+    content: string,
+    version: string,
+  ) => Promise<void>;
   readonly onDelete: (id: string) => Promise<void>;
   readonly runMutation: NoteMutationRunner;
   readonly isMutationPending: boolean;
   readonly noteDrafts: Readonly<Record<string, string>>;
-  readonly onNoteDraftChange: (key: string, content: string) => void;
+  /** `null` drops the draft, so the field shows the stored note again. */
+  readonly onNoteDraftChange: (key: string, content: string | null) => void;
   readonly onRequestDelete: (target: NoteDeletionTarget) => void;
 }) {
   return (
     <div className="space-y-2">
       <p className="text-xs font-medium text-gray-500">{label}</p>
-      {notes.map((note) => (
-        <NoteEditor
-          key={note.id}
-          label={label}
-          note={note}
-          content={noteDrafts[`${label}:${note.id}`] ?? note.content}
-          onContentChange={(content) =>
-            onNoteDraftChange(`${label}:${note.id}`, content)
-          }
-          onUpdate={onUpdate}
-          onDelete={onDelete}
-          runMutation={runMutation}
-          isMutationPending={isMutationPending}
-          onRequestDelete={onRequestDelete}
-        />
-      ))}
+      {notes.map((note) => {
+        // A draft belongs to the note version it was typed on: a newer stored
+        // note shows its own text instead of a draft typed on an older one.
+        const draftKey = `${label}:${note.id}:${note.version ?? ""}`;
+        return (
+          <NoteEditor
+            key={note.id}
+            label={label}
+            note={note}
+            content={noteDrafts[draftKey] ?? note.content}
+            onContentChange={(content) => onNoteDraftChange(draftKey, content)}
+            onDiscardDraft={() => onNoteDraftChange(draftKey, null)}
+            onUpdate={onUpdate}
+            onDelete={onDelete}
+            runMutation={runMutation}
+            isMutationPending={isMutationPending}
+            onRequestDelete={onRequestDelete}
+          />
+        );
+      })}
       <div className="flex gap-2">
         <div className="min-w-0 flex-1">
           <Input
@@ -889,6 +933,7 @@ function NoteEditor({
   note,
   content,
   onContentChange,
+  onDiscardDraft,
   onUpdate,
   onDelete,
   runMutation,
@@ -896,10 +941,15 @@ function NoteEditor({
   onRequestDelete,
 }: {
   readonly label: string;
-  readonly note: { id: string; content: string };
+  readonly note: EditableNote;
   readonly content: string;
   readonly onContentChange: (content: string) => void;
-  readonly onUpdate: (id: string, content: string) => Promise<void>;
+  readonly onDiscardDraft: () => void;
+  readonly onUpdate: (
+    id: string,
+    content: string,
+    version: string,
+  ) => Promise<void>;
   readonly onDelete: (id: string) => Promise<void>;
   readonly runMutation: NoteMutationRunner;
   readonly isMutationPending: boolean;
@@ -936,8 +986,9 @@ function NoteEditor({
         }
         onClick={() =>
           void runMutation(
-            () => onUpdate(note.id, trimmedContent),
+            () => onUpdate(note.id, trimmedContent, note.version ?? ""),
             () => onContentChange(trimmedContent),
+            onDiscardDraft,
           )
         }
       >

@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
+
 	peopleValues "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 
 	"github.com/moto-ogs/project-phoenix/api"
@@ -36,6 +38,15 @@ func isProfileLockTimeout(err error) bool {
 }
 
 // setupGuardianService creates a GuardianService with real database connection
+// paymentVersion reads the version of a guardian's bank section as the
+// staff form does before it saves (ADR 0311).
+func paymentVersion(t *testing.T, ctx context.Context, db *bun.DB, service peoplePorts.GuardianService, guardianID int64) string {
+	t.Helper()
+	masked, err := testpkg.TenantQuery3(t, ctx, db, service.GetGuardianPaymentMasked, guardianID, int64(1), "admin")
+	require.NoError(t, err)
+	return masked.Version
+}
+
 func setupGuardianService(t *testing.T, db *bun.DB) peoplePorts.GuardianService {
 	serviceFactoryServices, _, err := api.NewTestPeopleServices(testpkg.NewDatabase(t, db), slog.Default())
 	require.NoError(t, err, "Failed to create service factory")
@@ -319,7 +330,7 @@ func TestGuardianService_DeleteGuardian(t *testing.T) {
 	t.Run("deletes guardian successfully", func(t *testing.T) {
 		// ARRANGE
 		profile := testpkg.CreateTestGuardianProfile(t, db, "to-delete")
-		require.NoError(t, testpkg.TenantCommand4(t, ctx, db, service.UpdateGuardianPayment, profile.ID, peoplePorts.GuardianPaymentInput{
+		require.NoError(t, testpkg.TenantCommand4(t, ctx, db, service.UpdateGuardianPayment, profile.ID, peoplePorts.GuardianPaymentInput{ExpectedVersion: paymentVersion(t, ctx, db, service, profile.ID),
 			IBAN:          strPtr("DE89370400440532013000"),
 			AccountHolder: strPtr("Sabine Schneider"),
 		}, 1, ""))
@@ -482,7 +493,7 @@ func TestGuardianService_DeleteGuardianWithLinks_RejectsChangedPreview(t *testin
 		return testpkg.TenantCommand3(t, txCtx, db, service.DeleteGuardianWithLinks, guardian.ID, []int64{999999}, 1)
 	})
 
-	require.ErrorIs(t, err, peoplePorts.ErrGuardianDeletePreviewChanged)
+	require.ErrorIs(t, err, readstate.ErrChanged)
 	survivor, err := testpkg.TenantQuery1(t, ctx, db, service.GetGuardianByID, guardian.ID)
 	require.NoError(t, err)
 	assert.NotNil(t, survivor, "guardian must survive when preview token is stale")
@@ -2390,12 +2401,12 @@ func TestGuardianService_UpdateGuardianPayment_MaskedAuditCollisions(t *testing.
 	t.Run("new IBAN with the same last four digits", func(t *testing.T) {
 		profile := testpkg.CreateTestGuardianProfile(t, db, "same-tail")
 
-		require.NoError(t, testpkg.TenantCommand4(t, ctx, db, service.UpdateGuardianPayment, profile.ID, peoplePorts.GuardianPaymentInput{
+		require.NoError(t, testpkg.TenantCommand4(t, ctx, db, service.UpdateGuardianPayment, profile.ID, peoplePorts.GuardianPaymentInput{ExpectedVersion: paymentVersion(t, ctx, db, service, profile.ID),
 			IBAN: strPtr("DE89370400440532013000"),
 		}, 1, ""))
 
 		// ACT: valid IBAN, same "3000" tail, different account.
-		err := testpkg.TenantCommand4(t, ctx, db, service.UpdateGuardianPayment, profile.ID, peoplePorts.GuardianPaymentInput{
+		err := testpkg.TenantCommand4(t, ctx, db, service.UpdateGuardianPayment, profile.ID, peoplePorts.GuardianPaymentInput{ExpectedVersion: paymentVersion(t, ctx, db, service, profile.ID),
 			IBAN: strPtr("DE84120300000000203000"),
 		}, 1, "")
 
@@ -2417,13 +2428,13 @@ func TestGuardianService_UpdateGuardianPayment_MaskedAuditCollisions(t *testing.
 	t.Run("renamed account holder behind the fixed mask", func(t *testing.T) {
 		profile := testpkg.CreateTestGuardianProfile(t, db, "holder-rename")
 
-		require.NoError(t, testpkg.TenantCommand4(t, ctx, db, service.UpdateGuardianPayment, profile.ID, peoplePorts.GuardianPaymentInput{
+		require.NoError(t, testpkg.TenantCommand4(t, ctx, db, service.UpdateGuardianPayment, profile.ID, peoplePorts.GuardianPaymentInput{ExpectedVersion: paymentVersion(t, ctx, db, service, profile.ID),
 			IBAN:          strPtr("DE89370400440532013000"),
 			AccountHolder: strPtr("Sabine Schneider"),
 		}, 1, ""))
 
 		// ACT
-		err := testpkg.TenantCommand4(t, ctx, db, service.UpdateGuardianPayment, profile.ID, peoplePorts.GuardianPaymentInput{
+		err := testpkg.TenantCommand4(t, ctx, db, service.UpdateGuardianPayment, profile.ID, peoplePorts.GuardianPaymentInput{ExpectedVersion: paymentVersion(t, ctx, db, service, profile.ID),
 			IBAN:          strPtr("DE89370400440532013000"),
 			AccountHolder: strPtr("Peter Schneider"),
 		}, 1, "")

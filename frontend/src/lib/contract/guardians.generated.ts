@@ -181,6 +181,7 @@ export interface GuardianWithRelationship {
   emergency_priority: number;
   is_payer: boolean;
   account_status: string;
+  version: string;
 }
 
 export const GuardianWithRelationshipSchema: z.ZodType<GuardianWithRelationship, unknown> = object<GuardianWithRelationship>({
@@ -196,6 +197,7 @@ export const GuardianWithRelationshipSchema: z.ZodType<GuardianWithRelationship,
   emergency_priority: safeInt,
   is_payer: bool,
   account_status: str,
+  version: str,
 });
 
 /** Go: users.GuardianDeletePreview */
@@ -218,12 +220,14 @@ export interface GuardianPaymentMaskedResponse {
   guardian_id: string;
   iban_masked: string | null;
   account_holder: string | null;
+  version: string;
 }
 
 export const GuardianPaymentMaskedResponseSchema: z.ZodType<GuardianPaymentMaskedResponse, unknown> = object<GuardianPaymentMaskedResponse>({
   guardian_id: str,
   iban_masked: nullable(str),
   account_holder: nullable(str),
+  version: str,
 });
 
 /** Go: users.GuardianCreateRequest */
@@ -397,12 +401,14 @@ export interface GuardianPaymentRevealResponse {
   guardian_id: string;
   iban: string | null;
   account_holder: string | null;
+  version: string;
 }
 
 export const GuardianPaymentRevealResponseSchema: z.ZodType<GuardianPaymentRevealResponse, unknown> = object<GuardianPaymentRevealResponse>({
   guardian_id: str,
   iban: nullable(str),
   account_holder: nullable(str),
+  version: str,
 });
 
 /** Go: users.PhoneNumberCreateRequest */
@@ -424,11 +430,6 @@ export interface StudentGuardianUpdateRequest {
   emergency_priority?: number | null;
 }
 
-/** Go: users.StudentPayerRequest */
-export interface StudentPayerRequest {
-  guardian_id?: string | null;
-}
-
 /** Go: users.GuardianUpdateRequest */
 export interface GuardianUpdateRequest {
   first_name?: string | null;
@@ -442,11 +443,34 @@ export interface GuardianUpdateRequest {
   notes?: string | null;
 }
 
+/** Go: users.GuardianEntryPhone */
+export interface GuardianEntryPhone {
+  id?: string | null;
+  phone_number?: string;
+  phone_type?: string;
+  label?: string | null;
+  is_primary?: boolean;
+}
+
+/** Go: users.GuardianEntryRequest */
+export interface GuardianEntryRequest {
+  guardian?: GuardianUpdateRequest;
+  relationship?: StudentGuardianUpdateRequest;
+  phone_numbers?: GuardianEntryPhone[] | null;
+  expected_version?: string;
+}
+
+/** Go: users.StudentPayerRequest */
+export interface StudentPayerRequest {
+  guardian_id?: string | null;
+}
+
 /** Go: users.GuardianPaymentRequest */
 export interface GuardianPaymentRequest {
   iban?: string | null;
   account_holder?: string | null;
   note?: string;
+  expected_version?: string;
 }
 
 /** Go: users.PhoneNumberUpdateRequest */
@@ -491,6 +515,7 @@ export const routes = {
     method: "DELETE",
     pattern: "/api/guardians/{id}/phone-numbers/{phoneId}",
     portals: ["tenant"],
+    deprecated: true,
     response: noData,
   },
   "GET /api/guardians/invitations/pending-approval": {
@@ -635,14 +660,23 @@ export const routes = {
     method: "POST",
     pattern: "/api/guardians/{id}/phone-numbers/{phoneId}/set-primary",
     portals: ["tenant"],
+    deprecated: true,
     response: success(PhoneNumberResponseSchema),
   },
   "PUT /api/guardians/relationships/{relationshipId}": {
     method: "PUT",
     pattern: "/api/guardians/relationships/{relationshipId}",
     portals: ["tenant"],
+    deprecated: true,
     request: requestBody<StudentGuardianUpdateRequest>(),
     response: noData,
+  },
+  "PUT /api/guardians/students/{studentId}/guardians/{guardianId}": {
+    method: "PUT",
+    pattern: "/api/guardians/students/{studentId}/guardians/{guardianId}",
+    portals: ["tenant"],
+    request: requestBody<GuardianEntryRequest>(),
+    response: success(GuardianWithRelationshipSchema),
   },
   "PUT /api/guardians/students/{studentId}/payer": {
     method: "PUT",
@@ -655,6 +689,7 @@ export const routes = {
     method: "PUT",
     pattern: "/api/guardians/{id}",
     portals: ["tenant"],
+    deprecated: true,
     request: requestBody<GuardianUpdateRequest>(),
     response: success(GuardianResponseSchema),
   },
@@ -669,6 +704,7 @@ export const routes = {
     method: "PUT",
     pattern: "/api/guardians/{id}/phone-numbers/{phoneId}",
     portals: ["tenant"],
+    deprecated: true,
     request: requestBody<PhoneNumberUpdateRequest>(),
     response: success(PhoneNumberResponseSchema),
   },

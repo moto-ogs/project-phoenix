@@ -62,8 +62,8 @@ func TestGuardianListsPositiveGrowthQueryBudget(t *testing.T) {
 			require.Positive(t, phone.Data.ID)
 			phoneIDs = append(phoneIDs, int64(phone.Data.ID))
 			numbers = append(numbers, number)
-			rr = c.do(t, withPerms(testutil.DefaultTestClaims(), "admin:*", "guardians:financial"), http.MethodPut, fmt.Sprintf("/%d/payment", gid), map[string]any{"iban": testIBAN, "account_holder": fmt.Sprintf("Holder%02d", i)})
-			require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+			code, body := c.savePayment(t, gid, map[string]any{"iban": testIBAN, "account_holder": fmt.Sprintf("Holder%02d", i)}, "admin:*", "guardians:financial")
+			require.Equal(t, http.StatusOK, code, body)
 			c.requirePayerSet(t, sid, &gid)
 		}
 		for _, name := range []string{"search", "detail", "delete-preview", "phones", "payment_overview", "payment_export", "bulk_invite", "bulk_invite_notify"} {

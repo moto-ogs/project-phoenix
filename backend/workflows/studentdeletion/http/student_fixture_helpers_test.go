@@ -39,7 +39,7 @@ type testContext struct {
 	}
 	broadcaster          *testpkg.RecordingBroadcaster
 	clock                func() time.Time
-	newPickupAdjustments func(careplan.DirectOfferingAdjustments) (careplan.PickupAdjustments, error)
+	newPickupAdjustments func(careplan.DirectOfferingAdjustments) (careplan.PickupAdjustments, careplan.WeeklyPlans, error)
 	module               api.StudentTestModule
 	router               func() chi.Router
 }

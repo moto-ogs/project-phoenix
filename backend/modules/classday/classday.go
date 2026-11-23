@@ -410,6 +410,8 @@ type DayReport struct {
 	// Handover is the class's handover to the OGS on the date (#4794), nil
 	// while the class has not been handed over.
 	Handover *DayHandover `json:"handover,omitempty"`
+	// HandoverVersion is the handover's token, also without one (ADR 0311).
+	HandoverVersion string `json:"handover_version,omitempty"`
 	// CanHandOver is true when the caller may hand the class over or take
 	// the handover back (#4794): the date is today and a school day, the
 	// school ticked the handover in its write scope, and the token holds
@@ -432,20 +434,20 @@ type DayHandover struct {
 	AbsentCount int `json:"absent_count"`
 }
 
-// ClassHandoverChange hands one class over to the OGS after lessons, or
-// takes today's handover back (#4794).
+// ClassHandoverChange hands one class over to the OGS after lessons, or takes
+// today's handover back (#4794). readstate.ErrChanged refuses a stale one.
 type ClassHandoverChange struct {
 	SchoolClass string
 	Date        Date
-	// HandedOverBy is the users.staff_school_memberships row of the
-	// Lehrkraft.
+	// HandedOverBy is the Lehrkraft's users.staff_school_memberships row.
 	HandedOverBy int64
-	// PresentStudentIDs and AbsentStudentIDs are the children with an OGS
-	// record she handed over "da" and "nicht da".
+	// The children with an OGS record she handed over "da" and "nicht da".
 	PresentStudentIDs []int64
 	AbsentStudentIDs  []int64
 	// Withdraw takes the handover back instead; the children are ignored.
 	Withdraw bool
+	// ExpectedVersion is the HandoverVersion read; a withdrawal takes none.
+	ExpectedVersion string
 }
 
 // MorningAttendanceMark is one child's mark as the Lehrkraft enters it:

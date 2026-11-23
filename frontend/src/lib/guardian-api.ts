@@ -16,20 +16,13 @@ import type {
   GuardianWithRelationship,
   GuardianFormData,
   StudentGuardianLinkRequest,
-  PhoneNumber,
   PhoneType,
-  PhoneNumberCreateRequest,
-  PhoneNumberUpdateRequest,
   GuardianRole,
 } from "./guardian-helpers";
 import {
-  mapGuardianResponse,
   mapGuardianPickerResponse,
   mapGuardianWithRelationshipResponse,
   mapStudentGuardianLinkToBackend,
-  mapPhoneNumberResponse,
-  mapPhoneNumberCreateToBackend,
-  mapPhoneNumberUpdateToBackend,
 } from "./guardian-helpers";
 
 /**
@@ -155,19 +148,52 @@ export async function liftGuardianEmailBlock(
   });
 }
 
+/** One number of the staff form's phone list; without `id` it is new. */
+export interface GuardianEntryPhone {
+  id?: string;
+  phoneNumber: string;
+  phoneType: PhoneType | undefined;
+  label?: string;
+  isPrimary: boolean;
+}
+
 /**
- * Update a guardian profile
+ * Saves the staff form of a child's guardian in one request: profile, this
+ * child's link and the full phone list, against the version the list read
+ * (ADR 0311). A changed guardian is refused with general.changed_since_read
+ * and nothing is written. Answers the stored row with its new version.
  */
-export async function updateGuardian(
+export async function saveStudentGuardian(
+  studentId: string,
   guardianId: string,
-  data: Partial<GuardianFormData>,
-): Promise<Guardian> {
-  const updated = await bffJson("tenant", "PUT /api/guardians/{id}", {
-    params: { id: guardianId },
-    body: mapGuardianFormToBackend(data),
-    errorMessage: "Failed to update guardian",
-  });
-  return mapGuardianResponse(updated);
+  entry: {
+    guardian: Partial<GuardianFormData>;
+    relationship: Partial<StudentGuardianLinkRequest>;
+    phoneNumbers?: readonly GuardianEntryPhone[];
+  },
+  expectedVersion: string,
+): Promise<GuardianWithRelationship | null> {
+  const saved = await bffJson(
+    "tenant",
+    "PUT /api/guardians/students/{studentId}/guardians/{guardianId}",
+    {
+      params: { studentId, guardianId },
+      body: {
+        guardian: mapGuardianFormToBackend(entry.guardian),
+        relationship: mapRelationshipUpdateToBackend(entry.relationship),
+        phone_numbers: entry.phoneNumbers?.map((phone) => ({
+          id: phone.id,
+          phone_number: phone.phoneNumber,
+          phone_type: phone.phoneType,
+          label: phone.label,
+          is_primary: phone.isPrimary,
+        })),
+        expected_version: expectedVersion,
+      },
+      errorMessage: "Failed to save guardian",
+    },
+  );
+  return mapGuardianWithRelationshipResponse(saved);
 }
 
 /**
@@ -329,13 +355,10 @@ export async function createStudentGuardians(
   );
 }
 
-/**
- * Update student-guardian relationship
- */
-export async function updateStudentGuardianRelationship(
-  relationshipId: string,
+/** The link fields of the staff form that are defined. */
+function mapRelationshipUpdateToBackend(
   updates: Partial<StudentGuardianLinkRequest>,
-): Promise<void> {
+): guardiansContract.StudentGuardianUpdateRequest {
   const backendData: guardiansContract.StudentGuardianUpdateRequest = {};
 
   if (updates.relationshipType !== undefined) {
@@ -360,11 +383,7 @@ export async function updateStudentGuardianRelationship(
     backendData.emergency_priority = updates.emergencyPriority;
   }
 
-  await bffJson("tenant", "PUT /api/guardians/relationships/{relationshipId}", {
-    params: { relationshipId },
-    body: backendData,
-    errorMessage: "Failed to update relationship",
-  });
+  return backendData;
 }
 
 /**
@@ -452,78 +471,6 @@ export async function searchGuardians(query: string): Promise<Guardian[]> {
     errorMessage: "Failed to search guardians",
   });
   return page.data.map(mapGuardianPickerResponse);
-}
-
-// =============================================================================
-// Phone Number API Functions
-// =============================================================================
-
-/**
- * Add a phone number to a guardian
- */
-export async function addGuardianPhoneNumber(
-  guardianId: string,
-  data: PhoneNumberCreateRequest,
-): Promise<PhoneNumber> {
-  const created = await bffJson(
-    "tenant",
-    "POST /api/guardians/{id}/phone-numbers/",
-    {
-      params: { id: guardianId },
-      body: mapPhoneNumberCreateToBackend(data),
-      errorMessage: "Failed to add phone number",
-    },
-  );
-  return mapPhoneNumberResponse(created);
-}
-
-/**
- * Update a guardian's phone number
- */
-export async function updateGuardianPhoneNumber(
-  guardianId: string,
-  phoneId: string,
-  data: PhoneNumberUpdateRequest,
-): Promise<void> {
-  await bffJson("tenant", "PUT /api/guardians/{id}/phone-numbers/{phoneId}", {
-    params: { id: guardianId, phoneId },
-    body: mapPhoneNumberUpdateToBackend(data),
-    errorMessage: "Failed to update phone number",
-  });
-}
-
-/**
- * Delete a guardian's phone number
- */
-export async function deleteGuardianPhoneNumber(
-  guardianId: string,
-  phoneId: string,
-): Promise<void> {
-  await bffJson(
-    "tenant",
-    "DELETE /api/guardians/{id}/phone-numbers/{phoneId}",
-    {
-      params: { id: guardianId, phoneId },
-      errorMessage: "Failed to delete phone number",
-    },
-  );
-}
-
-/**
- * Set a phone number as primary for a guardian
- */
-export async function setGuardianPrimaryPhone(
-  guardianId: string,
-  phoneId: string,
-): Promise<void> {
-  await bffJson(
-    "tenant",
-    "POST /api/guardians/{id}/phone-numbers/{phoneId}/set-primary",
-    {
-      params: { id: guardianId, phoneId },
-      errorMessage: "Failed to set primary phone",
-    },
-  );
 }
 
 // ============================================================================

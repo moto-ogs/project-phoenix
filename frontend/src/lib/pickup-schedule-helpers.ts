@@ -68,6 +68,8 @@ export interface PickupNote {
   createdBy: string;
   createdAt: string;
   updatedAt: string;
+  /** The note's read-state token; a change sends it back (ADR 0311). */
+  version?: string;
 }
 
 // Combined Pickup Data (schedules + exceptions + notes)
@@ -88,6 +90,11 @@ export interface PickupData {
   exceptions: PickupException[];
   notes: PickupNote[];
   departureExceptions?: DepartureException[];
+  /**
+   * The token of the child's whole weekly plan (arrival, pickup, weekday
+   * notes). A save of the weekly plan sends it back (ADR 0311).
+   */
+  weeklyPlanVersion?: string;
 }
 
 export interface DatedPickupSchedule {
@@ -187,6 +194,7 @@ export function mapPickupNoteResponse(data: PickupNoteResponse): PickupNote {
     createdBy: data.created_by,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
+    ...(data.version ? { version: data.version } : {}),
   };
 }
 
@@ -211,6 +219,7 @@ export function mapPickupDataResponse(data: PickupDataResponse): PickupData {
         return mapped ? [mapped] : [];
       },
     ),
+    weeklyPlanVersion: data.weekly_plan_version ?? "",
   };
 }
 

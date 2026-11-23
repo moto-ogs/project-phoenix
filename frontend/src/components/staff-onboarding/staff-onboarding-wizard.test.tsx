@@ -11,6 +11,7 @@ import {
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import type { StaffOnboardingState } from "~/lib/staff-onboarding-api";
+import { useAnnounceMessageComposer } from "~/lib/hooks/use-message-composer-presence";
 
 const push = vi.fn();
 const replace = vi.fn(() => Promise.resolve());
@@ -138,6 +139,12 @@ function stepTitles(): string[] {
     .filter(Boolean);
 }
 
+/** Stands in for a chat's writing field, which announces itself (#7686). */
+function OpenChat() {
+  useAnnounceMessageComposer();
+  return <p>Chat offen</p>;
+}
+
 describe("StaffOnboardingWizard", () => {
   // Die Tour sucht im 200-ms-Takt und lässt eine fehlende Station erst nach
   // 1,5 s aus. Fake-Timer für die ganze Datei lassen diese Wartezeiten ohne
@@ -197,6 +204,58 @@ describe("StaffOnboardingWizard", () => {
     tenantSlug = "school-two";
     render(<StaffOnboardingWizard />);
     expect(screen.getByText("0 von 6 erledigt")).toBeInTheDocument();
+  });
+
+  it("steps aside with beacon and checklist while a chat is open (#7686)", () => {
+    sessionStorage.setItem("staff-onboarding-opened:school-one:74", "1");
+    const wizard = (chat: boolean) => (
+      <>
+        <StaffOnboardingWizard />
+        {chat ? <OpenChat /> : null}
+      </>
+    );
+    const { rerender } = render(wizard(true));
+    // Anker: der Chat steht.
+    expect(screen.getByText("Chat offen")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /^Erste Schritte öffnen/ }),
+    ).not.toBeInTheDocument();
+
+    rerender(wizard(false));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Erste Schritte öffnen, 6 offen" }),
+    );
+    rerender(wizard(true));
+    expect(screen.getByText("Chat offen")).toBeInTheDocument();
+    expect(screen.queryByText("0 von 6 erledigt")).not.toBeInTheDocument();
+
+    rerender(wizard(false));
+    expect(screen.getByText("0 von 6 erledigt")).toBeInTheDocument();
+  });
+
+  it("counts the checklist that opened by itself as shown once it is on screen (#7686)", () => {
+    // Neu geladen, während der Chat offen ist: Die Liste bleibt fällig.
+    render(
+      <>
+        <StaffOnboardingWizard />
+        <OpenChat />
+      </>,
+    ).unmount();
+    const { rerender } = render(
+      <>
+        <StaffOnboardingWizard />
+        <OpenChat />
+      </>,
+    );
+    expect(screen.getByText("Chat offen")).toBeInTheDocument();
+    expect(analytics.trackOnboardingSurface).not.toHaveBeenCalled();
+
+    rerender(<StaffOnboardingWizard />);
+    expect(screen.getByText("0 von 6 erledigt")).toBeInTheDocument();
+    expect(analytics.trackOnboardingSurface).toHaveBeenCalledExactlyOnceWith(
+      "shown",
+      "staff_first_steps",
+    );
   });
 
   it("leaves out steps the school or the person does not have", () => {

@@ -1961,6 +1961,7 @@ export interface ArrivalNoteResponse {
   created_by: string;
   created_at: string;
   updated_at: string;
+  version: string;
 }
 
 export const ArrivalNoteResponseSchema: z.ZodType<ArrivalNoteResponse, unknown> = object<ArrivalNoteResponse>({
@@ -1971,6 +1972,7 @@ export const ArrivalNoteResponseSchema: z.ZodType<ArrivalNoteResponse, unknown> 
   created_by: int64String,
   created_at: str,
   updated_at: str,
+  version: str,
 });
 
 /** Go: careplanhttp.ArrivalDataResponse */
@@ -1978,12 +1980,14 @@ export interface ArrivalDataResponse {
   schedules: ArrivalScheduleResponse[] | null;
   exceptions: StudentArrivalExceptionResponse[] | null;
   notes: ArrivalNoteResponse[] | null;
+  weekly_plan_version?: string;
 }
 
 export const ArrivalDataResponseSchema: z.ZodType<ArrivalDataResponse, unknown> = object<ArrivalDataResponse>({
   schedules: nullable(arr(ArrivalScheduleResponseSchema)),
   exceptions: nullable(arr(StudentArrivalExceptionResponseSchema)),
   notes: nullable(arr(ArrivalNoteResponseSchema)),
+  weekly_plan_version: optional(str),
 });
 
 /** Go: presenceprojectionhttp.attendanceSessionRecord */
@@ -2248,6 +2252,7 @@ export interface StudentDocumentResponse {
   sensitive: boolean;
   has_file: boolean;
   accident_report?: AccidentReportResponse;
+  version?: string;
 }
 
 export const StudentDocumentResponseSchema: z.ZodType<StudentDocumentResponse, unknown> = object<StudentDocumentResponse>({
@@ -2262,6 +2267,7 @@ export const StudentDocumentResponseSchema: z.ZodType<StudentDocumentResponse, u
   sensitive: bool,
   has_file: bool,
   accident_report: optional(AccidentReportResponseSchema),
+  version: optional(str),
 });
 
 /** Go: careplanhttp.StudentDocumentCategory */
@@ -2523,6 +2529,7 @@ export interface PickupNoteResponse {
   created_by: string;
   created_at: string;
   updated_at: string;
+  version: string;
 }
 
 export const PickupNoteResponseSchema: z.ZodType<PickupNoteResponse, unknown> = object<PickupNoteResponse>({
@@ -2534,6 +2541,7 @@ export const PickupNoteResponseSchema: z.ZodType<PickupNoteResponse, unknown> = 
   created_by: int64String,
   created_at: str,
   updated_at: str,
+  version: str,
 });
 
 /** Go: careplanhttp.DepartureExceptionResponse */
@@ -2564,6 +2572,7 @@ export interface PickupDataResponse {
   exceptions: PickupExceptionResponse[] | null;
   notes: PickupNoteResponse[] | null;
   departure_exceptions: DepartureExceptionResponse[] | null;
+  weekly_plan_version?: string;
 }
 
 export const PickupDataResponseSchema: z.ZodType<PickupDataResponse, unknown> = object<PickupDataResponse>({
@@ -2572,6 +2581,7 @@ export const PickupDataResponseSchema: z.ZodType<PickupDataResponse, unknown> = 
   exceptions: nullable(arr(PickupExceptionResponseSchema)),
   notes: nullable(arr(PickupNoteResponseSchema)),
   departure_exceptions: nullable(arr(DepartureExceptionResponseSchema)),
+  weekly_plan_version: optional(str),
 });
 
 /** Go: studentpresencehttp.PrivacyConsentResponse */
@@ -3203,6 +3213,7 @@ export interface AccidentReportRequest {
   parents_notified?: string;
   parents_notified_at?: string | null;
   supervisor?: string;
+  expected_version?: string;
 }
 
 /** Go: careplanhttp.AccidentSignatureRequest */
@@ -3210,6 +3221,7 @@ export interface AccidentSignatureRequest {
   method?: string;
   image_png?: string;
   typed_name?: string;
+  expected_version?: string;
 }
 
 /** Go: careplanhttp.StudentArrivalExceptionRequest */
@@ -3321,6 +3333,8 @@ export interface pickupAdjustmentRequest {
   effective_from?: string | null;
   selections?: pickupAdjustmentSelectionRequest[] | null;
   excluded_auto_offering_ids?: string[] | null;
+  expected_version?: string;
+  weekday_notes?: PickupNoteRequest[] | null;
   preview_token?: string;
   resolution?: string;
   reason?: string;
@@ -3330,11 +3344,13 @@ export interface pickupAdjustmentRequest {
 /** Go: careplanhttp.pickupAdjustmentResponse */
 export interface pickupAdjustmentResponse {
   resolution: string;
+  weekly_plan_version: string;
   roster_impact?: rosterImpactResponse;
 }
 
 export const pickupAdjustmentResponseSchema: z.ZodType<pickupAdjustmentResponse, unknown> = object<pickupAdjustmentResponse>({
   resolution: str,
+  weekly_plan_version: str,
   roster_impact: optional(rosterImpactResponseSchema),
 });
 
@@ -3605,9 +3621,18 @@ export interface UpdateStudentRequest {
   confirmed_companion_extensions?: CompanionEntry[] | null;
 }
 
+/** Go: careplanhttp.ArrivalNoteUpdateRequest */
+export interface ArrivalNoteUpdateRequest {
+  note_date?: string;
+  content?: string;
+  expected_version?: string;
+}
+
 /** Go: careplanhttp.BulkArrivalScheduleRequest */
 export interface BulkArrivalScheduleRequest {
   schedules?: ArrivalScheduleRequestItem[] | null;
+  weekday_notes?: PickupNoteRequest[] | null;
+  expected_version?: string;
 }
 
 /** Go: careplanhttp.DepartureExceptionRequest */
@@ -3625,12 +3650,22 @@ export interface setFamilyProtectionBody {
 /** Go: careplanhttp.WeekdayPickupNotesRequest */
 export interface WeekdayPickupNotesRequest {
   notes?: PickupNoteRequest[] | null;
+  expected_version?: string;
+}
+
+/** Go: careplanhttp.PickupNoteUpdateRequest */
+export interface PickupNoteUpdateRequest {
+  note_date?: string;
+  weekday?: number;
+  content?: string;
+  expected_version?: string;
 }
 
 /** Go: careplanhttp.BulkPickupScheduleRequest */
 export interface BulkPickupScheduleRequest {
   schedules?: PickupScheduleRequest[] | null;
   effective_date?: string | null;
+  expected_version?: string;
 }
 
 /** Go: studentpresencehttp.PrivacyConsentRequest */
@@ -4518,7 +4553,7 @@ export const routes = {
     method: "PUT",
     pattern: "/api/students/{id}/arrival-notes/{noteId}",
     portals: ["tenant"],
-    request: requestBody<ArrivalNoteRequest>(),
+    request: requestBody<ArrivalNoteUpdateRequest>(),
     response: success(ArrivalNoteResponseSchema),
   },
   "PUT /api/students/{id}/arrival-schedules": {
@@ -4574,7 +4609,7 @@ export const routes = {
     method: "PUT",
     pattern: "/api/students/{id}/pickup-notes/{noteId}",
     portals: ["tenant"],
-    request: requestBody<PickupNoteRequest>(),
+    request: requestBody<PickupNoteUpdateRequest>(),
     response: success(PickupNoteResponseSchema),
   },
   "PUT /api/students/{id}/pickup-schedules": {

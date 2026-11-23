@@ -160,6 +160,20 @@ func (s *dayReports) classDay(ctx context.Context, schoolClass string, date cale
 	return report, nil
 }
 
+// handoverDayRows projects the roster onto a school day the way classDay
+// does, without the departures, the times shown and the teacher entries:
+// the rows the class handover takes its children from (stays_today).
+func (s *dayReports) handoverDayRows(ctx context.Context, roster *DayRoster, date calendar.Date, weekday string) ([]classday.DayRow, error) {
+	if s.statusDays == nil || s.careDays == nil || s.times == nil {
+		return nil, fmt.Errorf("class day handover: status/schedule dependencies not configured")
+	}
+	facts, err := s.classDayPlanFacts(ctx, rosterStudentIDs(roster.Rows), date, false)
+	if err != nil {
+		return nil, err
+	}
+	return buildClassDayReportFor("", date, weekday, "", roster.Rows, facts).Rows, nil
+}
+
 // classDaySchoolDayFacts loads the day facts of a school day: statuses,
 // departures, effective times and the "kommt heute nicht" cancellations.
 func (s *dayReports) classDaySchoolDayFacts(ctx context.Context, roster *DayRoster, date calendar.Date, weekday string) (classDayFacts, error) {

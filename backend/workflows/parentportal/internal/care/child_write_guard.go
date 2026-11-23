@@ -55,6 +55,12 @@ type ChildWriteAccess struct {
 	// ChildMissing names the write's refusal when the child row cannot be
 	// locked, e.g. because it was deleted; nil returns the lock error.
 	ChildMissing func(ctx context.Context, err error) error
+	// NoKeyUpdate locks the child row FOR NO KEY UPDATE instead of FOR
+	// UPDATE: the write still waits for every other writer of the child,
+	// but not the key share of a row referencing the child. A write that
+	// waits under the child's lock for a lock whose holder inserts such rows
+	// (a meal write and the school's order lock) needs it.
+	NoKeyUpdate bool
 	// readReceipt skips the guard, see ReadReceiptOnly.
 	readReceipt bool
 }
@@ -189,7 +195,11 @@ func (s *Service) childWriteLocks(access ChildWriteAccess) HoldLocks {
 	return HoldLocks{
 		Membership: s.holdMembership,
 		Child: func(ctx context.Context, studentID int64) error {
-			_, err := s.StudentRepo.FindByIDForUpdate(ctx, studentID)
+			lock := s.StudentRepo.FindByIDForUpdate
+			if access.NoKeyUpdate {
+				lock = s.StudentRepo.FindByIDForNoKeyUpdate
+			}
+			_, err := lock(ctx, studentID)
 			if err != nil && access.ChildMissing != nil {
 				return access.ChildMissing(ctx, err)
 			}
