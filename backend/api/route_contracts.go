@@ -281,8 +281,17 @@ func ContractDocument() (contract.Document, error) {
 		// The one route whose answer a query parameter shapes (ADR 0270 point 3).
 		QueryVariants: []string{"GET /api/students/"},
 	}
-	// Both student bodies only refuse retired keys before the plain decode.
-	options.Readers = map[reflect.Type]string{
+	options.Readers = contractReaders()
+	// Appointments and the whole-day substitution keep their own day types.
+	options.Dates = []reflect.Type{reflect.TypeFor[appointments.Date](), reflect.TypeOf(substitutions.Day)}
+	return contract.Build(registrations, options)
+}
+
+// contractReaders names the request bodies that decode themselves: field by
+// field (ReadsFields) or as one value (ReadsValue).
+func contractReaders() map[reflect.Type]string {
+	return map[reflect.Type]string{
+		// Both student bodies only refuse retired keys before the plain decode.
 		reflect.TypeFor[careStudentsHTTP.StudentRequest]():       contract.ReadsFields,
 		reflect.TypeFor[careStudentsHTTP.UpdateStudentRequest](): contract.ReadsFields,
 		// An absence edit tells an absent absence_type_id from null.
@@ -316,9 +325,6 @@ func ContractDocument() (contract.Document, error) {
 		reflect.TypeFor[timetableActivitiesHTTP.OptionalOpen]():   contract.ReadsValue,
 		reflect.TypeFor[groupsHTTP.OptionalRoomID]():              contract.ReadsValue,
 	}
-	// Appointments and the whole-day substitution keep their own day types.
-	options.Dates = []reflect.Type{reflect.TypeFor[appointments.Date](), reflect.TypeOf(substitutions.Day)}
-	return contract.Build(registrations, options)
 }
 
 // notificationRouteContracts registers the notification routes, with patterns

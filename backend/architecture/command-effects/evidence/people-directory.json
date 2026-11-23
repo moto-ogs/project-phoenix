@@ -3729,38 +3729,6 @@
       "target_owner": ""
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.LockStudentNoKeyUpdate",
-      "binding_digest": "0ff8abd9a3c0d09cf2dc596cc841da34",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
-      "source_owner": "people-directory",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.RequireTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.LockStudentNoKeyUpdate",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
-      "binding_digest": "0ff8abd9a3c0d09cf2dc596cc841da34",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
-      "source_owner": "people-directory",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.RequireTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.LockStudentPhotoFeature",
       "binding_digest": "0ff8abd9a3c0d09cf2dc596cc841da34",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentPhotoFeature",
@@ -7145,22 +7113,6 @@
       "target_owner": ""
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.LockStudentNoKeyUpdate",
-      "binding_digest": "0ff8abd9a3c0d09cf2dc596cc841da34",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
-      "source_owner": "people-directory",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.RequireTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.LockStudentNoKeyUpdate",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.LockStudentPhotoFeature",
       "binding_digest": "0ff8abd9a3c0d09cf2dc596cc841da34",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentPhotoFeature",
@@ -9777,22 +9729,6 @@
       "target_owner": ""
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
-      "binding_digest": "0ff8abd9a3c0d09cf2dc596cc841da34",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentCommand.LockStudentNoKeyUpdate",
-      "source_owner": "people-directory",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.RequireTransaction",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
-      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentCommand.LockStudentNoKeyUpdate",
-      "source_owner": "people-directory",
-      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
-      "target_owner": ""
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ReadEnrollmentStudent",
       "binding_digest": "a85d70be637aa98e5af50aac3ad3f6b0",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentCommand.ReadEnrollmentStudent",
@@ -9884,6 +9820,22 @@
       "binding": "github.com/moto-ogs/project-phoenix/roots/requestreviewbinding.MasterDataPeople.ReviewStudentFields",
       "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentFieldReviewQuery.ReviewStudentFields",
+      "source_owner": "people-directory",
+      "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
+      "target_owner": ""
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.LockStudentNoKeyUpdate",
+      "binding_digest": "0ff8abd9a3c0d09cf2dc596cc841da34",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RequireTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.Service.LockStudentNoKeyUpdate",
+      "binding_digest": "6cdc81b797832cc1539502ea4216aa98",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate",
       "source_owner": "people-directory",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.observe",
       "target_owner": ""

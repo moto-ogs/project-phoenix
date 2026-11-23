@@ -26,6 +26,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/mealplan"
 	mealplanCompose "github.com/moto-ogs/project-phoenix/modules/mealplan/compose"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
+	peopleCompose "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	schoolCalendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/compose"
 	settingsModule "github.com/moto-ogs/project-phoenix/modules/settings"
@@ -457,7 +458,7 @@ func newMealPlanAt(db transactionruntime.Database, settings *mealplanCompose.Set
 		},
 		// The People Directory's student row lock, as owners.BuildServeMealPlan binds it.
 		LockStudent: func(ctx context.Context, studentID int64) (bool, error) {
-			err := names.LockStudentNoKeyUpdate(ctx, studentID)
+			err := names.(*peopleCompose.Directory).Owner.(peopledirectory.StudentKeyShareLock).LockStudentNoKeyUpdate(ctx, studentID)
 			if errors.Is(err, peopledirectory.ErrStudentNotFound) {
 				return false, nil
 			}

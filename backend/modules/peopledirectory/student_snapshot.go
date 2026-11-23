@@ -59,6 +59,6 @@ type StudentSnapshotReads interface {
 	StudentSnapshotByID(context.Context, int64) (*StudentSnapshot, error)
 	StudentSnapshotForUpdate(context.Context, int64) (*StudentSnapshot, error)
 	// StudentSnapshotForNoKeyUpdate reads the child with its row FOR NO KEY
-	// UPDATE (StudentCommand.LockStudentNoKeyUpdate).
+	// UPDATE (StudentKeyShareLock).
 	StudentSnapshotForNoKeyUpdate(context.Context, int64) (*StudentSnapshot, error)
 }

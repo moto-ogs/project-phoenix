@@ -22,17 +22,6 @@
       "target_owner": "people-directory"
     },
     {
-      "adr": "0067",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.BillingMonth",
-      "classification": "leaf",
-      "effect": "lock",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
-      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.Capability.LockStudentNoKeyUpdate (people-directory) through *modules/mealplan/internal/application.BillingMonths.BillingMonth. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit.",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
-      "target_owner": "people-directory"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.BillingMonth",
       "classification": "query",
       "effect": "query",
@@ -48,9 +37,9 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.BillingMonth",
-      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.Owner.LockStudentNoKeyUpdate (people-directory) through *modules/mealplan/internal/application.BillingMonths.BillingMonth. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit.",
+      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate (people-directory) through *modules/mealplan/internal/application.BillingMonths.BillingMonth. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit. The lock is the narrow peopledirectory.StudentKeyShareLock beside the facade (ADR 0313), bound at the root from the directory's owner.",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -196,17 +185,6 @@
       "target_owner": "people-directory"
     },
     {
-      "adr": "0067",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth",
-      "classification": "leaf",
-      "effect": "lock",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
-      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.Capability.LockStudentNoKeyUpdate (people-directory) through *modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit.",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
-      "target_owner": "people-directory"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth",
       "classification": "query",
       "effect": "query",
@@ -222,9 +200,9 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.BillingMonths.ReleaseBillingMonth",
-      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.Owner.LockStudentNoKeyUpdate (people-directory) through *modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit.",
+      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate (people-directory) through *modules/mealplan/internal/application.BillingMonths.ReleaseBillingMonth. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit. The lock is the narrow peopledirectory.StudentKeyShareLock beside the facade (ADR 0313), bound at the root from the directory's owner.",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -442,17 +420,6 @@
       "target_owner": "people-directory"
     },
     {
-      "adr": "0067",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ClearParticipationBySchool",
-      "classification": "leaf",
-      "effect": "lock",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearParticipationBySchool",
-      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.Capability.LockStudentNoKeyUpdate (people-directory) through *modules/mealplan/internal/application.Service.ClearParticipationBySchool. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit.",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
-      "target_owner": "people-directory"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ClearParticipationBySchool",
       "classification": "query",
       "effect": "query",
@@ -468,9 +435,9 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearParticipationBySchool",
-      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.Owner.LockStudentNoKeyUpdate (people-directory) through *modules/mealplan/internal/application.Service.ClearParticipationBySchool. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit.",
+      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate (people-directory) through *modules/mealplan/internal/application.Service.ClearParticipationBySchool. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit. The lock is the narrow peopledirectory.StudentKeyShareLock beside the facade (ADR 0313), bound at the root from the directory's owner.",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -555,17 +522,6 @@
       "target_owner": "people-directory"
     },
     {
-      "adr": "0067",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ClearParticipationForDay",
-      "classification": "leaf",
-      "effect": "lock",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearParticipationForDay",
-      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.Capability.LockStudentNoKeyUpdate (people-directory) through *modules/mealplan/internal/application.Service.ClearParticipationForDay. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit.",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
-      "target_owner": "people-directory"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ClearParticipationForDay",
       "classification": "query",
       "effect": "query",
@@ -581,9 +537,9 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearParticipationForDay",
-      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.Owner.LockStudentNoKeyUpdate (people-directory) through *modules/mealplan/internal/application.Service.ClearParticipationForDay. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit.",
+      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate (people-directory) through *modules/mealplan/internal/application.Service.ClearParticipationForDay. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit. The lock is the narrow peopledirectory.StudentKeyShareLock beside the facade (ADR 0313), bound at the root from the directory's owner.",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -1036,17 +992,6 @@
       "target_owner": "people-directory"
     },
     {
-      "adr": "0067",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ReplaceParticipationSchedule",
-      "classification": "leaf",
-      "effect": "lock",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceParticipationSchedule",
-      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.Capability.LockStudentNoKeyUpdate (people-directory) through *modules/mealplan/internal/application.Service.ReplaceParticipationSchedule. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit.",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
-      "target_owner": "people-directory"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ReplaceParticipationSchedule",
       "classification": "query",
       "effect": "query",
@@ -1062,9 +1007,9 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceParticipationSchedule",
-      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.Owner.LockStudentNoKeyUpdate (people-directory) through *modules/mealplan/internal/application.Service.ReplaceParticipationSchedule. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit.",
+      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate (people-directory) through *modules/mealplan/internal/application.Service.ReplaceParticipationSchedule. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit. The lock is the narrow peopledirectory.StudentKeyShareLock beside the facade (ADR 0313), bound at the root from the directory's owner.",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -1149,17 +1094,6 @@
       "target_owner": "people-directory"
     },
     {
-      "adr": "0067",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ReplaceScheduleBySchool",
-      "classification": "leaf",
-      "effect": "lock",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceScheduleBySchool",
-      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.Capability.LockStudentNoKeyUpdate (people-directory) through *modules/mealplan/internal/application.Service.ReplaceScheduleBySchool. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit.",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
-      "target_owner": "people-directory"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.ReplaceScheduleBySchool",
       "classification": "query",
       "effect": "query",
@@ -1175,9 +1109,9 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceScheduleBySchool",
-      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.Owner.LockStudentNoKeyUpdate (people-directory) through *modules/mealplan/internal/application.Service.ReplaceScheduleBySchool. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit.",
+      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate (people-directory) through *modules/mealplan/internal/application.Service.ReplaceScheduleBySchool. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit. The lock is the narrow peopledirectory.StudentKeyShareLock beside the facade (ADR 0313), bound at the root from the directory's owner.",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -1262,17 +1196,6 @@
       "target_owner": "people-directory"
     },
     {
-      "adr": "0067",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.SetParticipationBySchool",
-      "classification": "leaf",
-      "effect": "lock",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationBySchool",
-      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.Capability.LockStudentNoKeyUpdate (people-directory) through *modules/mealplan/internal/application.Service.SetParticipationBySchool. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit.",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
-      "target_owner": "people-directory"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.SetParticipationBySchool",
       "classification": "query",
       "effect": "query",
@@ -1288,9 +1211,9 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationBySchool",
-      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.Owner.LockStudentNoKeyUpdate (people-directory) through *modules/mealplan/internal/application.Service.SetParticipationBySchool. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit.",
+      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate (people-directory) through *modules/mealplan/internal/application.Service.SetParticipationBySchool. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit. The lock is the narrow peopledirectory.StudentKeyShareLock beside the facade (ADR 0313), bound at the root from the directory's owner.",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -1375,17 +1298,6 @@
       "target_owner": "people-directory"
     },
     {
-      "adr": "0067",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.SetParticipationForDay",
-      "classification": "leaf",
-      "effect": "lock",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationForDay",
-      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.Capability.LockStudentNoKeyUpdate (people-directory) through *modules/mealplan/internal/application.Service.SetParticipationForDay. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit.",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
-      "target_owner": "people-directory"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.SetParticipationForDay",
       "classification": "query",
       "effect": "query",
@@ -1401,9 +1313,9 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationForDay",
-      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.Owner.LockStudentNoKeyUpdate (people-directory) through *modules/mealplan/internal/application.Service.SetParticipationForDay. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit.",
+      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate (people-directory) through *modules/mealplan/internal/application.Service.SetParticipationForDay. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit. The lock is the narrow peopledirectory.StudentKeyShareLock beside the facade (ADR 0313), bound at the root from the directory's owner.",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -1483,20 +1395,9 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationForWeek",
-      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.Capability.LockStudentNoKeyUpdate (people-directory) through *modules/mealplan/internal/application.Service.SetParticipationForWeek. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit.",
+      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate (people-directory) through *modules/mealplan/internal/application.Service.SetParticipationForWeek. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit. The lock is the narrow peopledirectory.StudentKeyShareLock beside the facade (ADR 0313), bound at the root from the directory's owner.",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
-      "target_owner": "people-directory"
-    },
-    {
-      "adr": "0067",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.Service.SetParticipationForWeek",
-      "classification": "leaf",
-      "effect": "lock",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationForWeek",
-      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.Owner.LockStudentNoKeyUpdate (people-directory) through *modules/mealplan/internal/application.Service.SetParticipationForWeek. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit.",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -1846,17 +1747,6 @@
       "target_owner": "people-directory"
     },
     {
-      "adr": "0067",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearParticipationBySchool",
-      "classification": "leaf",
-      "effect": "lock",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ClearParticipationBySchool",
-      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.Capability.LockStudentNoKeyUpdate (people-directory) through modules/mealplan.Capability.ClearParticipationBySchool. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit.",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
-      "target_owner": "people-directory"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearParticipationBySchool",
       "classification": "query",
       "effect": "query",
@@ -1872,9 +1762,9 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ClearParticipationBySchool",
-      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.Owner.LockStudentNoKeyUpdate (people-directory) through modules/mealplan.Capability.ClearParticipationBySchool. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit.",
+      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate (people-directory) through modules/mealplan.Capability.ClearParticipationBySchool. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit. The lock is the narrow peopledirectory.StudentKeyShareLock beside the facade (ADR 0313), bound at the root from the directory's owner.",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -1959,17 +1849,6 @@
       "target_owner": "people-directory"
     },
     {
-      "adr": "0067",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearParticipationForDay",
-      "classification": "leaf",
-      "effect": "lock",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ClearParticipationForDay",
-      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.Capability.LockStudentNoKeyUpdate (people-directory) through modules/mealplan.Capability.ClearParticipationForDay. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit.",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
-      "target_owner": "people-directory"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ClearParticipationForDay",
       "classification": "query",
       "effect": "query",
@@ -1985,9 +1864,9 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ClearParticipationForDay",
-      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.Owner.LockStudentNoKeyUpdate (people-directory) through modules/mealplan.Capability.ClearParticipationForDay. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit.",
+      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate (people-directory) through modules/mealplan.Capability.ClearParticipationForDay. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit. The lock is the narrow peopledirectory.StudentKeyShareLock beside the facade (ADR 0313), bound at the root from the directory's owner.",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -2246,17 +2125,6 @@
       "target_owner": "people-directory"
     },
     {
-      "adr": "0067",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceParticipationSchedule",
-      "classification": "leaf",
-      "effect": "lock",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ReplaceParticipationSchedule",
-      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.Capability.LockStudentNoKeyUpdate (people-directory) through modules/mealplan.Capability.ReplaceParticipationSchedule. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit.",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
-      "target_owner": "people-directory"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceParticipationSchedule",
       "classification": "query",
       "effect": "query",
@@ -2272,9 +2140,9 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ReplaceParticipationSchedule",
-      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.Owner.LockStudentNoKeyUpdate (people-directory) through modules/mealplan.Capability.ReplaceParticipationSchedule. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit.",
+      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate (people-directory) through modules/mealplan.Capability.ReplaceParticipationSchedule. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit. The lock is the narrow peopledirectory.StudentKeyShareLock beside the facade (ADR 0313), bound at the root from the directory's owner.",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -2359,17 +2227,6 @@
       "target_owner": "people-directory"
     },
     {
-      "adr": "0067",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceScheduleBySchool",
-      "classification": "leaf",
-      "effect": "lock",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ReplaceScheduleBySchool",
-      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.Capability.LockStudentNoKeyUpdate (people-directory) through modules/mealplan.Capability.ReplaceScheduleBySchool. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit.",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
-      "target_owner": "people-directory"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.ReplaceScheduleBySchool",
       "classification": "query",
       "effect": "query",
@@ -2385,9 +2242,9 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.ReplaceScheduleBySchool",
-      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.Owner.LockStudentNoKeyUpdate (people-directory) through modules/mealplan.Capability.ReplaceScheduleBySchool. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit.",
+      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate (people-directory) through modules/mealplan.Capability.ReplaceScheduleBySchool. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit. The lock is the narrow peopledirectory.StudentKeyShareLock beside the facade (ADR 0313), bound at the root from the directory's owner.",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -2472,17 +2329,6 @@
       "target_owner": "people-directory"
     },
     {
-      "adr": "0067",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationBySchool",
-      "classification": "leaf",
-      "effect": "lock",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.SetParticipationBySchool",
-      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.Capability.LockStudentNoKeyUpdate (people-directory) through modules/mealplan.Capability.SetParticipationBySchool. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit.",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
-      "target_owner": "people-directory"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationBySchool",
       "classification": "query",
       "effect": "query",
@@ -2498,9 +2344,9 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.SetParticipationBySchool",
-      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.Owner.LockStudentNoKeyUpdate (people-directory) through modules/mealplan.Capability.SetParticipationBySchool. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit.",
+      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate (people-directory) through modules/mealplan.Capability.SetParticipationBySchool. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit. The lock is the narrow peopledirectory.StudentKeyShareLock beside the facade (ADR 0313), bound at the root from the directory's owner.",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -2585,17 +2431,6 @@
       "target_owner": "people-directory"
     },
     {
-      "adr": "0067",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationForDay",
-      "classification": "leaf",
-      "effect": "lock",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.SetParticipationForDay",
-      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.Capability.LockStudentNoKeyUpdate (people-directory) through modules/mealplan.Capability.SetParticipationForDay. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit.",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
-      "target_owner": "people-directory"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationForDay",
       "classification": "query",
       "effect": "query",
@@ -2611,9 +2446,9 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.SetParticipationForDay",
-      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.Owner.LockStudentNoKeyUpdate (people-directory) through modules/mealplan.Capability.SetParticipationForDay. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit.",
+      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate (people-directory) through modules/mealplan.Capability.SetParticipationForDay. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit. The lock is the narrow peopledirectory.StudentKeyShareLock beside the facade (ADR 0313), bound at the root from the directory's owner.",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -2693,20 +2528,9 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.SetParticipationForWeek",
-      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.Capability.LockStudentNoKeyUpdate (people-directory) through modules/mealplan.Capability.SetParticipationForWeek. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit.",
+      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate (people-directory) through modules/mealplan.Capability.SetParticipationForWeek. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit. The lock is the narrow peopledirectory.StudentKeyShareLock beside the facade (ADR 0313), bound at the root from the directory's owner.",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
-      "target_owner": "people-directory"
-    },
-    {
-      "adr": "0067",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan.Capability.SetParticipationForWeek",
-      "classification": "leaf",
-      "effect": "lock",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan.Registration.SetParticipationForWeek",
-      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.Owner.LockStudentNoKeyUpdate (people-directory) through modules/mealplan.Capability.SetParticipationForWeek. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit.",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {
@@ -2956,20 +2780,9 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/mealplan/internal/ports.Directory.LockStudent",
-      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.Capability.LockStudentNoKeyUpdate (people-directory) through modules/mealplan/internal/application.participantDirectory.LockStudentNoKeyUpdate. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit.",
+      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate (people-directory) through modules/mealplan/internal/application.participantDirectory.LockStudentNoKeyUpdate. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit. The lock is the narrow peopledirectory.StudentKeyShareLock beside the facade (ADR 0313), bound at the root from the directory's owner.",
       "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudentNoKeyUpdate",
-      "target_owner": "people-directory"
-    },
-    {
-      "adr": "0067",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/mealplan/internal/application.participantDirectory.LockStudent",
-      "classification": "leaf",
-      "effect": "lock",
-      "port": "github.com/moto-ogs/project-phoenix/modules/mealplan/internal/ports.Directory.LockStudent",
-      "reason": "Guarded leaf command (lock): meal-plan reaches modules/peopledirectory.Owner.LockStudentNoKeyUpdate (people-directory) through modules/mealplan/internal/application.participantDirectory.LockStudentNoKeyUpdate. Every write of a child's meal participation takes the student row FOR NO KEY UPDATE first, as the parent portal's child guard holds it for a meal write, before the Meal Plan's schedule and order advisory locks; the school path took them the other way round and deadlocked against a parent's write (#7904), and FOR UPDATE deadlocked against the holder of the order lock inserting order lines of the child (#7956). Bound at the root through mealplan.StudentLock; participates in the caller's tenant unit.",
-      "source_owner": "meal-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudentNoKeyUpdate",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentKeyShareLock.LockStudentNoKeyUpdate",
       "target_owner": "people-directory"
     },
     {

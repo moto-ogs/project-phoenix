@@ -93,7 +93,10 @@ func (s *Service) ListStudentsWithStatusFlag(ctx context.Context, status string)
 
 func invalidStudent(reason string) error { return &peopledirectory.InvalidStudentError{Reason: reason} }
 
-var _ peopledirectory.StudentRowLocks = (*Service)(nil)
+var (
+	_ peopledirectory.StudentRowLocks     = (*Service)(nil)
+	_ peopledirectory.StudentKeyShareLock = (*Service)(nil)
+)
 
 func (s *Service) LockStudentRows(ctx context.Context, ids []int64) (int, error) {
 	if len(ids) == 0 {
