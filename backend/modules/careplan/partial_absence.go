@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 var (
@@ -35,6 +36,35 @@ type PartialAbsenceInput struct {
 	StaffID   int64
 	// ByTraeger names the Träger-Büro as author; StaffID is then 0 (#7766).
 	ByTraeger bool
+	// ExpectedVersion binds an update to the partial absence its author read
+	// (PartialAbsenceVersion, ADR 0311). A create reads nothing and leaves it
+	// empty.
+	ExpectedVersion string
+}
+
+// PartialAbsenceVersion is the read-state token of one partial absence: the
+// day, from when, why, whether it follows the pickup time, and that pickup
+// time. The read hands it out per row and an update compares it under the
+// child's and the day's lock, so an edit made against an older read cannot
+// put back what a colleague or a pickup change set since.
+func PartialAbsenceVersion(row PickupException) string {
+	clock := func(value *time.Time) string {
+		if value == nil {
+			return ""
+		}
+		return calendar.NormalizeWallClock(*value).Format("15:04")
+	}
+	reason := ""
+	if row.ExcusedReason != nil {
+		reason = *row.ExcusedReason
+	}
+	return readstate.Fingerprint(struct {
+		Date   string `json:"date"`
+		From   string `json:"from"`
+		Reason string `json:"reason"`
+		Auto   bool   `json:"auto"`
+		Pickup string `json:"pickup"`
+	}{row.ExceptionDate.String(), clock(row.ExcusedFrom), reason, row.ExcusedAuto, clock(row.PickupTime)})
 }
 
 // PartialAbsenceService coordinates the existing pickup-exception and

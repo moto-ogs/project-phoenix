@@ -93,10 +93,13 @@ const maxArrivalScheduleDateRangeDays = 7
 // BulkUpsertArrivalScheduleRequest represents a request to bulk upsert arrival
 // schedules for exactly one filtered student cohort.
 type BulkUpsertArrivalScheduleRequest struct {
-	SchoolClass string                          `json:"school_class"`
-	GroupID     ident.ID                        `json:"group_id"`
-	StudentIDs  []ident.ID                      `json:"student_ids"`
-	Schedules   []careplan.ArrivalScheduleInput `json:"schedules"`
+	SchoolClass string `json:"school_class"`
+	// ExpectedVersion is the class times' version the screen read
+	// (GET /class-arrival-times/{schoolClass}); a class save needs it.
+	ExpectedVersion string                          `json:"expected_version,omitempty"`
+	GroupID         ident.ID                        `json:"group_id"`
+	StudentIDs      []ident.ID                      `json:"student_ids"`
+	Schedules       []careplan.ArrivalScheduleInput `json:"schedules"`
 }
 
 // Bind implements render.Binder for ArrivalNoteRequest

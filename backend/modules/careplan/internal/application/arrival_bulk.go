@@ -23,7 +23,7 @@ func (s *arrivalScheduleService) BulkUpsertArrivalSchedules(ctx context.Context,
 		return nil, &careplan.ScheduleError{Op: opBulkUpsertArrivalSchedules, Err: err}
 	}
 	if filter.SchoolClass != "" && s.classes != nil {
-		return s.upsertClassArrivalTimes(ctx, filter.SchoolClass, inputs, createdBy, filter.Authorize)
+		return s.upsertClassArrivalTimes(ctx, filter, inputs, createdBy)
 	}
 	students, kind, value, err := s.selectArrivalStudents(ctx, filter)
 	if err != nil {

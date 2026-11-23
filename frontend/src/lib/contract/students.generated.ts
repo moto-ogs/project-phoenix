@@ -1157,12 +1157,14 @@ export interface ClassArrivalTimesResponse {
   school_class: string;
   times: Record<string, string> | null;
   updated_at?: string;
+  version: string;
 }
 
 export const ClassArrivalTimesResponseSchema: z.ZodType<ClassArrivalTimesResponse, unknown> = object<ClassArrivalTimesResponse>({
   school_class: str,
   times: nullable(rec(str)),
   updated_at: optional(str),
+  version: str,
 });
 
 /** Go: presenceprojectionhttp.dayLogClassPeriod */
@@ -1810,6 +1812,7 @@ export interface StudentDetailResponse {
   updated_at: string;
   has_full_access: boolean;
   has_write_access: boolean;
+  version?: string;
   consents?: StudentConsentResponse[];
   has_absence_write_access: boolean;
   has_sick_excused_write_access: boolean;
@@ -1884,6 +1887,7 @@ export const StudentDetailResponseSchema: z.ZodType<StudentDetailResponse, unkno
   updated_at: instant,
   has_full_access: bool,
   has_write_access: bool,
+  version: optional(str),
   consents: optional(arr(StudentConsentResponseSchema)),
   has_absence_write_access: bool,
   has_sick_excused_write_access: bool,
@@ -2177,6 +2181,17 @@ export const CompanionResponseSchema: z.ZodType<CompanionResponse, unknown> = ob
   weekdays: nullable(arr(str)),
 });
 
+/** Go: careplanhttp.StudentCompanionList */
+export interface StudentCompanionList {
+  companions: CompanionResponse[] | null;
+  fingerprint: string;
+}
+
+export const StudentCompanionListSchema: z.ZodType<StudentCompanionList, unknown> = object<StudentCompanionList>({
+  companions: nullable(arr(CompanionResponseSchema)),
+  fingerprint: str,
+});
+
 /** Go: careplanhttp.AccidentReportResponse */
 export interface AccidentReportResponse {
   status: string;
@@ -2408,6 +2423,7 @@ export interface PartialAbsenceResponse {
   created_by: string;
   created_at: string;
   updated_at: string;
+  version: string;
 }
 
 export const PartialAbsenceResponseSchema: z.ZodType<PartialAbsenceResponse, unknown> = object<PartialAbsenceResponse>({
@@ -2421,6 +2437,7 @@ export const PartialAbsenceResponseSchema: z.ZodType<PartialAbsenceResponse, unk
   created_by: int64String,
   created_at: str,
   updated_at: str,
+  version: str,
 });
 
 /** Go: careplanhttp.PickupScheduleResponse */
@@ -2571,6 +2588,7 @@ export interface PrivacyConsentResponse {
   details?: Record<string, unknown | null>;
   created_at: string;
   updated_at: string;
+  version: string;
 }
 
 export const PrivacyConsentResponseSchema: z.ZodType<PrivacyConsentResponse, unknown> = object<PrivacyConsentResponse>({
@@ -2586,6 +2604,7 @@ export const PrivacyConsentResponseSchema: z.ZodType<PrivacyConsentResponse, unk
   details: optional(rec(nullable(json))),
   created_at: instant,
   updated_at: instant,
+  version: str,
 });
 
 /** Go: studentpresence.StudentStatusDayResponse */
@@ -2666,6 +2685,7 @@ export interface ArrivalScheduleInput {
 /** Go: careplanhttp.BulkUpsertArrivalScheduleRequest */
 export interface BulkUpsertArrivalScheduleRequest {
   school_class?: string;
+  expected_version?: string;
   group_id?: string;
   student_ids?: string[] | null;
   schedules?: ArrivalScheduleInput[] | null;
@@ -3249,6 +3269,7 @@ export interface PartialAbsenceRequest {
   date?: string;
   from_time?: string;
   reason?: string;
+  expected_version?: string;
 }
 
 /** Go: students.studentPhotoUploadedResponse */
@@ -3555,6 +3576,7 @@ export interface CompanionEntry {
 
 /** Go: careplanhttp.UpdateStudentRequest */
 export interface UpdateStudentRequest {
+  expected_version?: string;
   first_name?: string | null;
   last_name?: string | null;
   birthday?: string | null;
@@ -3618,6 +3640,7 @@ export interface PrivacyConsentRequest {
   duration_days?: number | null;
   data_retention_days?: number;
   details?: Record<string, unknown | null> | null;
+  expected_version?: string;
 }
 
 /** Query of GET /api/students/ */
@@ -4113,10 +4136,17 @@ export const routes = {
     portals: ["tenant"],
     response: success(z.array(changeHistoryEntrySchema)),
   },
+  "GET /api/students/{id}/companion-links": {
+    method: "GET",
+    pattern: "/api/students/{id}/companion-links",
+    portals: ["tenant"],
+    response: success(StudentCompanionListSchema),
+  },
   "GET /api/students/{id}/companions": {
     method: "GET",
     pattern: "/api/students/{id}/companions",
     portals: ["tenant"],
+    deprecated: true,
     response: success(z.array(CompanionResponseSchema)),
   },
   "GET /api/students/{id}/delete-impact": {

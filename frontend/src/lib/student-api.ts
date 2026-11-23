@@ -35,6 +35,7 @@ import type {
 import { notifyStudentCompanionsChanged } from "./student-companion-api";
 import {
   readConsentAfterWrite,
+  readStudentConsentVersion,
   sentConsentPair,
   writeStudentConsent,
 } from "./student-privacy-consent";
@@ -215,7 +216,13 @@ export async function createStudent(body: StudentCreateBody): Promise<Student> {
   let written = consent;
   if (consent) {
     try {
-      await writeStudentConsent(created.id, consent);
+      // The child is new: its consent is written against the state read
+      // right after creating it, with nothing recorded yet.
+      await writeStudentConsent(
+        created.id,
+        consent,
+        await readStudentConsentVersion(created.id),
+      );
     } catch (consentError) {
       written = null;
       logger.error("privacy_consent_write_failed_after_create", {
@@ -306,13 +313,14 @@ export async function fetchStudentEnrollmentExtraFields(
  *
  * Consent BEFORE the student PUT, deliberately. Both writes can fail, so one
  * of them has to run while the other is still undone, and the two are not
- * interchangeable. The consent PUT is a plain upsert of the two values in
- * this update: failing it leaves the student untouched, and a retry replays
- * the identical write. The student PUT carries the companion fingerprint
- * (#1694), so once it commits, a retry of the same payload is refused as
- * `students.companions_changed`. Running it last means a reported failure
- * never hides a committed companion write; a student PUT failing on top of a
- * committed consent write says so (markPrivacyConsentSaved).
+ * interchangeable. The consent PUT writes the two values of this update
+ * against the consent version the form read: failing it leaves the student
+ * untouched. The student PUT carries the companion fingerprint (#1694) and
+ * the master-data version (ADR 0311), so once it commits, a retry of the
+ * same payload is refused. Running it last means a reported failure never
+ * hides a committed companion write; a student PUT failing on top of a
+ * committed consent write says so (markPrivacyConsentSaved), and the caller
+ * then leaves the saved consent out of a retry.
  *
  * The consequence for callers: a consent pair in the update is WRITTEN,
  * refused student PUT or not, so only a save that actually changes it may
@@ -328,7 +336,8 @@ export async function updateStudent(
   update: StudentUpdate,
 ): Promise<Student> {
   const consent = sentConsentPair(update);
-  if (consent) await writeStudentConsent(id, consent);
+  if (consent)
+    await writeStudentConsent(id, consent, update.privacy_consent_version);
 
   let data;
   try {
@@ -712,6 +721,7 @@ function mapConsentPair(
   return {
     accepted: consent.accepted,
     dataRetentionDays: consent.data_retention_days,
+    ...("version" in consent && { version: consent.version }),
   };
 }
 

@@ -137,7 +137,10 @@ describe("StudentDeletionModal", () => {
     mockDeleteStudent.mockResolvedValue(undefined);
   });
 
-  it("waits for a fresh impact on every opening before fixing the confirmation", async () => {
+  // ADR 0311: the impact reads through the shared cache. A reopened dialog
+  // shows the known impact at once, reads it again and confirms the newer
+  // one; the delete carries that impact's fingerprint.
+  it("reads the impact again on every opening before fixing the confirmation", async () => {
     const props = {
       studentId: "42",
       displayName: "Mia Muster",
@@ -168,10 +171,6 @@ describe("StudentDeletionModal", () => {
     );
     rerender(view(true));
     await waitFor(() => expect(mockFetchImpact).toHaveBeenCalledTimes(2));
-    expect(screen.getByText("Auswirkungen werden geladen…")).toBeVisible();
-    expect(
-      screen.queryByText("Was wird gelöscht oder gelöst? (5)"),
-    ).not.toBeInTheDocument();
     await act(async () => resolve(fresh));
     expect(
       await screen.findByText("Was wird gelöscht oder gelöst? (8)"),

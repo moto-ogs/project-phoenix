@@ -107,6 +107,11 @@ type StudentRequest struct {
 
 // UpdateStudentRequest represents a student update request
 type UpdateStudentRequest struct {
+	// ExpectedVersion is the version of the child's master data the form read
+	// (StudentRecordVersion, ADR 0311). Every update but a pure absence
+	// report needs it.
+	ExpectedVersion string `json:"expected_version,omitempty"`
+
 	// Person details (optional for update)
 	FirstName *string `json:"first_name,omitempty"`
 	LastName  *string `json:"last_name,omitempty"`
@@ -150,8 +155,8 @@ type UpdateStudentRequest struct {
 	// nil = leave the links untouched; [] = clear them.
 	Companions *[]CompanionEntry `json:"companions,omitempty"`
 	// CompanionsFingerprint is the fingerprint of the list the client LOADED
-	// before it built Companions (models/departure.CompanionLinksFingerprint,
-	// mirrored by companionsFingerprint() in the frontend).
+	// before it built Companions: the one GET /{id}/companion-links returned
+	// with it (careplan.CompanionLinksFingerprint, ADR 0311).
 	//
 	// Because Companions is a complete replacement, two staff members editing
 	// the same child from the same snapshot would both submit everything they

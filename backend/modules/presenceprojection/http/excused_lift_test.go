@@ -3,7 +3,6 @@ package presenceprojectionhttp_test
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -34,8 +33,7 @@ func TestUpdateStudent_LiftFailsWhenStatusDayResponseCannotBeVerified(t *testing
 		err:            errors.New("status day response lookup failed"),
 	}
 
-	lift := authExec(t, tc, testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID),
-		map[string]any{"excused": false}), testutil.AdminTestClaims(1), []string{"admin:*"})
+	lift := authExec(t, tc, studentUpdateRequest(t, tc, student.ID, map[string]any{"excused": false}), testutil.AdminTestClaims(1), []string{"admin:*"})
 	assert.Equal(t, http.StatusInternalServerError, lift.Code, lift.Body.String())
 
 	tc.resource.StudentStatusDayService = statusDays

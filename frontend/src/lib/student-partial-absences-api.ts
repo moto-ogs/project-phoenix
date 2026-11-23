@@ -16,6 +16,8 @@ export interface StudentPartialAbsence {
   createdBy: string;
   createdAt: string;
   updatedAt: string;
+  /** What an update of this entry sends back (ADR 0311). */
+  version: string;
 }
 
 function mapPartialAbsence(row: PartialAbsenceResponse): StudentPartialAbsence {
@@ -30,6 +32,7 @@ function mapPartialAbsence(row: PartialAbsenceResponse): StudentPartialAbsence {
     createdBy: row.created_by,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    version: row.version,
   };
 }
 
@@ -46,9 +49,14 @@ export async function fetchStudentPartialAbsences(
   return rows.map(mapPartialAbsence);
 }
 
+/**
+ * Creates a partial absence, or updates `editing` against the version the
+ * form read: the backend refuses an update with `general.changed_since_read`
+ * when the entry changed since (ADR 0311).
+ */
 export async function saveStudentPartialAbsence(
   studentId: string,
-  partialAbsenceId: string | null,
+  editing: { readonly id: string; readonly version: string } | null,
   date: string,
   fromTime: string,
   reason?: string,
@@ -56,11 +64,14 @@ export async function saveStudentPartialAbsence(
   const body: PartialAbsenceRequest = reason
     ? { date, from_time: fromTime, reason }
     : { date, from_time: fromTime };
-  const row = partialAbsenceId
+  const row = editing
     ? await bffJson(
         "tenant",
         "PUT /api/students/{id}/partial-absences/{partialAbsenceId}",
-        { params: { id: studentId, partialAbsenceId }, body },
+        {
+          params: { id: studentId, partialAbsenceId: editing.id },
+          body: { ...body, expected_version: editing.version },
+        },
       )
     : await bffJson("tenant", "POST /api/students/{id}/partial-absences", {
         params: { id: studentId },

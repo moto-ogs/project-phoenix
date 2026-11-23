@@ -100,15 +100,24 @@ type ArrivalScheduleInput struct {
 
 // ArrivalScheduleBulkFilter selects exactly one class, OGS group, or explicit
 // student list. A whole class updates its timetable, not per-child deviations.
+//
+// ExpectedVersion binds a class update to the class times its author read
+// (ClassArrivalTimes.Version, ADR 0311); a class whose times changed since
+// is refused with readstate.ErrChanged. A group or student list starts from
+// empty fields and reads nothing, so it carries no version.
 type ArrivalScheduleBulkFilter struct {
-	SchoolClass string
-	GroupID     int64
-	StudentIDs  []int64
-	Authorize   func(context.Context, ScheduleStudent) (bool, error)
+	SchoolClass     string
+	ExpectedVersion string
+	GroupID         int64
+	StudentIDs      []int64
+	Authorize       func(context.Context, ScheduleStudent) (bool, error)
 }
 
+// ClassArrivalTimes is what one class carries. Version is the read-state
+// token of that stored state, also when the class has no row yet.
 type ClassArrivalTimes struct {
 	SchoolClass string            `json:"school_class"`
 	Times       map[string]string `json:"times"`
 	UpdatedAt   *time.Time        `json:"updated_at,omitempty"`
+	Version     string            `json:"version"`
 }

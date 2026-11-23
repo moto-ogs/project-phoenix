@@ -1,12 +1,11 @@
 package careplanhttp_test
 
 import (
-	"fmt"
 	"net/http"
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
-	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/departure"
+	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/realtime"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -35,16 +34,16 @@ func accompaniedPlanBody(extra map[string]any) map[string]any {
 // links in this file are Monday links, so the stored state is fully described by
 // the ids it holds (no ids = the empty list a child starts with).
 func mondayLinkFingerprint(ids ...int64) string {
-	links := make([]departure.CompanionLink, 0, len(ids))
+	links := make([]careplan.CompanionLink, 0, len(ids))
 	for _, id := range ids {
-		links = append(links, departure.CompanionLink{CompanionStudentID: id, Weekdays: []string{"mon"}})
+		links = append(links, careplan.CompanionLink{CompanionStudentID: id, Weekdays: []string{"mon"}})
 	}
-	return departure.CompanionLinksFingerprint(links)
+	return careplan.CompanionLinksFingerprint(links)
 }
 
 func putStudent(t *testing.T, tc *testContext, studentID int64, body map[string]any) {
 	t.Helper()
-	req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", studentID), body)
+	req := studentUpdateRequest(t, tc, studentID, body)
 	rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 	require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
 }

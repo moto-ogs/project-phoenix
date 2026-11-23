@@ -3,7 +3,10 @@ package studentpresence
 import (
 	"context"
 	"errors"
+	"sort"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // ErrInvalidPrivacyConsent reports a consent that violates the retention
@@ -39,11 +42,52 @@ type PrivacyConsentQuery interface {
 	ListPrivacyConsents(context.Context, int64) ([]PrivacyConsent, error)
 }
 
-// PrivacyConsentCommand appends consents. RecordPrivacyConsent joins the
+// PrivacyConsentCommand writes consents. RecordPrivacyConsent joins the
 // caller's tenant transaction and never rewrites an existing row.
+// RevisePrivacyConsent is the edit of a child's consent by staff: it records or
+// revises the consent of the saved policy version, bound to the consents the
+// editor read (ADR 0311).
 type PrivacyConsentCommand interface {
-	RevisePrivacyConsent(context.Context, PrivacyConsent) (PrivacyConsent, error)
+	RevisePrivacyConsent(context.Context, PrivacyConsentRevision) (RevisedPrivacyConsent, error)
 	RecordPrivacyConsent(context.Context, PrivacyConsent) (PrivacyConsent, error)
+}
+
+// PrivacyConsentRevision is one staff edit of a child's consent. ExpectedVersion
+// is the PrivacyConsentVersion of the consents the editor read; a student
+// whose consents changed since is refused with readstate.ErrChanged.
+type PrivacyConsentRevision struct {
+	StudentID         int64
+	ExpectedVersion   string
+	PolicyVersion     string
+	Accepted          bool
+	DurationDays      *int
+	DataRetentionDays int
+	// Details is the JSON document to record.
+	Details []byte
+}
+
+// RevisedPrivacyConsent is the stored consent and the version of the
+// student's consents after the save.
+type RevisedPrivacyConsent struct {
+	Consent PrivacyConsent
+	Version string
+}
+
+// PrivacyConsentVersion is the read-state token of a student's recorded
+// consents (ADR 0311): which rows exist and when each last changed. A student
+// without a recorded consent has a token too, so the first save is bound to
+// the school defaults its editor saw being still unrecorded.
+func PrivacyConsentVersion(consents []PrivacyConsent) string {
+	type state struct {
+		ID      int64  `json:"id"`
+		Changed string `json:"changed"`
+	}
+	states := make([]state, 0, len(consents))
+	for _, consent := range consents {
+		states = append(states, state{ID: consent.ID, Changed: readstate.Of(consent.UpdatedAt)})
+	}
+	sort.Slice(states, func(i, j int) bool { return states[i].ID < states[j].ID })
+	return readstate.Fingerprint(states)
 }
 
 // PrivacyConsentBatches records the retention consents of many new students
