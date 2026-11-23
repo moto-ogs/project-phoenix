@@ -797,11 +797,18 @@ describe("embedded enrollment analytics policy", () => {
         data: { user: { id: "7", scope: "parent" } },
       });
       mocks.fetchBootstrap.mockResolvedValue({ phase: {} });
-      let resolveTarget!: (response: Response) => void;
+      // The page and its school provider both resolve the target school,
+      // in either order; the answer reaches every waiting lookup.
+      const waitingTargets: ((response: Response) => void)[] = [];
+      const resolveTarget = (response: Response) => {
+        for (const resolve of waitingTargets.splice(0)) {
+          resolve(response.clone());
+        }
+      };
       vi.mocked(fetch).mockImplementation(async (input) => {
         if (String(input).startsWith("/api/auth/tenant/resolve")) {
           return new Promise<Response>((resolve) => {
-            resolveTarget = resolve;
+            waitingTargets.push(resolve);
           });
         }
         return Response.json({ data: { enabled: true } });
