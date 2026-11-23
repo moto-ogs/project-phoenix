@@ -522,7 +522,7 @@ function ChangeRequestStatusBadge({
   return <StatusBadge label={meta.label} tone={meta.tone} />;
 }
 
-function messageAuthorLabel(authorType: string): string {
+function messageAuthorLabel(authorType: string | undefined): string {
   if (authorType === "parent") return "Eltern";
   if (authorType === "system") return "System";
   return "OGS";

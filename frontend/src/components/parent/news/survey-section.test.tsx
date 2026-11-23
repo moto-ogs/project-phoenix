@@ -12,7 +12,6 @@ vi.unmock("swr");
 const render: typeof baseRender = ((ui: React.ReactElement) =>
   baseRender(ui, { wrapper: ParentResourceTestProvider })) as typeof baseRender;
 
-import type { ParentAnnouncement } from "~/lib/parent-api";
 import * as parentApi from "~/lib/parent-api";
 import type { SurveyForm } from "~/lib/survey-form";
 import { testClockDay } from "~/test/clock";
@@ -21,6 +20,7 @@ import {
   NewsDetailModal,
   isOutstandingAnnouncement,
 } from "./news-components";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 // Umfrage mit Fragebogen im Elternportal (#4781): die Karte zeigt, ob die
 // Umfrage anonym ist und ob dieses Elternkonto teilgenommen hat; der Dialog
@@ -38,8 +38,10 @@ const CLOSES_LABEL = new Intl.DateTimeFormat("de-DE", {
 }).format(new Date(CLOSES_AT));
 
 function surveyItem(
-  survey: Partial<NonNullable<ParentAnnouncement["survey"]>> = {},
-): ParentAnnouncement {
+  survey: Partial<
+    NonNullable<parentMeContract.AnnouncementResponse["survey"]>
+  > = {},
+): parentMeContract.AnnouncementResponse {
   return {
     delivery_mode: "informational",
     id: "42",

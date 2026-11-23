@@ -1,11 +1,11 @@
 import { ExternalLink } from "lucide-react";
 import { FileTypeIcon } from "~/components/ui/file-type-icon";
-import type { AdminRequestUpload } from "~/lib/enrollment-admin-api";
 import {
   adminUploadHref,
   asUploadValues,
   formatUploadSize,
 } from "~/lib/enrollment-uploads";
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 
 /**
  * The proof files (Nachweise) of one file question in the staff view of a
@@ -23,7 +23,7 @@ export function EnrollmentRequestUploadList({
   requestId: string;
   value: unknown;
   /** Undefined when the endpoint does not report stored files. */
-  uploads?: readonly AdminRequestUpload[];
+  uploads?: readonly enrollmentContract.AdminRequestUpload[];
   canView?: boolean;
 }>) {
   const files = asUploadValues(value);

@@ -13,8 +13,9 @@
 //
 // Diese Datei enthält nur die Regel und die Zählung, kein React, kein Fetch.
 
-import type { ClassDayReport, ClassDayRow } from "~/lib/class-day-api";
+import type { ClassDayReport } from "~/lib/class-day-api";
 import { berlinTodayISO, formatChatClockTime } from "~/lib/date-helpers";
+import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 
 /**
  * Eine Zeile weicht ab, wenn ein Tagesstatus gemeldet ist (krank,
@@ -24,7 +25,7 @@ import { berlinTodayISO, formatChatClockTime } from "~/lib/date-helpers";
  * Klassenlisteneinträge (#2382) sind ausgenommen: ein Kind ohne
  * OGS-Datensatz hat keinen üblichen Plan, von dem es abweichen könnte.
  */
-export function isDayChange(row: ClassDayRow): boolean {
+export function isDayChange(row: schoolClassDayContract.DayRow): boolean {
   if (row.list_entry) return false;
   return Boolean(row.status) || row.pickup_changed === true;
 }

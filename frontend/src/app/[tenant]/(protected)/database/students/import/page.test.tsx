@@ -150,10 +150,10 @@ vi.mock("~/components/import/student-row-card", () => ({
   StudentRowCard: ({
     student,
   }: {
-    student: { first_name: string; last_name: string };
+    student: { firstName: string; lastName: string };
   }) => (
     <div data-testid="student-row">
-      {student.first_name} {student.last_name}
+      {student.firstName} {student.lastName}
     </div>
   ),
 }));

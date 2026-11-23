@@ -11,10 +11,7 @@ import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { Modal } from "~/components/ui/modal";
 import { TimeField } from "~/components/ui/time-field";
 import { useApiFormError } from "~/contexts/ToastContext";
-import {
-  type CareScheduleRequestInput,
-  type ChildCareSchedule,
-} from "~/lib/parent-api";
+import { type CareScheduleRequestInput } from "~/lib/parent-api";
 import type { SignatureValue } from "~/lib/signature";
 import {
   PickupSignatureField,
@@ -23,6 +20,7 @@ import {
 } from "~/components/parent/pickup-permission-fields";
 import { FormFieldset } from "~/components/ui/form-fieldset";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 const DAY_KEYS: Record<number, "mon" | "tue" | "wed" | "thu" | "fri"> = {
   1: "mon",
@@ -50,8 +48,9 @@ interface RequestedDayResult {
   missingPlan: boolean;
 }
 
-type Capabilities = ChildCareSchedule["request_capabilities"];
-type Weekdays = NonNullable<ChildCareSchedule["weekdays"]>;
+type Capabilities =
+  parentMeContract.CareScheduleResponse["request_capabilities"];
+type Weekdays = NonNullable<parentMeContract.CareScheduleResponse["weekdays"]>;
 type SubmitRequest = (
   payload: CareScheduleRequestInput,
   /** Nur gesetzt, wenn die Anfrage das Kind allein gehen lässt (#4780). */

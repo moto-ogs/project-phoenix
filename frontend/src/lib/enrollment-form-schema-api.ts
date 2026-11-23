@@ -1,18 +1,21 @@
-import { ApiError, apiErrorFromResponse } from "~/lib/api-error";
+import { apiErrorFromResponse } from "~/lib/api-error";
+import { bffJson } from "~/lib/bff-fetch";
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import { createLogger } from "~/lib/logger";
 import { readEnrollmentError } from "~/lib/enrollment-api-error";
 import type { Translations } from "~/lib/enrollment-translations";
-import type { FileFieldOptions } from "~/lib/enrollment-uploads";
+import { requiredEnum } from "~/lib/contract/known-enum";
 import {
-  readEnrollmentJSON,
-  sendEnrollmentRequest,
-  withLateInviteQuery,
-} from "~/lib/enrollment-http";
+  ENROLLMENT_FILE_TYPES,
+  type FileFieldOptions,
+} from "~/lib/enrollment-uploads";
+import { sendEnrollmentRequest } from "~/lib/enrollment-http";
 
 const logger = createLogger({ component: "EnrollmentFormSchemaAPI" });
 
 /** Field types accepted by the backend FormFieldType enum. */
-export const FORM_FIELD_TYPES = [
+const FORM_FIELD_TYPES = [
   "boolean",
   "number",
   "text",
@@ -39,21 +42,12 @@ export type FormFieldType = (typeof FORM_FIELD_TYPES)[number];
  * - "grade_level": the per-child core field target_grade_level
  * - "care_offering": the child's selected care offering IDs
  */
-export const CONDITION_SOURCES = [
-  "field",
-  "grade_level",
-  "care_offering",
-] as const;
+const CONDITION_SOURCES = ["field", "grade_level", "care_offering"] as const;
 
 export type ConditionSource = (typeof CONDITION_SOURCES)[number];
 
 /** Visibility operators (backend ConditionOp* constants). */
-export const CONDITION_OPERATORS = [
-  "eq",
-  "neq",
-  "not_empty",
-  "includes",
-] as const;
+const CONDITION_OPERATORS = ["eq", "neq", "not_empty", "includes"] as const;
 
 export type ConditionOperator = (typeof CONDITION_OPERATORS)[number];
 
@@ -81,7 +75,7 @@ export interface VisibilityCondition {
  * checkbox + guardian_phone input). The decision service writes
  * them onto the Student / guardian_phone_numbers automatically.
  */
-export const FORM_FIELD_TARGETS = [
+const FORM_FIELD_TARGETS = [
   "",
   "student.health_info",
   "student.extra_info",
@@ -164,7 +158,7 @@ export const RESERVED_TARGETS: Record<
   },
 };
 
-export interface FormFieldOption {
+interface FormFieldOption {
   label: string;
   value: string;
   /** School-written translations of `label` (#3377). */
@@ -203,63 +197,37 @@ export interface FormAttachment {
   document_url: string;
 }
 
-export interface FormField {
-  attachments?: FormAttachment[];
-  key: string;
-  label: string;
+/**
+ * A field of a form schema: the contract's field with its enums narrowed.
+ * `content` is the body of an `information` block; `allowed_times` limits a
+ * `weekday_schedule` to fixed `HH:MM` values; `single_mode_grades` is the
+ * Heimweg-Beschränkung (#2381) of `student.allowed_departure_modes`;
+ * `file_options` are the rules of a `file` field (#4783); `target` links the
+ * answer to a Stammdaten column at approval; `visible_when` shows the field
+ * only when its condition matches (null/undefined = always visible).
+ */
+export type FormField = Omit<
+  sharedContract.FormField,
+  | "type"
+  | "options"
+  | "validation"
+  | "file_options"
+  | "target"
+  | "visible_when"
+  | "translations"
+> & {
   type: FormFieldType;
-  required?: boolean;
-  help_text?: string;
-  /**
-   * Body text for `information` blocks (plain text, newlines preserved).
-   * Empty/undefined for every other field type.
-   */
-  content?: string;
   options?: FormFieldOption[];
-  /**
-   * Fixed pickup times for a `weekday_schedule` field. When non-empty,
-   * the public form renders a dropdown limited to these `HH:MM` values
-   * per weekday instead of a free time input, and the backend rejects
-   * any off-list time. Empty/undefined = free time entry.
-   */
-  allowed_times?: string[];
-  /**
-   * Heimweg-Beschränkung (#2381) for the `weekday_multi_mode` field
-   * targeting `student.allowed_departure_modes`: target grade levels
-   * whose children may pick at most ONE departure mode per weekday.
-   * Parents still choose which one. Empty/undefined = unrestricted
-   * multi-select; only valid on that field, the backend rejects it
-   * everywhere else.
-   */
-  single_mode_grades?: number[];
-  /**
-   * Rules of a `file` field (#4783): allowed file kinds, the size limit per
-   * file and whether parents may attach several files (at most 5). Required
-   * on `file` fields, rejected by the backend on every other type.
-   */
-  file_options?: FileFieldOptions;
   validation?: FormFieldValidation | null;
-  sort_order: number;
-  applies_to_child?: boolean;
-  /**
-   * Optional link to a Stammdaten column / association table. When
-   * set, the decision service copies the value onto the matching
-   * downstream record at approval time. Empty/undefined = free
-   * custom field, stays in custom_data.
-   */
+  file_options?: FileFieldOptions;
   target?: FormFieldTarget;
-  /**
-   * Optional show-if rule. When set, the field is only rendered to
-   * parents (and only validated/submitted) when the condition matches.
-   * null/undefined = always visible.
-   */
   visible_when?: VisibilityCondition | null;
   /**
    * School-written translations of `label`, `help_text` and `content`
    * (#3377). Option labels translate on the option itself.
    */
   translations?: Translations;
-}
+};
 
 /**
  * `signature` asks the parent to sign the enrollment and every later edit
@@ -297,39 +265,31 @@ export const LEGAL_BLOCK_DISPLAY_MODES = ["text", "pdf"] as const;
 
 export type LegalBlockDisplayMode = (typeof LEGAL_BLOCK_DISPLAY_MODES)[number];
 
-export interface FormLegalBlock {
-  attachments?: FormAttachment[];
-  key: string;
+/**
+ * A legal block of a form: the contract's block with its enums narrowed.
+ * A consent with `guardian_agreement` also confirms the agreement of every
+ * other custodian (#2787).
+ */
+export type FormLegalBlock = Omit<
+  sharedContract.FormLegalBlock,
+  "kind" | "source" | "display_mode" | "translations"
+> & {
   kind: LegalBlockKind;
-  title: string;
-  label: string;
-  text: string;
-  required: boolean;
-  enabled: boolean;
-  sort_order: number;
   source?: LegalBlockSource;
   display_mode?: LegalBlockDisplayMode;
-  document_url?: string;
   /** School-written translations of `title`, `label` and `text` (#3377). */
   translations?: Translations;
-  /**
-   * Consent only: ticking it also confirms the agreement of every other
-   * custodian (#2787).
-   */
-  guardian_agreement?: boolean;
-}
+};
 
-export interface FormSchema {
-  id: string;
-  name: string;
-  version: number;
-  is_active: boolean;
+/** A form schema version with its fields, rules and legal blocks. */
+export type FormSchema = Omit<
+  enrollmentContract.FormSchemaResponse,
+  "fields" | "core_requirements" | "legal_blocks"
+> & {
   fields: FormField[];
   core_requirements?: CoreRequirements;
   legal_blocks?: FormLegalBlock[];
-  created_by: string;
-  created_at: string;
-}
+};
 
 const SCHEMA_PATH = "/api/enrollment/schema";
 
@@ -339,19 +299,12 @@ const SCHEMA_PATH = "/api/enrollment/schema";
  * this phase" dropdown.
  */
 export async function listSchemas(): Promise<FormSchema[]> {
-  const response = await sendEnrollmentRequest(`${SCHEMA_PATH}/versions`, {
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    throw await readEnrollmentError(
-      response,
-      "Formularvorlagen konnten nicht geladen werden",
-      logger,
-      "schema_list_failed",
-    );
-  }
-  const list = await readEnrollmentJSON<FormSchema[]>(response);
-  return Array.isArray(list) ? list : [];
+  const schemas = await bffJson(
+    "tenant",
+    "GET /api/enrollment/schema/versions",
+    { errorMessage: "Formularvorlagen konnten nicht geladen werden" },
+  );
+  return schemas.map(formSchemaFromContract);
 }
 
 export function latestSchemasByName(schemas: FormSchema[]): FormSchema[] {
@@ -373,19 +326,14 @@ export function latestSchemasByName(schemas: FormSchema[]): FormSchema[] {
 }
 
 /**
- * Public variant of fetchActiveSchema for the parent enrollment form.
- * Slug-gated, no JWT. Backend resolves the tenant from the URL param
- * and returns only the active schema's fields. Returns null when no
- * schema has been published yet (404), letting the form fall back to
- * core fields only without erroring out.
+ * The form a parent fills in: the active schema's fields, rules and legal
+ * blocks. Null in a bootstrap when no schema has been published yet: the
+ * form then asks the core fields only.
  */
-export interface PublicFormSchema {
-  id: string;
-  version: number;
-  fields: FormField[];
-  core_requirements?: CoreRequirements;
-  legal_blocks?: FormLegalBlock[];
-}
+export type PublicFormSchema = Pick<
+  FormSchema,
+  "id" | "version" | "fields" | "core_requirements" | "legal_blocks"
+>;
 
 export function schemaToPublicFormSchema(schema: FormSchema): PublicFormSchema {
   return {
@@ -401,44 +349,37 @@ export function schemaToPublicFormSchema(schema: FormSchema): PublicFormSchema {
   };
 }
 
-export interface EnrollmentPreviewBootstrap {
-  /** Effective tenant gate, present for phase previews only. */
-  enrollment_enabled?: boolean;
-  /**
-   * The phase's form configuration, present for phase previews only. Typed in
-   * `enrollment-phase-preview-api.ts`: the offering types live in the
-   * submission module, which imports this one.
-   */
-  phase_offerings?: unknown;
-  schema: FormSchema | null;
-  assigned_phase_count: number;
-  active_assigned_phase_count: number;
-}
+/**
+ * The staff preview of the parent form: `enrollment_enabled` and
+ * `phase_offerings` (typed in `enrollment-phase-preview-api.ts`) only for a
+ * phase preview.
+ */
+export type EnrollmentPreviewBootstrap = Omit<
+  enrollmentContract.SchemaPreviewBootstrapResponse,
+  "schema"
+> & { schema: FormSchema | null };
 
 export async function fetchEnrollmentPreviewBootstrap(params: {
   phaseId?: string;
   schemaId?: string | null;
   base?: boolean;
 }): Promise<EnrollmentPreviewBootstrap> {
-  const search = new URLSearchParams();
-  if (params.schemaId) search.set("schemaId", params.schemaId);
-  if (params.phaseId) search.set("phaseId", params.phaseId);
-  if (params.base) search.set("base", "1");
-  const response = await sendEnrollmentRequest(
-    `${SCHEMA_PATH}/preview?${search.toString()}`,
+  const { schema, ...preview } = await bffJson(
+    "tenant",
+    "GET /api/enrollment/schema/preview",
     {
-      cache: "no-store",
+      query: {
+        schemaId: params.schemaId || undefined,
+        phaseId: params.phaseId || undefined,
+        base: params.base ? "1" : undefined,
+      },
+      errorMessage: "Formularvorschau konnte nicht geladen werden",
     },
   );
-  if (!response.ok) {
-    throw await readEnrollmentError(
-      response,
-      "Formularvorschau konnte nicht geladen werden",
-      logger,
-      "schema_preview_bootstrap_failed",
-    );
-  }
-  return readEnrollmentJSON<EnrollmentPreviewBootstrap>(response);
+  return {
+    ...preview,
+    schema: schema && formSchemaFromContract(schema),
+  };
 }
 
 /**
@@ -453,45 +394,31 @@ export interface PublicCaptchaConfig {
   site_key: string;
 }
 
-export interface PublicLegalBlock {
-  attachments?: FormAttachment[];
-  key: string;
+/** A legal block of the public form: translations still matching the German text. */
+export type PublicLegalBlock = Omit<
+  sharedContract.LegalBlock,
+  "kind" | "source" | "translations"
+> & {
   kind: LegalBlockKind;
-  title: string;
-  label: string;
-  text: string;
-  required: boolean;
-  sort_order?: number;
   source?: LegalBlockSource;
-  /** Translations that still match the German text, without source. */
   translations?: Translations;
-  /** Ticking the consent also confirms the custodians' agreement (#2787). */
-  guardian_agreement?: boolean;
-}
+};
 
 /**
  * Per-tenant legal documents and the configured blocks shown on the public
  * form. Empty raw strings remain for compatibility; `blocks` is the canonical
- * render/validation contract for the form.
+ * render/validation contract for the form. `health_consent` is the consent
+ * moto adds to a form asking for health information; only the tenant-wide
+ * read carries it, for the template preview (#2787).
  */
-export interface PublicLegalTexts {
-  agb: string;
-  agb_document_url?: string;
-  agb_display_mode?: "text" | "pdf";
-  dsgvo: string;
-  email_contact: string;
-  photo: string;
-  terms_enabled: boolean;
-  dsgvo_enabled: boolean;
-  email_contact_enabled: boolean;
-  photo_enabled: boolean;
+export type PublicLegalTexts = Omit<
+  sharedContract.PublicLegalTextsResponse,
+  "agb_display_mode" | "blocks" | "health_consent"
+> & {
+  agb_display_mode?: LegalBlockDisplayMode;
   blocks: PublicLegalBlock[];
-  /**
-   * The consent moto adds to a form asking for health information; only the
-   * tenant-wide read carries it, for the template preview (#2787).
-   */
   health_consent?: PublicLegalBlock;
-}
+};
 
 /**
  * Fetches the per-tenant legal documents. Unconfigured texts come back
@@ -504,22 +431,22 @@ export async function fetchPublicLegalTexts(
   phaseId?: string,
   options: { lateInviteToken?: string } = {},
 ): Promise<PublicLegalTexts> {
+  const query = { late_invite: options.lateInviteToken?.trim() || undefined };
+  const errorMessage = "Rechtstexte konnten nicht geladen werden";
   // The phase is a path segment, as the backend serves it (#2352).
-  const path = `/api/enrollment/legal/${encodeURIComponent(tenantSlug)}`;
-  const url = withLateInviteQuery(
-    phaseId ? `${path}/${encodeURIComponent(phaseId)}` : path,
-    options.lateInviteToken,
+  return publicLegalTextsFromContract(
+    phaseId
+      ? await bffJson(
+          "public",
+          "GET /api/enrollment/legal/{tenantSlug}/{phaseId}",
+          { params: { tenantSlug, phaseId }, query, errorMessage },
+        )
+      : await bffJson("public", "GET /api/enrollment/legal/{tenantSlug}", {
+          params: { tenantSlug },
+          query,
+          errorMessage,
+        }),
   );
-  const response = await sendEnrollmentRequest(url, { cache: "no-store" });
-  if (!response.ok) {
-    throw await readEnrollmentError(
-      response,
-      "Rechtstexte konnten nicht geladen werden",
-      logger,
-      "public_legal_texts_failed",
-    );
-  }
-  return readEnrollmentJSON<PublicLegalTexts>(response);
 }
 
 /**
@@ -555,7 +482,12 @@ export async function createSchema(
       "schema_create_failed",
     );
   }
-  return readEnrollmentJSON<FormSchema>(response);
+  // POST and PUT `/schema/` read a body the contract does not describe
+  // (#7808), so they go out without bffJson; the answer is the contract's.
+  const { data } = (await response.json()) as {
+    data: enrollmentContract.FormSchemaResponse;
+  };
+  return formSchemaFromContract(data);
 }
 
 /**
@@ -603,40 +535,24 @@ export async function updateSchema(
       "schema_update_failed",
     );
   }
-  return readEnrollmentJSON<FormSchema>(response);
+  // POST and PUT `/schema/` read a body the contract does not describe
+  // (#7808), so they go out without bffJson; the answer is the contract's.
+  const { data } = (await response.json()) as {
+    data: enrollmentContract.FormSchemaResponse;
+  };
+  return formSchemaFromContract(data);
 }
 
 export async function uploadEnrollmentLegalDocument(
   file: File,
 ): Promise<string> {
-  const formData = new FormData();
-  formData.append("document", file);
-
-  const response = await sendEnrollmentRequest(
-    "/api/enrollment/legal-documents",
-    {
-      method: "POST",
-      body: formData,
-    },
+  const body = new FormData();
+  body.append("document", file);
+  const { document_url: documentURL } = await bffJson(
+    "tenant",
+    "POST /api/enrollment/legal-documents",
+    { body, errorMessage: "PDF-Datei konnte nicht hochgeladen werden" },
   );
-
-  if (!response.ok) {
-    throw await readEnrollmentError(
-      response,
-      "PDF-Datei konnte nicht hochgeladen werden",
-      logger,
-      "legal_document_upload_failed",
-    );
-  }
-
-  const result = (await response.json()) as {
-    data?: { document_url?: string };
-  };
-  const documentURL = result.data?.document_url;
-  if (!documentURL) {
-    // A success without the stored file's address is a server fault.
-    throw new ApiError("Legal document upload returned no document_url", 500);
-  }
   return documentURL;
 }
 
@@ -670,41 +586,20 @@ export async function renameSchema(
   id: string,
   name: string,
 ): Promise<FormSchema> {
-  const response = await sendEnrollmentRequest(
-    `${SCHEMA_PATH}/${encodeURIComponent(id)}`,
-    {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
-    },
+  return formSchemaFromContract(
+    await bffJson("tenant", "PATCH /api/enrollment/schema/{id}", {
+      params: { id },
+      body: { name },
+      errorMessage: "Formularvorlage konnte nicht umbenannt werden",
+    }),
   );
-  if (!response.ok) {
-    throw await readEnrollmentError(
-      response,
-      "Formularvorlage konnte nicht umbenannt werden",
-      logger,
-      "schema_rename_failed",
-    );
-  }
-  return readEnrollmentJSON<FormSchema>(response);
 }
 
 export async function deleteSchema(id: string): Promise<void> {
-  const response = await sendEnrollmentRequest(
-    `${SCHEMA_PATH}/${encodeURIComponent(id)}`,
-    {
-      method: "DELETE",
-    },
-  );
-  if (response.status === 204) return;
-  if (!response.ok) {
-    throw await readEnrollmentError(
-      response,
-      "Formularvorlage konnte nicht gelöscht werden",
-      logger,
-      "schema_delete_failed",
-    );
-  }
+  await bffJson("tenant", "DELETE /api/enrollment/schema/{id}", {
+    params: { id },
+    errorMessage: "Formularvorlage konnte nicht gelöscht werden",
+  });
 }
 
 /** Convenience: returns a fresh, blank field with sensible defaults. */
@@ -733,5 +628,278 @@ export function blankInfoField(sortOrder: number): FormField {
     required: false,
     sort_order: sortOrder,
     applies_to_child: false,
+  };
+}
+
+// --- Reading the contract ---------------------------------------------
+//
+// Narrows the form schema of the contract (open enums, translation records
+// that may hold null) into the form types of the online registration (#2353).
+// Every reader of these types may save the whole form back, so a value this
+// build does not know fails the read instead of being guessed or dropped.
+
+type WireTranslations = Record<
+  string,
+  Record<string, sharedContract.TranslatedText> | null
+>;
+
+/** The translations of a text, without the languages the decoder left null. */
+export function translationsFromContract(
+  translations: WireTranslations | undefined,
+): Translations | undefined {
+  if (translations === undefined) return undefined;
+  const present: Translations = {};
+  for (const [locale, texts] of Object.entries(translations)) {
+    if (texts !== null) present[locale] = texts;
+  }
+  return present;
+}
+
+function optionFromContract(
+  option: sharedContract.FormFieldOption,
+): FormFieldOption {
+  const { translations, ...rest } = option;
+  return {
+    ...rest,
+    ...(translations === undefined
+      ? {}
+      : { translations: translationsFromContract(translations) }),
+  };
+}
+
+function fileOptionsFromContract(
+  options: sharedContract.FormFileOptions,
+  at: string,
+): FileFieldOptions {
+  return {
+    allowed_types: (options.allowed_types ?? []).map((type, index) =>
+      requiredEnum(ENROLLMENT_FILE_TYPES, type, `${at}.allowed_types.${index}`),
+    ),
+    max_size_mb: options.max_size_mb,
+    multiple: options.multiple ?? false,
+  };
+}
+
+type ConditionValue = VisibilityCondition["value"];
+
+function conditionValue(value: unknown, at: string): ConditionValue {
+  if (
+    value === undefined ||
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
+    return value;
+  }
+  throw new Error(`contract: ${at} has an unknown value`);
+}
+
+function conditionFromContract(
+  condition: sharedContract.VisibilityCondition,
+  at: string,
+): VisibilityCondition {
+  const value = conditionValue(condition.value, `${at}.value`);
+  return {
+    source: requiredEnum(CONDITION_SOURCES, condition.source, `${at}.source`),
+    ...(condition.field === undefined ? {} : { field: condition.field }),
+    operator: requiredEnum(
+      CONDITION_OPERATORS,
+      condition.operator,
+      `${at}.operator`,
+    ),
+    ...(value === undefined ? {} : { value }),
+  };
+}
+
+/**
+ * One field of a form schema. `at` names the field in the error, such as
+ * "HolidayFormEditor.fields.2".
+ */
+export function formFieldFromContract(
+  field: sharedContract.FormField,
+  at: string,
+): FormField {
+  const {
+    type,
+    target,
+    options,
+    file_options: fileOptions,
+    visible_when: visibleWhen,
+    translations,
+    ...rest
+  } = field;
+  return {
+    ...rest,
+    type: requiredEnum(FORM_FIELD_TYPES, type, `${at}.type`),
+    ...(target === undefined
+      ? {}
+      : { target: requiredEnum(FORM_FIELD_TARGETS, target, `${at}.target`) }),
+    ...(options === undefined
+      ? {}
+      : { options: options.map(optionFromContract) }),
+    ...(fileOptions === undefined
+      ? {}
+      : {
+          file_options: fileOptionsFromContract(
+            fileOptions,
+            `${at}.file_options`,
+          ),
+        }),
+    ...(visibleWhen === undefined
+      ? {}
+      : {
+          visible_when: conditionFromContract(
+            visibleWhen,
+            `${at}.visible_when`,
+          ),
+        }),
+    ...(translations === undefined
+      ? {}
+      : { translations: translationsFromContract(translations) }),
+  };
+}
+
+/**
+ * A legal block of a form schema. An unknown kind, source or display mode
+ * fails the read for the same reasons as an unknown field type.
+ */
+function legalBlockFromContract(
+  block: sharedContract.FormLegalBlock,
+  at: string,
+): FormLegalBlock {
+  const {
+    kind,
+    source,
+    display_mode: displayMode,
+    translations,
+    ...rest
+  } = block;
+  return {
+    ...rest,
+    kind: requiredEnum(LEGAL_BLOCK_KINDS, kind, `${at}.kind`),
+    ...(source === undefined
+      ? {}
+      : { source: requiredEnum(LEGAL_BLOCK_SOURCES, source, `${at}.source`) }),
+    ...(displayMode === undefined
+      ? {}
+      : {
+          display_mode: requiredEnum(
+            LEGAL_BLOCK_DISPLAY_MODES,
+            displayMode,
+            `${at}.display_mode`,
+          ),
+        }),
+    ...(translations === undefined
+      ? {}
+      : { translations: translationsFromContract(translations) }),
+  };
+}
+
+// Go does not register the keys; the contract types them as string.
+const CORE_REQUIREMENT_KEYS = [
+  "guardian_phone",
+  "signature",
+  "holiday_care_wish",
+] as const satisfies readonly CoreRequirementKey[];
+
+/** The rules of the base form; a rule this build does not know is left out. */
+function coreRequirementsFromContract(
+  requirements: Record<string, boolean> | null,
+): CoreRequirements | undefined {
+  if (!requirements) return undefined;
+  return Object.fromEntries(
+    CORE_REQUIREMENT_KEYS.flatMap((key) =>
+      key in requirements ? [[key, requirements[key] === true]] : [],
+    ),
+  );
+}
+
+/** A form schema version; see `formFieldFromContract`. */
+function formSchemaFromContract(
+  schema: enrollmentContract.FormSchemaResponse,
+): FormSchema {
+  const {
+    fields,
+    core_requirements: coreRequirements,
+    legal_blocks: legalBlocks,
+    ...rest
+  } = schema;
+  const core = coreRequirementsFromContract(coreRequirements);
+  return {
+    ...rest,
+    fields: (fields ?? []).map((field, index) =>
+      formFieldFromContract(field, `FormSchema.fields.${index}`),
+    ),
+    ...(core && { core_requirements: core }),
+    ...(legalBlocks && {
+      legal_blocks: legalBlocks.map((block, index) =>
+        legalBlockFromContract(block, `FormSchema.legal_blocks.${index}`),
+      ),
+    }),
+  };
+}
+
+/** The active schema of the parent form. */
+export function publicFormSchemaFromContract(
+  schema: sharedContract.PublicFormSchemaResponse,
+): PublicFormSchema {
+  const core = coreRequirementsFromContract(schema.core_requirements);
+  return {
+    id: schema.id,
+    version: schema.version,
+    fields: (schema.fields ?? []).map((field, index) =>
+      formFieldFromContract(field, `PublicFormSchema.fields.${index}`),
+    ),
+    ...(core && { core_requirements: core }),
+  };
+}
+
+/** A legal block of the public form. */
+export function publicLegalBlockFromContract(
+  block: sharedContract.LegalBlock,
+  at: string,
+): PublicLegalBlock {
+  const { kind, source, translations, ...rest } = block;
+  return {
+    ...rest,
+    kind: requiredEnum(LEGAL_BLOCK_KINDS, kind, `${at}.kind`),
+    ...(source === undefined
+      ? {}
+      : { source: requiredEnum(LEGAL_BLOCK_SOURCES, source, `${at}.source`) }),
+    ...(translations === undefined
+      ? {}
+      : { translations: translationsFromContract(translations) }),
+  };
+}
+
+/** The legal texts and blocks of the public form. */
+export function publicLegalTextsFromContract(
+  texts: sharedContract.PublicLegalTextsResponse,
+): PublicLegalTexts {
+  const {
+    agb_display_mode: agbDisplayMode,
+    blocks,
+    health_consent: healthConsent,
+    ...rest
+  } = texts;
+  return {
+    ...rest,
+    ...(agbDisplayMode && {
+      agb_display_mode: requiredEnum(
+        LEGAL_BLOCK_DISPLAY_MODES,
+        agbDisplayMode,
+        "PublicLegalTexts.agb_display_mode",
+      ),
+    }),
+    blocks: (blocks ?? []).map((block, index) =>
+      publicLegalBlockFromContract(block, `PublicLegalTexts.blocks.${index}`),
+    ),
+    ...(healthConsent && {
+      health_consent: publicLegalBlockFromContract(
+        healthConsent,
+        "PublicLegalTexts.health_consent",
+      ),
+    }),
   };
 }

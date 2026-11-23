@@ -42,11 +42,7 @@ import germanEnrollmentFormMessages from "~/i18n/messages/de/enrollmentForm.json
 import { DEFAULT_LOCALE } from "~/i18n/locales";
 import {
   submitEnrollment,
-  type MeProfileChild,
-  type PublicCareOffering,
   type EnrollmentEditDraft,
-  type SubmitEnrollmentPayload,
-  type SubmitEnrollmentResult,
 } from "~/lib/enrollment-submission-api";
 import {
   holidayCareWishAsked,
@@ -160,6 +156,8 @@ import {
   type EnrollmentFormValues,
 } from "~/components/enrollment/enrollment-form-validation";
 import { buildEnrollmentPayload } from "~/components/enrollment/enrollment-form-payload";
+import type * as sharedContract from "~/lib/contract/shared.generated";
+import type { CareOffering } from "~/lib/care-offering-api";
 
 const logger = createLogger({ component: "EnrollmentForm" });
 
@@ -210,8 +208,8 @@ interface PropsBase {
    * `null` when it stopped before sending and shows the reason itself.
    */
   readonly submitter?: (
-    payload: SubmitEnrollmentPayload,
-  ) => Promise<SubmitEnrollmentResult | null>;
+    payload: sharedContract.SubmitEnrollmentRequest,
+  ) => Promise<sharedContract.SubmitEnrollmentResponse | null>;
   /**
    * Hides the captcha when the caller already authenticated the person
    * (parent session); the authenticated endpoint skips its verification.
@@ -771,7 +769,9 @@ export function EnrollmentForm({
     );
   };
 
-  const adoptExistingChild = (existing: MeProfileChild) => {
+  const adoptExistingChild = (
+    existing: sharedContract.GuardianProfileChild,
+  ) => {
     // A stored grade the phase does not accept (#1663) would prefill a value
     // the select cannot show and fail the whole submit with
     // grade_not_eligible; the required check then asks for one instead.
@@ -1375,10 +1375,7 @@ export function EnrollmentForm({
                 </SectionCard>
               );
             }
-            const offeringCard = (
-              offering: PublicCareOffering,
-              checked: boolean,
-            ) => (
+            const offeringCard = (offering: CareOffering, checked: boolean) => (
               <OfferingCard
                 key={offering.id}
                 offering={offering}
@@ -1989,19 +1986,19 @@ function interpolateMessage(value: string, values?: TranslationValues): string {
 }
 
 type OfferingBucket =
-  | { kind: "single"; offering: PublicCareOffering }
+  | { kind: "single"; offering: CareOffering }
   | {
       kind: "group";
       group: string;
       rule: string;
-      offerings: PublicCareOffering[];
+      offerings: CareOffering[];
     };
 
 // Buckets offerings for display: ungrouped offerings render individually (in
 // order); offerings sharing a non-empty selection_group collapse into one
 // bucket anchored at the group's first member. Mirrors the backend grouping
 // in backend/modules/careplan/selection/materialize.go.
-function groupOfferings(offerings: PublicCareOffering[]): OfferingBucket[] {
+function groupOfferings(offerings: CareOffering[]): OfferingBucket[] {
   const buckets: OfferingBucket[] = [];
   const indexByGroup = new Map<string, number>();
   for (const o of offerings) {
@@ -2046,7 +2043,7 @@ function BlockedOfferingCard({
   gradeLevelMax,
   stats,
 }: Readonly<{
-  offering: PublicCareOffering;
+  offering: CareOffering;
   gradeLevel: string;
   gradeLevelMax: number;
   stats: enrollmentContract.CareOfferingBookingStatsResponse | undefined;
@@ -2095,7 +2092,7 @@ function OfferingCard({
   onToggleDay,
   tr,
 }: {
-  readonly offering: PublicCareOffering;
+  readonly offering: CareOffering;
   readonly childIndex: number;
   readonly checked: boolean;
   readonly selectedDays: Set<string> | undefined;
@@ -2347,9 +2344,9 @@ function SectionHeading({
 }
 
 interface ExistingChildrenPanelProps {
-  readonly existing: MeProfileChild[];
+  readonly existing: sharedContract.GuardianProfileChild[];
   readonly usedIDs: Set<string>;
-  readonly onAdopt: (child: MeProfileChild) => void;
+  readonly onAdopt: (child: sharedContract.GuardianProfileChild) => void;
   readonly tr: EnrollmentFormTranslator;
 }
 

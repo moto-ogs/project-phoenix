@@ -22,6 +22,7 @@ const healthConsent = {
 
 const schoolTexts: PublicLegalTexts = {
   agb: "",
+  agb_document_url: "",
   dsgvo: "",
   email_contact: "",
   photo: "",

@@ -3,16 +3,17 @@
 import { useSession } from "next-auth/react";
 import { useSWRAuth } from "~/lib/swr";
 import { parentKeys } from "~/lib/swr/parent-keys";
-import { type Child, listAnnouncements } from "~/lib/parent-api";
+import { listAnnouncements } from "~/lib/parent-api";
 import {
   useParentChildren,
   useParentFeatures,
   PARENT_RESOURCE_OPTIONS,
 } from "./use-parent-resources";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 export function useParentNewsEnabled(
   enabled: boolean,
-  children?: readonly Child[] | null,
+  children?: readonly parentMeContract.ChildResponse[] | null,
 ): boolean {
   const { data: session } = useSession();
   const parentEnabled = enabled && session?.user.scope === "parent";

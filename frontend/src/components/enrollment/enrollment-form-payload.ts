@@ -8,11 +8,6 @@ import {
   type PublicFormSchema,
   type PublicLegalBlock,
 } from "~/lib/enrollment-form-schema-api";
-import type {
-  SubmitChildPayload,
-  SubmitEnrollmentPayload,
-  SubmitGuardianPayload,
-} from "~/lib/enrollment-submission-api";
 import { signatureRequestBody } from "~/lib/signature";
 import type {
   ChildDerivation,
@@ -31,6 +26,7 @@ import {
   departureAllowsCompanion,
   type EnrollmentFormValues,
 } from "./enrollment-form-validation";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 
 export interface EnrollmentPayloadRules {
   phaseID: string;
@@ -48,7 +44,7 @@ export interface EnrollmentPayloadRules {
 export function buildEnrollmentPayload(
   values: EnrollmentFormValues,
   rules: EnrollmentPayloadRules,
-): SubmitEnrollmentPayload {
+): sharedContract.SubmitEnrollmentRequest {
   const fields = rules.schema?.fields ?? [];
   const consentFlags: Record<string, unknown> = {};
   for (const block of rules.restrictToOfferings ? [] : rules.legalBlocks) {
@@ -59,7 +55,7 @@ export function buildEnrollmentPayload(
   }
   // Validation guarantees both names on every co-guardian card that is not
   // empty; empty cards are dropped.
-  const additionalGuardians: SubmitGuardianPayload[] =
+  const additionalGuardians: sharedContract.SubmitGuardianRequest[] =
     values.additionalGuardians
       .map((g) => ({
         first_name: g.first_name.trim(),
@@ -72,7 +68,7 @@ export function buildEnrollmentPayload(
       );
   const lateInviteToken = rules.lateInviteToken?.trim();
   return {
-    phase_id: Number(rules.phaseID),
+    phase_id: rules.phaseID,
     guardian_first_name: values.guardian.first_name.trim(),
     guardian_last_name: values.guardian.last_name.trim(),
     guardian_email: values.guardian.email.trim().toLowerCase(),
@@ -80,7 +76,7 @@ export function buildEnrollmentPayload(
     additional_guardians:
       additionalGuardians.length > 0 ? additionalGuardians : undefined,
     consent_flags: consentFlags,
-    form_schema_id: rules.schema?.id ? Number(rules.schema.id) : undefined,
+    form_schema_id: rules.schema?.id || undefined,
     custom_data: rules.restrictToOfferings
       ? { ...values.customData }
       : visibleAnswerData(
@@ -106,17 +102,19 @@ function childPayload(
   derivation: ChildDerivation,
   fields: readonly FormField[],
   rules: EnrollmentPayloadRules,
-): SubmitChildPayload {
+): sharedContract.SubmitChildRequest {
   if (child.lockedPayload) return child.lockedPayload;
   const bookable = new Set(derivation.offerings.map((o) => o.id));
-  const offeringDays: NonNullable<SubmitChildPayload["offering_days"]> = [];
+  const offeringDays: NonNullable<
+    sharedContract.SubmitChildRequest["offering_days"]
+  > = [];
   for (const id of child.offering_ids) {
     const offering = derivation.offerings.find((o) => o.id === id);
     if (offering?.days_of_week_mode !== "parent_choice") continue;
     const picked = child.offering_days[id];
     if (!picked || picked.size === 0) continue;
     offeringDays.push({
-      offering_id: Number(id),
+      offering_id: id,
       // The catalog's day order, so the payload does not follow click order.
       selected_days: offering.available_days.filter((d) => picked.has(d)),
     });
@@ -165,9 +163,7 @@ function childPayload(
       : undefined,
     custom_data: customData,
     offering_ids: rules.careOfferingsEnabled
-      ? Array.from(child.offering_ids)
-          .filter((id) => bookable.has(id))
-          .map(Number)
+      ? Array.from(child.offering_ids).filter((id) => bookable.has(id))
       : undefined,
     offering_days:
       rules.careOfferingsEnabled && offeringDays.length > 0

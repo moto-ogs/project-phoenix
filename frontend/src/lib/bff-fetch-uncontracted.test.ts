@@ -7,6 +7,8 @@ import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const UNCONTRACTED_CALLERS: Readonly<Record<string, string>> = {
+  "lib/enrollment-submission-api.ts":
+    "GET enrollment/form-bootstrap/public/[tenantSlug]/[phaseId]: the route adds the signed-in staff member's profile to the public form",
   "components/tenant/tenant-relogin.ts":
     "POST auth/logout: the BFF revokes the session family before Auth.js drops the cookie",
   "lib/mfa-api.ts":

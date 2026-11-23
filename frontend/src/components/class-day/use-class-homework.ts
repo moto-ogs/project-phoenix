@@ -8,10 +8,10 @@
 import { useState } from "react";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { useApiFormError } from "~/contexts/ToastContext";
-import type { ClassDayHomework } from "~/lib/class-day-api";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
 import type { HomeworkInput } from "~/lib/school-class-day-api";
+import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 
 const logger = createLogger({ component: "ClassDayHomework" });
 
@@ -32,7 +32,7 @@ export interface ClassHomeworkApi {
 
 /** Der Entwurf im Dialog; `editing` ist der geänderte Eintrag. */
 interface HomeworkDraft {
-  readonly editing: ClassDayHomework | null;
+  readonly editing: schoolClassDayContract.DayHomework | null;
   readonly subject: string;
   readonly description: string;
 }
@@ -52,7 +52,8 @@ export function useClassHomework({
   const [draft, setDraft] = useState<HomeworkDraft | null>(null);
   const submission = useFormModalPending(draft !== null);
   const saving = submission.pending;
-  const [deleting, setDeleting] = useState<ClassDayHomework | null>(null);
+  const [deleting, setDeleting] =
+    useState<schoolClassDayContract.DayHomework | null>(null);
   const [removing, setRemoving] = useState(false);
   const formErrors = useApiFormError();
   const deleteErrors = useApiFormError();
@@ -61,7 +62,7 @@ export function useClassHomework({
     formErrors.clear();
     setDraft({ editing: null, subject: "", description: "" });
   };
-  const openEdit = (entry: ClassDayHomework) => {
+  const openEdit = (entry: schoolClassDayContract.DayHomework) => {
     formErrors.clear();
     setDraft({
       editing: entry,
@@ -114,7 +115,7 @@ export function useClassHomework({
     });
   };
 
-  const askDelete = (entry: ClassDayHomework) => {
+  const askDelete = (entry: schoolClassDayContract.DayHomework) => {
     deleteErrors.clear();
     setDeleting(entry);
   };

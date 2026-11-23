@@ -35,8 +35,6 @@ import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import {
   type AdminRequestChild,
   type AdminRequestDetail,
-  type AdminRequestGuardian,
-  type AdminRequestSchemaField,
   type AdminRequestSummary,
   type DecisionStatus,
   type ExistingChildChoice,
@@ -117,6 +115,7 @@ import {
 } from "~/components/enrollment/child-status-badge";
 import { enrollmentsConcept } from "~/lib/concepts/enrollments";
 import { parentsConcept } from "~/lib/concepts/parents";
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 
 const logger = createLogger({ component: "AdminEnrollmentDetail" });
 
@@ -848,23 +847,29 @@ function EnrollmentSummary({
           <h3 className="text-base font-semibold text-gray-900">
             Weitere erziehungsberechtigte Personen
           </h3>
-          {data.additional_guardians.map((g: AdminRequestGuardian) => (
-            <InsetPanel framed key={g.id}>
-              <p className="text-sm font-semibold text-gray-900">
-                {g.first_name} {g.last_name}
-              </p>
-              <div className="mt-1 flex flex-col gap-1 text-sm text-gray-600 sm:flex-row sm:gap-4">
-                <span className="flex items-center gap-1.5">
-                  <Mail className="h-3.5 w-3.5" aria-hidden="true" />
-                  {g.email && g.email.trim() !== "" ? g.email : "Nicht gesetzt"}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Phone className="h-3.5 w-3.5" aria-hidden="true" />
-                  {g.phone && g.phone.trim() !== "" ? g.phone : "Nicht gesetzt"}
-                </span>
-              </div>
-            </InsetPanel>
-          ))}
+          {data.additional_guardians.map(
+            (g: enrollmentContract.AdminRequestGuardian) => (
+              <InsetPanel framed key={g.id}>
+                <p className="text-sm font-semibold text-gray-900">
+                  {g.first_name} {g.last_name}
+                </p>
+                <div className="mt-1 flex flex-col gap-1 text-sm text-gray-600 sm:flex-row sm:gap-4">
+                  <span className="flex items-center gap-1.5">
+                    <Mail className="h-3.5 w-3.5" aria-hidden="true" />
+                    {g.email && g.email.trim() !== ""
+                      ? g.email
+                      : "Nicht gesetzt"}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <Phone className="h-3.5 w-3.5" aria-hidden="true" />
+                    {g.phone && g.phone.trim() !== ""
+                      ? g.phone
+                      : "Nicht gesetzt"}
+                  </span>
+                </div>
+              </InsetPanel>
+            ),
+          )}
         </div>
       )}
     </InsetPanel>
@@ -907,7 +912,7 @@ function ChildInformationCard({
   requestGuardian: string;
   onDelete: () => void;
   reason: string;
-  schemaFields?: AdminRequestSchemaField[];
+  schemaFields?: enrollmentContract.AdminRequestSchemaField[];
   weeklyPlanToday: string | null;
 }>) {
   const terminal = isTerminalChildStatus(child.status);
