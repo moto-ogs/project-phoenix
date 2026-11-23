@@ -371,6 +371,7 @@ const arrayCallbacks = new Set([
   "some",
 ]);
 const arrayComparators = new Set(["sort", "toSorted"]);
+const arrayReducers = new Set(["reduce", "reduceRight"]);
 const arrayElementMethods = new Set(["at", "find", "findLast", "pop", "shift"]);
 const arraySubsetMethods = new Set([
   "filter",
@@ -422,7 +423,8 @@ function callbackElementKind(parameter, checker, seen) {
     ((arrayCallbacks.has(name) && callback.parameters[0] === parameter) ||
       (arrayComparators.has(name) &&
         (callback.parameters[0] === parameter ||
-          callback.parameters[1] === parameter))) &&
+          callback.parameters[1] === parameter)) ||
+      (arrayReducers.has(name) && callback.parameters[1] === parameter)) &&
     isArray(receiver, checker)
   )
     return collectionElementKind(receiver, checker, seen);
@@ -432,6 +434,14 @@ function collectionElementKind(collection, checker, seen, rest = false) {
   const kind = expressionKind(collection, checker, seen);
   if (kind === "id-list") return rest ? "id-list" : "id";
   if (kind === "other") return kind;
+}
+
+function isArrayIndex(type) {
+  if (type.isUnion()) return type.types.some(isArrayIndex);
+  return (
+    Boolean(type.flags & ts.TypeFlags.NumberLike) ||
+    (type.isStringLiteral() && /^(?:0|[1-9]\d*)$/.test(type.value))
+  );
 }
 
 function expressionKind(node, checker, seen = new Set()) {
@@ -466,7 +476,8 @@ function expressionKind(node, checker, seen = new Set()) {
   }
   if (
     ts.isElementAccessExpression(node) &&
-    expressionKind(node.expression, checker, seen) === "id-list"
+    expressionKind(node.expression, checker, seen) === "id-list" &&
+    isArrayIndex(checker.getTypeAtLocation(node.argumentExpression))
   )
     return "id";
   if (ts.isCallExpression(node)) {

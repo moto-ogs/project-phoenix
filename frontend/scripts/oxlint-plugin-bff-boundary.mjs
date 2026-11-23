@@ -146,7 +146,11 @@ const noRawBrowserTransport = {
       if (node.type === "MemberExpression") {
         const key = staticName(node.property, node.computed);
         const object = owner(node.object);
-        if (object === "global") return childOwner(key);
+        if (object === "global") {
+          if (node.computed && /^(?:0|[1-9]\d*)$/.test(String(key)))
+            return "global";
+          return childOwner(key);
+        }
         if (object === "document" && key === "defaultView") return "global";
       }
       if (node.type !== "Identifier") return;

@@ -17,6 +17,8 @@ describe.concurrent("bff-boundary", () => {
     "let win: Window; win = window; export const send = win.fetch",
     "let win: Window | undefined; win ??= window; win.fetch('/api/rooms')",
     "export const send = window.top?.fetch",
+    "export const send = window.frames[0]?.fetch",
+    "export const send = frames[0]?.fetch",
     "parent.fetch('/api/rooms')",
     "const { navigator: nav } = window; nav.sendBeacon('/api/log')",
     "globalThis.window.fetch",
@@ -66,6 +68,10 @@ describe.concurrent("bff-boundary", () => {
     ["src/lib/probe.ts", "const window = { fetch: () => 1 }; window.fetch()"],
     ["src/lib/probe.ts", "let win; win = { fetch: () => 1 }; win.fetch()"],
     ["src/lib/probe.ts", "const parent = { fetch: () => 1 }; parent.fetch()"],
+    [
+      "src/lib/probe.ts",
+      "const frames = [{ fetch: () => 1 }]; frames[0].fetch()",
+    ],
     ["src/lib/probe.ts", "import { bffJson } from './bff-fetch'; bffJson()"],
   ])("allows valid code in %s: %s", async (path, source) => {
     const result = await lintSource(source, path);
