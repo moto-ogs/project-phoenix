@@ -204,11 +204,10 @@ func newStaffResource(
 		ActiveCaregivers:     staffRoleRows(runtime.ActiveCaregivers),
 		StaffByRoles:         staffRoleRowsByRole(runtime.StaffByRoles),
 
-		CreateStaff:   staffCreate(runtime),
-		UpdateStaff:   staffUpdate(runtime),
-		RecordVersion: staffRecordToken,
-		Offboard:      runtime.Offboard,
-		PlanExit:      runtime.PlanExit, WithdrawExit: runtime.WithdrawExit, ExitFailure: renderStaffExitFailure,
+		CreateStaff: staffCreate(runtime),
+		UpdateStaff: staffUpdate(runtime), RecordVersion: staffRecordToken,
+		Offboard: runtime.Offboard,
+		PlanExit: runtime.PlanExit, WithdrawExit: runtime.WithdrawExit, ExitFailure: renderStaffExitFailure,
 
 		Log: logger,
 	}), nil
