@@ -1280,6 +1280,123 @@ describe("ChildOfferingAdjustment", () => {
   });
 });
 
+// Ein befristetes Angebot lässt sich bis zum Ende der Phase verlängern
+// (#7929). Das Backend nennt in `extends_until` den Tag, bis zu dem die
+// Korrektur bucht; ohne den Wert gibt es nichts zu verlängern.
+describe("ChildOfferingAdjustment booking end", () => {
+  const limitedBooking = (extendsUntil?: string) =>
+    adjustmentChild({
+      offerings: [
+        {
+          offering_id: "offering-1",
+          offering_name: "Ganztag",
+          days_of_week_mode: "fixed",
+          selected_days: ["mon"],
+          manual_selected_days: ["mon"],
+          available_days: ["mon"],
+          includes_lunch: false,
+          includes_holiday_care: false,
+          valid_until: "2027-02-28",
+          ...(extendsUntil ? { extends_until: extendsUntil } : {}),
+        },
+      ],
+    });
+
+  it("extends a limited booking to the end of the phase", async () => {
+    mocks.listCareOfferings.mockResolvedValue([catalogOffering()]);
+    mocks.updateAdminChildOfferings.mockResolvedValue({});
+    renderAdjustment(limitedBooking("2027-07-31"));
+
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    expect(await screen.findByText("Gebucht bis 28.02.2027")).toBeVisible();
+    const extend = screen.getByRole("checkbox", {
+      name: "Bis 31.07.2027 verlängern",
+    });
+    expect(extend).not.toBeChecked();
+    fireEvent.click(extend);
+    fireEvent.change(screen.getByLabelText("Begründung"), {
+      target: { value: "Betreuung läuft weiter" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => {
+      expect(mocks.updateAdminChildOfferings).toHaveBeenCalledWith(
+        "request-1",
+        "child-1",
+        expect.objectContaining({
+          offerings: [{ offering_id: "offering-1", extend_to_phase_end: true }],
+        }),
+      );
+    });
+  });
+
+  it("keeps the end when the office does not extend it", async () => {
+    mocks.listCareOfferings.mockResolvedValue([catalogOffering()]);
+    mocks.updateAdminChildOfferings.mockResolvedValue({});
+    renderAdjustment(limitedBooking("2027-07-31"));
+
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    await screen.findByText("Gebucht bis 28.02.2027");
+    fireEvent.change(screen.getByLabelText("Begründung"), {
+      target: { value: "Korrektur" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => {
+      expect(mocks.updateAdminChildOfferings).toHaveBeenCalledWith(
+        "request-1",
+        "child-1",
+        expect.objectContaining({ offerings: [{ offering_id: "offering-1" }] }),
+      );
+    });
+  });
+
+  it("shows an end it cannot extend without the choice", async () => {
+    mocks.listCareOfferings.mockResolvedValue([catalogOffering()]);
+    renderAdjustment(limitedBooking());
+
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+
+    expect(await screen.findByText("Gebucht bis 28.02.2027")).toBeVisible();
+    expect(screen.getByRole("checkbox", { name: /Ganztag/ })).toBeVisible();
+    expect(
+      screen.queryByRole("checkbox", { name: /verlängern/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("names the extension in the history", async () => {
+    const row = {
+      offering_id: "offering-1",
+      offering_name: "Ganztag",
+      days_of_week_mode: "fixed",
+      available_days: ["mon"],
+    };
+    mocks.listAdminChildOfferingAdjustments.mockResolvedValue([
+      {
+        id: "adjustment-1",
+        request_id: "request-1",
+        request_child_id: "child-1",
+        student_id: "student-1",
+        actor_account_id: "account-1",
+        actor_role: "admin",
+        actor_name_snapshot: "Ada Admin",
+        reason: "Betreuung läuft weiter",
+        before: [row],
+        after: [{ ...row, extended_until: "2027-07-31" }],
+        changed_at: "2026-09-24T13:59:00Z",
+      },
+    ]);
+    vi.mocked(useCareOfferingsEnabled).mockReturnValue(false);
+
+    renderAdjustment();
+
+    expect(
+      await screen.findByText("Ganztag bis 31.07.2027 verlängert"),
+    ).toBeVisible();
+    expect(screen.queryByText("Angebote unverändert")).not.toBeInTheDocument();
+  });
+});
+
 describe("ChildOfferingAdjustment history", () => {
   const snapshot = (
     id: string,

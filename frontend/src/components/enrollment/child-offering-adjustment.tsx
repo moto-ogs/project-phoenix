@@ -35,8 +35,10 @@ import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import { materializeCareSelection } from "~/lib/care-offering-selection";
 import { announceChangeRequestsChanged } from "~/lib/change-requests-refresh";
 import { changeHistoryConcept } from "~/lib/concepts/changeHistory";
+import { formatDate } from "~/lib/date-helpers";
 import {
   type AdminOfferingAdjustment,
+  type AdminOfferingChoice,
   type AdminRequestChild,
   type AdminRequestChildOffering,
   listAdminChildOfferingAdjustments,
@@ -219,6 +221,13 @@ export function ChildOfferingAdjustment({
   const [days, setDays] = useState<Record<string, string[]>>(() =>
     initialManualOfferingDays(child.offerings),
   );
+  // Befristete Angebote, die das Büro bis zum Ende der Phase verlängert
+  // (#7929).
+  const [extended, setExtended] = useState<Set<string>>(() => new Set());
+  const bookingEnds = useMemo(
+    () => currentBookingEnds(child.offerings),
+    [child.offerings],
+  );
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
   // Fehler stehen oben im Bearbeiten-Bereich (Bauart 2 Regel 5).
@@ -246,7 +255,7 @@ export function ChildOfferingAdjustment({
     useState(false);
   const [pendingWithdrawalInput, setPendingWithdrawalInput] = useState<{
     reason: string;
-    offerings: Array<{ offering_id: string; selected_days?: string[] }>;
+    offerings: AdminOfferingChoice[];
   } | null>(null);
   const [withdrawalCreated, setWithdrawalCreated] = useState(false);
   // Was die letzte Korrektur im Betreuungsplan bewirkt hat (#5102).
@@ -282,6 +291,16 @@ export function ChildOfferingAdjustment({
     setRosterImpact(null);
     errors.clear();
     setDays(initialManualOfferingDays(child.offerings));
+    setExtended(new Set());
+  };
+
+  const toggleExtended = (offeringID: string) => {
+    setExtended((current) => {
+      const next = new Set(current);
+      if (next.has(offeringID)) next.delete(offeringID);
+      else next.add(offeringID);
+      return next;
+    });
   };
 
   const preview = useMemo(() => {
@@ -370,7 +389,7 @@ export function ChildOfferingAdjustment({
   const saveAdjustment = async (
     input: {
       reason: string;
-      offerings: Array<{ offering_id: string; selected_days?: string[] }>;
+      offerings: AdminOfferingChoice[];
     },
     completeWithdrawalConfirmed: boolean,
   ) => {
@@ -404,6 +423,7 @@ export function ChildOfferingAdjustment({
         selected,
         days,
         child.offerings,
+        extended,
       ),
     };
     try {
@@ -519,6 +539,7 @@ export function ChildOfferingAdjustment({
                 const checked = selected.has(offering.id);
                 const autoDays = preview.automaticDays[offering.id] ?? [];
                 const inputId = `offering-adjustment-${child.id}-${offering.id}`;
+                const bookingEnd = bookingEnds[offering.id];
                 return (
                   <OfferingRowShell
                     key={offering.id}
@@ -586,6 +607,14 @@ export function ChildOfferingAdjustment({
                           </ToggleChip>
                         ))}
                       </div>
+                    ) : null}
+                    {checked && bookingEnd ? (
+                      <BookingEnd
+                        inputId={`${inputId}-extend`}
+                        end={bookingEnd}
+                        extended={extended.has(offering.id)}
+                        onToggle={() => toggleExtended(offering.id)}
+                      />
                     ) : null}
                   </OfferingRowShell>
                 );
@@ -729,6 +758,61 @@ export function ChildOfferingAdjustment({
   );
 }
 
+/**
+ * The end of a limited booking in the correction (#7929): the last booked
+ * day and, when the backend allows it, the choice to book the offering to
+ * `extends_until`, the end of the phase or the earlier care end.
+ */
+function BookingEnd({
+  inputId,
+  end,
+  extended,
+  onToggle,
+}: Readonly<{
+  inputId: string;
+  end: { validUntil: string; extendsUntil?: string };
+  extended: boolean;
+  onToggle: () => void;
+}>) {
+  return (
+    <div className="mt-3 space-y-2 pl-8">
+      <p className="text-xs text-gray-600">
+        Gebucht bis {formatDate(end.validUntil)}
+      </p>
+      {end.extendsUntil ? (
+        <label
+          htmlFor={inputId}
+          className="flex cursor-pointer items-center gap-2 text-sm text-gray-900"
+        >
+          <Checkbox id={inputId} checked={extended} onChange={onToggle} />
+          Bis {formatDate(end.extendsUntil)} verlängern
+        </label>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * The last booked day of each current booking that ends, keyed by offering.
+ * A row of automatic days only follows its trigger and has no own end here.
+ */
+function currentBookingEnds(
+  offerings?: AdminRequestChildOffering[],
+): Record<string, { validUntil: string; extendsUntil?: string }> {
+  const out: Record<string, { validUntil: string; extendsUntil?: string }> = {};
+  for (const offering of offerings ?? []) {
+    const automaticOnly =
+      (offering.automatic_selected_days?.length ?? 0) > 0 &&
+      (offering.manual_selected_days?.length ?? 0) === 0;
+    if (!offering.valid_until || automaticOnly) continue;
+    out[offering.offering_id] = {
+      validUntil: offering.valid_until,
+      ...(offering.extends_until && { extendsUntil: offering.extends_until }),
+    };
+  }
+  return out;
+}
+
 function initialManualOfferingIDs(
   offerings?: AdminRequestChildOffering[],
 ): Set<string> {
@@ -779,7 +863,8 @@ function adjustmentPayloadOfferings(
   selected: Set<string>,
   days: Record<string, string[]>,
   existingOfferings?: AdminRequestChildOffering[],
-): Array<{ offering_id: string; selected_days?: string[] }> {
+  extended: ReadonlySet<string> = new Set(),
+): AdminOfferingChoice[] {
   const payload = catalog
     .filter((offering) => selected.has(offering.id))
     .map((offering) => ({
@@ -788,6 +873,7 @@ function adjustmentPayloadOfferings(
         offering.days_of_week_mode === "parent_choice"
           ? (days[offering.id] ?? [])
           : undefined,
+      ...(extended.has(offering.id) && { extend_to_phase_end: true }),
     }));
   const catalogIDs = new Set(catalog.map((offering) => offering.id));
   for (const offering of existingOfferings ?? []) {

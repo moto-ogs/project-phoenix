@@ -1039,9 +1039,18 @@ behoben.
    dort. Eine Korrektur, die die Betreuung nicht ändert, erzeugt für einen
    gebundenen Vertrag keine Version mehr. Offen: Eine Änderung mit Stichtag
    verwirft das Ende weiterhin
-   ([#7928](https://github.com/moto-ogs/project-phoenix/issues/7928)), und
-   ein Ende lässt sich nicht ausdrücklich verlängern
-   ([#7929](https://github.com/moto-ogs/project-phoenix/issues/7929)).
+   ([#7928](https://github.com/moto-ogs/project-phoenix/issues/7928)).
+   **Nachtrag (#7929):** Das Büro verlängert ein Ende ausdrücklich. In der
+   Korrektur steht unter einem befristeten Angebot „Gebucht bis …“ und, wenn
+   die Betreuung danach weiterläuft, „Bis … verlängern“
+   (`extend_to_phase_end`). Die Korrektur ohne Datum bucht das Angebot dann
+   wie ein neues bis zum Ende der Phase oder bis zum früheren Betreuungsende;
+   Mitbuchungen folgen, Roster und Termine laufen mit, und ein gebundener
+   Vertrag bekommt ab dem alten Ende eine Version. Den Tag nennt die
+   Detailansicht (`extends_until`); an einem Ende, an dem eine geplante
+   Änderung beginnt, gibt es nichts zu verlängern. Eine Änderung mit
+   Stichtag lehnt die Verlängerung ab. Ein freies Enddatum gibt es nicht:
+   Kürzen ist die Änderung mit Stichtag oder das Betreuungsende.
 
 ## Verworfene Optionen
 

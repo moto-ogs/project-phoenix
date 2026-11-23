@@ -26,7 +26,7 @@ func (m *BookingMaterialization) persistOfferingAdjustment(ctx context.Context, 
 		return err
 	}
 	if work.effectiveFrom == nil {
-		keepBookingEnds(work.replacement, work.beforeLinks, history, work.offeringByID, work.phase.ServiceEnd.AddDays(1))
+		work.keptEnds = keepUnextendedBookingEnds(work, history)
 	}
 	scheduled := scheduledOfferingReplacements(history, work.selectionDate)
 	phase := work.phase.OfferingPhase

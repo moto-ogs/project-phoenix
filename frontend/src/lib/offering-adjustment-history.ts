@@ -1,3 +1,4 @@
+import { formatDate } from "~/lib/date-helpers";
 import type { AdminOfferingAdjustment } from "~/lib/enrollment-admin-api";
 import { WEEKDAY_CODES, weekdayShortList } from "~/lib/weekdays";
 
@@ -63,6 +64,15 @@ export function describeOfferingAdjustmentChanges(
   }
   if (undatedAdded.length > 0) {
     lines.push({ days: null, text: `${nameList(undatedAdded)} gebucht` });
+  }
+  // Ein verlängertes Ende ändert keinen Wochentag (#7929).
+  for (const row of after) {
+    if (row.extended_until) {
+      lines.push({
+        days: null,
+        text: `${snapshotName(row)} bis ${formatDate(row.extended_until)} verlängert`,
+      });
+    }
   }
 
   return lines.length > 0
