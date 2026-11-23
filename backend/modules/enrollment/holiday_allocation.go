@@ -142,6 +142,9 @@ type HolidayCriterion struct {
 type HolidayCriteriaCatalog struct {
 	Criteria []HolidayCriterion       `json:"criteria"`
 	Periods  []HolidayCriterionPeriod `json:"periods"`
+	// Version is the token of the criteria as the Büro edits them; a save
+	// sends it back (ADR 0311).
+	Version string `json:"version"`
 }
 
 // HolidayCriterionPeriod names a period that allocates by criteria.
@@ -290,8 +293,9 @@ type HolidayAllocation interface {
 	HolidayCriteria(ctx context.Context, reviewer HolidayReviewer) (HolidayCriteriaCatalog, error)
 	// SaveHolidayCriteria makes criteria the criteria of the Träger in their
 	// order; one left out is archived. Invalid texts or scopes are a
-	// validation error on criteria.N.field.
-	SaveHolidayCriteria(ctx context.Context, reviewer HolidayReviewer, criteria []HolidayCriterionInput) (HolidayCriteriaCatalog, error)
+	// validation error on criteria.N.field. expectedVersion is the Version
+	// the Büro read; another one is readstate.ErrChanged.
+	SaveHolidayCriteria(ctx context.Context, reviewer HolidayReviewer, expectedVersion string, criteria []HolidayCriterionInput) (HolidayCriteriaCatalog, error)
 	// HolidayAllocationBoard reads the allocation list of a period and
 	// records the read; a period by arrival is ErrHolidayAllocationOff.
 	HolidayAllocationBoard(ctx context.Context, reviewer HolidayReviewer, periodID int64) (HolidayAllocationBoard, error)

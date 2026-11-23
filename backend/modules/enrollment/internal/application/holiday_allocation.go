@@ -12,6 +12,7 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
@@ -86,13 +87,24 @@ func (a *HolidayAllocation) HolidayCriteria(ctx context.Context, reviewer enroll
 }
 
 // SaveHolidayCriteria checks and writes the criteria of the Träger in their
-// order and returns them as stored.
-func (a *HolidayAllocation) SaveHolidayCriteria(ctx context.Context, reviewer enrollment.HolidayReviewer, input []enrollment.HolidayCriterionInput) (enrollment.HolidayCriteriaCatalog, error) {
+// order and returns them as stored. It takes the catalog lock first and
+// writes only over the version the Büro read (ADR 0311).
+func (a *HolidayAllocation) SaveHolidayCriteria(ctx context.Context, reviewer enrollment.HolidayReviewer, expectedVersion string, input []enrollment.HolidayCriterionInput) (enrollment.HolidayCriteriaCatalog, error) {
 	if err := holidayReviewKey(reviewer, 1, 1); err != nil {
 		return enrollment.HolidayCriteriaCatalog{}, err
 	}
 	input, err := normalizeHolidayCriteria(input)
 	if err != nil {
+		return enrollment.HolidayCriteriaCatalog{}, err
+	}
+	if err := a.review.store.LockHolidayCriteriaCatalog(ctx, reviewer.OrganizationID); err != nil {
+		return enrollment.HolidayCriteriaCatalog{}, err
+	}
+	stored, err := a.review.store.ReadHolidayCriteria(ctx, reviewer.OrganizationID)
+	if err != nil {
+		return enrollment.HolidayCriteriaCatalog{}, fmt.Errorf("enrollment: read holiday criteria: %w", err)
+	}
+	if err := readstate.Check(expectedVersion, holidayCriteriaVersion(stored)); err != nil {
 		return enrollment.HolidayCriteriaCatalog{}, err
 	}
 	if err := a.review.store.WriteHolidayCriteria(ctx, reviewer.OrganizationID, input, reviewer.AccountID); err != nil {
@@ -111,13 +123,33 @@ func (a *HolidayAllocation) SaveHolidayCriteria(ctx context.Context, reviewer en
 
 // holidayCriteriaCatalog names the criteria with the periods by criteria.
 func holidayCriteriaCatalog(criteria []enrollment.HolidayCriterion, periods []enrollment.HolidayPeriod) enrollment.HolidayCriteriaCatalog {
-	catalog := enrollment.HolidayCriteriaCatalog{Criteria: criteria, Periods: []enrollment.HolidayCriterionPeriod{}}
+	catalog := enrollment.HolidayCriteriaCatalog{
+		Criteria: criteria, Periods: []enrollment.HolidayCriterionPeriod{}, Version: holidayCriteriaVersion(criteria),
+	}
 	for _, period := range periods {
 		if period.AllocationMode == enrollment.HolidayAllocationCriteria {
 			catalog.Periods = append(catalog.Periods, enrollment.HolidayCriterionPeriod{ID: period.ID, Name: period.Name})
 		}
 	}
 	return catalog
+}
+
+// holidayCriteriaVersion is the token of the criteria as the Büro edits
+// them, in their order (ADR 0311). Whether a criterion is answered is left
+// out: a parent's answer changes no text, and the scope of an answered
+// criterion is checked on every save anyway.
+func holidayCriteriaVersion(criteria []enrollment.HolidayCriterion) string {
+	type edited struct {
+		ID                    int64
+		Name, Question, Scope string
+		Active                bool
+		Position              int
+	}
+	state := make([]edited, len(criteria))
+	for i, criterion := range criteria {
+		state[i] = edited{criterion.ID.Int64(), criterion.Name, criterion.Question, criterion.Scope, criterion.Active, criterion.Position}
+	}
+	return readstate.Fingerprint(state)
 }
 
 // normalizeHolidayCriteria trims the texts and checks the list: at most

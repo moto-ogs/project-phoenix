@@ -9,6 +9,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -82,7 +83,7 @@ func newAllocationFixture(t *testing.T, name string) allocationFixture {
 	t.Helper()
 	f := newHolidayRegistrationFixture(t)
 	office := newTraegerOffice(t, f.db, f.traeger, name, identityaccess.TraegerRoleAdministration)
-	rec := traegerJSON(t, f.traeger, office.token, http.MethodPut, "/traeger/holiday-periods/criteria", map[string]any{"criteria": []map[string]any{
+	rec := saveHolidayCriteria(t, f.traeger, office.token, criteriaVersion(t, f.traeger, office.token), map[string]any{"criteria": []map[string]any{
 		{"name": "Berufstätig", "question": "Sind Sie berufstätig?", "scope": "family", "active": true},
 		{"name": "Geschwister", "question": "Ist ein Geschwisterkind schon in der OGS?", "scope": "child", "active": true},
 		{"name": "Alt", "question": "Nicht mehr gefragt?", "scope": "family", "active": false},
@@ -503,4 +504,23 @@ func TestHolidayAllocationMailNamesTheTraegerAndTheHostSchool(t *testing.T) {
 	require.Len(t, mail.Children[0].Weeks, 1)
 	assert.Equal(t, "04.01.2027 bis 08.01.2027: "+week.HostSchoolName+", bis 13 Uhr (08:00 bis 13:00 Uhr)", mail.Children[0].Weeks[0],
 		"the week names its host school")
+}
+
+// criteriaVersion reads the version of the criteria the Büro edits.
+func criteriaVersion(t *testing.T, router http.Handler, token string) string {
+	t.Helper()
+	rec := traegerJSON(t, router, token, http.MethodGet, "/traeger/holiday-periods/criteria", nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	return decodeSchoolPortalData[struct {
+		Version string `json:"version"`
+	}](t, rec.Body.Bytes()).Version
+}
+
+// saveHolidayCriteria saves the criteria over the version read before, as
+// the criteria page does (ADR 0311).
+func saveHolidayCriteria(t *testing.T, router http.Handler, token, version string, body map[string]any) *httptest.ResponseRecorder {
+	t.Helper()
+	sent := maps.Clone(body)
+	sent["expected_version"] = version
+	return traegerJSON(t, router, token, http.MethodPut, "/traeger/holiday-periods/criteria", sent)
 }

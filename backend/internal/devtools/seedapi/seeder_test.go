@@ -1898,7 +1898,7 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 		}
 		if r.URL.Path == "/traeger/holiday-periods/criteria" {
 			// The criteria of the allocation as stored (#4700).
-			_, _ = fmt.Fprint(w, `{"status":"success","data":{"criteria":[{"id":71},{"id":72},{"id":73},{"id":74}],"periods":[]}}`)
+			_, _ = fmt.Fprint(w, `{"status":"success","data":{"criteria":[{"id":71},{"id":72},{"id":73},{"id":74}],"periods":[],"version":"criteria-read"}}`)
 			return
 		}
 		if strings.HasPrefix(r.URL.Path, "/traeger/holiday-periods/") && strings.HasSuffix(r.URL.Path, "/allocation") {

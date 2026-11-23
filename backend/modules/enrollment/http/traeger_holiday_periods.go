@@ -73,7 +73,7 @@ func NewHolidayPeriodResource(periods capability.HolidayPeriods, review capabili
 // a period and records the Büro's check of answers (#4700).
 type HolidayAllocationReads interface {
 	HolidayCriteria(ctx context.Context, reviewer capability.HolidayReviewer) (capability.HolidayCriteriaCatalog, error)
-	SaveHolidayCriteria(ctx context.Context, reviewer capability.HolidayReviewer, criteria []capability.HolidayCriterionInput) (capability.HolidayCriteriaCatalog, error)
+	SaveHolidayCriteria(ctx context.Context, reviewer capability.HolidayReviewer, expectedVersion string, criteria []capability.HolidayCriterionInput) (capability.HolidayCriteriaCatalog, error)
 	HolidayAllocationBoard(ctx context.Context, reviewer capability.HolidayReviewer, periodID int64) (capability.HolidayAllocationBoard, error)
 	CheckHolidayCriteria(ctx context.Context, reviewer capability.HolidayReviewer, periodID, registrationID int64, checks []capability.HolidayCriterionCheck) (capability.HolidayRegistrationDetail, error)
 }
