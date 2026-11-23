@@ -139,8 +139,8 @@ func NewStaffAdmin(engine staffAdminEngine, traeger staffAdminTraeger) *StaffAdm
 	return &StaffAdmin{engine: engine, traeger: traeger}
 }
 
-func (a *StaffAdmin) UpdatePersonnelNumber(ctx context.Context, staffID int64, value *string, changedByStaffID int64, note string) (*StaffProfile, error) {
-	return a.engine.UpdatePersonnelNumber(ctx, staffID, value, changedByStaffID, note)
+func (a *StaffAdmin) UpdatePersonnelNumber(ctx context.Context, staffID int64, value, expectedVersion *string, changedByStaffID int64, note string) (*StaffProfile, error) {
+	return a.engine.UpdatePersonnelNumber(ctx, staffID, value, expectedVersion, changedByStaffID, note)
 }
 
 func (a *StaffAdmin) StaffStammdaten(ctx context.Context, staffID int64) (*StaffStammdaten, error) {
@@ -159,8 +159,8 @@ func (a *StaffAdmin) UpdateStaffStammdatenArbeitsvertrag(ctx context.Context, st
 	return a.engine.UpdateStaffStammdatenArbeitsvertrag(ctx, staffID, input, changedByStaffID, note)
 }
 
-func (a *StaffAdmin) ReplaceStaffQualificationList(ctx context.Context, staffID int64, inputs []StammdatenQualificationInput, changedByStaffID int64, note string) error {
-	return a.engine.ReplaceStaffQualificationList(ctx, staffID, inputs, changedByStaffID, note)
+func (a *StaffAdmin) ReplaceStaffQualificationList(ctx context.Context, staffID int64, inputs []StammdatenQualificationInput, expectedVersion *string, changedByStaffID int64, note string) error {
+	return a.engine.ReplaceStaffQualificationList(ctx, staffID, inputs, expectedVersion, changedByStaffID, note)
 }
 
 func (a *StaffAdmin) StaffFinancialMasked(ctx context.Context, staffID, actorAccountID int64, actorRole string) (*StaffFinancialMasked, error) {

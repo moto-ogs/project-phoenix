@@ -166,6 +166,7 @@ function splitSessionByBerlinDate(
     })),
     editCount: session.edit_count ?? 0,
     auditCount: session.audit_count ?? 0,
+    version: session.version ?? "",
   };
   const valuesByDate = indexWorkSessionMinutesByBerlinDate(
     [historySession],
@@ -596,9 +597,8 @@ export function StaffSessionTable({
   // derived from the very rows this modal just changed. Which keys those are:
   // isStaleAfterSessionSave above.
   const invalidate = useInvalidateMatching();
-  const handleSaved = () => {
-    void invalidate((key) => isStaleAfterSessionSave(key, staffId));
-  };
+  const handleSaved = () =>
+    invalidate((key) => isStaleAfterSessionSave(key, staffId));
 
   // One entry per visible day, with everything the cells below read.
   const rows = days.map((day, dayIndex) => {

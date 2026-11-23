@@ -39,7 +39,7 @@ func (r EmploymentResetter) ResetEmployment(ctx context.Context, in workforce.Em
 		}
 	}
 	if in.Qualifications {
-		return r.Admin.ReplaceStaffQualificationList(ctx, in.StaffID, nil, in.StaffID, note)
+		return r.Admin.ReplaceStaffQualificationList(ctx, in.StaffID, nil, nil, in.StaffID, note)
 	}
 	return nil
 }
@@ -67,7 +67,7 @@ func (r EmploymentResetter) resetMasterData(ctx context.Context, in workforce.Em
 			return err
 		}
 	}
-	_, err = a.UpdatePersonnelNumber(ctx, in.StaffID, nil, in.StaffID, note)
+	_, err = a.UpdatePersonnelNumber(ctx, in.StaffID, nil, nil, in.StaffID, note)
 	return err
 }
 

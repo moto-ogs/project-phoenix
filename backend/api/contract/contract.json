@@ -29276,6 +29276,12 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -59654,6 +59660,12 @@
           "schema": {
             "kind": "int"
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -75113,6 +75125,12 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -77282,6 +77300,13 @@
           }
         },
         {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "note",
           "optional": true,
           "schema": {
@@ -77311,6 +77336,12 @@
           "name": "kept_by_traeger",
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -92230,6 +92261,14 @@
               "ref": "BreakDurationUpdate"
             }
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
         }
       ]
     },
@@ -92282,6 +92321,13 @@
         },
         {
           "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_version",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -96729,6 +96775,13 @@
           }
         },
         {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "note",
           "optional": true,
           "schema": {
@@ -96773,6 +96826,12 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -96803,6 +96862,13 @@
           "schema": {
             "kind": "string",
             "nullable": true
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         },
         {
@@ -96843,6 +96909,12 @@
           "schema": {
             "kind": "string",
             "nullable": true
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -96964,6 +97036,13 @@
           }
         },
         {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "note",
           "optional": true,
           "schema": {
@@ -97037,6 +97116,13 @@
           "schema": {
             "kind": "string",
             "nullable": true
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         },
         {
@@ -97152,6 +97238,13 @@
           }
         },
         {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "note",
           "optional": true,
           "schema": {
@@ -97200,6 +97293,43 @@
               "kind": "ref",
               "ref": "StammdatenQualificationResponse"
             }
+          }
+        },
+        {
+          "name": "versions",
+          "schema": {
+            "kind": "ref",
+            "ref": "StammdatenVersionsResponse"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StammdatenVersionsResponse",
+      "go_type": "timetracking.StammdatenVersionsResponse",
+      "fields": [
+        {
+          "name": "person",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "kontakt",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "arbeitsvertrag",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "qualifikationen",
+          "schema": {
+            "kind": "string"
           }
         }
       ]

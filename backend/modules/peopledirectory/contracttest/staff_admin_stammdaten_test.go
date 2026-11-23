@@ -230,10 +230,10 @@ func TestStaffStammdaten_Qualifikationen(t *testing.T) {
 
 	acquired := "2023-03-10"
 	expires := "2026-03-10"
-	err := testpkg.TenantCommand4(t, s.ctx, s.db, s.svc.ReplaceStaffQualificationList, staff.ID, []workforce.StammdatenQualificationInput{
+	err := testpkg.TenantCommand5(t, s.ctx, s.db, s.svc.ReplaceStaffQualificationList, staff.ID, []workforce.StammdatenQualificationInput{
 		{Name: "Erste-Hilfe-Kurs", AcquiredOn: &acquired, ExpiresOn: &expires},
 		{Name: "Schwimmschein"},
-	}, actor.ID, "Nachweise erfasst")
+	}, (*string)(nil), actor.ID, "Nachweise erfasst")
 	require.NoError(t, err)
 
 	data, err := testpkg.TenantQuery1(t, s.ctx, s.db, s.svc.StaffStammdaten, staff.ID)
@@ -248,10 +248,10 @@ func TestStaffStammdaten_Qualifikationen(t *testing.T) {
 
 	// Changing only the acquisition date must persist and create an audit row.
 	updatedAcquired := "2023-04-10"
-	err = testpkg.TenantCommand4(t, s.ctx, s.db, s.svc.ReplaceStaffQualificationList, staff.ID, []workforce.StammdatenQualificationInput{
+	err = testpkg.TenantCommand5(t, s.ctx, s.db, s.svc.ReplaceStaffQualificationList, staff.ID, []workforce.StammdatenQualificationInput{
 		{Name: "Erste-Hilfe-Kurs", AcquiredOn: &updatedAcquired, ExpiresOn: &expires},
 		{Name: "Schwimmschein"},
-	}, actor.ID, "Erwerbsdatum korrigiert")
+	}, (*string)(nil), actor.ID, "Erwerbsdatum korrigiert")
 	require.NoError(t, err)
 	data, err = testpkg.TenantQuery1(t, s.ctx, s.db, s.svc.StaffStammdaten, staff.ID)
 	require.NoError(t, err)
@@ -262,9 +262,9 @@ func TestStaffStammdaten_Qualifikationen(t *testing.T) {
 	assert.Contains(t, rows[1].NewValue, "erworben 2023-04-10")
 
 	// Replace with a shorter list.
-	err = testpkg.TenantCommand4(t, s.ctx, s.db, s.svc.ReplaceStaffQualificationList, staff.ID, []workforce.StammdatenQualificationInput{
+	err = testpkg.TenantCommand5(t, s.ctx, s.db, s.svc.ReplaceStaffQualificationList, staff.ID, []workforce.StammdatenQualificationInput{
 		{Name: "Schwimmschein"},
-	}, actor.ID, "Erste Hilfe abgelaufen")
+	}, (*string)(nil), actor.ID, "Erste Hilfe abgelaufen")
 	require.NoError(t, err)
 	data, err = testpkg.TenantQuery1(t, s.ctx, s.db, s.svc.StaffStammdaten, staff.ID)
 	require.NoError(t, err)
@@ -273,9 +273,9 @@ func TestStaffStammdaten_Qualifikationen(t *testing.T) {
 	require.Len(t, s.auditRows(t, staff.ID), 3)
 
 	// Expiry before acquisition is rejected.
-	err = testpkg.TenantCommand4(t, s.ctx, s.db, s.svc.ReplaceStaffQualificationList, staff.ID, []workforce.StammdatenQualificationInput{
+	err = testpkg.TenantCommand5(t, s.ctx, s.db, s.svc.ReplaceStaffQualificationList, staff.ID, []workforce.StammdatenQualificationInput{
 		{Name: "Kaputt", AcquiredOn: &expires, ExpiresOn: &acquired},
-	}, actor.ID, "")
+	}, (*string)(nil), actor.ID, "")
 	require.ErrorIs(t, err, workforce.ErrStaffStammdatenInvalid)
 }
 

@@ -315,6 +315,11 @@ func (rs *Resource) updateSession(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
+	// A correction without the history row's token is refused like an
+	// outdated one (ADR 0311).
+	if updates.ExpectedVersion == nil {
+		updates.ExpectedVersion = new(string)
+	}
 
 	// Call service to update session
 	tenantID := tenant.FromContext(r.Context())

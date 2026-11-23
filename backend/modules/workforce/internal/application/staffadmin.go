@@ -62,8 +62,9 @@ func NewStaffAdmin(
 // UpdatePersonnelNumber sets or clears (value nil / empty) the staff member's
 // Personalnummer. The payroll system's number is what DATEV bills against, so
 // a change is unique per tenant and never happens without an audit row. A
-// no-op change writes no audit row.
-func (a *StaffAdmin) UpdatePersonnelNumber(ctx context.Context, staffID int64, value *string, changedByStaffID int64, note string) (domain.StaffSubject, error) {
+// no-op change writes no audit row. expectedVersion is the token of the
+// number the form showed (ADR 0311); nil only for the employment reset.
+func (a *StaffAdmin) UpdatePersonnelNumber(ctx context.Context, staffID int64, value, expectedVersion *string, changedByStaffID int64, note string) (domain.StaffSubject, error) {
 	if changedByStaffID <= 0 {
 		return domain.StaffSubject{}, errors.New("changed-by staff id is required")
 	}
@@ -79,6 +80,9 @@ func (a *StaffAdmin) UpdatePersonnelNumber(ctx context.Context, staffID int64, v
 			return err
 		}
 		if err := a.refuseKeptByTraeger(ctx, staffID); err != nil {
+			return err
+		}
+		if err := checkSection(expectedVersion, workforce.PersonnelNumberVersion(subject.PersonnelNumber)); err != nil {
 			return err
 		}
 		oldValue, newValue := domain.Deref(subject.PersonnelNumber), domain.Deref(normalized)
@@ -112,6 +116,8 @@ type StaffStammdaten struct {
 	Staff          domain.StaffSubject
 	MasterData     *domain.StaffMasterData
 	Qualifications []domain.StaffQualification
+	// Versions are the section tokens of this read (ADR 0311).
+	Versions StammdatenVersions
 }
 
 // StaffStammdaten returns the non-sensitive Stammdaten sections. Financial
@@ -129,7 +135,8 @@ func (a *StaffAdmin) StaffStammdaten(ctx context.Context, staffID int64) (StaffS
 	if err != nil {
 		return StaffStammdaten{}, err
 	}
-	return StaffStammdaten{Staff: subject, MasterData: masterData, Qualifications: qualificationsToDomain(qualifications)}, nil
+	rows := qualificationsToDomain(qualifications)
+	return StaffStammdaten{Staff: subject, MasterData: masterData, Qualifications: rows, Versions: stammdatenVersions(subject, masterData, rows)}, nil
 }
 
 // UpdateStaffStammdatenPerson replaces the person section. A no-op submit
@@ -142,6 +149,9 @@ func (a *StaffAdmin) UpdateStaffStammdatenPerson(ctx context.Context, staffID in
 	return a.writeSection(ctx, staffID, changedBy, domain.AuditSectionPerson, note, func(ctx context.Context, subject domain.StaffSubject) ([]domain.FieldChange, func() error, error) {
 		masterData, err := a.masterData(ctx, staffID)
 		if err != nil {
+			return nil, nil, err
+		}
+		if err := checkSection(section.ExpectedVersion, personSectionVersion(subject, masterData)); err != nil {
 			return nil, nil, err
 		}
 		apply := func() error {
@@ -163,6 +173,9 @@ func (a *StaffAdmin) UpdateStaffStammdatenKontakt(ctx context.Context, staffID i
 	return a.writeSection(ctx, staffID, changedBy, domain.AuditSectionKontakt, note, func(ctx context.Context, _ domain.StaffSubject) ([]domain.FieldChange, func() error, error) {
 		masterData, err := a.masterData(ctx, staffID)
 		if err != nil {
+			return nil, nil, err
+		}
+		if err := checkSection(section.ExpectedVersion, contactSectionVersion(masterData)); err != nil {
 			return nil, nil, err
 		}
 		apply := func() error {
@@ -191,6 +204,9 @@ func (a *StaffAdmin) UpdateStaffStammdatenArbeitsvertrag(ctx context.Context, st
 		if err != nil {
 			return nil, nil, err
 		}
+		if err := checkSection(section.ExpectedVersion, contractSectionVersion(subject, masterData)); err != nil {
+			return nil, nil, err
+		}
 		apply := func() error {
 			if domain.Deref(subject.EmploymentType) != domain.Deref(section.EmploymentType) {
 				if err := a.subjects.SetEmploymentType(ctx, staffID, section.EmploymentType); err != nil {
@@ -210,7 +226,7 @@ func (a *StaffAdmin) UpdateStaffStammdatenArbeitsvertrag(ctx context.Context, st
 
 // ReplaceStaffQualifications replaces the full qualification list. The audit
 // trail records the list as one field diff.
-func (a *StaffAdmin) ReplaceStaffQualifications(ctx context.Context, staffID int64, inputs []domain.QualificationInput, changedBy int64, note string) error {
+func (a *StaffAdmin) ReplaceStaffQualifications(ctx context.Context, staffID int64, inputs []domain.QualificationInput, expectedVersion *string, changedBy int64, note string) error {
 	rows, err := domain.NormalizeQualifications(inputs)
 	if err != nil {
 		return err
@@ -220,6 +236,10 @@ func (a *StaffAdmin) ReplaceStaffQualifications(ctx context.Context, staffID int
 		if err != nil {
 			return nil, nil, err
 		}
+		stored := qualificationsToDomain(existing)
+		if err := checkSection(expectedVersion, qualificationsVersion(stored)); err != nil {
+			return nil, nil, err
+		}
 		apply := func() error {
 			_, err := a.records.ReplaceStaffQualifications(ctx, staffID, qualificationsToPublic(rows))
 			if errors.Is(err, workforce.ErrInvalidStaffRecord) {
@@ -227,7 +247,7 @@ func (a *StaffAdmin) ReplaceStaffQualifications(ctx context.Context, staffID int
 			}
 			return err
 		}
-		return domain.QualificationChanges(qualificationsToDomain(existing), rows), apply, nil
+		return domain.QualificationChanges(stored, rows), apply, nil
 	})
 }
 
@@ -245,6 +265,7 @@ func (a *StaffAdmin) StaffFinancialMasked(ctx context.Context, staffID, actorAcc
 	}
 	masked := domain.MaskFinancial(staffID, data)
 	masked.KeptByTraeger = kept
+	masked.Version = financialSectionVersion(data)
 	return masked, nil
 }
 
@@ -275,6 +296,7 @@ func (a *StaffAdmin) UpdateStaffFinancial(ctx context.Context, staffID int64, in
 	if err != nil {
 		return err
 	}
+	section.ExpectedVersion = in.ExpectedVersion
 	return a.writeSection(ctx, staffID, changedByAccountID, domain.AuditSectionBankSteuer, note, func(ctx context.Context, _ domain.StaffSubject) ([]domain.FieldChange, func() error, error) {
 		return a.financialSectionChanges(ctx, staffID, section)
 	})
@@ -288,6 +310,9 @@ func (a *StaffAdmin) financialSectionChanges(ctx context.Context, staffID int64,
 	}
 	data, err := a.financial(ctx, staffID)
 	if err != nil {
+		return nil, nil, err
+	}
+	if err := checkSection(section.ExpectedVersion, financialSectionVersion(data)); err != nil {
 		return nil, nil, err
 	}
 	// The diff compares plaintext; opening also proves the stored values

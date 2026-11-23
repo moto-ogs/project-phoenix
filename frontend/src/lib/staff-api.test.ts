@@ -3027,6 +3027,12 @@ describe("staff-api", () => {
   describe("staffStammdatenService", () => {
     const backendStammdaten = {
       staff_id: "7",
+      versions: {
+        person: "v-person",
+        kontakt: "v-kontakt",
+        arbeitsvertrag: "v-vertrag",
+        qualifikationen: "v-quali",
+      },
       person: {
         first_name: "Max",
         last_name: "Mustermann",
@@ -3080,6 +3086,7 @@ describe("staff-api", () => {
         expect.any(Object),
       );
       expect(result.staffId).toBe("7");
+      expect(result.versions.qualifikationen).toBe("v-quali");
       expect(result.person).toEqual({
         firstName: "Max",
         lastName: "Mustermann",
@@ -3154,6 +3161,7 @@ describe("staff-api", () => {
           gender: "diverse",
         },
         "Namensänderung",
+        "v-read",
       );
 
       const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
@@ -3165,6 +3173,7 @@ describe("staff-api", () => {
         birthday: "1991-06-02",
         gender: "diverse",
         note: "Namensänderung",
+        expected_version: "v-read",
       });
     });
 
@@ -3184,6 +3193,7 @@ describe("staff-api", () => {
           emergencyContactPhone: null,
         },
         "Umzug",
+        "v-read",
       );
 
       const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
@@ -3197,6 +3207,7 @@ describe("staff-api", () => {
         emergency_contact_name: "Erika Muster",
         emergency_contact_phone: null,
         note: "Umzug",
+        expected_version: "v-read",
       });
     });
 
@@ -3214,6 +3225,7 @@ describe("staff-api", () => {
           employmentType: "part_time",
         },
         "Vertrag",
+        "v-read",
       );
 
       const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
@@ -3225,6 +3237,7 @@ describe("staff-api", () => {
         weekly_hours: 29.5,
         employment_type: "part_time",
         note: "Vertrag",
+        expected_version: "v-read",
       });
     });
 
@@ -3251,6 +3264,7 @@ describe("staff-api", () => {
           },
         ],
         "Nachweise",
+        "v-read",
       );
 
       const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
@@ -3272,6 +3286,7 @@ describe("staff-api", () => {
           },
         ],
         note: "Nachweise",
+        expected_version: "v-read",
       });
     });
 
@@ -3299,6 +3314,7 @@ describe("staff-api", () => {
             gender: null,
           },
           "",
+          "v-read",
         ),
       ).rejects.toMatchObject({ code: "workforce.stammdaten_invalid" });
     });
@@ -3325,6 +3341,7 @@ describe("staff-api", () => {
             emergencyContactPhone: null,
           },
           "",
+          "v-read",
         ),
       ).rejects.toThrow("Stammdaten konnten nicht gespeichert werden");
     });
@@ -3348,6 +3365,7 @@ describe("staff-api", () => {
             employmentType: null,
           },
           "",
+          "v-read",
         ),
       ).rejects.toThrow("Stammdaten konnten nicht gespeichert werden");
     });
@@ -3448,6 +3466,7 @@ describe("staff-api", () => {
           socialSecurityNumber: null,
         },
         "Lohnbüro",
+        "v-read",
       );
 
       const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
@@ -3458,6 +3477,7 @@ describe("staff-api", () => {
         tax_id: "12345678911",
         social_security_number: null,
         note: "Lohnbüro",
+        expected_version: "v-read",
       });
     });
   });

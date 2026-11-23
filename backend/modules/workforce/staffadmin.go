@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // This file is the public personnel-record contract of the staff
@@ -79,6 +81,17 @@ type StaffStammdaten struct {
 	Staff          StaffProfile
 	MasterData     *StaffMasterData
 	Qualifications []StaffQualification
+	// Versions are the section tokens of this read (ADR 0311).
+	Versions StammdatenVersions
+}
+
+// StammdatenVersions holds the token of each non-sensitive section: a save
+// of one section never refuses the next one.
+type StammdatenVersions struct {
+	Person          string
+	Kontakt         string
+	Arbeitsvertrag  string
+	Qualifikationen string
 }
 
 // StammdatenPersonInput is the full person section.
@@ -87,6 +100,9 @@ type StammdatenPersonInput struct {
 	LastName  string
 	Birthday  *string
 	Gender    *string
+	// ExpectedVersion is the section token of the read the form showed
+	// (ADR 0311); nil only for a system write that showed nothing.
+	ExpectedVersion *string
 }
 
 // StammdatenKontaktInput is the full contact section; nil clears a field.
@@ -98,6 +114,9 @@ type StammdatenKontaktInput struct {
 	Email                 *string
 	EmergencyContactName  *string
 	EmergencyContactPhone *string
+	// ExpectedVersion is the section token of the read the form showed
+	// (ADR 0311); nil only for a system write that showed nothing.
+	ExpectedVersion *string
 }
 
 // StammdatenArbeitsvertragInput is the full contract section.
@@ -107,6 +126,9 @@ type StammdatenArbeitsvertragInput struct {
 	ProbationEndDate *string
 	WeeklyHours      *float64
 	EmploymentType   *string
+	// ExpectedVersion is the section token of the read the form showed
+	// (ADR 0311); nil only for a system write that showed nothing.
+	ExpectedVersion *string
 }
 
 // StammdatenQualificationInput is one row of the submitted qualification
@@ -128,6 +150,9 @@ type StammdatenFinancialInput struct {
 	IBAN                 *string
 	TaxID                *string
 	SocialSecurityNumber *string
+	// ExpectedVersion is the section token of the read the form showed
+	// (ADR 0311); nil only for a system write that showed nothing.
+	ExpectedVersion *string
 }
 
 // StaffFinancialMasked is the default financial read: the IBAN shows its last
@@ -141,6 +166,8 @@ type StaffFinancialMasked struct {
 	// record (#4705, ADR 0089 section 6); the school then holds none and
 	// changes neither them nor the personnel number.
 	KeptByTraeger bool
+	// Version is the bank and tax section's token over its sealed values.
+	Version string
 }
 
 // StaffFinancialPlain carries the unmasked values after an audited reveal.
@@ -149,6 +176,8 @@ type StaffFinancialPlain struct {
 	IBAN                 *string
 	TaxID                *string
 	SocialSecurityNumber *string
+	// Version is the section token the edit sends back (ADR 0311).
+	Version string
 }
 
 // StaffRead selects membership facts when Employment is not consumed.
@@ -180,12 +209,12 @@ type StaffLookups interface {
 // tenant transaction; every financial read writes a data-access log row before
 // any value is served.
 type StaffRecordAdmin interface {
-	UpdatePersonnelNumber(ctx context.Context, staffID int64, value *string, changedByStaffID int64, note string) (*StaffProfile, error)
+	UpdatePersonnelNumber(ctx context.Context, staffID int64, value, expectedVersion *string, changedByStaffID int64, note string) (*StaffProfile, error)
 	StaffStammdaten(ctx context.Context, staffID int64) (*StaffStammdaten, error)
 	UpdateStaffStammdatenPerson(ctx context.Context, staffID int64, input StammdatenPersonInput, changedByStaffID int64, note string) error
 	UpdateStaffStammdatenKontakt(ctx context.Context, staffID int64, input StammdatenKontaktInput, changedByStaffID int64, note string) error
 	UpdateStaffStammdatenArbeitsvertrag(ctx context.Context, staffID int64, input StammdatenArbeitsvertragInput, changedByStaffID int64, note string) error
-	ReplaceStaffQualificationList(ctx context.Context, staffID int64, inputs []StammdatenQualificationInput, changedByStaffID int64, note string) error
+	ReplaceStaffQualificationList(ctx context.Context, staffID int64, inputs []StammdatenQualificationInput, expectedVersion *string, changedByStaffID int64, note string) error
 	StaffFinancialMasked(ctx context.Context, staffID, actorAccountID int64, actorRole string) (*StaffFinancialMasked, error)
 	RevealStaffFinancial(ctx context.Context, staffID, actorAccountID int64, actorRole string) (*StaffFinancialPlain, error)
 	UpdateStaffFinancial(ctx context.Context, staffID int64, input StammdatenFinancialInput, changedByAccountID int64, note string) error
@@ -262,4 +291,12 @@ type StaffDocumentFileCleanups interface {
 	ListQueuedStaffDocumentFileCleanup(ctx context.Context, staffID int64) ([]StaffDocumentFileCleanup, error)
 	ListQueuedStaffDocumentFileCleanups(ctx context.Context) ([]StaffDocumentFileCleanup, error)
 	MarkQueuedStaffDocumentFileCleanupComplete(ctx context.Context, cleanupID int64) error
+}
+
+// PersonnelNumberVersion is the token of a stored personnel number (ADR
+// 0311): the number alone, since the staff row also carries the contract
+// section's employment type. The read and the check under the staff lock
+// both use it.
+func PersonnelNumberVersion(value *string) string {
+	return readstate.Fingerprint(value)
 }

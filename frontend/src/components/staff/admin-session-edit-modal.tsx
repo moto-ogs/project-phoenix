@@ -11,7 +11,8 @@ import { FieldLabel } from "~/components/ui/field-label";
 import { Input } from "~/components/ui/input";
 import { Modal } from "~/components/ui/modal";
 import { Textarea } from "~/components/ui/textarea";
-import { useApiFormError } from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useApiFormError } from "~/contexts/ToastContext";
+import { isReadStateRefusal } from "~/lib/api-error";
 import {
   berlinClockFromISO,
   berlinDateTimeISO,
@@ -46,7 +47,8 @@ interface AdminSessionEditModalProps {
   readonly date: Date;
   readonly session: StaffHistorySession | null;
   readonly onClose: () => void;
-  readonly onSaved: () => void;
+  /** Reloads the table; resolves when it was read again. */
+  readonly onSaved: () => unknown;
 }
 
 export function AdminSessionEditModal({
@@ -85,6 +87,7 @@ export function AdminSessionEditModal({
         checkOut: extractTime(session.check_out_time) ?? "16:00",
         breakMinutes: session.break_minutes ?? 30,
         status: (session.status ?? "present") as "present" | "home_office",
+        version: session.version ?? "",
       };
     }
     return {
@@ -92,6 +95,7 @@ export function AdminSessionEditModal({
       checkOut: "16:00",
       breakMinutes: 30,
       status: "present" as const,
+      version: "",
     };
   }, [session]);
 
@@ -108,8 +112,12 @@ export function AdminSessionEditModal({
     initial.status,
   );
   const [notes, setNotes] = useState("");
+  // Der Stand des Eintrags, den das Formular zeigt (ADR 0311): gesetzt mit
+  // den Feldern, gesendet mit der Korrektur.
+  const [readVersion, setReadVersion] = useState(initial.version);
   const [isSaving, setIsSaving] = useState(false);
   const formErrors = useApiFormError();
+  const refusals = useApiErrorDisplay();
   const clearErrors = formErrors.clear;
 
   // Reset form when the modal opens or the target row changes — otherwise
@@ -127,6 +135,7 @@ export function AdminSessionEditModal({
     );
     setStatus(initial.status);
     setNotes("");
+    setReadVersion(initial.version);
     clearErrors();
   }, [isOpen, initial, breaks, clearErrors]);
 
@@ -214,6 +223,7 @@ export function AdminSessionEditModal({
           ...(hasIndividualBreaks ? { breaks: changedBreaks } : {}),
           status,
           notes: notes.trim(),
+          expected_version: readVersion,
         });
       } else {
         // The backend decodes `date` as an RFC3339 time and takes its
@@ -237,6 +247,18 @@ export function AdminSessionEditModal({
         session_id: session?.id ?? null,
         error: err instanceof Error ? err.message : String(err),
       });
+      if (isReadStateRefusal(err)) {
+        // Jemand hat den Eintrag inzwischen geändert: Der Dialog schließt,
+        // die Tabelle zeigt den gespeicherten Stand mit der Meldung.
+        onClose();
+        await refusals.show(err, {
+          object: "die Arbeitszeit",
+          reload: async () => {
+            await onSaved();
+          },
+        });
+        return;
+      }
       // The overlap 409 carries workforce.work_session_overlap (#2402); the
       // catalog explains it, the raw backend text never reaches the screen.
       await formErrors.show(err, {

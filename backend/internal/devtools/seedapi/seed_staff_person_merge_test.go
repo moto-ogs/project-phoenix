@@ -42,7 +42,12 @@ func TestSeedStaffPersonMergeStepDoesNotDuplicateExistingExample(t *testing.T) {
 					assert.NotContains(t, body, "email")
 					created++
 					_, _ = fmt.Fprint(w, `{"data":{"id":"2"}}`)
+				case r.Method == http.MethodGet && r.URL.Path == "/api/staff/2/stammdaten":
+					_, _ = fmt.Fprint(w, `{"data":{"versions":{"kontakt":"read-kontakt"}}}`)
 				case r.Method == http.MethodPut && r.URL.Path == "/api/staff/2/stammdaten/kontakt":
+					var body map[string]any
+					require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+					assert.Equal(t, "read-kontakt", body["expected_version"], "the section carries the version it read")
 					_, _ = fmt.Fprint(w, `{"data":{}}`)
 				case r.Method == http.MethodDelete && r.URL.Path == "/api/staff/2":
 					hasExample = true

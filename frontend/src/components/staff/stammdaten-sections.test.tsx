@@ -55,6 +55,8 @@ vi.mock("~/lib/swr", () => ({
   useTenantMutateMatching:
     (keys: readonly string[]) => (): Promise<unknown[]> =>
       refreshMatching(keys),
+  revalidateOrThrow: (read: { mutate: () => Promise<unknown> }) =>
+    read.mutate(),
 }));
 
 vi.mock("~/lib/staff-api", () => ({
@@ -73,6 +75,12 @@ vi.mock("~/lib/staff-api", () => ({
 
 const stammdaten: StaffStammdaten = {
   staffId: "42",
+  versions: {
+    person: "v-person",
+    kontakt: "v-kontakt",
+    arbeitsvertrag: "v-vertrag",
+    qualifikationen: "v-quali",
+  },
   person: {
     firstName: "Mila",
     lastName: "Muster",
@@ -272,6 +280,7 @@ describe("StammdatenTab Sektionen (#1423)", () => {
         "42",
         expect.objectContaining({ birthday: "1982-04-17" }),
         "",
+        "v-person",
       ),
     );
     // Name und Geschlecht stehen auch im Kopf und in der Personalliste.
@@ -315,6 +324,55 @@ describe("StammdatenTab Sektionen (#1423)", () => {
     await waitFor(() => expect(first).toHaveFocus());
     expect(first).toHaveAttribute("aria-invalid", "true");
     expect(screen.queryByRole("alert", { name: /^Fehler:/ })).toBeNull();
+  });
+
+  // ADR 0311: Jeder Abschnitt sendet den Stand, den das Bearbeiten
+  // vorfand; ist er inzwischen geändert, schließt der Entwurf, der
+  // gespeicherte Stand wird neu gelesen und die Meldung erscheint ohne
+  // Wiederholen.
+  it("sendet den gelesenen Stand je Abschnitt und zeigt nach einer Ablehnung den gespeicherten Stand", async () => {
+    seedSWR();
+    mutate.mockResolvedValue(stammdaten);
+    vi.mocked(staffStammdatenService.updatePerson).mockRejectedValue(
+      new ApiError("changed since it was read", 409, {
+        code: "general.changed_since_read",
+      }),
+    );
+    render(
+      <StammdatenTab
+        staffId="42"
+        canManagePayroll={false}
+        canManagePayrollSettings={false}
+        canViewSections
+        canEditSections
+      />,
+    );
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Bearbeiten" })[0]!);
+    // Ein Neuladen während des Bearbeitens ändert den gesendeten Stand nicht.
+    swrData.current.set("staff-stammdaten-", {
+      ...stammdaten,
+      versions: { ...stammdaten.versions, person: "v-person-newer" },
+    });
+    fireEvent.change(screen.getByLabelText("Geburtsdatum"), {
+      target: { value: "17.04.1982" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(
+      await screen.findByText(/Der Abschnitt „Person“ wurde inzwischen geändert/),
+    ).toBeInTheDocument();
+    expect(staffStammdatenService.updatePerson).toHaveBeenCalledWith(
+      "42",
+      expect.objectContaining({ birthday: "1982-04-17" }),
+      "",
+      "v-person",
+    );
+    await waitFor(() => expect(mutate).toHaveBeenCalled());
+    expect(screen.queryByLabelText("Geburtsdatum")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Erneut versuchen" }),
+    ).toBeNull();
   });
 
   it("zeigt bei einem Serverfehler die Vorgangskennung zum Kopieren", async () => {
@@ -361,7 +419,7 @@ describe("StammdatenTab Sektionen (#1423)", () => {
           code: "workforce.personnel_number_taken",
         }),
       )
-      .mockResolvedValueOnce("90002");
+      .mockResolvedValueOnce({ personnelNumber: "90002", version: "v-90002" });
     render(
       <StammdatenTab
         staffId="42"

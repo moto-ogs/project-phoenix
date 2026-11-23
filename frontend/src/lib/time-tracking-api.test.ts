@@ -474,7 +474,10 @@ describe("TimeTrackingService", () => {
         data: { ...backendSession, notes: "Updated notes" },
       });
 
-      const updates: UpdateSessionRequest = { notes: "Updated notes" };
+      const updates: UpdateSessionRequest = {
+        notes: "Updated notes",
+        expectedVersion: "v1",
+      };
       const result = await timeTrackingService.updateSession("1", updates);
 
       expect(global.fetch).toHaveBeenCalledWith("/api/time-tracking/1", {
@@ -482,7 +485,10 @@ describe("TimeTrackingService", () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(updates),
+        body: JSON.stringify({
+          notes: "Updated notes",
+          expected_version: "v1",
+        }),
       });
       expect(result.notes).toBe("Updated notes");
     });

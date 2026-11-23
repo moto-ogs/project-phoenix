@@ -178,6 +178,9 @@ type AllowanceSummaryResponse struct {
 	// KeptByTraeger: the Träger keeps this account over all schools of the
 	// person (#4710); the school reads it and does not change it.
 	KeptByTraeger bool `json:"kept_by_traeger"`
+	// Version is the token of the stored claim; PUT .../allowances/{staffId}
+	// sends it back as expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 // AllowanceCarryResponse is the previous year's rest still usable in the
@@ -204,6 +207,8 @@ type SetAllowanceRequest struct {
 	Year         int     `json:"year"`
 	EntitledDays float64 `json:"entitled_days"`
 	Reason       string  `json:"reason"`
+	// ExpectedVersion is the version of the summary the form showed.
+	ExpectedVersion string `json:"expected_version"`
 }
 
 func toAllowanceSummaryResponse(summary workforce.AbsenceTypeAllowanceSummary) AllowanceSummaryResponse {
@@ -219,6 +224,7 @@ func toAllowanceSummaryResponse(summary workforce.AbsenceTypeAllowanceSummary) A
 		ExpiredDays:   summary.ExpiredDays,
 		BookingDays:   summary.BookingDays,
 		KeptByTraeger: summary.KeptByTraeger,
+		Version:       summary.Version,
 	}
 	if carried := summary.CarriedIn; carried != nil {
 		response.CarriedIn = &AllowanceCarryResponse{
@@ -431,6 +437,7 @@ func (rs *Resource) setAllowance(w http.ResponseWriter, r *http.Request) {
 	summary, err := rs.types.SetAllowance(r.Context(), workforce.SetAbsenceTypeAllowance{
 		StaffID: staffID, AbsenceTypeID: typeID, Year: req.Year,
 		EntitledDays: req.EntitledDays, Reason: req.Reason, ChangedBy: actorID,
+		ExpectedVersion: &req.ExpectedVersion,
 	})
 	if err != nil {
 		rs.renderError(w, r, err)

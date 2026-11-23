@@ -332,6 +332,9 @@ type AbsenceTypeAllowanceSummary struct {
 	// KeptByTraeger is true when the Träger keeps this account: a type of
 	// the Träger for a person with a Personalakte, over all schools (#4710).
 	KeptByTraeger bool
+	// Version is the token of the person's stored claim in Year; a change
+	// of the claim sends it back (ADR 0311).
+	Version string
 }
 
 // AbsenceTypeAllowanceAccount is one active school-defined type with an
@@ -393,6 +396,9 @@ type SetAbsenceTypeAllowance struct {
 	EntitledDays  float64
 	Reason        string
 	ChangedBy     int64
+	// ExpectedVersion is the Version of the summary the form showed; nil
+	// only for a write that showed no claim (the seeder).
+	ExpectedVersion *string
 }
 
 // AbsenceTypeAdministration is the capability the absence-type administration

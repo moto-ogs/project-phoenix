@@ -571,6 +571,7 @@ const mockCheckedOutSession: WorkSession = {
 
 const mockHistorySession: WorkSessionHistory = {
   ...mockCheckedOutSession,
+  version: "v-history",
   netMinutes: 480,
   isOvertime: false,
   isBreakCompliant: true,

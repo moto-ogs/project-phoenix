@@ -83,11 +83,29 @@ type StammdatenResponse struct {
 	Kontakt         StammdatenKontaktPayload          `json:"kontakt"`
 	Arbeitsvertrag  StammdatenArbeitsvertragPayload   `json:"arbeitsvertrag"`
 	Qualifikationen []StammdatenQualificationResponse `json:"qualifikationen"`
+	// Versions carries one token per section; its PUT sends it back as
+	// expected_version (ADR 0311).
+	Versions StammdatenVersionsResponse `json:"versions"`
+}
+
+// StammdatenVersionsResponse is the token of each section of the read.
+type StammdatenVersionsResponse struct {
+	Person          string `json:"person"`
+	Kontakt         string `json:"kontakt"`
+	Arbeitsvertrag  string `json:"arbeitsvertrag"`
+	Qualifikationen string `json:"qualifikationen"`
+}
+
+// SectionToken is the read token every section PUT carries: the version
+// of the section in the read the form showed.
+type SectionToken struct {
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // StammdatenPersonRequest binds the person section PUT.
 type StammdatenPersonRequest struct {
 	StammdatenPersonPayload
+	SectionToken
 	Note string `json:"note"`
 }
 
@@ -107,6 +125,7 @@ func (r *StammdatenPersonRequest) Bind(_ *http.Request) error {
 // StammdatenKontaktRequest binds the contact section PUT.
 type StammdatenKontaktRequest struct {
 	StammdatenKontaktPayload
+	SectionToken
 	Note string `json:"note"`
 }
 
@@ -115,6 +134,7 @@ func (r *StammdatenKontaktRequest) Bind(_ *http.Request) error { return nil }
 // StammdatenArbeitsvertragRequest binds the contract section PUT.
 type StammdatenArbeitsvertragRequest struct {
 	StammdatenArbeitsvertragPayload
+	SectionToken
 	Note string `json:"note"`
 }
 
@@ -124,7 +144,8 @@ func (r *StammdatenArbeitsvertragRequest) Bind(_ *http.Request) error { return n
 // replace).
 type StammdatenQualifikationenRequest struct {
 	Qualifikationen []StammdatenQualificationPayload `json:"qualifikationen"`
-	Note            string                           `json:"note"`
+	SectionToken
+	Note string `json:"note"`
 }
 
 func (r *StammdatenQualifikationenRequest) Bind(_ *http.Request) error {
@@ -141,7 +162,8 @@ type StammdatenFinancialRequest struct {
 	IBAN                 *string `json:"iban"`
 	TaxID                *string `json:"tax_id"`
 	SocialSecurityNumber *string `json:"social_security_number"`
-	Note                 string  `json:"note"`
+	SectionToken
+	Note string `json:"note"`
 }
 
 func (r *StammdatenFinancialRequest) Bind(_ *http.Request) error { return nil }
@@ -155,6 +177,9 @@ type StammdatenFinancialMaskedResponse struct {
 	// KeptByTraeger is true when the Träger keeps the values in its staff
 	// record (#4705); the school then holds none.
 	KeptByTraeger bool `json:"kept_by_traeger"`
+	// Version is the section token over the sealed values; never a hash
+	// of the plaintext.
+	Version string `json:"version"`
 }
 
 // StammdatenFinancialRevealResponse carries the unmasked values after the
@@ -164,6 +189,8 @@ type StammdatenFinancialRevealResponse struct {
 	IBAN                 *string  `json:"iban"`
 	TaxID                *string  `json:"tax_id"`
 	SocialSecurityNumber *string  `json:"social_security_number"`
+	// Version is the token the bank and tax PUT sends back.
+	Version string `json:"version"`
 }
 
 // --- handlers --------------------------------------------------------------
@@ -196,6 +223,7 @@ func newStammdatenResponse(data *workforce.StaffStammdaten, types []workforce.Qu
 	resp := &StammdatenResponse{
 		StaffID:         ident.ID(data.Staff.ID),
 		Qualifikationen: make([]StammdatenQualificationResponse, 0, len(data.Qualifications)),
+		Versions:        StammdatenVersionsResponse(data.Versions),
 	}
 	typeNames := make(map[int64]string, len(types))
 	for _, kind := range types {
@@ -283,6 +311,8 @@ func (rs *StaffAdminResource) updateStammdatenPerson(w http.ResponseWriter, r *h
 			LastName:  req.LastName,
 			Birthday:  optionalDateString(req.Birthday),
 			Gender:    req.Gender,
+
+			ExpectedVersion: &req.ExpectedVersion,
 		}, changedBy, req.Note)
 	})
 }
@@ -302,6 +332,7 @@ func (rs *StaffAdminResource) updateStammdatenKontakt(w http.ResponseWriter, r *
 			Email:                 req.Email,
 			EmergencyContactName:  req.EmergencyContactName,
 			EmergencyContactPhone: req.EmergencyContactPhone,
+			ExpectedVersion:       &req.ExpectedVersion,
 		}, changedBy, req.Note)
 	})
 }
@@ -319,6 +350,7 @@ func (rs *StaffAdminResource) updateStammdatenArbeitsvertrag(w http.ResponseWrit
 			ProbationEndDate: optionalDateString(req.ProbationEndDate),
 			WeeklyHours:      req.WeeklyHours,
 			EmploymentType:   req.EmploymentType,
+			ExpectedVersion:  &req.ExpectedVersion,
 		}, changedBy, req.Note)
 	})
 }
@@ -349,7 +381,7 @@ func (rs *StaffAdminResource) updateStammdatenQualifikationen(w http.ResponseWri
 				ExpiresOn:  optionalDateString(q.ExpiresOn),
 			})
 		}
-		return rs.PersonService.ReplaceStaffQualificationList(r.Context(), staffID, inputs, changedBy, req.Note)
+		return rs.PersonService.ReplaceStaffQualificationList(r.Context(), staffID, inputs, &req.ExpectedVersion, changedBy, req.Note)
 	})
 }
 
@@ -403,6 +435,7 @@ func (rs *StaffAdminResource) getStammdatenFinancial(w http.ResponseWriter, r *h
 		TaxIDMasked:                masked.TaxIDMasked,
 		SocialSecurityNumberMasked: masked.SocialSecurityNumberMasked,
 		KeptByTraeger:              masked.KeptByTraeger,
+		Version:                    masked.Version,
 	}, "Financial data retrieved successfully")
 }
 
@@ -436,6 +469,7 @@ func (rs *StaffAdminResource) revealStammdatenFinancial(w http.ResponseWriter, r
 		IBAN:                 plain.IBAN,
 		TaxID:                plain.TaxID,
 		SocialSecurityNumber: plain.SocialSecurityNumber,
+		Version:              plain.Version,
 	}, "Financial data revealed successfully")
 }
 
@@ -458,6 +492,7 @@ func (rs *StaffAdminResource) updateStammdatenFinancial(w http.ResponseWriter, r
 		IBAN:                 req.IBAN,
 		TaxID:                req.TaxID,
 		SocialSecurityNumber: req.SocialSecurityNumber,
+		ExpectedVersion:      &req.ExpectedVersion,
 	}, accountID, req.Note); err != nil {
 		switch {
 		case errors.Is(err, workforce.ErrStaffStammdatenInvalid):

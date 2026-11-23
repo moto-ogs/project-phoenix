@@ -69,6 +69,7 @@ func publicSessionResponse(value *SessionResponse) *workforce.SessionResponse {
 		IsOvertime: value.IsOvertime, IsBreakCompliant: value.IsBreakCompliant, Breaks: publicWorkSessionBreaks(value.Breaks),
 		EditCount: value.EditCount, AuditCount: value.AuditCount,
 		PackUpMinutes: value.PackUpMinutes, RoundingMinutes: value.RoundingMinutes,
+		Version: value.Version,
 	}
 }
 
@@ -138,7 +139,7 @@ func publicWorkSessionEdits(values []*WorkSessionEditView) []*workforce.WorkSess
 func legacySessionUpdate(value workforce.SessionUpdateRequest) SessionUpdateRequest {
 	result := SessionUpdateRequest{
 		Date: value.Date, CheckInTime: value.CheckInTime, CheckOutTime: value.CheckOutTime, BreakMinutes: value.BreakMinutes,
-		Status: value.Status, Notes: value.Notes,
+		Status: value.Status, Notes: value.Notes, ExpectedVersion: value.ExpectedVersion,
 	}
 	if value.Breaks != nil {
 		result.Breaks = make([]BreakDurationUpdate, 0, len(value.Breaks))

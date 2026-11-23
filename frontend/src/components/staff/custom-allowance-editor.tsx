@@ -12,7 +12,12 @@ import { EditActions } from "~/components/ui/edit-actions";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
 import { NumberStepper } from "~/components/ui/number-stepper";
-import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import {
+  useApiErrorDisplay,
+  useApiFormError,
+  useToast,
+} from "~/contexts/ToastContext";
+import { isReadStateRefusal } from "~/lib/api-error";
 import { formatDayCount } from "~/lib/absence-helpers";
 import {
   absenceTypeService,
@@ -56,6 +61,10 @@ export function CustomAllowanceEditForm({
   readonly onSaved: RefreshAfterWrite;
 }) {
   const [days, setDays] = useState(formatInput(summary.entitledDays));
+  // Der Anspruch, den das Formular beim Öffnen zeigte (ADR 0311); ein
+  // Neuladen darunter ändert ihn nicht.
+  const [readVersion] = useState(summary.version);
+  const refusals = useApiErrorDisplay();
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
   const formErrors = useApiFormError();
@@ -96,6 +105,7 @@ export function CustomAllowanceEditForm({
         year,
         entitledDays: parsed,
         reason: reason.trim(),
+        expectedVersion: readVersion,
       });
       toast.success(`Der Anspruch ${type.name} ist gespeichert.`);
     } catch (cause) {
@@ -104,6 +114,17 @@ export function CustomAllowanceEditForm({
         absence_type_id: type.id,
         error: cause instanceof Error ? cause.message : String(cause),
       });
+      if (isReadStateRefusal(cause)) {
+        // Jemand hat den Anspruch inzwischen geändert: Das Formular
+        // schließt, die Karte zeigt den gespeicherten Anspruch.
+        setSaving(false);
+        onCancel();
+        await refusals.show(cause, {
+          object: "die Änderung am Anspruch",
+          reload: () => onSaved(),
+        });
+        return;
+      }
       await formErrors.show(cause, {
         object: "die Änderung am Anspruch",
         retry: () => void latestSaveRef.current(),

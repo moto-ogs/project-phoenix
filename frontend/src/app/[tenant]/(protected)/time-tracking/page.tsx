@@ -136,7 +136,7 @@ import {
   PLANNED_START_NOT_REACHED_CODE,
   timeTrackingService,
 } from "~/lib/time-tracking-api";
-import { ApiError } from "~/lib/api-error";
+import { ApiError, isReadStateRefusal } from "~/lib/api-error";
 import {
   type MonthSummary,
   type StaffAbsence,
@@ -2171,6 +2171,7 @@ function EditSessionModal({
   session,
   date,
   onSave,
+  onReload,
   absence,
   onUpdateAbsence,
   onDeleteAbsence,
@@ -2197,8 +2198,11 @@ function EditSessionModal({
       status?: SessionStatus;
       notes?: string;
       breaks?: Array<{ id: string; durationMinutes: number }>;
+      expectedVersion: string;
     },
   ) => Promise<void>;
+  /** Reads the history again; rejects when that fails. */
+  readonly onReload: () => Promise<unknown>;
   readonly absence: StaffAbsence | null;
   readonly onUpdateAbsence: (
     id: string,
@@ -2222,6 +2226,10 @@ function EditSessionModal({
   );
   const [status, setStatus] = useState<SessionStatus>("present");
   const [notes, setNotes] = useState("");
+  // Der Stand des Blocks, den der Dialog zeigt (ADR 0311): gesetzt mit den
+  // Feldern beim Öffnen, gesendet mit der Korrektur.
+  const [readVersion, setReadVersion] = useState("");
+  const refusals = useApiErrorDisplay();
   const [saving, setSaving] = useState(false);
 
   // Absence state. absType is an option value, not an AbsenceType: it also
@@ -2281,6 +2289,7 @@ function EditSessionModal({
       setBreakMins(session.breakMinutes.toString());
       setStatus(session.status);
       setNotes("");
+      setReadVersion(session.version);
 
       // Initialize per-break durations
       if (session.breaks.length > 0) {
@@ -2441,6 +2450,7 @@ function EditSessionModal({
             status,
             notes: notes || undefined,
             breaks: changedBreaks.length > 0 ? changedBreaks : undefined,
+            expectedVersion: readVersion,
           });
         } else {
           await onSave(session.id, {
@@ -2449,6 +2459,7 @@ function EditSessionModal({
             breakMinutes: editedBreak,
             status,
             notes: notes || undefined,
+            expectedVersion: readVersion,
           });
         }
         if (op.isCurrent()) onClose();
@@ -2459,6 +2470,16 @@ function EditSessionModal({
         });
         // Protokolliert; eine späte Ablehnung zeigt kein neuerer Vorgang.
         if (!op.isCurrent()) return;
+        if (isReadStateRefusal(err)) {
+          // Der Block hat sich inzwischen geändert: Der Dialog schließt,
+          // die Ansicht zeigt den gespeicherten Stand mit der Meldung.
+          onClose();
+          await refusals.show(err, {
+            object: "die Arbeitszeit",
+            reload: onReload,
+          });
+          return;
+        }
         // No retry link: the handlers live below the early returns, so a
         // latest-ref is not possible; „Speichern“ resends the current draft.
         await formErrors.show(err, { object: "die Arbeitszeit" });
@@ -3900,9 +3921,11 @@ function TimeTrackingContent() {
         status?: SessionStatus;
         notes?: string;
         breaks?: Array<{ id: string; durationMinutes: number }>;
+        expectedVersion: string;
       },
     ) => {
       await timeTrackingService.updateSession(id, {
+        expectedVersion: updates.expectedVersion,
         checkInTime: updates.checkInTime,
         checkOutTime: updates.checkOutTime,
         breakMinutes: updates.breakMinutes,
@@ -4090,6 +4113,13 @@ function TimeTrackingContent() {
             session={editModal?.session ?? null}
             date={editModal?.date ?? null}
             onSave={handleEditSave}
+            onReload={() =>
+              Promise.all([
+                mutateCurrentSession(),
+                mutateHistory(),
+                refreshTableData(),
+              ])
+            }
             absence={editModal?.absence ?? null}
             onUpdateAbsence={handleUpdateAbsence}
             onDeleteAbsence={handleDeleteAbsence}

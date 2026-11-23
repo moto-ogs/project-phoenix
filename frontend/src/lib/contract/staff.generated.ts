@@ -790,12 +790,14 @@ export interface PayrollNumberResponse {
   staff_id: string;
   personnel_number: string | null;
   kept_by_traeger: boolean;
+  version: string;
 }
 
 export const PayrollNumberResponseSchema: z.ZodType<PayrollNumberResponse, unknown> = object<PayrollNumberResponse>({
   staff_id: int64String,
   personnel_number: nullable(str),
   kept_by_traeger: bool,
+  version: str,
 });
 
 /** Go: timetracking.ScheduleModelInfo */
@@ -932,6 +934,21 @@ export const StammdatenQualificationResponseSchema: z.ZodType<StammdatenQualific
   expires_on: nullable(calendarDate),
 });
 
+/** Go: timetracking.StammdatenVersionsResponse */
+export interface StammdatenVersionsResponse {
+  person: string;
+  kontakt: string;
+  arbeitsvertrag: string;
+  qualifikationen: string;
+}
+
+export const StammdatenVersionsResponseSchema: z.ZodType<StammdatenVersionsResponse, unknown> = object<StammdatenVersionsResponse>({
+  person: str,
+  kontakt: str,
+  arbeitsvertrag: str,
+  qualifikationen: str,
+});
+
 /** Go: timetracking.StammdatenResponse */
 export interface StammdatenResponse {
   staff_id: string;
@@ -939,6 +956,7 @@ export interface StammdatenResponse {
   kontakt: StammdatenKontaktPayload;
   arbeitsvertrag: StammdatenArbeitsvertragPayload;
   qualifikationen: StammdatenQualificationResponse[] | null;
+  versions: StammdatenVersionsResponse;
 }
 
 export const StammdatenResponseSchema: z.ZodType<StammdatenResponse, unknown> = object<StammdatenResponse>({
@@ -947,6 +965,7 @@ export const StammdatenResponseSchema: z.ZodType<StammdatenResponse, unknown> = 
   kontakt: StammdatenKontaktPayloadSchema,
   arbeitsvertrag: StammdatenArbeitsvertragPayloadSchema,
   qualifikationen: nullable(arr(StammdatenQualificationResponseSchema)),
+  versions: StammdatenVersionsResponseSchema,
 });
 
 /** Go: timetracking.StammdatenFinancialMaskedResponse */
@@ -956,6 +975,7 @@ export interface StammdatenFinancialMaskedResponse {
   tax_id_masked: string | null;
   social_security_number_masked: string | null;
   kept_by_traeger: boolean;
+  version: string;
 }
 
 export const StammdatenFinancialMaskedResponseSchema: z.ZodType<StammdatenFinancialMaskedResponse, unknown> = object<StammdatenFinancialMaskedResponse>({
@@ -964,6 +984,7 @@ export const StammdatenFinancialMaskedResponseSchema: z.ZodType<StammdatenFinanc
   tax_id_masked: nullable(str),
   social_security_number_masked: nullable(str),
   kept_by_traeger: bool,
+  version: str,
 });
 
 /** Go: workforce.StaffTargetOverride */
@@ -1290,6 +1311,7 @@ export interface StammdatenFinancialRevealResponse {
   iban: string | null;
   tax_id: string | null;
   social_security_number: string | null;
+  version: string;
 }
 
 export const StammdatenFinancialRevealResponseSchema: z.ZodType<StammdatenFinancialRevealResponse, unknown> = object<StammdatenFinancialRevealResponse>({
@@ -1297,6 +1319,7 @@ export const StammdatenFinancialRevealResponseSchema: z.ZodType<StammdatenFinanc
   iban: nullable(str),
   tax_id: nullable(str),
   social_security_number: nullable(str),
+  version: str,
 });
 
 /** Go: timetracking.targetOverrideRequest */
@@ -1391,6 +1414,7 @@ export interface PayrollAbsenceTypeRequest {
 /** Go: timetracking.PayrollNumberBody */
 export interface PayrollNumberBody {
   personnel_number?: string | null;
+  expected_version?: string;
   note?: string;
 }
 
@@ -1439,6 +1463,7 @@ export interface StammdatenArbeitsvertragRequest {
   probation_end_date?: string | null;
   weekly_hours?: number | null;
   employment_type?: string | null;
+  expected_version?: string;
   note?: string;
 }
 
@@ -1447,6 +1472,7 @@ export interface StammdatenFinancialRequest {
   iban?: string | null;
   tax_id?: string | null;
   social_security_number?: string | null;
+  expected_version?: string;
   note?: string;
 }
 
@@ -1459,6 +1485,7 @@ export interface StammdatenKontaktRequest {
   email?: string | null;
   emergency_contact_name?: string | null;
   emergency_contact_phone?: string | null;
+  expected_version?: string;
   note?: string;
 }
 
@@ -1468,6 +1495,7 @@ export interface StammdatenPersonRequest {
   last_name?: string;
   birthday?: string | null;
   gender?: string | null;
+  expected_version?: string;
   note?: string;
 }
 
@@ -1483,6 +1511,7 @@ export interface StammdatenQualificationPayload {
 /** Go: timetracking.StammdatenQualifikationenRequest */
 export interface StammdatenQualifikationenRequest {
   qualifikationen?: StammdatenQualificationPayload[] | null;
+  expected_version?: string;
   note?: string;
 }
 

@@ -69,6 +69,7 @@ func newExportTransferResponse(outcome ExportTransferOutcome) ExportTransferResp
 // or null to clear the number.
 type PayrollNumberBody struct {
 	PersonnelNumber *string `json:"personnel_number"`
+	ExpectedVersion string  `json:"expected_version"`
 	Note            string  `json:"note"`
 }
 

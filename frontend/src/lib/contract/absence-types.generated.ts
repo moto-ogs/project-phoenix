@@ -58,6 +58,7 @@ export interface AllowanceSummaryResponse {
   booking_days: number;
   carried_in: AllowanceCarryResponse | null;
   kept_by_traeger: boolean;
+  version: string;
 }
 
 export const AllowanceSummaryResponseSchema: z.ZodType<AllowanceSummaryResponse, unknown> = object<AllowanceSummaryResponse>({
@@ -73,6 +74,7 @@ export const AllowanceSummaryResponseSchema: z.ZodType<AllowanceSummaryResponse,
   booking_days: num,
   carried_in: nullable(AllowanceCarryResponseSchema),
   kept_by_traeger: bool,
+  version: str,
 });
 
 /** Go: absencetypes.AllowancePreviewResponse */
@@ -112,6 +114,7 @@ export interface SetAllowanceRequest {
   year?: number;
   entitled_days?: number;
   reason?: string;
+  expected_version?: string;
 }
 
 export const routes = {
