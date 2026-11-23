@@ -318,6 +318,13 @@ export default function MealPlanPage() {
     [weekDates, drafts, originals],
   );
   const isDirty = changedDays.length > 0;
+  // A row with a note or allergens but no dish yet is not a change of the
+  // plan, but a background read must not wipe it either.
+  const hasUnnamedInput = weekDates.some((date) =>
+    (drafts[date] ?? []).some(
+      (row) => row.dish.trim() === "" && rowHasContent(row),
+    ),
+  );
 
   // Freeze all edit controls while a save, an explicit read of the week, or
   // "Vorwoche übernehmen" is in flight. handleSave() captures the pre-click
@@ -334,9 +341,9 @@ export default function MealPlanPage() {
     const entries = weekData;
     if (!weekKey || !entries || appliedWeek.current?.data === entries) return;
     const sameWeek = appliedWeek.current?.key === weekKey;
-    if (sameWeek && (isDirty || editingLocked)) return;
+    if (sameWeek && (isDirty || hasUnnamedInput || editingLocked)) return;
     applyWeek(weekKey, entries);
-  }, [weekKey, weekData, isDirty, editingLocked, applyWeek]);
+  }, [weekKey, weekData, isDirty, hasUnnamedInput, editingLocked, applyWeek]);
 
   // Warn before discarding unsaved changes — both on hard unloads (tab close /
   // reload) and on in-app navigation (clicking a sidebar/header link), which
@@ -522,26 +529,36 @@ export default function MealPlanPage() {
   };
 
   // Someone stored a day differently since this page read it: take the
-  // stored week as the new read state and keep the drafts, so the changed
-  // days stay marked. „Verwerfen“ then shows the stored plan, „Speichern“
-  // replaces it.
-  const adoptStoredWeek = async () => {
-    if (!weekKey) return;
+  // stored week as the new read state. Only the days still unsaved keep
+  // their drafts and stay marked; every other day shows the stored plan, so
+  // „Speichern“ cannot send back an old day the person never edited.
+  // „Verwerfen“ then shows the stored plan, „Speichern“ replaces the kept
+  // days. Answers the read's error, or null.
+  const adoptStoredWeek = async (unsaved: string[]): Promise<unknown> => {
+    if (!weekKey) return null;
     try {
       const entries = await week.mutate(getMealPlanWeek(mondayISO), {
         revalidate: false,
       });
-      if (!entries) return;
+      if (!entries) return null;
       appliedWeek.current = { key: weekKey, data: entries };
       const stored = draftsFromEntries(entries, weekDates);
       const orig: Record<string, DishDraft[]> = {};
       for (const date of weekDates) orig[date] = normalizeDay(stored[date]!);
       setOriginals(orig);
+      setDrafts((prev) => {
+        const next = { ...prev };
+        for (const date of weekDates) {
+          if (!unsaved.includes(date)) next[date] = stored[date]!;
+        }
+        return next;
+      });
+      return null;
     } catch (err) {
-      // The conflict stays on screen; the next save answers it again.
       logger.error("meal_plan_conflict_reload_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
+      return err;
     }
   };
 
@@ -573,12 +590,18 @@ export default function MealPlanPage() {
       // Toast: die noch ungespeicherten Tage bleiben sichtbar markiert.
       const changedElsewhere =
         err instanceof ApiError && err.code === "meals.day_changed";
-      if (changedElsewhere) await adoptStoredWeek();
+      const readError = changedElsewhere
+        ? await adoptStoredWeek(
+            changedDays.filter((date) => !(date in persisted)),
+          )
+        : null;
       // A changed day needs the person's decision, not the same request
-      // again: „Speichern“ and „Verwerfen“ stay next to it.
+      // again: „Speichern“ and „Verwerfen“ stay next to it. Without the
+      // stored week „Verwerfen“ would show the old read, so the failed read
+      // is shown; its retry saves again, which reads the week again.
       void saveErrors.show(
-        err,
-        changedElsewhere
+        readError ?? err,
+        changedElsewhere && readError === null
           ? { object: "die Woche im Speiseplan" }
           : {
               object: "die Woche im Speiseplan",

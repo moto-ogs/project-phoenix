@@ -185,7 +185,7 @@ func TestModuleRejectsUnknownAllergensBeforeWriting(t *testing.T) {
 
 // A save with the day as its saver read it locks the day, compares the
 // stored day in stored form and refuses a day changed since; without a read
-// state it neither locks nor reads.
+// state it takes no lock and writes unchecked.
 func TestModuleComparesTheReadDayBeforeTheWrite(t *testing.T) {
 	t.Parallel()
 
@@ -206,7 +206,7 @@ func TestModuleComparesTheReadDayBeforeTheWrite(t *testing.T) {
 	}{
 		{"matching read state", &asRead, nil, []string{"lock 2026-09-07", "read 2026-09-07", "write 2026-09-07"}},
 		{"changed since read", &empty, mealplan.ErrDayChanged, []string{"lock 2026-09-07", "read 2026-09-07"}},
-		{"no read state", nil, nil, []string{"write 2026-09-07"}},
+		{"no read state", nil, nil, []string{"read 2026-09-07", "write 2026-09-07"}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

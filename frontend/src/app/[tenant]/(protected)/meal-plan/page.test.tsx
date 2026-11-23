@@ -591,6 +591,72 @@ describe("Speiseplan: Woche aus dem Cache beim erneuten Öffnen", () => {
     );
   });
 
+  it("shows a colleague's other days after a conflict instead of saving them back", async () => {
+    const tuesday = { ...stored, date: "2026-10-06", dish: "Linsen" };
+    getMealPlanWeek.mockReset().mockResolvedValueOnce([stored, tuesday]);
+    getMealPlanWeek.mockResolvedValue([
+      { ...stored, dish: "Eintopf" },
+      { ...tuesday, dish: "Reis" },
+    ]);
+    setDay
+      .mockReset()
+      .mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "meals.day_changed" }),
+      )
+      .mockResolvedValue(undefined);
+    renderPage();
+    fireEvent.change(await screen.findByDisplayValue("Fischstäbchen"), {
+      target: { value: "Nudeln" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await screen.findByText(
+      catalogText("meals.day_changed", "die Woche im Speiseplan"),
+    );
+
+    // Only the edited day keeps its draft; Tuesday shows the stored change.
+    expect(await screen.findByDisplayValue("Reis")).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("Linsen")).not.toBeInTheDocument();
+    expect(screen.getByDisplayValue("Nudeln")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(setDay).toHaveBeenCalledTimes(2));
+    expect(setDay).toHaveBeenLastCalledWith(
+      "2026-10-05",
+      [{ dish: "Nudeln", note: null, allergens: [] }],
+      [{ dish: "Eintopf", note: null, allergens: [] }],
+    );
+  });
+
+  it("shows the failed read after a conflict, not an old week to discard to", async () => {
+    getMealPlanWeek
+      .mockReset()
+      .mockResolvedValueOnce([stored])
+      .mockRejectedValueOnce(
+        new ApiError("week exploded", 503, { code: "general.unavailable" }),
+      )
+      .mockResolvedValue([{ ...stored, dish: "Eintopf" }]);
+    setDay
+      .mockReset()
+      .mockRejectedValue(
+        new ApiError("changed", 409, { code: "meals.day_changed" }),
+      );
+    renderPage();
+    fireEvent.change(await screen.findByDisplayValue("Fischstäbchen"), {
+      target: { value: "Nudeln" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(
+      await screen.findByText(
+        catalogText("general.unavailable", "die Woche im Speiseplan"),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        catalogText("meals.day_changed", "die Woche im Speiseplan"),
+      ),
+    ).not.toBeInTheDocument();
+  });
+
   it("shows the stored day after a conflict when the person discards", async () => {
     getMealPlanWeek.mockReset().mockResolvedValueOnce([stored]);
     getMealPlanWeek.mockResolvedValue([{ ...stored, dish: "Eintopf" }]);

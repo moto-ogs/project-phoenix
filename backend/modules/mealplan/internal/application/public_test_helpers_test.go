@@ -15,11 +15,6 @@ type seamStore struct {
 	e *recordingEngine
 }
 
-// FindWeek reads no earlier menu: every save in the seam is a first publish.
-func (s seamStore) FindWeek(context.Context, domain.Date, domain.Date) ([]domain.Entry, domain.OperationStats, error) {
-	return nil, domain.OperationStats{}, nil
-}
-
 func (s seamStore) ReplaceDay(ctx context.Context, date domain.Date, values []mealplan.Dish, _ *time.Time) (domain.OperationStats, error) {
 	dishes := make([]mealplan.Dish, 0, len(values))
 	for _, v := range values {
@@ -33,6 +28,8 @@ func (s seamStore) LockDay(_ context.Context, date domain.Date) (domain.Operatio
 	return domain.OperationStats{}, nil
 }
 
+// FindWeek reads the day the engine holds; without one every save in the
+// seam is a first publish.
 func (s seamStore) FindWeek(_ context.Context, start, _ domain.Date) ([]domain.Entry, domain.OperationStats, error) {
 	s.e.calls = append(s.e.calls, "read "+start.String())
 	return s.e.stored, domain.OperationStats{}, nil

@@ -438,8 +438,8 @@ func (s *Service) weekEntries(ctx context.Context, monday domain.Date) (entries 
 // that already had a menu tells the families with a meal booked on it in the
 // same unit of work (#7145) and marks the day as changed for the staff
 // (#7666); saving the same menu again keeps the mark it had. With expected
-// set, the day is locked first and a day stored differently since it was
-// read is refused (ErrDayChanged).
+// set, a day stored differently since it was read is refused
+// (ErrDayChanged).
 func (s *Service) replace(ctx context.Context, date domain.Date, dishes []mealplan.Dish, expected *[]mealplan.Dish, actorAccountID int64) error {
 	operation := "replace_day"
 	if len(dishes) == 0 {
@@ -469,8 +469,9 @@ func (s *Service) replace(ctx context.Context, date domain.Date, dishes []mealpl
 }
 
 // storedDay reads the day before a write. A save with its read state holds
-// the day's lock until commit, so no other save slips in between check and
-// write.
+// the day's lock until commit, so no other checked save slips in between
+// check and write. A save without one (the DELETE route, a page from before
+// the check) takes no lock and stays last-write-wins.
 func (s *Service) storedDay(txCtx context.Context, date domain.Date, expected *[]mealplan.Dish) ([]domain.Entry, domain.OperationStats, error) {
 	var stats domain.OperationStats
 	if expected != nil {
