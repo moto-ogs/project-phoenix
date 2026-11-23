@@ -15802,17 +15802,6 @@
     },
     {
       "adr": "0067",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.rosterBatch.SaveRosterChanges",
-      "classification": "leaf",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.BookingRosters.SaveRosterChanges",
-      "reason": "Validated tenant-local roster diff or source update through the narrow SourcedRosterCommands capability. The target validates fields and writes only Timetable rows in the ambient transaction; the caller holds the recurrence gate.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/timetable.SourcedRosterCommands.SaveSourcedRosterChanges",
-      "target_owner": "timetable-activities"
-    },
-    {
-      "adr": "0067",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.bookingRosters.SaveRosterChanges",
       "classification": "leaf",
       "effect": "mutation",
