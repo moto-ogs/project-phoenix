@@ -7,6 +7,7 @@ const sourcePhase: Phase = {
   id: "1",
   name: "Schuljahr 2025/26",
   kind: "school_year",
+    version: "phase-read",
   service_start_date: "2025-08-01",
   service_end_date: "2026-07-31",
   enrollment_open_at: undefined,

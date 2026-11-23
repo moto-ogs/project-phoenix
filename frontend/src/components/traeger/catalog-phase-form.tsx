@@ -12,7 +12,10 @@ import { DateTimePicker } from "~/components/ui/date-time-picker";
 import { EditActions } from "~/components/ui/edit-actions";
 import { FieldErrorHint } from "~/components/ui/field-error-hint";
 import { FieldLabel } from "~/components/ui/field-label";
-import { FormErrorAlert } from "~/components/ui/form-error-alert";
+import {
+  FormErrorAlert,
+  LoadErrorAlert,
+} from "~/components/ui/form-error-alert";
 import { FormFieldset } from "~/components/ui/form-fieldset";
 import { Input } from "~/components/ui/input";
 import { SectionCard } from "~/components/ui/section-card";
@@ -36,7 +39,9 @@ import {
   PHASE_KIND_LABELS,
   PHASE_OVERFLOW_LABELS,
 } from "~/lib/enrollment-phase-labels";
+import { useReadDraftLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { type DraftSource, useDraftOn } from "~/lib/swr/read-draft";
 import type {
   TraegerPhase,
   TraegerPhaseDetail,
@@ -96,6 +101,13 @@ function phaseInputOf(phase: TraegerPhase): TraegerPhaseInput {
 
 type FieldErrors = Record<string, string>;
 
+/** Why an edit cannot be saved yet (ADR 0311). */
+function draftBlockReason(status: string): string {
+  return status === "loadFailed"
+    ? "Lade zuerst den gespeicherten Stand neu."
+    : "Der gespeicherte Stand wird geladen.";
+}
+
 /** The checks the form makes before it sends; the backend checks again. */
 export function validatePhaseInput(input: TraegerPhaseInput): FieldErrors {
   const errors: FieldErrors = {};
@@ -124,25 +136,55 @@ export function validatePhaseInput(input: TraegerPhaseInput): FieldErrors {
   return errors;
 }
 
+/** No phase to change: the form creates one and sends no version. */
+const NEW_PHASE: DraftSource<TraegerPhaseDetail> = {
+  opening: null,
+  data: undefined,
+  reload: () => Promise.resolve(undefined),
+};
+
 export function CatalogPhaseForm({
-  phase,
+  source,
   schools,
   saveLabel,
   onSave,
   onSaved,
   onCancel,
 }: Readonly<{
-  /** The phase to change; without it the form creates one. */
-  phase?: TraegerPhase;
+  /**
+   * The read of the phase to change; without it the form creates one. The
+   * draft rests on the version read when editing starts (ADR 0311).
+   */
+  source?: DraftSource<TraegerPhaseDetail>;
   schools: readonly TraegerSchool[];
   saveLabel: string;
-  onSave: (input: TraegerPhaseInput) => Promise<TraegerPhaseDetail>;
+  /** Saves the input; an edit sends the version it rests on. */
+  onSave: (
+    input: TraegerPhaseInput,
+    version?: string,
+  ) => Promise<TraegerPhaseDetail>;
   onSaved: (phase: TraegerPhaseDetail) => void;
   onCancel: () => void;
 }>) {
-  const [draft, setDraft] = useState<TraegerPhaseInput>(() =>
-    phase ? phaseInputOf(phase) : blankPhaseInput(),
+  // An edit rests on the read version: a newer read refills it only while
+  // untouched, after a refusal the stored phase shows, and nothing is sent
+  // until it was read.
+  const editor = useDraftOn<
+    TraegerPhaseDetail,
+    TraegerPhaseInput,
+    string,
+    TraegerPhaseDetail
+  >(source ?? NEW_PHASE, {
+    token: (stored) => stored.version,
+    toDraft: phaseInputOf,
+    answer: (saved) => saved,
+  });
+  const [blank, setBlank] = useState<TraegerPhaseInput>(() =>
+    blankPhaseInput(),
   );
+  const draft = (source ? editor.draft : undefined) ?? blank;
+  const setDraft = source ? editor.setDraft : setBlank;
+  const loadError = useReadDraftLoadError(editor, "die Anmeldephase");
   const [saving, setSaving] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
@@ -168,6 +210,31 @@ export function CatalogPhaseForm({
       formErrors.invalid("Bitte prüfe die markierten Felder.", found);
       return;
     }
+    if (source) {
+      if (!editor.canSubmit) return;
+      setSaving(true);
+      const result = await editor.submit((version, edited) =>
+        onSave(edited, version),
+      );
+      setSaving(false);
+      if (result.ok) {
+        onSaved(result.saved);
+        return;
+      }
+      logger.error("traeger_catalog_phase_save_failed", {
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
+      });
+      // Changed since it was read: the stored phase shows once it is read
+      // again, without offering the same save once more.
+      void formErrors.show(result.error, {
+        object: "die Anmeldephase",
+        ...(result.refused ? { reload: result.reload } : {}),
+      });
+      return;
+    }
     setSaving(true);
     try {
       onSaved(await onSave(draft));
@@ -187,10 +254,16 @@ export function CatalogPhaseForm({
       description="Diese Angaben bekommt jede Schule als eigene Anmeldephase. Die Schule kann sie danach ändern."
       footer={
         <EditActions
-          onCancel={onCancel}
+          onCancel={() => {
+            if (source) editor.discard();
+            onCancel();
+          }}
           onSave={() => formRef.current?.requestSubmit()}
           saving={saving}
           saveLabel={saveLabel}
+          {...(source && !editor.canSubmit
+            ? { disabled: true, disabledReason: draftBlockReason(editor.status) }
+            : {})}
         />
       }
     >
@@ -203,6 +276,7 @@ export function CatalogPhaseForm({
           void submit();
         }}
       >
+        {loadError ? <LoadErrorAlert error={loadError} /> : null}
         <FormErrorAlert message={formErrors.error} />
         <div className="grid gap-4 sm:grid-cols-2">
           <Input

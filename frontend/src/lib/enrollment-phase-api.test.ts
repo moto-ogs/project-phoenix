@@ -51,6 +51,7 @@ function mkPhase(id: string, name: string): Phase {
     id,
     name,
     kind: "school_year",
+    version: "phase-read",
     service_start_date: "2026-09-01",
     service_end_date: "2027-07-31",
     enrollment_open_at: undefined,

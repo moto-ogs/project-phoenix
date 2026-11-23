@@ -6,6 +6,7 @@ const phase: Phase = {
   id: "phase-1",
   name: "Anmeldephase 2026/2027",
   kind: "school_year",
+    version: "phase-read",
   service_start_date: "2026-08-01",
   service_end_date: "2027-07-31",
   enrollment_open_at: "2026-05-01T00:00:00Z",

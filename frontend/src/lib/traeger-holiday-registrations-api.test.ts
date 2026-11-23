@@ -117,6 +117,7 @@ const BACKEND_DETAIL = {
     event("confirm", "2026-11-05T09:00:00Z", { from: "received" }),
   ],
   criteria: null,
+  version: "registration-read",
 } satisfies sharedContract.HolidayRegistrationDetail;
 
 describe("traeger-holiday-registrations-api", () => {
