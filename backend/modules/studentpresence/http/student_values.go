@@ -13,8 +13,7 @@ import (
 // presence data is kept (#3349).
 type PrivacyConsentCapability interface {
 	ListPrivacyConsents(context.Context, int64) ([]studentpresence.PrivacyConsent, error)
-	RecordPrivacyConsent(context.Context, studentpresence.PrivacyConsent) (studentpresence.PrivacyConsent, error)
-	RevisePrivacyConsent(context.Context, studentpresence.PrivacyConsent) (studentpresence.PrivacyConsent, error)
+	RevisePrivacyConsent(context.Context, studentpresence.PrivacyConsentRevision) (studentpresence.RevisedPrivacyConsent, error)
 }
 
 // withinTenant runs fn in the transaction of tenantID. Inside a route that

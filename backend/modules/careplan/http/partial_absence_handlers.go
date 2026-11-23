@@ -20,6 +20,9 @@ type PartialAbsenceRequest struct {
 	Date     string `json:"date"`
 	FromTime string `json:"from_time"`
 	Reason   string `json:"reason,omitempty"`
+	// ExpectedVersion is the version of the partial absence an update was
+	// read from (ADR 0311); a create sends none.
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 func (req *PartialAbsenceRequest) Bind(_ *http.Request) error {
@@ -52,6 +55,9 @@ type PartialAbsenceResponse struct {
 	CreatedBy ident.ID `json:"created_by"`
 	CreatedAt string   `json:"created_at"`
 	UpdatedAt string   `json:"updated_at"`
+	// Version is what an update of this partial absence sends back as
+	// expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 // partialAbsenceDeletedResponse confirms a removed partial absence.
@@ -68,6 +74,7 @@ func mapPartialAbsenceToResponse(row *careplan.PickupException) PartialAbsenceRe
 		Auto:      row.ExcusedAuto,
 		CreatedAt: row.CreatedAt.Format(time.RFC3339),
 		UpdatedAt: row.UpdatedAt.Format(time.RFC3339),
+		Version:   careplan.PartialAbsenceVersion(*row),
 	}
 	if row.ExcusedCreatedBy != nil {
 		response.CreatedBy = ident.ID(*row.ExcusedCreatedBy)
@@ -205,6 +212,8 @@ func (rs *Resource) bindPartialAbsenceInput(w http.ResponseWriter, r *http.Reque
 		Reason:    req.Reason,
 		StaffID:   staffID,
 		ByTraeger: careplan.EnteredByTraeger(r.Context(), staffID),
+
+		ExpectedVersion: req.ExpectedVersion,
 	}, true
 }
 

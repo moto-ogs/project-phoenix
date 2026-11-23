@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
@@ -12,38 +13,39 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// careEnrollmentDraft is the roster row one child's bookings plan on one
-// activity group before it is written.
+// careEnrollmentDraft is one roster row a child's bookings plan on one
+// activity group before it is written. A group can carry several: one row
+// has one weekday set and one window, so bookings that end on different days
+// plan one row per stretch (#7908).
 type careEnrollmentDraft struct {
 	activityGroupID  int64
 	calendarPeriodID *int64
 	selectedWeekday  map[int]bool
 	allWeekdays      bool
-	// legacyOwned marks a draft written by the legacy ActivityGroupID feed
-	// (#1651). The sourced feed never merges into such a draft: the explicit
-	// legacy link owns the child's row on that template, and mixing both
-	// feeds' weekdays into one row would leave the resync unable to tell
-	// which days belong to which feed (#2147 review).
-	legacyOwned bool
-	// scheduleValidFrom/Until bound the draft's rows to the template segment's
-	// recurrence envelope (#2147 review): a split predecessor must not receive
-	// rows covering dates after its capped valid_until, nor a successor rows
-	// before its start. They also stop at the phase's overlap with the
-	// template's period. Only the sourced-template feed sets them; the legacy
-	// ActivityGroupID feed keeps its pre-#2137 phase-wide rows (nil = open).
-	scheduleValidFrom  *calendar.Date
-	scheduleValidUntil *calendar.Date
-	// linkValidFrom/Until bound a sourced draft's rows to the window the
-	// child's offering link is actually valid in (#2147 review): a dated
-	// switch into or out of the offering must not plan the child outside it.
-	// The legacy feed leaves them nil — its dated flows cap rows via the
-	// adjustment split instead.
-	linkValidFrom  *calendar.Date
-	linkValidUntil *calendar.Date
-	// studentValidUntil is the child's exclusive care end. Unlike link bounds,
-	// it also constrains the legacy feed, so a later resync cannot recreate
-	// rows after a completed care exit.
+	// validFrom/validUntil bound the row within the phase (until exclusive,
+	// nil = the phase's own bound). A sourced draft stops at its template
+	// segment's recurrence envelope, clipped to the phase's overlap with the
+	// template's period, and at the window the child's offering link is valid
+	// in (#2147 review): a split predecessor gets no row past its capped
+	// valid_until, and a dated switch into or out of the offering plans no
+	// day outside it. A draft of the legacy ActivityGroupID feed starts with
+	// the phase, its dated flows start rows via the adjustment split, and
+	// ends with its booking (#7908).
+	validFrom  *calendar.Date
+	validUntil *calendar.Date
+	// studentValidUntil is the child's exclusive care end. It bounds every
+	// draft, so a later resync cannot recreate rows after a completed care
+	// exit.
 	studentValidUntil *calendar.Date
+}
+
+// careDraftPlan collects what a child's booking links plan before the rows
+// are cut: per activity group one draft per link of the legacy
+// ActivityGroupID feed (#1651), each ending with its link, and the one draft
+// of the sourced feed (#2137).
+type careDraftPlan struct {
+	legacy  map[int64][]*careEnrollmentDraft
+	sourced map[int64]*careEnrollmentDraft
 }
 
 // draftSources are the templates and schedules the sourced feed drafts on,
@@ -59,9 +61,9 @@ func (m *BookingMaterialization) buildCareEnrollmentDrafts(
 	links []*careplan.BookedOffering,
 	offerings []careplan.CareOffering,
 	phase careplan.OfferingPhase,
-) (map[int64]*careEnrollmentDraft, map[int64]ports.SourcedTemplate, error) {
+) (map[int64][]*careEnrollmentDraft, map[int64]ports.SourcedTemplate, error) {
 	offeringByID := offeringsByID(offerings)
-	gradeLevel, studentValidUntil, err := m.studentCareDraftBounds(ctx, studentID)
+	student, studentValidUntil, err := m.studentCareDraftBounds(ctx, studentID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -69,7 +71,7 @@ func (m *BookingMaterialization) buildCareEnrollmentDrafts(
 	if err != nil {
 		return nil, nil, err
 	}
-	drafts := make(map[int64]*careEnrollmentDraft)
+	plan := careDraftPlan{legacy: make(map[int64][]*careEnrollmentDraft), sourced: make(map[int64]*careEnrollmentDraft)}
 	// Templates sourcing several offerings are not drafted per link — see
 	// addSourcedTemplateDrafts — the caller resyncs them after persisting.
 	multiSource := make(map[int64]ports.SourcedTemplate)
@@ -81,16 +83,19 @@ func (m *BookingMaterialization) buildCareEnrollmentDrafts(
 				slog.Int64("care_offering_id", link.CareOfferingID))
 			continue
 		}
-		if err := m.addLegacyLinkedGroupDrafts(ctx, drafts, offering, link, phase); err != nil {
+		if err := m.addLegacyLinkedGroupDrafts(ctx, plan.legacy, offering, link, phase); err != nil {
 			return nil, nil, err
 		}
-		feed := sourcedDraftFeed{offering: offering, link: link, phase: phase, gradeLevel: gradeLevel}
-		if err := m.addSourcedTemplateDrafts(ctx, drafts, multiSource, feed, sources); err != nil {
+		feed := sourcedDraftFeed{offering: offering, link: link, phase: phase, gradeLevel: student.GradeLevel, schoolClass: student.SchoolClass}
+		if err := m.addSourcedTemplateDrafts(ctx, plan.sourced, multiSource, feed, sources); err != nil {
 			return nil, nil, err
 		}
 	}
-	for _, draft := range drafts {
-		draft.studentValidUntil = cloneOptionalDate(studentValidUntil)
+	drafts := plan.rows(phase)
+	for _, rows := range drafts {
+		for _, draft := range rows {
+			draft.studentValidUntil = cloneOptionalDate(studentValidUntil)
+		}
 	}
 	return drafts, multiSource, nil
 }
@@ -124,32 +129,33 @@ func sourcedTemplatesByOffering(templates []ports.SourcedTemplate) map[int64][]p
 	return result
 }
 
-// studentCareDraftBounds derives the child's grade filter and exclusive care
-// end. A missing row yields open bounds for legacy compatibility.
-func (m *BookingMaterialization) studentCareDraftBounds(ctx context.Context, studentID int64) (*int16, *calendar.Date, error) {
+// studentCareDraftBounds reads the child's Jahrgang and school class the
+// sources' filters match on, and derives its exclusive care end. A missing
+// row yields open bounds for legacy compatibility.
+func (m *BookingMaterialization) studentCareDraftBounds(ctx context.Context, studentID int64) (ports.BookingStudent, *calendar.Date, error) {
 	if studentID <= 0 {
-		return nil, nil, nil
+		return ports.BookingStudent{}, nil, nil
 	}
 	student, err := m.deps.Students.Student(ctx, studentID, false)
 	if err != nil {
 		if errors.Is(err, ports.ErrBookingRowNotFound) {
-			return nil, nil, nil
+			return ports.BookingStudent{}, nil, nil
 		}
-		return nil, nil, fmt.Errorf("decision: load student for care draft bounds: %w", err)
+		return ports.BookingStudent{}, nil, fmt.Errorf("decision: load student for care draft bounds: %w", err)
 	}
 	var validUntil *calendar.Date
 	if student.EnrolledUntil != nil {
 		end := student.EnrolledUntil.AddDays(1)
 		validUntil = &end
 	}
-	return student.GradeLevel, validUntil, nil
+	return student, validUntil, nil
 }
 
 // addLegacyLinkedGroupDrafts is the pre-#2137 offering→template feed: the one
 // activity group the offering points at via ActivityGroupID.
 func (m *BookingMaterialization) addLegacyLinkedGroupDrafts(
 	ctx context.Context,
-	drafts map[int64]*careEnrollmentDraft,
+	drafts map[int64][]*careEnrollmentDraft,
 	offering *careplan.CareOffering,
 	link *careplan.BookedOffering,
 	phase careplan.OfferingPhase,
@@ -172,46 +178,152 @@ func (m *BookingMaterialization) addLegacyLinkedGroupDrafts(
 	if err := m.catalog.ValidateMaterializable(ctx, segments, phase, days); err != nil {
 		return fmt.Errorf("decision: care offering %d is not materializable: %w", link.CareOfferingID, err)
 	}
-	return addLegacySegmentDrafts(drafts, segments, days, link.CareOfferingID)
+	return addLegacySegmentDrafts(drafts, segments, days, link)
 }
 
 // addLegacySegmentDrafts drafts the legacy link's days on every segment of
-// its series.
-func addLegacySegmentDrafts(drafts map[int64]*careEnrollmentDraft, segments []careplan.LinkedSegment, days []string, offeringID int64) error {
+// its series, phase-wide on every overlapping segment (pre-#2137 behavior),
+// ending with the link (#7908). Each link keeps a draft of its own until
+// legacyLinkRows cuts the rows: links that end on different days cannot
+// share one row.
+func addLegacySegmentDrafts(drafts map[int64][]*careEnrollmentDraft, segments []careplan.LinkedSegment, days []string, link *careplan.BookedOffering) error {
 	for _, segment := range segments {
-		// The explicit legacy link owns the child's row on this template. When
-		// another link's sourced feed drafted it first, that draft is REPLACED,
-		// not merged: one row mixing both feeds' weekdays could never be told
-		// apart again by the resync's provenance check (#2147 review).
-		if draft := drafts[segment.Group.ID]; draft != nil && !draft.legacyOwned {
-			delete(drafts, segment.Group.ID)
-		}
-		if err := mergeCareEnrollmentDraft(drafts, segment, days, offeringID); err != nil {
+		groupID := segment.Group.ID
+		own := make(map[int64]*careEnrollmentDraft, 1)
+		if err := mergeCareEnrollmentDraft(own, segment, days, link.CareOfferingID); err != nil {
 			return err
 		}
-		// The legacy feed plans phase-wide rows on every overlapping segment
-		// (pre-#2137 behavior).
-		if draft := drafts[segment.Group.ID]; draft != nil {
-			draft.legacyOwned = true
-			draft.scheduleValidFrom, draft.scheduleValidUntil = nil, nil
-			draft.linkValidFrom, draft.linkValidUntil = nil, nil
+		draft := own[groupID]
+		if others := drafts[groupID]; len(others) > 0 && !sameOptionalInt64(others[0].calendarPeriodID, draft.calendarPeriodID) {
+			return fmt.Errorf("decision: care offering %d resolves to conflicting calendar_period_id", link.CareOfferingID)
 		}
+		draft.validUntil = cloneOptionalDate(link.ValidUntil)
+		drafts[groupID] = append(drafts[groupID], draft)
 	}
 	return nil
+}
+
+// rows cuts the plan into the roster rows to write, per activity group.
+//
+// The legacy links of a group share rows as far as they run together and
+// split where one of them ends (legacyLinkRows). The sourced draft of a
+// template without legacy rows is its one row, as before. Beside legacy rows
+// it contributes what they do not plan already: other weekdays, and the days
+// after a legacy link ended. The legacy rows are never merged with it, and
+// the remainder is cut exactly as the roster resync cuts it
+// (subtractTargetCoverage), so the resync finds the legacy rows protected
+// and the source rows servable, and leaves both alone (#7908). Before, the
+// legacy row replaced the sourced draft, and a child whose direct link
+// ended early would have dropped off a roster its source still booked.
+func (p careDraftPlan) rows(phase careplan.OfferingPhase) map[int64][]*careEnrollmentDraft {
+	rows := make(map[int64][]*careEnrollmentDraft, len(p.legacy)+len(p.sourced))
+	for groupID, links := range p.legacy {
+		if cut := legacyLinkRows(links, phase); len(cut) > 0 {
+			rows[groupID] = cut
+		}
+	}
+	for groupID, draft := range p.sourced {
+		legacy := rows[groupID]
+		if len(legacy) == 0 {
+			rows[groupID] = []*careEnrollmentDraft{draft}
+			continue
+		}
+		rows[groupID] = append(legacy, sourcedRowsBesideLegacy(draft, legacy, phase)...)
+	}
+	return rows
+}
+
+// legacyLinkRows cuts the legacy links of one activity group into rows: one
+// per stretch between two link ends, carrying the weekdays of the links
+// that still run there. Links that end together, or all run to the end of
+// the phase, share the one phase-wide row the feed has always written; a
+// link that ends earlier ends its weekdays with it. A link that ended before
+// the phase began plans nothing.
+func legacyLinkRows(links []*careEnrollmentDraft, phase careplan.OfferingPhase) []*careEnrollmentDraft {
+	ends := make([]calendar.Date, 0, len(links))
+	for _, link := range links {
+		if end := careDraftValidUntil(link, phase); end.After(phase.ServiceStart) && !slices.Contains(ends, end) {
+			ends = append(ends, end)
+		}
+	}
+	slices.SortFunc(ends, func(a, b calendar.Date) int { return a.Compare(b) })
+	rows := make([]*careEnrollmentDraft, 0, len(ends))
+	var from *calendar.Date
+	for i := range ends {
+		end := ends[i]
+		row := legacyRowUntil(links, phase, end)
+		row.validFrom = from
+		if last := len(rows) - 1; last >= 0 && sameSourcedDraftDays(rows[last], row) {
+			rows[last].validUntil = &end
+		} else {
+			rows = append(rows, row)
+		}
+		from = &end
+	}
+	return rows
+}
+
+// legacyRowUntil is the row of the stretch that ends on end: the weekdays
+// of every link that runs at least that long.
+func legacyRowUntil(links []*careEnrollmentDraft, phase careplan.OfferingPhase, end calendar.Date) *careEnrollmentDraft {
+	row := &careEnrollmentDraft{
+		activityGroupID: links[0].activityGroupID, calendarPeriodID: links[0].calendarPeriodID,
+		selectedWeekday: make(map[int]bool), validUntil: &end,
+	}
+	for _, link := range links {
+		if careDraftValidUntil(link, phase).Before(end) {
+			continue
+		}
+		row.allWeekdays = row.allWeekdays || link.allWeekdays
+		for weekday := range link.selectedWeekday {
+			row.selectedWeekday[weekday] = true
+		}
+	}
+	return row
+}
+
+// sourcedRowsBesideLegacy is what the sourced draft of a template still
+// plans beside the template's legacy rows.
+func sourcedRowsBesideLegacy(draft *careEnrollmentDraft, legacy []*careEnrollmentDraft, phase careplan.OfferingPhase) []*careEnrollmentDraft {
+	target := careDraftTarget(draft, phase)
+	if !target.validFrom.Before(target.validUntil) {
+		return nil
+	}
+	planned := make([]*sourcedRosterTarget, 0, len(legacy))
+	for _, row := range legacy {
+		planned = append(planned, careDraftTarget(row, phase))
+	}
+	remaining := subtractTargetCoverage([]*sourcedRosterTarget{target}, coverageFromSourcedTargets(planned))
+	rows := make([]*careEnrollmentDraft, 0, len(remaining))
+	for _, part := range remaining {
+		from, until := part.validFrom, part.validUntil
+		rows = append(rows, &careEnrollmentDraft{
+			activityGroupID: draft.activityGroupID, calendarPeriodID: draft.calendarPeriodID,
+			selectedWeekday: part.draft.selectedWeekday, allWeekdays: part.draft.allWeekdays,
+			validFrom: &from, validUntil: &until,
+		})
+	}
+	return rows
+}
+
+// careDraftTarget is the draft with the window it plans within the phase.
+func careDraftTarget(draft *careEnrollmentDraft, phase careplan.OfferingPhase) *sourcedRosterTarget {
+	return &sourcedRosterTarget{draft: draft, validFrom: careDraftValidFrom(draft, phase, nil), validUntil: careDraftValidUntil(draft, phase)}
 }
 
 // sourcedDraftFeed is one booking link feeding the templates that source its
 // offering.
 type sourcedDraftFeed struct {
-	offering   *careplan.CareOffering
-	link       *careplan.BookedOffering
-	phase      careplan.OfferingPhase
-	gradeLevel *int16
+	offering    *careplan.CareOffering
+	link        *careplan.BookedOffering
+	phase       careplan.OfferingPhase
+	gradeLevel  *int16
+	schoolClass string
 }
 
 // addSourcedTemplateDrafts is the #2137 feed: every template that declares
 // this offering as its roster source pulls the child in when the template's
-// Jahrgang filter matches. Misconfigured templates (no schedules, no
+// Jahrgang or Klassen filter matches. Misconfigured templates (no schedules, no
 // resolvable period, period drifted away from the phase) are skipped with a
 // warning instead of failing the approval — the editor surfaces the mismatch,
 // and blocking every approval on one broken template would be worse.
@@ -238,7 +350,9 @@ func (m *BookingMaterialization) addSourcedTemplateDrafts(
 		return fmt.Errorf("decision: resolve selected days for care offering %d: %w", feed.link.CareOfferingID, err)
 	}
 	for _, tmpl := range templates {
-		if !gradeFilterMatches(tmpl.SourceGradeLevels, feed.gradeLevel) {
+		// The two filters are mutually exclusive by validation, as in the
+		// resync (wantedSourcedRosterTargets).
+		if !gradeFilterMatches(tmpl.SourceGradeLevels, feed.gradeLevel) || !sourceClassFilterMatches(tmpl.SourceSchoolClasses, feed.schoolClass) {
 			continue
 		}
 		if len(tmpl.SourceCareOfferingIDs) > 1 {
@@ -304,12 +418,6 @@ func addSourcedSegmentDraft(
 	days []string,
 ) error {
 	templateID := segment.Group.ID
-	if existing := drafts[templateID]; existing != nil && existing.legacyOwned {
-		// The legacy ActivityGroupID feed already plans this child on the
-		// template and owns the row (see addLegacyLinkedGroupDrafts) — the
-		// sourced feed never merges into it.
-		return nil
-	}
 	_, existed := drafts[templateID]
 	if err := mergeCareEnrollmentDraft(drafts, segment, days, feed.link.CareOfferingID); err != nil {
 		return err
@@ -325,9 +433,14 @@ func addSourcedSegmentDraft(
 	// leaving the offering.
 	draft := drafts[templateID]
 	envelopeFrom, envelopeUntil := scheduleValidityBounds(schedules)
-	draft.scheduleValidFrom, draft.scheduleValidUntil = clipBoundsToPhase(envelopeFrom, envelopeUntil, phase)
-	draft.linkValidFrom = cloneOptionalDate(feed.link.ValidFrom)
-	draft.linkValidUntil = cloneOptionalDate(feed.link.ValidUntil)
+	from, until := clipBoundsToPhase(envelopeFrom, envelopeUntil, phase)
+	if feed.link.ValidFrom != nil && feed.link.ValidFrom.After(*from) {
+		from = cloneOptionalDate(feed.link.ValidFrom)
+	}
+	if feed.link.ValidUntil != nil && feed.link.ValidUntil.Before(*until) {
+		until = cloneOptionalDate(feed.link.ValidUntil)
+	}
+	draft.validFrom, draft.validUntil = from, until
 	return nil
 }
 

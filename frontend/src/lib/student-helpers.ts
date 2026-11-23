@@ -45,6 +45,8 @@ export type StudentConsent = ConsentRecord;
 export interface PrivacyConsent {
   accepted: boolean;
   dataRetentionDays: number;
+  /** The version of a child's stored consent read; defaults carry none. */
+  version?: string;
 }
 
 /** Die Zeile, mit der eine OGS-Ansicht einen Hinweis der Lehrkraft zeigt. */
@@ -175,6 +177,12 @@ export type Student = StudentCore &
     // The detail read's privacy_consent, flattened for form handling.
     privacy_consent_accepted?: boolean;
     data_retention_days?: number | null;
+    /** Write-only: the version of the consent read the form shows; a save of
+     *  the consent sends it back (ADR 0311). */
+    privacy_consent_version?: string;
+    /** The version of the master data the detail read showed (write access
+     *  only); a form save sends it back as expected_version (ADR 0311). */
+    version?: string;
     /** Answer of the create only: false when the child was created but the
      *  consent the form changed could not be saved (#5970). */
     privacy_consent_saved?: false;
