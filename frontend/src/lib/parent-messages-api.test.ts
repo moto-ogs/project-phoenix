@@ -320,7 +320,7 @@ describe("fetchUnreadCount", () => {
   });
 
   it("throws with backend error on non-OK", async () => {
-    mockFetch(async () => jsonOk({ detail: "Keine Berechtigung" }, 401));
+    mockFetch(async () => jsonOk({ detail: "Keine Berechtigung" }, 403));
     await expect(fetchUnreadCount()).rejects.toThrow(
       /Ungelesene Nachrichten konnten nicht geladen werden/,
     );

@@ -77,7 +77,8 @@ it.each(["same", "school", "account"])(
     expect(
       screen.queryByRole("button", { name: "Schließen" }),
     ).not.toBeInTheDocument();
-    expect(fetch).toHaveBeenCalled();
+    // The staff session gate answers first; the load follows.
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
   },
 );
 

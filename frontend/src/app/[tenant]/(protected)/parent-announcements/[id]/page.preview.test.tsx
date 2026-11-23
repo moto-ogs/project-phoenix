@@ -70,20 +70,23 @@ it.each(["none", "single_choice"])(
     // Anker: der Vorschaukopf ist sichtbar, kein vollständiger Datensatz.
     expect(screen.queryByText("Nur im Detail")).not.toBeInTheDocument();
     expect(screen.queryByText("Geheime Antwort")).not.toBeInTheDocument();
-    expect(fetch).toHaveBeenCalledWith(
-      "/api/parent-announcements/4",
-      expect.objectContaining({ method: "GET" }),
-    );
-    if (response_type !== "none") {
+    // The staff session gate answers first; the loads follow.
+    await waitFor(() => {
       expect(fetch).toHaveBeenCalledWith(
-        "/api/parent-announcements/4/poll-results",
+        "/api/parent-announcements/4",
         expect.objectContaining({ method: "GET" }),
       );
-      expect(fetch).toHaveBeenCalledWith(
-        "/api/parent-announcements/4/poll-children",
-        expect.objectContaining({ method: "GET" }),
-      );
-    }
+      if (response_type !== "none") {
+        expect(fetch).toHaveBeenCalledWith(
+          "/api/parent-announcements/4/poll-results",
+          expect.objectContaining({ method: "GET" }),
+        );
+        expect(fetch).toHaveBeenCalledWith(
+          "/api/parent-announcements/4/poll-children",
+          expect.objectContaining({ method: "GET" }),
+        );
+      }
+    });
   },
 );
 
@@ -130,14 +133,17 @@ it("loads evaluation before detail and reuses it only after detail confirms the 
     return pending.then((response) => response.clone());
   });
   render(<AnnouncementDetailPage />, { wrapper });
-  expect(fetch).toHaveBeenCalledWith(
-    "/api/parent-announcements/4/poll-results",
-    expect.objectContaining({ method: "GET" }),
-  );
-  expect(fetch).toHaveBeenCalledWith(
-    "/api/parent-announcements/4/poll-children",
-    expect.objectContaining({ method: "GET" }),
-  );
+  // The staff session gate answers first; the loads follow.
+  await waitFor(() => {
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/parent-announcements/4/poll-results",
+      expect.objectContaining({ method: "GET" }),
+    );
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/parent-announcements/4/poll-children",
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
   // Anker: die bekannte Identität steht im Kopf, die bereits geladenen Ergebnisse noch nicht.
   expect(
     screen.getByRole("heading", { name: "Sommerfest" }),
