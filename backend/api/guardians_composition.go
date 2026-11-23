@@ -10,6 +10,7 @@ import (
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/render"
 	apiCommon "github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
@@ -60,15 +61,19 @@ func renderPeopleDirectoryFailure(w http.ResponseWriter, r *http.Request, kind u
 	case usersAPI.FailureNotFound:
 		apiCommon.RenderError(w, r, apiCommon.ErrorNotFound(err))
 	case usersAPI.FailureConflict:
-		// A business rejection keeps its own code (general.changed_since_read).
-		if apiCommon.IsBusinessRejection(err) {
-			apiCommon.RenderError(w, r, apiCommon.ErrorBusinessRejection(err))
-			return
-		}
-		apiCommon.RenderError(w, r, apiCommon.ErrorConflict(err))
+		apiCommon.RenderError(w, r, guardianConflict(err))
 	default:
 		apiCommon.RenderError(w, r, apiCommon.ErrorInternalServer(err))
 	}
+}
+
+// guardianConflict renders a conflict; a business rejection keeps its own
+// code (general.changed_since_read for a stale bulk preview, ADR 0311).
+func guardianConflict(err error) render.Renderer {
+	if apiCommon.IsBusinessRejection(err) {
+		return apiCommon.ErrorBusinessRejection(err)
+	}
+	return apiCommon.ErrorConflict(err)
 }
 
 // guardianInputCodes gives the guardian input refusals the form can explain

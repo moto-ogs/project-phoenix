@@ -103,7 +103,7 @@ describe("authService", () => {
         ).resolves.toBe("v2");
 
         expect(fetchMock).toHaveBeenCalledTimes(1);
-        expect(sentUrl()).toBe("/api/auth/roles/1/permissions");
+        expect(sentUrl()).toBe("/api/auth/roles/1/permission-selection");
         expect(sentInit().method).toBe("PUT");
         expect(JSON.parse(String(sentInit().body))).toEqual({
           permission_ids: ["2", "3"],

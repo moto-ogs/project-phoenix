@@ -366,16 +366,35 @@ func (rs *Resource) readRolePermissions(w http.ResponseWriter, r *http.Request) 
 	return selection, true
 }
 
-// replaceRolePermissions applies a complete permission selection atomically.
+// replaceRolePermissions applies a complete permission selection atomically
+// and answers without a body. Deprecated for one release (ADR 0270): the
+// selection's PUT answers the stored version.
 func (rs *Resource) replaceRolePermissions(w http.ResponseWriter, r *http.Request) {
+	if _, ok := rs.applyRolePermissions(w, r); ok {
+		common.RespondNoContent(w, r)
+	}
+}
+
+// replaceRolePermissionSelection applies a complete permission selection
+// and answers the stored selection's version, so the next save follows
+// without a fresh read, even when the reload after this save fails.
+func (rs *Resource) replaceRolePermissionSelection(w http.ResponseWriter, r *http.Request) {
+	if version, ok := rs.applyRolePermissions(w, r); ok {
+		common.Respond(w, r, http.StatusOK, ReplaceRolePermissionsResponse{Version: version}, "Role permissions replaced successfully")
+	}
+}
+
+// applyRolePermissions replaces the selection of the role in the route; a
+// failure is answered.
+func (rs *Resource) applyRolePermissions(w http.ResponseWriter, r *http.Request) (string, bool) {
 	roleID, ok := common.ParseIntIDWithError(w, r, "roleId", common.MsgInvalidRoleID)
 	if !ok {
-		return
+		return "", false
 	}
 	req := &ReplaceRolePermissionsRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
-		return
+		return "", false
 	}
 	permissionIDs := make([]int64, len(req.PermissionIDs))
 	for i, permissionID := range req.PermissionIDs {
@@ -385,9 +404,7 @@ func (rs *Resource) replaceRolePermissions(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		rs.markRollback(r.Context())
 		common.RenderError(w, r, renderRoleMutationError(err))
-		return
+		return "", false
 	}
-	// The stored selection's version lets the next save follow without a
-	// fresh read, even when the reload after this save fails.
-	common.Respond(w, r, http.StatusOK, ReplaceRolePermissionsResponse{Version: version}, "Role permissions replaced successfully")
+	return version, true
 }

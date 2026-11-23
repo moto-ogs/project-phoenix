@@ -40,6 +40,10 @@ func AdminRouteContracts(caregiverState any) []common.RouteContract {
 	// permission selection carries the version a replacement sends back.
 	deprecatedRolePermissions := route("GET", "/roles/{roleId}/permissions/", nil, []PermissionResponse{})
 	deprecatedRolePermissions.Deprecated = true
+	// Deprecated for one release (ADR 0270): the selection's PUT answers the
+	// version of the stored selection.
+	deprecatedReplaceRolePermissions := route("PUT", "/roles/{roleId}/permissions/", ReplaceRolePermissionsRequest{}, nil)
+	deprecatedReplaceRolePermissions.Deprecated = true
 	// Deprecated for one release (ADR 0270): the role selection carries the
 	// version a role change sends back.
 	deprecatedAccountRoles := route("GET", "/accounts/{accountId}/roles/", nil, []RoleResponse{})
@@ -58,7 +62,8 @@ func AdminRouteContracts(caregiverState any) []common.RouteContract {
 		route("DELETE", "/roles/{id}/", nil, nil),
 		deprecatedRolePermissions,
 		route("GET", "/roles/{roleId}/permission-selection/", nil, RolePermissionsResponse{}),
-		route("PUT", "/roles/{roleId}/permissions/", ReplaceRolePermissionsRequest{}, ReplaceRolePermissionsResponse{}),
+		deprecatedReplaceRolePermissions,
+		route("PUT", "/roles/{roleId}/permission-selection/", ReplaceRolePermissionsRequest{}, ReplaceRolePermissionsResponse{}),
 		listPermissions,
 		deprecatedAccountRoles,
 		route("GET", "/accounts/{accountId}/role-selection/", nil, AccountRolesResponse{}),

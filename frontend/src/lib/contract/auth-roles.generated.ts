@@ -108,11 +108,19 @@ export const routes = {
     request: requestBody<UpdateRoleRequest>(),
     response: noData,
   },
+  "PUT /auth/roles/{roleId}/permission-selection/": {
+    method: "PUT",
+    pattern: "/auth/roles/{roleId}/permission-selection/",
+    portals: ["tenant"],
+    request: requestBody<ReplaceRolePermissionsRequest>(),
+    response: success(ReplaceRolePermissionsResponseSchema),
+  },
   "PUT /auth/roles/{roleId}/permissions/": {
     method: "PUT",
     pattern: "/auth/roles/{roleId}/permissions/",
     portals: ["tenant"],
+    deprecated: true,
     request: requestBody<ReplaceRolePermissionsRequest>(),
-    response: success(ReplaceRolePermissionsResponseSchema),
+    response: noData,
   },
 } as const;

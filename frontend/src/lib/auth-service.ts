@@ -61,7 +61,7 @@ export const authService = {
     // without reading again, also when the reload after this save fails.
     const stored = await bffJson(
       "tenant",
-      "PUT /auth/roles/{roleId}/permissions/",
+      "PUT /auth/roles/{roleId}/permission-selection/",
       {
         params: { roleId },
         body: {

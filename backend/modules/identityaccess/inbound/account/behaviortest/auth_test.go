@@ -1178,7 +1178,7 @@ func TestRolePermissionAssignment(t *testing.T) {
 		}
 		require.NoError(t, json.Unmarshal(selection.Body.Bytes(), &body))
 
-		req := testutil.NewJSONRequest(t, "PUT", fmt.Sprintf("/auth/roles/%d/permissions", role.ID), map[string]any{
+		req := testutil.NewJSONRequest(t, "PUT", fmt.Sprintf("/auth/roles/%d/permission-selection", role.ID), map[string]any{
 			"permission_ids":   []string{fmt.Sprintf("%d", permission.ID)},
 			"expected_version": body.Data.Version,
 		})
@@ -1196,6 +1196,14 @@ func TestRolePermissionAssignment(t *testing.T) {
 		reread := testutil.ExecuteWithAuthPermissions(t, router, testutil.NewJSONRequest(t, "GET", fmt.Sprintf("/auth/roles/%d/permission-selection", role.ID), nil), adminClaims, []string{"roles:manage"})
 		require.NoError(t, json.Unmarshal(reread.Body.Bytes(), &body))
 		assert.Equal(t, body.Data.Version, stored.Data.Version)
+
+		// The deprecated PUT keeps its empty answer for one release (ADR 0270).
+		legacy := testutil.NewJSONRequest(t, "PUT", fmt.Sprintf("/auth/roles/%d/permissions", role.ID), map[string]any{
+			"permission_ids":   []string{},
+			"expected_version": stored.Data.Version,
+		})
+		legacyRR := testutil.ExecuteWithAuthPermissions(t, router, legacy, adminClaims, []string{"roles:manage"})
+		assert.Equal(t, http.StatusNoContent, legacyRR.Code, "Replace failed: %s", legacyRR.Body.String())
 	})
 
 	t.Run("rejects an unknown permission while replacing permissions", func(t *testing.T) {

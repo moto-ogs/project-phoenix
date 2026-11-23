@@ -95,43 +95,49 @@ func (r *RoleAdministration) lockMutableRole(ctx context.Context, roleID int64, 
 // stored selection, so the caller never has to read it again to save again.
 func (r *RoleAdministration) ReplaceRolePermissions(ctx context.Context, roleID int64, permissionIDs []int64, expectedVersion string) (version string, err error) {
 	err = runFlowErr(ctx, r.flow(), func(ctx context.Context) error {
-		const op = "replace role permissions"
 		return r.runtime.RunInTx(ctx, func(txCtx context.Context) error {
-			// The role row serializes full replacements and the one-at-a-time
-			// mutations. Lock it before loading mappings so each operation observes
-			// the preceding committed selection.
-			if err := r.lockMutableRole(txCtx, roleID, op); err != nil {
-				return err
-			}
-			current, err := r.rolePermissions(txCtx, roleID, op)
-			if err != nil {
-				return err
-			}
-			if err := readstate.Check(expectedVersion, rolePermissionsVersion(current)); err != nil {
-				return failed(op, err)
-			}
-			desired, err := r.desiredRolePermissions(txCtx, permissionIDs)
-			if err != nil {
-				return err
-			}
-			if err := requireNoNewReservedPermission(desired, current, op); err != nil {
-				return err
-			}
-			if err := r.applyRolePermissionSelection(txCtx, roleID, desired, current, op); err != nil {
-				return err
-			}
-			stored := make([]int64, 0, len(desired))
-			for id := range desired {
-				stored = append(stored, id)
-			}
-			version = identityaccess.IDSetVersion(stored)
-			return nil
+			version, err = r.replaceRolePermissionsInTx(txCtx, roleID, permissionIDs, expectedVersion)
+			return err
 		})
 	})
 	if err != nil {
 		return "", err
 	}
 	return version, nil
+}
+
+// replaceRolePermissionsInTx runs the replacement in the caller's
+// transaction and answers the stored selection's version.
+func (r *RoleAdministration) replaceRolePermissionsInTx(txCtx context.Context, roleID int64, permissionIDs []int64, expectedVersion string) (string, error) {
+	const op = "replace role permissions"
+	// The role row serializes full replacements and the one-at-a-time
+	// mutations. Lock it before loading mappings so each operation observes
+	// the preceding committed selection.
+	if err := r.lockMutableRole(txCtx, roleID, op); err != nil {
+		return "", err
+	}
+	current, err := r.rolePermissions(txCtx, roleID, op)
+	if err != nil {
+		return "", err
+	}
+	if err := readstate.Check(expectedVersion, rolePermissionsVersion(current)); err != nil {
+		return "", failed(op, err)
+	}
+	desired, err := r.desiredRolePermissions(txCtx, permissionIDs)
+	if err != nil {
+		return "", err
+	}
+	if err := requireNoNewReservedPermission(desired, current, op); err != nil {
+		return "", err
+	}
+	if err := r.applyRolePermissionSelection(txCtx, roleID, desired, current, op); err != nil {
+		return "", err
+	}
+	stored := make([]int64, 0, len(desired))
+	for id := range desired {
+		stored = append(stored, id)
+	}
+	return identityaccess.IDSetVersion(stored), nil
 }
 
 // applyRolePermissionSelection removes the current permissions the selection

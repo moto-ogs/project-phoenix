@@ -325,6 +325,7 @@ func (rs *Resource) mountAdminRoutes(r chi.Router) {
 	// one release.
 	r.Route("/roles/{roleId}/permission-selection", func(r chi.Router) {
 		r.With(common.RequiresPermission(permRolesManage)).Get("/", rs.getRolePermissionSelection)
+		r.With(common.RequiresPermission(permRolesManage)).Put("/", rs.replaceRolePermissionSelection)
 	})
 
 	rs.mountInvitationRoutes(r)

@@ -22409,7 +22409,7 @@
     },
     {
       "method": "PUT",
-      "pattern": "/auth/roles/{roleId}/permissions/",
+      "pattern": "/auth/roles/{roleId}/permission-selection/",
       "portals": [
         "tenant"
       ],
@@ -22421,6 +22421,19 @@
         "kind": "ref",
         "ref": "ReplaceRolePermissionsResponse"
       }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/auth/roles/{roleId}/permissions/",
+      "portals": [
+        "tenant"
+      ],
+      "deprecated": true,
+      "request": {
+        "kind": "ref",
+        "ref": "ReplaceRolePermissionsRequest"
+      },
+      "no_data": true
     },
     {
       "method": "PUT",
