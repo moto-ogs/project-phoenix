@@ -741,6 +741,85 @@ describe("CalendarPeriodModal", () => {
     );
   });
 
+  // ADR 0311 rule 6: a failed read of the stored period after a refusal is
+  // a load error, and the refused version is not sent again.
+  it("names a failed read of the stored period after a refusal", async () => {
+    mockUpdate.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    mockGet.mockRejectedValueOnce(
+      new ApiError("down", 503, { code: "general.unavailable" }),
+    );
+    render(
+      <CalendarPeriodModal
+        isOpen
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+        initial={period}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText("Bezeichnung"), {
+      target: { value: "Mein Schuljahr" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Du siehst jetzt den neuen Stand/),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(mockUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  // ADR 0311 rule 5: a second save after an advisory warning carries the
+  // version the first save answered.
+  it("saves again with the version the first save answered", async () => {
+    mockUpdate
+      .mockResolvedValueOnce({
+        period: { ...period, name: "Mein Schuljahr", version: "v2" },
+        warnings: [
+          {
+            code: "overlapping_active_periods",
+            message: "Überschneidung",
+            overlappingPeriodIds: ["6"],
+            overlappingPeriodNames: ["Altes Schuljahr"],
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        period: { ...period, name: "Mein Schuljahr 2", version: "v3" },
+        warnings: [],
+      });
+    render(
+      <CalendarPeriodModal
+        isOpen
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+        initial={period}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText("Bezeichnung"), {
+      target: { value: "Mein Schuljahr" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
+    fireEvent.change(await screen.findByLabelText("Bezeichnung"), {
+      target: { value: "Mein Schuljahr 2" },
+    });
+    fireEvent.click(await screen.findByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(mockUpdate).toHaveBeenLastCalledWith(
+        "5",
+        expect.objectContaining({
+          name: "Mein Schuljahr 2",
+          expected_version: "v2",
+        }),
+      ),
+    );
+  });
+
   it("retries a failed save with the current form", async () => {
     mockCreate
       .mockRejectedValueOnce(
