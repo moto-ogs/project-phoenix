@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
+
 	peopleValues "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 
 	"github.com/moto-ogs/project-phoenix/api"
@@ -482,7 +484,7 @@ func TestGuardianService_DeleteGuardianWithLinks_RejectsChangedPreview(t *testin
 		return testpkg.TenantCommand3(t, txCtx, db, service.DeleteGuardianWithLinks, guardian.ID, []int64{999999}, 1)
 	})
 
-	require.ErrorIs(t, err, peoplePorts.ErrGuardianDeletePreviewChanged)
+	require.ErrorIs(t, err, readstate.ErrChanged)
 	survivor, err := testpkg.TenantQuery1(t, ctx, db, service.GetGuardianByID, guardian.ID)
 	require.NoError(t, err)
 	assert.NotNil(t, survivor, "guardian must survive when preview token is stale")

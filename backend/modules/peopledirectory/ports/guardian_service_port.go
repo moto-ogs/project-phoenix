@@ -46,5 +46,8 @@ type GuardianService interface {
 	UpdateGuardianPayment(ctx context.Context, guardianProfileID int64, input GuardianPaymentInput, changedByAccountID int64, note string) error
 	UpdatePhoneNumber(ctx context.Context, phoneID int64, req PhoneNumberUpdateRequest) error
 	UpdateStudentGuardianRelationship(ctx context.Context, relationshipID int64, req StudentGuardianUpdateRequest) error
+	// UpdateGuardianEntry saves the staff form of a child's guardian; check
+	// sees the locked profile and link before the first write.
+	UpdateGuardianEntry(ctx context.Context, edit peopleValues.GuardianEntryEdit, check func(*peopleValues.GuardianProfileSnapshot, *peopleValues.GuardianRelationshipSnapshot) error) error
 	ValidateNewGuardians(ctx context.Context, guardians []NewStudentGuardian) error
 }

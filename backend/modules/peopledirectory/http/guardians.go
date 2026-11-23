@@ -22,14 +22,10 @@ import (
 // show the catalog text selected by the error code.
 const (
 	msgInvalidGuardianID      = "invalid guardian ID"
-	msgInvalidPhoneID         = "invalid phone ID"
 	msgInvalidStudentID       = "invalid student ID"
-	msgInvalidRelationshipID  = "invalid relationship ID"
 	msgGuardianNotFound       = "guardian not found"
 	msgStudentNotFound        = "student not found"
 	msgRelationshipNotFound   = "relationship not found"
-	msgPhoneNotFound          = "phone number not found"
-	msgPhoneNotBelongsGuard   = "phone number does not belong to this guardian"
 	msgNotAuthenticated       = "user not authenticated"
 	msgGuardianStillLinked    = "Erziehungsberechtigte/r kann nicht gelöscht werden: Noch mit Kindern verknüpft"
 	msgInvalidPaymentGuardian = "Die erziehungsberechtigte Person konnte nicht zugeordnet werden."
@@ -220,7 +216,9 @@ func (rs *GuardianResource) Router() chi.Router {
 		r.With(usersRead, withTx).Get("/{id}", rs.getGuardian)
 
 		r.With(usersCreate, withTx).Post("/", rs.createGuardian)
-		r.With(usersUpdate, withTx).Put("/{id}", rs.updateGuardian)
+		// The single-field edits are deprecated (ADR 0311): the staff form saves
+		// a child's guardian as one entry with its version.
+		r.With(usersUpdate, withTx).Put("/{id}", rs.refuseUnversionedEdit)
 		// Read-only preview of a full delete's blast radius (admin-only check in
 		// the handler, #819).
 		r.With(usersDelete, withTx).Get("/{id}/delete-preview", rs.guardianDeletePreview)
@@ -234,7 +232,8 @@ func (rs *GuardianResource) Router() chi.Router {
 		r.With(usersUpdate, withTx).Post("/students/{studentId}/guardians", rs.linkGuardianToStudent)
 		// Atomic create-or-link of one or more guardians (#819).
 		r.With(usersUpdate, withTx).Post("/students/{studentId}/guardians/batch", rs.createStudentGuardians)
-		r.With(usersUpdate, withTx).Put("/relationships/{relationshipId}", rs.updateStudentGuardianRelationship)
+		r.With(usersUpdate, withTx).Put("/students/{studentId}/guardians/{guardianId}", rs.updateStudentGuardian)
+		r.With(usersUpdate, withTx).Put("/relationships/{relationshipId}", rs.refuseUnversionedEdit)
 		r.With(usersUpdate, withTx).Delete("/students/{studentId}/guardians/{guardianId}", rs.removeGuardianFromStudent)
 
 		rs.mountRelatedAccounts(r, withTx)
@@ -252,9 +251,9 @@ func (rs *GuardianResource) Router() chi.Router {
 		r.Route("/{id}/phone-numbers", func(r chi.Router) {
 			r.With(usersRead, withTx).Get("/", rs.listGuardianPhoneNumbers)
 			r.With(usersUpdate, withTx).Post("/", rs.addPhoneNumber)
-			r.With(usersUpdate, withTx).Put("/{phoneId}", rs.updatePhoneNumber)
-			r.With(usersUpdate, withTx).Delete("/{phoneId}", rs.deletePhoneNumber)
-			r.With(usersUpdate, withTx).Post("/{phoneId}/set-primary", rs.setPrimaryPhone)
+			r.With(usersUpdate, withTx).Put("/{phoneId}", rs.refuseUnversionedEdit)
+			r.With(usersUpdate, withTx).Delete("/{phoneId}", rs.refuseUnversionedEdit)
+			r.With(usersUpdate, withTx).Post("/{phoneId}/set-primary", rs.refuseUnversionedEdit)
 		})
 	})
 	return router
@@ -316,8 +315,7 @@ func classifyGuardianError(err error) FailureKind {
 		return FailureInvalidRequest
 	case errors.Is(err, peopledirectory.ErrGuardianForceDeleteRequiresAdmin), errors.Is(err, peopledirectory.ErrPayerRemovalRequiresFinancial):
 		return FailureForbidden
-	case errors.Is(err, peopledirectory.ErrGuardianStillLinked), errors.Is(err, peopledirectory.ErrGuardianDeletePreviewChanged),
-		errors.Is(err, peopledirectory.ErrGuardianLinkConflict):
+	case errors.Is(err, peopledirectory.ErrGuardianStillLinked), errors.Is(err, peopledirectory.ErrGuardianLinkConflict):
 		return FailureConflict
 	default:
 		return FailureInternal

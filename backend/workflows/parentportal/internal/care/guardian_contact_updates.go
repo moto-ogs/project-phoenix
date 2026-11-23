@@ -6,6 +6,8 @@ import (
 	"errors"
 	"log/slog"
 	"strings"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // UpdateGuardianContact replaces the contact data (name, email, address,
@@ -72,6 +74,12 @@ func (s *Service) updateGuardianContactInTx(ctx context.Context, child *Child, a
 		return nil, err
 	}
 	before := snapshotGuardianContact(profile, oldPhones)
+	// The form saves back the contact it showed (ADR 0311): a correction by
+	// the school or another parent since the read refuses the edit.
+	isSelf := profile.AccountID != nil && *profile.AccountID == accountID
+	if err := readstate.Check(input.ExpectedVersion, guardianContactVersion(profile, oldPhones, isSelf)); err != nil {
+		return nil, err
+	}
 
 	// Reject an email already owned by a DIFFERENT guardian profile before we
 	// write, returning a friendly ErrGuardianEmailConflict. The

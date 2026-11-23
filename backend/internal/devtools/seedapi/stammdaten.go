@@ -954,7 +954,22 @@ func (s *FixedSeeder) storeDemoBankDetails(index int, guardian DemoGuardian, gua
 		// on the partner's name.
 		body["account_holder"] = fmt.Sprintf("%s %s", guardian.FirstName, guardian.LastName+"-Berger")
 	}
+	// The bank write saves against the version of the section it read
+	// (ADR 0311).
 	paymentPath := fmt.Sprintf("/api/guardians/%d/payment", guardianID)
+	raw, err := s.client.Get(paymentPath)
+	if err != nil {
+		return false, fmt.Errorf("read bank details of guardian %s: %w", demoGuardianKey(guardian), err)
+	}
+	var read struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	if err := parseJSON(raw, &read); err != nil {
+		return false, fmt.Errorf("parse bank details of guardian %s: %w", demoGuardianKey(guardian), err)
+	}
+	body["expected_version"] = read.Data.Version
 	if _, err := s.client.Put(paymentPath, body); err != nil {
 		return false, fmt.Errorf("store bank details for guardian %s: %w", demoGuardianKey(guardian), err)
 	}

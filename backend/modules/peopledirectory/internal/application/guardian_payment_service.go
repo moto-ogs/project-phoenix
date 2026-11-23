@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/tenant"
 
 	peoplePorts "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Guardian payment data (#2608). Two hard rules, carried over from the staff
@@ -49,7 +50,7 @@ func (s *RetainedGuardianService) GetGuardianPaymentMasked(ctx context.Context, 
 	if err != nil {
 		return nil, err
 	}
-	masked := &peoplePorts.GuardianPaymentMasked{GuardianProfileID: guardianProfileID}
+	masked := &peoplePorts.GuardianPaymentMasked{GuardianProfileID: guardianProfileID, Version: peopleValues.GuardianPaymentVersion(data)}
 	if data != nil {
 		masked.IBANMasked = guardianIBANMask(data)
 		masked.AccountHolder = data.AccountHolder
@@ -64,7 +65,7 @@ func (s *RetainedGuardianService) RevealGuardianPayment(ctx context.Context, gua
 	if err != nil {
 		return nil, err
 	}
-	plain := &peoplePorts.GuardianPaymentPlain{GuardianProfileID: guardianProfileID}
+	plain := &peoplePorts.GuardianPaymentPlain{GuardianProfileID: guardianProfileID, Version: peopleValues.GuardianPaymentVersion(data)}
 	if data != nil {
 		plain.IBAN = data.IBAN
 		plain.AccountHolder = data.AccountHolder
@@ -79,6 +80,7 @@ func (s *RetainedGuardianService) UpdateGuardianPayment(ctx context.Context, gua
 	if err != nil {
 		return err
 	}
+	normalized.ExpectedVersion = input.ExpectedVersion
 	if s.GuardianFinancialAudit == nil {
 		return fmt.Errorf("guardian financial audit repository is not wired; refusing unaudited change")
 	}
@@ -107,6 +109,11 @@ func (s *RetainedGuardianService) updateGuardianPaymentInTx(ctx context.Context,
 
 	data, err := s.GuardianFinancialRepo.FindByGuardianProfileID(ctx, guardianProfileID)
 	if err != nil {
+		return err
+	}
+	// The form saves back the bank section it read (ADR 0311); a change
+	// since, by a colleague or by the parents, refuses it.
+	if err := readstate.Check(normalized.ExpectedVersion, peopleValues.GuardianPaymentVersion(data)); err != nil {
 		return err
 	}
 	// The diff compares plaintext; opening also proves the stored values

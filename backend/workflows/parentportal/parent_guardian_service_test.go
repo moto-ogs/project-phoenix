@@ -19,6 +19,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 	parentportalcompose "github.com/moto-ogs/project-phoenix/workflows/parentportal/compose"
@@ -26,6 +27,21 @@ import (
 
 // buildGuardianService wires a parent service with the guardian feature enabled
 // (the registry default). Use buildGuardianServiceFeature to exercise the gate.
+// editContact saves a contact as the parent's form does: with the version
+// the guardian list handed out (ADR 0311). A guardian the caller does not see
+// or may not edit gets no version; the service refuses it on its own grounds.
+func editContact(t *testing.T, svc *parentService.Portal, ctx context.Context, accountID, studentID, guardianID int64, input parentService.GuardianContactInput) (*parentService.ChildGuardian, error) {
+	t.Helper()
+	if guardians, err := svc.ListChildGuardians(ctx, accountID, studentID); err == nil {
+		for _, guardian := range guardians {
+			if guardian.GuardianProfileID == guardianID {
+				input.ExpectedVersion = guardian.Version
+			}
+		}
+	}
+	return svc.UpdateGuardianContact(ctx, accountID, studentID, guardianID, input)
+}
+
 func buildGuardianService(t *testing.T) (*parentService.Portal, *bun.DB) {
 	return buildGuardianServiceFeature(t, true)
 }
@@ -217,7 +233,7 @@ func TestUpdateGuardianContact_EditsContactOnlyGuardian(t *testing.T) {
 	contactID := linkContactOnlyGuardian(t, db, chain.StudentID, "oma-edit")
 
 	email := "neue.oma@example.com"
-	updated, err := svc.UpdateGuardianContact(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, contactID, parentService.GuardianContactInput{
+	updated, err := editContact(t, svc, testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, contactID, parentService.GuardianContactInput{
 		FirstName:     "Helga",
 		LastName:      "Schneider",
 		Email:         &email,
@@ -263,19 +279,19 @@ func TestUpdateGuardianContact_SalutationIsThePersonsOwnChoice(t *testing.T) {
 	}
 	own := parentService.GuardianContactInput{FirstName: "Karin", LastName: "Klein", Salutation: ptr("ms")}
 
-	updated, err := svc.UpdateGuardianContact(ctx, chain.AccountID, chain.StudentID, chain.GuardianProfileID, own)
+	updated, err := editContact(t, svc, ctx, chain.AccountID, chain.StudentID, chain.GuardianProfileID, own)
 	require.NoError(t, err)
 	assert.Equal(t, "ms", updated.Salutation)
 	require.NotNil(t, stored(chain.GuardianProfileID))
 	assert.Equal(t, "ms", *stored(chain.GuardianProfileID))
 
 	own.Salutation = nil
-	updated, err = svc.UpdateGuardianContact(ctx, chain.AccountID, chain.StudentID, chain.GuardianProfileID, own)
+	updated, err = editContact(t, svc, ctx, chain.AccountID, chain.StudentID, chain.GuardianProfileID, own)
 	require.NoError(t, err)
 	assert.Equal(t, "ms", updated.Salutation, "a client that does not send the field keeps the choice")
 
 	contactID := linkContactOnlyGuardian(t, db, chain.StudentID, "oma-anrede")
-	other, err := svc.UpdateGuardianContact(ctx, chain.AccountID, chain.StudentID, contactID, parentService.GuardianContactInput{
+	other, err := editContact(t, svc, ctx, chain.AccountID, chain.StudentID, contactID, parentService.GuardianContactInput{
 		FirstName: "Helga", LastName: "Schneider", Salutation: ptr("ms"),
 	})
 	require.NoError(t, err)
@@ -283,13 +299,13 @@ func TestUpdateGuardianContact_SalutationIsThePersonsOwnChoice(t *testing.T) {
 	assert.Nil(t, stored(contactID), "nobody chooses a form of address for someone else")
 
 	own.Salutation = ptr("")
-	updated, err = svc.UpdateGuardianContact(ctx, chain.AccountID, chain.StudentID, chain.GuardianProfileID, own)
+	updated, err = editContact(t, svc, ctx, chain.AccountID, chain.StudentID, chain.GuardianProfileID, own)
 	require.NoError(t, err)
 	assert.Empty(t, updated.Salutation)
 	assert.Nil(t, stored(chain.GuardianProfileID))
 
 	own.Salutation = ptr("Frau")
-	_, err = svc.UpdateGuardianContact(ctx, chain.AccountID, chain.StudentID, chain.GuardianProfileID, own)
+	_, err = editContact(t, svc, ctx, chain.AccountID, chain.StudentID, chain.GuardianProfileID, own)
 	require.ErrorIs(t, err, parentService.ErrGuardianContactInvalid)
 }
 
@@ -301,7 +317,7 @@ func TestUpdateGuardianContact_PromotesFirstPhoneWhenNoPrimarySubmitted(t *testi
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 	contactID := linkContactOnlyGuardian(t, db, chain.StudentID, "oma-no-primary")
 
-	updated, err := svc.UpdateGuardianContact(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, contactID, parentService.GuardianContactInput{
+	updated, err := editContact(t, svc, testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, contactID, parentService.GuardianContactInput{
 		FirstName: "Helga",
 		LastName:  "Schneider",
 		Phones: []parentService.GuardianPhoneInput{
@@ -325,7 +341,7 @@ func TestUpdateGuardianContact_KeepsOnlyFirstSubmittedPrimaryPhone(t *testing.T)
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 	contactID := linkContactOnlyGuardian(t, db, chain.StudentID, "oma-many-primary")
 
-	updated, err := svc.UpdateGuardianContact(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, contactID, parentService.GuardianContactInput{
+	updated, err := editContact(t, svc, testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, contactID, parentService.GuardianContactInput{
 		FirstName: "Helga",
 		LastName:  "Schneider",
 		Phones: []parentService.GuardianPhoneInput{
@@ -349,7 +365,7 @@ func TestUpdateGuardianContact_RejectsInvalidPhoneBeforeRepository(t *testing.T)
 
 	svc, _ := buildGuardianService(t)
 
-	_, err := svc.UpdateGuardianContact(testpkg.WithPackageTenantRuntime(context.Background()), 1, 1, 1, parentService.GuardianContactInput{
+	_, err := editContact(t, svc, testpkg.WithPackageTenantRuntime(context.Background()), 1, 1, 1, parentService.GuardianContactInput{
 		FirstName: "Helga",
 		LastName:  "Schneider",
 		Phones: []parentService.GuardianPhoneInput{
@@ -370,7 +386,7 @@ func TestUpdateGuardianContact_MapsDuplicateEmailToConflict(t *testing.T) {
 	secondID := linkContactOnlyGuardian(t, db, chain.StudentID, "oma-dupe-b")
 
 	email := guardianEmailForProfile(t, db, firstID)
-	_, err := svc.UpdateGuardianContact(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, secondID, parentService.GuardianContactInput{
+	_, err := editContact(t, svc, testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, secondID, parentService.GuardianContactInput{
 		FirstName: "Duplicate",
 		LastName:  "Email",
 		Email:     &email,
@@ -400,7 +416,7 @@ func TestUpdateGuardianContact_RejectsCaseInsensitiveDuplicateEmail(t *testing.T
 	// the second. Byte-distinct from the stored value, so the case-sensitive index
 	// would accept it; the LOWER(email) precheck must still reject it as a conflict.
 	mixedCase := strings.ToUpper(guardianEmailForProfile(t, db, firstID))
-	_, err := svc.UpdateGuardianContact(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, secondID, parentService.GuardianContactInput{
+	_, err := editContact(t, svc, testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, secondID, parentService.GuardianContactInput{
 		FirstName: "Mixed",
 		LastName:  "Case",
 		Email:     &mixedCase,
@@ -421,7 +437,7 @@ func TestUpdateGuardianContact_RejectsAccountHolder(t *testing.T) {
 		"parent_portal.access": true,
 	})
 
-	_, err := svc.UpdateGuardianContact(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, otherID, parentService.GuardianContactInput{
+	_, err := editContact(t, svc, testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, otherID, parentService.GuardianContactInput{
 		FirstName: "Hacked",
 		LastName:  "Name",
 	})
@@ -464,7 +480,7 @@ func TestUpdateGuardianContact_RejectsCrossFamilySharedProfile(t *testing.T) {
 	otherLink.TenantID = testpkg.Tenant(t)
 	require.NoError(t, testpkg.TenantCommand1(t, testpkg.Ctx(t), db, api.NewPeopleRepositorySuiteFactory(testpkg.NewDatabase(t, db)).CreateGuardianLinkFixture, otherLink))
 
-	_, err := svc.UpdateGuardianContact(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, contactID, parentService.GuardianContactInput{
+	_, err := editContact(t, svc, testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, contactID, parentService.GuardianContactInput{
 		FirstName: "Helga",
 		LastName:  "Schneider",
 	})
@@ -721,7 +737,7 @@ func TestUpdateGuardianContact_WritesContactAuditRows(t *testing.T) {
 	contactID := linkContactOnlyGuardian(t, db, chain.StudentID, "oma-contact-audit")
 
 	email := "neue.oma@example.com"
-	_, err := svc.UpdateGuardianContact(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, contactID, parentService.GuardianContactInput{
+	_, err := editContact(t, svc, testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, contactID, parentService.GuardianContactInput{
 		FirstName: "Helga",
 		LastName:  "Schneider",
 		Email:     &email,
@@ -755,7 +771,7 @@ func TestUpdateGuardianContact_WritesContactAuditRows(t *testing.T) {
 
 	// A no-op re-save with identical data must not append new rows.
 	before := len(rows)
-	_, err = svc.UpdateGuardianContact(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, contactID, parentService.GuardianContactInput{
+	_, err = editContact(t, svc, testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, contactID, parentService.GuardianContactInput{
 		FirstName: "Helga",
 		LastName:  "Schneider",
 		Email:     &email,
@@ -778,7 +794,7 @@ func TestGuardianManagement_FeatureDisabled(t *testing.T) {
 	contactID := linkContactOnlyGuardian(t, db, chain.StudentID, "oma-disabled")
 
 	// Contact edits are refused when the school disabled guardian management.
-	_, err := svc.UpdateGuardianContact(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, contactID, parentService.GuardianContactInput{
+	_, err := editContact(t, svc, testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, contactID, parentService.GuardianContactInput{
 		FirstName: "Helga",
 		LastName:  "Schneider",
 	})
@@ -984,7 +1000,7 @@ func TestUpdateGuardian_RejectsSchoolManagedRoles(t *testing.T) {
 	ctx := testpkg.WithPackageTenantRuntime(context.Background())
 	canPickup := true
 	writeContact := func(accountID, studentID, guardianID int64) error {
-		_, err := svc.UpdateGuardianContact(ctx, accountID, studentID, guardianID, parentService.GuardianContactInput{
+		_, err := editContact(t, svc, ctx, accountID, studentID, guardianID, parentService.GuardianContactInput{
 			FirstName: "Neuer",
 			LastName:  "Name",
 		})
@@ -1067,7 +1083,7 @@ func TestUpdateGuardianContact_AllowsHelperRoleWithoutAccount(t *testing.T) {
 	chain := testpkg.CreateTestParentGuardianChain(t, db)
 	helperID := linkRoleGuardian(t, db, chain.StudentID, "helper-pickup", "pickup_only")
 
-	updated, err := svc.UpdateGuardianContact(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, helperID, parentService.GuardianContactInput{
+	updated, err := editContact(t, svc, testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, helperID, parentService.GuardianContactInput{
 		FirstName: "Helfer",
 		LastName:  "Bearbeitet",
 	})
@@ -1178,7 +1194,7 @@ func TestUpdateGuardianContact_LabelOnlyPhoneEditWritesAuditRow(t *testing.T) {
 	contactID := linkContactOnlyGuardian(t, db, chain.StudentID, "oma-label-audit")
 
 	// Initial contact with one label-less phone.
-	_, err := svc.UpdateGuardianContact(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, contactID, parentService.GuardianContactInput{
+	_, err := editContact(t, svc, testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, contactID, parentService.GuardianContactInput{
 		FirstName: "Helga",
 		LastName:  "Schneider",
 		Phones: []parentService.GuardianPhoneInput{
@@ -1192,7 +1208,7 @@ func TestUpdateGuardianContact_LabelOnlyPhoneEditWritesAuditRow(t *testing.T) {
 	require.NoError(t, err)
 
 	// Change ONLY the phone label; number, type, and primary are identical.
-	_, err = svc.UpdateGuardianContact(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, contactID, parentService.GuardianContactInput{
+	_, err = editContact(t, svc, testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, contactID, parentService.GuardianContactInput{
 		FirstName: "Helga",
 		LastName:  "Schneider",
 		Phones: []parentService.GuardianPhoneInput{
@@ -1253,7 +1269,7 @@ func TestUpdateGuardianContact_CaseVariantEmailRaceLeavesSingleWinner(t *testing
 		run := func(idx int, profileID int64, email string) {
 			defer done.Done()
 			start.Wait()
-			_, errs[idx] = svc.UpdateGuardianContact(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, profileID, parentService.GuardianContactInput{
+			_, errs[idx] = editContact(t, svc, testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, profileID, parentService.GuardianContactInput{
 				FirstName: "Race",
 				LastName:  "Winner",
 				Email:     &email,
@@ -1424,7 +1440,7 @@ func TestUpdateGuardianContact_PropagatesEmailLookupError(t *testing.T) {
 	before := guardianFirstName(t, db, contactID)
 
 	newEmail := "neue-oma@example.test"
-	_, err := svc.UpdateGuardianContact(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, contactID, parentService.GuardianContactInput{
+	_, err := editContact(t, svc, testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, contactID, parentService.GuardianContactInput{
 		FirstName: "Changed",
 		LastName:  "Name",
 		Email:     &newEmail,
@@ -1499,7 +1515,7 @@ func TestUpdateGuardianContact_RequiresEditOnEverySiblingTheContactServes(t *tes
 	assert.True(t, before.ContactLockedShared, "the listing names the shared lock")
 
 	input := parentService.GuardianContactInput{FirstName: "Helga", LastName: "Schneider"}
-	_, err := svc.UpdateGuardianContact(ctx, chain.AccountID, chain.StudentID, contactID, input)
+	_, err := editContact(t, svc, ctx, chain.AccountID, chain.StudentID, contactID, input)
 	require.ErrorIs(t, err, parentService.ErrGuardianSharedAcrossFamilies)
 	assert.Equal(t, before.FirstName, contactOf().FirstName, "the refused edit leaves the contact unchanged")
 
@@ -1509,7 +1525,7 @@ func TestUpdateGuardianContact_RequiresEditOnEverySiblingTheContactServes(t *tes
 
 	testpkg.SetTestStudentGuardianLinkRole(t, db, siblingLink.ID, "legal_guardian")
 	assert.True(t, contactOf().CanEditContact, "edit on every served child unlocks the contact")
-	updated, err := svc.UpdateGuardianContact(ctx, chain.AccountID, chain.StudentID, contactID, input)
+	updated, err := editContact(t, svc, ctx, chain.AccountID, chain.StudentID, contactID, input)
 	require.NoError(t, err)
 	assert.Equal(t, "Helga", updated.FirstName)
 }
@@ -1539,4 +1555,49 @@ func TestCreateGuardianContact_WithoutCarePlaceKeepsEmergencyContacts(t *testing
 		parentService.GuardianRelationshipInput{IsEmergencyContact: &emergency})
 	require.NoError(t, err)
 	assert.False(t, updated.IsEmergencyContact)
+}
+
+// A parent's contact form opened before a staff correction is refused with
+// readstate.ErrChanged and leaves the correction in place; a save without a
+// read version is refused too (ADR 0311). The current version saves.
+func TestUpdateGuardianContact_RefusesAStaleVersion(t *testing.T) {
+	t.Parallel()
+
+	svc, db := buildGuardianService(t)
+	ctx := testpkg.WithPackageTenantRuntime(context.Background())
+	chain := testpkg.CreateTestParentGuardianChain(t, db)
+	contactID := linkContactOnlyGuardian(t, db, chain.StudentID, "oma-stale")
+	versionOf := func() string {
+		guardians, err := svc.ListChildGuardians(ctx, chain.AccountID, chain.StudentID)
+		require.NoError(t, err)
+		for _, guardian := range guardians {
+			if guardian.GuardianProfileID == contactID {
+				return guardian.Version
+			}
+		}
+		t.Fatalf("contact %d is not listed", contactID)
+		return ""
+	}
+	opened := versionOf()
+	require.NotEmpty(t, opened)
+
+	// The school corrects the address meanwhile.
+	_, err := db.NewRaw(`UPDATE users.guardian_profiles SET address_city = 'Korrigiert' WHERE id = ?`, contactID).Exec(context.Background())
+	require.NoError(t, err)
+
+	edit := parentService.GuardianContactInput{FirstName: "Helga", LastName: "Schneider", AddressCity: ptr("Alt")}
+	for name, version := range map[string]string{"older read": opened, "no read": ""} {
+		edit.ExpectedVersion = version
+		_, err = svc.UpdateGuardianContact(ctx, chain.AccountID, chain.StudentID, contactID, edit)
+		require.ErrorIs(t, err, readstate.ErrChanged, name)
+	}
+	var city string
+	require.NoError(t, db.NewRaw(`SELECT address_city FROM users.guardian_profiles WHERE id = ?`, contactID).Scan(context.Background(), &city))
+	assert.Equal(t, "Korrigiert", city, "a refused edit keeps the school's correction")
+
+	edit.ExpectedVersion = versionOf()
+	updated, err := svc.UpdateGuardianContact(ctx, chain.AccountID, chain.StudentID, contactID, edit)
+	require.NoError(t, err)
+	assert.Equal(t, "Alt", updated.AddressCity)
+	assert.Equal(t, versionOf(), updated.Version, "the save answers the version the next edit sends")
 }
