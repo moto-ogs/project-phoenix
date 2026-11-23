@@ -626,11 +626,9 @@ describe("bffJson", () => {
         params: student,
         query: { from: "2026-09-01", to: "2026-09-30" },
       });
-      void bffJson("tenant", partialAbsences, {
-        params: student,
-        // @ts-expect-error: from is a date string, not a number
-        query: { from: 5 },
-      });
+      const wrongDate = { params: student, query: { from: 5 } };
+      // @ts-expect-error: from is a date string, not a number
+      void bffJson("tenant", partialAbsences, wrongDate);
       const groups = "GET /api/groups/";
       // @ts-expect-error: page is a number, not pre-serialized text
       void bffJson("tenant", groups, { query: { page: "1" } });
