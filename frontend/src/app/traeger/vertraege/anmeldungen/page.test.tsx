@@ -519,7 +519,7 @@ describe("Anmeldungen nachtragen", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        /Bei 1 Vertrag steht die Anmeldung schon an der Schule, der Vertrag ist aber noch nicht daran gebunden/,
+        /1 Vertrag ist nicht gebunden, obwohl an der Schule schon eine Anmeldung stehen kann/,
       ),
     ).toBeInTheDocument();
     expect(
@@ -583,5 +583,75 @@ describe("Anmeldungen nachtragen", () => {
     expect(
       screen.queryByRole("heading", { name: "2 Verträge gebunden" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("lets only the run that owns the screen answer after a school switch and back", async () => {
+    schools.fetchTraegerSchools.mockResolvedValue([MANUELL, SONNENHOF]);
+    mockSearch = "schule=2";
+    api.previewContractEnrollments.mockResolvedValue(preview());
+    const page = () => (
+      <TraegerResourceTestProvider>
+        <TraegerContractEnrollmentPage />
+      </TraegerResourceTestProvider>
+    );
+    const view = render(page());
+    await screen.findByRole("heading", { name: "Vorschau prüfen" });
+    let first: (value: unknown) => void = () => undefined;
+    api.runContractEnrollments.mockReturnValueOnce(
+      new Promise((resolve) => {
+        first = resolve;
+      }),
+    );
+    await confirmRun();
+    // Away and back while the first run is on its way, then a second run.
+    mockSearch = "";
+    view.rerender(page());
+    await screen.findByRole("heading", { name: "Schule wählen" });
+    mockSearch = "schule=2";
+    view.rerender(page());
+    await screen.findByRole("heading", { name: "Vorschau prüfen" });
+    api.runContractEnrollments.mockReturnValueOnce(
+      new Promise(() => undefined),
+    );
+    await confirmRun();
+    await waitFor(() =>
+      expect(api.runContractEnrollments).toHaveBeenCalledTimes(2),
+    );
+    first({
+      schoolId: "2",
+      changed: true,
+      counts: preview().counts,
+      rows: ROWS.map((one) =>
+        one.status === "ready" ? { ...one, status: "done" as const } : one,
+      ),
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    // The second confirmation is still the screen: its dialog stays open.
+    expect(
+      screen.getByRole("dialog", { name: "Für 2 Verträge nachtragen?" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "2 Verträge gebunden" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("moves the focus to the fresh preview after a refused one", async () => {
+    await openPreview();
+    api.runContractEnrollments.mockRejectedValueOnce(
+      new ApiError("Request failed (409)", 409, {
+        code: "care_contract.enrollment_preview_changed",
+      }),
+    );
+    api.previewContractEnrollments.mockResolvedValueOnce(
+      preview({ fingerprint: "fp-2" }),
+    );
+    await confirmRun();
+    await screen.findByText(/Seit deiner Vorschau hat sich etwas geändert/);
+    await waitFor(() =>
+      expect(
+        screen.getByRole("heading", { name: "Vorschau prüfen" }),
+      ).toHaveFocus(),
+    );
   });
 });

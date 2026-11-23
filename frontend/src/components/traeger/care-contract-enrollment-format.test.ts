@@ -210,7 +210,7 @@ describe("Anmeldungen nachtragen: Texte", () => {
   it("tells a changed row whether the enrollment exists already", () => {
     expect(
       enrollmentRowTexts(row({ status: "changed", requestChildId: "140" }))[0],
-    ).toMatch(/Die Anmeldung ist eingetragen/);
+    ).toMatch(/An der Schule kann schon eine Anmeldung stehen/);
     expect(enrollmentRowTexts(row({ status: "changed" }))[0]).toMatch(
       /moto hat nichts eingetragen/,
     );

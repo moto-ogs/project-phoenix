@@ -31,7 +31,7 @@ import NavigationLink from "~/components/ui/navigation-link";
 import { SectionCard } from "~/components/ui/section-card";
 import { SectionLabel } from "~/components/ui/section-label";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
-import { useStepFocus } from "~/components/ui/use-step-focus";
+import { focusStepHeading, useStepFocus } from "~/components/ui/use-step-focus";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { ApiError, wireErrorCode } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
@@ -105,6 +105,10 @@ function ContractEnrollmentView() {
   const { show } = useApiErrorDisplay();
   const { success } = useToast();
 
+  // The run that owns the screen. Leaving the school (browser back) takes
+  // the screen from a run on its way: its answer then belongs to no screen,
+  // also when the office comes back and confirms again before it arrives.
+  const owner = useRef(0);
   // The run of another school, or a new choice, starts with its own preview.
   const [shownFor, setShownFor] = useState(schoolId);
   if (shownFor !== schoolId) {
@@ -113,11 +117,11 @@ function ContractEnrollmentView() {
     setNotice(null);
     setConfirming(null);
     setRunning(false);
+    owner.current++;
   }
-  // The school the page shows now: an answer of a run that arrives after
-  // the office went to another school (browser back) belongs to no screen.
-  const shownSchool = useRef(schoolId);
-  shownSchool.current = schoolId;
+  // After a step that replaces the preview, the focus goes to what comes
+  // next (the new preview or its load error), not to the page start.
+  const focusNext = useRef(false);
 
   // Fresh on each opening: the read stands in the access log of the school,
   // and only a preview the office has just seen may be confirmed.
@@ -139,6 +143,7 @@ function ContractEnrollmentView() {
   const run = async () => {
     const confirmed = confirming;
     if (!confirmed || running) return;
+    const mine = ++owner.current;
     setRunning(true);
     let result: EnrollmentRun;
     try {
@@ -147,13 +152,20 @@ function ContractEnrollmentView() {
         confirmed.fingerprint,
       );
     } catch (err) {
-      if (shownSchool.current !== confirmed.schoolId) return;
+      const previewChanged =
+        err instanceof ApiError &&
+        err.code === wireErrorCode("care_contract.enrollment_preview_changed");
+      if (!previewChanged) {
+        // A failed run may have bound contracts all the same: the lists
+        // follow, whichever school the page shows now.
+        void invalidateFamily(traegerContractKeys.listFamily);
+        void invalidateFamily(traegerContractKeys.detailFamily);
+      }
+      if (owner.current !== mine) return;
+      focusNext.current = true;
       setRunning(false);
       setConfirming(null);
-      if (
-        err instanceof ApiError &&
-        err.code === wireErrorCode("care_contract.enrollment_preview_changed")
-      ) {
+      if (previewChanged) {
         // Expected (ADR 0309): the contracts, the school or the day changed
         // since the preview. Nothing was written; show the current preview
         // for a new confirmation, without an error.
@@ -174,28 +186,30 @@ function ContractEnrollmentView() {
         (err.status ?? 0) < 500;
       setNotice(refused ? null : "run_failed");
       setRetired(true);
-      void invalidateFamily(traegerContractKeys.listFamily);
-      void invalidateFamily(traegerContractKeys.detailFamily);
       return;
     }
     // The lists follow the binding, whichever school the page shows now.
     void invalidateFamily(traegerContractKeys.listFamily);
     void invalidateFamily(traegerContractKeys.detailFamily);
     void invalidateFamily(traegerContractKeys.candidates());
-    if (shownSchool.current !== confirmed.schoolId) return;
+    if (owner.current !== mine) return;
     setRunning(false);
     setConfirming(null);
     setNotice(null);
     setDone(result);
     const summary = enrollmentRunSummary(result.rows);
-    success(
-      result.changed
-        ? `${enrollmentContractCount(summary.enrolled + summary.bound)} an ihre Anmeldung gebunden.`
-        : "Es gab nichts nachzutragen.",
-    );
+    // A run that left a contract unbound is no success: its card says so.
+    if (runLeftUnbound(result) === 0) {
+      success(
+        result.changed
+          ? `${enrollmentContractCount(summary.enrolled + summary.bound)} an ihre Anmeldung gebunden.`
+          : "Es gab nichts nachzutragen.",
+      );
+    }
   };
 
   const startOver = () => {
+    focusNext.current = true;
     setDone(null);
     setNotice(null);
   };
@@ -210,6 +224,17 @@ function ContractEnrollmentView() {
         ? "preview"
         : "school";
   const stepFocus = useStepFocus<HTMLDivElement>(phase);
+  const previewStep = useRef<HTMLDivElement>(null);
+  const previewArrived =
+    !retired && (preview !== null || previewError !== null);
+  useEffect(() => {
+    if (!previewArrived || !focusNext.current) return;
+    focusNext.current = false;
+    // After the closing dialog has handed its focus back (to a button that
+    // is gone by now): its return runs in a timer of its own.
+    const timer = setTimeout(() => focusStepHeading(previewStep.current), 0);
+    return () => clearTimeout(timer);
+  }, [previewArrived]);
 
   const counts = done?.counts ?? preview?.counts;
   const open = counts ? openEnrollmentCount(counts) : 0;
@@ -342,7 +367,13 @@ function ContractEnrollmentView() {
             />
           ) : null}
           <HowItWorks />
-          <div ref={stepFocus} className="flex flex-col">
+          <div
+            ref={(node) => {
+              stepFocus.current = node;
+              previewStep.current = node;
+            }}
+            className="flex flex-col"
+          >
             <PreviewBody
               preview={preview}
               loading={previewLoading || retired}
@@ -502,6 +533,16 @@ function ConfirmText({
   );
 }
 
+/**
+ * Contracts the run left unbound although an enrollment may stand at the
+ * school: the one of this run, or the one the preview showed.
+ */
+function runLeftUnbound(run: EnrollmentRun): number {
+  return run.rows.filter(
+    (row) => row.status === "changed" && row.requestChildId !== null,
+  ).length;
+}
+
 function RunResult({
   run,
   schoolName,
@@ -522,9 +563,7 @@ function RunResult({
   // The school has the enrollment, but the contract changed before moto
   // could bind it (ADR 0309 section 4): no clean result. The next preview
   // shows whether a new run can bind.
-  const unbound = run.rows.filter(
-    (row) => row.status === "changed" && row.requestChildId !== null,
-  ).length;
+  const unbound = runLeftUnbound(run);
   const partial = unbound > 0;
   return (
     <>
@@ -548,7 +587,7 @@ function RunResult({
           }
           description={
             partial
-              ? `${schoolName}: ${parts.join(", ")}. Bei ${enrollmentContractCount(unbound)} steht die Anmeldung schon an der Schule, der Vertrag ist aber noch nicht daran gebunden. Hol eine neue Vorschau.`
+              ? `${schoolName}: ${parts.join(", ")}. ${enrollmentContractCount(unbound)} ${unbound === 1 ? "ist" : "sind"} nicht gebunden, obwohl an der Schule schon eine Anmeldung stehen kann. Hol eine neue Vorschau, sie zeigt den Stand.`
               : `${schoolName}: ${parts.join(", ")}.`
           }
           action={

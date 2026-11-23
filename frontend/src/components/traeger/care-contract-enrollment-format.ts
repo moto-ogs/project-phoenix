@@ -174,7 +174,7 @@ export const STUCK_OTHER_PHASE =
   "Hast du die Module des Vertrags auf eine andere Anmeldephase umgestellt? Dann ordne sie zurück auf ein Modul der Phase dieser Anmeldung und hol eine neue Vorschau.";
 
 const STUCK_PLANNED_CHANGE =
-  "Die Schule hat aus einem früheren Lauf schon eine Anmeldung, aber sie kennt die geplante Änderung des Vertrags nicht. Die Schule bucht die Änderung nach, oder du berichtigst den Vertrag. Dann bindet der nächste Lauf.";
+  "Die Schule hat aus einem früheren Lauf schon eine Anmeldung, aber sie kennt die geplante Änderung des Vertrags nicht. Die Schule bucht die Änderung nach, oder du berichtigst den Vertrag. Dann bindet der nächste Lauf. Liegt das neue Modul in einer anderen Anmeldephase, hilft nur, die Änderung im Vertrag zurückzunehmen.";
 
 /**
  * Eine hängende Zeile (ADR 0309 Abschnitt 4): ihr Grund, wo er mehr sagt,
@@ -232,7 +232,7 @@ export function enrollmentRowTexts(row: EnrollmentRow): string[] {
     case "changed":
       return [
         row.requestChildId
-          ? "Die Anmeldung ist eingetragen, aber der Vertrag ist noch nicht daran gebunden: Seit der Vorschau hat sich etwas geändert. Lade die Vorschau neu. Sie zeigt, ob der nächste Lauf binden kann."
+          ? "Der Vertrag ist nicht gebunden: Seit der Vorschau hat sich etwas geändert. An der Schule kann schon eine Anmeldung stehen. Lade die Vorschau neu. Sie zeigt, ob der nächste Lauf binden kann."
           : "Schule oder Vertrag haben sich seit der Vorschau geändert. moto hat nichts eingetragen. Lade die Vorschau neu.",
       ];
     default:
