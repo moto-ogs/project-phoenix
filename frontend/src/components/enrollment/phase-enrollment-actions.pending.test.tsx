@@ -59,6 +59,7 @@ vi.mock("~/components/enrollment/enrollment-form", () => ({
     onFormChanged?: () => Promise<void>;
   }) {
     const [failed, setFailed] = useState(false);
+    const [reloadFailed, setReloadFailed] = useState(false);
     // Like the real form, the template is read once when it mounts.
     const [offerings] = useState(prefetchedData.offerings);
     return (
@@ -67,6 +68,7 @@ vi.mock("~/components/enrollment/enrollment-form", () => ({
           <p key={offering.name}>Angebot {offering.name}</p>
         ))}
         {failed ? <p>Senden fehlgeschlagen</p> : null}
+        {reloadFailed ? <p>Formular nicht geladen</p> : null}
         <button
           type="button"
           onClick={() => {
@@ -83,7 +85,13 @@ vi.mock("~/components/enrollment/enrollment-form", () => ({
                   "code" in err &&
                   err.code === "general.changed_since_read"
                 ) {
-                  await onFormChanged?.();
+                  try {
+                    await onFormChanged?.();
+                  } catch {
+                    // The real form names the failed read instead.
+                    setReloadFailed(true);
+                    return;
+                  }
                 }
                 setFailed(true);
               })
@@ -275,6 +283,26 @@ describe("ManualApprovedEnrollmentModal: Senden sperrt das Panel (#6593)", () =>
     expect(await screen.findByText("Senden fehlgeschlagen")).toBeVisible();
     expect(mocks.fetchManualEnrollmentBootstrap).toHaveBeenCalledTimes(
       reads + 1,
+    );
+  });
+
+  // A failed reload after a refusal keeps the panel and the typed entry;
+  // the form names the failure (finding of #7937).
+  it("keeps the entry when the reload after a refused form fails", async () => {
+    render(<Modal />, { wrapper: Providers });
+    await screen.findByRole("button", { name: SUBMIT });
+    mocks.createManualApprovedEnrollment.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    mocks.fetchManualEnrollmentBootstrap.mockRejectedValueOnce(
+      new ApiError("unavailable", 503, { code: "general.unavailable" }),
+    );
+    await fillAndSend();
+
+    expect(await screen.findByText("Formular nicht geladen")).toBeVisible();
+    expect(screen.getByRole("button", { name: SUBMIT })).toBeVisible();
+    expect(screen.getByLabelText("Interner Grund")).toHaveValue(
+      "telefonisch bestätigt",
     );
   });
 });

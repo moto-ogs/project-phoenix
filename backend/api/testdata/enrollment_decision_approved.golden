@@ -11,7 +11,7 @@
     "status": "approved",
     "status_reason": "Contract approval",
     "target_grade_level": 2,
-    "version": "f0f95d2f9895d52784d4a12180b1eb5b"
+    "version": "CHILD_DATA_VERSION"
   },
   "message": "Decision applied",
   "status": "success"

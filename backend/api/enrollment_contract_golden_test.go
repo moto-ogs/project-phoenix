@@ -46,14 +46,16 @@ func checkEnrollmentSubmissionGolden(t *testing.T, api *goldenRuntime) {
 	var slug, subdomain string
 	require.NoError(t, db.NewRaw("SELECT slug, subdomain FROM platform.schools WHERE id = ?", testpkg.Tenant(t)).Scan(context.Background(), &slug, &subdomain))
 	for _, scenario := range []struct {
-		name, path, token string
-		accountID         *int64
+		name, form, path, token string
+		accountID               *int64
 	}{
-		{"public", "/api/enrollment/" + slug + "/submit", "", nil},
-		{"parent", "/parent/enrollments/" + subdomain + "/submit", parentToken, &parent.AccountID},
+		{"public", fmt.Sprintf("/api/enrollment/form-bootstrap/public/%s/%d", slug, phase.ID), "/api/enrollment/" + slug + "/submit", "", nil},
+		{"parent", fmt.Sprintf("/parent/enrollments/%s/bootstrap/%d", subdomain, phase.ID), "/parent/enrollments/" + subdomain + "/submit", parentToken, &parent.AccountID},
 	} {
 		t.Run(scenario.name, func(t *testing.T) {
-			body := fmt.Sprintf(`{"phase_id":%d,"guardian_first_name":"Contract","guardian_last_name":"Guardian","guardian_email":"contract-%s@example.test","consent_flags":{"agb":true,"data_processing":true,"email_contact":true,"photo":true},"children":[{"first_name":"Contract","last_name":"Child-%s","date_of_birth":"2018-04-15","target_grade_level":2}]}`, phase.ID, scenario.name, scenario.name)
+			// The form sends the token of the form load it filled (ADR 0311).
+			terms := goldenFormTerms(t, api, scenario.form, scenario.token)
+			body := fmt.Sprintf(`{"expected_terms_fingerprint":%q,"phase_id":%d,"guardian_first_name":"Contract","guardian_last_name":"Guardian","guardian_email":"contract-%s@example.test","consent_flags":{"agb":true,"data_processing":true,"email_contact":true,"photo":true},"children":[{"first_name":"Contract","last_name":"Child-%s","date_of_birth":"2018-04-15","target_grade_level":2}]}`, terms, phase.ID, scenario.name, scenario.name)
 			response := checkpointRequest(api, checkpointScenario{Method: http.MethodPost, Path: scenario.path, Authenticated: scenario.token != "", Body: body}, scenario.token)
 			require.Equal(t, http.StatusCreated, response.Code, response.Body.String())
 			require.True(t, strings.HasPrefix(response.Header().Get("Content-Type"), "application/json"))
@@ -93,6 +95,22 @@ func checkEnrollmentSubmissionGolden(t *testing.T, api *goldenRuntime) {
 			}
 		})
 	}
+}
+
+// goldenFormTerms reads the terms_fingerprint of a form load, as the form
+// page does before it submits (ADR 0311).
+func goldenFormTerms(t *testing.T, api *goldenRuntime, path, token string) string {
+	t.Helper()
+	read := checkpointRequest(api, checkpointScenario{Method: http.MethodGet, Path: path, Authenticated: token != ""}, token)
+	require.Equal(t, http.StatusOK, read.Code, read.Body.String())
+	var form struct {
+		Data struct {
+			TermsFingerprint string `json:"terms_fingerprint"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(read.Body.Bytes(), &form))
+	require.NotEmpty(t, form.Data.TermsFingerprint)
+	return form.Data.TermsFingerprint
 }
 
 // checkPhaseResponseQueryBudget keeps GET /enrollment/phases/{id}/responses
@@ -295,6 +313,11 @@ func checkEnrollmentAcceptanceGolden(t *testing.T, api *goldenRuntime, db *testp
 	data["created_student_id"] = "STUDENT_ID"
 	data["reviewed_at"] = "REVIEWED_AT"
 	data["reviewed_by"] = "REVIEWER_ACCOUNT_ID"
+	// The child's read-state token is opaque (ADR 0311); the correction
+	// tests prove what it guards, the golden only that it travels.
+	version, ok := data["version"].(string)
+	require.True(t, ok && version != "", "the decided child carries its version")
+	data["version"] = "CHILD_DATA_VERSION"
 	normalized, err := json.MarshalIndent(envelope, "", "  ")
 	require.NoError(t, err)
 	compareGolden(t, "testdata/enrollment_decision_approved.golden", string(normalized)+"\n", "Enrollment acceptance response contract changed")
@@ -346,7 +369,8 @@ func checkEnrollmentChangeRequestDialogueGolden(t *testing.T, api *goldenRuntime
 	require.Equal(t, http.StatusOK, decided.Code, decided.Body.String())
 
 	publicBase := "/api/enrollment/requests/" + statusToken + "/change-requests"
-	proposal := fmt.Sprintf(`{"phase_id":%d,"guardian_first_name":"Contract","guardian_last_name":"Guardian-Korrigiert","guardian_email":"contract-public@example.test","consent_flags":{"agb":true,"data_processing":true,"email_contact":true,"photo":true},"children":[{"id":"%d","first_name":"Contract","last_name":"Child-public","date_of_birth":"2018-04-15","target_grade_level":2}],"parent_note":"Nachname korrigiert."}`, phaseID, childID)
+	terms := goldenFormTerms(t, api, "/api/enrollment/requests/"+statusToken+"/edit-bootstrap", "")
+	proposal := fmt.Sprintf(`{"expected_terms_fingerprint":%q,"phase_id":%d,"guardian_first_name":"Contract","guardian_last_name":"Guardian-Korrigiert","guardian_email":"contract-public@example.test","consent_flags":{"agb":true,"data_processing":true,"email_contact":true,"photo":true},"children":[{"id":"%d","first_name":"Contract","last_name":"Child-public","date_of_birth":"2018-04-15","target_grade_level":2}],"parent_note":"Nachname korrigiert."}`, terms, phaseID, childID)
 	created := checkpointRequest(api, checkpointScenario{Method: http.MethodPost, Path: publicBase, Body: proposal}, "")
 	require.Equal(t, http.StatusCreated, created.Code, created.Body.String())
 	var createdEnvelope struct {

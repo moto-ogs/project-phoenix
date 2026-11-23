@@ -1422,6 +1422,7 @@ export interface EditBootstrapResponse {
   legal_texts: PublicLegalTextsResponse;
   draft: EditDraftResponse;
   edit_mode: string;
+  terms_fingerprint: string;
 }
 
 export const EditBootstrapResponseSchema: z.ZodType<EditBootstrapResponse, unknown> = object<EditBootstrapResponse>({
@@ -1438,6 +1439,7 @@ export const EditBootstrapResponseSchema: z.ZodType<EditBootstrapResponse, unkno
   legal_texts: PublicLegalTextsResponseSchema,
   draft: EditDraftResponseSchema,
   edit_mode: str,
+  terms_fingerprint: str,
 });
 
 /** Go: enrollment.RegistrationFamilyChildren */
@@ -1752,6 +1754,7 @@ export interface AdminManualApprovedEnrollmentRequest {
   additional_guardians?: SubmitGuardianRequest[] | null;
   consent_flags?: Record<string, unknown | null> | null;
   form_schema_id?: string;
+  expected_terms_fingerprint?: string;
   custom_data?: Record<string, unknown | null> | null;
   children?: SubmitChildRequest[] | null;
   captcha_token?: string;
@@ -1839,6 +1842,7 @@ export interface CreateChangeRequestRequest {
   additional_guardians?: SubmitGuardianRequest[] | null;
   consent_flags?: Record<string, unknown | null> | null;
   form_schema_id?: string;
+  expected_terms_fingerprint?: string;
   custom_data?: Record<string, unknown | null> | null;
   children?: SubmitChildRequest[] | null;
   captcha_token?: string;

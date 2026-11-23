@@ -27,6 +27,11 @@ import { parentPath } from "~/lib/parent-url";
 import { resolveTenant, type TenantInfo } from "~/lib/tenant-api";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useSWRAuth } from "~/lib/swr";
+import {
+  followOpeningRead,
+  settledRead,
+  type OpenedRead,
+} from "~/lib/opening-read";
 import { createLogger } from "~/lib/logger";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import {
@@ -116,47 +121,34 @@ function ParentEnrollFormPageContent({ params }: PageProps) {
   };
   // A cached form shows at once and is read again in the background.
   const formRead = useSWRAuth(formKey, loadForm, { shouldRetryOnError: false });
-  // The parent fills the form version this opening read: it follows the
-  // first read of the opening, then a background read no longer swaps the
-  // legal texts under ticked consents. The submit sends that version; when
-  // the school published another one, the refusal loads the current form
-  // (ADR 0311).
-  const [opened, setOpened] = useState<{
-    key: string;
-    form: LoadedForm | null;
-    settled: boolean;
-  }>();
-  const firstReadRunning = opened?.key !== formKey || !opened.settled;
-  if (
-    formRead.data !== undefined &&
-    firstReadRunning &&
-    (opened?.key !== formKey ||
-      opened.form !== formRead.data ||
-      opened.settled === formRead.isValidating)
-  ) {
-    setOpened({
-      key: formKey,
-      form: formRead.data,
-      settled: !formRead.isValidating,
-    });
-  }
-  const openedForm = opened?.key === formKey ? opened.form : undefined;
+  // The parent fills the form this opening read: it follows the first read
+  // of the opening, then a background read no longer swaps the legal texts
+  // under ticked consents. The submit sends that form's token; when the
+  // school changed the form, the refusal loads the current one (ADR 0311).
+  // A failed first read shows its error even over a cached form: the server
+  // would refuse a form it cannot confirm.
+  const [opened, setOpened] = useState<OpenedRead<LoadedForm | null>>();
+  const current = opened?.key === formKey ? opened : undefined;
+  const next = followOpeningRead(current, formKey, formRead);
+  if (next !== current) setOpened(next);
+  const openedForm = next && !next.failed ? next.data : undefined;
   const loaded = openedForm ?? null;
   const reloadForm = async () => {
     try {
-      const current = await formRead.mutate(loadForm(), { revalidate: false });
-      if (current !== undefined) {
-        setOpened({ key: formKey, form: current, settled: true });
+      const reloaded = await formRead.mutate(loadForm(), { revalidate: false });
+      if (reloaded !== undefined) {
+        setOpened(settledRead(formKey, reloaded));
       }
     } catch (err) {
-      // The refusal stays on the form; reloading the page reads it again.
-      logger.error("enrollment_form_reload_failed", {
+      // The form shows this failure in place of the refusal.
+      logger.warn("enrollment_form_reload_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
+      throw err;
     }
   };
   // A failed load stays where the form would be, with retry (#2515); a
-  // failed background read leaves the opened form alone.
+  // failed background read after the opening leaves the opened form alone.
   const loadError = useSwrLoadError(
     openedForm === undefined ? formRead.error : undefined,
     loadErrorObject,

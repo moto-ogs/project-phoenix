@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -65,6 +66,37 @@ func TestFormSchemaService_CreateSchema_CreatesActive(t *testing.T) {
 	active, err := testpkg.TenantQuery0(t, ctx, testpkg.SetupTestDB(t), svc.GetActive)
 	require.NoError(t, err)
 	assert.Equal(t, schema.ID, active.ID)
+}
+
+// Two admins edit v1; the first publishes v2. The second save names v1,
+// which is no longer the newest of the lineage: it is refused with
+// readstate.ErrChanged and publishes nothing, so v2's changes are not
+// silently reverted (ADR 0311).
+func TestFormSchemaService_UpdateSchema_RefusesAnOutdatedVersion(t *testing.T) {
+	t.Parallel()
+	db, svc, creatorID, tenantID := setupSchemaTest(t)
+	ctx := testpkg.TenantContext(tenantID)
+	publish := func(id int64, label string) (*capability.FormSchema, error) {
+		return testpkg.TenantQuery0(t, ctx, db, func(txCtx context.Context) (*capability.FormSchema, error) {
+			return svc.UpdateSchema(txCtx, id, []capability.FormField{{Key: "diet", Label: label, Type: capability.FormFieldText, SortOrder: 0}}, creatorID)
+		})
+	}
+	v1, err := testpkg.TenantQuery0(t, ctx, db, func(txCtx context.Context) (*capability.FormSchema, error) {
+		return svc.CreateSchema(txCtx, "Zwei Bearbeitende", []capability.FormField{{Key: "diet", Label: "Ernährung", Type: capability.FormFieldText, SortOrder: 0}}, creatorID)
+	})
+	require.NoError(t, err)
+	v2, err := publish(v1.ID, "Ernährung und Allergien")
+	require.NoError(t, err)
+
+	_, err = publish(v1.ID, "Ernährung (alt)")
+	require.ErrorIs(t, err, readstate.ErrChanged)
+	versions, err := testpkg.TenantQuery0(t, ctx, db, svc.ListVersions)
+	require.NoError(t, err)
+	assert.Len(t, versions, 2, "the outdated save publishes nothing")
+
+	v3, err := publish(v2.ID, "Ernährung, Allergien, Getränke")
+	require.NoError(t, err)
+	assert.Equal(t, 3, v3.Version)
 }
 
 func TestFormSchemaService_UpdateSchema_KeepsAllVersionsActive(t *testing.T) {
@@ -426,9 +458,8 @@ func TestFormSchemaService_RenameAndPublishConcurrently_NeverSplitsLineage(t *te
 		{Key: "allergies", Label: "Allergien", Type: capability.FormFieldText, SortOrder: 0},
 	}
 
-	// Seed a single-version lineage. lineageID is any version's id — it
-	// survives every publish (versions are never deleted) and every rename
-	// (rename keeps row ids), so both operations can reference it forever.
+	// Seed a single-version lineage. lineageID is the newest version's id:
+	// a rename accepts any version, a publish only the newest (ADR 0311).
 	var lineageID int64
 	require.NoError(t, testpkg.WithTenantTx(t, context.Background(), db, tenantID, func(ctx context.Context, _ bun.Tx) error {
 		created, err := testpkg.TenantQuery0(t, ctx, db, func(txCtx context.Context) (*capability.FormSchema, error) {
@@ -446,6 +477,7 @@ func TestFormSchemaService_RenameAndPublishConcurrently_NeverSplitsLineage(t *te
 		var wg sync.WaitGroup
 		wg.Add(2)
 		var renameErr, publishErr error
+		var newest int64
 		go func() {
 			defer wg.Done()
 			renameErr = testpkg.WithTenantTx(t, context.Background(), db, tenantID, func(ctx context.Context, _ bun.Tx) error {
@@ -456,15 +488,20 @@ func TestFormSchemaService_RenameAndPublishConcurrently_NeverSplitsLineage(t *te
 		go func() {
 			defer wg.Done()
 			publishErr = testpkg.WithTenantTx(t, context.Background(), db, tenantID, func(ctx context.Context, _ bun.Tx) error {
-				_, err := testpkg.TenantQuery0(t, ctx, db, func(txCtx context.Context) (*capability.FormSchema, error) {
+				published, err := testpkg.TenantQuery0(t, ctx, db, func(txCtx context.Context) (*capability.FormSchema, error) {
 					return svc.UpdateSchema(txCtx, lineageID, field, creatorID)
 				})
+				if err == nil {
+					newest = published.ID
+				}
 				return err
 			})
 		}()
 		wg.Wait()
 		require.NoError(t, renameErr, "iteration %d: rename", i)
 		require.NoError(t, publishErr, "iteration %d: publish", i)
+		// The editor saves over the newest version of the lineage (ADR 0311).
+		lineageID = newest
 
 		names := make(map[string]struct{})
 		require.NoError(t, testpkg.WithTenantTx(t, context.Background(), db, tenantID, func(ctx context.Context, _ bun.Tx) error {

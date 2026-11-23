@@ -79,7 +79,7 @@ func TestParentInvitationOutboxIsAtomicWithApproval(t *testing.T) {
 			if manual {
 				grade := int16(1)
 				payload, err = json.Marshal(enrollmentAPI.AdminManualApprovedEnrollmentRequest{
-					SubmitEnrollmentRequest:  enrollmentAPI.SubmitEnrollmentRequest{GuardianFirstName: "Atomic", GuardianLastName: "Parent", GuardianEmail: fmt.Sprintf("atomic-manual-%d@example.test", testpkg.Tenant(t)), Children: []enrollmentAPI.SubmitChildRequest{{FirstName: "Atomic", LastName: "Child", DateOfBirth: "2019-03-01", TargetGradeLevel: &grade}}, FormSchemaID: ident.ID(schema.ID)},
+					SubmitEnrollmentRequest:  enrollmentAPI.SubmitEnrollmentRequest{GuardianFirstName: "Atomic", GuardianLastName: "Parent", GuardianEmail: fmt.Sprintf("atomic-manual-%d@example.test", testpkg.Tenant(t)), Children: []enrollmentAPI.SubmitChildRequest{{FirstName: "Atomic", LastName: "Child", DateOfBirth: "2019-03-01", TargetGradeLevel: &grade}}, FormSchemaID: ident.ID(schema.ID), ExpectedTermsFingerprint: phaseTerms(t, requests, phase.ID)},
 					ExternalConsentConfirmed: true, Reason: "Anmeldung auf Papier", SendNotification: true,
 				})
 				require.NoError(t, err)

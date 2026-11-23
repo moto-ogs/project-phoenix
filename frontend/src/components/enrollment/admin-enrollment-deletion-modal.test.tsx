@@ -138,4 +138,50 @@ describe("AdminEnrollmentDeletionModal (#2515)", () => {
       screen.queryByRole("button", { name: "Wiederholen" }),
     ).not.toBeInTheDocument();
   });
+
+  // Without the new preview the dialog names the failed read, not a new
+  // preview it does not have; its retry reads again and then names the
+  // refusal. Nothing is deleted twice.
+  it("names a failed preview read after a refused deletion", async () => {
+    mocks.getAdminRequestDeleteImpact
+      .mockResolvedValueOnce(impact)
+      .mockRejectedValueOnce(
+        new ApiError("down", 503, { code: "general.unavailable" }),
+      )
+      .mockResolvedValueOnce({
+        ...impact,
+        fingerprint: "after",
+        counts: { ...impact.counts, total: 2, request_children: 1 },
+      } as AdminEnrollmentDeletionImpact);
+    mocks.deleteAdminRequest.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    renderModal();
+
+    fireEvent.change(await screen.findByLabelText(/Löschgrund/), {
+      target: { value: "Testanmeldung" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Ja, löschen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Endgültig löschen" }));
+
+    expect(
+      await screen.findByText(
+        catalogText("general.unavailable", "die Vorschau der Löschung"),
+      ),
+    ).toBeVisible();
+    expect(
+      screen.queryByText(
+        catalogText("general.changed_since_read", "die Vorschau der Löschung"),
+      ),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "die Vorschau der Löschung"),
+      ),
+    ).toBeVisible();
+    expect(await screen.findByText("Betroffene Datensätze (2)")).toBeVisible();
+    expect(mocks.deleteAdminRequest).toHaveBeenCalledOnce();
+  });
 });

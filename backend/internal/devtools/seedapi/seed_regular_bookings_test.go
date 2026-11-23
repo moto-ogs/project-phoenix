@@ -78,9 +78,9 @@ func (s *regularBookingServer) handle(w seedHTTPResponseWriter, r *seedHTTPReque
 		_ = json.NewDecoder(r.Body).Decode(&body)
 	}
 	switch {
-	case r.Method == "GET" && r.URL.Path == "/api/enrollment/phases/77/":
-		// The office's form shows the phase's version (ADR 0311).
-		_, _ = fmt.Fprint(w, `{"status":"success","data":{"form_schema_id":"5"}}`)
+	case r.Method == "GET" && r.URL.Path == "/api/enrollment/phases/77/manual-bootstrap":
+		// The office's form shows the phase's version and token (ADR 0311).
+		_, _ = fmt.Fprint(w, `{"status":"success","data":{"schema":{"id":"5"},"terms_fingerprint":"form-5"}}`)
 	case r.URL.Path == "/api/enrollment/phases/77":
 		s.events = append(s.events, fmt.Sprintf("audience %v", body["audience"]))
 		_, _ = fmt.Fprint(w, `{"status":"success","data":{}}`)
@@ -91,6 +91,7 @@ func (s *regularBookingServer) handle(w seedHTTPResponseWriter, r *seedHTTPReque
 			`{"guardian":{"first_name":"Eva","last_name":"Muster","email":"eva.%s@example.test"},"relationship_id":%s,"relationship_type":"parent","is_primary":true}]}`, studentID, studentID)
 	case r.URL.Path == "/api/enrollment/phases/77/manual-approved-enrollments":
 		assert.Equal(s.t, "5", body["form_schema_id"], "the booking names the form version it filled")
+		assert.Equal(s.t, "form-5", body["expected_terms_fingerprint"], "the booking sends the token of the form it filled")
 		s.bookings = append(s.bookings, body)
 		child := body["children"].([]any)[0].(map[string]any)
 		studentID := map[string]string{"Emma": "1002", "Leon": "1003"}[child["first_name"].(string)]

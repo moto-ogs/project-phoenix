@@ -131,9 +131,9 @@ function EnrollPhaseFormPageContent({ params }: PageProps) {
     [bootstrap],
   );
 
-  // The family fills the version it opened. A refused submit of an outdated
-  // version (ADR 0311) loads the current form in place: the form keeps the
-  // answers, the page stays mounted.
+  // The family fills the form it opened. A refused submit of a changed form
+  // (ADR 0311) loads the current one in place: the form keeps the answers,
+  // the page stays mounted.
   const loadCurrentForm = async () => {
     try {
       setBootstrap(
@@ -142,10 +142,11 @@ function EnrollPhaseFormPageContent({ params }: PageProps) {
         }),
       );
     } catch (err) {
-      // The refusal stays on the form; reloading the page reads it again.
-      logger.error("public_enrollment_form_reload_failed", {
+      // The form shows this failure in place of the refusal.
+      logger.warn("public_enrollment_form_reload_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
+      throw err;
     }
   };
 

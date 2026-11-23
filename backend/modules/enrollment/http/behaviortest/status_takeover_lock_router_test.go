@@ -278,7 +278,7 @@ func (env *takeoverLockEnv) postChangeRequest(t *testing.T, body string) *httpte
 	req := httptest.NewRequest(
 		http.MethodPost,
 		fmt.Sprintf("/requests/%s/change-requests", env.token),
-		strings.NewReader(body),
+		strings.NewReader(withShownTerms(t, env.router, "/requests/"+env.token+"/edit-bootstrap", body)),
 	)
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()

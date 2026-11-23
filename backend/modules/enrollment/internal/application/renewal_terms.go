@@ -92,14 +92,8 @@ func (s *Intake) renewalFormFor(ctx context.Context, phaseID int64) (renewalForm
 	if err != nil {
 		return renewalForm{}, fmt.Errorf("renewal terms: resolve legal blocks: %w", err)
 	}
-	if s.deps.Fingerprint == nil {
-		return renewalForm{}, fmt.Errorf("renewal terms: fingerprint not configured")
-	}
-	encoded, err := json.Marshal(blocks)
-	if err != nil {
-		return renewalForm{}, fmt.Errorf("renewal terms: encode legal blocks: %w", err)
-	}
-	return renewalForm{schema: schema, blocks: blocks, fingerprint: s.deps.Fingerprint(encoded)}, nil
+	// The same token as a form read, over the blocks a renewal asks for.
+	return renewalForm{schema: schema, blocks: blocks, fingerprint: enrollmentNative.FormTermsFingerprint(schema, blocks)}, nil
 }
 
 // renewalTerms are the terms the status page asks the parents to accept;

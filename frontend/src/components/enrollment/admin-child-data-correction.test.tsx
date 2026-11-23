@@ -272,4 +272,60 @@ describe("AdminChildDataCorrection", () => {
       "Tippfehler",
     );
   });
+
+  // Without the stored data the form names the failed read, not a new state
+  // it does not show; its retry reads again and then names the refusal.
+  it("names a failed read of the stored data after a refusal", async () => {
+    const child = {
+      id: "child-1",
+      first_name: "Lina",
+      last_name: "Falsch",
+      date_of_birth: "2018-04-15",
+      target_grade_level: 1,
+      version: "v1",
+      status: "approved" as const,
+      activation_mode: "scheduled",
+      created_student_id: "student-1",
+    };
+    mocks.correctAdminChildData.mockRejectedValue(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    const onChangedSinceRead = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new ApiError("down", 503, { code: "general.unavailable" }),
+      )
+      .mockResolvedValue(undefined);
+    render(
+      <AdminChildDataCorrection
+        requestId="request-1"
+        onSaved={vi.fn()}
+        onChangedSinceRead={onChangedSinceRead}
+        child={child}
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Anmeldedaten korrigieren" }),
+    );
+    fireEvent.change(screen.getByLabelText("Grund der Korrektur"), {
+      target: { value: "Tippfehler" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Korrektur speichern" }),
+    );
+
+    expect(
+      await screen.findByText(
+        catalogText("general.unavailable", "der Eintrag des Kindes"),
+      ),
+    ).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "der Eintrag des Kindes"),
+      ),
+    ).toBeVisible();
+    expect(onChangedSinceRead).toHaveBeenCalledTimes(2);
+    expect(mocks.correctAdminChildData).toHaveBeenCalledOnce();
+  });
 });

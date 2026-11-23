@@ -16,7 +16,7 @@ import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
 import { useApiFormError } from "~/contexts/ToastContext";
-import { isChangedSinceRead } from "~/lib/api-error";
+import { ApiError, isChangedSinceRead } from "~/lib/api-error";
 import { todayISO } from "~/lib/date-helpers";
 import {
   correctAdminChildData,
@@ -35,8 +35,11 @@ export function AdminChildDataCorrection({
   child: AdminRequestChild;
   requestId: string;
   onSaved: (correctedChild: AdminRequestChild) => void;
-  /** Reads the request again after a colleague changed the child. */
-  onChangedSinceRead: () => void;
+  /**
+   * Reads the request again after a colleague changed the child; rejects
+   * when the read fails, so the form names that instead of a new state.
+   */
+  onChangedSinceRead: () => Promise<void>;
 }>) {
   const [open, setOpen] = useState(false);
   // The version of the child data the form was filled from (ADR 0311): a
@@ -89,6 +92,28 @@ export function AdminChildDataCorrection({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the child of this render
   }, [showStored, child, readVersion]);
 
+  // A colleague corrected the child meanwhile: the form shows the stored
+  // data with the refusal, the reason stays. Without the stored data the
+  // form names the failed read; its retry reads again.
+  const showRefusalWithStoredChild = async (refusal: unknown) => {
+    setShowStored(true);
+    try {
+      await onChangedSinceRead();
+    } catch (readError) {
+      logger.warn("admin_child_data_read_failed", {
+        error: readError instanceof Error ? readError.message : "unknown",
+        request_id: requestId,
+        child_id: child.id,
+      });
+      await errors.show(readError, {
+        object: "der Eintrag des Kindes",
+        retry: () => void showRefusalWithStoredChild(refusal),
+      });
+      return;
+    }
+    await errors.show(refusal, { object: "der Eintrag des Kindes" });
+  };
+
   const save = async () => {
     const parsedGrade = grade === "" ? undefined : Number(grade);
     if (parsedGrade !== undefined && !Number.isInteger(parsedGrade)) {
@@ -133,16 +158,20 @@ export function AdminChildDataCorrection({
         onSaved(correctedChild);
         if (op.isCurrent()) setOpen(false);
       } catch (err) {
-        logger.error("admin_child_data_correction_failed", {
+        const failure = {
           error: err instanceof Error ? err.message : "unknown",
           request_id: requestId,
           child_id: child.id,
-        });
+        };
+        // A refusal is expected; only server failures are errors.
+        if (err instanceof ApiError && (err.status ?? 500) < 500) {
+          logger.warn("admin_child_data_correction_failed", failure);
+        } else {
+          logger.error("admin_child_data_correction_failed", failure);
+        }
         if (!op.isCurrent()) return;
         if (isChangedSinceRead(err)) {
-          setShowStored(true);
-          onChangedSinceRead();
-          await errors.show(err, { object: "der Eintrag des Kindes" });
+          await showRefusalWithStoredChild(err);
           return;
         }
         await errors.show(err, {

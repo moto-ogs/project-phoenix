@@ -27447,6 +27447,13 @@
           }
         },
         {
+          "name": "expected_terms_fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "custom_data",
           "optional": true,
           "schema": {
@@ -47538,6 +47545,13 @@
           }
         },
         {
+          "name": "expected_terms_fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "custom_data",
           "optional": true,
           "schema": {
@@ -51191,6 +51205,12 @@
         },
         {
           "name": "edit_mode",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "terms_fingerprint",
           "schema": {
             "kind": "string"
           }
@@ -80300,6 +80320,12 @@
             "kind": "ref",
             "ref": "PublicLateInvitePrefill"
           }
+        },
+        {
+          "name": "terms_fingerprint",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -99126,6 +99152,13 @@
           "optional": true,
           "schema": {
             "kind": "id"
+          }
+        },
+        {
+          "name": "expected_terms_fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         },
         {

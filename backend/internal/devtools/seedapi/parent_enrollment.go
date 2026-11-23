@@ -565,7 +565,7 @@ func seedEnrollmentChangeConversation(rt *Runtime, adminAuth AuthRef, original m
 	children[0]["id"] = strconv.FormatInt(request.ChildIDs[0], 10)
 	body["children"] = children
 	body["parent_note"] = "Wir haben die Angaben ergänzt und bitten um erneute Prüfung."
-	raw, err := rt.Client.PostPublic(fmt.Sprintf("/api/enrollment/requests/%s/change-requests", request.StatusToken), body)
+	raw, err := postEditForm(rt, request.StatusToken, fmt.Sprintf("/api/enrollment/requests/%s/change-requests", request.StatusToken), body)
 	if err != nil {
 		return fmt.Errorf("create enrollment change request: %w", err)
 	}

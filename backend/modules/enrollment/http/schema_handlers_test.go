@@ -11,6 +11,7 @@ import (
 
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	transactionFailures "github.com/moto-ogs/project-phoenix/modules/transactionruntime"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
@@ -537,6 +538,20 @@ func TestUpdateSchemaHandler_RenameNameCollisionReturns409WithCode(t *testing.T)
 		})
 	require.Equal(t, http.StatusConflict, w.Code)
 	assert.Contains(t, w.Body.String(), "enrollment.schema_name_exists")
+}
+
+// A version published since the editor read {id} answers 409
+// general.changed_since_read, so the editor reloads instead of reverting it
+// (ADR 0311).
+func TestUpdateSchemaHandler_OutdatedVersionReturns409(t *testing.T) {
+	t.Parallel()
+
+	mock := &mockFormSchemaService{publishVersionErr: readstate.ErrChanged}
+	router := buildSchemaRouter(mock)
+	w := executeSchemaJSON(t, router, http.MethodPut, "/enrollment/schema/1234",
+		map[string]any{"fields": []map[string]any{{"key": "x", "label": "X", "type": "text", "sort_order": 0}}})
+	require.Equal(t, http.StatusConflict, w.Code)
+	assert.Contains(t, w.Body.String(), readstate.ChangedCode)
 }
 
 func TestUpdateSchemaHandler_RenameNotFoundReturns404(t *testing.T) {

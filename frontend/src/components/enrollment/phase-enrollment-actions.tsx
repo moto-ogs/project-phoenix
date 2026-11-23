@@ -56,6 +56,11 @@ import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
+import {
+  followOpeningRead,
+  settledRead,
+  type OpenedRead,
+} from "~/lib/opening-read";
 import { withLateInviteQuery } from "~/lib/enrollment-http";
 import { Loading } from "~/components/ui/loading";
 import type * as sharedContract from "~/lib/contract/shared.generated";
@@ -228,24 +233,47 @@ export function ManualApprovedEnrollmentModal({
 }>) {
   // A reopened panel shows the cached template while it reads again. The
   // server checks the entry against the current offerings, and refuses a
-  // form version the school replaced meanwhile (ADR 0311); the form then
-  // shows the current one.
+  // form the school changed meanwhile (ADR 0311); the form then shows the
+  // current one.
   const bootstrapRead = useSWRAuth(
     isOpen ? enrollmentKeys.manualEnrollmentBootstrap(phase.id) : null,
     () => fetchManualEnrollmentBootstrap(phase.id),
   );
+  // The office fills the template this opening read: it follows the first
+  // read of the opening, then a background read neither swaps it under the
+  // typed entry nor, when it fails, takes the form away. A failed first
+  // read shows its error, also over a cached template.
+  const [opening, setOpening] = useState(0);
+  const [wasOpen, setWasOpen] = useState(isOpen);
+  if (isOpen !== wasOpen) {
+    setWasOpen(isOpen);
+    if (isOpen) setOpening((n) => n + 1);
+  }
+  const [opened, setOpened] = useState<OpenedRead<ManualEnrollmentBootstrap>>();
+  const current = isOpen && opened?.key === opening ? opened : undefined;
+  const next = isOpen
+    ? followOpeningRead(current, opening, bootstrapRead)
+    : undefined;
+  if (isOpen && next !== current) setOpened(next);
   const loadCurrentForm = async () => {
     try {
-      await bootstrapRead.mutate();
+      const reloaded = await bootstrapRead.mutate(
+        fetchManualEnrollmentBootstrap(phase.id),
+        { revalidate: false },
+      );
+      if (reloaded !== undefined) {
+        setOpened(settledRead(opening, reloaded));
+      }
     } catch (err) {
-      // The refusal stays on the form; reopening the panel reads it again.
+      // The form keeps the entry and shows this failure in place of the
+      // refusal.
       logger.warn("manual_enrollment_form_reload_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
+      throw err;
     }
   };
-  // A failed load shows the error, not the earlier template.
-  const bootstrap = bootstrapRead.error ? undefined : bootstrapRead.data;
+  const bootstrap = next && !next.failed ? next.data : undefined;
   const prefetchedData = useMemo<EnrollmentFormPrefetchedData | null>(
     () => (bootstrap ? toManualPrefetchedData(bootstrap) : null),
     [bootstrap],
@@ -517,8 +545,12 @@ export function ManualApprovedEnrollmentModal({
   );
 }
 
+type ManualEnrollmentBootstrap = Awaited<
+  ReturnType<typeof fetchManualEnrollmentBootstrap>
+>;
+
 function toManualPrefetchedData(
-  bootstrap: Awaited<ReturnType<typeof fetchManualEnrollmentBootstrap>>,
+  bootstrap: ManualEnrollmentBootstrap,
 ): EnrollmentFormPrefetchedData {
   // The school confirms consent outside the form, so no block is required.
   // Staff entry bypasses the phase's audience and grade gates.

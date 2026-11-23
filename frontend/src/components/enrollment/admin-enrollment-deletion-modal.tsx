@@ -11,7 +11,7 @@ import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
 import NavigationLink from "~/components/ui/navigation-link";
 import { useApiFormError } from "~/contexts/ToastContext";
-import { isChangedSinceRead } from "~/lib/api-error";
+import { ApiError, isChangedSinceRead } from "~/lib/api-error";
 import {
   type AdminEnrollmentDeletionImpact,
   deleteAdminChild,
@@ -71,17 +71,33 @@ export function AdminEnrollmentDeletionModal({
   // A reopened dialog may show the cached preview while it reads again; the
   // deletion sends the fingerprint of the preview on screen, and the server
   // refuses it when the impact changed meanwhile (ADR 0311).
+  const readImpact = () =>
+    childId
+      ? getAdminChildDeleteImpact(requestId, childId)
+      : getAdminRequestDeleteImpact(requestId);
   const impactRead = useSWRAuth(
     isOpen
       ? childId
         ? enrollmentKeys.childDeleteImpact(requestId, childId)
         : enrollmentKeys.requestDeleteImpact(requestId)
       : null,
-    () =>
-      childId
-        ? getAdminChildDeleteImpact(requestId, childId)
-        : getAdminRequestDeleteImpact(requestId),
+    readImpact,
   );
+  // Reads the preview again after a refusal; a failure comes back, so the
+  // dialog names it instead of claiming the new preview is shown.
+  const adoptCurrentImpact = async (): Promise<{ error: unknown } | null> => {
+    try {
+      await impactRead.mutate(readImpact(), { revalidate: false });
+      return null;
+    } catch (error) {
+      logger.warn("enrollment_delete_preview_read_failed", {
+        error: error instanceof Error ? error.message : String(error),
+        request_id: requestId,
+        child_id: childId,
+      });
+      return { error };
+    }
+  };
   // A failed load shows the error, not the earlier preview.
   const impact = impactRead.error ? undefined : impactRead.data;
   const previewError = useSwrResourceLoadError(
@@ -114,6 +130,21 @@ export function AdminEnrollmentDeletionModal({
   const confirmDisabled =
     loadingPreview || deleting || !impact?.can_delete || !reasonValid;
 
+  // The impact changed since the preview: the dialog shows the new one and
+  // the error says so; deleting again confirms the new preview. Without the
+  // new preview the dialog names the failed read, whose retry reads again.
+  const showRefusalWithCurrentImpact = async (refusal: unknown) => {
+    const readFailure = await adoptCurrentImpact();
+    if (readFailure) {
+      await errors.show(readFailure.error, {
+        object: "die Vorschau der Löschung",
+        retry: () => void showRefusalWithCurrentImpact(refusal),
+      });
+      return;
+    }
+    await errors.show(refusal, { object: "die Vorschau der Löschung" });
+  };
+
   const handleDelete = async () => {
     if (!impact || confirmDisabled) return;
     setDeleting(true);
@@ -133,24 +164,25 @@ export function AdminEnrollmentDeletionModal({
           );
       onDeleted(result);
     } catch (deleteError) {
-      // The impact changed since the preview: the dialog shows the new one
-      // and the error says so; deleting again confirms the new preview.
       const changed = isChangedSinceRead(deleteError);
-      if (changed) await impactRead.mutate();
-      logger.error("enrollment_delete_failed", {
+      const failure = {
         error: deleteError instanceof Error ? deleteError.message : "unknown",
         request_id: requestId,
         child_id: childId,
-      });
-      await errors.show(
-        deleteError,
-        changed
-          ? { object: "die Vorschau der Löschung" }
-          : {
-              object: "die Löschung",
-              retry: () => void latestDeleteRef.current(),
-            },
-      );
+      };
+      // A refusal is expected; only server failures are errors.
+      const expected =
+        deleteError instanceof ApiError && (deleteError.status ?? 500) < 500;
+      if (expected) logger.warn("enrollment_delete_failed", failure);
+      else logger.error("enrollment_delete_failed", failure);
+      if (changed) {
+        await showRefusalWithCurrentImpact(deleteError);
+      } else {
+        await errors.show(deleteError, {
+          object: "die Löschung",
+          retry: () => void latestDeleteRef.current(),
+        });
+      }
     } finally {
       setDeleting(false);
     }

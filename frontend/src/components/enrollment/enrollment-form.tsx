@@ -254,11 +254,12 @@ interface PropsBase {
    */
   readonly withoutSignature?: boolean;
   /**
-   * Loads the current form after the server refused the version this form
+   * Loads the current form after the server refused the one this form
    * showed (`general.changed_since_read`, ADR 0311). The caller keeps the
    * form it opened with until then and hands the new one in as
    * `prefetchedData`; entered answers stay, consents to changed legal texts
-   * are cleared.
+   * are cleared. It rejects when the current form does not load; the form
+   * then shows that load error instead of the refusal.
    */
   readonly onFormChanged?: () => Promise<void>;
 }
@@ -483,7 +484,7 @@ export function EnrollmentForm({
   );
   // A confirmed signature only belongs to the values visible when it was
   // confirmed. Its own state update must not clear it; every later change to
-  // signed enrollment data does.
+  // signed enrollment data does, and so does another form (ADR 0311).
   const changeSignature = (value: SignatureValue | null) => {
     signatureJustConfirmed.current = value !== null;
     setSignature(value);
@@ -502,6 +503,7 @@ export function EnrollmentForm({
     children,
     additionalGuardians,
     customData,
+    config.termsFingerprint,
   ]);
 
   // A consent holds only for the legal text the parent saw: a new form keeps
@@ -565,6 +567,30 @@ export function EnrollmentForm({
   // for the next one instead of sending without it (#6739).
   const [retryPending, setRetryPending] = useState(false);
   const captchaSectionRef = useRef<HTMLElement>(null);
+  // Loads the current form after a refusal of the shown one (ADR 0311);
+  // a failure comes back instead of being thrown.
+  const reloadChangedForm = async (): Promise<{ error: unknown } | null> => {
+    if (!onFormChanged) return null;
+    try {
+      await onFormChanged();
+      return null;
+    } catch (error) {
+      return { error };
+    }
+  };
+  const showReloadFailure = async (reloadError: unknown, refusal: unknown) => {
+    await formError.show(reloadError, {
+      object: tr("errorObjectForm"),
+      retry: () => {
+        void (async () => {
+          const again = await reloadChangedForm();
+          if (again) void showReloadFailure(again.error, refusal);
+          else void formError.show(refusal, { object: tr("errorObjectForm") });
+        })();
+      },
+    });
+  };
+
   const retrySubmit = () => {
     setRetryPending(true);
     // A challenge the parent has to answer sits below the form: show it,
@@ -938,6 +964,7 @@ export function EnrollmentForm({
       restrictToOfferings,
       captchaToken: captchaRequired ? captchaToken || undefined : undefined,
       lateInviteToken,
+      termsFingerprint: config.termsFingerprint,
     });
 
     setSubmitting(true);
@@ -963,10 +990,10 @@ export function EnrollmentForm({
     } catch (err) {
       setCaptchaToken("");
       captchaRef.current?.reset();
-      // The school published another form meanwhile: the parent sees it
-      // now, with the answers kept, and sends it again after checking it.
+      // The school changed the form meanwhile: the parent sees the current
+      // one, with the answers kept, and sends it again after checking it.
       const formChanged = isChangedSinceRead(err);
-      if (formChanged) await onFormChanged?.();
+      const reloadFailure = formChanged ? await reloadChangedForm() : null;
       const code = err instanceof ApiError ? err.code : undefined;
       // A rejected input is expected; only server failures and crashes are
       // errors in the log.
@@ -1006,6 +1033,12 @@ export function EnrollmentForm({
         code === "enrollment.pickup_time_not_allowed"
           ? pickupTimeMarks(schema, children, customData)
           : [];
+      if (reloadFailure) {
+        // The current form did not load: the parent learns that, not that a
+        // new form is shown. Retrying loads it and then names the refusal.
+        void showReloadFailure(reloadFailure.error, err);
+        return;
+      }
       // "Wiederholen" submits the form again, so it sends what the parent
       // sees now, not the draft of the failed attempt.
       const presentation = await formError.show(

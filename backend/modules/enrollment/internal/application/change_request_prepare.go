@@ -200,6 +200,13 @@ func (s *ChangeRequests) validateProposal(ctx context.Context, req *enrollmentNa
 	if err != nil {
 		return err
 	}
+	// The family's form carries the token of the form it showed (ADR 0311);
+	// the approval re-validates the stored proposal, which carries none.
+	if opts.lockTakenOverChildren {
+		if err := checkFilledInForm(editReq.ExpectedTermsFingerprint, schema, legalBlocks); err != nil {
+			return err
+		}
+	}
 	if err := normalizeAdditionalGuardians(editReq); err != nil {
 		return err
 	}

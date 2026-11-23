@@ -257,6 +257,90 @@ describe("ParentEnrollFormPage", () => {
     );
   });
 
+  it("rejects a failed reload after a refusal, so the form names it", async () => {
+    await act(async () => {
+      render(
+        <Suspense fallback={null}>
+          <ParentEnrollFormPage
+            params={Promise.resolve({ tenantSlug: "demo", phaseId: "5" })}
+          />
+        </Suspense>,
+        { wrapper: Providers },
+      );
+    });
+    await screen.findByTestId("parent-enrollment-form");
+    const shown = mocks.enrollmentForm.mock.lastCall?.[0] as {
+      onFormChanged: () => Promise<void>;
+    };
+
+    mocks.fetchBootstrap.mockRejectedValueOnce(
+      new ApiError("unavailable", 503, { code: "general.unavailable" }),
+    );
+    await act(async () => {
+      await expect(shown.onFormChanged()).rejects.toThrow("unavailable");
+    });
+    expect(screen.getByTestId("parent-enrollment-form")).toBeInTheDocument();
+  });
+
+  // A cached form shows at once, but the opening's own read decides: when
+  // the window closed or the invitation was revoked meanwhile, the page
+  // shows that failure instead of a form the server would refuse.
+  it("shows the failed first read of an opening over a cached form", async () => {
+    const cache = new Map();
+    function SharedCache({
+      children,
+    }: Readonly<{ children: React.ReactNode }>) {
+      return (
+        <SessionProvider
+          session={{
+            user: { id: "parent-1", scope: "parent" },
+            expires: "2099-01-01",
+          }}
+          refetchOnWindowFocus={false}
+        >
+          <SWRConfig
+            value={{
+              provider: () => cache,
+              errorRetryCount: 0,
+              dedupingInterval: 0,
+            }}
+          >
+            {children}
+          </SWRConfig>
+        </SessionProvider>
+      );
+    }
+    const open = async () => {
+      let unmount = () => undefined as void;
+      await act(async () => {
+        ({ unmount } = render(
+          <Suspense fallback={null}>
+            <ParentEnrollFormPage
+              params={Promise.resolve({ tenantSlug: "demo", phaseId: "5" })}
+            />
+          </Suspense>,
+          { wrapper: SharedCache },
+        ));
+      });
+      return unmount;
+    };
+    const closeFirst = await open();
+    await screen.findByTestId("parent-enrollment-form");
+    closeFirst();
+
+    mocks.fetchBootstrap.mockRejectedValue(
+      new ApiError("window closed", 404, { code: "enrollment.window_closed" }),
+    );
+    await open();
+
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("parent-enrollment-form"),
+      ).not.toBeInTheDocument();
+    });
+  });
+
   it("shows an error instead of falling back when tenant metadata is unavailable", async () => {
     // #2353: the failed lookup carries its request ID to the parent.
     mocks.resolveTenant.mockRejectedValueOnce(
