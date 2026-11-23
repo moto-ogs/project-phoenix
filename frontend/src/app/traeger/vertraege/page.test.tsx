@@ -82,6 +82,8 @@ const DRAFT: CareContractSummary = {
   endsOn: null,
   studentId: null,
   imported: false,
+  followsBookings: false,
+  requestChildId: null,
 };
 
 const SENT: CareContractSummary = {

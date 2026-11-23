@@ -53,9 +53,13 @@ function services(contract: ApplicationContractResponse): ContractService[] {
 function contractStateLine(contract: ApplicationContractResponse): string {
   const concluded = contract.concluded;
   if (concluded && METHODS.has(concluded.method)) {
+    // A contract of an import knows at most its day, and maybe not even
+    // that (#7767): the same line as on the Träger's contract page.
     const line = `Abgeschlossen: ${formatConclusion({
       method: concluded.method as ConclusionMethod,
       at: concluded.at,
+      dateUnknown: concluded.date_unknown,
+      takenOver: concluded.taken_over,
     })}.`;
     if (contract.status === "gekuendigt") {
       return contract.ends_on

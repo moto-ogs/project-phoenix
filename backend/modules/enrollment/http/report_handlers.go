@@ -130,6 +130,7 @@ type careUsageRowResponse struct {
 	GuardianLastName  string                         `json:"guardian_last_name"`
 	GuardianEmail     string                         `json:"guardian_email"`
 	GuardianPhone     *string                        `json:"guardian_phone,omitempty"`
+	SubmissionSource  string                         `json:"submission_source"`
 	SubmittedAt       time.Time                      `json:"submitted_at"`
 }
 
@@ -543,6 +544,7 @@ func toCareUsageRowResponse(row capability.CareUsageRow) careUsageRowResponse {
 		GuardianLastName:  row.GuardianLastName,
 		GuardianEmail:     row.GuardianEmail,
 		GuardianPhone:     row.GuardianPhone,
+		SubmissionSource:  row.SubmissionSource,
 		SubmittedAt:       row.SubmittedAt,
 		Offerings:         make([]careUsageRowOfferingResponse, 0, len(row.Offerings)),
 	}

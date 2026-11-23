@@ -305,6 +305,7 @@ export const TRACKED_TRAEGER_ROUTE_TEMPLATES = [
   "/vertraege/nachpflege",
   "/vertraege/module-zuordnen",
   "/vertraege/verknuepfen",
+  "/vertraege/anmeldungen",
   "/zeitvergleich",
 ] as const;
 

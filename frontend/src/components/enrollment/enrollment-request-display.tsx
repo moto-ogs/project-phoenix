@@ -143,6 +143,7 @@ export function ChildOfferings({
   upcomingOfferings,
   unavailable,
   phaseName,
+  fromContract = false,
 }: Readonly<{
   offerings?: AdminRequestChildOffering[];
   /** Rendered alongside the current selection, flagged "gilt ab …". */
@@ -154,6 +155,11 @@ export function ChildOfferings({
    */
   unavailable?: boolean;
   phaseName?: string;
+  /**
+   * The days came from an imported contract (ADR 0309), not from a parent's
+   * choice: „Aus dem Vertrag“ instead of „Von Eltern gewählt“.
+   */
+  fromContract?: boolean;
 }>) {
   const rows = [...(offerings ?? []), ...(upcomingOfferings ?? [])];
   if (unavailable) {
@@ -175,7 +181,7 @@ export function ChildOfferings({
         {rows.map((o) => {
           const parentChoice = o.days_of_week_mode === "parent_choice";
           const dayDetails = parentChoice
-            ? formatAdminOfferingDaySource(o)
+            ? formatAdminOfferingDaySource(o, fromContract)
             : weekdayShortList(o.available_days ?? []);
           return (
             <li key={`${o.offering_id}-${o.valid_from ?? "current"}`}>
@@ -256,7 +262,10 @@ function OfferingAttributePills({
   );
 }
 
-function formatAdminOfferingDaySource(o: AdminRequestChildOffering): string {
+function formatAdminOfferingDaySource(
+  o: AdminRequestChildOffering,
+  fromContract: boolean,
+): string {
   const automatic = weekdayShortList(o.automatic_selected_days ?? []);
   const manualDays =
     (o.manual_selected_days?.length ?? 0) > 0 ||
@@ -265,10 +274,14 @@ function formatAdminOfferingDaySource(o: AdminRequestChildOffering): string {
       : (o.selected_days ?? []);
   const manual = weekdayShortList(manualDays);
   if (automatic && manual) {
-    return `${automatic} automatisch mitgebucht; ${manual} von Eltern gewählt`;
+    return `${automatic} automatisch mitgebucht; ${manual} ${fromContract ? "aus dem Vertrag" : "von Eltern gewählt"}`;
   }
   if (automatic) return `${automatic} automatisch mitgebucht`;
-  if (manual) return `Von Eltern gewählt: ${manual}`;
+  if (manual) {
+    return fromContract
+      ? `Aus dem Vertrag: ${manual}`
+      : `Von Eltern gewählt: ${manual}`;
+  }
   return "";
 }
 

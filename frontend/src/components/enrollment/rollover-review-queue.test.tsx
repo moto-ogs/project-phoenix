@@ -130,6 +130,25 @@ describe("RolloverReviewQueue", () => {
     expect(screen.getByText(/anna@example\.com/)).toBeInTheDocument();
   });
 
+  it("names a child of an imported contract without an empty guardian line", async () => {
+    mockListReview.mockResolvedValueOnce([
+      makeItem({
+        review_reason: "no_guardian",
+        guardian_first_name: "",
+        guardian_last_name: "",
+        guardian_email: "",
+      }),
+    ]);
+    render(<RolloverReviewQueue phaseID="77" />);
+
+    expect(
+      await screen.findByText("Keine Erziehungsberechtigten hinterlegt"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Aus importiertem Vertrag, ohne Eltern"),
+    ).toBeInTheDocument();
+  });
+
   it("falls back to the raw review reason when no label exists", async () => {
     mockListReview.mockResolvedValueOnce([
       makeItem({ review_reason: "future_unmapped_code" }),

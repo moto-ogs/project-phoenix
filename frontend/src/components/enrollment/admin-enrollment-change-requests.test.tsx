@@ -154,6 +154,7 @@ const baseChangeRequest: AdminEnrollmentChangeRequest = {
     guardian_last_name: "Muster",
     guardian_email: "mara@example.test",
     guardian_phone: "+49 221 555 990",
+    submission_source: "public",
     consent_flags: {},
     custom_data: {},
     submitted_at: "2026-06-01T10:00:00.000Z",

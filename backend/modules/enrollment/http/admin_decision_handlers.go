@@ -28,19 +28,23 @@ import (
 // answer next to its label. Listing endpoints leave them empty to
 // keep payloads light.
 type AdminRequestSummary struct {
-	ID                        string                    `json:"id"`
-	PhaseID                   string                    `json:"phase_id"`
-	PhaseName                 string                    `json:"phase_name"`
-	CareOfferingSelectionMode string                    `json:"care_offering_selection_mode"`
-	GuardianFirstName         string                    `json:"guardian_first_name"`
-	GuardianLastName          string                    `json:"guardian_last_name"`
-	GuardianEmail             string                    `json:"guardian_email"`
-	GuardianPhone             *string                   `json:"guardian_phone,omitempty"`
-	SubmittedAt               time.Time                 `json:"submitted_at"`
-	WithdrawnAt               *time.Time                `json:"withdrawn_at,omitempty"`
-	CustomData                capability.FormValues     `json:"custom_data,omitzero"`
-	ConsentFlags              capability.FormValues     `json:"consent_flags,omitzero"`
-	SchemaFields              []AdminRequestSchemaField `json:"schema_fields,omitempty"`
+	ID                        string  `json:"id"`
+	PhaseID                   string  `json:"phase_id"`
+	PhaseName                 string  `json:"phase_name"`
+	CareOfferingSelectionMode string  `json:"care_offering_selection_mode"`
+	GuardianFirstName         string  `json:"guardian_first_name"`
+	GuardianLastName          string  `json:"guardian_last_name"`
+	GuardianEmail             string  `json:"guardian_email"`
+	GuardianPhone             *string `json:"guardian_phone,omitempty"`
+	// SubmissionSource tells how the request came in (public, late_invite,
+	// admin_manual, contract_import): the school names a request of an
+	// imported contract as such, without parents (ADR 0309).
+	SubmissionSource string                    `json:"submission_source"`
+	SubmittedAt      time.Time                 `json:"submitted_at"`
+	WithdrawnAt      *time.Time                `json:"withdrawn_at,omitempty"`
+	CustomData       capability.FormValues     `json:"custom_data,omitzero"`
+	ConsentFlags     capability.FormValues     `json:"consent_flags,omitzero"`
+	SchemaFields     []AdminRequestSchemaField `json:"schema_fields,omitempty"`
 	// SchemaLegalBlocks carries key→title pairs from the pinned schema's
 	// legal blocks so the detail UI can label custom consent flags (e.g.
 	// "Schwimmbad") instead of rendering raw keys. Detail endpoint only.
@@ -212,6 +216,7 @@ func toAdminRequestSummary(s *RequestSummary) AdminRequestSummary {
 		GuardianLastName:  s.Request.GuardianLastName,
 		GuardianEmail:     s.Request.GuardianEmail,
 		GuardianPhone:     s.Request.GuardianPhone,
+		SubmissionSource:  capability.NormalizedSubmissionSource(s.Request.SubmissionSource),
 		SubmittedAt:       s.Request.SubmittedAt,
 		WithdrawnAt:       s.Request.WithdrawnAt,
 	}

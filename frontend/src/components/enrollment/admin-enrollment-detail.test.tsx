@@ -1607,3 +1607,67 @@ describe("AdminEnrollmentDetail future renewal (#6043)", () => {
     expect(mocks.getAdminRequest).toHaveBeenCalledTimes(2);
   });
 });
+
+describe("AdminEnrollmentDetail: Anmeldung aus importiertem Vertrag (ADR 0309)", () => {
+  const silent = {
+    id: "request-128",
+    phase_id: "phase-1",
+    phase_name: "2026/27",
+    guardian_first_name: "",
+    guardian_last_name: "",
+    guardian_email: "",
+    submission_source: "contract_import",
+    submitted_at: "2026-11-23T06:17:00Z",
+    status_token: "status-token",
+    children: [
+      adjustmentChild({
+        first_name: "Lina",
+        last_name: "Schröder",
+        created_student_id: "9",
+        status_reason: "Aus importiertem Vertrag",
+        offerings: [
+          {
+            offering_id: "7",
+            offering_name: "Betreuung bis 15 Uhr",
+            days_of_week_mode: "parent_choice",
+            selected_days: ["mon", "tue", "wed", "thu", "fri"],
+            manual_selected_days: ["mon", "tue", "wed", "thu", "fri"],
+            includes_lunch: false,
+            includes_holiday_care: false,
+          },
+        ],
+      }),
+    ],
+  };
+
+  it("names the request after the child and says the office made it from the contract", async () => {
+    mocks.getAdminRequest.mockResolvedValue(silent);
+    render(
+      <AdminEnrollmentDetail
+        requestId="request-128"
+        info="Hier prüfst du eine Anmeldung."
+      />,
+    );
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Lina Schröder" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Erklärung zu Lina Schröder" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Aus importiertem Vertrag" }),
+    ).toBeVisible();
+    expect(screen.getByText(/Eltern sind hier nicht hinterlegt/)).toBeVisible();
+    // Days the contract booked, not days a parent chose.
+    expect(
+      screen.getByText(/Aus dem Vertrag: Mo, Di, Mi, Do, Fr/),
+    ).toBeVisible();
+    expect(screen.queryByText(/Von Eltern gewählt/)).not.toBeInTheDocument();
+    // Its class stands in the child record, not in the request.
+    expect(screen.queryByText("Keine Klassenstufe")).not.toBeInTheDocument();
+    // No parent reads a status page of this request.
+    expect(
+      screen.queryByRole("link", { name: /Statusseite öffnen/ }),
+    ).not.toBeInTheDocument();
+  });
+});

@@ -38,6 +38,8 @@ const links = vi.hoisted(() => ({
 vi.unmock("swr");
 vi.mock("~/lib/traeger-care-contracts-api", () => api);
 vi.mock("~/lib/traeger-contract-child-links-api", () => links);
+const enrollments = vi.hoisted(() => ({ unbindContractEnrollment: vi.fn() }));
+vi.mock("~/lib/traeger-contract-enrollments-api", () => enrollments);
 // The SEPA mandate card of the family (#4695) answers 403 without the right
 // „Abrechnung“; these tests cover the contract and keep it empty.
 vi.mock("~/lib/traeger-sepa-api", () => ({
@@ -142,6 +144,8 @@ const DRAFT: CareContractDetail = {
   endsOn: null,
   studentId: null,
   imported: false,
+  followsBookings: false,
+  requestChildId: null,
   version: {
     number: 1,
     effectiveFrom: "2027-08-01",
@@ -1415,6 +1419,171 @@ describe("TraegerVertragPage", () => {
       expect(
         screen.queryByText(/Schon ausgestellte Rechnungen bleiben/),
       ).not.toBeInTheDocument();
+    });
+
+    it("keeps the link of a contract a colleague bound meanwhile, without an error log", async () => {
+      const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+      api.fetchCareContract.mockResolvedValue({ ...IMPORTED, studentId: "12" });
+      renderPage();
+      expect(await screen.findByText("Nr. 12")).toBeInTheDocument();
+      const [menu] = screen.getAllByRole("button", {
+        name: "Weitere Aktionen",
+      });
+      fireEvent.click(menu!);
+      fireEvent.click(
+        screen.getByRole("menuitem", { name: /Verknüpfung lösen/ }),
+      );
+      await screen.findByText(/Schon ausgestellte Rechnungen bleiben/);
+      links.unlinkContractChild.mockRejectedValueOnce(
+        new ApiError("Request failed (409)", 409, {
+          code: "care_contract.child_link_bound",
+        }),
+      );
+      api.fetchCareContract.mockResolvedValue({
+        ...IMPORTED,
+        studentId: "12",
+        followsBookings: true,
+        requestChildId: "128",
+      });
+      fireEvent.click(
+        screen.getByRole("button", { name: "Verknüpfung lösen" }),
+      );
+      expect(
+        await screen.findByText(
+          catalogText("care_contract.child_link_bound", "die Verknüpfung"),
+        ),
+      ).toBeInTheDocument();
+      expect(
+        await screen.findByText("Anmeldung nachgetragen"),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText(/Schon ausgestellte Rechnungen bleiben/),
+      ).not.toBeInTheDocument();
+      expect(errors).not.toHaveBeenCalledWith(
+        expect.stringContaining("traeger_care_contract_unlink_child_failed"),
+        expect.anything(),
+      );
+      errors.mockRestore();
+    });
+
+    describe("Bindung an die Anmeldung (ADR 0309)", () => {
+      const BOUND: CareContractDetail = {
+        ...IMPORTED,
+        studentId: "12",
+        followsBookings: true,
+        requestChildId: "128",
+      };
+
+      async function openUnbind() {
+        renderPage();
+        expect(
+          await screen.findByText("Anmeldung nachgetragen"),
+        ).toBeInTheDocument();
+        const [menu] = screen.getAllByRole("button", {
+          name: "Weitere Aktionen",
+        });
+        fireEvent.click(menu!);
+        // A bound contract keeps its child record: only the binding comes off.
+        expect(
+          screen.queryByRole("menuitem", { name: /^Verknüpfung lösen/ }),
+        ).not.toBeInTheDocument();
+        fireEvent.click(
+          screen.getByRole("menuitem", {
+            name: /Bindung an die Anmeldung lösen/,
+          }),
+        );
+        await screen.findByRole("dialog", {
+          name: "Bindung an die Anmeldung lösen?",
+        });
+      }
+
+      it("marks the contract and says it follows the bookings", async () => {
+        api.fetchCareContract.mockResolvedValue(BOUND);
+        renderPage();
+        expect(
+          await screen.findByText("Anmeldung nachgetragen"),
+        ).toBeInTheDocument();
+        expect(
+          screen.getByText(
+            /Der Vertrag folgt jetzt den Buchungen der Anmeldung an der Schule/,
+          ),
+        ).toBeInTheDocument();
+      });
+
+      it("unbinds the enrollment the office saw, after saying what stays", async () => {
+        api.fetchCareContract.mockResolvedValue(BOUND);
+        await openUnbind();
+        expect(
+          screen.getByText(
+            /Die Anmeldung und ihre Buchungen bleiben an der Schule/,
+          ),
+        ).toBeInTheDocument();
+        expect(
+          screen.getByText(/die Verknüpfung mit der Kinderakte lösen/),
+        ).toBeInTheDocument();
+        enrollments.unbindContractEnrollment.mockResolvedValueOnce(undefined);
+        api.fetchCareContract.mockResolvedValue({
+          ...BOUND,
+          followsBookings: false,
+          requestChildId: null,
+        });
+        fireEvent.click(screen.getByRole("button", { name: "Bindung lösen" }));
+        expect(
+          await screen.findByText("Die Bindung an die Anmeldung ist gelöst."),
+        ).toBeInTheDocument();
+        expect(enrollments.unbindContractEnrollment).toHaveBeenCalledWith(
+          "7",
+          "128",
+        );
+        await waitFor(() =>
+          expect(
+            screen.queryByText("Anmeldung nachgetragen"),
+          ).not.toBeInTheDocument(),
+        );
+      });
+
+      it("closes the dialog and shows the contract as it is when the binding changed", async () => {
+        const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+        api.fetchCareContract.mockResolvedValue(BOUND);
+        await openUnbind();
+        enrollments.unbindContractEnrollment.mockRejectedValueOnce(
+          new ApiError("Request failed (409)", 409, {
+            code: "care_contract.enrollment_binding_changed",
+          }),
+        );
+        api.fetchCareContract.mockResolvedValue({
+          ...BOUND,
+          followsBookings: false,
+          requestChildId: null,
+        });
+        fireEvent.click(screen.getByRole("button", { name: "Bindung lösen" }));
+        expect(
+          await screen.findByText(
+            catalogText(
+              "care_contract.enrollment_binding_changed",
+              "die Bindung",
+            ),
+          ),
+        ).toBeInTheDocument();
+        await waitFor(() =>
+          expect(
+            screen.queryByRole("dialog", {
+              name: "Bindung an die Anmeldung lösen?",
+            }),
+          ).not.toBeInTheDocument(),
+        );
+        await waitFor(() =>
+          expect(
+            screen.queryByText("Anmeldung nachgetragen"),
+          ).not.toBeInTheDocument(),
+        );
+        // An expected refusal is no error of the page.
+        expect(errors).not.toHaveBeenCalledWith(
+          expect.stringContaining("traeger_care_contract_unbind_failed"),
+          expect.anything(),
+        );
+        errors.mockRestore();
+      });
     });
 
     it("offers nothing for a contract from an application", async () => {
