@@ -90,8 +90,9 @@ func TestRenewalInitialStatus_UnknownDefaultsToAutoRenewed(t *testing.T) {
 }
 
 // A renewal no parent can answer goes to the school's review, whatever its
-// grade: the enrollment of a child of an imported care contract, and any
-// request without a guardian address and account (#7760, ADR 0309).
+// grade: the enrollment of a child of an imported care contract, and only
+// that (#7760, ADR 0309). A request of another source without a guardian
+// address and account rolls over as before.
 func TestARenewalNoParentCanAnswerGoesToReview(t *testing.T) {
 	t.Parallel()
 
@@ -102,7 +103,8 @@ func TestARenewalNoParentCanAnswerGoesToReview(t *testing.T) {
 	}{
 		"contract import":          {enrollmentNative.Request{SubmissionSource: enrollmentNative.RequestSourceContractImport}, true},
 		"contract import, address": {enrollmentNative.Request{SubmissionSource: enrollmentNative.RequestSourceContractImport, GuardianEmail: "eltern@example.test"}, true},
-		"no address, no account":   {enrollmentNative.Request{SubmissionSource: enrollmentNative.RequestSourceAdminManual}, true},
+		"no address, no account":   {enrollmentNative.Request{SubmissionSource: enrollmentNative.RequestSourceAdminManual}, false},
+		"public, no address":       {enrollmentNative.Request{}, false},
 		"address":                  {enrollmentNative.Request{GuardianEmail: "eltern@example.test"}, false},
 		"account":                  {enrollmentNative.Request{GuardianAccountID: &account}, false},
 	}

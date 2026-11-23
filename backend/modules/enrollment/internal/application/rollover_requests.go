@@ -127,13 +127,17 @@ func renewalSource(sourceRequest *enrollmentNative.Request) string {
 
 // renewalWithoutParent tells whether no parent can answer the renewal of
 // the request (#7760, ADR 0309): it is the enrollment of a child of an
-// imported care contract, or it names neither a guardian address nor an
-// account. Such a renewal gets no mail and nobody opens its status page, so
-// waiting for the parents would withdraw it at the deadline (opt-in) or
-// renew it without anyone having looked (opt-out). It goes to the school's
-// review instead.
+// imported care contract. Such a renewal names no guardian, gets no mail
+// and nobody opens its status page, so waiting for the parents would
+// withdraw it at the deadline (opt-in) or renew it without anyone having
+// looked (opt-out). It goes to the school's review instead.
+//
+// The rule reads the source and nothing else. A request of another source
+// that happens to name neither an address nor an account rolls over as it
+// always did: the rule changes nothing for a school without such an
+// enrollment.
 func renewalWithoutParent(sourceRequest *enrollmentNative.Request) bool {
-	return renewalSource(sourceRequest) != "" || (sourceRequest.GuardianEmail == "" && sourceRequest.GuardianAccountID == nil)
+	return renewalSource(sourceRequest) != ""
 }
 
 func (s *Rollovers) rollSourceChild(ctx context.Context, input rolloverRequestInput, newRequest *enrollmentNative.Request, source *enrollmentNative.RequestChild, unanswerable bool) (string, error) {

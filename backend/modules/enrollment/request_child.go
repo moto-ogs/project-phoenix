@@ -82,8 +82,8 @@ const (
 // (#3570), and that row stays submitted for a manual decision.
 // ReviewReasonNoGuardian marks the renewal of a request no parent can
 // answer (#7760, ADR 0309): the enrollment of a child of an imported care
-// contract, or any request without a guardian address and account. Nobody
-// gets its renewal mail, so the school decides instead of a deadline.
+// contract, and no other request. Nobody gets its renewal mail, so the
+// school decides instead of a deadline.
 const (
 	ReviewReasonGradeAboveMax     = "grade_above_max"
 	ReviewReasonNoGradeLevel      = "no_grade_level"
