@@ -3316,7 +3316,7 @@
         },
         {
           "name": "registered_by_id",
-          "kind": "string"
+          "kind": "id"
         },
         {
           "name": "search",
