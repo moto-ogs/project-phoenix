@@ -125,9 +125,17 @@ type EnrollmentRow struct {
 	PhaseID       ident.ID          `json:"phase_id,omitempty"`
 	PhaseName     string            `json:"phase_name"`
 	// Bookings are the modules the child books with their weekdays and the
-	// half-open time each holds (ValidUntil exclusive): what the run writes
-	// for ActionEnroll, what the application carries for ActionBind. Changes
-	// are the planned versions of the contract after them.
+	// half-open time each holds (ValidUntil exclusive). For a ready row with
+	// ActionEnroll they are what the run writes: the bookings derived from
+	// the contract. For a ready row that binds the application the plan
+	// proved (ActionBind with the RequestChildID of the plan) they are the
+	// stored bookings of that application as they hold from the day of the
+	// plan on, the ones the contract follows after the binding; nothing is
+	// written for them. For every other row they are the bookings derived
+	// from the contract, empty when none can be derived. Changes are the
+	// planned versions of the contract after the derived bookings; a row
+	// that shows the bookings of an application has none, those bookings
+	// carry the change.
 	Bookings []carecontract.EnrollmentBooking `json:"bookings"`
 	Changes  []carecontract.EnrollmentChange  `json:"changes"`
 	// RequestChildID is the application child the contract is bound to or

@@ -45,6 +45,13 @@ import (
 //     weekdays and the weekday mode of the offering, and that the offering
 //     still counts as care. A child whose phase or offering changed since
 //     the plan is answered as changed and gets no enrollment.
+//   - It creates what the office confirmed of the child record. The request
+//     child of a new enrollment stores the name and the date of birth of
+//     the child record. A row carries them as the confirmed preview showed
+//     them (ContractEnrollment.Confirmed), and the capability compares them
+//     with the child record it reads under its gates: a child record whose
+//     name or date of birth changed since is answered as changed, and
+//     nothing is written for it.
 //   - It also confirms what the plan proved of an application that exists.
 //     A row that names an approved application child (RequestChildID) is
 //     never enrolled: under the same locks the capability checks that this
@@ -110,7 +117,9 @@ const (
 	// ContractEnrollmentChanged is a child whose phase or offering is no
 	// longer what the plan read: the service of the phase moved, or an
 	// offering has other end times, weekdays or another weekday mode, or no
-	// longer counts as care. For a row that names an application it is also
+	// longer counts as care. It is also a child record whose name or date of
+	// birth is no longer what the row carries as confirmed
+	// (ContractEnrollment.Confirmed). For a row that names an application it is also
 	// an application that is gone, no longer approved or matched by the
 	// office, or whose stored bookings are not the ones the plan proved, as
 	// when the office changed its weekdays after the plan. It writes
@@ -222,10 +231,17 @@ type ContractBookingChange struct {
 // then the bookings of that application as the plan read them from
 // ProvedOn on (carecontract.EnrollmentPlanRow.ApplicationBookings), and the
 // answer is existing only when they are still the stored ones.
+//
+// Confirmed is the child record as the office confirmed it in the preview.
+// The caller that shows a preview passes it for every row; the child record
+// read under the gates must still carry that name and date of birth, else
+// the answer is changed. Without it nothing is compared: only a caller that
+// showed no child record to anyone leaves it out.
 type ContractEnrollment struct {
 	StudentID    int64
 	PhaseID      int64
 	ContractID   int64
+	Confirmed    *ContractChildIdentity
 	ServiceStart calendar.Date
 	ServiceEnd   calendar.Date
 	// RequestChildID names the approved application child the plan proved;
@@ -235,6 +251,15 @@ type ContractEnrollment struct {
 	Bookings       []ContractBooking
 	Changes        []ContractBookingChange
 	ActorAccountID int64
+}
+
+// ContractChildIdentity is what a preview showed of a child record: the name
+// and the date of birth of its person, BirthDate nil without one. A child
+// record the preview could not show is the empty identity.
+type ContractChildIdentity struct {
+	FirstName string
+	LastName  string
+	BirthDate *calendar.Date
 }
 
 // ContractEnrollmentResult answers one ContractEnrollment. RequestID and

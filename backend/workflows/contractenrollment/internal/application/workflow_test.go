@@ -219,8 +219,8 @@ func TestPreviewMergesPlanAndEnrollmentAndLogsTheRead(t *testing.T) {
 	preview, err := f.workflow(t).Preview(context.Background(), fakeActor, fakeSchool)
 	require.NoError(t, err)
 
-	assert.Equal(t, []string{"träger 1", "contracts in träger 1", "school 10", "hold in school 10", "plan in school 10", "check in school 10",
-		"children in school 10", "access in school 10"}, f.trail, "the Träger transaction ends before the school's begins")
+	assert.Equal(t, []string{"träger 1", "contracts in träger 1", "school 10", "hold in school 10", "plan in school 10", "children in school 10",
+		"check in school 10", "access in school 10"}, f.trail, "the Träger transaction ends before the school's begins")
 	assert.Empty(t, f.enrolled, "a preview enrolls nobody")
 	assert.Empty(t, f.bindings, "a preview binds nothing")
 	require.Len(t, f.access, 1, "the read of the school is written into its access log in the same transaction")
@@ -242,6 +242,9 @@ func TestPreviewMergesPlanAndEnrollmentAndLogsTheRead(t *testing.T) {
 	ben := rowOf(t, preview.Rows, contractBen)
 	assert.Equal(t, contractenrollment.ActionBind, ben.Action)
 	assert.Equal(t, ident.ID(childBen), ben.RequestChildID)
+	assert.Equal(t, []carecontract.EnrollmentBooking{booking(71)}, ben.Bookings,
+		"a row that binds shows the bookings of the application it binds, not the ones derived from the contract")
+	assert.Empty(t, ben.Changes)
 
 	lia := rowOf(t, preview.Rows, contractLia)
 	assert.Equal(t, contractenrollment.RowHeld, lia.Status, "the answer of the school's enrollment goes before the plan")
@@ -284,15 +287,19 @@ func TestRunEnrollsInTheSchoolAndBindsWhatTheEnrollmentAnswered(t *testing.T) {
 
 	run, err := workflow.Run(context.Background(), fakeActor, fakeSchool, preview.Fingerprint)
 	require.NoError(t, err)
-	assert.Equal(t, []string{"träger 1", "contracts in träger 1", "school 10", "hold in school 10", "plan in school 10", "check in school 10",
-		"children in school 10", "access in school 10", "enroll in school 10", "träger 1", "bind in träger 1"}, f.trail,
+	assert.Equal(t, []string{"träger 1", "contracts in träger 1", "school 10", "hold in school 10", "plan in school 10", "children in school 10",
+		"check in school 10", "access in school 10", "enroll in school 10", "träger 1", "bind in träger 1"}, f.trail,
 		"read, school and binding are three transactions, one after the other")
 
 	require.Len(t, f.enrolled, 2, "only the rows the preview showed as ready go through the school's enrollment")
 	assert.Equal(t, contractMia, f.enrolled[0].ContractID)
+	birth := calendar.NewDate(2019, 5, 3)
+	assert.Equal(t, &enrollment.ContractChildIdentity{FirstName: "Kind 201", LastName: "Akte", BirthDate: &birth}, f.enrolled[0].Confirmed,
+		"a child to enroll goes with the child record the preview showed")
 	assert.Equal(t, enrollment.ContractEnrollment{StudentID: studentBen, PhaseID: 7, ContractID: contractBen,
 		ServiceStart: calendar.NewDate(2027, 8, 1), ServiceEnd: calendar.NewDate(2028, 7, 31), RequestChildID: childBen,
 		ProvedOn: calendar.NewDate(2027, 9, 6), ActorAccountID: fakeAccount,
+		Confirmed: &enrollment.ContractChildIdentity{FirstName: "Kind 202", LastName: "Akte", BirthDate: &birth},
 		Bookings: []enrollment.ContractBooking{{CareOfferingID: 71, Days: []string{"mon"}, ValidFrom: calendar.NewDate(2027, 8, 1),
 			ValidUntil: calendar.NewDate(2028, 8, 1)}}}, f.enrolled[1],
 		"a row that names an application asks for its confirmation with the bookings the plan proved")
@@ -393,6 +400,47 @@ func TestRunWithoutAReadyPreviewRowWritesNothing(t *testing.T) {
 	assert.NotContains(t, f.trail, "bind in träger 1")
 	assert.Equal(t, preview.Rows, run.Rows)
 	assert.False(t, run.Changed)
+}
+
+// The office confirmed a preview that showed Mia's child record. After the
+// run compared the fingerprint, and before the school's enrollment read the
+// child record under its gates, staff changed its name: the enrollment
+// answers changed. The run hands over the child record as the preview
+// showed it, so the enrollment can tell; nothing is bound for the row.
+func TestRunHandsOverTheChildRecordThePreviewShowed(t *testing.T) {
+	t.Parallel()
+	f := newFakeOwners()
+	workflow := f.workflow(t)
+	preview, err := workflow.Preview(context.Background(), fakeActor, fakeSchool)
+	require.NoError(t, err)
+	shown := rowOf(t, preview.Rows, contractMia).Student
+	require.NotNil(t, shown)
+	f.lockedAnswer = map[int64]enrollment.ContractEnrollmentResult{contractMia: {Status: enrollment.ContractEnrollmentChanged}}
+
+	run, err := workflow.Run(context.Background(), fakeActor, fakeSchool, preview.Fingerprint)
+	require.NoError(t, err)
+	require.NotEmpty(t, f.enrolled)
+	for _, input := range f.enrolled {
+		require.NotNil(t, input.Confirmed, "every row names the child record the office confirmed")
+	}
+	assert.Equal(t, enrollment.ContractChildIdentity{FirstName: shown.FirstName, LastName: shown.LastName, BirthDate: shown.BirthDate},
+		*f.enrolled[0].Confirmed)
+	assert.Equal(t, contractenrollment.RowChanged, rowOf(t, run.Rows, contractMia).Status)
+	for _, binding := range f.bindings {
+		assert.NotEqual(t, ident.ID(contractMia), binding.ContractID, "a changed row is not bound")
+	}
+}
+
+// A child record the preview cannot show goes as the empty identity, never
+// as none: the enrollment compares it with whatever record it finds.
+func TestARowWithoutAShownChildRecordCarriesTheEmptyIdentity(t *testing.T) {
+	t.Parallel()
+	plan := newFakeOwners().plan
+	inputs := enrollmentInputs(plan, fakeAccount, map[int64]ports.Child{})
+	require.Len(t, inputs, 3)
+	for _, input := range inputs {
+		assert.Equal(t, &enrollment.ContractChildIdentity{}, input.Confirmed)
+	}
 }
 
 func TestRunRefusesAPreviewThatChanged(t *testing.T) {

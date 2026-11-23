@@ -288,6 +288,10 @@ func (r *contractRun) check(index int, input enrollmentNative.ContractEnrollment
 		result.Reason = enrollmentNative.ContractEnrollmentPhaseMissing
 		return
 	}
+	if student, known := r.students[input.StudentID]; known && !identityAsConfirmed(student, input.Confirmed) {
+		result.Status = enrollmentNative.ContractEnrollmentChanged
+		return
+	}
 	if input.RequestChildID > 0 {
 		confirmProvenApplication(phase, input, result)
 		r.refuseGoneRecord(input, result)
@@ -320,6 +324,26 @@ func (r *contractRun) check(index int, input enrollmentNative.ContractEnrollment
 		careStart: input.Bookings[0].ValidFrom}
 	phase.enrolling[input.StudentID] = subject
 	r.pending = append(r.pending, subject)
+}
+
+// identityAsConfirmed tells whether the child record the run read under its
+// gates still has the name and the date of birth the office confirmed in
+// the preview. A new enrollment stores them in its request child, and the
+// fingerprint of the preview was compared before the gates were taken: a
+// child record staff changed in between is not the one the office saw. A
+// row without a confirmed identity compares nothing.
+func identityAsConfirmed(student enrollmentNative.ContractStudent, confirmed *enrollmentNative.ContractChildIdentity) bool {
+	if confirmed == nil {
+		return true
+	}
+	day := func(date *calendar.Date) calendar.Date {
+		if date == nil {
+			return ""
+		}
+		return *date
+	}
+	return student.FirstName == confirmed.FirstName && student.LastName == confirmed.LastName &&
+		day(student.Birthday) == day(confirmed.BirthDate)
 }
 
 // refuseContractChild answers a child that is not enrolled: as changed when

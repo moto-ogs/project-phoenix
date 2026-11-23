@@ -256,3 +256,56 @@ func TestContractEnrollmentConfirmsNoEnrollmentOfAnInactiveChildRecord(t *testin
 	named.RequestChildID, named.ProvedOn = made[0].RequestChildID, calendar.Date(e.sourcePhase.ServiceStartDate)
 	assert.Equal(t, refused, e.enroll(t, named), "an application the row names is not confirmed either")
 }
+
+// The office confirmed a preview that showed the child record as Lina
+// Vertrag, born on 15 April 2018. Before the enrollment reads the child
+// record under its gates, staff change the name, then the date of birth.
+// The request child of a silent enrollment stores both: the enrollment
+// answers changed and writes nothing, in the check as in the run. A row that
+// carries the child record as it is now is enrolled with it, and a repeated
+// call with a child record that changed again finds nothing to confirm.
+func TestContractEnrollmentCreatesOnlyTheChildRecordTheOfficeConfirmed(t *testing.T) {
+	t.Parallel()
+	e := setupContractEnrollment(t)
+	ctx := testpkg.Ctx(t)
+	student := e.student(t, "Lina")
+	born := calendar.NewDate(2018, 4, 15)
+	confirmed := e.input(student.ID, e.booking("mon"))
+	confirmed.Confirmed = &capability.ContractChildIdentity{FirstName: "Lina", LastName: "Vertrag", BirthDate: &born}
+	require.Equal(t, capability.ContractEnrollmentEnrolled, e.check(t, confirmed)[0].Status, "the child record is what the office saw")
+
+	person := func(set string) {
+		t.Helper()
+		_, err := e.db.ExecContext(ctx, `UPDATE users.persons SET `+set+` WHERE id = ?`, student.PersonID)
+		require.NoError(t, err)
+	}
+	changed := []capability.ContractEnrollmentResult{{ContractID: e.contract, StudentID: student.ID, Status: capability.ContractEnrollmentChanged}}
+	for name, set := range map[string][2]string{
+		"first name":    {`first_name = 'Lena'`, `first_name = 'Lina'`},
+		"last name":     {`last_name = 'Anders'`, `last_name = 'Vertrag'`},
+		"date of birth": {`birthday = DATE '2018-04-16'`, `birthday = DATE '2018-04-15'`},
+		"no birth date": {`birthday = NULL`, `birthday = DATE '2018-04-15'`},
+	} {
+		person(set[0])
+		before := e.snapshot(t)
+		assert.Equal(t, changed, e.check(t, confirmed), name)
+		assert.Equal(t, changed, e.enroll(t, confirmed), name)
+		assert.Zero(t, e.count(t, contractWritten, testpkg.Tenant(t), student.ID, testpkg.Tenant(t), student.ID), name)
+		assert.Equal(t, before, e.snapshot(t), name)
+		person(set[1])
+	}
+
+	// The office confirms a new preview after the school renamed the child.
+	person(`first_name = 'Lena'`)
+	renamed := confirmed
+	renamed.Confirmed = &capability.ContractChildIdentity{FirstName: "Lena", LastName: "Vertrag", BirthDate: &born}
+	enrolled := e.enroll(t, renamed)
+	require.Equal(t, capability.ContractEnrollmentEnrolled, enrolled[0].Status)
+	var stored string
+	require.NoError(t, e.db.NewRaw(`SELECT first_name || ' ' || last_name || ' ' || date_of_birth::text FROM enrollment.request_children
+		WHERE tenant_id = ? AND id = ?`, testpkg.Tenant(t), enrolled[0].RequestChildID).Scan(ctx, &stored))
+	assert.Equal(t, "Lena Vertrag 2018-04-15", stored, "the request child stores what the office confirmed")
+	assert.Equal(t, capability.ContractEnrollmentExisting, e.enroll(t, renamed)[0].Status)
+	assert.Equal(t, capability.ContractEnrollmentChanged, e.enroll(t, confirmed)[0].Status,
+		"a stored enrollment is not confirmed for a child record the office did not see")
+}

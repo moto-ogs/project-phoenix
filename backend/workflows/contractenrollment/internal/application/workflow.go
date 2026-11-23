@@ -37,8 +37,8 @@ func reviewer(actor contractenrollment.Actor) carecontract.Reviewer {
 }
 
 // look is what one tenant transaction of the school read: the plan, the
-// rows the school's enrollment is asked for, the rows as a preview shows
-// them and their fingerprint.
+// rows the school's enrollment is asked for, each with the child record the
+// preview shows, the rows as a preview shows them and their fingerprint.
 type look struct {
 	plan   carecontract.EnrollmentPlan
 	inputs []enrollment.ContractEnrollment
@@ -141,9 +141,11 @@ func (w *Workflow) contracts(ctx context.Context, actor contractenrollment.Actor
 }
 
 // look plans the contracts in the tenant transaction of the school the
-// caller holds, asks the school's enrollment what it would do with each
-// ready row, reads the child records the rows name and writes the read into
-// the access log of the school.
+// caller holds, reads the child records the rows name, asks the school's
+// enrollment what it would do with each ready row and writes the read into
+// the access log of the school. The enrollment is asked with the child
+// records as read here: they are what the preview shows and what a run
+// hands over as confirmed.
 //
 // It first holds the school as one of the Träger. The check before the
 // Träger transaction (contracts) is not enough: an operator may give the
@@ -162,15 +164,6 @@ func (w *Workflow) look(ctx context.Context, actor contractenrollment.Actor, rea
 	if err != nil {
 		return look{}, err
 	}
-	seen := look{plan: plan, inputs: enrollmentInputs(plan, actor.AccountID)}
-	answers := enrollmentAnswers{}
-	if len(seen.inputs) > 0 {
-		checks, err := w.deps.SchoolEnrollments.CheckContractChildren(ctx, seen.inputs)
-		if err != nil {
-			return look{}, err
-		}
-		answers = answersOf(checks)
-	}
 	contracts, students := planSubjects(plan)
 	children := map[int64]ports.Child{}
 	if len(students) > 0 {
@@ -181,6 +174,15 @@ func (w *Workflow) look(ctx context.Context, actor contractenrollment.Actor, rea
 		for _, child := range found {
 			children[child.StudentID] = child
 		}
+	}
+	seen := look{plan: plan, inputs: enrollmentInputs(plan, actor.AccountID, children)}
+	answers := enrollmentAnswers{}
+	if len(seen.inputs) > 0 {
+		checks, err := w.deps.SchoolEnrollments.CheckContractChildren(ctx, seen.inputs)
+		if err != nil {
+			return look{}, err
+		}
+		answers = answersOf(checks)
 	}
 	seen.rows = previewRows(plan, answers, children)
 	seen.print = w.fingerprint(plan, seen.rows)

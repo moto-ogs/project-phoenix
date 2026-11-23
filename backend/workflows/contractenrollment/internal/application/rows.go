@@ -39,15 +39,23 @@ func (a enrollmentAnswers) of(row carecontract.EnrollmentPlanRow) (enrollment.Co
 // enrollmentInputs are the ready rows of the plan as the school's
 // enrollment takes them. A row that names an accepted application asks for
 // its confirmation, with the bookings the plan proved of it; any other asks
-// for the enrollment with the derived bookings.
-func enrollmentInputs(plan carecontract.EnrollmentPlan, accountID int64) []enrollment.ContractEnrollment {
+// for the enrollment with the derived bookings. Every row carries the child
+// record as the preview shows it (children): the enrollment compares it with
+// the record it reads under its gates, so the run creates and confirms only
+// for the child the office saw. A child record the preview cannot show is
+// the empty identity, which no child record with a name answers to.
+func enrollmentInputs(plan carecontract.EnrollmentPlan, accountID int64, children map[int64]ports.Child) []enrollment.ContractEnrollment {
 	inputs := []enrollment.ContractEnrollment{}
 	for _, row := range plan.Rows {
 		if row.Status != carecontract.EnrollmentReady {
 			continue
 		}
 		input := enrollment.ContractEnrollment{StudentID: row.StudentID.Int64(), PhaseID: row.PhaseID.Int64(),
-			ContractID: row.ContractID.Int64(), ServiceStart: row.PhaseStart, ServiceEnd: row.PhaseEnd, ActorAccountID: accountID}
+			ContractID: row.ContractID.Int64(), ServiceStart: row.PhaseStart, ServiceEnd: row.PhaseEnd, ActorAccountID: accountID,
+			Confirmed: &enrollment.ContractChildIdentity{}}
+		if child, known := children[row.StudentID.Int64()]; known {
+			input.Confirmed = &enrollment.ContractChildIdentity{FirstName: child.FirstName, LastName: child.LastName, BirthDate: child.BirthDate}
+		}
 		if row.RequestChildID != 0 {
 			input.RequestChildID, input.ProvedOn = row.RequestChildID.Int64(), row.ProvedOn
 			input.Bookings = contractBookings(row.ApplicationBookings)
@@ -129,13 +137,19 @@ func previewRows(plan carecontract.EnrollmentPlan, answers enrollmentAnswers, ch
 }
 
 // plannedRow is the row of the plan before the school's enrollment answers.
+//
+// A row that binds the application the plan proved shows the bookings of
+// that application (ApplicationBookings), not the ones derived from the
+// contract: nothing is written for it, and the stored bookings are what the
+// contract follows after the binding. They carry a planned change already,
+// so the row names no changes beside them.
 func plannedRow(schoolID ident.ID, planned carecontract.EnrollmentPlanRow, children map[int64]ports.Child) contractenrollment.EnrollmentRow {
 	row := contractenrollment.EnrollmentRow{ContractID: planned.ContractID, SchoolID: schoolID, Reason: planned.Reason,
 		ContractChild: contractenrollment.ContractChildName{FirstName: planned.ChildFirstName, LastName: planned.ChildLastName},
 		PhaseID:       planned.PhaseID, PhaseName: planned.PhaseName, Bookings: planned.Bookings, Changes: planned.Changes,
 		RequestChildID: planned.RequestChildID, FollowsContractID: planned.FollowsContractID}
-	if len(row.Bookings) == 0 && len(planned.ApplicationBookings) > 0 {
-		row.Bookings = planned.ApplicationBookings
+	if planned.Status == carecontract.EnrollmentReady && planned.RequestChildID != 0 {
+		row.Bookings, row.Changes = planned.ApplicationBookings, nil
 	}
 	if row.Bookings == nil {
 		row.Bookings = []carecontract.EnrollmentBooking{}
