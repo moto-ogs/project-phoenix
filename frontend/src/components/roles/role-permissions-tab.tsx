@@ -13,12 +13,13 @@ import { Input } from "~/components/ui/input";
 import { ListGroupHeader } from "~/components/ui/list-group-header";
 import { SectionCard } from "~/components/ui/section-card";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import { isChangedSinceRead } from "~/lib/api-error";
 import { authService } from "~/lib/auth-service";
 import type { Permission, Role } from "~/lib/auth-helpers";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { useFreshSWR, useSWRAuth } from "~/lib/swr";
+import { useSWRAuth } from "~/lib/swr";
 import { staffAccessKeys } from "~/lib/swr/staff-keys";
 import {
   formatPermissionDisplay,
@@ -42,6 +43,16 @@ interface RolePermissionsTabProps {
 }
 
 type AssignedMap = Record<string, boolean>;
+
+/**
+ * Die Auswahl im Bearbeiten und die Version des Stands, auf dem sie beruht:
+ * Speichern schickt diese Version mit, auch wenn der Reiter inzwischen einen
+ * neueren Stand zeigt (ADR 0311).
+ */
+interface Draft {
+  readonly map: AssignedMap;
+  readonly version: string;
+}
 
 const NO_PERMISSIONS: readonly Permission[] = [];
 
@@ -97,8 +108,11 @@ export function RolePermissionsTab({
 }: RolePermissionsTabProps) {
   const { success: toastSuccess } = useToast();
   const wasEditing = useRef(editing);
-  const enteringEdit = editing && !wasEditing.current;
-  const assignedRead = useFreshSWR(
+  // Der Reiter zeigt den Stand aus dem gemeinsamen Cache. Speichern schickt
+  // dessen Version mit; hat jemand die Rechte inzwischen geändert, lehnt das
+  // Backend ab (general.changed_since_read) und der Reiter zeigt den
+  // gespeicherten Stand wieder.
+  const assignedRead = useSWRAuth(
     staffAccessKeys.rolePermissions(role.id),
     () => authService.getRolePermissions(role.id),
     {
@@ -111,7 +125,8 @@ export function RolePermissionsTab({
     editing ? staffAccessKeys.permissionCatalog() : null,
     () => authService.getPermissions(),
   );
-  const assigned = assignedRead.data;
+  const assigned = assignedRead.data?.permissions;
+  const storedVersion = assignedRead.data?.version ?? "";
   const mutateAssigned = assignedRead.mutate;
   const mutateCatalog = catalogRead.mutate;
   const allPermissions = useMemo(
@@ -129,13 +144,7 @@ export function RolePermissionsTab({
   // Ladezustand.
   const { error: loadError, failure } = useSwrResourceLoadError(
     [
-      {
-        data: assigned,
-        error: assignedRead.error,
-        // Im Bearbeiten zählt nur der Stand dieses Abrufs: Schlägt er fehl,
-        // zeigt der Reiter den Ladefehler statt Kästchen auf älterem Stand.
-        ...(editing ? { hasConfirmedData: false } : {}),
-      },
+      { data: assigned, error: assignedRead.error },
       ...(editing
         ? [{ data: catalogRead.data, error: catalogRead.error }]
         : []),
@@ -145,17 +154,12 @@ export function RolePermissionsTab({
   );
   const loadFailed = failure !== undefined;
   const loading =
-    !loadFailed &&
-    (enteringEdit ||
-      // Im Bearbeiten beginnt kein Entwurf, solange ein Abruf läuft: Er
-      // überschriebe sonst die Änderung einer Kollegin.
-      (editing && assignedRead.isValidating) ||
-      !assigned ||
-      (editing && catalogRead.data === undefined));
+    !loadFailed && (!assigned || (editing && catalogRead.data === undefined));
   // Der Entwurf: null heißt unverändert, also der gespeicherte Stand. Ein
-  // Klick setzt ihn auf Grundlage des gerade gezeigten Stands (#3346).
-  const [draft, setDraft] = useState<AssignedMap | null>(null);
-  const draftMap = draft ?? assignedMap;
+  // Klick setzt ihn auf Grundlage des gerade gezeigten Stands (#3346) und
+  // merkt sich dessen Version.
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const draftMap = draft?.map ?? assignedMap;
   const [completingSave, setSaving] = useState(false);
   const [reloading, setReloading] = useState(false);
   const saving = completingSave || reloading;
@@ -196,18 +200,16 @@ export function RolePermissionsTab({
     clearReloadError.current = afterSave.clear;
   });
 
-  // Beim Umschalten zwischen Ansicht und Bearbeiten liest der Reiter den
-  // gespeicherten Stand neu; der Entwurf beginnt dort, ein Abbruch wirft die
-  // Kästchen zurück.
+  // Beim Umschalten zwischen Ansicht und Bearbeiten beginnt der Entwurf beim
+  // gezeigten Stand; ein Abbruch wirft die Kästchen zurück.
   useEffect(() => {
     if (wasEditing.current === editing) return;
     wasEditing.current = editing;
     setDraft(null);
-    void mutateAssigned();
     if (!editing) return;
     setSearchTerm("");
     clearSaveError();
-  }, [editing, mutateAssigned, clearSaveError]);
+  }, [editing, clearSaveError]);
 
   const assignedCount = useMemo(
     () => allPermissions.filter((p) => assignedMap[p.id] === true).length,
@@ -267,18 +269,21 @@ export function RolePermissionsTab({
 
   const toggleOne = (permissionId: string) => {
     setDraft((previous) => {
-      const current = previous ?? assignedMap;
-      return { ...current, [permissionId]: !current[permissionId] };
+      const current = previous ?? { map: assignedMap, version: storedVersion };
+      return {
+        ...current,
+        map: { ...current.map, [permissionId]: !current.map[permissionId] },
+      };
     });
   };
 
   const toggleMany = (permissions: readonly Permission[]) => {
     setDraft((previous) => {
-      const current = previous ?? assignedMap;
-      const allChecked = permissions.every((p) => current[p.id] === true);
-      const next = { ...current };
+      const current = previous ?? { map: assignedMap, version: storedVersion };
+      const allChecked = permissions.every((p) => current.map[p.id] === true);
+      const next = { ...current.map };
       for (const p of permissions) next[p.id] = !allChecked;
-      return next;
+      return { ...current, map: next };
     });
   };
 
@@ -289,24 +294,46 @@ export function RolePermissionsTab({
     setSaving(true);
     clearSaveError();
     try {
-      await authService.replaceRolePermissions(role.id, permissionIds);
+      await authService.replaceRolePermissions(
+        role.id,
+        permissionIds,
+        draft?.version ?? storedVersion,
+      );
       toastSuccess("Die Berechtigungen der Rolle sind gespeichert.");
     } catch (error) {
       logger.error("role_permissions_save_failed", {
         role_id: role.id,
         error: error instanceof Error ? error.message : String(error),
       });
-      void showSaveError(error, {
-        object: "das Speichern der Berechtigungen",
-        retry: () => latestSaveRef.current(),
-      });
+      // Jemand hat die Rechte seit dem Lesen geändert: Der Reiter zeigt den
+      // gespeicherten Stand, ein erneutes Senden würde wieder abgelehnt.
+      const changed = isChangedSinceRead(error);
+      void showSaveError(
+        error,
+        changed
+          ? { object: "das Speichern der Berechtigungen" }
+          : {
+              object: "das Speichern der Berechtigungen",
+              retry: () => latestSaveRef.current(),
+            },
+      );
+      if (changed) {
+        setDraft(null);
+        void mutateAssigned();
+      }
       setSaving(false);
       return;
     }
-    // The write confirms this selection even if the following reads fail.
+    // The write confirms this selection even if the following reads fail;
+    // its version is unknown until the reload below.
     setDraft(null);
     await mutateAssigned(
-      allPermissions.filter((permission) => draftMap[permission.id] === true),
+      {
+        permissions: allPermissions.filter(
+          (permission) => draftMap[permission.id] === true,
+        ),
+        version: "",
+      },
       { revalidate: false },
     );
     try {

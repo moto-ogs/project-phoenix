@@ -1,6 +1,7 @@
 DELETE /auth/roles/{id}/ -> basis
 GET /auth/roles/ -> basis
 GET /auth/roles/{id}/ -> basis
+GET /auth/roles/{roleId}/permission-selection/ -> basis
 GET /auth/roles/{roleId}/permissions/ -> basis
 POST /auth/roles/ -> basis
 PUT /auth/roles/{id}/ -> basis

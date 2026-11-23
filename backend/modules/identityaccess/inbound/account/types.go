@@ -432,8 +432,19 @@ type UpdateRoleRequest struct {
 
 // ReplaceRolePermissionsRequest contains the complete target set for a role.
 // An explicit empty array removes every permission; an omitted field is invalid.
+// ExpectedVersion is the version of the selection the set was made from
+// (ADR 0311); a selection changed since answers 409
+// general.changed_since_read.
 type ReplaceRolePermissionsRequest struct {
-	PermissionIDs []ident.ID `json:"permission_ids"`
+	PermissionIDs   []ident.ID `json:"permission_ids"`
+	ExpectedVersion string     `json:"expected_version"`
+}
+
+// RolePermissionsResponse is a role's selection with the version a
+// replacement sends back as expected_version.
+type RolePermissionsResponse struct {
+	Permissions []PermissionResponse `json:"permissions"`
+	Version     string               `json:"version"`
 }
 
 func (req *ReplaceRolePermissionsRequest) Bind(_ *http.Request) error {

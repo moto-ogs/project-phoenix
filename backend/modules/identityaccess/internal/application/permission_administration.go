@@ -2,9 +2,11 @@ package application
 
 import (
 	"context"
+	"slices"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Permission management (#3314): the permission catalog, direct account
@@ -86,8 +88,10 @@ func (r *RoleAdministration) lockMutableRole(ctx context.Context, roleID int64, 
 // current selection is changed, so an invalid request leaves it untouched.
 // A reserved permission the role does not hold yet is refused (#4574); one it
 // already holds may stay or be removed, so a role from before the rule stays
-// editable.
-func (r *RoleAdministration) ReplaceRolePermissions(ctx context.Context, roleID int64, permissionIDs []int64) error {
+// editable. A selection changed since the caller read expectedVersion is
+// refused with readstate.ErrChanged (ADR 0311): the replacement would
+// otherwise revert a colleague's change, and a removal revokes sessions.
+func (r *RoleAdministration) ReplaceRolePermissions(ctx context.Context, roleID int64, permissionIDs []int64, expectedVersion string) error {
 	return runFlowErr(ctx, r.flow(), func(ctx context.Context) error {
 		const op = "replace role permissions"
 		return r.runtime.RunInTx(ctx, func(txCtx context.Context) error {
@@ -105,6 +109,9 @@ func (r *RoleAdministration) ReplaceRolePermissions(ctx context.Context, roleID 
 			current, err := r.rolePermissions(txCtx, roleID, op)
 			if err != nil {
 				return err
+			}
+			if err := readstate.Check(expectedVersion, rolePermissionsVersion(current)); err != nil {
+				return failed(op, err)
 			}
 			if err := requireNoNewReservedPermission(desired, current, op); err != nil {
 				return err
@@ -173,9 +180,10 @@ func (r *RoleAdministration) removeHeldRolePermission(ctx context.Context, roleI
 	return nil
 }
 
-func (r *RoleAdministration) GetRolePermissions(ctx context.Context, roleID int64) (value0 []identityaccess.Permission, err error) {
+// GetRolePermissions reads a visible role's selection and its version.
+func (r *RoleAdministration) GetRolePermissions(ctx context.Context, roleID int64) (value0 identityaccess.RolePermissions, err error) {
 	if r == nil {
-		return nil, errRoleAdministrationUnavailable
+		return identityaccess.RolePermissions{}, errRoleAdministrationUnavailable
 	}
 	operation := func(ctx context.Context) ([]domain.ManagedPermission, error) {
 		permissions, found, err := r.store.ListVisibleRolePermissions(ctx, roleID)
@@ -189,10 +197,22 @@ func (r *RoleAdministration) GetRolePermissions(ctx context.Context, roleID int6
 	}
 	err = r.runtime.RunInTx(ctx, func(txCtx context.Context) error {
 		result, err := operation(bindRuntime(r.attach, txCtx))
-		value0 = publicPermissions(result)
+		value0 = identityaccess.RolePermissions{Permissions: publicPermissions(result), Version: rolePermissionsVersion(result)}
 		return roleError(err)
 	})
 	return
+}
+
+// rolePermissionsVersion is the read-state token of a role's selection: the
+// fingerprint of its sorted permission IDs. The read and the replacement's
+// check derive it here from the same mapping rows.
+func rolePermissionsVersion(permissions []domain.ManagedPermission) string {
+	ids := make([]int64, 0, len(permissions))
+	for _, permission := range permissions {
+		ids = append(ids, permission.ID)
+	}
+	slices.Sort(ids)
+	return readstate.Fingerprint(ids)
 }
 
 func (r *RoleAdministration) desiredRolePermissions(txCtx context.Context, permissionIDs []int64) (map[int64]domain.ManagedPermission, error) {

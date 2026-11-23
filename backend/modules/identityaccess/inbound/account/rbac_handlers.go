@@ -87,9 +87,9 @@ func (rs *Resource) getRoleByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get permissions for the role
-	permissions, _ := rs.Sessions.GetRolePermissions(r.Context(), int64(id))
-	permissionNames := make([]string, 0, len(permissions))
-	for _, perm := range permissions {
+	selection, _ := rs.Sessions.GetRolePermissions(r.Context(), int64(id))
+	permissionNames := make([]string, 0, len(selection.Permissions))
+	for _, perm := range selection.Permissions {
 		permissionNames = append(permissionNames, perm.FullName())
 	}
 
@@ -295,26 +295,49 @@ func (rs *Resource) listPermissions(w http.ResponseWriter, r *http.Request) {
 	common.Respond(w, r, http.StatusOK, toPermissionResponses(permissions), "Permissions retrieved successfully")
 }
 
-// getRolePermissions handles getting permissions for a role
+// getRolePermissions answers the role's permissions as a list. Deprecated
+// for one release (ADR 0270): the permission selection carries the version
+// a replacement needs.
 func (rs *Resource) getRolePermissions(w http.ResponseWriter, r *http.Request) {
-	roleID, ok := common.ParseIntIDWithError(w, r, "roleId", common.MsgInvalidRoleID)
+	selection, ok := rs.readRolePermissions(w, r)
 	if !ok {
 		return
 	}
+	common.Respond(w, r, http.StatusOK, toPermissionResponses(selection.Permissions), "Role permissions retrieved successfully")
+}
 
-	permissions, err := rs.Sessions.GetRolePermissions(r.Context(), int64(roleID))
+// getRolePermissionSelection answers the role's permissions with the
+// version a replacement sends back as expected_version (ADR 0311).
+func (rs *Resource) getRolePermissionSelection(w http.ResponseWriter, r *http.Request) {
+	selection, ok := rs.readRolePermissions(w, r)
+	if !ok {
+		return
+	}
+	response := RolePermissionsResponse{Permissions: make([]PermissionResponse, 0, len(selection.Permissions)), Version: selection.Version}
+	for _, permission := range selection.Permissions {
+		response.Permissions = append(response.Permissions, *toPermissionResponse(permission))
+	}
+	common.Respond(w, r, http.StatusOK, response, "Role permissions retrieved successfully")
+}
+
+// readRolePermissions reads the role in the route; a failure is answered.
+func (rs *Resource) readRolePermissions(w http.ResponseWriter, r *http.Request) (identityaccess.RolePermissions, bool) {
+	roleID, ok := common.ParseIntIDWithError(w, r, "roleId", common.MsgInvalidRoleID)
+	if !ok {
+		return identityaccess.RolePermissions{}, false
+	}
+	selection, err := rs.Sessions.GetRolePermissions(r.Context(), int64(roleID))
 	if errors.Is(err, identityaccess.ErrRoleNotFound) {
 		// Same answer as GET /auth/roles/{id}/ for a role outside the
 		// caller's school, so neither read reveals that it exists (#5703).
 		common.RenderError(w, r, common.ErrorNotFound(errors.New("role not found")))
-		return
+		return identityaccess.RolePermissions{}, false
 	}
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInternalServer(err))
-		return
+		return identityaccess.RolePermissions{}, false
 	}
-
-	common.Respond(w, r, http.StatusOK, toPermissionResponses(permissions), "Role permissions retrieved successfully")
+	return selection, true
 }
 
 // replaceRolePermissions applies a complete permission selection atomically.
@@ -332,7 +355,7 @@ func (rs *Resource) replaceRolePermissions(w http.ResponseWriter, r *http.Reques
 	for i, permissionID := range req.PermissionIDs {
 		permissionIDs[i] = permissionID.Int64()
 	}
-	if err := rs.Sessions.ReplaceRolePermissions(r.Context(), int64(roleID), permissionIDs); err != nil {
+	if err := rs.Sessions.ReplaceRolePermissions(r.Context(), int64(roleID), permissionIDs, req.ExpectedVersion); err != nil {
 		rs.markRollback(r.Context())
 		common.RenderError(w, r, renderRoleMutationError(err))
 		return

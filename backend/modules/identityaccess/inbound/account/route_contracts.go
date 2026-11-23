@@ -36,6 +36,10 @@ func AdminRouteContracts(caregiverState any) []common.RouteContract {
 		return common.RouteContract{Method: method, Pattern: pattern, Portals: portals, Request: request, Response: response, NoData: response == nil}
 	}
 	listRoles := route("GET", "/roles/", nil, []RoleResponse{})
+	// The list without a version goes after one release (ADR 0270); the
+	// permission selection carries the version a replacement sends back.
+	deprecatedRolePermissions := route("GET", "/roles/{roleId}/permissions/", nil, []PermissionResponse{})
+	deprecatedRolePermissions.Deprecated = true
 	listRoles.Query = []common.QueryParam{{Name: "name", Kind: common.QueryString}}
 	listPermissions := route("GET", "/permissions/", nil, []PermissionResponse{})
 	listPermissions.Query = []common.QueryParam{
@@ -48,7 +52,8 @@ func AdminRouteContracts(caregiverState any) []common.RouteContract {
 		route("GET", "/roles/{id}/", nil, RoleResponse{}),
 		route("PUT", "/roles/{id}/", UpdateRoleRequest{}, nil),
 		route("DELETE", "/roles/{id}/", nil, nil),
-		route("GET", "/roles/{roleId}/permissions/", nil, []PermissionResponse{}),
+		deprecatedRolePermissions,
+		route("GET", "/roles/{roleId}/permission-selection/", nil, RolePermissionsResponse{}),
 		route("PUT", "/roles/{roleId}/permissions/", ReplaceRolePermissionsRequest{}, nil),
 		listPermissions,
 		route("GET", "/accounts/{accountId}/roles/", nil, []RoleResponse{}),

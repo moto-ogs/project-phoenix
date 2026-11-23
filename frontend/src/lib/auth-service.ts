@@ -6,6 +6,12 @@ import {
   type Permission,
 } from "./auth-helpers";
 
+/** A role's permission selection and the version of that selection. */
+export interface RolePermissions {
+  permissions: Permission[];
+  version: string;
+}
+
 /**
  * Roles and permissions of the staff portal, through its catalog proxy
  * (#2352): the answers arrive decoded, the lists as plain arrays.
@@ -19,22 +25,38 @@ export const authService = {
     return roles.map(mapRoleResponse);
   },
 
-  getRolePermissions: async (roleId: string): Promise<Permission[]> => {
-    const permissions = await bffJson(
+  /**
+   * The role's permissions with the version of that selection, which
+   * `replaceRolePermissions` sends back (ADR 0311).
+   */
+  getRolePermissions: async (roleId: string): Promise<RolePermissions> => {
+    const selection = await bffJson(
       "tenant",
-      "GET /auth/roles/{roleId}/permissions/",
+      "GET /auth/roles/{roleId}/permission-selection/",
       { params: { roleId }, errorMessage: "Get role permissions failed" },
     );
-    return permissions.map(mapPermissionResponse);
+    return {
+      permissions: (selection.permissions ?? []).map(mapPermissionResponse),
+      version: selection.version,
+    };
   },
 
+  /**
+   * Replaces the role's selection. `expectedVersion` is the version of the
+   * selection it was made from; a selection changed since is refused with
+   * `general.changed_since_read`.
+   */
   replaceRolePermissions: async (
     roleId: string,
     permissionIds: readonly string[],
+    expectedVersion: string,
   ): Promise<void> => {
     await bffJson("tenant", "PUT /auth/roles/{roleId}/permissions/", {
       params: { roleId },
-      body: { permission_ids: [...permissionIds] },
+      body: {
+        permission_ids: [...permissionIds],
+        expected_version: expectedVersion,
+      },
       errorMessage: "Replace role permissions failed",
     });
   },

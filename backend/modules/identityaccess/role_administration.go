@@ -196,7 +196,17 @@ type RoleCommand interface {
 type PermissionQuery interface {
 	GetPermissionByName(ctx context.Context, name string) (Permission, error)
 	ListPermissions(ctx context.Context, filter PermissionFilter) ([]Permission, error)
-	GetRolePermissions(ctx context.Context, roleID int64) ([]Permission, error)
+	// GetRolePermissions reads a role's selection with its version, the
+	// token ReplaceRolePermissions expects back (ADR 0311).
+	GetRolePermissions(ctx context.Context, roleID int64) (RolePermissions, error)
+}
+
+// RolePermissions is a role's permission selection as one read saw it.
+// Version is the read-state token of the selection (ADR 0311): opaque to
+// the client, which sends it back as the expected version of a replacement.
+type RolePermissions struct {
+	Permissions []Permission
+	Version     string
 }
 
 // PermissionCommand changes permissions and role selections. Role selections of system roles are immutable.
@@ -206,7 +216,10 @@ type PermissionCommand interface {
 	// invalid request leaves the current selection untouched. A reserved
 	// permission the role does not hold yet is refused with
 	// ErrReservedPermissionNotAllowed; one it already holds may stay or go.
-	ReplaceRolePermissions(ctx context.Context, roleID int64, permissionIDs []int64) error
+	// expectedVersion is the Version of the selection the replacement was
+	// made from; a selection changed since is refused with
+	// readstate.ErrChanged, so nobody reverts a colleague's change unseen.
+	ReplaceRolePermissions(ctx context.Context, roleID int64, permissionIDs []int64, expectedVersion string) error
 	RemovePermissionFromRole(ctx context.Context, roleID, permissionID int64) error
 }
 

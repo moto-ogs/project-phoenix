@@ -81,13 +81,16 @@ describe("authService", () => {
 
     describe("getRolePermissions", () => {
       it("fetches role permissions", async () => {
-        respondWith({ data: [sampleBackendPermission] });
+        respondWith({
+          data: { permissions: [sampleBackendPermission], version: "v1" },
+        });
 
         const result = await authService.getRolePermissions("1");
 
-        expect(result).toHaveLength(1);
-        expect(result[0]?.name).toBe("users.read");
-        expect(sentUrl()).toBe("/api/auth/roles/1/permissions");
+        expect(result.permissions).toHaveLength(1);
+        expect(result.permissions[0]?.name).toBe("users.read");
+        expect(result.version).toBe("v1");
+        expect(sentUrl()).toBe("/api/auth/roles/1/permission-selection");
       });
     });
 
@@ -95,13 +98,14 @@ describe("authService", () => {
       it("replaces the permission set of a role with one PUT", async () => {
         respondWith(undefined, 204);
 
-        await authService.replaceRolePermissions("1", ["2", "3"]);
+        await authService.replaceRolePermissions("1", ["2", "3"], "v1");
 
         expect(fetchMock).toHaveBeenCalledTimes(1);
         expect(sentUrl()).toBe("/api/auth/roles/1/permissions");
         expect(sentInit().method).toBe("PUT");
         expect(JSON.parse(String(sentInit().body))).toEqual({
           permission_ids: ["2", "3"],
+          expected_version: "v1",
         });
       });
     });

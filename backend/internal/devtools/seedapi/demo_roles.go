@@ -133,7 +133,7 @@ func (s *FixedSeeder) seedDemoRoles(_ context.Context, definitions ...demoRoleDe
 		if role.Data.ID <= 0 {
 			return fmt.Errorf("demo role %s was created without an id", definition.Name)
 		}
-		if _, err := s.client.Put(fmt.Sprintf("/auth/roles/%d/permissions", role.Data.ID), map[string]any{"permission_ids": ids}); err != nil {
+		if err := s.grantRolePermissions(int64(role.Data.ID), ids); err != nil {
 			return fmt.Errorf("grant permissions of demo role %s: %w", definition.Name, err)
 		}
 		s.roleIDs[definition.Name] = int64(role.Data.ID)
@@ -151,6 +151,37 @@ func seedRoleDefinitionsOrDemo(definitions []demoRoleDefinition) []demoRoleDefin
 		return demoRoleDefinitions()
 	}
 	return definitions
+}
+
+// grantRolePermissions replaces the role's permissions with ids, sending the
+// version of the selection it read just before (ADR 0311).
+func (s *FixedSeeder) grantRolePermissions(roleID int64, ids []string) error {
+	version, err := s.rolePermissionsVersion(roleID)
+	if err != nil {
+		return fmt.Errorf("read permissions: %w", err)
+	}
+	_, err = s.client.Put(fmt.Sprintf("/auth/roles/%d/permissions", roleID), map[string]any{
+		"permission_ids": ids, "expected_version": version,
+	})
+	return err
+}
+
+// rolePermissionsVersion reads the version of a role's permission selection,
+// which a replacement sends back as expected_version (ADR 0311).
+func (s *FixedSeeder) rolePermissionsVersion(roleID int64) (string, error) {
+	respBody, err := s.client.Get(fmt.Sprintf("/auth/roles/%d/permission-selection", roleID))
+	if err != nil {
+		return "", err
+	}
+	var resp struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(respBody, &resp); err != nil {
+		return "", fmt.Errorf("parse role permissions response: %w", err)
+	}
+	return resp.Data.Version, nil
 }
 
 // fetchPermissionIDs reads the permission catalog as "resource:action" -> id.

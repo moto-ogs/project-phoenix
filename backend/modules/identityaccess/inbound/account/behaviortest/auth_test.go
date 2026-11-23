@@ -1168,8 +1168,19 @@ func TestRolePermissionAssignment(t *testing.T) {
 		role := testpkg.CreateTestRole(t, tc.db, "ReplacePermRole")
 		permission := testpkg.CreateTestPermission(t, tc.db, "ReplaceRolePermission", "test", "read")
 
-		req := testutil.NewJSONRequest(t, "PUT", fmt.Sprintf("/auth/roles/%d/permissions", role.ID), map[string][]string{
-			"permission_ids": {fmt.Sprintf("%d", permission.ID)},
+		read := testutil.NewJSONRequest(t, "GET", fmt.Sprintf("/auth/roles/%d/permission-selection", role.ID), nil)
+		selection := testutil.ExecuteWithAuthPermissions(t, router, read, adminClaims, []string{"roles:manage"})
+		require.Equal(t, http.StatusOK, selection.Code, selection.Body.String())
+		var body struct {
+			Data struct {
+				Version string `json:"version"`
+			} `json:"data"`
+		}
+		require.NoError(t, json.Unmarshal(selection.Body.Bytes(), &body))
+
+		req := testutil.NewJSONRequest(t, "PUT", fmt.Sprintf("/auth/roles/%d/permissions", role.ID), map[string]any{
+			"permission_ids":   []string{fmt.Sprintf("%d", permission.ID)},
+			"expected_version": body.Data.Version,
 		})
 		rr := testutil.ExecuteWithAuthPermissions(t, router, req, adminClaims, []string{"roles:manage"})
 

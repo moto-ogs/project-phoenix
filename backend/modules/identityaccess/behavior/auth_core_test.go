@@ -1541,24 +1541,28 @@ func TestAuthService_ReplaceRolePermissions(t *testing.T) {
 	newPermission := testpkg.CreateTestPermission(t, db, "replace-new", "replace-new", "read")
 	require.NoError(t, rbac.AssignPermissionToRole(ctx, role.ID, oldPermission.ID))
 
-	require.NoError(t, rbac.ReplaceRolePermissions(ctx, role.ID, []int64{newPermission.ID}))
-
-	permissions, err := rbac.GetRolePermissions(ctx, role.ID)
+	read, err := rbac.GetRolePermissions(ctx, role.ID)
 	require.NoError(t, err)
+	require.NoError(t, rbac.ReplaceRolePermissions(ctx, role.ID, []int64{newPermission.ID}, read.Version))
+
+	selection, err := rbac.GetRolePermissions(ctx, role.ID)
+	require.NoError(t, err)
+	permissions := selection.Permissions
 	require.Len(t, permissions, 1)
 	assert.Equal(t, newPermission.ID, permissions[0].ID)
 
 	sentinelErr := errors.New("force outer rollback")
 	err = testpkg.RunInTenantTransaction(ctx, func(txCtx context.Context) error {
-		if err := rbac.ReplaceRolePermissions(txCtx, role.ID, []int64{oldPermission.ID}); err != nil {
+		if err := rbac.ReplaceRolePermissions(txCtx, role.ID, []int64{oldPermission.ID}, selection.Version); err != nil {
 			return err
 		}
 		return sentinelErr
 	})
 	require.ErrorIs(t, err, sentinelErr)
 
-	permissions, err = rbac.GetRolePermissions(ctx, role.ID)
+	selection, err = rbac.GetRolePermissions(ctx, role.ID)
 	require.NoError(t, err)
+	permissions = selection.Permissions
 	require.Len(t, permissions, 1)
 	assert.Equal(t, newPermission.ID, permissions[0].ID)
 }
@@ -1618,7 +1622,7 @@ func TestAuthService_GetRolePermissions(t *testing.T) {
 
 		// ASSERT
 		require.NoError(t, err)
-		assert.NotEmpty(t, result)
+		assert.NotEmpty(t, result.Permissions)
 	})
 }
 

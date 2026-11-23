@@ -20,10 +20,10 @@ func TestRolePermissionPersistence(t *testing.T) {
 
 	assertPermissions := func(roleID int64, ids ...int64) {
 		t.Helper()
-		permissions, err := rbac.GetRolePermissions(ctx, roleID)
+		selection, err := rbac.GetRolePermissions(ctx, roleID)
 		require.NoError(t, err)
-		actual := make([]int64, 0, len(permissions))
-		for _, permission := range permissions {
+		actual := make([]int64, 0, len(selection.Permissions))
+		for _, permission := range selection.Permissions {
 			actual = append(actual, permission.ID)
 		}
 		require.ElementsMatch(t, ids, actual)
@@ -42,9 +42,11 @@ func TestRolePermissionPersistence(t *testing.T) {
 
 	// Replacement changes only the selected role, and an invalid selection
 	// leaves its existing grants intact.
-	require.Error(t, rbac.ReplaceRolePermissions(ctx, first.ID, []int64{0}))
+	read, err := rbac.GetRolePermissions(ctx, first.ID)
+	require.NoError(t, err)
+	require.Error(t, rbac.ReplaceRolePermissions(ctx, first.ID, []int64{0}, read.Version))
 	assertPermissions(first.ID, shared.ID, kept.ID)
-	require.NoError(t, rbac.ReplaceRolePermissions(ctx, first.ID, []int64{kept.ID}))
+	require.NoError(t, rbac.ReplaceRolePermissions(ctx, first.ID, []int64{kept.ID}, read.Version))
 	assertPermissions(first.ID, kept.ID)
 	assertPermissions(second.ID, shared.ID)
 	require.NoError(t, rbac.AssignPermissionToRole(ctx, first.ID, shared.ID))
@@ -55,7 +57,7 @@ func TestRolePermissionPersistence(t *testing.T) {
 	require.NoError(t, rbac.RemovePermissionFromRole(ctx, second.ID, shared.ID))
 	assertPermissions(first.ID, kept.ID)
 	assertPermissions(second.ID)
-	_, err := rbac.GetRole(ctx, second.ID)
+	_, err = rbac.GetRole(ctx, second.ID)
 	require.NoError(t, err)
 
 	require.NoError(t, rbac.AssignPermissionToRole(ctx, second.ID, kept.ID))
@@ -79,8 +81,9 @@ func TestRolePermissionPersistence(t *testing.T) {
 	_, err = db.NewUpdate().TableExpr("auth.permissions").Set("description = NULL").Where("id = ?", undescribed.ID).Exec(ctx)
 	require.NoError(t, err)
 	require.NoError(t, rbac.AssignPermissionToRole(ctx, second.ID, undescribed.ID))
-	permissions, err := rbac.GetRolePermissions(ctx, second.ID)
+	selection, err := rbac.GetRolePermissions(ctx, second.ID)
 	require.NoError(t, err)
+	permissions := selection.Permissions
 	require.Len(t, permissions, 1)
 	require.Equal(t, undescribed.ID, permissions[0].ID)
 	require.Empty(t, permissions[0].Description)

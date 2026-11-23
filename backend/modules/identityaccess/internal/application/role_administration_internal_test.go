@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Behaviour of the role and permission administration (#3314) over in-memory
@@ -403,6 +404,15 @@ func newRAFixture(t *testing.T) *raFixture {
 	return f
 }
 
+// readVersion is the version an editor reads before replacing the role's
+// selection (ADR 0311).
+func (f *raFixture) readVersion(t *testing.T, roleID int64) string {
+	t.Helper()
+	selection, err := f.admin.GetRolePermissions(raContext(), roleID)
+	require.NoError(t, err)
+	return selection.Version
+}
+
 func raContext() context.Context {
 	return (&fakeRuntime{}).WithTenantID(context.Background(), raTenant)
 }
@@ -484,7 +494,7 @@ func TestRoleAdministration_SystemRolesAreImmutable(t *testing.T) {
 
 	require.ErrorIs(t, f.admin.DeleteRole(ctx, system.ID), identityaccess.ErrSystemRoleImmutable)
 	require.ErrorIs(t, f.admin.AssignPermissionToRole(ctx, system.ID, permission.ID), identityaccess.ErrSystemRoleImmutable)
-	require.ErrorIs(t, f.admin.ReplaceRolePermissions(ctx, system.ID, []int64{permission.ID}), identityaccess.ErrSystemRoleImmutable)
+	require.ErrorIs(t, f.admin.ReplaceRolePermissions(ctx, system.ID, []int64{permission.ID}, f.readVersion(t, system.ID)), identityaccess.ErrSystemRoleImmutable)
 	require.ErrorIs(t, f.admin.RemovePermissionFromRole(ctx, system.ID, permission.ID), identityaccess.ErrSystemRoleImmutable)
 
 	assert.Equal(t, "admin", f.store.roles[system.ID].Name)
@@ -883,7 +893,7 @@ func TestRoleAdministration_ReplaceRolePermissions(t *testing.T) {
 		role := f.store.addRole(customRoleOf("ogs", "user"))
 		f.store.findPermissionErr = errors.New("permission database unavailable")
 
-		err := f.admin.ReplaceRolePermissions(raContext(), role.ID, []int64{role.ID + 1})
+		err := f.admin.ReplaceRolePermissions(raContext(), role.ID, []int64{role.ID + 1}, f.readVersion(t, role.ID))
 		require.ErrorIs(t, err, f.store.findPermissionErr)
 		assert.NotErrorIs(t, err, identityaccess.ErrPermissionNotFound)
 	})
@@ -894,8 +904,8 @@ func TestRoleAdministration_ReplaceRolePermissions(t *testing.T) {
 		kept := f.store.addPermission("groups:read")
 		f.store.rolePerms[role.ID] = []int64{kept.ID}
 
-		require.ErrorIs(t, f.admin.ReplaceRolePermissions(raContext(), role.ID, []int64{kept.ID, 0}), identityaccess.ErrPermissionNotFound)
-		require.ErrorIs(t, f.admin.ReplaceRolePermissions(raContext(), role.ID, []int64{kept.ID + 100}), identityaccess.ErrPermissionNotFound)
+		require.ErrorIs(t, f.admin.ReplaceRolePermissions(raContext(), role.ID, []int64{kept.ID, 0}, f.readVersion(t, role.ID)), identityaccess.ErrPermissionNotFound)
+		require.ErrorIs(t, f.admin.ReplaceRolePermissions(raContext(), role.ID, []int64{kept.ID + 100}, f.readVersion(t, role.ID)), identityaccess.ErrPermissionNotFound)
 		assert.Equal(t, []int64{kept.ID}, f.store.rolePerms[role.ID])
 	})
 
@@ -907,9 +917,30 @@ func TestRoleAdministration_ReplaceRolePermissions(t *testing.T) {
 		added := f.store.addPermission("students:read")
 		f.store.rolePerms[role.ID] = []int64{dropped.ID, kept.ID}
 
-		require.NoError(t, f.admin.ReplaceRolePermissions(raContext(), role.ID, []int64{kept.ID, added.ID}))
+		require.NoError(t, f.admin.ReplaceRolePermissions(raContext(), role.ID, []int64{kept.ID, added.ID}, f.readVersion(t, role.ID)))
 		assert.ElementsMatch(t, []int64{kept.ID, added.ID}, f.store.rolePerms[role.ID])
 		assert.Equal(t, []string{"lock role", "remove role permission", "assign role permission"}, f.store.calls)
+	})
+
+	t.Run("a selection changed since it was read is refused and kept", func(t *testing.T) {
+		f := newRAFixture(t)
+		role := f.store.addRole(customRoleOf("ogs", "user"))
+		mine := f.store.addPermission("groups:read")
+		colleagues := f.store.addPermission("rooms:read")
+		f.store.rolePerms[role.ID] = []int64{mine.ID}
+		read := f.readVersion(t, role.ID)
+		// A colleague adds a permission after this editor read the selection.
+		f.store.rolePerms[role.ID] = []int64{mine.ID, colleagues.ID}
+
+		for _, expected := range []string{read, ""} {
+			err := f.admin.ReplaceRolePermissions(raContext(), role.ID, []int64{mine.ID}, expected)
+			require.ErrorIs(t, err, readstate.ErrChanged)
+		}
+		assert.Equal(t, []int64{mine.ID, colleagues.ID}, f.store.rolePerms[role.ID])
+		assert.NotContains(t, f.store.calls, "remove role permission")
+
+		require.NoError(t, f.admin.ReplaceRolePermissions(raContext(), role.ID, []int64{mine.ID}, f.readVersion(t, role.ID)))
+		assert.Equal(t, []int64{mine.ID}, f.store.rolePerms[role.ID])
 	})
 
 	t.Run("single mutations need an existing permission", func(t *testing.T) {
@@ -1043,7 +1074,7 @@ func TestRoleAdministration_ReservedPermissionsStayOffSchoolRoles(t *testing.T) 
 			kept := f.store.grant(role.ID, "groups:read")
 			platform := f.store.addPermission(name)
 
-			err := f.admin.ReplaceRolePermissions(raContext(), role.ID, []int64{kept[0], platform.ID})
+			err := f.admin.ReplaceRolePermissions(raContext(), role.ID, []int64{kept[0], platform.ID}, f.readVersion(t, role.ID))
 			require.ErrorIs(t, err, identityaccess.ErrReservedPermissionNotAllowed)
 			var reservedErr *identityaccess.ReservedPermissionError
 			require.ErrorAs(t, err, &reservedErr)
@@ -1061,10 +1092,10 @@ func TestRoleAdministration_ReservedPermissionsStayOffSchoolRoles(t *testing.T) 
 		held := f.store.grant(role.ID, "admin:*", "groups:read")
 		added := f.store.addPermission("rooms:read")
 
-		require.NoError(t, f.admin.ReplaceRolePermissions(raContext(), role.ID, []int64{held[0], held[1], added.ID}))
+		require.NoError(t, f.admin.ReplaceRolePermissions(raContext(), role.ID, []int64{held[0], held[1], added.ID}, f.readVersion(t, role.ID)))
 		assert.ElementsMatch(t, []string{"admin:*", "groups:read", "rooms:read"}, f.store.permissionNames(role.ID))
 
-		require.NoError(t, f.admin.ReplaceRolePermissions(raContext(), role.ID, []int64{held[1], added.ID}))
+		require.NoError(t, f.admin.ReplaceRolePermissions(raContext(), role.ID, []int64{held[1], added.ID}, f.readVersion(t, role.ID)))
 		assert.ElementsMatch(t, []string{"groups:read", "rooms:read"}, f.store.permissionNames(role.ID))
 	})
 }
@@ -1090,7 +1121,7 @@ func TestRoleAdministration_ReservedPermissionsWithInconsistentMetadata(t *testi
 				}
 				f.store.permissions[permission.ID] = permission
 
-				err := f.admin.ReplaceRolePermissions(raContext(), role.ID, []int64{kept[0], permission.ID})
+				err := f.admin.ReplaceRolePermissions(raContext(), role.ID, []int64{kept[0], permission.ID}, f.readVersion(t, role.ID))
 				require.ErrorIs(t, err, identityaccess.ErrReservedPermissionNotAllowed)
 				var reservedErr *identityaccess.ReservedPermissionError
 				require.ErrorAs(t, err, &reservedErr)
