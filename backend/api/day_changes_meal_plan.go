@@ -18,8 +18,13 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
+// dayChangesMenuChanges is Meal Plan's read of a day's change mark.
+type dayChangesMenuChanges interface {
+	MenuChangedOn(ctx context.Context, date mealplan.Date) (bool, error)
+}
+
 // dayChangesMealPlan is the Essen source over Meal Plan's change mark.
-type dayChangesMealPlan struct{ reads mealplan.MenuChanges }
+type dayChangesMealPlan struct{ reads dayChangesMenuChanges }
 
 func (s dayChangesMealPlan) MealPlanChanges(ctx context.Context, day calendar.Date) ([]daychangesview.SourceEntry, error) {
 	changed, err := s.reads.MenuChangedOn(ctx, mealplan.Date(day.String()))

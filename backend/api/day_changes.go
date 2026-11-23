@@ -23,7 +23,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/daychangesview"
 	dayChangesHTTP "github.com/moto-ogs/project-phoenix/modules/daychangesview/http"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
-	"github.com/moto-ogs/project-phoenix/modules/mealplan"
 	peoplePorts "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
 	schoolstructureCompose "github.com/moto-ogs/project-phoenix/modules/schoolstructure/compose"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
@@ -115,7 +114,7 @@ type DayChangesSources struct {
 	// the class-wide arrival exceptions of the day (#7681).
 	ClassArrivals timetable.ClassArrivalQuery
 	// MealPlan is Meal Plan's change mark of a day (#7666).
-	MealPlan mealplan.MenuChanges
+	MealPlan dayChangesMenuChanges
 	Today    func() calendar.Date
 	Logger   *slog.Logger
 }
