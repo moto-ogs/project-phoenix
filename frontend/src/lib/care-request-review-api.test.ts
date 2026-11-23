@@ -19,7 +19,7 @@ import {
   fetchCareScheduleChangeRequest,
   type StaffCareRequest,
 } from "./care-request-review-api";
-import type { RequestDiffEntry } from "~/lib/messaging-status";
+import type * as studentsContract from "~/lib/contract/students.generated";
 
 // ---------------------------------------------------------------------------
 // Utilities
@@ -40,7 +40,9 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
-function mkDiff(overrides: Partial<RequestDiffEntry> = {}): RequestDiffEntry {
+function mkDiff(
+  overrides: Partial<studentsContract.CareRequestDiffResponse> = {},
+): studentsContract.CareRequestDiffResponse {
   return { label: "Montag Ankunft", old: "07:30", new: "08:00", ...overrides };
 }
 

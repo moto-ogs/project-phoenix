@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   attachmentIdArgs,
@@ -54,13 +54,37 @@ describe("checkAttachmentFiles", () => {
 });
 
 describe("Routen und Sende-Argument", () => {
-  it("hängt die Anhänge der Eltern an das Kind", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("hängt die Anhänge der Eltern an das Kind", async () => {
+    const uploaded = {
+      id: "7",
+      filename: "a.png",
+      size_bytes: 1,
+      content_type: "image/png",
+    };
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ data: uploaded }), { status: 201 }),
+      )
+      .mockResolvedValueOnce(new Response("%PDF-1.7", { status: 200 }));
     const routes = guardianMessageAttachments("42");
-    expect(routes.uploadUrl).toBe(
+
+    await expect(routes.upload(file("a.png"))).resolves.toEqual(uploaded);
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      1,
       "/api/parent/me/messages/children/42/attachments",
+      expect.objectContaining({ method: "POST", body: expect.any(FormData) }),
     );
     expect(routes.downloadUrl("7")).toBe(
       "/api/parent/me/messages/children/42/attachments/7/download",
+    );
+    await routes.loadFile("7");
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      2,
+      "/api/parent/me/messages/children/42/attachments/7/download?inline=1",
+      expect.objectContaining({ method: "GET" }),
     );
   });
 
@@ -68,7 +92,12 @@ describe("Routen und Sende-Argument", () => {
     expect(attachmentIdArgs([])).toEqual([]);
     expect(
       attachmentIdArgs([
-        { id: "9", filename: "a.png", size_bytes: 1, content_type: "image/png" },
+        {
+          id: "9",
+          filename: "a.png",
+          size_bytes: 1,
+          content_type: "image/png",
+        },
       ]),
     ).toEqual([["9"]]);
   });

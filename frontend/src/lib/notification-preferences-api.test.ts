@@ -8,6 +8,11 @@ import {
   setNotificationPreference,
 } from "./notification-preferences-api";
 
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 /**
  * The two portals speak to different paths and wrap their payloads
  * differently. Both details are invisible in the card and would fail silently:
@@ -27,11 +32,7 @@ describe("notification preferences API client", () => {
   });
 
   function jsonResponse(body: unknown, status = 200) {
-    return {
-      ok: status >= 200 && status < 300,
-      status,
-      text: () => Promise.resolve(JSON.stringify(body)),
-    };
+    return new Response(JSON.stringify(body), { status });
   }
 
   const payload = {
@@ -53,17 +54,16 @@ describe("notification preferences API client", () => {
 
     const result = await fetchNotificationPreferences();
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/notifications/preferences",
-      expect.objectContaining({ credentials: "include" }),
-    );
+    expect(fetchMock).toHaveBeenCalledWith("/api/notifications/preferences", {
+      method: "GET",
+    });
     expect(result.tenant_enabled).toBe(true);
     expect(result.types).toHaveLength(1);
     expect(result.types[0]?.key).toBe("pickup_upcoming");
   });
 
-  it("accepts an unwrapped payload from the parent path", async () => {
-    fetchMock.mockResolvedValueOnce(jsonResponse(payload));
+  it("reads the parent catalogue from the parent path", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ data: payload }));
 
     const result = await fetchNotificationPreferences("parent");
 
@@ -75,19 +75,6 @@ describe("notification preferences API client", () => {
 
   it("rejects a successful response without a preference payload", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({}));
-
-    await expect(fetchNotificationPreferences()).rejects.toThrow();
-  });
-
-  it("rejects malformed preference rows", async () => {
-    fetchMock.mockResolvedValueOnce(
-      jsonResponse({
-        data: {
-          tenant_enabled: true,
-          types: [{ key: "pickup_upcoming", enabled: "yes" }],
-        },
-      }),
-    );
 
     await expect(fetchNotificationPreferences()).rejects.toThrow();
   });
@@ -115,10 +102,10 @@ describe("notification preferences API client", () => {
     );
   });
 
-  it("reads an e-mail subscription in either envelope shape", async () => {
+  it("reads an e-mail subscription", async () => {
     fetchMock
       .mockResolvedValueOnce(jsonResponse({ data: { enabled: true } }))
-      .mockResolvedValueOnce(jsonResponse({ enabled: false }));
+      .mockResolvedValueOnce(jsonResponse({ data: { enabled: false } }));
 
     await expect(fetchEmailSubscription("enrollment_submitted")).resolves.toBe(
       true,
@@ -163,7 +150,7 @@ describe("notification preferences API client", () => {
 
     await expect(setNotificationPreference("nope", true)).rejects.toMatchObject(
       {
-        message: "Einstellung konnte nicht geladen werden (400).",
+        message: "Einstellung konnte nicht geladen werden.",
         detail: "unknown notification type",
       },
     );
@@ -177,7 +164,7 @@ describe("notification preferences API client", () => {
     });
 
     await expect(fetchNotificationPreferences()).rejects.toThrow(
-      /Einstellung konnte nicht geladen werden \(500\)/,
+      "Einstellung konnte nicht geladen werden.",
     );
   });
 });

@@ -6,6 +6,4 @@
 
 import { createStaffNoticesReadApi } from "./staff-notices-api";
 
-export const schoolStaffNoticesApi = createStaffNoticesReadApi(
-  "/api/school/staff-notices",
-);
+export const schoolStaffNoticesApi = createStaffNoticesReadApi("school");

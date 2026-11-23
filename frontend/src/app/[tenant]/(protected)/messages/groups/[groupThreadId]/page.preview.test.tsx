@@ -7,6 +7,10 @@ import { ToastProvider } from "~/contexts/ToastContext";
 import GroupMessagePage from "./page";
 
 vi.unmock("swr");
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
 const owner = vi.hoisted(() => ({ account: "7", school: "schule" }));
 vi.mock("next-auth/react", () => ({
   useSession: () => ({

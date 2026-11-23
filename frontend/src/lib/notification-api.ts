@@ -1,7 +1,6 @@
-import { apiErrorFromResponse, transportFetch } from "./api-error";
+import { bffJson } from "./bff-fetch";
 
-const TEST_NOTIFICATION_URL = "/api/notifications/test";
-const SCHOOL_TEST_NOTIFICATION_URL = "/api/school/notifications/test";
+const TEST_FAILED = "Test notification failed";
 
 /**
  * Sends a fixed test notification to the logged-in account. The school
@@ -14,20 +13,13 @@ const SCHOOL_TEST_NOTIFICATION_URL = "/api/school/notifications/test";
 export async function sendTestNotification(
   portal: "tenant" | "school" = "tenant",
 ): Promise<void> {
-  const response = await transportFetch(
-    portal === "school" ? SCHOOL_TEST_NOTIFICATION_URL : TEST_NOTIFICATION_URL,
-    {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
-    },
-  );
-
-  if (response.ok) return;
-
-  throw await apiErrorFromResponse(
-    response,
-    `Test notification failed (${response.status})`,
-  );
+  if (portal === "school") {
+    await bffJson("school", "POST /school/notifications/test", {
+      errorMessage: TEST_FAILED,
+    });
+    return;
+  }
+  await bffJson("tenant", "POST /api/notifications/test", {
+    errorMessage: TEST_FAILED,
+  });
 }
