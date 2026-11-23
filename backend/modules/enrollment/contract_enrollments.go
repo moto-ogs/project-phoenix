@@ -203,10 +203,12 @@ const (
 	ContractEnrollmentBookingsDiffer = "bookings_differ"
 	// ContractEnrollmentEnrolledElsewhere is a child that has the silent
 	// enrollment made for this contract in another phase: a contract has one
-	// silent enrollment (ADR 0309). An earlier run enrolled the child there,
+	// silent enrollment (ADR 0309), so neither a new one is made nor another
+	// application confirmed for it. An earlier run enrolled the child there,
 	// and the office has since corrected the unbound contract to an offering
 	// of this phase. RequestID and RequestChildID name that enrollment. The
-	// office corrects the contract back, or the school ends that enrollment.
+	// office corrects the contract back; ending that enrollment at the school
+	// does not release the contract (ADR 0309).
 	ContractEnrollmentEnrolledElsewhere = "enrolled_elsewhere"
 )
 

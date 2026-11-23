@@ -373,6 +373,13 @@ func TestContractEnrollmentRefusesASecondEnrollmentOfItsContractInAnotherPhase(t
 	assert.Equal(t, want, e.enroll(t, corrected), "the run enrolls the child in no second phase")
 	assert.Equal(t, written, e.count(t, contractWritten, testpkg.Tenant(t), student.ID, testpkg.Tenant(t), student.ID), "nothing is written")
 
+	// Nor is another application confirmed for the contract: a row that
+	// names a request child of the second phase gets the same refusal,
+	// before that application is looked at.
+	named := corrected
+	named.RequestChildID = first[0].RequestChildID + 1000
+	assert.Equal(t, want, e.check(t, named), "no other application is confirmed for the contract")
+
 	other := corrected
 	other.ContractID = e.contract + 1
 	assert.Equal(t, capability.ContractEnrollmentEnrolled, e.check(t, other)[0].Status,

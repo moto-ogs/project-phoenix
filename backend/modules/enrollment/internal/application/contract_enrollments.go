@@ -300,6 +300,15 @@ func (r *contractRun) check(index int, input enrollmentNative.ContractEnrollment
 		result.Status = enrollmentNative.ContractEnrollmentChanged
 		return
 	}
+	// A silent enrollment made for this contract in another phase goes
+	// first: a contract has one, and neither another application is
+	// confirmed for it nor a new one made beside it. The run that made it
+	// may have committed while this one waited for the gates.
+	if other, found := phase.enrolledElsewhere(input); found {
+		result.Reason = enrollmentNative.ContractEnrollmentEnrolledElsewhere
+		result.RequestID, result.RequestChildID = other.RequestID, other.RequestChildID
+		return
+	}
 	if input.RequestChildID > 0 {
 		confirmProvenApplication(phase, input, result)
 		r.refuseGoneRecord(input, result)
@@ -313,11 +322,6 @@ func (r *contractRun) check(index int, input enrollmentNative.ContractEnrollment
 	if holder, held := contractHolder(phase.holders[input.StudentID]); held {
 		answerContractHolder(holder, phase, input, reason, result)
 		r.refuseGoneRecord(input, result)
-		return
-	}
-	if other, found := phase.enrolledElsewhere(input); found {
-		result.Reason = enrollmentNative.ContractEnrollmentEnrolledElsewhere
-		result.RequestID, result.RequestChildID = other.RequestID, other.RequestChildID
 		return
 	}
 	if reason == "" {

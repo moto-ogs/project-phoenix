@@ -175,6 +175,9 @@ func plannedRow(schoolID ident.ID, planned carecontract.EnrollmentPlanRow, child
 	return row
 }
 
+// daysOfWeekFixed is the mode of a module that runs on all its weekdays.
+const daysOfWeekFixed = "fixed"
+
 // shownBookings are the bookings of an application as a row shows them: a
 // booking of a module with fixed weekdays stores none and holds all the
 // module offers, so the row names those, as a row that enrolls does. The
@@ -184,7 +187,7 @@ func plannedRow(schoolID ident.ID, planned carecontract.EnrollmentPlanRow, child
 func shownBookings(stored []carecontract.EnrollmentBooking) []carecontract.EnrollmentBooking {
 	shown := slices.Clone(stored)
 	for i, booking := range shown {
-		if len(booking.Days) == 0 {
+		if len(booking.Days) == 0 && booking.DaysOfWeekMode == daysOfWeekFixed {
 			shown[i].Days = booking.AvailableDays
 		}
 	}
