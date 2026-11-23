@@ -322,10 +322,10 @@ export function draftSubmitBlock(edit: {
   readonly status: string;
 }): string | undefined {
   if (edit.status === "loadFailed") {
-    return "Lade zuerst mit „Wiederholen“ den gespeicherten Stand.";
+    return "Lade zuerst den gespeicherten Stand neu.";
   }
   if (edit.status === "refused" || edit.status === "reloading") {
-    return "moto lädt gerade den gespeicherten Stand.";
+    return "Der gespeicherte Stand wird geladen.";
   }
   return undefined;
 }

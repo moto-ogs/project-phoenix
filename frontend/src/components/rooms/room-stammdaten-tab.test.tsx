@@ -295,7 +295,7 @@ describe("RoomStammdatenTab", () => {
     await waitFor(() => expect(screen.getByText("Save")).toBeDisabled());
     expect(screen.getByText("Save")).toHaveAttribute(
       "title",
-      "Lade zuerst mit „Wiederholen“ den gespeicherten Stand.",
+      "Lade zuerst den gespeicherten Stand neu.",
     );
     fireEvent.click(screen.getByText("Save"));
     expect(onSave).toHaveBeenCalledTimes(1);
