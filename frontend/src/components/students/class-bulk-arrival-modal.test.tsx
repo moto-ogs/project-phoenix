@@ -522,6 +522,50 @@ describe("FilteredBulkArrivalModal", () => {
     expect(screen.getByLabelText("Mittwoch")).toHaveValue("");
   });
 
+  // ADR 0311, rule 6: a failed reload after the refusal is a load error,
+  // never „Du siehst jetzt den neuen Stand“, and nothing can be sent.
+  it("names a failed reload of the class times after a refusal", async () => {
+    mockFetchClassArrivalTimes
+      .mockResolvedValueOnce({
+        school_class: "3a",
+        times: { mon: "11:45" },
+        version: "v1",
+      })
+      .mockRejectedValue(
+        new ApiError("offline", 503, { code: "general.unavailable" }),
+      );
+    mockBulkUpsert.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+
+    render(
+      <FilteredBulkArrivalModal
+        isOpen={true}
+        onClose={vi.fn()}
+        filter={{ type: "school_class", schoolClass: "3a" }}
+        filterLabel="3a"
+        studentsInFilter={[makeStudent("1")]}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Montag")).toHaveValue("11:45"),
+    );
+    fireEvent.change(screen.getByLabelText("Mittwoch"), {
+      target: { value: "09:30" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Der neue Stand konnte nicht geladen werden.",
+    );
+    expect(screen.getByRole("alert")).not.toHaveTextContent(
+      "Du siehst jetzt den neuen Stand.",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(mockBulkUpsert).toHaveBeenCalledTimes(1);
+  });
+
   it("cancel button calls onClose", () => {
     const onClose = vi.fn();
     render(
