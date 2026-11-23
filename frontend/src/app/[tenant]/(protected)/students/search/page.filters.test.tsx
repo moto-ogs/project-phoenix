@@ -222,7 +222,8 @@ vi.mock("~/lib/student-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/student-api")>()),
   fetchStudents: (...args: unknown[]) => mockGetStudents(...args),
   fetchSchoolClasses: vi.fn(() => Promise.resolve([])),
-  fetchEnrollmentAnswerFilters: () => mockFetchAnswerFilters(),
+  fetchEnrollmentAnswerFilters: (...args: unknown[]) =>
+    mockFetchAnswerFilters(...args),
 }));
 
 // Side-loads the test's SWR mock runs but no case reads: the signed-in
@@ -256,16 +257,23 @@ vi.mock("~/lib/api", () => ({
 
 // The registration questions (#6954) read through real SWR: their tests
 // depend on a pending, refused or late answer. The reader is told apart by
-// its fetcher, since its key is null while the session loads.
+// its key. Every read passes through real SWR so the hook order stays the
+// same when a key appears; a read without a key reads nothing, as in SWR.
 vi.mock("~/lib/swr", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/lib/swr")>();
-  const { fetchEnrollmentAnswerFilters } = await import("~/lib/student-api");
+  const { tenantListKeys } = await import("~/lib/swr/tenant-list-keys");
+  const answersKey = tenantListKeys.enrollmentAnswerFilters();
   return {
     useImmutableSWR: (...args: unknown[]) => mockUseImmutableSWR(...args),
-    useSWRAuth: (key: string | null, fetcher: () => Promise<unknown>) =>
-      fetcher === fetchEnrollmentAnswerFilters
-        ? actual.useSWRAuth(key, fetcher)
-        : mockUseSWRAuth(key, fetcher),
+    useSWRAuth: (
+      key: string | null,
+      fetcher: () => Promise<unknown>,
+      options?: object,
+    ) => {
+      const answers = key?.startsWith(answersKey) === true;
+      const real = actual.useSWRAuth(answers ? key : null, fetcher, options);
+      return answers || key === null ? real : mockUseSWRAuth(key, fetcher);
+    },
     mutate: vi.fn(),
     useTenantMutate: () => vi.fn(),
   };
@@ -348,7 +356,9 @@ beforeEach(() => {
     {
       key: "seepferdchen",
       label: "Seepferdchen vorhanden?",
-      options: [{ value: "true", label: "Ja", count: 3 }],
+      options: [
+        { value: "true", label: "Ja", count: 3, studentIds: ["1", "2", "3"] },
+      ],
     },
   ]);
   mockUseSession.mockImplementation(() => ({
@@ -465,13 +475,43 @@ describe("StudentSearchPage — room_id deep-link (#1323)", () => {
     expect(filteredCall?.roomId).toBe("42");
   });
 
-  it("forwards a registration answer from the URL with users:read (#6954)", async () => {
+  it("applies an offered registration answer from the URL on the page (#6954, #7645)", async () => {
+    mockUseSession.mockImplementation(() => ({
+      data: { user: { id: "7", token: "t", permissions: ["users:read"] } },
+      status: "authenticated",
+    }));
+    mockFetchAnswerFilters.mockResolvedValue([
+      {
+        key: "seepferdchen",
+        label: "Seepferdchen vorhanden?",
+        options: [{ value: "true", label: "Ja", count: 1, studentIds: ["7"] }],
+      },
+    ]);
+    currentSearch = new URLSearchParams({
+      enrollment_answer: "seepferdchen=true",
+    });
+
+    render(<StudentSearchPage />, { wrapper: FreshSwrCache });
+
+    // The answer names child 7, so the page keeps it; the list itself is
+    // read without the answer, which the page applies to the loaded rows.
+    expect(await screen.findByTestId("student-card-7")).toBeInTheDocument();
+    expect(mockGetStudents).toHaveBeenCalled();
+    expect(
+      mockGetStudents.mock.calls.every(
+        (call) =>
+          (call[0] as Record<string, unknown>).enrollmentAnswer === undefined,
+      ),
+    ).toBe(true);
+  });
+
+  it("leaves a registration answer the options no longer offer to the server (#6954, #7645)", async () => {
     mockUseSession.mockImplementation(() => ({
       data: { user: { id: "7", token: "t", permissions: ["users:read"] } },
       status: "authenticated",
     }));
     currentSearch = new URLSearchParams({
-      enrollment_answer: "seepferdchen=true",
+      enrollment_answer: "seepferdchen=false",
     });
 
     render(<StudentSearchPage />, { wrapper: FreshSwrCache });
@@ -481,7 +521,7 @@ describe("StudentSearchPage — room_id deep-link (#1323)", () => {
         mockGetStudents.mock.calls.some(
           (call) =>
             (call[0] as Record<string, unknown>).enrollmentAnswer ===
-            "seepferdchen=true",
+            "seepferdchen=false",
         ),
       ).toBe(true);
     });
@@ -552,8 +592,9 @@ describe("StudentSearchPage — room_id deep-link (#1323)", () => {
       data: { user: { id: "7", token: "t", permissions: ["users:read"] } },
       status: "authenticated",
     }));
+    // Not offered, so the list request carries it and shows when it goes.
     currentSearch = new URLSearchParams({
-      enrollment_answer: "seepferdchen=true",
+      enrollment_answer: "seepferdchen=false",
     });
     let reload!: () => Promise<unknown>;
     function Probe() {
@@ -576,7 +617,7 @@ describe("StudentSearchPage — room_id deep-link (#1323)", () => {
         mockGetStudents.mock.calls.some(
           (call) =>
             (call[0] as Record<string, unknown>).enrollmentAnswer ===
-            "seepferdchen=true",
+            "seepferdchen=false",
         ),
       ).toBe(true),
     );
@@ -630,7 +671,14 @@ describe("StudentSearchPage — room_id deep-link (#1323)", () => {
         {
           key: "seepferdchen",
           label: "Seepferdchen vorhanden?",
-          options: [{ value: "true", label: "Ja", count: 3 }],
+          options: [
+            {
+              value: "true",
+              label: "Ja",
+              count: 3,
+              studentIds: ["1", "2", "3"],
+            },
+          ],
         },
       ]);
       await Promise.resolve();
@@ -639,11 +687,11 @@ describe("StudentSearchPage — room_id deep-link (#1323)", () => {
     await waitFor(() => {
       expect(mockGetStudents).toHaveBeenCalled();
     });
+    // Offered, so the page applies the answer to the rows it loaded (#7645).
     expect(
       mockGetStudents.mock.calls.every(
         (call) =>
-          (call[0] as Record<string, unknown>).enrollmentAnswer ===
-          "seepferdchen=true",
+          (call[0] as Record<string, unknown>).enrollmentAnswer === undefined,
       ),
     ).toBe(true);
     expect(screen.getByRole("menuitem", { name: /Exportieren/ })).toBeEnabled();
@@ -656,8 +704,9 @@ describe("StudentSearchPage — room_id deep-link (#1323)", () => {
       data: null,
       status: "loading",
     }));
+    // Not offered, so the list request shows that the filter survived.
     currentSearch = new URLSearchParams({
-      enrollment_answer: "seepferdchen=true",
+      enrollment_answer: "seepferdchen=false",
     });
 
     const { rerender } = render(<StudentSearchPage />, {
@@ -679,7 +728,7 @@ describe("StudentSearchPage — room_id deep-link (#1323)", () => {
         mockGetStudents.mock.calls.some(
           (call) =>
             (call[0] as Record<string, unknown>).enrollmentAnswer ===
-            "seepferdchen=true",
+            "seepferdchen=false",
         ),
       ).toBe(true);
     });
@@ -687,7 +736,7 @@ describe("StudentSearchPage — room_id deep-link (#1323)", () => {
       mockGetStudents.mock.calls.every(
         (call) =>
           (call[0] as Record<string, unknown>).enrollmentAnswer ===
-          "seepferdchen=true",
+          "seepferdchen=false",
       ),
     ).toBe(true);
   });
@@ -765,6 +814,164 @@ describe("StudentSearchPage — room_id deep-link (#1323)", () => {
     // Without an active room filter the from= must NOT be encoded — the
     // existing call sites (and the breadcrumb) match on the literal path.
     expect(target).toBe("/students/7?from=/students/search");
+  });
+});
+
+describe("StudentSearchPage — registration answer counts (#7645)", () => {
+  resetDocumentAfterAll();
+
+  // Child 7 arrives at 08:00, child 8 has no arrival time.
+  const early = {
+    id: "7",
+    first_name: "Mia",
+    second_name: "Früh",
+    school_class: "1a",
+    current_location: "Anwesend",
+    arrival_time: "08:00",
+    has_full_access: true,
+  };
+  const late = {
+    id: "8",
+    first_name: "Ole",
+    second_name: "Später",
+    school_class: "1a",
+    current_location: "Anwesend",
+    has_full_access: true,
+  };
+
+  // The filter options as plain buttons, so a test reads their labels and
+  // picks one without the real header's panel.
+  function AnswerButtonsHeader({ filters }: { filters?: FilterConfig[] }) {
+    const answers = (filters ?? []).find(
+      (filter) => filter.id === "enrollmentAnswer",
+    );
+    return (
+      <div data-testid="header">
+        {answers?.options.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => answers.onChange(option.value)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    );
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    mockPageHeader.mockImplementation(AnswerButtonsHeader);
+    mockUseSession.mockImplementation(() => ({
+      data: { user: { id: "7", token: "t", permissions: ["users:read"] } },
+      status: "authenticated",
+    }));
+    mockUseImmutableSWR.mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: null,
+    });
+    mockUseSWRAuth.mockImplementation(
+      (key: string | null, fetcher?: () => Promise<unknown>) => {
+        if (fetcher && key !== null) void fetcher().catch(() => undefined);
+        if (key === 'rooms-list-{"page":1,"pageSize":1000}') {
+          return { data: [], isLoading: false, error: null };
+        }
+        return {
+          data: { students: [early, late] },
+          isLoading: false,
+          error: null,
+        };
+      },
+    );
+    mockGetStudents.mockResolvedValue({ students: [early, late] });
+    mockFetchAnswerFilters.mockResolvedValue([
+      {
+        key: "seepferdchen",
+        label: "Seepferdchen vorhanden?",
+        options: [
+          { value: "true", label: "Ja", count: 2, studentIds: ["7", "8"] },
+          { value: "false", label: "Nein", count: 0, studentIds: [] },
+        ],
+      },
+    ]);
+  });
+
+  afterEach(() => {
+    cleanup();
+    localStorage.clear();
+  });
+
+  it("counts an answer among the children the list shows", async () => {
+    render(<StudentSearchPage />, { wrapper: FreshSwrCache });
+
+    expect(
+      await screen.findByRole("button", { name: /: Ja \(2\)$/ }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /: Nein \(0\)$/ })).toBeVisible();
+  });
+
+  it("counts an answer under the list's other filters", async () => {
+    // Before #7645 the number stayed 2: it counted every child in care.
+    currentSearch = new URLSearchParams({ arrival_time: "08:00" });
+
+    render(<StudentSearchPage />, { wrapper: FreshSwrCache });
+
+    expect(
+      await screen.findByRole("button", { name: /: Ja \(1\)$/ }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("student-card-7")).toBeInTheDocument();
+    expect(screen.queryByTestId("student-card-8")).not.toBeInTheDocument();
+  });
+
+  it("shows as many children as the chosen answer counted, without a new list request", async () => {
+    mockFetchAnswerFilters.mockResolvedValue([
+      {
+        key: "seepferdchen",
+        label: "Seepferdchen vorhanden?",
+        options: [
+          { value: "true", label: "Ja", count: 1, studentIds: ["7"] },
+          { value: "false", label: "Nein", count: 1, studentIds: ["8"] },
+        ],
+      },
+    ]);
+    const listKeys = () =>
+      new Set(
+        mockUseSWRAuth.mock.calls
+          .map((call) => call[0] as string | null)
+          .filter((key) => key?.startsWith("search-students-")),
+      );
+    render(<StudentSearchPage />, { wrapper: FreshSwrCache });
+    const answer = await screen.findByRole("button", {
+      name: /: Nein \(1\)$/,
+    });
+    expect(screen.getByTestId("student-card-7")).toBeInTheDocument();
+
+    fireEvent.click(answer);
+
+    expect(await screen.findByTestId("student-card-8")).toBeInTheDocument();
+    expect(screen.queryByTestId("student-card-7")).not.toBeInTheDocument();
+    // The list keeps its one cache key: the answer needs no new request.
+    expect(listKeys().size).toBe(1);
+  });
+
+  it("asks for the answers of the list's planning day", async () => {
+    const day = toISODate(
+      new Date(parseISODate(berlinTodayISO()).getTime() + 86_400_000),
+    );
+    currentSearch = new URLSearchParams({ date: day });
+
+    render(<StudentSearchPage />, { wrapper: FreshSwrCache });
+
+    await waitFor(() => expect(mockFetchAnswerFilters).toHaveBeenCalled());
+    const days = mockFetchAnswerFilters.mock.calls.map((call) => call[0]);
+    // A day beyond the planning horizon falls back to today, whose answers
+    // the page reads without a day.
+    expect(days.every((value) => value === day || value === undefined)).toBe(
+      true,
+    );
   });
 });
 

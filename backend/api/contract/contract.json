@@ -6108,6 +6108,12 @@
       "portals": [
         "tenant"
       ],
+      "query": [
+        {
+          "name": "date",
+          "kind": "date"
+        }
+      ],
       "response": {
         "kind": "array",
         "elem": {
@@ -52981,6 +52987,16 @@
           "name": "count",
           "schema": {
             "kind": "int"
+          }
+        },
+        {
+          "name": "student_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "id"
+            }
           }
         }
       ]

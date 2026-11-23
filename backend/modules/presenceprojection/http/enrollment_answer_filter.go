@@ -11,6 +11,8 @@ import (
 	sessiontoken "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	securityruntime "github.com/moto-ogs/project-phoenix/modules/securityruntime"
+	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	ident "github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // EnrollmentAnswerFilters is the consumer-owned port to Enrollment's answers
@@ -34,13 +36,16 @@ type EnrollmentAnswerFilterResponse struct {
 }
 
 // EnrollmentAnswerOptionResponse is one answer of a filter question. Count is
-// the number of those children the list shows; StudentIDs, every linked child
-// with the answer, stays on the server.
+// the number of children the unfiltered list shows for the day with the
+// answer; ListedStudentIDs names them, so the list counts the answer against
+// its other filters (#7645). StudentIDs, every linked child with the answer,
+// including former pupils, stays on the server.
 type EnrollmentAnswerOptionResponse struct {
-	Value      string  `json:"value"`
-	Label      string  `json:"label"`
-	Count      int     `json:"count"`
-	StudentIDs []int64 `json:"-"`
+	Value            string     `json:"value"`
+	Label            string     `json:"label"`
+	Count            int        `json:"count"`
+	ListedStudentIDs []ident.ID `json:"student_ids"`
+	StudentIDs       []int64    `json:"-"`
 	// Given marks the "Angabe vorhanden" option of a text, number or date
 	// question (#7012); the other options of such a question are its answers.
 	Given bool `json:"-"`
@@ -118,8 +123,10 @@ func (rs *Resource) resolveEnrollmentAnswerFilter(ctx context.Context, params *s
 }
 
 // listEnrollmentAnswerOptions answers the questions the filter offers, with
-// the number of children the list shows for each answer. It needs the access
-// of the answers on the child's page.
+// the children the list shows for each answer on the planning day (`date`,
+// today when empty). The list narrows them by its other filters itself, so
+// the number beside an answer is what choosing it shows (#7645). It needs the
+// access of the answers on the child's page.
 func (rs *Resource) listEnrollmentAnswerOptions(w http.ResponseWriter, r *http.Request) {
 	if !rs.canReadEnrollmentAnswers(r.Context()) {
 		renderError(w, r, common.ErrorForbidden(errEnrollmentAnswerForbidden))
@@ -129,12 +136,17 @@ func (rs *Resource) listEnrollmentAnswerOptions(w http.ResponseWriter, r *http.R
 		renderError(w, r, common.ErrorInternalServer(errors.New("enrollment answer filters are not configured")))
 		return
 	}
+	planningDate, _, err := resolvePlanningDate(r.URL.Query().Get("date"), rs.Now())
+	if err != nil {
+		renderError(w, r, common.ErrorInvalidRequest(err))
+		return
+	}
 	filters, err := rs.EnrollmentAnswers.AnswerFilters(r.Context())
 	if err != nil {
 		renderError(w, r, common.ErrorInternalServerWrap("failed to load registration answer filters", err))
 		return
 	}
-	listed, err := rs.listedAmong(r, answeredStudents(filters))
+	listed, err := rs.listedAmong(r.Context(), answeredStudents(filters), planningDate)
 	if err != nil {
 		renderError(w, r, common.ErrorInternalServerWrap("failed to count registration answers", err))
 		return
@@ -159,22 +171,26 @@ func answeredStudents(filters []EnrollmentAnswerFilterResponse) []int64 {
 	return ids
 }
 
-// listedAmong reports which of ids the child list shows without further
-// filters, through the list's own path: the running care of today, then the
-// directory, which leaves out children who left the school.
-func (rs *Resource) listedAmong(r *http.Request, ids []int64) (map[int64]bool, error) {
+// listedAmong reports which of ids the child list shows on day without
+// further filters, through the list's own path: the running care of that day,
+// then the directory, which leaves out children who left the school. The
+// list's other filters stay with the list, which counts what it shows.
+func (rs *Resource) listedAmong(ctx context.Context, ids []int64, day calendar.Date) (map[int64]bool, error) {
 	listed := make(map[int64]bool, len(ids))
 	if len(ids) == 0 {
 		return listed, nil
 	}
-	params := parseStudentListParams(r, rs.todayDate())
-	params.careStatus = CareStatusRunning
-	params.studentIDs = ids
-	params.fetchAll = true
-	if nonEmpty, err := rs.resolveOperationalParticipantFilter(r.Context(), params); err != nil || !nonEmpty {
+	params := &studentListParams{
+		careStatus:      CareStatusRunning,
+		careStatusOn:    day,
+		careStatusToday: rs.todayDate(),
+		studentIDs:      ids,
+		fetchAll:        true,
+	}
+	if nonEmpty, err := rs.resolveOperationalParticipantFilter(ctx, params); err != nil || !nonEmpty {
 		return listed, err
 	}
-	records, err := rs.PeopleDirectory.ListStudentDirectory(r.Context(), params.buildDirectoryFilter())
+	records, err := rs.PeopleDirectory.ListStudentDirectory(ctx, params.buildDirectoryFilter())
 	if err != nil {
 		return nil, err
 	}
@@ -184,16 +200,18 @@ func (rs *Resource) listedAmong(r *http.Request, ids []int64) (map[int64]bool, e
 	return listed, nil
 }
 
-// countListedAnswers sets each answer's count to the listed children who gave
-// it. A choice nobody listed gave goes, as does a question left without any
-// listed answer; yes and no both stay while one of them has children.
+// countListedAnswers sets each answer's count and IDs to the listed children
+// who gave it. A choice nobody listed gave goes, as does a question left
+// without any listed answer; yes and no both stay while one of them has
+// children.
 func countListedAnswers(filters []EnrollmentAnswerFilterResponse, listed map[int64]bool) []EnrollmentAnswerFilterResponse {
 	out := make([]EnrollmentAnswerFilterResponse, 0, len(filters))
 	for _, filter := range filters {
 		options := make([]EnrollmentAnswerOptionResponse, 0, len(filter.Options))
 		total := 0
 		for _, option := range filter.Options {
-			option.Count = countListed(option.StudentIDs, listed)
+			option.ListedStudentIDs = listedIDs(option.StudentIDs, listed)
+			option.Count = len(option.ListedStudentIDs)
 			total += option.Count
 			if option.Count > 0 || filter.Type == "boolean" {
 				options = append(options, option)
@@ -222,13 +240,13 @@ func listedFreeAnswers(options []EnrollmentAnswerOptionResponse) []EnrollmentAns
 	return options
 }
 
-// countListed is the number of ids the list shows.
-func countListed(ids []int64, listed map[int64]bool) int {
-	count := 0
+// listedIDs keeps the ids the list shows, never nil so the wire carries [].
+func listedIDs(ids []int64, listed map[int64]bool) []ident.ID {
+	out := make([]ident.ID, 0, len(ids))
 	for _, id := range ids {
 		if listed[id] {
-			count++
+			out = append(out, ident.ID(id))
 		}
 	}
-	return count
+	return out
 }

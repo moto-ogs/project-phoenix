@@ -255,14 +255,17 @@ function markPrivacyConsentSaved(error: unknown): unknown {
 
 /**
  * The registration questions the child list can filter by (#6954), read
- * through the portal's catalog proxy since #7563.
+ * through the portal's catalog proxy since #7563. `date` is the list's
+ * planning day (YYYY-MM-DD); omit it for today. The answers name the children
+ * in care that day (#7645).
  */
-export async function fetchEnrollmentAnswerFilters(): Promise<
-  EnrollmentAnswerFilter[]
-> {
+export async function fetchEnrollmentAnswerFilters(
+  date?: string,
+): Promise<EnrollmentAnswerFilter[]> {
   const filters = await bffJson(
     "tenant",
     "GET /api/students/enrollment-answer-filters",
+    date ? { query: { date } } : undefined,
   );
   return filters.map(mapEnrollmentAnswerFilter);
 }
@@ -289,6 +292,7 @@ function mapEnrollmentAnswerFilter(
       value: option.value,
       label: option.label,
       count: option.count,
+      studentIds: option.student_ids ?? [],
     })),
   };
 }

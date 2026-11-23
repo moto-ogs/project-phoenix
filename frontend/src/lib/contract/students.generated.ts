@@ -1303,12 +1303,14 @@ export interface EnrollmentAnswerOptionResponse {
   value: string;
   label: string;
   count: number;
+  student_ids: string[] | null;
 }
 
 export const EnrollmentAnswerOptionResponseSchema: z.ZodType<EnrollmentAnswerOptionResponse, unknown> = object<EnrollmentAnswerOptionResponse>({
   value: str,
   label: str,
   count: safeInt,
+  student_ids: nullable(arr(int64String)),
 });
 
 /** Go: presenceprojectionhttp.EnrollmentAnswerFilterResponse */
@@ -3965,6 +3967,9 @@ export const routes = {
     method: "GET",
     pattern: "/api/students/enrollment-answer-filters",
     portals: ["tenant"],
+    query: {
+      "date": { kind: "date" },
+    },
     response: success(z.array(EnrollmentAnswerFilterResponseSchema)),
   },
   "GET /api/students/offering-change-requests/course-waitlists": {
