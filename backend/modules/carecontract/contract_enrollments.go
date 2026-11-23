@@ -98,7 +98,10 @@ const (
 	// contract and the bookings that would make a new version.
 	EnrollmentReasonBookingsDiffer = "bookings_differ"
 	// EnrollmentReasonCareEnds is a contract that promises care on a day in
-	// its phase no booking covers.
+	// its phase no booking covers, or no care any more: every module of the
+	// version in force has ended. Such a contract whose child has the one
+	// accepted application of the phase that booked that care is ready all
+	// the same (EnrollmentPlanRow.ProvedOn).
 	EnrollmentReasonCareEnds = "care_ends"
 	// EnrollmentReasonHasApplication is a child with an accepted
 	// application in the phase whose bookings differ from the contract, with
@@ -113,6 +116,13 @@ const (
 	// application child has one contract, so the row stays held; the office
 	// handles it as a change of the contract.
 	EnrollmentReasonFollowsContract = "follows_contract"
+	// EnrollmentReasonOfferingInactive is a contract that promises a module
+	// the school deactivated, for a child without an application in the
+	// phase: the school's enrollment refuses such a booking with the same
+	// reason, because a roster with several sources leaves an inactive one
+	// out. A child whose accepted application books the module already is
+	// bound all the same: nothing is written for it.
+	EnrollmentReasonOfferingInactive = "offering_inactive"
 	// EnrollmentReasonPlannedChange is a contract with a version that starts
 	// after today, in its phase or in a later one. The silent enrollment writes no dated change of bookings
 	// (it would tell the guardians in the parents portal), so the child is
@@ -241,7 +251,10 @@ type EnrollmentPlanRow struct {
 	// hold from ProvedOn on, with what the plan read of each module: what
 	// the proof stands on. The school's enrollment compares them with the
 	// stored bookings under its gates and confirms the application only
-	// when nothing changed.
+	// when nothing changed. ProvedOn is the day of the plan; for a contract
+	// that promises no care any more it is the first day the contract
+	// promised care in the phase, so the bookings are the whole of what the
+	// application booked there.
 	ApplicationBookings []EnrollmentBooking `json:"application_bookings,omitempty"`
 	ProvedOn            calendar.Date       `json:"proved_on,omitempty"`
 	// Token names what a ready row was proved on: the effective versions of

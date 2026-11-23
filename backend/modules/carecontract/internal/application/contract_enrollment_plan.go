@@ -455,6 +455,9 @@ func planEnrollmentRow(read schoolRead, contract carecontract.EnrollmentContract
 	row.Status = carecontract.EnrollmentHeld
 	derived, reason := deriveEnrollment(read, contract, today)
 	row.PhaseID, row.PhaseName, row.PhaseStart, row.PhaseEnd = ident.ID(derived.phaseID), derived.phaseName, derived.phaseStart, derived.phaseEnd
+	if reason == carecontract.EnrollmentReasonCareEnds && endedEnrollment(read, contract, applications, contracted, today, &row) {
+		return row
+	}
 	if reason != "" {
 		row.Reason = reason
 		return row
@@ -472,13 +475,18 @@ func planEnrollmentRow(read schoolRead, contract carecontract.EnrollmentContract
 }
 
 // enrolledBookings tells why a child without an application in the phase is
-// not enrolled with the derived bookings: they are not proved, or the
-// contract has a planned version, which the silent enrollment does not
-// write. The derived bookings start on the first day the contract promises
-// care in the phase, so they are compared from there.
+// not enrolled with the derived bookings: they are not proved, a module is
+// not active at the school (the school's enrollment refuses such a booking,
+// with the same reason), or the contract has a planned version, which the
+// silent enrollment does not write. The derived bookings start on the first
+// day the contract promises care in the phase, so they are compared from
+// there.
 func enrolledBookings(read schoolRead, contract carecontract.EnrollmentContract, derived enrollmentDerivation, today calendar.Date) string {
 	if reason := provenBookings(read, contract, derived.all(), derived.careStart, derived.phaseEnd, today); reason != "" {
 		return reason
+	}
+	if slices.ContainsFunc(derived.all(), func(booking carecontract.Booking) bool { return !read.offerings[booking.CareOfferingID].Active }) {
+		return carecontract.EnrollmentReasonOfferingInactive
 	}
 	if len(derived.changes) > 0 {
 		return carecontract.EnrollmentReasonPlannedChange
@@ -502,6 +510,21 @@ func enrolledBookings(read schoolRead, contract carecontract.EnrollmentContract,
 // phase, and the office handles it as a change of the contract.
 func boundApplication(read schoolRead, contract carecontract.EnrollmentContract, inPhase []carecontract.Application,
 	contracted boundChildren, derived enrollmentDerivation, today calendar.Date, row *carecontract.EnrollmentPlanRow) string {
+	if reason := soleApplication(inPhase, contracted, row); reason != "" {
+		return reason
+	}
+	if provenBookings(read, contract, inPhase[0].Bookings, today, derived.phaseEnd, today) != "" {
+		return carecontract.EnrollmentReasonHasApplication
+	}
+	row.ApplicationBookings, row.ProvedOn = applicationBookings(read, inPhase[0].Bookings, derived, today), today
+	return ""
+}
+
+// soleApplication names the one application of the phase in the row and
+// tells why the contract cannot be bound to it whatever it books: there are
+// several, or it has a contract already (follows_contract for an earlier
+// imported one of the child).
+func soleApplication(inPhase []carecontract.Application, contracted boundChildren, row *carecontract.EnrollmentPlanRow) string {
 	if len(inPhase) > 1 {
 		return carecontract.EnrollmentReasonHasApplication
 	}
@@ -513,16 +536,110 @@ func boundApplication(read schoolRead, contract carecontract.EnrollmentContract,
 		}
 		return carecontract.EnrollmentReasonHasApplication
 	}
-	if provenBookings(read, contract, inPhase[0].Bookings, today, derived.phaseEnd, today) != "" {
-		return carecontract.EnrollmentReasonHasApplication
-	}
-	row.ApplicationBookings, row.ProvedOn = applicationBookings(read, inPhase[0].Bookings, derived, today), today
 	return ""
+}
+
+// endedEnrollment answers a contract that promises no care any more in its
+// phase (care_ends) but whose child has an accepted application there, and
+// tells whether it did. That is what a run leaves behind that enrolled the
+// child and stopped before the binding, once the last module has ended: the
+// school committed a booking through 30 June, and on 1 July nothing is
+// derived any more. Without this the approved enrollment would stay unbound
+// for good.
+//
+// The row is ready, with that application, when the binding is as sound as
+// for a contract that still runs. The application is the only one of the
+// child record in the phase and has no contract (soleApplication). The
+// amendment that follows the bookings after the binding writes no version,
+// and from the first day the contract promised care in the phase no booking
+// runs that the contract did not promise (provenBookings, compared over the
+// contract's time, not from today, where nothing is left to compare). And
+// on the last day the contract promised care the bookings are exactly that
+// care (bookedAsLastPromised): the past is otherwise compared only as far
+// as it is booked, which an application with less care would pass. The row
+// carries the bookings from that first day on (ProvedOn), so the school's
+// enrollment confirms the whole of what is stored, not an empty rest.
+//
+// An application that does not pass holds the row back as has_application,
+// as for a running contract. Without an application of the phase, and
+// without one phase whose service runs today among the modules of the
+// version in force, the row stays care_ends.
+func endedEnrollment(read schoolRead, contract carecontract.EnrollmentContract, applications []carecontract.Application,
+	contracted boundChildren, today calendar.Date, row *carecontract.EnrollmentPlanRow) bool {
+	current, _ := versionAt(contract.Versions, today)
+	phase, found := runningPhase(read, current, today)
+	if !found {
+		return false
+	}
+	inPhase := phaseApplications(read, applications, phase.PhaseID)
+	if len(inPhase) == 0 {
+		return false
+	}
+	derived := enrollmentDerivation{phaseID: phase.PhaseID, phaseName: phase.PhaseName, phaseStart: *phase.ServiceStart, phaseEnd: *phase.ServiceEnd}
+	derived.careStart = derived.phaseStart
+	if first := contract.Versions[0].EffectiveFrom; first.After(derived.careStart) {
+		derived.careStart = first
+	}
+	row.PhaseID, row.PhaseName, row.PhaseStart, row.PhaseEnd = ident.ID(derived.phaseID), derived.phaseName, derived.phaseStart, derived.phaseEnd
+	if row.Reason = soleApplication(inPhase, contracted, row); row.Reason != "" {
+		return true
+	}
+	bookings := inPhase[0].Bookings
+	if provenBookings(read, contract, bookings, derived.careStart, derived.phaseEnd, today) != "" ||
+		!bookedAsLastPromised(read, contract, bookings, derived, today) {
+		row.Reason = carecontract.EnrollmentReasonHasApplication
+		return true
+	}
+	row.ApplicationBookings, row.ProvedOn = applicationBookings(read, bookings, derived, derived.careStart), derived.careStart
+	row.Status, row.Token = carecontract.EnrollmentReady, planToken(contract.Versions, row.RequestChildID.Int64())
+	return true
+}
+
+// runningPhase is the one enrollment phase whose service runs today among
+// the modules of the version, whether they still run or not; false with
+// none or several. A module of an earlier school year decides nothing.
+func runningPhase(read schoolRead, version carecontract.Version, today calendar.Date) (carecontract.Offering, bool) {
+	var phase carecontract.Offering
+	found := false
+	for _, service := range version.Services {
+		offering, known := read.offerings[service.CareOfferingID.Int64()]
+		if !known || offering.PhaseID <= 0 || offering.ServiceStart == nil || offering.ServiceEnd == nil ||
+			offering.ServiceStart.After(today) || offering.ServiceEnd.Before(today) {
+			continue
+		}
+		if found && phase.PhaseID != offering.PhaseID {
+			return carecontract.Offering{}, false
+		}
+		phase, found = offering, true
+	}
+	return phase, found
+}
+
+// bookedAsLastPromised tells whether, on the last day before today the
+// contract promised care in the phase, the bookings are exactly that care:
+// weekday, module and end time. The days in between are the days the booked
+// or the promised care may change (careBoundaries), so the care of the last
+// of them with a promise is the care the contract ended with.
+func bookedAsLastPromised(read schoolRead, contract carecontract.EnrollmentContract, bookings []carecontract.Booking,
+	derived enrollmentDerivation, today calendar.Date) bool {
+	current, _ := versionAt(contract.Versions, today)
+	application := carecontract.Application{Bookings: bookings}
+	same := false
+	for _, day := range careBoundaries(read, contract, bookings, derived.careStart, derived.phaseEnd, today) {
+		if !day.Before(today) || (contract.EndsOn != nil && day.After(*contract.EndsOn)) {
+			break
+		}
+		if care := promised(current, day); len(care) > 0 {
+			same = sameCare(care, servicesAt(read, application, day).services)
+		}
+	}
+	return same
 }
 
 // applicationBookings are the bookings of an application as they hold in
 // the phase from today on, with what the plan read of each module: what the
-// proof of the application stands on.
+// proof of the application stands on. For a contract that promises no care
+// any more, today is the first day it promised care in the phase.
 func applicationBookings(read schoolRead, stored []carecontract.Booking, derived enrollmentDerivation, today calendar.Date) []carecontract.EnrollmentBooking {
 	bookings := []carecontract.EnrollmentBooking{}
 	for _, booking := range stored {

@@ -502,3 +502,107 @@ func TestAStoredEnrollmentIsProvenWithItsOwnBookingsAfterAModuleEnded(t *testing
 	assert.Equal(t, ident.ID(plannedRequestChild), rerun.RequestChildID)
 	assert.Equal(t, planToken(contract.Versions, plannedRequestChild), rerun.Token)
 }
+
+// A module the school deactivated holds a child without an application
+// back, with the reason the school's enrollment answers for such a booking:
+// a roster with several sources leaves an inactive one out. A child whose
+// accepted application books the module already is bound all the same.
+func TestAnInactiveModuleHoldsANewEnrollmentBack(t *testing.T) {
+	t.Parallel()
+	school := enrollmentSchool()
+	short := school.offerings[1]
+	short.Active = false
+	school.offerings[1] = short
+	row := planEnrollmentRow(school, enrollableContract(), nil, boundChildren{}, enrollmentToday)
+	assert.Equal(t, carecontract.EnrollmentHeld, row.Status)
+	assert.Equal(t, carecontract.EnrollmentReasonOfferingInactive, row.Reason)
+	assert.Empty(t, row.Token)
+
+	student := plannedStudent
+	stored := carecontract.Application{RequestChildID: plannedRequestChild, StudentID: &student, Bookings: []carecontract.Booking{
+		{CareOfferingID: 1, Days: []string{"mon", "tue"}, ValidFrom: date(2030, 8, 1), ValidUntil: date(2031, 8, 1)}}}
+	bound := planEnrollmentRow(school, enrollableContract(), []carecontract.Application{stored}, boundChildren{}, enrollmentToday)
+	assert.Equal(t, carecontract.EnrollmentReady, bound.Status, "nothing is written for an application that exists")
+	assert.Equal(t, ident.ID(plannedRequestChild), bound.RequestChildID)
+}
+
+// A run enrolled the child and stopped before the binding; since then every
+// module of the contract has ended. The school committed bookings through
+// 30 June, and on 1 July the contract promises nothing any more, so nothing
+// is derived. The plan still finds the stored application, proves its
+// bookings over the time of the contract and names it, so the approved
+// enrollment gets bound. The modules end by their own last day or with the
+// version.
+func TestAStoredEnrollmentIsBoundAfterEveryModuleEnded(t *testing.T) {
+	t.Parallel()
+	student, after := plannedStudent, *date(2031, 7, 1)
+	ended := map[string]func(*carecontract.EnrollmentContract){
+		"modules": func(c *carecontract.EnrollmentContract) {
+			c.Versions[0].Services[0].LastDay, c.Versions[0].Services[1].LastDay = date(2031, 6, 30), date(2031, 6, 30)
+		},
+		"version": func(c *carecontract.EnrollmentContract) { c.Versions[0].EndsOn = date(2031, 6, 30) },
+	}
+	for name, end := range ended {
+		contract := enrollableContract()
+		// A module that ended before the first run was never booked.
+		early := importedService("wed", 2, "Ganztag", "16:30")
+		early.LastDay = date(2030, 10, 31)
+		contract.Versions[0].Services = append(contract.Versions[0].Services, early)
+		end(&contract)
+
+		first := planRow(contract)
+		require.Equal(t, carecontract.EnrollmentReady, first.Status, name)
+		require.Equal(t, []carecontract.EnrollmentBooking{shortBooking(date(2030, 8, 1), date(2031, 7, 1), "mon", "tue")}, first.Bookings, name)
+		stored := carecontract.Application{RequestChildID: plannedRequestChild, StudentID: &student, Bookings: enrollmentBookings(first.Bookings)}
+		plan := func(contracted boundChildren, applications ...carecontract.Application) carecontract.EnrollmentPlanRow {
+			return planEnrollmentRow(enrollmentSchool(), contract, applications, contracted, after)
+		}
+
+		alone := plan(boundChildren{})
+		assert.Equal(t, carecontract.EnrollmentHeld, alone.Status, name)
+		assert.Equal(t, carecontract.EnrollmentReasonCareEnds, alone.Reason, "%s: without an application nothing is left to enroll", name)
+
+		rerun := plan(boundChildren{}, stored)
+		require.Equal(t, carecontract.EnrollmentReady, rerun.Status, "%s: %s", name, rerun.Reason)
+		assert.Equal(t, ident.ID(plannedRequestChild), rerun.RequestChildID, name)
+		assert.Equal(t, planToken(contract.Versions, plannedRequestChild), rerun.Token, name)
+		assert.Equal(t, ident.ID(70), rerun.PhaseID, name)
+		assert.Equal(t, *date(2031, 7, 31), rerun.PhaseEnd, name)
+		assert.Empty(t, rerun.Bookings, "%s: nothing is derived, the child is not enrolled again", name)
+		assert.Equal(t, *date(2030, 8, 1), rerun.ProvedOn, "%s: proved over the time of the contract, not from today", name)
+		assert.Equal(t, []carecontract.EnrollmentBooking{shortBooking(date(2030, 8, 1), date(2031, 7, 1), "mon", "tue")}, rerun.ApplicationBookings,
+			"%s: the school's enrollment confirms the whole of what is stored", name)
+
+		// An application that did not book what the contract promised is not
+		// the contract's: less care, another module, care beyond the promise.
+		for label, booking := range map[string]carecontract.Booking{
+			"a weekday less": {CareOfferingID: 1, Days: []string{"mon"}, ValidFrom: date(2030, 8, 1), ValidUntil: date(2031, 7, 1)},
+			"another module": {CareOfferingID: 2, Days: []string{"mon", "tue"}, ValidFrom: date(2030, 8, 1), ValidUntil: date(2031, 7, 1)},
+			"ended earlier":  {CareOfferingID: 1, Days: []string{"mon", "tue"}, ValidFrom: date(2030, 8, 1), ValidUntil: date(2031, 3, 1)},
+			"still running":  {CareOfferingID: 1, Days: []string{"mon", "tue"}, ValidFrom: date(2030, 8, 1), ValidUntil: date(2031, 8, 1)},
+		} {
+			other := plan(boundChildren{}, carecontract.Application{RequestChildID: plannedRequestChild, StudentID: &student, Bookings: []carecontract.Booking{booking}})
+			assert.Equal(t, carecontract.EnrollmentHeld, other.Status, "%s: %s", name, label)
+			assert.Equal(t, carecontract.EnrollmentReasonHasApplication, other.Reason, "%s: %s", name, label)
+			assert.Empty(t, other.Token, "%s: %s", name, label)
+		}
+
+		second := stored
+		second.RequestChildID = 6
+		assert.Equal(t, carecontract.EnrollmentReasonHasApplication, plan(boundChildren{}, stored, second).Reason, "%s: two applications name no single one", name)
+		assert.Equal(t, carecontract.EnrollmentReasonHasApplication, plan(boundChildren{plannedRequestChild: 0}, stored).Reason,
+			"%s: the application has another contract", name)
+		follows := plan(boundChildren{plannedRequestChild: 3}, stored)
+		assert.Equal(t, carecontract.EnrollmentReasonFollowsContract, follows.Reason, name)
+		assert.Equal(t, ident.ID(3), follows.FollowsContractID, name)
+	}
+
+	// Once the service of the phase is over, no phase runs: the row stays as
+	// it was.
+	contract := enrollableContract()
+	ended["modules"](&contract)
+	stored := carecontract.Application{RequestChildID: plannedRequestChild, StudentID: &student, Bookings: []carecontract.Booking{
+		{CareOfferingID: 1, Days: []string{"mon", "tue"}, ValidFrom: date(2030, 8, 1), ValidUntil: date(2031, 7, 1)}}}
+	over := planEnrollmentRow(enrollmentSchool(), contract, []carecontract.Application{stored}, boundChildren{}, *date(2031, 9, 1))
+	assert.Equal(t, carecontract.EnrollmentReasonCareEnds, over.Reason)
+}
