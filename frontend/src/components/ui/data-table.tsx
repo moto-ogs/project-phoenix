@@ -351,53 +351,87 @@ const ROW_TONE_CLASS: Record<DataTableRowTone, string> = {
   muted: "bg-gray-50/60",
 };
 
-// A gradient in the row's translucent colour over white gives the same colour
-// as the row, but opaque, so wider columns do not shine through while they
-// scroll beneath the pinned cell.
-const PINNED_TONE_CLASS: Record<DataTableRowTone, string> = {
-  today:
-    "bg-linear-to-r from-moto-blue-soft/60 to-moto-blue-soft/60 group-hover:bg-none",
-  muted: "bg-linear-to-r from-gray-50/60 to-gray-50/60 group-hover:bg-none",
-};
-
-function pinnedBodyCellClass(
-  selected: boolean,
-  clickable: boolean,
-  tone: DataTableRowTone | null,
-): string {
-  if (selected) return `${pinnedCellClass} bg-gray-50`;
-  const tint = tone ? PINNED_TONE_CLASS[tone] : "";
-  return clickable
-    ? `${pinnedCellClass} bg-white ${tint} transition-colors group-hover:bg-gray-50`
-    : `${pinnedCellClass} bg-white ${tint}`;
-}
-
-// The same backgrounds for the first column of a comparison table, below md
-// only: from md on the cell stays transparent as before.
-const PINNED_START_TONE_CLASS: Record<DataTableRowTone, string> = {
-  today:
-    "max-md:bg-linear-to-r max-md:from-moto-blue-soft/60 max-md:to-moto-blue-soft/60 max-md:group-hover:bg-none",
-  muted:
-    "max-md:bg-linear-to-r max-md:from-gray-50/60 max-md:to-gray-50/60 max-md:group-hover:bg-none",
-};
-
-function pinnedStartBodyCellClass(
-  selected: boolean,
-  clickable: boolean,
-  tone: DataTableRowTone | null,
-): string {
-  if (selected) return `${pinnedStartCellClass} max-md:bg-gray-50`;
-  const tint = tone ? PINNED_START_TONE_CLASS[tone] : "";
-  return clickable
-    ? `${pinnedStartCellClass} max-md:bg-white ${tint} max-md:group-hover:bg-gray-50`
-    : `${pinnedStartCellClass} max-md:bg-white ${tint}`;
-}
 // A comparison table (`mobileScroll`) keeps its first column at the left
 // edge below md while the figures scroll beneath it (#7912). From md on
-// nothing changes. The cell needs its own background, as the pinned
-// action cell does; the shadow appears once columns sit beneath it.
+// nothing changes, so every class of that edge carries `max-md:`. The
+// shadow appears once columns sit beneath it.
 const pinnedStartCellClass =
   "max-md:sticky max-md:left-0 max-md:group-data-[overflow-start=true]/tablescroll:shadow-[12px_0_12px_-8px_rgb(0_0_0/0.18)]";
+
+type PinEdge = "start" | "end";
+
+// The backgrounds of a pinned cell, so wider columns do not shine through
+// while they scroll beneath it; they follow the row's hover, selection and
+// tone. A gradient in the row's translucent colour over white gives the
+// same colour as the row, but opaque. Tailwind needs every class spelled
+// out, hence one literal set per edge.
+const PIN_CLASSES: Record<
+  PinEdge,
+  {
+    readonly position: string;
+    readonly surface: string;
+    readonly selected: string;
+    readonly hover: string;
+    readonly extraRow: string;
+    readonly tone: Record<DataTableRowTone, string>;
+  }
+> = {
+  end: {
+    position: pinnedCellClass,
+    surface: "bg-white",
+    selected: "bg-gray-50",
+    hover: "group-hover:bg-gray-50",
+    extraRow: "bg-gray-50",
+    tone: {
+      today:
+        "bg-linear-to-r from-moto-blue-soft/60 to-moto-blue-soft/60 group-hover:bg-none",
+      muted: "bg-linear-to-r from-gray-50/60 to-gray-50/60 group-hover:bg-none",
+    },
+  },
+  start: {
+    position: pinnedStartCellClass,
+    surface: "max-md:bg-white",
+    selected: "max-md:bg-gray-50",
+    hover: "max-md:group-hover:bg-gray-50",
+    extraRow: "max-md:bg-gray-50",
+    tone: {
+      today:
+        "max-md:bg-linear-to-r max-md:from-moto-blue-soft/60 max-md:to-moto-blue-soft/60 max-md:group-hover:bg-none",
+      muted:
+        "max-md:bg-linear-to-r max-md:from-gray-50/60 max-md:to-gray-50/60 max-md:group-hover:bg-none",
+    },
+  },
+};
+
+/** Which edge a column is pinned to, if any. */
+function pinEdgeOf(
+  key: string,
+  pinStartKey: string | undefined,
+): PinEdge | null {
+  if (key === PINNED_COLUMN_KEY) return "end";
+  return key === pinStartKey ? "start" : null;
+}
+
+function pinnedHeadCellClass(edge: PinEdge | null): string {
+  return edge
+    ? `${PIN_CLASSES[edge].position} ${PIN_CLASSES[edge].surface}`
+    : "";
+}
+
+function pinnedBodyCellClass(
+  edge: PinEdge | null,
+  selected: boolean,
+  clickable: boolean,
+  tone: DataTableRowTone | null,
+): string {
+  if (!edge) return "";
+  const pin = PIN_CLASSES[edge];
+  if (selected) return `${pin.position} ${pin.selected}`;
+  const tint = tone ? pin.tone[tone] : "";
+  return clickable
+    ? `${pin.position} ${pin.surface} ${tint} transition-colors ${pin.hover}`
+    : `${pin.position} ${pin.surface} ${tint}`;
+}
 
 const bodyCellClass =
   "px-5 py-3 align-middle max-sm:px-3 compact:px-4 compact:py-2";
@@ -474,12 +508,14 @@ function ExtraRow<T>({
     const col = columns[index];
     if (!col) continue;
     const cell = cellsByColumn.get(col.key);
-    const pinned =
-      col.key === PINNED_COLUMN_KEY
-        ? `${pinnedCellClass} bg-gray-50`
-        : col.key === pinStartKey && (cell?.colSpan ?? 1) <= 1
-          ? `${pinnedStartCellClass} max-md:bg-gray-50`
-          : "";
+    // A cell spanning several columns is no first-column cell to pin.
+    const edge =
+      (cell?.colSpan ?? 1) > 1 && col.key !== PINNED_COLUMN_KEY
+        ? null
+        : pinEdgeOf(col.key, pinStartKey);
+    const pinned = edge
+      ? `${PIN_CLASSES[edge].position} ${PIN_CLASSES[edge].extraRow}`
+      : "";
     cells.push(
       <td
         key={col.key}
@@ -1597,12 +1633,9 @@ export function DataTable<T>({
                       const align = alignClass[col.align ?? "left"];
                       const sortable = Boolean(col.sortValue);
                       const active = sort?.key === col.key;
-                      const pinned =
-                        col.key === PINNED_COLUMN_KEY
-                          ? `${pinnedCellClass} bg-white`
-                          : col.key === pinStartKey
-                            ? `${pinnedStartCellClass} max-md:bg-white`
-                            : "";
+                      const pinned = pinnedHeadCellClass(
+                        pinEdgeOf(col.key, pinStartKey),
+                      );
                       if (!sortable) {
                         return (
                           <th
@@ -1788,20 +1821,12 @@ export function DataTable<T>({
                             ) : null}
                             {shownColumns.map((col, colIndex) => {
                               const align = alignClass[col.align ?? "left"];
-                              const pinned =
-                                col.key === PINNED_COLUMN_KEY
-                                  ? pinnedBodyCellClass(
-                                      tinted,
-                                      interactive,
-                                      tone,
-                                    )
-                                  : col.key === pinStartKey
-                                    ? pinnedStartBodyCellClass(
-                                        tinted,
-                                        interactive,
-                                        tone,
-                                      )
-                                    : "";
+                              const pinned = pinnedBodyCellClass(
+                                pinEdgeOf(col.key, pinStartKey),
+                                tinted,
+                                interactive,
+                                tone,
+                              );
                               return (
                                 <td
                                   key={col.key}
