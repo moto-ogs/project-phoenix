@@ -215,6 +215,39 @@ describe("OfferingChangeRequestModal", () => {
     expect(onEdited).toHaveBeenCalled();
   });
 
+  // ADR 0311 rule 6: after a refusal the page reads the request again; a
+  // failed read says so instead of claiming the new state shows.
+  it("names a failed read of the request after a refusal", async () => {
+    mockUpdateOffering.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    const onEdited = vi
+      .fn()
+      .mockRejectedValue(
+        new ApiError("down", 503, { code: "general.unavailable" }),
+      );
+    renderParent(
+      <OfferingChangeRequestModal
+        studentId="42"
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+        reasonRequired={false}
+        editRequest={{ id: "req-9", version: "v7" }}
+        onEdited={onEdited}
+      />,
+    );
+    const save = await screen.findByRole("button", {
+      name: "Änderung speichern",
+    });
+    await waitFor(() => expect(save).toBeEnabled());
+    fireEvent.click(save);
+
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeInTheDocument();
+    expect(onEdited).toHaveBeenCalled();
+  });
+
   it("confirms a complete withdrawal and retries with the explicit flag", async () => {
     const onSubmit = vi
       .fn()
