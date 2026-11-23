@@ -17,6 +17,7 @@ import { SectionLabel } from "~/components/ui/section-label";
 import { SwitchRow } from "~/components/ui/switch";
 import { Textarea } from "~/components/ui/textarea";
 import { useApiFormError } from "~/contexts/ToastContext";
+import { isReadStateRefusal } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import { TRAEGER_HOLIDAY_TAB } from "~/lib/traeger-payment-text";
 import { traegerPath } from "~/lib/traeger-url";
@@ -80,6 +81,7 @@ export function HolidayPeriodForm({
   onDirtyChange,
   calendar,
   criteria,
+  reload,
 }: Readonly<{
   /** The stored period; without it the form creates a new one. */
   period?: HolidayPeriod;
@@ -92,11 +94,22 @@ export function HolidayPeriodForm({
   calendar?: TraegerCalendar;
   /** The Träger's criteria for the hint at the allocation (#4700). */
   criteria?: readonly HolidayCriterion[];
+  /**
+   * Reads the stored period again and rejects when that fails: after a
+   * refused save the form shows it (ADR 0311).
+   */
+  reload?: () => Promise<HolidayPeriod>;
 }>) {
   const formRef = useRef<HTMLFormElement>(null);
   const [draft, setDraftState] = useState<HolidayPeriodDraft>(() =>
     period ? draftFromPeriod(period) : emptyHolidayPeriod(),
   );
+  // The version the draft rests on (ADR 0311): taken from the period the
+  // draft was filled from, renewed only when an untouched draft takes a
+  // newer read or a save answers.
+  const [baseVersion, setBaseVersion] = useState(period?.version);
+  // After a refused save nothing is sent until the stored period was read.
+  const [refused, setRefused] = useState(false);
   const [saving, setSaving] = useState(false);
   const [source, setSource] = useState(period);
   const [edited, setEdited] = useState(false);
@@ -134,6 +147,7 @@ export function HolidayPeriodForm({
     setSource(period);
     if (period && !edited && !hasInvalidDate && !saving) {
       setDraftState(draftFromPeriod(period));
+      setBaseVersion(period.version);
     }
   }
   useEffect(() => {
@@ -163,6 +177,7 @@ export function HolidayPeriodForm({
     });
 
   const save = async () => {
+    if (refused) return;
     const errors = {
       ...validateHolidayPeriod(draft),
       ...invalidDateFields(invalidDates, draft),
@@ -176,9 +191,10 @@ export function HolidayPeriodForm({
     try {
       const input = inputFromDraft(draft);
       const saved = period
-        ? await updateHolidayPeriod(period.id, input)
+        ? await updateHolidayPeriod(period.id, input, baseVersion ?? "")
         : await createHolidayPeriod(input);
       setDraftState(draftFromPeriod(saved));
+      setBaseVersion(saved.version);
       setEdited(false);
       onDirtyChange?.(false);
       onSaved(saved);
@@ -186,6 +202,26 @@ export function HolidayPeriodForm({
       logger.error("holiday_period_save_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
+      if (period && reload && isReadStateRefusal(err)) {
+        // Changed since it was read: the stored period replaces the draft
+        // once it is read; until then nothing is sent. A failed read shows
+        // as a load error with a retry of the read alone.
+        setRefused(true);
+        void errorPath.show(err, {
+          object: "die Planung des Ferienzeitraums",
+          reload: async () => {
+            const stored = await reload();
+            setDraftState(draftFromPeriod(stored));
+            setBaseVersion(stored.version);
+            setInvalidDates(new Set());
+            setEdited(false);
+            setRefused(false);
+            onDirtyChange?.(false);
+            return stored;
+          },
+        });
+        return;
+      }
       void errorPath.show(err, { object: "die Planung des Ferienzeitraums" });
     } finally {
       setSaving(false);
@@ -210,7 +246,17 @@ export function HolidayPeriodForm({
         title="Anmeldung und Wochen"
         stickyFooter
         footer={
-          <EditActions onCancel={onCancel} saving={saving} saveType="submit" />
+          <EditActions
+            onCancel={onCancel}
+            saving={saving}
+            saveType="submit"
+            {...(refused
+              ? {
+                  disabled: true,
+                  disabledReason: "Der gespeicherte Stand wird geladen.",
+                }
+              : {})}
+          />
         }
       >
         {/* Locked while saving: the answer replaces the draft, so an edit made

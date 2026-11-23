@@ -33,6 +33,7 @@ import { useReadDraftLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { type DraftSource, useDraftOn } from "~/lib/swr/read-draft";
 import {
+  type HolidayCriteriaRead,
   type HolidayCriterion,
   type HolidayCriterionScope,
   MAX_CRITERION_NAME,

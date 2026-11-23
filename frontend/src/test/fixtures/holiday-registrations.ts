@@ -27,6 +27,7 @@ export const HOLIDAY_PERIOD: HolidayPeriod = {
   publishedAt: "2026-08-20T10:00:00Z",
   publicToken: "link",
   registrationCount: 2,
+  version: "period-read",
   weeks: [
     {
       id: "51",

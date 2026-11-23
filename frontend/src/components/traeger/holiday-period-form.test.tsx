@@ -8,11 +8,14 @@ import {
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
+import { ApiError } from "~/lib/api-error";
+import { catalogText } from "~/test/error-catalog-text";
 import type { HolidayPeriod, TraegerSchool } from "~/lib/traeger-api";
 
-const { mockCreate, mockUpdate } = vi.hoisted(() => ({
+const { mockCreate, mockUpdate, mockVersion } = vi.hoisted(() => ({
   mockCreate: vi.fn(),
   mockUpdate: vi.fn(),
+  mockVersion: vi.fn(),
 }));
 
 vi.mock("~/lib/traeger-url", () => ({
@@ -21,7 +24,10 @@ vi.mock("~/lib/traeger-url", () => ({
 
 vi.mock("~/lib/traeger-api", () => ({
   createHolidayPeriod: (input: unknown) => mockCreate(input),
-  updateHolidayPeriod: (id: string, input: unknown) => mockUpdate(id, input),
+  updateHolidayPeriod: (id: string, input: unknown, version: string) => {
+    mockVersion(version);
+    return mockUpdate(id, input);
+  },
 }));
 
 import { HolidayPeriodForm } from "./holiday-period-form";
@@ -55,6 +61,7 @@ const stored: HolidayPeriod = {
   publishedAt: null,
   publicToken: "token",
   registrationCount: 0,
+  version: "period-read",
   weeks: [
     {
       id: "7",
@@ -78,6 +85,51 @@ describe("HolidayPeriodForm", () => {
   beforeEach(() => {
     mockCreate.mockReset();
     mockUpdate.mockReset();
+  });
+
+  // ADR 0311: the save sends the version its draft rests on; a refusal
+  // shows the stored period once it is read again, and nothing is sent
+  // meanwhile.
+  it("sends the read version and shows the stored period after a refusal", async () => {
+    mockUpdate.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    const colleague = {
+      ...stored,
+      name: "Von der Kollegin",
+      version: "colleague",
+    };
+    const reload = vi.fn().mockResolvedValue(colleague);
+    render(
+      <ToastProvider>
+        <HolidayPeriodForm
+          period={stored}
+          schools={schools}
+          onSaved={vi.fn()}
+          onCancel={vi.fn()}
+          reload={reload}
+        />
+      </ToastProvider>,
+    );
+    fireEvent.change(screen.getByLabelText("Name des Ferienzeitraums"), {
+      target: { value: "Mein Name" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
+    expect(mockVersion).toHaveBeenCalledWith("period-read");
+    expect(
+      await screen.findByText(
+        catalogText(
+          "general.changed_since_read",
+          "die Planung des Ferienzeitraums",
+        ),
+      ),
+    ).toBeInTheDocument();
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect(
+      await screen.findByDisplayValue("Von der Kollegin"),
+    ).toBeInTheDocument();
   });
 
   it("keeps Speichern and Abbrechen in the container of the whole form (#5684)", () => {

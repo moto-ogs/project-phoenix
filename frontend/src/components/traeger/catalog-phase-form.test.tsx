@@ -32,7 +32,10 @@ const phase: TraegerPhaseDetail = {
   offerings: [],
 };
 
-const source = (data: TraegerPhaseDetail, reload = vi.fn()) => ({
+const source = (
+  data: TraegerPhaseDetail,
+  reload: () => Promise<TraegerPhaseDetail | undefined> = vi.fn(),
+) => ({
   opening: data.id,
   data,
   reload,
