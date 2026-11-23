@@ -166,7 +166,9 @@ describe("AdminEnrollmentDeletionModal (#2515)", () => {
 
     expect(
       await screen.findByText(
-        catalogText("general.unavailable", "die Vorschau der Löschung"),
+        // ADR 0311: the failed read after a refusal says that the new state
+        // is missing, before the load error itself.
+        `Der neue Stand konnte nicht geladen werden. ${catalogText("general.unavailable", "die Vorschau der Löschung")}`,
       ),
     ).toBeVisible();
     expect(

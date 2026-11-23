@@ -621,6 +621,8 @@ function useApiErrorCore(
   // A catalog import can finish after the caller has cleared the error, shown
   // another one, or unmounted. Only the latest request may update its state.
   const showVersion = useRef(0);
+  // Counts calls of `show` alone, not clears: see the reload below.
+  const showStarts = useRef(0);
   // A failed load stays on screen while SWR retries it, and every retry
   // hands `show` a new error. Count it once until the caller clears it.
   const loadLogged = useRef(false);
@@ -698,8 +700,9 @@ function useApiErrorCore(
       error: unknown,
       options: ApiErrorDisplayOptions,
     ): Promise<ErrorPresentation | undefined> {
-      const version = showVersion.current + 1;
+      let version = showVersion.current + 1;
       showVersion.current = version;
+      const start = ++showStarts.current;
       // The hook may belong to the component that renders the dialog, above
       // its provider. Capture the action's actual rendered context before the
       // asynchronous catalog lookup, while its focused trigger is still in it.
@@ -745,6 +748,12 @@ function useApiErrorCore(
         return;
       }
       const reload = reloaded ? await reloaded : undefined;
+      if (reloaded) {
+        // The read itself may clear the form's error (a refilled form
+        // does); only a newer failure takes over from this one.
+        if (showStarts.current !== start) return;
+        version = ++showVersion.current;
+      }
       if (showVersion.current !== version) return;
       const { presentError, errorDisplayLabels } = presenter;
       if (reload?.failed) {

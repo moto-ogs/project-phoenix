@@ -316,7 +316,9 @@ describe("AdminChildDataCorrection", () => {
 
     expect(
       await screen.findByText(
-        catalogText("general.unavailable", "der Eintrag des Kindes"),
+        // ADR 0311: the failed read after a refusal says that the new state
+        // is missing, before the load error itself.
+        `Der neue Stand konnte nicht geladen werden. ${catalogText("general.unavailable", "der Eintrag des Kindes")}`,
       ),
     ).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));

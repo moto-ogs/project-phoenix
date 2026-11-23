@@ -133,16 +133,9 @@ export function AdminEnrollmentDeletionModal({
   // The impact changed since the preview: the dialog shows the new one and
   // the error says so; deleting again confirms the new preview. Without the
   // new preview the dialog names the failed read, whose retry reads again.
-  const showRefusalWithCurrentImpact = async (refusal: unknown) => {
+  const reloadCurrentImpact = async () => {
     const readFailure = await adoptCurrentImpact();
-    if (readFailure) {
-      await errors.show(readFailure.error, {
-        object: "die Vorschau der Löschung",
-        retry: () => void showRefusalWithCurrentImpact(refusal),
-      });
-      return;
-    }
-    await errors.show(refusal, { object: "die Vorschau der Löschung" });
+    if (readFailure) throw readFailure.error;
   };
 
   const handleDelete = async () => {
@@ -175,14 +168,11 @@ export function AdminEnrollmentDeletionModal({
         deleteError instanceof ApiError && (deleteError.status ?? 500) < 500;
       if (expected) logger.warn("enrollment_delete_failed", failure);
       else logger.error("enrollment_delete_failed", failure);
-      if (changed) {
-        await showRefusalWithCurrentImpact(deleteError);
-      } else {
-        await errors.show(deleteError, {
-          object: "die Löschung",
-          retry: () => void latestDeleteRef.current(),
-        });
-      }
+      await errors.show(deleteError, {
+        object: changed ? "die Vorschau der Löschung" : "die Löschung",
+        retry: () => void latestDeleteRef.current(),
+        reload: reloadCurrentImpact,
+      });
     } finally {
       setDeleting(false);
     }
