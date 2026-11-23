@@ -128,11 +128,14 @@ describe("useCompTimePreview", () => {
     rerender({ enabled: true });
     expect(result.current.preview).toEqual(positive);
     expect(result.current.loading).toBe(false);
-    act(() => {
-      result.current.reload();
-    });
+    // The reopening reads the projection itself (ADR 0311).
     await act(async () =>
-      pending.resolve({ ...positive, projectedBalanceMinutes: -60 }),
+      pending.resolve({
+        ...positive,
+        projectedBalanceMinutes: -60,
+        // A changed projection has a new fingerprint.
+        fingerprint: "preview-2",
+      }),
     );
     await waitFor(() =>
       expect(result.current.preview?.projectedBalanceMinutes).toBe(-60),

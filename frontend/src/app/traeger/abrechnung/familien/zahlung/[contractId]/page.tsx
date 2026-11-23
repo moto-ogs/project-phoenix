@@ -117,7 +117,11 @@ function FamilyPaymentContent() {
             format={debtorNumberFormat}
             existing={loaded.family}
             version={loaded.version}
-            onChangedSinceRead={familyRead.reload}
+            // The stored state arrives through `familyRead`.
+            reload={async () => {
+              await familyRead.reloadOrThrow();
+              return undefined;
+            }}
             termsText={terms.data ? termsPaymentText(terms.data) : null}
             mandateInForce={mandate.collectable}
             onCancel={() => router.push(backHref)}

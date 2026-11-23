@@ -33,7 +33,7 @@ import {
   useApiFormError,
   useToast,
 } from "~/contexts/ToastContext";
-import { isChangedSinceRead } from "~/lib/api-error";
+import { isReadStateRefusal } from "~/lib/api-error";
 import { fetchCareRules } from "~/lib/traeger-care-reductions-api";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { createLogger } from "~/lib/logger";
@@ -72,6 +72,7 @@ function PriceListPage() {
     loading,
     error: loadError,
     mutate,
+    reloadOrThrow,
   } = useTraegerResource(
     traegerBillingKeys.careTariffs(),
     fetchCareTariffs,
@@ -139,12 +140,15 @@ function PriceListPage() {
       logger.error("care_price_list_delete_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
-      if (isChangedSinceRead(err)) {
+      if (isReadStateRefusal(err)) {
         // A colleague changed the prices since: the dialog closes and the
-        // page shows them, so a second „Löschen“ cannot remove them unseen.
+        // page shows them once read, so a second „Löschen“ cannot remove
+        // them unseen.
         setDeleting(null);
-        void changedErrors.show(err, { object: "die Preisliste" });
-        void mutate();
+        void changedErrors.show(err, {
+          object: "die Preisliste",
+          reload: reloadOrThrow,
+        });
       } else {
         void deleteErrors.show(err, { object: "die Preisliste" });
       }
@@ -211,7 +215,7 @@ function PriceListPage() {
                 void mutate(next, { revalidate: false });
                 setEditing(null);
               }}
-              onChangedSinceRead={() => void mutate()}
+              reload={reloadOrThrow}
             />
             <ConfirmDeleteModal
               isOpen={deleting !== null}

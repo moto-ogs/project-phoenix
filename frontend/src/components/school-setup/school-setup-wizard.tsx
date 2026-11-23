@@ -17,6 +17,7 @@ import {
   buildHelpHref,
   type HelpTopicId,
 } from "~/lib/help-topics";
+import { useMessageComposerOnScreen } from "~/lib/hooks/use-message-composer-presence";
 import { createLogger } from "~/lib/logger";
 import {
   completeSchoolSetup,
@@ -59,14 +60,28 @@ type RunAction = (
 type View = "beacon" | "checklist";
 
 /** Einmal pro Anmeldung und Schule öffnet sich der Assistent von selbst. */
-function claimFirstOpen(tenantSlug: string, accountID: string): boolean {
-  const key = `school-setup-opened:${tenantSlug}:${accountID}`;
+function firstOpenKey(tenantSlug: string, accountID: string): string {
+  return `school-setup-opened:${tenantSlug}:${accountID}`;
+}
+
+/** Ob sich die Checkliste in dieser Sitzung schon von selbst gezeigt hat. */
+function openedThisSession(tenantSlug: string, accountID: string): boolean {
   try {
-    if (sessionStorage.getItem(key)) return false;
-    sessionStorage.setItem(key, "1");
-    return true;
+    return sessionStorage.getItem(firstOpenKey(tenantSlug, accountID)) !== null;
   } catch {
-    return false;
+    return true;
+  }
+}
+
+/**
+ * Merkt sich das erste Öffnen erst, wenn die Checkliste zu sehen war: Hielt
+ * ein Chat sie verdeckt, geht sie nach dem Neuladen noch einmal auf (#7686).
+ */
+function rememberOpened(tenantSlug: string, accountID: string): void {
+  try {
+    sessionStorage.setItem(firstOpenKey(tenantSlug, accountID), "1");
+  } catch {
+    // Ohne Sitzungsspeicher öffnet sie sich ohnehin nicht von selbst.
   }
 }
 
@@ -90,6 +105,10 @@ function SchoolSetupWizardForAdmin({
   viaTraeger,
 }: Readonly<{ viaTraeger: boolean }>) {
   const [view, setView] = useState<View>("beacon");
+  // Ein offener Chat hat seinen Senden-Knopf genau dort, wo Knopf und
+  // Checkliste unten am Rand stehen (#7686). Solange er offen ist, treten
+  // beide zurück.
+  const chatOpen = useMessageComposerOnScreen();
   const { state, accountID, refresh, replace } = useSchoolSetup(
     view === "checklist",
   );
@@ -184,6 +203,12 @@ function SchoolSetupWizardForAdmin({
     readonly tenantSlug: string;
   } | null>(null);
   const tenantSlug = useTenantSlugSafe();
+  // Von selbst geöffnet, aber noch nie zu sehen gewesen: „angezeigt“ zählt
+  // erst, wenn die Checkliste wirklich auf dem Bildschirm steht.
+  const [shownPending, setShownPending] = useState<{
+    readonly accountID: string;
+    readonly tenantSlug: string;
+  } | null>(null);
   useEffect(() => {
     const opened = openedByItself.current;
     if (
@@ -196,14 +221,20 @@ function SchoolSetupWizardForAdmin({
       visible &&
       tenantSlug &&
       accountID &&
-      claimFirstOpen(tenantSlug, accountID)
+      !openedThisSession(tenantSlug, accountID)
     ) {
       setView("checklist");
-      if (trackOnboardingSurface("shown", "setup_checklist")) {
-        openedByItself.current = { accountID, tenantSlug };
-      }
+      setShownPending({ accountID, tenantSlug });
     }
   }, [visible, tenantSlug, accountID]);
+  useEffect(() => {
+    if (!shownPending || !visible || view !== "checklist" || chatOpen) return;
+    setShownPending(null);
+    rememberOpened(shownPending.tenantSlug, shownPending.accountID);
+    if (trackOnboardingSurface("shown", "setup_checklist")) {
+      openedByItself.current = shownPending;
+    }
+  }, [shownPending, visible, view, chatOpen]);
   const closedByPerson = () => {
     const opened = openedByItself.current;
     if (
@@ -296,6 +327,8 @@ function SchoolSetupWizardForAdmin({
       />
     );
   }
+
+  if (chatOpen) return null;
 
   if (view === "beacon") {
     return (

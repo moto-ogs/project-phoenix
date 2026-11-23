@@ -30,23 +30,25 @@ import { SectionCard } from "~/components/ui/section-card";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { Textarea } from "~/components/ui/textarea";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
-import { isChangedSinceRead } from "~/lib/api-error";
 import { hasPermission } from "~/lib/auth-utils";
 import { formatDate } from "~/lib/date-helpers";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
 import type { ResolvedSetting } from "~/lib/settings-api";
 import { useInvalidateFamily } from "~/lib/swr";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
 import { fetchTraegerMasterData, traegerLogoSrc } from "~/lib/traeger-api";
 import { TRAEGER_BRANDING_TAB } from "~/lib/traeger-branding";
 import {
   DOCUMENT_TEMPLATE_KIND_LABELS,
   DOCUMENT_TEMPLATE_KIND_USE,
+  type DocumentTemplateDetail,
   type DocumentTemplateKind,
   type DocumentTemplatePlaceholder,
   type DocumentTemplatePreview,
   type DocumentTemplateText,
+  type DocumentTemplateVersion,
   fetchDocumentTemplate,
   hasInvoiceTable,
   hasLegalRemedy,
@@ -90,13 +92,6 @@ function TemplateEditorPage({
 }: Readonly<{ kind: DocumentTemplateKind }>) {
   const { data: session } = useSession();
   const canEdit = hasPermission(session ?? null, SETTINGS_RIGHT);
-  // Edits of the saved text with the version and text they started from
-  // (ADR 0311); `null` follows the saved text.
-  const [edited, setEdited] = useState<{
-    readonly text: DocumentTemplateText;
-    readonly from: string;
-    readonly base: DocumentTemplateText;
-  } | null>(null);
   // The preview of a draft; `null` shows the preview of the saved text.
   const [draftPreview, setDraftPreview] = useState<{
     readonly text: DocumentTemplateText;
@@ -147,55 +142,66 @@ function TemplateEditorPage({
   const formErrors = useApiFormError(formRef);
   const { success } = useToast();
 
-  // Liest die Vorlage und weist bei einem Fehler ab. Das Nachladen nach dem
-  // Speichern nutzt sie direkt, damit ein Fehler dabei den gespeicherten
-  // Stand stehen lässt (#6652).
-  const { mutate: mutateTemplate } = template;
-  const readTemplate = useCallback(async () => {
-    await mutateTemplate(fetchDocumentTemplate(kind), { revalidate: false });
-  }, [kind, mutateTemplate]);
-  // Reads the stored template after a refused save and shows it. The draft
-  // stays only while the stored text is the one it started from; otherwise
-  // the form shows the colleague's text, so a second „Speichern“ cannot
-  // replace it unseen. A failed read keeps the old start, so a save is
-  // refused again.
-  const adoptStoredTemplate = async () => {
-    try {
-      const stored = await fetchDocumentTemplate(kind);
-      await mutateTemplate(stored, { revalidate: false });
-      const storedText = templateTextOf(stored.current);
-      setEdited((before) =>
-        before && sameTemplateText(before.base, storedText)
-          ? { ...before, from: stored.version }
-          : null,
-      );
-      setDraftPreview(null);
-    } catch (err) {
-      logger.warn("traeger_document_template_reload_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-    }
-  };
+  // Reads the template again and rejects when that fails.
+  const { mutate: mutateTemplate, reloadOrThrow } = template;
   // Nachladen nach dem Speichern: ein Fehler dabei ist ein Ladefehler über
-  // der Vorlage, kein gescheitertes Speichern (#6652).
+  // der Vorlage, der sagt, dass die Änderung gespeichert ist, kein
+  // gescheitertes Speichern (#6652).
   const afterSave = useRefreshAfterWrite(
     "die Anzeige der Vorlage",
-    readTemplate,
+    reloadOrThrow,
   );
-
+  // The read after a save goes through `afterSave`; every other read of
+  // the editor (after a refusal) rejects for the error path.
+  const saveRead = useRef(false);
+  const saveReadFailed = useRef(false);
+  const readTemplate = useCallback(async () => {
+    if (!saveRead.current) return reloadOrThrow();
+    saveRead.current = false;
+    saveReadFailed.current = !(await afterSave.refresh());
+    if (saveReadFailed.current) {
+      throw new Error("the template could not be read after the save");
+    }
+    // The stored template arrives through `template.data`.
+    return undefined;
+  }, [afterSave, reloadOrThrow]);
+  // The editor's text rests on the version it started from (ADR 0311): a
+  // newer read refills it only while untouched; after a refused save the
+  // draft stays only while the stored text is the one it started from,
+  // otherwise the colleague's text shows, so a second „Speichern“ cannot
+  // replace it unseen. Nothing is sent until a read of the stored template
+  // succeeded, also after a save whose read failed.
+  const editor = useDraftOn<
+    DocumentTemplateDetail,
+    DocumentTemplateText,
+    string,
+    DocumentTemplateVersion
+  >(
+    {
+      opening: kind,
+      data: template.data ?? undefined,
+      reload: readTemplate,
+      write: (stored) => mutateTemplate(stored, { revalidate: false }),
+    },
+    {
+      token: (stored) => stored.version,
+      toDraft: (stored) => templateTextOf(stored.current),
+      same: sameTemplateText,
+      rebase: (draft, from, to) =>
+        sameTemplateText(
+          templateTextOf(from.current),
+          templateTextOf(to.current),
+        )
+          ? draft
+          : templateTextOf(to.current),
+    },
+  );
   const error =
     template.error ?? master.error ?? savedPreview.error ?? schemaError;
-  const draft = edited?.text ?? current;
-  // Changes the draft; the first change remembers the version and text it
-  // starts from.
+  const draft = editor.draft ?? current;
+  // Changes the draft.
   const edit = (next: (base: DocumentTemplateText) => DocumentTemplateText) =>
-    setEdited((before) => {
-      if (before) return { ...before, text: next(before.text) };
-      const from = template.data?.version;
-      return current && from !== undefined
-        ? { text: next(current), from, base: current }
-        : before;
-    });
+    editor.setDraft(next);
   const previewed = draftPreview?.text ?? current;
   const preview = draftPreview?.preview ?? savedPreview.data;
   const data =
@@ -225,52 +231,48 @@ function TemplateEditorPage({
   };
 
   const save = async () => {
-    if (!draft || saving) return;
+    if (!draft || saving || !editor.canSubmit) return;
     previewRequest.current++;
     setPreviewing(false);
     formErrors.clear();
     setSaving(true);
-    const submitted = draft;
-    const from = edited?.from ?? template.data?.version ?? "";
-    let saved: Awaited<ReturnType<typeof saveDocumentTemplate>>;
-    try {
-      saved = await saveDocumentTemplate(kind, submitted, from);
-    } catch (err) {
+    saveReadFailed.current = false;
+    const result = await editor.submit(async (version, submitted) => {
+      const saved = await saveDocumentTemplate(kind, submitted, version);
+      saveRead.current = true;
+      return saved;
+    });
+    if (!result.ok) {
       logger.error("traeger_document_template_save_failed", {
-        error: err instanceof Error ? err.message : String(err),
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
       });
-      void formErrors.show(err, { object: "die Vorlage" });
-      // Someone saved a version since: the page shows it (number, date,
+      // Someone saved a version since: `reload` shows it (number, date,
       // text, versions) instead of the draft over it.
-      if (isChangedSinceRead(err)) await adoptStoredTemplate();
+      void formErrors.show(result.error, {
+        object: "die Vorlage",
+        reload: result.reload,
+      });
+      if (result.refused) setDraftPreview(null);
       setSaving(false);
       return;
     }
-    setEdited((before) =>
-      before && sameTemplateText(before.text, submitted)
-        ? { ...before, text: templateTextOf(saved) }
-        : before,
-    );
     void invalidateFamily(traegerKeys.documentTemplatesFamily);
     success(
-      `Die Vorlage ist gespeichert. Neue Schreiben nutzen Version ${saved.version}.`,
+      `Die Vorlage ist gespeichert. Neue Schreiben nutzen Version ${result.saved.version}.`,
     );
-    // Das Formular bleibt gesperrt, bis der neue Stand geladen ist.
-    const reloaded = await afterSave.refresh();
-    // Scheitert das Nachladen, gilt trotzdem die gespeicherte Version;
-    // sonst böte die Seite ein zweites Speichern an (#6652).
-    if (!reloaded) {
+    // The read after the save failed: the page shows the saved version and
+    // its text, and saving waits for a successful read of its token.
+    if (saveReadFailed.current) {
+      const saved = result.saved;
       await mutateTemplate(
         (before) => (before ? { ...before, current: saved } : before),
         { revalidate: false },
       );
+      editor.setDraft(templateTextOf(saved));
     }
-    // The saved text is now the stored one: the form follows it again.
-    setEdited((before) =>
-      before && sameTemplateText(before.text, templateTextOf(saved))
-        ? null
-        : before,
-    );
     setDraftPreview(null);
     setSaving(false);
   };
@@ -511,11 +513,17 @@ function TemplateEditorPage({
                     {canEdit && changed ? (
                       <EditActions
                         onCancel={() => {
-                          setEdited(null);
+                          editor.discard();
                           formErrors.clear();
                         }}
                         saving={saving}
                         saveType="submit"
+                        disabled={!editor.canSubmit}
+                        disabledReason={
+                          editor.status === "loadFailed"
+                            ? "Lade zuerst die gespeicherte Vorlage neu."
+                            : undefined
+                        }
                       />
                     ) : null}
                   </div>

@@ -819,6 +819,7 @@ export function OgsConversation({
           pickupChangeRequests={care.pickupChangeRequests}
           careExceptionsLoaded={care.careExceptionsLoaded}
           pickupChangeRequestsLoaded={care.pickupChangeRequestsLoaded}
+          reloadRequests={care.reloadPickupRequests}
           pickupChangeEnabled={care.features.pickup_change_enabled}
           departureModeEnabled={
             care.features.pickup_change_mode_enabled === true

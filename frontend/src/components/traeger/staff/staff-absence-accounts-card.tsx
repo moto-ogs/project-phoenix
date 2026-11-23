@@ -12,6 +12,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 
 import { AllowanceCard } from "~/components/staff/allowance-card";
 import { useFreshTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { ButtonLink } from "~/components/ui/button";
 import { EditActions } from "~/components/ui/edit-actions";
 import { EmptyState } from "~/components/ui/empty-state";
@@ -28,7 +29,7 @@ import { formatDayCount } from "~/lib/absence-helpers";
 import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
 import { formatDate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
-import { isChangedSinceRead } from "~/lib/api-error";
+import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
 import { useInvalidateFamily } from "~/lib/swr";
 import { traegerStaffKeys } from "~/lib/swr/traeger-staff-keys";
@@ -108,58 +109,70 @@ function SchoolShares({
   );
 }
 
+interface AllowanceDraft {
+  readonly days: string;
+  readonly reason: string;
+}
+
 /** The values a stored claim fills the allowance form with. */
-function allowanceDraftBase(account: TraegerAbsenceAccount) {
-  return {
-    version: account.version,
-    days: formatInput(account.entitledDays),
-  };
+function allowanceDraft(account: TraegerAbsenceAccount): AllowanceDraft {
+  return { days: formatInput(account.entitledDays), reason: "" };
 }
 
 function AllowanceForm({
   recordId,
   account,
+  reload,
   onCancel,
   onSaved,
-  onChanged,
 }: Readonly<{
   recordId: string;
   account: TraegerAbsenceAccount;
+  /** Reads the claim again; rejects when the read fails (ADR 0311). */
+  reload: () => Promise<TraegerAbsenceAccount>;
   onCancel: () => void;
   onSaved: () => Promise<void>;
-  /** Reads the accounts again after a refusal of a changed claim. */
-  onChanged: () => void;
 }>) {
-  // The claim the form opened from (ADR 0311): its version goes out with the
-  // save, its days tell whether the person has typed since.
-  const [base, setBase] = useState(() => allowanceDraftBase(account));
-  const [days, setDays] = useState(base.days);
-  const [reason, setReason] = useState("");
+  // The claim the form opened from (ADR 0311): its version goes out with
+  // the save. A newer read refills the form only while untouched; after a
+  // refusal the stored claim shows, and nothing is sent until it is read.
+  const edit = useDraftOn<
+    TraegerAbsenceAccount,
+    AllowanceDraft,
+    string,
+    unknown
+  >(
+    {
+      opening: `${account.absenceTypeId}:${account.year}`,
+      data: account,
+      reload,
+    },
+    {
+      token: (claim) => claim.version,
+      toDraft: allowanceDraft,
+      // The reason annotates the change; it stays over the stored claim.
+      rebase: (draft, _from, stored) => ({
+        ...allowanceDraft(stored),
+        reason: draft.reason,
+      }),
+    },
+  );
+  const { days, reason } = edit.draft ?? allowanceDraft(account);
+  const setDays = (value: string) =>
+    edit.setDraft((current) => ({ ...current, days: value }));
+  const setReason = (value: string) =>
+    edit.setDraft((current) => ({ ...current, reason: value }));
   const [saving, setSaving] = useState(false);
-  // After a refusal the form shows the stored claim, also over typed days.
-  const [showStored, setShowStored] = useState(false);
   const errors = useApiFormError();
   const { success } = useToast();
   const latestSaveRef = useRef<() => Promise<void>>(async () => undefined);
-  // A newer read refills the form only while nothing is typed; typed days
-  // stay and the save keeps the version they were typed over, so the server
-  // refuses it instead of storing them over a claim the person has not seen.
-  const untouched = days === base.days && reason === "";
-  const newer =
-    account.version !== base.version && (untouched || showStored)
-      ? allowanceDraftBase(account)
-      : null;
-  // Adjusted while rendering: setting base ends the condition.
-  if (newer) {
-    setBase(newer);
-    setDays(newer.days);
-    setShowStored(false);
-  }
   const used = account.takenDays + account.reservedDays;
   const parsed = parseDays(days);
   const id = `traeger-allowance-${account.absenceTypeId}`;
 
   const save = async () => {
+    // Enter submits too: nothing goes out before the stored claim is read.
+    if (!edit.canSubmit) return;
     errors.clear();
     const daysError =
       parsed === null
@@ -179,36 +192,34 @@ function AllowanceForm({
       return;
     }
     setSaving(true);
-    try {
-      await setTraegerAbsenceAllowance(recordId, account.absenceTypeId, {
+    const result = await edit.submit((version, sent) =>
+      setTraegerAbsenceAllowance(recordId, account.absenceTypeId, {
         year: account.year,
         entitledDays: parsed,
-        reason,
-        expectedVersion: base.version,
-      });
-      success(
-        `Der Anspruch ${account.absenceTypeName} ${account.year} ist gespeichert. Er gilt an allen Schulen der Person.`,
-      );
-    } catch (err) {
+        reason: sent.reason,
+        expectedVersion: version,
+      }),
+    );
+    setSaving(false);
+    if (!result.ok) {
       logger.error("traeger_absence_allowance_save_failed", {
-        error: err instanceof Error ? err.message : String(err),
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
       });
-      // Changed since the read: the card shows the stored claim again; the
-      // same request would be refused again, so there is no retry.
-      if (isChangedSinceRead(err)) {
-        setShowStored(true);
-        onChanged();
-        await errors.show(err, { object: "die Änderung am Anspruch" });
-      } else {
-        await errors.show(err, {
-          object: "die Änderung am Anspruch",
-          retry: () => void latestSaveRef.current(),
-        });
-      }
-      setSaving(false);
+      // Changed since the read: `reload` shows the stored claim again,
+      // without a retry of the same version.
+      await errors.show(result.error, {
+        object: "die Änderung am Anspruch",
+        retry: () => void latestSaveRef.current(),
+        reload: result.reload,
+      });
       return;
     }
-    setSaving(false);
+    success(
+      `Der Anspruch ${account.absenceTypeName} ${account.year} ist gespeichert. Er gilt an allen Schulen der Person.`,
+    );
     await onSaved();
   };
 
@@ -270,6 +281,12 @@ function AllowanceForm({
       <EditActions
         onCancel={onCancel}
         saving={saving}
+        disabled={!edit.canSubmit}
+        disabledReason={
+          edit.status === "loadFailed"
+            ? "Lade zuerst den gespeicherten Stand neu."
+            : "Der gespeicherte Stand wird geladen."
+        }
         saveTooltip="Speichert den Anspruch. Er gilt sofort an allen Schulen der Person."
       />
     </form>
@@ -285,7 +302,7 @@ export function StaffAbsenceAccountsCard({
   const {
     data: accounts,
     error,
-    reload,
+    reloadOrThrow,
   } = useFreshTraegerResource(
     traegerStaffKeys.absenceAccounts(recordId, year),
     () => fetchTraegerAbsenceAccounts(recordId, year),
@@ -293,6 +310,10 @@ export function StaffAbsenceAccountsCard({
   );
   const [editing, setEditing] = useState<string | null>(null);
   const invalidateFamily = useInvalidateFamily();
+  // A saved claim whose read failed: the card says it is saved and that
+  // the figures may be old; „Wiederholen“ reads again (ADR 0311 rule 6).
+  const afterSave = useRefreshAfterWrite("die Kontingente", reloadOrThrow);
+  const readFailed = useRef(false);
 
   return (
     <SectionCard
@@ -305,6 +326,7 @@ export function StaffAbsenceAccountsCard({
           value={String(year)}
           onChange={(next) => {
             setEditing(null);
+            afterSave.clear();
             setYear(Number(next));
           }}
           items={[thisYear, thisYear + 1].map((value) => ({
@@ -335,6 +357,13 @@ export function StaffAbsenceAccountsCard({
         />
       ) : accounts ? (
         <div className="grid gap-4 lg:grid-cols-2">
+          {afterSave.error ? (
+            <LoadErrorAlert
+              error={afterSave.error}
+              actionLayout="responsive"
+              className="lg:col-span-2"
+            />
+          ) : null}
           {accounts.map((account) => (
             <AllowanceCard
               key={account.absenceTypeId}
@@ -359,14 +388,33 @@ export function StaffAbsenceAccountsCard({
                   <AllowanceForm
                     recordId={recordId}
                     account={account}
+                    // Liest die Kontingente neu (ein Eintrag im
+                    // Zugriffsprotokoll) und lehnt ab, wenn das scheitert.
+                    reload={async () => {
+                      readFailed.current = true;
+                      const stored = (await reloadOrThrow()).find(
+                        (entry) =>
+                          entry.absenceTypeId === account.absenceTypeId,
+                      );
+                      if (!stored) throw new Error("account is gone");
+                      readFailed.current = false;
+                      return stored;
+                    }}
                     onCancel={() => setEditing(null)}
-                    onChanged={reload}
                     onSaved={async () => {
                       setEditing(null);
-                      // Der Anspruch eines Jahres ändert den Rest im
-                      // Folgejahr.
+                      // The form read the stored claim after the save; a
+                      // failure would leave the old figures unexplained.
+                      if (readFailed.current) void afterSave.refresh();
+                      else afterSave.clear();
+                      // Den gespeicherten Stand hat das Formular schon
+                      // gelesen; der Anspruch eines Jahres ändert den Rest
+                      // im Folgejahr.
                       await invalidateFamily(
-                        traegerStaffKeys.absenceAccountsFamily,
+                        traegerStaffKeys.absenceAccounts(
+                          recordId,
+                          account.year + 1,
+                        ),
                       );
                     }}
                   />

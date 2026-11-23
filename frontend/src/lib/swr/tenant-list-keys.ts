@@ -17,8 +17,14 @@ export const tenantListKeys = {
   /** Gerichte einer Speiseplan-Woche ab ihrem Montag (Mitarbeitende). */
   mealPlanWeek: (monday: string) =>
     `meal-plan-week-${encodeURIComponent(monday)}`,
-  /** Fragen der Anmeldung, nach deren Antworten die Kinderliste filtert (#6954). */
-  enrollmentAnswerFilters: () => "enrollment-answer-filters",
+  /**
+   * Fragen der Anmeldung, nach deren Antworten die Kinderliste filtert
+   * (#6954), mit den Kindern des Planungstags (#7645); ohne Tag heute.
+   */
+  enrollmentAnswerFilters: (date?: string) =>
+    date
+      ? `enrollment-answer-filters-${encodeURIComponent(date)}`
+      : "enrollment-answer-filters",
   /** Der kleine Hilfe-Index der Suche (Titel, Frage, Zusammenfassung; #6954). */
   helpSearchIndex: () => "help-search-index",
   /** Die Treffer der Schulsuche (Cmd/Ctrl+K) zu einem Suchtext. */

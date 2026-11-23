@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import { ApiError } from "~/lib/api-error";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type {
@@ -14,6 +15,7 @@ const { api } = vi.hoisted(() => ({
   api: {
     fetchCareRun: vi.fn(),
     fetchCareLetters: vi.fn(),
+    releaseCareRun: vi.fn(),
   },
 }));
 // The recipient of the handover (ADR 0218) is tested on its own.
@@ -243,6 +245,43 @@ describe("monthly run page letters card", () => {
     expect(
       within(dialog).getByRole("button", { name: "Trotzdem freigeben" }),
     ).toBeInTheDocument();
+  });
+
+  // ADR 0311 rule 6: a failed read of the run after a refused release says
+  // so instead of claiming the new state shows.
+  it("names a failed read of the run after a refused release", async () => {
+    api.fetchCareRun.mockResolvedValue({
+      ...RUN,
+      status: "calculated",
+      releasedAt: null,
+      issuedOn: null,
+    });
+    api.releaseCareRun.mockRejectedValue(
+      new ApiError("changed", 409, {
+        code: "parent_billing.billing_run_changed",
+      }),
+    );
+    renderPage();
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Lauf freigeben" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Monatslauf freigeben?",
+    });
+    api.fetchCareRun.mockRejectedValue(
+      new ApiError("down", 503, { code: "general.unavailable" }),
+    );
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: /^(Trotzdem f|F)reigeben$/ }),
+    );
+
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Du siehst jetzt den neuen Stand/),
+    ).not.toBeInTheDocument();
+    expect(api.releaseCareRun).toHaveBeenCalledTimes(1);
   });
 
   // The release refuses a direct debit without mandate: the question names

@@ -5,7 +5,7 @@
 // Änderung zurücknehmen. Jede Änderung braucht einen Grund. Die Seite der
 // Rechnung lädt diese Datei, die Seite des Laufs nicht.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   type GuardianAddressDraft,
   GuardianAddressFields,
@@ -18,6 +18,7 @@ import { Textarea } from "~/components/ui/textarea";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import {
   type CareAmendmentInput,
   amendCareInvoice,
@@ -215,20 +216,65 @@ type DraftChange = DistributiveOmit<
 >;
 
 /** One change of one invoice of the preview, with its reason. */
+/** The run and the invoice a change rests on. */
+export interface AmendedInvoice {
+  readonly run: CareRunDetail;
+  readonly invoice: CareInvoice;
+}
+
+/** One opening of the dialog: the change and the invoice it changes. */
+function openingOf(draft: CareAmendmentDraft, invoice: CareInvoice): string {
+  const target =
+    draft.kind === "remove_position"
+      ? draft.positionKey
+      : draft.kind === "revoke"
+        ? draft.amendment.id
+        : "";
+  return `${invoice.contractId}:${invoice.service}:${draft.kind}:${target}`;
+}
+
 export function CareInvoiceAmendmentModal({
   run,
   invoice,
   draft,
+  reload,
   onClose,
   onSaved,
 }: Readonly<{
   run: CareRunDetail;
   invoice: CareInvoice;
   draft: CareAmendmentDraft | null;
+  /**
+   * Reads the run again after a refusal of a changed state; rejects when
+   * the read fails or the invoice is gone (ADR 0311).
+   */
+  reload: () => Promise<AmendedInvoice>;
   onClose: () => void;
   onSaved: (run: CareRunDetail) => void;
 }>) {
-  const [fields, setFields] = useState<Fields>(() => initialFields(invoice));
+  // The change rests on the run as the dialog opened on it (ADR 0311): a
+  // reload of the run (focus, another tab) refills the fields only while
+  // untouched and keeps the fingerprint they were typed over; after a
+  // refusal the stored run shows, and nothing is sent until it is read.
+  // One object per read: a fresh one each render would count as a new read
+  // and end a failed read after a refusal with the run read before it.
+  const opened = useMemo(() => ({ run, invoice }), [run, invoice]);
+  const edit = useDraftOn<AmendedInvoice, Fields, string, CareRunDetail>(
+    {
+      opening: draft ? openingOf(draft, invoice) : null,
+      data: opened,
+      reload,
+    },
+    {
+      token: (shown) => shown.run.fingerprint,
+      toDraft: (shown) => initialFields(shown.invoice),
+      // The dialog closes after a save; the page takes the answer.
+      answer: (_saved, shown) => shown,
+    },
+  );
+  const fields = edit.draft ?? initialFields(invoice);
+  const shownInvoice = edit.base?.invoice ?? invoice;
+  const setFields = edit.setDraft;
   const save = useFormModalPending(draft !== null);
   const saving = save.pending;
   const formRef = useRef<HTMLFormElement>(null);
@@ -237,15 +283,14 @@ export function CareInvoiceAmendmentModal({
 
   useEffect(() => {
     if (!draft) return;
-    setFields(initialFields(invoice));
     clear();
-  }, [draft, invoice, clear]);
+  }, [draft, clear]);
 
   const set = (key: keyof Fields) => (event: { target: { value: string } }) =>
     setFields((current) => ({ ...current, [key]: event.target.value }));
 
   const submit = async () => {
-    if (!draft) return;
+    if (!draft || !edit.canSubmit) return;
     formErrors.clear();
     const result = draftInput(draft, fields);
     if ("errors" in result) {
@@ -253,29 +298,37 @@ export function CareInvoiceAmendmentModal({
       return;
     }
     await save.run(async (op) => {
-      try {
-        const amended = await amendCareInvoice(run.id, {
+      const sent = await edit.submit((fingerprint) =>
+        amendCareInvoice(run.id, {
           ...result.input,
           contractId: invoice.contractId,
           service: invoice.service,
-          fingerprint: run.fingerprint,
+          fingerprint,
           reason: fields.reason.trim(),
-        });
-        if (op.isCurrent()) onSaved(amended);
-      } catch (err) {
-        logger.error("traeger_care_invoice_amend_failed", {
-          kind: draft.kind,
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (!op.isCurrent()) return;
-        if (err instanceof ApiError && err.errors) {
-          err.errors = err.errors.map((entry) => ({
-            ...entry,
-            field: SERVER_FIELDS[entry.field] ?? entry.field,
-          }));
-        }
-        void formErrors.show(err, { object: "die Rechnung" });
+        }),
+      );
+      if (sent.ok) {
+        if (op.isCurrent()) onSaved(sent.saved);
+        return;
       }
+      const err = sent.error;
+      logger.error("traeger_care_invoice_amend_failed", {
+        kind: draft.kind,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      if (!op.isCurrent()) return;
+      if (err instanceof ApiError && err.errors) {
+        err.errors = err.errors.map((entry) => ({
+          ...entry,
+          field: SERVER_FIELDS[entry.field] ?? entry.field,
+        }));
+      }
+      // Changed since the read: `reload` shows the stored run, without a
+      // retry of the refused state.
+      void formErrors.show(err, {
+        object: "die Rechnung",
+        reload: sent.reload,
+      });
     });
   };
 
@@ -294,6 +347,12 @@ export function CareInvoiceAmendmentModal({
           onCancel={onClose}
           onSave={() => formRef.current?.requestSubmit()}
           saving={saving}
+          disabled={!edit.canSubmit}
+          disabledReason={
+            edit.status === "loadFailed"
+              ? "Lade zuerst die Rechnung neu."
+              : "Die Rechnung wird geladen."
+          }
           saveLabel={draft ? SAVE_LABELS[draft.kind] : ""}
         />
       }
@@ -310,7 +369,7 @@ export function CareInvoiceAmendmentModal({
         {draft ? (
           <DraftFields
             draft={draft}
-            invoice={invoice}
+            invoice={shownInvoice}
             fields={fields}
             set={set}
             setAddress={(address) =>

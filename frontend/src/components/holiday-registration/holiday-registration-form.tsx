@@ -99,8 +99,9 @@ export function HolidayRegistrationForm({
   /** Without a value the form neither asks nor links back (#6673). */
   parentAccount?: HolidayRegistrationParentAccount;
   /**
-   * Loads the offer again after the Träger changed the form (#5198). The
-   * answers stay: they are kept by the key of their question.
+   * Loads the offer again after the Träger changed the form (#5198); rejects
+   * when the read fails (ADR 0311). The answers stay: they are kept by the
+   * key of their question.
    */
   onFormChanged?: () => Promise<void>;
   /** Tells the page which step shows; only the form step has fields (#5334). */
@@ -187,6 +188,9 @@ export function HolidayRegistrationForm({
       // The answer may name a field; the form shows it where it is.
       setStep("form");
       setCaptchaToken("");
+      // The form changed since it was read: the error path reads it again
+      // and says when that fails (ADR 0311).
+      let reload: (() => Promise<unknown>) | undefined;
       if (err instanceof ApiError && err.code === FORM_CHANGED) {
         // The privacy text may name another retention now (#6691): the
         // parent agrees to the text the reloaded form shows, not the old one.
@@ -195,7 +199,7 @@ export function HolidayRegistrationForm({
           legalAcceptances: {},
           privacyConsent: false,
         }));
-        await onFormChanged?.();
+        reload = onFormChanged;
       } else if (
         err instanceof ApiError &&
         err.errors?.some(({ field }) =>
@@ -204,7 +208,16 @@ export function HolidayRegistrationForm({
       ) {
         // The catalog can change without a new form version. Reload its
         // questions so parents can answer them, keeping the entire draft.
-        await onFormChanged?.();
+        // A failed read keeps the questions on screen; the field error says
+        // what to check.
+        await onFormChanged?.().catch((reloadError: unknown) =>
+          logger.warn("holiday_registration_offer_reload_failed", {
+            error:
+              reloadError instanceof Error
+                ? reloadError.message
+                : String(reloadError),
+          }),
+        );
       }
       // The parent uploads the proof again; the old token claims nothing.
       if (err instanceof ApiError && err.code === UPLOAD_EXPIRED) {
@@ -216,7 +229,7 @@ export function HolidayRegistrationForm({
           field: contactFieldFromPayload(error.field, draft.contacts),
         }));
       }
-      void errorPath.show(err, { object: t("errorObject") });
+      void errorPath.show(err, { object: t("errorObject"), reload });
     } finally {
       setSubmitting(false);
     }

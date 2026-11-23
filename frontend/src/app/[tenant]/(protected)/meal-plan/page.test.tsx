@@ -694,16 +694,33 @@ describe("Speiseplan: Woche aus dem Cache beim erneuten Öffnen", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
-    expect(
-      await screen.findByText(
+    const failedRead = await screen.findByText((text) =>
+      text.includes(
         catalogText("general.unavailable", "die Woche im Speiseplan"),
       ),
-    ).toBeInTheDocument();
+    );
+    expect(failedRead).toBeInTheDocument();
     expect(
       screen.queryByText(
         catalogText("general.changed_since_read", "die Woche im Speiseplan"),
       ),
     ).not.toBeInTheDocument();
+
+    // ADR 0311 rules 4 and 6: the retry reads the week again, it never
+    // sends the refused versions; saving waits for the stored week.
+    fireEvent.click(
+      within(failedRead.closest<HTMLElement>("[role=alert]")!).getByRole(
+        "button",
+        { name: "Wiederholen" },
+      ),
+    );
+    await waitFor(() => expect(getMealPlanWeek).toHaveBeenCalledTimes(3));
+    expect(setDay).toHaveBeenCalledTimes(1);
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "die Woche im Speiseplan"),
+      ),
+    ).toBeInTheDocument();
   });
 });
 

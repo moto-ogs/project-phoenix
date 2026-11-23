@@ -148,7 +148,7 @@ describe("CarePriceListModal", () => {
           currentMonth="2027-01-01"
           onClose={() => undefined}
           onSaved={() => undefined}
-          onChangedSinceRead={() => undefined}
+          reload={() => Promise.reject(new Error("not read"))}
         />
       </ToastProvider>,
     );
@@ -231,7 +231,15 @@ describe("CarePriceListModal", () => {
     saveCarePriceList.mockRejectedValue(
       new ApiError("changed", 409, { code: "general.changed_since_read" }),
     );
-    const changed = vi.fn();
+    const stored: CareTariffs = {
+      ...data,
+      versions: { "12": "v-2" },
+      tariffs: data.tariffs.map((tariff) =>
+        tariff.daysPerWeek === 3 ? { ...tariff, siblingCents: 4800 } : tariff,
+      ),
+    };
+    // The page reads the prices again; they arrive as `data` as well.
+    const changed = vi.fn(() => Promise.resolve(stored));
     const modal = (tariffs: CareTariffs) => (
       <ToastProvider>
         <CarePriceListModal
@@ -240,7 +248,7 @@ describe("CarePriceListModal", () => {
           currentMonth="2027-01-01"
           onClose={() => undefined}
           onSaved={() => undefined}
-          onChangedSinceRead={changed}
+          reload={changed}
         />
       </ToastProvider>
     );
@@ -260,15 +268,7 @@ describe("CarePriceListModal", () => {
     expect(saveCarePriceList.mock.calls[0]?.[4]).toBe("v-1");
     expect(changed).toHaveBeenCalledTimes(1);
 
-    rerender(
-      modal({
-        ...data,
-        versions: { "12": "v-2" },
-        tariffs: data.tariffs.map((tariff) =>
-          tariff.daysPerWeek === 3 ? { ...tariff, siblingCents: 4800 } : tariff,
-        ),
-      }),
-    );
+    rerender(modal(stored));
     await waitFor(() =>
       expect(screen.getByRole("textbox", { name: label })).toHaveValue("48,00"),
     );
@@ -286,7 +286,7 @@ describe("CarePriceListModal", () => {
           currentMonth="2027-01-01"
           onClose={() => undefined}
           onSaved={() => undefined}
-          onChangedSinceRead={() => undefined}
+          reload={() => Promise.reject(new Error("not read"))}
         />
       </ToastProvider>
     );

@@ -299,6 +299,47 @@ describe("TraegerVorlagePage", () => {
     ).toBeInTheDocument();
   });
 
+  // ADR 0311 rule 5: the read-state token comes with the read, not with the
+  // save's answer. When the read after a save fails, a second save waits
+  // for a successful read instead of sending the old token (a false
+  // refusal).
+  it("sends no second save with the old token when the read after a save failed", async () => {
+    renderPage();
+    fireEvent.change(await screen.findByLabelText(/Betreff/), {
+      target: { value: "Ihre Rechnung" },
+    });
+    templatesApi.saveDocumentTemplate.mockResolvedValue({
+      kind: "rechnung",
+      version: 1,
+      standard: false,
+      createdAt: "2026-09-09T10:00:00Z",
+      ...STANDARD,
+      subject: "Ihre Rechnung",
+    });
+    templatesApi.fetchDocumentTemplate.mockRejectedValue(
+      new ApiError("down", 503, { code: "general.unavailable" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(templatesApi.saveDocumentTemplate).toHaveBeenCalledTimes(1),
+    );
+    expect(
+      await screen.findByText(/Deine Änderung ist gespeichert/),
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/Betreff/), {
+      target: { value: "Ihre Rechnung 2" },
+    });
+    const save = screen.queryByRole("button", { name: "Speichern" });
+    if (save) fireEvent.click(save);
+    await waitFor(() =>
+      expect(
+        templatesApi.fetchDocumentTemplate.mock.calls.length,
+      ).toBeGreaterThan(1),
+    );
+    expect(templatesApi.saveDocumentTemplate).toHaveBeenCalledTimes(1);
+  });
+
   // ADR 0311: a colleague saved a version since the editor opened. The save
   // is refused and the page shows the stored version with its text; the
   // draft over it is gone, so no second „Speichern“ replaces it unseen.

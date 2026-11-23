@@ -13,7 +13,7 @@ import { LOCATION_COLORS } from "~/lib/location-helper";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { ApiError, isChangedSinceRead } from "~/lib/api-error";
+import { ApiError, isReadStateRefusal } from "~/lib/api-error";
 import { useLocale, useTranslations } from "next-intl";
 import { Trash2 } from "lucide-react";
 import type { MotoConcept } from "~/lib/moto-concepts";
@@ -63,7 +63,12 @@ import { berlinTodayISO, parseISODate, toISODate } from "~/lib/date-helpers";
 import { useMessagesActivity } from "~/lib/hooks/use-messages-activity";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { PARENT_RESOURCE_OPTIONS } from "~/lib/hooks/use-parent-resources";
-import { useInvalidateFamily, useSWRAuth, useTenantMutate } from "~/lib/swr";
+import {
+  revalidateOrThrow,
+  useInvalidateFamily,
+  useSWRAuth,
+  useTenantMutate,
+} from "~/lib/swr";
 import { parentKeys } from "~/lib/swr/parent-keys";
 import type { SignatureValue } from "~/lib/signature";
 import {
@@ -314,6 +319,10 @@ export interface ChildCare {
   // silently wipe an existing override the UI never managed to prefill.
   readonly careExceptionsLoaded: boolean;
   readonly pickupChangeRequestsLoaded: boolean;
+  /** Reads the pickup requests again; rejects when the read fails. */
+  readonly reloadPickupRequests: () => Promise<unknown>;
+  /** Reads the absence requests again; rejects when the read fails. */
+  readonly reloadExcusedRequests: () => Promise<unknown>;
   // Today's resolved pickup state for the "Heute" tile (see TodayPickup).
   readonly todayPickup: TodayPickup;
   readonly features: parentMeContract.ChildFeaturesResponse;
@@ -595,6 +604,8 @@ export function useChildCare(
     pickupChangeRequests: pickupRequests.data ?? EMPTY_PICKUP_CHANGE_REQUESTS,
     careExceptionsLoaded,
     pickupChangeRequestsLoaded,
+    reloadPickupRequests: () => revalidateOrThrow(pickupRequests),
+    reloadExcusedRequests: () => revalidateOrThrow(excused),
     todayPickup,
     features: featureState.features ?? DEFAULT_FEATURES,
     loading:
@@ -1100,6 +1111,7 @@ export function PickupTimeModal({
   todayClosed = false,
   careDayEnded = false,
   onCutoffPassed,
+  reloadRequests,
 }: Readonly<{
   studentId?: string;
   careExceptions: parentMeContract.CareExceptionResponse[];
@@ -1127,6 +1139,11 @@ export function PickupTimeModal({
   careDayEnded?: boolean;
   /** Der Server hat die Frist oder das Betreuungsende gemeldet: Daten neu laden. */
   onCutoffPassed?: () => void;
+  /**
+   * Liest die Anfragen nach einer Ablehnung neu und lehnt ab, wenn das
+   * scheitert (ADR 0311). Ohne sie lädt der Dialog die Liste still neu.
+   */
+  reloadRequests?: () => Promise<unknown>;
 }>) {
   const t = useCareTermTranslations("parentChildCare");
   const tModes = useCareTermTranslations("parentMasterData");
@@ -1280,6 +1297,8 @@ export function PickupTimeModal({
   // a ref, so typing itself never triggers a refill).
   const [draftVersion, setDraftVersion] = useState("");
   const [reloadingVersion, setReloadingVersion] = useState<string | null>(null);
+  // The read after a refusal failed: nothing is sent until a read succeeds.
+  const [storedReadFailed, setStoredReadFailed] = useState(false);
   const draftTouchedRef = useRef(false);
   const draftVersionRef = useRef("");
   const touchDraft = () => {
@@ -1472,7 +1491,7 @@ export function PickupTimeModal({
   // Ändern einer noch offenen eigenen Anfrage. Die Empfänger bleiben, wie sie
   // beim Senden festgelegt wurden; sie werden über "Anfrage teilen" geändert.
   const handleSaveEdit = async () => {
-    if (!studentId || !request) return;
+    if (!studentId || !request || storedReadFailed) return;
     // An existing collector may only be retained after the current contact
     // list confirmed it. Omitting its ID would silently clear the collector.
     if (
@@ -1515,12 +1534,33 @@ export function PickupTimeModal({
       void invalidateFamily(parentKeys.requestEventsFamily(studentId));
       onClose();
     } catch (err) {
-      if (isChangedSinceRead(err)) {
+      if (isReadStateRefusal(err)) {
         // Sending the same version again would be refused again: reload
-        // the request and show what is stored now.
-        void form.show(err, { object: t("pickup.errorObject") });
-        setReloadingVersion(draftVersion);
-        void invalidateFamily(parentKeys.pickupChangeRequestsFamily(studentId));
+        // the request and show what is stored now. A failed read says so
+        // and keeps saving locked until a read succeeds (ADR 0311).
+        const refused = draftVersion;
+        setReloadingVersion(refused);
+        void form.show(err, {
+          object: t("pickup.errorObject"),
+          reload: reloadRequests
+            ? async () => {
+                setReloadingVersion(refused);
+                setStoredReadFailed(false);
+                try {
+                  await reloadRequests();
+                } catch (readError) {
+                  setReloadingVersion(null);
+                  setStoredReadFailed(true);
+                  throw readError;
+                }
+              }
+            : undefined,
+        });
+        if (!reloadRequests) {
+          void invalidateFamily(
+            parentKeys.pickupChangeRequestsFamily(studentId),
+          );
+        }
       } else {
         reportError(form, err, () => latestActionsRef.current.saveEdit());
       }
@@ -1621,9 +1661,15 @@ export function PickupTimeModal({
               size="md"
               className="w-full whitespace-nowrap sm:w-auto"
               onClick={() => void handleSaveEdit()}
-              disabled={submitting || todayLocked}
+              disabled={submitting || todayLocked || storedReadFailed}
               tooltip={t("pickup.saveEditTooltip")}
-              disabledReason={todayLocked ? cutoffClosedText : undefined}
+              disabledReason={
+                todayLocked
+                  ? cutoffClosedText
+                  : storedReadFailed
+                    ? t("pickup.reloadFirst")
+                    : undefined
+              }
               // After a refusal the refused version would go out again
               // until the stored request has arrived.
               isLoading={submitting || reloadingVersion !== null}
@@ -2009,8 +2055,11 @@ export function SickStatusSummary({
   canEdit?: boolean;
   /** Ob die OGS einen Grund verlangt (requiresGuardianReason). */
   reasonRequired?: boolean;
-  /** Nach einer geänderten Anfrage: die Liste neu laden. */
-  onEdited?: () => void;
+  /**
+   * Nach einer geänderten oder abgelehnten Anfrage: die Liste neu laden.
+   * Lehnt ab, wenn das Lesen scheitert (ADR 0311).
+   */
+  onEdited?: () => Promise<unknown>;
 }>) {
   const t = useCareTermTranslations("parentChildCare");
   const locale = useLocale();
@@ -2190,7 +2239,7 @@ export function SickStatusSummary({
             note: editing.note,
           }}
           onClose={() => setEditingId(null)}
-          onReload={() => onEdited?.()}
+          onReload={() => onEdited?.() ?? Promise.resolve()}
         />
       )}
     </div>

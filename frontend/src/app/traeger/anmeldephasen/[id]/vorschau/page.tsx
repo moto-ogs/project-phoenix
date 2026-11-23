@@ -15,7 +15,6 @@ import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
-import { ApiError } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import { useInvalidateFamily } from "~/lib/swr";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
@@ -28,8 +27,6 @@ import { traegerPath } from "~/lib/traeger-url";
 
 const logger = createLogger({ component: "TraegerCatalogPreviewPage" });
 
-const PREVIEW_STALE = "enrollment.traeger_preview_stale";
-
 export default function TraegerCatalogPreviewPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id ?? "";
@@ -40,6 +37,7 @@ export default function TraegerCatalogPreviewPage() {
     loading: previewLoading,
     error: previewError,
     mutate,
+    reloadOrThrow,
   } = useTraegerResource(
     id ? traegerKeys.catalogPhasePreview(id) : null,
     () => previewTraegerPhase(id),
@@ -63,6 +61,16 @@ export default function TraegerCatalogPreviewPage() {
       setRecomputing(false);
     }
   };
+  // After a refusal: reads the preview again and rejects when that fails,
+  // so the message says so (ADR 0311).
+  const reloadPreview = async () => {
+    setRecomputing(true);
+    try {
+      return await reloadOrThrow();
+    } finally {
+      setRecomputing(false);
+    }
+  };
 
   const release = async () => {
     if (!preview) return;
@@ -76,12 +84,9 @@ export default function TraegerCatalogPreviewPage() {
       logger.error("traeger_catalog_rollout_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
-      void show(err, { object: "die Anmeldephase" });
       // Etwas hat sich seit der Vorschau geändert: die neue Vorschau zeigt
       // es, bevor das Büro noch einmal freigibt.
-      if (err instanceof ApiError && err.code === PREVIEW_STALE) {
-        void loadPreview();
-      }
+      void show(err, { object: "die Anmeldephase", reload: reloadPreview });
     } finally {
       setRollingOut(false);
     }

@@ -90,6 +90,7 @@ export default function TraegerClosingDaysPage() {
     loading: calendarLoading,
     error: loadError,
     mutate,
+    reloadOrThrow,
   } = useTraegerResource(
     traegerKeys.closingDays(from, to),
     () => fetchTraegerCalendar(from, to),
@@ -381,13 +382,15 @@ export default function TraegerClosingDaysPage() {
               void mutate();
               void pendingResponse.mutate();
             }}
-            onChangedSinceRead={async () => {
-              // Der Dialog zeigt den gespeicherten Schließtag (ADR 0311).
-              const stored = (await mutate())?.closingDays.find(
+            reload={async () => {
+              // Der Dialog zeigt den gespeicherten Schließtag (ADR 0311);
+              // scheitert das Lesen oder ist er weg, sagt er das.
+              const stored = (await reloadOrThrow()).closingDays.find(
                 (day) => day.id === editing?.id,
               );
-              if (stored) setEditing(stored);
-              return stored ?? null;
+              if (!stored) throw new Error("closing day is gone");
+              setEditing(stored);
+              return stored;
             }}
             onDraftChange={holiday.onDraftChange}
             consequences={

@@ -380,6 +380,52 @@ describe("useReadDraft", () => {
     expect(send).toHaveBeenCalledWith("1", { version: "1", name: "Anna" });
   });
 
+  it("keeps a failed reload after a refusal when follow turns off over an older held read", async () => {
+    const offline = new Error("offline");
+    const fetcher = answering({ version: "1", name: "Anna" }, offline);
+    const { result, rerender } = renderHook(
+      ({ follow }: { follow: boolean }) => ({
+        draft: useReadDraft<Stored, string, string, unknown>({
+          key: "draft-follow-off",
+          fetcher,
+          token: (read) => read.version,
+          toDraft: (read) => read.name,
+          follow,
+        }),
+        cache: useSWRAuth<Stored>("draft-follow-off", fetcher, {
+          revalidateOnMount: false,
+          revalidateIfStale: false,
+          shouldRetryOnError: false,
+        }),
+      }),
+      { initialProps: { follow: true } },
+    );
+    await waitFor(() => expect(result.current.draft.token).toBe("1"));
+    // A background read of the plan brings a newer state; the opening's own
+    // read (version 1) stays held.
+    await act(async () => {
+      await result.current.cache.mutate(
+        { version: "2", name: "Anne" },
+        { revalidate: false },
+      );
+    });
+    await waitFor(() => expect(result.current.draft.token).toBe("2"));
+    await act(async () => {
+      const outcome = await result.current.draft.submit(() =>
+        Promise.reject(changed()),
+      );
+      if (!outcome.ok) await outcome.reload?.()?.catch(() => undefined);
+    });
+    expect(result.current.draft.status).toBe("loadFailed");
+
+    // Leaving the editor: the draft holds instead of following.
+    rerender({ follow: false });
+    expect(result.current.draft.status).toBe("loadFailed");
+    expect(result.current.draft.error).toBe(offline);
+    expect(result.current.draft.canSubmit).toBe(false);
+    expect(result.current.draft.token).toBe("2");
+  });
+
   it("waits for a newer row of a list the caller reloads (useDraftOn)", async () => {
     const reload = vi.fn(async () => undefined);
     const { result, rerender } = renderHook(
@@ -514,5 +560,44 @@ describe("useReadDraft", () => {
     rerender({ row: { version: "3", name: "Hanna" } });
     expect(result.current.status).toBe("ready");
     expect(result.current.token).toBe("3");
+  });
+
+  // Input typed after a save whose read failed rests on the saved draft:
+  // a read that brings exactly that draft keeps it; any other stored state
+  // replaces it.
+  it("keeps input typed after a save when the read brings what was saved", async () => {
+    const reload = vi.fn(async () => {
+      throw new Error("offline");
+    });
+    const { result, rerender } = renderHook(
+      ({ row }: { row: Stored }) =>
+        useDraftOn<Stored, string, string, unknown>(
+          { opening: "row-5", data: row, reload },
+          { token: (read) => read.version, toDraft: (read) => read.name },
+        ),
+      { initialProps: { row: { version: "1", name: "Anna" } } },
+    );
+    act(() => result.current.setDraft("Hanna"));
+    await act(async () => {
+      await result.current.submit(async () => undefined);
+    });
+    expect(result.current.status).toBe("loadFailed");
+    act(() => result.current.setDraft("Hannah"));
+
+    rerender({ row: { version: "2", name: "Hanna" } });
+    expect(result.current.status).toBe("ready");
+    expect(result.current.token).toBe("2");
+    expect(result.current.draft).toBe("Hannah");
+    expect(result.current.touched).toBe(true);
+
+    // A colleague's state instead of the saved one replaces the input.
+    act(() => result.current.setDraft("Hanna B."));
+    await act(async () => {
+      await result.current.submit(async () => undefined);
+    });
+    act(() => result.current.setDraft("Hanna C."));
+    rerender({ row: { version: "3", name: "Anne" } });
+    expect(result.current.draft).toBe("Anne");
+    expect(result.current.touched).toBe(false);
   });
 });

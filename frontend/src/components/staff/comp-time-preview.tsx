@@ -6,13 +6,13 @@
 // Die Bestätigung prüft der Server unter seiner Sperre (ADR 0311): eine
 // Vorschau aus dem Cache, die kein Minus zeigte, bucht kein Minus.
 
-import { useCallback, useEffect } from "react";
+import { useEffect } from "react";
 
 import { formatSignedDuration } from "~/components/staff/staff-time-views";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useApiLoadError } from "~/contexts/ToastContext";
-import { useSWRAuth } from "~/lib/swr";
+import { useReadDraft } from "~/lib/swr/read-draft";
 import { staffAbsenceKeys } from "~/lib/swr/staff-keys";
 import {
   staffAbsenceService,
@@ -20,6 +20,13 @@ import {
 } from "~/lib/staff-api";
 import { InsetPanel } from "~/components/ui/inset-panel";
 
+/**
+ * The projection a comp time booking confirms (ADR 0311). The draft is the
+ * confirmation of a minus: unconfirmed, the projection follows a newer
+ * read; confirmed, it holds the projection on screen, and the booking sends
+ * its fingerprint. After a refusal the stored projection shows and the
+ * confirmation is gone. A new range is a new opening.
+ */
 export function useCompTimePreview({
   enabled,
   staffId,
@@ -32,38 +39,34 @@ export function useCompTimePreview({
   readonly dateStart: string;
   readonly dateEnd: string;
   readonly halfDay: boolean;
-}): {
-  preview: CompTimeBalancePreview | null;
-  loading: boolean;
-  error: unknown;
-  reload: () => void;
-} {
-  const { data, error, mutate, isValidating } = useSWRAuth(
-    enabled && dateStart && dateEnd
+}) {
+  const active = enabled && Boolean(dateStart && dateEnd);
+  const draft = useReadDraft<CompTimeBalancePreview, boolean, string>({
+    key: active
       ? staffAbsenceKeys.compTimePreview(staffId, dateStart, dateEnd, halfDay)
       : null,
-    () =>
+    fetcher: () =>
       staffAbsenceService.getCompTimePreview(staffId, {
         dateStart,
         dateEnd,
         halfDay,
       }),
-    // Ein anderer Zeitraum zeigt nicht die Projektion des vorigen.
-    { keepPreviousData: false },
-  );
-  const reload = useCallback(() => void mutate(), [mutate]);
+    token: (preview) => preview.fingerprint,
+    toDraft: () => false,
+    // The dialog closes after a booking: no read of the old projection.
+    answer: (_saved, shown) => shown,
+  });
   // Der Block zeigt den Ladefehler (das Panel); ohne Vorschau bucht der
   // Dialog keinen Freizeitausgleich, denn der Server prüft genau die gezeigte
-  // Projektion. Ein gescheitertes Auffrischen zeigt keine alte Projektion als
+  // Projektion. Ein gescheitertes Lesen zeigt keine alte Projektion als
   // Grundlage einer Bestätigung.
-  const failure = isValidating ? undefined : error;
-  const preview = failure ? null : (data ?? null);
-  const active = enabled && Boolean(dateStart && dateEnd);
+  const failed = draft.status === "loadFailed";
   return {
-    preview,
-    loading: active && preview === null && !failure,
-    error: failure ?? null,
-    reload,
+    ...draft,
+    preview: failed ? null : (draft.base ?? null),
+    loading: active && draft.status === "loading",
+    error: failed ? draft.error : null,
+    reload: draft.retryLoad,
   };
 }
 
