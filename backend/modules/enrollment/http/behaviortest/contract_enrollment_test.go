@@ -2,6 +2,7 @@ package enrollmenthttp_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -491,6 +492,35 @@ func TestContractEnrollmentQueryBudget(t *testing.T) {
 	assert.Equal(t, 4, e.count(t, `SELECT COUNT(*) FROM schedule.student_pickup_exceptions WHERE tenant_id = ? AND excused_auto`, testpkg.Tenant(t)),
 		"the resync ran for every child")
 	querybudgets.AssertQueryBudget(t, "services.enrollment.contract_enrollments.enroll", one)
+
+	// The count has a term per phase, not per child: each phase of a call is
+	// locked, and its offerings and the applications that hold its children
+	// are read once. Two rows the run answers without a write, in one phase
+	// and in two.
+	second := *e.sourcePhase
+	second.ID, second.Name = 0, "Zweite Phase "+t.Name()
+	require.NoError(t, InsertOwnerPhaseForTest(ctx, e.repos.Enrollment(), &second))
+	const perPhaseCheck, perPhaseRun = 2, 3
+	answered := func(call func(context.Context, []capability.ContractEnrollment) ([]capability.ContractEnrollmentResult, error), phases ...int64) int {
+		inputs := make([]capability.ContractEnrollment, len(phases))
+		for i, phase := range phases {
+			inputs[i] = e.input(e.student(t, fmt.Sprintf("Phase%d", i)).ID, e.booking("mon"))
+			// A row that names no service of its phase is answered as changed.
+			inputs[i].PhaseID, inputs[i].ServiceStart, inputs[i].ServiceEnd = phase, "", ""
+		}
+		counter := testpkg.CaptureQueriesForContext(t, e.db)
+		results, err := testpkg.TenantQuery1(t, counter.Context(ctx), e.db, call, inputs)
+		require.NoError(t, err)
+		for _, result := range results {
+			require.Equal(t, capability.ContractEnrollmentChanged, result.Status)
+		}
+		return len(counter.Queries())
+	}
+	first := e.sourcePhase.ID
+	assert.Equal(t, perPhaseCheck, answered(e.owner.CheckContractChildren, first, second.ID)-answered(e.owner.CheckContractChildren, first, first),
+		"a further phase costs the check its offerings and its holders")
+	assert.Equal(t, perPhaseRun, answered(e.owner.EnrollContractChildren, first, second.ID)-answered(e.owner.EnrollContractChildren, first, first),
+		"a further phase costs the run its lock, its offerings and its holders")
 }
 
 // The rollover of a school year carries the child of a contract enrollment

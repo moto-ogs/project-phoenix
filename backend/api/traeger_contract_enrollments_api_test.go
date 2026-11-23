@@ -23,6 +23,7 @@ import (
 	enrollmentOwner "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -75,6 +76,7 @@ type contractEnrollmentRowBody struct {
 
 type contractEnrollmentBody struct {
 	Fingerprint string `json:"fingerprint"`
+	Changed     bool   `json:"changed"`
 	Counts      struct {
 		Ready, Done, Unlinked, Held, Stuck, Changed int
 	} `json:"counts"`
@@ -102,6 +104,26 @@ type contractEnrollmentFixture struct {
 	ida                    int64
 	group                  int64
 	enroll                 http.Handler
+	// afterSchoolList runs once after the workflow listed the schools of the
+	// Träger: what an operator does between that check and the school's
+	// tenant transaction.
+	afterSchoolList *func()
+}
+
+// listedSchools is Organisation & Tenancy for the workflow, with a moment
+// after the list of the Träger's schools.
+type listedSchools struct {
+	ContractEnrollmentOrganizations
+	after *func()
+}
+
+func (s listedSchools) ListSchoolsByOrganization(ctx context.Context, organizationID int64) ([]organizationtenancy.School, error) {
+	schools, err := s.ContractEnrollmentOrganizations.ListSchoolsByOrganization(ctx, organizationID)
+	if after := *s.after; after != nil {
+		*s.after = nil
+		after()
+	}
+	return schools, err
 }
 
 func newContractEnrollmentFixture(t *testing.T, name string) contractEnrollmentFixture {
@@ -152,7 +174,7 @@ func newContractEnrollmentFixtureWithAmendments(t *testing.T, name string) (cont
 	f := contractEnrollmentFixture{childLinkFixture: childLinkFixture{careContractFixture: care, mia: int64(imported.Rows[0].ContractID),
 		ben: int64(imported.Rows[1].ContractID), miaStudent: student("Mia", "Beispiel", "2019-05-03")},
 		ida: int64(imported.Rows[2].ContractID), benStudent: student("Ben", "Beispiel", "2020-11-11"),
-		idaStudent: student("Ida", "Muster", "2019-02-07"), group: group.ID}
+		idaStudent: student("Ida", "Muster", "2019-02-07"), group: group.ID, afterSchoolList: new(func())}
 	f.link(t, [2]int64{f.mia, f.miaStudent}, [2]int64{f.ben, f.benStudent})
 	enroll, conclusion := contractEnrollmentRoutes(t, f, unit)
 	f.enroll = enroll
@@ -194,7 +216,7 @@ func contractEnrollmentRoutes(t *testing.T, f contractEnrollmentFixture, unit te
 			next.ServeHTTP(w, r.WithContext(tenant.WithUnitOfWork(r.Context(), unit)))
 		})
 	})
-	require.NoError(t, mountContractEnrollmentRoutes(router, organizations, schoolEnrollments, audit.DataAccessLog, contractEnrollmentDay, contractEnrollmentNow))
+	require.NoError(t, mountContractEnrollmentRoutes(router, listedSchools{organizations, f.afterSchoolList}, schoolEnrollments, audit.DataAccessLog, contractEnrollmentDay, contractEnrollmentNow))
 
 	settings, err := owners.BuildTraegerSettings(database, unit, slog.Default(), organizations, nil)
 	require.NoError(t, err)
@@ -271,6 +293,42 @@ func (f contractEnrollmentFixture) billed(t *testing.T) string {
 	return string(encoded)
 }
 
+// openCareMonth prices the module of the contracts and opens the monthly run
+// of the Elternabrechnung for October 2027 as a colleague of the billing
+// office; it answers that colleague's session and the run.
+func (f contractEnrollmentFixture) openCareMonth(t *testing.T) (string, int64) {
+	t.Helper()
+	billing := traegerColleague(t, f.reviewFixture, identityaccess.TraegerRoleBilling)
+	rec := traegerJSON(t, f.traeger, billing, http.MethodPut, numberRangesPath+"/care", map[string]any{"pattern": "MB-{JJJJ}-{NNNN}"})
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	prices := []map[string]any{}
+	for _, weekday := range []string{"mon", "tue", "wed"} {
+		prices = append(prices, map[string]any{"care_offering_id": f.offering, "module_name": "Offene Ganztagsschule", "weekday": weekday, "monthly_cents": 3200})
+	}
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, careTariffsPath, map[string]any{"school_id": f.school, "valid_from": "2027-08-01", "prices": prices})
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, careRunsPath, map[string]any{"billing_month": "2027-10-01"})
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+	return billing, int64(decodeSchoolPortalData[careRunBody](t, rec.Body.Bytes()).ID)
+}
+
+// careMonth is what the open monthly run would charge: per contract its
+// positions and its total, the bookings without a price and the children
+// with two contracts.
+func (f contractEnrollmentFixture) careMonth(t *testing.T, billing string, runID int64) (string, careRunBody) {
+	t.Helper()
+	rec := traegerJSON(t, f.traeger, billing, http.MethodGet, careRunPath(runID, ""), nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	run := decodeSchoolPortalData[careRunBody](t, rec.Body.Bytes())
+	charged := map[int64]any{}
+	for _, invoice := range run.Invoices {
+		charged[int64(invoice.ContractID)] = []any{invoice.TotalCents, invoice.Positions}
+	}
+	encoded, err := json.Marshal([]any{charged, run.PreviewCount, run.PreviewCents, len(run.Unpriced), run.DuplicateChildren})
+	require.NoError(t, err)
+	return string(encoded), run
+}
+
 func (f contractEnrollmentFixture) versions(t *testing.T, contractID int64) int {
 	t.Helper()
 	return f.count(t, `SELECT COUNT(*) FROM care_contract.contract_versions WHERE contract_id = ?`, contractID)
@@ -295,6 +353,13 @@ func TestContractEnrollmentEnrollsBindsAndKeepsCareContractAndBillingInStep(t *t
 	t.Parallel()
 	f, conclusion := newContractEnrollmentFixtureWithAmendments(t, "Träger Anmeldung nachtragen")
 	ctx := tenant.WithUnitOfWork(context.Background(), testpkg.TenantRuntime(t, f.db))
+	// The real calculation of the Elternabrechnung, before anything runs:
+	// each of the three contracts is charged its three weekdays once.
+	billing, careRun := f.openCareMonth(t)
+	charged, month := f.careMonth(t, billing, careRun)
+	require.Len(t, month.Invoices, 3, charged)
+	require.Equal(t, int64(3*3*3200), month.PreviewCents, charged)
+	require.Zero(t, month.DuplicateChildren)
 	effects, silent, billed := f.sideEffects(t), f.silentRows(t), f.billed(t)
 
 	preview := f.preview(t)
@@ -331,6 +396,7 @@ func TestContractEnrollmentEnrollsBindsAndKeepsCareContractAndBillingInStep(t *t
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	run := decodeSchoolPortalData[contractEnrollmentBody](t, rec.Body.Bytes())
 	assert.Equal(t, 2, run.Counts.Done)
+	assert.True(t, run.Changed, "the run enrolled and bound: it counts as the core action")
 	assert.Equal(t, "done", run.row(t, f.mia).Status)
 	assert.Equal(t, "enroll", run.row(t, f.mia).Action)
 	assert.Equal(t, "unlinked", run.row(t, f.ida).Status)
@@ -340,23 +406,36 @@ func TestContractEnrollmentEnrollsBindsAndKeepsCareContractAndBillingInStep(t *t
 
 	// Care: the school has both as approved children of their child records,
 	// with the bookings of the contract and the roster from its first day.
-	var applications []enrollmentOwner.ContractApplication
+	var applications, ofMia, ofNobody []enrollmentOwner.ContractApplication
 	schoolID, err := tenant.NewTenantID(f.school)
 	require.NoError(t, err)
 	require.NoError(t, tenant.WithinTenant(ctx, schoolID, func(ctx context.Context) error {
+		read := enrollmentCompose.NewContractApplications(securityruntime.Fingerprint)
 		var err error
-		applications, err = enrollmentCompose.NewContractApplications(securityruntime.Fingerprint).AcceptedContractApplications(ctx, []int64{miaChild, benChild})
+		if applications, err = read.AcceptedContractApplications(ctx, []int64{miaChild, benChild}); err != nil {
+			return err
+		}
+		if ofMia, err = read.AcceptedStudentApplications(ctx, []int64{f.miaStudent}); err != nil {
+			return err
+		}
+		ofNobody, err = read.AcceptedStudentApplications(ctx, nil)
 		return err
 	}))
+	require.Len(t, ofMia, 1, "the plan reads the applications of the linked child records only")
+	assert.Equal(t, miaChild, ofMia[0].RequestChildID)
+	assert.Empty(t, ofNobody, "no child record, no application: never the whole school")
 	require.Len(t, applications, 2)
-	accepted := map[int64]int64{}
+	accepted, madeFor := map[int64]int64{}, map[int64]int64{}
 	for _, application := range applications {
 		require.NotNil(t, application.StudentID)
 		accepted[application.RequestChildID] = *application.StudentID
+		require.NotNil(t, application.SourceContractID, "the enrollment names the contract it was made for")
+		madeFor[application.RequestChildID] = *application.SourceContractID
 		assert.Equal(t, enrollmentOwner.RequestSourceContractImport, application.Source)
 		assert.Empty(t, application.GuardianEmail, "the enrollment names no parent")
 	}
 	assert.Equal(t, map[int64]int64{miaChild: f.miaStudent, benChild: f.benStudent}, accepted)
+	assert.Equal(t, map[int64]int64{miaChild: f.mia, benChild: f.ben}, madeFor)
 	bookings := `SELECT COUNT(*) FROM enrollment.care_offering_bookings WHERE tenant_id = ? AND request_child_id = ? AND care_offering_id = ?
 		AND valid_from = ?::date AND valid_until = DATE '2028-08-01'`
 	assert.Equal(t, 1, f.count(t, bookings, f.school, miaChild, f.offering, "2027-08-01"))
@@ -381,12 +460,16 @@ func TestContractEnrollmentEnrollsBindsAndKeepsCareContractAndBillingInStep(t *t
 
 	// Billing and silence.
 	assert.Equal(t, billed, f.billed(t), "the Elternabrechnung reads the same versions: nothing is charged twice")
+	after, month := f.careMonth(t, billing, careRun)
+	assert.Equal(t, charged, after, "the monthly run charges every contract the same positions and amounts as before the run")
+	assert.Zero(t, month.DuplicateChildren, "the enrollment gives no child a second contract to charge")
 	assert.Equal(t, effects, f.sideEffects(t), "a run sends nothing and starts no billing")
 	assert.Equal(t, silent, f.silentRows(t), "child records, guardians, accounts, invitations and outboxes stay as they are")
 
 	// A second run does nothing twice.
 	again := f.runPreviewed(t)
 	assert.Equal(t, 2, again.Counts.Done)
+	assert.False(t, again.Changed, "a run that finds everything done changed nothing and is not counted")
 	assert.Empty(t, again.row(t, f.mia).Action, "a contract that was bound before is done, not done again")
 	assert.Equal(t, 2, f.silentRequests(t))
 	assert.Equal(t, 2, f.events(t, "bind_application"))
@@ -458,6 +541,14 @@ func TestContractEnrollmentBindingIsTakenOffAndSetAgain(t *testing.T) {
 	// Unbound, the link of part 1 can be corrected again.
 	rec = traegerJSON(t, f.enroll, f.office.token, http.MethodDelete, contractEnrollmentUnbindPath(f.ben, benChild), nil)
 	require.Equal(t, http.StatusNoContent, rec.Code, rec.Body.String())
+	// The school ends the stored bookings early: they are no longer the
+	// contract's. The row hangs on the enrollment that was made for it.
+	_, err := f.db.ExecContext(context.Background(), `UPDATE enrollment.care_offering_bookings SET valid_until = DATE '2027-12-01'
+		WHERE tenant_id = ? AND request_child_id = ?`, f.school, benChild)
+	require.NoError(t, err)
+	stuck := f.preview(t).row(t, f.ben)
+	assert.Equal(t, "stuck", stuck.Status)
+	assert.Equal(t, benChild, int64(stuck.RequestChildID), "the stuck row names the enrollment of its own contract")
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodDelete, unlinkPath(f.ben, f.benStudent), nil)
 	require.Equal(t, http.StatusNoContent, rec.Code, rec.Body.String())
 	assert.Equal(t, "unlinked", f.preview(t).row(t, f.ben).Status)
@@ -487,6 +578,28 @@ func TestContractEnrollmentNeedsTheRightAndASchoolOfTheTraeger(t *testing.T) {
 	rec = traegerJSON(t, f.enroll, f.office.token, http.MethodPost, contractEnrollmentPreviewPath, map[string]any{})
 	assert.Equal(t, http.StatusBadRequest, rec.Code, "a preview names its school")
 	assert.Zero(t, f.silentRequests(t))
+
+	// An operator gives the school to the other Träger while a request is
+	// under way: after the list of the Träger's schools, before the school's
+	// tenant transaction. That transaction is scoped by the school alone, so
+	// the workflow holds the school there and refuses.
+	preview := f.preview(t)
+	require.Equal(t, 2, preview.Counts.Ready)
+	accessed := `SELECT COUNT(*) FROM audit.data_access_log WHERE tenant_id = ? AND metadata->>'view' = 'contract_enrollment'`
+	before := f.count(t, accessed, f.school)
+	for _, path := range []string{contractEnrollmentPreviewPath, contractEnrollmentPath} {
+		*f.afterSchoolList = func() {
+			_, err := f.db.ExecContext(context.Background(), `UPDATE platform.schools SET organization_id = ? WHERE id = ?`, other.organization, f.school)
+			require.NoError(t, err)
+		}
+		rec := traegerJSON(t, f.enroll, f.office.token, http.MethodPost, path, map[string]any{"school_id": f.school, "fingerprint": preview.Fingerprint})
+		require.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
+		assert.Contains(t, rec.Body.String(), "care_contract.school_outside_traeger")
+		_, err := f.db.ExecContext(context.Background(), `UPDATE platform.schools SET organization_id = ? WHERE id = ?`, f.office.organization, f.school)
+		require.NoError(t, err)
+	}
+	assert.Zero(t, f.silentRequests(t), "the former Träger enrolls nobody")
+	assert.Equal(t, before, f.count(t, accessed, f.school), "and reads nothing of the school")
 }
 
 // contractEnrollmentResidual is what one more child adds to a run through
