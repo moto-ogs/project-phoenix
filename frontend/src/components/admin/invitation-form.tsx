@@ -26,7 +26,8 @@ import {
 } from "~/lib/invitation-helpers";
 import { looksLikeEmail } from "~/lib/email-format";
 import { createLogger } from "~/lib/logger";
-import { useFreshSWR, useSWRAuth } from "~/lib/swr";
+import { isChangedSinceRead } from "~/lib/api-error";
+import { useSWRAuth } from "~/lib/swr";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { useDebounce } from "~/lib/use-debounce";
 import type { StammdatenGender } from "~/lib/staff-api";
@@ -59,12 +60,14 @@ const FORMER_EMPLOYMENT_LOOKUP_TIMEOUT_MS = 5_000;
 function useFormerEmployment(email: string): {
   formerEmployment: FormerEmployment | null;
   pending: boolean;
+  refresh: () => Promise<unknown>;
 } {
   const current = email.trim().toLowerCase();
   const address = useDebounce(current, FORMER_EMPLOYMENT_DEBOUNCE_MS);
-  // Each address asks anew, also when the person returns to one: a
-  // Wiederaufnahme must not rest on an earlier answer.
-  const lookup = useFreshSWR(
+  // The answer comes from the shared cache. Without a choice the invitation
+  // says it found no former employment; the backend refuses it when one
+  // exists by then (general.changed_since_read), and the form asks again.
+  const lookup = useSWRAuth(
     looksLikeEmail(address) ? enrollmentKeys.formerEmployment(address) : null,
     async () => {
       const controller = new AbortController();
@@ -79,6 +82,8 @@ function useFormerEmployment(email: string): {
       }
     },
     {
+      // An answer belongs to the address it was asked for.
+      keepPreviousData: false,
       shouldRetryOnError: false,
       // Without a successful lookup there is no choice to offer. Keep the
       // existing invitation behavior; sending reports its own form errors.
@@ -89,11 +94,14 @@ function useFormerEmployment(email: string): {
       },
     },
   );
-  const answered = address === current && lookup.fresh;
+  const answered =
+    address === current &&
+    (lookup.data !== undefined || lookup.error !== undefined);
 
   return {
     formerEmployment: answered ? (lookup.data ?? null) : null,
     pending: looksLikeEmail(current) && !answered,
+    refresh: lookup.mutate,
   };
 }
 
@@ -191,9 +199,11 @@ export function InvitationForm({
   const showError = errors.show;
   const clearErrors = errors.clear;
 
-  const { formerEmployment, pending: checkingAddress } = useFormerEmployment(
-    form.email,
-  );
+  const {
+    formerEmployment,
+    pending: checkingAddress,
+    refresh: refreshFormerEmployment,
+  } = useFormerEmployment(form.email);
 
   const [successInfo, setSuccessInfo] = useState<{
     email: string;
@@ -297,6 +307,14 @@ export function InvitationForm({
       logger.warn("invitation_create_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
+      if (isChangedSinceRead(err)) {
+        // Die Person war inzwischen hier beschäftigt: Das Formular fragt
+        // nach Wiederaufnahme oder Neuaufnahme, statt dieselbe Einladung
+        // erneut zu senden.
+        await errors.show(err, { object: "die Einladung" });
+        void refreshFormerEmployment();
+        return;
+      }
       await errors.show(err, {
         object: "die Einladung",
         // Erneut absenden: derselbe Weg wie „Einladung senden“, mit den

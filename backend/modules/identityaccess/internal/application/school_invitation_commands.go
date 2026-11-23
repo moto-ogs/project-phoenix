@@ -99,6 +99,7 @@ func (s *SchoolInvitation) CreateSchoolInvitation(ctx context.Context, request i
 			ResetMasterData:  request.ResetMasterData, ResetQualifications: request.ResetQualifications, ResetWorkTime: request.ResetWorkTime,
 			PersonID: request.PersonID, CreatedBy: request.CreatedBy, SchoolName: request.SchoolName,
 			ActorPermissions: request.ActorPermissions, OperatorGrant: request.OperatorGrant,
+			FormerEmploymentAsked: request.FormerEmploymentAsked,
 		})
 		return PublicSchoolInvitation(invitation), err
 	})

@@ -145,8 +145,11 @@ func (rs *Resource) createInvitation(w http.ResponseWriter, r *http.Request) {
 // copying the optional name/position fields.
 func (rs *Resource) buildInvitationRequest(r *http.Request, req *CreateSchoolInvitationRequest, claims sessiontoken.AppClaims) identityaccess.SchoolInvitationRequest {
 	invitationReq := identityaccess.SchoolInvitationRequest{
-		EmploymentAction: req.EmploymentAction,
-		ResetMasterData:  req.ResetMasterData, ResetQualifications: req.ResetQualifications, ResetWorkTime: req.ResetWorkTime,
+		// The Einladen dialog asks for the choice whenever its read found a
+		// former employment; an empty choice says it found none.
+		FormerEmploymentAsked: true,
+		EmploymentAction:      req.EmploymentAction,
+		ResetMasterData:       req.ResetMasterData, ResetQualifications: req.ResetQualifications, ResetWorkTime: req.ResetWorkTime,
 		Email:            req.Email,
 		RoleID:           req.RoleID.Int64(),
 		CreatedBy:        int64(claims.ID),

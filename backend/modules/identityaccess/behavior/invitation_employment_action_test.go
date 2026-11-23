@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 )
@@ -124,4 +125,40 @@ func TestInvitationEmploymentChoice(t *testing.T) {
 			require.Equal(t, 1, persons, "both choices reuse the person")
 		})
 	}
+}
+
+// TestInvitationDialogWithoutChoiceRefusesAFormerEmployment: the Einladen
+// dialog sends no choice when its read found no former employment. If one
+// exists by the time it saves, the invitation is refused (ADR 0311) instead
+// of resuming the employment with every reset off.
+func TestInvitationDialogWithoutChoiceRefusesAFormerEmployment(t *testing.T) {
+	t.Parallel()
+	testpkg.OwnTenant(t)
+	db := testpkg.SetupTestDB(t)
+	ctx := testpkg.Ctx(t)
+	module, err := api.NewAuthTestModule(testpkg.NewDatabase(t, db), testpkg.TenantRuntime(t, db), api.WithAuthTestMailer(testpkg.NewCapturingMailer()))
+	require.NoError(t, err)
+	invitations := module.Invitation
+	former, account := testpkg.CreateTestStaffWithAccount(t, db, "Returning", "Member")
+	_, err = db.ExecContext(ctx, `UPDATE users.staff_school_memberships SET deleted_at = now() WHERE id = ?`, former.ID)
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, `UPDATE auth.account_tenants SET status = 'inactive', deactivated_at = now() WHERE account_id = ? AND tenant_id = ?`, account.ID, testpkg.Tenant(t))
+	require.NoError(t, err)
+	role := testpkg.CreateTestRole(t, db, "returning-dialog")
+	creator := testpkg.CreateTestAccount(t, db, "dialog-inviter")
+	request := identityaccess.SchoolInvitationRequest{
+		Email: account.Email, RoleID: role.ID, CreatedBy: creator.ID, FormerEmploymentAsked: true,
+		ActorPermissions: []string{usersManagePermission},
+	}
+
+	_, err = invitations.CreateSchoolInvitation(ctx, request)
+	require.ErrorIs(t, err, readstate.ErrChanged)
+	pending, err := invitations.ListPendingSchoolInvitations(ctx)
+	require.NoError(t, err)
+	require.Empty(t, pending, "a refused invitation leaves no link behind")
+
+	request.EmploymentAction = identityaccess.EmploymentActionResume
+	invitation, err := invitations.CreateSchoolInvitation(ctx, request)
+	require.NoError(t, err)
+	require.Equal(t, identityaccess.EmploymentActionResume, invitation.EmploymentAction)
 }

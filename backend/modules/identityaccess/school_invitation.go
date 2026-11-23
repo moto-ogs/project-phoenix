@@ -140,6 +140,13 @@ type SchoolInvitationRequest struct {
 	PersonID            *int64
 	CreatedBy           int64
 	SchoolName          string
+	// FormerEmploymentAsked marks a request from the Einladen dialog, which
+	// showed the school whether the address has a former employment and
+	// asked for the choice (ADR 0021). An empty EmploymentAction then means
+	// the dialog found none: a former employment found now refuses the
+	// invitation with readstate.ErrChanged instead of resuming it unasked
+	// (ADR 0311). The staff import and the operator keep the default.
+	FormerEmploymentAsked bool
 	// ActorPermissions are the inviting account's permissions; the empty set
 	// grants nothing beyond the user tier.
 	ActorPermissions []string

@@ -133,6 +133,8 @@ type SchoolInvitationRequest struct {
 	PersonID   *int64
 	CreatedBy  int64
 	SchoolName string
+	// FormerEmploymentAsked: see identityaccess.SchoolInvitationRequest.
+	FormerEmploymentAsked bool
 	// ActorPermissions are the inviting account's permissions. The empty set
 	// grants nothing beyond the user tier, so a caller that forgets it fails
 	// closed.

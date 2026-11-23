@@ -815,7 +815,7 @@ describe("InvitationForm former employment hint", () => {
     });
   });
 
-  it("waits for a fresh lookup when returning to an address with a former employment", async () => {
+  it("shows the known answer at once when returning to an address", async () => {
     mockFindFormerEmployment.mockImplementation((email: string) => {
       if (email === "former@example.com") {
         return Promise.resolve({
@@ -838,20 +838,57 @@ describe("InvitationForm former employment hint", () => {
     });
     skipLookupDebounce();
     await waitFor(() =>
-      expect(mockFindFormerEmployment).toHaveBeenCalledTimes(2),
-    );
-    await waitFor(() =>
       expect(screen.getByText("Adresse wird geprüft…")).toBeDisabled(),
     );
 
+    // Zurück zur ersten Adresse: Die Antwort steht im Cache; ist sie
+    // inzwischen falsch, lehnt das Backend die Einladung ab.
     fireEvent.change(screen.getByLabelText("E-Mail-Adresse"), {
       target: { value: "former@example.com" },
     });
+    skipLookupDebounce();
+    expect(
+      await screen.findByText("Diese Person war schon bei dir beschäftigt"),
+    ).toBeInTheDocument();
+  });
+
+  it("asks for the choice when the person turns out to have worked here", async () => {
+    mockFindFormerEmployment.mockResolvedValueOnce(null).mockResolvedValue({
+      startedOn: "2024-08-01",
+      endedOn: "2026-07-31",
+      resumes: ["master_data"],
+      notReturning: ["staff_documents"],
+    });
+    mockCreateInvitation
+      .mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      )
+      .mockResolvedValue({
+        id: 1,
+        email: "former@example.com",
+        token: "abc123",
+      });
+
+    await typeEmail("former@example.com");
+    fireEvent.click(await screen.findByText("Einladung senden"));
+    await waitFor(() =>
+      expect(mockCreateInvitation).toHaveBeenCalledWith(
+        expect.not.objectContaining({ employmentAction: expect.anything() }),
+      ),
+    );
 
     expect(
-      screen.queryByText("Diese Person war schon bei dir beschäftigt"),
+      await screen.findByText("Diese Person war schon bei dir beschäftigt"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Wiederholen" }),
     ).not.toBeInTheDocument();
-    expect(screen.getByText("Adresse wird geprüft…")).toBeDisabled();
+    fireEvent.click(screen.getByText("Einladung senden"));
+    await waitFor(() =>
+      expect(mockCreateInvitation).toHaveBeenLastCalledWith(
+        expect.objectContaining({ employmentAction: "resume" }),
+      ),
+    );
   });
 
   it("keeps the dialog usable when the lookup fails", async () => {
