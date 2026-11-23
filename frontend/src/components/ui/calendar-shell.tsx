@@ -1,6 +1,12 @@
 "use client";
 
-import { Suspense, useMemo, type ComponentProps } from "react";
+import {
+  Suspense,
+  useEffect,
+  useMemo,
+  useRef,
+  type ComponentProps,
+} from "react";
 import type { Locale } from "date-fns";
 import { addMonths } from "date-fns/addMonths";
 import { format } from "date-fns/format";
@@ -80,6 +86,12 @@ type CalendarShellProps = DistributiveOmit<
     readonly months?: string;
     readonly month?: string;
   };
+  /**
+   * Called once the grid has replaced its skeleton. The calendar module
+   * loads lazily, so on a first open the grid can arrive after its panel
+   * placed the focus.
+   */
+  readonly onGridReady?: () => void;
 };
 
 export function CalendarShell({
@@ -88,6 +100,7 @@ export function CalendarShell({
   classNames = DAY_PICKER_CLASSNAMES,
   skeletonClassNames,
   showOutsideDays = true,
+  onGridReady,
   ...dayPicker
 }: CalendarShellProps) {
   const today = useBerlinToday();
@@ -112,8 +125,50 @@ export function CalendarShell({
         hideNavigation
         classNames={classNames}
       />
+      {onGridReady ? <GridReady onReady={onGridReady} /> : null}
     </Suspense>
   );
+}
+
+/**
+ * Was im Blatt eines Kalenders beim Öffnen den Fokus bekommt
+ * (`ResponsivePanel` `initialFocus`): der gewählte Tag (beim Zeitraum der
+ * erste), sonst heute, sonst der Tag, den der Kalender mit der Tastatur
+ * erreicht. Lädt das Kalendermodul noch, nimmt das Blatt sein erstes
+ * bedienbares Element.
+ */
+export function focusChosenCalendarDay(sheet: HTMLElement): HTMLElement | null {
+  return (
+    sheet.querySelector<HTMLElement>("[data-selected] button") ??
+    sheet.querySelector<HTMLElement>("[data-today] button") ??
+    sheet.querySelector<HTMLElement>('[data-day] button[tabindex="0"]')
+  );
+}
+
+/** Mounts with the grid in the same Suspense boundary and reports it once. */
+function GridReady({ onReady }: { readonly onReady: () => void }) {
+  const onReadyRef = useRef(onReady);
+  useEffect(() => {
+    onReadyRef.current = onReady;
+  });
+  useEffect(() => {
+    onReadyRef.current();
+  }, []);
+  return null;
+}
+
+/**
+ * Für ein Blatt (`ResponsivePanel`): Kommt das Raster erst nach dem Öffnen,
+ * hat das Blatt den Fokus schon auf sein erstes bedienbares Element gelegt.
+ * Liegt er noch dort und auf keinem Tag, geht er auf den gewählten Tag bzw.
+ * heute.
+ */
+export function moveFocusToChosenDayOnLoad(calendar: HTMLElement | null) {
+  const sheet = calendar?.closest<HTMLElement>('[role="dialog"]');
+  const active = document.activeElement;
+  if (!sheet || !(active instanceof HTMLElement)) return;
+  if (!sheet.contains(active) || active.closest("[data-day]")) return;
+  focusChosenCalendarDay(sheet)?.focus({ preventScroll: true });
 }
 
 // Month names come from the active date-fns locale, never a hardcoded list, so

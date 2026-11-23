@@ -8,10 +8,17 @@ import {
   beforeEach,
   afterEach,
 } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import {
+  act,
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { usePhoneViewport } from "~/test/helpers/viewport";
 import { DatePicker, ISODateInput, ISODatePicker } from "./date-picker";
+import { Modal } from "./modal";
 import { useScrollLock } from "./overlay-stack";
 import { preloadDayPicker } from "./lazy-day-picker";
 
@@ -40,13 +47,20 @@ vi.mock("react-day-picker", () => ({
       data-required={required}
       data-month={month?.toISOString()}
     >
-      <button
-        type="button"
-        onClick={() => onSelect(new Date("2024-01-15T00:00:00Z"))}
-        data-testid="select-date"
+      {/* Like a day cell of the real grid: chosen, else today. */}
+      <div
+        data-day="2024-01-15"
+        data-selected={selected === undefined ? undefined : true}
+        data-today={selected === undefined ? true : undefined}
       >
-        Select 15.01.2024
-      </button>
+        <button
+          type="button"
+          onClick={() => onSelect(new Date("2024-01-15T00:00:00Z"))}
+          data-testid="select-date"
+        >
+          Select 15.01.2024
+        </button>
+      </div>
       {selected instanceof Date && (
         <div data-testid="selected-date">{selected.toISOString()}</div>
       )}
@@ -1236,5 +1250,114 @@ describe("hint", () => {
     expect(
       hint.compareDocumentPosition(error) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+});
+
+describe("DatePicker am Handy", () => {
+  usePhoneViewport();
+
+  /** Vaul hält das Blatt bis zum Ende seiner Animation; happy-dom spielt keine. */
+  async function finishSheetClosing(name: string) {
+    const sheet = screen.queryByRole("dialog", { name });
+    if (sheet !== null) {
+      await waitFor(() =>
+        expect(sheet).toHaveAttribute("data-state", "closed"),
+      );
+      const end = new Event("animationend");
+      Object.assign(end, {
+        animationName: getComputedStyle(sheet).animationName,
+      });
+      act(() => {
+        sheet.dispatchEvent(end);
+      });
+    }
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name })).not.toBeInTheDocument(),
+    );
+  }
+
+  it("öffnet als Blatt mit Fokus auf dem gewählten Tag; ein Tag setzt den Wert und schließt", async () => {
+    const onChange = vi.fn();
+    render(
+      <DatePicker
+        value={new Date(2024, 0, 15)}
+        onChange={onChange}
+        ariaLabel="Startdatum"
+      />,
+    );
+    const trigger = screen.getByRole("button", { name: /^Startdatum/ });
+    expect(trigger).toHaveAttribute("aria-haspopup", "dialog");
+
+    fireEvent.click(trigger);
+    await screen.findByRole("dialog", { name: "Startdatum" });
+    const day = await screen.findByTestId("select-date");
+    await waitFor(() => expect(day).toHaveFocus());
+
+    fireEvent.click(day);
+    expect(onChange).toHaveBeenCalledOnce();
+    await finishSheetClosing("Startdatum");
+    expect(trigger).toHaveFocus();
+  });
+
+  it("fokussiert ohne Wert heute", async () => {
+    render(<DatePicker value={null} onChange={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: /Datum auswählen/ }));
+
+    await screen.findByRole("dialog", { name: "Datum auswählen" });
+    const day = await screen.findByTestId("select-date");
+    expect(day.parentElement).toHaveAttribute("data-today");
+    await waitFor(() => expect(day).toHaveFocus());
+  });
+
+  it("öffnet Monat und Jahr im Blatt außerhalb des verschobenen Blatts und wählt darin", async () => {
+    const onChange = vi.fn();
+    render(
+      <DatePicker
+        value={new Date(2024, 0, 15)}
+        onChange={onChange}
+        ariaLabel="Geburtsdatum"
+        monthYearNavigation
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /^Geburtsdatum/ }));
+    const sheet = await screen.findByRole("dialog", { name: "Geburtsdatum" });
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Monat" }));
+    const months = screen.getByRole("listbox", { name: "Monat" });
+    // Das Blatt verschiebt seinen Inhalt per transform; die Liste öffnet
+    // als eigenes Blatt (#7800) und läge sonst neben ihrem Auslöser.
+    expect(sheet).not.toContainElement(months);
+    // Die Monatsnamen sind in dieser Datei gemockt; der dritte ist der März.
+    fireEvent.click(screen.getAllByRole("option")[2]!);
+
+    expect(screen.getByTestId("day-picker")).toHaveAttribute(
+      "data-month",
+      new Date(2024, 2, 1).toISOString(),
+    );
+    expect(sheet).toBeInTheDocument();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("schließt in einem Modal nur das Blatt", async () => {
+    const onClose = vi.fn();
+    const onChange = vi.fn();
+    render(
+      <Modal isOpen onClose={onClose} title="Abwesenheit">
+        <DatePicker value={null} onChange={onChange} ariaLabel="Startdatum" />
+      </Modal>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /^Startdatum/ }));
+    await screen.findByRole("dialog", { name: "Startdatum" });
+
+    fireEvent.click(await screen.findByTestId("select-date"));
+    await finishSheetClosing("Startdatum");
+
+    expect(onChange).toHaveBeenCalledOnce();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("dialog", { name: "Abwesenheit" }),
+    ).toBeInTheDocument();
+    // Die Fokusfalle des Modals hält den Auslöser wieder.
+    expect(screen.getByRole("button", { name: /^Startdatum/ })).toHaveFocus();
   });
 });

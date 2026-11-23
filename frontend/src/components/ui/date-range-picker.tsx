@@ -10,6 +10,7 @@ import {
   type OverlayOwner,
 } from "./overlay-stack";
 import { useAnchoredPanel } from "./anchored-panel";
+import { ResponsivePanel, useResponsivePanelSheet } from "./responsive-panel";
 import { useKitDefault } from "./kit-locale";
 import { PANEL_VIEWPORT_MARGIN } from "./panel-geometry";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
@@ -34,7 +35,12 @@ import {
   DAY_PICKER_CLASSNAMES,
   preloadDayPicker,
 } from "~/components/ui/lazy-day-picker";
-import { CalendarMonthHeader, CalendarShell } from "./calendar-shell";
+import {
+  CalendarMonthHeader,
+  CalendarShell,
+  focusChosenCalendarDay,
+  moveFocusToChosenDayOnLoad,
+} from "./calendar-shell";
 
 interface Preset {
   readonly label: string;
@@ -131,13 +137,17 @@ export function DateRangePicker({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const panelId = useId();
+  // Unter `sm` öffnet der Kalender als Blatt von unten (`ResponsivePanel`,
+  // #7801); Lage am Auslöser und Schließen gehören dann dem Blatt.
+  const asSheet = useResponsivePanelSheet();
   // Closing from inside the panel (a finished range, a preset) hands focus
   // back to the trigger; the panel would otherwise take it along. Escape does
-  // the same through the engine below.
+  // the same through the engine below. The sheet returns it itself once it
+  // has closed.
   const closeToTrigger = useCallback(() => {
     setIsOpen(false);
-    triggerRef.current?.focus();
-  }, []);
+    if (!asSheet) triggerRef.current?.focus();
+  }, [asSheet]);
 
   // The engine closes the calendar on a press outside and on Escape, like in
   // `DatePicker`. The overlay stack decides whether it is the topmost overlay
@@ -151,7 +161,7 @@ export function DateRangePicker({
   const repositionRef = useRef<(() => void) | null>(null);
   const reposition = useCallback(() => repositionRef.current?.(), []);
   const { owner } = useAnchoredPanel({
-    open: isOpen,
+    open: isOpen && !asSheet,
     onClose: (reason) => {
       setIsOpen(false);
       if (reason === "escape") triggerRef.current?.focus();
@@ -165,87 +175,109 @@ export function DateRangePicker({
   });
 
   const resolvedFieldLabel = fieldLabel ?? kitDefault("Zeitraum");
+  const handleChange = (range: DateRange | undefined) => {
+    onChange(range);
+    // Close only when both bounds are picked (or when a preset fires).
+    if (range?.from && range.to) {
+      closeToTrigger();
+    }
+  };
 
   return (
     <div className={`relative ${className}`} ref={containerRef}>
-      <button
-        ref={triggerRef}
-        type="button"
-        aria-haspopup="dialog"
-        aria-expanded={isOpen}
-        aria-controls={isOpen ? panelId : undefined}
-        onClick={() => setIsOpen((v) => !v)}
-        // Fetch the calendar module before the click, so opening does not
-        // wait for it.
-        onPointerEnter={preloadDayPicker}
-        onFocus={preloadDayPicker}
-        // Derselbe Auslöser wie jedes Auswahlfeld (`CustomSelect`).
-        {...(embedded && CONTROL_PART)}
-        className={
-          embedded
-            ? cn(
-                selectTriggerClassName({
-                  embedded: true,
-                  className: "w-full justify-center",
-                }),
-                isOpen && "bg-gray-50",
-              )
-            : cn(
-                selectTriggerClassName({ className: triggerClassName }),
-                // `moto-content-surface` supplies the white background outside
-                // the Tailwind layer, so the open state must take precedence.
-                isOpen && "bg-gray-50!",
-              )
+      <ResponsivePanel
+        open={isOpen}
+        onOpenChange={setIsOpen}
+        label="Zeitraum wählen"
+        sheetId={panelId}
+        returnFocusRef={triggerRef}
+        initialFocus={focusChosenCalendarDay}
+        trigger={
+          <button
+            ref={triggerRef}
+            type="button"
+            aria-haspopup="dialog"
+            aria-expanded={isOpen}
+            aria-controls={isOpen ? panelId : undefined}
+            onClick={() => setIsOpen((v) => !v)}
+            // Fetch the calendar module before the click, so opening does not
+            // wait for it.
+            onPointerEnter={preloadDayPicker}
+            onFocus={preloadDayPicker}
+            // Derselbe Auslöser wie jedes Auswahlfeld (`CustomSelect`).
+            {...(embedded && CONTROL_PART)}
+            className={
+              embedded
+                ? cn(
+                    selectTriggerClassName({
+                      embedded: true,
+                      className: "w-full justify-center",
+                    }),
+                    isOpen && "bg-gray-50",
+                  )
+                : cn(
+                    selectTriggerClassName({ className: triggerClassName }),
+                    // `moto-content-surface` supplies the white background outside
+                    // the Tailwind layer, so the open state must take precedence.
+                    isOpen && "bg-gray-50!",
+                  )
+            }
+          >
+            <span
+              className={cn(
+                "whitespace-nowrap tabular-nums",
+                value?.from ? "text-gray-900" : "text-gray-500",
+              )}
+            >
+              {formatRangeLabel(value)}
+            </span>
+            {/* Without a range the trigger already says „Zeitraum wählen“. */}
+            {resolvedFieldLabel && value?.from ? (
+              <span className="sr-only">{`, ${resolvedFieldLabel}`}</span>
+            ) : null}
+            <svg
+              className="h-4 w-4 shrink-0 text-gray-400"
+              aria-hidden="true"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
+            </svg>
+          </button>
         }
       >
-        <span
-          className={cn(
-            "whitespace-nowrap tabular-nums",
-            value?.from ? "text-gray-900" : "text-gray-500",
-          )}
-        >
-          {formatRangeLabel(value)}
-        </span>
-        {/* Without a range the trigger already says „Zeitraum wählen“. */}
-        {resolvedFieldLabel && value?.from ? (
-          <span className="sr-only">{`, ${resolvedFieldLabel}`}</span>
-        ) : null}
-        <svg
-          className="h-4 w-4 shrink-0 text-gray-400"
-          aria-hidden="true"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-          />
-        </svg>
-      </button>
-
-      {isOpen && (
-        <RangeCalendar
-          triggerRef={triggerRef}
-          panelRef={panelRef}
-          owner={owner}
-          repositionRef={repositionRef}
-          panelId={panelId}
-          value={value}
-          presets={presets}
-          fromMin={fromMin}
-          toMax={toMax}
-          onChange={(range) => {
-            onChange(range);
-            // Close only when both bounds are picked (or when a preset fires).
-            if (range?.from && range.to) {
-              closeToTrigger();
-            }
-          }}
-        />
-      )}
+        {(inSheet) =>
+          inSheet ? (
+            <RangeCalendarInline
+              inSheet
+              value={value}
+              presets={presets}
+              fromMin={fromMin}
+              toMax={toMax}
+              onChange={handleChange}
+            />
+          ) : (
+            <RangeCalendar
+              triggerRef={triggerRef}
+              panelRef={panelRef}
+              owner={owner}
+              repositionRef={repositionRef}
+              panelId={panelId}
+              value={value}
+              presets={presets}
+              fromMin={fromMin}
+              toMax={toMax}
+              onChange={handleChange}
+            />
+          )
+        }
+      </ResponsivePanel>
     </div>
   );
 }
@@ -444,6 +476,8 @@ interface RangeCalendarProps {
   readonly toMax?: Date;
   readonly modifiers?: Record<string, Matcher | Matcher[]>;
   readonly modifiersClassNames?: Record<string, string>;
+  /** Im Blatt: Fokus auf den Zeitraum, sobald das Raster geladen ist. */
+  readonly inSheet?: boolean;
 }
 
 export function RangeCalendarInline({
@@ -454,7 +488,9 @@ export function RangeCalendarInline({
   toMax,
   modifiers: extraModifiers,
   modifiersClassNames: extraModifiersClassNames,
+  inSheet = false,
 }: RangeCalendarProps) {
+  const rootRef = useRef<HTMLDivElement>(null);
   const today = useBerlinToday();
   const [month, setMonth] = useState(value?.from ?? parseISODate(today));
   const isSingleMonth = useMediaQuery(BELOW_SM);
@@ -497,6 +533,7 @@ export function RangeCalendarInline({
 
   return (
     <div
+      ref={rootRef}
       className={`flex flex-col sm:flex-row ${hasPresets ? "" : "justify-center"}`}
     >
       {hasPresets && (
@@ -589,6 +626,11 @@ export function RangeCalendarInline({
           }}
           classNames={RANGE_CLASSNAMES}
           skeletonClassNames={RANGE_CLASSNAMES}
+          onGridReady={
+            inSheet
+              ? () => moveFocusToChosenDayOnLoad(rootRef.current)
+              : undefined
+          }
         />
       </div>
     </div>
