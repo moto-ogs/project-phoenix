@@ -54,7 +54,7 @@ export function enrollmentStatus(row: EnrollmentRow): StatusLabel {
     case "unlinked":
       return { label: "Ohne Kinderakte", tone: "gray" };
     case "held":
-      return { label: "Offen", tone: "warning" };
+      return { label: "Zurückgestellt", tone: "warning" };
     case "stuck":
       return { label: "Hängt", tone: "red" };
     case "changed":
@@ -86,7 +86,7 @@ const REASON_TEXTS: Record<EnrollmentReason, string> = {
   follows_contract:
     "Das Kind hat in dieser Phase schon einen früheren importierten Vertrag mit Anmeldung. Behandle diesen Vertrag als Änderung des früheren.",
   enrolled_elsewhere:
-    "Für diesen Vertrag gibt es schon eine Anmeldung in einer anderen Anmeldephase. Ordne den Vertrag zurück auf ein Modul dieser Phase.",
+    "Für diesen Vertrag gibt es schon eine Anmeldung in einer anderen Anmeldephase. Ordne den Vertrag zurück auf ein Modul der Phase dieser Anmeldung.",
   // An der Schule zu klären.
   has_application:
     "Das Kind hat in dieser Phase schon eine andere Anmeldung, die nicht zum Vertrag passt. Kläre mit der Schule, welche Buchungen gelten.",
@@ -122,7 +122,7 @@ const REASON_TEXTS: Record<EnrollmentReason, string> = {
   phase_ended:
     "Die Betreuung der Anmeldephase ist vorbei. Für sie trägt moto keine Anmeldung mehr nach.",
   planned_change:
-    "Der Vertrag hat eine geplante Änderung. moto trägt die Anmeldung ein, sobald diese Version gilt.",
+    "Der Vertrag hat eine geplante Änderung. Sobald sie gilt, nimmt ein neuer Lauf ihn mit.",
   window_too_short:
     "Bis zum Ende der Phase liegt kein gebuchter Wochentag mehr. Für diesen Vertrag ist nichts nachzutragen.",
 };
@@ -135,7 +135,7 @@ export function enrollmentReasonText(row: EnrollmentRow): string {
   if (row.reason === "planned_change") {
     const from = row.changes[0]?.effectiveFrom;
     if (from) {
-      return `Der Vertrag ändert sich ab ${formatDate(from)}. moto trägt die Anmeldung ein, sobald diese Version gilt.`;
+      return `Der Vertrag ändert sich ab ${formatDate(from)}. Ab dann nimmt ein neuer Lauf ihn mit.`;
     }
   }
   if (row.reason === "follows_contract" && row.followsContractId) {
@@ -153,13 +153,28 @@ export const STUCK_WAY_OUT =
   "Die Schule hat aus einem früheren Lauf schon eine Anmeldung, aber der Vertrag passt nicht mehr dazu. Berichtige den Vertrag, oder die Schule berichtigt die Buchungen der Anmeldung. Dann bindet der nächste Lauf. Die Anmeldung an der Schule zu beenden hilft nicht.";
 
 // Gründe, die bei einer hängenden Zeile nur sagen, dass die Anmeldung nicht
-// mehr zum Vertrag passt: Das sagt der Satz zum Ausweg schon.
+// mehr zum Vertrag passt: Das sagt der Satz zum Ausweg schon. Nur bei ihnen
+// hilft es, Vertrag oder Buchungen zu berichtigen.
 const STUCK_MISMATCH: ReadonlySet<EnrollmentReason | undefined> = new Set([
   "has_application",
   "bookings_differ",
   "changed",
   undefined,
 ]);
+
+/** Vor jedem anderen Grund einer hängenden Zeile: was schon da ist. */
+export const STUCK_HAS_ENROLLMENT =
+  "Die Schule hat aus einem früheren Lauf schon eine Anmeldung. Der Vertrag ist noch nicht daran gebunden.";
+
+/**
+ * Der Vertrag wurde nach einem Lauf auf eine andere Anmeldephase umgestellt
+ * (ADR 0309 Abschnitt 4): Buchungen zu ändern löst die Zeile dann nicht.
+ */
+export const STUCK_OTHER_PHASE =
+  "Hast du die Module des Vertrags auf eine andere Anmeldephase umgestellt? Dann ordne sie zurück auf ein Modul der Phase dieser Anmeldung und hol eine neue Vorschau.";
+
+const STUCK_PLANNED_CHANGE =
+  "Die Schule hat aus einem früheren Lauf schon eine Anmeldung, aber sie kennt die geplante Änderung des Vertrags nicht. Die Schule bucht die Änderung nach, oder du berichtigst den Vertrag. Dann bindet der nächste Lauf.";
 
 /**
  * Eine hängende Zeile (ADR 0309 Abschnitt 4): ihr Grund, wo er mehr sagt,
@@ -171,8 +186,16 @@ function stuckTexts(row: EnrollmentRow): string[] {
       "Die Anmeldung aus einem früheren Lauf hat keinen Vertrag, und ihre Anmeldephase ist vorbei. Sie bleibt so an der Schule stehen. Ein zweiter Vertrag entsteht dafür nicht.",
     ];
   }
+  if (row.reason === "planned_change") return [STUCK_PLANNED_CHANGE];
+  // The planner cannot tell a contract moved to another phase from one whose
+  // bookings differ: both arrive as `has_application`. Name both ways out.
+  if (row.reason === "has_application") {
+    return [STUCK_WAY_OUT, STUCK_OTHER_PHASE];
+  }
   if (STUCK_MISMATCH.has(row.reason)) return [STUCK_WAY_OUT];
-  return [enrollmentReasonText(row), STUCK_WAY_OUT];
+  // Ein anderer Grund (Kinderakte, Vertrag, Modul): Buchungen zu berichtigen
+  // löst ihn nicht, nur der Grund selbst.
+  return [STUCK_HAS_ENROLLMENT, enrollmentReasonText(row)];
 }
 
 /** Die Sätze einer Zeile: was moto tut oder getan hat, und was offen ist. */
@@ -183,9 +206,11 @@ export function enrollmentRowTexts(row: EnrollmentRow): string[] {
         ? [
             "Eine passende Anmeldung gibt es schon. moto bindet nur den Vertrag daran.",
           ]
-        : [
-            "moto legt die Anmeldung mit dieser Betreuung an und bindet den Vertrag daran.",
-          ];
+        : row.action === "enroll"
+          ? [
+              "moto legt die Anmeldung mit dieser Betreuung an und bindet den Vertrag daran.",
+            ]
+          : [UNKNOWN_REASON];
     case "done":
       if (row.action === "enroll") {
         return ["Anmeldung eingetragen, Vertrag daran gebunden."];
@@ -207,7 +232,7 @@ export function enrollmentRowTexts(row: EnrollmentRow): string[] {
     case "changed":
       return [
         row.requestChildId
-          ? "Die Anmeldung ist eingetragen, aber der Vertrag hat sich seither geändert. Lade die Vorschau neu, dann bindet der nächste Lauf."
+          ? "Die Anmeldung ist eingetragen, aber der Vertrag ist noch nicht daran gebunden: Seit der Vorschau hat sich etwas geändert. Lade die Vorschau neu. Sie zeigt, ob der nächste Lauf binden kann."
           : "Schule oder Vertrag haben sich seit der Vorschau geändert. moto hat nichts eingetragen. Lade die Vorschau neu.",
       ];
     default:

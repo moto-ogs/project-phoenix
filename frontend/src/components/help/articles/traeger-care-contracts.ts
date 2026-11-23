@@ -169,14 +169,14 @@ export function traegerCareContractsTopic(): HelpTopic {
       {
         title: "Anmeldungen für importierte Verträge nachtragen",
         description:
-          "Ein importierter Vertrag hat an der Schule noch keine Anmeldung. moto legt sie aus dem Vertrag an, schon genehmigt, und bindet den Vertrag daran. Die Kinder stehen dann ab ihrem Vertragsbeginn in den Gruppenlisten. Eltern bekommen keine Mail und keine Einladung, die Kinderakte bleibt, wie sie ist. Die Reihenfolge: falls nötig `Module neu zuordnen`, dann `Mit Kinderakten verknüpfen`, dann `Anmeldungen nachtragen`.",
+          "Ein importierter Vertrag hat an der Schule noch keine Anmeldung. moto legt sie aus dem Vertrag an, schon genehmigt, und bindet den Vertrag daran. Die Kinder stehen dann in den Gruppenlisten. Eltern bekommen keine Mail und keine Einladung, die Kinderakte bleibt, wie sie ist. Die Reihenfolge: falls nötig `Module neu zuordnen`, dann `Mit Kinderakten verknüpfen`, dann `Anmeldungen nachtragen`.",
         steps: [
           "Wähle in der Navigation `Verträge`. Wähle oben rechts das Menü mit den drei Punkten und dann `Anmeldungen nachtragen`.",
           "Hat dein Träger mehrere Schulen, wähle unter `Schule wählen` die Schule. moto trägt je Schule nach.",
           "Prüfe unter `Vorschau prüfen` jede Zeile. Bei `Vertrag` steht das Kind, wie der Vertrag es nennt, bei `Kinderakte` das Kind der Schule. Steht dort `Name weicht ab`, prüfe zuerst die Verknüpfung.",
           "Bei `Betreuung` stehen Modul, Wochentage mit Endzeit und Zeitraum. So bucht die Anmeldung das Kind.",
-          "`Bereit` trägt moto nach. Hat das Kind schon eine passende Anmeldung, bindet moto den Vertrag nur daran. `Erledigt` ist schon gebunden. Bei `Offen` und `Hängt` steht in der Spalte `Hinweis`, was fehlt und wer es klärt. `Ohne Kinderakte` verknüpfst du zuerst.",
-          "Wähle unten zum Beispiel `12 Anmeldungen nachtragen`. moto fragt vorher nach. Bestätige mit `Jetzt nachtragen`.",
+          "`Bereit` trägt moto nach. Hat das Kind schon eine passende Anmeldung, bindet moto den Vertrag nur daran. `Erledigt` ist schon gebunden. Bei `Zurückgestellt` und `Hängt` steht in der Spalte `Hinweis`, was fehlt und wer es klärt. `Ohne Kinderakte` verknüpfst du zuerst.",
+          "Wähle unten zum Beispiel `Für 12 Verträge nachtragen`. moto fragt vorher nach. Bestätige mit `Jetzt nachtragen`.",
           "Danach zeigt moto, wie viele Anmeldungen nachgetragen und wie viele Verträge nur gebunden sind. Die offenen Zeilen bleiben als Arbeitsliste stehen.",
           "Mit `Neue Vorschau` holst du den neuen Stand. Erledigtes steht dann auf `Erledigt`. Es entsteht nichts doppelt.",
         ],
@@ -190,7 +190,7 @@ export function traegerCareContractsTopic(): HelpTopic {
           "Am Vertrag zu berichtigen: Ein Modul gibt es nicht mehr, die Module liegen in zwei Anmeldephasen, Wochentage oder Endzeit passen nicht zum Modul, oder der Vertrag ist nicht aktiv.",
           "Mit der Schule zu klären: Das Kind hat schon eine andere Anmeldung, das Modul ist ausgeschaltet, die Kinderakte ist nicht mehr aktiv, ihr fehlt der Betreuungsplatz oder das Geburtsdatum, oder die Betreuung endet dort früher.",
           "Kommt von selbst: Der Vertrag oder die Anmeldephase hat noch nicht begonnen, oder eine geplante Änderung gilt noch nicht.",
-          "`Hängt` heißt: Ein früherer Lauf hat die Anmeldung schon angelegt, aber der Vertrag passt nicht mehr dazu. Berichtige den Vertrag, oder die Schule berichtigt die Buchungen der Anmeldung. Dann bindet der nächste Lauf. Die Anmeldung an der Schule zu beenden hilft nicht.",
+          "`Hängt` heißt: Ein früherer Lauf hat die Anmeldung schon angelegt, aber der Vertrag passt nicht mehr dazu. Berichtige den Vertrag, oder die Schule berichtigt die Buchungen der Anmeldung. Dann bindet der nächste Lauf. Hast du die Module des Vertrags auf eine andere Anmeldephase umgestellt, ordne sie zurück auf ein Modul der Phase dieser Anmeldung. Die Anmeldung an der Schule zu beenden hilft nicht.",
         ],
       },
       {
@@ -201,7 +201,7 @@ export function traegerCareContractsTopic(): HelpTopic {
           "Öffne den Vertrag. Wähle im Menü mit den drei Punkten `Bindung an die Anmeldung lösen`.",
           "Lies im Fenster, was passiert, und wähle `Bindung lösen`.",
           "Der Vertrag folgt den Buchungen dann nicht mehr. Versionen, die schon entstanden sind, bleiben.",
-          "Die Anmeldung und ihre Buchungen bleiben an der Schule. Braucht das Kind sie nicht, beendet die Schule sie.",
+          "Die Anmeldung und ihre Buchungen bleiben an der Schule. Braucht das Kind sie nicht, nimmt die Schule die Buchungen heraus.",
           "War die Verknüpfung falsch, wähle danach `Verknüpfung lösen` und verknüpfe die richtige Kinderakte. Sonst bindet `Anmeldungen nachtragen` den Vertrag wieder an dieselbe Anmeldung.",
         ],
       },

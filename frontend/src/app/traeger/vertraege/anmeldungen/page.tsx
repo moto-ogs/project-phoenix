@@ -8,9 +8,9 @@
 // bleibt, wie sie ist. Er übernimmt nur die bestätigte Vorschau; hat sie sich
 // geändert (auch über Mitternacht), lädt die Seite sie still neu.
 
-import { CheckCircle, ClipboardCheck } from "lucide-react";
+import { CheckCircle, ClipboardCheck, TriangleAlert } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import {
   enrollmentContractCount,
   enrollmentCount,
@@ -50,7 +50,7 @@ const logger = createLogger({ component: "TraegerContractEnrollmentPage" });
 const TITLE = "Anmeldungen nachtragen";
 
 const INFO =
-  "Importierte Verträge haben an der Schule noch keine Anmeldung. Hier trägt moto sie nach: mit der Betreuung aus dem Vertrag, und bindet den Vertrag daran. Danach verhält sich der Vertrag wie jeder andere: Eine geänderte Buchung ergibt eine neue Vertragsversion.";
+  "Importierte Verträge haben an der Schule noch keine Anmeldung. Hier legt moto sie mit der Betreuung aus dem Vertrag an und bindet den Vertrag daran. Danach verhält sich der Vertrag wie jeder andere: Eine geänderte Buchung ergibt eine neue Vertragsversion.";
 
 const VERTRAEGE = "/traeger/vertraege";
 const PAGE = "/traeger/vertraege/anmeldungen";
@@ -94,6 +94,13 @@ function ContractEnrollmentView() {
   const [confirming, setConfirming] = useState<EnrollmentPreview | null>(null);
   const [running, setRunning] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
+  // A preview the server refused, or whose run failed, is retired at once:
+  // the read closes for one render and opens anew, so nothing stays to
+  // confirm until a fresh answer is there (a failed read shows its error).
+  const [retired, setRetired] = useState(false);
+  useEffect(() => {
+    if (retired) setRetired(false);
+  }, [retired]);
   const invalidateFamily = useInvalidateFamily();
   const { show } = useApiErrorDisplay();
   const { success } = useToast();
@@ -105,7 +112,12 @@ function ContractEnrollmentView() {
     setDone(null);
     setNotice(null);
     setConfirming(null);
+    setRunning(false);
   }
+  // The school the page shows now: an answer of a run that arrives after
+  // the office went to another school (browser back) belongs to no screen.
+  const shownSchool = useRef(schoolId);
+  shownSchool.current = schoolId;
 
   // Fresh on each opening: the read stands in the access log of the school,
   // and only a preview the office has just seen may be confirmed.
@@ -113,9 +125,10 @@ function ContractEnrollmentView() {
     data: preview,
     error: previewError,
     loading: previewLoading,
-    reload,
   } = useFreshTraegerResource(
-    schoolId && !done ? traegerContractKeys.enrollmentPreview(schoolId) : null,
+    schoolId && !done && !retired
+      ? traegerContractKeys.enrollmentPreview(schoolId)
+      : null,
     () => previewContractEnrollments(schoolId),
     "die Vorschau der Anmeldungen",
   );
@@ -134,6 +147,7 @@ function ContractEnrollmentView() {
         confirmed.fingerprint,
       );
     } catch (err) {
+      if (shownSchool.current !== confirmed.schoolId) return;
       setRunning(false);
       setConfirming(null);
       if (
@@ -144,7 +158,7 @@ function ContractEnrollmentView() {
         // since the preview. Nothing was written; show the current preview
         // for a new confirmation, without an error.
         setNotice("preview_changed");
-        reload();
+        setRetired(true);
         return;
       }
       logger.error("contract_enrollment_run_failed", {
@@ -152,13 +166,23 @@ function ContractEnrollmentView() {
       });
       void show(err, { object: "die Anmeldungen" });
       // The school may have enrolled children before the binding failed:
-      // the next preview shows them ready to bind (ADR 0309 section 4).
-      setNotice("run_failed");
-      reload();
+      // the next preview shows them ready to bind (ADR 0309 section 4). A
+      // refusal (4xx) wrote nothing.
+      const refused =
+        err instanceof ApiError &&
+        (err.status ?? 0) >= 400 &&
+        (err.status ?? 0) < 500;
+      setNotice(refused ? null : "run_failed");
+      setRetired(true);
       void invalidateFamily(traegerContractKeys.listFamily);
       void invalidateFamily(traegerContractKeys.detailFamily);
       return;
     }
+    // The lists follow the binding, whichever school the page shows now.
+    void invalidateFamily(traegerContractKeys.listFamily);
+    void invalidateFamily(traegerContractKeys.detailFamily);
+    void invalidateFamily(traegerContractKeys.candidates());
+    if (shownSchool.current !== confirmed.schoolId) return;
     setRunning(false);
     setConfirming(null);
     setNotice(null);
@@ -169,11 +193,6 @@ function ContractEnrollmentView() {
         ? `${enrollmentContractCount(summary.enrolled + summary.bound)} an ihre Anmeldung gebunden.`
         : "Es gab nichts nachzutragen.",
     );
-    // The list, every open contract and „Verträge erstellen“ follow the
-    // binding.
-    void invalidateFamily(traegerContractKeys.listFamily);
-    void invalidateFamily(traegerContractKeys.detailFamily);
-    void invalidateFamily(traegerContractKeys.candidates());
   };
 
   const startOver = () => {
@@ -251,7 +270,7 @@ function ContractEnrollmentView() {
           isOpen={confirming !== null}
           title={
             confirming
-              ? `${enrollmentCount(confirming.counts.ready)} nachtragen?`
+              ? `Für ${enrollmentContractCount(confirming.counts.ready)} nachtragen?`
               : "Anmeldungen nachtragen?"
           }
           icon={<ClipboardCheck className="h-5 w-5" aria-hidden="true" />}
@@ -326,9 +345,9 @@ function ContractEnrollmentView() {
           <div ref={stepFocus} className="flex flex-col">
             <PreviewBody
               preview={preview}
-              loading={previewLoading}
+              loading={previewLoading || retired}
               error={previewError}
-              onConfirm={() => preview && setConfirming(preview)}
+              onConfirm={() => preview && !retired && setConfirming(preview)}
             />
           </div>
         </div>
@@ -405,6 +424,11 @@ function PreviewBody({
   }
   const { counts } = preview;
   const open = openEnrollmentCount(counts) + counts.unlinked;
+  // A ready row whose action this page does not know: it cannot say what the
+  // run would do, so it does not offer the run.
+  const unexplained = preview.rows.some(
+    (row) => row.status === "ready" && row.action === undefined,
+  );
   return (
     <CareContractEnrollmentTableCard
       title="Vorschau prüfen"
@@ -426,15 +450,19 @@ function PreviewBody({
             size="md"
             className="shrink-0"
             onClick={onConfirm}
-            disabled={counts.ready === 0}
+            disabled={counts.ready === 0 || unexplained}
             disabledReason={
-              counts.done > 0 && open === 0
-                ? "Alle Verträge sind schon an ihre Anmeldung gebunden."
-                : "Kein Vertrag ist bereit. Bei jeder Zeile steht, was fehlt."
+              unexplained
+                ? "moto kann eine Zeile gerade nicht erklären. Lade die Seite neu."
+                : counts.done > 0 && open === 0
+                  ? "Alle Verträge sind schon an ihre Anmeldung gebunden."
+                  : "Kein Vertrag ist bereit. Bei jeder Zeile steht, was fehlt."
             }
             tooltip="moto fragt vorher nach, dann trägt es die Anmeldungen ein."
           >
-            {`${enrollmentCount(counts.ready)} nachtragen`}
+            {counts.ready === 0
+              ? "Anmeldungen nachtragen"
+              : `Für ${enrollmentContractCount(counts.ready)} nachtragen`}
           </Button>
         </div>
       }
@@ -456,7 +484,7 @@ function ConfirmText({
     <div className="space-y-3 text-sm text-gray-700">
       {enroll > 0 ? (
         <p>
-          {`moto legt${at} ${enrollmentCount(enroll)} an, schon genehmigt. Die Kinder stehen ab ihrem Vertragsbeginn in den Gruppenlisten.`}
+          {`moto legt${at} ${enrollmentCount(enroll)} an, schon genehmigt. Die Kinder stehen dann in den Gruppenlisten.`}
         </p>
       ) : null}
       {bind > 0 ? (
@@ -491,32 +519,53 @@ function RunResult({
     `${summary.open} offen`,
   ];
   const changedNothing = !run.changed;
+  // The school has the enrollment, but the contract changed before moto
+  // could bind it (ADR 0309 section 4): no clean result. The next preview
+  // shows whether a new run can bind.
+  const unbound = run.rows.filter(
+    (row) => row.status === "changed" && row.requestChildId !== null,
+  ).length;
+  const partial = unbound > 0;
   return (
     <>
       <SectionCard>
         <EmptyState
-          tone="success"
+          tone={partial ? "neutral" : "success"}
           titleAs="h2"
-          icon={<CheckCircle aria-hidden className="size-6" />}
-          title={
-            changedNothing
-              ? "Nichts nachzutragen"
-              : `${enrollmentContractCount(summary.enrolled + summary.bound)} gebunden`
+          icon={
+            partial ? (
+              <TriangleAlert aria-hidden className="size-6" />
+            ) : (
+              <CheckCircle aria-hidden className="size-6" />
+            )
           }
-          description={`${schoolName}: ${parts.join(", ")}.`}
+          title={
+            partial
+              ? "Nicht ganz durchgelaufen"
+              : changedNothing
+                ? "Nichts nachzutragen"
+                : `${enrollmentContractCount(summary.enrolled + summary.bound)} gebunden`
+          }
+          description={
+            partial
+              ? `${schoolName}: ${parts.join(", ")}. Bei ${enrollmentContractCount(unbound)} steht die Anmeldung schon an der Schule, der Vertrag ist aber noch nicht daran gebunden. Hol eine neue Vorschau.`
+              : `${schoolName}: ${parts.join(", ")}.`
+          }
           action={
             <div className="flex flex-wrap justify-center gap-3">
-              <ButtonLink
-                href={traegerPath(VERTRAEGE)}
-                variant="primary"
-                size="md"
-                tooltip="Öffnet die Liste aller Verträge."
-              >
-                Zu den Verträgen
-              </ButtonLink>
+              {partial ? null : (
+                <ButtonLink
+                  href={traegerPath(VERTRAEGE)}
+                  variant="primary"
+                  size="md"
+                  tooltip="Öffnet die Liste aller Verträge."
+                >
+                  Zu den Verträgen
+                </ButtonLink>
+              )}
               <Button
                 type="button"
-                variant="outline"
+                variant={partial ? "primary" : "outline"}
                 size="md"
                 onClick={onStartOver}
                 tooltip="Liest die Verträge der Schule neu und zeigt die Vorschau."

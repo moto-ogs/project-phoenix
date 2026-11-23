@@ -157,7 +157,7 @@ export function ChildOfferings({
   phaseName?: string;
   /**
    * The days came from an imported contract (ADR 0309), not from a parent's
-   * choice: „Aus dem Vertrag“ instead of „Von Eltern gewählt“.
+   * choice: the days read „Gebucht“, since the school may have changed them since.
    */
   fromContract?: boolean;
 }>) {
@@ -274,12 +274,12 @@ function formatAdminOfferingDaySource(
       : (o.selected_days ?? []);
   const manual = weekdayShortList(manualDays);
   if (automatic && manual) {
-    return `${automatic} automatisch mitgebucht; ${manual} ${fromContract ? "aus dem Vertrag" : "von Eltern gewählt"}`;
+    return `${automatic} automatisch mitgebucht; ${manual} ${fromContract ? "gebucht" : "von Eltern gewählt"}`;
   }
   if (automatic) return `${automatic} automatisch mitgebucht`;
   if (manual) {
     return fromContract
-      ? `Aus dem Vertrag: ${manual}`
+      ? `Gebucht: ${manual}`
       : `Von Eltern gewählt: ${manual}`;
   }
   return "";

@@ -602,7 +602,9 @@ export function AdminEnrollmentPhaseDetail({ phaseId, info }: Props) {
         header: "Elternkontakt",
         render: (row) =>
           fromImportedContract(row) ? (
-            <p className="text-sm text-gray-500">Keine Eltern hinterlegt</p>
+            <p className="text-sm text-gray-500">
+              In der Anmeldung keine Eltern
+            </p>
           ) : (
             <div>
               <p className="font-medium text-gray-900">
@@ -1422,11 +1424,11 @@ function formatOfferingDaySource(
     hasProvenance ? (offering.manual_selected_days ?? []) : offering.days,
   );
   if (automatic && manual) {
-    return `${automatic} automatisch mitgebucht; ${manual} ${fromContract ? "aus dem Vertrag" : "von Eltern gewählt"}`;
+    return `${automatic} automatisch mitgebucht; ${manual} ${fromContract ? "gebucht" : "von Eltern gewählt"}`;
   }
   if (automatic) return `${automatic} automatisch mitgebucht`;
   if (manual) {
-    return `${manual} · ${fromContract ? "aus dem Vertrag" : "von Eltern gewählt"}`;
+    return `${manual} · ${fromContract ? "gebucht" : "von Eltern gewählt"}`;
   }
   return "";
 }

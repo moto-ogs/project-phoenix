@@ -752,8 +752,8 @@ function TraegerVertragView() {
               </p>
               <p>
                 Die Anmeldung und ihre Buchungen bleiben an der Schule. Braucht
-                das Kind sie nicht, beendet die Schule sie. Versionen, die schon
-                entstanden sind, bleiben.
+                das Kind sie nicht, nimmt die Schule die Buchungen heraus.
+                Versionen, die schon entstanden sind, bleiben.
               </p>
               <p>
                 Danach kannst du die Verknüpfung mit der Kinderakte lösen, oder

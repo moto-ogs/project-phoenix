@@ -338,8 +338,8 @@ describe("AdminEnrollmentPhaseDetail", () => {
     expect(
       (await screen.findAllByText("Aus importiertem Vertrag")).length,
     ).toBeGreaterThan(0);
-    expect(screen.getByText("Keine Eltern hinterlegt")).toBeVisible();
-    expect(screen.getByText("Mo, Di · aus dem Vertrag")).toBeVisible();
+    expect(screen.getByText("In der Anmeldung keine Eltern")).toBeVisible();
+    expect(screen.getByText("Mo, Di · gebucht")).toBeVisible();
     // Its class stands in the child record, not in the request.
     expect(screen.queryByText("Keine Klassenstufe")).not.toBeInTheDocument();
   });

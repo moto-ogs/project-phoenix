@@ -1659,9 +1659,7 @@ describe("AdminEnrollmentDetail: Anmeldung aus importiertem Vertrag (ADR 0309)",
     ).toBeVisible();
     expect(screen.getByText(/Eltern sind hier nicht hinterlegt/)).toBeVisible();
     // Days the contract booked, not days a parent chose.
-    expect(
-      screen.getByText(/Aus dem Vertrag: Mo, Di, Mi, Do, Fr/),
-    ).toBeVisible();
+    expect(screen.getByText(/Gebucht: Mo, Di, Mi, Do, Fr/)).toBeVisible();
     expect(screen.queryByText(/Von Eltern gewählt/)).not.toBeInTheDocument();
     // Its class stands in the child record, not in the request.
     expect(screen.queryByText("Keine Klassenstufe")).not.toBeInTheDocument();

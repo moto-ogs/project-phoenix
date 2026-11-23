@@ -5,6 +5,8 @@ import type {
   EnrollmentRow,
 } from "~/lib/traeger-contract-enrollments-api";
 import {
+  STUCK_HAS_ENROLLMENT,
+  STUCK_OTHER_PHASE,
   STUCK_WAY_OUT,
   defaultEnrollmentFilter,
   enrollmentBookingDays,
@@ -114,7 +116,7 @@ describe("Anmeldungen nachtragen: Texte", () => {
         }),
       ),
     ).toBe(
-      "Der Vertrag ändert sich ab 01.01.2027. moto trägt die Anmeldung ein, sobald diese Version gilt.",
+      "Der Vertrag ändert sich ab 01.01.2027. Ab dann nimmt ein neuer Lauf ihn mit.",
     );
     expect(
       enrollmentReasonText(
@@ -141,7 +143,9 @@ describe("Anmeldungen nachtragen: Texte", () => {
     expect(enrollmentStatus(row({ status: "unlinked" })).label).toBe(
       "Ohne Kinderakte",
     );
-    expect(enrollmentStatus(row({ status: "held" })).label).toBe("Offen");
+    expect(enrollmentStatus(row({ status: "held" })).label).toBe(
+      "Zurückgestellt",
+    );
     expect(enrollmentStatus(row({ status: "stuck" }))).toEqual({
       label: "Hängt",
       tone: "red",
@@ -160,6 +164,16 @@ describe("Anmeldungen nachtragen: Texte", () => {
         }),
       ),
     ).toEqual([STUCK_WAY_OUT]);
+    // Moved to another phase arrives as `has_application` too: both ways out.
+    expect(
+      enrollmentRowTexts(
+        row({
+          status: "stuck",
+          reason: "has_application",
+          requestChildId: "140",
+        }),
+      ),
+    ).toEqual([STUCK_WAY_OUT, STUCK_OTHER_PHASE]);
     expect(
       enrollmentRowTexts(
         row({
@@ -169,8 +183,20 @@ describe("Anmeldungen nachtragen: Texte", () => {
         }),
       ),
     ).toEqual([
+      STUCK_HAS_ENROLLMENT,
       "Die Kinderakte ist nicht mehr aktiv. Beende den Vertrag, oder die Schule nimmt das Kind wieder auf.",
-      STUCK_WAY_OUT,
+    ]);
+    // A planned change the enrollment does not know: its own way out.
+    expect(
+      enrollmentRowTexts(
+        row({
+          status: "stuck",
+          reason: "planned_change",
+          requestChildId: "140",
+        }),
+      ),
+    ).toEqual([
+      expect.stringMatching(/Die Schule bucht die Änderung nach, oder du/),
     ]);
     expect(
       enrollmentRowTexts(

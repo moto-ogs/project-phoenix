@@ -183,9 +183,9 @@ async function openPreview(result = preview()) {
 
 async function confirmRun() {
   fireEvent.click(
-    screen.getByRole("button", { name: "2 Anmeldungen nachtragen" }),
+    screen.getByRole("button", { name: "Für 2 Verträge nachtragen" }),
   );
-  await screen.findByRole("dialog", { name: "2 Anmeldungen nachtragen?" });
+  await screen.findByRole("dialog", { name: "Für 2 Verträge nachtragen?" });
   fireEvent.click(screen.getByRole("button", { name: "Jetzt nachtragen" }));
 }
 
@@ -250,7 +250,7 @@ describe("Anmeldungen nachtragen", () => {
 
   it("says for every open row what is wrong and who acts", async () => {
     await openPreview();
-    fireEvent.click(screen.getByRole("button", { name: "Offen 2" }));
+    fireEvent.click(screen.getByRole("button", { name: "Zurückgestellt 2" }));
     expect(
       screen.getByText(
         "Der Vertrag hat noch nicht begonnen. Ab seinem ersten Tag nimmt ein neuer Lauf ihn mit.",
@@ -299,9 +299,9 @@ describe("Anmeldungen nachtragen", () => {
       ),
     });
     fireEvent.click(
-      screen.getByRole("button", { name: "2 Anmeldungen nachtragen" }),
+      screen.getByRole("button", { name: "Für 2 Verträge nachtragen" }),
     );
-    await screen.findByRole("dialog", { name: "2 Anmeldungen nachtragen?" });
+    await screen.findByRole("dialog", { name: "Für 2 Verträge nachtragen?" });
     // The weight of the run, without drama.
     expect(
       screen.getByText(
@@ -365,11 +365,11 @@ describe("Anmeldungen nachtragen", () => {
       ),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "0 Anmeldungen nachtragen" }),
+      screen.getByRole("button", { name: "Anmeldungen nachtragen" }),
     ).toHaveAttribute("aria-disabled", "true");
   });
 
-  it("reads the preview again quietly when it changed, also after midnight", async () => {
+  it("reads the preview again quietly when the server answers that it changed", async () => {
     const errors = vi.spyOn(console, "error").mockImplementation(() => {});
     await openPreview();
     // The office confirms the next morning: rows that bind carry their day.
@@ -430,5 +430,158 @@ describe("Anmeldungen nachtragen", () => {
     await waitFor(() =>
       expect(api.previewContractEnrollments).toHaveBeenCalledTimes(2),
     );
+  });
+
+  it("retires a refused preview until a fresh one has answered", async () => {
+    await openPreview();
+    api.runContractEnrollments.mockRejectedValueOnce(
+      new ApiError("Request failed (409)", 409, {
+        code: "care_contract.enrollment_preview_changed",
+      }),
+    );
+    let answer: (value: EnrollmentPreview) => void = () => undefined;
+    api.previewContractEnrollments.mockReturnValueOnce(
+      new Promise<EnrollmentPreview>((resolve) => {
+        answer = resolve;
+      }),
+    );
+    await confirmRun();
+    await screen.findByText(/Seit deiner Vorschau hat sich etwas geändert/);
+    // While the new preview is on its way, the old one is gone: nothing to
+    // confirm a second time.
+    await waitFor(() =>
+      expect(api.previewContractEnrollments).toHaveBeenCalledTimes(2),
+    );
+    expect(
+      screen.queryByRole("button", { name: "Für 2 Verträge nachtragen" }),
+    ).not.toBeInTheDocument();
+    answer(preview({ fingerprint: "fp-2" }));
+    expect(
+      await screen.findByRole("button", { name: "Für 2 Verträge nachtragen" }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the load error, not the old preview, when the fresh read fails", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    await openPreview();
+    api.runContractEnrollments.mockRejectedValueOnce(
+      new ApiError("Request failed (500)", 500, { code: "general.internal" }),
+    );
+    api.previewContractEnrollments.mockRejectedValue(
+      new ApiError("Request failed (500)", 500, { code: "general.internal" }),
+    );
+    await confirmRun();
+    await screen.findByText(/Manche Kinder können schon angemeldet sein/);
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: "Für 2 Verträge nachtragen" }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(
+      screen.queryByRole("heading", { name: "Vorschau prüfen" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not warn about enrolled children when the run was refused", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    await openPreview();
+    api.runContractEnrollments.mockRejectedValueOnce(
+      new ApiError("Request failed (403)", 403, { code: "general.forbidden" }),
+    );
+    api.previewContractEnrollments.mockResolvedValueOnce(preview());
+    await confirmRun();
+    await waitFor(() =>
+      expect(api.previewContractEnrollments).toHaveBeenCalledTimes(2),
+    );
+    await screen.findByRole("button", { name: "Für 2 Verträge nachtragen" });
+    expect(
+      screen.queryByText(/Manche Kinder können schon angemeldet sein/),
+    ).not.toBeInTheDocument();
+  });
+
+  it("names a run that enrolled a child without binding its contract", async () => {
+    await openPreview();
+    api.runContractEnrollments.mockResolvedValueOnce({
+      schoolId: "2",
+      changed: true,
+      counts: { ready: 0, done: 2, unlinked: 1, held: 2, stuck: 1, changed: 1 },
+      rows: ROWS.map((one) =>
+        one.contractId === "82"
+          ? { ...one, status: "changed" as const, requestChildId: "150" }
+          : one.status === "ready"
+            ? { ...one, status: "done" as const }
+            : one,
+      ),
+    });
+    await confirmRun();
+    expect(
+      await screen.findByRole("heading", { name: "Nicht ganz durchgelaufen" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Bei 1 Vertrag steht die Anmeldung schon an der Schule, der Vertrag ist aber noch nicht daran gebunden/,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Zu den Verträgen" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("drops the result of a run when the office went to another school", async () => {
+    schools.fetchTraegerSchools.mockResolvedValue([MANUELL, SONNENHOF]);
+    mockSearch = "schule=2";
+    api.previewContractEnrollments.mockResolvedValueOnce(preview());
+    const view = render(
+      <TraegerResourceTestProvider>
+        <TraegerContractEnrollmentPage />
+      </TraegerResourceTestProvider>,
+    );
+    await screen.findByRole("heading", { name: "Vorschau prüfen" });
+    let answer: (value: unknown) => void = () => undefined;
+    api.runContractEnrollments.mockReturnValueOnce(
+      new Promise((resolve) => {
+        answer = resolve;
+      }),
+    );
+    await confirmRun();
+    // Browser back to the other school while the run is on its way.
+    api.previewContractEnrollments.mockResolvedValue(
+      preview({
+        schoolId: "3",
+        fingerprint: "fp-3",
+        rows: [],
+        counts: {
+          ready: 0,
+          done: 0,
+          unlinked: 0,
+          held: 0,
+          stuck: 0,
+          changed: 0,
+        },
+      }),
+    );
+    mockSearch = "schule=3";
+    view.rerender(
+      <TraegerResourceTestProvider>
+        <TraegerContractEnrollmentPage />
+      </TraegerResourceTestProvider>,
+    );
+    await screen.findByText("Keine importierten Verträge");
+    answer({
+      schoolId: "2",
+      changed: true,
+      counts: preview().counts,
+      rows: ROWS.map((one) =>
+        one.status === "ready" ? { ...one, status: "done" as const } : one,
+      ),
+    });
+    await waitFor(() =>
+      expect(api.runContractEnrollments).toHaveBeenCalledTimes(1),
+    );
+    await Promise.resolve();
+    expect(screen.getByText("Keine importierten Verträge")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "2 Verträge gebunden" }),
+    ).not.toBeInTheDocument();
   });
 });

@@ -259,7 +259,7 @@ function filterItems(
     items.push({ value: "ready", label: `Bereit ${counts.ready}` });
   items.push(
     { value: "done", label: `Erledigt ${counts.done}` },
-    { value: "open", label: `Offen ${counts.held + counts.changed}` },
+    { value: "open", label: `Zurückgestellt ${counts.held + counts.changed}` },
   );
   // A stuck row needs another way out than an open one: its own filter, only
   // when there is one.
