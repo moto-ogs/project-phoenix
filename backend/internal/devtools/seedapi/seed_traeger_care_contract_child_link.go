@@ -46,14 +46,7 @@ func seedCareContractChildLink(rt *Runtime, auth AuthRef, module seedImportModul
 	}
 	tries := 0
 	for _, candidate := range seedChildLinkCandidates {
-		child, found, err := seedFindChildRecord(rt, candidate)
-		if err != nil {
-			return linked, bound, err
-		}
-		if !found || child.Birthday == "" {
-			continue
-		}
-		now, done, err := seedLinkedChildRecordContract(rt.Client, auth, module, child)
+		now, done, err := seedLinkedCandidate(rt, auth, module, candidate)
 		if err != nil {
 			return linked, bound, err
 		}
@@ -69,6 +62,16 @@ func seedCareContractChildLink(rt *Runtime, auth AuthRef, module seedImportModul
 		}
 	}
 	return linked, bound, nil
+}
+
+// seedLinkedCandidate links the contract of one demo child to its child
+// record; done is false for a child without a record or a contract.
+func seedLinkedCandidate(rt *Runtime, auth AuthRef, module seedImportModule, candidate DemoStudent) (int, bool, error) {
+	child, found, err := seedFindChildRecord(rt, candidate)
+	if err != nil || !found || child.Birthday == "" {
+		return 0, false, err
+	}
+	return seedLinkedChildRecordContract(rt.Client, auth, module, child)
 }
 
 // seedLinkedChildRecordContract takes over the contract of the child and

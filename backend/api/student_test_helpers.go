@@ -270,12 +270,8 @@ func newStudentTestModule(db transactionruntime.Database, unit tenant.UnitOfWork
 		Schemas:       repos.Enrollment(),
 		Offerings:     enrollmentCompose.NewCareOfferingRecords(students.CarePlan),
 		Notifications: owners.NewEnrollmentNotifications(repos.Enrollment(), settingsService, owners.OutboxEnqueuer{Outbox: emailOutboxService}, owners.EnrollmentSchoolDirectory{Schools: reposSchools.School}),
-		Bookings:      careBookings,
-		// The enrollment of the children of imported contracts (ADR 0309), as
-		// the root binds it.
-		ContractStudents: owners.EnrollmentContractStudents{People: persons},
-		CareBookings:     owners.EnrollmentCareBookingsBinding{Owner: students.CarePlan},
-		GuardianAccess:   guardianAccess, GuardianAuthorizer: repos.StudentGuardian, GuardianHold: owners.NewEnrollmentGuardianHold(db, repos.StudentGuardian, repos.Student, repos.GuardianProfile, nil),
+		Bookings:      careBookings, ContractStudents: owners.EnrollmentContractStudents{People: persons}, CareBookings: owners.BuildEnrollmentRows(owners.NewEnrollmentBookings(time.Now), students.CarePlan, persons).CareBookings,
+		GuardianAccess: guardianAccess, GuardianAuthorizer: repos.StudentGuardian, GuardianHold: owners.NewEnrollmentGuardianHold(db, repos.StudentGuardian, repos.Student, repos.GuardianProfile, nil),
 		People: owners.EnrollmentDecisionPeopleDirectory(
 			repos.Person, repos.Staff, repos.Student, repos.StudentGuardian, repos.GuardianProfile, repos.GuardianPhoneNumber, persons,
 		),

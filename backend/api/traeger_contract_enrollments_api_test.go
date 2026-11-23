@@ -102,11 +102,17 @@ type contractEnrollmentFixture struct {
 	ida                    int64
 	group                  int64
 	enroll                 http.Handler
-	conclusion             carecontract.Conclusion
-	unit                   tenant.UnitOfWork
 }
 
 func newContractEnrollmentFixture(t *testing.T, name string) contractEnrollmentFixture {
+	t.Helper()
+	f, _ := newContractEnrollmentFixtureWithAmendments(t, name)
+	return f
+}
+
+// newContractEnrollmentFixtureWithAmendments is newContractEnrollmentFixture
+// with the amendment that follows approved bookings (AmendFromBookings).
+func newContractEnrollmentFixtureWithAmendments(t *testing.T, name string) (contractEnrollmentFixture, carecontract.Conclusion) {
 	t.Helper()
 	db := testpkg.SetupTestDB(t)
 	unit := testpkg.TenantRuntime(t, db)
@@ -146,10 +152,11 @@ func newContractEnrollmentFixture(t *testing.T, name string) contractEnrollmentF
 	f := contractEnrollmentFixture{childLinkFixture: childLinkFixture{careContractFixture: care, mia: int64(imported.Rows[0].ContractID),
 		ben: int64(imported.Rows[1].ContractID), miaStudent: student("Mia", "Beispiel", "2019-05-03")},
 		ida: int64(imported.Rows[2].ContractID), benStudent: student("Ben", "Beispiel", "2020-11-11"),
-		idaStudent: student("Ida", "Muster", "2019-02-07"), group: group.ID, unit: unit}
+		idaStudent: student("Ida", "Muster", "2019-02-07"), group: group.ID}
 	f.link(t, [2]int64{f.mia, f.miaStudent}, [2]int64{f.ben, f.benStudent})
-	f.enroll, f.conclusion = contractEnrollmentRoutes(t, f)
-	return f
+	enroll, conclusion := contractEnrollmentRoutes(t, f, unit)
+	f.enroll = enroll
+	return f, conclusion
 }
 
 // link links contracts to child records through the file of the link
@@ -168,30 +175,30 @@ func (f contractEnrollmentFixture) link(t *testing.T, rows ...[2]int64) {
 // contractEnrollmentRoutes mounts /traeger/contract-enrollments as the
 // serving root does, over the decision flow of the student graph, and
 // composes the amendment that follows approved bookings.
-func contractEnrollmentRoutes(t *testing.T, f contractEnrollmentFixture) (http.Handler, carecontract.Conclusion) {
+func contractEnrollmentRoutes(t *testing.T, f contractEnrollmentFixture, unit tenant.UnitOfWork) (http.Handler, carecontract.Conclusion) {
 	t.Helper()
 	database := testpkg.NewDatabase(t, f.db)
 	organizations, err := owners.NewOrganizationTenancy(database)
 	require.NoError(t, err)
 	audit, err := auditCompose.NewTenantPersistence(f.db, time.Now)
 	require.NoError(t, err)
-	feedback, err := NewFeedbackTestModule(database, f.unit)
+	feedback, err := NewFeedbackTestModule(database, unit)
 	require.NoError(t, err)
-	_, _, _, _, decisions, _, err := NewStudentTestModule(database, f.unit, feedback.Feedback, contractEnrollmentNow)
+	_, _, _, _, decisions, _, err := NewStudentTestModule(database, unit, feedback.Feedback, contractEnrollmentNow)
 	require.NoError(t, err)
 	schoolEnrollments, ok := decisions.(enrollmentOwner.ContractEnrollments)
 	require.True(t, ok, "the decision flow serves the enrollment of contract children")
 	router := chi.NewRouter()
 	router.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			next.ServeHTTP(w, r.WithContext(tenant.WithUnitOfWork(r.Context(), f.unit)))
+			next.ServeHTTP(w, r.WithContext(tenant.WithUnitOfWork(r.Context(), unit)))
 		})
 	})
 	require.NoError(t, mountContractEnrollmentRoutes(router, organizations, schoolEnrollments, audit.DataAccessLog, contractEnrollmentDay, contractEnrollmentNow))
 
-	settings, err := owners.BuildTraegerSettings(database, f.unit, slog.Default(), organizations, nil)
+	settings, err := owners.BuildTraegerSettings(database, unit, slog.Default(), organizations, nil)
 	require.NoError(t, err)
-	schoolSettings, err := owners.NewSettingsTestModule(database, f.unit)
+	schoolSettings, err := owners.NewSettingsTestModule(database, unit)
 	require.NoError(t, err)
 	delivery, err := deliveryCompose.NewModule(deliveryCompose.ModuleDependencies{
 		DB: f.db, People: owners.EnrollmentFlowGuardianDirectory{}, Observe: func(deliveryContract.Observation) {},
@@ -252,7 +259,7 @@ func (f contractEnrollmentFixture) silentRows(t *testing.T) map[string]string {
 func (f contractEnrollmentFixture) billed(t *testing.T) string {
 	t.Helper()
 	var periods []carecontract.VersionPeriod
-	ctx := tenant.WithUnitOfWork(context.Background(), f.unit)
+	ctx := tenant.WithUnitOfWork(context.Background(), testpkg.TenantRuntime(t, f.db))
 	require.NoError(t, tenant.WithinTraeger(ctx, f.office.organization, func(ctx context.Context) error {
 		var err error
 		periods, err = careContractCompose.NewContractVersions().VersionsInForce(ctx, f.office.organization,
@@ -286,8 +293,8 @@ func (f contractEnrollmentFixture) silentRequests(t *testing.T) int {
 // bookings then makes version 2 like for any contract.
 func TestContractEnrollmentEnrollsBindsAndKeepsCareContractAndBillingInStep(t *testing.T) {
 	t.Parallel()
-	f := newContractEnrollmentFixture(t, "Träger Anmeldung nachtragen")
-	ctx := tenant.WithUnitOfWork(context.Background(), f.unit)
+	f, conclusion := newContractEnrollmentFixtureWithAmendments(t, "Träger Anmeldung nachtragen")
+	ctx := tenant.WithUnitOfWork(context.Background(), testpkg.TenantRuntime(t, f.db))
 	effects, silent, billed := f.sideEffects(t), f.silentRows(t), f.billed(t)
 
 	preview := f.preview(t)
@@ -366,7 +373,7 @@ func TestContractEnrollmentEnrollsBindsAndKeepsCareContractAndBillingInStep(t *t
 	assert.Equal(t, 1, f.count(t, bound, f.mia, miaChild))
 	assert.Equal(t, 1, f.count(t, bound, f.ben, benChild))
 	assert.Equal(t, 2, f.events(t, "bind_application"))
-	amended, err := f.conclusion.AmendFromBookings(ctx, f.office.organization)
+	amended, err := conclusion.AmendFromBookings(ctx, f.office.organization)
 	require.NoError(t, err)
 	assert.Empty(t, amended.Amended, "the bookings are the contract: the amendment makes no version")
 	assert.Equal(t, 1, f.versions(t, f.mia))
@@ -399,7 +406,7 @@ func TestContractEnrollmentEnrollsBindsAndKeepsCareContractAndBillingInStep(t *t
 	_, err = f.db.ExecContext(ctx, `INSERT INTO enrollment.care_offering_bookings (tenant_id, request_child_id, care_offering_id,
 			manual_selected_days, valid_from) VALUES (?, ?, ?, '[]'::jsonb, DATE '2027-10-01')`, f.school, miaChild, late.ID)
 	require.NoError(t, err)
-	amended, err = f.conclusion.AmendFromBookings(ctx, f.office.organization)
+	amended, err = conclusion.AmendFromBookings(ctx, f.office.organization)
 	require.NoError(t, err)
 	require.Len(t, amended.Amended, 1, "a bound imported contract follows its bookings like any other")
 	assert.Equal(t, f.mia, amended.Amended[0].ContractID)
