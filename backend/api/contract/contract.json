@@ -1003,7 +1003,8 @@
         "platform"
       ],
       "response": {
-        "kind": "json"
+        "kind": "ref",
+        "ref": "CaregiverCapabilityState"
       }
     },
     {
@@ -8697,7 +8698,8 @@
         "platform"
       ],
       "response": {
-        "kind": "json"
+        "kind": "ref",
+        "ref": "CaregiverCapabilityState"
       }
     },
     {
@@ -18152,7 +18154,8 @@
         "ref": "updateCaregiverCapabilityRequest"
       },
       "response": {
-        "kind": "json"
+        "kind": "ref",
+        "ref": "CaregiverCapabilityState"
       }
     },
     {
@@ -26945,9 +26948,13 @@
         {
           "name": "custom_data",
           "optional": true,
+          "json_reason": "Answer values follow the school's versioned form schema",
           "schema": {
-            "kind": "json",
-            "nullable": true
+            "kind": "map",
+            "elem": {
+              "kind": "json",
+              "nullable": true
+            }
           }
         },
         {
@@ -27449,9 +27456,15 @@
         },
         {
           "name": "consent_flags",
+          "json_reason": "Preserve the recorded value of historical non-boolean checkbox answers",
           "schema": {
-            "kind": "json",
-            "nullable": true
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "bool",
+              "nullable": true,
+              "legacy_json": true
+            }
           }
         },
         {
@@ -27540,11 +27553,12 @@
         {
           "name": "consent_flags",
           "optional": true,
+          "refines_json": "The typed checkbox input still reads the full legacy JSON value domain",
           "schema": {
             "kind": "map",
             "nullable": true,
             "elem": {
-              "kind": "json",
+              "kind": "bool",
               "nullable": true
             }
           }
@@ -27566,6 +27580,7 @@
         {
           "name": "custom_data",
           "optional": true,
+          "json_reason": "Answer values follow the school's versioned form schema",
           "schema": {
             "kind": "map",
             "nullable": true,
@@ -27758,21 +27773,102 @@
         {
           "name": "before",
           "schema": {
-            "kind": "json",
-            "nullable": true
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "AdminOfferingAdjustmentSnapshot"
+            }
           }
         },
         {
           "name": "after",
           "schema": {
-            "kind": "json",
-            "nullable": true
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "AdminOfferingAdjustmentSnapshot"
+            }
           }
         },
         {
           "name": "changed_at",
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AdminOfferingAdjustmentSnapshot",
+      "go_type": "enrollmenthttp.AdminOfferingAdjustmentSnapshot",
+      "fields": [
+        {
+          "name": "offering_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "offering_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "days_of_week_mode",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "selected_days",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "manual_selected_days",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "automatic_selected_days",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "available_days",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "extended_until",
+          "optional": true,
+          "schema": {
+            "kind": "date"
           }
         }
       ]
@@ -27921,9 +28017,13 @@
         {
           "name": "custom_data",
           "optional": true,
+          "json_reason": "Answer values follow the school's versioned form schema",
           "schema": {
-            "kind": "json",
-            "nullable": true
+            "kind": "map",
+            "elem": {
+              "kind": "json",
+              "nullable": true
+            }
           }
         },
         {
@@ -28161,17 +28261,26 @@
         {
           "name": "custom_data",
           "optional": true,
+          "json_reason": "Answer values follow the school's versioned form schema",
           "schema": {
-            "kind": "json",
-            "nullable": true
+            "kind": "map",
+            "elem": {
+              "kind": "json",
+              "nullable": true
+            }
           }
         },
         {
           "name": "consent_flags",
           "optional": true,
+          "json_reason": "Preserve the recorded value of historical non-boolean checkbox answers",
           "schema": {
-            "kind": "json",
-            "nullable": true
+            "kind": "map",
+            "elem": {
+              "kind": "bool",
+              "nullable": true,
+              "legacy_json": true
+            }
           }
         },
         {
@@ -28479,17 +28588,26 @@
         {
           "name": "custom_data",
           "optional": true,
+          "json_reason": "Answer values follow the school's versioned form schema",
           "schema": {
-            "kind": "json",
-            "nullable": true
+            "kind": "map",
+            "elem": {
+              "kind": "json",
+              "nullable": true
+            }
           }
         },
         {
           "name": "consent_flags",
           "optional": true,
+          "json_reason": "Preserve the recorded value of historical non-boolean checkbox answers",
           "schema": {
-            "kind": "json",
-            "nullable": true
+            "kind": "map",
+            "elem": {
+              "kind": "bool",
+              "nullable": true,
+              "legacy_json": true
+            }
           }
         },
         {
@@ -31298,9 +31416,14 @@
         },
         {
           "name": "detail",
+          "json_reason": "The audit source selects the recorded fields, including historical deletion payloads",
           "schema": {
-            "kind": "json",
-            "nullable": true
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "json",
+              "nullable": true
+            }
           }
         }
       ]
@@ -38851,9 +38974,18 @@
         {
           "name": "translations",
           "optional": true,
+          "refines_json": "The catalog already rejects values that are not translation documents",
           "schema": {
-            "kind": "json",
-            "nullable": true
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "map",
+              "nullable": true,
+              "elem": {
+                "kind": "ref",
+                "ref": "TranslatedTextInput"
+              }
+            }
           }
         }
       ]
@@ -40680,13 +40812,11 @@
         {
           "name": "payload",
           "optional": true,
+          "refines_json": "The care-plan parser already validates this weekly change document",
           "schema": {
-            "kind": "map",
+            "kind": "ref",
             "nullable": true,
-            "elem": {
-              "kind": "json",
-              "nullable": true
-            }
+            "ref": "WeeklyChange"
           }
         },
         {
@@ -41836,6 +41966,160 @@
       ]
     },
     {
+      "name": "ChangeRequestChildSnapshot",
+      "go_type": "enrollmenthttp.ChangeRequestChildSnapshot",
+      "fields": [
+        {
+          "name": "id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "date_of_birth",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "target_grade_level",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "target_school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "holiday_care_wish",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "custom_data",
+          "optional": true,
+          "json_reason": "Answer values follow the school's versioned form schema",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "json",
+              "nullable": true
+            }
+          }
+        },
+        {
+          "name": "offering_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "offering_days",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ChangeRequestOfferingDays"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChangeRequestDiff",
+      "go_type": "enrollmenthttp.ChangeRequestDiff",
+      "fields": [
+        {
+          "name": "changed",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChangeRequestGuardian",
+      "go_type": "enrollmenthttp.ChangeRequestGuardian",
+      "fields": [
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "phone",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "ChangeRequestMessageRequest",
       "go_type": "enrollmenthttp.ChangeRequestMessageRequest",
       "request": true,
@@ -41888,6 +42172,28 @@
           "name": "created_at",
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChangeRequestOfferingDays",
+      "go_type": "enrollmenthttp.ChangeRequestOfferingDays",
+      "fields": [
+        {
+          "name": "offering_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "selected_days",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
           }
         }
       ]
@@ -41949,34 +42255,25 @@
         {
           "name": "base_snapshot",
           "schema": {
-            "kind": "map",
+            "kind": "ref",
             "nullable": true,
-            "elem": {
-              "kind": "json",
-              "nullable": true
-            }
+            "ref": "ChangeRequestSnapshot"
           }
         },
         {
           "name": "proposed_snapshot",
           "schema": {
-            "kind": "map",
+            "kind": "ref",
             "nullable": true,
-            "elem": {
-              "kind": "json",
-              "nullable": true
-            }
+            "ref": "ChangeRequestSnapshot"
           }
         },
         {
           "name": "diff",
           "schema": {
-            "kind": "map",
+            "kind": "ref",
             "nullable": true,
-            "elem": {
-              "kind": "json",
-              "nullable": true
-            }
+            "ref": "ChangeRequestDiff"
           }
         },
         {
@@ -42145,34 +42442,25 @@
         {
           "name": "base_snapshot",
           "schema": {
-            "kind": "map",
+            "kind": "ref",
             "nullable": true,
-            "elem": {
-              "kind": "json",
-              "nullable": true
-            }
+            "ref": "ChangeRequestSnapshot"
           }
         },
         {
           "name": "proposed_snapshot",
           "schema": {
-            "kind": "map",
+            "kind": "ref",
             "nullable": true,
-            "elem": {
-              "kind": "json",
-              "nullable": true
-            }
+            "ref": "ChangeRequestSnapshot"
           }
         },
         {
           "name": "diff",
           "schema": {
-            "kind": "map",
+            "kind": "ref",
             "nullable": true,
-            "elem": {
-              "kind": "json",
-              "nullable": true
-            }
+            "ref": "ChangeRequestDiff"
           }
         },
         {
@@ -42242,6 +42530,104 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChangeRequestSnapshot",
+      "go_type": "enrollmenthttp.ChangeRequestSnapshot",
+      "fields": [
+        {
+          "name": "phase_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_email",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "guardian_phone",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "consent_flags",
+          "optional": true,
+          "json_reason": "Preserve the recorded value of historical non-boolean checkbox answers",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "bool",
+              "nullable": true,
+              "legacy_json": true
+            }
+          }
+        },
+        {
+          "name": "custom_data",
+          "optional": true,
+          "json_reason": "Answer values follow the school's versioned form schema",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "json",
+              "nullable": true
+            }
+          }
+        },
+        {
+          "name": "additional_guardians",
+          "optional": true,
+          "json_reason": "Historical snapshots can contain a displayed guardian name instead of a structured row",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "legacy_json": true,
+              "ref": "ChangeRequestGuardian"
+            }
+          }
+        },
+        {
+          "name": "children",
+          "optional": true,
+          "json_reason": "Historical snapshots can contain a displayed child name instead of a structured row",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "legacy_json": true,
+              "ref": "ChangeRequestChildSnapshot"
+            }
           }
         }
       ]
@@ -44602,11 +44988,12 @@
         {
           "name": "consent_flags",
           "optional": true,
+          "refines_json": "The typed checkbox input still reads the full legacy JSON value domain",
           "schema": {
             "kind": "map",
             "nullable": true,
             "elem": {
-              "kind": "json",
+              "kind": "bool",
               "nullable": true
             }
           }
@@ -46953,16 +47340,18 @@
         {
           "name": "substatus",
           "optional": true,
+          "refines_json": "The previous attendance parser rejected values other than strings and null",
           "schema": {
-            "kind": "json",
+            "kind": "string",
             "nullable": true
           }
         },
         {
           "name": "note",
           "optional": true,
+          "refines_json": "The previous attendance parser rejected values other than strings and null",
           "schema": {
-            "kind": "json",
+            "kind": "string",
             "nullable": true
           }
         },
@@ -47855,11 +48244,12 @@
         {
           "name": "consent_flags",
           "optional": true,
+          "refines_json": "The typed checkbox input still reads the full legacy JSON value domain",
           "schema": {
             "kind": "map",
             "nullable": true,
             "elem": {
-              "kind": "json",
+              "kind": "bool",
               "nullable": true
             }
           }
@@ -47881,6 +48271,7 @@
         {
           "name": "custom_data",
           "optional": true,
+          "json_reason": "Answer values follow the school's versioned form schema",
           "schema": {
             "kind": "map",
             "nullable": true,
@@ -50681,6 +51072,7 @@
         },
         {
           "name": "value",
+          "json_reason": "The controlling setting's registered kind determines the comparison value",
           "schema": {
             "kind": "json",
             "nullable": true
@@ -50775,6 +51167,7 @@
         {
           "name": "old_value",
           "optional": true,
+          "json_reason": "The historical event's subject and field select the shape of its previous value",
           "schema": {
             "kind": "json",
             "nullable": true
@@ -50783,6 +51176,7 @@
         {
           "name": "new_value",
           "optional": true,
+          "json_reason": "The historical event's subject and field select the shape of its new value",
           "schema": {
             "kind": "json",
             "nullable": true
@@ -51559,13 +51953,11 @@
         {
           "name": "payload",
           "optional": true,
+          "refines_json": "The care-plan parser already validates this weekly change document",
           "schema": {
-            "kind": "map",
+            "kind": "ref",
             "nullable": true,
-            "elem": {
-              "kind": "json",
-              "nullable": true
-            }
+            "ref": "WeeklyChange"
           }
         },
         {
@@ -51637,9 +52029,14 @@
         },
         {
           "name": "custom_data",
+          "json_reason": "Answer values follow the school's versioned form schema",
           "schema": {
-            "kind": "json",
-            "nullable": true
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "json",
+              "nullable": true
+            }
           }
         },
         {
@@ -51806,16 +52203,27 @@
         },
         {
           "name": "consent_flags",
+          "json_reason": "Preserve the recorded value of historical non-boolean checkbox answers",
           "schema": {
-            "kind": "json",
-            "nullable": true
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "bool",
+              "nullable": true,
+              "legacy_json": true
+            }
           }
         },
         {
           "name": "custom_data",
+          "json_reason": "Answer values follow the school's versioned form schema",
           "schema": {
-            "kind": "json",
-            "nullable": true
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "json",
+              "nullable": true
+            }
           }
         },
         {
@@ -51882,6 +52290,7 @@
         {
           "name": "new_value",
           "optional": true,
+          "json_reason": "The requested student field selects the master-data value type",
           "schema": {
             "kind": "json",
             "nullable": true
@@ -51986,11 +52395,12 @@
         {
           "name": "consent_flags",
           "optional": true,
+          "refines_json": "The typed checkbox input still reads the full legacy JSON value domain",
           "schema": {
             "kind": "map",
             "nullable": true,
             "elem": {
-              "kind": "json",
+              "kind": "bool",
               "nullable": true
             }
           }
@@ -51998,6 +52408,7 @@
         {
           "name": "custom_data",
           "optional": true,
+          "json_reason": "Answer values follow the school's versioned form schema",
           "schema": {
             "kind": "map",
             "nullable": true,
@@ -59429,6 +59840,7 @@
         },
         {
           "name": "custom_data",
+          "json_reason": "Answer values follow the school's versioned form schema",
           "schema": {
             "kind": "map",
             "nullable": true,
@@ -61559,6 +61971,7 @@
         },
         {
           "name": "value",
+          "json_reason": "The holiday registration field schema determines the answer type",
           "schema": {
             "kind": "json",
             "nullable": true
@@ -62838,6 +63251,7 @@
         },
         {
           "name": "custom_data",
+          "json_reason": "Answer values follow the school's versioned form schema",
           "schema": {
             "kind": "map",
             "nullable": true,
@@ -63044,6 +63458,7 @@
         {
           "name": "custom_data",
           "optional": true,
+          "json_reason": "Answer values follow the school's versioned form schema",
           "schema": {
             "kind": "map",
             "nullable": true,
@@ -63489,6 +63904,7 @@
         },
         {
           "name": "custom_data",
+          "json_reason": "Answer values follow the school's versioned form schema",
           "schema": {
             "kind": "map",
             "nullable": true,
@@ -63506,6 +63922,7 @@
       "fields": [
         {
           "name": "custom_data",
+          "json_reason": "Answer values follow the school's versioned form schema",
           "schema": {
             "kind": "map",
             "nullable": true,
@@ -63862,6 +64279,7 @@
         {
           "name": "custom_data",
           "optional": true,
+          "json_reason": "Answer values follow the school's versioned form schema",
           "schema": {
             "kind": "map",
             "nullable": true,
@@ -66460,6 +66878,7 @@
         {
           "name": "data",
           "deprecated": true,
+          "json_reason": "The originating request owner supplies a different DTO for each inbox item kind",
           "schema": {
             "kind": "json",
             "nullable": true
@@ -67652,6 +68071,7 @@
         {
           "name": "value",
           "optional": true,
+          "json_reason": "The requested student field selects the master-data value type",
           "schema": {
             "kind": "json",
             "nullable": true
@@ -67732,6 +68152,7 @@
         {
           "name": "old_value",
           "optional": true,
+          "json_reason": "The requested student field selects the master-data value type",
           "schema": {
             "kind": "json",
             "nullable": true
@@ -67739,6 +68160,7 @@
         },
         {
           "name": "new_value",
+          "json_reason": "The requested student field selects the master-data value type",
           "schema": {
             "kind": "json",
             "nullable": true
@@ -67828,6 +68250,7 @@
         {
           "name": "old_value",
           "optional": true,
+          "json_reason": "The requested student field selects the master-data value type",
           "schema": {
             "kind": "json",
             "nullable": true
@@ -67835,6 +68258,7 @@
         },
         {
           "name": "new_value",
+          "json_reason": "The requested student field selects the master-data value type",
           "schema": {
             "kind": "json",
             "nullable": true
@@ -67886,6 +68310,7 @@
         {
           "name": "old_value",
           "optional": true,
+          "json_reason": "The requested student field selects the master-data value type",
           "schema": {
             "kind": "json",
             "nullable": true
@@ -67893,6 +68318,7 @@
         },
         {
           "name": "new_value",
+          "json_reason": "The requested student field selects the master-data value type",
           "schema": {
             "kind": "json",
             "nullable": true
@@ -74790,6 +75216,7 @@
         {
           "name": "payload",
           "optional": true,
+          "json_reason": "The message kind selects an extensible event payload, including historical kinds",
           "schema": {
             "kind": "json",
             "nullable": true
@@ -75535,6 +75962,7 @@
         {
           "name": "payload",
           "optional": true,
+          "json_reason": "The message kind selects an extensible event payload, including historical kinds",
           "schema": {
             "kind": "map",
             "elem": {
@@ -75951,6 +76379,7 @@
         },
         {
           "name": "options",
+          "json_reason": "The WebAuthn library owns the ceremony-specific browser options",
           "schema": {
             "kind": "json",
             "nullable": true
@@ -76050,6 +76479,7 @@
         {
           "name": "response",
           "optional": true,
+          "json_reason": "The WebAuthn verifier owns the browser attestation document",
           "schema": {
             "kind": "json",
             "nullable": true
@@ -76072,6 +76502,7 @@
         {
           "name": "response",
           "optional": true,
+          "json_reason": "The WebAuthn verifier owns the browser assertion document",
           "schema": {
             "kind": "json",
             "nullable": true
@@ -76137,16 +76568,18 @@
         {
           "name": "substatus",
           "optional": true,
+          "refines_json": "The previous attendance parser rejected values other than strings and null",
           "schema": {
-            "kind": "json",
+            "kind": "string",
             "nullable": true
           }
         },
         {
           "name": "note",
           "optional": true,
+          "refines_json": "The previous attendance parser rejected values other than strings and null",
           "schema": {
-            "kind": "json",
+            "kind": "string",
             "nullable": true
           }
         }
@@ -80139,6 +80572,7 @@
         {
           "name": "details",
           "optional": true,
+          "json_reason": "Consent metadata uses keys and value types specific to the consent type",
           "schema": {
             "kind": "map",
             "nullable": true,
@@ -80221,6 +80655,7 @@
         {
           "name": "details",
           "optional": true,
+          "json_reason": "Consent metadata uses keys and value types specific to the consent type",
           "schema": {
             "kind": "map",
             "elem": {
@@ -82761,6 +83196,7 @@
         },
         {
           "name": "default",
+          "json_reason": "The setting key selects its default value type in the settings registry",
           "schema": {
             "kind": "json",
             "nullable": true
@@ -82768,6 +83204,7 @@
         },
         {
           "name": "value",
+          "json_reason": "The setting key selects its value type in the settings registry",
           "schema": {
             "kind": "json",
             "nullable": true
@@ -83059,6 +83496,7 @@
       "fields": [
         {
           "name": "value",
+          "json_reason": "The revealed setting's registered kind determines its value type",
           "schema": {
             "kind": "json",
             "nullable": true
@@ -89849,6 +90287,7 @@
         },
         {
           "name": "value",
+          "json_reason": "Option values have the kind of the setting declaring them",
           "schema": {
             "kind": "json",
             "nullable": true
@@ -98041,6 +98480,7 @@
         },
         {
           "name": "value",
+          "json_reason": "The school's enrollment field schema determines the answer type",
           "schema": {
             "kind": "json",
             "nullable": true
@@ -99744,6 +100184,7 @@
         {
           "name": "custom_data",
           "optional": true,
+          "json_reason": "Answer values follow the school's versioned form schema",
           "schema": {
             "kind": "map",
             "nullable": true,
@@ -99834,11 +100275,12 @@
         {
           "name": "consent_flags",
           "optional": true,
+          "refines_json": "The typed checkbox input still reads the full legacy JSON value domain",
           "schema": {
             "kind": "map",
             "nullable": true,
             "elem": {
-              "kind": "json",
+              "kind": "bool",
               "nullable": true
             }
           }
@@ -99860,6 +100302,7 @@
         {
           "name": "custom_data",
           "optional": true,
+          "json_reason": "Answer values follow the school's versioned form schema",
           "schema": {
             "kind": "map",
             "nullable": true,
@@ -101130,6 +101573,7 @@
         },
         {
           "name": "settings",
+          "json_reason": "The tenant directory forwards legacy school-specific settings without interpreting their keys",
           "schema": {
             "kind": "json",
             "nullable": true
@@ -101531,6 +101975,7 @@
         {
           "name": "last_message_payload",
           "optional": true,
+          "json_reason": "The last message kind selects its extensible event payload",
           "schema": {
             "kind": "map",
             "elem": {
@@ -103117,6 +103562,7 @@
         },
         {
           "name": "traeger",
+          "json_reason": "The changed field selects the inherited phase value type",
           "schema": {
             "kind": "json",
             "nullable": true
@@ -103124,6 +103570,7 @@
         },
         {
           "name": "school",
+          "json_reason": "The changed field selects the overridden phase value type",
           "schema": {
             "kind": "json",
             "nullable": true
@@ -103920,6 +104367,7 @@
         },
         {
           "name": "traeger",
+          "json_reason": "The changed field selects the inherited offering value type",
           "schema": {
             "kind": "json",
             "nullable": true
@@ -103927,6 +104375,7 @@
         },
         {
           "name": "school",
+          "json_reason": "The changed field selects the overridden offering value type",
           "schema": {
             "kind": "json",
             "nullable": true
@@ -107245,8 +107694,9 @@
         {
           "name": "school_limit_days",
           "optional": true,
+          "refines_json": "The absence type handler already requires a number or null",
           "schema": {
-            "kind": "json",
+            "kind": "number",
             "nullable": true
           }
         }
@@ -107381,6 +107831,7 @@
         {
           "name": "value",
           "optional": true,
+          "json_reason": "The requested student field selects the master-data value type",
           "schema": {
             "kind": "json",
             "nullable": true
@@ -108371,6 +108822,7 @@
         {
           "name": "value",
           "optional": true,
+          "json_reason": "The form field referenced by source determines the comparison value type",
           "schema": {
             "kind": "json",
             "nullable": true
@@ -108407,6 +108859,7 @@
         {
           "name": "value",
           "optional": true,
+          "json_reason": "The form field referenced by source determines the comparison value type",
           "schema": {
             "kind": "json",
             "nullable": true
@@ -108637,6 +109090,49 @@
       ]
     },
     {
+      "name": "WeekdayChange",
+      "go_type": "carerequests.WeekdayChange",
+      "request": true,
+      "fields": [
+        {
+          "name": "weekday",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "scheduled",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        },
+        {
+          "name": "mode",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "arrival",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pickup",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "WeekdayPickupNotesRequest",
       "go_type": "careplanhttp.WeekdayPickupNotesRequest",
       "request": true,
@@ -108650,6 +109146,25 @@
             "elem": {
               "kind": "ref",
               "ref": "PickupNoteRequest"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "WeeklyChange",
+      "go_type": "carerequests.WeeklyChange",
+      "request": true,
+      "fields": [
+        {
+          "name": "weekdays",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "WeekdayChange"
             }
           }
         }
@@ -117016,6 +117531,7 @@
         {
           "name": "custom_data",
           "optional": true,
+          "json_reason": "Answer values follow the school's versioned form schema",
           "schema": {
             "kind": "map",
             "nullable": true,
@@ -117104,6 +117620,7 @@
         {
           "name": "custom_data",
           "optional": true,
+          "json_reason": "Answer values follow the school's versioned form schema",
           "schema": {
             "kind": "map",
             "nullable": true,
@@ -122313,8 +122830,9 @@
         {
           "name": "reminder_at",
           "optional": true,
+          "refines_json": "The reminder handler already requires an RFC 3339 instant or null",
           "schema": {
-            "kind": "json",
+            "kind": "instant",
             "nullable": true
           }
         },
@@ -122820,6 +123338,7 @@
         {
           "name": "staff_value",
           "optional": true,
+          "json_reason": "The conflict kind selects the staff value shape",
           "schema": {
             "kind": "map",
             "nullable": true,
@@ -122958,6 +123477,7 @@
       "fields": [
         {
           "name": "value",
+          "json_reason": "The revealed setting's registered kind determines its value type",
           "schema": {
             "kind": "json",
             "nullable": true
@@ -123854,6 +124374,7 @@
         {
           "name": "value",
           "optional": true,
+          "json_reason": "The route's setting key selects the value type in the settings registry",
           "schema": {
             "kind": "json",
             "nullable": true
@@ -123898,6 +124419,7 @@
         {
           "name": "value",
           "optional": true,
+          "json_reason": "The route's setting key selects the value type in the settings registry",
           "schema": {
             "kind": "json",
             "nullable": true

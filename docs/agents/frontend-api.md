@@ -160,6 +160,12 @@ or write a `Backend*` interface for a registered route.
   `successResponse(null)`.
 - A portal other than `tenant` uses its own route wrapper with the same
   helpers; the route entry names its portals.
+- Import generated wire types for closed fields, including nested
+  snapshots and maps. An `unknown` value is intentionally open only where
+  `contract_json` on the Go field explains the protocol or configuration
+  that determines its shape. Narrow such values at the point of use.
+  A typed response may also carry a documented `LegacyJSON` alternative
+  when recorded data predates the typed shape.
 - A registered enum is typed as its
   known values but decodes any string; narrow it with `knownEnum`.
 - A day is a `calendar.Date`, an instant a `time.Time`. A string field that
@@ -183,7 +189,11 @@ or write a `Backend*` interface for a registered route.
   does not make an `int64` an identifier.
 - Removing or renaming a registered field or route needs one release as
   deprecated (`DeprecatedFields`, `Deprecated`);
-  `scripts/check-contract-compat.mjs <base>` fails otherwise.
+  `scripts/check-contract-compat.mjs <base>` fails otherwise. Typing an open
+  request field in place needs `contract_refines:"<compatibility evidence>"`
+  and a reader that either accepts the previous input domain or already
+  rejected everything outside the new shape. Expand first when callers need
+  to move to a new wire shape.
 
 
 #### Portal proxy (#2352)

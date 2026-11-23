@@ -15,7 +15,6 @@ package absencetypes
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -23,6 +22,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 
+	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 )
 
@@ -122,21 +122,20 @@ type UpdateAbsenceTypeRequest struct {
 	// Offered and SchoolLimitDays are the school's deviation from a type of
 	// its Träger (#4710). SchoolLimitDays: omitted keeps the limit, null
 	// removes it.
-	Offered         *bool           `json:"offered"`
-	SchoolLimitDays json.RawMessage `json:"school_limit_days"`
+	Offered         *bool                         `json:"offered"`
+	SchoolLimitDays common.DeferredJSON[*float64] `json:"school_limit_days" contract_refines:"The absence type handler already requires a number or null"`
 }
 
 // schoolLimit reads the optional limit: nil when omitted, a patch without
 // days for null.
 func (req UpdateAbsenceTypeRequest) schoolLimit() (*workforce.SchoolLimitPatch, error) {
-	if len(req.SchoolLimitDays) == 0 {
+	if !req.SchoolLimitDays.Present {
 		return nil, nil
 	}
-	patch := &workforce.SchoolLimitPatch{}
-	if err := json.Unmarshal(req.SchoolLimitDays, &patch.Days); err != nil {
+	if req.SchoolLimitDays.Invalid != nil {
 		return nil, &workforce.InvalidAbsenceTypeError{Reason: "school_limit_days must be a number or null"}
 	}
-	return patch, nil
+	return &workforce.SchoolLimitPatch{Days: req.SchoolLimitDays.Value}, nil
 }
 
 // AbsenceTypeResponse is the wire format returned to clients. BaseType tells

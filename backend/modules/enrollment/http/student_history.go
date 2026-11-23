@@ -49,8 +49,8 @@ func (rs *Resource) toStudentHistorySummary(ctx context.Context, summary *Reques
 		return rs.toAdminRequestDetailSummary(ctx, summary)
 	}
 	detail := toAdminRequestSummary(summary)
-	detail.CustomData = summary.Request.CustomData
-	detail.ConsentFlags = summary.Request.ConsentFlags
+	detail.CustomData = formAnswerMap(summary.Request.CustomData)
+	detail.ConsentFlags = consentFlagsFromOwner(summary.Request.ConsentFlags)
 	if summary.Request.SchemaID != nil {
 		if schema := schemas[*summary.Request.SchemaID]; schema != nil {
 			detail.SchemaFields, detail.SchemaLegalBlocks = toAdminSchemaMetadata(schema)

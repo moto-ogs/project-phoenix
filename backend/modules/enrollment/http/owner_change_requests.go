@@ -40,9 +40,9 @@ type ChangeRequest struct {
 	Status            string
 	ParentNote        *string
 	AdminDecisionNote *string
-	BaseSnapshot      map[string]any
-	ProposedSnapshot  map[string]any
-	Diff              map[string]any
+	BaseSnapshot      *ChangeRequestSnapshot
+	ProposedSnapshot  *ChangeRequestSnapshot
+	Diff              *ChangeRequestDiff
 	// CareOfferingsEnabledAtCreation pins the form capability used to validate
 	// and apply this proposal. It is internal workflow state, not API data.
 	CareOfferingsEnabledAtCreation bool
@@ -133,7 +133,7 @@ func changeRequestValue(value *capability.ChangeRequest) (*ChangeRequest, error)
 	for _, field := range []struct {
 		name string
 		raw  json.RawMessage
-		into *map[string]any
+		into any
 	}{
 		{"BaseSnapshot", value.BaseSnapshot, &row.BaseSnapshot},
 		{"ProposedSnapshot", value.ProposedSnapshot, &row.ProposedSnapshot},

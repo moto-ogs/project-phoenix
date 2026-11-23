@@ -125,7 +125,7 @@ type HolidayHostAnswer struct {
 	Key   string          `json:"key"`
 	Label string          `json:"label"`
 	Type  FormFieldType   `json:"type"`
-	Value json.RawMessage `json:"value"`
+	Value json.RawMessage `json:"value" contract_json:"The holiday registration field schema determines the answer type"`
 }
 
 // HolidayHostQuestion is a shared question of a participant list: one

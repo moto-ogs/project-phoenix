@@ -47,8 +47,8 @@ type MasterDataChangeRequestResponse struct {
 	LastName   string          `json:"last_name"`
 	Target     string          `json:"target"`
 	FieldKey   string          `json:"field_key"`
-	OldValue   json.RawMessage `json:"old_value,omitempty"`
-	NewValue   json.RawMessage `json:"new_value"`
+	OldValue   json.RawMessage `json:"old_value,omitempty" contract_json:"The requested student field selects the master-data value type"`
+	NewValue   json.RawMessage `json:"new_value" contract_json:"The requested student field selects the master-data value type"`
 	Status     string          `json:"status"`
 	CreatedAt  time.Time       `json:"created_at"`
 	ReviewedAt *time.Time      `json:"reviewed_at,omitempty"`

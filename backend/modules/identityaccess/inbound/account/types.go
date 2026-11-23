@@ -26,7 +26,7 @@ type TenantResolveResponse struct {
 	OrganizationID   ident.ID        `json:"organization_id"`
 	OrganizationName string          `json:"organization_name"`
 	Hidden           bool            `json:"hidden"`
-	Settings         json.RawMessage `json:"settings"`
+	Settings         json.RawMessage `json:"settings" contract_json:"The tenant directory forwards legacy school-specific settings without interpreting their keys"`
 	// PresenceMode is the tenant's resolved operations.presence_mode setting
 	// ("detailed" | "binary"). Included so the frontend can render the right
 	// badge component (PresenceBadge vs LocationBadge) without a second call.

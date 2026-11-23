@@ -95,7 +95,7 @@ func (rs *Resource) updateAdminChildOfferings(w http.ResponseWriter, r *http.Req
 		return
 	}
 	out := AdminChildOfferingsResponse{AdminRequestChild: newAdminRequestChild(updated.Child), RosterImpact: newRosterImpactResponse(updated.RosterImpact)}
-	out.CustomData = updated.Child.CustomData
+	out.CustomData = formAnswerMap(updated.Child.CustomData)
 	rs.enrichUpdatedAdminOfferings(r, requestID, childID, &out.AdminRequestChild)
 	common.Respond(w, r, http.StatusOK, out, "Child offerings updated")
 }
@@ -236,7 +236,12 @@ func (rs *Resource) listAdminChildOfferingAdjustments(w http.ResponseWriter, r *
 	}
 	out := make([]AdminOfferingAdjustment, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, toAdminOfferingAdjustment(row))
+		adjustment, err := toAdminOfferingAdjustment(row)
+		if err != nil {
+			common.RenderError(w, r, common.ErrorInternalServerWrap("decode offering adjustment", err))
+			return
+		}
+		out = append(out, adjustment)
 	}
 	common.Respond(w, r, http.StatusOK, out, "Offering adjustments retrieved")
 }
@@ -324,8 +329,8 @@ func toAdminSubmittedOfferingTerms(terms *capability.OfferingTerms) *AdminSubmit
 	}
 }
 
-func toAdminOfferingAdjustment(row *OfferingAdjustment) AdminOfferingAdjustment {
-	return AdminOfferingAdjustment{
+func toAdminOfferingAdjustment(row *OfferingAdjustment) (AdminOfferingAdjustment, error) {
+	response := AdminOfferingAdjustment{
 		ID:                 strconv.FormatInt(row.ID, 10),
 		RequestID:          strconv.FormatInt(row.RequestID, 10),
 		RequestChildID:     strconv.FormatInt(row.RequestChildID, 10),
@@ -335,8 +340,13 @@ func toAdminOfferingAdjustment(row *OfferingAdjustment) AdminOfferingAdjustment 
 		ActorNameSnapshot:  row.ActorNameSnapshot,
 		ActorEmailSnapshot: row.ActorEmailSnapshot,
 		Reason:             row.Reason,
-		Before:             row.Before,
-		After:              row.After,
 		ChangedAt:          row.ChangedAt,
 	}
+	if err := decodeJSONObject(row.Before, &response.Before); err != nil {
+		return AdminOfferingAdjustment{}, fmt.Errorf("before snapshot: %w", err)
+	}
+	if err := decodeJSONObject(row.After, &response.After); err != nil {
+		return AdminOfferingAdjustment{}, fmt.Errorf("after snapshot: %w", err)
+	}
+	return response, nil
 }

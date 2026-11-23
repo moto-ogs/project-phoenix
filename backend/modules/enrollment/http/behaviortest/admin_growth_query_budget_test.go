@@ -151,7 +151,7 @@ func TestEnrollmentAdminRouteGrowthQueryBudget(t *testing.T) {
 	addAdjustments := func(n int) {
 		for range n {
 			i := len(adjustmentIDs)
-			row := &api.EnrollmentFlowOfferingAdjustmentAudit{RequestID: request.ID, RequestChildID: child.ID, StudentID: student.ID, ActorAccountID: env.creatorID, ActorRole: "admin", Reason: fmt.Sprintf("Correction %d", i), Before: json.RawMessage(`{}`), After: json.RawMessage(`{}`), ChangedAt: time.Now().Add(time.Duration(i) * time.Minute)}
+			row := &api.EnrollmentFlowOfferingAdjustmentAudit{RequestID: request.ID, RequestChildID: child.ID, StudentID: student.ID, ActorAccountID: env.creatorID, ActorRole: "admin", Reason: fmt.Sprintf("Correction %d", i), Before: json.RawMessage(`[]`), After: json.RawMessage(`[]`), ChangedAt: time.Now().Add(time.Duration(i) * time.Minute)}
 			require.NoError(t, testpkg.TenantCommand1(t, ctx, env.db, audit.EnrollmentOfferingAdjustment.Create, row))
 			adjustmentIDs = append(adjustmentIDs, fmt.Sprint(row.ID))
 		}

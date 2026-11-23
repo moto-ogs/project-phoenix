@@ -17,6 +17,7 @@ import {
   success,
 } from "./runtime";
 import {
+  CaregiverCapabilityStateSchema,
   OperatorDeviceSchema,
   OperatorPersonSchema,
   SchoolSchema,
@@ -302,7 +303,7 @@ export const routes = {
     method: "DELETE",
     pattern: "/operator/schools/{id}/accounts/{accountId}/caregiver-capability/",
     portals: ["platform"],
-    response: success(z.unknown()),
+    response: success(CaregiverCapabilityStateSchema),
   },
   "DELETE /operator/schools/{id}/accounts/{accountId}/mfa/": {
     method: "DELETE",
@@ -346,7 +347,7 @@ export const routes = {
     method: "GET",
     pattern: "/operator/schools/{id}/accounts/{accountId}/caregiver-capability/",
     portals: ["platform"],
-    response: success(z.unknown()),
+    response: success(CaregiverCapabilityStateSchema),
   },
   "GET /operator/schools/{id}/accounts/{accountId}/mfa/": {
     method: "GET",
@@ -402,7 +403,7 @@ export const routes = {
     pattern: "/operator/schools/{id}/accounts/{accountId}/caregiver-capability/",
     portals: ["platform"],
     request: requestBody<updateCaregiverCapabilityRequest>(),
-    response: success(z.unknown()),
+    response: success(CaregiverCapabilityStateSchema),
   },
   "POST /operator/schools/{id}/create-account": {
     method: "POST",

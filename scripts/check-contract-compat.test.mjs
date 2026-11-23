@@ -51,11 +51,18 @@ test("a request identifier may become an id, an answer's may not", () => {
     route.types[0].request = true;
     return route;
   };
-  for (const kind of ["string", "lax_id"]) {
+  for (const kind of ["string", "legacy_id", "lax_id"]) {
     assert.deepEqual(breakingChanges(body(kind), body("id")), [], `Go reads a ${kind} identifier as an id`);
   }
   assert.deepEqual(breakingChanges(body("id"), body("string")), ["POST /api/rows/ request.id: id became string"]);
   assert.deepEqual(breakingChanges(model([field("id", "string")]), model([field("id", "id")])), ["GET /api/rows/[].id: string became id"]);
+});
+
+test("a released reader accepts string answers for legacy numeric identifiers", () => {
+  const old = model([field("student_id", "legacy_id")]);
+  const typed = model([field("student_id", "id")]);
+  assert.deepEqual(breakingChanges(old, typed), []);
+  assert.deepEqual(breakingChanges(typed, old), ["GET /api/rows/[].student_id: id became legacy_id"]);
 });
 
 test("an answer's json may gain a type, a request's json may not", () => {
@@ -175,4 +182,41 @@ test("renaming the student selector breaks slim-only fields even with an unchang
   const head = structuredClone(before);
   head.routes.find((route) => route.pattern === "/api/students/").variants.query_param = "projection";
   assert.ok(breakingChanges(before, head).includes("GET /api/students/ ?view=slim[].departure_modes: removed without a release as deprecated"));
+});
+
+test("an open object answer can gain a struct without accepting other answer kinds", () => {
+  const before = model([{ name: "snapshot", schema: { kind: "map", elem: { kind: "json" }, nullable: true } }]);
+  const typed = model([{ name: "snapshot", schema: { kind: "ref", ref: "Snapshot", nullable: true } }]);
+  typed.types.push({ name: "Snapshot", fields: [field("name", "string")] });
+  assert.deepEqual(breakingChanges(before, typed), []);
+  assert.deepEqual(breakingChanges(before, model([field("snapshot", "string")])), [
+    "GET /api/rows/[].snapshot: map<json> became string",
+  ]);
+});
+
+test("a legacy fallback can refine an open answer but must not widen a closed one", () => {
+  const fieldWithFallback = { name: "flag", schema: { kind: "bool", legacy_json: true } };
+  const withFallback = model([fieldWithFallback]);
+  assert.deepEqual(breakingChanges(model([field("flag", "json")]), withFallback), []);
+  assert.deepEqual(breakingChanges(model([field("flag", "bool")]), withFallback), [
+    "GET /api/rows/[].flag: may now return other JSON shapes",
+  ]);
+});
+
+test("a closed request needs evidence that old callers can still send the accepted values", () => {
+  const body = (payload) => ({
+    ...model([], { method: "POST", request: { kind: "ref", ref: "Body" } }),
+    types: [base.types[0], { name: "Body", request: true, fields: [payload] }],
+  });
+  const before = body(field("note", "json"));
+  const after = field("note", "string");
+  assert.equal(breakingChanges(before, body(after)).length, 1);
+  assert.deepEqual(
+    breakingChanges(before, body({ ...after, refines_json: "Previously validated as a string" })),
+    [],
+  );
+  assert.equal(
+    breakingChanges(body(field("note", "bool")), body({ ...after, refines_json: "Unrelated marker" })).length,
+    1,
+  );
 });
