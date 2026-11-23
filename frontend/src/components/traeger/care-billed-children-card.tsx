@@ -114,16 +114,12 @@ function unpricedNoticeText(children: readonly CareBilledChild[]): string {
       ? "Für einen Vertrag dieses Kindes fehlt ein Preis."
       : "Für je einen Vertrag dieser Kinder fehlt ein Preis.",
     one
-      ? "Sein bisheriger Jahresbescheid gilt darum weiter."
-      : "Die bisherigen Jahresbescheide gelten darum weiter.",
-    one
-      ? "Er rechnet auch Tage ab, an denen jetzt ein anderer Vertrag läuft."
-      : "Sie rechnen auch Tage ab, an denen jetzt andere Verträge laufen.",
+      ? "Sein bisheriger Jahresbescheid gilt weiter, auch für Tage eines anderen Vertrags."
+      : "Ihre bisherigen Jahresbescheide gelten weiter, auch für Tage anderer Verträge.",
     one
       ? "Damit kein Tag doppelt abgerechnet wird, bekommt der andere Vertrag keinen neuen Bescheid."
       : "Damit kein Tag doppelt abgerechnet wird, bekommen die anderen Verträge keinen neuen Bescheid.",
-    "Trage den Preis in der Preisliste ein.",
-    "Danach rechnet diese Vorschau den Monat neu.",
+    "Trage den Preis in der Preisliste ein, dann rechnet diese Vorschau neu.",
   ].join(" ");
 }
 
@@ -319,10 +315,14 @@ function BilledCard({
                     )
                   : null}
                 {billed.contracts.map((contract, index) => {
+                  // Next to „Vertrag ohne Preis“ the held one is the other
+                  // contract the card text names.
+                  const noun =
+                    kind === "unpricedNotice" ? "Anderer Vertrag" : "Vertrag";
                   const label =
                     billed.contracts.length === 1
-                      ? "Vertrag"
-                      : `Vertrag ${index + 1}`;
+                      ? noun
+                      : `${noun} ${index + 1}`;
                   return (
                     <ButtonLink
                       key={contract.contractId}

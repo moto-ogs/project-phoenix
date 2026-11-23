@@ -186,7 +186,7 @@ describe("CareBilledChildrenCard", () => {
     if (!card) throw new Error("the price card without its section");
     expect(
       within(card).getByText(
-        "Für einen Vertrag dieses Kindes fehlt ein Preis. Sein bisheriger Jahresbescheid gilt darum weiter. Er rechnet auch Tage ab, an denen jetzt ein anderer Vertrag läuft. Damit kein Tag doppelt abgerechnet wird, bekommt der andere Vertrag keinen neuen Bescheid. Trage den Preis in der Preisliste ein. Danach rechnet diese Vorschau den Monat neu.",
+        "Für einen Vertrag dieses Kindes fehlt ein Preis. Sein bisheriger Jahresbescheid gilt weiter, auch für Tage eines anderen Vertrags. Damit kein Tag doppelt abgerechnet wird, bekommt der andere Vertrag keinen neuen Bescheid. Trage den Preis in der Preisliste ein, dann rechnet diese Vorschau neu.",
       ),
     ).toBeInTheDocument();
     expect(within(card).queryByText(/musst du nichts tun/)).toBeNull();
@@ -205,7 +205,7 @@ describe("CareBilledChildrenCard", () => {
     ).toHaveAttribute("href", "/vertraege/42");
     expect(
       within(card).getByRole("link", {
-        name: "Vertrag · OGS Ispringen: Kind 4 Beispiel",
+        name: "Anderer Vertrag · OGS Ispringen: Kind 4 Beispiel",
       }),
     ).toHaveAttribute("href", "/vertraege/41");
     expect(
