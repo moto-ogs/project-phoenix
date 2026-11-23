@@ -1,7 +1,6 @@
 package parent
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -45,7 +44,7 @@ type GroupMessageResponse struct {
 	Body      string    `json:"body"`
 	CreatedAt time.Time `json:"created_at"`
 	// Attachments are the photos and files of the message (#6685).
-	Attachments json.RawMessage `json:"attachments,omitempty"`
+	Attachments []messageAttachmentResponse `json:"attachments,omitempty"`
 }
 
 // GroupThreadViewResponse is an opened group thread.
@@ -92,7 +91,7 @@ func (rs *Resource) getGroupThread(w http.ResponseWriter, r *http.Request) {
 		Messages:                   make([]GroupMessageResponse, 0, len(detail.Messages)),
 	}
 	for _, m := range detail.Messages {
-		out.Messages = append(out.Messages, GroupMessageResponse{ID: strconv.FormatInt(m.ID, 10), Body: m.Body, CreatedAt: m.CreatedAt, Attachments: m.Attachments})
+		out.Messages = append(out.Messages, GroupMessageResponse{ID: strconv.FormatInt(m.ID, 10), Body: m.Body, CreatedAt: m.CreatedAt, Attachments: toMessageAttachmentResponses(m.Attachments)})
 	}
 	if n := len(detail.Messages); n > 0 {
 		last := detail.Messages[n-1]
