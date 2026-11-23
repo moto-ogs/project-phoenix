@@ -17,6 +17,7 @@ import {
 } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import type { SchoolSetupState } from "~/lib/school-setup-api";
+import { useAnnounceMessageComposer } from "~/lib/hooks/use-message-composer-presence";
 
 const push = vi.fn();
 const replace = vi.fn(() => Promise.resolve());
@@ -273,6 +274,12 @@ function studentsNext(): SchoolSetupState {
   return state;
 }
 
+/** Stands in for a chat's writing field, which announces itself (#7686). */
+function OpenChat() {
+  useAnnounceMessageComposer();
+  return <p>Chat offen</p>;
+}
+
 describe("SchoolSetupWizard", () => {
   // Die Tour sucht im 200-ms-Takt und wartet bewusst (Klick 250 ms, Verlassen
   // 800 ms, fehlende Seitenleiste 1,5 s). Fake-Timer für die ganze Datei
@@ -323,6 +330,64 @@ describe("SchoolSetupWizard", () => {
     expect(
       screen.getByRole("button", { name: "Erste Schritte öffnen, 5 offen" }),
     ).toBeInTheDocument();
+  });
+
+  it("steps aside with beacon and checklist while a chat is open (#7686)", () => {
+    sessionStorage.setItem("school-setup-opened:school-a:73", "1");
+    const wizard = (chat: boolean) => (
+      <>
+        <SchoolSetupWizard />
+        {chat ? <OpenChat /> : null}
+      </>
+    );
+    const { rerender } = render(wizard(true));
+    // Anker: der Chat steht.
+    expect(screen.getByText("Chat offen")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /^Erste Schritte öffnen/ }),
+    ).not.toBeInTheDocument();
+
+    rerender(wizard(false));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Erste Schritte öffnen, 5 offen" }),
+    );
+    rerender(wizard(true));
+    expect(screen.getByText("Chat offen")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("region", { name: "Erste Schritte mit moto" }),
+    ).not.toBeInTheDocument();
+
+    rerender(wizard(false));
+    expect(
+      screen.getByRole("region", { name: "Erste Schritte mit moto" }),
+    ).toBeInTheDocument();
+  });
+
+  it("counts the checklist that opened by itself as shown once it is on screen (#7686)", () => {
+    // Neu geladen, während der Chat offen ist: Die Liste bleibt fällig.
+    render(
+      <>
+        <SchoolSetupWizard />
+        <OpenChat />
+      </>,
+    ).unmount();
+    const { rerender } = render(
+      <>
+        <SchoolSetupWizard />
+        <OpenChat />
+      </>,
+    );
+    expect(screen.getByText("Chat offen")).toBeInTheDocument();
+    expect(analytics.trackOnboardingSurface).not.toHaveBeenCalled();
+
+    rerender(<SchoolSetupWizard />);
+    expect(
+      screen.getByRole("region", { name: "Erste Schritte mit moto" }),
+    ).toBeInTheDocument();
+    expect(analytics.trackOnboardingSurface).toHaveBeenCalledExactlyOnceWith(
+      "shown",
+      "setup_checklist",
+    );
   });
 
   it("does not answer an auto-open that analytics could not record", () => {
