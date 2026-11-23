@@ -1048,7 +1048,8 @@ behoben.
    Mitbuchungen folgen, Roster und Termine laufen mit, und ein gebundener
    Vertrag bekommt ab dem alten Ende eine Version. Den Tag nennt die
    Detailansicht (`extends_until`); an einem Ende, an dem eine geplante
-   Änderung beginnt, gibt es nichts zu verlängern. Eine Änderung mit
+   Änderung beginnt, gibt es nichts zu verlängern. Eine spätere geplante
+   Änderung bleibt und begrenzt die Verlängerung auf den Tag davor. Eine Änderung mit
    Stichtag lehnt die Verlängerung ab. Ein freies Enddatum gibt es nicht:
    Kürzen ist die Änderung mit Stichtag oder das Betreuungsende.
 
