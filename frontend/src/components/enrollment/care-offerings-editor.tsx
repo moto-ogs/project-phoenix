@@ -534,16 +534,16 @@ export function CareOfferingsEditor({
           (offering) => offering.id === editedId,
         ),
       // The save's answer carries the new version into the list. Not
-      // awaited: a write after the editor left must not hold back the
-      // save's confirmation.
+      // awaited, and a cache gone with the editor takes nothing: the save
+      // stands, and the list reads again after it (`afterWrite`).
       write: (stored) => {
-        void mutateOfferings(
+        mutateOfferings(
           (current) =>
             current?.map((offering) =>
               offering.id === stored.id ? stored : offering,
             ),
           { revalidate: false },
-        );
+        ).catch(() => undefined);
         return Promise.resolve();
       },
     },
