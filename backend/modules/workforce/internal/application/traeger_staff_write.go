@@ -22,22 +22,9 @@ const (
 // one record wait for each other, and a record changed since the link read
 // it is refused (ADR 0311): the choices were made on its values.
 func (t *TraegerStaff) writeLink(ctx context.Context, actor workforce.TraegerStaffActor, plan linkPlan, resolved domain.ResolvedStaffFields) (domain.TraegerStaffRecord, error) {
-	record := domain.TraegerStaffRecord{OrganizationID: actor.OrganizationID}
-	var before map[string]string
-	if plan.record != nil {
-		locked, err := t.store.FindStaffRecord(ctx, actor.OrganizationID, plan.record.ID, true)
-		if err != nil {
-			return domain.TraegerStaffRecord{}, err
-		}
-		financial, err := t.openRecordFinancial(locked)
-		if err != nil {
-			return domain.TraegerStaffRecord{}, err
-		}
-		record, before = locked, recordValues(locked, financial)
-		// collectSources puts the record first in the link's state.
-		if err := readstate.Check(readstate.Fingerprint(plan.state[0]), readstate.Fingerprint(recordState(locked, before))); err != nil {
-			return domain.TraegerStaffRecord{}, err
-		}
+	record, before, err := t.lockLinkRecord(ctx, actor, plan)
+	if err != nil {
+		return domain.TraegerStaffRecord{}, err
 	}
 	values := resolved.Values
 	record.FirstName, record.LastName = strings.TrimSpace(values[domain.StaffFieldFirstName]), strings.TrimSpace(values[domain.StaffFieldLastName])
@@ -73,6 +60,29 @@ func (t *TraegerStaff) writeLink(ctx context.Context, actor workforce.TraegerSta
 		return domain.TraegerStaffRecord{}, err
 	}
 	return record, t.store.AppendStaffChanges(ctx, actor.OrganizationID, changes)
+}
+
+// lockLinkRecord locks the record a link extends and returns it with its
+// values; a new record starts empty. A record whose values differ from the
+// link's read is refused (ADR 0311).
+func (t *TraegerStaff) lockLinkRecord(ctx context.Context, actor workforce.TraegerStaffActor, plan linkPlan) (domain.TraegerStaffRecord, map[string]string, error) {
+	if plan.record == nil {
+		return domain.TraegerStaffRecord{OrganizationID: actor.OrganizationID}, nil, nil
+	}
+	locked, err := t.store.FindStaffRecord(ctx, actor.OrganizationID, plan.record.ID, true)
+	if err != nil {
+		return domain.TraegerStaffRecord{}, nil, err
+	}
+	financial, err := t.openRecordFinancial(locked)
+	if err != nil {
+		return domain.TraegerStaffRecord{}, nil, err
+	}
+	before := recordValues(locked, financial)
+	// collectSources puts the record first in the link's state.
+	if err := readstate.Check(readstate.Fingerprint(plan.state[0]), readstate.Fingerprint(recordState(locked, before))); err != nil {
+		return domain.TraegerStaffRecord{}, nil, err
+	}
+	return locked, before, nil
 }
 
 // linkChanges lists the trail of a link: each new Einsatzort, each value
