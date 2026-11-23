@@ -31,6 +31,7 @@ describe.concurrent("bff-boundary", () => {
 
   it.each([
     "import { bffJsonUncontracted as x } from '~/lib/bff-fetch'; x()",
+    "import { bffJsonUncontracted as x } from '~/lib/../lib/bff-fetch'; x()",
     "export { bffJsonUncontracted as x } from '~/lib/bff-fetch'",
     "export * from '../lib/bff-fetch'",
     "import * as bff from '~/lib/bff-fetch'; bff['bffJsonUncontracted']()",

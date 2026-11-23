@@ -2,6 +2,7 @@ import { hash } from "node:crypto";
 import {
   mkdirSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   writeFileSync,
@@ -82,6 +83,7 @@ function loadCache() {
       process.cwd(),
       process.version,
       ts.sys.useCaseSensitiveFileNames,
+      realpathSync(ts.sys.getExecutingFilePath()),
       hash("sha256", readFileSync(require.resolve("typescript"))),
       hash("sha256", readFileSync(new URL(import.meta.url))),
       readContract(),
@@ -93,7 +95,10 @@ function loadCache() {
         ([method, inputs]) =>
           compilerInputs.includes(method) &&
           inputs.every(([key, value]) => {
-            const args = method === "readDirectory" ? JSON.parse(key) : [key];
+            const args =
+              method === "readDirectory"
+                ? JSON.parse(key).map((arg) => arg ?? undefined)
+                : [key];
             return inputValue(method, ts.sys[method](...args)) === value;
           }),
       )
@@ -202,6 +207,16 @@ function declaredKind(type, checker, seen) {
   if (!type) return;
   if (ts.isParenthesizedTypeNode(type))
     return declaredKind(type.type, checker, seen);
+  if (
+    ts.isTypeOperatorNode(type) &&
+    type.operator === ts.SyntaxKind.ReadonlyKeyword
+  )
+    return declaredKind(type.type, checker, seen);
+  if (ts.isArrayTypeNode(type)) {
+    return declaredKind(type.elementType, checker, seen) === "id"
+      ? "id-list"
+      : undefined;
+  }
   if (ts.isUnionTypeNode(type)) {
     let known;
     for (const member of type.types) {
@@ -225,6 +240,12 @@ function declaredKind(type, checker, seen) {
       );
   }
   if (ts.isTypeReferenceNode(type)) {
+    const [element] = type.typeArguments ?? [];
+    if (element && checker.isArrayType(checker.getTypeFromTypeNode(type))) {
+      return declaredKind(element, checker, seen) === "id"
+        ? "id-list"
+        : undefined;
+    }
     const symbol = checker.getSymbolAtLocation(type.typeName);
     return contractKind(symbol, checker, seen);
   }

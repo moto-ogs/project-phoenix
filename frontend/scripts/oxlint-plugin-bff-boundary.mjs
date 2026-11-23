@@ -260,7 +260,9 @@ const onlyListedUncontracted = {
       const target = path.startsWith(".")
         ? posix.join(posix.dirname(file), path)
         : path.replace(/^[@~]\//, "");
-      return target.replace(/\.[jt]sx?$/, "") === "lib/bff-fetch";
+      return (
+        posix.normalize(target).replace(/\.[jt]sx?$/, "") === "lib/bff-fetch"
+      );
     }
 
     return {

@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import {
   copyFileSync,
-  existsSync,
+  statSync,
   mkdirSync,
   mkdtempSync,
   rmSync,
@@ -34,6 +34,9 @@ const regressions = [
   "Number(shorthand.copied)",
   "Number(query.group_id?.[0])",
   "query.group_id?.map(Number)",
+  "keys.map(Number)",
+  "Array.from(readonlyKeys, BigInt)",
+  "genericKeys.map(Number)",
   "Array.from(query.group_id ?? [], BigInt)",
   'Number(row.photo_consent_given_by ?? "0")',
   "Number(actor)",
@@ -66,6 +69,9 @@ describe("bff-boundary/no-numeric-identifier", () => {
       "declare const parenthesized: MaybeKey;",
       "const pick = { student: row.id };",
       "declare const query: GetStudentsQuery;",
+      'declare const keys: StudentResponse["id"][];',
+      'declare const readonlyKeys: readonly StudentResponse["id"][];',
+      "declare const genericKeys: ReadonlyArray<StudentKey>;",
       "declare const optionalNumeric: { id?: number };",
       "const { id: invoice } = optionalNumeric;",
       "declare const room: { id: string };",
@@ -181,12 +187,15 @@ describe("bff-boundary/no-numeric-identifier", () => {
         );
       };
       lint(1);
-      expect(
-        existsSync(
-          join(frontend, "node_modules/.cache/identifier-provenance.json"),
-        ),
-      ).toBe(true);
+      const cache = join(
+        frontend,
+        "node_modules/.cache/identifier-provenance.json",
+      );
+      const inode = statSync(cache).ino;
       lint(1);
+      // A miss replaces the cache atomically. Check that the second invocation
+      // actually reused it before exercising invalidation.
+      expect(statSync(cache).ino).toBe(inode);
       write("types/preferred.ts", "export type Key = string;");
       lint(0);
       write("types/preferred.ts", key);
