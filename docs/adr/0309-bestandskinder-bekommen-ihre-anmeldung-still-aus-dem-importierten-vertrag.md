@@ -579,7 +579,7 @@ Kinder unverändert ab.
 Drei Fehler in Care Plan bestehen vor diesem PR und bleiben bestehen. Die
 ersten beiden gehören in das Folge-Issue
 [#7908](https://github.com/moto-ogs/project-phoenix/issues/7908), der dritte
-bekommt ein eigenes.
+in [#7909](https://github.com/moto-ogs/project-phoenix/issues/7909).
 
 1. **Die Roster-Zeile eines direkt verknüpften Angebots endet nicht mit der
    Buchung.** `booking_drafts.go` verwirft für Angebote mit
