@@ -54,7 +54,22 @@ die der Resync für richtig hält:
    denselben Wochentagen den Stichtag abdeckt; ihr Ende wird auf das Ende
    dieses Entwurfs gesetzt, verlängert oder gekürzt. Vorher wurde nur
    verlängert.
-6. **Stille Anmeldung.** `roster_bound` entfällt: Ein Kind mit einer Buchung,
+6. **Schutz im Resync ab dem Stichtag.** Der Resync schützt eine Zeile der
+   direkten Verknüpfung, wenn deren Buchungen sie ab seinem Stichtag
+   abdecken; was davor liegt, schreibt er ohnehin nicht um. Sonst kappte er
+   nach einer datierten Änderung eine behaltene direkte Zeile, die vor dem
+   Stichtag begann, weil die alte Buchung am Stichtag endet.
+7. **Klassenfilter bei der Genehmigung.** Die Genehmigung prüft den
+   Klassenfilter einer Quelle wie der Resync, nicht nur den Jahrgangsfilter.
+   Dafür liefert die Bindung `bookingStudents.Student` zusätzlich die
+   Schulklasse der Zeile, die sie schon liest; Wirkung, Sperre und Ziel
+   bleiben gleich. Dieses ADR gibt die geänderte E4-Bindung frei
+   (`command-effects/reviews/care-plan.json`).
+8. **Ein Kind zählt einmal.** AG-Liste und Teilnehmerzahl nennen und zählen
+   jedes Kind einer Gruppe einmal, auch wenn es mehrere Zeilen hat.
+9. **Eine Anweisung je Kind.** Die Genehmigung schreibt die Zeilen eines
+   Kindes über den vorhandenen Batch des Roster-Ports.
+10. **Stille Anmeldung.** `roster_bound` entfällt: Ein Kind mit einer Buchung,
    die vor dem Ende der Phase endet, wird auch auf einem direkt verknüpften
    Angebot angemeldet.
 
@@ -64,16 +79,21 @@ die der Resync für richtig hält:
   Buchungen, zwei direkte Buchungen mit verschiedenem Ende, und Quellregeln
   neben einer direkten Verknüpfung mit Tagen, die die direkte nicht plant.
   Offene direkte Buchungen ergeben dieselbe Zeile wie bisher.
-- Keine Migration. Zu lange Zeilen aus der Zeit davor werden beim nächsten
-  Schreibweg des Kindes richtig: Korrektur ohne Datum (schreibt alle Zeilen
-  neu), datierte Änderung (kürzt die behaltene Zeile auf das Ende des
-  Entwurfs), Resync einer Vorlage mit Quellregel (die Zeile liegt nicht mehr
-  in der direkten Abdeckung und wird neu geschnitten). Auf Vorlagen ohne
-  Quellregel bleibt eine solche Zeile, bis das Kind neu geschrieben wird.
-  Befristete direkte Buchungen waren bisher selten: Die stille Anmeldung
-  lehnte sie ab, und eine datierte Änderung kappt ihre Zeile selbst.
+- Keine Migration. Zu lange direkte Zeilen aus der Zeit davor werden bei
+  einer Korrektur ohne Datum richtig (sie schreibt alle Zeilen des Kindes
+  neu). Eine datierte Änderung kürzt eine behaltene Zeile nur, wenn ihr
+  Entwurf früher endet; weil Korrekturen das Ende einer Buchung heute
+  verwerfen (#7909), ist das selten. Ein Resync einer Vorlage mit Quellregel
+  kappt eine solche Zeile am Stichtag und schreibt die noch gebuchten Tage
+  der direkten Verknüpfung nicht neu; das bestand schon vorher. Befristete
+  direkte Buchungen waren bisher selten: Die stille Anmeldung lehnte sie ab,
+  und eine datierte Änderung kappt ihre Zeile selbst.
+- Korrekturen verwerfen weiterhin das Ende einer Buchung (#7909). Seit
+  `roster_bound` entfällt, betrifft das auch still angemeldete Kinder mit
+  befristeter direkter Buchung: Nach einer Korrektur des Büros laufen
+  Buchung und Liste bis zum Ende der Phase.
 - Keine neuen Datenbankabfragen in der Genehmigung; der Schnitt rechnet nur
-  mit den schon geladenen Buchungen.
+  mit den schon geladenen Buchungen, die Zeilen gehen in einer Anweisung.
 - Offen wie vorher: Der Beginn einer direkten Zeile folgt nicht dem Beginn der
   Buchung (`link.ValidFrom`), der Resync rechnet die direkte Abdeckung aber ab
   diesem Tag.
