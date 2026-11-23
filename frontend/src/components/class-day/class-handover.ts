@@ -5,15 +5,17 @@
 // das am Vormittag als „fehlt“ eingetragen ist, mit „Nicht da“. Die Lehrkraft
 // ändert einzelne Kinder und bestätigt die Übergabe für die ganze Klasse.
 
-import type { ClassDayHandover, ClassDayRow } from "~/lib/class-day-api";
 import { berlinClockFromISO } from "~/lib/date-helpers";
 import {
   morningStatus,
   type MorningAttendanceDraft,
 } from "./morning-attendance";
+import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 
 /** Die Kinder, die heute aus der Klasse in die OGS gehen. */
-export function handoverRows(rows: readonly ClassDayRow[]): ClassDayRow[] {
+export function handoverRows(
+  rows: readonly schoolClassDayContract.DayRow[],
+): schoolClassDayContract.DayRow[] {
   return rows.filter((row) => row.stays_today && !row.list_entry);
 }
 
@@ -23,7 +25,7 @@ export function handoverRows(rows: readonly ClassDayRow[]): ClassDayRow[] {
  * wenn diese Eintragung noch nicht gespeichert ist.
  */
 export function initialAbsentIds(
-  rows: readonly ClassDayRow[],
+  rows: readonly schoolClassDayContract.DayRow[],
   handedOver: boolean,
   draft: MorningAttendanceDraft = {},
 ): ReadonlySet<string> {
@@ -42,7 +44,7 @@ export function initialAbsentIds(
  * Kinder, die in die OGS gehen, (`ogsChildren` 0) entfällt „alle da“.
  */
 export function handoverLine(
-  handover: ClassDayHandover,
+  handover: schoolClassDayContract.DayHandover,
   ogsChildren?: number,
 ): string {
   const clock = berlinClockFromISO(handover.handed_over_at);

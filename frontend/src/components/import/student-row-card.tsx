@@ -9,8 +9,8 @@ interface DisplayRow {
   errors: string[];
   /** Non-blocking hints (info severity), shown in gray instead of red. */
   notes?: string[];
-  first_name: string;
-  last_name: string;
+  firstName: string;
+  lastName: string;
   /**
    * Secondary info chips rendered under the name, separated by "•" (e.g.
    * class + group + guardian for students, or role + position for staff).
@@ -58,7 +58,7 @@ export function StudentRowCard({ student, index }: StudentRowCardProps) {
           <div className="flex items-center gap-2">
             <h4 className="text-sm font-semibold text-gray-900">
               {/* A row without a name still needs a heading text (#7112). */}
-              {`${student.first_name} ${student.last_name}`.trim() ||
+              {`${student.firstName} ${student.lastName}`.trim() ||
                 "Ohne Namen"}
             </h4>
             {getStatusBadge(student.status)}

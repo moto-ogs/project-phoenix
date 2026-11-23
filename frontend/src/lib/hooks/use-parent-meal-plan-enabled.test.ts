@@ -7,9 +7,9 @@ import {
   listMyChildren,
   getChildFeatures,
   listAnnouncements,
-  type Child,
 } from "~/lib/parent-api";
 import { useParentMealPlanEnabled } from "./use-parent-meal-plan-enabled";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 vi.unmock("swr");
 vi.mock("~/lib/tenant-context", () => ({ useTenantSlugSafe: () => null }));
@@ -22,7 +22,7 @@ const children = [
   { tenant_id: "1", student_id: "10" },
   { tenant_id: "1", student_id: "11" },
   { tenant_id: "2", student_id: "20" },
-] as Child[];
+] as parentMeContract.ChildResponse[];
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(listMyChildren).mockResolvedValue(children);

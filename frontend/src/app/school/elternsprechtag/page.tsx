@@ -55,13 +55,13 @@ import {
   updateSchoolParentConference,
   type ParentConference,
   type ParentConferenceDraft,
-  type ParentConferenceSlot,
 } from "~/lib/parent-conferences";
 import { schoolClassLabel } from "~/lib/school-class-label";
 import { NO_OWN_CLASS_REASON } from "~/components/school/no-own-class";
 import { schoolPath } from "~/lib/school-url";
 import { useSWRAuth } from "~/lib/swr";
 import { schoolPortalKeys } from "~/lib/swr/portal-keys";
+import type * as schoolCalendarContract from "~/lib/contract/school-calendar.generated";
 
 const logger = createLogger({ component: "SchoolParentConferencePage" });
 
@@ -106,31 +106,32 @@ const conferenceColumns: DataTableColumn<ParentConference>[] = [
   },
 ];
 
-const slotColumns: DataTableColumn<ParentConferenceSlot>[] = [
-  {
-    key: "time",
-    header: "Uhrzeit",
-    stacked: "title",
-    render: (row) => (
-      <span className="font-semibold text-gray-900">
-        {parentConferenceWindowLabel(row)}
-      </span>
-    ),
-  },
-  {
-    key: "child",
-    header: "Kind",
-    stacked: "meta",
-    render: (row) =>
-      row.booked ? (
-        <span className="text-sm text-gray-900">
-          {row.student_name ?? "Gebucht"}
+const slotColumns: DataTableColumn<schoolCalendarContract.ParentConferenceSlot>[] =
+  [
+    {
+      key: "time",
+      header: "Uhrzeit",
+      stacked: "title",
+      render: (row) => (
+        <span className="font-semibold text-gray-900">
+          {parentConferenceWindowLabel(row)}
         </span>
-      ) : (
-        <StatusBadge tone="gray" label="Frei" />
       ),
-  },
-];
+    },
+    {
+      key: "child",
+      header: "Kind",
+      stacked: "meta",
+      render: (row) =>
+        row.booked ? (
+          <span className="text-sm text-gray-900">
+            {row.student_name ?? "Gebucht"}
+          </span>
+        ) : (
+          <StatusBadge tone="gray" label="Frei" />
+        ),
+    },
+  ];
 
 function SchoolParentConferences() {
   const { data: session } = useSession();

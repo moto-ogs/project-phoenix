@@ -16,10 +16,6 @@ import {
   type AdminExistingChildCandidate,
   type ExistingChildChoice,
 } from "~/lib/enrollment-admin-api";
-import type {
-  SubmitEnrollmentPayload,
-  SubmitEnrollmentResult,
-} from "~/lib/enrollment-submission-api";
 import type { Phase } from "~/lib/enrollment-phase-api";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
@@ -62,6 +58,7 @@ import { useFreshSWR, useInvalidateFamily, useSWRAuth } from "~/lib/swr";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { withLateInviteQuery } from "~/lib/enrollment-http";
 import { Loading } from "~/components/ui/loading";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 
 const logger = createLogger({ component: "PhaseEnrollmentActions" });
 
@@ -292,8 +289,8 @@ export function ManualApprovedEnrollmentModal({
   }, [isOpen, phase.id, clearChecks]);
 
   const submitter = async (
-    payload: SubmitEnrollmentPayload,
-  ): Promise<SubmitEnrollmentResult | null> => {
+    payload: sharedContract.SubmitEnrollmentRequest,
+  ): Promise<sharedContract.SubmitEnrollmentResponse | null> => {
     const trimmedReason = reason.trim();
     // Grund und Einwilligung stehen über dem Formular. Der Kasten hier sagt,
     // was fehlt; `null` hält das Formular davon ab, Erfolg oder einen
@@ -312,7 +309,7 @@ export function ManualApprovedEnrollmentModal({
     }
     checks.clear();
     setRenewedChildName(null);
-    const child = payload.children[0];
+    const child = payload.children?.[0];
     let renewalCandidates: AdminExistingChildCandidate[] = [];
     const created = await send.run(async (op) => {
       try {

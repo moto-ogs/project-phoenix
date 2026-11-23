@@ -2,12 +2,9 @@
 // Type definitions and helper functions for groups
 
 import { createLogger } from "~/lib/logger";
-import type { GroupResponse } from "~/lib/contract/groups.generated";
+import type * as groupsContract from "~/lib/contract/groups.generated";
 
 const logger = createLogger({ component: "GroupHelpers" });
-
-// Wire type: the decoded response of the catalog proxy (#2353).
-export type GroupWire = GroupResponse;
 
 export interface Group {
   id: string;
@@ -31,7 +28,9 @@ export interface Group {
 }
 
 // Mapping functions
-export function mapGroupResponse(backendGroup: GroupWire): Group {
+export function mapGroupResponse(
+  backendGroup: groupsContract.GroupResponse,
+): Group {
   // Create the basic group properties
   const group: Group = {
     id: backendGroup.id,
@@ -71,7 +70,9 @@ export function mapGroupResponse(backendGroup: GroupWire): Group {
   return group;
 }
 
-export function mapGroupsResponse(backendGroups: GroupWire[]): Group[] {
+export function mapGroupsResponse(
+  backendGroups: groupsContract.GroupResponse[],
+): Group[] {
   // Safety check to ensure we have an array
   if (!Array.isArray(backendGroups)) {
     logger.error("expected array for backendGroups", {

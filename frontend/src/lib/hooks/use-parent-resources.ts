@@ -19,9 +19,6 @@ import {
   listMyChildren,
   getChildFeatures,
   getChildToday,
-  type Child,
-  type ChildFeatures,
-  type ChildToday,
   UNKNOWN_CHILD_TODAY,
 } from "~/lib/parent-api";
 
@@ -30,6 +27,7 @@ import {
   isParentAccessRefusal,
   PARENT_ACCESS_REFUSED_EVENT,
 } from "~/lib/parent-access-refusal";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 const REFUSAL_SIGNAL = "moto:parent-access-refused";
 let tabSource: string | undefined;
 const sourceOfTab = () => (tabSource ??= crypto.randomUUID());
@@ -216,7 +214,9 @@ function useParentBatchData<T>(
 const NO_FEATURE_FAILURES: Readonly<Record<string, unknown>> = {};
 
 /** Every relationship is probed, including siblings at the same school. */
-export function useParentFeatures(children: readonly Child[] | undefined) {
+export function useParentFeatures(
+  children: readonly parentMeContract.ChildResponse[] | undefined,
+) {
   const day = useBerlinToday();
   const refuse = useParentRefusal();
   const { data: session } = useSession();
@@ -224,17 +224,22 @@ export function useParentFeatures(children: readonly Child[] | undefined) {
     session?.user.scope === "parent" && children
       ? parentKeys.features(children, day)
       : null,
-    async (): Promise<Record<string, ChildFeatures>> => {
+    async (): Promise<
+      Record<string, parentMeContract.ChildFeaturesResponse>
+    > => {
       const current = resource.readCurrent?.();
-      const previous = parentBatchValues<ChildFeatures>(
-        current?.data,
-        current?.error,
-      );
+      const previous =
+        parentBatchValues<parentMeContract.ChildFeaturesResponse>(
+          current?.data,
+          current?.error,
+        );
       const list = children ?? [];
       const responses = await Promise.allSettled(
         list.map((child) => getChildFeatures(child.student_id)),
       );
-      const partial: Record<string, ChildFeatures> = { ...previous };
+      const partial: Record<string, parentMeContract.ChildFeaturesResponse> = {
+        ...previous,
+      };
       const failures: Record<string, unknown> = {};
       responses.forEach((response, index) => {
         const child = list[index];
@@ -269,7 +274,7 @@ export function useParentFeatures(children: readonly Child[] | undefined) {
   );
   const batch =
     resource.error instanceof ParentResourceFailure
-      ? (resource.error as ParentResourceFailure<ChildFeatures>)
+      ? (resource.error as ParentResourceFailure<parentMeContract.ChildFeaturesResponse>)
       : undefined;
   const data = useParentBatchData(resource.data, resource.error, batch);
   return {
@@ -281,7 +286,9 @@ export function useParentFeatures(children: readonly Child[] | undefined) {
   };
 }
 
-export function useParentToday(children: readonly Child[] | undefined) {
+export function useParentToday(
+  children: readonly parentMeContract.ChildResponse[] | undefined,
+) {
   const day = useBerlinToday();
   const refuse = useParentRefusal();
   const { data: session } = useSession();
@@ -289,9 +296,9 @@ export function useParentToday(children: readonly Child[] | undefined) {
     session?.user.scope === "parent" && children
       ? parentKeys.today(children, day)
       : null,
-    async (): Promise<Record<string, ChildToday>> => {
+    async (): Promise<Record<string, parentMeContract.TodayStatusResponse>> => {
       const current = resource.readCurrent?.();
-      const previous = parentBatchValues<ChildToday>(
+      const previous = parentBatchValues<parentMeContract.TodayStatusResponse>(
         current?.data,
         current?.error,
       );
@@ -299,7 +306,9 @@ export function useParentToday(children: readonly Child[] | undefined) {
       const responses = await Promise.allSettled(
         list.map((child) => getChildToday(child.student_id)),
       );
-      const partial: Record<string, ChildToday> = { ...previous };
+      const partial: Record<string, parentMeContract.TodayStatusResponse> = {
+        ...previous,
+      };
       const failures: Record<string, unknown> = {};
       responses.forEach((response, index) => {
         const child = list[index];
@@ -336,7 +345,7 @@ export function useParentToday(children: readonly Child[] | undefined) {
   );
   const batch =
     resource.error instanceof ParentResourceFailure
-      ? (resource.error as ParentResourceFailure<ChildToday>)
+      ? (resource.error as ParentResourceFailure<parentMeContract.TodayStatusResponse>)
       : undefined;
   const data = useParentBatchData(resource.data, resource.error, batch);
   return {

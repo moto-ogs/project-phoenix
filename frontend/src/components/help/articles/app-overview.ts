@@ -93,7 +93,9 @@ export function appOverviewTopic(): HelpTopic {
           "Auch wer nur bei einem Termin fehlt oder vertritt, steht mit Uhrzeit da. Beispiel: `Sara übernimmt heute „Chor“ für Ben.`",
           "Darfst du den `Vertretungsplan` öffnen, führt dich der Eintrag zu diesem Termin.",
           "Am Handy zeigt `Schule` nur die ersten 3 Einträge. Den Rest zeigt `Alle anzeigen`.",
-          "Dienste, Angebote und AGs, die schon vorbei sind, stehen ganz unten unter `erledigt`. Wähle `erledigt`, um sie zu sehen.",
+          // Termine aus dem eigenen Kalender (#7663), api/day_changes_appointments.go.
+          "Unter `Betrifft dich` stehen auch deine Termine aus `Mein Kalender`. Du siehst dort, welcher Termin heute ausfällt. Du siehst auch, welcher Termin heute woanders oder zu einer anderen Zeit ist.",
+          "Dienste, Termine, Angebote und AGs, die schon vorbei sind, stehen ganz unten unter `erledigt`. Wähle `erledigt`, um sie zu sehen.",
           // Hinweise der Leitung in „Heute anders" (#7667), components/home/day-notice-row.tsx.
           "Einen Hinweis der Leitung, den du noch bestätigen sollst, siehst du ganz oben. Wähle `Zur Kenntnis nehmen`. Danach steht er unter `Schule`.",
           "Tippe auf einen Eintrag, um die passende Seite zu öffnen.",

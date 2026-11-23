@@ -15,7 +15,6 @@ import type {
   HolidayFormVersion,
 } from "~/lib/holiday-form-field";
 import { looksLikeEmail } from "~/lib/email-format";
-import type { NewUploadValue } from "~/lib/enrollment-uploads";
 import type * as sharedContract from "~/lib/contract/shared.generated";
 import type * as traegerHolidayQuotesContract from "~/lib/contract/traeger-holiday-quotes.generated";
 import type * as traegerHolidayRegistrationsContract from "~/lib/contract/traeger-holiday-registrations.generated";
@@ -207,7 +206,7 @@ export interface RegistrationDraft {
    * The proofs of the benefits the parent uploaded (#5238); optional, the
    * Träger-Büro may still collect them later.
    */
-  readonly benefitsProofs: readonly NewUploadValue[];
+  readonly benefitsProofs: readonly sharedContract.UploadReceipt[];
   /** Answers to the Träger's questions per family, by key (#5198). */
   readonly answers: Readonly<Record<string, unknown>>;
   /** Yes/no to the criteria of the family, by criterion ID (#4700). */

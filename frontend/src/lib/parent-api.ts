@@ -42,11 +42,7 @@ import {
 } from "~/lib/messaging-status";
 import { readEnrollmentError } from "~/lib/enrollment-api-error";
 import { type SignatureValue, signatureRequestBody } from "~/lib/signature";
-import type {
-  MeProfileResponse,
-  SubmitEnrollmentPayload,
-  SubmitEnrollmentResult,
-} from "~/lib/enrollment-submission-api";
+import type { MeProfileResponse } from "~/lib/enrollment-submission-api";
 
 import { boundSessionAccount } from "~/lib/session-account";
 import {
@@ -62,48 +58,19 @@ import {
 
 const logger = createLogger({ component: "ParentAPI" });
 
-export type Child = parentMeContract.ChildResponse;
-export type ChildConsent = parentMeContract.ChildConsentResponse;
-
-// One enrollment phase the calling parent may apply to, joined to its school.
-// Mirrors api/parent EnrollablePhaseResponse. Rows are pre-filtered server-side
-// (only phases the account may actually apply to) and pre-sorted (already_linked
-// DESC, school name, service start). int64 ids arrive as strings.
-export type EnrollablePhase = parentMeContract.EnrollablePhaseResponse;
-
-export type ParentProfile = parentMeContract.ParentProfileResponse;
-
 // The two absence kinds a parent can report: "sick" (Krankmeldung, flips the
 // live sick flag) or "excused" (Termin/Abwesenheit, no live flag).
 export type StudentStatusKind = "sick" | "excused";
 
-// One reported sick/excused day. Mirrors api/parent.StatusDayResponse.
-export type StatusDay = parentMeContract.StatusDayResponse;
-
-// One sick or excused absence request awaiting (or having received) an OGS
-// decision. Mirrors api/parent.ParentExcusedRequestResponse; the type and route
-// retain their legacy names. `dates` are YYYY-MM-DD.
-export type ExcusedRequest = parentMeContract.ParentExcusedRequestResponse;
-
 export type ParentRequestShareType =
   "master_data" | "care_schedule" | "pickup_change" | "offering" | "excused";
-
-export type RequestSharingState = parentMeContract.requestSharingResponse;
-
-/**
- * One entry of a request's append-only history (backend
- * `users.parent_request_events`). The newest entry carries the request's
- * current `version`, which every guardian edit must send back as
- * `expected_version` so a concurrent OGS decision is never overwritten.
- */
-export type ParentRequestEvent = parentMeContract.ParentRequestEventResponse;
 
 /** Reads the history of one request (oldest first). */
 export async function listParentRequestEvents(
   studentId: string,
   requestType: ParentRequestShareType,
   requestId: string,
-): Promise<ParentRequestEvent[]> {
+): Promise<parentMeContract.ParentRequestEventResponse[]> {
   return parentCall(
     bffJson(
       "parent",
@@ -115,7 +82,7 @@ export async function listParentRequestEvents(
 
 export async function getRequestSharingOptions(
   studentId: string,
-): Promise<RequestSharingState> {
+): Promise<parentMeContract.requestSharingResponse> {
   return parentCall(
     bffJson(
       "parent",
@@ -129,7 +96,7 @@ export async function getRequestSharing(
   studentId: string,
   requestType: ParentRequestShareType,
   requestId: string,
-): Promise<RequestSharingState> {
+): Promise<parentMeContract.requestSharingResponse> {
   return parentCall(
     bffJson(
       "parent",
@@ -144,7 +111,7 @@ export async function setRequestSharing(
   requestType: ParentRequestShareType,
   requestId: string,
   recipientGuardianProfileIds: string[],
-): Promise<RequestSharingState> {
+): Promise<parentMeContract.requestSharingResponse> {
   return parentCall(
     bffJson(
       "parent",
@@ -157,13 +124,6 @@ export async function setRequestSharing(
   );
 }
 
-// Normalized response of POST .../sick-note. Direct submissions carry the
-// recorded days; approval-gated submissions carry an empty array.
-export type SickNoteSubmitResult = parentMeContract.SickNoteEnvelopeResponse;
-
-// Resolved per-tenant parent-portal feature toggles for a child.
-export type ChildFeatures = parentMeContract.ChildFeaturesResponse;
-
 // One dish of the read-only meal plan (Essensplan) for a child's school.
 // Mirrors api/parent.MealPlanEntryResponse. A day can carry several dishes.
 export interface MealPlanEntry {
@@ -175,11 +135,6 @@ export interface MealPlanEntry {
   readonly allergens: readonly MealAllergen[];
 }
 
-// One day's pickup override plus OGS-owned arrival state for display.
-// Times are "HH:MM" wall-clock strings; a missing leg has no override that day.
-// `source` is "guardian" for parent-set entries, "staff" for ones the team set.
-export type CareException = parentMeContract.CareExceptionResponse;
-
 // Abholarten, die Eltern für einen einzelnen Tag anfragen können (#3945).
 // „In Begleitung“ setzt nur die OGS, weil sie das Begleitkind verknüpft.
 export const REQUESTABLE_DAY_DEPARTURE_MODES = [
@@ -189,38 +144,6 @@ export const REQUESTABLE_DAY_DEPARTURE_MODES = [
 ] as const;
 export type DayDepartureMode =
   (typeof REQUESTABLE_DAY_DEPARTURE_MODES)[number] | "accompanied";
-
-// Eine Abholänderungsanfrage für einen Tag. pickup_time oder departure_mode
-// ist null, wenn die Anfrage diesen Teil nicht ändert (#3945).
-export type PickupChangeRequest = parentMeContract.PickupChangeRequestResponse;
-
-// Eine Anfrage, eine Kontaktperson dauerhaft oder an Wochentagen abholen zu
-// lassen (#4780). weekdays leer: an allen Tagen.
-export type PickupPermissionRequest =
-  parentMeContract.pickupPermissionRequestResponse;
-
-// A guardian linked to the child, with portal-access status.
-export type RelatedAccount = parentMeContract.relatedAccountResponse;
-
-// One phone number of a guardian. Mirrors api/parent.guardianPhoneResponse.
-// A guardian of the child with contact + pickup detail and the caller's
-// per-guardian edit capabilities. Mirrors api/parent.childGuardianResponse.
-export type ChildGuardian = parentMeContract.childGuardianResponse;
-
-// Payload for a guardian contact edit. Profile fields + phone list are
-// replaced wholesale. Mirrors api/parent.updateGuardianContactRequest.
-export type GuardianContactPayload =
-  parentMeContract.updateGuardianContactRequest;
-
-// Creates a contact without app access. App access is handled independently by
-// the related-account invitation flow.
-export type CreateGuardianContactPayload =
-  parentMeContract.createGuardianContactRequest;
-
-// Payload for a per-child pickup/relationship edit. Every field optional; an
-// omitted field is left unchanged. Mirrors api/parent.updateGuardianRelationshipRequest.
-export type GuardianRelationshipPayload =
-  parentMeContract.updateGuardianRelationshipRequest;
 
 /**
  * Records a failed parent request: the access-refused event when the
@@ -278,14 +201,16 @@ async function parentCall<T>(
  * every active tenant mapping. The response is already sorted (school
  * to first name to last name) by the backend.
  */
-export async function listMyChildren(): Promise<Child[]> {
+export async function listMyChildren(): Promise<
+  parentMeContract.ChildResponse[]
+> {
   return parentCall(bffJson("parent", "GET /parent/me/children"));
 }
 
 /** Reads the four current consent and acknowledgement states for one child. */
 export async function getChildConsents(
   studentId: string,
-): Promise<ChildConsent[]> {
+): Promise<parentMeContract.ChildConsentResponse[]> {
   return parentCall(
     bffJson("parent", "GET /parent/me/children/{studentId}/consents", {
       params: { studentId },
@@ -296,7 +221,7 @@ export async function getChildConsents(
 /** Withdraws the voluntary photo consent and returns all updated states. */
 export async function withdrawChildPhotoConsent(
   studentId: string,
-): Promise<ChildConsent[]> {
+): Promise<parentMeContract.ChildConsentResponse[]> {
   return parentCall(
     bffJson("parent", "DELETE /parent/me/children/{studentId}/consents/photo", {
       params: { studentId },
@@ -307,7 +232,7 @@ export async function withdrawChildPhotoConsent(
 /** Records a new voluntary photo consent and returns all updated states. */
 export async function grantChildPhotoConsent(
   studentId: string,
-): Promise<ChildConsent[]> {
+): Promise<parentMeContract.ChildConsentResponse[]> {
   return parentCall(
     bffJson("parent", "PUT /parent/me/children/{studentId}/consents/photo", {
       params: { studentId },
@@ -315,19 +240,10 @@ export async function grantChildPhotoConsent(
   );
 }
 
-/**
- * Whether the room history and mood of the child are stopped (#3844).
- * `offered` is false while the Träger has not let parents stop it and the
- * child is not stopped; `can_change` needs the Träger's switch and the
- * guardian's consent permission.
- */
-export type ChildRoomHistoryStop =
-  parentMeContract.ChildRoomHistoryStopResponse;
-
 /** Reads the stop of the child's room history and mood. */
 export async function getChildRoomHistoryStop(
   studentId: string,
-): Promise<ChildRoomHistoryStop> {
+): Promise<parentMeContract.ChildRoomHistoryStopResponse> {
   return parentCall(
     bffJson("parent", "GET /parent/me/children/{studentId}/room-history-stop", {
       params: { studentId },
@@ -341,7 +257,7 @@ export async function getChildRoomHistoryStop(
  */
 export async function stopChildRoomHistory(
   studentId: string,
-): Promise<ChildRoomHistoryStop> {
+): Promise<parentMeContract.ChildRoomHistoryStopResponse> {
   return parentCall(
     bffJson("parent", "PUT /parent/me/children/{studentId}/room-history-stop", {
       params: { studentId },
@@ -352,7 +268,7 @@ export async function stopChildRoomHistory(
 /** Lifts the stop; moto records again from now on. */
 export async function resumeChildRoomHistory(
   studentId: string,
-): Promise<ChildRoomHistoryStop> {
+): Promise<parentMeContract.ChildRoomHistoryStopResponse> {
   return parentCall(
     bffJson(
       "parent",
@@ -419,17 +335,19 @@ export async function cancelChildParentConference(
  * start), so the picker renders the list as-is. Powers the "Neue Anmeldung"
  * picker at /parents/anmeldung.
  */
-export async function listEnrollableSchools(): Promise<EnrollablePhase[]> {
+export async function listEnrollableSchools(): Promise<
+  parentMeContract.EnrollablePhaseResponse[]
+> {
   return parentCall(bffJson("parent", "GET /parent/me/enrollable-schools"));
 }
 
-export async function fetchParentProfile(): Promise<ParentProfile> {
+export async function fetchParentProfile(): Promise<parentMeContract.ParentProfileResponse> {
   return parentCall(bffJson("parent", "GET /parent/me/profile"));
 }
 
 export async function updateParentPortalLocale(
   locale: AppLocale,
-): Promise<ParentProfile> {
+): Promise<parentMeContract.ParentProfileResponse> {
   return parentCall(
     bffJson("parent", "PUT /parent/me/profile", {
       body: { portal_locale: locale },
@@ -509,8 +427,8 @@ export async function fetchParentEnrollmentProfile(
  */
 export async function submitParentEnrollment(
   tenantSlug: string,
-  payload: SubmitEnrollmentPayload,
-): Promise<SubmitEnrollmentResult> {
+  payload: sharedContract.SubmitEnrollmentRequest,
+): Promise<sharedContract.SubmitEnrollmentResponse> {
   const response = await fetchEnrollmentEndpoint(
     `/api/parent/enrollments/${encodeURIComponent(tenantSlug)}/submit`,
     {
@@ -527,7 +445,10 @@ export async function submitParentEnrollment(
       "parent_submit_failed",
     );
   }
-  return readEnrollmentData<SubmitEnrollmentResult>(response, "POST");
+  return readEnrollmentData<sharedContract.SubmitEnrollmentResponse>(
+    response,
+    "POST",
+  );
 }
 
 /**
@@ -546,7 +467,7 @@ export async function submitSickNote(
   reason: string,
   status: StudentStatusKind = "sick",
   recipientGuardianProfileIds: string[] = [],
-): Promise<SickNoteSubmitResult> {
+): Promise<parentMeContract.SickNoteEnvelopeResponse> {
   // The backend answers {status_days, pending_request} (#2352).
   return parentCall(
     bffJson("parent", "POST /parent/me/children/{studentId}/sick-note", {
@@ -570,7 +491,7 @@ export async function updateExcusedRequest(
   studentId: string,
   requestId: string,
   input: { dates: string[]; note: string; expectedVersion: string },
-): Promise<ExcusedRequest> {
+): Promise<parentMeContract.ParentExcusedRequestResponse> {
   return parentCall(
     bffJson(
       "parent",
@@ -593,7 +514,7 @@ export async function updateExcusedRequest(
  */
 export async function listExcusedRequests(
   studentId: string,
-): Promise<ExcusedRequest[]> {
+): Promise<parentMeContract.ParentExcusedRequestResponse[]> {
   return parentCall(
     bffJson("parent", "GET /parent/me/children/{studentId}/excused-requests", {
       params: { studentId },
@@ -609,7 +530,7 @@ export async function listExcusedRequests(
  */
 export async function getChildFeatures(
   studentId: string,
-): Promise<ChildFeatures> {
+): Promise<parentMeContract.ChildFeaturesResponse> {
   return parentCall(
     bffJson("parent", "GET /parent/me/children/{studentId}/features", {
       params: { studentId },
@@ -618,18 +539,8 @@ export async function getChildFeatures(
   );
 }
 
-/**
- * Der Tagesstatus eines Kindes (#2252). Zweistufig: `at_ogs` beantwortet die
- * eine Frage ("Ist mein Kind in der OGS?"), `state` erklaert sie.
- *
- * `at_ogs` ist `null`, wenn die Frage nicht belastbar zu beantworten ist. Das
- * Frontend leitet Ebene 1 NIE aus `state` ab; eine Ja/Nein-Aussage ohne Beleg
- * waere schlimmer als zu schweigen.
- */
-export type ChildToday = parentMeContract.TodayStatusResponse;
-
 /** Was angezeigt wird, solange oder falls der Endpunkt nichts liefert. */
-export const UNKNOWN_CHILD_TODAY: ChildToday = {
+export const UNKNOWN_CHILD_TODAY: parentMeContract.TodayStatusResponse = {
   at_ogs: null,
   state: "unknown",
 };
@@ -648,7 +559,9 @@ export const UNKNOWN_CHILD_TODAY: ChildToday = {
  * durchgehen. Alle Aufrufer fangen den Wurf ab und zeigen weiterhin
  * UNKNOWN_CHILD_TODAY — nur bleibt der Ausfall jetzt als Fehler sichtbar.
  */
-export async function getChildToday(studentId: string): Promise<ChildToday> {
+export async function getChildToday(
+  studentId: string,
+): Promise<parentMeContract.TodayStatusResponse> {
   try {
     return await parentCall(
       bffJson("parent", "GET /parent/me/children/{studentId}/today", {
@@ -789,7 +702,9 @@ export async function clearMealParticipationDay(
  * Fetches the child's active sick days (today .. +2 months by default).
  * Used to show already-reported days on the child page.
  */
-export async function listSickDays(studentId: string): Promise<StatusDay[]> {
+export async function listSickDays(
+  studentId: string,
+): Promise<parentMeContract.StatusDayResponse[]> {
   return parentCall(
     bffJson("parent", "GET /parent/me/children/{studentId}/sick-note", {
       params: { studentId },
@@ -852,12 +767,6 @@ interface ParentReaders {
   readonly school: SchoolReaders;
 }
 
-export type ParentAnnouncement = parentMeContract.AnnouncementResponse;
-
-/** The feed part of an Umfrage with Fragebogen (#4781). */
-export type ParentAnnouncementSurvey =
-  parentMeContract.AnnouncementSurveyResponse;
-
 /** What a guardian can do or did for one child in an Einverständnis. */
 export type ParentDeclarationAction = "agreed" | "declined" | "revoked";
 
@@ -872,19 +781,6 @@ export const PARENT_DECLARATION_STATES = [
   "expired",
 ] as const;
 export type ParentDeclarationState = (typeof PARENT_DECLARATION_STATES)[number];
-
-export type ParentDeclarationChild =
-  parentMeContract.parentDeclarationChildResponse;
-
-export type ParentDeclaration =
-  parentMeContract.AnnouncementDeclarationResponse;
-
-export type ParentDeclarationSubmission =
-  parentMeContract.parentDeclarationSubmissionResponse;
-
-/** One of the guardian's children, with the options selected for that child. */
-export type ParentAnnouncementPollChild =
-  parentMeContract.AnnouncementPollChild;
 
 // A child's full conversation (messages oldest-first). `thread_id` is empty
 // when the guardian has not written about this child yet.
@@ -983,7 +879,9 @@ export async function fetchMessagesUnreadCount(): Promise<number> {
  * schools, newest-published first. Visibility + audience are enforced
  * server-side from the JWT account.
  */
-export async function listAnnouncements(): Promise<ParentAnnouncement[]> {
+export async function listAnnouncements(): Promise<
+  parentMeContract.AnnouncementResponse[]
+> {
   return parentCall(bffJson("parent", "GET /parent/me/news"));
 }
 
@@ -998,10 +896,6 @@ export async function fetchAnnouncementsUnreadCount(): Promise<number> {
   return result.unread_count ?? 0;
 }
 
-/** One file attached to an announcement (#2890). */
-export type ParentAnnouncementAttachment =
-  sharedContract.AnnouncementAttachmentResponse;
-
 /**
  * Attachments of one announcement. Loaded when the guardian opens the message,
  * not with the feed: the file only matters once the message is being read, and
@@ -1013,7 +907,7 @@ export type ParentAnnouncementAttachment =
  */
 export async function listAnnouncementAttachments(
   announcementId: string,
-): Promise<ParentAnnouncementAttachment[]> {
+): Promise<sharedContract.AnnouncementAttachmentResponse[]> {
   const result = await parentCall(
     bffJson("parent", "GET /parent-news-attachments/{announcementId}", {
       params: { announcementId },
@@ -1153,7 +1047,10 @@ export async function submitDeclaration(
     /** Sent only when agreeing to an Einverständnis that asks for it. */
     readonly signature?: SignatureValue;
   },
-): Promise<{ submission: ParentDeclarationSubmission; created: boolean }> {
+): Promise<{
+  submission: parentMeContract.parentDeclarationSubmissionResponse;
+  created: boolean;
+}> {
   return parentCall(
     bffJson("parent", "POST /parent/me/news/{announcementId}/declaration", {
       params: { announcementId },
@@ -1169,9 +1066,6 @@ export async function submitDeclaration(
     }),
   );
 }
-
-/** The proof (Nachweis) of this account's Einverständnis for one child. */
-export type ParentDeclarationProof = parentMeContract.declarationProofResponse;
 
 /**
  * Downloads the proof as the school's PDF (#3430), under the file name the
@@ -1203,7 +1097,7 @@ export async function downloadDeclarationProofPdf(
 export async function fetchDeclarationProof(
   announcementId: string,
   studentId: string,
-): Promise<ParentDeclarationProof> {
+): Promise<parentMeContract.declarationProofResponse> {
   return parentCall(
     bffJson(
       "parent",
@@ -1508,7 +1402,7 @@ export async function submitCareException(
     /** Der vom Server geladene Wortlaut neben der Unterschrift (#4780). */
     signatureStatement?: string;
   },
-): Promise<PickupChangeRequest> {
+): Promise<parentMeContract.PickupChangeRequestResponse> {
   return parentCall(
     bffJson("parent", "POST /parent/me/children/{studentId}/care-exception", {
       params: { studentId },
@@ -1548,7 +1442,7 @@ export async function updatePickupChangeRequest(
     signature?: SignatureValue | null;
     signatureStatement?: string;
   },
-): Promise<PickupChangeRequest> {
+): Promise<parentMeContract.PickupChangeRequestResponse> {
   return parentCall(
     bffJson(
       "parent",
@@ -1602,7 +1496,7 @@ export async function downloadPickupRequestProofPdf(
 /** Die Abholerlaubnis-Anfragen des Kindes, die dieses Konto sieht (#4780). */
 export async function listPickupPermissionRequests(
   studentId: string,
-): Promise<PickupPermissionRequest[]> {
+): Promise<parentMeContract.pickupPermissionRequestResponse[]> {
   return parentCall(
     bffJson(
       "parent",
@@ -1656,9 +1550,9 @@ export async function submitPickupPermissionRequest(
     signature: SignatureValue;
     statement: string;
     reason?: string;
-    relationship?: GuardianRelationshipPayload;
+    relationship?: parentMeContract.updateGuardianRelationshipRequest;
   },
-): Promise<PickupPermissionRequest> {
+): Promise<parentMeContract.pickupPermissionRequestResponse> {
   return parentCall(
     bffJson(
       "parent",
@@ -1678,7 +1572,7 @@ export async function submitPickupPermissionRequest(
 
 export async function listPickupChangeRequests(
   studentId: string,
-): Promise<PickupChangeRequest[]> {
+): Promise<parentMeContract.PickupChangeRequestResponse[]> {
   return parentCall(
     bffJson(
       "parent",
@@ -1693,7 +1587,7 @@ export async function listPickupChangeRequests(
 /** Lists guardians linked to the child, with portal-access status. */
 export async function listRelatedAccounts(
   studentId: string,
-): Promise<RelatedAccount[]> {
+): Promise<parentMeContract.relatedAccountResponse[]> {
   return parentCall(
     bffJson("parent", "GET /parent/me/children/{studentId}/related-accounts", {
       params: { studentId },
@@ -1706,7 +1600,7 @@ export async function listRelatedAccounts(
 /** Lists the child's guardians with contact + pickup detail and edit caps. */
 export async function listChildGuardians(
   studentId: string,
-): Promise<ChildGuardian[]> {
+): Promise<parentMeContract.childGuardianResponse[]> {
   return parentCall(
     bffJson("parent", "GET /parent/me/children/{studentId}/guardians", {
       params: { studentId },
@@ -1717,8 +1611,8 @@ export async function listChildGuardians(
 /** Adds an accountless contact to the child. */
 export async function createGuardianContact(
   studentId: string,
-  payload: CreateGuardianContactPayload,
-): Promise<ChildGuardian> {
+  payload: parentMeContract.createGuardianContactRequest,
+): Promise<parentMeContract.childGuardianResponse> {
   return parentCall(
     bffJson("parent", "POST /parent/me/children/{studentId}/guardians", {
       params: { studentId },
@@ -1731,8 +1625,8 @@ export async function createGuardianContact(
 export async function updateGuardianContact(
   studentId: string,
   guardianProfileId: string,
-  payload: GuardianContactPayload,
-): Promise<ChildGuardian> {
+  payload: parentMeContract.updateGuardianContactRequest,
+): Promise<parentMeContract.childGuardianResponse> {
   return parentCall(
     bffJson(
       "parent",
@@ -1746,8 +1640,8 @@ export async function updateGuardianContact(
 export async function updateGuardianRelationship(
   studentId: string,
   guardianProfileId: string,
-  payload: GuardianRelationshipPayload,
-): Promise<ChildGuardian> {
+  payload: parentMeContract.updateGuardianRelationshipRequest,
+): Promise<parentMeContract.childGuardianResponse> {
   return parentCall(
     bffJson(
       "parent",
@@ -1756,10 +1650,6 @@ export async function updateGuardianRelationship(
     ),
   );
 }
-
-// Outcome echoed by the invite resolve.
-export type InviteRelatedAccountResult =
-  parentMeContract.inviteRelatedAccountResponse;
 
 /** Invites a further guardian to the child by email. */
 export async function inviteRelatedAccount(
@@ -1770,7 +1660,7 @@ export async function inviteRelatedAccount(
     lastName?: string;
     confirmRoleUpgrade?: boolean;
   },
-): Promise<InviteRelatedAccountResult> {
+): Promise<parentMeContract.inviteRelatedAccountResponse> {
   return parentCall(
     bffJson("parent", "POST /parent/me/children/{studentId}/related-accounts", {
       params: { studentId },
@@ -1797,7 +1687,7 @@ export async function inviteRelatedAccount(
 export async function listCareExceptions(
   studentId: string,
   range?: { readonly from: string; readonly to: string },
-): Promise<CareException[]> {
+): Promise<parentMeContract.CareExceptionResponse[]> {
   return parentCall(
     bffJson("parent", "GET /parent/me/children/{studentId}/care-exception", {
       params: { studentId },
@@ -1819,11 +1709,6 @@ export async function deleteCareException(
   );
 }
 
-// --- Care schedule (standard weekly plan + permanent change requests, #1803) ---
-
-// The read view of a child's care schedule. Mirrors api/parent.CareScheduleResponse.
-export type ChildCareSchedule = parentMeContract.CareScheduleResponse;
-
 /**
  * Fetches the child's standard weekly care plan (Mon-Fr), the guardian's own
  * still-open change request (if any), and whether a new request may be
@@ -1831,7 +1716,7 @@ export type ChildCareSchedule = parentMeContract.CareScheduleResponse;
  */
 export async function getChildCareSchedule(
   studentId: string,
-): Promise<ChildCareSchedule> {
+): Promise<parentMeContract.CareScheduleResponse> {
   return parentCall(
     bffJson("parent", "GET /parent/me/children/{studentId}/care-schedule", {
       params: { studentId },
@@ -1857,7 +1742,7 @@ export async function submitCareScheduleRequest(
   payload: CareScheduleRequestInput,
   signature?: SignatureValue | null,
   signatureStatement?: string,
-): Promise<ChildCareSchedule> {
+): Promise<parentMeContract.CareScheduleResponse> {
   return parentCall(
     bffJson(
       "parent",
@@ -1885,9 +1770,6 @@ export type OfferingChangesDisabledReason =
   | "period_over"
   | "no_time_remaining";
 
-/** Parent-facing view of what the child is booked into. */
-export type ChildCareOfferings = parentMeContract.CareOfferingsResponse;
-
 /** One selectable offering in the change-request modal. */
 export type OfferingCatalogItem = Omit<
   parentMeContract.OfferingCatalogItemResponse,
@@ -1900,14 +1782,10 @@ export type OfferingCatalog = Omit<
   "items"
 > & { readonly items: OfferingCatalogItem[] };
 
-/** One desired offering in a submission. */
-export type OfferingChangeSelectionInput =
-  parentMeContract.OfferingSelectionBody;
-
 /** Returns the care offerings the child is booked into. */
 export async function getChildCareOfferings(
   studentId: string,
-): Promise<ChildCareOfferings> {
+): Promise<parentMeContract.CareOfferingsResponse> {
   return parentCall(
     bffJson("parent", "GET /parent/me/children/{studentId}/care-offerings", {
       params: { studentId },
@@ -1944,13 +1822,13 @@ export async function getChildOfferingCatalog(
 export async function submitOfferingChangeRequest(
   studentId: string,
   input: {
-    offerings: OfferingChangeSelectionInput[];
+    offerings: parentMeContract.OfferingSelectionBody[];
     effective_from: string;
     note?: string;
     complete_withdrawal_confirmed?: boolean;
   },
   recipientGuardianProfileIds: string[] = [],
-): Promise<ChildCareOfferings> {
+): Promise<parentMeContract.CareOfferingsResponse> {
   return parentCall(
     bffJson(
       "parent",
@@ -1975,13 +1853,13 @@ export async function updateOfferingChangeRequest(
   studentId: string,
   requestId: string,
   input: {
-    offerings: OfferingChangeSelectionInput[];
+    offerings: parentMeContract.OfferingSelectionBody[];
     effective_from: string;
     note?: string;
     complete_withdrawal_confirmed?: boolean;
     expectedVersion: string;
   },
-): Promise<ChildCareOfferings> {
+): Promise<parentMeContract.CareOfferingsResponse> {
   const { expectedVersion, ...body } = input;
   return parentCall(
     bffJson(
@@ -1995,18 +1873,10 @@ export async function updateOfferingChangeRequest(
   );
 }
 
-// --- Kurse (AG requests through the offering path, #3075) ---
-
-/** One course a family can see for their child. */
-export type CourseItem = parentMeContract.CourseItemResponse;
-
-/** The Kurse section of a child. Empty with a reason when switched off. */
-export type ChildCourses = parentMeContract.CoursesResponse;
-
 /** Returns the school's courses with this child's state. */
 export async function getChildCourses(
   studentId: string,
-): Promise<ChildCourses> {
+): Promise<parentMeContract.CoursesResponse> {
   return parentCall(
     bffJson("parent", "GET /parent/me/children/{studentId}/courses", {
       params: { studentId },
@@ -2019,7 +1889,7 @@ export async function requestChildCourse(
   studentId: string,
   courseId: string,
   note?: string,
-): Promise<ChildCourses> {
+): Promise<parentMeContract.CoursesResponse> {
   return parentCall(
     bffJson("parent", "POST /parent/me/children/{studentId}/courses/requests", {
       params: { studentId },
@@ -2032,7 +1902,7 @@ export async function requestChildCourse(
 export async function withdrawChildCourseRequest(
   studentId: string,
   requestId: string,
-): Promise<ChildCourses> {
+): Promise<parentMeContract.CoursesResponse> {
   return parentCall(
     bffJson(
       "parent",
@@ -2042,20 +1912,10 @@ export async function withdrawChildCourseRequest(
   );
 }
 
-// --- Stammdaten (master data view + change flow) ---
-
-// One change-request row in the parent view. Mirrors
-// api/parent.MasterDataChangeResponse. old/new values are JSON (string for the
-// fields shipped today; object for departure modes).
-export type MasterDataChange = parentMeContract.MasterDataChangeResponse;
-
-// The structured Stammdaten view. Mirrors api/parent.MasterDataResponse.
-export type ChildMasterData = parentMeContract.MasterDataResponse;
-
 /** Fetches the child's structured Stammdaten view (guardian's own data included). */
 export async function getChildMasterData(
   studentId: string,
-): Promise<ChildMasterData> {
+): Promise<parentMeContract.MasterDataResponse> {
   return parentCall(
     bffJson("parent", "GET /parent/me/children/{studentId}/master-data", {
       params: { studentId },
@@ -2072,7 +1932,7 @@ export async function updateMasterDataField(
   target: string,
   field: string,
   value: unknown,
-): Promise<ChildMasterData> {
+): Promise<parentMeContract.MasterDataResponse> {
   return parentCall(
     bffJson(
       "parent",
@@ -2094,7 +1954,7 @@ export async function submitMasterDataRequest(
   studentId: string,
   changes: MasterDataChangeInput[],
   recipientGuardianProfileIds: string[] = [],
-): Promise<MasterDataChange[]> {
+): Promise<parentMeContract.MasterDataChangeResponse[]> {
   return parentCall(
     bffJson(
       "parent",
@@ -2115,7 +1975,7 @@ export async function updateMasterDataRequest(
   studentId: string,
   requestId: string,
   input: { newValue: unknown; expectedVersion: string },
-): Promise<MasterDataChange> {
+): Promise<parentMeContract.MasterDataChangeResponse> {
   return parentCall(
     bffJson(
       "parent",
@@ -2166,18 +2026,11 @@ export type ParentDocument = Omit<
 export interface ParentDocumentInbox {
   readonly documents: ParentDocument[];
   /** Documents a Träger released for the parents (#4692). */
-  readonly shared: ParentSharedDocument[];
+  readonly shared: parentMeContract.SharedDocumentResponse[];
   /** `several` when more than one source failed: no single one is named. */
   readonly failedSource: "letters" | "contracts" | "shared" | "several" | null;
   readonly error: unknown;
 }
-
-/**
- * A document a Träger released for the parents of the account's children
- * (#4692): a house rule, a letter, a list. It is the same for every family
- * the release covers, so it names no child and no amount.
- */
-export type ParentSharedDocument = parentMeContract.SharedDocumentResponse;
 
 export async function listMyDocuments(): Promise<ParentDocumentInbox> {
   const [letters, contracts, shared] = await Promise.allSettled([
@@ -2232,7 +2085,10 @@ export async function listMyDocuments(): Promise<ParentDocumentInbox> {
  * name the backend chose. The backend records the opening.
  */
 export async function downloadMySharedDocument(
-  document: Pick<ParentSharedDocument, "id" | "organization_id" | "file_name">,
+  document: Pick<
+    parentMeContract.SharedDocumentResponse,
+    "id" | "organization_id" | "file_name"
+  >,
 ): Promise<void> {
   const response = await parentCall(
     bffFile(

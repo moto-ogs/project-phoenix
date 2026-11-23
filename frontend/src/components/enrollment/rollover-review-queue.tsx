@@ -1,5 +1,6 @@
 "use client";
 
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import { useRefreshPhaseExpiryWarnings } from "~/components/enrollment/phase-expiry-warnings";
 import { MAX_SUPPORTED_GRADE_LEVEL } from "~/lib/grade-level";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -7,7 +8,6 @@ import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import {
   decideRolloverReview,
   listRolloverReview,
-  type ReviewQueueItem,
 } from "~/lib/enrollment-phase-api";
 import { useConfirmedSWR } from "~/lib/hooks/use-confirmed-resource";
 import { LOCATION_COLORS } from "~/lib/location-helper";
@@ -110,7 +110,7 @@ export function RolloverReviewQueue({ phaseID, info }: Props) {
   }, [phaseID, clearAfterDecideError]);
 
   const decide = async (
-    item: ReviewQueueItem,
+    item: enrollmentContract.ReviewItemResponse,
     choice: "keep" | "drop" | "defer",
   ) => {
     if (accessRefused || completed.current.has(item.child_id)) return;
