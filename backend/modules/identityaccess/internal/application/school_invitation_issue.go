@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // issueInvitation spends the address's previous invitations, stores the new
@@ -16,6 +17,9 @@ func (s *SchoolInvitation) issueInvitation(ctx context.Context, invitation domai
 	// an invitation already committed keeps the account, while an invitation
 	// created after erasure correctly targets a new account.
 	if err := s.ensureTargetAllowed(ctx, invitation.Email, request); err != nil {
+		return domain.SchoolInvitation{}, err
+	}
+	if err := s.checkFormerEmploymentRead(ctx, invitation.Email, request.ExpectedFormerEmployment); err != nil {
 		return domain.SchoolInvitation{}, err
 	}
 	if _, _, err := s.store.RevokeSchoolInvitationsForEmail(ctx, invitation.Email); err != nil {
@@ -38,6 +42,41 @@ func (s *SchoolInvitation) issueInvitation(ctx context.Context, invitation domai
 		return domain.SchoolInvitation{}, err
 	}
 	return stored, nil
+}
+
+// checkFormerEmploymentRead refuses an invitation whose Einladen dialog
+// decided on a former-employment answer that is no longer true: one found
+// since it read "none" would resume unasked with every reset off, one gone
+// or replaced makes the choice void (ADR 0021, ADR 0311). Without a token no
+// answer was read and the ADR 0021 default applies. It runs after the
+// address's account row is locked, the lock acceptance writes under.
+func (s *SchoolInvitation) checkFormerEmploymentRead(ctx context.Context, email, expected string) error {
+	if expected == "" {
+		return nil
+	}
+	former, found, err := s.findFormerEmployment(ctx, email)
+	if err != nil {
+		return err
+	}
+	if err := readstate.Check(expected, formerEmploymentVersion(former, found)); err != nil {
+		return failed(opCreateInvitation, err)
+	}
+	return nil
+}
+
+// formerEmploymentVersion is the read-state token of a former-employment
+// answer, "none" included. The lookup returns it and the invitation checks
+// it with the same function over the same read.
+func formerEmploymentVersion(former domain.FormerEmployment, found bool) string {
+	if !found {
+		former = domain.FormerEmployment{}
+	}
+	return readstate.Fingerprint(struct {
+		Found     bool   `json:"found"`
+		StaffID   int64  `json:"staff_id"`
+		StartedOn string `json:"started_on"`
+		EndedOn   string `json:"ended_on"`
+	}{found, former.StaffID, former.StartedOn.String(), former.EndedOn.String()})
 }
 
 // mailed hands the delivery an invitation just issued for s.expiry with its

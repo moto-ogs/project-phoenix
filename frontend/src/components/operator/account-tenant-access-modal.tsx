@@ -23,6 +23,7 @@ import {
   useToast,
 } from "~/contexts/ToastContext";
 import { isAssignableStaffRole } from "~/lib/auth-helpers";
+import { isChangedSinceRead } from "~/lib/api-error";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
 import { isLehrkraftRole, systemRoleLabel } from "~/lib/role-labels";
@@ -162,8 +163,9 @@ export function AccountTenantAccessModal({
   );
 
   const reading = isOpen && accountId !== "";
-  // The access list is what every grant, role change and revoke edits: each
-  // opening reads it anew and shows nothing of an earlier one.
+  // The backend logs every read of the access list (operator read audit), so
+  // each opening reads it anew (ADR 0311). A role change sends the entry's
+  // version; roles changed since are refused, and the list is read again.
   const accessRead = useOpeningRead(
     reading ? operatorKeys.accountTenantAccess(accountId) : null,
     () => accountTenantAccessService.list(accountId),
@@ -391,14 +393,25 @@ export function AccountTenantAccessModal({
           accountId,
           entry.tenantId,
           roleId,
+          entry.version,
         ),
       `Rolle an ${entry.schoolName} wurde geändert.`,
       "school_access_role_change_failed",
-      (error) =>
+      (error) => {
+        if (isChangedSinceRead(error)) {
+          // Die Rollen an der Schule haben sich geändert: Die Liste zeigt den
+          // gespeicherten Stand, ein erneutes Senden würde abgelehnt.
+          void showRoleChangeError(error, {
+            object: `die Rolle an ${entry.schoolName}`,
+          });
+          void accessRead.mutate();
+          return;
+        }
         void showRoleChangeError(error, {
           object: `die Rolle an ${entry.schoolName}`,
           retry: () => void handleRoleChange(entry, roleId),
-        }),
+        });
+      },
     );
   }
 

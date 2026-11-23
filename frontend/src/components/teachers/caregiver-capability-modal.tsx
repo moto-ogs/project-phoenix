@@ -23,7 +23,7 @@ import {
 import { CaregiverBlockerResolutionPanel } from "~/components/teachers/caregiver-blocker-resolution-panel";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useOpeningRead } from "~/lib/swr";
+import { useOpeningRead, useSWRAuth } from "~/lib/swr";
 import { staffAccessKeys } from "~/lib/swr/staff-keys";
 import { createLogger } from "~/lib/logger";
 import { groupsConcept } from "~/lib/concepts/groups";
@@ -111,23 +111,31 @@ export function CaregiverCapabilityModal({
       );
     }
   }
-  // Jede Öffnung wartet auf ihren eigenen Stand: die Namensfelder starten
-  // daraus, nie aus dem einer früheren Öffnung.
+  const readState = () =>
+    operatorSchoolId
+      ? caregiverCapabilityService.getOperatorAccountCapability(
+          operatorSchoolId,
+          accountId,
+        )
+      : caregiverCapabilityService.getTenantAccountCapability(accountId);
+  // Die Schule liest den Stand über den gemeinsamen Cache: Einschalten legt
+  // nur an, was fehlt, Ausschalten prüft die offenen Zuordnungen beim
+  // Speichern neu (ADR 0311). Das Operator-Portal protokolliert jedes Lesen
+  // dieses Stands und liest ihn darum bei jeder Öffnung neu.
+  const tenantRead = useSWRAuth(
+    scope === "tenant" ? capabilityKey : null,
+    readState,
+  );
+  const operatorRead = useOpeningRead(
+    scope === "operator" ? capabilityKey : null,
+    readState,
+    { showCached: false },
+  );
   const {
     data: freshState,
     error: stateError,
     mutate: mutateState,
-  } = useOpeningRead(
-    capabilityKey,
-    () =>
-      operatorSchoolId
-        ? caregiverCapabilityService.getOperatorAccountCapability(
-            operatorSchoolId,
-            accountId,
-          )
-        : caregiverCapabilityService.getTenantAccountCapability(accountId),
-    { showCached: false },
-  );
+  } = scope === "operator" ? operatorRead : tenantRead;
   // Scheitert das Laden, zeigt der Dialog den Fehler, keinen älteren Stand.
   const state = stateError ? undefined : freshState;
   // Für welches Konto die Namensfelder schon aus dem geladenen Stand

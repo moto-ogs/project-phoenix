@@ -168,6 +168,7 @@ func TestOperatorRoutesManageTheSchoolsAndSecondFactorsOfAccounts(t *testing.T) 
 		Roles    []struct {
 			ID string `json:"id"`
 		} `json:"roles"`
+		Version string `json:"version"`
 	}
 	find := func(entries []access) access {
 		for _, entry := range entries {
@@ -183,7 +184,7 @@ func TestOperatorRoutesManageTheSchoolsAndSecondFactorsOfAccounts(t *testing.T) 
 	assert.Equal(t, http.StatusCreated, f.call(t, http.MethodPost, base, map[string]any{"school_id": schoolID, "role_id": roles[0].ID, "first_name": "Anna", "last_name": "Zugang"}, &granted))
 	assert.Equal(t, roles[0].ID, find(granted).Roles[0].ID)
 	var changed []access
-	f.call(t, http.MethodPut, fmt.Sprintf("%s/%d", base, schoolID), map[string]any{"role_id": roles[1].ID}, &changed)
+	f.call(t, http.MethodPut, fmt.Sprintf("%s/%d", base, schoolID), map[string]any{"role_id": roles[1].ID, "expected_version": find(granted).Version}, &changed)
 	assert.Equal(t, roles[1].ID, find(changed).Roles[0].ID)
 	var revoked []access
 	f.call(t, http.MethodDelete, fmt.Sprintf("%s/%d", base, schoolID), nil, &revoked)

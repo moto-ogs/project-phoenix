@@ -93,6 +93,9 @@ type AccountTenantAccess struct {
 	HasPerson        bool
 	HasStaff         bool
 	Roles            []AccountTenantRole
+	// Version is the read-state token of Roles
+	// (identityaccess.AccountRolesVersion over their IDs).
+	Version string
 }
 
 // OrganizationName is the organisation fact the listing shows.

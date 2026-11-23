@@ -102,12 +102,12 @@ func TestPermissionPersistence_FindByRoleID(t *testing.T) {
 		require.NoError(t, err)
 
 		// Find permissions
-		permissions, err := repo.GetRolePermissions(ctx, role.ID)
+		selection, err := repo.GetRolePermissions(ctx, role.ID)
 		require.NoError(t, err)
-		assert.NotEmpty(t, permissions)
+		assert.NotEmpty(t, selection.Permissions)
 
 		var found bool
-		for _, p := range permissions {
+		for _, p := range selection.Permissions {
 			if p.ID == permission.ID {
 				found = true
 				break
@@ -133,9 +133,9 @@ func TestPermissionPersistence_AssignPermissionToRole(t *testing.T) {
 		require.NoError(t, err)
 
 		// Verify assignment
-		permissions, err := repo.GetRolePermissions(ctx, role.ID)
+		selection, err := repo.GetRolePermissions(ctx, role.ID)
 		require.NoError(t, err)
-		assert.Len(t, permissions, 1)
+		assert.Len(t, selection.Permissions, 1)
 	})
 }
 
@@ -162,8 +162,8 @@ func TestPermissionPersistence_RemovePermissionFromRole(t *testing.T) {
 		require.NoError(t, err)
 
 		// Verify removal
-		permissions, err := repo.GetRolePermissions(ctx, role.ID)
+		selection, err := repo.GetRolePermissions(ctx, role.ID)
 		require.NoError(t, err)
-		assert.Empty(t, permissions)
+		assert.Empty(t, selection.Permissions)
 	})
 }

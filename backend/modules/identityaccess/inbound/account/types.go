@@ -432,8 +432,26 @@ type UpdateRoleRequest struct {
 
 // ReplaceRolePermissionsRequest contains the complete target set for a role.
 // An explicit empty array removes every permission; an omitted field is invalid.
+// ExpectedVersion is the version of the selection the set was made from
+// (ADR 0311); a selection changed since answers 409
+// general.changed_since_read.
 type ReplaceRolePermissionsRequest struct {
-	PermissionIDs []ident.ID `json:"permission_ids"`
+	PermissionIDs   []ident.ID `json:"permission_ids"`
+	ExpectedVersion string     `json:"expected_version"`
+}
+
+// ReplaceRolePermissionsResponse answers a replacement with the version of
+// the selection it stored; the next replacement sends it as
+// expected_version.
+type ReplaceRolePermissionsResponse struct {
+	Version string `json:"version"`
+}
+
+// RolePermissionsResponse is a role's selection with the version a
+// replacement sends back as expected_version.
+type RolePermissionsResponse struct {
+	Permissions []PermissionResponse `json:"permissions"`
+	Version     string               `json:"version"`
 }
 
 func (req *ReplaceRolePermissionsRequest) Bind(_ *http.Request) error {
@@ -458,6 +476,17 @@ func (req *ReplaceRolePermissionsRequest) Bind(_ *http.Request) error {
 // removed; guardian access is kept.
 type ReplaceAccountRoleRequest struct {
 	RoleID *ident.ID `json:"role_id"`
+	// ExpectedVersion is the version of the roles the change was made from
+	// (GET /accounts/{accountId}/role-selection/, ADR 0311); roles changed
+	// since answer 409 general.changed_since_read.
+	ExpectedVersion string `json:"expected_version"`
+}
+
+// AccountRolesResponse is an account's roles at this school with the
+// version a role change sends back as expected_version.
+type AccountRolesResponse struct {
+	Roles   []*RoleResponse `json:"roles"`
+	Version string          `json:"version"`
 }
 
 func (req *ReplaceAccountRoleRequest) Bind(_ *http.Request) error {
