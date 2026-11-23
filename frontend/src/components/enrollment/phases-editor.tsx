@@ -316,7 +316,10 @@ export function PhasesEditor({ info }: { readonly info?: string }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   // A new phase: no stored state, no version.
   const [createDraft, setCreateDraft] = useState<PhaseInput | null>(null);
-  const [schemaSource, setSchemaSource] = useState<SchemaSource>("base");
+  // The radio follows the draft's form_schema_id, so a refill after a
+  // refusal or a newer read shows the stored choice (ADR 0311). Only "Eigene
+  // Vorlage" chosen before a template is picked lives outside the draft.
+  const [reuseWithoutTemplate, setReuseWithoutTemplate] = useState(false);
   // Aktivieren/Ausschalten aus der Liste, außerhalb des Panels.
   const [togglingActive, setTogglingActive] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -399,6 +402,8 @@ export function PhasesEditor({ info }: { readonly info?: string }) {
     "die Anmeldephase",
   );
   const draft = editingId === "new" ? createDraft : (editor.draft ?? null);
+  const schemaSource: SchemaSource =
+    draft?.form_schema_id || reuseWithoutTemplate ? "reuse" : "base";
   const { setDraft: setEditedDraft } = editor;
   const setDraft = useCallback(
     (next: React.SetStateAction<PhaseInput | null>) => {
@@ -477,7 +482,7 @@ export function PhasesEditor({ info }: { readonly info?: string }) {
       ...blankInput(),
       form_schema_id: assignSchema?.id ?? null,
     });
-    setSchemaSource(assignSchema ? "reuse" : "base");
+    setReuseWithoutTemplate(false);
     setHighlightFormSection(Boolean(assignSchema));
     clearFormErrors();
   }, [assignSchema, clearFormErrors]);
@@ -486,7 +491,7 @@ export function PhasesEditor({ info }: { readonly info?: string }) {
     (phase: Phase, forceFormHighlight = false) => {
       setEditingId(phase.id);
       setCreateDraft(null);
-      setSchemaSource(assignSchema || phase.form_schema_id ? "reuse" : "base");
+      setReuseWithoutTemplate(false);
       setHighlightFormSection(Boolean(assignSchema) || forceFormHighlight);
       clearFormErrors();
     },
@@ -1167,7 +1172,9 @@ export function PhasesEditor({ info }: { readonly info?: string }) {
                     periods={periods}
                     schemas={latestSchemas}
                     schemaSource={schemaSource}
-                    setSchemaSource={setSchemaSource}
+                    setSchemaSource={(source) =>
+                      setReuseWithoutTemplate(source === "reuse")
+                    }
                     editing={editingId !== "new"}
                     savedPhase={phases.find((p) => p.id === editingId)}
                     hasSuccessor={phases.some(
@@ -1343,7 +1350,7 @@ interface PhaseFormProps {
   readonly periods: CalendarPeriod[];
   readonly schemas: FormSchema[];
   readonly schemaSource: SchemaSource;
-  readonly setSchemaSource: React.Dispatch<React.SetStateAction<SchemaSource>>;
+  readonly setSchemaSource: (source: SchemaSource) => void;
   readonly editing: boolean;
   /** The stored phase while editing; its dates decide the extension hint. */
   readonly savedPhase?: Phase;
@@ -2012,9 +2019,11 @@ function PhaseForm(props: PhaseFormProps) {
                   name="form_schema_id"
                   invalid={Boolean(fieldError("form_schema_id"))}
                   value={draft.form_schema_id ?? ""}
-                  onChange={(value) =>
-                    update({ form_schema_id: value || null })
-                  }
+                  onChange={(value) => {
+                    // "Wählen" keeps the reuse choice open.
+                    setSchemaSource("reuse");
+                    update({ form_schema_id: value || null });
+                  }}
                   className="mt-1 py-2"
                   disabled={schemas.length === 0}
                   required={schemaSource === "reuse"}

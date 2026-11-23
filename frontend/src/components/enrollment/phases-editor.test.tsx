@@ -1090,6 +1090,55 @@ describe("PhasesEditor", () => {
     expect(mocks.updatePhase.mock.calls[1]?.[2]).toBe("colleague");
   });
 
+  // ADR 0311: after a refusal the form shows the stored template choice; a
+  // second save never sends the choice the person read before.
+  it("shows the colleague's form template after a refused save", async () => {
+    const stored = phase({ version: "colleague" });
+    mocks.listPhases
+      .mockResolvedValueOnce([phase({ form_schema_id: undefined })])
+      .mockResolvedValue([stored]);
+    mocks.listSchemas.mockResolvedValue([schema()]);
+    mocks.updatePhase
+      .mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      )
+      .mockResolvedValue(stored);
+
+    render(<PhasesEditor />);
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Aktionen für Schuljahr 2026/27",
+      }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Bearbeiten" }),
+    );
+    fireEvent.change(await waitForInputByName("name"), {
+      target: { value: "Mein Name" },
+    });
+    expect(
+      document.querySelector("#schema-source-base") as HTMLInputElement,
+    ).toBeChecked();
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() =>
+      expect(
+        document.querySelector("#schema-source-reuse") as HTMLInputElement,
+      ).toBeChecked(),
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Speichern" }),
+      ).not.toHaveAttribute("aria-disabled"),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(mocks.updatePhase).toHaveBeenCalledTimes(2));
+    expect(mocks.updatePhase.mock.calls[1]?.[1]).toMatchObject({
+      form_schema_id: "schema-1",
+    });
+    expect(mocks.updatePhase.mock.calls[1]?.[2]).toBe("colleague");
+  });
+
   // ADR 0311: the switch acts on the phase as the list shows it; a refusal
   // reads the list again instead of offering the same switch once more.
   it("reads the phases again after a refused status change", async () => {
