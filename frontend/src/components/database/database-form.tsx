@@ -18,7 +18,6 @@ import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
 import { Button } from "~/components/ui/button";
 import { RemovableChip } from "~/components/ui/removable-chip";
-import { isChangedSinceRead } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import { getDefaultMaxLength } from "~/lib/constants/input-limits";
 import { InsetPanel } from "~/components/ui/inset-panel";
@@ -65,6 +64,25 @@ function applyInitialData<T>(
       formData[key] = value;
     }
   }
+}
+
+/**
+ * The values a form of `sections` starts with: each field's default, then
+ * `initialData`. A surface that holds the draft itself (`draft`) fills it
+ * with these.
+ */
+export function formValuesFor<T>(
+  sections: FormSection[],
+  initialData?: Partial<T>,
+): Record<string, unknown> {
+  const values: Record<string, unknown> = {};
+  for (const section of sections) {
+    for (const field of section.fields) {
+      values[field.name] = getDefaultValueForField(field);
+    }
+  }
+  if (initialData) applyInitialData(values, initialData, sections);
+  return values;
 }
 
 /** Checks if a value is empty (undefined, null, or empty string) */
@@ -228,7 +246,12 @@ export interface DatabaseFormErrorPath {
   readonly error: FormErrorInput;
   readonly show: (
     error: unknown,
-    options: { object: string; retry?: () => void },
+    options: {
+      object: string;
+      retry?: () => void;
+      /** After a refusal of a changed state: reads it again (ADR 0311). */
+      reload?: () => Promise<unknown>;
+    },
   ) => unknown;
   readonly invalid: (
     message: string,
@@ -271,6 +294,17 @@ interface DatabaseFormProps<T = Record<string, unknown>> {
    * singular („die Planungsspur“). Default „die Änderung“.
    */
   readonly errorObject?: string;
+  /**
+   * The draft, held by the surface (`useDraftOn` of `~/lib/swr/read-draft`,
+   * ADR 0311): the form shows and edits these values and ignores
+   * `initialData`. Fill it with `formValuesFor`.
+   */
+  readonly draft?: {
+    readonly values: Record<string, unknown>;
+    readonly setValues: (
+      next: (current: Record<string, unknown>) => Record<string, unknown>,
+    ) => void;
+  };
 }
 
 type FieldOption = { value: string; label: string };
@@ -339,8 +373,20 @@ export function DatabaseForm<T = Record<string, unknown>>({
   sectionLevel = 2,
   errorPath,
   errorObject = "die Änderung",
+  draft,
 }: DatabaseFormProps<T>) {
-  const [formData, setFormData] = useState<Record<string, unknown>>({});
+  const [ownData, setOwnData] = useState<Record<string, unknown>>({});
+  const formData = draft?.values ?? ownData;
+  const setFormData = (
+    next:
+      | Record<string, unknown>
+      | ((current: Record<string, unknown>) => Record<string, unknown>),
+  ) => {
+    const update = typeof next === "function" ? next : () => next;
+    if (draft) draft.setValues(update);
+    else setOwnData(update);
+  };
+  const controlled = draft !== undefined;
   const formRef = useRef<HTMLFormElement>(null);
   // „Wiederholen“ sendet den aktuellen Stand des Formulars.
   const latestSubmitRef = useRef<() => void>(() => undefined);
@@ -394,20 +440,11 @@ export function DatabaseForm<T = Record<string, unknown>>({
     };
   }, []);
 
-  // Initialize form data from sections
+  // Initialize form data from sections; a surface that holds the draft
+  // fills it itself.
   useEffect(() => {
-    const initialFormData: Record<string, unknown> = {};
-
-    // Set defaults from sections using helper
-    for (const section of sections) {
-      for (const field of section.fields) {
-        initialFormData[field.name] = getDefaultValueForField(field);
-      }
-    }
-
-    if (initialData) {
-      applyInitialData(initialFormData, initialData, sections);
-    }
+    if (controlled) return;
+    const initialFormData = formValuesFor(sections, initialData);
 
     if (preserveDraftOnSectionsChange && hasInitializedFormRef.current) {
       const fieldNames = new Set(
@@ -416,7 +453,7 @@ export function DatabaseForm<T = Record<string, unknown>>({
         ),
       );
       const previousFieldNames = renderedFieldNamesRef.current;
-      setFormData((currentFormData) => {
+      setOwnData((currentFormData) => {
         const nextFormData = { ...currentFormData };
         for (const [name, value] of Object.entries(initialFormData)) {
           // Ein Feld, das vorher nicht sichtbar war, konnte noch nicht
@@ -432,12 +469,12 @@ export function DatabaseForm<T = Record<string, unknown>>({
       return;
     }
 
-    setFormData(initialFormData);
+    setOwnData(initialFormData);
     hasInitializedFormRef.current = true;
     renderedFieldNamesRef.current = new Set(
       sections.flatMap((section) => section.fields.map((field) => field.name)),
     );
-  }, [initialData, preserveDraftOnSectionsChange, sections]);
+  }, [controlled, initialData, preserveDraftOnSectionsChange, sections]);
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -502,13 +539,11 @@ export function DatabaseForm<T = Record<string, unknown>>({
       logger.error("failed to submit form", {
         error: err instanceof Error ? err.message : String(err),
       });
-      // A save refused as changed since it was read would be refused again:
-      // no retry, the surface shows the stored state (ADR 0311).
+      // The error path offers no retry for a save refused as changed since
+      // it was read (ADR 0311).
       void errorPath.show(err, {
         object: errorObject,
-        retry: isChangedSinceRead(err)
-          ? undefined
-          : () => latestSubmitRef.current(),
+        retry: () => latestSubmitRef.current(),
       });
     } finally {
       if (isMountedRef.current) {
