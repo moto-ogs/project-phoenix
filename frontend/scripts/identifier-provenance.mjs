@@ -436,11 +436,26 @@ function collectionElementKind(collection, checker, seen, rest = false) {
   if (kind === "other") return kind;
 }
 
-function isArrayIndex(type) {
-  if (type.isUnion()) return type.types.some(isArrayIndex);
+function isArrayIndex(index, checker) {
+  const type = checker.getTypeAtLocation(index);
+  const types = type.isUnion() ? type.types : [type];
+  if (
+    types.some(
+      (part) =>
+        checker.isTypeAssignableTo(part, checker.getNumberType()) ||
+        (part.isStringLiteral() && /^(?:0|[1-9]\d*)$/.test(part.value)),
+    )
+  )
+    return true;
+
+  // TypeScript also allows an array's for-in key as an index, although
+  // the variable's public type is string.
+  const declaration = checker.getSymbolAtLocation(index)?.valueDeclaration;
   return (
-    Boolean(type.flags & ts.TypeFlags.NumberLike) ||
-    (type.isStringLiteral() && /^(?:0|[1-9]\d*)$/.test(type.value))
+    declaration &&
+    ts.isVariableDeclaration(declaration) &&
+    ts.isForInStatement(declaration.parent.parent) &&
+    isArray(declaration.parent.parent.expression, checker)
   );
 }
 
@@ -477,7 +492,7 @@ function expressionKind(node, checker, seen = new Set()) {
   if (
     ts.isElementAccessExpression(node) &&
     expressionKind(node.expression, checker, seen) === "id-list" &&
-    isArrayIndex(checker.getTypeAtLocation(node.argumentExpression))
+    isArrayIndex(node.argumentExpression, checker)
   )
     return "id";
   if (ts.isCallExpression(node)) {
