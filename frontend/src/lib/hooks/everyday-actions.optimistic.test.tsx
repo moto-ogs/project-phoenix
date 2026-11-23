@@ -207,7 +207,7 @@ function useSchedule() {
   const hook = useMealParticipation("1", "child-1", "2026-09-07", "2026-10-02");
   return {
     data: hook.data?.weekdays.includes(3),
-    run: () => hook.saveSchedule([3]),
+    run: () => hook.saveSchedule([3], hook.data?.version ?? ""),
     ready: !!hook.data,
   };
 }

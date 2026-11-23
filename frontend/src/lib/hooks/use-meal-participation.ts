@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useSWRAuth } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
 import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
 import { useOptimisticAction } from "~/lib/swr/optimistic";
 import { parentKeys } from "~/lib/swr/parent-keys";
@@ -121,15 +121,19 @@ export function useMealParticipation(
         () => setMealParticipationWeek(studentId, monday, participating),
         (data, result) => days(result.changed, participating)(data),
       ),
-    saveSchedule: (weekdays: number[]) =>
+    /**
+     * Reads the participation again and rejects when that read fails
+     * (ADR 0311): for the stored state after a refused save.
+     */
+    reloadOrThrow: () => revalidateOrThrow(reader),
+    /**
+     * Saves the regular days with the version they were edited on (ADR
+     * 0311), never the version of a later read.
+     */
+    saveSchedule: (weekdays: number[], version: string) =>
       change(
         (data) => ({ ...data, weekdays }),
-        () =>
-          replaceMealParticipationSchedule(
-            studentId,
-            weekdays,
-            reader.data?.version ?? "",
-          ),
+        () => replaceMealParticipationSchedule(studentId, weekdays, version),
         // The answer's version is the stored days': a second save right
         // after this one sends it and is not refused as changed (ADR 0311).
         (data, result) => ({

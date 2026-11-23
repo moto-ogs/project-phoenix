@@ -84,6 +84,7 @@
   "lastMealPlanWeekReason": "Për më tej ende nuk ka menu.",
   "editRegularDaysTooltip": "Hap zgjedhjen e ditëve kur fëmija juaj ha gjithmonë.",
   "saveRegularDaysTooltip": "Ruan ditët e reja të rregullta për fëmijën tuaj.",
+  "saveAfterReload": "Ngarko fillimisht sërish regjistrimin, pastaj mund të ruash.",
   "saveDayTooltip": "Ruan regjistrimin për këtë ditë.",
   "registerWeekTooltip": "E regjistron fëmijën menjëherë për të gjitha ditët ende të ndryshueshme të kësaj jave.",
   "cancelWeekTooltip": "E çregjistron fëmijën për këtë javë. moto pyet më parë.",

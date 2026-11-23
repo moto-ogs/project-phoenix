@@ -54,9 +54,8 @@ import { fetchCareOfferingBookingStats } from "~/lib/care-offering-booking-stats
 import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
+import { useInvalidateFamily, useOpeningRead, useSWRAuth } from "~/lib/swr";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
-import { openingReadOptions, useOpeningRead } from "~/lib/opening-read";
 import { withLateInviteQuery } from "~/lib/enrollment-http";
 import { Loading } from "~/components/ui/loading";
 import type * as sharedContract from "~/lib/contract/shared.generated";
@@ -231,23 +230,14 @@ export function ManualApprovedEnrollmentModal({
   // server checks the entry against the current offerings, and refuses a
   // form the school changed meanwhile (ADR 0311); the form then shows the
   // current one.
-  const bootstrapRead = useSWRAuth(
-    isOpen ? enrollmentKeys.manualEnrollmentBootstrap(phase.id) : null,
-    () => fetchManualEnrollmentBootstrap(phase.id),
-    openingReadOptions,
-  );
   // The office fills the template this opening read: every opening reads it
   // again, then a background read neither swaps it under the typed entry
   // nor, when it fails, takes the form away. A failed first read shows its
   // error, also over a cached template, until a retry answers.
-  const [opening, setOpening] = useState(0);
-  const [wasOpen, setWasOpen] = useState(isOpen);
-  if (isOpen !== wasOpen) {
-    setWasOpen(isOpen);
-    if (isOpen) setOpening((n) => n + 1);
-  }
-  const opened = useOpeningRead(isOpen ? opening : null, bootstrapRead, () =>
-    fetchManualEnrollmentBootstrap(phase.id),
+  const opened = useOpeningRead(
+    isOpen ? enrollmentKeys.manualEnrollmentBootstrap(phase.id) : null,
+    () => fetchManualEnrollmentBootstrap(phase.id),
+    { showCached: true },
   );
   const loadCurrentForm = async () => {
     try {

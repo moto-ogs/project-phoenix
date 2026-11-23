@@ -1,6 +1,7 @@
 import { SWRConfig } from "~/lib/swr/testing";
 vi.unmock("swr");
 import {
+  act,
   fireEvent,
   render as rtlRender,
   screen,
@@ -703,7 +704,11 @@ describe("TraegerClosingDaysPage (#4702)", () => {
     expect(api.deleteTraegerClosingDay).toHaveBeenCalledWith("9", "del456");
   });
 
-  it("waits for a new preview each time the delete dialog opens (#6457)", async () => {
+  // ADR 0311 replaces the wait of #6457: the preview comes from the shared
+  // cache, the delete confirms the preview on screen with its token, and the
+  // server refuses a changed one (traeger.closing_day_bookings_changed, see
+  // above).
+  it("confirms the cached preview with its token when the delete dialog opens again", async () => {
     session.permissions = ["traeger_overview:read", "traeger_settings:manage"];
     let finish!: (impact: HolidayClosureImpact) => void;
     api.previewTraegerClosingDayHolidayBookings
@@ -737,16 +742,11 @@ describe("TraegerClosingDaysPage (#4702)", () => {
     );
 
     dialog = await openDelete();
-    await waitFor(() =>
-      expect(api.previewTraegerClosingDayHolidayBookings).toHaveBeenCalledTimes(
-        2,
-      ),
-    );
     expect(
-      within(dialog).getByRole("button", { name: "Ja, löschen" }),
-    ).toBeDisabled();
-
-    finish({ ...summerImpact, token: "second" });
+      await within(dialog).findByText(
+        "3 Familien bekommen nach dem Löschen eine E-Mail",
+      ),
+    ).toBeInTheDocument();
     await waitFor(() =>
       expect(
         within(dialog).getByRole("button", { name: "Ja, löschen" }),
@@ -759,8 +759,78 @@ describe("TraegerClosingDaysPage (#4702)", () => {
       await within(dialog).findByRole("button", { name: "Endgültig löschen" }),
     );
     await waitFor(() =>
-      expect(api.deleteTraegerClosingDay).toHaveBeenCalledWith("9", "second"),
+      expect(api.deleteTraegerClosingDay).toHaveBeenCalledWith("9", "first"),
     );
+    finish({ ...summerImpact, token: "second" });
+  });
+
+  it("deletes with the preview on screen while a newer read arrives, and names a failed reload after a refusal", async () => {
+    session.permissions = ["traeger_overview:read", "traeger_settings:manage"];
+    let finish!: (impact: HolidayClosureImpact) => void;
+    api.previewTraegerClosingDayHolidayBookings
+      .mockResolvedValueOnce({ ...summerImpact, token: "first" })
+      .mockReturnValueOnce(
+        new Promise<HolidayClosureImpact>((resolve) => {
+          finish = resolve;
+        }),
+      )
+      .mockRejectedValueOnce(
+        new ApiError("offline", 503, { code: "general.unavailable" }),
+      );
+    api.deleteTraegerClosingDay.mockRejectedValueOnce(
+      new ApiError("changed", 409, {
+        code: "traeger.closing_day_bookings_changed",
+      }),
+    );
+    render(<TraegerClosingDaysPage />);
+    const openDelete = async () => {
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Aktionen für Brückentag" }),
+      );
+      fireEvent.click(await screen.findByRole("menuitem", { name: "Löschen" }));
+      return screen.findByRole("dialog", { name: "Schließtag löschen" });
+    };
+    let dialog = await openDelete();
+    await within(dialog).findByText(
+      "3 Familien bekommen nach dem Löschen eine E-Mail",
+    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "Abbrechen" }));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Schließtag löschen" }),
+      ).not.toBeInTheDocument(),
+    );
+
+    dialog = await openDelete();
+    await within(dialog).findByText(
+      "3 Familien bekommen nach dem Löschen eine E-Mail",
+    );
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Ja, löschen" }),
+    );
+    // The opening's own read answers between the two steps.
+    await act(async () => {
+      finish({ ...summerImpact, families: 5, token: "second" });
+    });
+    expect(
+      within(dialog).getByText(
+        "3 Familien bekommen nach dem Löschen eine E-Mail",
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(
+      await within(dialog).findByRole("button", { name: "Endgültig löschen" }),
+    );
+    await waitFor(() =>
+      expect(api.deleteTraegerClosingDay).toHaveBeenCalledWith("9", "first"),
+    );
+
+    // The refusal reads the preview again; that read fails.
+    expect(
+      await within(dialog).findByText(
+        /Der neue Stand konnte nicht geladen werden/,
+      ),
+    ).toBeInTheDocument();
+    expect(api.deleteTraegerClosingDay).toHaveBeenCalledTimes(1);
   });
 
   it("refreshes pending notices when their closing day is deleted", async () => {

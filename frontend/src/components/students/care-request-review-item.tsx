@@ -1,6 +1,5 @@
 "use client";
 
-import { isOutdatedDecision } from "~/lib/change-request-list-api";
 import { useLayoutEffect, useRef, useState } from "react";
 
 import {
@@ -148,7 +147,7 @@ export function CareRequestReviewItem({
   /** Fassung, die entschieden werden soll — verhindert Überschreiben (#2267). */
   expectedVersion: string;
   /** Die Anfrage ist seit dem Lesen anders gespeichert: die Liste neu laden. */
-  onStale: () => void;
+  onStale: () => Promise<unknown>;
   /** Warum hier gerade nicht einzeln entschieden werden kann (#2267). */
   decisionDisabledReason?: string;
   approveReasonRequired?: boolean;
@@ -209,7 +208,7 @@ function useCareRequestDecision(
   row: StaffCareRequest,
   onDecided: (notice: string) => void,
   expectedVersion: string,
-  onStale: () => void,
+  onStale: () => Promise<unknown>,
 ) {
   const { show: showApiError, showMessage: showLocalError } =
     useApiErrorDisplay();
@@ -240,12 +239,11 @@ function useCareRequestDecision(
       );
     } catch (err) {
       logDecisionError(err, row.id);
-      const stale = isOutdatedDecision(err);
       await showApiError(err, {
         object: "die Anfrage",
-        retry: stale ? undefined : () => void decideRef.current(approve),
+        retry: () => void decideRef.current(approve),
+        reload: onStale,
       });
-      if (stale) onStale();
       setBusy(false);
       return;
     }

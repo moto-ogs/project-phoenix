@@ -26,6 +26,7 @@ export const ERROR_CATALOG = {
       crash:
         "{object} konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
       fieldCheck: "Bitte prüfe dieses Feld.",
+      reloadFailed: "Der neue Stand konnte nicht geladen werden.",
     },
     codes: {
       "attendance.checkin_staff_profile_required":
@@ -2206,6 +2207,7 @@ export const ERROR_CATALOG = {
       requestId: "Request ID: {requestId}",
       crash: "{object} could not be processed. Please try again later.",
       fieldCheck: "Please check this field.",
+      reloadFailed: "The current version could not be loaded.",
     },
     codes: {
       "attendance.checkin_staff_profile_required":
@@ -3004,6 +3006,7 @@ export const ERROR_CATALOG = {
       requestId: "Номер запроса: {requestId}",
       crash: "Не удалось обработать: {object}. Повторите попытку позже.",
       fieldCheck: "Проверьте это поле.",
+      reloadFailed: "Не удалось загрузить актуальное состояние.",
     },
     codes: {
       "attendance.checkin_staff_profile_required":
@@ -3652,6 +3655,7 @@ export const ERROR_CATALOG = {
       requestId: "Numri i kërkesës: {requestId}",
       crash: "Nuk u përpunua: {object}. Provoni përsëri më vonë.",
       fieldCheck: "Kontrolloni këtë fushë.",
+      reloadFailed: "Gjendja e re nuk u ngarkua dot.",
     },
     codes: {
       "attendance.checkin_staff_profile_required":
@@ -4316,6 +4320,7 @@ export const ERROR_CATALOG = {
       requestId: "Numer zgłoszenia: {requestId}",
       crash: "Nie udało się przetworzyć: {object}. Spróbuj ponownie później.",
       fieldCheck: "Sprawdź to pole.",
+      reloadFailed: "Nie udało się wczytać aktualnego stanu.",
     },
     codes: {
       "attendance.checkin_staff_profile_required":
@@ -4965,6 +4970,7 @@ export const ERROR_CATALOG = {
       requestId: "İstek numarası: {requestId}",
       crash: "{object} işlenemedi. Daha sonra yeniden deneyin.",
       fieldCheck: "Bu alanı kontrol edin.",
+      reloadFailed: "Güncel durum yüklenemedi.",
     },
     codes: {
       "attendance.checkin_staff_profile_required":
@@ -5622,6 +5628,7 @@ export const ERROR_CATALOG = {
       requestId: "Номер запиту: {requestId}",
       crash: "Не вдалося обробити: {object}. Спробуйте пізніше.",
       fieldCheck: "Перевірте це поле.",
+      reloadFailed: "Не вдалося завантажити актуальний стан.",
     },
     codes: {
       "attendance.checkin_staff_profile_required":

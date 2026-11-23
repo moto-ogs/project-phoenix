@@ -84,6 +84,7 @@
   "lastMealPlanWeekReason": "There is no menu further ahead yet.",
   "editRegularDaysTooltip": "Opens the choice of days on which your child always eats.",
   "saveRegularDaysTooltip": "Saves the new regular days for your child.",
+  "saveAfterReload": "Reload the registration first, then you can save.",
   "saveDayTooltip": "Saves the registration for this day.",
   "registerWeekTooltip": "Registers your child right away for every day of this week still open.",
   "cancelWeekTooltip": "Cancels your child's meals for this week. moto asks you first.",

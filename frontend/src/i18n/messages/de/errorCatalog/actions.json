@@ -3,5 +3,6 @@
   "copyRequestId": "Vorgangskennung kopieren",
   "requestId": "Vorgangskennung: {requestId}",
   "crash": "{object} konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
-  "fieldCheck": "Bitte prüfe dieses Feld."
+  "fieldCheck": "Bitte prüfe dieses Feld.",
+  "reloadFailed": "Der neue Stand konnte nicht geladen werden."
 }

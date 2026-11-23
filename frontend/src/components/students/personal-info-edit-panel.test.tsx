@@ -1036,6 +1036,188 @@ describe("PersonalInfoEditPanel", () => {
       );
     });
 
+    // ADR 0311: a live refresh of the same child (check-in, check-out)
+    // refills only an untouched draft; an edited one keeps its input and the
+    // version it was edited on.
+    it("keeps the typed input and its version across a refresh of the child", async () => {
+      mockOnSave.mockResolvedValue(undefined);
+      const panel = (student: Student) => (
+        <PersonalInfoEditPanel
+          onCancel={mockOnCancel}
+          student={student}
+          onSave={mockOnSave}
+        />
+      );
+      const view = render(panel(createMockStudent({ version: "record-v1" })));
+      await consentLoaded();
+
+      const firstName = screen.getByLabelText<HTMLInputElement>("Vorname");
+      fireEvent.change(firstName, { target: { value: "Mia" } });
+      view.rerender(panel(createMockStudent({ version: "record-v2" })));
+      expect(firstName.value).toBe("Mia");
+
+      fireEvent.click(screen.getByText("Speichern"));
+      await waitFor(() =>
+        expect(mockOnSave).toHaveBeenCalledWith(
+          expect.objectContaining({ first_name: "Mia", version: "record-v1" }),
+        ),
+      );
+    });
+
+    it("refills an untouched draft from a refresh of the child", async () => {
+      const panel = (student: Student) => (
+        <PersonalInfoEditPanel
+          onCancel={mockOnCancel}
+          student={student}
+          onSave={mockOnSave}
+        />
+      );
+      const view = render(panel(createMockStudent({ version: "record-v1" })));
+      await consentLoaded();
+      view.rerender(
+        panel(createMockStudent({ first_name: "Lena", version: "record-v2" })),
+      );
+      await waitFor(() =>
+        expect(screen.getByLabelText<HTMLInputElement>("Vorname").value).toBe(
+          "Lena",
+        ),
+      );
+    });
+
+    it("names a failed reload after a refusal as a load error", async () => {
+      mockOnSave.mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      );
+      const onStudentReload = vi.fn(() =>
+        Promise.reject(
+          new ApiError("offline", 503, { code: "general.unavailable" }),
+        ),
+      );
+      render(
+        <PersonalInfoEditPanel
+          onCancel={mockOnCancel}
+          student={createMockStudent({ version: "record-v1" })}
+          onSave={mockOnSave}
+          onStudentReload={onStudentReload}
+        />,
+      );
+      await consentLoaded();
+      fireEvent.change(screen.getByLabelText("Vorname"), {
+        target: { value: "Mia" },
+      });
+      fireEvent.click(screen.getByText("Speichern"));
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Der neue Stand konnte nicht geladen werden.",
+      );
+      expect(screen.getByRole("alert")).not.toHaveTextContent(
+        "Du siehst jetzt den neuen Stand.",
+      );
+    });
+
+    it("keeps saving locked after a refusal until a read of the stored child succeeds", async () => {
+      mockOnSave.mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      );
+      const onStudentReload = vi
+        .fn<() => Promise<unknown>>()
+        .mockRejectedValueOnce(
+          new ApiError("offline", 503, { code: "general.unavailable" }),
+        )
+        .mockResolvedValue(undefined);
+      render(
+        <PersonalInfoEditPanel
+          onCancel={mockOnCancel}
+          student={createMockStudent({ version: "record-v1" })}
+          onSave={mockOnSave}
+          onStudentReload={onStudentReload}
+        />,
+      );
+      await consentLoaded();
+      fireEvent.change(screen.getByLabelText("Vorname"), {
+        target: { value: "Mia" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Der neue Stand konnte nicht geladen werden.",
+      );
+
+      // The draft still carries the refused version: no save until a read.
+      // Blocked with its reason (`aria-disabled`), the click is swallowed.
+      const save = screen.getByRole("button", { name: "Speichern" });
+      await waitFor(() =>
+        expect(save).toHaveAttribute("aria-disabled", "true"),
+      );
+      fireEvent.click(save);
+      expect(mockOnSave).toHaveBeenCalledTimes(1);
+
+      fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: "Speichern" }),
+        ).not.toHaveAttribute("aria-disabled"),
+      );
+      expect(screen.getByRole("button", { name: "Speichern" })).toBeEnabled();
+      expect(onStudentReload).toHaveBeenCalledTimes(2);
+    });
+
+    it("keeps saving locked after a refusal until live updates bring the stored child", async () => {
+      mockOnSave.mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      );
+      const onStudentReload = vi
+        .fn<() => Promise<unknown>>()
+        .mockRejectedValue(
+          new ApiError("offline", 503, { code: "general.unavailable" }),
+        );
+      const panel = (student: Student) => (
+        <PersonalInfoEditPanel
+          onCancel={mockOnCancel}
+          student={student}
+          onSave={mockOnSave}
+          onStudentReload={onStudentReload}
+        />
+      );
+      const { rerender } = render(
+        panel(createMockStudent({ version: "record-v1" })),
+      );
+      await consentLoaded();
+      fireEvent.change(screen.getByLabelText("Vorname"), {
+        target: { value: "Mia" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Der neue Stand konnte nicht geladen werden.",
+      );
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: "Speichern" }),
+        ).toHaveAttribute("aria-disabled", "true"),
+      );
+
+      // Two live updates of the child: each is a successful read of it.
+      rerender(panel(createMockStudent({ version: "record-v2" })));
+      rerender(panel(createMockStudent({ version: "record-v3" })));
+
+      // Either saving is free again, or the alert still offers the reload:
+      // never a locked save without a way to read.
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: "Speichern" }),
+        ).not.toHaveAttribute("aria-disabled"),
+      );
+      mockOnSave.mockResolvedValueOnce(undefined);
+      fireEvent.change(screen.getByLabelText("Vorname"), {
+        target: { value: "Mila" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+      await waitFor(() =>
+        expect(mockOnSave).toHaveBeenLastCalledWith(
+          expect.objectContaining({ first_name: "Mila", version: "record-v3" }),
+        ),
+      );
+    });
+
     it("does not mark loaded privacy consent as changed for an unrelated save", async () => {
       mockOnSave.mockResolvedValue(undefined);
       fetchStudentPrivacyConsentMock.mockResolvedValue({

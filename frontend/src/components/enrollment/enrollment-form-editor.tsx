@@ -94,7 +94,7 @@ import {
 } from "~/lib/enrollment-legal-blocks";
 import { listPhases, type Phase } from "~/lib/enrollment-phase-api";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { ApiError, isChangedSinceRead } from "~/lib/api-error";
+import { ApiError } from "~/lib/api-error";
 import { useSWRAuth } from "~/lib/swr";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import type { Translations } from "~/lib/enrollment-translations";
@@ -601,17 +601,14 @@ export function EnrollmentFormEditor({
         };
         if (expected) logger.warn("schema_save_failed", failure);
         else logger.error("schema_save_failed", failure);
-        if (isChangedSinceRead(err)) {
-          // A colleague published a newer version since this one was read
-          // (ADR 0311): the editor shows it, no stale draft stays, and the
-          // refusal offers no retry of the same save.
-          void showRefusalWithNewestSchema(err);
-        } else {
-          void showSaveError(err, {
-            object: "die Formularvorlage",
-            retry: () => void saveSchemaRef.current(nextMode),
-          });
-        }
+        // A colleague published a newer version since this one was read
+        // (ADR 0311): the editor shows it, no stale draft stays, and the
+        // refusal offers no retry of the same save.
+        void showSaveError(err, {
+          object: "die Formularvorlage",
+          reload: reloadNewestSchema,
+          retry: () => void saveSchemaRef.current(nextMode),
+        });
       }
       return null;
     } finally {
@@ -646,16 +643,10 @@ export function EnrollmentFormEditor({
       return { error };
     }
   };
-  const showRefusalWithNewestSchema = async (refusal: unknown) => {
+  // The read after a refusal; rejects when the newest version is not there.
+  const reloadNewestSchema = async () => {
     const failed = await adoptNewestSchema();
-    if (failed) {
-      void showSaveError(failed.error, {
-        object: "die Formularvorlagen",
-        retry: () => void showRefusalWithNewestSchema(refusal),
-      });
-      return;
-    }
-    void showSaveError(refusal, { object: "die Formularvorlage" });
+    if (failed) throw failed.error;
   };
 
   const handleSave = async () => {

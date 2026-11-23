@@ -95,7 +95,7 @@ export function AdminChildDataCorrection({
   // A colleague corrected the child meanwhile: the form shows the stored
   // data with the refusal, the reason stays. Without the stored data the
   // form names the failed read; its retry reads again.
-  const showRefusalWithStoredChild = async (refusal: unknown) => {
+  const reloadStoredChild = async () => {
     setShowStored(true);
     try {
       await onChangedSinceRead();
@@ -105,13 +105,8 @@ export function AdminChildDataCorrection({
         request_id: requestId,
         child_id: child.id,
       });
-      await errors.show(readError, {
-        object: "der Eintrag des Kindes",
-        retry: () => void showRefusalWithStoredChild(refusal),
-      });
-      return;
+      throw readError;
     }
-    await errors.show(refusal, { object: "der Eintrag des Kindes" });
   };
 
   const save = async () => {
@@ -170,13 +165,12 @@ export function AdminChildDataCorrection({
           logger.error("admin_child_data_correction_failed", failure);
         }
         if (!op.isCurrent()) return;
-        if (isChangedSinceRead(err)) {
-          await showRefusalWithStoredChild(err);
-          return;
-        }
         await errors.show(err, {
-          object: "die Korrektur",
+          object: isChangedSinceRead(err)
+            ? "der Eintrag des Kindes"
+            : "die Korrektur",
           retry: () => void latestSubmitRef.current(),
+          reload: reloadStoredChild,
         });
       }
     });

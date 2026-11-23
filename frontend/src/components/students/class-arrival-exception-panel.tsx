@@ -65,7 +65,9 @@ const LIST_HORIZON_DAYS = 60;
 
 /** Die Datenquelle des Bausteins; jedes Portal bringt seine eigene mit. */
 export interface ClassArrivalExceptionApi {
-  readonly list: (schoolClass: string) => Promise<ClassArrivalExceptionListResponse>;
+  readonly list: (
+    schoolClass: string,
+  ) => Promise<ClassArrivalExceptionListResponse>;
   readonly upsert: (
     schoolClass: string,
     date: string,
@@ -176,7 +178,9 @@ interface ClassArrivalExceptionPanelProps {
    * Zusatzzeile unter einem Eintrag, zum Beispiel wer ihn gemacht hat. Ohne
    * Angabe nennt die OGS Einträge der Schule.
    */
-  readonly originLabel?: (exception: ClassArrivalExceptionResponse) => string | null;
+  readonly originLabel?: (
+    exception: ClassArrivalExceptionResponse,
+  ) => string | null;
   /**
    * Die Schule betreut Sa/So nach dem Freitagsplan (#3921): dann sind auch
    * Wochenendtage wählbar.
@@ -235,7 +239,9 @@ type ClassArrivalExceptionPanelBodyProps = ClassArrivalExceptionPanelProps & {
 /** Der OGS-Satz für alle, die nur lesen dürfen. */
 const OGS_READ_ONLY_HINT = "Ändern kann das die Koordination.";
 
-function ogsOriginLabel(exception: ClassArrivalExceptionResponse): string | null {
+function ogsOriginLabel(
+  exception: ClassArrivalExceptionResponse,
+): string | null {
   return exception.origin === "school" ? "Eingetragen von der Schule" : null;
 }
 

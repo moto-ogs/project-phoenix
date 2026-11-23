@@ -22,7 +22,8 @@ import { normalizeLocale, type AppLocale } from "~/i18n/locales";
 import { useErrorContact } from "~/lib/error-contact";
 import { useModulePortal } from "~/lib/module-portal-context";
 import { portalNotBookedExplanation } from "~/lib/portal-not-booked";
-import { ApiError } from "~/lib/api-error";
+import { ApiError, isReadStateRefusal } from "~/lib/api-error";
+import type { ErrorPresentation } from "~/lib/error-presentation";
 import {
   announceModuleBookingStale,
   moduleNotBookedExplanation,
@@ -552,6 +553,14 @@ interface ApiErrorDisplayOptions {
   retry?: () => void;
   /** Concrete next step for a refusal that cannot be retried as-is. */
   action?: { label: string; onClick: () => void };
+  /**
+   * Reads the stored state again after a read-state refusal
+   * (`isReadStateRefusal`, ADR 0311) and rejects when that read fails.
+   * The message waits for it: the refusal's text says that the new state
+   * shows, a failed read shows its load error instead, with a retry that
+   * runs only the read. Other errors ignore it.
+   */
+  reload?: () => Promise<unknown>;
 }
 
 export function loginUrl(host: string, path: string): string {
@@ -567,6 +576,18 @@ export function loginUrl(host: string, path: string): string {
     }
   }
   return "/?error=SessionExpired";
+}
+
+/** The outcome of the read after a read-state refusal, never a rejection. */
+async function settleReload(
+  reload: () => Promise<unknown>,
+): Promise<{ failed: false } | { failed: true; error: unknown }> {
+  try {
+    await reload();
+    return { failed: false };
+  } catch (error) {
+    return { failed: true, error };
+  }
 }
 
 /** What one failed action shows, in a toast or in the form's alert. */
@@ -600,6 +621,8 @@ function useApiErrorCore(
   // A catalog import can finish after the caller has cleared the error, shown
   // another one, or unmounted. Only the latest request may update its state.
   const showVersion = useRef(0);
+  // Counts calls of `show` alone, not clears: see the reload below.
+  const showStarts = useRef(0);
   // A failed load stays on screen while SWR retries it, and every retry
   // hands `show` a new error. Count it once until the caller clears it.
   const loadLogged = useRef(false);
@@ -673,15 +696,25 @@ function useApiErrorCore(
   }, [fieldErrors, formRef]);
 
   const show = useCallback(
-    async (error: unknown, options: ApiErrorDisplayOptions) => {
-      const version = showVersion.current + 1;
+    async function show(
+      error: unknown,
+      options: ApiErrorDisplayOptions,
+    ): Promise<ErrorPresentation | undefined> {
+      let version = showVersion.current + 1;
       showVersion.current = version;
+      const start = ++showStarts.current;
       // The hook may belong to the component that renders the dialog, above
       // its provider. Capture the action's actual rendered context before the
       // asynchronous catalog lookup, while its focused trigger is still in it.
       const fixInNewTab =
         document.activeElement?.closest('[role="dialog"]') !== null;
       const locale = normalizeLocale(document.documentElement.lang);
+      // A refused write on a changed state: the same request would be
+      // refused again, so neither retry nor action is offered. The stored
+      // state is read at once, while the catalog loads.
+      const readState = isReadStateRefusal(error);
+      const reloaded =
+        readState && options.reload ? settleReload(options.reload) : undefined;
       // The presenter remains a separate chunk. The mounted error path starts
       // its load ahead of time, and concurrent failures share that request.
       let presenter: typeof import("~/lib/error-presentation");
@@ -714,8 +747,55 @@ function useApiErrorCore(
         );
         return;
       }
+      const reload = reloaded ? await reloaded : undefined;
+      if (reloaded) {
+        // The read itself may clear the form's error (a refilled form
+        // does); only a newer failure takes over from this one.
+        if (showStarts.current !== start) return;
+        version = ++showVersion.current;
+      }
       if (showVersion.current !== version) return;
       const { presentError, errorDisplayLabels } = presenter;
+      if (reload?.failed) {
+        // The refusal's text would claim the new state shows. Shown is the
+        // failed read, and its retry reads again (`show` once more), never
+        // the refused write.
+        const loadPresentation = presentError(
+          reload.error,
+          options.object,
+          locale,
+          contact,
+        );
+        if (loadPresentation.requiresLogin) {
+          window.location.assign(
+            loginUrl(window.location.host, window.location.pathname),
+          );
+          return loadPresentation;
+        }
+        const loadLogged = errorLogFields(reload.error);
+        logShown(reload.error, {
+          ...loadLogged,
+          error_class: loadPresentation.errorClass ?? loadLogged.error_class,
+        });
+        const loadLabels = errorDisplayLabels(locale);
+        setFieldErrors({});
+        deliver(
+          {
+            message: [loadLabels.reloadFailed, loadPresentation.message]
+              .filter(Boolean)
+              .join(" "),
+            retry: {
+              label: loadLabels.retry,
+              onClick: () => void show(error, options),
+            },
+            requestId: loadPresentation.requestId,
+            requestIdLabel: loadLabels.requestId,
+            fixInNewTab,
+          },
+          locale,
+        );
+        return loadPresentation;
+      }
       const presentation = presentError(error, options.object, locale, contact);
       if (presentation.requiresLogin) {
         window.location.assign(
@@ -758,11 +838,12 @@ function useApiErrorCore(
           message: [presentation.message, options.messageSuffix]
             .filter(Boolean)
             .join(" "),
-          retry:
-            options.action ??
-            (presentation.retryable && options.retry
-              ? { label: labels.retry, onClick: options.retry }
-              : undefined),
+          retry: readState
+            ? undefined
+            : (options.action ??
+              (presentation.retryable && options.retry
+                ? { label: labels.retry, onClick: options.retry }
+                : undefined)),
           requestId: presentation.requestId,
           requestIdLabel: labels.requestId,
           code: error instanceof ApiError ? error.code : undefined,

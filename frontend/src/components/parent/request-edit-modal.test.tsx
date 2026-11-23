@@ -208,6 +208,54 @@ describe("RequestEditModal", () => {
   // refused. The dialog shows the catalog text without a retry (the same
   // version would be refused again), reloads the list and then shows the
   // stored values of the new version.
+  // ADR 0311, rule 6: a list that cannot be read again after the refusal
+  // ends the wait with its load error instead of a spinner without end.
+  it("names a failed reload after a refusal instead of waiting forever", async () => {
+    const onReload = vi.fn(() =>
+      Promise.reject(
+        new ApiError("offline", 503, { code: "general.unavailable" }),
+      ),
+    );
+    updateMasterData.mockRejectedValue(
+      new ApiError("changed since it was read", 409, {
+        code: "general.changed_since_read",
+      }),
+    );
+    renderParent(
+      <RequestEditModal
+        studentId="1"
+        request={{
+          type: "master_data",
+          id: "md-1",
+          version: "row-1",
+          label: "Vorname",
+          value: "Lena",
+        }}
+        onClose={vi.fn()}
+        onReload={onReload}
+      />,
+    );
+
+    await screen.findByText("Geändert am 24.08.2026");
+    fireEvent.change(screen.getByLabelText("Vorname"), {
+      target: { value: "Lea" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Änderung speichern" }));
+
+    const dialog = screen.getByRole("dialog");
+    expect(
+      await within(dialog).findByText(
+        /Der neue Stand konnte nicht geladen werden/,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Lädt den gespeicherten Stand/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Änderung speichern" }),
+    ).toBeDisabled();
+  });
+
   it("reloads a request changed since it was read and shows its stored values", async () => {
     const onClose = vi.fn();
     const onReload = vi.fn();

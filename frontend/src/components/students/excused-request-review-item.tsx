@@ -1,6 +1,5 @@
 "use client";
 
-import { isOutdatedDecision } from "~/lib/change-request-list-api";
 import { useLayoutEffect, useRef, useState } from "react";
 
 import { ConsentCheckbox } from "~/components/ui/consent-checkbox";
@@ -113,7 +112,7 @@ export function ExcusedRequestReviewItem({
   /** Fassung, die entschieden werden soll — verhindert Überschreiben (#2267). */
   expectedVersion: string;
   /** Die Anfrage ist seit dem Lesen anders gespeichert: die Liste neu laden. */
-  onStale: () => void;
+  onStale: () => Promise<unknown>;
   /** Aktueller Stand je Tag, damit „Aktuell → Gewünscht" möglich ist (#2267). */
   currentStatusByDate?: Readonly<Record<string, string>>;
   /** Warum hier gerade nicht einzeln entschieden werden kann (#2267). */
@@ -169,12 +168,11 @@ export function ExcusedRequestReviewItem({
         request_id: row.id,
         ...(code ? { code } : {}),
       });
-      const stale = isOutdatedDecision(err);
       await showError(err, {
         object: "die Anfrage",
-        retry: stale ? undefined : () => void decideRef.current(approve),
+        retry: () => void decideRef.current(approve),
+        reload: onStale,
       });
-      if (stale) onStale();
       setBusy(false);
     }
   };

@@ -212,9 +212,12 @@ vi.mock("~/lib/swr", () => {
   return {
     ...lib,
     // A read that is new per opening answers like the cache here.
-    useFreshSWR: (key: string | null, fetcher?: () => Promise<unknown>) => ({
+    useOpeningRead: (key: string | null, fetcher?: () => Promise<unknown>) => ({
       ...lib.useSWRAuth(key, fetcher),
-      fresh: true,
+      settled: true,
+      latest: undefined,
+      retry: () => undefined,
+      reload: () => Promise.resolve(undefined),
     }),
   };
 });

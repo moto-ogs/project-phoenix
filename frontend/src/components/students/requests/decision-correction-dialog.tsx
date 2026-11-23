@@ -58,7 +58,7 @@ export function DecisionCorrectionDialog({
   onCorrected: (notice: string) => void;
   /** Die Entscheidung ist inzwischen anders gespeichert: die Liste lädt neu
    * und der Dialog schließt. */
-  onStale: () => void;
+  onStale: () => Promise<unknown>;
 }>) {
   // Vorbelegt auf das Gegenteil der bisherigen Entscheidung: wer korrigiert,
   // will fast immer das andere Ergebnis.
@@ -101,8 +101,10 @@ export function DecisionCorrectionDialog({
         // Veraltet: erst neu laden, dann neu entscheiden. Der Dialog trägt
         // die alte Fassung und schickte sie wieder; er schließt, die Liste
         // zeigt den gespeicherten Stand und die Meldung steht als Toast.
-        void staleErrors.show(err, { object: "die Korrektur" });
-        onStale();
+        void staleErrors.show(err, {
+          object: "die Korrektur",
+          reload: onStale,
+        });
         return;
       }
       await errors.show(err, {

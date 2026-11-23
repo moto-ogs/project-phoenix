@@ -23,7 +23,7 @@ import {
 import { CaregiverBlockerResolutionPanel } from "~/components/teachers/caregiver-blocker-resolution-panel";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useFreshSWR, useSWRAuth } from "~/lib/swr";
+import { useOpeningRead, useSWRAuth } from "~/lib/swr";
 import { staffAccessKeys } from "~/lib/swr/staff-keys";
 import { createLogger } from "~/lib/logger";
 import { groupsConcept } from "~/lib/concepts/groups";
@@ -126,9 +126,10 @@ export function CaregiverCapabilityModal({
     scope === "tenant" ? capabilityKey : null,
     readState,
   );
-  const operatorRead = useFreshSWR(
+  const operatorRead = useOpeningRead(
     scope === "operator" ? capabilityKey : null,
     readState,
+    { showCached: false },
   );
   const {
     data: freshState,

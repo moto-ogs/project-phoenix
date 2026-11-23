@@ -19,7 +19,8 @@
 
 // Re-export hooks
 export {
-  useFreshSWR,
+  revalidateOrThrow,
+  useOpeningRead,
   useSWRAuth,
   useSWRCacheKey,
   useSWRPreload,
@@ -48,6 +49,6 @@ export {
 } from "./live-sync";
 
 // Types only: no export of this module hands out the cache (#5007).
-export type { ReaderOptions } from "./hooks";
+export type { OpeningRead, OpeningReadOptions, ReaderOptions } from "./hooks";
 export type { SWRConfiguration, SWRResponse, KeyedMutator } from "swr";
 export { mutate } from "./mutate";

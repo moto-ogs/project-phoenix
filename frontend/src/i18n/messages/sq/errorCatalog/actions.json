@@ -3,5 +3,6 @@
   "copyRequestId": "Kopjo numrin e kërkesës",
   "requestId": "Numri i kërkesës: {requestId}",
   "crash": "Nuk u përpunua: {object}. Provoni përsëri më vonë.",
-  "fieldCheck": "Kontrolloni këtë fushë."
+  "fieldCheck": "Kontrolloni këtë fushë.",
+  "reloadFailed": "Gjendja e re nuk u ngarkua dot."
 }

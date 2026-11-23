@@ -43,6 +43,7 @@ import {
   fetchStudentCareWithdrawalHistory,
 } from "~/lib/care-exit-api";
 import { itemKey } from "./requests/case-model";
+import { CHANGE_REQUESTS_REFRESH_EVENT } from "~/lib/change-requests-refresh";
 
 // Die Liste hält ihre Seiten im SWR-Cache (#4988): echtes SWR, ein eigener
 // Cache je Render und eine angemeldete Sitzung für useSWRAuth.
@@ -628,6 +629,117 @@ describe("AggregatedRequestList", () => {
     expect(await screen.findByRole("status")).toHaveTextContent(
       "2 Anfragen wurden freigegeben.",
     );
+  });
+
+  // ADR 0311: die Sammelfreigabe gibt die Fassung frei, die beim Anhaken
+  // zu sehen war; eine seither geänderte lehnt der Server ab.
+  function bulkItems(firstVersion: string) {
+    return {
+      items: [
+        {
+          request_type: "master_data",
+          occurred_at: "2026-08-29T10:00:00Z",
+          student_id: "10",
+          student_name: "Mia Muster",
+          expected_version: firstVersion,
+          urgent_today: false,
+          bulk_eligible: true,
+          data: { id: "1" },
+        },
+        {
+          request_type: "excused",
+          occurred_at: "2026-08-29T09:00:00Z",
+          student_id: "10",
+          student_name: "Mia Muster",
+          expected_version: "v2",
+          urgent_today: false,
+          bulk_eligible: true,
+          data: { id: "2" },
+        },
+      ] as never,
+    };
+  }
+
+  async function tickBothAndConfirm(afterTicking?: () => Promise<void>) {
+    const selections = await screen.findAllByRole("checkbox", {
+      name: /^Gemeinsam freigeben:/,
+    });
+    fireEvent.click(selections[0]!);
+    fireEvent.click(selections[1]!);
+    await afterTicking?.();
+    fireEvent.change(screen.getByLabelText("Gemeinsame Begründung"), {
+      target: { value: "Alles geprüft" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "2 Anfragen freigeben" }),
+    );
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "2 Anfragen freigeben" }).at(-1)!,
+    );
+  }
+
+  it("gibt die beim Anhaken gezeigte Fassung frei, nicht eine später geladene", async () => {
+    mockListOpen
+      .mockResolvedValueOnce(bulkItems("v1"))
+      .mockResolvedValue(bulkItems("v9"));
+    render(<AggregatedRequestList view="open" filters={NO_FILTERS} />);
+
+    await tickBothAndConfirm(async () => {
+      act(() => {
+        window.dispatchEvent(new Event(CHANGE_REQUESTS_REFRESH_EVENT));
+      });
+      await waitFor(() => expect(mockListOpen).toHaveBeenCalledTimes(2));
+      await act(async () => undefined);
+    });
+
+    await waitFor(() =>
+      expect(mockBulkApprove).toHaveBeenCalledWith(
+        [
+          { kind: "master_data", id: "1", expected_version: "v1" },
+          { kind: "excused", id: "2", expected_version: "v2" },
+        ],
+        "Alles geprüft",
+      ),
+    );
+  });
+
+  it("lädt nach einer abgelehnten Sammelfreigabe neu und hebt die Auswahl auf", async () => {
+    mockListOpen.mockResolvedValue(bulkItems("v1"));
+    mockBulkApprove.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    render(<AggregatedRequestList view="open" filters={NO_FILTERS} />);
+
+    await tickBothAndConfirm();
+
+    expect(
+      await screen.findByRole("alert", { name: /wurde inzwischen geändert/ }),
+    ).toBeInTheDocument();
+    expect(mockListOpen).toHaveBeenCalledTimes(2);
+    for (const selection of screen.getAllByRole("checkbox", {
+      name: /^Gemeinsam freigeben:/,
+    })) {
+      expect(selection).not.toBeChecked();
+    }
+  });
+
+  it("meldet ein gescheitertes Neuladen nach der Ablehnung als Ladefehler", async () => {
+    mockListOpen
+      .mockResolvedValueOnce(bulkItems("v1"))
+      .mockRejectedValueOnce(
+        new ApiError("offline", 503, { code: "general.unavailable" }),
+      );
+    mockBulkApprove.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    render(<AggregatedRequestList view="open" filters={NO_FILTERS} />);
+
+    await tickBothAndConfirm();
+
+    const toast = await screen.findByRole("alert", {
+      name: /Der neue Stand konnte nicht geladen werden/,
+    });
+    expect(toast).not.toHaveAccessibleName(/Du siehst jetzt den neuen Stand/);
   });
 
   it("erklärt private Angaben und schaltet Familienschutz mit Begründung ein", async () => {
