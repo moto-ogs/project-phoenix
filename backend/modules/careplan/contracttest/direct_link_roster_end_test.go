@@ -160,6 +160,7 @@ func TestDecide_DirectLinkEndingEarlyKeepsTheChildOnTheRosterOfItsSource(t *test
 
 	start, end := string(calendar.Date(env.sourcePhase.ServiceStartDate)), string(calendar.Date(env.sourcePhase.ServiceEndDate).AddDays(1))
 	approved := loadTemplateEnrollments(t, env, roster.ID)
+	require.Len(t, approved, 3)
 	assert.ElementsMatch(t, []rosterSpan{
 		{Weekdays: []int{1}, From: start, Until: string(directLinkBookingEnd)},
 		{Weekdays: []int{2}, From: start, Until: string(directLinkBookingEnd)},
@@ -186,8 +187,10 @@ func TestDecide_DirectLinkEndingEarlyKeepsTheChildOnTheRosterOfItsSource(t *test
 	})
 	require.NoError(t, err)
 	kept := map[int64]rosterSpan{}
-	for _, row := range approved[:2] {
-		kept[row.ID] = rosterSpan{Weekdays: row.SelectedWeekdays, From: start, Until: end}
+	for _, row := range approved {
+		if row.ValidFrom == start {
+			kept[row.ID] = rosterSpan{Weekdays: row.SelectedWeekdays, From: start, Until: end}
+		}
 	}
 	require.Len(t, kept, 2)
 	assert.Equal(t, kept, rosterSpansByID(loadTemplateEnrollments(t, env, roster.ID)), "each weekday keeps its row and runs to the end of its booking")
