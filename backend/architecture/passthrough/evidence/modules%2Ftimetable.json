@@ -2452,13 +2452,6 @@
     },
     {
       "build": "testhooks",
-      "evidence": "func (r closingDayCalendarRepository) Update(ctx context.Context, day *scheduleModels.ClosingDay) error {\n\tif day == nil {\n\t\treturn errors.New(\"ClosingDay cannot be nil or zero value\")\n\t}\n\tif err := day.Validate(); err != nil {\n\t\treturn err\n\t}\n\tupdated, err := r.calendar.UpdateClosingDay(ctx, schoolcalendar.UpdateClosingDay{ID: day.ID, ClosingDayFields: closingDayFieldsFromLegacy(day)})\n\tif err != nil {\n\t\treturn calendarError(\"update\", err)\n\t}\n\tapplyClosingDayToLegacy(day, updated)\n\treturn nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/timetable/internal/application/closingDayCalendarRepository.Update",
-      "owner": "modules/timetable"
-    },
-    {
-      "build": "testhooks",
       "evidence": "func (r dateframeCalendarRepository) Create(ctx context.Context, dateframe *scheduleModels.Dateframe) error {\n\tif dateframe == nil {\n\t\treturn fmt.Errorf(\"%s cannot be nil or zero value\", \"Dateframe\")\n\t}\n\tif err := dateframe.Validate(); err != nil {\n\t\treturn err\n\t}\n\tcreated, err := r.calendar.CreateDateframe(ctx, schoolcalendar.CreateDateframe{DateframeFields: dateframeFieldsFromLegacy(dateframe)})\n\tif err != nil {\n\t\treturn calendarError(\"create\", err)\n\t}\n\tapplyDateframeToLegacy(dateframe, created)\n\treturn nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/timetable/internal/application/dateframeCalendarRepository.Create",

@@ -1752,11 +1752,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/timetable/internal/application/closingDayCalendarRepository.Update",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/timetable/internal/application/dateframeCalendarRepository.Create",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
