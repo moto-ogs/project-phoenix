@@ -56207,8 +56207,11 @@
           "name": "attachments",
           "optional": true,
           "schema": {
-            "kind": "json",
-            "nullable": true
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "messageAttachmentResponse"
+            }
           }
         }
       ]
@@ -74295,8 +74298,11 @@
           "name": "attachments",
           "optional": true,
           "schema": {
-            "kind": "json",
-            "nullable": true
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "ParentMessageAttachmentResponse"
+            }
           }
         }
       ]
@@ -75020,8 +75026,11 @@
           "name": "attachments",
           "optional": true,
           "schema": {
-            "kind": "json",
-            "nullable": true
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "messageAttachmentResponse"
+            }
           }
         }
       ]
