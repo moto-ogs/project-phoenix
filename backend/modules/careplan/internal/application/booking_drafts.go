@@ -250,19 +250,8 @@ func legacyLinkRows(links []*careEnrollmentDraft, phase careplan.OfferingPhase) 
 	var from *calendar.Date
 	for i := range ends {
 		end := ends[i]
-		row := &careEnrollmentDraft{
-			activityGroupID: links[0].activityGroupID, calendarPeriodID: links[0].calendarPeriodID,
-			selectedWeekday: make(map[int]bool), validFrom: from, validUntil: &end,
-		}
-		for _, link := range links {
-			if careDraftValidUntil(link, phase).Before(end) {
-				continue
-			}
-			row.allWeekdays = row.allWeekdays || link.allWeekdays
-			for weekday := range link.selectedWeekday {
-				row.selectedWeekday[weekday] = true
-			}
-		}
+		row := legacyRowUntil(links, phase, end)
+		row.validFrom = from
 		if last := len(rows) - 1; last >= 0 && sameSourcedDraftDays(rows[last], row) {
 			rows[last].validUntil = &end
 		} else {
@@ -271,6 +260,25 @@ func legacyLinkRows(links []*careEnrollmentDraft, phase careplan.OfferingPhase) 
 		from = &end
 	}
 	return rows
+}
+
+// legacyRowUntil is the row of the stretch that ends on end: the weekdays
+// of every link that runs at least that long.
+func legacyRowUntil(links []*careEnrollmentDraft, phase careplan.OfferingPhase, end calendar.Date) *careEnrollmentDraft {
+	row := &careEnrollmentDraft{
+		activityGroupID: links[0].activityGroupID, calendarPeriodID: links[0].calendarPeriodID,
+		selectedWeekday: make(map[int]bool), validUntil: &end,
+	}
+	for _, link := range links {
+		if careDraftValidUntil(link, phase).Before(end) {
+			continue
+		}
+		row.allWeekdays = row.allWeekdays || link.allWeekdays
+		for weekday := range link.selectedWeekday {
+			row.selectedWeekday[weekday] = true
+		}
+	}
+	return row
 }
 
 // sourcedRowsBesideLegacy is what the sourced draft of a template still
