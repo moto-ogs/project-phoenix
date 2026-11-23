@@ -563,4 +563,16 @@ func TestCareSchoolChangeLeavesTwinsAsBefore(t *testing.T) {
 		map[int64]parentbilling.CareContractChild{827: {StudentID: ptr(int64(9825)), FirstName: "Ida", LastName: "Beispiel", BirthDate: birth}},
 		map[int64]string{827: parentbilling.FamilyKey(familyOther)})
 	assert.Empty(t, fromIssued.joined)
+
+	// An issued invoice of Noah's old record names another date of birth:
+	// the chain may rank him by it, so nothing joins.
+	byContract, order = versionsByContract([]parentbilling.CareContractVersion{
+		version(821, schoolBirkenfeld, 9821, "Noah", billingMonth, "2027-01-14"),
+		version(822, schoolIspringen, 9822, "Noah", "2027-01-15", "2027-01-31"),
+	})
+	conflicting := groupCare(byContract, order, contractFamilies(byContract, recipients),
+		map[int64]parentbilling.CareContractChild{828: {StudentID: ptr(int64(9821)), FirstName: "Noah", LastName: "Beispiel",
+			BirthDate: ptr(day(t, "2018-03-05"))}},
+		map[int64]string{828: parentbilling.FamilyKey(familyEva)})
+	assert.Empty(t, conflicting.joined)
 }

@@ -287,8 +287,9 @@ Rechnung des Monats ausgestellt ist, sonst den seines ersten Teils; haben
 mehrere Teile schon eine, legt moto nicht zusammen (#7892). Hat die Familie
 ein weiteres Kind mit demselben Geburtsdatum (einen Zwilling), so wie die
 Kette sie rangiert (mit dem Geburtsdatum, das sie einem Kind ohne eines
-gibt, und der Familie, unter der eine ausgestellte Rechnung zählt), legt
-moto ebenfalls nicht zusammen: Die Kette entscheidet Gleichstand bei Preis und
+gibt, und der Familie, unter der eine ausgestellte Rechnung zählt), oder
+nennen die Teile des Kindes verschiedene Geburtsdaten, legt moto ebenfalls
+nicht zusammen: Die Kette entscheidet Gleichstand bei Preis und
 Geburtsdatum nach dem Schlüssel, und nur ein Zwilling könnte mit dem Kind
 gleichstehen. So ändert kein Kind seinen Rang gegenüber einem anderen, auch
 nicht gegenüber Rechnungen, die ein Lauf des Monats schon ausgestellt hat. Ein Bescheid-Lauf entscheidet in beiden Rechnungen eines
