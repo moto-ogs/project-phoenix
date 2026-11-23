@@ -15,6 +15,10 @@ func staffGet(rt *Runtime, auth AuthRef) func(string) ([]byte, error) {
 // form schema, read through the staff phase route with get. The submission
 // sends it as its read-state token (ADR 0311); a Basis phase sends none.
 func showFormVersion(get func(string) ([]byte, error), body map[string]any) error {
+	// A step that pins the phase's form itself already names it.
+	if _, named := body["form_schema_id"]; named {
+		return nil
+	}
 	var phaseID int64
 	switch id := body["phase_id"].(type) {
 	case int64:
@@ -50,4 +54,13 @@ func showPhaseFormVersion(get func(string) ([]byte, error), phaseID int64, body 
 		body["form_schema_id"] = *phase.Data.FormSchemaID
 	}
 	return nil
+}
+
+// postShownForm sends a submission through post with the version of the
+// form shown for its phase, read with get (showFormVersion).
+func postShownForm(get func(string) ([]byte, error), body map[string]any, post func(map[string]any) ([]byte, error)) ([]byte, error) {
+	if err := showFormVersion(get, body); err != nil {
+		return nil, err
+	}
+	return post(body)
 }

@@ -282,10 +282,9 @@ func (s seedRegularBookingsStep) book(rt *Runtime, auth AuthRef, studentID int64
 		"external_consent_confirmed": true,
 		"send_notification":          false,
 	}
-	if err := showFormVersion(staffGet(rt, auth), body); err != nil {
-		return err
-	}
-	raw, err := rt.Client.PostWithAuth(auth, fmt.Sprintf("/api/enrollment/phases/%d/manual-approved-enrollments", rt.Enrollment.PhaseID), body)
+	raw, err := postShownForm(staffGet(rt, auth), body, func(b map[string]any) ([]byte, error) {
+		return rt.Client.PostWithAuth(auth, fmt.Sprintf("/api/enrollment/phases/%d/manual-approved-enrollments", rt.Enrollment.PhaseID), b)
+	})
 	if err != nil {
 		return fmt.Errorf("book care and lunch for child %d: %w", studentID, err)
 	}
