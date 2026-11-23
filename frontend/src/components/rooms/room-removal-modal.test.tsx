@@ -160,7 +160,7 @@ describe("RoomRemovalModal (#6845)", () => {
     expect(mocks.removeRoom).toHaveBeenCalledWith("7", "vorschau-1");
     expect(await screen.findByRole("alert")).toBeVisible();
     expect(
-      screen.queryByRole("button", { name: "Erneut versuchen" }),
+      screen.queryByRole("button", { name: /Wiederholen|Erneut versuchen/ }),
     ).not.toBeInTheDocument();
     expect(onRemoved).not.toHaveBeenCalled();
   });

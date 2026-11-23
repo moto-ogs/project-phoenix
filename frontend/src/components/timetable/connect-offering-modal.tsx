@@ -19,6 +19,7 @@ import { FormModal } from "~/components/ui/form-modal";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { MultiSelect } from "~/components/ui/multi-select";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import { isChangedSinceRead } from "~/lib/api-error";
 import { formatDate } from "~/lib/date-helpers";
 import { useOfferingPreview } from "~/lib/hooks/use-offering-preview";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
@@ -141,6 +142,7 @@ export function ConnectOfferingModal({
     preview,
     loading,
     error: previewError,
+    reload: reloadPreview,
   } = useOfferingPreview(isOpen ? deviation.templateId : undefined, selection);
   const options = offeringOptions(deviation, periodOfferings, offeringIds);
   const selectedOfferings = options
@@ -157,7 +159,7 @@ export function ConnectOfferingModal({
         await timetableService.connectTemplateToOffering(
           deviation.templateId,
           selection,
-          preview.from,
+          preview,
         );
       } catch (err) {
         logger.error("offering_connection_failed", {
@@ -165,9 +167,14 @@ export function ConnectOfferingModal({
           error: err instanceof Error ? err.message : String(err),
         });
         if (!op.isCurrent()) return;
+        // Kommen oder gehen inzwischen andere Kinder als in der Vorschau,
+        // zeigt der Dialog die neue Vorschau; bestätigt wird sie, nicht
+        // dieselbe Anfrage noch einmal (ADR 0311).
+        const changed = isChangedSinceRead(err);
+        if (changed) reloadPreview();
         void formErrors.show(err, {
           object: `die Verbindung von „${templateName}“ mit ${selectedOfferings.length > 1 ? "den Angeboten" : "dem Angebot"}`,
-          retry: () => latestSaveRef.current(),
+          retry: changed ? undefined : () => latestSaveRef.current(),
         });
         return;
       }

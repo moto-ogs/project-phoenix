@@ -423,19 +423,21 @@ class TimetableService {
 
   /**
    * POST /api/timetable/templates/{id}/offering-connection — „Mit Angebot
-   * verbinden“ (#5103) for every period of the series from effectiveDate on.
+   * verbinden“ (#5103) for every period of the series from the confirmed
+   * preview's day on. The preview's fingerprint travels along; the server
+   * refuses when other children would join or leave now (ADR 0311).
    */
   async connectTemplateToOffering(
     templateId: string,
     selection: OfferingSelection,
-    effectiveDate: string,
+    preview: Pick<OfferingPreview, "from" | "fingerprint">,
   ): Promise<void> {
     await bffJson(
       "tenant",
       "POST /api/timetable/templates/{id}/offering-connection",
       {
         params: { id: templateId },
-        body: connectionBody(selection, effectiveDate),
+        body: connectionBody(selection, preview),
       },
     );
   }

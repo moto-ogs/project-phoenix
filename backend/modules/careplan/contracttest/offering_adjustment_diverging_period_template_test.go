@@ -337,6 +337,8 @@ func TestSourcedRowPeriod_ConnectingSourceWithNarrowerSchedulePeriodSucceeds(t *
 	err = testpkg.WithTenantTx(t, ctx, env.db, testpkg.Tenant(t), func(txCtx context.Context, _ bun.Tx) error {
 		_, connectErr := templates.RosterReview.ConnectOfferingSource(txCtx, timetable.ConnectOfferingSourceCommand{
 			TemplateID: group.ID, OfferingIDs: []int64{source.ID}, EffectiveDate: monday,
+			// The phase check is under test, not the confirmed preview.
+			ConfirmPreview: func(context.Context) error { return nil },
 		})
 		return connectErr
 	})

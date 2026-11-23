@@ -768,6 +768,7 @@ export interface offeringPreviewResponse {
   weekdays: offeringPreviewWeekdayResponse[] | null;
   segments: offeringPreviewSegmentResponse[] | null;
   other_offerings: offeringPreviewAlternativeResponse[] | null;
+  fingerprint: string;
 }
 
 export const offeringPreviewResponseSchema: z.ZodType<offeringPreviewResponse, unknown> = object<offeringPreviewResponse>({
@@ -775,6 +776,7 @@ export const offeringPreviewResponseSchema: z.ZodType<offeringPreviewResponse, u
   weekdays: nullable(arr(offeringPreviewWeekdayResponseSchema)),
   segments: nullable(arr(offeringPreviewSegmentResponseSchema)),
   other_offerings: nullable(arr(offeringPreviewAlternativeResponseSchema)),
+  fingerprint: str,
 });
 
 /** Go: timetablehttp.offeringSuggestionResponse */
@@ -2215,6 +2217,7 @@ export interface offeringConnectionRequest {
   grade_levels?: number[] | null;
   school_classes?: string[] | null;
   effective_date?: string;
+  expected_fingerprint?: string;
 }
 
 /** Go: timetablehttp.offeringConnectionResponse */

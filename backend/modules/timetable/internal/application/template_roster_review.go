@@ -351,6 +351,10 @@ func (r *templateRosterReview) ConnectOfferingSource(ctx context.Context, cmd ti
 	if err := s.lockRecurrence(ctx, connectOfferingSourceOp); err != nil {
 		return timetable.ConnectOfferingSourceResult{}, err
 	}
+	// The rosters the school confirmed are read again under the gate.
+	if err := cmd.ConfirmPreview(ctx); err != nil {
+		return timetable.ConnectOfferingSourceResult{}, err
+	}
 	segments, err := r.futureSegments(ctx, cmd.TemplateID, cmd.EffectiveDate)
 	if err != nil {
 		return timetable.ConnectOfferingSourceResult{}, err
@@ -378,6 +382,8 @@ func validateConnectOfferingSource(cmd timetable.ConnectOfferingSourceCommand, t
 		return &ports.ScheduleError{Op: connectOfferingSourceOp, Err: fmt.Errorf("%w: template id is required", timetable.ErrRosterReviewInvalid)}
 	case len(cmd.OfferingIDs) == 0:
 		return &ports.ScheduleError{Op: connectOfferingSourceOp, Err: fmt.Errorf("%w: at least one offering is required", timetable.ErrRosterReviewInvalid)}
+	case cmd.ConfirmPreview == nil:
+		return &ports.ScheduleError{Op: connectOfferingSourceOp, Err: errors.New("the confirmed preview is required")}
 	case len(cmd.GradeLevels) > 0 && len(cmd.SchoolClasses) > 0:
 		return &ports.ScheduleError{Op: connectOfferingSourceOp, Err: fmt.Errorf("%w: grade and class filters exclude each other", timetable.ErrRosterReviewInvalid)}
 	case cmd.EffectiveDate.IsZero() || cmd.EffectiveDate.Before(today):

@@ -8,6 +8,7 @@ import { OfferingPreviewList } from "./offering-preview-list";
 // Schule am Berg chose only „Randstunde“ for class 1a. Children booked in a
 // Ganztag offering dropped from the preview without a reason.
 const preview: OfferingPreview = {
+  fingerprint: "vorschau",
   from: "2026-11-04",
   weekdays: [
     {
@@ -94,6 +95,7 @@ describe("OfferingPreviewList", () => {
     render(
       <OfferingPreviewList
         preview={{
+          fingerprint: "vorschau",
           from: "2026-11-10",
           weekdays: [
             {

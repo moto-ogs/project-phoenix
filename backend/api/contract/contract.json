@@ -118171,6 +118171,13 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "expected_fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -118448,6 +118455,12 @@
               "kind": "ref",
               "ref": "offeringPreviewAlternativeResponse"
             }
+          }
+        },
+        {
+          "name": "fingerprint",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
