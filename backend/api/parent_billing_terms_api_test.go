@@ -118,6 +118,41 @@ func partyEmailOf(t *testing.T, f careBillingFixture, contract int64) string {
 	return email
 }
 
+func TestHolidayDirectDebitReleaseKeepsTheAnnouncedAccount(t *testing.T) {
+	t.Parallel()
+	f := newReviewFixture(t, "Träger Ferien-Lastschrift")
+	billing := traegerColleague(t, f, identityaccess.TraegerRoleBilling)
+	testpkg.OwnTraegerCareContracts(t, f.db, f.office.organization)
+	care := careBillingFixture{db: f.db, traeger: f.traeger, office: traegerOffice{
+		organization: f.office.organization, schools: f.office.schools, token: billing,
+	}}
+	setNumberRange(t, f, billing, "FE-{NNNN}")
+	setTerms(t, f.traeger, billing, "holiday", map[string]any{"payment_method": "direct_debit", "due_days": 14})
+
+	contract := careContract(t, f.db, f.office.organization, f.office.schools[0], "Lia", careMonth, sjrServices()...)
+	ctx := context.Background()
+	_, err := f.db.ExecContext(ctx, `UPDATE care_contract.contract_parties SET email = 'EVA.Muster@example.org' WHERE contract_id = ?`, contract)
+	require.NoError(t, err)
+	saveCreditor(t, care, map[string]any{"creditor_id": sepaCreditorID, "prenotification_days": 2, "missing_mandate": "transfer"})
+	mandate := createMandate(t, care, mandateBody(contract, "SEPA-FERIEN"))
+
+	require.Equal(t, http.StatusOK, f.act(t, f.siblings, "confirm").Code)
+	run := startBillingRun(t, f, billing, int64(f.period.ID))
+	preview := billingRun(t, f, billing, int64(run.ID))
+	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(preview))
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	var sameAccount bool
+	require.NoError(t, f.db.NewRaw(`SELECT invoice.account_holder_sealed = debit.account_holder_sealed
+			AND invoice.debtor_iban_masked = mandate.iban_masked AND debit.iban_sealed = mandate.iban_sealed
+		FROM parent_billing.documents AS invoice
+		JOIN parent_billing.sepa_debits AS debit ON debit.organization_id = invoice.organization_id AND debit.document_id = invoice.id
+		JOIN parent_billing.sepa_mandates AS mandate ON mandate.organization_id = debit.organization_id AND mandate.id = debit.mandate_id
+		WHERE invoice.organization_id = ? AND invoice.run_id = ? AND mandate.id = ?`,
+		f.office.organization, run.ID, mandate.ID).Scan(ctx, &sameAccount))
+	assert.True(t, sameAccount)
+}
+
 // The SJR case of #4689: one Träger bills the monthly care by direct debit
 // and the holiday care by transfer. Each run's due date per payment method
 // reaches every invoice of that method; the holiday invoice stays an invoice
