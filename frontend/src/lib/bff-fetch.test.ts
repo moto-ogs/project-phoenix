@@ -603,10 +603,8 @@ describe("bffJson", () => {
         query: { from: "2026-09-01", to: "2026-09-30" },
       });
       void bffJson("platform", "GET /operator/stats");
-      void bffJson("tenant", "GET /api/students/", {
-        // @ts-expect-error: the route has no such variant
-        query: { view: "wide" },
-      });
+      // @ts-expect-error: the route has no such variant
+      void bffJson("tenant", "GET /api/students/", { query: { view: "wide" } });
       // @ts-expect-error: the route belongs to the Träger portal
       void bffJson("tenant", "GET /traeger/absence-types/");
       // A route its own route.ts serves, with the backend's answer.
@@ -617,15 +615,13 @@ describe("bffJson", () => {
       void bffJson("tenant", "GET /api/display/dashboard");
       // @ts-expect-error: the path parameter is missing
       void bffJson("tenant", "DELETE /api/activities/{id}");
-      void bffJson("tenant", "GET /api/activities/categories", {
-        // @ts-expect-error: the route reads no such query parameter
-        query: { name: "x" },
-      });
-      void bffJson("tenant", "PUT /api/activities/categories/{categoryId}", {
-        params: { categoryId: "1" },
-        // @ts-expect-error: the request type has no such field
-        body: { title: "x" },
-      });
+      const getCategories = "GET /api/activities/categories";
+      // @ts-expect-error: the route reads no such query parameter
+      void bffJson("tenant", getCategories, { query: { name: "x" } });
+      const putCategory = "PUT /api/activities/categories/{categoryId}";
+      const params = { categoryId: "1" };
+      // @ts-expect-error: the request type has no such field
+      void bffJson("tenant", putCategory, { params, body: { title: "x" } });
     };
     expect(checks).toBeTypeOf("function");
   });
