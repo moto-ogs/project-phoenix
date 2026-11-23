@@ -342,7 +342,7 @@ describe("monthly run page with a child an issued invoice already bills (#7892)"
     expect(screen.getByText("Rechnung MB-0002 · OGS Süd")).toBeInTheDocument();
     expect(
       screen.getByRole("link", {
-        name: "Rechnung MB-0002 von Noah Muster öffnen",
+        name: "Rechnung öffnen: MB-0002, Noah Muster",
       }),
     ).toHaveAttribute(
       "href",

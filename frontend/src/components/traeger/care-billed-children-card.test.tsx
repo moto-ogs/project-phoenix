@@ -41,7 +41,7 @@ describe("CareBilledChildrenCard", () => {
     expect(screen.getByText("1 Kind")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Für diese Kinder gibt es in diesem Monat schon eine Rechnung. Der Lauf stellt für sie keine weitere aus. Stimmt die Rechnung, musst du nichts tun. Ist sie falsch, storniere sie. Danach rechnet ein neuer Monatslauf das Kind ab.",
+        "Für dieses Kind ist der Monat schon abgerechnet. Der Lauf stellt keine zweite Rechnung aus. Stimmt das, musst du nichts tun. Ist eine Rechnung falsch, storniere sie. Danach rechnet dieser Lauf das Kind ab.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByText("Kind 1 Beispiel")).toBeInTheDocument();
@@ -50,12 +50,12 @@ describe("CareBilledChildrenCard", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("link", {
-        name: "Rechnung MB-0001 von Kind 1 Beispiel öffnen",
+        name: "Rechnung öffnen: MB-0001, Kind 1 Beispiel",
       }),
     ).toHaveAttribute("href", "/abrechnung/monatsbeitraege/31/rechnung/12");
     expect(
       screen.getByRole("link", {
-        name: "Vertrag von Kind 1 Beispiel öffnen: OGS Birkenfeld",
+        name: "Vertrag · OGS Birkenfeld: Kind 1 Beispiel",
       }),
     ).toHaveAttribute("href", "/vertraege/11");
   });
@@ -97,12 +97,12 @@ describe("CareBilledChildrenCard", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        /Einen Jahresbescheid änderst du mit einem neuen Jahreslauf\.$/,
+        /Ist ein Jahresbescheid falsch, ändere ihn mit einem neuen Jahreslauf\. Danach rechnet dieser Lauf das Kind ab\.$/,
       ),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("link", {
-        name: "Jahresbescheid JB-0003 von Kind 3 Beispiel öffnen",
+        name: "Jahresbescheid öffnen: JB-0003, Kind 3 Beispiel",
       }),
     ).toHaveAttribute("href", "/abrechnung/jahresbescheide/9/bescheid/32");
   });
@@ -118,14 +118,14 @@ describe("CareBilledChildrenCard", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Für diese Kinder gab es in diesem Monat schon eine Rechnung. Der Lauf hat für sie keine weitere ausgestellt. Stimmt die Rechnung, musst du nichts tun. Ist sie falsch, storniere sie. Danach rechnet ein neuer Monatslauf das Kind ab.",
+        "Für dieses Kind war der Monat schon abgerechnet. Der Lauf hat keine zweite Rechnung ausgestellt. Stimmt das, musst du nichts tun. Ist eine Rechnung falsch, storniere sie. Danach rechnet ein neuer Monatslauf das Kind ab.",
       ),
     ).toBeInTheDocument();
 
     rerender(<CareBilledChildrenCard childrenBilled={[billed(1)]} yearly />);
     expect(
       screen.getByText(
-        "Für diese Kinder gibt es in einem Monat des Jahres schon eine Rechnung. Der Jahreslauf nimmt diesen Monat nicht in ihren Bescheid. Stimmt die Rechnung, musst du nichts tun. Ist sie falsch, storniere sie. Danach nimmt ein neuer Jahreslauf den Monat auf.",
+        "Für dieses Kind ist ein Monat des Jahres schon abgerechnet. Der Jahreslauf lässt diesen Monat im Bescheid weg. Stimmt das, musst du nichts tun. Ist eine Rechnung falsch, storniere sie. Danach nimmt dieser Lauf den Monat auf.",
       ),
     ).toBeInTheDocument();
   });
@@ -153,7 +153,7 @@ describe("CareBilledChildrenCard", () => {
       screen.getByText("Rechnung MB-0004 · OGS Ispringen"),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("link", { name: /Rechnung MB-0004/ }),
+      screen.queryByRole("link", { name: /MB-0004/ }),
     ).not.toBeInTheDocument();
   });
 
@@ -164,6 +164,11 @@ describe("CareBilledChildrenCard", () => {
       />,
     );
     expect(screen.getByText("6 Kinder")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /^Für diese Kinder ist der Monat schon abgerechnet\..* Danach rechnet dieser Lauf die Kinder ab\.$/,
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByText("Kind 5 Beispiel")).toBeInTheDocument();
     expect(screen.queryByText("Kind 6 Beispiel")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /1 weitere anzeigen/ }));

@@ -57,31 +57,40 @@ function descriptionText(
   released: boolean,
   yearly: boolean,
 ): string {
-  const noticed = children.some((child) =>
-    child.invoices.some((invoice) => invoice.source === "care_notice_run"),
+  const one = children.length === 1;
+  const documents = children.flatMap((child) => child.invoices);
+  const noticed = documents.some(
+    (invoice) => invoice.source === "care_notice_run",
   );
+  const invoiced = documents.some(
+    (invoice) => invoice.source !== "care_notice_run",
+  );
+  const who = one ? "dieses Kind" : "diese Kinder";
   const found = yearly
-    ? "Für diese Kinder gibt es in einem Monat des Jahres schon eine Rechnung."
-    : released
-      ? "Für diese Kinder gab es in diesem Monat schon eine Rechnung."
-      : "Für diese Kinder gibt es in diesem Monat schon eine Rechnung.";
+    ? `Für ${who} ist ein Monat des Jahres schon abgerechnet.`
+    : `Für ${who} ${released ? "war" : "ist"} der Monat schon abgerechnet.`;
   const follows = yearly
-    ? "Der Jahreslauf nimmt diesen Monat nicht in ihren Bescheid."
+    ? "Der Jahreslauf lässt diesen Monat im Bescheid weg."
     : released
-      ? "Der Lauf hat für sie keine weitere ausgestellt."
-      : "Der Lauf stellt für sie keine weitere aus.";
+      ? "Der Lauf hat keine zweite Rechnung ausgestellt."
+      : "Der Lauf stellt keine zweite Rechnung aus.";
+  // An open run computes again when it opens, so it bills the child
+  // itself once the document is cancelled; a released one needs a new run.
+  const them = one ? "das Kind" : "die Kinder";
   const next = yearly
-    ? "Danach nimmt ein neuer Jahreslauf den Monat auf."
-    : "Danach rechnet ein neuer Monatslauf das Kind ab.";
+    ? "Danach nimmt dieser Lauf den Monat auf."
+    : released
+      ? `Danach rechnet ein neuer Monatslauf ${them} ab.`
+      : `Danach rechnet dieser Lauf ${them} ab.`;
   return [
     found,
     follows,
-    "Stimmt die Rechnung, musst du nichts tun.",
-    "Ist sie falsch, storniere sie.",
-    next,
+    "Stimmt das, musst du nichts tun.",
+    invoiced ? "Ist eine Rechnung falsch, storniere sie." : "",
     noticed
-      ? "Einen Jahresbescheid änderst du mit einem neuen Jahreslauf."
+      ? "Ist ein Jahresbescheid falsch, ändere ihn mit einem neuen Jahreslauf."
       : "",
+    next,
   ]
     .filter(Boolean)
     .join(" ");
@@ -155,7 +164,7 @@ export function CareBilledChildrenCard({
                       href={traegerPath(href)}
                       variant="surface"
                       size="compact"
-                      aria-label={`${label} ${invoice.number} von ${child} öffnen`}
+                      aria-label={`${label} öffnen: ${invoice.number}, ${child}`}
                       tooltip={
                         invoice.source === "care_notice_run"
                           ? "Öffnet den Jahresbescheid, der den Monat schon abrechnet."
@@ -179,7 +188,7 @@ export function CareBilledChildrenCard({
                       )}
                       variant="surface"
                       size="compact"
-                      aria-label={`${label} von ${child} öffnen: ${contract.schoolName}`}
+                      aria-label={`${label} · ${contract.schoolName}: ${child}`}
                       tooltip="Öffnet den Vertrag, für den der Lauf keine Rechnung ausstellt."
                     >
                       {label} · {contract.schoolName}

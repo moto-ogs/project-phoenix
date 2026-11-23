@@ -186,6 +186,16 @@ function alreadyBilledLabel(children: number): string {
     : `${children} Kinder haben schon eine Rechnung und bekommen keine weitere.`;
 }
 
+/** The empty run; it names the children already billed (#7892). */
+function emptyRunText(month: string, billedChildren: number): string {
+  if (billedChildren === 0) {
+    return `Für ${month} gibt es keine Rechnung. Es fehlt auch kein Preis. Du kannst den Lauf verwerfen. Danach ist der Monat frei für einen neuen Lauf.`;
+  }
+  const who =
+    billedChildren === 1 ? "Ein Kind ist" : `${billedChildren} Kinder sind`;
+  return `Für ${month} gibt es keine neue Rechnung. ${who} schon abgerechnet, siehe unten. Stimmt das, kannst du den Lauf verwerfen.`;
+}
+
 function notBilledLabel(children: number, released = false): string {
   if (children === 1) {
     return `1 Kind mit doppeltem Vertrag ${released ? "ist" : "wird"} nicht abgerechnet.`;
@@ -608,7 +618,10 @@ export default function TraegerCareRunPage() {
             description={
               discarded
                 ? `Er hatte nichts abzurechnen und hat nichts ausgestellt. Für ${formatMonth(run.billingMonth)} kannst du einen neuen Lauf starten.`
-                : `Für ${formatMonth(run.billingMonth)} gibt es keine Rechnung. Es fehlt auch kein Preis. Du kannst den Lauf verwerfen. Danach ist der Monat frei für einen neuen Lauf.`
+                : emptyRunText(
+                    formatMonth(run.billingMonth),
+                    (run.billedChildren ?? []).length,
+                  )
             }
             createdAt={run.createdAt}
             discardedAt={run.discardedAt}

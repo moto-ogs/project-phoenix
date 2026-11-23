@@ -234,6 +234,9 @@ describe("discarding an empty monthly run", () => {
       }),
     ).toBeInTheDocument();
     expect(screen.getByText("Rechnung MB-0002 · OGS Süd")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Ein Kind ist schon abgerechnet, siehe unten\./),
+    ).toBeInTheDocument();
   });
 
   it("keeps the notice hold and recovery link visible for an empty run", async () => {
