@@ -188,6 +188,7 @@ describe("Träger cards reload after a confirmed write", () => {
       <ContributionRulesCard
         kind="benefits_exemption"
         reload={async () => []}
+        write={async () => undefined}
         rules={[
           {
             version: "v1",
@@ -240,6 +241,7 @@ describe("Träger cards reload after a confirmed write", () => {
         bearers={[bearer]}
         onChanged={onChanged}
         reload={async () => [bearer]}
+        write={async () => undefined}
       />,
       {
         wrapper: ToastProvider,
@@ -262,6 +264,7 @@ describe("Träger cards reload after a confirmed write", () => {
       <CostBearersCard
         bearers={[{ ...bearer, inUse: false }]}
         reload={async () => [bearer]}
+        write={async () => undefined}
         onChanged={onChanged}
       />,
       { wrapper: ToastProvider },

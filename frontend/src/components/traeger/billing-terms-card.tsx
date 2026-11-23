@@ -13,12 +13,14 @@ import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EditActions } from "~/components/ui/edit-actions";
 import { FieldLabel } from "~/components/ui/field-label";
 import { FormModal } from "~/components/ui/form-modal";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { Input } from "~/components/ui/input";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { SectionCard } from "~/components/ui/section-card";
 import { SegmentedControl } from "~/components/ui/segmented-control";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { useDraftOn } from "~/lib/swr/read-draft";
 import {
@@ -132,6 +134,7 @@ function ServiceTermsModal({
       answer: (saved) => saved,
     },
   );
+  const form = useReadDraftForm(edit, formErrors, "die Zahlung");
   const draft = edit.draft ?? (row ? termsDraft(row.terms) : null);
   const method = draft?.method ?? null;
   const days = draft?.days ?? "";
@@ -144,8 +147,9 @@ function ServiceTermsModal({
     edit.setDraft((current) => ({ ...current, bundleWith: next }));
 
   const submit = async () => {
-    if (!row) return;
-    formErrors.clear();
+    // Enter submits too: nothing goes out before the stored terms are
+    // read, and the shown error stays.
+    if (!row || !form.begin()) return;
     const dueDays = parseDueDays(days);
     if (dueDays === null) {
       formErrors.invalid("Bitte prüfe deine Angaben.", {
@@ -157,7 +161,6 @@ function ServiceTermsModal({
       formErrors.invalid("Bitte wähle aus, wie die Familien zahlen.", {});
       return;
     }
-    if (!edit.canSubmit) return;
     await save.run(async (op) => {
       let saved: BillingTerms | undefined;
       const result = await edit.submit(async (version) => {
@@ -220,6 +223,7 @@ function ServiceTermsModal({
           void submit();
         }}
       >
+        <LoadErrorAlert error={form.loadError} />
         <div className="space-y-2">
           <FieldLabel>Zahlungsweg</FieldLabel>
           <SegmentedControl
@@ -297,11 +301,17 @@ export function BillingTermsCard({
   data,
   onChanged,
   reload,
+  write,
 }: Readonly<{
   data: BillingTerms;
   onChanged: () => Promise<unknown>;
   /** Reads the terms again; rejects when the read fails (ADR 0311). */
   reload: () => Promise<BillingTerms>;
+  /**
+   * Hands the terms a save answered to the read (ADR 0311, rule 5): the
+   * next change sends their version even when reading all defaults fails.
+   */
+  write: (terms: BillingTerms) => Promise<unknown>;
 }>) {
   const [editing, setEditing] = useState<TermsRow | null>(null);
   const rows = rowsOf(data);
@@ -380,8 +390,9 @@ export function BillingTermsCard({
         data={data}
         reload={reload}
         onClose={() => setEditing(null)}
-        onSaved={() => {
+        onSaved={(saved) => {
           setEditing(null);
+          void write(saved);
           void onChanged();
         }}
       />

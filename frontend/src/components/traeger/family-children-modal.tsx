@@ -16,6 +16,8 @@ import { InsetPanel } from "~/components/ui/inset-panel";
 import { NumberStepper } from "~/components/ui/number-stepper";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { berlinTodayISO } from "~/lib/date-helpers";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { useDraftOn } from "~/lib/swr/read-draft";
 import {
@@ -122,14 +124,16 @@ export function FamilyChildrenModal({
     (family
       ? draftOf(family, monthStart)
       : { children: 1, validFrom: monthStart, validUntil: "" });
+  const form = useReadDraftForm(edit, formErrors, "die Kinderzahl");
   const set = (patch: Partial<Draft>) =>
     edit.setDraft((current) => ({ ...current, ...patch }));
   const withContract = family?.children.length ?? 0;
   const name = family ? familyName(family) : "";
 
   const submit = async () => {
-    if (!family) return;
-    formErrors.clear();
+    // Enter submits too: nothing goes out before the stored state is
+    // read, and the shown error stays.
+    if (!family || !form.begin()) return;
     const fieldErrors: Record<string, string> = {};
     if (!draft.validFrom) fieldErrors.valid_from = "Bitte ein Datum wählen.";
     if (draft.validUntil && draft.validUntil < draft.validFrom) {
@@ -140,7 +144,6 @@ export function FamilyChildrenModal({
       return;
     }
     const contract = family.count?.contractId ?? family.contractId;
-    if (!edit.canSubmit) return;
     await save.run(async (op) => {
       const result = await edit.submit((version) =>
         confirmFamilyChildren(
@@ -202,6 +205,7 @@ export function FamilyChildrenModal({
           void submit();
         }}
       >
+        <LoadErrorAlert error={form.loadError} />
         {family ? (
           <InsetPanel>
             <DataGrid>

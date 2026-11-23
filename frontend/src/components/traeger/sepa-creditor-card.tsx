@@ -14,11 +14,13 @@ import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EditActions } from "~/components/ui/edit-actions";
 import { FieldLabel } from "~/components/ui/field-label";
 import { FormModal } from "~/components/ui/form-modal";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { Input } from "~/components/ui/input";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { useDraftOn } from "~/lib/swr/read-draft";
 import { traegerPath } from "~/lib/traeger-url";
@@ -62,6 +64,7 @@ function SepaCreditorModal({
   open,
   creditor,
   reload,
+  write,
   onClose,
   onSaved,
 }: Readonly<{
@@ -69,6 +72,8 @@ function SepaCreditorModal({
   creditor: SepaCreditor;
   /** Reads the creditor again; rejects when the read fails (ADR 0311). */
   reload: () => Promise<SepaCreditor>;
+  /** Hands the saved creditor to the read (ADR 0311, rule 5). */
+  write: (creditor: SepaCreditor) => Promise<unknown>;
   onClose: () => void;
   onSaved: (creditor: SepaCreditor) => void;
 }>) {
@@ -87,12 +92,17 @@ function SepaCreditorModal({
   // refills it only while untouched, the save sends its version, and after
   // a refusal the stored creditor shows.
   const edit = useDraftOn<SepaCreditor, CreditorDraft, string, SepaCreditor>(
-    { opening: open ? "creditor" : null, data: creditor, reload },
+    { opening: open ? "creditor" : null, data: creditor, reload, write },
     {
       token: (read) => read.version,
       toDraft: creditorDraft,
       answer: (saved) => saved,
     },
+  );
+  const form = useReadDraftForm(
+    edit,
+    formErrors,
+    "die Angaben zur Lastschrift",
   );
   const draft = edit.draft ?? creditorDraft(creditor);
   const { creditorId, days, missing } = draft;
@@ -104,7 +114,9 @@ function SepaCreditorModal({
     edit.setDraft((current) => ({ ...current, missing: next }));
 
   const submit = async () => {
-    formErrors.clear();
+    // Enter submits too: nothing goes out before the stored state is read,
+    // and the shown error stays.
+    if (!form.begin()) return;
     const fields: Record<string, string> = {};
     const compact = compactCode(creditorId);
     if (compact !== "" && !creditorIdLooksValid(compact)) {
@@ -128,7 +140,6 @@ function SepaCreditorModal({
       );
       return;
     }
-    if (!edit.canSubmit) return;
     await save.run(async (op) => {
       const result = await edit.submit((version) =>
         saveSepaCreditor(
@@ -187,6 +198,7 @@ function SepaCreditorModal({
           void submit();
         }}
       >
+        <LoadErrorAlert error={form.loadError} />
         <Input
           controlSize="compact"
           id="sepa-creditor-id"
@@ -272,12 +284,15 @@ const ONLINE_MANDATE_SETTINGS_PATH =
 export function SepaCreditorCard({
   creditor,
   reload,
+  write,
   onlineMandate,
   onChanged,
 }: Readonly<{
   creditor: SepaCreditor;
   /** Reads the creditor again; rejects when the read fails (ADR 0311). */
   reload: () => Promise<SepaCreditor>;
+  /** Hands the saved creditor to the read (ADR 0311, rule 5). */
+  write: (creditor: SepaCreditor) => Promise<unknown>;
   /** The Träger's switch of the mandate in the parents portal; null while unknown. */
   onlineMandate?: boolean | null;
   onChanged: () => Promise<unknown>;
@@ -354,6 +369,7 @@ export function SepaCreditorCard({
         open={editing}
         creditor={creditor}
         reload={reload}
+        write={write}
         onClose={() => setEditing(false)}
         onSaved={() => {
           setEditing(false);

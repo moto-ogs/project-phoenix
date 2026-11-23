@@ -255,6 +255,73 @@ describe("RequestSharingControl", () => {
     expect(setSharing).toHaveBeenCalledTimes(1);
   });
 
+  // ADR 0311, rule 6: the failed read outlasts the dialog. Reopened, the
+  // dialog names it with its retry, and nothing is sent until it succeeds.
+  it("names a failed read after a refusal again in the reopened dialog", async () => {
+    const recipient = {
+      guardian_profile_id: "7",
+      first_name: "Mara",
+      last_name: "Muster",
+    };
+    getSharing
+      .mockResolvedValueOnce({
+        version: "v1",
+        family_protected: false,
+        recipients: [{ ...recipient, selected: true }],
+      })
+      .mockRejectedValueOnce(
+        new ApiError("offline", 503, { code: "general.unavailable" }),
+      )
+      .mockResolvedValue({
+        version: "v2",
+        family_protected: false,
+        recipients: [{ ...recipient, selected: false }],
+      });
+    setSharing.mockRejectedValueOnce(
+      new ApiError("changed since it was read", 409, {
+        code: "general.changed_since_read",
+      }),
+    );
+    renderControl();
+    fireEvent.click(await screen.findByText("Anfrage teilen"));
+    fireEvent.click(
+      await screen.findByRole("checkbox", { name: "Mara Muster" }),
+    );
+    fireEvent.click(screen.getByText("Auswahl speichern"));
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Abbrechen" }));
+    fireEvent.click(await screen.findByText("Anfrage teilen"));
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      await within(dialog).findByText(
+        catalogText("general.unavailable", "die Liste der Empfänger"),
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByText("Auswahl speichern"));
+    expect(setSharing).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Wiederholen" }),
+    );
+    await waitFor(() => expect(getSharing).toHaveBeenCalledTimes(3));
+    fireEvent.click(
+      await within(dialog).findByRole("checkbox", { name: "Mara Muster" }),
+    );
+    fireEvent.click(within(dialog).getByText("Auswahl speichern"));
+    await waitFor(() =>
+      expect(setSharing).toHaveBeenLastCalledWith(
+        "42",
+        "excused",
+        "9",
+        ["7"],
+        "v2",
+      ),
+    );
+  });
+
   it("keeps a touched selection when a newer read arrives and sends its own version", async () => {
     const recipient = {
       guardian_profile_id: "7",

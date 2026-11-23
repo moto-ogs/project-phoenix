@@ -17,6 +17,8 @@ import { Input } from "~/components/ui/input";
 import { SegmentedControl } from "~/components/ui/segmented-control";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { berlinTodayISO } from "~/lib/date-helpers";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { useDraftOn } from "~/lib/swr/read-draft";
 import type {
@@ -196,6 +198,11 @@ export function CareCostShareModal({
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
   const { clear: clearErrors } = formErrors;
+  const form = useReadDraftForm(
+    changedId ? stored : null,
+    formErrors,
+    "die Kostenübernahme",
+  );
   const { success } = useToast();
 
   useEffect(() => {
@@ -218,8 +225,9 @@ export function CareCostShareModal({
   );
 
   const submit = async () => {
-    if (!target || !draft) return;
-    formErrors.clear();
+    // Enter submits too: nothing goes out before the stored state is
+    // read, and the shown error stays.
+    if (!target || !draft || !form.begin()) return;
     const fieldErrors: Record<string, string> = {};
     if (!draft.kind) fieldErrors.kind = "Bitte die Art wählen.";
     if (!draft.costBearerId) {
@@ -262,7 +270,6 @@ export function CareCostShareModal({
       reference: draft.reference.trim(),
       checkedOn: draft.checkedOn,
     };
-    if (changedId && !stored.canSubmit) return;
     await save.run(async (op) => {
       const result = changedId
         ? await stored.submit((version) =>
@@ -332,6 +339,7 @@ export function CareCostShareModal({
             void submit();
           }}
         >
+          <LoadErrorAlert error={form.loadError} />
           <div
             className="space-y-2"
             role="group"

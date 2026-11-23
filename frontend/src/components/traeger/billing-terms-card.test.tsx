@@ -63,6 +63,7 @@ function renderCard() {
         data={data}
         onChanged={onChanged}
         reload={async () => data}
+        write={async () => undefined}
       />
     </ToastProvider>,
   );

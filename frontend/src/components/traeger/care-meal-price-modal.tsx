@@ -4,15 +4,17 @@
 // Pauschale je Kind und Monat. Ein Monat, den schon eine Rechnung abrechnet,
 // behält seinen Preis; das prüft das Speichern.
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { EditActions } from "~/components/ui/edit-actions";
 import { SectionLabel } from "~/components/ui/section-label";
 import { FormModal } from "~/components/ui/form-modal";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { Input } from "~/components/ui/input";
 import { SegmentedControl } from "~/components/ui/segmented-control";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { useDraftOn } from "~/lib/swr/read-draft";
 import {
@@ -37,6 +39,8 @@ const MODE_HINTS: Record<CareMealMode, string> = {
 };
 
 interface MealPriceDraft {
+  /** The month the price applies from, "YYYY-MM-01". */
+  readonly month: string;
   readonly mode: CareMealMode;
   readonly amount: string;
 }
@@ -49,9 +53,22 @@ function mealPriceDraft(
 ): MealPriceDraft {
   const holding = mealTariffOn(data.tariffs, schoolId, month);
   return {
+    month,
     mode: holding?.mode ?? "per_meal",
     amount: holding ? centsToEuroInput(holding.amountCents) : "",
   };
+}
+
+/** The next month the school has not billed yet, at least `currentMonth`. */
+function openingMonth(
+  data: CareMealTariffs,
+  schoolId: string,
+  currentMonth: string,
+): string {
+  const billedUntil = data.billedUntil[schoolId];
+  return billedUntil && billedUntil >= currentMonth
+    ? addMonths(billedUntil, 1)
+    : currentMonth;
 }
 
 export function CareMealPriceModal({
@@ -75,7 +92,6 @@ export function CareMealPriceModal({
   onClose: () => void;
   onSaved: (data: CareMealTariffs) => void;
 }>) {
-  const [month, setMonth] = useState("");
   const save = useFormModalPending(school !== null);
   const saving = save.pending;
   const formRef = useRef<HTMLFormElement>(null);
@@ -92,24 +108,25 @@ export function CareMealPriceModal({
     [currentMonth],
   );
 
-  // Open with the next month the school has not billed yet. The school by
-  // its id: a caller that passes a new object or a newer read for the same
-  // school does not open the form again.
+  // The school by its id: a caller that passes a new object or a newer
+  // read for the same school does not open the form again.
   const schoolId = school?.id ?? null;
-  const billedUntil = schoolId ? data.billedUntil[schoolId] : undefined;
   useEffect(() => {
-    if (!schoolId) return;
-    setMonth(
-      billedUntil && billedUntil >= currentMonth
-        ? addMonths(billedUntil, 1)
-        : currentMonth,
-    );
-    clearErrors();
-  }, [schoolId, billedUntil, currentMonth, clearErrors]);
+    if (schoolId) clearErrors();
+  }, [schoolId, clearErrors]);
 
-  // The price of the chosen month rests on the school's version (ADR
-  // 0311): a newer read refills it only while untouched, the save confirms
-  // what the form showed, and after a refusal the stored price shows.
+  // The price rests on the school's version (ADR 0311): a newer read
+  // refills it only while untouched, the save confirms what the form
+  // showed, and after a refusal the stored price shows. The month is part
+  // of the draft, not of the opening: choosing another month keeps the
+  // token and its lock after a refusal, and a newer read (a month billed
+  // meanwhile) never replaces a month the person chose.
+  const toDraft = (read: CareMealTariffs) =>
+    mealPriceDraft(
+      read,
+      schoolId ?? "",
+      openingMonth(read, schoolId ?? "", currentMonth),
+    );
   const edit = useDraftOn<
     CareMealTariffs,
     MealPriceDraft,
@@ -117,27 +134,37 @@ export function CareMealPriceModal({
     CareMealTariffs
   >(
     {
-      opening: schoolId && month ? `${schoolId}:${month}` : null,
+      opening: schoolId,
       data,
       reload,
     },
     {
       token: (read) => (schoolId ? (read.versions[schoolId] ?? "") : ""),
-      toDraft: (read) => mealPriceDraft(read, schoolId ?? "", month),
+      toDraft,
       // The dialog closes after a save; the page takes the answer.
       answer: (saved) => saved,
     },
   );
-  const { mode, amount } =
-    edit.draft ?? mealPriceDraft(data, schoolId ?? "", month);
+  const form = useReadDraftForm(
+    edit,
+    formErrors,
+    "die Preisangabe für die Mensa",
+  );
+  const { month, mode, amount } = edit.draft ?? toDraft(data);
+  // Another month shows its stored price, on the read the token belongs to.
+  const setMonth = (next: string) =>
+    edit.setDraft(() =>
+      mealPriceDraft(edit.base ?? data, schoolId ?? "", next),
+    );
   const setMode = (next: CareMealMode) =>
     edit.setDraft((current) => ({ ...current, mode: next }));
   const setAmount = (next: string) =>
     edit.setDraft((current) => ({ ...current, amount: next }));
 
   const submit = async () => {
-    if (!school) return;
-    formErrors.clear();
+    // Enter submits too: nothing goes out before the stored prices are
+    // read, and the shown error stays.
+    if (!school || !form.begin()) return;
     const cents = euroInputToCents(amount.trim());
     if (cents === null) {
       formErrors.invalid("Bitte prüfe den Betrag.", {
@@ -145,7 +172,6 @@ export function CareMealPriceModal({
       });
       return;
     }
-    if (!edit.canSubmit) return;
     await save.run(async (op) => {
       const result = await edit.submit((version) =>
         saveCareMealTariff(
@@ -201,6 +227,7 @@ export function CareMealPriceModal({
           void submit();
         }}
       >
+        <LoadErrorAlert error={form.loadError} />
         <CustomSelect
           id="care-meal-month"
           name="valid_from"

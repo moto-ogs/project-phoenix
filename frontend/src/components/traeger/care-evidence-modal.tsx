@@ -13,6 +13,8 @@ import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { Input } from "~/components/ui/input";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { berlinTodayISO } from "~/lib/date-helpers";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { useDraftOn } from "~/lib/swr/read-draft";
 import {
@@ -108,6 +110,11 @@ export function CareEvidenceModal({
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
   const { clear: clearErrors } = formErrors;
+  const form = useReadDraftForm(
+    changedId ? stored : null,
+    formErrors,
+    "den Nachweis",
+  );
   const { success } = useToast();
 
   useEffect(() => {
@@ -126,8 +133,9 @@ export function CareEvidenceModal({
     : "";
 
   const submit = async () => {
-    if (!target) return;
-    formErrors.clear();
+    // Enter submits too: nothing goes out before the stored state is
+    // read, and the shown error stays.
+    if (!target || !form.begin()) return;
     const fieldErrors: Record<string, string> = {};
     if (income && !draft.ruleId) {
       fieldErrors.rule_id = "Bitte eine Stufe wählen.";
@@ -153,7 +161,6 @@ export function CareEvidenceModal({
       validFrom: draft.validFrom,
       validUntil: draft.validUntil || null,
     };
-    if (changedId && !stored.canSubmit) return;
     await save.run(async (op) => {
       const result = changedId
         ? await stored.submit((version) =>
@@ -212,6 +219,7 @@ export function CareEvidenceModal({
           void submit();
         }}
       >
+        <LoadErrorAlert error={form.loadError} />
         {income ? (
           <CustomSelect
             id="care-evidence-level"

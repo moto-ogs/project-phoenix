@@ -31,7 +31,10 @@ import { CustomSelect } from "~/components/ui/custom-select";
 import { EditActions } from "~/components/ui/edit-actions";
 import { FieldErrorHint } from "~/components/ui/field-error-hint";
 import { FieldLabel } from "~/components/ui/field-label";
-import { FormErrorAlert } from "~/components/ui/form-error-alert";
+import {
+  FormErrorAlert,
+  LoadErrorAlert,
+} from "~/components/ui/form-error-alert";
 import { InsetPanel } from "~/components/ui/inset-panel";
 import { Input } from "~/components/ui/input";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
@@ -39,6 +42,7 @@ import { SectionCard } from "~/components/ui/section-card";
 import { SegmentedControl } from "~/components/ui/segmented-control";
 import { SwitchRow } from "~/components/ui/switch";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { useDraftOn } from "~/lib/swr/read-draft";
 import { traegerPath } from "~/lib/traeger-url";
@@ -359,6 +363,7 @@ export function SollMappingEditor({
   const [saving, setSaving] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
+  const form = useReadDraftForm(edit, formErrors, "die Feldzuordnung");
   const { success } = useToast();
   const fieldError = (name: string) => formErrors.fieldError(name) ?? undefined;
   const decimalError = fieldError("decimal_separator");
@@ -372,13 +377,14 @@ export function SollMappingEditor({
     }));
 
   const submit = async () => {
-    formErrors.clear();
+    // Enter submits too: nothing goes out before the stored state is
+    // read, and the shown error stays.
+    if (!form.begin()) return;
     const errors = sollMappingErrors(draft);
     if (Object.keys(errors).length > 0) {
       formErrors.invalid("Bitte prüfe die markierten Felder.", errors);
       return;
     }
-    if (!edit.canSubmit) return;
     setSaving(true);
     const result = await edit.submit((version) =>
       saveSollMapping(
@@ -597,6 +603,7 @@ export function SollMappingEditor({
       </SectionCard>
 
       <FormErrorAlert message={formErrors.error} />
+      <LoadErrorAlert error={form.loadError} />
       <EditActions onCancel={onCancel} saving={saving} />
     </form>
   );

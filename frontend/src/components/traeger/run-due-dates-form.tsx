@@ -5,14 +5,18 @@
 // Leistung ab dem Rechnungsdatum; eine Familie mit eigenem Zahltag behält
 // ihren Tag. Nach der Freigabe ändern sich die Daten nicht mehr.
 
-import { Fragment, useRef, useState } from "react";
+import { Fragment, useMemo, useRef, useState } from "react";
 import { Alert } from "~/components/ui/alert";
 import { ISODatePicker } from "~/components/ui/date-picker";
 import { EditActions } from "~/components/ui/edit-actions";
-import { FormErrorAlert } from "~/components/ui/form-error-alert";
+import {
+  FormErrorAlert,
+  LoadErrorAlert,
+} from "~/components/ui/form-error-alert";
 import { SectionCard } from "~/components/ui/section-card";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { formatDate } from "~/lib/date-helpers";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { useDraftOn } from "~/lib/swr/read-draft";
 import {
@@ -81,8 +85,11 @@ export function RunDueDatesForm({
   // The dates rest on the ones read (ADR 0311): a newer read refills the
   // form only while untouched, the save sends their version, and after a
   // refusal the stored dates show.
+  // One object per read: a failed read after a refusal ends only through a
+  // read that arrived later, which `useDraftOn` tells by identity (rule 6).
+  const shown = useMemo(() => ({ dueDates, version }), [dueDates, version]);
   const edit = useDraftOn<StoredRunDueDates, Draft, string, RunDueDate[]>(
-    { opening: runId, data: { dueDates, version }, reload },
+    { opening: runId, data: shown, reload },
     {
       token: (read) => read.version,
       toDraft: (read) => draftOf(read.dueDates),
@@ -115,11 +122,13 @@ export function RunDueDatesForm({
   const [saving, setSaving] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
+  const form = useReadDraftForm(edit, formErrors, "die Fälligkeiten");
   const { success } = useToast();
 
   const submit = async () => {
-    formErrors.clear();
-    if (!edit.canSubmit) return;
+    // Enter submits too: nothing goes out before the stored state is
+    // read, and the shown error stays.
+    if (!form.begin()) return;
     setSaving(true);
     const result = await edit.submit((token) =>
       saveRunDueDates(
@@ -191,6 +200,7 @@ export function RunDueDatesForm({
           Familien mit eigenem Zahltag behalten ihren Tag.
         </p>
         <FormErrorAlert message={formErrors.error} />
+        <LoadErrorAlert error={form.loadError} />
         <EditActions onCancel={onCancel} saving={saving} />
       </form>
     </SectionCard>

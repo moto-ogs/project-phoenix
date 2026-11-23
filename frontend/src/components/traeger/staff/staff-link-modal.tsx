@@ -112,7 +112,9 @@ export function StaffLinkModal({
   const joinsRecord = request?.recordId != null;
 
   const submit = async () => {
-    if (!request || !preview) return;
+    // Enter submits too: nothing goes out before the stored values are
+    // read, and the shown error with its retry stays.
+    if (!request || !preview || !link.canSubmit) return;
     formErrors.clear();
     if (missing.length > 0) {
       formErrors.invalid(
@@ -126,7 +128,6 @@ export function StaffLinkModal({
       );
       return;
     }
-    if (!link.canSubmit) return;
     await save.run(async (op) => {
       const result = await link.submit((fingerprint, chosen) =>
         linkStaff({

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ISODateInput } from "~/components/ui/date-picker";
 import { EditActions } from "~/components/ui/edit-actions";
 import { FormModal } from "~/components/ui/form-modal";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { Input } from "~/components/ui/input";
 import {
@@ -14,6 +15,7 @@ import { Textarea } from "~/components/ui/textarea";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { berlinTodayISO } from "~/lib/date-helpers";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { useDraftOn } from "~/lib/swr/read-draft";
 import {
@@ -106,6 +108,7 @@ export function ContributionRuleModal({
   edit,
   rules,
   reload,
+  write,
   onClose,
   onSaved,
 }: Readonly<{
@@ -114,6 +117,8 @@ export function ContributionRuleModal({
   rules: readonly ContributionRule[];
   /** Reads the rules again; rejects when the read fails (ADR 0311). */
   reload: () => Promise<readonly ContributionRule[]>;
+  /** Hands a changed rule to the read (ADR 0311, rule 5). */
+  write: (rule: ContributionRule) => Promise<unknown>;
   onClose: () => void;
   /** Reloads the card; never rejects (#6652). */
   onSaved: RefreshAfterWrite;
@@ -145,6 +150,7 @@ export function ContributionRuleModal({
         if (!found) throw new Error("contribution rule is gone");
         return found;
       },
+      write,
     },
     {
       token: (rule) => rule.version,
@@ -153,6 +159,11 @@ export function ContributionRuleModal({
     },
   );
   const draft = edit?.kind === "change" ? (stored.draft ?? null) : created;
+  const form = useReadDraftForm(
+    edit?.kind === "change" ? stored : null,
+    formErrors,
+    "die Regel",
+  );
 
   const ruleKind: ContributionRuleKind | null =
     edit?.kind === "create" ? edit.ruleKind : (edit?.rule.kind ?? null);
@@ -204,11 +215,11 @@ export function ContributionRuleModal({
   };
 
   const submit = async () => {
-    if (!edit || !draft) return;
-    formErrors.clear();
+    // Enter submits too: a change goes out only after the stored rule is
+    // read, and the shown error stays until then.
+    if (!edit || !draft || !form.begin()) return;
     const rule = input(draft);
     if (!rule) return;
-    if (edit.kind === "change" && !stored.canSubmit) return;
     await save.run(async (op) => {
       if (edit.kind === "create") {
         try {
@@ -267,6 +278,7 @@ export function ContributionRuleModal({
             void submit();
           }}
         >
+          <LoadErrorAlert error={form.loadError} />
           {sibling ? null : (
             // The rule is the Träger's, not a family's (#5690): it applies
             // to a registration once the office picks the exemption there.
