@@ -6,6 +6,7 @@ const CodeCareContractChangeContractNotActive = "care_contract.change_contract_n
 const CodeCareContractChangeEndsCare = "care_contract.change_ends_care"
 const CodeCareContractChangeNotApplicable = "care_contract.change_not_applicable"
 const CodeCareContractChangeNotFound = "care_contract.change_not_found"
+const CodeCareContractChildLinkBound = "care_contract.child_link_bound"
 const CodeCareContractChildLinkChanged = "care_contract.child_link_changed"
 const CodeCareContractChildLinkNotImported = "care_contract.child_link_not_imported"
 const CodeCareContractChildLinkRefused = "care_contract.child_link_refused"
@@ -14,6 +15,8 @@ const CodeCareContractContractNotDraft = "care_contract.contract_not_draft"
 const CodeCareContractContractNotEndable = "care_contract.contract_not_endable"
 const CodeCareContractContractNotFound = "care_contract.contract_not_found"
 const CodeCareContractContractNotSignable = "care_contract.contract_not_signable"
+const CodeCareContractEnrollmentBindingChanged = "care_contract.enrollment_binding_changed"
+const CodeCareContractEnrollmentPreviewChanged = "care_contract.enrollment_preview_changed"
 const CodeCareContractFieldInvalid = "care_contract.field_invalid"
 const CodeCareContractImportChanged = "care_contract.import_changed"
 const CodeCareContractImportFileInvalid = "care_contract.import_file_invalid"
@@ -41,6 +44,7 @@ var errorCodeClassesCareContract = []errorCodeClass{
 	{CodeCareContractChangeEndsCare, "business_rejection"},
 	{CodeCareContractChangeNotApplicable, "business_rejection"},
 	{CodeCareContractChangeNotFound, "business_rejection"},
+	{CodeCareContractChildLinkBound, "business_rejection"},
 	{CodeCareContractChildLinkChanged, "business_rejection"},
 	{CodeCareContractChildLinkNotImported, "business_rejection"},
 	{CodeCareContractChildLinkRefused, "business_rejection"},
@@ -49,6 +53,8 @@ var errorCodeClassesCareContract = []errorCodeClass{
 	{CodeCareContractContractNotEndable, "business_rejection"},
 	{CodeCareContractContractNotFound, "business_rejection"},
 	{CodeCareContractContractNotSignable, "business_rejection"},
+	{CodeCareContractEnrollmentBindingChanged, "business_rejection"},
+	{CodeCareContractEnrollmentPreviewChanged, "business_rejection"},
 	{CodeCareContractFieldInvalid, "input"},
 	{CodeCareContractImportChanged, "business_rejection"},
 	{CodeCareContractImportFileInvalid, "input"},

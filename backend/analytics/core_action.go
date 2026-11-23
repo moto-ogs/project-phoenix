@@ -32,6 +32,11 @@ type CoreAction struct {
 	// data.<Flag>=true: a write that can switch something on and off counts
 	// only the direction it names (a dismissal, not taking it back).
 	Flag string
+	// FlagLeads: the route answers with a list that may be longer than the
+	// response the middleware holds, and puts data.<Flag> before that list.
+	// Of a response too large to hold, the flag is then read from its first
+	// bytes (completed); without it a long answer would never count.
+	FlagLeads bool
 	// StepFromRoute: the route's `{step}` names a step of a checklist, and
 	// the event counts only when the response lists that step under
 	// data.steps with skipped=true. The step key goes out as `step`; it is
@@ -72,6 +77,9 @@ func endedEvent(name string) CoreAction {
 func flaggedEvent(name, flag string) CoreAction {
 	return CoreAction{Event: name, Flag: flag}
 }
+func leadingFlagEvent(name, flag string) CoreAction {
+	return CoreAction{Event: name, Flag: flag, FlagLeads: true}
+}
 func skippedStepEvent(name string) CoreAction {
 	return CoreAction{Event: name, StepFromRoute: true}
 }
@@ -97,6 +105,17 @@ func (action CoreAction) countsResponse(body []byte) bool {
 		return false
 	}
 	return !action.EndedOnly || responseFlag(body, "ended")
+}
+
+// completed reports whether a 2xx response completed the action, with what
+// the event adds from it. A response too large to hold is not parsed: it
+// counts only for a route whose flag leads its answer (FlagLeads), read
+// from head, the first bytes of the response.
+func (action CoreAction) completed(r *http.Request, body *cappedBuffer, head []byte) (map[string]any, bool) {
+	if extra, ok := action.responseProperties(r, body.Bytes()); ok {
+		return extra, true
+	}
+	return nil, body.overflow && action.FlagLeads && action.Flag != "" && leadingResponseFlag(head, action.Flag)
 }
 
 // responseProperties reports whether a 2xx response completed the action and

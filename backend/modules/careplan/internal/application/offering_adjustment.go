@@ -13,13 +13,16 @@ import (
 // offeringAdjustmentWork carries one adjustment from its validation through
 // the persisted rows.
 type offeringAdjustmentWork struct {
-	input                                  careplan.OfferingAdjustment
-	reason                                 string
-	child                                  ports.BookingChild
-	student                                ports.BookingStudent
-	phase                                  ports.BookingPhase
-	effectiveFrom                          *calendar.Date
-	selectionDate                          calendar.Date
+	input         careplan.OfferingAdjustment
+	reason        string
+	child         ports.BookingChild
+	student       ports.BookingStudent
+	phase         ports.BookingPhase
+	effectiveFrom *calendar.Date
+	selectionDate calendar.Date
+	// startsWithFirstBooking is ports.BookingRequest.StartsWithFirstBooking
+	// of the child's request.
+	startsWithFirstBooking                 bool
 	offeringByID                           map[int64]*careplan.CareOffering
 	activeOfferingByID, beforeOfferingByID map[int64]*careplan.CareOffering
 	beforeLinks                            []*careplan.BookedOffering
@@ -117,7 +120,7 @@ func (m *BookingMaterialization) loadOfferingAdjustmentSubject(ctx context.Conte
 	if !child.Approved || child.CreatedStudentID == nil || *child.CreatedStudentID <= 0 {
 		return fmt.Errorf("%w: only approved children with a linked student can be adjusted", careplan.ErrOfferingAdjustmentInvalid)
 	}
-	work.child = child
+	work.child, work.startsWithFirstBooking = child, request.StartsWithFirstBooking
 	// All callers, including the admin correction, acquire gates before rows.
 	if err := m.LockOfferingDerivedWrites(ctx); err != nil {
 		return err

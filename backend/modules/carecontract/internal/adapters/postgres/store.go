@@ -228,6 +228,7 @@ const moduleNamesSQL = `ARRAY(SELECT s.module_name FROM care_contract.contract_v
 // party; the filter follows. Bind order: today twice, then organization_id.
 const summarySQL = `SELECT c.id, c.status, c.school_id, c.student_id, c.created_at, c.sent_at, c.concluded_at, c.conclusion_method,
 	c.conclusion_date_unknown, c.import_origin IS NOT NULL AS taken_over, c.ends_on, c.early_start_requested, c.import_origin IS NOT NULL AS imported,
+	c.request_child_id IS NOT NULL AS follows_bookings, c.request_child_id, c.updated_at,
 	v.school_name, v.child_first_name, v.child_last_name, ` + moduleNamesSQL + ` AS module_names, v.effective_from,
 	COALESCE(p.first_name || ' ' || p.last_name, '') AS party_name, COALESCE(p.email, '') AS party_email
 	FROM care_contract.contracts AS c
@@ -271,6 +272,12 @@ type summaryRow struct {
 	EndsOn     *calendar.Date `bun:"ends_on,type:date"`
 	EarlyStart bool           `bun:"early_start_requested"`
 	Imported   bool           `bun:"imported"`
+	// FollowsBookings tells that the contract has an application child,
+	// RequestChildID which.
+	FollowsBookings bool   `bun:"follows_bookings"`
+	RequestChildID  *int64 `bun:"request_child_id"`
+	// UpdatedAt is the stamp of the last write of the contract row.
+	UpdatedAt time.Time `bun:"updated_at"`
 }
 
 func (r summaryRow) summary() carecontract.ContractSummary {
@@ -280,7 +287,7 @@ func (r summaryRow) summary() carecontract.ContractSummary {
 		ModulesText: carecontract.JoinNames(r.ModuleNames),
 		PartyName:   strings.TrimSpace(r.PartyName), PartyEmail: r.PartyEmail, EffectiveFrom: r.EffectiveFrom,
 		CreatedAt: r.CreatedAt, SentAt: r.SentAt, Concluded: r.concluded(), EndsOn: r.EndsOn,
-		Imported: r.Imported,
+		Imported: r.Imported, FollowsBookings: r.FollowsBookings,
 	}
 }
 

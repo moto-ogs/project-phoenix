@@ -196,6 +196,9 @@ var childLinkErrorRules = []struct {
 	{carecontract.ErrChildLinkNotImported, func(err error) render.Renderer {
 		return common.ErrorConflictWithCode(err, common.CodeCareContractChildLinkNotImported)
 	}},
+	{carecontract.ErrChildLinkBound, func(err error) render.Renderer {
+		return common.ErrorConflictWithCode(err, common.CodeCareContractChildLinkBound)
+	}},
 }
 
 // renderChildLinkError renders the failures of the link, then those of the

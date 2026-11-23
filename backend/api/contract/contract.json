@@ -1349,6 +1349,20 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/traeger/contract-enrollments/{contractId}",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "request_child_id",
+          "kind": "id"
+        }
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/traeger/contracts/{id}",
       "portals": [
         "org"
@@ -19895,6 +19909,37 @@
       "max_body_bytes": 2359296,
       "multipart": true,
       "too_large_code": "care_contract.import_file_too_large"
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/contract-enrollments/",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ContractEnrollmentRunRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "EnrollmentRun"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/contract-enrollments/preview",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ContractEnrollmentPreviewRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "EnrollmentPreview"
+      },
+      "no_commit": "the preview shows what the run would do for the children of the imported contracts and enrolls nobody"
     },
     {
       "method": "POST",
@@ -42690,6 +42735,37 @@
       ]
     },
     {
+      "name": "ChildRecord",
+      "go_type": "contractenrollment.ChildRecord",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "birth_date",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        }
+      ]
+    },
+    {
       "name": "ChildResponse",
       "go_type": "parent.ChildResponse",
       "fields": [
@@ -44229,6 +44305,24 @@
       ]
     },
     {
+      "name": "ContractChildName",
+      "go_type": "contractenrollment.ContractChildName",
+      "fields": [
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "ContractCorrection",
       "go_type": "carecontract.ContractCorrection",
       "fields": [
@@ -44661,6 +44755,12 @@
           }
         },
         {
+          "name": "follows_bookings",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "version",
           "schema": {
             "kind": "ref",
@@ -44752,6 +44852,41 @@
               "kind": "ref",
               "ref": "ContractCorrection"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContractEnrollmentPreviewRequest",
+      "go_type": "contractenrollmenthttp.ContractEnrollmentPreviewRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "school_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContractEnrollmentRunRequest",
+      "go_type": "contractenrollmenthttp.ContractEnrollmentRunRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "school_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -45921,6 +46056,12 @@
         },
         {
           "name": "imported",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "follows_bookings",
           "schema": {
             "kind": "bool"
           }
@@ -51706,6 +51847,98 @@
       ]
     },
     {
+      "name": "EnrollmentBooking",
+      "go_type": "carecontract.EnrollmentBooking",
+      "fields": [
+        {
+          "name": "care_offering_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "module_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "days",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "valid_from",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "valid_until",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "end_times",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "available_days",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "days_of_week_mode",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "EnrollmentChange",
+      "go_type": "carecontract.EnrollmentChange",
+      "fields": [
+        {
+          "name": "effective_from",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "bookings",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "EnrollmentBooking"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "EnrollmentChangeRequestPendingCountResponse",
       "go_type": "enrollmenthttp.EnrollmentChangeRequestPendingCountResponse",
       "fields": [
@@ -51872,6 +52105,222 @@
                 "kind": "ref",
                 "ref": "PhaseTranslatedTextRequest"
               }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "EnrollmentPreview",
+      "go_type": "contractenrollment.EnrollmentPreview",
+      "fields": [
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "fingerprint",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "counts",
+          "schema": {
+            "kind": "ref",
+            "ref": "EnrollmentRowCounts"
+          }
+        },
+        {
+          "name": "rows",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "EnrollmentRow"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "EnrollmentRow",
+      "go_type": "contractenrollment.EnrollmentRow",
+      "fields": [
+        {
+          "name": "contract_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "action",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "contract_child",
+          "schema": {
+            "kind": "ref",
+            "ref": "ContractChildName"
+          }
+        },
+        {
+          "name": "student",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "ChildRecord"
+          }
+        },
+        {
+          "name": "phase_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "phase_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "bookings",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "EnrollmentBooking"
+            }
+          }
+        },
+        {
+          "name": "changes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "EnrollmentChange"
+            }
+          }
+        },
+        {
+          "name": "request_child_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "follows_contract_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "EnrollmentRowCounts",
+      "go_type": "contractenrollment.EnrollmentRowCounts",
+      "fields": [
+        {
+          "name": "ready",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "done",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "unlinked",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "held",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "stuck",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "changed",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "EnrollmentRun",
+      "go_type": "contractenrollment.EnrollmentRun",
+      "fields": [
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "changed",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "counts",
+          "schema": {
+            "kind": "ref",
+            "ref": "EnrollmentRowCounts"
+          }
+        },
+        {
+          "name": "rows",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "EnrollmentRow"
             }
           }
         }

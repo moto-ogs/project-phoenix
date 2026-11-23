@@ -53,7 +53,7 @@ func mountTraegerRoutes(root, tenant chi.Router, limiters authRateLimiters, iden
 	delivery deliveryRuntime.Capability, closureMail owners.HolidayClosureMail, outcomes deliveryRuntime.EmailOutcomes, keys TurnstileKeys,
 	healthData enrollmentOwner.HolidayHealthCipher, bankData parentbilling.BankDataCipher, statistics studentpresence.StatisticsReports, changes careplan.OfferingChangeCapability, contractHolidays carecontract.SchoolHolidays,
 	holidayCalendar enrollmentOwner.HolidaySchoolCalendar, closureHolidays owners.HolidayClosureHolidays, calendarSchools traegercalendar.Schools, schoolPhases *enrollmentCompose.Phases, schoolCatalog careplan.CareOfferingCatalogCapability, lockRecurrence func(context.Context) error,
-	staffing schoolCalendarHTTP.StaffingChangeQueue, today func() calendar.Date, now func() time.Time, parentsURL string, logger *slog.Logger) error {
+	staffing schoolCalendarHTTP.StaffingChangeQueue, contractEnrollments enrollmentOwner.ContractEnrollments, today func() calendar.Date, now func() time.Time, parentsURL string, logger *slog.Logger) error {
 	if _, ok := identity.(identityaccess.TraegerMemberProfiles); !ok {
 		return errors.New("traeger portal: identity does not serve the names of the Träger-Büro")
 	}
@@ -79,6 +79,10 @@ func mountTraegerRoutes(root, tenant chi.Router, limiters authRateLimiters, iden
 	}
 	mountCareContractRoutes(root, signingLink, organizations, settings, schoolSettings, delivery, outcomes, audit.Log,
 		owners.NewCareContractNoticeAddressees(persons, identity), contractHolidays, parentsURL, today, now)
+	// The children of imported contracts get their enrollment (#7760).
+	if err := mountContractEnrollmentRoutes(root, organizations, contractEnrollments, audit.Log, today, now); err != nil {
+		return err
+	}
 	mountCareTimeOverrunRoutes(root, organizations, statistics, audit.Log, today)
 	// The office decides the parents' changes through Care Plan's review of
 	// the school (#5979).

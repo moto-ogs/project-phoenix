@@ -124,6 +124,14 @@ type BookingPhase struct {
 type BookingRequest struct {
 	ID      int64
 	PhaseID int64
+	// StartsWithFirstBooking tells that the children of the request are
+	// booked from the first day of their bookings, which may lie after the
+	// service start of the phase: an enrollment made from an imported care
+	// contract books a child from the first day of its contract (ADR 0309).
+	// An undated correction of such a child keeps that day. Every other
+	// request is booked over the whole phase by its approval and corrected
+	// from the service start.
+	StartsWithFirstBooking bool
 }
 
 // BookingChild is the request child an adjustment switches.
