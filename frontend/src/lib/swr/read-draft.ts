@@ -19,7 +19,8 @@ import { useOpeningRead } from "./hooks";
  * 6. A read after a refusal or a save that fails is a load error
  *    (`status` `loadFailed`, `error`); SWR's own revalidation would resolve
  *    with the old data and hide it. Show `error` whether or not a draft is
- *    on screen (`useReadDraftLoadError` of `~/lib/hooks/use-swr-load-error`):
+ *    on screen (`useReadDraftLoadError` of `~/lib/hooks/use-swr-load-error`,
+ *    in a form with its own error alert `useReadDraftForm`):
  *    nothing can be sent until a read of the stored state succeeded, by
  *    `retryLoad` or by a newer read arriving after the save went out. Until
  *    then `discard` returns to the draft as saved, not to the state the
