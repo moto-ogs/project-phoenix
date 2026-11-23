@@ -205,9 +205,10 @@ The key is the scope claim of the portal's session token
 (`common.PortalScope`).
 
 - The allowlist is `portalRoutes.<key>` in the generated
-  `lib/contract/portals.generated.ts`: the routes whose registration names
-  the portal. A path outside it is a 404 before the session is read and
-  before any backend call.
+  `lib/contract/portals.generated.ts`. It contains only the portal's proxied
+  registrations; named handlers are listed separately in `routeFileRoutes`.
+  A path outside the allowlist is a 404 from the proxy before it reads the
+  session or calls the backend.
 - Only the registered query parameters are forwarded, every path segment is
   encoded again, and the answer is checked against the route's decoder.
   Session, the single 401 renewal, body limit and `Idempotency-Key` come

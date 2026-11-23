@@ -205,10 +205,11 @@ export async function readBackendJson<T>(response: Response): Promise<T> {
   if (!response.ok) {
     // A refusal's status still applies if the body stream breaks. In
     // particular, losing a 401 here must not turn a revoked session live.
-    const body = await response.text().catch(() => "");
-    throw new ApiResponseError(response.status, body, {
+    const body = await response.text().catch(() => null);
+    throw new ApiResponseError(response.status, body ?? "", {
       retryAfter: response.headers?.get?.("Retry-After") ?? null,
       contentType: response.headers?.get?.("Content-Type") ?? null,
+      bodyInterrupted: body === null,
     });
   }
   if (response.status === 204) return undefined as T;

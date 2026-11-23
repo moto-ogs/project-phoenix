@@ -329,6 +329,46 @@ describe("JWT callback — refresh scenarios", () => {
     expect(refreshAlreadyRefused(result as never)).toBe(true);
   });
 
+  it("retries a refresh 403 whose response body times out", async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.error(
+                new DOMException("Response timed out", "TimeoutError"),
+              );
+            },
+          }),
+          { status: 403 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        Response.json(
+          { status: 403, code: "module.not_booked" },
+          { status: 403 },
+        ),
+      );
+    const token = {
+      id: "7e",
+      token: "old-access",
+      refreshToken: "unbooked-refresh",
+      tokenExpiry: Date.now() - 30 * 1000,
+      refreshTokenExpiry: Date.now() + 60 * 60 * 1000,
+    };
+
+    const first = await callJwt({ ...token });
+
+    expect(first?.error).toBeUndefined();
+    expect(first?.refreshToken).toBe(token.refreshToken);
+    expect(first?.notBooked).toBeUndefined();
+    expect(refreshAlreadyRefused(token)).toBe(false);
+
+    const second = await callJwt({ ...token });
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(second?.notBooked).toBe(true);
+  });
+
   // ── Scenario 8: Backend refresh network timeout ───────────────────
   it("scenario 8: network timeout (AbortError) — token unchanged, no error set", async () => {
     const abortError = new DOMException(

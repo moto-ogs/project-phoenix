@@ -149,8 +149,8 @@ function pruneRefreshCache(): void {
   }
 }
 
-// A 401/403 from the refresh endpoint is final, except a 403
-// module.not_booked; everything else may be retried.
+// A 401 from the refresh endpoint is final, as is a 403 with a complete
+// body unless it says module.not_booked. Everything else may be retried.
 // The dead token is remembered for as long as a cookie could still carry it.
 function rememberTerminal(refreshKey: string, refreshTokenExpiry: unknown) {
   terminalRefreshKeys.set(
@@ -195,10 +195,11 @@ async function fetchRotation(
       timeout: "session",
     });
     if (!reply.ok) {
-      const { status, code } = reply.error;
+      const { status, code, cause } = reply.error;
       authLogger.warn("proactive_token_refresh_failed", {
         status,
         scope: token.scope,
+        bodyInterrupted: cause.bodyInterrupted,
       });
       if (status === 403 && code === moduleNotBookedCode) {
         notBookedRefreshKeys.set(refreshKey, Date.now() + NOT_BOOKED_RETRY_MS);
@@ -208,7 +209,8 @@ async function fetchRotation(
         }
         return { status: "notBooked" };
       }
-      if (status === 401 || status === 403) {
+      // Without the full 403 body we cannot rule out module.not_booked.
+      if (status === 401 || (status === 403 && !cause.bodyInterrupted)) {
         rememberTerminal(refreshKey, token.refreshTokenExpiry);
         return { status: "terminal", remembered: false };
       }
