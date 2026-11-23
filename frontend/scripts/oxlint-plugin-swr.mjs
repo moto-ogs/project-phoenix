@@ -123,6 +123,7 @@ const PUBLIC_MODULES = new Set(
     "mutate",
     "config-boundaries",
     "scope-boundary",
+    "read-draft",
     "course-waitlist-keys",
     "portal-keys",
     "traeger-keys",

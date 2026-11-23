@@ -53,6 +53,7 @@ const PUBLIC_SURFACE: Record<string, () => Promise<object>> = {
   mutate: () => import("./mutate"),
   "config-boundaries": () => import("./config-boundaries"),
   "scope-boundary": () => import("./scope-boundary"),
+  "read-draft": () => import("./read-draft"),
   "course-waitlist-keys": () => import("./course-waitlist-keys"),
   "portal-keys": () => import("./portal-keys"),
   "traeger-keys": () => import("./traeger-keys"),
@@ -133,6 +134,7 @@ const REVIEWED_EXPORTS: Record<string, string[]> = {
   mutate: ["mutate"],
   "config-boundaries": ["IsolatedSWRCache", "SWRSeedBoundary"],
   "scope-boundary": ["SWRScopeBoundary"],
+  "read-draft": ["useReadDraft"],
   "course-waitlist-keys": ["activityWaitlistKeys", "courseWaitlistKeys"],
   "portal-keys": [
     "STUDENT_KEY_FAMILIES",
