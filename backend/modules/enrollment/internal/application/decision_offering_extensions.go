@@ -51,16 +51,20 @@ func (d *Decisions) markExtendableBookings(
 		if next, scheduled := nextScheduledChange(linksByChild[childID], selectionDate); scheduled && next.Before(lastDay.AddDays(1)) {
 			lastDay = next.AddDays(-1)
 		}
-		set := sets[childID]
-		for i := range set.Current {
-			end, limited := limitedBookingEnd(set.Current[i], linksByChild[childID], phaseEnd)
-			if limited && end.Before(lastDay.AddDays(1)) {
-				until := lastDay
-				set.Current[i].ExtendsUntil = &until
-			}
-		}
+		markExtendableRows(sets[childID].Current, linksByChild[childID], phaseEnd, lastDay)
 	}
 	return nil
+}
+
+// markExtendableRows offers lastDay on each limited row that ends before it.
+func markExtendableRows(rows []enrollmentNative.ChildOfferingRow, links []*enrollmentNative.RequestChildOfferingRecord, phaseEnd, lastDay calendar.Date) {
+	for i := range rows {
+		end, limited := limitedBookingEnd(rows[i], links, phaseEnd)
+		if limited && end.Before(lastDay.AddDays(1)) {
+			until := lastDay
+			rows[i].ExtendsUntil = &until
+		}
+	}
 }
 
 // childrenWithLimitedBookings maps each approved child with a record and at
