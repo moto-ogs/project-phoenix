@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
+	"maps"
 	"slices"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
@@ -89,8 +90,35 @@ func (n *CareFeeNotices) preview(ctx context.Context, organizationID int64, run 
 func (n *CareFeeNotices) noticeDrafts(ctx context.Context, organizationID int64, run parentbilling.CareNoticeRun, in noticeInput,
 	preview *noticePreview,
 ) (map[calendar.Date][]parentbilling.CareInvoice, error) {
+	months, err := n.noticeMonths(ctx, organizationID, in)
+	if err != nil {
+		return nil, err
+	}
 	drafts := map[calendar.Date][]parentbilling.CareInvoice{}
 	billed := map[int64]bool{}
+	schools := ident.Int64s(run.SchoolIDs)
+	for _, monthIn := range months {
+		month := monthIn.month
+		review, final, err := computeNoticeMonth(monthIn, monthIn.invoiced, in.noticed[month], schools)
+		if err != nil {
+			return nil, err
+		}
+		drafts[month] = retainFailedAssessments(final, review.careMonth, in.previous, in.month.recipients, month)
+		if !month.Before(run.PeriodFrom) {
+			addBilledByInvoice(billed, monthIn.invoiced, schools)
+		}
+		preview.unpriced = appendNew(preview.unpriced, review.unpriced)
+		preview.duplicates = appendNew(preview.duplicates, review.duplicates)
+	}
+	preview.billed = len(billed)
+	return drafts, nil
+}
+
+// noticeMonths reads all issued child identities missing from the monthly
+// versions in one batch for the whole notice run.
+func (n *CareFeeNotices) noticeMonths(ctx context.Context, organizationID int64, in noticeInput) ([]careMonthInput, error) {
+	months := make([]careMonthInput, 0, len(in.months))
+	missing := map[int64]bool{}
 	for _, month := range in.months {
 		monthIn := in.month
 		monthIn.month = month
@@ -99,19 +127,20 @@ func (n *CareFeeNotices) noticeDrafts(ctx context.Context, organizationID int64,
 		if err != nil {
 			return nil, err
 		}
-		review, final, err := computeNoticeMonth(monthIn, invoiced, in.noticed[month], ident.Int64s(run.SchoolIDs))
-		if err != nil {
-			return nil, err
+		monthIn.invoiced = invoiced
+		for _, id := range missingCareChildren(monthIn.versions, invoiced) {
+			missing[id] = true
 		}
-		drafts[month] = retainFailedAssessments(final, review.careMonth, in.previous, in.month.recipients, month)
-		if !month.Before(run.PeriodFrom) {
-			addBilledByInvoice(billed, invoiced, ident.Int64s(run.SchoolIDs))
-		}
-		preview.unpriced = appendNew(preview.unpriced, review.unpriced)
-		preview.duplicates = appendNew(preview.duplicates, review.duplicates)
+		months = append(months, monthIn)
 	}
-	preview.billed = len(billed)
-	return drafts, nil
+	children, err := n.billing.issuedCareChildren(ctx, organizationID, slices.Collect(maps.Keys(missing)))
+	if err != nil {
+		return nil, err
+	}
+	for i := range months {
+		months[i].issuedChildren = children
+	}
+	return months, nil
 }
 
 // computeNoticeMonth computes a month for the notices: every contract of an

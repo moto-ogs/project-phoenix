@@ -530,6 +530,61 @@ func TestCareMonthlyContractLeftOutForAMissingPriceIsBilledLater(t *testing.T) {
 	assert.Equal(t, 1, second.Billed)
 }
 
+func TestCareMonthlyPreviewCountsAnIssuedChildWithoutAStudentRecordOnce(t *testing.T) {
+	t.Parallel()
+	const birthday = "2020-02-01"
+	f := newCareBillingFixture(t, "Träger Geschwister nach Vertragsende")
+	school, other := f.office.schools[0], f.office.schools[1]
+	old := careContract(t, f.db, f.office.organization, school, "Noah", "2029-12-01", sjrServices()[0])
+	for _, id := range []int64{school, other} {
+		rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(id, "2029-09-01", 3450))
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	}
+	first := f.run(t, int64(f.startRun(t, careMonth).ID))
+	require.Len(t, first.Invoices, 1)
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(first.ID), "/release"), careRelease(first))
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	ctx := context.Background()
+	_, err := f.db.ExecContext(ctx, `UPDATE care_contract.contract_versions SET ends_on = '2029-12-31'
+		WHERE organization_id = ? AND contract_id = ?`, f.office.organization, old)
+	require.NoError(t, err)
+	mia := careContract(t, f.db, f.office.organization, school, "Mia", careMonth, sjrServices()...)
+	early := careContract(t, f.db, f.office.organization, other, "Noah", careMonth, sjrServices()[0])
+	late := careContract(t, f.db, f.office.organization, school, "Noah", "2030-01-15", sjrServices()[1])
+	_, err = f.db.ExecContext(ctx, `UPDATE care_contract.contract_versions SET ends_on = '2030-01-14'
+		WHERE organization_id = ? AND contract_id = ?`, f.office.organization, early)
+	require.NoError(t, err)
+	_, err = f.db.ExecContext(ctx, `UPDATE care_contract.contract_versions SET child_birth_date = ?
+		WHERE organization_id = ? AND contract_id IN (?, ?, ?)`, birthday, f.office.organization, old, early, late)
+	require.NoError(t, err)
+	for _, id := range []int64{mia, early, late} {
+		sameFamily(t, f, id, old)
+	}
+	f.saveRule(t, careRule("sibling", "Ab drei Kindern", []int64{school}, map[string]any{
+		"sibling_from_child": 3, "sibling_all_children": true, "discount_basis_points": 5000,
+	}))
+
+	preview := f.run(t, int64(f.startRun(t, careMonth).ID))
+	assert.Equal(t, 1, preview.Billed)
+	totals := map[int64]int64{}
+	for _, invoice := range preview.Invoices {
+		totals[int64(invoice.ContractID)] = invoice.TotalCents
+	}
+	assert.Equal(t, map[int64]int64{mia: 8000, early: 3450}, totals, "two children do not qualify at the three-child threshold")
+
+	notices := f.noticeRun(t, int64(f.startNoticeRun(t, careMonth, "2030-01-02").ID))
+	for _, notice := range notices.Notices {
+		if int64(notice.ContractID) == mia {
+			require.NotEmpty(t, notice.Installments)
+			assert.Equal(t, careMonth, notice.Installments[0].Month)
+			assert.Equal(t, int64(8000), notice.Installments[0].AmountCents, "the notice also counts two children in January")
+			return
+		}
+	}
+	t.Fatal("notice preview omitted Mia")
+}
+
 // Two active contracts of one child book Monday until 14:00 twice: the run
 // bills neither and shows the child as a duplicate with both contracts
 // (Betragsregel 1); a release of nothing else is refused.

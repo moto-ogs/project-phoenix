@@ -111,3 +111,78 @@ Punkt 5 den Satz zum Beginn der Zahl.
   danach (ADR 0164 Punkt 6). Frühere Monate rechnet moto erst zum
   Geschwisterpreis, wenn das Büro einen früheren Tag nennt.
 - Migration `20261122070000`: zwei Spalten mit Standard `false`, zwei Checks.
+
+## Nachtrag 22.11.2026: Grenzen der Kinderzahl-Datei (#7863 Punkte 3 bis 5)
+
+- **Tag weiter als neun Monate voraus.** moto liest Verträge bis
+  `evidenceLookAhead` (273 Tage) voraus. Liegt der Tag einer Zeile dahinter,
+  ob aus ihrer Spalte oder aus dem Tag der Datei, hält moto die Zeile zurück
+  (`too_far_ahead` an „Gültig ab“). Sie zeigt damit nie „Schon bestätigt“
+  für eine Zeit, für die moto die Familie nicht kennt. Ihre Zahl spricht wie
+  bei einem ungültigen Tag weiter gegen die Zeilen der Geschwister.
+- **Vergleich mit der Bestätigung des Tages.** Die Zeile vergleicht die
+  Bestätigungen, die an ihrem Entscheidungstag gelten. Verschiedene Zahlen
+  für einen späteren Tag sind heute kein Widerspruch. Gilt am
+  Entscheidungstag keine Zahl, schützt moto weiterhin geplante Bestätigungen:
+  Die Datei übernimmt nie eine Zahl vor einer geplanten (Punkt 6, ADR 0288).
+  Die Liste der Familien bleibt bei `countOn`.
+- **Beendete Verträge.** Eine Familie zählt für die Zeile nur, wenn das Kind
+  in ihr am oder nach dem Beginn der Kinderzahl einen Vertrag hat. Maßgeblich
+  ist der Tag der Zeile. Bei einer Erneuerung gilt frühestens der Tag nach
+  Ablauf der alten Bestätigung. Ein inzwischen beendeter Vertrag zählt also
+  für einen früheren Beginn, aber nicht für eine Erneuerung nach Vertragsende.
+  Bleibt keine Familie übrig, hält moto die Zeile zurück (`contract_ended`).
+  Eine Familie, die die Zahl so nicht mehr erreicht, hört die Zeile weiter
+  als Zeugin: Ihre Zahl widerspricht den Zeilen der Geschwister wie vor
+  #7863, für jeden Tag. Gespeichert wird dort nichts. Punkt 5 verhindert also
+  nur das Speichern; die Konfliktprüfung bleibt so vorsichtig wie bisher.
+
+## Nachtrag 22.11.2026: Jeder Vertrag im Monat zählt, die Schulen der Regel zählen immer (#7863 Punkte 1 und 2)
+
+Entscheidung von Yannick am 22.11.2026.
+
+- **Jeder Vertrag im Monat zählt (Punkt 1).** Bei Vollmonatsabrechnung
+  rechnet nur ein Vertrag des Kindes den Monat ab (ADR 0158, Nachtrag
+  Kind-Monat E2). Für die Geschwisterregel zählt das Kind trotzdem an jeder
+  Schule, an der ein Vertrag von ihm an einem Tag des Monats Betreuung bucht,
+  Tag für Tag gelesen wie bei taggenauer Abrechnung. Der Vertrag ohne
+  Positionen bekommt keine Rechnung; er steht wie ein Vertrag ohne Preis als
+  Ort des Kindes in der Kette (`unbilled`). Ein Vertrag an einer zählenden
+  Schule geht einem Vertrag an einer anderen Schule vor. Folgen: Im
+  Größenmodus zählt das Kind zur Familiengröße. Im Rangmodus mit Kinderzahl
+  geht es nicht mehr als Kind „an anderer Schule“ von der Zahl ab; es steht
+  ohne Beitrag hinter den gereihten Kindern (ADR 0115 Punkt 3). Kam es von
+  einer anderen Schule, ändert sich deshalb kein Rang und kein Betrag, nur
+  die Kinderzahl auf der Ermäßigung („2. Kind von 3“ statt „von 2“). Buchte
+  sein Vertrag am 1. dagegen keine Betreuung (etwa nur Mittagessen), stand es
+  bisher als Geschwister ohne Vertrag vorn; jetzt steht es als Kind mit
+  Vertrag ohne Beitrag hinten, und ein Geschwisterkind kann im Wechselmonat
+  einen Rang verlieren und mehr zahlen. Das folgt aus der Reihenfolge nach
+  ADR 0088 (Kind mit Vertrag zu 0 €). Die taggenaue Abrechnung rechnet wie
+  bisher.
+- **Die Schulen der Regel zählen immer (Punkt 2).** Das ersetzt in
+  Entscheidung 2 den Satz „Der Rangmodus zählt wie bisher nur die gewählten
+  Schulen.“ In beiden Modi zählen die Schulen der Regel und dazu die unter
+  „Geschwister zählen auch an“ gewählten. Eine bestehende Rangregel, deren
+  Auswahl die eigene Schule nicht nennt, ermäßigt damit ab dem nächsten Lauf
+  an ihrer eigenen Schule. Die Maske bietet nur noch die anderen Schulen an;
+  beim Speichern fallen die Schulen der Regel aus der Auswahl. Gespeicherte
+  Regeln bleiben ohne Migration gültig, weil die Kette die Schulen der Regel
+  selbst dazunimmt.
+- **Ausgestellte Rechnungen bleiben.** Beides wirkt auf Entwürfe. Eine
+  ausgestellte Rechnung behält ihre gespeicherten Ermäßigungen. Ein
+  Änderungsbescheid rechnet dagegen alle Monate des Bescheids neu, auch
+  frühere (ADR 0182). Dort gilt die neue Zählung also auch rückwirkend. Weil
+  beide Punkte nur Kinder zur Zählung hinzunehmen, können Rang und
+  Familiengröße meist nur steigen; was die Familie zusammen zahlt, sinkt
+  dann oder bleibt. Ausnahme ist der Rangfall oben (Kind ohne Betreuung am
+  1.). Ein einzelner Vertrag kann außerdem mehr zahlen, wenn ein
+  Höchstbetrag der Familie greift: Er verteilt den Überschuss neu auf die
+  Kinder (Beispiel: 100 € und 80 € bei 120 € Höchstbetrag waren 100 € und
+  20 €; mit 50 % für beide sind es 50 € und 40 €).
+- **Ein Kind zählt einmal.** Eine ausgestellte Rechnung eines Vertrags, der
+  den Monat nicht mehr berührt, zählt ihr Kind über die Identität, die der
+  Betreuungsvertrag hält (ADR 0158 E1: Schülerdatensatz, sonst Name und
+  Geburtsdatum), und reiht es nach diesem Geburtsdatum. Vorher zählte so ein
+  Kind unter einer eigenen Kennung und konnte doppelt zählen. Für eine solche
+  Familie kann ein Änderungsbescheid deshalb auch mehr verlangen als bisher.

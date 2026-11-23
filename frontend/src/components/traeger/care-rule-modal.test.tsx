@@ -190,4 +190,91 @@ describe("CareRuleModal", () => {
     ).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByLabelText(/Ab so vielen Kindern/)).toHaveValue("3");
   });
+
+  // #7863: the rule's own schools always count; the field adds others.
+  const twoSchools: CareRuleSet = {
+    ...data,
+    schools: [
+      { id: "11", name: "Schule" },
+      { id: "12", name: "Nachbarschule" },
+    ],
+  };
+
+  it("says that the rule's schools always count and offers only the others", () => {
+    render(
+      <ToastProvider>
+        <CareRuleModal
+          data={twoSchools}
+          open={{ kind: "sibling", rule }}
+          currentMonth="2026-09-01"
+          onClose={vi.fn()}
+          onSaved={vi.fn()}
+        />
+      </ToastProvider>,
+    );
+    const field = screen.getByRole("combobox", {
+      name: "Geschwister zählen auch an",
+    });
+    expect(field).toHaveTextContent("Keine weitere Schule");
+    expect(
+      screen.getByText(
+        "Die Schulen der Regel zählen immer. Wähle hier weitere Schulen, deren Kinder mitzählen.",
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(field);
+    expect(
+      screen.getByRole("option", { name: "Nachbarschule" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("option")).toHaveLength(1);
+  });
+
+  it("drops the rule's own schools from a stored choice when saving", async () => {
+    saveCareRule.mockResolvedValue(twoSchools);
+    render(
+      <ToastProvider>
+        <CareRuleModal
+          data={twoSchools}
+          open={{
+            kind: "sibling",
+            rule: { ...rule, countSchoolIds: ["11", "12"] },
+          }}
+          currentMonth="2026-09-01"
+          onClose={vi.fn()}
+          onSaved={vi.fn()}
+        />
+      </ToastProvider>,
+    );
+    expect(
+      screen.getByRole("combobox", { name: "Geschwister zählen auch an" }),
+    ).toHaveTextContent("Nachbarschule");
+    fireEvent.click(screen.getByRole("button", { name: "Regel speichern" }));
+    await waitFor(() =>
+      expect(saveCareRule).toHaveBeenCalledWith(
+        "7",
+        expect.objectContaining({ schoolIds: ["11"], countSchoolIds: ["12"] }),
+      ),
+    );
+  });
+
+  it("explains a rule that already applies at every school", () => {
+    render(
+      <ToastProvider>
+        <CareRuleModal
+          data={data}
+          open={{ kind: "sibling", rule }}
+          currentMonth="2026-09-01"
+          onClose={vi.fn()}
+          onSaved={vi.fn()}
+        />
+      </ToastProvider>,
+    );
+    expect(
+      screen.getByRole("combobox", { name: "Geschwister zählen auch an" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByText(
+        "Die Schulen der Regel zählen immer. Es gibt keine weitere Schule.",
+      ),
+    ).toBeInTheDocument();
+  });
 });

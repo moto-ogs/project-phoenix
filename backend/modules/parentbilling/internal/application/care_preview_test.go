@@ -337,6 +337,10 @@ func (s *spanContracts) Recipients(context.Context, int64, []int64) (map[int64]p
 	return nil, nil
 }
 
+func (s *spanContracts) ChildrenOf(context.Context, int64, []int64) (map[int64]parentbilling.CareContractChild, error) {
+	return nil, nil
+}
+
 // TestPriceListReadsTheBookedModulesOfTheYearBefore asks for the modules a
 // year back as well, so a module whose contracts ended can still get the
 // price of a month that no invoice bills yet.

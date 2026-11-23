@@ -51,6 +51,32 @@ func (Store) PartiesOf(ctx context.Context, organizationID int64, contractIDs []
 	return parties, nil
 }
 
+// ChildrenForBilling reads identities from the effective timeline, without
+// requiring that the contract still runs or reading its booked services.
+func (Store) ChildrenForBilling(ctx context.Context, organizationID int64, contractIDs []int64) (map[int64]carecontract.BillingChild, error) {
+	db, err := traegerDB(ctx, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	var rows []struct {
+		ContractID int64
+		carecontract.BillingChild
+	}
+	if err := db.NewRaw(`SELECT DISTINCT ON (c.id) c.id AS contract_id, c.student_id,
+			v.child_first_name AS first_name, v.child_last_name AS last_name, v.child_birth_date AS birth_date
+		FROM care_contract.contracts AS c
+		JOIN care_contract.contract_versions AS v ON v.organization_id = c.organization_id AND v.contract_id = c.id
+		WHERE c.organization_id = ? AND c.id = ANY(?) AND v.status IN `+effectiveStatusSQL+`
+		ORDER BY c.id, v.effective_from DESC`, organizationID, pgdialect.Array(contractIDs)).Scan(ctx, &rows); err != nil {
+		return nil, fmt.Errorf("care contract postgres: read children for billing: %w", err)
+	}
+	children := make(map[int64]carecontract.BillingChild, len(rows))
+	for _, row := range rows {
+		children[row.ContractID] = row.BillingChild
+	}
+	return children, nil
+}
+
 // ContractFamilyEmails finds all matching parties of existing contracts in
 // one statement; another Träger's contracts never establish membership.
 func (Store) ContractFamilyEmails(ctx context.Context, organizationID int64, emails []string) ([]string, error) {

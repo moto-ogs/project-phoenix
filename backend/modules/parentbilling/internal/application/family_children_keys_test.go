@@ -441,3 +441,32 @@ func TestEndedContractStillSuppliesTheFamilyNumber(t *testing.T) {
 	require.Len(t, candidates, 1)
 	assert.Equal(t, parentbilling.FamilyImportDiffers, candidates[0].row.Status, "the ended contract's valid confirmation is protected")
 }
+
+// A contract import compares with the confirmation in force on the first
+// day of the row's contract, not with one planned for later (#7863 point 4).
+func TestContractImportComparesWithTheConfirmationInForceOnTheContractStart(t *testing.T) {
+	t.Parallel()
+	september, december, january := calendar.NewDate(2026, 9, 1), calendar.NewDate(2026, 12, 1), calendar.NewDate(2027, 1, 1)
+	ends := calendar.NewDate(2026, 12, 31)
+	counts := []parentbilling.FamilyChildCount{{ID: 1, ContractID: 1, FamilyEmail: "family@example.org", ConfirmedChildren: ptr(3), ValidFrom: &january,
+		Confirmations: []parentbilling.FamilyChildConfirmation{{Children: ptr(2), ValidFrom: &september, ValidUntil: &ends}}}}
+	numbers := FamilyNumbers{store: familySourceStore{counts: counts}}
+	for _, tc := range []struct {
+		name     string
+		from     calendar.Date
+		children int
+		want     string
+	}{
+		{"the number in force on the start is the same", december, 2, parentbilling.ImportedChildrenSame},
+		{"another number than the one in force differs", december, 3, parentbilling.ImportedChildrenDiffers},
+		{"the planned number decides once it holds", january, 3, parentbilling.ImportedChildrenSame},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			decisions, err := numbers.DecideImportedFamilyChildren(context.Background(), parentbilling.HolidayReviewer{OrganizationID: 9, AccountID: 8},
+				[]parentbilling.ImportedFamilyChildren{{Line: 2, ContractID: 2, FamilyEmail: "family@example.org", Children: tc.children, ValidFrom: tc.from}}, false)
+			require.NoError(t, err)
+			require.Len(t, decisions, 1)
+			assert.Equal(t, tc.want, decisions[0].Status)
+		})
+	}
+}
