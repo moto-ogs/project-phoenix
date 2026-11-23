@@ -9598,14 +9598,14 @@ export const studentSearchTopic = function studentSearchTopic(
         // #6954: der Filter steht im Filterfeld unter `Anmeldung`, nur mit
         // Zugriff auf die Angaben der Kinderakte und nur bei eigenen Fragen
         // der Online-Anmeldung. Freitext, Zahl und Datum: `Angabe vorhanden`
-        // (#7012).
+        // (#7012). Die Zahl folgt den übrigen Filtern der Liste (#7645).
         title: "Nach Angaben aus der Anmeldung filtern",
         steps: [
           "Wähle rechts neben der Suche das Filtersymbol.",
           "Wähle unter `Anmeldung` bei `Angabe aus der Anmeldung` eine Antwort, zum Beispiel eine Frage mit `Ja`.",
           "Bei Fragen mit freiem Text, Zahl oder Datum wählst du `Angabe vorhanden`. Dann siehst du alle Kinder, bei denen die Eltern etwas eingetragen haben. Auch „keine“ zählt als Angabe.",
           "Haben die Eltern nur wenige verschiedene Antworten gegeben, steht jede Antwort darunter, zum Beispiel `keine`. So siehst du, wie viele Kinder welche Antwort haben.",
-          "Die Zahl in Klammern nennt, wie viele Kinder die Liste dann zeigt. Kinder, die die Schule verlassen haben, zählen nicht.",
+          "Die Zahl in Klammern nennt, wie viele Kinder die Liste mit dieser Antwort zeigt. Deine anderen Filter zählen mit, zum Beispiel Gruppe, Klasse oder Anwesenheit. Kinder, die die Schule verlassen haben, zählen nicht.",
           "`Alle Angaben` hebt den Filter wieder auf.",
         ],
       },
