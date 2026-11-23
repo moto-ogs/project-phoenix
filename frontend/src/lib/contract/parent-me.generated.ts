@@ -2593,10 +2593,12 @@ export interface ReplaceMealParticipationRequest {
 /** Go: parent.MealPlanSavedResponse */
 export interface MealPlanSavedResponse {
   effective_from: string;
+  version: string;
 }
 
 export const MealPlanSavedResponseSchema: z.ZodType<MealPlanSavedResponse, unknown> = object<MealPlanSavedResponse>({
   effective_from: str,
+  version: str,
 });
 
 /** Go: parent.SetMealParticipationDayRequest */

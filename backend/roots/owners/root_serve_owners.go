@@ -220,9 +220,25 @@ func BuildServeMealPlan(db transactionruntime.Database, settings *mealplanCompos
 		Participants:    mealPlanParticipantFinder(students, time.Now),
 		ParticipantDays: mealPlanParticipantDaysFinder(names, time.Now),
 		StudentNames:    mealPlanStudentNames(names),
+		LockStudent:     mealPlanStudentLock(names),
 		Calendar:        mealPlanCalendar(calendarRecords),
 		Notices:         notices,
 	})
+}
+
+// mealPlanStudentLock binds the Meal Plan's first lock to the People
+// Directory's student row lock, the one every care-day writer and the
+// parent portal's child guard take first.
+func mealPlanStudentLock(students interface {
+	LockStudent(context.Context, int64) error
+}) mealplanModule.StudentLock {
+	return func(ctx context.Context, studentID int64) (bool, error) {
+		err := students.LockStudent(ctx, studentID)
+		if errors.Is(err, peopledirectory.ErrStudentNotFound) {
+			return false, nil
+		}
+		return err == nil, err
+	}
 }
 
 // studentNames is the People Directory's lookup of children by ID.

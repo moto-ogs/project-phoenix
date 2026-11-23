@@ -30,6 +30,7 @@ func BuildMealPlanAtForTests(db transactionruntime.Database, settings settingsCo
 		Participants:    mealPlanParticipantFinder(students, now),
 		ParticipantDays: mealPlanParticipantDaysFinder(names, now),
 		StudentNames:    mealPlanStudentNames(names),
+		LockStudent:     mealPlanStudentLock(names),
 		Calendar:        mealPlanCalendar(calendarRecords),
 		Notices:         notices,
 	})

@@ -443,6 +443,14 @@ func newMealPlanAt(db transactionruntime.Database, settings *mealplanCompose.Set
 			}
 			return out, nil
 		},
+		// The People Directory's student row lock, as owners.BuildServeMealPlan binds it.
+		LockStudent: func(ctx context.Context, studentID int64) (bool, error) {
+			err := names.LockStudent(ctx, studentID)
+			if errors.Is(err, peopledirectory.ErrStudentNotFound) {
+				return false, nil
+			}
+			return err == nil, err
+		},
 		Calendar: func(ctx context.Context, from, to string) (map[string]bool, []mealplan.HolidayPeriod, error) {
 			closed, err := records.NonWorkingDayDates(ctx, from, to)
 			if err != nil {

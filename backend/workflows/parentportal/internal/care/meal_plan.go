@@ -130,21 +130,32 @@ func mealParticipationWriter(child *Child) error {
 }
 
 // ReplaceMealParticipationSchedule replaces the child's regular days against
-// the version the parent read (MealParticipationPlan.Version).
-func (s *Service) ReplaceMealParticipationSchedule(ctx context.Context, accountID, studentID int64, weekdays []MealWeekday, expectedVersion string) (string, error) {
-	var effectiveFrom string
+// the version the parent read (MealParticipationPlan.Version) and answers
+// the version of the days it stored (ADR 0311): the write still holds the
+// child's regular days, so the read after it in the same unit sees exactly
+// what it stored, and a fast second save is not refused as changed.
+func (s *Service) ReplaceMealParticipationSchedule(ctx context.Context, accountID, studentID int64, weekdays []MealWeekday, expectedVersion string) (MealScheduleSaved, error) {
+	var saved MealScheduleSaved
 	err := s.WithPermittedChildForWrite(ctx, accountID, studentID, GuardianPermissionPortalAccess, mealParticipationWriter, func(txCtx context.Context, _ *Child) error {
 		if err := s.RequireCareRunningForUpdate(txCtx, studentID); err != nil {
 			return err
 		}
-		var writeErr error
-		effectiveFrom, writeErr = s.MealPlan.ReplaceParticipationSchedule(txCtx, MealParticipationSchedule{StudentID: studentID, GuardianAccountID: accountID, Weekdays: weekdays, ExpectedVersion: expectedVersion})
-		return writeErr
+		effectiveFrom, writeErr := s.MealPlan.ReplaceParticipationSchedule(txCtx, MealParticipationSchedule{StudentID: studentID, GuardianAccountID: accountID, Weekdays: weekdays, ExpectedVersion: expectedVersion})
+		if writeErr != nil {
+			return writeErr
+		}
+		day, dateErr := calendar.ParseDate(effectiveFrom)
+		if dateErr != nil {
+			return fmt.Errorf("meal schedule saved for an invalid day %q: %w", effectiveFrom, dateErr)
+		}
+		stored, readErr := s.MealPlan.Participation(txCtx, studentID, day, day)
+		saved = MealScheduleSaved{EffectiveFrom: effectiveFrom, Version: stored.Version}
+		return readErr
 	}, mealParticipationWriteAccess)
 	if err != nil {
-		return "", mapMealParticipationError(err)
+		return MealScheduleSaved{}, mapMealParticipationError(err)
 	}
-	return effectiveFrom, nil
+	return saved, nil
 }
 
 func (s *Service) SetMealParticipationDay(ctx context.Context, accountID, studentID int64, date calendar.Date, participating bool) error {

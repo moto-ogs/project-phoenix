@@ -101,6 +101,10 @@ func (f *fakeMealPlan) RegistrationAvailable(context.Context) (bool, error) {
 	return f.available, f.err
 }
 func (f *fakeMealPlan) Participation(context.Context, int64, mealplanModule.Date, mealplanModule.Date) (mealplanModule.ParticipationPlan, error) {
+	if f.lastSchedule != nil {
+		// The regular days as the last save stored them.
+		return mealplanModule.ParticipationPlan{Version: "stored-version"}, f.err
+	}
 	return mealplanModule.ParticipationPlan{Version: "read-version"}, f.err
 }
 func (f *fakeMealPlan) ReplaceParticipationSchedule(_ context.Context, command mealplanModule.ReplaceParticipationSchedule) (mealplanModule.Date, error) {
@@ -291,6 +295,24 @@ func TestReplaceMealParticipationSchedule_PassesTheReadVersion(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, mealPlan.lastSchedule)
 	assert.Equal(t, "read-version", mealPlan.lastSchedule.ExpectedVersion)
+}
+
+// The save answers the version of the regular days it stored, read in its
+// own unit after the write (ADR 0311): the page's next save sends it and is
+// not refused as changed.
+func TestReplaceMealParticipationSchedule_AnswersTheStoredVersion(t *testing.T) {
+	t.Parallel()
+
+	db := testpkg.SetupTestDB(t)
+	chain := testpkg.CreateTestParentGuardianChain(t, db)
+	mealPlan := availableMealPlan(true)
+	svc := buildMealPlanService(t, db, mealPlanSettings(true, nil), mealPlan)
+	ctx := testpkg.WithPackageTenantRuntime(context.Background())
+
+	saved, err := svc.ReplaceMealParticipationSchedule(ctx, chain.AccountID, chain.StudentID, []parentService.MealWeekday{1}, "read-version")
+	require.NoError(t, err)
+	assert.Equal(t, "2026-09-07", saved.EffectiveFrom)
+	assert.Equal(t, "stored-version", saved.Version)
 }
 
 // TestMealPlanWeek_PastWeekOutOfRange asserts parents cannot reach a staff draft

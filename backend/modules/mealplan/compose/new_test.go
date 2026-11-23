@@ -51,6 +51,22 @@ func testStudentNames(ctx context.Context, ids []int64) ([]mealplan.ParticipantC
 	return result, err
 }
 
+// testStudentLock takes the child's student row FOR UPDATE in the test
+// database, as the People Directory's binding does.
+func testStudentLock(ctx context.Context, studentID int64) (bool, error) {
+	transaction, ok := tenant.TransactionFromContext(ctx)
+	if !ok {
+		return false, errors.New("test student lock: transaction is required")
+	}
+	tx, ok := transaction.(bun.Tx)
+	if !ok {
+		return false, fmt.Errorf("test student lock: unsupported transaction %T", transaction)
+	}
+	var ids []int64
+	err := tx.NewSelect().Table("users.student_profiles").Column("id").Where("id = ?", studentID).For("UPDATE").Scan(ctx, &ids)
+	return len(ids) == 1, err
+}
+
 // openCalendar is a school calendar without closing days or holidays.
 func openCalendar(context.Context, string, string) (map[string]bool, []mealplan.HolidayPeriod, error) {
 	return map[string]bool{}, nil, nil
@@ -191,6 +207,7 @@ func buildModuleAt(t *testing.T, db *bun.DB, enabled bool, settingErr error, now
 		Participants:    testParticipantFinder,
 		ParticipantDays: testParticipantDaysFinder,
 		StudentNames:    testStudentNames,
+		LockStudent:     testStudentLock,
 		Calendar:        openCalendar,
 	})
 	require.NoError(t, err)
@@ -313,6 +330,7 @@ func TestModuleReportsPersistenceQueryAndRowCounts(t *testing.T) {
 		Participants:    testParticipantFinder,
 		ParticipantDays: testParticipantDaysFinder,
 		StudentNames:    testStudentNames,
+		LockStudent:     testStudentLock,
 		Calendar:        openCalendar,
 	})
 	require.NoError(t, err)
@@ -368,6 +386,7 @@ func TestParticipationRejectsSameDayChangeAfterKitchenCutoff(t *testing.T) {
 		Participants:    testParticipantFinder,
 		ParticipantDays: testParticipantDaysFinder,
 		StudentNames:    testStudentNames,
+		LockStudent:     testStudentLock,
 		Calendar:        openCalendar,
 	})
 	require.NoError(t, err)
@@ -396,6 +415,7 @@ func TestRegistrationUsesSeparateToggleAndTenantCutoff(t *testing.T) {
 		Participants:    testParticipantFinder,
 		ParticipantDays: testParticipantDaysFinder,
 		StudentNames:    testStudentNames,
+		LockStudent:     testStudentLock,
 		Calendar:        openCalendar,
 	})
 	require.NoError(t, err)
@@ -417,6 +437,7 @@ func TestRegistrationUsesSeparateToggleAndTenantCutoff(t *testing.T) {
 		Participants:    testParticipantFinder,
 		ParticipantDays: testParticipantDaysFinder,
 		StudentNames:    testStudentNames,
+		LockStudent:     testStudentLock,
 		Calendar:        openCalendar,
 	})
 	require.NoError(t, err)
@@ -595,6 +616,7 @@ func buildModuleWithRules(t *testing.T, db *bun.DB, ordering OrderingSettings, n
 		Participants:    testParticipantFinder,
 		ParticipantDays: testParticipantDaysFinder,
 		StudentNames:    testStudentNames,
+		LockStudent:     testStudentLock,
 		Calendar:        openCalendar,
 	})
 	require.NoError(t, err)
@@ -783,6 +805,7 @@ func buildModuleWithCalendar(t *testing.T, db *bun.DB, calendar mealplan.Calenda
 		Participants:    testParticipantFinder,
 		ParticipantDays: testParticipantDaysFinder,
 		StudentNames:    testStudentNames,
+		LockStudent:     testStudentLock,
 		Calendar:        calendar,
 	})
 	require.NoError(t, err)

@@ -404,9 +404,12 @@ type ReplaceMealParticipationRequest struct {
 	ExpectedVersion string                      `json:"expected_version"`
 }
 
-// MealPlanSavedResponse names the day the regular meal plan applies from.
+// MealPlanSavedResponse names the day the regular meal plan applies from
+// and the version of the regular days stored: the next save sends it back
+// as expected_version (ADR 0311).
 type MealPlanSavedResponse struct {
 	EffectiveFrom string `json:"effective_from"`
+	Version       string `json:"version"`
 }
 
 type SetMealParticipationDayRequest struct {
@@ -489,12 +492,12 @@ func (rs *Resource) replaceMealParticipation(w http.ResponseWriter, r *http.Requ
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid JSON body")))
 		return
 	}
-	effectiveFrom, err := rs.ParentService.ReplaceMealParticipationSchedule(r.Context(), accountID, studentID, request.Weekdays, request.ExpectedVersion)
+	saved, err := rs.ParentService.ReplaceMealParticipationSchedule(r.Context(), accountID, studentID, request.Weekdays, request.ExpectedVersion)
 	if err != nil {
 		renderParentWriteError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, MealPlanSavedResponse{EffectiveFrom: string(effectiveFrom)}, "Regular meal participation saved")
+	common.Respond(w, r, http.StatusOK, MealPlanSavedResponse{EffectiveFrom: saved.EffectiveFrom, Version: saved.Version}, "Regular meal participation saved")
 }
 
 func (rs *Resource) setMealParticipationDay(w http.ResponseWriter, r *http.Request) {
