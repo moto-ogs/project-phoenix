@@ -469,8 +469,15 @@ function isArrayIndex(index, checker) {
       : initializer;
     if (!target || !ts.isIdentifier(target)) continue;
     if (checker.getSymbolAtLocation(target) !== symbol) continue;
-    const collection = checker.getTypeAtLocation(parent.expression);
-    if (checker.isArrayType(collection) || checker.isTupleType(collection))
+    const collection = checker.getNonNullableType(
+      checker.getTypeAtLocation(parent.expression),
+    );
+    const members = collection.isUnion() ? collection.types : [collection];
+    if (
+      members.every(
+        (part) => checker.isArrayType(part) || checker.isTupleType(part),
+      )
+    )
       return true;
   }
   return false;
