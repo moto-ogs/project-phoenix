@@ -78,5 +78,6 @@ Variante 3.
 - Die Elternanfragen verlieren ihre vier Fehlerwerte und den leeren Token, der
   die Prüfung übersprang.
 - Eine neue Prüfung braucht keinen neuen Fehlercode und keine neue Übersetzung.
-- Der Speiseplan lehnt schon mit `general.changed_since_read` ab, schickt aber
-  noch den gelesenen Tag statt eines Tokens (#7898); er zieht nach.
+- Der Speiseplan (#7930) liest und schickt ein Token je Tag. Seine alten
+  Routen, die den gelesenen Tag statt eines Tokens schicken (#7898), bleiben
+  ein Release lang und prüfen über dieselbe Funktion.

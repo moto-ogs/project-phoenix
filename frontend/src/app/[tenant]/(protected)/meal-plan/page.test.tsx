@@ -580,16 +580,15 @@ describe("Speiseplan: Woche aus dem Cache beim erneuten Öffnen", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("keeps the drafts when someone changed the day since it was read", async () => {
+  it("shows the stored day it refused instead of keeping the draft over it", async () => {
     const colleague = day("2026-10-05", "Eintopf");
     getMealPlanWeek.mockReset().mockResolvedValueOnce([stored]);
     getMealPlanWeek.mockResolvedValue([colleague]);
     setDay
       .mockReset()
-      .mockRejectedValueOnce(
+      .mockRejectedValue(
         new ApiError("changed", 409, { code: "general.changed_since_read" }),
-      )
-      .mockResolvedValue(day("2026-10-05", "Nudeln"));
+      );
     renderPage();
     fireEvent.change(await screen.findByDisplayValue("Fischstäbchen"), {
       target: { value: "Nudeln" },
@@ -606,18 +605,52 @@ describe("Speiseplan: Woche aus dem Cache beim erneuten Öffnen", () => {
       [{ dish: "Nudeln", note: null, allergens: [] }],
       stored.version,
     );
-    // The draft stays; the next save is checked against the stored day.
-    expect(screen.getByDisplayValue("Nudeln")).toBeInTheDocument();
+    // The colleague's change is on screen and nothing is left to save, so
+    // no second „Speichern“ can replace it unseen.
+    expect(await screen.findByDisplayValue("Eintopf")).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("Nudeln")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Speichern" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps the draft of an unsaved day nobody changed since it was read", async () => {
+    const tuesday = day("2026-10-06", "Linsen");
+    getMealPlanWeek.mockReset().mockResolvedValueOnce([stored, tuesday]);
+    getMealPlanWeek.mockResolvedValue([day("2026-10-05", "Eintopf"), tuesday]);
+    setDay
+      .mockReset()
+      .mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      )
+      .mockResolvedValue(day("2026-10-06", "Reis"));
+    renderPage();
+    fireEvent.change(await screen.findByDisplayValue("Fischstäbchen"), {
+      target: { value: "Nudeln" },
+    });
+    fireEvent.change(screen.getByDisplayValue("Linsen"), {
+      target: { value: "Reis" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await screen.findByText(
+      catalogText("general.changed_since_read", "die Woche im Speiseplan"),
+    );
+
+    // Monday was refused and shows the stored change; Tuesday is stored as
+    // read, so its draft stays and saves against the same version.
+    expect(await screen.findByDisplayValue("Eintopf")).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("Nudeln")).not.toBeInTheDocument();
+    expect(screen.getByDisplayValue("Reis")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await waitFor(() => expect(setDay).toHaveBeenCalledTimes(2));
     expect(setDay).toHaveBeenLastCalledWith(
-      "2026-10-05",
-      [{ dish: "Nudeln", note: null, allergens: [] }],
-      colleague.version,
+      "2026-10-06",
+      [{ dish: "Reis", note: null, allergens: [] }],
+      tuesday.version,
     );
   });
 
-  it("shows a colleague's other days after a conflict instead of saving them back", async () => {
+  it("shows a colleague's change on a day the person did not edit", async () => {
     const tuesday = day("2026-10-06", "Linsen");
     getMealPlanWeek.mockReset().mockResolvedValueOnce([stored, tuesday]);
     getMealPlanWeek.mockResolvedValue([
@@ -626,10 +659,9 @@ describe("Speiseplan: Woche aus dem Cache beim erneuten Öffnen", () => {
     ]);
     setDay
       .mockReset()
-      .mockRejectedValueOnce(
+      .mockRejectedValue(
         new ApiError("changed", 409, { code: "general.changed_since_read" }),
-      )
-      .mockResolvedValue(day("2026-10-05", "Nudeln"));
+      );
     renderPage();
     fireEvent.change(await screen.findByDisplayValue("Fischstäbchen"), {
       target: { value: "Nudeln" },
@@ -639,17 +671,8 @@ describe("Speiseplan: Woche aus dem Cache beim erneuten Öffnen", () => {
       catalogText("general.changed_since_read", "die Woche im Speiseplan"),
     );
 
-    // Only the edited day keeps its draft; Tuesday shows the stored change.
     expect(await screen.findByDisplayValue("Reis")).toBeInTheDocument();
     expect(screen.queryByDisplayValue("Linsen")).not.toBeInTheDocument();
-    expect(screen.getByDisplayValue("Nudeln")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
-    await waitFor(() => expect(setDay).toHaveBeenCalledTimes(2));
-    expect(setDay).toHaveBeenLastCalledWith(
-      "2026-10-05",
-      [{ dish: "Nudeln", note: null, allergens: [] }],
-      day("2026-10-05", "Eintopf").version,
-    );
   });
 
   it("shows the failed read after a conflict, not an old week to discard to", async () => {
@@ -681,28 +704,6 @@ describe("Speiseplan: Woche aus dem Cache beim erneuten Öffnen", () => {
         catalogText("general.changed_since_read", "die Woche im Speiseplan"),
       ),
     ).not.toBeInTheDocument();
-  });
-
-  it("shows the stored day after a conflict when the person discards", async () => {
-    getMealPlanWeek.mockReset().mockResolvedValueOnce([stored]);
-    getMealPlanWeek.mockResolvedValue([day("2026-10-05", "Eintopf")]);
-    setDay
-      .mockReset()
-      .mockRejectedValue(
-        new ApiError("changed", 409, { code: "general.changed_since_read" }),
-      );
-    renderPage();
-    fireEvent.change(await screen.findByDisplayValue("Fischstäbchen"), {
-      target: { value: "Nudeln" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
-    await screen.findByText(
-      catalogText("general.changed_since_read", "die Woche im Speiseplan"),
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "Verwerfen" }));
-    expect(await screen.findByDisplayValue("Eintopf")).toBeInTheDocument();
-    expect(screen.queryByDisplayValue("Nudeln")).not.toBeInTheDocument();
   });
 });
 
