@@ -366,11 +366,11 @@ func TestHolidayAllocationModeAndRights(t *testing.T) {
 	a.submitCriteria(t, "sperre@example.org", true, true)
 
 	body.AllocationMode = "arrival"
-	rec := traegerJSON(t, a.traeger, a.office.token, http.MethodPut, holidayPeriodPath(int64(a.period.ID)), body)
+	rec := putHolidayPeriod(t, a.traeger, a.office.token, holidayPeriodPath(int64(a.period.ID)), body)
 	assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Equal(t, "enrollment.holiday_allocation_mode_locked", a.errorCode(t, rec))
 	body.AllocationMode = "criteria"
-	rec = traegerJSON(t, a.traeger, a.office.token, http.MethodPut, holidayPeriodPath(int64(a.period.ID)), body)
+	rec = putHolidayPeriod(t, a.traeger, a.office.token, holidayPeriodPath(int64(a.period.ID)), body)
 	assert.Equal(t, http.StatusOK, rec.Code, rec.Body.String(), "keeping the mode is no change")
 	assert.True(t, strings.Contains(rec.Body.String(), `"allocation_mode_locked":true`))
 

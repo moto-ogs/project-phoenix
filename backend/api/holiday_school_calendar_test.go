@@ -121,6 +121,7 @@ func TestHolidaySchoolCalendarNamesEachHostSchoolsDaysWithoutCare(t *testing.T) 
 		foreignInput.Weeks = []enrollment.HolidayWeekInput{{HostSchoolID: foreign, StartsOn: calendar.NewDate(2026, 6, 3), EndsOn: calendar.NewDate(2026, 6, 5)}}
 		_, err = periods.CreateHolidayPeriod(txCtx, org, foreignInput)
 		assert.ErrorIs(t, err, enrollment.ErrHolidayHostSchoolOutsideTraeger, "create authorizes the host school before reading its closure")
+		foreignInput.ExpectedVersion = period.Version
 		_, err = periods.UpdateHolidayPeriod(txCtx, org, period.ID.Int64(), foreignInput)
 		assert.ErrorIs(t, err, enrollment.ErrHolidayHostSchoolOutsideTraeger, "update authorizes the host school before reading its closure")
 		return nil

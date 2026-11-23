@@ -287,7 +287,7 @@ func TestConfirmationFreezesTheContributionAgainstLaterPriceAndRuleChanges(t *te
 			period.Weeks[w].TimeModels[m].PriceCents *= 2
 		}
 	}
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayPeriodPath(int64(f.period.ID)), period)
+	rec = putHolidayPeriod(t, f.traeger, f.office.token, holidayPeriodPath(int64(f.period.ID)), period)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	lower := siblingHalf()
 	lower["discount_basis_points"] = 1000

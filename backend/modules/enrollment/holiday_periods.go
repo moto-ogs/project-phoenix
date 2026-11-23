@@ -175,6 +175,9 @@ type HolidayPeriod struct {
 	// figure without personal data.
 	RegistrationCount int           `json:"registration_count"`
 	Weeks             []HolidayWeek `json:"weeks"`
+	// Version is the token of the period as the Büro edits it; an update
+	// sends it back (ADR 0311).
+	Version string `json:"version"`
 }
 
 // HolidayTimeModelInput is a time model as the Träger-Büro writes it. A zero
@@ -224,6 +227,9 @@ type HolidayPeriodInput struct {
 	// period has no registration.
 	AllocationMode string
 	Weeks          []HolidayWeekInput
+	// ExpectedVersion is the Version of the period the Büro read; an
+	// update refuses another one (ADR 0311). Creating sends none.
+	ExpectedVersion string
 }
 
 // HolidayWeekHost is a week of a holiday period with the school that hosts

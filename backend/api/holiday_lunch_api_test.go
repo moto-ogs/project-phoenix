@@ -223,7 +223,7 @@ func TestHolidayLunchOfferStaysWhileBookedAndAFrozenPriceHolds(t *testing.T) {
 			weeks[i]["id"] = l.lunch.Weeks[i].ID
 			weeks[i]["time_models"].([]map[string]any)[0]["id"] = l.lunch.Weeks[i].TimeModels[0].ID
 		}
-		return traegerJSON(t, l.traeger, l.office.token, http.MethodPut, holidayPeriodPath(int64(l.period.ID)), map[string]any{
+		return putHolidayPeriod(t, l.traeger, l.office.token, holidayPeriodPath(int64(l.period.ID)), map[string]any{
 			"name": "Winterferien 2099", "registration_opens_on": "2020-01-01", "registration_closes_on": "2099-12-31",
 			"binding": true, "notes": "", "weeks": weeks,
 		})

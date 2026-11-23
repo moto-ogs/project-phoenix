@@ -234,7 +234,7 @@ func TestHolidayWeekChangeCountsTheChildsOtherRegistrations(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	period := decodeSchoolPortalData[map[string]any](t, rec.Body.Bytes())
 	period["weeks"].([]any)[1].(map[string]any)["ends_on"] = "2027-01-19"
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayPeriodPath(int64(created.ID)), period)
+	rec = putHolidayPeriod(t, f.traeger, office.token, holidayPeriodPath(int64(created.ID)), period)
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	code, fields := registrationRefusalOf(t, rec)
 	assert.Equal(t, "enrollment.holiday_week_day_limit", code)

@@ -349,7 +349,7 @@ func TestTraegerFreezesReopensAndRebooksHolidayRegistrations(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	closed := decodeSchoolPortalData[holidayPeriodBody](t, rec.Body.Bytes())
 	closed.RegistrationOpensOn, closed.RegistrationClosesOn = "2020-01-01", "2020-12-31"
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayPeriodPath(int64(f.period.ID)), closed)
+	rec = putHolidayPeriod(t, f.traeger, f.office.token, holidayPeriodPath(int64(f.period.ID)), closed)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	list := f.list(t, "")
 	assert.False(t, registrationByID(t, list, f.siblings).Frozen, "the reopened registration stays open")
@@ -520,7 +520,7 @@ func TestTimeModelOfAPastBookingIsNotRemoved(t *testing.T) {
 		}
 	}
 	without.Weeks[0].TimeModels = kept
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayPeriodPath(int64(f.period.ID)), without)
+	rec = putHolidayPeriod(t, f.traeger, f.office.token, holidayPeriodPath(int64(f.period.ID)), without)
 	require.Equal(t, http.StatusConflict, rec.Code, "the time model of past booked days stays: %s", rec.Body.String())
 	code, _ := registrationRefusalOf(t, rec)
 	assert.Equal(t, "enrollment.holiday_week_booked", code)

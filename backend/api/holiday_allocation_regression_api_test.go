@@ -51,7 +51,7 @@ func TestHolidayAllocationNotifiesAgainAfterAddingDays(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	body := decodeSchoolPortalData[holidayPeriodBody](t, rec.Body.Bytes())
 	body.AllocationMode = "criteria"
-	rec = traegerJSON(t, d.traeger, d.office.token, http.MethodPut, holidayPeriodPath(int64(d.period.ID)), body)
+	rec = putHolidayPeriod(t, d.traeger, d.office.token, holidayPeriodPath(int64(d.period.ID)), body)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	a := allocationFixture{reviewFixture: reviewFixture{holidayRegistrationFixture: d.holidayRegistrationFixture, office: d.office, period: d.period}}
 	registration := d.submit(t, d.registration("erneut@example.org", "Tom", d.days(dayMonday)))

@@ -13,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -266,8 +267,46 @@ func (s *HolidayPeriodStore) withWeeks(ctx context.Context, db bun.IDB, organiza
 			MaxDaysPerChild: row.MaxDaysPerChild,
 			AllocationMode:  row.AllocationMode, AllocationModeLocked: row.RegistrationCount > 0,
 		})
+		periods[len(periods)-1].Version = holidayPeriodVersion(periods[len(periods)-1])
 	}
 	return periods, nil
+}
+
+// holidayPeriodVersion is the token of a period as the Büro edits it (ADR
+// 0311): its fields, its status and every week with its time models. What
+// parents and other routes change is left out: the registrations, the
+// places of a week (HolidayPlaces), the lunch and time models booked.
+func holidayPeriodVersion(period enrollment.HolidayPeriod) string {
+	type model struct {
+		ID                   int64
+		Name, StartsAt, Ends string
+		PriceCents           int
+		Archived             bool
+	}
+	type week struct {
+		ID, HostSchoolID int64
+		StartsOn, EndsOn calendar.Date
+		BookingUnit      string
+		LunchPriceCents  *int
+		Models           []model
+	}
+	weeks := make([]week, len(period.Weeks))
+	for i, w := range period.Weeks {
+		weeks[i] = week{ID: w.ID.Int64(), HostSchoolID: w.HostSchoolID.Int64(), StartsOn: w.StartsOn, EndsOn: w.EndsOn,
+			BookingUnit: w.BookingUnit, LunchPriceCents: w.LunchPriceCents, Models: make([]model, len(w.TimeModels))}
+		for j, m := range w.TimeModels {
+			weeks[i].Models[j] = model{m.ID.Int64(), m.Name, m.StartsAt, m.EndsAt, m.PriceCents, m.Archived}
+		}
+	}
+	return readstate.Fingerprint(struct {
+		Name, Notes, AcceptanceMailText, Status, AllocationMode string
+		RegistrationOpensOn, RegistrationClosesOn               calendar.Date
+		Binding, HolidayWishRule                                bool
+		MaxDaysPerChild                                         *int
+		Weeks                                                   []week
+	}{period.Name, period.Notes, period.AcceptanceMailText, period.Status, period.AllocationMode,
+		period.RegistrationOpensOn, period.RegistrationClosesOn, period.Binding, period.HolidayWishRule,
+		period.MaxDaysPerChild, weeks})
 }
 
 const insertHolidayPeriodQuery = `INSERT INTO enrollment.holiday_periods

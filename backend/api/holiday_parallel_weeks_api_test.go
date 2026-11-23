@@ -121,7 +121,7 @@ func TestBookedWeeksOfOneChildCannotMoveOntoTheSameDays(t *testing.T) {
 	moved.Weeks = []holidayWeekBody{current.Weeks[0], current.Weeks[1]}
 	moved.Weeks[1].StartsOn, moved.Weeks[1].EndsOn = current.Weeks[0].StartsOn, current.Weeks[0].EndsOn
 
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayPeriodPath(int64(period.ID)), moved)
+	rec = putHolidayPeriod(t, f.traeger, office.token, holidayPeriodPath(int64(period.ID)), moved)
 
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	code, fields := registrationRefusalOf(t, rec)
@@ -148,7 +148,7 @@ func TestUnbookedWeekMovesParallelToABookedWeek(t *testing.T) {
 	moved.Weeks = []holidayWeekBody{current.Weeks[0], current.Weeks[1]}
 	moved.Weeks[1].StartsOn, moved.Weeks[1].EndsOn = current.Weeks[0].StartsOn, current.Weeks[0].EndsOn
 
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayPeriodPath(int64(period.ID)), moved)
+	rec = putHolidayPeriod(t, f.traeger, office.token, holidayPeriodPath(int64(period.ID)), moved)
 
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 }
