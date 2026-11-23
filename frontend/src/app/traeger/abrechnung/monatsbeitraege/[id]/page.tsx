@@ -28,6 +28,10 @@ import {
   CareUnpricedCard,
 } from "~/components/traeger/care-run-invoices";
 import { CareBilledChildrenCard } from "~/components/traeger/care-billed-children-card";
+import {
+  emptyCareRunText,
+  releaseBilledLines,
+} from "~/components/traeger/care-billed-children-format";
 import { CareJoinedChildrenCard } from "~/components/traeger/care-joined-children-card";
 import { CareUncountedCard } from "~/components/traeger/care-uncounted-card";
 import {
@@ -177,23 +181,6 @@ function releaseBlockReason(run: CareRunDetail): string | undefined {
     return "Lege zuerst das Muster der Rechnungsnummern für Monatsbeiträge fest.";
   }
   return undefined;
-}
-
-/** "1 Kind hat schon eine Rechnung und bekommt keine weitere." */
-function alreadyBilledLabel(children: number): string {
-  return children === 1
-    ? "1 Kind hat schon eine Rechnung und bekommt keine weitere."
-    : `${children} Kinder haben schon eine Rechnung und bekommen keine weitere.`;
-}
-
-/** The empty run; it names the children already billed (#7892). */
-function emptyRunText(month: string, billedChildren: number): string {
-  if (billedChildren === 0) {
-    return `Für ${month} gibt es keine Rechnung. Es fehlt auch kein Preis. Du kannst den Lauf verwerfen. Danach ist der Monat frei für einen neuen Lauf.`;
-  }
-  const who =
-    billedChildren === 1 ? "Ein Kind ist" : `${billedChildren} Kinder sind`;
-  return `Für ${month} gibt es keine neue Rechnung. ${who} schon abgerechnet, siehe unten. Stimmt das, kannst du den Lauf verwerfen.`;
 }
 
 function notBilledLabel(children: number, released = false): string {
@@ -583,11 +570,11 @@ export default function TraegerCareRunPage() {
                 neuen Lauf nach, wenn ein Vertrag beendet ist.
               </p>
             ) : null}
-            {(run.billedChildren ?? []).length > 0 ? (
-              <p className="mt-3 text-sm text-gray-700">
-                {alreadyBilledLabel((run.billedChildren ?? []).length)}
+            {releaseBilledLines(run.billedChildren ?? []).map((line) => (
+              <p key={line} className="mt-3 text-sm text-gray-700">
+                {line}
               </p>
-            ) : null}
+            ))}
             <ReleaseOpenPoints points={releaseOpenPoints} />
           </ConfirmationModal>
         ) : null
@@ -618,9 +605,9 @@ export default function TraegerCareRunPage() {
             description={
               discarded
                 ? `Er hatte nichts abzurechnen und hat nichts ausgestellt. Für ${formatMonth(run.billingMonth)} kannst du einen neuen Lauf starten.`
-                : emptyRunText(
+                : emptyCareRunText(
                     formatMonth(run.billingMonth),
-                    (run.billedChildren ?? []).length,
+                    run.billedChildren ?? [],
                   )
             }
             createdAt={run.createdAt}

@@ -1,12 +1,13 @@
 "use client";
 
 // Kinder, die ein Lauf zurückhält, weil für den Monat schon eine Rechnung
-// ausgestellt ist (ADR 0158, Nachtrag „Schon abgerechnet je Kind“, #7892):
-// Ein anderer Vertrag des Kindes hat den Monat abgerechnet, oder die
-// Rechnung des Vertrags enthält nur die Mensa und sperrt seine Betreuung.
-// Der Lauf stellt für das Kind keine weitere Rechnung aus. Die Karte nennt
-// die vorhandene Rechnung, damit das Büro sie prüft und, wenn sie falsch
-// ist, storniert. Ein freigegebener Lauf zeigt, was seine Freigabe
+// ausgestellt ist (ADR 0158, Nachtrag „Schon abgerechnet je Kind“, #7892).
+// Zwei Fälle, je eine Karte, weil das Büro Verschiedenes tut:
+// Ein anderer Vertrag des Kindes hat den Monat abgerechnet. Der Lauf stellt
+// keine zweite Rechnung aus; stimmt die vorhandene, ist nichts zu tun.
+// Oder die Rechnung des Vertrags enthält nur die Mensa und sperrt seine
+// Betreuung. Die Betreuung ist dann nicht abgerechnet, und das Büro muss die
+// Rechnung stornieren. Ein freigegebener Lauf zeigt, was seine Freigabe
 // gespeichert hat.
 
 import { ChevronDown, ChevronUp, TriangleAlert } from "lucide-react";
@@ -24,6 +25,7 @@ import type {
   CareBilledInvoice,
 } from "~/lib/traeger-care-billing-api";
 import { traegerPath } from "~/lib/traeger-url";
+import { splitBilledChildren } from "./care-billed-children-format";
 
 /** Rows shown before „N weitere anzeigen“. */
 const INITIAL_ROWS = 5;
@@ -52,7 +54,8 @@ function documentHref(invoice: CareBilledInvoice): string | undefined {
     : `/traeger/abrechnung/monatsbeitraege/${invoice.runId}/rechnung/${invoice.contractId}`;
 }
 
-function descriptionText(
+/** The month has an invoice already: check it, nothing to do if right. */
+function billedText(
   children: readonly CareBilledChild[],
   released: boolean,
   yearly: boolean,
@@ -69,8 +72,9 @@ function descriptionText(
   const found = yearly
     ? `Für ${who} ist ein Monat des Jahres schon abgerechnet.`
     : `Für ${who} ${released ? "war" : "ist"} der Monat schon abgerechnet.`;
+  // A Jahreslauf keeps what an earlier notice set for the month (S11).
   const follows = yearly
-    ? "Der Jahreslauf lässt diesen Monat im Bescheid weg."
+    ? "Der Jahreslauf ändert diesen Monat im Bescheid nicht."
     : released
       ? "Der Lauf hat keine zweite Rechnung ausgestellt."
       : "Der Lauf stellt keine zweite Rechnung aus.";
@@ -78,7 +82,7 @@ function descriptionText(
   // itself once the document is cancelled; a released one needs a new run.
   const them = one ? "das Kind" : "die Kinder";
   const next = yearly
-    ? "Danach nimmt dieser Lauf den Monat auf."
+    ? "Danach nimmt diese Vorschau den Monat auf."
     : released
       ? `Danach rechnet ein neuer Monatslauf ${them} ab.`
       : `Danach rechnet dieser Lauf ${them} ab.`;
@@ -96,6 +100,33 @@ function descriptionText(
     .join(" ");
 }
 
+/** The invoice carries only the Mensa: the care is open until its Storno. */
+function mealOnlyText(
+  children: readonly CareBilledChild[],
+  released: boolean,
+  yearly: boolean,
+): string {
+  const one = children.length === 1;
+  const next = yearly
+    ? "Dann nimmt diese Vorschau den Monat auf."
+    : released
+      ? "Dann rechnet ein neuer Monatslauf Betreuung und Mensa ab."
+      : "Dann rechnet dieser Lauf Betreuung und Mensa ab.";
+  return [
+    one
+      ? "Die Rechnung dieses Kindes enthält nur die Mensa."
+      : "Die Rechnungen dieser Kinder enthalten nur die Mensa.",
+    "Die Betreuung ist noch nicht abgerechnet.",
+    one ? "Storniere die Rechnung." : "Storniere die Rechnungen.",
+    next,
+  ].join(" ");
+}
+
+/**
+ * The children a run holds back for an issued invoice: one card for those
+ * whose month is billed already, one for those whose invoice carries only
+ * the Mensa.
+ */
 export function CareBilledChildrenCard({
   childrenBilled,
   released = false,
@@ -105,8 +136,42 @@ export function CareBilledChildrenCard({
   childrenBilled: readonly CareBilledChild[];
   /** A released monthly run: it shows what its release stored. */
   released?: boolean;
-  /** A run of Jahresbescheide: it leaves the month out of the notice. */
+  /** A run of Jahresbescheide: it keeps the month as it was assessed. */
   yearly?: boolean;
+}>) {
+  const { billed, mealOnly } = splitBilledChildren(childrenBilled);
+  return (
+    <>
+      <BilledCard
+        childrenBilled={billed}
+        title={
+          released
+            ? "Nicht abgerechnet – Kind hatte schon eine Rechnung"
+            : "Kind hat schon eine Rechnung – bitte prüfen"
+        }
+        description={billedText(billed, released, yearly)}
+      />
+      <BilledCard
+        childrenBilled={mealOnly}
+        mealOnly
+        title="Betreuung noch nicht abgerechnet – Rechnung nur mit Mensa"
+        description={mealOnlyText(mealOnly, released, yearly)}
+      />
+    </>
+  );
+}
+
+function BilledCard({
+  childrenBilled,
+  title,
+  description,
+  mealOnly = false,
+}: Readonly<{
+  childrenBilled: readonly CareBilledChild[];
+  title: string;
+  description: string;
+  /** The invoices of these children carry only the Mensa. */
+  mealOnly?: boolean;
 }>) {
   const [expanded, setExpanded] = useState(false);
   if (childrenBilled.length === 0) return null;
@@ -116,18 +181,14 @@ export function CareBilledChildrenCard({
     : childrenBilled.slice(0, INITIAL_ROWS);
   return (
     <SectionCard
-      title={
-        released
-          ? "Nicht abgerechnet – Kind hatte schon eine Rechnung"
-          : "Kind hat schon eine Rechnung – bitte prüfen"
-      }
+      title={title}
       titleBadge={
         <StatusBadge
           tone="warning"
           label={count === 1 ? "1 Kind" : `${count} Kinder`}
         />
       }
-      description={descriptionText(childrenBilled, released, yearly)}
+      description={description}
       leading={
         <TriangleAlert
           className="text-moto-orange-strong mt-0.5 size-5 shrink-0"
@@ -148,9 +209,6 @@ export function CareBilledChildrenCard({
                 </p>
                 <p className="mt-0.5 text-sm wrap-anywhere text-gray-600">
                   {billed.invoices.map(documentText).join(", ")}
-                  {billed.reason === "meal_only_invoice"
-                    ? " · nur Mensa, die Betreuung fehlt"
-                    : ""}
                 </p>
               </div>
               <ResponsiveRowActions>
@@ -166,9 +224,11 @@ export function CareBilledChildrenCard({
                       size="compact"
                       aria-label={`${label} öffnen: ${invoice.number}, ${child}`}
                       tooltip={
-                        invoice.source === "care_notice_run"
-                          ? "Öffnet den Jahresbescheid, der den Monat schon abrechnet."
-                          : "Öffnet die Rechnung, die den Monat schon abrechnet."
+                        mealOnly
+                          ? "Öffnet die Rechnung, die nur die Mensa enthält."
+                          : invoice.source === "care_notice_run"
+                            ? "Öffnet den Jahresbescheid, der den Monat schon abrechnet."
+                            : "Öffnet die Rechnung, die den Monat schon abrechnet."
                       }
                     >
                       {label} öffnen
@@ -210,7 +270,7 @@ export function CareBilledChildrenCard({
           tooltip={
             expanded
               ? "Zeigt wieder nur die ersten Kinder der Liste."
-              : "Zeigt alle Kinder, die schon eine Rechnung haben."
+              : "Zeigt alle Kinder dieser Liste."
           }
           onClick={() => setExpanded((open) => !open)}
         >

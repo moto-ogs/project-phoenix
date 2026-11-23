@@ -122,6 +122,45 @@ describe("discarding an empty notice run", () => {
     expect(screen.getByText("OGS Nord, dann OGS Süd")).toBeInTheDocument();
   });
 
+  it("names a child whose month is billed already in an empty run (#7892)", async () => {
+    api.fetchCareNoticeRun.mockResolvedValue(
+      run({
+        billedChildren: [
+          {
+            childFirstName: "Noah",
+            childLastName: "Muster",
+            reason: "already_billed",
+            contracts: [
+              { contractId: "81", schoolId: "3", schoolName: "OGS Nord" },
+            ],
+            invoices: [
+              {
+                source: "care_run",
+                runId: "5",
+                contractId: "82",
+                schoolName: "OGS Süd",
+                number: "MB-0002",
+                documentKind: "invoice",
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    renderPage();
+
+    expect(
+      await screen.findByText(
+        /Für das Jahr \d{4} gibt es keinen neuen Bescheid\. Für ein Kind ist ein Monat schon abgerechnet, siehe unten\. Stimmt das, kannst du den Lauf verwerfen\./,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", {
+        name: "Kind hat schon eine Rechnung – bitte prüfen",
+      }),
+    ).toBeInTheDocument();
+  });
+
   it("closes a run whose contracts keep their notice, as before", async () => {
     api.fetchCareNoticeRun.mockResolvedValue(run({ unchanged: 2 }));
     renderPage();

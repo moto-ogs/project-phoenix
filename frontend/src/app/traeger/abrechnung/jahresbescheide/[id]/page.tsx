@@ -24,6 +24,7 @@ import {
 } from "~/components/traeger/care-notice-format";
 import { formatEuro } from "~/components/traeger/contribution-format";
 import { CareBilledChildrenCard } from "~/components/traeger/care-billed-children-card";
+import { emptyNoticeRunText } from "~/components/traeger/care-billed-children-format";
 import { CareJoinedChildrenCard } from "~/components/traeger/care-joined-children-card";
 import { EmptyRunCard } from "~/components/traeger/empty-run-card";
 import {
@@ -444,7 +445,7 @@ export default function TraegerCareNoticeRunPage() {
             description={
               discarded
                 ? `Er hatte nichts abzurechnen und hat nichts ausgestellt. Für das Jahr ${run.year} kannst du einen neuen Lauf starten.`
-                : `Für das Jahr ${run.year} gibt es keinen Bescheid. Es fehlt auch kein Preis. Du kannst den Lauf verwerfen. Danach ist das Jahr frei für einen neuen Lauf.`
+                : emptyNoticeRunText(run.year, run.billedChildren ?? [])
             }
             createdAt={run.createdAt}
             discardedAt={run.discardedAt}

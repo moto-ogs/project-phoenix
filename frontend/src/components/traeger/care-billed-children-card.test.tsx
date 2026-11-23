@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { CareBilledChild } from "~/lib/traeger-care-billing-api";
 import { CareBilledChildrenCard } from "./care-billed-children-card";
@@ -60,17 +60,58 @@ describe("CareBilledChildrenCard", () => {
     ).toHaveAttribute("href", "/vertraege/11");
   });
 
-  it("says that an invoice with only the Mensa lacks the care", () => {
-    render(
+  // An invoice with only the Mensa leaves the care unbilled: the card of
+  // such a child tells to cancel it and never that nothing is to do.
+  it("tells to cancel an invoice with only the Mensa, in a card of its own", () => {
+    const { rerender } = render(
       <CareBilledChildrenCard
-        childrenBilled={[billed(2, { reason: "meal_only_invoice" })]}
+        childrenBilled={[billed(1), billed(2, { reason: "meal_only_invoice" })]}
+      />,
+    );
+    const heading = screen.getByRole("heading", {
+      name: "Betreuung noch nicht abgerechnet – Rechnung nur mit Mensa",
+    });
+    const card = heading.closest("section");
+    if (!card) throw new Error("the Mensa card without its section");
+    expect(
+      within(card).getByText(
+        "Die Rechnung dieses Kindes enthält nur die Mensa. Die Betreuung ist noch nicht abgerechnet. Storniere die Rechnung. Dann rechnet dieser Lauf Betreuung und Mensa ab.",
+      ),
+    ).toBeInTheDocument();
+    expect(within(card).getByText("Kind 2 Beispiel")).toBeInTheDocument();
+    expect(
+      within(card).getByText("Rechnung MB-0002 · OGS Ispringen"),
+    ).toBeInTheDocument();
+    // Anker: the card of the Mensa invoice renders with its own text.
+    expect(within(card).queryByText(/musst du nichts tun/)).toBeNull();
+    expect(within(card).queryByText("Kind 1 Beispiel")).toBeNull();
+    // The child whose month is billed keeps its own card.
+    expect(
+      screen.getByRole("heading", {
+        name: "Kind hat schon eine Rechnung – bitte prüfen",
+      }),
+    ).toBeInTheDocument();
+
+    rerender(
+      <CareBilledChildrenCard
+        childrenBilled={[
+          billed(2, { reason: "meal_only_invoice" }),
+          billed(3, { reason: "meal_only_invoice" }),
+        ]}
+        released
       />,
     );
     expect(
       screen.getByText(
-        "Rechnung MB-0002 · OGS Ispringen · nur Mensa, die Betreuung fehlt",
+        "Die Rechnungen dieser Kinder enthalten nur die Mensa. Die Betreuung ist noch nicht abgerechnet. Storniere die Rechnungen. Dann rechnet ein neuer Monatslauf Betreuung und Mensa ab.",
       ),
     ).toBeInTheDocument();
+    // Anker: only the Mensa card is left, nothing says the month is billed.
+    expect(
+      screen.queryByRole("heading", {
+        name: "Nicht abgerechnet – Kind hatte schon eine Rechnung",
+      }),
+    ).toBeNull();
   });
 
   it("opens a Jahresbescheid in its own run and says how to change it", () => {
@@ -125,7 +166,7 @@ describe("CareBilledChildrenCard", () => {
     rerender(<CareBilledChildrenCard childrenBilled={[billed(1)]} yearly />);
     expect(
       screen.getByText(
-        "Für dieses Kind ist ein Monat des Jahres schon abgerechnet. Der Jahreslauf lässt diesen Monat im Bescheid weg. Stimmt das, musst du nichts tun. Ist eine Rechnung falsch, storniere sie. Danach nimmt dieser Lauf den Monat auf.",
+        "Für dieses Kind ist ein Monat des Jahres schon abgerechnet. Der Jahreslauf ändert diesen Monat im Bescheid nicht. Stimmt das, musst du nichts tun. Ist eine Rechnung falsch, storniere sie. Danach nimmt diese Vorschau den Monat auf.",
       ),
     ).toBeInTheDocument();
   });
