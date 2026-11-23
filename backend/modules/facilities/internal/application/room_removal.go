@@ -49,17 +49,28 @@ func (s *Service) DeleteRoom(ctx context.Context, id int64, expectedFingerprint 
 		if references.Live() {
 			return &facilities.RoomStillPlannedError{References: references}
 		}
-		confirmed := facilities.NewRoomRemovalImpact(false, false, references)
-		if err := readstate.Check(expectedFingerprint, confirmed.Fingerprint()); err != nil {
-			return err
-		}
-		result, err = s.removeRoom(txCtx, existing, stats)
-		if err == nil && confirmed.Outcome == facilities.RoomRemovalArchive && result.Outcome != confirmed.Outcome {
-			return readstate.ErrChanged
-		}
+		result, err = s.removeConfirmedRoom(txCtx, existing, references, expectedFingerprint, stats)
 		return err
 	})
 	return result, err
+}
+
+// removeConfirmedRoom removes a room nothing plans any more, as the
+// confirmed preview promised: another preview is refused before the write,
+// and an archive the database would turn into a delete after it.
+func (s *Service) removeConfirmedRoom(ctx context.Context, existing facilities.Room, references facilities.RoomReferences, expectedFingerprint string, stats *domain.OperationStats) (facilities.RoomRemoval, error) {
+	confirmed := facilities.NewRoomRemovalImpact(false, false, references)
+	if err := readstate.Check(expectedFingerprint, confirmed.Fingerprint()); err != nil {
+		return facilities.RoomRemoval{}, err
+	}
+	removal, err := s.removeRoom(ctx, existing, stats)
+	if err != nil {
+		return facilities.RoomRemoval{}, err
+	}
+	if confirmed.Outcome == facilities.RoomRemovalArchive && removal.Outcome != confirmed.Outcome {
+		return facilities.RoomRemoval{}, readstate.ErrChanged
+	}
+	return removal, nil
 }
 
 // RoomRemovalImpact previews DeleteRoom: the outcome and every fact behind
