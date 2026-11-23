@@ -100,12 +100,14 @@ func (s *TraegerOfferingCopies) ApplyTraegerOffering(ctx context.Context, copy c
 	if current.Traeger != nil {
 		deviations = current.Traeger.Deviations
 	}
+	// The copy rows are locked: the version read above is the stored one.
+	read := current.Version
 	school := traegerOfferingValues(traegerOfferingFieldsOf(current), current.IsActive)
 	merged, changes := mergeTraegerOfferingValues(traeger, school, deviations)
 	if err := applyTraegerOfferingValues(&current, merged); err != nil {
 		return careplan.TraegerOfferingApplied{}, err
 	}
-	if _, err := s.catalog.UpdateOffering(ctx, current); err != nil {
+	if _, err := s.catalog.UpdateOffering(ctx, current, read); err != nil {
 		return careplan.TraegerOfferingApplied{}, err
 	}
 	if err := s.store.LinkTraegerOfferingCopy(ctx, current.ID, copy.SourceID, copy.Version, traeger); err != nil {
@@ -155,8 +157,9 @@ func (s *TraegerOfferingCopies) WithdrawTraegerOffering(ctx context.Context, sou
 	if err != nil {
 		return careplan.TraegerOfferingWithdrawal{}, err
 	}
+	read := offering.Version
 	offering.IsActive = false
-	if _, err := s.catalog.UpdateOffering(ctx, offering); err != nil {
+	if _, err := s.catalog.UpdateOffering(ctx, offering, read); err != nil {
 		return careplan.TraegerOfferingWithdrawal{}, err
 	}
 	return careplan.TraegerOfferingWithdrawal{Found: true}, nil

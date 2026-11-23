@@ -8,6 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // offeringAdjustmentWork carries one adjustment from its validation through
@@ -83,6 +84,9 @@ func (m *BookingMaterialization) prepareOfferingAdjustment(ctx context.Context, 
 	if err := m.loadOfferingAdjustmentSubject(ctx, work); err != nil {
 		return nil, err
 	}
+	if err := m.checkReadBookings(ctx, work); err != nil {
+		return nil, err
+	}
 	if err := m.loadOfferingAdjustmentCatalog(ctx, work); err != nil {
 		return nil, err
 	}
@@ -152,6 +156,20 @@ func (m *BookingMaterialization) loadOfferingAdjustmentSubject(ctx context.Conte
 	work.effectiveFrom = effectiveFrom
 	work.selectionDate = adjustmentSelectionDate(phase.OfferingPhase, effectiveFrom, today)
 	return nil
+}
+
+// checkReadBookings refuses a correction over bookings that changed since the
+// office read them (ADR 0311). It runs under the gates and the student lock
+// every writer of the child's bookings holds, before anything is written.
+func (m *BookingMaterialization) checkReadBookings(ctx context.Context, work *offeringAdjustmentWork) error {
+	if work.input.ExpectedVersion == nil {
+		return nil
+	}
+	stored, err := m.deps.Enrollment.SelectionHistory(ctx, work.child.ID)
+	if err != nil {
+		return fmt.Errorf("decision: read child bookings for adjustment: %w", err)
+	}
+	return readstate.Check(*work.input.ExpectedVersion, careplan.BookingsVersion(stored))
 }
 
 // validateAdjustmentEffectiveFrom keeps a dated switch inside the window it

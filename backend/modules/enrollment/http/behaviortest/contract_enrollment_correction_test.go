@@ -54,9 +54,13 @@ func setupCorrection(t *testing.T) *correctionEnv {
 
 func (c *correctionEnv) correct(t *testing.T, effectiveFrom *calendar.Date, offerings ...enrollmentAPI.OfferingAdjustmentSelection) {
 	t.Helper()
-	_, err := testpkg.TenantQuery1(t, testpkg.Ctx(t), c.db, c.owner.UpdateChildOfferings, enrollmentAPI.UpdateChildOfferingsInput{
+	// The office corrects the bookings it read (ADR 0311).
+	sets, err := testpkg.TenantQuery1(t, testpkg.Ctx(t), c.db, c.owner.ListChildOfferings, c.requestID)
+	require.NoError(t, err)
+	_, err = testpkg.TenantQuery1(t, testpkg.Ctx(t), c.db, c.owner.UpdateChildOfferings, enrollmentAPI.UpdateChildOfferingsInput{
 		RequestID: c.requestID, ChildID: c.childID, ActorAccountID: c.creatorID, ActorRole: "admin",
 		Reason: "Korrektur", Offerings: offerings, EffectiveFrom: effectiveFrom,
+		ExpectedVersion: sets[c.childID].Version,
 	})
 	require.NoError(t, err)
 }

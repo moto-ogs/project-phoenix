@@ -3,6 +3,8 @@ package api
 import (
 	"fmt"
 	"maps"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // readSeedVersion reads the version a save of the record at path sends back
@@ -26,4 +28,35 @@ func putReadPhase(rt *Runtime, auth AuthRef, path string, body map[string]any) e
 	sent["expected_version"] = version
 	_, err = rt.Client.PutWithAuth(auth, path, sent)
 	return err
+}
+
+// putReadChildOfferings corrects a child's bookings over the
+// offerings_version the request detail answers right before, as the
+// correction editor does (ADR 0311), and returns the answer.
+func putReadChildOfferings(rt *Runtime, auth AuthRef, requestID, childID int64, body map[string]any) ([]byte, error) {
+	raw, err := rt.Client.GetWithAuth(auth, fmt.Sprintf("/api/enrollment/admin/requests/%d", requestID))
+	if err != nil {
+		return nil, fmt.Errorf("read enrollment request %d: %w", requestID, err)
+	}
+	var detail struct {
+		Data struct {
+			Children []struct {
+				ID               ident.ID `json:"id"`
+				OfferingsVersion string   `json:"offerings_version"`
+			} `json:"children"`
+		} `json:"data"`
+	}
+	if err := parseJSON(raw, &detail); err != nil {
+		return nil, fmt.Errorf("parse enrollment request %d: %w", requestID, err)
+	}
+	sent := maps.Clone(body)
+	for _, child := range detail.Data.Children {
+		if int64(child.ID) == childID {
+			sent["expected_version"] = child.OfferingsVersion
+		}
+	}
+	if _, ok := sent["expected_version"]; !ok {
+		return nil, fmt.Errorf("enrollment request %d has no child %d", requestID, childID)
+	}
+	return rt.Client.PutWithAuth(auth, fmt.Sprintf("/api/enrollment/admin/requests/%d/children/%d/offerings", requestID, childID), sent)
 }
