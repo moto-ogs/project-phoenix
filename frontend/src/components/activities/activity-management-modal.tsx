@@ -3,10 +3,15 @@
 import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import {
+  fetchActivity,
   updateActivity,
   deleteActivity,
   type Activity,
 } from "~/lib/activity-api";
+import { isChangedSinceRead } from "~/lib/api-error";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import {
   parseParticipantLimit,
   useActivityForm,
@@ -124,6 +129,21 @@ export function ActivityManagementModal({
 }: ActivityManagementModalProps) {
   const submission = useFormModalPending(isOpen);
   const isSubmitting = submission.pending;
+  // The list row carries no version: the dialog reads the activity once it
+  // opens and saves against that stored state (ADR 0311).
+  const detail = useSWRAuth(
+    isOpen && !readOnly ? tenantAdminKeys.activity(activity.id) : null,
+    () => fetchActivity(activity.id),
+  );
+  const detailLoad = useSwrResourceLoadError(
+    [{ data: detail.data, error: detail.error }],
+    "die Aktivität",
+    () => detail.mutate(),
+  );
+  // The stored state the form was filled from. A newer read refills the
+  // form only while nobody has typed into it.
+  const [base, setBase] = useState<Activity | null>(null);
+  const [touched, setTouched] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -155,6 +175,7 @@ export function ActivityManagementModal({
   const retrySaveRef = useRef<() => void>(() => undefined);
   const retryDeleteRef = useRef<() => void>(() => undefined);
   const stepMaxParticipants = (delta: -1 | 1) => {
+    setTouched(true);
     setForm((prev) => {
       const current = Number.parseInt(prev.max_participants, 10);
       if (!Number.isFinite(current)) return prev;
@@ -167,8 +188,18 @@ export function ActivityManagementModal({
 
   const onInput = (event: ChangeEvent<HTMLInputElement>) => {
     handleInputChange(event);
+    setTouched(true);
     clearFormErrors();
   };
+
+  if (isOpen && detail.data && !touched && base !== detail.data) {
+    setBase(detail.data);
+    setForm({
+      name: detail.data.name,
+      category_id: detail.data.ag_category_id || "",
+      max_participants: detail.data.max_participant?.toString() ?? "",
+    });
+  }
 
   // Reset form when activity changes
   useEffect(() => {
@@ -181,6 +212,8 @@ export function ActivityManagementModal({
       clearFormErrors();
       clearDeleteErrors();
       setShowDeleteConfirm(false);
+      setBase(null);
+      setTouched(false);
     }
   }, [isOpen, activity, setForm, clearFormErrors, clearDeleteErrors]);
 
@@ -194,20 +227,17 @@ export function ActivityManagementModal({
 
     await submission.run(async (op) => {
       try {
-        // Prepare the update data
+        // Only what the dialog shows: the route keeps the opening, the
+        // room, the schedules and the supervisors (ADR 0311).
         const updateData = {
           name: form.name.trim(),
           category_id: form.category_id,
           max_participants: parseParticipantLimit(form.max_participants),
-          // Include existing values that might be required
-          is_open: activity.is_open_ags || false,
-          supervisor_ids: activity.supervisor_id
-            ? [activity.supervisor_id]
-            : [],
+          expected_version: base?.version,
         };
 
-        // Call the update API
-        await updateActivity(activity.id, updateData);
+        const saved = await updateActivity(activity.id, updateData);
+        void detail.mutate(saved, { revalidate: false });
 
         const successMessage = `Die Aktivität „${form.name.trim()}“ ist gespeichert.`;
 
@@ -226,9 +256,16 @@ export function ActivityManagementModal({
           activity_id: activity.id,
         });
         if (!op.isCurrent()) return;
+        // Changed since it was read: the same save would be refused again.
+        // The form shows the stored state once it is read.
+        const changed = isChangedSinceRead(err);
+        if (changed) {
+          setTouched(false);
+          void detail.mutate();
+        }
         void formErrors.show(err, {
           object: "die Aktivität",
-          retry: () => retrySaveRef.current(),
+          retry: changed ? undefined : () => retrySaveRef.current(),
         });
       }
     });
@@ -285,7 +322,7 @@ export function ActivityManagementModal({
       readOnly={readOnly}
       isSubmitting={isSubmitting}
       isDeleting={isDeleting}
-      loading={loading}
+      loading={loading || (!readOnly && !base)}
       onClose={onClose}
       onShowDeleteConfirm={() => setShowDeleteConfirm(true)}
     />
@@ -324,6 +361,7 @@ export function ActivityManagementModal({
             </div>
 
             <LoadErrorAlert error={loadError} />
+            <LoadErrorAlert error={detailLoad.error} />
             <FormErrorAlert message={formErrors.error} />
 
             {/* Activity Name Card - Compact */}
@@ -374,6 +412,7 @@ export function ActivityManagementModal({
                   value={form.category_id}
                   onChange={(next) => {
                     setForm((prev) => ({ ...prev, category_id: next }));
+                    setTouched(true);
                     clearFormErrors();
                   }}
                   invalid={Boolean(fieldError("category_id"))}
@@ -427,12 +466,13 @@ export function ActivityManagementModal({
                   <Checkbox
                     id="activity-no-participant-limit"
                     checked={!form.max_participants}
-                    onChange={(event) =>
+                    onChange={(event) => {
+                      setTouched(true);
                       setForm((prev) => ({
                         ...prev,
                         max_participants: event.target.checked ? "" : "15",
-                      }))
-                    }
+                      }));
+                    }}
                     disabled={readOnly}
                   />
                   Keine Begrenzung

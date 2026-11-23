@@ -19,7 +19,7 @@ func RouteContracts() []apiCommon.RouteContract {
 		}, Response: []ActivityResponse{}},
 		{Method: "POST", Pattern: "/", Portals: portals, Request: ActivityRequest{}, Response: ActivityResponse{}},
 		{Method: "GET", Pattern: "/{id}", Portals: portals, Response: ActivityResponse{}},
-		{Method: "PUT", Pattern: "/{id}", Portals: portals, Request: ActivityRequest{}, Response: ActivityResponse{}},
+		{Method: "PUT", Pattern: "/{id}", Portals: portals, Request: ActivityUpdateRequest{}, Response: ActivityResponse{}},
 		{Method: "DELETE", Pattern: "/{id}", Portals: portals, NoData: true},
 		{Method: "POST", Pattern: "/quick-create", Portals: portals, Request: QuickActivityRequest{}, Response: QuickActivityResponse{}},
 		{Method: "GET", Pattern: "/categories", Portals: portals, Query: categoryFlags, Response: []ActivityCategoryResponse{}},
