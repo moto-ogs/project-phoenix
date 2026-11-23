@@ -689,6 +689,13 @@ function RowStackedRow<T>({
   const detailValue = detail
     ? (detail.stackedRender ?? detail.render)(row)
     : null;
+  const metaValue = meta ? (
+    <span
+      className={`flex max-w-[9.5rem] min-w-0 justify-end ${meta.stackedClassName ?? ""}`}
+    >
+      {(meta.stackedRender ?? meta.render)(row)}
+    </span>
+  ) : null;
   return (
     <div data-stacked-head="" className="flex min-h-8 items-center gap-3">
       {selection ? (
@@ -720,14 +727,17 @@ function RowStackedRow<T>({
           </div>
         ) : null}
       </div>
-      {meta ? (
-        <span
-          className={`flex max-w-[9.5rem] min-w-0 justify-end ${meta.stackedClassName ?? ""}`}
-        >
-          {(meta.stackedRender ?? meta.render)(row)}
-        </span>
-      ) : null}
-      {end}
+      {/* The controls stand under the meta value, on the level of the
+          detail line: beside it they would narrow the title and the detail
+          that a phone line has room for (#7911). */}
+      {meta && end ? (
+        <div className="flex max-w-[9.5rem] min-w-0 flex-col items-end gap-0.5">
+          {metaValue}
+          {end}
+        </div>
+      ) : (
+        (metaValue ?? end)
+      )}
     </div>
   );
 }
@@ -935,15 +945,17 @@ function StackedRows<T>({
         />
       </>
     ) : null;
-    // "row" lines are flat: the controls overhang them instead of raising
-    // the line to 44 px by finger. The other layouts keep their spacing.
-    const end = (
-      <StackedRowEnd
-        toggle={toggle}
-        menu={menu}
-        className={layout === "row" ? "-my-1.5" : ""}
-      />
-    );
+    // Under a "row" line's meta value the controls overhang the line by
+    // finger instead of raising it to 44 px; the other layouts keep their
+    // spacing.
+    const end =
+      toggle === null && menu == null ? null : (
+        <StackedRowEnd
+          toggle={toggle}
+          menu={menu}
+          className={layout === "row" ? "-my-1.5 pointer-coarse:-my-3" : ""}
+        />
+      );
     const callerControls =
       typeof rowHasInteractiveControls === "function"
         ? rowHasInteractiveControls(row)
