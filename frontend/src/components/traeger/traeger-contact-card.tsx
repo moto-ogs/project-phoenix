@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { EditActions } from "~/components/ui/edit-actions";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
@@ -8,8 +8,14 @@ import { SectionCard } from "~/components/ui/section-card";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import { useReadDraftLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { saveTraegerContact, type TraegerContact } from "~/lib/traeger-api";
+import { useDraftOn } from "~/lib/swr/read-draft";
+import {
+  saveTraegerContact,
+  type TraegerContact,
+  type TraegerSection,
+} from "~/lib/traeger-api";
 
 const logger = createLogger({ component: "TraegerContactCard" });
 
@@ -29,14 +35,22 @@ export const TRAEGER_CONTACT_FIELD_IDS = {
  */
 export function TraegerContactCard({
   contact,
+  version,
   canEdit,
+  reload,
+  write,
   onSaved,
 }: Readonly<{
   contact: TraegerContact;
+  /** The section's read state the save sends back (ADR 0311). */
+  version: string;
   canEdit: boolean;
+  /** Reads the contact again after a refused save; rejects on failure. */
+  reload: () => Promise<TraegerSection<TraegerContact>>;
+  /** Hands the save answer to the page's read (ADR 0311, rule 5). */
+  write?: (stored: TraegerSection<TraegerContact>) => Promise<unknown>;
   onSaved: () => Promise<unknown>;
 }>) {
-  const [draft, setDraft] = useState<TraegerContact>(contact);
   const [saving, setSaving] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
@@ -48,43 +62,50 @@ export function TraegerContactCard({
     onSaved,
   );
 
-  // A refresh after another change on the page brings a new contact
-  // object; an open draft stays until it is saved or cancelled.
-  const shown = useRef(contact);
-  const [stored, setStored] = useState(contact);
-  useEffect(() => {
-    const before = shown.current;
-    shown.current = contact;
-    setStored(contact);
-    setDraft((current) => (sameContact(current, before) ? contact : current));
-  }, [contact]);
-
-  const changed = !sameContact(draft, stored);
+  // The draft rests on the section's version (ADR 0311): a refresh after
+  // another change on the page refills it only while untouched, the save
+  // answer (trimmed, e-mail in lower case) becomes its base, and a refused
+  // save shows the stored contact instead of the draft.
+  const form = useDraftOn<
+    TraegerSection<TraegerContact>,
+    TraegerContact,
+    string,
+    TraegerSection<TraegerContact>
+  >(
+    { opening: "contact", data: { value: contact, version }, reload, write },
+    {
+      token: (read) => read.version,
+      toDraft: (read) => read.value,
+      same: sameContact,
+      answer: (saved) => saved,
+    },
+  );
+  const draft = form.draft ?? contact;
+  const setDraft = form.setDraft;
+  const changed = form.touched;
+  const loadError = useReadDraftLoadError(form, "die Ansprechperson");
 
   const submit = async () => {
+    if (!form.canSubmit) return;
     formErrors.clear();
     setSaving(true);
-    const submitted = draft;
-    try {
-      const saved = await saveTraegerContact(submitted);
-      // The form shows what the backend keeps (trimmed, e-mail in lower
-      // case), unless the person typed on while it saved.
-      shown.current = saved;
-      setStored(saved);
-      setDraft((current) =>
-        sameContact(current, submitted) ? saved : current,
-      );
-    } catch (err) {
+    const result = await form.submit((expected, submitted) =>
+      saveTraegerContact(submitted, expected),
+    );
+    setSaving(false);
+    if (!result.ok) {
       logger.error("traeger_contact_save_failed", {
-        error: err instanceof Error ? err.message : String(err),
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
       });
-      void formErrors.show(err, {
+      void formErrors.show(result.error, {
         object: "die Änderung der Ansprechperson",
+        reload: result.reload,
       });
-      setSaving(false);
       return;
     }
-    setSaving(false);
     success("Die Ansprechperson ist gespeichert.");
     await afterSave.refresh();
   };
@@ -104,6 +125,7 @@ export function TraegerContactCard({
         }}
       >
         <LoadErrorAlert error={afterSave.error} />
+        {formErrors.error ? null : <LoadErrorAlert error={loadError} />}
         <FormErrorAlert message={formErrors.error} />
         <div className="grid gap-4 md:grid-cols-3">
           <Input
@@ -145,11 +167,12 @@ export function TraegerContactCard({
         {canEdit && changed ? (
           <EditActions
             onCancel={() => {
-              setDraft(stored);
+              form.discard();
               formErrors.clear();
             }}
             saving={saving}
             saveType="submit"
+            disabled={!form.canSubmit}
           />
         ) : null}
       </form>

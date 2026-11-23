@@ -9,6 +9,7 @@ import {
 } from "./export-recipient-cards";
 
 const RECIPIENT: ExportRecipient = {
+  version: "v-1",
   id: "7",
   name: "Kämmerei",
   enabled: true,
@@ -36,7 +37,8 @@ function form(recipient: ExportRecipient) {
 }
 
 it("updates an untouched recipient draft in Strict Mode", () => {
-  const updated = { ...RECIPIENT, remoteDirectory: "/archiv" };
+  // A stored change moves the version (ADR 0311).
+  const updated = { ...RECIPIENT, remoteDirectory: "/archiv", version: "v-2" };
   const view = render(form(RECIPIENT));
 
   expect(screen.getByLabelText("Zielordner")).toHaveValue("/eingang");

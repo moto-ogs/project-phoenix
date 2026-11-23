@@ -56,7 +56,7 @@ type offeringCorrectionBody struct {
 func offeringCorrectionFixture(t *testing.T, name string, rows ...string) (careContractFixture, []int64, int64) {
 	t.Helper()
 	f := newCareContractFixture(t, name)
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	rec := applyContractImport(t, f, f.office.token, "kinder.csv", contractImportFile(contractImportSchoolName(t, f), rows...))
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	imported := decodeSchoolPortalData[contractImportBody](t, rec.Body.Bytes())

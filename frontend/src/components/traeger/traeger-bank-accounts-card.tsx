@@ -38,10 +38,13 @@ export function TraegerBankAccountsCard({
   accounts,
   canEdit,
   onChanged,
+  reload,
 }: Readonly<{
   accounts: readonly TraegerBankAccount[];
   canEdit: boolean;
   onChanged: () => Promise<unknown>;
+  /** Reads the accounts again after a refused change; rejects on failure. */
+  reload: () => Promise<readonly TraegerBankAccount[]>;
 }>) {
   const [edit, setEdit] = useState<BankAccountEdit | null>(null);
   const [deleting, setDeleting] = useState<TraegerBankAccount | null>(null);
@@ -58,15 +61,18 @@ export function TraegerBankAccountsCard({
 
   const makeDefault = async (account: TraegerBankAccount) => {
     try {
-      await updateTraegerBankAccount(account.id, {
-        ...account,
-        isDefault: true,
-      });
+      // The row as shown, with its version (ADR 0311): a colleague's change
+      // since is refused, and `reload` shows it in the table.
+      await updateTraegerBankAccount(
+        account.id,
+        { ...account, isDefault: true },
+        account.version,
+      );
     } catch (err) {
       logger.error("traeger_bank_account_default_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
-      void showError(err, { object: "die Bankverbindung" });
+      void showError(err, { object: "die Bankverbindung", reload });
       return;
     }
     success(`„${account.label}“ ist jetzt der Standard.`);
@@ -219,6 +225,8 @@ export function TraegerBankAccountsCard({
       />
       <TraegerBankAccountModal
         edit={edit}
+        accounts={accounts}
+        reload={reload}
         onClose={() => setEdit(null)}
         onSaved={afterWrite.refresh}
       />

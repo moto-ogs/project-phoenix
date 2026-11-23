@@ -393,7 +393,11 @@ func seedSchoolChangeApproval(rt *Runtime, auth AuthRef, phaseID int64, child se
 // seedSchoolChangeNewContract gives the offering its contract template and
 // concludes the child's contract at the Demo-Schule Manuell on paper.
 func seedSchoolChangeNewContract(client *Client, auth AuthRef, school, offering, requestChild int64, party seedSchoolChangeParty) (int64, error) {
-	if _, err := client.PutWithAuth(auth, fmt.Sprintf("/traeger/contract-templates/%d/%d", school, offering), seedCareContractTemplate); err != nil {
+	version, err := seedTemplateVersion(client, auth, school, offering)
+	if err != nil {
+		return 0, err
+	}
+	if _, err := client.PutWithAuth(auth, fmt.Sprintf("/traeger/contract-templates/%d/%d", school, offering), seedTemplateBody(version)); err != nil {
 		return 0, fmt.Errorf("save the contract template of the Demo-Schule Manuell: %w", err)
 	}
 	raw, err := client.PostWithAuth(auth, "/traeger/contracts/", map[string]any{

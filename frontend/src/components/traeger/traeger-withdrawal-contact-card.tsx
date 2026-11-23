@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Alert } from "~/components/ui/alert";
 import { JumpButton } from "~/components/ui/jump-button";
 import { DataField, DataGrid } from "~/components/ui/data-field";
@@ -20,10 +20,13 @@ import {
 } from "~/components/ui/status-badge";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import { useReadDraftLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import {
   saveTraegerWithdrawalContact,
   type TraegerContact,
+  type TraegerSection,
   type TraegerWithdrawalContact,
 } from "~/lib/traeger-api";
 import { traegerPath } from "~/lib/traeger-url";
@@ -85,18 +88,28 @@ function ReachField({
  */
 export function TraegerWithdrawalContactCard({
   withdrawal,
+  version,
   contact,
   letterheadText,
   canEdit,
+  reload,
+  write,
   onSaved,
 }: Readonly<{
   withdrawal: TraegerWithdrawalContact;
+  /** The section's read state the save sends back (ADR 0311). */
+  version: string;
   contact: TraegerContact;
   letterheadText: string;
   canEdit: boolean;
+  /** Reads the section again after a refused save; rejects on failure. */
+  reload: () => Promise<TraegerSection<TraegerWithdrawalContact>>;
+  /** Hands the save answer to the page's read (ADR 0311, rule 5). */
+  write?: (
+    stored: TraegerSection<TraegerWithdrawalContact>,
+  ) => Promise<unknown>;
   onSaved: () => Promise<unknown>;
 }>) {
-  const [draft, setDraft] = useState<TraegerWithdrawalContact>(withdrawal);
   const [saving, setSaving] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
@@ -108,18 +121,32 @@ export function TraegerWithdrawalContactCard({
     onSaved,
   );
 
-  // A refresh after another change on the page brings a new object; an
-  // open draft stays until it is saved or cancelled.
-  const shown = useRef(withdrawal);
-  const [stored, setStored] = useState(withdrawal);
-  useEffect(() => {
-    const before = shown.current;
-    shown.current = withdrawal;
-    setStored(withdrawal);
-    setDraft((current) => (sameReach(current, before) ? withdrawal : current));
-  }, [withdrawal]);
-
-  const changed = !sameReach(draft, stored);
+  // The draft rests on the section's version (ADR 0311): a refresh after
+  // another change on the page refills it only while untouched, the save
+  // answer becomes its base, and a refused save shows the stored values.
+  const form = useDraftOn<
+    TraegerSection<TraegerWithdrawalContact>,
+    TraegerWithdrawalContact,
+    string,
+    TraegerSection<TraegerWithdrawalContact>
+  >(
+    {
+      opening: "withdrawal",
+      data: { value: withdrawal, version },
+      reload,
+      write,
+    },
+    {
+      token: (read) => read.version,
+      toDraft: (read) => read.value,
+      same: sameReach,
+      answer: (saved) => saved,
+    },
+  );
+  const draft = form.draft ?? withdrawal;
+  const setDraft = form.setDraft;
+  const changed = form.touched;
+  const loadError = useReadDraftLoadError(form, "den Kontakt für Widerrufe");
   const reach = withdrawalReach(contact, draft);
   const addressee = withdrawalAddressee(letterheadText, reach);
   const missing = [
@@ -128,25 +155,26 @@ export function TraegerWithdrawalContactCard({
   ].filter((value) => value !== null);
 
   const submit = async () => {
+    if (!form.canSubmit) return;
     formErrors.clear();
     setSaving(true);
-    const submitted = draft;
-    try {
-      const saved = await saveTraegerWithdrawalContact(submitted);
-      shown.current = saved;
-      setStored(saved);
-      setDraft((current) => (sameReach(current, submitted) ? saved : current));
-    } catch (err) {
+    const result = await form.submit((expected, submitted) =>
+      saveTraegerWithdrawalContact(submitted, expected),
+    );
+    setSaving(false);
+    if (!result.ok) {
       logger.error("traeger_withdrawal_contact_save_failed", {
-        error: err instanceof Error ? err.message : String(err),
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
       });
-      void formErrors.show(err, {
+      void formErrors.show(result.error, {
         object: "die Änderung des Kontakts für Widerrufe",
+        reload: result.reload,
       });
-      setSaving(false);
       return;
     }
-    setSaving(false);
     success("Der Kontakt für Widerrufe ist gespeichert.");
     await afterSave.refresh();
   };
@@ -166,6 +194,7 @@ export function TraegerWithdrawalContactCard({
         }}
       >
         <LoadErrorAlert error={afterSave.error} />
+        {formErrors.error ? null : <LoadErrorAlert error={loadError} />}
         <FormErrorAlert message={formErrors.error} />
         <div className="grid gap-4 md:grid-cols-2">
           <Input
@@ -259,11 +288,12 @@ export function TraegerWithdrawalContactCard({
         {canEdit && changed ? (
           <EditActions
             onCancel={() => {
-              setDraft(stored);
+              form.discard();
               formErrors.clear();
             }}
             saving={saving}
             saveType="submit"
+            disabled={!form.canSubmit}
           />
         ) : null}
       </form>

@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 const maxCreateBatch = 200
@@ -445,7 +446,8 @@ func sortTemplates(templates []carecontract.OfferingTemplate) {
 
 // SaveTemplate creates or replaces the template of one offering of a school
 // of the Träger.
-func (in *Intake) SaveTemplate(ctx context.Context, reviewer carecontract.Reviewer, schoolID, offeringID int64, input carecontract.TemplateInput) (carecontract.OfferingTemplate, error) {
+func (in *Intake) SaveTemplate(ctx context.Context, reviewer carecontract.Reviewer, schoolID, offeringID int64, input carecontract.TemplateInput,
+	expectedVersion string) (carecontract.OfferingTemplate, error) {
 	if err := checkReviewer(reviewer); err != nil {
 		return carecontract.OfferingTemplate{}, err
 	}
@@ -476,7 +478,10 @@ func (in *Intake) SaveTemplate(ctx context.Context, reviewer carecontract.Review
 	var saved carecontract.ContractTemplate
 	var head carecontract.Letterhead
 	err = in.runtime.WithinTraeger(ctx, reviewer.OrganizationID, func(txCtx context.Context) error {
-		var err error
+		err := in.lockTemplateAsRead(txCtx, reviewer.OrganizationID, schoolID, offeringID, expectedVersion)
+		if err != nil {
+			return err
+		}
 		if head, err = in.letterheads.Letterhead(txCtx, reviewer); err != nil {
 			return fmt.Errorf("care contract: letterhead: %w", err)
 		}
@@ -490,6 +495,18 @@ func (in *Intake) SaveTemplate(ctx context.Context, reviewer carecontract.Review
 		return carecontract.OfferingTemplate{}, err
 	}
 	return offeringTemplate(schools[0], offering, &saved, head), nil
+}
+
+// lockTemplateAsRead takes the lock of one offering's template, also for an
+// offering without one, and refuses a template that differs from the
+// version its author read (ADR 0311): the form sends every condition back,
+// also the ones nobody touched.
+func (in *Intake) lockTemplateAsRead(ctx context.Context, organizationID, schoolID, offeringID int64, expectedVersion string) error {
+	stored, err := in.store.LockTemplate(ctx, organizationID, schoolID, offeringID)
+	if err != nil {
+		return err
+	}
+	return readstate.Check(expectedVersion, carecontract.TemplateVersion(stored))
 }
 
 // schoolsOf is every school of the Träger, or only schoolID, which must be
@@ -629,6 +646,7 @@ func offeringTemplate(school carecontract.School, offering carecontract.Offering
 		AcceptanceText: text, WithdrawalText: withdrawal, EarlyStartText: earlyStart, TermText: term, NoticeText: notice,
 		SchoolID: ident.ID(school.ID), SchoolName: school.Name, OfferingID: ident.ID(offering.ID), OfferingName: offering.Name,
 		PhaseName: offering.PhaseName, PriceCents: offering.PriceCents, Active: offering.Active, Template: template,
+		Version: carecontract.TemplateVersion(template),
 	}
 }
 

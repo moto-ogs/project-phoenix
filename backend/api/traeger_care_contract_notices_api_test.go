@@ -18,6 +18,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -87,6 +88,17 @@ func concludeWithEarlyStart(t *testing.T, f careContractFixture) int64 {
 	return run.Concluded[0]
 }
 
+// shownOrdinaryEnd is the ordinary end the office is shown for a receipt on
+// day: the end a termination sends back (ADR 0311).
+func shownOrdinaryEnd(t *testing.T, f careContractFixture, path string, day calendar.Date) string {
+	t.Helper()
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, path+"?received_on="+day.String(), nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	shown := decodeSchoolPortalData[noticeOptionsBody](t, rec.Body.Bytes()).OrdinaryEndsOn
+	require.NotNil(t, shown)
+	return shown.String()
+}
+
 // The Träger-Büro records a termination it received (#4682): the right
 // "Verträge verwalten" is required, another Träger sees nothing, every read
 // and the declaration land in the trail and the read in the school's access
@@ -95,7 +107,7 @@ func TestCareContractNoticeNeedsTheRightStaysWithItsTraegerAndIsAudited(t *testi
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertrag Kündigung")
 	token := f.office.token
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, token, f.school, f.offering, careContractTemplate).Code)
 	contract := concludeWithEarlyStart(t, f)
 	path := "/traeger/contract-notices/" + strconv.FormatInt(contract, 10)
 	ctx := context.Background()
@@ -148,8 +160,13 @@ func TestCareContractNoticeNeedsTheRightStaysWithItsTraegerAndIsAudited(t *testi
 	assert.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "care_contract.field_invalid")
 
-	rec = traegerJSON(t, f.traeger, token, http.MethodPost, path, map[string]any{"kind": "kuendigung", "termination_kind": "ordentlich",
-		"received_on": concludedOn.String()})
+	ordinary := map[string]any{"kind": "kuendigung", "termination_kind": "ordentlich", "received_on": concludedOn.String()}
+	rec = traegerJSON(t, f.traeger, token, http.MethodPost, path, ordinary)
+	assert.Equal(t, http.StatusConflict, rec.Code, "a termination without the end shown is refused: %s", rec.Body.String())
+	assert.Contains(t, rec.Body.String(), readstate.ChangedCode)
+	// The end the office was shown with the options above.
+	ordinary["expected_ends_on"] = options.OrdinaryEndsOn.String()
+	rec = traegerJSON(t, f.traeger, token, http.MethodPost, path, ordinary)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	done := decodeSchoolPortalData[noticeOptionsBody](t, rec.Body.Bytes())
 	assert.Equal(t, carecontract.StatusTerminated, done.Status)
@@ -187,7 +204,7 @@ func TestCareContractNoticeNeedsTheRightStaysWithItsTraegerAndIsAudited(t *testi
 func TestCareContractNoticeWithoutALetterheadIsNotRecorded(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertrag Kündigung ohne Briefkopf")
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	contract := concludeWithEarlyStart(t, f)
 	var concludedOn calendar.Date
 	require.NoError(t, f.db.NewRaw(`SELECT (concluded_at AT TIME ZONE 'Europe/Berlin')::date FROM care_contract.contracts WHERE id = ?`, contract).
@@ -196,7 +213,7 @@ func TestCareContractNoticeWithoutALetterheadIsNotRecorded(t *testing.T) {
 
 	path := "/traeger/contract-notices/" + strconv.FormatInt(contract, 10)
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, path, map[string]any{"kind": "kuendigung",
-		"termination_kind": "ordentlich", "received_on": concludedOn.String()})
+		"termination_kind": "ordentlich", "received_on": concludedOn.String(), "expected_ends_on": shownOrdinaryEnd(t, f, path, concludedOn)})
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "care_contract.letterhead_missing")
 	var status string
@@ -216,7 +233,7 @@ func TestCareContractNoticeEndIsSetByTheOfficeAfterItsCheck(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertrag außerordentlich")
 	token := f.office.token
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, token, f.school, f.offering, careContractTemplate).Code)
 	contract := concludeWithEarlyStart(t, f)
 	linkContractGuardian(t, f, contract)
 	path := "/traeger/contract-notices/" + strconv.FormatInt(contract, 10)
@@ -285,7 +302,7 @@ func TestCareContractNoticeReasonIsRefusedByTheOfficeOnce(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertrag Grund abgelehnt")
 	token := f.office.token
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, token, f.school, f.offering, careContractTemplate).Code)
 	contract := concludeWithEarlyStart(t, f)
 	linkContractGuardian(t, f, contract)
 	path := "/traeger/contract-notices/" + strconv.FormatInt(contract, 10)
@@ -307,9 +324,11 @@ func TestCareContractNoticeReasonIsRefusedByTheOfficeOnce(t *testing.T) {
 	testpkg.OwnTraegerCareContracts(t, f.db, other.organization)
 	rec = traegerJSON(t, f.traeger, other.token, http.MethodPost, path+"/reason-rejection", map[string]any{"expected_ends_on": shown.String()})
 	assert.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, f.traeger, token, http.MethodPost, path+"/reason-rejection", map[string]any{"expected_ends_on": shown.AddDays(-1).String()})
-	assert.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
-	assert.Contains(t, rec.Body.String(), "expected_ends_on")
+	for _, stale := range []map[string]any{{"expected_ends_on": shown.AddDays(-1).String()}, {}} {
+		rec = traegerJSON(t, f.traeger, token, http.MethodPost, path+"/reason-rejection", stale)
+		assert.Equal(t, http.StatusConflict, rec.Code, "another end than the one shown, or none: %s", rec.Body.String())
+		assert.Contains(t, rec.Body.String(), readstate.ChangedCode)
+	}
 	assert.Zero(t, noticeEndMails(t, f, contract), "no notice before the decision")
 
 	rec = traegerJSON(t, f.traeger, token, http.MethodPost, path+"/reason-rejection", map[string]any{"expected_ends_on": shown.String()})
@@ -366,7 +385,7 @@ func TestCareContractEndNoticeSkipsAParentWhoseRightWasRevoked(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertrag Recht entzogen")
 	token := f.office.token
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, token, f.school, f.offering, careContractTemplate).Code)
 	contract := concludeWithEarlyStart(t, f)
 	link := linkContractGuardian(t, f, contract)
 	path := "/traeger/contract-notices/" + strconv.FormatInt(contract, 10)

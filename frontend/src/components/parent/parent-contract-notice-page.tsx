@@ -33,7 +33,7 @@ import { Textarea } from "~/components/ui/textarea";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { PARENT_RESOURCE_OPTIONS } from "~/lib/hooks/use-parent-resources";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
+import { revalidateOrThrow, useInvalidateFamily, useSWRAuth } from "~/lib/swr";
 import { parentInboxKeys } from "~/lib/swr/parent-inbox-keys";
 import type {
   ContractNotice,
@@ -109,6 +109,12 @@ export function ParentContractNoticePage({
   const refresh = useCallback(async () => {
     await mutate();
   }, [mutate]);
+  // After a refused declaration (ADR 0311): rejects when the read fails, so
+  // the form shows the load error instead of claiming the new dates show.
+  const reloadOrThrow = useCallback(
+    () => revalidateOrThrow(resource),
+    [resource],
+  );
   const invalidateFamily = useInvalidateFamily();
   const declared = useCallback(
     (next: ContractNoticeOptions) => {
@@ -161,6 +167,7 @@ export function ParentContractNoticePage({
           requireSelection={requireSelection}
           withdrawal={withdrawal}
           onRefresh={refresh}
+          onReload={reloadOrThrow}
           organizationId={organizationId}
           contractId={contractId}
           onDeclared={declared}
@@ -200,6 +207,7 @@ function NoticeForm({
   requireSelection,
   withdrawal,
   onRefresh,
+  onReload,
   organizationId,
   contractId,
   onDeclared,
@@ -209,6 +217,8 @@ function NoticeForm({
   requireSelection: boolean;
   withdrawal: boolean;
   onRefresh: () => Promise<void>;
+  /** Reads the options again after a refusal; rejects when that fails. */
+  onReload: () => Promise<unknown>;
   organizationId: string;
   contractId: string;
   onDeclared: (next: ContractNoticeOptions) => void;
@@ -269,7 +279,12 @@ function NoticeForm({
       );
       window.scrollTo({ top: 0 });
     } catch (err) {
-      void errors.show(err, { object: t("declareErrorObject") });
+      // The end date moved since it was shown (ADR 0311): the new dates
+      // arrive with `reload`, and changed ones ask for a choice again.
+      void errors.show(err, {
+        object: t("declareErrorObject"),
+        reload: onReload,
+      });
     } finally {
       setSending(false);
     }

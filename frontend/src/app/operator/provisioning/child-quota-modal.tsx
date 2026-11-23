@@ -1,5 +1,6 @@
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { Modal } from "~/components/ui/modal";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { Alert } from "~/components/ui/alert";
@@ -27,12 +28,15 @@ const logger = createLogger({ component: "ChildQuotaModal" });
 const FIELD_NAMES = { bundles: "bundles", bundleSize: "bundle_size" } as const;
 
 // The school update route replaces every school field, so a quota change
-// sends the school's current values with it.
+// sends the values of the school it was opened on, with its version: a
+// change since is refused (ADR 0311) instead of undone.
 function schoolUpdate(
   school: SchoolSummary,
   childQuota: UpdateSchoolRequest["child_quota"],
+  version: string,
 ): UpdateSchoolRequest {
   return {
+    expected_version: version,
     organization_id: school.organizationId,
     name: school.name,
     slug: school.slug,
@@ -45,6 +49,20 @@ function schoolUpdate(
     active: school.active,
     hidden: school.hidden,
     child_quota: childQuota,
+  };
+}
+
+interface QuotaDraft {
+  readonly bundles: string;
+  readonly bundleSize: string;
+}
+
+function quotaDraftOf(school: SchoolSummary): QuotaDraft {
+  return {
+    bundles: school.childQuotaBundles?.toString() ?? "",
+    bundleSize: (
+      school.childQuotaBundleSize ?? CHILD_QUOTA_DEFAULT_BUNDLE_SIZE
+    ).toString(),
   };
 }
 
@@ -64,15 +82,34 @@ export function ChildQuotaModal({
   readonly onClose: () => void;
   readonly school: SchoolSummary;
   /**
-   * Reads the school fresh right before saving. The update route replaces
-   * every school field, so saving from the copy the page loaded earlier
-   * would undo a rename or status change made in the meantime.
+   * Reads the school again after a refused save; rejects when the read
+   * fails. The update route replaces every school field: a save over a
+   * school changed since it was opened is refused, never undoes the change.
    */
   readonly loadCurrentSchool: () => Promise<SchoolSummary>;
   readonly onUpdated: () => Promise<void>;
 }) {
-  const [bundles, setBundles] = useState("");
-  const [bundleSize, setBundleSize] = useState("");
+  // The quota rests on the school as the modal opened it (ADR 0311): a
+  // newer read refills only an untouched form, a refused save shows the
+  // stored school, and nothing goes out until it was read.
+  const quota = useDraftOn<SchoolSummary, QuotaDraft, string, unknown>(
+    {
+      opening: isOpen ? `child-quota:${school.id}` : null,
+      data: school,
+      reload: loadCurrentSchool,
+    },
+    {
+      token: (read) => read.version,
+      toDraft: quotaDraftOf,
+      // The modal closes; the page reads the school again (`onUpdated`).
+      answer: (_saved, opened) => opened,
+    },
+  );
+  const { bundles, bundleSize } = quota.draft ?? quotaDraftOf(school);
+  const setBundles = (value: string) =>
+    quota.setDraft((current) => ({ ...current, bundles: value }));
+  const setBundleSize = (value: string) =>
+    quota.setDraft((current) => ({ ...current, bundleSize: value }));
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
   const { show: showError, invalid, clear: clearError } = formErrors;
@@ -87,20 +124,9 @@ export function ChildQuotaModal({
 
   useEffect(() => {
     if (!isOpen) return;
-    setBundles(school.childQuotaBundles?.toString() ?? "");
-    setBundleSize(
-      (
-        school.childQuotaBundleSize ?? CHILD_QUOTA_DEFAULT_BUNDLE_SIZE
-      ).toString(),
-    );
     clearError();
     setConfirmRemove(false);
-  }, [
-    isOpen,
-    school.childQuotaBundles,
-    school.childQuotaBundleSize,
-    clearError,
-  ]);
+  }, [isOpen, clearError]);
 
   const draft = validateChildQuotaDraft({ bundles, bundleSize });
   const warning = draft.ok
@@ -109,20 +135,29 @@ export function ChildQuotaModal({
 
   const save = useCallback(
     async (childQuota: UpdateSchoolRequest["child_quota"]) => {
+      const opened = quota.base;
+      if (!opened || !quota.canSubmit) return;
       setSaving(true);
       clearError();
-      try {
-        const current = await loadCurrentSchool();
-        await operatorProvisioningService.updateSchool(
-          current.id,
-          schoolUpdate(current, childQuota),
-        );
-      } catch (err) {
+      const result = await quota.submit((version) =>
+        operatorProvisioningService.updateSchool(
+          opened.id,
+          schoolUpdate(opened, childQuota, version),
+        ),
+      );
+      if (!result.ok) {
         logger.error("child_quota_update_failed", {
           school_id: school.id,
-          error: err instanceof Error ? err.message : String(err),
+          error:
+            result.error instanceof Error
+              ? result.error.message
+              : String(result.error),
         });
-        void showError(err, { object: "die Änderung am Kinderkontingent" });
+        // The school changed since the modal opened: `reload` shows it.
+        void showError(result.error, {
+          object: "die Änderung am Kinderkontingent",
+          reload: result.reload,
+        });
         setSaving(false);
         return;
       }
@@ -145,7 +180,7 @@ export function ChildQuotaModal({
       onClose();
     },
     [
-      loadCurrentSchool,
+      quota,
       onClose,
       onUpdated,
       school.id,
@@ -212,7 +247,7 @@ export function ChildQuotaModal({
                 clearError();
                 setConfirmRemove(true);
               }}
-              disabled={saving}
+              disabled={saving || !quota.canSubmit}
               className="mr-auto"
             >
               Entfernen
@@ -232,7 +267,8 @@ export function ChildQuotaModal({
             form="child-quota-form"
             variant="primary"
             size="md"
-            disabled={saving}
+            // Nothing goes out until the stored school was read (ADR 0311).
+            disabled={saving || !quota.canSubmit}
           >
             {saving ? "Wird gespeichert…" : "Speichern"}
           </Button>

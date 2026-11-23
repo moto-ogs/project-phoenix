@@ -455,6 +455,7 @@ func (s *Seeder) retireAbandonedSchool(subdomain string) error {
 			Name           string   `json:"name"`
 			Subdomain      string   `json:"subdomain"`
 			Email          string   `json:"email"`
+			Version        string   `json:"version"`
 		} `json:"data"`
 	}
 	if err := parseJSON(resp, &payload); err != nil {
@@ -469,6 +470,8 @@ func (s *Seeder) retireAbandonedSchool(subdomain string) error {
 		if _, err := s.client.Put(path, map[string]any{
 			"organization_id": school.OrganizationID, "name": school.Name,
 			"slug": retired, "subdomain": retired, "email": school.Email, "active": false, "hidden": true,
+			// The school as the list showed it (ADR 0311).
+			"expected_version": school.Version,
 		}); err != nil {
 			return fmt.Errorf("rename abandoned school: %w", err)
 		}

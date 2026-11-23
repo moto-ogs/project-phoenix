@@ -179,6 +179,7 @@ const STANDARD_REPORT: KeyDateReport = {
 };
 
 const TEMPLATE: ReportTemplate = {
+  version: "v-1",
   id: "12",
   name: "Kommune Belegung",
   sections: ["demand"],

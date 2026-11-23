@@ -9,6 +9,7 @@ import { Input } from "~/components/ui/input";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import {
   createTraegerBankAccount,
   type TraegerBankAccount,
@@ -33,21 +34,66 @@ export type BankAccountEdit =
   | { readonly kind: "create"; readonly first: boolean }
   | { readonly kind: "change"; readonly account: TraegerBankAccount };
 
+/** The form values of a stored account; the IBAN in groups of four. */
+function inputOf(account: TraegerBankAccount): TraegerBankAccountInput {
+  return {
+    label: account.label,
+    accountHolder: account.accountHolder,
+    iban: formatIBAN(account.iban),
+    bic: account.bic,
+    bankName: account.bankName,
+    isDefault: account.isDefault,
+  };
+}
+
 /**
  * Adds or changes a bank account of the Träger (#4653). The backend checks
  * the IBAN with its check digits and keeps exactly one default.
  */
 export function TraegerBankAccountModal({
   edit,
+  accounts,
+  reload,
   onClose,
   onSaved,
 }: Readonly<{
   edit: BankAccountEdit | null;
+  /** The accounts as the card shows them now. */
+  accounts: readonly TraegerBankAccount[];
+  /** Reads the accounts again after a refused change; rejects on failure. */
+  reload: () => Promise<readonly TraegerBankAccount[]>;
   onClose: () => void;
   /** Reloads the card; never rejects (#6652). */
   onSaved: RefreshAfterWrite;
 }>) {
-  const [draft, setDraft] = useState<TraegerBankAccountInput>(EMPTY);
+  const [created, setCreated] = useState<TraegerBankAccountInput>(EMPTY);
+  // A change rests on the version of the account it opened with (ADR
+  // 0311): a refused save shows the stored account, nothing goes out until
+  // it was read, and a newer read refills only an untouched form.
+  const changing = edit?.kind === "change" ? edit.account : undefined;
+  const stored = changing
+    ? (accounts.find((account) => account.id === changing.id) ?? changing)
+    : undefined;
+  const change = useDraftOn<
+    TraegerBankAccount,
+    TraegerBankAccountInput,
+    string,
+    TraegerBankAccount
+  >(
+    {
+      opening: stored ? `bank-account:${stored.id}` : null,
+      data: stored,
+      reload: async () =>
+        (await reload()).find((account) => account.id === changing?.id),
+    },
+    {
+      token: (read) => read.version,
+      toDraft: inputOf,
+      answer: (saved) => saved,
+    },
+  );
+  const draft = changing ? (change.draft ?? inputOf(changing)) : created;
+  const setDraft = changing ? change.setDraft : setCreated;
   const save = useFormModalPending(edit !== null);
   const saving = save.pending;
   const formRef = useRef<HTMLFormElement>(null);
@@ -57,11 +103,7 @@ export function TraegerBankAccountModal({
 
   useEffect(() => {
     if (!edit) return;
-    setDraft(
-      edit.kind === "change"
-        ? { ...edit.account, iban: formatIBAN(edit.account.iban) }
-        : EMPTY,
-    );
+    if (edit.kind === "create") setCreated(EMPTY);
     clearErrors();
   }, [edit, clearErrors]);
 
@@ -80,25 +122,46 @@ export function TraegerBankAccountModal({
       formErrors.invalid("Bitte prüfe deine Angaben.", fields);
       return;
     }
+    if (edit.kind === "change" && !change.canSubmit) return;
     await save.run(async (op) => {
-      try {
-        if (edit.kind === "create") {
+      if (edit.kind === "change") {
+        const id = edit.account.id;
+        const result = await change.submit((version, submitted) =>
+          updateTraegerBankAccount(id, submitted, version),
+        );
+        if (!result.ok) {
+          logger.error("traeger_bank_account_save_failed", {
+            kind: edit.kind,
+            error:
+              result.error instanceof Error
+                ? result.error.message
+                : String(result.error),
+          });
+          if (!op.isCurrent()) return;
+          // A colleague changed the account since: `reload` shows it in
+          // the form instead of the draft over it.
+          void formErrors.show(result.error, {
+            object: "die Bankverbindung",
+            reload: result.reload,
+          });
+          return;
+        }
+        success(`Die Bankverbindung „${draft.label.trim()}“ ist geändert.`);
+      } else {
+        try {
           await createTraegerBankAccount(draft);
           success(
             `Die Bankverbindung „${draft.label.trim()}“ ist gespeichert.`,
           );
-        } else {
-          await updateTraegerBankAccount(edit.account.id, draft);
-          success(`Die Bankverbindung „${draft.label.trim()}“ ist geändert.`);
+        } catch (err) {
+          logger.error("traeger_bank_account_save_failed", {
+            kind: edit.kind,
+            error: err instanceof Error ? err.message : String(err),
+          });
+          if (!op.isCurrent()) return;
+          void formErrors.show(err, { object: "die Bankverbindung" });
+          return;
         }
-      } catch (err) {
-        logger.error("traeger_bank_account_save_failed", {
-          kind: edit.kind,
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (!op.isCurrent()) return;
-        void formErrors.show(err, { object: "die Bankverbindung" });
-        return;
       }
       if (op.isCurrent()) onClose();
       await onSaved();
@@ -130,6 +193,7 @@ export function TraegerBankAccountModal({
           onCancel={onClose}
           onSave={() => formRef.current?.requestSubmit()}
           saving={saving}
+          disabled={changing !== undefined && !change.canSubmit}
         />
       }
     >

@@ -8,14 +8,19 @@ import { useMemo, useRef, useState } from "react";
 import { CheckboxCard } from "~/components/ui/checkbox-card";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { EditActions } from "~/components/ui/edit-actions";
-import { FormErrorAlert } from "~/components/ui/form-error-alert";
+import {
+  FormErrorAlert,
+  LoadErrorAlert,
+} from "~/components/ui/form-error-alert";
 import { FormFieldset } from "~/components/ui/form-fieldset";
 import { FramedList } from "~/components/ui/framed-list";
 import { Input } from "~/components/ui/input";
 import { SectionCard } from "~/components/ui/section-card";
 import { SuggestInput } from "~/components/ui/suggest-input";
 import { useApiFormError } from "~/contexts/ToastContext";
+import { useReadDraftLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import type { TraegerSchool } from "~/lib/traeger-api";
 import {
   REPORT_SECTIONS,
@@ -97,6 +102,7 @@ export function validateTemplateInput(
 
 export function ReportTemplateForm({
   initial,
+  stored,
   schools,
   takenNames,
   saveLabel,
@@ -105,15 +111,50 @@ export function ReportTemplateForm({
   onCancel,
 }: Readonly<{
   initial: ReportTemplateInput;
+  /**
+   * Die gespeicherte Vorlage, die das Formular ändert, mit einem Neulesen,
+   * das laut scheitert; fehlt beim Anlegen.
+   */
+  stored?: {
+    readonly template: ReportTemplate;
+    readonly reload: () => Promise<ReportTemplate | undefined>;
+  };
   schools: readonly TraegerSchool[];
   /** Namen der anderen Vorlagen; ein Name gilt nur einmal je Träger. */
   takenNames: readonly string[];
   saveLabel: string;
-  onSave: (input: ReportTemplateInput) => Promise<ReportTemplate>;
+  /** Speichert; `version` ist der gelesene Stand, beim Anlegen leer. */
+  onSave: (
+    input: ReportTemplateInput,
+    version: string,
+  ) => Promise<ReportTemplate>;
   onSaved: (template: ReportTemplate) => void;
   onCancel: () => void;
 }>) {
-  const [draft, setDraft] = useState<ReportTemplateInput>(initial);
+  const [created, setCreated] = useState<ReportTemplateInput>(initial);
+  // Eine Änderung ruht auf dem Stand, mit dem sie begann (ADR 0311): ein
+  // neueres Lesen füllt nur das unberührte Formular nach, eine Ablehnung
+  // zeigt die gespeicherte Vorlage, und vor ihrem Lesen geht nichts raus.
+  const change = useDraftOn<
+    ReportTemplate,
+    ReportTemplateInput,
+    string,
+    ReportTemplate
+  >(
+    {
+      opening: stored ? `report-template:${stored.template.id}` : null,
+      data: stored?.template,
+      reload: () => stored?.reload() ?? Promise.resolve(undefined),
+    },
+    {
+      token: (read) => read.version,
+      toDraft: templateInputOf,
+      answer: (saved) => saved,
+    },
+  );
+  const draft = stored ? (change.draft ?? initial) : created;
+  const setDraft = stored ? change.setDraft : setCreated;
+  const loadError = useReadDraftLoadError(change, "die Vorlage");
   const [saving, setSaving] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
@@ -167,9 +208,34 @@ export function ReportTemplateForm({
       formErrors.invalid("Bitte prüfe die markierten Felder.", found);
       return;
     }
+    if (stored) {
+      if (!change.canSubmit) return;
+      setSaving(true);
+      const result = await change.submit((version, input) =>
+        onSave(input, version),
+      );
+      setSaving(false);
+      if (result.ok) {
+        onSaved(result.saved);
+        return;
+      }
+      logger.error("traeger_report_template_save_failed", {
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
+      });
+      // Jemand hat die Vorlage inzwischen geändert: `reload` zeigt sie
+      // statt des Entwurfs darüber.
+      void formErrors.show(result.error, {
+        object: "die Vorlage",
+        reload: result.reload,
+      });
+      return;
+    }
     setSaving(true);
     try {
-      onSaved(await onSave(draft));
+      onSaved(await onSave(draft, ""));
     } catch (err) {
       logger.error("traeger_report_template_save_failed", {
         error: err instanceof Error ? err.message : String(err),
@@ -190,6 +256,7 @@ export function ReportTemplateForm({
           onSave={() => formRef.current?.requestSubmit()}
           saving={saving}
           saveLabel={saveLabel}
+          disabled={stored !== undefined && !change.canSubmit}
         />
       }
     >
@@ -203,6 +270,7 @@ export function ReportTemplateForm({
         }}
       >
         <FormErrorAlert message={formErrors.error} />
+        {formErrors.error ? null : <LoadErrorAlert error={loadError} />}
         <Input
           name="name"
           label="Name"

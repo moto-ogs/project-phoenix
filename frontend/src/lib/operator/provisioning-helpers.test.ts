@@ -131,6 +131,7 @@ describe("isValidSlug", () => {
 describe("mapOrganization", () => {
   it("maps backend organization to frontend format", () => {
     const backend: sharedContract.Organization = {
+      version: "v-1",
       test_system: false,
       id: "42",
       name: "Test Org",
@@ -156,6 +157,7 @@ describe("mapOrganization", () => {
 describe("mapSchool", () => {
   it("maps backend school to frontend format", () => {
     const backend: sharedContract.School = {
+      version: "v-1",
       child_quota_bundles: null,
       child_quota_bundle_size: 0,
       device_slots: null,
@@ -190,6 +192,7 @@ describe("mapSchool", () => {
 
   it("maps hidden: true correctly", () => {
     const backend: sharedContract.School = {
+      version: "v-1",
       child_quota_bundles: null,
       child_quota_bundle_size: 0,
       device_slots: null,
@@ -218,6 +221,7 @@ describe("mapSchool", () => {
 
   it("maps deleted_at timestamp correctly", () => {
     const backend: sharedContract.School = {
+      version: "v-1",
       child_quota_bundles: null,
       child_quota_bundle_size: 0,
       device_slots: null,
@@ -246,6 +250,7 @@ describe("mapSchool", () => {
 
   it("maps deleted_at: null correctly", () => {
     const backend: sharedContract.School = {
+      version: "v-1",
       child_quota_bundles: null,
       child_quota_bundle_size: 0,
       device_slots: null,
@@ -275,6 +280,7 @@ describe("mapSchool", () => {
   it("maps nested organization when present", () => {
     const backend: sharedContract.School = {
       child_quota_bundles: null,
+      version: "v-1",
       child_quota_bundle_size: 0,
       device_slots: null,
       id: "10",
@@ -294,6 +300,7 @@ describe("mapSchool", () => {
       created_at: "2025-01-01T00:00:00Z",
       updated_at: "2025-01-02T00:00:00Z",
       organization: {
+        version: "v-1",
         test_system: false,
         id: "42",
         name: "Parent Org",
@@ -397,6 +404,7 @@ describe("mapInvitation", () => {
 describe("summary adapters", () => {
   it("drops organization summary counts for base organization consumers", () => {
     const summary: OrganizationSummary = {
+      version: "v-1",
       id: "5",
       name: "Stadt Köln",
       slug: "stadt-koeln",
@@ -420,11 +428,13 @@ describe("summary adapters", () => {
       createdAt: "2026-01-01T00:00:00Z",
       updatedAt: "2026-01-02T00:00:00Z",
       testSystem: false,
+      version: "v-1",
     });
   });
 
   it("drops school summary counts for base school consumers", () => {
     const summary: SchoolSummary = {
+      version: "v-1",
       id: "10",
       organizationId: "5",
       organizationName: "Stadt Köln",
@@ -466,12 +476,14 @@ describe("summary adapters", () => {
       deletedAt: null,
       createdAt: "2026-01-01T00:00:00Z",
       updatedAt: "2026-01-02T00:00:00Z",
+      version: "v-1",
     });
   });
 });
 
 describe("mapSchoolSummary", () => {
   const backend: sharedContract.SchoolSummary = {
+    version: "v-1",
     device_slots: null,
     id: "10",
     organization_id: "5",

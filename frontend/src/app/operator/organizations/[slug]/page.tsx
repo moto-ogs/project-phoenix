@@ -636,24 +636,29 @@ function OperatorOrganizationDetailPageContent({ params }: PageProps) {
   const handleToggleOrgActive = useCallback(async () => {
     if (!organization) return;
     try {
+      // The Träger as shown, with its version (ADR 0311): a change since
+      // is refused instead of undone.
       await operatorProvisioningService.updateOrganization(organization.id, {
         name: organization.name,
         slug: organization.slug,
         active: !organization.active,
+        expected_version: organization.version,
       });
     } catch (error) {
       logger.warn("organization_toggle_active_failed", {
         error: error instanceof Error ? error.message : String(error),
       });
-      // The retry sets the same target state, so it is safe to repeat.
+      // The retry sets the same target state, so it is safe to repeat; a
+      // refusal of a changed Träger offers none and shows the stored one.
       void showToggleError(error, {
         object: "die Änderung des Status",
         retry: () => void handleToggleOrgActive(),
+        reload: readOrganizations,
       });
       return;
     }
     await statusAfterWrite.refresh();
-  }, [organization, showToggleError, statusAfterWrite]);
+  }, [organization, readOrganizations, showToggleError, statusAfterWrite]);
 
   const orgDelete = useSoftDeletable<OrganizationSummary>({
     softDeleteFn: operatorProvisioningService.softDeleteOrganization,
@@ -1075,6 +1080,14 @@ function OperatorOrganizationDetailPageContent({ params }: PageProps) {
             onClose={() => setEditOrgOpen(false)}
             organization={summaryToOrganization(organization)}
             onUpdated={editAfterWrite.refresh}
+            reload={async () => {
+              const read = (await readOrganizations())?.find(
+                (item) => item.id === organization.id,
+              );
+              if (!read)
+                throw new Error("organization not found after refresh");
+              return summaryToOrganization(read);
+            }}
           />
 
           <CreateDeviceModal

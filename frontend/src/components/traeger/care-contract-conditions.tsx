@@ -20,7 +20,10 @@ import { ConfirmationModal } from "~/components/ui/modal";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { EditActions } from "~/components/ui/edit-actions";
 import { EmptyState } from "~/components/ui/empty-state";
-import { FormErrorAlert } from "~/components/ui/form-error-alert";
+import {
+  FormErrorAlert,
+  LoadErrorAlert,
+} from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
 import { ListRowLink } from "~/components/ui/list-row-link";
 import { MotoDuotoneIcon } from "~/components/ui/moto-duotone-icon";
@@ -40,6 +43,8 @@ import {
   useResolvedMediaQuery,
 } from "~/lib/hooks/use-media-query";
 import { careContractsConcept } from "~/lib/concepts/careContracts";
+import { useReadDraftLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { createLogger } from "~/lib/logger";
 import {
   type ContractNoticeTo,
@@ -109,8 +114,11 @@ export function CareContractConditions({
   selectedKey,
   onSelect,
   onSaved,
+  reload,
 }: Readonly<{
   offerings: readonly OfferingTemplate[];
+  /** Reads the offerings again; rejects when the read fails (ADR 0311). */
+  reload: () => Promise<readonly OfferingTemplate[]>;
   /** The offering in the address, `<schoolId>-<offeringId>`. */
   selectedKey: string | null;
   /** Writes the choice into the address; `null` closes it. */
@@ -220,6 +228,7 @@ export function CareContractConditions({
     <ConditionsForm
       key={shownKey}
       offering={selected}
+      reload={reload}
       onSaved={onSaved}
       onDirtyChange={setDirty}
       onSavingChange={setFormSaving}
@@ -268,18 +277,45 @@ export function CareContractConditions({
 
 function ConditionsForm({
   offering,
+  reload,
   onSaved,
   onDirtyChange,
   onSavingChange,
 }: Readonly<{
   offering: OfferingTemplate;
+  /** Reads the offerings again; rejects when the read fails. */
+  reload: () => Promise<readonly OfferingTemplate[]>;
   onSaved: (offering: OfferingTemplate) => void;
   onDirtyChange: (dirty: boolean) => void;
   onSavingChange: (saving: boolean) => void;
 }>) {
   const selected = offering;
-  const [draft, setDraft] = useState<ContractTerms>(() => termsOf(offering));
-  const dirty = JSON.stringify(draft) !== JSON.stringify(termsOf(offering));
+  const key = offeringKey(offering);
+  // The conditions rest on the version they were read with (ADR 0311): a
+  // newer read refills them only while untouched, a refused save shows the
+  // stored conditions, and nothing is sent until they were read.
+  const form = useDraftOn<
+    OfferingTemplate,
+    ContractTerms,
+    string,
+    OfferingTemplate
+  >(
+    {
+      opening: key,
+      data: offering,
+      reload: async () =>
+        (await reload()).find((item) => offeringKey(item) === key),
+    },
+    {
+      token: (read) => read.version,
+      toDraft: termsOf,
+      answer: (saved) => saved,
+    },
+  );
+  const draft = form.draft ?? termsOf(offering);
+  const setDraft = form.setDraft;
+  const dirty = form.touched;
+  const loadError = useReadDraftLoadError(form, "die Vertragsbedingungen");
   useEffect(() => {
     onDirtyChange(dirty);
   }, [dirty, onDirtyChange]);
@@ -299,28 +335,37 @@ function ConditionsForm({
   ) => setDraft((current) => ({ ...current, [key]: value }));
 
   const submit = async () => {
+    if (!form.canSubmit) return;
     formErrors.clear();
     setSaving(true);
-    try {
-      const saved = await saveContractTemplate(
+    const result = await form.submit((version, terms) =>
+      saveContractTemplate(
         selected.schoolId,
         selected.offeringId,
-        draft,
-      );
-      onSaved(saved);
+        terms,
+        version,
+      ),
+    );
+    setSaving(false);
+    if (result.ok) {
+      onSaved(result.saved);
       success(
-        `Die Vertragsbedingungen für „${saved.offeringName}“ sind gespeichert.`,
+        `Die Vertragsbedingungen für „${result.saved.offeringName}“ sind gespeichert.`,
       );
-    } catch (err) {
-      logger.error("care_contract_conditions_save_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      void formErrors.show(err, {
-        object: "die Änderung der Vertragsbedingungen",
-      });
-    } finally {
-      setSaving(false);
+      return;
     }
+    logger.error("care_contract_conditions_save_failed", {
+      error:
+        result.error instanceof Error
+          ? result.error.message
+          : String(result.error),
+    });
+    // A colleague saved the conditions since: `reload` shows them instead
+    // of the draft, so no second save replaces them unseen.
+    void formErrors.show(result.error, {
+      object: "die Änderung der Vertragsbedingungen",
+      reload: result.reload,
+    });
   };
 
   return (
@@ -351,6 +396,7 @@ function ConditionsForm({
           Gilt für neue Verträge; bestehende behalten ihre Bedingungen.
         </p>
         <FormErrorAlert message={formErrors.error} />
+        {formErrors.error ? null : <LoadErrorAlert error={loadError} />}
         <ContractTermsFields
           draft={draft}
           set={set}
@@ -398,15 +444,16 @@ function ConditionsForm({
       <div className="border-t border-gray-100 px-6 py-4 max-sm:px-4">
         <EditActions
           onCancel={() => {
-            setDraft(termsOf(selected));
+            form.discard();
             clearErrors();
           }}
           onSave={() => formRef.current?.requestSubmit()}
           saving={saving}
           cancelDisabled={!dirty}
           // Unchanged conditions have nothing to save; an offering without
-          // conditions saves the shown ones as they stand.
-          disabled={Boolean(selected.template) && !dirty}
+          // conditions saves the shown ones as they stand. Nothing goes out
+          // until the stored conditions were read (ADR 0311).
+          disabled={(Boolean(selected.template) && !dirty) || !form.canSubmit}
           saveLabel="Bedingungen speichern"
           // A phone keeps both buttons on one line under the legal texts.
           cancelLabel={isPhone ? "Verwerfen" : "Änderungen verwerfen"}

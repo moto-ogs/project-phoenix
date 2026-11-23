@@ -130,6 +130,30 @@ func (Store) Templates(ctx context.Context, organizationID int64) ([]ports.Templ
 	return result, nil
 }
 
+// LockTemplate serializes the saves of one offering's template: an advisory
+// lock covers an offering without a template, the row lock the one with.
+func (Store) LockTemplate(ctx context.Context, organizationID, schoolID, offeringID int64) (*carecontract.ContractTemplate, error) {
+	db, err := traegerDB(ctx, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := db.NewRaw(`SELECT pg_advisory_xact_lock(hashtextextended(?, 0))`,
+		fmt.Sprintf("care_contract.template:%d:%d:%d", organizationID, schoolID, offeringID)).Exec(ctx); err != nil {
+		return nil, fmt.Errorf("care contract postgres: lock the template: %w", err)
+	}
+	var rows []templateRow
+	if err := db.NewRaw(`SELECT `+templateColumns+` FROM care_contract.contract_templates
+		WHERE organization_id = ? AND school_id = ? AND care_offering_id = ? FOR UPDATE`,
+		organizationID, schoolID, offeringID).Scan(ctx, &rows); err != nil {
+		return nil, fmt.Errorf("care contract postgres: lock the template: %w", err)
+	}
+	if len(rows) == 0 {
+		return nil, nil
+	}
+	template := rows[0].template()
+	return &template, nil
+}
+
 func (Store) UpsertTemplate(ctx context.Context, organizationID, accountID, schoolID, offeringID int64, input carecontract.TemplateInput) (carecontract.ContractTemplate, error) {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {

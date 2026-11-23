@@ -73,7 +73,10 @@ type traegerBankAccountRow struct {
 }
 
 func (r traegerBankAccountRow) toDomain() organizationtenancy.TraegerBankAccount {
-	return organizationtenancy.TraegerBankAccount(r)
+	account := organizationtenancy.TraegerBankAccount{ID: r.ID, Label: r.Label, AccountHolder: r.AccountHolder, IBAN: r.IBAN,
+		BIC: r.BIC, BankName: r.BankName, IsDefault: r.IsDefault, UpdatedAt: r.UpdatedAt}
+	account.Version = organizationtenancy.TraegerBankAccountVersion(account)
+	return account
 }
 
 const (

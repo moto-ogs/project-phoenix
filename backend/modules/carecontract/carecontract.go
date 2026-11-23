@@ -21,6 +21,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The states of a contract (ADR 0088 section 2). The Träger-Büro reaches
@@ -176,6 +177,19 @@ type OfferingTemplate struct {
 	// contract PDF prints them; empty without a template.
 	TermText   string `json:"term_text"`
 	NoticeText string `json:"notice_text"`
+	// Version is the read state of the offering's template (ADR 0311): a
+	// save sends it back and is refused once the template changed.
+	Version string `json:"version"`
+}
+
+// TemplateVersion is the read-state token of an offering's template: the
+// row's updated_at, which its trigger bumps on every update; an offering
+// without a template has readstate.Absent, so a first save is bound too.
+func TemplateVersion(template *ContractTemplate) string {
+	if template == nil {
+		return readstate.Absent
+	}
+	return readstate.Of(template.UpdatedAt)
 }
 
 // CandidateKey names one accepted application child.
@@ -507,8 +521,10 @@ type Intake interface {
 	// Templates lists every offering of the Träger's schools with its
 	// template.
 	Templates(ctx context.Context, reviewer Reviewer) ([]OfferingTemplate, error)
-	// SaveTemplate creates or replaces the template of one offering.
-	SaveTemplate(ctx context.Context, reviewer Reviewer, schoolID, offeringID int64, input TemplateInput) (OfferingTemplate, error)
+	// SaveTemplate creates or replaces the template of one offering; it
+	// refuses with readstate.ErrChanged once the template differs from the
+	// version its author read (expectedVersion, TemplateVersion).
+	SaveTemplate(ctx context.Context, reviewer Reviewer, schoolID, offeringID int64, input TemplateInput, expectedVersion string) (OfferingTemplate, error)
 	// ConclusionModes tells for every school of the Träger how its contracts
 	// come about: ModeSendLater (Weg a) or ModeOnAcceptance (Weg b).
 	ConclusionModes(ctx context.Context, reviewer Reviewer) ([]SchoolConclusion, error)

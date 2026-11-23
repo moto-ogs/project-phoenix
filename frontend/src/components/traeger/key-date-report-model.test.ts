@@ -174,6 +174,7 @@ describe("figures", () => {
 
 describe("templates", () => {
   const template: ReportTemplate = {
+    version: "v-1",
     id: "12",
     name: "Jugendamt",
     sections: ["children", "staff", "absences", "demand"],

@@ -98,7 +98,11 @@ export function RecordNoticeModal({
   const form = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(form);
   const { success } = useToast();
-  const { data: choices, error: optionsError } = useTraegerResource(
+  const {
+    data: choices,
+    error: optionsError,
+    reloadOrThrow: reloadChoices,
+  } = useTraegerResource(
     isOpen ? traegerContractKeys.noticeOn(contractId, receivedOn) : null,
     () => fetchContractNoticeOptions(contractId, receivedOn),
     "die Kündigung",
@@ -178,7 +182,12 @@ export function RecordNoticeModal({
           }
         }
         if (!op.isCurrent()) return;
-        void formErrors.show(err, { object: "die Kündigung" });
+        // The end date moved since it was shown (ADR 0311): `reload`
+        // shows the new one before the office declares again.
+        void formErrors.show(err, {
+          object: "die Kündigung",
+          reload: reloadChoices,
+        });
       }
     });
   };
@@ -561,6 +570,7 @@ export function RejectReasonModal({
   receivedOn,
   endsOn,
   onRejected,
+  reload,
 }: Readonly<{
   isOpen: boolean;
   onClose: () => void;
@@ -570,6 +580,8 @@ export function RejectReasonModal({
   /** The ordinary end the declaration then holds to. */
   endsOn: string;
   onRejected: (next: ContractNoticeOptions) => void;
+  /** Reads the notice options again; rejects when the read fails. */
+  reload: () => Promise<unknown>;
 }>) {
   const save = useFormModalPending(isOpen);
   const saving = save.pending;
@@ -590,7 +602,9 @@ export function RejectReasonModal({
           error: err instanceof Error ? err.message : String(err),
         });
         if (!op.isCurrent()) return;
-        void formErrors.show(err, { object: "die Entscheidung" });
+        // The end moved since it was shown (ADR 0311): `reload` shows the
+        // new one here before the office decides again.
+        void formErrors.show(err, { object: "die Entscheidung", reload });
       }
     });
   };

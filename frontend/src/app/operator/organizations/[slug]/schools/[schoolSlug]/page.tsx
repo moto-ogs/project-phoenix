@@ -499,29 +499,34 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
     if (!school) return;
     let subdomain: string;
     try {
-      const current = await readCurrentSchool(school.id);
-
-      await operatorProvisioningService.updateSchool(current.id, {
-        organization_id: current.organizationId,
-        name: current.name,
-        slug: current.slug,
-        subdomain: current.subdomain,
-        address: current.address,
-        city: current.city,
-        zip: current.zip,
-        phone: current.phone,
-        email: current.email,
-        active: !current.active,
-        hidden: current.hidden,
+      // The route replaces every field: the toggle sends the school as shown
+      // with its version (ADR 0311), so a change since is refused, never
+      // undone, and the refusal shows the stored school.
+      await operatorProvisioningService.updateSchool(school.id, {
+        organization_id: school.organizationId,
+        name: school.name,
+        slug: school.slug,
+        subdomain: school.subdomain,
+        address: school.address,
+        city: school.city,
+        zip: school.zip,
+        phone: school.phone,
+        email: school.email,
+        active: !school.active,
+        hidden: school.hidden,
+        expected_version: school.version,
       });
-      subdomain = current.subdomain;
+      subdomain = school.subdomain;
     } catch (error) {
       logger.warn("school_toggle_active_failed", {
         error: error instanceof Error ? error.message : String(error),
       });
-      // No retry: the toggle reads the current state again, so a repeat
-      // after an unknown outcome could switch the school back.
-      void showToggleError(error, { object: "die Änderung des Status" });
+      // No retry: a repeat after an unknown outcome could switch the school
+      // back.
+      void showToggleError(error, {
+        object: "die Änderung des Status",
+        reload: () => readCurrentSchool(school.id),
+      });
       return;
     }
     await statusAfterWrite.refresh(subdomain);
@@ -925,6 +930,9 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
             isOpen={editSchoolOpen}
             onClose={() => setEditSchoolOpen(false)}
             school={summaryToSchool(school)}
+            reload={async () =>
+              summaryToSchool(await readCurrentSchool(school.id))
+            }
             requiredDetails={schoolRequiredDetails}
             organizations={activeOrganizations}
             onUpdated={editAfterWrite.refresh}

@@ -173,7 +173,7 @@ func TestProvisioningUpdateOrganization(t *testing.T) {
 		h := newHarness(t)
 		h.addOrg(1, "Old Name", "old-slug", false)
 
-		updated, err := h.svc.UpdateOrganization(context.Background(), 1, organizationtenancy.OrganizationChanges{
+		updated, err := h.updateOrganization(context.Background(), 1, organizationtenancy.OrganizationChanges{
 			Name: "New Name", Slug: "NEW-SLUG", Active: false,
 		}, testOperatorID, operatorIP)
 
@@ -194,7 +194,7 @@ func TestProvisioningUpdateOrganization(t *testing.T) {
 		h := newHarness(t)
 		h.addOrg(1, "Old Name", "same", false)
 
-		_, err := h.svc.UpdateOrganization(context.Background(), 1, organizationtenancy.OrganizationChanges{
+		_, err := h.updateOrganization(context.Background(), 1, organizationtenancy.OrganizationChanges{
 			Name: "Renamed", Slug: "same", Active: true,
 		}, testOperatorID, operatorIP)
 
@@ -208,7 +208,7 @@ func TestProvisioningUpdateOrganization(t *testing.T) {
 		h := newHarness(t)
 		h.addOrg(1, "Same", "same", false)
 
-		_, err := h.svc.UpdateOrganization(context.Background(), 1, organizationtenancy.OrganizationChanges{
+		_, err := h.updateOrganization(context.Background(), 1, organizationtenancy.OrganizationChanges{
 			Name: "Same", Slug: "same", Active: true,
 		}, testOperatorID, operatorIP)
 
@@ -221,7 +221,7 @@ func TestProvisioningUpdateOrganization(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t)
 
-		updated, err := h.svc.UpdateOrganization(context.Background(), 99, organizationtenancy.OrganizationChanges{
+		updated, err := h.updateOrganization(context.Background(), 99, organizationtenancy.OrganizationChanges{
 			Name: "Name", Slug: "slug",
 		}, testOperatorID, operatorIP)
 
@@ -236,7 +236,7 @@ func TestProvisioningUpdateOrganization(t *testing.T) {
 		h := newHarness(t)
 		h.addOrg(1, "Gone", "gone", true)
 
-		_, err := h.svc.UpdateOrganization(context.Background(), 1, organizationtenancy.OrganizationChanges{
+		_, err := h.updateOrganization(context.Background(), 1, organizationtenancy.OrganizationChanges{
 			Name: "Name", Slug: "slug",
 		}, testOperatorID, operatorIP)
 
@@ -253,7 +253,7 @@ func TestProvisioningUpdateOrganization(t *testing.T) {
 		h.addOrg(1, "One", "one", false)
 		h.addOrg(2, "Two", "two", false)
 
-		_, err := h.svc.UpdateOrganization(context.Background(), 1, organizationtenancy.OrganizationChanges{
+		_, err := h.updateOrganization(context.Background(), 1, organizationtenancy.OrganizationChanges{
 			Name: "One", Slug: "two", Active: true,
 		}, testOperatorID, operatorIP)
 
@@ -267,7 +267,7 @@ func TestProvisioningUpdateOrganization(t *testing.T) {
 		h := newHarness(t)
 		h.addOrg(1, "One", "one", false)
 
-		_, err := h.svc.UpdateOrganization(context.Background(), 1, organizationtenancy.OrganizationChanges{
+		_, err := h.updateOrganization(context.Background(), 1, organizationtenancy.OrganizationChanges{
 			Name: "One", Slug: "api",
 		}, testOperatorID, operatorIP)
 
@@ -281,7 +281,7 @@ func TestProvisioningUpdateOrganization(t *testing.T) {
 		h.addOrg(1, "One", "one", false)
 		h.engine.fail["Update"] = errBoom
 
-		_, err := h.svc.UpdateOrganization(context.Background(), 1, organizationtenancy.OrganizationChanges{
+		_, err := h.updateOrganization(context.Background(), 1, organizationtenancy.OrganizationChanges{
 			Name: "One", Slug: "one",
 		}, testOperatorID, operatorIP)
 
@@ -295,7 +295,7 @@ func TestProvisioningUpdateOrganization(t *testing.T) {
 		h.addOrg(1, "One", "one", false)
 		h.audit.err = errBoom
 
-		updated, err := h.svc.UpdateOrganization(context.Background(), 1, organizationtenancy.OrganizationChanges{
+		updated, err := h.updateOrganization(context.Background(), 1, organizationtenancy.OrganizationChanges{
 			Name: "Two", Slug: "one",
 		}, testOperatorID, operatorIP)
 
