@@ -540,10 +540,10 @@ Für den Zustand „beide Ursprünge gesetzt“ gilt:
   (leer zu einem Wert) oder gelöst (ein Wert zu leer). Das Anmeldekind
   eines Vertrags aus einer Anmeldung ändert sich nie, und ein gebundener
   Vertrag wechselt nicht in einem Schritt zu einem anderen Anmeldekind.
-  Derselbe Trigger lehnt ein Einfügen mit beiden Ursprüngen ab: Seit
-  `chk_contracts_origin` mindestens einen Ursprung verlangt, hätte die
-  Request-Rolle sonst einen Vertrag anlegen können, der von Anfang an
-  gebunden ist. Der Trigger schützt die Form des Übergangs, nicht welches
+  Ein Einfügen prüft der Trigger nicht: Ein gebundener importierter Vertrag
+  trägt beide Ursprünge zu Recht, und ein Wiedereinspielen der Daten des
+  Trägers fügt ihn so ein. Die Anwendung legt Verträge nur mit einem
+  Ursprung an. Der Trigger schützt die Form des Übergangs, nicht welches
   Anmeldekind genannt wird: Das prüft das Kommando `BindApplications` unter
   seinen Sperren. Eine Prüfung gegen das Schema der Anmeldung gibt es mit
   Absicht nicht (Schule und Träger, ADR 0105).

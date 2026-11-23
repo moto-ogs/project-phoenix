@@ -18,7 +18,7 @@ import (
 // again and the trail records the way back; a bound contract is not moved to
 // another application child in one step, the application child of a
 // contract from an application never changes, and no contract is created
-// with both origins: an imported contract is bound by an update only.
+// with one origin; an insert is not guarded, so a restore keeps a bound contract.
 func TestCareContractApplicationUnbindingKeepsItsShape(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
@@ -62,13 +62,6 @@ func TestCareContractApplicationUnbindingKeepsItsShape(t *testing.T) {
 		return fmt.Sprintf(`INSERT INTO care_contract.contracts (organization_id, school_id, status, %s) VALUES (%d, %d, 'entwurf', %s)`,
 			origins, organization, school, values)
 	}
-	both := `request_child_id, import_origin`
-	assert.ErrorContains(t, as(insert(both, `902, 'ben|beispiel|2018-03-04|2026-08-01'`)), "created with one origin",
-		"the request role creates no contract with both origins")
-	var created int
-	require.NoError(t, db.NewRaw(`SELECT COUNT(*) FROM care_contract.contracts WHERE organization_id = ? AND request_child_id = 902`,
-		organization).Scan(ctx, &created))
-	assert.Zero(t, created)
 	require.NoError(t, as(insert(`request_child_id`, `902`)), "a contract from an application is created as before")
 	require.NoError(t, as(insert(`import_origin`, `'ben|beispiel|2018-03-04|2026-08-01'`)), "and so is an imported one")
 }
