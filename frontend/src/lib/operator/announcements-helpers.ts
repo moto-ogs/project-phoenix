@@ -65,6 +65,11 @@ export interface Announcement {
   updatedAt: string;
   /** undefined: a status this build does not know. */
   status: AnnouncementStatus | undefined;
+  /**
+   * The stored state an edit and the publication send back (ADR 0311);
+   * `version` is the release label the announcement names.
+   */
+  editVersion: string;
 }
 
 export interface AnnouncementViewDetail {
@@ -125,6 +130,7 @@ export function mapAnnouncement(
     createdAt: data.created_at,
     updatedAt: data.updated_at,
     status: knownEnum(ANNOUNCEMENT_STATUS_VALUES, data.status),
+    editVersion: data.edit_version,
   };
 }
 

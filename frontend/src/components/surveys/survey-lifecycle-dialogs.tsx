@@ -16,6 +16,11 @@ import { ConfirmationModal } from "~/components/ui/modal";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import type { OverflowMenuItem } from "~/components/ui/page-header/types";
 import { useApiFormError } from "~/contexts/ToastContext";
+import {
+  readStateWaitReason,
+  useReadDraftForm,
+} from "~/lib/hooks/use-swr-load-error";
+import { useActionOn, type ReadAction } from "~/lib/swr/read-draft";
 import { createLogger } from "~/lib/logger";
 import {
   closeSurvey,
@@ -52,13 +57,27 @@ function surveyRecipients(survey: Pick<Survey, "audience">) {
 }
 
 interface DialogProps {
+  /** Die Umfrage, wie die Seite sie gerade zeigt. */
   readonly survey: Survey;
   readonly onClose: () => void;
   /** Läuft nach dem erfolgreichen Aufruf, vor dem Schließen. */
   readonly onDone: () => Promise<void> | void;
 }
 
-/** Ein Schritt mit Rückfrage: der Fehler bleibt im offenen Dialog. */
+interface ReadDialogProps extends DialogProps {
+  /**
+   * Liest die Umfrage neu, nachdem der Server einen inzwischen geänderten
+   * Stand abgelehnt hat; lehnt bei einem Fehler ab (ADR 0311).
+   */
+  readonly reload: () => Promise<unknown>;
+}
+
+/**
+ * Ein Schritt mit Rückfrage: der Fehler bleibt im offenen Dialog. Mit `read`
+ * schickt der Schritt den Stand, den der Dialog zeigt (ADR 0311): eine
+ * Ablehnung zeigt den neu gelesenen Stand ohne „Wiederholen“, und bis er
+ * gelesen ist, geht nichts raus.
+ */
 function useSurveyAction<T>(
   run: () => Promise<T>,
   {
@@ -66,36 +85,48 @@ function useSurveyAction<T>(
     onClose,
     object,
     logEvent,
+    read,
   }: {
     onDone: (result: T) => Promise<void> | void;
     onClose: () => void;
     object: string;
     logEvent: string;
+    read?: ReadAction;
   },
 ) {
   const [pending, setPending] = useState(false);
   const errors = useApiFormError();
+  const form = useReadDraftForm(read ?? null, errors, object);
   const latestConfirmRef = useRef<() => void>(() => undefined);
 
   const confirm = async () => {
+    if (!form.begin()) return;
     setPending(true);
-    errors.clear();
-    let result: T;
-    try {
-      result = await run();
-    } catch (err) {
-      logger.error(logEvent, {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await errors.show(err, {
-        object,
-        retry: () => latestConfirmRef.current(),
-      });
+    const result = read
+      ? await read.submit(run)
+      : await run().then(
+          (saved) => ({ ok: true as const, saved }),
+          (error: unknown) => ({ ok: false as const, error, refused: false }),
+        );
+    if (!result.ok) {
       setPending(false);
+      if ("skipped" in result && result.skipped) return;
+      logger.error(logEvent, {
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
+      });
+      await errors.show(
+        result.error,
+        result.refused && "reload" in result
+          ? { object, reload: result.reload }
+          : { object, retry: () => latestConfirmRef.current() },
+      );
       return;
     }
     try {
-      await onDone(result);
+      await onDone(result.saved);
     } finally {
       setPending(false);
       onClose();
@@ -105,17 +136,34 @@ function useSurveyAction<T>(
     latestConfirmRef.current = () => void confirm();
   });
 
-  return { pending, error: errors.error, confirm };
+  return {
+    pending,
+    error: errors.error ?? form.loadError,
+    confirm,
+    blocked: read !== undefined && !read.canSubmit,
+    blockedReason: read ? readStateWaitReason(read.status) : undefined,
+  };
 }
 
-export function PublishSurveyDialog({ survey, onClose, onDone }: DialogProps) {
-  const { pending, error, confirm } = useSurveyAction(
-    () => publishSurvey(survey.id),
+export function PublishSurveyDialog({
+  survey,
+  onClose,
+  onDone,
+  reload,
+}: ReadDialogProps) {
+  // Veröffentlicht wird der Entwurf, den der Dialog zeigt.
+  const read = useActionOn(
+    { opening: survey.id, data: survey, reload },
+    { token: (shown) => shown.version },
+  );
+  const { pending, error, confirm, blocked, blockedReason } = useSurveyAction(
+    () => publishSurvey(survey.id, survey.version),
     {
       onDone,
       onClose,
       object: "das Veröffentlichen der Umfrage",
       logEvent: "survey_publish_failed",
+      read,
     },
   );
 
@@ -128,6 +176,8 @@ export function PublishSurveyDialog({ survey, onClose, onDone }: DialogProps) {
       confirmText="Jetzt veröffentlichen"
       confirmTooltip={`Schickt die Umfrage sofort ${surveyRecipients(survey).publish}.`}
       cancelText="Abbrechen"
+      isConfirmDisabled={blocked}
+      confirmDisabledReason={blockedReason}
       isConfirmLoading={pending}
       loadingText="Wird veröffentlicht …"
     >
@@ -236,14 +286,26 @@ export function RemindSurveyDialog({
   );
 }
 
-export function DeleteSurveyDialog({ survey, onClose, onDone }: DialogProps) {
-  const { pending, error, confirm } = useSurveyAction(
-    () => deleteSurvey(survey.id),
+export function DeleteSurveyDialog({
+  survey,
+  onClose,
+  onDone,
+  reload,
+}: ReadDialogProps) {
+  // Gelöscht wird mit den Antworten, die der Dialog nennt: kam seitdem eine
+  // dazu, lehnt der Server ab und der Dialog zeigt die neue Zahl.
+  const read = useActionOn(
+    { opening: survey.id, data: survey, reload },
+    { token: (shown) => shown.fingerprint },
+  );
+  const { pending, error, confirm, blocked } = useSurveyAction(
+    () => deleteSurvey(survey.id, survey.fingerprint),
     {
       onDone,
       onClose,
       object: "das Löschen der Umfrage",
       logEvent: "survey_delete_failed",
+      read,
     },
   );
   const withAnswers = survey.status !== "draft";
@@ -281,6 +343,7 @@ export function DeleteSurveyDialog({ survey, onClose, onDone }: DialogProps) {
       onConfirm={confirm}
       onClose={onClose}
       loading={pending}
+      confirmDisabled={blocked}
       error={error}
     />
   );

@@ -461,14 +461,19 @@ export async function createAnnouncement(
   );
 }
 
+/**
+ * Speichert den Entwurf, der mit `expectedVersion` gelesen wurde (ADR 0311);
+ * hat ihn jemand seitdem geändert, lehnt der Server ab.
+ */
 export async function updateAnnouncement(
   id: string,
   input: AnnouncementInput,
+  expectedVersion: string,
 ): Promise<Announcement> {
   return toAnnouncement(
     await bffJson("tenant", "PUT /api/parent-announcements/{announcementId}", {
       params: { announcementId: id },
-      body: input,
+      body: { ...input, expected_version: expectedVersion },
       errorMessage: "Elternmitteilung konnte nicht gespeichert werden",
     }),
   );
@@ -512,12 +517,18 @@ export async function deleteAnnouncement(
   );
 }
 
+/**
+ * Veröffentlicht den Entwurf, wie er gelesen wurde: `expectedVersion` ist
+ * seine `version` (ADR 0311).
+ */
 export async function publishAnnouncement(
   id: string,
+  expectedVersion: string,
   base: AnnouncementApiBase = BASE,
 ): Promise<Announcement> {
   const errorMessage = "Elternmitteilung konnte nicht veröffentlicht werden";
   const params = { announcementId: id };
+  const body = { expected_version: expectedVersion };
   return toAnnouncement(
     await onPortal(
       base,
@@ -525,13 +536,13 @@ export async function publishAnnouncement(
         bffJson(
           "tenant",
           "POST /api/parent-announcements/{announcementId}/publish",
-          { params, errorMessage },
+          { params, body, errorMessage },
         ),
       () =>
         bffJson(
           "school",
           "POST /school/parent-letters/{announcementId}/publish",
-          { params, errorMessage },
+          { params, body, errorMessage },
         ),
     ),
   );

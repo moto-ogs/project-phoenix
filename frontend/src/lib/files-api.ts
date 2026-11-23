@@ -28,6 +28,10 @@ export interface FileFolder {
   roleIds: string[];
   accountIds: string[];
   createdAt: string;
+  /** Der gelesene Stand, den eine Änderung zurückschickt (ADR 0311). */
+  version: string;
+  /** Die Dateien, die der Lösch-Dialog nennt; das Löschen bestätigt sie. */
+  fingerprint: string;
 }
 
 export interface FolderOverview {
@@ -101,6 +105,8 @@ function mapFolder(data: FolderResponse): FileFolder | null {
     roleIds: data.role_ids ?? [],
     accountIds: data.account_ids ?? [],
     createdAt: data.created_at,
+    version: data.version,
+    fingerprint: data.fingerprint,
   };
 }
 
@@ -158,25 +164,39 @@ class FilesService {
     return mapFolder(folder);
   }
 
+  /** Speichert den Ordner, wie er mit `expectedVersion` gelesen wurde. */
   async updateFolder(
     folderId: string,
     input: FolderInput,
+    expectedVersion: string,
   ): Promise<FileFolder | null> {
     const folder = await bffJson(
       "tenant",
       "PUT /api/files/folders/{folderId}",
       {
         params: { folderId },
-        body: toBackendFolderInput(input),
+        body: {
+          ...toBackendFolderInput(input),
+          expected_version: expectedVersion,
+        },
         errorMessage: "Ordner konnte nicht gespeichert werden.",
       },
     );
     return mapFolder(folder);
   }
 
-  async deleteFolder(folderId: string): Promise<void> {
+  /**
+   * Löscht den Ordner mit den Dateien, die der Dialog genannt hat
+   * (`fingerprint`); kam seitdem eine dazu oder fiel eine weg, lehnt der
+   * Server ab.
+   */
+  async deleteFolder(
+    folderId: string,
+    expectedFingerprint: string,
+  ): Promise<void> {
     await bffJson("tenant", "DELETE /api/files/folders/{folderId}", {
       params: { folderId },
+      body: { expected_fingerprint: expectedFingerprint },
       errorMessage: "Ordner konnte nicht gelöscht werden.",
     });
   }

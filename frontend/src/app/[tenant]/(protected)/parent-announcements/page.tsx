@@ -111,9 +111,11 @@ import {
 } from "~/lib/date-helpers";
 import { useApiFormError } from "~/contexts/ToastContext";
 import {
+  useReadDraftForm,
   useSwrLoadError,
   useSwrResourceLoadError,
 } from "~/lib/hooks/use-swr-load-error";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import {
   STALE_DATA_SUFFIX,
   useRefreshAfterWrite,
@@ -126,7 +128,7 @@ import {
   MIN_POLL_OPTIONS,
   insertPastedOptions,
 } from "~/lib/announcement-poll-options";
-import { useSWRAuth, useTenantMutate } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth, useTenantMutate } from "~/lib/swr";
 import { tenantListKeys } from "~/lib/swr/tenant-list-keys";
 import { parentAnnouncementKeys } from "~/lib/swr/portal-keys";
 import { type Group } from "~/lib/api";
@@ -318,16 +320,12 @@ function ParentAnnouncementsContent() {
     null,
   );
 
-  const {
-    data: announcements,
-    isLoading,
-    error: loadError,
-    mutate,
-  } = useSWRAuth<Announcement[]>(
+  const listRead = useSWRAuth<Announcement[]>(
     parentAnnouncementKeys.list(),
     () => fetchAnnouncements(true),
     { keepPreviousData: true, revalidateOnFocus: false },
   );
+  const { data: announcements, isLoading, error: loadError, mutate } = listRead;
 
   // Targeting data sources — fetched while the form is open (pickers).
   const shownLoadError = useSwrLoadError(
@@ -796,6 +794,9 @@ function ParentAnnouncementsContent() {
               lookupLoadError={lookupLoadError}
               onClose={closeForm}
               onRefresh={formAfterWrite.refresh}
+              reloadStored={async (id) =>
+                (await revalidateOrThrow(listRead)).find((row) => row.id === id)
+              }
               onSaved={async () => {
                 const refreshed = await formAfterWrite.refresh();
                 closeForm();
@@ -806,7 +807,13 @@ function ParentAnnouncementsContent() {
 
           {publishTarget && (
             <PublishAnnouncementDialog
-              announcement={publishTarget}
+              // The row as the list reads it now: after a refusal the
+              // reloaded draft with its new version (ADR 0311).
+              announcement={
+                announcements?.find((row) => row.id === publishTarget.id) ??
+                publishTarget
+              }
+              reload={() => revalidateOrThrow(listRead)}
               onClose={() => setPublishTarget(null)}
               onDone={async () => {
                 await formAfterWrite.refresh();
@@ -882,6 +889,11 @@ interface AnnouncementFormModalProps {
    * (#6652).
    */
   readonly onRefresh: RefreshAfterWrite;
+  /**
+   * Reads the stored announcement again (the list), after the server refused
+   * a save of a draft changed meanwhile; rejects on failure (ADR 0311).
+   */
+  readonly reloadStored: (id: string) => Promise<Announcement | undefined>;
 }
 
 const WIZARD_STEPS = ["Inhalt", "Empfänger"] as const;
@@ -959,6 +971,7 @@ function AnnouncementFormModal({
   onClose,
   onSaved,
   onRefresh,
+  reloadStored,
 }: AnnouncementFormModalProps) {
   const isEdit = announcement !== null;
   const isPollForm = kind === "poll";
@@ -973,12 +986,27 @@ function AnnouncementFormModal({
   const attachmentsFrozen =
     isDeclarationForm && announcement?.declaration_locked_attachments === true;
   const [step, setStep] = useState(0);
-  // Tracks the id of the draft once it exists in the backend. Seeded from an
-  // existing draft when editing; set after a create so that a publish-retry
-  // (the modal stays open when publishing fails) updates that same draft
-  // instead of creating a duplicate.
-  const [persistedId, setPersistedId] = useState<string | null>(
-    announcement?.id ?? null,
+  // The draft once it exists in the backend. Seeded from an existing draft
+  // when editing; set by a create so that a publish-retry (the modal stays
+  // open when publishing fails) updates that same draft instead of creating
+  // a duplicate.
+  const [persisted, setPersisted] = useState<Announcement | null>(announcement);
+  const persistedId = persisted?.id ?? null;
+  // The stored state a save sends back (ADR 0311): taken when the draft
+  // opens, held while the person types (`follow: false`), replaced by each
+  // save's answer, and after a refusal by the stored state read again.
+  const stored = useDraftOn<Announcement, Announcement, string, Announcement>(
+    {
+      opening: persistedId,
+      data: persisted ?? undefined,
+      reload: () =>
+        persistedId ? reloadStored(persistedId) : Promise.resolve(undefined),
+    },
+    {
+      token: (read) => read.version,
+      follow: false,
+      answer: (saved) => saved,
+    },
   );
 
   // Anhänge (#2890). Eine schon hochgeladene Datei liegt beim Backend
@@ -1138,6 +1166,36 @@ function AnnouncementFormModal({
       : null,
   );
 
+  // After a refusal the form shows the stored draft (ADR 0311): the input
+  // that rested on the older state is gone, as on every edit surface.
+  const showStored = (a: Announcement) => {
+    setTitle(a.title);
+    setBody(a.body);
+    setLinkUrl(a.link_url ?? "");
+    setPriority(a.priority);
+    setRequiresAck(a.requires_acknowledgement);
+    setSendEmail(a.send_email);
+    setEmailAudience(a.email_audience);
+    setExpiresAt(a.expires_at ? berlinDayFromISO(a.expires_at) : null);
+    setReminderDay(a.reminder_at ? berlinDayFromISO(a.reminder_at) : null);
+    setReminderTime(
+      a.reminder_at ? berlinClockFromISO(a.reminder_at) : DEFAULT_REMINDER_TIME,
+    );
+    setReminderText(a.reminder_text ?? "");
+    setTargets(a.targets);
+    setMultiChoice(a.response_type === "multi_choice");
+    setOptionRows(a.options.map((o) => o.label));
+    setDefaultOptionsUntouched(false);
+    setDeclarationSigners(a.declaration_signers ?? "any");
+    setDeclarationRequiresPassword(a.declaration_requires_password ?? false);
+    setDeclarationRequiresSignature(a.declaration_requires_signature ?? false);
+    setDeadline(
+      a.response_deadline ? berlinDayFromISO(a.response_deadline) : null,
+    );
+    setPendingFiles([]);
+    setPersisted(a);
+  };
+
   // The persisted set: trimmed, blanks dropped. Rows stay editable as typed.
   const options = useMemo(
     () => optionRows.map((row) => row.trim()).filter(Boolean),
@@ -1162,6 +1220,12 @@ function AnnouncementFormModal({
   );
   const formRef = useRef<HTMLDivElement>(null);
   const formErrors = useApiFormError(formRef);
+  // A failed read of the stored draft after a refusal (ADR 0311, rule 6).
+  const storedForm = useReadDraftForm(
+    persistedId ? stored : null,
+    formErrors,
+    "die gespeicherte Mitteilung",
+  );
   const setFormError = formErrors.invalid;
   const clearFormError = formErrors.clear;
   // „Wiederholen“ speichert bzw. veröffentlicht den dann aktuellen Stand.
@@ -1401,6 +1465,9 @@ function AnnouncementFormModal({
         : {}),
     };
 
+    // Nothing goes out before the stored draft is read after a refusal; the
+    // shown error stays.
+    if (!storedForm.begin()) return;
     const retry = () => latestSubmitRef.current(publish);
     await save.run(async (op) => {
       setSubmitting(publish ? "publish" : "draft");
@@ -1408,11 +1475,43 @@ function AnnouncementFormModal({
       // Speichert, lädt Anhänge hoch und veröffentlicht. Ein Fehler nach dem
       // Speichern des Entwurfs zeigt das Formular selbst und meldet „refresh“:
       // die Liste lädt nach, das Panel bleibt offen.
-      const persist = async (): Promise<"saved" | "refresh"> => {
-        const saved = persistedId
-          ? await updateAnnouncement(persistedId, input)
-          : await createAnnouncement(input);
-        setPersistedId(saved.id);
+      const persist = async (): Promise<"saved" | "refresh" | "refused"> => {
+        let saved: Announcement;
+        if (persistedId) {
+          // The draft as read when it opened, or as the last save answered:
+          // a change by someone else since then is refused (ADR 0311).
+          const result = await stored.submit((version) =>
+            updateAnnouncement(persistedId, input, version),
+          );
+          if (!result.ok) {
+            if ("skipped" in result && result.skipped) return "refused";
+            if (!result.refused) throw result.error;
+            logger.error("announcement_save_failed", {
+              mode: "update",
+              error:
+                result.error instanceof Error
+                  ? result.error.message
+                  : String(result.error),
+            });
+            // No retry: the stored draft is read again and shown instead of
+            // the input; a failed read stays as the form's load error.
+            if (op.isCurrent()) {
+              await formErrors.show(result.error, {
+                object: "das Speichern der Mitteilung",
+                reload: async () => {
+                  const read = (await result.reload?.()) as
+                    Announcement | undefined;
+                  if (read) showStored(read);
+                },
+              });
+            }
+            return "refused";
+          }
+          saved = result.saved;
+        } else {
+          saved = await createAnnouncement(input);
+        }
+        setPersisted(saved);
 
         // Anhänge vor dem Veröffentlichen hochladen: danach ist die Mitteilung
         // unveränderlich und das Backend lehnt jeden weiteren Anhang ab. Der
@@ -1454,7 +1553,8 @@ function AnnouncementFormModal({
 
         if (publish) {
           try {
-            await publishAnnouncement(saved.id);
+            // The version this save answered: the draft just written.
+            await publishAnnouncement(saved.id, saved.version);
           } catch (err) {
             // The draft is saved — surface only the publish failure so nothing is
             // lost. Refresh the list so the draft appears, but keep THIS modal
@@ -1473,7 +1573,7 @@ function AnnouncementFormModal({
         }
         return "saved";
       };
-      let outcome: "saved" | "refresh";
+      let outcome: "saved" | "refresh" | "refused";
       try {
         outcome = await persist();
       } catch (err) {
@@ -1607,6 +1707,7 @@ function AnnouncementFormModal({
         {/* Der Fehler des Formulars steht oben im Rumpf, nicht unten über
             dem Footer (Bauart 2 Regel 5, #3113). */}
         <SlideOverBody error={formErrors.error} className="space-y-4">
+          <LoadErrorAlert error={storedForm.loadError} />
           <div ref={formRef} className="space-y-4">
             <WizardStepper steps={WIZARD_STEPS} current={step} />
 

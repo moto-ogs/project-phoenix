@@ -142,6 +142,7 @@ vi.mock("~/lib/activity-api", () => ({
 
 const base: Announcement = {
   id: "1",
+  version: "2026-09-01T08:00:00Z",
   title: "Sommerfest",
   body: "Am Freitag.",
   priority: "info",
@@ -457,6 +458,7 @@ describe("ParentAnnouncementsPage: scheduled reminder (#3162)", () => {
         expect.objectContaining({
           options: ["Ja", "Nein", "Di 14.10. 15:00", "Di 14.10. 15:15"],
         }),
+        "2026-09-01T08:00:00Z",
       ),
     );
   });
@@ -865,6 +867,7 @@ describe("ParentAnnouncementsPage: Einverständnisse (#3430)", () => {
         declaration_signers: "all",
         declaration_requires_password: true,
       }),
+      "2026-09-01T08:00:00Z",
     );
   });
 
@@ -899,6 +902,7 @@ describe("ParentAnnouncementsPage: Einverständnisse (#3430)", () => {
           declaration_requires_password: false,
           declaration_requires_signature: false,
         }),
+        "2026-09-01T08:00:00Z",
       ),
     );
     expect(vi.mocked(updateAnnouncement).mock.calls[0]?.[1]).not.toHaveProperty(
@@ -931,6 +935,7 @@ describe("ParentAnnouncementsPage: Einverständnisse (#3430)", () => {
       expect(updateAnnouncement).toHaveBeenCalledWith(
         "9",
         expect.objectContaining({ declaration_requires_signature: true }),
+        "2026-09-01T08:00:00Z",
       ),
     );
   });

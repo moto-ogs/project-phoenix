@@ -15,6 +15,7 @@ import {
 
 const base: Announcement = {
   id: "1",
+  version: "2026-09-01T08:00:00Z",
   title: "Sommerfest",
   body: "Am Freitag.",
   priority: "info",
