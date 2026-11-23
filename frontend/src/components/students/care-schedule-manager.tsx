@@ -39,7 +39,7 @@ import {
   FormErrorAlert,
   LoadErrorAlert,
 } from "~/components/ui/form-error-alert";
-import { isChangedSinceRead } from "~/lib/api-error";
+import { isReadStateRefusal } from "~/lib/api-error";
 import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useSWRAuth } from "~/lib/swr";
@@ -690,6 +690,21 @@ export function CareScheduleManager({
     onUpdate,
   ]);
 
+  // The read after a refused save (ADR 0311): it rejects when it fails, so
+  // the refusal's message names the failed read instead of claiming the
+  // stored plan is on screen.
+  const reloadCareWeek = useCallback(async () => {
+    if (fromISO === null || toISO === null) return;
+    const [arrival, pickup] = await Promise.all([
+      fetchArrivalData(studentId, fromISO, toISO),
+      fetchStudentPickupData(studentId, { from: fromISO, to: toISO }),
+    ]);
+    await Promise.all([
+      mutateArrivalWeek(arrival, { revalidate: false }),
+      mutatePickupWeek(pickup, { revalidate: false }),
+    ]);
+  }, [fromISO, toISO, studentId, mutateArrivalWeek, mutatePickupWeek]);
+
   // Read through a ref inside the listener so opening/closing a modal does not
   // resubscribe it, and so the check uses the state at event time.
   const isEditorOpenRef = useRef(isEditorOpen);
@@ -769,12 +784,22 @@ export function CareScheduleManager({
       // they live beside the pickup rows, not on them, because a row would
       // mark the child as expected and these notes are for the days it is not.
       const expectedVersion = pickupData.weeklyPlanVersion ?? "";
+      let refused = false;
       const showRefusal = (err: unknown) => {
-        if (!isChangedSinceRead(err)) return;
+        if (!isReadStateRefusal(err)) return;
         // The draft was made on a plan that changed since: back to the stored
-        // plan, which `refreshCareData` reads below, with the message.
+        // plan with the message, which waits for that read.
+        refused = true;
         setIsEditingWeekly(false);
-        void planErrors.show(err, { object: "die Änderung am Wochenplan" });
+        void planErrors.show(err, {
+          object: "die Änderung am Wochenplan",
+          reload: reloadCareWeek,
+        });
+      };
+      const afterSave = async () => {
+        if (refused) return;
+        await refreshCareData();
+        invalidatePickupCaches();
       };
       if (!pickupChanged && !careDaysChanged && !adjustment) {
         try {
@@ -786,8 +811,7 @@ export function CareScheduleManager({
           showRefusal(err);
           throw err;
         } finally {
-          await refreshCareData();
-          invalidatePickupCaches();
+          await afterSave();
         }
         return;
       }
@@ -819,13 +843,13 @@ export function CareScheduleManager({
         showRefusal(err);
         throw err;
       } finally {
-        await refreshCareData();
-        invalidatePickupCaches();
+        await afterSave();
       }
     },
     [
       studentId,
       refreshCareData,
+      reloadCareWeek,
       planErrors,
       pickupData.schedules,
       pickupData.weeklyPlanVersion,
@@ -1009,7 +1033,7 @@ export function CareScheduleManager({
   // message (ADR 0311).
   const refreshOnRefusal = useCallback(
     async (err: unknown) => {
-      if (isChangedSinceRead(err)) await refreshCareData();
+      if (isReadStateRefusal(err)) await refreshCareData();
     },
     [refreshCareData],
   );
