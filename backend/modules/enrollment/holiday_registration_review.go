@@ -415,6 +415,9 @@ type HolidayRegistrationDetail struct {
 	// the waiting list because of the change that answers with this detail:
 	// a cancellation or a rebooking (#4699). A read has none.
 	Promotions []HolidayPromotion `json:"promotions,omitempty"`
+	// Version is the token of what the Büro edits and rebooks on the
+	// registration; an edit and a rebooking send it back (ADR 0311).
+	Version string `json:"version"`
 }
 
 // HolidayRegistrationExportRow is one booking of the export: one row per
@@ -464,6 +467,9 @@ type HolidayRegistrationEdit struct {
 	// CustomData replaces the family's answers to the questions of the form
 	// without health information.
 	CustomData *HolidayAnswers
+	// ExpectedVersion is the Version of the registration the Büro read; an
+	// edit refuses another one (ADR 0311).
+	ExpectedVersion string
 }
 
 // HolidayGuardiansEdit are the parent who registered with the postal
@@ -557,7 +563,7 @@ type HolidayRegistrationReview interface {
 	SetHolidayDebtorNumber(ctx context.Context, reviewer HolidayReviewer, periodID, registrationID int64, debtorNumber string) (HolidayRegistrationDetail, error)
 	// RebookHolidayChild replaces the bookings of one child: one time model
 	// per week, at least one week.
-	RebookHolidayChild(ctx context.Context, reviewer HolidayReviewer, periodID, registrationID, childID int64, bookings []HolidayBookingInput) (HolidayRegistrationDetail, error)
+	RebookHolidayChild(ctx context.Context, reviewer HolidayReviewer, periodID, registrationID, childID int64, expectedVersion string, bookings []HolidayBookingInput) (HolidayRegistrationDetail, error)
 	// EditHolidayRegistration changes the details a family entered (#5629)
 	// with the checks of the public form; the answers are checked against the
 	// form version of the registration, and schools are the Träger's

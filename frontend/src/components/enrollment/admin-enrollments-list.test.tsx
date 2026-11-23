@@ -89,6 +89,7 @@ function phase(overrides: Partial<Phase> = {}): Phase {
     id: "10",
     name: "Schuljahr 2026/27",
     kind: "school_year",
+    version: "phase-read",
     service_start_date: "2026-09-01",
     service_end_date: "2027-07-31",
     enrollment_open_at: undefined,

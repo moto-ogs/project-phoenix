@@ -40,12 +40,12 @@ type holidayAllocationPlaces struct {
 }
 
 // RebookHolidayChild rebooks the child (#4699).
-func (c parentBillingPlaceChanges) RebookHolidayChild(ctx context.Context, reviewer parentbilling.HolidayReviewer, periodID, registrationID, childID int64, bookings []parentbilling.HolidayBookingChoice) (parentbilling.HolidayPlaceChange, error) {
+func (c parentBillingPlaceChanges) RebookHolidayChild(ctx context.Context, reviewer parentbilling.HolidayReviewer, periodID, registrationID, childID int64, expectedVersion string, bookings []parentbilling.HolidayBookingChoice) (parentbilling.HolidayPlaceChange, error) {
 	choices := make([]enrollmentOwner.HolidayBookingInput, len(bookings))
 	for i, booking := range bookings {
 		choices[i] = enrollmentOwner.HolidayBookingInput{WeekID: booking.WeekID, TimeModelID: booking.TimeModelID, Days: booking.Days, Lunch: booking.Lunch}
 	}
-	detail, err := c.workflow.RebookHolidayChild(ctx, enrollmentOwner.HolidayReviewer(reviewer), periodID, registrationID, childID, choices)
+	detail, err := c.workflow.RebookHolidayChild(ctx, enrollmentOwner.HolidayReviewer(reviewer), periodID, registrationID, childID, expectedVersion, choices)
 	if err != nil {
 		return parentbilling.HolidayPlaceChange{}, parentBillingPlacesError(err)
 	}

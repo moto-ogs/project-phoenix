@@ -33,7 +33,7 @@ type holidayAddressFormBody struct {
 
 func saveHolidayAddressForm(t *testing.T, f holidayRegistrationFixture, office traegerOffice, periodID int64, requirement string) holidayAddressFormBody {
 	t.Helper()
-	rec := traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayFormPath(periodID),
+	rec := putHolidayForm(t, f.traeger, office.token, holidayFormPath(periodID),
 		map[string]any{"fields": []map[string]any{}, "address_requirement": requirement})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	return decodeSchoolPortalData[holidayAddressFormBody](t, rec.Body.Bytes())
@@ -70,12 +70,12 @@ func TestTraegerSwitchesTheAddressPerFormVersion(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), `"address_requirement":"required"`, "parents see the setting of the current version")
 
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayFormPath(int64(period.ID)), map[string]any{"fields": []map[string]any{}})
+	rec = putHolidayForm(t, f.traeger, office.token, holidayFormPath(int64(period.ID)), map[string]any{"fields": []map[string]any{}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, "off", decodeSchoolPortalData[holidayAddressFormBody](t, rec.Body.Bytes()).AddressRequirement,
 		"a save without the setting asks for no address")
 
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayFormPath(int64(period.ID)),
+	rec = putHolidayForm(t, f.traeger, office.token, holidayFormPath(int64(period.ID)),
 		map[string]any{"fields": []map[string]any{}, "address_requirement": "sometimes"})
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	code, fields := registrationRefusalOf(t, rec)
@@ -86,8 +86,8 @@ func TestTraegerSwitchesTheAddressPerFormVersion(t *testing.T) {
 	readOnly := newTraegerOffice(t, f.db, f.traeger, "Anschrift Schalter Lesend", identityaccess.TraegerRoleReadOnly)
 	foreign := newTraegerOffice(t, f.db, f.traeger, "Anschrift Schalter Fremd", identityaccess.TraegerRoleAdministration)
 	body := map[string]any{"fields": []map[string]any{}, "address_requirement": "optional"}
-	assert.Equal(t, http.StatusForbidden, traegerJSON(t, f.traeger, readOnly.token, http.MethodPut, holidayFormPath(int64(period.ID)), body).Code)
-	assert.Equal(t, http.StatusNotFound, traegerJSON(t, f.traeger, foreign.token, http.MethodPut, holidayFormPath(int64(period.ID)), body).Code)
+	assert.Equal(t, http.StatusForbidden, putHolidayForm(t, f.traeger, readOnly.token, holidayFormPath(int64(period.ID)), body).Code)
+	assert.Equal(t, http.StatusNotFound, putHolidayForm(t, f.traeger, foreign.token, holidayFormPath(int64(period.ID)), body).Code)
 }
 
 // submitWithAddress posts a registration with the address and returns the

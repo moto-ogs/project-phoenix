@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Date is a calendar day in canonical YYYY-MM-DD form, never an instant.
@@ -210,6 +212,30 @@ type Phase struct {
 	// Traeger names the Träger phase this phase is a copy of (ADR 0195),
 	// nil for a phase of the school. Only the copy commands set it.
 	Traeger *TraegerCopyLink `json:"traeger,omitempty"`
+}
+
+// PhaseVersion is the token of a phase as the school edits it (ADR 0311): a
+// fingerprint of the stored values, because not every writer of the phases
+// stamps updated_at. The change times are left out, so a save that stores
+// the same values keeps the token; so is the link to a Träger phase, which
+// a read may leave unloaded. An empty list and none are the same state.
+func PhaseVersion(p *Phase) string {
+	if p == nil {
+		return ""
+	}
+	state := *p
+	state.Traeger = nil
+	state.CreatedAt, state.UpdatedAt = time.Time{}, time.Time{}
+	if state.AvailableSchoolClasses == nil {
+		state.AvailableSchoolClasses = []string{}
+	}
+	if state.EligibleSchoolClasses == nil {
+		state.EligibleSchoolClasses = []string{}
+	}
+	if state.EligibleGradeLevels == nil {
+		state.EligibleGradeLevels = []int{}
+	}
+	return readstate.Fingerprint(state)
 }
 
 // Validate runs the column-level checks in app code so the service can

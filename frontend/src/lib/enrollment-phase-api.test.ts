@@ -51,6 +51,7 @@ function mkPhase(id: string, name: string): Phase {
     id,
     name,
     kind: "school_year",
+    version: "phase-read",
     service_start_date: "2026-09-01",
     service_end_date: "2027-07-31",
     enrollment_open_at: undefined,
@@ -191,6 +192,8 @@ describe("phase calendar period helpers", () => {
     expect(calls[1]!.body).toEqual({
       ...phaseToInput(fresh),
       calendar_period_id: "period/2",
+      // The link goes onto the version just read (ADR 0311).
+      expected_version: fresh.version,
     });
     expect(out.calendar_period_id).toBe("period/2");
   });
@@ -326,12 +329,20 @@ describe("fetchRolloverPreview", () => {
 describe("updatePhase", () => {
   it("PUTs to the id-bearing URL and returns the unwrapped phase", async () => {
     let seenURL = "";
-    mockFetch(async (input) => {
+    let sent: unknown;
+    mockFetch(async (input, init) => {
       seenURL = typeof input === "string" ? input : input.toString();
+      sent = JSON.parse(String(init?.body));
       return jsonResponse({ data: mkPhase("1234", "Updated") });
     });
-    const out = await updatePhase("1234", { ...validInput, name: "Updated" });
+    const out = await updatePhase(
+      "1234",
+      { ...validInput, name: "Updated" },
+      "phase-read",
+    );
     expect(out.name).toBe("Updated");
+    // The save sends the version its draft rests on (ADR 0311).
+    expect(sent).toMatchObject({ expected_version: "phase-read" });
     expect(seenURL).toContain("/1234");
   });
 
@@ -355,7 +366,7 @@ describe("updatePhase", () => {
         },
       }),
     );
-    const out = await updatePhase("1234", validInput);
+    const out = await updatePhase("1234", validInput, "phase-read");
     expect(out.careBeyondEnd).toEqual([
       {
         studentId: "77",
@@ -376,7 +387,7 @@ describe("updatePhase", () => {
       seenURL = typeof input === "string" ? input : input.toString();
       return jsonResponse({ data: mkPhase("a/b", "X") });
     });
-    await updatePhase("a/b", validInput);
+    await updatePhase("a/b", validInput, "phase-read");
     expect(seenURL).toContain("a%2Fb");
   });
 
@@ -390,7 +401,9 @@ describe("updatePhase", () => {
         { status: 400 },
       ),
     );
-    await expect(updatePhase("1", validInput)).rejects.toMatchObject({
+    await expect(
+      updatePhase("1", validInput, "phase-read"),
+    ).rejects.toMatchObject({
       status: 400,
       code: "general.input",
       errors: [{ field: "enrollment_close_at", reason: "after_open" }],
@@ -401,7 +414,7 @@ describe("updatePhase", () => {
     mockFetch(async () =>
       jsonResponse({ error: "some other backend error" }, { status: 400 }),
     );
-    await expect(updatePhase("1", validInput)).rejects.toThrow(
+    await expect(updatePhase("1", validInput, "phase-read")).rejects.toThrow(
       /Phase konnte nicht gespeichert werden/,
     );
   });

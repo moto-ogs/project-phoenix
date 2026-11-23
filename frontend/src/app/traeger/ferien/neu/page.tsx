@@ -19,7 +19,7 @@ export default function NewTraegerHolidayPeriodPage() {
   const invalidate = useInvalidateFamily();
   const { schools, error } = useTraegerSchools();
   const listHref = traegerPath("/traeger/ferien");
-  const { data: criteria } = useTraegerHolidayCriteria();
+  const criteria = useTraegerHolidayCriteria().data?.criteria;
 
   return (
     <TenantPage

@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Invariant (#4702): a day that is a statutory holiday or a closing day of the
@@ -123,7 +124,7 @@ func TestHolidayWeekChecksTheDaysOfItsOwnHostSchool(t *testing.T) {
 func TestHolidayPeriodUpdateChecksOnlyAddedOrMovedWeeks(t *testing.T) {
 	t.Parallel()
 	monday := calendar.NewDate(2027, 5, 17)
-	stored := enrollment.HolidayPeriod{ID: 9, Status: enrollment.HolidayPeriodDraft, Weeks: []enrollment.HolidayWeek{{
+	stored := enrollment.HolidayPeriod{ID: 9, Status: enrollment.HolidayPeriodDraft, Version: "read", Weeks: []enrollment.HolidayWeek{{
 		ID: 3, StartsOn: monday, EndsOn: monday.AddDays(4), HostSchoolID: ident.ID(careDayHostSchool),
 		TimeModels: []enrollment.HolidayTimeModel{{ID: 5, Name: "bis 13 Uhr", StartsAt: "08:00", EndsAt: "13:00", PriceCents: 4500}},
 	}}}
@@ -131,17 +132,44 @@ func TestHolidayPeriodUpdateChecksOnlyAddedOrMovedWeeks(t *testing.T) {
 	periods := newCareDayPeriods(store, careDaySchoolCalendar{careDayHostSchool: {whitMonday}})
 	kept := careDayWeek(3, monday, careDayHostSchool)
 	kept.TimeModels[0].ID = 5
+	// The Büro saves over the version it read (ADR 0311).
+	read := func(week enrollment.HolidayWeekInput) enrollment.HolidayPeriodInput {
+		input := careDayPeriod(week)
+		input.ExpectedVersion = "read"
+		return input
+	}
 
-	_, err := periods.UpdateHolidayPeriod(context.Background(), 7, 9, careDayPeriod(kept))
+	_, err := periods.UpdateHolidayPeriod(context.Background(), 7, 9, read(kept))
 	require.NoError(t, err, "the unchanged week stays writable")
 	moved := kept
 	moved.HostSchoolID = careDayOtherSchool
-	_, err = periods.UpdateHolidayPeriod(context.Background(), 7, 9, careDayPeriod(moved))
+	_, err = periods.UpdateHolidayPeriod(context.Background(), 7, 9, read(moved))
 	require.NoError(t, err, "another host school without the holiday is fine")
 
 	periods = newCareDayPeriods(store, careDaySchoolCalendar{careDayHostSchool: {whitMonday}, careDayOtherSchool: {whitMonday}})
-	_, err = periods.UpdateHolidayPeriod(context.Background(), 7, 9, careDayPeriod(moved))
+	_, err = periods.UpdateHolidayPeriod(context.Background(), 7, 9, read(moved))
 	require.ErrorIs(t, err, enrollment.ErrHolidayWeekNoCareDay, "a new host school with the holiday is refused")
+}
+
+// TestHolidayPeriodUpdateRefusesAnotherReadVersion pins ADR 0311: a period
+// saved over another version than the stored one, or over none, is refused
+// before anything is checked or written.
+func TestHolidayPeriodUpdateRefusesAnotherReadVersion(t *testing.T) {
+	t.Parallel()
+	monday := calendar.NewDate(2027, 5, 17)
+	store := &careDayPeriodStore{stored: enrollment.HolidayPeriod{ID: 9, Status: enrollment.HolidayPeriodDraft, Version: "stored"}}
+	periods := newCareDayPeriods(store, careDaySchoolCalendar{})
+	input := careDayPeriod(careDayWeek(0, monday, careDayHostSchool))
+	for _, expected := range []string{"older", ""} {
+		input.ExpectedVersion = expected
+		_, err := periods.UpdateHolidayPeriod(context.Background(), 7, 9, input)
+		require.ErrorIs(t, err, readstate.ErrChanged, "expected version %q", expected)
+	}
+	assert.Zero(t, store.written, "a refused save writes nothing")
+	input.ExpectedVersion = "stored"
+	_, err := periods.UpdateHolidayPeriod(context.Background(), 7, 9, input)
+	require.NoError(t, err)
+	assert.Equal(t, 1, store.written)
 }
 
 func TestHolidayWeekIsNotWrittenWithoutTheHostSchoolsCalendar(t *testing.T) {

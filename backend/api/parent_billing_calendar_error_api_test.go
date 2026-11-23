@@ -75,7 +75,7 @@ func TestParentBillingRebookingPreservesCalendarRefusal(t *testing.T) {
 			path := holidayRebookPath(int64(f.period.ID), int64(registration.ID), int64(before.Children[0].ID))
 			rebook := map[string]any{"bookings": []map[string]any{{"week_id": second.ID, "time_model_id": second.TimeModels[0].ID}}}
 
-			rec := traegerJSON(t, router, f.office.token, http.MethodPut, path, rebook)
+			rec := putReadRegistrationVia(t, f.traeger, router, f.office.token, path, rebook)
 			assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 			var refusal struct {
 				Status  int            `json:"status"`
@@ -95,7 +95,7 @@ func TestParentBillingRebookingPreservesCalendarRefusal(t *testing.T) {
 			assert.Equal(t, places, f.places(t), "no capacity, placement or waiting-list change")
 
 			foreign := newTraegerOffice(t, f.db, f.traeger, "Fremder Träger Kalender", identityaccess.TraegerRoleAdministration)
-			rec = traegerJSON(t, router, foreign.token, http.MethodPut, path, rebook)
+			rec = putReadRegistrationVia(t, f.traeger, router, foreign.token, path, rebook)
 			require.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 			var foreignRefusal holidayErrorBody
 			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &foreignRefusal))
@@ -104,12 +104,12 @@ func TestParentBillingRebookingPreservesCalendarRefusal(t *testing.T) {
 
 			// The same week may be kept even after it became closed.
 			keep := map[string]any{"bookings": []map[string]any{{"week_id": first.ID, "time_model_id": first.TimeModels[0].ID}}}
-			rec = traegerJSON(t, router, f.office.token, http.MethodPut, path, keep)
+			rec = putReadRegistrationVia(t, f.traeger, router, f.office.token, path, keep)
 			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 			assert.Equal(t, contribution, readContribution())
 
 			invalid := map[string]any{"bookings": []map[string]any{{"week_id": first.ID, "time_model_id": second.TimeModels[0].ID}}}
-			rec = traegerJSON(t, router, f.office.token, http.MethodPut, path, invalid)
+			rec = putReadRegistrationVia(t, f.traeger, router, f.office.token, path, invalid)
 			require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 			var validation holidayErrorBody
 			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &validation))

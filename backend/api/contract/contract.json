@@ -53447,6 +53447,13 @@
               }
             }
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -61351,6 +61358,12 @@
               "ref": "HolidayCriterionPeriod"
             }
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -61388,6 +61401,13 @@
               "kind": "ref",
               "ref": "holidayCriterionRequest"
             }
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -62933,6 +62953,12 @@
               "ref": "HolidayWeek"
             }
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -63030,6 +63056,13 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
         }
       ]
     },
@@ -63114,6 +63147,13 @@
               "kind": "ref",
               "ref": "HolidayWeekRequest"
             }
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -63220,6 +63260,13 @@
               "kind": "ref",
               "ref": "HolidayBookingChoice"
             }
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -63958,6 +64005,12 @@
               "ref": "HolidayPromotion"
             }
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -64040,6 +64093,13 @@
               "kind": "json",
               "nullable": true
             }
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -72082,6 +72142,13 @@
             "nullable": true,
             "ref": "OfferingContractTemplateRequest"
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -78650,6 +78717,12 @@
           }
         },
         {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "offerings",
           "schema": {
             "kind": "array",
@@ -78818,6 +78891,13 @@
             "elem": {
               "kind": "id"
             }
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -79006,6 +79086,12 @@
         },
         {
           "name": "updated_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "version",
           "schema": {
             "kind": "string"
           }
@@ -79344,6 +79430,12 @@
         },
         {
           "name": "updated_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "version",
           "schema": {
             "kind": "string"
           }
@@ -105289,6 +105381,12 @@
           "schema": {
             "kind": "instant"
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -105734,6 +105832,12 @@
           "name": "updated_at",
           "schema": {
             "kind": "instant"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]

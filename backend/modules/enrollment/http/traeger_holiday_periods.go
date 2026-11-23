@@ -73,7 +73,7 @@ func NewHolidayPeriodResource(periods capability.HolidayPeriods, review capabili
 // a period and records the Büro's check of answers (#4700).
 type HolidayAllocationReads interface {
 	HolidayCriteria(ctx context.Context, reviewer capability.HolidayReviewer) (capability.HolidayCriteriaCatalog, error)
-	SaveHolidayCriteria(ctx context.Context, reviewer capability.HolidayReviewer, criteria []capability.HolidayCriterionInput) (capability.HolidayCriteriaCatalog, error)
+	SaveHolidayCriteria(ctx context.Context, reviewer capability.HolidayReviewer, expectedVersion string, criteria []capability.HolidayCriterionInput) (capability.HolidayCriteriaCatalog, error)
 	HolidayAllocationBoard(ctx context.Context, reviewer capability.HolidayReviewer, periodID int64) (capability.HolidayAllocationBoard, error)
 	CheckHolidayCriteria(ctx context.Context, reviewer capability.HolidayReviewer, periodID, registrationID int64, checks []capability.HolidayCriterionCheck) (capability.HolidayRegistrationDetail, error)
 }
@@ -158,6 +158,9 @@ type HolidayPeriodRequest struct {
 	// AllocationMode is "arrival" or "criteria"; empty is "arrival" (#4700).
 	AllocationMode string               `json:"allocation_mode"`
 	Weeks          []HolidayWeekRequest `json:"weeks"`
+	// ExpectedVersion is the version of the period the Büro edits; a
+	// change saved since is refused (ADR 0311). A new period sends none.
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 // Bind accepts the body; the Owner validates the period as a whole.
@@ -178,7 +181,7 @@ func (req *HolidayPeriodRequest) input() capability.HolidayPeriodInput {
 	return capability.HolidayPeriodInput{
 		Name: req.Name, RegistrationOpensOn: req.RegistrationOpensOn, RegistrationClosesOn: req.RegistrationClosesOn,
 		Binding: req.Binding, Notes: req.Notes, AcceptanceMailText: req.AcceptanceMailText, HolidayWishRule: req.HolidayWishRule, Weeks: weeks, MaxDaysPerChild: req.MaxDaysPerChild,
-		AllocationMode: req.AllocationMode,
+		AllocationMode: req.AllocationMode, ExpectedVersion: req.ExpectedVersion,
 	}
 }
 

@@ -6,7 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -145,6 +148,45 @@ type catalogPhaseBody struct {
 	} `json:"offerings"`
 }
 
+// catalogPut saves a Träger phase or offering over the version the office
+// reads first, as the catalog pages do (ADR 0311). An offering's version
+// comes with the detail of its phase.
+func catalogPut(t *testing.T, router http.Handler, token, path string, body map[string]any) *httptest.ResponseRecorder {
+	t.Helper()
+	sent := maps.Clone(body)
+	sent["expected_version"] = catalogVersion(t, router, token, path)
+	return traegerJSON(t, router, token, http.MethodPut, path, sent)
+}
+
+// catalogVersion reads the version of the phase or offering at path.
+func catalogVersion(t *testing.T, router http.Handler, token, path string) string {
+	t.Helper()
+	type versioned struct {
+		ID      wireID `json:"id"`
+		Version string `json:"version"`
+	}
+	if strings.HasPrefix(path, "/traeger/catalog/phases/") {
+		rec := traegerJSON(t, router, token, http.MethodGet, path, nil)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		return decodeSchoolPortalData[versioned](t, rec.Body.Bytes()).Version
+	}
+	rec := traegerJSON(t, router, token, http.MethodGet, "/traeger/catalog/phases", nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	for _, phase := range decodeSchoolPortalData[[]versioned](t, rec.Body.Bytes()) {
+		rec = traegerJSON(t, router, token, http.MethodGet, fmt.Sprintf("/traeger/catalog/phases/%d", phase.ID), nil)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		for _, offering := range decodeSchoolPortalData[struct {
+			Offerings []versioned `json:"offerings"`
+		}](t, rec.Body.Bytes()).Offerings {
+			if fmt.Sprintf("/traeger/catalog/offerings/%d", offering.ID) == path {
+				return offering.Version
+			}
+		}
+	}
+	t.Fatalf("no offering at %s", path)
+	return ""
+}
+
 func catalogOffering(capacity int, mondayCents int64) map[string]any {
 	return map[string]any{
 		"fields": map[string]any{
@@ -237,10 +279,10 @@ func TestTraegerCatalogRollsOutIntoEverySchoolAndKeepsTheSchoolsChanges(t *testi
 	_, err := db.ExecContext(ctx, `UPDATE enrollment.care_offerings SET is_active = false WHERE tenant_id = ? AND traeger_source_id = ?`,
 		office.schools[0], offering.ID)
 	require.NoError(t, err)
-	rec = traegerJSON(t, router, office.token, http.MethodPut, fmt.Sprintf("/traeger/catalog/offerings/%d", offering.ID), catalogOffering(30, 1800))
+	rec = catalogPut(t, router, office.token, fmt.Sprintf("/traeger/catalog/offerings/%d", offering.ID), catalogOffering(30, 1800))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	stale := catalogPreview(t, router, office.token, phasePath)
-	rec = traegerJSON(t, router, office.token, http.MethodPut, fmt.Sprintf("/traeger/catalog/offerings/%d", offering.ID), catalogOffering(30, 1900))
+	rec = catalogPut(t, router, office.token, fmt.Sprintf("/traeger/catalog/offerings/%d", offering.ID), catalogOffering(30, 1900))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	rec = traegerJSON(t, router, office.token, http.MethodPost, phasePath+"/rollout", map[string]any{"fingerprint": stale.Fingerprint})
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
@@ -354,7 +396,7 @@ func TestTraegerCatalogRecoversCopiesAfterBillingFailure(t *testing.T) {
 			if scenario.deselect {
 				fields["all_schools"] = false
 				fields["school_ids"] = []int64{}
-				rec = traegerJSON(t, router, office.token, http.MethodPut, path, fields)
+				rec = catalogPut(t, router, office.token, path, fields)
 			} else {
 				rec = traegerJSON(t, router, office.token, http.MethodPost, path+"/withdraw", nil)
 			}
@@ -406,7 +448,7 @@ func TestTraegerCatalogChangesSelectionGroupsTogether(t *testing.T) {
 		fields["selection_group"], fields["selection_rule"] = "Betreuung", "exactly_one"
 		delete(draft, "prices")
 		delete(draft, "contract_template")
-		rec = traegerJSON(t, router, office.token, http.MethodPut, fmt.Sprintf("/traeger/catalog/offerings/%d", id), draft)
+		rec = catalogPut(t, router, office.token, fmt.Sprintf("/traeger/catalog/offerings/%d", id), draft)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	}
 	preview = catalogPreview(t, router, office.token, path)
@@ -480,7 +522,7 @@ func TestTraegerCatalogStatementCountDoesNotGrowWithOfferings(t *testing.T) {
 			draft := catalogOffering(30, 1800)
 			draft["fields"].(map[string]any)["name"] = fmt.Sprintf("Modul %d", index)
 			draft["contract_template"].(map[string]any)["contract_partner"] = "Aktualisierter Vertragspartner"
-			rec = traegerJSON(t, router, office.token, http.MethodPut, fmt.Sprintf("/traeger/catalog/offerings/%d", id), draft)
+			rec = catalogPut(t, router, office.token, fmt.Sprintf("/traeger/catalog/offerings/%d", id), draft)
 			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		}
 		preview = catalogPreview(t, router, office.token, path)
@@ -490,7 +532,7 @@ func TestTraegerCatalogStatementCountDoesNotGrowWithOfferings(t *testing.T) {
 		for _, school := range result.Schools {
 			require.Equal(t, "applied", school.Outcome, school.ErrorCode)
 		}
-		rec = traegerJSON(t, router, office.token, http.MethodPut, path, map[string]any{
+		rec = catalogPut(t, router, office.token, path, map[string]any{
 			"name": fmt.Sprintf("Stapel %d", size), "kind": "school_year", "service_start_date": "2027-08-01", "service_end_date": "2028-08-31", "all_schools": true,
 		})
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -550,7 +592,7 @@ func TestTraegerCatalogFinancialWritesAreAtomic(t *testing.T) {
 
 	dearer := catalogOffering(30, 1800)
 	dearer["contract_template"].(map[string]any)["contract_partner"] = "Abgelehnte Bedingungen"
-	rec = traegerJSON(t, router, office.token, http.MethodPut, fmt.Sprintf("/traeger/catalog/offerings/%d", offering.ID), dearer)
+	rec = catalogPut(t, router, office.token, fmt.Sprintf("/traeger/catalog/offerings/%d", offering.ID), dearer)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	preview = catalogPreview(t, router, office.token, path)
 	_, err := db.ExecContext(t.Context(), `CREATE FUNCTION care_contract.refuse_catalog_template_test() RETURNS trigger LANGUAGE plpgsql AS $$
@@ -574,7 +616,7 @@ func TestTraegerCatalogFinancialWritesAreAtomic(t *testing.T) {
 		}
 	}
 	checkTerms()
-	rec = traegerJSON(t, router, office.token, http.MethodPut, fmt.Sprintf("/traeger/catalog/offerings/%d", offering.ID), draft)
+	rec = catalogPut(t, router, office.token, fmt.Sprintf("/traeger/catalog/offerings/%d", offering.ID), draft)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	preview = catalogPreview(t, router, office.token, path)
 	result := catalogRollout(t, router, office.token, path, preview.Fingerprint)
@@ -590,7 +632,7 @@ func TestTraegerCatalogFinancialWritesAreAtomic(t *testing.T) {
   FOR EACH ROW EXECUTE FUNCTION enrollment.refuse_catalog_outcome_test()`)
 	require.NoError(t, err)
 	dearer["contract_template"].(map[string]any)["contract_partner"] = "Neue Bedingungen"
-	rec = traegerJSON(t, router, office.token, http.MethodPut, fmt.Sprintf("/traeger/catalog/offerings/%d", offering.ID), dearer)
+	rec = catalogPut(t, router, office.token, fmt.Sprintf("/traeger/catalog/offerings/%d", offering.ID), dearer)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	preview = catalogPreview(t, router, office.token, path)
 	rec = traegerJSON(t, router, office.token, http.MethodPost, path+"/rollout", map[string]any{"fingerprint": preview.Fingerprint})
@@ -634,7 +676,12 @@ func TestTraegerCatalogRejectsInvalidOfferingFields(t *testing.T) {
 				if method == http.MethodPut {
 					target = fmt.Sprintf("/traeger/catalog/offerings/%d", offering.ID)
 				}
-				rec := traegerJSON(t, router, office.token, method, target, draft)
+				var rec *httptest.ResponseRecorder
+				if method == http.MethodPut {
+					rec = catalogPut(t, router, office.token, target, draft)
+				} else {
+					rec = traegerJSON(t, router, office.token, method, target, draft)
+				}
 				assert.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 				assert.Contains(t, rec.Body.String(), fmt.Sprintf(`"code":%q`, invalid.code))
 			})
@@ -653,4 +700,68 @@ func (o catalogPhaseOfferings) HasTraegerCopiesForPhase(ctx context.Context, id 
 		}
 	}
 	return false, nil
+}
+
+// TestTraegerCatalogRefusesASaveOverAnotherVersion pins ADR 0311 for the
+// Träger catalog: a phase or offering saved over a version read before a
+// colleague's save is refused with general.changed_since_read and keeps the
+// colleague's draft; the version read afterwards saves.
+func TestTraegerCatalogRefusesASaveOverAnotherVersion(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	portal := traegerPortalWithDays(t, db, testpkg.TenantRuntime(t, db), owners.HolidayTestSchoolCalendar{})
+	office := newTraegerOffice(t, db, portal, "Träger Lesestand", identityaccess.TraegerRoleAdministration)
+	testpkg.OwnTraegerCatalog(t, db, office.organization)
+	router := traegerCatalogRouter(t, db)
+	fields := map[string]any{"name": "Gelesen", "kind": "school_year", "service_start_date": "2027-08-01", "service_end_date": "2028-07-31", "all_schools": true}
+	rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/catalog/phases", fields)
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+	phasePath := fmt.Sprintf("/traeger/catalog/phases/%d", decodeSchoolPortalData[catalogPhaseBody](t, rec.Body.Bytes()).ID)
+	rec = traegerJSON(t, router, office.token, http.MethodPost, phasePath+"/offerings", catalogOffering(20, 1600))
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+	offeringPath := fmt.Sprintf("/traeger/catalog/offerings/%d", decodeSchoolPortalData[careplan.TraegerOffering](t, rec.Body.Bytes()).ID)
+
+	for _, target := range []struct {
+		path string
+		body func(name string) map[string]any
+		name func() string
+	}{
+		{phasePath, func(name string) map[string]any {
+			body := maps.Clone(fields)
+			body["name"] = name
+			return body
+		}, func() string {
+			rec := traegerJSON(t, router, office.token, http.MethodGet, phasePath, nil)
+			return decodeSchoolPortalData[struct {
+				Draft struct {
+					Name string `json:"name"`
+				} `json:"draft"`
+			}](t, rec.Body.Bytes()).Draft.Name
+		}},
+		{offeringPath, func(name string) map[string]any {
+			body := catalogOffering(20, 1600)
+			body["fields"].(map[string]any)["name"] = name
+			return body
+		}, func() string {
+			rec := traegerJSON(t, router, office.token, http.MethodGet, phasePath, nil)
+			return decodeSchoolPortalData[struct {
+				Offerings []careplan.TraegerOffering `json:"offerings"`
+			}](t, rec.Body.Bytes()).Offerings[0].Draft.Fields.Name
+		}},
+	} {
+		read := catalogVersion(t, router, office.token, target.path)
+		rec := catalogPut(t, router, office.token, target.path, target.body("Kollegin"))
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		for _, stale := range []string{read, ""} {
+			body := target.body("Veraltet")
+			body["expected_version"] = stale
+			rec = traegerJSON(t, router, office.token, http.MethodPut, target.path, body)
+			require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+			assert.Contains(t, rec.Body.String(), `"code":"general.changed_since_read"`)
+			assert.Equal(t, "Kollegin", target.name(), "%s: a refused save writes nothing", target.path)
+		}
+		rec = catalogPut(t, router, office.token, target.path, target.body("Neu gelesen"))
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		assert.Equal(t, "Neu gelesen", target.name())
+	}
 }

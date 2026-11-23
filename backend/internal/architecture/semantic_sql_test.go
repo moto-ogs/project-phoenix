@@ -39,6 +39,20 @@ func TestSQLUpdateLockClauseIsNotTreatedAsTableWrite(t *testing.T) {
 	}
 }
 
+func TestSQLNoKeyUpdateLockClauseIsNotTreatedAsTableWrite(t *testing.T) {
+	t.Parallel()
+	query := "SELECT offering.id FROM enrollment.traeger_care_offerings AS offering " +
+		"LEFT JOIN enrollment.traeger_care_offering_versions AS version ON version.id = offering.id " +
+		"WHERE offering.id = ? FOR NO KEY UPDATE OF offering"
+	matches := writeTablePattern.FindAllStringSubmatchIndex(query, -1)
+	if len(matches) != 1 {
+		t.Fatalf("expected the SQL regex to see the lock clause, got %d matches", len(matches))
+	}
+	if !sqlUpdateIsNotStatementTarget(query, matches[0][0]) {
+		t.Fatal("FOR NO KEY UPDATE must not be treated as a write to table OF")
+	}
+}
+
 func TestSQLConflictActionUpdateIsNotTreatedAsTableWrite(t *testing.T) {
 	t.Parallel()
 	query := "INSERT INTO users.care_withdrawal_completions (tenant_id, student_id) " +

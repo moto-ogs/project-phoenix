@@ -36,6 +36,7 @@ func seedHolidayLegalForm(rt *Runtime, auth AuthRef, path string) (int, error) {
 	}
 	var form struct {
 		Data struct {
+			Version            int             `json:"version"`
 			Fields             json.RawMessage `json:"fields"`
 			AddressRequirement string          `json:"address_requirement"`
 		} `json:"data"`
@@ -53,7 +54,9 @@ func seedHolidayLegalForm(rt *Runtime, auth AuthRef, path string) (int, error) {
 	}
 	blocks = append(blocks, map[string]any{"key": "fotos_ferien", "kind": "consent", "source": "custom", "title": "Fotos in der Ferienbetreuung", "label": "Mein Kind darf auf Erinnerungsfotos zu sehen sein.", "text": "Die Fotos bleiben in der OGS.", "enabled": true})
 	raw, err = rt.Client.PutWithAuth(auth, path, map[string]any{
-		"fields": form.Data.Fields, "legal_blocks": blocks, "address_requirement": form.Data.AddressRequirement,
+		// The save carries the version it replaces (ADR 0311).
+		"expected_version": form.Data.Version,
+		"fields":           form.Data.Fields, "legal_blocks": blocks, "address_requirement": form.Data.AddressRequirement,
 		// The last version requires allergies and medication (#6686): the
 		// public form shows the questions with „Nein, keine“, the earlier
 		// registrations keep their optional version.

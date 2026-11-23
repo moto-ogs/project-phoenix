@@ -354,6 +354,11 @@ interface HolidayRegistrationProof {
 
 export interface HolidayRegistrationDetail extends HolidayRegistrationSummary {
   /**
+   * Token of what the Büro edits and rebooks; an edit and a rebooking send
+   * the one read when they started (ADR 0311).
+   */
+  readonly version: string;
+  /**
    * Postal address of the parent, when the form asked for it (#5625). Only
    * the detail and the export name it, the list does not.
    */
@@ -631,6 +636,7 @@ function detailFromBackend(
 ): HolidayRegistrationDetail {
   return {
     ...summaryFromBackend(registration),
+    version: registration.version,
     guardianAddress: registration.guardian_address
       ? {
           street: registration.guardian_address.street,
@@ -951,12 +957,16 @@ export async function setHolidayChildWish(
   );
 }
 
-/** Replaces the bookings of one child: one time model per week. */
+/**
+ * Replaces the bookings of one child: one time model per week, over the
+ * version of the registration read when the rebooking started (ADR 0311).
+ */
 export async function rebookHolidayChild(
   periodId: string,
   registrationId: string,
   childId: string,
   bookings: readonly HolidayBookingChange[],
+  version: string,
 ): Promise<HolidayRegistrationDetail> {
   return detailFromBackend(
     await bffJson(
@@ -965,6 +975,7 @@ export async function rebookHolidayChild(
       {
         params: { periodId, registrationId, childId },
         body: {
+          expected_version: version,
           bookings: bookings.map(
             (
               booking,
@@ -1094,11 +1105,15 @@ function holidayRegistrationEditBody(
   return body;
 }
 
-/** Changes the details a family entered (#5629). */
+/**
+ * Changes the details a family entered (#5629), over the version of the
+ * registration read when the edit started (ADR 0311).
+ */
 export async function editHolidayRegistration(
   periodId: string,
   registrationId: string,
   edit: HolidayRegistrationEdit,
+  version: string,
 ): Promise<HolidayRegistrationDetail> {
   return detailFromBackend(
     await bffJson(
@@ -1106,7 +1121,10 @@ export async function editHolidayRegistration(
       "PUT /traeger/holiday-periods/{id}/registrations/{registrationId}/details",
       {
         params: { id: periodId, registrationId },
-        body: holidayRegistrationEditBody(edit),
+        body: {
+          ...holidayRegistrationEditBody(edit),
+          expected_version: version,
+        },
       },
     ),
   );

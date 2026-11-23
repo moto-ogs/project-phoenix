@@ -52,7 +52,7 @@ func holidayLegalBlocks(ids ...string) []enrollment.FormLegalBlock {
 }
 func saveHolidayLegalBlocks(t *testing.T, f holidayRegistrationFixture, office traegerOffice, period int64, blocks []enrollment.FormLegalBlock) *httptest.ResponseRecorder {
 	t.Helper()
-	return traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayFormPath(period), map[string]any{"fields": []any{}, "legal_blocks": blocks})
+	return putHolidayForm(t, f.traeger, office.token, holidayFormPath(period), map[string]any{"fields": []any{}, "legal_blocks": blocks})
 }
 
 func TestHolidayLegalDocumentsAndPinnedAcceptanceEvidence(t *testing.T) {

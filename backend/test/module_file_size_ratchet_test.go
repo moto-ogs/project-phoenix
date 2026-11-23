@@ -60,7 +60,7 @@ var moduleFileSizeAllowlist = map[string]int{
 	// ADR 0087.
 	"database/migrations/student_owner_backfill.go": 827,
 	// ADR 0087.
-	"internal/architecture/semantic.go": 1435,
+	"internal/architecture/semantic.go": 1431,
 	// ADR 0087.
 	"internal/devtools/seedapi/parent_enrollment.go": 1241,
 	// ADR 0087.

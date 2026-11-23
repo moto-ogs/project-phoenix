@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -23,6 +24,7 @@ import (
 )
 
 type editedRegistration struct {
+	Version           string `json:"version"`
 	GuardianFirstName string `json:"guardian_first_name"`
 	GuardianEmail     string `json:"guardian_email"`
 	GuardianPhone     string `json:"guardian_phone"`
@@ -86,7 +88,7 @@ func newEditFixture(t *testing.T, name string) reviewFixture {
 
 func (f reviewFixture) editDetails(t *testing.T, id int64, body map[string]any) *httptest.ResponseRecorder {
 	t.Helper()
-	return traegerJSON(t, f.traeger, f.office.token, http.MethodPut, f.registrationPath(id, "/details"), body)
+	return putReadRegistration(t, f.traeger, f.office.token, f.registrationPath(id, "/details"), body)
 }
 
 func (f reviewFixture) edited(t *testing.T, rec *httptest.ResponseRecorder) editedRegistration {
@@ -294,19 +296,23 @@ func TestTraegerEditNeedsTheRightAndStaysWithItsTraeger(t *testing.T) {
 	readOnly := newTraegerOffice(t, f.db, f.traeger, "Träger Bearbeiten Lesend", identityaccess.TraegerRoleReadOnly)
 	foreign := newTraegerOffice(t, f.db, f.traeger, "Träger Bearbeiten Fremd", identityaccess.TraegerRoleAdministration)
 	body := editedGuardians("0151 3333333", nil)
-	rec := traegerJSON(t, f.traeger, readOnly.token, http.MethodPut, f.registrationPath(f.siblings, "/details"), body)
+	rec := putReadRegistration(t, f.traeger, readOnly.token, f.registrationPath(f.siblings, "/details"), body)
 	assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, f.traeger, foreign.token, http.MethodPut, f.registrationPath(f.siblings, "/details"), body)
+	rec = putReadRegistration(t, f.traeger, foreign.token, f.registrationPath(f.siblings, "/details"), body)
 	assert.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 	assert.Empty(t, f.editEntries(t, f.siblings))
 	assert.Equal(t, "0151 2345678", f.readDetail(t, f.siblings).GuardianPhone)
 }
 
-// Two edits of one registration at the same time run one after the other
-// through the lock of the registration: neither is lost.
-func TestTraegerEditsOfOneRegistrationRunOneAfterTheOther(t *testing.T) {
+// Two edits of one registration started from the same read run one after
+// the other through the lock of the registration; the second finds the
+// registration changed since its read and is refused with
+// general.changed_since_read, so neither replaces what it never saw (ADR
+// 0311). An edit over the version read afterwards succeeds.
+func TestTraegerEditsOfOneRegistrationOverOneReadKeepTheFirst(t *testing.T) {
 	t.Parallel()
 	f := newReviewFixture(t, "Träger Bearbeiten Sperre")
+	read := f.readDetail(t, f.siblings).Version
 	bodies := []map[string]any{
 		editedGuardians("0151 4444444", nil),
 		{"emergency_contacts": []map[string]any{{"name": "Nachbarin Muster", "phone": "05402 7777"}}, "pickup_persons": []map[string]any{}},
@@ -317,11 +323,23 @@ func TestTraegerEditsOfOneRegistrationRunOneAfterTheOther(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			codes[i] = f.editDetails(t, f.siblings, body).Code
+			sent := maps.Clone(body)
+			sent["expected_version"] = read
+			rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, f.registrationPath(f.siblings, "/details"), sent)
+			if rec.Code == http.StatusConflict {
+				assert.Contains(t, rec.Body.String(), `"code":"general.changed_since_read"`)
+			}
+			codes[i] = rec.Code
 		}()
 	}
 	wg.Wait()
-	assert.Equal(t, []int{http.StatusOK, http.StatusOK}, codes)
+	assert.ElementsMatch(t, []int{http.StatusOK, http.StatusConflict}, codes, "the first edit wins, the second is refused")
+	assert.Len(t, f.editEntries(t, f.siblings), 1, "a refused edit writes nothing")
+	for i, code := range codes {
+		if code == http.StatusConflict {
+			require.Equal(t, http.StatusOK, f.editDetails(t, f.siblings, bodies[i]).Code, "the edit over the new read succeeds")
+		}
+	}
 	detail := f.readDetail(t, f.siblings)
 	assert.Equal(t, "0151 4444444", detail.GuardianPhone)
 	require.Len(t, detail.Contacts, 1)
@@ -347,7 +365,7 @@ func TestHolidayHostSeesAnEditedNameAtOnceAndTheGuestCopyAfterTheReconciliation(
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, fmt.Sprintf("%s/registrations/%d", holidayPeriodPath(f.periodID(t)), f.siblings), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	ben := decodeSchoolPortalData[editedRegistration](t, rec.Body.Bytes()).Children[1]
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, path, map[string]any{"children": []map[string]any{{
+	rec = putReadRegistration(t, f.traeger, f.office.token, path, map[string]any{"children": []map[string]any{{
 		"id": ben.ID, "first_name": "Ben", "last_name": "Mustermann", "birth_date": "2016-09-12", "home_school_id": 0,
 		"guest_school_name": "Grundschule Melle", "custom_data": map[string]any{},
 	}}})

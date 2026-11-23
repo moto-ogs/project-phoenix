@@ -51,7 +51,7 @@ func editHolidayTimesOn(t *testing.T, db *bun.DB, org, account int64, booking ow
 		})
 	})
 	router.Mount("/traeger/holiday-periods", resource.TraegerRouter(func(r chi.Router, mount func(chi.Router, common.Middleware)) { mount(r, common.TraegerTxMiddleware) }))
-	response := traegerJSON(t, router, "", http.MethodPut, holidayPeriodPath(booking.period), body)
+	response := putHolidayPeriod(t, router, "", holidayPeriodPath(booking.period), body)
 	require.Equal(t, http.StatusOK, response.Code, response.Body.String())
 }
 

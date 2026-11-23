@@ -81,7 +81,11 @@ func (s *regularBookingServer) handle(w seedHTTPResponseWriter, r *seedHTTPReque
 	case r.Method == "GET" && r.URL.Path == "/api/enrollment/phases/77/manual-bootstrap":
 		// The office's form shows the phase's version and token (ADR 0311).
 		_, _ = fmt.Fprint(w, `{"status":"success","data":{"schema":{"id":"5"},"terms_fingerprint":"form-5"}}`)
+	case r.Method == "GET" && r.URL.Path == "/api/enrollment/phases/77":
+		// The phase editor reads the version it saves over (ADR 0311).
+		_, _ = fmt.Fprint(w, `{"status":"success","data":{"version":"phase-77"}}`)
 	case r.URL.Path == "/api/enrollment/phases/77":
+		assert.Equal(s.t, "phase-77", body["expected_version"], "the phase save sends the version it read (ADR 0311)")
 		s.events = append(s.events, fmt.Sprintf("audience %v", body["audience"]))
 		_, _ = fmt.Fprint(w, `{"status":"success","data":{}}`)
 	case r.Method == "PUT" && strings.HasPrefix(r.URL.Path, "/api/guardians/students/"):

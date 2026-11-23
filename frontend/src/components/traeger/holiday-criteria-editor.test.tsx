@@ -8,6 +8,7 @@ import {
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
+import { catalogText } from "~/test/error-catalog-text";
 import type { HolidayCriterion } from "~/lib/traeger-holiday-allocation-api";
 
 const { save } = vi.hoisted(() => ({ save: vi.fn() }));
@@ -30,10 +31,18 @@ const STORED: HolidayCriterion[] = [
   },
 ];
 
+// The page's read: a save hands its answer to `write` (ADR 0311).
 function renderEditor(onSaved = vi.fn()) {
   render(
     <ToastProvider>
-      <HolidayCriteriaEditor criteria={STORED} onSaved={onSaved} />
+      <HolidayCriteriaEditor
+        source={{
+          opening: "criteria",
+          data: { criteria: STORED, version: "criteria-read" },
+          reload: vi.fn(),
+          write: onSaved,
+        }}
+      />
     </ToastProvider>,
   );
   return onSaved;
@@ -45,7 +54,7 @@ describe("holiday criteria editor (#4700)", () => {
   });
 
   it("adds a template, moves it to the top and saves the list in that order", async () => {
-    const saved: HolidayCriterion[] = [];
+    const saved = { criteria: [] as HolidayCriterion[], version: "saved" };
     save.mockResolvedValue(saved);
     const onSaved = renderEditor();
 
@@ -69,6 +78,8 @@ describe("holiday criteria editor (#4700)", () => {
     );
 
     await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+    // The list goes out with the version it was read in.
+    expect(save.mock.calls[0]![1]).toBe("criteria-read");
     expect(save.mock.calls[0]![0]).toEqual([
       {
         id: "",
@@ -143,6 +154,40 @@ describe("holiday criteria editor (#4700)", () => {
     );
     expect(hint).toBeInTheDocument();
     expect(hint).not.toBeEmptyDOMElement();
+  });
+
+  it("reads the stored criteria again after a list saved since", async () => {
+    save.mockRejectedValue(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    const reload = vi.fn().mockResolvedValue({
+      criteria: STORED,
+      version: "colleague",
+    });
+    render(
+      <ToastProvider>
+        <HolidayCriteriaEditor
+          source={{
+            opening: "criteria",
+            data: { criteria: STORED, version: "criteria-read" },
+            reload,
+          }}
+        />
+      </ToastProvider>,
+    );
+    fireEvent.change(screen.getByLabelText(/^Name/), {
+      target: { value: "Beide Eltern arbeiten" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Kriterien speichern" }),
+    );
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "die Kriterien"),
+      ),
+    ).toBeInTheDocument();
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect(save).toHaveBeenCalledTimes(1);
   });
 
   it("puts a refusal of the backend at its field", async () => {

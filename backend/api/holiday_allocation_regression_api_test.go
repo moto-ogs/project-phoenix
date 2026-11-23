@@ -16,14 +16,32 @@ func TestHolidayAllocationCriterionScopeStaysAfterTheFirstAnswer(t *testing.T) {
 	a := newAllocationFixture(t, "Träger Kriterienbezug")
 	// The editor opened before the first answer was submitted.
 	stale := map[string]any{"criteria": []map[string]any{{"id": a.working, "name": "Berufstätig", "question": "Sind Sie berufstätig?", "scope": "child", "active": true}}}
+	read := criteriaVersion(t, a.traeger, a.office.token)
 	a.submitCriteria(t, "bezug@example.org", true, false)
-	rec := traegerJSON(t, a.traeger, a.office.token, http.MethodPut, "/traeger/holiday-periods/criteria", stale)
+	rec := saveHolidayCriteria(t, a.traeger, a.office.token, read, stale)
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	_, fields := registrationRefusalOf(t, rec)
 	assert.Contains(t, fields, "criteria.0.scope")
 	board := a.board(t)
 	require.Len(t, board.Criteria, 2, "a refused save also rolls back archiving")
 	assert.Equal(t, "yes", board.Weeks[0].Pending[0].Criteria[0].Value, "the answer keeps its allocation priority")
+
+	// A colleague renames the criteria; a save over the version read before
+	// is refused and writes nothing (ADR 0311).
+	renamed := map[string]any{"criteria": []map[string]any{
+		{"id": a.working, "name": "Beide berufstätig", "question": "Sind Sie berufstätig?", "scope": "family", "active": true},
+		{"id": a.sibling, "name": "Geschwister", "question": "Ist ein Geschwisterkind schon in der OGS?", "scope": "child", "active": true},
+	}}
+	rec = saveHolidayCriteria(t, a.traeger, a.office.token, read, renamed)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	for _, version := range []string{read, ""} {
+		rec = saveHolidayCriteria(t, a.traeger, a.office.token, version, map[string]any{"criteria": []map[string]any{}})
+		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+		assert.Contains(t, rec.Body.String(), `"code":"general.changed_since_read"`)
+	}
+	board = a.board(t)
+	require.Len(t, board.Criteria, 2, "a refused save archives nothing")
+	assert.Equal(t, "Beide berufstätig", board.Criteria[0].Name)
 }
 
 func TestHolidayAllocationNotifiesAgainAfterAddingDays(t *testing.T) {
@@ -33,7 +51,7 @@ func TestHolidayAllocationNotifiesAgainAfterAddingDays(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	body := decodeSchoolPortalData[holidayPeriodBody](t, rec.Body.Bytes())
 	body.AllocationMode = "criteria"
-	rec = traegerJSON(t, d.traeger, d.office.token, http.MethodPut, holidayPeriodPath(int64(d.period.ID)), body)
+	rec = putHolidayPeriod(t, d.traeger, d.office.token, holidayPeriodPath(int64(d.period.ID)), body)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	a := allocationFixture{reviewFixture: reviewFixture{holidayRegistrationFixture: d.holidayRegistrationFixture, office: d.office, period: d.period}}
 	registration := d.submit(t, d.registration("erneut@example.org", "Tom", d.days(dayMonday)))
@@ -41,7 +59,7 @@ func TestHolidayAllocationNotifiesAgainAfterAddingDays(t *testing.T) {
 	rec = a.decide(t, decision(first, "placed", ""))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	detail := a.detail(t, traegerJSON(t, a.traeger, a.office.token, http.MethodGet, a.registrationPath(int64(registration.ID), ""), nil))
-	rec = traegerJSON(t, d.traeger, d.office.token, http.MethodPut, holidayRebookPath(int64(d.period.ID), int64(registration.ID), int64(detail.Children[0].ID)),
+	rec = putReadRegistration(t, d.traeger, d.office.token, holidayRebookPath(int64(d.period.ID), int64(registration.ID), int64(detail.Children[0].ID)),
 		map[string]any{"bookings": []map[string]any{d.days(dayMonday, dayTuesday)}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	second := a.board(t).Weeks[0].Pending[0]

@@ -334,10 +334,14 @@ func (h *HolidayRegistrationReview) reopen(ctx context.Context, organizationID i
 }
 
 // RebookHolidayChild replaces the bookings of one child of a registration
-// that is not frozen. The history keeps the bookings before and after.
-func (h *HolidayRegistrationReview) RebookHolidayChild(ctx context.Context, reviewer enrollment.HolidayReviewer, periodID, registrationID, childID int64, bookings []enrollment.HolidayBookingInput) (enrollment.HolidayRegistrationDetail, error) {
+// that is not frozen, over the version its author read (ADR 0311). The
+// history keeps the bookings before and after.
+func (h *HolidayRegistrationReview) RebookHolidayChild(ctx context.Context, reviewer enrollment.HolidayReviewer, periodID, registrationID, childID int64, expectedVersion string, bookings []enrollment.HolidayBookingInput) (enrollment.HolidayRegistrationDetail, error) {
 	var promoted []enrollment.HolidayPromotion
 	detail, err := h.change(ctx, reviewer, periodID, registrationID, func(period enrollment.HolidayPeriod, current holidayRegistrationState) (string, any, error) {
+		if err := h.checkReadRegistration(ctx, reviewer.OrganizationID, period, current.ID, expectedVersion); err != nil {
+			return "", nil, err
+		}
 		details, changed, err := h.rebook(ctx, reviewer.OrganizationID, period, current, childID, bookings)
 		if err != nil {
 			return "", nil, err
@@ -537,22 +541,12 @@ func holidayReviewHasLunch(read []enrollment.HolidayRegistrationDetail) bool {
 }
 
 func (h *HolidayRegistrationReview) detail(ctx context.Context, reviewer enrollment.HolidayReviewer, period enrollment.HolidayPeriod, registrationID int64) (enrollment.HolidayRegistrationDetail, error) {
-	read, overrides, err := h.store.ReadHolidayReview(ctx, reviewer.OrganizationID, period.ID.Int64(), registrationID)
+	detail, err := h.editedDetail(ctx, reviewer.OrganizationID, period, registrationID)
 	if err != nil {
-		return enrollment.HolidayRegistrationDetail{}, fmt.Errorf("enrollment: read holiday registration: %w", err)
-	}
-	if len(read) == 0 {
-		return enrollment.HolidayRegistrationDetail{}, enrollment.ErrHolidayRegistrationEntryNotFound
-	}
-	if err := h.completeWithLunch(ctx, period, read, overrides); err != nil {
 		return enrollment.HolidayRegistrationDetail{}, err
 	}
-	detail := read[0]
 	if texts, ok := enrollment.HolidayConsentTextsOf(detail.ConsentVersion, detail.RetentionDays); ok {
 		detail.ConsentTexts = &texts
-	}
-	if detail.Contacts, err = h.store.ReadHolidayContacts(ctx, reviewer.OrganizationID, registrationID); err != nil {
-		return enrollment.HolidayRegistrationDetail{}, fmt.Errorf("enrollment: read holiday registration contacts: %w", err)
 	}
 	if detail.History, err = h.store.ReadHolidayHistory(ctx, reviewer.OrganizationID, registrationID); err != nil {
 		return enrollment.HolidayRegistrationDetail{}, fmt.Errorf("enrollment: read holiday registration history: %w", err)
@@ -560,9 +554,6 @@ func (h *HolidayRegistrationReview) detail(ctx context.Context, reviewer enrollm
 	holidayBookingReplacements(period, &detail)
 	if detail.BenefitsProofs, err = h.store.ReadHolidayProofs(ctx, reviewer.OrganizationID, registrationID); err != nil {
 		return enrollment.HolidayRegistrationDetail{}, fmt.Errorf("enrollment: read holiday registration proofs: %w", err)
-	}
-	if err := h.detailAnswers(ctx, reviewer.OrganizationID, period.ID.Int64(), &detail); err != nil {
-		return enrollment.HolidayRegistrationDetail{}, err
 	}
 	if detail.Criteria, err = h.detailCriteria(ctx, reviewer.OrganizationID, period, detail); err != nil {
 		return enrollment.HolidayRegistrationDetail{}, err

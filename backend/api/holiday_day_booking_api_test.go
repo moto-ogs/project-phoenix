@@ -295,7 +295,7 @@ func TestHolidayChildDayLimitRefusesMoreDaysThanThePeriodAllows(t *testing.T) {
 	ole := d.submit(t, d.registration("ole.tage@example.org", "Ole", d.days(dayThursday, dayFriday)))
 	child := d.childOf(t, int64(ole.ID))
 	rebook := func(bookings ...map[string]any) int {
-		rec := traegerJSON(t, d.traeger, d.office.token, http.MethodPut, holidayRebookPath(int64(d.period.ID), int64(ole.ID), child),
+		rec := putReadRegistration(t, d.traeger, d.office.token, holidayRebookPath(int64(d.period.ID), int64(ole.ID), child),
 			map[string]any{"bookings": bookings})
 		return rec.Code
 	}

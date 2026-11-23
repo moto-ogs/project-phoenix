@@ -20,31 +20,33 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 type mockPhaseService struct {
-	listResult        []*capability.Phase
-	listErr           error
-	listPublicOpenRes []*capability.Phase
-	listPublicOpenErr error
-	getByIDCalls      int
-	getByIDID         int64
-	getByIDResults    []*capability.Phase
-	getByIDErrs       []error
-	getByIDResult     *capability.Phase
-	getByIDErr        error
-	createInput       *capability.Phase
-	createResult      *capability.Phase
-	createErr         error
-	updateInput       *capability.Phase
-	updateReport      capability.PhaseUpdateReport
-	updateErr         error
-	deleteID          int64
-	deleteErr         error
-	deleteImpactID    int64
-	deleteImpactRes   *capability.PhaseDeleteImpact
-	deleteImpactErr   error
+	listResult            []*capability.Phase
+	listErr               error
+	listPublicOpenRes     []*capability.Phase
+	listPublicOpenErr     error
+	getByIDCalls          int
+	getByIDID             int64
+	getByIDResults        []*capability.Phase
+	getByIDErrs           []error
+	getByIDResult         *capability.Phase
+	getByIDErr            error
+	createInput           *capability.Phase
+	createResult          *capability.Phase
+	createErr             error
+	updateInput           *capability.Phase
+	updateExpectedVersion string
+	updateReport          capability.PhaseUpdateReport
+	updateErr             error
+	deleteID              int64
+	deleteErr             error
+	deleteImpactID        int64
+	deleteImpactRes       *capability.PhaseDeleteImpact
+	deleteImpactErr       error
 }
 
 func (m *mockPhaseService) Phases(_ context.Context) ([]*capability.Phase, error) {
@@ -69,8 +71,9 @@ func (m *mockPhaseService) CreatePhase(_ context.Context, phase *capability.Phas
 	m.createInput = phase
 	return m.createResult, m.createErr
 }
-func (m *mockPhaseService) UpdatePhase(_ context.Context, phase *capability.Phase) (capability.PhaseUpdateReport, error) {
+func (m *mockPhaseService) UpdatePhase(_ context.Context, phase *capability.Phase, expectedVersion string) (capability.PhaseUpdateReport, error) {
 	m.updateInput = phase
+	m.updateExpectedVersion = expectedVersion
 	return m.updateReport, m.updateErr
 }
 func (m *mockPhaseService) DeletePhase(_ context.Context, id int64) error {
@@ -362,6 +365,25 @@ func TestUpdatePhaseHandler_HappyPathRefetchesAfterUpdate(t *testing.T) {
 	require.NotNil(t, mock.updateInput)
 	assert.Equal(t, int64(1234), mock.updateInput.ID, "ID from URL must be stamped onto the model")
 	assert.Equal(t, int64(1234), mock.getByIDID, "refetch must call GetByID after the update")
+}
+
+// A save over an outdated version answers 409 general.changed_since_read
+// (ADR 0311): the route hands the read version to the service and renders
+// its refusal unchanged.
+func TestUpdatePhaseHandler_OutdatedVersionReturns409(t *testing.T) {
+	t.Parallel()
+
+	mock := &mockPhaseService{getByIDResult: makePhaseModel(1234, "Updated"), updateErr: readstate.ErrChanged}
+	body := validPhaseBody("Updated")
+	body["expected_version"] = "older"
+	w := executePhaseJSON(t, buildPhaseRouter(mock), http.MethodPut, "/enrollment/phases/1234", body)
+	require.Equal(t, http.StatusConflict, w.Code, w.Body.String())
+	assert.Equal(t, "older", mock.updateExpectedVersion)
+	var problem struct {
+		Code string `json:"code"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &problem))
+	assert.Equal(t, "general.changed_since_read", problem.Code)
 }
 
 // A shortened phase names the confirmed children whose care now runs past

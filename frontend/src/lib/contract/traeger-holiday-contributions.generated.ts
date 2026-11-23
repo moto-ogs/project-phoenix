@@ -236,6 +236,7 @@ export interface HolidayBookingChoice {
 /** Go: parentbillinghttp.HolidayRebookingRequest */
 export interface HolidayRebookingRequest {
   bookings?: HolidayBookingChoice[] | null;
+  expected_version?: string;
 }
 
 /** Go: parentbillinghttp.HolidayDebtorNumberRequest */
