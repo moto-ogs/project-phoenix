@@ -2290,9 +2290,12 @@ func serveRegularBookingSeedAPI(t *testing.T, w seedHTTPResponseWriter, r *seedH
 		studentIDsByName[body.FirstName+" "+body.LastName] = idCounter
 		_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": map[string]any{"id": idCounter}})
 	case r.Method == seedHTTPMethodGet && strings.HasPrefix(r.URL.Path, "/api/guardians/students/") && r.Header.Get("Authorization") != "Bearer manual-admin-token":
+		// One stable primary guardian per child: the relationship restore
+		// after the booking reads the same row with its version (ADR 0311).
+		studentID := strings.Split(r.URL.Path, "/")[4]
 		_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": []map[string]any{{
-			"guardian":        map[string]any{"id": idCounter, "first_name": "Demo", "last_name": "Elternteil", "email": "demo.elternteil@example.test"},
-			"relationship_id": idCounter, "relationship_type": "parent", "is_primary": true,
+			"guardian":        map[string]any{"id": "7" + studentID, "first_name": "Demo", "last_name": "Elternteil", "email": "demo.elternteil@example.test"},
+			"relationship_id": "9" + studentID, "relationship_type": "parent", "is_primary": true, "version": "v" + studentID,
 		}}})
 	case r.Method == seedHTTPMethodPost && strings.HasSuffix(r.URL.Path, "/manual-approved-enrollments"):
 		var body struct {

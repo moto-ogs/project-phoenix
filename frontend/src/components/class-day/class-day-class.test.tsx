@@ -770,6 +770,7 @@ describe("ClassDayClass", () => {
     ): ClassDayReport {
       return report({
         can_hand_over: true,
+        handover_version: "v-none",
         totals: {
           students: 3,
           staying: 2,
@@ -840,6 +841,7 @@ describe("ClassDayClass", () => {
         expect(save).toHaveBeenLastCalledWith("4a", todayISO(), {
           present: [],
           absent: ["1", "2"],
+          expectedVersion: "v-none",
         }),
       );
     });
@@ -890,6 +892,7 @@ describe("ClassDayClass", () => {
           handed_over_by: "Petra Lehrkraft",
           absent_count: 1,
         },
+        handover_version: "v-stored",
       });
       current.rows[0]!.handover_absent = true;
       fireEvent.click(screen.getByRole("button", { name: "Übergeben" }));
@@ -898,6 +901,7 @@ describe("ClassDayClass", () => {
         expect(handOver).toHaveBeenCalledWith("4a", todayISO(), {
           present: ["2"],
           absent: ["1"],
+          expectedVersion: "v-none",
         }),
       );
       expect(
@@ -918,6 +922,7 @@ describe("ClassDayClass", () => {
           handed_over_at: "2026-09-09T09:45:00Z",
           absent_count: 1,
         },
+        handover_version: "v-stored",
       });
       report.rows[0]!.handover_absent = true;
       render(
@@ -946,8 +951,68 @@ describe("ClassDayClass", () => {
         expect(handOver).toHaveBeenCalledWith("4a", todayISO(), {
           present: ["2"],
           absent: ["1"],
+          expectedVersion: "v-stored",
         }),
       );
+    });
+
+    // ADR 0311: a colleague handed the class over since the view was read.
+    // The save is refused, offers no retry, and the dialog shows the stored
+    // handover: the child marked "nicht da" there is not "da" again.
+    it("shows the stored handover after a refusal instead of retrying", async () => {
+      const handOver = vi
+        .fn()
+        .mockRejectedValueOnce(
+          new ApiError("changed", 409, { code: "general.changed_since_read" }),
+        );
+      let current = handoverReport();
+      render(
+        <ClassDayClass
+          schoolClass="4a"
+          fetchClassDay={() => Promise.resolve(current)}
+          handOverClass={handOver}
+          withdrawClassHandover={() => Promise.resolve()}
+        />,
+      );
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Klasse übergeben" }),
+      );
+      fireEvent.click(
+        within(choice("Mia Morgenfehlt")).getByRole("button", { name: "Da" }),
+      );
+      current = handoverReport({
+        handover: {
+          handed_over_at: "2026-09-09T09:45:00Z",
+          handed_over_by: "Petra Lehrkraft",
+          absent_count: 1,
+        },
+        handover_version: "v-stored",
+      });
+      current.rows[0]!.handover_absent = true;
+      current.rows[1]!.handover_absent = true;
+      fireEvent.click(screen.getByRole("button", { name: "Übergeben" }));
+
+      expect(
+        await screen.findByText(
+          catalogText("general.changed_since_read", "die Übergabe"),
+        ),
+      ).toBeInTheDocument();
+      await waitFor(() =>
+        expect(
+          within(choice("Mia Morgenfehlt")).getByRole("button", {
+            name: "Nicht da",
+          }),
+        ).toHaveAttribute("aria-pressed", "true"),
+      );
+      expect(
+        within(choice("Klara Klassentag")).getByRole("button", {
+          name: "Nicht da",
+        }),
+      ).toHaveAttribute("aria-pressed", "true");
+      expect(
+        screen.queryByRole("button", { name: "Wiederholen" }),
+      ).not.toBeInTheDocument();
+      expect(handOver).toHaveBeenCalledTimes(1);
     });
 
     it("takes the handover back only after the confirmation", async () => {

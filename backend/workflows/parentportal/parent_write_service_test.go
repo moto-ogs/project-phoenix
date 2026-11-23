@@ -47,6 +47,7 @@ type recordingParentAbsenceNotifier struct {
 type studentReads[T any] interface {
 	FindByID(ctx context.Context, id int64) (*T, error)
 	FindByIDForUpdate(ctx context.Context, id int64) (*T, error)
+	FindByIDForNoKeyUpdate(ctx context.Context, id int64) (*T, error)
 }
 
 // pausingStudentRepository parks the write once it holds the student lock.
@@ -59,7 +60,15 @@ type pausingStudentRepository[T any] struct {
 }
 
 func (r *pausingStudentRepository[T]) FindByIDForUpdate(ctx context.Context, id int64) (*T, error) {
-	student, err := r.studentReads.FindByIDForUpdate(ctx, id)
+	return r.pause(ctx, id, r.studentReads.FindByIDForUpdate)
+}
+
+func (r *pausingStudentRepository[T]) FindByIDForNoKeyUpdate(ctx context.Context, id int64) (*T, error) {
+	return r.pause(ctx, id, r.studentReads.FindByIDForNoKeyUpdate)
+}
+
+func (r *pausingStudentRepository[T]) pause(ctx context.Context, id int64, lock func(context.Context, int64) (*T, error)) (*T, error) {
+	student, err := lock(ctx, id)
 	if err != nil {
 		return nil, err
 	}

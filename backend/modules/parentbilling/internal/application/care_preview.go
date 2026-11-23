@@ -36,6 +36,10 @@ type careMonthInput struct {
 	// still decides a school change, but they count as not issued there, so
 	// a child an issued invoice bills is found among them too (#7892).
 	recomputed map[int64]bool
+	// assessed are the notice months of those contracts: the first
+	// computation holds a child whose contract without a price keeps an
+	// assessment that bills days another contract would assess (#7952).
+	assessed map[int64]parentbilling.CareInvoice
 	// keepHeld are the contracts the first computation of a notice month
 	// held back for an issued invoice: the second one keeps the whole child
 	// held (#7892, S4).

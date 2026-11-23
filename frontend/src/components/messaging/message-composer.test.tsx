@@ -3,6 +3,7 @@ import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { useMessageComposerOnScreen } from "~/lib/hooks/use-message-composer-presence";
 import { MessageComposer } from "./message-composer";
 
 function ParentComposer({ onSend }: Readonly<{ onSend: () => void }>) {
@@ -37,6 +38,25 @@ describe("MessageComposer in der Eltern-App", () => {
 
     await user.click(send);
     expect(onSend).toHaveBeenCalledOnce();
+  });
+});
+
+describe("MessageComposer meldet sich an (#7686)", () => {
+  function ChatState() {
+    return <p>{useMessageComposerOnScreen() ? "Chat offen" : "Kein Chat"}</p>;
+  }
+
+  it("meldet sich an, solange es offen ist", () => {
+    const { rerender } = render(
+      <>
+        <ChatState />
+        <ParentComposer onSend={vi.fn()} />
+      </>,
+    );
+    expect(screen.getByText("Chat offen")).toBeInTheDocument();
+
+    rerender(<ChatState />);
+    expect(screen.getByText("Kein Chat")).toBeInTheDocument();
   });
 });
 

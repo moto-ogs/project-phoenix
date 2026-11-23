@@ -33,15 +33,10 @@ import type { RelationshipFormData } from "./guardian-form-modal";
 import {
   fetchStudentGuardians,
   createStudentGuardians,
-  updateGuardian,
+  saveStudentGuardian,
   deleteGuardian,
   linkGuardianToStudent,
-  updateStudentGuardianRelationship,
   removeGuardianFromStudent,
-  addGuardianPhoneNumber,
-  updateGuardianPhoneNumber,
-  deleteGuardianPhoneNumber,
-  setGuardianPrimaryPhone,
   inviteGuardianToStudent,
   fetchGuardianDeletePreview,
   fetchStudentGuardianEmailStates,
@@ -236,7 +231,7 @@ export default function StudentGuardianManager({
   const deletePreviewRequestIdRef = useRef(0);
   const { success: toastSuccess } = useToast();
   // Aktionen ohne Formular (Verknüpfen, Einladen): Toast mit Katalogtext.
-  const { show: showActionError } = useApiErrorDisplay();
+  const { show: showActionError, showMessage } = useApiErrorDisplay();
   // Fehler beim Entfernen und bei der Vorschau bleiben im offenen
   // Löschdialog; ein Toast läge unter dem Dialog.
   const deleteErrors = useApiFormError();
@@ -385,7 +380,10 @@ export default function StudentGuardianManager({
     }
   };
 
-  // Handle edit guardian - takes array but only uses first entry (edit mode has single entry)
+  // Edit: the form saves profile, link and phone list in one request against
+  // the version of the row it opened with (ADR 0311). A guardian changed
+  // since is refused and nothing is written; the form then shows the stored
+  // row (reloadEditingGuardian).
   const handleEditGuardian = async (
     guardians: Array<{
       id: string;
@@ -407,28 +405,23 @@ export default function StudentGuardianManager({
     if (!first) return;
 
     const { guardianData, relationshipData, phoneNumbers } = first;
-
-    const syncPhones = async () => {
-      if (!phoneNumbers) return;
-      await syncGuardianPhoneNumbers(
-        editingGuardian.id,
-        phoneNumbers,
-        editingGuardian.phoneNumbers ?? [],
-      );
-    };
-    // A cleared e-mail ("" deletes it) goes last: if a phone number is
-    // refused, the person keeps the address they could be reached by.
-    const clearsEmail = guardianData.email === "";
-    if (clearsEmail) await syncPhones();
-
-    // Update guardian profile and relationship
-    await updateGuardian(editingGuardian.id, guardianData);
-    await updateStudentGuardianRelationship(
-      editingGuardian.relationshipId,
-      relationshipData,
+    // A number the form added carries a temporary id; only stored ids stay.
+    const storedPhoneIds = new Set(
+      (editingGuardian.phoneNumbers ?? []).map((phone) => phone.id),
     );
-
-    if (!clearsEmail) await syncPhones();
+    await saveStudentGuardian(
+      studentId,
+      editingGuardian.id,
+      {
+        guardian: guardianData,
+        relationship: relationshipData,
+        phoneNumbers: phoneNumbers?.map(({ id, ...phone }) => ({
+          ...phone,
+          id: id !== undefined && storedPhoneIds.has(id) ? id : undefined,
+        })),
+      },
+      editingGuardian.version ?? "",
+    );
 
     // Reload guardians
     await guardiansAfterWrite.refresh();
@@ -439,89 +432,23 @@ export default function StudentGuardianManager({
     );
   };
 
-  // Helper: Sync phone numbers (add/update/delete)
-  const syncGuardianPhoneNumbers = async (
-    guardianId: string,
-    formPhones: Array<{
-      phoneNumber: string;
-      phoneType: PhoneType | undefined;
-      label?: string;
-      isPrimary: boolean;
-      id?: string;
-    }>,
-    existingPhones: Array<{ id: string; isPrimary: boolean }>,
-  ) => {
-    const existingPhoneIds = new Set(existingPhones.map((p) => p.id));
-
-    // Process phones and track primary
-    const primaryPhoneId = await processPhoneUpdates(
-      guardianId,
-      formPhones,
-      existingPhoneIds,
+  // After a refused save the form shows the stored row; rejects when the
+  // read fails, so the refusal shows the load error instead (rule 6).
+  const reloadEditingGuardian = async () => {
+    const guardianId = editingGuardian?.id;
+    const fresh = await fetchStudentGuardians(studentId);
+    await mutateGuardians(fresh, { revalidate: false });
+    const stored = fresh.find((guardian) => guardian.id === guardianId);
+    if (stored) {
+      setEditingGuardian(stored);
+      return;
+    }
+    // Unlinked from the child since: no stored row to show, so the form
+    // closes instead of keeping the refused input and its old version.
+    handleCloseModal();
+    showMessage(
+      "Diese Person ist nicht mehr mit dem Kind verknüpft. Deine Änderungen sind nicht gespeichert.",
     );
-
-    // Delete removed phones
-    await deleteRemovedPhones(guardianId, formPhones, existingPhones);
-
-    // Update primary if changed
-    await updatePrimaryIfNeeded(guardianId, primaryPhoneId, existingPhones);
-  };
-
-  // Helper: Process phone additions/updates
-  const processPhoneUpdates = async (
-    guardianId: string,
-    formPhones: Array<{
-      phoneNumber: string;
-      phoneType: PhoneType | undefined;
-      label?: string;
-      isPrimary: boolean;
-      id?: string;
-    }>,
-    existingPhoneIds: Set<string>,
-  ): Promise<string | null> => {
-    let primaryPhoneId: string | null = null;
-
-    for (const phone of formPhones) {
-      const isNew =
-        !phone.id || phone.id.includes("-") || !existingPhoneIds.has(phone.id);
-      const resultId = isNew
-        ? (await addGuardianPhoneNumber(guardianId, phone)).id
-        : (await updateGuardianPhoneNumber(guardianId, phone.id!, phone),
-          phone.id!);
-
-      if (phone.isPrimary) primaryPhoneId = resultId;
-    }
-
-    return primaryPhoneId;
-  };
-
-  // Helper: Delete phones removed from form
-  const deleteRemovedPhones = async (
-    guardianId: string,
-    formPhones: Array<{ id?: string }>,
-    existingPhones: Array<{ id: string }>,
-  ) => {
-    const keepIds = new Set(
-      formPhones.filter((p) => p.id && !p.id.includes("-")).map((p) => p.id),
-    );
-    for (const existing of existingPhones) {
-      if (!keepIds.has(existing.id)) {
-        await deleteGuardianPhoneNumber(guardianId, existing.id);
-      }
-    }
-  };
-
-  // Helper: Update primary phone if changed
-  const updatePrimaryIfNeeded = async (
-    guardianId: string,
-    primaryPhoneId: string | null,
-    existingPhones: Array<{ id: string; isPrimary: boolean }>,
-  ) => {
-    if (!primaryPhoneId) return;
-    const existingPrimary = existingPhones.find((p) => p.isPrimary);
-    if (existingPrimary?.id !== primaryPhoneId) {
-      await setGuardianPrimaryPhone(guardianId, primaryPhoneId);
-    }
   };
 
   // Invite an existing guardian (info already on file) to the parents portal.
@@ -690,6 +617,30 @@ export default function StudentGuardianManager({
     }
   };
 
+  // Reads the blast radius of the full delete again after a refusal; rejects
+  // when the read fails, and confirming stays off until it succeeded.
+  const reloadFullDeletePreview = async () => {
+    if (!deletingGuardian) return;
+    const requestId = deletePreviewRequestIdRef.current + 1;
+    deletePreviewRequestIdRef.current = requestId;
+    setFullDeleteWarning(null);
+    setFullDeleteAffectedLinkIds([]);
+    setIsWarningLoading(true);
+    try {
+      const [preview] = await Promise.all([
+        fetchGuardianDeletePreview(deletingGuardian.id),
+        fetchGuardians(),
+      ]);
+      if (deletePreviewRequestIdRef.current !== requestId) return;
+      setFullDeleteWarning(preview.warning);
+      setFullDeleteAffectedLinkIds(preview.affectedLinkIds);
+    } finally {
+      if (deletePreviewRequestIdRef.current === requestId) {
+        setIsWarningLoading(false);
+      }
+    }
+  };
+
   // Confirm the full delete (force): removes the guardian and all of its links.
   const handleConfirmFullDelete = async () => {
     if (!deletingGuardian || !fullDeleteWarning) return;
@@ -718,6 +669,9 @@ export default function StudentGuardianManager({
       await deleteErrors.show(err, {
         object: "das Löschen der Person",
         retry: () => latestFullDeleteRef.current(),
+        // Links changed since the preview: the dialog shows the new set
+        // before anything can be confirmed again (ADR 0311).
+        reload: reloadFullDeletePreview,
       });
     } finally {
       setIsDeleting(false);
@@ -938,6 +892,7 @@ export default function StudentGuardianManager({
             : undefined
         }
         initialData={editingGuardian}
+        onReload={editingGuardian ? reloadEditingGuardian : undefined}
         mode={editingGuardian ? "edit" : "create"}
       />
 

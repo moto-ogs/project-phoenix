@@ -491,6 +491,34 @@ Die Einzelheiten (`billedChildHolds`, eine reine Funktion):
     sonst einem anderen Vertrag des Kindes den Monat, ohne dass die Vorschau
     es zeigt.
 
+- **S12 Behaltene Festsetzung ohne Preis (#7952).** Behält der Bescheid-Lauf
+  die Festsetzung eines Vertrags, dem ein Preis fehlt, rechnet sie weiter ab,
+  was sie festgesetzt hat, auch an Tagen, an denen ihr Vertrag nicht mehr
+  läuft. Diese Tage sind veraltet wie bei einer Rechnung (S2). Würde ein
+  anderer Vertrag des Kindes ohne behaltene Festsetzung einen solchen Tag neu
+  festsetzen, hält schon die erste Rechnung des Monats das Kind zurück (S3),
+  wie in #7892 entschieden. Bisher setzte der Lauf diese Tage zweimal fest:
+  Vertrag A ohne Preis läuft heute vom 1. bis 14., sein Bescheid setzte den
+  ganzen Monat fest (40,00 €); Vertrag B läuft vom 15. bis 31. und hätte
+  32,90 € bekommen, 40,00 € * 17/31 = 21,94 € zu viel. Zurückgehalten werden
+  die anderen Verträge des Kindes; sie behalten ihre bisherige Festsetzung
+  oder bleiben ohne sie offen (S11). Der Vertrag ohne Preis bleibt unter
+  „Ohne Preis“ und behält seine Festsetzung. Die Prüfung nennt das Kind mit
+  eigenem Grund `unpriced_notice` und dem behaltenen Bescheid, in der Karte
+  „Preis fehlt – Kind bekommt keinen neuen Bescheid“: Der Ausweg ist der
+  Preis, nicht ein Storno; danach rechnet die Vorschau den Monat neu. Weil die
+  erste Rechnung entscheidet, gilt weiter: Die zweite hält niemanden neu
+  zurück. Verworfen wurde, die behaltene Festsetzung nur für die Tage zu
+  behalten, an denen ihr Vertrag heute läuft: Das änderte eine Festsetzung
+  ohne Preis und bräuchte eine fachliche Entscheidung. Ein Monatslauf kennt
+  den Grund nicht, `care_run_holds` bleibt unverändert. Grenze: Hat der
+  andere Vertrag für diese Tage schon eine ausgestellte Monatsrechnung, setzt
+  der Lauf nichts neu fest und hält niemanden zurück; die behaltene
+  Festsetzung und die Rechnung bleiben, wie sie sind. Behält der
+  zurückgehaltene Vertrag selbst eine frühere Festsetzung, bleibt auch sie
+  (S11): Der Lauf setzt nichts zusätzlich fest, behebt eine schon bestehende
+  Doppelung aber erst mit dem Preis.
+
 **Grenzen.** Ein Vertrag außerhalb des Monats ohne Kinderakte und ohne
 Geburtsdatum hat keine Identität (#7863) und hält kein Kind. Haben beide
 Verträge eines Schulwechsels schon eine Rechnung (ausgestellt vor diesem
@@ -498,11 +526,7 @@ Nachtrag), legt moto sie nicht zusammen und nennt nichts. Wechselt ein Zwilling
 die Schule, legt moto nicht zusammen (#7874) und hält darum auch nicht.
 Rechnet eine Rechnung ein Modul ab, das ihr Vertrag nicht mehr bucht, während
 er an den Tagen ein anderes Modul abrechnet, gilt sie nicht als veraltet.
-Behält im Bescheid-Lauf bei „anteilig“ ein Vertrag ohne Preis seine alte
-Festsetzung für den ganzen Monat, während ein anderer Vertrag des Kindes den
-15. bis 31. neu festsetzt, sind diese Tage zweimal festgesetzt (im Beispiel
-40,00 € * 17/31 = 21,94 €). Das war vor diesem Nachtrag genauso; es endet,
-sobald der alte Vertrag einen Preis hat.
+Die frühere Grenze „behaltene Festsetzung ohne Preis“ regelt S12.
 
 **Verworfen.**
 

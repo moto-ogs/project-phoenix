@@ -33,7 +33,10 @@ func TestPickupResetToOfferingRemovesTheStaffTimeThroughTheRoute(t *testing.T) {
 	_, account := testpkg.CreateTestStaffWithAccount(t, tc.db, "Gehzeit", "Leitung")
 	claims, perms := testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"}
 
-	staffTime := map[string]any{"schedules": []map[string]any{{"weekday": 1, "pickup_time": "15:45"}}}
+	staffTime := map[string]any{
+		"schedules":        []map[string]any{{"weekday": 1, "pickup_time": "15:45"}},
+		"expected_version": weeklyPlanVersion(t, tc, child.ID),
+	}
 	rr := authExec(t, tc, testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/%d/pickup-schedules", child.ID), staffTime), claims, perms)
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 	require.Equal(t, 1, staffPickupRows(t, tc, child.ID, 1))

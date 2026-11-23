@@ -37,6 +37,7 @@ import { Button } from "~/components/ui/button";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import {
   DatabaseForm,
+  draftSubmitBlock,
   formValuesFor,
 } from "~/components/database/database-form";
 import { DatabaseFormModal } from "~/components/database/database-form-modal";
@@ -718,6 +719,7 @@ export function CatalogPage<T extends CatalogItem>({
                           ...edit.draft,
                         },
                         setValues: edit.setDraft,
+                        blocked: draftSubmitBlock(edit),
                       }
                     : undefined
                 }

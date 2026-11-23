@@ -87,8 +87,8 @@ type PickupAdjustmentDependencies struct {
 	Today       func() calendar.Date
 }
 
-// NewPickupAdjustments composes the pickup adjustment over the tenant runtime.
-func NewPickupAdjustments(deps PickupAdjustmentDependencies) (careplan.PickupAdjustments, error) {
+// NewPickupAdjustments composes the pickup adjustment (and careplan.WeeklyPlans).
+func NewPickupAdjustments(deps PickupAdjustmentDependencies) (*application.PickupAdjustments, error) {
 	return application.NewPickupAdjustments(application.PickupAdjustmentDependencies{
 		PickupSchedules: deps.PickupSchedules, ArrivalSchedules: deps.ArrivalSchedules, Records: deps.Records,
 		Baselines: deps.Baselines, Offerings: deps.Offerings, Settings: deps.Settings, Audit: deps.Audit,

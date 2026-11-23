@@ -3,7 +3,10 @@
 // gibt zwei Fälle mit verschiedenem Ausweg: Der Monat ist schon abgerechnet
 // (prüfen, sonst nichts tun), oder die Rechnung enthält nur die Mensa (die
 // Betreuung fehlt, die Rechnung muss storniert werden). Kein Text darf beim
-// zweiten Fall „nichts tun“ oder „verwerfen“ nahelegen.
+// zweiten Fall „nichts tun“ oder „verwerfen“ nahelegen. Im Jahreslauf gibt es
+// einen dritten (#7952): Einem Vertrag des Kindes fehlt ein Preis, sein
+// bisheriger Bescheid gilt weiter und setzt Tage fest, die ein anderer Vertrag
+// neu festsetzen würde. Hier fehlt der Preis, auch das ist kein „nichts tun“.
 
 import type { CareBilledChild } from "~/lib/traeger-care-billing-api";
 
@@ -13,10 +16,19 @@ export function splitBilledChildren(children: readonly CareBilledChild[]): {
   readonly billed: CareBilledChild[];
   /** Their invoice carries only the Mensa: the care is not billed. */
   readonly mealOnly: CareBilledChild[];
+  /** A contract of theirs has no price and keeps its notice (Jahreslauf). */
+  readonly unpricedNotice: CareBilledChild[];
 } {
   return {
-    billed: children.filter((child) => child.reason !== "meal_only_invoice"),
+    billed: children.filter(
+      (child) =>
+        child.reason !== "meal_only_invoice" &&
+        child.reason !== "unpriced_notice",
+    ),
     mealOnly: children.filter((child) => child.reason === "meal_only_invoice"),
+    unpricedNotice: children.filter(
+      (child) => child.reason === "unpriced_notice",
+    ),
   };
 }
 
@@ -26,10 +38,17 @@ function heldSentences(
   billedText: (one: boolean, count: number) => string,
   afterCancel: (one: boolean) => string,
 ): string[] {
-  const { billed, mealOnly } = splitBilledChildren(children);
+  const { billed, mealOnly, unpricedNotice } = splitBilledChildren(children);
   const sentences: string[] = [];
   if (billed.length > 0) {
     sentences.push(billedText(billed.length === 1, billed.length));
+  }
+  if (unpricedNotice.length > 0) {
+    const one = unpricedNotice.length === 1;
+    sentences.push(
+      `${one ? "Bei einem Kind" : `Bei ${unpricedNotice.length} Kindern`} fehlt ein Preis, siehe unten.`,
+      `Trage ${one ? "ihn" : "die Preise"} in der Preisliste ein. Danach rechnet diese Vorschau den Monat neu.`,
+    );
   }
   if (mealOnly.length > 0) {
     const one = mealOnly.length === 1;
@@ -37,7 +56,7 @@ function heldSentences(
       `${one ? "Bei einem Kind" : `Bei ${mealOnly.length} Kindern`} ist die Betreuung noch nicht abgerechnet, siehe unten.`,
       `Storniere ${one ? "die Rechnung" : "die Rechnungen"}. ${afterCancel(one)}`,
     );
-  } else if (billed.length > 0) {
+  } else if (billed.length > 0 && unpricedNotice.length === 0) {
     // Only when every held child is billed already is nothing left to do.
     sentences.push("Stimmt das, kannst du den Lauf verwerfen.");
   }

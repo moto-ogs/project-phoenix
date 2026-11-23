@@ -53,6 +53,9 @@ type ArrivalNoteResponse struct {
 	CreatedBy ident.ID `json:"created_by"`
 	CreatedAt string   `json:"created_at"`
 	UpdatedAt string   `json:"updated_at"`
+	// Version is the note's read-state token (careplan.ArrivalNoteVersion);
+	// a change sends it back as expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 // ArrivalDataResponse represents combined arrival data
@@ -60,11 +63,19 @@ type ArrivalDataResponse struct {
 	Schedules  []ArrivalScheduleResponse         `json:"schedules"`
 	Exceptions []StudentArrivalExceptionResponse `json:"exceptions"`
 	Notes      []ArrivalNoteResponse             `json:"notes"`
+	// WeeklyPlanVersion is the token of the saved weekly plan; only the save
+	// sets it (ADR 0311).
+	WeeklyPlanVersion string `json:"weekly_plan_version,omitempty"`
 }
 
 // BulkArrivalScheduleRequest represents a request to update all weekly arrival schedules for a student
+// ExpectedVersion is the weekly plan token the plan was read with
+// (weekly_plan_version of GET pickup-schedules, ADR 0311); WeekdayNotes
+// replaces the recurring pickup notes in the same save.
 type BulkArrivalScheduleRequest struct {
-	Schedules []ArrivalScheduleRequestItem `json:"schedules"`
+	Schedules       []ArrivalScheduleRequestItem `json:"schedules"`
+	WeekdayNotes    *[]PickupNoteRequest         `json:"weekday_notes,omitempty"`
+	ExpectedVersion string                       `json:"expected_version"`
 }
 
 // ArrivalScheduleRequestItem represents a single arrival schedule entry in a request
@@ -82,10 +93,23 @@ type StudentArrivalExceptionRequest struct {
 	Reason               *string `json:"reason,omitempty"`
 }
 
-// ArrivalNoteRequest represents a request to create/update an arrival note
+// ArrivalNoteRequest represents a request to create an arrival note
 type ArrivalNoteRequest struct {
 	NoteDate string `json:"note_date"` // YYYY-MM-DD format
 	Content  string `json:"content"`
+}
+
+// ArrivalNoteUpdateRequest changes an arrival note read at ExpectedVersion
+// (version of the note in the read, ADR 0311).
+type ArrivalNoteUpdateRequest struct {
+	NoteDate        string `json:"note_date"` // YYYY-MM-DD format
+	Content         string `json:"content"`
+	ExpectedVersion string `json:"expected_version"`
+}
+
+// Bind implements render.Binder.
+func (r *ArrivalNoteUpdateRequest) Bind(_ *http.Request) error {
+	return validateCareNoteRequest(r.NoteDate, r.Content)
 }
 
 const maxArrivalScheduleDateRangeDays = 7
@@ -109,6 +133,11 @@ func (r *ArrivalNoteRequest) Bind(_ *http.Request) error {
 
 // Bind implements render.Binder for BulkArrivalScheduleRequest
 func (r *BulkArrivalScheduleRequest) Bind(_ *http.Request) error {
+	if r.WeekdayNotes != nil {
+		if err := validateWeekdayPickupNotes(*r.WeekdayNotes); err != nil {
+			return err
+		}
+	}
 	return validateArrivalScheduleItems(r.Schedules)
 }
 
@@ -281,6 +310,7 @@ func mapArrivalNoteToResponse(n *careplan.ArrivalNote) ArrivalNoteResponse {
 		CreatedBy: ident.ID(n.CreatedBy),
 		CreatedAt: n.CreatedAt.Format(time.RFC3339),
 		UpdatedAt: n.UpdatedAt.Format(time.RFC3339),
+		Version:   careplan.ArrivalNoteVersion(*n),
 	}
 }
 

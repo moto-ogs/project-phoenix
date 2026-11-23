@@ -236,7 +236,7 @@ export default function GuardiansPanel({
     (resource) =>
       resource.data === undefined && (!resource.error || resource.isValidating),
   );
-  const { show: showActionError } = useApiErrorDisplay();
+  const { show: showActionError, showMessage } = useApiErrorDisplay();
   const [busy, setBusy] = useState(false);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
   // Bestaetigung fuer den Ausbau eines eingeschraenkten Kontakts (#2172).
@@ -595,6 +595,23 @@ export default function GuardiansPanel({
           mode="edit"
           studentId={studentId}
           guardian={editingContact}
+          onReload={async () => {
+            // After a refusal (ADR 0311) the form shows the stored contact;
+            // a failed read rejects and shows as a load error.
+            const fresh = await listChildGuardians(studentId);
+            await mutateGuardians(fresh, { revalidate: false });
+            const stored = fresh.find(
+              (g) =>
+                g.guardian_profile_id === editingContact.guardian_profile_id,
+            );
+            if (!stored) {
+              // Removed from the child since: nothing stored to show, so
+              // the form closes instead of keeping the refused input.
+              setEditingContact(null);
+              showMessage(t("guardians.contactGone"));
+            }
+            return stored;
+          }}
           onClose={() => setEditingContact(null)}
           onSaved={() => handleSaved(t("guardians.contactSaved"))}
         />
@@ -1123,10 +1140,35 @@ type PhoneDraft = Required<parentMeContract.guardianPhoneRequest> & {
   id: string;
 };
 
+// The form's phone rows of a stored contact, or one empty row.
+function phoneDrafts(
+  guardian: parentMeContract.childGuardianResponse | undefined,
+): PhoneDraft[] {
+  if (guardian?.phones && guardian.phones.length > 0) {
+    return guardian.phones.map((p) => ({
+      id: `${guardian.guardian_profile_id}-${p.phone_number}-${p.phone_type}`,
+      phone_number: p.phone_number,
+      phone_type: p.phone_type || "mobile",
+      label: p.label ?? null,
+      is_primary: p.is_primary,
+    }));
+  }
+  return [
+    {
+      id: newPhoneDraftId(),
+      phone_number: "",
+      phone_type: "mobile",
+      label: null,
+      is_primary: true,
+    },
+  ];
+}
+
 function ContactModal({
   mode,
   studentId,
   guardian,
+  onReload,
   withoutCarePlace = false,
   canManagePickup = false,
   canManageEmergencyContact = canManagePickup,
@@ -1136,6 +1178,11 @@ function ContactModal({
   mode: "create" | "edit";
   studentId: string;
   guardian?: parentMeContract.childGuardianResponse;
+  /**
+   * Edit: reads the stored contact after a refused save; rejects when the
+   * read fails (ADR 0311).
+   */
+  onReload?: () => Promise<parentMeContract.childGuardianResponse | undefined>;
   withoutCarePlace?: boolean;
   canManagePickup?: boolean;
   canManageEmergencyContact?: boolean;
@@ -1165,25 +1212,23 @@ function ContactModal({
   );
   const [isEmergency, setIsEmergency] = useState(false);
   const [pickupNotes, setPickupNotes] = useState("");
-  const [phones, setPhones] = useState<PhoneDraft[]>(
-    guardian?.phones && guardian.phones.length > 0
-      ? guardian.phones.map((p) => ({
-          id: `${guardian.guardian_profile_id}-${p.phone_number}-${p.phone_type}`,
-          phone_number: p.phone_number,
-          phone_type: p.phone_type || "mobile",
-          label: p.label ?? null,
-          is_primary: p.is_primary,
-        }))
-      : [
-          {
-            id: newPhoneDraftId(),
-            phone_number: "",
-            phone_type: "mobile",
-            label: null,
-            is_primary: true,
-          },
-        ],
+  const [phones, setPhones] = useState<PhoneDraft[]>(() =>
+    phoneDrafts(guardian),
   );
+  // The version of the contact the form shows; the save sends it back.
+  const [version, setVersion] = useState(guardian?.version ?? "");
+  // After a refusal: the stored contact replaces the input.
+  const showStored = (stored: parentMeContract.childGuardianResponse) => {
+    setFirstName(stored.first_name);
+    setLastName(stored.last_name);
+    setSalutation(knownEnum(SALUTATIONS, stored.salutation) ?? "");
+    setEmail(stored.email ?? "");
+    setStreet(stored.address_street ?? "");
+    setCity(stored.address_city ?? "");
+    setPostal(stored.address_postal_code ?? "");
+    setPhones(phoneDrafts(stored));
+    setVersion(stored.version ?? "");
+  };
   const [busy, setBusy] = useState(false);
   const tError = useTranslations("errorCatalog");
   const formRef = useRef<HTMLDivElement>(null);
@@ -1275,11 +1320,10 @@ function ContactModal({
         };
         await createGuardianContact(studentId, createPayload);
       } else if (guardian) {
-        await updateGuardianContact(
-          studentId,
-          guardian.guardian_profile_id,
-          payload,
-        );
+        await updateGuardianContact(studentId, guardian.guardian_profile_id, {
+          ...payload,
+          expected_version: version,
+        });
       }
       onSaved(requestsPickup);
     } catch (err) {
@@ -1289,6 +1333,13 @@ function ContactModal({
       void show(err, {
         object: t("guardians.errorObjectContact"),
         retry: () => void saveRef.current(),
+        // Changed since the form opened: it shows the stored contact.
+        reload: onReload
+          ? async () => {
+              const stored = await onReload();
+              if (stored) showStored(stored);
+            }
+          : undefined,
       });
     } finally {
       setBusy(false);

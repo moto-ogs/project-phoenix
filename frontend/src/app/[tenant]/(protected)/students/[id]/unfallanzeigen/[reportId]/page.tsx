@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { AccidentReportCreateModal } from "~/components/students/accident-report-create-modal";
@@ -16,7 +23,11 @@ import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink, buttonClassName } from "~/components/ui/button";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EditActions } from "~/components/ui/edit-actions";
-import { FormErrorAlert } from "~/components/ui/form-error-alert";
+import {
+  FormErrorAlert,
+  LoadErrorAlert,
+} from "~/components/ui/form-error-alert";
+import type { FormErrorInput } from "~/components/ui/form-error";
 import { SectionCard } from "~/components/ui/section-card";
 import {
   SignaturePad,
@@ -25,6 +36,8 @@ import {
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useApiFormError, useApiLoadError } from "~/contexts/ToastContext";
+import { isReadStateRefusal } from "~/lib/api-error";
+import { useReadDraftLoadError } from "~/lib/hooks/use-swr-load-error";
 import { fetchStudent } from "~/lib/student-api";
 import { useStudentHistoryBreadcrumb } from "~/lib/breadcrumb-context";
 import { hasPermission } from "~/lib/auth-utils";
@@ -40,7 +53,8 @@ import {
   type StudentDocument,
   type StudentDocumentList,
 } from "~/lib/student-documents-api";
-import { useSWRAuth } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
+import { useDraftOn, type ReadDraft } from "~/lib/swr/read-draft";
 import { studentKeys } from "~/lib/swr/portal-keys";
 
 const ACCIDENT_REPORT_INFO =
@@ -72,6 +86,15 @@ function useStudentName(studentId: string): string | null {
   return data ?? null;
 }
 
+function findReport(
+  list: StudentDocumentList | undefined,
+  reportId: string,
+): StudentDocument | undefined {
+  return list?.documents.find(
+    (doc) => doc.id === reportId && doc.accidentReport,
+  );
+}
+
 function orDash(value: string): string {
   return value.trim() ? value : "–";
 }
@@ -83,9 +106,21 @@ export default function AccidentReportPage() {
   const { data: session } = useSession();
   const canManage = hasPermission(session, "student_accidents:manage");
 
-  const { data, isLoading, error, mutate } = useSWRAuth<StudentDocumentList>(
+  const documents = useSWRAuth<StudentDocumentList>(
     studentKeys.documents(studentId),
     () => studentDocumentsService.list(studentId),
+  );
+  const { data, isLoading, error, mutate } = documents;
+  // A refusal reads the stored report again; this read rejects when it
+  // fails, SWR's own `mutate()` would resolve with the old list (ADR 0311).
+  const documentsRef = useRef(documents);
+  useLayoutEffect(() => {
+    documentsRef.current = documents;
+  });
+  const reloadReport = useCallback(
+    async () =>
+      findReport(await revalidateOrThrow(documentsRef.current), reportId),
+    [reportId],
   );
   const load = useApiLoadError();
   const showLoadError = load.show;
@@ -101,9 +136,7 @@ export default function AccidentReportPage() {
     }
   }, [error, mutate, showLoadError, clearLoadError]);
 
-  const document: StudentDocument | undefined = data?.documents.find(
-    (doc) => doc.id === reportId && doc.accidentReport,
-  );
+  const document = findReport(data, reportId);
   const report = document?.accidentReport ?? null;
   const backHref = `/students/${studentId}?tab=dokumente`;
   const studentName = useStudentName(studentId);
@@ -112,7 +145,37 @@ export default function AccidentReportPage() {
     referrer: "/students/search",
   });
 
-  const [editing, setEditing] = useState<AccidentReportDraft | null>(null);
+  // The change is a draft on the report as it was when „Ändern“ opened it;
+  // the save sends that version, a refusal shows the stored report again
+  // (ADR 0311).
+  const [editing, setEditing] = useState(false);
+  const editFormRef = useRef<HTMLFormElement>(null);
+  const editErrors = useApiFormError(editFormRef);
+  const reportDraft = useDraftOn<
+    StudentDocument,
+    AccidentReportDraft,
+    string,
+    void
+  >(
+    {
+      opening: editing ? reportId : null,
+      data: document,
+      reload: reloadReport,
+    },
+    {
+      token: (doc) => doc.version ?? "",
+      toDraft: (doc) =>
+        draftFromReport(doc.accidentReport as AccidentReportDetails),
+    },
+  );
+  // Signed by someone else while this page edited it: once the draft holds
+  // nothing typed (after the refusal's reload, or an untouched draft), the
+  // edit state ends and „Korrektur anlegen“ is offered. Typed input is never
+  // dropped silently; its save is refused and the reload ends the edit then.
+  // The refusal's message lives here, so it outlasts the form it came from.
+  if (editing && report && report.status !== "open" && !reportDraft.touched) {
+    setEditing(false);
+  }
   const [correcting, setCorrecting] = useState(false);
 
   return (
@@ -203,26 +266,35 @@ export default function AccidentReportPage() {
             report={report}
             canManage={canManage && !editing}
             onSigned={() => void mutate()}
+            reload={reloadReport}
             onCorrect={() => setCorrecting(true)}
           />
-          {editing ? (
+          {editing && report.status === "open" ? (
             <EditReportSection
               studentId={studentId}
               reportId={reportId}
-              draft={editing}
-              onDraftChange={setEditing}
+              reportDraft={reportDraft}
+              formRef={editFormRef}
+              formError={editErrors}
               onDone={() => {
-                setEditing(null);
+                setEditing(false);
                 void mutate();
               }}
-              onCancel={() => setEditing(null)}
+              onCancel={() => {
+                editErrors.clear();
+                setEditing(false);
+              }}
             />
           ) : (
             <ReportDetails
               report={report}
+              error={editErrors.error}
               onEdit={
                 canManage && report.status === "open"
-                  ? () => setEditing(draftFromReport(report))
+                  ? () => {
+                      editErrors.clear();
+                      setEditing(true);
+                    }
                   : undefined
               }
             />
@@ -235,8 +307,14 @@ export default function AccidentReportPage() {
 
 function ReportDetails({
   report,
+  error,
   onEdit,
-}: Readonly<{ report: AccidentReportDetails; onEdit?: () => void }>) {
+}: Readonly<{
+  report: AccidentReportDetails;
+  /** A refused change whose edit state has ended (signed meanwhile). */
+  error: FormErrorInput;
+  onEdit?: () => void;
+}>) {
   return (
     <SectionCard
       title="Angaben zum Unfall"
@@ -255,6 +333,7 @@ function ReportDetails({
         ) : undefined
       }
     >
+      <FormErrorAlert message={error} />
       <DataGrid>
         <DataField label="Unfallzeitpunkt">
           {stamp(report.occurredAt)}
@@ -290,23 +369,27 @@ function ReportDetails({
 function EditReportSection({
   studentId,
   reportId,
-  draft,
-  onDraftChange,
+  reportDraft,
+  formRef,
+  formError,
   onDone,
   onCancel,
 }: Readonly<{
   studentId: string;
   reportId: string;
-  draft: AccidentReportDraft;
-  onDraftChange: (draft: AccidentReportDraft) => void;
+  reportDraft: ReadDraft<StudentDocument, AccidentReportDraft, string, void>;
+  formRef: RefObject<HTMLFormElement | null>;
+  /** The page's, so a refusal that ends the edit state stays on screen. */
+  formError: ReturnType<typeof useApiFormError>;
   onDone: () => void;
   onCancel: () => void;
 }>) {
   const [saving, setSaving] = useState(false);
-  const formRef = useRef<HTMLFormElement>(null);
-  const formError = useApiFormError(formRef);
+  const loadError = useReadDraftLoadError(reportDraft, "die Unfallanzeige");
+  const draft = reportDraft.draft;
 
   const save = async () => {
+    if (!draft) return;
     const errors = accidentReportDraftErrors(draft);
     if (Object.keys(errors).length > 0) {
       formError.invalid("Bitte fülle die markierten Felder aus.", errors);
@@ -314,23 +397,33 @@ function EditReportSection({
     }
     setSaving(true);
     formError.clear();
-    try {
-      await studentAccidentReportsService.update(
+    const result = await reportDraft.submit((version, current) =>
+      studentAccidentReportsService.update(
         studentId,
         reportId,
-        fieldsFromDraft(draft),
-      );
+        fieldsFromDraft(current),
+        version,
+      ),
+    );
+    setSaving(false);
+    if (result.ok) {
       onDone();
-    } catch (err) {
-      logger.error("accident_report_update_failed", {
-        student_id: studentId,
-        report_id: reportId,
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await formError.show(err, { object: "die Unfallanzeige" });
-    } finally {
-      setSaving(false);
+      return;
     }
+    logger.error("accident_report_update_failed", {
+      student_id: studentId,
+      report_id: reportId,
+      error:
+        result.error instanceof Error
+          ? result.error.message
+          : String(result.error),
+    });
+    // After a refusal the form holds the stored report; the message waits
+    // for that read and names a failed one instead.
+    await formError.show(result.error, {
+      object: "die Unfallanzeige",
+      reload: result.reload,
+    });
   };
 
   return (
@@ -343,14 +436,23 @@ function EditReportSection({
         }}
         className="space-y-4"
       >
+        {loadError ? <LoadErrorAlert error={loadError} /> : null}
         <FormErrorAlert message={formError.error} />
-        <AccidentReportFormFields
-          draft={draft}
-          onChange={onDraftChange}
-          fieldError={formError.fieldError}
-          disabled={saving}
+        {draft ? (
+          <AccidentReportFormFields
+            draft={draft}
+            onChange={reportDraft.setDraft}
+            fieldError={formError.fieldError}
+            disabled={saving}
+          />
+        ) : null}
+        <EditActions
+          onCancel={onCancel}
+          saving={saving}
+          saveType="submit"
+          disabled={!reportDraft.canSubmit}
+          disabledReason="Der gespeicherte Stand der Unfallanzeige wird zuerst geladen."
         />
-        <EditActions onCancel={onCancel} saving={saving} saveType="submit" />
       </form>
     </SectionCard>
   );
@@ -363,6 +465,7 @@ function SignatureSection({
   report,
   canManage,
   onSigned,
+  reload,
   onCorrect,
 }: Readonly<{
   studentId: string;
@@ -371,6 +474,8 @@ function SignatureSection({
   report: AccidentReportDetails;
   canManage: boolean;
   onSigned: () => void;
+  /** Reads the stored report again; rejects when that read fails. */
+  reload: () => Promise<unknown>;
   onCorrect: () => void;
 }>) {
   const [signature, setSignature] = useState<SignatureValue | null>(null);
@@ -392,7 +497,11 @@ function SignatureSection({
         report_id: reportId,
         error: err instanceof Error ? err.message : String(err),
       });
-      await formError.show(err, { object: "die Unterschrift" });
+      // Refused because the report changed since it was read: the signature
+      // is dropped and the stored report shows, to be read and signed again.
+      // The message waits for that read (ADR 0311).
+      if (isReadStateRefusal(err)) setSignature(null);
+      await formError.show(err, { object: "die Unterschrift", reload });
     } finally {
       setBusy(false);
       if (fileRef.current) fileRef.current.value = "";
@@ -417,6 +526,8 @@ function SignatureSection({
           ) : undefined
         }
       >
+        {/* A signature refused because someone else signed first. */}
+        <FormErrorAlert message={formError.error} />
         <div className="flex flex-wrap items-center gap-3">
           <StatusBadge tone="green" label="Unterschrieben" />
           <span className="text-sm text-gray-700">
@@ -488,6 +599,7 @@ function SignatureSection({
                         studentId,
                         reportId,
                         signature,
+                        document.version ?? "",
                       ),
                     "accident_report_sign_failed",
                   );
@@ -527,6 +639,7 @@ function SignatureSection({
                         studentId,
                         reportId,
                         file,
+                        document.version ?? "",
                       ),
                     "accident_report_paper_upload_failed",
                   );

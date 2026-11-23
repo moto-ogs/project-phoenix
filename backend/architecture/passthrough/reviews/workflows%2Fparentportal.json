@@ -531,11 +531,6 @@
       "reason": "Workflow step (#4696): it resolves the children whose relationship grants parent_portal.enrollment.submit, checks the contract and its payer and renders the mandate text in that Träger's transaction."
     },
     {
-      "decision": "0090",
-      "id": "workflows/parentportal/internal/care/Service.RequireCareRunningForUpdate",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
       "decision": "0171",
       "id": "workflows/parentportal/internal/care/Service.RevokeSEPAMandate",
       "reason": "Workflow step (#4696): it resolves the children whose relationship grants parent_portal.enrollment.submit, checks the contract and its payer and revokes the family's mandate in that Träger's transaction."
@@ -769,6 +764,11 @@
       "decision": "0090",
       "id": "workflows/parentportal/portalStudentReads.FindByID",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0313",
+      "id": "workflows/parentportal/portalStudentReads.FindByIDForNoKeyUpdate",
+      "reason": "ADR 0313 (#7956): binds the root's NO KEY UPDATE student lock callback to the native care port for the guard of a meal write, the same shape as the registered FindByIDForUpdate."
     },
     {
       "decision": "0090",

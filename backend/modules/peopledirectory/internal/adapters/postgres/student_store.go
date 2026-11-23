@@ -61,6 +61,21 @@ func (s *StudentStore) Lock(ctx context.Context, id int64) (bool, domain.Operati
 	return found, stats, err
 }
 
+// LockNoKeyUpdate takes the student row FOR NO KEY UPDATE: it conflicts
+// with Lock and with every update of the row, not with the key share a
+// foreign key of a row referencing the child takes.
+func (s *StudentStore) LockNoKeyUpdate(ctx context.Context, id int64) (bool, domain.OperationStats, error) {
+	_, scope, err := s.database(ctx)
+	if err != nil {
+		return false, domain.OperationStats{}, err
+	}
+	if scope.TenantID <= 0 {
+		return false, domain.OperationStats{}, errors.New("people directory: tenant is required to lock a student")
+	}
+	_, found, stats, err := s.FindRecord(ctx, id, "NO KEY UPDATE")
+	return found, stats, err
+}
+
 func requireStudentWriteTenant(tenantID int64) error {
 	if tenantID <= 0 {
 		return errors.New("people directory postgres: tenant is required to write students")

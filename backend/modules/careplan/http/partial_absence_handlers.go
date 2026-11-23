@@ -238,6 +238,9 @@ func (rs *Resource) renderPartialAbsenceError(w http.ResponseWriter, r *http.Req
 	renderError(w, r, partialAbsenceErrorRenderer(err))
 }
 
+// registerPartialAbsenceBroadcasts tells, after commit, the open staff tabs
+// and the child's guardians that the child's pickup side changed: a partial
+// absence, or the weekday notes a weekly plan save replaced.
 func (rs *Resource) registerPartialAbsenceBroadcasts(r *http.Request, studentID int64) {
 	tenantID := tenant.FromContext(r.Context())
 	tenant.RegisterAfterCommit(r.Context(), func() {

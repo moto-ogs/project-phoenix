@@ -7,9 +7,6 @@ import (
 )
 
 var (
-	// ErrGuardianDeletePreviewChanged indicates the affected guardian links no
-	// longer match the set the admin confirmed.
-	ErrGuardianDeletePreviewChanged = errors.New("die Verknüpfungen haben sich seit der Vorschau geändert. Bitte erneut prüfen")
 	// ErrGuardianForceDeleteRequiresAdmin indicates a full delete of a guardian
 	// still linked to students was requested by a non-admin. The full delete
 	// reaches across siblings the caller may not supervise, so it is restricted

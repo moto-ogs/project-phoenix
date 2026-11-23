@@ -69,9 +69,11 @@ func TestStaffPickupWrite_BroadcastsPickupScheduleChanged(t *testing.T) {
 	t.Run("weekly_schedule_update", func(t *testing.T) {
 		student := testpkg.CreateTestStudent(t, tc.db, "PickupCast", "Weekly", "PC1")
 
+		version := weeklyPlanVersion(t, tc, student.ID)
 		tc.broadcaster.Reset()
 		body := map[string]any{
-			"schedules": []map[string]any{{"weekday": 1, "pickup_time": "15:30"}},
+			"schedules":        []map[string]any{{"weekday": 1, "pickup_time": "15:30"}},
+			"expected_version": version,
 		}
 		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/pickup-schedules", student.ID), body)
 		rr := authExec(t, tc, req, claims, []string{"admin:*"})

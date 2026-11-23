@@ -84,11 +84,18 @@ func (s *regularBookingServer) handle(w seedHTTPResponseWriter, r *seedHTTPReque
 	case r.URL.Path == "/api/enrollment/phases/77":
 		s.events = append(s.events, fmt.Sprintf("audience %v", body["audience"]))
 		_, _ = fmt.Fprint(w, `{"status":"success","data":{}}`)
+	case r.Method == "PUT" && strings.HasPrefix(r.URL.Path, "/api/guardians/students/"):
+		parts := strings.Split(r.URL.Path, "/")
+		relationship, _ := body["relationship"].(map[string]any)
+		assert.Equal(s.t, "8"+parts[4], parts[6], "the staff save names the primary guardian")
+		assert.Equal(s.t, "v"+parts[4], body["expected_version"], "the staff save sends the version it read (ADR 0311)")
+		s.events = append(s.events, fmt.Sprintf("relationship %s %v", parts[4], relationship["relationship_type"]))
+		_, _ = fmt.Fprint(w, `{"status":"success","data":{}}`)
 	case strings.HasPrefix(r.URL.Path, "/api/guardians/students/"):
 		studentID := strings.Split(r.URL.Path, "/")[4]
 		_, _ = fmt.Fprintf(w, `{"status":"success","data":[`+
-			`{"guardian":{"first_name":"Oma","last_name":"X","email":"oma@example.test"},"relationship_id":1,"relationship_type":"relative","is_primary":false},`+
-			`{"guardian":{"first_name":"Eva","last_name":"Muster","email":"eva.%s@example.test"},"relationship_id":%s,"relationship_type":"parent","is_primary":true}]}`, studentID, studentID)
+			`{"guardian":{"id":"1","first_name":"Oma","last_name":"X","email":"oma@example.test"},"relationship_id":1,"relationship_type":"relative","is_primary":false},`+
+			`{"guardian":{"id":"8%s","first_name":"Eva","last_name":"Muster","email":"eva.%s@example.test"},"relationship_id":%s,"relationship_type":"parent","is_primary":true,"version":"v%s"}]}`, studentID, studentID, studentID, studentID)
 	case r.URL.Path == "/api/enrollment/phases/77/manual-approved-enrollments":
 		assert.Equal(s.t, "5", body["form_schema_id"], "the booking names the form version it filled")
 		assert.Equal(s.t, "form-5", body["expected_terms_fingerprint"], "the booking sends the token of the form it filled")
@@ -100,9 +107,6 @@ func (s *regularBookingServer) handle(w seedHTTPResponseWriter, r *seedHTTPReque
 		}
 		s.events = append(s.events, "book "+studentID)
 		_, _ = fmt.Fprintf(w, `{"status":"success","data":{"request_id":"9","child_id":"9","student_id":%q,"status":"approved"}}`, studentID)
-	case strings.HasPrefix(r.URL.Path, "/api/guardians/relationships/"):
-		s.events = append(s.events, fmt.Sprintf("relationship %s %v", strings.Split(r.URL.Path, "/")[4], body["relationship_type"]))
-		_, _ = fmt.Fprint(w, `{"status":"success","data":{}}`)
 	default:
 		s.t.Errorf("unexpected request %s %s", r.Method, r.URL.Path)
 		w.WriteHeader(seedHTTPStatusNotFound)

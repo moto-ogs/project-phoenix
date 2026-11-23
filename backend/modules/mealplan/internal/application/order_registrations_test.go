@@ -50,7 +50,7 @@ func TestOrderBatchFailureKeepsDailyErrorPriority(t *testing.T) {
 					return nil, rosterErr
 				}
 				return []mealplan.ParticipantCandidate{{StudentID: 1}}, nil
-			}, nil, unavailableParticipantDays)
+			}, nil, unavailableParticipantDays, nil)
 			service := &Service{store: failedParticipationBatch{batchErr: batchErr, dailyErr: tc.daily}, directory: directory}
 			rules := defaultOrderingRules("09:00")
 			seen := registrations{}
@@ -88,7 +88,7 @@ func TestOrderRosterBatchIncludesLaterChildrenBeforeParticipation(t *testing.T) 
 			monday.String():  {{StudentID: 1}},
 			tuesday.String(): {{StudentID: 1}, {StudentID: 2}},
 		}, nil
-	})
+	}, nil)
 	store := &rosterBatchParticipation{t: t}
 	service := &Service{directory: directory, store: store}
 	rules := defaultOrderingRules("09:00")

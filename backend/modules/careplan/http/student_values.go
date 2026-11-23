@@ -7,12 +7,6 @@ import (
 	tenant "github.com/moto-ogs/project-phoenix/tenant"
 )
 
-// WeekdayPickupNoteReplacer owns the one atomic write that replaces the
-// recurring day notes for a child. It deliberately excludes dated notes.
-type WeekdayPickupNoteReplacer interface {
-	ReplaceWeekdayPickupNotes(context.Context, int64, int64, map[int]string) error
-}
-
 func (rs *Resource) todayDate() calendar.Date {
 	return calendar.DateFromTime(rs.Now())
 }

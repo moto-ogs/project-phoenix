@@ -158,6 +158,29 @@ func (r childReadRig) sharingVersion(t *testing.T, f childReadFamily) string {
 	return read.Data.Version
 }
 
+// contactVersion reads the version of the family's own contact as the
+// guardian list hands it to the contact form (ADR 0311).
+func (r childReadRig) contactVersion(t *testing.T, f childReadFamily) string {
+	t.Helper()
+	rec := testutil.ExecuteRequest(r.router, testutil.NewAuthenticatedRequest(t, http.MethodGet, childPath(f, "/guardians"), nil, testutil.WithJWTBearer(f.token)))
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	var read struct {
+		Data []struct {
+			GuardianProfileID string `json:"guardian_profile_id"`
+			Version           string `json:"version"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &read))
+	for _, guardian := range read.Data {
+		if guardian.GuardianProfileID == fmt.Sprint(f.GuardianProfileID) {
+			require.NotEmpty(t, guardian.Version)
+			return guardian.Version
+		}
+	}
+	t.Fatalf("own contact %d is not in the child's guardian list", f.GuardianProfileID)
+	return ""
+}
+
 // masterDataVersion is the version the parent list emits for the family's
 // open master-data request.
 func (r childReadRig) masterDataVersion(t *testing.T, f childReadFamily) string {

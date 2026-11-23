@@ -3,6 +3,10 @@ package care
 import (
 	"context"
 	"errors"
+	"slices"
+	"strings"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // callerStudentSets reads the caller's relationships once and returns two
@@ -189,7 +193,54 @@ func projectChildGuardian(profile *GuardianProfile, link *GuardianRelationship, 
 		return g
 	}
 	applyGuardianContactDetails(g, profile, phones)
+	g.Version = guardianContactVersion(profile, phones, isSelf)
 	return g
+}
+
+func primaryRank(phone GuardianPhone) int {
+	if phone.IsPrimary {
+		return 1
+	}
+	return 0
+}
+
+// guardianContactVersion is the read-state token of the contact a parent's
+// edit form shows and saves back whole (ADR 0311): name, the caller's own
+// form of address, e-mail, address and phone list as the parent sees them. A
+// staff correction since the read refuses the edit instead of being undone.
+// It covers shown values only, so a redacted contact gets none.
+func guardianContactVersion(profile *GuardianProfile, phones []*GuardianPhoneNumber, isSelf bool) string {
+	shown := &ChildGuardian{FirstName: profile.FirstName, LastName: profile.LastName, Salutation: ownSalutation(profile, isSelf)}
+	applyGuardianContactDetails(shown, profile, phones)
+	type contact struct {
+		FirstName  string          `json:"first_name"`
+		LastName   string          `json:"last_name"`
+		Salutation string          `json:"salutation,omitempty"`
+		Email      string          `json:"email,omitempty"`
+		Street     string          `json:"street,omitempty"`
+		City       string          `json:"city,omitempty"`
+		PostalCode string          `json:"postal_code,omitempty"`
+		Phones     []GuardianPhone `json:"phones"`
+	}
+	sorted := slices.Clone(shown.Phones)
+	slices.SortFunc(sorted, func(a, b GuardianPhone) int {
+		for _, order := range []int{
+			strings.Compare(a.PhoneNumber, b.PhoneNumber), strings.Compare(a.PhoneType, b.PhoneType),
+			strings.Compare(a.Label, b.Label), primaryRank(a) - primaryRank(b),
+		} {
+			if order != 0 {
+				return order
+			}
+		}
+		return 0
+	})
+	if sorted == nil {
+		sorted = []GuardianPhone{}
+	}
+	return readstate.Fingerprint(contact{
+		FirstName: shown.FirstName, LastName: shown.LastName, Salutation: shown.Salutation, Email: shown.Email,
+		Street: shown.AddressStreet, City: shown.AddressCity, PostalCode: shown.AddressPostalCode, Phones: sorted,
+	})
 }
 
 // ownSalutation shows the form of address only to the person who chose it.

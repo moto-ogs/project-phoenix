@@ -122,6 +122,8 @@ func TestPresenceGroups20ActivitiesQueryBudget(t *testing.T) {
 				for _, supervisor := range supervisors {
 					want.SupervisorIDs = append(want.SupervisorIDs, supervisor.StaffID)
 				}
+				require.NotEmpty(t, row.Version, "the detail read carries the activity's version (ADR 0311)")
+				want.Version = row.Version
 				require.Equal(t, want, row)
 				require.Equal(t, group.Name, row.Name)
 				require.Equal(t, n, row.EnrollmentCount)

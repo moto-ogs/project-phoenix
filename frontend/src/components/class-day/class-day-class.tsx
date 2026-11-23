@@ -49,6 +49,7 @@ import {
 } from "~/lib/homework-feedback";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import { isChangedSinceRead } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import {
   type ClassDayClasses,
@@ -611,6 +612,20 @@ export function ClassDayClass({
   const [handoverAbsent, setHandoverAbsent] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
+  // The handover the dialog was filled from (ADR 0311). A newer read fills
+  // it again only while no child was changed in it.
+  const [handoverVersion, setHandoverVersion] = useState<string | null>(null);
+  const [handoverTouched, setHandoverTouched] = useState(false);
+  const storedHandoverVersion = report?.handover_version ?? "";
+  if (
+    handoverOpen &&
+    !handoverTouched &&
+    handoverVersion !== null &&
+    handoverVersion !== storedHandoverVersion
+  ) {
+    setHandoverVersion(storedHandoverVersion);
+    setHandoverAbsent(initialAbsentIds(rows, Boolean(report?.handover), draft));
+  }
   const handoverSave = useFormModalPending(handoverOpen);
   const savingHandover = handoverSave.pending;
   const handoverErrors = useApiFormError();
@@ -620,9 +635,12 @@ export function ClassDayClass({
   const openHandover = () => {
     handoverErrors.clear();
     setHandoverAbsent(initialAbsentIds(rows, Boolean(report?.handover), draft));
+    setHandoverVersion(storedHandoverVersion);
+    setHandoverTouched(false);
     setHandoverOpen(true);
   };
   const markHandover = (studentId: string, choice: HandoverChoice) => {
+    setHandoverTouched(true);
     setHandoverAbsent((current) => {
       const next = new Set(current);
       if (choice === "absent") next.add(studentId);
@@ -642,6 +660,7 @@ export function ClassDayClass({
           absent: ogsRows
             .filter((row) => handoverAbsent.has(row.student_id))
             .map((row) => row.student_id),
+          expectedVersion: handoverVersion ?? storedHandoverVersion,
         });
         await reportAfterWrite.refresh();
         if (op.isCurrent()) setHandoverOpen(false);
@@ -650,9 +669,19 @@ export function ClassDayClass({
           error: cause instanceof Error ? cause.message : String(cause),
         });
         if (!op.isCurrent()) return;
+        // Another handover of the class was stored since the view was read:
+        // the dialog shows the stored one once it is read, and the same
+        // save would be refused again (ADR 0311).
+        const changed = isChangedSinceRead(cause);
+        if (changed) {
+          setHandoverTouched(false);
+          void reportAfterWrite.refresh();
+        }
         void handoverErrors.show(cause, {
           object: "die Übergabe",
-          retry: () => void retrySaveRef.current.handover(),
+          retry: changed
+            ? undefined
+            : () => void retrySaveRef.current.handover(),
         });
       }
     });

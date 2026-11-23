@@ -195,6 +195,73 @@ type GuardianWithRelationship struct {
 	EmergencyPriority int    `json:"emergency_priority"`
 	IsPayer           bool   `json:"is_payer"`
 	AccountStatus     string `json:"account_status"`
+	// Version is the token of profile, link and phone list a save of the
+	// staff form sends back as expected_version (ADR 0311).
+	Version string `json:"version"`
+}
+
+// GuardianEntryRequest saves the staff form of a child's guardian in one
+// request: profile and link fields that are present, and the full phone list
+// when phone_numbers is present (ADR 0311).
+type GuardianEntryRequest struct {
+	Guardian        GuardianUpdateRequest        `json:"guardian"`
+	Relationship    StudentGuardianUpdateRequest `json:"relationship"`
+	PhoneNumbers    *[]GuardianEntryPhone        `json:"phone_numbers,omitempty"`
+	ExpectedVersion string                       `json:"expected_version"`
+}
+
+// GuardianEntryPhone is one number of the saved list; without id it is new,
+// a stored number missing from the list is deleted.
+type GuardianEntryPhone struct {
+	ID          *ident.ID `json:"id,omitempty"`
+	PhoneNumber string    `json:"phone_number"`
+	PhoneType   string    `json:"phone_type,omitempty"`
+	Label       *string   `json:"label,omitempty"`
+	IsPrimary   bool      `json:"is_primary"`
+}
+
+func (req *GuardianEntryRequest) Bind(_ *http.Request) error {
+	if req.PhoneNumbers == nil {
+		return nil
+	}
+	for _, phone := range *req.PhoneNumbers {
+		if phone.PhoneNumber == "" {
+			return errors.New("phone_number is required")
+		}
+		if phone.PhoneType != "" && !validPhoneTypes[phone.PhoneType] {
+			return errors.New("phone_type must be one of: mobile, home, work, other")
+		}
+	}
+	return nil
+}
+
+func (req *GuardianEntryRequest) edit(studentID, guardianID int64) peopledirectory.GuardianEntryEdit {
+	profile, link := req.Guardian, req.Relationship
+	edit := peopledirectory.GuardianEntryEdit{
+		StudentID: studentID, GuardianProfileID: guardianID, ExpectedVersion: req.ExpectedVersion,
+		Profile: peopledirectory.GuardianProfileEdit{
+			FirstName: profile.FirstName, LastName: profile.LastName, Email: profile.Email,
+			AddressStreet: profile.AddressStreet, AddressCity: profile.AddressCity, AddressPostalCode: profile.AddressPostalCode,
+			PreferredContactMethod: profile.PreferredContactMethod, LanguagePreference: profile.LanguagePreference, Notes: profile.Notes,
+		},
+		Link: peopledirectory.GuardianLinkUpdate{
+			RelationshipType: link.RelationshipType, GuardianRole: link.GuardianRole,
+			IsPrimary: link.IsPrimary, IsEmergencyContact: link.IsEmergencyContact, CanPickup: link.CanPickup,
+			PickupNotes: link.PickupNotes, EmergencyPriority: link.EmergencyPriority,
+		},
+	}
+	if req.PhoneNumbers != nil {
+		phones := make([]peopledirectory.GuardianPhoneEdit, 0, len(*req.PhoneNumbers))
+		for _, phone := range *req.PhoneNumbers {
+			saved := peopledirectory.GuardianPhoneEdit{PhoneNumber: phone.PhoneNumber, PhoneType: phone.PhoneType, Label: phone.Label, IsPrimary: phone.IsPrimary}
+			if phone.ID != nil {
+				saved.ID = phone.ID.Int64()
+			}
+			phones = append(phones, saved)
+		}
+		edit.Phones = &phones
+	}
+	return edit
 }
 
 // guardianAccountStatus derives the staff-facing account status. An open

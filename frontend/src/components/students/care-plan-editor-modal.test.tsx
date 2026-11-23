@@ -761,6 +761,106 @@ describe("CarePlanEditorModal", () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
+  it("drops a refused note change and shows the stored note without a second save", async () => {
+    const readDay = {
+      ...baseArrivalDay,
+      notes: [{ ...baseArrivalDay.notes[0]!, version: "note-read" }],
+    };
+    const storedDay = {
+      ...baseArrivalDay,
+      notes: [
+        {
+          ...baseArrivalDay.notes[0]!,
+          content: "Holt die Tante ab",
+          version: "note-stored",
+        },
+      ],
+    };
+    const onUpdateArrivalNote = vi.fn().mockRejectedValue(
+      new ApiError("changed since it was read", 409, {
+        code: "general.changed_since_read",
+      }),
+    );
+    let showStored: () => void = () => undefined;
+    const reloadAfterRefusal = vi.fn(async () => showStored());
+    const { rerender, renderModal } = renderEditor({
+      arrivalDay: readDay,
+      onUpdateArrivalNote,
+      reloadAfterRefusal,
+    });
+    showStored = () => rerender(renderModal({ arrivalDay: storedDay }));
+
+    const field = screen.getByLabelText("Ankunft Hinweis");
+    fireEvent.change(field, { target: { value: "Kommt mit dem Bus" } });
+    fireEvent.click(rowButton(field));
+
+    expect(await screen.findByText(/inzwischen geändert/)).toBeInTheDocument();
+    expect(onUpdateArrivalNote).toHaveBeenCalledWith(
+      "2026-05-25",
+      "11",
+      "Kommt mit dem Bus",
+      "note-read",
+    );
+    expect(reloadAfterRefusal).toHaveBeenCalledOnce();
+    const shown = screen.getByLabelText("Ankunft Hinweis");
+    expect(shown).toHaveValue("Holt die Tante ab");
+    expect(rowButton(shown)).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("keeps the stored note when the reload after a refusal fails", async () => {
+    const onUpdateArrivalNote = vi.fn().mockRejectedValue(
+      new ApiError("changed since it was read", 409, {
+        code: "general.changed_since_read",
+      }),
+    );
+    renderEditor({
+      onUpdateArrivalNote,
+      reloadAfterRefusal: vi.fn().mockRejectedValue(new Error("offline")),
+    });
+
+    const field = screen.getByLabelText("Ankunft Hinweis");
+    fireEvent.change(field, { target: { value: "Kommt mit dem Bus" } });
+    fireEvent.click(rowButton(field));
+
+    expect(await screen.findByRole("alert")).not.toHaveTextContent(
+      /inzwischen geändert/,
+    );
+    // The typed text is gone, so nothing resends it on the old read.
+    expect(field).toHaveValue("Kommt mit Oma");
+    expect(rowButton(field)).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("shows a newer stored note instead of a draft typed on an older one", () => {
+    const { rerender, renderModal } = renderEditor({
+      arrivalDay: {
+        ...baseArrivalDay,
+        notes: [{ ...baseArrivalDay.notes[0]!, version: "note-read" }],
+      },
+    });
+    const field = screen.getByLabelText("Ankunft Hinweis");
+    fireEvent.change(field, { target: { value: "Kommt mit dem Bus" } });
+
+    // The user's own save of another note brings this note's newer version.
+    rerender(
+      renderModal({
+        arrivalDay: {
+          ...baseArrivalDay,
+          notes: [
+            {
+              ...baseArrivalDay.notes[0]!,
+              content: "Holt die Tante ab",
+              version: "note-stored",
+            },
+          ],
+        },
+      }),
+    );
+
+    const shown = screen.getByLabelText("Ankunft Hinweis");
+    expect(shown).toHaveValue("Holt die Tante ab");
+    expect(rowButton(shown)).toHaveAttribute("aria-disabled", "true");
+  });
+
   it("clears day note drafts when the editor switches to another date", async () => {
     const onCreateArrivalNote = vi.fn().mockResolvedValue(undefined);
     const { rerender, renderModal } = renderEditor({ onCreateArrivalNote });

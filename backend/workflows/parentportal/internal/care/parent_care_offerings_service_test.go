@@ -38,6 +38,10 @@ func (careOfferingsStudentRepoStub[T]) FindByIDForUpdate(context.Context, int64)
 	return new(T), nil
 }
 
+func (careOfferingsStudentRepoStub[T]) FindByIDForNoKeyUpdate(context.Context, int64) (*T, error) {
+	return new(T), nil
+}
+
 func careOfferingsStudentReads[S, T any](_ func(S, context.Context, int64) (*T, error)) careOfferingsStudentRepoStub[T] {
 	return careOfferingsStudentRepoStub[T]{}
 }

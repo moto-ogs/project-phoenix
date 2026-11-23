@@ -94,13 +94,13 @@ var moduleFacadeMethodSetAllowlist = map[string]int{
 	"modules/organizationtenancy/organizationtenancy.go:Query":                                        25,
 	"modules/organizationtenancy/provisioning.go:Provisioning":                                        47,
 	"modules/parentbilling/care_months.go:CareBilling":                                                14,
-	"modules/peopledirectory/guardian.go:GuardianCommand":                                             16,
-	"modules/peopledirectory/guardian.go:GuardianProvider":                                            29,
-	"modules/peopledirectory/guardian.go:GuardianQuery":                                               18,
-	"modules/peopledirectory/peopledirectory.go:Capability":                                           139, // Lowered by #7808: the test-only cross-tenant visitor reads left.
-	"modules/peopledirectory/peopledirectory.go:Command":                                              78,
-	"modules/peopledirectory/peopledirectory.go:Owner":                                                142, // Lowered by #7808: the test-only cross-tenant visitor reads left.
-	"modules/peopledirectory/peopledirectory.go:Query":                                                60,  // Lowered by #7808: the test-only cross-tenant person read left.
+	"modules/peopledirectory/guardian.go:GuardianCommand":                                             14,
+	"modules/peopledirectory/guardian.go:GuardianProvider":                                            26,
+	"modules/peopledirectory/guardian.go:GuardianQuery":                                               17,
+	"modules/peopledirectory/peopledirectory.go:Capability":                                           136, // Lowered by #7808: the test-only cross-tenant visitor reads left.
+	"modules/peopledirectory/peopledirectory.go:Command":                                              76,
+	"modules/peopledirectory/peopledirectory.go:Owner":                                                139, // Lowered by #7808: the test-only cross-tenant visitor reads left.
+	"modules/peopledirectory/peopledirectory.go:Query":                                                59,  // Lowered by #7808: the test-only cross-tenant person read left.
 	"modules/peopledirectory/student_directory.go:StudentDirectoryQuery":                              15,
 	"modules/schoolcalendar/period_administration.go:Calendar":                                        31,
 	"modules/schoolcalendar/portal/contract.go:FullService":                                           41,

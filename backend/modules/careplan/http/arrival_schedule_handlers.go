@@ -148,10 +148,12 @@ func (rs *Resource) updateStudentArrivalSchedules(w http.ResponseWriter, r *http
 	schedules := toArrivalScheduleModels(r.Context(), req.Schedules, student.ID, staffID)
 
 	tenantID := tenant.FromContext(r.Context())
-	if err := withinTenant(r.Context(), tenantID, func(ctx context.Context) error {
-		return rs.ArrivalScheduleService.UpsertBulkStudentArrivalSchedules(ctx, student.ID, schedules)
-	}); err != nil {
-		renderError(w, r, common.ErrorInternalServer(err))
+	version, err := rs.WeeklyPlans.SaveWeeklyPlan(r.Context(), careplan.WeeklyPlanInput{
+		StudentID: student.ID, ArrivalSchedules: &schedules, WeekdayNotes: weekdayPickupNoteMap(req.WeekdayNotes),
+		CreatedByStaffID: staffID, ExpectedVersion: req.ExpectedVersion,
+	})
+	if err != nil {
+		renderPickupAdjustmentError(w, r, err)
 		return
 	}
 
@@ -173,7 +175,12 @@ func (rs *Resource) updateStudentArrivalSchedules(w http.ResponseWriter, r *http
 		rs.broadcastArrivalScheduleChanged(tenantID, student.ID)
 		rs.wakeChildGuardians(tenantID, student.ID)
 	})
+	if req.WeekdayNotes != nil {
+		// The weekday notes ride along in the pickup data the tiles render.
+		rs.registerPartialAbsenceBroadcasts(r, student.ID)
+	}
 	response := buildArrivalDataResponse(data)
+	response.WeeklyPlanVersion = version
 	common.Respond(w, r, http.StatusOK, response, "Arrival schedules updated successfully")
 }
 
@@ -373,7 +380,7 @@ func (rs *Resource) updateStudentArrivalNote(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	req := &ArrivalNoteRequest{}
+	req := &ArrivalNoteUpdateRequest{}
 	if err := render.Bind(r, req); err != nil {
 		renderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -392,7 +399,7 @@ func (rs *Resource) updateStudentArrivalNote(w http.ResponseWriter, r *http.Requ
 
 	tenantID := tenant.FromContext(r.Context())
 	if err := withinTenant(r.Context(), tenantID, func(ctx context.Context) error {
-		return rs.ArrivalScheduleService.UpdateStudentArrivalNote(ctx, note)
+		return rs.ArrivalScheduleService.UpdateStudentArrivalNote(ctx, note, req.ExpectedVersion)
 	}); err != nil {
 		renderError(w, r, common.ErrorInternalServer(err))
 		return

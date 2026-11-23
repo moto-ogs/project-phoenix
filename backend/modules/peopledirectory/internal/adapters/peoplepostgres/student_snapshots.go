@@ -71,6 +71,9 @@ func (r *studentRepository) StudentSnapshotForUpdate(ctx context.Context, id int
 	row, err := r.FindByIDForUpdate(ctx, id)
 	return NativeStudentSnapshot(row), err
 }
+func (r *studentRepository) StudentSnapshotForNoKeyUpdate(context.Context, int64) (*directory.StudentSnapshot, error) {
+	return nil, errStudentWritesMoved
+}
 
 func studentDepartureSnapshot(row *models.Student) *directory.StudentDepartureSnapshot {
 	if row.DepartureBaseline != nil {

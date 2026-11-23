@@ -16,6 +16,7 @@ import { Textarea } from "~/components/ui/textarea";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { formatBytes } from "~/lib/file-format";
+import { useAnnounceMessageComposer } from "~/lib/hooks/use-message-composer-presence";
 import { cn } from "~/lib/utils";
 import {
   checkAttachmentFiles,
@@ -163,6 +164,8 @@ export function MessageComposer({
     readonly onOpenAttachment?: (item: ComposerAttachmentItem) => void;
   };
 }) {
+  // Schwebende Hilfen unten am Rand weichen dem Senden-Knopf (#7686).
+  useAnnounceMessageComposer();
   const labels = attachments?.labels ?? GERMAN_ATTACHMENT_LABELS;
   const [pending, setPending] = useState<readonly PendingAttachment[]>([]);
   const pendingRef = useRef(pending);

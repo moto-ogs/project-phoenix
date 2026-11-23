@@ -1,6 +1,7 @@
 package application
 
 import (
+	"fmt"
 	"slices"
 	"testing"
 
@@ -192,13 +193,37 @@ func asNotice(invoice parentbilling.CareInvoice, number string) parentbilling.Ca
 	return invoice
 }
 
-// The first computation of a notice month decides who is held; the second
-// one, which takes a contract's old assessment back as issued, only adopts
-// that (review round 2 of #7938). An assessment taken back for a missing
-// price is stale on the days its contract no longer runs, and the second
-// computation held the child for it: the run then took the sibling
-// contract's month back to nothing while the review named nobody.
-func TestCareNoticeMonthSecondComputationHoldsNobodyNew(t *testing.T) {
+// keptMonth is a notice month a run computes again: its cents and the days
+// its position bills.
+type keptMonth struct {
+	cents       int64
+	from, until string
+}
+
+// keptTotals are the drafts of a notice month by contract with the
+// assessments the run keeps for contracts it could not price or held.
+func keptTotals(t *testing.T, review reviewedMonth, final careMonth, invoiced map[int64]parentbilling.CareInvoice,
+	in careMonthInput,
+) map[int64]int64 {
+	t.Helper()
+	previous := map[int64]parentbilling.CareNotice{}
+	for contractID, invoice := range invoiced {
+		previous[contractID] = parentbilling.CareNotice{ContractID: ident.ID(contractID),
+			Installments: []parentbilling.CareNoticeInstallment{{Month: in.month, AmountCents: invoice.TotalCents}},
+			Months:       []parentbilling.CareInvoice{invoice}}
+	}
+	return draftTotals(careMonth{invoices: retainFailedAssessments(final, review.careMonth, previous, in.recipients, in.month)})
+}
+
+// A notice run keeps the assessment of a contract it cannot price (S11).
+// Pro rata, that assessment still bills the days its contract no longer
+// runs; a contract of the child that would assess those days anew holds the
+// child as a whole, like an issued invoice does (S3, S4), and the review
+// names it with the kept notice (#7952). The first computation decides
+// that, the second one only adopts it: an assessment kept for its missing
+// price never takes another contract's month back to nothing unnamed
+// (review round 2 of #7938). Prices as in care_billed_children_test.go.
+func TestCareNoticeMonthHoldsAChildAKeptAssessmentBills(t *testing.T) {
 	t.Parallel()
 	unpriced := booked("mon", 999, "Ohne Preis", "16:00")
 	schools := []int64{schoolBirkenfeld, schoolIspringen}
@@ -206,54 +231,96 @@ func TestCareNoticeMonthSecondComputationHoldsNobodyNew(t *testing.T) {
 		name      string
 		contracts []identityContract
 		noticed   map[int64]bool
-		// assessed is the notice month of contractNoah the run keeps.
-		assessed int64
+		// assessed are the notice months the run computes again.
+		assessed map[int64]keptMonth
+		held     []int64
 		totals   map[int64]int64
+		kept     map[int64]int64
 	}{
 		{
-			// Both contracts have a notice the run computes again. The one
-			// without a price ran the whole month when it was assessed,
-			// 45,00 €, and runs from the 15th today. The other one bills the
-			// whole month, 45,00 €, as before.
-			name: "the priced contract of the whole month keeps its draft",
-			contracts: []identityContract{
-				noahAt(contractNoah, schoolBirkenfeld, noahBirkenfeldRecord, "2027-01-15", "2027-01-31", unpriced),
-				noahAt(contractLea, schoolBirkenfeld, noahBirkenfeldRecord, billingMonth, "2027-01-31", mon1400),
-			},
-			noticed: map[int64]bool{contractNoah: true, contractLea: true}, assessed: 4500,
-			totals: map[int64]int64{contractLea: 4500},
-		},
-		{
-			// The contract without a price runs the 1st to the 14th today;
-			// its notice assessed the whole month, 40,00 €. The new contract
-			// bills the 15th to the 31st: 60,00 € * 17/31 = 32,90 €. A known
-			// limit, as before #7892 (ADR 0158, Grenzen): the kept
-			// assessment still bills those days too, 40,00 € * 17/31 =
-			// 21,94 €, until a price lets the run assess the old contract.
-			name: "the new contract for the rest of the month keeps its draft",
+			// The scenario of #7952. The contract without a price runs the
+			// 1st to the 14th today; its notice assessed the whole month,
+			// 40,00 €. The new contract would assess the 15th to the 31st,
+			// 60,00 € * 17/31 = 32,90 €, which the kept 40,00 € bill
+			// already: 40,00 € * 17/31 = 21,94 € twice. It is held and has
+			// no notice, so the month stays open for it.
+			name: "a new contract on the days of the kept assessment",
 			contracts: []identityContract{
 				noahAt(contractNoah, schoolBirkenfeld, noahBirkenfeldRecord, billingMonth, "2027-01-14", unpriced),
 				noahAt(contractLea, schoolIspringen, noahBirkenfeldRecord, "2027-01-15", "2027-01-31", mon1630),
 			},
-			noticed: map[int64]bool{contractNoah: true}, assessed: 4000,
-			totals: map[int64]int64{contractLea: 3290},
+			noticed: map[int64]bool{contractNoah: true}, assessed: map[int64]keptMonth{contractNoah: {4000, billingMonth, "2027-01-31"}},
+			held: []int64{contractLea}, totals: map[int64]int64{}, kept: map[int64]int64{contractNoah: 4000},
+		},
+		{
+			// Both contracts have a notice the run computes again: the held
+			// one keeps its 32,90 €.
+			name: "a noticed contract on the days of the kept assessment",
+			contracts: []identityContract{
+				noahAt(contractNoah, schoolBirkenfeld, noahBirkenfeldRecord, billingMonth, "2027-01-14", unpriced),
+				noahAt(contractLea, schoolIspringen, noahBirkenfeldRecord, "2027-01-15", "2027-01-31", mon1630),
+			},
+			noticed:  map[int64]bool{contractNoah: true, contractLea: true},
+			assessed: map[int64]keptMonth{contractNoah: {4000, billingMonth, "2027-01-31"}, contractLea: {3290, "2027-01-15", "2027-01-31"}},
+			held:     []int64{contractLea}, totals: map[int64]int64{}, kept: map[int64]int64{contractNoah: 4000, contractLea: 3290},
+		},
+		{
+			// The contract without a price ran the whole month when it was
+			// assessed, 45,00 €, and runs from the 15th today. The other one
+			// assesses the whole month, the 1st to the 14th too: held, it
+			// keeps its 45,00 €. Before #7952 it was assessed anew, and the
+			// 1st to the 14th were assessed twice; before #7938's second
+			// round the second computation held it unnamed, at 0,00 €.
+			name: "a contract of the whole month",
+			contracts: []identityContract{
+				noahAt(contractNoah, schoolBirkenfeld, noahBirkenfeldRecord, "2027-01-15", "2027-01-31", unpriced),
+				noahAt(contractLea, schoolBirkenfeld, noahBirkenfeldRecord, billingMonth, "2027-01-31", mon1400),
+			},
+			noticed:  map[int64]bool{contractNoah: true, contractLea: true},
+			assessed: map[int64]keptMonth{contractNoah: {4500, billingMonth, "2027-01-31"}, contractLea: {4500, billingMonth, "2027-01-31"}},
+			held:     []int64{contractLea}, totals: map[int64]int64{}, kept: map[int64]int64{contractNoah: 4500, contractLea: 4500},
+		},
+		{
+			// The kept assessment bills only days its contract still runs:
+			// nothing is assessed twice, the other contract is assessed
+			// anew, 45,00 € * 17/31 = 24,68 €.
+			name: "a contract next to a kept assessment that is not stale",
+			contracts: []identityContract{
+				noahAt(contractNoah, schoolBirkenfeld, noahBirkenfeldRecord, billingMonth, "2027-01-14", unpriced),
+				noahAt(contractLea, schoolBirkenfeld, noahBirkenfeldRecord, "2027-01-15", "2027-01-31", mon1400),
+			},
+			noticed: map[int64]bool{contractNoah: true}, assessed: map[int64]keptMonth{contractNoah: {1806, billingMonth, "2027-01-14"}},
+			totals: map[int64]int64{contractLea: 2468}, kept: map[int64]int64{contractNoah: 1806, contractLea: 2468},
 		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			in := billedMonth(t, parentbilling.MonthRuleProRata, nil, tc.contracts...)
-			invoiced := map[int64]parentbilling.CareInvoice{
-				contractNoah: asNotice(issuedFor(t, tc.contracts[0], "", tc.assessed, billingMonth, "2027-01-31"), "B-2027-0006"),
-			}
-			if tc.noticed[contractLea] {
-				invoiced[contractLea] = asNotice(issuedFor(t, tc.contracts[1], "", 4500, billingMonth, "2027-01-31"), "B-2027-0007")
+			invoiced := map[int64]parentbilling.CareInvoice{}
+			for i, contract := range tc.contracts {
+				if month, ok := tc.assessed[contract.contract]; ok {
+					invoiced[contract.contract] = asNotice(issuedFor(t, contract, "", month.cents, month.from, month.until),
+						fmt.Sprintf("B-2027-%04d", 6+i))
+				}
 			}
 			review, final, err := computeNoticeMonth(in, invoiced, tc.noticed, schools)
 			require.NoError(t, err)
-			require.Len(t, review.unpriced, 1, "the contract without a price keeps its assessment")
-			assert.Empty(t, review.billedChildren, "the review holds nobody")
-			assert.Equal(t, tc.totals, draftTotals(final), "so the run assesses what the review showed")
+			require.Len(t, review.unpriced, 1, "the contract without a price stays under Ohne Preis")
+			assert.Equal(t, ident.ID(contractNoah), review.unpriced[0].ContractID)
+			if len(tc.held) == 0 {
+				assert.Empty(t, review.billedChildren, "the review holds nobody")
+			} else {
+				require.Len(t, review.billedChildren, 1, "the review names the child")
+				held := review.billedChildren[0]
+				assert.Equal(t, parentbilling.HoldReasonUnpricedNotice, held.Reason)
+				assert.Equal(t, tc.held, heldContractsOf(review.billedChildren))
+				require.Len(t, held.Invoices, 1, "with the kept notice in the way")
+				assert.Equal(t, ident.ID(contractNoah), held.Invoices[0].ContractID)
+				assert.Equal(t, parentbilling.BilledByNoticeRun, held.Invoices[0].Source)
+			}
+			assert.Equal(t, tc.totals, draftTotals(final), "the run assesses what the review showed")
+			assert.Equal(t, tc.kept, keptTotals(t, review, final, invoiced, in), "and keeps the assessments it could not compute")
 		})
 	}
 }

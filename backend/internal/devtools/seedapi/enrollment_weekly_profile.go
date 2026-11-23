@@ -257,10 +257,17 @@ func submitWeeklyProfileRequest(rt *Runtime, step parentEnrollmentSeedStep, enro
 
 func writeWeeklyProfileSchedule(rt *Runtime, studentID int64) error {
 	for _, schedule := range []struct{ path, timeField, clock string }{{"arrival-schedules", "expected_arrival", "12:00"}, {"pickup-schedules", "pickup_time", "15:00"}} {
-		_, err := rt.Client.Put(fmt.Sprintf("/api/students/%d/%s", studentID, schedule.path), map[string]any{"schedules": []map[string]any{
+		body := map[string]any{"schedules": []map[string]any{
 			{"weekday": 1, schedule.timeField: schedule.clock}, {"weekday": 2, schedule.timeField: schedule.clock}, {"weekday": 4, schedule.timeField: schedule.clock},
-		}})
+		}}
+		// Both are saves of the weekly plan (ADR 0311); each reads the token
+		// the previous one left.
+		version, err := seedWeeklyPlanVersion(rt, studentID)
 		if err != nil {
+			return err
+		}
+		body["expected_version"] = version
+		if _, err := rt.Client.Put(fmt.Sprintf("/api/students/%d/%s", studentID, schedule.path), body); err != nil {
 			return err
 		}
 	}

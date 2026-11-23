@@ -6,6 +6,7 @@ package users
 type GuardianContractTypes struct {
 	Pickers, Phones, Phone, PhoneCreate, PhoneUpdate                                    any
 	LinkRequest, Link, LinkUpdate, WithRelationships, BatchRequest                      any
+	Entry, EntryRequest                                                                 any
 	DeletePreview, EmailStatuses                                                        any
 	PaymentMasked, PaymentReveal, PaymentRequest, PayerRequest, Overview, PaymentExport any
 	BulkInviteRequest, BulkInvite, InviteRequest, Invite, Approvals                     any
@@ -21,6 +22,7 @@ func RouteContractTypes() GuardianContractTypes {
 		PhoneCreate: PhoneNumberCreateRequest{}, PhoneUpdate: PhoneNumberUpdateRequest{},
 		LinkRequest: StudentGuardianLinkRequest{}, Link: GuardianLinkResponse{}, LinkUpdate: StudentGuardianUpdateRequest{},
 		WithRelationships: []GuardianWithRelationship{}, BatchRequest: CreateStudentGuardiansRequest{},
+		Entry: GuardianWithRelationship{}, EntryRequest: GuardianEntryRequest{},
 		DeletePreview: GuardianDeletePreview{}, EmailStatuses: []guardianEmailStatusResponse{},
 		PaymentMasked: GuardianPaymentMaskedResponse{}, PaymentReveal: GuardianPaymentRevealResponse{},
 		PaymentRequest: GuardianPaymentRequest{}, PayerRequest: StudentPayerRequest{}, Overview: []PaymentOverviewRow{}, PaymentExport: PaymentExportRequest{},

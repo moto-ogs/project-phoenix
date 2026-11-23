@@ -50,6 +50,7 @@ describe("guardian-payment-api", () => {
           guardian_id: "42",
           iban_masked: "•••• 3000",
           account_holder: null,
+          version: "absent",
         },
       }),
     );
@@ -71,6 +72,7 @@ describe("guardian-payment-api", () => {
           guardian_id: "42",
           iban: "DE89370400440532013000",
           account_holder: "Sabine Schneider",
+          version: "2026-11-23T09:00:00Z",
         },
       }),
     );
@@ -78,18 +80,20 @@ describe("guardian-payment-api", () => {
     const result = await revealGuardianPayment("42");
 
     expect(result.iban).toBe("DE89370400440532013000");
+    expect(result.version).toBe("2026-11-23T09:00:00Z");
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/guardians/42/payment/reveal",
       expect.objectContaining({ method: "POST" }),
     );
   });
 
-  it("sends the bank fields in snake_case", async () => {
+  it("sends the bank fields in snake_case with the read version", async () => {
     fetchMock.mockResolvedValue(jsonResponse({ data: null }));
 
     await updateGuardianPayment("42", {
       iban: "DE89370400440532013000",
       accountHolder: null,
+      expectedVersion: "v1",
     });
 
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
@@ -97,6 +101,7 @@ describe("guardian-payment-api", () => {
     expect(JSON.parse(init.body as string)).toEqual({
       iban: "DE89370400440532013000",
       account_holder: null,
+      expected_version: "v1",
     });
   });
 
@@ -118,7 +123,11 @@ describe("guardian-payment-api", () => {
     );
 
     await expect(
-      updateGuardianPayment("42", { iban: "DE00", accountHolder: null }),
+      updateGuardianPayment("42", {
+        iban: "DE00",
+        accountHolder: null,
+        expectedVersion: "v1",
+      }),
     ).rejects.toMatchObject({
       name: "ApiError",
       status: 400,

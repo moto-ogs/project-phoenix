@@ -12,6 +12,7 @@ import {
   trackOnboardingSurface,
 } from "~/lib/analytics";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
+import { useMessageComposerOnScreen } from "~/lib/hooks/use-message-composer-presence";
 import {
   buildHelpHref,
   HELP_TOPICS,
@@ -47,14 +48,28 @@ const EMPTY_STATE: ParentFirstStepsState = {
   finished: false,
 };
 
-function claimFirstOpen(accountId: string): boolean {
-  const key = `parent-first-steps-opened:${accountId}`;
+function firstOpenKey(accountId: string): string {
+  return `parent-first-steps-opened:${accountId}`;
+}
+
+/** Ob sich die Liste in dieser Sitzung schon von selbst gezeigt hat. */
+function openedThisSession(accountId: string): boolean {
   try {
-    if (sessionStorage.getItem(key)) return false;
-    sessionStorage.setItem(key, "1");
-    return true;
+    return sessionStorage.getItem(firstOpenKey(accountId)) !== null;
   } catch {
-    return true;
+    return false;
+  }
+}
+
+/**
+ * Merkt sich das erste Öffnen erst, wenn die Liste zu sehen war: Hielt ein
+ * Chat sie verdeckt, geht sie nach dem Neuladen noch einmal von selbst auf.
+ */
+function rememberOpened(accountId: string): void {
+  try {
+    sessionStorage.setItem(firstOpenKey(accountId), "1");
+  } catch {
+    // Ohne Sitzungsspeicher öffnet sich die Liste beim nächsten Laden erneut.
   }
 }
 
@@ -82,6 +97,12 @@ export function ParentFirstSteps({
   // Erfassung beim Öffnen noch aus (Schulfreigabe noch nicht geladen), zählt
   // auch die Antwort nicht, sonst gäbe es mehr Antworten als Anzeigen.
   const autoOpenRef = useRef(false);
+  // Ein offener Chat hat seinen Senden-Knopf genau dort, wo Knopf und Liste
+  // unten am Rand stehen (#7686). Solange er offen ist, treten beide zurück.
+  const chatOpen = useMessageComposerOnScreen();
+  // Von selbst geöffnet, aber noch nie zu sehen gewesen: „angezeigt“ zählt
+  // erst, wenn die Liste wirklich auf dem Bildschirm steht.
+  const [shownPending, setShownPending] = useState(false);
 
   const steps = useMemo<readonly StepContent[]>(() => {
     const list: StepContent[] = [
@@ -226,14 +247,18 @@ export function ParentFirstSteps({
     stateRef.current = stored;
     autoOpenRef.current = false;
     setState(stored);
-    if (!stored.dismissed && !stored.finished && claimFirstOpen(accountId)) {
-      setView("checklist");
-      autoOpenRef.current = trackOnboardingSurface(
-        "shown",
-        "parent_first_steps",
-      );
-    }
+    const opens =
+      !stored.dismissed && !stored.finished && !openedThisSession(accountId);
+    if (opens) setView("checklist");
+    setShownPending(opens);
   }, [accountId]);
+
+  useEffect(() => {
+    if (!shownPending || view !== "checklist" || chatOpen) return;
+    setShownPending(false);
+    rememberOpened(accountId);
+    autoOpenRef.current = trackOnboardingSurface("shown", "parent_first_steps");
+  }, [accountId, shownPending, view, chatOpen]);
 
   const updateState = useCallback(
     (next: ParentFirstStepsState) => {
@@ -341,6 +366,8 @@ export function ParentFirstSteps({
       />
     );
   }
+
+  if (chatOpen) return null;
 
   if (view === "beacon") {
     return (

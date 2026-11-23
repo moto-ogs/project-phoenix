@@ -25,11 +25,16 @@ func BuildMealPlanAtForTests(db transactionruntime.Database, settings settingsCo
 	if err != nil {
 		return nil, err
 	}
+	lockStudent, err := mealPlanStudentLock(names)
+	if err != nil {
+		return nil, err
+	}
 	return mealplanCompose.New(mealplanCompose.Dependencies{
 		DB: db.Pool(), Settings: mealSettings, Observe: func(mealplanCompose.Observation) {}, Now: now,
 		Participants:    mealPlanParticipantFinder(students, now),
 		ParticipantDays: mealPlanParticipantDaysFinder(names, now),
 		StudentNames:    mealPlanStudentNames(names),
+		LockStudent:     lockStudent,
 		Calendar:        mealPlanCalendar(calendarRecords),
 		Notices:         notices,
 	})

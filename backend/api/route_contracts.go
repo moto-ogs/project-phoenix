@@ -281,8 +281,17 @@ func ContractDocument() (contract.Document, error) {
 		// The one route whose answer a query parameter shapes (ADR 0270 point 3).
 		QueryVariants: []string{"GET /api/students/"},
 	}
-	// Both student bodies only refuse retired keys before the plain decode.
-	options.Readers = map[reflect.Type]string{
+	options.Readers = contractReaders()
+	// Appointments and the whole-day substitution keep their own day types.
+	options.Dates = []reflect.Type{reflect.TypeFor[appointments.Date](), reflect.TypeOf(substitutions.Day)}
+	return contract.Build(registrations, options)
+}
+
+// contractReaders names the request bodies that decode themselves: field by
+// field (ReadsFields) or as one value (ReadsValue).
+func contractReaders() map[reflect.Type]string {
+	return map[reflect.Type]string{
+		// Both student bodies only refuse retired keys before the plain decode.
 		reflect.TypeFor[careStudentsHTTP.StudentRequest]():       contract.ReadsFields,
 		reflect.TypeFor[careStudentsHTTP.UpdateStudentRequest](): contract.ReadsFields,
 		// An absence edit tells an absent absence_type_id from null.
@@ -311,10 +320,11 @@ func ContractDocument() (contract.Document, error) {
 		reflect.TypeFor[staffShiftsHTTP.OptionalBool]():   contract.ReadsValue,
 		reflect.TypeFor[staffShiftsHTTP.OptionalInt]():    contract.ReadsValue,
 		reflect.TypeFor[staffShiftsHTTP.OptionalString](): contract.ReadsValue,
+		// The activity and group updates tell an absent room from null.
+		reflect.TypeFor[timetableActivitiesHTTP.OptionalRoomID](): contract.ReadsValue,
+		reflect.TypeFor[timetableActivitiesHTTP.OptionalOpen]():   contract.ReadsValue,
+		reflect.TypeFor[groupsHTTP.OptionalRoomID]():              contract.ReadsValue,
 	}
-	// Appointments and the whole-day substitution keep their own day types.
-	options.Dates = []reflect.Type{reflect.TypeFor[appointments.Date](), reflect.TypeOf(substitutions.Day)}
-	return contract.Build(registrations, options)
 }
 
 // notificationRouteContracts registers the notification routes, with patterns
@@ -535,7 +545,10 @@ func guardianRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/search", Portals: portals, Query: search, Paginated: true, Response: types.Pickers},
 		{Method: "GET", Pattern: "/{id}", Portals: portals, Response: types.Guardian},
 		{Method: "POST", Pattern: "/", Portals: portals, Request: types.GuardianCreate, Response: types.Guardian},
-		{Method: "PUT", Pattern: "/{id}", Portals: portals, Request: types.GuardianUpdate, Response: types.Guardian},
+		// The single-field edits answer general.changed_since_read since the
+		// staff form saves one entry with its version (ADR 0311); they go
+		// after one release (ADR 0270, #7953).
+		{Method: "PUT", Pattern: "/{id}", Portals: portals, Request: types.GuardianUpdate, Response: types.Guardian, Deprecated: true},
 		// Without force a guardian still linked to children is refused; the
 		// expected links pin the confirmed state of the full delete.
 		{Method: "DELETE", Pattern: "/{id}", Portals: portals, Query: deleteQuery, NoData: true},
@@ -553,16 +566,19 @@ func guardianRouteContracts() []common.RouteContract {
 		{Method: "POST", Pattern: "/{id}/payment/reveal", Portals: portals, Response: types.PaymentReveal},
 		{Method: "GET", Pattern: "/{id}/phone-numbers/", Portals: portals, Response: types.Phones},
 		{Method: "POST", Pattern: "/{id}/phone-numbers/", Portals: portals, Request: types.PhoneCreate, Response: types.Phone},
-		{Method: "PUT", Pattern: "/{id}/phone-numbers/{phoneId}", Portals: portals, Request: types.PhoneUpdate, Response: types.Phone},
-		{Method: "DELETE", Pattern: "/{id}/phone-numbers/{phoneId}", Portals: portals, NoData: true},
-		{Method: "POST", Pattern: "/{id}/phone-numbers/{phoneId}/set-primary", Portals: portals, Response: types.Phone},
+		{Method: "PUT", Pattern: "/{id}/phone-numbers/{phoneId}", Portals: portals, Request: types.PhoneUpdate, Response: types.Phone, Deprecated: true},
+		{Method: "DELETE", Pattern: "/{id}/phone-numbers/{phoneId}", Portals: portals, NoData: true, Deprecated: true},
+		{Method: "POST", Pattern: "/{id}/phone-numbers/{phoneId}/set-primary", Portals: portals, Response: types.Phone, Deprecated: true},
 		{Method: "POST", Pattern: "/bulk-invite", Portals: portals, Request: types.BulkInviteRequest, Response: types.BulkInvite},
 		{Method: "GET", Pattern: "/invitations/pending-approval", Portals: portals, Response: types.Approvals},
 		{Method: "GET", Pattern: "/payment-overview", Portals: portals, Response: types.Overview},
-		{Method: "PUT", Pattern: "/relationships/{relationshipId}", Portals: portals, Request: types.LinkUpdate, NoData: true},
+		{Method: "PUT", Pattern: "/relationships/{relationshipId}", Portals: portals, Request: types.LinkUpdate, NoData: true, Deprecated: true},
 		{Method: "GET", Pattern: "/students/{studentId}/guardians", Portals: portals, Response: types.WithRelationships},
 		{Method: "POST", Pattern: "/students/{studentId}/guardians", Portals: portals, Request: types.LinkRequest, Response: types.Link},
 		{Method: "POST", Pattern: "/students/{studentId}/guardians/batch", Portals: portals, Request: types.BatchRequest, NoData: true},
+		// The staff form saves profile, link and phone list of a child's
+		// guardian as one entry against the version the list read (ADR 0311).
+		{Method: "PUT", Pattern: "/students/{studentId}/guardians/{guardianId}", Portals: portals, Request: types.EntryRequest, Response: types.Entry},
 		{Method: "DELETE", Pattern: "/students/{studentId}/guardians/{guardianId}", Portals: portals, NoData: true},
 		{Method: "GET", Pattern: "/students/{studentId}/email-status", Portals: portals, Response: types.EmailStatuses},
 		{Method: "POST", Pattern: "/students/{studentId}/invite", Portals: portals, Request: types.InviteRequest, Response: types.Invite},

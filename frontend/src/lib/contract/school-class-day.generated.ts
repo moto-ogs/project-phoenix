@@ -181,6 +181,7 @@ export interface DayReport {
   can_write_homework: boolean;
   can_read_shared_notes: boolean;
   handover?: DayHandover;
+  handover_version?: string;
   can_hand_over: boolean;
   can_report_absences: boolean;
 }
@@ -202,6 +203,7 @@ export const DayReportSchema: z.ZodType<DayReport, unknown> = object<DayReport>(
   can_write_homework: bool,
   can_read_shared_notes: bool,
   handover: optional(DayHandoverSchema),
+  handover_version: optional(str),
   can_hand_over: bool,
   can_report_absences: bool,
 });
@@ -516,6 +518,7 @@ export interface DayHintRequest {
 export interface ClassHandoverRequest {
   present_student_ids?: string[] | null;
   absent_student_ids?: string[] | null;
+  expected_version?: string;
 }
 
 /** Go: classdayhttp.MorningAttendanceMarkRequest */

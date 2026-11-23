@@ -133,6 +133,7 @@ var coreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/api/guardians/students/{studentId}/guardians"}:                                     notCaptured,
 	{http.MethodPost, "/api/guardians/students/{studentId}/guardians/batch"}:                               notCaptured,
 	{http.MethodDelete, "/api/guardians/students/{studentId}/guardians/{guardianId}"}:                      notCaptured,
+	{http.MethodPut, "/api/guardians/students/{studentId}/guardians/{guardianId}"}:                         notCaptured,
 	{http.MethodPost, "/api/guardians/students/{studentId}/invite"}:                                        notCaptured,
 	{http.MethodPut, "/api/guardians/students/{studentId}/payer"}:                                          notCaptured,
 	{http.MethodDelete, "/api/guardians/{id}"}:                                                             notCaptured,

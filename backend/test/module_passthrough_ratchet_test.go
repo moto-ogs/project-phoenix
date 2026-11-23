@@ -272,14 +272,14 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// Raised by ADR 0209: the billing lock B of the holiday allocation
 	// workflow, which validates the Träger and maps the lock error (+1).
 	"modules/parentbilling":    12,
-	"modules/peopledirectory":  195, // #6840: DeletePerson checks live profiles (-1); #7104: the rosters and the retention read the owner's clock (-2); #2352: dead guardian lists removed (-2); #7808: the group routes read no persons (-2); Lowered by #7808: the test-only cross-tenant visitor reads left (-3)
+	"modules/peopledirectory":  192, // #7904: the single phone edits fold into one guardian entry save (-3); #6840: DeletePerson checks live profiles (-1); #7104: the rosters and the retention read the owner's clock (-2); #2352: dead guardian lists removed (-2); #7808: the group routes read no persons (-2); Lowered by #7808: the test-only cross-tenant visitor reads left (-3)
 	"modules/requestreview":    15,
 	"modules/schedulerruntime": 4,
 	// Raised by ADR 0073: the feed cleanup keeps only the staff feed tombstones.
 	"modules/schoolcalendar":   13,
 	"modules/schoolmembership": 15,
 	"modules/schoolsetup":      1,
-	"modules/schoolstructure":  42,
+	"modules/schoolstructure":  41, // Lowered by #7956: the retained test group update reads the version itself (-1)
 	"modules/settings":         16,
 	// Raised by ADR 0131: the kiosk count revision read (+1).
 	// Raised by ADR 0133: the kiosk room count revision read (+1).

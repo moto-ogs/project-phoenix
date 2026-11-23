@@ -294,13 +294,45 @@ func seedArrivalSchedules(rt *Runtime, studentIDs []int64) (int, error) {
 				"weekday": weekday, "expected_arrival": arrival,
 			})
 		}
+		version, err := seedWeeklyPlanVersion(rt, studentID)
+		if err != nil {
+			return index, err
+		}
 		if _, err := rt.Client.Put(fmt.Sprintf("/api/students/%d/arrival-schedules", studentID), map[string]any{
-			"schedules": schedules,
+			"schedules": schedules, "expected_version": version,
 		}); err != nil {
 			return index, fmt.Errorf("seed arrival plan for student %d: %w", studentID, err)
 		}
 	}
 	return len(studentIDs), nil
+}
+
+// seedWeeklyPlanVersion reads the token of a child's weekly plan the way the
+// Betreuungsplan editor does (weekly_plan_version of the pickup read, ADR 0311);
+// every save of the weekly plan sends it back.
+func seedWeeklyPlanVersion(rt *Runtime, studentID int64) (string, error) {
+	return weeklyPlanVersionVia(rt.Client, studentID)
+}
+
+// weeklyPlanVersionVia is seedWeeklyPlanVersion for a step that holds the
+// client itself.
+func weeklyPlanVersionVia(client *Client, studentID int64) (string, error) {
+	raw, err := client.Get(fmt.Sprintf("/api/students/%d/pickup-schedules", studentID))
+	if err != nil {
+		return "", fmt.Errorf("read weekly plan of student %d: %w", studentID, err)
+	}
+	var response struct {
+		Data *struct {
+			WeeklyPlanVersion string `json:"weekly_plan_version"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(raw, &response); err != nil {
+		return "", fmt.Errorf("parse weekly plan of student %d: %w", studentID, err)
+	}
+	if response.Data == nil {
+		return "", nil
+	}
+	return response.Data.WeeklyPlanVersion, nil
 }
 
 func createSeedPlanningTrack(rt *Runtime) (int64, error) {

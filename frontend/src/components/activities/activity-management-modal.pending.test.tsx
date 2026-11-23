@@ -15,9 +15,21 @@ vi.mock("./activity-waitlist-section", () => ({
   ActivityWaitlistSection: () => null,
 }));
 vi.mock("~/lib/activity-api", () => ({
+  fetchActivity: vi.fn(),
   updateActivity: vi.fn(),
   deleteActivity: vi.fn(),
 }));
+// The dialog reads the activity it saves (ADR 0311); the test answers with
+// the stored state of the row and its version.
+const { detailMutate } = vi.hoisted(() => ({ detailMutate: vi.fn() }));
+vi.mock("~/lib/swr", () => ({
+  useSWRAuth: vi.fn((key: string | null) => ({
+    data: key ? storedActivity : undefined,
+    error: undefined,
+    mutate: detailMutate,
+  })),
+}));
+
 const { setForm } = vi.hoisted(() => ({ setForm: vi.fn() }));
 vi.mock("~/hooks/useActivityForm", () => ({
   parseParticipantLimit: (value: string) =>
@@ -49,6 +61,7 @@ const activity: Activity = {
     { id: "1", staff_id: "1", is_primary: true, full_name: "John Doe" },
   ],
 };
+const storedActivity: Activity = { ...activity, version: "v1" };
 
 function renderAndSave() {
   const answer = deferred<Activity>();
