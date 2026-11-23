@@ -57,7 +57,12 @@ import { createLogger } from "~/lib/logger";
 import { exportPlan } from "~/lib/plan-export-api";
 import { NO_PLAN_FILTER } from "~/lib/plan-filter";
 import { roomPlanCareDay } from "~/lib/room-plan";
-import { formatFloor, isSystemRoom, type Room } from "~/lib/room-helpers";
+import {
+  formatFloor,
+  isSystemRoom,
+  type Room,
+  withStoredRoomFields,
+} from "~/lib/room-helpers";
 import {
   useTenantMutate,
   useTenantMutateMatching,
@@ -311,7 +316,21 @@ function RoomDetailPageContent() {
           ? roomsConfig.form.transformBeforeSubmit(data)
           : data;
         // The save carries the version the form was filled from.
-        await service.update(room.id, { ...payload, version: room.version });
+        const saved = await service.update(room.id, {
+          ...payload,
+          version: room.version,
+        });
+        // The answer carries the new version: the next save sends it even
+        // when the reload below fails (ADR 0311). Occupancy is not part of
+        // the answer and stays as read.
+        await tenantMutate(
+          roomKeys.detailKey(roomId),
+          (current?: { room: Room }) =>
+            current
+              ? { ...current, room: withStoredRoomFields(current.room, saved) }
+              : current,
+          { revalidate: false },
+        );
         const savedName = data.name?.trim() || room.name;
         toastSuccess(`Der Raum „${savedName}“ ist gespeichert.`);
         // A failed reload is a load error above the room, never an error
@@ -331,7 +350,15 @@ function RoomDetailPageContent() {
         throw updateError;
       }
     },
-    [refreshRoomLists, roomAfterWrite, room, service, toastSuccess],
+    [
+      refreshRoomLists,
+      roomAfterWrite,
+      room,
+      roomId,
+      service,
+      tenantMutate,
+      toastSuccess,
+    ],
   );
 
   const handleRoomRemoved = useCallback(

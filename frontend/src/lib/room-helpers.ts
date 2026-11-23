@@ -131,6 +131,28 @@ export function mapRoomResponse(room: RoomResponse): Room {
   };
 }
 
+/**
+ * The room as read, with the stored fields and the version of a save's
+ * answer. The answer of PUT /api/rooms/{id} names no occupancy, so the
+ * occupancy stays as read.
+ */
+export function withStoredRoomFields(read: Room, saved: Room): Room {
+  return {
+    ...read,
+    name: saved.name,
+    building: saved.building,
+    floor: saved.floor,
+    capacity: saved.capacity,
+    category: saved.category,
+    color: saved.color,
+    isSystem: saved.isSystem,
+    isOpenRoom: saved.isOpenRoom,
+    archivedAt: saved.archivedAt,
+    updatedAt: saved.updatedAt,
+    version: saved.version,
+  };
+}
+
 /** The rooms of a list answer; Go writes an empty list as null. */
 export function mapRoomsResponse(
   rooms: readonly RoomResponse[] | null,

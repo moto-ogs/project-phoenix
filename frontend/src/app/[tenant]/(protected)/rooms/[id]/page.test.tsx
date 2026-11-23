@@ -2,6 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useSession } from "next-auth/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { roomKeys } from "~/lib/swr/rooms-keys";
 import RoomDetailPage from "./page";
 
 const {
@@ -19,6 +20,7 @@ const {
   supervisionState,
   suspendSearchParamsState,
   weekendOpenState,
+  tenantMutateMock,
 } = vi.hoisted(() => ({
   searchParams: new URLSearchParams(),
   pushMock: vi.fn(),
@@ -34,6 +36,7 @@ const {
   supervisionState: { overviewEnabled: false },
   suspendSearchParamsState: { value: false },
   weekendOpenState: { value: false },
+  tenantMutateMock: vi.fn(() => Promise.resolve()),
 }));
 
 vi.mock("next-auth/react", () => ({ useSession: vi.fn() }));
@@ -107,7 +110,7 @@ vi.mock("~/lib/swr", () => ({
     mutate: () => Promise.resolve(undefined),
   }),
   useSWRSeedFrom: () => () => undefined,
-  useTenantMutate: () => vi.fn(() => Promise.resolve()),
+  useTenantMutate: () => tenantMutateMock,
   useTenantMutateMatching: () => vi.fn(() => Promise.resolve()),
 }));
 
@@ -418,6 +421,35 @@ describe("RoomDetailPage", () => {
       );
     });
     expect(toastSuccessMock).toHaveBeenCalled();
+  });
+
+  // The answer of the save carries the new version (ADR 0311): the next save
+  // of the same person sends it even when the reload after this one fails.
+  it("writes the saved room with its new version into the detail cache", async () => {
+    mockSession(["rooms:update"]);
+    serviceUpdateMock.mockResolvedValueOnce({
+      ...room,
+      name: "Neu",
+      isOccupied: false,
+      version: "v2",
+    });
+    render(<RoomDetailPage />);
+
+    fireEvent.click(screen.getByRole("tab", { name: "Stammdaten" }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => expect(toastSuccessMock).toHaveBeenCalled());
+    const write = (tenantMutateMock.mock.calls as unknown[][]).find(
+      ([, data]) => typeof data === "function",
+    );
+    expect(write?.[0]).toBe(roomKeys.detailKey("7"));
+    expect(write?.[2]).toEqual({ revalidate: false });
+    const update = write?.[1] as (current: unknown) => {
+      room: { name: string; version?: string; isOccupied: boolean };
+    };
+    const cached = update({ room: { ...room, version: "v1" }, history: [] });
+    expect(cached.room).toMatchObject({ name: "Neu", version: "v2" });
+    expect(cached.room.isOccupied).toBe(true);
   });
 
   it("keeps the referrer when switching room tabs", () => {
