@@ -33,3 +33,20 @@ func QueueArrivalScheduleChanged(ctx context.Context, broadcaster realtimeevents
 func NewGroupEvents(broadcaster RealtimePublisher, logger *slog.Logger) realtimeevents.GroupEvents {
 	return realtimeevents.GroupEvents{Broadcaster: broadcaster, Logger: logger}
 }
+
+// TenantSignal names a tenant-wide staff signal without content (ADR 0310).
+type TenantSignal = realtimeevents.TenantSignal
+
+// BoundTenantSignal is Delivery's shared after-commit site for those
+// signals, bound to one of them.
+type BoundTenantSignal = realtimeevents.BoundTenantSignal
+
+// CalendarAppointmentsChanged: an appointment of the school was written (#7693).
+const CalendarAppointmentsChanged = realtimeevents.CalendarAppointmentsChanged
+
+// NewTenantSignal binds Delivery's shared after-commit site for tenant-wide
+// signals without content to signal (ADR 0310). The root binds an owner's
+// change port to it; Announce sends the signal after the caller's commit.
+func NewTenantSignal(broadcaster realtimeevents.TenantPublisher, logger *slog.Logger, signal TenantSignal) BoundTenantSignal {
+	return realtimeevents.BoundTenantSignal{Broadcaster: broadcaster, Logger: logger, Signal: signal}
+}

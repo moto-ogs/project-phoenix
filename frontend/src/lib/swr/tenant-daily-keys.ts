@@ -220,8 +220,9 @@ export const tenantDailyKeys = {
   /** Aktivitäten, Kategorien und eigenes Personalprofil der Seite „Aktivitäten“. */
   activitiesOverview: () => "activities-page",
   /** Termine des Team-Kalenders je Ansicht und Zeitraum. */
+  staffCalendarFamily: "staff-calendar-",
   staffCalendar: (viewMode: string, from: string, to: string) =>
-    `staff-calendar-${viewMode}-${from}-${to}`,
+    `${tenantDailyKeys.staffCalendarFamily}${viewMode}-${from}-${to}`,
   /** Empfänger, die ein Termin erreichen kann, je Suche. */
   calendarRecipientOptions: (search: string) =>
     `calendar-recipient-options-${search}`,

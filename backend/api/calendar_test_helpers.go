@@ -37,6 +37,12 @@ func (m CalendarTestModule) ParentCalendarRouter() chi.Router {
 }
 
 func NewCalendarTestModule(db transactionruntime.Database, unit tenant.UnitOfWork) (CalendarTestModule, error) {
+	return newCalendarTestModule(db, unit, nil)
+}
+
+// newCalendarTestModule composes the calendar as NewCalendarTestModule does;
+// changes, when set, receives the change signal of every appointment write.
+func newCalendarTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, changes owners.CalendarAppointmentChanges) (CalendarTestModule, error) {
 	command, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {}, time.Now)
 	if err != nil {
 		return CalendarTestModule{}, err
@@ -95,6 +101,9 @@ func NewCalendarTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 	calendarConfig.ReminderNotifier = owners.NewCalendarReminderNotifier(delivery.Notifications)
 	calendarConfig.Preferences = delivery.NotificationPreferences
 	calendarConfig.Logger = logger.With("service", "calendar")
+	if changes != nil {
+		calendarConfig.Changes = changes
+	}
 	calendarSvc := owners.NewCalendarPortal(calendarConfig)
 
 	return CalendarTestModule{Calendar: calendarSvc}, nil

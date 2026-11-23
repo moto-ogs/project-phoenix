@@ -67,6 +67,7 @@ import { announceChangeRequestsChanged } from "~/lib/change-requests-refresh";
 import { announceCareScheduleStale } from "~/lib/care-schedule-stale";
 import { groupKeys } from "~/lib/swr/groups-keys";
 import { staffNoticeKeys } from "~/lib/swr/staff-keys";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 
 const logger = createLogger({ component: "GlobalSSE" });
 
@@ -408,6 +409,8 @@ export function useGlobalSSE(): SSEHookState {
   const hasPendingGroupSubscriptionRefresh = useRef(false);
   // A Hinweis der Leitung was created, changed or deleted (#7667).
   const hasPendingStaffNoticesEvent = useRef(false);
+  // An appointment of the school was written (#7693).
+  const hasPendingCalendarAppointmentsEvent = useRef(false);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Per-burst flush state (#2057): jitter drawn once when a burst starts, and
   // the burst's start time for the MAX_FLUSH_WAIT_MS cap.
@@ -437,6 +440,7 @@ export function useGlobalSSE(): SSEHookState {
     hasPendingGroupAccessEvent.current = false;
     hasPendingGroupSubscriptionRefresh.current = false;
     hasPendingStaffNoticesEvent.current = false;
+    hasPendingCalendarAppointmentsEvent.current = false;
     burstScopeRef.current = null;
   }, []);
 
@@ -972,7 +976,8 @@ export function useGlobalSSE(): SSEHookState {
     // departure announce student_updated; a staff Gehzeit or pickup note
     // pickup_schedule_changed. The classes (#7681): a class trip status
     // announces student_updated, a day outing and a changed
-    // Unterrichtsschluss arrival_schedule_changed. The burst debounce makes
+    // Unterrichtsschluss arrival_schedule_changed. The appointments (#7663)
+    // calendar_appointments_changed (#7693). The burst debounce makes
     // several events one reload; the reconnect reconcile sets every flag.
     if (
       hasPendingTimetableEvent.current ||
@@ -981,7 +986,8 @@ export function useGlobalSSE(): SSEHookState {
       hasPendingStaffTimeTrackingEvent.current ||
       hasPendingStudentUpdateEvent.current ||
       hasPendingPickupScheduleEvent.current ||
-      hasPendingStaffNoticesEvent.current
+      hasPendingStaffNoticesEvent.current ||
+      hasPendingCalendarAppointmentsEvent.current
     ) {
       mutate(
         (key) =>
@@ -1011,6 +1017,22 @@ export function useGlobalSSE(): SSEHookState {
         logger.debug("swr_revalidation_failed", {
           error: err instanceof Error ? err.message : String(err),
           scope: "staff_notices",
+        });
+      });
+    }
+
+    // Kalendertermine (#7693): „Heute anders“ reloads above; the own calendar
+    // reads its views and ranges under the staff calendar family.
+    if (hasPendingCalendarAppointmentsEvent.current) {
+      mutate(
+        (key) =>
+          typeof key === "string" &&
+          key.includes(tenantDailyKeys.staffCalendarFamily),
+      ).catch((err) => {
+        // Fire-and-forget: the calendar keeps its data until the next event or load.
+        logger.debug("swr_revalidation_failed", {
+          error: err instanceof Error ? err.message : String(err),
+          scope: "staff_calendar",
         });
       });
     }
@@ -1292,6 +1314,12 @@ export function useGlobalSSE(): SSEHookState {
 
         case "staff_notices_changed": {
           hasPendingStaffNoticesEvent.current = true;
+          scheduleFlush();
+          break;
+        }
+
+        case "calendar_appointments_changed": {
+          hasPendingCalendarAppointmentsEvent.current = true;
           scheduleFlush();
           break;
         }
@@ -1585,6 +1613,7 @@ export function useGlobalSSE(): SSEHookState {
     hasPendingTimetableEvent.current = true;
     hasPendingGroupAccessEvent.current = true;
     hasPendingStaffNoticesEvent.current = true;
+    hasPendingCalendarAppointmentsEvent.current = true;
     const openStudentId = currentStudentDetailId();
     if (openStudentId) pendingOpenStudentIds.current.add(openStudentId);
     // One flush for the gap and any burst that was still waiting.

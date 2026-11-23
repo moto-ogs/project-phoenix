@@ -174,6 +174,14 @@ const (
 	// view („Heute anders“, Tagesinformationen, the sidebar count).
 	EventStaffNoticesChanged EventType = "staff_notices_changed"
 
+	// EventCalendarAppointmentsChanged is a tenant-wide staff signal that an
+	// appointment of the school was created, changed, cancelled or deleted,
+	// or that one date of a series was cancelled (#7693). It carries no
+	// content: appointments have recipients, and readers refetch their own
+	// view („Heute anders“, the own calendar). Delivery emits it through its
+	// shared after-commit site for content-free tenant signals (ADR 0310).
+	EventCalendarAppointmentsChanged EventType = "calendar_appointments_changed"
+
 	// Tenant-scoped settings change. Fires when a setting whose value travels
 	// through /auth/tenant/resolve (currently operations.student_photos_enabled)
 	// is written or reset. Already-open tabs at the affected tenant pick this

@@ -181,6 +181,13 @@ type ShiftTypes interface {
 	ListAll(context.Context) ([]*ShiftType, error)
 }
 
+// AppointmentChanges announces that the school's appointments changed. It is
+// called inside the write's transaction and sends nothing before the commit
+// (#7693); the root binds it to Delivery's tenant signals.
+type AppointmentChanges interface {
+	Announce(context.Context)
+}
+
 // Runtime keeps transaction ownership in composition. Tenant operations reuse
 // the ambient transaction, including rollback and after-commit semantics.
 type Runtime interface {
