@@ -1139,3 +1139,92 @@ describe("ShiftEditModal series editor and a colleague's change", () => {
     );
   });
 });
+
+describe("ShiftEditModal split and the rule on screen (ADR 0311)", () => {
+  function renderOccurrence() {
+    render(
+      <>
+        <CacheHandle />
+        <ShiftEditModal
+          isOpen
+          mode="edit"
+          staffId="7"
+          staffName="Ada Lovelace"
+          date="2026-09-07"
+          shift={seriesShift}
+          shiftTypes={[]}
+          onClose={vi.fn()}
+          onSaved={vi.fn()}
+        />
+      </>,
+    );
+  }
+
+  async function splitFromHere() {
+    fireEvent.click(
+      screen.getByRole("button", { name: "Änderungen speichern" }),
+    );
+    const following = () =>
+      screen.getByRole("button", { name: /Ab jetzt dauerhaft/ });
+    await waitFor(() => expect(following()).toBeEnabled());
+    fireEvent.click(following());
+  }
+
+  it("splits with the version of the rule shown, not of a newer read", async () => {
+    splitSeries.mockResolvedValue({
+      seriesId: "6",
+      created: 1,
+      skippedDates: [],
+    });
+    renderOccurrence();
+    expect(await screen.findByText(/Mo, Mi/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Ende"), {
+      target: { value: "14:00" },
+    });
+    getSeries.mockResolvedValue({
+      ...seriesRule,
+      weekdays: [1, 3, 5],
+      version: "series-v2",
+    });
+    await act(revalidateAll);
+
+    await splitFromHere();
+    // The colleague's Friday was never on screen: the split confirms the
+    // rule shown, and the server refuses it.
+    await waitFor(() =>
+      expect(splitSeries).toHaveBeenCalledWith(
+        "5",
+        expect.objectContaining({
+          endTime: "14:00",
+          expectedVersion: "series-v1",
+        }),
+      ),
+    );
+  });
+
+  it("names a failed read of the stored rule after a refused split", async () => {
+    splitSeries.mockRejectedValueOnce(
+      new ApiError("changed since it was read", 409, {
+        code: "general.changed_since_read",
+      }),
+    );
+    renderOccurrence();
+    expect(await screen.findByText(/Mo, Mi/)).toBeInTheDocument();
+    getSeries.mockRejectedValue(
+      new ApiError("down", 503, { code: "general.unavailable" }),
+    );
+    await splitFromHere();
+
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Du siehst jetzt den neuen Stand/),
+    ).not.toBeInTheDocument();
+    // Nothing goes out with the refused version.
+    expect(
+      screen.getByRole("button", { name: "Serie bearbeiten" }),
+    ).toBeDisabled();
+    expect(splitSeries).toHaveBeenCalledTimes(1);
+  });
+});
