@@ -104,3 +104,43 @@ func TestEnrollmentEnabledForTenantsFailsWhenDefinitionIsMissing(t *testing.T) {
 	require.ErrorAs(t, err, &missing)
 	assert.Equal(t, config.KeyEnrollmentEnabled, missing.Key)
 }
+
+// A school the request already read is answered from its cache, the other
+// school from the store, so a batch read inside an administrative unit costs
+// nothing for the school the route lock read (#7967).
+func TestResolveManyForTenantsAnswersACachedSchoolFromTheRequestCache(t *testing.T) {
+	t.Parallel()
+	registry := config.NewRegistry()
+	registerTestSetting(registry, "test.cached_batch", config.FieldText, "default")
+	cachedSchool := testpkg.UniqueTestTenantID(t)
+	otherSchool := testpkg.UniqueTestTenantID(t)
+	repository := newInMemoryValueRepo()
+	store := func(tenantID int64, value string) {
+		override := &config.SettingValue{SettingKey: "test.cached_batch", Value: json.RawMessage(value)}
+		override.SetTenantID(tenantID)
+		require.NoError(t, repository.Upsert(context.Background(), override))
+	}
+	store(cachedSchool, `"read first"`)
+	store(otherSchool, `"other"`)
+	service := NewSettingsService(repository, nil, nil, testSettingsRuntime{}, slog.Default(), registry)
+	keys := []string{"test.cached_batch"}
+	request := config.WithSettingsRequestCache(context.Background())
+	_, err := service.ResolveStringForTenant(request, cachedSchool, keys[0])
+	require.NoError(t, err)
+	// Written behind the cache: only a read of the store sees it.
+	store(cachedSchool, `"stored later"`)
+
+	resolved := func(ctx context.Context) map[int64]string {
+		snapshots, err := service.(config.BatchSettingsService).ResolveManyForTenants(ctx, []int64{cachedSchool, otherSchool}, keys)
+		require.NoError(t, err)
+		values := map[int64]string{}
+		for tenantID, snapshot := range snapshots {
+			values[tenantID], err = snapshot.String("test.cached_batch")
+			require.NoError(t, err)
+		}
+		return values
+	}
+	assert.Equal(t, map[int64]string{cachedSchool: "read first", otherSchool: "other"}, resolved(request))
+	assert.Equal(t, map[int64]string{cachedSchool: "stored later", otherSchool: "other"}, resolved(context.Background()),
+		"without a request cache every school comes from the store")
+}
