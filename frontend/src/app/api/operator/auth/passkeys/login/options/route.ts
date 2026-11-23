@@ -1,6 +1,6 @@
+import { routes } from "~/lib/contract/operator-auth.generated";
 import { authStepProxy } from "~/lib/auth-proxy.server";
 
 export const POST = authStepProxy(
-  "/operator/auth/passkeys/login/options",
-  "optional-json",
+  routes["POST /operator/auth/passkeys/login/options"],
 );

@@ -198,7 +198,10 @@ export async function sendBackend(
 /** The JSON of a successful backend answer; an error answer throws. */
 export async function readBackendJson<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    throw new ApiResponseError(response.status, await response.text(), {
+    // A refusal's status still applies if the body stream breaks. In
+    // particular, losing a 401 here must not turn a revoked session live.
+    const body = await response.text().catch(() => "");
+    throw new ApiResponseError(response.status, body, {
       retryAfter: response.headers?.get?.("Retry-After") ?? null,
       contentType: response.headers?.get?.("Content-Type") ?? null,
     });

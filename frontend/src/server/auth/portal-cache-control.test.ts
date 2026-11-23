@@ -127,19 +127,12 @@ const routes: Array<[string, () => Promise<Route>]> = [
     },
   ],
   [
-    "public pass-through (token routes)",
-    async () =>
-      (await import("~/lib/backend-proxy-route.server")).createPublicJsonProxy({
-        method: "GET",
-        path: "/api/x",
-      }),
-  ],
-  [
     "public login step",
     async () =>
       (await import("~/lib/auth-proxy.server")).authStepProxy(
-        "/api/x",
-        "optional-json",
+        (await import("~/lib/contract/auth-mfa.generated")).routes[
+          "POST /auth/mfa/resend"
+        ],
       ) as Route,
   ],
 ];
@@ -156,9 +149,14 @@ afterEach(() => {
 });
 
 describe("portal route wrappers send private, no-store", () => {
-  it.each(routes)("%s: JSON success", async (_portal, load) => {
+  it.each(routes)("%s: JSON success", async (portal, load) => {
     mockFetch.mockResolvedValue(
-      backendJson(200, { status: "success", data: { id: 1 } }),
+      backendJson(
+        200,
+        portal === "public login step"
+          ? { challenge_token: "challenge" }
+          : { status: "success", data: { id: 1 } },
+      ),
     );
 
     const response = await call(await load());

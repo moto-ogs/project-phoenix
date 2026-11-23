@@ -101,7 +101,7 @@ export const noData = z
     z.undefined(),
     z.object({ status: z.literal("success"), data: z.null().optional() }),
   ])
-  .transform(() => ({ data: null }));
+  .transform(() => ({ status: "success" as const, data: null }));
 
 /**
  * A route that answers a file (`File` in the Go registration): the proxy

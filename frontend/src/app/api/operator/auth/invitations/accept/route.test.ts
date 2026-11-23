@@ -32,7 +32,10 @@ describe("POST /api/operator/auth/invitations/accept", () => {
       ok: true,
       status: 200,
       headers: new Headers({ "content-type": "application/json" }),
-      json: async () => ({}),
+      json: async () => ({
+        status: "success",
+        data: { id: "1", email: "operator@example.test", display_name: "Test" },
+      }),
     });
 
     const request = new NextRequest(

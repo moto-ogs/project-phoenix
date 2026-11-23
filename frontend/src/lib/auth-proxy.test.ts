@@ -1,6 +1,8 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { authStepProxy } from "./auth-proxy.server";
+import { routes } from "./contract/auth-mfa.generated";
+import { routes as operatorRoutes } from "./contract/operator-auth.generated";
 
 const { captureException } = vi.hoisted(() => ({ captureException: vi.fn() }));
 vi.mock("@sentry/nextjs", () => ({ captureException }));
@@ -29,11 +31,11 @@ const sent = () => {
   return { url, init: init!, headers: new Headers(init!.headers) };
 };
 
-const resend = authStepProxy("/auth/mfa/resend", "optional-json");
+const resend = authStepProxy(routes["POST /auth/mfa/resend"]);
 
 beforeEach(() => {
   fetchMock.mockReset();
-  fetchMock.mockResolvedValue(Response.json({ ok: true }));
+  fetchMock.mockResolvedValue(Response.json({ challenge_token: "renewed" }));
 });
 
 describe("authStepProxy", () => {
@@ -51,7 +53,7 @@ describe("authStepProxy", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
       status: "success",
-      data: { ok: true },
+      data: { challenge_token: "renewed" },
     });
     expect(sent().url).toBe("http://backend.test/auth/mfa/resend");
     expect(sent().init).toMatchObject({
@@ -74,7 +76,7 @@ describe("authStepProxy", () => {
   });
 
   it("sends no body for a step without one", async () => {
-    await authStepProxy("/auth/mfa/enroll/start", "none")(step());
+    await authStepProxy(routes["POST /auth/mfa/enroll/start"])(step());
 
     expect(sent().init.body).toBeUndefined();
   });
@@ -96,10 +98,55 @@ describe("authStepProxy", () => {
     });
   });
 
+  it("refuses a successful resend without the generated challenge token", async () => {
+    fetchMock.mockResolvedValueOnce(
+      Response.json({ extra_token: "not-a-challenge" }),
+    );
+    const response = await resend(step());
+    expect(response.status).toBe(502);
+    await expect(response.json()).resolves.toMatchObject({
+      code: "general.write_answer_unreadable",
+    });
+  });
+
+  it("keeps a successful no-data envelope at enrollment start", async () => {
+    fetchMock.mockResolvedValueOnce(Response.json({ status: "success" }));
+    const start = authStepProxy(
+      operatorRoutes["POST /operator/auth/mfa/enroll/start"],
+    );
+    const response = await start(step());
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      status: "success",
+      data: null,
+    });
+  });
+
+  it("returns a safe 502 when a successful response breaks mid-body", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.error(new TypeError("private upstream detail"));
+          },
+        }),
+      ),
+    );
+    const response = await resend(step());
+    expect(response.status).toBe(502);
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    await expect(response.json()).resolves.toMatchObject({
+      code: "general.write_answer_unreadable",
+    });
+  });
+
   it("answers a backend 204 without a body", async () => {
     fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
 
-    const response = await resend(step());
+    const start = authStepProxy(
+      operatorRoutes["POST /operator/auth/mfa/enroll/start"],
+    );
+    const response = await start(step());
 
     expect(response.status).toBe(204);
     expect(await response.text()).toBe("");

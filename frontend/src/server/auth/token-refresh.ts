@@ -3,10 +3,11 @@ import type { JWT } from "next-auth/jwt";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { createHmac, randomBytes } from "node:crypto";
 import { env } from "~/env";
-import { sendBackend } from "~/lib/backend-client.server";
+import { contractWrite } from "~/lib/contract/client.server";
+import type { TokenResponse } from "~/lib/contract/shared.generated";
 import type { ErrorCode } from "~/lib/error-codes.generated";
 import { authLogger, parseJwtPayload } from "./jwt-claims";
-import type { BackendEndpoint } from "./portals";
+import type { RefreshRoute } from "./portals";
 
 // The backend refuses an unexpired access token once its refresh-token family
 // is revoked (#5194): logout in another tab, or a cookie a late response wrote
@@ -28,15 +29,10 @@ export function isRenewalForced(): boolean {
   return forcedRenewal.getStore() === true;
 }
 
-export interface TokenPair {
-  access_token: string;
-  refresh_token: string;
-}
-
 export type Rotation =
   | {
       status: "success";
-      result: TokenPair;
+      result: TokenResponse;
       recoveryProof: string;
       refreshTokenExpiresAt: number;
       /** Another request of this process already rotated this token. */
@@ -60,7 +56,7 @@ const activeRefreshes = new Map<string, Promise<Rotation>>();
 const refreshCache = new Map<
   string,
   {
-    result: TokenPair;
+    result: TokenResponse;
     recoveryProof: string;
     refreshTokenExpiresAt: number;
     expiresAt: number;
@@ -185,34 +181,26 @@ export function refreshAlreadyRefused(token: JWT): boolean {
   );
 }
 
-async function refusedAsNotBooked(response: Response): Promise<boolean> {
-  try {
-    const body = (await response.json()) as { code?: unknown } | null;
-    return body?.code === moduleNotBookedCode;
-  } catch {
-    return false;
-  }
-}
-
 async function fetchRotation(
-  endpoint: BackendEndpoint,
+  endpoint: RefreshRoute,
   refreshToken: string,
   recoveryProof: string,
   refreshKey: string,
   token: JWT,
 ): Promise<Rotation> {
   try {
-    const response = await sendBackend(endpoint.path, refreshToken, {
-      method: "POST",
+    const reply = await contractWrite(endpoint, undefined, {
+      token: refreshToken,
       headers: { "X-Refresh-Recovery-Proof": recoveryProof },
       timeout: "session",
     });
-    if (!response.ok) {
+    if (!reply.ok) {
+      const { status, code } = reply.error;
       authLogger.warn("proactive_token_refresh_failed", {
-        status: response.status,
+        status,
         scope: token.scope,
       });
-      if (response.status === 403 && (await refusedAsNotBooked(response))) {
+      if (status === 403 && code === moduleNotBookedCode) {
         notBookedRefreshKeys.set(refreshKey, Date.now() + NOT_BOOKED_RETRY_MS);
         if (notBookedRefreshKeys.size > MAX_CACHE_ENTRIES) {
           const oldest = notBookedRefreshKeys.keys().next();
@@ -220,16 +208,13 @@ async function fetchRotation(
         }
         return { status: "notBooked" };
       }
-      if (response.status === 401 || response.status === 403) {
+      if (status === 401 || status === 403) {
         rememberTerminal(refreshKey, token.refreshTokenExpiry);
         return { status: "terminal", remembered: false };
       }
       return { status: "transient" };
     }
-    const body = (await response.json()) as TokenPair | { data: TokenPair };
-    const tokens = endpoint.enveloped
-      ? (body as { data: TokenPair }).data
-      : (body as TokenPair);
+    const tokens = "data" in reply.value ? reply.value.data : reply.value;
     const successorExpiresAt = refreshTokenExpiresAt(tokens.refresh_token);
     if (successorExpiresAt === null) return { status: "transient" };
     const successorProof = deriveRefreshRecoveryProof(tokens.refresh_token);
@@ -265,7 +250,7 @@ async function fetchRotation(
  */
 export async function rotateRefreshToken(
   token: JWT,
-  endpoint: BackendEndpoint,
+  endpoint: RefreshRoute,
 ): Promise<Rotation> {
   const refreshToken = token.refreshToken;
   if (typeof refreshToken !== "string" || !refreshToken) {
@@ -326,8 +311,8 @@ export function applyRotation(
  */
 export async function redeemTraegerHandoff(
   handoffToken: string,
-  endpoint: BackendEndpoint,
-): Promise<TokenPair | null> {
+  endpoint: RefreshRoute,
+): Promise<TokenResponse | null> {
   if (
     typeof handoffToken !== "string" ||
     !handoffToken ||
@@ -336,19 +321,21 @@ export async function redeemTraegerHandoff(
     return null;
   }
   try {
-    const response = await sendBackend(endpoint.path, handoffToken, {
-      method: "POST",
+    const reply = await contractWrite(endpoint, undefined, {
+      token: handoffToken,
       // A fresh proof per redemption: the hand-off token alone, replayed
       // within the recovery window, must not recover the session it
       // opened. A lost answer means opening the school again.
       headers: { "X-Refresh-Recovery-Proof": createRefreshRecoveryProof() },
       timeout: "session",
     });
-    if (!response.ok) {
-      authLogger.warn("traeger_handoff_refused", { status: response.status });
+    if (!reply.ok) {
+      authLogger.warn("traeger_handoff_refused", {
+        status: reply.error.status,
+      });
       return null;
     }
-    return (await response.json()) as TokenPair;
+    return "data" in reply.value ? reply.value.data : reply.value;
   } catch (err) {
     authLogger.warn("traeger_handoff_failed", {
       error: err instanceof Error ? err.message : String(err),

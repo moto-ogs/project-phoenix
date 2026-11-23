@@ -14,13 +14,7 @@ export async function loadUserContext(
   token: string,
   options?: { signal?: AbortSignal },
 ): Promise<UserContextResponse> {
-  const result = await contractGet(
-    `${NAVIGATION.method} ${NAVIGATION.pattern}`,
-    NAVIGATION.response,
-    "/api/me/navigation",
-    token,
-    options,
-  );
+  const result = await contractGet(NAVIGATION, { token, ...options });
   if (!result.ok) throw result.error.cause;
   return mapUserContext(result.value.data);
 }

@@ -1,32 +1,39 @@
 import type { NextRequest } from "next/server";
-import { createPublicJsonProxy } from "./backend-proxy-route.server";
-import { envelopedBackendSuccess } from "./backend-proxy-response.server";
+import { handleApiError } from "./api-response-error.server";
+import { noData } from "./contract/runtime";
+import { contractWrite, type ContractBody } from "./contract/client.server";
+import { contractResponse } from "./contract/route-response.server";
+import { withPrivateNoStore } from "./private-no-store";
+import { successResponse } from "./route-wrapper-utils.server";
 
 /**
- * A login step before a session exists (MFA resend, enrollment start,
- * passkey login options). The browser's Authorization header carries the
- * step's challenge or enrollment proof, not a session token (#5005).
- *
- * Its route files stay beside the catalog proxy (#2352): the proxy sends only
- * a session bearer or, on a public route, none. Teaching it to forward a
- * browser credential for these routes would give it a second credential path
- * for one-line files; a route file per step is the smaller boundary.
- *
- * The backend answers these steps without its envelope (`plain`); the BFF
- * answers the browser `{ status: "success", data }` like every route (a 204
- * stays bodyless, an error passes through unchanged).
+ * MFA resend, enrollment start and passkey options carry no session.
+ * The Authorization header, if present, is the step's limited proof.
  */
-export function authStepProxy(path: string, body: "optional-json" | "none") {
-  return createPublicJsonProxy({
-    method: "POST",
-    path,
-    body,
-    timeout: "login",
-    onSuccess: (response, request) =>
-      envelopedBackendSuccess(response, request),
-    additionalHeaders: (request: NextRequest): Record<string, string> => {
-      const proof = request.headers.get("authorization");
-      return proof ? { Authorization: proof } : {};
-    },
+export function authStepProxy<
+  R extends Parameters<typeof contractWrite>[0] & {
+    method: "POST";
+    routeFile: string;
+  },
+>(route: R) {
+  return withPrivateNoStore(async (request: NextRequest) => {
+    // The Go route validates the body it binds.
+    const body: ContractBody<R> =
+      "request" in route
+        ? await request.json().catch(() => ({}))
+        : (undefined as ContractBody<R>);
+    const proof = request.headers.get("authorization");
+    try {
+      const reply = await contractWrite(route, body, {
+        request,
+        timeout: "login",
+        headers: proof ? { Authorization: proof } : undefined,
+      });
+      return route.response === noData
+        ? contractResponse(reply, request)
+        : contractResponse(reply, request, successResponse);
+    } catch (error) {
+      return handleApiError(error, request);
+    }
   });
 }

@@ -68,10 +68,13 @@ describe("invitation owner session boundary", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
-        new Response("{}", {
-          status: 201,
-          headers: { "Content-Type": "application/json" },
-        }),
+        Response.json(
+          {
+            status: "success",
+            data: { account_id: "1", email: "owner@example.test" },
+          },
+          { status: 201 },
+        ),
       ),
     );
   });

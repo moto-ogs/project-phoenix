@@ -2,9 +2,9 @@
 
 import React, { createContext, useContext, useMemo } from "react";
 import {
-  portalAuthPath,
   portalLoginPath,
   type HostedPortalKey,
+  type PortalKey,
 } from "./portal-paths";
 import { signOut, useSession } from "next-auth/react";
 import { useProfile } from "~/lib/profile-context";
@@ -20,7 +20,8 @@ import { clearPersonalStorage } from "~/lib/personal-storage";
 import { createLogger } from "~/lib/logger";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
-import { bffJsonUncontracted } from "~/lib/bff-fetch";
+import { bffJson } from "~/lib/bff-fetch";
+import { sessionBff } from "~/lib/session-bff";
 import { unsubscribePushSilently } from "~/lib/push-api";
 import { getSessionPersonName, hasPermission } from "~/lib/auth-utils";
 import { getSmartRedirectPath } from "~/lib/redirect-utils";
@@ -108,14 +109,14 @@ async function signOutToLogin(portal: HostedPortalKey): Promise<void> {
  * (offline, timeout) the call throws and the session stays, with a retry.
  */
 async function revokeSessionFamily(
-  path: string,
+  portal: PortalKey,
   signal?: AbortSignal,
 ): Promise<void> {
   markLogoutNotRevoked(false);
   // A session step of the BFF: through `public`, so a 401 neither renews the
   // session nor opens the login.
   try {
-    await bffJsonUncontracted<null>("public", "POST", path, {
+    await bffJson("public", sessionBff.logout(portal), {
       signal: signal
         ? AbortSignal.any([signal, AbortSignal.timeout(5000)])
         : AbortSignal.timeout(5000),
@@ -283,10 +284,7 @@ export function TeacherShellProvider({
             // The revocation never waits for push (#5194): the backend drops the
             // family's push subscriptions with it, and the device-side cleanup
             // below stays best-effort with one five-second budget (#5260).
-            await revokeSessionFamily(
-              portalAuthPath("tenant", "logout"),
-              signal,
-            );
+            await revokeSessionFamily("tenant", signal);
             void unsubscribePushSilently("tenant", {
               signal,
               timeoutMs: 5000,
@@ -376,7 +374,7 @@ export function OperatorShellProvider({
         behindSessionBarrier(async () => {
           // The operator family is checked on every operator request; revoking
           // it ends this session's tokens at once (#5194).
-          await revokeSessionFamily(portalAuthPath("operator", "logout"));
+          await revokeSessionFamily("operator");
           // Namen, Vorauswahl und Zähler dieses Kontos bleiben nicht auf dem
           // Gerät (#5000).
           clearPersonalStorage();
@@ -455,7 +453,7 @@ export function SchoolShellProvider({
           // School sessions revoke through the shared scope-preserving
           // /auth/logout (tenant-style), proxied with the school session's
           // refresh token (#5194).
-          await revokeSessionFamily(portalAuthPath("school", "logout"));
+          await revokeSessionFamily("school");
           // Dieses Gerät abmelden, bevor die Session weg ist (#2208): sonst
           // bliebe das Browser-Abo bestehen und der nächste Login auf diesem
           // Gerät fände ein Abo ohne Zuordnung vor.
@@ -524,7 +522,7 @@ export function CatererShellProvider({
           } catch {
             // sessionStorage unavailable: the login page shows its notice.
           }
-          await revokeSessionFamily(portalAuthPath("caterer", "logout"));
+          await revokeSessionFamily("caterer");
           // Namen, Vorauswahl und Zähler dieses Kontos bleiben nicht auf dem
           // Gerät (#5000).
           clearPersonalStorage();
@@ -564,7 +562,7 @@ export const endTraegerSession: () => Promise<void> = behindSessionBarrier(
       // "session expired" note, which is harmless.
     }
     // Revoke the backend refresh session first (#5194).
-    await revokeSessionFamily(portalAuthPath("traeger", "logout"));
+    await revokeSessionFamily("traeger");
     // Namen, Vorauswahl und Zähler dieses Kontos bleiben nicht auf dem
     // Gerät (#5000).
     clearPersonalStorage();
@@ -717,7 +715,7 @@ export function ParentShellProvider({
           // Revoke the parent family first (#5194): the revocation never waits
           // for push. The backend drops the family's push subscriptions with
           // it; the device-side cleanup below stays best-effort (#5260).
-          await revokeSessionFamily(portalAuthPath("parent", "logout"));
+          await revokeSessionFamily("parent");
           await unsubscribePushSilently("parent");
           // Namen, Vorauswahl und Zähler dieses Kontos bleiben nicht auf dem
           // Gerät (#5000).

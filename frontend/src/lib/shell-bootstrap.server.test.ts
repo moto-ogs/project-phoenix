@@ -9,6 +9,18 @@ vi.mock("~/lib/api-helpers.server", () => ({
   apiGet: mockApiGet,
 }));
 
+vi.mock("~/lib/backend-client.server", async (original) => ({
+  ...(await original<typeof import("~/lib/backend-client.server")>()),
+  sendBackend: async (
+    endpoint: string,
+    token: string,
+    options: { signal?: AbortSignal },
+  ) =>
+    Response.json(
+      await mockApiGet(endpoint, token, { signal: options.signal }),
+    ),
+}));
+
 vi.mock("~/lib/user-context.server", () => ({
   loadUserContext: vi.fn(async () => ({
     educationalGroups: [],

@@ -433,7 +433,7 @@ line, and writes one WARN. It still counts in
 ## Portal session isolation
 
 Each portal has its own NextAuth instance, cookie, and base path.
-Operator, parents, school, and Träger cookies are host-only. The tenant cookie is
+Operator, parents, school, caterer, and Träger cookies are host-only. The tenant cookie is
 domain-scoped to support switching between school subdomains (localhost:
 host-only). The proxy redirects cross-host paths to their canonical subdomain.
 
@@ -809,6 +809,17 @@ installed. Other tabs, a tab started during a logout and the public tenant
 pages need no barrier: their answers pass the same server gates.
 
 ### Login, refresh, and MFA
+
+All six portals use generated `RouteFile` entries for session calls to Go.
+`frontend/src/server/auth/portals.ts` selects the login, refresh and
+logout contracts, including which bearer logout takes. Login and factor
+routes decode and install the pair server-side, then answer the browser
+through the shared types in `frontend/src/lib/session-bff.ts`. The only
+proofs sent before sign-in are limited enrollment or challenge proofs,
+never a session pair. These routes do not enter a catalog proxy allowlist.
+For the call syntax and error handling, see
+[Frontend API](frontend-api.md#generated-contract-adr-0270).
+A password or code goes to Go once, not again after session renewal.
 
 Backend paths in this section are relative to `backend/`:
 

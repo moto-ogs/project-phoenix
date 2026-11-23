@@ -227,12 +227,15 @@ one sentence why the route file serves it (`common.RouteFileSession` for a
 session step), beside its portal, `Request` and `Response` (or `NoData`,
 `File`, `Multipart`). `Plain: true` says the handler writes the data without
 the envelope (`common.RenderJSON`). The generator writes its types, decoder
-and route entry, so the route file calls `contractGet` or `contractWrite`
-(`frontend/src/lib/contract/client.server.ts`), and lists it in
-`routeFileRoutes` of `portals.generated.ts`, never in a proxy allowlist:
-the catalog proxy never hands a session step's tokens to the browser.
-Example: `SessionRouteContracts` in
-`backend/modules/identityaccess/inbound/account/route_contracts.go`.
+and route entry and lists that entry in `routeFileRoutes`, never in a proxy
+allowlist. The named handler calls `contractGet(entry, options)` or
+`contractWrite(entry, body, options)`, even without a session. The session
+step's Go tokens never reach the browser; put its BFF answer in
+`frontend/src/lib/session-bff.ts` and call that entry with `bffJson`.
+See [school switching](../../frontend/src/app/api/auth/switch-tenant/route.ts)
+and [pre-session enrollment start](../../frontend/src/app/api/auth/mfa/enroll/start/route.ts).
+`app/api/route-backend-paths.test.ts` checks entry use and rejects raw Go
+response reads in named routes.
 
 A reshaping, an ID or format check or a second backend call for the same
 screen moves into the Go handler; an aggregation of several reads is a Go

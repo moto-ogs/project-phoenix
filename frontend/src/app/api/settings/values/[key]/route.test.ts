@@ -5,10 +5,19 @@ const mockApiDelete = vi.fn();
 const mockRevalidateTag = vi.fn();
 const mockRevalidatePath = vi.fn();
 
-vi.mock("~/lib/api-helpers.server", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/lib/api-helpers.server")>()),
-  apiPut: (...args: unknown[]) => mockApiPut(...args),
-  apiDelete: (...args: unknown[]) => mockApiDelete(...args),
+vi.mock("~/lib/backend-client.server", async (original) => ({
+  ...(await original<typeof import("~/lib/backend-client.server")>()),
+  sendBackend: async (
+    endpoint: string,
+    token: string,
+    call: { method: string; json?: unknown },
+  ) => {
+    if (call.method === "DELETE") {
+      await mockApiDelete(endpoint, token);
+      return new Response(null, { status: 204 });
+    }
+    return Response.json(await mockApiPut(endpoint, token, call.json));
+  },
 }));
 
 vi.mock("~/lib/route-wrapper.server", () => ({
@@ -46,7 +55,7 @@ describe("PUT /api/settings/values/[key]", () => {
     process.env.TENANT_DOMAIN = "moto-app.de";
   });
 
-  it("calls apiPut with correct endpoint, token, and body", async () => {
+  it("sends a PUT with the correct endpoint, token, and body", async () => {
     const body = { value: "16:30" };
     mockApiPut.mockResolvedValue({ status: "success" });
 
@@ -62,7 +71,7 @@ describe("PUT /api/settings/values/[key]", () => {
       "test-token",
       body,
     );
-    expect(result).toEqual({ status: "success" });
+    expect(result).toBeNull();
     expect(mockRevalidateTag).not.toHaveBeenCalled();
     expect(mockRevalidatePath).not.toHaveBeenCalled();
   });
@@ -74,7 +83,7 @@ describe("DELETE /api/settings/values/[key]", () => {
     process.env.TENANT_DOMAIN = "moto-app.de";
   });
 
-  it("calls apiDelete with correct endpoint", async () => {
+  it("sends a DELETE to the correct endpoint", async () => {
     mockApiDelete.mockResolvedValue(undefined);
 
     await (DELETE as Function)(reqWithHost(null), "test-token", {
@@ -91,14 +100,14 @@ describe("DELETE /api/settings/values/[key]", () => {
 
 // Branch coverage: VALID_KEY_PATTERN rejection. Both PUT and DELETE share the
 // same regex guard. A key with disallowed characters (uppercase, slashes,
-// spaces) MUST be rejected before any apiPut/apiDelete call so a malicious
+// spaces) MUST be rejected before calling Go so a malicious
 // caller cannot smuggle path-traversal characters into the proxied URL.
 describe("settings values key validation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("rejects PUT with invalid key (uppercase) before calling apiPut", async () => {
+  it("rejects PUT with invalid key (uppercase) before calling Go", async () => {
     await expect(
       (PUT as Function)(reqWithHost(null), { value: "x" }, "test-token", {
         key: "Operations.Bad",
@@ -142,6 +151,24 @@ describe("settings values tenant cache busting", () => {
   afterEach(() => {
     if (ORIGINAL_TENANT_DOMAIN === undefined) delete process.env.TENANT_DOMAIN;
     else process.env.TENANT_DOMAIN = ORIGINAL_TENANT_DOMAIN;
+  });
+
+  it("revalidates the tenant after a committed write with an invalid answer", async () => {
+    mockApiPut.mockResolvedValue({
+      status: "success",
+      data: { unexpected: true },
+    });
+    await expect(
+      (PUT as Function)(
+        reqWithHost("school-a.moto-app.de"),
+        { value: false },
+        "test-token",
+        { key: "analytics.enabled" },
+      ),
+    ).rejects.toMatchObject({ status: 502 });
+    expect(mockRevalidateTag).toHaveBeenCalledWith("tenant-school-a", {
+      expire: 0,
+    });
   });
 
   it.each([

@@ -72,6 +72,7 @@ describe("POST /api/settings/login-image", () => {
       ok: true,
       status: 200,
       json: async () => ({
+        status: "success",
         data: { login_image_url: "/uploads/login-image.jpg" },
       }),
     });
@@ -95,6 +96,36 @@ describe("POST /api/settings/login-image", () => {
     };
     expect(json.data.login_image_url).toBe("/uploads/login-image.jpg");
   });
+
+  it.each([false, true])(
+    "purges the cache on a committed upload with an unreadable reply (browser disconnect: %s)",
+    async (disconnect) => {
+      const controller = new AbortController();
+      mockFetch.mockImplementationOnce(async () => {
+        if (disconnect) controller.abort();
+        return new Response("not JSON", { status: 200 });
+      });
+      const formData = new FormData();
+      formData.append("login_image", createMockImageFile());
+      const request = new NextRequest(
+        "http://localhost:3000/api/settings/login-image",
+        {
+          method: "POST",
+          body: formData,
+          signal: controller.signal,
+          headers: { referer: "http://localhost:3000/school-a/settings" },
+        },
+      );
+
+      const result = await POST(request, createMockContext());
+
+      expect(request.signal.aborted).toBe(disconnect);
+      expect(result.status).toBe(502);
+      expect(mockRevalidateTag).toHaveBeenCalledWith("tenant-school-a", {
+        expire: 0,
+      });
+    },
+  );
 
   it("rejects request with no file", async () => {
     const formData = new FormData();
@@ -135,6 +166,7 @@ describe("POST /api/settings/login-image", () => {
       ok: true,
       status: 200,
       json: async () => ({
+        status: "success",
         data: { login_image_url: "/uploads/login-image.jpg" },
       }),
     });
@@ -171,6 +203,7 @@ describe("POST /api/settings/login-image", () => {
         ok: true,
         status: 200,
         json: async () => ({
+          status: "success",
           data: { login_image_url: "/uploads/login-image.jpg" },
         }),
       });
@@ -278,6 +311,7 @@ describe("GET /api/settings/login-image", () => {
       ok: true,
       status: 200,
       json: async () => ({
+        status: "success",
         data: { login_image_url: "/uploads/login-image.jpg", can_edit: true },
       }),
     });
@@ -329,6 +363,7 @@ describe("GET /api/settings/login-image", () => {
         ok: true,
         status: 200,
         json: async () => ({
+          status: "success",
           data: {
             login_image_url: "/uploads/login-image.jpg",
             can_edit: true,

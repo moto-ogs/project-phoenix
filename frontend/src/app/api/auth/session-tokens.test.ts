@@ -56,7 +56,7 @@ beforeEach(() => {
   familyStatus = 200;
   backend.mockImplementation(async (url: unknown) =>
     String(url).endsWith("/auth/session/validate")
-      ? Response.json({ id: 7 }, { status: familyStatus })
+      ? Response.json({ id: "7" }, { status: familyStatus })
       : new Response(null, { status: 404 }),
   );
 });
@@ -284,7 +284,7 @@ describe.each(PORTALS)(
       familyStatus = 401;
       backend.mockImplementation(async (url: unknown) =>
         String(url).endsWith("/auth/session/validate")
-          ? Response.json({ id: 7 }, { status: familyStatus })
+          ? Response.json({ id: "7" }, { status: familyStatus })
           : new Response(null, { status: 503 }),
       );
 

@@ -1,7 +1,8 @@
 import { ApiError } from "./api-error";
-import { bffJson, bffJsonUncontracted } from "./bff-fetch";
+import { bffJson } from "./bff-fetch";
 import type * as sharedContract from "./contract/shared.generated";
-import { portalAuthPath, type PortalKey } from "./portal-paths";
+import type { PortalKey } from "./portal-paths";
+import { sessionBff, type SessionAuthenticated } from "./session-bff";
 import {
   browserSupportsWebAuthn,
   startAuthentication,
@@ -19,10 +20,6 @@ export type PasskeyScope = Extract<
   PortalKey,
   "tenant" | "operator" | "caterer"
 >;
-
-interface PasskeyLoginResponse {
-  status: "authenticated";
-}
 
 /** The options of a ceremony; the backend may wrap them in `publicKey`. */
 function extractOptions<TOptions>(
@@ -52,12 +49,10 @@ function requestLoginOptions(
   scope: PasskeyScope,
   tenantSlug: string,
 ): Promise<sharedContract.PasskeyCeremonyOptions> {
-  return bffJsonUncontracted<sharedContract.PasskeyCeremonyOptions>(
-    "public",
-    "POST",
-    portalAuthPath(scope, "passkeys/login/options"),
-    { body: { tenant_slug: tenantSlug }, errorMessage: PASSKEY_ERROR },
-  );
+  return bffJson("public", sessionBff.passkeyOptions(scope), {
+    body: { tenant_slug: tenantSlug },
+    errorMessage: PASSKEY_ERROR,
+  });
 }
 
 export function isPasskeyCeremonyIncompleteError(error: unknown): boolean {
@@ -75,7 +70,7 @@ export function isPasskeySupported(): boolean {
 export async function loginWithPasskey(
   scope: PasskeyScope,
   params: { tenantSlug?: string } = {},
-): Promise<PasskeyLoginResponse> {
+): Promise<SessionAuthenticated> {
   const start = await requestLoginOptions(scope, params.tenantSlug ?? "");
   const assertion = await startAuthentication({
     optionsJSON: extractOptions<PublicKeyCredentialRequestOptionsJSON>(start),
@@ -88,16 +83,11 @@ async function finishPasskeyLogin(
   scope: PasskeyScope,
   sessionID: string,
   response: AuthenticationResponseJSON,
-): Promise<PasskeyLoginResponse> {
-  return bffJsonUncontracted<PasskeyLoginResponse>(
-    "public",
-    "POST",
-    portalAuthPath(scope, "passkeys/login/verify"),
-    {
-      body: { session_id: sessionID, response },
-      errorMessage: PASSKEY_ERROR,
-    },
-  );
+): Promise<SessionAuthenticated> {
+  return bffJson("public", sessionBff.verifyPasskey(scope), {
+    body: { session_id: sessionID, response },
+    errorMessage: PASSKEY_ERROR,
+  });
 }
 
 export async function startPasskeyEnrollment(

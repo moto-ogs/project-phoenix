@@ -1,9 +1,10 @@
 import { captureBffException } from "~/lib/sentry-bff.server";
 import type { NextRequest } from "next/server";
-import { sendBackend } from "~/lib/backend-client.server";
+import { contractWrite } from "~/lib/contract/client.server";
+import { contractResponse } from "~/lib/contract/route-response.server";
+import { routes } from "~/lib/contract/auth-invitations.generated";
 import { createLogger } from "~/lib/logger";
 import { withInvitationOwnerSession } from "~/lib/invitation-owner-session.server";
-import { forwardBackendResponse } from "~/lib/backend-proxy-response.server";
 import { problemResponse } from "~/lib/api-helpers.server";
 import { withPrivateNoStore } from "~/lib/private-no-store";
 
@@ -40,13 +41,16 @@ async function POSTHandler(request: NextRequest) {
     };
 
     const forward = async (ownerToken?: string) => {
-      const response = await sendBackend(
-        `/auth/invitations/${encodeURIComponent(token)}/accept`,
-        ownerToken,
-        { method: "POST", json: payload, request },
+      const reply = await contractWrite(
+        routes["POST /auth/invitations/{token}/accept"],
+        payload,
+        {
+          endpoint: `/auth/invitations/${encodeURIComponent(token)}/accept`,
+          token: ownerToken,
+          request,
+        },
       );
-
-      return forwardBackendResponse(response, request);
+      return contractResponse(reply, request);
     };
     return body.existingAccount
       ? await withInvitationOwnerSession(request, forward)

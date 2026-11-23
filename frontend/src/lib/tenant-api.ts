@@ -1,3 +1,4 @@
+import { sessionBff } from "./session-bff";
 /**
  * Tenant resolution and switching API client.
  * Provides public tenant resolution (pre-login) and authenticated
@@ -5,7 +6,7 @@
  */
 
 import { normalizeCareFacilityTerm } from "~/lib/care-facility-term-value";
-import { bffJson, bffJsonUncontracted } from "./bff-fetch";
+import { bffJson } from "./bff-fetch";
 import { clearSessionCache } from "./session-cache";
 import { clearPersonalStorage } from "./personal-storage";
 import { mapAccountTenant } from "./account-tenants";
@@ -475,17 +476,12 @@ export async function switchTenant(subdomain: string): Promise<void> {
   // The UI branches on the code: identity.tenant_access_denied (401, no
   // access to that school) or identity.use_school_portal (a teacher account
   // that belongs in the school portal).
-  await bffJsonUncontracted<unknown>(
-    "tenant",
-    "POST",
-    "/api/auth/switch-tenant",
-    {
-      body: { tenant_slug: subdomain },
-      errorMessage: "Failed to switch tenant",
-      authRefusals: [
-        "identity.tenant_access_denied",
-        "identity.mfa_session_required",
-      ],
-    },
-  );
+  await bffJson("tenant", sessionBff.switchTenant, {
+    body: { tenant_slug: subdomain },
+    errorMessage: "Failed to switch tenant",
+    authRefusals: [
+      "identity.tenant_access_denied",
+      "identity.mfa_session_required",
+    ],
+  });
 }

@@ -1,15 +1,18 @@
 import { ApiError } from "./api-error";
-import { bffJson, bffJsonUncontracted } from "./bff-fetch";
+import { bffJson } from "./bff-fetch";
 import { requiredEnum } from "./contract/known-enum";
 import type * as sharedContract from "./contract/shared.generated";
-import { portalAuthPath, type PortalKey } from "./portal-paths";
+import type { PortalKey } from "./portal-paths";
+import {
+  sessionBff,
+  type SessionAuthenticated,
+  type SessionBffRoute,
+} from "./session-bff";
 import { signInAnswer, type SignInAnswer } from "./sign-in-answer";
 
 export type LoginScope = PortalKey;
 
-export interface MFAResult {
-  status: "authenticated";
-}
+export type MFAResult = SessionAuthenticated;
 
 /**
  * A sign-in step: every portal's route answers `{ status, data }`, whether
@@ -19,17 +22,11 @@ export interface MFAResult {
  * (`public`); enrollment sends the login's enrollment token as its bearer.
  */
 function postSignInStep<T>(
-  scope: LoginScope,
-  step:
-    | "login"
-    | "mfa/verify"
-    | "mfa/resend"
-    | "mfa/enroll/start"
-    | "mfa/enroll/confirm",
+  route: SessionBffRoute<T>,
   body: unknown,
   bearerToken?: string,
 ): Promise<T> {
-  return bffJsonUncontracted<T>("public", "POST", portalAuthPath(scope, step), {
+  return bffJson("public", route, {
     body,
     ...(bearerToken && {
       headers: { Authorization: `Bearer ${bearerToken}` },
@@ -61,7 +58,7 @@ export async function login(
 
   return signInAnswer(
     scope,
-    await postSignInStep<unknown>(scope, "login", payload),
+    await postSignInStep(sessionBff.login(scope), payload),
   );
 }
 
@@ -89,7 +86,7 @@ export async function verifyMFA(
     remember_device: params.rememberDevice,
     ...organizationField(params.organizationId),
   };
-  return postSignInStep<MFAResult>(scope, "mfa/verify", payload);
+  return postSignInStep(sessionBff.verifyMfa(scope), payload);
 }
 
 interface ResendParams {
@@ -108,11 +105,9 @@ export async function resendChallenge(
   scope: LoginScope,
   params: ResendParams,
 ): Promise<string> {
-  const answer = await postSignInStep<sharedContract.MFAResendResponse | null>(
-    scope,
-    "mfa/resend",
-    { challenge_token: params.challengeToken },
-  );
+  const answer = await postSignInStep(sessionBff.resendMfa(scope), {
+    challenge_token: params.challengeToken,
+  });
   if (!answer?.challenge_token) {
     throw new ApiError("MFA resend returned no challenge token", 500);
   }
@@ -130,13 +125,11 @@ export async function enrollStart(
   scope: LoginScope,
   bearerToken: string,
 ): Promise<string | null> {
-  const answer =
-    await postSignInStep<sharedContract.EnrollStartResponse | null>(
-      scope,
-      "mfa/enroll/start",
-      undefined,
-      bearerToken,
-    );
+  const answer = await postSignInStep(
+    sessionBff.startEnrollment(scope),
+    undefined,
+    bearerToken,
+  );
   if (scope === "operator") return null;
   if (!answer?.challenge_token) {
     throw new ApiError("Enrollment start returned no challenge token", 500);
@@ -161,9 +154,8 @@ export async function enrollConfirm(
     remember_device: false,
     ...organizationField(organizationId),
   };
-  return postSignInStep<MFAResult>(
-    scope,
-    "mfa/enroll/confirm",
+  return postSignInStep(
+    sessionBff.confirmEnrollment(scope),
     payload,
     bearerToken,
   );

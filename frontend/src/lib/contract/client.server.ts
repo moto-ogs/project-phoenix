@@ -2,7 +2,12 @@
 // decoder (ADR 0270). A backend error and an answer that does not match the
 // contract both come back as a typed failure, never as an empty value.
 import type { z } from "zod";
-import { apiGet, apiPost, apiPut } from "~/lib/api-helpers.server";
+import {
+  readBackendJson,
+  sendBackend,
+  type BackendCall,
+  type BackendMethod,
+} from "~/lib/backend-client.server";
 import { wireErrorCode } from "~/lib/api-error";
 import {
   ApiResponseError,
@@ -76,6 +81,10 @@ export function decodeContract<T>(
       .slice(0, 20)
       .map((issue) => `${issue.path.join(".")}: ${issue.code}`),
   });
+  return invalidAnswer(write);
+}
+
+function invalidAnswer(write: boolean): ContractResult<never> {
   return failure(
     bffError(
       502,
@@ -85,59 +94,107 @@ export function decodeContract<T>(
   );
 }
 
-/** GET of a registered route. `route` is its catalog line, for the log. */
-export async function contractGet<T>(
-  route: string,
-  schema: z.ZodType<T>,
-  endpoint: string,
-  token: string,
-  options?: { signal?: AbortSignal },
-): Promise<ContractResult<T>> {
-  let payload: unknown;
-  try {
-    payload = options
-      ? await apiGet<unknown>(endpoint, token, options)
-      : await apiGet<unknown>(endpoint, token);
-  } catch (error) {
-    if (isApiResponseError(error)) return failure(error);
-    throw error;
-  }
-  return decodeContract(route, schema, payload, false);
+interface JsonRoute {
+  readonly method: BackendMethod;
+  readonly pattern: string;
+  readonly noCommit?: string;
+  readonly response: z.ZodType;
 }
 
-/** A generated route entry with a body: `routes["POST /api/students/"]`. */
-interface WriteRoute<B, T> {
-  method: "POST" | "PUT";
-  pattern: string;
-  noCommit?: string;
-  request: RequestBody<B>;
-  response: z.ZodType<T>;
+export type ContractBody<R> = R extends { request: RequestBody<infer B> }
+  ? B
+  : R extends { request: { kind: "multipart" } }
+    ? FormData
+    : undefined;
+
+interface ContractOptions extends Pick<
+  BackendCall,
+  "request" | "signal" | "timeout" | "headers" | "idempotencyKey"
+> {
+  /** Override the pattern only to fill path parameters or add a query. */
+  endpoint?: string;
+  /** A bearer the caller holds; omit it for a pre-session or public call. */
+  token?: string | null;
+  /** Use the portal's session client when the route owns renewal policy. */
+  send?: (path: string, call: BackendCall) => Promise<Response>;
 }
 
-/**
- * POST or PUT of a registered route. The entry types the body and decodes
- * the answer; `endpoint` is the path with its parameters filled in.
- */
-export async function contractWrite<B, T>(
-  route: WriteRoute<B, T>,
-  endpoint: string,
-  token: string,
-  body: B,
-): Promise<ContractResult<T>> {
-  let payload: unknown;
+export type ContractReply<T> = ContractResult<T> & {
+  /** The HTTP result even when the answer body cannot be decoded. */
+  backend?: Pick<Response, "headers" | "status" | "ok">;
+};
+
+async function callContract<T>(
+  route: JsonRoute & { response: z.ZodType<T> },
+  options: ContractOptions,
+  body?: unknown,
+): Promise<ContractReply<T>> {
+  const { endpoint = route.pattern, token, send, ...transport } = options;
+  const call: BackendCall = {
+    ...transport,
+    method: route.method,
+    ...(body instanceof FormData ? { body } : { json: body }),
+  };
+  let backend: ContractReply<T>["backend"];
   try {
-    payload =
-      route.method === "POST"
-        ? await apiPost<unknown, B>(endpoint, token, body)
-        : await apiPut<unknown, B>(endpoint, token, body);
+    const response = await (
+      send ?? ((path, call) => sendBackend(path, token, call))
+    )(endpoint, call);
+    backend = {
+      headers: response.headers,
+      status: response.status,
+      ok: response.ok,
+    };
+    const write = commits(route);
+    let payload: unknown;
+    try {
+      payload = await readBackendJson<unknown>(response);
+    } catch (error) {
+      if (!response.ok) throw error;
+      const aborted =
+        options.signal?.aborted || options.request?.signal.aborted;
+      // A browser disconnect does not undo an upstream commit. The route
+      // still needs the 2xx to invalidate its cache before it answers.
+      if (aborted && !write) throw error;
+      if (!aborted) {
+        // A parse error may quote credentials from the response. Never log it.
+        logger.error("contract_json_failed", { route: route.pattern, write });
+      }
+      return { ...invalidAnswer(write), backend };
+    }
+    return {
+      ...decodeContract(
+        `${route.method} ${route.pattern}`,
+        route.response,
+        payload,
+        write,
+      ),
+      backend,
+    };
   } catch (error) {
-    if (isApiResponseError(error)) return failure(error);
+    if (isApiResponseError(error)) return { ...failure(error), backend };
     throw error;
   }
-  return decodeContract(
-    `${route.method} ${route.pattern}`,
-    route.response,
-    payload,
-    commits(route),
-  );
+}
+
+/** GET of a registered JSON route, with or without a session. */
+export function contractGet<T>(
+  route: JsonRoute & { method: "GET"; response: z.ZodType<T> },
+  options: ContractOptions = {},
+): Promise<ContractReply<T>> {
+  return callContract(route, options);
+}
+
+/** Write a registered route once; its generated entry types both directions. */
+export function contractWrite<
+  R extends JsonRoute & { method: Exclude<BackendMethod, "GET"> },
+>(
+  route: R,
+  body: NoInfer<ContractBody<R>>,
+  options: ContractOptions = {},
+): Promise<ContractReply<z.output<R["response"]>>> {
+  // The output is inferred from this entry's decoder, never from the body.
+  return callContract(route, options, body) as Promise<
+    ContractReply<z.output<R["response"]>>
+  >;
 }

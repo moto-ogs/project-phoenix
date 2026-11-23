@@ -5,6 +5,7 @@
 
 import { apiErrorFromBody } from "./api-error";
 import type { PortalKey } from "./portal-paths";
+import type { SignInReply } from "./session-bff";
 
 /** The code step a login page keeps between the password and the code. */
 export interface MFAStep {
@@ -40,17 +41,6 @@ export type SignInAnswer =
       readonly status: "organization_selection_required";
       readonly organizations: readonly TraegerChoice[];
     };
-
-interface WireSignInAnswer {
-  status?: string;
-  access_token?: string;
-  challenge_token?: string;
-  masked_email?: string;
-  organization_id?: string;
-  organizations?: { id: string; name: string }[];
-  trusted_device_enabled?: boolean;
-  trusted_device_days?: number;
-}
 
 interface SignInWire {
   /**
@@ -91,8 +81,7 @@ const SIGN_IN_WIRE: Record<PortalKey, SignInWire> = {
 /** Reads the answer of a portal's password step, out of its envelope. */
 export function signInAnswer(portal: PortalKey, body: unknown): SignInAnswer {
   const wire = SIGN_IN_WIRE[portal];
-  const answer = (body ?? {}) as WireSignInAnswer;
-  const organizationId = answer.organization_id ?? "";
+  const answer = (body ?? {}) as Partial<SignInReply>;
   const readable = (field?: string) => !wire.refusesUnreadable || !!field;
 
   if (answer.status === "organization_selection_required") {
@@ -109,7 +98,7 @@ export function signInAnswer(portal: PortalKey, body: unknown): SignInAnswer {
       status: "mfa_required",
       challengeToken: answer.challenge_token ?? "",
       maskedEmail: answer.masked_email ?? "",
-      organizationId,
+      organizationId: answer.organization_id ?? "",
       trustedDeviceEnabled:
         answer.trusted_device_enabled ?? wire.rememberDeviceWhenOmitted,
       trustedDeviceDays: answer.trusted_device_days,
@@ -123,7 +112,7 @@ export function signInAnswer(portal: PortalKey, body: unknown): SignInAnswer {
       status: "mfa_enrollment_required",
       enrollmentToken: answer.access_token ?? "",
       maskedEmail: answer.masked_email ?? "",
-      organizationId,
+      organizationId: answer.organization_id ?? "",
     };
   }
   if (wire.refusesUnreadable && answer.status !== "authenticated") {

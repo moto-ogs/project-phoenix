@@ -38,15 +38,16 @@ const { POST: passkey } = await import("./passkeys/login/verify/route");
 const { handlers } = (await import("~/server/auth")).tenantPortal;
 const backend = vi.fn();
 const claims = () => ({
-  id: 42,
+  id: "42",
   sub: "local@example.test",
-  tenant_id: 7,
+  tenant_id: "7",
   scope: "",
   exp: Math.floor(Date.now() / 1000) + 900,
 });
 const access = () =>
   `e30.${Buffer.from(JSON.stringify(claims())).toString("base64url")}.synthetic`;
 const pair = () => ({
+  status: "authenticated",
   access_token: access(),
   refresh_token: "synthetic-server-refresh",
 });

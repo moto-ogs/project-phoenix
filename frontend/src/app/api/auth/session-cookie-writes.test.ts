@@ -31,7 +31,7 @@ const SESSION = {
 const backend = vi.fn<typeof fetch>();
 /** The answer of Identity & Access on the session's family. */
 let familyStatus = 200;
-let familyBody: Record<string, unknown> = { id: 7 };
+let familyBody: Record<string, unknown> = { id: "7" };
 const NOT_BOOKED = { status: 403, code: "module.not_booked" };
 
 function familyChecks() {
@@ -56,7 +56,7 @@ afterAll(() => {
 });
 beforeEach(() => {
   familyStatus = 200;
-  familyBody = { id: 7 };
+  familyBody = { id: "7" };
   backend.mockReset();
   backend.mockImplementation(async (url) => {
     const target = String(url);
@@ -185,6 +185,29 @@ describe("gateSessionCookieWrites", () => {
       ),
     );
 
+    expect(written(answer)).toEqual([]);
+  });
+
+  it("drops a just-issued refresh token after 401 even when the refusal body breaks", async () => {
+    backend.mockResolvedValueOnce(
+      new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.error(new TypeError("interrupted backend stream"));
+          },
+        }),
+        { status: 401 },
+      ),
+    );
+
+    const answer = await gateSessionCookieWrites(
+      request(`${NAME}=${await sealed(SESSION)}`),
+      response(
+        `${NAME}=${await sealed({ ...SESSION, token: "access-2", refreshToken: "refresh-2" })}; Path=/`,
+      ),
+    );
+
+    expect(familyChecks()).toHaveLength(1);
     expect(written(answer)).toEqual([]);
   });
 

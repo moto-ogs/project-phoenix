@@ -68,12 +68,11 @@ global.fetch = (async (...args: Parameters<typeof fetch>) => {
   });
 }) as typeof fetch;
 
-import { createPublicJsonProxy } from "~/lib/backend-proxy-route.server";
+import { POST as validateInvite } from "~/app/api/operator/auth/invitations/validate/route";
 import {
   operatorApiGet,
   operatorApiPost,
   createOperatorJsonProxy,
-  operatorJsonErrors,
   proxyDelete,
   proxyGet,
   proxyPost,
@@ -410,11 +409,7 @@ describe("operator JSON proxies", () => {
   });
 
   it("answers an unreadable body with 400 general.input before any call", async () => {
-    const response = await createPublicJsonProxy({
-      method: "POST",
-      path: "/operator/auth/email-confirm",
-      ...operatorJsonErrors,
-    })(post("not json{"));
+    const response = await validateInvite(post("not json{"));
 
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({ code: "general.input" });
@@ -424,11 +419,12 @@ describe("operator JSON proxies", () => {
   it("answers an unreachable backend with 503 general.unavailable", async () => {
     mockFetch.mockRejectedValue(new TypeError("fetch failed"));
 
-    const response = await createPublicJsonProxy({
-      method: "POST",
-      path: "/operator/auth/email-confirm",
-      ...operatorJsonErrors,
-    })(post("{}"));
+    const request = post("{}");
+    request.headers.set(
+      "x-operator-invitation-flow",
+      "11111111-1111-4111-8111-111111111111",
+    );
+    const response = await validateInvite(request);
 
     expect(response.status).toBe(503);
     expect(await response.json()).toMatchObject({

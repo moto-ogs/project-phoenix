@@ -7,6 +7,7 @@ import {
 } from "~/lib/operator/operator-invitation-session.server";
 import { operatorErrorResponse } from "~/lib/operator/route-wrapper.server";
 import { withPrivateNoStore } from "~/lib/private-no-store";
+import type { OperatorInvitationFlow } from "~/lib/session-bff";
 import { successResponse } from "~/lib/route-wrapper-utils.server";
 
 const MAX_TOKEN_LENGTH = 4096;
@@ -39,9 +40,12 @@ async function POSTHandler(request: NextRequest): Promise<NextResponse> {
   }
 
   const flowID = createOperatorInvitationFlowID();
-  const response = NextResponse.json(successResponse({ flow_id: flowID }), {
-    status: 201,
-  });
+  const response = NextResponse.json(
+    successResponse<OperatorInvitationFlow>({ flow_id: flowID }),
+    {
+      status: 201,
+    },
+  );
   response.cookies.set(
     operatorInvitationCookieName(flowID),
     token,

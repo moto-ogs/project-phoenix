@@ -144,16 +144,15 @@ describe("POST /api/auth/logout", () => {
     });
   });
 
-  it("forwards a backend 200 response", async () => {
+  it("does not forward a successful logout outside the no-data contract", async () => {
     vi.mocked(global.fetch).mockResolvedValueOnce(
-      new Response(JSON.stringify({ success: true }), { status: 200 }),
+      Response.json({ success: true }),
     );
-
-    const request = createMockRequest("/api/auth/logout");
-    const response = await POST(request);
-
-    expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ success: true });
+    const response = await POST(createMockRequest("/api/auth/logout"));
+    expect(response.status).toBe(502);
+    await expect(response.json()).resolves.toMatchObject({
+      code: "general.write_answer_unreadable",
+    });
   });
 
   it("returns 503 when the backend cannot be reached", async () => {

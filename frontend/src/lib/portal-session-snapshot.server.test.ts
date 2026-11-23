@@ -24,7 +24,8 @@ vi.mock("~/server/auth/token-validation", async (importOriginal) => ({
 const { backendStatus } = vi.hoisted(() => ({
   backendStatus: { current: 401 },
 }));
-vi.mock("~/lib/backend-client.server", () => ({
+vi.mock("~/lib/backend-client.server", async (original) => ({
+  ...(await original<typeof import("~/lib/backend-client.server")>()),
   sendBackend: vi.fn(
     async () =>
       new Response(JSON.stringify({ code: "auth.invalid_token" }), {
