@@ -22,10 +22,12 @@ export interface ClassHomeworkApi {
     date: string,
     input: HomeworkInput,
   ) => Promise<void>;
+  /** `expectedVersion` is the entry's version the dialog opened with. */
   readonly change: (
     schoolClass: string,
     homeworkId: string,
     input: HomeworkInput,
+    expectedVersion: string,
   ) => Promise<void>;
   readonly remove: (schoolClass: string, homeworkId: string) => Promise<void>;
 }
@@ -42,12 +44,20 @@ export function useClassHomework({
   schoolClass,
   dateISO,
   onChanged,
+  reloadAfterRefusal,
 }: {
   readonly api?: ClassHomeworkApi;
   readonly schoolClass: string;
   readonly dateISO: string;
   /** Reloads the class; never rejects (#6652). */
   readonly onChanged: RefreshAfterWrite;
+  /**
+   * Reads the class's homework again after a change refused as changed
+   * since read (ADR 0311); rejects when that read fails.
+   */
+  readonly reloadAfterRefusal: () => Promise<
+    readonly schoolClassDayContract.DayHomework[]
+  >;
 }) {
   const [draft, setDraft] = useState<HomeworkDraft | null>(null);
   const submission = useFormModalPending(draft !== null);
@@ -94,7 +104,13 @@ export function useClassHomework({
     await submission.run(async (op) => {
       try {
         if (draft.editing) {
-          await api.change(schoolClass, draft.editing.id, input);
+          // The entry as the dialog opened it (ADR 0311).
+          await api.change(
+            schoolClass,
+            draft.editing.id,
+            input,
+            draft.editing.version,
+          );
         } else {
           await api.add(schoolClass, dateISO, input);
         }
@@ -103,9 +119,25 @@ export function useClassHomework({
           error: cause instanceof Error ? cause.message : String(cause),
         });
         if (!op.isCurrent()) return;
+        const editedId = draft.editing?.id;
         void formErrors.show(cause, {
           object: "die Hausaufgabe",
           retry: () => void save(),
+          // Someone changed the entry since the dialog opened: the dialog
+          // shows it as stored, with its token; a deleted entry closes it.
+          reload: async () => {
+            const entries = await reloadAfterRefusal();
+            const fresh = entries.find((entry) => entry.id === editedId);
+            setDraft(
+              fresh
+                ? {
+                    editing: fresh,
+                    subject: fresh.subject ?? "",
+                    description: fresh.description,
+                  }
+                : null,
+            );
+          },
         });
         return;
       }

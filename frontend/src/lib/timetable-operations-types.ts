@@ -178,6 +178,11 @@ export interface TimetableRosterRow {
   homework?: TimetableRosterHomework[];
   /** Rückmeldung der OGS zu diesen Hausaufgaben, falls schon gegeben. */
   homeworkFeedback?: TimetableHomeworkFeedback;
+  /**
+   * Lese-Token dieser Rückmeldung (ADR 0311), auch vor der ersten; die
+   * Rückmeldung schickt ihn als expected_version mit.
+   */
+  homeworkFeedbackVersion?: string;
 }
 
 export type TimetableHomeworkFeedbackStatus = HomeworkFeedbackStatus;
@@ -257,6 +262,8 @@ export interface StartOperationResult {
 export interface HomeworkFeedbackBody {
   status: TimetableHomeworkFeedbackStatus;
   note: string | null;
+  /** The feedback as the dialog opened it (ADR 0311). */
+  expected_version: string;
 }
 
 export type { AttendancePatchBody };
@@ -381,6 +388,9 @@ function mapRosterRow(
             note: row.homework_feedback.note ?? null,
           },
         }
+      : {}),
+    ...(row.homework_feedback_version
+      ? { homeworkFeedbackVersion: row.homework_feedback_version }
       : {}),
   };
 }

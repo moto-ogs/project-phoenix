@@ -1123,8 +1123,8 @@ describe("ClassDayClass homework (#4796)", () => {
     return report({
       can_write_homework: true,
       homework: [
-        { id: "11", subject: "Mathe", description: "Seite 12" },
-        { id: "12", description: "Lesen" },
+        { id: "11", subject: "Mathe", description: "Seite 12", version: "v11" },
+        { id: "12", description: "Lesen", version: "v12" },
       ],
       rows: [
         {
@@ -1193,10 +1193,15 @@ describe("ClassDayClass homework (#4796)", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
 
     await waitFor(() =>
-      expect(homework.change).toHaveBeenCalledWith("4a", "12", {
-        subject: null,
-        description: "Lesen, Seite 4",
-      }),
+      expect(homework.change).toHaveBeenCalledWith(
+        "4a",
+        "12",
+        {
+          subject: null,
+          description: "Lesen, Seite 4",
+        },
+        "v12",
+      ),
     );
   });
 

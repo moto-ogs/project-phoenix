@@ -1055,6 +1055,11 @@ interface TimetableRosterContentProps {
     body: HomeworkFeedbackBody,
   ) => Promise<void>;
   /**
+   * Reads the roster again after a feedback refused as changed since read
+   * (ADR 0311) and answers it; rejects when that read fails.
+   */
+  readonly reloadAfterRefusal?: () => Promise<TimetableRoster | null>;
+  /**
    * Adresse der Kinderseite für den Knopf „Profil ansehen“ (#4356). Nur wer
    * die Kinderseite öffnen darf (`users:read`), bekommt sie; ohne sie fehlt
    * der Knopf.
@@ -1166,6 +1171,7 @@ export function TimetableRosterContent({
   onExcuseRestOfDay,
   onOpenStudent,
   onSaveHomeworkFeedback,
+  reloadAfterRefusal,
   studentProfileHref,
   onSearchChange,
   rowFilter = null,
@@ -1265,6 +1271,22 @@ export function TimetableRosterContent({
   );
   const savingHomework = homeworkSave.pending;
   const homeworkErrors = useApiFormError();
+  // After a feedback refused as changed since read (ADR 0311) the dialog
+  // shows the child's stored feedback with its token; a child no longer on
+  // the roster closes it.
+  const reloadHomework = async (studentId: string) => {
+    const fresh = await reloadAfterRefusal?.();
+    const row = fresh?.rows.find(
+      (candidate) => candidate.studentId === studentId,
+    );
+    if (!row) {
+      setHomeworkRow(null);
+      return;
+    }
+    setHomeworkRow(row);
+    setHomeworkStatus(row.homeworkFeedback?.status ?? null);
+    setHomeworkNote(row.homeworkFeedback?.note ?? "");
+  };
   const openHomework = (row: TimetableRosterRow) => {
     homeworkErrors.clear();
     setHomeworkRow(row);
@@ -1288,15 +1310,19 @@ export function TimetableRosterContent({
         await onSaveHomeworkFeedback(homeworkRow, {
           status: homeworkStatus,
           note: homeworkNote.trim() === "" ? null : homeworkNote.trim(),
+          // The feedback as the dialog opened it (ADR 0311).
+          expected_version: homeworkRow.homeworkFeedbackVersion ?? "",
         });
         // Eine späte Antwort schließt nicht die Rückmeldung eines anderen
         // Kindes (#6533).
         if (op.isCurrent()) setHomeworkRow(null);
       } catch (cause) {
         if (!op.isCurrent()) return;
+        const studentId = homeworkRow.studentId;
         void homeworkErrors.show(cause, {
           object: "die Rückmeldung",
           retry: () => void retrySaveRef.current(),
+          reload: () => reloadHomework(studentId),
         });
       }
     });

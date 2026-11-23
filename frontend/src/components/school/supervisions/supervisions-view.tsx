@@ -332,6 +332,14 @@ export function SchoolSupervisionsView() {
     },
     [openId, refreshAll],
   );
+  // After a refused feedback (ADR 0311): the roster read anew, rejecting
+  // when that read fails.
+  const reloadRosterAfterRefusal = useCallback(async () => {
+    if (!openId) return null;
+    const fresh = await schoolSupervisionsApi.roster(openId);
+    await reloadRoster(fresh, { revalidate: false });
+    return fresh;
+  }, [openId, reloadRoster]);
 
   const handleConfirmExpected = useCallback(
     async (rows: TimetableRosterRow[]) => {
@@ -511,6 +519,7 @@ export function SchoolSupervisionsView() {
           onSearchChange={() => undefined}
           onRosterAction={handleRosterAction}
           onSaveHomeworkFeedback={handleSaveHomeworkFeedback}
+          reloadAfterRefusal={reloadRosterAfterRefusal}
           onConfirmExpected={handleConfirmExpected}
           onComplete={handleComplete}
           onOpenStudent={setSheetRow}

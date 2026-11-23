@@ -134,6 +134,8 @@ export interface TimetableActions {
     row: TimetableRosterRow,
     body: HomeworkFeedbackBody,
   ) => Promise<void>;
+  /** Reads the roster again after a refused feedback; rejects on failure. */
+  readonly reloadRosterAfterRefusal: () => Promise<TimetableRoster | null>;
   readonly confirmCompleteTimetableInstance: () => Promise<void>;
   readonly handleCompleteTimetableInstance: () => Promise<void>;
   /**
@@ -532,6 +534,17 @@ export function useTimetableActions(
     },
     [activeTimetableInstanceId, mutateRoster],
   );
+  // After a refused feedback (ADR 0311): the block's roster read anew,
+  // rejecting when that read fails (SWR's own mutate would resolve with the
+  // old roster).
+  const reloadRosterAfterRefusal = useCallback(async () => {
+    if (!activeTimetableInstanceId) return null;
+    const fresh = await timetableOperationsApi.roster(
+      activeTimetableInstanceId,
+    );
+    await mutateRoster(fresh, { revalidate: false });
+    return fresh;
+  }, [activeTimetableInstanceId, mutateRoster]);
 
   // „Rest des Tages“ (#3166): this block by hand, every later block of the day
   // through a partial absence from this block's start.
@@ -920,6 +933,7 @@ export function useTimetableActions(
     handleRosterAction,
     handleExcuseRestOfDay,
     handleSaveHomeworkFeedback,
+    reloadRosterAfterRefusal,
     confirmCompleteTimetableInstance,
     handleCompleteTimetableInstance,
     handleReopenTimetableInstance,
