@@ -19,7 +19,11 @@ import (
 // and the Träger ends today; the Demo-Schule Manuell takes the child in
 // with its own record and a contract from tomorrow, for the same family.
 // The open runs of the month of both schools then bill the child once and
-// show it under „Ein Kind an zwei Schulen“.
+// show it under „Ein Kind an zwei Schulen“. The Jahresbescheid of the old
+// school still assesses the months after the change, so the open run of the
+// next month at the Demo-Schule Manuell holds the child back under „Kind hat
+// schon eine Rechnung – bitte prüfen“ (ADR 0158, Nachtrag „Schon abgerechnet
+// je Kind“, #7892).
 //
 // The Demo-Schule Manuell has no online enrollment. The step switches it on
 // for the one manual enrollment the contract needs and off again, so the
@@ -104,7 +108,8 @@ func seedSchoolChangeDay(rt *Runtime) (*SeedProfile, calendar.Date, bool, error)
 
 // seedSchoolChangeRun prices the modules of the Demo-Schule Manuell from
 // the month on and leaves its run of the month open, so the review shows
-// the child at both schools.
+// the child at both schools, and its run of the next month, which holds the
+// child back for the Jahresbescheid of its old school.
 func seedSchoolChangeRun(client *Client, auth AuthRef, school int64, month calendar.Date) error {
 	if err := seedSchoolChangePrices(client, auth, school, month); err != nil {
 		return err
@@ -113,7 +118,24 @@ func seedSchoolChangeRun(client *Client, auth AuthRef, school int64, month calen
 	if err != nil {
 		return err
 	}
-	return seedBillingTerms(client, auth, runID, month)
+	if err := seedBillingTerms(client, auth, runID, month); err != nil {
+		return err
+	}
+	return seedSchoolChangeHeldRun(client, auth, school, month)
+}
+
+// seedSchoolChangeHeldRun leaves the run of the month after the change open
+// at the Demo-Schule Manuell. The Jahresbescheid of the old school
+// (seedCareNotices) assesses that month for the ended contract, so the run
+// issues no invoice for the child and names the notice (#7892). The notices
+// end in December: a change in December starts no such run.
+func seedSchoolChangeHeldRun(client *Client, auth AuthRef, school int64, month calendar.Date) error {
+	next := monthAfter(month)
+	if next.Year() != month.Year() {
+		return nil
+	}
+	_, err := seedStartCareRun(client, auth, school, next)
+	return err
 }
 
 // seedSchoolChangePrices gives every module of the school its weekday
