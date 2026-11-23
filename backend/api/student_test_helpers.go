@@ -50,7 +50,8 @@ type StudentTestModule struct {
 	PartialAbsence    careplan.PartialAbsenceService
 	CareRequests      carerequests.Service
 	OfferingChanges   careplan.OfferingChangeCapability
-	PickupAdjustments careplan.PickupPlanning
+	PickupAdjustments careplan.PickupAdjustments
+	WeeklyPlans       careplan.WeeklyPlans
 	ExcusedRequests   careplan.ExcusedAbsenceRequests
 	MasterDataReview  masterdatarequests.Decisions
 	ParentRequests    parentrequests.Coordinator
@@ -332,16 +333,17 @@ func newStudentTestModule(db transactionruntime.Database, unit tenant.UnitOfWork
 	if err != nil {
 		return StudentTestModule{}, ActiveTestModule{}, StudentTestPeople{}, nil, nil, nil, err
 	}
-	newPickupPlanningFor := func(offerings careplan.DirectOfferingAdjustments) (careplan.PickupPlanning, error) {
+	newPickupPlanningFor := func(offerings careplan.DirectOfferingAdjustments) (careplan.PickupAdjustments, careplan.WeeklyPlans, error) {
 		return owners.NewPickupAdjustments(
 			students.CarePlan, pickupScheduleService, arrivalScheduleService, pickupBaselines, offerings,
 			settingsService, studentAuditService, repos.Student, today,
 		)
 	}
 	newPickupAdjustmentsFor := func(offerings careplan.DirectOfferingAdjustments) (careplan.PickupAdjustments, error) {
-		return newPickupPlanningFor(offerings)
+		adjustments, _, err := newPickupPlanningFor(offerings)
+		return adjustments, err
 	}
-	pickupAdjustments, err := newPickupPlanningFor(offeringChanges)
+	pickupAdjustments, weeklyPlans, err := newPickupPlanningFor(offeringChanges)
 	if err != nil {
 		return StudentTestModule{}, ActiveTestModule{}, StudentTestPeople{}, nil, nil, nil, err
 	}
@@ -428,7 +430,7 @@ func newStudentTestModule(db transactionruntime.Database, unit tenant.UnitOfWork
 	return StudentTestModule{
 			NewPickupAdjustments: newPickupAdjustmentsFor,
 			CareLifecycle:        careLifecycleService, PartialAbsence: partialAbsenceService, CareRequests: careRequestService,
-			OfferingChanges: offeringChanges, PickupAdjustments: pickupAdjustments, ExcusedRequests: excusedRequestService,
+			OfferingChanges: offeringChanges, PickupAdjustments: pickupAdjustments, WeeklyPlans: weeklyPlans, ExcusedRequests: excusedRequestService,
 			MasterDataReview: masterDataDecisions, ParentRequests: parentRequestCoordinator, OfferingDays: offeringDays,
 		}, live, StudentTestPeople{PeopleDirectory: persons, StudentAudit: studentAuditService, StudentPhotos: studentPhotoService},
 		auditCommand, enrollmentDecisionService, ogsGroupLiveService, nil

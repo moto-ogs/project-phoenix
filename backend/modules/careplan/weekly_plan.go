@@ -20,13 +20,6 @@ type WeeklyPlans interface {
 	SaveWeeklyPlan(ctx context.Context, input WeeklyPlanInput) (string, error)
 }
 
-// PickupPlanning is the pickup adjustment together with the weekly plan it
-// changes.
-type PickupPlanning interface {
-	PickupAdjustments
-	WeeklyPlans
-}
-
 // WeeklyPlanInput changes the weekly plan read at ExpectedVersion.
 // ArrivalSchedules replaces the weekly arrival plan and WeekdayNotes the
 // recurring weekday notes, both in one unit; nil leaves either as it is.
