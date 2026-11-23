@@ -501,3 +501,52 @@ func TestUnbindRunsInOneTraegerTransaction(t *testing.T) {
 	assert.Equal(t, []string{"träger 1", "unbind in träger 1"}, f.trail, "the way back reads and writes nothing of the school")
 	assert.Equal(t, [2]int64{contractKai, childKai}, f.unbound)
 }
+
+// A row that binds an application with a module of fixed weekdays shows the
+// weekdays the booking holds, as a row that enrolls does: such a booking
+// stores none. The plan row keeps the stored bookings, and they are what the
+// school's enrollment is asked to compare.
+func TestABindingRowShowsTheWeekdaysItsBookingsHold(t *testing.T) {
+	t.Parallel()
+	f := newFakeOwners()
+	fixed := booking(71)
+	fixed.Days, fixed.AvailableDays, fixed.DaysOfWeekMode = []string{}, []string{"mon", "tue", "wed"}, "fixed"
+	f.plan.Rows[1].ApplicationBookings = []carecontract.EnrollmentBooking{fixed}
+	workflow := f.workflow(t)
+	preview, err := workflow.Preview(context.Background(), fakeActor, fakeSchool)
+	require.NoError(t, err)
+
+	ben := rowOf(t, preview.Rows, contractBen)
+	require.Equal(t, contractenrollment.ActionBind, ben.Action)
+	require.Len(t, ben.Bookings, 1)
+	assert.Equal(t, []string{"mon", "tue", "wed"}, ben.Bookings[0].Days, "the row names the weekdays in effect")
+	assert.Empty(t, f.plan.Rows[1].ApplicationBookings[0].Days, "the plan keeps what the application stores")
+
+	_, err = workflow.Run(context.Background(), fakeActor, fakeSchool, preview.Fingerprint)
+	require.NoError(t, err)
+	for _, input := range f.enrolled {
+		if input.ContractID == contractBen {
+			require.Len(t, input.Bookings, 1)
+			assert.Empty(t, input.Bookings[0].Days, "the enrollment compares the stored weekdays, not the shown ones")
+			return
+		}
+	}
+	require.Fail(t, "the binding row was not handed to the enrollment")
+}
+
+// The school's enrollment refuses a child that has the silent enrollment of
+// its contract in another phase (enrolled_elsewhere) and names it; the row
+// is held with that reason and names that enrollment.
+func TestARowRefusedForAnEnrollmentElsewhereNamesIt(t *testing.T) {
+	t.Parallel()
+	f := newFakeOwners()
+	const elsewhere int64 = 477
+	f.answer[contractMia] = enrollment.ContractEnrollmentResult{Status: enrollment.ContractEnrollmentRefused,
+		Reason: enrollment.ContractEnrollmentEnrolledElsewhere, RequestChildID: elsewhere}
+	preview, err := f.workflow(t).Preview(context.Background(), fakeActor, fakeSchool)
+	require.NoError(t, err)
+	mia := rowOf(t, preview.Rows, contractMia)
+	assert.Equal(t, contractenrollment.RowHeld, mia.Status)
+	assert.Equal(t, enrollment.ContractEnrollmentEnrolledElsewhere, mia.Reason)
+	assert.Equal(t, ident.ID(elsewhere), mia.RequestChildID)
+}

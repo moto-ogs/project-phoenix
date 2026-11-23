@@ -31,6 +31,12 @@ import (
 //     asked for is answered as existing also when the school has since
 //     deactivated its offering or linked it to a roster directly, so a run
 //     that stopped before the binding can still bind its contract.
+//   - A contract has one silent enrollment, whatever its phase. A child
+//     that has the enrollment of this source made for the contract of the
+//     row in another phase gets none here (enrolled_elsewhere); the answer
+//     names that enrollment. The run reads it under the approval gates,
+//     which serialize the runs of one school across its phases, so a run
+//     that waited for another finds what that one wrote.
 //   - A child with any other application in the phase gets none; the answer
 //     names that application. Any other means every request child of the
 //     phase that holds the child record and is neither rejected nor
@@ -195,6 +201,13 @@ const (
 	// corrects no approved bookings: the rosters of an approved child are
 	// not derived twice. The office changes the bookings on the usual way.
 	ContractEnrollmentBookingsDiffer = "bookings_differ"
+	// ContractEnrollmentEnrolledElsewhere is a child that has the silent
+	// enrollment made for this contract in another phase: a contract has one
+	// silent enrollment (ADR 0309). An earlier run enrolled the child there,
+	// and the office has since corrected the unbound contract to an offering
+	// of this phase. RequestID and RequestChildID name that enrollment. The
+	// office corrects the contract back, or the school ends that enrollment.
+	ContractEnrollmentEnrolledElsewhere = "enrolled_elsewhere"
 )
 
 // ContractBooking is one booking of an offering: its weekdays and the
@@ -275,9 +288,15 @@ type ContractEnrollmentResult struct {
 }
 
 // ContractEnrollmentHolder is a request child of a phase that created or
-// renews a student, with the source of its request.
+// renews a student, with the source of its request; and a request child of
+// the source contract_import of the student in any other phase.
 type ContractEnrollmentHolder struct {
-	StudentID        int64
+	StudentID int64
+	// PhaseID is the phase of the request. ContractID is the imported
+	// contract a request of the source contract_import was made for; 0 for
+	// any other request.
+	PhaseID          int64
+	ContractID       int64
 	RequestID        int64
 	RequestChildID   int64
 	Status           string

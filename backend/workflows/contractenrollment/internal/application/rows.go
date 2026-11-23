@@ -142,14 +142,15 @@ func previewRows(plan carecontract.EnrollmentPlan, answers enrollmentAnswers, ch
 // that application (ApplicationBookings), not the ones derived from the
 // contract: nothing is written for it, and the stored bookings are what the
 // contract follows after the binding. They carry a planned change already,
-// so the row names no changes beside them.
+// so the row names no changes beside them. The row shows the weekdays such
+// a booking holds (shownBookings).
 func plannedRow(schoolID ident.ID, planned carecontract.EnrollmentPlanRow, children map[int64]ports.Child) contractenrollment.EnrollmentRow {
 	row := contractenrollment.EnrollmentRow{ContractID: planned.ContractID, SchoolID: schoolID, Reason: planned.Reason,
 		ContractChild: contractenrollment.ContractChildName{FirstName: planned.ChildFirstName, LastName: planned.ChildLastName},
 		PhaseID:       planned.PhaseID, PhaseName: planned.PhaseName, Bookings: planned.Bookings, Changes: planned.Changes,
 		RequestChildID: planned.RequestChildID, FollowsContractID: planned.FollowsContractID}
 	if planned.Status == carecontract.EnrollmentReady && planned.RequestChildID != 0 {
-		row.Bookings, row.Changes = planned.ApplicationBookings, nil
+		row.Bookings, row.Changes = shownBookings(planned.ApplicationBookings), nil
 	}
 	if row.Bookings == nil {
 		row.Bookings = []carecontract.EnrollmentBooking{}
@@ -174,6 +175,22 @@ func plannedRow(schoolID ident.ID, planned carecontract.EnrollmentPlanRow, child
 	return row
 }
 
+// shownBookings are the bookings of an application as a row shows them: a
+// booking of a module with fixed weekdays stores none and holds all the
+// module offers, so the row names those, as a row that enrolls does. The
+// bookings of the plan stay as stored: they are what the school's
+// enrollment compares (enrollmentInputs) and what the fingerprint of the
+// plan stands on.
+func shownBookings(stored []carecontract.EnrollmentBooking) []carecontract.EnrollmentBooking {
+	shown := slices.Clone(stored)
+	for i, booking := range shown {
+		if len(booking.Days) == 0 {
+			shown[i].Days = booking.AvailableDays
+		}
+	}
+	return shown
+}
+
 // answered puts the answer of the school's enrollment for a ready row into
 // it. Without an answer for the contract and its child record, and with the
 // answer changed, the row is changed.
@@ -191,6 +208,12 @@ func answered(row *contractenrollment.EnrollmentRow, answer enrollment.ContractE
 		row.RequestChildID = ident.ID(answer.RequestChildID)
 	default:
 		row.Status, row.Reason = contractenrollment.RowHeld, answer.Reason
+		if answer.RequestChildID != 0 {
+			// A refusal that names an application: the silent enrollment
+			// of the contract in another phase (enrolled_elsewhere), or
+			// the one of a child record that is gone or no longer active.
+			row.RequestChildID = ident.ID(answer.RequestChildID)
+		}
 	}
 }
 

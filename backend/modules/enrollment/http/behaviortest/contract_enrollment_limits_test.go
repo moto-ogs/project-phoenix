@@ -341,3 +341,40 @@ func TestARepeatedContractEnrollmentConfirmsItsStoredEnrollment(t *testing.T) {
 	assert.Equal(t, capability.ContractEnrollmentRefused, other[0].Status)
 	assert.Equal(t, capability.ContractEnrollmentBookingsDiffer, other[0].Reason, "other bookings are not the stored enrollment")
 }
+
+// A contract has one silent enrollment, whatever its phase. A run enrolled
+// the child in a phase and the binding did not follow; the office then
+// corrected the unbound contract to an offering of a second phase that
+// overlaps the first. That phase holds no application of the child, so only
+// the read across the phases finds the enrollment: the row is refused
+// (enrolled_elsewhere), names that enrollment and writes nothing, in a check
+// and in a run. Another contract of the child is not held back by it.
+func TestContractEnrollmentRefusesASecondEnrollmentOfItsContractInAnotherPhase(t *testing.T) {
+	t.Parallel()
+	e := setupContractEnrollment(t)
+	ctx := testpkg.Ctx(t)
+	student := e.student(t, "Nora")
+	first := e.enroll(t, e.input(student.ID, e.booking("mon", "wed")))
+	require.Equal(t, capability.ContractEnrollmentEnrolled, first[0].Status)
+	written := e.count(t, contractWritten, testpkg.Tenant(t), student.ID, testpkg.Tenant(t), student.ID)
+
+	second := *e.sourcePhase
+	second.ID, second.Name = 0, "Zweite Phase "+t.Name()
+	require.NoError(t, InsertOwnerPhaseForTest(ctx, e.repos.Enrollment(), &second))
+	offering := createAdjustmentCareOfferingWith(t, e.decisionTestEnv, "Ganztag zweite Phase "+t.Name(), func(o *offeringContract.CareOfferingRecord) {
+		o.PhaseID, o.CountsAsCare, o.PickupTimes = second.ID, true, carePickupTimes("mon", "tue", "wed", "thu", "fri")
+	})
+	corrected := e.input(student.ID, bookingOf(offering, calendar.Date(second.ServiceStartDate), calendar.Date(second.ServiceEndDate).AddDays(1), "mon", "wed"))
+	corrected.PhaseID = second.ID
+
+	want := []capability.ContractEnrollmentResult{{ContractID: e.contract, StudentID: student.ID, Status: capability.ContractEnrollmentRefused,
+		Reason: capability.ContractEnrollmentEnrolledElsewhere, RequestID: first[0].RequestID, RequestChildID: first[0].RequestChildID}}
+	assert.Equal(t, want, e.check(t, corrected), "the check names the enrollment of the first phase")
+	assert.Equal(t, want, e.enroll(t, corrected), "the run enrolls the child in no second phase")
+	assert.Equal(t, written, e.count(t, contractWritten, testpkg.Tenant(t), student.ID, testpkg.Tenant(t), student.ID), "nothing is written")
+
+	other := corrected
+	other.ContractID = e.contract + 1
+	assert.Equal(t, capability.ContractEnrollmentEnrolled, e.check(t, other)[0].Status,
+		"the enrollment of one contract does not hold back another contract of the child")
+}

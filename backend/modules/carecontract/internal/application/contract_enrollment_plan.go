@@ -449,7 +449,9 @@ type boundChildren map[int64]int64
 // have corrected the unbound contract to a module of another phase that runs
 // today: the plan finds no application of the child there, and a second
 // enrollment would stand beside the approved first one. Such a row is held
-// (has_application) and names the enrollment.
+// (has_application) and names the enrollment, until the office corrects the
+// contract back. The plan reads before the gates of the school's
+// enrollment, which holds the same rule under them (enrolled_elsewhere).
 func planEnrollmentRow(read schoolRead, contract carecontract.EnrollmentContract, applications []carecontract.Application,
 	contracted boundChildren, today calendar.Date) carecontract.EnrollmentPlanRow {
 	row := planContractRow(read, contract, applications, contracted, today)

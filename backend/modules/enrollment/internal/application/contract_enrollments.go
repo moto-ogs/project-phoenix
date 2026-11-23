@@ -119,6 +119,9 @@ type contractPhase struct {
 	phase     *enrollmentNative.Phase
 	offerings map[int64]*offeringContract.CareOfferingRecord
 	holders   map[int64][]enrollmentNative.ContractEnrollmentHolder
+	// elsewhere are the enrollments of this source the students have in
+	// another phase, by student.
+	elsewhere map[int64][]enrollmentNative.ContractEnrollmentHolder
 	stored    map[int64][]*enrollmentNative.RequestChildOffering
 	// enrolling are the children this call enrolls, by child record: a
 	// second row of a child record finds the first one.
@@ -207,7 +210,7 @@ func (d *Decisions) readContractPhase(ctx context.Context, row *enrollmentNative
 		return nil, fmt.Errorf("contract enrollment: read applications of phase %d: %w", row.ID, err)
 	}
 	phase := &contractPhase{phase: row, offerings: make(map[int64]*offeringContract.CareOfferingRecord, len(offerings)),
-		holders: map[int64][]enrollmentNative.ContractEnrollmentHolder{}, stored: map[int64][]*enrollmentNative.RequestChildOffering{},
+		holders: map[int64][]enrollmentNative.ContractEnrollmentHolder{}, elsewhere: map[int64][]enrollmentNative.ContractEnrollmentHolder{}, stored: map[int64][]*enrollmentNative.RequestChildOffering{},
 		enrolling: map[int64]*contractSubject{}}
 	for _, offering := range offerings {
 		if offering != nil {
@@ -232,10 +235,15 @@ func (d *Decisions) readContractPhase(ctx context.Context, row *enrollmentNative
 
 // hold files the holders by student and answers the request children whose
 // stored bookings the run compares: the enrollments of this source and the
-// applications the rows name.
+// applications the rows name. An enrollment of this source in another phase
+// holds no student of this one; it is filed apart (enrolledElsewhere).
 func (p *contractPhase) hold(holders []enrollmentNative.ContractEnrollmentHolder, named map[int64]bool) []int64 {
 	compared := []int64{}
 	for _, holder := range holders {
+		if holder.PhaseID != p.phase.ID {
+			p.elsewhere[holder.StudentID] = append(p.elsewhere[holder.StudentID], holder)
+			continue
+		}
 		p.holders[holder.StudentID] = append(p.holders[holder.StudentID], holder)
 		if (ownContractEnrollment(holder) || named[holder.RequestChildID]) && !slices.Contains(compared, holder.RequestChildID) {
 			compared = append(compared, holder.RequestChildID)
@@ -307,6 +315,11 @@ func (r *contractRun) check(index int, input enrollmentNative.ContractEnrollment
 		r.refuseGoneRecord(input, result)
 		return
 	}
+	if other, found := phase.enrolledElsewhere(input); found {
+		result.Reason = enrollmentNative.ContractEnrollmentEnrolledElsewhere
+		result.RequestID, result.RequestChildID = other.RequestID, other.RequestChildID
+		return
+	}
 	if reason == "" {
 		reason = guard
 	}
@@ -324,6 +337,24 @@ func (r *contractRun) check(index int, input enrollmentNative.ContractEnrollment
 		careStart: input.Bookings[0].ValidFrom}
 	phase.enrolling[input.StudentID] = subject
 	r.pending = append(r.pending, subject)
+}
+
+// enrolledElsewhere names the silent enrollment made for the contract of the
+// row in another phase. A contract has one silent enrollment (ADR 0309): a
+// run enrolled the child in a phase, the binding did not follow, and the
+// office corrected the unbound contract to an offering of this phase, which
+// holds no application of the child. The plan of the Träger holds such a row
+// back itself, but it reads before the gates: a run that waited at them for
+// the run that made the enrollment planned without seeing it. The gates are
+// those of the school (LockApprovalGates), not of a phase, so the read under
+// them finds what that run committed.
+func (p *contractPhase) enrolledElsewhere(input enrollmentNative.ContractEnrollment) (enrollmentNative.ContractEnrollmentHolder, bool) {
+	for _, holder := range p.elsewhere[input.StudentID] {
+		if holder.ContractID == input.ContractID {
+			return holder, true
+		}
+	}
+	return enrollmentNative.ContractEnrollmentHolder{}, false
 }
 
 // identityAsConfirmed tells whether the child record the run read under its

@@ -35,8 +35,9 @@ type (
 	DecisionPhaseHolders interface {
 		PhaseRequestsHoldingStudents(ctx context.Context, phaseID int64, studentIDs, excludedChildIDs []int64) (map[int64]enrollmentNative.CandidatePhaseRequest, error)
 		// ContractEnrollmentHolders lists every request child of the phase
-		// that holds one of the students, with the source of its request
-		// (#7760, ADR 0309).
+		// that holds one of the students, with the source of its request,
+		// and the request children of the source contract_import of these
+		// students in every other phase (#7760, ADR 0309).
 		ContractEnrollmentHolders(ctx context.Context, phaseID int64, studentIDs []int64) ([]enrollmentNative.ContractEnrollmentHolder, error)
 		// InsertContractEnrollments stores the requests, their children and
 		// the submitted choices of a contract enrollment run in three
