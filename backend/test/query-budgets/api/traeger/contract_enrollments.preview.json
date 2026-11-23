@@ -1,0 +1,7 @@
+{
+  "scenario": "api.traeger.contract_enrollments.preview",
+  "max": 28,
+  "exact": true,
+  "description": "workflows/contractenrollment — POST /traeger/contract-enrollments/preview (#7760, ADR 0309 section 4), a school\nwith one linked and two unlinked imported contracts: the schools of the Träger; the Träger transaction\nwith the contracts, their timelines, the contracted application children and one trail entry; the\nschool's tenant transaction with the hold of the school as one of the Träger (the share lock and its read, 2),\nthe plan (offerings, phases, accepted applications), the check of the\nschool's enrollment (setting, phases, offerings, holders, child records and persons), the child records\nshown and one access log entry. Flat in the number of contracts.",
+  "route": "POST /traeger/contract-enrollments/preview"
+}

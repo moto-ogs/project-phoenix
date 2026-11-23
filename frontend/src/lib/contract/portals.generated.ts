@@ -137,6 +137,7 @@ import { routes as traegerClosingDays } from "./traeger-closing-days.generated";
 import { routes as traegerContractChanges } from "./traeger-contract-changes.generated";
 import { routes as traegerContractChildLinks } from "./traeger-contract-child-links.generated";
 import { routes as traegerContractCorrections } from "./traeger-contract-corrections.generated";
+import { routes as traegerContractEnrollments } from "./traeger-contract-enrollments.generated";
 import { routes as traegerContractImports } from "./traeger-contract-imports.generated";
 import { routes as traegerContractNotices } from "./traeger-contract-notices.generated";
 import { routes as traegerContractTemplates } from "./traeger-contract-templates.generated";
@@ -344,6 +345,9 @@ export const portalRoutes = {
     traegerContractCorrections["GET /traeger/contract-corrections/list"],
     traegerContractCorrections["POST /traeger/contract-corrections/"],
     traegerContractCorrections["POST /traeger/contract-corrections/preview"],
+    traegerContractEnrollments["DELETE /traeger/contract-enrollments/{contractId}"],
+    traegerContractEnrollments["POST /traeger/contract-enrollments/"],
+    traegerContractEnrollments["POST /traeger/contract-enrollments/preview"],
     traegerContractImports["GET /traeger/contract-imports/"],
     traegerContractImports["POST /traeger/contract-imports/"],
     traegerContractImports["POST /traeger/contract-imports/offering-corrections"],

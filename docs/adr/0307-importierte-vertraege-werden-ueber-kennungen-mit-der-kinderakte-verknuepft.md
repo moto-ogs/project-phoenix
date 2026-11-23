@@ -112,8 +112,10 @@ Care Plan, und `AmendFromBookings` folgt nur Verträgen mit
    noch kein Konto haben. Wo der Auslöser sitzt und wie die Mail lautet,
    legt die Umsetzung fest und hält es im PR fest.
 
-Die Umsetzung folgt in einem eigenen PR auf diesem; bis dahin bleibt das
-Schema der Ursprünge unverändert.
+Die Umsetzung hält
+[ADR 0309](0309-bestandskinder-bekommen-ihre-anmeldung-still-aus-dem-importierten-vertrag.md)
+fest: die stille Anmeldung, die Bindung, den Workflow und den Schritt für die
+Eltern.
 
 ## Register
 

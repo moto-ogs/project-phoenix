@@ -261,7 +261,9 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0232: the import of existing contracts and its ports (+6).
 	// ADR 0307 (#7760): the link of imported contracts
 	// to child records and its ports (+7).
-	"modules/carecontract/compose": 188,
+	// ADR 0309 (#7760): the plan and the binding of the enrollment of the
+	// children of imported contracts and its ports (+7).
+	"modules/carecontract/compose": 195,
 	// Raised by ADR 0158: the monthly contribution constructor (+5);
 	// ADR 0165: the constructor of the monthly letters (+7);
 	// ADR 0167: the constructor of the payment terms (+5);
@@ -389,6 +391,10 @@ var moduleComposeBudgets = map[string]int{
 	// Added by ADR 0215: the Träger catalog rollout and its runtime (ADR 0195).
 	"workflows/traegercatalog/compose":  38,
 	"workflows/studentdeletion/compose": 74,
+	// Added by ADR 0309 (#7760): the enrollment of the children of imported
+	// contracts and its runtime (Träger and school transaction), no retained
+	// logic.
+	"workflows/contractenrollment/compose": 34,
 }
 
 // moduleLegacyBudgets maps a legacy tree to its production LOC on 2026-09-18.

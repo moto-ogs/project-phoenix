@@ -15219,7 +15219,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.BookingEnrollment.Request",
-      "reason": "Batch form of the existing offering-roster command; same owner, tenant transaction and guards. Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.BookingProjection.RequestByID; modules/enrollment.BookingProjection (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Batch form of the existing offering-roster command; same owner, tenant transaction and guards. Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.BookingProjection.RequestByID; modules/enrollment.BookingProjection (supplied contract method). May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7760 (ADR 0309): the binding also hands on whether the request books from the first day of its bookings (its source, read from the same row); still no write and no locking read.",
       "source_owner": "care-plan",
       "target": "*github.com/moto-ogs/project-phoenix/modules/enrollment.BookingProjection.RequestByID",
       "target_owner": "enrollment"
@@ -15229,7 +15229,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.BookingEnrollment.Request",
-      "reason": "Batch form of the existing offering-roster command; same owner, tenant transaction and guards. Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.Owner.RequestByID; modules/enrollment.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Batch form of the existing offering-roster command; same owner, tenant transaction and guards. Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.Owner.RequestByID; modules/enrollment.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7760 (ADR 0309): the binding also hands on whether the request books from the first day of its bookings (its source, read from the same row); still no write and no locking read.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/enrollment.Owner.RequestByID",
       "target_owner": "enrollment"
@@ -15239,7 +15239,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.BookingEnrollment.Request",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.BookingProjection.RequestByID; modules/enrollment.BookingProjection (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.BookingProjection.RequestByID; modules/enrollment.BookingProjection (supplied contract method). May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7760 (ADR 0309): the binding also hands on whether the request books from the first day of its bookings (its source, read from the same row); still no write and no locking read.",
       "source_owner": "care-plan",
       "target": "*github.com/moto-ogs/project-phoenix/modules/enrollment.BookingProjection.RequestByID",
       "target_owner": "enrollment"
@@ -15249,7 +15249,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.BookingEnrollment.Request",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.Owner.RequestByID; modules/enrollment.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.Owner.RequestByID; modules/enrollment.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7760 (ADR 0309): the binding also hands on whether the request books from the first day of its bookings (its source, read from the same row); still no write and no locking read.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/enrollment.Owner.RequestByID",
       "target_owner": "enrollment"

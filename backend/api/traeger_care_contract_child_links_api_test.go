@@ -309,6 +309,38 @@ func TestCareContractChildUnlinkCorrectsOnlyImportedContracts(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 }
 
+// An imported contract bound to the enrollment of its child (ADR 0309) keeps
+// its child record: the enrollment and the bookings it follows belong to
+// that child. The unlink answers child_link_bound and changes nothing, and
+// the contract tells that it follows its bookings.
+func TestCareContractChildUnlinkRefusesABoundContract(t *testing.T) {
+	t.Parallel()
+	f := newChildLinkFixture(t, "Träger Kind gebunden")
+	token := f.office.token
+	rec := traegerJSON(t, f.traeger, token, http.MethodPut, childLinkContractPath(f.mia, ""),
+		map[string]any{"student_id": f.miaStudent, "fingerprint": f.preview(t, f.mia, f.miaStudent).Fingerprint})
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	followsBookings := func() bool {
+		rec := traegerJSON(t, f.traeger, token, http.MethodGet, fmt.Sprintf("/traeger/contracts/%d", f.mia), nil)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		return decodeSchoolPortalData[struct {
+			FollowsBookings bool `json:"follows_bookings"`
+		}](t, rec.Body.Bytes()).FollowsBookings
+	}
+	assert.False(t, followsBookings(), "linked only, the imported contract follows no bookings")
+
+	// No route binds a contract yet; the binding itself is the store's.
+	_, err := f.db.ExecContext(context.Background(), `UPDATE care_contract.contracts SET request_child_id = ? WHERE id = ?`,
+		testpkg.UniqueTestTenantID(t), f.mia)
+	require.NoError(t, err)
+	rec = traegerJSON(t, f.traeger, token, http.MethodDelete, unlinkPath(f.mia, f.miaStudent), nil)
+	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+	assert.Contains(t, rec.Body.String(), "care_contract.child_link_bound")
+	assert.Equal(t, 1, f.count(t, `SELECT COUNT(*) FROM care_contract.contracts WHERE id = ? AND student_id = ?`, f.mia, f.miaStudent))
+	assert.Zero(t, f.events(t, "unlink_child"))
+	assert.True(t, followsBookings())
+}
+
 // A single link confirms the state the office saw: the fingerprint of the
 // previewed row. A child record whose name or date of birth changed since
 // the preview links nothing and answers child_link_changed; a link without

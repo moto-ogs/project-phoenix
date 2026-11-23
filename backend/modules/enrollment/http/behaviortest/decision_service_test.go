@@ -180,7 +180,7 @@ func newBookingsForTest(
 	}
 	options := []api.BookingMaterializationOption{
 		api.WithBookingCatalog(env.offeringCatalog),
-		api.WithBookingToday(func() calendar.Date { return decisionTestToday }),
+		api.WithBookingToday(env.decisionDay),
 		api.WithBookingSettings(bookingSettings),
 		api.WithBookingWithdrawals(careWithdrawal),
 	}
@@ -257,20 +257,28 @@ func newDecisionsForTestWithBookings(
 	if t != nil {
 		pickupBaselines := newPickupBaselineService(repoFactoryCare.CarePlan, approvedOfferingTestProjection(repoFactory))
 		pickupAutoExcusal = newPickupExcusal(t, env.db, repoFactoryCare.CarePlan, pickupBaselines, env.timetable, true)
+		if env.excusalToday != nil {
+			var err error
+			pickupAutoExcusal, err = api.NewEnrollmentFlowPickupExcusalOn(testpkg.NewDatabase(t, env.db), repoFactoryCare.CarePlan,
+				pickupBaselines, env.timetable, true, env.excusalToday)
+			require.NoError(t, err)
+		}
 	}
 	studentEnrollment := testStudentEnrollment(env.db)
 	decisionRows := repoFactory.EnrollmentOn(decisionTestClock)
 	return newTestDecisions(enrollmentCompose.DecisionDependencies{
-		Now:            decisionTestClock,
-		Requests:       decisionRows,
-		Children:       decisionRows,
-		Guardians:      decisionRows,
-		LateInvites:    decisionRows,
-		Phases:         decisionRows,
-		Schemas:        decisionRows,
-		Offerings:      enrollmentCompose.NewCareOfferingRecords(repoFactoryCare.CarePlan),
-		Bookings:       bookings,
-		GuardianAccess: testGuardianAccess(env.db), GuardianAuthorizer: repoFactory.StudentGuardian, GuardianHold: testGuardianHold(env.db, repoFactory),
+		Now:              decisionTestClock,
+		Requests:         decisionRows,
+		Children:         decisionRows,
+		Guardians:        decisionRows,
+		LateInvites:      decisionRows,
+		Phases:           decisionRows,
+		Schemas:          decisionRows,
+		Offerings:        enrollmentCompose.NewCareOfferingRecords(repoFactoryCare.CarePlan),
+		Bookings:         bookings,
+		ContractStudents: owners.EnrollmentContractStudents{People: owners.MustNewPeopleDirectory(testpkg.MustDatabase(env.db))},
+		CareBookings:     requestTestBookingCommands(),
+		GuardianAccess:   testGuardianAccess(env.db), GuardianAuthorizer: repoFactory.StudentGuardian, GuardianHold: testGuardianHold(env.db, repoFactory),
 		People: owners.EnrollmentDecisionPeopleDirectory(
 			repoFactory.Person, repoFactory.Staff, repoFactory.Student, repoFactory.StudentGuardian, repoFactory.GuardianProfile, repoFactory.GuardianPhoneNumber, studentEnrollment,
 		),
@@ -287,12 +295,23 @@ func newDecisionsForTestWithBookings(
 		LockTemplateRecurrence: lockTemplateRecurrence,
 		FollowClassChanges:     api.MustEnrollmentTestClassFollowUp(testpkg.MustDatabase(env.db)),
 		Pickups: TestWeeklyPickupHooks{
+			ResyncExcusal: resyncPickupExcusals(pickupAutoExcusal),
 			Snapshot:      snapshotPickupWeekdayChanges(pickupAutoExcusal),
 			RecordChanges: recordPickupWeekdayChanges(pickupAutoExcusal),
 		},
 		Logger: slog.Default(),
-		Today:  func() calendar.Date { return decisionTestToday },
+		Today:  env.decisionDay,
 	}, settings, outbox)
+}
+
+// resyncPickupExcusals binds the resync of the pickup auto excusals the way
+// the root binds it (weeklyPickupHooks), so the flows of the suites run it
+// as production does.
+func resyncPickupExcusals(syncer careplan.PickupAutoExcusal) func(context.Context, []int64) error {
+	if syncer == nil {
+		return nil
+	}
+	return syncer.ResyncFutureExceptions
 }
 
 func snapshotPickupWeekdayChanges(syncer careplan.PickupAutoExcusal) func(context.Context, int64, calendar.Date) (map[int]string, error) {

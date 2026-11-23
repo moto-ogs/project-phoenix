@@ -744,6 +744,34 @@
     },
     {
       "build": "production",
+      "evidence": "func (l contractEnrollmentAccessLog) RecordAccess(ctx context.Context, read ports.SchoolRead) error {\n\treturn l.log.RecordAccess(ctx, carecontract.SchoolAccess{OrganizationID: read.OrganizationID, AccountID: read.AccountID, Data: carecontract.SchoolAccessContracts, View: contractEnrollmentAccessView, Rows: len(read.ContractIDs), ContractIDs: read.ContractIDs, StudentIDs: read.StudentIDs})\n}",
+      "form": "unclassified-evidence",
+      "id": "api/contractEnrollmentAccessLog.RecordAccess",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
+      "evidence": "func (c contractEnrollmentChildren) SchoolChildren(ctx context.Context, studentIDs []int64) ([]ports.Child, error) {\n\tfound, err := c.records.StudentRecordIdentities(ctx, studentIDs)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tchildren := make([]ports.Child, len(found))\n\tfor i, record := range found {\n\t\tchildren[i] = ports.Child{StudentID: record.StudentID, FirstName: record.FirstName, LastName: record.LastName, BirthDate: record.Birthday}\n\t}\n\treturn children, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "api/contractEnrollmentChildren.SchoolChildren",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
+      "evidence": "func (s contractEnrollmentSchools) HoldTraegerSchool(ctx context.Context, organizationID, schoolID int64) (bool, error) {\n\tschool, err := s.organizations.FindSchoolForShare(ctx, schoolID)\n\tif errors.Is(err, organizationtenancy.ErrSchoolNotFound) {\n\t\treturn false, nil\n\t}\n\tif err != nil {\n\t\treturn false, err\n\t}\n\treturn school.OrganizationID.Int64() == organizationID \u0026\u0026 !school.IsDeleted(), nil\n}",
+      "form": "unclassified-evidence",
+      "id": "api/contractEnrollmentSchools.HoldTraegerSchool",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
+      "evidence": "func (s contractEnrollmentSchools) TraegerSchoolIDs(ctx context.Context, organizationID int64) ([]int64, error) {\n\tschools, err := s.organizations.ListSchoolsByOrganization(ctx, organizationID)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tids := make([]int64, 0, len(schools))\n\tfor _, school := range schools {\n\t\tif !school.IsDeleted() {\n\t\t\tids = append(ids, school.ID.Int64())\n\t\t}\n\t}\n\treturn ids, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "api/contractEnrollmentSchools.TraegerSchoolIDs",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
       "evidence": "func (s dayChangesMealPlan) MealPlanChanges(ctx context.Context, day calendar.Date) ([]daychangesview.SourceEntry, error) {\n\tchanged, err := s.reads.MenuChangedOn(ctx, mealplan.Date(day.String()))\n\tif err != nil {\n\t\treturn nil, fmt.Errorf(\"read meal plan change: %w\", err)\n\t}\n\tif !changed {\n\t\treturn nil, nil\n\t}\n\tentry := daychangesview.SourceEntry{Kind: daychangesview.KindMealPlanChanged}\n\tif mealPlanAllowed(ctx, mealplanAPI.AccessRead) {\n\t\tentry.Link = \u0026daychangesview.Link{Target: daychangesview.LinkMealPlan}\n\t}\n\treturn []daychangesview.SourceEntry{entry}, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/dayChangesMealPlan.MealPlanChanges",
@@ -4216,7 +4244,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (e bookingEnrollment) Request(ctx context.Context, id int64) (careplanCompose.BookingRequest, error) {\n\trequest, err := e.owner.RequestByID(ctx, id, false)\n\tif err != nil {\n\t\treturn careplanCompose.BookingRequest{}, err\n\t}\n\tif request == nil {\n\t\treturn careplanCompose.BookingRequest{}, careplanCompose.BookingRowNotFound(fmt.Errorf(\"request %d not found\", id))\n\t}\n\treturn careplanCompose.BookingRequest{ID: request.ID, PhaseID: request.PhaseID}, nil\n}",
+      "evidence": "func (e bookingEnrollment) Request(ctx context.Context, id int64) (careplanCompose.BookingRequest, error) {\n\trequest, err := e.owner.RequestByID(ctx, id, false)\n\tif err != nil {\n\t\treturn careplanCompose.BookingRequest{}, err\n\t}\n\tif request == nil {\n\t\treturn careplanCompose.BookingRequest{}, careplanCompose.BookingRowNotFound(fmt.Errorf(\"request %d not found\", id))\n\t}\n\treturn careplanCompose.BookingRequest{ID: request.ID, PhaseID: request.PhaseID, StartsWithFirstBooking: request.SubmissionSource == enrollmentOwner.RequestSourceContractImport}, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/bookingEnrollment.Request",
       "owner": "roots"

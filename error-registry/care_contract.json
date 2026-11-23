@@ -31,6 +31,12 @@
       "legacy": "care_contract.change_not_found"
     },
     {
+      "code": "care_contract.child_link_bound",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "care_contract.child_link_bound"
+    },
+    {
       "code": "care_contract.child_link_changed",
       "class": "business_rejection",
       "parameters": [],
@@ -77,6 +83,18 @@
       "class": "business_rejection",
       "parameters": [],
       "legacy": "care_contract.contract_not_signable"
+    },
+    {
+      "code": "care_contract.enrollment_binding_changed",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "care_contract.enrollment_binding_changed"
+    },
+    {
+      "code": "care_contract.enrollment_preview_changed",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "care_contract.enrollment_preview_changed"
     },
     {
       "code": "care_contract.field_invalid",
