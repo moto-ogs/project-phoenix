@@ -89,7 +89,7 @@ func approveDirectLinkChild(t *testing.T, env *decisionTestEnv, firstName string
 func approveDirectLinkChildIn(ctx context.Context, t *testing.T, env *decisionTestEnv, firstName string, offeringIDs []int64, ends ...int64) (studentID, childID int64) {
 	t.Helper()
 	grade := int16(2)
-	submitted, err := testpkg.TenantQuery1(t, ctx, env.db, env.requestSvc.Submit, enrollmentTest.SubmitRequest{
+	submitted, err := testpkg.TenantQuery1(t, ctx, env.db, submitShown(env.requestSvc), enrollmentTest.SubmitRequest{
 		TenantID: testpkg.Tenant(t), PhaseID: env.sourcePhase.ID,
 		GuardianFirstName: "Eltern", GuardianLastName: "Liste", GuardianEmail: firstName + "-liste@example.com",
 		ConsentFlags: enrollmentTest.FormValuesOf(map[string]any{"agb": true, "data_processing": true, "email_contact": true, "photo": true}),
