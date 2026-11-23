@@ -1036,6 +1036,85 @@ describe("PersonalInfoEditPanel", () => {
       );
     });
 
+    // ADR 0311: a live refresh of the same child (check-in, check-out)
+    // refills only an untouched draft; an edited one keeps its input and the
+    // version it was edited on.
+    it("keeps the typed input and its version across a refresh of the child", async () => {
+      mockOnSave.mockResolvedValue(undefined);
+      const panel = (student: Student) => (
+        <PersonalInfoEditPanel
+          onCancel={mockOnCancel}
+          student={student}
+          onSave={mockOnSave}
+        />
+      );
+      const view = render(panel(createMockStudent({ version: "record-v1" })));
+      await consentLoaded();
+
+      const firstName = screen.getByLabelText<HTMLInputElement>("Vorname");
+      fireEvent.change(firstName, { target: { value: "Mia" } });
+      view.rerender(panel(createMockStudent({ version: "record-v2" })));
+      expect(firstName.value).toBe("Mia");
+
+      fireEvent.click(screen.getByText("Speichern"));
+      await waitFor(() =>
+        expect(mockOnSave).toHaveBeenCalledWith(
+          expect.objectContaining({ first_name: "Mia", version: "record-v1" }),
+        ),
+      );
+    });
+
+    it("refills an untouched draft from a refresh of the child", async () => {
+      const panel = (student: Student) => (
+        <PersonalInfoEditPanel
+          onCancel={mockOnCancel}
+          student={student}
+          onSave={mockOnSave}
+        />
+      );
+      const view = render(panel(createMockStudent({ version: "record-v1" })));
+      await consentLoaded();
+      view.rerender(
+        panel(createMockStudent({ first_name: "Lena", version: "record-v2" })),
+      );
+      await waitFor(() =>
+        expect(screen.getByLabelText<HTMLInputElement>("Vorname").value).toBe(
+          "Lena",
+        ),
+      );
+    });
+
+    it("names a failed reload after a refusal as a load error", async () => {
+      mockOnSave.mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      );
+      const onStudentReload = vi.fn(() =>
+        Promise.reject(
+          new ApiError("offline", 503, { code: "general.unavailable" }),
+        ),
+      );
+      render(
+        <PersonalInfoEditPanel
+          onCancel={mockOnCancel}
+          student={createMockStudent({ version: "record-v1" })}
+          onSave={mockOnSave}
+          onStudentReload={onStudentReload}
+        />,
+      );
+      await consentLoaded();
+      fireEvent.change(screen.getByLabelText("Vorname"), {
+        target: { value: "Mia" },
+      });
+      fireEvent.click(screen.getByText("Speichern"));
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Der neue Stand konnte nicht geladen werden.",
+      );
+      expect(screen.getByRole("alert")).not.toHaveTextContent(
+        "Du siehst jetzt den neuen Stand.",
+      );
+    });
+
     it("does not mark loaded privacy consent as changed for an unrelated save", async () => {
       mockOnSave.mockResolvedValue(undefined);
       fetchStudentPrivacyConsentMock.mockResolvedValue({

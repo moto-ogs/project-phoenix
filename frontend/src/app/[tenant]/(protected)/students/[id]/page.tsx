@@ -520,6 +520,7 @@ function StudentDetailPageContent() {
     myGroupRooms,
     mySupervisedRooms,
     refreshData,
+    reloadOrThrow: reloadStudentOrThrow,
   } = useStudentData(studentId);
   const seedFrom = useSWRSeedFrom();
   const preview = useMemo(
@@ -1906,6 +1907,7 @@ function StudentDetailPageContent() {
           groupOptions={groupOptions}
           groupOptionsLoadError={groupOptionsLoadError}
           onRefreshData={refreshDataAndHistory}
+          onReloadStudent={reloadStudentOrThrow}
         />
       )}
       {!isHolidayGuest && !hasFullAccess && (
@@ -2202,6 +2204,8 @@ interface FullAccessViewProps {
   onClosePersonalInfoEdit: () => void;
   onSavePersonal: (student: PersonalInfoSaveDraft) => Promise<void>;
   onRefreshData: () => void;
+  /** Reads the child again; rejects on failure (ADR 0311). */
+  onReloadStudent: () => Promise<unknown>;
   groupOptions: ReadonlyArray<{ value: string; label: string }>;
   groupOptionsLoadError: FormErrorInput;
 }
@@ -2232,6 +2236,7 @@ function FullAccessView({
   onClosePersonalInfoEdit,
   onSavePersonal,
   onRefreshData,
+  onReloadStudent,
   groupOptions,
   groupOptionsLoadError,
 }: Readonly<FullAccessViewProps>) {
@@ -2304,6 +2309,7 @@ function FullAccessView({
               onSave={onSavePersonal}
               onCancel={onClosePersonalInfoEdit}
               onStudentRefresh={onRefreshData}
+              onStudentReload={onReloadStudent}
               groups={groupOptions}
             />
           </>
