@@ -110529,6 +110529,13 @@
           }
         },
         {
+          "name": "notify_active",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "expected_fingerprint",
           "optional": true,
           "schema": {
@@ -110579,6 +110586,24 @@
         },
         {
           "name": "skipped_restricted",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "notified",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "already_notified",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "without_visible_care",
           "schema": {
             "kind": "int"
           }

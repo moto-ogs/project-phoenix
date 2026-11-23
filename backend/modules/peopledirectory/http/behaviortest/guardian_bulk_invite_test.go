@@ -39,22 +39,23 @@ func TestBulkInviteOnlyPassesActiveChildrenOfTheSchool(t *testing.T) {
 	h := newGuardianHarness(t, bulkInviteDirectory())
 	h.permitted["users:create"] = true
 	h.bulkResult = usersHTTP.GuardianBulkInviteResult{
-		Invited: 2, SkippedOpen: 1,
+		Invited: 2, SkippedOpen: 1, Notified: 3, AlreadyNotified: 1, WithoutVisibleCare: 2,
 		Problems:    []usersHTTP.GuardianBulkInviteProblem{{GuardianProfileID: 9, GuardianName: "Katharina Brenner", Reason: "missing_email"}},
 		Fingerprint: "preview-token",
 	}
 
 	recorder := h.do(t, http.MethodPost, "/guardians/bulk-invite", map[string]any{
-		"student_ids": []int64{3, 4, 99}, "resend_open": true, "dry_run": true,
+		"student_ids": []int64{3, 4, 99}, "resend_open": true, "dry_run": true, "notify_active": true,
 	})
 
 	require.Equal(t, http.StatusOK, recorder.Code)
 	require.Len(t, h.bulkInvites, 1)
-	assert.Equal(t, usersHTTP.GuardianBulkInvite{StudentIDs: []int64{3}, ActorAccountID: 42, ResendOpen: true, DryRun: true}, h.bulkInvites[0],
+	assert.Equal(t, usersHTTP.GuardianBulkInvite{StudentIDs: []int64{3}, ActorAccountID: 42, ResendOpen: true, DryRun: true, NotifyActive: true}, h.bulkInvites[0],
 		"the graduated child and the unknown ID are dropped")
 	assert.JSONEq(t, `{
 		"dry_run": true, "invited": 2, "linked_existing_account": 0, "resent": 0,
 		"skipped_active": 0, "skipped_open": 1, "skipped_restricted": 0,
+		"notified": 3, "already_notified": 1, "without_visible_care": 2,
 		"problems": [{"guardian_profile_id": "9", "guardian_name": "Katharina Brenner", "student_names": [], "reason": "missing_email"}],
 		"fingerprint": "preview-token"
 	}`, string(decode(t, recorder).Data))

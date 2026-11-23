@@ -14273,6 +14273,14 @@
       "target_owner": "enrollment"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeEnrollment.SelectionHistory",
+      "binding_digest": "4fab73502fd9dec6867cb919e72fc43a",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.OfferingChangeEnrollment.SelectionHistory",
+      "source_owner": "care-plan",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/enrollment.BookingProjection.RequestChildOfferingHistory",
+      "target_owner": "enrollment"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeEnrollment.SelectionsAt",
       "binding_digest": "324d084074c5216841255c3ffd144c6a",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.OfferingChangeEnrollment.SelectionsAt",

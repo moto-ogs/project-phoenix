@@ -103,7 +103,7 @@ func BuildIdentityAccess(
 		return nil, nil, err
 	}
 	lifecycle, err := LifecycleDependencies(sessionRepos.Lifecycle, audit.Command, CaregiverProfiles{Persons: persons, Membership: membership},
-		guardianMail, catererMail, enrollmentClaims, authLogger)
+		guardianMail, catererMail, enrollmentClaims, NewEnrollmentBookings(env.Now), authLogger)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -168,6 +168,8 @@ func IdentityDeliveryRenderers(module identityaccess.Owner, defaultFrom email.Em
 			DefaultFrom: defaultFrom,
 		})),
 		identityaccess.MailKindCatererInvitation: payloadRenderer(NewCatererInvitationRenderer(defaultFrom)),
+		// The care notice of the bulk invitation (#7760).
+		identityaccess.MailKindGuardianCareVisible: payloadRenderer(NewGuardianCareVisibleRenderer(defaultFrom)),
 		identityaccess.MailKindGuardianWelcome: payloadRenderer(NewGuardianWelcomeRenderer(GuardianInvitationRendererConfig{
 			DefaultFrom:          defaultFrom,
 			PrecedingEmailStatus: identityaccessCompose.NewGuardianWelcomeOrder(precedingMails{status: mailState}),

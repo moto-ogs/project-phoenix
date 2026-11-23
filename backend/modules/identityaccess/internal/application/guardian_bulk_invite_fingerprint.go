@@ -12,13 +12,14 @@ import (
 // The preview of a bulk invitation and the run it confirms decide the
 // guardians from the same facts. The fingerprint covers exactly those facts,
 // so the run is refused when it would mail another set than the preview
-// counted (ADR 0311).
+// counted: invitations as well as care notices (#7760) (ADR 0311).
 
 // bulkInviteState is the canonical form of what a bulk run decides on.
 type bulkInviteState struct {
-	ResendOpen bool                      `json:"resend_open"`
-	Restricted int                       `json:"restricted"`
-	Guardians  []bulkInviteGuardianState `json:"guardians"`
+	ResendOpen   bool                      `json:"resend_open"`
+	NotifyActive bool                      `json:"notify_active,omitempty"`
+	Restricted   int                       `json:"restricted"`
+	Guardians    []bulkInviteGuardianState `json:"guardians"`
 }
 
 // bulkInviteGuardianState is one candidate in profile order.
@@ -31,6 +32,18 @@ type bulkInviteGuardianState struct {
 	ExistingAccount bool                       `json:"existing_account,omitempty"`
 	MailBlock       string                     `json:"mail_block,omitempty"`
 	Open            []bulkInviteOpenInvitation `json:"open,omitempty"`
+	Notice          *bulkInviteNoticeState     `json:"notice,omitempty"`
+}
+
+// bulkInviteNoticeState is the care notice decision of an account holder
+// (decideCareNotice). The login address stays out: the school does not see
+// it, and the token is an unkeyed hash it could test guesses against. What
+// the address decides, a problem instead of a mail, is in.
+type bulkInviteNoticeState struct {
+	Owed           bool    `json:"owed,omitempty"`
+	Pending        []int64 `json:"pending,omitempty"`
+	NotifiedBefore bool    `json:"notified_before,omitempty"`
+	Problem        string  `json:"problem,omitempty"`
 }
 
 // bulkInviteOpenInvitation is what a run reads of an open invitation.
@@ -44,7 +57,7 @@ type bulkInviteOpenInvitation struct {
 // bulkInviteFingerprint is the token of the facts a run decides on. The
 // candidates come in profile order; their students are sorted already.
 func bulkInviteFingerprint(req identityaccess.BulkInviteRequest, restricted int, candidates []bulkInviteCandidate, profiles map[int64]domain.GuardianProfile, open map[int64][]domain.GuardianInvitation, run *bulkInviteRun) string {
-	state := bulkInviteState{ResendOpen: req.ResendOpen, Restricted: restricted, Guardians: make([]bulkInviteGuardianState, 0, len(candidates))}
+	state := bulkInviteState{ResendOpen: req.ResendOpen, NotifyActive: req.NotifyActive, Restricted: restricted, Guardians: make([]bulkInviteGuardianState, 0, len(candidates))}
 	for _, candidate := range candidates {
 		guardian := bulkInviteGuardianState{ProfileID: candidate.profileID, StudentIDs: candidate.studentIDs}
 		profile, found := profiles[candidate.profileID]
@@ -61,6 +74,13 @@ func bulkInviteFingerprint(req identityaccess.BulkInviteRequest, restricted int,
 			// guesses against, so a global account ID stays out of it.
 			_, guardian.ExistingAccount = run.existingAccounts[email]
 			guardian.MailBlock = run.mailBlocks[email]
+			if req.NotifyActive && profile.HasAccount {
+				decision := run.notices.decideCareNotice(candidate, run.mailBlocks)
+				guardian.Notice = &bulkInviteNoticeState{
+					Owed: decision.owed, Pending: decision.pending,
+					NotifiedBefore: decision.notifiedBefore, Problem: decision.problem,
+				}
+			}
 		}
 		for _, invitation := range open[profile.ID] {
 			guardian.Open = append(guardian.Open, bulkInviteOpenInvitation{

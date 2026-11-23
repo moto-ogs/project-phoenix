@@ -23,10 +23,13 @@ import (
 const bulkInviteMaxStudents = 2000
 
 type bulkInviteRequest struct {
-	StudentIDs          []ident.ID `json:"student_ids"`
-	ResendOpen          bool       `json:"resend_open"`
-	DryRun              bool       `json:"dry_run"`
-	ExpectedFingerprint string     `json:"expected_fingerprint"`
+	StudentIDs []ident.ID `json:"student_ids"`
+	ResendOpen bool       `json:"resend_open"`
+	DryRun     bool       `json:"dry_run"`
+	// NotifyActive also mails guardians who already use the parents portal
+	// that the child's care is visible there, once per child (#7760).
+	NotifyActive        bool   `json:"notify_active"`
+	ExpectedFingerprint string `json:"expected_fingerprint"`
 }
 
 type bulkInviteProblemResponse struct {
@@ -37,14 +40,23 @@ type bulkInviteProblemResponse struct {
 }
 
 type bulkInviteResponse struct {
-	DryRun                bool                        `json:"dry_run"`
-	Invited               int                         `json:"invited"`
-	LinkedExistingAccount int                         `json:"linked_existing_account"`
-	Resent                int                         `json:"resent"`
-	SkippedActive         int                         `json:"skipped_active"`
-	SkippedOpen           int                         `json:"skipped_open"`
-	SkippedRestricted     int                         `json:"skipped_restricted"`
-	Problems              []bulkInviteProblemResponse `json:"problems"`
+	DryRun                bool `json:"dry_run"`
+	Invited               int  `json:"invited"`
+	LinkedExistingAccount int  `json:"linked_existing_account"`
+	Resent                int  `json:"resent"`
+	SkippedActive         int  `json:"skipped_active"`
+	SkippedOpen           int  `json:"skipped_open"`
+	SkippedRestricted     int  `json:"skipped_restricted"`
+	// Notified counts the guardians with an account who get (in a preview:
+	// would get) the care notice; AlreadyNotified those whose notice was
+	// queued before for every child; WithoutVisibleCare the selected children
+	// of account holders whose care the parents portal does not show as
+	// running today, so no notice names them (#7760). All stay 0 without
+	// notify_active.
+	Notified           int                         `json:"notified"`
+	AlreadyNotified    int                         `json:"already_notified"`
+	WithoutVisibleCare int                         `json:"without_visible_care"`
+	Problems           []bulkInviteProblemResponse `json:"problems"`
 	// Fingerprint is set on a preview: the run sends it back.
 	Fingerprint string `json:"fingerprint"`
 }
@@ -86,7 +98,7 @@ func (rs *GuardianResource) bulkInviteGuardians(w http.ResponseWriter, r *http.R
 	}
 	result, err := rs.runtime.BulkInviteGuardians(r.Context(), GuardianBulkInvite{
 		StudentIDs: studentIDs, ActorAccountID: accountID, ResendOpen: body.ResendOpen, DryRun: body.DryRun,
-		ExpectedFingerprint: body.ExpectedFingerprint,
+		NotifyActive: body.NotifyActive, ExpectedFingerprint: body.ExpectedFingerprint,
 	})
 	if err != nil {
 		rs.fail(w, r, rs.runtime.InviteFailureKind(err), err)
@@ -112,7 +124,8 @@ func newBulkInviteResponse(dryRun bool, result GuardianBulkInviteResult) bulkInv
 	response := bulkInviteResponse{
 		DryRun: dryRun, Invited: result.Invited, LinkedExistingAccount: result.LinkedExistingAccount,
 		Resent: result.Resent, SkippedActive: result.SkippedActive, SkippedOpen: result.SkippedOpen,
-		SkippedRestricted: result.SkippedRestricted, Problems: make([]bulkInviteProblemResponse, 0, len(result.Problems)),
+		SkippedRestricted: result.SkippedRestricted, Notified: result.Notified, AlreadyNotified: result.AlreadyNotified,
+		WithoutVisibleCare: result.WithoutVisibleCare, Problems: make([]bulkInviteProblemResponse, 0, len(result.Problems)),
 		Fingerprint: result.Fingerprint,
 	}
 	for _, problem := range result.Problems {
