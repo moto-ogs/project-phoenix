@@ -905,7 +905,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (c staffAbsenceCapability) VacationQuotaSummary(ctx context.Context, staffID int64, year int) (*workforce.VacationQuotaSummary, error) {\n\tsummary, err := c.absences.GetVacationQuotaSummary(ctx, staffID, year)\n\tif err != nil {\n\t\treturn nil, mapTimeTrackingFailure(err)\n\t}\n\tif summary == nil {\n\t\treturn nil, nil\n\t}\n\treturn \u0026workforce.VacationQuotaSummary{StaffID: ident.ID(summary.StaffID), Year: summary.Year, EntitledDays: summary.EntitledDays, CarryoverDays: summary.CarryoverDays, TakenBeforeDays: summary.TakenBeforeDays, TakenDays: summary.TakenDays, ReservedDays: summary.ReservedDays, RemainingDays: summary.RemainingDays, Opening: publicVacationOpening(summary.Opening)}, nil\n}",
+      "evidence": "func (c staffAbsenceCapability) VacationQuotaSummary(ctx context.Context, staffID int64, year int) (*workforce.VacationQuotaSummary, error) {\n\tsummary, err := c.absences.GetVacationQuotaSummary(ctx, staffID, year)\n\tif err != nil {\n\t\treturn nil, mapTimeTrackingFailure(err)\n\t}\n\tif summary == nil {\n\t\treturn nil, nil\n\t}\n\treturn \u0026workforce.VacationQuotaSummary{StaffID: ident.ID(summary.StaffID), Year: summary.Year, EntitledDays: summary.EntitledDays, CarryoverDays: summary.CarryoverDays, TakenBeforeDays: summary.TakenBeforeDays, TakenDays: summary.TakenDays, ReservedDays: summary.ReservedDays, RemainingDays: summary.RemainingDays, Opening: publicVacationOpening(summary.Opening), Version: summary.Version}, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/workforce/internal/application/timetracking/staffAbsenceCapability.VacationQuotaSummary",
       "owner": "modules/workforce"

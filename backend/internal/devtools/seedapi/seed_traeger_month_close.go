@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -31,20 +30,13 @@ func seedTraegerMonthClose(client *Client, auth AuthRef, recordID int64) (bool, 
 	// The close carries the fingerprint of the month it confirms (ADR 0311).
 	path := fmt.Sprintf("/traeger/staff-records/%d/time-account", recordID)
 	raw, err := client.GetWithAuth(auth, fmt.Sprintf("%s?year=%d&month=%d", path, month.Year(), int(month.Month())))
-	if err != nil {
+	fingerprint, readErr := seedReadToken(raw, "fingerprint")
+	if err = errors.Join(err, readErr); err != nil {
 		return false, fmt.Errorf("read a month of a Träger staff record: %w", err)
-	}
-	var read struct {
-		Data struct {
-			Fingerprint string `json:"fingerprint"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(raw, &read); err != nil {
-		return false, fmt.Errorf("decode a month of a Träger staff record: %w", err)
 	}
 	_, err = client.PostWithAuth(auth, path+"/close", map[string]any{
 		"year": month.Year(), "month": int(month.Month()), "reason": "Monatsabschluss für das Lohnbüro",
-		"expected_fingerprint": read.Data.Fingerprint,
+		"expected_fingerprint": fingerprint,
 	})
 	var refused *APIError
 	if errors.As(err, &refused) && (refused.Code == seedCodeTraegerMonthLaterClosed || refused.Code == seedCodeTraegerMonthNotKept) {

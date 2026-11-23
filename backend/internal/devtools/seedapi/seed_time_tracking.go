@@ -478,20 +478,13 @@ func seedTimeTrackingCoverage(rt *Runtime, staffID int64, year int) error {
 	// The change carries the version of the claim it replaces (ADR 0311).
 	quotaPath := fmt.Sprintf("/api/staff/%d/vacation/quota", staffID)
 	raw, err := rt.Client.Get(fmt.Sprintf("%s?year=%d", quotaPath, year))
-	if err != nil {
+	version, readErr := seedReadToken(raw, "version")
+	if err = errors.Join(err, readErr); err != nil {
 		return fmt.Errorf("read vacation quota for staff %d: %w", staffID, err)
-	}
-	var read struct {
-		Data struct {
-			Version string `json:"version"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(raw, &read); err != nil {
-		return fmt.Errorf("decode vacation quota for staff %d: %w", staffID, err)
 	}
 	if _, err := rt.Client.Put(quotaPath, map[string]any{
 		"year": year, "entitled_days": 30, "carryover_days": 2,
-		"reason": "Tariflicher Jahresurlaub", "expected_version": read.Data.Version,
+		"reason": "Tariflicher Jahresurlaub", "expected_version": version,
 	}); err != nil {
 		return fmt.Errorf("seed vacation quota for staff %d: %w", staffID, err)
 	}
@@ -703,18 +696,11 @@ func seedCompTimeFridays(rt *Runtime, staffID int64, fridays []time.Time, sickLe
 	path := fmt.Sprintf("/api/staff/%d/absences/rebook", staffID)
 	rebooking["dry_run"] = true
 	preview, err := rt.Client.Post(path, rebooking)
-	if err != nil {
+	fingerprint, readErr := seedReadToken(preview, "fingerprint")
+	if err = errors.Join(err, readErr); err != nil {
 		return 0, fmt.Errorf("seed absence rebooking preview for staff %d: %w", staffID, err)
 	}
-	var confirmed struct {
-		Data struct {
-			Fingerprint string `json:"fingerprint"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(preview, &confirmed); err != nil {
-		return 0, fmt.Errorf("seed absence rebooking preview for staff %d: %w", staffID, err)
-	}
-	rebooking["dry_run"], rebooking["expected_fingerprint"] = false, confirmed.Data.Fingerprint
+	rebooking["dry_run"], rebooking["expected_fingerprint"] = false, fingerprint
 	if _, err := rt.Client.Post(path, rebooking); err != nil {
 		return 0, fmt.Errorf("seed absence rebooking for staff %d: %w", staffID, err)
 	}
