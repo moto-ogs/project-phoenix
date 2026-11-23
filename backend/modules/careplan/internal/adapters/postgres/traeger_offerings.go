@@ -111,21 +111,26 @@ func (s *TraegerOfferingStore) ListTraegerOfferings(ctx context.Context, organiz
 
 // TraegerOffering returns one offering of the Träger.
 func (s *TraegerOfferingStore) TraegerOffering(ctx context.Context, organizationID, id int64) (careplan.TraegerOffering, error) {
-	return s.readTraegerOffering(ctx, organizationID, id, traegerOfferingByIDSelect)
+	return s.readTraegerOffering(ctx, organizationID, id, false)
 }
 
 // LockTraegerOffering returns one offering of the Träger under its row lock.
 func (s *TraegerOfferingStore) LockTraegerOffering(ctx context.Context, organizationID, id int64) (careplan.TraegerOffering, error) {
-	return s.readTraegerOffering(ctx, organizationID, id, traegerOfferingByIDLockSelect)
+	return s.readTraegerOffering(ctx, organizationID, id, true)
 }
 
-func (s *TraegerOfferingStore) readTraegerOffering(ctx context.Context, organizationID, id int64, query string) (careplan.TraegerOffering, error) {
+func (s *TraegerOfferingStore) readTraegerOffering(ctx context.Context, organizationID, id int64, lock bool) (careplan.TraegerOffering, error) {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {
 		return careplan.TraegerOffering{}, err
 	}
 	var rows []traegerOfferingRow
-	if err := db.NewRaw(query, organizationID, id).Scan(ctx, &rows); err != nil {
+	if lock {
+		err = db.NewRaw(traegerOfferingByIDLockSelect, organizationID, id).Scan(ctx, &rows)
+	} else {
+		err = db.NewRaw(traegerOfferingByIDSelect, organizationID, id).Scan(ctx, &rows)
+	}
+	if err != nil {
 		return careplan.TraegerOffering{}, fmt.Errorf("care plan postgres: read träger care offering: %w", err)
 	}
 	offerings, err := s.withSchools(ctx, db, organizationID, rows)

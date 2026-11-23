@@ -834,7 +834,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingPlaceChanges.RebookHolidayChild",
-      "binding_digest": "6ad9166c90cd13bd7bcf431244583813",
+      "binding_digest": "5f1ce720c2a5bd7be1b3f32069d7c987",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling/http.HolidayPlaceChanges.RebookHolidayChild",
       "source_owner": "parent-billing",
       "target": "*github.com/moto-ogs/project-phoenix/workflows/holidayallocation.Workflow.RebookHolidayChild",
