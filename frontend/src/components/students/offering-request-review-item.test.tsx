@@ -1237,3 +1237,92 @@ describe("OfferingRequestReviewItem on an outdated read", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+// ADR 0311: the card decides on the version it shows. A parent's edit
+// refills an untouched card; an edited card keeps its version, so the
+// server refuses instead of approving a date nobody saw.
+describe("OfferingRequestReviewItem on a newer version of the request", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockPreview.mockResolvedValue(previewResult());
+    mockDecide.mockResolvedValue(undefined);
+  });
+
+  function renderVersioned(row: StaffOfferingRequest, version: string) {
+    const view = render(
+      <OfferingRequestReviewItem
+        row={row}
+        onDecided={vi.fn()}
+        expectedVersion={version}
+        onStale={vi.fn(async () => undefined)}
+      />,
+    );
+    return (next: StaffOfferingRequest, nextVersion: string) =>
+      view.rerender(
+        <OfferingRequestReviewItem
+          row={next}
+          onDecided={vi.fn()}
+          expectedVersion={nextVersion}
+          onStale={vi.fn(async () => undefined)}
+        />,
+      );
+  }
+
+  it("approves the parents' new date with its version when the card is untouched", async () => {
+    const rerender = renderVersioned(request(), "v1");
+    fireEvent.click(screen.getByRole("button", { name: /Lara Beispiel/ }));
+    rerender(request({ effective_from: "2027-03-01" }), "v2");
+
+    await confirmApproval();
+    await waitFor(() =>
+      expect(mockDecide).toHaveBeenCalledWith(
+        "77",
+        true,
+        undefined,
+        [],
+        "2027-03-01",
+        false,
+        "v2",
+      ),
+    );
+  });
+
+  it("keeps the version it was edited on", async () => {
+    const rerender = renderVersioned(request(), "v1");
+    fireEvent.click(screen.getByRole("button", { name: /Lara Beispiel/ }));
+    fireEvent.click(screen.getByLabelText("Anderes Datum wählen"));
+    fireEvent.change(screen.getByLabelText("Gültig ab"), {
+      target: { value: "2027-04-01" },
+    });
+    await waitFor(() =>
+      expect(mockPreview).toHaveBeenCalledWith("77", [], "2027-04-01"),
+    );
+    rerender(request({ effective_from: "2027-03-01" }), "v2");
+
+    await confirmApproval();
+    await waitFor(() =>
+      expect(mockDecide).toHaveBeenCalledWith(
+        "77",
+        true,
+        undefined,
+        [],
+        "2027-04-01",
+        false,
+        "v1",
+      ),
+    );
+  });
+
+  it("closes the confirmation after a refusal instead of offering it again", async () => {
+    mockDecide.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    renderItem(request());
+    await confirmApproval();
+
+    await expectErrorToast(/wurde inzwischen geändert/);
+    expect(
+      screen.queryByRole("button", { name: "Änderung freigeben" }),
+    ).not.toBeInTheDocument();
+  });
+});

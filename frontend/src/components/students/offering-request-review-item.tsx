@@ -4,7 +4,8 @@ import type * as studentsContract from "~/lib/contract/students.generated";
 import { weekdayShortLabel } from "~/lib/weekdays";
 import type { ErrorCode } from "~/lib/error-codes.generated";
 import { ApiError, wireErrorCode } from "~/lib/api-error";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useDraftOn } from "~/lib/swr/read-draft";
 
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
@@ -71,6 +72,18 @@ function blockedReason(code: string | undefined): string {
       return "Mit diesem Datum ist keine Freigabe möglich.";
   }
 }
+
+interface OfferingRead {
+  readonly row: StaffOfferingRequest;
+  readonly version: string;
+}
+
+interface OfferingDraft {
+  readonly effectiveFrom: string;
+  readonly excluded: readonly string[];
+}
+
+const NO_EXCLUSIONS: readonly string[] = [];
 
 // joinNames renders trigger names as „A“ und „B“ for the explanation line.
 function joinNames(names: readonly string[]): string {
@@ -142,17 +155,50 @@ export function OfferingRequestReviewItem({
   const [reason, setReason] = useState("");
   const [reasonError, setReasonError] = useState(false);
   const [busy, setBusy] = useState(false);
-  // Rule-added offerings the reviewer unticked for this request (#2370).
-  const [excluded, setExcluded] = useState<readonly string[]>([]);
   const [preview, setPreview] = useState<
     | readonly studentsContract.OfferingRequestPreviewSelectionResponse[]
     | undefined
   >(undefined);
   const [approvalPreview, setApprovalPreview] =
     useState<OfferingRequestPreview | null>(null);
-  // Das Datum, ab dem die Umstellung gilt (#2484). Vorbelegt mit dem Wunsch der
-  // Eltern; die OGS entscheidet, ob es dabei bleibt.
-  const [effectiveFrom, setEffectiveFrom] = useState(row.effective_from);
+  // Was die OGS an der Anfrage ändert, auf der Fassung, die sie sieht
+  // (ADR 0311): das Datum, ab dem die Umstellung gilt (#2484, vorbelegt mit
+  // dem Wunsch der Eltern), und die abgewählten Mitbuchungen (#2370).
+  // Ändern die Eltern die Anfrage, folgt eine unberührte Karte der neuen
+  // Fassung; eine bearbeitete behält ihre, und der Server lehnt ab.
+  const read = useMemo(
+    () => ({ row, version: expectedVersion }),
+    [row, expectedVersion],
+  );
+  const decision = useDraftOn<
+    OfferingRead,
+    OfferingDraft,
+    string,
+    Awaited<ReturnType<typeof decideOfferingChangeRequest>>
+  >(
+    {
+      opening: row.id,
+      data: read,
+      // Die Liste lädt neu und reicht die neue Fassung als `row` herein.
+      reload: async () => {
+        await onStale();
+        return undefined;
+      },
+    },
+    {
+      token: (current) => current.version,
+      toDraft: (current) => ({
+        effectiveFrom: current.row.effective_from,
+        excluded: NO_EXCLUSIONS,
+      }),
+    },
+  );
+  const effectiveFrom = decision.draft?.effectiveFrom ?? row.effective_from;
+  const excluded = decision.draft?.excluded ?? NO_EXCLUSIONS;
+  const setEffectiveFrom = (iso: string) =>
+    decision.setDraft((current) => ({ ...current, effectiveFrom: iso }));
+  const setExcluded = (ids: readonly string[]) =>
+    decision.setDraft((current) => ({ ...current, excluded: ids }));
   // Gesetzt, wenn die Vorschau zum gewählten Datum nicht aufgeht: der Grund in
   // Kurzform. Freigeben ist dann gesperrt, Ablehnen bleibt möglich.
   const [blocked, setBlocked] = useState<string | null>(null);
@@ -188,17 +234,19 @@ export function OfferingRequestReviewItem({
     }
     setBusy(true);
     confirmErrors.clear();
-    const excludedIds = approve ? excluded : [];
-    try {
-      const impactWire = await decideOfferingChangeRequest(
+    const result = await decision.submit((version, draft) =>
+      decideOfferingChangeRequest(
         row.id,
         approve,
         trimmed || undefined,
-        excludedIds,
-        approve ? effectiveFrom : undefined,
+        approve ? draft.excluded : [],
+        approve ? draft.effectiveFrom : undefined,
         confirmWithdrawal,
-        expectedVersion,
-      );
+        version,
+      ),
+    );
+    if (result.ok) {
+      const impactWire = result.saved;
       refreshWaitlists();
       const impact = approve ? mapRosterImpact(impactWire) : null;
       const notice = approve
@@ -218,7 +266,8 @@ export function OfferingRequestReviewItem({
         return;
       }
       onDecided(notice);
-    } catch (err) {
+    } else {
+      const err = result.error;
       const message = err instanceof Error ? err.message : String(err);
       const code = err instanceof ApiError ? err.code : undefined;
       logger.warn("offering_request_review_decide_failed", {
@@ -233,12 +282,17 @@ export function OfferingRequestReviewItem({
         setConfirmationRequired(true);
         return;
       }
+      // Eine abgelehnte Fassung: der Bestätigungsdialog zeigte die Folgen
+      // der alten und schließt; die Meldung steht dann als Toast.
+      if (result.refused) setApprovalPreview(null);
       const showDecideError =
-        approve && approvalPreview !== null ? confirmErrors.show : showError;
+        approve && approvalPreview !== null && !result.refused
+          ? confirmErrors.show
+          : showError;
       await showDecideError(err, {
         object: "die Anfrage",
         retry: () => void decideRef.current(approve, confirmWithdrawal),
-        reload: onStale,
+        reload: result.reload,
       });
     }
   };
@@ -422,7 +476,7 @@ export function OfferingRequestReviewItem({
           ? "Für eine Ablehnung ist eine Begründung erforderlich."
           : undefined
       }
-      busy={busy}
+      busy={busy || !decision.canSubmit}
       approveDisabled={blocked !== null}
       approveDisabledReason={blocked ?? undefined}
       approveReasonRequired={approveReasonRequired}
