@@ -166,23 +166,7 @@ func billedChildHolds(in billedHoldInput, held map[int64]bool) []parentbilling.C
 	children, keys := in.billedChildren(held)
 	for _, key := range keys {
 		child := children[key]
-		if inTheWay := in.staleInTheWay(child.open, child.stale); len(inTheWay) > 0 {
-			// The whole child, with the Mensa of the contracts in its way (S4).
-			for _, contractID := range slices.Concat(child.open, inTheWay) {
-				held[contractID] = true
-			}
-			holds = append(holds, in.hold(parentbilling.HoldReasonAlreadyBilled, child.open, inTheWay))
-		} else if inTheWay := in.staleInTheWay(child.open, child.kept); len(inTheWay) > 0 {
-			// The contracts without a price keep their assessment and stay
-			// under "Ohne Preis"; every other contract of the child waits.
-			open := slices.DeleteFunc(slices.Clone(child.open), func(contractID int64) bool {
-				return slices.ContainsFunc(child.kept, func(kept staleInvoice) bool { return kept.contractID == contractID })
-			})
-			for _, contractID := range open {
-				held[contractID] = true
-			}
-			holds = append(holds, in.hold(parentbilling.HoldReasonUnpricedNotice, open, inTheWay))
-		}
+		holds = append(holds, in.staleHolds(child, held)...)
 		// The care behind an invoice with only the Mensa is open (S5), whether
 		// the child is held or not: the office cancels that invoice.
 		for _, contractID := range child.mealOnly {
@@ -190,6 +174,54 @@ func billedChildHolds(in billedHoldInput, held map[int64]bool) []parentbilling.C
 		}
 	}
 	return holds
+}
+
+// staleHolds holds a child whose open contract would bill a stale day: of
+// an issued invoice (S3, S4) or else of a kept assessment (#7952).
+func (in billedHoldInput) staleHolds(child *billedChild, held map[int64]bool) []parentbilling.CareBilledChild {
+	if inTheWay := in.staleInTheWay(child.open, child.stale); len(inTheWay) > 0 {
+		// The whole child, with the Mensa of the contracts in its way (S4).
+		for _, contractID := range slices.Concat(child.open, inTheWay) {
+			held[contractID] = true
+		}
+		return []parentbilling.CareBilledChild{in.hold(parentbilling.HoldReasonAlreadyBilled, child.open, inTheWay)}
+	}
+	inTheWay := in.staleInTheWay(child.open, child.kept)
+	if len(inTheWay) == 0 {
+		return nil
+	}
+	// The contracts without a price keep their assessment and stay under
+	// "Ohne Preis"; every other contract of the child waits.
+	open := slices.DeleteFunc(slices.Clone(child.open), func(contractID int64) bool {
+		return slices.ContainsFunc(child.kept, func(kept staleInvoice) bool { return kept.contractID == contractID })
+	})
+	for _, contractID := range open {
+		held[contractID] = true
+	}
+	return []parentbilling.CareBilledChild{in.hold(parentbilling.HoldReasonUnpricedNotice, open, inTheWay)}
+}
+
+// childEntry answers the entry of a child, adding it on first use.
+func childEntry(children map[string]*billedChild, key string) *billedChild {
+	if children[key] == nil {
+		children[key] = &billedChild{}
+	}
+	return children[key]
+}
+
+// addKept adds the stale days of the assessments a run of Jahresbescheide
+// keeps for a missing price to their children (#7952).
+func (in billedHoldInput) addKept(children map[string]*billedChild, held map[int64]bool) {
+	for _, contractID := range in.order {
+		key := in.childOf[contractID]
+		if key == "" || !in.keptForPrice(contractID, held) {
+			continue
+		}
+		child := childEntry(children, key)
+		if stale := billedDays(in.month, in.assessed[contractID]) &^ in.billingDays(contractID); stale != 0 {
+			child.kept = append(child.kept, staleInvoice{contractID: contractID, days: stale})
+		}
+	}
 }
 
 // billedChildren groups the contracts of the month by child and keeps the
@@ -203,23 +235,9 @@ func (in billedHoldInput) billedChildren(held map[int64]bool) (map[string]*bille
 		if key == "" {
 			continue
 		}
-		if children[key] == nil {
-			children[key] = &billedChild{}
-		}
-		in.addIssued(children[key], contractID, held[contractID])
+		in.addIssued(childEntry(children, key), contractID, held[contractID])
 	}
-	for _, contractID := range in.order {
-		key := in.childOf[contractID]
-		if key == "" || !in.keptForPrice(contractID, held) {
-			continue
-		}
-		if children[key] == nil {
-			children[key] = &billedChild{}
-		}
-		if stale := billedDays(in.month, in.assessed[contractID]) &^ in.billingDays(contractID); stale != 0 {
-			children[key].kept = append(children[key].kept, staleInvoice{contractID: contractID, days: stale})
-		}
-	}
+	in.addKept(children, held)
 	listed := map[string]bool{}
 	for _, contractID := range in.order {
 		key := in.childOf[contractID]
