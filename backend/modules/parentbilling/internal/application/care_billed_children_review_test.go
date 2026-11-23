@@ -417,3 +417,25 @@ func TestCareMonthNamesAHeldChildAndItsMealOnlyInvoiceApart(t *testing.T) {
 	assert.Equal(t, []int64{contractLea}, heldContractsOf(month.billedChildren[1:]))
 	assert.Equal(t, in.invoiced[contractLea].BilledBy, open.Invoices)
 }
+
+// A held child stays held with its Mensa too (S4), also on the contract
+// whose Jahresbescheid holds it. Case 1 of #7892 with a notice: the contract
+// at Ispringen has a Jahresbescheid for January, 60,00 €, and the one at
+// Birkenfeld holds on the 1st, so the run holds Noah. His Mensa of December
+// at Ispringen, 2 meals at 4,80 €, got an invoice of its own on the contract
+// of the notice, which then also blocked its care (S5).
+func TestCareMonthHoldsTheMensaOfAHeldChild(t *testing.T) {
+	t.Parallel()
+	_, leaves, enters := billedTable(t)
+	in := billedMonth(t, parentbilling.MonthRuleVersionOnFirst, nil, leaves, enters)
+	in.invoiced[contractLea] = asNotice(issuedFor(t, enters, "", 6000, billingMonth, "2027-01-31"), "B-2027-0005")
+	month, err := buildCareMonth(in)
+	require.NoError(t, err)
+	require.Equal(t, []int64{contractNoah}, heldContractsOf(month.billedChildren))
+	noah := parentbilling.CareMealChild{StudentID: noahIspringenRecord, FirstName: "Noah", LastName: "Beispiel", MealDays: 2}
+	release := parentbilling.CareMealRelease{SchoolID: schoolIspringen, Month: day(t, "2026-12-01"), Children: []parentbilling.CareMealChild{noah}}
+	billMeals(&month, careMealInput{month: in.month, today: day(t, "2027-01-02"), schools: map[int64]string{schoolIspringen: "Ispringen"},
+		tariffs:  []parentbilling.CareMealTariff{{SchoolID: ident.ID(schoolIspringen), ValidFrom: day(t, "2026-01-01"), Mode: parentbilling.MealModePerMeal, AmountCents: 480}},
+		releases: []parentbilling.CareMealRelease{release}, versions: in.versions, invoiced: in.invoiced})
+	assert.Empty(t, draftTotals(month), "no invoice for the held child, not even for its Mensa")
+}

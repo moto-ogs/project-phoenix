@@ -119,11 +119,12 @@ type staleInvoice struct {
 
 // billedChild is a child with an issued invoice of the month: its contracts
 // in force without one (open), its contracts whose invoice carries only the
-// Mensa while they would bill care (mealOnly), and its stale invoices.
-// Contracts held for a duplicate (E4) are in neither list.
+// Mensa while they would bill care (mealOnly), its issued contracts and its
+// stale invoices. Contracts held for a duplicate (E4) are neither open nor
+// mealOnly.
 type billedChild struct {
-	open, mealOnly []int64
-	stale          []staleInvoice
+	open, mealOnly, issued []int64
+	stale                  []staleInvoice
 }
 
 // staleDays are the days any stale invoice of the child bills.
@@ -136,7 +137,8 @@ func (c *billedChild) staleDays() monthDays {
 }
 
 // billedChildHolds finds the children an issued invoice of the month
-// already bills and marks their contracts as held. A contract held for a
+// already bills and marks their contracts as held, the issued ones too, so
+// their Mensa waits as well (careMonth.held). A contract held for a
 // duplicate (E4) stays under its duplicate; other contracts of its child are
 // held like any. The second computation of a notice month only adopts what
 // the first one held (keepHeld) and finds nobody new: an assessment it took
@@ -156,7 +158,8 @@ func billedChildHolds(in billedHoldInput, held map[int64]bool) []parentbilling.C
 	for _, key := range keys {
 		child := children[key]
 		if inTheWay := in.staleInTheWay(child); len(inTheWay) > 0 {
-			for _, contractID := range child.open {
+			// The whole child, with the Mensa of its issued contracts (S4).
+			for _, contractID := range slices.Concat(child.open, child.issued) {
 				held[contractID] = true
 			}
 			holds = append(holds, in.hold(parentbilling.HoldReasonAlreadyBilled, child.open, inTheWay))
@@ -208,6 +211,7 @@ func (in billedHoldInput) billedChildren(held map[int64]bool) (map[string]*bille
 // stale on, or the contract itself when its invoice carries only the Mensa
 // and it would bill care. A contract held for a duplicate is named there.
 func (in billedHoldInput) addIssued(child *billedChild, contractID int64, duplicate bool) {
+	child.issued = append(child.issued, contractID)
 	if in.blocked(contractID) {
 		if !duplicate {
 			child.mealOnly = append(child.mealOnly, contractID)

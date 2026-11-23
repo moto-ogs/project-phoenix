@@ -74,6 +74,9 @@ type careMonth struct {
 	// billedChildren are the children held back because an issued invoice
 	// of the month already bills them (ADR 0158, Nachtrag #7892).
 	billedChildren []parentbilling.CareBilledChild
+	// held are the contracts held for a duplicate (E4) or an issued invoice
+	// (S4), issued ones of a held child included: none gets its Mensa.
+	held           map[int64]bool
 	billed         int
 	billedBySchool map[int64]int
 	// feeNoticesBySchool names per school the Jahresbescheide that assess
@@ -167,7 +170,7 @@ func buildCareMonth(in careMonthInput) (careMonth, error) {
 	billedChildren := billedChildHolds(billedHoldInput{careMonthInput: in, byContract: byContract, order: order, childOf: grouping.keys,
 		entries: entries, prices: prices, free: free}, held)
 	result := careMonth{invoices: []parentbilling.CareInvoice{}, unpriced: []parentbilling.CareUnpriced{}, duplicates: duplicates,
-		joined: joinedChildren(grouping, source), billedChildren: billedChildren, freeBySchool: map[int64]int{}}
+		joined: joinedChildren(grouping, source), billedChildren: billedChildren, held: held, freeBySchool: map[int64]int{}}
 	var chained []*careChainEntry
 	var unbilled []careContractPlace
 	childOf := grouping.keys

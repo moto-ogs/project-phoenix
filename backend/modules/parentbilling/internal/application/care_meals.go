@@ -466,7 +466,7 @@ func placeMeal(month *careMonth, in careMealInput, position parentbilling.CareMe
 	}
 	skipped := heldOrUnpriced(month)
 	for _, contractID := range contracts {
-		if skipped[contractID] {
+		if skipped[contractID] || month.held[contractID] {
 			return
 		}
 	}
