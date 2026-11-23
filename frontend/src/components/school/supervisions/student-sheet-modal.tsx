@@ -11,7 +11,7 @@
 import { useEffect } from "react";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useApiLoadError } from "~/contexts/ToastContext";
-import { useFreshSWR } from "~/lib/swr";
+import { useOpeningRead } from "~/lib/swr";
 import { schoolPortalKeys } from "~/lib/swr/portal-keys";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { InfoSection } from "~/components/ui/info-section";
@@ -120,13 +120,13 @@ export function StudentSheetModal({
     show: showLoadError,
     clear: clearLoadError,
   } = useApiLoadError();
-  const sheetRead = useFreshSWR(
+  const sheetRead = useOpeningRead(
     studentId
       ? schoolPortalKeys.supervisionStudentSheet(instanceId, studentId)
       : null,
     () => schoolSupervisionsApi.studentSheet(instanceId, studentId ?? ""),
     // Every opening is an authorized, audited access, never a background read.
-    { shouldRetryOnError: false },
+    { showCached: false },
   );
   const sheet: SupervisionStudentSheet | null = sheetRead.data ?? null;
   const failure = sheetRead.error;

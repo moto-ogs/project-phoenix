@@ -38,7 +38,7 @@ import { Textarea } from "~/components/ui/textarea";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { isChangedSinceRead } from "~/lib/api-error";
-import { useSWRAuth } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
 import { studentKeys } from "~/lib/swr/portal-keys";
 import {
   SegmentedControl,
@@ -851,15 +851,23 @@ export function PlannedStatusDaysModal({
         } catch (error) {
           // Eine späte Ablehnung gehört nicht in einen neueren Vorgang.
           if (!op.isCurrent()) return;
-          recheckConflicts();
           // Someone changed this entry since the form was filled: the check
           // above reads it again and fills the form with the stored state.
-          // The same save would be refused again, so no retry (ADR 0311).
+          // The message waits for that read and names it when it fails; a
+          // failed check blocks saving. No retry of the same save (ADR 0311).
           if (isChangedSinceRead(error)) {
             setPartialDraftTouched(false);
-            await submitErrors.show(error, { object: "die Entschuldigung" });
+            await submitErrors.show(error, {
+              object: "die Entschuldigung",
+              reload: () =>
+                Promise.all([
+                  revalidateOrThrow(existingDaysCheck),
+                  revalidateOrThrow(partialAbsencesCheck),
+                ]),
+            });
             return;
           }
+          recheckConflicts();
           // The caller logs the failure; the person reads it here, at the form.
           await submitErrors.show(error, {
             object: "die Entschuldigung",

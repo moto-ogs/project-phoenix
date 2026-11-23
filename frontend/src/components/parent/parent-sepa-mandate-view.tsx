@@ -36,7 +36,7 @@ import { formatDate } from "~/lib/date-helpers";
 import { downloadBlob } from "~/lib/file-download";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useInvalidateFamily, useFreshSWR } from "~/lib/swr";
+import { useInvalidateFamily, useOpeningRead } from "~/lib/swr";
 import { parentInboxKeys } from "~/lib/swr/parent-inbox-keys";
 import { createLogger } from "~/lib/logger";
 import {
@@ -89,10 +89,11 @@ export function ParentSepaMandateView({
   const cacheKey = parentInboxKeys.sepaMandate(organizationId, contractId);
   const guard = useRefusalGuard(cacheKey);
   const beginRead = useSWRRequestGuard();
-  const resource = useFreshSWR(
+  const resource = useOpeningRead(
     cacheKey,
     () => fetchSepaMandate(organizationId, contractId),
     {
+      showCached: false,
       onSuccess: guard.callbacks.onSuccess,
       onError: (error) => {
         if (isMandateRefusal(error)) guard.callbacks.onError(error);

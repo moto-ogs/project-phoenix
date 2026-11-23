@@ -1,6 +1,5 @@
 "use client";
 
-import { isOutdatedDecision } from "~/lib/change-request-list-api";
 import { useLayoutEffect, useRef, useState } from "react";
 
 import {
@@ -124,7 +123,7 @@ export function MasterDataReviewItem({
   /** Fassung, die entschieden werden soll — verhindert Überschreiben (#2267). */
   expectedVersion: string;
   /** Die Anfrage ist seit dem Lesen anders gespeichert: die Liste neu laden. */
-  onStale: () => void;
+  onStale: () => Promise<unknown>;
   /** Warum hier gerade nicht einzeln entschieden werden kann (#2267). */
   decisionDisabledReason?: string;
   approveReasonRequired?: boolean;
@@ -163,12 +162,11 @@ export function MasterDataReviewItem({
         error: message,
         request_id: row.id,
       });
-      const stale = isOutdatedDecision(err);
       await showError(err, {
         object: "die Anfrage",
-        retry: stale ? undefined : () => void decideRef.current(approve),
+        retry: () => void decideRef.current(approve),
+        reload: onStale,
       });
-      if (stale) onStale();
       setBusy(false);
     }
   };

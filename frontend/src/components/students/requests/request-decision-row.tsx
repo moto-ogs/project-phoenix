@@ -28,7 +28,6 @@ import {
   markRequestDone,
   type AggregatedOpenRequest,
   type ParentRequestKind,
-  isOutdatedDecision,
 } from "~/lib/change-request-list-api";
 import { hasReviewMetadata, itemKey } from "./case-model";
 import {
@@ -53,7 +52,7 @@ function OpenRequestContent({
 }: Readonly<{
   request: AggregatedOpenRequest;
   onDecided: (notice: string) => void;
-  onStale: () => void;
+  onStale: () => Promise<unknown>;
   onHold?: (decision: HeldOfferingDecision) => void;
   held?: HeldOfferingDecision;
   decisionDisabledReason?: string;
@@ -147,7 +146,7 @@ export function RequestDecisionRow({
   ) => void;
   /** Gehaltene Freigabe dieser Anfrage, falls die Karte noch offen ist. */
   held?: HeldOfferingDecision;
-  onStale: () => void;
+  onStale: () => Promise<unknown>;
 }>) {
   const key = itemKey(request);
   const hold = onHold
@@ -192,14 +191,13 @@ export function RequestDecisionRow({
       logger.warn("parent_request_mark_done_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
-      // Eine veraltete Anfrage meldet der Katalog über ihren Code; die Liste
-      // lädt dann die neue Fassung, statt einen Wiederholen-Klick anzubieten.
-      const stale = isOutdatedDecision(err);
+      // Eine veraltete Anfrage: die Liste lädt die neue Fassung, die Meldung
+      // wartet darauf und bietet kein Wiederholen mit dem alten Stand an.
       await actionErrors.show(err, {
         object: "die Anfrage",
-        retry: stale ? undefined : () => void markDone(),
+        retry: () => void markDone(),
+        reload: onStale,
       });
-      if (stale) onStale();
       setMarkingDone(false);
     }
   };

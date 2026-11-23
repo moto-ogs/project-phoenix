@@ -14,7 +14,7 @@ import { formatDate, parseISODate, toISODate } from "~/lib/date-helpers";
 import { useLocalizedDatePicker } from "~/lib/hooks/use-localized-date-picker";
 import { createLogger } from "~/lib/logger";
 import { useApiFormError } from "~/contexts/ToastContext";
-import { isChangedSinceRead } from "~/lib/api-error";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
 import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
 import { parentKeys } from "~/lib/swr/parent-keys";
@@ -168,28 +168,31 @@ export function RequestEditModal({
   reasonRequired?: boolean;
   onClose: () => void;
   /** Lädt die Liste neu: nach dem Speichern und wenn die Anfrage inzwischen
-   * anders gespeichert ist. */
-  onReload: () => void;
+   * anders gespeichert ist. Lehnt ab, wenn das Lesen scheitert. */
+  onReload: () => void | Promise<unknown>;
 }>) {
   const t = useCareTermTranslations("parentRequestEdit");
   const tError = useTranslations("errorCatalog");
   const tTimePicker = useTranslations("datePicker.timePicker");
   const locale = useLocale();
   const datePicker = useLocalizedDatePicker();
-  const [draft, setDraft] = useState<Draft>(() => initialDraft(request));
   // The version the draft was filled from; saving sends it (ADR 0311). A
   // newer read refills the draft only while it is untouched, so typed input
-  // is never replaced silently. After a refusal, `reloading` waits for the
-  // stored request and then shows its values with the refusal message.
-  const [draftVersion, setDraftVersion] = useState(request.version);
-  const [touched, setTouched] = useState(false);
-  const [reloading, setReloading] = useState(false);
-  if (draftVersion !== request.version && (!touched || reloading)) {
-    setDraftVersion(request.version);
-    setDraft(initialDraft(request));
-    setTouched(false);
-    setReloading(false);
-  }
+  // is never replaced silently. After a refusal the list reloads and the
+  // stored request replaces the draft; until then nothing is sent.
+  const edit = useDraftOn<EditableRequest, Draft, string, unknown>(
+    {
+      opening: `${request.type}:${request.id}`,
+      data: request,
+      reload: async () => {
+        await onReload();
+        return undefined;
+      },
+    },
+    { token: (read) => read.version, toDraft: initialDraft },
+  );
+  const draft = edit.draft ?? initialDraft(request);
+  const reloading = edit.status === "refused" || edit.status === "reloading";
   const [saving, setSaving] = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
   const { error, show, invalid, fieldError, clear } = useApiFormError(formRef);
@@ -202,8 +205,7 @@ export function RequestEditModal({
   const invalidateFamily = useInvalidateFamily();
 
   const set = (patch: Partial<Draft>) => {
-    setTouched(true);
-    setDraft((current) => ({ ...current, ...patch }));
+    edit.setDraft((current) => ({ ...current, ...patch }));
   };
 
   const submit = async () => {
@@ -222,33 +224,29 @@ export function RequestEditModal({
     }
     setSaving(true);
     clear();
-    try {
-      await saveRequest(studentId, request, draft, draftVersion);
+    const result = await edit.submit((version, sent) =>
+      saveRequest(studentId, request, sent, version),
+    );
+    setSaving(false);
+    if (result.ok) {
+      // The list was read again inside the save (rule 5).
       void invalidateFamily(parentKeys.requestEventsFamily(studentId));
-      onReload();
       onClose();
-    } catch (err) {
-      logger.warn("parent_request_edit_failed", {
-        error: err instanceof Error ? err.message : String(err),
-        request_type: request.type,
-      });
-      if (isChangedSinceRead(err)) {
-        // The request was stored differently since the list was read:
-        // sending the same version again would be refused again. The list
-        // reloads, and the new version replaces the draft with its stored
-        // values; until then the save stays locked.
-        void show(err, { object: t("errorObject") });
-        setReloading(true);
-        onReload();
-        return;
-      }
-      void show(err, {
-        object: t("errorObject"),
-        retry: () => void submitRef.current(),
-      });
-    } finally {
-      setSaving(false);
+      return;
     }
+    const err = result.error;
+    logger.warn("parent_request_edit_failed", {
+      error: err instanceof Error ? err.message : String(err),
+      request_type: request.type,
+    });
+    // Stored differently since the list was read: the list reloads, the
+    // stored values replace the draft, and the message waits for them
+    // without a retry of the same version.
+    void show(err, {
+      object: t("errorObject"),
+      retry: () => void submitRef.current(),
+      reload: result.reload,
+    });
   };
   // The retry sends the latest draft, not the one of the failed attempt.
   const submitRef = useRef(submit);
@@ -284,6 +282,7 @@ export function RequestEditModal({
             size="md"
             className="w-full sm:w-auto"
             isLoading={saving || reloading}
+            disabled={!saving && !reloading && !edit.canSubmit}
             loadingText={reloading ? t("reloading") : t("saving")}
             tooltip={t("submitTooltip")}
             onClick={() => void submit()}

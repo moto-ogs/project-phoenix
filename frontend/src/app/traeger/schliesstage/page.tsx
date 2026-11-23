@@ -28,7 +28,10 @@ import {
   traegerExportScope,
   useTraegerListExportItems,
 } from "~/components/traeger/traeger-list-export-menu";
-import { useClosingDayHolidayImpact } from "~/components/traeger/use-closing-day-holiday-impact";
+import {
+  useClosingDayDeletePreview,
+  useClosingDayHolidayImpact,
+} from "~/components/traeger/use-closing-day-holiday-impact";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { ClosingDayModal } from "~/components/planning/closing-day-modal";
 import { TraegerYearCalendar } from "~/components/traeger/traeger-year-calendar";
@@ -50,12 +53,12 @@ import { calendarConcept } from "~/lib/concepts/calendar";
 import { closingDaysConcept } from "~/lib/concepts/closingDays";
 import { sendingRefreshInterval } from "~/lib/holiday-closure-notices";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
+import { useReadDraftLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
   createTraegerClosingDay,
   updateTraegerClosingDay,
-  deleteTraegerClosingDay,
   fetchPendingHolidayClosures,
   fetchTraegerCalendar,
   type TraegerClosingDay,
@@ -115,11 +118,12 @@ export default function TraegerClosingDaysPage() {
   );
   const pending = pendingResponse.data;
   const holiday = useClosingDayHolidayImpact(modalOpen, editing);
-  // Beim Löschen zeigt der Dialog die Tage, die wieder öffnen (#6457).
-  const deleteHoliday = useClosingDayHolidayImpact(
-    deleting !== null,
-    deleting,
-    "delete",
+  // Beim Löschen zeigt der Dialog die Tage, die wieder öffnen (#6457), und
+  // bestätigt genau die Vorschau, die er zeigt (ADR 0311).
+  const deletePreview = useClosingDayDeletePreview(deleting);
+  const deletePreviewError = useReadDraftLoadError(
+    deletePreview,
+    "die gebuchte Ferienbetreuung",
   );
 
   const schools = useMemo(() => data?.schools ?? [], [data]);
@@ -151,11 +155,10 @@ export default function TraegerClosingDaysPage() {
     if (!deleting) return;
     setDeleteLoading(true);
     deleteErrors.clear();
-    try {
-      const families = await deleteTraegerClosingDay(
-        deleting.id,
-        deleteHoliday.impact?.token ?? "",
-      );
+    const result = await deletePreview.confirm();
+    setDeleteLoading(false);
+    if (result.ok) {
+      const families = result.saved;
       toastSuccess(
         families > 0
           ? `Der Schließtag „${deleting.reason}“ ist gelöscht. ${familiesLabel(families)} ${families === 1 ? "bekommt" : "bekommen"} eine E-Mail.`
@@ -164,30 +167,25 @@ export default function TraegerClosingDaysPage() {
       setDeleting(null);
       void mutate();
       void pendingResponse.mutate();
-    } catch (err) {
-      logger.error("traeger_closing_day_delete_failed", {
-        closing_day_id: deleting.id,
-        error: err instanceof Error ? err.message : String(err),
-      });
-      // Haben sich die Buchungen seit der Vorschau geändert, zeigt der
-      // Dialog den neuen Stand; die Meldung sagt es.
-      if (
-        err instanceof ApiError &&
-        err.code === "traeger.closing_day_bookings_changed"
-      ) {
-        deleteHoliday.reload();
-      }
-      await deleteErrors.show(err, {
-        object: "das Löschen des Schließtags",
-        retry: () => latestDeleteRef.current(),
-      });
-    } finally {
-      setDeleteLoading(false);
+      return;
     }
+    const err = result.error;
+    logger.error("traeger_closing_day_delete_failed", {
+      closing_day_id: deleting.id,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    // Haben sich die Buchungen seit der Vorschau geändert, zeigt der Dialog
+    // den neuen Stand; die Meldung wartet darauf und nennt ein gescheitertes
+    // Neuladen.
+    await deleteErrors.show(err, {
+      object: "das Löschen des Schließtags",
+      retry: () => latestDeleteRef.current(),
+      reload: result.reload,
+    });
   }, [
     deleting,
     deleteErrors,
-    deleteHoliday,
+    deletePreview,
     mutate,
     pendingResponse,
     toastSuccess,
@@ -425,14 +423,18 @@ export default function TraegerClosingDaysPage() {
             }
             warningSlot={
               <ClosingDayHolidayImpact
-                impact={deleteHoliday.impact}
-                loading={deleteHoliday.loading}
-                error={deleteHoliday.error}
+                impact={deleting ? (deletePreview.base ?? null) : null}
+                loading={
+                  deleting !== null &&
+                  !deletePreview.canSubmit &&
+                  deletePreview.status !== "loadFailed"
+                }
+                error={deletePreviewError}
                 schoolName={schoolName}
                 action="Löschen"
               />
             }
-            confirmDisabled={deleteHoliday.blocked}
+            confirmDisabled={!deletePreview.canSubmit}
             gate={{ mode: "twoStep" }}
             onConfirm={handleDelete}
             onClose={() => {

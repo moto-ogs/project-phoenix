@@ -39,7 +39,10 @@ function decidedItem(overrides: Record<string, unknown> = {}): AnyItem {
   } as never;
 }
 
-function renderList(item: AnyItem, onStale: () => void = vi.fn()) {
+function renderList(
+  item: AnyItem,
+  onStale: () => Promise<unknown> = vi.fn(async () => undefined),
+) {
   return render(
     <ToastProvider>
       <HistoryRequestList

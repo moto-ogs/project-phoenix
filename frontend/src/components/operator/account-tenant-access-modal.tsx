@@ -36,7 +36,7 @@ import { changeHistoryConcept } from "~/lib/concepts/changeHistory";
 import { permissionsConcept } from "~/lib/concepts/permissions";
 import { schoolsConcept } from "~/lib/concepts/schools";
 import { Loading } from "~/components/ui/loading";
-import { useFreshSWR, useSWRAuth } from "~/lib/swr";
+import { useOpeningRead, useSWRAuth } from "~/lib/swr";
 import { operatorKeys } from "~/lib/swr/operator-keys";
 import { operatorProvisioningKeys } from "~/lib/swr/portal-keys";
 import { InsetPanel } from "~/components/ui/inset-panel";
@@ -166,9 +166,10 @@ export function AccountTenantAccessModal({
   // The backend logs every read of the access list (operator read audit), so
   // each opening reads it anew (ADR 0311). A role change sends the entry's
   // version; roles changed since are refused, and the list is read again.
-  const accessRead = useFreshSWR(
+  const accessRead = useOpeningRead(
     reading ? operatorKeys.accountTenantAccess(accountId) : null,
     () => accountTenantAccessService.list(accountId),
+    { showCached: false },
   );
   const schoolsRead = useSWRAuth(
     reading ? operatorProvisioningKeys.schoolSummaries() : null,

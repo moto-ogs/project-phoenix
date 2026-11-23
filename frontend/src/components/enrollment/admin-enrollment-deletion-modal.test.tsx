@@ -1,4 +1,10 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { SessionProvider } from "next-auth/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SWRConfig } from "~/lib/swr/testing";
@@ -139,6 +145,48 @@ describe("AdminEnrollmentDeletionModal (#2515)", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("deletes with the preview it opened with while a newer read arrives", async () => {
+    let answerOwn!: (next: AdminEnrollmentDeletionImpact) => void;
+    mocks.getAdminRequestDeleteImpact
+      .mockResolvedValueOnce(impact)
+      .mockReturnValueOnce(
+        new Promise<AdminEnrollmentDeletionImpact>((resolve) => {
+          answerOwn = resolve;
+        }),
+      );
+    mocks.deleteAdminRequest.mockResolvedValueOnce(impact);
+    const view = renderModal();
+    expect(await screen.findByText("Betroffene Datensätze (1)")).toBeVisible();
+    view.rerender(<Modal isOpen={false} />);
+    view.rerender(<Modal isOpen />);
+
+    // The cached preview shows at once; this opening's read answers later.
+    fireEvent.change(await screen.findByLabelText(/Löschgrund/), {
+      target: { value: "Testanmeldung" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Ja, löschen" }));
+    // Each opening reads the preview anew.
+    await waitFor(() =>
+      expect(mocks.getAdminRequestDeleteImpact).toHaveBeenCalledTimes(2),
+    );
+    await act(async () => {
+      answerOwn({
+        ...impact,
+        fingerprint: "after",
+        counts: { ...impact.counts, total: 2, request_children: 1 },
+      } as AdminEnrollmentDeletionImpact);
+    });
+    expect(screen.getByText("Betroffene Datensätze (1)")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Endgültig löschen" }));
+    await waitFor(() =>
+      expect(mocks.deleteAdminRequest).toHaveBeenCalledWith(
+        "7",
+        "Testanmeldung",
+        "shown",
+      ),
+    );
+  });
+
   // Without the new preview the dialog names the failed read, not a new
   // preview it does not have; its retry reads again and then names the
   // refusal. Nothing is deleted twice.
@@ -166,7 +214,9 @@ describe("AdminEnrollmentDeletionModal (#2515)", () => {
 
     expect(
       await screen.findByText(
-        catalogText("general.unavailable", "die Vorschau der Löschung"),
+        // ADR 0311: the failed read after a refusal says that the new state
+        // is missing, before the load error itself.
+        `Der neue Stand konnte nicht geladen werden. ${catalogText("general.unavailable", "die Vorschau der Löschung")}`,
       ),
     ).toBeVisible();
     expect(

@@ -370,6 +370,167 @@ describe("MealParticipantList", () => {
     expect(onSaved).not.toHaveBeenCalled();
   });
 
+  // ADR 0311: the days keep the version they were edited on. A read of the
+  // schedule in the background (another view) must not lend its newer
+  // version to the edited days.
+  it("sends the version the days were edited on, not a later read's", async () => {
+    mocks.getChildMealSchedule
+      .mockReset()
+      .mockResolvedValueOnce({ weekdays: [1, 3], version: "v-read" })
+      .mockResolvedValue({ weekdays: [2], version: "v-later" });
+    const scheduleKey = tenantContactKeys.childMealSchedule("42", "2026-09-07");
+    let readAgain: () => Promise<unknown> = async () => undefined;
+    function OtherView() {
+      const other = useSWRAuth(
+        scheduleKey,
+        () => mocks.getChildMealSchedule("42", "2026-09-07"),
+        { revalidateOnMount: false },
+      );
+      readAgain = () => other.mutate();
+      return null;
+    }
+    render(
+      <>
+        <MealRegistrationChangeModal
+          isOpen
+          date="2026-09-07"
+          participants={[
+            {
+              studentId: "42",
+              firstName: "Mia",
+              lastName: "Muster",
+              schoolClass: "2a",
+            },
+          ]}
+          others={[]}
+          initialStudentId="42"
+          onClose={vi.fn()}
+          onSaved={vi.fn()}
+        />
+        <OtherView />
+      </>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Feste Tage" }));
+    await waitFor(() =>
+      expect(screen.getByRole("checkbox", { name: "Montag" })).toBeChecked(),
+    );
+    fireEvent.click(screen.getByRole("checkbox", { name: "Freitag" }));
+    await act(async () => {
+      await readAgain();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() =>
+      expect(mocks.replaceChildMealSchedule).toHaveBeenCalledWith(
+        "42",
+        [1, 3, 5],
+        "2026-09-07",
+        "v-read",
+      ),
+    );
+  });
+
+  it("shows a failed reload after a refusal as a load error", async () => {
+    mocks.getChildMealSchedule
+      .mockReset()
+      .mockResolvedValueOnce({ weekdays: [1, 3], version: "v-read" })
+      .mockRejectedValue(
+        new ApiError("offline", 503, { code: "general.unavailable" }),
+      );
+    mocks.replaceChildMealSchedule.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    render(
+      <MealRegistrationChangeModal
+        isOpen
+        date="2026-09-07"
+        participants={[
+          {
+            studentId: "42",
+            firstName: "Mia",
+            lastName: "Muster",
+            schoolClass: "2a",
+          },
+        ]}
+        others={[]}
+        initialStudentId="42"
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Feste Tage" }));
+    await waitFor(() =>
+      expect(screen.getByRole("checkbox", { name: "Montag" })).toBeChecked(),
+    );
+    fireEvent.click(screen.getByRole("checkbox", { name: "Freitag" }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Du siehst jetzt den neuen Stand/),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Speichern" })).toBeDisabled();
+  });
+
+  it("names a failed opening read over cached regular days and saves nothing", async () => {
+    mocks.getChildMealSchedule
+      .mockReset()
+      .mockResolvedValueOnce({ weekdays: [1, 3], version: "v-read" })
+      .mockRejectedValueOnce(
+        new ApiError("offline", 503, { code: "general.unavailable" }),
+      )
+      .mockResolvedValueOnce({ weekdays: [2], version: "v-new" });
+    const modal = (isOpen: boolean) => (
+      <MealRegistrationChangeModal
+        isOpen={isOpen}
+        date="2026-09-07"
+        participants={[
+          {
+            studentId: "42",
+            firstName: "Mia",
+            lastName: "Muster",
+            schoolClass: "2a",
+          },
+        ]}
+        others={[]}
+        initialStudentId="42"
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />
+    );
+    const { rerender } = render(modal(true));
+    fireEvent.click(screen.getByRole("button", { name: "Feste Tage" }));
+    await waitFor(() =>
+      expect(screen.getByRole("checkbox", { name: "Montag" })).toBeChecked(),
+    );
+    rerender(modal(false));
+    rerender(modal(true));
+    fireEvent.click(screen.getByRole("button", { name: "Feste Tage" }));
+
+    expect(
+      await screen.findByText(
+        catalogText("general.unavailable", "die festen Tage"),
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Speichern" })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+    await waitFor(() =>
+      expect(screen.getByRole("checkbox", { name: "Dienstag" })).toBeChecked(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(mocks.replaceChildMealSchedule).toHaveBeenCalledWith(
+        "42",
+        [2],
+        expect.any(String),
+        "v-new",
+      ),
+    );
+  });
+
   // #3873: seeing the list opens no change of a registration.
   it("offers no change and loads no other children without the right to register", async () => {
     render(<MealParticipantList canRegister={false} />);

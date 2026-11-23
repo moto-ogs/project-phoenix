@@ -86,3 +86,17 @@ export function useSwrResourceLoadError(
   // Hide a previous presentation synchronously, even before its effect clears.
   return { error: failure ? error : null, failure };
 }
+
+/**
+ * The load failure of a draft of `~/lib/swr/read-draft` (status
+ * `loadFailed`): the opening read, the read after a refusal or after a
+ * save failed. Shown also while a draft is on screen, because nothing can
+ * be sent until a read of the stored state succeeded (ADR 0311, rule 6);
+ * its retry reads again (`retryLoad`). Render it in `LoadErrorAlert`.
+ */
+export function useReadDraftLoadError(
+  draft: { readonly error: unknown; readonly retryLoad: () => void },
+  object: string,
+) {
+  return useSwrLoadError(draft.error, object, draft.retryLoad);
+}

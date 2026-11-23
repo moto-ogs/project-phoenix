@@ -567,29 +567,6 @@ export function EnrollmentForm({
   // for the next one instead of sending without it (#6739).
   const [retryPending, setRetryPending] = useState(false);
   const captchaSectionRef = useRef<HTMLElement>(null);
-  // Loads the current form after a refusal of the shown one (ADR 0311);
-  // a failure comes back instead of being thrown.
-  const reloadChangedForm = async (): Promise<{ error: unknown } | null> => {
-    if (!onFormChanged) return null;
-    try {
-      await onFormChanged();
-      return null;
-    } catch (error) {
-      return { error };
-    }
-  };
-  const showReloadFailure = async (reloadError: unknown, refusal: unknown) => {
-    await formError.show(reloadError, {
-      object: tr("errorObjectForm"),
-      retry: () => {
-        void (async () => {
-          const again = await reloadChangedForm();
-          if (again) void showReloadFailure(again.error, refusal);
-          else void formError.show(refusal, { object: tr("errorObjectForm") });
-        })();
-      },
-    });
-  };
 
   const retrySubmit = () => {
     setRetryPending(true);
@@ -993,7 +970,6 @@ export function EnrollmentForm({
       // The school changed the form meanwhile: the parent sees the current
       // one, with the answers kept, and sends it again after checking it.
       const formChanged = isChangedSinceRead(err);
-      const reloadFailure = formChanged ? await reloadChangedForm() : null;
       const code = err instanceof ApiError ? err.code : undefined;
       // A rejected input is expected; only server failures and crashes are
       // errors in the log.
@@ -1033,20 +1009,15 @@ export function EnrollmentForm({
         code === "enrollment.pickup_time_not_allowed"
           ? pickupTimeMarks(schema, children, customData)
           : [];
-      if (reloadFailure) {
-        // The current form did not load: the parent learns that, not that a
-        // new form is shown. Retrying loads it and then names the refusal.
-        void showReloadFailure(reloadFailure.error, err);
-        return;
-      }
       // "Wiederholen" submits the form again, so it sends what the parent
-      // sees now, not the draft of the failed attempt.
-      const presentation = await formError.show(
-        err,
-        formChanged
-          ? { object: tr("errorObjectForm") }
-          : { object: tr("errorObject"), retry: retrySubmit },
-      );
+      // sees now, not the draft of the failed attempt. A changed form
+      // (ADR 0311) loads the current one first; the message waits for it and
+      // names a failed load instead.
+      const presentation = await formError.show(err, {
+        object: tr(formChanged ? "errorObjectForm" : "errorObject"),
+        retry: retrySubmit,
+        reload: onFormChanged,
+      });
       if (
         presentation &&
         presentation.fields.length === 0 &&
