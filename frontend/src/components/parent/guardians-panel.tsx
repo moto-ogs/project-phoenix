@@ -236,7 +236,7 @@ export default function GuardiansPanel({
     (resource) =>
       resource.data === undefined && (!resource.error || resource.isValidating),
   );
-  const { show: showActionError } = useApiErrorDisplay();
+  const { show: showActionError, showMessage } = useApiErrorDisplay();
   const [busy, setBusy] = useState(false);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
   // Bestaetigung fuer den Ausbau eines eingeschraenkten Kontakts (#2172).
@@ -600,10 +600,17 @@ export default function GuardiansPanel({
             // a failed read rejects and shows as a load error.
             const fresh = await listChildGuardians(studentId);
             await mutateGuardians(fresh, { revalidate: false });
-            return fresh.find(
+            const stored = fresh.find(
               (g) =>
                 g.guardian_profile_id === editingContact.guardian_profile_id,
             );
+            if (!stored) {
+              // Removed from the child since: nothing stored to show, so
+              // the form closes instead of keeping the refused input.
+              setEditingContact(null);
+              showMessage(t("guardians.contactGone"));
+            }
+            return stored;
           }}
           onClose={() => setEditingContact(null)}
           onSaved={() => handleSaved(t("guardians.contactSaved"))}

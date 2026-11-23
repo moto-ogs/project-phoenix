@@ -231,7 +231,7 @@ export default function StudentGuardianManager({
   const deletePreviewRequestIdRef = useRef(0);
   const { success: toastSuccess } = useToast();
   // Aktionen ohne Formular (Verknüpfen, Einladen): Toast mit Katalogtext.
-  const { show: showActionError } = useApiErrorDisplay();
+  const { show: showActionError, showMessage } = useApiErrorDisplay();
   // Fehler beim Entfernen und bei der Vorschau bleiben im offenen
   // Löschdialog; ein Toast läge unter dem Dialog.
   const deleteErrors = useApiFormError();
@@ -439,7 +439,16 @@ export default function StudentGuardianManager({
     const fresh = await fetchStudentGuardians(studentId);
     await mutateGuardians(fresh, { revalidate: false });
     const stored = fresh.find((guardian) => guardian.id === guardianId);
-    if (stored) setEditingGuardian(stored);
+    if (stored) {
+      setEditingGuardian(stored);
+      return;
+    }
+    // Unlinked from the child since: no stored row to show, so the form
+    // closes instead of keeping the refused input and its old version.
+    handleCloseModal();
+    showMessage(
+      "Diese Person ist nicht mehr mit dem Kind verknüpft. Deine Änderungen sind nicht gespeichert.",
+    );
   };
 
   // Invite an existing guardian (info already on file) to the parents portal.

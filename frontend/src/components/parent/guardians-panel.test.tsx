@@ -733,6 +733,30 @@ describe("GuardiansPanel", () => {
     );
   });
 
+  // Removed from the child since the form opened: nothing stored to show,
+  // so the form closes and says so instead of keeping the refused input.
+  it("closes the form when the refused contact no longer exists", async () => {
+    mocks.updateGuardianContact.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    render(
+      <GuardiansPanel studentId="42" canInvite={false} canRemove={false} />,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Bearbeiten" }));
+    const dialog = screen.getByRole("dialog");
+
+    mocks.listChildGuardians.mockResolvedValue([]);
+    fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
+
+    expect(
+      await screen.findByText(
+        "Diesen Kontakt gibt es bei deinem Kind nicht mehr. Deine Änderung ist nicht gespeichert.",
+      ),
+    ).toBeInTheDocument();
+    await waitFor(() => expect(dialog).not.toBeInTheDocument());
+    expect(mocks.updateGuardianContact).toHaveBeenCalledTimes(1);
+  });
+
   it("reaches the pickup-note action without exposing pickup flags for an edit-only guardian", async () => {
     // can_edit_contact without can_manage_pickup (e.g. the caller's own row):
     // the backend permits a pickup_notes edit but not the safety-critical flags.

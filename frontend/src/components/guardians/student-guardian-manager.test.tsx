@@ -106,13 +106,17 @@ vi.mock("next-auth/react", () => ({
 
 // Mock toast context. Load and dialog errors run through the real hooks;
 // action errors (link, invite) are spied at useApiErrorDisplay (#2517).
-const { mockToastSuccess, mockToastError, mockShowActionError } = vi.hoisted(
-  () => ({
-    mockToastSuccess: vi.fn(),
-    mockToastError: vi.fn(),
-    mockShowActionError: vi.fn(),
-  }),
-);
+const {
+  mockToastSuccess,
+  mockToastError,
+  mockShowActionError,
+  mockShowActionMessage,
+} = vi.hoisted(() => ({
+  mockToastSuccess: vi.fn(),
+  mockToastError: vi.fn(),
+  mockShowActionError: vi.fn(),
+  mockShowActionMessage: vi.fn(),
+}));
 vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/contexts/ToastContext")>()),
   useToast: () => ({
@@ -120,7 +124,10 @@ vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
     error: mockToastError,
     info: vi.fn(),
   }),
-  useApiErrorDisplay: () => ({ show: mockShowActionError }),
+  useApiErrorDisplay: () => ({
+    show: mockShowActionError,
+    showMessage: mockShowActionMessage,
+  }),
 }));
 
 // Mock child components
@@ -810,6 +817,27 @@ describe("StudentGuardianManager", () => {
           "Annette v-stored",
         );
       });
+    });
+
+    // Unlinked since the form opened: there is no stored row to show, so
+    // the form closes and says so instead of keeping the refused input.
+    it("closes the form after a refusal when the guardian was unlinked meanwhile", async () => {
+      render(<StudentGuardianManager studentId="student-123" />);
+      fireEvent.click(await screen.findByTestId("edit-guardian-1"));
+      expect(screen.getByTestId("guardian-form-modal")).toBeInTheDocument();
+
+      mockFetchStudentGuardians.mockResolvedValue(mockGuardians.slice(1));
+      fireEvent.click(screen.getByTestId("modal-reload"));
+
+      await waitFor(() => {
+        expect(mockShowActionMessage).toHaveBeenCalledWith(
+          "Diese Person ist nicht mehr mit dem Kind verknüpft. Deine Änderungen sind nicht gespeichert.",
+        );
+      });
+      expect(
+        screen.queryByTestId("guardian-form-modal"),
+      ).not.toBeInTheDocument();
+      expect(screen.getByTestId("edit-guardian-2")).toBeInTheDocument();
     });
 
     it("does not show edit buttons when readOnly", async () => {
