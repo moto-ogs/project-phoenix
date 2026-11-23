@@ -69,6 +69,9 @@ function result(overrides: Partial<BulkInviteResult>): BulkInviteResult {
     skippedActive: 0,
     skippedOpen: 0,
     skippedRestricted: 0,
+    notified: 0,
+    alreadyNotified: 0,
+    withoutVisibleCare: 0,
     problems: [],
     ...overrides,
   };
@@ -103,6 +106,7 @@ describe("SelectionBulkInviteModal", () => {
     expect(bulkInvite).toHaveBeenCalledWith(["4", "9"], {
       dryRun: true,
       resendOpen: false,
+      notifyActive: false,
     });
     expect(screen.getByText("Nutzen das Elternportal schon")).toBeVisible();
 
@@ -112,6 +116,7 @@ describe("SelectionBulkInviteModal", () => {
       expect(bulkInvite).toHaveBeenLastCalledWith(["4", "9"], {
         dryRun: false,
         resendOpen: false,
+        notifyActive: false,
       }),
     );
     expect(
@@ -181,6 +186,7 @@ describe("SelectionBulkInviteModal", () => {
       expect(bulkInvite).toHaveBeenLastCalledWith(["4", "9"], {
         dryRun: false,
         resendOpen: false,
+        notifyActive: false,
       }),
     );
     expect(
@@ -220,6 +226,7 @@ describe("SelectionBulkInviteModal", () => {
     expect(bulkInvite).toHaveBeenLastCalledWith(["4", "9"], {
       dryRun: true,
       resendOpen: true,
+      notifyActive: false,
     });
   });
 
@@ -389,5 +396,209 @@ describe("SelectionBulkInviteModal", () => {
       await screen.findByRole("button", { name: "2 Eltern einladen" }),
     ).toBeVisible();
     expect(bulkInvite).toHaveBeenCalledTimes(2);
+  });
+
+  it("offers the notice to parents with an account only on request (#7760)", async () => {
+    bulkInvite
+      .mockResolvedValueOnce(result({ invited: 1, skippedActive: 2 }))
+      .mockResolvedValueOnce(
+        result({
+          invited: 1,
+          notified: 2,
+          problems: [
+            {
+              guardianProfileId: "7",
+              guardianName: "Paul Brenner",
+              studentNames: ["Mia Brenner"],
+              reason: "missing_email",
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        result({
+          dryRun: false,
+          invited: 1,
+          notified: 2,
+          withoutVisibleCare: 2,
+        }),
+      );
+    renderModal();
+
+    const option = await screen.findByRole("checkbox", {
+      name: /Eltern mit Konto benachrichtigen/,
+    });
+    expect(option).not.toBeChecked();
+    expect(
+      screen.queryByText("Bekommen die Nachricht"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "1 Elternteil einladen" }),
+    ).toBeVisible();
+
+    fireEvent.click(option);
+
+    const send = await screen.findByRole("button", {
+      name: "3 Eltern anschreiben",
+    });
+    expect(bulkInvite).toHaveBeenLastCalledWith(["4", "9"], {
+      dryRun: true,
+      resendOpen: false,
+      notifyActive: true,
+    });
+    const counts = screen.getByRole("list", { name: "Was verschickt wird" });
+    expect(counts).toHaveTextContent(
+      "Werden eingeladen1Bekommen die Nachricht2Keine E-Mail-Adresse1",
+    );
+    expect(
+      screen.getByText(/1 Elternteil kann keine E-Mail bekommen/),
+    ).toBeVisible();
+
+    fireEvent.click(send);
+
+    expect(
+      await screen.findByText(
+        "Die Einladung an 1 Elternteil wird jetzt verschickt. Die Nachricht an 2 Eltern mit Konto wird jetzt verschickt. Das dauert ein paar Minuten.",
+      ),
+    ).toBeVisible();
+    expect(
+      screen.getByText(
+        "2 Kinder haben heute keine Betreuung gebucht. Für sie geht keine Nachricht raus.",
+      ),
+    ).toBeVisible();
+    expect(bulkInvite).toHaveBeenNthCalledWith(3, ["4", "9"], {
+      dryRun: false,
+      resendOpen: false,
+      notifyActive: true,
+    });
+    expect(toastSuccess).toHaveBeenCalledWith(
+      "1 Elternteil ist eingeladen. 2 Eltern bekommen die Nachricht.",
+    );
+  });
+
+  it("says that nobody gets the notice twice and which children it leaves out (#7760)", async () => {
+    bulkInvite
+      .mockResolvedValueOnce(result({ skippedActive: 1 }))
+      .mockResolvedValueOnce(
+        result({ skippedActive: 1, alreadyNotified: 1, withoutVisibleCare: 2 }),
+      );
+    renderModal();
+
+    fireEvent.click(
+      await screen.findByRole("checkbox", {
+        name: /Eltern mit Konto benachrichtigen/,
+      }),
+    );
+
+    expect(await screen.findByText("Nachricht schon verschickt")).toBeVisible();
+    expect(
+      screen.getByRole("list", { name: "Was verschickt wird" }),
+    ).toHaveTextContent("Kinder ohne gebuchte Betreuung: keine Nachricht2");
+    expect(
+      screen.queryByText("Nutzen das Elternportal schon"),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Einladen" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+  });
+
+  it("hides the notice without parents who have an account (#7760)", async () => {
+    bulkInvite.mockResolvedValueOnce(result({ invited: 2 }));
+    renderModal();
+
+    await screen.findByRole("button", { name: "2 Eltern einladen" });
+    expect(
+      screen.queryByRole("checkbox", {
+        name: /Eltern mit Konto benachrichtigen/,
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps the option while ticked, also when nobody can be told (#7760)", async () => {
+    bulkInvite
+      .mockResolvedValueOnce(result({ skippedActive: 1 }))
+      // With the option, the only parent with an account has a blocked
+      // address: in no counter of account holders.
+      .mockResolvedValueOnce(
+        result({
+          problems: [
+            {
+              guardianProfileId: "7",
+              guardianName: "Katharina Brenner",
+              studentNames: ["Mia Brenner"],
+              reason: "address_blocked",
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(result({ skippedActive: 1 }));
+    renderModal();
+
+    const option = await screen.findByRole("checkbox", {
+      name: /Eltern mit Konto benachrichtigen/,
+    });
+    fireEvent.click(option);
+    expect(await screen.findByText("Katharina Brenner")).toBeVisible();
+
+    const ticked = screen.getByRole("checkbox", {
+      name: /Eltern mit Konto benachrichtigen/,
+    });
+    expect(ticked).toBeChecked();
+    fireEvent.click(ticked);
+    await waitFor(() =>
+      expect(bulkInvite).toHaveBeenLastCalledWith(["4", "9"], {
+        dryRun: true,
+        resendOpen: false,
+        notifyActive: false,
+      }),
+    );
+    expect(
+      await screen.findByRole("checkbox", {
+        name: /Eltern mit Konto benachrichtigen/,
+      }),
+    ).not.toBeChecked();
+  });
+
+  it("keeps both choices and the focus while it counts again (#7760)", async () => {
+    let answer!: (value: BulkInviteResult) => void;
+    bulkInvite
+      .mockResolvedValueOnce(result({ skippedActive: 1, skippedOpen: 1 }))
+      .mockReturnValueOnce(
+        new Promise<BulkInviteResult>((resolve) => {
+          answer = resolve;
+        }),
+      );
+    renderModal();
+
+    const option = await screen.findByRole("checkbox", {
+      name: /Eltern mit Konto benachrichtigen/,
+    });
+    option.focus();
+    fireEvent.click(option);
+
+    // Counting again: the same checkboxes stay, the focus with them.
+    expect(
+      screen.getByRole("checkbox", {
+        name: /Eltern mit Konto benachrichtigen/,
+      }),
+    ).toBe(option);
+    expect(option).toHaveFocus();
+    expect(option).toBeChecked();
+    expect(
+      screen.getByLabelText("Offene Einladungen noch einmal senden"),
+    ).toBeVisible();
+    expect(
+      screen.getByText("Nutzen das Elternportal schon").closest("ul"),
+    ).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByRole("button", { name: "Einladen" })).toBeDisabled();
+
+    answer(result({ notified: 1, skippedOpen: 1 }));
+    expect(
+      await screen.findByRole("button", {
+        name: "1 Elternteil benachrichtigen",
+      }),
+    ).toBeEnabled();
+    expect(option).toHaveFocus();
   });
 });

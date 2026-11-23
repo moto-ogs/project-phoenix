@@ -3154,11 +3154,35 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.BulkInviteToStudents",
+      "binding_digest": "f6f1e24af0da6e4826f6bf6869122954",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.GuardianRelativeAccess.BulkInviteToStudents",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/compose.EmailOutbox.Enqueue",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.BulkInviteToStudents",
       "binding_digest": "caad9bdb201518a70c89c203120833df",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.GuardianRelativeAccess.BulkInviteToStudents",
       "source_owner": "identity-access",
       "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/contract.ProviderBlockBudget.Attempt",
       "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.BulkInviteToStudents",
+      "binding_digest": "52b3eee325578c4e19b060bf84d46af1",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.GuardianRelativeAccess.BulkInviteToStudents",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/enrollment.BookingProjection.EffectiveOfferingSelectionsAtDates",
+      "target_owner": "enrollment"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.BulkInviteToStudents",
+      "binding_digest": "72877565965775e22f5ea25a344d76b4",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.GuardianRelativeAccess.BulkInviteToStudents",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/enrollment.BookingProjection.StudentCarePeriodsByStudentIDs",
+      "target_owner": "enrollment"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.BulkInviteToStudents",
@@ -4810,11 +4834,35 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.BulkInviteToStudents",
+      "binding_digest": "f6f1e24af0da6e4826f6bf6869122954",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.BulkInviteToStudents",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/compose.EmailOutbox.Enqueue",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.BulkInviteToStudents",
       "binding_digest": "caad9bdb201518a70c89c203120833df",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.BulkInviteToStudents",
       "source_owner": "identity-access",
       "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/contract.ProviderBlockBudget.Attempt",
       "target_owner": "delivery-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.BulkInviteToStudents",
+      "binding_digest": "52b3eee325578c4e19b060bf84d46af1",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.BulkInviteToStudents",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/enrollment.BookingProjection.EffectiveOfferingSelectionsAtDates",
+      "target_owner": "enrollment"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.BulkInviteToStudents",
+      "binding_digest": "72877565965775e22f5ea25a344d76b4",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.BulkInviteToStudents",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/enrollment.BookingProjection.StudentCarePeriodsByStudentIDs",
+      "target_owner": "enrollment"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.BulkInviteToStudents",
@@ -16281,6 +16329,22 @@
       "target_owner": "audit-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.GuardianDirectory.ApprovedCarePeriods",
+      "binding_digest": "72877565965775e22f5ea25a344d76b4",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.GuardianDirectory.ApprovedCarePeriods",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/enrollment.BookingProjection.StudentCarePeriodsByStudentIDs",
+      "target_owner": "enrollment"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.GuardianDirectory.CareBookingsInForce",
+      "binding_digest": "52b3eee325578c4e19b060bf84d46af1",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.GuardianDirectory.CareBookingsInForce",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/enrollment.BookingProjection.EffectiveOfferingSelectionsAtDates",
+      "target_owner": "enrollment"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.GuardianDirectory.DeleteGuardianProfile",
       "binding_digest": "9ab2de728a77799ab7fffffb3d4c3129",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.GuardianDirectory.DeleteGuardianProfile",
@@ -16351,6 +16415,14 @@
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.PromoteGuardianLinkToLegalGuardian",
       "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.GuardianInvitationDelivery.EnqueueCareVisibleEmail",
+      "binding_digest": "f6f1e24af0da6e4826f6bf6869122954",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.GuardianInvitationDelivery.EnqueueCareVisibleEmail",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/compose.EmailOutbox.Enqueue",
+      "target_owner": "delivery-platform"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.GuardianInvitationDelivery.GuardianMailBlocks",
@@ -19153,6 +19225,22 @@
       "target_owner": "people-directory"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.guardianDirectory.ApprovedCarePeriods",
+      "binding_digest": "72877565965775e22f5ea25a344d76b4",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.GuardianDirectory.ApprovedCarePeriods",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/enrollment.BookingProjection.StudentCarePeriodsByStudentIDs",
+      "target_owner": "enrollment"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.guardianDirectory.CareBookingsInForce",
+      "binding_digest": "52b3eee325578c4e19b060bf84d46af1",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.GuardianDirectory.CareBookingsInForce",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/enrollment.BookingProjection.EffectiveOfferingSelectionsAtDates",
+      "target_owner": "enrollment"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.guardianDirectory.CreateGuardianProfile",
       "binding_digest": "2cf4367a6693d67b3987fa96a08a8ff9",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.GuardianDirectory.CreateGuardianProfile",
@@ -19266,7 +19354,15 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.guardianDirectory.FindStudents",
-      "binding_digest": "8f5b3811364ea39286c4a825a0602637",
+      "binding_digest": "e1714775d449e8179697a2b4ad7beb9e",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.GuardianDirectory.FindStudents",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.guardianDirectory.FindStudents",
+      "binding_digest": "35e43f7b7e05c2316f3908cb727670bc",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.GuardianDirectory.FindStudents",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.FindByIDs",
@@ -19367,6 +19463,14 @@
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/rows.EnrollmentRequestRepository.BackfillGuardianAccountID",
       "target_owner": "care-plan"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.guardianInvitationDelivery.EnqueueCareVisibleEmail",
+      "binding_digest": "f6f1e24af0da6e4826f6bf6869122954",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.GuardianInvitationDelivery.EnqueueCareVisibleEmail",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/compose.EmailOutbox.Enqueue",
+      "target_owner": "delivery-platform"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.guardianInvitationDelivery.EnqueueExistingAccountEmail",

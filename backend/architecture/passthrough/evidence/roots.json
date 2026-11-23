@@ -6113,13 +6113,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (d guardianDirectory) FindStudents(ctx context.Context, ids []int64) (map[int64]identityPorts.Student, error) {\n\tstudents, err := d.repos.Students.FindByIDs(ctx, ids)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make(map[int64]identityPorts.Student, len(students))\n\tfor id, student := range students {\n\t\tif student != nil {\n\t\t\tresult[id] = identityPorts.Student{ID: student.ID, PersonID: student.PersonID}\n\t\t}\n\t}\n\treturn result, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/guardianDirectory.FindStudents",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
       "evidence": "func (d guardianDirectory) LinkGuardianProfileToAccount(ctx context.Context, profileID, accountID int64) error {\n\treturn d.repos.People.LinkGuardianProfileToAccount(ctx, profileID, accountID)\n}",
       "form": "forward-debt",
       "id": "roots/owners/guardianDirectory.LinkGuardianProfileToAccount",

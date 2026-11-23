@@ -184,6 +184,7 @@ func buildDeliveryWorker(
 		calendarService.EmailKindAppointmentPublished, calendarService.EmailKindAppointmentUpdated,
 		calendarService.EmailKindAppointmentCancelled, calendarService.EmailKindAppointmentReminder,
 		identityaccess.MailKindGuardianInvitation, identityaccess.MailKindGuardianWelcome,
+		identityaccess.MailKindGuardianCareVisible,
 	}, enrollmentKinds, []string{TransactionalMailKind, identityaccess.MailKindStaffWelcome, parentbilling.MailKindBillingLetter, carecontract.MailKindContract, carecontract.MailKindNotice})
 	if err != nil {
 		return nil, err

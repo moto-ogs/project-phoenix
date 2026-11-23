@@ -15,6 +15,7 @@ import (
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
 )
 
 // Drive the registered guardian resource, including JWT, permissions and the
@@ -39,6 +40,12 @@ func TestGuardianListsPositiveGrowthQueryBudget(t *testing.T) {
 			guardianIDs = append(guardianIDs, gid)
 			emails = append(emails, email)
 			studentIDs = append(studentIDs, sid)
+			// A second parent who already uses the parents portal, for the
+			// care notice of the bulk invitation (#7760).
+			holder, _ := c.createNamedGuardian("BudgetParent", fmt.Sprintf("Family%02d", i), fmt.Sprintf("budget-holder-%02d", i))
+			c.link(sid, holder, "primary_guardian")
+			makeBudgetAccountHolder(t, db, holder, fmt.Sprintf("budget-holder-account-%02d", i))
+			approveBudgetChild(t, db, sid)
 			linkIDs = append(linkIDs, c.link(sid, guardianIDs[0], "primary_guardian"))
 			if gid != guardianIDs[0] {
 				c.link(sid, gid, "primary_guardian")
@@ -59,7 +66,7 @@ func TestGuardianListsPositiveGrowthQueryBudget(t *testing.T) {
 			require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 			c.requirePayerSet(t, sid, &gid)
 		}
-		for _, name := range []string{"search", "detail", "delete-preview", "phones", "payment_overview", "payment_export", "bulk_invite"} {
+		for _, name := range []string{"search", "detail", "delete-preview", "phones", "payment_overview", "payment_export", "bulk_invite", "bulk_invite_notify"} {
 			path := map[string]string{"search": "/search?q=BudgetGuardian", "detail": fmt.Sprintf("/%d", guardianIDs[0]), "delete-preview": fmt.Sprintf("/%d/delete-preview", guardianIDs[0]), "phones": fmt.Sprintf("/%d/phone-numbers/", guardianIDs[0])}[name]
 			method := http.MethodGet
 			var body any
@@ -74,6 +81,10 @@ func TestGuardianListsPositiveGrowthQueryBudget(t *testing.T) {
 				method = http.MethodPost
 				path = "/bulk-invite"
 				body = map[string]any{"student_ids": studentIDs, "dry_run": true}
+			case "bulk_invite_notify":
+				method = http.MethodPost
+				path = "/bulk-invite"
+				body = map[string]any{"student_ids": studentIDs, "dry_run": true, "notify_active": true}
 			}
 			req := testutil.NewAuthenticatedRequest(t, method, "/api/guardians"+path, body, testutil.WithJWTBearer(token))
 			req = req.WithContext(counter.Context(testpkg.Ctx(t)))
@@ -160,6 +171,18 @@ func TestGuardianListsPositiveGrowthQueryBudget(t *testing.T) {
 				require.NoError(t, json.Unmarshal(envelope.Data, &row))
 				require.True(t, row.Dry)
 				require.Equal(t, n, row.Invited)
+				require.Empty(t, row.Problems)
+			case "bulk_invite_notify":
+				var row struct {
+					Invited            int
+					SkippedActive      int `json:"skipped_active"`
+					WithoutVisibleCare int `json:"without_visible_care"`
+					Problems           []any
+				}
+				require.NoError(t, json.Unmarshal(envelope.Data, &row))
+				require.Equal(t, n, row.Invited)
+				require.Equal(t, n, row.SkippedActive, "no child has a booking today")
+				require.Equal(t, n, row.WithoutVisibleCare)
 				require.Empty(t, row.Problems)
 			case "search":
 				var rows []struct {
@@ -256,7 +279,45 @@ func TestGuardianListsPositiveGrowthQueryBudget(t *testing.T) {
 				querybudgets.AssertQueryBudget(t, "api.guardians.payment_export.http_positive_growth", counter.Measurement(counter.Queries()))
 			case "bulk_invite":
 				querybudgets.AssertQueryBudget(t, "api.guardians.bulk_invite.http_positive_growth", counter.Measurement(counter.Queries()))
+			case "bulk_invite_notify":
+				querybudgets.AssertQueryBudget(t, "api.guardians.bulk_invite_notify.http_positive_growth", counter.Measurement(counter.Queries()))
 			}
 		}
 	}
+}
+
+// approveBudgetChild gives the child an approved care period that covers
+// today, without a booking: the care notice reads the bookings of its
+// request child and names nobody (#7760).
+func approveBudgetChild(t *testing.T, db *bun.DB, studentID int64) {
+	t.Helper()
+	ctx := testpkg.Ctx(t)
+	phase := testpkg.CreateTestEnrollmentPhase(t, db)
+	request := testpkg.CreateTestEnrollmentRequestAwaitingGuardian(t, db, phase.ID, fmt.Sprintf("budget-request-%d@example.test", studentID), fmt.Sprintf("budget-request-%d", testpkg.UniqueSuffix()))
+	_, err := db.NewRaw(`INSERT INTO enrollment.request_children (tenant_id, request_id, first_name, last_name, date_of_birth, status, created_student_id)
+		SELECT tenant_id, ?, 'Budget', 'Child', '2018-04-15', 'approved', ? FROM enrollment.requests WHERE id = ?`, request.ID, studentID, request.ID).Exec(ctx)
+	require.NoError(t, err)
+}
+
+// makeBudgetAccountHolder binds the guardian to a new account that already
+// belongs to the school's parents portal: the profile, the access rows of
+// its relationships, the active mapping and the guardian role, as an
+// accepted invitation leaves them.
+func makeBudgetAccountHolder(t *testing.T, db *bun.DB, guardianID int64, emailSeed string) {
+	t.Helper()
+	ctx := testpkg.Ctx(t)
+	account := testpkg.CreateTestAccount(t, db, emailSeed)
+	_, err := db.NewRaw(`UPDATE users.guardian_profiles SET account_id = ?, has_account = TRUE WHERE id = ?`, account.ID, guardianID).Exec(ctx)
+	require.NoError(t, err)
+	_, err = db.NewRaw(`UPDATE auth.guardian_student_access a SET account_id = ?
+		FROM users.student_guardian_relationships r WHERE r.id = a.relationship_id AND r.guardian_profile_id = ?`, account.ID, guardianID).Exec(ctx)
+	require.NoError(t, err)
+	_, err = db.NewRaw(`INSERT INTO auth.account_tenants (account_id, tenant_id, status, activated_at)
+		SELECT ?, tenant_id, 'active', NOW() FROM users.guardian_profiles WHERE id = ?
+		ON CONFLICT (account_id, tenant_id) DO UPDATE SET status = 'active'`, account.ID, guardianID).Exec(ctx)
+	require.NoError(t, err)
+	_, err = db.NewRaw(`INSERT INTO auth.account_roles (account_id, role_id, tenant_id)
+		SELECT ?, r.id, g.tenant_id FROM auth.roles r, users.guardian_profiles g WHERE r.name = 'guardian' AND g.id = ?
+		ON CONFLICT DO NOTHING`, account.ID, guardianID).Exec(ctx)
+	require.NoError(t, err)
 }

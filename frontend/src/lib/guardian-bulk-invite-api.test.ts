@@ -30,6 +30,9 @@ describe("bulkInviteGuardians", () => {
         skipped_active: 4,
         skipped_open: 5,
         skipped_restricted: 6,
+        notified: 8,
+        already_notified: 1,
+        without_visible_care: 2,
         problems: [
           {
             guardian_profile_id: "7",
@@ -44,6 +47,7 @@ describe("bulkInviteGuardians", () => {
     const result = await bulkInviteGuardians(["4", "9"], {
       dryRun: true,
       resendOpen: true,
+      notifyActive: true,
     });
 
     expect(fetchMock).toHaveBeenCalledWith(
@@ -54,6 +58,7 @@ describe("bulkInviteGuardians", () => {
           student_ids: ["4", "9"],
           dry_run: true,
           resend_open: true,
+          notify_active: true,
         }),
       }),
     );
@@ -65,6 +70,9 @@ describe("bulkInviteGuardians", () => {
       skippedActive: 4,
       skippedOpen: 5,
       skippedRestricted: 6,
+      notified: 8,
+      alreadyNotified: 1,
+      withoutVisibleCare: 2,
       problems: [
         {
           guardianProfileId: "7",
@@ -80,13 +88,21 @@ describe("bulkInviteGuardians", () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
     mockFetch(403, {});
     await expect(
-      bulkInviteGuardians(["4"], { dryRun: false, resendOpen: false }),
+      bulkInviteGuardians(["4"], {
+        dryRun: false,
+        resendOpen: false,
+        notifyActive: false,
+      }),
     ).rejects.toMatchObject({ status: 403, code: "general.permission" });
 
     // A success answer without data is a broken answer.
     mockFetch(200, { status: "success" });
     await expect(
-      bulkInviteGuardians(["4"], { dryRun: false, resendOpen: false }),
+      bulkInviteGuardians(["4"], {
+        dryRun: false,
+        resendOpen: false,
+        notifyActive: false,
+      }),
     ).rejects.toMatchObject({
       status: 502,
       code: "general.write_answer_unreadable",

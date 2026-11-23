@@ -242,6 +242,12 @@ type StudentGuardianLink struct {
 type Student struct {
 	ID       int64
 	PersonID int64
+	// WithoutCarePlace and EnrolledUntil are the child's OGS place and last
+	// care day, read by the parent step (#7760).
+	WithoutCarePlace bool
+	EnrolledUntil    *calendar.Date
+	// Alumnus is a graduated child: the parents portal no longer lists it.
+	Alumnus bool
 }
 
 // GuardianInvitation is one auth.guardian_invitations row.
@@ -350,3 +356,19 @@ const (
 
 // InvitationMailOutcomeDelayed is the outcome that stops a resend.
 const InvitationMailOutcomeDelayed = "delayed"
+
+// GuardianCareNoticeState is the parent step of one relationship (#7760),
+// read under a share lock of its access row: whether the care notice was
+// queued, whether the stored permissions grant parent_portal.access, and the
+// account the access is bound to: active and not erased, already a member of
+// the parents portal of the school (active mapping and guardian role), its
+// login address and portal language.
+type GuardianCareNoticeState struct {
+	RelationshipID int64
+	Notified       bool
+	PortalAccess   bool
+	AccountActive  bool
+	PortalMember   bool
+	Email          string
+	Locale         string
+}
