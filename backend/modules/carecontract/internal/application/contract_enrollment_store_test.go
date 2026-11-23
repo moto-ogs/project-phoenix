@@ -284,6 +284,67 @@ func TestAnAmendmentWritesNoVersionForAContractUnboundSinceItsRead(t *testing.T)
 	assert.Len(t, run.Amended, 1, "a bound contract is amended as before")
 }
 
+// The amendment read the bound contract and a new Tuesday booking of its
+// application child. Before it takes the row lock, the office takes the
+// binding off, the school takes the Tuesday back, and the office binds the
+// contract again to the same application child. The application child under
+// the lock is the one that was read, but the binding is another: the version
+// planned from the first read would bring the Tuesday back. Nothing is
+// written; the next run reads the bookings the contract is bound to now.
+func TestAnAmendmentWritesNoVersionForAContractUnboundAndBoundAgainSinceItsRead(t *testing.T) {
+	t.Parallel()
+	f := newEnrollmentFixture(t, "Träger Anpassung nach dem erneuten Binden")
+	row := f.plan(t).Rows[0]
+	require.Equal(t, carecontract.EnrollmentReady, row.Status)
+	f.enroll(row)
+	require.Equal(t, carecontract.BindingBound, f.bind(t, f.binding(row))[0].Status)
+	proved := slices.Clone(f.school.applications[0].Bookings)
+	changed := calendar.NewDate(2099, 1, 5)
+	f.school.applications[0].Bookings = []carecontract.Booking{
+		{CareOfferingID: 7, Days: []string{"mon"}, ValidFrom: proved[0].ValidFrom, ValidUntil: &changed},
+		{CareOfferingID: 7, Days: []string{"mon", "tue"}, ValidFrom: &changed},
+	}
+	rebound := false
+	interrupted := *f.conclusions
+	intake := *interrupted.intake
+	intake.bookings = interruptedBookings{SchoolBookings: f.school, then: func() {
+		rebound = true
+		require.NoError(t, testpkg.WithinTraeger(f.ctx, f.org, func(txCtx context.Context) error {
+			_, err := f.enrollments.UnbindApplication(txCtx, f.reviewer, f.imported, f.requestChild)
+			return err
+		}))
+		f.school.applications[0].Bookings = proved
+		again := f.plan(t).Rows[0]
+		require.Equal(t, carecontract.EnrollmentReady, again.Status, "the bookings are the contract's again")
+		binding := carecontract.ApplicationBinding{ContractID: again.ContractID, StudentID: again.StudentID,
+			RequestChildID: again.RequestChildID, Token: again.Token, Enrollment: carecontract.EnrollmentAnswerExisting}
+		require.Equal(t, carecontract.BindingBound, f.bind(t, binding)[0].Status)
+	}}
+	interrupted.intake = &intake
+
+	run, err := interrupted.AmendFromBookings(f.ctx, f.org)
+	require.NoError(t, err)
+	require.True(t, rebound, "the office unbound and bound the contract between the read and the write")
+	assert.Empty(t, run.Amended, "the bookings that were read are not the ones the contract was bound on")
+	versions := `SELECT COUNT(*) FROM care_contract.contract_versions WHERE organization_id = ? AND contract_id = ?`
+	assert.Equal(t, 1, f.count(t, versions, f.org, f.imported), "no version from the bookings of the first binding")
+	assert.Equal(t, 1, f.count(t, `SELECT COUNT(*) FROM care_contract.contracts WHERE organization_id = ? AND id = ? AND request_child_id = ?`,
+		f.org, f.imported, f.requestChild), "the contract is bound to the same application child as at the read")
+
+	// The next run reads the contract as it is bound now and finds nothing
+	// to write; a booking change after that makes the version as before.
+	run, err = f.conclusions.AmendFromBookings(f.ctx, f.org)
+	require.NoError(t, err)
+	assert.Empty(t, run.Amended)
+	f.school.applications[0].Bookings = []carecontract.Booking{
+		{CareOfferingID: 7, Days: []string{"mon"}, ValidFrom: proved[0].ValidFrom, ValidUntil: &changed},
+		{CareOfferingID: 7, Days: []string{"mon", "tue"}, ValidFrom: &changed},
+	}
+	run, err = f.conclusions.AmendFromBookings(f.ctx, f.org)
+	require.NoError(t, err)
+	assert.Len(t, run.Amended, 1, "the bound contract follows its bookings again")
+}
+
 // What the bound contract is to the other readers: it keeps its child
 // record, its summary says that it follows bookings, and it still holds
 // back every other application of the child whose care it overlaps. Only

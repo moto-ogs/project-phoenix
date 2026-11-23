@@ -442,11 +442,24 @@ type boundChildren map[int64]int64
 // run made for this contract and that has no contract (EnrollmentChildID):
 // the run stopped before the binding. A ready row binds it; for a row that
 // stays held the contract can no longer be bound to it.
+//
+// A contract has one silent enrollment. While the one made for it has no
+// contract, the row is ready only to bind exactly that application; it never
+// enrolls the child anew and never binds another application. The office may
+// have corrected the unbound contract to a module of another phase that runs
+// today: the plan finds no application of the child there, and a second
+// enrollment would stand beside the approved first one. Such a row is held
+// (has_application) and names the enrollment.
 func planEnrollmentRow(read schoolRead, contract carecontract.EnrollmentContract, applications []carecontract.Application,
 	contracted boundChildren, today calendar.Date) carecontract.EnrollmentPlanRow {
 	row := planContractRow(read, contract, applications, contracted, today)
-	if row.Status == carecontract.EnrollmentHeld || row.Status == carecontract.EnrollmentReady {
-		row.EnrollmentChildID = unboundEnrollment(contract.ID, applications, contracted)
+	if row.Status != carecontract.EnrollmentHeld && row.Status != carecontract.EnrollmentReady {
+		return row
+	}
+	row.EnrollmentChildID = unboundEnrollment(contract.ID, applications, contracted)
+	if row.Status == carecontract.EnrollmentReady && row.EnrollmentChildID != 0 && row.RequestChildID != row.EnrollmentChildID {
+		row.Status, row.Reason, row.RequestChildID = carecontract.EnrollmentHeld, carecontract.EnrollmentReasonHasApplication, row.EnrollmentChildID
+		row.Token, row.ApplicationBookings, row.ProvedOn = "", nil, ""
 	}
 	return row
 }

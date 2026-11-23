@@ -122,3 +122,47 @@ func TestARowNamesTheSilentEnrollmentWithoutAContract(t *testing.T) {
 	assert.Equal(t, carecontract.EnrollmentHeld, held.Status)
 	assert.Zero(t, held.EnrollmentChildID, "the enrollment of another contract of the child is not named")
 }
+
+// A run enrolled the child in the phase of the contract's module and stopped
+// before the binding. The office then corrected the unbound contract to a
+// module of another phase that runs today. The plan finds no application of
+// the child in that phase, but the contract has its silent enrollment: the
+// row never enrolls the child a second time. It is held and names the
+// enrollment; once the contract books the first phase again, the row binds
+// exactly that enrollment.
+func TestAContractWithAnUnboundSilentEnrollmentIsNeverEnrolledAnew(t *testing.T) {
+	t.Parallel()
+	student := plannedStudent
+	stored := carecontract.Application{RequestChildID: plannedRequestChild, StudentID: &student, ContractImport: true,
+		ImportContractID: enrollableContract().ID,
+		Bookings:         []carecontract.Booking{{CareOfferingID: 1, Days: []string{"mon", "tue"}, ValidFrom: date(2030, 8, 1), ValidUntil: date(2031, 8, 1)}}}
+	school := enrollmentSchool()
+	other := school.offerings[4]
+	// The other phase overlaps the first: its service runs today as well.
+	other.ServiceStart, other.ServiceEnd = date(2030, 8, 1), date(2031, 7, 31)
+	school.offerings[4] = other
+	corrected := enrollableContract()
+	corrected.Versions[0].Services = []carecontract.Service{importedService("mon", 4, "Ganztag 2031/32", "16:30")}
+
+	without := planEnrollmentRow(school, corrected, nil, boundChildren{}, enrollmentToday)
+	require.Equal(t, carecontract.EnrollmentReady, without.Status, "without the enrollment the corrected contract is enrolled in the other phase")
+	require.Equal(t, ident.ID(71), without.PhaseID)
+
+	row := planEnrollmentRow(school, corrected, []carecontract.Application{stored}, boundChildren{}, enrollmentToday)
+	assert.Equal(t, carecontract.EnrollmentHeld, row.Status, "no second enrollment beside the approved one")
+	assert.Equal(t, carecontract.EnrollmentReasonHasApplication, row.Reason)
+	assert.Equal(t, ident.ID(plannedRequestChild), row.EnrollmentChildID)
+	assert.Equal(t, ident.ID(plannedRequestChild), row.RequestChildID, "the row names the enrollment that holds it back")
+	assert.Empty(t, row.Token, "a held row has no token a binding could take")
+
+	// The enrollment of another contract of the child holds nothing back.
+	foreign := stored
+	foreign.ImportContractID++
+	assert.Equal(t, carecontract.EnrollmentReady, planEnrollmentRow(school, corrected, []carecontract.Application{foreign}, boundChildren{}, enrollmentToday).Status)
+
+	// Uncorrected, the contract is bound to exactly its enrollment.
+	bind := planEnrollmentRow(school, enrollableContract(), []carecontract.Application{stored}, boundChildren{}, enrollmentToday)
+	require.Equal(t, carecontract.EnrollmentReady, bind.Status, bind.Reason)
+	assert.Equal(t, ident.ID(plannedRequestChild), bind.RequestChildID)
+	assert.NotEmpty(t, bind.ApplicationBookings, "it confirms the stored application, it does not enroll")
+}

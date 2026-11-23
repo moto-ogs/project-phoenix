@@ -23,6 +23,9 @@ import (
 //     becomes a silent new version.
 //   - A contract with a child record and without an application child is
 //     ready, held back or bound; one without a child record is only named.
+//   - A contract gets one silent enrollment. While the one made for it has
+//     no contract, its row is ready only to bind that application, never
+//     to enroll the child again, whatever phase the contract books now.
 //   - The binding changes request_child_id and nothing else: no version, no
 //     document, no party. It sends nothing. A repeated binding answers the
 //     contract as bound.
@@ -244,7 +247,10 @@ type EnrollmentPlanRow struct {
 	// EnrollmentChildID is, for a ready or a held row, the accepted
 	// application of the source contract_import the school made for this
 	// contract (Application.ImportContractID) and that has no contract: a
-	// run enrolled the child and stopped before the binding. A ready row binds it. For a row that is held, or that the
+	// run enrolled the child and stopped before the binding. A ready row
+	// binds exactly it (RequestChildID is the same application): a contract
+	// has one silent enrollment, so a row that would enroll the child anew or
+	// bind another application is held instead (has_application). For a row that is held, or that the
 	// school's enrollment refuses, the contract can no longer be bound to
 	// that enrollment (the service of its phase ended, or its bookings no
 	// longer pass the proof): the caller shows such a row as stuck.

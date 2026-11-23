@@ -26,9 +26,16 @@ type InboxRow struct {
 // effective version by effective date, the newest of them, the start of the
 // first, which a fixed term counts from, and the number its next version
 // gets.
+//
+// UpdatedAt is the stamp of the last write of the contract row as the read
+// found it (the trigger of the table sets it on every update). The binding
+// and its way back write the row, so a contract that was unbound and bound
+// again since the read, to the same application child, carries another
+// stamp (ADR 0309).
 type AmendableContract struct {
 	ID         int64
 	Key        ContractKey
+	UpdatedAt  time.Time
 	FirstFrom  calendar.Date
 	NextNumber int
 	Latest     carecontract.Version
@@ -99,9 +106,11 @@ type ContractRecord struct {
 	// RequestChildID is the application child the contract follows; nil for
 	// an imported contract that is not bound (ADR 0309).
 	RequestChildID *int64
-	Version        carecontract.Version
-	Parties        []carecontract.Party
-	DocumentID     *int64
+	// UpdatedAt is the stamp of the last write of the contract row.
+	UpdatedAt  time.Time
+	Version    carecontract.Version
+	Parties    []carecontract.Party
+	DocumentID *int64
 	// Concluded is how and when the contract was concluded; nil before. The
 	// conclusion at acceptance sets it before the PDF is rendered, so the
 	// frozen PDF and the mail say that the contract is concluded.
