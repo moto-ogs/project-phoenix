@@ -75,11 +75,14 @@ type SubmitEnrollmentRequest struct {
 	AdditionalGuardians []SubmitGuardianRequest `json:"additional_guardians,omitempty"`
 	ConsentFlags        map[string]any          `json:"consent_flags,omitempty"`
 	// FormSchemaID is the form version the page showed (#4680).
-	FormSchemaID    ident.ID             `json:"form_schema_id,omitempty"`
-	CustomData      map[string]any       `json:"custom_data,omitempty"`
-	Children        []SubmitChildRequest `json:"children"`
-	CaptchaToken    string               `json:"captcha_token,omitempty"`
-	LateInviteToken string               `json:"late_invite_token,omitempty"`
+	FormSchemaID ident.ID `json:"form_schema_id,omitempty"`
+	// ExpectedTermsFingerprint is the terms_fingerprint of the form read the
+	// page filled in (ADR 0311); a submission without it is refused.
+	ExpectedTermsFingerprint string               `json:"expected_terms_fingerprint"`
+	CustomData               map[string]any       `json:"custom_data,omitempty"`
+	Children                 []SubmitChildRequest `json:"children"`
+	CaptchaToken             string               `json:"captcha_token,omitempty"`
+	LateInviteToken          string               `json:"late_invite_token,omitempty"`
 	// Signature is the parent's signature (#4786), required when the form
 	// asks for one.
 	Signature *SubmitSignatureRequest `json:"signature,omitempty"`
@@ -220,6 +223,8 @@ func buildServiceRequest(wireReq *SubmitEnrollmentRequest, tenantID int64, remot
 		LateInviteToken:       wireReq.LateInviteToken,
 		DisplayedFormSchemaID: wireReq.FormSchemaID.Int64(),
 		Signature:             wireReq.Signature.value(),
+
+		ExpectedTermsFingerprint: wireReq.ExpectedTermsFingerprint,
 	}
 	for _, g := range wireReq.AdditionalGuardians {
 		out.AdditionalGuardians = append(out.AdditionalGuardians, SubmitGuardian{

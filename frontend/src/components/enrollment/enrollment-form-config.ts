@@ -45,6 +45,11 @@ export interface EnrollmentFormPrefetchedData {
   audience?: PublicPhase["audience"];
   /** Phase grade restriction (#1663): the grade select offers only these. */
   eligibleGradeLevels?: number[];
+  /**
+   * The read-state token of the form and its legal texts (ADR 0311); the
+   * submit sends it back, so a refused one means the form changed.
+   */
+  termsFingerprint?: string;
 }
 
 /** The fields every enrollment bootstrap response shares. */
@@ -58,6 +63,7 @@ type EnrollmentFormBootstrap = Pick<
   | "care_offerings_enabled"
   | "legal_texts"
   | "late_invite"
+  | "terms_fingerprint"
 > & {
   phase: Pick<PublicPhase, "audience" | "eligible_grade_levels">;
   school_class?: PublicSchoolClassConfig;
@@ -94,6 +100,7 @@ export function prefetchedDataFromBootstrap(
     profile,
     lateInvite: bootstrap.late_invite,
     schoolClass: bootstrap.school_class,
+    termsFingerprint: bootstrap.terms_fingerprint,
     ...(phaseRestrictions
       ? {
           audience: bootstrap.phase.audience,
@@ -119,6 +126,8 @@ export interface EnrollmentFormConfig {
   profile: MeProfileResponse | null;
   lateInvite?: sharedContract.PublicLateInvitePrefill;
   audience?: PublicPhase["audience"];
+  /** The token the submit sends; absent in a preview, which sends nothing. */
+  termsFingerprint?: string;
 }
 
 export function formConfig(
@@ -137,6 +146,7 @@ export function formConfig(
     profile: data?.profile ?? null,
     lateInvite: data?.lateInvite,
     audience: data?.audience,
+    termsFingerprint: data?.termsFingerprint,
   };
 }
 

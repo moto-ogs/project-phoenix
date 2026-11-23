@@ -1602,6 +1602,13 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 			})
 			return
 		}
+		if r.Method == seedHTTPMethodGet && (strings.HasSuffix(r.URL.Path, "/manual-bootstrap") || strings.HasSuffix(r.URL.Path, "/edit-bootstrap")) {
+			// The form the seeder fills, with its read-state token (ADR 0311).
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"status": "success", "data": map[string]any{"schema": nil, "terms_fingerprint": "seed-form"},
+			})
+			return
+		}
 		if strings.HasPrefix(r.URL.Path, "/api/enrollment/phases/") && strings.HasSuffix(r.URL.Path, "/late-invites") {
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"status": "success", "data": map[string]any{"id": fmt.Sprintf("%d", idCounter), "token": "late-invite-token"},

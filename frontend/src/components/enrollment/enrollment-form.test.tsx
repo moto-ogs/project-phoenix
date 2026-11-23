@@ -8,6 +8,7 @@ import {
 } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 
 const {
   phaseSchemaFixture,
@@ -5613,6 +5614,158 @@ describe("EnrollmentForm signature (#4786)", () => {
       sharedContract.SubmitEnrollmentRequest,
     ];
     expect(payload.signature).toBeUndefined();
+  });
+
+  // A refused form (ADR 0311): the server saw another form or legal text
+  // than the one shown. The page loads the current form, which this harness
+  // hands in like the parent and public pages do.
+  async function renderRefusedForm(
+    reload: () => Promise<void> = async () => undefined,
+    agbText = "Neue AGB",
+  ) {
+    const first = {
+      ...(await fixturePrefetchedData(true)),
+      termsFingerprint: "terms-read",
+    };
+    const changedAGB = legalTexts().blocks.map((block) =>
+      block.key === "agb" ? { ...block, text: agbText } : block,
+    );
+    const current = {
+      ...first,
+      legalTexts: { ...first.legalTexts, blocks: changedAGB },
+      termsFingerprint: "terms-current",
+    };
+    const onFormChanged = vi.fn();
+    function Harness() {
+      const [data, setData] = useState(first);
+      return (
+        <EnrollmentForm
+          phaseID="5"
+          gradeLevelMax={4}
+          onSubmitted={vi.fn()}
+          prefetchedData={data}
+          onFormChanged={async () => {
+            onFormChanged();
+            await reload();
+            setData(current);
+          }}
+        />
+      );
+    }
+    render(<Harness />);
+    await waitForLoaded();
+    return onFormChanged;
+  }
+
+  const refusal = () =>
+    new ApiError("changed since it was read", 409, {
+      code: "general.changed_since_read",
+    });
+
+  it("shows the current form after a refusal, keeps the answers and asks again only for changed texts", async () => {
+    mockSubmitEnrollment.mockRejectedValueOnce(refusal());
+    const onFormChanged = await renderRefusedForm();
+    await fillRequiredFields();
+    fireEvent.click(screen.getByText(/Schulveranstaltungen fotografiert/));
+    sign();
+
+    fireEvent.click(screen.getByRole("button", { name: "Anmeldung absenden" }));
+
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "das Anmeldeformular"),
+      ),
+    ).toBeInTheDocument();
+    expect(onFormChanged).toHaveBeenCalledOnce();
+    expect(mockSubmitEnrollment).toHaveBeenCalledOnce();
+    const [, sent] = mockSubmitEnrollment.mock.calls[0] as [
+      string,
+      sharedContract.SubmitEnrollmentRequest,
+    ];
+    expect(sent.expected_terms_fingerprint).toBe("terms-read");
+    expect(
+      screen.queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
+    // The answers stay; the changed AGB and the signature are asked again,
+    // the unchanged photo consent stays ticked.
+    expect(screen.getAllByLabelText("Vorname")[0]).toHaveValue("Mara");
+    expect(screen.getAllByLabelText("Vorname")[1]).toHaveValue("Lina");
+    expect(screen.getByRole("checkbox", { name: /AGB/ })).not.toBeChecked();
+    expect(
+      screen.getByRole("checkbox", {
+        name: /Schulveranstaltungen fotografiert/,
+      }),
+    ).toBeChecked();
+    expect(
+      screen.queryByText("Deine Unterschrift ist bereit."),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText(/AGB|Ganztag Info-Brief/));
+    sign();
+    fireEvent.click(screen.getByRole("button", { name: "Anmeldung absenden" }));
+    await waitFor(() => expect(mockSubmitEnrollment).toHaveBeenCalledTimes(2));
+    const [, resent] = mockSubmitEnrollment.mock.calls[1] as [
+      string,
+      sharedContract.SubmitEnrollmentRequest,
+    ];
+    expect(resent.expected_terms_fingerprint).toBe("terms-current");
+    expect(resent.consent_flags).toMatchObject({ agb: true, photo: true });
+  });
+
+  it("asks for a new signature after a refusal even when every text stayed", async () => {
+    mockSubmitEnrollment.mockRejectedValueOnce(refusal());
+    // Another form version with the same legal texts: the ticks stay, the
+    // signature confirmed the old form and goes.
+    await renderRefusedForm(async () => undefined, "AGB Text");
+    await fillRequiredFields();
+    sign();
+
+    fireEvent.click(screen.getByRole("button", { name: "Anmeldung absenden" }));
+
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "das Anmeldeformular"),
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /AGB/ })).toBeChecked();
+    expect(
+      screen.queryByText("Deine Unterschrift ist bereit."),
+    ).not.toBeInTheDocument();
+  });
+
+  it("names a failed reload after a refusal instead of claiming the new form is shown", async () => {
+    mockSubmitEnrollment.mockRejectedValueOnce(refusal());
+    let fail = true;
+    const onFormChanged = await renderRefusedForm(async () => {
+      if (fail) throw new ApiError("unavailable", 503);
+    });
+    await fillRequiredFields();
+    sign();
+
+    fireEvent.click(screen.getByRole("button", { name: "Anmeldung absenden" }));
+
+    expect(
+      await screen.findByText(
+        catalogText("general.unavailable", "das Anmeldeformular"),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        catalogText("general.changed_since_read", "das Anmeldeformular"),
+      ),
+    ).not.toBeInTheDocument();
+    expect(screen.getAllByLabelText("Vorname")[0]).toHaveValue("Mara");
+
+    // Its retry loads the form, then names the refusal; nothing is sent.
+    fail = false;
+    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "das Anmeldeformular"),
+      ),
+    ).toBeInTheDocument();
+    expect(onFormChanged).toHaveBeenCalledTimes(2);
+    expect(mockSubmitEnrollment).toHaveBeenCalledOnce();
   });
 
   it("shows no signature field for a change request", async () => {

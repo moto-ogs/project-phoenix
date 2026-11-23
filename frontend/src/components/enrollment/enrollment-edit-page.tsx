@@ -160,6 +160,31 @@ function EnrollmentEditPageContent({ params, adjustOnly = false }: Props) {
     },
     [router, statusHref, toast, t, bootstrap?.edit_mode],
   );
+  // A refused save of a form the school changed meanwhile (ADR 0311) loads
+  // the current one in place: the form keeps the entries, the page stays.
+  const loadCurrentForm = useCallback(async () => {
+    try {
+      const result = await fetchEnrollmentEditBootstrap(
+        token,
+        loadErrorFallback,
+      );
+      // The typed entries stay: the opened draft is kept, only the form
+      // around it is the current one.
+      setLoaded((previous) => ({
+        token,
+        bootstrap:
+          previous?.token === token
+            ? { ...result, draft: previous.bootstrap.draft }
+            : result,
+      }));
+    } catch (err) {
+      // The form shows this failure in place of the refusal.
+      logger.warn("enrollment_edit_form_reload_failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
+    }
+  }, [token, loadErrorFallback]);
   // The edit path re-runs the submit's eligibility gates, so the form gets
   // the same narrowed grade set (#1663).
   const prefetchedData = useMemo(
@@ -253,6 +278,7 @@ function EnrollmentEditPageContent({ params, adjustOnly = false }: Props) {
           initialDraft={bootstrap.draft}
           statusToken={token}
           submitter={submitter}
+          onFormChanged={loadCurrentForm}
           skipCaptcha
           localizedCopy
           lockedGuardianEmail

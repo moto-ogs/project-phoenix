@@ -109,6 +109,10 @@ type EditBootstrapResponse struct {
 	LegalTexts                PublicLegalTextsResponse  `json:"legal_texts"`
 	Draft                     EditDraftResponse         `json:"draft"`
 	EditMode                  string                    `json:"edit_mode"`
+	// TermsFingerprint is the read-state token of the form and its legal
+	// texts (ADR 0311); an edit or change request sends it back as
+	// expected_terms_fingerprint.
+	TermsFingerprint string `json:"terms_fingerprint"`
 }
 
 type EditDraftResponse struct {
@@ -448,8 +452,9 @@ func (rs *Resource) getEditBootstrap(w http.ResponseWriter, r *http.Request) {
 			PhotoEnabled:        draft.LegalTexts.PhotoEnabled,
 			Blocks:              draft.LegalTexts.Blocks,
 		},
-		Draft:    toEditDraftResponse(draft),
-		EditMode: draft.EditMode,
+		Draft:            toEditDraftResponse(draft),
+		EditMode:         draft.EditMode,
+		TermsFingerprint: capability.FormTermsFingerprint(draft.Schema, draft.LegalTexts.Blocks),
 	}, "Enrollment edit bootstrap retrieved")
 }
 
