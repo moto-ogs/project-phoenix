@@ -17,7 +17,12 @@ vi.mock("~/lib/tenant-context", () => ({
 
 import { ApiError } from "~/lib/api-error";
 import { useInvalidateMatching, useSWRAuth } from "./hooks";
-import { useDraftOn, useReadDraft, type ReadDraftResult } from "./read-draft";
+import {
+  useActionOn,
+  useDraftOn,
+  useReadDraft,
+  type ReadDraftResult,
+} from "./read-draft";
 import { resetSWRScope } from "./scope";
 
 interface Stored {
@@ -599,5 +604,113 @@ describe("useReadDraft", () => {
     rerender({ row: { version: "3", name: "Anne" } });
     expect(result.current.draft).toBe("Anne");
     expect(result.current.touched).toBe(false);
+  });
+});
+
+describe("useActionOn", () => {
+  interface Props {
+    readonly data: Stored | undefined;
+    readonly opening?: string | null;
+  }
+  function renderAction(reload: () => Promise<unknown>, data: Stored) {
+    return renderHook(
+      ({ data: shown, opening = "record-1" }: Props) =>
+        useActionOn(
+          { opening, data: shown, reload },
+          { token: (read) => read.version },
+        ),
+      { initialProps: { data } as Props },
+    );
+  }
+  const stored = { version: "1", name: "Anna" };
+
+  async function refuse(result: { current: ReturnType<typeof useActionOn> }) {
+    let sent!: ReadDraftResult<unknown>;
+    await act(async () => {
+      sent = await result.current.submit(() => Promise.reject(changed()));
+    });
+    expect(sent).toMatchObject({ ok: false, refused: true });
+    return sent;
+  }
+
+  it("keeps a failed read after a refusal locked and shown until a read of another state arrives", async () => {
+    const reload = vi.fn(() => Promise.reject(new ApiError("down", 503)));
+    const { result, rerender } = renderAction(reload, stored);
+    expect(result.current.canSubmit).toBe(true);
+
+    await refuse(result);
+    await waitFor(() => expect(result.current.status).toBe("loadFailed"));
+    expect(result.current.canSubmit).toBe(false);
+    expect(result.current.error).toBeInstanceOf(ApiError);
+
+    // The same state again (a revalidation of the refused version): still
+    // locked, the failed read still shown.
+    rerender({ data: { ...stored } });
+    expect(result.current.status).toBe("loadFailed");
+
+    // Another view's read brings the stored state: sending goes on from it,
+    // whatever became of the message that offered „Wiederholen“.
+    rerender({ data: { version: "2", name: "Anne" } });
+    expect(result.current.status).toBe("ready");
+    expect(result.current.error).toBeUndefined();
+  });
+
+  it("lifts the lock when the read after a refusal succeeds, also on the same token", async () => {
+    let answer!: () => void;
+    const reload = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    const { result } = renderAction(reload, stored);
+
+    const sent = await refuse(result);
+    expect(result.current.status).toBe("reloading");
+    expect(result.current.canSubmit).toBe(false);
+    // The error path asks for this read; it is the one already on its way.
+    if (sent.ok) throw new Error("refused");
+    const shown = sent.reload?.();
+    expect(reload).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      answer();
+      await shown;
+    });
+    expect(result.current.status).toBe("ready");
+  });
+
+  it("retries a failed read and sends nothing twice while a send is out", async () => {
+    const reload = vi
+      .fn<() => Promise<unknown>>()
+      .mockRejectedValueOnce(new ApiError("down", 503))
+      .mockResolvedValueOnce(undefined);
+    const { result } = renderAction(reload, stored);
+
+    await refuse(result);
+    await waitFor(() => expect(result.current.status).toBe("loadFailed"));
+    act(() => result.current.retryLoad());
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+
+    const send = vi.fn(() => new Promise<never>(() => undefined));
+    let second!: ReadDraftResult<unknown>;
+    await act(async () => {
+      void result.current.submit(send);
+      second = await result.current.submit(send);
+    });
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(second).toMatchObject({ ok: false, skipped: true });
+    expect(result.current.status).toBe("saving");
+  });
+
+  it("starts a new opening unlocked", async () => {
+    const reload = vi.fn(() => Promise.reject(new ApiError("down", 503)));
+    const { result, rerender } = renderAction(reload, stored);
+    await refuse(result);
+    await waitFor(() => expect(result.current.status).toBe("loadFailed"));
+
+    rerender({ data: stored, opening: null });
+    rerender({ data: stored, opening: "record-1" });
+    expect(result.current.status).toBe("ready");
   });
 });

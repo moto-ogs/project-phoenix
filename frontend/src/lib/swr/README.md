@@ -139,8 +139,17 @@ A surface reads stored state in one of three ways:
    (`status` `loadFailed`, `error`) that the surface shows also over a
    draft on screen (`useReadDraftLoadError`). A form with its own
    `FormErrorAlert` takes `useReadDraftForm`: its `begin()` refuses to send
-   while `canSubmit` is false without clearing the shown error, and its
-   `loadError` shows the failed read.
+   while `canSubmit` is false without clearing the shown error, its
+   `loadError` shows the failed read, and its `waitReason` says why saving
+   waits (`readStateWaitReason` for a surface without a form).
+   An action without a draft (a switch, a row action, a dialog that sends
+   what it shows) goes through `useActionOn` of the same module, on the
+   read the surface shows. Its `submit` locks while the send is out; after
+   a refusal nothing is sent until the read it started succeeded or any
+   read arrives with another token than the refused one (a revalidation, a
+   refresh after another write). A failed read keeps it locked and is its
+   `error`: show it on the surface (`useReadDraftLoadError`, in a form
+   `useReadDraftForm`), not only in a toast its reader can close.
 3. **A read the server logs or authorizes on every opening** (an access
    log entry per read) goes through
    `useOpeningRead(key, fetcher, { showCached: false })` (Träger:

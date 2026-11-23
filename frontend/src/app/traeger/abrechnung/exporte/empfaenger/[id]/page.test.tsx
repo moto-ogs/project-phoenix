@@ -29,6 +29,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 const READY: ExportRecipient = {
+  version: "v-1",
   id: "7",
   name: "Kämmerei",
   enabled: true,
@@ -148,6 +149,8 @@ it("asks for the password again when the destination changes", async () => {
         host: "andere.example.org",
         password: "neues-geheimnis",
       }),
+      // The recipient as the page read it (ADR 0311).
+      "v-1",
     ),
   );
 });

@@ -83,6 +83,8 @@ func TestProvisioningListOrganizationSummaries(t *testing.T) {
 		assert.Equal(t, &organizationtenancy.OrganizationSummary{
 			ID: 1, Name: "Talent OGS", Slug: "talent", Active: true, CreatedAt: fixedTime, UpdatedAt: fixedTime,
 			SchulenCount: 2, KontenCount: 6, GeraeteCount: 3, PersonenCount: 8,
+			// The token an edit of the stored organisation is checked against.
+			Version: organizationtenancy.OrganizationVersion(*h.engine.orgs[1]),
 		}, summaries[0])
 		assert.Equal(t, 1, summaries[1].GeraeteCount)
 		assert.Equal(t, 7, summaries[1].PersonenCount)
@@ -149,6 +151,8 @@ func TestProvisioningListSchoolSummaries(t *testing.T) {
 			Subdomain: "burbach", Active: true, Hidden: true, CreatedAt: fixedTime, UpdatedAt: fixedTime,
 			Address: "Hauptstr. 1", City: "Burbach", Zip: "57299", Phone: "0271", Email: "gs@burbach.test",
 			Settings: `{"a":1}`, KontenCount: 4, GeraeteCount: 2, PersonenCount: 5,
+			// The token an edit of the stored school is checked against.
+			Version: organizationtenancy.SchoolVersion(*school),
 		}, summaries[0])
 		assert.Equal(t, ident.ID(int64(50)), summaries[3].ID)
 		require.NotNil(t, summaries[3].DeletedAt, "deleted schools stay listed")

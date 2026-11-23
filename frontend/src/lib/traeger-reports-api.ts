@@ -110,9 +110,14 @@ export interface ReportTemplate {
   readonly keyDateDay: number;
   readonly districts: readonly ReportTemplateDistrict[];
   readonly updatedAt: string | null;
+  /** Der gelesene Stand, den eine Änderung mitschickt (ADR 0311). */
+  readonly version: string;
 }
 
-export type ReportTemplateInput = Omit<ReportTemplate, "id" | "updatedAt">;
+export type ReportTemplateInput = Omit<
+  ReportTemplate,
+  "id" | "updatedAt" | "version"
+>;
 
 function isSection(value: string): value is ReportSection {
   return (REPORT_SECTIONS as readonly string[]).includes(value);
@@ -217,6 +222,7 @@ function templateFromBackend(
       district: entry.district,
     })),
     updatedAt: template.updated_at,
+    version: template.version,
   };
 }
 
@@ -288,14 +294,19 @@ export async function createReportTemplate(
   );
 }
 
+/**
+ * Ändert eine Vorlage über dem Stand, mit dem sie gelesen wurde (ADR 0311);
+ * eine inzwischen geänderte Vorlage antwortet `general.changed_since_read`.
+ */
 export async function updateReportTemplate(
   id: string,
   input: ReportTemplateInput,
+  expectedVersion: string,
 ): Promise<ReportTemplate> {
   return templateFromBackend(
     await bffJson("org", "PUT /traeger/report-templates/{id}", {
       params: { id },
-      body: templateToBackend(input),
+      body: { ...templateToBackend(input), expected_version: expectedVersion },
     }),
   );
 }

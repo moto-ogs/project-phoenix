@@ -59,5 +59,7 @@
   "endNoticeTitle": "Njoftimi i ofruesit për fundin e kontratës",
   "submitTerminationTooltip": "E dërgon menjëherë ndërprerjen te ofruesi.",
   "submitWithdrawalTooltip": "E dërgon menjëherë tërheqjen te ofruesi.",
-  "submitDisabledReason": "Zgjidhni fillimisht një mundësi më lart."
+  "submitDisabledReason": "Zgjidhni fillimisht një mundësi më lart.",
+  "reloadingReason": "Datat aktuale po ngarkohen ende.",
+  "reloadFailedReason": "Datat aktuale nuk u ngarkuan dot. Prekni „Provo përsëri” në mesazhin më lart."
 }

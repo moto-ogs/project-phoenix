@@ -22,6 +22,7 @@ const SCHOOLS = [
 ];
 
 const SAVED: ReportTemplate = {
+  version: "v-1",
   id: "12",
   name: "Jugendamt",
   sections: ["children", "staff", "absences", "demand"],
@@ -88,13 +89,17 @@ describe("ReportTemplateForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Vorlage anlegen" }));
 
     await waitFor(() => expect(onSaved).toHaveBeenCalledWith(SAVED));
-    expect(onSave).toHaveBeenCalledWith({
-      name: "Jugendamt",
-      sections: ["children", "staff", "demand"],
-      keyDateMonth: 10,
-      keyDateDay: 15,
-      districts: [{ schoolId: "2", district: "Nord" }],
-    });
+    // A new template has no read state to send back (ADR 0311).
+    expect(onSave).toHaveBeenCalledWith(
+      {
+        name: "Jugendamt",
+        sections: ["children", "staff", "demand"],
+        keyDateMonth: 10,
+        keyDateDay: 15,
+        districts: [{ schoolId: "2", district: "Nord" }],
+      },
+      "",
+    );
     expect(
       screen.getByText(/1 von 2 Schulen haben einen Sozialraum/),
     ).toBeInTheDocument();

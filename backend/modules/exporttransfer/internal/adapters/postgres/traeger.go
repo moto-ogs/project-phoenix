@@ -337,6 +337,19 @@ func (s *TraegerStore) ReplaceSealedPasswords(ctx context.Context, organizationI
 	return nil
 }
 
+// LockFormats takes the Träger's advisory lock of its format assignments.
+func (s *TraegerStore) LockFormats(ctx context.Context, organizationID int64) error {
+	db, err := s.database(ctx, organizationID)
+	if err != nil {
+		return err
+	}
+	if _, err := db.NewRaw(`SELECT pg_advisory_xact_lock(hashtextextended(?, 0))`,
+		fmt.Sprintf("export_transfer.formats:%d", organizationID)).Exec(ctx); err != nil {
+		return fmt.Errorf("export transfer postgres: lock the formats: %w", err)
+	}
+	return nil
+}
+
 // AssignFormat sends the format to one recipient of the Träger, or leaves
 // it to the download for recipientID 0. A recipient of another Träger
 // matches no row and answers false; the composite reference refuses it too.

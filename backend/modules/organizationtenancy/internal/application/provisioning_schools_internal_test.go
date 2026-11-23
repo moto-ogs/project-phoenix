@@ -7,6 +7,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -421,7 +422,7 @@ func TestProvisioningUpdateSchool(t *testing.T) {
 		school := h.addSchool(10, 1, "Burbach", "burbach")
 		school.Settings = `{"theme":"blue"}`
 
-		updated, err := h.svc.UpdateSchool(context.Background(), 10, organizationtenancy.SchoolChanges{
+		updated, err := h.updateSchool(context.Background(), 10, organizationtenancy.SchoolChanges{
 			OrganizationID: 1, Name: "Walbach", Slug: "walbach", Subdomain: "walbach-gs",
 			Address: "Hauptstr. 1", City: "Walbach", Zip: "57299", Phone: "0271", Email: "info@walbach.test",
 			Active: false, Hidden: true,
@@ -455,7 +456,7 @@ func TestProvisioningUpdateSchool(t *testing.T) {
 		changes := schoolChanges(1)
 		changes.Name = "Burbach Nord"
 
-		updated, err := h.svc.UpdateSchool(context.Background(), 10, changes, testOperatorID, operatorIP)
+		updated, err := h.updateSchool(context.Background(), 10, changes, testOperatorID, operatorIP)
 
 		require.NoError(t, err, "the contact address is optional")
 		assert.Equal(t, "Burbach Nord", updated.Name)
@@ -469,7 +470,7 @@ func TestProvisioningUpdateSchool(t *testing.T) {
 		h.addOrg(1, "Talent", "talent", false)
 		h.addSchool(10, 1, "Burbach", "burbach").Email = "info@burbach.test"
 
-		updated, err := h.svc.UpdateSchool(context.Background(), 10, schoolChanges(1), testOperatorID, operatorIP)
+		updated, err := h.updateSchool(context.Background(), 10, schoolChanges(1), testOperatorID, operatorIP)
 
 		require.NoError(t, err, "the contact address is optional")
 		assert.Empty(t, updated.Email)
@@ -484,7 +485,7 @@ func TestProvisioningUpdateSchool(t *testing.T) {
 		h.addOrg(2, "Two", "two", false)
 		h.addSchool(10, 1, "Burbach", "burbach")
 
-		updated, err := h.svc.UpdateSchool(context.Background(), 10, schoolChanges(2), testOperatorID, operatorIP)
+		updated, err := h.updateSchool(context.Background(), 10, schoolChanges(2), testOperatorID, operatorIP)
 
 		require.NoError(t, err)
 		assert.Equal(t, ident.ID(int64(2)), updated.OrganizationID)
@@ -500,7 +501,7 @@ func TestProvisioningUpdateSchool(t *testing.T) {
 		h.addOrg(1, "Talent", "talent", false)
 		h.addSchool(10, 1, "Burbach", "burbach")
 
-		_, err := h.svc.UpdateSchool(context.Background(), 10, schoolChanges(1), testOperatorID, operatorIP)
+		_, err := h.updateSchool(context.Background(), 10, schoolChanges(1), testOperatorID, operatorIP)
 
 		require.NoError(t, err)
 		entry := h.onlyAudit(t, domain.AuditActionUpdate, domain.AuditResourceSchool, 10)
@@ -517,7 +518,7 @@ func TestProvisioningUpdateSchool(t *testing.T) {
 		h.addSchool(10, 1, "Burbach", "burbach")
 		h.audit.err = errBoom
 
-		updated, err := h.svc.UpdateSchool(context.Background(), 10, schoolChanges(1), testOperatorID, operatorIP)
+		updated, err := h.updateSchool(context.Background(), 10, schoolChanges(1), testOperatorID, operatorIP)
 
 		require.ErrorIs(t, err, errBoom)
 		assert.Nil(t, updated)
@@ -694,7 +695,7 @@ func TestProvisioningUpdateSchool(t *testing.T) {
 				tc.seed(h)
 			}
 
-			updated, err := h.svc.UpdateSchool(context.Background(), 10, tc.changes, testOperatorID, operatorIP)
+			updated, err := h.updateSchool(context.Background(), 10, tc.changes, testOperatorID, operatorIP)
 
 			assert.Nil(t, updated)
 			tc.check(t, err)
@@ -956,4 +957,40 @@ func TestProvisioningRestoreSchool(t *testing.T) {
 			assert.Empty(t, h.audit.entries)
 		})
 	}
+}
+
+// An edit of a school or an organisation carries the version the operator
+// read (ADR 0311): a stale or missing one is refused before anything is
+// written or audited; the stored version passes. The school's version
+// leaves out the device slots, which have a write of their own.
+func TestProvisioningUpdatesAreBoundToTheReadVersion(t *testing.T) {
+	t.Parallel()
+	h := newHarness(t)
+	org := h.addOrg(1, "Talent", "talent", false)
+	school := h.addSchool(10, 1, "Burbach", "burbach")
+	read := organizationtenancy.SchoolVersion(*school)
+	school.Name = "Burbach am See"
+	slots := 3
+	school.DeviceSlots = &slots
+	changed := organizationtenancy.SchoolVersion(*school)
+	school.DeviceSlots = nil
+	assert.Equal(t, changed, organizationtenancy.SchoolVersion(*school), "the device slots are no part of the version")
+
+	for _, stale := range []string{read, ""} {
+		changes := schoolChanges(1)
+		changes.ExpectedVersion = stale
+		_, err := h.svc.UpdateSchool(context.Background(), 10, changes, testOperatorID, operatorIP)
+		require.ErrorIs(t, err, readstate.ErrChanged, "school version %q", stale)
+		orgChanges := organizationtenancy.OrganizationChanges{Name: "Talent neu", Slug: "talent", Active: true, ExpectedVersion: stale}
+		_, err = h.svc.UpdateOrganization(context.Background(), 1, orgChanges, testOperatorID, operatorIP)
+		require.ErrorIs(t, err, readstate.ErrChanged, "organization version %q", stale)
+	}
+	assert.Empty(t, h.engine.updates, "a refused edit writes nothing")
+	assert.Empty(t, h.audit.entries, "and audits nothing")
+	assert.Equal(t, "Talent", org.Name)
+
+	changes := schoolChanges(1)
+	changes.ExpectedVersion = changed
+	_, err := h.svc.UpdateSchool(context.Background(), 10, changes, testOperatorID, operatorIP)
+	require.NoError(t, err, "the stored version passes")
 }

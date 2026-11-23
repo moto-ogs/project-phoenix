@@ -3,10 +3,12 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // seedTraegerCareContractsStep gives the demo Träger its care contracts
@@ -96,6 +98,7 @@ func seedCareContractTemplates(client *Client, auth AuthRef) (int, error) {
 			OfferingID ident.ID        `json:"offering_id"`
 			Active     bool            `json:"active"`
 			Template   json.RawMessage `json:"template"`
+			Version    string          `json:"version"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil {
@@ -107,12 +110,53 @@ func seedCareContractTemplates(client *Client, auth AuthRef) (int, error) {
 			continue
 		}
 		path := fmt.Sprintf("/traeger/contract-templates/%d/%d", offering.SchoolID, offering.OfferingID)
-		if _, err := client.PutWithAuth(auth, path, seedCareContractTemplate); err != nil {
+		_, err := client.PutWithAuth(auth, path, seedTemplateBody(offering.Version))
+		// Another demo school of the same Träger saved this template since
+		// the read (ADR 0311): it has one now, which is all the seed needs.
+		var refused *APIError
+		if errors.As(err, &refused) && refused.Code == readstate.ChangedCode {
+			continue
+		}
+		if err != nil {
 			return saved, fmt.Errorf("save the contract template of offering %d: %w", offering.OfferingID, err)
 		}
 		saved++
 	}
 	return saved, nil
+}
+
+// seedTemplateBody is the demo template with the version the read of the
+// offering gave (ADR 0311): the save is refused on another one.
+func seedTemplateBody(version string) map[string]any {
+	body := map[string]any{"expected_version": version}
+	for key, value := range seedCareContractTemplate {
+		body[key] = value
+	}
+	return body
+}
+
+// seedTemplateVersion reads the version of one offering's template.
+func seedTemplateVersion(client *Client, auth AuthRef, schoolID, offeringID int64) (string, error) {
+	raw, err := client.GetWithAuth(auth, "/traeger/contract-templates/")
+	if err != nil {
+		return "", fmt.Errorf("read the contract templates: %w", err)
+	}
+	var envelope struct {
+		Data []struct {
+			SchoolID   ident.ID `json:"school_id"`
+			OfferingID ident.ID `json:"offering_id"`
+			Version    string   `json:"version"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(raw, &envelope); err != nil {
+		return "", fmt.Errorf("read the contract templates: %w", err)
+	}
+	for _, offering := range envelope.Data {
+		if offering.SchoolID.Int64() == schoolID && offering.OfferingID.Int64() == offeringID {
+			return offering.Version, nil
+		}
+	}
+	return "", fmt.Errorf("the contract templates list no offering %d of school %d", offeringID, schoolID)
 }
 
 // seedCareContractDrafts creates a draft for every candidate with a

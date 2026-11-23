@@ -68,6 +68,7 @@ export interface TraegerBankAccount {
   bank_name: string;
   is_default: boolean;
   updated_at: string;
+  version: string;
 }
 
 export const TraegerBankAccountSchema: z.ZodType<TraegerBankAccount, unknown> = object<TraegerBankAccount>({
@@ -79,6 +80,7 @@ export const TraegerBankAccountSchema: z.ZodType<TraegerBankAccount, unknown> = 
   bank_name: str,
   is_default: bool,
   updated_at: instant,
+  version: str,
 });
 
 /** Go: organizationtenancy.TraegerProfile */
@@ -87,6 +89,8 @@ export interface TraegerProfile {
   withdrawal: TraegerWithdrawalContact;
   logo: TraegerLogo | null;
   bank_accounts: TraegerBankAccount[] | null;
+  contact_version: string;
+  withdrawal_version: string;
 }
 
 export const TraegerProfileSchema: z.ZodType<TraegerProfile, unknown> = object<TraegerProfile>({
@@ -94,6 +98,8 @@ export const TraegerProfileSchema: z.ZodType<TraegerProfile, unknown> = object<T
   withdrawal: TraegerWithdrawalContactSchema,
   logo: nullable(TraegerLogoSchema),
   bank_accounts: nullable(arr(TraegerBankAccountSchema)),
+  contact_version: str,
+  withdrawal_version: str,
 });
 
 /** Go: organizationtenancy.TraegerDocumentTemplateSummary */
@@ -274,18 +280,59 @@ export const SampleLetterSchema: z.ZodType<SampleLetter, unknown> = object<Sampl
   legal_remedy: optional(arr(BlockSchema)),
 });
 
+/** Go: traeger.BankAccountUpdateRequest */
+export interface BankAccountUpdateRequest {
+  label?: string;
+  account_holder?: string;
+  iban?: string;
+  bic?: string;
+  bank_name?: string;
+  is_default?: boolean;
+  expected_version?: string;
+}
+
 /** Go: traeger.ContactRequest */
 export interface ContactRequest {
   name?: string;
   phone?: string;
   email?: string;
+  expected_version?: string;
 }
+
+/** Go: organizationtenancy.TraegerSavedContact */
+export interface TraegerSavedContact {
+  name: string;
+  phone: string;
+  email: string;
+  version: string;
+}
+
+export const TraegerSavedContactSchema: z.ZodType<TraegerSavedContact, unknown> = object<TraegerSavedContact>({
+  name: str,
+  phone: str,
+  email: str,
+  version: str,
+});
 
 /** Go: traeger.WithdrawalContactRequest */
 export interface WithdrawalContactRequest {
   phone?: string;
   email?: string;
+  expected_version?: string;
 }
+
+/** Go: organizationtenancy.TraegerSavedWithdrawalContact */
+export interface TraegerSavedWithdrawalContact {
+  phone: string;
+  email: string;
+  version: string;
+}
+
+export const TraegerSavedWithdrawalContactSchema: z.ZodType<TraegerSavedWithdrawalContact, unknown> = object<TraegerSavedWithdrawalContact>({
+  phone: str,
+  email: str,
+  version: str,
+});
 
 export const routes = {
   "DELETE /traeger/master-data/bank-accounts/{id}": {
@@ -363,7 +410,7 @@ export const routes = {
     method: "PUT",
     pattern: "/traeger/master-data/bank-accounts/{id}",
     portals: ["org"],
-    request: requestBody<BankAccountRequest>(),
+    request: requestBody<BankAccountUpdateRequest>(),
     response: success(TraegerBankAccountSchema),
   },
   "PUT /traeger/master-data/contact": {
@@ -371,7 +418,7 @@ export const routes = {
     pattern: "/traeger/master-data/contact",
     portals: ["org"],
     request: requestBody<ContactRequest>(),
-    response: success(TraegerContactSchema),
+    response: success(TraegerSavedContactSchema),
   },
   "PUT /traeger/master-data/logo": {
     method: "PUT",
@@ -387,6 +434,6 @@ export const routes = {
     pattern: "/traeger/master-data/withdrawal-contact",
     portals: ["org"],
     request: requestBody<WithdrawalContactRequest>(),
-    response: success(TraegerWithdrawalContactSchema),
+    response: success(TraegerSavedWithdrawalContactSchema),
   },
 } as const;

@@ -27,7 +27,7 @@ func TestProvisioningUpdateSchoolChildQuota(t *testing.T) {
 		h.addOrg(1, "Talent", "talent", false)
 		h.addSchool(10, 1, "Burbach", "burbach")
 
-		updated, err := h.svc.UpdateSchool(context.Background(), 10,
+		updated, err := h.updateSchool(context.Background(), 10,
 			withChildQuota(schoolChanges(1), &organizationtenancy.ChildQuota{Bundles: 2, BundleSize: 50}), testOperatorID, operatorIP)
 
 		require.NoError(t, err)
@@ -50,12 +50,12 @@ func TestProvisioningUpdateSchoolChildQuota(t *testing.T) {
 		bundles := 3
 		school.ChildQuotaBundles, school.ChildQuotaBundleSize = &bundles, 40
 
-		updated, err := h.svc.UpdateSchool(context.Background(), 10,
+		updated, err := h.updateSchool(context.Background(), 10,
 			withChildQuota(schoolChanges(1), &organizationtenancy.ChildQuota{Bundles: 1, BundleSize: 40}), testOperatorID, operatorIP)
 		require.NoError(t, err)
 		assert.Equal(t, 40, updated.ChildQuota().Limit())
 
-		updated, err = h.svc.UpdateSchool(context.Background(), 10, withChildQuota(schoolChanges(1), nil), testOperatorID, operatorIP)
+		updated, err = h.updateSchool(context.Background(), 10, withChildQuota(schoolChanges(1), nil), testOperatorID, operatorIP)
 		require.NoError(t, err)
 		assert.Nil(t, updated.ChildQuota(), "a removed Kinderkontingent means no limit")
 		require.Len(t, h.audit.entries, 2)
@@ -75,7 +75,7 @@ func TestProvisioningUpdateSchoolChildQuota(t *testing.T) {
 		bundles := 2
 		school.ChildQuotaBundles, school.ChildQuotaBundleSize = &bundles, 50
 
-		updated, err := h.svc.UpdateSchool(context.Background(), 10, schoolChanges(1), testOperatorID, operatorIP)
+		updated, err := h.updateSchool(context.Background(), 10, schoolChanges(1), testOperatorID, operatorIP)
 
 		require.NoError(t, err)
 		require.NotNil(t, updated.ChildQuota())
@@ -90,7 +90,7 @@ func TestProvisioningUpdateSchoolChildQuota(t *testing.T) {
 		h.addSchool(10, 1, "Burbach", "burbach")
 
 		for _, quota := range []organizationtenancy.ChildQuota{{Bundles: 0, BundleSize: 50}, {Bundles: 1, BundleSize: 0}} {
-			_, err := h.svc.UpdateSchool(context.Background(), 10, withChildQuota(schoolChanges(1), &quota), testOperatorID, operatorIP)
+			_, err := h.updateSchool(context.Background(), 10, withChildQuota(schoolChanges(1), &quota), testOperatorID, operatorIP)
 			var invalid *organizationtenancy.InvalidProvisioningDataError
 			require.ErrorAs(t, err, &invalid)
 		}
@@ -105,7 +105,7 @@ func TestProvisioningUpdateSchoolChildQuota(t *testing.T) {
 		h.addSchool(10, 1, "Burbach", "burbach")
 		h.audit.err = errBoom
 
-		_, err := h.svc.UpdateSchool(context.Background(), 10,
+		_, err := h.updateSchool(context.Background(), 10,
 			withChildQuota(schoolChanges(1), &organizationtenancy.ChildQuota{Bundles: 2, BundleSize: 50}), testOperatorID, operatorIP)
 
 		require.ErrorIs(t, err, errBoom)

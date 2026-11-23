@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/modules/carecontract/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 type NoticeStore = ports.NoticeStore
@@ -257,8 +258,12 @@ func (n *Notices) newNotice(ctx context.Context, record ContractRecord, state po
 	default:
 		return ports.NewNotice{}, &carecontract.ValidationError{Fields: map[string]string{"kind": "unknown"}}
 	}
-	if notice.EndsOn != nil && !d.input.ExpectedEndsOn.IsZero() && *notice.EndsOn != d.input.ExpectedEndsOn {
-		return ports.NewNotice{}, &carecontract.ValidationError{Fields: map[string]string{"expected_ends_on": "changed"}}
+	// A dated termination holds to the end its author was shown (ADR 0311):
+	// a changed or missing one is refused, so nobody declares an end unseen.
+	if notice.EndsOn != nil {
+		if err := readstate.Check(d.input.ExpectedEndsOn.String(), notice.EndsOn.String()); err != nil {
+			return ports.NewNotice{}, err
+		}
 	}
 	return notice, nil
 }

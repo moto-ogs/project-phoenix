@@ -145,6 +145,7 @@ export default function TraegerExportRecipientPage() {
     loading,
     error,
     mutate,
+    reloadOrThrow,
   } = useTraegerResource(
     id ? traegerBillingKeys.exportRecipient(id) : null,
     () => fetchExportRecipient(id),
@@ -189,14 +190,20 @@ export default function TraegerExportRecipientPage() {
           <RecipientStateNotice recipient={recipient} />
           <ExportRecipientFormCard
             recipient={recipient}
-            onSave={async (draft) => {
-              const saved = await saveExportRecipient(recipient.id, draft);
+            reload={async () => (await reloadOrThrow()).recipient}
+            onSave={async (draft, version) => {
+              const saved = await saveExportRecipient(
+                recipient.id,
+                draft,
+                version,
+              );
               await mutate(
                 { ...page, recipient: saved },
                 { revalidate: false },
               );
               // The list shows whether the recipient is ready.
               void invalidate(traegerBillingKeys.exportRecipients());
+              return saved;
             }}
             onDelete={async () => {
               await deleteExportRecipient(recipient.id);

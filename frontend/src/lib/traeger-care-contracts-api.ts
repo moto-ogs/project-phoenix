@@ -154,6 +154,8 @@ export interface OfferingTemplate {
   readonly priceCents: number | null;
   readonly active: boolean;
   readonly template: ContractTemplate | null;
+  /** The read state a save sends back (ADR 0311). */
+  readonly version: string;
 }
 
 /** One contract per accepted application child at its school. */
@@ -498,6 +500,7 @@ function offeringFromBackend(
           updatedAt: row.template.updated_at,
         }
       : null,
+    version: row.version,
   };
 }
 
@@ -846,16 +849,24 @@ export async function fetchContractTemplates(): Promise<OfferingTemplate[]> {
   return rows.map(offeringFromBackend);
 }
 
+/**
+ * Saves the conditions of one offering over the version they were read with
+ * (ADR 0311); a changed template answers `general.changed_since_read`.
+ */
 export async function saveContractTemplate(
   schoolId: string,
   offeringId: string,
   terms: ContractTerms,
+  expectedVersion: string,
 ): Promise<OfferingTemplate> {
   return offeringFromBackend(
     await bffJson(
       "org",
       "PUT /traeger/contract-templates/{schoolId}/{offeringId}",
-      { params: { schoolId, offeringId }, body: termsToBackend(terms) },
+      {
+        params: { schoolId, offeringId },
+        body: { ...termsToBackend(terms), expected_version: expectedVersion },
+      },
     ),
   );
 }

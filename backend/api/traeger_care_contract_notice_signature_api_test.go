@@ -24,7 +24,7 @@ import (
 func TestSignedContractIsWithdrawnAndTakesNoFurtherSignature(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Unterschrift Widerruf")
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	contract, link := sentCareContract(t, f, f.child)
 
 	rec := publicSigning(t, f.traeger, http.MethodPost, link+"/sign", map[string]any{"method": "drawn",
@@ -70,7 +70,7 @@ func TestSignedContractIsWithdrawnAndTakesNoFurtherSignature(t *testing.T) {
 func TestPaperContractIsTerminatedAndTakesNoFurtherSignature(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Papier Kündigung")
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	contract, link := sentCareContract(t, f, f.child)
 	pdf := []byte("%PDF-1.4 unterschrieben")
 	rec := paperUpload(t, f, f.office.token, contract, "vertrag.pdf", pdf)
@@ -85,7 +85,7 @@ func TestPaperContractIsTerminatedAndTakesNoFurtherSignature(t *testing.T) {
 
 	today := concludedOn(t, f, contract).String()
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, path, map[string]any{"kind": "kuendigung",
-		"termination_kind": "ordentlich", "received_on": today})
+		"termination_kind": "ordentlich", "received_on": today, "expected_ends_on": shownOrdinaryEnd(t, f, path, concludedOn(t, f, contract))})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, carecontract.StatusTerminated, decodeSchoolPortalData[noticeOptionsBody](t, rec.Body.Bytes()).Status)
 
@@ -121,7 +121,7 @@ func assertLinkClosed(t *testing.T, f careContractFixture, link, ended string) {
 func TestWithdrawnContractClosesTheLinkOfItsMail(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Papier Widerruf")
-	require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	contract, link := sentCareContract(t, f, f.child)
 	_, err := f.db.ExecContext(context.Background(), `UPDATE platform.email_outbox SET status = 'sent', sent_at = NOW(),
 		delivery_state = 'delivered', delivery_state_at = NOW()

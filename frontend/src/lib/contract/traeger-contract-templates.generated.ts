@@ -58,6 +58,7 @@ export interface OfferingTemplate {
   early_start_text: string;
   term_text: string;
   notice_text: string;
+  version: string;
 }
 
 export const OfferingTemplateSchema: z.ZodType<OfferingTemplate, unknown> = object<OfferingTemplate>({
@@ -74,6 +75,7 @@ export const OfferingTemplateSchema: z.ZodType<OfferingTemplate, unknown> = obje
   early_start_text: str,
   term_text: str,
   notice_text: str,
+  version: str,
 });
 
 /** Go: carecontracthttp.ContractTemplateRequest */
@@ -88,6 +90,7 @@ export interface ContractTemplateRequest {
   statute_title?: string;
   statute_url?: string;
   contract_partner?: string;
+  expected_version?: string;
 }
 
 export const routes = {

@@ -80,6 +80,7 @@ func findOperatorSchool(rt *Runtime, schoolID int64) (map[string]any, error) {
 			Email          string   `json:"email"`
 			Active         bool     `json:"active"`
 			Hidden         bool     `json:"hidden"`
+			Version        string   `json:"version"`
 		} `json:"data"`
 	}
 	if err := parseJSON(raw, &payload); err != nil {
@@ -93,6 +94,8 @@ func findOperatorSchool(rt *Runtime, schoolID int64) (map[string]any, error) {
 			"organization_id": school.OrganizationID, "name": school.Name, "slug": school.Slug,
 			"subdomain": school.Subdomain, "address": school.Address, "city": school.City, "zip": school.Zip,
 			"phone": school.Phone, "email": school.Email, "active": school.Active, "hidden": school.Hidden,
+			// The school as the list showed it (ADR 0311).
+			"expected_version": school.Version,
 		}, nil
 	}
 	return nil, fmt.Errorf("school %d not found", schoolID)

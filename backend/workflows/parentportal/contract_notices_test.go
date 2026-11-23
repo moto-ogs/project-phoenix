@@ -86,7 +86,7 @@ func TestParentsEndAContractOnlyWithTheRelationshipRight(t *testing.T) {
 		parentService.ContractNoticeInput{Kind: "kuendigung", TerminationKind: "ordentlich", Reason: "Umzug"})
 	require.Error(t, err, "an ordinary termination carries no reason")
 	done, err := portal.DeclareContractNotice(ctx, chain.AccountID, organization, own,
-		parentService.ContractNoticeInput{Kind: "kuendigung", TerminationKind: "ordentlich"})
+		parentService.ContractNoticeInput{Kind: "kuendigung", TerminationKind: "ordentlich", ExpectedEndsOn: *options.OrdinaryEndsOn})
 	require.NoError(t, err)
 	assert.Equal(t, "gekuendigt", done.Status)
 	require.NotNil(t, done.Notice)
@@ -238,6 +238,13 @@ func TestSigningPageClosesOnceTheContractEnded(t *testing.T) {
 		_, err = portal.ContractSigningView(ctx, chain.AccountID, organization, contract)
 		require.NoError(t, err, "%s: a signed contract shows its signature", declaration.Kind)
 
+		if declaration.Kind == "kuendigung" {
+			// The parents declare to the end they were shown (ADR 0311).
+			shown, err := portal.ContractNoticeOptions(ctx, chain.AccountID, organization, contract)
+			require.NoError(t, err)
+			require.NotNil(t, shown.OrdinaryEndsOn)
+			declaration.ExpectedEndsOn = *shown.OrdinaryEndsOn
+		}
 		done, err := portal.DeclareContractNotice(ctx, chain.AccountID, organization, contract, declaration)
 		require.NoError(t, err, declaration.Kind)
 		require.NotEqual(t, "aktiv", done.Status, declaration.Kind)

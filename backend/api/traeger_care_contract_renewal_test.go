@@ -46,7 +46,7 @@ func TestRenewalAcceptanceReachesTheContractIntake(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			f := newCareContractFixture(t, "Träger Wiederanmeldung "+tc.name)
-			require.Equal(t, http.StatusOK, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, f.offering), careContractTemplate).Code)
+			require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 			intake, rollovers, schemaID := newRenewalContractFlow(t, f)
 
 			request, child := rollRenewal(t, f, intake, rollovers, schemaID, tc.mode)
@@ -319,7 +319,7 @@ func careContractAcceptanceText(t *testing.T, f careContractFixture) string {
 // traegerTemplateFor saves the conditions of one offering.
 func traegerTemplateFor(t *testing.T, f careContractFixture, offeringID int64, template map[string]any) {
 	t.Helper()
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, templatePath(f.school, offeringID), template)
+	rec := putTemplate(t, f.traeger, f.office.token, f.school, offeringID, template)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 }
 

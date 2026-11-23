@@ -19,7 +19,12 @@ export default function EditReportTemplatePage() {
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
   const { schools, error: schoolsError } = useTraegerSchools();
-  const { templates, error: templatesError, mutate } = useReportTemplates();
+  const {
+    templates,
+    error: templatesError,
+    mutate,
+    reload,
+  } = useReportTemplates();
   const invalidateFamily = useInvalidateFamily();
   const listHref = traegerPath("/traeger/berichte");
   const template = templates?.find((entry) => entry.id === id) ?? null;
@@ -49,12 +54,19 @@ export default function EditReportTemplatePage() {
         <ReportTemplateForm
           key={template.id}
           initial={templateInputOf(template)}
+          stored={{
+            template,
+            reload: async () =>
+              (await reload()).find((entry) => entry.id === template.id),
+          }}
           schools={schools}
           takenNames={templates
             .filter((entry) => entry.id !== template.id)
             .map((entry) => entry.name)}
           saveLabel="Speichern"
-          onSave={(input) => updateReportTemplate(template.id, input)}
+          onSave={(input, version) =>
+            updateReportTemplate(template.id, input, version)
+          }
           onCancel={() => router.push(listHref)}
           onSaved={(saved) => {
             void mutate();

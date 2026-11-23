@@ -105,6 +105,8 @@ export interface SchoolSummary {
   childQuotaCount: number;
   /** Geräteplätze der Schule (#2312); null, solange moto keine Grenze gesetzt hat. */
   deviceSlots: number | null;
+  /** Der gelesene Stand, den eine Änderung mitschickt (ADR 0311). */
+  version: string;
 }
 
 export function mapSchoolSummary(
@@ -134,6 +136,7 @@ export function mapSchoolSummary(
     childQuotaBundleSize: data.child_quota_bundle_size,
     childQuotaCount: data.child_quota_count,
     deviceSlots: data.device_slots,
+    version: data.version,
   };
 }
 
@@ -152,6 +155,7 @@ export function summaryToOrganization(
     createdAt: summary.createdAt,
     updatedAt: summary.updatedAt,
     testSystem: summary.testSystem,
+    version: summary.version,
   };
 }
 
@@ -172,6 +176,7 @@ export function summaryToSchool(summary: SchoolSummary): School {
     deletedAt: summary.deletedAt,
     createdAt: summary.createdAt,
     updatedAt: summary.updatedAt,
+    version: summary.version,
   };
 }
 
@@ -186,6 +191,8 @@ export interface Organization {
   createdAt: string;
   updatedAt: string;
   testSystem: boolean;
+  /** Der gelesene Stand, den eine Änderung mitschickt (ADR 0311). */
+  version: string;
 }
 
 export interface School {
@@ -205,6 +212,8 @@ export interface School {
   createdAt: string;
   updatedAt: string;
   organization?: Organization;
+  /** Der gelesene Stand, den eine Änderung mitschickt (ADR 0311). */
+  version: string;
 }
 
 export interface Invitation {
@@ -383,6 +392,7 @@ export function mapOrganization(
     createdAt: data.created_at,
     updatedAt: data.updated_at,
     testSystem: data.test_system,
+    version: data.version,
   };
 }
 
@@ -406,6 +416,7 @@ export function mapSchool(data: sharedContract.School): School {
     organization: data.organization
       ? mapOrganization(data.organization)
       : undefined,
+    version: data.version,
   };
 }
 

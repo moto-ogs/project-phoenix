@@ -73,13 +73,21 @@ func (f traegerLifecycleFixture) call(t *testing.T, method, path string, body an
 // setActive switches the Träger on or off through the operator's edit route.
 func (f traegerLifecycleFixture) setActive(t *testing.T, active bool) *httptest.ResponseRecorder {
 	t.Helper()
-	var organization struct {
-		Name string `bun:"name"`
-		Slug string `bun:"slug"`
+	// The operator edits the organisation as the list showed it (ADR 0311).
+	rec := f.call(t, http.MethodGet, "/organizations/summaries", nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	var listed struct {
+		Data []organizationtenancy.OrganizationSummary `json:"data"`
 	}
-	require.NoError(t, f.db.NewRaw(`SELECT name, slug FROM platform.organizations WHERE id = ?`, f.organizationID).Scan(f.ctx, &organization))
-	return f.call(t, http.MethodPut, fmt.Sprintf("/organizations/%d", f.organizationID),
-		map[string]any{"name": organization.Name, "slug": organization.Slug, "active": active})
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &listed))
+	for _, organization := range listed.Data {
+		if organization.ID.Int64() == f.organizationID {
+			return f.call(t, http.MethodPut, fmt.Sprintf("/organizations/%d", f.organizationID),
+				map[string]any{"name": organization.Name, "slug": organization.Slug, "active": active, "expected_version": organization.Version})
+		}
+	}
+	t.Fatalf("the summaries list no organisation %d", f.organizationID)
+	return nil
 }
 
 // openOrder reads the open erasure order; nil without one.
