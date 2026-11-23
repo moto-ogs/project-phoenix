@@ -12,9 +12,10 @@
  * Häkchen „Auch diese Serien absagen“ setzt; der Dialog nennt sie mit Namen.
  * Eltern bekommen keine Nachricht.
  *
- * Die Zählung kommt aus dem gemeinsamen Cache. Bestätigt wird mit ihrem
- * Fingerabdruck: sagte moto inzwischen andere Termine ab, lehnt der Server
- * ab (ADR 0311), und der Dialog zählt neu.
+ * Die Zählung kommt aus dem gemeinsamen Cache und zählt je Öffnen neu.
+ * Bestätigt wird mit dem Fingerabdruck der gezeigten Zählung: sagte moto
+ * inzwischen andere Termine ab, lehnt der Server ab (ADR 0311), und der
+ * Dialog zählt neu.
  */
 
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
@@ -28,11 +29,11 @@ import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { formatClosingDayRange } from "~/lib/closing-day-helpers";
 import { berlinTodayISO, parseISODate, toISODate } from "~/lib/date-helpers";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
-import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useReadDraftLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { SCHOOL_VACATION_HINTS_KEY } from "~/lib/school-vacations-api";
-import { isChangedSinceRead } from "~/lib/api-error";
-import { useSWRAuth, useTenantMutateMatching } from "~/lib/swr";
+import { useTenantMutateMatching } from "~/lib/swr";
+import { useReadDraft } from "~/lib/swr/read-draft";
 import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import { timetableService } from "~/lib/timetable-api";
 import type { BulkCancelResult } from "~/lib/timetable-types";
@@ -104,22 +105,25 @@ export function BulkCancelAppointmentsModal({
   const formErrors = useApiFormError();
   const { clear: clearError } = formErrors;
   const counting = isOpen && from !== "" && to !== "";
-  const {
-    data: preview,
-    error: countError,
-    mutate: recount,
-  } = useSWRAuth(
-    counting
+  const count = useReadDraft<
+    BulkCancelResult,
+    BulkCancelResult,
+    string,
+    BulkCancelResult
+  >({
+    key: counting
       ? tenantDailyKeys.bulkCancelPreview(from, to, includeSeries)
       : null,
-    () => timetableService.bulkCancel(from, to, true, includeSeries),
-    { keepPreviousData: false },
-  );
-  const countLoad = useSwrResourceLoadError(
-    [{ data: preview, error: countError }],
-    "das Zählen der Termine",
-    () => recount(),
-  );
+    fetcher: () => timetableService.bulkCancel(from, to, true, includeSeries),
+    token: (counted) => counted.fingerprint,
+    // Bestätigt wird die gezeigte Zählung.
+    follow: false,
+    // Der Dialog schließt nach dem Absagen: kein Neuzählen.
+    answer: (_saved, shown) => shown,
+  });
+  const countFailed = count.status === "loadFailed";
+  const preview = countFailed ? undefined : count.base;
+  const countLoadError = useReadDraftLoadError(count, "das Zählen der Termine");
   const latestConfirmRef = useRef<() => void>(() => undefined);
   const { success: toastSuccess } = useToast();
   const refreshPlan = useTenantMutateMatching(PLAN_CACHE_PREFIXES);
@@ -146,42 +150,37 @@ export function BulkCancelAppointmentsModal({
   };
 
   const handleConfirm = async () => {
-    if (!preview || countError || cancelling) return;
+    if (!preview || !count.canSubmit || cancelling) return;
     setCancelling(true);
     formErrors.clear();
-    let result: Awaited<ReturnType<typeof timetableService.bulkCancel>>;
-    try {
-      result = await timetableService.bulkCancel(
-        from,
-        to,
-        false,
-        includeSeries,
-        preview.fingerprint,
-      );
-    } catch (err) {
+    const result = await count.submit((fingerprint) =>
+      timetableService.bulkCancel(from, to, false, includeSeries, fingerprint),
+    );
+    setCancelling(false);
+    if (!result.ok) {
       logger.error("bulk_cancel_failed", {
         from,
         to,
-        error: err instanceof Error ? err.message : String(err),
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
       });
-      // Andere Termine als gezählt: der Dialog zählt neu, bestätigt wird die
+      // Andere Termine als gezählt: `reload` zählt neu, bestätigt wird die
       // neue Zählung, nicht dieselbe Anfrage noch einmal.
-      const changed = isChangedSinceRead(err);
-      if (changed) void recount();
-      void formErrors.show(err, {
+      void formErrors.show(result.error, {
         object: "die Absage der Termine",
-        retry: changed ? undefined : () => latestConfirmRef.current(),
+        retry: () => latestConfirmRef.current(),
+        reload: result.reload,
       });
-      setCancelling(false);
       return;
     }
-    setCancelling(false);
     toastSuccess(
-      result.count === 1
+      result.saved.count === 1
         ? "1 Termin ist abgesagt."
-        : `${result.count} Termine sind abgesagt.`,
+        : `${result.saved.count} Termine sind abgesagt.`,
     );
-    onCancelled?.(result.count);
+    onCancelled?.(result.saved.count);
     onClose();
     await planAfterWrite.refresh();
   };
@@ -229,10 +228,14 @@ export function BulkCancelAppointmentsModal({
               fromMin={parseISODate(berlinTodayISO())}
             />
           </div>
-          {counting && !preview && !countError && (
+          {counting && count.status === "loading" && (
             <p>Die Termine werden gezählt.</p>
           )}
-          <LoadErrorAlert error={countLoad.error} />
+          {/* Nach einer Ablehnung nennt der Fehler oben das gescheiterte
+              Zählen schon, mit Wiederholen. */}
+          {countFailed && !formErrors.error ? (
+            <LoadErrorAlert error={countLoadError} />
+          ) : null}
           <LoadErrorAlert error={planAfterWrite.error} />
           {ready && ready.count === 0 && keptSeries.length === 0 && (
             <p>{rangeText} sind keine Termine mehr geplant.</p>
@@ -273,7 +276,9 @@ export function BulkCancelAppointmentsModal({
       }
       gate={{ mode: "twoStep", firstStepLabel: "Termine absagen" }}
       cancelLabel="Termine behalten"
-      confirmDisabled={!ready || ready.count === 0 || cancelling}
+      confirmDisabled={
+        !ready || ready.count === 0 || !count.canSubmit || cancelling
+      }
       onConfirm={handleConfirm}
       onClose={onClose}
       loading={cancelling}

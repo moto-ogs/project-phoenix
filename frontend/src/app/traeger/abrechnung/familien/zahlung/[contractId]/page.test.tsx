@@ -209,8 +209,8 @@ describe("TraegerFamilyPaymentPage (#7770)", () => {
     expect(await screen.findByTestId("billing-form")).toHaveTextContent(
       "Carla",
     );
-    const props = form.props as { onChangedSinceRead: () => void };
-    act(() => props.onChangedSinceRead());
+    const props = form.props as { reload: () => Promise<undefined> };
+    await act(() => props.reload());
     expect(await screen.findByText("Dora")).toBeInTheDocument();
     expect(api.fetchContractFamilyBilling).toHaveBeenCalledTimes(2);
     expect(form.props).toMatchObject({ version: "v-8" });

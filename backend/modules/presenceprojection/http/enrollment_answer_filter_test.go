@@ -225,3 +225,66 @@ func TestEnrollmentAnswerFilterNeedsTheChildPageAccess(t *testing.T) {
 	unfiltered := authExec(t, tc, birthdayExportRequest(t, `{"format":"xlsx","preset":"birthday_list","filters":{"months":["09"]}}`), claims, read)
 	assert.Equal(t, http.StatusOK, unfiltered.Code)
 }
+
+// answerFilterChildren reads the children the options name per answer.
+func answerFilterChildren(t *testing.T, tc *testContext, reader sessiontoken.AppClaims, query string) (int, map[string][]int64) {
+	t.Helper()
+	rr := authExec(t, tc, testutil.NewRequest("GET", "/enrollment-answer-filters"+query, nil), reader, []string{"users:read"})
+	if rr.Code != http.StatusOK {
+		return rr.Code, nil
+	}
+	var options struct {
+		Data []struct {
+			Key     string `json:"key"`
+			Options []struct {
+				Value      string       `json:"value"`
+				Count      int          `json:"count"`
+				StudentIDs []testpkg.ID `json:"student_ids"`
+			} `json:"options"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &options))
+	children := map[string][]int64{}
+	for _, filter := range options.Data {
+		for _, option := range filter.Options {
+			ids := make([]int64, 0, len(option.StudentIDs))
+			for _, id := range option.StudentIDs {
+				ids = append(ids, int64(id))
+			}
+			require.Len(t, ids, option.Count, "the count is the children named")
+			children[filter.Key+"="+option.Value] = ids
+		}
+	}
+	return rr.Code, children
+}
+
+// TestEnrollmentAnswerFilterNamesTheChildrenOfThePlanningDay lets the child
+// list count an answer against its own filters (#7645): the options name the
+// children the list shows for each answer, on the list's planning day. A
+// child whose care starts later counts from its start on; a day the list
+// cannot plan is refused like on the list.
+func TestEnrollmentAnswerFilterNamesTheChildrenOfThePlanningDay(t *testing.T) {
+	t.Parallel()
+	tc := setupStudentsRouteWithCareLifecycle(t, false, fixedCalendarClock)
+	today := studentsTestToday
+	start, until := today.AddDays(3), today.AddDays(300)
+	swimmer := testpkg.CreateTestStudent(t, tc.db, "Svea", "Schwimmt", "2a").ID
+	starter := testpkg.CreateTestStudent(t, tc.db, "Sami", "Startet", "2a").ID
+	testpkg.SetStudentLifecycle(t, tc.db, starter, testpkg.StudentStatusPending, &start, &until)
+	learner := testpkg.CreateTestStudent(t, tc.db, "Lea", "Lernt", "2b").ID
+	registrationAnswers(t, tc, map[int64]bool{swimmer: true, starter: true, learner: false})
+	reader := answerReader(t, tc)
+
+	code, now := answerFilterChildren(t, tc, reader, "")
+	require.Equal(t, http.StatusOK, code)
+	assert.Equal(t, []int64{swimmer}, now["seepferdchen=true"], "today the list shows the swimmer only")
+	assert.Equal(t, []int64{learner}, now["seepferdchen=false"])
+
+	_, planned := answerFilterChildren(t, tc, reader, "?date="+start.String())
+	assert.ElementsMatch(t, []int64{swimmer, starter}, planned["seepferdchen=true"], "from its care start the child counts")
+
+	code, _ = answerFilterChildren(t, tc, reader, "?date="+today.AddDays(-1).String())
+	assert.Equal(t, http.StatusBadRequest, code, "a past day has no plan, as on the list")
+	code, _ = answerFilterChildren(t, tc, reader, "?date=morgen")
+	assert.Equal(t, http.StatusBadRequest, code)
+}

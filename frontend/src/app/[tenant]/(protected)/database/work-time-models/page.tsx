@@ -35,7 +35,12 @@ import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { STALE_DATA_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { workTimeModelService, type WorkTimeModel } from "~/lib/staff-api";
 import { startOfWeek, toDateKey } from "~/lib/staff-metrics-helpers";
-import { useInvalidateMatching, useSWRAuth, useTenantMutate } from "~/lib/swr";
+import {
+  revalidateOrThrow,
+  useInvalidateMatching,
+  useSWRAuth,
+  useTenantMutate,
+} from "~/lib/swr";
 import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
 import { workTimeModelKeys } from "~/lib/swr/staff-keys";
 import {
@@ -224,14 +229,10 @@ function WorkTimeModelsPageContent() {
   const tenantMutate = useTenantMutate();
   const invalidate = useInvalidateMatching();
   const discardRefused = useDiscardRefusedEntity();
-  const {
-    data: cachedData,
-    isLoading,
-    error: swrError,
-    mutate,
-  } = useSWRAuth<WorkTimeModel[]>(workTimeModelKeys.catalog(), () =>
+  const list = useSWRAuth<WorkTimeModel[]>(workTimeModelKeys.catalog(), () =>
     workTimeModelService.listWithUsage(),
   );
+  const { data: cachedData, isLoading, error: swrError, mutate } = list;
   const accessRefused =
     swrError instanceof ApiError && isAccessRefusal(swrError);
   const data = accessRefused ? undefined : cachedData;
@@ -252,15 +253,16 @@ function WorkTimeModelsPageContent() {
 
   // Eine Änderung schreibt das Soll aller zugeordneten Personen neu: die
   // Auswahl in der Personalakte und jede Soll-Ansicht laden neu.
-  const onChanged = useCallback(
-    () =>
-      Promise.all([
-        tenantMutate(CACHE_KEY),
-        tenantMutate(STAFF_PICKER_KEY),
-        invalidate(isStaleAfterModelSave),
-      ]),
-    [tenantMutate, invalidate],
-  );
+  // Lehnt ab, wenn das Lesen scheitert (ADR 0311), mit der Liste als
+  // Antwort.
+  const onChanged = useCallback(async () => {
+    const [stored] = await Promise.all([
+      revalidateOrThrow(list),
+      tenantMutate(STAFF_PICKER_KEY),
+      invalidate(isStaleAfterModelSave),
+    ]);
+    return stored;
+  }, [list, tenantMutate, invalidate]);
 
   const items = useMemo(
     () =>

@@ -22,7 +22,8 @@ const meta: Meta<typeof RoomStammdatenTab> = {
   component: RoomStammdatenTab,
   args: {
     room,
-    onSave: async () => {},
+    onSave: async () => room,
+    reload: async () => room,
   },
   // Der Tab zeigt Speicherfehler über den Fehlerpfad der Seite (#7108: ohne
   // ihn brach die Story beim Rendern ab).

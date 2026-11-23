@@ -8,7 +8,7 @@
 // steht im Zugriffsprotokoll jeder Schule und wird deshalb bei jedem Öffnen
 // neu gelesen; das Verknüpfen trägt ihren Fingerabdruck (ADR 0311).
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useFreshTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { ChoiceTile } from "~/components/ui/choice-tile";
 import { DataField, DataGrid } from "~/components/ui/data-field";
@@ -23,8 +23,8 @@ import { SectionLabel } from "~/components/ui/section-label";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { useApiFormError } from "~/contexts/ToastContext";
-import { isChangedSinceRead } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { traegerStaffKeys } from "~/lib/swr/traeger-staff-keys";
 import {
   linkStaff,
@@ -38,6 +38,9 @@ import {
 import { STAFF_FIELD_LABELS, staffFieldValue } from "./staff-record-format";
 
 const logger = createLogger({ component: "StaffLinkModal" });
+
+type Choices = Partial<Record<StaffRecordField, string>>;
+const NO_CHOICES: Choices = {};
 
 /** Wo die Werte gleich sind, zeigt der Dialog sie nur zur Kontrolle. */
 function agreedValue(preview: StaffLinkPreview, field: StaffRecordField) {
@@ -57,14 +60,11 @@ export function StaffLinkModal({
   onLinked: (record: StaffRecordDetail) => void;
 }>) {
   const isOpen = request !== null;
-  const {
-    data: preview,
-    error: previewError,
-    reload: reloadPreview,
-  } = useFreshTraegerResource(
-    request
-      ? traegerStaffKeys.linkPreview(request.recordId, request.members)
-      : null,
+  const previewKey = request
+    ? traegerStaffKeys.linkPreview(request.recordId, request.members)
+    : null;
+  const read = useFreshTraegerResource(
+    previewKey,
     () =>
       previewStaffLink({
         recordId: request?.recordId ?? null,
@@ -73,18 +73,37 @@ export function StaffLinkModal({
       }),
     "die Vorschau",
   );
-  const [choices, setChoices] = useState<
-    Partial<Record<StaffRecordField, string>>
-  >({});
+  // The values the dialog shows are the ones the link confirms (ADR 0311):
+  // the choices rest on them, and after a refusal the new values show with
+  // the choices starting over; nothing is sent until they are read.
+  const link = useDraftOn<StaffLinkPreview, Choices, string, StaffRecordDetail>(
+    {
+      opening: previewKey,
+      data: read.data ?? undefined,
+      error: read.data === null ? read.failure : undefined,
+      reload: read.reloadOrThrow,
+    },
+    {
+      token: (shown) => shown.fingerprint,
+      toDraft: () => NO_CHOICES,
+      follow: false,
+      // The dialog closes after linking: no further read (each one is an
+      // access-log entry at every school).
+      answer: (_saved, shown) => shown,
+    },
+  );
+  const preview = link.base ?? null;
+  const previewError = read.error;
+  const choices = link.draft ?? NO_CHOICES;
+  const setChoices = link.setDraft;
   const save = useFormModalPending(isOpen);
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
   const { clear: clearErrors } = formErrors;
 
-  // A new request starts without the choices and errors of the one before.
+  // A new request starts without the errors of the one before.
   useEffect(() => {
     if (!request) return;
-    setChoices({});
     clearErrors();
   }, [request, clearErrors]);
 
@@ -107,27 +126,32 @@ export function StaffLinkModal({
       );
       return;
     }
+    if (!link.canSubmit) return;
     await save.run(async (op) => {
-      try {
-        const record = await linkStaff({
+      const result = await link.submit((fingerprint, chosen) =>
+        linkStaff({
           ...request,
-          choices,
-          expectedFingerprint: preview.fingerprint,
-        });
-        if (op.isCurrent()) onLinked(record);
-      } catch (err) {
-        logger.error("traeger_staff_link_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (!op.isCurrent()) return;
-        // A school changed a value since the preview: the dialog shows the
-        // values again and the choices start over.
-        if (isChangedSinceRead(err)) {
-          setChoices({});
-          reloadPreview();
-        }
-        void formErrors.show(err, { object: "die Personalakte" });
+          choices: chosen,
+          expectedFingerprint: fingerprint,
+        }),
+      );
+      if (result.ok) {
+        if (op.isCurrent()) onLinked(result.saved);
+        return;
       }
+      logger.error("traeger_staff_link_failed", {
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
+      });
+      if (!op.isCurrent()) return;
+      // A school changed a value since the preview: `reload` shows the
+      // values again and the choices start over.
+      void formErrors.show(result.error, {
+        object: "die Personalakte",
+        reload: result.reload,
+      });
     });
   };
 
@@ -148,8 +172,12 @@ export function StaffLinkModal({
           onCancel={onClose}
           onSave={() => formRef.current?.requestSubmit()}
           saving={save.pending}
-          disabled={!preview}
-          disabledReason="Die Vorschau lädt noch."
+          disabled={!preview || !link.canSubmit}
+          disabledReason={
+            link.status === "loadFailed"
+              ? "Lade zuerst die Vorschau neu."
+              : "Die Vorschau lädt noch."
+          }
           saveLabel={joinsRecord ? "Hinzufügen" : "Akte anlegen"}
         />
       }

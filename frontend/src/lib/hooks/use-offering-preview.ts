@@ -20,9 +20,8 @@ const logger = createLogger({ component: "useOfferingPreview" });
 /**
  * Reads the preview of `key` through the shared cache; a null key reads
  * nothing. A failed load is shown where the preview is missing, with a
- * retry. A write the preview confirms sends its fingerprint (ADR 0311), so a
- * cached preview never connects other children than it shows; `reload`
- * reads it again after such a refusal.
+ * retry. Advisory only: a write that confirms a preview reads it through
+ * `useReadDraft` (ADR 0311, „Mit Angebot verbinden“).
  */
 function usePreviewLoad(
   key: string | null,
@@ -46,7 +45,6 @@ function usePreviewLoad(
     preview: data ?? null,
     loading: isLoading,
     error: loadError,
-    reload: () => void mutate(),
   };
 }
 

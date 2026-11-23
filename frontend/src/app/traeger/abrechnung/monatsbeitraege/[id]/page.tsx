@@ -43,6 +43,8 @@ import {
 } from "~/components/traeger/care-debit-hints";
 import { usePrenotificationDays } from "~/components/traeger/use-prenotification-days";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { useDraftOn } from "~/lib/swr/read-draft";
+import { isReadStateRefusal } from "~/lib/api-error";
 import { CareLettersSummaryCard } from "~/components/traeger/care-letters-summary-card";
 import {
   type OpenPoint,
@@ -204,6 +206,7 @@ export default function TraegerCareRunPage() {
     error: loadError,
     mutate,
     reload,
+    reloadOrThrow,
   } = useTraegerResource(
     runId ? traegerBillingRunKeys.careRun(runId) : null,
     () => fetchCareRun(runId),
@@ -211,6 +214,26 @@ export default function TraegerCareRunPage() {
   );
   const invalidateFamily = useInvalidateFamily();
   const [confirming, setConfirming] = useState(false);
+  // The release confirms the run as the dialog opened on it (ADR 0311):
+  // a newer read in the background does not change what is confirmed, and
+  // after a refusal the stored run shows.
+  const releaseRead = useDraftOn<CareRunDetail, CareRunDetail, string, unknown>(
+    {
+      opening: confirming && run ? run.id : null,
+      data: run ?? undefined,
+      reload: reloadOrThrow,
+    },
+    // The dialog closes after the release or its refusal; reopened, it
+    // confirms the run then on screen.
+    { token: (shown) => shown.fingerprint, follow: false },
+  );
+  const releaseShown = async <A,>(
+    send: (shown: CareRunDetail) => Promise<A>,
+  ) => {
+    const shown = releaseRead.base ?? run;
+    if (!shown) throw new Error("no run to release");
+    return send(shown);
+  };
   const [releasing, setReleasing] = useState(false);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const [discarding, setDiscarding] = useState(false);
@@ -242,7 +265,7 @@ export default function TraegerCareRunPage() {
     if (!run) return;
     setReleasing(true);
     try {
-      const released = await releaseCareRun(run);
+      const released = await releaseShown(releaseCareRun);
       await changed(released);
       // The exports list the released run.
       void invalidateFamily(traegerBillingKeys.exportRuns());
@@ -259,8 +282,11 @@ export default function TraegerCareRunPage() {
         error: err instanceof Error ? err.message : String(err),
       });
       setConfirming(false);
-      void releaseErrors.show(err, { object: "der Monatslauf" });
-      reload();
+      void releaseErrors.show(err, {
+        object: "der Monatslauf",
+        reload: reloadOrThrow,
+      });
+      if (!isReadStateRefusal(err)) reload();
     } finally {
       setReleasing(false);
     }
@@ -280,8 +306,11 @@ export default function TraegerCareRunPage() {
         error: err instanceof Error ? err.message : String(err),
       });
       setConfirmingDiscard(false);
-      void releaseErrors.show(err, { object: "der Monatslauf" });
-      reload();
+      void releaseErrors.show(err, {
+        object: "der Monatslauf",
+        reload: reloadOrThrow,
+      });
+      if (!isReadStateRefusal(err)) reload();
     } finally {
       setDiscarding(false);
     }
@@ -301,8 +330,11 @@ export default function TraegerCareRunPage() {
       logger.error("traeger_care_invoice_include_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
-      void reviewErrors.show(err, { object: "die Rechnung" });
-      reload();
+      void reviewErrors.show(err, {
+        object: "die Rechnung",
+        reload: reloadOrThrow,
+      });
+      if (!isReadStateRefusal(err)) reload();
     } finally {
       setReturning(null);
     }

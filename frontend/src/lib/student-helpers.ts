@@ -234,6 +234,12 @@ export interface EnrollmentAnswerFilter {
   readonly options: ReadonlyArray<{
     readonly value: string;
     readonly label: string;
+    /** Children the unfiltered list shows for the day with this answer. */
     readonly count: number;
+    /**
+     * The same children by ID, so the list counts the answer against its
+     * other filters (#7645).
+     */
+    readonly studentIds: readonly string[];
   }>;
 }

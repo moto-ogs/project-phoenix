@@ -875,6 +875,59 @@ describe("PickupTimeModal — failed preload guard", () => {
     );
   });
 
+  // ADR 0311 rule 6: a failed read of the request after a refusal says so,
+  // stops waiting, and sends nothing with the refused version.
+  it("names a failed read of a refused pickup request and sends nothing", async () => {
+    const update = vi
+      .spyOn(parentApi, "updatePickupChangeRequest")
+      .mockRejectedValue(
+        new ApiError("changed since it was read", 409, {
+          code: "general.changed_since_read",
+        }),
+      );
+    const stored = {
+      version: "v1",
+      departure_mode: null,
+      is_self: true,
+      signed: false,
+      id: "request-edit",
+      date: todayISO(),
+      pickup_time: "14:30",
+      reason: "appointment",
+      status: "pending",
+      created_at: "2026-09-09T08:00:00Z",
+    };
+    render(
+      <PickupTimeModal
+        studentId="1"
+        careExceptions={[]}
+        careExceptionsLoaded
+        pickupChangeEnabled
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+        onRemove={vi.fn()}
+        pickupChangeRequests={[stored]}
+        reloadRequests={() =>
+          Promise.reject(
+            new ApiError("down", 503, { code: "general.unavailable" }),
+          )
+        }
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Anfrage bearbeiten" }));
+    fireEvent.change(screen.getByRole("textbox", { name: /Grund/ }), {
+      target: { value: "my draft" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Änderung speichern" }));
+
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeInTheDocument();
+    const save = screen.getByRole("button", { name: "Änderung speichern" });
+    fireEvent.click(save);
+    expect(update).toHaveBeenCalledTimes(1);
+  });
+
   it("shows a pending request and lets the guardian edit it", () => {
     const onRemove = vi.fn().mockResolvedValue(undefined);
     render(

@@ -10,6 +10,7 @@ beforeEach(() => {
 
 import { ApiError } from "./api-error";
 import { buildBackendStudent } from "~/test/fixtures/students";
+import { testClockDay } from "~/test/clock-instant";
 import type { StudentDetailResponse } from "./contract/students.generated";
 import { subscribeStudentCompanionsChanged } from "./student-companion-api";
 import {
@@ -258,7 +259,15 @@ describe("child list filter options", () => {
           key: "bus",
           label: "Fährt mit dem Bus",
           type: "boolean",
-          options: [{ value: "true", label: "Ja", count: 3 }],
+          options: [
+            {
+              value: "true",
+              label: "Ja",
+              count: 2,
+              student_ids: ["11", "12"],
+            },
+            { value: "false", label: "Nein", count: 0, student_ids: null },
+          ],
         },
         { key: "lunch", label: "Mittagessen", type: "choice", options: null },
       ]),
@@ -268,12 +277,25 @@ describe("child list filter options", () => {
       {
         key: "bus",
         label: "Fährt mit dem Bus",
-        options: [{ value: "true", label: "Ja", count: 3 }],
+        options: [
+          { value: "true", label: "Ja", count: 2, studentIds: ["11", "12"] },
+          { value: "false", label: "Nein", count: 0, studentIds: [] },
+        ],
       },
       { key: "lunch", label: "Mittagessen", options: [] },
     ]);
     expect(fetchMock.mock.calls[0]![0]).toBe(
       "/api/students/enrollment-answer-filters",
+    );
+  });
+
+  it("asks for the children of the list's planning day (#7645)", async () => {
+    fetchMock.mockResolvedValueOnce(answer([]));
+
+    const day = testClockDay(5);
+    await fetchEnrollmentAnswerFilters(day);
+    expect(fetchMock.mock.calls[0]![0]).toBe(
+      `/api/students/enrollment-answer-filters?date=${day}`,
     );
   });
 });

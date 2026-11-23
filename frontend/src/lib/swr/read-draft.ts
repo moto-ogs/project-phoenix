@@ -77,6 +77,12 @@ export interface DraftSource<T> {
   readonly opening: string | null;
   /** The newest read; a change of its token refills an untouched draft. */
   readonly data: T | undefined;
+  /**
+   * The newest read whatever `data` holds (`follow: false` holds an older
+   * one): only a read newer than the one shown when a save went out ends
+   * a refusal or a failed read (rule 6). Undefined: `data`.
+   */
+  readonly arrived?: T | undefined;
   /** The read failed and no confirmed state is there: nothing is sent. */
   readonly error?: unknown;
   /**
@@ -185,6 +191,9 @@ export function useReadDraft<T, D = T, K = unknown, A = unknown>(
       opening: opened.opening,
       data:
         options.follow === false ? opened.data : (opened.latest ?? opened.data),
+      // Turning `follow` off swaps `data` for the older held read; that one
+      // must not end a failed read after a refusal.
+      arrived: opened.latest ?? opened.data,
       // A failed opening read counts also over a cached draft: the server
       // would refuse a token it cannot confirm.
       error: opened.data === undefined ? opened.error : undefined,
@@ -211,7 +220,11 @@ function settled<T, D>(
   const draft =
     prev.refused && rebase
       ? rebase(prev.refused.draft, prev.refused.base, read)
-      : stored;
+      : // Input typed after a save rests on the saved draft: a read that
+        // brings exactly it keeps the input; any other state replaces it.
+        !prev.refused && prev.saved !== undefined && same(stored, prev.saved)
+        ? prev.draft
+        : stored;
   // A fresh state: `sent` and `saved` belong to the reads before this one.
   return {
     key: prev.key,
@@ -231,6 +244,7 @@ export function useDraftOn<T, D = T, K = unknown, A = unknown>(
   const toDraft = options.toDraft ?? ((read: T) => read as unknown as D);
   const same = options.same ?? sameJSON;
   const newest = source.data;
+  const arrived = "arrived" in source ? source.arrived : newest;
 
   const [state, setState] = useState<DraftState<T, D> | null>(null);
   const differs = (read: T, base: T) => !sameJSON(token(read), token(base));
@@ -253,14 +267,15 @@ export function useDraftOn<T, D = T, K = unknown, A = unknown>(
           };
     if (current !== state) setState(current);
   } else if (
-    newest !== undefined &&
+    arrived !== undefined &&
     (current.awaiting === true ||
-      (current.phase === "loadFailed" && newest !== current.sent)) &&
-    differs(newest, current.base)
+      (current.phase === "loadFailed" && arrived !== current.sent)) &&
+    differs(arrived, current.base)
   ) {
     // Rule 3: the stored state a refusal waited for arrived, or a read
     // after a failed one (rule 6): the draft rests on it, and sends again.
-    current = settled(current, newest, options.rebase, toDraft, same);
+    // `arrived`, not `data`: a held older read never ends the wait.
+    current = settled(current, arrived, options.rebase, toDraft, same);
     setState(current);
   } else if (
     newest !== undefined &&
@@ -348,7 +363,8 @@ export function useDraftOn<T, D = T, K = unknown, A = unknown>(
         };
       }
       const { key: forKey, base, draft } = sent;
-      const shown = latest.current.source.data;
+      const { source: from } = latest.current;
+      const shown = "arrived" in from ? from.arrived : from.data;
       update(forKey, (prev) => ({ ...prev, phase: "saving", sent: shown }));
       let saved: A;
       try {

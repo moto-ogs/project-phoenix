@@ -57,7 +57,13 @@ func StudentRouteContracts() []common.RouteContract {
 		// The filter options of the child list; their reshaping route files
 		// left in #7563.
 		{Method: "GET", Pattern: "/care-offerings", Portals: tenant, Response: []CareOfferingOptionResponse{}},
-		{Method: "GET", Pattern: "/enrollment-answer-filters", Portals: tenant, Response: []EnrollmentAnswerFilterResponse{}},
+		// date is the list's planning day: the answers count the children in
+		// care that day (#7645).
+		{
+			Method: "GET", Pattern: "/enrollment-answer-filters", Portals: tenant,
+			Query:    []common.QueryParam{{Name: "date", Kind: common.QueryDate}},
+			Response: []EnrollmentAnswerFilterResponse{},
+		},
 	}, studentFileRouteContracts(tenant)...)
 }
 
