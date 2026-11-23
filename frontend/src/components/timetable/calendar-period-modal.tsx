@@ -10,6 +10,7 @@
  * line ~213). This modal is the only UI path to fix that today.
  */
 
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { Alert } from "~/components/ui/alert";
@@ -103,16 +104,17 @@ interface CalendarPeriodModalProps {
 }
 
 /**
- * Structural subset of an enrollment phase — deliberately not imported
- * from the enrollment lib to keep this shared timetable component
- * decoupled from that domain.
+ * Structural subset of an enrollment phase, from the contract rather than
+ * the enrollment lib to keep this shared timetable component decoupled
+ * from that domain. A phase without a linked period carries null.
  */
-export interface LinkablePhase {
-  id: string;
-  name: string;
-  calendar_period_id?: string | null;
-  is_active: boolean;
-}
+export type LinkablePhase = Pick<
+  enrollmentContract.PhaseResponse,
+  "id" | "name" | "is_active"
+> & {
+  calendar_period_id?:
+    enrollmentContract.PhaseResponse["calendar_period_id"] | null;
+};
 
 interface FormState {
   name: string;

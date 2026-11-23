@@ -1,5 +1,6 @@
 "use client";
 
+import type * as studentsContract from "~/lib/contract/students.generated";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import {
@@ -26,7 +27,6 @@ import {
   mapVisitsToSupervisionStudents,
   resolveSupervisionSelection,
 } from "~/components/active-supervisions/view-model";
-import type { TeacherHint } from "~/lib/student-helpers";
 import type {
   ActiveSupervisionRoom,
   ActiveSupervisionStudent,
@@ -475,7 +475,7 @@ export function useSupervisionDashboard(
 
   // Hinweise der Lehrkraft (#4795) je Kind, für die Karten der Aufsicht.
   const teacherHintsByStudent = useMemo(() => {
-    const byStudent = new Map<string, TeacherHint[]>();
+    const byStudent = new Map<string, studentsContract.TeacherHint[]>();
     for (const { studentId, ...hint } of snapshot?.teacherHints ?? []) {
       byStudent.set(studentId, [...(byStudent.get(studentId) ?? []), hint]);
     }
