@@ -234,7 +234,7 @@ const SUBSCRIPTIONS: Readonly<Record<PushPortal, string>> = {
  * the portal's call, its 401 handling included. During a logout the session
  * family is already revoked and the sign-out must stay the last cookie
  * change, so the call goes out plain: no session gate, no renewal, no login
- * redirect (bff-fetch-uncontracted.test.ts).
+ * redirect (bff-boundary/only-listed-uncontracted).
  */
 async function deleteServerSubscription(
   portal: PushPortal,

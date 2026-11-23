@@ -479,6 +479,11 @@ proxy's `X-Moto-Original-Path`; the browser keeps the fragment), the BFF
 refuses a school's session on the bare domain, and `TenantGuard` moves a tab
 still on path mode to the subdomain.
 
+For browser callers, [One transport](frontend-api.md#browser-calls) names
+the lint rules for BFF calls, raw transport and keeping wire IDs as strings.
+The fetch observer, session renewal and client log shipping are transport
+infrastructure, not patterns to copy for new callers.
+
 All tabs of a portal also share one account: another account that signs in
 in tab B replaces tab A's session before tab A hears of it (#5183). Every
 browser request to the tab's own `/api/` therefore names the account its

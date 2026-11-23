@@ -37,7 +37,7 @@ export async function acceptInvitation(
   // A new account accepts without a session, an existing one with the
   // owner's: the route file decides by `existingAccount` and forwards the
   // backend's answer. No portal of the route's contract carries both, so
-  // bff-fetch-uncontracted.test.ts names this caller.
+  // bff-boundary/only-listed-uncontracted names this caller.
   const result =
     await bffJsonUncontracted<authInvitationsContract.AcceptInvitationResponse>(
       "public",

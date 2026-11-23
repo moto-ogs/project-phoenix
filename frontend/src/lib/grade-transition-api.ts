@@ -3,6 +3,7 @@ import { knownEnum } from "~/lib/contract/known-enum";
 import type { ErrorCode } from "~/lib/error-codes.generated";
 import { ApiError } from "./api-error";
 import { bffJson } from "./bff-fetch";
+import { compareIds } from "./compare-ids";
 // grade-transition-api.ts
 // Client for the Jahrgangsstufenwechsel (grade transition) admin flow (#405).
 // Calls the registered routes under /api/admin/grade-transitions through the
@@ -307,18 +308,12 @@ const LIST_PAGE_SIZE = 100;
 // produce, so it never truncates in practice.
 const LIST_PAGE_LIMIT = 100;
 
-// Newest-first, the order the offset endpoint used to return. Compared as
-// BigInt of the exact string id — creation order for an autoincrement key —
-// never as a number, so ids above 2^53 cannot collapse through float rounding
-// (#405 review).
+// Newest-first by autoincrement key, without rounding ids above 2^53.
 function compareByIdDesc(
   a: adminContract.TransitionResponse,
   b: adminContract.TransitionResponse,
 ): number {
-  const aID = BigInt(a.id);
-  const bID = BigInt(b.id);
-  if (aID === bID) return 0;
-  return aID > bID ? -1 : 1;
+  return compareIds(b.id, a.id);
 }
 
 // Fetches every transition, not just the first page. The list feeds both the

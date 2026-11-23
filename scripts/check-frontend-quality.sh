@@ -30,6 +30,9 @@ export NEXT_PUBLIC_TRAEGER_HOSTNAME=traeger.localhost:3000
 [[ "${1:-quality}" == fast ]] || quality_step portal-pages pnpm exec node scripts/generate-portal-pages.mjs --check
 [[ "${1:-quality}" == fast ]] || quality_step error-catalog pnpm exec node scripts/verify-error-catalog.mjs
 [[ "${1:-quality}" == fast ]] || quality_step frontend-source-contracts pnpm run test:source-contracts
+if [[ "${1:-quality}" == fast ]]; then
+  quality_step bff-exceptions node --test scripts/bff-boundary.node-test.mjs
+fi
 quality_step frontend-lint pnpm run lint --max-warnings 0
 quality_step frontend-types pnpm run typecheck
 # Unused exports and files were the most frequent frontend-quality CI failure

@@ -533,9 +533,9 @@ export async function bffFile<P extends Portal, K extends FileRouteKey<P>>(
 
 /**
  * The same call for the remaining BFF paths without a shared browser
- * entry. The caller names the answer's type. Every caller is
- * listed with its reason in `bff-fetch-uncontracted.test.ts`, and the list
- * only shrinks; a backend route without a contract gets one instead (#7808).
+ * entry. The caller names the answer's type. The shrink-only exception list
+ * and reasons are in the `bff-boundary/only-listed-uncontracted` rule.
+ * Give a backend route without a contract one instead (#7808).
  */
 export function bffJsonUncontracted<T>(
   portal: Portal,
