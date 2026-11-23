@@ -7,17 +7,24 @@ import {
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
+import { ToastProvider } from "~/contexts/ToastContext";
+import { ApiError } from "~/lib/api-error";
+import { catalogText } from "~/test/error-catalog-text";
 import type { CareTariffs } from "~/lib/traeger-care-billing-api";
 import type { CareRule } from "~/lib/traeger-care-reductions-api";
 import { setTestClock } from "~/test/clock";
 
-const { fetchCareTariffs, fetchCareRules } = vi.hoisted(() => ({
-  fetchCareTariffs: vi.fn(),
-  fetchCareRules: vi.fn(),
-}));
+const { fetchCareTariffs, fetchCareRules, deleteCarePriceList } = vi.hoisted(
+  () => ({
+    fetchCareTariffs: vi.fn(),
+    fetchCareRules: vi.fn(),
+    deleteCarePriceList: vi.fn(),
+  }),
+);
 vi.mock("~/lib/traeger-care-billing-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/traeger-care-billing-api")>()),
   fetchCareTariffs,
+  deleteCarePriceList,
 }));
 vi.mock("~/lib/traeger-care-reductions-api", async (importOriginal) => ({
   ...(await importOriginal<
@@ -179,5 +186,67 @@ describe("sibling prices of the displayed price list", () => {
     const grid = cards[0]?.parentElement;
     expect(grid).toHaveClass("grid");
     for (const card of cards) expect(card?.parentElement).toBe(grid);
+  });
+});
+
+// ADR 0311: a colleague changed the school's prices since the page read
+// them. The removal sends the version the page showed, is refused, closes
+// its dialog and shows the stored prices, so a second „Löschen“ cannot
+// remove them unseen.
+describe("removing a price list", () => {
+  beforeEach(() => {
+    setTestClock("2026-11-12T12:00:00+01:00");
+  });
+
+  it("shows the prices a colleague saved since instead of removing them", async () => {
+    const read: CareTariffs = {
+      ...data,
+      lists: [{ schoolId: "11", validFrom: "2026-01-01", freeMonths: [] }],
+      versions: { "11": "v-1" },
+    };
+    fetchCareTariffs.mockReset().mockResolvedValueOnce(read);
+    fetchCareTariffs.mockResolvedValue({
+      ...read,
+      tariffs: read.tariffs.map((tariff) => ({
+        ...tariff,
+        monthlyCents: 1200,
+      })),
+      versions: { "11": "v-2" },
+    });
+    deleteCarePriceList
+      .mockReset()
+      .mockRejectedValue(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      );
+    fetchCareRules.mockResolvedValue({ rules: [rule] });
+    render(
+      <ToastProvider>
+        <TraegerResourceTestProvider>
+          <TraegerPreislistePage />
+        </TraegerResourceTestProvider>
+      </ToastProvider>,
+    );
+    await screen.findAllByText("Modul A");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Weitere Aktionen: Sonnenhof" }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", {
+        name: /Preise ab Januar 2026 löschen/,
+      }),
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Ja, löschen" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Löschen" }));
+
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "die Preisliste"),
+      ),
+    ).toBeInTheDocument();
+    expect(deleteCarePriceList).toHaveBeenCalledWith("11", "2026-01-01", "v-1");
+    expect((await screen.findAllByText("12,00 €")).length).toBeGreaterThan(0);
+    expect(
+      screen.queryByRole("button", { name: "Löschen" }),
+    ).not.toBeInTheDocument();
   });
 });

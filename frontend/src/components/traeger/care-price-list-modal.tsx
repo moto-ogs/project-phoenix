@@ -16,6 +16,7 @@ import { FormModal } from "~/components/ui/form-modal";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { ToggleChip } from "~/components/ui/toggle-chip";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import { isChangedSinceRead } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import {
   type CarePriceInput,
@@ -120,6 +121,7 @@ export function CarePriceListModal({
   initialMonth,
   onClose,
   onSaved,
+  onChangedSinceRead,
 }: Readonly<{
   data: CareTariffs;
   /** The school whose prices change; null keeps the modal closed. */
@@ -130,6 +132,11 @@ export function CarePriceListModal({
   initialMonth?: string;
   onClose: () => void;
   onSaved: (data: CareTariffs) => void;
+  /**
+   * The save was refused because the school's prices changed since they
+   * were read: the page reads them again, and the form shows them.
+   */
+  onChangedSinceRead: () => void;
 }>) {
   const [month, setMonth] = useState("");
   const [drafts, setDrafts] = useState<Drafts>({});
@@ -220,11 +227,14 @@ export function CarePriceListModal({
     }
     await save.run(async (op) => {
       try {
+        // The drafts start from `data` and follow every new read of it,
+        // so its version is the one they started from (ADR 0311).
         const result = await saveCarePriceList(
           school.id,
           month,
           prices,
           freeMonths,
+          data.versions?.[school.id] ?? "",
         );
         if (op.isCurrent()) onSaved(result);
         success(`Die Preise gelten ab ${formatMonth(month)}.`);
@@ -234,6 +244,9 @@ export function CarePriceListModal({
         });
         if (!op.isCurrent()) return;
         void formErrors.show(err, { object: "die Preisliste" });
+        // A colleague changed the prices since: the form shows them instead
+        // of the draft, so no second „Speichern“ replaces them unseen.
+        if (isChangedSinceRead(err)) onChangedSinceRead();
       }
     });
   };

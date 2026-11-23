@@ -2,6 +2,8 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CareTariffs } from "~/lib/traeger-care-billing-api";
 import { ToastProvider } from "~/contexts/ToastContext";
+import { ApiError } from "~/lib/api-error";
+import { catalogText } from "~/test/error-catalog-text";
 import {
   freeMonthsAt,
   freeMonthsLabel,
@@ -146,6 +148,7 @@ describe("CarePriceListModal", () => {
           currentMonth="2027-01-01"
           onClose={() => undefined}
           onSaved={() => undefined}
+          onChangedSinceRead={() => undefined}
         />
       </ToastProvider>,
     );
@@ -218,6 +221,57 @@ describe("CarePriceListModal", () => {
       siblingCents: 4500,
       mealExtra: true,
     });
+  });
+
+  // ADR 0311: a colleague changed the school's prices since the list was
+  // read. The save sent the version the form started from, is refused, and
+  // the page reads the prices again: the form shows the colleague's prices
+  // instead of the draft.
+  it("shows the prices a colleague saved since instead of keeping the draft", async () => {
+    saveCarePriceList.mockRejectedValue(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    const changed = vi.fn();
+    const modal = (tariffs: CareTariffs) => (
+      <ToastProvider>
+        <CarePriceListModal
+          data={tariffs}
+          school={{ id: "12", name: "Grundschule Birkenfeld" }}
+          currentMonth="2027-01-01"
+          onClose={() => undefined}
+          onSaved={() => undefined}
+          onChangedSinceRead={changed}
+        />
+      </ToastProvider>
+    );
+    const { rerender } = render(modal({ ...data, versions: { "12": "v-1" } }));
+    const label =
+      "Modul 4 mit Mittagessen, 3 Tage je Woche, Jedes weitere Kind, Monatspreis in Euro";
+    fireEvent.change(await screen.findByRole("textbox", { name: label }), {
+      target: { value: "40,00" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Preise speichern" }));
+
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "die Preisliste"),
+      ),
+    ).toBeInTheDocument();
+    expect(saveCarePriceList.mock.calls[0]?.[4]).toBe("v-1");
+    expect(changed).toHaveBeenCalledTimes(1);
+
+    rerender(
+      modal({
+        ...data,
+        versions: { "12": "v-2" },
+        tariffs: data.tariffs.map((tariff) =>
+          tariff.daysPerWeek === 3 ? { ...tariff, siblingCents: 4800 } : tariff,
+        ),
+      }),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("textbox", { name: label })).toHaveValue("48,00"),
+    );
   });
 
   it("refuses a sibling price above the first child's", async () => {
