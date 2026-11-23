@@ -79,7 +79,7 @@ func (m *mockPlatformAnnouncementService) GetAnnouncement(ctx context.Context, i
 	return nil, nil
 }
 
-func (m *mockPlatformAnnouncementService) UpdateAnnouncement(ctx context.Context, announcement *platformModel.Announcement, operatorID int64, clientIP net.IP) error {
+func (m *mockPlatformAnnouncementService) UpdateAnnouncement(ctx context.Context, announcement *platformModel.Announcement, _ string, operatorID int64, clientIP net.IP) error {
 	return nil
 }
 
@@ -91,7 +91,7 @@ func (m *mockPlatformAnnouncementService) ListAnnouncements(ctx context.Context,
 	return nil, nil
 }
 
-func (m *mockPlatformAnnouncementService) PublishAnnouncement(ctx context.Context, id int64, operatorID int64, clientIP net.IP) error {
+func (m *mockPlatformAnnouncementService) PublishAnnouncement(ctx context.Context, id int64, _ string, operatorID int64, clientIP net.IP) error {
 	return nil
 }
 

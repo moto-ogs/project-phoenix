@@ -29,7 +29,7 @@ func RouteContracts() []common.RouteContract {
 		{Method: "POST", Pattern: "/folders", Portals: portals, Request: FolderRequest{}, Response: FolderResponse{}},
 		{Method: "GET", Pattern: "/audience", Portals: portals, Response: AudienceResponse{}},
 		{Method: "PUT", Pattern: "/folders/{folderId}", Portals: portals, Request: FolderRequest{}, Response: FolderResponse{}},
-		{Method: "DELETE", Pattern: "/folders/{folderId}", Portals: portals, Response: FolderRemovedResponse{}},
+		{Method: "DELETE", Pattern: "/folders/{folderId}", Portals: portals, Request: FolderRemovalRequest{}, Response: FolderRemovedResponse{}},
 		{Method: "DELETE", Pattern: "/folders/{folderId}/files/{fileId}", Portals: portals, Response: FolderRemovedResponse{}},
 		{Method: "GET", Pattern: "/folders/{folderId}/files", Portals: portals, Response: FileListResponse{}},
 		{Method: "POST", Pattern: "/folders/{folderId}/files", Portals: portals, Multipart: true,

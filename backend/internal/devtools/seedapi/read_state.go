@@ -41,3 +41,20 @@ func (s *FixedSeeder) saveClassArrivalTimes(class string, schedules []map[string
 	}
 	return nil
 }
+
+// publishParentAnnouncement publishes the announcement its create answered
+// as its author read it: with the version of that stored draft (ADR 0311).
+// An attachment does not change the draft's version. A nil auth uses the
+// client's bound session.
+func publishParentAnnouncement(rt *Runtime, auth *AuthRef, id int64, created []byte) ([]byte, error) {
+	version, err := readDataVersion(func(string) ([]byte, error) { return created, nil }, "the created announcement")
+	if err != nil {
+		return nil, err
+	}
+	path := fmt.Sprintf("/api/parent-announcements/%d/publish", id)
+	body := map[string]any{"expected_version": version}
+	if auth != nil {
+		return rt.Client.PostWithAuth(*auth, path, body)
+	}
+	return rt.Client.Post(path, body)
+}

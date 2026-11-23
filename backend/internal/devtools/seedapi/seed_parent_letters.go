@@ -69,7 +69,7 @@ func seedParentLetter(rt *Runtime) error {
 	); err != nil {
 		return fmt.Errorf("attach file to parent letter: %w", err)
 	}
-	if err := publishAndRead(rt, id, reader); err != nil {
+	if err := publishAndRead(rt, id, raw, reader); err != nil {
 		return fmt.Errorf("parent letter: %w", err)
 	}
 	fmt.Println("  3 read notices and 2 parent letters published")
@@ -95,8 +95,8 @@ func seedLetterReader(rt *Runtime) (*AuthRef, error) {
 
 // publishAndRead publishes an announcement and, with a reader, marks it read
 // by them.
-func publishAndRead(rt *Runtime, id int64, reader *AuthRef) error {
-	publishedRaw, err := rt.Client.PostWithAuth(rt.TenantAuth, fmt.Sprintf("/api/parent-announcements/%d/publish", id), nil)
+func publishAndRead(rt *Runtime, id int64, created []byte, reader *AuthRef) error {
+	publishedRaw, err := publishParentAnnouncement(rt, &rt.TenantAuth, id, created)
 	if err != nil {
 		return fmt.Errorf("publish: %w", err)
 	}
@@ -142,7 +142,7 @@ func seedEarlierNotices(rt *Runtime, reader *AuthRef) error {
 		if err != nil {
 			return fmt.Errorf("parse notice %s: %w", n.title, err)
 		}
-		if err := publishAndRead(rt, id, reader); err != nil {
+		if err := publishAndRead(rt, id, raw, reader); err != nil {
 			return fmt.Errorf("notice %s: %w", n.title, err)
 		}
 	}
@@ -208,7 +208,7 @@ func seedReminderAnnouncement(rt *Runtime) error {
 	if err != nil {
 		return fmt.Errorf("parse reminder announcement response: %w", err)
 	}
-	if _, err := rt.Client.Post(fmt.Sprintf("/api/parent-announcements/%d/publish", id), nil); err != nil {
+	if _, err := publishParentAnnouncement(rt, nil, id, raw); err != nil {
 		return fmt.Errorf("publish reminder announcement: %w", err)
 	}
 	fmt.Println("  1 parent announcement with scheduled reminder published")

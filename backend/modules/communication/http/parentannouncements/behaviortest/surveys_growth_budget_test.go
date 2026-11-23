@@ -61,7 +61,7 @@ func TestSurveyPositiveGrowthQueryBudget(t *testing.T) {
 			if e != nil {
 				return e
 			}
-			survey, e = surveys.PublishSurvey(ctx, viewer.ID, draft.ID)
+			survey, e = surveys.PublishSurvey(ctx, viewer.ID, draft.ID, communication.SurveyVersion(*draft))
 			return e
 		}))
 		require.Len(t, survey.Questions, n)

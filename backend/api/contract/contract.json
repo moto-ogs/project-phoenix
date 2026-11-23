@@ -163,6 +163,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "FolderRemovalRequest"
+      },
       "response": {
         "kind": "ref",
         "ref": "FolderRemovedResponse"
@@ -678,6 +682,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "fingerprintRequest"
+      },
       "response": {
         "kind": "ref",
         "ref": "deletedResponse"
@@ -14796,6 +14804,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "versionRequest"
+      },
       "response": {
         "kind": "ref",
         "ref": "announcementResponse"
@@ -16200,6 +16212,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "versionRequest"
+      },
       "response": {
         "kind": "ref",
         "ref": "surveyResponse"
@@ -17637,6 +17653,10 @@
       "portals": [
         "platform"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "PublishAnnouncementRequest"
+      },
       "no_data": true
     },
     {
@@ -19118,6 +19138,10 @@
       "portals": [
         "school"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "versionRequest"
+      },
       "response": {
         "kind": "ref",
         "ref": "announcementResponse"
@@ -55950,6 +55974,20 @@
       ]
     },
     {
+      "name": "FolderRemovalRequest",
+      "go_type": "files.FolderRemovalRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "expected_fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "FolderRemovedResponse",
       "go_type": "files.FolderRemovedResponse",
       "fields": [
@@ -56000,6 +56038,13 @@
             "elem": {
               "kind": "id"
             }
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -56056,6 +56101,18 @@
           "name": "created_at",
           "schema": {
             "kind": "instant"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "fingerprint",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -74167,6 +74224,12 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "edit_version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -82416,6 +82479,20 @@
         },
         {
           "name": "organization_name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PublishAnnouncementRequest",
+      "go_type": "operatorannouncements.PublishAnnouncementRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "expected_edit_version",
+          "optional": true,
           "schema": {
             "kind": "string"
           }
@@ -108761,6 +108838,13 @@
               "kind": "id"
             }
           }
+        },
+        {
+          "name": "expected_edit_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -111024,6 +111108,13 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -111234,6 +111325,12 @@
           "optional": true,
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -118076,6 +118173,20 @@
       ]
     },
     {
+      "name": "fingerprintRequest",
+      "go_type": "announcement.fingerprintRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "expected_fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "grantAccountTenantAccessRequest",
       "go_type": "operator.grantAccountTenantAccessRequest",
       "request": true,
@@ -123961,6 +124072,13 @@
             "kind": "string",
             "nullable": true
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -127762,6 +127880,13 @@
               "ref": "surveyQuestionRequest"
             }
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -127921,6 +128046,18 @@
               "kind": "ref",
               "ref": "surveyQuestionResponse"
             }
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "fingerprint",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -129758,6 +129895,20 @@
           "optional": true,
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "versionRequest",
+      "go_type": "announcement.versionRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]

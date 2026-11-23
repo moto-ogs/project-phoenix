@@ -102,6 +102,11 @@ func TestCommunicationFiles18PositiveGrowthQueryBudget(t *testing.T) {
 		slices.SortFunc(people, func(a, b filesHTTP.AudienceAccountResponse) int {
 			return collation.CompareGermanNames(a.LastName, a.FirstName, b.LastName, b.FirstName)
 		})
+		// The delete fingerprint covers the uploaded files: the folder's own
+		// file list answers it (ADR 0311), and an empty folder has another.
+		listed := growthData[filesHTTP.FileListResponse](t, c.request(testpkg.Ctx(t), "GET", fmt.Sprintf("/api/files/folders/%s/files", folders[0].ID), nil, "", c.admin, permissions.AdminWildcard).Body.Bytes())
+		require.NotEqual(t, folders[1].Fingerprint, listed.Folder.Fingerprint)
+		folders[0].Fingerprint = listed.Folder.Fingerprint
 		paths := []string{"/api/files/audience", "/api/files/folders", fmt.Sprintf("/api/files/folders/%s/files", folders[0].ID)}
 		for _, path := range paths {
 			counter.Reset()

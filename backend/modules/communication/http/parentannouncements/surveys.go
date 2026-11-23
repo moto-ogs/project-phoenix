@@ -139,7 +139,11 @@ func (rs *SurveyResource) delete(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if err := rs.Service.DeleteSurvey(r.Context(), id); err != nil {
+	var req fingerprintRequest
+	if !decodeReadState(w, r, &req) {
+		return
+	}
+	if err := rs.Service.DeleteSurvey(r.Context(), id, req.ExpectedFingerprint); err != nil {
 		surveyFailure(w, r, err)
 		return
 	}
@@ -151,7 +155,11 @@ func (rs *SurveyResource) publish(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	survey, err := rs.Service.PublishSurvey(r.Context(), callerAccountID(r), id)
+	var req versionRequest
+	if !decodeReadState(w, r, &req) {
+		return
+	}
+	survey, err := rs.Service.PublishSurvey(r.Context(), callerAccountID(r), id, req.ExpectedVersion)
 	rs.respondSurvey(w, r, survey, err, http.StatusOK, "Survey published")
 }
 

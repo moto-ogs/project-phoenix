@@ -2039,6 +2039,7 @@ export interface announcementResponse {
   declaration_requires_password?: boolean;
   declaration_requires_signature?: boolean;
   declaration_locked_attachments?: boolean;
+  version: string;
 }
 
 export const announcementResponseSchema: z.ZodType<announcementResponse, unknown> = object<announcementResponse>({
@@ -2072,6 +2073,7 @@ export const announcementResponseSchema: z.ZodType<announcementResponse, unknown
   declaration_requires_password: optional(bool),
   declaration_requires_signature: optional(bool),
   declaration_locked_attachments: optional(bool),
+  version: str,
 });
 
 /** Go: announcement.letterPlaceholderResponse */
@@ -2416,6 +2418,7 @@ export interface announcementRequest {
   declaration_signers?: string;
   declaration_requires_password?: boolean;
   declaration_requires_signature?: boolean;
+  expected_version?: string;
 }
 
 /** Go: announcement.letterPreviewRequest */
@@ -2449,6 +2452,11 @@ export const letterPreviewResponseSchema: z.ZodType<letterPreviewResponse, unkno
   body: str,
   child: letterPreviewChildSchema,
 });
+
+/** Go: announcement.versionRequest */
+export interface versionRequest {
+  expected_version?: string;
+}
 
 /** Go: announcement.remindedResponse */
 export interface remindedResponse {

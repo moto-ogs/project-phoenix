@@ -7,6 +7,8 @@ import (
 	"io"
 	"strings"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 var (
@@ -64,6 +66,17 @@ type ParentAnnouncementInput struct {
 	// Sender makes the announcement a class letter of a Lehrkraft (#4800):
 	// one class target, that class, no poll, the portal audience only.
 	Sender *ParentLetterSender
+	// ExpectedVersion is the version of the draft an update was made on
+	// (ADR 0311); a new announcement has none.
+	ExpectedVersion string
+}
+
+// ParentAnnouncementVersion is the token of a stored announcement (ADR
+// 0311): an edit, the reminder edit and the publication send it back. Every
+// write of the row stamps updated_at (the table's trigger); reads,
+// acknowledgements and answers live in their own tables.
+func ParentAnnouncementVersion(a ParentAnnouncement) string {
+	return readstate.Of(a.UpdatedAt)
 }
 
 // ParentAnnouncementReminderInput is the one edit a published announcement
@@ -72,6 +85,9 @@ type ParentAnnouncementInput struct {
 type ParentAnnouncementReminderInput struct {
 	ReminderAt   *time.Time
 	ReminderText *string
+	// ExpectedVersion is the version of the announcement the reminder was
+	// read on (ADR 0311).
+	ExpectedVersion string
 }
 
 type ParentAnnouncement struct {
@@ -345,7 +361,9 @@ type ParentAnnouncementAuthoring interface {
 	CreateParentAnnouncement(context.Context, int64, ParentAnnouncementInput) (*ParentAnnouncement, error)
 	UpdateParentAnnouncement(context.Context, int64, ParentAnnouncementInput) (*ParentAnnouncement, error)
 	DeleteParentAnnouncement(context.Context, int64) error
-	PublishParentAnnouncement(context.Context, int64) (*ParentAnnouncement, error)
+	// PublishParentAnnouncement publishes the draft whose version (the token
+	// of its updated_at, ADR 0311) is the given one.
+	PublishParentAnnouncement(ctx context.Context, id int64, expectedVersion string) (*ParentAnnouncement, error)
 	UnpublishParentAnnouncement(context.Context, int64) (*ParentAnnouncement, error)
 }
 

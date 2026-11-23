@@ -37,6 +37,9 @@ type surveyRequest struct {
 	ClosesAt  *time.Time              `json:"closes_at"`
 	Targets   []surveyTargetRequest   `json:"targets"`
 	Questions []surveyQuestionRequest `json:"questions"`
+	// ExpectedVersion is the version of the draft an update was made on
+	// (ADR 0311); a new survey sends none.
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 func (req surveyRequest) input() (announcementService.SurveyInput, error) {
@@ -45,7 +48,7 @@ func (req surveyRequest) input() (announcementService.SurveyInput, error) {
 	}
 	in := announcementService.SurveyInput{
 		Title: req.Title, Intro: req.Intro, Audience: req.Audience, Anonymous: req.Anonymous, SendEmail: req.SendEmail,
-		ClosesAt: *req.ClosesAt, Targets: make([]announcementService.SurveyTarget, 0, len(req.Targets)),
+		ClosesAt: *req.ClosesAt, ExpectedVersion: req.ExpectedVersion, Targets: make([]announcementService.SurveyTarget, 0, len(req.Targets)),
 		Questions: make([]announcementService.SurveyQuestionInput, 0, len(req.Questions)),
 	}
 	for _, t := range req.Targets {
@@ -94,6 +97,10 @@ type surveyResponse struct {
 	ParticipantCount int                      `json:"participant_count"`
 	Targets          []surveyTargetWire       `json:"targets"`
 	Questions        []surveyQuestionResponse `json:"questions"`
+	// Version is the token an update and the publication send back;
+	// Fingerprint the one a delete confirms with (ADR 0311).
+	Version     string `json:"version"`
+	Fingerprint string `json:"fingerprint"`
 }
 
 func toSurveyQuestions(questions []announcementService.SurveyQuestion) []surveyQuestionResponse {
@@ -125,6 +132,7 @@ func toSurveyResponse(s *announcementService.Survey, now time.Time) surveyRespon
 		SendEmail: s.SendEmail, Status: s.Status(now), ClosesAt: s.ClosesAt, PublishedAt: s.PublishedAt,
 		CreatedAt: s.CreatedAt, UpdatedAt: s.UpdatedAt, ParticipantCount: s.ParticipantCount,
 		Targets: targets, Questions: toSurveyQuestions(s.Questions),
+		Version: announcementService.SurveyVersion(*s), Fingerprint: announcementService.SurveyDeleteFingerprint(*s),
 	}
 }
 

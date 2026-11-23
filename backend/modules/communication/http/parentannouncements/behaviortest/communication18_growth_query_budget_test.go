@@ -112,7 +112,7 @@ func communication18Announcement(a *communication.ParentAnnouncement) map[string
 	if a.PublishedAt != nil {
 		status = "published"
 	}
-	out := map[string]any{"id": fmt.Sprint(a.ID), "title": a.Title, "body": a.Body, "priority": a.Priority, "requires_acknowledgement": a.RequiresAcknowledgement, "send_email": a.SendEmail, "status": status, "active": a.Active, "created_at": a.CreatedAt, "updated_at": a.UpdatedAt, "targets": targets, "response_type": a.ResponseType, "options": options, "delivery_mode": a.DeliveryMode, "email_audience": a.EmailAudience}
+	out := map[string]any{"id": fmt.Sprint(a.ID), "title": a.Title, "body": a.Body, "priority": a.Priority, "requires_acknowledgement": a.RequiresAcknowledgement, "send_email": a.SendEmail, "status": status, "active": a.Active, "created_at": a.CreatedAt, "updated_at": a.UpdatedAt, "version": communication.ParentAnnouncementVersion(*a), "targets": targets, "response_type": a.ResponseType, "options": options, "delivery_mode": a.DeliveryMode, "email_audience": a.EmailAudience}
 	if a.PublishedAt != nil {
 		out["published_at"] = a.PublishedAt
 	}
@@ -233,7 +233,12 @@ func TestCommunication18AnnouncementPositiveGrowthQueryBudget(t *testing.T) {
 			}
 			testpkg.PublishTestParentAnnouncement(t, db, poll.ID)
 			run(func(c context.Context) error {
-				_, e := service.PublishParentAnnouncement(communication.WithClassLetterAuthor(c, viewer.ID), letter.ID)
+				author := communication.WithClassLetterAuthor(c, viewer.ID)
+				read, e := service.GetParentAnnouncement(author, letter.ID)
+				if e != nil {
+					return e
+				}
+				_, e = service.PublishParentAnnouncement(author, letter.ID, communication.ParentAnnouncementVersion(*read))
 				return e
 			})
 			testpkg.PublishTestParentAnnouncement(t, db, declaration.ID)

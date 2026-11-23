@@ -84,6 +84,10 @@ type Folder struct {
 	RoleIDs    []int64
 	AccountIDs []int64
 	CreatedAt  time.Time
+	// Version is the token an update sends back; DeleteFingerprint the one
+	// a delete confirms its dialog with (ADR 0311).
+	Version           string
+	DeleteFingerprint string
 }
 
 // FolderOverview is the folder list plus what the caller may do, so the UI
@@ -104,6 +108,9 @@ type FolderInput struct {
 	Visibility string
 	RoleIDs    []int64
 	AccountIDs []int64
+	// ExpectedVersion is the Version of the folder an update was made on
+	// (ADR 0311); a new folder has none.
+	ExpectedVersion string
 }
 
 // File is one stored file as the caller may see it.
@@ -206,8 +213,9 @@ type FolderCommand interface {
 	CreateFolder(ctx context.Context, input FolderInput, actor Actor) (Folder, error)
 	UpdateFolder(ctx context.Context, folderID int64, input FolderInput, actor Actor) (Folder, error)
 	// DeleteFolder queues cleanup for every file still on disk and removes the
-	// folder; the file rows cascade. Bytes are removed by the sweep.
-	DeleteFolder(ctx context.Context, folderID int64, actor Actor) error
+	// folder whose DeleteFingerprint is expectedFingerprint; the file rows
+	// cascade. Bytes are removed by the sweep.
+	DeleteFolder(ctx context.Context, folderID int64, expectedFingerprint string, actor Actor) error
 }
 
 // FileQuery reads the files of visible folders.

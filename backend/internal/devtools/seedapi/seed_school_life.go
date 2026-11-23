@@ -99,7 +99,7 @@ func seedEverydayNotices(rt *Runtime) error {
 		if err != nil {
 			return fmt.Errorf("parse notice %s: %w", n.title, err)
 		}
-		if _, err := rt.Client.Post(fmt.Sprintf("/api/parent-announcements/%d/publish", id), nil); err != nil {
+		if _, err := publishParentAnnouncement(rt, nil, id, raw); err != nil {
 			return fmt.Errorf("publish notice %s: %w", n.title, err)
 		}
 	}

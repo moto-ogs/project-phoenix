@@ -46,13 +46,13 @@ func (f *fakeAnnouncementRepo) Create(_ context.Context, announcement *StaffPare
 }
 
 func (f *fakeAnnouncementRepo) FindByID(_ context.Context, _ int64) (*StaffParentAnnouncement, error) {
-	return f.announcement, nil
+	return asStored(f.announcement), nil
 }
 
 // FindByIDForUpdate has no row lock to take against a fake; it answers from the
 // same stored row as FindByID, so a test arranges one state for both (#2890).
 func (f *fakeAnnouncementRepo) FindByIDForUpdate(_ context.Context, _ int64) (*StaffParentAnnouncement, error) {
-	return f.announcement, nil
+	return asStored(f.announcement), nil
 }
 
 // ReplaceOptions is a no-op: these tests drive plain Mitteilungen, whose option
@@ -257,7 +257,7 @@ func TestUpdate_PublishedIsImmutable(t *testing.T) {
 	repo := &fakeAnnouncementRepo{announcement: published}
 	svc := newTestService(repo, &fakeOutbox{})
 
-	_, err := svc.Update(context.Background(), published.ID, validInput())
+	_, err := updateAsRead(context.Background(), svc, published.ID, validInput())
 	if !errors.Is(err, ErrPublishedImmutable) {
 		t.Fatalf("expected ErrPublishedImmutable, got %v", err)
 	}
@@ -272,7 +272,7 @@ func TestUpdate_DraftStaysEditable(t *testing.T) {
 	repo := &fakeAnnouncementRepo{announcement: draftAnnouncement(false)}
 	svc := newTestService(repo, &fakeOutbox{})
 
-	if _, err := svc.Update(context.Background(), repo.announcement.ID, validInput()); err != nil {
+	if _, err := updateAsRead(context.Background(), svc, repo.announcement.ID, validInput()); err != nil {
 		t.Fatalf("expected draft update to pass, got %v", err)
 	}
 	if repo.updateCalls != 1 {
@@ -450,7 +450,7 @@ func TestPublish_EnqueuesTitleOnlyEmails(t *testing.T) {
 	outbox := &fakeOutbox{}
 	svc := newTestService(repo, outbox)
 
-	if _, err := svc.Publish(context.Background(), repo.announcement.ID); err != nil {
+	if _, err := publishAsRead(context.Background(), svc, repo.announcement.ID); err != nil {
 		t.Fatalf("publish failed: %v", err)
 	}
 	if repo.publishCalls != 1 {
@@ -495,7 +495,7 @@ func TestPublish_NotifiesTargetedGuardiansWithoutAnnouncementContent(t *testing.
 		Logger:     slog.Default(),
 	}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
 
-	if _, err := svc.Publish(context.Background(), repo.announcement.ID); err != nil {
+	if _, err := publishAsRead(context.Background(), svc, repo.announcement.ID); err != nil {
 		t.Fatalf("publish failed: %v", err)
 	}
 	if len(notifier.events) != 1 {
@@ -530,7 +530,7 @@ func TestPublish_RecordsTheReachedChildren(t *testing.T) {
 		Logger:   slog.Default(),
 	}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
 
-	if _, err := svc.Publish(context.Background(), repo.announcement.ID); err != nil {
+	if _, err := publishAsRead(context.Background(), svc, repo.announcement.ID); err != nil {
 		t.Fatalf("publish failed: %v", err)
 	}
 	want := []int64{repo.announcement.GetTenantID(), repo.announcement.ID}
@@ -562,7 +562,7 @@ func TestPublish_GroupsGuardianPushesByPortalLocale(t *testing.T) {
 		ParentsURL: "https://parents.example.test", Logger: slog.Default(),
 	}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
 
-	if _, err := svc.Publish(context.Background(), repo.announcement.ID); err != nil {
+	if _, err := publishAsRead(context.Background(), svc, repo.announcement.ID); err != nil {
 		t.Fatalf("publish failed: %v", err)
 	}
 	if len(notifier.events) != 2 {
@@ -610,7 +610,7 @@ func TestPublish_PollNotifiesAllTargetedGuardians(t *testing.T) {
 		Logger:     slog.Default(),
 	}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
 
-	if _, err := svc.Publish(context.Background(), poll.ID); err != nil {
+	if _, err := publishAsRead(context.Background(), svc, poll.ID); err != nil {
 		t.Fatalf("publish poll: %v", err)
 	}
 	if len(notifier.events) != 1 || !slices.Equal(notifier.events[0].Audience.GuardianAccountIDs, []int64{999}) {
@@ -644,7 +644,7 @@ func TestPublish_EnqueuesBrandingLogos(t *testing.T) {
 		Logger:     slog.Default(),
 	}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
 
-	if _, err := svc.Publish(context.Background(), repo.announcement.ID); err != nil {
+	if _, err := publishAsRead(context.Background(), svc, repo.announcement.ID); err != nil {
 		t.Fatalf("publish failed: %v", err)
 	}
 	if len(outbox.requests) != 1 {
@@ -673,7 +673,7 @@ func TestPublish_BrandingWithoutSchoolLogo(t *testing.T) {
 	outbox := &fakeOutbox{}
 	svc := newTestService(repo, outbox)
 
-	if _, err := svc.Publish(context.Background(), repo.announcement.ID); err != nil {
+	if _, err := publishAsRead(context.Background(), svc, repo.announcement.ID); err != nil {
 		t.Fatalf("publish failed: %v", err)
 	}
 	payload := outbox.requests[0].Payload
@@ -697,7 +697,7 @@ func TestPublish_NoEmailWithoutOptIn(t *testing.T) {
 	outbox := &fakeOutbox{}
 	svc := newTestService(repo, outbox)
 
-	if _, err := svc.Publish(context.Background(), repo.announcement.ID); err != nil {
+	if _, err := publishAsRead(context.Background(), svc, repo.announcement.ID); err != nil {
 		t.Fatalf("publish failed: %v", err)
 	}
 	if len(outbox.requests) != 0 {
@@ -717,10 +717,10 @@ func TestPublish_RepublishDoesNotReEnqueue(t *testing.T) {
 	outbox := &fakeOutbox{}
 	svc := newTestService(repo, outbox)
 
-	if _, err := svc.Publish(context.Background(), repo.announcement.ID); err != nil {
+	if _, err := publishAsRead(context.Background(), svc, repo.announcement.ID); err != nil {
 		t.Fatalf("first publish failed: %v", err)
 	}
-	if _, err := svc.Publish(context.Background(), repo.announcement.ID); err != nil {
+	if _, err := publishAsRead(context.Background(), svc, repo.announcement.ID); err != nil {
 		t.Fatalf("second publish failed: %v", err)
 	}
 	if repo.publishCalls != 1 {
@@ -751,7 +751,7 @@ func TestPublish_ConcurrentEditWins_UsesFreshRow(t *testing.T) {
 	outbox := &fakeOutbox{}
 	svc := newTestService(repo, outbox)
 
-	if _, err := svc.Publish(context.Background(), repo.announcement.ID); err != nil {
+	if _, err := publishAsRead(context.Background(), svc, repo.announcement.ID); err != nil {
 		t.Fatalf("publish failed: %v", err)
 	}
 	if len(outbox.requests) != 0 {
@@ -779,7 +779,7 @@ func TestPublish_ConcurrentEditExpires_RollsBack(t *testing.T) {
 	outbox := &fakeOutbox{}
 	svc := newTestService(repo, outbox)
 
-	if _, err := svc.Publish(context.Background(), repo.announcement.ID); err == nil {
+	if _, err := publishAsRead(context.Background(), svc, repo.announcement.ID); err == nil {
 		t.Fatal("expected publish to fail when the row expired concurrently during the flip")
 	}
 	if len(outbox.requests) != 0 {
@@ -810,7 +810,7 @@ func TestPublish_ConcurrentEditInvalidatesReminder_RollsBack(t *testing.T) {
 	outbox := &fakeOutbox{}
 	svc := newTestService(repo, outbox)
 
-	if _, err := svc.Publish(context.Background(), initial.ID); !errors.Is(err, ErrValidation) {
+	if _, err := publishAsRead(context.Background(), svc, initial.ID); !errors.Is(err, ErrValidation) {
 		t.Fatalf("Publish() error = %v, want reminder validation error", err)
 	}
 	if len(outbox.requests) != 0 {
@@ -852,7 +852,7 @@ func TestPublish_EmailEnqueueFailureIsFatal(t *testing.T) {
 		Logger:     slog.Default(),
 	}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
 
-	if _, err := svc.Publish(context.Background(), repo.announcement.ID); err == nil {
+	if _, err := publishAsRead(context.Background(), svc, repo.announcement.ID); err == nil {
 		t.Fatal("expected publish to fail when the e-mail enqueue fails")
 	}
 }

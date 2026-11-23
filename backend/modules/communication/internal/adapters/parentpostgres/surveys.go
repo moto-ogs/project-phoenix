@@ -128,11 +128,13 @@ func (s *SurveyStore) FindSurvey(ctx context.Context, id int64, lock bool) (*com
 		return nil, err
 	}
 	row := new(surveyRow)
-	query := db.NewSelect().Model(row).Where("sv.id = ? AND sv.tenant_id = ?", id, tenantID)
+	// The count under the lock is what a delete compares with its dialog
+	// (communication.SurveyDeleteFingerprint): the lock holds off the key
+	// share a new participation takes on the row.
+	query := db.NewSelect().Model(row).Column("sv.*").ColumnExpr(participantCountColumn).
+		Where("sv.id = ? AND sv.tenant_id = ?", id, tenantID)
 	if lock {
-		query = query.For("UPDATE")
-	} else {
-		query = query.Column("sv.*").ColumnExpr(participantCountColumn)
+		query = query.For("UPDATE OF sv")
 	}
 	return withQuestions(ctx, db, row, query.Scan(ctx))
 }

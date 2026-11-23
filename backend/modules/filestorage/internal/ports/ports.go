@@ -22,6 +22,10 @@ type FolderStore interface {
 	// caller queues cleanup intents for the bytes BEFORE calling this.
 	Delete(ctx context.Context, folderID int64) (domain.OperationStats, error)
 	FindByID(ctx context.Context, folderID int64) (domain.Folder, bool, domain.OperationStats, error)
+	// FindByIDForUpdate is FindByID under the row lock: an edit and a delete
+	// compare the state their author read with it, and a file upload (its
+	// foreign key share lock) waits until they commit.
+	FindByIDForUpdate(ctx context.Context, folderID int64) (domain.Folder, bool, domain.OperationStats, error)
 	// ListVisible returns the folders the viewer may see, by name, with the
 	// number of live files in each.
 	ListVisible(ctx context.Context, viewer domain.Viewer) ([]domain.FolderListItem, domain.OperationStats, error)

@@ -43,7 +43,7 @@ func TestAnnouncementWithoutAuthorStaysEditable(t *testing.T) {
 	}
 	assert.True(t, found)
 	stored.Title = "Ohne Autor, bearbeitet"
-	require.NoError(t, module.UpdateAnnouncement(ctx, stored, editor.ID, nil))
+	require.NoError(t, module.UpdateAnnouncement(ctx, stored, communication.AnnouncementEditVersion(*stored), editor.ID, nil))
 
 	var authorless bool
 	require.NoError(t, db.NewRaw(`SELECT created_by IS NULL FROM platform.announcements WHERE id = ? AND title = ?`,
@@ -69,7 +69,7 @@ func TestAnnouncementWithoutAuthorReachesItsAudience(t *testing.T) {
 		_, err := db.ExecContext(context.Background(), `DELETE FROM platform.announcements WHERE id = ?`, announcement.ID)
 		require.NoError(t, err)
 	})
-	require.NoError(t, module.PublishAnnouncement(ctx, announcement.ID, author.ID, nil))
+	require.NoError(t, module.PublishAnnouncement(ctx, announcement.ID, communication.AnnouncementEditVersion(*announcement), author.ID, nil))
 	_, err := db.ExecContext(context.Background(), `UPDATE platform.announcements SET created_by = NULL WHERE id = ?`, announcement.ID)
 	require.NoError(t, err)
 

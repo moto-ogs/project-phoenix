@@ -135,6 +135,9 @@ type announcementRequest struct {
 	ReminderText *string    `json:"reminder_text,omitempty"`
 	// Erklärung settings (#3430), used with delivery_mode "declaration".
 	declarationSettingsRequest
+	// ExpectedVersion is the version of the draft an update was made on
+	// (ADR 0311); a new announcement sends none.
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 // reminderRequest is the post-publish reminder edit. Presence distinguishes
@@ -143,6 +146,9 @@ type announcementRequest struct {
 type reminderRequest struct {
 	ReminderAt   common.DeferredJSON[*time.Time] `json:"reminder_at" contract_refines:"The reminder handler already requires an RFC 3339 instant or null"`
 	ReminderText *string                         `json:"reminder_text,omitempty"`
+	// ExpectedVersion is the version of the announcement whose reminder
+	// was read (ADR 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // optionResponse is one answer option of a poll.
@@ -189,6 +195,9 @@ type announcementResponse struct {
 	ReminderText   *string    `json:"reminder_text,omitempty"`
 	ReminderSentAt *time.Time `json:"reminder_sent_at,omitempty"`
 	declarationSettingsResponse
+	// Version is the token an update, the reminder edit and the publication
+	// send back (ADR 0311).
+	Version string `json:"version"`
 }
 
 type statsResponse struct {
@@ -252,6 +261,7 @@ func toAnnouncementResponse(a *announcementService.ParentAnnouncement, now time.
 		Active:                      a.Active,
 		CreatedAt:                   a.CreatedAt,
 		UpdatedAt:                   a.UpdatedAt,
+		Version:                     announcementService.ParentAnnouncementVersion(*a),
 		Targets:                     toTargetResponses(a.Targets),
 		ResponseType:                a.ResponseType,
 		ResponseDeadline:            a.ResponseDeadline,
@@ -287,6 +297,7 @@ func toInput(req announcementRequest) (announcementService.ParentAnnouncementInp
 		ReminderAt:              req.ReminderAt,
 		ReminderText:            req.ReminderText,
 		Declaration:             req.settings(),
+		ExpectedVersion:         req.ExpectedVersion,
 		Targets:                 make([]announcementService.ParentAnnouncementTargetInput, 0, len(req.Targets)),
 	}
 	for _, t := range req.Targets {
@@ -418,7 +429,7 @@ func (rs *Resource) updateReminder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a, err := rs.Service.UpdateParentAnnouncementReminder(r.Context(), id, announcementService.ParentAnnouncementReminderInput{
-		ReminderAt: req.ReminderAt.Value, ReminderText: req.ReminderText,
+		ReminderAt: req.ReminderAt.Value, ReminderText: req.ReminderText, ExpectedVersion: req.ExpectedVersion,
 	})
 	if err != nil {
 		renderAnnouncementError(w, r, err)
@@ -444,7 +455,11 @@ func (rs *Resource) publish(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	a, err := rs.Service.PublishParentAnnouncement(r.Context(), id)
+	var req versionRequest
+	if !decodeReadState(w, r, &req) {
+		return
+	}
+	a, err := rs.Service.PublishParentAnnouncement(r.Context(), id, req.ExpectedVersion)
 	if err != nil {
 		renderAnnouncementError(w, r, err)
 		return

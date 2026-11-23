@@ -145,7 +145,7 @@ func publishSeedDeclaration(rt *Runtime, declaration seedDeclaration) error {
 			return fmt.Errorf("attach file to parent declaration: %w", err)
 		}
 	}
-	if _, err := rt.Client.Post(fmt.Sprintf("/api/parent-announcements/%d/publish", id), nil); err != nil {
+	if _, err := publishParentAnnouncement(rt, nil, id, raw); err != nil {
 		return fmt.Errorf("publish parent declaration %q: %w", declaration.title, err)
 	}
 	return nil

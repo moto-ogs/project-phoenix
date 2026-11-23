@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -20,6 +21,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -39,6 +41,8 @@ type mockAnnouncementService struct {
 	publishFn         func(ctx context.Context, id int64, operatorID int64, clientIP net.IP) error
 	getStatsFn        func(ctx context.Context, id int64) (*platform.AnnouncementStats, error)
 	getViewDetailsFn  func(ctx context.Context, id int64) ([]*platform.AnnouncementViewDetail, error)
+	// publishedVersion is the edit version the last publication sent.
+	publishedVersion string
 }
 
 func (m *mockAnnouncementService) CreateAnnouncement(ctx context.Context, announcement *platform.Announcement, operatorID int64, clientIP net.IP) error {
@@ -55,7 +59,7 @@ func (m *mockAnnouncementService) GetAnnouncement(ctx context.Context, id int64)
 	return nil, nil
 }
 
-func (m *mockAnnouncementService) UpdateAnnouncement(ctx context.Context, announcement *platform.Announcement, operatorID int64, clientIP net.IP) error {
+func (m *mockAnnouncementService) UpdateAnnouncement(ctx context.Context, announcement *platform.Announcement, _ string, operatorID int64, clientIP net.IP) error {
 	if m.updateFn != nil {
 		return m.updateFn(ctx, announcement, operatorID, clientIP)
 	}
@@ -76,7 +80,8 @@ func (m *mockAnnouncementService) ListAnnouncements(ctx context.Context, include
 	return nil, nil
 }
 
-func (m *mockAnnouncementService) PublishAnnouncement(ctx context.Context, id int64, operatorID int64, clientIP net.IP) error {
+func (m *mockAnnouncementService) PublishAnnouncement(ctx context.Context, id int64, expectedEditVersion string, operatorID int64, clientIP net.IP) error {
+	m.publishedVersion = expectedEditVersion
 	if m.publishFn != nil {
 		return m.publishFn(ctx, id, operatorID, clientIP)
 	}
@@ -852,6 +857,15 @@ func TestPublishAnnouncement_SuccessAndErrors(t *testing.T) {
 			},
 			wantStatus: http.StatusNotFound,
 		},
+		{
+			name: "changed since read",
+			id:   "1",
+			publishFn: func(_ context.Context, _ int64, _ int64, _ net.IP) error {
+				return readstate.ErrChanged
+			},
+			wantStatus: http.StatusConflict,
+			wantBody:   readstate.ChangedCode,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -864,6 +878,23 @@ func TestPublishAnnouncement_SuccessAndErrors(t *testing.T) {
 			}
 		})
 	}
+}
+
+// The publication hands the edit version the operator read to the owner,
+// which compares it under its lock (ADR 0311).
+func TestPublishAnnouncement_SendsTheReadEditVersion(t *testing.T) {
+	t.Parallel()
+	mock := &mockAnnouncementService{}
+	resource := operatorannouncements.NewAnnouncementsResource(mock, operatorTestClock)
+	req := httptest.NewRequest(http.MethodPost, "/announcements/1/publish", strings.NewReader(`{"expected_edit_version":"read-version"}`))
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("id", "1")
+	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, rctx)
+	ctx = context.WithValue(ctx, sessiontoken.CtxClaims, sessiontoken.AppClaims{ID: 1})
+	rr := httptest.NewRecorder()
+	resource.PublishAnnouncement(rr, req.WithContext(ctx))
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Equal(t, "read-version", mock.publishedVersion)
 }
 
 func TestGetStats_ResponseStructure(t *testing.T) {

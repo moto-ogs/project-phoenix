@@ -41,6 +41,7 @@ func (seedAnnouncementsStep) Run(ctx context.Context, rt *Runtime) error {
 	}
 
 	var firstAnnouncementID int64
+	var firstAnnouncement []byte
 	for _, a := range announcements {
 		raw, err := rt.Client.Post("/operator/announcements", a)
 		if err != nil {
@@ -51,10 +52,21 @@ func (seedAnnouncementsStep) Run(ctx context.Context, rt *Runtime) error {
 			if err != nil {
 				return fmt.Errorf("parse operator announcement: %w", err)
 			}
+			firstAnnouncement = raw
 		}
 	}
 	if firstAnnouncementID != 0 {
-		if _, err := rt.Client.Post(fmt.Sprintf("/operator/announcements/%d/publish", firstAnnouncementID), nil); err != nil {
+		// The operator publishes the announcement as created (ADR 0311).
+		var announcement struct {
+			Data struct {
+				EditVersion string `json:"edit_version"`
+			} `json:"data"`
+		}
+		if err := json.Unmarshal(firstAnnouncement, &announcement); err != nil {
+			return fmt.Errorf("parse operator announcement: %w", err)
+		}
+		path := fmt.Sprintf("/operator/announcements/%d/publish", firstAnnouncementID)
+		if _, err := rt.Client.Post(path, map[string]any{"expected_edit_version": announcement.Data.EditVersion}); err != nil {
 			return fmt.Errorf("publish operator announcement: %w", err)
 		}
 		rt.Client.BindAuth(rt.TenantAuth)

@@ -98,8 +98,8 @@ func (p *parentAnnouncements) DeleteParentAnnouncement(ctx context.Context, id i
 	return mapParentAnnouncementError(p.service.Delete(ctx, id))
 }
 
-func (p *parentAnnouncements) PublishParentAnnouncement(ctx context.Context, id int64) (*communication.ParentAnnouncement, error) {
-	row, err := p.service.Publish(ctx, id)
+func (p *parentAnnouncements) PublishParentAnnouncement(ctx context.Context, id int64, expectedVersion string) (*communication.ParentAnnouncement, error) {
+	row, err := p.service.Publish(ctx, id, expectedVersion)
 	return mapParentAnnouncement(row), mapParentAnnouncementError(err)
 }
 
@@ -215,7 +215,9 @@ func (p *parentAnnouncements) ResendParentAnnouncementEmails(ctx context.Context
 }
 
 func (p *parentAnnouncements) UpdateParentAnnouncementReminder(ctx context.Context, id int64, input communication.ParentAnnouncementReminderInput) (*communication.ParentAnnouncement, error) {
-	row, err := p.service.UpdateReminder(ctx, id, ReminderInput{ReminderAt: input.ReminderAt, ReminderText: input.ReminderText})
+	row, err := p.service.UpdateReminder(ctx, id, ReminderInput{
+		ReminderAt: input.ReminderAt, ReminderText: input.ReminderText, ExpectedVersion: input.ExpectedVersion,
+	})
 	return mapParentAnnouncement(row), mapParentAnnouncementError(err)
 }
 
@@ -275,8 +277,9 @@ func mapParentAnnouncementInput(input communication.ParentAnnouncementInput) Inp
 		ResponseDeadline: input.ResponseDeadline, Options: input.Options,
 		DeliveryMode: input.DeliveryMode, EmailAudience: input.EmailAudience,
 		ReminderAt: input.ReminderAt, ReminderText: input.ReminderText,
-		Declaration: StaffAnnouncementDeclarationSettings(input.Declaration),
-		Sender:      (*ClassLetterSender)(input.Sender),
+		Declaration:     StaffAnnouncementDeclarationSettings(input.Declaration),
+		Sender:          (*ClassLetterSender)(input.Sender),
+		ExpectedVersion: input.ExpectedVersion,
 	}
 }
 

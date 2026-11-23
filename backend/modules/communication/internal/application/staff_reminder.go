@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"strings"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Scheduled reminder (#3162).
@@ -56,6 +58,9 @@ const (
 type ReminderInput struct {
 	ReminderAt   *time.Time `json:"reminder_at,omitempty"`
 	ReminderText *string    `json:"reminder_text,omitempty"`
+	// ExpectedVersion is the version of the announcement the reminder was
+	// read on (ADR 0311).
+	ExpectedVersion string `json:"-"`
 }
 
 // normalizeReminder trims and validates a draft-safe reminder representation.
@@ -131,6 +136,10 @@ func (s *service) UpdateReminder(ctx context.Context, id int64, in ReminderInput
 		return nil, ErrNotFound
 	}
 	if err := guardClassLetterWrite(ctx, a); err != nil {
+		return nil, err
+	}
+	// The reminder the person changed is the one they read (ADR 0311).
+	if err := readstate.Check(in.ExpectedVersion, readstate.Of(a.UpdatedAt)); err != nil {
 		return nil, err
 	}
 	if !a.IsPublished() {

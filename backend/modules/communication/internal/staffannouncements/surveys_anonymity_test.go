@@ -129,7 +129,7 @@ func (f *surveyFixture) publishStaffSurvey(t *testing.T, anonymous bool) *commun
 		if err != nil {
 			return err
 		}
-		survey, err = f.surveys.PublishSurvey(ctx, f.staff[0].AccountID, draft.ID)
+		survey, err = f.surveys.PublishSurvey(ctx, f.staff[0].AccountID, draft.ID, communication.SurveyVersion(*draft))
 		return err
 	}))
 	return survey
@@ -340,7 +340,9 @@ func TestSurvey_PublishedSurveyIsFrozenAndClosedSurveyTakesNoAnswers(t *testing.
 	survey := f.publishStaffSurvey(t, true)
 
 	err := f.inSchool(t, func(ctx context.Context) error {
-		_, err := f.surveys.UpdateSurvey(ctx, survey.ID, staffSurveyInput(false))
+		in := staffSurveyInput(false)
+		in.ExpectedVersion = communication.SurveyVersion(*survey)
+		_, err := f.surveys.UpdateSurvey(ctx, survey.ID, in)
 		return err
 	})
 	require.ErrorIs(t, err, communication.ErrSurveyNotDraft)
@@ -433,7 +435,7 @@ func TestParentSurvey_OneAnswerPerGuardianAccountAndCarrierStaysOutOfAnnouncemen
 		if err != nil {
 			return err
 		}
-		survey, err = f.surveys.PublishSurvey(ctx, chain.AccountID, draft.ID)
+		survey, err = f.surveys.PublishSurvey(ctx, chain.AccountID, draft.ID, communication.SurveyVersion(*draft))
 		return err
 	}))
 	require.NotNil(t, survey.AnnouncementID, "a parent survey is carried by an announcement")
@@ -479,7 +481,11 @@ func TestParentSurvey_OneAnswerPerGuardianAccountAndCarrierStaysOutOfAnnouncemen
 
 	// Deleting the survey removes its carrier with it.
 	require.NoError(t, f.inSchool(t, func(ctx context.Context) error {
-		return f.surveys.DeleteSurvey(ctx, survey.ID)
+		read, err := f.surveys.GetSurvey(ctx, survey.ID)
+		if err != nil {
+			return err
+		}
+		return f.surveys.DeleteSurvey(ctx, survey.ID, communication.SurveyDeleteFingerprint(*read))
 	}))
 	var carriers int
 	require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM users.parent_announcements WHERE id = ?`, *survey.AnnouncementID).Scan(testpkg.Ctx(t), &carriers))
