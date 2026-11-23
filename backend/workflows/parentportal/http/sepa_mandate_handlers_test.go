@@ -112,6 +112,15 @@ func TestRevokeSEPAMandate_SendsTheReadVersion(t *testing.T) {
 
 	w = serveSEPAMandate(t, &Resource{ParentService: &fakeParentService{}}, http.MethodPost, path, `{"expected_version":`, 7301)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	// An older page revokes without a body: the service sees an empty
+	// token and refuses it like a changed read, never as invalid input.
+	empty := &fakeParentService{sepaErr: readstate.ErrChanged, gotSEPAVersion: "unset"}
+	w = serveSEPAMandate(t, &Resource{ParentService: empty}, http.MethodPost, path, "", 7301)
+	assert.Equal(t, http.StatusConflict, w.Code, w.Body.String())
+	assert.Contains(t, w.Body.String(), `"code":"general.changed_since_read"`)
+	assert.Equal(t, "revoke", empty.gotSEPACall)
+	assert.Empty(t, empty.gotSEPAVersion, "no body is an empty token")
 }
 
 // Every refusal answers its registered code, and none repeats the IBAN of

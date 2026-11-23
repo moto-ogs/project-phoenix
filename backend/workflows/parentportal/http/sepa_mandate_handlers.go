@@ -2,6 +2,7 @@ package parent
 
 import (
 	"errors"
+	"io"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -115,8 +116,11 @@ func (rs *Resource) revokeSEPAMandate(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	// A body without a token (an older page sends none) is an empty token:
+	// the service refuses it as a changed read, so the parents see the
+	// stored mandate again.
 	req := &ParentSEPAMandateRevokeRequest{}
-	if err := render.Bind(r, req); err != nil {
+	if err := render.Bind(r, req); err != nil && !errors.Is(err, io.EOF) {
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(errors.New("the body names no SEPA mandate"),
 			common.CodeParentBillingSepaMandateInvalid))
 		return

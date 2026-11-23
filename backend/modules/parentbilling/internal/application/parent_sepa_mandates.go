@@ -382,9 +382,10 @@ func (p *ParentMandates) insertMandate(ctx context.Context, organizationID int64
 
 // RevokeParentSEPAMandate ends the family's mandate in force today: the
 // next run no longer collects with it. The parents revoke the mandate they
-// read: when another member of the family replaced it since, the locked
-// mandate in force has another version and the revocation is refused with
-// readstate.ErrChanged (ADR 0311).
+// read: the mandate in force must be the one their version names, else
+// readstate.ErrChanged (ADR 0311). The lock holds only that row; a
+// mandate revoked between finding and locking it is caught by the update,
+// which ends a mandate only while revoked_on IS NULL.
 func (p *ParentMandates) RevokeParentSEPAMandate(ctx context.Context, organizationID int64, reader parentbilling.ParentMandateReader,
 	expectedVersion string,
 ) (parentbilling.ParentMandate, error) {
