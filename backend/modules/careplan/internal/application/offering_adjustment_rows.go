@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -20,20 +21,18 @@ type scheduledOfferingReplacement struct {
 }
 
 func (m *BookingMaterialization) persistOfferingAdjustment(ctx context.Context, work *offeringAdjustmentWork) error {
-	history, err := m.deps.Enrollment.SelectionHistory(ctx, work.child.ID)
+	history, err := m.correctedSelectionHistory(ctx, work)
 	if err != nil {
-		return fmt.Errorf("decision: list scheduled child offerings: %w", err)
+		return err
 	}
-	stored := bookedOfferingPointers(history)
-	keepBookingEnds(work.replacement, work.beforeLinks, stored, work.phase.ServiceEnd.AddDays(1))
-	var scheduled []scheduledOfferingReplacement
-	phase := work.phase.OfferingPhase
 	if work.effectiveFrom == nil {
-		scheduled = scheduledOfferingReplacements(stored, work.selectionDate)
-		if start := correctionStart(work, stored); len(scheduled) == 0 && start.After(phase.ServiceStart) {
-			phase.ServiceStart = start
-			work.replacement = replacementFrom(work.replacement, start)
-		}
+		keepBookingEnds(work.replacement, work.beforeLinks, history, work.offeringByID, work.phase.ServiceEnd.AddDays(1))
+	}
+	scheduled := scheduledOfferingReplacements(history, work.selectionDate)
+	phase := work.phase.OfferingPhase
+	if start := correctionStart(work, history); len(scheduled) == 0 && start.After(phase.ServiceStart) {
+		phase.ServiceStart = start
+		work.replacement = replacementFrom(work.replacement, start)
 	}
 	if err := m.persistOfferingBookings(ctx, work, scheduled, phase); err != nil {
 		return err
@@ -55,29 +54,112 @@ func (m *BookingMaterialization) persistOfferingAdjustment(ctx context.Context, 
 	return nil
 }
 
-// keepBookingEnds gives an offering that stays chosen the end its booking
-// has (#7909): an adjustment changes what the office changed, and an
-// offering booked until February is not booked to the end of the phase
-// because a weekday changed. The end is the last day of the offering's
-// stored bookings that follow each other from the one in effect. An end on
-// which another stored booking of the child starts is not the end of the
-// care but the start of a later change, which a dated switch replaces and
-// an undated correction schedules again; the offering is then booked as a
-// new one. An offering the adjustment adds is booked as before. The care
-// end of the child record, set on the rows already, still wins when it is
-// earlier.
-func keepBookingEnds(replacement, before, stored []*careplan.BookedOffering, phaseEnd calendar.Date) {
+// correctedSelectionHistory reads every dated selection of the child before
+// an undated staff correction rewrites the current one; a dated switch reads
+// none.
+func (m *BookingMaterialization) correctedSelectionHistory(ctx context.Context, work *offeringAdjustmentWork) ([]*careplan.BookedOffering, error) {
+	if work.effectiveFrom != nil {
+		return nil, nil
+	}
+	history, err := m.deps.Enrollment.SelectionHistory(ctx, work.child.ID)
+	if err != nil {
+		return nil, fmt.Errorf("decision: list scheduled child offerings: %w", err)
+	}
+	return bookedOfferingPointers(history), nil
+}
+
+// keepBookingEnds gives an offering that stays chosen in an undated
+// correction the end its booking has (#7909): the correction changes what
+// the office changed, and an offering booked until February is not booked
+// to the end of the phase because a weekday changed. The end is the last
+// day of the offering's stored bookings that follow each other from the one
+// in effect. An end on which another stored booking of the child starts is
+// not the end of the care but the start of a scheduled change, which the
+// correction schedules again and which closes the booking there; the
+// offering is then booked as a new one. An offering the correction adds is
+// booked as before. A dated switch keeps its own rules (#7928: its
+// capacity check reads the phase end). The care end of the child record,
+// set on the rows already, still wins when it is earlier.
+//
+// A row of automatic days only follows the rows that add them: it ends with
+// the last of them, not with an end of its own, so a co-booking stops with
+// a trigger that keeps its end and goes on with one that does not.
+func keepBookingEnds(replacement, before, stored []*careplan.BookedOffering, offerings map[int64]*careplan.CareOffering, phaseEnd calendar.Date) {
+	ends := storedBookingEnds(before, stored, phaseEnd)
+	derived := make(map[*careplan.BookedOffering]bool, len(replacement))
+	for _, row := range replacement {
+		if automaticOnly(row) && len(drivers(row, replacement, offerings[row.CareOfferingID])) > 0 {
+			derived[row] = true
+		} else if end, ok := ends[row.CareOfferingID]; ok {
+			endAtMost(row, end)
+		}
+	}
+	// A co-booking can add another; each pass only moves ends earlier.
+	for range derived {
+		endWithDrivers(replacement, derived, offerings)
+	}
+}
+
+// storedBookingEnds is the end of each booking in effect that ends before
+// the phase does.
+func storedBookingEnds(before, stored []*careplan.BookedOffering, phaseEnd calendar.Date) map[int64]calendar.Date {
 	ends := make(map[int64]calendar.Date, len(before))
 	for _, link := range before {
 		if end, ok := bookingEnd(link, stored); ok && end.Before(phaseEnd) {
 			ends[link.CareOfferingID] = end
 		}
 	}
+	return ends
+}
+
+func automaticOnly(row *careplan.BookedOffering) bool {
+	return len(row.ManualSelectedDays) == 0 && len(row.AutomaticSelectedDays) > 0
+}
+
+// endWithDrivers ends each derived row with the last of its drivers.
+func endWithDrivers(replacement []*careplan.BookedOffering, derived map[*careplan.BookedOffering]bool, offerings map[int64]*careplan.CareOffering) {
 	for _, row := range replacement {
-		end, ok := ends[row.CareOfferingID]
-		if !ok || (row.ValidUntil != nil && !end.Before(*row.ValidUntil)) {
+		if !derived[row] {
 			continue
 		}
+		if end, ok := latestEnd(drivers(row, replacement, offerings[row.CareOfferingID])); ok {
+			endAtMost(row, end)
+		}
+	}
+}
+
+// drivers are the rows of the selection that add row's automatic days: its
+// triggers, and for a required lunch every other row (selection.materialize).
+func drivers(row *careplan.BookedOffering, rows []*careplan.BookedOffering, offering *careplan.CareOffering) []*careplan.BookedOffering {
+	if offering == nil {
+		return nil
+	}
+	lunch := offering.IsRequired && offering.IncludesLunch && offering.DaysOfWeekMode == daysOfWeekModeParentChoice
+	var result []*careplan.BookedOffering
+	for _, other := range rows {
+		if other != row && (lunch || slices.Contains(offering.AutoAddTriggerOfferingIDs, other.CareOfferingID)) {
+			result = append(result, other)
+		}
+	}
+	return result
+}
+
+// latestEnd is the last end of rows; an open row has none.
+func latestEnd(rows []*careplan.BookedOffering) (calendar.Date, bool) {
+	var latest calendar.Date
+	for _, row := range rows {
+		if row.ValidUntil == nil {
+			return "", false
+		}
+		if latest == "" || row.ValidUntil.After(latest) {
+			latest = *row.ValidUntil
+		}
+	}
+	return latest, latest != ""
+}
+
+func endAtMost(row *careplan.BookedOffering, end calendar.Date) {
+	if row.ValidUntil == nil || end.Before(*row.ValidUntil) {
 		row.ValidUntil = &end
 	}
 }

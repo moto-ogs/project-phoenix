@@ -1029,15 +1029,19 @@ behoben.
    behoben (Abschnitt 2), für alle anderen nicht. Dasselbe gilt für ein
    einzelnes Angebot, das später als die übrigen begann: Die Korrektur
    bucht es ab dem ersten Tag des Kindes.
-3. **Behoben (#7909): Eine Änderung behält das Ende einer Buchung.** Bleibt
-   ein Angebot bei einer Korrektur ohne Datum oder einer Änderung mit
-   Stichtag gewählt, behält seine Buchung ihr gespeichertes Ende
-   (`keepBookingEnds`); ein neu gewähltes Angebot endet mit der Phase, ein
-   früheres Betreuungsende der Kinderakte gilt weiter. Ein Ende, an dem eine
-   andere gespeicherte Buchung des Kindes beginnt, ist kein Ende der
-   Betreuung, sondern der Beginn einer geplanten Änderung; das Angebot wird
-   dann wie bisher gebucht. Eine Korrektur, die die Betreuung nicht ändert,
-   erzeugt für einen gebundenen Vertrag keine Version mehr.
+3. **Behoben (#7909): Eine Korrektur ohne Datum behält das Ende einer
+   Buchung.** Bleibt ein Angebot gewählt, behält seine Buchung ihr
+   gespeichertes Ende (`keepBookingEnds`); eine Mitbuchung endet mit ihrem
+   letzten Auslöser. Ein neu gewähltes Angebot endet mit der Phase oder dem
+   früheren Betreuungsende der Kinderakte. Ein Ende, an dem eine andere
+   gespeicherte Buchung des Kindes beginnt, ist der Beginn einer geplanten
+   Änderung; die Korrektur plant sie neu ein, und sie schließt die Buchung
+   dort. Eine Korrektur, die die Betreuung nicht ändert, erzeugt für einen
+   gebundenen Vertrag keine Version mehr. Offen: Eine Änderung mit Stichtag
+   verwirft das Ende weiterhin
+   ([#7928](https://github.com/moto-ogs/project-phoenix/issues/7928)), und
+   ein Ende lässt sich nicht ausdrücklich verlängern
+   ([#7929](https://github.com/moto-ogs/project-phoenix/issues/7929)).
 
 ## Verworfene Optionen
 

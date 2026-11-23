@@ -111,21 +111,6 @@ func TestAnUndatedCorrectionKeepsTheEndOfABooking(t *testing.T) {
 	}
 }
 
-// A dated switch of the weekdays keeps the end of the booking as well: the
-// new weekdays apply from the switch to the end of February.
-func TestADatedSwitchKeepsTheEndOfABooking(t *testing.T) {
-	t.Parallel()
-	c := setupCorrection(t)
-	switchDay := calendar.NewDate(2027, 1, 11)
-	c.correct(t, &switchDay, enrollmentAPI.OfferingAdjustmentSelection{OfferingID: c.bounded.ID, SelectedDays: []string{"mon"}})
-
-	assert.Equal(t, []calendar.Date{switchDay, c.bookingEnd}, c.bookingEnds(t, c.bounded.ID),
-		"the old weekdays end at the switch, the new ones with the booking")
-	assert.Zero(t, c.rosterRowsPast(t, c.bookingEnd), "no roster row runs past the booking")
-	assert.Equal(t, 1, c.onOccurrence(t, c.beforeEnd), "on the Monday before the end")
-	assert.Zero(t, c.onOccurrence(t, c.afterEnd), "on no occurrence after the end")
-}
-
 // An offering the correction adds is booked to the end of the phase, while
 // the booking that stays chosen keeps its end.
 func TestAnOfferingACorrectionAddsEndsWithThePhase(t *testing.T) {
@@ -141,12 +126,13 @@ func TestAnOfferingACorrectionAddsEndsWithThePhase(t *testing.T) {
 
 // The last care day of the child record still caps every booking: the
 // earlier of care end and booking end wins, and an added offering ends with
-// the care end too.
+// the care end too, or with the phase when care goes on past it.
 func TestACorrectionCapsKeptAndAddedBookingsAtTheCareEnd(t *testing.T) {
 	t.Parallel()
 	for name, careEnd := range map[string]calendar.Date{
 		"care end before the booking end": calendar.NewDate(2027, 1, 31),
 		"care end after the booking end":  calendar.NewDate(2027, 5, 31),
+		"care end after the phase end":    calendar.NewDate(2027, 9, 30),
 	} {
 		t.Run(name, func(t *testing.T) {
 			testpkg.OwnTenant(t)
@@ -162,7 +148,11 @@ func TestACorrectionCapsKeptAndAddedBookingsAtTheCareEnd(t *testing.T) {
 				kept = careEnd.AddDays(1)
 			}
 			assert.Equal(t, []calendar.Date{kept}, c.bookingEnds(t, c.bounded.ID), "the earlier end wins")
-			assert.Equal(t, []calendar.Date{careEnd.AddDays(1)}, c.bookingEnds(t, c.added.ID), "the added offering ends with the care end")
+			added := careEnd.AddDays(1)
+			if c.phaseEndExcl.Before(added) {
+				added = c.phaseEndExcl
+			}
+			assert.Equal(t, []calendar.Date{added}, c.bookingEnds(t, c.added.ID), "the added offering ends with the care end or the phase")
 		})
 	}
 }
