@@ -895,10 +895,11 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
             onClose={() => setChildQuotaOpen(false)}
             school={school}
             loadCurrentSchool={async () => {
-              const fresh = await mutateSchools(undefined, {
-                throwOnError: true,
-              });
-              const current = fresh?.find((item) => item.id === school.id);
+              // Read directly: `mutateSchools(undefined, …)` would empty the
+              // cached list, unmount this dialog and resolve to undefined.
+              const fresh =
+                await operatorProvisioningService.listSchoolSummaries();
+              const current = fresh.find((item) => item.id === school.id);
               if (!current) {
                 throw new Error("school not found after refresh");
               }

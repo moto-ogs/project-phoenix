@@ -335,7 +335,14 @@ describe("OperatorSchoolDetailPage", () => {
       status: "authenticated",
     });
     mockMutateOrgs.mockResolvedValue(undefined);
-    mockMutateSchools.mockResolvedValue([mockSchool]);
+    // Like SWR 2.x: an explicit `undefined` writes the cache empty and resolves
+    // to undefined; only an argument-free call revalidates and returns data.
+    mockMutateSchools.mockImplementation((...args: unknown[]) =>
+      Promise.resolve(
+        args.length > 0 && args[0] === undefined ? undefined : [mockSchool],
+      ),
+    );
+    mockListSchoolSummaries.mockResolvedValue([mockSchool]);
     mockMutateRequiredDetails.mockResolvedValue([]);
     await schoolPageProps.params;
   });
@@ -580,9 +587,11 @@ describe("OperatorSchoolDetailPage", () => {
     expect(headerStatValue("Kontingentzahl")).toBe("37");
   });
 
-  it("sets the Kinderkontingent from the school view and refreshes it", async () => {
+  it("saves an unlimited school as 1 x 75 on the freshly read school and closes (#7780)", async () => {
     setupSWR();
-    mockUpdateSchool.mockResolvedValue(mockSchool);
+    const renamed = { ...mockSchool, name: "Test School (neu)" };
+    mockListSchoolSummaries.mockResolvedValue([renamed]);
+    mockUpdateSchool.mockResolvedValue(renamed);
 
     await renderPage();
 
@@ -592,26 +601,59 @@ describe("OperatorSchoolDetailPage", () => {
     fireEvent.change(screen.getByLabelText("Anzahl Bundles"), {
       target: { value: "1" },
     });
+    fireEvent.change(screen.getByLabelText("Kinder pro Bundle"), {
+      target: { value: "75" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     await waitFor(() =>
       expect(mockUpdateSchool).toHaveBeenCalledWith(
         "10",
         expect.objectContaining({
-          name: "Test School",
+          name: "Test School (neu)",
           active: true,
-          child_quota: { bundles: 1, bundle_size: 50 },
+          child_quota: { bundles: 1, bundle_size: 75 },
         }),
       ),
     );
+    expect(mockMutateSchools).not.toHaveBeenCalledWith(
+      undefined,
+      expect.anything(),
+    );
     await waitFor(() => expect(mockMutateSchools).toHaveBeenCalled());
-    expect(mockMutateSchools).toHaveBeenCalledWith(undefined, {
-      throwOnError: true,
-    });
     expect(mockMutateOrgs).toHaveBeenCalled();
     await waitFor(() =>
       expect(screen.queryByLabelText("Anzahl Bundles")).not.toBeInTheDocument(),
     );
+  });
+
+  it("keeps the Kinderkontingent dialog and inputs when reading the school fails (#7780)", async () => {
+    setupSWR();
+    mockListSchoolSummaries.mockRejectedValue(
+      new ApiError("down", 503, { code: "general.unavailable" }),
+    );
+
+    await renderPage();
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Kinderkontingent" }),
+    );
+    fireEvent.change(screen.getByLabelText("Anzahl Bundles"), {
+      target: { value: "1" },
+    });
+    fireEvent.change(screen.getByLabelText("Kinder pro Bundle"), {
+      target: { value: "75" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(
+      await screen.findByText(
+        catalogText("general.unavailable", "die Änderung am Kinderkontingent"),
+      ),
+    ).toBeInTheDocument();
+    expect(mockUpdateSchool).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Anzahl Bundles")).toHaveValue("1");
+    expect(screen.getByLabelText("Kinder pro Bundle")).toHaveValue("75");
   });
 
   it("opens edit school modal when Bearbeiten is clicked", async () => {
