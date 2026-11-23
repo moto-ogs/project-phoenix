@@ -69,6 +69,8 @@ Worked example, the same route from Go to the browser:
    v1.11.5 reads them. `ident.ID` still reads a JSON number in a request:
    that is the one-release compatibility for browser tabs of the previous
    frontend and goes after the next release (`backend/sharedkernel/ident/id.go`).
+   Keep IDs as strings in browser code, including when filtering or sorting;
+   see [One transport](frontend-api.md#browser-calls).
    Give each Go field a concrete wire type; the generator rejects free JSON
    unless the field carries `contract_json:"<why its shape is open>"`.
 3. **Mount.** A new contracts function gets one row in the matching
@@ -248,6 +250,9 @@ See [school switching](../../frontend/src/app/api/auth/switch-tenant/route.ts)
 and [pre-session enrollment start](../../frontend/src/app/api/auth/mfa/enroll/start/route.ts).
 `app/api/route-backend-paths.test.ts` checks entry use and rejects raw Go
 response reads in named routes.
+
+The browser uses `bffJsonUncontracted` only from the remaining callers
+listed by the lint rule. See [One transport](frontend-api.md#browser-calls).
 
 A reshaping, an ID or format check or a second backend call for the same
 screen moves into the Go handler; an aggregation of several reads is a Go

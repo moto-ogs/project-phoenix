@@ -20,7 +20,7 @@ export async function fetchDisplayDashboard(
 ): Promise<displayContract.DashboardResponse> {
   // The wall display has no session and its answer has no envelope
   // (`plain`): neither fits a portal of bffJson, so it fetches the route
-  // file itself (old-fetch-helpers.test.ts lists it).
+  // file itself (bff-boundary/no-raw-browser-transport lists it).
   let response: Response;
   try {
     response = await fetch("/api/display/dashboard", {

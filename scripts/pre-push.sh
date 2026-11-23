@@ -81,6 +81,7 @@ while IFS= read -r -d '' file; do
   esac
   case "$file" in
     *.md) context=true ;;
+    backend/api/contract/contract.json) backend=true; frontend=true ;;
     backend/*|scripts/backend-*|scripts/check-backend-quality.sh|scripts/check-deadcode*) backend=true ;;
     frontend/*|scripts/check-frontend-quality.sh) frontend=true ;;
     environments/*|.env.example) env_sync=true ;;

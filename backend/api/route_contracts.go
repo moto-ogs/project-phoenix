@@ -693,7 +693,7 @@ func staffPortalCalendarContractMounts() []contractMount {
 	list := []common.QueryParam{
 		{Name: "device_type", Kind: common.QueryString},
 		{Name: "status", Kind: common.QueryString},
-		{Name: "registered_by_id", Kind: common.QueryString},
+		{Name: "registered_by_id", Kind: common.QueryID},
 		{Name: "search", Kind: common.QueryString},
 	}
 	devices := []common.RouteContract{
