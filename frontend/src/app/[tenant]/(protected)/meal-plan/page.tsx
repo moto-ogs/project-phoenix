@@ -25,7 +25,7 @@ import {
   useApiFormError,
   useToast,
 } from "~/contexts/ToastContext";
-import { isChangedSinceRead } from "~/lib/api-error";
+import { isReadStateRefusal } from "~/lib/api-error";
 import { formatWeekLabel, parseISODate, toISODate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import {
@@ -221,6 +221,8 @@ export default function MealPlanPage() {
   const [originals, setOriginals] = useState<Record<string, DishDraft[]>>({});
   // The version of each day as read or as the last save answered it.
   const [versions, setVersions] = useState<Record<string, string>>({});
+  // After a refusal until the stored week is read: nothing is sent.
+  const [storedWeekUnread, setStoredWeekUnread] = useState(false);
   const [clipboard, setClipboard] = useState<DishDraft[] | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{
     date: string;
@@ -292,6 +294,7 @@ export default function MealPlanPage() {
       for (const date of weekDates) orig[date] = normalizeDay(built[date]!);
       setOriginals(orig);
       setVersions(versionsFromDays(days));
+      setStoredWeekUnread(false);
       setHasLoaded(true);
     },
     [weekDates],
@@ -532,17 +535,18 @@ export default function MealPlanPage() {
   // stored week as the new read state. A day keeps its draft only while it
   // is unsaved and stored as this page read it; every other day, the refused
   // one included, shows the stored plan, so „Speichern“ never replaces a
-  // change the person has not seen. Answers the read's error, or null.
+  // change the person has not seen. Rejects when the read fails: saving
+  // then waits for a read of the stored week (ADR 0311).
   const adoptStoredWeek = async (
     unsaved: string[],
     readVersions: Record<string, string>,
-  ): Promise<unknown> => {
-    if (!weekKey) return null;
+  ): Promise<void> => {
+    if (!weekKey) return;
     try {
       const days = await week.mutate(getMealPlanWeek(mondayISO), {
         revalidate: false,
       });
-      if (!days) return null;
+      if (!days) return;
       appliedWeek.current = { key: weekKey, data: days };
       const stored = draftsFromDays(days, weekDates);
       const orig: Record<string, DishDraft[]> = {};
@@ -560,16 +564,17 @@ export default function MealPlanPage() {
         }
         return next;
       });
-      return null;
+      setStoredWeekUnread(false);
     } catch (err) {
       logger.error("meal_plan_conflict_reload_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
-      return err;
+      throw err;
     }
   };
 
   const handleSave = async () => {
+    if (storedWeekUnread) return;
     setSaving(true);
     clearSaveError();
     // Each setDay is its own backend transaction, so a mid-loop failure leaves
@@ -600,26 +605,21 @@ export default function MealPlanPage() {
       }
       // Der Fehler steht über dem Wochenplan (Bauart 2 Regel 5), nicht als
       // Toast: die noch ungespeicherten Tage bleiben sichtbar markiert.
-      const changedElsewhere = isChangedSinceRead(err);
-      const readError = changedElsewhere
-        ? await adoptStoredWeek(
-            changedDays.filter((date) => !(date in persisted)),
-            { ...versions, ...saved },
-          )
-        : null;
       // A changed day needs the person's decision, not the same request
-      // again: „Speichern“ and „Verwerfen“ stay next to it. Without the
-      // stored week „Verwerfen“ would show the old read, so the failed read
-      // is shown; its retry saves again, which reads the week again.
-      void saveErrors.show(
-        readError ?? err,
-        changedElsewhere && readError === null
-          ? { object: "die Woche im Speiseplan" }
-          : {
-              object: "die Woche im Speiseplan",
-              retry: () => retrySaveRef.current(),
-            },
-      );
+      // again: `reload` reads the stored week, „Speichern“ and „Verwerfen“
+      // stay next to it. A failed read is shown with a retry of the read
+      // alone, and saving waits for it (ADR 0311).
+      const unsaved = changedDays.filter((date) => !(date in persisted));
+      const readVersions = { ...versions, ...saved };
+      const changedElsewhere = isReadStateRefusal(err);
+      if (changedElsewhere) setStoredWeekUnread(true);
+      void saveErrors.show(err, {
+        object: "die Woche im Speiseplan",
+        retry: () => retrySaveRef.current(),
+        reload: changedElsewhere
+          ? () => adoptStoredWeek(unsaved, readVersions)
+          : undefined,
+      });
       setSaving(false);
       return;
     }
@@ -1044,7 +1044,10 @@ export default function MealPlanPage() {
             variant="primary"
             size="md"
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || storedWeekUnread}
+            disabledReason={
+              saving ? undefined : "Lade zuerst die gespeicherte Woche neu."
+            }
             tooltip="Speichert die Woche, Eltern sehen den Plan im Elternportal."
             isLoading={saving}
             loadingText="Speichern…"

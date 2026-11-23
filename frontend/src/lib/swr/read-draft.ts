@@ -220,7 +220,11 @@ function settled<T, D>(
   const draft =
     prev.refused && rebase
       ? rebase(prev.refused.draft, prev.refused.base, read)
-      : stored;
+      : // Input typed after a save rests on the saved draft: a read that
+        // brings exactly it keeps the input; any other state replaces it.
+        !prev.refused && prev.saved !== undefined && same(stored, prev.saved)
+        ? prev.draft
+        : stored;
   // A fresh state: `sent` and `saved` belong to the reads before this one.
   return {
     key: prev.key,

@@ -105,7 +105,11 @@ export default function TraegerFamilyBillingPage() {
             format={debtorNumberFormat}
             existing={loaded.family.family}
             version={loaded.family.version}
-            onChangedSinceRead={familyRead.reload}
+            // The stored state arrives through `familyRead`.
+            reload={async () => {
+              await familyRead.reloadOrThrow();
+              return undefined;
+            }}
             runDueText={runDueDatesText(loaded.run.dueDates ?? [])}
             onCancel={() => router.push(runHref)}
             onSaved={() => {

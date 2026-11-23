@@ -27,7 +27,7 @@ import {
   type OfferingCatalog,
   type OfferingCatalogItem,
 } from "~/lib/parent-api";
-import { ApiError, isChangedSinceRead } from "~/lib/api-error";
+import { ApiError, isReadStateRefusal } from "~/lib/api-error";
 import {
   type CareOfferingDayConflict,
   careOfferingDayConflicts,
@@ -141,8 +141,11 @@ export function OfferingChangeRequestModal({
     },
     recipientGuardianProfileIds: string[],
   ) => Promise<void | string>;
-  /** Nach dem Ändern einer offenen Anfrage: die Ansicht neu laden. */
-  onEdited?: () => void;
+  /**
+   * Nach dem Ändern einer offenen Anfrage oder seiner Ablehnung: die Ansicht
+   * neu laden. Lehnt ab, wenn das Lesen scheitert (ADR 0311).
+   */
+  onEdited?: () => Promise<unknown>;
   /**
    * Gesetzt, wenn eine noch offene Anfrage geändert wird. Die Auswahl ersetzt
    * dann die bisherige Anfrage, statt eine neue zu senden. `version` ist die
@@ -320,7 +323,8 @@ export function OfferingChangeRequestModal({
           expectedVersion: editRequest.version,
         });
         void invalidateFamily(parentKeys.requestEventsFamily(studentId));
-        onEdited?.();
+        // The page shows its own load error when this read fails.
+        void Promise.resolve(onEdited?.()).catch(() => undefined);
         onClose();
         return;
       }
@@ -344,14 +348,15 @@ export function OfferingChangeRequestModal({
         setConfirmCompleteWithdrawal(true);
         return;
       }
-      if (isChangedSinceRead(err)) {
+      if (isReadStateRefusal(err)) {
         // The request was stored differently since the family opened it.
-        // The page shows the stored request again; the dialog closes, since
-        // sending the same version again would be refused again.
+        // `reload` shows the stored request again, or says it could not;
+        // the dialog closes, since sending the same version again would be
+        // refused again.
         void errorDisplay.show(err, {
           object: t("careOfferingsModal.errorObjectRequest"),
+          reload: onEdited,
         });
-        onEdited?.();
         onClose();
         return;
       }

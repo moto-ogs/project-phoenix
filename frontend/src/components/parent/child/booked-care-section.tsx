@@ -21,7 +21,7 @@ import { formatDate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { PARENT_RESOURCE_OPTIONS } from "~/lib/hooks/use-parent-resources";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useSWRAuth } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
 import { parentKeys } from "~/lib/swr/parent-keys";
 import {
   getChildCareOfferings,
@@ -115,10 +115,15 @@ export function BookedCareSection({
   } | null>(null);
   // `parent-conversation-refresh` reaches these readers through useChildCare
   // of the same child page, which refreshes the child's whole status family.
-  const refresh = useCallback(() => {
-    void mutateOfferings();
-    void mutateSchedule();
-  }, [mutateOfferings, mutateSchedule]);
+  // Rejects when a read fails, so a refused edit can say so (ADR 0311).
+  const reloadOrThrow = useCallback(
+    () =>
+      Promise.all([
+        revalidateOrThrow(offeringsResource),
+        revalidateOrThrow(scheduleResource),
+      ]),
+    [offeringsResource, scheduleResource],
+  );
 
   const weekdayList = useCallback(
     (weekdays: readonly number[] | null) =>
@@ -495,7 +500,7 @@ export function BookedCareSection({
           reasonRequired={reasonRequired}
           editRequest={editRequest}
           onClose={() => setEditRequest(null)}
-          onEdited={refresh}
+          onEdited={reloadOrThrow}
         />
       )}
     </div>

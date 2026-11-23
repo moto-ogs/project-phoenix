@@ -60,6 +60,7 @@ function CareInvoiceAmendPage() {
     error: runError,
     mutate,
     reload,
+    reloadOrThrow,
   } = useTraegerResource(
     runId ? traegerBillingRunKeys.careRun(runId) : null,
     () => fetchCareRun(runId),
@@ -278,6 +279,12 @@ function CareInvoiceAmendPage() {
               run={run}
               invoice={invoice}
               draft={draft}
+              reload={async () => {
+                const stored = await reloadOrThrow();
+                const shown = invoiceOf(stored, contractId, service);
+                if (!shown) throw new Error("invoice is gone");
+                return { run: stored, invoice: shown };
+              }}
               onClose={() => setDraft(null)}
               onSaved={(next) => {
                 setDraft(null);

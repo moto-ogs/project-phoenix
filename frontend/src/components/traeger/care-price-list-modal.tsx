@@ -16,8 +16,8 @@ import { FormModal } from "~/components/ui/form-modal";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { ToggleChip } from "~/components/ui/toggle-chip";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
-import { isChangedSinceRead } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import {
   type CarePriceInput,
   type CareTariffs,
@@ -52,6 +52,42 @@ const MONTHS_AHEAD = 18;
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 
 type Drafts = Record<string, ModuleDraft>;
+
+/** What the dialog edits for one school and start month. */
+interface PriceListDraft {
+  readonly drafts: Drafts;
+  readonly freeMonths: readonly number[];
+}
+
+/**
+ * Every module with the prices that hold in `month`; a later price stays
+ * where it starts and is never copied back.
+ */
+function priceListDraft(
+  data: CareTariffs,
+  schoolId: string,
+  month: string,
+): PriceListDraft {
+  if (!schoolId || !month) return { drafts: {}, freeMonths: [] };
+  const drafts: Drafts = {};
+  for (const row of priceRowsAt(data, schoolId, month)) {
+    drafts[row.careOfferingId] =
+      row.form === "days_per_week"
+        ? {
+            form: row.form,
+            mealExtra: row.mealExtra,
+            first: centsRecord(row.steps),
+            further: centsRecord(row.siblingSteps),
+          }
+        : {
+            form: row.form,
+            mealExtra: row.mealExtra,
+            first: centsRecord(row.prices),
+            further: centsRecord(row.siblingPrices),
+          };
+  }
+  return { drafts, freeMonths: freeMonthsAt(data, schoolId, month) };
+}
 
 function centsRecord(
   values: Partial<Record<string | number, number>>,
@@ -121,7 +157,7 @@ export function CarePriceListModal({
   initialMonth,
   onClose,
   onSaved,
-  onChangedSinceRead,
+  reload,
 }: Readonly<{
   data: CareTariffs;
   /** The school whose prices change; null keeps the modal closed. */
@@ -133,19 +169,12 @@ export function CarePriceListModal({
   onClose: () => void;
   onSaved: (data: CareTariffs) => void;
   /**
-   * The save was refused because the school's prices changed since they
-   * were read: the page reads them again, and the form shows them.
+   * Reads the prices again after a save refused because the school's prices
+   * changed since they were read; rejects when the read fails (ADR 0311).
    */
-  onChangedSinceRead: () => void;
+  reload: () => Promise<CareTariffs>;
 }>) {
   const [month, setMonth] = useState("");
-  const [drafts, setDrafts] = useState<Drafts>({});
-  const [freeMonths, setFreeMonths] = useState<readonly number[]>([]);
-  // The form follows each new read of `data` until the person changes it;
-  // from then on it keeps the input and the version it was filled from,
-  // so the save confirms exactly what the form showed (ADR 0311).
-  const [touched, setTouched] = useState(false);
-  const [version, setVersion] = useState("");
   const save = useFormModalPending(school !== null);
   const saving = save.pending;
   const formRef = useRef<HTMLFormElement>(null);
@@ -178,42 +207,34 @@ export function CarePriceListModal({
     const start =
       initialMonth && initialMonth >= firstMonth ? initialMonth : defaultMonth;
     setMonth(start);
-    setTouched(false);
     clearErrors();
   }, [schoolId, initialMonth, firstMonth, defaultMonth, clearErrors]);
 
-  // Prefill every module with the prices that hold in the chosen month,
-  // again on a new read while the person has not changed anything.
-  useEffect(() => {
-    if (!schoolId || !month || touched) return;
-    // Only the prices that hold in the chosen month; a later price stays
-    // where it starts and is never copied back.
-    const next: Drafts = {};
-    for (const row of priceRowsAt(data, schoolId, month)) {
-      next[row.careOfferingId] =
-        row.form === "days_per_week"
-          ? {
-              form: row.form,
-              mealExtra: row.mealExtra,
-              first: centsRecord(row.steps),
-              further: centsRecord(row.siblingSteps),
-            }
-          : {
-              form: row.form,
-              mealExtra: row.mealExtra,
-              first: centsRecord(row.prices),
-              further: centsRecord(row.siblingPrices),
-            };
-    }
-    setDrafts(next);
-    setFreeMonths(freeMonthsAt(data, schoolId, month));
-    setVersion(data.versions?.[schoolId] ?? "");
-  }, [data, schoolId, month, touched]);
+  // The prices of the chosen month rest on the school's version (ADR
+  // 0311): a newer read refills them only while untouched, the save
+  // confirms what the form showed, and after a refusal the stored prices
+  // show; nothing is sent until they are read. Another month starts anew.
+  const edit = useDraftOn<CareTariffs, PriceListDraft, string, CareTariffs>(
+    {
+      opening: schoolId && month ? `${schoolId}:${month}` : null,
+      data,
+      reload,
+    },
+    {
+      token: (read) => (schoolId ? (read.versions?.[schoolId] ?? "") : ""),
+      toDraft: (read) => priceListDraft(read, schoolId ?? "", month),
+      // The dialog closes after a save; the page takes the answer.
+      answer: (saved) => saved,
+    },
+  );
+  const { drafts, freeMonths } =
+    edit.draft ?? priceListDraft(data, schoolId ?? "", month);
 
-  const changeDrafts = (change: (current: Drafts) => Drafts) => {
-    setTouched(true);
-    setDrafts(change);
-  };
+  const changeDrafts = (change: (current: Drafts) => Drafts) =>
+    edit.setDraft((current) => ({
+      ...current,
+      drafts: change(current.drafts),
+    }));
 
   const draftOf = (offeringId: string) =>
     drafts[offeringId] ?? EMPTY_MODULE_DRAFT;
@@ -241,41 +262,39 @@ export function CarePriceListModal({
       formErrors.invalid("Bitte trage mindestens einen Preis ein.", {});
       return;
     }
+    if (!edit.canSubmit) return;
     await save.run(async (op) => {
-      try {
-        const result = await saveCarePriceList(
-          school.id,
-          month,
-          prices,
-          freeMonths,
-          version,
-        );
-        if (op.isCurrent()) onSaved(result);
+      const result = await edit.submit((version) =>
+        saveCarePriceList(school.id, month, prices, freeMonths, version),
+      );
+      if (result.ok) {
+        if (op.isCurrent()) onSaved(result.saved);
         success(`Die Preise gelten ab ${formatMonth(month)}.`);
-      } catch (err) {
-        logger.error("care_price_list_save_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (!op.isCurrent()) return;
-        void formErrors.show(err, { object: "die Preisliste" });
-        // A colleague changed the prices since: the form shows them instead
-        // of the draft, so no second „Speichern“ replaces them unseen.
-        if (isChangedSinceRead(err)) {
-          setTouched(false);
-          onChangedSinceRead();
-        }
+        return;
       }
+      logger.error("care_price_list_save_failed", {
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
+      });
+      if (!op.isCurrent()) return;
+      // A colleague changed the prices since: `reload` shows them instead
+      // of the draft, so no second „Speichern“ replaces them unseen.
+      void formErrors.show(result.error, {
+        object: "die Preisliste",
+        reload: result.reload,
+      });
     });
   };
 
-  const toggleFreeMonth = (value: number, pressed: boolean) => {
-    setTouched(true);
-    setFreeMonths((current) =>
-      pressed
-        ? [...current, value].sort((a, b) => a - b)
-        : current.filter((entry) => entry !== value),
-    );
-  };
+  const toggleFreeMonth = (value: number, pressed: boolean) =>
+    edit.setDraft((current) => ({
+      ...current,
+      freeMonths: pressed
+        ? [...current.freeMonths, value].sort((a, b) => a - b)
+        : current.freeMonths.filter((entry) => entry !== value),
+    }));
 
   return (
     <FormModal
@@ -314,11 +333,8 @@ export function CarePriceListModal({
               value,
               label: formatMonth(value),
             }))}
-            onChange={(value) => {
-              // Another start month shows the prices that hold then.
-              setMonth(value);
-              setTouched(false);
-            }}
+            // Another start month shows the prices that hold then.
+            onChange={setMonth}
             error={formErrors.fieldError("valid_from")}
           />
           <p className="text-sm text-gray-600 sm:pb-2.5">

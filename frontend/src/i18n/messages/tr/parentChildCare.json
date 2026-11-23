@@ -125,6 +125,7 @@
     "submitting": "Gönderiliyor …",
     "savingEdit": "Kaydediliyor …",
     "reloadingEdit": "Kaydedilmiş sürüm yükleniyor …",
+    "reloadFirst": "Önce kaydedilmiş sürümü yeniden yükle.",
     "resetTooltip": "Bu gün için değişikliğinizi kaldırır. moto önce sorar.",
     "saveEditTooltip": "Açık talebinizi değiştirir. {careTerm} yine de onaylamalıdır.",
     "submitTooltip": "Talebi onay için hemen {careTerm} ekibine gönderir.",

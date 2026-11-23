@@ -268,6 +268,33 @@ describe("StudentDeletionModal", () => {
     expect(screen.getByRole("button", { name: "Ja, löschen" })).toBeDisabled();
   });
 
+  // ADR 0311 rule 6: a failed read of the impact after a refusal says so
+  // instead of claiming the new impact shows.
+  it("names a failed read of the impact after a conflict", async () => {
+    mockDeleteStudent.mockRejectedValueOnce(
+      new ApiError("changed", 409, {
+        code: "students.deletion_preview_changed",
+      }),
+    );
+    mockFetchImpact
+      .mockResolvedValueOnce(impact)
+      .mockRejectedValue(
+        new ApiError("down", 503, { code: "general.unavailable" }),
+      );
+    renderModal();
+
+    fireEvent.click(await advanceToFinalConfirmation());
+
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeVisible();
+    expect(
+      screen.queryByText(/wurde inzwischen geändert/),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(mockDeleteStudent).toHaveBeenCalledTimes(1);
+  });
+
   it("does not expose the destructive controls when the preview fails", async () => {
     mockFetchImpact.mockRejectedValueOnce(
       new ApiError("Vorschau nicht verfügbar", 503, {
@@ -342,7 +369,10 @@ describe("StudentDeletionModal", () => {
     fireEvent.click(await advanceToFinalConfirmation());
 
     await waitFor(() => expect(onDeleted).toHaveBeenCalledTimes(1));
-    expect(await screen.findByRole("button", { name: CONFIRM })).toBeEnabled();
+    // Out of the deleting state: the button carries its label again, not
+    // „Wird gelöscht…“. (The acknowledgement belonged to the deleted
+    // impact, so a second deletion stays locked.)
+    expect(await screen.findByRole("button", { name: CONFIRM })).toBeDisabled();
     expect(mockDeleteStudent).toHaveBeenCalledTimes(1);
   });
 });
