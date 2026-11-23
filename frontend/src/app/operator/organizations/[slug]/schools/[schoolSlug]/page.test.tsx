@@ -111,7 +111,10 @@ vi.mock("~/lib/breadcrumb-context", () => ({
   useSetBreadcrumb: vi.fn(),
 }));
 
-vi.mock("~/lib/swr", () => ({
+vi.mock("~/lib/swr", async () => ({
+  revalidateOrThrow: (
+    await vi.importActual<typeof import("~/lib/swr")>("~/lib/swr")
+  ).revalidateOrThrow,
   useSWRAuth: mockUseSWR,
   useInvalidateMatching: () => vi.fn(async () => []),
   useSWRConfig: () => ({ mutate: vi.fn() }),
@@ -231,10 +234,23 @@ const mockSchool = {
   deviceSlots: null as number | null,
 };
 
+// Like SWR 2.x: an explicit `undefined` writes the cache empty and resolves to
+// undefined; only an argument-free call revalidates. A failed read still
+// resolves with the old list, so the failure shows only in readCurrent.
+function swrMutate(list: unknown[]) {
+  return (...args: unknown[]) =>
+    Promise.resolve(
+      args.length > 0 && args[0] === undefined ? undefined : list,
+    );
+}
+
 interface SetupOpts {
   orgs?: (typeof mockOrg)[];
   schools?: (typeof mockSchool)[];
   schoolsError?: Error;
+  /** What a fresh read of the school list finds; defaults to `schools`. */
+  freshSchools?: (typeof mockSchool)[];
+  schoolsReadError?: Error;
   accountsError?: Error;
   devicesError?: Error;
   personsError?: Error;
@@ -255,6 +271,8 @@ function setupSWR(opts: SetupOpts = {}) {
     orgs = [mockOrg],
     schools = [mockSchool],
     schoolsError,
+    freshSchools = schools,
+    schoolsReadError,
     accountsError,
     devicesError,
     personsError,
@@ -275,6 +293,10 @@ function setupSWR(opts: SetupOpts = {}) {
           error: schoolsError,
           isLoading: false,
           mutate: mockMutateSchools,
+          readCurrent: () => ({
+            data: schoolsReadError ? undefined : freshSchools,
+            error: schoolsReadError,
+          }),
         };
       case operatorProvisioningKeys.schoolRequiredDetails():
         return {
@@ -335,14 +357,7 @@ describe("OperatorSchoolDetailPage", () => {
       status: "authenticated",
     });
     mockMutateOrgs.mockResolvedValue(undefined);
-    // Like SWR 2.x: an explicit `undefined` writes the cache empty and resolves
-    // to undefined; only an argument-free call revalidates and returns data.
-    mockMutateSchools.mockImplementation((...args: unknown[]) =>
-      Promise.resolve(
-        args.length > 0 && args[0] === undefined ? undefined : [mockSchool],
-      ),
-    );
-    mockListSchoolSummaries.mockResolvedValue([mockSchool]);
+    mockMutateSchools.mockImplementation(swrMutate([mockSchool]));
     mockMutateRequiredDetails.mockResolvedValue([]);
     await schoolPageProps.params;
   });
@@ -511,6 +526,25 @@ describe("OperatorSchoolDetailPage", () => {
     });
   });
 
+  it("does not toggle from the cached school when reading it again fails (#7780)", async () => {
+    setupSWR({
+      schoolsReadError: new ApiError("down", 503, {
+        code: "general.unavailable",
+      }),
+    });
+
+    await renderPage();
+    fireEvent.click(await screen.findByLabelText("Deaktivieren"));
+
+    expect(
+      await screen.findByText(
+        catalogText("general.unavailable", "die Änderung des Status"),
+      ),
+    ).toBeInTheDocument();
+    expect(mockMutateSchools).toHaveBeenCalledWith();
+    expect(mockUpdateSchool).not.toHaveBeenCalled();
+  });
+
   // #6652: the status change holds once the write is through; a failed reload
   // of the portal cache is a load error above the page, never a failed change.
   it("keeps a status change successful when the portal cache reload fails", async () => {
@@ -588,9 +622,10 @@ describe("OperatorSchoolDetailPage", () => {
   });
 
   it("saves an unlimited school as 1 x 75 on the freshly read school and closes (#7780)", async () => {
-    setupSWR();
     const renamed = { ...mockSchool, name: "Test School (neu)" };
-    mockListSchoolSummaries.mockResolvedValue([renamed]);
+    // The cache shows the old name; the fresh read brings the new one.
+    setupSWR({ freshSchools: [renamed] });
+    mockMutateSchools.mockImplementation(swrMutate([renamed]));
     mockUpdateSchool.mockResolvedValue(renamed);
 
     await renderPage();
@@ -628,10 +663,11 @@ describe("OperatorSchoolDetailPage", () => {
   });
 
   it("keeps the Kinderkontingent dialog and inputs when reading the school fails (#7780)", async () => {
-    setupSWR();
-    mockListSchoolSummaries.mockRejectedValue(
-      new ApiError("down", 503, { code: "general.unavailable" }),
-    );
+    setupSWR({
+      schoolsReadError: new ApiError("down", 503, {
+        code: "general.unavailable",
+      }),
+    });
 
     await renderPage();
 
