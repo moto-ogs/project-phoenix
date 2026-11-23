@@ -516,7 +516,7 @@ func TestTimeModelOfAPastBookingIsNotRemoved(t *testing.T) {
 	// Ben moves from "bis 13 Uhr" of both weeks to "bis 16 Uhr" of the first.
 	old := f.offer.Weeks[0].TimeModels[0].ID
 	rebook := map[string]any{"bookings": []map[string]any{{"week_id": f.offer.Weeks[0].ID, "time_model_id": f.offer.Weeks[0].TimeModels[1].ID}}}
-	f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodPut,
+	f.detail(t, putReadRegistration(t, f.traeger, f.office.token,
 		holidayRebookPath(int64(f.period.ID), f.siblings, int64(ben.ID)), rebook))
 	var booked int
 	require.NoError(t, f.db.NewRaw(`SELECT COUNT(*) FROM enrollment.holiday_registration_bookings WHERE holiday_week_time_model_id = ?`, old).

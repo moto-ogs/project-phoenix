@@ -115,13 +115,13 @@ func TestArchivedTimeModelIsNoLongerBookable(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rec.Code, "a new registration cannot book the archived time model: %s", rec.Body.String())
 
 	onto := map[string]any{"bookings": []map[string]any{{"week_id": week.ID, "time_model_id": booked}}}
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut,
+	rec = putReadRegistration(t, f.traeger, f.office.token,
 		holidayRebookPath(int64(f.period.ID), f.siblings, int64(lia.ID)), onto)
 	assert.Equal(t, http.StatusBadRequest, rec.Code, "nor does a rebooking onto it: %s", rec.Body.String())
 
 	// Ben keeps his booking on it and gives up the second week.
 	keep := map[string]any{"bookings": []map[string]any{{"week_id": week.ID, "time_model_id": booked}}}
-	f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodPut,
+	f.detail(t, putReadRegistration(t, f.traeger, f.office.token,
 		holidayRebookPath(int64(f.period.ID), f.siblings, int64(ben.ID)), keep))
 
 	// A period written without it, or with it no longer archived, keeps it
