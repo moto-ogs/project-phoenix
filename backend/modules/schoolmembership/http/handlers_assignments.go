@@ -21,7 +21,7 @@ func (rs *Resource) getStaffSchoolClasses(w http.ResponseWriter, r *http.Request
 		rs.runtime.SchoolClassFailure(w, r, err)
 		return
 	}
-	rs.respond(w, r, http.StatusOK, SchoolClassesResponse{StaffID: ident.ID(id), SchoolClasses: classes}, "School classes retrieved successfully")
+	rs.respond(w, r, http.StatusOK, rs.schoolClassesResponse(id, classes), "School classes retrieved successfully")
 }
 
 // updateStaffSchoolClasses replaces the school class assignments with the
@@ -45,7 +45,7 @@ func (rs *Resource) updateStaffSchoolClasses(w http.ResponseWriter, r *http.Requ
 		rs.failure(w, r, FailureUnauthorized, errors.New("invalid token"), "unauthorized")
 		return
 	}
-	if err := rs.runtime.SetSchoolClasses(ctx, id, req.SchoolClasses, accountID); err != nil {
+	if err := rs.runtime.SetSchoolClasses(ctx, id, req.SchoolClasses, req.ExpectedVersion, accountID); err != nil {
 		rs.runtime.SchoolClassFailure(w, r, err)
 		return
 	}
@@ -54,7 +54,12 @@ func (rs *Resource) updateStaffSchoolClasses(w http.ResponseWriter, r *http.Requ
 		rs.runtime.SchoolClassFailure(w, r, err)
 		return
 	}
-	rs.respond(w, r, http.StatusOK, SchoolClassesResponse{StaffID: ident.ID(id), SchoolClasses: classes}, "School classes updated successfully")
+	rs.respond(w, r, http.StatusOK, rs.schoolClassesResponse(id, classes), "School classes updated successfully")
+}
+
+// schoolClassesResponse answers the assignments with their token.
+func (rs *Resource) schoolClassesResponse(staffID int64, classes []string) SchoolClassesResponse {
+	return SchoolClassesResponse{StaffID: ident.ID(staffID), SchoolClasses: classes, Version: rs.runtime.SchoolClassesVersion(classes)}
 }
 
 // getStaffByRole answers GET /by-role?role=user or ?roles=teacher,staff,user.

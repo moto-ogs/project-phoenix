@@ -142,6 +142,6 @@ func (s *groupManagement) GetStaffSchoolClasses(ctx context.Context, id int64) (
 	return values, PublicGroupError(err)
 }
 
-func (s *groupManagement) SetStaffSchoolClasses(ctx context.Context, id int64, classes []string, changedBy int64) error {
-	return PublicGroupError(s.service.SetStaffSchoolClasses(ctx, id, classes, changedBy))
+func (s *groupManagement) SetStaffSchoolClasses(ctx context.Context, id int64, classes []string, expectedVersion string, changedBy int64) error {
+	return PublicGroupError(s.service.SetStaffSchoolClasses(ctx, id, classes, expectedVersion, changedBy))
 }

@@ -46,6 +46,7 @@ const sampleBackendStaff: StaffRecordResponse = {
     tag_id: "TAG001",
     created_at: "2024-01-01T00:00:00Z",
     updated_at: "2024-01-15T00:00:00Z",
+    version: "person-version",
   },
   specialization: "Mathematics",
   role: "Teacher",
@@ -70,6 +71,7 @@ const sampleBackendStaffWithoutTeacher: StaffRecordResponse = {
     last_name: "Schmidt",
     created_at: "2024-01-01T00:00:00Z",
     updated_at: "2024-01-15T00:00:00Z",
+    version: "person-version",
   },
   is_teacher: false,
   was_present_today: false,
@@ -1396,16 +1398,21 @@ describe("staff-api", () => {
         json: () => Promise.resolve({ data: backendSchedule }),
       } as Response);
 
-      await staffScheduleService.updateSchedule("1", {
-        mode: "template",
-        modelId: "5",
-      });
+      await staffScheduleService.updateSchedule(
+        "1",
+        { mode: "template", modelId: "5" },
+        "read-version",
+      );
 
       expect(mockFetch).toHaveBeenCalledWith(
         "/api/staff/1/schedule",
         expect.objectContaining({
           method: "PUT",
-          body: JSON.stringify({ mode: "template", model_id: "5" }),
+          body: JSON.stringify({
+            mode: "template",
+            model_id: "5",
+            expected_version: "read-version",
+          }),
         }),
       );
     });
@@ -1420,13 +1427,17 @@ describe("staff-api", () => {
           }),
       } as Response);
 
-      const result = await staffScheduleService.updateSchedule("1", {
-        mode: "custom",
-        rotationLength: 1,
-        rotationAnchorDate: "2026-06-01",
-        entries: [{ weekIndex: 0, dayOfWeek: 1, targetMinutes: 267 }],
-        saveAsTemplate: "Teilzeit",
-      });
+      const result = await staffScheduleService.updateSchedule(
+        "1",
+        {
+          mode: "custom",
+          rotationLength: 1,
+          rotationAnchorDate: "2026-06-01",
+          entries: [{ weekIndex: 0, dayOfWeek: 1, targetMinutes: 267 }],
+          saveAsTemplate: "Teilzeit",
+        },
+        "read-version",
+      );
 
       expect(mockFetch).toHaveBeenCalledWith(
         "/api/staff/1/schedule",
@@ -1438,6 +1449,7 @@ describe("staff-api", () => {
             rotation_anchor_date: "2026-06-01",
             entries: [{ week_index: 0, day_of_week: 1, target_minutes: 267 }],
             save_as_template: "Teilzeit",
+            expected_version: "read-version",
           }),
         }),
       );
@@ -1454,18 +1466,22 @@ describe("staff-api", () => {
           }),
       } as Response);
 
-      await staffScheduleService.updateSchedule("1", {
-        mode: "custom",
-        rotationLength: 1,
-        entries: [
-          {
-            weekIndex: 0,
-            dayOfWeek: 1,
-            targetMinutes: 360,
-            startTime: "09:00",
-          },
-        ],
-      });
+      await staffScheduleService.updateSchedule(
+        "1",
+        {
+          mode: "custom",
+          rotationLength: 1,
+          entries: [
+            {
+              weekIndex: 0,
+              dayOfWeek: 1,
+              targetMinutes: 360,
+              startTime: "09:00",
+            },
+          ],
+        },
+        "read-version",
+      );
 
       expect(mockFetch).toHaveBeenCalledWith(
         "/api/staff/1/schedule",
@@ -1483,6 +1499,7 @@ describe("staff-api", () => {
               },
             ],
             save_as_template: undefined,
+            expected_version: "read-version",
           }),
         }),
       );

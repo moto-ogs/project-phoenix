@@ -26,7 +26,6 @@ import {
   WorkSessionBreakSchema,
   WorkSessionEditViewSchema,
   type AllowanceCarryResponse,
-  type CreateAbsenceRequest,
   type SessionUpdateRequest,
 } from "./shared.generated";
 
@@ -182,6 +181,16 @@ export const PublicHolidaySchema: z.ZodType<PublicHoliday, unknown> = object<Pub
   date: str,
   name: str,
 });
+
+/** Go: timetracking.OwnAbsenceRequest */
+export interface OwnAbsenceRequest {
+  absence_type?: string;
+  absence_type_id?: string | null;
+  date_start?: string;
+  date_end?: string;
+  half_day?: boolean;
+  note?: string;
+}
 
 /** Go: timetracking.ResubmitAbsenceRequest */
 export interface ResubmitAbsenceRequest {
@@ -364,7 +373,7 @@ export const routes = {
     method: "POST",
     pattern: "/api/time-tracking/absences",
     portals: ["tenant"],
-    request: requestBody<CreateAbsenceRequest>(),
+    request: requestBody<OwnAbsenceRequest>(),
     response: success(StaffAbsenceResponseSchema),
   },
   "POST /api/time-tracking/absences/{id}/cancel": {
