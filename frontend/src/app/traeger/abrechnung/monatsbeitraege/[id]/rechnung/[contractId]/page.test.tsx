@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "~/lib/api-error";
 import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
+import { useSWRConfig } from "~/lib/swr/testing";
 import type {
   CareAmendment,
   CareInvoice,
@@ -199,12 +200,40 @@ function run(change: Partial<CareRunDetail> = {}): CareRunDetail {
   };
 }
 
+let revalidateAll: () => Promise<unknown> = () => Promise.resolve();
+function CacheHandle() {
+  const { mutate } = useSWRConfig();
+  revalidateAll = () => mutate(() => true);
+  return null;
+}
+
 function renderPage() {
   render(
     <TraegerResourceTestProvider>
+      <CacheHandle />
       <TraegerCareInvoiceAmendPage />
     </TraegerResourceTestProvider>,
   );
+}
+
+async function openAddPosition() {
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Rechnung ändern" }),
+  );
+  fireEvent.click(
+    await screen.findByRole("menuitem", { name: /Position hinzufügen/ }),
+  );
+  const dialog = await screen.findByRole("dialog");
+  fireEvent.change(within(dialog).getByLabelText(/Bezeichnung/), {
+    target: { value: "Ausflug Wildpark" },
+  });
+  fireEvent.change(within(dialog).getByLabelText(/Betrag in Euro/), {
+    target: { value: "12,00" },
+  });
+  fireEvent.change(within(dialog).getByLabelText(/Grund/), {
+    target: { value: "Elternbrief vom 3.1." },
+  });
+  return dialog;
 }
 
 describe("TraegerCareInvoiceAmendPage", () => {
@@ -284,6 +313,53 @@ describe("TraegerCareInvoiceAmendPage", () => {
       fingerprint: "f1",
       reason: "Elternbrief vom 3.1.",
     });
+  });
+
+  // ADR 0311 rules 1 and 2: a reload of the run while the dialog is open
+  // keeps the typed change and the state it was typed over.
+  it("keeps a typed change and its state across a reload of the run", async () => {
+    api.fetchCareRun.mockResolvedValue(run());
+    amend.amendCareInvoice.mockResolvedValue(run());
+    renderPage();
+    const dialog = await openAddPosition();
+    api.fetchCareRun.mockResolvedValue(run({ fingerprint: "f2" }));
+    await act(revalidateAll);
+
+    expect(within(dialog).getByLabelText(/Bezeichnung/)).toHaveValue(
+      "Ausflug Wildpark",
+    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "Hinzufügen" }));
+    await vi.waitFor(() =>
+      expect(amend.amendCareInvoice).toHaveBeenCalledWith(
+        "7",
+        expect.objectContaining({ fingerprint: "f1" }),
+      ),
+    );
+  });
+
+  // ADR 0311 rules 3 and 6: a refusal reads the run again; without a
+  // successful read nothing is sent with the refused state.
+  it("reads the run again after a refusal and names a failed read", async () => {
+    api.fetchCareRun.mockResolvedValue(run());
+    amend.amendCareInvoice.mockRejectedValue(
+      new ApiError("changed", 409, {
+        code: "parent_billing.billing_run_changed",
+      }),
+    );
+    renderPage();
+    const dialog = await openAddPosition();
+    api.fetchCareRun.mockRejectedValue(
+      new ApiError("down", 503, { code: "general.unavailable" }),
+    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "Hinzufügen" }));
+
+    expect(
+      await within(dialog).findByText(
+        /Der neue Stand konnte nicht geladen werden/,
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Hinzufügen" }));
+    expect(amend.amendCareInvoice).toHaveBeenCalledTimes(1);
   });
 
   it("confirms the effective care deduction after reductions", async () => {
