@@ -454,7 +454,7 @@ func TestTypeScriptWritesTypesBeforeTheirUse(t *testing.T) {
 func TestTypeScriptListsTheRoutesOfEachPortal(t *testing.T) {
 	t.Parallel()
 	staff := get("/api/rows/{id}", inner{})
-	staff.Query = []QueryParam{{Name: "view", Kind: "string"}, {Name: "page", Kind: "int"}}
+	staff.Query = []QueryParam{{Name: "view", Kind: "string"}, {Name: "page", Kind: "int"}, {Name: "ids", Kind: "id", Repeated: true}}
 	shared := get("/parent/me/rows", body{})
 	shared.Portals = []string{"tenant", "parent"}
 	doc, err := Build([]Registration{staff, shared}, Options{Identifiers: identifiers})
@@ -462,7 +462,11 @@ func TestTypeScriptListsTheRoutesOfEachPortal(t *testing.T) {
 	files, err := TypeScript(doc)
 	require.NoError(t, err)
 
-	assert.Contains(t, files["rows.generated.ts"], `    query: ["page", "view"],`)
+	assert.Contains(t, files["rows.generated.ts"], `    query: {
+      "ids": { kind: "id", repeated: true },
+      "page": { kind: "int" },
+      "view": { kind: "string" },
+    },`)
 	table := files["portals.generated.ts"]
 	for _, line := range []string{
 		`import { routes as parentMe } from "./parent-me.generated";`,
@@ -569,7 +573,7 @@ func TestTypeScriptWritesAFileAndAnUpload(t *testing.T) {
 	cachedFiles, err := TypeScript(cachedDoc)
 	require.NoError(t, err)
 	assert.Contains(t, cachedFiles["rows.generated.ts"], "    privateCache: true,\n    response: fileAnswer,\n")
-	assert.Contains(t, source, "  \"GET /api/rows/export\": {\n    method: \"GET\",\n    pattern: \"/api/rows/export\",\n    portals: [\"tenant\"],\n    query: [\"format\"],\n    response: fileAnswer,\n  },\n")
+	assert.Contains(t, source, "  \"GET /api/rows/export\": {\n    method: \"GET\",\n    pattern: \"/api/rows/export\",\n    portals: [\"tenant\"],\n    query: {\n      \"format\": { kind: \"string\" },\n    },\n    response: fileAnswer,\n  },\n")
 	assert.Contains(t, source, "    maxBodyBytes: 1048576,\n    tooLargeCode: \"files.file_too_large\",\n    request: multipart,\n    response: success(innerSchema),\n")
 	assert.Contains(t, source, "  fileAnswer,\n")
 	assert.Contains(t, source, "  multipart,\n")

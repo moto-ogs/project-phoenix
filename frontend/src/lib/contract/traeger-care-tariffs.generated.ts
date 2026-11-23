@@ -104,17 +104,14 @@ export interface CarePriceListRequest {
   expected_version?: string;
 }
 
-/** Query of DELETE /traeger/care-tariffs/{schoolID}/{validFrom} */
-export interface DeleteTraegerCareTariffsSchoolIDValidFromQuery {
-  expected_version?: string;
-}
-
 export const routes = {
   "DELETE /traeger/care-tariffs/{schoolID}/{validFrom}": {
     method: "DELETE",
     pattern: "/traeger/care-tariffs/{schoolID}/{validFrom}",
     portals: ["org"],
-    query: ["expected_version"],
+    query: {
+      "expected_version": { kind: "string" },
+    },
     response: success(CareTariffsSchema),
   },
   "GET /traeger/care-tariffs/": {

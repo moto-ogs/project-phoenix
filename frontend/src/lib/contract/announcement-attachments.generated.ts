@@ -21,11 +21,6 @@ export const AttachmentRemovedResponseSchema: z.ZodType<AttachmentRemovedRespons
   announcement_id: str,
 });
 
-/** Query of GET /api/announcement-attachments/{announcementId}/{attachmentId}/download */
-export interface GetAnnouncementAttachmentsAnnouncementIdAttachmentIdDownloadQuery {
-  inline?: string;
-}
-
 export const routes = {
   "DELETE /api/announcement-attachments/{announcementId}/{attachmentId}": {
     method: "DELETE",
@@ -43,7 +38,9 @@ export const routes = {
     method: "GET",
     pattern: "/api/announcement-attachments/{announcementId}/{attachmentId}/download",
     portals: ["tenant"],
-    query: ["inline"],
+    query: {
+      "inline": { kind: "string" },
+    },
     response: fileAnswer,
   },
   "POST /api/announcement-attachments/{announcementId}": {

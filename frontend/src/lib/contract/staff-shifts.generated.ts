@@ -307,30 +307,14 @@ export interface MoveShiftRequest {
   shift_type_id?: string | null;
 }
 
-/** Query of DELETE /api/staff-shifts/series/{id} */
-export interface DeleteStaffShiftsSeriesIdQuery {
-  from?: string;
-}
-
-/** Query of GET /api/staff-shifts/ */
-export interface GetStaffShiftsQuery {
-  from?: string;
-  staff_id?: string;
-  to?: string;
-}
-
-/** Query of GET /api/staff-shifts/overview */
-export interface GetStaffShiftsOverviewQuery {
-  from?: string;
-  to?: string;
-}
-
 export const routes = {
   "DELETE /api/staff-shifts/series/{id}": {
     method: "DELETE",
     pattern: "/api/staff-shifts/series/{id}",
     portals: ["tenant"],
-    query: ["from"],
+    query: {
+      "from": { kind: "date" },
+    },
     response: success(SeriesResponseSchema),
   },
   "DELETE /api/staff-shifts/{id}": {
@@ -343,14 +327,21 @@ export const routes = {
     method: "GET",
     pattern: "/api/staff-shifts/",
     portals: ["tenant"],
-    query: ["from", "staff_id", "to"],
+    query: {
+      "from": { kind: "date" },
+      "staff_id": { kind: "id" },
+      "to": { kind: "date" },
+    },
     response: success(z.array(ShiftResponseSchema)),
   },
   "GET /api/staff-shifts/overview": {
     method: "GET",
     pattern: "/api/staff-shifts/overview",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(OverviewResponseSchema),
   },
   "GET /api/staff-shifts/series/{id}": {

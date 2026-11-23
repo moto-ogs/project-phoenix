@@ -67,12 +67,6 @@ export interface ShiftTypeRequest {
   category_ids?: string[] | null;
 }
 
-/** Query of GET /api/shift-types/ */
-export interface GetShiftTypesQuery {
-  include_archived?: boolean;
-  with_usage?: boolean;
-}
-
 export const routes = {
   "DELETE /api/shift-types/{id}": {
     method: "DELETE",
@@ -84,7 +78,10 @@ export const routes = {
     method: "GET",
     pattern: "/api/shift-types/",
     portals: ["tenant"],
-    query: ["include_archived", "with_usage"],
+    query: {
+      "include_archived": { kind: "bool" },
+      "with_usage": { kind: "bool" },
+    },
     response: success(z.array(ShiftTypeResponseSchema)),
   },
   "POST /api/shift-types/": {

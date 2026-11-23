@@ -1157,7 +1157,7 @@ export async function downloadHolidayRegistrationPdf(
       "GET /traeger/holiday-periods/{id}/registrations/{registrationId}/pdf",
       {
         params: { id: periodId, registrationId },
-        query: { health: withHealth ? "true" : undefined },
+        query: { health: withHealth || undefined },
       },
     ),
   );
@@ -1174,7 +1174,7 @@ export async function downloadHolidayRegistrationPdfs(
       params: { id: periodId },
       query: {
         ...holidayFilterQuery(filter),
-        health: withHealth ? "true" : undefined,
+        health: withHealth || undefined,
       },
     }),
   );

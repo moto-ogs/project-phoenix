@@ -435,11 +435,6 @@ export const RolloutSchema: z.ZodType<Rollout, unknown> = object<Rollout>({
   schools: nullable(arr(SchoolResultSchema)),
 });
 
-/** Query of GET /traeger/catalog/phases/export */
-export interface GetTraegerCatalogPhasesExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-}
-
 export const routes = {
   "GET /traeger/catalog/phases": {
     method: "GET",
@@ -451,7 +446,9 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/catalog/phases/export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "GET /traeger/catalog/phases/{id}": {

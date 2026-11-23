@@ -1675,11 +1675,11 @@
       "query": [
         {
           "name": "active",
-          "kind": "string"
+          "kind": "bool"
         },
         {
           "name": "is_active",
-          "kind": "string"
+          "kind": "bool"
         }
       ],
       "response": {
@@ -1769,7 +1769,7 @@
       "query": [
         {
           "name": "active",
-          "kind": "string"
+          "kind": "bool"
         },
         {
           "name": "active_group_ids",
@@ -2717,7 +2717,7 @@
       "query": [
         {
           "name": "bumps_grade",
-          "kind": "string"
+          "kind": "bool"
         }
       ],
       "response": {
@@ -4145,11 +4145,11 @@
         },
         {
           "name": "include_system",
-          "kind": "string"
+          "kind": "bool"
         },
         {
           "name": "is_open_room",
-          "kind": "string"
+          "kind": "bool"
         },
         {
           "name": "page",

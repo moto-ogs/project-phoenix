@@ -65,7 +65,7 @@ const routes: CatalogRoute[] = [
   {
     method: "GET",
     pattern: "/parent/rows/",
-    query: ["day", "group_id"],
+    query: { day: { kind: "date" }, group_id: { kind: "id" } },
     response: success(z.array(z.string())),
   },
   { method: "POST", pattern: "/parent/rows/", response: row },
@@ -76,7 +76,7 @@ const routes: CatalogRoute[] = [
   {
     method: "GET",
     pattern: "/parent/pages/",
-    query: ["page", "view"],
+    query: { page: { kind: "int" }, view: { kind: "string" } },
     variantParam: "view",
     defaultVariant: "full",
     response: {
@@ -239,15 +239,15 @@ describe("makeCatalogProxy", () => {
     });
   });
 
-  it("forwards only the registered query parameters, every occurrence", async () => {
+  it("forwards only the registered query parameters, without validating their values", async () => {
     api.mockResolvedValueOnce({ status: "success", data: [] });
     await call(
       "GET",
       ["rows"],
-      "?group_id=1&group_id=2&debug=1&day=2026-09-09",
+      "?group_id=1&group_id=2&debug=1&day=not-a-date",
     );
     expect(api.mock.calls[0]?.[1]).toBe(
-      "/parent/rows?day=2026-09-09&group_id=1&group_id=2",
+      "/parent/rows?day=not-a-date&group_id=1&group_id=2",
     );
   });
 

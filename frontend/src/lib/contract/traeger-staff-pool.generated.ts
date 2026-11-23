@@ -8,17 +8,6 @@ import {
   PoolWeekSchema,
 } from "./shared.generated";
 
-/** Query of GET /traeger/staff-pool/ */
-export interface GetTraegerStaffPoolQuery {
-  week?: string;
-}
-
-/** Query of GET /traeger/staff-pool/export */
-export interface GetTraegerStaffPoolExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-  week?: string;
-}
-
 export const routes = {
   "DELETE /traeger/staff-pool/blocks/{id}": {
     method: "DELETE",
@@ -30,14 +19,19 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/staff-pool/",
     portals: ["org"],
-    query: ["week"],
+    query: {
+      "week": { kind: "date" },
+    },
     response: success(PoolWeekSchema),
   },
   "GET /traeger/staff-pool/export": {
     method: "GET",
     pattern: "/traeger/staff-pool/export",
     portals: ["org"],
-    query: ["format", "week"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "week": { kind: "date" },
+    },
     response: fileAnswer,
   },
 } as const;

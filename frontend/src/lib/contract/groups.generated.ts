@@ -80,14 +80,6 @@ export interface GroupRequest {
   teacher_ids?: string[] | null;
 }
 
-/** Query of GET /api/groups/ */
-export interface GetGroupsQuery {
-  name?: string;
-  page?: number;
-  page_size?: number;
-  room_id?: string;
-}
-
 export const routes = {
   "DELETE /api/groups/{id}": {
     method: "DELETE",
@@ -99,7 +91,12 @@ export const routes = {
     method: "GET",
     pattern: "/api/groups/",
     portals: ["tenant"],
-    query: ["name", "page", "page_size", "room_id"],
+    query: {
+      "name": { kind: "string" },
+      "page": { kind: "int" },
+      "page_size": { kind: "int" },
+      "room_id": { kind: "id" },
+    },
     response: paginated(z.array(GroupResponseSchema)),
   },
   "GET /api/groups/{id}": {

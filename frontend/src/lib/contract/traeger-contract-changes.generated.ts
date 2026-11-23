@@ -157,17 +157,14 @@ export interface ChangeDecisionRequest {
   expected_version?: string;
 }
 
-/** Query of GET /traeger/contract-changes/{id} */
-export interface GetTraegerContractChangesIdQuery {
-  effective_from?: string;
-}
-
 export const routes = {
   "GET /traeger/contract-changes/{id}": {
     method: "GET",
     pattern: "/traeger/contract-changes/{id}",
     portals: ["org"],
-    query: ["effective_from"],
+    query: {
+      "effective_from": { kind: "date" },
+    },
     response: success(ContractChangesSchema),
   },
   "POST /traeger/contract-changes/{id}/requests/{requestId}/decide": {

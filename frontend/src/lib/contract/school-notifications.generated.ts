@@ -13,17 +13,6 @@ import {
   type pushSubscriptionRequest,
 } from "./shared.generated";
 
-/** Query of DELETE /school/notifications/push/subscriptions */
-export interface DeleteSchoolNotificationsPushSubscriptionsQuery {
-  endpoint?: string;
-}
-
-/** Query of GET /school/notifications/feed/ */
-export interface GetSchoolNotificationsFeedQuery {
-  cursor?: string;
-  limit?: number;
-}
-
 export const routes = {
   "DELETE /school/notifications/preferences/": {
     method: "DELETE",
@@ -35,14 +24,19 @@ export const routes = {
     method: "DELETE",
     pattern: "/school/notifications/push/subscriptions",
     portals: ["school"],
-    query: ["endpoint"],
+    query: {
+      "endpoint": { kind: "string" },
+    },
     response: noData,
   },
   "GET /school/notifications/feed/": {
     method: "GET",
     pattern: "/school/notifications/feed/",
     portals: ["school"],
-    query: ["cursor", "limit"],
+    query: {
+      "cursor": { kind: "string" },
+      "limit": { kind: "int" },
+    },
     response: success(feedPageResponseSchema),
   },
   "GET /school/notifications/feed/unread-count": {

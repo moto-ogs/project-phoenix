@@ -100,17 +100,14 @@ export const TenantResolveResponseSchema: z.ZodType<TenantResolveResponse, unkno
   traeger_name: optional(str),
 });
 
-/** Query of GET /auth/tenant/resolve */
-export interface GetAuthTenantResolveQuery {
-  slug?: string;
-}
-
 export const routes = {
   "GET /auth/tenant/resolve": {
     method: "GET",
     pattern: "/auth/tenant/resolve",
     portals: ["public"],
-    query: ["slug"],
+    query: {
+      "slug": { kind: "string" },
+    },
     response: success(TenantResolveResponseSchema),
   },
 } as const;
