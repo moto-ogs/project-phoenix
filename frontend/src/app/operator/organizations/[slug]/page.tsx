@@ -56,6 +56,7 @@ import { useSetBreadcrumb } from "~/lib/breadcrumb-context";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useReadStateLock } from "~/lib/hooks/use-read-state-lock";
 import {
   STALE_DATA_SUFFIX,
   useRefreshAfterWrite,
@@ -633,32 +634,45 @@ function OperatorOrganizationDetailPageContent({ params }: PageProps) {
     [],
   );
 
+  // From a refusal until the stored Träger is read, the badge sends
+  // nothing: it still carries the refused version (ADR 0311, rule 4).
+  const toggleLock = useReadStateLock();
+  const { run: runToggle, guard: guardToggleRead } = toggleLock;
   const handleToggleOrgActive = useCallback(async () => {
     if (!organization) return;
-    try {
-      // The Träger as shown, with its version (ADR 0311): a change since
-      // is refused instead of undone.
-      await operatorProvisioningService.updateOrganization(organization.id, {
-        name: organization.name,
-        slug: organization.slug,
-        active: !organization.active,
-        expected_version: organization.version,
-      });
-    } catch (error) {
-      logger.warn("organization_toggle_active_failed", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      // The retry sets the same target state, so it is safe to repeat; a
-      // refusal of a changed Träger offers none and shows the stored one.
-      void showToggleError(error, {
-        object: "die Änderung des Status",
-        retry: () => void handleToggleOrgActive(),
-        reload: readOrganizations,
-      });
-      return;
-    }
-    await statusAfterWrite.refresh();
-  }, [organization, readOrganizations, showToggleError, statusAfterWrite]);
+    await runToggle(async () => {
+      try {
+        // The Träger as shown, with its version (ADR 0311): a change since
+        // is refused instead of undone.
+        await operatorProvisioningService.updateOrganization(organization.id, {
+          name: organization.name,
+          slug: organization.slug,
+          active: !organization.active,
+          expected_version: organization.version,
+        });
+      } catch (error) {
+        logger.warn("organization_toggle_active_failed", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        // The retry sets the same target state, so it is safe to repeat; a
+        // refusal of a changed Träger offers none and shows the stored one.
+        void showToggleError(error, {
+          object: "die Änderung des Status",
+          retry: () => void handleToggleOrgActive(),
+          reload: guardToggleRead(readOrganizations),
+        });
+        return;
+      }
+      await statusAfterWrite.refresh();
+    });
+  }, [
+    organization,
+    readOrganizations,
+    runToggle,
+    guardToggleRead,
+    showToggleError,
+    statusAfterWrite,
+  ]);
 
   const orgDelete = useSoftDeletable<OrganizationSummary>({
     softDeleteFn: operatorProvisioningService.softDeleteOrganization,
@@ -747,8 +761,12 @@ function OperatorOrganizationDetailPageContent({ params }: PageProps) {
               ? setDeactivateOpen(true)
               : void handleToggleOrgActive()
           }
-          className="cursor-pointer"
-          title={organization?.active ? "Deaktivieren" : "Aktivieren"}
+          disabled={toggleLock.busy}
+          className="cursor-pointer disabled:cursor-not-allowed"
+          title={
+            toggleLock.reason ??
+            (organization?.active ? "Deaktivieren" : "Aktivieren")
+          }
           aria-label={organization?.active ? "Deaktivieren" : "Aktivieren"}
         >
           <DataTableStatusBadge active={organization?.active ?? false} />
@@ -775,7 +793,13 @@ function OperatorOrganizationDetailPageContent({ params }: PageProps) {
         </Button>
       </>
     ),
-    [handleToggleOrgActive, orgDelete, organization],
+    [
+      handleToggleOrgActive,
+      orgDelete,
+      organization,
+      toggleLock.busy,
+      toggleLock.reason,
+    ],
   );
 
   const schoolColumns = useMemo(() => buildSchoolColumns(), []);

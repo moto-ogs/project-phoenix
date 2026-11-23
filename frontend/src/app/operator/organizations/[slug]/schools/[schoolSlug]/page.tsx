@@ -56,6 +56,7 @@ import { MFAAdminOverrideModal } from "~/components/auth/mfa-admin-override-moda
 import { useSetBreadcrumb } from "~/lib/breadcrumb-context";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
+import { useReadStateLock } from "~/lib/hooks/use-read-state-lock";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import {
   STALE_DATA_SUFFIX,
@@ -495,42 +496,55 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
     [],
   );
 
+  // From a refusal until the stored school is read, the badge sends
+  // nothing: it still carries the refused version (ADR 0311, rule 4).
+  const toggleLock = useReadStateLock();
+  const { run: runToggle, guard: guardToggleRead } = toggleLock;
   const handleToggleSchoolActive = useCallback(async () => {
     if (!school) return;
-    let subdomain: string;
-    try {
-      // The route replaces every field: the toggle sends the school as shown
-      // with its version (ADR 0311), so a change since is refused, never
-      // undone, and the refusal shows the stored school.
-      await operatorProvisioningService.updateSchool(school.id, {
-        organization_id: school.organizationId,
-        name: school.name,
-        slug: school.slug,
-        subdomain: school.subdomain,
-        address: school.address,
-        city: school.city,
-        zip: school.zip,
-        phone: school.phone,
-        email: school.email,
-        active: !school.active,
-        hidden: school.hidden,
-        expected_version: school.version,
-      });
-      subdomain = school.subdomain;
-    } catch (error) {
-      logger.warn("school_toggle_active_failed", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      // No retry: a repeat after an unknown outcome could switch the school
-      // back.
-      void showToggleError(error, {
-        object: "die Änderung des Status",
-        reload: () => readCurrentSchool(school.id),
-      });
-      return;
-    }
-    await statusAfterWrite.refresh(subdomain);
-  }, [readCurrentSchool, school, showToggleError, statusAfterWrite]);
+    await runToggle(async () => {
+      let subdomain: string;
+      try {
+        // The route replaces every field: the toggle sends the school as shown
+        // with its version (ADR 0311), so a change since is refused, never
+        // undone, and the refusal shows the stored school.
+        await operatorProvisioningService.updateSchool(school.id, {
+          organization_id: school.organizationId,
+          name: school.name,
+          slug: school.slug,
+          subdomain: school.subdomain,
+          address: school.address,
+          city: school.city,
+          zip: school.zip,
+          phone: school.phone,
+          email: school.email,
+          active: !school.active,
+          hidden: school.hidden,
+          expected_version: school.version,
+        });
+        subdomain = school.subdomain;
+      } catch (error) {
+        logger.warn("school_toggle_active_failed", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        // No retry: a repeat after an unknown outcome could switch the school
+        // back.
+        void showToggleError(error, {
+          object: "die Änderung des Status",
+          reload: guardToggleRead(() => readCurrentSchool(school.id)),
+        });
+        return;
+      }
+      await statusAfterWrite.refresh(subdomain);
+    });
+  }, [
+    readCurrentSchool,
+    runToggle,
+    guardToggleRead,
+    school,
+    showToggleError,
+    statusAfterWrite,
+  ]);
 
   const schoolDelete = useSoftDeletable<SchoolSummary>({
     softDeleteFn: operatorProvisioningService.softDeleteSchool,
@@ -626,8 +640,12 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
         <button
           type="button"
           onClick={() => void handleToggleSchoolActive()}
-          className="cursor-pointer"
-          title={school?.active ? "Deaktivieren" : "Aktivieren"}
+          disabled={toggleLock.busy}
+          className="cursor-pointer disabled:cursor-not-allowed"
+          title={
+            toggleLock.reason ??
+            (school?.active ? "Deaktivieren" : "Aktivieren")
+          }
           aria-label={school?.active ? "Deaktivieren" : "Aktivieren"}
         >
           <DataTableStatusBadge active={school?.active ?? false} />
@@ -680,6 +698,8 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
       handleToggleSchoolActive,
       school,
       schoolDelete,
+      toggleLock.busy,
+      toggleLock.reason,
       schoolSlug,
       slug,
     ],

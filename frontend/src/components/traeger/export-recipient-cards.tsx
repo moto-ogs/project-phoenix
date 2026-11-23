@@ -36,7 +36,8 @@ import { StatusBadge } from "~/components/ui/status-badge";
 import { SwitchRow } from "~/components/ui/switch";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { formatBerlinDate, formatBerlinTime } from "~/lib/date-helpers";
-import { useReadDraftLoadError } from "~/lib/hooks/use-swr-load-error";
+import { readStateWaitReason } from "~/lib/hooks/use-read-state-lock";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { useDraftOn } from "~/lib/swr/read-draft";
 import {
@@ -151,12 +152,16 @@ export function ExportRecipientFormCard({
   );
   const draft = recipient ? (change.draft ?? draftOf(recipient)) : created;
   const setDraft = recipient ? change.setDraft : setCreated;
-  const loadError = useReadDraftLoadError(change, "den Empfänger");
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
+  const form = useReadDraftForm(
+    recipient ? change : null,
+    formErrors,
+    "den Empfänger",
+  );
   const deleteErrors = useApiFormError();
   const { success } = useToast();
 
@@ -172,7 +177,9 @@ export function ExportRecipientFormCard({
 
   const submit = async (event: { preventDefault: () => void }) => {
     event.preventDefault();
-    formErrors.clear();
+    // Enter submits too: a change goes out only after the stored recipient
+    // is read, and the shown error stays until then.
+    if (!form.begin()) return;
     const port = Number(draft.port);
     const fields: Record<string, string> = {};
     if (!draft.name.trim())
@@ -200,7 +207,6 @@ export function ExportRecipientFormCard({
       hostKeyFingerprint: draft.hostKeyFingerprint.trim(),
     };
     if (recipient) {
-      if (!change.canSubmit) return;
       setSaving(true);
       const result = await change.submit((version) => onSave(input, version));
       setSaving(false);
@@ -296,7 +302,7 @@ export function ExportRecipientFormCard({
             disabled={recipient !== null && (!changed || !change.canSubmit)}
             disabledReason={
               changed
-                ? "Der gespeicherte Stand wird noch geladen."
+                ? readStateWaitReason(change.status)
                 : "Du hast noch nichts geändert."
             }
             noTooltip="Ein reines Speichern ohne Folgen."
@@ -314,7 +320,7 @@ export function ExportRecipientFormCard({
         onSubmit={(event) => void submit(event)}
       >
         <FormErrorAlert message={formErrors.error} />
-        {formErrors.error ? null : <LoadErrorAlert error={loadError} />}
+        <LoadErrorAlert error={form.loadError} />
         <Input
           name="name"
           label="Name"
@@ -474,7 +480,7 @@ export function ExportFormatAssignmentCard({
   const draft = assignment.draft ?? assignmentsOf(page);
   const setDraft = assignment.setDraft;
   const changed = assignment.touched;
-  const loadError = useReadDraftLoadError(assignment, "die Zuordnung");
+  const form = useReadDraftForm(assignment, errors, "die Zuordnung");
   const options = [
     { value: DOWNLOAD, label: "Nur herunterladen" },
     ...page.recipients.map((recipient) => ({
@@ -486,8 +492,7 @@ export function ExportFormatAssignmentCard({
   ];
 
   const save = async () => {
-    if (!assignment.canSubmit) return;
-    errors.clear();
+    if (!form.begin()) return;
     setSaving(true);
     const result = await assignment.submit((version, chosen) =>
       onSave(
@@ -528,12 +533,17 @@ export function ExportFormatAssignmentCard({
           onSave={() => void save()}
           saving={saving}
           disabled={!changed || !assignment.canSubmit}
+          disabledReason={
+            changed
+              ? readStateWaitReason(assignment.status)
+              : "Du hast noch nichts geändert."
+          }
           cancelDisabled={!changed || saving}
         />
       }
     >
       <FormErrorAlert message={errors.error} />
-      {errors.error ? null : <LoadErrorAlert error={loadError} />}
+      <LoadErrorAlert error={form.loadError} />
       <ul className="divide-y divide-gray-100">
         {HANDOVER_FORMATS.map((format) => {
           const chosen = page.recipients.find(

@@ -4,7 +4,7 @@
 // Träger-Büro eine Erklärung einträgt, die per Mail oder Brief kam. Die Karte
 // „Vertrag beenden“ lädt es erst beim Öffnen.
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { DataField, DataGrid } from "~/components/ui/data-field";
@@ -40,6 +40,7 @@ import {
   toISODate,
 } from "~/lib/date-helpers";
 import { ApiError } from "~/lib/api-error";
+import { useReadStateLock } from "~/lib/hooks/use-read-state-lock";
 import { traegerContractKeys } from "~/lib/swr/traeger-contract-keys";
 import { traegerPath } from "~/lib/traeger-url";
 import { createLogger } from "~/lib/logger";
@@ -98,6 +99,13 @@ export function RecordNoticeModal({
   const form = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(form);
   const { success } = useToast();
+  // From a refusal until the new dates are read, nothing is sent: the
+  // shown end date would be refused again (ADR 0311, rule 4).
+  const lock = useReadStateLock();
+  const { reset: resetLock } = lock;
+  useEffect(() => {
+    if (isOpen) resetLock();
+  }, [isOpen, resetLock]);
   const {
     data: choices,
     error: optionsError,
@@ -130,7 +138,7 @@ export function RecordNoticeModal({
           : undefined;
 
   const submit = async () => {
-    if (!choices || optionsError || missingText) return;
+    if (!choices || optionsError || missingText || lock.locked) return;
     formErrors.clear();
     const recordedMessage =
       kind === "widerruf"
@@ -186,7 +194,7 @@ export function RecordNoticeModal({
         // shows the new one before the office declares again.
         void formErrors.show(err, {
           object: "die Kündigung",
-          reload: reloadChoices,
+          reload: lock.guard(reloadChoices),
         });
       }
     });
@@ -224,9 +232,10 @@ export function RecordNoticeModal({
               saving ||
               !choices ||
               Boolean(optionsError) ||
-              Boolean(missingText)
+              Boolean(missingText) ||
+              lock.locked
             }
-            disabledReason={missingText}
+            disabledReason={missingText ?? lock.reason}
             tooltip={`Trägt ${kind === "widerruf" ? "den Widerruf" : "die Kündigung"} ein und schickt den Eltern sofort eine Bestätigung.`}
             isLoading={saving}
             loadingText="Wird eingetragen …"
@@ -587,8 +596,16 @@ export function RejectReasonModal({
   const saving = save.pending;
   const formErrors = useApiFormError();
   const { success } = useToast();
+  // From a refusal until the new end is read, nothing is sent: the shown
+  // end would be refused again (ADR 0311, rule 4).
+  const lock = useReadStateLock();
+  const { reset: resetLock } = lock;
+  useEffect(() => {
+    if (isOpen) resetLock();
+  }, [isOpen, resetLock]);
 
   const submit = async () => {
+    if (lock.locked) return;
     formErrors.clear();
     await save.run(async (op) => {
       try {
@@ -604,7 +621,10 @@ export function RejectReasonModal({
         if (!op.isCurrent()) return;
         // The end moved since it was shown (ADR 0311): `reload` shows the
         // new one here before the office decides again.
-        void formErrors.show(err, { object: "die Entscheidung", reload });
+        void formErrors.show(err, {
+          object: "die Entscheidung",
+          reload: lock.guard(reload),
+        });
       }
     });
   };
@@ -617,6 +637,8 @@ export function RejectReasonModal({
       title="Grund nicht anerkennen"
       confirmText="Grund nicht anerkennen"
       isConfirmLoading={saving}
+      isConfirmDisabled={lock.locked}
+      confirmDisabledReason={lock.reason}
       isDismissDisabled={saving}
       isBackdropDismissDisabled
       loadingText="Wird eingetragen …"

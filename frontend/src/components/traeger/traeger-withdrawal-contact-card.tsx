@@ -20,7 +20,8 @@ import {
 } from "~/components/ui/status-badge";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
-import { useReadDraftLoadError } from "~/lib/hooks/use-swr-load-error";
+import { readStateWaitReason } from "~/lib/hooks/use-read-state-lock";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { useDraftOn } from "~/lib/swr/read-draft";
 import {
@@ -146,7 +147,11 @@ export function TraegerWithdrawalContactCard({
   const draft = form.draft ?? withdrawal;
   const setDraft = form.setDraft;
   const changed = form.touched;
-  const loadError = useReadDraftLoadError(form, "den Kontakt für Widerrufe");
+  const readForm = useReadDraftForm(
+    form,
+    formErrors,
+    "den Kontakt für Widerrufe",
+  );
   const reach = withdrawalReach(contact, draft);
   const addressee = withdrawalAddressee(letterheadText, reach);
   const missing = [
@@ -155,8 +160,7 @@ export function TraegerWithdrawalContactCard({
   ].filter((value) => value !== null);
 
   const submit = async () => {
-    if (!form.canSubmit) return;
-    formErrors.clear();
+    if (!readForm.begin()) return;
     setSaving(true);
     const result = await form.submit((expected, submitted) =>
       saveTraegerWithdrawalContact(submitted, expected),
@@ -194,7 +198,7 @@ export function TraegerWithdrawalContactCard({
         }}
       >
         <LoadErrorAlert error={afterSave.error} />
-        {formErrors.error ? null : <LoadErrorAlert error={loadError} />}
+        <LoadErrorAlert error={readForm.loadError} />
         <FormErrorAlert message={formErrors.error} />
         <div className="grid gap-4 md:grid-cols-2">
           <Input
@@ -294,6 +298,7 @@ export function TraegerWithdrawalContactCard({
             saving={saving}
             saveType="submit"
             disabled={!form.canSubmit}
+            disabledReason={readStateWaitReason(form.status)}
           />
         ) : null}
       </form>

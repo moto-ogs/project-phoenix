@@ -43,7 +43,8 @@ import {
   useResolvedMediaQuery,
 } from "~/lib/hooks/use-media-query";
 import { careContractsConcept } from "~/lib/concepts/careContracts";
-import { useReadDraftLoadError } from "~/lib/hooks/use-swr-load-error";
+import { readStateWaitReason } from "~/lib/hooks/use-read-state-lock";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { useDraftOn } from "~/lib/swr/read-draft";
 import { createLogger } from "~/lib/logger";
 import {
@@ -315,7 +316,6 @@ function ConditionsForm({
   const draft = form.draft ?? termsOf(offering);
   const setDraft = form.setDraft;
   const dirty = form.touched;
-  const loadError = useReadDraftLoadError(form, "die Vertragsbedingungen");
   useEffect(() => {
     onDirtyChange(dirty);
   }, [dirty, onDirtyChange]);
@@ -327,6 +327,11 @@ function ConditionsForm({
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
   const { clear: clearErrors } = formErrors;
+  const readForm = useReadDraftForm(
+    form,
+    formErrors,
+    "die Vertragsbedingungen",
+  );
   const { success } = useToast();
 
   const set = <K extends keyof ContractTerms>(
@@ -335,8 +340,7 @@ function ConditionsForm({
   ) => setDraft((current) => ({ ...current, [key]: value }));
 
   const submit = async () => {
-    if (!form.canSubmit) return;
-    formErrors.clear();
+    if (!readForm.begin()) return;
     setSaving(true);
     const result = await form.submit((version, terms) =>
       saveContractTemplate(
@@ -396,7 +400,7 @@ function ConditionsForm({
           Gilt für neue Verträge; bestehende behalten ihre Bedingungen.
         </p>
         <FormErrorAlert message={formErrors.error} />
-        {formErrors.error ? null : <LoadErrorAlert error={loadError} />}
+        <LoadErrorAlert error={readForm.loadError} />
         <ContractTermsFields
           draft={draft}
           set={set}
@@ -454,6 +458,11 @@ function ConditionsForm({
           // conditions saves the shown ones as they stand. Nothing goes out
           // until the stored conditions were read (ADR 0311).
           disabled={(Boolean(selected.template) && !dirty) || !form.canSubmit}
+          disabledReason={
+            form.canSubmit
+              ? "Du hast noch nichts geändert."
+              : readStateWaitReason(form.status)
+          }
           saveLabel="Bedingungen speichern"
           // A phone keeps both buttons on one line under the legal texts.
           cancelLabel={isPhone ? "Verwerfen" : "Änderungen verwerfen"}

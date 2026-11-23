@@ -15,6 +15,7 @@ import {
   useToast,
 } from "~/contexts/ToastContext";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
+import { useReadStateLock } from "~/lib/hooks/use-read-state-lock";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
 import {
@@ -59,25 +60,32 @@ export function TraegerBankAccountsCard({
     onChanged,
   );
 
-  const makeDefault = async (account: TraegerBankAccount) => {
-    try {
-      // The row as shown, with its version (ADR 0311): a colleague's change
-      // since is refused, and `reload` shows it in the table.
-      await updateTraegerBankAccount(
-        account.id,
-        { ...account, isDefault: true },
-        account.version,
-      );
-    } catch (err) {
-      logger.error("traeger_bank_account_default_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      void showError(err, { object: "die Bankverbindung", reload });
-      return;
-    }
-    success(`„${account.label}“ ist jetzt der Standard.`);
-    await afterWrite.refresh();
-  };
+  // From a refusal until the stored accounts are read, the rows still
+  // carry the refused versions: nothing is sent (ADR 0311, rule 4).
+  const defaultLock = useReadStateLock();
+  const makeDefault = (account: TraegerBankAccount) =>
+    defaultLock.run(async () => {
+      try {
+        // The row as shown, with its version (ADR 0311): a colleague's change
+        // since is refused, and `reload` shows it in the table.
+        await updateTraegerBankAccount(
+          account.id,
+          { ...account, isDefault: true },
+          account.version,
+        );
+      } catch (err) {
+        logger.error("traeger_bank_account_default_failed", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+        void showError(err, {
+          object: "die Bankverbindung",
+          reload: defaultLock.guard(reload),
+        });
+        return;
+      }
+      success(`„${account.label}“ ist jetzt der Standard.`);
+      await afterWrite.refresh();
+    });
 
   const remove = async () => {
     if (!deleting) return;
@@ -166,8 +174,11 @@ export function TraegerBankAccountsCard({
               : [
                   {
                     label: "Als Standard festlegen",
-                    description: "Gilt sofort für Briefe und Rechnungen.",
+                    description:
+                      defaultLock.reason ??
+                      "Gilt sofort für Briefe und Rechnungen.",
                     icon: <Star className="size-4" aria-hidden />,
+                    disabled: defaultLock.busy,
                     onClick: () => void makeDefault(account),
                   },
                 ]),

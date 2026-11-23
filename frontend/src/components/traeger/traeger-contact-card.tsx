@@ -8,7 +8,8 @@ import { SectionCard } from "~/components/ui/section-card";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
-import { useReadDraftLoadError } from "~/lib/hooks/use-swr-load-error";
+import { readStateWaitReason } from "~/lib/hooks/use-read-state-lock";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { useDraftOn } from "~/lib/swr/read-draft";
 import {
@@ -83,11 +84,10 @@ export function TraegerContactCard({
   const draft = form.draft ?? contact;
   const setDraft = form.setDraft;
   const changed = form.touched;
-  const loadError = useReadDraftLoadError(form, "die Ansprechperson");
+  const readForm = useReadDraftForm(form, formErrors, "die Ansprechperson");
 
   const submit = async () => {
-    if (!form.canSubmit) return;
-    formErrors.clear();
+    if (!readForm.begin()) return;
     setSaving(true);
     const result = await form.submit((expected, submitted) =>
       saveTraegerContact(submitted, expected),
@@ -125,7 +125,7 @@ export function TraegerContactCard({
         }}
       >
         <LoadErrorAlert error={afterSave.error} />
-        {formErrors.error ? null : <LoadErrorAlert error={loadError} />}
+        <LoadErrorAlert error={readForm.loadError} />
         <FormErrorAlert message={formErrors.error} />
         <div className="grid gap-4 md:grid-cols-3">
           <Input
@@ -173,6 +173,7 @@ export function TraegerContactCard({
             saving={saving}
             saveType="submit"
             disabled={!form.canSubmit}
+            disabledReason={readStateWaitReason(form.status)}
           />
         ) : null}
       </form>

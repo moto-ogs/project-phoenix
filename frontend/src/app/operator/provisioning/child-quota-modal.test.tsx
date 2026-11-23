@@ -293,6 +293,69 @@ describe("ChildQuotaModal", () => {
     });
   });
 
+  // A refusal for a rename keeps the quota typed here when the stored quota
+  // did not change; the next save goes out on the stored school.
+  it("keeps the typed quota over a school renamed since it opened", async () => {
+    const renamed = { ...school, name: "OGS Am Park (neu)", version: "v-2" };
+    mockUpdateSchool.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    const onClose = vi.fn();
+    const loadCurrentSchool = vi.fn().mockResolvedValue(renamed);
+    render(
+      <ChildQuotaModal
+        isOpen
+        onClose={onClose}
+        school={school}
+        loadCurrentSchool={loadCurrentSchool}
+        onUpdated={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Anzahl Bundles"), {
+      target: { value: "4" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", SAVE_OBJECT),
+      ),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Speichern" })).toBeEnabled(),
+    );
+    expect(screen.getByLabelText("Anzahl Bundles")).toHaveValue("4");
+
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(mockUpdateSchool).toHaveBeenLastCalledWith("10", {
+      ...schoolFieldsOf(renamed),
+      child_quota: { bundles: 4, bundle_size: 50 },
+    });
+  });
+
+  // Rule 5 of ADR 0311: the save's answer is the new base, so a second save
+  // in the same opening is not refused for the first one.
+  it("saves a second time on the version the first save answered", async () => {
+    mockUpdateSchool.mockResolvedValue({
+      ...school,
+      organization: undefined,
+      version: "v-2",
+    });
+    const { onClose } = renderModal();
+
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(2));
+
+    expect(mockUpdateSchool).toHaveBeenLastCalledWith("10", {
+      ...schoolFieldsOf({ ...school, version: "v-2" }),
+      child_quota: { bundles: 2, bundle_size: 50 },
+    });
+  });
+
   it("keeps saving locked when the read after a refusal fails", async () => {
     mockUpdateSchool.mockRejectedValueOnce(
       new ApiError("changed", 409, { code: "general.changed_since_read" }),

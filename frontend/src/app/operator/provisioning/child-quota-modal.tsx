@@ -10,6 +10,7 @@ import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { useApiErrorDisplay, useApiFormError } from "~/contexts/ToastContext";
 import { operatorProvisioningService } from "~/lib/operator/provisioning-api";
 import type {
+  School,
   SchoolSummary,
   UpdateSchoolRequest,
 } from "~/lib/operator/provisioning-helpers";
@@ -57,6 +58,41 @@ interface QuotaDraft {
   readonly bundleSize: string;
 }
 
+/** A save's answer with the quota it sent: the school answer has no quota. */
+interface QuotaSaved {
+  readonly school: School;
+  readonly childQuota: UpdateSchoolRequest["child_quota"];
+}
+
+/**
+ * The school as stored after a quota save (ADR 0311, rule 5): the answer's
+ * fields and version, the quota the save sent, the counts as opened.
+ */
+function storedAfterSave(
+  opened: SchoolSummary,
+  { school, childQuota }: QuotaSaved,
+): SchoolSummary {
+  return {
+    ...opened,
+    name: school.name,
+    slug: school.slug,
+    subdomain: school.subdomain,
+    address: school.address,
+    city: school.city,
+    zip: school.zip,
+    phone: school.phone,
+    email: school.email,
+    active: school.active,
+    hidden: school.hidden,
+    updatedAt: school.updatedAt,
+    version: school.version,
+    // The dialog sends both figures, or null to remove the limit.
+    childQuotaBundles: childQuota?.bundles ?? null,
+    childQuotaBundleSize:
+      childQuota?.bundle_size ?? opened.childQuotaBundleSize,
+  };
+}
+
 function quotaDraftOf(school: SchoolSummary): QuotaDraft {
   return {
     bundles: school.childQuotaBundles?.toString() ?? "",
@@ -65,6 +101,9 @@ function quotaDraftOf(school: SchoolSummary): QuotaDraft {
     ).toString(),
   };
 }
+
+const sameQuota = (a: QuotaDraft, b: QuotaDraft) =>
+  a.bundles === b.bundles && a.bundleSize === b.bundleSize;
 
 /**
  * Kinderkontingent of one school (#3568): the moto team books whole bundles
@@ -92,17 +131,37 @@ export function ChildQuotaModal({
   // The quota rests on the school as the modal opened it (ADR 0311): a
   // newer read refills only an untouched form, a refused save shows the
   // stored school, and nothing goes out until it was read.
-  const quota = useDraftOn<SchoolSummary, QuotaDraft, string, unknown>(
+  // The stored school a save answered, until the page brings a new read:
+  // the shown school would otherwise take the draft back to the version the
+  // save replaced (ADR 0311, rule 5).
+  const [answered, setAnswered] = useState<{
+    readonly over: SchoolSummary;
+    readonly stored: SchoolSummary;
+  } | null>(null);
+  const shown = answered?.over === school ? answered.stored : school;
+  const quota = useDraftOn<SchoolSummary, QuotaDraft, string, QuotaSaved>(
     {
       opening: isOpen ? `child-quota:${school.id}` : null,
-      data: school,
+      data: shown,
       reload: loadCurrentSchool,
+      write: (stored) => {
+        setAnswered({ over: school, stored });
+        return Promise.resolve();
+      },
     },
     {
       token: (read) => read.version,
       toDraft: quotaDraftOf,
-      // The modal closes; the page reads the school again (`onUpdated`).
-      answer: (_saved, opened) => opened,
+      // A refusal for a change of the school's other fields (a rename, an
+      // address) keeps the quota typed here, as long as the stored quota is
+      // still the one the dialog opened with.
+      rebase: (draft, from, to) =>
+        sameQuota(quotaDraftOf(from), quotaDraftOf(to))
+          ? draft
+          : quotaDraftOf(to),
+      // The save's version is the new base, also while the page reads the
+      // school again (`onUpdated`).
+      answer: (saved, opened) => storedAfterSave(opened, saved),
     },
   );
   const { bundles, bundleSize } = quota.draft ?? quotaDraftOf(school);
@@ -139,12 +198,13 @@ export function ChildQuotaModal({
       if (!opened || !quota.canSubmit) return;
       setSaving(true);
       clearError();
-      const result = await quota.submit((version) =>
-        operatorProvisioningService.updateSchool(
+      const result = await quota.submit(async (version) => ({
+        school: await operatorProvisioningService.updateSchool(
           opened.id,
           schoolUpdate(opened, childQuota, version),
         ),
-      );
+        childQuota,
+      }));
       if (!result.ok) {
         logger.error("child_quota_update_failed", {
           school_id: school.id,

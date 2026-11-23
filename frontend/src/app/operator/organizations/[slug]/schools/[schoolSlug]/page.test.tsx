@@ -555,6 +555,30 @@ describe("OperatorSchoolDetailPage", () => {
     expect(mockMutateSchools).toHaveBeenCalledWith();
   });
 
+  // ADR 0311, rule 4: from the refusal until the school is read again the
+  // badge sends nothing; a failed read keeps it locked.
+  it("locks the status toggle while the read after a refusal failed", async () => {
+    setupSWR({ schoolsReadError: new ApiError("unavailable", 503) });
+    mockUpdateSchool.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+
+    await renderPage();
+    fireEvent.click(await screen.findByLabelText("Deaktivieren"));
+
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden\./),
+    ).toBeInTheDocument();
+    const toggle = screen.getByLabelText("Deaktivieren");
+    expect(toggle).toBeDisabled();
+    expect(toggle).toHaveAttribute(
+      "title",
+      "Die gespeicherten Angaben konnten nicht geladen werden. Tippe in der Fehlermeldung auf „Wiederholen“.",
+    );
+    fireEvent.click(toggle);
+    expect(mockUpdateSchool).toHaveBeenCalledTimes(1);
+  });
+
   // #6652: the status change holds once the write is through; a failed reload
   // of the portal cache is a load error above the page, never a failed change.
   it("keeps a status change successful when the portal cache reload fails", async () => {

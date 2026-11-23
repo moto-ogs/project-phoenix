@@ -118,11 +118,12 @@ it("sends a file that has no recipient to one, as a whole", async () => {
   const card = (await screen.findByText("Welche Datei geht wohin")).closest(
     "section",
   )!;
-  const save = within(card).getByRole("button", { name: "Speichern" });
-  expect(save).toBeDisabled();
+  const save = () => within(card).getByRole("button", { name: "Speichern" });
+  // Blocked with its reason: nothing changed yet.
+  expect(save()).toHaveAttribute("aria-disabled", "true");
   fireEvent.click(within(card).getByRole("combobox", { name: "DATEV-Datei" }));
   fireEvent.click(await screen.findByRole("option", { name: "Steuerbüro" }));
-  fireEvent.click(save);
+  fireEvent.click(save());
   await waitFor(() =>
     expect(api.assignExportFormats).toHaveBeenCalledWith(
       [

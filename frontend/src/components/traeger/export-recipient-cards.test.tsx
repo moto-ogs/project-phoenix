@@ -1,7 +1,8 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { StrictMode } from "react";
 import { expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
+import { ApiError } from "~/lib/api-error";
 import type { ExportRecipient } from "~/lib/traeger-export-handovers-api";
 import {
   ExportHandoverHistoryCard,
@@ -61,4 +62,42 @@ it("keeps the card inset around the handover table", () => {
       .getByRole("heading", { name: "Letzte Übergaben" })
       .closest("section"),
   ).toHaveClass("p-5");
+});
+
+// ADR 0311, rules 4 and 6: after a refusal whose read failed, saving waits
+// for a read and says why, without claiming the read still runs.
+it("names the failed read as the reason saving waits", async () => {
+  const onSave = vi
+    .fn()
+    .mockRejectedValue(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+  const reload = vi.fn().mockRejectedValue(new ApiError("unavailable", 503));
+  render(
+    <ToastProvider>
+      <ExportRecipientFormCard
+        recipient={RECIPIENT}
+        reload={reload}
+        onSave={onSave}
+      />
+    </ToastProvider>,
+  );
+
+  fireEvent.change(screen.getByLabelText("Zielordner"), {
+    target: { value: "/archiv" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+  expect(
+    await screen.findByText(/Der neue Stand konnte nicht geladen werden\./),
+  ).toBeInTheDocument();
+  const save = screen.getByRole("button", { name: "Speichern" });
+  expect(save).toHaveAttribute("aria-disabled", "true");
+  fireEvent.focus(save);
+  expect(
+    await screen.findByText(
+      "Die gespeicherten Angaben konnten nicht geladen werden. Tippe in der Fehlermeldung auf „Wiederholen“.",
+    ),
+  ).toBeInTheDocument();
+  expect(onSave).toHaveBeenCalledTimes(1);
 });

@@ -59,5 +59,7 @@
   "endNoticeTitle": "Mitteilung des Trägers zum Vertragsende",
   "submitTerminationTooltip": "Schickt die Kündigung sofort an den Träger.",
   "submitWithdrawalTooltip": "Schickt den Widerruf sofort an den Träger.",
-  "submitDisabledReason": "Wähle zuerst oben eine Möglichkeit aus."
+  "submitDisabledReason": "Wähle zuerst oben eine Möglichkeit aus.",
+  "reloadingReason": "Die aktuellen Termine werden noch geladen.",
+  "reloadFailedReason": "Die aktuellen Termine konnten nicht geladen werden. Tippe oben in der Meldung auf „Wiederholen“."
 }

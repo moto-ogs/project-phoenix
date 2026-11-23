@@ -32,6 +32,7 @@ import { StatusBadge } from "~/components/ui/status-badge";
 import { Textarea } from "~/components/ui/textarea";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { PARENT_RESOURCE_OPTIONS } from "~/lib/hooks/use-parent-resources";
+import { useReadStateLock } from "~/lib/hooks/use-read-state-lock";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { revalidateOrThrow, useInvalidateFamily, useSWRAuth } from "~/lib/swr";
 import { parentInboxKeys } from "~/lib/swr/parent-inbox-keys";
@@ -239,11 +240,20 @@ function NoticeForm({
   const reasonField = useRef<HTMLTextAreaElement>(null);
   const form = useRef<HTMLFormElement>(null);
   const errors = useApiFormError(form);
+  // From a refusal until the new dates are read, nothing is sent: the
+  // shown end date would be refused again (ADR 0311, rule 4).
+  const lock = useReadStateLock();
+  const lockReason =
+    lock.status === "reloading"
+      ? t("reloadingReason")
+      : lock.status === "loadFailed"
+        ? t("reloadFailedReason")
+        : undefined;
   const date = (iso: string | null) =>
     iso ? formatDate(iso, false, locale) : "–";
 
   const submit = async () => {
-    if (sending || choice === null) return;
+    if (sending || choice === null || lock.locked) return;
     if (berlinTodayISO() !== optionsDay) {
       await onRefresh();
       return;
@@ -283,7 +293,7 @@ function NoticeForm({
       // arrive with `reload`, and changed ones ask for a choice again.
       void errors.show(err, {
         object: t("declareErrorObject"),
-        reload: onReload,
+        reload: lock.guard(onReload),
       });
     } finally {
       setSending(false);
@@ -409,8 +419,8 @@ function NoticeForm({
                 variant="danger"
                 size="base"
                 className="w-full sm:w-auto"
-                disabled={sending || choice === null}
-                disabledReason={t("submitDisabledReason")}
+                disabled={sending || choice === null || lock.locked}
+                disabledReason={lockReason ?? t("submitDisabledReason")}
                 isLoading={sending}
                 loadingText={t("sending")}
                 tooltip={

@@ -18,7 +18,8 @@ import { Input } from "~/components/ui/input";
 import { SectionCard } from "~/components/ui/section-card";
 import { SuggestInput } from "~/components/ui/suggest-input";
 import { useApiFormError } from "~/contexts/ToastContext";
-import { useReadDraftLoadError } from "~/lib/hooks/use-swr-load-error";
+import { readStateWaitReason } from "~/lib/hooks/use-read-state-lock";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { useDraftOn } from "~/lib/swr/read-draft";
 import type { TraegerSchool } from "~/lib/traeger-api";
@@ -154,10 +155,14 @@ export function ReportTemplateForm({
   );
   const draft = stored ? (change.draft ?? initial) : created;
   const setDraft = stored ? change.setDraft : setCreated;
-  const loadError = useReadDraftLoadError(change, "die Vorlage");
   const [saving, setSaving] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
+  const form = useReadDraftForm(
+    stored ? change : null,
+    formErrors,
+    "die Vorlage",
+  );
   const fieldError = formErrors.fieldError;
 
   const set = <K extends keyof ReportTemplateInput>(
@@ -202,14 +207,15 @@ export function ReportTemplateForm({
   );
 
   const submit = async () => {
-    formErrors.clear();
+    // Enter submits too: a change goes out only after the stored template
+    // is read, and the shown error stays until then.
+    if (!form.begin()) return;
     const found = validateTemplateInput(draft, takenNames);
     if (Object.keys(found).length > 0) {
       formErrors.invalid("Bitte prüfe die markierten Felder.", found);
       return;
     }
     if (stored) {
-      if (!change.canSubmit) return;
       setSaving(true);
       const result = await change.submit((version, input) =>
         onSave(input, version),
@@ -257,6 +263,7 @@ export function ReportTemplateForm({
           saving={saving}
           saveLabel={saveLabel}
           disabled={stored !== undefined && !change.canSubmit}
+          disabledReason={readStateWaitReason(change.status)}
         />
       }
     >
@@ -270,7 +277,7 @@ export function ReportTemplateForm({
         }}
       >
         <FormErrorAlert message={formErrors.error} />
-        {formErrors.error ? null : <LoadErrorAlert error={loadError} />}
+        <LoadErrorAlert error={form.loadError} />
         <Input
           name="name"
           label="Name"

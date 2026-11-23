@@ -3,11 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import { Checkbox } from "~/components/ui/checkbox";
 import { EditActions } from "~/components/ui/edit-actions";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { FormModal } from "~/components/ui/form-modal";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { Input } from "~/components/ui/input";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import { readStateWaitReason } from "~/lib/hooks/use-read-state-lock";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { useDraftOn } from "~/lib/swr/read-draft";
 import {
@@ -99,6 +102,11 @@ export function TraegerBankAccountModal({
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
   const { clear: clearErrors } = formErrors;
+  const form = useReadDraftForm(
+    changing ? change : null,
+    formErrors,
+    "die Bankverbindung",
+  );
   const { success } = useToast();
 
   useEffect(() => {
@@ -112,7 +120,9 @@ export function TraegerBankAccountModal({
 
   const submit = async () => {
     if (!edit) return;
-    formErrors.clear();
+    // Enter submits too: a change goes out only after the stored account
+    // is read, and the shown error stays until then.
+    if (!form.begin()) return;
     const fields: Record<string, string> = {};
     if (!draft.label.trim()) fields.label = "Bitte gib eine Bezeichnung an.";
     if (!draft.accountHolder.trim())
@@ -122,7 +132,6 @@ export function TraegerBankAccountModal({
       formErrors.invalid("Bitte prüfe deine Angaben.", fields);
       return;
     }
-    if (edit.kind === "change" && !change.canSubmit) return;
     await save.run(async (op) => {
       if (edit.kind === "change") {
         const id = edit.account.id;
@@ -194,6 +203,9 @@ export function TraegerBankAccountModal({
           onSave={() => formRef.current?.requestSubmit()}
           saving={saving}
           disabled={changing !== undefined && !change.canSubmit}
+          disabledReason={
+            changing ? readStateWaitReason(change.status) : undefined
+          }
         />
       }
     >
@@ -207,6 +219,7 @@ export function TraegerBankAccountModal({
           void submit();
         }}
       >
+        <LoadErrorAlert error={form.loadError} />
         <Input
           controlSize="compact"
           id="traeger-bank-account-label"
