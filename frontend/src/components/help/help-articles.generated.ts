@@ -1084,6 +1084,9 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
       "Du weißt, wo du die wichtigsten Bereiche und die passende Hilfe findest.",
     differences: [
       "Welche Bereiche du siehst, hängt von deiner Rolle und den Einstellungen deiner OGS ab.",
+      // Menü mit einem Eintrag am Handy (#7799, OverflowMenu): die
+      // Anleitungen nennen weiter „das Menü mit den drei Punkten“.
+      "Eine Anleitung nennt das Menü mit den drei Punkten, aber am Handy steht dort ein Knopf wie `Einladen`? Hat das Menü nur einen Eintrag, zeigt moto am Handy gleich diesen Knopf. Tippe direkt darauf.",
       "Du siehst keine Überschriften wie `Tagesbetrieb` oder `Team`? Dann hat deine OGS die einfache Seitenleiste eingeschaltet. Alle Seiten zeigt `Alle Seiten anzeigen` ganz unten.",
       "Unter `Bausteine` fehlt eine Karte? Dann steht sie schon auf deiner Startseite. Oder deine Rolle oder deine OGS sieht sie nicht vor.",
       // Sichtregel von „Heute anders" (#7659): Namen nur für die eigenen
