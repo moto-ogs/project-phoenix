@@ -51,7 +51,7 @@ import {
 import type { Staff } from "~/lib/staff-api";
 import { schoolClassesLabel, schoolClassLabel } from "~/lib/school-class-label";
 import { getSchoolYear } from "~/lib/student-helpers";
-import { useFreshSWR, useSWRAuth } from "~/lib/swr";
+import { useSWRAuth } from "~/lib/swr";
 import { timetableKeys } from "~/lib/swr/portal-keys";
 import { staff as staffResource } from "~/lib/swr/staff";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
@@ -466,20 +466,21 @@ export function useEventForm({
       onError: logLoadFailure("planning_tracks_fetch_failed"),
     },
   );
-  // The category list seeds the draft (the first category of a new Termin),
-  // so each opening reads it anew and never starts from an earlier answer.
-  const categoryRead = useFreshSWR(
+  // The category, student and staff lists are option catalogs (ADR 0311):
+  // they read through the shared cache and revalidate at every opening, and
+  // the save validates what it receives. The first category of the list
+  // seeds a new Termin.
+  const categoryRead = useSWRAuth(
     isOpen ? tenantDailyKeys.plannerCategories() : null,
     () => fetchPlannerActivityCategories(),
     { onError: logLoadFailure("categories_fetch_failed") },
   );
-  // The rosters decide what a save writes: until this opening's own list
-  // answered, the stored assignment is kept. So each opening reads them anew
-  // and an answer of an earlier opening never unlocks the roster.
-  // The student catalog has a stricter permission boundary than the shared
-  // planner references. Keep it on an independent read so users without
-  // users:read can still use rooms, categories and groups immediately.
-  const studentRead = useFreshSWR(
+  // Until the student list answered, the roster stays read-only and keeps
+  // its stored assignment. The student catalog has a stricter permission
+  // boundary than the shared planner references. Keep it on an independent
+  // read so users without users:read can still use rooms, categories and
+  // groups immediately.
+  const studentRead = useSWRAuth(
     isOpen ? tenantDailyKeys.plannerStudentOptions() : null,
     () => fetchAllStudentOptions(),
     { onError: logLoadFailure("students_fetch_failed") },
@@ -487,7 +488,7 @@ export function useEventForm({
   // Staff carries the same users:read boundary as students. Keep it
   // independent from rooms/categories/groups so a 403 cannot masquerade as
   // an empty editable roster or delay the planner references.
-  const staffRead = useFreshSWR(
+  const staffRead = useSWRAuth(
     isOpen ? staffResource.key() : null,
     () => staffResource.fetcher(),
     { onError: logLoadFailure("staff_fetch_failed") },
