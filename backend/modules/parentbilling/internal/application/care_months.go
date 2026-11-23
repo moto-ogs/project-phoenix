@@ -632,7 +632,8 @@ func (c *CareBilling) issuedCareChildren(ctx context.Context, organizationID int
 // range the release uses.
 func (c *CareBilling) detail(ctx context.Context, reviewer parentbilling.HolidayReviewer, run parentbilling.CareRun) (parentbilling.CareRunDetail, error) {
 	detail := parentbilling.CareRunDetail{CareRun: run, Unpriced: []parentbilling.CareUnpriced{}, Duplicates: []parentbilling.CareDuplicate{},
-		MealGaps: []parentbilling.CareMealGap{}, MealUnbilled: []parentbilling.CareMealUnbilled{}, MealChanged: []parentbilling.CareMealChanged{}}
+		JoinedChildren: []parentbilling.CareJoinedChild{},
+		MealGaps:       []parentbilling.CareMealGap{}, MealUnbilled: []parentbilling.CareMealUnbilled{}, MealChanged: []parentbilling.CareMealChanged{}}
 	if run.Status == parentbilling.RunDiscarded {
 		return c.discardedDetail(ctx, reviewer.OrganizationID, detail)
 	}
@@ -735,7 +736,7 @@ func versionContracts(versions []parentbilling.CareContractVersion) []int64 {
 }
 
 // shownContracts names the contracts whose child a detail shows: on an
-// invoice, without a price or as a duplicate.
+// invoice, without a price, as a duplicate or joined across schools.
 func shownContracts(detail parentbilling.CareRunDetail) []int64 {
 	ids := []int64{}
 	for _, invoice := range detail.Invoices {
@@ -747,10 +748,19 @@ func shownContracts(detail parentbilling.CareRunDetail) []int64 {
 		}
 	}
 	for _, duplicate := range detail.Duplicates {
-		for _, contract := range duplicate.Contracts {
-			if !slices.Contains(ids, contract.ContractID.Int64()) {
-				ids = append(ids, contract.ContractID.Int64())
-			}
+		ids = appendContracts(ids, duplicate.Contracts)
+	}
+	for _, child := range detail.JoinedChildren {
+		ids = appendContracts(ids, child.Contracts)
+	}
+	return ids
+}
+
+// appendContracts adds the contracts not named yet.
+func appendContracts(ids []int64, contracts []parentbilling.CareDuplicateContract) []int64 {
+	for _, contract := range contracts {
+		if !slices.Contains(ids, contract.ContractID.Int64()) {
+			ids = append(ids, contract.ContractID.Int64())
 		}
 	}
 	return ids

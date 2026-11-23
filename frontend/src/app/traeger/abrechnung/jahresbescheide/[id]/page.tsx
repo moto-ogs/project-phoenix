@@ -23,6 +23,7 @@ import {
   rateCountLabel,
 } from "~/components/traeger/care-notice-format";
 import { formatEuro } from "~/components/traeger/contribution-format";
+import { CareJoinedChildrenCard } from "~/components/traeger/care-joined-children-card";
 import { EmptyRunCard } from "~/components/traeger/empty-run-card";
 import {
   traegerExportScope,
@@ -435,26 +436,33 @@ export default function TraegerCareNoticeRunPage() {
       }
     >
       {run && (discarded || empty) ? (
-        <EmptyRunCard
-          title="Jahreslauf"
-          discarded={discarded}
-          description={
-            discarded
-              ? `Er hatte nichts abzurechnen und hat nichts ausgestellt. Für das Jahr ${run.year} kannst du einen neuen Lauf starten.`
-              : `Für das Jahr ${run.year} gibt es keinen Bescheid. Es fehlt auch kein Preis. Du kannst den Lauf verwerfen. Danach ist das Jahr frei für einen neuen Lauf.`
-          }
-          createdAt={run.createdAt}
-          discardedAt={run.discardedAt}
-        >
-          <DataField label="Zeitraum">
-            {noticePeriod(run.periodFrom, run.periodUntil)}
-          </DataField>
-          <DataField label="Schulen">
-            {run.schoolIds.length === 1
-              ? "1 Schule"
-              : `${run.schoolIds.length} Schulen`}
-          </DataField>
-        </EmptyRunCard>
+        <>
+          <EmptyRunCard
+            title="Jahreslauf"
+            discarded={discarded}
+            description={
+              discarded
+                ? `Er hatte nichts abzurechnen und hat nichts ausgestellt. Für das Jahr ${run.year} kannst du einen neuen Lauf starten.`
+                : `Für das Jahr ${run.year} gibt es keinen Bescheid. Es fehlt auch kein Preis. Du kannst den Lauf verwerfen. Danach ist das Jahr frei für einen neuen Lauf.`
+            }
+            createdAt={run.createdAt}
+            discardedAt={run.discardedAt}
+          >
+            <DataField label="Zeitraum">
+              {noticePeriod(run.periodFrom, run.periodUntil)}
+            </DataField>
+            <DataField label="Schulen">
+              {run.schoolIds.length === 1
+                ? "1 Schule"
+                : `${run.schoolIds.length} Schulen`}
+            </DataField>
+          </EmptyRunCard>
+          {/* A child billed at another school (#7874): the empty run says
+            why it has no notice here. */}
+          {empty ? (
+            <CareJoinedChildrenCard childrenJoined={run.joinedChildren} />
+          ) : null}
+        </>
       ) : run ? (
         <>
           {preview && run.previewCount > 0 && run.legalRemedyMissing ? (
@@ -497,6 +505,9 @@ export default function TraegerCareNoticeRunPage() {
               type="warning"
               message="Für einige Kinder fehlt ein Preis oder es gibt einen doppelten Vertrag. Für diese Monate bleibt ein bisheriger Bescheid gültig. Ohne bisherigen Bescheid bleiben sie offen. Der Monatslauf zeigt, was fehlt."
             />
+          ) : null}
+          {preview ? (
+            <CareJoinedChildrenCard childrenJoined={run.joinedChildren} />
           ) : null}
           <div className="grid gap-4 sm:grid-cols-3">
             <StatCard

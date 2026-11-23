@@ -90,7 +90,7 @@ func (c *CareBilling) reviewed(ctx context.Context, organizationID int64, run pa
 func narrowMonth(month careMonth, schoolIDs []int64, exclusions map[parentbilling.CareInvoiceKey]parentbilling.CareExclusion) reviewedMonth {
 	inRun := func(schoolID int64) bool { return slices.Contains(schoolIDs, schoolID) }
 	review := reviewedMonth{careMonth: careMonth{invoices: []parentbilling.CareInvoice{}, unpriced: []parentbilling.CareUnpriced{},
-		duplicates: []parentbilling.CareDuplicate{}, mealGaps: []parentbilling.CareMealGap{},
+		duplicates: []parentbilling.CareDuplicate{}, joined: []parentbilling.CareJoinedChild{}, mealGaps: []parentbilling.CareMealGap{},
 		mealUnbilled: []parentbilling.CareMealUnbilled{}, mealChanged: []parentbilling.CareMealChanged{}, dueDates: month.dueDates, deviations: month.deviations,
 		mandates: month.mandates, childNumbers: month.childNumbers},
 		excluded: []parentbilling.CareInvoice{}, uncountedContracts: []parentbilling.CareUncountedContract{}}
@@ -122,14 +122,24 @@ func narrowMonth(month careMonth, schoolIDs []int64, exclusions map[parentbillin
 		}
 	}
 	narrowMeals(&review, month, inRun)
+	narrowChildren(&review, month, inRun)
+	return review
+}
+
+// narrowChildren keeps the held and the joined children with a contract at
+// a school of the run.
+func narrowChildren(review *reviewedMonth, month careMonth, inRun func(int64) bool) {
+	atRunSchool := func(contract parentbilling.CareDuplicateContract) bool { return inRun(contract.SchoolID.Int64()) }
 	for _, duplicate := range month.duplicates {
-		if slices.ContainsFunc(duplicate.Contracts, func(contract parentbilling.CareDuplicateContract) bool {
-			return inRun(contract.SchoolID.Int64())
-		}) {
+		if slices.ContainsFunc(duplicate.Contracts, atRunSchool) {
 			review.duplicates = append(review.duplicates, duplicate)
 		}
 	}
-	return review
+	for _, child := range month.joined {
+		if slices.ContainsFunc(child.Contracts, atRunSchool) {
+			review.joined = append(review.joined, child)
+		}
+	}
 }
 
 // namesContract tells whether the list names a contract already: a Mensa
@@ -255,10 +265,13 @@ func previewFingerprint(run parentbilling.CareRun, rule string, review reviewedM
 		MealChanged []parentbilling.CareMealChanged  `json:"meal_changed"`
 		LegalRemedy string                           `json:"legal_remedy"`
 		FeeNotices  []string                         `json:"fee_notices"`
+		// Joined stays out while empty, so a run without a joined child
+		// keeps the fingerprint it had before #7874.
+		Joined []parentbilling.CareJoinedChild `json:"joined,omitempty"`
 	}{run.ID.Int64(), ident.Int64s(run.SchoolIDs), run.InvoiceDate, rule, fingerprintInvoices(review.invoices),
 		fingerprintInvoices(review.excluded), review.unpriced, review.duplicates, review.billed, review.free,
 		review.dueDates.InPaymentOrder(), review.uncounted, review.mealGaps, review.mealUnbilled, review.mealChanged,
-		review.legalRemedy, review.feeNotices})
+		review.legalRemedy, review.feeNotices, review.joined})
 }
 
 // runSchools resolves the schools a new run bills: the given ones, each a
@@ -484,6 +497,7 @@ func (c *CareBilling) reviewDetail(ctx context.Context, reviewer parentbilling.H
 	detail.MonthRule, detail.Unpriced, detail.Billed = rule, review.unpriced, review.billed
 	detail.FreeOfCharge = review.free
 	detail.Duplicates, detail.MealGaps, detail.MealUnbilled = review.duplicates, review.mealGaps, review.mealUnbilled
+	detail.JoinedChildren = review.joined
 	detail.MealChanged = review.mealChanged
 	detail.UncountedFamilies, detail.UncountedContracts = review.uncounted, review.uncountedContracts
 	detail.FeeNoticeContracts = len(review.feeNotices)

@@ -19,11 +19,14 @@ import (
 // in a month of the period, the bookings the months leave out and the legal
 // remedy the notices would print.
 type noticePreview struct {
-	notices            []parentbilling.CareNotice
-	unchanged          int
-	billed             int
-	unpriced           []parentbilling.CareUnpriced
-	duplicates         []parentbilling.CareDuplicate
+	notices    []parentbilling.CareNotice
+	unchanged  int
+	billed     int
+	unpriced   []parentbilling.CareUnpriced
+	duplicates []parentbilling.CareDuplicate
+	// joined are the children the months join by their name across
+	// schools (ADR 0158, Nachtrag Schulwechsel).
+	joined             []parentbilling.CareJoinedChild
 	legalRemedyMissing bool
 	issuedOn           calendar.Date
 	fingerprint        string
@@ -60,7 +63,8 @@ func (n *CareFeeNotices) preview(ctx context.Context, organizationID int64, run 
 	if run.NoticeDate != nil {
 		issuedOn = *run.NoticeDate
 	}
-	preview := noticePreview{issuedOn: issuedOn, unpriced: []parentbilling.CareUnpriced{}, duplicates: []parentbilling.CareDuplicate{}}
+	preview := noticePreview{issuedOn: issuedOn, unpriced: []parentbilling.CareUnpriced{}, duplicates: []parentbilling.CareDuplicate{},
+		joined: []parentbilling.CareJoinedChild{}}
 	drafts, err := n.noticeDrafts(ctx, organizationID, run, in, &preview)
 	if err != nil {
 		return noticePreview{}, err
@@ -109,6 +113,7 @@ func (n *CareFeeNotices) noticeDrafts(ctx context.Context, organizationID int64,
 		}
 		preview.unpriced = appendNew(preview.unpriced, review.unpriced)
 		preview.duplicates = appendNew(preview.duplicates, review.duplicates)
+		preview.joined = appendNew(preview.joined, review.joined)
 	}
 	preview.billed = len(billed)
 	return drafts, nil
@@ -160,6 +165,7 @@ func computeNoticeMonth(in careMonthInput, invoiced map[int64]parentbilling.Care
 		}
 	}
 	in.invoiced = issued
+	in.frozenFamilies = invoiceFamilies(invoiced)
 	computed, err := buildCareMonth(in)
 	if err != nil {
 		return reviewedMonth{}, careMonth{}, err
@@ -356,7 +362,8 @@ func (n *CareFeeNotices) withPayments(ctx context.Context, organizationID int64,
 // method, lines, installments, the months it bills with the cents the rule
 // chain allocated and the notice it amends; the contracts whose notice
 // still holds and those a monthly invoice bills; the bookings without a
-// price and the duplicates; and the legal remedy. A change of any of them
+// price, the duplicates and the children joined by their name; and the
+// legal remedy. A change of any of them
 // since the review makes the release refuse.
 func noticeFingerprint(run parentbilling.CareNoticeRun, rule string, preview noticePreview, legalRemedy string) string {
 	notices := make([]any, len(preview.notices))
@@ -379,8 +386,11 @@ func noticeFingerprint(run parentbilling.CareNoticeRun, rule string, preview not
 		Unpriced    []parentbilling.CareUnpriced  `json:"unpriced"`
 		Duplicates  []parentbilling.CareDuplicate `json:"duplicates"`
 		LegalRemedy string                        `json:"legal_remedy"`
+		// Joined stays out while empty, so a run without a joined child
+		// keeps the fingerprint it had before #7874.
+		Joined []parentbilling.CareJoinedChild `json:"joined,omitempty"`
 	}{run.ID.Int64(), ident.Int64s(run.SchoolIDs), run.PeriodFrom, preview.issuedOn, rule, notices, preview.unchanged, preview.billed,
-		preview.unpriced, preview.duplicates, legalRemedy})
+		preview.unpriced, preview.duplicates, legalRemedy, preview.joined})
 	if err != nil {
 		return ""
 	}

@@ -109,6 +109,7 @@ function run(
     billed: 0,
     unpricedCount: 0,
     duplicateCount: 0,
+    joinedChildren: [],
     previewCount: 1,
     previewCents: 12800,
     previewDeltaCents: 12800,
@@ -205,6 +206,29 @@ describe("TraegerCareNoticeRunPage", () => {
     );
     expect(screen.getByText("Herunterladen")).toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: /PDF/ })).toBeInTheDocument();
+  });
+
+  it("names a child the months bill once across two schools (#7874)", async () => {
+    api.fetchCareNoticeRun.mockResolvedValue(
+      run({
+        joinedChildren: [
+          {
+            childFirstName: "Noah",
+            childLastName: "Muster",
+            contracts: [
+              { contractId: "81", schoolId: "3", schoolName: "OGS Nord" },
+              { contractId: "82", schoolId: "5", schoolName: "OGS Süd" },
+            ],
+          },
+        ],
+      }),
+    );
+    renderPage();
+
+    expect(
+      await screen.findByRole("heading", { name: "Ein Kind an zwei Schulen" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("OGS Nord, dann OGS Süd")).toBeInTheDocument();
   });
 
   it("holds the release back while the legal remedy is missing", async () => {

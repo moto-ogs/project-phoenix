@@ -451,6 +451,33 @@ export interface CareDuplicate {
 }
 
 /**
+ * A child with a record at each of several schools that the run bills as
+ * one (ADR 0158, Nachtrag Schulwechsel, #7874): the same family, name and
+ * date of birth on contracts that run one after the other. The name joined
+ * them, not a record, so the review shows them.
+ */
+export interface CareJoinedChild {
+  readonly childFirstName: string;
+  readonly childLastName: string;
+  readonly contracts: CareDuplicate["contracts"];
+}
+
+/** Maps the joined children of a monthly or notice run. */
+export function joinedChildrenFromBackend(
+  children: readonly sharedContract.CareJoinedChild[] | null | undefined,
+): CareJoinedChild[] {
+  return (children ?? []).map((child) => ({
+    childFirstName: child.child_first_name,
+    childLastName: child.child_last_name,
+    contracts: (child.contracts ?? []).map((contract) => ({
+      contractId: id(contract.contract_id),
+      schoolId: id(contract.school_id),
+      schoolName: contract.school_name,
+    })),
+  }));
+}
+
+/**
  * An invoice of a monthly run whose family has no confirmed number of
  * children for the month (#7356): the sibling rule counts its children with
  * a contract alone.
@@ -470,6 +497,8 @@ export interface CareRunDetail extends CareRun {
   readonly duplicates: readonly CareDuplicate[];
   /** The children of `duplicates`; the release bills none of them. */
   readonly duplicateChildren: number;
+  /** Children of a calculated run joined by their name across schools. */
+  readonly joinedChildren: readonly CareJoinedChild[];
   /**
    * Families a sibling rule that counts the family ranks without a
    * confirmed number for the month (#5918); it counts their children with a
@@ -785,6 +814,7 @@ export function detailFromBackend(
       })),
     })),
     duplicateChildren: detail.duplicate_children,
+    joinedChildren: joinedChildrenFromBackend(detail.joined_children),
     uncountedFamilies: detail.uncounted_families,
     uncountedContracts: (detail.uncounted_contracts ?? []).map((contract) => ({
       contractId: id(contract.contract_id),

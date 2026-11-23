@@ -27,6 +27,7 @@ import {
   CareDuplicatesCard,
   CareUnpricedCard,
 } from "~/components/traeger/care-run-invoices";
+import { CareJoinedChildrenCard } from "~/components/traeger/care-joined-children-card";
 import { CareUncountedCard } from "~/components/traeger/care-uncounted-card";
 import {
   careDebitItems,
@@ -606,6 +607,11 @@ export default function TraegerCareRunPage() {
               {run.schools.map((school) => school.name).join(", ") || "–"}
             </DataField>
           </EmptyRunCard>
+          {/* A child billed at another school of the run's month (#7874):
+              the empty run says why it has no invoice here. */}
+          {empty ? (
+            <CareJoinedChildrenCard childrenJoined={run.joinedChildren} />
+          ) : null}
           {/* Mensa months a school has not released yet come with a later
               run; the empty run still names them. */}
           {empty ? (
@@ -860,6 +866,9 @@ export default function TraegerCareRunPage() {
             />
           ) : null}
           <CareDuplicatesCard duplicates={run.duplicates} released={!preview} />
+          {preview ? (
+            <CareJoinedChildrenCard childrenJoined={run.joinedChildren} />
+          ) : null}
           {preview ? <CareUnpricedCard unpriced={run.unpriced} /> : null}
           {preview ? (
             <CareRunMealsCard

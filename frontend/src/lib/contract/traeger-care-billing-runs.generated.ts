@@ -18,6 +18,7 @@ import {
 import {
   BillingLetterSeriesSchema,
   CareDuplicateSchema,
+  CareJoinedChildSchema,
   CareRecipientSchema,
   CareSchoolSchema,
   CareUnpricedSchema,
@@ -25,6 +26,7 @@ import {
   PostalAddressSchema,
   RunDueDateSchema,
   type CareDuplicate,
+  type CareJoinedChild,
   type CareRecipient,
   type CareReleaseRequest,
   type CareSchool,
@@ -506,6 +508,7 @@ export interface CareRunDetail {
   invoices: CareInvoice[] | null;
   unpriced: CareUnpriced[] | null;
   duplicates: CareDuplicate[] | null;
+  joined_children: CareJoinedChild[] | null;
   duplicate_children: number;
   uncounted_families: number;
   uncounted_contracts: CareUncountedContract[] | null;
@@ -548,6 +551,7 @@ export const CareRunDetailSchema: z.ZodType<CareRunDetail, unknown> = object<Car
   invoices: nullable(arr(CareInvoiceSchema)),
   unpriced: nullable(arr(CareUnpricedSchema)),
   duplicates: nullable(arr(CareDuplicateSchema)),
+  joined_children: nullable(arr(CareJoinedChildSchema)),
   duplicate_children: safeInt,
   uncounted_families: safeInt,
   uncounted_contracts: nullable(arr(CareUncountedContractSchema)),

@@ -270,13 +270,19 @@ func (e *careChainEntry) reduceToSiblingPrices(rule *parentbilling.ContributionR
 // recipient's address. An invoice without an address is a family of its
 // own. #5918 adds the children the family states.
 func familyOf(entry *careChainEntry) string {
-	if email := parentbilling.FamilyKey(entry.invoice.FamilyEmail); email != "" {
+	return invoiceFamily(*entry.invoice)
+}
+
+// invoiceFamily is the family an invoice counts under: its family, else
+// the mail address of its recipient, else its contract.
+func invoiceFamily(invoice parentbilling.CareInvoice) string {
+	if email := parentbilling.FamilyKey(invoice.FamilyEmail); email != "" {
 		return email
 	}
-	if email := strings.ToLower(strings.TrimSpace(entry.invoice.Recipient.Email)); email != "" {
+	if email := strings.ToLower(strings.TrimSpace(invoice.Recipient.Email)); email != "" {
 		return email
 	}
-	return parentbilling.ContractFamilyKey("", entry.invoice.ContractID.Int64())
+	return parentbilling.ContractFamilyKey("", invoice.ContractID.Int64())
 }
 
 // rankedCareChild is a child of a family as a rule counts it.

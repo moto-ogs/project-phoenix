@@ -1,4 +1,8 @@
 import { bffJson } from "~/lib/bff-fetch";
+import {
+  joinedChildrenFromBackend,
+  type CareJoinedChild,
+} from "~/lib/traeger-care-billing-api";
 /**
  * Client of the Jahresbescheide of the monthly care (#6219, ADR 0182): a
  * run assesses the months of a year from its first month to December in one
@@ -125,6 +129,8 @@ export interface CareNoticeRunDetail extends CareNoticeRun {
   readonly billed: number;
   readonly unpricedCount: number;
   readonly duplicateCount: number;
+  /** Children the months join by their name across schools (#7874). */
+  readonly joinedChildren: readonly CareJoinedChild[];
   readonly previewCount: number;
   readonly previewCents: number;
   readonly previewDeltaCents: number;
@@ -258,6 +264,7 @@ function detailFromBackend(
     billed: detail.billed,
     unpricedCount: (detail.unpriced ?? []).length,
     duplicateCount: (detail.duplicates ?? []).length,
+    joinedChildren: joinedChildrenFromBackend(detail.joined_children),
     previewCount: detail.preview_count,
     previewCents: detail.preview_cents,
     previewDeltaCents: detail.preview_delta_cents,

@@ -70,6 +70,7 @@ const RUN: CareRunDetail = {
   unpriced: [],
   duplicates: [],
   duplicateChildren: 0,
+  joinedChildren: [],
   uncountedFamilies: 0,
   billed: 0,
   previewCount: 1,
