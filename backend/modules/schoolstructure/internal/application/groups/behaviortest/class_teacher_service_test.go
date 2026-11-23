@@ -5,7 +5,9 @@ import (
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/api"
+	"github.com/moto-ogs/project-phoenix/modules/schoolstructure"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -31,11 +33,20 @@ func TestSetStaffSchoolClasses(t *testing.T) {
 	ctx := testpkg.Ctx(t)
 
 	actor := testpkg.CreateTestAccount(t, db, "class-teacher-actor@test.local")
+	// set saves the classes on the assignments it reads first (ADR 0311).
+	set := func(staffID int64, classes []string) error {
+		read, err := testpkg.TenantQuery1(t, ctx, db, svc.GetStaffSchoolClasses, staffID)
+		version := ""
+		if err == nil {
+			version = schoolstructure.StaffSchoolClassesVersion(read)
+		}
+		return testpkg.TenantCommand4(t, ctx, db, svc.SetStaffSchoolClasses, staffID, classes, version, actor.ID)
+	}
 
 	t.Run("assigns and reads classes", func(t *testing.T) {
 		staff := testpkg.CreateTestStaff(t, db, "CTSvc", "Assign")
 
-		require.NoError(t, testpkg.TenantCommand3(t, ctx, db, svc.SetStaffSchoolClasses, staff.ID, []string{"2b", "1a"}, actor.ID))
+		require.NoError(t, set(staff.ID, []string{"2b", "1a"}))
 
 		classes, err := testpkg.TenantQuery1(t, ctx, db, svc.GetStaffSchoolClasses, staff.ID)
 		require.NoError(t, err)
@@ -45,7 +56,7 @@ func TestSetStaffSchoolClasses(t *testing.T) {
 	t.Run("dedupes case-insensitively and trims", func(t *testing.T) {
 		staff := testpkg.CreateTestStaff(t, db, "CTSvc", "Dedupe")
 
-		require.NoError(t, testpkg.TenantCommand3(t, ctx, db, svc.SetStaffSchoolClasses, staff.ID, []string{"1a", " 1A ", "2b"}, actor.ID))
+		require.NoError(t, set(staff.ID, []string{"1a", " 1A ", "2b"}))
 
 		classes, err := testpkg.TenantQuery1(t, ctx, db, svc.GetStaffSchoolClasses, staff.ID)
 		require.NoError(t, err)
@@ -55,11 +66,11 @@ func TestSetStaffSchoolClasses(t *testing.T) {
 	t.Run("resubmitting the same set keeps existing rows", func(t *testing.T) {
 		staff := testpkg.CreateTestStaff(t, db, "CTSvc", "Resubmit")
 
-		require.NoError(t, testpkg.TenantCommand3(t, ctx, db, svc.SetStaffSchoolClasses, staff.ID, []string{"1a", "2b"}, actor.ID))
+		require.NoError(t, set(staff.ID, []string{"1a", "2b"}))
 		before, err := repos.ClassTeacher.FindByStaff(ctx, staff.ID)
 		require.NoError(t, err)
 
-		require.NoError(t, testpkg.TenantCommand3(t, ctx, db, svc.SetStaffSchoolClasses, staff.ID, []string{"2b", "1a"}, actor.ID))
+		require.NoError(t, set(staff.ID, []string{"2b", "1a"}))
 		after, err := repos.ClassTeacher.FindByStaff(ctx, staff.ID)
 		require.NoError(t, err)
 
@@ -72,12 +83,12 @@ func TestSetStaffSchoolClasses(t *testing.T) {
 	t.Run("case-only edit updates the stored display form in place", func(t *testing.T) {
 		staff := testpkg.CreateTestStaff(t, db, "CTSvc", "CaseEdit")
 
-		require.NoError(t, testpkg.TenantCommand3(t, ctx, db, svc.SetStaffSchoolClasses, staff.ID, []string{"1a"}, actor.ID))
+		require.NoError(t, set(staff.ID, []string{"1a"}))
 		before, err := repos.ClassTeacher.FindByStaff(ctx, staff.ID)
 		require.NoError(t, err)
 		require.Len(t, before, 1)
 
-		require.NoError(t, testpkg.TenantCommand3(t, ctx, db, svc.SetStaffSchoolClasses, staff.ID, []string{"1A"}, actor.ID))
+		require.NoError(t, set(staff.ID, []string{"1A"}))
 		after, err := repos.ClassTeacher.FindByStaff(ctx, staff.ID)
 		require.NoError(t, err)
 		require.Len(t, after, 1)
@@ -88,8 +99,8 @@ func TestSetStaffSchoolClasses(t *testing.T) {
 	t.Run("replaces the set with a diff", func(t *testing.T) {
 		staff := testpkg.CreateTestStaff(t, db, "CTSvc", "Replace")
 
-		require.NoError(t, testpkg.TenantCommand3(t, ctx, db, svc.SetStaffSchoolClasses, staff.ID, []string{"1a", "2b"}, actor.ID))
-		require.NoError(t, testpkg.TenantCommand3(t, ctx, db, svc.SetStaffSchoolClasses, staff.ID, []string{"2b", "3c"}, actor.ID))
+		require.NoError(t, set(staff.ID, []string{"1a", "2b"}))
+		require.NoError(t, set(staff.ID, []string{"2b", "3c"}))
 
 		classes, err := testpkg.TenantQuery1(t, ctx, db, svc.GetStaffSchoolClasses, staff.ID)
 		require.NoError(t, err)
@@ -99,8 +110,8 @@ func TestSetStaffSchoolClasses(t *testing.T) {
 	t.Run("clears assignments with an empty set", func(t *testing.T) {
 		staff := testpkg.CreateTestStaff(t, db, "CTSvc", "Clear")
 
-		require.NoError(t, testpkg.TenantCommand3(t, ctx, db, svc.SetStaffSchoolClasses, staff.ID, []string{"1a"}, actor.ID))
-		require.NoError(t, testpkg.TenantCommand3(t, ctx, db, svc.SetStaffSchoolClasses, staff.ID, []string{}, actor.ID))
+		require.NoError(t, set(staff.ID, []string{"1a"}))
+		require.NoError(t, set(staff.ID, []string{}))
 
 		classes, err := testpkg.TenantQuery1(t, ctx, db, svc.GetStaffSchoolClasses, staff.ID)
 		require.NoError(t, err)
@@ -120,19 +131,19 @@ func TestSetStaffSchoolClasses(t *testing.T) {
 			return int(count)
 		}
 
-		require.NoError(t, testpkg.TenantCommand3(t, ctx, db, svc.SetStaffSchoolClasses, staff.ID, []string{"1a"}, actor.ID))
+		require.NoError(t, set(staff.ID, []string{"1a"}))
 		assert.Equal(t, 1, auditCount(), "the initial assignment is a change")
 
-		require.NoError(t, testpkg.TenantCommand3(t, ctx, db, svc.SetStaffSchoolClasses, staff.ID, []string{"1a"}, actor.ID))
+		require.NoError(t, set(staff.ID, []string{"1a"}))
 		assert.Equal(t, 1, auditCount(), "a no-op resubmit must not write a row")
 
-		require.NoError(t, testpkg.TenantCommand3(t, ctx, db, svc.SetStaffSchoolClasses, staff.ID, []string{"2b"}, actor.ID))
+		require.NoError(t, set(staff.ID, []string{"2b"}))
 		assert.Equal(t, 2, auditCount(), "a replace is a change")
 
 		// A case-only rename mutates the same rows the audit snapshot is
 		// derived from — the trail must still record it (the exact casing
 		// decides how a grade transition matches this teacher).
-		require.NoError(t, testpkg.TenantCommand3(t, ctx, db, svc.SetStaffSchoolClasses, staff.ID, []string{"2B"}, actor.ID))
+		require.NoError(t, set(staff.ID, []string{"2B"}))
 		assert.Equal(t, 3, auditCount(), "a case-only rename is a change and must be audited")
 
 		var row struct {
@@ -157,7 +168,7 @@ func TestSetStaffSchoolClasses(t *testing.T) {
 	t.Run("rejects blank class names", func(t *testing.T) {
 		staff := testpkg.CreateTestStaff(t, db, "CTSvc", "Blank")
 
-		err := testpkg.TenantCommand3(t, ctx, db, svc.SetStaffSchoolClasses, staff.ID, []string{"1a", "   "}, actor.ID)
+		err := set(staff.ID, []string{"1a", "   "})
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, ErrEmptySchoolClass))
 	})
@@ -169,12 +180,31 @@ func TestSetStaffSchoolClasses(t *testing.T) {
 		// ErrStaffNotFound for an ID that no longer exists (#2419).
 		require.NoError(t, testpkg.TenantCommand1(t, ctx, db, reposPeople.Staff.Delete, any(ghostID)))
 
-		err := testpkg.TenantCommand3(t, ctx, db, svc.SetStaffSchoolClasses, ghostID, []string{"1a"}, actor.ID)
+		err := set(ghostID, []string{"1a"})
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, ErrStaffNotFound))
 
 		_, err = testpkg.TenantQuery1(t, ctx, db, svc.GetStaffSchoolClasses, ghostID)
 		require.Error(t, err)
 		assert.True(t, errors.Is(err, ErrStaffNotFound))
+	})
+
+	t.Run("refuses assignments changed since they were read", func(t *testing.T) {
+		staff := testpkg.CreateTestStaff(t, db, "CTSvc", "Stale")
+		require.NoError(t, set(staff.ID, []string{"1a"}))
+		read, err := testpkg.TenantQuery1(t, ctx, db, svc.GetStaffSchoolClasses, staff.ID)
+		require.NoError(t, err)
+		shown := schoolstructure.StaffSchoolClassesVersion(read)
+		// Someone else saves 2b meanwhile.
+		require.NoError(t, set(staff.ID, []string{"1a", "2b"}))
+
+		err = testpkg.TenantCommand4(t, ctx, db, svc.SetStaffSchoolClasses, staff.ID, []string{"1a", "3c"}, shown, actor.ID)
+		require.ErrorIs(t, err, readstate.ErrChanged)
+		err = testpkg.TenantCommand4(t, ctx, db, svc.SetStaffSchoolClasses, staff.ID, []string{"3c"}, "", actor.ID)
+		require.ErrorIs(t, err, readstate.ErrChanged, "a save without a read is refused")
+
+		classes, err := testpkg.TenantQuery1(t, ctx, db, svc.GetStaffSchoolClasses, staff.ID)
+		require.NoError(t, err)
+		assert.Equal(t, []string{"1a", "2b"}, classes, "the refused saves wrote nothing")
 	})
 }

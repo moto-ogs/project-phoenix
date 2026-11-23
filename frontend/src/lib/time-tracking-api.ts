@@ -65,12 +65,9 @@ export interface UpdateSessionRequest {
  * Abwesenheitsart, #2403) the backend takes the canonical absence_type from
  * the art itself, so the pair can never disagree.
  */
-export type CreateAbsenceRequest = shared.CreateAbsenceRequest &
+export type CreateAbsenceRequest = tt.OwnAbsenceRequest &
   Required<
-    Pick<
-      shared.CreateAbsenceRequest,
-      "absence_type" | "date_start" | "date_end"
-    >
+    Pick<tt.OwnAbsenceRequest, "absence_type" | "date_start" | "date_end">
   >;
 
 /** Body of POST /api/time-tracking/vacation/request. */

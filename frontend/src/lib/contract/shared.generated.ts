@@ -3574,17 +3574,6 @@ export const VacationQuotaSummarySchema: z.ZodType<VacationQuotaSummary, unknown
   version: str,
 });
 
-/** Go: workforce.CreateAbsenceRequest */
-export interface CreateAbsenceRequest {
-  absence_type?: string;
-  absence_type_id?: string | null;
-  date_start?: string;
-  date_end?: string;
-  half_day?: boolean;
-  note?: string;
-  expected_fingerprint?: string;
-}
-
 /** Go: workforce.BreakDurationUpdate */
 export interface BreakDurationUpdate {
   id?: string;

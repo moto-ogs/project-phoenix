@@ -16224,7 +16224,7 @@
       ],
       "request": {
         "kind": "ref",
-        "ref": "CreateAbsenceRequest"
+        "ref": "OwnAbsenceRequest"
       },
       "response": {
         "kind": "ref",
@@ -52106,6 +52106,13 @@
           "schema": {
             "kind": "id"
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -75462,6 +75469,56 @@
       ]
     },
     {
+      "name": "OwnAbsenceRequest",
+      "go_type": "timetracking.OwnAbsenceRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "absence_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "absence_type_id",
+          "optional": true,
+          "schema": {
+            "kind": "id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "date_start",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "date_end",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "half_day",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "OwnAllowanceResponse",
       "go_type": "absencetypes.OwnAllowanceResponse",
       "fields": [
@@ -78574,6 +78631,12 @@
           "name": "updated_at",
           "schema": {
             "kind": "instant"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -87930,6 +87993,12 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -88180,6 +88249,13 @@
         },
         {
           "name": "valid_from",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_version",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -89001,6 +89077,13 @@
               "kind": "string"
             }
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -89022,6 +89105,12 @@
             "elem": {
               "kind": "string"
             }
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -96437,6 +96526,12 @@
           "schema": {
             "kind": "instant"
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -96865,6 +96960,13 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -97007,6 +97109,13 @@
         },
         {
           "name": "qualifications",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_version",
           "optional": true,
           "schema": {
             "kind": "string"

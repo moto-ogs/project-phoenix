@@ -9,15 +9,13 @@ import { useLayoutEffect, useRef, useState } from "react";
 
 import { FieldLabel } from "~/components/ui/field-label";
 import { EditActions } from "~/components/ui/edit-actions";
-import { FormErrorAlert } from "~/components/ui/form-error-alert";
+import {
+  FormErrorAlert,
+  LoadErrorAlert,
+} from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
 import { NumberStepper } from "~/components/ui/number-stepper";
-import {
-  useApiErrorDisplay,
-  useApiFormError,
-  useToast,
-} from "~/contexts/ToastContext";
-import { isReadStateRefusal } from "~/lib/api-error";
+import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { formatDayCount } from "~/lib/absence-helpers";
 import {
   absenceTypeService,
@@ -25,7 +23,9 @@ import {
   type AbsenceTypeAllowanceSummary,
 } from "~/lib/absence-type-api";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { useDraftOn } from "~/lib/swr/read-draft";
 
 const logger = createLogger({ component: "CustomAllowanceEditor" });
 
@@ -44,50 +44,92 @@ function formatInput(days: number): string {
   return String(days).replace(".", ",");
 }
 
+/** Was das Formular bearbeitet: die Tage als getippter Text, die Begründung. */
+interface AllowanceDraft {
+  readonly days: string;
+  readonly reason: string;
+}
+
+const allowanceDraft = (
+  summary: AbsenceTypeAllowanceSummary,
+): AllowanceDraft => ({ days: formatInput(summary.entitledDays), reason: "" });
+
 export function CustomAllowanceEditForm({
   staffId,
   year,
   type,
   summary,
+  read,
   onCancel,
   onSaved,
-  onReload,
 }: {
   readonly staffId: string;
   readonly year: number;
   readonly type: AbsenceType;
   readonly summary: AbsenceTypeAllowanceSummary;
+  /**
+   * The tab's read of this claim: reads it again (rejects on failure,
+   * ADR 0311 rule 6) and takes the stored claim a save answered.
+   */
+  readonly read: {
+    readonly reload: () => Promise<AbsenceTypeAllowanceSummary | undefined>;
+    readonly write: (stored: AbsenceTypeAllowanceSummary) => Promise<unknown>;
+  };
   readonly onCancel: () => void;
   /** Closes the form and reloads; never rejects (#6652). */
   readonly onSaved: RefreshAfterWrite;
-  /**
-   * Reads the stored claims again after a refusal; rejects when the read
-   * fails, so the refusal shows the load error (ADR 0311, rule 6).
-   */
-  readonly onReload: () => Promise<unknown>;
 }) {
-  const [days, setDays] = useState(formatInput(summary.entitledDays));
-  // Der Anspruch, den das Formular beim Öffnen zeigte (ADR 0311); ein
-  // Neuladen darunter ändert ihn nicht.
-  const [readVersion] = useState(summary.version);
-  const refusals = useApiErrorDisplay();
-  const [reason, setReason] = useState("");
+  // Der Anspruch beim Öffnen (ADR 0311): seine Version geht mit dem
+  // Speichern. Eine neuere Lesung füllt das Formular nur nach, solange nichts
+  // getippt ist; nach einer Ablehnung steht der gespeicherte Anspruch da, und
+  // nichts geht raus, bevor er gelesen ist.
+  const edit = useDraftOn<
+    AbsenceTypeAllowanceSummary,
+    AllowanceDraft,
+    string,
+    AbsenceTypeAllowanceSummary
+  >(
+    {
+      opening: `${staffId}:${type.id}:${year}`,
+      data: summary,
+      reload: read.reload,
+      write: read.write,
+    },
+    {
+      token: (claim) => claim.version,
+      toDraft: allowanceDraft,
+      // Die Begründung erklärt die Änderung, sie ist kein gespeicherter
+      // Wert: sie bleibt über dem gespeicherten Anspruch stehen.
+      rebase: (draft, _from, stored) => ({
+        ...allowanceDraft(stored),
+        reason: draft.reason,
+      }),
+      answer: (saved) => saved,
+    },
+  );
+  const { days, reason } = edit.draft ?? allowanceDraft(summary);
+  const set = (patch: Partial<AllowanceDraft>) =>
+    edit.setDraft((current) => ({ ...current, ...patch }));
   const [saving, setSaving] = useState(false);
   const formErrors = useApiFormError();
+  const form = useReadDraftForm(edit, formErrors, "den Anspruch");
   const toast = useToast();
   // „Wiederholen“ sendet den aktuellen Entwurf, nicht den vom Fehlerzeitpunkt.
   const latestSaveRef = useRef<() => Promise<void>>(async () => undefined);
 
-  const used = summary.takenDays + summary.reservedDays;
+  const shown = edit.base ?? summary;
+  const used = shown.takenDays + shown.reservedDays;
   const parsed = parseDays(days);
 
   const step = (delta: number) => {
     const next = Math.min(MAX_DAYS, Math.max(used, (parsed ?? 0) + delta));
-    setDays(formatInput(next));
+    set({ days: formatInput(next) });
   };
 
   const save = async () => {
-    formErrors.clear();
+    // Enter sendet auch: nichts geht raus, bevor der gespeicherte Anspruch
+    // gelesen ist; ein gezeigter Fehler bleibt dann stehen.
+    if (!form.begin()) return;
     const daysError =
       parsed === null
         ? "Bitte ganze oder halbe Tage zwischen 0 und 366 eintragen."
@@ -106,39 +148,38 @@ export function CustomAllowanceEditForm({
       return;
     }
     setSaving(true);
-    try {
-      await absenceTypeService.setAllowance(type.id, staffId, {
+    const result = await edit.submit((version, sent) =>
+      absenceTypeService.setAllowance(type.id, staffId, {
         year,
         entitledDays: parsed,
-        reason: reason.trim(),
-        expectedVersion: readVersion,
-      });
-      toast.success(`Der Anspruch ${type.name} ist gespeichert.`);
-    } catch (cause) {
+        reason: sent.reason.trim(),
+        expectedVersion: version,
+      }),
+    );
+    setSaving(false);
+    if (!result.ok) {
       logger.error("custom_allowance_save_failed", {
         staff_id: staffId,
         absence_type_id: type.id,
-        error: cause instanceof Error ? cause.message : String(cause),
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
       });
-      if (isReadStateRefusal(cause)) {
-        // Jemand hat den Anspruch inzwischen geändert: Das Formular
-        // schließt, die Karte zeigt den gespeicherten Anspruch.
-        setSaving(false);
-        onCancel();
-        await refusals.show(cause, {
-          object: "die Änderung am Anspruch",
-          reload: onReload,
-        });
-        return;
-      }
-      await formErrors.show(cause, {
-        object: "die Änderung am Anspruch",
-        retry: () => void latestSaveRef.current(),
-      });
-      setSaving(false);
+      // Seit dem Lesen geändert: das Formular bleibt offen, `reload` zeigt
+      // den gespeicherten Anspruch, ohne „Wiederholen“ mit derselben Version.
+      await formErrors.show(
+        result.error,
+        result.refused
+          ? { object: "die Änderung am Anspruch", reload: result.reload }
+          : {
+              object: "die Änderung am Anspruch",
+              retry: () => void latestSaveRef.current(),
+            },
+      );
       return;
     }
-    setSaving(false);
+    toast.success(`Der Anspruch ${type.name} ist gespeichert.`);
     await onSaved();
   };
 
@@ -157,6 +198,7 @@ export function CustomAllowanceEditForm({
       }}
     >
       <FormErrorAlert message={formErrors.error} />
+      <LoadErrorAlert error={form.loadError} />
       <div>
         <FieldLabel htmlFor={`allowance-days-${type.id}`}>
           Anspruch {year} in Tagen
@@ -166,7 +208,7 @@ export function CustomAllowanceEditForm({
           name="entitled_days"
           inputMode="decimal"
           value={days}
-          onChange={(event) => setDays(event.target.value)}
+          onChange={(event) => set({ days: event.target.value })}
           onStep={step}
           canDecrement={(parsed ?? 0) - 1 >= used}
           canIncrement={(parsed ?? 0) + 1 <= MAX_DAYS}
@@ -185,7 +227,7 @@ export function CustomAllowanceEditForm({
         name="reason"
         label="Begründung"
         value={reason}
-        onChange={(event) => setReason(event.target.value)}
+        onChange={(event) => set({ reason: event.target.value })}
         placeholder="z. B. in den Sommerferien krank"
         error={formErrors.fieldError("reason")}
         disabled={saving}

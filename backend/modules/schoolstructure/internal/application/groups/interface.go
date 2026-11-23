@@ -29,5 +29,5 @@ type Service interface {
 	// matched via schoolclass.Normalize; there is no class entity. changedBy
 	// is the authenticated account ID for the audit trail.
 	GetStaffSchoolClasses(ctx context.Context, staffID int64) ([]string, error)
-	SetStaffSchoolClasses(ctx context.Context, staffID int64, classes []string, changedBy int64) error
+	SetStaffSchoolClasses(ctx context.Context, staffID int64, classes []string, expectedVersion string, changedBy int64) error
 }

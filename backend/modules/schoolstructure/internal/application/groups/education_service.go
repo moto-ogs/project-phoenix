@@ -19,6 +19,7 @@ type service struct {
 	rooms            RoomDirectory
 	teachers         TeacherDirectory
 	staff            StaffDirectory
+	staffLock        StaffLockStore
 	students         StudentCounter
 	substitutionRepo HandoverReader
 	runtime          Runtime
@@ -77,10 +78,20 @@ func NewService(
 		rooms:            rooms,
 		teachers:         teachers,
 		staff:            staff,
+		staffLock:        staffLockOf(staff),
 		students:         students,
 		substitutionRepo: substitutionRepo,
 		runtime:          runtime,
 	}
+}
+
+// staffLockOf is the staff row lock of the staff checks the root binds,
+// which lock as well (StaffLockStore); the class assignments of one person
+// are replaced under it (ADR 0311). Checks without it leave the lock
+// unwired, and a class write refuses.
+func staffLockOf(staff StaffDirectory) StaffLockStore {
+	lock, _ := staff.(StaffLockStore)
+	return lock
 }
 
 // Group operations

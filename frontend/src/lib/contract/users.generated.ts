@@ -20,6 +20,7 @@ export interface PersonResponse {
   account_id?: string;
   created_at: string;
   updated_at: string;
+  version: string;
 }
 
 export const PersonResponseSchema: z.ZodType<PersonResponse, unknown> = object<PersonResponse>({
@@ -31,6 +32,7 @@ export const PersonResponseSchema: z.ZodType<PersonResponse, unknown> = object<P
   account_id: optional(int64String),
   created_at: instant,
   updated_at: instant,
+  version: str,
 });
 
 /** Go: users.DirectoryPersonRequest */
@@ -39,6 +41,7 @@ export interface DirectoryPersonRequest {
   last_name?: string;
   tag_id?: string;
   account_id?: string;
+  expected_version?: string;
 }
 
 export const routes = {

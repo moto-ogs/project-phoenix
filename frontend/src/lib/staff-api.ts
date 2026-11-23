@@ -546,6 +546,11 @@ export interface StaffSchedule {
   // True while a contract of the Träger keeps the Soll (#4706): the school
   // reads it but changes neither the model nor a Sonderarbeitszeit.
   keptByTraeger?: boolean;
+  /**
+   * Stand des gespeicherten Modells (ADR 0311); Speichern sendet ihn.
+   * Jede Antwort trägt ihn, nur Beispieldaten lassen ihn weg.
+   */
+  version?: string;
 }
 
 const SCHEDULE_MODES: readonly StaffSchedule["mode"][] = ["template", "custom"];
@@ -578,6 +583,7 @@ function mapScheduleResponse(data: ScheduleResponse): StaffSchedule {
     weeklyTotals: data.weekly_totals ?? [],
     validFrom: (data.valid_from ?? "").slice(0, 10),
     keptByTraeger: data.kept_by_traeger,
+    version: data.version,
   };
 }
 
@@ -611,13 +617,22 @@ class StaffScheduleService {
     );
   }
 
+  /**
+   * Speichert das Modell auf dem Stand `expectedVersion`, den der Editor
+   * beim Öffnen las (ADR 0311).
+   */
   async updateSchedule(
     staffId: string,
     update: UpdateScheduleRequest,
+    expectedVersion: string,
   ): Promise<StaffSchedule> {
     const body: ScheduleUpdateRequest =
       update.mode === "template"
-        ? { mode: "template", model_id: update.modelId }
+        ? {
+            mode: "template",
+            model_id: update.modelId,
+            expected_version: expectedVersion,
+          }
         : {
             mode: "custom",
             rotation_length: update.rotationLength,
@@ -629,6 +644,7 @@ class StaffScheduleService {
               start_time: e.startTime,
             })),
             save_as_template: update.saveAsTemplate,
+            expected_version: expectedVersion,
           };
     return mapScheduleResponse(
       await bffJson("tenant", "PUT /api/staff/{id}/schedule", {
@@ -1186,7 +1202,7 @@ class StaffAbsenceService {
   // absent server-side (#1843). Returns the created StaffAbsence row.
   async createAbsence(
     staffId: string,
-    body: sharedContract.CreateAbsenceRequest,
+    body: staffContract.CreateAbsenceRequest,
   ): Promise<StaffAbsenceRow> {
     return bffJson("tenant", "POST /api/staff/{id}/absences", {
       params: { id: staffId },

@@ -41,7 +41,7 @@ func RouteContracts(shift, allowance any) []common.RouteContract {
 		{Method: "GET", Pattern: "/schedule-targets", Portals: portals, Query: days, Response: []workforce.DailyProjection{}},
 		{Method: "GET", Pattern: "/assignments", Portals: portals, Query: days, Response: []assignmentResponse{}},
 		{Method: "GET", Pattern: "/absences", Portals: portals, Query: absences, Response: []workforce.StaffAbsenceResponse{}},
-		{Method: "POST", Pattern: "/absences", Portals: portals, Request: workforce.CreateAbsenceRequest{}, Response: absence},
+		{Method: "POST", Pattern: "/absences", Portals: portals, Request: OwnAbsenceRequest{}, Response: absence},
 		{Method: "PUT", Pattern: "/absences/{id}", Portals: portals, Request: workforce.UpdateAbsenceRequest{}, Response: absence},
 		{Method: "DELETE", Pattern: "/absences/{id}", Portals: portals, NoData: true},
 		{Method: "POST", Pattern: "/absences/{id}/cancel", Portals: portals, NoData: true},

@@ -41,6 +41,10 @@ type ScheduleResponse struct {
 	// KeptByTraeger is true while a contract of the Träger governs the Soll
 	// (#4706): the school reads it but does not change it.
 	KeptByTraeger bool `json:"kept_by_traeger"`
+	// Version is the token of the stored schedule (ADR 0311,
+	// workforce.ScheduleVersion); the PUT sends it back as expected_version
+	// and answers the new one.
+	Version string `json:"version"`
 }
 
 // ScheduleUpdateRequest is the union body for PUT /api/staff/{id}/schedule.
@@ -63,6 +67,9 @@ type ScheduleUpdateRequest struct {
 	// today. A day before today is accepted for a staff member's first
 	// schedule only (#3892).
 	ValidFrom string `json:"valid_from,omitempty"`
+	// ExpectedVersion is the version of the schedule the form showed (ADR
+	// 0311); another one, also an empty one, is refused.
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // toServiceInput maps the api request DTO to the service-layer input struct,
@@ -85,5 +92,6 @@ func (req ScheduleUpdateRequest) toServiceInput() workforce.ScheduleUpdateInput 
 		Entries:            entries,
 		SaveAsTemplateName: req.SaveAsTemplateName,
 		ValidFrom:          req.ValidFrom,
+		ExpectedVersion:    req.ExpectedVersion,
 	}
 }

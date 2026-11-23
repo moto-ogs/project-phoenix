@@ -38,6 +38,7 @@ import {
   useApiLoadError,
   useToast,
 } from "~/contexts/ToastContext";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import {
   staffMonthSummaryService,
@@ -54,7 +55,12 @@ import {
   startOfWeek,
   toDateKey,
 } from "~/lib/staff-metrics-helpers";
-import { useInvalidateMatching, useSWRAuth } from "~/lib/swr";
+import {
+  revalidateOrThrow,
+  useInvalidateMatching,
+  useSWRAuth,
+} from "~/lib/swr";
+import { type ReadDraft, useDraftOn } from "~/lib/swr/read-draft";
 import { workTimeModelKeys, staffTimeKeys } from "~/lib/swr/staff-keys";
 import { formatDuration } from "~/lib/time-tracking-helpers";
 
@@ -62,6 +68,7 @@ import { isStaleAfterModelSave } from "./arbeitszeit-hours";
 import { SonderarbeitszeitenSection } from "./sonderarbeitszeiten-section";
 import {
   draftFromPattern,
+  type PatternDraft,
   patternEntries,
   validatePatternDraft,
   WEEK_BADGE_LETTERS,
@@ -82,6 +89,30 @@ export {
 } from "./arbeitszeit-hours";
 
 const logger = createLogger({ component: "ArbeitszeitmodellTab" });
+
+const OBJECT = "das Arbeitszeitmodell";
+
+/** Der Bearbeiten-Zustand: Modus, Vorlagenwahl, Wochenmuster, Vorlagenname. */
+interface ScheduleDraft {
+  readonly mode: "template" | "custom";
+  readonly modelId: string;
+  readonly pattern: PatternDraft;
+  readonly saveAsTemplateName: string;
+}
+
+const scheduleDraftOf = (schedule: StaffSchedule): ScheduleDraft => ({
+  mode: schedule.mode,
+  modelId: schedule.model?.id ?? "",
+  pattern: draftFromPattern(schedule.rotationLength, schedule.entries),
+  saveAsTemplateName: "",
+});
+
+type ScheduleEdit = ReadDraft<
+  StaffSchedule,
+  ScheduleDraft,
+  string,
+  StaffSchedule
+>;
 
 const PREVIEW_WEEKS = 4;
 
@@ -106,13 +137,36 @@ export function ArbeitszeitmodellTab({
   // Den Reiter sieht nur die Leitung; sie darf Zeitkonten lesen.
   const hasTarget = useStaffHasTarget(staffId, berlinTodayISO(), canEdit);
 
+  const scheduleRead = useSWRAuth(staffTimeKeys.schedule(staffId), () =>
+    staffScheduleService.getSchedule(staffId),
+  );
   const {
     data: schedule,
     isLoading,
     error: scheduleError,
     mutate: mutateSchedule,
-  } = useSWRAuth(staffTimeKeys.schedule(staffId), () =>
-    staffScheduleService.getSchedule(staffId),
+  } = scheduleRead;
+  const scheduleReadRef = useRef(scheduleRead);
+  useLayoutEffect(() => {
+    scheduleReadRef.current = scheduleRead;
+  });
+  // Der Entwurf ruht auf dem Modell beim Öffnen (ADR 0311): eine neuere
+  // Lesung füllt ihn nur nach, solange nichts geändert ist; nach einer
+  // Ablehnung zeigt der offene Editor das gespeicherte Modell, Speichern
+  // wartet auf diese Lesung, die Antwort eines Speicherns geht in den Cache.
+  const edit = useDraftOn<StaffSchedule, ScheduleDraft, string, StaffSchedule>(
+    {
+      opening: editing ? staffId : null,
+      data: schedule,
+      error: scheduleError,
+      reload: () => revalidateOrThrow(scheduleReadRef.current),
+      write: (stored) => mutateSchedule(stored, { revalidate: false }),
+    },
+    {
+      token: (read) => read.version ?? "",
+      toDraft: scheduleDraftOf,
+      answer: (saved) => saved,
+    },
   );
 
   const invalidate = useInvalidateMatching();
@@ -168,21 +222,20 @@ export function ArbeitszeitmodellTab({
   const averagePerWeek =
     schedule.rotationLength > 0 ? weeklyTotal / schedule.rotationLength : 0;
   const handleScheduleSaved = () => {
-    mutateSchedule();
+    // Die Antwort des Speicherns steht schon im Cache (`write`).
     void invalidate(isStaleAfterModelSave);
     setEditing(false);
   };
 
-  if (editing) {
-    // Der Editor ist nur im Bearbeiten-Zustand eingehängt und liest seinen
-    // Ausgangsstand beim Einhängen aus `schedule`; Abbrechen hängt ihn aus,
-    // also braucht es keinen Reset-Effekt wie im früheren Slide-over.
+  if (editing && edit.draft !== undefined && edit.base !== undefined) {
+    // Der Editor ist nur im Bearbeiten-Zustand eingehängt; Abbrechen hängt
+    // ihn aus und verwirft den Entwurf.
     return (
       <div className="space-y-5">
         <SectionCard title="Arbeitszeitmodell" headingLevel={3}>
           <ArbeitszeitmodellEditor
             staffId={staffId}
-            schedule={schedule}
+            edit={edit}
             onCancel={() => setEditing(false)}
             onSaved={handleScheduleSaved}
           />
@@ -475,27 +528,25 @@ function FourWeekPreview({
  */
 function ArbeitszeitmodellEditor({
   staffId,
-  schedule,
+  edit,
   onCancel,
   onSaved,
 }: {
   readonly staffId: string;
-  readonly schedule: StaffSchedule;
+  readonly edit: ScheduleEdit;
   readonly onCancel: () => void;
   readonly onSaved: () => void;
 }) {
   const toast = useToast();
-
   const formErrors = useApiFormError();
-  const [mode, setMode] = useState<"template" | "custom">(schedule.mode);
-  const [selectedModelId, setSelectedModelId] = useState<string>(
-    schedule.model?.id ?? "",
-  );
-  const [draft, setDraft] = useState(() =>
-    draftFromPattern(schedule.rotationLength, schedule.entries),
-  );
-  const [saveAsTemplateName, setSaveAsTemplateName] = useState("");
+  const form = useReadDraftForm(edit, formErrors, OBJECT);
+  const draft = edit.draft;
+  const boundId = edit.base?.model?.id ?? null;
+  const { setDraft } = edit;
+  const patch = (next: Partial<ScheduleDraft>) =>
+    setDraft((current) => ({ ...current, ...next }));
   const [saving, setSaving] = useState(false);
+  const mode = draft?.mode ?? "custom";
 
   const { data: templates, mutate: reloadTemplates } = useSWRAuth(
     workTimeModelKeys.picker(),
@@ -510,50 +561,61 @@ function ArbeitszeitmodellEditor({
   useCatalogRefreshOnFocus(refreshTemplates, mode === "template");
 
   const handleSave = async () => {
-    setSaving(true);
-    formErrors.clear();
-    try {
-      if (mode === "template" && !selectedModelId) {
-        formErrors.invalid("Bitte wähle eine Vorlage.");
-        setSaving(false);
+    if (!draft) return;
+    // Nichts geht raus, bevor das gespeicherte Modell gelesen ist; ein
+    // gezeigter Ladefehler bleibt dann stehen.
+    if (!form.begin()) return;
+    if (draft.mode === "template" && !draft.modelId) {
+      formErrors.invalid("Bitte wähle eine Vorlage.");
+      return;
+    }
+    if (draft.mode === "custom") {
+      // Ein leeres Modell oder eine leere Rotationswoche sähe nach dem
+      // Speichern kaputt aus und erzeugte jede n-te Woche Minusstunden.
+      const invalid = validatePatternDraft(draft.pattern);
+      if (invalid) {
+        formErrors.invalid(invalid);
         return;
       }
+    }
+    const payload: UpdateScheduleRequest =
+      draft.mode === "template"
+        ? { mode: "template", modelId: draft.modelId }
+        : {
+            mode: "custom",
+            rotationLength: draft.pattern.rotationLength,
+            entries: patternEntries(draft.pattern),
+            ...(draft.saveAsTemplateName.trim()
+              ? { saveAsTemplate: draft.saveAsTemplateName.trim() }
+              : {}),
+          };
 
-      if (mode === "custom") {
-        // Ein leeres Modell oder eine leere Rotationswoche sähe nach dem
-        // Speichern kaputt aus und erzeugte jede n-te Woche Minusstunden.
-        const invalid = validatePatternDraft(draft);
-        if (invalid) {
-          formErrors.invalid(invalid);
-          setSaving(false);
-          return;
-        }
+    setSaving(true);
+    try {
+      const result = await edit.submit((version) =>
+        staffScheduleService.updateSchedule(staffId, payload, version),
+      );
+      if (result.ok) {
+        toast.success("Das Arbeitszeitmodell ist gespeichert.");
+        onSaved();
+        return;
       }
-
-      const payload: UpdateScheduleRequest =
-        mode === "template"
-          ? { mode: "template", modelId: selectedModelId }
-          : {
-              mode: "custom",
-              rotationLength: draft.rotationLength,
-              entries: patternEntries(draft),
-              ...(saveAsTemplateName.trim()
-                ? { saveAsTemplate: saveAsTemplateName.trim() }
-                : {}),
-            };
-
-      await staffScheduleService.updateSchedule(staffId, payload);
-      toast.success("Das Arbeitszeitmodell ist gespeichert.");
-      onSaved();
-    } catch (error) {
       logger.error("schedule_save_failed", {
-        error: error instanceof Error ? error.message : String(error),
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
         staff_id: staffId,
       });
-      await formErrors.show(error, {
-        object: "das Arbeitszeitmodell",
-        retry: () => void latestSave.current(),
-      });
+      // Jemand hat das Modell seit dem Öffnen geändert (ADR 0311): der
+      // Editor bleibt offen, zeigt das gespeicherte Modell und meldet es
+      // ohne „Wiederholen“.
+      await formErrors.show(
+        result.error,
+        result.refused
+          ? { object: OBJECT, reload: result.reload }
+          : { object: OBJECT, retry: () => void latestSave.current() },
+      );
     } finally {
       setSaving(false);
     }
@@ -564,29 +626,39 @@ function ArbeitszeitmodellEditor({
     latestSave.current = handleSave;
   });
 
+  if (!draft) return null;
+
   return (
     <div className="space-y-5">
+      <LoadErrorAlert error={form.loadError} />
       <FormErrorAlert message={formErrors.error} />
 
-      <ModeChoice mode={mode} onChange={setMode} disabled={saving} />
+      <ModeChoice
+        mode={draft.mode}
+        onChange={(next) => patch({ mode: next })}
+        disabled={saving}
+      />
 
-      {mode === "template" ? (
+      {draft.mode === "template" ? (
         <TemplateSelector
           templates={templates ?? []}
-          boundId={schedule.model?.id ?? null}
-          selectedId={selectedModelId}
-          onSelect={setSelectedModelId}
+          boundId={boundId}
+          selectedId={draft.modelId}
+          onSelect={(modelId) => patch({ modelId })}
         />
       ) : (
-        <WorkTimePatternEditor draft={draft} onChange={setDraft}>
+        <WorkTimePatternEditor
+          draft={draft.pattern}
+          onChange={(pattern) => patch({ pattern })}
+        >
           <div className="border-t border-gray-100 pt-4">
             <Input
               id="arbeitszeitmodell-save-as-input"
               label="Optional als Vorlage speichern"
               type="text"
               controlSize="compact"
-              value={saveAsTemplateName}
-              onChange={(e) => setSaveAsTemplateName(e.target.value)}
+              value={draft.saveAsTemplateName}
+              onChange={(e) => patch({ saveAsTemplateName: e.target.value })}
               placeholder="z. B. Teilzeit 30h A/B"
               hint="Leer lassen, um nur das Modell dieser Person zu ändern."
             />

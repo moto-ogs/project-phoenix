@@ -21,6 +21,7 @@ const record: StaffRecordResponse = {
     account_id: "9007199254740997",
     created_at: "2024-01-01T00:00:00Z",
     updated_at: "2024-01-01T00:00:00Z",
+    version: "person-version",
   },
   is_teacher: true,
   teacher_id: "5",
@@ -31,6 +32,7 @@ const record: StaffRecordResponse = {
   is_external: false,
   created_at: "2024-01-01T00:00:00Z",
   updated_at: "2024-01-02T00:00:00Z",
+  version: "record-v1",
 };
 
 describe("mapTeacherResponse", () => {
@@ -56,6 +58,9 @@ describe("mapTeacherResponse", () => {
       staff_id: "9007199254740993",
       teacher_id: "5",
       person: record.person,
+      // Die Stände von Datensatz und Person gehen mit (ADR 0311).
+      version: "record-v1",
+      person_version: "person-version",
     });
   });
 
