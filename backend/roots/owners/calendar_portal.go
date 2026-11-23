@@ -58,7 +58,7 @@ func NewCalendarAppointmentChanges(broadcaster realtime.Broadcaster, logger *slo
 	if broadcaster == nil {
 		return nil
 	}
-	return deliveryCompose.NewTenantSignal(broadcaster, logger, deliveryCompose.CalendarAppointmentsChanged)
+	return deliveryCompose.NewCalendarAppointmentsChanged(broadcaster, logger)
 }
 
 // BindCalendarCaller binds the calendar's identity port to Identity &

@@ -47,14 +47,14 @@ Variante 2.
    `realtime/events.go`, keine neue After-Commit-Stelle und kein neuer
    Registereintrag.
 3. Owner erreichen die Stelle über einen eigenen Port. Die Wurzel bindet ihn mit
-   `deliveryCompose.NewTenantSignal(hub, logger, signal)`; der Owner ruft ihn in
+   `deliveryCompose.NewCalendarAppointmentsChanged(hub, logger)`, je Signal ein solcher Konstruktor; der Owner ruft ihn in
    seiner Transaktion. Der Kalender ist der erste Nutzer:
    `calendar_appointments_changed` nach jeder Termin-Schreibung
    (`withinAppointmentWrite`: Anlegen, Ändern, Absagen, Löschen, Absage eines
    einzelnen Termins einer Serie, Schultermine, Elternsprechtag-Buchungen).
 4. `TestDurableSideEffectsRatchet` kennt die Stelle über einen einzigen
    festen Schlüssel (`sharedTenantSignalSite` in
-   `backend/test/shared_tenant_signal_site.go`): Pfad, Funktion, Vorkommen und
+   `backend/test/shared_tenant_signal_site_test.go`): Pfad, Funktion, Vorkommen und
    Fingerabdruck des ganzen Callbacks. Nur dieser eine Fund fällt aus der
    Prüfung. Ein zweiter Aufruf in der Funktion, eine Kopie an anderer Stelle oder
    ein geänderter Callback ist ein neuer Fund und scheitert wie bisher. Fehlt der

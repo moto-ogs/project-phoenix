@@ -219,8 +219,9 @@ export const tenantDailyKeys = {
   pickupExtensions: () => "pickup-extensions",
   /** Aktivitäten, Kategorien und eigenes Personalprofil der Seite „Aktivitäten“. */
   activitiesOverview: () => "activities-page",
-  /** Termine des Team-Kalenders je Ansicht und Zeitraum. */
+  /** Alle Ansichten und Zeiträume des Team-Kalenders (#7693). */
   staffCalendarFamily: "staff-calendar-",
+  /** Termine des Team-Kalenders je Ansicht und Zeitraum. */
   staffCalendar: (viewMode: string, from: string, to: string) =>
     `${tenantDailyKeys.staffCalendarFamily}${viewMode}-${from}-${to}`,
   /** Empfänger, die ein Termin erreichen kann, je Suche. */

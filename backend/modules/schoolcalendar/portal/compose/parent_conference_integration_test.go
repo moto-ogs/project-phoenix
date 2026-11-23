@@ -152,6 +152,41 @@ func TestParentConferenceIntegration_FamilyBooksAFreeSlotThatShowsInBothCalendar
 	require.ErrorIs(t, err, calendarSvc.ErrForbidden)
 }
 
+// countedChanges counts the change announcements of the calendar (#7693).
+type countedChanges struct{ calls int }
+
+func (c *countedChanges) Announce(context.Context) { c.calls++ }
+
+// A family's look at the Sprechtag reads only and wakes nobody; a booking
+// and its cancellation announce the change to the school's staff (#7693).
+func TestParentConferenceIntegration_OnlyWritesAnnounceTheChange(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	cfg := calendarTestConfig(t, db)
+	_, _, reposCalendar, _, _, _, _ := calendarTestRepositories(t, db)
+	cfg.SchoolDays = reposCalendar.SchoolCalendar()
+	cfg.ParentConferences = owners.BuildServeParentConferences(testpkg.NewDatabase(t, db))
+	changes := &countedChanges{}
+	cfg.Changes = changes
+	service := owners.NewCalendarPortal(cfg)
+	lehrkraft, account := createTestLehrkraft(t, db, "Sig", "Nal")
+	testpkg.CreateTestClassTeacher(t, db, lehrkraft.ID, "1a")
+	family := testpkg.CreateTestParentGuardianChain(t, db)
+	view := createConference(t, db, service, account.ID, conferenceDay("1a"))
+	changes.calls = 0
+
+	_, err := testpkg.TenantQuery1(t, testpkg.Ctx(t), db, service.ListChildParentConferences, conferenceChild(family))
+	require.NoError(t, err)
+	assert.Zero(t, changes.calls, "reading the Sprechtag announces nothing")
+
+	_, err = testpkg.TenantQuery3(t, testpkg.Ctx(t), db, service.BookParentConference, conferenceChild(family), conferenceID(t, view), "14:15")
+	require.NoError(t, err)
+	assert.Equal(t, 1, changes.calls, "a booking announces the change")
+
+	require.NoError(t, testpkg.TenantCommand2(t, testpkg.Ctx(t), db, service.CancelParentConferenceBooking, conferenceChild(family), conferenceID(t, view)))
+	assert.Equal(t, 2, changes.calls, "a cancelled booking announces the change")
+}
+
 func TestParentConferenceIntegration_ABookedSlotIsTakenForOthersAlsoAtTheSameMoment(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)

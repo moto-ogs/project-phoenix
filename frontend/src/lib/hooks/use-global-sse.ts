@@ -977,7 +977,7 @@ export function useGlobalSSE(): SSEHookState {
     // pickup_schedule_changed. The classes (#7681): a class trip status
     // announces student_updated, a day outing and a changed
     // Unterrichtsschluss arrival_schedule_changed. The appointments (#7663)
-    // calendar_appointments_changed (#7693). The burst debounce makes
+    // announce calendar_appointments_changed (#7693). The burst debounce makes
     // several events one reload; the reconnect reconcile sets every flag.
     if (
       hasPendingTimetableEvent.current ||

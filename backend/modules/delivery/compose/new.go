@@ -38,8 +38,7 @@ func (r *Runtime) EmailStatus(ctx context.Context, tenantID, id int64) (delivery
 	return (*application.Runtime)(r).EmailStatus(ctx, tenantID, id)
 }
 
-// NewModule composes the enqueue capability and the e-mail state without the
-// worker; NewWorker adds the worker once the mail renderers exist.
+// NewModule composes enqueue and e-mail state; NewWorker adds the worker once renderers exist.
 func NewModule(dependencies ModuleDependencies) (*Runtime, error) {
 	if dependencies.DB == nil || dependencies.People == nil || dependencies.Observe == nil {
 		return nil, errors.New("delivery compose: all dependencies are required")

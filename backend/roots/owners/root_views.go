@@ -100,6 +100,7 @@ func BuildCalendarApp(
 	cfg.ParentsURL, cfg.FrontendURL, cfg.CalDAVURL = links.ParentsURL, links.FrontendURL, links.PublicAPIURL
 	cfg.Notifier, cfg.ReminderNotifier = NewCalendarNotifier(notifications.Notifier), NewCalendarReminderNotifier(notifications.Notifier)
 	cfg.Preferences, cfg.Logger = notifications.Preferences, env.Logger.With("service", "calendar")
+	// A nil *realtime.Hub would become a non-nil interface; check it here.
 	if hub != nil {
 		cfg.Changes = NewCalendarAppointmentChanges(hub, cfg.Logger)
 	}
