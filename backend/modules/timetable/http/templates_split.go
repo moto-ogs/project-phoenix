@@ -258,6 +258,9 @@ func (rs *Resource) splitTemplate(w http.ResponseWriter, r *http.Request) {
 	if !rs.validateSplitTemplateReferences(w, r, req) {
 		return
 	}
+	if !rs.lockTemplateForWrite(w, r) || !rs.checkTemplateReadVersion(w, r, id, req.ExpectedVersion) {
+		return
+	}
 
 	result, err := rs.Templates.SplitTemplate(r.Context(), in)
 	if err != nil {

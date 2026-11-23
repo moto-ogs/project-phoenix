@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Tagesinformationen (#2180): interne Hinweise der Leitung an das Team, die
@@ -97,6 +99,15 @@ type StaffNoticeInput struct {
 	WeekPattern             int
 	RequiresAcknowledgement bool
 	Active                  bool
+	// ExpectedVersion ist bei einer Änderung die StaffNoticeVersion, die
+	// die Person gelesen hat (ADR 0311); ein neuer Hinweis braucht keine.
+	ExpectedVersion string
+}
+
+// StaffNoticeVersion ist das Lese-Token eines Hinweises: der Zeitpunkt
+// seiner letzten Änderung, den ein Trigger bei jeder Änderung setzt.
+func StaffNoticeVersion(notice StaffNotice) string {
+	return readstate.Of(notice.UpdatedAt)
 }
 
 // StaffNotices ist die Capability der Tagesinformationen.

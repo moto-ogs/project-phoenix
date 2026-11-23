@@ -67,7 +67,7 @@ func TestTemplateWritersLockOldAndNewStaffBeforeRows(t *testing.T) {
 					body["primary_staff_id"] = s.staffA
 				}
 			}
-			payload, err := json.Marshal(body)
+			payload, err := json.Marshal(withTemplateReadVersion(t, router, method, path, body))
 			require.NoError(t, err)
 			holder, err := s.db.BeginTx(ctx, nil)
 			require.NoError(t, err)

@@ -134,6 +134,10 @@ type UpdateInstanceInput struct {
 	// period, not spontaneous). Only the series conversion sets it; an
 	// ordinary edit leaves hand-linked one-offs outside the roster resync.
 	CalendarPeriodID *int64
+	// ExpectedVersion is the InstanceVersion its editor read (ADR 0311);
+	// the edit is refused with readstate.ErrChanged unless the block is
+	// still stored that way.
+	ExpectedVersion string
 }
 
 // StartInstanceResult is a started (or reopened) block, its live session
@@ -210,6 +214,9 @@ type ConvertInstanceToSeriesInput struct {
 	Template       CreateTemplateCommand
 	InstanceNotes  *string
 	ActorAccountID *int64
+	// ExpectedVersion is the InstanceVersion of the one-off block its editor
+	// read (ADR 0311).
+	ExpectedVersion string
 }
 
 // ConvertInstanceToSeriesResult identifies both sides of a conversion;

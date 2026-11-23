@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"sort"
@@ -13,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	scheduleModels "github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain/schedulerecords"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Tagesinformationen (#2180) — Geschäftslogik der Hinweise fürs Team:
@@ -293,12 +295,21 @@ func (s *staffNoticeService) UpdateStaffNotice(ctx context.Context, id, updatedB
 	if err != nil {
 		return timetable.StaffNotice{}, err
 	}
+	// The editor saves back the notice it read (ADR 0311). The update below
+	// writes only while the row still carries the change time read here, so
+	// a change landing in between is refused as well.
+	if err := readstate.Check(in.ExpectedVersion, timetable.StaffNoticeVersion(staffNoticeContract(existing))); err != nil {
+		return timetable.StaffNotice{}, err
+	}
 	reachedStaff := reachesStaffOn(existing, s.currentDate())
 	notice, err := s.apply(existing, in)
 	if err != nil {
 		return timetable.StaffNotice{}, err
 	}
 	if err := s.repo.Update(ctx, notice); err != nil {
+		if errors.Is(err, readstate.ErrChanged) {
+			return timetable.StaffNotice{}, err
+		}
 		return timetable.StaffNotice{}, fmt.Errorf("staffnotice: update: %w", err)
 	}
 	// Wird die Kenntnisnahme erst nachträglich verlangt, gilt dasselbe wie beim

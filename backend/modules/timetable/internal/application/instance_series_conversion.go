@@ -100,6 +100,9 @@ func (s *instanceSeriesConversion) convertLocked(ctx context.Context, in timetab
 		StaffIDs:         assignments.StaffIDs,
 		StudentIDs:       assignments.StudentIDs,
 		RequiredStaff:    nil,
+		// The template writes above leave the seed block as it was read, so
+		// the edit checks the token of the block its editor read.
+		ExpectedVersion: in.ExpectedVersion,
 	}, in.ActorAccountID); err != nil {
 		return none, err
 	}

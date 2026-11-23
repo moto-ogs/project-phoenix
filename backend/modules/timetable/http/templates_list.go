@@ -285,6 +285,10 @@ type templateResponse struct {
 	// on purpose ("Liste so lassen", #5103), so the deviation hint
 	// stays hidden. Read from the series root.
 	ManualRosterConfirmed bool `json:"manual_roster_confirmed"`
+	// Version is the segment's read-state token (ADR 0311), answered by the
+	// editing read GET /templates/{id} and the update; a series edit sends it
+	// back as expected_version. The list carries none.
+	Version string `json:"version,omitempty"`
 }
 
 type listTemplatesResponse struct {

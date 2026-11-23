@@ -63,6 +63,9 @@ type updateTemplateRequest struct {
 	// WeekdayAssignments overrides the shared roster for individual weekdays
 	// (#2129); omitted/empty resets the series to one shared roster.
 	WeekdayAssignments []weekdayAssignmentRequest `json:"weekday_assignments,omitempty"`
+	// ExpectedVersion is the template's version its editor read (ADR 0311);
+	// the split carries it as well.
+	ExpectedVersion string `json:"expected_version"`
 	// SeriesRosterFrom (#2187, YYYY-MM-DD) extends the saved roster backwards
 	// over the template's split series: bounded predecessor segments
 	// overlapping [series_roster_from, this segment's valid_from) receive the
@@ -290,6 +293,10 @@ func (rs *Resource) getTemplate(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	rs.attachRosterMaintenance(r.Context(), templates[:1], periodID)
+	if templates[0].Version, err = rs.templateReadVersion(r.Context(), templates[0].ID.Int64()); err != nil {
+		common.RenderError(w, r, common.ErrorInternalServerWrap("load template failed", err))
+		return
+	}
 	common.Respond(w, r, http.StatusOK, templates[0], "Template retrieved")
 }
 
@@ -380,6 +387,14 @@ func (rs *Resource) updateTemplate(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInternalServerWrap("resolve timeframe failed", err))
 		return
 	}
+	// The recurrence gate comes after the timeframe, in the order a template
+	// create takes them; the check reads the segment again under it, so a
+	// segment that changed since its editor read it (or since the unlocked
+	// read above) is refused.
+	if !rs.lockTemplateForWrite(w, r) || !rs.checkTemplateReadVersion(w, r, id, parsed.req.ExpectedVersion) {
+		tenant.MarkRollback(ctx)
+		return
+	}
 	command := buildUpdateTemplateInput(id, parsed, timeframeID, gradeLevelMax, rosterValidFrom)
 	command.ActorAccountID = sessiontoken.ActorAccountIDFromCtx(ctx)
 	updateErr := rs.Templates.UpdateTemplate(ctx, command)
@@ -393,6 +408,10 @@ func (rs *Resource) updateTemplate(w http.ResponseWriter, r *http.Request) {
 	}
 	templates, err := rs.loadTemplates(ctx, &id, (*int64)(parsed.req.CalendarPeriodID))
 	if err != nil || len(templates) == 0 {
+		common.RenderError(w, r, common.ErrorInternalServerWrap("reload template failed", err))
+		return
+	}
+	if templates[0].Version, err = rs.templateReadVersion(ctx, id); err != nil {
 		common.RenderError(w, r, common.ErrorInternalServerWrap("reload template failed", err))
 		return
 	}
