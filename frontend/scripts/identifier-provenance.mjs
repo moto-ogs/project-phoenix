@@ -358,6 +358,50 @@ function numericOrBoolean(type, checker, inspectElements = true) {
   );
 }
 
+const arrayCallbacks = new Set([
+  "every",
+  "filter",
+  "find",
+  "findIndex",
+  "findLast",
+  "findLastIndex",
+  "flatMap",
+  "forEach",
+  "map",
+  "some",
+]);
+
+function callbackElementKind(parameter, checker, seen) {
+  const callback = parameter.parent;
+  if (!ts.isArrowFunction(callback) && !ts.isFunctionExpression(callback))
+    return;
+  const call = callback.parent;
+  if (
+    !ts.isCallExpression(call) ||
+    call.arguments[0] !== callback ||
+    callback.parameters[0] !== parameter
+  )
+    return;
+  const method = call.expression;
+  if (
+    !ts.isPropertyAccessExpression(method) ||
+    !arrayCallbacks.has(method.name.text)
+  )
+    return;
+  const collection = method.expression;
+  const type = checker.getNonNullableType(
+    checker.getTypeAtLocation(collection),
+  );
+  if (!checker.isArrayType(type)) return;
+  return collectionElementKind(collection, checker, seen);
+}
+
+function collectionElementKind(collection, checker, seen, rest = false) {
+  const kind = expressionKind(collection, checker, seen);
+  if (kind === "id-list") return rest ? "id-list" : "id";
+  if (kind === "other") return kind;
+}
+
 function expressionKind(node, checker, seen = new Set()) {
   if (seen.has(node)) return;
   seen.add(node);
@@ -407,6 +451,27 @@ function expressionKind(node, checker, seen = new Set()) {
   // string. Follow local aliases back to the schema, not their spelling.
   if (ts.isIdentifier(node)) {
     const declaration = symbol?.valueDeclaration;
+    if (declaration && ts.isParameter(declaration) && !declaration.type) {
+      const element = callbackElementKind(declaration, checker, seen);
+      if (element) return element;
+    }
+    if (
+      declaration &&
+      ts.isBindingElement(declaration) &&
+      ts.isArrayBindingPattern(declaration.parent) &&
+      ts.isVariableDeclaration(declaration.parent.parent)
+    ) {
+      const collection = declaration.parent.parent.initializer;
+      const element =
+        collection &&
+        collectionElementKind(
+          collection,
+          checker,
+          seen,
+          Boolean(declaration.dotDotDotToken),
+        );
+      if (element) return element;
+    }
     if (
       declaration &&
       ts.isBindingElement(declaration) &&

@@ -155,11 +155,14 @@ const noRawBrowserTransport = {
         const variable = scope.set.get(node.name);
         if (!variable) continue;
         const binding = variable.defs[0]?.node;
+        if (binding?.type !== "VariableDeclarator") return;
+        const writes = variable.references.filter(
+          (ref) => ref.isWrite() && !ref.init,
+        );
         if (
-          binding?.type === "VariableDeclarator" &&
           binding.init &&
           binding.range[1] <= node.range[0] &&
-          !variable.references.some((ref) => ref.isWrite() && !ref.init)
+          !writes.length
         ) {
           return bindingOwner(
             binding.id,
@@ -167,6 +170,16 @@ const noRawBrowserTransport = {
             variable.identifiers[0],
           );
         }
+        const assignment = writes[0]?.identifier.parent;
+        if (
+          !binding.init &&
+          writes.length === 1 &&
+          assignment?.type === "AssignmentExpression" &&
+          assignment.left === writes[0].identifier &&
+          assignment.operator === "=" &&
+          assignment.range[1] <= node.range[0]
+        )
+          return owner(assignment.right);
         return;
       }
     }

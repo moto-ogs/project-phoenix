@@ -17,6 +17,7 @@ function frontendGateFixture(t) {
     copyFileSync(join(source, file), join(f.root, 'scripts', file));
   }
   f.write('frontend/package.json', JSON.stringify({ scripts }));
+  f.write('frontend/.oxlintrc.json', '{}');
   mkdirSync(join(f.root, 'frontend/scripts'));
   copyFileSync(join(source, '../frontend/scripts/lint.mjs'), join(f.root, 'frontend/scripts/lint.mjs'));
   f.write('bin/node', `#!/bin/sh
@@ -65,6 +66,28 @@ const frontendGates = {
   'check:fresh': scripts['check:fresh'],
   'CI frontend': 'bash ../scripts/check-quality.sh frontend',
 };
+
+test('lint leaves configs with overrides on a single pass', t => {
+  const f = frontendGateFixture(t);
+  f.write('frontend/.oxlintrc.json', JSON.stringify({
+    overrides: [{ files: ['**/*.ts'], rules: { 'swr/no-effect-load': 'off' } }],
+  }));
+  const result = f.run('cd frontend && node scripts/lint.mjs --max-warnings 0', {
+    LINT_GROUP: 'unsplit', LINT_WARNINGS: '0',
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(readFileSync(f.log, 'utf8').trim(), 'oxlint:unsplit');
+});
+
+test('fast frontend quality stops for stale BFF exceptions', t => {
+  const f = frontendGateFixture(t);
+  const result = f.run('cd frontend && bash ../scripts/check-quality.sh frontend-fast', {
+    FAILED_STAGE: '--test',
+  });
+  assert.equal(result.status, 7, result.stdout + result.stderr);
+  assert.match(result.stdout, /bff-exceptions/);
+  assert.equal(readFileSync(f.log, 'utf8').trim(), '--test');
+});
 
 for (const [name, command] of Object.entries(frontendGates)) {
   test(`${name} rejects warnings and errors but accepts clean tools with error logs`, t => {
