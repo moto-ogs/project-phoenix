@@ -360,7 +360,7 @@ func mapChangeRequestError(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.Is(err, capability.ErrChangeRequestConflict):
 		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeEnrollmentChangeRequestConflict))
 	case errors.Is(err, capability.ErrChangeRequestInvalidStatus):
-		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeEnrollmentChangeRequestStatusChanged))
+		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeEnrollmentChangeRequestStatusChanged))
 	case errors.Is(err, capability.ErrChangeRequestInvalidData):
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 	// Approving a change (or correcting child data) replaces the student's

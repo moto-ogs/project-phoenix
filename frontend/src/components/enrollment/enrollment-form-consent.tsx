@@ -251,3 +251,27 @@ function legalBlockText(
   const documentURL = agbDocumentURL(block);
   return documentURL !== "" ? agbDocumentSentence(documentURL) : block.text;
 }
+
+/**
+ * The consents that still hold after the form changed from `before` to
+ * `after`: a tick stays only while its legal block is unchanged. The same
+ * object comes back when nothing is cleared.
+ */
+export function consentsToUnchangedTexts(
+  consents: Record<string, boolean>,
+  before: readonly PublicLegalBlock[],
+  after: readonly PublicLegalBlock[],
+): Record<string, boolean> {
+  const text = (blocks: readonly PublicLegalBlock[], key: string) => {
+    const block = blocks.find((candidate) => candidate.key === key);
+    return block ? JSON.stringify(block) : undefined;
+  };
+  const kept = Object.fromEntries(
+    Object.entries(consents).filter(
+      ([key]) => text(before, key) === text(after, key),
+    ),
+  );
+  return Object.keys(kept).length === Object.keys(consents).length
+    ? consents
+    : kept;
+}

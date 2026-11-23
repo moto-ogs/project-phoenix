@@ -63,6 +63,7 @@ import {
 /** Go: enrollmenthttp.AdminEnrollmentDeleteRequest */
 export interface AdminEnrollmentDeleteRequest {
   reason?: string;
+  expected_fingerprint?: string;
 }
 
 /** Go: enrollmenthttp.AdminEnrollmentDeletionCounts */
@@ -108,6 +109,7 @@ export interface AdminEnrollmentDeletionImpact {
   preserved_parent_accounts: number;
   unlinked_guardian_profiles: number;
   parent_accounts_without_students: number;
+  fingerprint: string;
 }
 
 export const AdminEnrollmentDeletionImpactSchema: z.ZodType<AdminEnrollmentDeletionImpact, unknown> = object<AdminEnrollmentDeletionImpact>({
@@ -121,6 +123,7 @@ export const AdminEnrollmentDeletionImpactSchema: z.ZodType<AdminEnrollmentDelet
   preserved_parent_accounts: safeInt,
   unlinked_guardian_profiles: safeInt,
   parent_accounts_without_students: safeInt,
+  fingerprint: str,
 });
 
 /** Go: enrollmenthttp.AdminRequestSchemaFieldOption */
@@ -260,6 +263,7 @@ export interface AdminRequestChild {
   date_of_birth: string;
   target_grade_level?: number;
   target_school_class?: string;
+  version: string;
   holiday_care_wish?: boolean;
   status: string;
   status_reason?: string;
@@ -286,6 +290,7 @@ export const AdminRequestChildSchema: z.ZodType<AdminRequestChild, unknown> = ob
   date_of_birth: str,
   target_grade_level: optional(safeInt),
   target_school_class: optional(str),
+  version: str,
   holiday_care_wish: optional(bool),
   status: str,
   status_reason: optional(str),
@@ -1419,6 +1424,7 @@ export interface EditBootstrapResponse {
   legal_texts: PublicLegalTextsResponse;
   draft: EditDraftResponse;
   edit_mode: string;
+  terms_fingerprint: string;
 }
 
 export const EditBootstrapResponseSchema: z.ZodType<EditBootstrapResponse, unknown> = object<EditBootstrapResponse>({
@@ -1435,6 +1441,7 @@ export const EditBootstrapResponseSchema: z.ZodType<EditBootstrapResponse, unkno
   legal_texts: PublicLegalTextsResponseSchema,
   draft: EditDraftResponseSchema,
   edit_mode: str,
+  terms_fingerprint: str,
 });
 
 /** Go: enrollment.RegistrationFamilyChildren */
@@ -1749,6 +1756,7 @@ export interface AdminManualApprovedEnrollmentRequest {
   additional_guardians?: SubmitGuardianRequest[] | null;
   consent_flags?: Record<string, unknown | null> | null;
   form_schema_id?: string;
+  expected_terms_fingerprint?: string;
   custom_data?: Record<string, unknown | null> | null;
   children?: SubmitChildRequest[] | null;
   captcha_token?: string;
@@ -1836,6 +1844,7 @@ export interface CreateChangeRequestRequest {
   additional_guardians?: SubmitGuardianRequest[] | null;
   consent_flags?: Record<string, unknown | null> | null;
   form_schema_id?: string;
+  expected_terms_fingerprint?: string;
   custom_data?: Record<string, unknown | null> | null;
   children?: SubmitChildRequest[] | null;
   captcha_token?: string;
@@ -1902,6 +1911,7 @@ export interface AdminChildDataCorrectionRequest {
   target_grade_level?: number | null;
   target_school_class?: string | null;
   reason?: string;
+  expected_version?: string;
 }
 
 /** Go: enrollmenthttp.AdminUpdateOfferingSelection */
@@ -1927,6 +1937,7 @@ export interface AdminChildOfferingsResponse {
   date_of_birth: string;
   target_grade_level?: number;
   target_school_class?: string;
+  version: string;
   holiday_care_wish?: boolean;
   status: string;
   status_reason?: string;
@@ -1954,6 +1965,7 @@ export const AdminChildOfferingsResponseSchema: z.ZodType<AdminChildOfferingsRes
   date_of_birth: str,
   target_grade_level: optional(safeInt),
   target_school_class: optional(str),
+  version: str,
   holiday_care_wish: optional(bool),
   status: str,
   status_reason: optional(str),

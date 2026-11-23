@@ -288,6 +288,7 @@ func (rs *Resource) getManualEnrollmentBootstrap(w http.ResponseWriter, r *http.
 		CollectGradeLevel:         capabilities.CollectGradeLevel,
 		CareOfferingsEnabled:      capabilities.CareOfferingsEnabled,
 		CaptchaConfig:             PublicCaptchaConfigResponse{},
+		TermsFingerprint:          capability.FormTermsFingerprint(data.Schema, texts.Blocks),
 		LegalTexts: PublicLegalTextsResponse{
 			AGB:                 texts.AGB,
 			AGBDocumentURL:      texts.AGBDocumentURL,

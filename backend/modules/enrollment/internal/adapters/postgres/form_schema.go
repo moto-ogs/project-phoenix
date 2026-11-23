@@ -88,7 +88,12 @@ func (r *Store) ActiveSchema(ctx context.Context) (*enrollment.FormSchema, error
 		return nil, err
 	}
 	var row formSchemaRow
-	err = db.NewSelect().Model(&row).Where("form_schema.tenant_id = ?", tenantID).Where("form_schema.is_active = true").Scan(ctx)
+	// Every version of every lineage stays active (migration 1.15.74), so
+	// the active schema is the one published last. Its id is the newest of
+	// its lineage: a save over it passes the lineage check (ADR 0311),
+	// while an unordered pick could name an older version forever.
+	err = db.NewSelect().Model(&row).Where("form_schema.tenant_id = ?", tenantID).Where("form_schema.is_active = true").
+		OrderExpr("form_schema.id DESC").Limit(1).Scan(ctx)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("no active form schema for tenant: %w", err)

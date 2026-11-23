@@ -50,13 +50,16 @@ vi.mock("~/components/enrollment/enrollment-form", () => ({
     onSubmitted,
     submitLabel,
     prefetchedData,
+    onFormChanged,
   }: {
     submitter: (payload: unknown) => Promise<{ status_url: string } | null>;
     onSubmitted: (url: string) => void;
     submitLabel: string;
     prefetchedData: { offerings: { name: string }[] };
+    onFormChanged?: () => Promise<void>;
   }) {
     const [failed, setFailed] = useState(false);
+    const [reloadFailed, setReloadFailed] = useState(false);
     // Like the real form, the template is read once when it mounts.
     const [offerings] = useState(prefetchedData.offerings);
     return (
@@ -65,6 +68,7 @@ vi.mock("~/components/enrollment/enrollment-form", () => ({
           <p key={offering.name}>Angebot {offering.name}</p>
         ))}
         {failed ? <p>Senden fehlgeschlagen</p> : null}
+        {reloadFailed ? <p>Formular nicht geladen</p> : null}
         <button
           type="button"
           onClick={() => {
@@ -75,7 +79,22 @@ vi.mock("~/components/enrollment/enrollment-form", () => ({
               .then((result) => {
                 if (result) onSubmitted(result.status_url);
               })
-              .catch(() => setFailed(true))
+              .catch(async (err: unknown) => {
+                if (
+                  err instanceof Error &&
+                  "code" in err &&
+                  err.code === "general.changed_since_read"
+                ) {
+                  try {
+                    await onFormChanged?.();
+                  } catch {
+                    // The real form names the failed read instead.
+                    setReloadFailed(true);
+                    return;
+                  }
+                }
+                setFailed(true);
+              })
               .finally(() => mocks.submitSettled());
           }}
         >
@@ -91,7 +110,6 @@ import { SWRConfig } from "~/lib/swr/testing";
 import { ApiError } from "~/lib/api-error";
 import type { Phase } from "~/lib/enrollment-phase-api";
 import { schema } from "~/test/enrollment-editors";
-import { catalogText } from "~/test/error-catalog-text";
 import { ManualApprovedEnrollmentModal } from "./phase-enrollment-actions";
 
 // Reads run through real SWR under a staff session, a fresh cache per render.
@@ -230,7 +248,10 @@ describe("ManualApprovedEnrollmentModal: Senden sperrt das Panel (#6593)", () =>
     expect(screen.queryByText(SUCCESS)).not.toBeInTheDocument();
   });
 
-  it("waits for this opening's template instead of the cached one", async () => {
+  // ADR 0311: a reopened panel shows the cached template at once. The
+  // server refuses an entry from a form version the school replaced, and
+  // the panel then reads the current template.
+  it("shows the cached template and reads it again after a refused form", async () => {
     const offering = (name: string) => ({
       id: name,
       name,
@@ -239,56 +260,49 @@ describe("ManualApprovedEnrollmentModal: Senden sperrt das Panel (#6593)", () =>
       includes_holiday_care: false,
       includes_lunch: false,
     });
-    const bootstrap = (name: string) => ({
+    mocks.fetchManualEnrollmentBootstrap.mockResolvedValue({
       schema: schema(),
-      offerings: [offering(name)],
+      offerings: [offering("Frühbetreuung")],
       care_offering_selection_mode: "optional",
       captcha_config: null,
       legal_texts: { blocks: [] },
     });
-    const second = deferred<ReturnType<typeof bootstrap>>();
-    mocks.fetchManualEnrollmentBootstrap
-      .mockResolvedValueOnce(bootstrap("Frühbetreuung"))
-      .mockReturnValueOnce(second.promise);
     const { rerender } = render(<Modal />, { wrapper: Providers });
     expect(await screen.findByText("Angebot Frühbetreuung")).toBeVisible();
 
     rerender(<Modal isOpen={false} />);
     rerender(<Modal />);
-    expect(
-      await screen.findByText("Formularvorlage wird geladen..."),
-    ).toBeVisible();
-    expect(screen.queryByText("Angebot Frühbetreuung")).not.toBeInTheDocument();
+    expect(screen.getByText("Angebot Frühbetreuung")).toBeVisible();
+    const reads = mocks.fetchManualEnrollmentBootstrap.mock.calls.length;
 
-    await act(async () => {
-      second.resolve(bootstrap("Spätbetreuung"));
-    });
-    expect(await screen.findByText("Angebot Spätbetreuung")).toBeVisible();
-    expect(screen.queryByText("Angebot Frühbetreuung")).not.toBeInTheDocument();
+    mocks.createManualApprovedEnrollment.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    await fillAndSend();
+
+    expect(await screen.findByText("Senden fehlgeschlagen")).toBeVisible();
+    expect(mocks.fetchManualEnrollmentBootstrap).toHaveBeenCalledTimes(
+      reads + 1,
+    );
   });
 
-  it("shows the failed load of a reopened panel instead of the old template", async () => {
-    mocks.fetchManualEnrollmentBootstrap
-      .mockResolvedValueOnce({
-        schema: schema(),
-        offerings: [],
-        care_offering_selection_mode: "optional",
-        captcha_config: null,
-        legal_texts: { blocks: [] },
-      })
-      .mockRejectedValueOnce(
-        new ApiError("kaputt", 500, { code: "general.server" }),
-      );
-    const { rerender } = render(<Modal />, { wrapper: Providers });
-    expect(await screen.findByRole("button", { name: SUBMIT })).toBeVisible();
+  // A failed reload after a refusal keeps the panel and the typed entry;
+  // the form names the failure (finding of #7937).
+  it("keeps the entry when the reload after a refused form fails", async () => {
+    render(<Modal />, { wrapper: Providers });
+    await screen.findByRole("button", { name: SUBMIT });
+    mocks.createManualApprovedEnrollment.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    mocks.fetchManualEnrollmentBootstrap.mockRejectedValueOnce(
+      new ApiError("unavailable", 503, { code: "general.unavailable" }),
+    );
+    await fillAndSend();
 
-    rerender(<Modal isOpen={false} />);
-    rerender(<Modal />);
-    expect(
-      await screen.findByText(catalogText("general.server", "das Formular")),
-    ).toBeVisible();
-    expect(
-      screen.queryByRole("button", { name: SUBMIT }),
-    ).not.toBeInTheDocument();
+    expect(await screen.findByText("Formular nicht geladen")).toBeVisible();
+    expect(screen.getByRole("button", { name: SUBMIT })).toBeVisible();
+    expect(screen.getByLabelText("Interner Grund")).toHaveValue(
+      "telefonisch bestätigt",
+    );
   });
 });

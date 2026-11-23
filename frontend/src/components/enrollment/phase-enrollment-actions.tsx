@@ -54,8 +54,9 @@ import { fetchCareOfferingBookingStats } from "~/lib/care-offering-booking-stats
 import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { useFreshSWR, useInvalidateFamily, useSWRAuth } from "~/lib/swr";
+import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
+import { openingReadOptions, useOpeningRead } from "~/lib/opening-read";
 import { withLateInviteQuery } from "~/lib/enrollment-http";
 import { Loading } from "~/components/ui/loading";
 import type * as sharedContract from "~/lib/contract/shared.generated";
@@ -226,14 +227,41 @@ export function ManualApprovedEnrollmentModal({
   phase: Phase;
   gradeLevelMax: number | null;
 }>) {
-  // The form reads its template once when it mounts: every opening waits for
-  // its own answer, so no deleted offering or outdated template is offered.
-  const bootstrapRead = useFreshSWR(
+  // A reopened panel shows the cached template while it reads again. The
+  // server checks the entry against the current offerings, and refuses a
+  // form the school changed meanwhile (ADR 0311); the form then shows the
+  // current one.
+  const bootstrapRead = useSWRAuth(
     isOpen ? enrollmentKeys.manualEnrollmentBootstrap(phase.id) : null,
     () => fetchManualEnrollmentBootstrap(phase.id),
+    openingReadOptions,
   );
-  // A failed load of this opening shows the error, not an earlier template.
-  const bootstrap = bootstrapRead.error ? undefined : bootstrapRead.data;
+  // The office fills the template this opening read: every opening reads it
+  // again, then a background read neither swaps it under the typed entry
+  // nor, when it fails, takes the form away. A failed first read shows its
+  // error, also over a cached template, until a retry answers.
+  const [opening, setOpening] = useState(0);
+  const [wasOpen, setWasOpen] = useState(isOpen);
+  if (isOpen !== wasOpen) {
+    setWasOpen(isOpen);
+    if (isOpen) setOpening((n) => n + 1);
+  }
+  const opened = useOpeningRead(isOpen ? opening : null, bootstrapRead, () =>
+    fetchManualEnrollmentBootstrap(phase.id),
+  );
+  const loadCurrentForm = async () => {
+    try {
+      await opened.reload();
+    } catch (err) {
+      // The form keeps the entry and shows this failure in place of the
+      // refusal.
+      logger.warn("manual_enrollment_form_reload_failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
+    }
+  };
+  const bootstrap = isOpen ? opened.data : undefined;
   const prefetchedData = useMemo<EnrollmentFormPrefetchedData | null>(
     () => (bootstrap ? toManualPrefetchedData(bootstrap) : null),
     [bootstrap],
@@ -264,9 +292,9 @@ export function ManualApprovedEnrollmentModal({
   // a click on it nor the focus it hands back may close the waiting form.
   const send = useFormModalPending(isOpen, phase.id);
   const loadError = useSwrResourceLoadError(
-    [{ data: bootstrap, error: bootstrapRead.error }],
+    [{ data: bootstrap, error: opened.error }],
     "das Formular",
-    () => bootstrapRead.mutate(),
+    opened.retry,
   );
   const loading = isOpen && !bootstrap && !loadError.failure;
   const checks = useApiFormError();
@@ -469,6 +497,7 @@ export function ManualApprovedEnrollmentModal({
               onSubmitted={(url) => setStatusUrl(url)}
               prefetchedData={prefetchedData}
               submitter={submitter}
+              onFormChanged={loadCurrentForm}
               skipCaptcha
               lockChildStructure
               withoutSignature
@@ -504,8 +533,12 @@ export function ManualApprovedEnrollmentModal({
   );
 }
 
+type ManualEnrollmentBootstrap = Awaited<
+  ReturnType<typeof fetchManualEnrollmentBootstrap>
+>;
+
 function toManualPrefetchedData(
-  bootstrap: Awaited<ReturnType<typeof fetchManualEnrollmentBootstrap>>,
+  bootstrap: ManualEnrollmentBootstrap,
 ): EnrollmentFormPrefetchedData {
   // The school confirms consent outside the form, so no block is required.
   // Staff entry bypasses the phase's audience and grade gates.

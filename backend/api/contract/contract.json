@@ -26717,6 +26717,13 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -26758,6 +26765,12 @@
         {
           "name": "target_school_class",
           "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "version",
           "schema": {
             "kind": "string"
           }
@@ -27120,6 +27133,13 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "expected_fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -27269,6 +27289,12 @@
           "name": "parent_accounts_without_students",
           "schema": {
             "kind": "int"
+          }
+        },
+        {
+          "name": "fingerprint",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -27454,6 +27480,13 @@
           "optional": true,
           "schema": {
             "kind": "id"
+          }
+        },
+        {
+          "name": "expected_terms_fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         },
         {
@@ -27708,6 +27741,12 @@
         {
           "name": "target_school_class",
           "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "version",
           "schema": {
             "kind": "string"
           }
@@ -47605,6 +47644,13 @@
           }
         },
         {
+          "name": "expected_terms_fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "custom_data",
           "optional": true,
           "schema": {
@@ -51258,6 +51304,12 @@
         },
         {
           "name": "edit_mode",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "terms_fingerprint",
           "schema": {
             "kind": "string"
           }
@@ -80414,6 +80466,12 @@
             "kind": "ref",
             "ref": "PublicLateInvitePrefill"
           }
+        },
+        {
+          "name": "terms_fingerprint",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -99431,6 +99489,13 @@
           "optional": true,
           "schema": {
             "kind": "id"
+          }
+        },
+        {
+          "name": "expected_terms_fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         },
         {

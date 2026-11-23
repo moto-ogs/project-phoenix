@@ -201,15 +201,15 @@ func submitWeeklyProfileRequest(rt *Runtime, step parentEnrollmentSeedStep, enro
 	offeringID := enrollment.Offerings["wochenangebot"]
 	body := step.enrollmentSubmissionWithDays(enrollment.PhaseID, enrollment.Offerings, weeklyProfileNames()[index], "Wochenplan", "2019-04-18", 1,
 		"Alex", fmt.Sprintf("Wochenplan%02d", index+1), email, key, []int64{offeringID}, map[int64][]string{offeringID: {"mon"}})
-	source := "public"
-	var raw []byte
-	var err error
-	if index == 12 {
-		source = "parent"
-		raw, err = rt.Client.PostWithAuth(parentAuth, "/parent/enrollments/"+rt.Bootstrap.TenantSlug+"/submit", body)
-	} else {
-		raw, err = rt.Client.PostPublicWithHeaders("/api/enrollment/"+rt.Bootstrap.TenantSlug+"/submit", body, publicEnrollmentSeedHeaders(100+index))
+	source, post := "public", func(b map[string]any) ([]byte, error) {
+		return rt.Client.PostPublicWithHeaders("/api/enrollment/"+rt.Bootstrap.TenantSlug+"/submit", b, publicEnrollmentSeedHeaders(100+index))
 	}
+	if index == 12 {
+		source, post = "parent", func(b map[string]any) ([]byte, error) {
+			return rt.Client.PostWithAuth(parentAuth, "/parent/enrollments/"+rt.Bootstrap.TenantSlug+"/submit", b)
+		}
+	}
+	raw, err := postShownForm(staffGet(rt, rt.TenantAuth), body, post)
 	if err != nil {
 		return SeedEnrollmentRequest{}, err
 	}

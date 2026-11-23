@@ -989,6 +989,7 @@ export interface PublicEnrollmentFormBootstrapResponse {
   captcha_config: PublicCaptchaConfigResponse;
   legal_texts: PublicLegalTextsResponse;
   late_invite?: PublicLateInvitePrefill;
+  terms_fingerprint: string;
 }
 
 export const PublicEnrollmentFormBootstrapResponseSchema: z.ZodType<PublicEnrollmentFormBootstrapResponse, unknown> = object<PublicEnrollmentFormBootstrapResponse>({
@@ -1003,6 +1004,7 @@ export const PublicEnrollmentFormBootstrapResponseSchema: z.ZodType<PublicEnroll
   captcha_config: PublicCaptchaConfigResponseSchema,
   legal_texts: PublicLegalTextsResponseSchema,
   late_invite: optional(PublicLateInvitePrefillSchema),
+  terms_fingerprint: str,
 });
 
 /** Go: common.GuardianProfileGuardian */
@@ -1192,6 +1194,7 @@ export interface SubmitEnrollmentRequest {
   additional_guardians?: SubmitGuardianRequest[] | null;
   consent_flags?: Record<string, unknown | null> | null;
   form_schema_id?: string;
+  expected_terms_fingerprint?: string;
   custom_data?: Record<string, unknown | null> | null;
   children?: SubmitChildRequest[] | null;
   captcha_token?: string;

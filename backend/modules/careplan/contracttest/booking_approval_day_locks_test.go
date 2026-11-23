@@ -79,7 +79,7 @@ func TestBookingApprovalLocksCareDaysOnceAndAppliesDayRules(t *testing.T) {
 func approveOfferingChildIn(t *testing.T, env *decisionTestEnv, ctx context.Context, offeringID int64, guardianEmail, firstName string) {
 	t.Helper()
 	grade := int16(1)
-	submitted, err := testpkg.TenantQuery1(t, testpkg.Ctx(t), env.db, env.requestSvc.Submit, enrollmentTest.SubmitRequest{
+	submitted, err := testpkg.TenantQuery1(t, testpkg.Ctx(t), env.db, submitShown(env.requestSvc), enrollmentTest.SubmitRequest{
 		TenantID: testpkg.Tenant(t), PhaseID: env.sourcePhase.ID,
 		GuardianFirstName: "Eltern", GuardianLastName: "Sperre", GuardianEmail: guardianEmail,
 		ConsentFlags: enrollmentTest.FormValuesOf(map[string]any{"agb": true, "data_processing": true, "email_contact": true, "photo": true}),

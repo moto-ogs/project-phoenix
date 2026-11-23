@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Refusals of the change requests (#3565). Handlers render err.Error().
@@ -58,6 +59,20 @@ type CorrectApprovedChildDataInput struct {
 	TargetSchoolClass *string
 	Reason            string
 	ActorAccountID    int64
+	// ExpectedVersion is the ChildDataVersion the staff corrected (ADR 0311).
+	ExpectedVersion string
+}
+
+// ChildDataVersion is the read-state token of the child data a staff
+// correction replaces: names, birthday, grade and class as stored. A
+// correction sends the version it read; another one is refused with
+// readstate.ErrChanged, so a colleague's correction is not overwritten.
+func ChildDataVersion(child *RequestChild) string {
+	return readstate.Fingerprint(struct {
+		FirstName, LastName, DateOfBirth string
+		TargetGradeLevel                 *int16
+		TargetSchoolClass                *string
+	}{child.FirstName, child.LastName, string(child.DateOfBirth), child.TargetGradeLevel, child.TargetSchoolClass})
 }
 
 // ChangeRequestCase is a change request with the request, children, messages

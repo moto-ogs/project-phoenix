@@ -93,7 +93,7 @@ func enrollExistingStudent(t *testing.T, env *decisionTestEnv, phaseID, studentI
 		ids = append(ids, offering.ID)
 		days = append(days, enrollmentTest.SubmitOfferingDays{OfferingID: offering.ID, SelectedDays: []string{"mon"}})
 	}
-	submitted, err := testpkg.TenantQuery1(t, ctx, env.db, env.requestSvc.Submit, enrollmentTest.SubmitRequest{
+	submitted, err := testpkg.TenantQuery1(t, ctx, env.db, submitShown(env.requestSvc), enrollmentTest.SubmitRequest{
 		TenantID: testpkg.Tenant(t), PhaseID: phaseID,
 		GuardianFirstName: "Eltern", GuardianLastName: "Carry", GuardianEmail: "offer-change-carry-5366-other@example.com",
 		ConsentFlags: consentFlags(t),

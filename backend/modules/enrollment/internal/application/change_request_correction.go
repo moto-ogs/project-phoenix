@@ -9,6 +9,7 @@ import (
 
 	enrollmentNative "github.com/moto-ogs/project-phoenix/modules/enrollment"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -40,6 +41,11 @@ func (s *ChangeRequests) correctApprovedChildData(ctx context.Context, input enr
 		return nil, enrollmentNative.ErrChangeRequestNotFound
 	}
 	if err := s.validateAdminCorrectionChild(child); err != nil {
+		return nil, err
+	}
+	// The staff corrected the data it read; a colleague's correction since
+	// is refused, not overwritten (ADR 0311).
+	if err := readstate.Check(input.ExpectedVersion, enrollmentNative.ChildDataVersion(child)); err != nil {
 		return nil, err
 	}
 	targetGradeLevel, targetSchoolClass, err := s.prepareAdminCorrectionTargets(ctx, req, child, input)

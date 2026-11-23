@@ -551,6 +551,7 @@ for (const analytics of [false, true]) {
           offerings: [],
           care_offering_selection_mode: "optional",
           care_required: false,
+          terms_fingerprint: "network-form",
           collect_grade_level: false,
           care_offerings_enabled: false,
           school_class: {
