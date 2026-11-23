@@ -184,7 +184,10 @@ einer Schule, welche Buchungen eine Anmeldung tragen muss:
   hat das Kind keine Anmeldung; der Plan hätte es dort neu angemeldet, und
   die genehmigte Anmeldung aus Phase A wäre daneben geblieben. Die Zeile
   bleibt stattdessen zurück (`has_application`), nennt die Anmeldung und
-  hängt, bis das Büro den Vertrag oder die Schule die Anmeldung berichtigt.
+  hängt, bis das Büro den Vertrag zurück auf ein Modul der Phase A
+  berichtigt; der nächste Lauf bindet dann (Abschnitt 4, „hängt“). Die
+  Anmeldung der Schule hält dieselbe Regel unter ihren Sperren
+  (`enrolled_elsewhere`, Abschnitt 2).
 - **Ein deaktiviertes Modul hält eine neue Anmeldung zurück**
   (`offering_inactive`), mit demselben Grund wie in der Anmeldung
   (Abschnitt 2). An eine bestehende Anmeldung, die das Modul schon bucht,
@@ -264,6 +267,31 @@ erreicht.
 - Ein Kind mit einer anderen Anmeldung in der Phase bekommt keine
   (`has_application`). Gemeint ist jedes Kind einer Anmeldung der Phase, das
   die Kinderakte hält und weder abgelehnt noch zurückgezogen ist.
+- **Ein Vertrag hat eine stille Anmeldung, auch über Phasen und
+  gleichzeitige Läufe hinweg** (`enrolled_elsewhere`). Der Plan hält die
+  Zeile eines Vertrags zurück, dessen stille Anmeldung in einer anderen
+  Phase steht (Abschnitt 1), aber er liest vor den Sperren: Lauf A meldet
+  das Kind für Vertrag C in Phase A an und hat noch nicht abgeschlossen, das
+  Büro berichtigt den ungebundenen Vertrag auf ein Modul der überlappenden
+  Phase B, Lauf B plant Phase B, ohne die Anmeldung von A zu sehen, und
+  wartet an den Sperren der Genehmigung. Die Anmeldungen der Phase B allein
+  zeigen sie ihm auch danach nicht. Die Anmeldung liest deshalb unter den
+  Sperren, im selben Statement wie die Anmeldungen der Phase, auch die
+  Anmeldungen der Herkunft `contract_import` der Kinderakten in jeder
+  anderen Phase, mit dem Vertrag, für den sie angelegt wurden
+  (`source_metadata.contract_id`). Nennt eine davon den Vertrag der Zeile
+  und ist sie weder abgelehnt noch zurückgezogen, wird die Zeile abgelehnt,
+  nennt diese Anmeldung, und nichts wird geschrieben, in
+  `CheckContractChildren` wie im Lauf. Die Anmeldung eines anderen Vertrags
+  des Kindes hält nichts zurück. Die Regel gilt der neuen Anmeldung; eine
+  Zeile, die eine Anmeldung der eigenen Phase nur bestätigt, schreibt
+  nichts und wird nicht danach gefragt. **Was die Läufe ordnet:** Die
+  Sperren der Genehmigung (`LockApprovalGates`: die Sperre der
+  Klassenzuordnungen und die der Wiederholungen,
+  `schedule.TenantRecurrenceLockKey`) gelten je Schule, nicht je Phase, und
+  bis zum Ende der Transaktion. Zwei Läufe einer Schule laufen deshalb
+  nacheinander, auch für verschiedene Phasen; die Sperre je Phase
+  (`AcquireExistingStudentMatchLock`) allein ordnete sie nicht.
 - **Ein überholter Plan wird abgelehnt** (`changed`). Unter den Sperren der
   Genehmigung vergleicht die Anmeldung, was die Zeile vom Plan mitbringt,
   mit der Schule: Betreuungsbeginn und -ende der Phase, je Buchung
@@ -645,9 +673,10 @@ ist ungebunden. Der nächste Lauf bindet; nichts entsteht doppelt.
   Träger-Transaktion mit `BindApplications`. Keine ist in eine andere
   geschachtelt. Einen exklusiven Abschnitt je Träger wie der Katalog-Rollout
   braucht der Lauf nicht: Zwei Läufe derselben Schule warten an den Sperren
-  der Genehmigung und der Phase, der zweite findet die Anmeldung des ersten
-  (`existing`), und die Bindung unter der Sperre der Verknüpfungen antwortet
-  ihm „schon gebunden“.
+  der Genehmigung, die je Schule gelten, auch wenn sie verschiedene Phasen
+  anmelden. Der zweite findet die Anmeldung des ersten (`existing`, in
+  einer anderen Phase `enrolled_elsewhere`, Abschnitt 2), und die Bindung
+  unter der Sperre der Verknüpfungen antwortet ihm „schon gebunden“.
 - **Zugriffsprotokoll.** Jede Tenant-Transaktion des Workflows schreibt
   einen Eintrag in `audit.data_access_log` der Schule: Verträge als
   Ressource, Ansicht `contract_enrollment`, die gezeigten Verträge und
@@ -668,7 +697,12 @@ ist ungebunden. Der nächste Lauf bindet; nichts entsteht doppelt.
   abgeleiteten: Geschrieben wird für sie nichts, und der Vertrag folgt nach
   der Bindung genau diesen Buchungen. Eine geplante Änderung steht dann in
   diesen Buchungen und nicht daneben. Alle anderen Zeilen zeigen die
-  abgeleiteten Buchungen.
+  abgeleiteten Buchungen. Die Zeile nennt die Wochentage, die eine Buchung
+  wirksam hält: Die Buchung eines Moduls mit festen Tagen speichert keine,
+  die Zeile zeigt dann alle Tage des Moduls, wie eine Zeile, die anmeldet.
+  Sonst stünde nach dem Lösen einer Bindung ein Modul Montag bis Mittwoch
+  ohne Tage in der Vorschau. Der Plan behält die gespeicherte Auswahl
+  (`ApplicationBookings`): Sie ist, was die Anmeldung der Schule vergleicht.
 - **Status einer Zeile**: `ready` (der Lauf handelt: `action` `enroll`
   meldet an und bindet, `bind` bindet an die Anmeldung, die es gibt), `done`
   (gebunden; nach einem Lauf sagt `action`, was er getan hat), `unlinked`
@@ -687,13 +721,27 @@ ist ungebunden. Der nächste Lauf bindet; nichts entsteht doppelt.
   Antworten der Anmeldung ordnet er den Zeilen über Vertrag und Kinderakte
   zu, nie über die Position. Ein zweiter Lauf braucht eine neue Vorschau;
   sie zeigt die Zeilen des ersten als `done`.
-- **Eine Vorschau gilt für ihren Tag.** Der Plan rechnet mit dem heutigen
-  Tag, und eine Zeile, die an eine bestehende Anmeldung bindet, trägt ihn
-  (`ProvedOn`) samt den Buchungen ab diesem Tag. Bestätigt das Büro eine
-  solche Vorschau nach Mitternacht, ist der Fingerabdruck ein anderer, und
-  der Lauf antwortet `care_contract.enrollment_preview_changed`. Das ist
-  kein Fehler des Büros: Die Seite lädt die Vorschau dann still neu und
-  zeigt sie zur Bestätigung, ohne Fehlermeldung.
+- **Eine Vorschau gilt, solange der Plan dasselbe sagt; für manche Zeilen
+  ist das ihr Tag.** Der Lauf vergleicht den Fingerabdruck, kein Datum. Der
+  Plan rechnet mit dem heutigen Tag, aber nicht jede Zeile trägt ihn:
+  - Eine Zeile, die an die Anmeldung eines laufenden Vertrags bindet, trägt
+    den Tag des Plans (`ProvedOn`) samt den Buchungen ab diesem Tag. Nach
+    Mitternacht ist ihr Fingerabdruck immer ein anderer.
+  - Die Zeile eines abgebrochenen Laufs nach dem Ende des letzten Moduls
+    (Abschnitt 1) trägt als `ProvedOn` den ersten Tag, an dem der Vertrag in
+    der Phase Betreuung versprach, und alle Buchungen der Anmeldung in der
+    Phase. Beides liegt in der Vergangenheit: Ihr Fingerabdruck bleibt über
+    Mitternacht gleich, solange die Phase läuft.
+  - Jede andere Zeile (anmelden, zurückgehalten, erledigt, ohne Kinderakte)
+    trägt den Tag nicht. Sie ändert sich über Mitternacht nur, wenn der
+    neue Tag den Plan ändert: Eine Version, ein Modul, ein Vertrag oder
+    eine Phase beginnt oder endet.
+  Eine Vorschau ohne Zeile der ersten Art kann der Lauf also auch am
+  nächsten Tag übernehmen; er plant ohnehin neu und schreibt nur, was dann
+  gilt. Ist der Fingerabdruck ein anderer, antwortet der Lauf
+  `care_contract.enrollment_preview_changed`. Das ist kein Fehler des Büros:
+  Die Seite lädt die Vorschau dann still neu und zeigt sie zur Bestätigung,
+  ohne Fehlermeldung.
 - **Angemeldet wird nur, was die Vorschau bereit nannte.** An
   `EnrollContractChildren` gehen nur die Zeilen, die in der bestätigten
   Vorschau `ready` waren, zugeordnet über Vertrag und Kinderakte. Eine
@@ -734,7 +782,16 @@ ist ungebunden. Der nächste Lauf bindet; nichts entsteht doppelt.
   beendet, bleibt die Anmeldung als angenommene Anmeldung ohne Vertrag
   stehen. Der Vertrag deckt sie weiter über die Kinderakte (ADR 0307
   Punkt 6), solange er läuft und verknüpft ist; ein zweiter Vertrag entsteht
-  für sie nicht.
+  für sie nicht. Hängt die Zeile, weil das Büro den Vertrag auf ein Modul
+  einer anderen Phase berichtigt hat (Abschnitt 1), berichtigt das Büro den
+  Vertrag zurück; der nächste Lauf bindet dann. Die Seite des Büros muss
+  das sagen. **Offen:** Beendet stattdessen die Schule die stille Anmeldung
+  (alle Module heraus, siehe „Der Weg zurück“), löst das die Zeile in diesem
+  PR nicht: Die Anmeldung bleibt genehmigt, der Plan nennt sie weiter
+  (`unboundEnrollment` fragt nicht nach ihren Buchungen), und die Anmeldung
+  der Schule lehnt die neue Phase weiter ab (`enrolled_elsewhere`). Ob eine
+  stille Anmeldung ohne Buchungen ab heute den Vertrag freigibt, ist nicht
+  entschieden.
 - **Der Weg zurück: Bindung lösen** (`UnbindApplication`). Das Büro nimmt
   das Anmeldekind, das es an einem gebundenen importierten Vertrag sieht,
   wieder ab: in einer Träger-Transaktion, unter der Sperre der
@@ -790,7 +847,14 @@ ist ungebunden. Der nächste Lauf bindet; nichts entsteht doppelt.
   wird damit länger als die 64 KiB, die die Middleware von einer Antwort
   hält; `changed` steht deshalb vor den Zeilen und wird für diese Route
   aus dem Anfang der Antwort gelesen (`leadingFlagEvent`). Vorschau und Weg
-  zurück zählen nicht.
+  zurück zählen nicht. **In Produktion wird das Ereignis noch nicht
+  gesendet:** Die Route ist eingestuft, aber eine Sitzung des Träger-Büros
+  nennt keine Schule und ergibt deshalb keinen Akteur der Nutzungsanalyse
+  (`analytics.ActorOf`, `backend/analytics/actor.go`: `TenantID == 0`), wie
+  bei allen Routen des Träger-Portals
+  (`backend/analytics/core_actions_traeger.go`). Gezählt wird erst, wenn es
+  eine Erhebungsentscheidung für den Träger gibt; die Tests der Einstufung
+  setzen den Akteur selbst.
 - **Seed**: Der Seed verknüpft den Vertrag einer Kinderakte der Demo-Schule,
   ruft Vorschau und Lauf über diese Routen auf und versucht es mit dem
   nächsten Kind, bis ein Vertrag gebunden ist (höchstens fünf). Die vier
@@ -878,6 +942,10 @@ Die Entscheidung ändert diese Register (ADR 0057 Punkt 5, ADR 0070):
 - **Herkunft**: `chk_enrollment_requests_submission_source` kennt
   `contract_import` (Migration `20261122202200`).
 - **Fehlercode**: `care_contract.child_link_bound`.
+- **Ablehnungsgrund der Anmeldung**: `enrolled_elsewhere` (Abschnitt 2).
+  Das Lesen der Anmeldungen einer Phase (`ContractEnrollmentHolders`) liest
+  die stillen Anmeldungen der anderen Phasen mit; die Query-Budgets bleiben,
+  wie sie sind (46; 2 und 3 je weitere Phase; 28 und 72 der Routen).
 - **Prüfgrund der Verlängerung**: `no_guardian` (Abschnitt 6).
 
 Mit dem Workflow (Abschnitt 4) kommen dazu:

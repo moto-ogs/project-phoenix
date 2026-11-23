@@ -16,9 +16,11 @@ import (
 // TestCareContractApplicationUnbindingKeepsItsShape pins 20261123090000
 // (#7760) under the request role: an imported contract is bound and unbound
 // again and the trail records the way back; a bound contract is not moved to
-// another application child in one step, the application child of a
-// contract from an application never changes, and no contract is created
-// with one origin; an insert is not guarded, so a restore keeps a bound contract.
+// another application child in one step, and the application child of a
+// contract from an application never changes. An insert is not guarded: a
+// contract with one origin is created as before, from an application or
+// imported, and one with both origins is inserted as it stands, so a
+// restore keeps a bound contract.
 func TestCareContractApplicationUnbindingKeepsItsShape(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
@@ -64,4 +66,6 @@ func TestCareContractApplicationUnbindingKeepsItsShape(t *testing.T) {
 	}
 	require.NoError(t, as(insert(`request_child_id`, `902`)), "a contract from an application is created as before")
 	require.NoError(t, as(insert(`import_origin`, `'ben|beispiel|2018-03-04|2026-08-01'`)), "and so is an imported one")
+	require.NoError(t, as(insert(`import_origin, request_child_id`, `'lea|beispiel|2018-03-04|2026-08-01', 903`)),
+		"a bound imported contract is inserted with both origins")
 }
