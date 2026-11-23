@@ -48,6 +48,7 @@ import {
   type FormLegalBlock,
 } from "~/lib/enrollment-form-schema-api";
 import { draftDocumentURLsInLegalBlocks } from "~/lib/enrollment-legal-blocks";
+import { isReadStateRefusal } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import {
   HOLIDAY_FORM_FIELD_TYPES,
@@ -105,11 +106,23 @@ export function HolidayFormEditor({
   periodId,
   form,
   onSaved,
+  reload,
 }: Readonly<{
   periodId: string;
+  /**
+   * The version the editor rests on: the page mounts a new editor for each
+   * version, so a save sends this one (ADR 0311).
+   */
   form: HolidayForm;
   onSaved: (form: HolidayForm) => void;
+  /**
+   * Reads the current form again and rejects when that fails: after a
+   * refused save the editor of the stored version replaces this one.
+   */
+  reload: () => Promise<unknown>;
 }>) {
+  // After a refused save nothing is sent until the stored form was read.
+  const [refused, setRefused] = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
   const healthHeadingId = useId();
   const addressHeadingId = useId();
@@ -192,6 +205,7 @@ export function HolidayFormEditor({
     setFields((current) => current.filter((_, i) => i !== index));
 
   const save = async () => {
+    if (refused) return;
     const errors = validateHolidayForm(fields);
     if (Object.keys(errors).length > 0) {
       const marked = new Set(
@@ -213,6 +227,7 @@ export function HolidayFormEditor({
       );
       const saved = await saveHolidayForm(
         periodId,
+        form.version,
         prepareHolidayFieldsForSave(fields),
         legalBlocks,
         address,
@@ -232,6 +247,21 @@ export function HolidayFormEditor({
       logger.error("traeger_holiday_form_save_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
+      if (isReadStateRefusal(err)) {
+        // Another version was saved since this one was read: the page
+        // shows the stored version once it is read; until then nothing is
+        // sent. A failed read shows with a retry of the read alone.
+        setRefused(true);
+        void errorPath.show(err, {
+          object: "das Anmeldeformular",
+          reload: async () => {
+            const stored = await reload();
+            setRefused(false);
+            return stored;
+          },
+        });
+        return;
+      }
       void errorPath.show(err, { object: "das Anmeldeformular" });
     } finally {
       setSaving(false);
@@ -255,7 +285,10 @@ export function HolidayFormEditor({
       onSave={() => void save()}
       saving={saving}
       cancelDisabled={uploading}
-      disabled={!dirty || uploading}
+      disabled={!dirty || uploading || refused}
+      {...(refused && dirty && !uploading
+        ? { disabledReason: "Das gespeicherte Formular wird geladen." }
+        : {})}
       // A phone keeps both buttons on one line under the long list: two
       // lines would cover a quarter of the screen with the sticky footer.
       cancelLabel={isPhone ? "Verwerfen" : "Änderungen verwerfen"}
