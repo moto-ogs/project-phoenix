@@ -364,13 +364,16 @@ slash is dropped and each parameter encoded.
   Read it as an empty list where the screen needs one, once, in the client
   (`slot-lists-api.ts` derives `WithLists<…>` from the generated type); do not
   copy the answer into a hand-written type.
-- **One transport:** `bff-fetch.ts` holds the only `fetch` of browser code
-  that talks to the BFF; nothing else exports a fetch helper. The old
-  helpers (`fetchWithAuth`, `authFetch`, `operatorFetch`, `traegerRequest`,
-  `sessionFetch`, `transportFetch`) are gone. `old-fetch-helpers.test.ts`
-  fails on a raw `fetch(` in browser code outside its infrastructure list
-  (log shipping, the SSE stream, the session renewal, Auth.js endpoints, a
-  static file), each entry with its reason. `scripts/backend-wire-types.mjs`
+- **One transport:** `bff-fetch.ts` is the one transport of browser code to
+  the BFF; nothing else exports a fetch helper. `old-fetch-helpers.test.ts`
+  fails on a call of the global `fetch` (also as `window.fetch`,
+  `globalThis.fetch` or `self.fetch`) or a replacement of it in browser code
+  outside its infrastructure list (log shipping, the SSE stream, the session
+  renewal, Auth.js endpoints, the wall display, a static file, the two
+  wrappers of the global fetch that add the session account and the 429
+  wait), each entry with its reason, and on any name of the deleted helpers.
+  `identifier-text.test.ts` fails on a conversion of an identifier to a
+  number (`Number(room.id)`). `scripts/backend-wire-types.mjs`
   finds hand-written wire types by their form (two `snake_case` fields of
   their own, a generated type imported under another name, a type that only
   renames a generated one); its baseline only shrinks.

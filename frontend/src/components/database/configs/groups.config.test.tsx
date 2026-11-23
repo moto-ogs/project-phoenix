@@ -3,7 +3,7 @@
  * Tests group config structure and response mapping
  */
 import { describe, it, expect, vi } from "vitest";
-import { groupsConfig } from "./groups.config";
+import { groupsConfig, toGroupRequest } from "./groups.config";
 import type { Group } from "@/lib/group-helpers";
 import { ApiError } from "~/lib/api-error";
 
@@ -32,10 +32,6 @@ describe("groupsConfig", () => {
       singular: "Gruppe",
       plural: "Gruppen",
     });
-  });
-
-  it("has correct API configuration", () => {
-    expect(groupsConfig.api.routes.list).toBe("GET /api/groups/");
   });
 
   it("has form sections configured", () => {
@@ -104,7 +100,7 @@ describe("groupsConfig", () => {
       teacher_ids: ["1", "2"],
     };
 
-    const mapped = groupsConfig.service?.mapRequest?.(data);
+    const mapped = toGroupRequest(data);
     expect(mapped).toEqual({
       name: "Test Group",
       room_id: "5",
@@ -245,7 +241,9 @@ describe("groupsConfig", () => {
     const { mapGroupResponse } = await import("@/lib/group-helpers");
     const row = { id: "12", name: "Gruppe" };
 
-    groupsConfig.service?.mapResponse?.(row);
+    mockFetch.mockResolvedValueOnce(Response.json({ data: row }));
+
+    await groupsConfig.api.get!("12");
 
     expect(vi.mocked(mapGroupResponse)).toHaveBeenCalledWith(row);
   });

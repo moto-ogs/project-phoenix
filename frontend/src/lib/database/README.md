@@ -15,8 +15,8 @@ Each entity has a configuration file that defines:
 - Form fields and sections
 - Detail view layout
 - List view appearance
-- API endpoints
-- Data transformation
+- API calls: each calls `bffJson` with its registered route, so path
+  parameters, body and answer are checked against the generated contract
 - Business logic hooks
 
 Example: `configs/students.config.tsx`
@@ -30,9 +30,10 @@ Example: `configs/students.config.tsx`
 
 ### 3. Service Factory
 
-The `service-factory.ts` automatically generates CRUD services from configuration:
+The `service-factory.ts` wraps the config's calls in a CRUD service with hooks
+and logging; it does not call `bffJson` itself:
 
-- getList (with pagination)
+- getList (an unpaginated list becomes one page)
 - getOne
 - create
 - update
@@ -53,7 +54,21 @@ export const roomsConfig = defineEntityConfig<Room>({
   concept: roomsConcept, // import { roomsConcept } from "~/lib/concepts/rooms"
 
   api: {
-    basePath: "/api/rooms",
+    list: async () => {
+      const page = await bffJson("tenant", "GET /api/rooms/");
+      return { data: page.data.map(mapRoomResponse), pagination: page.pagination };
+    },
+    get: async (id) =>
+      mapRoomResponse(
+        await bffJson("tenant", "GET /api/rooms/{id}", { params: { id } }),
+      ),
+    create: async (data) =>
+      mapRoomResponse(
+        await bffJson("tenant", "POST /api/rooms/", {
+          body: prepareRoomForBackend(data),
+        }),
+      ),
+    // update, delete alike; an operation without a call is not offered
   },
 
   form: {

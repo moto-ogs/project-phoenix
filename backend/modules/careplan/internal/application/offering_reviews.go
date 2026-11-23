@@ -205,10 +205,9 @@ func (s *OfferingReviews) ListHistory(ctx context.Context, filter careplan.Reque
 			continue
 		}
 		name := names[student.PersonID]
-		item := &careplan.OfferingHistoryItem{Request: row, StudentName: strings.TrimSpace(name.FirstName + " " + name.LastName), ReviewerName: reviewerDisplayName(reviewers, row.ReviewedBy)}
-		s.resolveHistoryDetail(ctx, item, row)
-		result = append(result, item)
+		result = append(result, &careplan.OfferingHistoryItem{Request: row, StudentName: strings.TrimSpace(name.FirstName + " " + name.LastName), ReviewerName: reviewerDisplayName(reviewers, row.ReviewedBy)})
 	}
+	s.resolveHistoryDetails(ctx, result)
 	return result, cursor, nil
 }
 
@@ -222,43 +221,87 @@ func offeringReviewerIDs(rows []careplan.OfferingChangeRequest) []int64 {
 	return reviewerIDs
 }
 
-// resolveHistoryDetail attaches the decision snapshot diff, or for rows
-// without one the requested offerings; a failure is logged, not returned.
-func (s *OfferingReviews) resolveHistoryDetail(ctx context.Context, item *careplan.OfferingHistoryItem, row *careplan.OfferingChangeRequest) {
+// offeringHistoryRequest is a history item without a decision snapshot and
+// the offerings its payload requested.
+type offeringHistoryRequest struct {
+	item     *careplan.OfferingHistoryItem
+	selected []careplan.OfferingReviewSelection
+}
+
+// resolveHistoryDetails attaches each item's decision snapshot diff, or for
+// rows without one the requested offerings. The catalog entries of every
+// requested offering on the page load in one read, not one per row; a
+// failure is logged per row, not returned.
+func (s *OfferingReviews) resolveHistoryDetails(ctx context.Context, items []*careplan.OfferingHistoryItem) {
+	requests, ids := s.historyDiffsAndRequests(items)
+	var byID map[int64]careplan.CareOffering
 	var err error
-	if len(row.DecisionSnapshot) > 0 && strings.TrimSpace(string(row.DecisionSnapshot)) != "null" {
-		item.Diff, err = careplan.ParseOfferingReviewDecisionDiff(row.DecisionSnapshot)
-	} else {
-		item.Requested, err = s.requestedItems(ctx, row.Payload)
+	if len(ids) > 0 {
+		byID, err = s.offeringCatalog(ctx, ids)
 	}
-	if err != nil {
-		s.Logger.Warn("offering change: resolve requested offerings for history failed",
-			slog.Int64("request_id", row.ID),
-			slog.String("error", err.Error()),
-		)
+	for _, request := range requests {
+		if err != nil && len(request.selected) > 0 {
+			s.warnHistoryDetail(request.item.Request.ID, fmt.Errorf("list requested offerings: %w", err))
+			continue
+		}
+		request.item.Requested = namedRequestedOfferings(request.selected, byID)
 	}
 }
 
-func (s *OfferingReviews) requestedItems(ctx context.Context, payload []byte) ([]careplan.OfferingRequestedItem, error) {
-	selected, err := careplan.ParseOfferingReviewSelections(payload)
+// historyDiffsAndRequests sets the diff of every item with a decision
+// snapshot and returns the others with their parsed selections, plus the
+// offering IDs they request.
+func (s *OfferingReviews) historyDiffsAndRequests(items []*careplan.OfferingHistoryItem) ([]offeringHistoryRequest, []int64) {
+	requests := make([]offeringHistoryRequest, 0, len(items))
+	ids := make([]int64, 0, len(items))
+	for _, item := range items {
+		row := item.Request
+		if len(row.DecisionSnapshot) > 0 && strings.TrimSpace(string(row.DecisionSnapshot)) != "null" {
+			diff, err := careplan.ParseOfferingReviewDecisionDiff(row.DecisionSnapshot)
+			item.Diff = diff
+			s.warnHistoryDetail(row.ID, err)
+			continue
+		}
+		selected, err := careplan.ParseOfferingReviewSelections(row.Payload)
+		if err != nil {
+			s.warnHistoryDetail(row.ID, err)
+			continue
+		}
+		requests = append(requests, offeringHistoryRequest{item: item, selected: selected})
+		for _, choice := range selected {
+			ids = append(ids, choice.OfferingID)
+		}
+	}
+	return requests, ids
+}
+
+func (s *OfferingReviews) offeringCatalog(ctx context.Context, ids []int64) (map[int64]careplan.CareOffering, error) {
+	slices.Sort(ids)
+	offerings, err := s.Catalog.ListCareOfferings(ctx, careplan.CareOfferingFilter{IDs: slices.Compact(ids)})
 	if err != nil {
 		return nil, err
-	}
-	if len(selected) == 0 {
-		return []careplan.OfferingRequestedItem{}, nil
-	}
-	ids := make([]int64, 0, len(selected))
-	for _, item := range selected {
-		ids = append(ids, item.OfferingID)
-	}
-	offerings, err := s.Catalog.ListCareOfferings(ctx, careplan.CareOfferingFilter{IDs: ids})
-	if err != nil {
-		return nil, fmt.Errorf("list requested offerings: %w", err)
 	}
 	byID := make(map[int64]careplan.CareOffering, len(offerings))
 	for _, offering := range offerings {
 		byID[offering.ID] = offering
 	}
+	return byID, nil
+}
+
+func (s *OfferingReviews) warnHistoryDetail(requestID int64, err error) {
+	if err == nil {
+		return
+	}
+	s.Logger.Warn("offering change: resolve requested offerings for history failed",
+		slog.Int64("request_id", requestID),
+		slog.String("error", err.Error()),
+	)
+}
+
+// namedRequestedOfferings names the requested offerings from the loaded
+// catalog, in catalog order. An offering missing from the catalog is listed
+// by id rather than dropped.
+func namedRequestedOfferings(selected []careplan.OfferingReviewSelection, byID map[int64]careplan.CareOffering) []careplan.OfferingRequestedItem {
 	result := make([]careplan.OfferingRequestedItem, 0, len(selected))
 	for _, item := range selected {
 		result = append(result, careplan.OfferingRequestedItem{OfferingID: item.OfferingID, Name: offeringLabel(item.OfferingID, byID), Days: slices.Clone(item.SelectedDays)})
@@ -270,7 +313,7 @@ func (s *OfferingReviews) requestedItems(ctx context.Context, payload []byte) ([
 		}
 		return left < right
 	})
-	return result, nil
+	return result
 }
 
 func offeringLabel(id int64, catalog map[int64]careplan.CareOffering) string {
