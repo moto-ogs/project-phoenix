@@ -118,6 +118,7 @@ const editableGuardian: parentMeContract.childGuardianResponse = {
   contact_locked_shared: false,
   contact_locked_social_worker: false,
   contact_locked_full_guardian: false,
+  version: "c-read",
 };
 
 describe("GuardiansPanel", () => {
@@ -226,6 +227,8 @@ describe("GuardiansPanel", () => {
       "7",
       expect.objectContaining({
         email: "neu@example.test",
+        // The version of the contact the form opened with (ADR 0311).
+        expected_version: "c-read",
         phones: [
           {
             phone_number: "0211 111111",
@@ -677,6 +680,57 @@ describe("GuardiansPanel", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/parent: guardian/)).not.toBeInTheDocument();
+  });
+
+  // ADR 0311: a contact the school corrected since the form opened is
+  // refused; the form shows the stored contact with the refusal and no
+  // retry, and the next save sends the new version.
+  it("shows the stored contact after a save refused as changed", async () => {
+    mocks.updateGuardianContact.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    render(
+      <GuardiansPanel studentId="42" canInvite={false} canRemove={false} />,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Bearbeiten" }));
+    const dialog = screen.getByRole("dialog");
+    const emailInput = dialog.querySelector<HTMLInputElement>(
+      'input[type="email"]',
+    );
+    fireEvent.change(emailInput!, { target: { value: "alt@example.test" } });
+
+    mocks.listChildGuardians.mockResolvedValue([
+      {
+        ...editableGuardian,
+        email: "korrigiert@example.test",
+        version: "c-stored",
+      },
+    ]);
+    fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
+
+    expect(
+      await within(dialog).findByText(
+        catalogText("general.changed_since_read", "die Änderung am Kontakt"),
+      ),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(emailInput).toHaveValue("korrigiert@example.test"),
+    );
+    expect(
+      within(dialog).queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(mocks.updateGuardianContact).toHaveBeenLastCalledWith(
+        "42",
+        "7",
+        expect.objectContaining({
+          email: "korrigiert@example.test",
+          expected_version: "c-stored",
+        }),
+      ),
+    );
   });
 
   it("reaches the pickup-note action without exposing pickup flags for an edit-only guardian", async () => {

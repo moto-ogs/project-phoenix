@@ -180,6 +180,7 @@ describe("guardian-helpers", () => {
           can_pickup: true,
           emergency_priority: 1,
           is_payer: false,
+          version: "v1",
           account_status: "active",
         }),
       ).toBeNull();
@@ -208,6 +209,7 @@ describe("guardian-helpers", () => {
         emergency_priority: 1,
         guardian_role: "",
         is_payer: false,
+        version: "v1",
         account_status: "",
       };
 
@@ -239,6 +241,7 @@ describe("guardian-helpers", () => {
         pickupNotes: "Usually picks up at 15:00",
         emergencyPriority: 1,
         accountStatus: "active",
+        version: "v1",
       });
     });
 
@@ -260,6 +263,7 @@ describe("guardian-helpers", () => {
         is_payer: true,
         emergency_priority: 1,
         guardian_role: "",
+        version: "v1",
         account_status: "",
       };
 
@@ -286,6 +290,7 @@ describe("guardian-helpers", () => {
         emergency_priority: 3,
         guardian_role: "",
         is_payer: false,
+        version: "v1",
         account_status: "",
       };
 

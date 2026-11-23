@@ -244,6 +244,11 @@ interface GuardianFormModalProps {
   ) => Promise<void>;
   readonly onDelete?: () => void;
   readonly initialData?: GuardianWithRelationship;
+  /**
+   * Edit: reads the stored guardian after a refused save and hands it in as
+   * `initialData`; rejects when the read fails (ADR 0311).
+   */
+  readonly onReload?: () => Promise<unknown>;
   readonly mode: "create" | "edit";
 }
 
@@ -253,6 +258,7 @@ export default function GuardianFormModal({
   onSubmit,
   onDelete,
   initialData,
+  onReload,
   mode,
 }: GuardianFormModalProps) {
   // Another guardian in the open panel starts a new session (#6593).
@@ -266,7 +272,10 @@ export default function GuardianFormModal({
   const [newEntryId, setNewEntryId] = useState<string | null>(null);
   const entryRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
-  // Reset entries when modal opens/closes or initialData changes
+  // Reset entries when modal opens/closes or initialData changes. The stored
+  // row read after a refused save refills the form but keeps the refusal's
+  // message: errors clear only for a new opening or another guardian.
+  const initialId = initialData?.id;
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
@@ -274,12 +283,14 @@ export default function GuardianFormModal({
       } else {
         setEntries([createEmptyEntry()]);
       }
-      clearErrors();
       setFieldErrors(new Set());
       setNewEntryId(null);
       entryRefs.current.clear();
     }
-  }, [isOpen, initialData, clearErrors]);
+  }, [isOpen, initialData]);
+  useEffect(() => {
+    if (isOpen) clearErrors();
+  }, [isOpen, initialId, clearErrors]);
 
   // Scroll to newly added entry
   useEffect(() => {
@@ -581,6 +592,8 @@ export default function GuardianFormModal({
               : "das Speichern der Erziehungsberechtigten",
           // Erneut absenden mit den Eingaben von jetzt.
           retry: () => formRef.current?.requestSubmit(),
+          // Geändert seit dem Öffnen: der gespeicherte Stand steht im Formular.
+          reload: onReload,
         });
       }
     });
