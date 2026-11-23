@@ -15,16 +15,19 @@ import (
 // today. It is stale on the days it bills care for on which its contract
 // bills nothing by E2 today: the contract was withdrawn or shortened, or
 // another contract of the child now holds on the 1st or is its entry. A
-// child is held back when a contract of it would bill a stale day of an
-// invoice of another of its contracts: the run issues no invoice for the
-// child and the review names it with the invoice in its way, until the
-// office cancels that invoice. Under the full month every invoice bills the
-// whole month, so one stale invoice holds the child; pro rata a contract
-// that bills its own days next to an invoice for other days is billed.
+// child is held back when a contract of it without an invoice would bill a
+// stale day of an invoice of another of its contracts: the run issues no
+// invoice for the child and the review names it with the invoices in its
+// way, until the office cancels them. Under the full month every invoice
+// bills the whole month, so one stale invoice holds the child; pro rata a
+// contract that bills its own days next to an invoice for other days is
+// billed.
 //
 // The issued invoice of a contract that carries only its Mensa bills no care.
 // A contract has one invoice a month, so its care stays unbilled until the
-// office cancels that invoice; the review names it the same way.
+// office cancels that invoice. The review names such a contract in an entry
+// of its own; it never holds another contract back. Once its invoice is
+// cancelled it has none, and a stale day it would bill holds its child (S3).
 //
 // billedChildHolds is pure: it reads only its arguments.
 
@@ -107,30 +110,44 @@ func (in billedHoldInput) blocked(contractID int64) bool {
 	return in.wouldBill(contractID)
 }
 
+// staleInvoice is the issued invoice of a contract with the days it is
+// stale on.
+type staleInvoice struct {
+	contractID int64
+	days       monthDays
+}
+
 // billedChild is a child with an issued invoice of the month: its contracts
-// in force without one (open), its contracts whose invoice blocks their care
-// and the days and documents of its stale invoices.
+// in force without one (open), its contracts whose invoice carries only the
+// Mensa while they would bill care (mealOnly), and its stale invoices.
+// Contracts held for a duplicate (E4) are in neither list.
 type billedChild struct {
-	open, blocked []int64
-	stale         monthDays
-	staleBy       []parentbilling.CareBilledInvoice
+	open, mealOnly []int64
+	stale          []staleInvoice
+}
+
+// staleDays are the days any stale invoice of the child bills.
+func (c *billedChild) staleDays() monthDays {
+	var days monthDays
+	for _, invoice := range c.stale {
+		days |= invoice.days
+	}
+	return days
 }
 
 // billedChildHolds finds the children an issued invoice of the month
-// already bills and marks their contracts as held. It leaves a child held
-// for a duplicate contract (E4) as it is. The contracts an earlier
-// computation of the month held (keepHeld) stay held.
+// already bills and marks their contracts as held. A contract held for a
+// duplicate (E4) stays under its duplicate; other contracts of its child are
+// held like any. The second computation of a notice month only adopts what
+// the first one held (keepHeld) and finds nobody new: an assessment it took
+// back as issued is no reason to hold a child the review showed as billed.
 func billedChildHolds(in billedHoldInput, held map[int64]bool) []parentbilling.CareBilledChild {
-	holds := in.findBilledChildren(held)
-	for contractID := range in.keepHeld {
-		held[contractID] = true
+	if in.keepHeld != nil {
+		for contractID := range in.keepHeld {
+			held[contractID] = true
+		}
+		return []parentbilling.CareBilledChild{}
 	}
-	return holds
-}
-
-// findBilledChildren is billedChildHolds for the contracts of this
-// computation.
-func (in billedHoldInput) findBilledChildren(held map[int64]bool) []parentbilling.CareBilledChild {
 	holds := []parentbilling.CareBilledChild{}
 	if len(in.invoiced) == 0 {
 		return holds
@@ -138,16 +155,16 @@ func (in billedHoldInput) findBilledChildren(held map[int64]bool) []parentbillin
 	children, keys := in.billedChildren(held)
 	for _, key := range keys {
 		child := children[key]
-		if in.billsStaleDay(child) {
+		if inTheWay := in.staleInTheWay(child); len(inTheWay) > 0 {
 			for _, contractID := range child.open {
 				held[contractID] = true
 			}
-			holds = append(holds, in.hold(parentbilling.HoldReasonAlreadyBilled, slices.Concat(child.open, child.blocked),
-				slices.Concat(child.staleBy, in.documents(child.blocked))))
-			continue
+			holds = append(holds, in.hold(parentbilling.HoldReasonAlreadyBilled, child.open, inTheWay))
 		}
-		for _, contractID := range child.blocked {
-			holds = append(holds, in.hold(parentbilling.HoldReasonMealOnlyInvoice, []int64{contractID}, in.documents([]int64{contractID})))
+		// The care behind an invoice with only the Mensa is open (S5), whether
+		// the child is held or not: the office cancels that invoice.
+		for _, contractID := range child.mealOnly {
+			holds = append(holds, in.hold(parentbilling.HoldReasonMealOnlyInvoice, []int64{contractID}, []int64{contractID}))
 		}
 	}
 	return holds
@@ -155,10 +172,9 @@ func (in billedHoldInput) findBilledChildren(held map[int64]bool) []parentbillin
 
 // billedChildren groups the contracts of the month by child and keeps the
 // children with an issued invoice, in the order of their first contract in
-// force. A child held for a duplicate contract stays out.
+// force.
 func (in billedHoldInput) billedChildren(held map[int64]bool) (map[string]*billedChild, []string) {
 	children := map[string]*billedChild{}
-	duplicate := map[string]bool{}
 	var keys []string
 	for _, contractID := range slices.Sorted(maps.Keys(in.invoiced)) {
 		key := in.childOf[contractID]
@@ -168,50 +184,63 @@ func (in billedHoldInput) billedChildren(held map[int64]bool) (map[string]*bille
 		if children[key] == nil {
 			children[key] = &billedChild{}
 		}
-		in.addIssued(children[key], contractID)
+		in.addIssued(children[key], contractID, held[contractID])
 	}
+	listed := map[string]bool{}
 	for _, contractID := range in.order {
 		key := in.childOf[contractID]
 		child := children[key]
 		if child == nil {
 			continue
 		}
-		if _, seen := duplicate[key]; !seen {
+		if !listed[key] {
+			listed[key] = true
 			keys = append(keys, key)
 		}
-		duplicate[key] = duplicate[key] || held[contractID]
-		if _, issued := in.invoiced[contractID]; !issued {
+		if _, issued := in.invoiced[contractID]; !issued && !held[contractID] {
 			child.open = append(child.open, contractID)
 		}
 	}
-	return children, slices.DeleteFunc(keys, func(key string) bool { return duplicate[key] })
+	return children, keys
 }
 
 // addIssued adds an issued contract to its child: the days its invoice is
-// stale on, or the contract itself when its invoice blocks its care.
-func (in billedHoldInput) addIssued(child *billedChild, contractID int64) {
+// stale on, or the contract itself when its invoice carries only the Mensa
+// and it would bill care. A contract held for a duplicate is named there.
+func (in billedHoldInput) addIssued(child *billedChild, contractID int64, duplicate bool) {
 	if in.blocked(contractID) {
-		child.blocked = append(child.blocked, contractID)
+		if !duplicate {
+			child.mealOnly = append(child.mealOnly, contractID)
+		}
 		return
 	}
-	stale := billedDays(in.month, in.invoiced[contractID]) &^ in.billingDays(contractID)
-	if stale == 0 {
-		return
+	if stale := billedDays(in.month, in.invoiced[contractID]) &^ in.billingDays(contractID); stale != 0 {
+		child.stale = append(child.stale, staleInvoice{contractID: contractID, days: stale})
 	}
-	child.stale |= stale
-	child.staleBy = append(child.staleBy, in.documents([]int64{contractID})...)
 }
 
-// billsStaleDay tells whether a contract of the child would bill a day one
-// of its stale invoices bills already. A contract of a free month or without
-// a price bills nothing (wouldBill).
-func (in billedHoldInput) billsStaleDay(child *billedChild) bool {
-	if child.stale == 0 {
-		return false
+// staleInTheWay names the contracts whose stale invoices bill a day a
+// contract of the child without an invoice would bill (S3); empty when none
+// does. A contract of a free month or without a price bills nothing
+// (wouldBill), and a contract with an invoice of its own triggers nothing.
+func (in billedHoldInput) staleInTheWay(child *billedChild) []int64 {
+	all := child.staleDays()
+	if all == 0 {
+		return nil
 	}
-	return slices.ContainsFunc(slices.Concat(child.open, child.blocked), func(contractID int64) bool {
-		return in.billingDays(contractID)&child.stale != 0 && in.wouldBill(contractID)
-	})
+	var billing monthDays
+	for _, contractID := range child.open {
+		if days := in.billingDays(contractID); days&all != 0 && in.wouldBill(contractID) {
+			billing |= days
+		}
+	}
+	var inTheWay []int64
+	for _, invoice := range child.stale {
+		if invoice.days&billing != 0 {
+			inTheWay = append(inTheWay, invoice.contractID)
+		}
+	}
+	return inTheWay
 }
 
 // documents names the issued documents of the contracts that are in the
@@ -240,13 +269,12 @@ func (in billedHoldInput) documents(contractIDs []int64) []parentbilling.CareBil
 	return documents
 }
 
-// hold is the entry of the review for the contracts in force of a child:
-// those without an invoice in the order of the run, then those whose invoice
-// blocks their care.
-func (in billedHoldInput) hold(reason string, contractIDs []int64, documents []parentbilling.CareBilledInvoice) parentbilling.CareBilledChild {
+// hold is the entry of the review for contracts in force of a child, with
+// the documents of the issued contracts in their way.
+func (in billedHoldInput) hold(reason string, contractIDs, issued []int64) parentbilling.CareBilledChild {
 	head := in.byContract[contractIDs[0]][0]
 	return parentbilling.CareBilledChild{ChildFirstName: head.ChildFirstName, ChildLastName: head.ChildLastName, Reason: reason,
-		Contracts: childContracts(contractIDs, in.byContract), Invoices: documents}
+		Contracts: childContracts(contractIDs, in.byContract), Invoices: in.documents(issued)}
 }
 
 // appendBilledChildren adds the contracts of the children held for an
