@@ -97,7 +97,7 @@ func TestUpdateRoomWithoutAnOpinionLeavesTheReleaseUntouched(t *testing.T) {
 	module := newTestModule(engine)
 
 	_, err := module.UpdateRoom(testpkg.TenantContext(42), facilities.UpdateRoom{
-		ID: 7, Name: "Turnhalle",
+		ID: 7, Name: "Turnhalle", ExpectedVersion: seamRoomVersion,
 	})
 	require.NoError(t, err)
 	require.NotNil(t, engine.updateInput)
@@ -115,7 +115,7 @@ func TestUpdateRoomCarriesBothReleaseVerdicts(t *testing.T) {
 			module := newTestModule(engine)
 
 			room, err := module.UpdateRoom(testpkg.TenantContext(42), facilities.UpdateRoom{
-				ID: 7, Name: "Turnhalle", IsOpenRoom: boolPtr(released),
+				ID: 7, Name: "Turnhalle", IsOpenRoom: boolPtr(released), ExpectedVersion: seamRoomVersion,
 			})
 			require.NoError(t, err)
 			assert.Equal(t, released, room.IsOpenRoom)
@@ -136,7 +136,7 @@ func TestUpdateRoomRefusesToReleaseAToiletRoom(t *testing.T) {
 			module := newTestModule(engine)
 
 			_, err := module.UpdateRoom(testpkg.TenantContext(42), facilities.UpdateRoom{
-				ID: 7, Name: name, IsOpenRoom: boolPtr(true),
+				ID: 7, Name: name, IsOpenRoom: boolPtr(true), ExpectedVersion: seamRoomVersion,
 			})
 			require.ErrorIs(t, err, facilities.ErrToiletRoomNotReleasable)
 			assert.Nil(t, engine.updateInput,
@@ -155,7 +155,7 @@ func TestUpdateRoomAllowsRevokingAToiletRoomRelease(t *testing.T) {
 	module := newTestModule(engine)
 
 	_, err := module.UpdateRoom(testpkg.TenantContext(42), facilities.UpdateRoom{
-		ID: 7, Name: facilities.WCRoomName, IsOpenRoom: boolPtr(false),
+		ID: 7, Name: facilities.WCRoomName, IsOpenRoom: boolPtr(false), ExpectedVersion: seamRoomVersion,
 	})
 	require.NoError(t, err)
 	require.NotNil(t, engine.updateInput)

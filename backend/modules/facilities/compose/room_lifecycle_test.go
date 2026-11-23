@@ -53,10 +53,11 @@ func TestModulePersistsRoomUpdateAtPublicSeam(t *testing.T) {
 	capacity := 18
 
 	updated, err := module.UpdateRoom(ctx, facilities.UpdateRoom{
-		ID:       created.ID,
-		Name:     "Fuchsbau",
-		Building: "Neubau",
-		Capacity: &capacity,
+		ID:              created.ID,
+		Name:            "Fuchsbau",
+		Building:        "Neubau",
+		Capacity:        &capacity,
+		ExpectedVersion: facilities.RoomVersion(created),
 	})
 
 	require.NoError(t, err)
@@ -119,7 +120,7 @@ func TestSystemRoomCannotBeRenamedOrDeleted(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	_, err = module.UpdateRoom(ctx, facilities.UpdateRoom{ID: created.ID, Name: "Garten"})
+	_, err = module.UpdateRoom(ctx, facilities.UpdateRoom{ID: created.ID, Name: "Garten", ExpectedVersion: facilities.RoomVersion(created)})
 	require.ErrorIs(t, err, facilities.ErrSystemRoomProtected)
 
 	_, err = module.DeleteRoom(ctx, created.ID, "")
@@ -141,7 +142,7 @@ func TestUpdateRoomRejectsCaseInsensitiveDuplicate(t *testing.T) {
 	second, err := module.CreateRoom(ctx, facilities.CreateRoom{Name: "Fuchsbau"})
 	require.NoError(t, err)
 
-	_, err = module.UpdateRoom(ctx, facilities.UpdateRoom{ID: second.ID, Name: "IGELRAUM"})
+	_, err = module.UpdateRoom(ctx, facilities.UpdateRoom{ID: second.ID, Name: "IGELRAUM", ExpectedVersion: facilities.RoomVersion(second)})
 	require.ErrorIs(t, err, facilities.ErrDuplicateRoom)
 
 	unchanged, err := module.FindRoom(ctx, second.ID)
@@ -164,10 +165,10 @@ func TestRoomCommandsPreserveToiletAliasAndColorContracts(t *testing.T) {
 	require.ErrorIs(t, err, facilities.ErrDuplicateToiletRoom)
 
 	changedColor := "#445566"
-	_, err = module.UpdateRoom(ctx, facilities.UpdateRoom{ID: wc.ID, Name: wc.Name, Color: &changedColor})
+	_, err = module.UpdateRoom(ctx, facilities.UpdateRoom{ID: wc.ID, Name: wc.Name, Color: &changedColor, ExpectedVersion: facilities.RoomVersion(wc)})
 	require.ErrorIs(t, err, facilities.ErrSystemRoomProtected)
 
-	updated, err := module.UpdateRoom(ctx, facilities.UpdateRoom{ID: wc.ID, Name: wc.Name, Building: "Altbau"})
+	updated, err := module.UpdateRoom(ctx, facilities.UpdateRoom{ID: wc.ID, Name: wc.Name, Building: "Altbau", ExpectedVersion: facilities.RoomVersion(wc)})
 	require.NoError(t, err)
 	assert.Equal(t, &legacyColor, updated.Color)
 	assert.Equal(t, "Altbau", updated.Building)

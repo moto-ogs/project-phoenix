@@ -88,8 +88,8 @@ type UpdateRoom struct {
 	IsOpenRoom *bool
 	// ExpectedVersion is the RoomVersion of the room the editor read (ADR
 	// 0311); a room changed since is refused with readstate.ErrChanged, an
-	// empty version too. Nil only for a caller that saves no person's read.
-	ExpectedVersion *string
+	// empty version too.
+	ExpectedVersion string
 }
 
 // RoomVersion is the token of a stored room (ADR 0311): every write of a

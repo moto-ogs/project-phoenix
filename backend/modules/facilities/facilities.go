@@ -7,8 +7,6 @@ import (
 	"context"
 	"errors"
 	"time"
-
-	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 type roomNotFoundError struct{}
@@ -127,8 +125,6 @@ func ErrorCode(err error) string {
 		return "room_still_planned"
 	case errors.Is(err, ErrRoomArchived):
 		return "room_archived"
-	case errors.Is(err, readstate.ErrChanged):
-		return "changed_since_read"
 	default:
 		return "internal_error"
 	}

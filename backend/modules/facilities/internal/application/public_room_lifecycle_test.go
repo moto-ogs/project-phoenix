@@ -8,6 +8,7 @@ import (
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 
 	"github.com/moto-ogs/project-phoenix/modules/facilities"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -102,9 +103,10 @@ func TestUpdateRoomNormalizesAtPublicSeam(t *testing.T) {
 	module := newTestModule(engine)
 
 	updated, err := module.UpdateRoom(testpkg.TenantContext(42), facilities.UpdateRoom{
-		ID:    41,
-		Name:  "  Fuchsbau  ",
-		Color: &color,
+		ID:              41,
+		Name:            "  Fuchsbau  ",
+		Color:           &color,
+		ExpectedVersion: seamRoomVersion,
 	})
 
 	require.NoError(t, err)
@@ -114,6 +116,25 @@ func TestUpdateRoomNormalizesAtPublicSeam(t *testing.T) {
 	assert.Equal(t, "#AABBCC", *engine.updated.Color)
 	assert.Equal(t, "Fuchsbau", updated.Name)
 	assert.Equal(t, 1, engine.calls)
+}
+
+// Every update of a room carries the version its editor read (ADR 0311):
+// one without it, or with another, reaches no write.
+func TestUpdateRoomRefusesAnEditOfAnotherVersion(t *testing.T) {
+	t.Parallel()
+
+	for name, version := range map[string]string{"missing": "", "outdated": "2020-01-01T00:00:00Z"} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			engine := &lifecycleEngine{}
+			module := newTestModule(engine)
+
+			_, err := module.UpdateRoom(testpkg.TenantContext(42), facilities.UpdateRoom{ID: 41, Name: "Fuchsbau", ExpectedVersion: version})
+
+			require.ErrorIs(t, err, readstate.ErrChanged)
+			assert.Zero(t, engine.calls, "nothing is written")
+		})
+	}
 }
 
 func TestDeleteRoomValidatesIdentifierAtPublicSeam(t *testing.T) {

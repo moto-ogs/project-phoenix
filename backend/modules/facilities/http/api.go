@@ -16,7 +16,6 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation"
 	"github.com/moto-ogs/project-phoenix/modules/facilities"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 type Middleware = func(http.Handler) http.Handler
@@ -290,7 +289,7 @@ func (rs *Resource) updateRoom(w http.ResponseWriter, r *http.Request) {
 	room, err := rs.rooms.UpdateRoom(r.Context(), facilities.UpdateRoom{
 		ID: id, Name: req.Name, Building: req.Building, Floor: req.Floor,
 		Capacity: req.Capacity, Category: req.Category, Color: req.Color,
-		IsOpenRoom: req.IsOpenRoom, ExpectedVersion: &req.ExpectedVersion,
+		IsOpenRoom: req.IsOpenRoom, ExpectedVersion: req.ExpectedVersion,
 	})
 	if err != nil {
 		rs.failure(w, r, err)
@@ -420,7 +419,7 @@ func classifyFailure(err error) (FailureKind, string) {
 	case errors.Is(err, facilities.ErrDuplicateRoom), errors.Is(err, facilities.ErrDuplicateToiletRoom),
 		errors.Is(err, facilities.ErrRoomColorAlreadyInUse), errors.Is(err, facilities.ErrRoomInUse),
 		errors.Is(err, facilities.ErrRoomRequiredByOffering), errors.Is(err, facilities.ErrRoomStillPlanned),
-		errors.Is(err, facilities.ErrRoomArchived), errors.Is(err, readstate.ErrChanged):
+		errors.Is(err, facilities.ErrRoomArchived):
 		kind = FailureConflict
 	}
 	return kind, code

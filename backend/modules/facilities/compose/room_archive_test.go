@@ -68,7 +68,7 @@ func TestSelfMadeToiletRoomIsASystemRoom(t *testing.T) {
 	require.NoError(t, err)
 	require.False(t, room.IsSystem)
 
-	toilet, err := module.UpdateRoom(ctx, facilities.UpdateRoom{ID: room.ID, Name: facilities.WCRoomName})
+	toilet, err := module.UpdateRoom(ctx, facilities.UpdateRoom{ID: room.ID, Name: facilities.WCRoomName, ExpectedVersion: facilities.RoomVersion(room)})
 	require.NoError(t, err)
 	assert.True(t, toilet.IsSystem)
 	_, err = module.DeleteRoom(ctx, toilet.ID, "")

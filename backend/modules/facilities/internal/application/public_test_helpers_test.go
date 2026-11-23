@@ -39,6 +39,10 @@ func (s seamStore) Delete(ctx context.Context, id int64) (bool, domain.Operation
 func (s seamStore) Archive(_ context.Context, id int64) (facilities.Room, domain.OperationStats, error) {
 	return facilities.Room{ID: id}, domain.OperationStats{}, nil
 }
+
+// seamRoomVersion is the version of the room the seam store locks.
+var seamRoomVersion = facilities.RoomVersion(facilities.Room{})
+
 func (s seamStore) FindByID(ctx context.Context, id int64, lock string) (facilities.Room, bool, domain.OperationStats, error) {
 	if lock != "" {
 		return facilities.Room{ID: id, Name: "Igelraum"}, true, domain.OperationStats{}, nil

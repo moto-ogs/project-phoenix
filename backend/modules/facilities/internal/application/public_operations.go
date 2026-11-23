@@ -102,7 +102,7 @@ func (s *Service) updateLockedRoom(ctx context.Context, input facilities.UpdateR
 	if err := validateRoomUpdate(existing, &input); err != nil {
 		return facilities.Room{}, err
 	}
-	if err := checkRoomVersion(input.ExpectedVersion, existing); err != nil {
+	if err := readstate.Check(input.ExpectedVersion, facilities.RoomVersion(existing)); err != nil {
 		return facilities.Room{}, err
 	}
 	if err := s.ensureUpdateNameAvailable(ctx, existing, input, stats); err != nil {
@@ -113,14 +113,6 @@ func (s *Service) updateLockedRoom(ctx context.Context, input facilities.UpdateR
 	return updated, err
 }
 
-// checkRoomVersion compares the version an editor read with the stored
-// room; a caller that saves no person's read passes none.
-func checkRoomVersion(expected *string, existing facilities.Room) error {
-	if expected == nil {
-		return nil
-	}
-	return readstate.Check(*expected, facilities.RoomVersion(existing))
-}
 func (s *Service) FindRoom(ctx context.Context, id int64) (result facilities.Room, err error) {
 	if err := s.requireTenant(ctx, "find_room"); err != nil {
 		return facilities.Room{}, err
