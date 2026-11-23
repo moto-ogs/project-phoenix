@@ -14,7 +14,8 @@ import { ClassArrivalExceptionPanel } from "./class-arrival-exception-panel";
 import type { Student } from "~/lib/student-helpers";
 import { createLogger } from "~/lib/logger";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useFreshSWR, useSWRAuth } from "~/lib/swr";
+import { isChangedSinceRead } from "~/lib/api-error";
+import { useSWRAuth } from "~/lib/swr";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import type { ArrivalScheduleInput } from "~/lib/contract/students.generated";
 import {
@@ -82,6 +83,10 @@ function initialDraft(): DraftState {
   return draft;
 }
 
+function sameDraft(a: DraftState, b: DraftState): boolean {
+  return WEEKDAYS.every(({ value }) => (a[value] ?? "") === (b[value] ?? ""));
+}
+
 function isValidTime(value: string): boolean {
   if (value === "") return true;
   return /^\d{2}:\d{2}$/.test(value);
@@ -142,28 +147,37 @@ export function FilteredBulkArrivalModal({
   const schoolClass =
     filter.type === "school_class" ? filter.schoolClass : null;
 
-  const classTimes = useFreshSWR(
+  // Reads through the shared cache (ADR 0311): a save sends the version of
+  // the class times the draft was filled from, and the backend refuses it
+  // when a colleague changed the class since.
+  const classTimes = useSWRAuth(
     isOpen && schoolClass
       ? tenantStudentKeys.classArrivalTimes(schoolClass)
       : null,
     () => fetchClassArrivalTimes(schoolClass ?? ""),
   );
-  // A failed load of this opening fills nothing from an earlier answer.
   const classTimesData = classTimes.error ? undefined : classTimes.data;
   const classTimesLoad = useSwrResourceLoadError(
     [{ data: classTimesData, error: classTimes.error }],
     "die Klassenzeit",
     () => classTimes.mutate(),
   );
-  // The class the draft was filled from in this opening; null = not yet.
-  const [seededClass, setSeededClass] = useState<string | null>(null);
+  // What the draft was filled from: the class, the version of its stored
+  // times and the draft as filled. null = not yet in this opening.
+  const [seed, setSeed] = useState<{
+    readonly schoolClass: string;
+    readonly version: string;
+    readonly draft: DraftState;
+  } | null>(null);
   const classTimesError = classTimesLoad.failure !== undefined;
   const classTimesLoading =
-    schoolClass !== null && seededClass !== schoolClass && !classTimesError;
+    schoolClass !== null &&
+    seed?.schoolClass !== schoolClass &&
+    !classTimesError;
 
   useEffect(() => {
     if (!isOpen) {
-      setSeededClass(null);
+      setSeed(null);
       return;
     }
     setDraft(initialDraft());
@@ -171,24 +185,25 @@ export function FilteredBulkArrivalModal({
     setView("weekly");
   }, [isOpen, schoolClass]);
 
-  // Fill the draft once per opening, from an answer read in this opening,
-  // so later refreshes never replace what is being typed.
+  // Fill the draft from the stored class times. A newer answer (the
+  // background read after a cached one, or the reload after a refused save)
+  // fills it again only while nobody has typed, so a refresh never replaces
+  // what is being typed.
   useEffect(() => {
-    if (
-      !isOpen ||
-      !schoolClass ||
-      seededClass === schoolClass ||
-      !classTimesData
-    )
-      return;
+    if (!isOpen || !schoolClass || !classTimesData) return;
+    const version = classTimesData.version;
+    if (seed?.schoolClass === schoolClass) {
+      if (seed.version === version || !sameDraft(seed.draft, draft)) return;
+    }
     const next = initialDraft();
     for (const day of WEEKDAYS) {
-      next[day.value] = classTimesData.times?.[DAY_CODES[day.value] ?? ""] ?? "";
+      next[day.value] =
+        classTimesData.times?.[DAY_CODES[day.value] ?? ""] ?? "";
     }
     setDraft(next);
     setLastChanged(classTimesData.updated_at ?? null);
-    setSeededClass(schoolClass);
-  }, [isOpen, schoolClass, seededClass, classTimesData]);
+    setSeed({ schoolClass, version, draft: next });
+  }, [isOpen, schoolClass, seed, draft, classTimesData]);
 
   const targetTitle =
     filter.type === "school_class"
@@ -242,7 +257,7 @@ export function FilteredBulkArrivalModal({
 
     await save.run(async (op) => {
       try {
-        await bulkUpsertArrivalSchedules(filter, schedules);
+        await bulkUpsertArrivalSchedules(filter, schedules, seed?.version);
         toastSuccess(
           isClassTimetable
             ? `Der Unterrichtsschluss für ${targetTitle} ist gespeichert.`
@@ -259,6 +274,15 @@ export function FilteredBulkArrivalModal({
           error: err instanceof Error ? err.message : String(err),
         });
         if (!op.isCurrent()) return;
+        // Someone changed the class since the draft was filled: show the
+        // stored times again. Sending the same draft would be refused again,
+        // so the error offers no retry (ADR 0311).
+        if (isChangedSinceRead(err)) {
+          setSeed(null);
+          void classTimes.mutate();
+          await formErrors.show(err, { object: "die Klassenzeit" });
+          return;
+        }
         await formErrors.show(err, {
           object: isClassTimetable ? "die Klassenzeit" : "die Ankunftszeit",
           retry: () => void latestSubmitRef.current(),

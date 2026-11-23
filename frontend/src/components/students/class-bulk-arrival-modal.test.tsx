@@ -143,6 +143,7 @@ describe("FilteredBulkArrivalModal", () => {
     mockFetchClassArrivalTimes.mockResolvedValue({
       school_class: "3a",
       times: {},
+      version: "v-empty",
     });
   });
 
@@ -333,6 +334,7 @@ describe("FilteredBulkArrivalModal", () => {
         { weekday: 1, expected_arrival: "08:00" },
         { weekday: 3, expected_arrival: "09:30" },
       ],
+      "v-empty",
     );
     expect(onSuccess).toHaveBeenCalled();
     expect(onClose).toHaveBeenCalled();
@@ -375,6 +377,7 @@ describe("FilteredBulkArrivalModal", () => {
       expect(mockBulkUpsert).toHaveBeenCalledWith(
         { type: "school_class", schoolClass: "3a" },
         [{ weekday: 2, expected_arrival: "13:20" }],
+        "v-empty",
       ),
     );
   });
@@ -424,6 +427,7 @@ describe("FilteredBulkArrivalModal", () => {
       expect(mockBulkUpsert).toHaveBeenCalledWith(
         { type: "group", groupId: "17" },
         [{ weekday: 2, expected_arrival: "09:15" }],
+        undefined,
       ),
     );
   });
@@ -456,6 +460,66 @@ describe("FilteredBulkArrivalModal", () => {
     );
     expect(alert).not.toHaveTextContent("Save failed");
     expect(mockToastError).not.toHaveBeenCalled();
+  });
+
+  // ADR 0311: the save goes out with the version the draft was filled from.
+  // A colleague's change since is refused; the dialog then shows the stored
+  // times and offers no retry of the refused draft.
+  it("shows the stored times again when the class changed since it was read", async () => {
+    mockFetchClassArrivalTimes
+      .mockResolvedValueOnce({
+        school_class: "3a",
+        times: { mon: "11:45" },
+        version: "v1",
+      })
+      .mockResolvedValue({
+        school_class: "3a",
+        times: { mon: "12:30", tue: "13:00" },
+        version: "v2",
+      });
+    mockBulkUpsert.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+
+    render(
+      <FilteredBulkArrivalModal
+        isOpen={true}
+        onClose={vi.fn()}
+        filter={{ type: "school_class", schoolClass: "3a" }}
+        filterLabel="3a"
+        studentsInFilter={[makeStudent("1")]}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Montag")).toHaveValue("11:45"),
+    );
+    fireEvent.change(screen.getByLabelText("Mittwoch"), {
+      target: { value: "09:30" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() =>
+      expect(mockBulkUpsert).toHaveBeenCalledWith(
+        { type: "school_class", schoolClass: "3a" },
+        [
+          { weekday: 1, expected_arrival: "11:45" },
+          { weekday: 3, expected_arrival: "09:30" },
+        ],
+        "v1",
+      ),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Du siehst jetzt den neuen Stand.",
+    );
+    expect(
+      screen.queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByLabelText("Montag")).toHaveValue("12:30"),
+    );
+    expect(screen.getByLabelText("Dienstag")).toHaveValue("13:00");
+    expect(screen.getByLabelText("Mittwoch")).toHaveValue("");
   });
 
   it("cancel button calls onClose", () => {

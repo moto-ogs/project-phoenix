@@ -1012,17 +1012,30 @@ func TestFixedSeeder_SeedClassArrivalTimes(t *testing.T) {
 		} `json:"schedules"`
 	}
 	srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
+		if r.Method == "GET" {
+			require.Contains(t, r.URL.Path, "/api/students/class-arrival-times/")
+			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": map[string]string{"version": "read-version"}})
+			return
+		}
 		require.Equal(t, "POST", r.Method)
 		require.Equal(t, "/api/students/arrival-schedules/bulk", r.URL.Path)
 		request := struct {
-			SchoolClass string `json:"school_class"`
-			Schedules   []struct {
+			SchoolClass     string `json:"school_class"`
+			ExpectedVersion string `json:"expected_version"`
+			Schedules       []struct {
 				Weekday int    `json:"weekday"`
 				Time    string `json:"expected_arrival"`
 			} `json:"schedules"`
 		}{}
 		require.NoError(t, json.NewDecoder(r.Body).Decode(&request))
-		requests = append(requests, request)
+		require.Equal(t, "read-version", request.ExpectedVersion)
+		requests = append(requests, struct {
+			SchoolClass string `json:"school_class"`
+			Schedules   []struct {
+				Weekday int    `json:"weekday"`
+				Time    string `json:"expected_arrival"`
+			} `json:"schedules"`
+		}{request.SchoolClass, request.Schedules})
 		_ = json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 	})
 	defer srv.Close()

@@ -937,14 +937,17 @@ describe("PersonalInfoReadOnly", () => {
       .mockRejectedValueOnce(
         new ApiError("down", 503, { code: "general.unavailable" }),
       )
-      .mockResolvedValueOnce([
-        {
-          companion_student_id: "9",
-          first_name: "Lina",
-          last_name: "Lustig",
-          weekdays: ["mon"],
-        },
-      ]);
+      .mockResolvedValueOnce({
+        companions: [
+          {
+            companion_student_id: "9",
+            first_name: "Lina",
+            last_name: "Lustig",
+            weekdays: ["mon"],
+          },
+        ],
+        fingerprint: "f",
+      });
 
     render(<PersonalInfoReadOnly student={mockStudent} />);
 

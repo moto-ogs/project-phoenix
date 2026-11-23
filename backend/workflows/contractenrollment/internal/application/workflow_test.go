@@ -265,7 +265,7 @@ func TestPreviewHoldsAnApplicationThatIsNotWhatThePlanProved(t *testing.T) {
 	t.Parallel()
 	f := newFakeOwners()
 	f.answer[contractBen] = enrollment.ContractEnrollmentResult{Status: enrollment.ContractEnrollmentChanged}
-	f.answer[contractMia] = enrollment.ContractEnrollmentResult{Status: enrollment.ContractEnrollmentRefused, Reason: enrollment.ContractEnrollmentRosterBound}
+	f.answer[contractMia] = enrollment.ContractEnrollmentResult{Status: enrollment.ContractEnrollmentRefused, Reason: enrollment.ContractEnrollmentWindowTooShort}
 	preview, err := f.workflow(t).Preview(context.Background(), fakeActor, fakeSchool)
 	require.NoError(t, err)
 	ben := rowOf(t, preview.Rows, contractBen)
@@ -273,7 +273,7 @@ func TestPreviewHoldsAnApplicationThatIsNotWhatThePlanProved(t *testing.T) {
 	assert.Equal(t, contractenrollment.ReasonChanged, ben.Reason)
 	mia := rowOf(t, preview.Rows, contractMia)
 	assert.Equal(t, contractenrollment.RowHeld, mia.Status)
-	assert.Equal(t, enrollment.ContractEnrollmentRosterBound, mia.Reason, "the refusal of the school's enrollment is the reason of the row")
+	assert.Equal(t, enrollment.ContractEnrollmentWindowTooShort, mia.Reason, "the refusal of the school's enrollment is the reason of the row")
 }
 
 func TestRunEnrollsInTheSchoolAndBindsWhatTheEnrollmentAnswered(t *testing.T) {
@@ -387,7 +387,7 @@ func TestRunNeverEnrollsARowThePreviewHeldBack(t *testing.T) {
 func TestRunWithoutAReadyPreviewRowWritesNothing(t *testing.T) {
 	t.Parallel()
 	f := newFakeOwners()
-	refused := enrollment.ContractEnrollmentResult{Status: enrollment.ContractEnrollmentRefused, Reason: enrollment.ContractEnrollmentRosterBound}
+	refused := enrollment.ContractEnrollmentResult{Status: enrollment.ContractEnrollmentRefused, Reason: enrollment.ContractEnrollmentWindowTooShort}
 	f.answer[contractMia], f.answer[contractBen] = refused, refused
 	workflow := f.workflow(t)
 	preview, err := workflow.Preview(context.Background(), fakeActor, fakeSchool)

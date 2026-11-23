@@ -11865,14 +11865,6 @@
       "target_owner": "timetable-activities"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.rosterBatch.SaveRosterChanges",
-      "binding_digest": "5c79cd997366b07a6ca7e9756f33a0b6",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.BookingRosters.SaveRosterChanges",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/timetable.SourcedRosterCommands.SaveSourcedRosterChanges",
-      "target_owner": "timetable-activities"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.bookingRosters.SaveRosterChanges",
       "binding_digest": "5c79cd997366b07a6ca7e9756f33a0b6",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.BookingRosters.SaveRosterChanges",
@@ -11978,7 +11970,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.bookingStudents.Student",
-      "binding_digest": "b370082adf7000e8bb14346ec572fbce",
+      "binding_digest": "0a76a8ca0dadb2e9c9f27be7c3cf037c",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.BookingStudents.Student",
       "source_owner": "care-plan",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ReadEnrollmentStudent",
@@ -11986,7 +11978,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.bookingStudents.Student",
-      "binding_digest": "163693cb7f27c9e77733f1df79da3f7f",
+      "binding_digest": "8cd23ff6dca2edc1cc3a73a3d8d3b3dd",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.BookingStudents.Student",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/enrollment.SchoolClassGradeLevel",
@@ -11994,7 +11986,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.bookingStudents.Student",
-      "binding_digest": "2f17ea2687314113d1149b7878c7c828",
+      "binding_digest": "aec818143e9142a52fd91f4cfac6ec46",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.BookingStudents.Student",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ReadEnrollmentStudent",
@@ -12002,7 +11994,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.bookingStudents.Student",
-      "binding_digest": "64146a86c59358d054207f969a09a44d",
+      "binding_digest": "873f3e01ee95ccc3b7787fe42d28863b",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.BookingStudents.Student",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ReadEnrollmentStudent",

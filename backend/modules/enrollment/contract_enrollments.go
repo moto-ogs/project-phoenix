@@ -82,15 +82,15 @@ import (
 //     plan books a contract and a phase that began, and a row that starts
 //     later is refused (booking_window). An undated correction of the
 //     office reads the bookings on today's day, so it finds them.
-//   - It ends no roster before the phase and writes no care past the child
-//     record's care end. A booking of an offering that names its roster
-//     through the direct link (ActivityGroupID) and ends before the service
-//     of the phase is refused (roster_bound): Care Plan writes such a row
-//     to the end of the phase. So is a child whose recorded care end lies
-//     before the end of its bookings (care_ends_earlier), and a booking
-//     whose window holds none of one of its weekdays (window_too_short),
-//     which Care Plan's roster check would answer with an error for the
-//     whole call. So is a booking of an offering the school deactivated
+//   - It writes no care past the child record's care end. A child whose
+//     recorded care end lies before the end of its bookings is refused
+//     (care_ends_earlier). So is a booking whose window holds none of one
+//     of its weekdays (window_too_short), which Care Plan's roster check
+//     would answer with an error for the whole call. A booking that ends
+//     before the service of the phase is enrolled, and its roster row ends
+//     with it, whether its offering names the roster through the direct
+//     link (ActivityGroupID) or a roster names it as its source (#7908).
+//     Refused too is a booking of an offering the school deactivated
 //     (offering_inactive): a roster with several sources leaves an inactive
 //     one out, and the child would be approved on no roster.
 //   - A school that derives no care from bookings
@@ -167,14 +167,6 @@ const (
 	// from bookings (enrollment.care_offerings_enabled off): an approval
 	// there writes no roster, so no child is enrolled.
 	ContractEnrollmentCareOfferingsOff = "care_offerings_off"
-	// ContractEnrollmentRosterBound is a child with a booking that ends
-	// before the service of the phase on an offering that names its roster
-	// through the direct link (ActivityGroupID). Care Plan writes the roster
-	// row of such an offering to the end of the phase, whatever the booking
-	// says, so the child would stay on the roster and its occurrences after
-	// the booking ended. Two such bookings that end on different days on one
-	// roster are this case too. Known limitation of Care Plan (ADR 0309).
-	ContractEnrollmentRosterBound = "roster_bound"
 	// ContractEnrollmentCareEndsEarlier is a child record whose recorded
 	// care end (its last care day) lies before the last day of the bookings:
 	// the bookings would promise care the child record has ended.

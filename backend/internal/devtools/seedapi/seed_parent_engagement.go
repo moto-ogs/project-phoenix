@@ -336,8 +336,14 @@ func seedParentPhotoConsentHistory(rt *Runtime, auth AuthRef, studentID int64) e
 	if _, err := rt.Client.PutWithAuth(rt.TenantAuth, photosSetting, map[string]any{"value": true}); err != nil {
 		return fmt.Errorf("switch child photos on for the photo consent: %w", err)
 	}
+	version, err := readDataVersion(func(path string) ([]byte, error) {
+		return rt.Client.GetWithAuth(rt.TenantAuth, path)
+	}, fmt.Sprintf("/api/students/%d", studentID))
+	if err != nil {
+		return err
+	}
 	if _, err := rt.Client.PutWithAuth(rt.TenantAuth, fmt.Sprintf("/api/students/%d", studentID), map[string]any{
-		"photo_consent_given": true,
+		"photo_consent_given": true, "expected_version": version,
 	}); err != nil {
 		return fmt.Errorf("seed granted photo consent: %w", err)
 	}

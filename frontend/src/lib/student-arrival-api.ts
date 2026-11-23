@@ -238,13 +238,22 @@ export async function updateArrivalSchedules(
 
 const POSITIVE_ID = /^[1-9]\d{0,18}$/;
 
+/**
+ * Writes the weekly times of a class, a group or a child list. A class save
+ * sends the version of the class times the form was filled from
+ * (`expectedVersion`, ADR 0311): the form sends every filled weekday back, so
+ * the backend refuses it with `general.changed_since_read` when a colleague
+ * changed the class since.
+ */
 export async function bulkUpsertArrivalSchedules(
   filter: BulkArrivalFilter,
   schedules: ArrivalScheduleInput[],
+  expectedVersion?: string,
 ): Promise<BulkUpsertResult> {
   const body: BulkUpsertArrivalScheduleRequest = { schedules };
   if (filter.type === "school_class") {
     body.school_class = filter.schoolClass;
+    body.expected_version = expectedVersion;
   } else if (filter.type === "group") {
     if (!POSITIVE_ID.test(filter.groupId)) {
       throw new ApiError("Ungültige Gruppen-ID", 400, {

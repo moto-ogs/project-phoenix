@@ -1,7 +1,6 @@
 package departure
 
 import (
-	"sort"
 	"strconv"
 	"strings"
 )
@@ -116,39 +115,4 @@ func CompanionDaysFromLinks(links []CompanionLink) map[string]bool {
 		}
 	}
 	return days
-}
-
-// CompanionLinksFingerprint is an order-independent fingerprint of a companion
-// list: the state a client read, in one comparable string.
-//
-// It exists because the submitted list REPLACES the stored one. Two staff
-// members editing the same child from the same snapshot both send a complete
-// list, and the row locks only decide who writes first — the second write would
-// otherwise delete the links the first one just committed, with nothing in the
-// data to notice it. The client echoes the fingerprint of the list it loaded
-// and the write path compares it against the stored links while holding the
-// subject's row lock (see validateCompanionUpdate).
-//
-// The format is MIRRORED by companionsFingerprint() in
-// frontend/src/lib/student-companion-api.ts, which the forms already use for
-// their dirty check — "<id>:<mon,tue,…>" per link, links sorted as strings and
-// joined with "|". Both sides build it from the same wire data, so the strings
-// match byte for byte; change one and you must change the other.
-func CompanionLinksFingerprint(links []CompanionLink) string {
-	entries := make([]string, 0, len(links))
-	for _, link := range links {
-		requested := make(map[string]bool, len(link.Weekdays))
-		for _, day := range link.Weekdays {
-			requested[day] = true
-		}
-		days := make([]string, 0, len(PickupDayOrder))
-		for _, day := range PickupDayOrder {
-			if requested[day] {
-				days = append(days, day)
-			}
-		}
-		entries = append(entries, strconv.FormatInt(link.CompanionStudentID, 10)+":"+strings.Join(days, ","))
-	}
-	sort.Strings(entries)
-	return strings.Join(entries, "|")
 }
