@@ -7,14 +7,12 @@
   "lib/error-log.ts shape ErrorLogFields",
   "lib/import-batch-result.ts shape ImportBatchResult",
   "lib/messaging-status.ts shape ChatMessage",
-  "lib/operator/operator-invitation-helpers.ts shape InvitationValidationBody",
   "lib/parent-api.ts alias GroupThreadChild",
   "lib/parent-api.ts shape GroupThreadSummary",
   "lib/parent-api.ts shape ThreadSummary",
   "lib/parent-api.ts shape ThreadView",
   "lib/sign-in-answer.ts shape WireSignInAnswer",
   "lib/sse-types.ts shape SSEEventData",
-  "lib/staff-preview-api.ts shape StaffPreviewStartBody",
   "server/auth/jwt-payload.ts shape JwtPayload",
   "server/auth/token-refresh.ts shape TokenPair"
 ]
