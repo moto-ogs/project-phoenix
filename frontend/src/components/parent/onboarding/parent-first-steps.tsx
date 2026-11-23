@@ -48,8 +48,9 @@ const EMPTY_STATE: ParentFirstStepsState = {
   finished: false,
 };
 
-const firstOpenKey = (accountId: string) =>
-  `parent-first-steps-opened:${accountId}`;
+function firstOpenKey(accountId: string): string {
+  return `parent-first-steps-opened:${accountId}`;
+}
 
 /** Ob sich die Liste in dieser Sitzung schon von selbst gezeigt hat. */
 function openedThisSession(accountId: string): boolean {

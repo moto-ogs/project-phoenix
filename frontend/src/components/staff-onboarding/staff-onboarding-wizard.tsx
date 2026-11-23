@@ -74,8 +74,9 @@ type RunAction = (
 type View = "beacon" | "checklist";
 
 /** Einmal pro Anmeldung öffnet sich die Checkliste von selbst. */
-const firstOpenKey = (tenantSlug: string, accountID: string) =>
-  `staff-onboarding-opened:${tenantSlug}:${accountID}`;
+function firstOpenKey(tenantSlug: string, accountID: string): string {
+  return `staff-onboarding-opened:${tenantSlug}:${accountID}`;
+}
 
 /** Ob sich die Checkliste in dieser Sitzung schon von selbst gezeigt hat. */
 function openedThisSession(tenantSlug: string, accountID: string): boolean {

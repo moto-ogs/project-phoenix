@@ -60,8 +60,9 @@ type RunAction = (
 type View = "beacon" | "checklist";
 
 /** Einmal pro Anmeldung und Schule öffnet sich der Assistent von selbst. */
-const firstOpenKey = (tenantSlug: string, accountID: string) =>
-  `school-setup-opened:${tenantSlug}:${accountID}`;
+function firstOpenKey(tenantSlug: string, accountID: string): string {
+  return `school-setup-opened:${tenantSlug}:${accountID}`;
+}
 
 /** Ob sich die Checkliste in dieser Sitzung schon von selbst gezeigt hat. */
 function openedThisSession(tenantSlug: string, accountID: string): boolean {
