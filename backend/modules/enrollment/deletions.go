@@ -51,6 +51,9 @@ type DeletionImpact struct {
 	PreservedParentAccounts       int
 	UnlinkedGuardianProfiles      int
 	ParentAccountsWithoutStudents int
+	// Fingerprint is the read-state token of the preview (ADR 0311); a
+	// deletion sends it back as the impact it confirms.
+	Fingerprint string
 }
 
 // EnrollmentDeletions previews and deletes an enrollment request or one of its
@@ -61,8 +64,11 @@ type EnrollmentDeletions interface {
 	PreviewChild(ctx context.Context, requestID, childID int64) (*DeletionImpact, error)
 	// RequestMailOutcomes reports what became of the mails to the family (#5934).
 	RequestMailOutcomes(ctx context.Context, requestID int64) ([]RequestMailOutcome, error)
-	DeleteRequest(ctx context.Context, requestID, actorAccountID int64, reason string) (*DeletionImpact, error)
-	DeleteChild(ctx context.Context, requestID, childID, actorAccountID int64, reason string) (*DeletionImpact, error)
+	// DeleteRequest and DeleteChild refuse with readstate.ErrChanged unless
+	// expectedFingerprint is the Fingerprint of the impact recomputed under
+	// the deletion's locks.
+	DeleteRequest(ctx context.Context, requestID, actorAccountID int64, reason, expectedFingerprint string) (*DeletionImpact, error)
+	DeleteChild(ctx context.Context, requestID, childID, actorAccountID int64, reason, expectedFingerprint string) (*DeletionImpact, error)
 }
 
 // RejectedEnrollmentCleanupResult reports one retention run.

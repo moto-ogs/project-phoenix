@@ -89,7 +89,7 @@ func approveDirectLinkChild(t *testing.T, env *decisionTestEnv, firstName string
 func approveDirectLinkChildIn(ctx context.Context, t *testing.T, env *decisionTestEnv, firstName string, offeringIDs []int64, ends ...int64) (studentID, childID int64) {
 	t.Helper()
 	grade := int16(2)
-	submitted, err := testpkg.TenantQuery1(t, ctx, env.db, env.requestSvc.Submit, enrollmentTest.SubmitRequest{
+	submitted, err := testpkg.TenantQuery1(t, ctx, env.db, submitShown(env.requestSvc), enrollmentTest.SubmitRequest{
 		TenantID: testpkg.Tenant(t), PhaseID: env.sourcePhase.ID,
 		GuardianFirstName: "Eltern", GuardianLastName: "Liste", GuardianEmail: firstName + "-liste@example.com",
 		ConsentFlags: enrollmentTest.FormValuesOf(map[string]any{"agb": true, "data_processing": true, "email_contact": true, "photo": true}),
@@ -173,27 +173,22 @@ func TestDecide_DirectLinkEndingEarlyKeepsTheChildOnTheRosterOfItsSource(t *test
 	resynced := loadTemplateEnrollments(t, env, roster.ID)
 	assert.Equal(t, rosterSpansByID(approved), rosterSpansByID(resynced), "the resync leaves the rows of the approval as they are")
 
-	// A dated change books both offerings to the end of the phase. The rows
-	// the child is on that day stay and run on to the end of the new
-	// bookings; the row that began with the end of the direct link is gone.
+	// A dated change that keeps both offerings keeps the end of A (#7928):
+	// the roster shows the same spans as after the approval. Tuesday and
+	// Monday run with A to its end, then both with the source to the end of
+	// the phase; the row that begins after the switch is written again.
 	var requestID int64
 	require.NoError(t, env.db.NewRaw(`SELECT request_id FROM enrollment.request_children WHERE tenant_id = ? AND id = ?`,
 		testpkg.Tenant(t), childID).Scan(ctx, &requestID))
 	switchDate := calendar.NewDate(2026, 11, 2)
 	_, err := testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentTest.UpdateChildOfferingsInput{
-		RequestID: requestID, ChildID: childID, ActorAccountID: env.creatorID, ActorRole: "admin", Reason: "Beide bis Juli",
+		RequestID: requestID, ChildID: childID, ActorAccountID: env.creatorID, ActorRole: "admin", Reason: "Wochentage bestätigt",
 		EffectiveFrom: &switchDate,
 		Offerings:     []enrollmentTest.OfferingAdjustmentSelection{{OfferingID: direct.ID}, {OfferingID: source.ID}},
 	})
 	require.NoError(t, err)
-	kept := map[int64]rosterSpan{}
-	for _, row := range approved {
-		if row.ValidFrom == start {
-			kept[row.ID] = rosterSpan{Weekdays: row.SelectedWeekdays, From: start, Until: end}
-		}
-	}
-	require.Len(t, kept, 2)
-	assert.Equal(t, kept, rosterSpansByID(loadTemplateEnrollments(t, env, roster.ID)), "each weekday keeps its row and runs to the end of its booking")
+	assert.ElementsMatch(t, rosterSpans(approved), rosterSpans(loadTemplateEnrollments(t, env, roster.ID)),
+		"A keeps its end, and the roster follows both bookings as before")
 }
 
 // Two offerings name one roster through the direct link. Bookings that end

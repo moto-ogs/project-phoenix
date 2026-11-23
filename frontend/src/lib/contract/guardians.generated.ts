@@ -244,6 +244,7 @@ export interface bulkInviteRequest {
   student_ids?: string[] | null;
   resend_open?: boolean;
   dry_run?: boolean;
+  notify_active?: boolean;
 }
 
 /** Go: users.bulkInviteProblemResponse */
@@ -270,6 +271,9 @@ export interface bulkInviteResponse {
   skipped_active: number;
   skipped_open: number;
   skipped_restricted: number;
+  notified: number;
+  already_notified: number;
+  without_visible_care: number;
   problems: bulkInviteProblemResponse[] | null;
 }
 
@@ -281,6 +285,9 @@ export const bulkInviteResponseSchema: z.ZodType<bulkInviteResponse, unknown> = 
   skipped_active: safeInt,
   skipped_open: safeInt,
   skipped_restricted: safeInt,
+  notified: safeInt,
+  already_notified: safeInt,
+  without_visible_care: safeInt,
   problems: nullable(arr(bulkInviteProblemResponseSchema)),
 });
 

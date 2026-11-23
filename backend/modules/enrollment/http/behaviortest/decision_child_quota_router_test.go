@@ -31,6 +31,7 @@ import (
 	identityaccessCompose "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose"
 	transactionFailures "github.com/moto-ogs/project-phoenix/modules/transactionruntime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -182,6 +183,10 @@ type manualEnrollmentRouter struct {
 	router   http.Handler
 	phase    *capability.Phase
 	reviewer *testpkg.AccountFixture
+	requests enrollmentAPI.RequestService
+	// terms is the terms_fingerprint the office sends; empty reads it from
+	// the manual bootstrap, as the form does.
+	terms string
 }
 
 func setupManualEnrollmentRouter(t *testing.T) manualEnrollmentRouter {
@@ -241,7 +246,7 @@ func setupManualEnrollmentRouter(t *testing.T) manualEnrollmentRouter {
 		nativeUploads.UploadFiles{}, enrollmentAPI.DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation}, func() time.Time { return requestTestToday.BerlinMidnight().Add(10 * time.Hour) })
 	router := testpkg.TenantRuntimeMiddleware(t, db)(resource.Router(api.TenantSessionChain))
 
-	return manualEnrollmentRouter{db: db, ctx: ctx, router: router, phase: phase, reviewer: reviewer}
+	return manualEnrollmentRouter{db: db, ctx: ctx, router: router, phase: phase, reviewer: reviewer, requests: requests}
 }
 
 // postManualEnrollment posts one manual enrollment of the child.
@@ -251,9 +256,21 @@ func (m manualEnrollmentRouter) postManualEnrollment(t *testing.T, child enrollm
 }
 
 // postManualEnrollmentChoosing posts one manual enrollment of the child with
-// the office's answer to an already enrolled child (#6148).
+// the office's answer to an already enrolled child (#6148), from the form
+// of the phase's current version.
 func (m manualEnrollmentRouter) postManualEnrollmentChoosing(t *testing.T, child enrollmentAPI.SubmitChildRequest, existingStudentID string, createNewStudent bool, shownStudentIDs ...string) *httptest.ResponseRecorder {
 	t.Helper()
+	return m.postManualEnrollmentForm(t, *m.phase.FormSchemaID, child, existingStudentID, createNewStudent, shownStudentIDs...)
+}
+
+// postManualEnrollmentForm posts one manual enrollment from the form of
+// version formSchemaID.
+func (m manualEnrollmentRouter) postManualEnrollmentForm(t *testing.T, formSchemaID int64, child enrollmentAPI.SubmitChildRequest, existingStudentID string, createNewStudent bool, shownStudentIDs ...string) *httptest.ResponseRecorder {
+	t.Helper()
+	terms := m.terms
+	if terms == "" {
+		terms = phaseTerms(t, m.requests, m.phase.ID)
+	}
 	payload, err := json.Marshal(enrollmentAPI.AdminManualApprovedEnrollmentRequest{
 		ExistingStudentID:       existingStudentID,
 		CreateNewStudent:        createNewStudent,
@@ -262,13 +279,17 @@ func (m manualEnrollmentRouter) postManualEnrollmentChoosing(t *testing.T, child
 			GuardianFirstName: "Anna", GuardianLastName: "Beispiel",
 			GuardianEmail: fmt.Sprintf("manuell-%d@example.test", testpkg.Tenant(t)),
 			Children:      []enrollmentAPI.SubmitChildRequest{child},
+			FormSchemaID:  ident.ID(formSchemaID),
+
+			ExpectedTermsFingerprint: terms,
 		},
 		ExternalConsentConfirmed: true,
 		Reason:                   "Anmeldung auf Papier",
 	})
 	require.NoError(t, err)
+	auth := "Bearer " + mintOfferingGuardReviewerToken(t, m.reviewer.ID, m.reviewer.Email)
 	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/phases/%d/manual-approved-enrollments", m.phase.ID), bytes.NewReader(payload))
-	req.Header.Set("Authorization", "Bearer "+mintOfferingGuardReviewerToken(t, m.reviewer.ID, m.reviewer.Email))
+	req.Header.Set("Authorization", auth)
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	m.router.ServeHTTP(rec, req)

@@ -117,3 +117,109 @@ func TestBulkInviteToStudents_DeadLinksGetANewInvitation(t *testing.T) {
 		})
 	}
 }
+
+// The parent step (#7760, ADR 0309 section 5) against the real tables: a
+// guardian with an active account who may see a child in running care gets
+// one care notice through the outbox, at the login address of the account
+// even when the contact address on the profile differs, the access row
+// remembers it, and a second run mails nobody again. A guardian whose
+// relationship does not grant parent_portal.access gets nothing, and no
+// notice names a child without an approved care period, with an approved
+// phase but no booking, or whose booking ended yesterday. Without the option
+// nothing is mailed.
+func TestBulkInviteToStudents_NotifiesAnAccountHolderOnce(t *testing.T) {
+	t.Parallel()
+
+	outbox := api.NewCapturingOutbox()
+	env := setupGuardianInvitationTest(t, func(_ *bun.DB, cfg *api.GuardianInvitationTestConfig) { cfg.Outbox = outbox })
+	chain := testpkg.CreateTestParentGuardianChain(t, env.db)
+	withoutAccess := testpkg.CreateTestParentGuardianChain(t, env.db)
+	withoutCare := testpkg.CreateTestParentGuardianChain(t, env.db)
+	withoutBooking := testpkg.CreateTestParentGuardianChain(t, env.db)
+	bookingEnded := testpkg.CreateTestParentGuardianChain(t, env.db)
+	ctx := testpkg.Ctx(t)
+	phase := testpkg.CreateTestEnrollmentPhase(t, env.db)
+	offering := testpkg.CreateTestCareOffering(t, env.db, phase.ID, "Betreuung")
+	// The approved child of each family; the booking decides whether the
+	// parents portal lists care today. valid_until is exclusive: a booking
+	// ending today ended yesterday.
+	for _, family := range []struct {
+		chain   testpkg.ParentChain
+		booking string
+	}{
+		{chain, `(NULL, NULL)`},
+		{withoutAccess, `(NULL, NULL)`},
+		{withoutBooking, ``},
+		{bookingEnded, `(CURRENT_DATE - 30, CURRENT_DATE)`},
+	} {
+		request := testpkg.CreateTestEnrollmentRequestAwaitingGuardian(t, env.db, phase.ID, family.chain.Email, fmt.Sprintf("care-notice-%d", testpkg.UniqueSuffix()))
+		var requestChildID int64
+		require.NoError(t, env.db.NewRaw(`INSERT INTO enrollment.request_children (tenant_id, request_id, first_name, last_name, date_of_birth, status, created_student_id)
+			VALUES (?, ?, 'Felix', 'Schneider', '2018-04-15', 'approved', ?) RETURNING id`, family.chain.TenantID, request.ID, family.chain.StudentID).Scan(ctx, &requestChildID))
+		if family.booking == "" {
+			continue
+		}
+		_, err := env.db.NewRaw(`INSERT INTO enrollment.care_offering_bookings (tenant_id, request_child_id, care_offering_id, valid_from, valid_until)
+			SELECT ?, ?, ?, b.f::date, b.u::date FROM (VALUES `+family.booking+`) AS b(f, u)`,
+			family.chain.TenantID, requestChildID, offering.ID).Exec(ctx)
+		require.NoError(t, err)
+	}
+	_, err := env.db.NewRaw(`UPDATE auth.guardian_student_access a SET permissions = '{"parent_portal.access": false}'::jsonb
+		FROM users.student_guardian_relationships r
+		WHERE r.id = a.relationship_id AND r.guardian_profile_id = ?`, withoutAccess.GuardianProfileID).Exec(ctx)
+	require.NoError(t, err)
+	_, err = env.db.NewRaw(`UPDATE users.guardian_profiles SET email = 'tippfehler@example.test' WHERE id = ?`, chain.GuardianProfileID).Exec(ctx)
+	require.NoError(t, err)
+	req := identityaccess.BulkInviteRequest{
+		StudentIDs: []int64{chain.StudentID, withoutAccess.StudentID, withoutCare.StudentID, withoutBooking.StudentID, bookingEnded.StudentID},
+		CreatedBy:  env.inviterAccountID(t),
+	}
+
+	plain, err := env.service.BulkInviteToStudents(ctx, req)
+	require.NoError(t, err)
+	assert.Equal(t, 5, plain.SkippedActive)
+	assert.Zero(t, plain.Notified)
+	assert.Empty(t, outbox.Requests(), "without the option an account holder gets nothing")
+
+	req.NotifyActive = true
+	preview := req
+	preview.DryRun = true
+	counted, err := env.service.BulkInviteToStudents(ctx, preview)
+	require.NoError(t, err)
+	assert.Equal(t, 1, counted.Notified)
+	assert.Equal(t, 3, counted.WithoutVisibleCare, "no approved period, an approved phase without booking, a booking that ended yesterday")
+	assert.Empty(t, outbox.Requests(), "the preview mails nobody")
+
+	result, err := env.service.BulkInviteToStudents(ctx, req)
+	require.NoError(t, err)
+	assert.Equal(t, 1, result.Notified)
+	assert.Equal(t, 4, result.SkippedActive, "no parent_portal.access, no booked care today: only counted")
+	assert.Equal(t, 3, result.WithoutVisibleCare, "the result names the children left out too")
+	require.Len(t, outbox.Requests(), 1)
+	mailed := outbox.Requests()[0]
+	assert.Equal(t, identityaccess.MailKindGuardianCareVisible, mailed.Kind)
+	assert.Equal(t, chain.GuardianProfileID, mailed.RelatedEntityID)
+	assert.Equal(t, []string{"Felix"}, mailed.Payload["child_first_names"])
+	assert.Equal(t, chain.Email, mailed.Payload["recipient_email"], "the account's login address, not the edited contact address")
+	assert.ElementsMatch(t, []string{"recipient_email", "first_name", "last_name", "child_first_names", "school_name", "portal_url", "logo_url", "locale"},
+		mapKeys(mailed.Payload), "the payload carries no account, health or contract data")
+	var stamped []int64
+	require.NoError(t, env.db.NewRaw(`SELECT r.student_id FROM auth.guardian_student_access a
+		JOIN users.student_guardian_relationships r ON r.id = a.relationship_id
+		WHERE r.student_id IN (?) AND a.care_notice_sent_at IS NOT NULL`, bun.List(req.StudentIDs)).Scan(ctx, &stamped))
+	assert.Equal(t, []int64{chain.StudentID}, stamped, "only the mailed child is remembered")
+
+	again, err := env.service.BulkInviteToStudents(ctx, req)
+	require.NoError(t, err)
+	assert.Zero(t, again.Notified)
+	assert.Equal(t, 1, again.AlreadyNotified)
+	assert.Len(t, outbox.Requests(), 1, "a second run mails nobody again")
+}
+
+func mapKeys(values map[string]any) []string {
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	return keys
+}

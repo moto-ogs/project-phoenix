@@ -39,10 +39,15 @@ type AdminEnrollmentDeletionImpact struct {
 	PreservedParentAccounts       int                           `json:"preserved_parent_accounts"`
 	UnlinkedGuardianProfiles      int                           `json:"unlinked_guardian_profiles"`
 	ParentAccountsWithoutStudents int                           `json:"parent_accounts_without_students"`
+	// Fingerprint is the token of this preview; the deletion sends it as
+	// expected_fingerprint (ADR 0311).
+	Fingerprint string `json:"fingerprint"`
 }
 
 type AdminEnrollmentDeleteRequest struct {
 	Reason string `json:"reason"`
+	// ExpectedFingerprint is the fingerprint of the confirmed preview.
+	ExpectedFingerprint string `json:"expected_fingerprint"`
 }
 
 func (req *AdminEnrollmentDeleteRequest) Bind(_ *http.Request) error { return nil }
@@ -140,9 +145,9 @@ func (rs *Resource) executeEnrollmentDeletion(w http.ResponseWriter, r *http.Req
 	err := rs.runInTenantTx(r, func(ctx context.Context) error {
 		var deleteErr error
 		if childID > 0 {
-			impact, deleteErr = rs.DeletionService.DeleteChild(ctx, requestID, childID, actorAccountID, body.Reason)
+			impact, deleteErr = rs.DeletionService.DeleteChild(ctx, requestID, childID, actorAccountID, body.Reason, body.ExpectedFingerprint)
 		} else {
-			impact, deleteErr = rs.DeletionService.DeleteRequest(ctx, requestID, actorAccountID, body.Reason)
+			impact, deleteErr = rs.DeletionService.DeleteRequest(ctx, requestID, actorAccountID, body.Reason, body.ExpectedFingerprint)
 		}
 		return deleteErr
 	})
@@ -196,6 +201,7 @@ func toAdminEnrollmentDeletionImpact(impact *capability.DeletionImpact) AdminEnr
 		PreservedParentAccounts:       impact.PreservedParentAccounts,
 		UnlinkedGuardianProfiles:      impact.UnlinkedGuardianProfiles,
 		ParentAccountsWithoutStudents: impact.ParentAccountsWithoutStudents,
+		Fingerprint:                   impact.Fingerprint,
 	}
 }
 

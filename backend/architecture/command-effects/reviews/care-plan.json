@@ -19057,6 +19057,16 @@
       "target_owner": "enrollment"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeEnrollment.SelectionHistory",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.OfferingChangeEnrollment.SelectionHistory",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.BookingProjection.RequestChildOfferingHistory; modules/enrollment/booking_reads.go:8. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "care-plan",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/enrollment.BookingProjection.RequestChildOfferingHistory",
+      "target_owner": "enrollment"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeEnrollment.SelectionsAt",
       "classification": "query",
       "effect": "query",

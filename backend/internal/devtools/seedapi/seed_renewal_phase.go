@@ -187,6 +187,9 @@ func (s parentEnrollmentSeedStep) submitRenewal(rt *Runtime, adminAuth AuthRef, 
 		delete(body, "additional_guardians")
 	}
 
+	if err := showFormVersion(staffGet(rt, adminAuth), body); err != nil {
+		return err
+	}
 	respBody, err := rt.Client.PostWithAuth(auth, "/parent/enrollments/"+rt.Bootstrap.TenantSlug+"/submit", body)
 	if err != nil {
 		return fmt.Errorf("submit renewal for %s: %w", parent.Email, err)
