@@ -8,6 +8,7 @@ import {
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
+import { isChangedSinceRead } from "~/lib/api-error";
 import { isSystemRoom, type Room } from "~/lib/room-helpers";
 import { buildRoomFormSections } from "./room-form-sections";
 
@@ -33,9 +34,21 @@ export function RoomStammdatenTab({
 }: RoomStammdatenTabProps) {
   const [formResetCounter, setFormResetCounter] = useState(0);
   const sections = useMemo(() => buildRoomFormSections(room), [room]);
+  // A save refused because the room changed since it was read (ADR 0311)
+  // waits for the stored room; once it arrives the form shows it.
+  const [refusedVersion, setRefusedVersion] = useState<string | null>(null);
+  if (refusedVersion !== null && room.version !== refusedVersion) {
+    setRefusedVersion(null);
+    setFormResetCounter((n) => n + 1);
+  }
 
   const handleSave = async (data: Partial<Room>) => {
-    await onSave(data);
+    try {
+      await onSave(data);
+    } catch (err) {
+      if (isChangedSinceRead(err)) setRefusedVersion(room.version ?? "");
+      throw err;
+    }
     setFormResetCounter((n) => n + 1);
   };
 

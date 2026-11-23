@@ -97,6 +97,7 @@ describe("mapRoomResponse", () => {
       is_open_room: false,
       created_at: "2024-01-15T10:00:00Z",
       updated_at: "2024-01-15T10:00:00Z",
+      version: "v1",
     };
 
     const result = mapRoomResponse(minimalRoom);
@@ -143,9 +144,11 @@ describe("prepareRoomForBackend", () => {
       color: "#FF0000",
       deviceId: "device-123",
       isOccupied: true,
+      version: "v1",
     };
 
     const result = prepareRoomForBackend(frontendRoom);
+    expect(result.expected_version).toBe("v1");
 
     // The body carries only what the backend reads (RoomRequest).
     expect(result).not.toHaveProperty("id");

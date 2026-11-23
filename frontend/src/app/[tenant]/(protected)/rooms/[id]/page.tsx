@@ -44,6 +44,7 @@ import {
   useApiFormError,
   useToast,
 } from "~/contexts/ToastContext";
+import { isChangedSinceRead } from "~/lib/api-error";
 import { canReadSupervisionData, hasPermission } from "~/lib/auth-utils";
 import { useSetBreadcrumb } from "~/lib/breadcrumb-context";
 import { useOptionalSupervision } from "~/lib/supervision-context";
@@ -309,7 +310,8 @@ function RoomDetailPageContent() {
         const payload = roomsConfig.form.transformBeforeSubmit
           ? roomsConfig.form.transformBeforeSubmit(data)
           : data;
-        await service.update(room.id, payload);
+        // The save carries the version the form was filled from.
+        await service.update(room.id, { ...payload, version: room.version });
         const savedName = data.name?.trim() || room.name;
         toastSuccess(`Der Raum „${savedName}“ ist gespeichert.`);
         // A failed reload is a load error above the room, never an error
@@ -323,10 +325,13 @@ function RoomDetailPageContent() {
               ? updateError.message
               : String(updateError),
         });
+        // Someone saved the room since it was read: read it again, the form
+        // then shows the stored state (ADR 0311).
+        if (isChangedSinceRead(updateError)) void refreshRoomLists();
         throw updateError;
       }
     },
-    [roomAfterWrite, room, service, toastSuccess],
+    [refreshRoomLists, roomAfterWrite, room, service, toastSuccess],
   );
 
   const handleRoomRemoved = useCallback(

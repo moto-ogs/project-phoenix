@@ -51,6 +51,8 @@ export interface Room {
   studentCount?: number;
   createdAt?: string;
   updatedAt?: string;
+  /** Stand des Raums; das Speichern schickt ihn mit (ADR 0311). */
+  version?: string;
 }
 
 // System room names that cannot be deleted or renamed.
@@ -125,6 +127,7 @@ export function mapRoomResponse(room: RoomResponse): Room {
     studentCount: room.student_count,
     createdAt: room.created_at,
     updatedAt: room.updated_at,
+    version: room.version,
   };
 }
 
@@ -167,6 +170,11 @@ export function prepareRoomForBackend(room: Partial<Room>): RoomRequest {
   // real answer here and must survive the check.
   if (typeof room.isOpenRoom === "boolean") {
     body.is_open_room = room.isOpenRoom;
+  }
+  // The stored state the form was filled from; the backend refuses a save
+  // over a room someone changed since (ADR 0311).
+  if (room.version !== undefined) {
+    body.expected_version = room.version;
   }
 
   return body;

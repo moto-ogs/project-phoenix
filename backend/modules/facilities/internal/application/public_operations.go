@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/facilities"
 	"github.com/moto-ogs/project-phoenix/modules/facilities/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/facilities/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -90,6 +91,11 @@ func (s *Service) UpdateRoom(ctx context.Context, input facilities.UpdateRoom) (
 		}
 		if err := validateRoomUpdate(existing, &input); err != nil {
 			return err
+		}
+		if input.ExpectedVersion != nil {
+			if err := readstate.Check(*input.ExpectedVersion, facilities.RoomVersion(existing)); err != nil {
+				return err
+			}
 		}
 		if err := s.ensureUpdateNameAvailable(txCtx, existing, input, stats); err != nil {
 			return err

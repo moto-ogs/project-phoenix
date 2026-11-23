@@ -7,6 +7,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiError } from "~/lib/api-error";
 import type { Room } from "~/lib/room-helpers";
 import { RoomStammdatenTab } from "./room-stammdaten-tab";
 
@@ -190,5 +191,39 @@ describe("RoomStammdatenTab", () => {
     expect(screen.queryByText("Belegt")).not.toBeInTheDocument();
     expect(screen.queryByText("Fußball AG")).not.toBeInTheDocument();
     expect(screen.getByTestId("form-name")).toHaveTextContent("Raum 101");
+  });
+
+  it("shows the stored room once a save was refused as changed since it was read (ADR 0311)", async () => {
+    const onSave = vi.fn(() =>
+      Promise.reject(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      ),
+    );
+    const read = { ...room, version: "v1" };
+    const { rerender } = render(
+      <RoomStammdatenTab
+        errorPath={errorPath}
+        room={read}
+        showOccupancy={false}
+        onSave={onSave}
+      />,
+    );
+    const before = getCurrentNonce();
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(getCurrentNonce()).toBe(before);
+
+    rerender(
+      <RoomStammdatenTab
+        errorPath={errorPath}
+        room={{ ...read, name: "Raum der Kollegin", version: "v2" }}
+        showOccupancy={false}
+        onSave={onSave}
+      />,
+    );
+    expect(getCurrentNonce()).not.toBe(before);
+    expect(screen.getByTestId("form-name")).toHaveTextContent(
+      "Raum der Kollegin",
+    );
   });
 });

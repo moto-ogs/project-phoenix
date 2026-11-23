@@ -18,6 +18,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	deliveryModule "github.com/moto-ogs/project-phoenix/modules/delivery/runtime"
+	facilitiesModule "github.com/moto-ogs/project-phoenix/modules/facilities"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	timetableModule "github.com/moto-ogs/project-phoenix/modules/timetable"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -109,7 +110,7 @@ func measureRuntimeCheckpoint(t *testing.T, production *Runtime) {
 	scenarios := []checkpointScenario{
 		{"timetable.not-found", "GET", fmt.Sprintf("/api/activities/%d", missingActivityID), 404, true, ""},
 		{"organization-tenancy.resolve", "GET", "/auth/tenant/resolve?slug=" + slug, 200, false, ""},
-		{"facilities.update", "PUT", fmt.Sprintf("/api/rooms/%d", writeRoom.ID), 200, true, `{"name":"Checkpoint Updated Room","capacity":40}`},
+		{"facilities.update", "PUT", fmt.Sprintf("/api/rooms/%d", writeRoom.ID), 200, true, `{"name":"Checkpoint Updated Room","capacity":40,"expected_version":"{{room_version}}"}`},
 		{"facilities.list", "GET", "/api/rooms/", 200, true, ""},
 		{"school-structure.list", "GET", "/api/groups/", 200, true, ""},
 		{"people-directory.guardians", "GET", "/api/guardians/search?q=Checkpoint", 200, true, ""},
@@ -322,6 +323,12 @@ func measureRuntimeCheckpoint(t *testing.T, production *Runtime) {
 			sequence = requestSequence
 		}
 		requestToken := token
+		if scenario.Name == "facilities.update" {
+			// Each save carries the version of the room as stored now (ADR 0311).
+			var room facilitiesModule.Room
+			require.NoError(t, db.NewRaw("SELECT updated_at FROM facilities.rooms WHERE id = ?", writeRoom.ID).Scan(context.Background(), &room.UpdatedAt))
+			scenario.Body = strings.ReplaceAll(scenario.Body, "{{room_version}}", facilitiesModule.RoomVersion(room))
+		}
 		if scenario.Name == "enrollment.parent-submit" {
 			requestToken = parentToken
 		}
