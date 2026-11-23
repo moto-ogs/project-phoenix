@@ -3,7 +3,6 @@
 // the Heimweg plan in departure-plan.ts.
 
 import { schoolClassLabel } from "./school-class-label";
-import type { ClassHandover } from "~/lib/class-handover";
 import type { AttendanceActor } from "~/lib/attendance-actor";
 import type {
   CompanionExtensionConfirmation,
@@ -17,6 +16,7 @@ import type {
   DepartureMode,
   PickupDays,
 } from "./departure-plan";
+import type * as studentsContract from "~/lib/contract/students.generated";
 
 /**
  * Shared filter options for school year (Klassenstufe) filter
@@ -158,7 +158,7 @@ export interface Student {
   planned_activities?: PlannedActivity[];
   // Übergabe nach dem Unterricht (#4794): die Lehrkraft hat das Kind heute
   // mit der Klasse übergeben, „da“ oder „nicht da“.
-  class_handover?: ClassHandover;
+  class_handover?: studentsContract.ClassHandover;
   address_street?: string;
   address_city?: string;
   address_postal_code?: string;

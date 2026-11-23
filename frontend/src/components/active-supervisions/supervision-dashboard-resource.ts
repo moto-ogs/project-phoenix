@@ -5,9 +5,9 @@ import type { TrackingIndicatorsResponse } from "~/lib/active-helpers";
 import type { PlannedTimetableInstance } from "~/lib/timetable-operations-types";
 import type { DepartureMode } from "~/lib/departure-plan";
 import type { TeacherHint } from "~/lib/student-helpers";
-import type { ClassHandover } from "~/lib/class-handover";
 import { mapSupervisionDashboard } from "~/lib/supervision-dashboard-wire";
 import type { OpenRoomView, SchulhofStatusResponse } from "./view-model";
+import type * as studentsContract from "~/lib/contract/students.generated";
 const logger = createLogger({ component: "useSupervisionDashboard" });
 
 // The page's view of the supervision projection (#2096), mapped once from
@@ -56,7 +56,7 @@ export interface BFFDashboardResponse {
     class_trip?: boolean;
     class_trip_since?: string;
     // Übergabe nach dem Unterricht (#4794).
-    classHandover?: ClassHandover;
+    classHandover?: studentsContract.ClassHandover;
     // Authenticated proxy URL — backend rewrites the raw /uploads path
     // to /api/students/{id}/photo/{filename} before sending it down.
     photoUrl?: string;

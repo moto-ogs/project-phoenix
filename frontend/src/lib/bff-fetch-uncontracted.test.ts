@@ -9,6 +9,8 @@ import { describe, expect, it } from "vitest";
 const UNCONTRACTED_CALLERS: Readonly<Record<string, string>> = {
   "lib/invitation-api.ts":
     "POST invitations/accept: a new account accepts without a session, an existing one with the owner's; the route's contract names only the tenant portal",
+  "lib/enrollment-submission-api.ts":
+    "GET enrollment/form-bootstrap/public/[tenantSlug]/[phaseId]: the route adds the signed-in staff member's profile to the public form",
   "components/tenant/tenant-relogin.ts":
     "POST auth/logout: the BFF revokes the session family before Auth.js drops the cookie",
   "lib/mfa-api.ts":

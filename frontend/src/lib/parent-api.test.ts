@@ -41,7 +41,7 @@ import {
   type ParentAnnouncement,
 } from "./parent-api";
 
-import type { SubmitEnrollmentPayload } from "./enrollment-submission-api";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 
 const originalFetch = globalThis.fetch;
 
@@ -523,23 +523,26 @@ describe("fetchParentEnrollmentProfile", () => {
     });
   });
 
-  it("handles flat (non-enveloped) response", async () => {
+  it("rejects an answer without data as unreadable (502)", async () => {
+    // The catalog proxy always answers { status, data }; a flat profile is a
+    // broken route, not a second answer shape.
     mockFetch(async () =>
       jsonResponse({
         guardian: { first_name: "Anna", last_name: "", email: "" },
         children: [],
       }),
     );
-    const out = await fetchParentEnrollmentProfile("school");
-    expect(out).not.toBeNull();
-    expect(out!.guardian.first_name).toBe("Anna");
+    await expect(fetchParentEnrollmentProfile("school")).rejects.toMatchObject({
+      status: 502,
+      code: "general.unavailable",
+    });
   });
 });
 
 // --- submitParentEnrollment ----------------------------------------
 
-const validPayload: SubmitEnrollmentPayload = {
-  phase_id: 42,
+const validPayload: sharedContract.SubmitEnrollmentRequest = {
+  phase_id: "42",
   guardian_first_name: "Anna",
   guardian_last_name: "Beispiel",
   guardian_email: "a@b.c",
@@ -566,7 +569,7 @@ describe("submitParentEnrollment", () => {
     expect(out.request_id).toBe("1234");
     expect(out.status_url).toBe("/status/tok");
     expect(seenURL).toContain("/api/parent/enrollments/school/submit");
-    expect(seenBody).toContain(`"phase_id":42`);
+    expect(seenBody).toContain(`"phase_id":"42"`);
   });
 
   it("URL-encodes the tenant slug", async () => {
@@ -582,23 +585,21 @@ describe("submitParentEnrollment", () => {
     expect(seenURL).toContain("a%2Fb");
   });
 
-  it("handles flat (non-enveloped) response", async () => {
-    mockFetch(async () =>
-      jsonResponse(
-        { request_id: "9999", status_url: "/status/abc" },
-        { status: 201 },
-      ),
-    );
-    const out = await submitParentEnrollment("school", validPayload);
-    expect(out.request_id).toBe("9999");
-    expect(out.status_url).toBe("/status/abc");
-  });
-
-  it("falls back to empty strings when neither envelope nor flat fields present", async () => {
-    mockFetch(async () => jsonResponse({}, { status: 201 }));
-    const out = await submitParentEnrollment("school", validPayload);
-    expect(out.request_id).toBe("");
-    expect(out.status_url).toBe("");
+  it("rejects an answer without data as unreadable (502)", async () => {
+    // A flat or empty answer is a broken route; the enrollment may have been
+    // saved, so the person reloads before sending it again.
+    for (const body of [
+      { request_id: "9999", status_url: "/status/abc" },
+      {},
+    ]) {
+      mockFetch(async () => jsonResponse(body, { status: 201 }));
+      await expect(
+        submitParentEnrollment("school", validPayload),
+      ).rejects.toMatchObject({
+        status: 502,
+        code: "general.write_answer_unreadable",
+      });
+    }
   });
 
   it("keeps the backend sentence out of the error", async () => {

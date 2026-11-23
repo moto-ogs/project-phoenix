@@ -89,12 +89,7 @@ import {
   parseISODate,
   toISODate,
 } from "~/lib/date-helpers";
-import {
-  staffAbsenceService,
-  type StaffAbsenceRow,
-  type StaffVacationOpening,
-  type StaffVacationQuotaSummary,
-} from "~/lib/staff-api";
+import { staffAbsenceService, type StaffAbsenceRow } from "~/lib/staff-api";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import {
   useSWRAuth,
@@ -113,6 +108,7 @@ import {
 } from "~/lib/absence-type-api";
 import { InsetPanel } from "~/components/ui/inset-panel";
 import { SectionLabel } from "~/components/ui/section-label";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 
 const logger = createLogger({ component: "AbwesenheitenTab" });
 
@@ -224,7 +220,7 @@ function TabLoadingBoundary({
 interface ShownYear {
   readonly staffId: string;
   readonly year: number;
-  readonly quota: StaffVacationQuotaSummary;
+  readonly quota: sharedContract.VacationQuotaSummary;
   readonly absences: readonly StaffAbsenceRow[];
   readonly types: readonly AbsenceType[];
   readonly allowances: readonly CustomAllowance[];
@@ -296,7 +292,7 @@ export function AbwesenheitenTab({
   // ConfirmDeleteModal at tab level instead of nesting a dialog inside the
   // takeover modal.
   const [openingDeleteTarget, setOpeningDeleteTarget] =
-    useState<StaffVacationOpening | null>(null);
+    useState<sharedContract.StaffVacationOpening | null>(null);
   // Snapshot of the staff identity taken when the modal opens: the live
   // `staff` prop can flip to undefined while onCreated's cache invalidation
   // refetches the page data, and a conditional `{staff && <Modal/>}` render
@@ -1002,7 +998,7 @@ function VacationOpeningDeleteModal({
   onDeleted,
 }: {
   readonly staffId: string;
-  readonly opening: StaffVacationOpening;
+  readonly opening: sharedContract.StaffVacationOpening;
   readonly onClose: () => void;
   /** Closes the dialog and reloads; never rejects (#6652). */
   readonly onDeleted: RefreshAfterWrite;
@@ -1207,7 +1203,7 @@ function AbsenceRow({
 function VacationOpeningSummary({
   opening,
 }: {
-  readonly opening: StaffVacationOpening;
+  readonly opening: sharedContract.StaffVacationOpening;
 }) {
   return (
     <InsetPanel
@@ -1246,9 +1242,9 @@ function VacationOpeningModal({
 }: {
   readonly staffId: string;
   readonly year: number;
-  readonly quota: StaffVacationQuotaSummary;
+  readonly quota: sharedContract.VacationQuotaSummary;
   readonly onClose: () => void;
-  readonly onDelete: (opening: StaffVacationOpening) => void;
+  readonly onDelete: (opening: sharedContract.StaffVacationOpening) => void;
   /** Closes the form and reloads; never rejects (#6652). */
   readonly onSaved: RefreshAfterWrite;
 }) {
@@ -1526,7 +1522,7 @@ function QuotaEditForm({
   onSaved,
 }: {
   readonly staffId: string;
-  readonly quota: StaffVacationQuotaSummary;
+  readonly quota: sharedContract.VacationQuotaSummary;
   readonly year: number;
   readonly onCancel: () => void;
   /** Closes the form and reloads; never rejects (#6652). */

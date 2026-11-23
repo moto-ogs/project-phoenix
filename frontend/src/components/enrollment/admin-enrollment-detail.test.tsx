@@ -733,6 +733,8 @@ describe("AdminEnrollmentDetail approval without an offering", () => {
                 available_days: ["mon", "tue", "wed", "thu", "fri"],
               },
               changed_terms: ["price", "days"],
+              includes_lunch: false,
+              includes_holiday_care: false,
             },
           ],
         }),

@@ -14,16 +14,17 @@ import {
 } from "~/app/[tenant]/providers";
 import { useStaffNoticesPending } from "~/lib/hooks/use-staff-notices-pending";
 import type { ShellBootstrap } from "~/lib/shell-seed";
-import {
-  STAFF_NOTICES_REFRESH_EVENT,
-  type StaffNotice,
-} from "~/lib/staff-notices-api";
+import type { DayChange, DayChangeNotice } from "~/lib/day-changes";
+import type { StaffNotice } from "~/lib/staff-notices-api";
 import { SWRConfig } from "~/lib/swr/testing";
-import { StaffNoticesBlock } from "./staff-notices-block";
+import { DayNoticeRow } from "./day-notice-row";
 
-// Badge der Seitenleiste und Startseiten-Baustein lesen einen Eintrag, den die
+// Badge der Seitenleiste und Tagesinformationen lesen einen Eintrag, den die
 // App-Hülle aus dem Server-Seed anlegt. Beim Wechsel zur Startseite lief
-// /api/staff-notices/today trotzdem erneut (#4989).
+// /api/staff-notices/today trotzdem erneut (#4989). Seit „Heute anders“ den
+// Baustein „Hinweise der Leitung“ ersetzt (#7668), steht der Hinweis auf der
+// Startseite als Zeile der Übersicht; ihre Kenntnisnahme muss das Badge
+// weiter mit einem Abruf aktualisieren.
 
 // Echtes SWR: gezählt wird, was die gemeinsame Deduplizierung übrig lässt.
 vi.unmock("swr");
@@ -49,48 +50,11 @@ vi.mock("~/lib/tenant-context", () => ({
 vi.mock("~/lib/tenant-path", () => ({
   useTenantAwarePath: () => (path: string) => path,
 }));
-vi.mock("~/components/home/home-card", () => ({
-  HomeCard: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  HomeCardEmpty: ({ title }: { title: string }) => <p>{title}</p>,
-  HomeCardIcon: () => null,
+vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/contexts/ToastContext")>()),
+  useApiErrorDisplay: () => ({ show: vi.fn() }),
 }));
-vi.mock("~/components/home/home-card-rows", () => ({
-  HomeCardLink: ({ children }: { children: React.ReactNode }) => (
-    <>{children}</>
-  ),
-  HomeMoreRow: () => null,
-  useHomeCardRows: (items: readonly StaffNotice[]) => ({
-    shown: items,
-    hidden: 0,
-  }),
-}));
-// Wie die echte Liste: nach der Kenntnisnahme den Eintrag neu laden und das
-// Ereignis für die Zähler senden.
-vi.mock("~/components/staff-notices/today-notice-list", () => ({
-  TodayNoticeList: ({
-    notices,
-    onChanged,
-  }: {
-    notices: readonly StaffNotice[];
-    onChanged: () => Promise<unknown>;
-  }) => (
-    <>
-      {notices.map((n) => (
-        <p key={n.id}>{n.title}</p>
-      ))}
-      <button
-        type="button"
-        onClick={() =>
-          void onChanged().then(() =>
-            window.dispatchEvent(new Event(STAFF_NOTICES_REFRESH_EVENT)),
-          )
-        }
-      >
-        Zur Kenntnis genommen
-      </button>
-    </>
-  ),
-}));
+vi.mock("~/lib/analytics", () => ({ trackEvent: vi.fn() }));
 
 const PENDING: StaffNotice = {
   id: "1",
@@ -118,6 +82,29 @@ function Badge() {
   return <span data-testid="badge">{unreadCount}</span>;
 }
 
+const ENTRY: DayChange = {
+  kind: "staff_notice",
+  section: "mine",
+  halfDay: false,
+  since: null,
+  until: null,
+  startsAt: null,
+  endsAt: null,
+  people: [],
+  groupName: null,
+  link: null,
+  count: null,
+};
+
+const NOTICE: DayChangeNotice = {
+  id: "1",
+  title: "Elternabend am Donnerstag",
+  body: "",
+  important: true,
+  requiresAcknowledgement: true,
+  acknowledged: false,
+};
+
 function Shell({
   notices,
   onHome,
@@ -133,7 +120,15 @@ function Shell({
     <SWRConfig value={shellSwrConfig(shell, tenantState.slug)}>
       <ShellCacheSeeder entries={shellOwnedEntries(shell, tenantState.slug)} />
       <Badge />
-      {onHome && <StaffNoticesBlock />}
+      {onHome && (
+        <ul>
+          <DayNoticeRow
+            entry={ENTRY}
+            notice={NOTICE}
+            onChanged={() => Promise.resolve()}
+          />
+        </ul>
+      )}
     </SWRConfig>
   );
 }
@@ -156,7 +151,7 @@ afterEach(() => {
 });
 
 describe("Tagesinformationen aus dem Eintrag der App-Hülle", () => {
-  it("shows the shell's notices on the home page without loading them again", async () => {
+  it("keeps the shell's entry on the home page without loading it again", async () => {
     // Der Wechsel zur Startseite kommt später als SWRs Deduplizierungsfenster
     // (5 s); erst danach zählt eine erneute Abfrage als Request.
     vi.useFakeTimers();
@@ -179,7 +174,9 @@ describe("Tagesinformationen aus dem Eintrag der App-Hülle", () => {
     expect(screen.getByTestId("badge")).toHaveTextContent("1");
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Zur Kenntnis genommen" }),
+      screen.getByRole("button", {
+        name: "Elternabend am Donnerstag: zur Kenntnis nehmen",
+      }),
     );
 
     await waitFor(() =>
@@ -187,5 +184,12 @@ describe("Tagesinformationen aus dem Eintrag der App-Hülle", () => {
     );
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(noticeRequests()).toBe(1);
+    expect(
+      fetchMock.mock.calls.some(
+        ([url, init]) =>
+          String(url) === "/api/staff-notices/1/acknowledge" &&
+          init?.method === "POST",
+      ),
+    ).toBe(true);
   });
 });

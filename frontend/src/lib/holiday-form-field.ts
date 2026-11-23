@@ -14,7 +14,7 @@ import {
 import {
   formFieldFromContract,
   translationsFromContract,
-} from "./form-field-contract";
+} from "./enrollment-form-schema-api";
 
 /**
  * A question of the holiday form: a form field of the online registration

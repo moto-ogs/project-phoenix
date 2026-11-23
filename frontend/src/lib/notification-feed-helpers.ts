@@ -12,11 +12,9 @@ type FeedEntryAnswer = sharedContract.feedEntryResponse & {
 };
 
 /** Eine Seite des Feeds; Go schreibt eine leere Liste als null. */
-interface FeedPageAnswer {
+type FeedPageAnswer = Omit<sharedContract.feedPageResponse, "entries"> & {
   entries: readonly FeedEntryAnswer[] | null;
-  next_cursor: string | null;
-  unread_count: number;
-}
+};
 
 export interface NotificationFeedEntry {
   id: string;

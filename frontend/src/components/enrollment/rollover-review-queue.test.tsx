@@ -75,7 +75,7 @@ function Providers({ children }: Readonly<{ children: ReactNode }>) {
 }
 const render = (ui: ReactElement) =>
   renderComponent(ui, { wrapper: Providers });
-import type { ReviewQueueItem } from "~/lib/enrollment-phase-api";
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import {
   expectPageReloadedAfterRefusal,
   resetPageReloads,
@@ -85,7 +85,9 @@ import {
 // Test data
 // ============================================================================
 
-function makeItem(overrides: Partial<ReviewQueueItem> = {}): ReviewQueueItem {
+function makeItem(
+  overrides: Partial<enrollmentContract.ReviewItemResponse> = {},
+): enrollmentContract.ReviewItemResponse {
   return {
     child_id: "999",
     request_id: "555",
