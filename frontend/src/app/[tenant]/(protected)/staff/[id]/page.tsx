@@ -357,7 +357,11 @@ export default function StaffDetailContent() {
   // sagt die Meldung, was schon gespeichert ist.
   const handleSaveKonto = useCallback(
     async (draft: KontoDraft) => {
-      const { role_id: targetRoleId, ...recordData } = draft;
+      const {
+        role_id: targetRoleId,
+        role_version: roleVersion,
+        ...recordData
+      } = draft;
       const hasRecordChanges = Object.keys(recordData).length > 0;
       if (hasRecordChanges) {
         try {
@@ -373,12 +377,9 @@ export default function StaffDetailContent() {
       }
       if (targetRoleId !== undefined) {
         try {
-          // Die Version der Rollen, die das Feld zeigt (ADR 0311).
-          await replaceAccountRole(
-            accountId,
-            targetRoleId,
-            roleAssignment?.version ?? "",
-          );
+          // Die Version der Rollen, die die Person beim Wählen sah
+          // (ADR 0311), nicht die des inzwischen nachgeladenen Stands.
+          await replaceAccountRole(accountId, targetRoleId, roleVersion ?? "");
         } catch (err) {
           logger.error("failed to update account role", {
             staff_id: staffId,
@@ -404,15 +405,7 @@ export default function StaffDetailContent() {
       toastSuccess("Die Änderungen sind gespeichert.");
       await refreshRecord();
     },
-    [
-      accountId,
-      record,
-      refreshRecord,
-      roleAssignment?.version,
-      staffId,
-      tenantMutate,
-      toastSuccess,
-    ],
+    [accountId, record, refreshRecord, staffId, tenantMutate, toastSuccess],
   );
 
   const handleDeleteRecord = useCallback(async () => {

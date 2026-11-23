@@ -916,6 +916,44 @@ describe("InvitationForm former employment hint", () => {
     );
   });
 
+  // SWR keeps the earlier answer next to the error of a failed reload. Its
+  // version is no longer the read: sending it would be refused again until
+  // the address changes.
+  it("sends no stale version when the lookup fails after a refusal", async () => {
+    mockFindFormerEmployment
+      .mockResolvedValueOnce(noFormerEmployment)
+      .mockRejectedValue(new Error("network"));
+    mockCreateInvitation
+      .mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      )
+      .mockResolvedValue({
+        id: 1,
+        email: "former@example.com",
+        token: "abc123",
+      });
+
+    await typeEmail("former@example.com");
+    fireEvent.click(await screen.findByText("Einladung senden"));
+    await waitFor(() =>
+      expect(mockCreateInvitation).toHaveBeenCalledWith(
+        expect.objectContaining({ expectedFormerEmployment: NONE_VERSION }),
+      ),
+    );
+    await waitFor(() =>
+      expect(mockFindFormerEmployment).toHaveBeenCalledTimes(2),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Einladung senden")).not.toBeDisabled();
+    });
+    fireEvent.click(screen.getByText("Einladung senden"));
+    await waitFor(() => expect(mockCreateInvitation).toHaveBeenCalledTimes(2));
+    expect(mockCreateInvitation.mock.calls[1]?.[0]).not.toHaveProperty(
+      "expectedFormerEmployment",
+    );
+  });
+
   it("keeps the dialog usable when the lookup fails", async () => {
     mockFindFormerEmployment.mockRejectedValue(new Error("network"));
     mockCreateInvitation.mockResolvedValue({

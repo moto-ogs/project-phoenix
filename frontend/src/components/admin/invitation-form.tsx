@@ -102,7 +102,11 @@ function useFormerEmployment(email: string): {
   const answered =
     address === current &&
     (lookup.data !== undefined || lookup.error !== undefined);
-  const answer = answered ? lookup.data : undefined;
+  // A failed reload keeps the earlier data next to its error (SWR). That
+  // answer is no longer the read the invitation may carry: its version
+  // would be refused again until the address changes.
+  const answer =
+    answered && lookup.error === undefined ? lookup.data : undefined;
 
   return {
     formerEmployment: answer?.formerEmployment ?? null,
