@@ -92,7 +92,7 @@ func holdView(holds []parentbilling.CareRunHold) []parentbilling.CareDuplicate {
 // date of birth. A contract without a record joins the child whose record's
 // contracts carry the same name and date of birth when exactly one does.
 func childrenOf(byContract map[int64][]parentbilling.CareContractVersion, order []int64) [][]int64 {
-	return groupCareChildren(contractChildrenOf(byContract), order)
+	return groupCareChildren(contractChildrenOf(byContract), order, nil)
 }
 
 func contractChildrenOf(byContract map[int64][]parentbilling.CareContractVersion) map[int64]parentbilling.CareContractChild {
@@ -105,12 +105,16 @@ func contractChildrenOf(byContract map[int64][]parentbilling.CareContractVersion
 	return children
 }
 
-func groupCareChildren(identities map[int64]parentbilling.CareContractChild, order []int64) [][]int64 {
+// groupCareChildren groups the contracts by child. Only a contract not in
+// issued lends its record to contracts without one by name and date of
+// birth: an issued contract outside the month joins by its own record and
+// never claims another child by name alone (#7863).
+func groupCareChildren(identities map[int64]parentbilling.CareContractChild, order []int64, issued map[int64]bool) [][]int64 {
 	recordsOf := map[string][]int64{}
 	for _, contractID := range order {
 		child := identities[contractID]
 		person := personOf(child)
-		if child.StudentID != nil && !slices.Contains(recordsOf[person], *child.StudentID) {
+		if child.StudentID != nil && !issued[contractID] && !slices.Contains(recordsOf[person], *child.StudentID) {
 			recordsOf[person] = append(recordsOf[person], *child.StudentID)
 		}
 	}
@@ -136,14 +140,16 @@ func groupCareChildren(identities map[int64]parentbilling.CareContractChild, ord
 func childKeys(byContract map[int64][]parentbilling.CareContractVersion, order []int64, issued map[int64]parentbilling.CareContractChild) map[int64]string {
 	identities := contractChildrenOf(byContract)
 	order = slices.Clone(order)
+	outside := map[int64]bool{}
 	for _, id := range slices.Sorted(maps.Keys(issued)) {
 		if _, inForce := identities[id]; !inForce {
 			identities[id] = issued[id]
 			order = append(order, id)
+			outside[id] = true
 		}
 	}
 	keys := map[int64]string{}
-	for i, child := range groupCareChildren(identities, order) {
+	for i, child := range groupCareChildren(identities, order, outside) {
 		key := "child:" + strconv.Itoa(i)
 		if _, inForce := byContract[child[0]]; !inForce {
 			key = "contract:" + strconv.FormatInt(child[0], 10)
