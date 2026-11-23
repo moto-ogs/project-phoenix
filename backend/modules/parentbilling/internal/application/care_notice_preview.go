@@ -117,7 +117,7 @@ func (n *CareFeeNotices) noticeDrafts(ctx context.Context, organizationID int64,
 		preview.unpriced = appendNew(preview.unpriced, review.unpriced)
 		preview.duplicates = appendNew(preview.duplicates, review.duplicates)
 		preview.joined = appendNew(preview.joined, review.joined)
-		preview.billedChildren = appendNew(preview.billedChildren, review.billedChildren)
+		preview.billedChildren = mergeBilledChildren(preview.billedChildren, review.billedChildren)
 	}
 	preview.billed = len(billed)
 	return drafts, nil
@@ -434,4 +434,26 @@ func noticeFingerprint(run parentbilling.CareNoticeRun, rule string, preview not
 	hash := fnv.New128a()
 	_, _ = hash.Write(state)
 	return hex.EncodeToString(hash.Sum(nil))
+}
+
+// mergeBilledChildren adds the held children of a month to those of the
+// months before. A child held in several months stands once per reason, with
+// the contracts and documents of every month: the preview counts children,
+// not months. Two entries are one child when they share a contract.
+func mergeBilledChildren(list, entries []parentbilling.CareBilledChild) []parentbilling.CareBilledChild {
+	for _, entry := range entries {
+		at := slices.IndexFunc(list, func(have parentbilling.CareBilledChild) bool {
+			return have.Reason == entry.Reason && slices.ContainsFunc(have.Contracts, func(contract parentbilling.CareDuplicateContract) bool {
+				return slices.Contains(entry.Contracts, contract)
+			})
+		})
+		if at < 0 {
+			entry.Contracts, entry.Invoices = slices.Clone(entry.Contracts), slices.Clone(entry.Invoices)
+			list = append(list, entry)
+			continue
+		}
+		list[at].Contracts = appendNew(list[at].Contracts, entry.Contracts)
+		list[at].Invoices = appendNew(list[at].Invoices, entry.Invoices)
+	}
+	return list
 }

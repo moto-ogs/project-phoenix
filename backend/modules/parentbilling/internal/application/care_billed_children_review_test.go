@@ -1,6 +1,7 @@
 package application
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -362,6 +363,30 @@ func TestCareMonthNamesOnlyTheInvoicesInTheWay(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, month.billedChildren, 1)
 	assert.Equal(t, in.invoiced[secondHalf].BilledBy, month.billedChildren[0].Invoices)
+}
+
+// A notice run names a child once, however many months hold it: the
+// invoices of every month stand on its one entry (S8).
+func TestCareNoticePreviewNamesAHeldChildOnce(t *testing.T) {
+	t.Parallel()
+	contracts := []parentbilling.CareDuplicateContract{{ContractID: ident.ID(contractLea), SchoolID: ident.ID(schoolIspringen)}}
+	entry := func(reason, number string) parentbilling.CareBilledChild {
+		return parentbilling.CareBilledChild{ChildFirstName: "Noah", ChildLastName: "Beispiel", Reason: reason, Contracts: contracts,
+			Invoices: []parentbilling.CareBilledInvoice{{Source: parentbilling.BilledByCareRun, ContractID: ident.ID(contractNoah), Number: number}}}
+	}
+	january := []parentbilling.CareBilledChild{entry(parentbilling.HoldReasonAlreadyBilled, "R-2027-0003")}
+	february := []parentbilling.CareBilledChild{entry(parentbilling.HoldReasonAlreadyBilled, "R-2027-0011"),
+		entry(parentbilling.HoldReasonMealOnlyInvoice, "R-2027-0012")}
+	// In March a second contract of the child is in force too.
+	march := []parentbilling.CareBilledChild{entry(parentbilling.HoldReasonAlreadyBilled, "R-2027-0013")}
+	march[0].Contracts = append(slices.Clone(contracts), parentbilling.CareDuplicateContract{ContractID: ident.ID(contractNoah)})
+	merged := mergeBilledChildren(mergeBilledChildren(mergeBilledChildren(mergeBilledChildren(nil, january), february), january), march)
+	require.Len(t, merged, 2, "one entry per child and reason")
+	assert.Equal(t, []string{"R-2027-0003", "R-2027-0011", "R-2027-0013"},
+		[]string{merged[0].Invoices[0].Number, merged[0].Invoices[1].Number, merged[0].Invoices[2].Number})
+	assert.Equal(t, []int64{contractLea, contractNoah}, heldContractsOf(merged[:1]), "with the contracts of every month")
+	assert.Equal(t, parentbilling.HoldReasonMealOnlyInvoice, merged[1].Reason)
+	assert.Len(t, january[0].Invoices, 1, "the months keep their own entries")
 }
 
 // A held child and a contract of it whose invoice carries only the Mensa
