@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, use, useCallback, useState } from "react";
+import { Suspense, use, useCallback } from "react";
 // eslint-disable-next-line no-restricted-imports -- parent portal uses bare paths, no tenant-router
 import { useRouter, useSearchParams } from "next/navigation";
 import { LATE_INVITE_QUERY_PARAM } from "~/lib/enrollment-http";
@@ -27,11 +27,7 @@ import { parentPath } from "~/lib/parent-url";
 import { resolveTenant, type TenantInfo } from "~/lib/tenant-api";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useSWRAuth } from "~/lib/swr";
-import {
-  followOpeningRead,
-  settledRead,
-  type OpenedRead,
-} from "~/lib/opening-read";
+import { openingReadOptions, useOpeningRead } from "~/lib/opening-read";
 import { createLogger } from "~/lib/logger";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import {
@@ -119,26 +115,20 @@ function ParentEnrollFormPageContent({ params }: PageProps) {
       targetPath,
     };
   };
-  // A cached form shows at once and is read again in the background.
-  const formRead = useSWRAuth(formKey, loadForm, { shouldRetryOnError: false });
-  // The parent fills the form this opening read: it follows the first read
-  // of the opening, then a background read no longer swaps the legal texts
-  // under ticked consents. The submit sends that form's token; when the
-  // school changed the form, the refusal loads the current one (ADR 0311).
-  // A failed first read shows its error even over a cached form: the server
-  // would refuse a form it cannot confirm.
-  const [opened, setOpened] = useState<OpenedRead<LoadedForm | null>>();
-  const current = opened?.key === formKey ? opened : undefined;
-  const next = followOpeningRead(current, formKey, formRead);
-  if (next !== current) setOpened(next);
-  const openedForm = next && !next.failed ? next.data : undefined;
+  // A cached form shows at once while the opening reads it again.
+  const formRead = useSWRAuth(formKey, loadForm, openingReadOptions);
+  // The parent fills the form this opening read: it reads the form again
+  // even right after an earlier read, then a background read no longer
+  // swaps the legal texts under ticked consents. The submit sends that
+  // form's token; when the school changed the form, the refusal loads the
+  // current one (ADR 0311). A failed first read shows its error even over a
+  // cached form: the server would refuse a form it cannot confirm.
+  const opened = useOpeningRead(formKey, formRead, loadForm);
+  const openedForm = opened.data;
   const loaded = openedForm ?? null;
   const reloadForm = async () => {
     try {
-      const reloaded = await formRead.mutate(loadForm(), { revalidate: false });
-      if (reloaded !== undefined) {
-        setOpened(settledRead(formKey, reloaded));
-      }
+      await opened.reload();
     } catch (err) {
       // The form shows this failure in place of the refusal.
       logger.warn("enrollment_form_reload_failed", {
@@ -150,14 +140,14 @@ function ParentEnrollFormPageContent({ params }: PageProps) {
   // A failed load stays where the form would be, with retry (#2515); a
   // failed background read after the opening leaves the opened form alone.
   const loadError = useSwrLoadError(
-    openedForm === undefined ? formRead.error : undefined,
+    opened.error,
     loadErrorObject,
-    () => formRead.mutate(),
+    opened.retry,
   );
   // Until its catalog text is there, a failure keeps the loading state.
   const loading =
     openedForm === undefined &&
-    (formRead.error === undefined || loadError === null);
+    (opened.error === undefined || loadError === null);
   useAnalyticsSchoolPolicy(
     tenantSlug,
     !loading &&

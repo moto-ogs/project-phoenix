@@ -56,11 +56,7 @@ import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
-import {
-  followOpeningRead,
-  settledRead,
-  type OpenedRead,
-} from "~/lib/opening-read";
+import { openingReadOptions, useOpeningRead } from "~/lib/opening-read";
 import { withLateInviteQuery } from "~/lib/enrollment-http";
 import { Loading } from "~/components/ui/loading";
 import type * as sharedContract from "~/lib/contract/shared.generated";
@@ -238,32 +234,24 @@ export function ManualApprovedEnrollmentModal({
   const bootstrapRead = useSWRAuth(
     isOpen ? enrollmentKeys.manualEnrollmentBootstrap(phase.id) : null,
     () => fetchManualEnrollmentBootstrap(phase.id),
+    openingReadOptions,
   );
-  // The office fills the template this opening read: it follows the first
-  // read of the opening, then a background read neither swaps it under the
-  // typed entry nor, when it fails, takes the form away. A failed first
-  // read shows its error, also over a cached template.
+  // The office fills the template this opening read: every opening reads it
+  // again, then a background read neither swaps it under the typed entry
+  // nor, when it fails, takes the form away. A failed first read shows its
+  // error, also over a cached template, until a retry answers.
   const [opening, setOpening] = useState(0);
   const [wasOpen, setWasOpen] = useState(isOpen);
   if (isOpen !== wasOpen) {
     setWasOpen(isOpen);
     if (isOpen) setOpening((n) => n + 1);
   }
-  const [opened, setOpened] = useState<OpenedRead<ManualEnrollmentBootstrap>>();
-  const current = isOpen && opened?.key === opening ? opened : undefined;
-  const next = isOpen
-    ? followOpeningRead(current, opening, bootstrapRead)
-    : undefined;
-  if (isOpen && next !== current) setOpened(next);
+  const opened = useOpeningRead(isOpen ? opening : null, bootstrapRead, () =>
+    fetchManualEnrollmentBootstrap(phase.id),
+  );
   const loadCurrentForm = async () => {
     try {
-      const reloaded = await bootstrapRead.mutate(
-        fetchManualEnrollmentBootstrap(phase.id),
-        { revalidate: false },
-      );
-      if (reloaded !== undefined) {
-        setOpened(settledRead(opening, reloaded));
-      }
+      await opened.reload();
     } catch (err) {
       // The form keeps the entry and shows this failure in place of the
       // refusal.
@@ -273,7 +261,7 @@ export function ManualApprovedEnrollmentModal({
       throw err;
     }
   };
-  const bootstrap = next && !next.failed ? next.data : undefined;
+  const bootstrap = isOpen ? opened.data : undefined;
   const prefetchedData = useMemo<EnrollmentFormPrefetchedData | null>(
     () => (bootstrap ? toManualPrefetchedData(bootstrap) : null),
     [bootstrap],
@@ -304,9 +292,9 @@ export function ManualApprovedEnrollmentModal({
   // a click on it nor the focus it hands back may close the waiting form.
   const send = useFormModalPending(isOpen, phase.id);
   const loadError = useSwrResourceLoadError(
-    [{ data: bootstrap, error: bootstrapRead.error }],
+    [{ data: bootstrap, error: opened.error }],
     "das Formular",
-    () => bootstrapRead.mutate(),
+    opened.retry,
   );
   const loading = isOpen && !bootstrap && !loadError.failure;
   const checks = useApiFormError();
