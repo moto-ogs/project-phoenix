@@ -20,15 +20,20 @@ type scheduledOfferingReplacement struct {
 }
 
 func (m *BookingMaterialization) persistOfferingAdjustment(ctx context.Context, work *offeringAdjustmentWork) error {
-	history, err := m.correctedSelectionHistory(ctx, work)
+	history, err := m.deps.Enrollment.SelectionHistory(ctx, work.child.ID)
 	if err != nil {
-		return err
+		return fmt.Errorf("decision: list scheduled child offerings: %w", err)
 	}
-	scheduled := scheduledOfferingReplacements(history, work.selectionDate)
+	stored := bookedOfferingPointers(history)
+	keepBookingEnds(work.replacement, work.beforeLinks, stored, work.phase.ServiceEnd.AddDays(1))
+	var scheduled []scheduledOfferingReplacement
 	phase := work.phase.OfferingPhase
-	if start := correctionStart(work, history); len(scheduled) == 0 && start.After(phase.ServiceStart) {
-		phase.ServiceStart = start
-		work.replacement = replacementFrom(work.replacement, start)
+	if work.effectiveFrom == nil {
+		scheduled = scheduledOfferingReplacements(stored, work.selectionDate)
+		if start := correctionStart(work, stored); len(scheduled) == 0 && start.After(phase.ServiceStart) {
+			phase.ServiceStart = start
+			work.replacement = replacementFrom(work.replacement, start)
+		}
 	}
 	if err := m.persistOfferingBookings(ctx, work, scheduled, phase); err != nil {
 		return err
@@ -50,18 +55,64 @@ func (m *BookingMaterialization) persistOfferingAdjustment(ctx context.Context, 
 	return nil
 }
 
-// correctedSelectionHistory reads every dated selection of the child before
-// an undated staff correction rewrites the current one; a dated switch reads
-// none.
-func (m *BookingMaterialization) correctedSelectionHistory(ctx context.Context, work *offeringAdjustmentWork) ([]*careplan.BookedOffering, error) {
-	if work.effectiveFrom != nil {
-		return nil, nil
+// keepBookingEnds gives an offering that stays chosen the end its booking
+// has (#7909): an adjustment changes what the office changed, and an
+// offering booked until February is not booked to the end of the phase
+// because a weekday changed. The end is the last day of the offering's
+// stored bookings that follow each other from the one in effect. An end on
+// which another stored booking of the child starts is not the end of the
+// care but the start of a later change, which a dated switch replaces and
+// an undated correction schedules again; the offering is then booked as a
+// new one. An offering the adjustment adds is booked as before. The care
+// end of the child record, set on the rows already, still wins when it is
+// earlier.
+func keepBookingEnds(replacement, before, stored []*careplan.BookedOffering, phaseEnd calendar.Date) {
+	ends := make(map[int64]calendar.Date, len(before))
+	for _, link := range before {
+		if end, ok := bookingEnd(link, stored); ok && end.Before(phaseEnd) {
+			ends[link.CareOfferingID] = end
+		}
 	}
-	history, err := m.deps.Enrollment.SelectionHistory(ctx, work.child.ID)
-	if err != nil {
-		return nil, fmt.Errorf("decision: list scheduled child offerings: %w", err)
+	for _, row := range replacement {
+		end, ok := ends[row.CareOfferingID]
+		if !ok || (row.ValidUntil != nil && !end.Before(*row.ValidUntil)) {
+			continue
+		}
+		row.ValidUntil = &end
 	}
-	return bookedOfferingPointers(history), nil
+}
+
+// bookingEnd follows the offering's stored bookings from link to the last
+// one that continues it and reports where that one ends, unless the care
+// goes on there with another booking of the child.
+func bookingEnd(link *careplan.BookedOffering, stored []*careplan.BookedOffering) (calendar.Date, bool) {
+	if link == nil || link.ValidUntil == nil {
+		return "", false
+	}
+	end := *link.ValidUntil
+	for {
+		next := startingOn(stored, end, func(row *careplan.BookedOffering) bool { return row.CareOfferingID == link.CareOfferingID })
+		if next == nil {
+			break
+		}
+		if next.ValidUntil == nil {
+			return "", false
+		}
+		end = *next.ValidUntil
+	}
+	if startingOn(stored, end, func(*careplan.BookedOffering) bool { return true }) != nil {
+		return "", false
+	}
+	return end, true
+}
+
+func startingOn(rows []*careplan.BookedOffering, day calendar.Date, match func(*careplan.BookedOffering) bool) *careplan.BookedOffering {
+	for _, row := range rows {
+		if row != nil && row.ValidFrom != nil && *row.ValidFrom == day && match(row) {
+			return row
+		}
+	}
+	return nil
 }
 
 // correctionStart is the day an undated correction books and plans the

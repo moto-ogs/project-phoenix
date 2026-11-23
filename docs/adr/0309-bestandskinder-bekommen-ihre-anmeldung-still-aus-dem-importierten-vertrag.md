@@ -1003,10 +1003,11 @@ Kinder unverändert ab.
 
 ## Bekannte Grenze: befristete Buchungen und späte erste Buchungen in Care Plan
 
-Drei Fehler in Care Plan bestehen vor diesem PR und bleiben bestehen. Die
-ersten beiden gehören in das Folge-Issue
-[#7908](https://github.com/moto-ogs/project-phoenix/issues/7908), der dritte
-in [#7909](https://github.com/moto-ogs/project-phoenix/issues/7909).
+Drei Fehler in Care Plan bestanden vor diesem PR. Die ersten beiden gehören
+in das Folge-Issue
+[#7908](https://github.com/moto-ogs/project-phoenix/issues/7908); der dritte
+ist mit [#7909](https://github.com/moto-ogs/project-phoenix/issues/7909)
+behoben.
 
 1. **Die Roster-Zeile eines direkt verknüpften Angebots endet nicht mit der
    Buchung.** `booking_drafts.go` verwirft für Angebote mit
@@ -1025,14 +1026,18 @@ in [#7909](https://github.com/moto-ogs/project-phoenix/issues/7909).
 2. **Eine Korrektur ohne Datum bucht ab dem Betreuungsbeginn der Phase**,
    auch wenn die erste Buchung des Kindes später begann (Stichtagsänderung
    für ein Kind ohne Buchung). Für die Herkunft `contract_import` ist das
-   behoben (Abschnitt 2), für alle anderen nicht.
-3. **Eine Korrektur ohne Datum verwirft das Ende einer Buchung.** Bleibt
-   ein Angebot bei der Korrektur gewählt, schreibt sie seine Buchung ohne
-   das gespeicherte Ende neu (`buildOfferingAdjustmentReplacement`,
-   `changeCareBookings`): Das Kind ist bis zum Ende der Phase gebucht und
-   auf dem Roster, bei jedem Kind, auch ohne diesen PR. Nach der Bindung
-   folgt der Vertrag dieser Buchung wie jeder genehmigten Änderung: Er
-   bekommt eine neue Version.
+   behoben (Abschnitt 2), für alle anderen nicht. Dasselbe gilt für ein
+   einzelnes Angebot, das später als die übrigen begann: Die Korrektur
+   bucht es ab dem ersten Tag des Kindes.
+3. **Behoben (#7909): Eine Änderung behält das Ende einer Buchung.** Bleibt
+   ein Angebot bei einer Korrektur ohne Datum oder einer Änderung mit
+   Stichtag gewählt, behält seine Buchung ihr gespeichertes Ende
+   (`keepBookingEnds`); ein neu gewähltes Angebot endet mit der Phase, ein
+   früheres Betreuungsende der Kinderakte gilt weiter. Ein Ende, an dem eine
+   andere gespeicherte Buchung des Kindes beginnt, ist kein Ende der
+   Betreuung, sondern der Beginn einer geplanten Änderung; das Angebot wird
+   dann wie bisher gebucht. Eine Korrektur, die die Betreuung nicht ändert,
+   erzeugt für einen gebundenen Vertrag keine Version mehr.
 
 ## Verworfene Optionen
 
