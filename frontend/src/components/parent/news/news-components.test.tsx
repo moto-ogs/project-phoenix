@@ -359,6 +359,38 @@ describe("Umfrage answering in the detail view", () => {
     expect(respond).toHaveBeenCalledTimes(2);
   });
 
+  it("reads a changed announcement again and offers no retry", async () => {
+    vi.spyOn(parentApi, "respondToAnnouncement").mockRejectedValue(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    const onStale = vi.fn();
+
+    render(
+      <NewsDetailModal
+        item={poll()}
+        onClose={vi.fn()}
+        onUpdated={vi.fn()}
+        onStale={onStale}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("radio", { name: "Ja" }));
+    fireEvent.click(screen.getByRole("button", { name: "Antwort speichern" }));
+
+    // The backend refuses a stale answer with the read-state code (ADR 0311):
+    // the stored announcement is read again, and the same answer would be
+    // refused again, so the error offers no retry.
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "die Antwort"),
+      ),
+    ).toBeInTheDocument();
+    expect(onStale).toHaveBeenCalled();
+    expect(
+      screen.queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("reconciles earlier child responses when a later save fails", async () => {
     vi.spyOn(parentApi, "respondToAnnouncement")
       .mockResolvedValueOnce(undefined)
