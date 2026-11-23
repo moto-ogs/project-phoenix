@@ -43,7 +43,7 @@ export interface AuditLogEvent {
   actorIsSystem: boolean;
   actorIsSelf: boolean;
   reason: string;
-  detail: Record<string, unknown>;
+  detail: NonNullable<staffContract.AuditLogEvent["detail"]>;
 }
 
 export interface AuditLogPage {
@@ -77,12 +77,6 @@ function isKnown(
   return false;
 }
 
-function detailOf(detail: unknown): Record<string, unknown> {
-  return typeof detail === "object" && detail !== null && !Array.isArray(detail)
-    ? (detail as Record<string, unknown>)
-    : {};
-}
-
 export function mapAuditLogEvent(data: KnownAuditLogEvent): AuditLogEvent {
   return {
     occurredAt: data.occurred_at,
@@ -95,7 +89,7 @@ export function mapAuditLogEvent(data: KnownAuditLogEvent): AuditLogEvent {
     actorIsSystem: data.actor.is_system,
     actorIsSelf: data.actor.is_self,
     reason: data.reason,
-    detail: detailOf(data.detail),
+    detail: data.detail ?? {},
   };
 }
 

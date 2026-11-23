@@ -21,7 +21,7 @@ func RouteContractTypes() ContractTypes {
 // RevealedValueResponse is the plain value of a secret setting
 // (GET /api/settings/values/{key}/reveal); its form depends on the setting.
 type RevealedValueResponse struct {
-	Value any `json:"value"`
+	Value any `json:"value" contract_json:"The revealed setting's registered kind determines its value type"`
 }
 
 // LegalAGBDocumentRouteContracts registers the upload and the removal of the

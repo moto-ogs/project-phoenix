@@ -95,12 +95,12 @@ func NewSettingsResource(cfg SettingsConfig) *SettingsResource {
 }
 
 type setSchoolSettingRequest struct {
-	Value any `json:"value"`
+	Value any `json:"value" contract_json:"The route's setting key selects the value type in the settings registry"`
 }
 
 // revealedSettingValue is the unmasked value of a password or PIN setting.
 type revealedSettingValue struct {
-	Value any `json:"value"`
+	Value any `json:"value" contract_json:"The revealed setting's registered kind determines its value type"`
 }
 
 // requiresPhotoMutationResponse gates which keys name the school slug in

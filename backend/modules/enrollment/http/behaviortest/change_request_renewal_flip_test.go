@@ -52,12 +52,11 @@ func TestChangeRequestService_Create_FlipsPendingRenewalToSubmitted(t *testing.T
 
 	// The base snapshot must already carry the flipped status so the later
 	// approval's conflict guard compares equal states.
-	children, ok := created.ChangeRequest.BaseSnapshot["children"].([]any)
-	require.True(t, ok)
+	require.NotNil(t, created.ChangeRequest.BaseSnapshot)
+	children := created.ChangeRequest.BaseSnapshot.Children
 	require.Len(t, children, 1)
-	row, ok := children[0].(map[string]any)
-	require.True(t, ok)
-	assert.Equal(t, enrollmentNative.ChildStatusSubmitted, row["status"])
+	require.NotNil(t, children[0].Value.Status)
+	assert.Equal(t, enrollmentNative.ChildStatusSubmitted, *children[0].Value.Status)
 
 	// And the approval must go through without a snapshot conflict.
 	_, err = testpkg.TenantQuery2(t, ctx, testpkg.SetupTestDB(t), svc.Approve, created.ChangeRequest.ID, enrollmentAPI.ReviewChangeRequestInput{

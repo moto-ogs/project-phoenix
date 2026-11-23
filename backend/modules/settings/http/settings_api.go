@@ -146,7 +146,7 @@ func (rs *SettingsResource) SettingsRouter() chi.Router {
 // --- Request types ---
 
 type setValueRequest struct {
-	Value any `json:"value"`
+	Value any `json:"value" contract_json:"The route's setting key selects the value type in the settings registry"`
 }
 
 // --- Handlers ---

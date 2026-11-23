@@ -825,6 +825,12 @@ proofs sent before sign-in are limited enrollment or challenge proofs,
 never a session pair. These routes do not enter a catalog proxy allowlist.
 For the call syntax and error handling, see
 [Frontend API](frontend-api.md#generated-contract-adr-0270).
+
+The contract types closed Go fields and requires a field-local
+`contract_json` reason for open ones. The reason appears in `contract.json`.
+Refining a response must keep its existing wire data. A request may refine
+free JSON with `contract_refines` only when the previously accepted input
+still works; otherwise, add the new shape before retiring the old one.
 A password or code goes to Go once, not again after session renewal.
 
 Backend paths in this section are relative to `backend/`:

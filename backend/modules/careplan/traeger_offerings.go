@@ -155,8 +155,8 @@ type TraegerOfferingCopy struct {
 type TraegerOfferingFieldChange struct {
 	Field   string `json:"field"`
 	State   string `json:"state"`
-	Traeger any    `json:"traeger"`
-	School  any    `json:"school"`
+	Traeger any    `json:"traeger" contract_json:"The changed field selects the inherited offering value type"`
+	School  any    `json:"school" contract_json:"The changed field selects the overridden offering value type"`
 }
 
 // TraegerOfferingApplied is the result of applying a Träger offering.

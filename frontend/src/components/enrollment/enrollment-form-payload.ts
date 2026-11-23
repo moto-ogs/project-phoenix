@@ -48,7 +48,9 @@ export function buildEnrollmentPayload(
   rules: EnrollmentPayloadRules,
 ): sharedContract.SubmitEnrollmentRequest {
   const fields = rules.schema?.fields ?? [];
-  const consentFlags: Record<string, unknown> = {};
+  const consentFlags: NonNullable<
+    sharedContract.SubmitEnrollmentRequest["consent_flags"]
+  > = {};
   for (const block of rules.restrictToOfferings ? [] : rules.legalBlocks) {
     // A notice records that the form showed it; the parent ticks nothing.
     consentFlags[block.key] = legalBlockHasCheckbox(block.kind)

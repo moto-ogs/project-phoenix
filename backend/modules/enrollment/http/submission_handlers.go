@@ -37,7 +37,7 @@ type SubmitChildRequest struct {
 	TargetGradeLevel  *int16                  `json:"target_grade_level,omitempty"`
 	TargetSchoolClass *string                 `json:"target_school_class,omitempty"`
 	HolidayCareWish   *bool                   `json:"holiday_care_wish,omitempty"`
-	CustomData        map[string]any          `json:"custom_data,omitempty"`
+	CustomData        map[string]any          `json:"custom_data,omitempty" contract_json:"Answer values follow the school's versioned form schema"`
 	OfferingIDs       []ident.ID              `json:"offering_ids,omitempty"`
 	OfferingDays      []SubmitOfferingDaysRow `json:"offering_days,omitempty"`
 }
@@ -73,13 +73,13 @@ type SubmitEnrollmentRequest struct {
 	GuardianEmail       string                  `json:"guardian_email"`
 	GuardianPhone       *string                 `json:"guardian_phone,omitempty"`
 	AdditionalGuardians []SubmitGuardianRequest `json:"additional_guardians,omitempty"`
-	ConsentFlags        map[string]any          `json:"consent_flags,omitempty"`
+	ConsentFlags        ConsentFlagsInput       `json:"consent_flags,omitzero" contract_refines:"The typed checkbox input still reads the full legacy JSON value domain"`
 	// FormSchemaID is the form version the page showed (#4680).
 	FormSchemaID ident.ID `json:"form_schema_id,omitempty"`
 	// ExpectedTermsFingerprint is the terms_fingerprint of the form read the
 	// page filled in (ADR 0311); a submission without it is refused.
 	ExpectedTermsFingerprint string               `json:"expected_terms_fingerprint"`
-	CustomData               map[string]any       `json:"custom_data,omitempty"`
+	CustomData               map[string]any       `json:"custom_data,omitempty" contract_json:"Answer values follow the school's versioned form schema"`
 	Children                 []SubmitChildRequest `json:"children"`
 	CaptchaToken             string               `json:"captcha_token,omitempty"`
 	LateInviteToken          string               `json:"late_invite_token,omitempty"`
@@ -91,9 +91,7 @@ type SubmitEnrollmentRequest struct {
 // Bind defaults nil maps + slices to empty so downstream code doesn't
 // have to nil-check.
 func (req *SubmitEnrollmentRequest) Bind(_ *http.Request) error {
-	if req.ConsentFlags == nil {
-		req.ConsentFlags = map[string]any{}
-	}
+
 	if req.CustomData == nil {
 		req.CustomData = map[string]any{}
 	}
@@ -218,7 +216,7 @@ func buildServiceRequest(wireReq *SubmitEnrollmentRequest, tenantID int64, remot
 		GuardianLastName:      wireReq.GuardianLastName,
 		GuardianEmail:         wireReq.GuardianEmail,
 		GuardianPhone:         wireReq.GuardianPhone,
-		ConsentFlags:          formValues(wireReq.ConsentFlags),
+		ConsentFlags:          formValues(wireReq.ConsentFlags.values()),
 		CustomData:            formValues(wireReq.CustomData),
 		LateInviteToken:       wireReq.LateInviteToken,
 		DisplayedFormSchemaID: wireReq.FormSchemaID.Int64(),

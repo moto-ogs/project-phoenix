@@ -1,7 +1,6 @@
 package enrollmenthttp
 
 import (
-	"encoding/json"
 	"slices"
 	"time"
 
@@ -14,7 +13,7 @@ type AdminLegalEvidenceEntry struct {
 	WordingUnavailable bool                            `json:"wording_unavailable,omitempty"`
 	SnapshotAt         time.Time                       `json:"snapshot_at"`
 	Blocks             []enrollment.LegalBlockSnapshot `json:"blocks"`
-	ConsentFlags       json.RawMessage                 `json:"consent_flags"`
+	ConsentFlags       ConsentFlags                    `json:"consent_flags" contract_json:"Preserve the recorded value of historical non-boolean checkbox answers"`
 	VersionUnknown     bool                            `json:"version_unknown,omitempty"`
 	VersionMismatch    bool                            `json:"version_mismatch,omitempty"`
 	StaffRecorded      bool                            `json:"staff_recorded,omitempty"`
@@ -24,11 +23,17 @@ type AdminLegalEvidenceEntry struct {
 func adminLegalEvidence(request *enrollment.Request) []AdminLegalEvidenceEntry {
 	out := make([]AdminLegalEvidenceEntry, 0, len(request.LegalBlocksSnapshot))
 	for i, entry := range request.LegalBlocksSnapshot {
+		var flags ConsentFlags
+		// Malformed legacy evidence is not a consent. Leave the stored
+		// evidence untouched and do not turn a failed decode into a tick.
+		if err := decodeJSONObject(entry.ConsentFlags, &flags); err != nil {
+			flags = nil
+		}
 		out = append(out, AdminLegalEvidenceEntry{
 			SnapshotAt:         entry.SnapshotAt,
 			WordingUnavailable: entry.WordingUnavailable,
 			Blocks:             entry.Blocks,
-			ConsentFlags:       entry.ConsentFlags,
+			ConsentFlags:       flags,
 			VersionUnknown:     entry.DisplayedFormSchemaID == 0 && entry.FormSchemaID != 0,
 			VersionMismatch:    entry.DisplayedFormSchemaID != 0 && entry.DisplayedFormSchemaID != entry.FormSchemaID,
 			ChangeRequest:      entry.ChangeRequest,

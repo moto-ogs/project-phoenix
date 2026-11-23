@@ -4,9 +4,9 @@ import { translationsFromContract } from "~/lib/enrollment-form-schema-api";
 import { WEEKDAY_CODES, weekdayShortLabel } from "~/lib/weekdays";
 
 export interface EnrollmentChangeRequestDiffInput {
-  readonly baseSnapshot: Record<string, unknown>;
-  readonly proposedSnapshot: Record<string, unknown>;
-  readonly diff: Record<string, unknown>;
+  readonly baseSnapshot: object | null;
+  readonly proposedSnapshot: object | null;
+  readonly diff: object | null;
   readonly copy?: EnrollmentChangeRequestDiffCopy;
   /** Questions of the request's form version; without them rows show keys. */
   readonly formLabels?: EnrollmentFormLabels | null;
@@ -203,13 +203,16 @@ function formKeyLabels(
 const GUARDIAN_METADATA_KEYS = new Set(["id"]);
 
 export function buildEnrollmentChangeRequestDiffGroups({
-  baseSnapshot,
+  baseSnapshot: base,
   copy = DEFAULT_ENROLLMENT_CHANGE_REQUEST_DIFF_COPY,
-  proposedSnapshot,
-  diff,
+  proposedSnapshot: proposed,
+  diff: storedDiff,
   formLabels,
 }: EnrollmentChangeRequestDiffInput): EnrollmentChangeRequestDiffGroup[] {
   const labels = formKeyLabels(formLabels, copy);
+  const baseSnapshot: Record<string, unknown> = { ...base };
+  const proposedSnapshot: Record<string, unknown> = { ...proposed };
+  const diff: Record<string, unknown> = { ...storedDiff };
   return changedSnapshotKeys(baseSnapshot, proposedSnapshot, diff).flatMap(
     (key) => {
       const before = baseSnapshot[key];
