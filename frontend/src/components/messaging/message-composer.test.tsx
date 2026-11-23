@@ -46,7 +46,7 @@ describe("MessageComposer meldet sich an (#7686)", () => {
     return <p>{useMessageComposerOnScreen() ? "Chat offen" : "Kein Chat"}</p>;
   }
 
-  it("zeigt schwebenden Hilfen, solange ein Schreibfeld offen ist", () => {
+  it("meldet sich an, solange es offen ist", () => {
     const { rerender } = render(
       <>
         <ChatState />

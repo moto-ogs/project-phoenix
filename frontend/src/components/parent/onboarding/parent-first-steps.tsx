@@ -12,10 +12,7 @@ import {
   trackOnboardingSurface,
 } from "~/lib/analytics";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
-import {
-  isMessageComposerOnScreen,
-  useMessageComposerOnScreen,
-} from "~/lib/hooks/use-message-composer-presence";
+import { useMessageComposerOnScreen } from "~/lib/hooks/use-message-composer-presence";
 import {
   buildHelpHref,
   HELP_TOPICS,
@@ -86,12 +83,12 @@ export function ParentFirstSteps({
   // Erfassung beim Öffnen noch aus (Schulfreigabe noch nicht geladen), zählt
   // auch die Antwort nicht, sonst gäbe es mehr Antworten als Anzeigen.
   const autoOpenRef = useRef(false);
-  // Ein offener Chat hat seinen Senden-Knopf genau dort, wo der Knopf und die
-  // Liste unten am Rand stehen (#7686). Solange er offen ist, tritt beides
-  // zurück; nur eine Liste, die die Person selbst geöffnet hat, bleibt.
+  // Ein offener Chat hat seinen Senden-Knopf genau dort, wo Knopf und Liste
+  // unten am Rand stehen (#7686). Solange er offen ist, treten beide zurück.
   const chatOpen = useMessageComposerOnScreen();
-  const [openedItself, setOpenedItself] = useState(false);
-  const [autoOpenDue, setAutoOpenDue] = useState(false);
+  // Von selbst geöffnet, aber noch nie zu sehen gewesen: „angezeigt“ zählt
+  // erst, wenn die Liste wirklich auf dem Bildschirm steht.
+  const [shownPending, setShownPending] = useState(false);
 
   const steps = useMemo<readonly StepContent[]>(() => {
     const list: StepContent[] = [
@@ -236,25 +233,17 @@ export function ParentFirstSteps({
     stateRef.current = stored;
     autoOpenRef.current = false;
     setState(stored);
-    setAutoOpenDue(!stored.dismissed && !stored.finished);
+    const opens =
+      !stored.dismissed && !stored.finished && claimFirstOpen(accountId);
+    if (opens) setView("checklist");
+    setShownPending(opens);
   }, [accountId]);
 
-  // Von selbst geht die Liste erst auf, wenn kein Chat offen ist: wer über
-  // eine Benachrichtigung direkt in einen Chat kommt, will zuerst antworten.
   useEffect(() => {
-    if (!autoOpenDue || chatOpen || isMessageComposerOnScreen()) return;
-    setAutoOpenDue(false);
-    if (!claimFirstOpen(accountId)) return;
-    setView("checklist");
-    setOpenedItself(true);
+    if (!shownPending || view !== "checklist" || chatOpen) return;
+    setShownPending(false);
     autoOpenRef.current = trackOnboardingSurface("shown", "parent_first_steps");
-  }, [accountId, autoOpenDue, chatOpen]);
-
-  /** Wechselt die Ansicht auf Wunsch der Person. */
-  const showView = useCallback((next: View) => {
-    setView(next);
-    setOpenedItself(false);
-  }, []);
+  }, [shownPending, view, chatOpen]);
 
   const updateState = useCallback(
     (next: ParentFirstStepsState) => {
@@ -290,9 +279,9 @@ export function ParentFirstSteps({
     (key: ParentFirstStepKey) => {
       completeStep(key);
       setExpanded(key);
-      showView("checklist");
+      setView("checklist");
     },
-    [completeStep, showView],
+    [completeStep],
   );
   const tour = useParentFirstStepsTour(definitions, onTourFinished);
 
@@ -357,13 +346,13 @@ export function ParentFirstSteps({
         onClose={() => {
           tour.stop();
           setExpanded(active.key);
-          showView("checklist");
+          setView("checklist");
         }}
       />
     );
   }
 
-  if (chatOpen && (view === "beacon" || openedItself)) return null;
+  if (chatOpen) return null;
 
   if (view === "beacon") {
     return (
@@ -374,7 +363,7 @@ export function ParentFirstSteps({
           type="button"
           variant="success"
           size="md"
-          onClick={() => showView("checklist")}
+          onClick={() => setView("checklist")}
           aria-label={t("open", { count: steps.length - finished })}
           tooltip={t("tooltips.open")}
           className="gap-2"
@@ -415,7 +404,7 @@ export function ParentFirstSteps({
               size="icon"
               onClick={() => {
                 answerAutoOpen("dismissed");
-                showView("beacon");
+                setView("beacon");
               }}
               aria-label={t("collapse")}
               tooltip={t("tooltips.collapse")}
@@ -517,7 +506,7 @@ export function ParentFirstSteps({
                             size="md"
                             onClick={() => {
                               answerAutoOpen("accepted");
-                              showView("beacon");
+                              setView("beacon");
                               tour.start(step.key);
                             }}
                             tooltip={t("tooltips.show")}

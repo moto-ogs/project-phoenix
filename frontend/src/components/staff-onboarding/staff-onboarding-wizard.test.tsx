@@ -142,7 +142,7 @@ function stepTitles(): string[] {
 /** Stands in for a chat's writing field, which announces itself (#7686). */
 function OpenChat() {
   useAnnounceMessageComposer();
-  return null;
+  return <p>Chat offen</p>;
 }
 
 describe("StaffOnboardingWizard", () => {
@@ -206,52 +206,49 @@ describe("StaffOnboardingWizard", () => {
     expect(screen.getByText("0 von 6 erledigt")).toBeInTheDocument();
   });
 
-  it("keeps the beacon off a chat's send button and opens only after the chat (#7686)", () => {
+  it("steps aside with beacon and checklist while a chat is open (#7686)", () => {
+    sessionStorage.setItem("staff-onboarding-opened:school-one:74", "1");
+    const wizard = (chat: boolean) => (
+      <>
+        <StaffOnboardingWizard />
+        {chat ? <OpenChat /> : null}
+      </>
+    );
+    const { rerender } = render(wizard(true));
+    // Anker: der Chat steht.
+    expect(screen.getByText("Chat offen")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /^Erste Schritte öffnen/ }),
+    ).not.toBeInTheDocument();
+
+    rerender(wizard(false));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Erste Schritte öffnen, 6 offen" }),
+    );
+    rerender(wizard(true));
+    expect(screen.getByText("Chat offen")).toBeInTheDocument();
+    expect(screen.queryByText("0 von 6 erledigt")).not.toBeInTheDocument();
+
+    rerender(wizard(false));
+    expect(screen.getByText("0 von 6 erledigt")).toBeInTheDocument();
+  });
+
+  it("counts the checklist that opened by itself as shown once it is on screen (#7686)", () => {
     const { rerender } = render(
       <>
         <StaffOnboardingWizard />
         <OpenChat />
       </>,
     );
-    expect(screen.queryByText("0 von 6 erledigt")).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: /^Erste Schritte öffnen/ }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByText("Chat offen")).toBeInTheDocument();
     expect(analytics.trackOnboardingSurface).not.toHaveBeenCalled();
 
     rerender(<StaffOnboardingWizard />);
     expect(screen.getByText("0 von 6 erledigt")).toBeInTheDocument();
-    fireEvent.click(
-      screen.getByRole("button", { name: "Checkliste einklappen" }),
+    expect(analytics.trackOnboardingSurface).toHaveBeenCalledExactlyOnceWith(
+      "shown",
+      "staff_first_steps",
     );
-    rerender(
-      <>
-        <StaffOnboardingWizard />
-        <OpenChat />
-      </>,
-    );
-    expect(
-      screen.queryByRole("button", { name: /^Erste Schritte öffnen/ }),
-    ).not.toBeInTheDocument();
-    rerender(<StaffOnboardingWizard />);
-    expect(
-      screen.getByRole("button", { name: "Erste Schritte öffnen, 6 offen" }),
-    ).toBeInTheDocument();
-  });
-
-  it("keeps a checklist the person opened, also in a chat (#7686)", () => {
-    sessionStorage.setItem("staff-onboarding-opened:school-one:74", "1");
-    const { rerender } = render(<StaffOnboardingWizard />);
-    fireEvent.click(
-      screen.getByRole("button", { name: "Erste Schritte öffnen, 6 offen" }),
-    );
-    rerender(
-      <>
-        <StaffOnboardingWizard />
-        <OpenChat />
-      </>,
-    );
-    expect(screen.getByText("0 von 6 erledigt")).toBeInTheDocument();
   });
 
   it("leaves out steps the school or the person does not have", () => {

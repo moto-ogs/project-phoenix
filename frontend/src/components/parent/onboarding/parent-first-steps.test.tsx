@@ -1,10 +1,4 @@
-import {
-  act,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAnnounceMessageComposer } from "~/lib/hooks/use-message-composer-presence";
 import { ParentFirstSteps } from "./parent-first-steps";
@@ -18,10 +12,18 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
+const analytics = vi.hoisted(() => ({
+  trackOnboardingSurface: vi.fn(() => true),
+}));
+vi.mock("~/lib/analytics", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/analytics")>()),
+  trackOnboardingSurface: analytics.trackOnboardingSurface,
+}));
+
 /** Stands in for a chat's writing field, which announces itself (#7686). */
 function OpenChat() {
   useAnnounceMessageComposer();
-  return null;
+  return <p>Chat offen</p>;
 }
 
 describe("ParentFirstSteps", () => {
@@ -122,74 +124,52 @@ describe("ParentFirstSteps", () => {
   });
 
   describe("in a chat (#7686)", () => {
+    const steps = (chat: boolean) => (
+      <>
+        <ParentFirstSteps accountId="42" childCount={1} newsEnabled={true} />
+        {chat ? <OpenChat /> : null}
+      </>
+    );
     const beacon = () =>
       screen.queryByRole("button", { name: /Erste Schritte öffnen/ });
+    const list = () => screen.queryByRole("region", { name: "Erste Schritte" });
 
-    it("takes the beacon off the send button while a chat is open", async () => {
+    it("steps aside with button and list while a chat is open", async () => {
       sessionStorage.setItem("parent-first-steps-opened:42", "1");
-      const { rerender } = render(
-        <>
-          <ParentFirstSteps accountId="42" childCount={1} newsEnabled={true} />
-          <OpenChat />
-        </>,
-      );
-      await act(async () => {});
+      const { rerender } = render(steps(true));
+      // Anker: der Chat steht, die Liste hat ihren Stand gelesen.
+      expect(await screen.findByText("Chat offen")).toBeVisible();
       expect(beacon()).not.toBeInTheDocument();
 
-      rerender(
-        <ParentFirstSteps accountId="42" childCount={1} newsEnabled={true} />,
-      );
-      expect(
+      rerender(steps(false));
+      fireEvent.click(
         await screen.findByRole("button", { name: /Erste Schritte öffnen/ }),
-      ).toBeVisible();
+      );
+      expect(list()).toBeVisible();
+
+      rerender(steps(true));
+      expect(screen.getByText("Chat offen")).toBeVisible();
+      expect(list()).not.toBeInTheDocument();
+
+      rerender(steps(false));
+      expect(list()).toBeVisible();
     });
 
-    it("opens the list on its own only after the chat is closed", async () => {
-      const { rerender } = render(
-        <>
-          <ParentFirstSteps accountId="42" childCount={1} newsEnabled={true} />
-          <OpenChat />
-        </>,
-      );
-      await act(async () => {});
-      expect(
-        screen.queryByRole("region", { name: "Erste Schritte" }),
-      ).not.toBeInTheDocument();
-      expect(beacon()).not.toBeInTheDocument();
+    it("counts the list that opened by itself as shown once it is on screen", async () => {
+      analytics.trackOnboardingSurface.mockClear();
+      const { rerender } = render(steps(true));
+      expect(await screen.findByText("Chat offen")).toBeVisible();
+      expect(list()).not.toBeInTheDocument();
+      expect(analytics.trackOnboardingSurface).not.toHaveBeenCalled();
 
-      rerender(
-        <ParentFirstSteps accountId="42" childCount={1} newsEnabled={true} />,
-      );
+      rerender(steps(false));
       expect(
         await screen.findByRole("region", { name: "Erste Schritte" }),
       ).toBeVisible();
-    });
-
-    it("keeps a list the parent opened, also when a chat opens", async () => {
-      sessionStorage.setItem("parent-first-steps-opened:42", "1");
-      const { rerender } = render(
-        <ParentFirstSteps accountId="42" childCount={1} newsEnabled={true} />,
+      expect(analytics.trackOnboardingSurface).toHaveBeenCalledExactlyOnceWith(
+        "shown",
+        "parent_first_steps",
       );
-      fireEvent.click(
-        await screen.findByRole("button", { name: /Erste Schritte öffnen/ }),
-      );
-      rerender(
-        <>
-          <ParentFirstSteps accountId="42" childCount={1} newsEnabled={true} />
-          <OpenChat />
-        </>,
-      );
-      expect(
-        screen.getByRole("region", { name: "Erste Schritte" }),
-      ).toBeVisible();
-
-      fireEvent.click(
-        screen.getByRole("button", { name: "Erste Schritte einklappen" }),
-      );
-      expect(beacon()).not.toBeInTheDocument();
-      expect(
-        screen.queryByRole("region", { name: "Erste Schritte" }),
-      ).not.toBeInTheDocument();
     });
   });
 });

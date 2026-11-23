@@ -42,7 +42,7 @@ export function firstStepsTopic(): HelpTopic {
       "Der Stand gilt für die ganze OGS. Andere Leitungen sehen denselben Stand.",
     ],
     differences: [
-      "In einem Chat fehlt unten der Knopf `Erste Schritte`. So bleibt `Senden` frei. Auf den anderen Seiten ist er wieder da.",
+      "In einem Chat ist `Erste Schritte` ausgeblendet, damit `Senden` frei bleibt. Auf jeder anderen Seite ist es wieder da.",
     ],
     troubleshootingDetails: [
       "Die Tour ist plötzlich weg? Sie endet, wenn du eine andere Seite öffnest. Mit `Zeig es mir` startest du sie neu.",

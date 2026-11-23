@@ -277,7 +277,7 @@ function studentsNext(): SchoolSetupState {
 /** Stands in for a chat's writing field, which announces itself (#7686). */
 function OpenChat() {
   useAnnounceMessageComposer();
-  return null;
+  return <p>Chat offen</p>;
 }
 
 describe("SchoolSetupWizard", () => {
@@ -332,79 +332,55 @@ describe("SchoolSetupWizard", () => {
     ).toBeInTheDocument();
   });
 
-  it("keeps the beacon off a chat's send button and opens only after the chat (#7686)", () => {
+  it("steps aside with beacon and checklist while a chat is open (#7686)", () => {
+    sessionStorage.setItem("school-setup-opened:school-a:73", "1");
+    const wizard = (chat: boolean) => (
+      <>
+        <SchoolSetupWizard />
+        {chat ? <OpenChat /> : null}
+      </>
+    );
+    const { rerender } = render(wizard(true));
+    // Anker: der Chat steht.
+    expect(screen.getByText("Chat offen")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /^Erste Schritte öffnen/ }),
+    ).not.toBeInTheDocument();
+
+    rerender(wizard(false));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Erste Schritte öffnen, 5 offen" }),
+    );
+    rerender(wizard(true));
+    expect(screen.getByText("Chat offen")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("region", { name: "Erste Schritte mit moto" }),
+    ).not.toBeInTheDocument();
+
+    rerender(wizard(false));
+    expect(
+      screen.getByRole("region", { name: "Erste Schritte mit moto" }),
+    ).toBeInTheDocument();
+  });
+
+  it("counts the checklist that opened by itself as shown once it is on screen (#7686)", () => {
     const { rerender } = render(
       <>
         <SchoolSetupWizard />
         <OpenChat />
       </>,
     );
-    expect(
-      screen.queryByRole("region", { name: "Erste Schritte mit moto" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: /^Erste Schritte öffnen/ }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByText("Chat offen")).toBeInTheDocument();
     expect(analytics.trackOnboardingSurface).not.toHaveBeenCalled();
 
     rerender(<SchoolSetupWizard />);
     expect(
       screen.getByRole("region", { name: "Erste Schritte mit moto" }),
     ).toBeInTheDocument();
-
-    fireEvent.click(
-      screen.getByRole("button", { name: "Checkliste einklappen" }),
+    expect(analytics.trackOnboardingSurface).toHaveBeenCalledExactlyOnceWith(
+      "shown",
+      "setup_checklist",
     );
-    rerender(
-      <>
-        <SchoolSetupWizard />
-        <OpenChat />
-      </>,
-    );
-    expect(
-      screen.queryByRole("button", { name: /^Erste Schritte öffnen/ }),
-    ).not.toBeInTheDocument();
-    rerender(<SchoolSetupWizard />);
-    expect(
-      screen.getByRole("button", { name: "Erste Schritte öffnen, 5 offen" }),
-    ).toBeInTheDocument();
-  });
-
-  it("keeps a checklist the person opened, also in a chat (#7686)", () => {
-    sessionStorage.setItem("school-setup-opened:school-a:73", "1");
-    const { rerender } = render(<SchoolSetupWizard />);
-    fireEvent.click(
-      screen.getByRole("button", { name: "Erste Schritte öffnen, 5 offen" }),
-    );
-    rerender(
-      <>
-        <SchoolSetupWizard />
-        <OpenChat />
-      </>,
-    );
-    expect(
-      screen.getByRole("region", { name: "Erste Schritte mit moto" }),
-    ).toBeInTheDocument();
-  });
-
-  it("hides an auto-opened checklist while a chat opens after it (#7686)", () => {
-    const { rerender } = render(<SchoolSetupWizard />);
-    expect(
-      screen.getByRole("region", { name: "Erste Schritte mit moto" }),
-    ).toBeInTheDocument();
-    rerender(
-      <>
-        <SchoolSetupWizard />
-        <OpenChat />
-      </>,
-    );
-    expect(
-      screen.queryByRole("region", { name: "Erste Schritte mit moto" }),
-    ).not.toBeInTheDocument();
-    rerender(<SchoolSetupWizard />);
-    expect(
-      screen.getByRole("region", { name: "Erste Schritte mit moto" }),
-    ).toBeInTheDocument();
   });
 
   it("does not answer an auto-open that analytics could not record", () => {

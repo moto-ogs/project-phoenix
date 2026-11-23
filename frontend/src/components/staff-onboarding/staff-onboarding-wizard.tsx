@@ -27,10 +27,7 @@ import {
   type HelpTopicId,
 } from "~/lib/help-topics";
 import { trackOnboardingSurface } from "~/lib/analytics";
-import {
-  isMessageComposerOnScreen,
-  useMessageComposerOnScreen,
-} from "~/lib/hooks/use-message-composer-presence";
+import { useMessageComposerOnScreen } from "~/lib/hooks/use-message-composer-presence";
 import { createLogger } from "~/lib/logger";
 import { useHasOwnStaff } from "~/lib/hooks/use-user-context";
 import { useShellAuthSafe } from "~/lib/shell-auth-context";
@@ -105,16 +102,14 @@ export function StaffOnboardingWizard() {
 }
 
 function StaffOnboardingForPerson() {
-  const [view, setViewState] = useState<View>("beacon");
+  const [view, setView] = useState<View>("beacon");
   // Ein offener Chat hat seinen Senden-Knopf genau dort, wo Knopf und
-  // Checkliste unten am Rand stehen (#7686). Solange er offen ist, tritt
-  // beides zurück; nur eine Liste, die die Person selbst geöffnet hat, bleibt.
+  // Checkliste unten am Rand stehen (#7686). Solange er offen ist, treten
+  // beide zurück.
   const chatOpen = useMessageComposerOnScreen();
-  const [openedItself, setOpenedItself] = useState(false);
-  const setView = useCallback((next: View) => {
-    setViewState(next);
-    setOpenedItself(false);
-  }, []);
+  // Von selbst geöffnet, aber noch nie zu sehen gewesen: „angezeigt“ zählt
+  // erst, wenn die Checkliste wirklich auf dem Bildschirm steht.
+  const [shownPending, setShownPending] = useState(false);
   const { state, accountID, replace } = useStaffOnboarding();
   const [expanded, setExpanded] = useState<StaffOnboardingStepKey | null>(null);
   const [expandedByPerson, setExpandedByPerson] = useState(false);
@@ -233,17 +228,14 @@ function StaffOnboardingForPerson() {
       setView("checklist");
       void run(() => setStaffOnboardingStepState(step, "done"));
     },
-    [run, setView],
+    [run],
   );
-  const onTourLeft = useCallback(
-    (step: StaffOnboardingStepKey) => {
-      setView("checklist");
-      setExpanded(step);
-      setExpandedByPerson(true);
-      setNotice(TOUR_LEFT);
-    },
-    [setView],
-  );
+  const onTourLeft = useCallback((step: StaffOnboardingStepKey) => {
+    setView("checklist");
+    setExpanded(step);
+    setExpandedByPerson(true);
+    setNotice(TOUR_LEFT);
+  }, []);
   const tours = useMemo(
     () => staffOnboardingTours(childSearchOnlyNavigation),
     [childSearchOnlyNavigation],
@@ -254,21 +246,23 @@ function StaffOnboardingForPerson() {
     state !== null && !state.dismissed && state.schoolReady && steps.length > 0;
   const nextOpen = firstOpenStaffStep(steps);
 
-  // Beim ersten Aufruf der Sitzung geht die Checkliste von selbst auf, aber
-  // erst, wenn kein Chat offen ist.
+  // Beim ersten Aufruf der Sitzung geht die Checkliste von selbst auf.
   useEffect(() => {
     if (
       visible &&
-      !isMessageComposerOnScreen() &&
       tenantSlug &&
       accountID &&
       claimFirstOpen(tenantSlug, accountID)
     ) {
-      setViewState("checklist");
-      setOpenedItself(true);
-      selfOpened.current = trackOnboardingSurface("shown", "staff_first_steps");
+      setView("checklist");
+      setShownPending(true);
     }
-  }, [visible, chatOpen, tenantSlug, accountID]);
+  }, [visible, tenantSlug, accountID]);
+  useEffect(() => {
+    if (!shownPending || !visible || view !== "checklist" || chatOpen) return;
+    setShownPending(false);
+    selfOpened.current = trackOnboardingSurface("shown", "staff_first_steps");
+  }, [shownPending, visible, view, chatOpen]);
 
   // Aufgeklappt ist der nächste offene Schritt, solange die Person nicht
   // selbst einen anderen gewählt hat.
@@ -331,7 +325,7 @@ function StaffOnboardingForPerson() {
 
   const open = steps.filter((step) => !step.done && !step.skipped).length;
 
-  if (chatOpen && (view === "beacon" || openedItself)) return null;
+  if (chatOpen) return null;
 
   if (view === "beacon") {
     return <SetupBeacon open={open} onOpen={() => setView("checklist")} />;

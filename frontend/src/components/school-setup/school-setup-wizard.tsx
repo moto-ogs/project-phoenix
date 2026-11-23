@@ -17,10 +17,7 @@ import {
   buildHelpHref,
   type HelpTopicId,
 } from "~/lib/help-topics";
-import {
-  isMessageComposerOnScreen,
-  useMessageComposerOnScreen,
-} from "~/lib/hooks/use-message-composer-presence";
+import { useMessageComposerOnScreen } from "~/lib/hooks/use-message-composer-presence";
 import { createLogger } from "~/lib/logger";
 import {
   completeSchoolSetup,
@@ -93,16 +90,11 @@ export function SchoolSetupWizard() {
 function SchoolSetupWizardForAdmin({
   viaTraeger,
 }: Readonly<{ viaTraeger: boolean }>) {
-  const [view, setViewState] = useState<View>("beacon");
+  const [view, setView] = useState<View>("beacon");
   // Ein offener Chat hat seinen Senden-Knopf genau dort, wo Knopf und
-  // Checkliste unten am Rand stehen (#7686). Solange er offen ist, tritt
-  // beides zurück; nur eine Liste, die die Person selbst geöffnet hat, bleibt.
+  // Checkliste unten am Rand stehen (#7686). Solange er offen ist, treten
+  // beide zurück.
   const chatOpen = useMessageComposerOnScreen();
-  const [openedItself, setOpenedItself] = useState(false);
-  const setView = useCallback((next: View) => {
-    setViewState(next);
-    setOpenedItself(false);
-  }, []);
   const { state, accountID, refresh, replace } = useSchoolSetup(
     view === "checklist",
   );
@@ -156,19 +148,16 @@ function SchoolSetupWizardForAdmin({
     followUps.current = TOUR_FOLLOW_UP_MS.map((delay) =>
       window.setTimeout(() => void refresh(), delay),
     );
-  }, [refresh, setView]);
+  }, [refresh]);
   // Hat die Person die Seite der Tour verlassen, endet die Tour. Die
   // Checkliste geht beim Schritt auf und sagt, warum, statt dass nur die
   // Abdunklung stehen bleibt.
-  const onTourLeft = useCallback(
-    (step: SchoolSetupStepKey) => {
-      setView("checklist");
-      setExpanded(step);
-      setExpandedByPerson(true);
-      setNotice(TOUR_LEFT);
-    },
-    [setView],
-  );
+  const onTourLeft = useCallback((step: SchoolSetupStepKey) => {
+    setView("checklist");
+    setExpanded(step);
+    setExpandedByPerson(true);
+    setNotice(TOUR_LEFT);
+  }, []);
   const visible = state !== null && !state.completed && !state.dismissed;
   // Die Zahl der Personen ohne Soll (#6919) lädt erst, wenn der Schritt in
   // der offenen Checkliste aufgeklappt ist: Vorher zeigt sie niemand an.
@@ -200,6 +189,12 @@ function SchoolSetupWizardForAdmin({
     readonly tenantSlug: string;
   } | null>(null);
   const tenantSlug = useTenantSlugSafe();
+  // Von selbst geöffnet, aber noch nie zu sehen gewesen: „angezeigt“ zählt
+  // erst, wenn die Checkliste wirklich auf dem Bildschirm steht.
+  const [shownPending, setShownPending] = useState<{
+    readonly accountID: string;
+    readonly tenantSlug: string;
+  } | null>(null);
   useEffect(() => {
     const opened = openedByItself.current;
     if (
@@ -208,21 +203,23 @@ function SchoolSetupWizardForAdmin({
     ) {
       openedByItself.current = null;
     }
-    // Von selbst geht die Liste erst auf, wenn kein Chat offen ist.
     if (
       visible &&
-      !isMessageComposerOnScreen() &&
       tenantSlug &&
       accountID &&
       claimFirstOpen(tenantSlug, accountID)
     ) {
-      setViewState("checklist");
-      setOpenedItself(true);
-      if (trackOnboardingSurface("shown", "setup_checklist")) {
-        openedByItself.current = { accountID, tenantSlug };
-      }
+      setView("checklist");
+      setShownPending({ accountID, tenantSlug });
     }
-  }, [visible, chatOpen, tenantSlug, accountID]);
+  }, [visible, tenantSlug, accountID]);
+  useEffect(() => {
+    if (!shownPending || !visible || view !== "checklist" || chatOpen) return;
+    setShownPending(null);
+    if (trackOnboardingSurface("shown", "setup_checklist")) {
+      openedByItself.current = shownPending;
+    }
+  }, [shownPending, visible, view, chatOpen]);
   const closedByPerson = () => {
     const opened = openedByItself.current;
     if (
@@ -316,7 +313,7 @@ function SchoolSetupWizardForAdmin({
     );
   }
 
-  if (chatOpen && (view === "beacon" || openedItself)) return null;
+  if (chatOpen) return null;
 
   if (view === "beacon") {
     return (

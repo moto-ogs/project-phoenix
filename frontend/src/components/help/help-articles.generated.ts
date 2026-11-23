@@ -1607,6 +1607,7 @@ export const caregiverFirstStepsTopic =
       differences: [
         "Welche Schritte du siehst, hängt von deiner OGS ab. Ohne feste Gruppen fehlt zum Beispiel `Meine Gruppe ansehen`.",
         "`Meine Gruppe ansehen` erscheint erst, wenn dir eine Gruppe zugeordnet ist.",
+        "In einem Chat ist `Erste Schritte` ausgeblendet, damit `Senden` frei bleibt. Auf jeder anderen Seite ist es wieder da.",
       ],
       troubleshootingDetails: [
         "Die Checkliste erscheint nicht? Sie kommt erst, wenn deine OGS eine Gruppe oder ein Kind in moto hat. Wer schon vor der Checkliste mit moto gearbeitet hat, bekommt sie nicht.",
@@ -3338,6 +3339,9 @@ export const firstStepsTopic = function firstStepsTopic(): HelpTopic {
       "Du hast eine Liste aller Kinder? Starte die Tour zu `Erstes Kind anlegen`. Öffne dort das Menü mit den drei Punkten. Wähle `Importieren`. Dann zeigt die Tour den Import.",
       "Deine OGS nutzt die Eltern-App nicht? Dann überspringe `Erste Eltern einladen`.",
       "Der Stand gilt für die ganze OGS. Andere Leitungen sehen denselben Stand.",
+    ],
+    differences: [
+      "In einem Chat ist `Erste Schritte` ausgeblendet, damit `Senden` frei bleibt. Auf jeder anderen Seite ist es wieder da.",
     ],
     troubleshootingDetails: [
       "Die Tour ist plötzlich weg? Sie endet, wenn du eine andere Seite öffnest. Mit `Zeig es mir` startest du sie neu.",
@@ -6826,6 +6830,9 @@ export const parentFirstStepsTopic =
         "`Angaben zu meinem Kind ändern` zeigt Angaben, Betreuungszeiten, den Heimweg und Kontakte.",
         "`moto als App auf dem Handy hinzufügen` und `Benachrichtigungen einschalten` sind zwei getrennte Touren.",
         "Der Stand gilt für dieses Elternkonto auf diesem Gerät.",
+      ],
+      differences: [
+        "In einem Chat ist `Erste Schritte` ausgeblendet, damit `Senden` frei bleibt. Auf jeder anderen Seite ist es wieder da.",
       ],
       troubleshootingDetails: [
         "Du hast `Erste Schritte ausblenden` gewählt? Dann erscheint die Checkliste auf diesem Gerät nicht mehr. Die einzelnen Anleitungen findest du weiterhin in der Hilfe.",

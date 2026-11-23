@@ -32,7 +32,7 @@ export function parentFirstStepsTopic(): HelpTopic {
       "Der Stand gilt für dieses Elternkonto auf diesem Gerät.",
     ],
     differences: [
-      "In einem Chat fehlt unten der Knopf `Erste Schritte`. So bleibt `Senden` frei. Auf den anderen Seiten ist er wieder da.",
+      "In einem Chat ist `Erste Schritte` ausgeblendet, damit `Senden` frei bleibt. Auf jeder anderen Seite ist es wieder da.",
     ],
     troubleshootingDetails: [
       "Du hast `Erste Schritte ausblenden` gewählt? Dann erscheint die Checkliste auf diesem Gerät nicht mehr. Die einzelnen Anleitungen findest du weiterhin in der Hilfe.",
