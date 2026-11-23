@@ -32,7 +32,7 @@ import {
   type PublicFormSchema,
 } from "~/lib/enrollment-form-schema-api";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useFreshSWR } from "~/lib/swr";
+import { useSWRAuth } from "~/lib/swr";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { permissionsConcept } from "~/lib/concepts/permissions";
@@ -69,14 +69,14 @@ function EnrollmentPreviewPageContent() {
   // Without a template in the address there is nothing to load: a fixed
   // hint, not an API error.
   const missingSchema = !schemaId && !phaseId && !isBasePreview;
-  // A preview shows the template as it is now, each time it opens: the
-  // school checks it right after editing it.
-  const phasesRead = useFreshSWR(
+  // A preview saves nothing: it shows the cached template at once and reads
+  // it again, so a school that just edited it sees the new version.
+  const phasesRead = useSWRAuth(
     missingSchema ? null : enrollmentKeys.phases(),
     () => listPhases(),
     { shouldRetryOnError: false },
   );
-  const phases = phasesRead.fresh ? phasesRead.data : undefined;
+  const phases = phasesRead.data;
   const requestedPhase = useMemo<Phase | null>(
     () =>
       phaseId
@@ -86,7 +86,7 @@ function EnrollmentPreviewPageContent() {
   );
   const phaseGone =
     phaseId !== null && phases !== undefined && requestedPhase === null;
-  const phaseBootstrapRead = useFreshSWR(
+  const phaseBootstrapRead = useSWRAuth(
     requestedPhase
       ? enrollmentKeys.phasePreviewBootstrap(
           requestedPhase.id,
@@ -108,19 +108,15 @@ function EnrollmentPreviewPageContent() {
     },
     { shouldRetryOnError: false },
   );
-  const templateBootstrapRead = useFreshSWR(
+  const templateBootstrapRead = useSWRAuth(
     !missingSchema && !phaseId
       ? enrollmentKeys.formPreviewBootstrap(schemaId, isBasePreview)
       : null,
     () => fetchEnrollmentPreviewBootstrap({ schemaId, base: isBasePreview }),
     { shouldRetryOnError: false },
   );
-  const phaseBootstrap = phaseBootstrapRead.fresh
-    ? phaseBootstrapRead.data
-    : undefined;
-  const templateBootstrap = templateBootstrapRead.fresh
-    ? templateBootstrapRead.data
-    : undefined;
+  const phaseBootstrap = phaseBootstrapRead.data;
+  const templateBootstrap = templateBootstrapRead.data;
   // The phase shows with its own configuration only, as one answer.
   const previewPhase = phaseBootstrap ? requestedPhase : null;
   const bootstrap = phaseId ? phaseBootstrap : templateBootstrap;
@@ -135,14 +131,14 @@ function EnrollmentPreviewPageContent() {
   // page still shows the form and names the way to the phase.
   const assignedPhases = useMemo<Phase[] | null>(
     () =>
-      phasesRead.fresh && phasesRead.error !== undefined
+      phasesRead.error !== undefined
         ? null
         : (phases ?? []).filter((phase) =>
             isBasePreview && !schemaId
               ? !phase.form_schema_id
               : phase.form_schema_id === schemaId,
           ),
-    [phasesRead.fresh, phasesRead.error, phases, isBasePreview, schemaId],
+    [phasesRead.error, phases, isBasePreview, schemaId],
   );
   const offeringConfig = phaseBootstrap?.phase_offerings;
   const previewOfferings = useMemo<PreviewCareOfferings | undefined>(
@@ -170,12 +166,12 @@ function EnrollmentPreviewPageContent() {
   // a form without them.
   const needsSchoolLegalTexts =
     bootstrap !== undefined && previewNeedsSchoolLegalTexts(previewSchema);
-  const legalRead = useFreshSWR(
+  const legalRead = useSWRAuth(
     needsSchoolLegalTexts ? enrollmentKeys.publicLegalTexts(tenantSlug) : null,
     () => fetchPublicLegalTexts(tenantSlug),
     { shouldRetryOnError: false },
   );
-  const schoolLegalTexts = legalRead.fresh ? legalRead.data : undefined;
+  const schoolLegalTexts = legalRead.data;
   const failure: unknown =
     (phaseId
       ? (phasesRead.error ??
@@ -200,7 +196,8 @@ function EnrollmentPreviewPageContent() {
       ? loadError === null
       : (phaseId
           ? phaseBootstrap === undefined
-          : templateBootstrap === undefined || !phasesRead.fresh) ||
+          : templateBootstrap === undefined ||
+            (phases === undefined && phasesRead.error === undefined)) ||
         (needsSchoolLegalTexts && schoolLegalTexts === undefined));
 
   const previewStatus = previewPhase

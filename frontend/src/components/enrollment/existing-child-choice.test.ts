@@ -220,6 +220,7 @@ describe("a duplicate of another enrollment of the phase", () => {
     first_name: "Mara",
     last_name: "Papier",
     date_of_birth: "2019-03-01",
+    version: "v1",
     status: "submitted" as const,
     activation_mode: "scheduled",
     possible_existing_children: [held],

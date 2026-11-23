@@ -210,6 +210,11 @@ export function AdminEnrollmentDetail({ requestId, info }: Props) {
   const reloadError = useApiLoadError();
   const showReloadError = reloadError.show;
   const clearReloadError = reloadError.clear;
+  // The stored request after a refused write: a failure rejects, so the
+  // refused form can name it.
+  const readDetailAgain = useCallback(async () => {
+    await mutateDetail(fetchDetail(), { revalidate: false });
+  }, [mutateDetail, fetchDetail]);
   const refreshAfterWrite = useCallback(
     async function reload(): Promise<void> {
       clearReloadError();
@@ -777,6 +782,7 @@ export function AdminEnrollmentDetail({ requestId, info }: Props) {
                       : undefined
                   }
                   onOfferingsChanged={() => void refreshAfterWrite()}
+                  onChildChanged={readDetailAgain}
                   onDataCorrected={handleDataCorrected}
                   onDelete={() =>
                     setDeletionTarget({
@@ -931,6 +937,7 @@ function ChildInformationCard({
   onDecide,
   onDataCorrected,
   onOfferingsChanged,
+  onChildChanged,
   onReasonChange,
   onRejectDuplicate,
   onDelete,
@@ -954,6 +961,8 @@ function ChildInformationCard({
   onDecide: (status: DecisionStatus) => void;
   onDataCorrected: (correctedChild: AdminRequestChild) => void;
   onOfferingsChanged: () => void;
+  /** Reads the request again; rejects when the read fails. */
+  onChildChanged: () => Promise<void>;
   onReasonChange: (value: string) => void;
   onRejectDuplicate?: () => void;
   requestGuardian: string;
@@ -1022,6 +1031,8 @@ function ChildInformationCard({
                 requestId={requestId}
                 child={child}
                 onSaved={onDataCorrected}
+                // Both read the request again.
+                onChangedSinceRead={onChildChanged}
               />
             </>
           ) : null}

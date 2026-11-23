@@ -52,6 +52,9 @@ func (s parentEnrollmentSeedStep) submitSeedEnrollment(rt *Runtime, adminAuth Au
 		}
 	}
 
+	if err := showFormVersion(staffGet(rt, adminAuth), submission.body); err != nil {
+		return SeedEnrollmentRequest{}, err
+	}
 	var respBody []byte
 	var submitErr error
 	if submission.source == "parent" {

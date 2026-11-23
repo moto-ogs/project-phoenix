@@ -47,6 +47,9 @@ func (seedEnrollmentSignatureStep) Run(_ context.Context, rt *Runtime) error {
 		return err
 	}
 	body := seedSignedEnrollmentSubmission(phaseID, signature)
+	if err := showFormVersion(staffGet(rt, auth), body); err != nil {
+		return err
+	}
 	rt.Client.BindAuth(rt.TenantAuth)
 	if _, err := rt.Client.PostPublicWithHeaders("/api/enrollment/"+rt.Bootstrap.TenantSlug+"/submit", body, publicEnrollmentSeedHeaders(91)); err != nil {
 		return fmt.Errorf("submit signed enrollment: %w", err)

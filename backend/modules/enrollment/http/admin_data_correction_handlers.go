@@ -20,6 +20,8 @@ type AdminChildDataCorrectionRequest struct {
 	TargetGradeLevel  *int16  `json:"target_grade_level"`
 	TargetSchoolClass *string `json:"target_school_class"`
 	Reason            string  `json:"reason"`
+	// ExpectedVersion is the child's version the staff corrected.
+	ExpectedVersion string `json:"expected_version"`
 }
 
 func (req *AdminChildDataCorrectionRequest) Bind(_ *http.Request) error { return nil }
@@ -61,6 +63,7 @@ func (rs *Resource) correctAdminChildData(w http.ResponseWriter, r *http.Request
 			TargetSchoolClass: body.TargetSchoolClass,
 			Reason:            body.Reason,
 			ActorAccountID:    int64(claims.ID),
+			ExpectedVersion:   body.ExpectedVersion,
 		})
 		return correctionErr
 	})

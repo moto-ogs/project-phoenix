@@ -19,8 +19,11 @@ type SubmitRequest struct {
 	// (#4680). Versions never change, so the snapshot proves the shown legal
 	// texts are the stored ones only when it equals the version in force.
 	DisplayedFormSchemaID int64
-	TenantID              int64
-	PhaseID               int64
+	// ExpectedTermsFingerprint is the FormTermsFingerprint of the form the
+	// family or the office filled in (ADR 0311); another one is refused.
+	ExpectedTermsFingerprint string
+	TenantID                 int64
+	PhaseID                  int64
 	// RemoteIP is the parent's source IP. Empty disables IP-based rate
 	// limiting for that submission.
 	RemoteIP string
