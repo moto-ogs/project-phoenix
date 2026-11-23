@@ -317,13 +317,6 @@
     },
     {
       "build": "testhooks",
-      "evidence": "func (adapter fromCalendarPeriodRecords) Update(arg0 context.Context, arg1 *CalendarPeriod) error {\n\tresult0 := adapter.value.Update(arg0, toNative7(arg1))\n\treturn result0\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/timetable/fixturetest/fromCalendarPeriodRecords.Update",
-      "owner": "modules/timetable"
-    },
-    {
-      "build": "testhooks",
       "evidence": "func (adapter fromCalendarPeriodRecords) UsageCounts(arg0 context.Context) (map[int64]CalendarPeriodUsage, error) {\n\tresult0, result1 := adapter.value.UsageCounts(arg0)\n\treturn fromNative9(result0), result1\n}",
       "form": "unclassified-evidence",
       "id": "modules/timetable/fixturetest/fromCalendarPeriodRecords.UsageCounts",
@@ -1265,13 +1258,6 @@
       "evidence": "func (adapter intoCalendarPeriodRecords) FindByTenantID(arg0 context.Context) ([]*records.CalendarPeriod, error) {\n\tresult0, result1 := adapter.value.FindByTenantID(arg0)\n\treturn toNative8(result0), result1\n}",
       "form": "unclassified-evidence",
       "id": "modules/timetable/fixturetest/intoCalendarPeriodRecords.FindByTenantID",
-      "owner": "modules/timetable"
-    },
-    {
-      "build": "testhooks",
-      "evidence": "func (adapter intoCalendarPeriodRecords) Update(arg0 context.Context, arg1 *records.CalendarPeriod) error {\n\tfixtureArg1 := fromNative7(arg1)\n\tdefer func() {\n\t\tif arg1 != nil {\n\t\t\t*arg1 = fixtureArg1.CalendarPeriod\n\t\t}\n\t}()\n\tresult0 := adapter.value.Update(arg0, fixtureArg1)\n\treturn result0\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/timetable/fixturetest/intoCalendarPeriodRecords.Update",
       "owner": "modules/timetable"
     },
     {

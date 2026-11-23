@@ -227,11 +227,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/timetable/fixturetest/fromCalendarPeriodRecords.Update",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/timetable/fixturetest/fromCalendarPeriodRecords.UsageCounts",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -903,11 +898,6 @@
     {
       "decision": "0090",
       "id": "modules/timetable/fixturetest/intoCalendarPeriodRecords.FindByTenantID",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/timetable/fixturetest/intoCalendarPeriodRecords.Update",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
