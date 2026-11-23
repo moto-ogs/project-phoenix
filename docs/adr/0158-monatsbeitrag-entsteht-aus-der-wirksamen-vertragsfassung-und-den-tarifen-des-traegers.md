@@ -280,7 +280,9 @@ des Wechsels festhält; dann ändert sich in beiden dasselbe, und kein Eintrag
 einer anderen Familie ändert seinen Schlüssel. Punkt 5 zählt die Kinder mit laufendem Vertrag;
 Verträge, die nur eine ausgestellte Rechnung in den Monat bringen, verhindern
 das Zusammenlegen nur, wenn sie einen Teil in der Gruppierung der Kette mit
-einem anderen Vertrag verbinden oder ihn teilen.
+einem anderen Vertrag verbinden oder ihn teilen. Seit dem Nachtrag „Schon
+abgerechnet je Kind“ (#7892) ist ein solcher Vertrag selbst Teil eines
+Schulwechsels; Punkt 5 gilt dann auch für ihn.
 
 Das zusammengelegte Kind behält den Schlüssel des Teils, für den schon eine
 Rechnung des Monats ausgestellt ist, sonst den seines ersten Teils; haben
@@ -328,3 +330,127 @@ nacheinander laufen. Die Prüfung nennt jeden solchen Fall vor der Freigabe.
   braucht aber Tabelle, Maske und Protokoll; bis zur Bestätigung bliebe die
   zusätzliche Rechnung. Ein eigenes Issue, wenn der Namensvergleich nicht
   reicht.
+
+## Nachtrag 2026-11-23: Schon abgerechnet je Kind (#7892)
+
+Ergänzt E1 bis E5 und den Nachtrag „Schulwechsel“. Entschieden von Product
+Owner Yannick Wenger (#7892).
+
+**Kontext.** Der Lauf prüfte „schon abgerechnet“ je Vertrag: Ein Vertrag mit
+ausgestellter Rechnung des Monats blieb draußen, jeder andere Vertrag desselben
+Kindes wurde abgerechnet, als gäbe es die Rechnung nicht. Drei Fälle:
+
+1. **Zwei Rechnungen über zwei Läufe.** Bei „voller Monat“ ist der Vertrag an
+   der neuen Schule schon als Eintritt ausgestellt (60,00 €), bevor der Vertrag
+   der alten Schule in moto steht. Der gilt am 1. und wurde im nächsten Lauf
+   für den ganzen Monat abgerechnet (45,00 €).
+2. **Eine Rechnung nur mit Mensa sperrt die Betreuung.** Ein Vertrag ohne
+   Betreuungstage im Monat bekommt bei gebündelter Mensa eine Rechnung nur mit
+   Mensa. Wird er später zum Eintritt des Kindes, bleibt seine Betreuung
+   unabgerechnet: Ein Vertrag hat je Monat eine Rechnung
+   (`uq_care_invoices_contract_month`). Nichts wies darauf hin.
+3. **Widerrufener Vertrag mit Rechnung.** Der Vertrag der alten Schule hat eine
+   Rechnung des Monats und wird danach widerrufen. Nur die Rechnung bringt ihn
+   noch in den Monat. Der Vertrag der neuen Schule war Eintritt und wurde auch
+   für den ganzen Monat abgerechnet; mit zwei Kinderakten zählte die
+   Geschwisterregel das Kind zweimal.
+
+**Entscheidung.** Rechnet eine ausgestellte, nicht stornierte Rechnung oder ein
+Monat eines Jahresbescheids den Monat eines Kindes schon ab, stellt der Lauf
+für dieses Kind keine weitere Rechnung aus. Er hält das Kind zurück, und die
+Prüfung nennt es mit seinen Verträgen und der vorhandenen Rechnung (Nummer,
+Schule, Vertrag, Lauf). Ist die Rechnung falsch, storniert das Büro sie; der
+nächste Lauf des Monats rechnet das Kind dann ab. Die Rechnung nur mit Mensa
+aus Fall 2 wird genauso genannt.
+
+Die Einzelheiten (`billedChildHolds`, eine reine Funktion):
+
+- **S1 Dasselbe Kind.** Es gilt die Gruppierung der Geschwisterregel: E1 über
+  die laufenden und die ausgestellten Verträge (#7863) mit dem Schulwechsel
+  aus #7874. Neu ist ein Vertrag, den nur seine ausgestellte Rechnung in den
+  Monat bringt (widerrufen oder vor dem Monat beendet), selbst Teil eines
+  Schulwechsels: Für ihn stehen Kind, Familie und Schule seiner Rechnung, und
+  er läuft an keinem Tag des Monats. Die Punkte 1 bis 5 des Nachtrags
+  „Schulwechsel“ gelten unverändert, auch Punkt 5: Ein solcher Namensvetter
+  einer anderen Familie oder an derselben Schule verhindert das
+  Zusammenlegen. Das Kind behält den Schlüssel seiner ausgestellten Rechnung.
+  Die Karte „Ein Kind an zwei Schulen“ nennt auch diesen Vertrag, vor den
+  laufenden. Haben schon mehrere Teile eine Rechnung, legt moto weiter nicht
+  zusammen.
+- **S2 Veraltete Rechnung.** Eine ausgestellte Rechnung behält, was sie
+  abgerechnet hat. Sie ist an den Tagen veraltet, die ihre
+  Betreuungspositionen abrechnen (ihr Zeitraum; ohne Zeitraum der ganze Monat),
+  an denen ihr Vertrag nach E2 heute nichts abrechnet: Der Vertrag ist
+  widerrufen oder gekürzt, oder ein anderer Vertrag des Kindes gilt jetzt am
+  1. oder ist sein Eintritt.
+- **S3 Zurückhalten.** Ein Kind wird zurückgehalten, wenn ein Vertrag des
+  Kindes ohne Rechnung einen Tag abrechnen würde, an dem eine Rechnung eines
+  anderen seiner Verträge veraltet ist. Bei „voller Monat“ rechnet jede
+  Rechnung den ganzen Monat ab: Eine veraltete Rechnung hält das Kind. Zwei
+  Verträge, die beide am 1. gelten (verschiedene Module), sind nicht veraltet;
+  der zweite wird abgerechnet, wie bisher. Bei „anteilig“ rechnet jeder
+  Vertrag seine Tage ab: Eine Rechnung für den 15. bis 31. hält den Vertrag
+  für den 1. bis 14. nicht. Hat sie den ganzen Monat abgerechnet und beginnt
+  ihr Vertrag heute erst am 15., sind der 1. bis 14. schon abgerechnet, und
+  das Kind wird zurückgehalten. Ein Vertrag in einem beitragsfreien Monat
+  (#6196) rechnet nichts ab und löst nichts aus.
+- **S4 Ganzes Kind.** Wie E4 hält der Lauf alle Verträge des Kindes ohne
+  Rechnung zurück, auch ihre Mensa. Ein Kind mit doppeltem Vertrag (E3) bleibt
+  unter „Doppelter Vertrag“.
+- **S5 Rechnung nur mit Mensa.** Trägt die Monatsrechnung eines laufenden
+  Vertrags keine Betreuungsposition und würde der Vertrag heute Betreuung
+  abrechnen (Preis vorhanden, kein beitragsfreier Monat), nennt die Prüfung
+  das Kind mit dieser Rechnung (`meal_only_invoice`). Nach dem Storno rechnet
+  der nächste Lauf Betreuung und Mensa zusammen ab.
+- **S6 Jahresbescheid.** Ein Monat eines Jahresbescheids, der Betreuung
+  festsetzt, hält wie eine Rechnung; die Prüfung nennt den Bescheid. Ein
+  Monat, den ein Änderungsbescheid auf nichts gesetzt hat (ADR 0182), rechnet
+  nichts ab und hält keinen anderen Vertrag; für den eigenen Vertrag bleibt
+  es bei „Durch aufgehobenen Bescheid gesperrt“. Der häufige Fall ist der
+  Schulwechsel im Jahr: Der Bescheid der alten Schule setzt die Monate nach
+  dem Wechsel weiter fest, bis ein Jahreslauf dieser Schule ihn ändert.
+- **S7 Geschwisterregel.** Ein zurückgehaltenes Kind zählt einmal: über seine
+  ausgestellte Rechnung und als Ort seiner zurückgehaltenen Verträge
+  (ADR 0305, Nachtrag #7863). Seine Basis ist die ausgestellte Rechnung. Für
+  die anderen Kinder ändert sich nur, was daraus folgt.
+- **S8 Sichtbar.** `billed_children` an `CareRunDetail` und
+  `CareNoticeRunDetail`, Karte „Kind hat schon eine Rechnung – bitte prüfen“
+  für jeden Lauf mit einer Schule der zurückgehaltenen Verträge, auch im
+  leeren Lauf, und eine Zeile je Kind in der Prüfliste. Beide Fingerabdrücke
+  enthalten die Liste, wenn sie nicht leer ist. Das Leseprotokoll nennt die
+  Verträge der Karte und den Vertrag der Rechnung.
+- **S9 Momentaufnahme.** Die Freigabe speichert diese Kinder in
+  `care_run_holds` (Gründe `already_billed` und `meal_only_invoice`, neue
+  Spalte `invoices`), und der freigegebene Lauf zeigt sie von dort (E5).
+- **S10 Leerer Lauf.** Ein Lauf, der nur solche Kinder zurückhält, lässt sich
+  verwerfen: Die vorhandene Rechnung kann stimmen, dann ist nichts offen. Ein
+  doppelter Vertrag verhindert das Verwerfen weiter.
+- **S11 Bescheid-Lauf.** Er rechnet jeden Monat mit derselben Funktion. Ein
+  zurückgehaltener Vertrag behält für den Monat seine bisherige Festsetzung,
+  wie bei einem doppelten Vertrag; ohne bisherigen Bescheid bleibt der Monat
+  offen. Die Vorschau zeigt dieselbe Karte.
+
+**Grenzen.** Ein Vertrag außerhalb des Monats ohne Kinderakte und ohne
+Geburtsdatum hat keine Identität (#7863) und hält kein Kind. Haben beide
+Verträge eines Schulwechsels schon eine Rechnung (ausgestellt vor diesem
+Nachtrag), legt moto sie nicht zusammen und nennt nichts. Wechselt ein Zwilling
+die Schule, legt moto nicht zusammen (#7874) und hält darum auch nicht.
+Rechnet eine Rechnung ein Modul ab, das ihr Vertrag nicht mehr bucht, während
+er an den Tagen ein anderes Modul abrechnet, gilt sie nicht als veraltet.
+
+**Verworfen.**
+
+- **Nur ein Hinweis, der Lauf rechnet trotzdem ab.** Die zweite Rechnung
+  entstünde weiter und müsste storniert werden.
+- **Die Rechnung nur mit Mensa nicht als Rechnung des Vertrags zählen.** Dann
+  bräuchte der Vertrag eine zweite Rechnung im Monat; Storno, Schreiben und
+  der Nummernkreis gehen von einer aus (ADR 0165).
+- **Jede Rechnung eines anderen Vertrags hält das Kind.** Das sperrte ein
+  Kind mit zwei Verträgen für verschiedene Module, von denen einer später
+  einen Preis bekommt, und bei „anteilig“ jeden Wechsel im Monat.
+
+**Register.** Kein neuer Owner, kein neuer Port, keine neue Route. Migration
+`20261123091500` erweitert `parent_billing.care_run_holds`;
+`return_register.json` und der Text im `data_lifecycle_catalog.json` folgen
+ihr. `InvoicedContracts` liest zusätzlich Nummer, Schule, Lauf und Zeitraum
+der Positionen, in derselben Anweisung.
