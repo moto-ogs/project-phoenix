@@ -38,7 +38,7 @@ function renderModal(existing: FamilyBilling | null = null) {
         target={target}
         existing={existing}
         version="v-1"
-        onChangedSinceRead={vi.fn()}
+        reload={() => Promise.resolve(undefined)}
         onCancel={vi.fn()}
         onSaved={onSaved}
       />
@@ -210,7 +210,7 @@ describe("FamilyBillingForm and the family's debtor number", () => {
           target={target}
           existing={{ ...STORED, debtorNumber: "LEGACY 1" }}
           version="v-1"
-          onChangedSinceRead={vi.fn()}
+          reload={() => Promise.resolve(undefined)}
           format={{ digitsOnly: true, minDigits: 5, maxDigits: 5 }}
           onCancel={vi.fn()}
           onSaved={vi.fn()}
@@ -247,14 +247,15 @@ describe("FamilyBillingForm and the family's debtor number", () => {
     saveFamilyBilling.mockRejectedValueOnce(
       new ApiError("changed", 409, { code: "general.changed_since_read" }),
     );
-    const onChangedSinceRead = vi.fn();
+    // The page reads the family again; the stored state arrives as props.
+    const reload = vi.fn(() => Promise.resolve(undefined));
     const form = (existing: FamilyBilling, version: string) => (
       <ToastProvider>
         <FamilyBillingForm
           target={target}
           existing={existing}
           version={version}
-          onChangedSinceRead={onChangedSinceRead}
+          reload={reload}
           onCancel={vi.fn()}
           onSaved={vi.fn()}
         />
@@ -276,7 +277,7 @@ describe("FamilyBillingForm and the family's debtor number", () => {
       expect.objectContaining({ paymentMethod: "transfer" }),
       "v-1",
     );
-    expect(onChangedSinceRead).toHaveBeenCalledTimes(1);
+    expect(reload).toHaveBeenCalledTimes(1);
 
     view.rerender(form({ ...STORED, debtorNumber: "40301" }, "v-2"));
     expect(await screen.findByLabelText(/Debitorennummer/)).toHaveValue(
@@ -305,6 +306,41 @@ describe("FamilyBillingForm and the family's debtor number", () => {
     );
   });
 
+  // ADR 0311 rule 6: a failed read of the stored state after a refusal is
+  // a load error, and the refused version is not sent again.
+  it("names a failed read of the stored state after a refusal", async () => {
+    saveFamilyBilling.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    render(
+      <ToastProvider>
+        <FamilyBillingForm
+          target={target}
+          existing={STORED}
+          version="v-1"
+          reload={() =>
+            Promise.reject(
+              new ApiError("down", 503, { code: "general.unavailable" }),
+            )
+          }
+          onCancel={vi.fn()}
+          onSaved={vi.fn()}
+        />
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByRole("radio", { name: "Überweisung" }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Du siehst jetzt den neuen Stand/),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(saveFamilyBilling).toHaveBeenCalledTimes(1);
+  });
+
   it("refuses a number in another format of the Träger (#6675)", async () => {
     render(
       <ToastProvider>
@@ -312,7 +348,7 @@ describe("FamilyBillingForm and the family's debtor number", () => {
           target={target}
           existing={null}
           version="v-1"
-          onChangedSinceRead={vi.fn()}
+          reload={() => Promise.resolve(undefined)}
           format={{ digitsOnly: true, minDigits: 5, maxDigits: 5 }}
           onCancel={vi.fn()}
           onSaved={vi.fn()}
@@ -401,7 +437,7 @@ describe("FamilyBillingForm without a run (#7770)", () => {
           target={{ ...target, withoutRun: true }}
           existing={null}
           version="v-1"
-          onChangedSinceRead={vi.fn()}
+          reload={() => Promise.resolve(undefined)}
           onCancel={vi.fn()}
           onSaved={onSaved}
           {...props}
