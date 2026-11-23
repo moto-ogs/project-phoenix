@@ -192,15 +192,6 @@ export function ActivityManagementModal({
     clearFormErrors();
   };
 
-  if (isOpen && detail.data && !touched && base !== detail.data) {
-    setBase(detail.data);
-    setForm({
-      name: detail.data.name,
-      category_id: detail.data.ag_category_id || "",
-      max_participants: detail.data.max_participant?.toString() ?? "",
-    });
-  }
-
   // Reset form when activity changes
   useEffect(() => {
     if (isOpen) {
@@ -216,6 +207,19 @@ export function ActivityManagementModal({
       setTouched(false);
     }
   }, [isOpen, activity, setForm, clearFormErrors, clearDeleteErrors]);
+
+  // The stored activity fills the form while nobody has typed; its version
+  // is the one the save sends.
+  const stored = detail.data;
+  useEffect(() => {
+    if (!isOpen || !stored || touched || base === stored) return;
+    setBase(stored);
+    setForm({
+      name: stored.name,
+      category_id: stored.ag_category_id || "",
+      max_participants: stored.max_participant?.toString() ?? "",
+    });
+  }, [isOpen, stored, touched, base, setForm]);
 
   const save = async () => {
     formErrors.clear();
