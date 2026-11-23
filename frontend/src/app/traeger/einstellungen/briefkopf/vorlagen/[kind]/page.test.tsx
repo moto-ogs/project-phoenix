@@ -300,23 +300,21 @@ describe("TraegerVorlagePage", () => {
   });
 
   // ADR 0311: a colleague saved a version since the editor opened. The save
-  // is refused, the page shows the stored version, the draft stays, and the
-  // next save builds on the version now shown.
-  it("keeps the draft and shows the version a colleague saved since", async () => {
+  // is refused and the page shows the stored version with its text; the
+  // draft over it is gone, so no second „Speichern“ replaces it unseen.
+  it("shows the text a colleague saved since instead of keeping the draft over it", async () => {
     const colleague = {
       kind: "rechnung" as const,
       version: 1,
       standard: false,
       createdAt: "2026-09-09T10:00:00Z",
       ...STANDARD,
-      closing: "Viele Grüße\n{{traeger}}",
+      subject: "Rechnung der Kollegin",
     };
     renderPage();
     fireEvent.change(await screen.findByLabelText(/Betreff/), {
       target: { value: "Ihre Rechnung" },
     });
-    // The background read brings the colleague's version: the draft keeps
-    // the version it started from.
     templatesApi.fetchDocumentTemplate.mockResolvedValue(detail([colleague]));
     templatesApi.saveDocumentTemplate.mockRejectedValueOnce(
       new ApiError("changed", 409, { code: "general.changed_since_read" }),
@@ -333,6 +331,44 @@ describe("TraegerVorlagePage", () => {
       { ...STANDARD, subject: "Ihre Rechnung" },
       "v-0",
     );
+    expect((await screen.findAllByText("Version 1"))[0]).toBeVisible();
+    await waitFor(() =>
+      expect(screen.getByLabelText(/Betreff/)).toHaveValue(
+        "Rechnung der Kollegin",
+      ),
+    );
+    // Nothing is left to save over the colleague's version.
+    expect(
+      screen.queryByRole("button", { name: "Speichern" }),
+    ).not.toBeInTheDocument();
+    expect(templatesApi.saveDocumentTemplate).toHaveBeenCalledTimes(1);
+  });
+
+  // The stored version is newer but carries the text the draft started
+  // from: nothing of the colleague's is lost, so the draft stays and the
+  // next save builds on the version now shown.
+  it("keeps the draft when the version saved since has the text it started from", async () => {
+    const colleague = {
+      kind: "rechnung" as const,
+      version: 1,
+      standard: false,
+      createdAt: "2026-09-09T10:00:00Z",
+      ...STANDARD,
+    };
+    renderPage();
+    fireEvent.change(await screen.findByLabelText(/Betreff/), {
+      target: { value: "Ihre Rechnung" },
+    });
+    templatesApi.fetchDocumentTemplate.mockResolvedValue(detail([colleague]));
+    templatesApi.saveDocumentTemplate.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "die Vorlage"),
+      ),
+    ).toBeInTheDocument();
     expect((await screen.findAllByText("Version 1"))[0]).toBeVisible();
     expect(screen.getByLabelText(/Betreff/)).toHaveValue("Ihre Rechnung");
 

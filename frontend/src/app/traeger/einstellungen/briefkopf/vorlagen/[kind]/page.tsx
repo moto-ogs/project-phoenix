@@ -90,11 +90,12 @@ function TemplateEditorPage({
 }: Readonly<{ kind: DocumentTemplateKind }>) {
   const { data: session } = useSession();
   const canEdit = hasPermission(session ?? null, SETTINGS_RIGHT);
-  // Edits of the saved text with the version they started from (ADR 0311);
-  // `null` follows the saved text.
+  // Edits of the saved text with the version and text they started from
+  // (ADR 0311); `null` follows the saved text.
   const [edited, setEdited] = useState<{
     readonly text: DocumentTemplateText;
     readonly from: string;
+    readonly base: DocumentTemplateText;
   } | null>(null);
   // The preview of a draft; `null` shows the preview of the saved text.
   const [draftPreview, setDraftPreview] = useState<{
@@ -153,15 +154,22 @@ function TemplateEditorPage({
   const readTemplate = useCallback(async () => {
     await mutateTemplate(fetchDocumentTemplate(kind), { revalidate: false });
   }, [kind, mutateTemplate]);
-  // Reads the stored template after a refused save; the draft now starts
-  // from it. A failed read keeps the old start, so a save is refused again.
+  // Reads the stored template after a refused save and shows it. The draft
+  // stays only while the stored text is the one it started from; otherwise
+  // the form shows the colleague's text, so a second „Speichern“ cannot
+  // replace it unseen. A failed read keeps the old start, so a save is
+  // refused again.
   const adoptStoredTemplate = async () => {
     try {
       const stored = await fetchDocumentTemplate(kind);
       await mutateTemplate(stored, { revalidate: false });
+      const storedText = templateTextOf(stored.current);
       setEdited((before) =>
-        before ? { ...before, from: stored.version } : before,
+        before && sameTemplateText(before.base, storedText)
+          ? { ...before, from: stored.version }
+          : null,
       );
+      setDraftPreview(null);
     } catch (err) {
       logger.warn("traeger_document_template_reload_failed", {
         error: err instanceof Error ? err.message : String(err),
@@ -178,12 +186,15 @@ function TemplateEditorPage({
   const error =
     template.error ?? master.error ?? savedPreview.error ?? schemaError;
   const draft = edited?.text ?? current;
-  // Changes the draft; the first change remembers the version it starts from.
+  // Changes the draft; the first change remembers the version and text it
+  // starts from.
   const edit = (next: (base: DocumentTemplateText) => DocumentTemplateText) =>
     setEdited((before) => {
-      const base = before?.text ?? current;
-      const from = before?.from ?? template.data?.version;
-      return base && from !== undefined ? { text: next(base), from } : before;
+      if (before) return { ...before, text: next(before.text) };
+      const from = template.data?.version;
+      return current && from !== undefined
+        ? { text: next(current), from, base: current }
+        : before;
     });
   const previewed = draftPreview?.text ?? current;
   const preview = draftPreview?.preview ?? savedPreview.data;
@@ -230,8 +241,7 @@ function TemplateEditorPage({
       });
       void formErrors.show(err, { object: "die Vorlage" });
       // Someone saved a version since: the page shows it (number, date,
-      // versions) and the draft stays. Saving again builds on the version
-      // now shown.
+      // text, versions) instead of the draft over it.
       if (isChangedSinceRead(err)) await adoptStoredTemplate();
       setSaving(false);
       return;
