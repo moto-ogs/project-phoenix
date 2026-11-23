@@ -198,3 +198,31 @@ func TestACoBookingEndsWithItsLastTrigger(t *testing.T) {
 	assert.Zero(t, c.onOccurrence(t, afterFebruary), "on no occurrence after the end")
 	assert.Equal(t, []calendar.Date{calendar.Date(e.sourcePhase.ServiceEndDate).AddDays(1)}, c.bookingEnds(t, may.ID), "the scheduled switch stays")
 }
+
+// Changes scheduled for March and May both keep an offering as it is. An
+// undated correction schedules them again and keeps the offering's roster
+// row in one piece: a booking that ends where the next change starts is no
+// end the row follows.
+func TestACorrectionKeepsARosterRowAcrossScheduledChanges(t *testing.T) {
+	t.Parallel()
+	e := setupContractEnrollment(t)
+	kept, march, may := e.careOffering(t, "Ganztag", nil), e.careOffering(t, "Modul ab März", nil), e.careOffering(t, "Modul ab Mai", nil)
+	roster := createSourcedTemplate(t, e.decisionTestEnv, "correction-scheduled", kept.ID, nil, offeringSourcePeriod(t, e.decisionTestEnv))
+	student := e.student(t, "Lina")
+	phaseEnd := calendar.Date(e.sourcePhase.ServiceEndDate).AddDays(1)
+	made := e.enroll(t, e.input(student.ID, bookingOf(kept, calendar.Date(e.sourcePhase.ServiceStartDate), phaseEnd, "mon")))
+	require.Equal(t, capability.ContractEnrollmentEnrolled, made[0].Status)
+	c := &correctionEnv{contractEnrollmentEnv: e, studentID: student.ID, requestID: made[0].RequestID, childID: made[0].RequestChildID, roster: roster}
+	monday := func(id int64) enrollmentAPI.OfferingAdjustmentSelection {
+		return enrollmentAPI.OfferingAdjustmentSelection{OfferingID: id, SelectedDays: []string{"mon"}}
+	}
+	inMarch, inMay := calendar.NewDate(2027, 3, 1), calendar.NewDate(2027, 5, 3)
+	c.correct(t, &inMarch, monday(kept.ID), monday(march.ID))
+	c.correct(t, &inMay, monday(kept.ID), monday(may.ID))
+
+	c.correct(t, nil, monday(kept.ID))
+
+	assert.Equal(t, 1, c.count(t, `SELECT COUNT(*) FROM activities.student_enrollments WHERE tenant_id = ? AND student_id = ?
+		AND activity_group_id = ?`, testpkg.Tenant(t), student.ID, roster.ID), "one roster row for the unchanged offering")
+	assert.Equal(t, 1, c.rosterEndsOn(t, phaseEnd), "it runs to the end of the phase")
+}

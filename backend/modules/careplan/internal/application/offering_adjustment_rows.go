@@ -42,10 +42,12 @@ func (m *BookingMaterialization) persistOfferingAdjustment(ctx context.Context, 
 		materializeFrom = &work.selectionDate
 	}
 	studentID := *work.child.CreatedStudentID
-	adjusted := adjustedRoster{requestChildID: work.child.ID, studentID: studentID, phase: phase}
+	adjusted := adjustedRoster{requestChildID: work.child.ID, studentID: studentID, phase: phase, toBookingEnd: work.effectiveFrom == nil}
 	if err := m.rematerializeAdjustedEnrollments(ctx, adjusted, work.beforeLinks, work.replacement, materializeFrom); err != nil {
 		return err
 	}
+	// A restored change ends where the next one starts: no booking end.
+	adjusted.toBookingEnd = false
 	for _, future := range scheduled {
 		if err := m.splitAdjustedEnrollments(ctx, adjusted, future.Rows, future.EffectiveFrom); err != nil {
 			return err
@@ -386,6 +388,10 @@ type adjustedRoster struct {
 	requestChildID int64
 	studentID      int64
 	phase          careplan.OfferingPhase
+	// toBookingEnd lets a kept row follow a booking that ends earlier: set
+	// for the selection of an undated correction, whose ends are those of
+	// the bookings (keepBookingEnds), not the start of a later change.
+	toBookingEnd bool
 }
 
 func (m *BookingMaterialization) rematerializeAdjustedEnrollments(
@@ -491,7 +497,7 @@ func (m *BookingMaterialization) splitAdjustedEnrollments(
 			continue
 		}
 		affectedGroups[row.ActivityGroupID] = true
-		if err := m.reconcileAdjustedEnrollment(ctx, row, adjusted.phase, effectiveFrom, drafts); err != nil {
+		if err := m.reconcileAdjustedEnrollment(ctx, row, adjusted, effectiveFrom, drafts); err != nil {
 			return err
 		}
 	}
@@ -650,7 +656,7 @@ func deferredToUnionResync(row ports.RosterEnrollment, drafts map[int64]*careEnr
 func (m *BookingMaterialization) reconcileAdjustedEnrollment(
 	ctx context.Context,
 	row ports.RosterEnrollment,
-	phase careplan.OfferingPhase,
+	adjusted adjustedRoster,
 	effectiveFrom calendar.Date,
 	drafts map[int64]*careEnrollmentDraft,
 ) error {
@@ -659,7 +665,7 @@ func (m *BookingMaterialization) reconcileAdjustedEnrollment(
 	}
 	if draft := drafts[row.ActivityGroupID]; draft != nil && !row.ValidFrom.After(effectiveFrom) && careDraftMatchesEnrollment(draft, row) {
 		delete(drafts, row.ActivityGroupID)
-		return m.retainAdjustedEnrollment(ctx, row, draft, phase)
+		return m.retainAdjustedEnrollment(ctx, row, draft, adjusted)
 	}
 	if !row.ValidFrom.Before(effectiveFrom) {
 		if err := m.deps.Rosters.DeleteEnrollment(ctx, row.ID); err != nil {
@@ -678,10 +684,11 @@ func (m *BookingMaterialization) reconcileAdjustedEnrollment(
 // draft itself may reach — the phase end, clamped by the sourced segment's
 // envelope and the offering-link window (#2147 review). Extending a capped
 // split predecessor back to the phase end would restore coverage past the
-// split and overlap its successor. It is shortened only to a booking that
-// ends before the phase (#7909): a co-booking whose trigger ends earlier
-// ends there on the roster too.
-func (m *BookingMaterialization) retainAdjustedEnrollment(ctx context.Context, row ports.RosterEnrollment, draft *careEnrollmentDraft, phase careplan.OfferingPhase) error {
+// split and overlap its successor. In an undated correction it is shortened
+// to a booking that ends before the phase (#7909): a co-booking whose
+// trigger ends earlier ends there on the roster too.
+func (m *BookingMaterialization) retainAdjustedEnrollment(ctx context.Context, row ports.RosterEnrollment, draft *careEnrollmentDraft, adjusted adjustedRoster) error {
+	phase := adjusted.phase
 	draftEndExclusive := careDraftValidUntil(draft, phase)
 	if row.ValidUntil != nil && row.ValidUntil.Before(draftEndExclusive) {
 		if err := m.deps.Rosters.SetEnrollmentValidUntil(ctx, row.ID, draftEndExclusive); err != nil {
@@ -689,7 +696,7 @@ func (m *BookingMaterialization) retainAdjustedEnrollment(ctx context.Context, r
 		}
 		return nil
 	}
-	bookingEnds := draft.linkValidUntil != nil && *draft.linkValidUntil == draftEndExclusive && draftEndExclusive.Before(phase.ServiceEnd.AddDays(1))
+	bookingEnds := adjusted.toBookingEnd && draft.linkValidUntil != nil && *draft.linkValidUntil == draftEndExclusive && draftEndExclusive.Before(phase.ServiceEnd.AddDays(1))
 	if bookingEnds && (row.ValidUntil == nil || row.ValidUntil.After(draftEndExclusive)) {
 		if err := m.deps.Rosters.SetEnrollmentValidUntil(ctx, row.ID, draftEndExclusive); err != nil {
 			return fmt.Errorf("decision: shorten retained adjusted enrollment: %w", err)
