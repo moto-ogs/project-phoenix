@@ -362,6 +362,14 @@ function enrollmentAnswerAccessOf(
   return options.error ? "granted" : "pending";
 }
 
+/** The filter value of an answer, "<question key>=<answer value>" (#6954). */
+function enrollmentAnswerValue(
+  question: EnrollmentAnswerFilter,
+  option: EnrollmentAnswerFilter["options"][number],
+): string {
+  return `${question.key}=${option.value}`;
+}
+
 /**
  * The children an offered registration answer names, or null when the answer
  * is off or not offered (#7645).
@@ -373,7 +381,7 @@ function enrollmentAnswerChildrenOf(
   if (!answer) return null;
   for (const question of questions) {
     for (const option of question.options) {
-      if (`${question.key}=${option.value}` === answer) {
+      if (enrollmentAnswerValue(question, option) === answer) {
         return new Set(option.studentIds);
       }
     }
@@ -1658,8 +1666,8 @@ function SearchPageContent() {
   // A session that is still loading names no permissions yet: deciding now
   // would refuse the account and drop its saved filter.
   // The answers name the children in care on the list's planning day
-  // (#7645). The previous day's answers stay while the next day's load, so a
-  // date change does not hold the list for the access again.
+  // (#7645). A new day waits for its own answers: the previous day's would
+  // filter and count the new day's children.
   const enrollmentAnswerDay = isToday ? undefined : selectedDate;
   const fetchEnrollmentAnswersOfDay = useCallback(
     () => fetchEnrollmentAnswerFilters(enrollmentAnswerDay),
@@ -1670,7 +1678,6 @@ function SearchPageContent() {
       ? tenantListKeys.enrollmentAnswerFilters(enrollmentAnswerDay)
       : null,
     fetchEnrollmentAnswersOfDay,
-    { keepPreviousData: true },
   );
   const enrollmentAnswerAccess = enrollmentAnswerAccessOf(
     status === "loading",
@@ -2320,7 +2327,7 @@ function SearchPageContent() {
           ? option.studentIds.filter((id) => shown.has(id)).length
           : option.count;
         return {
-          value: `${question.key}=${option.value}`,
+          value: enrollmentAnswerValue(question, option),
           label: `${answerQuestionLabel(question.label)}: ${option.label} (${count})`,
           chip: `${answerQuestionLabel(question.label)}: ${option.label}`,
         };
