@@ -1,11 +1,11 @@
 "use client";
 
-import { type Child } from "~/lib/parent-api";
 import { useParentChildren, useParentFeatures } from "./use-parent-resources";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 export function useParentMealPlanEnabled(
   enabled: boolean,
-  children?: readonly Child[] | null,
+  children?: readonly parentMeContract.ChildResponse[] | null,
 ): boolean {
   const linked = useParentChildren(enabled && children === undefined);
   const features = useParentFeatures(

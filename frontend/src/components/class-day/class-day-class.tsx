@@ -38,9 +38,7 @@ import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { Textarea } from "~/components/ui/textarea";
 import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
 import type {
-  ClassDayHint,
   ClassDayReport,
-  ClassDayRow,
   MorningAttendanceStatus,
 } from "~/lib/class-day-api";
 import { dayHintAuthorSuffix } from "~/lib/class-day-api";
@@ -394,7 +392,7 @@ export function ClassDayClass({
   // Link, und nur bei Kindern mit Betreuungsplatz.
   const sharedNotesHref =
     report?.can_read_shared_notes === true
-      ? (row: ClassDayRow) => {
+      ? (row: schoolClassDayContract.DayRow) => {
           if (row.list_entry || row.without_care_place) return undefined;
           return schoolPath(
             classDayChildPath(schoolClass, row.student_id, dateISO),
@@ -419,7 +417,9 @@ export function ClassDayClass({
       label: `${row.last_name}, ${row.first_name}`,
     })),
   ];
-  const ownHintFor = (target: string): ClassDayHint | undefined => {
+  const ownHintFor = (
+    target: string,
+  ): schoolClassDayContract.DayHint | undefined => {
     if (target === CLASS_TARGET) return classHints.find((hint) => hint.own);
     const row = hintChildren.find((child) => child.student_id === target);
     return row?.day_hints?.find((hint) => hint.own);
@@ -550,7 +550,7 @@ export function ClassDayClass({
     (row) => morningStatus(row, draft) === null,
   ).length;
   const markRow = useCallback(
-    (row: ClassDayRow, status: MorningAttendanceStatus) => {
+    (row: schoolClassDayContract.DayRow, status: MorningAttendanceStatus) => {
       setDraftState((current) => ({
         key: reportKey,
         marks: {

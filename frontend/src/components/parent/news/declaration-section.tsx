@@ -36,23 +36,23 @@ import { formatBerlinDate, formatChatDateTime } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
 import { parentPath } from "~/lib/parent-url";
 import {
-  type ParentAnnouncement,
-  type ParentDeclaration,
   type ParentDeclarationAction,
-  type ParentDeclarationChild,
   PARENT_DECLARATION_STATES,
   type ParentDeclarationState,
   declarationProofPath,
   submitDeclaration,
 } from "~/lib/parent-api";
 import type { SignatureValue } from "~/lib/signature";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 const logger = createLogger({ component: "ParentDeclaration" });
 
 /** True when the item is an Einverständnis with its declaration block. */
 export function isDeclarationItem(
-  item: ParentAnnouncement,
-): item is ParentAnnouncement & { declaration: ParentDeclaration } {
+  item: parentMeContract.AnnouncementResponse,
+): item is parentMeContract.AnnouncementResponse & {
+  declaration: parentMeContract.AnnouncementDeclarationResponse;
+} {
   return item.delivery_mode === "declaration" && item.declaration !== undefined;
 }
 
@@ -61,7 +61,9 @@ export function isDeclarationItem(
  * feed for the children this guardian answered for, so a consent can still be
  * revoked (#6290); it asks for nothing and has no live attachments.
  */
-export function isEndedDeclaration(item: ParentAnnouncement): boolean {
+export function isEndedDeclaration(
+  item: parentMeContract.AnnouncementResponse,
+): boolean {
   return isDeclarationItem(item) && item.declaration.ended;
 }
 
@@ -72,7 +74,9 @@ export function isEndedDeclaration(item: ParentAnnouncement): boolean {
  * another guardian settles the child, so no "Antwort nötig" then, although
  * the buttons stay (a decline still wins). Same rule as the unread count.
  */
-export function isOpenDeclaration(item: ParentAnnouncement): boolean {
+export function isOpenDeclaration(
+  item: parentMeContract.AnnouncementResponse,
+): boolean {
   if (!isDeclarationItem(item) || item.declaration.closed) return false;
   return (item.declaration.children ?? []).some(
     (child) =>
@@ -157,8 +161,8 @@ export function declarationErrorOutcome(err: unknown): {
  * with "all" the child stays partial while another person is still open.
  */
 function stateAfter(
-  declaration: ParentDeclaration,
-  child: ParentDeclarationChild,
+  declaration: parentMeContract.AnnouncementDeclarationResponse,
+  child: parentMeContract.parentDeclarationChildResponse,
   action: ParentDeclarationAction,
 ): ParentDeclarationState {
   if (action === "declined" || action === "revoked") return action;
@@ -171,7 +175,7 @@ function stateAfter(
 
 /** True when this action of this Einverständnis needs a signature. */
 function declarationNeedsSignature(
-  declaration: ParentDeclaration,
+  declaration: parentMeContract.AnnouncementDeclarationResponse,
   action: ParentDeclarationAction,
 ): boolean {
   return declaration.requires_signature && action === "agreed";
@@ -182,7 +186,7 @@ function declarationNeedsSignature(
 const SIGNATURE_FIELD = "declaration-signature";
 
 interface PendingAction {
-  readonly child: ParentDeclarationChild;
+  readonly child: parentMeContract.parentDeclarationChildResponse;
   readonly action: ParentDeclarationAction;
   /** The wording acted on; the current one unless an earlier consent is revoked. */
   readonly version: { readonly id: string; readonly version_no: number };
@@ -193,11 +197,11 @@ interface PendingAction {
  * to the Einverständnis, also one to an older wording (#6303).
  */
 function childAfter(
-  declaration: ParentDeclaration,
-  child: ParentDeclarationChild,
+  declaration: parentMeContract.AnnouncementDeclarationResponse,
+  child: parentMeContract.parentDeclarationChildResponse,
   action: ParentDeclarationAction,
   submittedAt: string,
-): ParentDeclarationChild {
+): parentMeContract.parentDeclarationChildResponse {
   if (action === "revoked" && child.my_action !== "agreed") {
     return { ...child, earlier_consent: null };
   }
@@ -218,8 +222,13 @@ export function DeclarationSection({
   onReload,
   onBusyChange,
 }: Readonly<{
-  item: ParentAnnouncement & { declaration: ParentDeclaration };
-  onUpdated: (id: string, patch: Partial<ParentAnnouncement>) => void;
+  item: parentMeContract.AnnouncementResponse & {
+    declaration: parentMeContract.AnnouncementDeclarationResponse;
+  };
+  onUpdated: (
+    id: string,
+    patch: Partial<parentMeContract.AnnouncementResponse>,
+  ) => void;
   /** Reload the feed; the server has the authoritative state. */
   onReload?: (id: string) => void;
   /** Locks the surrounding dialog while a confirmation is open or running. */
@@ -257,7 +266,7 @@ export function DeclarationSection({
   }, [pending, saving, onBusyChange]);
 
   const open = (
-    child: ParentDeclarationChild,
+    child: parentMeContract.parentDeclarationChildResponse,
     action: ParentDeclarationAction,
     version: PendingAction["version"] | null = declaration.version,
   ) => {
@@ -510,9 +519,9 @@ function DeclarationChildCard({
   busy,
   onAction,
 }: Readonly<{
-  item: ParentAnnouncement;
-  declaration: ParentDeclaration;
-  child: ParentDeclarationChild;
+  item: parentMeContract.AnnouncementResponse;
+  declaration: parentMeContract.AnnouncementDeclarationResponse;
+  child: parentMeContract.parentDeclarationChildResponse;
   busy: boolean;
   onAction: (
     action: ParentDeclarationAction,

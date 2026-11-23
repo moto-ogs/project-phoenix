@@ -8,10 +8,8 @@ import { useCareTermTranslations } from "~/lib/care-facility-term";
 import { PARENT_RESOURCE_OPTIONS } from "~/lib/hooks/use-parent-resources";
 import { useSWRAuth } from "~/lib/swr";
 import { parentKeys } from "~/lib/swr/parent-keys";
-import {
-  getRequestSharingOptions,
-  type RequestSharingState,
-} from "~/lib/parent-api";
+import { getRequestSharingOptions } from "~/lib/parent-api";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 /**
  * Loads the guardians a request may be shared with. Every selector of a
@@ -22,7 +20,7 @@ import {
  * choice is possible right now.
  */
 export function useSharingOptions(studentId: string): {
-  state: RequestSharingState | null;
+  state: parentMeContract.requestSharingResponse | null;
   failed: boolean;
   error: FormError | null;
 } {

@@ -4,8 +4,8 @@ import {
   listRelatedAccounts,
   inviteRelatedAccount,
   removeRelatedAccount,
-  type RelatedAccount,
 } from "./parent-api";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 const originalFetch = globalThis.fetch;
 
@@ -31,7 +31,7 @@ afterEach(() => {
   globalThis.fetch = originalFetch;
 });
 
-const sampleAccount: RelatedAccount = {
+const sampleAccount: parentMeContract.relatedAccountResponse = {
   guardian_profile_id: "10",
   first_name: "Sabine",
   last_name: "Schneider",
@@ -42,7 +42,7 @@ const sampleAccount: RelatedAccount = {
   is_self: false,
 };
 
-const noAccountSample: RelatedAccount = {
+const noAccountSample: parentMeContract.relatedAccountResponse = {
   ...sampleAccount,
   guardian_profile_id: "11",
   status: "no_account",

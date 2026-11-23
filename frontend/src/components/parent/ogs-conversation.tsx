@@ -56,7 +56,6 @@ import {
   parentRequestTypeI18nKey,
 } from "~/lib/messaging-status";
 import {
-  type ChildFeatures,
   type ParentMessage,
   type ThreadSummary,
   UNKNOWN_CHILD_TODAY,
@@ -82,6 +81,7 @@ import {
   useCareFacilityTerm,
   useCareTermTranslations,
 } from "~/lib/care-facility-term";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 const logger = createLogger({ component: "OgsConversation" });
 
@@ -894,7 +894,7 @@ function QuickActions({
   childName,
   onPick,
 }: Readonly<{
-  features: ChildFeatures;
+  features: parentMeContract.ChildFeaturesResponse;
   loading: boolean;
   childName?: string;
   onPick: (key: OgsActionKey) => void;

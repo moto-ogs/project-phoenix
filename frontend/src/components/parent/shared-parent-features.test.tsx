@@ -1,3 +1,4 @@
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
@@ -27,11 +28,13 @@ vi.mock("~/lib/tenant-context", () => ({
   useTenantSafe: () => null,
 }));
 
-const children = [{ student_id: "42", tenant_id: "7" }] as api.Child[];
+const children = [
+  { student_id: "42", tenant_id: "7" },
+] as parentMeContract.ChildResponse[];
 const features = {
   sick_note_enabled: true,
   master_data_edit_enabled: true,
-} as api.ChildFeatures;
+} as parentMeContract.ChildFeaturesResponse;
 function wrapper({ children: content }: Readonly<{ children: ReactNode }>) {
   return (
     <ParentResourceTestProvider>
@@ -45,12 +48,12 @@ beforeEach(() => {
   vi.restoreAllMocks();
   vi.spyOn(api, "getChildFeatures").mockResolvedValue(features);
   vi.spyOn(api, "getChildMasterData").mockResolvedValue(
-    {} as api.ChildMasterData,
+    {} as parentMeContract.MasterDataResponse,
   );
   vi.spyOn(api, "getChildCareSchedule").mockResolvedValue({
     weekdays: [],
     today_absent: false,
-  } as unknown as api.ChildCareSchedule);
+  } as unknown as parentMeContract.CareScheduleResponse);
   vi.spyOn(api, "listSickDays").mockResolvedValue([]);
   vi.spyOn(api, "listExcusedRequests").mockResolvedValue([]);
   vi.spyOn(api, "listCareExceptions").mockResolvedValue([]);
@@ -124,7 +127,7 @@ describe("shared parent relationship features", () => {
     });
     const linked = [
       ...children,
-      { student_id: "43", tenant_id: "7" } as api.Child,
+      { student_id: "43", tenant_id: "7" } as parentMeContract.ChildResponse,
     ];
     const { result } = renderHook(
       () => ({
@@ -159,10 +162,16 @@ describe("shared parent relationship features", () => {
 describe("shared parent daily status", () => {
   const linked = [
     ...children,
-    { student_id: "43", tenant_id: "7" } as api.Child,
+    { student_id: "43", tenant_id: "7" } as parentMeContract.ChildResponse,
   ];
-  const present: api.ChildToday = { at_ogs: true, state: "present" };
-  const left: api.ChildToday = { at_ogs: false, state: "left" };
+  const present: parentMeContract.TodayStatusResponse = {
+    at_ogs: true,
+    state: "present",
+  };
+  const left: parentMeContract.TodayStatusResponse = {
+    at_ogs: false,
+    state: "left",
+  };
   const failure = new ApiError("offline", 503, { code: "general.unavailable" });
 
   it("keeps successful sibling statuses and exposes cold-load failures", async () => {
@@ -278,7 +287,10 @@ describe("shared parent rate-limit recovery", () => {
       if (blocked) throw blocked;
       return features;
     });
-    const present: api.ChildToday = { at_ogs: true, state: "present" };
+    const present: parentMeContract.TodayStatusResponse = {
+      at_ogs: true,
+      state: "present",
+    };
     vi.spyOn(api, "getChildToday").mockImplementation(async () => {
       const blocked = rateLimitBlockedError("GET");
       if (blocked) throw blocked;
@@ -309,7 +321,7 @@ describe("shared parent rate-limit recovery", () => {
 describe("alternating partial parent refreshes", () => {
   const linked = [
     ...children,
-    { student_id: "43", tenant_id: "7" } as api.Child,
+    { student_id: "43", tenant_id: "7" } as parentMeContract.ChildResponse,
   ];
   it.each(["features", "today"] as const)(
     "keeps the latest successful %s value per child",
@@ -327,7 +339,10 @@ describe("alternating partial parent refreshes", () => {
       const failure = new ApiError("offline", 503, {
         code: "general.unavailable",
       });
-      request.mockResolvedValue(initial as api.ChildFeatures & api.ChildToday);
+      request.mockResolvedValue(
+        initial as parentMeContract.ChildFeaturesResponse &
+          parentMeContract.TodayStatusResponse,
+      );
       const { result } = renderHook(
         () => ({
           features: useParentFeatures(linked),
@@ -340,7 +355,8 @@ describe("alternating partial parent refreshes", () => {
       );
       request.mockImplementation(async (id) => {
         if (id === "43") throw failure;
-        return fresh as api.ChildFeatures & api.ChildToday;
+        return fresh as parentMeContract.ChildFeaturesResponse &
+          parentMeContract.TodayStatusResponse;
       });
       await act(async () => {
         await result.current[kind].mutate();
@@ -348,7 +364,8 @@ describe("alternating partial parent refreshes", () => {
       expect(result.current[kind].data?.["42"]).toEqual(fresh);
       request.mockImplementation(async (id) => {
         if (id === "42") throw failure;
-        return fresh as api.ChildFeatures & api.ChildToday;
+        return fresh as parentMeContract.ChildFeaturesResponse &
+          parentMeContract.TodayStatusResponse;
       });
       await act(async () => {
         await result.current[kind].mutate();
