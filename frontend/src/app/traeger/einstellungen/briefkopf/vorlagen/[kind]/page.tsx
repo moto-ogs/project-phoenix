@@ -522,7 +522,7 @@ function TemplateEditorPage({
                         disabledReason={
                           editor.status === "loadFailed"
                             ? "Lade zuerst die gespeicherte Vorlage neu."
-                            : "Die gespeicherte Vorlage wird geladen."
+                            : undefined
                         }
                       />
                     ) : null}
