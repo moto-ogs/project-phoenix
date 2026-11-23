@@ -392,7 +392,10 @@ Die Einzelheiten (`billedChildHolds`, eine reine Funktion):
   1. oder ist sein Eintritt.
 - **S3 Zurückhalten.** Ein Kind wird zurückgehalten, wenn ein Vertrag des
   Kindes ohne Rechnung einen Tag abrechnen würde, an dem eine Rechnung eines
-  anderen seiner Verträge veraltet ist. „Würde abrechnen“ heißt: Der Vertrag
+  anderen seiner Verträge veraltet ist. Nur ein Vertrag ohne Rechnung löst
+  das aus: Ein Vertrag mit eigener Rechnung, auch einer nur mit Mensa (S5),
+  bekommt in diesem Lauf ohnehin keine und hält darum keinen anderen Vertrag
+  zurück. „Würde abrechnen“ heißt: Der Vertrag
   bekäme heute eine Rechnung mit Betreuungspositionen. Er rechnet den Tag
   nach E2 ab, sein Monat ist nicht beitragsfrei (#6196), und jeder gebuchte
   Wochentag hat einen Preis. Ein Vertrag ohne Preis bleibt unter „Ohne Preis“
@@ -405,16 +408,26 @@ Die Einzelheiten (`billedChildHolds`, eine reine Funktion):
   ihr Vertrag heute erst am 15., sind der 1. bis 14. schon abgerechnet, und
   das Kind wird zurückgehalten.
 - **S4 Ganzes Kind.** Wie E4 hält der Lauf alle Verträge des Kindes ohne
-  Rechnung zurück, auch ihre Mensa und auch einen Vertrag ohne Preis. Ein
-  Kind mit doppeltem Vertrag (E3) bleibt unter „Doppelter Vertrag“.
+  Rechnung zurück, auch ihre Mensa und auch einen Vertrag ohne Preis. Die
+  Verträge, die E4 wegen eines doppelten Vertrags zurückhält, bleiben unter
+  „Doppelter Vertrag“. Zählt die Geschwisterkette einen weiteren Vertrag zu
+  demselben Kind, den E3 nicht erfasst (etwa über den Namen einer
+  ausgestellten Rechnung), gilt S3 für ihn wie für jeden anderen.
 - **S5 Rechnung nur mit Mensa.** Trägt die Monatsrechnung eines laufenden
   Vertrags keine Betreuungsposition und würde der Vertrag heute Betreuung
   abrechnen (Preis vorhanden, kein beitragsfreier Monat), nennt die Prüfung
-  das Kind mit dieser Rechnung (`meal_only_invoice`). Nach dem Storno rechnet
-  der nächste Lauf Betreuung und Mensa zusammen ab. Hier ist die Betreuung
+  das Kind mit dieser Rechnung (`meal_only_invoice`), in einem eigenen
+  Eintrag, auch wenn das Kind nach S3 zurückgehalten wird. Ein solcher
+  Vertrag hält keinen anderen zurück (S3). Nach dem Storno hat er keine
+  Rechnung mehr: Würde er dann einen Tag abrechnen, den eine veraltete
+  Rechnung eines anderen Vertrags schon abrechnet, hält der nächste Lauf das
+  Kind nach S3 zurück und nennt jene Rechnung. So rechnet kein Lauf diese
+  Tage zweimal ab. Sonst rechnet der nächste Lauf Betreuung und Mensa
+  zusammen ab. Hier ist die Betreuung
   nicht abgerechnet: Die Prüfung zeigt diese Kinder in einer eigenen Karte,
   die zum Storno auffordert, und kein Text nennt „nichts tun“ oder das
-  Verwerfen des Laufs als Ausweg.
+  Verwerfen des Laufs als Ausweg. Ein Kind mit beiden Einträgen steht in
+  beiden Karten, und der leere Lauf fordert zum Storno auf.
 - **S6 Jahresbescheid.** Ein Monat eines Jahresbescheids, der Betreuung
   festsetzt, hält wie eine Rechnung; die Prüfung nennt den Bescheid. Ein
   Monat, den ein Änderungsbescheid auf nichts gesetzt hat (ADR 0182), rechnet
@@ -426,8 +439,12 @@ Die Einzelheiten (`billedChildHolds`, eine reine Funktion):
   ausgestellte Rechnung und als Ort seiner zurückgehaltenen Verträge
   (ADR 0305, Nachtrag #7863). Seine Basis ist die ausgestellte Rechnung. Für
   die anderen Kinder ändert sich nur, was daraus folgt.
-- **S8 Sichtbar.** `billed_children` an `CareRunDetail` und
-  `CareNoticeRunDetail`, Karte „Kind hat schon eine Rechnung – bitte prüfen“
+- **S8 Sichtbar.** Ein Eintrag nennt die zurückgehaltenen Verträge und nur die
+  Rechnungen, die ihnen im Weg sind: deren veraltete Tage ein
+  zurückgehaltener Vertrag abrechnen würde. Ein Bescheid-Lauf nennt ein Kind
+  je Grund einmal, mit den Verträgen und Rechnungen aller Monate; Einträge mit
+  einem gemeinsamen Vertrag sind ein Kind. `billed_children` an
+  `CareRunDetail` und `CareNoticeRunDetail`, Karte „Kind hat schon eine Rechnung – bitte prüfen“
   für jeden Lauf mit einer Schule der zurückgehaltenen Verträge, auch im
   leeren Lauf, und eine Zeile je Kind in der Prüfliste. Beide Fingerabdrücke
   enthalten die Liste, wenn sie nicht leer ist. Das Leseprotokoll nennt die
@@ -455,9 +472,14 @@ Die Einzelheiten (`billedChildHolds`, eine reine Funktion):
     Rechnung schon abrechnet, auch dann zurückgehalten, wenn sein laufender
     Vertrag schon einen Bescheid hat. Zwei Teile eines Schulwechsels, deren
     Bescheide der Lauf beide neu rechnet, legt er damit zusammen.
-  - Ein Kind, das die erste Rechnung zurückhält, bleibt in der zweiten als
-    Ganzes zurückgehalten (S4), auch wenn einer seiner Verträge dort seine
-    Festsetzung zurückbekommt.
+  - Die erste Rechnung entscheidet, wer zurückgehalten wird; die zweite
+    übernimmt das nur. Ein Kind, das die erste zurückhält, bleibt als Ganzes
+    zurückgehalten (S4), auch wenn einer seiner Verträge dort seine
+    Festsetzung zurückbekommt. Die zweite hält niemanden neu zurück: Eine
+    Festsetzung, die sie wegen eines fehlenden Preises wieder einsetzt, kann
+    an Tagen veraltet sein, an denen ihr Vertrag nicht mehr läuft, und nähme
+    sonst einem anderen Vertrag des Kindes den Monat, ohne dass die Vorschau
+    es zeigt.
 
 **Grenzen.** Ein Vertrag außerhalb des Monats ohne Kinderakte und ohne
 Geburtsdatum hat keine Identität (#7863) und hält kein Kind. Haben beide
