@@ -21098,7 +21098,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.RenamePerson",
-      "binding_digest": "83c5850c57718e05bb751d25ccb17700",
+      "binding_digest": "a7a15c647f402e5f99000665305be883",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.RenamePerson",
       "source_owner": "care-plan",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.RenamePerson",
@@ -21106,7 +21106,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.RenamePerson",
-      "binding_digest": "b5d0d6b3788b0121f620caede0fce2ee",
+      "binding_digest": "bd49f293aacf5713fa8ec89254117d09",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.RenamePerson",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.RenamePerson",
@@ -21114,7 +21114,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.RenamePerson",
-      "binding_digest": "26d4dcc04e2bb8faeb29a97df8565b9f",
+      "binding_digest": "7031a01ab2f8c5a35971532b9cfaabf8",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.RenamePerson",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.RenamePerson",
@@ -21122,7 +21122,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.RenamePerson",
-      "binding_digest": "26d4dcc04e2bb8faeb29a97df8565b9f",
+      "binding_digest": "7031a01ab2f8c5a35971532b9cfaabf8",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.RenamePerson",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.RenamePerson",

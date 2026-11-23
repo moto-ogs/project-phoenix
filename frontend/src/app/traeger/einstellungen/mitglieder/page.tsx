@@ -16,7 +16,7 @@ import {
   InviteTraegerAccountModal,
 } from "~/components/traeger/traeger-account-modals";
 import { isRefusal } from "~/components/traeger/use-traeger-confirmed-resource";
-import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { useFreshTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { TraegerAccountHistory } from "~/components/traeger/traeger-account-history";
 import { useTraegerListExportItems } from "~/components/traeger/traeger-list-export-menu";
 import { Button } from "~/components/ui/button";
@@ -63,12 +63,14 @@ type Pending =
 export default function TraegerAccountsPage() {
   const { data: session } = useSession();
   const ownEmail = session?.user?.email ?? "";
-  const reader = useTraegerResource(
+  // Every read of the people is logged in the history („Liste angesehen“,
+  // ADR 0311 rule 1): each opening reads once, never from the cache.
+  const reader = useFreshTraegerResource(
     traegerKeys.buero(),
     fetchTraegerBuero,
     "die Liste der Personen",
   );
-  const { mutate } = reader;
+  const { mutate, reloadOrThrow } = reader;
   const [exportRefusal, setExportRefusal] = useState<unknown>();
   const refused = reader.refused || exportRefusal !== undefined;
   const buero: TraegerBuero = (refused ? null : reader.data) ?? NO_BUERO;
@@ -114,17 +116,13 @@ export default function TraegerAccountsPage() {
     "die Anzeige des Träger-Büros",
     async () => {
       void invalidateFamily(traegerKeys.accountHistoryFamily);
-      await mutate(fetchTraegerBuero(), { revalidate: false });
+      await reloadOrThrow();
     },
   );
 
   // Reads the people again for a refused role change; rejects when the read
   // fails, where SWR would resolve with the old list (ADR 0311).
-  const reloadMembers = async () => {
-    const fresh = await fetchTraegerBuero();
-    await mutate(fresh, { revalidate: false });
-    return fresh.members;
-  };
+  const reloadMembers = async () => (await reloadOrThrow()).members;
 
   const closeConfirm = () => {
     setPending(null);

@@ -2832,7 +2832,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CallerProfiles.UpdateProfile",
-      "reason": "Guarded leaf command (mutation) already reviewed as leaf for this target: identity-access reaches modules/peopledirectory.AccountLifecycleCommand.RenamePerson (people-directory) through modules/identityaccess/internal/application.CallerEngine.UpdateProfile. Participates in the caller unit; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Re-reviewed with #7981: RenamePerson now takes the expected person version (ADR 0311) and checks it under the person row lock it already takes before writing; effect, scope, lock and classification unchanged. Guarded leaf command (mutation) already reviewed as leaf for this target: identity-access reaches modules/peopledirectory.AccountLifecycleCommand.RenamePerson (people-directory) through modules/identityaccess/internal/application.CallerEngine.UpdateProfile. Participates in the caller unit; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.AccountLifecycleCommand.RenamePerson",
       "target_owner": "people-directory"
@@ -2854,7 +2854,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CallerProfiles.UpdateProfile",
-      "reason": "Guarded leaf command (mutation) already reviewed as leaf for this target: identity-access reaches modules/peopledirectory.Capability.RenamePerson (people-directory) through modules/identityaccess/internal/application.CallerEngine.UpdateProfile. Participates in the caller unit; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Re-reviewed with #7981: RenamePerson now takes the expected person version (ADR 0311) and checks it under the person row lock it already takes before writing; effect, scope, lock and classification unchanged. Guarded leaf command (mutation) already reviewed as leaf for this target: identity-access reaches modules/peopledirectory.Capability.RenamePerson (people-directory) through modules/identityaccess/internal/application.CallerEngine.UpdateProfile. Participates in the caller unit; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.RenamePerson",
       "target_owner": "people-directory"
@@ -2876,7 +2876,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CallerProfiles.UpdateProfile",
-      "reason": "Guarded leaf command (mutation) already reviewed as leaf for this target: identity-access reaches modules/peopledirectory.Owner.RenamePerson (people-directory) through modules/identityaccess/internal/application.CallerEngine.UpdateProfile. Participates in the caller unit; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Re-reviewed with #7981: RenamePerson now takes the expected person version (ADR 0311) and checks it under the person row lock it already takes before writing; effect, scope, lock and classification unchanged. Guarded leaf command (mutation) already reviewed as leaf for this target: identity-access reaches modules/peopledirectory.Owner.RenamePerson (people-directory) through modules/identityaccess/internal/application.CallerEngine.UpdateProfile. Participates in the caller unit; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.RenamePerson",
       "target_owner": "people-directory"
@@ -21644,7 +21644,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.CallerPeople.RenamePerson",
-      "reason": "Guarded leaf command (mutation) already reviewed as leaf for this target: identity-access reaches modules/peopledirectory.AccountLifecycleCommand.RenamePerson (people-directory) through modules/identityaccess/internal/application.CallerPeople.RenamePerson. Participates in the caller unit; newly visible through #4836 callable resolution (ADR 0098).",
+      "reason": "Re-reviewed with #7981: RenamePerson now takes the expected person version (ADR 0311) and checks it under the person row lock it already takes before writing; effect, scope, lock and classification unchanged. Guarded leaf command (mutation) already reviewed as leaf for this target: identity-access reaches modules/peopledirectory.AccountLifecycleCommand.RenamePerson (people-directory) through modules/identityaccess/internal/application.CallerPeople.RenamePerson. Participates in the caller unit; newly visible through #4836 callable resolution (ADR 0098).",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.AccountLifecycleCommand.RenamePerson",
       "target_owner": "people-directory"
@@ -21655,7 +21655,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.CallerPeople.RenamePerson",
-      "reason": "Guarded leaf command (mutation) already reviewed as leaf for this target: identity-access reaches modules/peopledirectory.Capability.RenamePerson (people-directory) through modules/identityaccess/internal/application.CallerPeople.RenamePerson. Participates in the caller unit; newly visible through #4836 callable resolution (ADR 0098).",
+      "reason": "Re-reviewed with #7981: RenamePerson now takes the expected person version (ADR 0311) and checks it under the person row lock it already takes before writing; effect, scope, lock and classification unchanged. Guarded leaf command (mutation) already reviewed as leaf for this target: identity-access reaches modules/peopledirectory.Capability.RenamePerson (people-directory) through modules/identityaccess/internal/application.CallerPeople.RenamePerson. Participates in the caller unit; newly visible through #4836 callable resolution (ADR 0098).",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.RenamePerson",
       "target_owner": "people-directory"
@@ -21666,7 +21666,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.CallerPeople.RenamePerson",
-      "reason": "Guarded leaf command (mutation) already reviewed as leaf for this target: identity-access reaches modules/peopledirectory.Owner.RenamePerson (people-directory) through modules/identityaccess/internal/application.CallerPeople.RenamePerson. Participates in the caller unit; newly visible through #4836 callable resolution (ADR 0098).",
+      "reason": "Re-reviewed with #7981: RenamePerson now takes the expected person version (ADR 0311) and checks it under the person row lock it already takes before writing; effect, scope, lock and classification unchanged. Guarded leaf command (mutation) already reviewed as leaf for this target: identity-access reaches modules/peopledirectory.Owner.RenamePerson (people-directory) through modules/identityaccess/internal/application.CallerPeople.RenamePerson. Participates in the caller unit; newly visible through #4836 callable resolution (ADR 0098).",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.RenamePerson",
       "target_owner": "people-directory"
@@ -25735,7 +25735,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.CallerPeople.RenamePerson",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.AccountLifecycleCommand.RenamePerson; modules/peopledirectory/account_lifecycle_commands.go:58. ",
+      "reason": "Re-reviewed with #7981: RenamePerson now takes the expected person version (ADR 0311) and checks it under the person row lock it already takes before writing; effect, scope, lock and classification unchanged. Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.AccountLifecycleCommand.RenamePerson; modules/peopledirectory/account_lifecycle_commands.go:58. ",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.AccountLifecycleCommand.RenamePerson",
       "target_owner": "people-directory"
@@ -25746,7 +25746,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.CallerPeople.RenamePerson",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Capability.RenamePerson; modules/peopledirectory.Capability (supplied contract method). ",
+      "reason": "Re-reviewed with #7981: RenamePerson now takes the expected person version (ADR 0311) and checks it under the person row lock it already takes before writing; effect, scope, lock and classification unchanged. Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Capability.RenamePerson; modules/peopledirectory.Capability (supplied contract method). ",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.RenamePerson",
       "target_owner": "people-directory"
@@ -25757,7 +25757,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.CallerPeople.RenamePerson",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Owner.RenamePerson; modules/peopledirectory.Owner (supplied contract method). ",
+      "reason": "Re-reviewed with #7981: RenamePerson now takes the expected person version (ADR 0311) and checks it under the person row lock it already takes before writing; effect, scope, lock and classification unchanged. Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Owner.RenamePerson; modules/peopledirectory.Owner (supplied contract method). ",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.RenamePerson",
       "target_owner": "people-directory"

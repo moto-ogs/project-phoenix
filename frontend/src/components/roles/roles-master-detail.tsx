@@ -60,7 +60,7 @@ interface RolesMasterDetailProps {
    */
   onSaveRole: (data: Partial<Role>, base: Role) => Promise<Role>;
   /** Liest die Rolle neu; scheitert das Lesen, lehnt es ab (ADR 0311). */
-  onReloadRole: () => Promise<Role>;
+  onReloadRole: () => Promise<Role | undefined>;
   onDeleteClick: () => void;
   /** Nach dem Speichern der Berechtigungen: Liste und Detail neu laden. */
   onPermissionsSaved: () => void | Promise<void>;
@@ -152,7 +152,7 @@ interface RoleDetailContentProps {
   detailError: FormErrorInput;
   canManagePermissions: boolean;
   onSaveRole: (data: Partial<Role>, base: Role) => Promise<Role>;
-  onReloadRole: () => Promise<Role>;
+  onReloadRole: () => Promise<Role | undefined>;
   onDeleteClick: () => void;
   onPermissionsSaved: () => void | Promise<void>;
 }
@@ -285,7 +285,7 @@ function RoleStammdatenTab({
   detailError: FormErrorInput;
   editing: boolean;
   onSaveRole: (data: Partial<Role>, base: Role) => Promise<Role>;
-  onReloadRole: () => Promise<Role>;
+  onReloadRole: () => Promise<Role | undefined>;
   onSaved: () => void;
   onCancelEdit: () => void;
 }) {
@@ -392,7 +392,8 @@ function RoleMasterDataForm({
 }: {
   role: Role;
   onSave: (data: Partial<Role>, base: Role) => Promise<Role>;
-  reload: () => Promise<Role>;
+  /** undefined: the role is gone; the page ends the selection. */
+  reload: () => Promise<Role | undefined>;
   onSaved: () => void;
   onCancel: () => void;
   errorPath: DatabaseFormErrorPath;

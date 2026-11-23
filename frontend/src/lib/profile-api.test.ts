@@ -41,6 +41,7 @@ const sampleProfileWire: meContract.ProfileResponse = {
   settings: '{"theme":"dark"}',
   created_at: "2024-01-01T00:00:00Z",
   updated_at: "2024-01-15T12:00:00Z",
+  version: "v1",
   last_login: "2024-01-20T10:00:00Z",
 };
 
@@ -55,6 +56,7 @@ const sampleProfile: Profile = {
   rfidCard: "CARD001",
   createdAt: "2024-01-01T00:00:00Z",
   updatedAt: "2024-01-15T12:00:00Z",
+  version: "v1",
   lastLogin: "2024-01-20T10:00:00Z",
   settings: { theme: "dark" },
 };

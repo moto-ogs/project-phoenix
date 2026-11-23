@@ -12,7 +12,7 @@ import (
 type CallerPeople interface {
 	FindPersonByAccount(ctx context.Context, accountID int64) (person identityaccess.CallerPerson, found bool, err error)
 	CreatePerson(ctx context.Context, accountID int64, firstName, lastName string) error
-	RenamePerson(ctx context.Context, personID int64, firstName, lastName *string) error
+	RenamePerson(ctx context.Context, personID int64, firstName, lastName *string, expectedVersion string) error
 }
 
 // CallerSessions is the Student Presence seam: the room sessions a caller

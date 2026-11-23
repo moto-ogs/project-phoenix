@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/domain"
@@ -78,8 +79,13 @@ func (e *recordingEngine) CreatePersons(_ context.Context, inputs []peopledirect
 	}
 	return persons, domain.OperationStats{}, nil
 }
+
+// recordedPersonChange is the stored change time of the person FindByID
+// answers: a rename sends its PersonVersion.
+var recordedPersonChange = time.Date(2026, 9, 1, 8, 0, 0, 0, time.UTC)
+
 func (e *recordingEngine) FindByID(context.Context, int64, string) (peopledirectory.Person, bool, domain.OperationStats, error) {
-	return peopledirectory.Person{ID: 7}, true, domain.OperationStats{}, nil
+	return peopledirectory.Person{ID: 7, UpdatedAt: recordedPersonChange}, true, domain.OperationStats{}, nil
 }
 func (e *recordingEngine) FindByTag(_ context.Context, tag string) (peopledirectory.Person, bool, domain.OperationStats, error) {
 	e.calls++

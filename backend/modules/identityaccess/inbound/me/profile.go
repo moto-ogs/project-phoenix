@@ -29,6 +29,10 @@ type ProfileUpdateRequest struct {
 	LastName  *string `json:"last_name,omitempty"`
 	Username  *string `json:"username,omitempty"`
 	Bio       *string `json:"bio,omitempty"`
+	// ExpectedVersion is the version of the profile the edit was made from
+	// (ADR 0311); a profile changed since answers 409
+	// general.changed_since_read.
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // Bind validates the profile update request
@@ -53,13 +57,16 @@ type ProfileResponse struct {
 	RFIDCard  *string    `json:"rfid_card,omitempty"`
 	Bio       string     `json:"bio,omitempty"`
 	Settings  string     `json:"settings,omitempty"`
+	// Version is the read-state token of the profile (ADR 0311): an edit
+	// sends it back as expected_version.
+	Version string `json:"version"`
 }
 
 func profileResponse(profile identityaccess.CallerProfile) ProfileResponse {
 	account := profile.Account
 	response := ProfileResponse{
 		Email: account.Email, Username: account.Username, LastLogin: account.LastLogin, Avatar: account.Avatar,
-		Bio: profile.Bio, Settings: profile.Settings,
+		Bio: profile.Bio, Settings: profile.Settings, Version: identityaccess.ProfileVersion(profile),
 	}
 	if person := profile.Person; person != nil {
 		response.ID, response.FirstName, response.LastName = ident.ID(person.ID), person.FirstName, person.LastName
@@ -87,6 +94,7 @@ func (res *Resource) updateCurrentProfile(w http.ResponseWriter, r *http.Request
 	}
 	profile, err := res.caller.UpdateProfile(r.Context(), identityaccess.CallerProfileUpdate{
 		FirstName: req.FirstName, LastName: req.LastName, Username: req.Username, Bio: req.Bio,
+		ExpectedVersion: req.ExpectedVersion,
 	})
 	res.respond(w, r, profileResponse(profile), err, "Profile updated successfully")
 }

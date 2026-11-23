@@ -6,7 +6,11 @@ import { FormModal } from "~/components/ui/form-modal";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { Input } from "~/components/ui/input";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
-import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import {
+  useApiErrorDisplay,
+  useApiFormError,
+  useToast,
+} from "~/contexts/ToastContext";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { useDraftOn } from "~/lib/swr/read-draft";
@@ -163,6 +167,9 @@ const LAST_LEADER_REASON =
 
 const LAST_LEADER_LOCK = { leadership: LAST_LEADER_REASON } as const;
 
+const MEMBER_GONE =
+  "Diese Person gehört nicht mehr zum Träger-Büro. Die Rollen sind nicht geändert.";
+
 /**
  * Changes the roles of a person of the Träger-Büro (#4650). The person's
  * open session picks the new rights up within a few minutes. Leitung stays
@@ -193,6 +200,7 @@ export function ChangeTraegerRolesModal({
   onChanged: RefreshAfterWrite;
 }>) {
   const accountId = member?.accountId ?? null;
+  const { showMessage } = useApiErrorDisplay();
   const find = (list: readonly TraegerMember[]) =>
     list.find((other) => other.accountId === accountId);
   const edit = useDraftOn<
@@ -204,9 +212,14 @@ export function ChangeTraegerRolesModal({
     {
       opening: accountId,
       data: find(members) ?? member ?? undefined,
+      // A person removed meanwhile closes the dialog: there is nothing
+      // left to save, and the list no longer shows them.
       reload: async () => {
         const found = find(await reload());
-        if (!found) throw new Error("traeger member is gone");
+        if (!found) {
+          onClose();
+          showMessage(MEMBER_GONE);
+        }
         return found;
       },
     },

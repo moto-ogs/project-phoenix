@@ -100,8 +100,8 @@ func (p callerPeople) CreatePerson(ctx context.Context, accountID int64, firstNa
 	return p.persons.People.CreateAccountPerson(ctx, accountID, firstName, lastName)
 }
 
-func (p callerPeople) RenamePerson(ctx context.Context, personID int64, firstName, lastName *string) error {
-	return p.persons.People.RenamePerson(ctx, personID, firstName, lastName)
+func (p callerPeople) RenamePerson(ctx context.Context, personID int64, firstName, lastName *string, expectedVersion string) error {
+	return p.persons.People.RenamePerson(ctx, personID, firstName, lastName, expectedVersion)
 }
 
 type callerMembership struct{ membership schoolmembership.Capability }

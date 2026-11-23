@@ -3,7 +3,6 @@
 import {
   Suspense,
   useState,
-  useEffect,
   useCallback,
   useLayoutEffect,
   useRef,
@@ -19,8 +18,10 @@ import {
 } from "~/contexts/ToastContext";
 import { createLogger } from "~/lib/logger";
 import { updateProfile, uploadAvatar } from "~/lib/profile-api";
-import type { ProfileUpdateRequest } from "~/lib/profile-helpers";
+import type { Profile } from "~/lib/profile-helpers";
 import { useProfile } from "~/lib/profile-context";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { compressAvatar } from "~/lib/image-utils";
 import { Avatar } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
@@ -44,6 +45,12 @@ import { PushNotificationSection } from "~/components/settings/push-notification
 import { OwnQualificationsSection } from "~/components/settings/own-qualifications-section";
 
 const logger = createLogger({ component: "ProfilePage" });
+
+/** What the profile edit changes: the two names. */
+interface NameDraft {
+  readonly firstName: string;
+  readonly lastName: string;
+}
 
 // Der Ladezustand kommt aus dem Seitengeruest, nicht aus einem eigenen
 // Skelett: dieselbe Kopfkarte und dieselben Platzhalterflaechen wie auf jeder
@@ -71,7 +78,8 @@ function ProfileContent() {
     required: true,
   });
   const { success: toastSuccess } = useToast();
-  const { profile, updateProfileData, refreshProfile } = useProfile();
+  const { profile, updateProfileData, refreshProfile, reloadProfile } =
+    useProfile();
   const [isSaving, setIsSaving] = useState(false);
   const profileAfterWrite = useRefreshAfterWrite(
     "die Anzeige des Profils",
@@ -99,61 +107,68 @@ function ProfileContent() {
   const latestSaveRef = useRef<() => void>(() => undefined);
   const latestAvatarRef = useRef<(file: File) => void>(() => undefined);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-  });
-
-  const resetFormFromProfile = useCallback(() => {
-    if (profile) {
-      setFormData({
-        firstName: profile.firstName || "",
-        lastName: profile.lastName || "",
-        email: profile.email || "",
-      });
-    }
-  }, [profile]);
-
-  useEffect(() => {
-    resetFormFromProfile();
-  }, [resetFormFromProfile]);
+  // Die Bearbeitung ruht auf dem gelesenen Profil (ADR 0311): ein neuerer
+  // Stand füllt sie nur, solange nichts getippt ist; Speichern sendet seine
+  // Version. Hat jemand den Namen seitdem geändert (etwa die Leitung in der
+  // Personalverwaltung), steht danach der gespeicherte Name da, und erst
+  // dann lässt sich erneut speichern.
+  const edit = useDraftOn<Profile, NameDraft, string | undefined, Profile>(
+    {
+      opening: isEditing ? "own-profile" : null,
+      data: profile ?? undefined,
+      reload: reloadProfile,
+    },
+    {
+      token: (stored) => stored.version,
+      toDraft: (stored) => ({
+        firstName: stored.firstName || "",
+        lastName: stored.lastName || "",
+      }),
+      answer: (saved) => saved,
+    },
+  );
+  const form = useReadDraftForm(edit, formErrors, "das Profil");
+  const draft = edit.draft;
 
   const handleSaveProfile = async () => {
-    if (!hasSessionAccess(session) || !profile || isSaving) return;
+    if (!hasSessionAccess(session) || !profile || isSaving || !draft) return;
+    if (!form.begin()) return;
 
     setIsSaving(true);
-    formErrors.clear();
-    try {
-      const updateData: ProfileUpdateRequest = {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-      };
-
-      await updateProfile(updateData);
-    } catch (err) {
+    const result = await edit.submit((version, names) =>
+      updateProfile({
+        firstName: names.firstName,
+        lastName: names.lastName,
+        expectedVersion: version,
+      }),
+    );
+    if (!result.ok) {
       logger.error("profile_save_failed", {
-        error: err instanceof Error ? err.message : String(err),
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
       });
-      void formErrors.show(err, {
-        object: "das Profil",
-        retry: () => latestSaveRef.current(),
-      });
+      // Seit dem Lesen geändert: `reload` zeigt den gespeicherten Namen,
+      // ohne dasselbe Speichern noch einmal anzubieten.
+      void formErrors.show(
+        result.error,
+        result.refused
+          ? { object: "das Profil", reload: result.reload }
+          : { object: "das Profil", retry: () => latestSaveRef.current() },
+      );
       setIsSaving(false);
       return;
     }
 
-    updateProfileData({
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-    });
+    // Die Antwort ist das gespeicherte Profil mit seiner neuen Version.
+    updateProfileData(result.saved);
     setIsEditing(false);
     toastSuccess("Dein Profil ist gespeichert.");
     // Profil und Sitzung laden nach dem Speichern; ein Fehler dabei ist ein
     // Ladefehler, kein Fehler des Speicherns (#6652).
     await profileAfterWrite.refresh({
-      sessionName:
-        `${formData.firstName} ${formData.lastName}`.trim() || undefined,
+      sessionName: `${draft.firstName} ${draft.lastName}`.trim() || undefined,
     });
   };
 
@@ -196,8 +211,11 @@ function ProfileContent() {
     redirect("/");
   }
 
-  const fullName = `${formData.firstName} ${formData.lastName}`.trim();
-  const statsParts = [fullName, formData.email].filter(Boolean);
+  const firstName = profile?.firstName ?? "";
+  const lastName = profile?.lastName ?? "";
+  const email = profile?.email ?? "";
+  const fullName = `${firstName} ${lastName}`.trim();
+  const statsParts = [fullName, email].filter(Boolean);
 
   return (
     <TenantPage
@@ -268,14 +286,16 @@ function ProfileContent() {
         {isEditing ? (
           <div ref={formRef} className="space-y-4">
             <FormErrorAlert message={formErrors.error} />
+            <LoadErrorAlert error={form.loadError} />
             <Input
               label="Vorname"
               name="first_name"
               type="text"
-              value={formData.firstName}
-              onChange={(e) =>
-                setFormData({ ...formData, firstName: e.target.value })
-              }
+              value={draft?.firstName ?? ""}
+              onChange={(e) => {
+                const value = e.target.value;
+                edit.setDraft((names) => ({ ...names, firstName: value }));
+              }}
               error={formErrors.fieldError("first_name")}
               maxLength={255}
             />
@@ -283,16 +303,17 @@ function ProfileContent() {
               label="Nachname"
               name="last_name"
               type="text"
-              value={formData.lastName}
-              onChange={(e) =>
-                setFormData({ ...formData, lastName: e.target.value })
-              }
+              value={draft?.lastName ?? ""}
+              onChange={(e) => {
+                const value = e.target.value;
+                edit.setDraft((names) => ({ ...names, lastName: value }));
+              }}
               error={formErrors.fieldError("last_name")}
               maxLength={255}
             />
             <DataGrid>
               <DataField label="E-Mail" fullWidth>
-                {formData.email || "–"}
+                {email || "–"}
               </DataField>
             </DataGrid>
             <div className="flex justify-end gap-3 pt-1">
@@ -303,7 +324,6 @@ function ProfileContent() {
                 onClick={() => {
                   setIsEditing(false);
                   formErrors.clear();
-                  resetFormFromProfile();
                 }}
                 tooltip="Verwirft deine Änderungen am Namen."
               >
@@ -324,10 +344,10 @@ function ProfileContent() {
           </div>
         ) : (
           <DataGrid>
-            <DataField label="Vorname">{formData.firstName || "–"}</DataField>
-            <DataField label="Nachname">{formData.lastName || "–"}</DataField>
+            <DataField label="Vorname">{firstName || "–"}</DataField>
+            <DataField label="Nachname">{lastName || "–"}</DataField>
             <DataField label="E-Mail" fullWidth>
-              {formData.email || "–"}
+              {email || "–"}
             </DataField>
           </DataGrid>
         )}

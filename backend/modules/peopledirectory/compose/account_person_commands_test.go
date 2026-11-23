@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -26,13 +27,28 @@ func TestAccountPersonIsCreatedAndRenamedAtTheSchool(t *testing.T) {
 	assert.Equal(t, "Kraft", created.LastName)
 
 	renamed := " Leonie "
-	require.NoError(t, module.RenamePerson(ctx, created.ID, &renamed, nil))
+	read := peopledirectory.PersonVersion(created.UpdatedAt)
+	require.NoError(t, module.RenamePerson(ctx, created.ID, &renamed, nil, read))
 	stored, err := module.FindPerson(ctx, created.ID)
 	require.NoError(t, err)
 	assert.Equal(t, "Leonie", stored.FirstName)
 	assert.Equal(t, "Kraft", stored.LastName, "a name the edit leaves out is kept")
 	assert.Equal(t, created.AccountID, stored.AccountID)
 	assert.False(t, stored.UpdatedAt.Before(created.UpdatedAt))
+
+	// ADR 0311: a rename saves only over the version it was made from. The
+	// version read before the first rename and a missing one are refused,
+	// and nothing is written; the stored version saves.
+	stale := "Veraltet"
+	for name, version := range map[string]string{"older version": read, "no version": ""} {
+		err := module.RenamePerson(ctx, created.ID, &stale, nil, version)
+		require.ErrorIs(t, err, readstate.ErrChanged, name)
+	}
+	unchanged, err := module.FindPerson(ctx, created.ID)
+	require.NoError(t, err)
+	assert.Equal(t, "Leonie", unchanged.FirstName, "a refused rename writes nothing")
+	again := "Lena"
+	require.NoError(t, module.RenamePerson(ctx, created.ID, &again, nil, peopledirectory.PersonVersion(unchanged.UpdatedAt)))
 }
 
 // A person of another school cannot be renamed through this school.
@@ -45,7 +61,7 @@ func TestRenamePersonStaysInTheSchool(t *testing.T) {
 	foreign := testpkg.CreateTestPersonForTenant(t, db, otherTenant, "Ina", "Fremd")
 
 	name := "Umbenannt"
-	err := module.RenamePerson(ctx, foreign.ID, &name, nil)
+	err := module.RenamePerson(ctx, foreign.ID, &name, nil, peopledirectory.PersonVersion(foreign.UpdatedAt))
 	require.ErrorIs(t, err, peopledirectory.ErrPersonNotFound)
 
 	var firstName string

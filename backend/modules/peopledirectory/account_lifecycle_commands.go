@@ -53,9 +53,12 @@ type AccountLifecycleCommand interface {
 	// when its holder first edits their profile. Both names are required.
 	CreateAccountPerson(ctx context.Context, accountID int64, firstName, lastName string) error
 	// RenamePerson replaces the given names of a person of the school; a nil
-	// name keeps the stored one. ErrPersonNotFound when the school has no
-	// such person.
-	RenamePerson(ctx context.Context, personID int64, firstName, lastName *string) error
+	// name keeps the stored one, and two nil names write nothing.
+	// expectedVersion is the PersonVersion of the person the edit was made
+	// from (ADR 0311): checked under the person's row lock before anything
+	// is written; a different or empty one is readstate.ErrChanged.
+	// ErrPersonNotFound when the school has no such person.
+	RenamePerson(ctx context.Context, personID int64, firstName, lastName *string, expectedVersion string) error
 }
 
 // ChildPerson is the person an enrollment approval creates for the child it

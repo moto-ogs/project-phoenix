@@ -13,7 +13,7 @@ import { sessionIdentityKey } from "~/lib/session-access";
 import { fetchProfile } from "~/lib/profile-api";
 import { createLogger } from "~/lib/logger";
 import { useLatest } from "~/lib/hooks/use-latest";
-import { useSWRAuth } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
 import { profileKeys } from "~/lib/swr/me-keys";
 import type { Profile } from "~/lib/profile-helpers";
 
@@ -25,6 +25,11 @@ interface ProfileContextType {
   profile: Profile | null;
   isLoading: boolean;
   refreshProfile: (silent?: boolean) => Promise<void>;
+  /**
+   * Reads the profile again and rejects when the read fails (ADR 0311,
+   * rule 6): for the profile edit after a refusal.
+   */
+  reloadProfile: () => Promise<Profile>;
   updateProfileData: (data: Partial<Profile>) => void;
 }
 
@@ -58,7 +63,7 @@ export function ProfileProvider({
       ? initialProfile
       : undefined;
 
-  const { data, error, mutate } = useSWRAuth<Profile>(
+  const read = useSWRAuth<Profile>(
     sessionKey ? profileKeys.own() : null,
     fetchProfile,
     {
@@ -69,6 +74,12 @@ export function ProfileProvider({
       shouldRetryOnError: false,
       onError: logProfileError,
     },
+  );
+  const { data, error, mutate } = read;
+  const readRef = useLatest(read);
+  const reloadProfile = useCallback(
+    () => revalidateOrThrow(readRef.current),
+    [readRef],
   );
   const profile = error === undefined ? (data ?? null) : null;
   const profileRef = useLatest(profile);
@@ -110,8 +121,14 @@ export function ProfileProvider({
     (sessionKey !== null && data === undefined && error === undefined);
 
   const contextValue = useMemo(
-    () => ({ profile, isLoading, refreshProfile, updateProfileData }),
-    [profile, isLoading, refreshProfile, updateProfileData],
+    () => ({
+      profile,
+      isLoading,
+      refreshProfile,
+      reloadProfile,
+      updateProfileData,
+    }),
+    [profile, isLoading, refreshProfile, reloadProfile, updateProfileData],
   );
 
   return (

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The caller-context outcomes consumers match on. Their texts are part of
@@ -146,11 +148,27 @@ type CallerProfile struct {
 }
 
 // CallerProfileUpdate names the self-editable fields; nil leaves a field.
+// ExpectedVersion is the ProfileVersion of the profile the edit was made
+// from (ADR 0311); a person changed since is refused with
+// readstate.ErrChanged.
 type CallerProfileUpdate struct {
-	FirstName *string
-	LastName  *string
-	Username  *string
-	Bio       *string
+	FirstName       *string
+	LastName        *string
+	Username        *string
+	Bio             *string
+	ExpectedVersion string
+}
+
+// ProfileVersion is the read-state token of the caller's profile (ADR 0311):
+// the version of the linked person (persons.updated_at, the People
+// Directory's PersonVersion, which an admin's name change through
+// PUT /api/users/{id} sends as well), or readstate.Absent while the account
+// has no person. Username and bio only their holder writes.
+func ProfileVersion(profile CallerProfile) string {
+	if profile.Person == nil {
+		return readstate.Absent
+	}
+	return readstate.Of(profile.Person.UpdatedAt)
 }
 
 // CallerIdentities resolves the caller's Account → Person → Staff → Teacher

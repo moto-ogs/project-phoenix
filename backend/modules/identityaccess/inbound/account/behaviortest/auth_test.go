@@ -1148,16 +1148,47 @@ func TestRoleUpdate(t *testing.T) {
 	// ADR 0311: an edit saves only over the role it was read from. A stale
 	// or missing version is refused and writes nothing; the version the
 	// master-data PUT answers saves the next edit without a read. The
-	// permission selection carries its own version, so saving it refuses no
-	// following edit of the master data.
+	// permission selection carries its own version: a real change of the
+	// selection refuses no edit of the master data read before it, and an
+	// edit of the master data refuses no selection read before it.
 	t.Run("update saves only over the read version", func(t *testing.T) {
 		role := testpkg.CreateTestRole(t, tc.db, "VersionedRole")
-		read := readRoleVersion(t, router, adminClaims, role.ID)
+		granted := testpkg.CreateTestPermission(t, tc.db, "VersionedRoleGranted", "versioned", "read")
+		replacement := testpkg.CreateTestPermission(t, tc.db, "VersionedRoleReplacement", "versioned", "update")
 		path := fmt.Sprintf("/auth/roles/%d/master-data/", role.ID)
+		selectionPath := fmt.Sprintf("/auth/roles/%d/permission-selection/", role.ID)
 		edit := func(name, version string) *httptest.ResponseRecorder {
 			body := map[string]string{"name": name, "description": "Stand", "expected_version": version}
 			return testutil.ExecuteWithAuthPermissions(t, router, testutil.NewJSONRequest(t, "PUT", path, body), adminClaims, []string{"roles:update"})
 		}
+		readSelection := func() (string, []string) {
+			rr := testutil.ExecuteWithAuthPermissions(t, router, testutil.NewJSONRequest(t, "GET", selectionPath, nil), adminClaims, []string{"roles:manage"})
+			testutil.AssertSuccessResponse(t, rr, http.StatusOK)
+			var body struct {
+				Data struct {
+					Version     string `json:"version"`
+					Permissions []struct {
+						Name string `json:"name"`
+					} `json:"permissions"`
+				} `json:"data"`
+			}
+			require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &body))
+			names := make([]string, 0, len(body.Data.Permissions))
+			for _, permission := range body.Data.Permissions {
+				names = append(names, permission.Name)
+			}
+			return body.Data.Version, names
+		}
+		replaceSelection := func(permissionID int64, version string) *httptest.ResponseRecorder {
+			return testutil.ExecuteWithAuthPermissions(t, router, testutil.NewJSONRequest(t, "PUT", selectionPath,
+				map[string]any{"permission_ids": []string{fmt.Sprint(permissionID)}, "expected_version": version}), adminClaims, []string{"roles:manage"})
+		}
+		initialSelection, _ := readSelection()
+		testutil.AssertSuccessResponse(t, replaceSelection(granted.ID, initialSelection), http.StatusOK)
+
+		read := readRoleVersion(t, router, adminClaims, role.ID)
+		selectionRead, names := readSelection()
+		require.Equal(t, []string{granted.Name}, names)
 
 		first := fmt.Sprintf("first-%d", time.Now().UnixNano())
 		rr := edit(first, read)
@@ -1177,16 +1208,40 @@ func TestRoleUpdate(t *testing.T) {
 		testutil.AssertSuccessResponse(t, getRr, http.StatusOK)
 		assert.Equal(t, first, testutil.ParseJSONResponse(t, getRr.Body.Bytes())["data"].(map[string]interface{})["name"], "a refused edit writes nothing")
 
-		selectionPath := fmt.Sprintf("/auth/roles/%d/permission-selection/", role.ID)
-		selectionRr := testutil.ExecuteWithAuthPermissions(t, router, testutil.NewJSONRequest(t, "GET", selectionPath, nil), adminClaims, []string{"roles:manage"})
-		testutil.AssertSuccessResponse(t, selectionRr, http.StatusOK)
-		selection := testutil.ParseJSONResponse(t, selectionRr.Body.Bytes())["data"].(map[string]interface{})
-		replaceRr := testutil.ExecuteWithAuthPermissions(t, router, testutil.NewJSONRequest(t, "PUT", selectionPath,
-			map[string]any{"permission_ids": []string{}, "expected_version": selection["version"]}), adminClaims, []string{"roles:manage"})
-		testutil.AssertSuccessResponse(t, replaceRr, http.StatusOK)
+		// The selection read before the master-data save still saves.
+		testutil.AssertSuccessResponse(t, replaceSelection(replacement.ID, selectionRead), http.StatusOK)
+		_, names = readSelection()
+		assert.Equal(t, []string{replacement.Name}, names, "the selection save writes the change")
 
-		rr = edit(fmt.Sprintf("second-%d", time.Now().UnixNano()), answered)
+		// The master-data version answered before the selection save still saves.
+		second := fmt.Sprintf("second-%d", time.Now().UnixNano())
+		rr = edit(second, answered)
 		testutil.AssertSuccessResponse(t, rr, http.StatusOK)
+		assert.Equal(t, second, testutil.ParseJSONResponse(t, rr.Body.Bytes())["data"].(map[string]interface{})["name"])
+	})
+
+	// The deprecated PUT /auth/roles/{id}/ keeps its empty answer for one
+	// release (ADR 0270) but saves only over the read version as well.
+	t.Run("deprecated update refuses a stale or missing version", func(t *testing.T) {
+		role := testpkg.CreateTestRole(t, tc.db, "DeprecatedVersionedRole")
+		read := readRoleVersion(t, router, adminClaims, role.ID)
+		legacyPath := fmt.Sprintf("/auth/roles/%d/", role.ID)
+		edit := func(name, version string) *httptest.ResponseRecorder {
+			body := map[string]string{"name": name, "description": "Stand", "expected_version": version}
+			return testutil.ExecuteWithAuthPermissions(t, router, testutil.NewJSONRequest(t, "PUT", legacyPath, body), adminClaims, []string{"roles:update"})
+		}
+		first := fmt.Sprintf("legacy-first-%d", time.Now().UnixNano())
+		rr := edit(first, read)
+		require.Equal(t, http.StatusNoContent, rr.Code, rr.Body.String())
+
+		for name, version := range map[string]string{"older version": read, "no version": ""} {
+			rr = edit(fmt.Sprintf("legacy-stale-%d", time.Now().UnixNano()), version)
+			assert.Equal(t, http.StatusConflict, rr.Code, name)
+			assert.Contains(t, rr.Body.String(), "general.changed_since_read", name)
+		}
+		getRr := testutil.ExecuteWithAuthPermissions(t, router, testutil.NewJSONRequest(t, "GET", fmt.Sprintf("/auth/roles/%d", role.ID), nil), adminClaims, []string{"roles:read"})
+		testutil.AssertSuccessResponse(t, getRr, http.StatusOK)
+		assert.Equal(t, first, testutil.ParseJSONResponse(t, getRr.Body.Bytes())["data"].(map[string]interface{})["name"], "a refused edit writes nothing")
 	})
 }
 

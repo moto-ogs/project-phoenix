@@ -221,6 +221,9 @@ describe("TraegerAccountsPage", () => {
       expect((await screen.findAllByText("Rollen geändert"))[0]).toBeVisible();
       expect(office.readCurrent?.().data).toEqual(BUERO);
       expect(history.readCurrent?.().data).toEqual(HISTORY);
+      // The right is gone: the list, read anew on every opening, is refused
+      // as well.
+      api.fetchTraegerBuero.mockRejectedValue(new ApiError("refused", 403));
       await openDownload(downloadLabel);
       fireEvent.click(await screen.findByRole("menuitem", { name: /Excel/ }));
       expect(
@@ -520,6 +523,72 @@ describe("TraegerAccountsPage", () => {
     expect(api.changeTraegerRoles).toHaveBeenCalledTimes(1);
   });
 
+  // A person removed after the refused change has nothing left to save:
+  // the dialog closes and says so, instead of a load error that blocks
+  // Speichern.
+  it("closes the role change when the person left meanwhile", async () => {
+    api.changeTraegerRoles.mockRejectedValue(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    api.fetchTraegerBuero
+      .mockResolvedValueOnce(BUERO)
+      .mockResolvedValue({ ...BUERO, members: [BUERO.members[0]!] });
+    renderPage();
+
+    await openMenu("kasse@traeger.example");
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Rollen bearbeiten" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
+
+    expect(
+      await screen.findByText(
+        "Diese Person gehört nicht mehr zum Träger-Büro. Die Rollen sind nicht geändert.",
+      ),
+    ).toBeVisible();
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+    expect(
+      screen.queryByRole("button", {
+        name: "Aktionen für kasse@traeger.example",
+      }),
+    ).not.toBeInTheDocument();
+    expect(api.changeTraegerRoles).toHaveBeenCalledTimes(1);
+  });
+
+  // ADR 0311 rule 1: the server logs every read of the people in the
+  // history, so each opening of the page reads once and shows no cached
+  // list without that entry.
+  it("reads the people anew on every opening", async () => {
+    function View({ open }: { open: boolean }) {
+      return open ? <TraegerAccountsPage /> : null;
+    }
+    function Providers({ children }: { children: React.ReactNode }) {
+      return (
+        <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
+          <ToastProvider>{children}</ToastProvider>
+        </SWRConfig>
+      );
+    }
+    const view = render(<View open />, { wrapper: Providers });
+    await screen.findAllByText("kasse@traeger.example");
+    expect(api.fetchTraegerBuero).toHaveBeenCalledTimes(1);
+
+    view.rerender(<View open={false} />);
+    const reopened = deferred<typeof BUERO>();
+    api.fetchTraegerBuero.mockReturnValueOnce(reopened.promise);
+    view.rerender(<View open />);
+
+    await waitFor(() => expect(api.fetchTraegerBuero).toHaveBeenCalledTimes(2));
+    const actions = { name: "Aktionen für kasse@traeger.example" };
+    expect(screen.queryByRole("button", actions)).not.toBeInTheDocument();
+    await act(async () => reopened.resolve(BUERO));
+    expect((await screen.findAllByRole("button", actions))[0]).toBeVisible();
+    expect(api.fetchTraegerBuero).toHaveBeenCalledTimes(2);
+  });
+
   it("lets Leitung pass on once another person holds it", async () => {
     api.fetchTraegerBuero.mockResolvedValue({
       ...BUERO,
@@ -800,6 +869,11 @@ describe("TraegerAccountsPage", () => {
       renderPage();
       await screen.findAllByText("kasse@traeger.example");
       await screen.findAllByText("Rollen geändert");
+      // A 403 means the right is gone: the list, read anew on every
+      // opening, is refused as well.
+      if (status === 403) {
+        api.fetchTraegerBuero.mockRejectedValue(new ApiError("refused", 403));
+      }
       await openDownload(downloadLabel);
       fireEvent.click(await screen.findByRole("menuitem", { name: /Excel/ }));
       const closeToast = await screen.findByRole("button", {

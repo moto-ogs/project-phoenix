@@ -83,11 +83,17 @@ vi.mock("@/lib/database/service-factory", () => {
 
 const mockToastSuccess = vi.fn();
 const mockToastError = vi.fn();
+const mockShowMessage = vi.fn();
 vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/contexts/ToastContext")>()),
   useToast: vi.fn(() => ({
     success: mockToastSuccess,
     error: mockToastError,
+  })),
+  useApiErrorDisplay: vi.fn(() => ({
+    show: vi.fn(),
+    clear: vi.fn(),
+    showMessage: mockShowMessage,
   })),
 }));
 
@@ -276,6 +282,7 @@ vi.mock("@/components/roles/roles-master-detail", () => ({
     onSaveRole,
     onDeleteClick,
     onPermissionsSaved,
+    onReloadRole,
     canManagePermissions,
   }: {
     roles: Array<{ id: string; name: string }>;
@@ -288,10 +295,12 @@ vi.mock("@/components/roles/roles-master-detail", () => ({
     ) => Promise<unknown>;
     onDeleteClick: () => void;
     onPermissionsSaved: () => void | Promise<void>;
+    onReloadRole: () => Promise<{ name: string } | undefined>;
     canManagePermissions?: boolean;
   }) => {
     const [editing, setEditing] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [reloaded, setReloaded] = useState<string | null>(null);
     const submit = () => {
       setError(null);
       // The form saves over the role it was opened on (ADR 0311).
@@ -343,6 +352,21 @@ vi.mock("@/components/roles/roles-master-detail", () => ({
             >
               Permissions saved
             </button>
+            <button
+              type="button"
+              data-testid="trigger-reload-role"
+              onClick={() =>
+                void onReloadRole().then(
+                  (stored) => setReloaded(stored?.name ?? "gone"),
+                  (err: unknown) => setReloaded(`failed: ${String(err)}`),
+                )
+              }
+            >
+              Reload role
+            </button>
+            {reloaded ? (
+              <span data-testid="reloaded-role">{reloaded}</span>
+            ) : null}
             <button
               type="button"
               data-testid="trigger-deselect"
@@ -816,6 +840,50 @@ describe("RolesPage", () => {
       expect.anything(),
       expect.objectContaining({ version: "v2" }),
     );
+  });
+
+  // A role deleted after a refused edit has nothing left to save: the
+  // reload ends the selection, drops the role from the list and says so,
+  // instead of a load error that blocks saving.
+  it("ends the selection when the reloaded role is gone", async () => {
+    setSelectedRole("1");
+    render(<RolesPage />);
+    await screen.findByTestId("role-detail-panel");
+    mockGetOne.mockRejectedValueOnce(
+      new ApiError("role not found", 404, { code: "general.not_found" }),
+    );
+
+    fireEvent.click(screen.getByTestId("trigger-reload-role"));
+
+    await waitFor(() =>
+      expect(mockShowMessage).toHaveBeenCalledWith(
+        "Diese Rolle gibt es nicht mehr. Deine Änderung ist nicht gespeichert.",
+      ),
+    );
+    expect(mockReplace).toHaveBeenCalledWith("/tenant/database/roles", {
+      scroll: false,
+    });
+    await waitFor(() =>
+      expect(screen.queryByTestId("role-row-1")).not.toBeInTheDocument(),
+    );
+    expect(screen.getByTestId("role-row-2")).toBeInTheDocument();
+  });
+
+  it("keeps a failed reload of the role a load failure", async () => {
+    setSelectedRole("1");
+    render(<RolesPage />);
+    await screen.findByTestId("role-detail-panel");
+    mockGetOne.mockRejectedValueOnce(
+      new ApiError("down", 503, { code: "general.unavailable" }),
+    );
+
+    fireEvent.click(screen.getByTestId("trigger-reload-role"));
+
+    expect(await screen.findByTestId("reloaded-role")).toHaveTextContent(
+      "failed",
+    );
+    expect(mockShowMessage).not.toHaveBeenCalled();
+    expect(screen.getByTestId("role-row-1")).toBeInTheDocument();
   });
 
   it("refreshes the roles of the invitation form after saving a role", async () => {

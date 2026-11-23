@@ -27,8 +27,10 @@ type engineTestPeople struct {
 func (p engineTestPeople) FindPersonByAccount(context.Context, int64) (identityaccess.CallerPerson, bool, error) {
 	return identityaccess.CallerPerson{ID: 70}, p.found, p.err
 }
-func (engineTestPeople) CreatePerson(context.Context, int64, string, string) error   { return nil }
-func (engineTestPeople) RenamePerson(context.Context, int64, *string, *string) error { return nil }
+func (engineTestPeople) CreatePerson(context.Context, int64, string, string) error { return nil }
+func (engineTestPeople) RenamePerson(context.Context, int64, *string, *string, string) error {
+	return nil
+}
 
 type engineTestMembership struct{ staff, teacher bool }
 

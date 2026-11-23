@@ -91,7 +91,7 @@ func TestWireShape_CurrentProfile(t *testing.T) {
 		require.True(t, ok, "data must be an object")
 		assert.Equal(t, sorted(
 			"email", "username", "last_login", "avatar", "id", "first_name", "last_name",
-			"created_at", "updated_at", "rfid_card", "bio", "settings",
+			"created_at", "updated_at", "rfid_card", "bio", "settings", "version",
 		), sortedKeys(data))
 		assert.Equal(t, int64(person.ID), testpkg.JSONID(t, data["id"]), "id is the person ID when a person exists")
 		assert.Equal(t, "Wire", data["first_name"])
@@ -119,7 +119,7 @@ func TestWireShape_ProfileAccountFallback(t *testing.T) {
 	// username and last_login are always present (null when unset); avatar,
 	// rfid_card, bio and settings only when non-empty.
 	assert.Equal(t, sorted(
-		"email", "username", "last_login", "id", "first_name", "last_name", "created_at", "updated_at",
+		"email", "username", "last_login", "id", "first_name", "last_name", "created_at", "updated_at", "version",
 	), sortedKeys(data))
 	assert.Equal(t, int64(account.ID), testpkg.JSONID(t, data["id"]), "id falls back to the account ID")
 	assert.Equal(t, "", data["first_name"])
