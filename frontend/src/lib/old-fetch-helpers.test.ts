@@ -53,8 +53,6 @@ const PENDING: Readonly<Record<string, string>> = {
   "lib/staff-messages-api.ts": "c3 #7880",
   "lib/staff-notices-api.ts": "c3 #7880",
   "lib/surveys-api.ts": "c3 #7880",
-  "lib/enrollment-http.ts": "enrollment transport after c6/c7",
-  "lib/parent-api.ts": "enrollment transport after c6/c7",
   "lib/api-error.ts": "transportFetch definition, removed when the slices land",
 };
 

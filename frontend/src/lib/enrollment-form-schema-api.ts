@@ -1,16 +1,14 @@
-import { apiErrorFromResponse } from "~/lib/api-error";
 import { bffJson } from "~/lib/bff-fetch";
 import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import type * as sharedContract from "~/lib/contract/shared.generated";
 import { createLogger } from "~/lib/logger";
-import { readEnrollmentError } from "~/lib/enrollment-api-error";
+import { logEnrollmentFailure } from "~/lib/enrollment-api-error";
 import type { Translations } from "~/lib/enrollment-translations";
 import { requiredEnum } from "~/lib/contract/known-enum";
 import {
   ENROLLMENT_FILE_TYPES,
   type FileFieldOptions,
 } from "~/lib/enrollment-uploads";
-import { sendEnrollmentRequest } from "~/lib/enrollment-http";
 
 const logger = createLogger({ component: "EnrollmentFormSchemaAPI" });
 
@@ -291,8 +289,6 @@ export type FormSchema = Omit<
   legal_blocks?: FormLegalBlock[];
 };
 
-const SCHEMA_PATH = "/api/enrollment/schema";
-
 /**
  * Lists every schema version for the current tenant (newest first).
  * The Phasen admin page uses this to populate the "use schema X for
@@ -469,25 +465,14 @@ export async function createSchema(
           core_requirements: coreRequirements,
           legal_blocks: legalBlocks,
         };
-  const response = await sendEnrollmentRequest(SCHEMA_PATH, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!response.ok) {
-    throw await readEnrollmentError(
-      response,
-      "Formularvorlage konnte nicht erstellt werden",
-      logger,
-      "schema_create_failed",
-    );
-  }
-  // POST and PUT `/schema/` read a body the contract does not describe
-  // (#7808), so they go out without bffJson; the answer is the contract's.
-  const { data } = (await response.json()) as {
-    data: enrollmentContract.FormSchemaResponse;
-  };
-  return formSchemaFromContract(data);
+  return formSchemaFromContract(
+    await bffJson("tenant", "POST /api/enrollment/schema/", {
+      body,
+      errorMessage: "Formularvorlage konnte nicht erstellt werden",
+    }).catch((error: unknown) =>
+      logEnrollmentFailure(error, logger, "schema_create_failed"),
+    ),
+  );
 }
 
 /**
@@ -519,28 +504,15 @@ export async function updateSchema(
   if (newName !== undefined) body.name = newName;
   if (coreRequirements !== undefined) body.core_requirements = coreRequirements;
   if (legalBlocks !== undefined) body.legal_blocks = legalBlocks;
-  const response = await sendEnrollmentRequest(
-    `${SCHEMA_PATH}/${encodeURIComponent(id)}`,
-    {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    },
+  return formSchemaFromContract(
+    await bffJson("tenant", "PUT /api/enrollment/schema/{id}", {
+      params: { id },
+      body,
+      errorMessage: "Formularvorlage konnte nicht gespeichert werden",
+    }).catch((error: unknown) =>
+      logEnrollmentFailure(error, logger, "schema_update_failed"),
+    ),
   );
-  if (!response.ok) {
-    throw await readEnrollmentError(
-      response,
-      "Formularvorlage konnte nicht gespeichert werden",
-      logger,
-      "schema_update_failed",
-    );
-  }
-  // POST and PUT `/schema/` read a body the contract does not describe
-  // (#7808), so they go out without bffJson; the answer is the contract's.
-  const { data } = (await response.json()) as {
-    data: enrollmentContract.FormSchemaResponse;
-  };
-  return formSchemaFromContract(data);
 }
 
 export async function uploadEnrollmentLegalDocument(
@@ -563,16 +535,13 @@ export async function deleteEnrollmentLegalDocument(
   const filename = documentURL.trim().split("/").pop();
   if (!filename) return;
 
-  const response = await sendEnrollmentRequest(
-    `/api/enrollment/legal-documents/${encodeURIComponent(filename)}`,
-    { keepalive: options.keepalive, method: "DELETE" },
-  );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      "PDF-Datei konnte nicht entfernt werden",
-    );
-  }
+  await bffJson("tenant", "DELETE /api/enrollment/legal-documents/{filename}", {
+    params: { filename },
+    errorMessage: "PDF-Datei konnte nicht entfernt werden",
+    // The draft's PDF goes when the page goes (pagehide): only a keepalive
+    // request outlives it.
+    ...(options.keepalive && { keepalive: true }),
+  });
 }
 
 /**

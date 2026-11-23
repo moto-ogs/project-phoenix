@@ -2,12 +2,9 @@ import { createLogger } from "~/lib/logger";
 import { requiredEnum } from "~/lib/contract/known-enum";
 import { CHILD_STATUSES, type ChildStatus } from "~/lib/enrollment-status";
 import { downloadBlob, filenameFromDisposition } from "~/lib/file-download";
-import { bffJson } from "~/lib/bff-fetch";
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
-import {
-  enrollmentErrorReader,
-  sendEnrollmentRequest,
-} from "~/lib/enrollment-http";
+import { logEnrollmentFailure } from "~/lib/enrollment-api-error";
 
 const logger = createLogger({ component: "EnrollmentReportAPI" });
 
@@ -108,10 +105,7 @@ function careUsageReportFromContract(
   };
 }
 
-const readError = enrollmentErrorReader(
-  logger,
-  "enrollment_report_request_failed",
-);
+const LOG_EVENT = "enrollment_report_request_failed";
 
 export async function getCareUsageReport(
   filters: CareUsageFilters,
@@ -140,26 +134,19 @@ export async function exportCareUsageReport(
   format: EnrollmentExportFormat,
   layout: EnrollmentReportLayout = "detailed",
 ): Promise<void> {
-  const response = await sendEnrollmentRequest(
-    "/api/enrollment/admin/reports/care-usage/export",
+  const response = await bffFile(
+    "tenant",
+    "POST /api/enrollment/admin/reports/care-usage/export",
     {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
       // "detailed" is the backend default; only the compact layout is sent
       // explicitly so the detailed request body stays unchanged.
-      body: JSON.stringify(
+      body:
         layout === "compact"
           ? { format, layout, filters }
           : { format, filters },
-      ),
+      errorMessage: "Auswertung konnte nicht exportiert werden",
     },
-  );
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Auswertung konnte nicht exportiert werden",
-    );
-  }
+  ).catch((error: unknown) => logEnrollmentFailure(error, logger, LOG_EVENT));
   downloadBlob(
     await response.blob(),
     filenameFromDisposition(response) ?? `anmelde-auswertung.${format}`,
@@ -171,12 +158,11 @@ export async function exportPhaseClassRoster(
   schoolClass: string | null,
   format: EnrollmentExportFormat,
 ): Promise<void> {
-  const response = await sendEnrollmentRequest(
-    "/api/enrollment/admin/reports/class-roster/export",
+  const response = await bffFile(
+    "tenant",
+    "POST /api/enrollment/admin/reports/class-roster/export",
     {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+      body: {
         format,
         filters: {
           phase_id: phaseId,
@@ -184,15 +170,10 @@ export async function exportPhaseClassRoster(
             ? { school_class: schoolClass }
             : { all_classes: true }),
         },
-      }),
+      },
+      errorMessage: "Klassenliste konnte nicht exportiert werden",
     },
-  );
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Klassenliste konnte nicht exportiert werden",
-    );
-  }
+  ).catch((error: unknown) => logEnrollmentFailure(error, logger, LOG_EVENT));
   downloadBlob(
     await response.blob(),
     filenameFromDisposition(response) ??
@@ -210,19 +191,15 @@ export async function exportPhaseRegistrations(
   format: EnrollmentExportFormat,
   childStatus?: string,
 ): Promise<void> {
-  const response = await sendEnrollmentRequest(
-    `/api/enrollment/phases/${encodeURIComponent(phaseId)}/export`,
+  const response = await bffFile(
+    "tenant",
+    "POST /api/enrollment/phases/{id}/export",
     {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(
-        childStatus ? { format, child_status: childStatus } : { format },
-      ),
+      params: { id: phaseId },
+      body: childStatus ? { format, child_status: childStatus } : { format },
+      errorMessage: "Export konnte nicht erstellt werden",
     },
-  );
-  if (!response.ok) {
-    throw await readError(response, "Export konnte nicht erstellt werden");
-  }
+  ).catch((error: unknown) => logEnrollmentFailure(error, logger, LOG_EVENT));
   downloadBlob(
     await response.blob(),
     filenameFromDisposition(response) ?? `anmeldungen.${format}`,
