@@ -13,39 +13,43 @@ import { RoomStammdatenTab } from "./room-stammdaten-tab";
 
 // The form remounts (new key) after save, cancel and room switch so a stale
 // draft never survives. The stand-in records each mount with a nonce.
-vi.mock("~/components/database/database-form", () => ({
-  DatabaseForm: ({
-    onSubmit,
-    onCancel,
-    initialData,
-  }: {
-    onSubmit: (data: { name: string }) => Promise<void>;
-    onCancel: () => void;
-    initialData?: { name?: string };
-  }) => {
-    const nonce = String(Math.random());
-    const mounts = (globalThis as unknown as { __formMounts?: string[] })
-      .__formMounts;
-    mounts?.push(nonce);
-    return (
-      <div data-testid="database-form" data-nonce={nonce}>
-        <span data-testid="form-name">{initialData?.name}</span>
-        <button
-          type="button"
-          // The real form shows a refused save on its error path.
-          onClick={() =>
-            void onSubmit({ name: "Updated Room" }).catch(() => undefined)
-          }
-        >
-          Save
-        </button>
-        <button type="button" onClick={onCancel}>
-          Cancel
-        </button>
-      </div>
-    );
-  },
-}));
+vi.mock("~/components/database/database-form", async () => {
+  const { useState } = await import("react");
+  return {
+    DatabaseForm: function DatabaseFormStandIn({
+      onSubmit,
+      onCancel,
+      initialData,
+    }: {
+      onSubmit: (data: { name: string }) => Promise<void>;
+      onCancel: () => void;
+      initialData?: { name?: string };
+    }) {
+      // One nonce per mount: a re-render keeps it, a remount draws a new one.
+      const [nonce] = useState(() => String(Math.random()));
+      const mounts = (globalThis as unknown as { __formMounts?: string[] })
+        .__formMounts;
+      mounts?.push(nonce);
+      return (
+        <div data-testid="database-form" data-nonce={nonce}>
+          <span data-testid="form-name">{initialData?.name}</span>
+          <button
+            type="button"
+            // The real form shows a refused save on its error path.
+            onClick={() =>
+              void onSubmit({ name: "Updated Room" }).catch(() => undefined)
+            }
+          >
+            Save
+          </button>
+          <button type="button" onClick={onCancel}>
+            Cancel
+          </button>
+        </div>
+      );
+    },
+  };
+});
 
 // The error path itself is tested in DatabaseForm; here it only travels.
 const errorPath = {
