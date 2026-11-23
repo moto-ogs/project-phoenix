@@ -1,7 +1,6 @@
 package careplan
 
 import (
-	"cmp"
 	"context"
 	"errors"
 	"slices"
@@ -248,12 +247,16 @@ func BookingsVersion(bookings []BookedOffering) string {
 		state = append(state, booking)
 	}
 	slices.SortFunc(state, func(a, b BookedOffering) int {
-		return cmp.Or(
-			cmp.Compare(a.RequestChildID, b.RequestChildID),
-			cmp.Compare(a.CareOfferingID, b.CareOfferingID),
-			compareOptionalDate(a.ValidFrom, b.ValidFrom),
-			compareOptionalDate(a.ValidUntil, b.ValidUntil),
-		)
+		switch {
+		case a.RequestChildID != b.RequestChildID:
+			return compareIDs(a.RequestChildID, b.RequestChildID)
+		case a.CareOfferingID != b.CareOfferingID:
+			return compareIDs(a.CareOfferingID, b.CareOfferingID)
+		}
+		if order := compareOptionalDate(a.ValidFrom, b.ValidFrom); order != 0 {
+			return order
+		}
+		return compareOptionalDate(a.ValidUntil, b.ValidUntil)
 	})
 	return readstate.Fingerprint(state)
 }
@@ -263,6 +266,13 @@ func daysOrEmpty(days []string) []string {
 		return []string{}
 	}
 	return days
+}
+
+func compareIDs(a, b int64) int {
+	if a < b {
+		return -1
+	}
+	return 1
 }
 
 // compareOptionalDate orders an open bound before every date.
