@@ -276,6 +276,47 @@ describe("TraegerStaffRecordsPage", () => {
     expect(mockPush).not.toHaveBeenCalled();
   });
 
+  // ADR 0311 rule 6: a failed read of the values after a refusal is a load
+  // error, and the refused preview is not confirmed again.
+  it("names a failed read of the values after a refusal", async () => {
+    api.linkStaff.mockRejectedValueOnce(
+      new ApiError("changed since it was read", 409, {
+        code: "general.changed_since_read",
+      }),
+    );
+    renderPage();
+    const proposal = await screen.findByText(
+      "Gleiches Konto",
+      {},
+      { timeout: 3000 },
+    );
+    fireEvent.click(proposal.closest("tr")!);
+    const dialog = await screen.findByRole("dialog", {
+      name: "Personalakte anlegen",
+    });
+    await within(dialog).findByText("Welcher Wert gilt?");
+    api.previewStaffLink.mockRejectedValue(
+      new ApiError("down", 503, { code: "general.unavailable" }),
+    );
+    fireEvent.click(within(dialog).getByRole("radio", { name: /Sommer-Berg/ }));
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Akte anlegen" }),
+    );
+
+    expect(
+      await within(dialog).findByText(
+        /Der neue Stand konnte nicht geladen werden/,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).queryByText(/Du siehst jetzt den neuen Stand/),
+    ).not.toBeInTheDocument();
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Akte anlegen" }),
+    );
+    expect(api.linkStaff).toHaveBeenCalledTimes(1);
+  });
+
   it("lists the people without a record and keeps the tab in the address", async () => {
     const view = renderPage();
     fireEvent.click(await screen.findByRole("tab", { name: /Ohne Akte/ }));
