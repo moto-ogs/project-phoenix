@@ -3,11 +3,15 @@
 //
 //   pnpm run kit-pixel baseline [--ref <commit>] [--filter <regex>] [--all-stories]
 //   pnpm run kit-pixel compare  [--filter <regex>] [--all-stories]
+//   pnpm run kit-pixel touch    [--filter <regex>] [--all-stories] [--storybook-dir <dir>]
 //
 // baseline exportiert den Commit (Standard HEAD, ohne uncommittete Änderungen),
 // baut daraus Storybook und schreibt je Story und Breite ein PNG nach
 // .kit-pixel/baseline/. compare baut Storybook aus dem Arbeitsstand und
-// vergleicht Pixel für Pixel. Anleitung: docs/agents/frontend-testing.md.
+// vergleicht Pixel für Pixel. touch baut Storybook aus dem Arbeitsstand und
+// prüft die Trefferflächen unter `pointer: coarse` (#8060), ohne Baseline;
+// mit --storybook-dir auf einem fertigen Build (CI: storybook-static).
+// Anleitung: docs/agents/frontend-testing.md.
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
@@ -137,6 +141,10 @@ function exportFrontend(sha) {
   return exportedFrontend;
 }
 
+/** Spec-Dateien je Befehl; ohne Angabe liefe der Pixel-Vergleich auch die Trefferflächen. */
+const PIXEL_SPEC = "scripts/kit-pixel-stories.pw.ts";
+const TOUCH_SPEC = "scripts/kit-touch-targets.pw.ts";
+
 function runPlaywright({
   mode,
   storybookDir,
@@ -144,6 +152,8 @@ function runPlaywright({
   filter,
   allStories,
 }) {
+  const selection =
+    mode === "touch" ? ["--project=phone", TOUCH_SPEC] : [PIXEL_SPEC];
   return run(
     "pnpm",
     [
@@ -153,6 +163,7 @@ function runPlaywright({
       "-c",
       "playwright.kit-pixel.config.ts",
       `--update-snapshots=${mode === "baseline" ? "all" : "none"}`,
+      ...selection,
     ],
     {
       cwd: frontendDir,
@@ -280,9 +291,41 @@ function compare({ filter, allStories }) {
   process.exitCode = status || 1;
 }
 
+function touch({ filter, allStories, storybookDir: prebuilt }) {
+  const storybookDir = prebuilt
+    ? path.resolve(prebuilt)
+    : path.join(workDir, "storybook-current");
+  if (!prebuilt) buildStorybook(frontendDir, storybookDir);
+  else if (!existsSync(path.join(storybookDir, "index.json"))) {
+    throw new StepFailed(
+      `Kein Storybook-Build in ${storybookDir} (index.json fehlt).`,
+      1,
+    );
+  }
+  const findingsDir = path.join(workDir, "touch");
+  rmSync(findingsDir, { recursive: true, force: true });
+  const status = runPlaywright({
+    mode: "touch",
+    storybookDir,
+    // Der Lauf vergleicht keine Bilder; die Config verlangt den Pfad trotzdem.
+    snapshotDir: baselineDir,
+    filter,
+    allStories,
+  });
+  if (status === 0) {
+    console.log("\nTrefferflächen: keine neuen Verstöße.");
+    return;
+  }
+  console.error(
+    `\nTrefferflächen: neue oder behobene Verstöße (siehe oben). Messwerte je Story: ${path.relative(frontendDir, findingsDir)}/`,
+  );
+  process.exitCode = status;
+}
+
 try {
   const options = parseKitPixelArgs(process.argv.slice(2));
   if (options.command === "baseline") baseline(options);
+  else if (options.command === "touch") touch(options);
   else compare(options);
 } catch (error) {
   console.error(`\n${error.message}`);

@@ -1,0 +1,677 @@
+{
+  "components-ui-anchoredpopover--select-inside-opened": {
+    "phone": [
+      "zu klein: option \"Monat\"",
+      "zu klein: option \"Tag\"",
+      "zu klein: option \"Woche\""
+    ],
+    "tablet": [
+      "zu klein: option \"Monat\"",
+      "zu klein: option \"Tag\"",
+      "zu klein: option \"Woche\""
+    ]
+  },
+  "components-ui-attachmentlist--default": {
+    "phone": [
+      "zu klein: link \"Anmeldung-Ferienbetreuung.docx\"",
+      "zu klein: link \"Elternbrief-Herbstferien.pdf\"",
+      "zu klein: link \"Foto-Ausflug.jpg\""
+    ],
+    "tablet": [
+      "zu klein: link \"Anmeldung-Ferienbetreuung.docx\"",
+      "zu klein: link \"Elternbrief-Herbstferien.pdf\"",
+      "zu klein: link \"Foto-Ausflug.jpg\""
+    ]
+  },
+  "components-ui-attachmentlist--file-actions": {
+    "phone": [
+      "zu klein: link \"Anmeldung-Ferienbetreuung.docx\"",
+      "zu klein: link \"Elternbrief-Herbstferien.pdf\"",
+      "zu klein: link \"Foto-Ausflug.jpg\""
+    ],
+    "tablet": [
+      "zu klein: link \"Anmeldung-Ferienbetreuung.docx\"",
+      "zu klein: link \"Elternbrief-Herbstferien.pdf\"",
+      "zu klein: link \"Foto-Ausflug.jpg\""
+    ]
+  },
+  "components-ui-attachmentlist--removable": {
+    "phone": [
+      "zu klein: link \"Anmeldung-Ferienbetreuung.docx\"",
+      "zu klein: link \"Elternbrief-Herbstferien.pdf\"",
+      "zu klein: link \"Foto-Ausflug.jpg\""
+    ],
+    "tablet": [
+      "zu klein: link \"Anmeldung-Ferienbetreuung.docx\"",
+      "zu klein: link \"Elternbrief-Herbstferien.pdf\"",
+      "zu klein: link \"Foto-Ausflug.jpg\""
+    ]
+  },
+  "components-ui-backlink--action": {
+    "tablet": ["zu klein: button \"Zurück zur Übersicht\""]
+  },
+  "components-ui-backlink--default": {
+    "tablet": ["zu klein: link \"Zurück zu den Räumen\""]
+  },
+  "components-ui-button--field-next-to-input": {
+    "phone": ["zu klein: textbox \"E-Mail\""],
+    "tablet": ["zu klein: textbox \"E-Mail\""]
+  },
+  "components-ui-checkbox--checked": {
+    "phone": ["zu klein: label \"Option\""],
+    "tablet": ["zu klein: label \"Option\""]
+  },
+  "components-ui-checkbox--disabled-checked": {
+    "phone": ["zu klein: label \"Option\""],
+    "tablet": ["zu klein: label \"Option\""]
+  },
+  "components-ui-checkbox--disabled": {
+    "phone": ["zu klein: label \"Option\""],
+    "tablet": ["zu klein: label \"Option\""]
+  },
+  "components-ui-checkbox--unchecked": {
+    "phone": ["zu klein: label \"Option\""],
+    "tablet": ["zu klein: label \"Option\""]
+  },
+  "components-ui-choicetile--checkbox-rows": {
+    "phone": [
+      "zu klein: label \"Dienstag\"",
+      "zu klein: label \"Donnerstag (kein Betreuungstag)\"",
+      "zu klein: label \"Mittwoch\"",
+      "zu klein: label \"Montag\""
+    ],
+    "tablet": [
+      "zu klein: label \"Dienstag\"",
+      "zu klein: label \"Donnerstag (kein Betreuungstag)\"",
+      "zu klein: label \"Mittwoch\"",
+      "zu klein: label \"Montag\""
+    ]
+  },
+  "components-ui-choicetile--green-selection": {
+    "phone": [
+      "zu klein: button \"Abholliste\"",
+      "zu klein: button \"Anwesenheitsliste\""
+    ],
+    "tablet": [
+      "zu klein: button \"Abholliste\"",
+      "zu klein: button \"Anwesenheitsliste\""
+    ]
+  },
+  "components-ui-choicetile--radio-rows": {
+    "phone": [
+      "zu klein: label \"PDF hochladen\"",
+      "zu klein: label \"Text eingeben\""
+    ],
+    "tablet": [
+      "zu klein: label \"PDF hochladen\"",
+      "zu klein: label \"Text eingeben\""
+    ]
+  },
+  "components-ui-collectionviewswitch--table": {
+    "tablet": ["zu klein: button \"Kacheln\"", "zu klein: button \"Liste\""]
+  },
+  "components-ui-collectionviewswitch--tiles": {
+    "tablet": ["zu klein: button \"Kacheln\"", "zu klein: button \"Liste\""]
+  },
+  "components-ui-confirmdeletemodal--interactive": {
+    "phone": ["zu klein: textbox \"Gib LÖSCHEN ein, um zu bestätigen\""],
+    "tablet": ["zu klein: textbox \"Gib LÖSCHEN ein, um zu bestätigen\""]
+  },
+  "components-ui-confirmdeletemodal--text-confirm": {
+    "phone": ["zu klein: textbox \"Gib LÖSCHEN ein, um zu bestätigen\""],
+    "tablet": ["zu klein: textbox \"Gib LÖSCHEN ein, um zu bestätigen\""]
+  },
+  "components-ui-customselect--compact": {
+    "phone": ["zu klein: combobox \"Gruppe auswählen\""],
+    "tablet": ["zu klein: combobox \"Gruppe auswählen\""]
+  },
+  "components-ui-customselect--searchable-opened": {
+    "phone": [
+      "zu klein: option \"Gruppe A\"",
+      "zu klein: option \"Gruppe B\"",
+      "zu klein: textbox \"Suchen\""
+    ],
+    "tablet": [
+      "zu klein: option \"Gruppe A\"",
+      "zu klein: option \"Gruppe B\"",
+      "zu klein: textbox \"Suchen\""
+    ]
+  },
+  "components-ui-datatable--default": {
+    "tablet": [
+      "zu klein: button \"Name↕ – Spalte sortieren\"",
+      "zu klein: button \"Rolle↕ – Spalte sortieren\""
+    ]
+  },
+  "components-ui-datatable--expandable-with-sub-rows-and-summary": {
+    "tablet": [
+      "zu klein: button \"Anna Schmidt: Details öffnen\"",
+      "zu klein: button \"Clara Weber: Details öffnen\"",
+      "zu klein: button \"Name↕ – Spalte sortieren\"",
+      "zu klein: button \"Rolle↕ – Spalte sortieren\""
+    ]
+  },
+  "components-ui-datatable--loading": {
+    "tablet": [
+      "zu klein: button \"Name↕ – Spalte sortieren\"",
+      "zu klein: button \"Rolle↕ – Spalte sortieren\""
+    ]
+  },
+  "components-ui-datatable--paginated": {
+    "tablet": [
+      "zu klein: button \"Name↕ – Spalte sortieren\"",
+      "zu klein: button \"Rolle↕ – Spalte sortieren\""
+    ]
+  },
+  "components-ui-datatable--phone-cards-with-details-and-summary": {
+    "tablet": [
+      "zu klein: button \"Aktionen für Di, 08.09.\"",
+      "zu klein: button \"Aktionen für Mo, 07.09.\"",
+      "zu klein: button \"Di, 08.09.: Verlauf öffnen\"",
+      "zu klein: button \"Mo, 07.09.: Verlauf öffnen\""
+    ]
+  },
+  "components-ui-datatable--with-header-actions-and-caption": {
+    "phone": ["zu klein: button \"Filtern\""],
+    "tablet": [
+      "zu klein: button \"Filtern\"",
+      "zu klein: button \"Name↑ – aufsteigend sortiert\"",
+      "zu klein: button \"Rolle↕ – Spalte sortieren\""
+    ]
+  },
+  "components-ui-datepicker--month-menu-opened": {
+    "phone": [
+      "zu klein: option \"April\"",
+      "zu klein: option \"August\"",
+      "zu klein: option \"Dezember\"",
+      "zu klein: option \"Februar\"",
+      "zu klein: option \"Januar\"",
+      "zu klein: option \"Juli\"",
+      "zu klein: option \"Juni\"",
+      "zu klein: option \"Mai\"",
+      "zu klein: option \"März\"",
+      "zu klein: option \"November\"",
+      "zu klein: option \"Oktober\"",
+      "zu klein: option \"September\""
+    ],
+    "tablet": [
+      "zu klein: combobox \"Jahr\"",
+      "zu klein: combobox \"Monat\"",
+      "zu klein: option \"April\"",
+      "zu klein: option \"August\"",
+      "zu klein: option \"Dezember\"",
+      "zu klein: option \"Februar\"",
+      "zu klein: option \"Januar\"",
+      "zu klein: option \"Juli\"",
+      "zu klein: option \"Juni\"",
+      "zu klein: option \"Mai\"",
+      "zu klein: option \"März\"",
+      "zu klein: option \"November\"",
+      "zu klein: option \"Oktober\"",
+      "zu klein: option \"September\""
+    ]
+  },
+  "components-ui-daterangepicker--range-calendar-inline-standalone": {
+    "phone": [
+      "zu klein: button \"Dienstag, 1. September 2026\"",
+      "zu klein: button \"Dienstag, 15. September 2026\"",
+      "zu klein: button \"Dienstag, 22. September 2026\"",
+      "zu klein: button \"Dienstag, 29. September 2026\"",
+      "zu klein: button \"Dienstag, 8. September 2026\"",
+      "zu klein: button \"Donnerstag, 10. September 2026\"",
+      "zu klein: button \"Donnerstag, 17. September 2026\"",
+      "zu klein: button \"Donnerstag, 24. September 2026\"",
+      "zu klein: button \"Donnerstag, 3. September 2026\"",
+      "zu klein: button \"Freitag, 11. September 2026\"",
+      "zu klein: button \"Freitag, 18. September 2026\"",
+      "zu klein: button \"Freitag, 25. September 2026\"",
+      "zu klein: button \"Freitag, 4. September 2026\"",
+      "zu klein: button \"Heute, Mittwoch, 9. September 2026\"",
+      "zu klein: button \"Mittwoch, 16. September 2026\"",
+      "zu klein: button \"Mittwoch, 2. September 2026\"",
+      "zu klein: button \"Mittwoch, 23. September 2026\"",
+      "zu klein: button \"Mittwoch, 30. September 2026\"",
+      "zu klein: button \"Montag, 14. September 2026\"",
+      "zu klein: button \"Montag, 21. September 2026\"",
+      "zu klein: button \"Montag, 28. September 2026\"",
+      "zu klein: button \"Montag, 7. September 2026\"",
+      "zu klein: button \"Samstag, 12. September 2026\"",
+      "zu klein: button \"Samstag, 19. September 2026\"",
+      "zu klein: button \"Samstag, 26. September 2026\"",
+      "zu klein: button \"Samstag, 5. September 2026\"",
+      "zu klein: button \"Sonntag, 13. September 2026\"",
+      "zu klein: button \"Sonntag, 20. September 2026\"",
+      "zu klein: button \"Sonntag, 27. September 2026\"",
+      "zu klein: button \"Sonntag, 6. September 2026\""
+    ]
+  },
+  "components-ui-input--compact": {
+    "phone": ["zu klein: textbox \"Name\""],
+    "tablet": ["zu klein: textbox \"Name\""]
+  },
+  "components-ui-knopf-erklärungen--standardtexte": {
+    "tablet": ["zu klein: button \"Weitere Aktionen\""]
+  },
+  "components-ui-listboxdropdown--compact": {
+    "phone": ["zu klein: button \"Apfel, Frucht auswählen\""],
+    "tablet": ["zu klein: button \"Apfel, Frucht auswählen\""]
+  },
+  "components-ui-listboxdropdown--opened": {
+    "phone": ["zu klein: option \"Apfel\"", "zu klein: option \"Banane\""],
+    "tablet": ["zu klein: option \"Apfel\"", "zu klein: option \"Banane\""]
+  },
+  "components-ui-listrow--as-button": {
+    "phone": ["zu klein: button \"Mia Schneider\""],
+    "tablet": ["zu klein: button \"Mia Schneider\""]
+  },
+  "components-ui-listrow--as-link": {
+    "phone": ["zu klein: link \"Mia Schneider\""],
+    "tablet": ["zu klein: link \"Mia Schneider\""]
+  },
+  "components-ui-listrow--compact-with-trailing": {
+    "phone": [
+      "zu klein: link \"Mia SchneiderAnwesend\"",
+      "zu klein: link \"Noah WeberZuhause\""
+    ],
+    "tablet": [
+      "zu klein: link \"Mia SchneiderAnwesend\"",
+      "zu klein: link \"Noah WeberZuhause\""
+    ]
+  },
+  "components-ui-modal--with-footer": {
+    "phone": ["zu klein: button \"Speichern\""],
+    "tablet": ["zu klein: button \"Speichern\""]
+  },
+  "components-ui-modalcontext--within-provider": {
+    "phone": ["zu klein: button \"Schließen\"", "zu klein: button \"Öffnen\""],
+    "tablet": ["zu klein: button \"Schließen\"", "zu klein: button \"Öffnen\""]
+  },
+  "components-ui-modalcontext--without-provider": {
+    "phone": ["zu klein: button \"Schließen\"", "zu klein: button \"Öffnen\""],
+    "tablet": ["zu klein: button \"Schließen\"", "zu klein: button \"Öffnen\""]
+  },
+  "components-ui-navigationlink--default": {
+    "phone": ["zu klein: link \"Zu den Räumen\""],
+    "tablet": ["zu klein: link \"Zu den Räumen\""]
+  },
+  "components-ui-page-header-activefilterchips--multiple-filters-with-clear-all": {
+    "phone": [
+      "zu klein: button \"Alle löschen\"",
+      "zu klein: button \"Filter Status: Aktiv entfernen\"",
+      "überlappt: button \"Filter Status: Aktiv entfernen\""
+    ],
+    "tablet": ["zu klein: button \"Alle löschen\""]
+  },
+  "components-ui-planning-planblock--compact": {
+    "phone": ["zu klein: button \"12:00–14:00Mensa\""],
+    "tablet": ["zu klein: button \"12:00–14:00Mensa\""]
+  },
+  "components-ui-planning-planblock--suggested": {
+    "phone": ["zu klein: button \"5 hVorschlag\""],
+    "tablet": ["zu klein: button \"5 hVorschlag\""]
+  },
+  "components-ui-planning-planningcontextbar--default": {
+    "phone": [
+      "zu klein: button \"HeuteSpringt zum Zeitraum mit dem heuti…\"",
+      "zu klein: button \"Weiter\"",
+      "zu klein: button \"Zurück\""
+    ],
+    "tablet": [
+      "zu klein: button \"HeuteSpringt zum Zeitraum mit dem heuti…\"",
+      "zu klein: button \"Weiter\"",
+      "zu klein: button \"Zurück\""
+    ]
+  },
+  "components-ui-planning-planningcontextbar--with-context-row": {
+    "phone": [
+      "zu klein: button \"HeuteSpringt zum Zeitraum mit dem heuti…\"",
+      "zu klein: button \"Weiter\"",
+      "zu klein: button \"Zurück\""
+    ],
+    "tablet": [
+      "zu klein: button \"HeuteSpringt zum Zeitraum mit dem heuti…\"",
+      "zu klein: button \"Weiter\"",
+      "zu klein: button \"Zurück\""
+    ]
+  },
+  "components-ui-planning-planningcontextbar--with-select-in-group": {
+    "phone": [
+      "zu klein: button \"Monat danach\"",
+      "zu klein: button \"Monat davor\"",
+      "zu klein: combobox \"Monat\""
+    ],
+    "tablet": [
+      "zu klein: button \"Monat danach\"",
+      "zu klein: button \"Monat davor\"",
+      "zu klein: combobox \"Monat\""
+    ]
+  },
+  "components-ui-planning-planningcontextbar--with-view-switcher": {
+    "phone": [
+      "zu klein: button \"HeuteSpringt zum Zeitraum mit dem heuti…\"",
+      "zu klein: button \"Weiter\"",
+      "zu klein: button \"Zurück\""
+    ],
+    "tablet": [
+      "zu klein: button \"HeuteSpringt zum Zeitraum mit dem heuti…\"",
+      "zu klein: button \"Weiter\"",
+      "zu klein: button \"Zurück\""
+    ]
+  },
+  "components-ui-planning-planningcontextbar--with-week-strip-count-dot-only": {
+    "phone": [
+      "zu klein: button \"HeuteSpringt zum Zeitraum mit dem heuti…\"",
+      "zu klein: button \"Weiter\"",
+      "zu klein: button \"Zurück\""
+    ],
+    "tablet": [
+      "zu klein: button \"HeuteSpringt zum Zeitraum mit dem heuti…\"",
+      "zu klein: button \"Weiter\"",
+      "zu klein: button \"Zurück\""
+    ]
+  },
+  "components-ui-planning-planningcontextbar--with-week-strip": {
+    "phone": [
+      "zu klein: button \"HeuteSpringt zum Zeitraum mit dem heuti…\"",
+      "zu klein: button \"Weiter\"",
+      "zu klein: button \"Zurück\""
+    ],
+    "tablet": [
+      "zu klein: button \"HeuteSpringt zum Zeitraum mit dem heuti…\"",
+      "zu klein: button \"Weiter\"",
+      "zu klein: button \"Zurück\""
+    ]
+  },
+  "components-ui-planning-resourcedaylist--one-day-of-a-week": {
+    "phone": [
+      "zu klein: button \"08:00–12:00Frühdienst Di\"",
+      "zu klein: button \"Schicht planen, Yilmaz, Berk, Di\""
+    ],
+    "tablet": [
+      "zu klein: button \"08:00–12:00Frühdienst Di\"",
+      "zu klein: button \"Schicht planen, Yilmaz, Berk, Di\""
+    ]
+  },
+  "components-ui-planning-resourcegrid--week-days": {
+    "phone": ["zu klein: button \"08:00–10:00Vertretung\""],
+    "tablet": ["zu klein: button \"08:00–10:00Vertretung\""]
+  },
+  "components-ui-radio--checked": {
+    "phone": ["zu klein: label \"Option\""],
+    "tablet": ["zu klein: label \"Option\""]
+  },
+  "components-ui-radio--disabled": {
+    "phone": ["zu klein: label \"Option\""],
+    "tablet": ["zu klein: label \"Option\""]
+  },
+  "components-ui-radio--group": {
+    "phone": [
+      "zu klein: label \"Erste Option\"",
+      "zu klein: label \"Zweite Option\""
+    ],
+    "tablet": [
+      "zu klein: label \"Erste Option\"",
+      "zu klein: label \"Zweite Option\""
+    ]
+  },
+  "components-ui-radio--unchecked": {
+    "phone": ["zu klein: label \"Option\""],
+    "tablet": ["zu klein: label \"Option\""]
+  },
+  "components-ui-responsiveactionlist--button-with-menu": {
+    "tablet": ["zu klein: button \"Aktionen\""]
+  },
+  "components-ui-segmentedcontrol--icon-only": {
+    "phone": ["zu klein: button \"Kacheln\"", "zu klein: button \"Liste\""],
+    "tablet": ["zu klein: button \"Kacheln\"", "zu klein: button \"Liste\""]
+  },
+  "components-ui-sidebarrowlink--active": {
+    "phone": ["zu klein: link \"Nachrichten3 ungelesene Nachrichten\""],
+    "tablet": ["zu klein: link \"Nachrichten3 ungelesene Nachrichten\""]
+  },
+  "components-ui-sidebarrowlink--button": {
+    "phone": ["zu klein: button \"Abmelden\""],
+    "tablet": ["zu klein: button \"Abmelden\""]
+  },
+  "components-ui-sidebarrowlink--fading-to-rail": {
+    "phone": ["zu klein: link \"Nachrichten, nicht gebucht3 ungelesene …\""],
+    "tablet": ["zu klein: link \"Nachrichten, nicht gebucht3 ungelesene …\""]
+  },
+  "components-ui-sidebarrowlink--locked": {
+    "phone": ["zu klein: link \"Nachrichten, nicht gebucht\""],
+    "tablet": ["zu klein: link \"Nachrichten, nicht gebucht\""]
+  },
+  "components-ui-sidebarrowlink--rail-active": {
+    "phone": ["zu klein: link \"Nachrichten\""],
+    "tablet": ["zu klein: link \"Nachrichten\""]
+  },
+  "components-ui-sidebarrowlink--rail-with-count": {
+    "phone": ["zu klein: link \"Nachrichten3 ungelesene Nachrichten\""],
+    "tablet": ["zu klein: link \"Nachrichten3 ungelesene Nachrichten\""]
+  },
+  "components-ui-sidebarrowlink--section-heading": {
+    "phone": ["zu klein: link \"Nachrichten\""],
+    "tablet": ["zu klein: link \"Nachrichten\""]
+  },
+  "components-ui-sidebarrowlink--with-count": {
+    "phone": ["zu klein: link \"Nachrichten3 ungelesene Nachrichten\""],
+    "tablet": ["zu klein: link \"Nachrichten3 ungelesene Nachrichten\""]
+  },
+  "components-ui-sidebarsubitem--active-with-badge": {
+    "phone": ["zu klein: link \"Überblick3 ungelesene Anmeldungen\""],
+    "tablet": ["zu klein: link \"Überblick3 ungelesene Anmeldungen\""]
+  },
+  "components-ui-sidebarsubitem--active": {
+    "phone": ["zu klein: link \"Übersicht\""],
+    "tablet": ["zu klein: link \"Übersicht\""]
+  },
+  "components-ui-sidebarsubitem--default": {
+    "phone": ["zu klein: link \"Übersicht\""],
+    "tablet": ["zu klein: link \"Übersicht\""]
+  },
+  "components-ui-sidebarsubitem--locked": {
+    "phone": ["zu klein: link \"Speiseplan, nicht gebucht\""],
+    "tablet": ["zu klein: link \"Speiseplan, nicht gebucht\""]
+  },
+  "components-ui-sidebarsubitem--long-label-with-count": {
+    "phone": ["zu klein: link \"Eine sehr lange Gruppenbezeichnung, die…\""],
+    "tablet": ["zu klein: link \"Eine sehr lange Gruppenbezeichnung, die…\""]
+  },
+  "components-ui-sidebarsubitem--with-count": {
+    "phone": ["zu klein: link \"Anfragen5\""],
+    "tablet": ["zu klein: link \"Anfragen5\""]
+  },
+  "components-ui-sidebarsubitem--with-string-count": {
+    "phone": ["zu klein: link \"Benachrichtigungen99+\""],
+    "tablet": ["zu klein: link \"Benachrichtigungen99+\""]
+  },
+  "components-ui-statcard--row-focused": {
+    "phone": [
+      "zu klein: link \"Kinder anwesend86, Liste öffnen\"",
+      "zu klein: link \"Krank, Liste öffnen\""
+    ],
+    "tablet": [
+      "zu klein: link \"Kinder anwesend86, Liste öffnen\"",
+      "zu klein: link \"Krank, Liste öffnen\""
+    ]
+  },
+  "components-ui-statcard--rows": {
+    "phone": [
+      "zu klein: link \"Kinder anwesend86, Liste öffnen\"",
+      "zu klein: link \"Krank, Liste öffnen\""
+    ],
+    "tablet": [
+      "zu klein: link \"Kinder anwesend86, Liste öffnen\"",
+      "zu klein: link \"Krank, Liste öffnen\""
+    ]
+  },
+  "components-ui-suggestinput--compact-with-search-icon": {
+    "phone": ["zu klein: combobox \"Aktivität\""],
+    "tablet": ["zu klein: combobox \"Aktivität\""]
+  },
+  "components-ui-tabs--default": {
+    "phone": [
+      "zu klein: tab \"Details\"",
+      "zu klein: tab \"Einstellungen\"",
+      "zu klein: tab \"Übersicht\""
+    ],
+    "tablet": [
+      "zu klein: tab \"Details\"",
+      "zu klein: tab \"Einstellungen\"",
+      "zu klein: tab \"Übersicht\""
+    ]
+  },
+  "components-ui-tabs--line": {
+    "phone": [
+      "zu klein: tab \"Details\"",
+      "zu klein: tab \"Einstellungen\"",
+      "zu klein: tab \"Übersicht\""
+    ],
+    "tablet": [
+      "zu klein: tab \"Details\"",
+      "zu klein: tab \"Einstellungen\"",
+      "zu klein: tab \"Übersicht\""
+    ]
+  },
+  "components-ui-tenantpage--controls-in-search-slot": {
+    "tablet": ["zu klein: combobox \"Gruppe\"", "zu klein: textbox \"Suche\""]
+  },
+  "components-ui-tenantpage--icon-and-text-actions": {
+    "tablet": [
+      "zu klein: button \"Kacheln\"",
+      "zu klein: button \"Liste\"",
+      "zu klein: button \"Weitere Aktionen\""
+    ]
+  },
+  "components-ui-tenantpage--long-title-with-info": {
+    "tablet": ["zu klein: button \"Weitere Aktionen\""]
+  },
+  "components-ui-tenantpage--quiet-filters-opened": {
+    "phone": [
+      "zu klein: button \"Alle\"",
+      "zu klein: button \"Mond\"",
+      "zu klein: button \"Sonne\""
+    ],
+    "tablet": [
+      "zu klein: button \"Alle\"",
+      "zu klein: button \"Mond\"",
+      "zu klein: button \"Sonne\""
+    ]
+  },
+  "components-ui-tenantpage--search-with-overflow-menu": {
+    "tablet": ["zu klein: button \"Weitere Aktionen\""]
+  },
+  "components-ui-tenantpage--symbol-actions-with-tour-and-preload": {
+    "tablet": ["zu klein: button \"Weitere Aktionen\""]
+  },
+  "components-ui-tenantpage--with-back-link": {
+    "tablet": ["zu klein: link \"Zurück zu den Räumen\""]
+  },
+  "components-ui-tenantpage--with-default-back-link": {
+    "tablet": ["zu klein: link \"Zurück zur Datenverwaltung\""]
+  },
+  "components-ui-tenantpage--with-tabs-and-search": {
+    "tablet": [
+      "zu klein: tab \"Abwesenheiten\"",
+      "zu klein: tab \"Gruppen3\"",
+      "zu klein: tab \"Mehr\"",
+      "zu klein: tab \"Personal\"",
+      "zu klein: tab \"Räume\"",
+      "zu klein: tab \"Verlauf\"",
+      "zu klein: tab \"Übersicht\""
+    ]
+  },
+  "components-ui-tenantpage--with-tabs": {
+    "tablet": [
+      "zu klein: tab \"Abwesenheiten\"",
+      "zu klein: tab \"Gruppen3\"",
+      "zu klein: tab \"Mehr\"",
+      "zu klein: tab \"Personal\"",
+      "zu klein: tab \"Räume\"",
+      "zu klein: tab \"Verlauf\"",
+      "zu klein: tab \"Übersicht\""
+    ]
+  },
+  "components-ui-tenantpageheaderskeleton--full": {
+    "tablet": ["zu klein: link \"Zurück zu den Räumen\""]
+  },
+  "ui-numberstepper--default": {
+    "phone": ["zu klein: textbox \"Anzahl\""],
+    "tablet": ["zu klein: textbox \"Anzahl\""]
+  },
+  "ui-page-header-desktopfilters--combined": {
+    "phone": ["zu klein: button \"Alle\""],
+    "tablet": ["zu klein: button \"Alle\""]
+  },
+  "ui-page-header-desktopfilters--dropdown": {
+    "phone": ["zu klein: button \"Alle\""],
+    "tablet": ["zu klein: button \"Alle\""]
+  },
+  "ui-page-header-desktopfilters--grid": {
+    "phone": ["zu klein: button \"Alle\""],
+    "tablet": ["zu klein: button \"Alle\""]
+  },
+  "ui-page-header-desktopfilters--interactive": {
+    "phone": ["zu klein: button \"Alle\""],
+    "tablet": ["zu klein: button \"Alle\""]
+  },
+  "ui-page-header-filterpanel--default": {
+    "phone": [
+      "zu klein: button \"Aktiv\"",
+      "zu klein: button \"Alle\"",
+      "zu klein: button \"Inaktiv\"",
+      "zu klein: button \"Raum\""
+    ],
+    "tablet": [
+      "zu klein: button \"Aktiv\"",
+      "zu klein: button \"Alle\"",
+      "zu klein: button \"Inaktiv\"",
+      "zu klein: button \"Raum\""
+    ]
+  },
+  "ui-page-header-filterpanel--desktop-placement": {
+    "phone": ["zu klein: button \"Aktiv\"", "zu klein: button \"Inaktiv\""],
+    "tablet": ["zu klein: button \"Aktiv\"", "zu klein: button \"Inaktiv\""]
+  },
+  "ui-page-header-filterpanel--quiet": {
+    "phone": [
+      "zu klein: button \"Aktiv\"",
+      "zu klein: button \"Alle\"",
+      "zu klein: button \"Inaktiv\"",
+      "zu klein: button \"Raum\""
+    ],
+    "tablet": [
+      "zu klein: button \"Aktiv\"",
+      "zu klein: button \"Alle\"",
+      "zu klein: button \"Inaktiv\"",
+      "zu klein: button \"Raum\""
+    ]
+  },
+  "ui-page-header-filterpanel--sectioned": {
+    "phone": [
+      "zu klein: button \"Aktiv\"",
+      "zu klein: button \"Alle\"",
+      "zu klein: button \"Inaktiv\"",
+      "zu klein: button \"Raum\""
+    ],
+    "tablet": ["zu klein: button \"Aktiv\"", "zu klein: button \"Inaktiv\""]
+  },
+  "ui-page-header-overflowmenu--default": {
+    "phone": ["zu klein: button \"Weitere Aktionen\""],
+    "tablet": ["zu klein: button \"Weitere Aktionen\""]
+  },
+  "ui-page-header-overflowmenu--opened": {
+    "phone": [
+      "zu klein: menuitem \"Bearbeiten\"",
+      "zu klein: menuitem \"Duplizieren\""
+    ],
+    "tablet": [
+      "zu klein: button \"Weitere Aktionen\"",
+      "zu klein: menuitem \"Duplizieren\""
+    ]
+  },
+  "ui-page-header-overflowmenu--with-badge-and-destructive": {
+    "phone": ["zu klein: button \"Weitere Aktionen\""],
+    "tablet": ["zu klein: button \"Weitere Aktionen\""]
+  }
+}

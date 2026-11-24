@@ -67,15 +67,18 @@ test("an invalid filter fails with the offending pattern", () => {
 });
 
 test("rejects an index format it does not know", () => {
-  assert.throws(
-    () => selectStories({ v: 4, stories: {} }, {}),
-    /index\.json/,
-  );
+  assert.throws(() => selectStories({ v: 4, stories: {} }, {}), /index\.json/);
 });
 
 test("parses baseline with ref and filter", () => {
   assert.deepEqual(
-    parseKitPixelArgs(["baseline", "--ref", "development", "--filter", "modal"]),
+    parseKitPixelArgs([
+      "baseline",
+      "--ref",
+      "development",
+      "--filter",
+      "modal",
+    ]),
     {
       command: "baseline",
       ref: "development",
@@ -102,11 +105,28 @@ test("ignores the -- separator pnpm forwards", () => {
 test("rejects a missing or unknown command and --ref on compare", () => {
   assert.throws(() => parseKitPixelArgs([]), /baseline|compare/);
   assert.throws(() => parseKitPixelArgs(["update"]), /baseline|compare/);
-  assert.throws(
-    () => parseKitPixelArgs(["compare", "--ref", "HEAD"]),
-    /--ref/,
-  );
+  assert.throws(() => parseKitPixelArgs(["compare", "--ref", "HEAD"]), /--ref/);
   assert.throws(() => parseKitPixelArgs(["compare", "--nope"]), /nope/);
+});
+
+test("touch checks the working tree like compare and takes no ref", () => {
+  assert.deepEqual(parseKitPixelArgs(["touch", "--filter", "tabs"]), {
+    command: "touch",
+    ref: undefined,
+    filter: "tabs",
+    allStories: false,
+    storybookDir: undefined,
+  });
+  assert.equal(
+    parseKitPixelArgs(["touch", "--storybook-dir", "storybook-static"])
+      .storybookDir,
+    "storybook-static",
+  );
+  assert.throws(() => parseKitPixelArgs(["touch", "--ref", "HEAD"]), /--ref/);
+  assert.throws(
+    () => parseKitPixelArgs(["compare", "--storybook-dir", "x"]),
+    /--storybook-dir/,
+  );
 });
 
 test("names both browser versions when they differ", () => {

@@ -1,4 +1,4 @@
-# Frontend tests: clock, timers, network, absence assertions, kit pixel comparison, Storybook a11y
+# Frontend tests: clock, timers, network, absence assertions, kit pixel comparison, touch targets, Storybook a11y
 
 Read before writing or diagnosing a date- or time-sensitive Vitest test,
 Playwright spec or story, a
@@ -275,7 +275,8 @@ baseline or allowlist.
 (#6562, epic #6561). It renders every story under `src/components/ui/` at
 desktop and phone width (`playwright.kit-pixel.config.ts`) and compares them
 pixel for pixel, threshold zero, against a baseline of a chosen commit. Local
-only; no CI job runs it.
+only; no CI job runs it. The same command checks touch targets
+([below](#touch-targets)), which CI does run.
 
 1. `pnpm run kit-pixel baseline --ref <commit>` (default `HEAD`). Exports the
    commit with `git archive`, so uncommitted edits stay out, builds Storybook
@@ -309,6 +310,46 @@ baseline's selection unless given its own.
 - Chrome updates itself, and another build renders differently. The baseline
   records the version; `compare` refuses a different one. Take a new baseline
   then.
+
+### Touch targets
+
+`pnpm run kit-pixel touch` checks the finger rule of #8059 on every kit
+story (#8060): under `pointer: coarse` each control (`button`, `a[href]`,
+`input`, a `label` around a checkbox or radio, `role` button, link,
+menuitem, option, tab, checkbox, radio, switch) needs a 44 px hit area,
+and two hit areas must not overlap. It runs only in the `phone` project
+(Pixel 7, touch), in two widths: phone and iPad portrait (820 px), where
+sizes tied to `max-sm:` do not apply. The desktop project does not run it.
+CI runs it in „Frontend quality“ on the Storybook build of that job.
+
+- Measured with `elementFromPoint`, as the browser assigns a tap, so
+  `after:` areas and padding with negative margin count. A circle of 44 px
+  around the centre (radius 21 px: one pixel for Chrome's rounding of the
+  point) must hit only the element; Chrome leaves out rounded corners, so a
+  square would fail every round 44 px button. Overlap: a point another
+  control takes that this element would also take
+  (`scripts/kit-touch-targets-measure.ts`).
+- Not checked: hidden, `disabled` or `inert` controls, controls under an
+  open menu or dialog, full-screen backdrops, links inside running text,
+  labels of text fields (the field is the target), browser-drawn inputs
+  (file, range, color).
+- Known violations: `scripts/kit-touch-targets-known.json`, per story and
+  width. The list only gets shorter: a new violation fails, and so does an
+  entry that no longer occurs. Fix a new violation; never add it. The
+  tickets of #8059 empty the list.
+- Permanent exceptions: `scripts/kit-touch-targets-exceptions.mjs`, each
+  with a reason. `kit-ausnahme` for the deliberate exceptions of the
+  [finger rule](../../.claude/rules/frontend-ui-kit.md#buttons);
+  `abstand-24` for an element with at least 24 px clearance to every other
+  control because 44 px would break the layout. The check measures that
+  clearance; when it shrinks, the exception no longer applies.
+- Measurements per story land in `.kit-pixel/touch/`. One test per story
+  file: the preview loads once, stories switch over Storybook's channel.
+  Locally the run took 36-45 s on 12 cores (160 CPU seconds); `--filter`
+  narrows it like the pixel comparison.
+- Both runs ignore axe findings: they render at widths where
+  `pnpm run test:storybook` does not run axe (412 px, 820 px), and axe stays
+  that test's job. A render error or a failing `play` still fails.
 
 ## Storybook tests and a11y
 

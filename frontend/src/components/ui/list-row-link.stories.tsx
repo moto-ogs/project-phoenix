@@ -25,6 +25,11 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
+/** Nur ein Titel: die niedrigste Zeile, Maß der Trefferflächen-Prüfung (#8060). */
+export const TitleOnly: Story = {
+  args: { subtitle: undefined },
+};
+
 /** Einzeln als Karte. */
 export const Framed: Story = {
   args: { framed: true },

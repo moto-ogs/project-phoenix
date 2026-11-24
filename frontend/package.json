@@ -146,6 +146,7 @@
       "scripts/a11y-audit/*.audit.ts",
       "scripts/kit-pixel-browser-version.setup.ts",
       "scripts/kit-pixel-stories.pw.ts",
+      "scripts/kit-touch-targets.pw.ts",
       "playwright*.config.ts",
       "e2e/**/*.ts",
       "scripts/*.node-test.mjs"

@@ -259,6 +259,20 @@ jobs:
         working-directory: frontend
         run: pnpm run build-storybook
 
+      # Trefferflächen der Kit-Stories unter `pointer: coarse` (#8060) auf dem
+      # eben gebauten Storybook. Der Job endet vor den Storybook-Shards; die
+      # Prüfung liegt damit nicht auf dem kritischen Pfad. Google Chrome, weil
+      # jede Playwright-Config es verlangt (scripts/secure-chrome.ts, #5612).
+      - name: Install Chrome
+        working-directory: frontend
+        timeout-minutes: 5
+        run: pnpm exec playwright install --with-deps --force chrome
+
+      - name: Touch targets of kit stories
+        working-directory: frontend
+        timeout-minutes: 5
+        run: node scripts/kit-pixel.mjs touch --storybook-dir storybook-static
+
   # Every story renders in Chromium and fails on an axe violation (#7108).
   # A pull request tests the stories its changes import; the nightly run tests
   # all of them (scripts/storybook-test-changed.mjs). Inside "Frontend quality"

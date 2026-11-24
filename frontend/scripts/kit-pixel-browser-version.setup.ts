@@ -14,6 +14,8 @@ import { browserMismatch } from "./kit-pixel-lib.mjs";
  * @public Loaded by the Playwright CLI through `globalSetup`.
  */
 export default async function checkBrowserVersion(): Promise<void> {
+  // Die Trefferflächen-Prüfung (#8060) vergleicht keine Bilder.
+  if (process.env.KIT_PIXEL_MODE === "touch") return;
   const browser = await chromium.launch(secureLaunchOptions());
   const version = browser.version();
   await browser.close();
