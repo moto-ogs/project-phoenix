@@ -38,7 +38,9 @@ export interface DraftOptions<T, D, K, A> {
   /** Whether two drafts are the same; default: equal as JSON. */
   readonly same?: (a: D, b: D) => boolean;
   /**
-   * After a refusal: the draft on the stored state `to`. Default: the
+   * After a refusal: the draft on the stored state `to`, given the draft
+   * as it is when `to` arrives (input typed while the read failed
+   * included) and the base `from` the refused save rested on. Default: the
    * stored state alone (the input is gone). Only a surface that already
    * keeps drafts keeps input here (the meal plan's days).
    */
@@ -158,10 +160,11 @@ interface DraftState<T, D> {
   readonly phase: Phase;
   readonly loadError?: unknown;
   /**
-   * After a refusal: the refused draft on its base, for `rebase`, until
+   * After a refusal: the base the refused draft rested on. `rebase` moves
+   * the draft as it is when the stored state arrives from it, until
    * the stored state is read (`retryLoad` keeps it, `discard` drops it).
    */
-  readonly refused?: { readonly draft: D; readonly base: T };
+  readonly refused?: { readonly base: T };
   /**
    * The stored state arrives through `data` (a list the caller reloads):
    * a read with another token than `base` settles the draft.
@@ -213,7 +216,7 @@ export function useReadDraft<T, D = T, K = unknown, A = unknown>(
 /** The rules of `useReadDraft` on a read the caller owns. */
 /**
  * The draft on `read`, ready to send: after a refusal `rebase` may keep the
- * refused input.
+ * input typed on the refused base.
  */
 function settled<T, D>(
   prev: DraftState<T, D>,
@@ -225,7 +228,9 @@ function settled<T, D>(
   const stored = toDraft(read);
   const draft =
     prev.refused && rebase
-      ? rebase(prev.refused.draft, prev.refused.base, read)
+      ? // The draft as it is now: input typed after the refusal, while the
+        // stored state could not be read, rests on the same base.
+        rebase(prev.draft, prev.refused.base, read)
       : // Input typed after a save rests on the saved draft: a read that
         // brings exactly it keeps the input; any other state replaces it.
         !prev.refused && prev.saved !== undefined && same(stored, prev.saved)
@@ -381,7 +386,7 @@ export function useDraftOn<T, D = T, K = unknown, A = unknown>(
           update(forKey, (prev) => ({
             ...prev,
             phase: "refused",
-            refused: { draft, base },
+            refused: { base },
           }));
           const first = readAgain(forKey);
           // Not silent: a failure is the draft's `error` (status
