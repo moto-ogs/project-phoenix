@@ -71,9 +71,15 @@ func (e classTripRejection) ErrorDetails() any { return e.details }
 
 // classTripConflictDetails are the blocking days of a status conflict, the
 // shape of the OGS's own conflict answer; nil without a named day.
-type classTripConflictDetails struct {
-	Conflicts     []classday.ClassTripConflict `json:"conflicts"`
-	ConflictCount int                          `json:"conflict_count"`
+type ClassTripConflictDetails struct {
+	Conflicts     []classTripConflict `json:"conflicts"`
+	ConflictCount int                 `json:"conflict_count"`
+}
+
+type classTripConflict struct {
+	StudentID ident.ID      `json:"student_id"`
+	Date      classday.Date `json:"date"`
+	Status    string        `json:"status"`
 }
 
 func classTripStatusConflictDetails(err error) any {
@@ -81,7 +87,18 @@ func classTripStatusConflictDetails(err error) any {
 	if !errors.As(err, &conflict) {
 		return nil
 	}
-	return classTripConflictDetails{Conflicts: conflict.Conflicts, ConflictCount: conflict.Total}
+	details := ClassTripConflictDetails{ConflictCount: conflict.Total}
+	if conflict.Conflicts != nil {
+		details.Conflicts = make([]classTripConflict, 0, len(conflict.Conflicts))
+		for _, day := range conflict.Conflicts {
+			details.Conflicts = append(details.Conflicts, classTripConflict{
+				StudentID: ident.ID(day.StudentID),
+				Date:      day.Date,
+				Status:    day.Status,
+			})
+		}
+	}
+	return details
 }
 
 var classTripErrorRenderer = common.RulesRenderer([]common.ErrorRule{

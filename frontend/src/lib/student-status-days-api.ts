@@ -1,7 +1,7 @@
 import { ApiError } from "~/lib/api-error";
 import { bffJson } from "~/lib/bff-fetch";
-import type { ErrorCode } from "~/lib/error-codes.generated";
 import { knownEnum } from "~/lib/contract/known-enum";
+import { problemDetails } from "~/lib/contract/problem-details.generated";
 import type {
   BulkCreateStudentStatusDaysRequest,
   CreateStudentStatusDaysRequest,
@@ -24,22 +24,6 @@ const STATUS_KINDS: readonly StudentStatusKind[] = [
 export type StudentStatusDay = Omit<StudentStatusDayResponse, "status"> & {
   status: StudentStatusKind;
 };
-
-/**
- * The 409 body of a status-day write that would overwrite existing days:
- * the error envelope with the conflicting days (a capped sample) and their
- * full count as extension members.
- */
-interface ConflictBody {
-  conflicts?: StudentStatusDayResponse[];
-  conflict_count?: number;
-  code?: string;
-  instance?: string;
-}
-
-/** Matches backend `students.partial_absence_conflict` on status-day writes. */
-const PARTIAL_ABSENCE_CONFLICT_CODE: ErrorCode =
-  "students.partial_absence_conflict";
 
 /** null: a status this build does not know; lists leave the day out. */
 function mapStatusDay(row: StudentStatusDayResponse): StudentStatusDay | null {
@@ -77,24 +61,20 @@ function parseConflictError(error: ApiError): ApiError {
   // Only a body naming the existing days is the overwrite question. Any
   // other 409 (a partial absence, the Kinderkontingent) keeps its own code,
   // so the person reads its real reason.
-  const result = (error.problem ?? {}) as ConflictBody;
-  if (
-    error.code === PARTIAL_ABSENCE_CONFLICT_CODE ||
-    (!Array.isArray(result.conflicts) &&
-      typeof result.conflict_count !== "number")
-  ) {
-    return error;
-  }
-  const conflicts = mapStatusDays(result.conflicts ?? []);
-  const totalCount =
-    typeof result.conflict_count === "number" &&
-    Number.isFinite(result.conflict_count)
-      ? result.conflict_count
-      : conflicts.length;
-  return new StudentStatusDayConflictError(conflicts, totalCount, {
-    code: result.code,
-    instance: result.instance,
-  });
+  if (error.code !== "students.status_day_conflict") return error;
+  const result = problemDetails["students.status_day_conflict"].safeParse(
+    error.details,
+  );
+  if (!result.success) return error;
+  const conflicts = mapStatusDays(result.data.conflicts ?? []);
+  return new StudentStatusDayConflictError(
+    conflicts,
+    result.data.conflict_count,
+    {
+      code: error.code,
+      instance: error.requestId,
+    },
+  );
 }
 
 /**

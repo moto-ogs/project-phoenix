@@ -52,6 +52,7 @@ import {
 import { formatDate, parseISODate, toISODate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import type * as importContract from "~/lib/contract/import.generated";
+import { partialResults } from "~/lib/contract/partial-results.generated";
 import { createLogger } from "~/lib/logger";
 
 /** Info-Knopf am Seitentitel: wofür die Seite da ist und was man zuerst tut. */
@@ -395,14 +396,12 @@ function OpeningBalanceImportPageContent() {
       } catch (error) {
         // A stopped batch carries the rows already saved in its error body.
         const payload = importFailureBody(error);
-        const interrupted =
-          readImportBatchFailure<importContract.OpeningBalanceImportError>(
-            payload,
-          );
+        const interrupted = readImportBatchFailure(
+          payload,
+          partialResults["POST /api/import/opening-balances/import"],
+        );
         if (interrupted) {
-          setImportResult(
-            interrupted as importContract.OpeningBalanceImportResult,
-          );
+          setImportResult(interrupted);
           setImportInterrupted(true);
           setPreviewResult(null);
           setPreviewRows((interrupted.errors ?? []).map(toDisplayRow));

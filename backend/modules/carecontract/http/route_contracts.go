@@ -174,7 +174,7 @@ func SigningRouteContracts() []common.RouteContract {
 func ApplicationRouteContracts() []common.RouteContract {
 	return []common.RouteContract{{
 		Method: "GET", Pattern: "/", Portals: []common.PortalScope{common.PortalTenant},
-		Query:    []common.QueryParam{{Name: "request_child_ids", Kind: common.QueryString}},
+		Query:    []common.QueryParam{{Name: "request_child_ids", Kind: common.QueryID, Repeated: true}},
 		Response: []ApplicationContractResponse{},
 		Enums: []common.EnumContract{{
 			Name: "ApplicationContractStatus", Fields: []string{"ApplicationContractResponse.status"},

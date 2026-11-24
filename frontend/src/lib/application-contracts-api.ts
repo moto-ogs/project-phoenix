@@ -10,7 +10,7 @@ export async function getApplicationContracts(
 ): Promise<ApplicationContractResponse[]> {
   if (requestChildIds.length === 0) return [];
   return bffJson("tenant", "GET /api/care-contracts/", {
-    query: { request_child_ids: requestChildIds.join(",") },
+    query: { request_child_ids: requestChildIds },
     errorMessage: "Die Betreuungsverträge konnten nicht geladen werden",
   });
 }

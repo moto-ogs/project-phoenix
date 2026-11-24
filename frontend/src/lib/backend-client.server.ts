@@ -200,18 +200,21 @@ export async function sendBackend(
 
 /** The JSON of a successful backend answer; an error answer throws. */
 export async function readBackendJson<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    // A refusal's status still applies if the body stream breaks. In
-    // particular, losing a 401 here must not turn a revoked session live.
-    const body = await response.text().catch(() => null);
-    throw new ApiResponseError(response.status, body ?? "", {
-      retryAfter: response.headers?.get?.("Retry-After") ?? null,
-      contentType: response.headers?.get?.("Content-Type") ?? null,
-      bodyInterrupted: body === null,
-    });
-  }
+  if (!response.ok) throw await readBackendError(response);
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
+}
+
+/** Reads a refusal without losing its status if the body stream breaks. */
+export async function readBackendError(
+  response: Response,
+): Promise<ApiResponseError> {
+  const body = await response.text().catch(() => null);
+  return new ApiResponseError(response.status, body ?? "", {
+    retryAfter: response.headers?.get?.("Retry-After") ?? null,
+    contentType: response.headers?.get?.("Content-Type") ?? null,
+    bodyInterrupted: body === null,
+  });
 }
 
 /** One portal's session, as its Auth.js instance reads it. */

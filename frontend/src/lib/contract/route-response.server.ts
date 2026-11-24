@@ -1,25 +1,14 @@
 import { NextResponse } from "next/server";
 import { handleApiError } from "~/lib/api-response-error.server";
-import { forwardBackendResponse } from "~/lib/backend-proxy-response.server";
 import { applyPrivateNoStore } from "~/lib/private-no-store";
 import type { ContractReply } from "./client.server";
 
-/** Error answers keep the old forwarding policy, including Retry-After. */
+/** Use the same problem policy as catalog routes, including Retry-After. */
 export function contractError(
   reply: Extract<ContractReply<unknown>, { ok: false }>,
   request: Request,
 ): NextResponse {
-  const { backend, error } = reply;
-  const response =
-    backend && backend.status >= 400 && error.cause.bodyText
-      ? forwardBackendResponse(
-          new Response(error.cause.bodyText, {
-            status: error.status,
-            headers: backend.headers,
-          }),
-          request,
-        )
-      : handleApiError(error.cause, request);
+  const response = handleApiError(reply.error.cause, request);
   applyPrivateNoStore(response.headers);
   return response;
 }

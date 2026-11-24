@@ -161,11 +161,11 @@ func parsePlannedConflictSubjects(w http.ResponseWriter, r *http.Request, out pl
 	if !ok {
 		return out, false
 	}
-	staffIDs, ok := parseQueryIDList(w, r, q.Get("staff_ids"), "staff_ids")
+	staffIDs, ok := parseQueryIDList(w, r, strings.Join(q["staff_ids"], ","), "staff_ids")
 	if !ok {
 		return out, false
 	}
-	studentIDs, ok := parseQueryIDList(w, r, q.Get("student_ids"), "student_ids")
+	studentIDs, ok := parseQueryIDList(w, r, strings.Join(q["student_ids"], ","), "student_ids")
 	if !ok {
 		return out, false
 	}

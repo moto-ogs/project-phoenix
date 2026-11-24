@@ -574,7 +574,7 @@ describe("timetableService", () => {
     });
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
-      "/api/timetable/conflicts?date=2026-05-04&start_time=12%3A00&end_time=13%3A00&room_id=3&staff_ids=11%2C12&student_ids=21&exclude_instance_id=42",
+      "/api/timetable/conflicts?date=2026-05-04&start_time=12%3A00&end_time=13%3A00&room_id=3&staff_ids=11&staff_ids=12&student_ids=21&exclude_instance_id=42",
       expect.objectContaining({ method: "GET" }),
     );
 

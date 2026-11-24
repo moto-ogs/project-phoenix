@@ -99,7 +99,13 @@ describe("POST /api/caterer/account/mfa/confirm (#4497)", () => {
   });
 
   it("passes a wrong code through without touching the session", async () => {
-    const problem = { code: "identity.mfa_code_invalid", status: 401 };
+    const problem = {
+      type: "about:blank",
+      title: "Unauthorized",
+      detail: "Invalid code",
+      code: "identity.mfa_code_invalid",
+      status: 401,
+    };
     fetchMock.mockResolvedValueOnce(Response.json(problem, { status: 401 }));
 
     const response = await POST(confirmRequest("caterer-token"));

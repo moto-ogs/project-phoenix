@@ -1,12 +1,11 @@
 import { type NextRequest } from "next/server";
-import { sendBackend } from "~/lib/backend-client.server";
+import { readBackendError, sendBackend } from "~/lib/backend-client.server";
 import {
-  BackendUnavailableError,
+  handleApiError,
   problemResponse,
 } from "~/lib/api-response-error.server";
 import { type Logger } from "~/lib/logger";
-import { forwardBackendResponse } from "~/lib/backend-proxy-response.server";
-import { captureBffException } from "~/lib/sentry-bff.server";
+import { applyPrivateNoStore } from "~/lib/private-no-store";
 import { onDrain } from "~/lib/process-drain.server";
 
 function isAbortError(error: unknown): boolean {
@@ -23,12 +22,8 @@ export interface SSEProxyOptions {
 }
 
 /**
- * Shared Server-Sent-Events proxy for the tenant and parent portals. Both portal
- * routes bypass the route wrapper (streaming, not buffered JSON) and inject their
- * JWT server-side; only the auth function, the upstream path, and the logger name
- * differ, so all of the load-bearing streaming / abort / cleanup plumbing lives
- * here once. A reader-leak or missed-cleanup fix made here applies to both portals
- * instead of having to be mirrored (and risk diverging) across two ~150-line files.
+ * Streams events for the tenant, school and parent portals. Each route
+ * authenticates and injects its JWT server-side.
  *
  * The caller authenticates, extracts the token, and delegates here:
  *
@@ -75,7 +70,7 @@ export async function proxySSEStream(
       logger.error("SSE backend connection failed", {
         status: backendResponse.status,
       });
-      return forwardBackendResponse(backendResponse, request);
+      throw await readBackendError(backendResponse);
     }
 
     if (!backendResponse.body) {
@@ -163,13 +158,8 @@ export async function proxySSEStream(
       return new Response(null, { status: 204 });
     }
 
-    // sendBackend wraps an unreachable backend; report the network failure.
-    const failure =
-      error instanceof BackendUnavailableError ? error.cause : error;
-    captureBffException(failure, request);
-    logger.error("SSE proxy error", {
-      error: failure instanceof Error ? failure.message : String(failure),
-    });
-    return problemResponse(500, "Internal server error", request);
+    const response = handleApiError(error, request);
+    applyPrivateNoStore(response.headers);
+    return response;
   }
 }

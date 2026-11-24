@@ -276,7 +276,7 @@ const (
 // Event represents a Server-Sent Event that will be broadcast to clients
 type Event struct {
 	Type          EventType `json:"type"`
-	ActiveGroupID string    `json:"active_group_id"`
+	ActiveGroupID string    `json:"active_group_id" contract_text:"a topic is a decimal ID, edu:<ID>, or empty for tenant events"`
 	Data          EventData `json:"data"`
 	Timestamp     time.Time `json:"timestamp"`
 	// notificationID names the stored copy of a notification event, which
@@ -298,12 +298,12 @@ func (e Event) WithNotificationID(id int64) Event {
 // event-specific GDPR contract and must not expose sensitive data.
 type EventData struct {
 	// Student-related fields (for check-in/check-out events)
-	StudentID *string `json:"student_id,omitempty"`
+	StudentID *string `json:"student_id,omitempty" contract_text:"internal relay ID before the SSE projection"`
 
 	// StudentIDs carries the affected students on a bulk_student_checkout or
 	// bulk_student_checkin event. The client adds each to its per-student
 	// detail-cache invalidation set; the refetch itself is topic-driven.
-	StudentIDs *[]string `json:"student_ids,omitempty"`
+	StudentIDs *[]string `json:"student_ids,omitempty" contract_text:"internal relay IDs before the SSE projection"`
 
 	// GroupIDs carries the affected educational (OGS) group ids on
 	// active_supervision_changed / dashboard_counts_changed / student_checkin / student_checkout /
@@ -315,18 +315,18 @@ type EventData struct {
 	// broadly"; emitters MUST omit the field entirely (nil) instead of sending
 	// an empty array, which clients would read as "scope to nothing" and
 	// silently drop the invalidation.
-	GroupIDs *[]string `json:"group_ids,omitempty"`
+	GroupIDs *[]string `json:"group_ids,omitempty" contract_text:"internal relay IDs before the SSE projection"`
 
 	// Activity session fields (for activity_start/end/update events)
 	ActivityName  *string   `json:"activity_name,omitempty"`
-	RoomID        *string   `json:"room_id,omitempty"`
+	RoomID        *string   `json:"room_id,omitempty" contract_text:"internal room ID before the SSE projection"`
 	RoomName      *string   `json:"room_name,omitempty"`
-	SupervisorIDs *[]string `json:"supervisor_ids,omitempty"`
+	SupervisorIDs *[]string `json:"supervisor_ids,omitempty" contract_text:"internal supervisor IDs before the SSE projection"`
 
 	// Instance lifecycle fields (for instance_* events, WP-B9). String-typed
 	// so the Event envelope's ActiveGroupID convention stays consistent and
 	// so empty values serialize cleanly via omitempty.
-	InstanceID        *string `json:"instance_id,omitempty"`
+	InstanceID        *string `json:"instance_id,omitempty" contract_text:"internal relay ID before the SSE projection"`
 	InstanceDate      *string `json:"instance_date,omitempty"`       // YYYY-MM-DD
 	InstanceStartTime *string `json:"instance_start_time,omitempty"` // HH:MM:SS
 
@@ -352,7 +352,7 @@ type EventData struct {
 	// could still correlate future parent_message events to that conversation, so
 	// it is stripped too. The addressed guardian's own clients still receive the
 	// full event.
-	ThreadID *string `json:"thread_id,omitempty"`
+	ThreadID *string `json:"thread_id,omitempty" contract_text:"internal relay ID before the SSE projection"`
 
 	// Source tracking
 	Source *string `json:"source,omitempty"` // "rfid", "manual", "automated"

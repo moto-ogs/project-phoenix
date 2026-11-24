@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/moto-ogs/project-phoenix/realtime"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -34,7 +35,7 @@ func QueueInstanceStarted(ctx context.Context, broadcaster TenantPublisher, logg
 	if logger == nil {
 		logger = slog.Default()
 	}
-	id := strconv.FormatInt(instance.ID, 10)
+	id := ident.ID(instance.ID).String()
 	data := realtime.EventData{InstanceID: &id, InstanceDate: &instance.Date, InstanceStartTime: &instance.StartTime}
 	if instance.RoomID > 0 {
 		room := strconv.FormatInt(instance.RoomID, 10)

@@ -1,4 +1,4 @@
-import { bffJson, bffJsonUncontracted } from "~/lib/bff-fetch";
+import { bffJson } from "~/lib/bff-fetch";
 import type * as operatorDevicesContract from "~/lib/contract/operator-devices.generated";
 import type * as operatorSchoolsContract from "~/lib/contract/operator-schools.generated";
 import type * as operatorUnregisteredTagScansContract from "~/lib/contract/operator-unregistered-tag-scans.generated";
@@ -564,23 +564,3 @@ class OperatorProvisioningService {
 }
 
 export const operatorProvisioningService = new OperatorProvisioningService();
-
-/**
- * Purges the Next.js ISR cache for the given tenant subdomain slugs so stale
- * tenant-resolution does not linger (~5 min) after a slug change, delete,
- * restore, or active-flag toggle. Fire-and-forget: on failure the cache
- * self-heals within its TTL, so callers must never block success flow.
- */
-export async function revalidateTenantCache(slugs: string[]): Promise<void> {
-  if (slugs.length === 0) return;
-  try {
-    await bffJsonUncontracted<unknown>(
-      "platform",
-      "POST",
-      "/api/operator/provisioning/revalidate-tenant",
-      { body: { slugs } },
-    );
-  } catch {
-    // Cache self-heals in ≤5 min; don't block the success flow.
-  }
-}

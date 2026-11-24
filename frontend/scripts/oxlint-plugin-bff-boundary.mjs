@@ -41,10 +41,6 @@ export const UNCONTRACTED = {
     "public POST tenant GET /demo/access/status",
     "public POST tenant POST /demo/access/sessions",
   ],
-  // Purges the BFF lookup and ISR caches without calling Go.
-  "lib/operator/provisioning-api.ts": [
-    "platform POST /api/operator/provisioning/revalidate-tenant",
-  ],
 };
 
 const RETIRED_HELPERS = new Set([

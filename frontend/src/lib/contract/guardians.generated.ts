@@ -494,7 +494,7 @@ export const routes = {
     pattern: "/api/guardians/{id}",
     portals: ["tenant"],
     query: {
-      "expected_link_ids": { kind: "string" },
+      "expected_link_ids": { kind: "id", repeated: true },
       "force": { kind: "string" },
     },
     response: noData,

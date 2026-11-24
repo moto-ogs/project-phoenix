@@ -79,7 +79,7 @@ export function draftPreviewQuery(
     params.set("type", template.type);
     if (template.listKind) params.set("list_kind", template.listKind);
   }
-  params.set("offering_ids", selection.offeringIds.join(","));
+  for (const id of selection.offeringIds) params.append("offering_ids", id);
   if (selection.gradeLevels.length > 0) {
     params.set("grade_levels", selection.gradeLevels.join(","));
   }

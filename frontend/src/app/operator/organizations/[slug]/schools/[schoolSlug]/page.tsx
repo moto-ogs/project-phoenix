@@ -20,10 +20,7 @@ import {
 } from "~/lib/swr";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
-import {
-  operatorProvisioningService,
-  revalidateTenantCache,
-} from "~/lib/operator/provisioning-api";
+import { operatorProvisioningService } from "~/lib/operator/provisioning-api";
 import type {
   OperatorDevice,
   OperatorPerson,
@@ -408,17 +405,11 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
   // the data it reloads, also after the dialog closed (#6652).
   const statusAfterWrite = useRefreshAfterWrite(
     "die Anzeige der Schule",
-    async (subdomain: string) => {
-      await refreshSchoolDetail();
-      await revalidateTenantCache([subdomain]);
-    },
+    refreshSchoolDetail,
   );
   const editAfterWrite = useRefreshAfterWrite(
     "die Anzeige der Schule",
-    async (subdomains: readonly string[]) => {
-      if (subdomains.length > 0) {
-        await revalidateTenantCache([...subdomains]);
-      }
+    async () => {
       const [refreshedOrganizations] = await Promise.all([
         mutateOrganizations(),
         mutateSchools(),
@@ -554,7 +545,7 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
       });
       return;
     }
-    await statusAfterWrite.refresh(school.subdomain);
+    await statusAfterWrite.refresh();
   }, [school, submitToggle, showToggleError, statusAfterWrite]);
 
   const schoolDelete = useSoftDeletable<SchoolSummary>({
@@ -567,14 +558,10 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
     },
     logEventPrefix: "school",
     reloadObject: "die Anzeige der Schule",
-    onAfterSoftDelete: async (target) => {
-      await revalidateTenantCache([target.subdomain]);
+    onAfterSoftDelete: async () => {
       router.push(
         `/operator/organizations/${encodeURIComponent(slug)}?tab=schulen`,
       );
-    },
-    onAfterRestore: async (target) => {
-      await revalidateTenantCache([target.subdomain]);
     },
   });
 

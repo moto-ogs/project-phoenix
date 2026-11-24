@@ -191,26 +191,26 @@ func datesBetweenInclusive(from, to calendar.Date) []calendar.Date {
 	return dates
 }
 
-// statusDayConflictBody is the shared 409 body for single and bulk
-// planned-status writes: the shared error envelope plus a capped conflict
-// sample and the full total as extension members. The code lets the frontend
-// word the refusal without reading the sentence (ADR 0006).
-type statusDayConflictBody struct {
-	*common.ErrResponse
+// StatusDayConflictDetails carries the sample and full count of refused days.
+type StatusDayConflictDetails struct {
 	Conflicts     []studentpresence.StudentStatusDayResponse `json:"conflicts"`
 	ConflictCount int                                        `json:"conflict_count"`
 }
 
-func statusDayConflictResponse(conflictErr *studentpresence.StudentStatusDayConflictError) *statusDayConflictBody {
-	return &statusDayConflictBody{
-		ErrResponse: &common.ErrResponse{
-			Err:            conflictErr,
-			HTTPStatusCode: http.StatusConflict,
-			Detail:         "existing student status days were not overwritten",
-			Code:           common.CodeStudentsStatusDayConflict,
-		},
+func statusDayConflictResponse(conflictErr *studentpresence.StudentStatusDayConflictError) *common.ErrResponse {
+	details := StatusDayConflictDetails{
 		Conflicts:     studentpresence.NewStudentStatusDayConflictResponses(conflictErr.SampleConflicts()),
 		ConflictCount: conflictErr.ConflictTotal(),
+	}
+	return &common.ErrResponse{
+		Err:            conflictErr,
+		HTTPStatusCode: http.StatusConflict,
+		Detail:         "existing student status days were not overwritten",
+		Code:           common.CodeStudentsStatusDayConflict,
+		Details: map[string]any{
+			"conflicts":      details.Conflicts,
+			"conflict_count": details.ConflictCount,
+		},
 	}
 }
 

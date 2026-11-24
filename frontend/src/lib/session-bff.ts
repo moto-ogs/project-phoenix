@@ -36,6 +36,7 @@ import type {
 } from "./contract/shared.generated";
 import type { PortalKey } from "./portal-paths";
 import { sessionPost as post, type SessionBffRoute } from "./session-bff-route";
+import { accountLogoutBrowserPaths } from "./contract/browser-traits.generated";
 
 export type SessionAuthenticated = { status: "authenticated" };
 
@@ -158,12 +159,8 @@ const passkeyVerifies = {
   caterer: bffPath("caterer", "POST /caterer/auth/passkeys/login/verify"),
 };
 
-// These route files own the BFF session and do not have a Go route.
+// Only the invitation flow starts entirely inside the BFF.
 export const localSessionKeys = {
-  parent: "POST /api/parent/auth/logout",
-  school: "POST /api/school/auth/logout",
-  traeger: "POST /api/traeger/auth/logout",
-  caterer: "POST /api/caterer/auth/logout",
   operatorInvite: "POST /api/operator/auth/invitations/session",
 } as const;
 
@@ -176,10 +173,7 @@ function localPath(
 const logoutPaths = {
   tenant: bffPath("tenant", "POST /auth/logout"),
   operator: bffPath("platform", "POST /operator/auth/logout"),
-  parent: localPath(localSessionKeys.parent),
-  school: localPath(localSessionKeys.school),
-  traeger: localPath(localSessionKeys.traeger),
-  caterer: localPath(localSessionKeys.caterer),
+  ...accountLogoutBrowserPaths,
 } satisfies Record<PortalKey, SessionPath>;
 
 export const sessionBff = {
@@ -200,21 +194,27 @@ export const sessionBff = {
   logout: (portal: PortalKey) => post<null>(logoutPaths[portal]),
   switchTenant: post<null, SwitchTenantRequest>(
     bffPath("tenant", "POST /auth/switch-tenant"),
+    "tenant",
   ),
   startPreview: post<StaffPreviewReply, StaffPreviewStartRequest>(
     bffPath("tenant", "POST /auth/staff-preview"),
+    "tenant",
   ),
   endPreview: post<null, StaffPreviewEndRequest>(
     bffPath("tenant", "POST /auth/staff-preview/end"),
+    "tenant",
   ),
   confirmCatererFactor: post<SessionRenewed, confirmMFARequest>(
     bffPath("caterer", "POST /caterer/account/mfa/confirm"),
+    "caterer",
   ),
   confirmParentFactor: post<SessionRenewed, MFAVerifyRequest>(
     bffPath("parent", "POST /parent/me/mfa/confirm"),
+    "parent",
   ),
   verifyTraegerStepUp: post<SessionRenewed, MFAVerifyRequest>(
     bffPath("org", "POST /traeger/auth/mfa/step-up/verify"),
+    "org",
   ),
   startOperatorInvite: post<
     OperatorInvitationFlow,

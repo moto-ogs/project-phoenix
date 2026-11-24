@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { SessionClaimsResponse } from "~/lib/contract/auth-session.generated";
-import { INT64_DECIMAL } from "~/lib/compare-ids";
+import { isInt64Decimal } from "~/lib/compare-ids";
 
 // Older access tokens can name an email; refresh tokens carry the stored key.
 export type JwtPayload = Partial<SessionClaimsResponse> & {
@@ -11,7 +11,7 @@ export type JwtPayload = Partial<SessionClaimsResponse> & {
 };
 
 export function sessionIdentifier(value: unknown): string | undefined {
-  if (typeof value === "string" && INT64_DECIMAL.test(value)) {
+  if (typeof value === "string" && isInt64Decimal(value)) {
     return value;
   }
   // An older token or cookie may still carry exactly representable numbers.

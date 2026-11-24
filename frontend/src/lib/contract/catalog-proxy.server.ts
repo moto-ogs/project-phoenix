@@ -22,6 +22,14 @@ import { fileCacheValues, publicAssetCache } from "./browser-traits.generated";
 import { decodeContract, readContractJson } from "./client.server";
 import { commits } from "./commit";
 import { fileAnswer, multipart } from "./runtime";
+import {
+  purgeRequestTenantSettingsCache,
+  purgeTenantSettingsCache,
+} from "~/lib/tenant-settings-cache.server";
+import {
+  tenantLookupWrites,
+  tenantHostLookupWrites,
+} from "./tenant-lookup-writes.server";
 
 /** A generated route entry, as `portalRoutes` lists it. */
 export interface CatalogRoute {
@@ -468,6 +476,13 @@ export function makeCatalogProxy(
     request: NextRequest,
     response: Response,
   ): Promise<Response> {
+    // A successful write may have committed even if its body is unreadable.
+    if (response.ok) {
+      const key = `${route.method} ${route.pattern}`;
+      if (tenantLookupWrites.has(key)) purgeTenantSettingsCache();
+      if (tenantHostLookupWrites.has(key))
+        purgeRequestTenantSettingsCache(request);
+    }
     const envelope = decoded(
       route,
       request,

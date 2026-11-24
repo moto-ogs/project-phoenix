@@ -165,7 +165,7 @@ func (rs *Resource[E, C]) runEventLoop(ctx context.Context, conn *sseConnection[
 
 // sendEvent marshals and sends a single SSE event
 func (conn *sseConnection[E, C]) sendEvent(event E) error {
-	eventData, err := json.Marshal(event)
+	eventData, err := wire.Marshal(event.SSEPayload())
 	if err != nil {
 		conn.getLogger().Error("failed to marshal SSE event",
 			slog.String("error", err.Error()),

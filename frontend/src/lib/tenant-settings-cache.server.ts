@@ -3,11 +3,19 @@ import type { NextRequest } from "next/server";
 import { getOriginalRequestHost } from "./client-headers.server";
 import { createLogger } from "./logger";
 import { tenantSlugFromHost } from "./tenant-host";
-import { invalidateTenantResolve } from "./tenant-resolve.server";
+import {
+  invalidateAllTenantResolves,
+  invalidateTenantResolve,
+} from "./tenant-resolve.server";
 
 const logger = createLogger({ component: "TenantSettingsCache" });
 
-export function purgeTenantSettingsCache(slug: string): void {
+export function purgeTenantSettingsCache(slug?: string): void {
+  if (slug === undefined) {
+    invalidateAllTenantResolves();
+    revalidatePath("/[tenant]", "layout");
+    return;
+  }
   invalidateTenantResolve(slug);
   revalidatePath(`/${slug}`, "layout");
 }

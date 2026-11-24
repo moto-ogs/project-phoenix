@@ -1634,7 +1634,7 @@ export const routes = {
     pattern: "/api/staff/absences/mails",
     portals: ["tenant"],
     query: {
-      "ids": { kind: "string" },
+      "ids": { kind: "id", repeated: true },
     },
     response: success(AbsenceDecisionMailsResponseSchema),
   },

@@ -554,7 +554,7 @@ func optionalDateString(date *calendar.Date) *string {
 // school_classes as comma-separated lists.
 func offeringSourceFilterFromQuery(r *http.Request) (timetable.OfferingSourceFilter, error) {
 	query := r.URL.Query()
-	offeringIDs, err := commaSeparatedInts(query.Get("offering_ids"))
+	offeringIDs, err := commaSeparatedInts(strings.Join(query["offering_ids"], ","))
 	if err != nil || len(offeringIDs) == 0 {
 		return timetable.OfferingSourceFilter{}, errors.New("offering_ids must list at least one offering id")
 	}

@@ -75,7 +75,7 @@ export function invalidJsonResponse(
  * beyond, also without a Content-Length, so an oversized payload is never
  * buffered whole. Null means too large.
  */
-export async function readBoundedBody(
+async function readBoundedBody(
   request: Request,
   limit: number,
 ): Promise<Uint8Array<ArrayBuffer> | null> {

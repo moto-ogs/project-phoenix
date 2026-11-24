@@ -391,9 +391,9 @@ exception in [the SSE contract](realtime.md).
 No route file calls `fetch`; both contract helpers go through `sendBackend`. A file a named route answers goes through `fileResponse`
 (`lib/file-response.server.ts`: streaming, the backend's file headers,
 `nosniff` by default, `no-store` unless the route names a cache policy, a
-backend error as its problem body). An upload the BFF must check before
-forwarding uses `createFileUploadHandler` (`lib/file-upload-wrapper.server.ts`;
-`settings/login-image` checks the image and purges the tenant cache).
+backend error as its problem body). The login-image upload uses the catalog
+multipart path: Go validates the file, while the proxy bounds transport bytes
+and clears the school's lookup after a successful write.
 
 Go owns validation of the domain request. Two named adapters check or map
 only what they need to assemble that request:
@@ -453,8 +453,10 @@ a failed optional read is left out so the browser can load it normally.
 `tenant-resolve.server.ts` uses the public `GET /auth/tenant/resolve`
 entry without a session. Its own per-replica cache coalesces concurrent
 lookups and keeps decoded successes and 404s for 60 seconds. Explicit
-invalidation clears both; other failures are not cached. The unregistered SSE stream uses `sendBackend`
-directly and keeps its connection open past the header timeout. A route
+invalidation clears both; other failures are not cached. The unregistered SSE
+stream uses `sendBackend` directly and keeps its connection open past the
+header timeout. Before streaming begins, connection failures use
+`handleApiError`, like the named and catalog JSON routes. A route
 param in a backend path is encoded by `fillRoutePath` for a contract call;
 encode it with `encodeURIComponent` when building an unregistered path.
 A query key never replaces a route param. Why and

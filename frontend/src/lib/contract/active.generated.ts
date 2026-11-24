@@ -1067,7 +1067,7 @@ export const routes = {
     portals: ["tenant"],
     query: {
       "active": { kind: "bool" },
-      "active_group_ids": { kind: "string" },
+      "active_group_ids": { kind: "id", repeated: true },
     },
     response: success(z.array(VisitResponseSchema)),
   },

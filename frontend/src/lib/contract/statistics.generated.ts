@@ -393,7 +393,7 @@ export const routes = {
     portals: ["tenant"],
     query: {
       "from": { kind: "date" },
-      "group_id": { kind: "string", repeated: true },
+      "group_id": { kind: "id", repeated: true },
       "school_class": { kind: "string", repeated: true },
       "section": { kind: "string", repeated: true },
       "to": { kind: "date" },
@@ -407,7 +407,7 @@ export const routes = {
     query: {
       "format": { kind: "string", values: ["pdf", "xlsx"] },
       "from": { kind: "date" },
-      "group_id": { kind: "string", repeated: true },
+      "group_id": { kind: "id", repeated: true },
       "school_class": { kind: "string", repeated: true },
       "section": { kind: "string", repeated: true },
       "to": { kind: "date" },
@@ -421,7 +421,7 @@ export const routes = {
     query: {
       "format": { kind: "string", values: ["docx", "pdf", "xlsx"] },
       "from": { kind: "date" },
-      "group_id": { kind: "string", repeated: true },
+      "group_id": { kind: "id", repeated: true },
       "school_class": { kind: "string", repeated: true },
       "section": { kind: "string", repeated: true },
       "to": { kind: "date" },
@@ -434,7 +434,7 @@ export const routes = {
     portals: ["tenant"],
     query: {
       "from": { kind: "date" },
-      "group_id": { kind: "string", repeated: true },
+      "group_id": { kind: "id", repeated: true },
       "school_class": { kind: "string", repeated: true },
       "section": { kind: "string", repeated: true },
       "to": { kind: "date" },
@@ -447,7 +447,7 @@ export const routes = {
     portals: ["tenant"],
     query: {
       "from": { kind: "date" },
-      "group_id": { kind: "string", repeated: true },
+      "group_id": { kind: "id", repeated: true },
       "school_class": { kind: "string", repeated: true },
       "section": { kind: "string", repeated: true },
       "to": { kind: "date" },

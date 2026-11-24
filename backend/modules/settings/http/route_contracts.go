@@ -47,9 +47,9 @@ func RouteFileContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "PUT", Pattern: "/values/{key}", BrowserPath: "/api/settings/values/{key}", Portals: portals, RouteFile: tenantCacheRouteFile, Request: setValueRequest{}, NoData: true},
 		{Method: "DELETE", Pattern: "/values/{key}", BrowserPath: "/api/settings/values/{key}", Portals: portals, RouteFile: tenantCacheRouteFile, NoData: true},
-		{Method: "GET", Pattern: "/login-image", BrowserPath: "/api/settings/login-image", Portals: portals, RouteFile: "served by the same route file as its writes", Response: loginImageResponse{}},
-		{Method: "POST", Pattern: "/login-image", BrowserPath: "/api/settings/login-image", Portals: portals, RouteFile: tenantCacheRouteFile, Multipart: true,
+		{Method: "GET", Pattern: "/login-image", Portals: portals, Response: loginImageResponse{}},
+		{Method: "POST", Pattern: "/login-image", Portals: portals, Multipart: true,
 			MaxBodyBytes: maxLoginImageBody, TooLargeCode: common.CodeFilesFileTooLarge, Response: loginImageUploadResponse{}},
-		{Method: "DELETE", Pattern: "/login-image", BrowserPath: "/api/settings/login-image", Portals: portals, RouteFile: tenantCacheRouteFile, NoData: true},
+		{Method: "DELETE", Pattern: "/login-image", Portals: portals, NoData: true},
 	}
 }

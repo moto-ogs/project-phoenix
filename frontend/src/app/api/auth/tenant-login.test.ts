@@ -194,7 +194,13 @@ describe.each(paths)(
     ])(
       "preserves backend refusal %s without minting a cookie",
       async (code) => {
-        const body = JSON.stringify({ code, status: 403, detail: "refused" });
+        const body = JSON.stringify({
+          type: "about:blank",
+          title: "Forbidden",
+          code,
+          status: 403,
+          detail: "refused",
+        });
         backend.mockResolvedValueOnce(
           new Response(body, {
             status: 403,
@@ -318,8 +324,10 @@ it("does not disclose a full pair mislabelled as an enrollment challenge", async
 });
 it("keeps a replayed/expired MFA proof rejected by the backend", async () => {
   const body = {
+    type: "about:blank",
+    title: "Unauthorized",
     status: 401,
-    code: "identity.mfa_challenge_expired",
+    code: "general.permission",
     detail: "expired",
   };
   backend.mockImplementation(async () => Response.json(body, { status: 401 }));
