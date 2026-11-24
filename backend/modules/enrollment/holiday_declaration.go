@@ -116,8 +116,6 @@ const (
 	holidayBindingConfirmedText = "Ich weiß, dass die Anmeldung verbindlich ist."
 	holidayCustodyConfirmedText = "Ich darf die Anmeldung allein abgeben: " +
 		"Ich bin allein sorgeberechtigt oder die andere sorgeberechtigte Person ist einverstanden."
-	// holidayFormalDeclarationNameText is the name sentence of the versions
-	// 3 to 5; HolidayConsentVersionInformalDeclaration replaces it.
 	// sie-anrede-erlaubt (ADR 0294): versionierter Erklärungssatz der Versionen 3 bis 5, Eltern haben ihm zugestimmt.
 	holidayFormalDeclarationNameText = "Mit Ihrem Namen geben Sie die Erklärungen oben ab."
 	holidayDeclarationNameText       = "Mit deinem Namen gibst du die Erklärungen oben ab."
