@@ -28,10 +28,13 @@ import type {
   CaregiverCapabilityState,
 } from "~/lib/caregiver-capability-api";
 import { fetchGroupLeaderCandidates } from "~/lib/staff-role-api";
-import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import {
+  useReadDraftLoadError,
+  useSwrResourceLoadError,
+} from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { isChangedSinceRead } from "~/lib/api-error";
-import { useSWRAuth } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
+import { useActionOn } from "~/lib/swr/read-draft";
 import { groups as groupsKeys } from "~/lib/swr/groups";
 import { staffAccessKeys } from "~/lib/swr/staff-keys";
 import { activitiesConcept } from "~/lib/concepts/activities";
@@ -86,8 +89,6 @@ interface StoredGroup {
   readonly name: string;
   readonly teacherIds: string[];
   readonly version?: string;
-  /** The answer of the read it comes from. */
-  readonly readFrom: unknown;
 }
 
 // The route keeps the group's room: the body names no room (ADR 0311).
@@ -167,55 +168,48 @@ export function CaregiverBlockerResolutionPanel({
     Record<string, string>
   >({});
 
-  // The groups as stored when the step opened, each read on its own: a
-  // resolution keeps their other leads and sends the version read (ADR
-  // 0311). A group refused as changed starts again from a read answered
-  // after the refusal, never from the read it was refused under.
+  // The groups as stored, each read on its own: a resolution keeps their
+  // other leads and sends the version read (ADR 0311). After a refusal no
+  // group is resolved until the groups are read again; a failed read stays
+  // on screen with its retry.
   const blockerGroupIds = useMemo(
     () => [...new Set(state.groupAssignments.map((g) => g.groupId))],
     [state.groupAssignments],
   );
-  const storedGroupReads = useSWRAuth(
+  const groupsKey =
     active && blockerGroupIds.length > 0
       ? groupsKeys.byIds(blockerGroupIds)
-      : null,
-    () => groupsKeys.byIdsFetcher(blockerGroupIds),
+      : null;
+  const storedGroupReads = useSWRAuth(groupsKey, () =>
+    groupsKeys.byIdsFetcher(blockerGroupIds),
   );
   const { error: groupLoadError } = useSwrResourceLoadError(
     [{ data: storedGroupReads.data, error: storedGroupReads.error }],
     "die Stammgruppen",
     () => storedGroupReads.mutate(),
   );
-  const [storedGroups, setStoredGroups] = useState<Record<string, StoredGroup>>(
-    {},
+  const groupAction = useActionOn(
+    {
+      opening: groupsKey,
+      data: storedGroupReads.data,
+      reload: () => revalidateOrThrow(storedGroupReads),
+    },
+    { token: (read) => read.map((group) => [group.id, group.version]) },
   );
-  // Per refused group the read its refused version came from.
-  const [refusedUnder, setRefusedUnder] = useState<
-    Readonly<Record<string, unknown>>
-  >({});
-  const readGroups = storedGroupReads.data;
-  const unread = readGroups
-    ? groups.filter(
-        (item) =>
-          !(item.groupId in storedGroups) &&
-          refusedUnder[item.groupId] !== readGroups,
-      )
-    : [];
-  if (readGroups && unread.length > 0) {
-    const next = { ...storedGroups };
-    for (const item of unread) {
-      const group = readGroups.find((g) => g.id === item.groupId);
-      if (group)
-        next[item.groupId] = {
+  const groupReloadError = useReadDraftLoadError(
+    groupAction,
+    "die Stammgruppen",
+  );
+  const storedGroupOf = (groupId: string): StoredGroup | undefined => {
+    const group = storedGroupReads.data?.find((g) => g.id === groupId);
+    return group
+      ? {
           name: group.name,
           teacherIds: group.teacher_ids ?? [],
           version: group.version,
-          readFrom: readGroups,
-        };
-    }
-    if (Object.keys(next).length > Object.keys(storedGroups).length)
-      setStoredGroups(next);
-  }
+        }
+      : undefined;
+  };
 
   const [processing, setProcessing] = useState<Record<string, boolean>>({});
   const actionErrors = useApiFormError();
@@ -333,7 +327,6 @@ export function CaregiverBlockerResolutionPanel({
     setGroups(state.groupAssignments);
     setActivityReplacements({});
     setGroupReplacements({});
-    setStoredGroups({});
     clearActionErrors();
   }, [active, state, clearActionErrors]);
 
@@ -421,57 +414,50 @@ export function CaregiverBlockerResolutionPanel({
   async function handleResolveGroup(item: BlockerGroup) {
     const replacementStaffId = groupReplacements[item.id];
     const key = `grp-${item.id}`;
-    try {
-      setItemProcessing(key, true);
-      actionErrors.clear();
-      const replacementTeacherId = replacementStaffId
-        ? availableStaff.find((staff) => staff.id === replacementStaffId)
-            ?.teacherId
-        : undefined;
-      if (replacementStaffId && !replacementTeacherId) {
-        actionErrors.invalid(
-          "Diese Ersatzkraft kann keine Stammgruppe leiten. Bitte wähle eine andere Person.",
-        );
-        return;
-      }
-      const stored = storedGroups[item.groupId];
-      if (!stored) return;
-      const newTeacherIds = buildUpdatedTeacherIds(
-        { ...item, teacherIds: stored.teacherIds },
-        replacementTeacherId,
+    actionErrors.clear();
+    const replacementTeacherId = replacementStaffId
+      ? availableStaff.find((staff) => staff.id === replacementStaffId)
+          ?.teacherId
+      : undefined;
+    if (replacementStaffId && !replacementTeacherId) {
+      actionErrors.invalid(
+        "Diese Ersatzkraft kann keine Stammgruppe leiten. Bitte wähle eine andere Person.",
       );
-      await updateGroupTeachers(item.groupId, stored, newTeacherIds);
+      return;
+    }
+    const stored = storedGroupOf(item.groupId);
+    if (!stored) return;
+    const newTeacherIds = buildUpdatedTeacherIds(
+      { ...item, teacherIds: stored.teacherIds },
+      replacementTeacherId,
+    );
+    setItemProcessing(key, true);
+    const result = await groupAction.submit(() =>
+      updateGroupTeachers(item.groupId, stored, newTeacherIds),
+    );
+    setItemProcessing(key, false);
+    if (result.ok) {
       setGroups((prev) => prev.filter((g) => g.id !== item.id));
       toastSuccess(
         replacementStaffId
           ? `Die Gruppenleitung für „${item.groupName}“ ist übertragen.`
           : `Die Gruppenleitung für „${item.groupName}“ ist entfernt.`,
       );
-    } catch (error) {
-      logger.error("failed to resolve group", {
-        id: item.id,
-        error: String(error),
-      });
-      // Changed since it was read: read the group again; the same request
-      // would be refused again, so no retry (ADR 0311).
-      const changed = isChangedSinceRead(error);
-      if (changed) {
-        const refused = storedGroups[item.groupId]?.readFrom;
-        setStoredGroups((prev) => {
-          const next = { ...prev };
-          delete next[item.groupId];
-          return next;
-        });
-        setRefusedUnder((prev) => ({ ...prev, [item.groupId]: refused }));
-        void storedGroupReads.mutate();
-      }
-      void actionErrors.show(error, {
-        object: `die Gruppenleitung für „${item.groupName}“`,
-        retry: changed ? undefined : () => void handleResolveGroup(item),
-      });
-    } finally {
-      setItemProcessing(key, false);
+      return;
     }
+    if (result.skipped) return;
+    logger.error("failed to resolve group", {
+      id: item.id,
+      error: String(result.error),
+    });
+    // Changed since it was read: the message waits for the groups read
+    // again; the same request would be refused again, so it offers no
+    // retry (ADR 0311).
+    void actionErrors.show(result.error, {
+      object: `die Gruppenleitung für „${item.groupName}“`,
+      retry: () => void handleResolveGroup(item),
+      reload: result.reload,
+    });
   }
 
   return (
@@ -709,7 +695,8 @@ export function CaregiverBlockerResolutionPanel({
                       items={buildResolutionMenu(
                         Boolean(groupReplacements[item.id]),
                         processing[key] === true ||
-                          !(item.groupId in storedGroups),
+                          !groupAction.canSubmit ||
+                          !storedGroupOf(item.groupId),
                         () => resolveGroup(item),
                       )}
                     />
@@ -723,6 +710,7 @@ export function CaregiverBlockerResolutionPanel({
 
       <LoadErrorAlert error={staffLoadError} />
       <LoadErrorAlert error={groupLoadError} />
+      <LoadErrorAlert error={groupReloadError} />
       <FormErrorAlert message={actionErrors.error} />
 
       <ConfirmationModal
