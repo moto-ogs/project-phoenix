@@ -588,7 +588,8 @@ Foto-Einwilligung:
   Heimatschule gilt so mit dem nächsten Abruf, ohne Ereignis und ohne den
   stündlichen Abgleich. Dasselbe gilt für das Ende der Einwilligung durch
   Abschalten der Kinderfotos oder das Betreuungsende an der Heimatschule.
-- **Wer eine Antwort bekommt.** Nur die Schule, die die Woche ausrichtet,
+- **Wer eine Antwort bekommt.** Nur die Schule, die die Woche ausrichtet
+  und noch zum Träger der Woche gehört,
   für einen offenen Feriengast mit bestätigter, platzierter Buchung in einem
   veröffentlichten Zeitraum, bis zum letzten Tag der Woche, und nur für eine
   Heimatschule desselben Trägers. Sonst antwortet die Funktion `NULL`. Die

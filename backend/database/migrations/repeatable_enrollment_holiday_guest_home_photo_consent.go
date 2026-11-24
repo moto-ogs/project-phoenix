@@ -24,7 +24,8 @@ func init() {
 //
 // The answer is one boolean, or NULL when the question does not apply:
 //
-//   - NULL: the child is no open holiday guest of the calling school, its
+//   - NULL: the calling school does not host the week or left the Träger,
+//     the child is no open holiday guest of the calling school, its
 //     booking is not confirmed and placed any more, its week is over or not
 //     published, or it has no home school of the same Träger.
 //   - true: exactly one child that belongs to the home school during the
@@ -68,6 +69,8 @@ CREATE OR REPLACE FUNCTION enrollment.holiday_guest_home_photo_consent(p_student
 	FROM enrollment.holiday_guests AS guest
 	JOIN enrollment.holiday_period_weeks AS week
 		ON week.organization_id = guest.organization_id AND week.id = guest.holiday_period_week_id
+	JOIN platform.schools AS host
+		ON host.id = week.host_school_id AND host.organization_id = week.organization_id
 	JOIN enrollment.holiday_periods AS period
 		ON period.organization_id = week.organization_id AND period.id = week.holiday_period_id
 	JOIN enrollment.holiday_registration_children AS child

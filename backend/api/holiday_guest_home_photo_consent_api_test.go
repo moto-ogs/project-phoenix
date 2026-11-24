@@ -102,6 +102,15 @@ func TestPhotoConsentWithdrawnAtTheHomeSchoolCountsAtTheHostingSchoolAtOnce(t *t
 		consent := homeConsentAs(t, f, f.nord, tom)
 		assert.Nil(t, consent, "a home school that left the Träger answers nothing")
 		exec(`UPDATE platform.schools SET organization_id = (SELECT organization_id FROM platform.schools WHERE id = ?) WHERE id = ?`, f.nord, family.TenantID)
+
+		// A hosting school that left the Träger gets no answer any more,
+		// although its week and its guest copies still stand.
+		var traeger int64
+		require.NoError(t, f.db.NewRaw(`SELECT organization_id FROM platform.schools WHERE id = ?`, f.nord).Scan(t.Context(), &traeger))
+		exec(`UPDATE platform.schools SET organization_id = (SELECT organization_id FROM platform.schools WHERE id = ?) WHERE id = ?`, stranger.nord, f.nord)
+		assert.Nil(t, homeConsentAs(t, f, f.nord, tom), "a hosting school that left the Träger gets no answer")
+		exec(`UPDATE platform.schools SET organization_id = ? WHERE id = ?`, traeger, f.nord)
+		assert.True(t, *homeConsentAs(t, f, f.nord, tom))
 	})
 
 	t.Run("the answer ends with the booking", func(t *testing.T) {
