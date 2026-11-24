@@ -151,7 +151,7 @@ func TestHolidayReceiptAndDetailRepeatTheDeclaration(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(payload), &mail))
 	require.NotNil(t, mail.Declaration, "the receipt carries the parent's copy of the declaration")
 	assert.Equal(t, "Eva Muster", mail.Declaration.Name)
-	assert.Equal(t, 5, mail.Declaration.ConsentVersion)
+	assert.Equal(t, 6, mail.Declaration.ConsentVersion)
 	assert.False(t, mail.Declaration.GivenAt.IsZero(), "the receipt names when the declaration was given")
 	assert.Equal(t, []enrollment.HolidayDeclarationStatement{
 		{Title: "Datenschutz", Text: declarationPrivacyText},
@@ -169,7 +169,7 @@ func TestHolidayReceiptAndDetailRepeatTheDeclaration(t *testing.T) {
 	detail := decodeSchoolPortalData[enrollment.HolidayRegistrationDetail](t, rec.Body.Bytes())
 	assert.Equal(t, "Eva Muster", detail.DeclarationName)
 	require.NotNil(t, detail.CustodyConfirmedAt)
-	assert.Equal(t, 5, detail.ConsentVersion)
+	assert.Equal(t, 6, detail.ConsentVersion)
 	require.NotNil(t, detail.ConsentTexts, "the detail names the texts of its version")
 	assert.Equal(t, declarationCustodyText, detail.ConsentTexts.CustodyConfirmed)
 	assert.Equal(t, declarationPrivacyText, detail.ConsentTexts.PrivacyConsent)
