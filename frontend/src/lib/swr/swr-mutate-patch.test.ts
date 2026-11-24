@@ -6,7 +6,7 @@ import { initCache, internalMutate } from "swr/_internal";
 /**
  * patches/swr@2.5.1.patch: Safari 26 threw `undefined is not a function
  * (near '...[t,r,i,o]...')` where SWR's mutate destructured its rest
- * parameter, after the write was saved (#2459). These tests fail when the
+ * parameter, after the write was saved (#2459, #8031). These tests fail when the
  * patch is missing, and hold what the patch must not change: SWR counts the
  * arguments of a mutate.
  */
