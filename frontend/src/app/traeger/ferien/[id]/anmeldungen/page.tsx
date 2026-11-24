@@ -978,7 +978,6 @@ export default function TraegerHolidayRegistrationsPage() {
         }}
         isLoading={loading && list === null}
         loadingRowCount={4}
-        stackedOnMobile
         onRowClick={(registration) =>
           router.push(
             traegerPath(

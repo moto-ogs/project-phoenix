@@ -1133,6 +1133,9 @@ export default function StatisticsPage() {
             {view === "groups" && (
               <DataTable
                 columns={groupColumns}
+                mobileScroll={{
+                  reason: "Anwesenheitszahlen je Gruppe zum Vergleichen",
+                }}
                 rows={data.groups}
                 getRowKey={(row) => row.group_id}
                 defaultSortKey="name"
@@ -1148,6 +1151,9 @@ export default function StatisticsPage() {
             {view === "students" && (
               <DataTable
                 columns={studentColumns}
+                mobileScroll={{
+                  reason: "Anwesenheitszahlen je Kind zum Vergleichen",
+                }}
                 rows={data.students}
                 getRowKey={(row) => row.student_id}
                 defaultSortKey="name"
@@ -1181,6 +1187,9 @@ export default function StatisticsPage() {
                   {courseView === "by-course" ? (
                     <DataTable
                       columns={courseColumns}
+                      mobileScroll={{
+                        reason: "Termine und Teilnahme je Kurs zum Vergleichen",
+                      }}
                       rows={data.courses}
                       getRowKey={(row) => row.course_id}
                       defaultSortKey="name"
@@ -1196,6 +1205,9 @@ export default function StatisticsPage() {
                   ) : (
                     <DataTable
                       columns={courseStudentColumns}
+                      mobileScroll={{
+                        reason: "Teilnahme je Kind und Kurs zum Vergleichen",
+                      }}
                       rows={data.course_students}
                       getRowKey={(row) => `${row.student_id}-${row.course_id}`}
                       defaultSortKey="name"
@@ -1235,6 +1247,9 @@ export default function StatisticsPage() {
                   )}
                   <DataTable
                     columns={roomColumns}
+                    mobileScroll={{
+                      reason: "Nutzung und Auslastung je Raum zum Vergleichen",
+                    }}
                     rows={data.rooms}
                     getRowKey={(row) => row.room_id}
                     defaultSortKey="days"

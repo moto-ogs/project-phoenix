@@ -253,7 +253,6 @@ export function StudentCareTimesSection({
           isLoading={loading}
           pageSize={31}
           paginationResetKey={`${fromISO}-${toISO}`}
-          stackedOnMobile
           emptyState={
             <EmptyState
               title="Keine Tage im Zeitraum"

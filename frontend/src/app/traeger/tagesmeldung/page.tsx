@@ -500,7 +500,6 @@ export default function TraegerDailyAttendancePage() {
           rowTone={(day) =>
             isEmptyDay(day) || isWeekend(day.date) ? "muted" : null
           }
-          stackedOnMobile
         />
       ) : report ? (
         <SectionCard>
@@ -529,7 +528,6 @@ export default function TraegerDailyAttendancePage() {
           getRowKey={(school) => school.id}
           defaultSortKey="name"
           onRowClick={(school) => setSchoolId(school.id)}
-          stackedOnMobile
         />
       ) : null}
     </TenantPage>

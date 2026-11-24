@@ -383,7 +383,6 @@ export default function TraegerAccessLogPage() {
         getRowKey={(entry) => entry.id}
         isLoading={loading}
         loadingRowCount={5}
-        stackedOnMobile
         stackedLayout="row"
         stackedDetailKey="data"
         // Older entries load inside the list's surface, like every list.

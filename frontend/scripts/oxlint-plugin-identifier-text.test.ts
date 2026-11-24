@@ -131,5 +131,7 @@ describe("bff-boundary/no-numeric-identifier", () => {
     expect(reported, result.output).toEqual(
       regressions.map((line) => `void (${line});`),
     );
-  });
+    // Ein einziger oxlint-Lauf mit Typinformation: lokal etwa 2,5 s, auf
+    // dem ausgelasteten CI-Shard über den 5-s-Standard von Vitest.
+  }, 30_000);
 });

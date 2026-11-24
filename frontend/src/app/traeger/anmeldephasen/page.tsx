@@ -151,7 +151,6 @@ export default function TraegerCatalogPhasesPage() {
         getRowKey={(phase) => phase.id}
         isLoading={isLoading}
         loadingRowCount={3}
-        stackedOnMobile
         stackedLayout="row"
         onRowClick={(phase) =>
           router.push(traegerPath(`/traeger/anmeldephasen/${phase.id}`))

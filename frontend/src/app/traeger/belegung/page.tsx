@@ -483,7 +483,6 @@ function ViewContent({
         rows={groupRows}
         getRowKey={(row) => row.key}
         defaultSortKey="school"
-        stackedOnMobile
         emptyState={emptyRows(
           search,
           "Noch keine Gruppen",
@@ -507,7 +506,6 @@ function ViewContent({
             getRowKey={(sum) => sum.name}
             defaultSortKey="children"
             defaultSortDirection="desc"
-            stackedOnMobile
           />
         ) : null}
         <DataTable
@@ -520,7 +518,6 @@ function ViewContent({
           rows={formRows}
           getRowKey={(row) => row.key}
           defaultSortKey="school"
-          stackedOnMobile
           emptyState={emptyRows(
             search,
             "Heute läuft keine Betreuungsform",
@@ -537,7 +534,6 @@ function ViewContent({
       rows={[...schools]}
       getRowKey={(school) => school.id}
       defaultSortKey="name"
-      stackedOnMobile
       emptyState={NO_SCHOOL_MATCH}
     />
   );

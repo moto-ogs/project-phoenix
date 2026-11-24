@@ -601,7 +601,6 @@ export default function TraegerCareNoticeRunPage() {
             columns={noticeColumns}
             rows={[...run.notices]}
             getRowKey={(notice) => notice.contractId}
-            stackedOnMobile
             stackedLayout="row"
             stackedDetailKey="rate"
             onRowClick={openNotice}

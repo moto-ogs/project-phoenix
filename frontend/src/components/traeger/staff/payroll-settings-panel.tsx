@@ -490,7 +490,6 @@ export function PayrollSettingsPanel({
           columns={columns}
           rows={[...PAYROLL_CATEGORIES]}
           getRowKey={(category) => category}
-          stackedOnMobile
         />
       </SectionCard>
       {saveBar}

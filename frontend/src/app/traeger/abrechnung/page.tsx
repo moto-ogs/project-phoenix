@@ -426,7 +426,6 @@ function BillingRunsPage() {
             // Five columns beside the period's name: narrower gaps leave the
             // name its line on a tablet.
             dense
-            stackedOnMobile
             stackedLayout="row"
             stackedDetailKey="days"
             onRowClick={openRun}

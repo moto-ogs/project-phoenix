@@ -195,7 +195,6 @@ function FormerEmploymentTimes({ staff }: Readonly<{ staff: Staff }>) {
           caption="Erfasste Arbeitszeiten"
           rows={data ?? []}
           isLoading={isLoading}
-          stackedOnMobile
           getRowKey={(row) => row.id ?? row.check_in_time}
           emptyState="In diesem Zeitraum wurden keine Arbeitszeiten erfasst."
           columns={[

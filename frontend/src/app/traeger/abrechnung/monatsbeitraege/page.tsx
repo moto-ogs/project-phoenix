@@ -282,7 +282,6 @@ export default function TraegerMonatsbeitraegePage() {
             columns={runColumns(data.tariffs.schools)}
             rows={[...runs]}
             getRowKey={(run) => run.id}
-            stackedOnMobile
             stackedLayout="row"
             stackedDetailKey="schools"
             onRowClick={openRun}

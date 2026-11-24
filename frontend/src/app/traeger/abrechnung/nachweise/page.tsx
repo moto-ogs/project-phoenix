@@ -363,7 +363,6 @@ export default function TraegerNachweisePage() {
           columns={columns}
           rows={rows}
           getRowKey={(contract) => contract.contractId}
-          stackedOnMobile
           emptyState={
             <EmptyState
               title="Kein Kind passt zur Suche."
