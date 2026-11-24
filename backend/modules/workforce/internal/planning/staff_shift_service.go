@@ -706,28 +706,6 @@ func (s *staffShiftService) lockShiftEdit(ctx context.Context, shift *workforce.
 	return s.lockStaffWritesOrdered(ctx, lockIDs)
 }
 
-// ensureShiftUnchangedWhileLocking re-reads the row after locking.
-//
-// A normal edit may have loaded the row before a concurrent MoveShift acquired
-// this same lock. Re-read after locking and reject every move-relevant change,
-// including a same-person date/window move: otherwise the stale edit payload
-// would silently move the row back. UpdatedAt additionally catches other
-// concurrent whole-row updates while this request waited.
-func (s *staffShiftService) ensureShiftUnchangedWhileLocking(ctx context.Context, id int64, existing *workforce.ShiftRecord, read *workforce.ShiftReadState) error {
-	lockedExisting, err := s.findShiftOrNotFound(ctx, id, "reload staff shift after lock")
-	if err != nil {
-		return err
-	}
-	if err := checkShiftRead(read, lockedExisting); err != nil {
-		return err
-	}
-	if staffShiftMoveChanged(existing, lockedExisting) ||
-		!lockedExisting.UpdatedAt.Equal(existing.UpdatedAt) {
-		return fmt.Errorf("%w: shift changed while the edit was waiting for its write lock", ErrShiftConflict)
-	}
-	return nil
-}
-
 // ensureCoversFitEditedOrigin keeps the replacements of an edited origin valid.
 //
 // Editing a covered ORIGIN (not a replacement) through the ordinary path must

@@ -93,8 +93,7 @@ func (s *staffShiftService) ApplyCancellation(ctx context.Context, input CancelS
 	if err != nil {
 		return nil, err
 	}
-	// The covers are deleted and rebuilt from the request: the planner must
-	// have read exactly these (ADR 0311).
+	// The covers are rebuilt from the request: the planner read these (ADR 0311).
 	if err := checkCancellationRead(input.Read, existing, covers); err != nil {
 		return nil, err
 	}
