@@ -24,8 +24,9 @@ const ZONE_PADDING_BOTTOM = "compact:pb-4 pb-5 max-sm:pb-4";
 
 // Die Titelstufen einer Karte. `lg` steht als hervorgehobener Abschnitt mittig
 // neben der Symbolfläche, `page` und `display` tragen den Seitenkopf des
-// Elternportals (`display` die Begrüßung auf der Startseite).
-const TITLE_SIZES = {
+// Elternportals (`display` die Begrüßung auf der Startseite). Der Ladekopf des
+// Elternportals (`TenantPageHeaderSkeleton`) nimmt `page` von hier.
+export const SECTION_CARD_TITLE_SIZES = {
   sm: "text-sm",
   md: "text-base",
   lg: "flex min-h-9 items-center text-xl leading-tight tracking-tight sm:min-h-10",
@@ -357,7 +358,7 @@ export function SectionCard({
    */
   namedRegion?: boolean;
   /** Schriftstufe des Titels; die Größe kommt nie über `titleClassName`. */
-  titleSize?: keyof typeof TITLE_SIZES;
+  titleSize?: keyof typeof SECTION_CARD_TITLE_SIZES;
   titleClassName?: string;
   /** Overrides the default spacing above the body (`SECTION_CARD_BODY_GAP`). */
   bodyClassName?: string;
@@ -503,7 +504,7 @@ export function SectionCard({
                       id={namedRegion ? headingId : undefined}
                       className={cn(
                         "font-semibold text-balance text-gray-900",
-                        TITLE_SIZES[titleSize],
+                        SECTION_CARD_TITLE_SIZES[titleSize],
                         titleClassName,
                       )}
                     >

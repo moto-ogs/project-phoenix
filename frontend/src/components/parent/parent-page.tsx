@@ -4,6 +4,7 @@ import type React from "react";
 import { useTranslations } from "next-intl";
 import { MobilePageHelpTarget } from "~/components/ui/mobile-page-help-target";
 import { BackLink } from "~/components/ui/back-link";
+import { PARENT_HEAD_ROW } from "~/components/ui/control-geometry";
 import {
   PageBody,
   type PageBodyEmpty,
@@ -142,7 +143,7 @@ export function ParentPageHeader({
           {backHref && backLabel && (
             <BackLink href={backHref} label={backLabel} />
           )}
-          <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className={PARENT_HEAD_ROW.row}>
             <SectionCard
               bare
               kicker={kicker}
@@ -151,7 +152,7 @@ export function ParentPageHeader({
               leading={media}
               headingLevel={1}
               titleSize={prominent ? "display" : "page"}
-              className="min-w-0 flex-1 basis-0"
+              className={PARENT_HEAD_ROW.title}
             />
             {actions ? (
               <div className="contents sm:flex sm:shrink-0 sm:items-center sm:gap-2">
