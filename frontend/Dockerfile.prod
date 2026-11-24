@@ -69,7 +69,9 @@ ARG SENTRY_RELEASE
 # NEXT_DEPLOYMENT_ID (the release's commit SHA) is Next.js' version-skew
 # protection: a tab still running the previous build does a full page load on
 # its next navigation instead of requesting chunks the new image no longer
-# has. Empty (a local build without SENTRY_RELEASE) switches it off.
+# has; the proxy refuses its BFF calls, and it reloads by itself when nothing
+# would be lost (src/lib/deployment-skew.ts, deployment-reload.ts). Empty (a
+# local build without SENTRY_RELEASE) switches it off.
 RUN --mount=type=cache,target=/app/.next/cache \
     --mount=type=secret,id=sentry_auth_token,env=SENTRY_AUTH_TOKEN \
     SENTRY_ORG="$SENTRY_ORG" SENTRY_PROJECT="$SENTRY_PROJECT" \
