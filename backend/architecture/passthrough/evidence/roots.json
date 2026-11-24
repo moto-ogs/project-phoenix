@@ -4552,7 +4552,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p callerPeople) RenamePerson(ctx context.Context, personID int64, firstName, lastName *string) error {\n\treturn p.persons.People.RenamePerson(ctx, personID, firstName, lastName)\n}",
+      "evidence": "func (p callerPeople) RenamePerson(ctx context.Context, personID int64, firstName, lastName *string, expectedVersion string) error {\n\treturn p.persons.People.RenamePerson(ctx, personID, firstName, lastName, expectedVersion)\n}",
       "form": "forward-debt",
       "id": "roots/owners/callerPeople.RenamePerson",
       "owner": "roots"

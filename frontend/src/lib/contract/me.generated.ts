@@ -32,6 +32,7 @@ export interface ProfileResponse {
   rfid_card?: string;
   bio?: string;
   settings?: string;
+  version: string;
 }
 
 export const ProfileResponseSchema: z.ZodType<ProfileResponse, unknown> = object<ProfileResponse>({
@@ -47,6 +48,7 @@ export const ProfileResponseSchema: z.ZodType<ProfileResponse, unknown> = object
   rfid_card: optional(str),
   bio: optional(str),
   settings: optional(str),
+  version: str,
 });
 
 /** Go: domain.GroupRoom */
@@ -501,6 +503,7 @@ export interface ProfileUpdateRequest {
   last_name?: string | null;
   username?: string | null;
   bio?: string | null;
+  expected_version?: string;
 }
 
 export const routes = {

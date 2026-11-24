@@ -87,7 +87,7 @@ func TestTraegerAccountHistoryShowsTheChangesOfTheOwnTraeger(t *testing.T) {
 	rec := traegerCall(t, router, http.MethodDelete, fmt.Sprintf("/traeger/accounts/invitations/%d", invitation), session.AccessToken, nil)
 	require.Equal(t, http.StatusNoContent, rec.Code, rec.Body.String())
 	rec = traegerCall(t, router, http.MethodPut, fmt.Sprintf("/traeger/accounts/%d/roles", colleague.ID), session.AccessToken,
-		map[string]any{"roles": []string{identityaccess.TraegerRolePersonnel, identityaccess.TraegerRoleReadOnly}})
+		traegerRolesBody(t, router, session.AccessToken, colleague.ID, identityaccess.TraegerRolePersonnel, identityaccess.TraegerRoleReadOnly))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	rec = traegerCall(t, router, http.MethodDelete, fmt.Sprintf("/traeger/accounts/%d", colleague.ID), session.AccessToken, nil)
 	require.Equal(t, http.StatusNoContent, rec.Code, rec.Body.String())
@@ -226,12 +226,12 @@ func TestTraegerRoleChangeAndRemovalMailThePersonConcerned(t *testing.T) {
 
 	traegerInvite(t, db, router, session.AccessToken, fmt.Sprintf("keine-mitteilung-%d@test.local", testpkg.UniqueTestTenantID(t)), identityaccess.TraegerRoleReadOnly)
 	rec := traegerCall(t, router, http.MethodPut, fmt.Sprintf("/traeger/accounts/%d/roles", colleague.ID), session.AccessToken,
-		map[string]any{"roles": []string{identityaccess.TraegerRoleReadOnly}})
+		traegerRolesBody(t, router, session.AccessToken, colleague.ID, identityaccess.TraegerRoleReadOnly))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Empty(t, traegerChangeMails(t, db, colleague.ID), "the same roles again change nothing and mail nothing")
 
 	rec = traegerCall(t, router, http.MethodPut, fmt.Sprintf("/traeger/accounts/%d/roles", colleague.ID), session.AccessToken,
-		map[string]any{"roles": []string{identityaccess.TraegerRoleBilling, identityaccess.TraegerRoleReadOnly}})
+		traegerRolesBody(t, router, session.AccessToken, colleague.ID, identityaccess.TraegerRoleBilling, identityaccess.TraegerRoleReadOnly))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	mails := traegerChangeMails(t, db, colleague.ID)
 	require.Len(t, mails, 1, "a role change queues exactly one mail")
@@ -244,7 +244,7 @@ func TestTraegerRoleChangeAndRemovalMailThePersonConcerned(t *testing.T) {
 	assert.False(t, mails[0].Self)
 	assert.Contains(t, mails[0].Subject, "Träger Benachrichtigung")
 	rec = traegerCall(t, router, http.MethodPut, fmt.Sprintf("/traeger/accounts/%d/roles", colleague.ID), session.AccessToken,
-		map[string]any{"roles": []string{identityaccess.TraegerRoleReadOnly, identityaccess.TraegerRoleBilling}})
+		traegerRolesBody(t, router, session.AccessToken, colleague.ID, identityaccess.TraegerRoleReadOnly, identityaccess.TraegerRoleBilling))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Len(t, traegerChangeMails(t, db, colleague.ID), 1, "the same roles in another order change nothing and mail nothing")
 
@@ -258,7 +258,7 @@ func TestTraegerRoleChangeAndRemovalMailThePersonConcerned(t *testing.T) {
 	// A person who changes their own roles is mailed as well: a taken-over
 	// account would do exactly that.
 	rec = traegerCall(t, router, http.MethodPut, fmt.Sprintf("/traeger/accounts/%d/roles", leader.ID), session.AccessToken,
-		map[string]any{"roles": []string{identityaccess.TraegerRoleAdministration, identityaccess.TraegerRoleLeadership}})
+		traegerRolesBody(t, router, session.AccessToken, leader.ID, identityaccess.TraegerRoleAdministration, identityaccess.TraegerRoleLeadership))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	own := traegerChangeMails(t, db, leader.ID)
 	require.Len(t, own, 1)
@@ -272,14 +272,16 @@ func TestTraegerRoleChangeMailRollsBackWithTheChange(t *testing.T) {
 	t.Parallel()
 	db, router, identity, unit := newTraegerAccountsPortal(t)
 	organizationID := traegerBuero(t, db, "Träger Rücknahme")
-	leader, _ := traegerMember(t, db, router, organizationID, identityaccess.TraegerRoleLeadership)
+	leader, leaderSession := traegerMember(t, db, router, organizationID, identityaccess.TraegerRoleLeadership)
 	colleague, _ := traegerMember(t, db, router, organizationID, identityaccess.TraegerRoleReadOnly)
 	actor := identityaccess.TraegerActor{OrganizationID: organizationID, AccountID: leader.ID}
 	errAbort := errors.New("abort after the change")
+	read := traegerRolesBody(t, router, leaderSession.AccessToken, colleague.ID)["expected_version"].(string)
+	listed := traegerLedger(t, db, organizationID)
 
 	for name, change := range map[string]func(context.Context) error{
 		"roles": func(ctx context.Context) error {
-			_, err := identity.ChangeTraegerRoles(ctx, actor, colleague.ID, []string{identityaccess.TraegerRolePersonnel})
+			_, err := identity.ChangeTraegerRoles(ctx, actor, colleague.ID, []string{identityaccess.TraegerRolePersonnel}, read)
 			return err
 		},
 		"removal": func(ctx context.Context) error { return identity.RemoveTraegerMember(ctx, actor, colleague.ID) },
@@ -307,5 +309,5 @@ func TestTraegerRoleChangeMailRollsBackWithTheChange(t *testing.T) {
 	require.NoError(t, db.NewRaw(`SELECT role FROM auth.organization_account_roles WHERE organization_id = ? AND account_id = ?`, organizationID, colleague.ID).
 		Scan(context.Background(), &roles))
 	assert.Equal(t, []string{identityaccess.TraegerRoleReadOnly}, roles, "nor a change")
-	assert.Empty(t, traegerLedger(t, db, organizationID), "nor a ledger entry")
+	assert.Equal(t, listed, traegerLedger(t, db, organizationID), "nor a ledger entry beyond the list read")
 }

@@ -40,16 +40,16 @@ func TestRenamePersonRefusesAnEmptyName(t *testing.T) {
 	engine := &recordingEngine{}
 	module := newValidationService(engine)
 	empty, name := "", "Kim"
-	if err := module.RenamePerson(context.Background(), 5, &empty, nil); !errors.Is(err, peopledirectory.ErrInvalidPerson) {
+	if err := module.RenamePerson(context.Background(), 5, &empty, nil, "v1"); !errors.Is(err, peopledirectory.ErrInvalidPerson) {
 		t.Fatalf("empty first name: %v, want ErrInvalidPerson", err)
 	}
-	if err := module.RenamePerson(context.Background(), 5, nil, &empty); !errors.Is(err, peopledirectory.ErrInvalidPerson) {
+	if err := module.RenamePerson(context.Background(), 5, nil, &empty, "v1"); !errors.Is(err, peopledirectory.ErrInvalidPerson) {
 		t.Fatalf("empty last name: %v, want ErrInvalidPerson", err)
 	}
 	if engine.calls != 0 {
 		t.Fatalf("a refused rename reached the engine %d times", engine.calls)
 	}
-	if err := module.RenamePerson(context.Background(), 5, &name, nil); err != nil {
+	if err := module.RenamePerson(context.Background(), 5, &name, nil, peopledirectory.PersonVersion(recordedPersonChange)); err != nil {
 		t.Fatalf("rename: %v", err)
 	}
 	if engine.calls != 1 {

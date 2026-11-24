@@ -24,6 +24,7 @@ export interface TraegerMemberResponse {
   name: string;
   roles: string[] | null;
   activated_at: string | null;
+  version: string;
 }
 
 export const TraegerMemberResponseSchema: z.ZodType<TraegerMemberResponse, unknown> = object<TraegerMemberResponse>({
@@ -32,6 +33,7 @@ export const TraegerMemberResponseSchema: z.ZodType<TraegerMemberResponse, unkno
   name: str,
   roles: nullable(arr(str)),
   activated_at: nullable(instant),
+  version: str,
 });
 
 /** Go: traegerportal.TraegerInvitationResponse */
@@ -105,6 +107,7 @@ export interface TraegerInviteRequest {
 /** Go: traegerportal.TraegerRolesRequest */
 export interface TraegerRolesRequest {
   roles?: string[] | null;
+  expected_version?: string;
 }
 
 export const routes = {

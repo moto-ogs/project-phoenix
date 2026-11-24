@@ -2074,7 +2074,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CallerEngine.UpdateProfile",
-      "binding_digest": "e51f97f1628d069917c86b9f8fc30e91",
+      "binding_digest": "b11e1b7e06931b9a245b006fadf38973",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CallerProfiles.UpdateProfile",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.AccountLifecycleCommand.RenamePerson",
@@ -2090,7 +2090,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CallerEngine.UpdateProfile",
-      "binding_digest": "154158958150bd15297429590bb301a9",
+      "binding_digest": "d2c4258efb6d43b2eea4614a30d505ab",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CallerProfiles.UpdateProfile",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.RenamePerson",
@@ -2106,7 +2106,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CallerEngine.UpdateProfile",
-      "binding_digest": "f264a01cdd13e613d7e2bbabd3f18c82",
+      "binding_digest": "3f7d727cf6e52ff0684667093d0445f6",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CallerProfiles.UpdateProfile",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.RenamePerson",
@@ -15994,7 +15994,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CallerPeople.RenamePerson",
-      "binding_digest": "e51f97f1628d069917c86b9f8fc30e91",
+      "binding_digest": "b11e1b7e06931b9a245b006fadf38973",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.CallerPeople.RenamePerson",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.AccountLifecycleCommand.RenamePerson",
@@ -16002,7 +16002,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CallerPeople.RenamePerson",
-      "binding_digest": "154158958150bd15297429590bb301a9",
+      "binding_digest": "d2c4258efb6d43b2eea4614a30d505ab",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.CallerPeople.RenamePerson",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.RenamePerson",
@@ -16010,7 +16010,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CallerPeople.RenamePerson",
-      "binding_digest": "f264a01cdd13e613d7e2bbabd3f18c82",
+      "binding_digest": "3f7d727cf6e52ff0684667093d0445f6",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.CallerPeople.RenamePerson",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.RenamePerson",
@@ -19050,7 +19050,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.callerPeople.RenamePerson",
-      "binding_digest": "e51f97f1628d069917c86b9f8fc30e91",
+      "binding_digest": "b11e1b7e06931b9a245b006fadf38973",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.CallerPeople.RenamePerson",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.AccountLifecycleCommand.RenamePerson",
@@ -19058,7 +19058,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.callerPeople.RenamePerson",
-      "binding_digest": "154158958150bd15297429590bb301a9",
+      "binding_digest": "d2c4258efb6d43b2eea4614a30d505ab",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.CallerPeople.RenamePerson",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.RenamePerson",
@@ -19066,7 +19066,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.callerPeople.RenamePerson",
-      "binding_digest": "f264a01cdd13e613d7e2bbabd3f18c82",
+      "binding_digest": "3f7d727cf6e52ff0684667093d0445f6",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.CallerPeople.RenamePerson",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.RenamePerson",

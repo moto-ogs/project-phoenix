@@ -1070,6 +1070,7 @@ export const portalRoutes = {
     authRoles["GET /auth/roles/{roleId}/permissions/"],
     authRoles["POST /auth/roles/"],
     authRoles["PUT /auth/roles/{id}/"],
+    authRoles["PUT /auth/roles/{id}/master-data/"],
     authRoles["PUT /auth/roles/{roleId}/permission-selection/"],
     authRoles["PUT /auth/roles/{roleId}/permissions/"],
     authStaffPreview["GET /auth/staff-preview/candidates"],

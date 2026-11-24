@@ -29,6 +29,11 @@ export interface Role {
   schoolPortal?: boolean;
   createdAt: string;
   updatedAt: string;
+  /**
+   * The read-state token of the master data (ADR 0311): an edit sends it
+   * back. The permission selection carries its own.
+   */
+  version?: string;
   /** The names of the role's permissions; the role list sends names only. */
   permissionNames?: readonly string[];
 }
@@ -53,6 +58,7 @@ export function mapRoleResponse(role: sharedContract.RoleResponse): Role {
     schoolPortal: role.school_portal,
     createdAt: role.created_at,
     updatedAt: role.updated_at,
+    version: role.version,
     permissionNames: role.permissions ?? [],
   };
 }

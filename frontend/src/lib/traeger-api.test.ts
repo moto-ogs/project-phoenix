@@ -11,6 +11,7 @@ import { ApiError } from "./api-error";
 import {
   acceptTraegerInvitation,
   changeTraegerMemberName,
+  changeTraegerRoles,
   changeTraegerProfileName,
   fetchTraegerProfile,
   fetchTraegerInvitation,
@@ -579,6 +580,41 @@ describe("traeger-api", () => {
     expect(url).toBe("/api/traeger/accounts/4/name");
     expect(init!.method).toBe("PUT");
     expect(JSON.parse(init!.body as string)).toEqual({ name: "Eva Müller" });
+  });
+
+  // ADR 0311: the change carries the version of the roles it was made from
+  // and answers the person with the new one.
+  it("changes the roles over the read version", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(200, {
+        status: "success",
+        data: {
+          account_id: "4",
+          email: "e@f.de",
+          name: "",
+          roles: ["billing", "personnel"],
+          activated_at: "2026-09-01T08:00:00Z",
+          version: "v2",
+        },
+      }),
+    );
+
+    await expect(
+      changeTraegerRoles("4", ["billing", "personnel"], "v1"),
+    ).resolves.toEqual({
+      accountId: "4",
+      email: "e@f.de",
+      name: "",
+      roles: ["billing", "personnel"],
+      version: "v2",
+    });
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe("/api/traeger/accounts/4/roles");
+    expect(init!.method).toBe("PUT");
+    expect(JSON.parse(init!.body as string)).toEqual({
+      roles: ["billing", "personnel"],
+      expected_version: "v1",
+    });
   });
 
   it("reads and changes the own profile", async () => {

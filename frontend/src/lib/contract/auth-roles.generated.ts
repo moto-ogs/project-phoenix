@@ -39,6 +39,7 @@ export interface UpdateRoleRequest {
   name?: string;
   description?: string;
   base_role?: string | null;
+  expected_version?: string;
 }
 
 /** Go: account.ReplaceRolePermissionsRequest */
@@ -102,8 +103,16 @@ export const routes = {
     method: "PUT",
     pattern: "/auth/roles/{id}/",
     portals: ["tenant"],
+    deprecated: true,
     request: requestBody<UpdateRoleRequest>(),
     response: noData,
+  },
+  "PUT /auth/roles/{id}/master-data/": {
+    method: "PUT",
+    pattern: "/auth/roles/{id}/master-data/",
+    portals: ["tenant"],
+    request: requestBody<UpdateRoleRequest>(),
+    response: success(RoleResponseSchema),
   },
   "PUT /auth/roles/{roleId}/permission-selection/": {
     method: "PUT",

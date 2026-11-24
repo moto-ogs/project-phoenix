@@ -67,7 +67,10 @@ func TestRolePersistenceScopeOrderingAndRollback(t *testing.T) {
 	rollback := errors.New("roll back role changes")
 	err = testpkg.WithAdminTx(t, ctx, db, func(txCtx context.Context, _ bun.Tx) error {
 		txCtx = testpkg.ContextForTenant(txCtx, tenantID)
-		require.NoError(t, identity.UpdateRole(txCtx, changed))
+		read, readErr := identity.GetRole(txCtx, first.ID)
+		require.NoError(t, readErr)
+		_, updateErr := identity.UpdateRole(txCtx, changed.ID, identityaccess.RoleChange{Name: changed.Name, Description: changed.Description}, identityaccess.RoleVersion(read))
+		require.NoError(t, updateErr)
 		current, readErr := identity.GetRole(txCtx, first.ID)
 		require.NoError(t, readErr)
 		require.Equal(t, "renamed", current.Name)
@@ -86,7 +89,8 @@ func TestRolePersistenceScopeOrderingAndRollback(t *testing.T) {
 	roles, err = identity.GetAccountRoles(ctx, account.ID)
 	require.NoError(t, err)
 	require.Len(t, roles, 2)
-	require.ErrorIs(t, identity.UpdateRole(otherCtx, changed), identityaccess.ErrRoleNotFound)
+	_, err = identity.UpdateRole(otherCtx, changed.ID, identityaccess.RoleChange{Name: changed.Name, Description: changed.Description}, identityaccess.RoleVersion(current))
+	require.ErrorIs(t, err, identityaccess.ErrRoleNotFound)
 	require.ErrorIs(t, identity.DeleteRole(otherCtx, first.ID), identityaccess.ErrRoleNotFound)
 
 	require.NoError(t, identity.DeleteRole(ctx, first.ID))

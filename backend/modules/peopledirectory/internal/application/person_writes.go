@@ -6,6 +6,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/domain"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -17,12 +18,22 @@ import (
 // name, trimmed but not capped, as those flows always stored them.
 type PersonWrites struct{ persons *Service }
 
-func (p PersonWrites) RenamePerson(ctx context.Context, personID int64, firstName, lastName *string) error {
+// RenamePerson checks the version the edit was made from under the row
+// lock it writes under (ADR 0311): the token of the read and of the check
+// is PersonVersion over persons.updated_at, which the trigger
+// update_persons_updated_at moves on every write of the row.
+func (p PersonWrites) RenamePerson(ctx context.Context, personID int64, firstName, lastName *string, expectedVersion string) error {
 	s := p.persons
 	return MapError(s.runWrite(ctx, "rename_person", func(txCtx context.Context, stats *domain.OperationStats) error {
 		person, err := p.lock(txCtx, personID, stats)
 		if err != nil {
 			return err
+		}
+		if err := readstate.Check(expectedVersion, peopledirectory.PersonVersion(person.UpdatedAt)); err != nil {
+			return err
+		}
+		if firstName == nil && lastName == nil {
+			return nil
 		}
 		first, last := person.FirstName, person.LastName
 		if firstName != nil {

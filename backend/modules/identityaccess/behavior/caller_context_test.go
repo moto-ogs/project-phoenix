@@ -342,8 +342,9 @@ func TestCallerContext_UpdateProfile(t *testing.T) {
 
 		first, last := "UpdatedFirst", "UpdatedLast"
 		result, err := caller.UpdateProfile(callerCtx(t, account.ID), identityaccess.CallerProfileUpdate{
-			FirstName: &first,
-			LastName:  &last,
+			FirstName:       &first,
+			LastName:        &last,
+			ExpectedVersion: readProfileVersion(t, db, caller, account.ID),
 		})
 
 		require.NoError(t, err)
@@ -358,7 +359,8 @@ func TestCallerContext_UpdateProfile(t *testing.T) {
 		// Unique username to avoid a duplicate key error.
 		uniqueUsername := fmt.Sprintf("newusername_%d", time.Now().UnixNano())
 		result, err := caller.UpdateProfile(callerCtx(t, account.ID), identityaccess.CallerProfileUpdate{
-			Username: &uniqueUsername,
+			Username:        &uniqueUsername,
+			ExpectedVersion: readProfileVersion(t, db, caller, account.ID),
 		})
 
 		require.NoError(t, err)
@@ -370,7 +372,9 @@ func TestCallerContext_UpdateProfile(t *testing.T) {
 		_, account := testpkg.CreateTestPersonWithAccount(t, db, "Bio", "Update")
 
 		bio := "This is my bio"
-		result, err := caller.UpdateProfile(callerCtx(t, account.ID), identityaccess.CallerProfileUpdate{Bio: &bio})
+		result, err := caller.UpdateProfile(callerCtx(t, account.ID), identityaccess.CallerProfileUpdate{
+			Bio: &bio, ExpectedVersion: readProfileVersion(t, db, caller, account.ID),
+		})
 
 		require.NoError(t, err)
 		assert.Equal(t, "This is my bio", result.Bio)
@@ -380,6 +384,16 @@ func TestCallerContext_UpdateProfile(t *testing.T) {
 		_, err := caller.UpdateProfile(context.Background(), identityaccess.CallerProfileUpdate{})
 		require.Error(t, err)
 	})
+}
+
+// readProfileVersion reads the caller's profile version the way the profile
+// page does before an edit (ADR 0311).
+func readProfileVersion(t *testing.T, db *bun.DB, caller identityaccess.CallerContext, accountID int64) string {
+	t.Helper()
+	profile, err := testpkg.TenantQuery0(t, callerCtx(t, accountID), db, caller.Profile)
+	require.NoError(t, err)
+	require.NotNil(t, profile.Person)
+	return identityaccess.ProfileVersion(profile)
 }
 
 func TestCallerContext_UpdateAvatar(t *testing.T) {

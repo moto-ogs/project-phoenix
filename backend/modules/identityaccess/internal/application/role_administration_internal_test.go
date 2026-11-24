@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -79,6 +80,9 @@ func (s *raStore) record(call string) {
 func (s *raStore) addRole(role domain.ManagedRole) domain.ManagedRole {
 	s.nextID++
 	role.ID = s.nextID
+	if role.UpdatedAt.IsZero() {
+		role.UpdatedAt = time.Date(2026, 9, 1, 8, 0, 0, 0, time.UTC)
+	}
 	s.roles[role.ID] = role
 	return role
 }
@@ -122,10 +126,12 @@ func (s *raStore) FindRoleForUpdate(ctx context.Context, id int64) (domain.Manag
 	return s.FindRole(ctx, id)
 }
 
-func (s *raStore) UpdateRole(_ context.Context, role domain.ManagedRole) error {
+func (s *raStore) UpdateRole(_ context.Context, role domain.ManagedRole) (domain.ManagedRole, error) {
 	s.record("update role")
+	// The trigger moves updated_at on every write of the row.
+	role.UpdatedAt = role.UpdatedAt.Add(time.Microsecond)
 	s.roles[role.ID] = role
-	return nil
+	return role, nil
 }
 
 func (s *raStore) DeleteRole(_ context.Context, id int64) error {
@@ -483,13 +489,40 @@ func TestRoleAdministration_UpdateRoleReturnsNotFoundOnLookupFailure(t *testing.
 
 	f := newRAFixture(t)
 	f.store.findRoleErr = errors.New("sql: no rows in result set")
-	err := f.admin.UpdateRole(raContext(), identityaccess.Role{ID: f.account()})
+	_, err := f.admin.UpdateRole(raContext(), f.account(), identityaccess.RoleChange{Name: "renamed"}, "v")
 	require.ErrorIs(t, err, identityaccess.ErrRoleNotFound)
 	assert.NotErrorIs(t, err, f.store.findRoleErr)
 
 	missing := newRAFixture(t)
-	err = missing.admin.UpdateRole(raContext(), identityaccess.Role{ID: missing.account()})
+	_, err = missing.admin.UpdateRole(raContext(), missing.account(), identityaccess.RoleChange{Name: "renamed"}, "v")
 	require.ErrorIs(t, err, identityaccess.ErrRoleNotFound)
+}
+
+// An edit saves only over the role it was made from (ADR 0311): a stale
+// version is refused under the row lock and writes nothing, the current one
+// saves and answers the stored role's version, which the next edit sends.
+func TestRoleAdministration_UpdateRoleSavesOnlyOverTheReadVersion(t *testing.T) {
+	t.Parallel()
+
+	f := newRAFixture(t)
+	role := f.store.addRole(domain.ManagedRole{Name: "Springkraft", Description: "alt"})
+	read := identityaccess.RoleVersion(identityaccess.Role(role))
+	ctx := raContext()
+
+	saved, err := f.admin.UpdateRole(ctx, role.ID, identityaccess.RoleChange{Name: "Springkraft", Description: "neu"}, read)
+	require.NoError(t, err)
+	assert.Equal(t, "neu", f.store.roles[role.ID].Description)
+	require.NotEqual(t, read, identityaccess.RoleVersion(saved), "the save answers the stored version")
+
+	calls := len(f.store.calls)
+	_, err = f.admin.UpdateRole(ctx, role.ID, identityaccess.RoleChange{Name: "Springkraft", Description: "überholt"}, read)
+	require.ErrorIs(t, err, readstate.ErrChanged)
+	assert.Equal(t, "neu", f.store.roles[role.ID].Description, "a stale edit writes nothing")
+	assert.Equal(t, []string{"lock role"}, f.store.calls[calls:], "the version is checked under the row lock")
+
+	_, err = f.admin.UpdateRole(ctx, role.ID, identityaccess.RoleChange{Name: "Springkraft", Description: "weiter"}, identityaccess.RoleVersion(saved))
+	require.NoError(t, err, "the answered version saves again without a read")
+	assert.Equal(t, "weiter", f.store.roles[role.ID].Description)
 }
 
 func TestRoleAdministration_SystemRolesAreImmutable(t *testing.T) {
@@ -501,7 +534,7 @@ func TestRoleAdministration_SystemRolesAreImmutable(t *testing.T) {
 	ctx := raContext()
 
 	// The stored row decides, never the caller's flag.
-	err := f.admin.UpdateRole(ctx, identityaccess.Role{ID: system.ID, Name: "renamed", IsSystem: false})
+	_, err := f.admin.UpdateRole(ctx, system.ID, identityaccess.RoleChange{Name: "renamed"}, identityaccess.RoleVersion(identityaccess.Role(system)))
 	require.ErrorIs(t, err, identityaccess.ErrSystemRoleImmutable)
 	assert.EqualError(t, err, "auth error during update role: system roles cannot be modified")
 

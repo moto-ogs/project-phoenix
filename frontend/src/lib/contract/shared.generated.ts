@@ -193,6 +193,7 @@ export interface RoleResponse {
   school_portal: boolean;
   created_at: string;
   updated_at: string;
+  version: string;
   permissions?: string[];
 }
 
@@ -205,6 +206,7 @@ export const RoleResponseSchema: z.ZodType<RoleResponse, unknown> = object<RoleR
   school_portal: bool,
   created_at: str,
   updated_at: str,
+  version: str,
   permissions: optional(arr(str)),
 });
 

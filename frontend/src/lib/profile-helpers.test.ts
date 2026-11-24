@@ -37,6 +37,7 @@ describe("profile-helpers", () => {
         settings: JSON.stringify(settingsObj),
         created_at: "2024-01-01T00:00:00Z",
         updated_at: "2024-01-15T10:30:00Z",
+        version: "v1",
         last_login: "2024-01-15T09:00:00Z",
       };
 
@@ -53,6 +54,7 @@ describe("profile-helpers", () => {
         rfidCard: "RFID123",
         createdAt: "2024-01-01T00:00:00Z",
         updatedAt: "2024-01-15T10:30:00Z",
+        version: "v1",
         lastLogin: "2024-01-15T09:00:00Z",
         settings: settingsObj,
       });
@@ -67,6 +69,7 @@ describe("profile-helpers", () => {
         settings: "{invalid json}",
         created_at: "2024-01-01T00:00:00Z",
         updated_at: "2024-01-15T10:30:00Z",
+        version: "v1",
         username: null,
         last_login: null,
       };
@@ -84,6 +87,7 @@ describe("profile-helpers", () => {
         email: "nosettings@example.com",
         created_at: "2024-01-01T00:00:00Z",
         updated_at: "2024-01-15T10:30:00Z",
+        version: "v1",
         username: null,
         last_login: null,
       };
@@ -102,6 +106,7 @@ describe("profile-helpers", () => {
         avatar: "/uploads/avatars/global/user123.png",
         created_at: "2024-01-01T00:00:00Z",
         updated_at: "2024-01-15T10:30:00Z",
+        version: "v1",
         username: null,
         last_login: null,
       };
@@ -120,6 +125,7 @@ describe("profile-helpers", () => {
         avatar: "https://example.com/avatar.jpg",
         created_at: "2024-01-01T00:00:00Z",
         updated_at: "2024-01-15T10:30:00Z",
+        version: "v1",
         username: null,
         last_login: null,
       };
@@ -138,6 +144,7 @@ describe("profile-helpers", () => {
         avatar: undefined,
         created_at: "2024-01-01T00:00:00Z",
         updated_at: "2024-01-15T10:30:00Z",
+        version: "v1",
         username: null,
         last_login: null,
       };
@@ -156,6 +163,7 @@ describe("profile-helpers", () => {
         avatar: "/uploads/",
         created_at: "2024-01-01T00:00:00Z",
         updated_at: "2024-01-15T10:30:00Z",
+        version: "v1",
         username: null,
         last_login: null,
       };
@@ -174,6 +182,7 @@ describe("profile-helpers", () => {
         email: "minimal@example.com",
         created_at: "2024-01-01T00:00:00Z",
         updated_at: "2024-01-15T10:30:00Z",
+        version: "v1",
         username: null,
         last_login: null,
       };
@@ -191,6 +200,7 @@ describe("profile-helpers", () => {
         rfidCard: undefined,
         createdAt: "2024-01-01T00:00:00Z",
         updatedAt: "2024-01-15T10:30:00Z",
+        version: "v1",
         lastLogin: null,
         settings: undefined,
       });
@@ -211,6 +221,7 @@ describe("profile-helpers", () => {
         bio: "Updated bio",
         avatar: "/new/avatar.jpg",
         settings,
+        expectedVersion: "v1",
       };
 
       const result = mapProfileUpdateRequest(request);
@@ -222,6 +233,7 @@ describe("profile-helpers", () => {
         bio: "Updated bio",
         avatar: "/new/avatar.jpg",
         settings: JSON.stringify(settings),
+        expected_version: "v1",
       });
     });
 

@@ -145,27 +145,46 @@ func (r *RoleAdministration) resolveAssignableSchoolRole(ctx context.Context, ro
 	return role, names, nil
 }
 
-func (r *RoleAdministration) UpdateRole(ctx context.Context, role identityaccess.Role) (err error) {
+// UpdateRole writes name, description and base role of a custom role and
+// answers the stored role. The role row is locked before it is read, so the
+// check of expectedVersion and the write see the same state; a role changed
+// since the caller read it is refused with readstate.ErrChanged (ADR 0311).
+// The row lock is the only lock the edit takes, so it cannot deadlock with
+// the permission mutations, which lock the role's holders before the row.
+func (r *RoleAdministration) UpdateRole(ctx context.Context, id int64, change identityaccess.RoleChange, expectedVersion string) (updated identityaccess.Role, err error) {
 	if r == nil {
-		return errRoleAdministrationUnavailable
+		return identityaccess.Role{}, errRoleAdministrationUnavailable
 	}
-	operation := func(ctx context.Context, role domain.ManagedRole) error {
-		existing, found, err := r.store.FindRole(ctx, role.ID)
+	const op = "update role"
+	operation := func(ctx context.Context) (domain.ManagedRole, error) {
+		// A failed lookup answers not found, as before the lock.
+		existing, found, err := r.store.FindRoleForUpdate(ctx, id)
 		if err != nil || !found {
-			return failed("update role", domain.ErrRoleNotFound)
+			return domain.ManagedRole{}, failed(op, domain.ErrRoleNotFound)
 		}
 		if existing.IsSystem {
-			return failed("update role", identityaccess.ErrSystemRoleImmutable)
+			return domain.ManagedRole{}, failed(op, identityaccess.ErrSystemRoleImmutable)
 		}
-		if err := r.store.UpdateRole(ctx, role); err != nil {
-			return failed("update role", err)
+		if err := readstate.Check(expectedVersion, identityaccess.RoleVersion(identityaccess.Role(existing))); err != nil {
+			return domain.ManagedRole{}, failed(op, err)
 		}
-		return nil
+		existing.Name = change.Name
+		existing.Description = change.Description
+		if change.BaseRole != nil {
+			existing.BaseRole = change.BaseRole
+		}
+		stored, err := r.store.UpdateRole(ctx, existing)
+		if err != nil {
+			return domain.ManagedRole{}, failed(op, err)
+		}
+		return stored, nil
 	}
 	err = r.runtime.RunInTx(ctx, func(txCtx context.Context) error {
-		return roleError(operation(bindRuntime(r.attach, txCtx), domain.ManagedRole(role)))
+		stored, err := operation(bindRuntime(r.attach, txCtx))
+		updated = identityaccess.Role(stored)
+		return roleError(err)
 	})
-	return
+	return updated, err
 }
 
 // DeleteRole deletes a custom role with its account and permission mappings.

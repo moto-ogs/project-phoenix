@@ -26,6 +26,7 @@ func toRoleResponse(role identityaccess.Role) *RoleResponse {
 		SchoolPortal: role.SchoolPortal,
 		CreatedAt:    role.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:    role.UpdatedAt.Format(time.RFC3339),
+		Version:      identityaccess.RoleVersion(role),
 	}
 }
 
@@ -99,39 +100,44 @@ func (rs *Resource) getRoleByID(w http.ResponseWriter, r *http.Request) {
 	common.Respond(w, r, http.StatusOK, resp, "Role retrieved successfully")
 }
 
-// updateRole handles updating a role
+// updateRole writes a role's master data and answers without a body.
+// Deprecated for one release (ADR 0270): PUT /roles/{id}/master-data/
+// answers the stored role with its version.
 func (rs *Resource) updateRole(w http.ResponseWriter, r *http.Request) {
+	if _, ok := rs.applyRoleUpdate(w, r); ok {
+		common.RespondNoContent(w, r)
+	}
+}
+
+// updateRoleMasterData writes a role's master data and answers the stored
+// role with its version, so the next save follows without a fresh read
+// (ADR 0311).
+func (rs *Resource) updateRoleMasterData(w http.ResponseWriter, r *http.Request) {
+	if role, ok := rs.applyRoleUpdate(w, r); ok {
+		common.Respond(w, r, http.StatusOK, toRoleResponse(role), "Role updated successfully")
+	}
+}
+
+// applyRoleUpdate writes the master data of the role in the route from the
+// version the caller read; a failure is answered.
+func (rs *Resource) applyRoleUpdate(w http.ResponseWriter, r *http.Request) (identityaccess.Role, bool) {
 	id, ok := common.ParseIntIDWithError(w, r, "id", common.MsgInvalidRoleID)
 	if !ok {
-		return
+		return identityaccess.Role{}, false
 	}
-
 	req := &UpdateRoleRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
-		return
+		return identityaccess.Role{}, false
 	}
-
-	role, err := rs.Sessions.GetRole(r.Context(), int64(id))
+	role, err := rs.Sessions.UpdateRole(r.Context(), int64(id), identityaccess.RoleChange{
+		Name: req.Name, Description: req.Description, BaseRole: req.BaseRole,
+	}, req.ExpectedVersion)
 	if err != nil {
-		common.RenderError(w, r, common.ErrorNotFound(errors.New("role not found")))
-		return
-	}
-
-	role.Name = req.Name
-	role.Description = req.Description
-	// Preserve existing base_role when the caller omits the field.
-	// System roles must never carry a base_role — ignore silently.
-	if req.BaseRole != nil && !role.IsSystem {
-		role.BaseRole = req.BaseRole
-	}
-
-	if err := rs.Sessions.UpdateRole(r.Context(), role); err != nil {
 		common.RenderError(w, r, renderRoleMutationError(err))
-		return
+		return identityaccess.Role{}, false
 	}
-
-	common.RespondNoContent(w, r)
+	return role, true
 }
 
 // deleteRole handles deleting a role

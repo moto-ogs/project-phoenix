@@ -22501,11 +22501,27 @@
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "request": {
         "kind": "ref",
         "ref": "UpdateRoleRequest"
       },
       "no_data": true
+    },
+    {
+      "method": "PUT",
+      "pattern": "/auth/roles/{id}/master-data/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "UpdateRoleRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "RoleResponse"
+      }
     },
     {
       "method": "PUT",
@@ -81839,6 +81855,12 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -81877,6 +81899,13 @@
           "schema": {
             "kind": "string",
             "nullable": true
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -84984,6 +85013,12 @@
         },
         {
           "name": "updated_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "version",
           "schema": {
             "kind": "string"
           }
@@ -105534,6 +105569,12 @@
             "kind": "instant",
             "nullable": true
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -107002,6 +107043,13 @@
             "elem": {
               "kind": "string"
             }
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -109446,6 +109494,13 @@
           "schema": {
             "kind": "string",
             "nullable": true
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]

@@ -484,6 +484,11 @@ export interface TraegerMember {
    */
   readonly name: string;
   readonly roles: readonly TraegerRole[];
+  /**
+   * The read-state token of the role set (ADR 0311): a role change sends
+   * it back. Absent where a list does not carry it.
+   */
+  readonly version?: string;
 }
 
 /** An open invitation into the Träger-Büro. */
@@ -529,6 +534,7 @@ function mapMember(
     email: member.email,
     name: member.name,
     roles: traegerRoles(member.roles ?? []),
+    version: member.version,
   };
 }
 
@@ -607,14 +613,22 @@ export async function revokeTraegerInvitation(id: string): Promise<void> {
   });
 }
 
+/**
+ * Gives the person the roles in place of the ones read with `version` (ADR
+ * 0311) and returns the person as saved, with the new version. A role set
+ * changed since is refused with `general.changed_since_read`.
+ */
 export async function changeTraegerRoles(
   accountId: string,
   roles: readonly TraegerRole[],
-): Promise<void> {
-  await bffJson("org", "PUT /traeger/accounts/{accountId}/roles", {
-    params: { accountId },
-    body: { roles: [...roles] },
-  });
+  version: string | undefined,
+): Promise<TraegerMember> {
+  return mapMember(
+    await bffJson("org", "PUT /traeger/accounts/{accountId}/roles", {
+      params: { accountId },
+      body: { roles: [...roles], expected_version: version },
+    }),
+  );
 }
 
 /**
