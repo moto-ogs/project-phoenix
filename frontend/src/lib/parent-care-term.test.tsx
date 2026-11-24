@@ -6,8 +6,10 @@ import {
   accountCareTerm,
   ParentCareTermScope,
   ParentChildCareTermScope,
+  ParentSchoolCareTermScope,
   useParentCareTerms,
 } from "./parent-care-term";
+import { useErrorCareFacilityTerm } from "./care-facility-term-context";
 import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 const resources = vi.hoisted(() => ({
@@ -176,5 +178,26 @@ describe("care term in the parents portal (#6082)", () => {
     expect(terms?.termOfSchool("Sonnenschule")).toBe("OGS");
     expect(terms?.termOfSchool("Unbekannt")).toBe("GTS/OGS");
     expect(terms?.termOf("2")).toBe("OGS");
+  });
+
+  it("names a letter's own school in its texts and error messages (#6258)", () => {
+    link([child("1", "Barnstorf"), "GTS"], [child("2", "Sonnenschule"), "OGS"]);
+    function ErrorTerm() {
+      return <p>Fehler: {useErrorCareFacilityTerm()}</p>;
+    }
+    render(
+      <ParentCareTermScope enabled>
+        <ParentSchoolCareTermScope schoolName="Barnstorf">
+          <Today />
+          <ErrorTerm />
+        </ParentSchoolCareTermScope>
+        <ParentSchoolCareTermScope schoolName="Unbekannt">
+          <ErrorTerm />
+        </ParentSchoolCareTermScope>
+      </ParentCareTermScope>,
+    );
+    expect(screen.getByText("In der GTS")).toBeInTheDocument();
+    expect(screen.getByText("Fehler: GTS")).toBeInTheDocument();
+    expect(screen.getByText("Fehler: GTS/OGS")).toBeInTheDocument();
   });
 });
