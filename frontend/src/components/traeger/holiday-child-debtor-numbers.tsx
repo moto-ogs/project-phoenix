@@ -145,7 +145,7 @@ export function ChildDebtorNumberInputs({
  * rests on (ADR 0311, rule 5): a child the save did not name keeps its
  * number, the version is the one the save answered.
  */
-export function savedChildNumbers(
+function savedChildNumbers(
   base: HolidayFamilyDebtorNumbers,
   saved: SavedHolidayChildDebtorNumbers,
 ): HolidayFamilyDebtorNumbers {
