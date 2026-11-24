@@ -21082,7 +21082,7 @@
       ],
       "request": {
         "kind": "ref",
-        "ref": "ClassListEntryRequest"
+        "ref": "ClassListEntryUpdateRequest"
       },
       "response": {
         "kind": "ref",
@@ -44468,6 +44468,47 @@
             "elem": {
               "kind": "string"
             }
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ClassListEntryUpdateRequest",
+      "go_type": "classlistentries.ClassListEntryUpdateRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]

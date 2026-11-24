@@ -1588,7 +1588,7 @@ const EDIT_OVERLAY_BASELINE = new Map(
       "Termin bearbeiten Termin erstellen@1065",
     ],
     "src/app/[tenant]/(protected)/database/students/class-list/page.tsx": [
-      "edit Eintrag bearbeiten Klassenlisteneintrag anlegen@613",
+      "edit Eintrag bearbeiten Klassenlisteneintrag anlegen@689",
     ],
     // Seit #5604 gilt die Regel im Schul- und Operator-Portal. Diese Formulare
     // haben keine eigene Objektroute; ein Umbau geht über das Seitengerüst

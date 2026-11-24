@@ -595,7 +595,7 @@ func classListEntryRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: portals, Response: []classListHTTP.ClassListEntryResponse{}},
 		{Method: "POST", Pattern: "/", Portals: portals, Request: classListHTTP.ClassListEntryRequest{}, Response: classListHTTP.ClassListEntryResponse{}},
-		{Method: "PUT", Pattern: "/{id}", Portals: portals, Request: classListHTTP.ClassListEntryRequest{}, Response: classListHTTP.ClassListEntryResponse{}},
+		{Method: "PUT", Pattern: "/{id}", Portals: portals, Request: classListHTTP.ClassListEntryUpdateRequest{}, Response: classListHTTP.ClassListEntryResponse{}},
 		{Method: "DELETE", Pattern: "/{id}", Portals: portals, NoData: true},
 		{Method: "POST", Pattern: "/{id}/assign", Portals: portals, Request: classListHTTP.ClassListAssignRequest{}, NoData: true},
 	}

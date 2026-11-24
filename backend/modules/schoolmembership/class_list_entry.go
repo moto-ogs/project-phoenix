@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Class-list entries (#2382) are children of the class cohort without an
@@ -47,6 +49,13 @@ type ClassListEntry struct {
 	// CreatedBy is the creating account; nil for rows created by system paths
 	// without an authenticated account.
 	CreatedBy *int64 `json:"created_by,omitempty"`
+}
+
+// ClassListEntryVersion is the read-state token of an entry (ADR 0311):
+// a fingerprint of the name and the class the Klassenliste shows and a
+// revision writes back.
+func ClassListEntryVersion(entry ClassListEntry) string {
+	return readstate.Fingerprint([3]string{entry.FirstName, entry.LastName, entry.SchoolClass})
 }
 
 // ClassListEntryFields is the writable part of an entry shared by create and
@@ -95,6 +104,10 @@ type (
 		ID int64
 		ClassListEntryFields
 		ChangedBy int64
+		// ExpectedVersion is the ClassListEntryVersion the editor read
+		// (ADR 0311); a different or empty one is refused with
+		// readstate.ErrChanged.
+		ExpectedVersion string
 	}
 
 	RemoveClassListEntry struct {
@@ -167,7 +180,10 @@ type ClassListEntryFailure string
 const (
 	ClassListEntryFailureInvalidRequest ClassListEntryFailure = "invalid_request"
 	ClassListEntryFailureNotFound       ClassListEntryFailure = "not_found"
-	ClassListEntryFailureInternal       ClassListEntryFailure = "internal"
+	// ClassListEntryFailureChanged: the entry changed since its editor read
+	// it (readstate.ErrChanged, ADR 0311).
+	ClassListEntryFailureChanged  ClassListEntryFailure = "changed"
+	ClassListEntryFailureInternal ClassListEntryFailure = "internal"
 )
 
 // ClassifyClassListEntryFailure maps the owner's sentinels onto the outcome
@@ -185,6 +201,8 @@ func ClassifyClassListEntryFailure(err error) ClassListEntryFailure {
 		return ""
 	case errors.Is(err, ErrClassListEntryNotFound):
 		return ClassListEntryFailureNotFound
+	case errors.Is(err, readstate.ErrChanged):
+		return ClassListEntryFailureChanged
 	case errors.Is(err, ErrClassListEntryDuplicate),
 		errors.Is(err, ErrClassListEntryStudentExists),
 		errors.Is(err, ErrClassListEntryStudentNotFound),
