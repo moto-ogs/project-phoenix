@@ -117,6 +117,7 @@ const TRAEGER_FILE: PayrollFile = {
   missingClient: false,
   withoutNumber: [],
   duplicates: [],
+  splitNumbers: [],
   ready: true,
 };
 
@@ -573,6 +574,7 @@ describe("TraegerPayrollExportPage", () => {
     expect(
       screen.getByText(/In mehreren Dateien: Mira Sommer\./),
     ).toBeInTheDocument();
+    expect(screen.getByText("Teilweise bereit")).toBeInTheDocument();
     expect(
       screen.getByRole("button", {
         name: "Datei für Gemeinde Hardt herunterladen",
@@ -597,6 +599,37 @@ describe("TraegerPayrollExportPage", () => {
       "datev_lodas",
       "29098-55003",
     );
+  });
+
+  it("holds a file in which one person would have two numbers", async () => {
+    api.fetchPayrollReport.mockResolvedValue({
+      ...READY,
+      form: "arbeitgeber",
+      files: [
+        {
+          ...TRAEGER_FILE,
+          key: "1234-567",
+          employers: [{ body: "gemeinde", name: "Gemeinde Hardt" }],
+          splitNumbers: [
+            {
+              person: { recordId: "11", firstName: "Mira", lastName: "Sommer" },
+              numbers: ["100", "7"],
+            },
+          ],
+          ready: false,
+        },
+      ],
+      ready: false,
+    });
+    renderPage();
+    expect(
+      await screen.findByText(
+        "Mira Sommer stünde in der Datei für Gemeinde Hardt unter zwei Personalnummern (100 und 7). Trag bei jedem Einsatzort dieses Arbeitgebers dieselbe Nummer ein.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Personalakte von Mira Sommer öffnen" }),
+    ).toHaveAttribute("href", "/traeger/personal/11");
   });
 
   it("switches to one file per employer and saves the numbers of the Gemeinde", async () => {

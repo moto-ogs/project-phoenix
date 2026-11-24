@@ -130,6 +130,13 @@ function employerBlockers(
     }
   }
   for (const file of report.files) {
+    for (const split of file.splitNumbers) {
+      blockers.push({
+        key: `split-${file.key}-${split.person.recordId}`,
+        text: `${personName(split.person)} stünde in der Datei für ${fileEmployers(file)} unter zwei Personalnummern (${split.numbers.join(" und ")}). Trag bei jedem Einsatzort dieses Arbeitgebers dieselbe Nummer ein.`,
+        action: openRecord(split.person),
+      });
+    }
     for (const duplicate of file.duplicates) {
       const first = duplicate.people[0];
       blockers.push({
@@ -379,6 +386,18 @@ function kindColumns(
   ];
 }
 
+/** Der Stand der Karte; je Arbeitgeber kann ein Teil der Dateien fertig sein. */
+function readinessLabel(report: PayrollReport): string {
+  if (report.ready) return "Bereit";
+  if (
+    report.form === "arbeitgeber" &&
+    report.files.some((file) => file.ready)
+  ) {
+    return "Teilweise bereit";
+  }
+  return "Noch nicht bereit";
+}
+
 /** Die Unterzeile der Karte: Monat und wie die Datei entsteht. */
 function fileDescription(report: PayrollReport | null, monthLabel: string) {
   if (report?.form === "arbeitgeber") {
@@ -426,7 +445,7 @@ export function PayrollFilePanel({
         titleBadge={
           report ? (
             <StatusBadge
-              label={report.ready ? "Bereit" : "Noch nicht bereit"}
+              label={readinessLabel(report)}
               tone={report.ready ? "green" : "warning"}
               compact
             />

@@ -106,6 +106,11 @@ export interface PayrollFile {
   readonly missingClient: boolean;
   readonly withoutNumber: readonly ExportPerson[];
   readonly duplicates: readonly PayrollDuplicate[];
+  /** Personen, die in dieser Datei unter zwei Nummern stünden. */
+  readonly splitNumbers: readonly {
+    readonly person: ExportPerson;
+    readonly numbers: readonly string[];
+  }[];
   readonly ready: boolean;
 }
 
@@ -231,6 +236,10 @@ function mapPayrollFile(
     duplicates: (file.duplicates ?? []).map((duplicate) => ({
       number: duplicate.number,
       people: (duplicate.people ?? []).map(mapPerson),
+    })),
+    splitNumbers: (file.split_numbers ?? []).map((split) => ({
+      person: mapPerson(split.person),
+      numbers: split.numbers ?? [],
     })),
     ready: file.ready,
   };

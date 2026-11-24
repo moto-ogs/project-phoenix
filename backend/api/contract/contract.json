@@ -108538,6 +108538,17 @@
           }
         },
         {
+          "name": "split_numbers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "TraegerPayrollSplitNumber"
+            }
+          }
+        },
+        {
           "name": "ready",
           "schema": {
             "kind": "bool"
@@ -108760,6 +108771,29 @@
           "name": "ready",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerPayrollSplitNumber",
+      "go_type": "workforce.TraegerPayrollSplitNumber",
+      "fields": [
+        {
+          "name": "person",
+          "schema": {
+            "kind": "ref",
+            "ref": "TraegerExportPerson"
+          }
+        },
+        {
+          "name": "numbers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
           }
         }
       ]

@@ -37,12 +37,14 @@ type payrollFile struct {
 	lines  []domain.DatevPayrollLine
 	// index finds the line of a person, Lohnart, Kostenstelle and unit, so
 	// two contracts of one kind book one line.
-	index     map[payrollLineKey]int
-	people    map[int64]bool
-	missing   map[int64]bool
-	numbers   map[string][]int64
-	employers map[workforce.TraegerPayrollFileEmployer]bool
-	schools   map[string]bool
+	index   map[payrollLineKey]int
+	people  map[int64]bool
+	missing map[int64]bool
+	numbers map[string][]int64
+	// recordNumbers keeps the numbers each record books under in the file.
+	recordNumbers map[int64][]string
+	employers     map[workforce.TraegerPayrollFileEmployer]bool
+	schools       map[string]bool
 	// costCenterMissing: a line of an employer without Kostenstelle would
 	// stand unmarked in the one file.
 	costCenterMissing bool
@@ -86,14 +88,14 @@ func (b *payrollBook) add(record domain.TraegerStaffRecord, contract domain.Trae
 	counted := false
 	for _, group := range groups {
 		file := b.file(group.target)
-		b.noteEmployer(group.target, file)
 		if group.target.number == "" {
+			// The person blocks the file whether or not a value has a
+			// Lohnart, so the employer's values are checked too.
+			b.noteEmployer(group.target, file)
 			b.withoutNumber(record, file)
 			continue
 		}
 		b.people[record.ID], file.people[record.ID] = true, true
-		b.noteFile(record.ID, file)
-		file.noteNumber(group.target.number, record.ID)
 		count := b.kind(contract.Kind)
 		if !counted {
 			count.Contracts++
@@ -102,12 +104,22 @@ func (b *payrollBook) add(record domain.TraegerStaffRecord, contract domain.Trae
 		for _, month := range group.months {
 			file.schools[month.school] = true
 		}
-		b.bookGroup(file, contract.Kind, count, group)
+		if !b.bookGroup(file, contract.Kind, count, group) {
+			continue
+		}
+		// Only a body with a value in the month needs its values (ADR
+		// 0320 sections 4 and 5).
+		b.noteEmployer(group.target, file)
+		b.noteFile(record.ID, file)
+		file.noteNumber(group.target.number, record.ID)
 	}
 }
 
-func (b *payrollBook) bookGroup(file *payrollFile, kind string, count *workforce.TraegerPayrollKindCount, group payrollGroup) {
+// bookGroup books the sum of a group's months and reports whether any
+// value reached a line of the file.
+func (b *payrollBook) bookGroup(file *payrollFile, kind string, count *workforce.TraegerPayrollKindCount, group payrollGroup) bool {
 	sum := sumPayrollMonths(group.months)
+	booked := false
 	for _, category := range workforce.TraegerPayrollCategories {
 		value, ok := payrollCategoryValue(category, sum, b.settings.Units[category])
 		if !ok {
@@ -118,10 +130,12 @@ func (b *payrollBook) bookGroup(file *payrollFile, kind string, count *workforce
 			b.gaps[workforce.TraegerPayrollGap{Category: category, Kind: kind}] = true
 			continue
 		}
+		booked = true
 		if file.book(group.target.number, wageType, group.target.costCenter, value) {
 			count.Lines++
 		}
 	}
+	return booked
 }
 
 // file returns the file of a target, a new one at its first line.
@@ -133,9 +147,10 @@ func (b *payrollBook) file(target payrollTarget) *payrollFile {
 				Key: target.fileKey, ConsultantNumber: target.consultant, ClientNumber: target.client,
 				Employers: []workforce.TraegerPayrollFileEmployer{}, Schools: []string{},
 				WithoutNumber: []workforce.TraegerExportPerson{}, Duplicates: []workforce.TraegerPayrollDuplicate{},
+				SplitNumbers: []workforce.TraegerPayrollSplitNumber{},
 			},
 			index: map[payrollLineKey]int{}, people: map[int64]bool{}, missing: map[int64]bool{},
-			numbers: map[string][]int64{}, employers: map[workforce.TraegerPayrollFileEmployer]bool{}, schools: map[string]bool{},
+			numbers: map[string][]int64{}, recordNumbers: map[int64][]string{}, employers: map[workforce.TraegerPayrollFileEmployer]bool{}, schools: map[string]bool{},
 		}
 		b.byKey[target.fileKey] = file
 		b.files = append(b.files, file)
@@ -190,11 +205,33 @@ func (b *payrollBook) noteFile(recordID int64, file *payrollFile) {
 	b.inFiles[recordID][file.report.Key] = true
 }
 
-// noteNumber keeps which records book under a number in the file.
+// noteNumber keeps which records book under a number in the file, and
+// under which numbers each record books.
 func (f *payrollFile) noteNumber(number string, recordID int64) {
 	if !slices.Contains(f.numbers[number], recordID) {
 		f.numbers[number] = append(f.numbers[number], recordID)
 	}
+	if !slices.Contains(f.recordNumbers[recordID], number) {
+		f.recordNumbers[recordID] = append(f.recordNumbers[recordID], number)
+	}
+}
+
+// splitNumbers are the records of the file with more than one number, by
+// name: the number with the employer differs between its Einsatzorte.
+func (f *payrollFile) splitNumbers(scene exportScene) []workforce.TraegerPayrollSplitNumber {
+	split := []workforce.TraegerPayrollSplitNumber{}
+	for _, record := range scene.recordsByName() {
+		numbers := slices.Clone(f.recordNumbers[record.ID])
+		if len(numbers) < 2 {
+			continue
+		}
+		slices.Sort(numbers)
+		split = append(split, workforce.TraegerPayrollSplitNumber{
+			Person:  workforce.TraegerExportPerson{RecordID: ident.ID(record.ID), FirstName: record.FirstName, LastName: record.LastName},
+			Numbers: numbers,
+		})
+	}
+	return split
 }
 
 // contractChanges names the people whose contract changes within the month
@@ -283,8 +320,9 @@ func (b *payrollBook) finishFiles(scene exportScene) []workforce.TraegerPayrollF
 			report.MissingClient = report.MissingClient && b.report.Format == workforce.TraegerPayrollFormatLodas
 		}
 		report.Duplicates = file.duplicates(scene)
+		report.SplitNumbers = file.splitNumbers(scene)
 		report.Ready = len(report.WithoutNumber) == 0 && !report.MissingClient && anyWageType(b.settings) &&
-			report.LineCount > 0 && len(report.Duplicates) == 0 && !file.costCenterMissing
+			report.LineCount > 0 && len(report.Duplicates) == 0 && len(report.SplitNumbers) == 0 && !file.costCenterMissing
 		files = append(files, report)
 	}
 	slices.SortStableFunc(files, func(a, c workforce.TraegerPayrollFile) int {

@@ -72,6 +72,17 @@ export const TraegerPayrollDuplicateSchema: z.ZodType<TraegerPayrollDuplicate, u
   people: nullable(arr(TraegerExportPersonSchema)),
 });
 
+/** Go: workforce.TraegerPayrollSplitNumber */
+export interface TraegerPayrollSplitNumber {
+  person: TraegerExportPerson;
+  numbers: string[] | null;
+}
+
+export const TraegerPayrollSplitNumberSchema: z.ZodType<TraegerPayrollSplitNumber, unknown> = object<TraegerPayrollSplitNumber>({
+  person: TraegerExportPersonSchema,
+  numbers: nullable(arr(str)),
+});
+
 /** Go: workforce.TraegerPayrollFile */
 export interface TraegerPayrollFile {
   key: string;
@@ -84,6 +95,7 @@ export interface TraegerPayrollFile {
   missing_client: boolean;
   without_number: TraegerExportPerson[] | null;
   duplicates: TraegerPayrollDuplicate[] | null;
+  split_numbers: TraegerPayrollSplitNumber[] | null;
   ready: boolean;
 }
 
@@ -98,6 +110,7 @@ export const TraegerPayrollFileSchema: z.ZodType<TraegerPayrollFile, unknown> = 
   missing_client: bool,
   without_number: nullable(arr(TraegerExportPersonSchema)),
   duplicates: nullable(arr(TraegerPayrollDuplicateSchema)),
+  split_numbers: nullable(arr(TraegerPayrollSplitNumberSchema)),
   ready: bool,
 });
 

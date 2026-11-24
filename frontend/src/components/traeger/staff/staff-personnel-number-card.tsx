@@ -94,8 +94,8 @@ export function StaffPersonnelNumberCard({
       return;
     }
     setSaving(true);
+    let saved = record;
     try {
-      let saved = record;
       const value = draft.trim();
       if (value !== (record.personnelNumber ?? "")) {
         saved = await updateStaffPersonnelNumber(record.id, value || null);
@@ -118,6 +118,8 @@ export function StaffPersonnelNumberCard({
         error: errorMessage(err),
       });
       void errors.show(err, { object: "die Personalnummer" });
+      // Was schon gespeichert ist, zeigt die Akte mit neuem Stand.
+      if (saved !== record) onSaved(saved);
     } finally {
       setSaving(false);
     }

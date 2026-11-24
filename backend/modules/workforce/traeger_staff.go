@@ -354,7 +354,7 @@ type TraegerStaffRecords interface {
 	// UpdateEmployerNumber sets or, with nil, clears the personnel number of
 	// the record with the body that employs at its Einsatzort schoolID
 	// (#8041, ADR 0320). An Einsatzort the Träger employs at is
-	// ErrTraegerStaffEmployerNotOther; a number changed since expectedVersion
+	// ErrTraegerStaffEmployerChanged; a number changed since expectedVersion
 	// was read is readstate.ErrChanged.
 	UpdateEmployerNumber(ctx context.Context, actor TraegerStaffActor, recordID, schoolID int64, value *string, expectedVersion string) (TraegerStaffRecordDetail, error)
 	// UpdatePerson corrects name and birthday of the record (#7379); the

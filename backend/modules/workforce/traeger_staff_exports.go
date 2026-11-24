@@ -248,6 +248,13 @@ type TraegerPayrollDuplicate struct {
 	People []TraegerExportPerson `json:"people"`
 }
 
+// TraegerPayrollSplitNumber is a person a file would book under two
+// personnel numbers: DATEV would see two people.
+type TraegerPayrollSplitNumber struct {
+	Person  TraegerExportPerson `json:"person"`
+	Numbers []string            `json:"numbers"`
+}
+
 // TraegerPayrollFile is one file of the month: the one file of the Träger,
 // or in the form per employer one file per DATEV client. Key names it for
 // the download.
@@ -265,7 +272,10 @@ type TraegerPayrollFile struct {
 	// WithoutNumber are the people of this file without personnel number.
 	WithoutNumber []TraegerExportPerson     `json:"without_number"`
 	Duplicates    []TraegerPayrollDuplicate `json:"duplicates"`
-	Ready         bool                      `json:"ready"`
+	// SplitNumbers are the people with two numbers in this file: their
+	// number with the employer differs between its Einsatzorte.
+	SplitNumbers []TraegerPayrollSplitNumber `json:"split_numbers"`
+	Ready        bool                        `json:"ready"`
 }
 
 // TraegerPayrollEmployerCheck is a body that employs staff with values in

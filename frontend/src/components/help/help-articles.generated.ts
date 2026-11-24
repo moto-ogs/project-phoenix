@@ -14882,6 +14882,7 @@ export const traegerPayrollExportTopic =
         "„… hat noch keine Personalnummer“: Wähle `Akte öffnen` und trage die Nummer ein.",
         "„Für … fehlt die Kostenstelle“ oder „Für … fehlen Berater- und Mandantennummer“: Wähle `Einrichtung öffnen` und trage die Werte unter `Andere Arbeitgeber` ein.",
         "„… haben in der Datei für … dieselbe Personalnummer“: DATEV würde beide Personen als eine buchen. Gib einer von beiden ihre Nummer bei diesem Arbeitgeber.",
+        "„… stünde in der Datei für … unter zwei Personalnummern“: Die Person arbeitet an zwei Schulen desselben Arbeitgebers, die Nummer bei ihm steht aber nur an einer. Trag sie in der Personalakte bei beiden ein.",
         "Unter `In mehreren Dateien` steht eine Person: Sie arbeitet bei zwei Arbeitgebern. Prüfe mit beiden Lohnbüros, ob ihre Personalnummer stimmt.",
         "Ein Wert fehlt in der Tabelle `Nach Art des Vertrags`: Für diese Art fehlt die Lohnart. Trage sie im Reiter `Einrichtung` ein.",
         "Eine Person fehlt im Zeitexport: Sie hat keine Personalnummer. Die Seite nennt sie unter `Nicht in der Datei`.",

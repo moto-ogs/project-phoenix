@@ -95,6 +95,10 @@ const FORM_OPTIONS: readonly {
 
 type EmployerDrafts = Readonly<Record<string, PayrollEmployerValues>>;
 
+/** Ein Entwurf gilt nur für die Stelle, für die er begonnen wurde. */
+const draftKey = (employer: PayrollEmployer) =>
+  `${employer.schoolId}:${employer.body}`;
+
 const savedEmployerValues = (
   employer: PayrollEmployer,
 ): PayrollEmployerValues => ({
@@ -118,7 +122,7 @@ function changedEmployers(
   drafts: EmployerDrafts,
 ): PayrollEmployer[] {
   return employers.filter((employer) => {
-    const draft = drafts[employer.schoolId];
+    const draft = drafts[draftKey(employer)];
     if (!draft) return false;
     const saved = savedEmployerValues(employer);
     return (Object.keys(saved) as (keyof PayrollEmployerValues)[]).some(
@@ -134,7 +138,7 @@ function invalidEmployerFields(
 ): Record<string, string> {
   const invalid: Record<string, string> = {};
   for (const employer of employers) {
-    const draft = drafts[employer.schoolId];
+    const draft = drafts[draftKey(employer)];
     if (!draft) continue;
     for (const field of Object.keys(
       EMPLOYER_PATTERNS,
@@ -229,7 +233,7 @@ export function PayrollSettingsPanel({
     (draft !== null && changedKeys(draft, saved).length > 0) ||
     employerChanges.length > 0;
   const employerValues = (employer: PayrollEmployer) =>
-    employerDrafts[employer.schoolId] ?? savedEmployerValues(employer);
+    employerDrafts[draftKey(employer)] ?? savedEmployerValues(employer);
   const gapKeys = useMemo(
     () => new Set(gaps.map((gap) => wageTypeKey(gap.category, gap.kind))),
     [gaps],
@@ -246,8 +250,8 @@ export function PayrollSettingsPanel({
   ) => {
     setEmployerDrafts((current) => ({
       ...current,
-      [employer.schoolId]: {
-        ...(current[employer.schoolId] ?? savedEmployerValues(employer)),
+      [draftKey(employer)]: {
+        ...(current[draftKey(employer)] ?? savedEmployerValues(employer)),
         [field]: value.trim(),
       },
     }));
@@ -279,6 +283,9 @@ export function PayrollSettingsPanel({
       });
       void errors.show(err, { object: "die Einrichtung der Lohndatei" });
       setSaving(false);
+      // Was vor dem Fehler gespeichert wurde, kommt mit neuem Stand zurück;
+      // der Entwurf behält nur noch, was offen ist.
+      await afterWrite.refresh();
       return;
     }
     setDraft(null);

@@ -97,14 +97,21 @@ func clientFileKey(consultant, client, fallback string) string {
 }
 
 // groups splits the months of a contract by their target, in the order of
-// the Einsatzorte.
+// the Einsatzorte. The employer is part of the key: a body without its
+// Kostenstelle must not hide behind a Träger month of the same person.
 func (p payrollTargets) groups(record domain.TraegerStaffRecord, months []schoolPayrollMonth) []payrollGroup {
-	type groupKey struct{ file, costCenter, number string }
+	type groupKey struct {
+		file, costCenter, number string
+		employer                 employerKey
+	}
 	var groups []payrollGroup
 	index := map[groupKey]int{}
 	for _, month := range months {
 		target := p.of(record, month.schoolID)
-		key := groupKey{target.fileKey, target.costCenter, target.number}
+		key := groupKey{file: target.fileKey, costCenter: target.costCenter, number: target.number}
+		if target.check != nil {
+			key.employer = target.check.key
+		}
 		i, ok := index[key]
 		if !ok {
 			i = len(groups)

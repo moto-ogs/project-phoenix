@@ -49,6 +49,9 @@ und [ADR 0318](0318-zustaendigkeit-je-schule-ist-einstellung-die-stelle-stammdat
    Einsatzort aus dem Vertretungspool gehört immer zum Träger, wie in der
    Personalakte (ADR 0318 §7). Ein Arbeitsvertrag mit Einsatzorten bei zwei
    Arbeitgebern wird je Arbeitgeber getrennt summiert; nichts zählt doppelt.
+   Maßgeblich ist die Stelle, die beim Export wirksam ist: Wechselt eine
+   Schule den Arbeitgeber, ordnet ein erneuter Export auch frühere Monate dem
+   neuen zu. Eine Historie der Zuständigkeit gibt es nicht.
 3. **Lohnwerte eines anderen Arbeitgebers liegen bei Workforce.** Die neue
    Tabelle `workforce.payroll_employers` hält je Schule und Stelle
    (Schulträger oder Gemeinde) Berater-, Mandantennummer und Kostenstelle.
@@ -92,6 +95,10 @@ und [ADR 0318](0318-zustaendigkeit-je-schule-ist-einstellung-die-stelle-stammdat
    Arbeitgeber, Schulen, Personen, Zeilen und ob sie bereit ist, dazu je
    Arbeitgeber, was fehlt. Eine Datei, in der zwei Personen dieselbe Nummer
    hätten, entsteht nicht; DATEV würde die Stunden einer Person zuschreiben.
+   Ebenso wenig eine Datei, in der eine Person unter zwei Nummern stünde,
+   etwa weil ihre Nummer bei der Gemeinde nur an einem von zwei Einsatzorten
+   eingetragen ist. Ein Arbeitgeber ohne Wert im Monat hält nichts auf, und
+   eine Datei ohne Zeile erscheint nicht.
    Steht eine Person in mehreren Dateien, nennt die Prüfung sie, damit das
    Lohnbüro ihre Nummer bei jedem Arbeitgeber prüft. Personen ohne
    Personalnummer und fehlende Lohnarten halten wie bisher jede Datei auf.

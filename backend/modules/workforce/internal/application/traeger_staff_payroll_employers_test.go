@@ -235,3 +235,71 @@ func TestPayrollFilePerEmployerLeavesOutAFileWithoutLines(t *testing.T) {
 	assert.Empty(t, report.InSeveralFiles)
 	assert.True(t, report.Ready)
 }
+
+// Review #8054: Mira alone works at both employers and the Gemeinde has
+// no Kostenstelle. Her Träger hours and her Gemeinde hours must not merge
+// into one unmarked line of a file that counts as ready.
+func TestPayrollOneFileNeverMergesAnEmployerWithoutCostCenter(t *testing.T) {
+	t.Parallel()
+	scene := newEmployerScene(workforce.TraegerPayrollFormTraeger, domain.TraegerPayrollEmployer{}, nil)
+	delete(scene.scene.records, 8)
+	delete(scene.scene.records, 9)
+	scene.scene.contracts = scene.scene.contracts[:1]
+	_, report := scene.run(t)
+
+	require.Len(t, report.Files, 1)
+	assert.False(t, report.Files[0].Ready, "the Gemeinde's hours would stand unmarked")
+	require.Len(t, report.Employers, 1)
+	assert.True(t, report.Employers[0].MissingCostCenter)
+}
+
+// Review #8054: a Gemeinde with one DATEV client at two schools. Mira's
+// number with the Gemeinde is kept at one of them only, so one file would
+// book her under two numbers: it waits and names her.
+func TestPayrollFileRefusesOnePersonUnderTwoNumbers(t *testing.T) {
+	t.Parallel()
+	scene := newEmployerScene(workforce.TraegerPayrollFormArbeitgeber,
+		domain.TraegerPayrollEmployer{ConsultantNumber: "1234", ClientNumber: "567"}, nil)
+	// Mira's OGS Nord becomes a school of the same Gemeinde, with her own
+	// number there only.
+	scene.targets.employers[1] = workforce.TraegerStaffEmployer{Body: workforce.TraegerEmployerGemeinde, Name: "Gemeinde Hardt"}
+	scene.targets.values[employerKey{1, workforce.TraegerEmployerGemeinde}] = &domain.TraegerPayrollEmployer{
+		SchoolID: 1, Body: workforce.TraegerEmployerGemeinde, ConsultantNumber: "1234", ClientNumber: "567",
+	}
+	mira := scene.scene.records[7]
+	mira.Links = []domain.TraegerStaffLink{
+		{SchoolID: 1, StaffID: 10, EmployerBody: workforce.TraegerEmployerGemeinde, EmployerNumber: new("7")},
+		{SchoolID: 2, StaffID: 20},
+	}
+	scene.scene.records[7] = mira
+	_, report := scene.run(t)
+
+	var gemeinde *workforce.TraegerPayrollFile
+	for i := range report.Files {
+		if report.Files[i].Key == "1234-567" {
+			gemeinde = &report.Files[i]
+		}
+	}
+	require.NotNil(t, gemeinde)
+	assert.False(t, gemeinde.Ready)
+	require.Len(t, gemeinde.SplitNumbers, 1)
+	assert.Equal(t, "Sommer", gemeinde.SplitNumbers[0].Person.LastName)
+	assert.Equal(t, []string{"100", "7"}, gemeinde.SplitNumbers[0].Numbers)
+}
+
+// Review #8054: a Gemeinde without Kostenstelle whose school had no value
+// in the month holds nothing up.
+func TestPayrollOneFileIgnoresAnEmployerWithoutValues(t *testing.T) {
+	t.Parallel()
+	scene := newEmployerScene(workforce.TraegerPayrollFormTraeger, domain.TraegerPayrollEmployer{}, nil)
+	for _, key := range []siteKey{{2, 20}, {2, 21}, {2, 22}} {
+		month := scene.months[key]
+		month.month = workforce.TraegerPayrollMonth{StaffID: key.staff, Closed: true}
+		scene.months[key] = month
+	}
+	_, report := scene.run(t)
+
+	require.Len(t, report.Files, 1)
+	assert.True(t, report.Files[0].Ready)
+	assert.Empty(t, report.Employers)
+}
