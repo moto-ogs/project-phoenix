@@ -358,18 +358,6 @@ func (s *staffAbsenceService) broadcastTimeTrackingChanged(ctx context.Context) 
 }
 
 // NewStaffAbsenceService creates a new staff absence service
-func NewStaffAbsenceService(
-	absenceRepo AbsenceRequestRecords,
-	workSessionRepo WorkSessionRecords,
-	quotaRepo VacationQuotaRecords,
-	auditRepo AbsenceAuditRecords,
-	settings monthSettingsResolver,
-	monthService WorkTimeMonthService,
-	opts ...StaffAbsenceOption,
-) StaffAbsenceService {
-	return newStaffAbsenceService(absenceRepo, workSessionRepo, quotaRepo, auditRepo, settings, monthService, opts...).transactional()
-}
-
 func newStaffAbsenceService(
 	absenceRepo AbsenceRequestRecords,
 	workSessionRepo WorkSessionRecords,
