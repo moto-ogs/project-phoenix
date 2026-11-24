@@ -168,9 +168,9 @@ export function buttonStyles({
     // 32 px Trefferfläche, per Finger 44 px. Bringt sein Maß selbst mit.
     count_badge:
       "h-8 min-w-8 rounded-full p-0 bg-transparent shadow-none pointer-coarse:min-w-11 hover:opacity-90 focus-visible:ring-moto-blue",
-    // Reiter-Chip der App-Leiste (#8070): runde 36-px-Pille, gewählt
+    // Reiter-Chip der App-Leiste (#8070): runde 32-px-Pille (Trefferfläche 44 px), gewählt
     // (`aria-pressed`, `aria-current`) dunkel gefüllt. Bringt sein Maß mit.
-    chip: "h-9 shrink-0 gap-1.5 rounded-full px-3.5 py-0 whitespace-nowrap border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 active:bg-gray-100 aria-pressed:border-gray-900 aria-[current=page]:border-gray-900 aria-pressed:bg-gray-900 aria-pressed:text-white aria-[current=page]:bg-gray-900 aria-[current=page]:text-white",
+    chip: "h-8 shrink-0 gap-1.5 rounded-full px-3.5 py-0 whitespace-nowrap border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 active:bg-gray-100 aria-pressed:border-gray-900 aria-[current=page]:border-gray-900 aria-pressed:bg-gray-900 aria-pressed:text-white aria-[current=page]:bg-gray-900 aria-[current=page]:text-white",
   };
   // Fingerregel (#5531): Bei Bedienung per Finger ist jeder Kit-Knopf
   // mindestens 44 px hoch (Apple HIG 44 pt), `icon` auch 44 px breit. Mit Maus
