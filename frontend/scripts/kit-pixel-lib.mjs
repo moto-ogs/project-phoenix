@@ -53,7 +53,7 @@ export function selectStories(index, { filter, allStories = false } = {}) {
 
 /**
  * `baseline [--ref <rev>] [--filter <re>] [--all-stories]` | `compare [--filter <re>] [--all-stories]`
- * | `touch [--filter <re>] [--all-stories] [--storybook-dir <dir>]`
+ * | `touch [--filter <re>] [--all-stories] [--storybook-dir <dir>] [--shard <i/n>]`
  *
  * @param {string[]} argv
  */
@@ -68,6 +68,7 @@ export function parseKitPixelArgs(argv) {
       filter: { type: "string" },
       "all-stories": { type: "boolean", default: false },
       "storybook-dir": { type: "string" },
+      shard: { type: "string" },
     },
   });
   const command = positionals[0];
@@ -79,12 +80,20 @@ export function parseKitPixelArgs(argv) {
     throw new Error(
       "Aufruf: pnpm run kit-pixel baseline [--ref <commit>] [--filter <regex>] [--all-stories]\n" +
         "        pnpm run kit-pixel compare [--filter <regex>] [--all-stories]\n" +
-        "        pnpm run kit-pixel touch [--filter <regex>] [--all-stories] [--storybook-dir <fertiger Build>]",
+        "        pnpm run kit-pixel touch [--filter <regex>] [--all-stories] [--storybook-dir <fertiger Build>] [--shard <i/n>]",
     );
   }
   if (command !== "baseline" && values.ref !== undefined) {
     throw new Error(
       `--ref gilt nur für baseline; ${command} prüft immer den Arbeitsstand.`,
+    );
+  }
+  if (
+    values.shard !== undefined &&
+    (command !== "touch" || !/^[1-9]\d*\/[1-9]\d*$/.test(values.shard))
+  ) {
+    throw new Error(
+      "--shard gilt nur für touch und hat die Form 1/2 (Teil/Anzahl).",
     );
   }
   if (command !== "touch" && values["storybook-dir"] !== undefined) {
@@ -97,7 +106,9 @@ export function parseKitPixelArgs(argv) {
     ref: command === "baseline" ? (values.ref ?? "HEAD") : undefined,
     filter: values.filter,
     allStories: values["all-stories"],
-    ...(command === "touch" ? { storybookDir: values["storybook-dir"] } : {}),
+    ...(command === "touch"
+      ? { storybookDir: values["storybook-dir"], shard: values.shard }
+      : {}),
   };
 }
 

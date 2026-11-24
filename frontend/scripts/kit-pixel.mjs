@@ -3,7 +3,7 @@
 //
 //   pnpm run kit-pixel baseline [--ref <commit>] [--filter <regex>] [--all-stories]
 //   pnpm run kit-pixel compare  [--filter <regex>] [--all-stories]
-//   pnpm run kit-pixel touch    [--filter <regex>] [--all-stories] [--storybook-dir <dir>]
+//   pnpm run kit-pixel touch    [--filter <regex>] [--all-stories] [--storybook-dir <dir>] [--shard <i/n>]
 //
 // baseline exportiert den Commit (Standard HEAD, ohne uncommittete Änderungen),
 // baut daraus Storybook und schreibt je Story und Breite ein PNG nach
@@ -151,11 +151,17 @@ function runPlaywright({
   snapshotDir,
   filter,
   allStories,
+  shard,
 }) {
   const selection =
     mode === "touch"
       ? // Die Prüfung hält jeden Kern busy; Playwrights Standard ist die Hälfte.
-        ["--project=phone", "--workers=100%", TOUCH_SPEC]
+        [
+          "--project=phone",
+          "--workers=100%",
+          ...(shard ? [`--shard=${shard}`] : []),
+          TOUCH_SPEC,
+        ]
       : [PIXEL_SPEC];
   return run(
     "pnpm",
@@ -294,7 +300,7 @@ function compare({ filter, allStories }) {
   process.exitCode = status || 1;
 }
 
-function touch({ filter, allStories, storybookDir: prebuilt }) {
+function touch({ filter, allStories, storybookDir: prebuilt, shard }) {
   const storybookDir = prebuilt
     ? path.resolve(prebuilt)
     : path.join(workDir, "storybook-current");
@@ -313,6 +319,7 @@ function touch({ filter, allStories, storybookDir: prebuilt }) {
     snapshotDir: undefined,
     filter,
     allStories,
+    shard,
   });
   if (status === 0) {
     console.log("\nTrefferflächen: keine neuen Verstöße.");

@@ -116,7 +116,14 @@ test("touch checks the working tree like compare and takes no ref", () => {
     filter: "tabs",
     allStories: false,
     storybookDir: undefined,
+    shard: undefined,
   });
+  assert.equal(parseKitPixelArgs(["touch", "--shard", "2/2"]).shard, "2/2");
+  assert.throws(() => parseKitPixelArgs(["touch", "--shard", "2"]), /--shard/);
+  assert.throws(
+    () => parseKitPixelArgs(["compare", "--shard", "1/2"]),
+    /--shard/,
+  );
   assert.equal(
     parseKitPixelArgs(["touch", "--storybook-dir", "storybook-static"])
       .storybookDir,

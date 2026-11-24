@@ -320,7 +320,7 @@ menuitem, option, tab, checkbox, radio, switch) needs a 44 px hit area,
 and two hit areas must not overlap. It runs only in the `phone` project
 (Pixel 7, touch), in two widths: phone and iPad portrait (820 px), where
 sizes tied to `max-sm:` do not apply. The desktop project does not run it.
-CI runs it in its own job „Touch targets (kit stories)“ beside the Storybook shards.
+CI runs it in two shards „Touch targets (n/2)“ beside the Storybook shards (`--shard`).
 
 - Measured with `elementFromPoint`, as the browser assigns a tap, so
   `after:` areas and padding with negative margin count. A circle of 44 px

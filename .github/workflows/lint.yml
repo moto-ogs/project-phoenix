@@ -261,15 +261,20 @@ jobs:
   # control needs a 44 px hit area, measured with elementFromPoint at phone
   # and iPad width (frontend/scripts/kit-touch-targets.pw.ts). Inside
   # "Frontend quality" the check took 200 s and made that job the longest of
-  # the run (381 s), so it has its own hosted runner beside the Storybook
-  # shards. Chrome installs while Storybook builds.
+  # the run (381 s); on one own runner the job took 262 s (check 189 s on four
+  # workers), still the longest. Two shards on hosted runners keep it beside
+  # the Storybook shards. Chrome installs while Storybook builds.
   touch-targets:
-    name: Touch targets (kit stories)
+    name: Touch targets (${{ matrix.shard }}/2)
     if: ${{ inputs.run-frontend }}
     runs-on: ubuntu-latest
     timeout-minutes: 12
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -309,7 +314,7 @@ jobs:
       - name: Touch targets of kit stories
         working-directory: frontend
         timeout-minutes: 6
-        run: node scripts/kit-pixel.mjs touch --storybook-dir storybook-static
+        run: node scripts/kit-pixel.mjs touch --storybook-dir storybook-static --shard ${{ matrix.shard }}/2
 
   # Every story renders in Chromium and fails on an axe violation (#7108).
   # A pull request tests the stories its changes import; the nightly run tests
