@@ -54,7 +54,8 @@ async function revalidateTenantIfNeeded(
 
   const subdomain = await resolveSchoolSubdomain(schoolId, token);
   if (!subdomain) {
-    logger.warn("tenant_revalidate_skipped_no_subdomain", {
+    purgeTenantSettingsCache();
+    logger.warn("tenant_revalidate_all_no_subdomain", {
       school_id: schoolId,
       key,
     });

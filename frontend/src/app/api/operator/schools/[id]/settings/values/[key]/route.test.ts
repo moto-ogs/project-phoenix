@@ -302,7 +302,7 @@ describe("PUT /api/operator/schools/[id]/settings/values/[key]", () => {
     expect(mockRevalidatePath).not.toHaveBeenCalled();
   });
 
-  it("skips revalidation when the slug lookup cannot resolve the school", async () => {
+  it("purges all lookups when the slug lookup cannot resolve the school", async () => {
     mockAuth.mockResolvedValue({ user: { token: "valid-token" } });
     mockFetch
       .mockResolvedValueOnce({
@@ -334,7 +334,7 @@ describe("PUT /api/operator/schools/[id]/settings/values/[key]", () => {
     const response = await PUT(request, context);
 
     expect(response.status).toBe(200);
-    expect(mockRevalidatePath).not.toHaveBeenCalled();
+    expect(mockRevalidatePath).toHaveBeenCalledWith("/[tenant]", "layout");
   });
 });
 
