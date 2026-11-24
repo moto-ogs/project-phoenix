@@ -151,6 +151,7 @@ func (s studentConsentTrail) RecordStudentConsentTransitions(
 			Action:         action,
 			Source:         source,
 			ActorAccountID: actorAccountID,
+			TextVersion:    peopleModule.StudentConsentTextVersion(transition.Key, source, transition.Granted),
 		}
 		if err := s.trail.Create(ctx, entry); err != nil {
 			return fmt.Errorf("student consent recorder: record %s transition: %w", transition.Key, err)

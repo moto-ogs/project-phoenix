@@ -243,6 +243,13 @@ export function ChildConsentsSection({
                 <p className="text-sm font-semibold text-gray-900">
                   {t(`items.${consent.key}`)}
                 </p>
+                {/* #8039: Ein Wortlaut für die Foto-Einwilligung. Er steht,
+                    solange sie gilt; beim erneuten Geben steht er im Dialog. */}
+                {consent.key === "photo" && consent.state === "granted" ? (
+                  <p className="mt-1 text-sm text-gray-600">
+                    {t("photoMeaning")}
+                  </p>
+                ) : null}
                 {consent.changed_at ? (
                   <p className="mt-1 text-sm text-gray-600">
                     {t(`dates.${consent.state}`, {
@@ -353,6 +360,11 @@ export function ChildConsentsSection({
       >
         <FormErrorAlert message={actionErrors.error} className="mb-3" />
         <p>{t(pendingTexts.body)}</p>
+        {/* #4721: Ein Widerruf gilt auch dort, wo das Kind in den Ferien als
+            Gast betreut wird. Der Satz steht da, wo die Eltern entscheiden. */}
+        {pendingAction === "withdraw" ? (
+          <p className="mt-3">{t("confirmHolidayNote")}</p>
+        ) : null}
       </ConfirmationModal>
     </>
   );

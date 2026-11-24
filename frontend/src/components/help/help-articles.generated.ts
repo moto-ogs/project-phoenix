@@ -3630,6 +3630,8 @@ export const holidayGuestGroupTopic =
  * Tag ihrer Woche in den Listen (#5630). Vorher sagt die leere Feriengruppe,
  * wie viele Kinder dazukommen (#6680). Kinder der eigenen OGS bleiben in
  * ihrer Gruppe und zeigen die Angaben der Anmeldung in ihrer Akte (#6678).
+ * Unter „Fotos“ steht der Stand der Foto-Einwilligung bei der Heimatschule
+ * (#4721).
  */
 export const holidayGuestsTopic = function holidayGuestsTopic(): HelpTopic {
   return {
@@ -3643,7 +3645,7 @@ export const holidayGuestsTopic = function holidayGuestsTopic(): HelpTopic {
     icon: "SunHorizon",
     image: "/help/screens/feriengast-angaben-aus-der-anmeldung.webp",
     imageAlt:
-      "Notfall, Abholung, Gesundheit und Angaben aus der Ferienanmeldung bei einem Feriengast.",
+      "Notfall, Abholung, Gesundheit, Fotos, Raumverlauf und Stimmung und Angaben aus der Ferienanmeldung bei einem Feriengast.",
     requirements: [
       "Deine OGS richtet eine Ferienwoche für den Träger aus.",
       "Die Leitung hat unter `Ferienwochen` eine Feriengruppe gewählt.",
@@ -3656,6 +3658,8 @@ export const holidayGuestsTopic = function holidayGuestsTopic(): HelpTopic {
       "Lies unter `Betreuung` die Woche und die gebuchte Zeit.",
       "Unter `Notfall` stehen die Eltern und weitere Kontakte. Unter `Abholung` steht, wer das Kind außer den Eltern abholen darf.",
       "Unter `Gesundheit` stehen Allergien, Medikamente und weitere Hinweise der Eltern.",
+      "Unter `Fotos` steht, ob die Eltern eine Foto-Einwilligung gegeben haben. Steht dort `Keine Foto-Einwilligung`, mach bitte keine Fotos von dem Kind.",
+      "Steht auf der Karte `Raumverlauf und Stimmung` mit `An der Heimatschule gestoppt`? Dann speichert moto für dieses Kind keinen Raumverlauf und fragt keine Stimmung ab. Den Raum, in dem das Kind gerade ist, siehst du weiter.",
       "Unter `Angaben aus der Ferienanmeldung` steht zum Beispiel, ob das Kind allein nach Hause gehen darf.",
     ],
     result: "Du weißt, wann das Kind gehen darf und wen du im Notfall anrufst.",
@@ -3664,7 +3668,8 @@ export const holidayGuestsTopic = function holidayGuestsTopic(): HelpTopic {
       "Die Gesundheitsangaben stehen auch in den `Gesundheitsinformationen` des Feriengasts. Du siehst sie also auch in der Gruppe und in der `Gesundheitsliste`.",
       "Vor der Ferienwoche ist die Feriengruppe leer. Dort steht dann, wie viele Kinder dazukommen und ab wann. Zum Beispiel `Feriengruppe: 3 Kinder kommen ab 04.01.2027 dazu.`",
       "Kinder deiner OGS sind keine Feriengäste. Sie bleiben in ihrer Gruppe. Notfall, Abholung und Zeiten aus der Anmeldung stehen in ihrer Kinderakte unter `Angaben aus der Ferienanmeldung`.",
-      "Mehr als Betreuung, Notfall, Abholung, Gesundheit und die freigegebenen Angaben siehst du von einem Feriengast nicht. Die übrigen Angaben bleiben beim Träger.",
+      "Die Foto-Einwilligung geben und widerrufen die Eltern bei der Schule ihres Kindes. Ein Widerruf steht sofort bei dir unter `Fotos`. Ein Foto in moto bekommt ein Feriengast nicht.",
+      "Mehr als Betreuung, Notfall, Abholung, Gesundheit, Fotos und die freigegebenen Angaben siehst du von einem Feriengast nicht. Die übrigen Angaben bleiben beim Träger.",
       "Jeder Blick auf Notfall und Abholung steht im Zugriffsprotokoll deiner OGS.",
     ],
     differences: [
@@ -3672,6 +3677,7 @@ export const holidayGuestsTopic = function holidayGuestsTopic(): HelpTopic {
     ],
     troubleshootingDetails: [
       "Fehlt `Angaben aus der Ferienanmeldung`? Dann gibt der Träger keine Frage frei.",
+      "Fehlt `Fotos`? Dann geht das Kind auf keine Schule deines Trägers, oder die Ferienwoche ist vorbei. Frage dann die Eltern.",
       "Fehlt `Gesundheit`? Dann haben die Eltern nichts angegeben oder der Weitergabe nicht zugestimmt.",
       "Ist die Feriengruppe leer? Vor dem ersten Tag der Ferienwoche ist das richtig. Die Feriengäste kommen am ersten Tag von selbst dazu.",
       "Fehlt die Feriengruppe unter `Gruppen`? Hat sie keine eigenen Kinder, steht sie dort erst ab dem ersten Tag der Woche.",
@@ -6271,6 +6277,7 @@ export const parentChildDataTopic = function parentChildDataTopic(): HelpTopic {
           "Tippe bei `Raumverlauf und Stimmung` auf `Stoppen`.",
           "Tippe auf `Jetzt stoppen`.",
           "moto löscht sofort, in welchen Räumen dein Kind war. Danach speichert moto keine Räume und keine Stimmung mehr. Die Betreuung sieht weiter, wo dein Kind gerade ist. Schon gespeicherte Stimmungen löscht moto erst nach der üblichen Frist.",
+          "Wird dein Kind in den Ferien an einer anderen Schule betreut, gilt der Stopp auch dort.",
           "Mit `Wieder speichern` hebst du den Stopp für dein Kind auf. Deine Schule entscheidet, ob Raumverlauf und Stimmung gespeichert werden. Gelöschtes kommt nicht zurück.",
         ],
       },
@@ -6280,7 +6287,9 @@ export const parentChildDataTopic = function parentChildDataTopic(): HelpTopic {
     notes: [
       "Gesundheitshinweise gehen sofort an das Team, ohne Prüfung.",
       "Du möchtest eine offene Anfrage ändern? Tippe unter `Beantragte Änderung` auf `Anfrage bearbeiten`.",
+      "Mit der Foto-Einwilligung darf die OGS dein Kind fotografieren und ein Foto von deinem Kind in moto speichern.",
       "Nach dem Widerruf löscht moto ein gespeichertes Foto deines Kindes.",
+      "Der Widerruf gilt sofort. Er gilt auch, wenn dein Kind in den Ferien an einer anderen Schule betreut wird. Das Team dort sieht dann sofort, dass keine Einwilligung vorliegt.",
       "Nach dem letzten Betreuungstag löscht moto das Foto und die Foto-Einwilligung in der Nacht danach von selbst. Bis dahin kannst du weiter widerrufen. Neu geben kannst du die Einwilligung dann nicht mehr.",
     ],
     differences: [
