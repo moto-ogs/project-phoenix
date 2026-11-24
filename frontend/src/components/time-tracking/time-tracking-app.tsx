@@ -132,7 +132,13 @@ export function AppClockPanel(props: AppClockPanelProps) {
     busy,
   } = props;
   const [statusSheetOpen, setStatusSheetOpen] = useState(false);
-  const badge = clockBadge(state, sessionStatus, saving);
+  // Nach dem Ausstempeln meldet der Server keinen laufenden Block mehr; die
+  // Minuten von heute zeigen, dass schon gestempelt wurde.
+  const badge = clockBadge(
+    state === "idle" && todayMinutes > 0 ? "done" : state,
+    sessionStatus,
+    saving,
+  );
   const planned = plannedLine(plannedShifts);
 
   let headline: string;
