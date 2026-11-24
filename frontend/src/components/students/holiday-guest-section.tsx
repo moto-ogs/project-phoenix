@@ -8,6 +8,7 @@ import { InfoText } from "~/components/ui/detail-modal-components";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { SectionCard } from "~/components/ui/section-card";
 import { Skeleton } from "~/components/ui/skeleton";
+import { StatusBadge } from "~/components/ui/status-badge";
 import { formatDate } from "~/lib/date-helpers";
 import {
   fetchHolidayGuestSheet,
@@ -54,6 +55,38 @@ export function HolidayContactList({
         </DataField>
       ))}
     </DataGrid>
+  );
+}
+
+/**
+ * Foto-Einwilligung eines Feriengasts (#4721). Die Eltern geben und
+ * widerrufen sie bei der Heimatschule; die ausrichtende OGS liest bei jedem
+ * Abruf den Stand von dort. Die Zeile sagt, was das Team tun darf, und ist
+ * reine Anzeige: ändern kann sie hier niemand.
+ */
+function HolidayGuestPhotoConsent({
+  granted,
+  schoolName,
+}: Readonly<{ granted: boolean; schoolName: string }>) {
+  const home = schoolName ? `Heimatschule (${schoolName})` : "Heimatschule";
+  return (
+    <InfoSection title="Fotos">
+      <div className="flex flex-col items-start gap-2">
+        <StatusBadge
+          label={
+            granted ? "Foto-Einwilligung liegt vor" : "Keine Foto-Einwilligung"
+          }
+          tone={granted ? "green" : "warning"}
+        />
+        {granted ? null : (
+          <InfoText>
+            Mach bitte keine Fotos von diesem Kind. In moto liegt keine
+            Foto-Einwilligung der Eltern vor.
+          </InfoText>
+        )}
+        <InfoText>{`Die Eltern geben und widerrufen sie an der ${home}. Ein Widerruf gilt sofort auch hier.`}</InfoText>
+      </div>
+    </InfoSection>
   );
 }
 
@@ -156,6 +189,12 @@ export function HolidayGuestSection({
               <InfoSection title="Gesundheit">
                 <HolidayHealthFields health={data.health} />
               </InfoSection>
+            )}
+            {data.homePhotoConsent !== null && (
+              <HolidayGuestPhotoConsent
+                granted={data.homePhotoConsent}
+                schoolName={data.schoolName}
+              />
             )}
             {data.answers.length > 0 && (
               <InfoSection title="Angaben aus der Ferienanmeldung">

@@ -353,6 +353,11 @@ export function ChildConsentsSection({
       >
         <FormErrorAlert message={actionErrors.error} className="mb-3" />
         <p>{t(pendingTexts.body)}</p>
+        {/* #4721: Ein Widerruf gilt auch dort, wo das Kind in den Ferien als
+            Gast betreut wird. Der Satz steht da, wo die Eltern entscheiden. */}
+        {pendingAction === "withdraw" ? (
+          <p className="mt-3">{t("confirmHolidayNote")}</p>
+        ) : null}
       </ConfirmationModal>
     </>
   );

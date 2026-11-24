@@ -247,6 +247,11 @@ describe("ChildConsentsSection", () => {
         "Die Einwilligung endet sofort. Falls ein Foto gespeichert ist, wird es gelöscht.",
       ),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Das gilt auch, wenn dein Kind in den Ferien an einer anderen Schule betreut wird.",
+      ),
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Jetzt widerrufen" }));
 
@@ -286,6 +291,11 @@ describe("ChildConsentsSection", () => {
     expect(
       screen.getByText("Die OGS darf danach wieder ein Foto hinterlegen."),
     ).toBeInTheDocument();
+    // Der Ferienhinweis gehört nur zum Widerruf: Ein Feriengast bekommt an
+    // der anderen Schule kein Foto (#4721).
+    expect(
+      screen.queryByText(/in den Ferien an einer anderen Schule/),
+    ).not.toBeInTheDocument();
 
     await user.click(
       screen.getByRole("button", { name: "Einwilligung geben" }),

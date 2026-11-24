@@ -78,6 +78,7 @@
     "withdrawButtonShort": "Widerrufen",
     "confirmTitle": "Foto-Einwilligung widerrufen?",
     "confirmBody": "Die Einwilligung endet sofort. Falls ein Foto gespeichert ist, wird es gelöscht.",
+    "confirmHolidayNote": "Das gilt auch, wenn dein Kind in den Ferien an einer anderen Schule betreut wird.",
     "confirmButton": "Jetzt widerrufen",
     "withdrawing": "Wird widerrufen",
     "cancel": "Abbrechen",

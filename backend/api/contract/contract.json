@@ -63103,6 +63103,13 @@
           }
         },
         {
+          "name": "home_photo_consent",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "read_only",
           "schema": {
             "kind": "bool"

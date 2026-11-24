@@ -566,3 +566,79 @@ ihre Ferienanmeldungen und das Dokumentenpostfach des Trägers. An der
 ausrichtenden OGS hat es keine Rechte: Nachrichten, Abholung und Check-in
 bleiben verschlossen, die Kopie des Feriengasts bleibt ein Kind der Schule
 ohne Elternkonto.
+
+## Nachtrag 2026-11-24: Foto-Einwilligung der Heimatschule gilt beim Feriengast (#4721)
+
+**Status: Vorgeschlagen mit PR zu #4721; gilt mit dessen Merge.** Umsetzung von User Story 122 der Spec #4611 („ein
+Widerruf bei der Heim-OGS gilt auch in der Ferien-OGS“,
+[#4721](https://github.com/moto-ogs/project-phoenix/issues/4721)).
+
+Punkt 4 und die Nachträge vom 28.10. und 01.11.2026 sagen „keine
+Einwilligungen“. [ADR 0084 Abschnitt 6](0084-traeger-portal-liest-in-benannten-projektionen-und-schreibt-ueber-die-owner.md)
+sah dagegen vor, Einwilligungen in den Feriengast zu kopieren und die Kopie
+per Ereignis nachzuziehen. Dieser Nachtrag ersetzt beides für die
+Foto-Einwilligung:
+
+- **Nichts wird kopiert, die ausrichtende OGS liest live.** Die Funktion
+  `enrollment.holiday_guest_home_photo_consent(student_id)` (`SECURITY
+  DEFINER`, wiederholbare Definition nach ADR 0223) beantwortet in der
+  Tenant-Transaktion der ausrichtenden Schule, ob die Heimatschule des
+  Feriengasts gerade eine Foto-Einwilligung für das Kind hat. Eine Kopie
+  könnte veralten; ein Widerruf im Elternportal oder durch das Team der
+  Heimatschule gilt so mit dem nächsten Abruf, ohne Ereignis und ohne den
+  stündlichen Abgleich. Dasselbe gilt für das Ende der Einwilligung durch
+  Abschalten der Kinderfotos oder das Betreuungsende an der Heimatschule.
+- **Wer eine Antwort bekommt.** Nur die Schule, die die Woche ausrichtet,
+  für einen offenen Feriengast mit bestätigter, platzierter Buchung in einem
+  veröffentlichten Zeitraum, bis zum letzten Tag der Woche, und nur für eine
+  Heimatschule desselben Trägers. Sonst antwortet die Funktion `NULL`. Die
+  Zuordnung zum Kind der Heimatschule folgt der Regel der Teilnehmerliste
+  (ADR 0116): Heimatschule der Anmeldung, gleicher Vor- und Nachname,
+  gleiches Geburtsdatum, unter den Kindern, die in der Woche zur Heimatschule
+  gehören. Namen vergleicht sie wie das People Directory (NFC, ohne
+  Groß- und Kleinschreibung). Passt kein Kind oder passen mehrere, lautet
+  die Antwort „keine Einwilligung“.
+- **Was die Funktion liest und liefert.** Sie liest `users.persons`,
+  `users.student_profiles` und `users.student_school_memberships` der
+  Heimatschule, also Daten des People Directory
+  hinter der RLS der aufrufenden Schule. Sie liefert genau einen
+  Wahrheitswert: kein Name, keine Kennung, kein Datum, auch nicht der
+  Unterschied zwischen „nie gegeben“ und „widerrufen“. Enrollment besitzt die
+  Funktion, weil die Zugriffsbedingung (ausrichtende Schule, Träger,
+  bestätigte Buchung, Zeitraum) eine Regel von Enrollment ist, wie bei allen
+  Funktionen `enrollment.holiday_host_*`. Die Architekturprüfung sieht
+  einen Funktionsaufruf nicht als Lesezugriff auf fremde Tabellen; dieser
+  Nachtrag ist deshalb der Ort, an dem der Zugriff benannt ist. Eine weitere
+  Angabe der Heimatschule braucht einen eigenen Nachtrag.
+- **Blatt.** `GET /api/holiday-guests/{studentId}` trägt `home_photo_consent`
+  (fehlt ohne Antwort). Die Kindakte zeigt unter „Fotos“ „Foto-Einwilligung
+  liegt vor“ oder „Keine Foto-Einwilligung“ mit der Bitte, das Kind nicht zu
+  fotografieren. „Keine Foto-Einwilligung“ heißt nur, dass moto keine kennt: Eine
+  Heimatschule mit ausgeschalteten Kinderfotos hält keine Einwilligungen
+  (#7208), ihre Kinder lesen deshalb alle so. Jeder
+  Blick steht wie bisher als `holiday_guest_sheet` im Zugriffsprotokoll.
+- **Kein Foto am Feriengast.** People Directory lehnt ein Foto für ein Kind
+  der Klasse `Feriengast` ab und liefert keines aus, auch nicht mit
+  bestätigter Einwilligung: Die Kopie lebt eine Woche, und die Einwilligung
+  liegt bei der Heimatschule. Die Oberfläche bot das nie an; die Route
+  `POST /api/students/{id}/photo` ließ es bisher zu.
+
+- **Protokoll.** Der Zugriff steht im Protokoll der ausrichtenden Schule,
+  die liest. Die Heimatschule bekommt keinen eigenen Eintrag: Sie erfährt
+  auch sonst nicht, wann die ausrichtende Schule ein Blatt öffnet, und die
+  Antwort enthält keine Angabe, die sie nicht selbst hält.
+
+Nicht Teil dieses Nachtrags, jeweils mit eigenem Ticket:
+
+- Der Stopp für Raumverlauf und Stimmung (#3844) gilt weiter nur für den
+  Datensatz an der Heimatschule (`docs/operations/einwilligung-widerruf-3844.md`,
+  Abschnitt 2.2;
+  [#8037](https://github.com/moto-ogs/project-phoenix/issues/8037)).
+- Die freiwilligen Einwilligungen der Ferienanmeldung selbst (Rechtstext-
+  Blöcke der Art `consent`, etwa Erinnerungsfotos) sieht die ausrichtende
+  OGS weiter nicht (ADR 0116 Punkt 2), und Eltern können sie im Elternportal
+  weder sehen noch widerrufen
+  ([#8038](https://github.com/moto-ogs/project-phoenix/issues/8038)).
+- Die Foto-Einwilligung trägt keine Textversion in
+  `audit.student_consent_changes`
+  ([#8039](https://github.com/moto-ogs/project-phoenix/issues/8039)).

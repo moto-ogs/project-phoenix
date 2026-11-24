@@ -381,6 +381,7 @@ describe("holiday host api", () => {
             },
           ],
           pickup_contacts: null,
+          home_photo_consent: false,
           read_only: false,
         },
       }),
@@ -402,6 +403,7 @@ describe("holiday host api", () => {
       pickupContacts: [],
       answers: [],
       health: null,
+      homePhotoConsent: false,
       readOnly: false,
     });
     expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/holiday-guests/91");

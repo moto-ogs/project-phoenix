@@ -78,6 +78,7 @@
     "withdrawButtonShort": "Wycofaj",
     "confirmTitle": "Wycofać zgodę na zdjęcia?",
     "confirmBody": "Zgoda wygasa od razu. Jeśli zdjęcie jest zapisane, zostanie usunięte.",
+    "confirmHolidayNote": "Dotyczy to także opieki nad Państwa dzieckiem w innej szkole podczas ferii.",
     "confirmButton": "Wycofaj teraz",
     "withdrawing": "Wycofywanie",
     "cancel": "Anuluj",

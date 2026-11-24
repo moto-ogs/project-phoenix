@@ -324,6 +324,12 @@ export interface HolidayGuestSheet {
   readonly answers: HolidayHostAnswer[];
   /** `null` ohne Gesundheitsangaben oder ohne Zustimmung der Eltern. */
   readonly health: HolidayHostHealth | null;
+  /**
+   * Ob die Heimatschule gerade eine Foto-Einwilligung für das Kind hat
+   * (#4721). moto fragt bei jedem Abruf neu; ein Widerruf der Eltern gilt
+   * deshalb sofort. `null` ohne Heimatschule beim Träger und nach der Woche.
+   */
+  readonly homePhotoConsent: boolean | null;
   /** Nach dem letzten Tag der Woche: nur noch sieben Tage zum Nachlesen. */
   readonly readOnly: boolean;
 }
@@ -503,6 +509,7 @@ export async function fetchHolidayGuestSheet(
     pickupContacts: sheet.pickup_contacts ?? [],
     answers: mapAnswers(sheet.answers),
     health: mapHealth(sheet.health),
+    homePhotoConsent: sheet.home_photo_consent ?? null,
     readOnly: sheet.read_only,
   };
 }

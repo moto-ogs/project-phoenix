@@ -169,6 +169,18 @@ externer Nachweise setzen.** Keine der vorhandenen Stellen prüft den externen
 Nachweis automatisch; der Abgleich ist organisatorisch, kein technischer
 Schutz vor jedem Konflikt.
 
+**Ferienbetreuung an einer anderen Schule des Trägers (seit #4721):** Ist das
+Kind als Feriengast an einer anderen Schule des Trägers gebucht, liest deren
+Team bei jedem Blick in die Kindakte den aktuellen Stand der
+Foto-Einwilligung der Heimatschule (ADR 0120, Nachtrag vom 24.11.2026).
+Ein Widerruf über einen der Wege oben steht dort sofort als „Keine Foto-Einwilligung“;
+ein gesonderter Widerruf bei der ausrichtenden Schule ist nicht nötig. Die
+ausrichtende Schule kann für einen Feriengast kein Foto in moto speichern.
+Das gilt nicht für eine Einwilligung, die die Eltern nur in der
+Ferienanmeldung des Trägers gegeben haben (etwa Erinnerungsfotos): Sie ist
+im Träger-Portal an der Anmeldung zu sehen und wird dort außerhalb von moto
+widerrufen.
+
 ### 2.2 Raumhistorie und Anwesenheitsprotokoll
 
 Schulweit: **Einstellungen → Datenschutz → Anwesenheitsprotokoll**

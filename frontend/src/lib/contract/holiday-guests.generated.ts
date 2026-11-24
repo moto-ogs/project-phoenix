@@ -7,6 +7,7 @@ import {
   int64String,
   nullable,
   object,
+  optional,
   safeInt,
   str,
   success,
@@ -65,6 +66,7 @@ export interface HolidayGuestSheet {
   pickup_contacts: HolidayGuestContact[] | null;
   answers: HolidayHostAnswer[] | null;
   health: HolidayHostHealth | null;
+  home_photo_consent?: boolean;
   read_only: boolean;
 }
 
@@ -84,6 +86,7 @@ export const HolidayGuestSheetSchema: z.ZodType<HolidayGuestSheet, unknown> = ob
   pickup_contacts: nullable(arr(HolidayGuestContactSchema)),
   answers: nullable(arr(HolidayHostAnswerSchema)),
   health: nullable(HolidayHostHealthSchema),
+  home_photo_consent: optional(bool),
   read_only: bool,
 });
 

@@ -78,6 +78,7 @@
     "withdrawButtonShort": "Withdraw",
     "confirmTitle": "Withdraw photo consent?",
     "confirmBody": "The consent ends immediately. If a photo is stored, it will be deleted.",
+    "confirmHolidayNote": "This also applies when your child is cared for at another school during the holidays.",
     "confirmButton": "Withdraw now",
     "withdrawing": "Withdrawing",
     "cancel": "Cancel",

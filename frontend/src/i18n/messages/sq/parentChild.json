@@ -78,6 +78,7 @@
     "withdrawButtonShort": "Tërhiq",
     "confirmTitle": "Të tërhiqet pëlqimi për fotografinë?",
     "confirmBody": "Pëlqimi përfundon menjëherë. Nëse ka një fotografi të ruajtur, ajo do të fshihet.",
+    "confirmHolidayNote": "Kjo vlen edhe kur fëmija juaj kujdeset gjatë pushimeve në një shkollë tjetër.",
     "confirmButton": "Tërhiq tani",
     "withdrawing": "Po tërhiqet",
     "cancel": "Anulo",
