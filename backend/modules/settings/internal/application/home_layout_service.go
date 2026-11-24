@@ -233,18 +233,7 @@ func (s *HomeLayoutService) SetPolicies(ctx context.Context, tenantID, accountID
 
 	changedBy := accountID
 	return s.runtime.WithinTenant(ctx, tenantID, func(txCtx context.Context) error {
-		if err := s.lockPolicies(txCtx, tenantID, false); err != nil {
-			return err
-		}
-		stored, err := s.repo.FindPolicies(txCtx)
-		if err != nil {
-			return err
-		}
-		var current map[string]configModel.BlockPolicy
-		if stored != nil {
-			current = stored.Policies
-		}
-		if err := readstate.Check(expectedVersion, homeBlockPoliciesVersion(current)); err != nil {
+		if err := s.lockPoliciesRead(txCtx, tenantID, expectedVersion); err != nil {
 			return err
 		}
 		set := &configModel.HomeBlockPolicySet{
@@ -320,6 +309,23 @@ func mergeHomeLayoutOverrides(overrides map[string]bool, existing *configModel.H
 		delete(result, key)
 	}
 	return result
+}
+
+// lockPoliciesRead takes the policy lock and refuses a prescription written
+// on another one than the stored, read under that lock (ADR 0311).
+func (s *HomeLayoutService) lockPoliciesRead(ctx context.Context, tenantID int64, expectedVersion string) error {
+	if err := s.lockPolicies(ctx, tenantID, false); err != nil {
+		return err
+	}
+	stored, err := s.repo.FindPolicies(ctx)
+	if err != nil {
+		return err
+	}
+	var current map[string]configModel.BlockPolicy
+	if stored != nil {
+		current = stored.Policies
+	}
+	return readstate.Check(expectedVersion, homeBlockPoliciesVersion(current))
 }
 
 func (s *HomeLayoutService) readHomeLayout(ctx context.Context, accountID int64, view *HomeLayoutView) error {
