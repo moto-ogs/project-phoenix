@@ -72,7 +72,7 @@ func (n *CareFeeNotices) preview(ctx context.Context, organizationID int64, run 
 		return noticePreview{}, err
 	}
 	// The issuer of the school issues the notice and collects it with the
-	// family's mandate for its creditor identifier (#8040, ADR 0321).
+	// family's mandate for its creditor identifier (#8040, ADR 0322).
 	issuers, err := schoolIssuers(ctx, n.billing.kinds.templates, organizationID)
 	if err != nil {
 		return noticePreview{}, err

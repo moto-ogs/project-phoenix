@@ -77,7 +77,7 @@ var (
 )
 
 // NumberRangeMissingError names the issuer and the service a release has no
-// pattern for (#8040, ADR 0321): a body numbers its documents in a range of
+// pattern for (#8040, ADR 0322): a body numbers its documents in a range of
 // its own, never in the Träger's. It is ErrNumberRangeMissing.
 type NumberRangeMissingError struct {
 	Issuer  BillingIssuer
@@ -91,7 +91,7 @@ func (e *NumberRangeMissingError) Error() string {
 func (e *NumberRangeMissingError) Unwrap() error { return ErrNumberRangeMissing }
 
 // ErrIssuerUsesTraegerCreditor refuses a release while a body bills with the
-// creditor identifier of the Träger (#8040, ADR 0321 point 10): both would
+// creditor identifier of the Träger (#8040, ADR 0322 point 10): both would
 // collect under one identifier into two accounts and count two ranges.
 var ErrIssuerUsesTraegerCreditor = errors.New("parent billing: a body bills with the creditor identifier of the Träger")
 
@@ -233,7 +233,7 @@ type BillingDocument struct {
 	// draft carries the kind its release would freeze now.
 	DocumentKind string `json:"document_kind,omitempty"`
 	// Issuer is the Schulträger or the Gemeinde that issues the document
-	// (#8040, ADR 0321), nil for the Träger; an issued document keeps the one
+	// (#8040, ADR 0322), nil for the Träger; an issued document keeps the one
 	// its release froze.
 	Issuer              *BillingIssuer        `json:"issuer,omitempty"`
 	ReferenceDocumentID *ident.ID             `json:"reference_document_id"`
@@ -330,7 +330,7 @@ type BillingRelease struct {
 // before the first). Year is the year the counter belongs to, 0 for a
 // pattern without a year. Starts lists the start values set for this
 // counter, the newest first (#7358). Issuer names whose numbers they are
-// (#8040, ADR 0321): every issuer of the Träger has its own range per
+// (#8040, ADR 0322): every issuer of the Träger has its own range per
 // service.
 type NumberRange struct {
 	Issuer     BillingIssuer      `json:"issuer"`

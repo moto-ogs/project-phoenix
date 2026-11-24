@@ -1,5 +1,5 @@
 // Router-level tests for the issuer of the documents of a school (#8040,
-// ADR 0321): the responsibility "Abrechnung" names the Träger or the
+// ADR 0322): the responsibility "Abrechnung" names the Träger or the
 // school's Gemeinde; a Gemeinde with creditor identifier and account bills
 // its school itself, from its own number range and with the family's
 // mandate for its creditor identifier; an issued invoice keeps its issuer
@@ -199,7 +199,7 @@ func TestIssuersStayWithTheirTraeger(t *testing.T) {
 	assert.NotContains(t, rec.Body.String(), gemeindeCreditorID, "the range of another Träger's Gemeinde stays there")
 }
 
-// TestACreditorIdentifierBelongsToOneAccount (ADR 0321 point 2): the
+// TestACreditorIdentifierBelongsToOneAccount (ADR 0322 point 2): the
 // schools of one creditor identifier share one debit file, so a second body
 // may take the identifier only with the same account.
 func TestACreditorIdentifierBelongsToOneAccount(t *testing.T) {
@@ -263,7 +263,7 @@ func readIssuerStatus(t *testing.T, f careBillingFixture) issuerStatusBody {
 	return decodeSchoolPortalData[issuerStatusBody](t, rec.Body.Bytes())
 }
 
-// TestIssuerStatusNamesWhatTheGemeindeStillNeeds (ADR 0321 point 11): the
+// TestIssuerStatusNamesWhatTheGemeindeStillNeeds (ADR 0322 point 11): the
 // overview of the responsibilities shows per body its number ranges, the
 // kind of document and its legal remedy, and how many families pay by
 // direct debit without a mandate for its creditor identifier. It counts, it
@@ -314,7 +314,7 @@ func TestIssuerStatusNamesWhatTheGemeindeStillNeeds(t *testing.T) {
 	querybudgets.AssertQueryBudget(t, "api.traeger.required_details_issuers", first)
 }
 
-// TestGemeindeCollectsItsInstallmentsInAFileOfItsOwn (ADR 0321 point 8):
+// TestGemeindeCollectsItsInstallmentsInAFileOfItsOwn (ADR 0322 point 8):
 // the installments of the Gemeinde's notices never go into the Träger's
 // file, where the Träger's account would receive them; the Gemeinde's file
 // collects them with its creditor identifier into its account.
@@ -392,7 +392,7 @@ func TestGemeindeCollectsItsInstallmentsInAFileOfItsOwn(t *testing.T) {
 	assert.Len(t, read("").Debits, 1, "the Träger's file is still open")
 }
 
-// TestABodyNeverBillsWithTheTraegersCreditor (ADR 0321 point 10): a body
+// TestABodyNeverBillsWithTheTraegersCreditor (ADR 0322 point 10): a body
 // whose creditor identifier is the Träger's holds every release back and
 // its checklist says so; the Träger cannot take a body's identifier either.
 func TestABodyNeverBillsWithTheTraegersCreditor(t *testing.T) {

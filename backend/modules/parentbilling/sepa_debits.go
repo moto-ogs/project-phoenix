@@ -168,7 +168,7 @@ type SEPADebitRun struct {
 	Submitted      []SEPADebit      `json:"submitted"`
 	Left           []SEPADebit      `json:"left"`
 	SubmittedAt    *time.Time       `json:"submitted_at"`
-	// Issuer is the body whose file this is (#8040, ADR 0321), nil for the
+	// Issuer is the body whose file this is (#8040, ADR 0322), nil for the
 	// Träger's file. Issuers names every body with debits in the run: each
 	// one has a file of its own, with its creditor identifier and account.
 	Issuer  *BillingIssuer  `json:"issuer,omitempty"`
@@ -189,7 +189,7 @@ type SEPADebitFile struct {
 // in the Träger transaction of the reviewer's Träger, which the caller
 // opens; the download records the reveal of each mandate's account.
 //
-// A run has one file per issuer (#8040, ADR 0321 point 8): issuerKey names
+// A run has one file per issuer (#8040, ADR 0322 point 8): issuerKey names
 // it, empty for the Träger's file, else the creditor identifier of the body
 // whose invoices and notices it collects.
 type SEPADebits interface {
@@ -224,7 +224,7 @@ type SealedSEPADebit struct {
 	// now: its issuer's, the Träger's for the Träger, empty without one.
 	CreditorNow string
 	// Issuer is the body that issued the invoice or notice (#8040, ADR
-	// 0321), nil for the Träger. Its debits go into a file of its own.
+	// 0322), nil for the Träger. Its debits go into a file of its own.
 	Issuer *BillingIssuer
 	// Cancelled is an invoice cancelled since; CreditedCents the credits
 	// (negative) a holiday invoice got since.

@@ -220,7 +220,7 @@ func (s *SchoolResponsibilities) SaveParty(ctx context.Context, organizationID, 
 
 // creditorAccountFree refuses a creditor identifier another body of the
 // Träger holds with another bank account, account holder or BIC (#8040,
-// ADR 0321 point 2): the
+// ADR 0322 point 2): the
 // schools of one creditor share its number range, its mandates and its
 // debit file, which names one account. It runs under the lock of the
 // Träger's profile row, so two saves cannot both pass.

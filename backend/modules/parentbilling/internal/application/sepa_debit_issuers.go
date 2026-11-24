@@ -9,7 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 )
 
-// One direct debit file per issuer (#8040, ADR 0321 point 8): a body that
+// One direct debit file per issuer (#8040, ADR 0322 point 8): a body that
 // bills a school itself collects its invoices and notices with its own
 // creditor identifier into its own account. The file of a run names one
 // creditor, so the debits of each issuer form a file of their own; the

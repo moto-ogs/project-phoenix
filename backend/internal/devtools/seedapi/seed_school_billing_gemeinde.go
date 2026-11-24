@@ -6,7 +6,7 @@ import (
 )
 
 // seedGemeindeBillingStep lets the Gemeinde of the Demo-Schule Manuell bill
-// its school itself (#8040, ADR 0321): its own creditor identifier, its own
+// its school itself (#8040, ADR 0322): its own creditor identifier, its own
 // account and number ranges of its own. The page „Zuständigkeiten“ then
 // shows its checklist, the open runs of the Demo-Schule Manuell name it as
 // the issuer, and the next released run gives it a direct debit file of its

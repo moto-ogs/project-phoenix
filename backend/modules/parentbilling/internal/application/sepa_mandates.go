@@ -281,7 +281,7 @@ func (m *SEPAMandates) familyOf(ctx context.Context, organizationID, contractID 
 }
 
 // contractCreditor is the creditor a mandate for a contract is given to
-// (#8040, ADR 0321 point 7): the creditor identifier of the body that bills
+// (#8040, ADR 0322 point 7): the creditor identifier of the body that bills
 // the contract's school, else the Träger's. A mandate binds it for good.
 func (m *SEPAMandates) contractCreditor(ctx context.Context, organizationID, schoolID int64) (parentbilling.SEPACreditor, *parentbilling.BillingIssuer, error) {
 	creditor, err := creditorOf(ctx, m.store, organizationID)
@@ -321,7 +321,7 @@ func (m *SEPAMandates) CreateSEPAMandate(ctx context.Context, reviewer parentbil
 	mandate.FamilyEmail, mandate.ContractID = family, ident.ID(input.ContractID)
 	// A mandate is given to the creditor identifier of the issuer of the
 	// contract's school and stays bound to it; a later change of the
-	// identifier or of the issuer needs a new mandate (ADR 0171, ADR 0321).
+	// identifier or of the issuer needs a new mandate (ADR 0171, ADR 0322).
 	creditor, _, err := m.contractCreditor(ctx, reviewer.OrganizationID, party.SchoolID)
 	if err != nil {
 		return parentbilling.SEPAMandate{}, err
@@ -646,7 +646,7 @@ func (m *SEPAMandates) record(ctx context.Context, reviewer parentbilling.Holida
 }
 
 // creditorFree refuses the creditor identifier of a body that bills a
-// school itself as the Träger's (#8040, ADR 0321 point 10): the Träger and
+// school itself as the Träger's (#8040, ADR 0322 point 10): the Träger and
 // the body would collect under one identifier into two accounts.
 func (m *SEPAMandates) creditorFree(ctx context.Context, organizationID int64, creditorID string) error {
 	if creditorID == "" {

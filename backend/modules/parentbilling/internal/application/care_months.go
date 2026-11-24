@@ -569,7 +569,7 @@ func (c *CareBilling) monthWith(ctx context.Context, organizationID int64, run p
 		issuedOn = *run.InvoiceDate
 	}
 	// The issuer of the school bills the invoice and collects it with the
-	// family's mandate for its creditor identifier (#8040, ADR 0321).
+	// family's mandate for its creditor identifier (#8040, ADR 0322).
 	issuers, err := schoolIssuers(ctx, c.kinds.templates, organizationID)
 	if err != nil {
 		return rule, month, err

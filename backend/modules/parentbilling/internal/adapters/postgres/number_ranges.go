@@ -10,7 +10,7 @@ import (
 )
 
 // The number ranges of a Träger per issuer and service (#4668, ADR 0119,
-// #8040 ADR 0321) and the counters a release reserves its numbers from.
+// #8040 ADR 0322) and the counters a release reserves its numbers from.
 
 type numberRangeRow struct {
 	bun.BaseModel `bun:"table:parent_billing.number_ranges"`

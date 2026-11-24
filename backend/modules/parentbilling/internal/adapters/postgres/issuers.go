@@ -4,7 +4,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 )
 
-// The issuer an issued document keeps (#8040, ADR 0321): issuer_key names
+// The issuer an issued document keeps (#8040, ADR 0322): issuer_key names
 // it, empty for the Träger, and issuer holds what the document prints of a
 // body at the release, NULL for the Träger.
 

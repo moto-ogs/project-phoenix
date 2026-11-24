@@ -1,7 +1,7 @@
 "use client";
 
 // Was eine Stelle noch braucht, die Schulen selbst abrechnet (#8040, ADR
-// 0321): Anschrift, Gläubiger-ID und Konto hat sie schon, sonst rechnete
+// 0322): Anschrift, Gläubiger-ID und Konto hat sie schon, sonst rechnete
 // noch der Träger ab. Fehlen können Nummernkreise, die Belehrung eines
 // Bescheids und die Mandate der Familien, die per Lastschrift zahlen. Jede
 // Zeile sagt, was zu tun ist, und führt dorthin.

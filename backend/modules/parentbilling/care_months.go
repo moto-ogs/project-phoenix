@@ -324,7 +324,7 @@ type CareInvoice struct {
 	// fingerprint of the review covers it.
 	DocumentKind string `json:"document_kind,omitempty"`
 	// Issuer is the Schulträger or the Gemeinde that issues the invoice
-	// (#8040, ADR 0321), nil for the Träger; an issued invoice keeps the one
+	// (#8040, ADR 0322), nil for the Träger; an issued invoice keeps the one
 	// its release froze.
 	Issuer *BillingIssuer `json:"issuer,omitempty"`
 	// FamilyEmail is the family of the invoice: the mail address of the

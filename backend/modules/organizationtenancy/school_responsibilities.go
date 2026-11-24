@@ -76,7 +76,7 @@ var (
 	// ErrSchoolPartyCreditorAccountConflict reports a creditor identifier
 	// another body of the Träger already holds with another bank account: a
 	// creditor identifier names one creditor and one account (#8040, ADR
-	// 0321 point 2).
+	// 0322 point 2).
 	ErrSchoolPartyCreditorAccountConflict = errors.New("organization tenancy: the creditor identifier belongs to another bank account")
 )
 

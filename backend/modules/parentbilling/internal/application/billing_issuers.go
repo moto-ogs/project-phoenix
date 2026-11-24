@@ -11,7 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// The issuer of a document (#8040, ADR 0321): who bills the parents of its
+// The issuer of a document (#8040, ADR 0322): who bills the parents of its
 // school. A release numbers the documents of each issuer from that issuer's
 // range and freezes the issuer on them; the letters print the issuer's
 // sender, contact and bank account.
@@ -64,7 +64,7 @@ type releaseStore interface {
 
 // releasePatterns are the patterns a release numbers from. A body that
 // bills with the creditor identifier of the Träger is refused first (ADR
-// 0321 point 10): it would collect under the Träger's identifier into its
+// 0322 point 10): it would collect under the Träger's identifier into its
 // own account and count numbers of its own beside the Träger's.
 func releasePatterns(ctx context.Context, store releaseStore, organizationID int64, service string, issuers []*parentbilling.BillingIssuer,
 ) (map[string]string, error) {
@@ -115,7 +115,7 @@ func numberRangeState(ctx context.Context, store numberRangeReader, organization
 // issuerLetterhead is the letterhead a document of the issuer prints: the
 // Träger's own, or for a body its sender, contact and bank account in place
 // of the Träger's, without the logo and the footer of the Träger (ADR 0318
-// §5, ADR 0321). The template, the colour and the payment text stay.
+// §5, ADR 0322). The template, the colour and the payment text stay.
 func issuerLetterhead(head parentbilling.Letterhead, issuer *parentbilling.BillingIssuer) parentbilling.Letterhead {
 	if issuer == nil || issuer.IsTraeger() {
 		return head
@@ -204,7 +204,7 @@ func noticeIssuers(notices []parentbilling.CareNotice) []*parentbilling.BillingI
 }
 
 // childIssuers names the issuer of every child of the registrations (#8040,
-// ADR 0321 point 3): the issuer of the school the child attends, or for a
+// ADR 0322 point 3): the issuer of the school the child attends, or for a
 // holiday guest the issuer of the host school of its first booked week, the
 // place of care of its contract. It answers the issuers of the schools too.
 func (b *BillingRuns) childIssuers(ctx context.Context, reviewer parentbilling.HolidayReviewer, run parentbilling.BillingRun,
@@ -269,7 +269,7 @@ func hostOf(day calendar.Date, hosts []parentbilling.HolidayWeekHost) int64 {
 
 // mandateKey names the mandate in force of a family for a creditor
 // identifier: a mandate holds only for the creditor it was given to
-// (#8040, ADR 0321).
+// (#8040, ADR 0322).
 type mandateKey struct {
 	familyEmail string
 	creditorID  string
@@ -277,7 +277,7 @@ type mandateKey struct {
 
 // creditorOf is the creditor an invoice of the issuer collects for: the
 // Träger's, or the body's creditor identifier with the Träger's lead of the
-// pre-notification and its choice for a debit without a mandate (ADR 0321
+// pre-notification and its choice for a debit without a mandate (ADR 0322
 // point 8).
 func (p invoicePayments) creditorOf(issuer *parentbilling.BillingIssuer) parentbilling.SEPACreditor {
 	if issuer == nil || issuer.IsTraeger() {

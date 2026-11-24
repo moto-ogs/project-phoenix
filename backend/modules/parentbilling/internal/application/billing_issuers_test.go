@@ -20,7 +20,7 @@ var hardt = &parentbilling.BillingIssuer{Key: "DE13ZZZ00000012345", Body: parent
 	SenderText: "Gemeinde Hardt\nRathausplatz 1\n41749 Viersen", ContactName: "Petra Sommer", CreditorID: "DE13ZZZ00000012345",
 	BankAccount: &parentbilling.LetterheadBankAccount{AccountHolder: "Gemeindekasse Hardt", IBAN: "DE02120300000000202051"}}
 
-// TestHolidayChildrenOfTwoIssuersGetADocumentEach (ADR 0321 point 3): the
+// TestHolidayChildrenOfTwoIssuersGetADocumentEach (ADR 0322 point 3): the
 // children of one registration at schools of different issuers never share
 // a document, even while the Träger writes one per registration; a
 // registration of one issuer stays whole and takes it.
@@ -145,7 +145,7 @@ func (issuerLetterheads) SchoolBillingIssuers(context.Context, int64, []int64) (
 	return map[int64]parentbilling.BillingIssuer{3: *hardt}, nil
 }
 
-// TestEachIssuerCollectsItsDebitsInAFileOfItsOwn (ADR 0321 point 8): the
+// TestEachIssuerCollectsItsDebitsInAFileOfItsOwn (ADR 0322 point 8): the
 // Träger's file holds only the Träger's debits; the body's file carries its
 // creditor identifier and its account, and the run names the body.
 func TestEachIssuerCollectsItsDebitsInAFileOfItsOwn(t *testing.T) {

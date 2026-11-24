@@ -152,7 +152,7 @@ type CareNotice struct {
 	// (#4689); the sibling rules and caps count by it.
 	FamilyEmail string `json:"-"`
 	// Issuer is the Schulträger or the Gemeinde that issues the notice
-	// (#8040, ADR 0321), nil for the Träger.
+	// (#8040, ADR 0322), nil for the Träger.
 	Issuer        *BillingIssuer          `json:"issuer,omitempty"`
 	PaymentMethod string                  `json:"payment_method"`
 	Year          int                     `json:"year"`

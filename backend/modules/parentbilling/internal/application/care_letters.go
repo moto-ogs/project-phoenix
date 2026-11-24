@@ -361,7 +361,7 @@ func (l *CareLetters) issueCancellation(ctx context.Context, reviewer parentbill
 	invoice parentbilling.CareInvoice, reason string,
 ) (parentbilling.CareCancellation, error) {
 	// The Storno takes the issuer and the number range of its invoice
-	// (#8040, ADR 0321 point 4).
+	// (#8040, ADR 0322 point 4).
 	issuer := parentbilling.TraegerIssuer()
 	if invoice.Issuer != nil {
 		issuer = *invoice.Issuer

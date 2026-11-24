@@ -132,7 +132,7 @@ func (p *ParentMandates) open(ctx context.Context, organizationID int64, reader 
 }
 
 // forSchool puts the body that bills the school of the contract in place of
-// the Träger as the creditor (#8040, ADR 0321 point 7): its name, the
+// the Träger as the creditor (#8040, ADR 0322 point 7): its name, the
 // address of its master data and its creditor identifier. It names the
 // creditor identifiers of every body, whose mandates are none of the
 // Träger.

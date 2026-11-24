@@ -127,7 +127,7 @@ func (b CareContractIssuers) SchoolIssuers(ctx context.Context, organizationID i
 }
 
 // BillingIssuers binds the issuer of the documents of a school (#8040, ADR
-// 0321) to the responsibilities of Organisation & Tenancy: the school's
+// 0322) to the responsibilities of Organisation & Tenancy: the school's
 // Schulträger or Gemeinde where the setting "Abrechnung" names it and its
 // master data, creditor identifier and bank account are stored, in the
 // caller's Träger transaction. Its creditor identifier is its key.

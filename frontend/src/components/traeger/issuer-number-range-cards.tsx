@@ -1,7 +1,7 @@
 "use client";
 
 // Nummernkreise der Stellen, die eine Schule selbst abrechnen (#8040, ADR
-// 0321): ein Schulträger oder eine Gemeinde mit Gläubiger-ID und Konto
+// 0322): ein Schulträger oder eine Gemeinde mit Gläubiger-ID und Konto
 // vergibt eigene Nummern, je Leistung. Ohne Muster gibt moto keinen Lauf
 // mit ihren Rechnungen frei. Rechnet nur der Träger ab, zeigt die Seite
 // hier nichts.

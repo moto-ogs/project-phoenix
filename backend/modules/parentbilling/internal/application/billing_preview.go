@@ -58,7 +58,7 @@ func (in previewInput) invoiceKeys(registration parentbilling.HolidayBillingRegi
 	perChild, known := shapes[registration.ID]
 	if !known {
 		// Children of different issuers never share a document (#8040,
-		// ADR 0321 point 3).
+		// ADR 0322 point 3).
 		perChild = in.perChild || in.mixedIssuers(registration)
 	}
 	if !perChild {
@@ -85,7 +85,7 @@ func (in previewInput) mixedIssuers(registration parentbilling.HolidayBillingReg
 // issuerOf is the issuer of the document of a registration: the issuer of
 // the child it bills, or of the first child of an invoice of the whole
 // registration. A registration that kept the shape of its first invoice
-// takes its first child's (ADR 0321 point 3).
+// takes its first child's (ADR 0322 point 3).
 func (in previewInput) issuerOf(registration parentbilling.HolidayBillingRegistration, childID int64) *parentbilling.BillingIssuer {
 	if childID == 0 && len(registration.Children) > 0 {
 		childID = registration.Children[0].ID

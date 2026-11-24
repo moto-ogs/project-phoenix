@@ -135,7 +135,7 @@ func (b *BillingLetters) issueCorrection(ctx context.Context, reviewer parentbil
 ) (parentbilling.BillingDocument, error) {
 	organizationID, run := reviewer.OrganizationID, target.run
 	// A cancellation or a credit takes the issuer and the number range of
-	// its invoice (#8040, ADR 0321 point 4).
+	// its invoice (#8040, ADR 0322 point 4).
 	issuer := parentbilling.TraegerIssuer()
 	if target.invoice.Issuer != nil {
 		issuer = *target.invoice.Issuer

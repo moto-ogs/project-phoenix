@@ -165,7 +165,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingDocumentTemplates.SchoolBillingIssuers",
-      "reason": "Reviewed read: the Schulträger or the Gemeinde that bills the parents of each school of the Träger in effect (#8040, ADR 0321), from the master data of platform.school_responsible_parties under the Träger policy of the caller's Träger transaction and the settings responsibility.billing of the schools, read in an administrative read of their own (ADR 0318 point 4). No row changes, no locking read.",
+      "reason": "Reviewed read: the Schulträger or the Gemeinde that bills the parents of each school of the Träger in effect (#8040, ADR 0322), from the master data of platform.school_responsible_parties under the Träger policy of the caller's Träger transaction and the settings responsibility.billing of the schools, read in an administrative read of their own (ADR 0318 point 4). No row changes, no locking read.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.ResponsibleParties.ResponsibleParties",
       "target_owner": "organization-tenancy"
@@ -185,7 +185,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingDocumentTemplates.SchoolBillingIssuers",
-      "reason": "Reviewed read: the Schulträger or the Gemeinde that bills the parents of each school of the Träger in effect (#8040, ADR 0321), from the master data of platform.school_responsible_parties under the Träger policy of the caller's Träger transaction and the settings responsibility.billing of the schools, read in an administrative read of their own (ADR 0318 point 4). No row changes, no locking read.",
+      "reason": "Reviewed read: the Schulträger or the Gemeinde that bills the parents of each school of the Träger in effect (#8040, ADR 0322), from the master data of platform.school_responsible_parties under the Träger policy of the caller's Träger transaction and the settings responsibility.billing of the schools, read in an administrative read of their own (ADR 0318 point 4). No row changes, no locking read.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolResponsibilities.ResponsibleParties",
       "target_owner": "organization-tenancy"
@@ -195,7 +195,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingDocumentTemplates.SchoolBillingIssuers",
-      "reason": "Reviewed read: the Schulträger or the Gemeinde that bills the parents of each school of the Träger in effect (#8040, ADR 0321), from the master data of platform.school_responsible_parties under the Träger policy of the caller's Träger transaction and the settings responsibility.billing of the schools, read in an administrative read of their own (ADR 0318 point 4). No row changes, no locking read.",
+      "reason": "Reviewed read: the Schulträger or the Gemeinde that bills the parents of each school of the Träger in effect (#8040, ADR 0322), from the master data of platform.school_responsible_parties under the Träger policy of the caller's Träger transaction and the settings responsibility.billing of the schools, read in an administrative read of their own (ADR 0318 point 4). No row changes, no locking read.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.ResponsibleParties.ResponsibleParties",
       "target_owner": "organization-tenancy"
@@ -215,7 +215,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingDocumentTemplates.SchoolBillingIssuers",
-      "reason": "Reviewed read: the Schulträger or the Gemeinde that bills the parents of each school of the Träger in effect (#8040, ADR 0321), from the master data of platform.school_responsible_parties under the Träger policy of the caller's Träger transaction and the settings responsibility.billing of the schools, read in an administrative read of their own (ADR 0318 point 4). No row changes, no locking read.",
+      "reason": "Reviewed read: the Schulträger or the Gemeinde that bills the parents of each school of the Träger in effect (#8040, ADR 0322), from the master data of platform.school_responsible_parties under the Träger policy of the caller's Träger transaction and the settings responsibility.billing of the schools, read in an administrative read of their own (ADR 0318 point 4). No row changes, no locking read.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolResponsibilities.ResponsibleParties",
       "target_owner": "organization-tenancy"
@@ -225,7 +225,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingIssuers.SchoolBillingIssuers",
-      "reason": "Reviewed read: the Schulträger or the Gemeinde that bills the parents of each school of the Träger in effect (#8040, ADR 0321), from the master data of platform.school_responsible_parties under the Träger policy of the caller's Träger transaction and the settings responsibility.billing of the schools, read in an administrative read of their own (ADR 0318 point 4). No row changes, no locking read.",
+      "reason": "Reviewed read: the Schulträger or the Gemeinde that bills the parents of each school of the Träger in effect (#8040, ADR 0322), from the master data of platform.school_responsible_parties under the Träger policy of the caller's Träger transaction and the settings responsibility.billing of the schools, read in an administrative read of their own (ADR 0318 point 4). No row changes, no locking read.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.ResponsibleParties.ResponsibleParties",
       "target_owner": "organization-tenancy"
@@ -245,7 +245,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingIssuers.SchoolBillingIssuers",
-      "reason": "Reviewed read: the Schulträger or the Gemeinde that bills the parents of each school of the Träger in effect (#8040, ADR 0321), from the master data of platform.school_responsible_parties under the Träger policy of the caller's Träger transaction and the settings responsibility.billing of the schools, read in an administrative read of their own (ADR 0318 point 4). No row changes, no locking read.",
+      "reason": "Reviewed read: the Schulträger or the Gemeinde that bills the parents of each school of the Träger in effect (#8040, ADR 0322), from the master data of platform.school_responsible_parties under the Träger policy of the caller's Träger transaction and the settings responsibility.billing of the schools, read in an administrative read of their own (ADR 0318 point 4). No row changes, no locking read.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolResponsibilities.ResponsibleParties",
       "target_owner": "organization-tenancy"
@@ -255,7 +255,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingIssuers.SchoolBillingIssuers",
-      "reason": "Reviewed read: the Schulträger or the Gemeinde that bills the parents of each school of the Träger in effect (#8040, ADR 0321), from the master data of platform.school_responsible_parties under the Träger policy of the caller's Träger transaction and the settings responsibility.billing of the schools, read in an administrative read of their own (ADR 0318 point 4). No row changes, no locking read.",
+      "reason": "Reviewed read: the Schulträger or the Gemeinde that bills the parents of each school of the Träger in effect (#8040, ADR 0322), from the master data of platform.school_responsible_parties under the Träger policy of the caller's Träger transaction and the settings responsibility.billing of the schools, read in an administrative read of their own (ADR 0318 point 4). No row changes, no locking read.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.ResponsibleParties.ResponsibleParties",
       "target_owner": "organization-tenancy"
@@ -275,7 +275,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingIssuers.SchoolBillingIssuers",
-      "reason": "Reviewed read: the Schulträger or the Gemeinde that bills the parents of each school of the Träger in effect (#8040, ADR 0321), from the master data of platform.school_responsible_parties under the Träger policy of the caller's Träger transaction and the settings responsibility.billing of the schools, read in an administrative read of their own (ADR 0318 point 4). No row changes, no locking read.",
+      "reason": "Reviewed read: the Schulträger or the Gemeinde that bills the parents of each school of the Träger in effect (#8040, ADR 0322), from the master data of platform.school_responsible_parties under the Träger policy of the caller's Träger transaction and the settings responsibility.billing of the schools, read in an administrative read of their own (ADR 0318 point 4). No row changes, no locking read.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolResponsibilities.ResponsibleParties",
       "target_owner": "organization-tenancy"
@@ -398,7 +398,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingLetterheads.SchoolBillingIssuers",
-      "reason": "Reviewed read: the Schulträger or the Gemeinde that bills the parents of each school of the Träger in effect (#8040, ADR 0321), from the master data of platform.school_responsible_parties under the Träger policy of the caller's Träger transaction and the settings responsibility.billing of the schools, read in an administrative read of their own (ADR 0318 point 4). No row changes, no locking read.",
+      "reason": "Reviewed read: the Schulträger or the Gemeinde that bills the parents of each school of the Träger in effect (#8040, ADR 0322), from the master data of platform.school_responsible_parties under the Träger policy of the caller's Träger transaction and the settings responsibility.billing of the schools, read in an administrative read of their own (ADR 0318 point 4). No row changes, no locking read.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.ResponsibleParties.ResponsibleParties",
       "target_owner": "organization-tenancy"
@@ -418,7 +418,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingLetterheads.SchoolBillingIssuers",
-      "reason": "Reviewed read: the Schulträger or the Gemeinde that bills the parents of each school of the Träger in effect (#8040, ADR 0321), from the master data of platform.school_responsible_parties under the Träger policy of the caller's Träger transaction and the settings responsibility.billing of the schools, read in an administrative read of their own (ADR 0318 point 4). No row changes, no locking read.",
+      "reason": "Reviewed read: the Schulträger or the Gemeinde that bills the parents of each school of the Träger in effect (#8040, ADR 0322), from the master data of platform.school_responsible_parties under the Träger policy of the caller's Träger transaction and the settings responsibility.billing of the schools, read in an administrative read of their own (ADR 0318 point 4). No row changes, no locking read.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolResponsibilities.ResponsibleParties",
       "target_owner": "organization-tenancy"

@@ -72,7 +72,7 @@ type RequiredDetailSources struct {
 }
 
 // BillingIssuerStatus is what a Schulträger or a Gemeinde that bills a
-// school of the Träger needs before its documents go out (#8040, ADR 0321
+// school of the Träger needs before its documents go out (#8040, ADR 0322
 // point 11): its number range per service, the kind of document per
 // service and whether a fee notice lacks its legal remedy, and how many
 // families pay by direct debit at its schools and how many of them have no
@@ -87,7 +87,7 @@ type BillingIssuerStatus struct {
 	DirectDebitFamilies    int                   `json:"direct_debit_families"`
 	FamiliesWithoutMandate int                   `json:"families_without_mandate"`
 	// CreditorIsTraegers: the body names the Träger's own creditor
-	// identifier; no release goes out until it has its own (ADR 0321
+	// identifier; no release goes out until it has its own (ADR 0322
 	// point 10).
 	CreditorIsTraegers bool `json:"creditor_is_traegers"`
 }

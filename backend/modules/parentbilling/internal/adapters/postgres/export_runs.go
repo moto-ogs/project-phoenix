@@ -299,7 +299,7 @@ WHERE document.organization_id = ?0 AND document.run_id = ?1 AND document.issuer
 ORDER BY document.number_year, document.number_sequence`
 
 // ExportRunContent reads a released run and the invoices a Sollstellung of
-// it writes: the Träger's own (#8040, ADR 0321 point 9). A body that bills a
+// it writes: the Träger's own (#8040, ADR 0322 point 9). A body that bills a
 // school itself books in its own budget, not in the Träger's; a run of another Träger, none or an open one is
 // ErrExportRunNotFound.
 func (s *Store) ExportRunContent(ctx context.Context, organizationID int64, runKind string, runID int64) (parentbilling.ExportRunContent, error) {

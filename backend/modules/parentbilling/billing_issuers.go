@@ -5,7 +5,7 @@ import (
 	"sort"
 )
 
-// The Rechnungssteller of a document (#8040, ADR 0321). Who bills the
+// The Rechnungssteller of a document (#8040, ADR 0322). Who bills the
 // parents of a school is the setting responsibility.billing (ADR 0318): the
 // Träger, or the school's Schulträger or Gemeinde once its master data,
 // creditor identifier and bank account are stored. An issuer is named by its

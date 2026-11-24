@@ -22,7 +22,7 @@ func init() {
 }
 
 // parentBillingIssuersUpSQL lets a Schulträger or a Gemeinde bill the
-// parents of a school itself (#8040, ADR 0321). An issuer is named by its
+// parents of a school itself (#8040, ADR 0322). An issuer is named by its
 // key: empty for the Träger, else the SEPA creditor identifier of the body.
 //
 //   - The issued documents keep their issuer: issuer_key, and in issuer the
@@ -43,7 +43,7 @@ ALTER TABLE parent_billing.number_ranges
 	DROP CONSTRAINT uq_number_ranges_service,
 	ADD CONSTRAINT uq_number_ranges_service UNIQUE (organization_id, issuer_key, service);
 COMMENT ON COLUMN parent_billing.number_ranges.issuer_key IS
-	'Issuer the pattern numbers for (#8040, ADR 0321): empty for the Träger, else the creditor identifier of the body.';
+	'Issuer the pattern numbers for (#8040, ADR 0322): empty for the Träger, else the creditor identifier of the body.';
 
 ALTER TABLE parent_billing.number_range_counters
 	ADD COLUMN issuer_key VARCHAR(35) NOT NULL DEFAULT '',
@@ -51,7 +51,7 @@ ALTER TABLE parent_billing.number_range_counters
 	DROP CONSTRAINT number_range_counters_pkey,
 	ADD CONSTRAINT number_range_counters_pkey PRIMARY KEY (organization_id, issuer_key, service, year);
 COMMENT ON COLUMN parent_billing.number_range_counters.issuer_key IS
-	'Issuer the counter numbers for (#8040, ADR 0321): empty for the Träger, else the creditor identifier of the body.';
+	'Issuer the counter numbers for (#8040, ADR 0322): empty for the Träger, else the creditor identifier of the body.';
 
 ALTER TABLE parent_billing.number_range_starts
 	ADD COLUMN issuer_key VARCHAR(35) NOT NULL DEFAULT '',
@@ -66,7 +66,7 @@ ALTER TABLE parent_billing.document_kinds
 	DROP CONSTRAINT document_kinds_pkey,
 	ADD CONSTRAINT document_kinds_pkey PRIMARY KEY (organization_id, issuer_key, service);
 COMMENT ON COLUMN parent_billing.document_kinds.issuer_key IS
-	'Issuer that issues this kind (#8040, ADR 0321): empty for the Träger, else the creditor identifier of the body.';
+	'Issuer that issues this kind (#8040, ADR 0322): empty for the Träger, else the creditor identifier of the body.';
 
 ALTER TABLE parent_billing.documents
 	ADD COLUMN issuer_key VARCHAR(35) NOT NULL DEFAULT '',
@@ -79,7 +79,7 @@ ALTER TABLE parent_billing.documents
 	DROP CONSTRAINT uq_documents_sequence,
 	ADD CONSTRAINT uq_documents_sequence UNIQUE (organization_id, issuer_key, service, number_year, number_sequence);
 COMMENT ON COLUMN parent_billing.documents.issuer IS
-	'Body that issued the document in place of the Träger (#8040, ADR 0321): sender, contact, bank account and creditor identifier at the release; NULL for the Träger.';
+	'Body that issued the document in place of the Träger (#8040, ADR 0322): sender, contact, bank account and creditor identifier at the release; NULL for the Träger.';
 
 ALTER TABLE parent_billing.care_invoices
 	ADD COLUMN issuer_key VARCHAR(35) NOT NULL DEFAULT '',
@@ -92,7 +92,7 @@ ALTER TABLE parent_billing.care_invoices
 	DROP CONSTRAINT uq_care_invoices_sequence,
 	ADD CONSTRAINT uq_care_invoices_sequence UNIQUE (organization_id, issuer_key, number_year, number_sequence);
 COMMENT ON COLUMN parent_billing.care_invoices.issuer IS
-	'Body that issued the invoice in place of the Träger (#8040, ADR 0321): sender, contact, bank account and creditor identifier at the release; NULL for the Träger.';
+	'Body that issued the invoice in place of the Träger (#8040, ADR 0322): sender, contact, bank account and creditor identifier at the release; NULL for the Träger.';
 
 ALTER TABLE parent_billing.care_invoice_cancellations
 	ADD COLUMN issuer_key VARCHAR(35) NOT NULL DEFAULT '',
@@ -102,7 +102,7 @@ ALTER TABLE parent_billing.care_invoice_cancellations
 	DROP CONSTRAINT uq_care_invoice_cancellations_sequence,
 	ADD CONSTRAINT uq_care_invoice_cancellations_sequence UNIQUE (organization_id, issuer_key, number_year, number_sequence);
 COMMENT ON COLUMN parent_billing.care_invoice_cancellations.issuer_key IS
-	'Issuer of the cancelled invoice, whose number range numbers the Storno (#8040, ADR 0321).';
+	'Issuer of the cancelled invoice, whose number range numbers the Storno (#8040, ADR 0322).';
 
 ALTER TABLE parent_billing.care_notices
 	ADD COLUMN issuer_key VARCHAR(35) NOT NULL DEFAULT '',
@@ -115,7 +115,7 @@ ALTER TABLE parent_billing.care_notices
 	DROP CONSTRAINT uq_care_notices_sequence,
 	ADD CONSTRAINT uq_care_notices_sequence UNIQUE (organization_id, issuer_key, number_year, number_sequence);
 COMMENT ON COLUMN parent_billing.care_notices.issuer IS
-	'Body that issued the Jahresbescheid in place of the Träger (#8040, ADR 0321): sender, contact, bank account and creditor identifier at the release; NULL for the Träger.';
+	'Body that issued the Jahresbescheid in place of the Träger (#8040, ADR 0322): sender, contact, bank account and creditor identifier at the release; NULL for the Träger.';
 
 DROP INDEX parent_billing.uq_sepa_mandates_in_force;
 CREATE UNIQUE INDEX uq_sepa_mandates_in_force ON parent_billing.sepa_mandates (organization_id, family_email, creditor_id)

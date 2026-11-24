@@ -1,7 +1,7 @@
 import { bffJson } from "~/lib/bff-fetch";
 /**
  * Was ein Schulträger oder eine Gemeinde noch braucht, um die Eltern einer
- * Schule selbst abzurechnen (#8040, ADR 0321): Nummernkreis und Dokumentart
+ * Schule selbst abzurechnen (#8040, ADR 0322): Nummernkreis und Dokumentart
  * je Leistung, die Rechtsbehelfsbelehrung eines Bescheids und wie viele
  * Familien per Lastschrift zahlen und noch kein Mandat für die Stelle
  * haben. Die Antwort zählt nur, sie nennt keine Familie. Der Träger selbst

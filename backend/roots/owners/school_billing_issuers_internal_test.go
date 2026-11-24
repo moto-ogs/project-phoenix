@@ -9,7 +9,7 @@ import (
 )
 
 // Two schools of one creditor identifier print the same sender and account,
-// those of the school with the lowest ID, on every read (#8040, ADR 0321
+// those of the school with the lowest ID, on every read (#8040, ADR 0322
 // point 2): the debit file and its message ID never depend on map order.
 func TestSchoolsOfOneCreditorShareTheIssuerOfTheirFirstSchool(t *testing.T) {
 	t.Parallel()

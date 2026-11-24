@@ -61,7 +61,7 @@ func DefaultDocumentKind(service string) string {
 }
 
 // DefaultIssuerDocumentKind is the kind a service of an issuer issues
-// without a choice (#8040, ADR 0321): the Träger its default, a Schulträger
+// without a choice (#8040, ADR 0322): the Träger its default, a Schulträger
 // or a Gemeinde a fee notice.
 func DefaultIssuerDocumentKind(issuerKey, service string) string {
 	if issuerKey != "" && ValidDocumentKind(service, DocumentKindFeeNotice) {

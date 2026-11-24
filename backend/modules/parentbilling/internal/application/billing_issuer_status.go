@@ -11,7 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
-// The state of each body that bills a school of the Träger (#8040, ADR 0321
+// The state of each body that bills a school of the Träger (#8040, ADR 0322
 // point 11): what it still needs before its documents go out. The overview
 // of the responsibilities shows it beside the master data of the body. It
 // counts families and names none, so every member of the Träger reads it.
@@ -84,7 +84,7 @@ func issuerStatus(issuer parentbilling.BillingIssuer, schools map[int64]parentbi
 }
 
 // legalRemedyMissing tells whether the Träger's template of the fee notice
-// lacks its legal remedy; every issuer's fee notice takes it (ADR 0321
+// lacks its legal remedy; every issuer's fee notice takes it (ADR 0322
 // point 6).
 func (r *RequiredDetails) legalRemedyMissing(ctx context.Context, organizationID int64) (bool, error) {
 	template, err := r.sources.Issuers.DocumentTemplate(ctx, organizationID, parentbilling.DocumentKindFeeNotice)
