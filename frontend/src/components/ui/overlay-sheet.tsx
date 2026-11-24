@@ -136,6 +136,15 @@ function AppSheet({
           phone &&
             "h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] max-h-none",
         )}
+        // In halber Höhe liegt der untere Teil des Blatts außerhalb des
+        // Bildes; das Polster hebt Fußzeile und Listenende darüber.
+        style={
+          phone && snap === SNAP_HALF
+            ? {
+                paddingBottom: `calc(100dvh - env(safe-area-inset-top) - 0.5rem - ${SNAP_HALF * 100}dvh)`,
+              }
+            : undefined
+        }
       >
         <div className="flex items-start gap-3 px-4 pt-3 pb-2">
           <div className="min-w-0 flex-1">
