@@ -772,22 +772,19 @@ export function ISODatePicker({
   readonly embedded?: boolean;
 }) {
   // Hint and error belong to the field hull here rather than to DatePicker,
-  // so the hint reads before the error as in the kit `Input`.
-  // Only a caller's id links the error to the trigger; without one the error
-  // stays unlinked, as before #6579 (decision pending in #6800).
+  // so the hint reads before the error as in the kit `Input`. Without a
+  // caller's id the hull's generated id names the trigger, so label, hint
+  // and error stay linked either way (#6800).
   const ids = useFieldIds({
     id: rest.id,
     hint,
-    error: rest.id ? error : undefined,
+    error,
     describedBy: rest.ariaDescribedBy,
   });
-  const shellIds = {
-    ...ids,
-    errorId: error ? `${ids.id}-error` : undefined,
-  };
   const picker = (
     <DatePicker
       {...rest}
+      id={ids.id}
       invalid={rest.invalid ?? Boolean(error)}
       ariaDescribedBy={ids.describedBy}
       value={toDateOrNull(value)}
@@ -802,17 +799,13 @@ export function ISODatePicker({
 
   return (
     <FieldShell
-      ids={shellIds}
+      ids={ids}
       label={label}
-      // Only a caller's id links the label to the trigger; without one the
-      // trigger keeps its date text as its name, as before #6579 (#6800).
-      labelFor={rest.id ?? null}
       required={rest.required}
       invalid={Boolean(error)}
       hint={hint}
       error={error}
       errorLive
-      errorTone="base"
     >
       {picker}
     </FieldShell>
@@ -923,7 +916,6 @@ export function ISODateInput({
       // The field's own check runs while typing and is read out at once; the
       // form's error arrives after saving and stays quiet.
       errorLive={inputError !== null}
-      errorTone="base"
     >
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">

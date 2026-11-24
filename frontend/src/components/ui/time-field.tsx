@@ -190,7 +190,6 @@ export function TimeField({
       required={required}
       invalid={invalid}
       hint={hint}
-      hintTone="muted"
       hintHidden={inline}
     >
       <div ref={fieldRef} className="relative">

@@ -1134,6 +1134,31 @@ describe("ISODateInput", () => {
 });
 
 describe("ISODatePicker name", () => {
+  it.each([
+    ["with", "valid-from"],
+    ["without", undefined],
+  ])(
+    "names the trigger by its label and describes it by hint and error %s an id (#6800)",
+    (_case, id) => {
+      render(
+        <ISODatePicker
+          id={id}
+          label="Gültig ab"
+          value="2026-09-07"
+          onChange={() => undefined}
+          hint="Gilt ab diesem Tag."
+          error="Bitte wähle einen Schultag."
+        />,
+      );
+
+      const trigger = screen.getByRole("button", { name: "Gültig ab" });
+      expect(trigger).toHaveAccessibleDescription(
+        "Gilt ab diesem Tag. Bitte wähle einen Schultag.",
+      );
+      if (id) expect(trigger).toHaveAttribute("id", id);
+    },
+  );
+
   it("links an external hint and its own error", () => {
     render(
       <ISODatePicker
