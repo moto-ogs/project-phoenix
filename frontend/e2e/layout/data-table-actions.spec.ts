@@ -178,7 +178,7 @@ test.describe("phone card details toggle", () => {
     viewport: { width: 390, height: 844 },
   });
 
-  test("stands beside the menu at the top right with a 44 px hit area", async ({
+  test("stands right of the menu at the top right with a 44 px hit area", async ({
     page,
   }) => {
     const { createElement } = await import("react");
@@ -231,9 +231,11 @@ test.describe("phone card details toggle", () => {
 
     expect(toggleBox.width).toBeGreaterThanOrEqual(44);
     expect(toggleBox.height).toBeGreaterThanOrEqual(44);
-    // Menü ganz rechts, der Knopf links daneben, beide in der Karte.
-    expect(menuBox.x).toBeGreaterThanOrEqual(toggleBox.x + toggleBox.width);
-    expect(menuBox.x + menuBox.width).toBeLessThanOrEqual(
+    // Der Pfeil ganz rechts, das Menü links daneben, beide in der Karte:
+    // So bilden die Pfeile aller Karten eine Spalte (#7913).
+    expect(toggleBox.x).toBeGreaterThanOrEqual(menuBox.x + menuBox.width);
+    expect(menuBox.x).toBeGreaterThanOrEqual(cardBox.x);
+    expect(toggleBox.x + toggleBox.width).toBeLessThanOrEqual(
       cardBox.x + cardBox.width,
     );
     expect(toggleBox.y).toBeLessThan(cardBox.y + 24);
