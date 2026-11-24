@@ -29,6 +29,7 @@ import {
   CalendarRange,
   Download,
   FileText,
+  ListChecks,
   Search,
   StickyNote,
 } from "lucide-react";
@@ -128,6 +129,8 @@ import {
   trackingColumn,
 } from "~/components/students/student-table";
 import { StudentSelectionScope } from "~/components/students/student-selection-scope";
+import { StudentListApp } from "~/components/students/student-list-app";
+import { useDeviceContext } from "~/lib/device-context";
 import {
   CollectionViewSwitch,
   columnMenuEntries,
@@ -3371,6 +3374,11 @@ function SearchPageContent() {
   // Die Spaltenwahl wirkt nur am Computer: auf dem Handy zeigt die Liste
   // je Kind eine Zeile mit Name, Status und Gehzeit (#3834).
   const isPhone = useMediaQuery(BELOW_MD);
+  // App (#8070): Kinder als Zeilenliste mit Kind-Blatt. Der An- und
+  // Abmeldemodus behält seine Karten; die Ansichtswahl gilt nur am Desktop.
+  const device = useDeviceContext();
+  const appView = device.resolved && device.isApp;
+  const appList = appView && !(checkinModeAvailable && schoolCheckin.isActive);
   const changeView = useCallback(
     (next: "tiles" | "table") => {
       if (next === collectionView.view) return;
@@ -3457,10 +3465,29 @@ function SearchPageContent() {
         statsLoading={!hasFetchedOnce || isDateTransition}
         actions={
           <>
-            <CollectionViewSwitch
-              value={collectionView.view}
-              onChange={changeView}
-            />
+            {/* App (#8070): Der Modus steht als Symbol im Kopf statt als
+                Zeile über der Liste; die Liste bleibt im ersten Bild. */}
+            {appList && checkinModeAvailable ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                // Abstand zum „…“: Die Trefferflächen (44 px) überlappen sonst.
+                className="mr-2"
+                aria-label="Kinder an- und abmelden"
+                tooltip="Zeigt bei jedem Kind einen Knopf zum An- und Abmelden."
+                onClick={schoolCheckin.toggleActive}
+                disabled={schoolCheckin.isBulkRunning}
+              >
+                <ListChecks className="size-5" aria-hidden="true" />
+              </Button>
+            ) : null}
+            {appView ? null : (
+              <CollectionViewSwitch
+                value={collectionView.view}
+                onChange={changeView}
+              />
+            )}
             {/* `tourTarget` gibt der Einstiegs-Tour ein eindeutiges Ziel: über
                 dieses Menü erreicht man die Aufsicht, wenn die Schule Kinder
                 nur hier finden lässt (#1321). */}
@@ -3468,6 +3495,17 @@ function SearchPageContent() {
               tourTarget="child-search-menu"
               items={[
                 ...childScope.menuItems,
+                ...(appList && checkinModeAvailable
+                  ? [
+                      {
+                        label: "Kinder an- und abmelden",
+                        description:
+                          "Zeigt bei jedem Kind einen Knopf zum An- und Abmelden.",
+                        icon: <ListChecks className="h-4 w-4" aria-hidden />,
+                        onClick: schoolCheckin.toggleActive,
+                      },
+                    ]
+                  : []),
                 {
                   // Abwesenheits-Übersicht (#2288): bewusst kein eigener
                   // Seitenleisten-Eintrag; der Einstieg liegt hier, wo das Team
@@ -3779,7 +3817,7 @@ function SearchPageContent() {
           Check-in toggles TODAY's attendance, so it hides on other dates. */}
           {/* In der Liste markieren die Kästchen; der Modus gehört zu den
               Kacheln (#3834). */}
-          {checkinModeAvailable && !showTable && (
+          {checkinModeAvailable && !showTable && !appList && (
             <div className="mb-3 md:hidden">
               <SchoolCheckinModeMobile
                 isActive={schoolCheckin.isActive}
@@ -3862,6 +3900,22 @@ function SearchPageContent() {
               {(() => {
                 if (showGridSkeleton) {
                   return <StudentCardGridSkeleton />;
+                }
+                if (appList) {
+                  return (
+                    <StudentListApp
+                      students={sortedStudents}
+                      groups={groupedStudents}
+                      alphabetic={
+                        effectiveGroupMode === "none" && sortMode === "name"
+                      }
+                      isToday={isToday}
+                      studentHref={(student) =>
+                        `/students/${student.id}?from=${fromParam}`
+                      }
+                      classLabel={holidayGuestLabel}
+                    />
+                  );
                 }
                 if (showTable) {
                   return (
@@ -4188,23 +4242,26 @@ function SearchPageContent() {
           whose filter panel switches to desktop at `xl`. Both the filter sheet and the FAB
           live under the same boundary so iPad Air gets the consistent
           tablet UX. */}
-      {checkinModeAvailable && !schoolCheckin.isActive && !showTable && (
-        <div className="hidden md:block xl:hidden">
-          <SchoolCheckinFab
-            variant="floating"
-            floatingUntil="xl"
-            isActive={schoolCheckin.isActive}
-            onToggle={schoolCheckin.toggleActive}
-            successCount={
-              schoolCheckin.selectionActive
-                ? selectedStudentsForBulk.length
-                : schoolCheckin.successCount
-            }
-            pendingCount={schoolCheckin.pendingIds.size}
-            disabled={schoolCheckin.isBulkRunning}
-          />
-        </div>
-      )}
+      {checkinModeAvailable &&
+        !schoolCheckin.isActive &&
+        !showTable &&
+        !appView && (
+          <div className="hidden md:block xl:hidden">
+            <SchoolCheckinFab
+              variant="floating"
+              floatingUntil="xl"
+              isActive={schoolCheckin.isActive}
+              onToggle={schoolCheckin.toggleActive}
+              successCount={
+                schoolCheckin.selectionActive
+                  ? selectedStudentsForBulk.length
+                  : schoolCheckin.successCount
+              }
+              pendingCount={schoolCheckin.pendingIds.size}
+              disabled={schoolCheckin.isBulkRunning}
+            />
+          </div>
+        )}
     </>
   );
 }

@@ -1,7 +1,14 @@
 "use client";
 
 import type * as studentsContract from "~/lib/contract/students.generated";
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { useParams, usePathname, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { HolidayGuestSection } from "~/components/students/holiday-guest-section";
@@ -85,7 +92,13 @@ import {
 import { FamilyProtectionControl } from "~/components/students/family-protection-control";
 import { StudentConsentsReadOnly } from "~/components/students/student-consents-read-only";
 import { SectionCard } from "~/components/ui/section-card";
-import { TenantPage } from "~/components/ui/tenant-page";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
+import { useDeviceContext } from "~/lib/device-context";
+import {
+  RequestedQuickAction,
+  STUDENT_QUICK_ACTION_PARAM,
+  isStudentQuickAction,
+} from "~/components/students/requested-quick-action";
 import {
   StudentCheckoutSection,
   StudentCheckinSection,
@@ -473,6 +486,11 @@ function StudentDetailPageContent() {
   // dem aktuellen Stand, etwa einer inzwischen geänderten Notiz.
   const dialogErrors = useApiFormError();
   const { data: session, status: sessionStatus } = useSession();
+  // App (#8070): Kopf mit Chips und Aktionsleiste statt Statuszeilen und
+  // Kachelreihe. Vor der Hydration gilt der Desktop-Zweig.
+  const device = useDeviceContext();
+  const appHead = device.resolved && device.isApp;
+  const requestedAction = searchParams.get(STUDENT_QUICK_ACTION_PARAM);
   const weekendFollowsFriday = useWeekendFollowsFriday();
   const berlinToday = useBerlinToday();
 
@@ -1490,6 +1508,30 @@ function StudentDetailPageContent() {
   // RENDER
   // =============================================================================
 
+  // Ohne eine einzige Schnellaktion bliebe eine leere Zeile im Kopf.
+  const quickActions: ReactNode = hasQuickActions ? (
+    <StudentQuickActions
+      student={student}
+      showCheckout={showCheckout}
+      showCheckin={showCheckin}
+      hasAbsenceWriteAccess={hasAbsenceWriteAccess}
+      hasSickExcusedWriteAccess={hasSickExcusedWriteAccess}
+      onCheckoutClick={() => {
+        setCheckoutNote("");
+        setCheckoutIsEarly(isEarlyCheckout(todayPickup.time));
+        setShowConfirmCheckout(true);
+      }}
+      onCheckinClick={() => setShowConfirmCheckin(true)}
+      onSickClick={handleSickClick}
+      sickLoading={sickLoading}
+      isQuickExcused={isQuickExcused}
+      onExcusedClick={handleExcusedClick}
+      excusedLoading={excusedLoading}
+      onClassTripClick={() => setPlannedStatusModal("class_trip")}
+      plannedStatusLoading={plannedStatusLoading}
+    />
+  ) : undefined;
+
   return (
     /* Der Entitätskopf IST die Kopfkarte der Seite: Foto, Name, Statuszeile
           mit Klasse, Gruppe und den Zeiten des heutigen Tages, der aktuelle
@@ -1512,66 +1554,67 @@ function StudentDetailPageContent() {
         ) : undefined
       }
       stats={
-        // Der Aufenthaltsort ist Status, keine Aktion: er steht in der
-        // Statuszeile des Identitätskopfes und nicht im Aktionsplatz, wo er
-        // wie eine Schaltfläche gelesen würde.
-        <span className="block">
-          <span className="mb-1 flex flex-wrap items-center gap-2">
-            <StudentHeaderLocation
+        appHead ? (
+          <AppStudentHeadStatus
+            location={
+              <StudentHeaderLocation
+                student={student}
+                myGroups={myGroups}
+                myGroupRooms={myGroupRooms}
+                mySupervisedRooms={mySupervisedRooms}
+                todayArrivalPlannedTime={todayArrival.time}
+                isArrivalException={todayArrival.isException}
+                todayArrivalNote={todayArrival.note}
+                isArrivalAbsent={todayArrival.isAbsent}
+                showLocationSince={false}
+              />
+            }
+            arrival={student.actual_arrival_time ?? todayArrival.time}
+            arrived={Boolean(student.actual_arrival_time)}
+            pickup={student.actual_pickup_time ?? todayPickup.time}
+            pickedUp={Boolean(student.actual_pickup_time)}
+            group={student.group_name}
+            actions={quickActions}
+          />
+        ) : (
+          // Der Aufenthaltsort ist Status, keine Aktion: er steht in der
+          // Statuszeile des Identitätskopfes und nicht im Aktionsplatz, wo er
+          // wie eine Schaltfläche gelesen würde.
+          <span className="block">
+            <span className="mb-1 flex flex-wrap items-center gap-2">
+              <StudentHeaderLocation
+                student={student}
+                myGroups={myGroups}
+                myGroupRooms={myGroupRooms}
+                mySupervisedRooms={mySupervisedRooms}
+                todayArrivalPlannedTime={todayArrival.time}
+                isArrivalException={todayArrival.isException}
+                todayArrivalNote={todayArrival.note}
+                isArrivalAbsent={todayArrival.isAbsent}
+              />
+            </span>
+            <StudentHeaderStats
               student={student}
-              myGroups={myGroups}
-              myGroupRooms={myGroupRooms}
-              mySupervisedRooms={mySupervisedRooms}
+              todayPickupPlannedTime={todayPickup.time}
+              todayPickupActualTime={student.actual_pickup_time}
+              todayPickupNote={todayPickup.note}
+              todayCheckoutNote={student.actual_pickup_note}
+              isPickupException={todayPickup.isException}
               todayArrivalPlannedTime={todayArrival.time}
+              todayArrivalActualTime={student.actual_arrival_time}
               isArrivalException={todayArrival.isException}
               todayArrivalNote={todayArrival.note}
               isArrivalAbsent={todayArrival.isAbsent}
+              sickReason={currentSickReason}
+              todayArrivalBy={student.actual_arrival_by}
+              todayPickupBy={student.actual_pickup_by}
             />
           </span>
-          <StudentHeaderStats
-            student={student}
-            todayPickupPlannedTime={todayPickup.time}
-            todayPickupActualTime={student.actual_pickup_time}
-            todayPickupNote={todayPickup.note}
-            todayCheckoutNote={student.actual_pickup_note}
-            isPickupException={todayPickup.isException}
-            todayArrivalPlannedTime={todayArrival.time}
-            todayArrivalActualTime={student.actual_arrival_time}
-            isArrivalException={todayArrival.isException}
-            todayArrivalNote={todayArrival.note}
-            isArrivalAbsent={todayArrival.isAbsent}
-            sickReason={currentSickReason}
-            todayArrivalBy={student.actual_arrival_by}
-            todayPickupBy={student.actual_pickup_by}
-          />
-        </span>
+        )
       }
       searchSlotHeight="natural"
       // Ohne eine einzige Schnellaktion bliebe eine leere Zeile im Kopf.
-      searchSlot={
-        hasQuickActions ? (
-          <StudentQuickActions
-            student={student}
-            showCheckout={showCheckout}
-            showCheckin={showCheckin}
-            hasAbsenceWriteAccess={hasAbsenceWriteAccess}
-            hasSickExcusedWriteAccess={hasSickExcusedWriteAccess}
-            onCheckoutClick={() => {
-              setCheckoutNote("");
-              setCheckoutIsEarly(isEarlyCheckout(todayPickup.time));
-              setShowConfirmCheckout(true);
-            }}
-            onCheckinClick={() => setShowConfirmCheckin(true)}
-            onSickClick={handleSickClick}
-            sickLoading={sickLoading}
-            isQuickExcused={isQuickExcused}
-            onExcusedClick={handleExcusedClick}
-            excusedLoading={excusedLoading}
-            onClassTripClick={() => setPlannedStatusModal("class_trip")}
-            plannedStatusLoading={plannedStatusLoading}
-          />
-        ) : undefined
-      }
+      searchSlot={appHead ? undefined : quickActions}
       tabs={
         isHolidayGuest
           ? undefined
@@ -1585,6 +1628,29 @@ function StudentDetailPageContent() {
       }
       overlays={
         <>
+          {/* Aktion aus dem Kind-Blatt der Liste (#8070): öffnet hier
+              denselben Dialog wie die Kachel. */}
+          {requestedAction && isStudentQuickAction(requestedAction) ? (
+            <RequestedQuickAction
+              action={requestedAction}
+              run={{
+                abmelden: showCheckout
+                  ? () => {
+                      setCheckoutNote("");
+                      setCheckoutIsEarly(isEarlyCheckout(todayPickup.time));
+                      setShowConfirmCheckout(true);
+                    }
+                  : undefined,
+                anmelden: showCheckin
+                  ? () => setShowConfirmCheckin(true)
+                  : undefined,
+                krank: hasSickExcusedWriteAccess ? handleSickClick : undefined,
+                entschuldigen: hasSickExcusedWriteAccess
+                  ? handleExcusedClick
+                  : undefined,
+              }}
+            />
+          ) : null}
           {/* Checkout Confirmation Modal */}
           <Modal
             isOpen={showConfirmCheckout}
@@ -1986,7 +2052,7 @@ function StudentQuickActions({
     // laesst -- die Zeile lief rechts aus dem Bild, das Menue war gar nicht
     // erreichbar. Ab sm stehen sie wieder in einer Reihe.
     <div
-      className="grid grid-cols-2 gap-3 sm:flex sm:gap-4"
+      className="app:flex app:gap-1.5! grid grid-cols-2 gap-3 sm:flex sm:gap-4"
       aria-label="Schnellaktionen"
     >
       {showCheckout && (
@@ -2018,6 +2084,44 @@ function StudentQuickActions({
         />
       )}
     </div>
+  );
+}
+
+/**
+ * Kopf der Kindakte in der App (#8070): Aufenthaltsort und die Zeiten des
+ * Tages als Chips, darunter die Schnellaktionen als eine Leiste.
+ */
+function AppStudentHeadStatus({
+  location,
+  arrival,
+  arrived,
+  pickup,
+  pickedUp,
+  group,
+  actions,
+}: Readonly<{
+  location: ReactNode;
+  arrival?: string;
+  arrived: boolean;
+  pickup?: string;
+  pickedUp: boolean;
+  group?: string;
+  actions: ReactNode;
+}>) {
+  const items: { label: string }[] = [];
+  if (arrival)
+    items.push({ label: `${arrived ? "Da seit" : "Kommt"} ${arrival}` });
+  if (pickup)
+    items.push({ label: `${pickedUp ? "Gegangen" : "Geht"} ${pickup}` });
+  if (group) items.push({ label: group });
+  return (
+    <span className="flex flex-col gap-2 pt-0.5">
+      <span className="flex items-center gap-2 whitespace-nowrap">
+        <span className="shrink-0">{location}</span>
+        {items.length > 0 ? <TenantPageStats items={items} /> : null}
+      </span>
+      {actions}
+    </span>
   );
 }
 

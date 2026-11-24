@@ -376,6 +376,7 @@ export function StudentHeaderLocation({
   isArrivalException,
   isArrivalAbsent,
   todayArrivalNote,
+  showLocationSince = true,
 }: Readonly<
   Pick<
     StudentHeaderProps,
@@ -387,7 +388,10 @@ export function StudentHeaderLocation({
     | "isArrivalException"
     | "isArrivalAbsent"
     | "todayArrivalNote"
-  >
+  > & {
+    /** „seit …“ unter dem Ort; der App-Kopf nennt die Zeit als Chip. */
+    showLocationSince?: boolean;
+  }
 >) {
   // The page reads today's arrival from the child's arrival schedule, not from
   // the student row; the badge reads today's plan from these fields itself.
@@ -431,7 +435,7 @@ export function StudentHeaderLocation({
       supervisedRooms={mySupervisedRooms}
       variant="modern"
       size="md"
-      showLocationSince={true}
+      showLocationSince={showLocationSince}
     />
   );
 }
@@ -922,7 +926,7 @@ export function PersonalInfoReadOnly({
       />
       {/* Feldgitter aus dem Kit (`DataGrid`/`DataField`), kein eigenes
           Feldraster: dieselbe Anatomie wie in jeder anderen Objektansicht. */}
-      <DataGrid>
+      <DataGrid appRows>
         <DataField label="Vollständiger Name">
           <ParentVisibleValue hint={PARENT_VISIBLE_HINTS.name}>
             {student.name}
