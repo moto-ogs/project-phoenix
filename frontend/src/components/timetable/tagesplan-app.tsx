@@ -470,7 +470,12 @@ export function TagesplanApp(props: TagesplanAppProps) {
           if (!open) setSheetId(null);
         }}
         title={sheetEntry?.instance.title ?? ""}
-        footer={sheetEntry ? actionFor(sheetEntry, true) : undefined}
+        footer={
+          sheetEntry &&
+          (sheetEntry.state.openable || sheetEntry.state.startable)
+            ? actionFor(sheetEntry, true)
+            : undefined
+        }
       >
         {sheetEntry ? detailFor(sheetEntry) : null}
       </OverlaySheet>
