@@ -31,7 +31,7 @@ import { useClipboardCopy } from "~/lib/use-clipboard-copy";
  * The body of a device edit: the fields of the form and the `version` of the
  * stored device the form was filled from (ADR 0311).
  */
-export function toDeviceUpdateRequest(
+function toDeviceUpdateRequest(
   data: Partial<Device>,
 ): iotContract.DeviceUpdateRequest {
   return { ...prepareDeviceForBackend(data), expected_version: data.version };
