@@ -355,59 +355,6 @@ func TestGradeTransitionResource_Create(t *testing.T) {
 }
 
 // ============================================================================
-// GetByID Tests
-// ============================================================================
-
-func TestGradeTransitionResource_GetByID(t *testing.T) {
-	t.Parallel()
-
-	tc := setupGradeTransitionsModule(t)
-
-	account := testpkg.CreateTestAccount(t, tc.db, "getbyid-test@example.com")
-
-	transition := testpkg.CreateTestGradeTransition(t, tc.db, "2025-2026", account.ID)
-	testpkg.CreateTestGradeTransitionMapping(t, tc.db, transition.ID, "1a", testpkg.StrPtr("2a"))
-
-	router := tc.resource.Router(rootAPI.ProtectedTenantRoutes)
-	token := mintAdminToken(t, account.ID)
-
-	t.Run("get transition by ID", func(t *testing.T) {
-		url := fmt.Sprintf("/%d", transition.ID)
-		req := testutil.NewAuthenticatedRequest(t, "GET", url, nil,
-			testutil.WithJWTBearer(token),
-		)
-
-		rr := testutil.ExecuteRequest(router, req)
-		testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-
-		response := testutil.ParseJSONResponse(t, rr.Body.Bytes())
-		data := response["data"].(map[string]interface{})
-		// Ids cross the wire as strings so a value beyond 2^53 survives a JSON
-		// number parse in the browser (#405 review).
-		assert.Equal(t, strconv.FormatInt(transition.ID, 10), data["id"])
-		assert.Equal(t, "2025-2026", data["academic_year"])
-	})
-
-	t.Run("get non-existent transition returns 404", func(t *testing.T) {
-		req := testutil.NewAuthenticatedRequest(t, "GET", "/999999", nil,
-			testutil.WithJWTBearer(token),
-		)
-
-		rr := testutil.ExecuteRequest(router, req)
-		testutil.AssertNotFound(t, rr)
-	})
-
-	t.Run("get with invalid ID returns 400", func(t *testing.T) {
-		req := testutil.NewAuthenticatedRequest(t, "GET", "/invalid", nil,
-			testutil.WithJWTBearer(token),
-		)
-
-		rr := testutil.ExecuteRequest(router, req)
-		testutil.AssertBadRequest(t, rr)
-	})
-}
-
-// ============================================================================
 // Update Tests
 // ============================================================================
 

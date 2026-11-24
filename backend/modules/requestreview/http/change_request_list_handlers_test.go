@@ -343,7 +343,12 @@ func aggExcusedPending(id int64, first, last string, createdAt time.Time) *excus
 // given permissions, mirroring what the router middleware injects.
 func aggRequest(t *testing.T, rawQuery string, perms []string) *http.Request {
 	t.Helper()
-	req := httptest.NewRequest("GET", "/change-requests", nil)
+	return aggRequestTo(t, "/change-requests", rawQuery, perms)
+}
+
+func aggRequestTo(t *testing.T, path, rawQuery string, perms []string) *http.Request {
+	t.Helper()
+	req := httptest.NewRequest("GET", path, nil)
 	if rawQuery != "" {
 		req.URL.RawQuery = rawQuery
 	}
@@ -363,18 +368,25 @@ func serveAggregated(rs *requestreviewhttp.Resource, w http.ResponseWriter, r *h
 }
 
 type aggPage struct {
-	Items []struct {
-		RequestType string          `json:"request_type"`
-		UrgentToday bool            `json:"urgent_today"`
-		Data        json.RawMessage `json:"data"`
-	} `json:"items"`
-	NextCursor string `json:"next_cursor"`
+	Items      []aggItem `json:"items"`
+	NextCursor string    `json:"next_cursor"`
 }
 
 func execAggregated(t *testing.T, rs *requestreviewhttp.Resource, rawQuery string, perms []string) (*httptest.ResponseRecorder, aggPage) {
 	t.Helper()
+	return execAggregatedAt(t, rs, "/change-requests", rawQuery, perms)
+}
+
+// execAggregatedHistory reads the decided requests on their own path.
+func execAggregatedHistory(t *testing.T, rs *requestreviewhttp.Resource, rawQuery string, perms []string) (*httptest.ResponseRecorder, aggPage) {
+	t.Helper()
+	return execAggregatedAt(t, rs, "/change-requests/history", rawQuery, perms)
+}
+
+func execAggregatedAt(t *testing.T, rs *requestreviewhttp.Resource, path, rawQuery string, perms []string) (*httptest.ResponseRecorder, aggPage) {
+	t.Helper()
 	rr := httptest.NewRecorder()
-	serveAggregated(rs, rr, aggRequest(t, rawQuery, perms))
+	serveAggregated(rs, rr, aggRequestTo(t, path, rawQuery, perms))
 	var env struct {
 		Data aggPage `json:"data"`
 	}
@@ -423,18 +435,18 @@ func TestAggregatedChangeRequests_OpenMergesAllTypesNewestFirst(t *testing.T) {
 	assert.Equal(t, []string{"offering", "master_data", "excused", "care_schedule"}, aggTypes(page))
 	assert.Empty(t, page.NextCursor)
 
-	// The payload is the unchanged per-type queue projection.
+	// The projection travels in the member named like the type.
 	var master struct {
 		ID        string `json:"id"`
 		FirstName string `json:"first_name"`
 		FieldKey  string `json:"field_key"`
 	}
-	require.NoError(t, json.Unmarshal(page.Items[1].Data, &master))
+	require.NoError(t, json.Unmarshal(page.Items[1].MasterData, &master))
 	assert.Equal(t, "1", master.ID)
 	assert.Equal(t, "Anna", master.FirstName)
 	assert.Equal(t, "first_name", master.FieldKey)
 
-	assertCareAffectedBlocks(t, page.Items[3].Data)
+	assertCareAffectedBlocks(t, page.Items[3].CareSchedule)
 }
 
 func TestAggregatedChangeRequests_OpenPaginatesAllUrgentRowsBeforeNewerNormalRows(t *testing.T) {
@@ -514,16 +526,20 @@ func TestAggregatedChangeRequests_InvalidQuery(t *testing.T) {
 		"cursor=bm9wZQ",
 		"limit=0",
 		"limit=abc",
-		"view=nope",
 		"types=unknown",
-		"status=maybe&view=history",
-		"status=approved",              // status is a history-only filter
-		"from=2026-08-10",              // date range is history-only
-		"view=history&from=10.08.2026", // ISO dates only
-		"view=history&from=2026-08-10&to=2026-08-01",
+		"status=approved", // status is a history-only filter
+		"from=2026-08-10", // date range is history-only
 	} {
 		rr, _ := execAggregated(t, rs, query, aggUpdatePerms)
 		assert.Equal(t, http.StatusBadRequest, rr.Code, fmt.Sprintf("query %q must be rejected", query))
+	}
+	for _, query := range []string{
+		"status=maybe",
+		"from=10.08.2026", // ISO dates only
+		"from=2026-08-10&to=2026-08-01",
+	} {
+		rr, _ := execAggregatedHistory(t, rs, query, aggUpdatePerms)
+		assert.Equal(t, http.StatusBadRequest, rr.Code, fmt.Sprintf("history query %q must be rejected", query))
 	}
 }
 
@@ -541,7 +557,7 @@ func TestAggregatedChangeRequests_AbsenceOnlyCallerSeesNoDirectCorrections(t *te
 		aggDirectCorrection(7, "Anna Alt", aggBase.Add(3*time.Hour)),
 	}
 
-	rr, page := execAggregated(t, rs, "view=history", []string{"users:absence"})
+	rr, page := execAggregatedHistory(t, rs, "", []string{"users:absence"})
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 	assert.Empty(t, aggTypes(page))
 	assert.Zero(t, fakes.offering.correctionsCalls)

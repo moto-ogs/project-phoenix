@@ -193,55 +193,54 @@ func TestRequestReviewGolden(t *testing.T) {
 	rec := &goldenRecorder{t: t, tc: tc, scrub: scrub, counter: testpkg.CaptureQueriesForContext(t, tc.db)}
 	asterID, birkeID := strconv.FormatInt(aster.ID, 10), strconv.FormatInt(birke.ID, 10)
 
-	rec.pages("open", "view=open&search=Golda&limit=2", admin)
+	rec.pages("open", "search=Golda&limit=2", admin)
 	rec.pages("open-defaults", "search=Golda", admin)
-	rec.list("open-excused", "view=open&search=Golda&types=excused", admin)
-	rec.list("open-care-and-master-data", "view=open&search=Golda&types=care_schedule,master_data", admin)
-	rec.listLabeled("open-student", "view=open&student_id="+asterID, "view=open&student_id=<student:aster>", admin)
-	rec.list("open-no-match", "view=open&search=Niemand", admin)
-	rec.list("open-corrections-only", "view=open&search=Golda&types=direct_correction", admin)
+	rec.list("open-excused", "search=Golda&types=excused", admin)
+	rec.list("open-care-and-master-data", "search=Golda&types=care_schedule,master_data", admin)
+	rec.listLabeled("open-student", "student_id="+asterID, "student_id=<student:aster>", admin)
+	rec.list("open-no-match", "search=Niemand", admin)
+	rec.list("open-corrections-only", "search=Golda&types=direct_correction", admin)
 
-	rec.pages("history", "view=history&search=Golda&limit=2", admin)
-	rec.list("history-rejected", "view=history&search=Golda&status=rejected", admin)
-	rec.list("history-approved-or-withdrawn", "view=history&search=Golda&status=approved,withdrawn", admin)
-	rec.list("history-sunday", "view=history&search=Golda&from=2026-03-01&to=2026-03-01", admin)
-	rec.list("history-excused", "view=history&search=Golda&types=excused", admin)
-	rec.listLabeled("history-student", "view=history&student_id="+birkeID, "view=history&student_id=<student:birke>", admin)
+	rec.historyPages("history", "search=Golda&limit=2", admin)
+	rec.history("history-rejected", "search=Golda&status=rejected", admin)
+	rec.history("history-approved-or-withdrawn", "search=Golda&status=approved,withdrawn", admin)
+	rec.history("history-sunday", "search=Golda&from=2026-03-01&to=2026-03-01", admin)
+	rec.history("history-excused", "search=Golda&types=excused", admin)
+	rec.historyLabeled("history-student", "student_id="+birkeID, "student_id=<student:birke>", admin)
 
-	rec.list("invalid-view", "view=everything", admin)
 	rec.list("invalid-type", "types=unknown", admin)
-	rec.list("invalid-open-status", "view=open&status=approved", admin)
-	rec.list("invalid-range", "view=history&from=2026-03-02&to=2026-03-01", admin)
+	rec.list("invalid-open-status", "status=approved", admin)
+	rec.history("invalid-range", "from=2026-03-02&to=2026-03-01", admin)
 	rec.list("invalid-limit", "limit=0", admin)
-	rec.list("invalid-cursor", "view=open&cursor=not-a-cursor", admin)
+	rec.list("invalid-cursor", "cursor=not-a-cursor", admin)
 
 	rec.count("pending-count", admin)
 
-	rec.list("group-leader/open", "view=open&search=Golda", groupLeader)
-	rec.list("group-leader/history", "view=history&search=Golda", groupLeader)
+	rec.list("group-leader/open", "search=Golda", groupLeader)
+	rec.history("group-leader/history", "search=Golda", groupLeader)
 	rec.count("group-leader/pending-count", groupLeader)
 
 	// Without users:update only the excused queue is served (#2232).
-	rec.list("absence-reviewer/open", "view=open&search=Golda", absenceReviewer)
-	rec.list("absence-reviewer/open-master-data", "view=open&search=Golda&types=master_data", absenceReviewer)
-	rec.list("absence-reviewer/history", "view=history&search=Golda", absenceReviewer)
+	rec.list("absence-reviewer/open", "search=Golda", absenceReviewer)
+	rec.list("absence-reviewer/open-master-data", "search=Golda&types=master_data", absenceReviewer)
+	rec.history("absence-reviewer/history", "search=Golda", absenceReviewer)
 	rec.count("absence-reviewer/pending-count", absenceReviewer)
 
-	rec.list("absence-only/open", "view=open&search=Golda", absenceOnly)
-	rec.list("absence-only/history", "view=history&search=Golda", absenceOnly)
+	rec.list("absence-only/open", "search=Golda", absenceOnly)
+	rec.history("absence-only/history", "search=Golda", absenceOnly)
 	rec.count("absence-only/pending-count", absenceOnly)
 
-	rec.list("read-only/open", "view=open&search=Golda", readOnly)
+	rec.list("read-only/open", "search=Golda", readOnly)
 	rec.count("read-only/pending-count", readOnly)
 
 	// Once the school lets group leaders decide, the leader reviews exactly
 	// the children of the group they lead: Golda Aster, not Golda Birke.
 	require.NoError(t, tc.settings().SetValue(ctx, settings.KeyParentRequestGroupLeaderReviewEnabled, true, nil, nil))
 	groupAbsenceReviewer := goldenCaller{claims: testutil.TeacherTestClaims(int(leaderAccount.ID)), perms: []string{"users:read", "users:absence"}}
-	rec.list("group-leader-enabled/open", "view=open&search=Golda", groupLeader)
-	rec.list("group-leader-enabled/history", "view=history&search=Golda", groupLeader)
+	rec.list("group-leader-enabled/open", "search=Golda", groupLeader)
+	rec.history("group-leader-enabled/history", "search=Golda", groupLeader)
 	rec.count("group-leader-enabled/pending-count", groupLeader)
-	rec.list("group-absence-reviewer/open", "view=open&search=Golda", groupAbsenceReviewer)
+	rec.list("group-absence-reviewer/open", "search=Golda", groupAbsenceReviewer)
 	rec.count("group-absence-reviewer/pending-count", groupAbsenceReviewer)
 
 	var got bytes.Buffer
@@ -283,12 +282,26 @@ type goldenRecorder struct {
 	cases   []goldenCase
 }
 
+const (
+	goldenOpenPath    = "/change-requests"
+	goldenHistoryPath = "/change-requests/history"
+)
+
 func (r *goldenRecorder) list(name, query string, caller goldenCaller) {
 	r.listLabeled(name, query, query, caller)
 }
 
 func (r *goldenRecorder) listLabeled(name, query, label string, caller goldenCaller) {
-	r.get(name, "/change-requests?"+query, "/change-requests?"+label, caller)
+	r.get(name, goldenOpenPath+"?"+query, goldenOpenPath+"?"+label, caller)
+}
+
+// history records one read of the decision history, which has its own path.
+func (r *goldenRecorder) history(name, query string, caller goldenCaller) {
+	r.historyLabeled(name, query, query, caller)
+}
+
+func (r *goldenRecorder) historyLabeled(name, query, label string, caller goldenCaller) {
+	r.get(name, goldenHistoryPath+"?"+query, goldenHistoryPath+"?"+label, caller)
 }
 
 // count records the pending-count badge as one caller sees it.
@@ -296,17 +309,26 @@ func (r *goldenRecorder) count(name string, caller goldenCaller) {
 	r.get(name, "/change-requests/pending-count", "/change-requests/pending-count", caller)
 }
 
-// pages follows the cursor chain of one query to its last page.
+// pages follows the cursor chain of one open-list query to its last page.
 func (r *goldenRecorder) pages(name, query string, caller goldenCaller) {
-	path, label := "/change-requests?"+query, "/change-requests?"+query
+	r.pagesAt(goldenOpenPath, name, query, caller)
+}
+
+// historyPages follows the cursor chain of one history query.
+func (r *goldenRecorder) historyPages(name, query string, caller goldenCaller) {
+	r.pagesAt(goldenHistoryPath, name, query, caller)
+}
+
+func (r *goldenRecorder) pagesAt(base, name, query string, caller goldenCaller) {
+	path, label := base+"?"+query, base+"?"+query
 	for page := 1; ; page++ {
 		next := r.get(fmt.Sprintf("%s/page-%d", name, page), path, label, caller)
 		if next == "" {
 			return
 		}
 		require.Less(r.t, page, 10, "the cursor chain of %s does not end", name)
-		path = "/change-requests?" + query + "&cursor=" + url.QueryEscape(next)
-		label = fmt.Sprintf("/change-requests?%s&cursor=<next_cursor of page %d>", query, page)
+		path = base + "?" + query + "&cursor=" + url.QueryEscape(next)
+		label = fmt.Sprintf("%s?%s&cursor=<next_cursor of page %d>", base, query, page)
 	}
 }
 

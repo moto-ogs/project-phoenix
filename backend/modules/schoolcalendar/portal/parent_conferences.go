@@ -35,7 +35,6 @@ var (
 // their occupancy and the classes she may offer one for.
 type SchoolParentConferences interface {
 	ListSchoolParentConferences(ctx context.Context) (*SchoolParentConferenceList, error)
-	GetSchoolParentConference(ctx context.Context, id int64) (*ParentConferenceView, error)
 	CreateSchoolParentConference(ctx context.Context, req ParentConferenceRequest) (*ParentConferenceView, error)
 	UpdateSchoolParentConference(ctx context.Context, id int64, req ParentConferenceRequest) (*ParentConferenceView, error)
 	DeleteSchoolParentConference(ctx context.Context, id int64) error

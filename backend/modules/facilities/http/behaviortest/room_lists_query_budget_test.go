@@ -24,9 +24,7 @@ type roomListBudgetWant struct {
 }
 
 // The existing root binding includes JWT, scope, permissions and the tenant
-// transaction, but not the outer host's live-session middleware. Only the
-// paginated list invokes Occupancy; by-category intentionally returns simple
-// room responses, even for occupied rooms.
+// transaction, but not the outer host's live-session middleware.
 func TestRoomListsQueryBudget(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupIsolatedTestDB(t)
@@ -42,7 +40,7 @@ func TestRoomListsQueryBudget(t *testing.T) {
 	foreignTenant := testpkg.UniqueTestTenantID(t)
 	testpkg.EnsureTestTenant(t, db, foreignTenant)
 	foreignRoom := testpkg.CreateTestRoomForTenant(t, db, foreignTenant, "foreign-list-room")
-	// Match every requested filter so by-category also exercises isolation.
+	// Same category as the tenant's rooms: only the tenant keeps it out.
 	_, err = db.NewUpdate().Model(foreignRoom).
 		Set("category = ?", "BudgetCategory").
 		Where("id = ?", foreignRoom.ID).Where("tenant_id = ?", foreignTenant).
@@ -84,12 +82,10 @@ func TestRoomListsQueryBudget(t *testing.T) {
 	}
 
 	routes := []struct {
-		path      string
-		occupancy bool
-		message   string
+		path    string
+		message string
 	}{
-		{"/?page=1&page_size=100", true, "Rooms retrieved successfully"},
-		{"/by-category?category=BudgetCategory", false, "Rooms retrieved successfully"},
+		{"/?page=1&page_size=100", "Rooms retrieved successfully"},
 	}
 	counter := testpkg.CaptureQueriesForContext(t, db)
 	measure := func(n int) map[string]testpkg.QueryMeasurement {
@@ -135,34 +131,22 @@ func TestRoomListsQueryBudget(t *testing.T) {
 				require.False(t, room.IsOpenRoom)
 				require.False(t, room.CreatedAt.IsZero())
 				require.False(t, room.UpdatedAt.IsZero())
-				if route.occupancy {
-					require.True(t, room.IsOccupied)
-					require.Equal(t, 1, room.StudentCount)
-					require.NotNil(t, room.GroupName)
-					require.Equal(t, want.groupName, *room.GroupName)
-					require.NotNil(t, room.CategoryName)
-					require.Equal(t, want.categoryName, *room.CategoryName)
-					require.NotNil(t, room.SupervisorNames)
-					require.Equal(t, want.supervisorName, *room.SupervisorNames)
-				} else {
-					require.False(t, room.IsOccupied)
-					require.Zero(t, room.StudentCount)
-					require.Nil(t, room.GroupName)
-					require.Nil(t, room.CategoryName)
-					require.Nil(t, room.SupervisorNames)
-				}
+				require.True(t, room.IsOccupied)
+				require.Equal(t, 1, room.StudentCount)
+				require.NotNil(t, room.GroupName)
+				require.Equal(t, want.groupName, *room.GroupName)
+				require.NotNil(t, room.CategoryName)
+				require.Equal(t, want.categoryName, *room.CategoryName)
+				require.NotNil(t, room.SupervisorNames)
+				require.Equal(t, want.supervisorName, *room.SupervisorNames)
 			}
 			require.Len(t, seen, len(expected), "every expected room must be returned")
-			if route.occupancy {
-				require.Len(t, counter.Selects("staff_school_memberships"), 1, "one membership set read")
-				require.Len(t, counter.Selects("users.persons"), 1, "one person set read")
-				require.NotNil(t, body.Pagination)
-				require.Equal(t, 1, body.Pagination.CurrentPage)
-				require.Equal(t, 100, body.Pagination.PageSize)
-				require.Equal(t, n, body.Pagination.TotalRecords)
-			} else {
-				require.Nil(t, body.Pagination)
-			}
+			require.Len(t, counter.Selects("staff_school_memberships"), 1, "one membership set read")
+			require.Len(t, counter.Selects("users.persons"), 1, "one person set read")
+			require.NotNil(t, body.Pagination)
+			require.Equal(t, 1, body.Pagination.CurrentPage)
+			require.Equal(t, 100, body.Pagination.PageSize)
+			require.Equal(t, n, body.Pagination.TotalRecords)
 			for _, operation := range []string{"INSERT", "UPDATE", "DELETE", "MERGE"} {
 				require.Empty(t, counter.Operation(operation), "room reads must not issue %s", operation)
 			}
@@ -190,7 +174,5 @@ func TestRoomListsQueryBudget(t *testing.T) {
 	}
 	querybudgets.AssertQueryBudget(t, "api.rooms.list", small["/?page=1&page_size=100"])
 	querybudgets.AssertQueryBudget(t, "api.rooms.list", large["/?page=1&page_size=100"])
-	querybudgets.AssertQueryBudget(t, "api.rooms.by_category", small["/by-category?category=BudgetCategory"])
-	querybudgets.AssertQueryBudget(t, "api.rooms.by_category", large["/by-category?category=BudgetCategory"])
 
 }

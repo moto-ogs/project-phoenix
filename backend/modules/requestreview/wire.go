@@ -2,7 +2,6 @@ package requestreview
 
 import (
 	"encoding/json"
-	"reflect"
 	"time"
 )
 
@@ -24,18 +23,6 @@ type Payload struct {
 	Excused             *StaffExcusedRequestResponse
 	ExcusedHistory      *StaffExcusedRequestHistoryResponse
 	DirectCorrection    *DirectCorrectionResponse
-}
-
-// value is the one projection the payload holds, for the deprecated data
-// member of the list item; nil when none is set.
-func (p Payload) value() any {
-	for _, candidate := range []any{p.MasterData, p.MasterDataHistory, p.CareSchedule, p.CareScheduleHistory,
-		p.Offering, p.OfferingHistory, p.Excused, p.ExcusedHistory, p.DirectCorrection} {
-		if !reflect.ValueOf(candidate).IsNil() {
-			return candidate
-		}
-	}
-	return nil
 }
 
 // MasterDataChangeRequestResponse is the staff-facing projection of one parent

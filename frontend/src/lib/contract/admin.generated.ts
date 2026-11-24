@@ -232,13 +232,6 @@ export const routes = {
     portals: ["tenant"],
     response: success(z.array(SuggestedMappingResponseSchema)),
   },
-  "GET /api/admin/grade-transitions/{id}/": {
-    method: "GET",
-    pattern: "/api/admin/grade-transitions/{id}/",
-    portals: ["tenant"],
-    deprecated: true,
-    response: success(TransitionResponseSchema),
-  },
   "GET /api/admin/grade-transitions/{id}/history": {
     method: "GET",
     pattern: "/api/admin/grade-transitions/{id}/history",

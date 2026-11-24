@@ -51,18 +51,13 @@ test("a request identifier may become an id, an answer's may not", () => {
     route.types[0].request = true;
     return route;
   };
-  for (const kind of ["string", "legacy_id", "lax_id"]) {
-    assert.deepEqual(breakingChanges(body(kind), body("id")), [], `Go reads a ${kind} identifier as an id`);
+  assert.deepEqual(breakingChanges(body("string"), body("id")), [], "Go reads a string identifier as an id");
+  // The kinds of the numeric-identifier migration are gone with their reader (#7723).
+  for (const kind of ["legacy_id", "lax_id"]) {
+    assert.deepEqual(breakingChanges(body(kind), body("id")), [`POST /api/rows/ request.id: ${kind} became id`]);
   }
   assert.deepEqual(breakingChanges(body("id"), body("string")), ["POST /api/rows/ request.id: id became string"]);
   assert.deepEqual(breakingChanges(model([field("id", "string")]), model([field("id", "id")])), ["GET /api/rows/[].id: string became id"]);
-});
-
-test("a released reader accepts string answers for legacy numeric identifiers", () => {
-  const old = model([field("student_id", "legacy_id")]);
-  const typed = model([field("student_id", "id")]);
-  assert.deepEqual(breakingChanges(old, typed), []);
-  assert.deepEqual(breakingChanges(typed, old), ["GET /api/rows/[].student_id: id became legacy_id"]);
 });
 
 test("an answer's json may gain a type, a request's json may not", () => {

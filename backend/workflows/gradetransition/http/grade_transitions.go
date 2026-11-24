@@ -75,8 +75,6 @@ func (rs *GradeTransitionResource) Router(protectedTenantRoutes func(chi.Router,
 		// Individual transition routes
 		r.Route("/{id}", func(r chi.Router) {
 			r.With(common.RequiresPermission(permissions.GradeTransitionsRead), withTx).
-				Get("/", rs.getByID)
-			r.With(common.RequiresPermission(permissions.GradeTransitionsRead), withTx).
 				Get("/preview", rs.preview)
 			r.With(common.RequiresPermission(permissions.GradeTransitionsRead), withTx).
 				Get("/history", rs.getHistory)
@@ -434,22 +432,6 @@ func (rs *GradeTransitionResource) create(w http.ResponseWriter, r *http.Request
 	}
 
 	common.Respond(w, r, http.StatusCreated, toTransitionResponse(transition), "Grade transition created successfully")
-}
-
-// getByID returns a single grade transition
-func (rs *GradeTransitionResource) getByID(w http.ResponseWriter, r *http.Request) {
-	id, ok := common.ParseInt64IDWithError(w, r, "id", errMsgInvalidTransition)
-	if !ok {
-		return
-	}
-
-	transition, err := rs.workflow.FindTransition(r.Context(), id)
-	if err != nil {
-		common.RenderError(w, r, common.ErrorNotFound(errors.New(errMsgTransitionNotFound)))
-		return
-	}
-
-	common.Respond(w, r, http.StatusOK, toTransitionResponse(transition), "Grade transition retrieved successfully")
 }
 
 // update updates a grade transition

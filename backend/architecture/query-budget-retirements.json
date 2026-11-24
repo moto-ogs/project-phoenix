@@ -393,5 +393,10 @@
     "scenario": "api.auth.accounts.list.positive_growth",
     "route": "GET /auth/accounts/",
     "issue": 7808
+  },
+  {
+    "scenario": "api.rooms.by_category",
+    "route": "GET /api/rooms/by-category",
+    "issue": 7723
   }
 ]

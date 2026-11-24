@@ -66,9 +66,10 @@ Worked example, the same route from Go to the browser:
    identifier in any struct of `api/` and of every `http` and `inbound`
    role; only the kiosk device API (`/api/iot/*`, `/api/students/{id}/rfid`)
    keeps numbers and tags them `contract:"number"`, because PyrePortal
-   v1.11.5 reads them. `ident.ID` still reads a JSON number in a request:
-   that is the one-release compatibility for browser tabs of the previous
-   frontend and goes after the next release (`backend/sharedkernel/ident/id.go`).
+   v1.11.5 reads them. `ident.ID` also reads a JSON number: stored JSON
+   keeps identifiers as numbers and is read back through this type
+   (`backend/sharedkernel/ident/id.go`); a request decoder that refuses
+   numbers is open in #7987.
    Keep IDs as strings in browser code, including when filtering or sorting;
    see [One transport](frontend-api.md#browser-calls).
    Give each Go field a concrete wire type; the generator rejects free JSON

@@ -58,16 +58,6 @@ func (s *service) ListSchoolParentConferences(ctx context.Context) (*SchoolParen
 	return &SchoolParentConferenceList{Conferences: views, Classes: classes}, nil
 }
 
-// GetSchoolParentConference returns one of the Lehrkraft's days with the
-// names of the booked children, for the occupancy list and its print.
-func (s *service) GetSchoolParentConference(ctx context.Context, id int64) (*ParentConferenceView, error) {
-	conference, err := s.loadOwnParentConference(ctx, id, false)
-	if err != nil {
-		return nil, err
-	}
-	return s.parentConferenceView(ctx, conference)
-}
-
 // CreateSchoolParentConference offers a new day for a class the Lehrkraft
 // teaches.
 func (s *service) CreateSchoolParentConference(ctx context.Context, req ParentConferenceRequest) (*ParentConferenceView, error) {

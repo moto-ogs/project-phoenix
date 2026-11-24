@@ -172,16 +172,6 @@ export const routes = {
     },
     response: paginated(z.array(RoomResponseSchema)),
   },
-  "GET /api/rooms/by-category": {
-    method: "GET",
-    pattern: "/api/rooms/by-category",
-    portals: ["tenant"],
-    deprecated: true,
-    query: {
-      "category": { kind: "string" },
-    },
-    response: success(z.array(RoomResponseSchema)),
-  },
   "GET /api/rooms/{id}": {
     method: "GET",
     pattern: "/api/rooms/{id}",

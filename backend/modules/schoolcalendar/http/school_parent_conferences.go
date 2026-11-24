@@ -16,7 +16,6 @@ import (
 func (rs *Resource) mountSchoolParentConferences(r chi.Router, school, withTx common.Middleware) {
 	r.With(school, withTx).Get("/parent-conferences", rs.listSchoolParentConferences)
 	r.With(school, withTx).Post("/parent-conferences", rs.createSchoolParentConference)
-	r.With(school, withTx).Get("/parent-conferences/{conferenceId}", rs.getSchoolParentConference)
 	r.With(school, withTx).Put("/parent-conferences/{conferenceId}", rs.updateSchoolParentConference)
 	r.With(school, withTx).Delete("/parent-conferences/{conferenceId}", rs.deleteSchoolParentConference)
 }
@@ -75,19 +74,6 @@ func (rs *Resource) listSchoolParentConferences(w http.ResponseWriter, r *http.R
 		return
 	}
 	common.Respond(w, r, http.StatusOK, list, "Parent conferences retrieved")
-}
-
-func (rs *Resource) getSchoolParentConference(w http.ResponseWriter, r *http.Request) {
-	id, ok := common.ParsePositiveInt64IDWithError(w, r, "conferenceId", "invalid parent conference ID")
-	if !ok {
-		return
-	}
-	view, err := rs.service.GetSchoolParentConference(r.Context(), id)
-	if err != nil {
-		renderCalendarError(w, r, err)
-		return
-	}
-	common.Respond(w, r, http.StatusOK, view, "Parent conference retrieved")
 }
 
 func (rs *Resource) createSchoolParentConference(w http.ResponseWriter, r *http.Request) {

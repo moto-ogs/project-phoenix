@@ -13,8 +13,8 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// ErrInvalidQuery reports a malformed listing query: an unknown view, type
-// or status, a bad date, a history-only filter on the open view, a
+// ErrInvalidQuery reports a malformed listing query: an unknown type or
+// status, a bad date, a history-only filter on the open view, a
 // non-positive limit or student ID, or a cursor this projection did not mint.
 var ErrInvalidQuery = errors.New("invalid change request list query")
 
@@ -60,16 +60,10 @@ type ListQuery struct {
 	today Date
 }
 
-// ParseListQuery reads the wire query of the list route.
+// ParseListQuery reads the query of GET /change-requests: the filters of the
+// open list.
 func ParseListQuery(values url.Values) (ListQuery, error) {
-	switch values.Get("view") {
-	case "", "open":
-		return parseListQuery(values, false)
-	case "history":
-		return parseListQuery(values, true)
-	default:
-		return ListQuery{Limit: DefaultLimit}, ErrInvalidQuery
-	}
+	return parseListQuery(values, false)
 }
 
 // ParseHistoryQuery reads the query of GET /change-requests/history: the

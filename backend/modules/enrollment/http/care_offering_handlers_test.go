@@ -103,7 +103,6 @@ func buildCareOfferingRouter(svc CareOfferingCatalog) chi.Router {
 	r.Use(render.SetContentType(render.ContentTypeJSON))
 	r.Get("/enrollment/care-offerings", rs.listCareOfferings)
 	r.Get("/enrollment/care-offerings/booking-stats", rs.listCareOfferingBookingStats)
-	r.Get("/enrollment/care-offerings/{id}", rs.getCareOffering)
 	r.Post("/enrollment/care-offerings", rs.createCareOffering)
 	r.Put("/enrollment/care-offerings/{id}", rs.updateCareOffering)
 	r.Delete("/enrollment/care-offerings/{id}", rs.deleteCareOffering)
@@ -198,53 +197,6 @@ func TestListCareOfferingsHandler_ServiceErrorReturnsGeneric500(t *testing.T) {
 	mock := &mockCareOfferingService{listErr: errors.New("synthetic boom")}
 	router := buildCareOfferingRouter(mock)
 	w := executeCareJSON(t, router, http.MethodGet, "/enrollment/care-offerings", nil)
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
-	assert.NotContains(t, w.Body.String(), "synthetic boom")
-}
-
-// --- getCareOffering -------------------------------------------------
-
-func TestGetCareOfferingHandler_NilServiceReturns500(t *testing.T) {
-	t.Parallel()
-
-	router := buildCareOfferingRouter(nil)
-	w := executeCareJSON(t, router, http.MethodGet, "/enrollment/care-offerings/1234", nil)
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
-}
-
-func TestGetCareOfferingHandler_InvalidIDRejected(t *testing.T) {
-	t.Parallel()
-
-	router := buildCareOfferingRouter(&mockCareOfferingService{})
-	w := executeCareJSON(t, router, http.MethodGet, "/enrollment/care-offerings/notanumber", nil)
-	assert.Equal(t, http.StatusBadRequest, w.Code)
-}
-
-func TestGetCareOfferingHandler_HappyPath(t *testing.T) {
-	t.Parallel()
-
-	mock := &mockCareOfferingService{getByIDResult: makeOfferingModel(1234, 5678, "OGS")}
-	router := buildCareOfferingRouter(mock)
-	w := executeCareJSON(t, router, http.MethodGet, "/enrollment/care-offerings/1234", nil)
-	require.Equal(t, http.StatusOK, w.Code)
-	assert.Equal(t, int64(1234), mock.getByIDID)
-}
-
-func TestGetCareOfferingHandler_NotFoundReturns404(t *testing.T) {
-	t.Parallel()
-
-	mock := &mockCareOfferingService{getByIDErr: capability.ErrCareOfferingNotFound}
-	router := buildCareOfferingRouter(mock)
-	w := executeCareJSON(t, router, http.MethodGet, "/enrollment/care-offerings/1234", nil)
-	assert.Equal(t, http.StatusNotFound, w.Code)
-}
-
-func TestGetCareOfferingHandler_ServiceErrorReturnsGeneric500(t *testing.T) {
-	t.Parallel()
-
-	mock := &mockCareOfferingService{getByIDErr: errors.New("synthetic boom")}
-	router := buildCareOfferingRouter(mock)
-	w := executeCareJSON(t, router, http.MethodGet, "/enrollment/care-offerings/1234", nil)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 	assert.NotContains(t, w.Body.String(), "synthetic boom")
 }
@@ -671,7 +623,8 @@ func TestCareOfferingRouter_BookingStatsIsNotTreatedAsAnID(t *testing.T) {
 		r.Get("/", rs.listCareOfferings)
 		r.Get("/booking-stats", rs.listCareOfferingBookingStats)
 		r.Route("/{id}", func(r chi.Router) {
-			r.Get("/", rs.getCareOffering)
+			r.Put("/", rs.updateCareOffering)
+			r.Delete("/", rs.deleteCareOffering)
 		})
 	})
 
