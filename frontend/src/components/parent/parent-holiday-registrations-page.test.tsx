@@ -186,7 +186,7 @@ describe("ParentHolidayRegistrationsPage (#6673)", () => {
         within(card).getByRole("heading", { name: "Einwilligungen" }),
       ).toBeInTheDocument();
       expect(within(card).getByText(photos.label)).toBeInTheDocument();
-      expect(within(card).getByText(photos.text)).toBeInTheDocument();
+      expect(await within(card).findByText(photos.text)).toBeInTheDocument();
       expect(within(card).getByText("Seit 08.09.2026")).toBeInTheDocument();
       expect(within(card).getByText("Erteilt")).toBeInTheDocument();
       expect(within(card).getByText("Nicht erteilt")).toBeInTheDocument();

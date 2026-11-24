@@ -9,8 +9,8 @@
  */
 
 import { useLayoutEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { useLocale, useTranslations } from "next-intl";
-import { LegalMarkdown } from "~/components/enrollment/legal-markdown";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import {
@@ -33,6 +33,17 @@ import {
   type HolidayConsentState,
 } from "~/lib/holiday-consents";
 import type { HolidayRegistrationConsent } from "~/lib/parent-holiday-registration-entries";
+
+// The explanation of a consent may carry Markdown. react-markdown loads
+// only once a consent with an explanation shows, so the page itself stays
+// as light as before; the explanation appears a moment after the rest.
+const LegalMarkdown = dynamic(
+  () =>
+    import("~/components/enrollment/legal-markdown").then(
+      (module) => module.LegalMarkdown,
+    ),
+  { loading: () => null },
+);
 
 const STATE_TONES: Readonly<Record<HolidayConsentState, StatusBadgeTone>> = {
   given: "green",
