@@ -132,6 +132,9 @@ export function measureTouchTargets({
 
   const vw = document.documentElement.clientWidth;
   const vh = document.documentElement.clientHeight;
+  /** Punkt im sichtbaren Fenster; außerhalb liefert `elementFromPoint` nichts. */
+  const onScreen = (x: number, y: number) =>
+    x >= 0 && y >= 0 && x < vw && y < vh;
 
   const skip = (el: Element): boolean => {
     if (el.closest("[inert],[aria-hidden=true]")) return true;
@@ -152,6 +155,8 @@ export function measureTouchTargets({
     if (el instanceof HTMLLabelElement) {
       // Beschriftung eines Textfelds: Getippt wird ins Feld, das zählt dort.
       if (!isToggleInput(el.control)) return true;
+      // Zeile eines deaktivierten Kästchens: nicht bedienbar.
+      if ((el.control as HTMLInputElement).disabled) return true;
     }
     if (el instanceof HTMLInputElement && isToggleInput(el)) {
       // Verstecktes Kästchen in einer Zeile: Die Zeile (`label`) ist die Fläche.
@@ -214,7 +219,7 @@ export function measureTouchTargets({
     for (let x = rect.left - gap; x <= rect.right + gap; x += step) {
       for (let y = rect.top - gap; y <= rect.bottom + gap; y += step) {
         if (inside(rect, x, y)) continue;
-        if (x < 0 || y < 0 || x >= vw || y >= vh) continue;
+        if (!onScreen(x, y)) continue;
         const owner = ownerOf(document.elementFromPoint(x, y));
         if (!owner || isOwn(owner) || related(owner, el)) continue;
         if (isInnerControl(owner)) continue;
@@ -229,7 +234,7 @@ export function measureTouchTargets({
    * äußersten Punkte des Kreises (oben, unten, links, rechts) zählen mit,
    * sonst ginge ein 40 px hohes Feld als 44 px durch.
    */
-  const circleRadius = size / 2 - 1;
+  const circleRadius = size / 2 - 0.5;
   const circleSteps = Math.ceil((2 * circleRadius) / step / 2) * 2;
   const circleOffsets = Array.from(
     { length: circleSteps + 1 },
@@ -248,6 +253,12 @@ export function measureTouchTargets({
     /** Bedienelement innerhalb der eigenen Fläche (Augen-Knopf im Passwortfeld). */
     const isInnerControl = (owner: Element) =>
       !related(owner, el) && contains(rect, owner.getBoundingClientRect());
+
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    // Trifft schon der Mittelpunkt etwas anderes, liegt ein Dialog, Menü
+    // oder Blatt über dem Element: in diesem Zustand nicht antippbar.
+    if (!isOwn(ownerOf(document.elementFromPoint(cx, cy)))) continue;
 
     // 1. Eigene Fläche, 1 px nach innen: Wer trifft dort?
     let covered = false;
@@ -269,7 +280,7 @@ export function measureTouchTargets({
     for (const y of along(y0, y1)) points.push([x0, y], [x1, y]);
     for (const x of along(x0, x1)) points.push([x, (y0 + y1) / 2]);
     for (const [x, y] of points) {
-      if (x < 0 || y < 0 || x >= vw || y >= vh) continue;
+      if (!onScreen(x, y)) continue;
       const hit = document.elementFromPoint(x, y);
       if (!hit) continue;
       const owner = ownerOf(hit);
@@ -281,12 +292,15 @@ export function measureTouchTargets({
       if (hit.contains(el) || el.contains(hit)) continue;
       if (owner && accepted.some((a) => related(a, owner))) continue;
       if (owner && isInnerControl(owner)) continue;
-      if (owner && !inside(owner.getBoundingClientRect(), x, y)) {
+      // Ein Abzeichen oder eine Fläche ohne Bedienung über dem Rand: zählt im
+      // Kreis als Fehltreffer, nimmt das Element aber nicht aus der Prüfung.
+      if (!owner) continue;
+      if (!inside(owner.getBoundingClientRect(), x, y)) {
         // Die Fläche eines anderen reicht über seinen Rand hinaus hierher.
         intruders.add(owner);
         continue;
       }
-      // Ein Menü, Dialog oder anderes Element liegt über diesem.
+      // Ein anderes Bedienelement liegt über diesem (offenes Menü).
       covered = true;
       break;
     }
@@ -294,8 +308,8 @@ export function measureTouchTargets({
 
     const target = describe(el);
     const center = {
-      x: Math.round(rect.left + rect.width / 2 + scrollX),
-      y: Math.round(rect.top + rect.height / 2 + scrollY),
+      x: Math.round(cx + scrollX),
+      y: Math.round(cy + scrollY),
     };
     for (const other of intruders) {
       findings.push({
@@ -307,8 +321,6 @@ export function measureTouchTargets({
     }
 
     // 2. Kreis mit `size` px um den Mittelpunkt.
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
     const radius = circleRadius;
     let total = 0;
     let missed = 0;
@@ -319,7 +331,7 @@ export function measureTouchTargets({
         if (dx * dx + dy * dy > radius * radius + 0.01) continue;
         const x = cx + dx;
         const y = cy + dy;
-        if (x < 0 || y < 0 || x >= vw || y >= vh) continue;
+        if (!onScreen(x, y)) continue;
         const owner = ownerOf(document.elementFromPoint(x, y));
         if (isOwn(owner)) {
           total++;

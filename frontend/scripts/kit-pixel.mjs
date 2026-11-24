@@ -307,8 +307,7 @@ function touch({ filter, allStories, storybookDir: prebuilt }) {
   const status = runPlaywright({
     mode: "touch",
     storybookDir,
-    // Der Lauf vergleicht keine Bilder; die Config verlangt den Pfad trotzdem.
-    snapshotDir: baselineDir,
+    snapshotDir: undefined,
     filter,
     allStories,
   });

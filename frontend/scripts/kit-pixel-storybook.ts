@@ -1,5 +1,7 @@
 import type { BrowserContext, Page, Route } from "@playwright/test";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { createReadStream, existsSync, readFileSync, statSync } from "node:fs";
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import path from "node:path";
 
 import { TEST_CLOCK_INSTANT } from "../src/test/clock-instant";
@@ -55,14 +57,8 @@ const FREEZE_MOTION_STYLE = `<style data-kit-pixel>
 }
 </style>`;
 
-async function serveStorybook(dir: string, route: Route): Promise<void> {
-  const url = new URL(route.request().url());
-  if (url.origin !== ORIGIN) {
-    // Alles Fremde (Fonts, Tracking, APIs) bleibt draußen: Bilder hängen nur am Build.
-    await route.abort("blockedbyclient");
-    return;
-  }
-  const pathname = decodeURIComponent(url.pathname);
+/** Datei des Builds zu einem Pfad, `null` außerhalb des Builds oder wenn sie fehlt. */
+function buildFile(dir: string, pathname: string): string | null {
   const file = path.join(
     dir,
     pathname.endsWith("/") ? `${pathname}index.html` : pathname,
@@ -72,6 +68,21 @@ async function serveStorybook(dir: string, route: Route): Promise<void> {
     !existsSync(file) ||
     !statSync(file).isFile()
   ) {
+    return null;
+  }
+  return file;
+}
+
+async function serveStorybook(dir: string, route: Route): Promise<void> {
+  const url = new URL(route.request().url());
+  if (url.origin !== ORIGIN) {
+    // Alles Fremde (Fonts, Tracking, APIs) bleibt draußen: Bilder hängen nur am Build.
+    await route.abort("blockedbyclient");
+    return;
+  }
+  const pathname = decodeURIComponent(url.pathname);
+  const file = buildFile(dir, pathname);
+  if (!file) {
     await route.fulfill({ status: 404, body: "" });
     return;
   }
@@ -168,50 +179,105 @@ export async function prepareStorybookPage({
   await page.clock.setFixedTime(TEST_CLOCK_INSTANT);
 }
 
+const CONTENT_TYPES: Record<string, string> = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript",
+  ".mjs": "text/javascript",
+  ".css": "text/css",
+  ".json": "application/json",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".webp": "image/webp",
+  ".woff2": "font/woff2",
+};
+
+/**
+ * Liefert den Build über einen eigenen HTTP-Server auf 127.0.0.1 mit freiem
+ * Port aus, ohne Playwrights `route`: Routing schaltet den HTTP-Cache ab,
+ * und jede Datei lief einzeln durch das Protokoll (gemessen 870 ms je
+ * Story gegen 50–190 ms hier). So lädt jede Story eine frische Seite, ohne
+ * dass Zustand einer Story in die nächste reicht (#8060: Story-Wechsel ohne
+ * Neuladen verschob Spaltenbreiten im `DateRangePicker`). Der Server gehört
+ * dem Worker; `close` beendet ihn.
+ */
+export async function startStorybookServer(): Promise<{
+  origin: string;
+  close: () => Promise<void>;
+}> {
+  const dir = storybookDir();
+  const server = createServer((request, response) => {
+    const pathname = decodeURIComponent(
+      new URL(request.url ?? "/", "http://127.0.0.1").pathname,
+    );
+    const file = buildFile(dir, pathname);
+    if (!file) {
+      response.writeHead(404).end();
+      return;
+    }
+    response.writeHead(200, {
+      "content-type":
+        CONTENT_TYPES[path.extname(file)] ?? "application/octet-stream",
+      "cache-control": "max-age=3600",
+    });
+    createReadStream(file).pipe(response);
+  });
+  await new Promise<void>((resolve) =>
+    server.listen(0, "127.0.0.1", () => resolve()),
+  );
+  const { port } = server.address() as AddressInfo;
+  return {
+    origin: `http://127.0.0.1:${port}`,
+    close: () =>
+      new Promise<void>((resolve) => {
+        server.close(() => resolve());
+      }),
+  };
+}
+
+/**
+ * Wie `prepareStorybookPage`, für den eigenen Server: Bewegung anhalten,
+ * Story-Ende abhören, Uhr anhalten. Eine Anfrage an eine andere Adresse
+ * lässt den Lauf scheitern, statt still ins Netz zu gehen.
+ */
+export async function prepareServedStorybookPage(
+  page: Page,
+  origin: string,
+): Promise<{ externalRequests: string[] }> {
+  const externalRequests: string[] = [];
+  page.on("request", (request) => {
+    const url = request.url();
+    if (
+      !url.startsWith(`${origin}/`) &&
+      !url.startsWith("data:") &&
+      !url.startsWith("blob:")
+    ) {
+      externalRequests.push(url);
+    }
+  });
+  await page.addInitScript((style) => {
+    const install = () =>
+      document.documentElement.insertAdjacentHTML("beforeend", style);
+    if (document.documentElement) install();
+    else document.addEventListener("readystatechange", install, { once: true });
+  }, FREEZE_MOTION_STYLE);
+  await page.addInitScript(listenForStoryOutcome);
+  await page.clock.setFixedTime(TEST_CLOCK_INSTANT);
+  return { externalRequests };
+}
+
 /**
  * Öffnet die Story und wartet, bis Render, `play` und `afterEach` fertig sind
  * und Schriften und Bilder geladen haben. Offene Zustände (Menü, Popover)
  * entstehen in `play` und sind dann sichtbar.
  */
-export async function openStory(page: Page, storyId: string): Promise<void> {
-  await page.goto(
-    `${ORIGIN}/iframe.html?id=${encodeURIComponent(storyId)}&viewMode=story`,
-  );
-  await waitForStory(page, storyId);
-}
-
-/**
- * Wechselt in der geöffneten Vorschau zu einer anderen Story, mit Render und
- * `play`, ohne die Seite neu zu laden (Storybooks `setCurrentStory`, wie die
- * Seitenleiste von Storybook). Storybook hängt die alte Story vorher ab. Das
- * Laden des Builds kostet ein Vielfaches des Renders; für den Pixel-Vergleich
- * bleibt es beim Neuladen je Story. `remount` rendert die aktuelle Story neu
- * (`forceRemount`), etwa nach einem Wechsel der Breite.
- */
-export async function switchStory(
+export async function openStory(
   page: Page,
   storyId: string,
-  { remount = false }: { remount?: boolean } = {},
+  origin: string = ORIGIN,
 ): Promise<void> {
-  await page.evaluate(
-    ({ id, remount }) => {
-      const win = window as KitPixelWindow & {
-        __STORYBOOK_ADDONS_CHANNEL__?: {
-          emit: (event: string, payload: unknown) => void;
-        };
-      };
-      delete win.__KIT_PIXEL_OUTCOME__?.[id];
-      // Dieselbe Story noch einmal: `setCurrentStory` täte nichts.
-      if (remount) {
-        win.__STORYBOOK_ADDONS_CHANNEL__?.emit("forceRemount", { storyId: id });
-      } else {
-        win.__STORYBOOK_ADDONS_CHANNEL__?.emit("setCurrentStory", {
-          storyId: id,
-          viewMode: "story",
-        });
-      }
-    },
-    { id: storyId, remount },
+  await page.goto(
+    `${origin}/iframe.html?id=${encodeURIComponent(storyId)}&viewMode=story`,
   );
   await waitForStory(page, storyId);
 }

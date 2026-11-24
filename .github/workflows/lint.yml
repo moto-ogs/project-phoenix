@@ -253,21 +253,31 @@ jobs:
       - name: Frontend quality (shared with pre-push)
         run: bash scripts/check-quality.sh frontend
 
+      # Google Chrome for the touch-target check below, installed while
+      # Storybook builds (#8060). Every Playwright config demands it
+      # (scripts/secure-chrome.ts, #5612).
+      - name: Start Chrome install
+        working-directory: frontend
+        run: |
+          (pnpm exec playwright install --with-deps --force chrome > "$RUNNER_TEMP/chrome-install.log" 2>&1
+           echo $? > "$RUNNER_TEMP/chrome-install.status") &
+
       # Storybook supplies its own mock environment and needs no Next build.
       # Keep it off the serial Next.js/bundle-ratchet critical path.
       - name: Build Storybook
         working-directory: frontend
         run: pnpm run build-storybook
 
-      # Trefferflächen der Kit-Stories unter `pointer: coarse` (#8060) auf dem
-      # eben gebauten Storybook. Der Job endet vor den Storybook-Shards; die
-      # Prüfung liegt damit nicht auf dem kritischen Pfad. Google Chrome, weil
-      # jede Playwright-Config es verlangt (scripts/secure-chrome.ts, #5612).
-      - name: Install Chrome
-        working-directory: frontend
+      - name: Wait for Chrome install
         timeout-minutes: 5
-        run: pnpm exec playwright install --with-deps --force chrome
+        run: |
+          until [ -f "$RUNNER_TEMP/chrome-install.status" ]; do sleep 2; done
+          cat "$RUNNER_TEMP/chrome-install.log"
+          exit "$(cat "$RUNNER_TEMP/chrome-install.status")"
 
+      # Touch targets of the kit stories under `pointer: coarse` (#8060), on
+      # the Storybook build above. This job ends before the Storybook shards,
+      # so the check stays off the critical path.
       - name: Touch targets of kit stories
         working-directory: frontend
         timeout-minutes: 5

@@ -64,8 +64,27 @@ export function checkStory({ story, width, findings, known, exceptions }) {
   /** @type {Map<string, UnexpectedFinding>} */
   const unexpected = new Map();
 
+  // Gleiche Art und gleicher Name mehrmals (mehrere „Entfernen“): Die
+  // Anzahl gehört zum Eintrag, sonst versteckte sich ein neuer Verstoß
+  // hinter einem bekannten.
+  /** @type {Map<string, { finding: TouchFinding, count: number }>} */
+  const grouped = new Map();
   for (const finding of findings) {
-    const key = findingKey(finding);
+    const base = findingKey(finding);
+    const entry = grouped.get(base);
+    if (entry) {
+      entry.count++;
+      // `abstand-24` gilt nur, wenn jedes dieser Elemente den Abstand hat.
+      entry.finding = {
+        ...entry.finding,
+        clearance24:
+          entry.finding.clearance24 === true && finding.clearance24 === true,
+      };
+    } else grouped.set(base, { finding, count: 1 });
+  }
+
+  for (const [base, { finding, count }] of grouped) {
+    const key = count > 1 ? `${base} (${count}×)` : base;
     if (knownKeys.has(key)) {
       usedKnown.add(key);
       continue;
@@ -84,7 +103,7 @@ export function checkStory({ story, width, findings, known, exceptions }) {
       }
       continue;
     }
-    if (!unexpected.has(key)) unexpected.set(key, { ...finding, key });
+    unexpected.set(key, { ...finding, key });
   }
 
   return {

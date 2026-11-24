@@ -15,8 +15,8 @@ import { measureTouchTargets } from "./kit-touch-targets-measure";
 import {
   kitStories,
   openStory,
-  prepareStorybookPage,
-  switchStory,
+  prepareServedStorybookPage,
+  startStorybookServer,
 } from "./kit-pixel-storybook";
 
 // Trefferflächen unter `pointer: coarse` (#8060, Regel aus #8059): Jedes
@@ -25,9 +25,11 @@ import {
 // Breiten: Telefon und iPad hochkant, weil manche Größe heute nur an
 // `max-sm:` hängt. Start: `pnpm run kit-pixel touch`.
 //
-// Ein Test je Story-Datei: Die Vorschau lädt einmal, die Stories wechseln
-// über Storybooks Kanal. Das Laden kostete je Story ein Vielfaches der
-// Messung (gemessen 870 ms gegen 30 ms).
+// Ein Test je Story-Datei. Jede Story und Breite lädt eine frische Seite vom
+// eigenen Server des Workers; der Browser-Cache hält den Build (50–190 ms
+// je Laden). Ein Wechsel über Storybooks Kanal ohne Neuladen war schneller,
+// trug aber Zustand in die nächste Story (Spaltenbreiten im
+// `DateRangePicker`).
 
 const KNOWN_FILE = path.join(
   import.meta.dirname,
@@ -70,20 +72,26 @@ test("Liste und Ausnahmen sind gültig", () => {
 });
 
 test.describe("Trefferflächen", () => {
-  test.beforeEach(prepareStorybookPage);
+  let server: Awaited<ReturnType<typeof startStorybookServer>>;
+  test.beforeAll(async () => {
+    server = await startStorybookServer();
+  });
+  test.afterAll(async () => {
+    await server?.close();
+  });
 
   for (const [importPath, ids] of storiesByFile) {
     test(importPath.replace("./src/components/", ""), async ({ page }) => {
+      const { externalRequests } = await prepareServedStorybookPage(
+        page,
+        server.origin,
+      );
       const problems: string[] = [];
       const measured: Record<string, Record<string, unknown>> = {};
       for (const width of TOUCH_WIDTHS) {
         if (width === "tablet") await page.setViewportSize(TABLET_VIEWPORT);
-        for (const [index, id] of ids.entries()) {
-          if (width === "phone" && index === 0) {
-            await openStory(page, id);
-          } else {
-            await switchStory(page, id, { remount: ids.length === 1 });
-          }
+        for (const id of ids) {
+          await openStory(page, id, server.origin);
           const findings = await page.evaluate(measureTouchTargets, MEASURE);
           (measured[id] ??= {})[width] = findings;
           const { unexpected, stale } = checkStory({
@@ -114,6 +122,7 @@ test.describe("Trefferflächen", () => {
           `${JSON.stringify(byWidth, null, 2)}\n`,
         );
       }
+      expect(externalRequests, "Anfragen außerhalb des Builds").toEqual([]);
       expect(problems, `Trefferflächen in ${importPath}`).toEqual([]);
     });
   }

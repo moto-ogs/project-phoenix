@@ -40,17 +40,51 @@ test("a finding not on the list fails the story", () => {
   assert.deepEqual(result.stale, []);
 });
 
-test("a known finding passes, the same target twice counts once", () => {
+test("a known finding passes", () => {
   const result = checkStory({
     story: "components-ui-tabs--default",
     width: "phone",
-    findings: [small('tab "Details"'), small('tab "Details"')],
+    findings: [small('tab "Details"')],
     known: {
       "components-ui-tabs--default": { phone: ['zu klein: tab "Details"'] },
     },
     exceptions: [],
   });
   assert.deepEqual(result, { unexpected: [], stale: [] });
+});
+
+test("the same target several times carries its count: one more is new", () => {
+  const known = {
+    "components-ui-chips--default": {
+      phone: ['zu klein: button "Entfernen" (2×)'],
+    },
+  };
+  const base = {
+    story: "components-ui-chips--default",
+    width: "phone",
+    known,
+    exceptions: [],
+  };
+  assert.deepEqual(
+    checkStory({
+      ...base,
+      findings: [small('button "Entfernen"'), small('button "Entfernen"')],
+    }),
+    { unexpected: [], stale: [] },
+  );
+  const three = checkStory({
+    ...base,
+    findings: [
+      small('button "Entfernen"'),
+      small('button "Entfernen"'),
+      small('button "Entfernen"'),
+    ],
+  });
+  assert.deepEqual(
+    three.unexpected.map((f) => f.key),
+    ['zu klein: button "Entfernen" (3×)'],
+  );
+  assert.deepEqual(three.stale, ['zu klein: button "Entfernen" (2×)']);
 });
 
 test("a known entry applies only to its width", () => {

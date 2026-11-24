@@ -19,8 +19,12 @@ function requiredEnv(name: string): string {
 /** Trefferflächen unter `pointer: coarse` (#8060), nur im Projekt `phone`. */
 const TOUCH_TARGETS_SPEC = "kit-touch-targets.pw.ts";
 
-const baselineDir = requiredEnv("KIT_PIXEL_BASELINE_DIR");
 const workDir = requiredEnv("KIT_PIXEL_WORK_DIR");
+// Die Trefferflächen-Prüfung vergleicht keine Bilder und braucht keine Baseline.
+const baselineDir =
+  process.env.KIT_PIXEL_MODE === "touch"
+    ? `${workDir}/no-baseline`
+    : requiredEnv("KIT_PIXEL_BASELINE_DIR");
 
 /** Gemeinsame Einstellungen beider Breiten: Berliner Zeit, deutsch, ohne Bewegung. */
 const stableContext = {

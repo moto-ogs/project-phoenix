@@ -61,14 +61,6 @@
     "phone": ["zu klein: label \"Option\""],
     "tablet": ["zu klein: label \"Option\""]
   },
-  "components-ui-checkbox--disabled-checked": {
-    "phone": ["zu klein: label \"Option\""],
-    "tablet": ["zu klein: label \"Option\""]
-  },
-  "components-ui-checkbox--disabled": {
-    "phone": ["zu klein: label \"Option\""],
-    "tablet": ["zu klein: label \"Option\""]
-  },
   "components-ui-checkbox--unchecked": {
     "phone": ["zu klein: label \"Option\""],
     "tablet": ["zu klein: label \"Option\""]
@@ -76,13 +68,11 @@
   "components-ui-choicetile--checkbox-rows": {
     "phone": [
       "zu klein: label \"Dienstag\"",
-      "zu klein: label \"Donnerstag (kein Betreuungstag)\"",
       "zu klein: label \"Mittwoch\"",
       "zu klein: label \"Montag\""
     ],
     "tablet": [
       "zu klein: label \"Dienstag\"",
-      "zu klein: label \"Donnerstag (kein Betreuungstag)\"",
       "zu klein: label \"Mittwoch\"",
       "zu klein: label \"Montag\""
     ]
@@ -211,40 +201,6 @@
       "zu klein: option \"September\""
     ]
   },
-  "components-ui-daterangepicker--range-calendar-inline-standalone": {
-    "phone": [
-      "zu klein: button \"Dienstag, 1. September 2026\"",
-      "zu klein: button \"Dienstag, 15. September 2026\"",
-      "zu klein: button \"Dienstag, 22. September 2026\"",
-      "zu klein: button \"Dienstag, 29. September 2026\"",
-      "zu klein: button \"Dienstag, 8. September 2026\"",
-      "zu klein: button \"Donnerstag, 10. September 2026\"",
-      "zu klein: button \"Donnerstag, 17. September 2026\"",
-      "zu klein: button \"Donnerstag, 24. September 2026\"",
-      "zu klein: button \"Donnerstag, 3. September 2026\"",
-      "zu klein: button \"Freitag, 11. September 2026\"",
-      "zu klein: button \"Freitag, 18. September 2026\"",
-      "zu klein: button \"Freitag, 25. September 2026\"",
-      "zu klein: button \"Freitag, 4. September 2026\"",
-      "zu klein: button \"Heute, Mittwoch, 9. September 2026\"",
-      "zu klein: button \"Mittwoch, 16. September 2026\"",
-      "zu klein: button \"Mittwoch, 2. September 2026\"",
-      "zu klein: button \"Mittwoch, 23. September 2026\"",
-      "zu klein: button \"Mittwoch, 30. September 2026\"",
-      "zu klein: button \"Montag, 14. September 2026\"",
-      "zu klein: button \"Montag, 21. September 2026\"",
-      "zu klein: button \"Montag, 28. September 2026\"",
-      "zu klein: button \"Montag, 7. September 2026\"",
-      "zu klein: button \"Samstag, 12. September 2026\"",
-      "zu klein: button \"Samstag, 19. September 2026\"",
-      "zu klein: button \"Samstag, 26. September 2026\"",
-      "zu klein: button \"Samstag, 5. September 2026\"",
-      "zu klein: button \"Sonntag, 13. September 2026\"",
-      "zu klein: button \"Sonntag, 20. September 2026\"",
-      "zu klein: button \"Sonntag, 27. September 2026\"",
-      "zu klein: button \"Sonntag, 6. September 2026\""
-    ]
-  },
   "components-ui-input--compact": {
     "phone": ["zu klein: textbox \"Name\""],
     "tablet": ["zu klein: textbox \"Name\""]
@@ -301,6 +257,10 @@
       "überlappt: button \"Filter Status: Aktiv entfernen\""
     ],
     "tablet": ["zu klein: button \"Alle löschen\""]
+  },
+  "components-ui-page-header-searchbar--small": {
+    "phone": ["zu klein: textbox \"Name suchen...\""],
+    "tablet": ["zu klein: textbox \"Name suchen...\""]
   },
   "components-ui-planning-planblock--compact": {
     "phone": ["zu klein: button \"12:00–14:00Mensa\""],
@@ -397,10 +357,6 @@
     "tablet": ["zu klein: button \"08:00–10:00Vertretung\""]
   },
   "components-ui-radio--checked": {
-    "phone": ["zu klein: label \"Option\""],
-    "tablet": ["zu klein: label \"Option\""]
-  },
-  "components-ui-radio--disabled": {
     "phone": ["zu klein: label \"Option\""],
     "tablet": ["zu klein: label \"Option\""]
   },
@@ -509,6 +465,16 @@
     "phone": ["zu klein: combobox \"Aktivität\""],
     "tablet": ["zu klein: combobox \"Aktivität\""]
   },
+  "components-ui-suggestinput--opened": {
+    "phone": [
+      "zu klein: option \"Leitung\"",
+      "zu klein: option \"Pädagogische Fachkraft\""
+    ],
+    "tablet": [
+      "zu klein: option \"Leitung\"",
+      "zu klein: option \"Pädagogische Fachkraft\""
+    ]
+  },
   "components-ui-tabs--default": {
     "phone": [
       "zu klein: tab \"Details\"",
@@ -543,8 +509,14 @@
       "zu klein: button \"Weitere Aktionen\""
     ]
   },
+  "components-ui-tenantpage--list-search": {
+    "tablet": ["zu klein: textbox \"Kind suchen…\""]
+  },
   "components-ui-tenantpage--long-title-with-info": {
     "tablet": ["zu klein: button \"Weitere Aktionen\""]
+  },
+  "components-ui-tenantpage--primary-action-choice": {
+    "tablet": ["zu klein: textbox \"Kind, Klasse oder Kontoinhaber suchen\""]
   },
   "components-ui-tenantpage--quiet-filters-opened": {
     "phone": [
@@ -555,14 +527,24 @@
     "tablet": [
       "zu klein: button \"Alle\"",
       "zu klein: button \"Mond\"",
-      "zu klein: button \"Sonne\""
+      "zu klein: button \"Sonne\"",
+      "zu klein: textbox \"Kind suchen…\""
     ]
   },
+  "components-ui-tenantpage--quiet-filters": {
+    "tablet": ["zu klein: textbox \"Kind suchen…\""]
+  },
+  "components-ui-tenantpage--search-with-filters-and-badge": {
+    "tablet": ["zu klein: textbox \"Kinder suchen…\""]
+  },
   "components-ui-tenantpage--search-with-overflow-menu": {
-    "tablet": ["zu klein: button \"Weitere Aktionen\""]
+    "tablet": [
+      "zu klein: button \"Weitere Aktionen\"",
+      "zu klein: textbox \"Räume suchen…\""
+    ]
   },
   "components-ui-tenantpage--symbol-actions-with-tour-and-preload": {
-    "tablet": ["zu klein: button \"Weitere Aktionen\""]
+    "tablet": ["zu klein: button \"Weitere Aktionen\" (2×)"]
   },
   "components-ui-tenantpage--with-back-link": {
     "tablet": ["zu klein: link \"Zurück zu den Räumen\""]
@@ -578,7 +560,8 @@
       "zu klein: tab \"Personal\"",
       "zu klein: tab \"Räume\"",
       "zu klein: tab \"Verlauf\"",
-      "zu klein: tab \"Übersicht\""
+      "zu klein: tab \"Übersicht\"",
+      "zu klein: textbox \"Gruppe suchen\""
     ]
   },
   "components-ui-tenantpage--with-tabs": {
@@ -600,8 +583,8 @@
     "tablet": ["zu klein: textbox \"Anzahl\""]
   },
   "ui-page-header-desktopfilters--combined": {
-    "phone": ["zu klein: button \"Alle\""],
-    "tablet": ["zu klein: button \"Alle\""]
+    "phone": ["zu klein: button \"Alle\" (2×)"],
+    "tablet": ["zu klein: button \"Alle\" (2×)"]
   },
   "ui-page-header-desktopfilters--dropdown": {
     "phone": ["zu klein: button \"Alle\""],
@@ -667,6 +650,7 @@
     ],
     "tablet": [
       "zu klein: button \"Weitere Aktionen\"",
+      "zu klein: menuitem \"Bearbeiten\"",
       "zu klein: menuitem \"Duplizieren\""
     ]
   },

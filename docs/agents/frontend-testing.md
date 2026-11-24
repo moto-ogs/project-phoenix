@@ -324,7 +324,7 @@ CI runs it in „Frontend quality“ on the Storybook build of that job.
 
 - Measured with `elementFromPoint`, as the browser assigns a tap, so
   `after:` areas and padding with negative margin count. A circle of 44 px
-  around the centre (radius 21 px: one pixel for Chrome's rounding of the
+  around the centre (radius 21.5 px, sampled every 4 px; Chrome rounds the
   point) must hit only the element; Chrome leaves out rounded corners, so a
   square would fail every round 44 px button. Overlap: a point another
   control takes that this element would also take
@@ -343,10 +343,12 @@ CI runs it in „Frontend quality“ on the Storybook build of that job.
   `abstand-24` for an element with at least 24 px clearance to every other
   control because 44 px would break the layout. The check measures that
   clearance; when it shrinks, the exception no longer applies.
-- Measurements per story land in `.kit-pixel/touch/`. One test per story
-  file: the preview loads once, stories switch over Storybook's channel.
-  Locally the run took 36-45 s on 12 cores (160 CPU seconds); `--filter`
-  narrows it like the pixel comparison.
+- Measurements per story land in `.kit-pixel/touch/`. Each story and width
+  loads a fresh page from a server of the worker on 127.0.0.1 (no
+  `page.route`, so the browser cache holds the build): switching stories
+  over Storybook's channel carried state into the next story. Locally the
+  run took 58 s on 12 cores (about 250 CPU seconds); `--filter` narrows it
+  like the pixel comparison, `--storybook-dir` reuses a finished build.
 - Both runs ignore axe findings: they render at widths where
   `pnpm run test:storybook` does not run axe (412 px, 820 px), and axe stays
   that test's job. A render error or a failing `play` still fails.
