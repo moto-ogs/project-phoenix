@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/masterdatarequests"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/modules/requestreview"
 	"github.com/moto-ogs/project-phoenix/modules/settings"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
@@ -84,7 +85,7 @@ func TestParentAbsenceReviewScopeKeepsReadsAndDecisionsConsistent(t *testing.T) 
 	decide := func(actor sessiontoken.AppClaims, want int) {
 		t.Helper()
 		rr := authExec(t, tc, testutil.NewAuthenticatedRequest(t, "POST", fmt.Sprintf("/excused-absence-requests/%d/decide", requestID),
-			map[string]any{"approve": false, "reason": "Termin entfällt", "expected_version": testpkg.ExcusedRequestVersion(t, requestID)}), actor, perms)
+			map[string]any{"approve": false, "reason": "Termin entfällt", "expected_version": queueVersion(t, tc, requestreview.TypeExcused, requestID)}), actor, perms)
 		require.Equal(t, want, rr.Code, rr.Body.String())
 	}
 
@@ -119,7 +120,7 @@ func TestParentAbsenceReviewScopeKeepsReadsAndDecisionsConsistent(t *testing.T) 
 	require.NoError(t, json.Unmarshal(otherQueue.Body.Bytes(), &otherList))
 	require.Empty(t, otherList.Data.Items, "absence delegation does not expose other parent requests")
 	otherDecision := authExec(t, tc, testutil.NewAuthenticatedRequest(t, "POST", fmt.Sprintf("/master-data-change-requests/%d/decide", masterData.ID),
-		map[string]any{"approve": false, "reason": "Nicht freigegeben", "expected_version": testpkg.MasterDataRequestVersion(t, masterData.ID)}), unassigned, perms)
+		map[string]any{"approve": false, "reason": "Nicht freigegeben", "expected_version": queueVersion(t, tc, requestreview.TypeMasterData, masterData.ID)}), unassigned, perms)
 	require.Equal(t, http.StatusForbidden, otherDecision.Code, otherDecision.Body.String())
 	decide(unassigned, http.StatusOK)
 
@@ -166,7 +167,7 @@ func TestParentAbsenceReviewScopeKeepsReadsAndDecisionsConsistent(t *testing.T) 
 	require.NoError(t, err)
 	require.Zero(t, statusCount)
 	approved := authExec(t, tc, testutil.NewAuthenticatedRequest(t, "POST", fmt.Sprintf("/excused-absence-requests/%d/decide", requestID),
-		map[string]any{"approve": true, "reason": "Geprüft", "expected_version": testpkg.ExcusedRequestVersion(t, requestID)}), unassigned, perms)
+		map[string]any{"approve": true, "reason": "Geprüft", "expected_version": queueVersion(t, tc, requestreview.TypeExcused, requestID)}), unassigned, perms)
 	require.Equal(t, http.StatusOK, approved.Code, approved.Body.String())
 	var status testpkg.StudentStatusDayRow
 	require.NoError(t, tc.db.NewSelect().Model(&status).Where("student_id = ?", chain.StudentID).

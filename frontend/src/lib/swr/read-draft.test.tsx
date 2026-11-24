@@ -346,6 +346,34 @@ describe("useReadDraft", () => {
     expect(result.current.touched).toBe(true);
   });
 
+  it("keeps input typed while the read after a refusal failed", async () => {
+    const offline = new Error("offline");
+    const fetcher = answering({ version: "1", name: "Anna" }, offline, {
+      version: "2",
+      name: "Anne",
+    });
+    const { result } = renderHook(() =>
+      useNameDraft("draft-typed-after-refusal", fetcher, {
+        rebase: (draft) => draft,
+      }),
+    );
+    await waitFor(() => expect(result.current.draft).toBe("Anna"));
+    act(() => result.current.setDraft("Hanna"));
+    await act(async () => {
+      const outcome = await result.current.submit(() =>
+        Promise.reject(changed()),
+      );
+      if (!outcome.ok) await outcome.reload?.()?.catch(() => undefined);
+    });
+    expect(result.current.status).toBe("loadFailed");
+
+    // Typed after the refusal, before the stored state could be read.
+    act(() => result.current.setDraft("Johanna"));
+    act(() => result.current.retryLoad());
+    await waitFor(() => expect(result.current.token).toBe("2"));
+    expect(result.current.draft).toBe("Johanna");
+  });
+
   it("holds the preview shown at the opening when follow is false", async () => {
     let answerOwn!: (stored: Stored) => void;
     const fetcher = vi

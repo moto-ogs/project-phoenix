@@ -14,7 +14,6 @@ import (
 	planning "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 	"github.com/stretchr/testify/assert"
@@ -105,13 +104,15 @@ func (e *seriesTestEnv) inTx(t *testing.T, fn func(ctx context.Context) error) {
 	}))
 }
 
-// versionIn is the version of the stored series a planner reads, read in the
-// transaction of the write that sends it back (ADR 0311).
+// versionIn is the version of the stored series a planner reads, read
+// through the planning read the API answers, in the transaction of the write
+// that sends it back (ADR 0311).
 func (e *seriesTestEnv) versionIn(ctx context.Context, t *testing.T, seriesID int64) string {
 	t.Helper()
-	series, err := e.series.GetSeries(ctx, seriesID)
+	series, err := newPlanningFacade(planning.PlanningDependencies{Series: e.series}).GetSeries(ctx, seriesID)
 	require.NoError(t, err)
-	return readstate.Of(series.UpdatedAt)
+	require.NotEmpty(t, series.Version, "the series read must carry its token")
+	return series.Version
 }
 
 func (e *seriesTestEnv) inTxExpectErr(t *testing.T, fn func(ctx context.Context) error) error {

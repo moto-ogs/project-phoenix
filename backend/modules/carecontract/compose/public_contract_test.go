@@ -183,6 +183,22 @@ func (p *postDouble) ContractMailStates(context.Context, int64, int64) ([]careco
 // publicContractToday is the fixed day of the intake's candidates, a
 // Wednesday before the short module ends on 2028-01-31 (#7104): on a later
 // day the intake rightly leaves the ended module out.
+// templateVersion is the version the Träger's template read answers for an
+// offering (ADR 0311): a save sends it back, never a token the test builds.
+func templateVersion(t *testing.T, ctx context.Context, intake carecontract.Intake, reviewer carecontract.Reviewer, schoolID, offeringID int64) string {
+	t.Helper()
+	offerings, err := intake.Templates(ctx, reviewer)
+	require.NoError(t, err)
+	for _, offering := range offerings {
+		if offering.SchoolID.Int64() == schoolID && offering.OfferingID.Int64() == offeringID {
+			require.NotEmpty(t, offering.Version, "the template read must carry the token")
+			return offering.Version
+		}
+	}
+	t.Fatalf("offering %d of school %d is not in the template read", offeringID, schoolID)
+	return ""
+}
+
 func publicContractToday() calendar.Date { return calendar.NewDate(2026, time.November, 18) }
 
 func TestPublicCareContractBooksModulesPerWeekdayInOneDraftAndFreezesItsPDFAtTheFirstSend(t *testing.T) {
@@ -217,12 +233,12 @@ func TestPublicCareContractBooksModulesPerWeekdayInOneDraftAndFreezesItsPDFAtThe
 		TermKind: carecontract.TermFixedMonths, TermMonths: new(12), NoticeMonths: 1, NoticeTo: carecontract.NoticeMonthEnd,
 	}
 	for _, offering := range []int64{school.offering, school.offering + 1} {
-		_, err = intake.SaveTemplate(ctx, reviewer, school.school.ID, offering, twelveMonths, readstate.Absent)
+		_, err = intake.SaveTemplate(ctx, reviewer, school.school.ID, offering, twelveMonths, templateVersion(t, ctx, intake, reviewer, school.school.ID, offering))
 		require.NoError(t, err)
 	}
 	openEnded, err := intake.SaveTemplate(ctx, reviewer, school.school.ID, school.offering+2, carecontract.TemplateInput{
 		TermKind: carecontract.TermOpenEnded, NoticeMonths: 1, NoticeTo: carecontract.NoticeMonthEnd,
-	}, readstate.Absent)
+	}, templateVersion(t, ctx, intake, reviewer, school.school.ID, school.offering+2))
 	require.NoError(t, err)
 	_, err = intake.SaveTemplate(ctx, reviewer, testpkg.UniqueTestTenantID(t), school.offering, carecontract.TemplateInput{
 		TermKind: carecontract.TermOpenEnded, NoticeTo: carecontract.NoticeMonthEnd,

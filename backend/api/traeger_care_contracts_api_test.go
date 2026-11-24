@@ -888,11 +888,20 @@ func TestContractTemplateSaveIsBoundToTheReadVersion(t *testing.T) {
 	f := newCareContractFixture(t, "Träger Vertrag Vorlage Stand")
 	token := f.office.token
 	path := templatePath(f.school, f.offering)
-	first := map[string]any{"expected_version": readstate.Absent}
+	var unread string
+	rec := traegerJSON(t, f.traeger, token, http.MethodGet, "/traeger/contract-templates", nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	for _, offering := range decodeSchoolPortalData[[]carecontract.OfferingTemplate](t, rec.Body.Bytes()) {
+		if offering.OfferingID == ident.ID(f.offering) {
+			unread = offering.Version
+		}
+	}
+	require.NotEmpty(t, unread, "the template read carries the offering's token before its first save")
+	first := map[string]any{"expected_version": unread}
 	for key, value := range careContractTemplate {
 		first[key] = value
 	}
-	rec := traegerJSON(t, f.traeger, token, http.MethodPut, path, first)
+	rec = traegerJSON(t, f.traeger, token, http.MethodPut, path, first)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	read := decodeSchoolPortalData[carecontract.OfferingTemplate](t, rec.Body.Bytes()).Version
 	require.NotEmpty(t, read)
