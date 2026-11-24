@@ -5,6 +5,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
   type RefObject,
@@ -106,6 +107,8 @@ export function AppTenantHead({
   const scrolledAway = useScrolledAway(headRef);
   const hasMenuEntries = (overflowMenu?.length ?? 0) > 0;
   const hasToolbar = tabs != null || toolbar != null;
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  useStickyOffset(toolbarRef, scrolledAway);
   const stickyTop = scrolledAway
     ? `calc(${TOP_GAP} + ${COMPACT_HEIGHT_PX + 8}px)`
     : TOP_GAP;
@@ -161,6 +164,7 @@ export function AppTenantHead({
 
       {hasToolbar && (
         <div
+          ref={toolbarRef}
           data-app-page-toolbar=""
           className={cn(
             `sticky ${Z_LAYER.sticky} mt-2 space-y-1.5 px-1.5 py-1.5`,
@@ -234,6 +238,39 @@ export function AppTenantHead({
       </OverlaySheet>
     </>
   );
+}
+
+/**
+ * Unterkante der klebenden Kopfteile als `--app-sticky-offset` am Dokument:
+ * Darunter kleben die Gruppenköpfe einer `Collection`.
+ */
+function useStickyOffset(
+  toolbarRef: RefObject<HTMLDivElement | null>,
+  scrolledAway: boolean,
+) {
+  useEffect(() => {
+    const root = document.documentElement;
+    const update = () => {
+      const toolbar = toolbarRef.current;
+      const top = toolbar
+        ? Number.parseFloat(getComputedStyle(toolbar).top)
+        : 0;
+      const height = toolbar?.offsetHeight ?? 0;
+      const compact = scrolledAway && !toolbar ? COMPACT_HEIGHT_PX + 8 : 0;
+      root.style.setProperty(
+        "--app-sticky-offset",
+        `${(Number.isFinite(top) ? top : 0) + height + compact + 4}px`,
+      );
+    };
+    update();
+    const observer =
+      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
+    if (toolbarRef.current) observer?.observe(toolbarRef.current);
+    return () => {
+      observer?.disconnect();
+      root.style.removeProperty("--app-sticky-offset");
+    };
+  }, [toolbarRef, scrolledAway]);
 }
 
 /** Ob die Kopfkarte ganz aus dem Bild gescrollt ist. */
