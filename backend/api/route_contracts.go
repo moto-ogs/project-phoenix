@@ -295,9 +295,7 @@ func contractReaders() map[reflect.Type]string {
 		reflect.TypeFor[careStudentsHTTP.StudentRequest]():       contract.ReadsFields,
 		reflect.TypeFor[careStudentsHTTP.UpdateStudentRequest](): contract.ReadsFields,
 		// An absence edit tells an absent absence_type_id from null.
-		reflect.TypeFor[workforceModule.UpdateAbsenceRequest](): contract.ReadsFields,
-		// A presence is an object or, from older clients, a bare staff id.
-		reflect.TypeFor[timetableHTTP.DeviationPresence]():                 contract.ReadsFields,
+		reflect.TypeFor[workforceModule.UpdateAbsenceRequest]():            contract.ReadsFields,
 		reflect.TypeFor[common.DeferredJSON[*string]]():                    contract.ReadsValue,
 		reflect.TypeFor[common.DeferredJSON[*float64]]():                   contract.ReadsValue,
 		reflect.TypeFor[common.DeferredJSON[*time.Time]]():                 contract.ReadsValue,

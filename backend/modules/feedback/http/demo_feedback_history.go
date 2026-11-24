@@ -2,12 +2,12 @@ package feedback
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 
 	feedbackModule "github.com/moto-ogs/project-phoenix/modules/feedback"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // Bounds of one demo feedback history request. A demo school's month of
@@ -62,8 +62,7 @@ func DemoFeedbackHistoryHandler(record func(context.Context, int64, []feedbackMo
 
 func decodeDemoFeedbackHistory(w http.ResponseWriter, r *http.Request) ([]feedbackModule.CreateEntry, error) {
 	var body BatchFeedbackRequest
-	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxDemoFeedbackHistoryBytes))
-	decoder.DisallowUnknownFields()
+	decoder := wire.NewObjectDecoder(http.MaxBytesReader(w, r.Body, maxDemoFeedbackHistoryBytes))
 	if err := decoder.Decode(&body); err != nil {
 		return nil, fmt.Errorf("invalid feedback history: %w", err)
 	}

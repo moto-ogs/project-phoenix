@@ -11,13 +11,14 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	timetablehttp "github.com/moto-ogs/project-phoenix/modules/timetable/http"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
-	"github.com/stretchr/testify/require"
 )
 
 // These owner-handler measurements exclude outer transport, authentication and
@@ -204,7 +205,7 @@ func TestDeviationHistoryPopulatedQueryBudget(t *testing.T) {
 			staff := testpkg.CreateTestStaff(t, s.DB, "History", fmt.Sprintf("Growth %d", created))
 			instance := testpkg.CreateTestActivityInstance(t, s.DB, date, s.RoomID, testpkg.ActivityInstanceOpts{Title: fmt.Sprintf("History %d", created)})
 			testpkg.CreateTestInstanceStaff(t, s.DB, instance.ID, staff.ID, testpkg.InstanceStaffOpts{})
-			response := doGrowthDev(t, writeRouter, instance.ID, map[string]any{"substitutions": []map[string]any{{"absent_staff_id": staff.ID, "substitute_staff_id": s.StaffID, "reason": "krank"}}})
+			response := doGrowthDev(t, writeRouter, instance.ID, map[string]any{"substitutions": []map[string]any{{"absent_staff_id": fmt.Sprint(staff.ID), "substitute_staff_id": fmt.Sprint(s.StaffID), "reason": "krank"}}})
 			require.Equal(t, http.StatusOK, response.Code, response.Body.String())
 			created++
 		}

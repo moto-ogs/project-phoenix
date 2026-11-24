@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedTodaysBlockStaffStep gives "Heute anders" (#7675) a supervisor who
@@ -71,12 +73,12 @@ func seedTodaysBlockStaff(rt *Runtime, today seedDate, now time.Time) error {
 // stand-in, lets the stand-in cover it.
 func postBlockDeviation(rt *Runtime, block seedChangeableBlock, absentStaffID, standInID int64) error {
 	body := map[string]any{
-		"absences": []map[string]any{{"staff_id": absentStaffID, "reason": "Arzttermin", "instance_ids": []int64{int64(block.ID)}}},
+		"absences": []map[string]any{{"staff_id": ident.ID(absentStaffID), "reason": "Arzttermin", "instance_ids": []ident.ID{ident.ID(int64(block.ID))}}},
 	}
 	if standInID > 0 {
 		body["substitutions"] = []map[string]any{{
-			"absent_staff_id": absentStaffID, "substitute_staff_id": standInID,
-			"reason": "Vertretung wegen Arzttermin", "instance_ids": []int64{int64(block.ID)},
+			"absent_staff_id": ident.ID(absentStaffID), "substitute_staff_id": ident.ID(standInID),
+			"reason": "Vertretung wegen Arzttermin", "instance_ids": []ident.ID{ident.ID(int64(block.ID))},
 		}}
 	}
 	if _, err := rt.Client.Post(fmt.Sprintf("/api/timetable/instances/%d/deviations", block.ID), body); err != nil {

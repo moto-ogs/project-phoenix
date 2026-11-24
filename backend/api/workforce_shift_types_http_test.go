@@ -9,12 +9,13 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/moto-ogs/project-phoenix/api/testutil"
-	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
+
+	"github.com/moto-ogs/project-phoenix/api/testutil"
+	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 // The shift-type route is composed here, so the permission gate, the
@@ -83,7 +84,7 @@ func TestShiftTypesRouteCreatesWithCategoryLinks(t *testing.T) {
 	second := testpkg.CreateTestActivityCategory(t, route.db, "st-create-2")
 
 	created := route.do(t, http.MethodPost, "/", map[string]any{
-		"name": fmt.Sprintf("Betreuung-%d", time.Now().UnixNano()), "color": "#83CD2D", "category_ids": []int64{first.ID, second.ID},
+		"name": fmt.Sprintf("Betreuung-%d", time.Now().UnixNano()), "color": "#83CD2D", "category_ids": []string{fmt.Sprint(first.ID), fmt.Sprint(second.ID)},
 	})
 	require.Equal(t, http.StatusCreated, created.StatusCode)
 	typeID := decodeShiftTypeID(t, created)
@@ -103,14 +104,14 @@ func TestShiftTypesRouteUpdateSyncsAndOmittedLeavesUntouched(t *testing.T) {
 
 	name := fmt.Sprintf("Vorbereitung-%d", time.Now().UnixNano())
 	created := route.do(t, http.MethodPost, "/", map[string]any{
-		"name": name, "color": "#5080D8", "category_ids": []int64{first.ID, second.ID},
+		"name": name, "color": "#5080D8", "category_ids": []string{fmt.Sprint(first.ID), fmt.Sprint(second.ID)},
 	})
 	require.Equal(t, http.StatusCreated, created.StatusCode)
 	typeID := decodeShiftTypeID(t, created)
 
 	// Narrowing the set to the first category unlinks the second.
 	updated := route.do(t, http.MethodPut, fmt.Sprintf("/%d", typeID), map[string]any{
-		"name": name, "color": "#5080D8", "is_active": true, "category_ids": []int64{first.ID},
+		"name": name, "color": "#5080D8", "is_active": true, "category_ids": []string{fmt.Sprint(first.ID)},
 	})
 	require.Equal(t, http.StatusOK, updated.StatusCode)
 	require.NotNil(t, route.shiftTypeIDOf(t, first.ID))
@@ -138,7 +139,7 @@ func TestShiftTypesRouteRejectsUnknownCategoryIDsAndRollsBack(t *testing.T) {
 	first := testpkg.CreateTestActivityCategory(t, route.db, "st-unknown-1")
 	name := fmt.Sprintf("Betreuung-%d", time.Now().UnixNano())
 	created := route.do(t, http.MethodPost, "/", map[string]any{
-		"name": name, "color": "#83CD2D", "category_ids": []int64{first.ID},
+		"name": name, "color": "#83CD2D", "category_ids": []string{fmt.Sprint(first.ID)},
 	})
 	require.Equal(t, http.StatusCreated, created.StatusCode)
 	typeID := decodeShiftTypeID(t, created)
@@ -147,7 +148,7 @@ func TestShiftTypesRouteRejectsUnknownCategoryIDsAndRollsBack(t *testing.T) {
 	// An update carrying an unknown category id is a 400 and must NOT clear
 	// the existing mapping nor persist the renamed type.
 	rejected := route.do(t, http.MethodPut, fmt.Sprintf("/%d", typeID), map[string]any{
-		"name": name + " neu", "color": "#83CD2D", "is_active": true, "category_ids": []int64{first.ID, 999999999},
+		"name": name + " neu", "color": "#83CD2D", "is_active": true, "category_ids": []string{fmt.Sprint(first.ID), fmt.Sprint(999999999)},
 	})
 	require.Equal(t, http.StatusBadRequest, rejected.StatusCode)
 	require.NotNil(t, route.shiftTypeIDOf(t, first.ID), "existing mapping must survive a rejected update")

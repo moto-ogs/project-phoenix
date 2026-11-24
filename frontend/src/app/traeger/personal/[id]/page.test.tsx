@@ -131,6 +131,7 @@ const RECORD: StaffRecordDetail = {
   ],
   contracts: [],
   unsyncedSchools: [],
+  heldBankSchools: [],
 };
 
 const CONTRACT = {
@@ -615,7 +616,10 @@ describe("TraegerStaffRecordPage", () => {
   it("keeps the contract dialog open on the stored contract after a refusal", async () => {
     setTestClock("2026-09-09T12:00:00+02:00");
     const contract = { ...CONTRACT, version: "contract-v1" };
-    api.fetchStaffRecord.mockResolvedValue({ ...RECORD, contracts: [contract] });
+    api.fetchStaffRecord.mockResolvedValue({
+      ...RECORD,
+      contracts: [contract],
+    });
     api.updateStaffContract.mockRejectedValueOnce(changed());
     address.search = "tab=vertraege";
     renderPage();
@@ -644,7 +648,9 @@ describe("TraegerStaffRecordPage", () => {
     await vi.waitFor(() =>
       expect(within(dialog).getByRole("switch")).not.toBeChecked(),
     );
-    expect(within(dialog).getByRole("radio", { name: /Minijob/ })).toBeChecked();
+    expect(
+      within(dialog).getByRole("radio", { name: /Minijob/ }),
+    ).toBeChecked();
 
     api.updateStaffContract.mockResolvedValue({
       ...RECORD,

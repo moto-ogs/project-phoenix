@@ -89,7 +89,7 @@ func TestWireFormat_Operator_ErrHelpers(t *testing.T) {
 		},
 		{
 			name:       "ErrInternal",
-			renderer:   common.OperatorInternal("oops"),
+			renderer:   common.OperatorInternal(nil, "oops"),
 			wantStatus: 500,
 			wantBody:   `{"type":"https://moto-app.de/help/fehlermeldungen#anleitung-unerwarteter-fehler","title":"Internal Server Error","status":500,"detail":"oops","instance":"","code":"general.server"}` + "\n",
 		},

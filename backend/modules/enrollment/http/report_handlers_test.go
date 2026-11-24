@@ -7,10 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	transactionFailures "github.com/moto-ogs/project-phoenix/modules/transactionruntime"
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	transactionFailures "github.com/moto-ogs/project-phoenix/modules/transactionruntime"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/api/testutil/routetest"
@@ -24,7 +25,7 @@ func TestParseClassRosterExportRequestAcceptsNumericPhaseID(t *testing.T) {
 
 	req := httptest.NewRequest("POST", "/enrollment/admin/reports/class-roster/export", strings.NewReader(`{
 		"format":"xlsx",
-		"filters":{"phase_id":42,"school_class":" 1a "}
+		"filters":{"phase_id":"42","school_class":" 1a "}
 	}`))
 
 	format, filters, err := parseClassRosterExportRequest(req)
@@ -61,7 +62,7 @@ func TestClassRosterExportRequiresConfigManageAndUsersRead(t *testing.T) {
 		},
 	}).Router(scopeTestTenantSession(testpkg.TenantSessionGates()))
 	served := testpkg.SessionVerifier(router)
-	body := `{"format":"xlsx","filters":{"phase_id":42,"school_class":"1a"}}`
+	body := `{"format":"xlsx","filters":{"phase_id":"42","school_class":"1a"}}`
 
 	configOnly := newClassRosterExportHTTPRequest(t, body, []string{permissions.ConfigManage})
 	configOnlyRecorder := httptest.NewRecorder()

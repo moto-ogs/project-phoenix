@@ -1,14 +1,15 @@
 package parent
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"regexp"
 
 	"github.com/go-chi/chi/v5"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 var parentNotificationTypePattern = regexp.MustCompile(`^[a-z0-9_]{1,64}$`)
@@ -52,7 +53,7 @@ func (rs *Resource) setNotificationPreference(w http.ResponseWriter, r *http.Req
 
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<10)
 	req := parentPreferenceRequest{}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}

@@ -28,6 +28,7 @@ const originalFetch = globalThis.fetch;
 function announcement(overrides: Partial<Announcement> = {}): Announcement {
   return {
     id: "7",
+    version: "2026-09-01T08:00:00Z",
     title: "Sommerfest",
     body: "Wir feiern am Freitag.",
     priority: "info",
@@ -155,25 +156,26 @@ describe("createAnnouncement", () => {
 });
 
 describe("updateAnnouncement", () => {
-  it("PUTs to the id-scoped path and encodes the id", async () => {
+  it("PUTs to the id-scoped path with the read version and encodes the id", async () => {
     const updated = announcement({ id: "a/b", title: "Neu" });
     const fetchFn = mockFetch(async () => jsonResponse({ data: updated }));
 
-    await expect(updateAnnouncement("a/b", validInput)).resolves.toStrictEqual(
-      updated,
-    );
+    await expect(
+      updateAnnouncement("a/b", validInput, "read-version"),
+    ).resolves.toStrictEqual(updated);
 
     const [url, init] = fetchFn.mock.calls[0]!;
     expect(url).toBe("/api/parent-announcements/a%2Fb");
     expect((init as RequestInit).method).toBe("PUT");
-    expect(JSON.parse((init as RequestInit).body as string)).toEqual(
-      validInput,
-    );
+    expect(JSON.parse((init as RequestInit).body as string)).toEqual({
+      ...validInput,
+      expected_version: "read-version",
+    });
   });
 
   it("throws the save fallback when data is missing", async () => {
     mockFetch(async () => jsonResponse({}));
-    await expect(updateAnnouncement("7", validInput)).rejects.toThrow(
+    await expect(updateAnnouncement("7", validInput, "v")).rejects.toThrow(
       "Elternmitteilung konnte nicht gespeichert werden",
     );
   });
@@ -202,21 +204,25 @@ describe("deleteAnnouncement", () => {
 });
 
 describe("publishAnnouncement", () => {
-  // The route takes no request body (#7806).
-  it("POSTs without a body to the publish path", async () => {
+  // The publication names the draft it publishes (ADR 0311).
+  it("POSTs the read version to the publish path", async () => {
     const published = announcement({ status: "published" });
     const fetchFn = mockFetch(async () => jsonResponse({ data: published }));
 
-    await expect(publishAnnouncement("7")).resolves.toStrictEqual(published);
+    await expect(
+      publishAnnouncement("7", "read-version"),
+    ).resolves.toStrictEqual(published);
     const [url, init] = fetchFn.mock.calls[0]!;
     expect(url).toBe("/api/parent-announcements/7/publish");
     expect(init).toMatchObject({ method: "POST" });
-    expect((init as RequestInit).body).toBeUndefined();
+    expect(JSON.parse((init as RequestInit).body as string)).toEqual({
+      expected_version: "read-version",
+    });
   });
 
   it("throws the publish fallback when the backend returns no announcement", async () => {
     mockFetch(async () => jsonResponse({}));
-    await expect(publishAnnouncement("7")).rejects.toThrow(
+    await expect(publishAnnouncement("7", "v")).rejects.toThrow(
       "Elternmitteilung konnte nicht veröffentlicht werden",
     );
   });

@@ -159,10 +159,10 @@ func selectRecurringPlanningInstances(instances []seedPlanningInstance, deviatio
 
 func seedPlanningStaffDeviation(rt *Runtime, instanceID, absentStaffID, substituteStaffID int64) error {
 	if _, err := rt.Client.Post(fmt.Sprintf("/api/timetable/instances/%d/deviations", instanceID), map[string]any{
-		"absences": []map[string]any{{"staff_id": absentStaffID, "reason": "Fortbildung", "instance_ids": []int64{instanceID}}},
+		"absences": []map[string]any{{"staff_id": ident.ID(absentStaffID), "reason": "Fortbildung", "instance_ids": []ident.ID{ident.ID(instanceID)}}},
 		"substitutions": []map[string]any{{
-			"absent_staff_id": absentStaffID, "substitute_staff_id": substituteStaffID,
-			"reason": "Vertretung wegen Fortbildung", "instance_ids": []int64{instanceID},
+			"absent_staff_id": ident.ID(absentStaffID), "substitute_staff_id": ident.ID(substituteStaffID),
+			"reason": "Vertretung wegen Fortbildung", "instance_ids": []ident.ID{ident.ID(instanceID)},
 		}},
 	}); err != nil {
 		return fmt.Errorf("seed planning staff deviation: %w", err)
@@ -403,20 +403,20 @@ func seedPlanningTemplateBody(groupID, roomID, categoryID, trackID int64, studen
 		"weekdays":           []int{1, 2, 3, 4, 5},
 		"start_time":         "07:30",
 		"end_time":           "08:30",
-		"room_id":            roomID,
-		"category_id":        categoryID,
-		"planning_track_id":  trackID,
-		"education_group_id": groupID,
+		"room_id":            ident.ID(roomID),
+		"category_id":        ident.ID(categoryID),
+		"planning_track_id":  ident.ID(trackID),
+		"education_group_id": ident.ID(groupID),
 		"target_group_type":  "gruppe",
 		"targets": []map[string]any{
-			{"type": "gruppe", "education_group_id": groupID},
+			{"type": "gruppe", "education_group_id": ident.ID(groupID)},
 		},
 		"week_pattern":     0,
-		"student_ids":      selectedStudents,
-		"staff_ids":        selectedStaff,
-		"primary_staff_id": selectedStaff[0],
+		"student_ids":      ident.IDs(selectedStudents),
+		"staff_ids":        ident.IDs(selectedStaff),
+		"primary_staff_id": ident.ID(selectedStaff[0]),
 		"weekday_assignments": []map[string]any{
-			{"weekday": 2, "staff_ids": selectedStaff[1:], "student_ids": tuesdayStudents, "primary_staff_id": selectedStaff[1]},
+			{"weekday": 2, "staff_ids": ident.IDs(selectedStaff[1:]), "student_ids": ident.IDs(tuesdayStudents), "primary_staff_id": ident.ID(selectedStaff[1])},
 		},
 	}
 	planFromMonday(body, 6)
@@ -465,13 +465,13 @@ func createSeedTargetVariants(rt *Runtime, roomID, categoryID, trackID int64, st
 		},
 	}
 	for _, body := range variants {
-		body["room_id"], body["category_id"], body["planning_track_id"] = roomID, categoryID, trackID
-		body["week_pattern"], body["student_ids"], body["staff_ids"] = 0, studentIDs[:10], staffIDs[:3]
+		body["room_id"], body["category_id"], body["planning_track_id"] = ident.ID(roomID), ident.ID(categoryID), ident.ID(trackID)
+		body["week_pattern"], body["student_ids"], body["staff_ids"] = 0, ident.IDs(studentIDs[:10]), ident.IDs(staffIDs[:3])
 		if body["list_kind"] == "learning_time" {
 			// The Sternengruppe's own caregiver joins its Lernzeit (#3922).
-			body["staff_ids"] = withVisitorStaff(rt.FixedSeeder, staffIDs[:3])
+			body["staff_ids"] = ident.IDs(withVisitorStaff(rt.FixedSeeder, staffIDs[:3]))
 		}
-		body["primary_staff_id"] = staffIDs[0]
+		body["primary_staff_id"] = ident.ID(staffIDs[0])
 		if body["name"] != "Ferienbetreuung" {
 			planFromMonday(body, 6)
 		}
@@ -508,8 +508,8 @@ func createSeedClassEdgeHours(rt *Runtime, roomID, categoryID, trackID int64, st
 		"target_group_type": "klasse", "target_school_class": seedEdgeHoursClass,
 		"targets":  []map[string]any{{"type": "klasse", "school_class": seedEdgeHoursClass}},
 		"weekdays": []int{1, 2, 3, 4, 5}, "start_time": "07:00", "end_time": "07:30",
-		"room_id": roomID, "category_id": categoryID, "planning_track_id": trackID,
-		"week_pattern": 0, "student_ids": classIDs, "staff_ids": staffIDs[:1], "primary_staff_id": staffIDs[0],
+		"room_id": ident.ID(roomID), "category_id": ident.ID(categoryID), "planning_track_id": ident.ID(trackID),
+		"week_pattern": 0, "student_ids": ident.IDs(classIDs), "staff_ids": ident.IDs(staffIDs[:1]), "primary_staff_id": ident.ID(staffIDs[0]),
 	}
 	planFromMonday(body, 6)
 	if _, err := rt.Client.Post("/api/timetable/templates", body); err != nil {

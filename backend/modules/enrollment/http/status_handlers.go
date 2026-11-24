@@ -2,7 +2,6 @@ package enrollmenthttp
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -18,6 +17,7 @@ import (
 	"github.com/go-chi/render"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -661,7 +661,7 @@ func (rs *Resource) withdrawStatus(w http.ResponseWriter, r *http.Request) {
 	// The body is optional; render.Bind requires a body but we tolerate
 	// empty payloads (omit child_id = withdraw all). Decode manually.
 	if r.Body != nil && r.ContentLength != 0 {
-		if err := json.NewDecoder(r.Body).Decode(body); err != nil {
+		if err := wire.Decode(r.Body, body); err != nil {
 			common.RenderError(w, r, common.ErrorInvalidRequest(err))
 			return
 		}
@@ -713,7 +713,7 @@ type ConfirmRenewalResponse struct {
 // version is a bad request.
 func renewalConfirmation(r *http.Request) (capability.RenewalConfirmation, error) {
 	body := ConfirmRenewalRequest{}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		return capability.RenewalConfirmation{}, fmt.Errorf("decode renewal confirmation: %w", err)
 	}
 	formSchemaID, err := strconv.ParseInt(strings.TrimSpace(body.FormSchemaID), 10, 64)

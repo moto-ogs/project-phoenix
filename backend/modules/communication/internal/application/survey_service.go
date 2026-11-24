@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/communication"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // SurveyStore is the persistence of the surveys (#4781).
@@ -132,7 +133,12 @@ func (s *surveyService) CreateSurvey(ctx context.Context, createdBy int64, in co
 }
 
 func (s *surveyService) UpdateSurvey(ctx context.Context, id int64, in communication.SurveyInput) (*communication.Survey, error) {
-	if _, err := s.find(ctx, id, true); err != nil {
+	stored, err := s.find(ctx, id, true)
+	if err != nil {
+		return nil, err
+	}
+	// The draft the author edited, compared under the row lock (ADR 0311).
+	if err := readstate.Check(in.ExpectedVersion, communication.SurveyVersion(*stored)); err != nil {
 		return nil, err
 	}
 	normalized, err := normalizeSurveyInput(in, s.now())
@@ -151,9 +157,15 @@ func (s *surveyService) UpdateSurvey(ctx context.Context, id int64, in communica
 
 // DeleteSurvey removes a survey with every answer and, for a parent survey,
 // its carrier announcement with the mail and pushes still pending.
-func (s *surveyService) DeleteSurvey(ctx context.Context, id int64) error {
+func (s *surveyService) DeleteSurvey(ctx context.Context, id int64, expectedFingerprint string) error {
 	survey, err := s.find(ctx, id, true)
 	if err != nil {
+		return err
+	}
+	// The dialog named the answers that go with the survey; one given since
+	// then refuses the delete. The row lock holds off new answers until the
+	// delete commits.
+	if err := readstate.Check(expectedFingerprint, communication.SurveyDeleteFingerprint(*survey)); err != nil {
 		return err
 	}
 	if survey.AnnouncementID != nil {
@@ -170,9 +182,13 @@ func (s *surveyService) DeleteSurvey(ctx context.Context, id int64) error {
 
 // PublishSurvey opens a draft for answers. From here on nothing but its end
 // changes: the people asked were told who will see their answers.
-func (s *surveyService) PublishSurvey(ctx context.Context, publishedBy, id int64) (*communication.Survey, error) {
+func (s *surveyService) PublishSurvey(ctx context.Context, publishedBy, id int64, expectedVersion string) (*communication.Survey, error) {
 	survey, err := s.find(ctx, id, true)
 	if err != nil {
+		return nil, err
+	}
+	// The author publishes the draft they read, not one changed since.
+	if err := readstate.Check(expectedVersion, communication.SurveyVersion(*survey)); err != nil {
 		return nil, err
 	}
 	if survey.PublishedAt != nil {

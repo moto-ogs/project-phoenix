@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/communication"
 	"github.com/moto-ogs/project-phoenix/modules/communication/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/communication/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 const (
@@ -94,7 +95,7 @@ func (s *Service) GetAnnouncement(ctx context.Context, id int64) (*communication
 	return &result, nil
 }
 
-func (s *Service) UpdateAnnouncement(ctx context.Context, value *communication.Announcement, operatorID int64, clientIP net.IP) error {
+func (s *Service) UpdateAnnouncement(ctx context.Context, value *communication.Announcement, expectedEditVersion string, operatorID int64, clientIP net.IP) error {
 	started := time.Now()
 	if value == nil {
 		return s.reject("update", time.Since(started), errors.New("announcement cannot be nil"))
@@ -108,6 +109,11 @@ func (s *Service) UpdateAnnouncement(ctx context.Context, value *communication.A
 		existing, current, err := s.store.GetForMutation(txCtx, value.ID)
 		stats.Add(current)
 		if err != nil {
+			return stats, err
+		}
+		// The edit was made on the stored state, checked under the row lock
+		// (ADR 0311).
+		if err := readstate.Check(expectedEditVersion, communication.AnnouncementEditVersion(existing)); err != nil {
 			return stats, err
 		}
 		current, err = s.validateNewTargetingIDs(txCtx, *value, existing)
@@ -143,15 +149,20 @@ func (s *Service) UpdateAnnouncement(ctx context.Context, value *communication.A
 }
 
 func (s *Service) DeleteAnnouncement(ctx context.Context, id, operatorID int64, clientIP net.IP) error {
-	return s.mutateExisting(ctx, "delete", id, auditEntry(operatorID, clientIP), actionDelete, nil, s.store.Delete)
+	return s.mutateExisting(ctx, "delete", id, auditEntry(operatorID, clientIP), actionDelete, nil, nil, s.store.Delete)
 }
 
-func (s *Service) PublishAnnouncement(ctx context.Context, id, operatorID int64, clientIP net.IP) error {
-	return s.mutateExisting(ctx, "publish", id, auditEntry(operatorID, clientIP), actionPublish, nil, s.store.Publish)
+// PublishAnnouncement publishes what the operator read: an edit since then
+// refuses (ADR 0311).
+func (s *Service) PublishAnnouncement(ctx context.Context, id int64, expectedEditVersion string, operatorID int64, clientIP net.IP) error {
+	read := func(existing communication.Announcement) error {
+		return readstate.Check(expectedEditVersion, communication.AnnouncementEditVersion(existing))
+	}
+	return s.mutateExisting(ctx, "publish", id, auditEntry(operatorID, clientIP), actionPublish, nil, read, s.store.Publish)
 }
 
 func (s *Service) UnpublishAnnouncement(ctx context.Context, id, operatorID int64, clientIP net.IP) error {
-	return s.mutateExisting(ctx, "unpublish", id, auditEntry(operatorID, clientIP), actionUpdate, map[string]any{"action": "unpublish"}, s.store.Unpublish)
+	return s.mutateExisting(ctx, "unpublish", id, auditEntry(operatorID, clientIP), actionUpdate, map[string]any{"action": "unpublish"}, nil, s.store.Unpublish)
 }
 
 func (s *Service) mutateExisting(
@@ -161,13 +172,19 @@ func (s *Service) mutateExisting(
 	audit domain.AuditEntry,
 	action string,
 	changes map[string]any,
+	read func(communication.Announcement) error,
 	mutate func(context.Context, int64) (domain.OperationStats, error),
 ) error {
 	return s.run(ctx, operation, func(txCtx context.Context) (stats domain.OperationStats, err error) {
-		_, current, err := s.store.GetForMutation(txCtx, id)
+		existing, current, err := s.store.GetForMutation(txCtx, id)
 		stats.Add(current)
 		if err != nil {
 			return stats, err
+		}
+		if read != nil {
+			if err := read(existing); err != nil {
+				return stats, err
+			}
 		}
 		current, err = mutate(txCtx, id)
 		stats.Add(current)

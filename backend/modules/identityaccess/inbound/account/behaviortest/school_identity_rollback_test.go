@@ -39,7 +39,7 @@ func TestRegisterRollsBackRefusedProvisioning(t *testing.T) {
 		"username":         username,
 		"password":         "SecurePass123!",
 		"confirm_password": "SecurePass123!",
-		"role_id":          validRoleID,
+		"role_id":          fmt.Sprint(validRoleID),
 	}
 
 	req := testutil.NewJSONRequest(t, "POST", "/auth/register", body)
@@ -91,7 +91,7 @@ func TestLinkToTenantReusesExistingPersonWithoutNames(t *testing.T) {
 
 	req := testutil.NewJSONRequest(t, "POST", "/auth/link-to-tenant", map[string]interface{}{
 		"email":   email,
-		"role_id": adminRole.ID,
+		"role_id": fmt.Sprint(adminRole.ID),
 	})
 	rr := testutil.ExecuteWithAuthPermissions(t, router, req, claims, []string{"users:manage"})
 	require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())

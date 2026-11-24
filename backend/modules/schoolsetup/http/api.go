@@ -5,13 +5,14 @@ package schoolsetuphttp
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+
 	"github.com/moto-ogs/project-phoenix/modules/schoolsetup"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 type Middleware = func(http.Handler) http.Handler
@@ -88,7 +89,7 @@ func (rs *Resource) skipStep(w http.ResponseWriter, r *http.Request) {
 	}
 	step := chi.URLParam(r, "step")
 	var req skipRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		rs.runtime.Failure(w, r, http.StatusBadRequest, err)
 		return
 	}
@@ -117,7 +118,7 @@ func (rs *Resource) dismiss(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req dismissalRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		rs.runtime.Failure(w, r, http.StatusBadRequest, err)
 		return
 	}

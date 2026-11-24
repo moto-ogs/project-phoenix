@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/modules/communication"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -187,7 +189,7 @@ func TestOperatorRoutesRotateAndTransferADevice(t *testing.T) {
 	require.NoError(t, err)
 
 	var created operatorRouteDevice
-	f.call(t, http.MethodPost, "/operator/devices/", map[string]any{"school_id": sourceID, "device_id": fmt.Sprintf("route-device-%d", sourceID), "device_type": "rfid_terminal"}, &created)
+	f.call(t, http.MethodPost, "/operator/devices/", map[string]any{"school_id": fmt.Sprint(sourceID), "device_id": fmt.Sprintf("route-device-%d", sourceID), "device_type": "rfid_terminal"}, &created)
 	_, firstHash := f.storedDevice(t, int64(created.ID))
 
 	var rotated operatorRouteDevice
@@ -203,7 +205,7 @@ func TestOperatorRoutesRotateAndTransferADevice(t *testing.T) {
 	assert.True(t, status.CanTransfer, "an idle device can move")
 
 	var moved operatorRouteDevice
-	f.call(t, http.MethodPost, fmt.Sprintf("/operator/devices/%d/transfer", created.ID), map[string]int64{"target_school_id": target.ID.Int64()}, &moved)
+	f.call(t, http.MethodPost, fmt.Sprintf("/operator/devices/%d/transfer", created.ID), map[string]string{"target_school_id": fmt.Sprint(target.ID.Int64())}, &moved)
 	assert.Equal(t, target.ID.Int64(), int64(moved.SchoolID))
 	var tenantID int64
 	require.NoError(t, f.db.NewSelect().TableExpr("iot.devices").Column("tenant_id").Where("id = ?", moved.ID).Scan(testpkg.Ctx(t), &tenantID))
@@ -334,7 +336,7 @@ func TestOperatorRoutesPublishAnAnnouncementAndReadItsViews(t *testing.T) {
 	base := fmt.Sprintf("/operator/announcements/%d", announcement.ID)
 
 	_, viewer := testpkg.CreateTestPersonWithAccount(t, db, "Route", "Leserin")
-	f.call(t, http.MethodPost, base+"/publish", nil, nil)
+	f.call(t, http.MethodPost, base+"/publish", map[string]any{"expected_edit_version": communication.AnnouncementEditVersion(*announcement)}, nil)
 	var publishedAt *time.Time
 	require.NoError(t, db.NewSelect().TableExpr("platform.announcements").Column("published_at").Where("id = ?", announcement.ID).Scan(testpkg.Ctx(t), &publishedAt))
 	assert.NotNil(t, publishedAt, "the announcement is published")
@@ -447,7 +449,7 @@ func TestOperatorRoutesSchoolEditCarriesTheReadVersion(t *testing.T) {
 		t.Helper()
 		var payload bytes.Buffer
 		require.NoError(t, json.NewEncoder(&payload).Encode(map[string]any{
-			"organization_id": organizationID, "name": name, "slug": school.Slug, "subdomain": school.Subdomain,
+			"organization_id": fmt.Sprint(organizationID), "name": name, "slug": school.Slug, "subdomain": school.Subdomain,
 			"active": school.Active, "hidden": school.Hidden, "expected_version": version,
 		}))
 		req := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/operator/schools/%d", schoolID), &payload)

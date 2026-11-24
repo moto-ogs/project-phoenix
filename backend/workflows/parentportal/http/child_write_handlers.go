@@ -1,17 +1,18 @@
 package parent
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/absencerecords"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
@@ -139,7 +140,7 @@ func (rs *Resource) submitSickNote(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req SubmitSickNoteRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}
@@ -488,7 +489,7 @@ func (rs *Resource) replaceMealParticipation(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	var request ReplaceMealParticipationRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	if err := wire.Decode(r.Body, &request); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid JSON body")))
 		return
 	}
@@ -515,7 +516,7 @@ func (rs *Resource) setMealParticipationDay(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	var request SetMealParticipationDayRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil || request.Participating == nil {
+	if err := wire.Decode(r.Body, &request); err != nil || request.Participating == nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("participating is required")))
 		return
 	}
@@ -548,7 +549,7 @@ func (rs *Resource) setMealParticipationWeek(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	var request SetMealParticipationDayRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil || request.Participating == nil {
+	if err := wire.Decode(r.Body, &request); err != nil || request.Participating == nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("participating is required")))
 		return
 	}

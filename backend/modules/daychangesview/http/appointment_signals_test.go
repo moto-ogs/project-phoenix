@@ -67,7 +67,7 @@ func TestDayChangesAppointmentSignal(t *testing.T) {
 	create := func(title string, recurrence map[string]any) string {
 		payload := map[string]any{
 			"title": title, "start_date": "2026-05-04", "end_date": "2026-05-04", "start_time": "14:00", "end_time": "15:00",
-			"delivery_mode": "informational", "targets": []map[string]any{{"type": "staff", "id": invited.ID}},
+			"delivery_mode": "informational", "targets": []map[string]any{{"type": "staff", "id": testpkg.ID(invited.ID)}},
 		}
 		if recurrence != nil {
 			payload["recurrence"] = recurrence

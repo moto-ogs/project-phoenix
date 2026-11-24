@@ -1,7 +1,6 @@
 package account
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -9,6 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/portalauth"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 
 	"github.com/go-chi/render"
 )
@@ -46,7 +46,7 @@ type SessionClaimsResponse struct {
 func (rs *Resource) validateSession(w http.ResponseWriter, r *http.Request) {
 	var input SessionValidationRequest
 	r.Body = http.MaxBytesReader(w, r.Body, 32*1024)
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+	if err := wire.Decode(r.Body, &input); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid session validation request")))
 		return
 	}

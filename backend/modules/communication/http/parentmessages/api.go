@@ -16,6 +16,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/communication"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // Resource is the staff messaging HTTP resource.
@@ -384,7 +385,7 @@ func (rs *Resource) getCountScope(w http.ResponseWriter, r *http.Request) {
 
 func (rs *Resource) setCountScope(w http.ResponseWriter, r *http.Request) {
 	var req CountScopeRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}
@@ -421,7 +422,7 @@ func (rs *Resource) markThreadHandled(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req MarkHandledRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}
@@ -443,7 +444,7 @@ func (rs *Resource) postMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req ParentChatPostMessageRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}
@@ -472,7 +473,7 @@ func (rs *Resource) postMessage(w http.ResponseWriter, r *http.Request) {
 
 func (rs *Resource) openThread(w http.ResponseWriter, r *http.Request) {
 	var req OpenThreadRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}

@@ -16,7 +16,7 @@ func RouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/{id}", Portals: operator, Response: OperatorAnnouncementResponse{}},
 		{Method: "PUT", Pattern: "/{id}", Portals: operator, Request: UpdateAnnouncementRequest{}, Response: OperatorAnnouncementResponse{}},
 		{Method: "DELETE", Pattern: "/{id}", Portals: operator, NoData: true},
-		{Method: "POST", Pattern: "/{id}/publish", Portals: operator, NoData: true},
+		{Method: "POST", Pattern: "/{id}/publish", Portals: operator, Request: PublishAnnouncementRequest{}, NoData: true},
 		{Method: "GET", Pattern: "/{id}/stats", Portals: operator, Response: communication.AnnouncementStats{}},
 		{Method: "GET", Pattern: "/{id}/views", Portals: operator, Response: []AnnouncementViewDetailResponse{}},
 	}

@@ -8,13 +8,14 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	rootAPI "github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	calendarHTTP "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/http"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type schoolCalendarE2EResponse struct {
@@ -105,7 +106,7 @@ func TestSchoolCalendarHTTPFlow(t *testing.T) {
 	inviteRR := doJSON(t, router, http.MethodPost, "/calendar/appointments", manageToken, map[string]any{
 		"title": "Teamsitzung", "start_date": "2026-05-05", "end_date": "2026-05-05",
 		"start_time": "14:00", "end_time": "15:00", "delivery_mode": "rsvp_required",
-		"targets": []map[string]any{{"type": "staff", "id": teacher.ID}},
+		"targets": []map[string]any{{"type": "staff", "id": testpkg.ID(teacher.ID)}},
 	})
 	require.Equal(t, http.StatusCreated, inviteRR.Code, inviteRR.Body.String())
 	invited := decodeE2E[createAppointmentE2EResponse](t, inviteRR.Body.Bytes())

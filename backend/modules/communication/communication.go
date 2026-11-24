@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 const (
@@ -157,6 +158,14 @@ type AnnouncementViewer struct {
 	OrgID     int64
 }
 
+// AnnouncementEditVersion is the token of a stored platform announcement
+// (ADR 0311): an edit and the publication send it back. It is not Version,
+// the release label an announcement may name. Every write of the row stamps
+// updated_at (the table's trigger); views live in their own table.
+func AnnouncementEditVersion(a Announcement) string {
+	return readstate.Of(a.UpdatedAt)
+}
+
 // Query exposes platform-announcement reads without write authority.
 type Query interface {
 	GetAnnouncement(context.Context, int64) (*Announcement, error)
@@ -169,9 +178,13 @@ type Query interface {
 // Command owns platform-announcement lifecycle and read-state writes.
 type Command interface {
 	CreateAnnouncement(context.Context, *Announcement, int64, net.IP) error
-	UpdateAnnouncement(context.Context, *Announcement, int64, net.IP) error
+	// UpdateAnnouncement writes an edit made on the announcement whose
+	// AnnouncementEditVersion is expectedEditVersion.
+	UpdateAnnouncement(ctx context.Context, value *Announcement, expectedEditVersion string, operatorID int64, clientIP net.IP) error
 	DeleteAnnouncement(context.Context, int64, int64, net.IP) error
-	PublishAnnouncement(context.Context, int64, int64, net.IP) error
+	// PublishAnnouncement publishes the announcement whose
+	// AnnouncementEditVersion is expectedEditVersion.
+	PublishAnnouncement(ctx context.Context, id int64, expectedEditVersion string, operatorID int64, clientIP net.IP) error
 	UnpublishAnnouncement(context.Context, int64, int64, net.IP) error
 	MarkSeen(context.Context, AnnouncementViewer, int64) error
 	MarkDismissed(context.Context, AnnouncementViewer, int64) error

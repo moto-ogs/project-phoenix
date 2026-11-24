@@ -28,6 +28,7 @@ import {
   type announcementRequest,
   type declarationSignerResponse,
   type letterPreviewRequest,
+  type versionRequest,
 } from "./shared.generated";
 
 /** Go: announcement.studentLetterResponse */
@@ -134,6 +135,7 @@ export const pollResultsResponseSchema: z.ZodType<pollResultsResponse, unknown> 
 export interface reminderRequest {
   reminder_at?: string | null;
   reminder_text?: string | null;
+  expected_version?: string;
 }
 
 export const routes = {
@@ -241,6 +243,7 @@ export const routes = {
     method: "POST",
     pattern: "/api/parent-announcements/{announcementId}/publish",
     portals: ["tenant"],
+    request: requestBody<versionRequest>(),
     response: success(announcementResponseSchema),
   },
   "POST /api/parent-announcements/{announcementId}/remind": {

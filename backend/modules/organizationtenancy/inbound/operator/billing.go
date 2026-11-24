@@ -339,5 +339,5 @@ func (rs *BillingResource) billingError(r *http.Request, err error) render.Rende
 		"path", r.URL.Path,
 		"error", err.Error(),
 	)
-	return common.OperatorInternal(internalErrorMessage)
+	return common.OperatorInternal(err, internalErrorMessage)
 }

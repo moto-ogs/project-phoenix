@@ -5,10 +5,11 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/moto-ogs/project-phoenix/modules/timetable"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // dutyTemplateBody is a duty (#3822): staff only, no room, no children.
@@ -19,8 +20,8 @@ func dutyTemplateBody(s *templateSetup, name string) map[string]any {
 	delete(body, "room_id")
 	delete(body, "student_ids")
 	delete(body, "max_participants")
-	body["staff_ids"] = []int64{s.staffA}
-	body["primary_staff_id"] = s.staffA
+	body["staff_ids"] = []string{fmt.Sprint(s.staffA)}
+	body["primary_staff_id"] = fmt.Sprint(s.staffA)
 	body["required_staff"] = 1
 	return body
 }
@@ -52,7 +53,7 @@ func TestTemplateDutyRoundTripWithoutRoom(t *testing.T) {
 	updateW := doTemplateJSON(t, router, http.MethodPut, fmt.Sprintf("/templates/%d", created.TemplateID), dutyTemplateBody(s, "Tpl-Busaufsicht"))
 	require.Equal(t, http.StatusOK, updateW.Code, "body=%s", updateW.Body.String())
 	withRoom := dutyTemplateBody(s, "Tpl-Busaufsicht")
-	withRoom["room_id"] = s.roomID
+	withRoom["room_id"] = fmt.Sprint(s.roomID)
 	updateW = doTemplateJSON(t, router, http.MethodPut, fmt.Sprintf("/templates/%d", created.TemplateID), withRoom)
 	require.Equal(t, http.StatusOK, updateW.Code, "body=%s", updateW.Body.String())
 	assert.Equal(t, ident.ID(s.roomID), *decodeTemplateData[templateResponse](t, updateW).RoomID)
@@ -66,7 +67,7 @@ func TestTemplateDutyRejectsChildrenAndRoomlessCare(t *testing.T) {
 	router := templateRouter(s.ctx, s.res, s.db)
 
 	cases := map[string]func(body map[string]any){
-		"children": func(body map[string]any) { body["student_ids"] = []int64{s.studentA} },
+		"children": func(body map[string]any) { body["student_ids"] = []string{fmt.Sprint(s.studentA)} },
 		"target group": func(body map[string]any) {
 			body["target_group_type"] = timetable.TargetGroupTypeSchoolClass
 			body["target_school_class"] = "3a"

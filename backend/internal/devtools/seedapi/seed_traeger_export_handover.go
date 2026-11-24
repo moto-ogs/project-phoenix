@@ -60,9 +60,9 @@ func seedExportHandover(client *Client, auth AuthRef, runID int64) error {
 // assignment. A change by a parallel seed since the read reads again once.
 func seedExportFormats(client *Client, auth AuthRef, version string, kaemmerei, steuerbuero int64) error {
 	body := map[string]any{"assignments": []map[string]any{
-		{"format": "sollstellung", "recipient_id": kaemmerei},
-		{"format": "datev", "recipient_id": steuerbuero},
-		{"format": "pain008", "recipient_id": kaemmerei},
+		{"format": "sollstellung", "recipient_id": ident.ID(kaemmerei)},
+		{"format": "datev", "recipient_id": ident.ID(steuerbuero)},
+		{"format": "pain008", "recipient_id": ident.ID(kaemmerei)},
 	}}
 	for attempt := 0; ; attempt++ {
 		body["expected_version"] = version

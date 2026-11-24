@@ -18,6 +18,7 @@ import {
   statsResponseSchema,
   type announcementRequest,
   type letterPreviewRequest,
+  type versionRequest,
 } from "./shared.generated";
 
 export const routes = {
@@ -104,6 +105,7 @@ export const routes = {
     method: "POST",
     pattern: "/school/parent-letters/{announcementId}/publish",
     portals: ["school"],
+    request: requestBody<versionRequest>(),
     response: success(announcementResponseSchema),
   },
   "POST /school/parent-letters/{announcementId}/remind": {

@@ -11,11 +11,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
-	"github.com/stretchr/testify/require"
-	"github.com/uptrace/bun"
 )
 
 // Drive the registered guardian resource, including JWT, permissions and the
@@ -80,11 +81,11 @@ func TestGuardianListsPositiveGrowthQueryBudget(t *testing.T) {
 			case "bulk_invite":
 				method = http.MethodPost
 				path = "/bulk-invite"
-				body = map[string]any{"student_ids": studentIDs, "dry_run": true}
+				body = map[string]any{"student_ids": testpkg.IDsOf[testpkg.ID](studentIDs), "dry_run": true}
 			case "bulk_invite_notify":
 				method = http.MethodPost
 				path = "/bulk-invite"
-				body = map[string]any{"student_ids": studentIDs, "dry_run": true, "notify_active": true}
+				body = map[string]any{"student_ids": testpkg.IDsOf[testpkg.ID](studentIDs), "dry_run": true, "notify_active": true}
 			}
 			req := testutil.NewAuthenticatedRequest(t, method, "/api/guardians"+path, body, testutil.WithJWTBearer(token))
 			req = req.WithContext(counter.Context(testpkg.Ctx(t)))

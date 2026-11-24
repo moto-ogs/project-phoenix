@@ -63,14 +63,14 @@ func (s *offeringGapsSetup) createSourcedTemplate(t *testing.T, name string, per
 		"weekdays":                 []int{timetableModule.WeekdayMonday, timetableModule.WeekdayWednesday},
 		"start_time":               "07:00",
 		"end_time":                 "08:00",
-		"room_id":                  s.roomID,
-		"category_id":              s.category.ID,
-		"calendar_period_id":       periodID,
+		"room_id":                  fmt.Sprint(s.roomID),
+		"category_id":              fmt.Sprint(s.category.ID),
+		"calendar_period_id":       fmt.Sprint(periodID),
 		"target_group_type":        timetableModule.TargetGroupTypeOffering,
-		"source_care_offering_ids": []int64{offeringID},
+		"source_care_offering_ids": []string{fmt.Sprint(offeringID)},
 		"source_grade_levels":      grades,
-		"student_ids":              []int64{},
-		"staff_ids":                []int64{s.staffA},
+		"student_ids":              []string{},
+		"staff_ids":                []string{fmt.Sprint(s.staffA)},
 	}
 	if len(endDate) > 0 {
 		body["end_date"] = endDate[0].String()
@@ -94,7 +94,7 @@ func (s *offeringGapsSetup) listGaps(t *testing.T, periodID int64) []offeringGap
 func (s *offeringGapsSetup) decide(t *testing.T, offeringID, periodID int64, acknowledged bool) *httptest.ResponseRecorder {
 	t.Helper()
 	return doTemplateJSON(t, s.router, http.MethodPut, fmt.Sprintf("/offering-gaps/%d/acknowledgement", offeringID),
-		map[string]any{"period_id": periodID, "acknowledged": acknowledged})
+		map[string]any{"period_id": fmt.Sprint(periodID), "acknowledged": acknowledged})
 }
 
 func withGrade(bookings []timetableModule.OfferingWeekdayBooking, grade int) []timetableModule.OfferingWeekdayBooking {
@@ -167,7 +167,7 @@ func TestOfferingGapsRefusals(t *testing.T) {
 	w := s.decide(t, randstunde, period.ID, true)
 	assert.Equal(t, http.StatusNotFound, w.Code, "every booked child has a Regeltermin: body=%s", w.Body.String())
 	assert.Empty(t, s.sources.decisions)
-	w = doTemplateJSON(t, s.router, http.MethodPut, fmt.Sprintf("/offering-gaps/%d/acknowledgement", randstunde), map[string]any{"period_id": period.ID})
+	w = doTemplateJSON(t, s.router, http.MethodPut, fmt.Sprintf("/offering-gaps/%d/acknowledgement", randstunde), map[string]any{"period_id": fmt.Sprint(period.ID)})
 	assert.Equal(t, http.StatusBadRequest, w.Code, "body=%s", w.Body.String())
 	w = doTemplateJSON(t, s.router, http.MethodPut, fmt.Sprintf("/offering-gaps/%d/acknowledgement", randstunde), map[string]any{"acknowledged": true})
 	assert.Equal(t, http.StatusBadRequest, w.Code, "body=%s", w.Body.String())

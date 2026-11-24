@@ -41,7 +41,7 @@ func TestUpdateTemplateRequestSourceFieldPresence(t *testing.T) {
 	})
 
 	t.Run("explicit values are set", func(t *testing.T) {
-		req := decodeUpdateSourceFields(t, `{"source_care_offering_ids":[7,9],"source_grade_levels":[2,3]}`)
+		req := decodeUpdateSourceFields(t, `{"source_care_offering_ids":["7","9"],"source_grade_levels":[2,3]}`)
 		require.True(t, req.SourceCareOfferingIDs.Set)
 		assert.Equal(t, []ident.ID{7, 9}, req.SourceCareOfferingIDs.Value)
 		assert.True(t, req.SourceGradeLevels.Set)
@@ -63,7 +63,7 @@ func validUpdateBodyJSON(fragment string) string {
 		extra = "," + fragment
 	}
 	return `{"name":"Tpl","type":"care","weekdays":[1],"start_time":"14:00",` +
-		`"end_time":"15:00","room_id":3,"category_id":2` + extra + `}`
+		`"end_time":"15:00","room_id":"3","category_id":"2"` + extra + `}`
 }
 
 // A filter-only edit of a sourced template omits source_care_offering_id and
@@ -90,7 +90,7 @@ func TestUpdateTemplateBind_DefersSourceValidationUntilMerge(t *testing.T) {
 
 	t.Run("submitted source on a non-angebot type fails at bind", func(t *testing.T) {
 		req := decodeUpdateSourceFields(t, validUpdateBodyJSON(
-			`"target_group_type":"klasse","target_school_class":"1a","source_care_offering_ids":[7]`))
+			`"target_group_type":"klasse","target_school_class":"1a","source_care_offering_ids":["7"]`))
 		require.ErrorContains(t, req.Bind(nil), "requires target group type 'angebot'")
 	})
 }
@@ -105,12 +105,12 @@ func TestUpdateTemplateBind_AssignsMissingTimesToTheirFields(t *testing.T) {
 	}{
 		{
 			name:  "start time",
-			body:  `{"name":"Tpl","type":"care","weekdays":[1],"end_time":"15:00","room_id":3,"category_id":2}`,
+			body:  `{"name":"Tpl","type":"care","weekdays":[1],"end_time":"15:00","room_id":"3","category_id":"2"}`,
 			field: "start_time",
 		},
 		{
 			name:  "end time",
-			body:  `{"name":"Tpl","type":"care","weekdays":[1],"start_time":"14:00","room_id":3,"category_id":2}`,
+			body:  `{"name":"Tpl","type":"care","weekdays":[1],"start_time":"14:00","room_id":"3","category_id":"2"}`,
 			field: "end_time",
 		},
 	} {

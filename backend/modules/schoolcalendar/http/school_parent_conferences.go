@@ -1,13 +1,14 @@
 package staffcalendarhttp
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	calendarService "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // mountSchoolParentConferences mounts the Elternsprechtag of moto schule
@@ -48,7 +49,7 @@ type ParentConferenceBreak struct {
 
 func decodeParentConference(w http.ResponseWriter, r *http.Request) (calendarService.ParentConferenceRequest, bool) {
 	var body ParentConferenceUpdateRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return calendarService.ParentConferenceRequest{}, false
 	}

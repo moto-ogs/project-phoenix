@@ -122,11 +122,12 @@ func TestStudentParentRecordsListLettersAndDeclarationsOfOneChild(t *testing.T) 
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		var created struct {
 			Data struct {
-				ID string `json:"id"`
+				ID      string `json:"id"`
+				Version string `json:"version"`
 			} `json:"data"`
 		}
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &created))
-		rec = send(http.MethodPost, "/api/parent-announcements/"+created.Data.ID+"/publish", admin, nil)
+		rec = send(http.MethodPost, "/api/parent-announcements/"+created.Data.ID+"/publish", admin, map[string]any{"expected_version": created.Data.Version})
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		return created.Data.ID
 	}

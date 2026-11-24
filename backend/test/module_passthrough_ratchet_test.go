@@ -239,7 +239,7 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// Raised by ADR 0073: the composition forwards the parent announcement
 	// retention to its service.
 	// Raised by ADR 0079: the facade observes the reachable-children read.
-	"modules/communication": 51, // #2352: dead unread count removed (-1); #7808: dead thread start removed (-1)
+	"modules/communication": 50, // #2352: dead unread count removed (-1); #7808: dead thread start removed (-1); #7986: attachment reset answers the draft version (-1)
 	"modules/dataimport":    1,
 	"modules/delivery":      4,
 	"modules/devicefleet":   24, // #2352: dead device-management routes removed (-8)

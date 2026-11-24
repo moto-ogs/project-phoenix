@@ -121,6 +121,9 @@ type Input struct {
 	Declaration StaffAnnouncementDeclarationSettings `json:"-"`
 	// Sender makes the input a class letter of a Lehrkraft (#4800).
 	Sender *ClassLetterSender `json:"-"`
+	// ExpectedVersion is the version of the draft an update was made on
+	// (ADR 0311).
+	ExpectedVersion string `json:"-"`
 }
 
 // ClassLetterSender is the Lehrkraft a class letter comes from (#4800).
@@ -136,7 +139,8 @@ type StaffService interface {
 	Create(ctx context.Context, createdBy int64, in Input) (*StaffParentAnnouncement, error)
 	Update(ctx context.Context, id int64, in Input) (*StaffParentAnnouncement, error)
 	Delete(ctx context.Context, id int64) error
-	Publish(ctx context.Context, id int64) (*StaffParentAnnouncement, error)
+	// Publish publishes the draft whose version is expectedVersion (ADR 0311).
+	Publish(ctx context.Context, id int64, expectedVersion string) (*StaffParentAnnouncement, error)
 	Unpublish(ctx context.Context, id int64) (*StaffParentAnnouncement, error)
 	Stats(ctx context.Context, id int64) (*StaffAnnouncementStats, error)
 	Recipients(ctx context.Context, id int64) ([]*StaffAnnouncementRecipientStatus, error)

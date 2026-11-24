@@ -35,7 +35,7 @@ func (s *childQuotaProvisioning) UpdateSchool(ctx context.Context, id int64, cha
 
 func childQuotaRequest(accessToken string) *http.Request {
 	req := httptest.NewRequest(http.MethodPut, "/schools/10", bytes.NewBufferString(
-		`{"organization_id":7,"name":"Schule","slug":"schule","subdomain":"schule","active":true,"child_quota":{"bundles":2}}`))
+		`{"organization_id":"7","name":"Schule","slug":"schule","subdomain":"schule","active":true,"child_quota":{"bundles":2}}`))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 	return req

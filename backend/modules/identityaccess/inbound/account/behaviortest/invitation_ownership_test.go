@@ -12,10 +12,11 @@ import (
 
 	identityaccessCompose "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	authAPI "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/require"
 )
 
 func TestInvitationHTTPRequiresVerifiedOwner(t *testing.T) {
@@ -44,7 +45,7 @@ func TestInvitationHTTPRequiresVerifiedOwner(t *testing.T) {
 	require.Contains(t, rr.Body.String(), owner.Email)
 	path := "/auth/invitations/" + invitation.Token + "/accept"
 	// Neither a client account ID nor a client email is proof of ownership.
-	body := map[string]any{"account_id": owner.ID, "email": owner.Email, "owner_access_token": "unverified"}
+	body := map[string]any{"account_id": fmt.Sprint(owner.ID), "email": owner.Email, "owner_access_token": "unverified"}
 	req := testutil.NewJSONRequest(t, http.MethodPost, path, body)
 	rr = testutil.ExecuteRequest(router, req)
 	require.Equal(t, http.StatusUnauthorized, rr.Code, rr.Body.String())

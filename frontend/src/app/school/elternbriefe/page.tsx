@@ -212,7 +212,12 @@ export default function SchoolParentLettersPage() {
         // neu geöffnetes Formular beginnt einen neuen.
         if (op.isCurrent()) setCreatedLetter(created);
         try {
-          await publishAnnouncement(created.id, SCHOOL_PARENT_LETTERS_BASE);
+          // Sent as created: nobody else edits a class letter's draft.
+          await publishAnnouncement(
+            created.id,
+            created.version,
+            SCHOOL_PARENT_LETTERS_BASE,
+          );
         } finally {
           await mutate();
         }

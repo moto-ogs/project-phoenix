@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedTimeTrackingHistoryStep populates Soll/Ist data for the demo tenant
@@ -632,7 +634,7 @@ func postAbsence(client *Client, dateStart, dateEnd time.Time, absenceType, note
 		"note":         note,
 	}
 	if absenceTypeID != nil {
-		body["absence_type_id"] = *absenceTypeID
+		body["absence_type_id"] = ident.ID(*absenceTypeID)
 	}
 	if _, err := client.Post("/api/time-tracking/absences", body); err != nil {
 		return err
@@ -653,7 +655,7 @@ func postStaffAbsence(rt *Runtime, staffID int64, day time.Time, absenceType, no
 		"note":         note,
 	}
 	if absenceTypeID != nil {
-		body["absence_type_id"] = *absenceTypeID
+		body["absence_type_id"] = ident.ID(*absenceTypeID)
 	}
 	_, err := rt.Client.Post(fmt.Sprintf("/api/staff/%d/absences", staffID), body)
 	return err

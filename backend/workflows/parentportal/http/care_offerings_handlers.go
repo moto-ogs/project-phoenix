@@ -1,7 +1,6 @@
 package parent
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"sort"
@@ -10,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
@@ -360,7 +360,7 @@ func (rs *Resource) createOfferingChangeRequest(w http.ResponseWriter, r *http.R
 		return
 	}
 	var body OfferingChangeRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}

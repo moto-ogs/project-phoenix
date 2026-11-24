@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The staff members of today's changed Dienst (#7661), by name in DemoStaff:
@@ -69,7 +71,7 @@ func seedTodaysShiftChanges(rt *Runtime, today seedDate) error {
 	if _, err := rt.Client.Put("/api/staff-shifts/"+shift.ID+"/cancellation", map[string]any{
 		"cancelled": true, "change_reason": "Fortbildung",
 		"replacements": []map[string]any{{
-			"staff_id": coverID, "start_time": coverShiftTodayStart,
+			"staff_id": ident.ID(coverID), "start_time": coverShiftTodayStart,
 			"end_time": shift.EndTime, "break_minutes": 0,
 		}},
 	}); err != nil {

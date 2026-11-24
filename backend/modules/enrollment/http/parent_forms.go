@@ -2,7 +2,6 @@ package enrollmenthttp
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -51,7 +51,7 @@ func (ParentForms) RenderFormBootstrapError(w http.ResponseWriter, r *http.Reque
 // query parameter.
 func (f ParentForms) DecodeSubmission(r *http.Request) (func(context.Context, int64, int64, bool, string) (func(http.ResponseWriter, *http.Request), error), error) {
 	wireReq := &SubmitEnrollmentRequest{}
-	if err := json.NewDecoder(r.Body).Decode(wireReq); err != nil {
+	if err := wire.Decode(r.Body, wireReq); err != nil {
 		return nil, err
 	}
 	_ = wireReq.Bind(r)

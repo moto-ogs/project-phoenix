@@ -62,7 +62,7 @@ func TestContractSendPushesOncePerAddress(t *testing.T) {
 	assert.Empty(t, pushes(), "a draft pushes nothing")
 	send := func(body map[string]any) {
 		t.Helper()
-		body["contract_ids"] = []int64{int64(id)}
+		body["contract_ids"] = []wireID{id}
 		rec := traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", body)
 		require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
 		require.Contains(t, rec.Body.String(), fmt.Sprintf(`"sent":["%d"]`, id))
@@ -133,7 +133,7 @@ func TestReleaseForParentsPushesOncePerRelease(t *testing.T) {
 	f.released(t, token, int64(document.ID), map[string]any{"audience": "schools"})
 	assert.Empty(t, pushes(), "a release for schools tells no parent")
 
-	release := f.released(t, token, int64(document.ID), map[string]any{"audience": "parents", "school_id": f.office.schools[0]})
+	release := f.released(t, token, int64(document.ID), map[string]any{"audience": "parents", "school_id": fmt.Sprint(f.office.schools[0])})
 	queued := pushes()
 	require.Len(t, queued, 1)
 	assert.Equal(t, fmt.Sprintf("traeger-document-release:%d", release.ID), queued[0].IdempotencyKey)
@@ -144,13 +144,13 @@ func TestReleaseForParentsPushesOncePerRelease(t *testing.T) {
 	require.NoError(t, json.Unmarshal(queued[0].Payload, &payload))
 	assert.Equal(t, organizationtenancy.TraegerDocumentReleaseNotice{OrganizationID: f.office.organization, ReleaseID: int64(release.ID), DocumentID: int64(document.ID)}, payload)
 
-	rec := f.release(t, token, int64(document.ID), map[string]any{"audience": "parents", "school_id": f.office.schools[0]})
+	rec := f.release(t, token, int64(document.ID), map[string]any{"audience": "parents", "school_id": fmt.Sprint(f.office.schools[0])})
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Len(t, pushes(), 1, "a repeated release is refused and pushes nothing")
 
 	rec = traegerJSON(t, f.router, token, http.MethodDelete, fmt.Sprintf("/traeger/documents/%d/releases/%d", document.ID, release.ID), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	again := f.released(t, token, int64(document.ID), map[string]any{"audience": "parents", "school_id": f.office.schools[0]})
+	again := f.released(t, token, int64(document.ID), map[string]any{"audience": "parents", "school_id": fmt.Sprint(f.office.schools[0])})
 	queued = pushes()
 	require.Len(t, queued, 2, "a release after the revocation is a new event")
 	assert.Equal(t, int64(again.ID), queued[1].RelatedID)

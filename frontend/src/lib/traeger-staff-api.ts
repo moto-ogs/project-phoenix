@@ -223,6 +223,9 @@ export interface StaffRecordDetail extends StaffRecordSummary {
   readonly contracts: readonly StaffContract[];
   /** Schulen, die eine gespeicherte Änderung noch nicht erreicht hat. */
   readonly unsyncedSchools: readonly string[];
+  /** Schulen, deren neue Bankdaten ein Verknüpfen nicht übernommen hat:
+   *  Sie kamen nach der Vorschau (ADR 0311). */
+  readonly heldBankSchools: readonly string[];
 }
 
 /** Das Soll eines Einsatzorts in einer Eingabe. */
@@ -346,6 +349,7 @@ function mapDetail(
     proofs: (record.proofs ?? []).map(mapStaffProof),
     contracts: (record.contracts ?? []).map(mapContract),
     unsyncedSchools: record.unsynced_schools ?? [],
+    heldBankSchools: record.held_bank_schools ?? [],
   };
 }
 

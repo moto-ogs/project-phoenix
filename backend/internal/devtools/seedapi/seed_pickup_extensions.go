@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Demo data for later pickup times without a block (#3261). "Freies Spiel"
@@ -27,12 +29,12 @@ func seedPickupExtensionDemo(rt *Runtime, roomID, categoryID, trackID int64, stu
 	templates := []map[string]any{
 		{
 			"name": seedFreePlayTitle, "type": "care", "start_time": "15:00", "end_time": seedFreePlayEnd,
-			"student_ids": studentIDs[10:16], "staff_ids": staffIDs[:1], "primary_staff_id": staffIDs[0],
+			"student_ids": ident.IDs(studentIDs[10:16]), "staff_ids": ident.IDs(staffIDs[:1]), "primary_staff_id": ident.ID(staffIDs[0]),
 		},
 		{
 			// A team meets once a week, not every afternoon.
 			"name": "Teamsitzung", "type": "external", "start_time": "15:00", "end_time": "15:45",
-			"staff_ids": staffIDs[1:2], "primary_staff_id": staffIDs[1], "weekdays": []int{3},
+			"staff_ids": ident.IDs(staffIDs[1:2]), "primary_staff_id": ident.ID(staffIDs[1]), "weekdays": []int{3},
 		},
 	}
 	for _, body := range templates {
@@ -40,7 +42,7 @@ func seedPickupExtensionDemo(rt *Runtime, roomID, categoryID, trackID int64, stu
 			body["weekdays"] = []int{1, 2, 3, 4, 5}
 		}
 		body["week_pattern"], body["target_group_type"] = 0, "none"
-		body["room_id"], body["category_id"], body["planning_track_id"] = roomID, categoryID, trackID
+		body["room_id"], body["category_id"], body["planning_track_id"] = ident.ID(roomID), ident.ID(categoryID), ident.ID(trackID)
 		// Two weeks, so the pending parent request a week out has blocks too.
 		body["materialize_from"], body["materialize_to"] = today.String(), today.AddDays(13).String()
 		if _, err := rt.Client.Post("/api/timetable/templates", body); err != nil {

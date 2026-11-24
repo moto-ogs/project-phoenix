@@ -65,7 +65,7 @@ func (s *announcementContract) UpdateParentAnnouncement(c context.Context, id in
 func (s *announcementContract) DeleteParentAnnouncement(c context.Context, id int64) error {
 	return s.call(c, "delete", id)
 }
-func (s *announcementContract) PublishParentAnnouncement(c context.Context, id int64) (*communication.ParentAnnouncement, error) {
+func (s *announcementContract) PublishParentAnnouncement(c context.Context, id int64, _ string) (*communication.ParentAnnouncement, error) {
 	return &s.row, s.call(c, "publish", id)
 }
 func (s *announcementContract) UnpublishParentAnnouncement(c context.Context, id int64) (*communication.ParentAnnouncement, error) {

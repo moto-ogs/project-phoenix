@@ -66,7 +66,8 @@ func (t *TraegerStaff) UpdateFinancial(ctx context.Context, actor workforce.Trae
 	if saved.ID == 0 {
 		return nil
 	}
-	return t.handOver(ctx, actor, saved, nil)
+	_, err = t.handOver(ctx, actor, saved, nil)
+	return err
 }
 
 // writeFinancial seals the section under the record lock with the trail of

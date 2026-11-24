@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // deviceSlotsRequest sets the Geräteplätze of a school (#2312): a number
@@ -20,7 +21,7 @@ type deviceSlotsRequest struct {
 // decodeDeviceSlotsRequest reads the body and insists on the field.
 func decodeDeviceSlotsRequest(r *http.Request) (deviceSlotsRequest, error) {
 	var fields map[string]json.RawMessage
-	if err := json.NewDecoder(r.Body).Decode(&fields); err != nil {
+	if err := wire.Decode(r.Body, &fields); err != nil {
 		return deviceSlotsRequest{}, fmt.Errorf("invalid request body: %w", err)
 	}
 	raw, ok := fields["device_slots"]
@@ -48,7 +49,7 @@ func (rs *ProvisioningResource) SetSchoolDeviceSlots(w http.ResponseWriter, r *h
 		return
 	}
 	if rs.deviceSlots == nil {
-		common.RenderError(w, r, common.OperatorInternal(internalErrorMessage))
+		common.RenderError(w, r, common.OperatorInternal(nil, internalErrorMessage))
 		return
 	}
 	operatorID := int64(sessiontoken.ClaimsFromCtx(r.Context()).ID)

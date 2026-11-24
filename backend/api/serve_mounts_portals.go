@@ -113,10 +113,11 @@ func newOperatorIdentity(sessionAuth *sessiontoken.TokenAuth, identity operatorI
 
 // newTagScanReview composes Device Fleet's review of unregistered RFID scans;
 // it answers in the operator surface's format (#3232).
-func newTagScanReview(iot devicefleetCompose.IoTService, organizations organizationtenancy.Query) *tagScanOperatorAPI.Resource {
+func newTagScanReview(iot devicefleetCompose.IoTService, organizations organizationtenancy.Query, logger *slog.Logger) *tagScanOperatorAPI.Resource {
 	return tagScanOperatorAPI.NewResource(tagScanOperatorAPI.Config{
 		Scans:     iot.Fleet(),
 		Directory: tagScanSchoolDirectory{schools: organizations},
+		Logger:    logger.With("handler", "operator-unregistered-tag-scans"),
 		Surface: tagScanOperatorAPI.Surface{
 			InvalidRequest: apiCommon.OperatorInvalidRequest,
 			Internal:       apiCommon.OperatorInternal,
@@ -138,7 +139,7 @@ func newOperatorRouter(
 	demoPlans studentpresence.DemoCareDays,
 	now func() time.Time,
 ) (chi.Router, error) {
-	tagScanReview := newTagScanReview(iot, organizations)
+	tagScanReview := newTagScanReview(iot, organizations, logger)
 	billing, err := owners.NewOperatorBilling(logger)
 	if err != nil {
 		return nil, fmt.Errorf("compose operator billing: %w", err)

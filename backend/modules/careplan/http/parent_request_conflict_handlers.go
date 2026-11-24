@@ -8,6 +8,7 @@ import (
 	strings "strings"
 
 	render "github.com/go-chi/render"
+
 	common "github.com/moto-ogs/project-phoenix/api/common"
 	careplan "github.com/moto-ogs/project-phoenix/modules/careplan"
 	carerequests "github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
@@ -15,6 +16,7 @@ import (
 	masterdatarequests "github.com/moto-ogs/project-phoenix/modules/careplan/masterdatarequests"
 	parentrequests "github.com/moto-ogs/project-phoenix/modules/careplan/parentrequests"
 	sessiontoken "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	tenant "github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -47,7 +49,7 @@ func (rs *Resource) resolveRequestConflict(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	var body resolveConflictBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		renderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}

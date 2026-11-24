@@ -1,13 +1,13 @@
 package parent
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
@@ -183,7 +183,7 @@ type stampRequest struct {
 // unparseable or zero timestamp is a client error (the feed always supplies it).
 func parseStampBody(w http.ResponseWriter, r *http.Request) (time.Time, bool) {
 	var req stampRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return time.Time{}, false
 	}
@@ -269,7 +269,7 @@ func (rs *Resource) respondToAnnouncement(w http.ResponseWriter, r *http.Request
 		return
 	}
 	var req respondRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}

@@ -9,14 +9,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/realtime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func createStudentsAPITestStaffID(t *testing.T, tc *testContext) int64 {
@@ -194,7 +195,7 @@ func TestUpdateStudentArrivalSchedules(t *testing.T) {
 	t.Run("bad_request_empty_time_without_class_selector", func(t *testing.T) {
 		student := testpkg.CreateTestStudent(t, tc.db, "BulkEmptyTime", "Test", "BET1")
 		body := map[string]any{
-			"student_ids": []int64{student.ID},
+			"student_ids": []string{fmt.Sprint(student.ID)},
 			"schedules": []map[string]any{
 				{"weekday": 1, "expected_arrival": ""},
 			},
@@ -972,7 +973,7 @@ func TestBulkUpsertArrivalSchedules(t *testing.T) {
 
 		body := map[string]any{
 			"school_class": "1a",
-			"group_id":     group.ID,
+			"group_id":     fmt.Sprint(group.ID),
 			"schedules": []map[string]any{
 				{"weekday": 1, "expected_arrival": "08:00"},
 			},
@@ -985,8 +986,8 @@ func TestBulkUpsertArrivalSchedules(t *testing.T) {
 
 	t.Run("bad_request_with_group_and_student_filters", func(t *testing.T) {
 		body := map[string]any{
-			"group_id":    42,
-			"student_ids": []int64{1, 2},
+			"group_id":    "42",
+			"student_ids": []string{fmt.Sprint(1), fmt.Sprint(2)},
 			"schedules": []map[string]any{
 				{"weekday": 1, "expected_arrival": "08:00"},
 			},
@@ -1068,7 +1069,7 @@ func TestBulkUpsertArrivalSchedules(t *testing.T) {
 		_, account := testpkg.CreateTestTeacherWithAccount(t, tc.db, "BulkGroupArr", "Teacher")
 
 		body := map[string]any{
-			"group_id": group.ID,
+			"group_id": fmt.Sprint(group.ID),
 			"schedules": []map[string]any{
 				{"weekday": 2, "expected_arrival": "09:20"},
 			},
@@ -1087,7 +1088,7 @@ func TestBulkUpsertArrivalSchedules(t *testing.T) {
 		_, account := testpkg.CreateTestTeacherWithAccount(t, tc.db, "BulkExplicit", "Teacher")
 
 		body := map[string]any{
-			"student_ids": []int64{student1.ID, student2.ID},
+			"student_ids": []string{fmt.Sprint(student1.ID), fmt.Sprint(student2.ID)},
 			"schedules": []map[string]any{
 				{"weekday": 5, "expected_arrival": "10:30"},
 			},

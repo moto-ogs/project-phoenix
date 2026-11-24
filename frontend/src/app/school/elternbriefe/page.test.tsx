@@ -55,6 +55,7 @@ import { parentAnnouncementKeys } from "~/lib/swr/portal-keys";
 
 const sentLetter = {
   id: "11",
+  version: "2026-09-08T08:00:00Z",
   title: "Wandertag",
   body: "Feste Schuhe",
   status: "published",
@@ -175,6 +176,7 @@ describe("Elternbriefe in moto schule (#4800)", () => {
     );
     expect(mockPublish).toHaveBeenCalledWith(
       "12",
+      "2026-09-08T08:00:00Z",
       "/api/school/parent-letters",
     );
     expect(mockToastSuccess).toHaveBeenCalledWith(

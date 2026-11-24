@@ -6,7 +6,6 @@
 package staffcalendarhttp
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -17,11 +16,13 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 
 	"github.com/go-chi/chi/v5"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	calendarService "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -180,7 +181,7 @@ func (rs *Resource) rotateCalendarFeed(w http.ResponseWriter, r *http.Request) {
 
 func (rs *Resource) createAppointment(w http.ResponseWriter, r *http.Request) {
 	var req createAppointmentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
@@ -248,7 +249,7 @@ func (rs *Resource) updateAppointment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req updateAppointmentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
@@ -370,7 +371,7 @@ func (rs *Resource) respond(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req calendarService.InvitationAnswer
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}

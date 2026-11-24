@@ -194,7 +194,7 @@ func seedSendContractsToParents(rt *Runtime, auth AuthRef) error {
 	if len(ids) == 0 {
 		return nil
 	}
-	if _, err := rt.Client.PostWithAuth(auth, "/traeger/contracts/send", map[string]any{"contract_ids": ids}); err != nil {
+	if _, err := rt.Client.PostWithAuth(auth, "/traeger/contracts/send", map[string]any{"contract_ids": ident.IDs(ids)}); err != nil {
 		return fmt.Errorf("send the contracts of the demo parents: %w", err)
 	}
 	return nil

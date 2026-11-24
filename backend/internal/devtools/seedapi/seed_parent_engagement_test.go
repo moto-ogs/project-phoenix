@@ -233,7 +233,7 @@ func TestSeedParentEngagementStepUsesParentFacingFlows(t *testing.T) {
 		"Anmeldeschluss für die Ferienbetreuung", "Pädagogischer Tag: OGS geschlossen", "Laternenfest",
 	}, titles)
 	assert.Equal(t, []any{
-		map[string]any{"type": "parents_by_group", "id": float64(7)},
+		map[string]any{"type": "parents_by_group", "id": "7"},
 		map[string]any{"type": "all_staff"},
 	}, appointments[0]["targets"])
 	cafe := appointments[8]

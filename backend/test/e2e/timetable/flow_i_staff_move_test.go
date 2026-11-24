@@ -12,9 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -73,7 +74,7 @@ func TestFlowI_StaffPoolAndAtomicMove(t *testing.T) {
 	assert.Equal(t, "on_shift_free", categories[free.ID])
 
 	// 2. Atomic move Schulhof → Mensa.
-	moveBody := map[string]any{"staff_id": mover.ID, "source_instance_id": schulhof.ID}
+	moveBody := map[string]any{"staff_id": testpkg.ID(mover.ID), "source_instance_id": testpkg.ID(schulhof.ID)}
 	rr = s.do(http.MethodPost, fmt.Sprintf("/instances/%d/move-staff", mensa.ID), moveBody, claims)
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 	var moved struct {
@@ -111,7 +112,7 @@ func TestFlowI_StaffPoolAndAtomicMove(t *testing.T) {
 	assert.Contains(t, *history.Events[0].SubjectStaffName, "Ina")
 	// 4. Pool assign: the free person joins Mensa without a source block.
 	rr = s.do(http.MethodPost, fmt.Sprintf("/instances/%d/move-staff", mensa.ID),
-		map[string]any{"staff_id": free.ID}, claims)
+		map[string]any{"staff_id": testpkg.ID(free.ID)}, claims)
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 	decodeResponse(t, rr, &moved)
 	assert.Equal(t, "assigned", moved.Action)

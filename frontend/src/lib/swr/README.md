@@ -142,6 +142,13 @@ A surface reads stored state in one of three ways:
    while `canSubmit` is false without clearing the shown error, its
    `loadError` shows the failed read, and its `waitReason` says why saving
    waits (`readStateWaitReason` for a surface without a form).
+   A write of the surface that changes the stored state but not what the
+   draft edits, and whose server check took the draft's token (an
+   announcement's attachment), hands its answer to `adopt`: the draft keeps
+   its input on the new token, so the next save is not refused for it.
+   When the server refuses such a write, `refuse()` sends the draft down
+   the path of a refused save: the stored state is read again and shown,
+   and its answer is the `reload` for the error display.
    An action without a draft (a switch, a row action, a dialog that sends
    what it shows) goes through `useActionOn` of the same module, on the
    read the surface shows. Its `submit` locks while the send is out; after

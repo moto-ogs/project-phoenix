@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -105,7 +106,7 @@ func (s *testSurface) surface() operator.Surface {
 		InvalidRequest: func(err error) render.Renderer {
 			return &testRenderer{status: http.StatusBadRequest, kind: "invalid", message: err.Error()}
 		},
-		Internal: func(message string) render.Renderer {
+		Internal: func(_ error, message string) render.Renderer {
 			return &testRenderer{status: http.StatusInternalServerError, kind: "internal", message: message}
 		},
 		RenderError: func(w http.ResponseWriter, r *http.Request, renderer render.Renderer) {
@@ -427,6 +428,30 @@ func TestResolveUnregisteredTagScanPersistenceFailuresAreInternal(t *testing.T) 
 		require.NotContains(t, rr.Body.String(), rawErr.Error(), name)
 		require.NotContains(t, rr.Body.String(), "devicefleet postgres:", name)
 	}
+}
+
+// A store failure renders without its cause (a refusal text it wraps must
+// not lift it to a 409), so the log carries the cause instead: the 500 stays
+// diagnosable like every other internal operator error.
+func TestResolveUnregisteredTagScanStoreFailureLogsItsCause(t *testing.T) {
+	t.Parallel()
+
+	var logged bytes.Buffer
+	cause := &storeFailureError{err: errors.New("pq: deadlock detected")}
+	surface := &testSurface{operatorID: 42}
+	resource := operator.NewResource(operator.Config{
+		Scans:       &fakeScans{resolveErr: cause},
+		Directory:   &fakeDirectory{},
+		Surface:     surface.surface(),
+		WithinAdmin: func(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) },
+		Logger:      slog.New(slog.NewTextHandler(&logged, nil)),
+	})
+
+	rr := serve(t, resource, http.MethodPost, "/123/resolve", `{}`)
+
+	require.Equal(t, http.StatusInternalServerError, rr.Code)
+	require.Contains(t, logged.String(), "pq: deadlock detected")
+	require.NotContains(t, rr.Body.String(), "deadlock")
 }
 
 // #2519: an unknown or already handled scan reaches the surface with its

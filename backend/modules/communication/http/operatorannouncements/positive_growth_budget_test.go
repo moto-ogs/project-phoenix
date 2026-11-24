@@ -100,7 +100,7 @@ func TestPlatformAnnouncementPositiveGrowthQueryBudget(t *testing.T) {
 			announcement := &communication.Announcement{Title: fmt.Sprintf("Budget-%02d", created), CreatedAt: createdAt.Add(time.Duration(created*2) * time.Second), Content: "Positive growth", Type: communication.TypeAnnouncement, Severity: communication.SeverityInfo, Active: true, TargetTenantIDs: []int64{testpkg.Tenant(t)}}
 			require.NoError(t, module.CreateAnnouncement(ctx, announcement, operator.ID, nil))
 			ids = append(ids, announcement.ID)
-			require.NoError(t, module.PublishAnnouncement(ctx, announcement.ID, operator.ID, nil))
+			require.NoError(t, module.PublishAnnouncement(ctx, announcement.ID, communication.AnnouncementEditVersion(*announcement), operator.ID, nil))
 			expectedTitles = append([]string{announcement.Title}, expectedTitles...)
 			if created == 0 {
 				viewedID = announcement.ID
@@ -111,7 +111,7 @@ func TestPlatformAnnouncementPositiveGrowthQueryBudget(t *testing.T) {
 			foreign := &communication.Announcement{Title: fmt.Sprintf("Foreign-%02d", created), CreatedAt: createdAt.Add(time.Duration(created*2+1) * time.Second), Content: "Excluded", Type: communication.TypeAnnouncement, Severity: communication.SeverityInfo, Active: true, TargetTenantIDs: []int64{foreignTenant}}
 			require.NoError(t, module.CreateAnnouncement(ctx, foreign, operator.ID, nil))
 			ids = append(ids, foreign.ID)
-			require.NoError(t, module.PublishAnnouncement(ctx, foreign.ID, operator.ID, nil))
+			require.NoError(t, module.PublishAnnouncement(ctx, foreign.ID, communication.AnnouncementEditVersion(*foreign), operator.ID, nil))
 			created++
 		}
 		for _, entry := range []struct {

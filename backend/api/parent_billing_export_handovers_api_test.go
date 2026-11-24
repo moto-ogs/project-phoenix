@@ -76,7 +76,7 @@ func assignFormats(t *testing.T, f careBillingFixture, recipients map[string]int
 	for format, id := range recipients {
 		assignment := map[string]any{"format": format, "recipient_id": nil}
 		if id > 0 {
-			assignment["recipient_id"] = id
+			assignment["recipient_id"] = fmt.Sprint(id)
 		}
 		assignments = append(assignments, assignment)
 	}
@@ -328,7 +328,7 @@ func TestFinanceExportHandoverIgnoresARequestedOrganization(t *testing.T) {
 	createMandate(t, f, mandateBody(contract, "SJR-H-MIA"))
 	run := releaseDebitRun(t, f, sepaDebitMonth)
 	saveRecipient(t, other, readyRecipient())
-	rec = handOver(t, other, run, "pain008", map[string]any{"organization_id": f.office.organization})
+	rec = handOver(t, other, run, "pain008", map[string]any{"organization_id": fmt.Sprint(f.office.organization)})
 	assert.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 }
 

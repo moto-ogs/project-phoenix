@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type seedAuditLifecycleStep struct{}
@@ -55,9 +57,9 @@ func seedAttendanceCorrection(rt *Runtime) error {
 		"start_time":  "14:00",
 		"end_time":    "15:00",
 		"title":       "Hausaufgabenhilfe",
-		"room_id":     roomID,
-		"staff_ids":   []int64{staffID},
-		"student_ids": children,
+		"room_id":     ident.ID(roomID),
+		"staff_ids":   []ident.ID{ident.ID(staffID)},
+		"student_ids": ident.IDs(children),
 	})
 	if err != nil {
 		return fmt.Errorf("create attendance correction instance: %w", err)
@@ -70,7 +72,7 @@ func seedAttendanceCorrection(rt *Runtime) error {
 		return fmt.Errorf("start attendance correction instance: %w", err)
 	}
 	if _, err := rt.Client.Post(fmt.Sprintf("/api/timetable/instances/%d/complete", instanceID), map[string]any{
-		"confirmed_present_student_ids": children,
+		"confirmed_present_student_ids": ident.IDs(children),
 	}); err != nil {
 		return fmt.Errorf("complete attendance correction instance: %w", err)
 	}
@@ -110,7 +112,7 @@ func firstSeedGroupID(fs *FixedSeeder) int64 {
 func createDisposableStudent(rt *Runtime, groupID int64) (int64, error) {
 	studentRaw, err := rt.Client.Post("/api/students", map[string]any{
 		"first_name": "Löschdemo", "last_name": "Kind", "school_class": "Klasse 2b",
-		"group_id": groupID, "birthday": "2018-02-14", "pickup_status": "pickup",
+		"group_id": ident.ID(groupID), "birthday": "2018-02-14", "pickup_status": "pickup",
 	})
 	if err != nil {
 		return 0, fmt.Errorf("create disposable student: %w", err)
@@ -136,7 +138,7 @@ func seedDisposableGuardianChange(rt *Runtime, studentID int64) error {
 		return fmt.Errorf("parse disposable guardian: %w", err)
 	}
 	if _, err := rt.Client.Post(fmt.Sprintf("/api/guardians/students/%d/guardians", studentID), map[string]any{
-		"guardian_profile_id": guardianID, "relationship_type": "other", "guardian_role": "custom",
+		"guardian_profile_id": ident.ID(guardianID), "relationship_type": "other", "guardian_role": "custom",
 		"is_primary": false, "is_emergency_contact": false, "can_pickup": false, "emergency_priority": 1,
 	}); err != nil {
 		return fmt.Errorf("link disposable guardian: %w", err)

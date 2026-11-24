@@ -2,7 +2,6 @@ package parentbillinghttp
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -12,6 +11,7 @@ import (
 	capability "github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -195,7 +195,7 @@ func decodeBelegRetention(w http.ResponseWriter, r *http.Request, req any) (int6
 	if !ok {
 		return 0, false
 	}
-	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+	if err := wire.Decode(r.Body, req); err != nil {
 		common.RenderError(w, r, common.OperatorInvalidRequest(err))
 		return 0, false
 	}
@@ -213,6 +213,6 @@ func belegRetentionError(err error) render.Renderer {
 		errors.Is(err, capability.ErrBelegClarificationNotFound):
 		return common.OperatorRejection(http.StatusNotFound, common.CodeGeneralBusinessRejection, err.Error())
 	default:
-		return common.OperatorInternal("beleg retention failed")
+		return common.OperatorInternal(err, "beleg retention failed")
 	}
 }

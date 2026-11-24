@@ -1,7 +1,6 @@
 package catererportalhttp
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -9,9 +8,11 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/mealplan"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/workflows/catererportal"
 )
 
@@ -147,7 +148,7 @@ func (rs *Resource) acceptInvitation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var request acceptRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil || request.Password == "" {
+	if err := wire.Decode(r.Body, &request); err != nil || request.Password == "" {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("password is required")))
 		return
 	}

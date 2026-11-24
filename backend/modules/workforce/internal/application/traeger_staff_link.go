@@ -109,7 +109,8 @@ func (t *TraegerStaff) Link(ctx context.Context, actor workforce.TraegerStaffAct
 	// the dialog was open. What changes after it is caught under the lock each
 	// write takes: the record's values in writeLink, refused before anything
 	// is saved; a school's bank row in handOverSchool, which keeps a row it
-	// did not read and names it in the trail once the record is saved.
+	// did not read, names it in the trail once the record is saved and in
+	// the answer (HeldBankSchools).
 	if err := readstate.Check(request.ExpectedFingerprint, plan.fingerprint()); err != nil {
 		return workforce.TraegerStaffRecordDetail{}, err
 	}
@@ -133,10 +134,18 @@ func (t *TraegerStaff) Link(ctx context.Context, actor workforce.TraegerStaffAct
 	if err != nil {
 		return workforce.TraegerStaffRecordDetail{}, publicTraegerStaffError(err)
 	}
-	if err := t.handOver(ctx, actor, saved, plannedBankRows(plan)); err != nil {
+	held, err := t.handOver(ctx, actor, saved, plannedBankRows(plan))
+	if err != nil {
 		return workforce.TraegerStaffRecordDetail{}, err
 	}
-	return t.Record(ctx, actor, saved.ID)
+	detail, err := t.Record(ctx, actor, saved.ID)
+	if err != nil {
+		return workforce.TraegerStaffRecordDetail{}, err
+	}
+	for _, schoolID := range held {
+		detail.HeldBankSchools = append(detail.HeldBankSchools, plan.names[schoolID])
+	}
+	return detail, nil
 }
 
 // employmentKey names one employment: school and staff.
