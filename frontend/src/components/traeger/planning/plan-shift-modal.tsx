@@ -23,8 +23,8 @@ import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { formatDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
-import { useReadDraftLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useActionOn } from "~/lib/swr/read-draft";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import {
   changeTraegerShift,
   planTraegerShift,
@@ -58,13 +58,23 @@ export type PlanShiftTarget =
     };
 
 interface Draft {
-  schoolId: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  breakMinutes: string;
-  notes: string;
+  readonly schoolId: string;
+  readonly date: string;
+  readonly startTime: string;
+  readonly endTime: string;
+  readonly breakMinutes: string;
+  readonly notes: string;
 }
+
+/** The version an edit confirms; a new shift confirms none. */
+const targetToken = (target: PlanShiftTarget) =>
+  target.kind === "edit" ? target.shift.version : "";
+
+/** A changed shift's answer is the stored shift. */
+const savedTarget = (
+  saved: TraegerPlanningShift,
+  base: PlanShiftTarget,
+): PlanShiftTarget => (base.kind === "edit" ? { ...base, shift: saved } : base);
 
 function draftOf(target: PlanShiftTarget): Draft {
   if (target.kind === "edit") {
@@ -128,12 +138,12 @@ export function PlanShiftModal({
   onSaved: (message: string) => void;
   /**
    * Liest die Woche nach einem abgelehnten Ändern neu und gibt dem Dialog
-   * die gespeicherte Schicht (ADR 0311); lehnt ab, wenn das Lesen scheitert.
+   * die gespeicherte Schicht (ADR 0311), auch als Antwort; nichts, wenn sie
+   * fehlt. Lehnt ab, wenn das Lesen scheitert.
    */
-  reloadShift: () => Promise<unknown>;
+  reloadShift: () => Promise<PlanShiftTarget | undefined>;
 }>) {
   const isOpen = target !== null;
-  const [draft, setDraft] = useState<Draft | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const save = useFormModalPending(isOpen);
   const remove = useFormModalPending(confirmDelete);
@@ -144,23 +154,28 @@ export function PlanShiftModal({
   const { clear: clearErrors } = errors;
   const { clear: clearDeleteErrors } = deleteErrors;
   const { reset: resetWorkingTime } = workingTime;
-  // Ein Ändern ruht auf der Schicht, die der Dialog zeigt (ADR 0311): es
-  // schickt ihren Stand; nach einer Ablehnung wartet es auf die gespeicherte.
-  const shown = target?.kind === "edit" ? target.shift : undefined;
-  const change = useActionOn(
-    { opening: shown?.id ?? null, data: shown, reload: reloadShift },
-    { token: (shift) => shift.version },
-  );
-  const changeLoadError = useReadDraftLoadError(change, "die Schicht");
-
-  // Fehler gehören zu einer Öffnung: die gespeicherte Schicht nach einer
-  // Ablehnung hat dieselbe Kennung, ihre Meldung bleibt stehen.
+  // Fehler und Entwurf gehören zu einer Öffnung: die gespeicherte Schicht
+  // nach einer Ablehnung hat dieselbe Kennung, ihre Meldung bleibt stehen.
   const openedKey =
     target === null
       ? null
       : target.kind === "edit"
         ? `edit:${target.shift.id}`
         : `create:${target.person.recordId}:${target.date}`;
+  // Die Felder sind ein Entwurf auf der Schicht, mit der der Dialog öffnete
+  // (ADR 0311): ein Ändern schickt ihren Stand, eine neuere füllt nur
+  // unberührte Felder. Nach einer Ablehnung zeigt er die gespeicherte
+  // Schicht und Speichern wartet, bis sie gelesen ist.
+  const edit = useDraftOn<PlanShiftTarget, Draft, string, TraegerPlanningShift>(
+    { opening: openedKey, data: target ?? undefined, reload: reloadShift },
+    { token: targetToken, toDraft: draftOf, answer: savedTarget },
+  );
+  const { draft, setDraft } = edit;
+  const form = useReadDraftForm(
+    target?.kind === "edit" ? edit : null,
+    errors,
+    "die Schicht",
+  );
   useEffect(() => {
     if (openedKey === null) return;
     clearErrors();
@@ -169,7 +184,6 @@ export function PlanShiftModal({
 
   useEffect(() => {
     if (!target) return;
-    setDraft(draftOf(target));
     setConfirmDelete(false);
     resetWorkingTime();
   }, [target, resetWorkingTime]);
@@ -187,9 +201,11 @@ export function PlanShiftModal({
     person.sites.find((site) => site.schoolId === draft.schoolId)?.schoolName ??
     (editing ? target.shift.schoolName : "");
   const set = (patch: Partial<Draft>) =>
-    setDraft((current) => (current ? { ...current, ...patch } : current));
+    setDraft((current) => ({ ...current, ...patch }));
 
   const submit = async () => {
+    // Nichts geht vor dem Lesen der gespeicherten Schicht hinaus.
+    if (!form.begin()) return;
     const invalid = draftErrors(draft);
     if (Object.keys(invalid).length > 0) {
       errors.invalid("Bitte prüfe die markierten Felder.", invalid);
@@ -208,10 +224,10 @@ export function PlanShiftModal({
       try {
         if (target.kind === "edit") {
           const { shift } = target;
-          const result = await change.submit(() =>
+          const result = await edit.submit((expectedVersion) =>
             changeTraegerShift(person.recordId, shift.id, {
               ...input,
-              expectedVersion: shift.version,
+              expectedVersion,
             }),
           );
           if (!result.ok) {
@@ -307,6 +323,8 @@ export function PlanShiftModal({
               onCancel={onClose}
               onSave={() => formRef.current?.requestSubmit()}
               saving={save.pending}
+              disabled={form.waitReason !== undefined}
+              disabledReason={form.waitReason}
               saveLabel={editing ? "Speichern" : "Planen"}
               saveTooltip={
                 editing
@@ -328,9 +346,7 @@ export function PlanShiftModal({
         >
           {/* Das Lesen nach einer Ablehnung scheiterte: Speichern wartet,
               bis die gespeicherte Schicht da ist. */}
-          {change.status === "loadFailed" && !errors.error ? (
-            <LoadErrorAlert error={changeLoadError} />
-          ) : null}
+          <LoadErrorAlert error={form.loadError} />
           <p className="text-sm text-gray-700">
             <span className="font-medium text-gray-900">{name}</span>
             {editing && target.shift.fromSeries

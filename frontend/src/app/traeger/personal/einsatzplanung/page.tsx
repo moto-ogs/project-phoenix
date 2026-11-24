@@ -189,9 +189,11 @@ export default function TraegerStaffPlanningPage() {
   // (ADR 0311). Fehlt sie in der neu gelesenen Woche, ist sie gelöscht oder
   // verschoben: der Dialog schließt mit einer Meldung.
   const openedShiftId = target?.kind === "edit" ? target.shift.id : null;
-  const reloadShift = useCallback(async () => {
+  const reloadShift = useCallback(async (): Promise<
+    PlanShiftTarget | undefined
+  > => {
     const week = await reloadOrThrow();
-    if (openedShiftId === null) return;
+    if (openedShiftId === null) return undefined;
     const stored = storedShift(week, openedShiftId);
     if (!stored) {
       setTarget((current) =>
@@ -200,13 +202,16 @@ export default function TraegerStaffPlanningPage() {
           : current,
       );
       showMessage(SHIFT_GONE_MESSAGE);
-      return;
+      return undefined;
     }
+    const reread: PlanShiftTarget = { kind: "edit", ...stored };
     setTarget((current) =>
       current?.kind === "edit" && current.shift.id === openedShiftId
-        ? { kind: "edit", ...stored }
+        ? reread
         : current,
     );
+    // Der Entwurf des Dialogs ruht darauf, auch wenn sie unverändert ist.
+    return reread;
   }, [reloadOrThrow, openedShiftId, showMessage]);
   const loadError = notReleased ? null : error;
   const colors = useMemo(

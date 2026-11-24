@@ -319,6 +319,8 @@ function DienstplanContent() {
           }
         : current,
     );
+    // The dialog's draft settles on it, also when it did not change.
+    return { shift: reloaded.shift, covers: reloaded.replacements };
   }, [reloadShifts, openedShiftId, showModalMessage]);
 
   const refreshAfterPlanMutation = useCallback(() => {
