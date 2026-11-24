@@ -5,9 +5,10 @@ import {
   type Page,
 } from "@playwright/test";
 import { execFileSync } from "node:child_process";
-import { writeFileSync } from "node:fs";
+import { rmSync, writeFileSync } from "node:fs";
 import { cpus, loadavg } from "node:os";
 import { join } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import { gotoTolerant, PERF_ACTION_TIMEOUT } from "./access";
 import {
   armProbe,
@@ -259,8 +260,30 @@ function cpuTimes() {
   );
 }
 
+function idleSince(before: ReturnType<typeof cpuTimes>) {
+  const after = cpuTimes();
+  return Math.round(
+    (100 * (after.idle - before.idle)) / (after.total - before.total),
+  );
+}
+
+/** Do not begin a timing series while another local build occupies the machine. */
+async function initialIdleWindow() {
+  for (;;) {
+    const before = cpuTimes();
+    await delay(5000);
+    const idle = idleSince(before);
+    if (idle >= 50) return idle;
+    console.log("Warte auf eine ruhige Maschine: " + idle + " % CPU frei.");
+    await delay(10000);
+  }
+}
+
 export async function measureRevisits(browser: Browser) {
   const catalogRows = routeCatalog();
+  for (const file of ["revisit.json", "revisit.summary.json", "revisit.md"]) {
+    rmSync(join(OUT_DIR, file), { force: true });
+  }
   writeFileSync(
     join(OUT_DIR, "revisit.catalog.json"),
     JSON.stringify(catalogRows, null, 2) + "\n",
@@ -278,6 +301,7 @@ export async function measureRevisits(browser: Browser) {
   const switches: Awaited<ReturnType<typeof measureParentSwitch>>[] = [];
   const results: Observation[] = [];
   const metadata = {
+    initialIdlePercent: await initialIdleWindow(),
     revision: execFileSync("git", ["rev-parse", "HEAD"], {
       encoding: "utf8",
     }).trim(),
@@ -339,10 +363,7 @@ export async function measureRevisits(browser: Browser) {
             console.error("Messung fehlgeschlagen:", key, cause);
             continue;
           }
-          const after = cpuTimes();
-          const idlePercent = Math.round(
-            ((after.idle - before.idle) * 100) / (after.total - before.total),
-          );
+          const idlePercent = idleSince(before);
           for (const sample of samples)
             results.push({
               ...sample,

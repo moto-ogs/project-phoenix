@@ -66,7 +66,9 @@ journey names for diagnosis only. A partial result is not a baseline.
   action preparation through 1.5 s quiet (25 s cap) are counted, including runs
   below budget. RSC/JS/BFF are request counts, not necessarily transferred bodies.
   Visible loading indicators are recorded separately. Host load averages and
-  CPU idle percentage describe the shared machine, not just Chromium.
+  CPU idle percentage describe the shared machine, not just Chromium. After
+  the build, the series waits for a five-second window with at least 50% CPU idle;
+  later contention is recorded per sample, never used to discard slow values.
 
 ### Coverage and evidence
 
