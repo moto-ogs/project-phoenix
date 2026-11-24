@@ -543,6 +543,12 @@ function MeinRaumPageContent() {
   // In der App: läuft schon eine Aufsicht, steht der spontane Start am
   // Listenende; sonst ist er die Hauptaktion in der Leiste über der Pill.
   const appHasRunningRoster = appMode && currentTimetableRoster !== null;
+  // Ohne laufende Aufsicht und ohne offenen Raum gibt es in der App keine
+  // Liste: keine Suche, kein „Keine Kinder in diesem Raum“.
+  const appHasList =
+    currentTimetableRoster !== null ||
+    currentOpenRoom !== null ||
+    currentRoom !== null;
   const appStartablePlanned = appMode
     ? [...plannedNow]
         .filter(
@@ -1040,7 +1046,7 @@ function MeinRaumPageContent() {
                 <Search className="size-5" aria-hidden="true" />
               </Button>
             ) : null}
-            {tableApplies ? (
+            {tableApplies && !(appMode && !appHasList) ? (
               <CollectionViewSwitch
                 value={collectionView.view}
                 onChange={changeView}
@@ -1088,7 +1094,7 @@ function MeinRaumPageContent() {
         ) : undefined
       }
       tabs={supervisionTabs}
-      {...(appMode && !showUnclaimedOnly && !appHasRunningRoster
+      {...(appMode && appHasList && !appHasRunningRoster
         ? {
             search: {
               value: filters.searchTerm,
@@ -1169,11 +1175,12 @@ function MeinRaumPageContent() {
       {showUnclaimedOnly ? (
         <>
           {reopenBanner}
-          {spontaneousStartBanner}
+          {appMode ? null : spontaneousStartBanner}
           <EmptyRoomsView />
           {/* The day review must survive the empty state: after the last block
               ends, supervisors land exactly here (#2335). */}
           <PastBlocksSection onReopen={reopenPastBlock} />
+          {appMode ? spontaneousStartBanner : null}
         </>
       ) : (
         <>
@@ -1191,28 +1198,7 @@ function MeinRaumPageContent() {
             />
           )}
 
-          {appHasRunningRoster && !openRoomLayout
-            ? null
-            : spontaneousStartBanner}
-          {appMode && !appHasRunningRoster && appStartablePlanned ? (
-            <ActionBar>
-              <Button
-                type="button"
-                variant="success"
-                size="md"
-                isLoading={
-                  actions.isStartingInstance === appStartablePlanned.id
-                }
-                loadingText="Startet…"
-                tooltip="Startet die Aufsicht sofort und öffnet die Kinderliste."
-                onClick={() =>
-                  void actions.handleStartPlannedInstance(appStartablePlanned)
-                }
-              >
-                {`${appStartablePlanned.title} starten`}
-              </Button>
-            </ActionBar>
-          ) : null}
+          {appMode ? null : spontaneousStartBanner}
 
           {superviseBlockedReason ? (
             <Alert type="info" message={superviseBlockedReason} />
@@ -1277,7 +1263,7 @@ function MeinRaumPageContent() {
             />
           )}
 
-          {showTable ? (
+          {appMode && !appHasList ? null : showTable ? (
             <StudentSelectionScope
               visibleStudents={filters.filteredStudents}
               scopeKey={selectionScope}
@@ -1293,6 +1279,28 @@ function MeinRaumPageContent() {
           {appHasRunningRoster && !openRoomLayout ? null : (
             <PastBlocksSection onReopen={reopenPastBlock} />
           )}
+          {/* In der App ohne laufende Aufsicht: Start am Ende, die Leiste
+              schwebt über der Pill. */}
+          {appMode && !appHasRunningRoster ? spontaneousStartBanner : null}
+          {appMode && !appHasRunningRoster && appStartablePlanned ? (
+            <ActionBar>
+              <Button
+                type="button"
+                variant="success"
+                size="md"
+                isLoading={
+                  actions.isStartingInstance === appStartablePlanned.id
+                }
+                loadingText="Startet…"
+                tooltip="Startet die Aufsicht sofort und öffnet die Kinderliste."
+                onClick={() =>
+                  void actions.handleStartPlannedInstance(appStartablePlanned)
+                }
+              >
+                {`${appStartablePlanned.title} starten`}
+              </Button>
+            </ActionBar>
+          ) : null}
         </>
       )}
     </TenantPage>

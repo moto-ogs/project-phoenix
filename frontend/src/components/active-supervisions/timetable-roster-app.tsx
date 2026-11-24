@@ -593,7 +593,14 @@ export function TimetableRosterApp({
         />
       ) : null}
       <SplitView
-        list={list}
+        list={
+          <>
+            {list}
+            {/* Die Liste scrollt am iPad quer für sich: Polster, damit die
+                letzten Kinder über Aktionsleiste und Pill erreichbar sind. */}
+            {isSplit ? <div aria-hidden="true" className="h-40" /> : null}
+          </>
+        }
         detail={splitRow ? detailFor(splitRow, false) : null}
         empty="Tippe links auf ein Kind, um es hier zu sehen."
       />
