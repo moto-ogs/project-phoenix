@@ -3,7 +3,6 @@
 package gradetransitionhttp
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -12,9 +11,11 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/moto-ogs/project-phoenix/workflows/gradetransition"
 )
@@ -550,7 +551,7 @@ func (rs *GradeTransitionResource) apply(w http.ResponseWriter, r *http.Request)
 	// rejected as such instead of being read as an empty one (#405 review).
 	var req TransitionApplyRequest
 	if r.Body != nil {
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil && !errors.Is(err, io.EOF) {
+		if err := wire.Decode(r.Body, &req); err != nil && !errors.Is(err, io.EOF) {
 			common.RenderError(w, r, common.ErrorInvalidRequest(fmt.Errorf("invalid request body: %w", err)))
 			return
 		}

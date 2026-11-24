@@ -2,15 +2,17 @@ package behaviortest
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"testing"
 	"time"
 
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
+
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 // #6702: a rebooking takes the subject's work-time gates before it pins the
@@ -42,7 +44,7 @@ func TestRebookingAndBookingOfTheSameSubjectDoNotDeadlock(t *testing.T) {
 	friday := testpkg.Date(2026, time.September, 18)
 	book := startRequest(func() *httptest.ResponseRecorder {
 		return postAbsence(t, f.tc, f.token, f.subjectID, map[string]any{
-			"absence_type": "other", "absence_type_id": f.typeID,
+			"absence_type": "other", "absence_type_id": fmt.Sprint(f.typeID),
 			"date_start": friday.String(), "date_end": friday.String(),
 		})
 	})

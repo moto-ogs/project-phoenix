@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedHolidaySiblingCancellation lets the second parent register a fourth
@@ -32,7 +34,7 @@ func seedHolidaySiblingCancellation(rt *Runtime, auth AuthRef, token string, per
 		return fmt.Errorf("read the fourth sibling's registration: %w", err)
 	}
 	merge := fmt.Sprintf("/traeger/holiday-contributions/%d/sibling-groups", periodID)
-	if _, err := rt.Client.PostWithAuth(auth, merge, map[string]any{"registration_ids": []int64{siblings, cancelled}}); err != nil {
+	if _, err := rt.Client.PostWithAuth(auth, merge, map[string]any{"registration_ids": []ident.ID{ident.ID(siblings), ident.ID(cancelled)}}); err != nil {
 		return fmt.Errorf("merge the fourth sibling with the siblings: %w", err)
 	}
 	cancel := fmt.Sprintf("/traeger/holiday-contributions/%d/registrations/%d/cancel", periodID, cancelled)

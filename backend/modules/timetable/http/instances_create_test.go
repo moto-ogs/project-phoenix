@@ -22,14 +22,15 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
+
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/uptrace/bun"
 )
 
 type createSetup struct {
@@ -156,7 +157,7 @@ func TestCreateInstance_WithoutTemplateIsPlanned(t *testing.T) {
 		"start_time": "14:00",
 		"end_time":   "15:00",
 		"title":      "Geplante Bastelstunde",
-		"room_id":    s.roomID,
+		"room_id":    fmt.Sprint(s.roomID),
 	}
 
 	w := doCreate(t, router, body)
@@ -199,11 +200,11 @@ func TestCreateInstance_Validation(t *testing.T) {
 	}{
 		{
 			name: "missing date",
-			body: map[string]any{"start_time": "14:00", "end_time": "15:00", "title": "X", "room_id": s.roomID},
+			body: map[string]any{"start_time": "14:00", "end_time": "15:00", "title": "X", "room_id": fmt.Sprint(s.roomID)},
 		},
 		{
 			name: "missing title",
-			body: map[string]any{"date": tomorrow, "start_time": "14:00", "end_time": "15:00", "room_id": s.roomID},
+			body: map[string]any{"date": tomorrow, "start_time": "14:00", "end_time": "15:00", "room_id": fmt.Sprint(s.roomID)},
 		},
 		{
 			name: "missing room_id",
@@ -211,27 +212,27 @@ func TestCreateInstance_Validation(t *testing.T) {
 		},
 		{
 			name: "invalid time format",
-			body: map[string]any{"date": tomorrow, "start_time": "2:00 PM", "end_time": "15:00", "title": "X", "room_id": s.roomID},
+			body: map[string]any{"date": tomorrow, "start_time": "2:00 PM", "end_time": "15:00", "title": "X", "room_id": fmt.Sprint(s.roomID)},
 		},
 		{
 			name: "invalid date format",
-			body: map[string]any{"date": "tomorrow", "start_time": "14:00", "end_time": "15:00", "title": "X", "room_id": s.roomID},
+			body: map[string]any{"date": "tomorrow", "start_time": "14:00", "end_time": "15:00", "title": "X", "room_id": fmt.Sprint(s.roomID)},
 		},
 		{
 			name: "invalid end time format",
-			body: map[string]any{"date": tomorrow, "start_time": "14:00", "end_time": "later", "title": "X", "room_id": s.roomID},
+			body: map[string]any{"date": tomorrow, "start_time": "14:00", "end_time": "later", "title": "X", "room_id": fmt.Sprint(s.roomID)},
 		},
 		{
 			name: "title too long",
-			body: map[string]any{"date": tomorrow, "start_time": "14:00", "end_time": "15:00", "title": strings.Repeat("x", 256), "room_id": s.roomID},
+			body: map[string]any{"date": tomorrow, "start_time": "14:00", "end_time": "15:00", "title": strings.Repeat("x", 256), "room_id": fmt.Sprint(s.roomID)},
 		},
 		{
 			name: "end before start",
-			body: map[string]any{"date": tomorrow, "start_time": "15:00", "end_time": "14:00", "title": "X", "room_id": s.roomID},
+			body: map[string]any{"date": tomorrow, "start_time": "15:00", "end_time": "14:00", "title": "X", "room_id": fmt.Sprint(s.roomID)},
 		},
 		{
 			name: "weekend date",
-			body: map[string]any{"date": weekend.String(), "start_time": "14:00", "end_time": "15:00", "title": "X", "room_id": s.roomID},
+			body: map[string]any{"date": weekend.String(), "start_time": "14:00", "end_time": "15:00", "title": "X", "room_id": fmt.Sprint(s.roomID)},
 		},
 	}
 	for _, tc := range cases {
@@ -266,9 +267,9 @@ func TestCreateInstance_TemplateBoundAndErrorBranches(t *testing.T) {
 		"start_time":        "10:00",
 		"end_time":          "11:00",
 		"title":             "Template-bound extra slot",
-		"room_id":           s.roomID,
-		"activity_group_id": templateID,
-		"student_ids":       []int64{70, 80},
+		"room_id":           fmt.Sprint(s.roomID),
+		"activity_group_id": fmt.Sprint(templateID),
+		"student_ids":       []string{fmt.Sprint(70), fmt.Sprint(80)},
 	}
 
 	w := doCreate(t, router, body)
@@ -313,8 +314,8 @@ func TestCreateInstance_DuplicateTemplateBoundReturnsConflict(t *testing.T) {
 		"start_time":        "10:00",
 		"end_time":          "11:00",
 		"title":             "Duplicate slot",
-		"room_id":           room.ID,
-		"activity_group_id": template.ID,
+		"room_id":           fmt.Sprint(room.ID),
+		"activity_group_id": fmt.Sprint(template.ID),
 	}
 
 	first := doCreate(t, router, body)
@@ -352,7 +353,7 @@ func TestCreateInstance_UnwiredResource(t *testing.T) {
 		"start_time": "10:00",
 		"end_time":   "11:00",
 		"title":      "Unwired",
-		"room_id":    s.roomID,
+		"room_id":    fmt.Sprint(s.roomID),
 	}
 	w := doCreate(t, router, body)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)

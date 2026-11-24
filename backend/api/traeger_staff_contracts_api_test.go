@@ -100,7 +100,7 @@ func TestTraegerStaffContractsCarryTheSollIntoEachSchool(t *testing.T) {
 	require.NoError(t, err)
 
 	rec := traegerLink(t, router, office.token, map[string]any{
-		"members": []map[string]int64{{"school_id": north, "staff_id": miraNorth.ID}, {"school_id": south, "staff_id": miraSouth.ID}},
+		"members": []map[string]string{{"school_id": fmt.Sprint(north), "staff_id": fmt.Sprint(miraNorth.ID)}, {"school_id": fmt.Sprint(south), "staff_id": fmt.Sprint(miraSouth.ID)}},
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	recordID := decode[staffRecordBody](t, rec).ID
@@ -111,8 +111,8 @@ func TestTraegerStaffContractsCarryTheSollIntoEachSchool(t *testing.T) {
 		rec := traegerJSON(t, router, office.token, http.MethodPost, contracts, map[string]any{
 			"kind": "part_time", "starts_on": "2026-08-01",
 			"sites": []map[string]any{
-				{"school_id": north, "staff_id": miraNorth.ID, "weekday_minutes": []int{300, 300, 300, 300, 0}},
-				{"school_id": south, "staff_id": miraSouth.ID, "weekday_minutes": []int{0, 0, 0, 0, 240}},
+				{"school_id": fmt.Sprint(north), "staff_id": fmt.Sprint(miraNorth.ID), "weekday_minutes": []int{300, 300, 300, 300, 0}},
+				{"school_id": fmt.Sprint(south), "staff_id": fmt.Sprint(miraSouth.ID), "weekday_minutes": []int{0, 0, 0, 0, 240}},
 			},
 		})
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
@@ -135,7 +135,7 @@ func TestTraegerStaffContractsCarryTheSollIntoEachSchool(t *testing.T) {
 	t.Run("a change of the Soll cannot reach into a closed month", func(t *testing.T) {
 		rec := traegerContractWrite(t, router, office.token, http.MethodPost, fmt.Sprintf("%s/%d/soll", contracts, contractID), recordID, contractID, map[string]any{
 			"valid_from": "2026-10-15",
-			"sites":      []map[string]any{{"school_id": north, "staff_id": miraNorth.ID, "weekday_minutes": []int{480, 480, 480, 480, 480}}},
+			"sites":      []map[string]any{{"school_id": fmt.Sprint(north), "staff_id": fmt.Sprint(miraNorth.ID), "weekday_minutes": []int{480, 480, 480, 480, 480}}},
 		})
 		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 		var refusal contractRefusal
@@ -148,7 +148,7 @@ func TestTraegerStaffContractsCarryTheSollIntoEachSchool(t *testing.T) {
 	t.Run("a new Soll from a day on starts a new version", func(t *testing.T) {
 		rec := traegerContractWrite(t, router, office.token, http.MethodPost, fmt.Sprintf("%s/%d/soll", contracts, contractID), recordID, contractID, map[string]any{
 			"valid_from": "2026-12-01",
-			"sites":      []map[string]any{{"school_id": north, "staff_id": miraNorth.ID, "weekday_minutes": []int{480, 480, 480, 480, 480}}},
+			"sites":      []map[string]any{{"school_id": fmt.Sprint(north), "staff_id": fmt.Sprint(miraNorth.ID), "weekday_minutes": []int{480, 480, 480, 480, 480}}},
 		})
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		versions := schoolSchedule(t, db, north, miraNorth.ID)
@@ -191,13 +191,13 @@ func TestTraegerStaffContractsCarryTheSollIntoEachSchool(t *testing.T) {
 	t.Run("holiday weeks become Sonderarbeitszeiten, never over the school's own", func(t *testing.T) {
 		weeks := fmt.Sprintf("%s/%d/holiday-weeks", contracts, contractID)
 		rec := traegerJSON(t, router, office.token, http.MethodPost, weeks, map[string]any{
-			"school_id": south, "staff_id": miraSouth.ID, "from_week": "2026-12-21", "to_week": "2026-12-21", "weekday_minutes": []int{240, 240, 240, 0, 0},
+			"school_id": fmt.Sprint(south), "staff_id": fmt.Sprint(miraSouth.ID), "from_week": "2026-12-21", "to_week": "2026-12-21", "weekday_minutes": []int{240, 240, 240, 0, 0},
 		})
 		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 		assert.Equal(t, "workforce.traeger_holiday_week_school_override", refusalOf(t, rec).Code)
 
 		rec = traegerJSON(t, router, office.token, http.MethodPost, weeks, map[string]any{
-			"school_id": north, "staff_id": miraNorth.ID, "from_week": "2026-12-21", "to_week": "2026-12-28", "weekday_minutes": []int{360, 360, 360, 0, 0},
+			"school_id": fmt.Sprint(north), "staff_id": fmt.Sprint(miraNorth.ID), "from_week": "2026-12-21", "to_week": "2026-12-28", "weekday_minutes": []int{360, 360, 360, 0, 0},
 		})
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		assert.Len(t, decode[contractRecordBody](t, rec).Contracts[0].HolidayWeeks, 2)
@@ -206,7 +206,7 @@ func TestTraegerStaffContractsCarryTheSollIntoEachSchool(t *testing.T) {
 
 		// A week added by mistake goes again; the other weeks stay.
 		rec = traegerJSON(t, router, office.token, http.MethodPost, weeks, map[string]any{
-			"school_id": north, "staff_id": miraNorth.ID, "from_week": "2026-12-14", "to_week": "2026-12-14", "weekday_minutes": []int{120, 0, 0, 0, 0},
+			"school_id": fmt.Sprint(north), "staff_id": fmt.Sprint(miraNorth.ID), "from_week": "2026-12-14", "to_week": "2026-12-14", "weekday_minutes": []int{120, 0, 0, 0, 0},
 		})
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		require.Len(t, decode[contractRecordBody](t, rec).Contracts[0].HolidayWeeks, 3)
@@ -334,13 +334,13 @@ func TestTraegerStaffContractKeepsTheTemplateAndGivesItBack(t *testing.T) {
 	require.NoError(t, err)
 
 	rec := traegerLink(t, router, office.token, map[string]any{
-		"members": []map[string]int64{{"school_id": north, "staff_id": lea.ID}},
+		"members": []map[string]string{{"school_id": fmt.Sprint(north), "staff_id": fmt.Sprint(lea.ID)}},
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	contracts := fmt.Sprintf("/traeger/staff-records/%d/contracts", decode[staffRecordBody](t, rec).ID)
 	rec = traegerJSON(t, router, office.token, http.MethodPost, contracts, map[string]any{
 		"kind": "minijob", "starts_on": "2026-12-01",
-		"sites": []map[string]any{{"school_id": north, "staff_id": lea.ID, "weekday_minutes": []int{120, 0, 120, 0, 120}}},
+		"sites": []map[string]any{{"school_id": fmt.Sprint(north), "staff_id": fmt.Sprint(lea.ID), "weekday_minutes": []int{120, 0, 120, 0, 120}}},
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	contractID := decode[contractRecordBody](t, rec).Contracts[0].ID

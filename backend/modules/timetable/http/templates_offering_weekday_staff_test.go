@@ -10,12 +10,13 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	timetableModule "github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // sourcedOfferingID is never resolved: the offering callbacks below accept
@@ -44,20 +45,20 @@ func buildSourcedTemplateModule(t *testing.T) *templateSetup {
 func sourcedWeekdayStaffBody(s *templateSetup, name string) map[string]any {
 	body := createTemplateBody(s, name)
 	body["target_group_type"] = timetableModule.TargetGroupTypeOffering
-	body["source_care_offering_ids"] = []int64{sourcedOfferingID}
+	body["source_care_offering_ids"] = []string{fmt.Sprint(sourcedOfferingID)}
 	body["student_ids"] = []int64{}
 	body["staff_ids"] = []int64{}
 	delete(body, "primary_staff_id")
 	body["weekday_assignments"] = []map[string]any{
-		{"weekday": timetableModule.WeekdayMonday, "staff_ids": []int64{s.staffA}, "student_ids": []int64{}, "primary_staff_id": s.staffA},
-		{"weekday": timetableModule.WeekdayWednesday, "staff_ids": []int64{s.staffB}, "student_ids": []int64{}},
+		{"weekday": timetableModule.WeekdayMonday, "staff_ids": []string{fmt.Sprint(s.staffA)}, "student_ids": []string{}, "primary_staff_id": fmt.Sprint(s.staffA)},
+		{"weekday": timetableModule.WeekdayWednesday, "staff_ids": []string{fmt.Sprint(s.staffB)}, "student_ids": []string{}},
 	}
 	return body
 }
 
 func withWeekdayChild(body map[string]any, studentID int64) map[string]any {
 	assignments := body["weekday_assignments"].([]map[string]any)
-	assignments[1]["student_ids"] = []int64{studentID}
+	assignments[1]["student_ids"] = []string{fmt.Sprint(studentID)}
 	return body
 }
 

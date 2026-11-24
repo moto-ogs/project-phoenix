@@ -11,6 +11,8 @@ import (
 	"math"
 	"strconv"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedEnrollmentSignatureStep seeds an enrollment with the parent's
@@ -71,7 +73,7 @@ func seedSignedEnrollmentFormFields() []map[string]any {
 // seedSignedEnrollmentSubmission is the signed request of the Mensah family.
 func seedSignedEnrollmentSubmission(phaseID int64, signature string) map[string]any {
 	return map[string]any{
-		"phase_id":            phaseID,
+		"phase_id":            ident.ID(phaseID),
 		"guardian_first_name": "Abena",
 		"guardian_last_name":  "Mensah",
 		"guardian_email":      "abena.mensah@example.test",

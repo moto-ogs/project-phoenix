@@ -342,7 +342,7 @@ func (r *UpdateAbsenceRequest) UnmarshalJSON(data []byte) error {
 	var presence struct {
 		AbsenceTypeID json.RawMessage `json:"absence_type_id"`
 	}
-	if err := json.Unmarshal(data, (*plain)(r)); err != nil {
+	if err := wire.Unmarshal(data, (*plain)(r)); err != nil {
 		return err
 	}
 	if err := json.Unmarshal(data, &presence); err != nil {

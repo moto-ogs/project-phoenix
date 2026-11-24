@@ -8,9 +8,10 @@ import (
 	"testing"
 	"time"
 
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 // External caregivers (#4573) can be planned and marked absent like any
@@ -55,7 +56,7 @@ func TestApplyDeviations_MarksExternalCaregiverAbsent(t *testing.T) {
 	testpkg.CreateTestInstanceStaff(t, s.db, inst.ID, externalID, testpkg.InstanceStaffOpts{IsPrimary: true})
 
 	w := doDev(t, router, inst.ID, map[string]any{
-		"absences": []map[string]any{{"staff_id": externalID, "instance_ids": []int64{inst.ID}}},
+		"absences": []map[string]any{{"staff_id": fmt.Sprint(externalID), "instance_ids": []string{fmt.Sprint(inst.ID)}}},
 	})
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
 
@@ -79,7 +80,7 @@ func TestApplyDeviations_RejectsExternalCaregiverAsSubstitute(t *testing.T) {
 	for name, substituteID := range map[string]int64{"with account": externalID, "without account": accountless.StaffID} {
 		t.Run(name, func(t *testing.T) {
 			w := doDev(t, router, inst.ID, map[string]any{
-				"substitutions": []map[string]any{{"absent_staff_id": s.staffA, "substitute_staff_id": substituteID}},
+				"substitutions": []map[string]any{{"absent_staff_id": fmt.Sprint(s.staffA), "substitute_staff_id": fmt.Sprint(substituteID)}},
 			})
 			requireRefusal(t, w, "timetable.deviation_selection_invalid", "substitute_staff_id")
 		})
@@ -91,7 +92,7 @@ func TestApplyDeviations_RejectsExternalCaregiverAsSubstitute(t *testing.T) {
 
 	// Positive anchor: a regular colleague still substitutes.
 	w := doDev(t, router, inst.ID, map[string]any{
-		"substitutions": []map[string]any{{"absent_staff_id": s.staffA, "substitute_staff_id": s.staffY}},
+		"substitutions": []map[string]any{{"absent_staff_id": fmt.Sprint(s.staffA), "substitute_staff_id": fmt.Sprint(s.staffY)}},
 	})
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
 }
@@ -107,8 +108,8 @@ func TestBulkSubstitution_RejectsExternalCaregiverAsSubstitute(t *testing.T) {
 	testpkg.CreateTestInstanceStaff(t, s.db, inst.ID, s.staffA, testpkg.InstanceStaffOpts{})
 
 	w := doBulk(t, router, map[string]any{
-		"absent_staff_id":     s.staffA,
-		"substitute_staff_id": externalID,
+		"absent_staff_id":     fmt.Sprint(s.staffA),
+		"substitute_staff_id": fmt.Sprint(externalID),
 		"dates":               []string{d1Str},
 	})
 	requireRefusal(t, w, "timetable.deviation_selection_invalid", "substitute_staff_id")
@@ -121,7 +122,7 @@ func TestBulkSubstitution_RejectsExternalCaregiverAsSubstitute(t *testing.T) {
 	// An external may still be marked absent across several days.
 	extInst := testpkg.CreateTestActivityInstance(t, s.db, d1, s.roomID, testpkg.ActivityInstanceOpts{Title: "AG Musik"})
 	testpkg.CreateTestInstanceStaff(t, s.db, extInst.ID, externalID, testpkg.InstanceStaffOpts{})
-	w = doBulk(t, router, map[string]any{"absent_staff_id": externalID, "dates": []string{d1Str}})
+	w = doBulk(t, router, map[string]any{"absent_staff_id": fmt.Sprint(externalID), "dates": []string{d1Str}})
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
 	rows := devInstanceStaff(t, s.db, s.ctx, extInst.ID)
 	require.Len(t, rows, 1)

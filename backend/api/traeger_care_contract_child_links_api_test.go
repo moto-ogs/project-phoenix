@@ -122,7 +122,7 @@ func (f childLinkFixture) sideEffects(t *testing.T) int {
 // before it links them.
 func (f childLinkFixture) preview(t *testing.T, contractID, studentID int64) childLinkRowBody {
 	t.Helper()
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, childLinkContractPath(contractID, "/preview"), map[string]any{"student_id": studentID})
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, childLinkContractPath(contractID, "/preview"), map[string]any{"student_id": fmt.Sprint(studentID)})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	row := decodeSchoolPortalData[childLinkRowBody](t, rec.Body.Bytes())
 	require.NotEmpty(t, row.Fingerprint, "a single row names the state the office sees")
@@ -230,11 +230,11 @@ func TestCareContractChildLinkReachesTheCareAndTheBilling(t *testing.T) {
 	assert.Equal(t, "conflict", row.Status)
 	assert.Equal(t, "differs", row.Problems[0].Code)
 	rec := traegerJSON(t, f.traeger, token, http.MethodPut, childLinkContractPath(f.linn, ""),
-		map[string]any{"student_id": f.linaStudent, "fingerprint": row.Fingerprint})
+		map[string]any{"student_id": fmt.Sprint(f.linaStudent), "fingerprint": row.Fingerprint})
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "care_contract.child_link_refused")
 	rec = traegerJSON(t, f.traeger, token, http.MethodPut, childLinkContractPath(f.linn, ""),
-		map[string]any{"student_id": f.linaStudent, "accept_difference": true, "fingerprint": row.Fingerprint})
+		map[string]any{"student_id": fmt.Sprint(f.linaStudent), "accept_difference": true, "fingerprint": row.Fingerprint})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, "stored", decodeSchoolPortalData[childLinkRowBody](t, rec.Body.Bytes()).Status)
 	assert.Equal(t, 1, f.count(t, `SELECT COUNT(*) FROM care_contract.contract_events WHERE contract_id = ? AND action = 'link_child'
@@ -269,7 +269,7 @@ func TestCareContractChildUnlinkCorrectsOnlyImportedContracts(t *testing.T) {
 	f := newChildLinkFixture(t, "Träger Kind lösen")
 	token := f.office.token
 	rec := traegerJSON(t, f.traeger, token, http.MethodPut, childLinkContractPath(f.mia, ""),
-		map[string]any{"student_id": f.miaStudent, "fingerprint": f.preview(t, f.mia, f.miaStudent).Fingerprint})
+		map[string]any{"student_id": fmt.Sprint(f.miaStudent), "fingerprint": f.preview(t, f.mia, f.miaStudent).Fingerprint})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	rec = traegerJSON(t, f.traeger, token, http.MethodDelete, childLinkContractPath(f.mia, ""), nil)
@@ -296,7 +296,7 @@ func TestCareContractChildUnlinkCorrectsOnlyImportedContracts(t *testing.T) {
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "care_contract.child_link_not_imported")
 	rec = traegerJSON(t, f.traeger, token, http.MethodPut, childLinkContractPath(application, ""),
-		map[string]any{"student_id": f.linaStudent, "fingerprint": f.preview(t, application, f.linaStudent).Fingerprint})
+		map[string]any{"student_id": fmt.Sprint(f.linaStudent), "fingerprint": f.preview(t, application, f.linaStudent).Fingerprint})
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "care_contract.child_link_not_imported")
 
@@ -305,7 +305,7 @@ func TestCareContractChildUnlinkCorrectsOnlyImportedContracts(t *testing.T) {
 	rec = traegerJSON(t, f.traeger, other.token, http.MethodDelete, unlinkPath(f.mia, f.miaStudent), nil)
 	assert.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "care_contract.contract_not_found")
-	rec = traegerJSON(t, f.traeger, other.token, http.MethodPost, childLinkContractPath(f.mia, "/preview"), map[string]any{"student_id": f.miaStudent})
+	rec = traegerJSON(t, f.traeger, other.token, http.MethodPost, childLinkContractPath(f.mia, "/preview"), map[string]any{"student_id": fmt.Sprint(f.miaStudent)})
 	assert.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 }
 
@@ -318,7 +318,7 @@ func TestCareContractChildUnlinkRefusesABoundContract(t *testing.T) {
 	f := newChildLinkFixture(t, "Träger Kind gebunden")
 	token := f.office.token
 	rec := traegerJSON(t, f.traeger, token, http.MethodPut, childLinkContractPath(f.mia, ""),
-		map[string]any{"student_id": f.miaStudent, "fingerprint": f.preview(t, f.mia, f.miaStudent).Fingerprint})
+		map[string]any{"student_id": fmt.Sprint(f.miaStudent), "fingerprint": f.preview(t, f.mia, f.miaStudent).Fingerprint})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	followsBookings := func() bool {
 		rec := traegerJSON(t, f.traeger, token, http.MethodGet, fmt.Sprintf("/traeger/contracts/%d", f.mia), nil)
@@ -351,13 +351,13 @@ func TestCareContractChildLinkConfirmsThePreviewTheOfficeSaw(t *testing.T) {
 	token := f.office.token
 	link := func(fingerprint string) *httptest.ResponseRecorder {
 		return traegerJSON(t, f.traeger, token, http.MethodPut, childLinkContractPath(f.mia, ""),
-			map[string]any{"student_id": f.miaStudent, "fingerprint": fingerprint})
+			map[string]any{"student_id": fmt.Sprint(f.miaStudent), "fingerprint": fingerprint})
 	}
 	linked := func() int {
 		return f.count(t, `SELECT COUNT(*) FROM care_contract.contracts WHERE id = ? AND student_id IS NOT NULL`, f.mia)
 	}
 
-	rec := traegerJSON(t, f.traeger, token, http.MethodPut, childLinkContractPath(f.mia, ""), map[string]any{"student_id": f.miaStudent})
+	rec := traegerJSON(t, f.traeger, token, http.MethodPut, childLinkContractPath(f.mia, ""), map[string]any{"student_id": fmt.Sprint(f.miaStudent)})
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "fingerprint")
 
@@ -376,7 +376,7 @@ func TestCareContractChildLinkConfirmsThePreviewTheOfficeSaw(t *testing.T) {
 	assert.Zero(t, f.events(t, "link_child"))
 
 	rec = traegerJSON(t, f.traeger, token, http.MethodPut, childLinkContractPath(f.mia, ""),
-		map[string]any{"student_id": f.miaStudent, "accept_difference": true, "fingerprint": f.preview(t, f.mia, f.miaStudent).Fingerprint})
+		map[string]any{"student_id": fmt.Sprint(f.miaStudent), "accept_difference": true, "fingerprint": f.preview(t, f.mia, f.miaStudent).Fingerprint})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, "stored", decodeSchoolPortalData[childLinkRowBody](t, rec.Body.Bytes()).Status,
 		"the fingerprint of the preview confirms the accepted difference")
@@ -391,7 +391,7 @@ func TestCareContractChildLinksNeedTheRight(t *testing.T) {
 	file := childLinkFile([2]int64{f.mia, f.miaStudent})
 	assert.Equal(t, http.StatusForbidden, importForm(t, f.traeger, billing, childLinkPreviewPath, "k.csv", file, nil).Code)
 	assert.Equal(t, http.StatusForbidden, importForm(t, f.traeger, billing, childLinkPath, "k.csv", file, nil).Code)
-	body := map[string]any{"student_id": f.miaStudent}
+	body := map[string]any{"student_id": fmt.Sprint(f.miaStudent)}
 	assert.Equal(t, http.StatusForbidden, traegerJSON(t, f.traeger, billing, http.MethodPost, childLinkContractPath(f.mia, "/preview"), body).Code)
 	assert.Equal(t, http.StatusForbidden, traegerJSON(t, f.traeger, billing, http.MethodPut, childLinkContractPath(f.mia, ""), body).Code)
 	assert.Equal(t, http.StatusForbidden, traegerJSON(t, f.traeger, billing, http.MethodDelete, unlinkPath(f.mia, f.miaStudent), nil).Code)

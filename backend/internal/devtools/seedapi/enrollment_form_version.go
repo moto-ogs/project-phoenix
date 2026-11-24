@@ -3,6 +3,8 @@ package api
 import (
 	"fmt"
 	"strconv"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // staffGet reads a staff route with auth.
@@ -17,6 +19,8 @@ func staffGet(rt *Runtime, auth AuthRef) func(string) ([]byte, error) {
 func showFormVersion(get func(string) ([]byte, error), body map[string]any) error {
 	var phaseID int64
 	switch id := body["phase_id"].(type) {
+	case ident.ID:
+		phaseID = id.Int64()
 	case int64:
 		phaseID = id
 	case string:

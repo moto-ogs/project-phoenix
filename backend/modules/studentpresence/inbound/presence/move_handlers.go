@@ -1,12 +1,12 @@
 package presence
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 type moveStudentsToActiveGroupRequest struct {
@@ -25,7 +25,7 @@ type checkInStudentsToSessionRequest struct {
 
 func (rs *Resource) moveStudentsToActiveGroup(w http.ResponseWriter, r *http.Request) {
 	var req moveStudentsToActiveGroupRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}
@@ -54,7 +54,7 @@ func (rs *Resource) moveStudentsToActiveGroup(w http.ResponseWriter, r *http.Req
 // room's terminal. The request shape is the ordinary move's.
 func (rs *Resource) checkInStudentsToSession(w http.ResponseWriter, r *http.Request) {
 	var req checkInStudentsToSessionRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}

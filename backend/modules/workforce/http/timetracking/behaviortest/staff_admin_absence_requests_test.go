@@ -13,10 +13,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 // Wire values of the absence contract. Spelled out here because the tests may
@@ -69,12 +70,12 @@ func createAbsence(t *testing.T, tc *testContext, staffID int64, absenceType, st
 	start := testpkg.TodayDate().AddDays(21)
 	now := time.Now()
 	row := map[string]any{
-		"staff_id":     staffID,
+		"staff_id":     fmt.Sprint(staffID),
 		"absence_type": absenceType,
 		"date_start":   start.String(),
 		"date_end":     start.AddDays(1).String(),
 		"status":       status,
-		"created_by":   staffID,
+		"created_by":   fmt.Sprint(staffID),
 		"requested_at": now,
 	}
 	if decidedBy != nil {

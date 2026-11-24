@@ -57,7 +57,7 @@ func TestEmptyHolidayRunIsDiscardedAndFreesItsPeriod(t *testing.T) {
 	}{
 		{http.MethodPost, billingRunPath(int64(run.ID), "/discard"), nil},
 		{http.MethodPost, billingRunPath(int64(run.ID), "/release"), map[string]any{"document_count": 0, "total_cents": 0, "fingerprint": "x"}},
-		{http.MethodPost, billingRunPath(int64(run.ID), "/corrections"), map[string]any{"registration_id": f.siblings, "child_id": 1, "total_cents": 100, "reason": "x"}},
+		{http.MethodPost, billingRunPath(int64(run.ID), "/corrections"), map[string]any{"registration_id": fmt.Sprint(f.siblings), "child_id": "1", "total_cents": 100, "reason": "x"}},
 		{http.MethodPut, fmt.Sprintf("%s/holiday/%d", runDueDatesPath, run.ID), map[string]any{"due_dates": []map[string]any{{"payment_method": "transfer", "due_on": "2027-01-15"}}}},
 	} {
 		rec := traegerJSON(t, f.traeger, billing, change.method, change.path, change.body)

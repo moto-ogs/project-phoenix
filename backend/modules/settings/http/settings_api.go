@@ -2,12 +2,13 @@ package settingshttp
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"path/filepath"
 	"strings"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
@@ -180,7 +181,7 @@ func (rs *SettingsResource) setValue(w http.ResponseWriter, r *http.Request) {
 	key := chi.URLParam(r, "key")
 
 	var req setValueRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		rs.runtime.RenderError(w, r, http.StatusBadRequest, err)
 		return
 	}

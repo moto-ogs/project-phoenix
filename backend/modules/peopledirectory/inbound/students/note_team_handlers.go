@@ -2,7 +2,6 @@ package students
 
 import (
 	context "context"
-	json "encoding/json"
 	errors "errors"
 	http "net/http"
 	strconv "strconv"
@@ -11,6 +10,7 @@ import (
 	common "github.com/moto-ogs/project-phoenix/api/common"
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // StudentNoteTeamReach names the colleagues who may read a child's notes and
@@ -132,7 +132,7 @@ func (rs *Resource) readStudentNoteTeamNotices(w http.ResponseWriter, r *http.Re
 		return
 	}
 	var body studentNoteTeamReadRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		renderError(w, r, common.ErrorInvalidRequest(errors.New("invalid notice revisions")))
 		return
 	}

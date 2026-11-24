@@ -1,13 +1,13 @@
 package parent
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
@@ -80,7 +80,7 @@ type parentSurveyAnswersRequest struct {
 
 func decodeSurveyAnswers(r *http.Request) ([]parentService.SurveyAnswer, error) {
 	var req parentSurveyAnswersRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		return nil, errors.New("invalid request body")
 	}
 	out := make([]parentService.SurveyAnswer, 0, len(req.Answers))

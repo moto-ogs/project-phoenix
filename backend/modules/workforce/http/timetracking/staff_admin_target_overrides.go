@@ -5,10 +5,11 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/render"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -137,7 +138,7 @@ func (rs *StaffAdminResource) deleteTargetOverride(w http.ResponseWriter, r *htt
 
 func decodeTargetOverride(w http.ResponseWriter, r *http.Request) (workforce.StaffTargetOverrideFields, bool) {
 	var req targetOverrideRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return workforce.StaffTargetOverrideFields{}, false
 	}

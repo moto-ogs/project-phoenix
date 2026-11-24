@@ -11,8 +11,9 @@ import (
 	"strings"
 	"testing"
 
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
+
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 var runtimeCheckpointEnrollmentChangeRequests = flag.Bool("runtime-checkpoint-enrollment-change-requests", false, "measure the #2696 Enrollment change-request and parent/OGS dialogue workload instead of the checkpoint baseline")
@@ -74,7 +75,7 @@ func newChangeRequestWorkload(t *testing.T, handler http.Handler, token string, 
 func (w *changeRequestWorkload) submit(t *testing.T, name string) changeRequestCase {
 	t.Helper()
 	c := changeRequestCase{email: "checkpoint-" + name + "@example.test"}
-	body := fmt.Sprintf(`{"phase_id":%d,"guardian_first_name":"Checkpoint","guardian_last_name":%q,"guardian_email":%q,"consent_flags":{"agb":true,"data_processing":true,"email_contact":true,"photo":true},"children":[{"first_name":"Checkpoint","last_name":%q,"date_of_birth":"2018-04-15","target_grade_level":2}]}`, w.phaseID, "Applicant", c.email, name)
+	body := fmt.Sprintf(`{"phase_id":"%d","guardian_first_name":"Checkpoint","guardian_last_name":%q,"guardian_email":%q,"consent_flags":{"agb":true,"data_processing":true,"email_contact":true,"photo":true},"children":[{"first_name":"Checkpoint","last_name":%q,"date_of_birth":"2018-04-15","target_grade_level":2}]}`, w.phaseID, "Applicant", c.email, name)
 	submitted := checkpointRequest(w.handler, checkpointScenario{Method: http.MethodPost, Path: "/api/enrollment/" + w.slug + "/submit", Body: body}, "")
 	require.Equal(t, http.StatusCreated, submitted.Code, submitted.Body.String())
 	var envelope struct {
@@ -98,7 +99,7 @@ func (w *changeRequestWorkload) publicPath(c *changeRequestCase) string {
 }
 
 func (w *changeRequestWorkload) proposal(c *changeRequestCase, name string) string {
-	return fmt.Sprintf(`{"phase_id":%d,"guardian_first_name":"Checkpoint","guardian_last_name":%q,"guardian_email":%q,"consent_flags":{"agb":true,"data_processing":true,"email_contact":true,"photo":true},"children":[{"id":"%d","first_name":"Checkpoint","last_name":"Child","date_of_birth":"2018-04-15","target_grade_level":2}]}`, w.phaseID, name, c.email, c.childID)
+	return fmt.Sprintf(`{"phase_id":"%d","guardian_first_name":"Checkpoint","guardian_last_name":%q,"guardian_email":%q,"consent_flags":{"agb":true,"data_processing":true,"email_contact":true,"photo":true},"children":[{"id":"%d","first_name":"Checkpoint","last_name":"Child","date_of_birth":"2018-04-15","target_grade_level":2}]}`, w.phaseID, name, c.email, c.childID)
 }
 
 // create files a change request outside timing and returns its ID and the

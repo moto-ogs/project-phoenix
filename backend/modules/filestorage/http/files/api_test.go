@@ -25,6 +25,10 @@ import (
 	nativeUploads "github.com/moto-ogs/project-phoenix/modules/delivery/objects"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
@@ -32,9 +36,6 @@ import (
 	filestoreAPI "github.com/moto-ogs/project-phoenix/modules/filestorage/http/files"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/uptrace/bun"
 )
 
 var fakePDF = []byte("%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n")
@@ -200,9 +201,9 @@ func (c *apiContext) assignRole(accountID, roleID int64) {
 	_, err := c.db.NewInsert().
 		TableExpr("auth.account_roles").
 		Model(&map[string]any{
-			"tenant_id":  testpkg.Tenant(c.t),
-			"account_id": accountID,
-			"role_id":    roleID,
+			"tenant_id":  fmt.Sprint(testpkg.Tenant(c.t)),
+			"account_id": fmt.Sprint(accountID),
+			"role_id":    fmt.Sprint(roleID),
 		}).
 		Exec(testpkg.Ctx(c.t))
 	require.NoError(c.t, err)

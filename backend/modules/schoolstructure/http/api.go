@@ -5,7 +5,6 @@ package schoolstructurehttp
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -14,11 +13,13 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	education "github.com/moto-ogs/project-phoenix/modules/schoolstructure/contract"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -147,7 +148,7 @@ func (o *OptionalRoomID) UnmarshalJSON(b []byte) error {
 		o.Value = nil
 		return nil
 	}
-	return json.Unmarshal(b, &o.Value)
+	return wire.Unmarshal(b, &o.Value)
 }
 
 // Bind validates the group update.

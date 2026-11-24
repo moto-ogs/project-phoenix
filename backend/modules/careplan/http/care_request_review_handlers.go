@@ -1,14 +1,15 @@
 package careplanhttp
 
 import (
-	json "encoding/json"
 	errors "errors"
 	http "net/http"
 
 	render "github.com/go-chi/render"
+
 	common "github.com/moto-ogs/project-phoenix/api/common"
 	carerequests "github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
 	sessiontoken "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // DecideCareRequestBody is the body of POST
@@ -51,7 +52,7 @@ func decodeCareRequestDecision(w http.ResponseWriter, r *http.Request) (carerequ
 		return carerequests.DecideInput{}, false
 	}
 	var body DecideCareRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		renderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return carerequests.DecideInput{}, false
 	}

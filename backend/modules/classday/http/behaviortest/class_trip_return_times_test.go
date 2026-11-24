@@ -21,7 +21,7 @@ func (f *classTripFixture) returnTimeTrip(t *testing.T, counter *testpkg.QueryCo
 	t.Helper()
 	ids := make([]string, 0, len(studentIDs))
 	for _, id := range studentIDs {
-		ids = append(ids, fmt.Sprint(id))
+		ids = append(ids, fmt.Sprintf(`"%d"`, id))
 	}
 	body := fmt.Sprintf(`{"from":%q,"to":%q,"student_ids":[%s],"return_time":"13:30"}`, classTripMonday, classTripMonday, strings.Join(ids, ","))
 	req := httptest.NewRequest(http.MethodPost, "/class-trips/"+f.class, strings.NewReader(body))

@@ -8,10 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/moto-ogs/project-phoenix/api/testutil"
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moto-ogs/project-phoenix/api/testutil"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 // These routes reach the browser through the catalog proxy (#2352); the test
@@ -65,8 +66,8 @@ func TestAbsenceDecisionsAnswerWithTheDecidedAbsence(t *testing.T) {
 	subject := testpkg.CreateTestStaff(t, w.tc.db, "Antrag", fmt.Sprintf("Person-%d", testpkg.UniqueSuffix()))
 	request := func(start string) int64 {
 		return insertAbsenceRow(t, w.tc, map[string]any{
-			"staff_id": subject.ID, "absence_type": absenceTypeVacation, "date_start": start, "date_end": start,
-			"status": absenceStatusReqd, "created_by": subject.ID, "requested_at": workflowRoutesNow,
+			"staff_id": fmt.Sprint(subject.ID), "absence_type": absenceTypeVacation, "date_start": start, "date_end": start,
+			"status": absenceStatusReqd, "created_by": fmt.Sprint(subject.ID), "requested_at": workflowRoutesNow,
 		})
 	}
 	approved, declined := request("2026-11-23"), request("2026-11-24")

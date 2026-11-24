@@ -15,11 +15,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken/tokentest"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/require"
 )
 
 // Workload versions of the default checkpoint. checkpoint-1-v1 is the #3019
@@ -175,7 +176,7 @@ func (w *targetRiskWorkload) bookedStudent(t *testing.T, name string) int64 {
 	}
 	for _, activityID := range w.bookedActivities {
 		w.bookedRosters[activityID] = append(w.bookedRosters[activityID], id)
-		body, err := json.Marshal(map[string][]int64{"student_ids": w.bookedRosters[activityID]})
+		body, err := json.Marshal(map[string][]testpkg.ID{"student_ids": testpkg.IDsOf[testpkg.ID](w.bookedRosters[activityID])})
 		require.NoError(t, err)
 		enrolled := checkpointRequest(w.handler, checkpointScenario{Method: http.MethodPut, Path: fmt.Sprintf("/api/activities/%d/students", activityID), Body: string(body), Authenticated: true}, w.token)
 		require.Equal(t, http.StatusOK, enrolled.Code, "prepare activity booking: %s", enrolled.Body.String())
@@ -254,7 +255,7 @@ func (w *targetRiskWorkload) link(t *testing.T, subjectID int64, companionIDs ..
 	t.Helper()
 	links := make([]string, 0, len(companionIDs))
 	for _, companionID := range companionIDs {
-		links = append(links, fmt.Sprintf(`{"companion_student_id":%d,"weekdays":["mon"]}`, companionID))
+		links = append(links, fmt.Sprintf(`{"companion_student_id":"%d","weekdays":["mon"]}`, companionID))
 	}
 	w.putStudent(t, subjectID, "{"+accompaniedPlan+`,"companions":[`+strings.Join(links, ",")+`],"companions_fingerprint":"`+careplan.CompanionLinksFingerprint(nil)+`"}`)
 }

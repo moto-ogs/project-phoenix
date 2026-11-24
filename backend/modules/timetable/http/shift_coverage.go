@@ -4,11 +4,11 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 const (
@@ -47,7 +47,7 @@ func (rs *Resource) checkShiftCoverage(w http.ResponseWriter, r *http.Request) {
 
 	var request ShiftCoverageRequest
 	r.Body = http.MaxBytesReader(w, r.Body, maxShiftCoverageRequestBytes)
-	if err := render.DecodeJSON(r.Body, &request); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &request); err != nil {
 		renderShiftCoverageBadRequest(w, r)
 		return
 	}

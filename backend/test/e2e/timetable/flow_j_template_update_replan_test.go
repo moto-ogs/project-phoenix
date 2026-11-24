@@ -40,11 +40,11 @@ func TestFlowJ_TemplateUpdateReplansTheWholePeriod(t *testing.T) {
 			"weekdays":           []int{3},
 			"start_time":         start,
 			"end_time":           end,
-			"room_id":            room.ID,
-			"category_id":        category.ID,
-			"calendar_period_id": period.ID,
-			"staff_ids":          []int64{staffA.ID, staffB.ID},
-			"primary_staff_id":   staffA.ID,
+			"room_id":            testpkg.ID(room.ID),
+			"category_id":        testpkg.ID(category.ID),
+			"calendar_period_id": testpkg.ID(period.ID),
+			"staff_ids":          []testpkg.ID{testpkg.ID(staffA.ID), testpkg.ID(staffB.ID)},
+			"primary_staff_id":   testpkg.ID(staffA.ID),
 		}
 	}
 	create := body("14:00", "15:00")
@@ -63,7 +63,7 @@ func TestFlowJ_TemplateUpdateReplansTheWholePeriod(t *testing.T) {
 	require.Equal(t, "14:00", farBefore.StartTime.Format("15:04"))
 
 	devReq := map[string]any{
-		"absences":          []map[string]any{{"staff_id": staffA.ID, "reason": "Krank"}},
+		"absences":          []map[string]any{{"staff_id": testpkg.ID(staffA.ID), "reason": "Krank"}},
 		"understaffed_ack":  true,
 		"understaffed_note": "Kein Ersatz verfügbar",
 	}

@@ -164,7 +164,7 @@ func holidayWays() []holidayWay {
 			// The office read the registration before the locks are held.
 			path := holidayRebookPath(int64(f.period.ID), f.siblings, int64(ben.ID))
 			body := withRegistrationVersion(t, f.traeger, f.office.token, path,
-				map[string]any{"bookings": []map[string]any{{"week_id": second.ID, "time_model_id": second.TimeModels[0].ID}}})
+				map[string]any{"bookings": []map[string]any{{"week_id": fmt.Sprint(second.ID), "time_model_id": fmt.Sprint(second.TimeModels[0].ID)}}})
 			return f, func() *httptest.ResponseRecorder {
 				return traegerJSON(t, f.traeger, f.office.token, http.MethodPut, path, body)
 			}
@@ -243,7 +243,7 @@ func releaseWays() []releaseWay {
 			// The office read the registration before the locks are held.
 			path := holidayRebookPath(int64(f.period.ID), f.siblings, int64(ben.ID))
 			body := withRegistrationVersion(t, f.traeger, f.office.token, path,
-				map[string]any{"bookings": []map[string]any{{"week_id": second.ID, "time_model_id": second.TimeModels[0].ID}}})
+				map[string]any{"bookings": []map[string]any{{"week_id": fmt.Sprint(second.ID), "time_model_id": fmt.Sprint(second.TimeModels[0].ID)}}})
 			return f, billing, tom, func() *httptest.ResponseRecorder {
 				return traegerJSON(t, f.traeger, f.office.token, http.MethodPut, path, body)
 			}
@@ -340,7 +340,7 @@ func TestHolidayAllocationWorkflowWaysSerializeInOnePeriod(t *testing.T) {
 		ben := f.list(t, "").Registrations[0].Children[1]
 		path := holidayRebookPath(int64(f.period.ID), f.siblings, int64(ben.ID))
 		body := withRegistrationVersion(t, f.traeger, f.office.token, path,
-			map[string]any{"bookings": []map[string]any{{"week_id": second.ID, "time_model_id": second.TimeModels[0].ID}}})
+			map[string]any{"bookings": []map[string]any{{"week_id": fmt.Sprint(second.ID), "time_model_id": fmt.Sprint(second.TimeModels[0].ID)}}})
 		holder := holdAllocationLock(t, actors, holdAdvisoryLock, billingLockKey(f.office.organization, int64(f.period.ID)))
 		rebooked := asyncRequest(func() *httptest.ResponseRecorder {
 			return traegerJSON(t, f.traeger, f.office.token, http.MethodPut, path, body)

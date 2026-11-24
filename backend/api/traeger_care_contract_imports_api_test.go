@@ -241,7 +241,7 @@ func TestCareContractImportNeedsTheRightAndStaysWithTheTraeger(t *testing.T) {
 	assert.Equal(t, "invalid", foreign.Rows[0].Status)
 	assert.Equal(t, "unknown", foreign.Rows[0].Problems[0].Code)
 	rec = importForm(t, f.traeger, other.token, contractImportPreviewPath, "kinder.csv", file,
-		map[string]string{"mapping": fmt.Sprintf(`{"columns":{"child_first_name":"Vorname Kind","child_last_name":"Nachname Kind","effective_from":"Vertragsbeginn","party_last_name":"Zahler","module":"Modul"},"school_id":%d}`, f.school)})
+		map[string]string{"mapping": fmt.Sprintf(`{"columns":{"child_first_name":"Vorname Kind","child_last_name":"Nachname Kind","effective_from":"Vertragsbeginn","party_last_name":"Zahler","module":"Modul"},"school_id":"%d"}`, f.school)})
 	assert.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	require.Equal(t, http.StatusCreated, applyContractImport(t, f, f.office.token, "kinder.csv", file).Code)
 	rec = traegerJSON(t, f.traeger, other.token, http.MethodGet, contractImportPath, nil)
@@ -321,7 +321,7 @@ func TestCareContractImportTakesTheOGSConnectMasterDataBeforeItsMandates(t *test
 	assert.Equal(t, []string{"effective_from", "school"}, suggested.Unmapped, "the file names no first day and no school")
 
 	fields := map[string]string{"mapping": fmt.Sprintf(`{"columns":{"child_first_name":"Vorname Kind","child_last_name":"Nachname Kind",`+
-		`"party_last_name":"Kontoinhaber","debtor_number":"Debitor-Nr."},"school_id":%d,"module_name":"Offene Ganztagsschule",`+
+		`"party_last_name":"Kontoinhaber","debtor_number":"Debitor-Nr."},"school_id":"%d","module_name":"Offene Ganztagsschule",`+
 		`"effective_from":"2027-08-01"}`, f.school)}
 	rec = importForm(t, f.traeger, f.office.token, contractImportPreviewPath, "csv-export-stammdaten.csv", file, fields)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())

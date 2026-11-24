@@ -11,12 +11,13 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // TestOperationsCreateAndStartSpontaneousResolvesActivityAgainstRealRepositories
@@ -56,7 +57,7 @@ func TestOperationsCreateAndStartSpontaneousResolvesActivityAgainstRealRepositor
 	post := func(title string, roomID int64) *httptest.ResponseRecorder {
 		t.Helper()
 		service.lastSpontaneousInput = nil
-		body, err := json.Marshal(map[string]any{"title": title, "room_id": roomID})
+		body, err := json.Marshal(map[string]any{"title": title, "room_id": fmt.Sprint(roomID)})
 		require.NoError(t, err)
 		req := httptest.NewRequest(http.MethodPost, "/spontaneous/start", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
@@ -115,7 +116,7 @@ func TestOperationsCreateAndStartSpontaneousStaysStaffOnlyForTraegerSession(t *t
 	res.Now = testWorkdayNow
 	router := operationRouter(http.MethodPost, "/spontaneous/start", res.operationsCreateAndStartSpontaneous)
 
-	body, err := json.Marshal(map[string]any{"title": "Freispiel", "room_id": 70})
+	body, err := json.Marshal(map[string]any{"title": "Freispiel", "room_id": "70"})
 	require.NoError(t, err)
 	req := httptest.NewRequest(http.MethodPost, "/spontaneous/start", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")

@@ -12,8 +12,7 @@ import (
 
 // ID is an int64 identifier that travels to a client as a JSON string. A JSON
 // number beyond 2^53 is rounded by JavaScript to the identifier of a
-// different row. It reads a decimal string or a JSON number (see
-// UnmarshalJSON).
+// different row. At the HTTP boundary package wire reads and writes a string.
 //
 // encoding/json writes an ID as a JSON number, as it writes an int64: stored
 // JSON (audit details, outbox payloads, snapshots, fingerprints) keeps the
@@ -34,12 +33,8 @@ func (id ID) String() string { return strconv.FormatInt(int64(id), 10) }
 // is not a plain integer is rejected instead of being coerced to zero. null
 // leaves the value unchanged.
 //
-// The JSON number stays in this reader: stored JSON keeps identifiers as
-// numbers (ADR 0300, Nachtrag vom 2026-11-21) and is read back through this
-// type, and the seeder sends numbers. Whether and where a number from a
-// browser is refused is open in #7987; the proposal there puts it in the
-// request decoder, not in this type. The kiosk device API keeps its own int64
-// fields (contract:"number").
+// Stored JSON continues to use numbers. HTTP request decoders use wire to
+// require strings without changing the format that persistence reads.
 func (id *ID) UnmarshalJSON(data []byte) error {
 	trimmed := strings.TrimSpace(string(data))
 	if trimmed == "null" {

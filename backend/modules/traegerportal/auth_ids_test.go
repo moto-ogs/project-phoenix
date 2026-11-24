@@ -42,13 +42,13 @@ func TestAuthenticationOrganizationIDs(t *testing.T) {
 				r := httptest.NewRequest("POST", "/", strings.NewReader(`{"email":"a@b.de","password":"pw","challenge_token":"challenge","code":"123456","organization_id":`+id+`}`))
 				r.Header.Set("Content-Type", "application/json")
 				err := render.Bind(r, request)
-				if id == "-1" {
+				if id != `"9007199254740993"` {
 					require.Error(t, err)
 				} else {
 					require.NoError(t, err)
 				}
 			}
-			if id != "-1" {
+			if id == `"9007199254740993"` {
 				require.EqualValues(t, organizationID, login.OrganizationID)
 				require.EqualValues(t, organizationID, mfa.OrganizationID)
 			}

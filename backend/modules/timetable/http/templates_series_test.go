@@ -22,13 +22,14 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	timetableModule "github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // splitSeriesSetup builds the shared fixture of these tests: a source template
@@ -157,9 +158,9 @@ func TestUpdateTemplate_SeriesRosterFromReachesPredecessor(t *testing.T) {
 
 	anchor := s.effective.AddDays(-4)
 	body := createTemplateBody(s.templateSetup, "Tpl-SeriesRoster-Update")
-	body["student_ids"] = []int64{s.studentA, s.studentB, latecomer.ID}
+	body["student_ids"] = []string{fmt.Sprint(s.studentA), fmt.Sprint(s.studentB), fmt.Sprint(latecomer.ID)}
 	body["series_roster_from"] = anchor.String()
-	body["series_roster_scope_student_ids"] = []int64{latecomer.ID}
+	body["series_roster_scope_student_ids"] = []string{fmt.Sprint(latecomer.ID)}
 
 	w := doTemplateJSON(t, s.router, http.MethodPut, fmt.Sprintf("/templates/%d", s.newID), body)
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())

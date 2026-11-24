@@ -48,13 +48,13 @@ func (s *offeringGapsSetup) createKlassenRandstunde(t *testing.T, class string, 
 		"weekdays":            weekdays,
 		"start_time":          "11:45",
 		"end_time":            "12:45",
-		"room_id":             s.roomID,
-		"category_id":         s.category.ID,
-		"calendar_period_id":  periodID,
+		"room_id":             fmt.Sprint(s.roomID),
+		"category_id":         fmt.Sprint(s.category.ID),
+		"calendar_period_id":  fmt.Sprint(periodID),
 		"target_group_type":   timetableModule.TargetGroupTypeSchoolClass,
 		"target_school_class": class,
-		"student_ids":         []int64{},
-		"staff_ids":           []int64{s.staffA},
+		"student_ids":         []string{},
+		"staff_ids":           []string{fmt.Sprint(s.staffA)},
 	}
 	w := doTemplateJSON(t, s.router, http.MethodPost, "/templates", body)
 	require.Equal(t, http.StatusCreated, w.Code, "body=%s", w.Body.String())
@@ -165,11 +165,11 @@ func TestOfferingGapsOverlappingPeriodsFollowTheMaterializedPeriod(t *testing.T)
 		"weekdays":          []int{timetableModule.WeekdayMonday, timetableModule.WeekdayWednesday},
 		"start_time":        "11:45",
 		"end_time":          "12:45",
-		"room_id":           s.roomID,
-		"category_id":       s.category.ID,
+		"room_id":           fmt.Sprint(s.roomID),
+		"category_id":       fmt.Sprint(s.category.ID),
 		"target_group_type": timetableModule.TargetGroupTypeNone,
-		"student_ids":       []int64{},
-		"staff_ids":         []int64{s.staffA},
+		"student_ids":       []string{},
+		"staff_ids":         []string{fmt.Sprint(s.staffA)},
 	})
 	require.Equal(t, http.StatusCreated, w.Code, "body=%s", w.Body.String())
 	templateID := decodeTemplateData[createTemplateResponse](t, w).TemplateID

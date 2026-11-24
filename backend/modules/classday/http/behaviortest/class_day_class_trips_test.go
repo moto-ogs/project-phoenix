@@ -87,7 +87,7 @@ func TestSchoolClassTripsClosedByDefault(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), `"can_report_class_trip":false`)
 
-	body := fmt.Sprintf(`{"from":%q,"to":%q,"student_ids":[%d]}`, classTripWednesday, classTripFriday, f.first)
+	body := fmt.Sprintf(`{"from":%q,"to":%q,"student_ids":["%d"]}`, classTripWednesday, classTripFriday, f.first)
 	code, resp := f.post(t, body, classTripWritePermission)
 	require.Equal(t, http.StatusForbidden, code, resp)
 	assert.Contains(t, resp, "classday.school_write_disabled")
@@ -105,7 +105,7 @@ func TestSchoolClassTripsRequirePermission(t *testing.T) {
 	f := setupClassTripFixture(t)
 	f.openTrips(t)
 
-	body := fmt.Sprintf(`{"from":%q,"to":%q,"student_ids":[%d]}`, classTripWednesday, classTripFriday, f.first)
+	body := fmt.Sprintf(`{"from":%q,"to":%q,"student_ids":["%d"]}`, classTripWednesday, classTripFriday, f.first)
 	code, resp := f.post(t, body, classDayReadPermission, classDayWritePermission)
 	require.Equal(t, http.StatusForbidden, code, resp)
 	assert.NotContains(t, resp, "classday.school_write_disabled", "the permission gate answers before the setting")
@@ -123,7 +123,7 @@ func TestSchoolClassTripWritesStatusDays(t *testing.T) {
 	f := setupClassTripFixture(t)
 	f.openTrips(t)
 
-	body := fmt.Sprintf(`{"from":%q,"to":%q,"student_ids":[%d,%d],"reason":"Jugendherberge"}`, classTripWednesday, classTripFriday, f.first, f.second)
+	body := fmt.Sprintf(`{"from":%q,"to":%q,"student_ids":["%d","%d"],"reason":"Jugendherberge"}`, classTripWednesday, classTripFriday, f.first, f.second)
 	code, resp := f.post(t, body, classTripWritePermission)
 	require.Equal(t, http.StatusCreated, code, resp)
 	assert.Contains(t, resp, `"kind":"class_trip"`)
@@ -142,7 +142,7 @@ func TestSchoolClassTripWritesStatusDays(t *testing.T) {
 	assert.Equal(t, 3, f.classTripDays(t, f.first))
 
 	// A child of another class is refused before anything is written.
-	body = fmt.Sprintf(`{"from":%q,"to":%q,"student_ids":[%d]}`, classTripMonday, classTripMonday, f.foreign)
+	body = fmt.Sprintf(`{"from":%q,"to":%q,"student_ids":["%d"]}`, classTripMonday, classTripMonday, f.foreign)
 	code, resp = f.post(t, body, classTripWritePermission)
 	require.Equal(t, http.StatusConflict, code, resp)
 	assert.Contains(t, resp, "classday.class_trip_student_not_in_class")
@@ -157,7 +157,7 @@ func TestSchoolClassTripWithReturnTimeSetsArrivals(t *testing.T) {
 	f := setupClassTripFixture(t)
 	f.openTrips(t)
 
-	body := fmt.Sprintf(`{"from":%q,"to":%q,"student_ids":[%d],"return_time":"13:30","reason":"Zoo"}`, classTripMonday, classTripMonday, f.second)
+	body := fmt.Sprintf(`{"from":%q,"to":%q,"student_ids":["%d"],"return_time":"13:30","reason":"Zoo"}`, classTripMonday, classTripMonday, f.second)
 	code, resp := f.post(t, body, classTripWritePermission)
 	require.Equal(t, http.StatusCreated, code, resp)
 	assert.Contains(t, resp, `"kind":"return_time"`)
@@ -167,7 +167,7 @@ func TestSchoolClassTripWithReturnTimeSetsArrivals(t *testing.T) {
 	assert.Equal(t, "Ausflug: Zoo", reason)
 	assert.Zero(t, f.classTripDays(t, f.second), "an outing with a return time writes no status day")
 
-	body = fmt.Sprintf(`{"from":%q,"to":%q,"student_ids":[%d,%d],"return_time":"14:00"}`, classTripMonday, classTripMonday, f.second, f.first)
+	body = fmt.Sprintf(`{"from":%q,"to":%q,"student_ids":["%d","%d"],"return_time":"14:00"}`, classTripMonday, classTripMonday, f.second, f.first)
 	code, resp = f.post(t, body, classTripWritePermission)
 	require.Equal(t, http.StatusConflict, code, resp)
 	assert.Contains(t, resp, "classday.class_trip_arrival_conflict")
@@ -186,10 +186,10 @@ func TestSchoolClassTripRefusesInvalidReports(t *testing.T) {
 		body string
 		code string
 	}{
-		"past start":            {fmt.Sprintf(`{"from":"2020-03-02","to":"2020-03-02","student_ids":[%d]}`, f.first), "classday.class_trip_past_date"},
-		"end before start":      {fmt.Sprintf(`{"from":%q,"to":%q,"student_ids":[%d]}`, classTripFriday, classTripWednesday, f.first), "classday.class_trip_invalid_range"},
-		"return time, two days": {fmt.Sprintf(`{"from":%q,"to":%q,"student_ids":[%d],"return_time":"13:30"}`, classTripWednesday, classTripFriday, f.first), "classday.class_trip_return_time_multi_day"},
-		"return time, Saturday": {fmt.Sprintf(`{"from":"2099-03-07","to":"2099-03-07","student_ids":[%d],"return_time":"13:30"}`, f.first), "classday.class_trip_return_time_weekend"},
+		"past start":            {fmt.Sprintf(`{"from":"2020-03-02","to":"2020-03-02","student_ids":["%d"]}`, f.first), "classday.class_trip_past_date"},
+		"end before start":      {fmt.Sprintf(`{"from":%q,"to":%q,"student_ids":["%d"]}`, classTripFriday, classTripWednesday, f.first), "classday.class_trip_invalid_range"},
+		"return time, two days": {fmt.Sprintf(`{"from":%q,"to":%q,"student_ids":["%d"],"return_time":"13:30"}`, classTripWednesday, classTripFriday, f.first), "classday.class_trip_return_time_multi_day"},
+		"return time, Saturday": {fmt.Sprintf(`{"from":"2099-03-07","to":"2099-03-07","student_ids":["%d"],"return_time":"13:30"}`, f.first), "classday.class_trip_return_time_weekend"},
 		"no children":           {fmt.Sprintf(`{"from":%q,"to":%q,"student_ids":[]}`, classTripWednesday, classTripFriday), "classday.class_trip_no_students"},
 	}
 	for name, tc := range cases {

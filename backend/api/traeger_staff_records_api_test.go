@@ -254,14 +254,14 @@ func TestTraegerStaffRecordsLinkThePeopleOfAllSchools(t *testing.T) {
 		assert.Len(t, overview.Schools, 2)
 		assert.Empty(t, overview.Suggestions)
 		rec = traegerLink(t, router, office.token, map[string]any{
-			"members": []map[string]int64{{"school_id": north, "staff_id": miraNorth.ID}},
+			"members": []map[string]string{{"school_id": fmt.Sprint(north), "staff_id": fmt.Sprint(miraNorth.ID)}},
 		})
 		assertStaffRefusal(t, rec, http.StatusConflict, "workforce.traeger_staff_not_released")
 		assert.Empty(t, staffAccessEntries(t, db, office.organization, "traeger_staff_records"))
 	})
 
 	staffRelease(t, db, office.organization)
-	members := []map[string]int64{{"school_id": north, "staff_id": miraNorth.ID}, {"school_id": south, "staff_id": miraSouth.ID}}
+	members := []map[string]string{{"school_id": fmt.Sprint(north), "staff_id": fmt.Sprint(miraNorth.ID)}, {"school_id": fmt.Sprint(south), "staff_id": fmt.Sprint(miraSouth.ID)}}
 
 	t.Run("the overview proposes the same account at both schools", func(t *testing.T) {
 		rec := traegerJSON(t, router, office.token, http.MethodGet, "/traeger/staff-records/", nil)
@@ -470,7 +470,7 @@ func TestTraegerStaffRecordsLinkThePeopleOfAllSchools(t *testing.T) {
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		assert.Equal(t, 2, staffSchoolValue(t, db, `SELECT COUNT(*) FROM users.staff_employment_profiles WHERE membership_id IN (?, ?) AND personnel_number = '70005'`, miraNorth.ID, miraSouth.ID))
 		jonasRecord := traegerLink(t, router, office.token, map[string]any{
-			"members": []map[string]int64{{"school_id": south, "staff_id": jonas.ID}},
+			"members": []map[string]string{{"school_id": fmt.Sprint(south), "staff_id": fmt.Sprint(jonas.ID)}},
 		})
 		require.Equal(t, http.StatusCreated, jonasRecord.Code, jonasRecord.Body.String())
 		rec = traegerJSON(t, router, office.token, http.MethodPut, fmt.Sprintf("/traeger/staff-records/%d/personnel-number", decode[staffRecordBody](t, jonasRecord).ID), map[string]any{"personnel_number": "70005"})
@@ -623,7 +623,7 @@ func TestTraegerStaffOverviewQueryBudget(t *testing.T) {
 				staff := testpkg.CreateTestStaffForTenant(t, db, school, "Kraft", fmt.Sprintf("Nummer %d", i))
 				if i == 0 {
 					rec := traegerLink(t, router, office.token, map[string]any{
-						"members": []map[string]int64{{"school_id": school, "staff_id": staff.ID}},
+						"members": []map[string]string{{"school_id": fmt.Sprint(school), "staff_id": fmt.Sprint(staff.ID)}},
 					})
 					require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 				}

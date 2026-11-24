@@ -144,7 +144,7 @@ func seedNoticeTemplateOnce(client *Client, auth AuthRef) error {
 // gets no notices from this seed (0 without an error).
 func seedStartNoticeRun(client *Client, auth AuthRef, school int64, from calendar.Date) (int64, error) {
 	raw, err := client.PostWithAuth(auth, "/traeger/care-notice-runs/", map[string]any{
-		"year": from.Year(), "from_month": from.String(), "school_ids": []int64{school},
+		"year": from.Year(), "from_month": from.String(), "school_ids": []ident.ID{ident.ID(school)},
 	})
 	if seedConflictCode(err, seedCareNoticeRunOpen) {
 		return seedOpenNoticeRun(client, auth, school, from.Year())

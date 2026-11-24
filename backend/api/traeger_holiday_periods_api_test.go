@@ -17,6 +17,7 @@ import (
 	"github.com/uptrace/bun"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 )
@@ -116,7 +117,9 @@ func traegerJSON(t *testing.T, router http.Handler, token, method, path string, 
 	t.Helper()
 	var payload bytes.Buffer
 	if body != nil {
-		require.NoError(t, json.NewEncoder(&payload).Encode(body))
+		encoded, err := wire.Marshal(body)
+		require.NoError(t, err)
+		payload.Write(encoded)
 	}
 	req := httptest.NewRequest(method, path, &payload)
 	req.Header.Set("Content-Type", "application/json")

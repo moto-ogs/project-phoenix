@@ -1,12 +1,12 @@
 package parent
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
@@ -155,7 +155,7 @@ func (rs *Resource) createGuardianContact(w http.ResponseWriter, r *http.Request
 	// The pickup permission may carry its signature image (#5697).
 	r.Body = http.MaxBytesReader(w, r.Body, signedBodyLimit)
 	var body createGuardianContactRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		renderPickupSignatureBodyError(w, r, err)
 		return
 	}
@@ -193,7 +193,7 @@ func (rs *Resource) updateGuardianContact(w http.ResponseWriter, r *http.Request
 
 	r.Body = http.MaxBytesReader(w, r.Body, 8<<10)
 	var body updateGuardianContactRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}
@@ -257,7 +257,7 @@ func (rs *Resource) updateGuardianRelationship(w http.ResponseWriter, r *http.Re
 
 	r.Body = http.MaxBytesReader(w, r.Body, 2<<10)
 	var body updateGuardianRelationshipRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}

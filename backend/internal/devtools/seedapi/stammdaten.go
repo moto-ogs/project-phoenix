@@ -461,7 +461,7 @@ func (s *FixedSeeder) seedStaff(_ context.Context, result *FixedResult) error {
 		}
 
 		body := map[string]any{
-			"person_id":   personID,
+			"person_id":   ident.ID(personID),
 			"is_teacher":  staff.IsTeacher,
 			"staff_notes": fmt.Sprintf("Position: %s", staff.Position),
 			"role":        displayRole, // Display role for badge (Admin/Betreuer/Extern)
@@ -563,11 +563,11 @@ func (s *FixedSeeder) seedGroups(_ context.Context, result *FixedResult) error {
 
 		body := map[string]any{
 			"name":        class.name,
-			"teacher_ids": teacherIDsForGroup,
+			"teacher_ids": ident.IDs(teacherIDsForGroup),
 		}
 		roomNames := []string{"OGS-Raum 1", "OGS-Raum 2", "OGS-Raum 3", "Kreativraum"}
 		if roomID := s.roomIDs[roomNames[index%len(roomNames)]]; roomID > 0 {
-			body["room_id"] = roomID
+			body["room_id"] = ident.ID(roomID)
 		}
 
 		respBody, err := s.client.Post("/api/groups", body)
@@ -652,7 +652,7 @@ func (s *FixedSeeder) seedStudents(_ context.Context, result *FixedResult) error
 			"first_name":   student.FirstName,
 			"last_name":    student.LastName,
 			"school_class": student.Class,
-			"group_id":     groupID,
+			"group_id":     ident.ID(groupID),
 			"birthday":     birthday,
 		}
 		if i%3 == 0 {
@@ -1143,9 +1143,9 @@ func (s *FixedSeeder) seedActivities(_ context.Context, result *FixedResult) err
 			"name":             activity.Name,
 			"max_participants": 20,
 			"is_open":          true,
-			"category_id":      categoryID,
-			"planned_room_id":  roomID,
-			"supervisor_ids":   []int64{supervisorID},
+			"category_id":      ident.ID(categoryID),
+			"planned_room_id":  ident.ID(roomID),
+			"supervisor_ids":   []ident.ID{ident.ID(supervisorID)},
 		}
 
 		activityID, err := s.postDemoActivity(activity.Name, body)
@@ -1216,7 +1216,7 @@ func (s *FixedSeeder) enrollStudents(_ context.Context) error {
 		}
 
 		path := fmt.Sprintf("/api/activities/%d/students", activityID)
-		if _, err := s.client.Put(path, map[string]any{"student_ids": studentIDs}); err != nil {
+		if _, err := s.client.Put(path, map[string]any{"student_ids": ident.IDs(studentIDs)}); err != nil {
 			return fmt.Errorf("enroll students in %s: %w", activityName, err)
 		}
 		studentCount += len(studentIDs)
@@ -1338,7 +1338,7 @@ func (s *FixedSeeder) seedStaffAccounts(ctx context.Context, result *FixedResult
 			"username":         username,
 			"password":         password,
 			"confirm_password": password,
-			"role_id":          roleID,
+			"role_id":          ident.ID(roleID),
 		}
 		registerBody["first_name"], registerBody["last_name"] = visitorDisplayName(s.visitor, i == visitorStaffIndex,
 			staff.FirstName, staff.LastName, DemoStaff[visitorStaffIndex].FirstName, DemoStaff[visitorStaffIndex].LastName)
@@ -1346,7 +1346,7 @@ func (s *FixedSeeder) seedStaffAccounts(ctx context.Context, result *FixedResult
 			// The visitor enters with every function; the demo role chosen on
 			// the entry page replaces it with a reduced role of the school
 			// (#3469), so the seed itself needs no role for the visitor.
-			registerBody["role_id"] = adminRoleID
+			registerBody["role_id"] = ident.ID(adminRoleID)
 		}
 
 		registerResp, err := s.client.Post("/auth/register", registerBody)

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"slices"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedCourseParticipationStep records past occurrences of three demo courses
@@ -153,8 +155,8 @@ func createCourseTemplate(rt *Runtime, name string, roomID int64, dates []seedDa
 		"weekdays":         []int{weekday},
 		"start_time":       "14:00",
 		"end_time":         "15:00",
-		"room_id":          roomID,
-		"category_id":      categoryID,
+		"room_id":          ident.ID(roomID),
+		"category_id":      ident.ID(categoryID),
 		"max_participants": 20,
 		"week_pattern":     0,
 	})
@@ -202,9 +204,9 @@ func createCourseOccurrence(rt *Runtime, title string, date seedDate, roomID, ac
 		"start_time":        "14:00",
 		"end_time":          "15:00",
 		"title":             title,
-		"room_id":           roomID,
-		"activity_group_id": activityID,
-		"student_ids":       studentIDs,
+		"room_id":           ident.ID(roomID),
+		"activity_group_id": ident.ID(activityID),
+		"student_ids":       ident.IDs(studentIDs),
 	}
 	respBody, err := rt.Client.Post("/api/timetable/instances", body)
 	if err != nil {

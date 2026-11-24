@@ -9,15 +9,16 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/uptrace/bun"
 )
 
 // traegerSchoolClaims is the session the Absprung of the Träger-Büro opens
@@ -204,7 +205,7 @@ func TestTraegerSchoolSessionWritesCarePlanWithMark(t *testing.T) {
 
 	t.Run("bulk_arrival_times_per_child", func(t *testing.T) {
 		rr := requireTraegerWrite(t, tc, claims, http.MethodPost, "/arrival-schedules/bulk", map[string]any{
-			"student_ids": []int64{bulkChild.ID},
+			"student_ids": []string{fmt.Sprint(bulkChild.ID)},
 			"schedules":   []map[string]any{{"weekday": 2, "expected_arrival": "11:15"}},
 		}, http.StatusOK)
 		assert.Contains(t, rr.Body.String(), `"students_affected":1`)
@@ -221,7 +222,7 @@ func TestTraegerSchoolSessionWritesCarePlanWithMark(t *testing.T) {
 
 	t.Run("bulk_pickup_times", func(t *testing.T) {
 		rr := requireTraegerWrite(t, tc, claims, http.MethodPost, "/pickup-schedules/bulk", map[string]any{
-			"student_ids": []int64{bulkChild.ID},
+			"student_ids": []string{fmt.Sprint(bulkChild.ID)},
 			"schedules":   []map[string]any{{"weekday": 2, "pickup_time": "16:20"}},
 		}, http.StatusOK)
 		assert.Contains(t, rr.Body.String(), `"students_affected":1`)
@@ -364,7 +365,7 @@ func TestTraegerSchoolSessionWritesCarePlanWithMark(t *testing.T) {
 			for field, value := range times {
 				schedule[field] = value
 			}
-			return map[string]any{"student_ids": []int64{staffChild.ID}, "schedules": []map[string]any{schedule}}
+			return map[string]any{"student_ids": []string{fmt.Sprint(staffChild.ID)}, "schedules": []map[string]any{schedule}}
 		}
 		rr = staffExec(http.MethodPost, "/pickup-schedules/bulk", bulk(map[string]string{"pickup_time": "16:10"}))
 		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())

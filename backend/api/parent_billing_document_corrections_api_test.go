@@ -143,7 +143,7 @@ func TestIssuedInvoicesAreCancelledCreditedAndIssuedAgainAsDocumentsOfTheirOwn(t
 	code, _ = registrationRefusalOf(t, rec)
 	assert.Equal(t, "parent_billing.invoice_cancelled", code)
 	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, creditPath(int64(run.ID), int64(first.ID)),
-		map[string]any{"child_id": first.Children[0].ChildID, "amount_cents": 100, "reason": "Krank"})
+		map[string]any{"child_id": fmt.Sprint(first.Children[0].ChildID), "amount_cents": 100, "reason": "Krank"})
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	code, _ = registrationRefusalOf(t, rec)
 	assert.Equal(t, "parent_billing.invoice_cancelled", code)
@@ -156,12 +156,12 @@ func TestIssuedInvoicesAreCancelledCreditedAndIssuedAgainAsDocumentsOfTheirOwn(t
 	// A Gutschrift lowers one child's amount, at most to zero.
 	child := second.Children[0]
 	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, creditPath(int64(run.ID), int64(second.ID)),
-		map[string]any{"child_id": child.ChildID, "amount_cents": child.TotalCents + 1, "reason": "Krank"})
+		map[string]any{"child_id": fmt.Sprint(child.ChildID), "amount_cents": child.TotalCents + 1, "reason": "Krank"})
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	code, _ = registrationRefusalOf(t, rec)
 	assert.Equal(t, "parent_billing.billing_document_correction_invalid", code)
 	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, creditPath(int64(run.ID), int64(second.ID)),
-		map[string]any{"child_id": child.ChildID, "amount_cents": 500, "reason": "Erster Tag krank"})
+		map[string]any{"child_id": fmt.Sprint(child.ChildID), "amount_cents": 500, "reason": "Erster Tag krank"})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	credit := decodeSchoolPortalData[correctedDocumentBody](t, rec.Body.Bytes())
 	assert.Equal(t, run.ID, credit.RunID, "the response names the run that stores the credit")
@@ -254,7 +254,7 @@ func TestStornoAndGutschriftNeedTheBillingRightAndStayWithTheirTraeger(t *testin
 	foreign := newTraegerOffice(t, f.db, f.traeger, "Träger Storno Fremd", identityaccess.TraegerRoleBilling)
 	run := releasedBillingRun(t, f, billing)
 	invoice := correctedRun(t, f, billing, int64(run.ID)).Documents[0]
-	credit := map[string]any{"child_id": invoice.Children[0].ChildID, "amount_cents": 100, "reason": "Krank"}
+	credit := map[string]any{"child_id": fmt.Sprint(invoice.Children[0].ChildID), "amount_cents": 100, "reason": "Krank"}
 	cancel := map[string]any{"reason": "Abgemeldet"}
 
 	for _, request := range []struct {
@@ -319,7 +319,7 @@ func TestCorrectionsAfterAPatternWithoutYearStayBehindTheirInvoice(t *testing.T)
 
 	setNumberRange(t, f, billing, "FE-{NNNN}")
 	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, creditPath(int64(run.ID), int64(invoice.ID)),
-		map[string]any{"child_id": invoice.Children[0].ChildID, "amount_cents": 100, "reason": "Krank"})
+		map[string]any{"child_id": fmt.Sprint(invoice.Children[0].ChildID), "amount_cents": 100, "reason": "Krank"})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	credit := decodeSchoolPortalData[correctedDocumentBody](t, rec.Body.Bytes())
 	assert.Equal(t, "FE-0001", credit.Number, "the pattern without a year counts on its own")

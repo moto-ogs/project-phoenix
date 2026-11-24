@@ -283,7 +283,7 @@ func seedCareContractSends(client *Client, auth AuthRef) (int, error) {
 	if len(ids) == 0 {
 		return 0, nil
 	}
-	if _, err := client.PostWithAuth(auth, "/traeger/contracts/send", map[string]any{"contract_ids": ids}); err != nil {
+	if _, err := client.PostWithAuth(auth, "/traeger/contracts/send", map[string]any{"contract_ids": ident.IDs(ids)}); err != nil {
 		return 0, fmt.Errorf("send the contracts: %w", err)
 	}
 	return len(ids), nil

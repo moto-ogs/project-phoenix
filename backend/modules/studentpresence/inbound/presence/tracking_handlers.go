@@ -1,19 +1,19 @@
 package presence
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // getTrackingIndicators handles POST /tracking-indicators
 // Returns per-student match results for configured tracking indicator labels.
 func (rs *Resource) getTrackingIndicators(w http.ResponseWriter, r *http.Request) {
 	var req TrackingIndicatorsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}

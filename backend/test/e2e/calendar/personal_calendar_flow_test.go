@@ -12,13 +12,14 @@ import (
 	rootAPI "github.com/moto-ogs/project-phoenix/api"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	calendarAPI "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/http"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/uptrace/bun"
 )
 
 func setupPersonalCalendarRoute(t *testing.T) (*bun.DB, chi.Router) {
@@ -116,7 +117,7 @@ func TestPersonalCalendarHTTPFlow_StaffInvitationRSVP(t *testing.T) {
 		"end_time":      "10:00",
 		"delivery_mode": "rsvp_required",
 		"targets": []map[string]any{
-			{"type": "staff", "id": invitee.ID},
+			{"type": "staff", "id": testpkg.ID(invitee.ID)},
 		},
 	}
 	createRR := doJSON(t, router, http.MethodPost, "/api/calendar/appointments", manageToken, createBody)
@@ -169,7 +170,7 @@ func TestPersonalCalendarHTTPFlow_EditCancelDeleteAndICS(t *testing.T) {
 		"start_time":    "09:00",
 		"end_time":      "10:00",
 		"delivery_mode": "rsvp_required",
-		"targets":       []map[string]any{{"type": "staff", "id": invitee.ID}},
+		"targets":       []map[string]any{{"type": "staff", "id": testpkg.ID(invitee.ID)}},
 	})
 	require.Equal(t, http.StatusCreated, createRR.Code, createRR.Body.String())
 	var created createAppointmentE2EResponse
@@ -251,7 +252,7 @@ func TestPersonalCalendarHTTPFlow_CancelOneOccurrence(t *testing.T) {
 		"end_time":      "15:00",
 		"delivery_mode": "informational",
 		"recurrence":    map[string]any{"frequency": "weekly", "interval_count": 1, "weekdays": []string{"monday"}, "ends_on": "2026-05-25"},
-		"targets":       []map[string]any{{"type": "staff", "id": invitee.ID}},
+		"targets":       []map[string]any{{"type": "staff", "id": testpkg.ID(invitee.ID)}},
 	})
 	require.Equal(t, http.StatusCreated, createRR.Code, createRR.Body.String())
 	var created createAppointmentE2EResponse
@@ -291,7 +292,7 @@ func TestPersonalCalendarHTTPFlow_ForbiddenEdit(t *testing.T) {
 		"start_time":    "09:00",
 		"end_time":      "10:00",
 		"delivery_mode": "informational",
-		"targets":       []map[string]any{{"type": "staff", "id": other.ID}},
+		"targets":       []map[string]any{{"type": "staff", "id": testpkg.ID(other.ID)}},
 	})
 	require.Equal(t, http.StatusCreated, createRR.Code, createRR.Body.String())
 	var created createAppointmentE2EResponse

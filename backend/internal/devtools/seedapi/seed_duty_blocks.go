@@ -1,6 +1,10 @@
 package api
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+)
 
 // Demo duties (#3822): staff tasks without children that take part in
 // absences and substitutions. „Essensausgabe“ runs in the Mensa with two
@@ -19,18 +23,18 @@ func seedDutyBlocks(rt *Runtime, categoryID, trackID int64, staffIDs []int64) er
 	}
 	duties := []map[string]any{
 		{
-			"name": "Essensausgabe", "start_time": "12:00", "end_time": "13:00", "room_id": mensaID,
-			"staff_ids": staffIDs[2:4], "primary_staff_id": staffIDs[2], "required_staff": 2,
+			"name": "Essensausgabe", "start_time": "12:00", "end_time": "13:00", "room_id": ident.ID(mensaID),
+			"staff_ids": ident.IDs(staffIDs[2:4]), "primary_staff_id": ident.ID(staffIDs[2]), "required_staff": 2,
 		},
 		{
-			"name": "Busaufsicht", "start_time": "16:00", "end_time": "16:30", "room_id": aulaID,
-			"staff_ids": staffIDs[3:4], "primary_staff_id": staffIDs[3], "required_staff": 1,
+			"name": "Busaufsicht", "start_time": "16:00", "end_time": "16:30", "room_id": ident.ID(aulaID),
+			"staff_ids": ident.IDs(staffIDs[3:4]), "primary_staff_id": ident.ID(staffIDs[3]), "required_staff": 1,
 		},
 	}
 	for _, body := range duties {
 		body["type"], body["target_group_type"] = "duty", "none"
 		body["weekdays"], body["week_pattern"] = []int{1, 2, 3, 4, 5}, 0
-		body["category_id"], body["planning_track_id"] = categoryID, trackID
+		body["category_id"], body["planning_track_id"] = ident.ID(categoryID), ident.ID(trackID)
 		planFromMonday(body, 13)
 		if _, err := rt.Client.Post("/api/timetable/templates", body); err != nil {
 			return fmt.Errorf("create duty %s: %w", body["name"], err)

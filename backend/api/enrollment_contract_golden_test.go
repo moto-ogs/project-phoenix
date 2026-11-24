@@ -55,7 +55,7 @@ func checkEnrollmentSubmissionGolden(t *testing.T, api *goldenRuntime) {
 		t.Run(scenario.name, func(t *testing.T) {
 			// The form sends the token of the form load it filled (ADR 0311).
 			terms := goldenFormTerms(t, api, scenario.form, scenario.token)
-			body := fmt.Sprintf(`{"expected_terms_fingerprint":%q,"phase_id":%d,"guardian_first_name":"Contract","guardian_last_name":"Guardian","guardian_email":"contract-%s@example.test","consent_flags":{"agb":true,"data_processing":true,"email_contact":true,"photo":true},"children":[{"first_name":"Contract","last_name":"Child-%s","date_of_birth":"2018-04-15","target_grade_level":2}]}`, terms, phase.ID, scenario.name, scenario.name)
+			body := fmt.Sprintf(`{"expected_terms_fingerprint":%q,"phase_id":"%d","guardian_first_name":"Contract","guardian_last_name":"Guardian","guardian_email":"contract-%s@example.test","consent_flags":{"agb":true,"data_processing":true,"email_contact":true,"photo":true},"children":[{"first_name":"Contract","last_name":"Child-%s","date_of_birth":"2018-04-15","target_grade_level":2}]}`, terms, phase.ID, scenario.name, scenario.name)
 			response := checkpointRequest(api, checkpointScenario{Method: http.MethodPost, Path: scenario.path, Authenticated: scenario.token != "", Body: body}, scenario.token)
 			require.Equal(t, http.StatusCreated, response.Code, response.Body.String())
 			require.True(t, strings.HasPrefix(response.Header().Get("Content-Type"), "application/json"))
@@ -370,7 +370,7 @@ func checkEnrollmentChangeRequestDialogueGolden(t *testing.T, api *goldenRuntime
 
 	publicBase := "/api/enrollment/requests/" + statusToken + "/change-requests"
 	terms := goldenFormTerms(t, api, "/api/enrollment/requests/"+statusToken+"/edit-bootstrap", "")
-	proposal := fmt.Sprintf(`{"expected_terms_fingerprint":%q,"phase_id":%d,"guardian_first_name":"Contract","guardian_last_name":"Guardian-Korrigiert","guardian_email":"contract-public@example.test","consent_flags":{"agb":true,"data_processing":true,"email_contact":true,"photo":true},"children":[{"id":"%d","first_name":"Contract","last_name":"Child-public","date_of_birth":"2018-04-15","target_grade_level":2}],"parent_note":"Nachname korrigiert."}`, terms, phaseID, childID)
+	proposal := fmt.Sprintf(`{"expected_terms_fingerprint":%q,"phase_id":"%d","guardian_first_name":"Contract","guardian_last_name":"Guardian-Korrigiert","guardian_email":"contract-public@example.test","consent_flags":{"agb":true,"data_processing":true,"email_contact":true,"photo":true},"children":[{"id":"%d","first_name":"Contract","last_name":"Child-public","date_of_birth":"2018-04-15","target_grade_level":2}],"parent_note":"Nachname korrigiert."}`, terms, phaseID, childID)
 	created := checkpointRequest(api, checkpointScenario{Method: http.MethodPost, Path: publicBase, Body: proposal}, "")
 	require.Equal(t, http.StatusCreated, created.Code, created.Body.String())
 	var createdEnvelope struct {

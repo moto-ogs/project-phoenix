@@ -65,12 +65,12 @@ func TestBookingAccountsAreFrozenOntoTheIssuedPositions(t *testing.T) {
 
 	put := func(scope string, scopeID int64, account string) int {
 		rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, bookingAccountsPath+"/revenue-accounts",
-			map[string]any{"scope": scope, "scope_id": scopeID, "account": account})
+			map[string]any{"scope": scope, "scope_id": fmt.Sprint(scopeID), "account": account})
 		return rec.Code
 	}
 	addCenter := func(scope string, scopeID int64, from, code string) int {
 		rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, bookingAccountsPath+"/cost-centers",
-			map[string]any{"scope": scope, "scope_id": scopeID, "valid_from": from, "code": code})
+			map[string]any{"scope": scope, "scope_id": fmt.Sprint(scopeID), "valid_from": from, "code": code})
 		return rec.Code
 	}
 	require.Equal(t, http.StatusOK, put("offering", int64(offering.CareOfferingID), "4410"))
@@ -149,7 +149,7 @@ func TestBookingAccountsRightsAndTraeger(t *testing.T) {
 	f := sepaDebitFixture(t, "Träger Konten Rechte")
 	careContract(t, f.db, f.office.organization, f.office.schools[0], "Mia", sepaDebitMonth, sjrServices()...)
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, bookingAccountsPath+"/cost-centers",
-		map[string]any{"scope": "holiday", "scope_id": 0, "valid_from": "2029-01-01", "code": "FER"})
+		map[string]any{"scope": "holiday", "scope_id": "0", "valid_from": "2029-01-01", "code": "FER"})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	center := bookingAccountsOf(t, f).CostCenters[0].ID
 
@@ -157,14 +157,14 @@ func TestBookingAccountsRightsAndTraeger(t *testing.T) {
 	rec = exportGet(t, careBillingFixture{db: f.db, traeger: f.traeger, office: leadership}, "/booking-accounts")
 	assert.Equal(t, http.StatusForbidden, rec.Code, "the right Finanz-Export")
 	rec = traegerJSON(t, f.traeger, leadership.token, http.MethodPut, bookingAccountsPath+"/revenue-accounts",
-		map[string]any{"scope": "care", "scope_id": 0, "account": "4400"})
+		map[string]any{"scope": "care", "scope_id": "0", "account": "4400"})
 	assert.Equal(t, http.StatusForbidden, rec.Code)
 
 	other := sepaDebitFixture(t, "Träger Konten Fremd")
 	page := bookingAccountsOf(t, other)
 	assert.Empty(t, page.CostCenters, "no cost center of another Träger")
 	rec = traegerJSON(t, other.traeger, other.office.token, http.MethodPost, bookingAccountsPath+"/cost-centers",
-		map[string]any{"scope": "school", "scope_id": f.office.schools[0], "valid_from": "2029-01-01", "code": "X"})
+		map[string]any{"scope": "school", "scope_id": fmt.Sprint(f.office.schools[0]), "valid_from": "2029-01-01", "code": "X"})
 	assert.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), `"code":"general.`)
 	rec = traegerJSON(t, other.traeger, other.office.token, http.MethodDelete, fmt.Sprintf("%s/cost-centers/%d", bookingAccountsPath, center), nil)
@@ -202,13 +202,13 @@ func TestBookingAccountsQueryBudgetStaysFlatAsAssignmentsGrow(t *testing.T) {
 			// Distinct offerings per school make every result collection grow.
 			prices := carePriceList(school, sepaDebitMonth, 3200)
 			for j, price := range prices["prices"].([]map[string]any) {
-				price["care_offering_id"] = int64(10000 + 2*i + j%2)
+				price["care_offering_id"] = fmt.Sprint(10000 + 2*i + j%2)
 			}
 			rec := putCarePriceList(t, f.traeger, f.office.token, prices)
 			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 			for j := range 2 {
 				rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, bookingAccountsPath+"/revenue-accounts",
-					map[string]any{"scope": "offering", "scope_id": int64(10000 + 2*i + j), "account": "4410"})
+					map[string]any{"scope": "offering", "scope_id": fmt.Sprint(int64(10000 + 2*i + j)), "account": "4410"})
 				require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 			}
 			// Insert only the new schools' assignments in the second iteration.
@@ -217,7 +217,7 @@ func TestBookingAccountsQueryBudgetStaysFlatAsAssignmentsGrow(t *testing.T) {
 			}
 			for _, from := range []string{"2029-01-01", "2030-01-01", "2031-01-01"} {
 				rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, bookingAccountsPath+"/cost-centers",
-					map[string]any{"scope": "school", "scope_id": school, "valid_from": from, "code": fmt.Sprintf("K%d", i)})
+					map[string]any{"scope": "school", "scope_id": fmt.Sprint(school), "valid_from": from, "code": fmt.Sprintf("K%d", i)})
 				require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 			}
 		}

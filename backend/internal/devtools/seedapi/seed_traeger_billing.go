@@ -60,7 +60,7 @@ func seedHolidayBillingRun(client *Client, auth AuthRef, periodID, costBearerID 
 	if _, err := client.PutWithAuth(auth, "/traeger/billing-document-kinds/holiday", map[string]any{"document_kind": "confirmation"}); err != nil {
 		return 0, fmt.Errorf("choose the kind of document: %w", err)
 	}
-	raw, err := client.PostWithAuth(auth, "/traeger/billing-runs/", map[string]any{"holiday_period_id": periodID})
+	raw, err := client.PostWithAuth(auth, "/traeger/billing-runs/", map[string]any{"holiday_period_id": ident.ID(periodID)})
 	if err != nil {
 		return 0, fmt.Errorf("start the billing run: %w", err)
 	}

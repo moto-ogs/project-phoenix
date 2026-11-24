@@ -1,13 +1,13 @@
 package users
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // Bulk invitation (#3378): a school whose children and contacts already
@@ -70,7 +70,7 @@ func (rs *GuardianResource) bulkInviteGuardians(w http.ResponseWriter, r *http.R
 		return
 	}
 	var body bulkInviteRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		rs.failMessage(w, r, FailureInvalidRequest, "invalid request body")
 		return
 	}

@@ -1,11 +1,11 @@
 package staff
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // PlannedExitRequest enters or moves the last working day of a staff member
@@ -25,7 +25,7 @@ func (rs *Resource) planExit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var request PlannedExitRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil || request.LastWorkingDay == "" {
+	if err := wire.Decode(r.Body, &request); err != nil || request.LastWorkingDay == "" {
 		rs.failure(w, r, FailureInvalidRequest, errors.New("last_working_day is required (YYYY-MM-DD)"), "invalid_request")
 		return
 	}

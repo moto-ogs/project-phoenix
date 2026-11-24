@@ -170,7 +170,7 @@ func TestCancellationShowsTheCorrectionOfACostTakeover(t *testing.T) {
 	second := f.submitChild(t, f.period, f.offer, "papa.traeger@example.org", "Tom", 0)
 	require.Equal(t, http.StatusOK, f.merge(t, f.office.token, first, second).Code)
 	require.Equal(t, http.StatusOK, f.confirmWith(t, first, nil).Code)
-	rec := f.confirmWith(t, second, map[string]any{"cost_bearer_id": bearer.ID})
+	rec := f.confirmWith(t, second, map[string]any{"cost_bearer_id": fmt.Sprint(bearer.ID)})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	setNumberRange(t, f, billing, "FE-{NNNN}")

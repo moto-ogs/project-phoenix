@@ -1,12 +1,12 @@
 package staffshifts
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -25,7 +25,7 @@ type PlanExportRequest struct {
 // the permission set matches GET /overview exactly.
 func (rs *Resource) exportPlan(w http.ResponseWriter, r *http.Request) {
 	var req PlanExportRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		rs.invalid(w, r, errors.New("invalid JSON body"))
 		return
 	}

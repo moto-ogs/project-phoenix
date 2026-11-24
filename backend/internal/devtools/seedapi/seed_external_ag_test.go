@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -26,11 +28,11 @@ func TestSeedExternalAGBodyPlansTheExternalAsOnlyAndResponsibleStaff(t *testing.
 	assert.Equal(t, "activity", body["type"])
 	assert.Equal(t, 0, body["week_pattern"], "weekly")
 	assert.Equal(t, []int{4}, body["weekdays"], "on the weekday of the seed")
-	assert.Equal(t, []int64{13}, body["staff_ids"])
-	assert.Equal(t, int64(13), body["primary_staff_id"])
-	assert.Equal(t, int64(11), body["room_id"])
-	assert.Equal(t, int64(12), body["category_id"])
-	assert.Equal(t, students[12:], body["student_ids"])
+	assert.Equal(t, []ident.ID{13}, body["staff_ids"])
+	assert.Equal(t, ident.ID(13), body["primary_staff_id"])
+	assert.Equal(t, ident.ID(11), body["room_id"])
+	assert.Equal(t, ident.ID(12), body["category_id"])
+	assert.Equal(t, ident.IDs(students[12:]), body["student_ids"])
 	assert.Equal(t, "2026-10-22", body["materialize_from"])
 	assert.Equal(t, []int{1}, seedExternalAGBody(saturday, 11, 12, 13, students)["weekdays"], "a weekend seed plans Monday")
 }
@@ -62,9 +64,9 @@ func TestSeedExternalAGStepPlansTheAcceptedExternal(t *testing.T) {
 	require.NoError(t, seedExternalAGStep{}.Run(t.Context(), rt))
 
 	require.Len(t, templates, 1)
-	assert.Equal(t, []any{float64(77)}, templates[0]["staff_ids"])
-	assert.Equal(t, float64(77), templates[0]["primary_staff_id"])
-	assert.Equal(t, float64(24), templates[0]["room_id"])
+	assert.Equal(t, []any{"77"}, templates[0]["staff_ids"])
+	assert.Equal(t, "77", templates[0]["primary_staff_id"])
+	assert.Equal(t, "24", templates[0]["room_id"])
 }
 
 func TestSeedExternalAGStepFailsWithoutTheExternal(t *testing.T) {

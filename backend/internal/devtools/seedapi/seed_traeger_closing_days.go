@@ -69,7 +69,7 @@ func (seedHolidayClosuresStep) Run(_ context.Context, rt *Runtime) error {
 // confirms that preview with the save, which tells their parents. It
 // returns how many families the save told.
 func seedPlanTraegerClosingDay(client *Client, auth AuthRef, from, to calendar.Date, reason string, schools []int64) (int, error) {
-	body := map[string]any{"start_date": from.String(), "end_date": to.String(), "reason": reason, "school_ids": schools}
+	body := map[string]any{"start_date": from.String(), "end_date": to.String(), "reason": reason, "school_ids": ident.IDs(schools)}
 	raw, err := client.PostWithAuth(auth, "/traeger/holiday-closures/preview", body)
 	if err != nil {
 		return 0, fmt.Errorf("preview the holiday bookings of the closing day: %w", err)

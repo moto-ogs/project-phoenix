@@ -182,9 +182,9 @@ func seedTraegerStaffSuggestions(client *Client, auth AuthRef) ([]seedTraegerSta
 // seedTraegerStaffLink confirms one proposal with the first value of every
 // field the schools disagree on; it returns 0 when another run linked it.
 func seedTraegerStaffLink(client *Client, auth AuthRef, suggestion seedTraegerStaffSuggestion) (int64, error) {
-	members := make([]map[string]int64, 0, len(suggestion.Members))
+	members := make([]map[string]ident.ID, 0, len(suggestion.Members))
 	for _, member := range suggestion.Members {
-		members = append(members, map[string]int64{"school_id": int64(member.SchoolID), "staff_id": int64(member.StaffID)})
+		members = append(members, map[string]ident.ID{"school_id": member.SchoolID, "staff_id": member.StaffID})
 	}
 	body := map[string]any{"members": members}
 	if suggestion.RecordID != nil {

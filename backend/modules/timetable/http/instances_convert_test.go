@@ -11,6 +11,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	timetableModule "github.com/moto-ogs/project-phoenix/modules/timetable"
 	timetableCompose "github.com/moto-ogs/project-phoenix/modules/timetable/compose"
 	timetablePorts "github.com/moto-ogs/project-phoenix/modules/timetable/ports"
@@ -18,8 +21,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type stubInstanceSeriesConverter struct {
@@ -81,7 +82,7 @@ func TestConvertInstanceToSeries_MapsRequestAndResponse(t *testing.T) {
 	s.res.InstanceSeriesConverter = converter
 	router := conversionRouter(s.ctx, s.res)
 	body := createTemplateBody(s, "Tpl-Convert-HTTP")
-	body["calendar_period_id"] = period.ID
+	body["calendar_period_id"] = fmt.Sprint(period.ID)
 	body["start_date"] = "2026-05-04"
 	body["instance_notes"] = "Tageshinweis"
 
@@ -133,7 +134,7 @@ func TestConvertInstanceToSeries_PreservesTemplateValidationErrorContract(t *tes
 	defer s.cleanupFn()
 	period := createTemplateTestPeriod(t, s.db, "Tpl-Convert-Errors-Period")
 	body := createTemplateBody(s, "Tpl-Convert-Errors")
-	body["calendar_period_id"] = period.ID
+	body["calendar_period_id"] = fmt.Sprint(period.ID)
 	body["start_date"] = "2026-05-04"
 
 	tests := []struct {
@@ -173,7 +174,7 @@ func TestConvertInstanceToSeries_LinksExistingOccurrenceAndRejectsRetry(t *testi
 
 	router := conversionRouter(s.ctx, s.res)
 	body := createTemplateBody(s, "Tpl-Convert-Atomic")
-	body["calendar_period_id"] = period.ID
+	body["calendar_period_id"] = fmt.Sprint(period.ID)
 	body["start_date"] = date.String()
 	body["weekdays"] = []int{timetableModule.WeekdayMonday}
 	read := instanceReadVersion(t, router, date, instance.ID)
@@ -286,11 +287,11 @@ func TestConvertInstanceToSeries_UsesOfferingRosterForExistingSeed(t *testing.T)
 	s.res.InstanceSeriesConverter = converter
 	router := conversionRouter(s.ctx, s.res)
 	body := createTemplateBody(s, "Tpl-Convert-Source")
-	body["calendar_period_id"] = period.ID
+	body["calendar_period_id"] = fmt.Sprint(period.ID)
 	body["start_date"] = date.String()
 	body["weekdays"] = []int{timetableModule.WeekdayMonday}
 	body["target_group_type"] = timetableModule.TargetGroupTypeOffering
-	body["source_care_offering_ids"] = []int64{17}
+	body["source_care_offering_ids"] = []string{fmt.Sprint(17)}
 	body["student_ids"] = []int64{}
 	body["expected_version"] = instanceReadVersion(t, router, date, instance.ID)
 
@@ -336,7 +337,7 @@ func TestConvertInstanceToSeries_RollsBackTemplateWhenLinkFails(t *testing.T) {
 	s.res.InstanceSeriesConverter = converter
 	router := conversionRouter(s.ctx, s.res)
 	body := createTemplateBody(s, "Tpl-Convert-Rollback")
-	body["calendar_period_id"] = period.ID
+	body["calendar_period_id"] = fmt.Sprint(period.ID)
 	body["start_date"] = date.String()
 	body["weekdays"] = []int{timetableModule.WeekdayMonday}
 
@@ -373,7 +374,7 @@ func TestConvertInstanceToSeries_RollsBackOrphanSeriesOn4xxLinkFailure(t *testin
 
 	router := conversionRouterWithOpts(s.ctx, s.res, s.db, true)
 	body := createTemplateBody(s, "Tpl-Convert-4xx-Orphan")
-	body["calendar_period_id"] = period.ID
+	body["calendar_period_id"] = fmt.Sprint(period.ID)
 	body["start_date"] = weekendStart.String()
 	body["weekdays"] = []int{timetableModule.WeekdayMonday}
 
@@ -411,7 +412,7 @@ func TestConvertInstanceToSeries_MarksRollbackOnServiceError(t *testing.T) {
 
 	s.res.InstanceSeriesConverter = &stubInstanceSeriesConverter{err: timetableModule.ErrInstanceAlreadyInSeries}
 	body := createTemplateBody(s, "Tpl-Convert-MarkRollback")
-	body["calendar_period_id"] = period.ID
+	body["calendar_period_id"] = fmt.Sprint(period.ID)
 	body["start_date"] = "2026-05-04"
 
 	// Inject a rollback marker without full TenantTxMiddleware so we can assert
