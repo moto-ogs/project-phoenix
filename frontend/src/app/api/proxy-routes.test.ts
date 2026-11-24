@@ -394,9 +394,11 @@ describe("BFF routes use the generated contract", () => {
     );
   });
 
+  // Parsing and checking all production source takes about 14 s on an idle
+  // machine; the parallel suite on a loaded runner needs headroom above that.
   it(
     "finds no retired route helpers or handwritten registered BFF addresses in production source",
-    { timeout: 15_000 },
+    { timeout: 45_000 },
     () => {
       const sources = readdirSync(src, { recursive: true, encoding: "utf8" })
         .filter(
