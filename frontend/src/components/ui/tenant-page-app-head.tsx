@@ -57,9 +57,9 @@ const COMPACT_HEIGHT_PX = 48;
 
 // Ein Pfeil statt „Zurück zu …“: Das Ziel steht im zugänglichen Namen.
 // Der Text des Kit-Links bleibt für Vorleseprogramme, sichtbar ist nur der
-// Pfeil (Fläche 44 × 40 px).
+// Pfeil (Fläche 44 × 44 px).
 const ICON_BACK =
-  "shrink-0 [&>a]:m-0 [&>a]:h-11 [&>a]:w-10 [&>a]:overflow-hidden [&>a]:px-2.5 [&>a]:whitespace-nowrap [&>a]:text-transparent [&_svg]:size-5 [&_svg]:text-gray-800";
+  "shrink-0 [&>a]:m-0 [&>a]:h-11 [&>a]:w-11 [&>a]:overflow-hidden [&>a]:px-2.5 [&>a]:whitespace-nowrap [&>a]:text-transparent [&_svg]:size-5 [&_svg]:text-gray-800";
 
 export interface AppHeadProps {
   readonly title: string;
