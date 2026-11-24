@@ -1171,9 +1171,9 @@
     },
     {
       "build": "production",
-      "evidence": "func (d operatorSettingsSchools) SchoolSlug(ctx context.Context, schoolID int64) (string, error) {\n\tschool, err := d.schools.FindSchool(ctx, schoolID)\n\tif err != nil {\n\t\treturn \"\", err\n\t}\n\treturn school.Slug, nil\n}",
+      "evidence": "func (d operatorSettingsSchools) SchoolSubdomain(ctx context.Context, schoolID int64) (string, error) {\n\tschool, err := d.schools.FindSchool(ctx, schoolID)\n\tif err != nil {\n\t\treturn \"\", err\n\t}\n\treturn school.Subdomain, nil\n}",
       "form": "unclassified-evidence",
-      "id": "api/operatorSettingsSchools.SchoolSlug",
+      "id": "api/operatorSettingsSchools.SchoolSubdomain",
       "owner": "roots"
     },
     {

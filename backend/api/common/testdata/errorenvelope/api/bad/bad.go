@@ -96,3 +96,10 @@ type titledProblem struct {
 	Title  string `json:"title"`
 	Detail string `json:"detail"`
 }
+
+type misplacedExtension struct {
+	Status  int      `json:"status"`
+	Detail  string   `json:"detail"`
+	Code    string   `json:"code"`
+	Reasons []string `json:"because"`
+}

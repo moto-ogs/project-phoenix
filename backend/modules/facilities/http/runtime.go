@@ -111,9 +111,9 @@ func renderConflict(w http.ResponseWriter, r *http.Request, err error, code stri
 	switch {
 	case errors.As(err, &stillPlanned):
 		refs := stillPlanned.References
-		apiCommon.RenderError(w, r, apiCommon.ErrorConflictWithDetails(err, apiCommon.CodeRoomsStillPlanned, map[string]any{
-			"activity_groups": refs.ActivityGroups, "upcoming_blocks": refs.UpcomingBlocks,
-			"education_groups": refs.EducationGroups, "devices": refs.Devices,
+		apiCommon.RenderError(w, r, apiCommon.ErrorConflictWithDetails(err, apiCommon.CodeRoomsStillPlanned, RoomStillPlannedDetails{
+			ActivityGroups: refs.ActivityGroups, UpcomingBlocks: refs.UpcomingBlocks,
+			EducationGroups: refs.EducationGroups, Devices: refs.Devices,
 		}))
 	case code == "color_already_in_use":
 		apiCommon.RenderError(w, r, apiCommon.ErrorConflictWithCode(err, apiCommon.CodeRoomsColorAlreadyInUse))

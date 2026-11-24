@@ -32,14 +32,6 @@ import (
 var handlerQueryReadsOutsideContract = map[string][]string{
 	// ?format=pdf stays for existing calls (ADR 0270, public files)
 	"GET /api/enrollment/requests/{statusToken}": {"format"},
-	// the route answers the PDF; format is read by the shared helper
-	"GET /api/enrollment/requests/{statusToken}/signature-proof": {"format"},
-	// the overview's filter parser; coverage uses only year and month
-	"GET /api/staff/time-tracking/target-coverage": {"employment_type", "order", "sort"},
-	// no client asks for target_only
-	"GET /api/staff/{id}/time-tracking/schedule-targets": {"target_only"},
-	// no client sends kind; the invoice letter is the default
-	"POST /traeger/care-billing-runs/{id}/invoices/{invoiceID}/cancellation": {"kind"},
 }
 
 // checkHandlerQueryReadsAreRegistered holds every query parameter a route's
@@ -65,6 +57,7 @@ func checkHandlerQueryReadsAreRegistered(t *testing.T, apiInstance *goldenRuntim
 	}))
 	index := newQueryReadIndex(t)
 	unregistered := map[string][]string{}
+	var untypedIDs []string
 	for _, route := range doc.Routes {
 		name, found := handlers[route.Key()]
 		if !found {
@@ -80,13 +73,18 @@ func checkHandlerQueryReadsAreRegistered(t *testing.T, apiInstance *goldenRuntim
 		// FormValue reads the form body first; only a route without one
 		// reads it from the query.
 		bodiless := route.Request == nil && !route.Multipart
-		for _, key := range index.handlerReads(name, bodiless) {
-			if !registered[key] {
-				unregistered[route.Key()] = append(unregistered[route.Key()], key)
+		reads := index.handlerQuery(name)
+		if missed := reads.unregistered(registered, bodiless); len(missed) > 0 {
+			unregistered[route.Key()] = missed
+		}
+		for _, param := range route.Query {
+			if param.Kind == "string" && param.TextReason == "" && reads.idKeys[param.Name] {
+				untypedIDs = append(untypedIDs, route.Key()+" ?"+param.Name)
 			}
 		}
 	}
 	assertQueryReadBaseline(t, unregistered, doc.Routes)
+	assert.Empty(t, untypedIDs, "queries parsed as IDs need QueryID or a documented text alternative")
 }
 
 func assertQueryReadBaseline(t *testing.T, found map[string][]string, routes []contract.Route) {
@@ -123,6 +121,40 @@ func containsString(values []string, value string) bool {
 		}
 	}
 	return false
+}
+
+func TestQueryReadGuardTracksAliasedUnregisteredID(t *testing.T) {
+	t.Parallel()
+
+	source, err := parser.ParseFile(token.NewFileSet(), "probe.go", `package probe
+import numbers "strconv"
+func endpoint(request *http.Request) {
+	values := request.URL.Query()
+	alias := values
+	keys := []string{"hidden"}
+	for _, key := range keys {
+		value := alias.Get(key)
+		consume(value)
+	}
+}
+func consume(value string) {
+	_, _ = numbers.ParseInt(value, 10, 64)
+}
+`, 0)
+	require.NoError(t, err)
+	pkg := &queryReadPackage{funcs: map[string]*ast.FuncDecl{}, imports: map[*ast.FuncDecl]map[string]string{}}
+	for _, decl := range source.Decls {
+		if fn, ok := decl.(*ast.FuncDecl); ok {
+			pkg.funcs[fn.Name.Name] = fn
+			pkg.imports[fn] = queryReadFileImports(source)
+		}
+	}
+	ix := newQueryReadIndex(t)
+	handler := pkg.funcs["endpoint"]
+	reads := ix.analyze(pkg, handler, handler)
+	assert.Equal(t, []string{"hidden"}, reads.unregistered(map[string]bool{"other": true}, true))
+	assert.Empty(t, reads.unregistered(map[string]bool{"hidden": true}, true))
+	assert.True(t, reads.idKeys["hidden"], "a QueryString would pass a bigint to the parser")
 }
 
 // handlerFuncName is the Go name of a handler function, as the runtime knows
@@ -164,6 +196,9 @@ type queryReadResult struct {
 	formKeys    map[string]bool
 	keyedParams map[int]bool
 	formParams  map[int]bool
+	idKeys      map[string]bool
+	idParams    map[int]bool
+	parsed      map[int]bool
 }
 
 func newQueryReadIndex(t *testing.T) *queryReadIndex {
@@ -184,20 +219,23 @@ func newQueryReadIndex(t *testing.T) *queryReadIndex {
 }
 
 // handlerReads lists the keys the function the runtime names reads.
-func (ix *queryReadIndex) handlerReads(runtimeName string, withForm bool) []string {
+func (ix *queryReadIndex) handlerQuery(runtimeName string) *queryReadResult {
 	name := splitRuntimeName(runtimeName)
 	pkg := ix.pkg(name.pkgPath)
 	if pkg == nil {
-		return nil
+		return &queryReadResult{}
 	}
 	decl := pkg.funcs[name.funcName]
 	if name.recvType != "" {
 		decl = pkg.methods[name.recvType+"."+name.funcName]
 	}
 	if decl == nil {
-		return nil
+		return &queryReadResult{}
 	}
-	result := ix.analyze(pkg, decl, closureAt(decl, name.closure))
+	return ix.analyze(pkg, decl, closureAt(decl, name.closure))
+}
+
+func (result *queryReadResult) names(withForm bool) []string {
 	seen := map[string]bool{}
 	for key := range result.keys {
 		seen[key] = true
@@ -213,6 +251,16 @@ func (ix *queryReadIndex) handlerReads(runtimeName string, withForm bool) []stri
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+func (result *queryReadResult) unregistered(registered map[string]bool, withForm bool) []string {
+	var missing []string
+	for _, key := range result.names(withForm) {
+		if !registered[key] {
+			missing = append(missing, key)
+		}
+	}
+	return missing
 }
 
 type runtimeFuncName struct {
@@ -302,7 +350,9 @@ func loadQueryReadPackage(t *testing.T, root, pkgPath string) *queryReadPackage 
 		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
 			continue
 		}
-		file, err := parser.ParseFile(fset, filepath.Join(dir, name), nil, parser.SkipObjectResolution)
+		// Resolve lexical declarations: the scanner follows local aliases and
+		// parameters by their declaration rather than by their spelling.
+		file, err := parser.ParseFile(fset, filepath.Join(dir, name), nil, 0)
 		require.NoError(t, err)
 		fileImports := queryReadFileImports(file)
 		for _, decl := range file.Decls {
@@ -388,20 +438,22 @@ func (ix *queryReadIndex) analyze(pkg *queryReadPackage, decl *ast.FuncDecl, nod
 	if result, done := ix.results[node]; done {
 		return result
 	}
-	result := &queryReadResult{keys: map[string]bool{}, formKeys: map[string]bool{}, keyedParams: map[int]bool{}, formParams: map[int]bool{}}
+	result := &queryReadResult{keys: map[string]bool{}, formKeys: map[string]bool{}, keyedParams: map[int]bool{}, formParams: map[int]bool{},
+		idKeys: map[string]bool{}, idParams: map[int]bool{}, parsed: map[int]bool{}}
 	ix.results[node] = result // a recursive call sees what is known so far
 	fnType, body := decl.Type, decl.Body
 	if literal, ok := node.(*ast.FuncLit); ok {
 		fnType, body = literal.Type, literal.Body
 	}
 	recvType, recvName := receiver(decl)
-	scan := &queryReadScan{ix: ix, pkg: pkg, imports: pkg.imports[decl], result: result, params: paramIndexes(fnType), values: valuesParams(fnType), recvType: recvType, recvName: recvName}
+	scan := &queryReadScan{ix: ix, pkg: pkg, imports: pkg.imports[decl], result: result, params: paramIndexes(fnType), values: valuesParams(fnType, pkg.imports[decl]), recvType: recvType, recvName: recvName,
+		assignments: queryAssignments(body)}
 	ast.Inspect(body, scan.visit)
 	return result
 }
 
-func paramIndexes(fnType *ast.FuncType) map[string]int {
-	indexes := map[string]int{}
+func paramIndexes(fnType *ast.FuncType) map[token.Pos]int {
+	indexes := map[token.Pos]int{}
 	position := 0
 	for _, field := range fnType.Params.List {
 		if len(field.Names) == 0 {
@@ -409,7 +461,7 @@ func paramIndexes(fnType *ast.FuncType) map[string]int {
 			continue
 		}
 		for _, name := range field.Names {
-			indexes[name.Name] = position
+			indexes[queryBinding(name)] = position
 			position++
 		}
 	}
@@ -417,38 +469,79 @@ func paramIndexes(fnType *ast.FuncType) map[string]int {
 }
 
 // valuesParams are the parameters of type url.Values.
-func valuesParams(fnType *ast.FuncType) map[string]bool {
-	values := map[string]bool{}
+func valuesParams(fnType *ast.FuncType, imports map[string]string) map[token.Pos]bool {
+	values := map[token.Pos]bool{}
 	for _, field := range fnType.Params.List {
-		if sel, ok := field.Type.(*ast.SelectorExpr); ok && sel.Sel.Name == "Values" && isIdent(sel.X, "url") {
-			for _, name := range field.Names {
-				values[name.Name] = true
-			}
+		sel, ok := field.Type.(*ast.SelectorExpr)
+		if !ok || sel.Sel.Name != "Values" {
+			continue
+		}
+		qualifier, ok := sel.X.(*ast.Ident)
+		if !ok || imports[qualifier.Name] != "net/url" {
+			continue
+		}
+		for _, name := range field.Names {
+			values[queryBinding(name)] = true
 		}
 	}
 	return values
 }
 
-func isIdent(expr ast.Expr, name string) bool {
-	ident, ok := expr.(*ast.Ident)
-	return ok && ident.Name == name
+// queryBinding identifies a local by its declaration, not by its spelling.
+func queryBinding(id *ast.Ident) token.Pos {
+	if id.Obj == nil {
+		return token.NoPos
+	}
+	return id.Obj.Pos()
 }
 
 type queryReadScan struct {
-	ix       *queryReadIndex
-	pkg      *queryReadPackage
-	imports  map[string]string
-	result   *queryReadResult
-	params   map[string]int
-	values   map[string]bool // identifiers holding url.Values
-	recvType string
-	recvName string
+	ix          *queryReadIndex
+	pkg         *queryReadPackage
+	imports     map[string]string
+	result      *queryReadResult
+	params      map[token.Pos]int
+	values      map[token.Pos]bool // parameters holding url.Values
+	assignments map[token.Pos][]ast.Expr
+	recvType    string
+	recvName    string
+}
+
+func queryAssignments(body *ast.BlockStmt) map[token.Pos][]ast.Expr {
+	values := map[token.Pos][]ast.Expr{}
+	remember := func(left ast.Expr, right ast.Expr) {
+		if id, ok := left.(*ast.Ident); ok {
+			if origin := queryBinding(id); origin.IsValid() {
+				values[origin] = append(values[origin], right)
+			}
+		}
+	}
+	ast.Inspect(body, func(node ast.Node) bool {
+		switch n := node.(type) {
+		case *ast.AssignStmt:
+			for i, left := range n.Lhs {
+				if len(n.Rhs) == 1 {
+					remember(left, n.Rhs[0])
+				} else if i < len(n.Rhs) {
+					remember(left, n.Rhs[i])
+				}
+			}
+		case *ast.ValueSpec:
+			for i, name := range n.Names {
+				if i < len(n.Values) {
+					remember(name, n.Values[i])
+				}
+			}
+		case *ast.RangeStmt:
+			remember(n.Value, n.X)
+		}
+		return true
+	})
+	return values
 }
 
 func (s *queryReadScan) visit(node ast.Node) bool {
 	switch n := node.(type) {
-	case *ast.AssignStmt:
-		s.noteValues(n)
 	case *ast.IndexExpr:
 		if s.isValues(n.X) {
 			s.readKey(n.Index, false)
@@ -457,17 +550,6 @@ func (s *queryReadScan) visit(node ast.Node) bool {
 		s.call(n)
 	}
 	return true
-}
-
-// noteValues remembers `q := r.URL.Query()`.
-func (s *queryReadScan) noteValues(assign *ast.AssignStmt) {
-	for i, rhs := range assign.Rhs {
-		if i < len(assign.Lhs) && isQueryCall(rhs) {
-			if ident, ok := assign.Lhs[i].(*ast.Ident); ok {
-				s.values[ident.Name] = true
-			}
-		}
-	}
 }
 
 // isQueryCall reports `<x>.URL.Query()`.
@@ -485,13 +567,34 @@ func isQueryCall(expr ast.Expr) bool {
 }
 
 func (s *queryReadScan) isValues(expr ast.Expr) bool {
-	if ident, ok := expr.(*ast.Ident); ok {
-		return s.values[ident.Name]
+	return s.isValuesOrigin(ast.Unparen(expr), map[token.Pos]bool{})
+}
+
+func (s *queryReadScan) isValuesOrigin(expr ast.Expr, visited map[token.Pos]bool) bool {
+	ident, ok := expr.(*ast.Ident)
+	if !ok {
+		return isQueryCall(expr)
 	}
-	return isQueryCall(expr)
+	origin := queryBinding(ident)
+	if !origin.IsValid() || visited[origin] {
+		return false
+	}
+	visited[origin] = true
+	if s.values[origin] {
+		return true
+	}
+	for _, value := range s.assignments[origin] {
+		if s.isValuesOrigin(ast.Unparen(value), visited) {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *queryReadScan) call(call *ast.CallExpr) {
+	if s.parsesIdentifier(call) {
+		s.idSource(call.Args[0], map[ast.Expr]bool{})
+	}
 	if sel, isSel := call.Fun.(*ast.SelectorExpr); isSel && len(call.Args) > 0 {
 		switch {
 		case (sel.Sel.Name == "Get" || sel.Sel.Name == "Has") && s.isValues(sel.X):
@@ -513,6 +616,19 @@ func (s *queryReadScan) call(call *ast.CallExpr) {
 	for key := range result.formKeys {
 		s.result.formKeys[key] = true
 	}
+	for key := range result.idKeys {
+		s.result.idKeys[key] = true
+	}
+	for position := range result.idParams {
+		if position < len(call.Args) {
+			s.recordKey(call.Args[position], s.result.idKeys, s.result.idParams)
+		}
+	}
+	for position := range result.parsed {
+		if position < len(call.Args) {
+			s.idSource(call.Args[position], map[ast.Expr]bool{})
+		}
+	}
 	for position := range result.keyedParams {
 		if position < len(call.Args) {
 			s.readKey(call.Args[position], false)
@@ -525,22 +641,92 @@ func (s *queryReadScan) call(call *ast.CallExpr) {
 	}
 }
 
+func (s *queryReadScan) parsesIdentifier(call *ast.CallExpr) bool {
+	sel, ok := ast.Unparen(call.Fun).(*ast.SelectorExpr)
+	if !ok || len(call.Args) == 0 {
+		return false
+	}
+	pkg, ok := sel.X.(*ast.Ident)
+	if !ok {
+		return false
+	}
+	path := s.imports[pkg.Name]
+	if path == backendModulePath+"/sharedkernel/ident" {
+		return strings.HasPrefix(sel.Sel.Name, "Parse")
+	}
+	if path != "strconv" || len(call.Args) != 3 || (sel.Sel.Name != "ParseInt" && sel.Sel.Name != "ParseUint") {
+		return false
+	}
+	width, literal := ast.Unparen(call.Args[2]).(*ast.BasicLit)
+	return literal && width.Value == "64"
+}
+
+// idSource follows the value fed into an ID parser, through aliases,
+// splitting/normalizing calls and arguments of backend helper functions.
+func (s *queryReadScan) idSource(expr ast.Expr, seen map[ast.Expr]bool) {
+	expr = ast.Unparen(expr)
+	if expr == nil || seen[expr] {
+		return
+	}
+	seen[expr] = true
+	switch found := expr.(type) {
+	case *ast.Ident:
+		origin := queryBinding(found)
+		if position, parameter := s.params[origin]; parameter {
+			s.result.parsed[position] = true
+		}
+		for _, value := range s.assignments[origin] {
+			s.idSource(value, seen)
+		}
+	case *ast.IndexExpr:
+		if s.isValues(found.X) {
+			s.recordKey(found.Index, s.result.idKeys, s.result.idParams)
+		} else {
+			s.idSource(found.X, seen)
+		}
+	case *ast.CallExpr:
+		if sel, ok := found.Fun.(*ast.SelectorExpr); ok && len(found.Args) == 1 && sel.Sel.Name == "Get" && s.isValues(sel.X) {
+			s.recordKey(found.Args[0], s.result.idKeys, s.result.idParams)
+			return
+		}
+		for _, arg := range found.Args {
+			s.idSource(arg, seen)
+		}
+	}
+}
+
 // readKey records a key: a constant string, or a parameter of the function.
 func (s *queryReadScan) readKey(expr ast.Expr, form bool) {
 	keys, params := s.result.keys, s.result.keyedParams
 	if form {
 		keys, params = s.result.formKeys, s.result.formParams
 	}
+	s.recordKey(expr, keys, params)
+}
+
+func (s *queryReadScan) recordKey(expr ast.Expr, keys map[string]bool, params map[int]bool) {
+	s.recordKeyOrigin(ast.Unparen(expr), keys, params, map[token.Pos]bool{})
+}
+
+func (s *queryReadScan) recordKeyOrigin(expr ast.Expr, keys map[string]bool, params map[int]bool, visited map[token.Pos]bool) {
 	switch key := expr.(type) {
 	case *ast.BasicLit:
 		if value, err := strconv.Unquote(key.Value); err == nil && key.Kind == token.STRING {
 			keys[value] = true
 		}
 	case *ast.Ident:
-		if position, isParam := s.params[key.Name]; isParam {
+		origin := queryBinding(key)
+		if origin.IsValid() && visited[origin] {
+			return
+		}
+		visited[origin] = true
+		if position, isParam := s.params[origin]; isParam {
 			params[position] = true
 		} else if value, isConst := s.pkg.consts[key.Name]; isConst {
 			keys[value] = true
+		}
+		for _, assigned := range s.assignments[origin] {
+			s.recordKeyOrigin(ast.Unparen(assigned), keys, params, visited)
 		}
 	case *ast.SelectorExpr:
 		if ident, ok := key.X.(*ast.Ident); ok {
@@ -549,6 +735,15 @@ func (s *queryReadScan) readKey(expr ast.Expr, form bool) {
 					keys[value] = true
 				}
 			}
+		}
+	case *ast.CompositeLit:
+		// Query names can come from a fixed collection, for example the
+		// two run kinds whose DATEV filters are read in a loop.
+		for _, element := range key.Elts {
+			if entry, ok := element.(*ast.KeyValueExpr); ok {
+				element = entry.Value
+			}
+			s.recordKeyOrigin(ast.Unparen(element), keys, params, visited)
 		}
 	}
 }

@@ -1,16 +1,524 @@
 {
   "problem_details": {
+    "care_contract.family_refused": {
+      "kind": "ref",
+      "ref": "FamilyRefusalDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/carecontract"
+    },
+    "care_contract.import_file_too_large": {
+      "kind": "ref",
+      "ref": "BodyLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
+    },
+    "care_contract.paper_document_invalid": {
+      "kind": "ref",
+      "ref": "BodyLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
+    },
     "classday.class_trip_status_conflict": {
       "kind": "ref",
-      "ref": "ClassTripConflictDetails"
+      "ref": "ClassTripConflictDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/classday/http"
+    },
+    "communication.letter_placeholder_unknown": {
+      "kind": "ref",
+      "ref": "PlaceholderDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
+    },
+    "communication.staff_group_name_invalid": {
+      "kind": "ref",
+      "ref": "StaffGroupNameLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/communication/http/staffmessages"
+    },
+    "communication.staff_group_too_large": {
+      "kind": "ref",
+      "ref": "StaffGroupSizeLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/communication/http/staffmessages"
+    },
+    "enrollment.care_offering_template_mixed_phases": {
+      "kind": "ref",
+      "ref": "CareOfferingSourceConflictValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/careplan"
+    },
+    "enrollment.care_offering_template_no_active_source": {
+      "kind": "ref",
+      "ref": "CareOfferingSourceConflictValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/careplan"
+    },
+    "enrollment.care_offering_template_outside_period": {
+      "kind": "ref",
+      "ref": "CareOfferingSourceConflictValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/careplan"
+    },
+    "enrollment.care_offering_template_source_invalid": {
+      "kind": "ref",
+      "ref": "CareOfferingSourceConflictValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/careplan"
+    },
+    "enrollment.child_possibly_enrolled": {
+      "kind": "ref",
+      "ref": "PossiblyEnrolledDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
+    },
+    "enrollment.complete_withdrawal_confirmation_required": {
+      "kind": "ref",
+      "ref": "WithdrawalConfirmationDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/workflows/parentportal/http"
+    },
+    "enrollment.holiday_allocation_full": {
+      "kind": "ref",
+      "ref": "HolidayAllocationDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
+    },
+    "enrollment.holiday_child_day_limit": {
+      "kind": "ref",
+      "ref": "HolidayChildDayLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
+    },
+    "enrollment.holiday_child_day_limit_public": {
+      "kind": "ref",
+      "ref": "PublicHolidayChildDayLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
+    },
+    "enrollment.holiday_proof_limit": {
+      "kind": "ref",
+      "ref": "HolidayProofLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
+    },
+    "enrollment.holiday_week_no_care_day": {
+      "kind": "ref",
+      "ref": "HolidayWeekNoCareDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
+    },
+    "enrollment.legal_document_invalid": {
+      "kind": "ref",
+      "ref": "SizeLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
+    },
+    "enrollment.phase_booking_bounds_conflict": {
+      "kind": "ref",
+      "ref": "BookingBoundsDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
+    },
+    "enrollment.upload_content_mismatch": {
+      "kind": "ref",
+      "ref": "UploadContentDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
+    },
+    "enrollment.upload_invalid": {
+      "kind": "ref",
+      "ref": "UploadRefusalDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
+    },
+    "files.file_too_large": {
+      "kind": "ref",
+      "ref": "SizeLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
+    },
+    "general.input": {
+      "kind": "ref",
+      "ref": "InputLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
+    },
+    "general.request_too_large": {
+      "kind": "ref",
+      "ref": "BodyLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
+    },
+    "identity.role_platform_permission": {
+      "kind": "ref",
+      "ref": "PermissionDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
+    },
+    "import.file_columns_missing": {
+      "kind": "ref",
+      "ref": "MissingColumnsDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/dataimport/http"
+    },
+    "import.file_row_invalid": {
+      "kind": "ref",
+      "ref": "InvalidRowDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/dataimport/http"
+    },
+    "import.file_too_large": {
+      "kind": "ref",
+      "ref": "BodyLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
+    },
+    "iot.deviation_reason_required": {
+      "kind": "ref",
+      "ref": "DeviationReasonDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking"
+    },
+    "iot.device_in_active_session": {
+      "kind": "ref",
+      "ref": "DeviceInActiveSessionDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/devicefleet/http/devices"
+    },
+    "iot.device_slots_full": {
+      "kind": "ref",
+      "ref": "SchoolDeviceSlotsDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/devicefleet/http/devices"
+    },
+    "iot.planned_start_not_reached": {
+      "kind": "ref",
+      "ref": "PlannedStartDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking"
+    },
+    "module.not_booked": {
+      "kind": "ref",
+      "ref": "ModuleNotBookedDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
+    },
+    "parent_billing.datev_bookings_invalid": {
+      "kind": "ref",
+      "ref": "DatevBookingsDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
+    },
+    "parent_billing.datev_not_ready": {
+      "kind": "ref",
+      "ref": "DatevReadinessDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
+    },
+    "parent_billing.debtor_number_digit_range": {
+      "kind": "ref",
+      "ref": "DebtorNumberDigitRangeDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
+    },
+    "parent_billing.debtor_number_digits": {
+      "kind": "ref",
+      "ref": "DebtorNumberDigitsDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
+    },
+    "parent_billing.family_children_import_file_too_large": {
+      "kind": "ref",
+      "ref": "BodyLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
+    },
+    "parent_billing.family_debtor_number_conflict": {
+      "kind": "ref",
+      "ref": "FamilyDebtorNumberDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
+    },
+    "parent_billing.issuer_creditor_is_traegers": {
+      "kind": "ref",
+      "ref": "BillingIssuerDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
+    },
+    "parent_billing.number_range_missing": {
+      "kind": "ref",
+      "ref": "NumberRangeMissingDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
+    },
+    "parent_billing.number_range_start_taken": {
+      "kind": "ref",
+      "ref": "NumberRangeTakenDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
+    },
+    "parent_billing.payment_text_debtor_number_missing": {
+      "kind": "ref",
+      "ref": "PaymentTextDebtorDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
+    },
+    "parent_billing.sepa_import_file_too_large": {
+      "kind": "ref",
+      "ref": "BodyLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
+    },
+    "parent_billing.sollstellung_revenue_account_missing": {
+      "kind": "ref",
+      "ref": "SollRevenueAccountDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
+    },
+    "presence.activity_participant_limit_reached": {
+      "kind": "ref",
+      "ref": "ActivityParticipantLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/studentpresence"
+    },
+    "presence.room_capacity_exceeded": {
+      "kind": "ref",
+      "ref": "RoomCapacityDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/studentpresence"
+    },
+    "provisioning.caregiver_capability_blocked": {
+      "kind": "ref",
+      "ref": "CaregiverCapabilityDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
+    },
+    "provisioning.device_active_session": {
+      "kind": "ref",
+      "ref": "DeviceRemovalDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/operator"
+    },
+    "provisioning.device_slots_below_occupied": {
+      "kind": "ref",
+      "ref": "DeviceSlotsBelowOccupiedDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/operator"
+    },
+    "provisioning.device_slots_full": {
+      "kind": "ref",
+      "ref": "DeviceSlotsDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/operator"
+    },
+    "provisioning.organization_has_schools": {
+      "kind": "ref",
+      "ref": "OrganizationHasSchoolsDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/operator"
+    },
+    "rooms.still_planned": {
+      "kind": "ref",
+      "ref": "RoomStillPlannedDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/facilities/http"
+    },
+    "settings.attendance_retention_below_visible": {
+      "kind": "ref",
+      "ref": "VisibleDaysDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/settings/inbound/operator"
+    },
+    "settings.attendance_visible_exceeds_retention": {
+      "kind": "ref",
+      "ref": "RetentionDaysDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/settings/inbound/operator"
+    },
+    "settings.module_required_by": {
+      "kind": "ref",
+      "ref": "ModuleRequiredByDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/settings/inbound/operator"
+    },
+    "settings.module_requires": {
+      "kind": "ref",
+      "ref": "ModuleRequiresDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/settings/inbound/operator"
+    },
+    "students.child_quota_reached": {
+      "kind": "ref",
+      "ref": "ChildQuotaDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/schoolmembership"
     },
     "students.companion_plan_conflict": {
       "kind": "ref",
-      "ref": "CompanionConflictDetails"
+      "ref": "CompanionConflictDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/careplan/http"
+    },
+    "students.export_selection_too_large": {
+      "kind": "ref",
+      "ref": "ExportSelectionDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/presenceprojection/http"
+    },
+    "students.pickup_reset_still_needed": {
+      "kind": "ref",
+      "ref": "PickupResetDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/careplan/http"
     },
     "students.status_day_conflict": {
       "kind": "ref",
-      "ref": "StatusDayConflictDetails"
+      "ref": "StatusDayConflictDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/studentpresence/http"
+    },
+    "timetable.calendar_period_overlap_conflict": {
+      "kind": "ref",
+      "ref": "CalendarPeriodOverlapDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/timetable/http"
+    },
+    "timetable.calendar_period_shift_series_conflict": {
+      "kind": "ref",
+      "ref": "CalendarPeriodShiftSeriesDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/timetable/http"
+    },
+    "timetable.dates_in_past": {
+      "kind": "ref",
+      "ref": "RefusalValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/timetable"
+    },
+    "timetable.export_range_too_large": {
+      "kind": "ref",
+      "ref": "RefusalValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/timetable"
+    },
+    "timetable.pickup_extension_too_many_blocks": {
+      "kind": "ref",
+      "ref": "RefusalValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/timetable"
+    },
+    "timetable.series_end_before_start": {
+      "kind": "ref",
+      "ref": "RefusalValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/timetable"
+    },
+    "timetable.series_end_outside_period": {
+      "kind": "ref",
+      "ref": "RefusalValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/timetable"
+    },
+    "timetable.substitute_absent_on_date": {
+      "kind": "ref",
+      "ref": "RefusalValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/timetable"
+    },
+    "timetable.template_grade_above_max": {
+      "kind": "ref",
+      "ref": "RefusalValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/timetable"
+    },
+    "timetable.template_start_outside_period": {
+      "kind": "ref",
+      "ref": "RefusalValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/timetable"
+    },
+    "timetable.too_many_dates": {
+      "kind": "ref",
+      "ref": "RefusalValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/timetable"
+    },
+    "timetable.window_too_large": {
+      "kind": "ref",
+      "ref": "RefusalValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/timetable"
+    },
+    "traeger.access_log_export_too_large": {
+      "kind": "ref",
+      "ref": "AccessLogLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/traegerview/http"
+    },
+    "traeger.document_template_unknown_placeholder": {
+      "kind": "ref",
+      "ref": "PlaceholderDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
+    },
+    "traeger.logo_too_large": {
+      "kind": "ref",
+      "ref": "BodyLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
+    },
+    "traeger.school_party_creditor_account_conflict": {
+      "kind": "ref",
+      "ref": "SchoolPartyCreditorDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/traeger"
+    },
+    "traeger.school_role_name_used_at_school": {
+      "kind": "ref",
+      "ref": "SchoolRoleNameDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/traegerportal"
+    },
+    "workforce.month_closed": {
+      "kind": "ref",
+      "ref": "RebookingValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce"
+    },
+    "workforce.rebooking_before_vacation_opening": {
+      "kind": "ref",
+      "ref": "RebookingValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce"
+    },
+    "workforce.rebooking_half_day_edge": {
+      "kind": "ref",
+      "ref": "RebookingValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce"
+    },
+    "workforce.rebooking_no_working_day": {
+      "kind": "ref",
+      "ref": "RebookingValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce"
+    },
+    "workforce.rebooking_outside_balance": {
+      "kind": "ref",
+      "ref": "RebookingValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce"
+    },
+    "workforce.rebooking_request": {
+      "kind": "ref",
+      "ref": "RebookingValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce"
+    },
+    "workforce.rebooking_same_type": {
+      "kind": "ref",
+      "ref": "RebookingValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce"
+    },
+    "workforce.rebooking_sick_report": {
+      "kind": "ref",
+      "ref": "RebookingValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce"
+    },
+    "workforce.rebooking_too_many": {
+      "kind": "ref",
+      "ref": "RebookingValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce"
+    },
+    "workforce.shift_overlaps_other_site": {
+      "kind": "ref",
+      "ref": "ShiftOtherSiteDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce"
+    },
+    "workforce.shift_working_time_warning": {
+      "kind": "ref",
+      "ref": "ShiftWorkingTimeDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce"
+    },
+    "workforce.target_override_hours_invalid": {
+      "kind": "ref",
+      "ref": "TargetOverrideValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce"
+    },
+    "workforce.target_override_overlap": {
+      "kind": "ref",
+      "ref": "TargetOverrideValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce"
+    },
+    "workforce.target_override_range_invalid": {
+      "kind": "ref",
+      "ref": "TargetOverrideValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce"
+    },
+    "workforce.target_override_too_long": {
+      "kind": "ref",
+      "ref": "TargetOverrideValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce"
+    },
+    "workforce.traeger_contract_month_closed": {
+      "kind": "ref",
+      "ref": "StaffContractDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
+    },
+    "workforce.traeger_contract_overlap": {
+      "kind": "ref",
+      "ref": "StaffContractDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
+    },
+    "workforce.traeger_holiday_week_school_override": {
+      "kind": "ref",
+      "ref": "StaffContractDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
+    },
+    "workforce.traeger_month_closed_by_school": {
+      "kind": "ref",
+      "ref": "SchoolMonthDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
+    },
+    "workforce.traeger_month_later_closed": {
+      "kind": "ref",
+      "ref": "SchoolMonthDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
+    },
+    "workforce.traeger_payroll_not_ready": {
+      "kind": "ref",
+      "ref": "PayrollNotReadyDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
+    },
+    "workforce.traeger_staff_hire_duplicate": {
+      "kind": "ref",
+      "ref": "HireDuplicateDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
+    },
+    "workforce.traeger_staff_hire_incomplete": {
+      "kind": "ref",
+      "ref": "HireIncompleteDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
+    },
+    "workforce.traeger_staff_import_file_too_large": {
+      "kind": "ref",
+      "ref": "BodyLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
     }
   },
   "stream_event": {
@@ -3793,7 +4301,8 @@
       "query": [
         {
           "name": "target_id",
-          "kind": "string"
+          "kind": "string",
+          "text_reason": "target_type selects a school class label, an OGS group ID or an activity group ID"
         },
         {
           "name": "target_type",
@@ -7328,7 +7837,8 @@
         },
         {
           "name": "grade_levels",
-          "kind": "string"
+          "kind": "string",
+          "text_reason": "comma-separated grade numbers, not row identifiers"
         },
         {
           "name": "list_kind",
@@ -7346,7 +7856,8 @@
         {
           "name": "roster",
           "kind": "string",
-          "repeated": true
+          "repeated": true,
+          "text_reason": "each member pairs an ISO weekday with that day's list of child IDs"
         },
         {
           "name": "school_classes",
@@ -7375,7 +7886,8 @@
         },
         {
           "name": "grade_levels",
-          "kind": "string"
+          "kind": "string",
+          "text_reason": "comma-separated grade numbers, not row identifiers"
         },
         {
           "name": "list_kind",
@@ -7388,7 +7900,8 @@
         {
           "name": "roster",
           "kind": "string",
-          "repeated": true
+          "repeated": true,
+          "text_reason": "each member pairs an ISO weekday with that day's list of child IDs"
         },
         {
           "name": "school_classes",
@@ -7674,7 +8187,8 @@
         },
         {
           "name": "grade_levels",
-          "kind": "string"
+          "kind": "string",
+          "text_reason": "comma-separated grade numbers, not row identifiers"
         },
         {
           "name": "offering_ids",
@@ -11772,11 +12286,13 @@
       "query": [
         {
           "name": "care",
-          "kind": "string"
+          "kind": "id",
+          "repeated": true
         },
         {
           "name": "holiday",
-          "kind": "string"
+          "kind": "id",
+          "repeated": true
         }
       ],
       "response": {
@@ -12138,7 +12654,8 @@
       "query": [
         {
           "name": "school",
-          "kind": "string"
+          "kind": "string",
+          "text_reason": "a school ID or guest for children without a school in this Träger"
         },
         {
           "name": "status",
@@ -12180,7 +12697,8 @@
         },
         {
           "name": "school",
-          "kind": "string"
+          "kind": "string",
+          "text_reason": "a school ID or guest for children without a school in this Träger"
         },
         {
           "name": "status",
@@ -12242,7 +12760,8 @@
         },
         {
           "name": "school",
-          "kind": "string"
+          "kind": "string",
+          "text_reason": "a school ID or guest for children without a school in this Träger"
         },
         {
           "name": "status",
@@ -12728,7 +13247,8 @@
         },
         {
           "name": "schools",
-          "kind": "string"
+          "kind": "id",
+          "repeated": true
         },
         {
           "name": "to",
@@ -12766,7 +13286,8 @@
         },
         {
           "name": "schools",
-          "kind": "string"
+          "kind": "id",
+          "repeated": true
         },
         {
           "name": "to",
@@ -26005,6 +26526,18 @@
       ]
     },
     {
+      "name": "AccessLogLimitDetails",
+      "go_type": "traegerviewhttp.AccessLogLimitDetails",
+      "fields": [
+        {
+          "name": "limit",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "AccessLogPage",
       "go_type": "traegerview.AccessLogPage",
       "fields": [
@@ -26996,6 +27529,42 @@
       ]
     },
     {
+      "name": "ActivityParticipantLimitDetails",
+      "go_type": "studentpresence.ActivityParticipantLimitDetails",
+      "fields": [
+        {
+          "name": "activity_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "activity_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "current_occupancy",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "max_participants",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "incoming_students",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "ActivityRequest",
       "go_type": "httpadapter.ActivityRequest",
       "request": true,
@@ -27859,9 +28428,9 @@
         {
           "name": "existing_student_id",
           "optional": true,
-          "text_reason": "empty string means no existing student selected",
           "schema": {
-            "kind": "string"
+            "kind": "id",
+            "no_id": true
           }
         },
         {
@@ -28337,9 +28906,9 @@
         {
           "name": "existing_student_id",
           "optional": true,
-          "text_reason": "empty string means no existing student selected",
           "schema": {
-            "kind": "string"
+            "kind": "id",
+            "no_id": true
           }
         },
         {
@@ -33828,6 +34397,24 @@
       ]
     },
     {
+      "name": "BillingIssuerDetails",
+      "go_type": "parentbillinghttp.BillingIssuerDetails",
+      "fields": [
+        {
+          "name": "issuer_key",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "issuer_name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "BillingIssuerOverview",
       "go_type": "parentbilling.BillingIssuerOverview",
       "fields": [
@@ -35160,6 +35747,25 @@
       ]
     },
     {
+      "name": "BodyLimitDetails",
+      "go_type": "common.BodyLimitDetails",
+      "fields": [
+        {
+          "name": "max_bytes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "max_mb",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "BookingAccounts",
       "go_type": "parentbilling.BookingAccounts",
       "fields": [
@@ -35289,6 +35895,18 @@
           "optional": true,
           "schema": {
             "kind": "date"
+          }
+        }
+      ]
+    },
+    {
+      "name": "BookingBoundsDetails",
+      "go_type": "enrollmenthttp.BookingBoundsDetails",
+      "fields": [
+        {
+          "name": "child",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -35864,6 +36482,32 @@
       ]
     },
     {
+      "name": "CalendarPeriodOverlapDetails",
+      "go_type": "timetablehttp.CalendarPeriodOverlapDetails",
+      "fields": [
+        {
+          "name": "overlapping_period_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "id"
+            }
+          }
+        },
+        {
+          "name": "overlapping_period_names",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "CalendarPeriodRequest",
       "go_type": "timetablehttp.CalendarPeriodRequest",
       "request": true,
@@ -36045,6 +36689,18 @@
             "kind": "int"
           }
         },
+        {
+          "name": "staff_shift_series_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "CalendarPeriodShiftSeriesDetails",
+      "go_type": "timetablehttp.CalendarPeriodShiftSeriesDetails",
+      "fields": [
         {
           "name": "staff_shift_series_count",
           "schema": {
@@ -40296,6 +40952,24 @@
       ]
     },
     {
+      "name": "CareOfferingSourceConflictValues",
+      "go_type": "careplan.CareOfferingSourceConflictValues",
+      "fields": [
+        {
+          "name": "offering",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "template",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "CareOfferingsResponse",
       "go_type": "parent.CareOfferingsResponse",
       "fields": [
@@ -42471,6 +43145,22 @@
           "name": "amount_cents",
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "CaregiverCapabilityDetails",
+      "go_type": "common.CaregiverCapabilityDetails",
+      "fields": [
+        {
+          "name": "blockers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
           }
         }
       ]
@@ -44667,6 +45357,30 @@
           "name": "version",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChildQuotaDetails",
+      "go_type": "schoolmembership.ChildQuotaDetails",
+      "fields": [
+        {
+          "name": "booked_places",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "occupied_places",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "requested_places",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -51245,6 +51959,47 @@
       ]
     },
     {
+      "name": "DatevBookingProblem",
+      "go_type": "parentbilling.DatevBookingProblem",
+      "fields": [
+        {
+          "name": "document_number",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "field",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DatevBookingsDetails",
+      "go_type": "parentbillinghttp.DatevBookingsDetails",
+      "fields": [
+        {
+          "name": "documents",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "DatevBookingProblem"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "DatevExportReport",
       "go_type": "workforce.DatevExportReport",
       "fields": [
@@ -51317,6 +52072,32 @@
             "kind": "bool"
           }
         },
+        {
+          "name": "missing_settings",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "invalid_settings",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "DatevReadinessDetails",
+      "go_type": "parentbillinghttp.DatevReadinessDetails",
+      "fields": [
         {
           "name": "missing_settings",
           "schema": {
@@ -52165,6 +52946,48 @@
       ]
     },
     {
+      "name": "DebtorNumberDigitRangeDetails",
+      "go_type": "parentbillinghttp.DebtorNumberDigitRangeDetails",
+      "fields": [
+        {
+          "name": "min_digits",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "max_digits",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "example",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DebtorNumberDigitsDetails",
+      "go_type": "parentbillinghttp.DebtorNumberDigitsDetails",
+      "fields": [
+        {
+          "name": "digits",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "example",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "DebtorNumberFormat",
       "go_type": "parentbilling.DebtorNumberFormat",
       "fields": [
@@ -52633,6 +53456,36 @@
       ]
     },
     {
+      "name": "DeviationReasonDetails",
+      "go_type": "timetracking.DeviationReasonDetails",
+      "fields": [
+        {
+          "name": "action",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "planned_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "actual_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "deviation_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "DeviceCreationResponse",
       "go_type": "devices.DeviceCreationResponse",
       "fields": [
@@ -52722,6 +53575,30 @@
       ]
     },
     {
+      "name": "DeviceInActiveSessionDetails",
+      "go_type": "devices.DeviceInActiveSessionDetails",
+      "fields": [
+        {
+          "name": "session_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "room_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "started_at",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "DevicePINStatus",
       "go_type": "records.DevicePINStatus",
       "fields": [
@@ -52733,6 +53610,38 @@
         },
         {
           "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DeviceRemovalDetails",
+      "go_type": "operator.DeviceRemovalDetails",
+      "fields": [
+        {
+          "name": "session_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "started_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "activity_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_name",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -52864,6 +53773,36 @@
           "name": "version",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DeviceSlotsBelowOccupiedDetails",
+      "go_type": "operator.DeviceSlotsBelowOccupiedDetails",
+      "fields": [
+        {
+          "name": "device_slots",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "occupied",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DeviceSlotsDetails",
+      "go_type": "operator.DeviceSlotsDetails",
+      "fields": [
+        {
+          "name": "device_slots",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -53951,10 +54890,10 @@
         {
           "name": "pickup_person_guardian_profile_id",
           "optional": true,
-          "text_reason": "empty string explicitly clears the collector; null leaves it unspecified",
           "schema": {
-            "kind": "string",
-            "nullable": true
+            "kind": "id",
+            "nullable": true,
+            "no_id": true
           }
         },
         {
@@ -54454,19 +55393,19 @@
         {
           "name": "form_schema_id",
           "optional": true,
-          "text_reason": "empty string clears the form schema",
           "schema": {
-            "kind": "string",
-            "nullable": true
+            "kind": "id",
+            "nullable": true,
+            "no_id": true
           }
         },
         {
           "name": "calendar_period_id",
           "optional": true,
-          "text_reason": "empty string clears the calendar period",
           "schema": {
-            "kind": "string",
-            "nullable": true
+            "kind": "id",
+            "nullable": true,
+            "no_id": true
           }
         },
         {
@@ -55612,6 +56551,24 @@
           "schema": {
             "kind": "int",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "ExportSelectionDetails",
+      "go_type": "presenceprojectionhttp.ExportSelectionDetails",
+      "fields": [
+        {
+          "name": "total",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "limit",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -56809,6 +57766,59 @@
       ]
     },
     {
+      "name": "FamilyDebtorNumberDetails",
+      "go_type": "parentbillinghttp.FamilyDebtorNumberDetails",
+      "fields": [
+        {
+          "name": "family_email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "family_debtor_number",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "debtor_number",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "families",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "FamilyDebtorNumberEntry"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "FamilyDebtorNumberEntry",
+      "go_type": "parentbillinghttp.FamilyDebtorNumberEntry",
+      "fields": [
+        {
+          "name": "family_email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "family_debtor_number",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "FamilyDebtorNumberRequest",
       "go_type": "parentbillinghttp.FamilyDebtorNumberRequest",
       "request": true,
@@ -57007,6 +58017,24 @@
           "schema": {
             "kind": "date",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "FamilyRefusalDetails",
+      "go_type": "carecontract.FamilyRefusalDetails",
+      "fields": [
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "contract_id",
+          "schema": {
+            "kind": "id"
           }
         }
       ]
@@ -60408,9 +61436,9 @@
       "fields": [
         {
           "name": "account_id",
-          "text_reason": "required legacy field, empty when no guardian account is present",
           "schema": {
-            "kind": "string"
+            "kind": "id",
+            "no_id": true
           }
         },
         {
@@ -60791,6 +61819,46 @@
           "schema": {
             "kind": "date",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "HireDuplicateDetails",
+      "go_type": "traegerstaff.HireDuplicateDetails",
+      "fields": [
+        {
+          "name": "matches",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "hireMatchResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "HireIncompleteDetails",
+      "go_type": "traegerstaff.HireIncompleteDetails",
+      "fields": [
+        {
+          "name": "schools",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "staff_record_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
           }
         }
       ]
@@ -61504,6 +62572,18 @@
       ]
     },
     {
+      "name": "HolidayAllocationDetails",
+      "go_type": "enrollmenthttp.HolidayAllocationDetails",
+      "fields": [
+        {
+          "name": "week_id",
+          "schema": {
+            "kind": "id"
+          }
+        }
+      ]
+    },
+    {
       "name": "HolidayAllocationRequest",
       "go_type": "enrollmenthttp.HolidayAllocationRequest",
       "request": true,
@@ -61844,6 +62924,36 @@
         },
         {
           "name": "total_cents",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayChildDayLimitDetails",
+      "go_type": "common.HolidayChildDayLimitDetails",
+      "fields": [
+        {
+          "name": "limit",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "days",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "elsewhere",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "child",
           "schema": {
             "kind": "int"
           }
@@ -64629,6 +65739,18 @@
           "name": "week_id",
           "schema": {
             "kind": "id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayProofLimitDetails",
+      "go_type": "enrollmenthttp.HolidayProofLimitDetails",
+      "fields": [
+        {
+          "name": "max_files",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -67484,6 +68606,49 @@
       ]
     },
     {
+      "name": "HolidayWeekNoCareDetails",
+      "go_type": "common.HolidayWeekNoCareDetails",
+      "fields": [
+        {
+          "name": "week",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "week_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "iso_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "HolidayWeekPlaces",
       "go_type": "enrollment.HolidayWeekPlaces",
       "fields": [
@@ -68072,9 +69237,9 @@
         },
         {
           "name": "counterpart_account_id",
-          "text_reason": "required legacy field, empty for group threads without a counterpart",
           "schema": {
-            "kind": "string"
+            "kind": "id",
+            "no_id": true
           }
         },
         {
@@ -68256,6 +69421,33 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "InputLimitDetails",
+      "go_type": "common.InputLimitDetails",
+      "fields": [
+        {
+          "name": "min",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "max",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "max_bytes",
+          "optional": true,
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -68487,6 +69679,18 @@
           "schema": {
             "kind": "ref",
             "ref": "GuardianNoticeResponse"
+          }
+        }
+      ]
+    },
+    {
+      "name": "InvalidRowDetails",
+      "go_type": "importapi.InvalidRowDetails",
+      "fields": [
+        {
+          "name": "row",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -71248,6 +72452,18 @@
       ]
     },
     {
+      "name": "MissingColumnsDetails",
+      "go_type": "importapi.MissingColumnsDetails",
+      "fields": [
+        {
+          "name": "columns",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "ModelRequest",
       "go_type": "worktimemodels.ModelRequest",
       "request": true,
@@ -71361,6 +72577,61 @@
           "optional": true,
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ModuleNotBookedDetails",
+      "go_type": "common.ModuleNotBookedDetails",
+      "fields": [
+        {
+          "name": "module",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "module_label",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ModuleRequiredByDetails",
+      "go_type": "operator.ModuleRequiredByDetails",
+      "fields": [
+        {
+          "name": "module",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "dependents",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ModuleRequiresDetails",
+      "go_type": "operator.ModuleRequiresDetails",
+      "fields": [
+        {
+          "name": "module",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "required",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -72596,6 +73867,30 @@
       ]
     },
     {
+      "name": "NumberRangeMissingDetails",
+      "go_type": "parentbillinghttp.NumberRangeMissingDetails",
+      "fields": [
+        {
+          "name": "issuer_key",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "issuer_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "service",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "NumberRangeRequest",
       "go_type": "parentbillinghttp.NumberRangeRequest",
       "request": true,
@@ -72681,6 +73976,24 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "NumberRangeTakenDetails",
+      "go_type": "parentbillinghttp.NumberRangeTakenDetails",
+      "fields": [
+        {
+          "name": "last_number",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_sequence",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -74612,6 +75925,13 @@
           "optional": true,
           "schema": {
             "kind": "instant"
+          }
+        },
+        {
+          "name": "photo_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         },
         {
@@ -76592,6 +77912,18 @@
       ]
     },
     {
+      "name": "OrganizationHasSchoolsDetails",
+      "go_type": "operator.OrganizationHasSchoolsDetails",
+      "fields": [
+        {
+          "name": "school_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "OrganizationSummary",
       "go_type": "organizationtenancy.OrganizationSummary",
       "fields": [
@@ -77715,9 +79047,9 @@
         {
           "name": "handled_up_to_message_id",
           "optional": true,
-          "text_reason": "empty string means send without confirming a message",
           "schema": {
-            "kind": "string"
+            "kind": "id",
+            "no_id": true
           }
         },
         {
@@ -79132,6 +80464,28 @@
       ]
     },
     {
+      "name": "PaymentTextDebtorDetails",
+      "go_type": "parentbillinghttp.PaymentTextDebtorDetails",
+      "fields": [
+        {
+          "name": "count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "invoice_numbers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "PayrollAbsenceTypeRequest",
       "go_type": "timetracking.PayrollAbsenceTypeRequest",
       "request": true,
@@ -79423,6 +80777,19 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PayrollNotReadyDetails",
+      "go_type": "traegerstaff.PayrollNotReadyDetails",
+      "fields": [
+        {
+          "name": "report",
+          "schema": {
+            "kind": "ref",
+            "ref": "TraegerPayrollReport"
           }
         }
       ]
@@ -80032,6 +81399,18 @@
             "elem": {
               "kind": "string"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "PermissionDetails",
+      "go_type": "common.PermissionDetails",
+      "fields": [
+        {
+          "name": "permission",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -81846,6 +83225,24 @@
       ]
     },
     {
+      "name": "PickupResetDetails",
+      "go_type": "careplanhttp.PickupResetDetails",
+      "fields": [
+        {
+          "name": "needed_until",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "possible_from",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "PickupScheduleImportData",
       "go_type": "dataimport.PickupScheduleImportData",
       "fields": [
@@ -82083,6 +83480,18 @@
           "name": "table",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PlaceholderDetails",
+      "go_type": "common.PlaceholderDetails",
+      "fields": [
+        {
+          "name": "placeholders",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -82575,6 +83984,24 @@
       ]
     },
     {
+      "name": "PlannedStartDetails",
+      "go_type": "timetracking.PlannedStartDetails",
+      "fields": [
+        {
+          "name": "planned_start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "current_time",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "PlanningTrack",
       "go_type": "timetable.PlanningTrack",
       "fields": [
@@ -82875,6 +84302,23 @@
       ]
     },
     {
+      "name": "PossiblyEnrolledDetails",
+      "go_type": "enrollmenthttp.PossiblyEnrolledDetails",
+      "fields": [
+        {
+          "name": "candidates",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "AdminExistingChildCandidate"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "PostMessageRequest",
       "go_type": "parent.PostMessageRequest",
       "request": true,
@@ -82908,9 +84352,9 @@
         {
           "name": "group_thread_id",
           "optional": true,
-          "text_reason": "empty string means send without a group thread",
           "schema": {
-            "kind": "string"
+            "kind": "id",
+            "no_id": true
           }
         },
         {
@@ -83890,6 +85334,24 @@
           "name": "name",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PublicHolidayChildDayLimitDetails",
+      "go_type": "enrollmenthttp.PublicHolidayChildDayLimitDetails",
+      "fields": [
+        {
+          "name": "limit",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "child",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -84878,6 +86340,33 @@
       ]
     },
     {
+      "name": "RebookingValues",
+      "go_type": "workforce.RebookingValues",
+      "fields": [
+        {
+          "name": "day",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "month",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "limit",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "RecentActivityItem",
       "go_type": "presence.RecentActivityItem",
       "fields": [
@@ -85304,6 +86793,75 @@
           "optional": true,
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RefusalValues",
+      "go_type": "timetable.RefusalValues",
+      "fields": [
+        {
+          "name": "date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "max",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "given",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "max_days",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "max_weeks",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "grade",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "offering",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -86160,6 +87718,18 @@
       ]
     },
     {
+      "name": "RetentionDaysDetails",
+      "go_type": "operator.RetentionDaysDetails",
+      "fields": [
+        {
+          "name": "retention_days",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "RetentionInstruction",
       "go_type": "parentbilling.RetentionInstruction",
       "fields": [
@@ -86931,6 +88501,42 @@
       ]
     },
     {
+      "name": "RoomCapacityDetails",
+      "go_type": "studentpresence.RoomCapacityDetails",
+      "fields": [
+        {
+          "name": "room_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "room_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "current_occupancy",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "max_capacity",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "incoming_students",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "RoomHistoryStopResponse",
       "go_type": "studentpresencehttp.RoomHistoryStopResponse",
       "fields": [
@@ -87398,6 +89004,36 @@
           "optional": true,
           "schema": {
             "kind": "id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RoomStillPlannedDetails",
+      "go_type": "httpadapter.RoomStillPlannedDetails",
+      "fields": [
+        {
+          "name": "activity_groups",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "upcoming_blocks",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "education_groups",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "devices",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -89470,6 +91106,13 @@
         },
         {
           "name": "thread_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "sender_account_id",
           "optional": true,
           "schema": {
             "kind": "id"
@@ -91649,6 +93292,18 @@
       ]
     },
     {
+      "name": "SchoolDeviceSlotsDetails",
+      "go_type": "devices.SchoolDeviceSlotsDetails",
+      "fields": [
+        {
+          "name": "device_slots",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "SchoolFigures",
       "go_type": "traegerview.SchoolFigures",
       "fields": [
@@ -91892,6 +93547,31 @@
         },
         {
           "name": "tenant_slug",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolMonthDetails",
+      "go_type": "traegerstaff.SchoolMonthDetails",
+      "fields": [
+        {
+          "name": "school",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "month",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -92224,6 +93904,18 @@
         },
         {
           "name": "version",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolPartyCreditorDetails",
+      "go_type": "traeger.SchoolPartyCreditorDetails",
+      "fields": [
+        {
+          "name": "school_name",
           "schema": {
             "kind": "string"
           }
@@ -92635,6 +94327,18 @@
               "kind": "ref",
               "ref": "SchoolRoleSchoolResponse"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolRoleNameDetails",
+      "go_type": "traegerportal.SchoolRoleNameDetails",
+      "fields": [
+        {
+          "name": "schools",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -96220,6 +97924,44 @@
       ]
     },
     {
+      "name": "ShiftOtherSiteDetails",
+      "go_type": "workforce.ShiftOtherSiteDetails",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "day",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "ShiftRequest",
       "go_type": "staffshifts.ShiftRequest",
       "request": true,
@@ -96620,6 +98362,35 @@
           "name": "series",
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ShiftWorkingTimeDetails",
+      "go_type": "workforce.ShiftWorkingTimeDetails",
+      "fields": [
+        {
+          "name": "warnings",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ShiftWorkingTimeWarning"
+            }
+          }
+        },
+        {
+          "name": "count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "reason_required",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -97046,6 +98817,25 @@
       ]
     },
     {
+      "name": "SizeLimitDetails",
+      "go_type": "common.SizeLimitDetails",
+      "fields": [
+        {
+          "name": "max_mb",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "max_bytes",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "SlimStudentResponse",
       "go_type": "presenceprojectionhttp.SlimStudentResponse",
       "fields": [
@@ -97287,6 +99077,13 @@
           }
         },
         {
+          "name": "photo_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "photo_url",
           "optional": true,
           "schema": {
@@ -97475,6 +99272,28 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SollRevenueAccountDetails",
+      "go_type": "parentbillinghttp.SollRevenueAccountDetails",
+      "fields": [
+        {
+          "name": "count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "documents",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
           }
         }
       ]
@@ -98149,6 +99968,44 @@
       ]
     },
     {
+      "name": "StaffContractDetails",
+      "go_type": "traegerstaff.StaffContractDetails",
+      "fields": [
+        {
+          "name": "field",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "day",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "StaffDocumentListResponse",
       "go_type": "timetracking.StaffDocumentListResponse",
       "fields": [
@@ -98534,6 +100391,30 @@
               "kind": "ref",
               "ref": "ParentMessageAttachmentResponse"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "StaffGroupNameLimitDetails",
+      "go_type": "staffmessaging.StaffGroupNameLimitDetails",
+      "fields": [
+        {
+          "name": "max_characters",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StaffGroupSizeLimitDetails",
+      "go_type": "staffmessaging.StaffGroupSizeLimitDetails",
+      "fields": [
+        {
+          "name": "max_members",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -101729,6 +103610,13 @@
           }
         },
         {
+          "name": "photo_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "photo_url",
           "optional": true,
           "schema": {
@@ -102316,6 +104204,13 @@
           "schema": {
             "kind": "ref",
             "ref": "ClassHandover"
+          }
+        },
+        {
+          "name": "photo_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         },
         {
@@ -103311,10 +105206,10 @@
         {
           "name": "guardian_id",
           "optional": true,
-          "text_reason": "empty string clears the guardian selection",
           "schema": {
-            "kind": "string",
-            "nullable": true
+            "kind": "id",
+            "nullable": true,
+            "no_id": true
           }
         }
       ]
@@ -103987,6 +105882,13 @@
           }
         },
         {
+          "name": "photo_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "photo_url",
           "optional": true,
           "schema": {
@@ -104302,10 +106204,10 @@
         {
           "name": "pickup_person_guardian_profile_id",
           "optional": true,
-          "text_reason": "empty string explicitly clears the collector; null leaves it unspecified",
           "schema": {
-            "kind": "string",
-            "nullable": true
+            "kind": "id",
+            "nullable": true,
+            "no_id": true
           }
         },
         {
@@ -105468,6 +107370,47 @@
       ]
     },
     {
+      "name": "TargetOverrideValues",
+      "go_type": "workforce.TargetOverrideValues",
+      "fields": [
+        {
+          "name": "max_days",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "max_hours",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "start_date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "month",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "TeacherHint",
       "go_type": "presenceprojectionhttp.TeacherHint",
       "fields": [
@@ -106010,9 +107953,9 @@
         },
         {
           "name": "counterpart_account_id",
-          "text_reason": "required legacy field, empty for group threads without a counterpart",
           "schema": {
-            "kind": "string"
+            "kind": "id",
+            "no_id": true
           }
         },
         {
@@ -106214,9 +108157,9 @@
       "fields": [
         {
           "name": "thread_id",
-          "text_reason": "empty string before the first message",
           "schema": {
-            "kind": "string"
+            "kind": "id",
+            "no_id": true
           }
         },
         {
@@ -112937,6 +114880,18 @@
       ]
     },
     {
+      "name": "UploadContentDetails",
+      "go_type": "enrollmenthttp.UploadContentDetails",
+      "fields": [
+        {
+          "name": "filename",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "UploadReceipt",
       "go_type": "enrollmenthttp.UploadReceipt",
       "fields": [
@@ -112962,6 +114917,35 @@
           "name": "content_type",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "UploadRefusalDetails",
+      "go_type": "enrollmenthttp.UploadRefusalDetails",
+      "fields": [
+        {
+          "name": "max_mb",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "max_bytes",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "allowed_types",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
           }
         }
       ]
@@ -113652,6 +115636,18 @@
       ]
     },
     {
+      "name": "VisibleDaysDetails",
+      "go_type": "operator.VisibleDaysDetails",
+      "fields": [
+        {
+          "name": "visible_days",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "Visit",
       "go_type": "supervisiondashboard.Visit",
       "fields": [
@@ -113729,6 +115725,13 @@
           "optional": true,
           "schema": {
             "kind": "instant"
+          }
+        },
+        {
+          "name": "photo_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         },
         {
@@ -114076,10 +116079,22 @@
         {
           "name": "child_id",
           "optional": true,
-          "text_reason": "empty string or omission withdraws the whole request",
           "schema": {
-            "kind": "string",
-            "nullable": true
+            "kind": "id",
+            "nullable": true,
+            "no_id": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "WithdrawalConfirmationDetails",
+      "go_type": "parent.WithdrawalConfirmationDetails",
+      "fields": [
+        {
+          "name": "confirmation",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -122413,6 +124428,68 @@
       ]
     },
     {
+      "name": "hireMatchResponse",
+      "go_type": "traegerstaff.hireMatchResponse",
+      "fields": [
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "staff_record_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "school_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "school_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reasons",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "holidayAddressRequest",
       "go_type": "enrollmenthttp.holidayAddressRequest",
       "request": true,
@@ -128513,9 +130590,9 @@
         {
           "name": "chosen_request_id",
           "optional": true,
-          "text_reason": "empty string means no selected request",
           "schema": {
-            "kind": "string"
+            "kind": "id",
+            "no_id": true
           }
         },
         {
@@ -130710,17 +132787,28 @@
         {
           "name": "group_id",
           "optional": true,
-          "text_reason": "comma-separated list of groups or empty selection",
+          "text_reason": "legacy comma-separated group filter",
           "schema": {
             "kind": "string"
           }
         },
         {
+          "name": "group_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "id"
+            }
+          }
+        },
+        {
           "name": "room_id",
           "optional": true,
-          "text_reason": "empty string means no room filter",
           "schema": {
-            "kind": "string"
+            "kind": "id",
+            "no_id": true
           }
         },
         {
@@ -130992,19 +133080,19 @@
         {
           "name": "activity_group_id",
           "optional": true,
-          "text_reason": "empty string means the note has no group subject",
           "schema": {
-            "kind": "string",
-            "nullable": true
+            "kind": "id",
+            "nullable": true,
+            "no_id": true
           }
         },
         {
           "name": "education_group_id",
           "optional": true,
-          "text_reason": "empty string means the note has no group subject",
           "schema": {
-            "kind": "string",
-            "nullable": true
+            "kind": "id",
+            "nullable": true,
+            "no_id": true
           }
         },
         {
@@ -131236,6 +133324,18 @@
       "name": "studentPhotoUploadedResponse",
       "go_type": "students.studentPhotoUploadedResponse",
       "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "photo_version",
+          "schema": {
+            "kind": "string"
+          }
+        },
         {
           "name": "photo_url",
           "schema": {
@@ -132121,10 +134221,10 @@
         {
           "name": "ref_id",
           "optional": true,
-          "text_reason": "empty string means no numeric target",
           "schema": {
-            "kind": "string",
-            "nullable": true
+            "kind": "id",
+            "nullable": true,
+            "no_id": true
           }
         },
         {
@@ -132310,10 +134410,10 @@
         {
           "name": "ref_id",
           "optional": true,
-          "text_reason": "empty string means no numeric target",
           "schema": {
-            "kind": "string",
-            "nullable": true
+            "kind": "id",
+            "nullable": true,
+            "no_id": true
           }
         },
         {

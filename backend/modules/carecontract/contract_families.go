@@ -67,10 +67,10 @@ func (*FamilyRefusal) ErrorCode() string { return FamilyRefusedCode }
 
 // ErrorDetails names the reason and the contract.
 func (e *FamilyRefusal) ErrorDetails() any {
-	return familyRefusalDetails{Reason: e.Reason, ContractID: ident.ID(e.ContractID)}
+	return FamilyRefusalDetails{Reason: e.Reason, ContractID: ident.ID(e.ContractID)}
 }
 
-type familyRefusalDetails struct {
+type FamilyRefusalDetails struct {
 	Reason     string   `json:"reason"`
 	ContractID ident.ID `json:"contract_id"`
 }

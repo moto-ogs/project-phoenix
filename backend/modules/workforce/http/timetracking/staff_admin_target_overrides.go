@@ -179,25 +179,12 @@ func renderTargetOverrideError(w http.ResponseWriter, r *http.Request, err error
 
 // targetOverrideDetails puts the values a coded refusal names into wire form;
 // an unset value is left out, so each code carries only its own parameters.
-func targetOverrideDetails(values workforce.TargetOverrideValues) map[string]any {
-	details := map[string]any{}
-	if values.MaxDays != 0 {
-		details["max_days"] = values.MaxDays
-	}
-	if values.MaxHours != 0 {
-		details["max_hours"] = values.MaxHours
-	}
-	if values.StartDate != "" {
-		details["start_date"] = values.StartDate
-	}
-	if values.EndDate != "" {
-		details["end_date"] = values.EndDate
-	}
-	if values.Month != "" {
-		details["month"] = values.Month
-	}
-	if len(details) == 0 {
+func targetOverrideDetails(values workforce.TargetOverrideValues) any {
+	if values == (workforce.TargetOverrideValues{}) {
 		return nil
 	}
-	return details
+	if values.Month != "" {
+		return workforce.RebookingValues{Month: values.Month}
+	}
+	return values
 }

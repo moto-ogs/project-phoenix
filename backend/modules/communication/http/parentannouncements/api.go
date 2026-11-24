@@ -7,7 +7,6 @@ package announcement
 import (
 	"errors"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -106,9 +105,9 @@ func (rs *Resource) Router(protectedTenantRoutes func(chi.Router, func(chi.Route
 // --- wire shapes (int64 ids stringified per the frontend convention) ---
 
 type targetRequest struct {
-	TargetType string  `json:"target_type"`
-	RefID      *string `json:"ref_id,omitempty" contract_text:"empty string means no numeric target"`
-	RefText    *string `json:"ref_text,omitempty"`
+	TargetType string          `json:"target_type"`
+	RefID      *ident.IDOrNone `json:"ref_id,omitempty"`
+	RefText    *string         `json:"ref_text,omitempty"`
 }
 
 type announcementRequest struct {
@@ -292,9 +291,9 @@ func toInput(req announcementRequest) (announcementService.ParentAnnouncementInp
 	}
 	for _, t := range req.Targets {
 		target := announcementService.ParentAnnouncementTargetInput{TargetType: t.TargetType, RefText: t.RefText}
-		if t.RefID != nil && *t.RefID != "" {
-			id, err := strconv.ParseInt(*t.RefID, 10, 64)
-			if err != nil || id <= 0 {
+		if t.RefID != nil && !t.RefID.IsZero() {
+			id := t.RefID.Int64()
+			if id <= 0 {
 				return announcementService.ParentAnnouncementInput{}, errors.New("invalid target ref_id")
 			}
 			target.RefID = &id
@@ -732,7 +731,7 @@ func renderAnnouncementError(w http.ResponseWriter, r *http.Request, err error) 
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeCommunicationLetterPlaceholderLetterOnly))
 	case errors.As(err, &placeholders):
 		common.RenderError(w, r, common.ErrorInvalidRequestWithDetails(err, common.CodeCommunicationLetterPlaceholderUnknown,
-			map[string]any{"placeholders": strings.Join(placeholders.Names, ", ")}))
+			common.PlaceholderDetails{Placeholders: strings.Join(placeholders.Names, ", ")}))
 	case errors.Is(err, announcementService.ErrParentLetterNotPrintable):
 		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeCommunicationLetterPrintNotLetter))
 	case errors.Is(err, announcementService.ErrParentAnnouncementNotFound):

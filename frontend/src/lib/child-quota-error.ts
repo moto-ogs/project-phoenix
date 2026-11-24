@@ -1,12 +1,13 @@
 import type { ErrorCode } from "~/lib/error-codes.generated";
 import { readCodedApiError } from "./coded-api-error";
+import { ChildQuotaDetailsSchema } from "./contract/problem-details.generated";
 
 /**
  * Fehlercode, wenn das Kinderkontingent einer OGS erreicht ist (#3567). Der
  * Code ist die Identität des Fehlers; der Backend-Text ist nur Diagnose.
  */
-export const CHILD_QUOTA_REACHED_CODE: ErrorCode =
-  "students.child_quota_reached";
+export const CHILD_QUOTA_REACHED_CODE =
+  "students.child_quota_reached" satisfies ErrorCode;
 
 /**
  * Meldung für ein erreichtes Kinderkontingent, sonst null. Die Zahlen kommen
@@ -15,10 +16,9 @@ export const CHILD_QUOTA_REACHED_CODE: ErrorCode =
 export function childQuotaMessage(err: unknown): string | null {
   const coded = readCodedApiError(err);
   if (coded?.code !== CHILD_QUOTA_REACHED_CODE) return null;
-  const { booked_places: booked, occupied_places: occupied } = coded.details;
-  const stand =
-    typeof booked === "number" && typeof occupied === "number"
-      ? ` Die Kontingentzahl beträgt ${occupied} von ${booked} Kindern.`
-      : "";
+  const decoded = ChildQuotaDetailsSchema.safeParse(coded.details);
+  const stand = decoded.success
+    ? ` Die Kontingentzahl beträgt ${decoded.data.occupied_places} von ${decoded.data.booked_places} Kindern.`
+    : "";
   return `Das Kinderkontingent deiner Schule ist voll.${stand} Für weitere Kinder melde dich bitte beim moto-Team.`;
 }

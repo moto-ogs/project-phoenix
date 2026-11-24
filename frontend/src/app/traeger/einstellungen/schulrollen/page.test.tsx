@@ -6,7 +6,7 @@ import {
   within,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiError } from "~/lib/api-error";
+import { errorFromProblem } from "~/test/helpers/problem-response";
 import { catalogText } from "~/test/error-catalog-text";
 import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type {
@@ -236,7 +236,7 @@ describe("TraegerSchoolRolesPage", () => {
 
   it("names the schools that already use a name", async () => {
     api.updateTraegerSchoolRole.mockRejectedValue(
-      new ApiError("conflict", 409, {
+      await errorFromProblem("conflict", 409, {
         code: "traeger.school_role_name_used_at_school",
         details: { schools: "OGS West" },
       }),

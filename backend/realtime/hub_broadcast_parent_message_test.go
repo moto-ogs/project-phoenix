@@ -73,7 +73,7 @@ func TestHubBroadcastParentMessage_RoutesByGuardianAndTenant(t *testing.T) {
 
 // TestHubBroadcastParentMessage_SanitizesStaffCopy — the addressed guardian
 // receives the full event (their own data), while every staff client gets a
-// copy with thread_id, student_id, and source all cleared. ThreadID is opaque,
+// copy with thread_id, student_id, and sender_account_id all cleared. ThreadID is opaque,
 // but a staffer who knows a thread URL and later loses access to that child must
 // not be able to correlate future triggers to that specific conversation.
 func TestHubBroadcastParentMessage_SanitizesStaffCopy(t *testing.T) {
@@ -91,9 +91,9 @@ func TestHubBroadcastParentMessage_SanitizesStaffCopy(t *testing.T) {
 	}
 
 	guardianGot := <-guardian.Channel
-	if guardianGot.Data.ThreadID == nil || guardianGot.Data.StudentID == nil || guardianGot.Data.Source == nil {
-		t.Errorf("guardian should receive the full event, got thread=%v student=%v source=%v",
-			guardianGot.Data.ThreadID, guardianGot.Data.StudentID, guardianGot.Data.Source)
+	if guardianGot.Data.ThreadID == nil || guardianGot.Data.StudentID == nil || guardianGot.Data.SenderAccountID == nil {
+		t.Errorf("guardian should receive the full event, got thread=%v student=%v sender=%v",
+			guardianGot.Data.ThreadID, guardianGot.Data.StudentID, guardianGot.Data.SenderAccountID)
 	}
 
 	staffGot := <-staff.Channel
@@ -103,8 +103,8 @@ func TestHubBroadcastParentMessage_SanitizesStaffCopy(t *testing.T) {
 	if staffGot.Data.StudentID != nil {
 		t.Errorf("staff copy must strip student_id, got %q", *staffGot.Data.StudentID)
 	}
-	if staffGot.Data.Source != nil {
-		t.Errorf("staff copy must strip source, got %q", *staffGot.Data.Source)
+	if staffGot.Data.SenderAccountID != nil {
+		t.Errorf("staff copy must strip sender_account_id, got %v", *staffGot.Data.SenderAccountID)
 	}
 }
 
@@ -145,7 +145,7 @@ func TestBroadcastLeadershipParentMessage_ReachesOnlyLeadershipStaff(t *testing.
 	}
 	select {
 	case copyEvent := <-leader.Channel:
-		if copyEvent.Data.ThreadID != nil || copyEvent.Data.StudentID != nil || copyEvent.Data.Source != nil {
+		if copyEvent.Data.ThreadID != nil || copyEvent.Data.StudentID != nil || copyEvent.Data.SenderAccountID != nil {
 			t.Error("the leadership staff copy must stay sanitized")
 		}
 	case <-time.After(100 * time.Millisecond):

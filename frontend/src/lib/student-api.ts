@@ -8,6 +8,7 @@ import {
   mapAttendanceHistoryResponse,
   type AttendanceHistory,
 } from "./attendance-history-helpers";
+import { studentPhotoHref } from "~/lib/student-photo-href";
 import { bffJson } from "./bff-fetch";
 import type {
   EnrollmentAnswerFilterResponse,
@@ -46,7 +47,7 @@ import {
 import {
   CompanionPlanConflictError,
   isCompanionPlanConflictResponse,
-  PRIVACY_CONSENT_SAVED_DETAIL,
+  markPrivacyConsentSaved,
 } from "./student-update-errors";
 import {
   mapStudentDetailResponse,
@@ -240,17 +241,6 @@ export async function createStudent(body: StudentCreateBody): Promise<Student> {
     ...(await readConsentAfterWrite(created.id, written)),
     ...(consent && !written && { privacy_consent_saved: false }),
   };
-}
-
-/**
- * Marks a refused student write whose consent write had landed already, so
- * the form says which half was saved (isPrivacyConsentSaved). Status, code,
- * field errors and the companion conflict list stay as the backend sent them.
- */
-function markPrivacyConsentSaved(error: unknown): unknown {
-  if (!(error instanceof ApiError)) return error;
-  error.details = { ...error.details, [PRIVACY_CONSENT_SAVED_DETAIL]: true };
-  return error;
 }
 
 /**
@@ -627,7 +617,7 @@ export async function deleteStudentWithData(
  *
  * The backend requires `operations.student_photos_enabled` and either a stored
  * photo consent or `consentAcknowledged`, which stamps the consent together
- * with the photo. The returned URL is opaque.
+ * with the photo. The browser builds the registered file address.
  */
 export async function uploadStudentPhoto(
   studentId: string,
@@ -650,7 +640,7 @@ export async function uploadStudentPhoto(
     params: { id: studentId },
     body: formData,
   });
-  return { photoUrl: data.photo_url };
+  return { photoUrl: studentPhotoHref(data.student_id, data.photo_version) };
 }
 
 /** Removes a child's photo (idempotent). */

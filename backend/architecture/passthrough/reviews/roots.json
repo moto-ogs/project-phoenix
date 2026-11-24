@@ -837,8 +837,8 @@
     },
     {
       "decision": "0090",
-      "id": "api/operatorSettingsSchools.SchoolSlug",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+      "id": "api/operatorSettingsSchools.SchoolSubdomain",
+      "reason": "Root consumer-port projection of a school record to its routing subdomain for tenant-lookup invalidation (#8052); preserves the one read."
     },
     {
       "decision": "0090",

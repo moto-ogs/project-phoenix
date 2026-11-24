@@ -38,7 +38,7 @@ func TestOGSGroupLiveGuestCannotReadPlanningNotes(t *testing.T) {
 		student := data.Students[0]
 		require.Equal(t, "Mila", student["first_name"])
 		require.Equal(t, "2a", student["school_class"])
-		require.NotEmpty(t, student["photo_url"], "photos remain available independently of planning permissions")
+		require.Equal(t, "guest-test.jpg", student["photo_version"], "photos remain available independently of planning permissions")
 		if granted[0] == "students:read" {
 			require.NotContains(t, rr.Body.String(), "vertraulich")
 			require.NotContains(t, student, "arrival_notes")

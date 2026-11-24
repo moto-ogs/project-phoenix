@@ -10,6 +10,7 @@
  */
 import { ApiError } from "~/lib/api-error";
 import { parseISODate } from "~/lib/date-helpers";
+import { ShiftWorkingTimeDetailsSchema } from "~/lib/contract/problem-details.generated";
 
 const WORKING_TIME_WARNING_CODE = "workforce.shift_working_time_warning";
 
@@ -92,11 +93,13 @@ export function workingTimeRefusalOf(err: unknown): WorkingTimeRefusal | null {
   if (!(err instanceof ApiError) || err.code !== WORKING_TIME_WARNING_CODE) {
     return null;
   }
-  const warnings = mapWorkingTimeWarnings(err.details?.warnings);
+  const parsed = ShiftWorkingTimeDetailsSchema.safeParse(err.details);
+  if (!parsed.success) return null;
+  const warnings = mapWorkingTimeWarnings(parsed.data.warnings);
   return {
     warnings,
     reasonRequired:
-      err.details?.reason_required === true ||
+      parsed.data.reason_required ||
       warnings.some((warning) => warning.needsReason),
   };
 }

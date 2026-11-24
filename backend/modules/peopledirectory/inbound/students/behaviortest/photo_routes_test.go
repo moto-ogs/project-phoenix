@@ -195,30 +195,21 @@ func seedStudentWithPhoto(t *testing.T, tc *testContext, studentID int64) (store
 }
 
 // removeUploadedPhotoFile parses the JSON body returned by
-// uploadStudentPhoto, extracts photo_url, walks it back to the
-// on-disk path and unlinks the file so each happy-path test cleans
+// uploadStudentPhoto, extracts the photo version and unlinks the stored
+// file so each happy-path test cleans
 // up after itself. The handler keeps the file (it's the new state),
 // so this helper is the test's responsibility.
 func removeUploadedPhotoFile(t *testing.T, body []byte) {
 	t.Helper()
 	var resp struct {
 		Data struct {
-			PhotoURL string `json:"photo_url"`
+			PhotoVersion string `json:"photo_version"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return
 	}
-	if resp.Data.PhotoURL == "" {
-		return
-	}
-	// /api/students/{id}/photo/{filename} → grab the trailing
-	// filename and unlink under the canonical /uploads prefix.
-	parts := strings.Split(resp.Data.PhotoURL, "/")
-	if len(parts) == 0 {
-		return
-	}
-	filename := parts[len(parts)-1]
+	filename := resp.Data.PhotoVersion
 	if filename == "" {
 		return
 	}
@@ -231,8 +222,8 @@ func removeUploadedPhotoFile(t *testing.T, body []byte) {
 
 // TestUploadStudentPhoto_HappyPath_ConsentOnRow uploads a JPEG for a
 // student whose row already carries photo_consent_given_at. The
-// handler must persist photo_path, return 200 with a /api/students/...
-// proxy URL (not the raw /uploads/... path), and emit a tenant
+// handler must persist photo_path, return 200 with the photo version
+// (not a browser URL or the stored path), and emit a tenant
 // broadcast so SSE listeners refresh. Without the consent on the row
 // the handler would refuse — that branch is exercised in a separate
 // test below.
@@ -255,13 +246,13 @@ func TestUploadStudentPhoto_HappyPath_ConsentOnRow(t *testing.T) {
 	t.Cleanup(func() { removeUploadedPhotoFile(t, rr.Body.Bytes()) })
 
 	require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
-	assert.Contains(t, rr.Body.String(), "photo_url")
-	assert.Contains(t, rr.Body.String(), fmt.Sprintf("/api/students/%d/photo/", student.ID),
-		"response must use the authenticated proxy URL, not the raw /uploads/ path")
+	assert.Contains(t, rr.Body.String(), `"photo_url":""`, "only the BFF may populate the legacy address")
+	assert.NotContains(t, rr.Body.String(), "/uploads/")
 
 	stored := readStudentPhotoPath(t, tc, student.ID)
 	assert.True(t, strings.HasPrefix(stored, common.StudentPhotoStoredURLPrefix),
 		"DB must store the canonical /uploads/student-photos/ prefix, got %q", stored)
+	assert.Contains(t, rr.Body.String(), fmt.Sprintf(`"photo_version":"%s"`, filepath.Base(stored)))
 	photoPath, err := (nativeUploads.UploadFiles{}).StoredPath("public", stored, common.StudentPhotoStoredURLPrefix)
 	require.NoError(t, err)
 	fileInfo, err := os.Stat(photoPath)
@@ -865,7 +856,7 @@ func TestServeStudentPhoto_GraduatedStudentNotFound(t *testing.T) {
 	t.Cleanup(func() { _ = os.Remove(diskPath) })
 	graduateStudent(t, tc, student.ID)
 
-	req, _ := http.NewRequest("GET", common.BuildStudentPhotoServeURL(student.ID, storedURL), nil)
+	req, _ := http.NewRequest("GET", fmt.Sprintf("/%d/photo/%s", student.ID, common.StudentPhotoVersion(storedURL)), nil)
 	req.Header.Set("Authorization", "Bearer "+adminBearer(t))
 	rr := testutil.ExecuteRequest(tc.router(), req)
 

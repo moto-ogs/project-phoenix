@@ -18,6 +18,7 @@ import type { ErrorCode } from "~/lib/error-codes.generated";
 import { createLogger } from "~/lib/logger";
 import {
   fillRoutePath,
+  registeredRouteSearch,
   routeSearch,
   type ParamsOf,
   type QueryOf,
@@ -97,6 +98,9 @@ export async function readContractJson(
   try {
     return await readBackendJson<unknown>(response);
   } catch (error) {
+    if (!response.ok && isApiResponseError(error)) {
+      error.contractRouteKey = `${route.method} ${route.pattern}`;
+    }
     const write = commits(route);
     // A browser disconnect does not undo an upstream commit.
     const aborted =
@@ -113,6 +117,9 @@ interface JsonRoute {
   readonly method: BackendMethod;
   readonly pattern: string;
   readonly noCommit?: string;
+  readonly routeFile?: string;
+  readonly browserPath?: string;
+  readonly query?: Readonly<Record<string, unknown>>;
   readonly response: z.ZodType;
 }
 
@@ -151,7 +158,10 @@ interface TransportOptions extends Pick<
   onInvalidSuccess?: (payload: unknown) => Promise<void>;
 }
 
-type ContractAddress<R, V> = ParamsOf<R> & QueryOf<R, V>;
+type ContractAddress<R, V> = ParamsOf<R> &
+  (R extends { routeFile: string; browserPath: string; query: object }
+    ? { request: Request; query?: never }
+    : QueryOf<R, V>);
 type CallAddress = {
   params?: Readonly<Record<string, string>>;
   query?: Readonly<Record<string, QueryValue>>;
@@ -173,7 +183,14 @@ async function callContract<T>(
 ): Promise<ContractReply<T>> {
   const { params, query, token, send, onInvalidSuccess, ...transport } =
     options;
-  const endpoint = fillRoutePath(route.pattern, params) + routeSearch(query);
+  const search =
+    route.routeFile && route.browserPath && route.query && transport.request
+      ? registeredRouteSearch(
+          route.query,
+          new URL(transport.request.url).searchParams,
+        )
+      : routeSearch(query);
+  const endpoint = fillRoutePath(route.pattern, params) + search;
   const call: BackendCall = {
     ...transport,
     method: route.method,

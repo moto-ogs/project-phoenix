@@ -1484,7 +1484,7 @@ export function useGlobalSSE(): SSEHookState {
           // participants), so an open conversation can refetch selectively
           // instead of every mounted messaging surface reloading.
           //
-          // data.source (das absendende Konto) faehrt mit, aber die Ereignisse
+          // data.sender_account_id (das absendende Konto) faehrt mit, aber die Ereignisse
           // gehen an ALLE Beteiligten - auch an die weiteren Tabs des
           // Absenders, deren Posteingang sonst mit veralteter Vorschau,
           // Sortierung und Ungelesen-Zahl stehenbliebe.
@@ -1502,7 +1502,7 @@ export function useGlobalSSE(): SSEHookState {
               new CustomEvent("team-messages-activity", {
                 detail: {
                   threadId: event.data?.thread_id ?? null,
-                  source: event.data?.source ?? null,
+                  source: event.data?.sender_account_id ?? null,
                 },
               }),
             );

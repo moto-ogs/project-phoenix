@@ -227,4 +227,16 @@ describe("sessionTenantMismatchResponse", () => {
 
     expect(result?.status).toBe(503);
   });
+
+  it("passes the lookup's Retry-After to the browser", async () => {
+    mockResolve.mockRejectedValueOnce(new TenantResolveStatusError(429, "7"));
+
+    const result = await sessionTenantMismatchResponse(
+      request("schule-a.localhost:3000"),
+      session("1"),
+    );
+
+    expect(result?.status).toBe(429);
+    expect(result?.headers.get("Retry-After")).toBe("7");
+  });
 });

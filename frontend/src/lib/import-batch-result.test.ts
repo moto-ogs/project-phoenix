@@ -22,18 +22,21 @@ const committed = {
 };
 
 const resultSchema = z.object({
-  total_rows: z.number(),
-  created_count: z.number(),
-  updated_count: z.number(),
-  error_count: z.number(),
-  errors: z
-    .array(
-      z.object({
-        row_number: z.number(),
-        errors: z.array(z.object({ code: z.string() })),
-      }),
-    )
-    .nullable(),
+  result: z.object({
+    total_rows: z.number(),
+    created_count: z.number(),
+    updated_count: z.number(),
+    error_count: z.number(),
+    errors: z
+      .array(
+        z.object({
+          row_number: z.number(),
+          errors: z.array(z.object({ code: z.string() })),
+        }),
+      )
+      .nullable(),
+  }),
+  rejection: z.object({ code: z.string(), details: z.unknown() }).optional(),
 });
 
 function envelope(result: Record<string, unknown>) {
@@ -171,18 +174,26 @@ describe("readImportBatchRejection", () => {
       details: { booked_places: 150, occupied_places: 150 },
     };
     expect(
-      readImportBatchRejection({
-        code: "import.import_batch_failed",
-        details: { result: {}, rejection },
-      }),
+      readImportBatchRejection(
+        {
+          code: "import.import_batch_failed",
+          details: { result: committed, rejection },
+        },
+        resultSchema,
+      ),
     ).toEqual(rejection);
     expect(
-      readImportBatchRejection({
-        code: "import.import_batch_failed",
-        details: {},
-      }),
+      readImportBatchRejection(
+        {
+          code: "import.import_batch_failed",
+          details: {},
+        },
+        resultSchema,
+      ),
     ).toBeNull();
-    expect(readImportBatchRejection({ code: "other" })).toBeNull();
+    expect(
+      readImportBatchRejection({ code: "other" }, resultSchema),
+    ).toBeNull();
   });
 });
 

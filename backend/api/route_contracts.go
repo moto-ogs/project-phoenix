@@ -37,7 +37,6 @@ import (
 	careContractHTTP "github.com/moto-ogs/project-phoenix/modules/carecontract/http"
 	careStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/careplan/http"
 	requestFeedHTTP "github.com/moto-ogs/project-phoenix/modules/careplan/requestfeed/http"
-	classdayHTTP "github.com/moto-ogs/project-phoenix/modules/classday/http"
 	messageAttachmentsHTTP "github.com/moto-ogs/project-phoenix/modules/communication/http/messageattachments"
 	operatorAnnouncementsHTTP "github.com/moto-ogs/project-phoenix/modules/communication/http/operatorannouncements"
 	announcementAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentannouncements"
@@ -289,11 +288,7 @@ func ContractDocument() (contract.Document, error) {
 		StreamEnums: []contract.EnumSpec{{
 			Name: "StreamEventType", Type: realtime.EventType(""), Values: realtime.EventTypeValues(),
 		}},
-		ProblemDetails: map[string]any{
-			common.CodeStudentsCompanionPlanConflict:   careStudentsHTTP.CompanionConflictDetails{},
-			common.CodeClassdayClassTripStatusConflict: classdayHTTP.ClassTripConflictDetails{},
-			common.CodeStudentsStatusDayConflict:       presenceStudentsHTTP.StatusDayConflictDetails{},
-		},
+		ProblemDetails: problemDetailContracts,
 		Identifiers: map[reflect.Type]string{
 			reflect.TypeFor[ident.ID](): contract.KindID,
 			// The device management renders its instants in whole seconds.
@@ -441,7 +436,7 @@ func contractRegistration(prefix string, route common.RouteContract) contract.Re
 		registration.Portals = append(registration.Portals, string(portal))
 	}
 	for _, param := range route.Query {
-		registration.Query = append(registration.Query, contract.QueryParam{Name: param.Name, Kind: string(param.Kind), Repeated: param.Repeated, Values: param.Values})
+		registration.Query = append(registration.Query, contract.QueryParam{Name: param.Name, Kind: string(param.Kind), Repeated: param.Repeated, Values: param.Values, TextReason: param.TextReason})
 	}
 	if route.Variants != nil {
 		registration.Variants = &contract.VariantSpec{QueryParam: route.Variants.QueryParam, Default: route.Variants.Default, ByValue: route.Variants.ByValue}

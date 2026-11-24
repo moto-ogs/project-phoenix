@@ -32,6 +32,7 @@ import { ApiError, isReadStateRefusal } from "~/lib/api-error";
 import type { ErrorPresentation } from "~/lib/error-presentation";
 import {
   announceModuleBookingStale,
+  isModuleNotBooked,
   moduleNotBookedExplanation,
   notBookedModuleOf,
 } from "~/lib/module-not-booked";
@@ -807,6 +808,10 @@ function useApiErrorCore(
         );
         return loadPresentation;
       }
+      const notBookedModule = isModuleNotBooked(error)
+        ? await notBookedModuleOf(error)
+        : null;
+      if (showVersion.current !== version) return;
       const presentation = presentError(
         error,
         options.object,
@@ -828,7 +833,6 @@ function useApiErrorCore(
         ...(presentation.fields.length > 0 && { fields: presentation.fields }),
       });
       const labels = errorDisplayLabels(locale);
-      const notBookedModule = notBookedModuleOf(error);
       if (notBookedModule) {
         announceModuleBookingStale();
         setFieldErrors({});

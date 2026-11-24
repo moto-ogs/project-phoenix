@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -107,9 +106,9 @@ type ReadersResponse struct {
 }
 
 type GuardianReaderResponse struct {
-	AccountID        string `json:"account_id" contract_text:"required legacy field, empty when no guardian account is present"`
-	Name             string `json:"name"`
-	RelationshipType string `json:"relationship_type,omitempty"`
+	AccountID        ident.IDOrNone `json:"account_id"`
+	Name             string         `json:"name"`
+	RelationshipType string         `json:"relationship_type,omitempty"`
 }
 
 // SchoolReadersResponse names the school side. names carries only the
@@ -123,13 +122,9 @@ type SchoolReadersResponse struct {
 
 func toReadersResponse(readers communication.ParentMessageReaders) ReadersResponse {
 	names, unnamed := communication.SplitParentMessageLeaderNames(readers.School.Names)
-	accountID := ""
-	if readers.Guardian.AccountID > 0 {
-		accountID = ident.ID(readers.Guardian.AccountID).String()
-	}
 	return ReadersResponse{
 		Guardian: GuardianReaderResponse{
-			AccountID: accountID, Name: readers.Guardian.Name, RelationshipType: readers.Guardian.RelationshipType,
+			AccountID: ident.Optional(readers.Guardian.AccountID), Name: readers.Guardian.Name, RelationshipType: readers.Guardian.RelationshipType,
 		},
 		School: SchoolReadersResponse{Kind: readers.School.Kind, Names: names, UnnamedCount: unnamed},
 	}
@@ -195,9 +190,9 @@ type MessageableGuardianResponse struct {
 }
 
 type ParentChatPostMessageRequest struct {
-	ClientMessageID      string `json:"client_message_id,omitempty" contract_text:"client-supplied message deduplication key"`
-	Body                 string `json:"body"`
-	HandledUpToMessageID string `json:"handled_up_to_message_id,omitempty" contract_text:"empty string means send without confirming a message"`
+	ClientMessageID      string         `json:"client_message_id,omitempty" contract_text:"client-supplied message deduplication key"`
+	Body                 string         `json:"body"`
+	HandledUpToMessageID ident.IDOrNone `json:"handled_up_to_message_id,omitzero"`
 	// AttachmentIDs names the uploads the message carries (#6685).
 	AttachmentIDs []ident.ID `json:"attachment_ids,omitempty"`
 }
@@ -434,14 +429,10 @@ func (rs *Resource) postMessage(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}
-	var handledUpToMessageID int64
-	if req.HandledUpToMessageID != "" {
-		parsed, parseErr := strconv.ParseInt(req.HandledUpToMessageID, 10, 64)
-		if parseErr != nil || parsed <= 0 {
-			common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid handled message ID")))
-			return
-		}
-		handledUpToMessageID = parsed
+	handledUpToMessageID := req.HandledUpToMessageID.Int64()
+	if !req.HandledUpToMessageID.IsZero() && handledUpToMessageID <= 0 {
+		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid handled message ID")))
+		return
 	}
 	attachmentIDs, ok := common.ParseMessageSend(w, r, req.ClientMessageID, req.AttachmentIDs, communication.MaxMessageAttachments)
 	if !ok {

@@ -11,6 +11,11 @@ import { bffFile, bffJson } from "~/lib/bff-fetch";
  */
 import type * as traegerStaffRecordsContract from "~/lib/contract/traeger-staff-records.generated";
 import { knownEnum } from "~/lib/contract/known-enum";
+import {
+  HireDuplicateDetailsSchema,
+  HireIncompleteDetailsSchema,
+  type hireMatchResponse,
+} from "~/lib/contract/problem-details.generated";
 import { requiredDay } from "~/lib/contract/required-day";
 import {
   downloadTraegerList,
@@ -841,12 +846,10 @@ function hireMatchReasons(raw: unknown): StaffHireMatchReason[] {
  * One entry of `details.matches` of the hire refusal. It travels in the error
  * envelope. Identifiers are decimal strings, just as in success responses.
  */
-function hireMatch(
-  match: Readonly<Record<string, unknown>>,
-): StaffHireMatch | null {
+function hireMatch(match: hireMatchResponse): StaffHireMatch | null {
   const common = {
-    firstName: typeof match.first_name === "string" ? match.first_name : "",
-    lastName: typeof match.last_name === "string" ? match.last_name : "",
+    firstName: match.first_name,
+    lastName: match.last_name,
     reasons: hireMatchReasons(match.reasons),
   };
   if (match.kind === "record" && typeof match.staff_record_id === "string") {
@@ -878,14 +881,12 @@ function hireMatch(
  * (`workforce.traeger_staff_hire_duplicate`). Unbekannte Einträge bleiben
  * draußen.
  */
-export function staffHireMatches(
-  details: Readonly<Record<string, unknown>> | undefined,
-): StaffHireMatch[] {
-  const raw = Array.isArray(details?.matches) ? details.matches : [];
+export function staffHireMatches(details: unknown): StaffHireMatch[] {
+  const parsed = HireDuplicateDetailsSchema.safeParse(details);
+  if (!parsed.success) return [];
   const matches: StaffHireMatch[] = [];
-  for (const entry of raw as unknown[]) {
-    if (typeof entry !== "object" || entry === null) continue;
-    const match = hireMatch(entry as Record<string, unknown>);
+  for (const entry of parsed.data.matches ?? []) {
+    const match = hireMatch(entry);
     if (match) matches.push(match);
   }
   return matches;
@@ -903,16 +904,11 @@ export interface StaffHireIncomplete {
  * Was die Antwort `workforce.traeger_staff_hire_incomplete` nennt: die
  * Schulen mit der neuen Person und, wenn es sie schon gibt, die Akte.
  */
-export function staffHireIncomplete(
-  details: Readonly<Record<string, unknown>> | undefined,
-): StaffHireIncomplete {
-  const schools = Array.isArray(details?.schools) ? details.schools : [];
-  const recordId = details?.staff_record_id;
+export function staffHireIncomplete(details: unknown): StaffHireIncomplete {
+  const parsed = HireIncompleteDetailsSchema.safeParse(details);
   return {
-    schools: schools.filter(
-      (school): school is string => typeof school === "string",
-    ),
-    recordId: typeof recordId === "string" ? recordId : null,
+    schools: parsed.success ? (parsed.data.schools ?? []) : [],
+    recordId: parsed.success ? (parsed.data.staff_record_id ?? null) : null,
   };
 }
 

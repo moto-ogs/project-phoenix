@@ -137,13 +137,12 @@ describe("caregiverCapabilityService", () => {
 
   it("throws parsed blocker details on API errors", async () => {
     const problem = {
-      status: "error",
-      code: "general.business_rejection",
+      status: 409,
+      code: "provisioning.caregiver_capability_blocked",
       detail: "Betreuung kann nicht deaktiviert werden",
-      details: { count: 1 },
+      details: { blockers: ["active_group_supervisions"] },
       errors: [{ field: "account_id", reason: "blocked" }],
       instance: "capability-request",
-      blockers: ["active_group_supervisions"],
     };
     mockFetch.mockResolvedValue({
       ok: false,

@@ -86,6 +86,7 @@ describe("ShiftEditModal", () => {
         new ApiError("refused", 409, {
           code: "workforce.shift_working_time_warning",
           details: {
+            count: 1,
             reason_required: false,
             warnings: [
               {

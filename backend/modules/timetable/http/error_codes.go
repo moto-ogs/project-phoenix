@@ -1,7 +1,6 @@
 package timetablehttp
 
 import (
-	"encoding/json"
 	"errors"
 
 	"github.com/go-chi/render"
@@ -73,19 +72,11 @@ func codedInvalid(err error) render.Renderer {
 
 // refusalDetails puts the values a refusal names into wire form; nil when
 // it names none, so each code carries only its own parameters.
-func refusalDetails(values timetable.RefusalValues) map[string]any {
+func refusalDetails(values timetable.RefusalValues) any {
 	if values.IsZero() {
 		return nil
 	}
-	encoded, err := json.Marshal(values)
-	if err != nil {
-		return nil
-	}
-	details := map[string]any{}
-	if err := json.Unmarshal(encoded, &details); err != nil {
-		return nil
-	}
-	return details
+	return values
 }
 
 // codedInvalidOnField renders like codedInvalid and marks field.

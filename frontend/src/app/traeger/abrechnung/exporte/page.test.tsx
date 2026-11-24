@@ -341,7 +341,6 @@ it.each(["care", "holiday"] as const)(
               field: "debtor_number",
               reason: "missing",
             },
-            { document_number: 7, field: "debtor_number", reason: "missing" },
           ],
         },
       }),
@@ -352,8 +351,7 @@ it.each(["care", "holiday"] as const)(
     expect(
       await screen.findByText(`Keine DATEV-Datei für ${run.label}`),
     ).toBeInTheDocument();
-    // One line per reason, with every invoice it names; the malformed entry
-    // is left out.
+    // One line per reason, with every invoice it names.
     expect(
       screen.getByText("Debitorennummer fehlt: MB-2026-0001, MB-2026-0002"),
     ).toBeInTheDocument();

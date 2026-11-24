@@ -97,7 +97,7 @@ func TestProvisioningErrorRendererCarriesSchoolCount(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, http.StatusConflict, resp.HTTPStatusCode)
 	assert.Equal(t, common.CodeProvisioningOrganizationHasSchools, resp.Code)
-	assert.Equal(t, map[string]any{"school_count": 3}, resp.Details)
+	assert.Equal(t, OrganizationHasSchoolsDetails{SchoolCount: 3}, resp.Details)
 }
 
 // The adapter text of invalid data stays out of the answer; its field
@@ -115,11 +115,11 @@ func TestProvisioningErrorRendererHidesInvalidDataText(t *testing.T) {
 func TestCaregiverCapabilityRendererAnswersWithCodes(t *testing.T) {
 	t.Parallel()
 
-	blocked, ok := caregiverCapabilityProvisioningErrorRenderer(fakeCaregiverBlockedError{blockers: []string{"group_assignments"}}).(*common.CaregiverCapabilityBlockedResponse)
+	blocked, ok := caregiverCapabilityProvisioningErrorRenderer(fakeCaregiverBlockedError{blockers: []string{"group_assignments"}}).(*common.ErrResponse)
 	require.True(t, ok)
 	assert.Equal(t, http.StatusConflict, blocked.HTTPStatusCode)
 	assert.Equal(t, common.CodeProvisioningCaregiverCapabilityBlocked, blocked.Code)
-	assert.Equal(t, []string{"group_assignments"}, blocked.Blockers)
+	assert.Equal(t, []string{"group_assignments"}, blocked.Details.(common.CaregiverCapabilityDetails).Blockers)
 
 	missing, ok := caregiverCapabilityProvisioningErrorRenderer(organizationtenancy.ErrAccountNotFound).(*common.ErrResponse)
 	require.True(t, ok)

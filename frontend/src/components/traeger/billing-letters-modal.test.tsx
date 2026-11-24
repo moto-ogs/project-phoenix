@@ -5,6 +5,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
+import { errorFromProblem } from "~/test/helpers/problem-response";
 import { BillingLettersModal } from "./billing-letters-modal";
 
 const { createBillingLetters } = vi.hoisted(() => ({
@@ -48,7 +49,7 @@ it.each(schoolDateCases("2026-05-27"))(
 // invoices without one (#5622); the form names how many and what to do.
 it("names the invoices without a debtor number the payment text needs", async () => {
   createBillingLetters.mockRejectedValue(
-    new ApiError("missing", 409, {
+    await errorFromProblem("missing", 409, {
       code: "parent_billing.payment_text_debtor_number_missing",
       details: { count: 3, invoice_numbers: ["FE-0002", "FE-0003", "FE-0004"] },
     }),

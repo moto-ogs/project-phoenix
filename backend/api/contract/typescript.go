@@ -53,7 +53,7 @@ func TypeScript(doc Document) (map[string]string, error) {
 		w.enumOrder = shared.take(w.enumOrder, "enum:", users)
 	}
 	files := map[string]string{
-		portalsFile: portalTable(resources), browserTraitsFile: browserTraits(doc.Routes),
+		portalsFile: portalTable(resources), browserTraitsFile: browserTraits(doc),
 	}
 	for resource, routes := range resources {
 		files[resource+".generated.ts"] = writers[resource].file(routes, shared)
@@ -74,9 +74,10 @@ func writePartialResults(files map[string]string, routes []Route, writer *tsWrit
 			continue
 		}
 		writer.visit(*route.Response)
-		fmt.Fprintf(&entries, "  %q: %s,\n", route.Key(), writer.field(*route.Response))
+		fmt.Fprintf(&entries, "  %q: partialResult<%s>(%s),\n", route.Key(), writer.tsType(*route.Response, false), writer.field(*route.Response))
 	}
 	if entries.Len() > 0 {
+		writer.helpers["partialResult"] = true
 		files["partial-results.generated.ts"] = writer.file(nil, nil) +
 			"\nexport const partialResults = {\n" + entries.String() + "} as const;\n"
 	}
@@ -149,7 +150,8 @@ const portalsFile = "portals.generated.ts"
 const browserTraitsFile = "browser-traits.generated.ts"
 
 // browserTraits carries only routing facts; importing it never ships decoders.
-func browserTraits(routes []Route) string {
+func browserTraits(doc Document) string {
+	routes := doc.Routes
 	var out strings.Builder
 	out.WriteString(tsHeader)
 	paths := map[string][]string{}
@@ -176,6 +178,15 @@ func browserTraits(routes []Route) string {
 	writeRouteSet(&out, "tenantNoRetryRoutes", routes, func(route Route) bool {
 		return route.NoRetryAfterRenewal != "" && slices.Contains(route.Portals, "tenant")
 	})
+	objects := make(map[string]Object, len(doc.Types))
+	for _, object := range doc.Types {
+		objects[object.Name] = object
+	}
+	writeRouteSet(&out, "studentPhotoRoutes", routes, func(route Route) bool {
+		return slices.Contains(route.Portals, "tenant") && slices.ContainsFunc(routeSchemas(route), func(schema Schema) bool {
+			return carriesPhotoVersion(schema, objects, map[string]bool{})
+		})
+	})
 	fmt.Fprintf(&out, "\nexport const publicAssetCache = %q;\n", contractmodel.FileCachePublicAsset)
 	out.WriteString("\nexport const fileCacheValues = new Set<string>([\n")
 	for _, value := range contractmodel.FileCacheValues {
@@ -183,6 +194,23 @@ func browserTraits(routes []Route) string {
 	}
 	out.WriteString("]);\n")
 	return out.String()
+}
+
+// Only these responses need a BFF compatibility alias for old browser tabs.
+func carriesPhotoVersion(schema Schema, objects map[string]Object, seen map[string]bool) bool {
+	if schema.Elem != nil {
+		return carriesPhotoVersion(*schema.Elem, objects, seen)
+	}
+	if schema.Kind != KindRef || seen[schema.Ref] {
+		return false
+	}
+	seen[schema.Ref] = true
+	for _, field := range objects[schema.Ref].Fields {
+		if field.Name == "photo_version" || carriesPhotoVersion(field.Schema, objects, seen) {
+			return true
+		}
+	}
+	return false
 }
 
 // These browser routes revoke portal-specific sessions through the same Go route.
@@ -423,16 +451,18 @@ func (w *tsWriter) object(out *strings.Builder, object Object) {
 	// the checker the interface instead of letting it derive the shape's type.
 	w.helpers["object"] = true
 	codecType := "z.ZodType<" + object.Name + ", unknown>"
+	pure := ""
 	if w.browser {
 		w.helpers["type Decoder"] = true
 		codecType = "Decoder<" + object.Name + ">"
+		pure = "/*#__PURE__*/ "
 	}
-	fmt.Fprintf(out, "\nexport const %sSchema: %s = object<%s>({\n", object.Name, codecType, object.Name)
+	fmt.Fprintf(out, "\nexport const %sSchema: %s = %sobject<%s>({\n", object.Name, codecType, pure, object.Name)
 	for _, field := range object.Fields {
 		decoder := w.field(field.Schema)
 		if field.Optional {
 			w.helpers["optional"] = true
-			decoder = "optional(" + decoder + ")"
+			decoder = pure + "optional(" + decoder + ")"
 		}
 		fmt.Fprintf(out, "  %s: %s,\n", field.Name, decoder)
 	}
@@ -644,6 +674,13 @@ func (w *tsWriter) field(s Schema) string {
 		return name
 	}
 	var z string
+	call := func(name, value string) string {
+		prefix := ""
+		if w.browser {
+			prefix = "/*#__PURE__*/ "
+		}
+		return prefix + helper(name) + "(" + value + ")"
+	}
 	switch s.Kind {
 	case KindString, KindEnum:
 		// An open enum decodes any string.
@@ -655,7 +692,14 @@ func (w *tsWriter) field(s Schema) string {
 	case KindNumber:
 		z = helper("num")
 	case KindID:
-		z = helper("int64String")
+		switch {
+		case s.NoID && w.browser:
+			z = helper("int64String") + ".orNone"
+		case s.NoID:
+			z = helper("int64StringOrNone")
+		default:
+			z = helper("int64String")
+		}
 	case KindDate:
 		z = helper("calendarDate")
 	case KindInstant:
@@ -663,9 +707,9 @@ func (w *tsWriter) field(s Schema) string {
 	case KindClock:
 		z = helper("clockTime")
 	case KindArray:
-		z = helper("arr") + "(" + w.field(*s.Elem) + ")"
+		z = call("arr", w.field(*s.Elem))
 	case KindMap:
-		z = helper("rec") + "(" + w.field(*s.Elem) + ")"
+		z = call("rec", w.field(*s.Elem))
 	case KindJSON:
 		z = helper("json")
 	case KindRef:
@@ -673,14 +717,14 @@ func (w *tsWriter) field(s Schema) string {
 		if w.pending[s.Ref] {
 			// A type that refers back to itself or to a type of its cycle
 			// reads that schema once it exists.
-			z = helper("lazy") + "(() => " + z + ")"
+			z = call("lazy", "() => "+z)
 		}
 	}
 	if s.Nullable {
-		z = helper("nullable") + "(" + z + ")"
+		z = call("nullable", z)
 	}
 	if s.LegacyJSON {
-		return helper("legacyJSON") + "(" + z + ")"
+		return call("legacyJSON", z)
 	}
 	return z
 }
@@ -704,6 +748,9 @@ func (w *tsWriter) zod(s Schema) string {
 		z = "z.number()"
 	case KindID:
 		z = helper("int64String")
+		if s.NoID {
+			z = helper("int64StringOrNone")
+		}
 	case KindDate:
 		z = helper("calendarDate")
 	case KindInstant:

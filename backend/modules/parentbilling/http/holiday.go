@@ -509,11 +509,11 @@ func renderHolidayError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.As(err, &dayLimit):
 		common.RenderError(w, r, common.ErrorInvalidRequestWithDetails(err, common.CodeEnrollmentHolidayChildDayLimit,
-			map[string]any{"limit": dayLimit.Limit, "days": dayLimit.Days, "elsewhere": dayLimit.Elsewhere, "child": 1}))
+			common.HolidayChildDayLimitDetails{Limit: dayLimit.Limit, Days: dayLimit.Days, Elsewhere: dayLimit.Elsewhere, Child: 1}))
 	case errors.As(err, &noCareDay):
-		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeEnrollmentHolidayWeekNoCareDay, map[string]any{
-			"week": noCareDay.Week, "week_id": ident.ID(noCareDay.WeekID), "date": noCareDay.Date.Format("02.01.2006"),
-			"iso_date": noCareDay.Date.String(), "kind": noCareDay.Kind, "name": noCareDay.Name,
+		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeEnrollmentHolidayWeekNoCareDay, common.HolidayWeekNoCareDetails{
+			Week: noCareDay.Week, WeekID: ident.ID(noCareDay.WeekID), Date: noCareDay.Date.Format("02.01.2006"),
+			ISODate: noCareDay.Date, Kind: noCareDay.Kind, Name: noCareDay.Name,
 		}))
 	case errors.Is(err, capability.ErrInvalidHolidayPlaces):
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeEnrollmentHolidayRegistrationInvalid))

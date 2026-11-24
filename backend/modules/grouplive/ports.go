@@ -98,8 +98,8 @@ type RosterStudent struct {
 	SickSince    *time.Time
 	Excused      bool
 	ExcusedSince *time.Time
-	// PhotoURL is the browser address; the projection checks photo access.
-	PhotoURL string
+	// PhotoVersion names the stored photo after the projection checks access.
+	PhotoVersion string
 }
 
 // Roster lists a group's members and their care participation.

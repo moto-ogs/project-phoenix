@@ -9,7 +9,8 @@ import "github.com/moto-ogs/project-phoenix/api/common"
 func RouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalTenant}
 	audience := []common.QueryParam{{Name: "audience", Kind: common.QueryString}}
-	target := []common.QueryParam{{Name: "target_type", Kind: common.QueryString}, {Name: "target_id", Kind: common.QueryString}}
+	target := []common.QueryParam{{Name: "target_type", Kind: common.QueryString},
+		{Name: "target_id", Kind: common.QueryString, TextReason: "target_type selects a school class label, an OGS group ID or an activity group ID"}}
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/students/{studentId}/guardians", Portals: portals, Query: audience, Response: []MessageableGuardianResponse{}},
 		{Method: "GET", Pattern: "/reachable-students", Portals: portals, Response: ReachableStudentsResponse{}},

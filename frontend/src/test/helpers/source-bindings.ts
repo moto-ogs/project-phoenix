@@ -81,6 +81,9 @@ export function sourceBindings(file: string, text: string) {
     source,
     binding,
     declaration: (node: ts.Identifier) =>
-      checker.getSymbolAtLocation(node)?.valueDeclaration,
+      (ts.isShorthandPropertyAssignment(node.parent)
+        ? checker.getShorthandAssignmentValueSymbol(node.parent)
+        : checker.getSymbolAtLocation(node)
+      )?.valueDeclaration,
   };
 }

@@ -81,7 +81,7 @@ func (p groupRosterPeople) GroupMembers(ctx context.Context, groupID int64) ([]g
 			SchoolClass: student.SchoolClass, SickSince: student.SickSince, ExcusedSince: student.ExcusedSince,
 		}
 		if student.PhotoPath != nil {
-			member.PhotoURL = common.BuildStudentPhotoServeURL(student.ID, *student.PhotoPath)
+			member.PhotoVersion = common.StudentPhotoVersion(*student.PhotoPath)
 		}
 		if student.Sick != nil {
 			member.Sick = *student.Sick

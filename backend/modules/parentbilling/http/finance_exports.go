@@ -3,9 +3,9 @@ package parentbillinghttp
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
@@ -285,7 +285,7 @@ func (rs *FinanceExportResource) datev(w http.ResponseWriter, r *http.Request) {
 
 // datevRuns answers the new DATEV bookings and fiscal years of the runs a
 // page of the export page shows (#6433): care and holiday name the IDs of
-// monthly and holiday runs, separated by commas.
+// monthly and holiday runs.
 func (rs *FinanceExportResource) datevRuns(w http.ResponseWriter, r *http.Request) {
 	reviewer, ok := reviewerOf(w, r)
 	if !ok {
@@ -304,19 +304,16 @@ func (rs *FinanceExportResource) datevRuns(w http.ResponseWriter, r *http.Reques
 	common.Respond(w, r, http.StatusOK, overviews, "DATEV bookings of the runs retrieved successfully")
 }
 
-// datevRunRefs reads the runs of the query: care=5,6&holiday=7.
+// datevRunRefs reads the runs of the query: care=5&care=6&holiday=7.
 func datevRunRefs(r *http.Request) ([]capability.ExportRunRef, error) {
 	var runs []capability.ExportRunRef
-	for param, kind := range map[string]string{"care": capability.DebitRunCare, "holiday": capability.DebitRunHoliday} {
-		value := r.URL.Query().Get(param)
-		if value == "" {
-			continue
+	query := r.URL.Query()
+	for _, kind := range []string{capability.DebitRunCare, capability.DebitRunHoliday} {
+		ids, err := common.ParseIDQuery(query[kind])
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", kind, err)
 		}
-		for _, part := range strings.Split(value, ",") {
-			id, err := strconv.ParseInt(part, 10, 64)
-			if err != nil || id <= 0 {
-				return nil, errors.New(param + " must name run IDs separated by commas")
-			}
+		for _, id := range ids {
 			runs = append(runs, capability.ExportRunRef{RunKind: kind, RunID: id})
 		}
 	}
@@ -404,14 +401,14 @@ func renderExportError(w http.ResponseWriter, r *http.Request, err error) {
 	var sollAccounts *capability.SollRevenueAccountError
 	switch {
 	case errors.As(err, &sollAccounts):
-		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeParentBillingSollstellungRevenueAccountMissing, map[string]any{
-			"count": len(sollAccounts.DocumentNumbers), "documents": sollAccounts.DocumentNumbers}))
+		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeParentBillingSollstellungRevenueAccountMissing,
+			SollRevenueAccountDetails{Count: len(sollAccounts.DocumentNumbers), Documents: sollAccounts.DocumentNumbers}))
 	case errors.As(err, &notReady):
-		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeParentBillingDatevNotReady, map[string]any{
-			"missing_settings": notReady.Readiness.MissingSettings, "invalid_settings": notReady.Readiness.InvalidSettings}))
+		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeParentBillingDatevNotReady,
+			DatevReadinessDetails{MissingSettings: notReady.Readiness.MissingSettings, InvalidSettings: notReady.Readiness.InvalidSettings}))
 	case errors.As(err, &bookings):
-		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeParentBillingDatevBookingsInvalid, map[string]any{
-			"documents": bookings.Problems}))
+		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeParentBillingDatevBookingsInvalid,
+			DatevBookingsDetails{Documents: bookings.Problems}))
 	case errors.As(err, &fields):
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeParentBillingExportMappingInvalid))
 	case errors.Is(err, capability.ErrExportRunNotFound):
@@ -429,4 +426,18 @@ func renderExportError(w http.ResponseWriter, r *http.Request, err error) {
 	default:
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 	}
+}
+
+type SollRevenueAccountDetails struct {
+	Count     int      `json:"count"`
+	Documents []string `json:"documents"`
+}
+
+type DatevReadinessDetails struct {
+	MissingSettings []string `json:"missing_settings"`
+	InvalidSettings []string `json:"invalid_settings"`
+}
+
+type DatevBookingsDetails struct {
+	Documents []capability.DatevBookingProblem `json:"documents"`
 }

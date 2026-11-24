@@ -59,6 +59,16 @@ type ShiftWorkingTimeWarning struct {
 	NeedsReason bool          `json:"needs_reason"`
 }
 
+type ShiftWorkingTimeDetails struct {
+	Warnings       []ShiftWorkingTimeWarning `json:"warnings"`
+	Count          int                       `json:"count"`
+	ReasonRequired bool                      `json:"reason_required"`
+}
+
+func (e *ShiftWorkingTimeError) RefusalDetails() ShiftWorkingTimeDetails {
+	return ShiftWorkingTimeDetails{Warnings: e.Warnings, Count: len(e.Warnings), ReasonRequired: e.ReasonRequired}
+}
+
 // ShiftWorkingTimeError carries the warnings of a write that was not
 // confirmed, or that needs a reason it lacks.
 type ShiftWorkingTimeError struct {
@@ -80,6 +90,18 @@ type ShiftOtherSiteError struct {
 	StartTime  string
 	EndTime    string
 	SchoolName string
+}
+
+type ShiftOtherSiteDetails struct {
+	Date   calendar.Date `json:"date"`
+	Day    string        `json:"day"`
+	Start  string        `json:"start"`
+	End    string        `json:"end"`
+	School string        `json:"school,omitempty"`
+}
+
+func ShiftOtherSiteRefusalDetails(e *ShiftOtherSiteError) ShiftOtherSiteDetails {
+	return ShiftOtherSiteDetails{Date: e.Date, Day: e.Date.Format("02.01.2006"), Start: e.StartTime, End: e.EndTime, School: e.SchoolName}
 }
 
 func (e *ShiftOtherSiteError) Error() string {

@@ -59,13 +59,13 @@ func (rs *Resource) readComparison(w http.ResponseWriter, r *http.Request) (trae
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return traegerview.SchoolComparison{}, false
 	}
-	schools, err := comparisonSchools(r.URL.Query().Get("schools"))
+	schools, err := common.ParseIDQuery(r.URL.Query()["schools"])
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return traegerview.SchoolComparison{}, false
 	}
 	comparison, err := rs.reports.SchoolComparison(r.Context(), principal.OrganizationID(),
-		traegerview.ComparisonFilter{From: from, To: to, SchoolIDs: schools})
+		traegerview.ComparisonFilter{From: from, To: to, SchoolIDs: uniqueSchoolIDs(schools)})
 	switch {
 	case errors.Is(err, traegerview.ErrSchoolOutsideTraeger):
 		common.RenderError(w, r, common.ErrorNotFoundWithCode(err, common.CodeTraegerSchoolNotFound))
@@ -81,22 +81,14 @@ func (rs *Resource) readComparison(w http.ResponseWriter, r *http.Request) (trae
 	return traegerview.SchoolComparison{}, false
 }
 
-// comparisonSchools reads the optional comma-separated school IDs.
-func comparisonSchools(raw string) ([]int64, error) {
-	if raw == "" {
-		return nil, nil
-	}
+func uniqueSchoolIDs(schools []int64) []int64 {
 	var ids []int64
-	for part := range strings.SplitSeq(raw, ",") {
-		id, err := strconv.ParseInt(strings.TrimSpace(part), 10, 64)
-		if err != nil || id <= 0 {
-			return nil, errors.New("schools must be positive IDs separated by commas")
-		}
+	for _, id := range schools {
 		if !slices.Contains(ids, id) {
 			ids = append(ids, id)
 		}
 	}
-	return ids, nil
+	return ids
 }
 
 // comparisonMetrics reads the optional comma-separated figure keys; none

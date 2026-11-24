@@ -138,7 +138,7 @@ var locationDerivedExportStatuses = map[string]struct{}{
 // activeLiveExportFilters is the export counterpart of activeLiveListFilters.
 func activeLiveExportFilters(filters studentExportFilters) []string {
 	var active []string
-	if strings.TrimSpace(filters.RoomID) != "" {
+	if !filters.RoomID.IsZero() {
 		active = append(active, "room_id")
 	}
 	if _, isLive := locationDerivedExportStatuses[filters.Status]; isLive {

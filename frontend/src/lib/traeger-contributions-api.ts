@@ -14,6 +14,7 @@ import {
 } from "./holiday-contribution";
 import { ApiError, wireErrorCode } from "./api-error";
 import { knownEnum } from "./contract/known-enum";
+import { FamilyDebtorNumberDetailsSchema } from "./contract/problem-details.generated";
 import { requiredDay } from "./contract/required-day";
 import type * as sharedContract from "./contract/shared.generated";
 import type * as traegerContributionRulesContract from "./contract/traeger-contribution-rules.generated";
@@ -456,36 +457,21 @@ export function familyDebtorNumberConflictOf(
   ) {
     return null;
   }
-  const familyNumber = error.details?.family_debtor_number;
-  const enteredNumber = error.details?.debtor_number;
-  if (typeof familyNumber !== "string" || typeof enteredNumber !== "string") {
-    return null;
-  }
-  const familyEmail = error.details?.family_email;
-  const families = Array.isArray(error.details?.families)
-    ? error.details.families.flatMap((family: unknown) => {
-        if (!family || typeof family !== "object") return [];
-        const row = family as Record<string, unknown>;
-        return typeof row.family_email === "string" &&
-          typeof row.family_debtor_number === "string"
-          ? [
-              {
-                familyEmail: row.family_email,
-                familyNumber: row.family_debtor_number,
-              },
-            ]
-          : [];
-      })
-    : [
-        {
-          familyEmail: typeof familyEmail === "string" ? familyEmail : "",
-          familyNumber,
-        },
-      ];
+  const parsed = FamilyDebtorNumberDetailsSchema.safeParse(error.details);
+  if (!parsed.success) return null;
+  const {
+    family_debtor_number: familyNumber,
+    debtor_number: enteredNumber,
+    family_email: familyEmail,
+  } = parsed.data;
+  const families = parsed.data.families?.map((family) => ({
+    familyEmail: family.family_email,
+    familyNumber: family.family_debtor_number,
+  })) ?? [{ familyEmail, familyNumber }];
   return {
     families,
     familyNumber,
     enteredNumber,
-    familyEmail: typeof familyEmail === "string" ? familyEmail : "",
+    familyEmail,
   };
 }

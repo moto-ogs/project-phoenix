@@ -873,7 +873,7 @@ describe("StudentSearchPage", () => {
       ) as Record<string, string>;
       expect(exportFilters).toMatchObject({
         school_class: "1a,2b",
-        group_id: "1,2",
+        group_ids: ["1", "2"],
         year: "3,4",
       });
     });
@@ -931,7 +931,7 @@ describe("StudentSearchPage", () => {
       ) as Record<string, string>;
       expect(exportFilters).toMatchObject({
         school_class: "1a,2b",
-        group_id: "1,2",
+        group_ids: ["1", "2"],
         year: "3,4",
       });
     });
@@ -960,7 +960,7 @@ describe("StudentSearchPage", () => {
       const exportFilters = JSON.parse(
         screen.getByTestId("export-modal").getAttribute("data-filters") ?? "{}",
       ) as Record<string, string>;
-      expect(exportFilters).toMatchObject({ group_id: "1,2" });
+      expect(exportFilters).toMatchObject({ group_ids: ["1", "2"] });
     });
 
     it("restores filters from localStorage when opening without URL params", async () => {

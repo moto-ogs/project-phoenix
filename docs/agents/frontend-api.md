@@ -189,8 +189,10 @@ or write a `Backend*` interface for a registered route.
   ```
 
 - Pass `token` when the caller holds the bearer, or omit it for a public
-  or pre-session step. Pass typed `params` and `query`; the entry supplies
-  the backend path. There is no endpoint override. For a session-bound route that
+  or pre-session step. Pass typed `params`; the entry supplies the backend
+  path. For a named browser route with registered query keys, pass the incoming
+  `request` so the transport forwards them. Other server calls pass typed
+  `query`. There is no endpoint override. For a session-bound route that
   uses `backendFetch`, hand that transport to the contract helper as
   `send`; it keeps the portal's renewal policy.
 - Return `contractResponse(reply, request)` for decoded JSON that the BFF

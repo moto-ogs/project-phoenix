@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ApiError } from "~/lib/api-error";
+import { errorFromProblem } from "~/test/helpers/problem-response";
 import { catalogText } from "~/test/error-catalog-text";
 import { StudentsInRoomSection } from "./students-in-room-section";
 import { useAttendanceWebEnabled } from "~/lib/tenant-context";
@@ -699,6 +700,7 @@ describe("StudentsInRoomSection", () => {
         kind: "activity",
         code: "presence.activity_participant_limit_reached",
         details: {
+          activity_id: "900",
           activity_name: "Fußball",
           current_occupancy: 19,
           max_participants: 20,
@@ -709,6 +711,7 @@ describe("StudentsInRoomSection", () => {
         kind: "room",
         code: "presence.room_capacity_exceeded",
         details: {
+          room_id: "6",
           room_name: "Raum 6",
           current_occupancy: 30,
           max_capacity: 30,
@@ -743,10 +746,14 @@ describe("StudentsInRoomSection", () => {
           },
         });
         mockMoveStudentsToActiveGroup.mockRejectedValue(
-          new ApiError("Move students to active group failed: 409", 409, {
-            code,
-            details,
-          }),
+          await errorFromProblem(
+            "Move students to active group failed: 409",
+            409,
+            {
+              code,
+              details,
+            },
+          ),
         );
 
         render(<StudentsInRoomSection roomId="42" roomName="OGS-Raum 1" />);

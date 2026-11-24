@@ -121,7 +121,7 @@ export type AdminExistingChildCandidate = Omit<
   "phase_request"
 > & { phase_request?: AdminCandidatePhaseRequest };
 
-function candidateFromContract(
+export function candidateFromContract(
   candidate: enrollmentContract.AdminExistingChildCandidate,
 ): AdminExistingChildCandidate {
   const { phase_request: other, ...rest } = candidate;

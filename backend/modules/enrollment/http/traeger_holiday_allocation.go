@@ -205,7 +205,7 @@ func renderHolidayAllocationError(w http.ResponseWriter, r *http.Request, err er
 		common.RenderError(w, r, common.ErrorInvalidOnField(err, common.CodeEnrollmentHolidayRegistrationInvalid,
 			fmt.Sprintf("decisions.%d.reason", reason.Index)))
 	case errors.As(err, &full):
-		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeEnrollmentHolidayAllocationFull, map[string]any{"week_id": ident.ID(full.WeekID)}))
+		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeEnrollmentHolidayAllocationFull, HolidayAllocationDetails{WeekID: ident.ID(full.WeekID)}))
 	case errors.Is(err, capability.ErrHolidayAllocationOff):
 		common.RenderError(w, r, common.ErrorConflict(err))
 	case errors.Is(err, capability.ErrHolidayAllocationChanged):

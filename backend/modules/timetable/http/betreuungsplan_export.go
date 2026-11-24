@@ -17,6 +17,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/planexport"
+	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
@@ -104,7 +105,7 @@ func planExportInvalidRenderer(err error) render.Renderer {
 	switch {
 	case errors.Is(err, planexport.ErrRangeTooLarge):
 		return common.ErrorInvalidRequestWithDetails(err, common.CodeTimetableExportRangeTooLarge,
-			map[string]any{"max_weeks": planexport.MaxExportWeeks})
+			timetable.RefusalValues{MaxWeeks: planexport.MaxExportWeeks})
 	case errors.Is(err, planexport.ErrRangeReversed):
 		return common.ErrorInvalidOnField(err, common.CodeTimetableExportEndBeforeStart, "to")
 	default:

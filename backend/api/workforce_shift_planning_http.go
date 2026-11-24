@@ -229,16 +229,12 @@ func renderShiftTypesFailure(w http.ResponseWriter, r *http.Request, kind shiftt
 // planCheckDetails returns the details{} of a refusal of the working-time
 // check: the warnings and whether a reason is missing, or the shift at the
 // other Einsatzort. ok is false for every other error.
-func planCheckDetails(err error) (map[string]any, bool) {
+func planCheckDetails(err error) (any, bool) {
 	if warning, ok := errors.AsType[*workforce.ShiftWorkingTimeError](err); ok {
-		return map[string]any{"warnings": warning.Warnings, "count": len(warning.Warnings), "reason_required": warning.ReasonRequired}, true
+		return warning.RefusalDetails(), true
 	}
 	if other, ok := errors.AsType[*workforce.ShiftOtherSiteError](err); ok {
-		details := map[string]any{"date": other.Date.String(), "day": other.Date.Format("02.01.2006"), "start": other.StartTime, "end": other.EndTime}
-		if other.SchoolName != "" {
-			details["school"] = other.SchoolName
-		}
-		return details, true
+		return workforce.ShiftOtherSiteRefusalDetails(other), true
 	}
 	return nil, false
 }

@@ -618,7 +618,7 @@ func supervisionVisitRecords(rows []*studentpresence.VisitDisplay) []supervision
 			ExcusedSince:  row.ExcusedSince,
 		}
 		if row.PhotoPath != nil {
-			record.PhotoURL = common.BuildStudentPhotoServeURL(row.StudentID, *row.PhotoPath)
+			record.PhotoVersion = common.StudentPhotoVersion(*row.PhotoPath)
 		}
 		if row.Sick != nil {
 			record.Sick = *row.Sick

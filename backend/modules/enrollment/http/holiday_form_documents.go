@@ -29,7 +29,7 @@ func (rs *HolidayPeriodResource) uploadFormDocument(w http.ResponseWriter, r *ht
 		defer func() { _ = r.MultipartForm.RemoveAll() }()
 	}
 	if err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequestWithDetails(err, common.CodeEnrollmentLegalDocumentInvalid, map[string]any{"max_mb": 10}))
+		common.RenderError(w, r, common.ErrorInvalidRequestWithDetails(err, common.CodeEnrollmentLegalDocumentInvalid, common.SizeLimitDetails{MaxMB: 10}))
 		return
 	}
 	defer common.CloseFile(uploaded.File)

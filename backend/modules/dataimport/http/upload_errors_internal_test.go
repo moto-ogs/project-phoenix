@@ -20,10 +20,10 @@ func TestDecodeFailureNamesWhatToFix(t *testing.T) {
 		name    string
 		err     error
 		code    string
-		details map[string]any
+		details any
 	}{
-		{"missing columns", &importModels.FileMissingColumnsError{Columns: []string{"Vorname", "Klasse"}}, codeImportFileColumnsMissing, map[string]any{"columns": "Vorname, Klasse"}},
-		{"bad row", fmt.Errorf("wrap: %w", &importModels.FileRowError{Row: 7, Err: errors.New("bad value")}), codeImportFileRowInvalid, map[string]any{"row": 7}},
+		{"missing columns", &importModels.FileMissingColumnsError{Columns: []string{"Vorname", "Klasse"}}, codeImportFileColumnsMissing, MissingColumnsDetails{Columns: "Vorname, Klasse"}},
+		{"bad row", fmt.Errorf("wrap: %w", &importModels.FileRowError{Row: 7, Err: errors.New("bad value")}), codeImportFileRowInvalid, InvalidRowDetails{Row: 7}},
 		{"no rows", &importModels.FileNoDataRowsError{Kind: "CSV"}, codeImportFileNoRows, nil},
 		{"broken file", errors.New("open excel file: zip: not a valid zip file"), codeImportFileUnreadable, nil},
 	}

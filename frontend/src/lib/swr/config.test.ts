@@ -94,7 +94,7 @@ describe("swrConfig.onError", () => {
       .mockImplementation(() => {});
 
     swrConfig.onError?.(
-      new Error("Error fetching students: API error: 429"),
+      Object.assign(new Error("Error fetching students"), { status: 429 }),
       "tenant-slug:ogs-students-3",
       stubConfig,
     );

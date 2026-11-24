@@ -116,6 +116,16 @@ export const tenantNoRetryRoutes = new Set<string>([
   "POST /auth/password",
 ]);
 
+export const studentPhotoRoutes = new Set<string>([
+  "GET /api/active/supervision-dashboard",
+  "GET /api/students/",
+  "GET /api/students/ogs-group-live",
+  "GET /api/students/{id}",
+  "POST /api/students/",
+  "POST /api/students/{id}/photo",
+  "PUT /api/students/{id}",
+]);
+
 export const publicAssetCache = "public, max-age=86400";
 
 export const fileCacheValues = new Set<string>([

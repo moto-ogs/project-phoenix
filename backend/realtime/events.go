@@ -5,6 +5,8 @@ package realtime
 import (
 	"strconv"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // EventType represents the type of SSE event
@@ -343,7 +345,7 @@ type EventData struct {
 	// refetching the heavy inbox projection on every message tenant-wide. Trigger
 	// only; the client still refetches the affected thread via the API.
 	//
-	// NOTE: ThreadID, StudentID, and Source (guardian account id) are all cleared
+	// NOTE: ThreadID, StudentID and SenderAccountID are all cleared
 	// for the staff fan-out by staffSafeParentMessage so an unauthorized staffer
 	// cannot observe which child/guardian — or which specific conversation — a
 	// thread concerns from raw SSE traffic (student read access,
@@ -352,7 +354,8 @@ type EventData struct {
 	// could still correlate future parent_message events to that conversation, so
 	// it is stripped too. The addressed guardian's own clients still receive the
 	// full event.
-	ThreadID *string `json:"thread_id,omitempty" contract_text:"internal relay ID before the SSE projection"`
+	ThreadID        *string   `json:"thread_id,omitempty" contract_text:"internal relay ID before the SSE projection"`
+	SenderAccountID *ident.ID `json:"-"` // projected separately from source text
 
 	// Source tracking
 	Source *string `json:"source,omitempty"` // "rfid", "manual", "automated"
@@ -403,6 +406,7 @@ func staffSafeParentMessage(event Event) Event {
 	safe.Data.ThreadID = nil
 	safe.Data.StudentID = nil
 	safe.Data.Source = nil
+	safe.Data.SenderAccountID = nil
 	return safe
 }
 
@@ -452,11 +456,10 @@ func NewParentMessageUnreadChangedEvent() Event {
 
 // NewStaffMessageEvent builds the EventStaffMessage SSE event for the
 // OGS-internal chat. It carries the thread id (see EventStaffMessage on why
-// that is safe here) and the sender account as Source, so the sender's own tabs
+// that is safe here) and the sender account, so the sender's own tabs
 // can skip the refetch their own send already triggered.
 func NewStaffMessageEvent(senderAccountID, threadID int64) Event {
-	sid := strconv.FormatInt(senderAccountID, 10)
-	data := EventData{Source: &sid}
+	data := EventData{SenderAccountID: new(ident.ID(senderAccountID))}
 	if threadID > 0 {
 		tid := strconv.FormatInt(threadID, 10)
 		data.ThreadID = &tid
@@ -492,11 +495,10 @@ func NewInstanceOverdueRefreshEvent(instanceID int64) Event {
 }
 
 // parentMessageData builds the shared payload for the parent-messaging events:
-// the guardian account as Source plus the (optional) thread/student filter. One
+// the guardian account plus the (optional) thread/student filter. One
 // home so the new-message and read events can never drift in shape.
 func parentMessageData(guardianAccountID, threadID, studentID int64) EventData {
-	gid := strconv.FormatInt(guardianAccountID, 10)
-	data := EventData{Source: &gid}
+	data := EventData{SenderAccountID: new(ident.ID(guardianAccountID))}
 	if threadID > 0 {
 		tid := strconv.FormatInt(threadID, 10)
 		data.ThreadID = &tid

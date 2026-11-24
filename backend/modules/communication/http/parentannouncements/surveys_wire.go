@@ -3,7 +3,6 @@ package announcement
 import (
 	"errors"
 	"net/http"
-	"strconv"
 	"time"
 
 	announcementService "github.com/moto-ogs/project-phoenix/modules/communication"
@@ -21,9 +20,9 @@ type surveyTargetWire struct {
 
 // surveyTargetRequest is a target as the author sends it.
 type surveyTargetRequest struct {
-	TargetType string  `json:"target_type"`
-	RefID      *string `json:"ref_id,omitempty" contract_text:"empty string means no numeric target"`
-	RefText    *string `json:"ref_text,omitempty"`
+	TargetType string          `json:"target_type"`
+	RefID      *ident.IDOrNone `json:"ref_id,omitempty"`
+	RefText    *string         `json:"ref_text,omitempty"`
 }
 
 type surveyQuestionRequest struct {
@@ -58,9 +57,9 @@ func (req surveyRequest) input() (announcementService.SurveyInput, error) {
 	}
 	for _, t := range req.Targets {
 		target := announcementService.SurveyTarget{TargetType: t.TargetType, RefText: t.RefText}
-		if t.RefID != nil && *t.RefID != "" {
-			id, err := strconv.ParseInt(*t.RefID, 10, 64)
-			if err != nil || id <= 0 {
+		if t.RefID != nil && !t.RefID.IsZero() {
+			id := t.RefID.Int64()
+			if id <= 0 {
 				return announcementService.SurveyInput{}, errors.New("invalid target ref_id")
 			}
 			target.RefID = &id

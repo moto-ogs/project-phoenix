@@ -173,9 +173,10 @@ func newOperatorRouter(
 		provisioningOperatorAPI.NewBillingResource(billing, nil),
 		&operatorSchoolSettings{
 			values: settingsOperatorAPI.NewSettingsResource(settingsOperatorAPI.SettingsConfig{
-				Settings:   schoolSettings,
-				Schools:    operatorSettingsSchools{schools: organizations},
-				OperatorID: operatorIDFromSession,
+				Settings:             schoolSettings,
+				Schools:              operatorSettingsSchools{schools: organizations},
+				TenantLookupSettings: ContractTenantShellSettingKeys(),
+				OperatorID:           operatorIDFromSession,
 			}),
 			bookingAuthorityImpact: newBookingAuthorityImpact(lifecycle, calendar.CalendarDateClock(now)),
 			traegerValues:          traegerSettings,

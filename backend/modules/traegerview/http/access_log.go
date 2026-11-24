@@ -139,10 +139,14 @@ func renderAccessLogError(w http.ResponseWriter, r *http.Request, err error) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 	case errors.Is(err, traegerview.ErrAccessLogExportTooLarge):
 		common.RenderError(w, r, common.ErrorInvalidRequestWithDetails(err, common.CodeTraegerAccessLogExportTooLarge,
-			map[string]any{"limit": traegerview.AccessLogExportLimit}))
+			AccessLogLimitDetails{Limit: traegerview.AccessLogExportLimit}))
 	default:
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 	}
+}
+
+type AccessLogLimitDetails struct {
+	Limit int `json:"limit"`
 }
 
 // accessLogDays reads the window: from and to as YYYY-MM-DD, both required.

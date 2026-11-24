@@ -86,7 +86,7 @@ var staffMessagingErrorRules = []common.ErrorRule{
 		return common.ErrorInvalidRequestMessageWithCodeAndDetails(
 			fmt.Sprintf("Der Gruppenchat braucht einen Namen mit höchstens %d Zeichen.", maxCharacters),
 			common.CodeCommunicationStaffGroupNameInvalid,
-			map[string]any{"max_characters": maxCharacters},
+			StaffGroupNameLimitDetails{MaxCharacters: maxCharacters},
 		)
 	}},
 	{Target: communication.ErrStaffMessageGroupMembersRequired, Render: func(_ error) render.Renderer {
@@ -100,12 +100,20 @@ var staffMessagingErrorRules = []common.ErrorRule{
 		return common.ErrorInvalidRequestMessageWithCodeAndDetails(
 			fmt.Sprintf("Ein Gruppenchat hat höchstens %d Mitglieder.", maxMembers),
 			common.CodeCommunicationStaffGroupTooLarge,
-			map[string]any{"max_members": maxMembers},
+			StaffGroupSizeLimitDetails{MaxMembers: maxMembers},
 		)
 	}},
 	{Target: communication.ErrStaffMessagingNoActor, Render: func(_ error) render.Renderer {
 		return common.ErrorForbiddenMessage("Bitte melde dich erneut an.")
 	}},
+}
+
+type StaffGroupNameLimitDetails struct {
+	MaxCharacters int `json:"max_characters"`
+}
+
+type StaffGroupSizeLimitDetails struct {
+	MaxMembers int `json:"max_members"`
 }
 
 var renderStaffMessagingErrorRenderer = common.RulesRenderer(
