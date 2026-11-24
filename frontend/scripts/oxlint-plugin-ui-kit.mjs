@@ -2751,6 +2751,7 @@ const KIT_PURE_LIB_MODULES = new Set([
   // Kein Mandanten- oder Fachwissen, keine Daten.
   "src/lib/device-context",
   "src/lib/mobile-navigation/history-stack",
+  "src/lib/mobile-navigation/use-keyboard-flag",
   "src/lib/mobile-navigation/page-transition",
   "src/lib/mobile-navigation/use-navigation-stack",
   "src/lib/search-fold",

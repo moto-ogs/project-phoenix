@@ -1271,3 +1271,29 @@ html[data-chat-page-lock] body {
     transform: translateX(100%);
   }
 }
+
+/*
+ * Home-Screen-Betrieb der App (#8070).
+ * - Tastatur offen (`data-keyboard-open`, useKeyboardFlag): die Pill weicht.
+ * - iPhone quer reicht mit viewport-fit=cover unter die Notch: Inhalt und
+ *   Pill rücken um den seitlichen Safe-Area-Rand ein (sonst 0).
+ * - Standalone: kein Gummiband-Überscrollen am Dokument (iOS wirkt nur am
+ *   html); im Safari-Tab bleibt es.
+ */
+@media (width < 64rem), (pointer: coarse) {
+  html[data-keyboard-open] nav.fixed.bottom-0 {
+    display: none;
+  }
+  /* margin, nicht padding: diese Regel ist ungeschichtet und würde das
+     Tailwind-Padding von main und der Pill überstimmen. */
+  #hauptinhalt,
+  nav.fixed.bottom-0 {
+    margin-left: env(safe-area-inset-left);
+    margin-right: env(safe-area-inset-right);
+  }
+  @media (display-mode: standalone) {
+    html {
+      overscroll-behavior-y: none;
+    }
+  }
+}

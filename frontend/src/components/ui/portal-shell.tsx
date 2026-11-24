@@ -9,6 +9,7 @@ import {
 import { NavigationScrollPosition } from "~/components/ui/navigation-scroll-position";
 import { ButtonLink } from "~/components/ui/button";
 import { NavigationStackTracker } from "~/lib/mobile-navigation/use-navigation-stack";
+import { useKeyboardFlag } from "~/lib/mobile-navigation/use-keyboard-flag";
 import {
   FIXED_LAYER_SHIFT,
   useFixedLayersFollowViewport,
@@ -66,6 +67,7 @@ export function PortalShell({
   children,
 }: PortalShellProps) {
   useFixedLayersFollowViewport();
+  useKeyboardFlag();
   return (
     <NavigationProgressProvider>
       <Suspense fallback={null}>
