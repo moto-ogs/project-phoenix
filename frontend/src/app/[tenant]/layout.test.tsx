@@ -78,14 +78,49 @@ beforeEach(() => {
   vi.restoreAllMocks();
 });
 
-function tenantResponse() {
+const tenantDefaults = {
+  hidden: false,
+  presence_mode: "",
+  student_photos_enabled: false,
+  booked_modules: null,
+  parent_messaging_enabled: false,
+  parent_message_card_badge_enabled: false,
+  staff_messaging_enabled: false,
+  display_enabled: false,
+  caldav_enabled: false,
+  care_offerings_enabled: false,
+  attendance_web_enabled: false,
+  attendance_log_enabled: false,
+  group_mode: "",
+  operational_overview_scope: "",
+  attendance_edit_scope: "",
+  parent_request_reason_policy: "both",
+  show_timetable_counts: false,
+  timetable_enabled: true,
+  meal_plan_enabled: false,
+  meal_registration_enabled: false,
+  waitlist_enabled: false,
+  analytics_enabled: false,
+  analytics_freigabe: false,
+  analytics_recording_sample_percent: 0,
+  early_checkout_note_enabled: false,
+  early_checkout_note_tolerance_minutes: 0,
+  weekend_follows_friday: false,
+  children_without_care_place: false,
+  child_search_only_navigation: false,
+  simple_staff_navigation: false,
+  care_facility_term: "",
+};
+
+function tenantResponse(name = "School A") {
   return new Response(
     JSON.stringify({
       status: "success",
       data: {
+        ...tenantDefaults,
         tenant_id: "1",
         slug: "school-a",
-        name: "School A",
+        name,
         subdomain: "school-a",
         organization_id: "2",
         organization_name: "Organization",
@@ -234,6 +269,7 @@ describe("TenantLayout", () => {
         JSON.stringify({
           status: "success",
           data: {
+            ...tenantDefaults,
             tenant_id: "1",
             slug: "school-a",
             name: "School A",
@@ -262,13 +298,24 @@ describe("TenantLayout", () => {
     );
   });
 
+  it("does not cache a successful HTTP response without tenant data", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(Response.json({ status: "success" }))
+      .mockResolvedValueOnce(tenantResponse());
+
+    await expect(resolveTenantCached("school-a", {})).rejects.toMatchObject({
+      status: 502,
+    });
+    expect((await resolveTenantCached("school-a", {})).name).toBe("School A");
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
   it("shares a refresh and waits for current tenant settings after 60 seconds", async () => {
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(tenantResponse())
-      .mockResolvedValueOnce(
-        Response.json({ data: { name: "Updated school" } }),
-      );
+      .mockResolvedValueOnce(tenantResponse("Updated school"));
 
     expect((await resolveTenantCached("school-a", {})).name).toBe("School A");
     setTestClock(new Date(TEST_CLOCK_INSTANT.getTime() + 60_000));
@@ -288,9 +335,7 @@ describe("TenantLayout", () => {
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
       .mockReturnValueOnce(earlier.promise)
-      .mockResolvedValueOnce(
-        Response.json({ data: { name: "Updated school" } }),
-      );
+      .mockResolvedValueOnce(tenantResponse("Updated school"));
 
     const old = resolveTenantCached("school-a", {});
     invalidateTenantResolve("school-a");
@@ -336,6 +381,7 @@ describe("TenantLayout", () => {
         JSON.stringify({
           status: "success",
           data: {
+            ...tenantDefaults,
             tenant_id: "1",
             slug: "school-a",
             name: "School A",
@@ -482,6 +528,7 @@ describe("TenantLayout", () => {
         JSON.stringify({
           status: "success",
           data: {
+            ...tenantDefaults,
             tenant_id: "1",
             slug: "school-a",
             name: "School A",
@@ -521,6 +568,7 @@ describe("TenantLayout", () => {
         JSON.stringify({
           status: "success",
           data: {
+            ...tenantDefaults,
             tenant_id: "1",
             slug: "school-a",
             name: "School A",
@@ -562,6 +610,7 @@ describe("TenantLayout", () => {
           JSON.stringify({
             status: "success",
             data: {
+              ...tenantDefaults,
               tenant_id: "1",
               slug: "school-a",
               name: "School A",
@@ -570,7 +619,8 @@ describe("TenantLayout", () => {
               organization_name: "Organization",
               settings: {},
               grade_level_max: 4,
-              timetable_enabled,
+              timetable_enabled:
+                timetable_enabled ?? tenantDefaults.timetable_enabled,
             },
           }),
           { status: 200 },
@@ -604,6 +654,7 @@ describe("TenantLayout", () => {
           JSON.stringify({
             status: "success",
             data: {
+              ...tenantDefaults,
               tenant_id: "1",
               slug: "school-a",
               name: "School A",
@@ -612,7 +663,9 @@ describe("TenantLayout", () => {
               organization_name: "Organization",
               settings: {},
               grade_level_max: 4,
-              parent_request_reason_policy,
+              parent_request_reason_policy:
+                parent_request_reason_policy ??
+                tenantDefaults.parent_request_reason_policy,
             },
           }),
           { status: 200 },
@@ -642,6 +695,7 @@ describe("TenantLayout", () => {
           JSON.stringify({
             status: "success",
             data: {
+              ...tenantDefaults,
               tenant_id: "1",
               slug: "school-a",
               name: "School A",
@@ -650,7 +704,8 @@ describe("TenantLayout", () => {
               organization_name: "Organization",
               settings: {},
               grade_level_max: 4,
-              analytics_enabled,
+              analytics_enabled:
+                analytics_enabled ?? tenantDefaults.analytics_enabled,
             },
           }),
           { status: 200 },
@@ -677,6 +732,7 @@ describe("TenantLayout", () => {
           JSON.stringify({
             status: "success",
             data: {
+              ...tenantDefaults,
               tenant_id: "1",
               slug: "school-a",
               name: "School A",
@@ -685,7 +741,7 @@ describe("TenantLayout", () => {
               organization_name: "Organization",
               settings: {},
               grade_level_max: 4,
-              caldav_enabled,
+              caldav_enabled: caldav_enabled ?? tenantDefaults.caldav_enabled,
             },
           }),
           { status: 200 },

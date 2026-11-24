@@ -255,7 +255,9 @@ step's Go tokens never reach the browser; put its BFF answer in
 See [school switching](../../frontend/src/app/api/auth/switch-tenant/route.ts)
 and [pre-session enrollment start](../../frontend/src/app/api/auth/mfa/enroll/start/route.ts).
 `app/api/route-backend-paths.test.ts` checks entry use and rejects raw Go
-response reads in named routes.
+response reads in named routes and server modules. A server caller of a
+registered JSON route also uses its generated entry with `contractGet`
+or `contractWrite`; the old generic JSON helpers are not an alternative.
 
 The browser uses `bffJsonUncontracted` only from the remaining callers
 listed by the lint rule. See [One transport](frontend-api.md#browser-calls).

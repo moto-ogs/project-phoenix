@@ -33,11 +33,16 @@ export type RemindersResult = Omit<remindersContract.Result, "reminders"> & {
 // Shared SWR key so the page and the header bell badge dedupe to one request.
 export const REMINDERS_SWR_KEY = shellResourceKeys.reminders();
 
-export async function fetchReminders(): Promise<RemindersResult> {
-  const result = await bffJson("tenant", "GET /api/reminders/");
+export function toRemindersResult(
+  result: remindersContract.Result,
+): RemindersResult {
   return {
     ...result,
     // The backend writes the types listed above; Go writes no list as null.
     reminders: (result.reminders ?? []) as Reminder[],
   };
+}
+
+export async function fetchReminders(): Promise<RemindersResult> {
+  return toRemindersResult(await bffJson("tenant", "GET /api/reminders/"));
 }

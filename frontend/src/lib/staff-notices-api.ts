@@ -87,7 +87,9 @@ const PRIORITIES: readonly StaffNoticePriority[] = ["info", "important"];
 const AUDIENCES: readonly StaffNoticeAudience[] = ["all", "staff", "lehrkraft"];
 
 /** Grenzt die offenen Werte des Vertrags auf die bekannten ein. */
-function toStaffNotice(notice: sharedContract.noticeResponse): StaffNotice {
+export function toStaffNotice(
+  notice: sharedContract.noticeResponse,
+): StaffNotice {
   return {
     ...notice,
     priority: PRIORITIES.find((p) => p === notice.priority) ?? "info",
