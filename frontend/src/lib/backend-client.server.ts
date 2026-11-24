@@ -218,9 +218,8 @@ export async function readBackendJson<T>(response: Response): Promise<T> {
 
 /**
  * The backend's JSON for a token the caller holds, envelope included; an
- * error answer throws ApiResponseError. The one JSON path of every portal:
- * the portal handlers' `api` and the tenant's `apiGet`/`apiPost`/… use it,
- * and a 401 is repeated by the route handler around it, per endpoint.
+ * error answer throws ApiResponseError. Retained for the legacy portal
+ * handlers; registered JSON routes use the contract client or catalog proxy.
  */
 export async function backendJson<T>(
   method: BackendMethod,

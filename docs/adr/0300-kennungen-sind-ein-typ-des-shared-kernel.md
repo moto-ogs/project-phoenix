@@ -131,7 +131,9 @@ was eine Antwort-Kennung als Zahl zuließ:
    fest.
 4. **`/auth/tenant/resolve` steht im Vertrag** als öffentliche Route.
    `tenant_id` und `organization_id` reisen als String; das Frontend ruft
-   sie über `/api/auth/tenant/resolve` und den Katalog-Proxy, die
+   sie im Browser über `/api/auth/tenant/resolve` und den Katalog-Proxy
+   auf, im Server über denselben Routeneintrag mit `contractGet`.
+   Der Server-Cache speichert nur dekodierte Treffer (#8003). Die
    Schulkennung der Oberfläche (`TenantInfo.tenantId`) ist ein String. Die
    Schulkennung im Sitzungstoken bleibt eine Zahl; die Vergleiche wandeln sie
    in Text.
