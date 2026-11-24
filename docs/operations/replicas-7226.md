@@ -203,24 +203,33 @@ docker compose up -d --no-recreate --scale server=2 server   # replace it
 
 ## Failover record
 
-Run on 2026-11-19 with the staging Compose file, both images built from this
-branch, in a separate Compose project on a developer machine: two `server`,
-one `worker`, two `frontend`, Caddy with the `(replica_pool)` snippet, one
-seeded school. A probe in the Compose network ran two BFF session readers
-(`/api/auth/session`), two API readers (`/api/me/`), one event stream through
-the BFF and one directly at the API, and toggled a school setting (an event
-for both streams) before and after each stop.
+Run on 2026-11-24 on `rechenzentrum` (Linux x86-64, Docker 29.9.2), with both
+images built from `development` at `ed2655e461cf9070c68662d939b21550fd2456a6`.
+The isolated staging Compose stack used two `server`, one `worker`, two
+`frontend`, PostgreSQL, Mailpit and Caddy 2.11.9 with the deployed
+`(replica_pool)` snippet. The probe seeded one school and one school admin
+through the operator portal, using throwaway secrets and loopback ports.
+
+On a Linux Docker host with Node.js, run `node scripts/probe-replica-failover.mjs`
+from a clean checkout to build the images, take the measurements and remove
+the probe's containers, network, volumes and built images. The probe does not
+run in PR CI.
 
 | Step | Result |
 | --- | --- |
-| Stop the API replica that held both streams' upstreams (`docker stop`) | Drained in 5.1 s; both streams ended cleanly (EOF) and reconnected within 1 s; the API stream reconnected once to the draining replica and moved on after 1 s |
-| Setting change after the API stop | Event reached both streams |
-| Stop the Next.js replica that held the BFF stream | Exited in 1.3 s under load (20 s before the `Connection: close` fix); the BFF stream ended cleanly and reconnected within 1 s |
-| Setting change after the Next.js stop | Event reached both streams |
-| Load during both stops | 1,858 API and 1,356 BFF session requests, all 200, the session valid on every response |
-| Caddy log | Failed health probes against the stopped replicas only; no proxied request to a stopped replica |
-| Third Next.js replica with another `NEXTAUTH_SECRET` (`--no-recreate --scale`) | `release-backup.sh check-replicas` exit 1, `frontend replicas differ in image or environment`; exit 0 after scaling back |
+| 1. Load during both stops | 608 API reads and 373 BFF session reads (`/api/auth/session`), all HTTP 200 with the expected account; both replicas in each pool served reads. `/api/me/` returned 404: [#7622](https://github.com/moto-ogs/project-phoenix/pull/7622) removed it. The API readers used `/api/me/profile`. |
+| 2. Streams | One SSE stream through Caddy and the BFF, one through Caddy directly to the API. Both sent `connected` before the stops. |
+| 3. Stop the API holding both upstreams | Drained in 5.409 s (exit 0). Direct/BFF streams ended at 56/62 ms with clean EOF and reconnected 1.032/1.034 s later. The settings event reached them in 35/36 ms. |
+| 4. Stop the Next.js replica holding the BFF stream | Drained in 2.146 s (Next.js's graceful SIGTERM exit 143). The BFF stream ended at 60 ms with clean EOF and reconnected 1.030 s later. The direct stream stayed open. The settings event reached both in 16 ms. |
+| 5. Process-local school lookup | After the operator renamed the school, the writer's first lookup was fresh at 11 ms; the other replica was last observed stale at 59.603 s and first fresh at 59.789 s. After changing the student photos setting, those times were 17 ms, 59.772 s and 59.953 s. Both probes read the actual tenant layout, not the uncached JSON proxy. |
+| 6. Catalog writes during both drains | Sent `POST /api/rooms` and `PUT /api/staff-onboarding/dismissal?outcome=completed` 60 ms after starting each stop, after the first EOF and before process exit. HTTP 201/200 in both cases. PostgreSQL recorded exactly one room insert and one dismissal change per stop. |
+| 7. Session renewal after access-token expiry | Sent the same session cookie with an expired access token to both Next.js replicas concurrently. Both returned HTTP 200 and a valid replacement in 44 ms total; each subsequent read with the other replica's cookie also returned a valid session. PostgreSQL showed one rotation (generation 0 to 1) and one live successor. An expired direct access token returned HTTP 401. |
+| 8. Different `NEXTAUTH_SECRET` on a third Next.js replica | `release-backup.sh check-replicas` exited 1 with `frontend replicas differ in image or environment`; it exited 0 before the change and again after removing the third replica. |
 
-Not covered: a stop on the production host with Cloudflare in front, and a
-browser tab instead of the probe (the browser's reconnect path is the one
-`use-sse.test.ts` covers).
+Reconnect times run from the last stream's EOF to its replacement's
+`connected` event and include the probe's 1 s retry delay. Settings event
+times run from sending the write to receiving `tenant_settings_changed`.
+Lookup times run from the write acknowledgment to the request start for
+the last stale response and to response completion for the first fresh one.
+This run did not use Cloudflare or a browser tab; `use-sse.test.ts` covers
+the browser's reconnect path separately.
