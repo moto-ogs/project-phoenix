@@ -227,6 +227,7 @@ func (p staffShiftPlanning) SplitSeries(ctx context.Context, input workforce.Spl
 		ValidUntil: validUntil, ValidUntilSet: input.ValidUntilSet, WeekPattern: input.WeekPattern,
 		IncludeSchoolBreaks: input.IncludeSchoolBreaks, ActorStaffID: input.ActorStaffID, TraegerAccountID: input.TraegerAccountID,
 		WorkingTime: input.WorkingTime, ExpectedVersion: input.ExpectedVersion,
+		ExpectedOccurrenceVersion: input.ExpectedOccurrenceVersion,
 	})
 	if err != nil {
 		return workforce.StaffShiftSeriesResult{}, mapPlanningError(err)

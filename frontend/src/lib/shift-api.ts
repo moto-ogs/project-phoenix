@@ -126,6 +126,9 @@ interface SeriesSplitPayload {
   /** Concrete occurrence opened by the planner. If it is today, the backend
    * updates this row in place and only re-plans the series from tomorrow. */
   occurrenceShiftId?: string;
+  /** Version of that occurrence as the modal shows it (ADR 0311): a split
+   *  effective today rewrites it in place and refuses it when it changed. */
+  expectedOccurrenceVersion?: string;
   startTime: string;
   endTime: string;
   breakMinutes: number;
@@ -393,7 +396,11 @@ class StaffShiftSeriesService {
         body: {
           effective_date: payload.effectiveDate,
           ...(payload.occurrenceShiftId !== undefined
-            ? { occurrence_shift_id: payload.occurrenceShiftId }
+            ? {
+                occurrence_shift_id: payload.occurrenceShiftId,
+                expected_occurrence_version:
+                  payload.expectedOccurrenceVersion ?? "",
+              }
             : {}),
           start_time: payload.startTime,
           end_time: payload.endTime,

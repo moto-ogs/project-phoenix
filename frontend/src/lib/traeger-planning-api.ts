@@ -60,6 +60,8 @@ export interface TraegerPlanningShift {
   readonly plannedByTraeger: boolean;
   /** Die Schicht gehört zu einer Serie der Schule. */
   readonly fromSeries: boolean;
+  /** Stand der Schicht; ein Ändern schickt ihn zurück (ADR 0311). */
+  readonly version: string;
 }
 
 export interface TraegerPlanningPerson {
@@ -120,6 +122,8 @@ export interface TraegerPlanShiftInput {
   readonly breakMinutes: number;
   readonly notes: string;
   readonly workingTime?: WorkingTimeConfirmation;
+  /** Stand der Schicht, die ein Ändern ersetzt; Planen schickt keinen. */
+  readonly expectedVersion?: string;
 }
 
 /** Künftige Schichten einer Schule, vor dem Ausschalten der Einsatzplanung. */
@@ -154,6 +158,7 @@ function mapPlanningShift(
     shiftTypeColor: shift.shift_type_color ?? null,
     plannedByTraeger: shift.planned_by_traeger,
     fromSeries: shift.from_series,
+    version: shift.version,
   };
 }
 
@@ -207,6 +212,9 @@ function shiftBody(
     break_minutes: input.breakMinutes,
     notes: input.notes,
     ...workingTimeBody(input.workingTime),
+    ...(input.expectedVersion !== undefined
+      ? { expected_version: input.expectedVersion }
+      : {}),
   };
 }
 

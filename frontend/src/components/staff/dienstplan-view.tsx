@@ -38,7 +38,11 @@ import {
   type OverflowMenuEntry,
 } from "~/components/ui/page-header/OverflowMenu";
 import { SegmentedControl } from "~/components/ui/segmented-control";
-import { useApiLoadError } from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useApiLoadError } from "~/contexts/ToastContext";
+import {
+  MODAL_SHIFT_GONE_MESSAGE,
+  reloadedModalShift,
+} from "~/components/staff/dienstplan-modal-reload";
 import { hasEffectiveAdminScope, hasPermission } from "~/lib/auth-utils";
 import { calendarPeriodService } from "~/lib/calendar-period-api";
 import { isValidISODate, parseISODate, toISODate } from "~/lib/date-helpers";
@@ -212,6 +216,7 @@ function DienstplanContent() {
 
   // Ladefehler stehen dort, wo die Daten fehlen (#2514): der Wochenplan als
   // Fehler des Gerüsts, Schichtarten und Kalenderzeiträume über dem Raster.
+  const { showMessage: showModalMessage } = useApiErrorDisplay();
   const scheduleLoad = useApiLoadError();
   const shiftTypesLoad = useApiLoadError();
   const periodsLoad = useApiLoadError();
@@ -291,21 +296,30 @@ function DienstplanContent() {
 
   // After a refused save the modal shows the shift as stored (ADR 0311):
   // read the week again, rejecting on failure, and hand the modal the
-  // stored shift with its covers. A gone shift keeps what the modal shows.
+  // stored shift with its covers. A shift gone from the week closes the
+  // modal with a message: its old token could only be refused again.
+  const openedShiftId = modal?.shift?.id ?? null;
   const reloadModalShift = useCallback(async () => {
     const shifts = await reloadShifts();
-    setModal((current) => {
-      const opened = current?.shift;
-      if (!current || !opened) return current;
-      const stored = shifts.find((s) => s.id === opened.id);
-      if (!stored) return current;
-      return {
-        ...current,
-        shift: stored,
-        replacements: shifts.filter((s) => s.originShiftId === stored.id),
-      };
-    });
-  }, [reloadShifts]);
+    if (openedShiftId === null) return;
+    const reloaded = reloadedModalShift(openedShiftId, shifts);
+    if (reloaded.kind === "gone") {
+      setModal((current) =>
+        current?.shift?.id === openedShiftId ? null : current,
+      );
+      showModalMessage(MODAL_SHIFT_GONE_MESSAGE);
+      return;
+    }
+    setModal((current) =>
+      current?.shift?.id === openedShiftId
+        ? {
+            ...current,
+            shift: reloaded.shift,
+            replacements: reloaded.replacements,
+          }
+        : current,
+    );
+  }, [reloadShifts, openedShiftId, showModalMessage]);
 
   const refreshAfterPlanMutation = useCallback(() => {
     // Bewusst still: die Änderung ist gespeichert; ein misslungenes

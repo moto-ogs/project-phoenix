@@ -69,6 +69,7 @@ type planningWeekBody struct {
 			Date             string `json:"date"`
 			StartTime        string `json:"start_time"`
 			PlannedByTraeger bool   `json:"planned_by_traeger"`
+			Version          string `json:"version"`
 		} `json:"shifts"`
 		PlannedMinutes int  `json:"planned_minutes"`
 		SollMinutes    *int `json:"soll_minutes"`
@@ -290,11 +291,39 @@ func TestTraegerStaffPlanningChecksEveryEinsatzort(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	})
 
+	// The version of the shift as the week shows it (ADR 0311).
+	shownVersion := func(t *testing.T, shiftID int64) string {
+		t.Helper()
+		rec := traegerJSON(t, router, office.token, http.MethodGet, "/traeger/staff-planning/?week=2026-11-23", nil)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		for _, person := range decode[planningWeekBody](t, rec).People {
+			for _, shift := range person.Shifts {
+				if int64(shift.ID) == shiftID {
+					require.NotEmpty(t, shift.Version, "the week carries the shift's token")
+					return shift.Version
+				}
+			}
+		}
+		t.Fatalf("shift %d is not in the week", shiftID)
+		return ""
+	}
+
 	t.Run("a change keeps the school and clears the warning", func(t *testing.T) {
+		read := shownVersion(t, afternoonID)
 		rec := traegerJSON(t, router, office.token, http.MethodPut, fmt.Sprintf("%s/%d", shifts, afternoonID), map[string]any{
 			"school_id": strconv.FormatInt(south, 10), "date": "2026-11-23", "start_time": "14:00", "end_time": "18:00",
+			"expected_version": read,
 		})
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		assert.Equal(t, "14:00:00", shiftColumn(t, db, `SELECT start_time::text FROM schedule.staff_shifts WHERE id = ?`, afternoonID))
+
+		// ADR 0311: a change over the week read before that one is refused
+		// and writes nothing; the stored state is shown again.
+		rec = traegerJSON(t, router, office.token, http.MethodPut, fmt.Sprintf("%s/%d", shifts, afternoonID), map[string]any{
+			"school_id": strconv.FormatInt(south, 10), "date": "2026-11-23", "start_time": "15:00", "end_time": "18:00",
+			"expected_version": read,
+		})
+		assertStaffRefusal(t, rec, http.StatusConflict, "general.changed_since_read")
 		assert.Equal(t, "14:00:00", shiftColumn(t, db, `SELECT start_time::text FROM schedule.staff_shifts WHERE id = ?`, afternoonID))
 	})
 

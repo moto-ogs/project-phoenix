@@ -63,8 +63,9 @@ type CreateStaffShift struct {
 // ShiftVersion of every replacement the planner showed, by shift id. The
 // write refuses a shift or a cover set changed since with
 // readstate.ErrChanged. A nil read state is a write no person read (the sick
-// cascade, a split's retained occurrence, the Träger's planning) and checks
-// nothing.
+// cascade and its restoration, internal steps under the owner's own lock)
+// and checks nothing. Every route that saves what a person read sets it,
+// also when the client sent no token: an empty token is refused.
 type ShiftReadState struct {
 	Version      string
 	Replacements map[int64]string
@@ -215,6 +216,11 @@ type SplitStaffShiftSeries struct {
 	// WorkingTime confirms the working-time warnings of the occurrences
 	// (#4708).
 	WorkingTime WorkingTimeConfirmation
+	// ExpectedOccurrenceVersion is the ShiftVersion of the occurrence the
+	// planner opened (ADR 0311). A split effective today rewrites that row in
+	// place and refuses it when it changed since, also when an earlier
+	// same-day split kept it as the retained occurrence.
+	ExpectedOccurrenceVersion string
 	// ExpectedVersion is the version of the series the planner edited (ADR
 	// 0311); a series changed since is not written.
 	ExpectedVersion string

@@ -63,6 +63,9 @@ type TraegerPlanningShift struct {
 	ShiftTypeColor   string        `json:"shift_type_color,omitempty"`
 	PlannedByTraeger bool          `json:"planned_by_traeger"`
 	FromSeries       bool          `json:"from_series"`
+	// Version is the ShiftVersion a change of the shift sends back as
+	// expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 // TraegerPlanningPerson is one Personalakte in the week: its Einsatzorte,
@@ -123,6 +126,9 @@ type TraegerPlanShift struct {
 	BreakMinutes int
 	Notes        string
 	WorkingTime  WorkingTimeConfirmation
+	// ExpectedVersion is the version of the shift a change replaces, as
+	// the week showed it (ADR 0311); a plan ignores it.
+	ExpectedVersion string
 }
 
 // TraegerFutureShifts counts the shifts after today at one school, for the

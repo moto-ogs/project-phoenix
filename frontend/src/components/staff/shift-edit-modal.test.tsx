@@ -11,6 +11,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { ShiftEditModal } from "./shift-edit-modal";
 import { ApiError } from "~/lib/api-error";
+import { catalogText } from "~/test/error-catalog-text";
 import { staffShiftService } from "~/lib/shift-api";
 import type { StaffShift } from "~/lib/shift-helpers";
 
@@ -261,6 +262,66 @@ describe("ShiftEditModal", () => {
         replacements: [expect.objectContaining({ endTime: "13:00" })],
       }),
     );
+  });
+
+  // ADR 0311: nach einer Ablehnung bringt das Neuladen die gespeicherte
+  // Schicht mit derselben Kennung. Sie füllt die Felder neu, die Meldung
+  // bleibt stehen. Das Neuladen setzt den Zustand ohne act(), wie die
+  // Dienstplan-Ansicht es tut.
+  it("keeps the refusal message when the stored shift arrives after a refused edit", async () => {
+    const updateShift = vi.mocked(staffShiftService.updateShift);
+    updateShift.mockReset();
+    updateShift.mockRejectedValueOnce(
+      new ApiError("changed since it was read", 409, {
+        code: "general.changed_since_read",
+      }),
+    );
+    const opened: StaffShift = {
+      ...oneHourShift,
+      id: "5",
+      startTime: "08:00",
+      endTime: "16:00",
+      version: "shift-v1",
+    };
+    let handOver: (() => void) | undefined;
+    function Harness() {
+      const [shift, setShift] = useState(opened);
+      handOver = () =>
+        setShift({ ...opened, startTime: "09:00", version: "shift-v2" });
+      return (
+        <ShiftEditModal
+          isOpen={true}
+          mode="edit"
+          staffId="7"
+          staffName="Ada Lovelace"
+          date="2026-07-06"
+          shift={shift}
+          shiftTypes={[]}
+          staffOptions={[]}
+          existingReplacements={[]}
+          onClose={vi.fn()}
+          onSaved={vi.fn()}
+          reloadShift={async () => {
+            await Promise.resolve();
+            handOver?.();
+          }}
+        />
+      );
+    }
+    render(<Harness />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Änderungen speichern" }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByDisplayValue("09:00")).toBeInTheDocument(),
+    );
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "die Schicht"),
+      ),
+    ).toBeInTheDocument();
   });
 
   it("keeps existing covers when the cancel toggle is un- and re-checked (#1841)", async () => {

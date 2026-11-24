@@ -348,6 +348,18 @@ export function ShiftEditModal({
   // begin at that slot, so every editor hint must describe the same date.
   const seriesEffectiveDate = shift?.seriesOccurrenceDate ?? date;
 
+  // Errors belong to one opening: a different shift or a new opening starts
+  // without them. The reload after a refusal hands in the stored shift with
+  // the same id; its message stays until the person acts (ADR 0311).
+  const openedShiftId = isOpen ? (shift?.id ?? "") : null;
+  useEffect(() => {
+    if (openedShiftId === null) return;
+    clearFormError();
+    clearDeleteError();
+  }, [openedShiftId, clearFormError, clearDeleteError]);
+
+  // The fields follow the shift handed in: on opening and when the stored
+  // shift arrives after a refusal.
   useEffect(() => {
     if (!isOpen) return;
     resetWorkingTime();
@@ -355,8 +367,6 @@ export function ShiftEditModal({
     setEndTime(initial.endTime);
     setBreakMinutesStr(String(initial.breakMinutes));
     setShiftTypeId(initial.shiftTypeId);
-    clearFormError();
-    clearDeleteError();
     setConfirmDeleteOpen(false);
     setRepeatEnabled(false);
     setWeekdays([isoWeekdayOf(date)]);
@@ -384,16 +394,7 @@ export function ShiftEditModal({
         shiftTypeId: cover.shiftTypeId ?? "",
       })),
     );
-  }, [
-    isOpen,
-    initial,
-    date,
-    shift,
-    existingReplacements,
-    clearFormError,
-    clearDeleteError,
-    resetWorkingTime,
-  ]);
+  }, [isOpen, initial, date, shift, existingReplacements, resetWorkingTime]);
 
   // Calendar periods load once the series section is opened; the period is
   // required (it bounds the series and anchors Woche A/B). A series row needs
@@ -705,6 +706,7 @@ export function ShiftEditModal({
         staffShiftSeriesService.splitSeries(seriesRule.id, {
           effectiveDate: seriesEffectiveDate,
           occurrenceShiftId: shift.id,
+          expectedOccurrenceVersion: shift.version ?? "",
           startTime,
           endTime,
           breakMinutes: breakMinutes ?? 0,
@@ -765,7 +767,15 @@ export function ShiftEditModal({
   ) => {
     if (seriesEditOpen) leaveSeriesEdit();
     onSaved();
-    void formErrors.show(err, { object: "die Serie", reload });
+    // A split effective today also rewrote the opened occurrence and checks
+    // its version: read it again too, so the next save sends the stored one.
+    const readAgain =
+      seriesEffectiveDate === berlinTodayISO()
+        ? async () => {
+            await Promise.all([reload?.(), reloadShift()]);
+          }
+        : reload;
+    void formErrors.show(err, { object: "die Serie", reload: readAgain });
   };
 
   const toggleWeekday = (value: number) => {
@@ -1003,6 +1013,7 @@ export function ShiftEditModal({
           staffShiftSeriesService.splitSeries(seriesId, {
             effectiveDate: seriesEffectiveDate,
             occurrenceShiftId: shift.id,
+            expectedOccurrenceVersion: shift.version ?? "",
             startTime,
             endTime,
             breakMinutes: breakMinutes ?? 0,

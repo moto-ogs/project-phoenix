@@ -260,6 +260,7 @@ export interface SeriesSplitRequest {
   occurrence_shift_id?: string;
   include_school_breaks?: boolean | null;
   expected_version?: string;
+  expected_occurrence_version?: string;
 }
 
 /** Go: staffshifts.ReplacementRequest */

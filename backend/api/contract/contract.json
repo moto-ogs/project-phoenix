@@ -80851,6 +80851,13 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -92420,6 +92427,13 @@
         },
         {
           "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_occurrence_version",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -106934,6 +106948,12 @@
           "name": "from_series",
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
