@@ -63,6 +63,8 @@ vi.mock("~/lib/swr", () => ({
 function survey(patch: Partial<Survey> = {}): Survey {
   return {
     id: "21",
+    version: "2026-09-01T08:00:00Z",
+    fingerprint: "fp-21",
     title: "Elternzufriedenheit",
     intro: "Ihre Meinung hilft uns.",
     audience: "parents",
@@ -216,6 +218,7 @@ describe("Umfrage, Objektseite (#4781)", () => {
     expect(updateSurvey).toHaveBeenLastCalledWith(
       "21",
       expect.objectContaining({ title: "ALT" }),
+      "2026-09-01T08:00:00Z",
     );
 
     fireEvent.change(screen.getByLabelText("Titel"), {
@@ -227,6 +230,7 @@ describe("Umfrage, Objektseite (#4781)", () => {
     expect(updateSurvey).toHaveBeenLastCalledWith(
       "21",
       expect.objectContaining({ title: "NEU" }),
+      "2026-09-01T08:00:00Z",
     );
   });
 });

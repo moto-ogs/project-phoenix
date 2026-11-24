@@ -68,7 +68,7 @@ func (req *MFAAdminOverrideSetRequest) Bind(_ *http.Request) error {
 // Returns false (with a 503 already written) when either is missing.
 func (rs *SchoolAccountMFAResource) requireMFAAdminDeps(w http.ResponseWriter, r *http.Request) bool {
 	if rs.TenantMFAService == nil {
-		common.RenderError(w, r, common.OperatorInternal("MFA admin endpoints are not configured"))
+		common.RenderError(w, r, common.OperatorInternal(nil, "MFA admin endpoints are not configured"))
 		return false
 	}
 	return true
@@ -89,7 +89,7 @@ func (rs *SchoolAccountMFAResource) resolveOperatorMFAAdminTarget(w http.Respons
 	}
 	exists, err := rs.TenantMFAService.AccountBelongsToSchool(r.Context(), accountID, schoolID)
 	if err != nil {
-		common.RenderError(w, r, common.OperatorInternal("failed to verify account membership"))
+		common.RenderError(w, r, common.OperatorInternal(err, "failed to verify account membership"))
 		return 0, 0, false
 	}
 	if !exists {
@@ -111,7 +111,7 @@ func (rs *SchoolAccountMFAResource) GetSchoolAccountMFAState(w http.ResponseWrit
 	}
 	enrolled, err := rs.TenantMFAService.HasMFAEnrollment(r.Context(), accountID)
 	if err != nil {
-		common.RenderError(w, r, common.OperatorInternal("failed to read MFA enrollment"))
+		common.RenderError(w, r, common.OperatorInternal(err, "failed to read MFA enrollment"))
 		return
 	}
 	// The school MFA modal shows the *tenant-scoped* override that
@@ -167,7 +167,7 @@ func (rs *SchoolAccountMFAResource) ResetSchoolAccountMFA(w http.ResponseWriter,
 			common.RenderError(w, r, common.OperatorForbidden("Permission denied"))
 			return
 		}
-		common.RenderError(w, r, common.OperatorInternal("MFA admin disable failed"))
+		common.RenderError(w, r, common.OperatorInternal(err, "MFA admin disable failed"))
 		return
 	}
 	common.RespondNoContent(w, r)
@@ -214,7 +214,7 @@ func (rs *SchoolAccountMFAResource) SetSchoolAccountMFAOverride(w http.ResponseW
 			common.RenderError(w, r, common.OperatorForbidden("Permission denied"))
 			return
 		}
-		common.RenderError(w, r, common.OperatorInternal("MFA override failed"))
+		common.RenderError(w, r, common.OperatorInternal(err, "MFA override failed"))
 		return
 	}
 	common.RespondNoContent(w, r)
@@ -260,7 +260,7 @@ func (rs *SchoolAccountMFAResource) GetAccountMFAGlobalOverride(w http.ResponseW
 	}
 	enrolled, err := rs.TenantMFAService.HasMFAEnrollment(r.Context(), accountID)
 	if err != nil {
-		common.RenderError(w, r, common.OperatorInternal("failed to read MFA enrollment"))
+		common.RenderError(w, r, common.OperatorInternal(err, "failed to read MFA enrollment"))
 		return
 	}
 	override, err := rs.TenantMFAService.GetGlobalMFAOverride(r.Context(), accountID)
@@ -316,7 +316,7 @@ func (rs *SchoolAccountMFAResource) SetAccountMFAGlobalOverride(w http.ResponseW
 			common.RenderError(w, r, common.OperatorForbidden("Permission denied"))
 			return
 		}
-		common.RenderError(w, r, common.OperatorInternal("MFA global override failed"))
+		common.RenderError(w, r, common.OperatorInternal(err, "MFA global override failed"))
 		return
 	}
 	common.RespondNoContent(w, r)

@@ -135,14 +135,9 @@ type announcementRequest struct {
 	ReminderText *string    `json:"reminder_text,omitempty"`
 	// Erklärung settings (#3430), used with delivery_mode "declaration".
 	declarationSettingsRequest
-}
-
-// reminderRequest is the post-publish reminder edit. Presence distinguishes
-// the distinction between an omitted reminder_at (invalid PUT body) and an
-// explicit null (remove the reminder).
-type reminderRequest struct {
-	ReminderAt   common.DeferredJSON[*time.Time] `json:"reminder_at" contract_refines:"The reminder handler already requires an RFC 3339 instant or null"`
-	ReminderText *string                         `json:"reminder_text,omitempty"`
+	// ExpectedVersion is the version of the draft an update was made on
+	// (ADR 0311); a new announcement sends none.
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 // optionResponse is one answer option of a poll.
@@ -189,6 +184,9 @@ type announcementResponse struct {
 	ReminderText   *string    `json:"reminder_text,omitempty"`
 	ReminderSentAt *time.Time `json:"reminder_sent_at,omitempty"`
 	declarationSettingsResponse
+	// Version is the token an update, the reminder edit and the publication
+	// send back (ADR 0311).
+	Version string `json:"version"`
 }
 
 type statsResponse struct {
@@ -252,6 +250,7 @@ func toAnnouncementResponse(a *announcementService.ParentAnnouncement, now time.
 		Active:                      a.Active,
 		CreatedAt:                   a.CreatedAt,
 		UpdatedAt:                   a.UpdatedAt,
+		Version:                     announcementService.ParentAnnouncementVersion(*a),
 		Targets:                     toTargetResponses(a.Targets),
 		ResponseType:                a.ResponseType,
 		ResponseDeadline:            a.ResponseDeadline,
@@ -287,6 +286,7 @@ func toInput(req announcementRequest) (announcementService.ParentAnnouncementInp
 		ReminderAt:              req.ReminderAt,
 		ReminderText:            req.ReminderText,
 		Declaration:             req.settings(),
+		ExpectedVersion:         req.ExpectedVersion,
 		Targets:                 make([]announcementService.ParentAnnouncementTargetInput, 0, len(req.Targets)),
 	}
 	for _, t := range req.Targets {
@@ -396,37 +396,6 @@ func (rs *Resource) update(w http.ResponseWriter, r *http.Request) {
 	common.Respond(w, r, http.StatusOK, toAnnouncementResponse(a, rs.now()), "Announcement updated")
 }
 
-// updateReminder moves, rewords or removes the scheduled reminder of an
-// announcement — the one edit that stays open after publishing, until the
-// reminder has been sent.
-func (rs *Resource) updateReminder(w http.ResponseWriter, r *http.Request) {
-	id, ok := parseAnnouncementID(w, r)
-	if !ok {
-		return
-	}
-	var req reminderRequest
-	if err := wire.Decode(r.Body, &req); err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
-		return
-	}
-	if !req.ReminderAt.Present {
-		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("reminder_at is required")))
-		return
-	}
-	if req.ReminderAt.Invalid != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid reminder_at")))
-		return
-	}
-	a, err := rs.Service.UpdateParentAnnouncementReminder(r.Context(), id, announcementService.ParentAnnouncementReminderInput{
-		ReminderAt: req.ReminderAt.Value, ReminderText: req.ReminderText,
-	})
-	if err != nil {
-		renderAnnouncementError(w, r, err)
-		return
-	}
-	common.Respond(w, r, http.StatusOK, toAnnouncementResponse(a, rs.now()), "Announcement reminder updated")
-}
-
 func (rs *Resource) delete(w http.ResponseWriter, r *http.Request) {
 	id, ok := parseAnnouncementID(w, r)
 	if !ok {
@@ -444,7 +413,11 @@ func (rs *Resource) publish(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	a, err := rs.Service.PublishParentAnnouncement(r.Context(), id)
+	var req versionRequest
+	if !decodeReadState(w, r, &req) {
+		return
+	}
+	a, err := rs.Service.PublishParentAnnouncement(r.Context(), id, req.ExpectedVersion)
 	if err != nil {
 		renderAnnouncementError(w, r, err)
 		return

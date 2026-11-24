@@ -11,6 +11,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -134,7 +135,7 @@ func (r *attachmentFrameRig) upload(t *testing.T, token string, announcementID i
 	_, err = part.Write([]byte("%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n"))
 	require.NoError(t, err)
 	require.NoError(t, writer.Close())
-	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/announcement-attachments/%d", announcementID), &body)
+	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/announcement-attachments/%d?expected_version=%s", announcementID, url.QueryEscape(draftVersion(t, r.db, announcementID))), &body)
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	rec := httptest.NewRecorder()

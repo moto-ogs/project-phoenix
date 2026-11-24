@@ -27,6 +27,7 @@ describe("mapAnnouncement", () => {
     created_at: "2026-02-28T08:00:00Z",
     updated_at: "2026-02-28T09:00:00Z",
     status: "published",
+    edit_version: "2026-02-28T09:00:00Z",
   };
 
   it("maps all fields including targeting arrays", () => {
@@ -181,6 +182,7 @@ describe("mapAnnouncement with values this build does not know (#2353)", () => {
       created_at: "2026-09-01T08:00:00Z",
       updated_at: "2026-09-01T08:00:00Z",
       status: "scheduled",
+      edit_version: "2026-09-01T08:00:00Z",
     };
 
   it("preserves unknown type and severity values for editing", () => {

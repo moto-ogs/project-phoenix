@@ -151,30 +151,49 @@ export async function createSurvey(input: SurveyInput): Promise<Survey> {
   );
 }
 
+/**
+ * Speichert den Entwurf, der mit `expectedVersion` gelesen wurde (ADR 0311);
+ * hat ihn jemand seitdem geändert, lehnt der Server ab.
+ */
 export async function updateSurvey(
   id: string,
   input: SurveyInput,
+  expectedVersion: string,
 ): Promise<Survey> {
   return toSurvey(
     await bffJson("tenant", "PUT /api/surveys/{surveyId}", {
       params: surveyParams(id),
-      body: input,
+      body: { ...input, expected_version: expectedVersion },
       errorMessage: "Umfrage konnte nicht gespeichert werden",
     }),
   );
 }
 
-export async function deleteSurvey(id: string): Promise<void> {
+/**
+ * Löscht die Umfrage mit den Antworten, die der Dialog genannt hat
+ * (`fingerprint` der gelesenen Umfrage); kam seitdem eine Antwort dazu,
+ * lehnt der Server ab.
+ */
+export async function deleteSurvey(
+  id: string,
+  expectedFingerprint: string,
+): Promise<void> {
   await bffJson("tenant", "DELETE /api/surveys/{surveyId}", {
     params: surveyParams(id),
+    body: { expected_fingerprint: expectedFingerprint },
     errorMessage: "Umfrage konnte nicht gelöscht werden",
   });
 }
 
-export async function publishSurvey(id: string): Promise<Survey> {
+/** Veröffentlicht den Entwurf, wie er gelesen wurde (ADR 0311). */
+export async function publishSurvey(
+  id: string,
+  expectedVersion: string,
+): Promise<Survey> {
   return toSurvey(
     await bffJson("tenant", "POST /api/surveys/{surveyId}/publish", {
       params: surveyParams(id),
+      body: { expected_version: expectedVersion },
       errorMessage: "Umfrage konnte nicht veröffentlicht werden",
     }),
   );

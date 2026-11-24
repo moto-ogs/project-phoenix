@@ -50,7 +50,7 @@ func (rs *ProvisioningResource) ListSchoolSummaries(w http.ResponseWriter, r *ht
 // GET /api/operator/schools/required-details.
 func (rs *ProvisioningResource) ListSchoolRequiredDetails(w http.ResponseWriter, r *http.Request) {
 	if rs.requiredDetails == nil {
-		common.RenderError(w, r, common.OperatorInternal(internalErrorMessage))
+		common.RenderError(w, r, common.OperatorInternal(nil, internalErrorMessage))
 		return
 	}
 	details, err := rs.requiredDetails.ListSchoolRequiredDetails(r.Context())

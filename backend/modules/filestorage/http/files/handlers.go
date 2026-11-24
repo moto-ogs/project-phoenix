@@ -20,6 +20,15 @@ type FolderRequest struct {
 	Visibility string     `json:"visibility"`
 	RoleIDs    []ident.ID `json:"role_ids"`
 	AccountIDs []ident.ID `json:"account_ids"`
+	// ExpectedVersion is the version of the folder an update was made on
+	// (ADR 0311); a new folder sends none.
+	ExpectedVersion string `json:"expected_version,omitempty"`
+}
+
+// FolderRemovalRequest confirms the delete dialog whose fingerprint it
+// carries: the files it named.
+type FolderRemovalRequest struct {
+	ExpectedFingerprint string `json:"expected_fingerprint"`
 }
 
 // FolderResponse is one folder on the wire. Ids are decimal strings; see
@@ -32,6 +41,10 @@ type FolderResponse struct {
 	RoleIDs    []string  `json:"role_ids"`
 	AccountIDs []string  `json:"account_ids"`
 	CreatedAt  time.Time `json:"created_at"`
+	// Version is the token an update sends back; Fingerprint the one a
+	// delete confirms with, over the files it removes (ADR 0311).
+	Version     string `json:"version"`
+	Fingerprint string `json:"fingerprint"`
 }
 
 // FolderListResponse is the folder overview: what the caller sees plus what
@@ -91,6 +104,7 @@ func newFolderResponse(folder filestorage.Folder) FolderResponse {
 		RoleIDs:    idStrings(folder.RoleIDs),
 		AccountIDs: idStrings(folder.AccountIDs),
 		CreatedAt:  folder.CreatedAt,
+		Version:    folder.Version, Fingerprint: folder.DeleteFingerprint,
 	}
 }
 
@@ -109,10 +123,11 @@ func newFileResponse(file filestorage.File) FileResponse {
 
 func folderInput(req FolderRequest) filestorage.FolderInput {
 	return filestorage.FolderInput{
-		Name:       req.Name,
-		Visibility: req.Visibility,
-		RoleIDs:    int64IDs(req.RoleIDs),
-		AccountIDs: int64IDs(req.AccountIDs),
+		Name:            req.Name,
+		Visibility:      req.Visibility,
+		RoleIDs:         int64IDs(req.RoleIDs),
+		AccountIDs:      int64IDs(req.AccountIDs),
+		ExpectedVersion: req.ExpectedVersion,
 	}
 }
 
@@ -203,7 +218,13 @@ func (rs *Resource) deleteFolder(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorUnauthorized(err))
 		return
 	}
-	if err := rs.files.DeleteFolder(r.Context(), folderID, actor); err != nil {
+	// A DELETE without a body confirms no dialog; the owner refuses it.
+	var req FolderRemovalRequest
+	if err := common.DecodeReadStateBody(r, &req); err != nil {
+		common.RenderError(w, r, common.ErrorInvalidRequest(err))
+		return
+	}
+	if err := rs.files.DeleteFolder(r.Context(), folderID, req.ExpectedFingerprint, actor); err != nil {
 		renderError(w, r, err)
 		return
 	}

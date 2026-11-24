@@ -8,7 +8,8 @@ import {
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
 // eslint-disable-next-line no-restricted-imports -- operator pages use useOperatorAuth, not NextAuth
-import { useSWRAuth } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
+import { useActionOn, useDraftOn } from "~/lib/swr/read-draft";
 import { Pencil, Trash2, Send } from "lucide-react";
 import { SectionCard } from "~/components/ui/section-card";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
@@ -52,7 +53,11 @@ import {
   FormErrorAlert,
   LoadErrorAlert,
 } from "~/components/ui/form-error-alert";
-import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import {
+  readStateWaitReason,
+  useReadDraftForm,
+  useSwrLoadError,
+} from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { useCurrentTimestamp } from "~/lib/hooks/use-current-timestamp";
 import { Alert } from "~/components/ui/alert";
@@ -87,6 +92,25 @@ interface FormData {
   targetTenantIds: string[];
 }
 
+/** The form of a stored announcement: its wire values and all targets. */
+function formDataOf(announcement: Announcement): FormData {
+  // Preserve wire values and historical targets when editing. Dropping
+  // deleted-org/school IDs would make a scoped announcement global: empty
+  // target arrays mean "no filter" in the backend. The warning banner
+  // surfaces unavailable targets without changing them.
+  return {
+    title: announcement.title,
+    content: announcement.content,
+    type: announcement.type,
+    severity: announcement.severity,
+    version: announcement.version ?? "",
+    expiresAt: announcement.expiresAt ?? "",
+    targetRoles: announcement.targetRoles,
+    targetOrgIds: announcement.targetOrgIds ?? [],
+    targetTenantIds: announcement.targetTenantIds ?? [],
+  };
+}
+
 const EMPTY_FORM: FormData = {
   title: "",
   content: "",
@@ -116,7 +140,7 @@ export default function OperatorAnnouncementsPage() {
   const [editTarget, setEditTarget] = useState<Announcement | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Announcement | null>(null);
   const [publishTarget, setPublishTarget] = useState<Announcement | null>(null);
-  const [formData, setFormData] = useState<FormData>(EMPTY_FORM);
+  const [createForm, setCreateForm] = useState<FormData>(EMPTY_FORM);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -125,15 +149,65 @@ export default function OperatorAnnouncementsPage() {
   // this page only renders when the session is authenticated.
   // Using useSession().status here caused data loss during token refresh
   // (status briefly becomes "loading" → SWR key becomes null → data cleared).
+  const listRead = useSWRAuth(
+    operatorAnnouncementKeys.list(),
+    () => operatorAnnouncementsService.fetchAll(),
+    { keepPreviousData: false },
+  );
   const {
     data: announcements,
     error: announcementsError,
     isLoading,
     mutate,
-  } = useSWRAuth(
-    operatorAnnouncementKeys.list(),
-    () => operatorAnnouncementsService.fetchAll(),
-    { keepPreviousData: false },
+  } = listRead;
+  // An edit rests on the announcement as read when the form opened: a newer
+  // read refills it only while untouched, and saving sends its edit version
+  // (ADR 0311). A new announcement has no stored state.
+  const editing = formOpen && editTarget !== null;
+  const edit = useDraftOn<Announcement, FormData, string, Announcement>(
+    {
+      opening: editing ? editTarget.id : null,
+      data: editTarget
+        ? (announcements?.find((row) => row.id === editTarget.id) ?? editTarget)
+        : undefined,
+      reload: async () =>
+        (await revalidateOrThrow(listRead)).find(
+          (row) => row.id === editTarget?.id,
+        ),
+    },
+    {
+      token: (read) => read.editVersion,
+      toDraft: formDataOf,
+      answer: (saved) => saved,
+    },
+  );
+  const formData = editing
+    ? (edit.draft ?? formDataOf(editTarget))
+    : createForm;
+  const setFormData = editing ? edit.setDraft : setCreateForm;
+  const editForm = useReadDraftForm(
+    editing ? edit : null,
+    saveErrors,
+    "die Ankündigung",
+  );
+  // The publication sends the announcement the dialog shows; after a
+  // refusal it shows the stored one and sends nothing until it is read.
+  const publishShown = publishTarget
+    ? (announcements?.find((row) => row.id === publishTarget.id) ??
+      publishTarget)
+    : undefined;
+  const publishAction = useActionOn(
+    {
+      opening: publishTarget?.id ?? null,
+      data: publishShown,
+      reload: () => revalidateOrThrow(listRead),
+    },
+    { token: (read) => read.editVersion },
+  );
+  const publishLoad = useReadDraftForm(
+    publishTarget ? publishAction : null,
+    publishErrors,
+    "die Ankündigung",
   );
   const announcementsLoadError = useSwrLoadError(
     announcementsError,
@@ -248,7 +322,7 @@ export default function OperatorAnnouncementsPage() {
       if (pruned.length === prev.targetTenantIds.length) return prev;
       return { ...prev, targetTenantIds: pruned };
     });
-  }, [schools, orgIdKey]);
+  }, [schools, orgIdKey, setFormData]);
 
   const filteredAnnouncements = useMemo(() => {
     if (!announcements) return [];
@@ -293,29 +367,15 @@ export default function OperatorAnnouncementsPage() {
   const openCreateForm = useCallback(() => {
     clearSaveError();
     setEditTarget(null);
-    setFormData(EMPTY_FORM);
+    setCreateForm(EMPTY_FORM);
     setFormOpen(true);
   }, [clearSaveError]);
 
   const openEditForm = useCallback(
     (announcement: Announcement) => {
       clearSaveError();
+      // The draft starts from this announcement (`edit`, above).
       setEditTarget(announcement);
-      // Preserve wire values and historical targets when editing. Dropping
-      // deleted-org/school IDs would make a scoped announcement global:
-      // empty target arrays mean "no filter" in the backend. The warning
-      // banner surfaces unavailable targets without changing them.
-      setFormData({
-        title: announcement.title,
-        content: announcement.content,
-        type: announcement.type,
-        severity: announcement.severity,
-        version: announcement.version ?? "",
-        expiresAt: announcement.expiresAt ?? "",
-        targetRoles: announcement.targetRoles,
-        targetOrgIds: announcement.targetOrgIds ?? [],
-        targetTenantIds: announcement.targetTenantIds ?? [],
-      });
       setFormOpen(true);
     },
     [clearSaveError],
@@ -325,8 +385,10 @@ export default function OperatorAnnouncementsPage() {
     async (e: React.FormEvent) => {
       e.preventDefault();
       if (!formData.title.trim() || !formData.content.trim()) return;
+      // An edit sends nothing before the stored state is read after a
+      // refusal; the shown error stays.
+      if (!editForm.begin()) return;
       setIsSaving(true);
-      clearSaveError();
       try {
         // Submit target IDs verbatim. Dropping deleted-org/school IDs here
         // would silently widen a scoped announcement to global (empty arrays
@@ -339,18 +401,42 @@ export default function OperatorAnnouncementsPage() {
         const targetTenantIdList = idList(formData.targetTenantIds);
 
         if (editTarget) {
-          const updateData: UpdateAnnouncementRequest = {
-            title: formData.title,
-            content: formData.content,
-            type: formData.type,
-            severity: formData.severity,
-            version: formData.version || null,
-            expires_at: formData.expiresAt || null,
-            target_roles: formData.targetRoles,
-            target_org_ids: targetOrgIdList,
-            target_tenant_ids: targetTenantIdList,
-          };
-          await operatorAnnouncementsService.update(editTarget.id, updateData);
+          const result = await edit.submit((editVersion) => {
+            const updateData: UpdateAnnouncementRequest = {
+              title: formData.title,
+              content: formData.content,
+              type: formData.type,
+              severity: formData.severity,
+              version: formData.version || null,
+              expires_at: formData.expiresAt || null,
+              target_roles: formData.targetRoles,
+              target_org_ids: targetOrgIdList,
+              target_tenant_ids: targetTenantIdList,
+              expected_edit_version: editVersion,
+            };
+            return operatorAnnouncementsService.update(
+              editTarget.id,
+              updateData,
+            );
+          });
+          if (!result.ok) {
+            if (result.skipped) return;
+            logger.warn("announcement_save_failed", {
+              error:
+                result.error instanceof Error
+                  ? result.error.message
+                  : String(result.error),
+            });
+            // Changed meanwhile: `reload` shows the stored announcement in
+            // the form, without a retry (ADR 0311).
+            void showSaveError(
+              result.error,
+              result.refused
+                ? { object: "die Ankündigung", reload: result.reload }
+                : { object: "die Ankündigung" },
+            );
+            return;
+          }
         } else {
           const createData: CreateAnnouncementRequest = {
             title: formData.title,
@@ -385,7 +471,7 @@ export default function OperatorAnnouncementsPage() {
         setIsSaving(false);
       }
     },
-    [formData, editTarget, mutate, toastSuccess, showSaveError, clearSaveError],
+    [formData, editTarget, edit, editForm, mutate, toastSuccess, showSaveError],
   );
 
   const handleDelete = useCallback(async () => {
@@ -413,11 +499,37 @@ export default function OperatorAnnouncementsPage() {
   }, [deleteTarget, mutate, toastSuccess, showDeleteError, clearDeleteError]);
 
   const handlePublish = useCallback(async () => {
-    if (!publishTarget) return;
+    if (!publishShown) return;
     setIsPublishing(true);
     clearPublishError();
     try {
-      await operatorAnnouncementsService.publish(publishTarget.id);
+      const result = await publishAction.submit(() =>
+        operatorAnnouncementsService.publish(
+          publishShown.id,
+          publishShown.editVersion,
+        ),
+      );
+      if (!result.ok) {
+        if (result.skipped) return;
+        logger.warn("announcement_publish_failed", {
+          error:
+            result.error instanceof Error
+              ? result.error.message
+              : String(result.error),
+        });
+        // Changed meanwhile: `reload` shows the stored announcement in the
+        // dialog, without a retry (ADR 0311).
+        void showPublishError(
+          result.error,
+          result.refused
+            ? {
+                object: "die Veröffentlichung der Ankündigung",
+                reload: result.reload,
+              }
+            : { object: "die Veröffentlichung der Ankündigung" },
+        );
+        return;
+      }
       toastSuccess("Ankündigung veröffentlicht");
       setPublishTarget(null);
       // A failed revalidation shows up through the list's load error.
@@ -437,7 +549,8 @@ export default function OperatorAnnouncementsPage() {
       setIsPublishing(false);
     }
   }, [
-    publishTarget,
+    publishShown,
+    publishAction,
     mutate,
     toastSuccess,
     showPublishError,
@@ -578,6 +691,7 @@ export default function OperatorAnnouncementsPage() {
               id="announcement-form"
             >
               <FormErrorAlert message={saveErrors.error} />
+              <LoadErrorAlert error={editForm.loadError} />
               {/* Title */}
               <Input
                 id="announcement-title"
@@ -971,16 +1085,21 @@ export default function OperatorAnnouncementsPage() {
             confirmText="Veröffentlichen"
             confirmVariant="success"
             isConfirmLoading={isPublishing}
+            isConfirmDisabled={!publishAction.canSubmit}
+            confirmDisabledReason={readStateWaitReason(publishAction.status)}
             loadingText="Wird veröffentlicht …"
           >
             <p className="text-sm text-gray-600">
-              {publishTarget &&
-              ((publishTarget.targetOrgIds?.length ?? 0) > 0 ||
-                (publishTarget.targetTenantIds?.length ?? 0) > 0)
-                ? `Die Ankündigung "${publishTarget.title}" wird für die ausgewählten Organisationen/Schulen sichtbar.`
-                : `Die Ankündigung "${publishTarget?.title}" wird für alle Nutzer sichtbar.`}
+              {publishShown &&
+              ((publishShown.targetOrgIds?.length ?? 0) > 0 ||
+                (publishShown.targetTenantIds?.length ?? 0) > 0)
+                ? `Die Ankündigung "${publishShown.title}" wird für die ausgewählten Organisationen/Schulen sichtbar.`
+                : `Die Ankündigung "${publishShown?.title}" wird für alle Nutzer sichtbar.`}
             </p>
-            <FormErrorAlert message={publishErrors.error} className="mt-3" />
+            <FormErrorAlert
+              message={publishErrors.error ?? publishLoad.loadError}
+              className="mt-3"
+            />
           </ConfirmationModal>
         </>
       }

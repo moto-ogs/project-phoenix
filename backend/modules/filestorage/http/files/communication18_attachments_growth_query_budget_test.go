@@ -7,6 +7,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"slices"
 	"testing"
 	"time"
@@ -83,7 +84,7 @@ func TestCommunication18AttachmentsPositiveGrowthQueryBudget(t *testing.T) {
 			_, e = part.Write(pdf)
 			require.NoError(t, e)
 			require.NoError(t, writer.Close())
-			req := httptest.NewRequest("POST", fmt.Sprintf("/api/announcement-attachments/%d", announcement.ID), &body)
+			req := httptest.NewRequest("POST", fmt.Sprintf("/api/announcement-attachments/%d?expected_version=%s", announcement.ID, url.QueryEscape(draftVersion(t, db, announcement.ID))), &body)
 			req.Header.Set("Authorization", "Bearer "+staffToken)
 			req.Header.Set("Content-Type", writer.FormDataContentType())
 			rec := testutil.ExecuteRequestForTest(t, router, req)

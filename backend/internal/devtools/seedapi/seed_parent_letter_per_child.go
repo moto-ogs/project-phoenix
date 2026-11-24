@@ -35,7 +35,7 @@ func seedPersonalLetter(rt *Runtime, reader *AuthRef) error {
 	if err != nil {
 		return fmt.Errorf("parse personal parent letter: %w", err)
 	}
-	if err := publishAndRead(rt, id, reader); err != nil {
+	if err := publishAndRead(rt, id, raw, reader); err != nil {
 		return fmt.Errorf("personal parent letter: %w", err)
 	}
 	return nil

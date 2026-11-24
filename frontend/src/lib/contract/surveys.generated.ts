@@ -16,7 +16,13 @@ import {
 } from "./runtime";
 import {
   deletedResponseSchema,
+  type versionRequest,
 } from "./shared.generated";
+
+/** Go: announcement.fingerprintRequest */
+export interface fingerprintRequest {
+  expected_fingerprint?: string;
+}
 
 /** Go: announcement.surveyTargetWire */
 export interface surveyTargetWire {
@@ -77,6 +83,8 @@ export interface surveyResponse {
   participant_count: number;
   targets: surveyTargetWire[] | null;
   questions: surveyQuestionResponse[] | null;
+  version: string;
+  fingerprint: string;
 }
 
 export const surveyResponseSchema: z.ZodType<surveyResponse, unknown> = object<surveyResponse>({
@@ -94,6 +102,8 @@ export const surveyResponseSchema: z.ZodType<surveyResponse, unknown> = object<s
   participant_count: safeInt,
   targets: nullable(arr(surveyTargetWireSchema)),
   questions: nullable(arr(surveyQuestionResponseSchema)),
+  version: str,
+  fingerprint: str,
 });
 
 /** Go: announcement.surveyToAnswerResponse */
@@ -282,6 +292,7 @@ export interface surveyRequest {
   closes_at?: string | null;
   targets?: surveyTargetRequest[] | null;
   questions?: surveyQuestionRequest[] | null;
+  expected_version?: string;
 }
 
 /** Go: announcement.surveyAnswerRequest */
@@ -320,6 +331,7 @@ export const routes = {
     method: "DELETE",
     pattern: "/api/surveys/{surveyId}",
     portals: ["tenant"],
+    request: requestBody<fingerprintRequest>(),
     response: success(deletedResponseSchema),
   },
   "GET /api/surveys/": {
@@ -388,6 +400,7 @@ export const routes = {
     method: "POST",
     pattern: "/api/surveys/{surveyId}/publish",
     portals: ["tenant"],
+    request: requestBody<versionRequest>(),
     response: success(surveyResponseSchema),
   },
   "POST /api/surveys/{surveyId}/remind": {

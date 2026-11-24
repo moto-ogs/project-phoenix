@@ -78,8 +78,8 @@ var authRules = []common.ErrorRule{
 
 // AuthErrorRenderer answers an operator sign-in outcome; everything the
 // table does not name is a failed sign-in.
-var AuthErrorRenderer = common.RulesRenderer(authRules, func(error) render.Renderer {
-	return common.OperatorInternal("Authentication failed")
+var AuthErrorRenderer = common.RulesRenderer(authRules, func(err error) render.Renderer {
+	return common.OperatorInternal(err, "Authentication failed")
 })
 
 func operatorRejection(status int, code, message string) func(error) render.Renderer {

@@ -169,13 +169,13 @@ func (rs *InvitationsResource) CreateInvitation(w http.ResponseWriter, r *http.R
 func (rs *InvitationsResource) ListInvitations(w http.ResponseWriter, r *http.Request) {
 	pending, err := rs.invitationService.ListPendingOperatorInvitations(r.Context())
 	if err != nil {
-		common.RenderError(w, r, common.OperatorInternal("Failed to list invitations"))
+		common.RenderError(w, r, common.OperatorInternal(err, "Failed to list invitations"))
 		return
 	}
 
 	operators, err := rs.invitationService.ListOperators(r.Context())
 	if err != nil {
-		common.RenderError(w, r, common.OperatorInternal("Failed to list operators"))
+		common.RenderError(w, r, common.OperatorInternal(err, "Failed to list operators"))
 		return
 	}
 
@@ -332,7 +332,7 @@ func invitationErrorRenderer(err error) render.Renderer {
 	case errors.Is(err, identityaccess.ErrOperatorAuditUnavailable):
 		return operatorAuditUnavailable()
 	default:
-		return common.OperatorInternal("Ein Fehler ist aufgetreten")
+		return common.OperatorInternal(err, "Ein Fehler ist aufgetreten")
 	}
 }
 
@@ -350,6 +350,6 @@ func publicInvitationErrorRenderer(err error) render.Renderer {
 	case errors.Is(err, identityaccess.ErrOperatorAuditUnavailable):
 		return operatorAuditUnavailable()
 	default:
-		return common.OperatorInternal("Ein Serverfehler ist aufgetreten")
+		return common.OperatorInternal(err, "Ein Serverfehler ist aufgetreten")
 	}
 }

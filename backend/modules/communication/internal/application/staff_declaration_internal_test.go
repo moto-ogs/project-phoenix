@@ -97,7 +97,7 @@ type declarationRepo struct {
 }
 
 func (r *declarationRepo) FindByID(context.Context, int64) (*StaffParentAnnouncement, error) {
-	copied := *r.announcement
+	copied := *asStored(r.announcement)
 	return &copied, nil
 }
 
@@ -216,7 +216,7 @@ func TestDeclarationLifecycleVersionsProofAndDeleteGuard(t *testing.T) {
 	repo := &declarationRepo{announcement: announcement}
 	svc := NewService(ServiceConfig{Now: staffTestClock, Repo: repo, Settings: newsOn{}, Fingerprints: securityFingerprints{}, Attachments: digestStub{&stubPurger{}}}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy()).(*service)
 
-	_, err := svc.Publish(ctx, announcement.ID)
+	_, err := publishAsRead(ctx, svc, announcement.ID)
 	require.NoError(t, err)
 	require.Len(t, repo.versions, 1)
 	first := repo.versions[0]
@@ -227,7 +227,7 @@ func TestDeclarationLifecycleVersionsProofAndDeleteGuard(t *testing.T) {
 	// Unchanged republication keeps the version.
 	_, err = svc.Unpublish(ctx, announcement.ID)
 	require.NoError(t, err)
-	_, err = svc.Publish(ctx, announcement.ID)
+	_, err = publishAsRead(ctx, svc, announcement.ID)
 	require.NoError(t, err)
 	assert.Len(t, repo.versions, 1)
 
@@ -250,7 +250,7 @@ func TestDeclarationLifecycleVersionsProofAndDeleteGuard(t *testing.T) {
 	_, err = svc.Unpublish(ctx, announcement.ID)
 	require.NoError(t, err)
 	repo.announcement.Body = "Donnerstag"
-	_, err = svc.Publish(ctx, announcement.ID)
+	_, err = publishAsRead(ctx, svc, announcement.ID)
 	require.NoError(t, err)
 	require.Len(t, repo.versions, 2)
 	assert.Equal(t, 2, repo.versions[1].VersionNo)
@@ -293,7 +293,7 @@ func TestDeclarationWithSubmissionsKeepsItsDeliveryMode(t *testing.T) {
 
 	in := declarationTestInput()
 	in.DeliveryMode = StaffParentAnnouncementDeliveryStandard
-	_, err := svc.Update(context.Background(), announcement.ID, in)
+	_, err := updateAsRead(context.Background(), svc, announcement.ID, in)
 	require.ErrorIs(t, err, ErrDeclarationHasSubmissions)
 	assert.Equal(t, StaffParentAnnouncementDeliveryDeclaration, repo.announcement.DeliveryMode)
 }
@@ -318,7 +318,7 @@ func TestDeclarationWithSubmissionsKeepsItsRules(t *testing.T) {
 	in.Declaration.Signers = StaffDeclarationSignersAll
 	nextDeadline := deadline.Add(time.Hour)
 	in.ResponseDeadline = &nextDeadline
-	_, err := svc.Update(context.Background(), announcement.ID, in)
+	_, err := updateAsRead(context.Background(), svc, announcement.ID, in)
 
 	require.ErrorIs(t, err, ErrDeclarationHasSubmissions)
 	assert.Equal(t, StaffDeclarationSignersAny, repo.announcement.Declaration.Signers)

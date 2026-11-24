@@ -59,6 +59,6 @@ func operatorStatusErrorRenderer(err error) render.Renderer {
 	case errors.Is(err, identityaccess.ErrOperatorSelfDeactivation):
 		return common.OperatorRejection(http.StatusConflict, common.CodeIdentityOperatorSelfDeactivation, "an operator cannot deactivate their own account")
 	default:
-		return common.OperatorInternal("Failed to change the operator status")
+		return common.OperatorInternal(err, "Failed to change the operator status")
 	}
 }

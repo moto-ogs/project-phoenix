@@ -597,11 +597,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/communication/internal/application/service.ResetAnnouncementEngagement",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/communication/internal/application/staffMessaging[I, T, M, G, R].CleanupExpiredStaffMessages",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },

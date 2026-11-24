@@ -44,7 +44,11 @@ import {
 import { useUpdateUrlParams } from "~/hooks/useUpdateUrlParams";
 import { ApiError } from "~/lib/api-error";
 import { hasPermission } from "~/lib/auth-utils";
-import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import {
+  readStateWaitReason,
+  useReadDraftForm,
+  useSwrLoadError,
+} from "~/lib/hooks/use-swr-load-error";
 import {
   useRefreshAfterWrite,
   type RefreshAfterWrite,
@@ -70,7 +74,8 @@ import {
   type SurveyRespondent,
   type SurveyResults,
 } from "~/lib/surveys-api";
-import { useSWRAuth, useTenantMutate } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth, useTenantMutate } from "~/lib/swr";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { useTenantRouter } from "~/lib/tenant-router";
 import { pollsConcept } from "~/lib/concepts/polls";
@@ -141,17 +146,14 @@ function SurveyDetail({ surveyId }: Readonly<{ surveyId: string }>) {
   const [action, setAction] = useState<LifecycleAction>(null);
   const [exporting, setExporting] = useState(false);
 
-  const {
-    data: survey,
-    error: loadError,
-    mutate,
-  } = useSWRAuth<Survey>(
+  const surveyRead = useSWRAuth<Survey>(
     tenantAdminKeys.survey(surveyId),
     () => fetchSurvey(surveyId),
     {
       revalidateOnFocus: false,
     },
   );
+  const { data: survey, error: loadError, mutate } = surveyRead;
   const notFound = loadError instanceof ApiError && loadError.status === 404;
   // Nachladen nach dem Speichern des Entwurfs: ein Fehler dabei steht über
   // dem Fragebogen und speichert nichts erneut (#6652).
@@ -334,6 +336,7 @@ function SurveyDetail({ surveyId }: Readonly<{ surveyId: string }>) {
           {action === "publish" && (
             <PublishSurveyDialog
               survey={survey}
+              reload={() => revalidateOrThrow(surveyRead)}
               onClose={() => setAction(null)}
               onDone={refresh}
             />
@@ -355,6 +358,7 @@ function SurveyDetail({ surveyId }: Readonly<{ surveyId: string }>) {
           {action === "delete" && (
             <DeleteSurveyDialog
               survey={survey}
+              reload={() => revalidateOrThrow(surveyRead)}
               onClose={() => setAction(null)}
               onDone={async () => {
                 await tenantMutate(tenantAdminKeys.surveys());
@@ -396,7 +400,7 @@ function SurveyDetail({ surveyId }: Readonly<{ surveyId: string }>) {
       {tab === "fragebogen" &&
         (editing ? (
           <SurveyEditSection
-            survey={survey}
+            read={surveyRead}
             onCancel={() => updateUrlParams({ bearbeiten: null })}
             onSaved={(saved) => {
               updateUrlParams({ bearbeiten: null });
@@ -469,52 +473,80 @@ function SurveyReadView({ survey }: Readonly<{ survey: Survey }>) {
 }
 
 function SurveyEditSection({
-  survey,
+  read,
   onCancel,
   onSaved,
 }: Readonly<{
-  survey: Survey;
+  /** The survey read of the page; the draft rests on it (ADR 0311). */
+  read: ReturnType<typeof useSWRAuth<Survey>>;
   onCancel: () => void;
   /** Closes the editor and reloads; never rejects (#6652). */
   onSaved: RefreshAfterWrite<[saved: Survey]>;
 }>) {
-  const [draft, setDraft] = useState<SurveyEditorDraft>(() =>
-    surveyDraftFromSurvey(survey),
+  const readRef = useRef(read);
+  useLayoutEffect(() => {
+    readRef.current = read;
+  });
+  // The draft rests on the survey as read when editing started: a newer
+  // read refills it only while untouched, and saving sends that version.
+  const edit = useDraftOn<Survey, SurveyEditorDraft, string, Survey>(
+    {
+      opening: read.data?.id ?? null,
+      data: read.data,
+      error: read.error,
+      reload: () => revalidateOrThrow(readRef.current),
+      write: (stored) => read.mutate(stored, { revalidate: false }),
+    },
+    {
+      token: (survey) => survey.version,
+      toDraft: surveyDraftFromSurvey,
+      answer: (saved) => saved,
+    },
   );
+  const draft = edit.draft;
   const [errors, setErrors] = useState<SurveyEditorErrors | null>(null);
   const [saving, setSaving] = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
   const formErrors = useApiFormError(formRef);
+  const form = useReadDraftForm(edit, formErrors, "die Umfrage");
   // „Wiederholen“ speichert den jetzt sichtbaren Entwurf, nicht den vom
   // Fehlversuch (#6503).
   const latestSave = useRef<() => Promise<void>>(async () => undefined);
-  const lookups = useParentTargetLookups(draft.audience === "parents");
+  const lookups = useParentTargetLookups(draft?.audience === "parents");
 
   const save = async () => {
+    if (!draft) return;
     const found = validateSurveyDraft(draft);
     setErrors(found);
-    formErrors.clear();
     if (hasEditorErrors(found)) {
+      formErrors.clear();
       formErrors.invalid(SURVEY_FORM_CHECK_MESSAGE);
       return;
     }
+    // Nothing goes out before the stored survey is read; a shown error stays.
+    if (!form.begin()) return;
     setSaving(true);
-    let saved: Survey;
-    try {
-      saved = await updateSurvey(survey.id, surveyInputFromDraft(draft));
-    } catch (err: unknown) {
+    const result = await edit.submit((version, current) =>
+      updateSurvey(read.data?.id ?? "", surveyInputFromDraft(current), version),
+    );
+    setSaving(false);
+    if (!result.ok) {
       logger.error("survey_update_failed", {
-        error: err instanceof Error ? err.message : String(err),
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
       });
-      void formErrors.show(err, {
-        object: "die Umfrage",
-        retry: () => void latestSave.current(),
-      });
-      setSaving(false);
+      // Changed meanwhile: `reload` shows the stored survey, no retry.
+      void formErrors.show(
+        result.error,
+        result.refused
+          ? { object: "die Umfrage", reload: result.reload }
+          : { object: "die Umfrage", retry: () => void latestSave.current() },
+      );
       return;
     }
-    setSaving(false);
-    await onSaved(saved);
+    await onSaved(result.saved);
   };
   useLayoutEffect(() => {
     latestSave.current = save;
@@ -524,20 +556,25 @@ function SurveyEditSection({
     <SectionCard title="Entwurf bearbeiten">
       <div ref={formRef} className="space-y-6">
         <FormErrorAlert message={formErrors.error} />
-        <SurveyEditorFields
-          draft={draft}
-          onChange={(next) => {
-            setDraft(next);
-            if (errors) setErrors(validateSurveyDraft(next));
-          }}
-          errors={errors}
-          disabled={saving}
-          {...lookups}
-        />
+        <LoadErrorAlert error={form.loadError} />
+        {draft ? (
+          <SurveyEditorFields
+            draft={draft}
+            onChange={(next) => {
+              edit.setDraft(next);
+              if (errors) setErrors(validateSurveyDraft(next));
+            }}
+            errors={errors}
+            disabled={saving}
+            {...lookups}
+          />
+        ) : null}
         <EditActions
           onCancel={onCancel}
           onSave={() => void save()}
           saving={saving}
+          disabled={!edit.canSubmit}
+          disabledReason={readStateWaitReason(edit.status)}
         />
       </div>
     </SectionCard>

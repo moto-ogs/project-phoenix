@@ -48,9 +48,11 @@ class OperatorAnnouncementsService {
     });
   }
 
-  async publish(id: string): Promise<void> {
+  /** Publishes the announcement as read: `expectedEditVersion` (ADR 0311). */
+  async publish(id: string, expectedEditVersion: string): Promise<void> {
     await bffJson("platform", "POST /operator/announcements/{id}/publish", {
       params: { id },
+      body: { expected_edit_version: expectedEditVersion },
     });
   }
 
