@@ -5,7 +5,8 @@ import { HELP_TOPICS } from "~/lib/help-topics";
  * `/traeger/vertraege` (#4678, #4679, #4680, #4681): festlegen, wann der
  * Vertrag gilt, Vertragsbedingungen je Angebot festlegen, Entwürfe aus
  * angenommenen Anmeldungen erstellen, prüfen und senden; die Unterschrift
- * der Eltern und den Papiervertrag erfassen; Versionen nach einer Änderung;
+ * der Eltern, die Übergabe auf Papier (#8030) und den Papiervertrag
+ * erfassen; Versionen nach einer Änderung;
  * Kündigung und Widerruf (#4682); Änderungswünsche der Eltern freigeben (#5979);
  * Kinder und bestehende Verträge aus einer Datei importieren (#4723), auch
  * ohne Mail-Adresse der Eltern (#7360), ihre Vertragsangaben aus den
@@ -92,15 +93,18 @@ export function traegerCareContractsTopic(): HelpTopic {
         ],
       },
       {
-        title: "Papiervertrag erfassen",
+        title: "Auf Papier übergeben und erfassen",
         description:
           "Für Familien ohne Internet oder einen Vertrag, den es nur auf Papier gibt.",
         steps: [
-          "Wähle oben `PDF herunterladen` und drucke den Vertrag.",
-          "Die Eltern unterschreiben ihn. Scanne den unterschriebenen Vertrag als PDF.",
-          "Wähle auf der Vertragsseite im Reiter `Unterschrift und Versand` in der Karte `Unterschrift` den Knopf `Papiervertrag erfassen`.",
+          "Öffne den Entwurf und den Reiter `Unterschrift und Versand`. Wähle in der Karte `Unterschrift` den Knopf `Auf Papier übergeben`.",
+          "Bestätige mit `Übergeben und PDF laden`. moto speichert den Vertrag so, wie er jetzt ist, und lädt das PDF herunter. Ein neuer Briefkopf ändert dieses PDF nicht mehr.",
+          "Der Vertrag ist dann `Versendet`. Die Eltern bekommen keine Mail und keine Erinnerung.",
+          "Drucke das PDF und gib es den Eltern. Sie unterschreiben es. Scanne den unterschriebenen Vertrag als PDF.",
+          "Wähle in der Karte `Unterschrift` den Knopf `Papiervertrag erfassen`.",
           "Prüfe `Unterschrieben von` und `Unterschrieben am`. Wähle mit `PDF wählen` die Datei.",
           "Wähle `Vertrag abschließen`. Der Vertrag ist dann `Aktiv`. Mit `Papiervertrag laden` holst du das PDF später wieder.",
+          "Ging der Vertrag schon per Mail? Dann drucke ihn mit `PDF herunterladen` und erfasse ihn wie oben.",
         ],
       },
       {

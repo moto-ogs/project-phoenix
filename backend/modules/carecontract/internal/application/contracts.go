@@ -570,6 +570,24 @@ func (c *Contracts) frozenDocument(ctx context.Context, reviewer carecontract.Re
 	return file, id, err
 }
 
+// paperDocument freezes the PDF of a contract handed over on paper and
+// answers its ID; a frozen one stays. Like a send, a new PDF needs the
+// letterhead: its withdrawal notice names the Träger's address (#7177).
+func (c *Contracts) paperDocument(ctx context.Context, reviewer carecontract.Reviewer, record ContractRecord) (int64, error) {
+	if record.DocumentID != nil {
+		return *record.DocumentID, nil
+	}
+	head, err := c.letterheads.Letterhead(ctx, reviewer)
+	if err != nil {
+		return 0, fmt.Errorf("care contract: letterhead: %w", err)
+	}
+	if letterheadMissing(head.SenderText) {
+		return 0, carecontract.ErrLetterheadMissing
+	}
+	_, documentID, err := c.frozenDocument(ctx, reviewer, record)
+	return documentID, err
+}
+
 // DiscardContract removes a draft. The trail keeps the entry.
 func (c *Contracts) DiscardContract(ctx context.Context, reviewer carecontract.Reviewer, contractID int64) error {
 	if err := checkReviewer(reviewer); err != nil {

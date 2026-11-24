@@ -2,10 +2,12 @@
 
 // Die Unterschrift eines Betreuungsvertrags im Träger-Büro (#4679): wer wann
 // auf welchem Weg unterschrieben hat, ob die Prüfsummen noch stimmen, und
-// solange der Vertrag wartet, die Erinnerungen. Ein Vertrag, den die Eltern
-// auf Papier unterschrieben haben, wird hier mit seinem PDF erfasst.
+// solange der Vertrag wartet, die Erinnerungen. Für Eltern ohne Internet
+// übergibt das Büro einen Entwurf hier auf Papier: moto friert das PDF ein,
+// das gedruckt wird (#8030). Den unterschriebenen Vertrag erfasst das Büro
+// dann mit seinem PDF.
 
-import { Download, Upload } from "lucide-react";
+import { Download, Printer, Upload } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useState } from "react";
 
@@ -14,9 +16,10 @@ import { Button } from "~/components/ui/button";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { InsetPanel } from "~/components/ui/inset-panel";
+import { ConfirmationModal } from "~/components/ui/modal";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { useApiErrorDisplay } from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import {
   formatBerlinDate,
   formatBerlinTime,
@@ -28,7 +31,9 @@ import { createLogger } from "~/lib/logger";
 import {
   type CareContractDetail,
   type ContractSignature,
+  downloadCareContract,
   downloadPaperSignature,
+  handOverCareContractOnPaper,
 } from "~/lib/traeger-care-contracts-api";
 import { labelOf } from "~/lib/label-of";
 
@@ -68,6 +73,10 @@ export function CareContractSignatureCard({
   onChanged,
 }: Readonly<{ contract: CareContractDetail; onChanged: () => Promise<void> }>) {
   const [paperOpen, setPaperOpen] = useState(false);
+  const [confirmHandover, setConfirmHandover] = useState(false);
+  const [handingOver, setHandingOver] = useState(false);
+  const actionError = useApiErrorDisplay();
+  const { success } = useToast();
   // The reload after the paper contract stands above the card, also after
   // the dialog closed (#6652).
   const afterPaper = useRefreshAfterWrite(
@@ -75,8 +84,39 @@ export function CareContractSignatureCard({
     onChanged,
   );
   const signature = contract.signature;
-  const waiting =
-    contract.status === "entwurf" || contract.status === "versendet";
+  // Handed over on paper (#8030): versendet, but no mail went out.
+  const onPaper =
+    contract.status === "versendet" && contract.mailings.length === 0;
+
+  // Freezes the PDF, then downloads exactly that PDF for printing. A failed
+  // download leaves the handover done; the PDF stays on the contract page.
+  const handOver = async () => {
+    setHandingOver(true);
+    try {
+      await handOverCareContractOnPaper(contract.id);
+    } catch (err) {
+      logger.error("traeger_care_contract_paper_handover_failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      setHandingOver(false);
+      setConfirmHandover(false);
+      void actionError.show(err, { object: "der Vertrag" });
+      return;
+    }
+    setConfirmHandover(false);
+    success("Der Vertrag ist übergeben. Druck das PDF aus.");
+    try {
+      const file = await downloadCareContract(contract.id);
+      downloadBlob(file.blob, file.filename);
+    } catch (err) {
+      logger.error("traeger_care_contract_paper_handover_download_failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      void actionError.show(err, { object: "das PDF" });
+    }
+    setHandingOver(false);
+    await afterPaper.refresh();
+  };
 
   return (
     <>
@@ -89,9 +129,11 @@ export function CareContractSignatureCard({
               ? contract.concluded.method === "mit_anmeldung"
                 ? "Der Vertrag ist bereits mit der Annahme der Anmeldung abgeschlossen."
                 : "Der Vertrag ist bereits abgeschlossen."
-              : contract.status === "versendet"
-                ? "Die Eltern unterschreiben in der Eltern-App oder über den Link in der Mail."
-                : "Nach dem Senden können die Eltern online unterschreiben."
+              : onPaper
+                ? "Die Eltern unterschreiben den Vertrag auf Papier."
+                : contract.status === "versendet"
+                  ? "Die Eltern unterschreiben in der Eltern-App oder über den Link in der Mail."
+                  : "Nach dem Senden können die Eltern online unterschreiben."
         }
         titleBadge={
           signature ? (
@@ -103,7 +145,18 @@ export function CareContractSignatureCard({
           ) : null
         }
         action={
-          waiting && !signature ? (
+          contract.status === "entwurf" ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              tooltip="Öffnet ein Fenster. Danach lädst du das PDF zum Ausdrucken."
+              onClick={() => setConfirmHandover(true)}
+            >
+              <Printer className="mr-2 h-4 w-4" aria-hidden="true" />
+              Auf Papier übergeben
+            </Button>
+          ) : contract.status === "versendet" && !signature ? (
             <Button
               type="button"
               variant="outline"
@@ -124,6 +177,28 @@ export function CareContractSignatureCard({
           <WaitingDetails contract={contract} />
         )}
       </SectionCard>
+      <ConfirmationModal
+        isOpen={confirmHandover}
+        title="Vertrag auf Papier übergeben?"
+        confirmText="Übergeben und PDF laden"
+        confirmTooltip="Speichert das PDF so, wie es jetzt ist, und lädt es herunter."
+        isConfirmLoading={handingOver}
+        loadingText="Wird übergeben …"
+        onClose={() => setConfirmHandover(false)}
+        onConfirm={() => void handOver()}
+      >
+        <div className="space-y-3 text-sm text-gray-700">
+          <p>
+            moto speichert den Vertrag jetzt als PDF. Druck es aus und gib es
+            den Eltern. Die Eltern bekommen keine Mail.
+          </p>
+          <p>
+            Danach gilt der Vertrag als versendet. Verwerfen geht dann nicht
+            mehr. Den unterschriebenen Vertrag erfasst du später mit
+            „Papiervertrag erfassen“.
+          </p>
+        </div>
+      </ConfirmationModal>
       {paperOpen ? (
         <PaperSignatureModal
           contract={contract}
@@ -256,8 +331,17 @@ function WaitingDetails({
   if (contract.status === "entwurf") {
     return (
       <p className="text-sm text-gray-600">
-        Haben die Eltern schon auf Papier unterschrieben? Dann erfasst du den
-        Vertrag mit „Papiervertrag erfassen“.
+        Haben die Eltern kein Internet? Dann wähle „Auf Papier übergeben“ und
+        gib ihnen den Ausdruck.
+      </p>
+    );
+  }
+  if (contract.mailings.length === 0) {
+    return (
+      <p className="text-sm text-gray-600">
+        Die Eltern haben den Vertrag auf Papier bekommen. Erinnerungen per Mail
+        gibt es dafür nicht. Hast du den unterschriebenen Vertrag zurück? Dann
+        wähle „Papiervertrag erfassen“.
       </p>
     );
   }

@@ -872,8 +872,20 @@ export async function saveContractTemplate(
 }
 
 /**
+ * Hands the contract over on paper (#8030): moto freezes the PDF the office
+ * prints, and a draft counts as sent, without a mail. The office then
+ * downloads that PDF with `downloadCareContract`.
+ */
+export async function handOverCareContractOnPaper(id: string): Promise<void> {
+  await bffJson("org", "POST /traeger/contracts/{id}/paper-handover", {
+    params: { id },
+  });
+}
+
+/**
  * Records a contract the parents signed on paper (#4679): the signed PDF,
- * who signed and on which day. The contract is concluded afterwards.
+ * who signed and on which day. The contract must have been handed over or
+ * sent first (#8030); it is concluded afterwards.
  */
 export async function recordPaperSignature(
   id: string,

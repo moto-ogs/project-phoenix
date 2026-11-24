@@ -23,6 +23,7 @@ const { api, mockPush, mockReplace } = vi.hoisted(() => ({
     resendCareContract: vi.fn(),
     discardCareContract: vi.fn(),
     recordPaperSignature: vi.fn(),
+    handOverCareContractOnPaper: vi.fn(),
     downloadCareContractVersion: vi.fn(),
   },
   mockPush: vi.fn(),
@@ -484,6 +485,118 @@ describe("TraegerVertragPage", () => {
     expect(
       await screen.findByText(/Der Vertrag ist unterwegs/),
     ).toBeInTheDocument();
+  });
+
+  it("hands a draft over on paper and downloads the frozen PDF", async () => {
+    // The paper signature binds what the office printed (#8030): the draft
+    // offers the handover, not yet the paper signature.
+    mockSearch = "tab=versand";
+    api.handOverCareContractOnPaper.mockResolvedValue(undefined);
+    renderPage();
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Auf Papier übergeben" }),
+    );
+    expect(
+      screen.queryByRole("button", { name: "Papiervertrag erfassen" }),
+    ).not.toBeInTheDocument();
+    const dialog = await screen.findByRole("dialog", {
+      name: "Vertrag auf Papier übergeben?",
+    });
+    expect(
+      within(dialog).getByText(/Die Eltern bekommen keine Mail/),
+    ).toBeInTheDocument();
+    expect(api.handOverCareContractOnPaper).not.toHaveBeenCalled();
+    const previews = api.downloadCareContract.mock.calls.length;
+    api.fetchCareContract.mockResolvedValue({
+      ...DRAFT,
+      status: "versendet",
+      sentAt: "2026-09-02T08:00:00Z",
+      documentFrozen: true,
+    });
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Übergeben und PDF laden" }),
+    );
+
+    await waitFor(() =>
+      expect(api.handOverCareContractOnPaper).toHaveBeenCalledWith("7"),
+    );
+    await waitFor(() =>
+      expect(api.downloadCareContract.mock.calls.length).toBeGreaterThan(
+        previews,
+      ),
+    );
+    expect(api.downloadCareContract).toHaveBeenLastCalledWith("7");
+    expect(
+      await screen.findByText(/Der Vertrag ist übergeben/),
+    ).toBeInTheDocument();
+    // Reloaded, the contract waits for the paper signature, without mails.
+    expect(
+      await screen.findByRole("button", { name: "Papiervertrag erfassen" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Auf Papier übergeben" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("names a refused handover and downloads nothing", async () => {
+    mockSearch = "tab=versand";
+    api.handOverCareContractOnPaper.mockRejectedValue(
+      new ApiError("failed", 409, { code: "care_contract.letterhead_missing" }),
+    );
+    renderPage();
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Auf Papier übergeben" }),
+    );
+    const previews = api.downloadCareContract.mock.calls.length;
+    fireEvent.click(
+      within(
+        await screen.findByRole("dialog", {
+          name: "Vertrag auf Papier übergeben?",
+        }),
+      ).getByRole("button", { name: "Übergeben und PDF laden" }),
+    );
+
+    expect(
+      await screen.findByText(
+        catalogText("care_contract.letterhead_missing", "der Vertrag"),
+      ),
+    ).toBeInTheDocument();
+    expect(api.downloadCareContract).toHaveBeenCalledTimes(previews);
+    expect(
+      screen.getByRole("button", { name: "Auf Papier übergeben" }),
+    ).toBeInTheDocument();
+  });
+
+  it("waits for the paper signature of a contract handed over on paper", async () => {
+    api.fetchCareContract.mockResolvedValue({
+      ...DRAFT,
+      status: "versendet",
+      sentAt: "2026-09-02T08:00:00Z",
+      documentFrozen: true,
+    });
+    renderPage();
+
+    // No mail went out yet: mailing it is a first send, not a second.
+    expect(
+      await screen.findByRole("button", { name: "Vertrag senden" }),
+    ).toBeInTheDocument();
+    showTab("Unterschrift und Versand");
+    expect(
+      screen.getByText("Die Eltern unterschreiben den Vertrag auf Papier."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Erinnerungen per Mail gibt es dafür nicht/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Auf Papier übergeben, nicht per Mail."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Papiervertrag erfassen" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Auf Papier übergeben" }),
+    ).not.toBeInTheDocument();
   });
 
   it.each([
@@ -1226,9 +1339,20 @@ describe("TraegerVertragPage", () => {
         name: /Vertrag senden/,
       });
       api.fetchCareContract.mockClear();
-      api.fetchCareContract
-        .mockRejectedValueOnce(down())
-        .mockResolvedValue({ ...DRAFT, status: "versendet" });
+      // Sent by mail, the contract holds its mailing; without one it was
+      // handed over on paper (#8030).
+      api.fetchCareContract.mockRejectedValueOnce(down()).mockResolvedValue({
+        ...DRAFT,
+        status: "versendet",
+        documentFrozen: true,
+        mailings: [
+          {
+            recipient: "erika@example.org",
+            sentAt: "2026-09-02T08:00:00Z",
+            state: "sent",
+          },
+        ],
+      });
 
       fireEvent.click(sendButton);
       // Sending asks first: confirm in the dialog.

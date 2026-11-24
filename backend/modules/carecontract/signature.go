@@ -44,7 +44,7 @@ var (
 	// signature. The answer never tells which.
 	ErrSigningLinkInvalid = errors.New("the signing link is not valid")
 	// ErrContractNotSignable reports a contract that waits for no signature:
-	// a draft online, or a contract signed already.
+	// a draft, online or on paper (#8030), or a contract signed already.
 	ErrContractNotSignable = errors.New("the contract cannot be signed")
 	// ErrSignatureInvalid reports a signature image or typed name the
 	// checks refuse.
@@ -173,6 +173,12 @@ type InboxSigning interface {
 // the Träger transaction of the route. PDF reads open their own units and
 // log access in the contract's school after the Träger transaction ends.
 type PaperSignatures interface {
+	// HandOverOnPaper freezes the PDF the office prints for the parents
+	// (#8030): a draft becomes versendet without a mail, so the paper
+	// signature binds the text the parents got.
+	HandOverOnPaper(ctx context.Context, reviewer Reviewer, contractID int64) error
+	// RecordPaperSignature takes the signed scan of a contract handed over
+	// on paper or by mail; a draft is not signable.
 	RecordPaperSignature(ctx context.Context, reviewer Reviewer, contractID int64, input PaperInput) error
 	PaperDocument(ctx context.Context, reviewer Reviewer, contractID int64) (File, error)
 }

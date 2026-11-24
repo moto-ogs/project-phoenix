@@ -230,7 +230,9 @@ var traegerCoreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/traeger/contracts/"}:       notCaptured,
 	{http.MethodPost, "/traeger/contracts/send"}:   notCaptured,
 	{http.MethodDelete, "/traeger/contracts/{id}"}: notCaptured,
-	// The paper contract (#4679) is recorded by the office, no core action.
+	// The paper contract (#4679) is handed over and recorded by the office
+	// (#8030), no core action.
+	{http.MethodPost, "/traeger/contracts/{id}/paper-handover"}:             notCaptured,
 	{http.MethodPost, "/traeger/contracts/{id}/paper-signature"}:            notCaptured,
 	{http.MethodPut, "/traeger/contract-templates/{schoolId}/{offeringId}"}: notCaptured,
 	// The import of existing contracts (#4723) belongs to the Träger, not

@@ -106,6 +106,7 @@ func TestPaperSignatureRequiresARecorder(t *testing.T) {
 	t.Parallel()
 	s := &Signatures{}
 	require.ErrorContains(t, s.RecordPaperSignature(context.Background(), carecontract.Reviewer{OrganizationID: 1}, 1, carecontract.PaperInput{}), "reviewer needs a Träger and an account")
+	require.ErrorContains(t, s.HandOverOnPaper(context.Background(), carecontract.Reviewer{OrganizationID: 1}, 1), "reviewer needs a Träger and an account")
 }
 
 func TestInboxContractPreservesOperationalErrors(t *testing.T) {

@@ -9,4 +9,5 @@ GET /traeger/contracts/{id}/paper-signature -> basis
 GET /traeger/contracts/{id}/versions/{number}/document -> basis
 POST /traeger/contracts/ -> basis
 POST /traeger/contracts/send -> basis
+POST /traeger/contracts/{id}/paper-handover -> basis
 POST /traeger/contracts/{id}/paper-signature -> basis

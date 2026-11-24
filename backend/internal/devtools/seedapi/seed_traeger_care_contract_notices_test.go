@@ -47,6 +47,12 @@ func TestSeedCareContractNoticesFillsMissingCasesOnce(t *testing.T) {
 					respond(map[string]any{"contracts": contracts})
 					return
 				}
+				if strings.HasSuffix(r.URL.Path, "/paper-handover") {
+					assert.Equal(t, "POST", r.Method)
+					writes = append(writes, r.Method+" "+r.URL.Path)
+					respond(map[string]any{})
+					return
+				}
 				if strings.HasSuffix(r.URL.Path, "/paper-signature") {
 					assert.Equal(t, "POST", r.Method)
 					assert.Contains(t, r.Header.Get("Content-Type"), "multipart/form-data")
