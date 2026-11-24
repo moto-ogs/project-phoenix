@@ -637,6 +637,12 @@
       "legacy": "workforce.traeger_month_not_kept"
     },
     {
+      "code": "workforce.traeger_payroll_employer_invalid",
+      "class": "input",
+      "parameters": [],
+      "legacy": "workforce.traeger_payroll_employer_invalid"
+    },
+    {
       "code": "workforce.traeger_payroll_not_ready",
       "class": "business_rejection",
       "parameters": [],
@@ -689,6 +695,12 @@
       "class": "business_rejection",
       "parameters": [],
       "legacy": "workforce.traeger_staff_already_linked"
+    },
+    {
+      "code": "workforce.traeger_staff_employer_changed",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "workforce.traeger_staff_employer_changed"
     },
     {
       "code": "workforce.traeger_staff_hire_duplicate",

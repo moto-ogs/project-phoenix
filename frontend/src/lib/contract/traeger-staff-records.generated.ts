@@ -43,6 +43,9 @@ export interface TraegerStaffEmployment {
   active: boolean;
   via_pool: boolean;
   employer_name: string;
+  employer_body: string;
+  employer_personnel_number: string | null;
+  employer_number_version: string;
 }
 
 export const TraegerStaffEmploymentSchema: z.ZodType<TraegerStaffEmployment, unknown> = object<TraegerStaffEmployment>({
@@ -52,6 +55,9 @@ export const TraegerStaffEmploymentSchema: z.ZodType<TraegerStaffEmployment, unk
   active: bool,
   via_pool: bool,
   employer_name: str,
+  employer_body: str,
+  employer_personnel_number: nullable(str),
+  employer_number_version: str,
 });
 
 /** Go: workforce.TraegerStaffFinancial */
@@ -554,6 +560,12 @@ export interface UpdateContractRequest {
   expected_version?: string;
 }
 
+/** Go: traegerstaff.EmployerNumberRequest */
+export interface EmployerNumberRequest {
+  employer_personnel_number?: string | null;
+  expected_version?: string;
+}
+
 /** Go: traegerstaff.StaffFinancialRequest */
 export interface StaffFinancialRequest {
   iban?: string | null;
@@ -715,6 +727,13 @@ export const routes = {
     pattern: "/traeger/staff-records/{id}/contracts/{contractId}",
     portals: ["org"],
     request: requestBody<UpdateContractRequest>(),
+    response: success(TraegerStaffRecordDetailSchema),
+  },
+  "PUT /traeger/staff-records/{id}/employer-numbers/{schoolId}": {
+    method: "PUT",
+    pattern: "/traeger/staff-records/{id}/employer-numbers/{schoolId}",
+    portals: ["org"],
+    request: requestBody<EmployerNumberRequest>(),
     response: success(TraegerStaffRecordDetailSchema),
   },
   "PUT /traeger/staff-records/{id}/financial": {

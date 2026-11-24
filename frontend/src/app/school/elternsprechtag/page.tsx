@@ -655,7 +655,6 @@ function SchoolParentConferences() {
               columns={slotColumns}
               rows={[...selected.slots]}
               getRowKey={(row) => row.start_time}
-              stackedOnMobile
             />
             <p className="mt-4 text-sm text-gray-600 print:hidden">
               Eltern buchen, verschieben oder sagen ab, bis 24 Stunden vor dem
@@ -675,7 +674,6 @@ function SchoolParentConferences() {
               rows={[...conferences]}
               getRowKey={(row) => row.id}
               isLoading={isLoading && !data}
-              stackedOnMobile
               defaultSortKey="date"
               defaultSortDirection="asc"
               onRowClick={(row) => select(row.id)}

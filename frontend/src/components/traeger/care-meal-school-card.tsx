@@ -173,7 +173,6 @@ export function CareMealSchoolCard({
           columns={columns(currentMonth)}
           rows={[...stands].reverse()}
           getRowKey={(tariff) => tariff.validFrom}
-          stackedOnMobile
         />
       ) : null}
     </SectionCard>

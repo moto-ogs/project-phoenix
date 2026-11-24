@@ -298,7 +298,6 @@ function NoticeBody({
           getRowKey={(line) =>
             `${line.kind}-${line.label}-${line.detail}-${line.periodFrom}`
           }
-          stackedOnMobile
           stackedLayout={change ? "lines" : "row"}
           dense
         />
@@ -339,7 +338,6 @@ function NoticeBody({
           rows={[...notice.installments]}
           stackedDetailKey="due"
           getRowKey={(rate) => rate.month}
-          stackedOnMobile
           stackedLayout={change ? "lines" : "row"}
           dense
         />

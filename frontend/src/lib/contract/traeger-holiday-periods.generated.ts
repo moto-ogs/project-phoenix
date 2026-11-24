@@ -856,6 +856,12 @@ export const routes = {
     portals: ["org"],
     response: success(HolidayPeriodSchema),
   },
+  "POST /traeger/holiday-periods/{id}/registrations/{registrationId}/consents/{key}/withdraw": {
+    method: "POST",
+    pattern: "/traeger/holiday-periods/{id}/registrations/{registrationId}/consents/{key}/withdraw",
+    portals: ["org"],
+    response: success(HolidayRegistrationDetailSchema),
+  },
   "POST /traeger/holiday-periods/{id}/registrations/{registrationId}/freeze": {
     method: "POST",
     pattern: "/traeger/holiday-periods/{id}/registrations/{registrationId}/freeze",

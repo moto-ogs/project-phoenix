@@ -118,7 +118,6 @@ export function TraegerBueroTable({
         defaultSortKey="email"
         isLoading={isLoading}
         rowHasInteractiveControls
-        stackedOnMobile
       />
       <ConfirmDeleteModal
         isOpen={revoking !== null}

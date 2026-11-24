@@ -19,6 +19,7 @@ import {
 import { Suspense, useEffect, useState } from "react";
 import { staffChangeText } from "~/components/traeger/staff/staff-record-format";
 import { StaffPersonCard } from "~/components/traeger/staff/staff-person-card";
+import { StaffPersonnelNumberCard } from "~/components/traeger/staff/staff-personnel-number-card";
 import { StaffProofsCard } from "~/components/traeger/staff/staff-proofs-card";
 import { StaffAbsenceAccountsCard } from "~/components/traeger/staff/staff-absence-accounts-card";
 import { useStaffOverviewReturn } from "~/components/traeger/staff/staff-overview-tab";
@@ -57,7 +58,6 @@ import {
   revealStaffFinancial,
   staffName,
   updateStaffFinancial,
-  updateStaffPersonnelNumber,
   type StaffFinancial,
   type StaffFinancialValues,
   type StaffRecordDetail,
@@ -133,98 +133,6 @@ const FINANCIAL_FIELDS = [
   string,
   string,
 ])[];
-
-function PersonnelNumberCard({
-  record,
-  onSaved,
-}: Readonly<{
-  record: StaffRecordDetail;
-  onSaved: (record: StaffRecordDetail) => void;
-}>) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState("");
-  const [saving, setSaving] = useState(false);
-  const errors = useApiFormError();
-  const { success } = useToast();
-
-  const save = async () => {
-    const value = draft.trim();
-    if (value !== "" && !/^\d{1,9}$/.test(value)) {
-      errors.invalid("Bitte prüfe die Personalnummer.", {
-        personnel_number: "Die Personalnummer hat 1 bis 9 Ziffern.",
-      });
-      return;
-    }
-    setSaving(true);
-    try {
-      const saved = await updateStaffPersonnelNumber(record.id, value || null);
-      setEditing(false);
-      success("Die Personalnummer ist gespeichert. Alle Schulen sehen sie.");
-      onSaved(saved);
-    } catch (err) {
-      logger.error("traeger_staff_personnel_number_failed", {
-        error: errorMessage(err),
-      });
-      void errors.show(err, { object: "die Personalnummer" });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <SectionCard
-      concept={payrollConcept}
-      title="Personalnummer"
-      description="Die Nummer aus deinem Lohnsystem. Sie gilt an allen Schulen dieser Person und ist bei deinem Träger nur einmal vergeben."
-      action={
-        editing ? undefined : (
-          <Button
-            size="md"
-            type="button"
-            variant="outline"
-            className="gap-2"
-            tooltip="Öffnet das Feld, um die Personalnummer einzutragen oder zu ändern."
-            onClick={() => {
-              setDraft(record.personnelNumber ?? "");
-              errors.clear();
-              setEditing(true);
-            }}
-          >
-            <PencilSimpleIcon className="h-4 w-4" aria-hidden="true" />
-            Bearbeiten
-          </Button>
-        )
-      }
-      footer={
-        editing ? (
-          <EditActions
-            onCancel={() => setEditing(false)}
-            onSave={() => void save()}
-            saving={saving}
-          />
-        ) : undefined
-      }
-    >
-      {editing ? (
-        <Input
-          id="traeger-staff-personnel-number"
-          label="Personalnummer"
-          controlSize="compact"
-          hint="Leer lassen, wenn es noch keine Nummer gibt."
-          inputMode="numeric"
-          autoComplete="off"
-          value={draft}
-          error={errors.fieldError("personnel_number") ?? errors.error?.message}
-          onChange={(event) => setDraft(event.target.value)}
-        />
-      ) : (
-        <p className="font-mono text-2xl font-semibold tracking-tight text-gray-900 tabular-nums">
-          {record.personnelNumber ?? "–"}
-        </p>
-      )}
-    </SectionCard>
-  );
-}
 
 const valuesOf = (financial: StaffFinancial): StaffFinancialValues => ({
   iban: financial.iban,
@@ -606,7 +514,7 @@ function StaffRecordContent() {
                 }}
               />
               <div className="compact:gap-4 grid gap-6 max-sm:gap-3 lg:grid-cols-2">
-                <PersonnelNumberCard record={record} onSaved={replace} />
+                <StaffPersonnelNumberCard record={record} onSaved={replace} />
                 <SectionCard
                   concept={schoolsConcept}
                   title="Einsatzorte"

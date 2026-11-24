@@ -4,8 +4,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
 import deMessages from "~/i18n/messages/de.generated";
 import { ApiError } from "~/lib/api-error";
-import { listHolidayRegistrationEntries } from "~/lib/parent-api";
-import { holidayRegistrationEntriesFromBackend } from "~/lib/parent-holiday-registration-entries";
+import {
+  listHolidayRegistrationEntries,
+  setHolidayRegistrationConsent,
+} from "~/lib/parent-api";
+import {
+  holidayRegistrationEntriesFromBackend,
+  type HolidayRegistrationEntry,
+} from "~/lib/parent-holiday-registration-entries";
 import { IsolatedSWRCache } from "~/lib/swr";
 import { catalogText } from "~/test/error-catalog-text";
 import { PARENT_HOLIDAY_REGISTRATION_ENTRIES } from "~/test/fixtures/holiday-registrations";
@@ -25,9 +31,11 @@ vi.mock("next-auth/react", () => ({
 }));
 vi.mock("~/lib/parent-api", () => ({
   listHolidayRegistrationEntries: vi.fn(),
+  setHolidayRegistrationConsent: vi.fn(),
 }));
 
 const mockedEntries = vi.mocked(listHolidayRegistrationEntries);
+const mockedSetConsent = vi.mocked(setHolidayRegistrationConsent);
 const ENTRIES = holidayRegistrationEntriesFromBackend(
   PARENT_HOLIDAY_REGISTRATION_ENTRIES,
 );
@@ -137,5 +145,123 @@ describe("ParentHolidayRegistrationsPage (#6673)", () => {
     expect(
       await screen.findByRole("region", { name: "Herbstferien 2026" }),
     ).toBeInTheDocument();
+  });
+
+  describe("voluntary consents (#8038)", () => {
+    const photos = {
+      key: "fotos",
+      title: "Fotos in der Ferienbetreuung",
+      label: "Mein Kind darf auf Erinnerungsfotos zu sehen sein.",
+      text: "Die Fotos bleiben in der OGS.",
+    };
+    const trips = {
+      key: "ausfluege",
+      title: "Ausflüge mit dem Bus",
+      label: "Mein Kind darf mit dem Bus fahren.",
+      text: "",
+    };
+    const withConsents = (
+      given: boolean,
+      changedAt: string | null,
+    ): HolidayRegistrationEntry[] => [
+      {
+        ...ENTRIES[0]!,
+        consents: [
+          { ...photos, given, changedAt },
+          { ...trips, given: false, changedAt: null },
+        ],
+      },
+    ];
+
+    it("lists each consent in its words with its state and withdraws one after asking", async () => {
+      mockedEntries.mockResolvedValueOnce(
+        withConsents(true, "2026-09-08T08:00:00Z"),
+      );
+      renderPage();
+
+      const card = await screen.findByRole("region", {
+        name: "Weihnachtsferien 2026/27",
+      });
+      expect(
+        within(card).getByRole("heading", { name: "Einwilligungen" }),
+      ).toBeInTheDocument();
+      expect(within(card).getByText(photos.label)).toBeInTheDocument();
+      expect(await within(card).findByText(photos.text)).toBeInTheDocument();
+      expect(within(card).getByText("Seit 08.09.2026")).toBeInTheDocument();
+      expect(within(card).getByText("Erteilt")).toBeInTheDocument();
+      expect(within(card).getByText("Nicht erteilt")).toBeInTheDocument();
+      expect(
+        within(card).getByText("Du hast sie bei der Anmeldung nicht gegeben."),
+      ).toBeInTheDocument();
+
+      mockedSetConsent.mockResolvedValueOnce();
+      mockedEntries.mockResolvedValueOnce(
+        withConsents(false, "2026-09-09T10:00:00Z"),
+      );
+      fireEvent.click(
+        within(card).getByRole("button", {
+          name: "Einwilligung „Fotos in der Ferienbetreuung“ widerrufen",
+        }),
+      );
+      const dialog = await screen.findByRole("dialog", {
+        name: "Einwilligung widerrufen?",
+      });
+      expect(within(dialog).getByText(photos.label)).toBeInTheDocument();
+      expect(within(dialog).getByText(/sieht ihn sofort/)).toBeInTheDocument();
+      expect(mockedSetConsent).not.toHaveBeenCalled();
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: "Widerrufen" }),
+      );
+
+      expect(
+        await screen.findByText(
+          "Du hast die Einwilligung „Fotos in der Ferienbetreuung“ widerrufen.",
+        ),
+      ).toBeInTheDocument();
+      expect(mockedSetConsent).toHaveBeenCalledWith("12", "fotos", false);
+      expect(mockedEntries).toHaveBeenCalledTimes(2);
+      expect(
+        within(card).getByText("Du hast sie am 09.09.2026 widerrufen."),
+      ).toBeInTheDocument();
+      expect(
+        within(card).getByRole("button", {
+          name: "Einwilligung „Fotos in der Ferienbetreuung“ geben",
+        }),
+      ).toBeInTheDocument();
+    });
+
+    it("keeps a failed change in the open dialog with a retry", async () => {
+      mockedEntries.mockResolvedValue(withConsents(false, null));
+      renderPage();
+      const card = await screen.findByRole("region", {
+        name: "Weihnachtsferien 2026/27",
+      });
+      mockedSetConsent.mockRejectedValueOnce(
+        new ApiError("gone", 404, {
+          code: "enrollment.holiday_registration_entry_not_found",
+        }),
+      );
+      fireEvent.click(
+        within(card).getByRole("button", {
+          name: "Einwilligung „Ausflüge mit dem Bus“ geben",
+        }),
+      );
+      const dialog = await screen.findByRole("dialog", {
+        name: "Einwilligung geben?",
+      });
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: "Einwilligung geben" }),
+      );
+      expect(
+        await within(dialog).findByText(
+          catalogText(
+            "enrollment.holiday_registration_entry_not_found",
+            "Die Einwilligung",
+          ),
+          { exact: false },
+        ),
+      ).toBeInTheDocument();
+      expect(mockedSetConsent).toHaveBeenCalledWith("12", "ausfluege", true);
+    });
   });
 });

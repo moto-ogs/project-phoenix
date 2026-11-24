@@ -225,7 +225,6 @@ export default function TraegerJahresbescheidePage() {
           columns={runColumns(data.schools)}
           rows={[...runs]}
           getRowKey={(run) => run.id}
-          stackedOnMobile
           stackedLayout="row"
           onRowClick={openRun}
           emptyState={

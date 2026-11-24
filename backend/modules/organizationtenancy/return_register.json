@@ -2,7 +2,7 @@
   "registerVersion": 1,
   "formatVersion": 1,
   "catalogVersion": 1,
-  "catalogSHA256": "2b6505939489cd02924dea4abffa75b91624ee24656c3898e1c43dd8cf292120",
+  "catalogSHA256": "af2414cd61674dcca0f891e0676dde9d9962a0d8d37fc1f1a3ee24b77eacaf1e",
   "about": "Dieses Register beschreibt das Rückgabepaket von moto: welche Tabellen und Felder es enthält, welche Typen sie haben, ob sie leer sein dürfen und wie die Tabellen verbunden sind. Es enthält keine Kundendaten. Jedes Paket enthält dieselbe Beschreibung für seine Tabellen als model.json. formatVersion und catalogSHA256 stehen auch in der manifest.json des Pakets.",
   "standards": [
     {
@@ -5998,6 +5998,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": false
+        },
+        {
+          "name": "text_version",
+          "type": "text",
+          "udt": "text",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -15932,6 +15938,12 @@
           "name": "parent_account_requested",
           "type": "boolean",
           "udt": "bool",
+          "nullable": false
+        },
+        {
+          "name": "legal_withdrawals",
+          "type": "jsonb",
+          "udt": "jsonb",
           "nullable": false
         },
         {
@@ -39494,6 +39506,87 @@
       }
     },
     {
+      "name": "workforce.payroll_employers",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "organization_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "school_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "body",
+          "type": "character varying",
+          "udt": "varchar",
+          "nullable": false
+        },
+        {
+          "name": "consultant_number",
+          "type": "character varying",
+          "udt": "varchar",
+          "nullable": false
+        },
+        {
+          "name": "client_number",
+          "type": "character varying",
+          "udt": "varchar",
+          "nullable": false
+        },
+        {
+          "name": "cost_center",
+          "type": "character varying",
+          "udt": "varchar",
+          "nullable": false
+        },
+        {
+          "name": "updated_by",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        }
+      ],
+      "relationships": [
+        {
+          "column": "organization_id",
+          "targetTable": "platform.organizations",
+          "targetColumn": "id"
+        },
+        {
+          "column": "updated_by",
+          "targetTable": "auth.accounts",
+          "targetColumn": "id"
+        }
+      ],
+      "packages": [
+        "school",
+        "organization"
+      ]
+    },
+    {
       "name": "workforce.staff_record_links",
       "columns": [
         {
@@ -39543,6 +39636,18 @@
           "type": "boolean",
           "udt": "bool",
           "nullable": false
+        },
+        {
+          "name": "employer_body",
+          "type": "character varying",
+          "udt": "varchar",
+          "nullable": true
+        },
+        {
+          "name": "employer_personnel_number",
+          "type": "character varying",
+          "udt": "varchar",
+          "nullable": true
         }
       ],
       "relationships": [

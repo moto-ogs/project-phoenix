@@ -335,7 +335,6 @@ export function CareContractOfferingCorrectionPreviewCard({
         columns={columns}
         rows={[...shown]}
         getRowKey={(contract) => `${contract.line}|${contract.reference}`}
-        stackedOnMobile
         stackedLayout="lines"
         dense
         pageSize={PAGE_SIZE}

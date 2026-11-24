@@ -1341,6 +1341,25 @@ export const HolidayRegistrationEntryChildResponseSchema: z.ZodType<HolidayRegis
   weeks: nullable(arr(HolidayRegistrationEntryWeekResponseSchema)),
 });
 
+/** Go: parent.HolidayRegistrationConsentResponse */
+export interface HolidayRegistrationConsentResponse {
+  key: string;
+  title: string;
+  label: string;
+  text: string;
+  given: boolean;
+  changed_at: string | null;
+}
+
+export const HolidayRegistrationConsentResponseSchema: z.ZodType<HolidayRegistrationConsentResponse, unknown> = object<HolidayRegistrationConsentResponse>({
+  key: str,
+  title: str,
+  label: str,
+  text: str,
+  given: bool,
+  changed_at: nullable(instant),
+});
+
 /** Go: parent.HolidayRegistrationEntryResponse */
 export interface HolidayRegistrationEntryResponse {
   id: string;
@@ -1351,6 +1370,7 @@ export interface HolidayRegistrationEntryResponse {
   submitted_at: string;
   status: string;
   children: HolidayRegistrationEntryChildResponse[] | null;
+  consents: HolidayRegistrationConsentResponse[] | null;
 }
 
 export const HolidayRegistrationEntryResponseSchema: z.ZodType<HolidayRegistrationEntryResponse, unknown> = object<HolidayRegistrationEntryResponse>({
@@ -1362,6 +1382,7 @@ export const HolidayRegistrationEntryResponseSchema: z.ZodType<HolidayRegistrati
   submitted_at: instant,
   status: str,
   children: nullable(arr(HolidayRegistrationEntryChildResponseSchema)),
+  consents: nullable(arr(HolidayRegistrationConsentResponseSchema)),
 });
 
 /** Go: parent.HolidayRegistrationEntriesResponse */
@@ -2661,6 +2682,11 @@ export interface familyChildrenRequest {
   children?: number;
 }
 
+/** Go: parent.HolidayRegistrationConsentRequest */
+export interface HolidayRegistrationConsentRequest {
+  given?: boolean | null;
+}
+
 /** Go: parent.parentPreferenceRequest */
 export interface parentPreferenceRequest {
   enabled?: boolean | null;
@@ -3476,6 +3502,13 @@ export const routes = {
     portals: ["parent"],
     request: requestBody<familyChildrenRequest>(),
     response: success(ContractFamilyChildrenSchema),
+  },
+  "PUT /parent/me/holiday-registration-entries/{registrationId}/consents/{key}": {
+    method: "PUT",
+    pattern: "/parent/me/holiday-registration-entries/{registrationId}/consents/{key}",
+    portals: ["parent"],
+    request: requestBody<HolidayRegistrationConsentRequest>(),
+    response: noData,
   },
   "PUT /parent/me/notification-preferences/{type}": {
     method: "PUT",

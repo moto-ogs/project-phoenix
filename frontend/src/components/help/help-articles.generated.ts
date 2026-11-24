@@ -200,6 +200,8 @@ import type { parentGroupMessageTopic as authored_parentGroupMessageTopic } from
 
 import type { parentGuardiansTopic as authored_parentGuardiansTopic } from "./articles/parent-guardians";
 
+import type { parentHolidayConsentsTopic as authored_parentHolidayConsentsTopic } from "./articles/parent-holiday-consents";
+
 import type { parentHolidayRegistrationTopic as authored_parentHolidayRegistrationTopic } from "./articles/parent-holiday-registration";
 
 import type { parentInstallAppTopic as authored_parentInstallAppTopic } from "./articles/parent-install-app";
@@ -3630,6 +3632,9 @@ export const holidayGuestGroupTopic =
  * Tag ihrer Woche in den Listen (#5630). Vorher sagt die leere Feriengruppe,
  * wie viele Kinder dazukommen (#6680). Kinder der eigenen OGS bleiben in
  * ihrer Gruppe und zeigen die Angaben der Anmeldung in ihrer Akte (#6678).
+ * Unter „Fotos“ steht der Stand der Foto-Einwilligung bei der Heimatschule
+ * (#4721), unter „Einwilligungen aus der Ferienanmeldung“ der Stand der
+ * freiwilligen Einwilligungen der Anmeldung, live gelesen (#8038).
  */
 export const holidayGuestsTopic = function holidayGuestsTopic(): HelpTopic {
   return {
@@ -3643,7 +3648,7 @@ export const holidayGuestsTopic = function holidayGuestsTopic(): HelpTopic {
     icon: "SunHorizon",
     image: "/help/screens/feriengast-angaben-aus-der-anmeldung.webp",
     imageAlt:
-      "Notfall, Abholung, Gesundheit und Angaben aus der Ferienanmeldung bei einem Feriengast.",
+      "Notfall, Abholung, Gesundheit, Fotos, Raumverlauf und Stimmung, Einwilligungen und Angaben aus der Ferienanmeldung bei einem Feriengast.",
     requirements: [
       "Deine OGS richtet eine Ferienwoche für den Träger aus.",
       "Die Leitung hat unter `Ferienwochen` eine Feriengruppe gewählt.",
@@ -3656,6 +3661,9 @@ export const holidayGuestsTopic = function holidayGuestsTopic(): HelpTopic {
       "Lies unter `Betreuung` die Woche und die gebuchte Zeit.",
       "Unter `Notfall` stehen die Eltern und weitere Kontakte. Unter `Abholung` steht, wer das Kind außer den Eltern abholen darf.",
       "Unter `Gesundheit` stehen Allergien, Medikamente und weitere Hinweise der Eltern.",
+      "Unter `Fotos` steht, ob die Eltern eine Foto-Einwilligung gegeben haben. Steht dort `Keine Foto-Einwilligung`, mach bitte keine Fotos von dem Kind.",
+      "Steht auf der Karte `Raumverlauf und Stimmung` mit `An der Heimatschule gestoppt`? Dann speichert moto für dieses Kind keinen Raumverlauf und fragt keine Stimmung ab. Den Raum, in dem das Kind gerade ist, siehst du weiter.",
+      "Unter `Einwilligungen aus der Ferienanmeldung` steht, was die Eltern beim Träger erlaubt haben. Zum Beispiel `Fotos in der Ferienbetreuung` mit `Erteilt`, `Nicht erteilt` oder `Widerrufen`.",
       "Unter `Angaben aus der Ferienanmeldung` steht zum Beispiel, ob das Kind allein nach Hause gehen darf.",
     ],
     result: "Du weißt, wann das Kind gehen darf und wen du im Notfall anrufst.",
@@ -3664,7 +3672,10 @@ export const holidayGuestsTopic = function holidayGuestsTopic(): HelpTopic {
       "Die Gesundheitsangaben stehen auch in den `Gesundheitsinformationen` des Feriengasts. Du siehst sie also auch in der Gruppe und in der `Gesundheitsliste`.",
       "Vor der Ferienwoche ist die Feriengruppe leer. Dort steht dann, wie viele Kinder dazukommen und ab wann. Zum Beispiel `Feriengruppe: 3 Kinder kommen ab 04.01.2027 dazu.`",
       "Kinder deiner OGS sind keine Feriengäste. Sie bleiben in ihrer Gruppe. Notfall, Abholung und Zeiten aus der Anmeldung stehen in ihrer Kinderakte unter `Angaben aus der Ferienanmeldung`.",
-      "Mehr als Betreuung, Notfall, Abholung, Gesundheit und die freigegebenen Angaben siehst du von einem Feriengast nicht. Die übrigen Angaben bleiben beim Träger.",
+      "Die Foto-Einwilligung geben und widerrufen die Eltern bei der Schule ihres Kindes. Ein Widerruf steht sofort bei dir unter `Fotos`. Ein Foto in moto bekommt ein Feriengast nicht.",
+      "Die Einwilligungen aus der Ferienanmeldung widerrufen die Eltern in der Eltern-App oder beim Träger. Ein Widerruf steht sofort bei dir.",
+      "Sagen `Fotos` und eine Einwilligung aus der Ferienanmeldung zum selben Thema etwas anderes? Dann gilt das Nein. Mach keine Fotos und frag die Eltern.",
+      "Mehr als Betreuung, Notfall, Abholung, Gesundheit, Fotos, Einwilligungen und die freigegebenen Angaben siehst du von einem Feriengast nicht. Die übrigen Angaben bleiben beim Träger.",
       "Jeder Blick auf Notfall und Abholung steht im Zugriffsprotokoll deiner OGS.",
     ],
     differences: [
@@ -3672,6 +3683,8 @@ export const holidayGuestsTopic = function holidayGuestsTopic(): HelpTopic {
     ],
     troubleshootingDetails: [
       "Fehlt `Angaben aus der Ferienanmeldung`? Dann gibt der Träger keine Frage frei.",
+      "Fehlt `Einwilligungen aus der Ferienanmeldung`? Dann fragt das Formular des Trägers keine ab, oder die Ferienwoche ist vorbei.",
+      "Fehlt `Fotos`? Dann geht das Kind auf keine Schule deines Trägers, oder die Ferienwoche ist vorbei. Frage dann die Eltern.",
       "Fehlt `Gesundheit`? Dann haben die Eltern nichts angegeben oder der Weitergabe nicht zugestimmt.",
       "Ist die Feriengruppe leer? Vor dem ersten Tag der Ferienwoche ist das richtig. Die Feriengäste kommen am ersten Tag von selbst dazu.",
       "Fehlt die Feriengruppe unter `Gruppen`? Hat sie keine eigenen Kinder, steht sie dort erst ab dem ersten Tag der Woche.",
@@ -3766,6 +3779,7 @@ export const holidayWeeksTopic = function holidayWeeksTopic(): HelpTopic {
       "Gibt der Träger Fragen frei, steht jede in einer eigenen Spalte. Zum Beispiel `Darf allein nach Hause gehen`.",
       "Unter `Zweite sorgeberechtigte Person` stehen Name und Telefon, wenn die Eltern eine zweite Person angegeben haben.",
       "Unter `Gesundheit` stehen Allergien, Medikamente und weitere Hinweise. Dort stehen auch Antworten auf Gesundheitsfragen, die der Träger freigibt.",
+      "Fragt der Träger im Formular Einwilligungen ab, steht jede in einer eigenen Spalte. Zum Beispiel `Fotos in der Ferienbetreuung` mit `Ja`, `Nein` oder `Widerrufen`.",
     ],
     result:
       "Du weißt, wie viele Kinder in welcher Zeit kommen und woher sie kommen.",
@@ -3777,6 +3791,7 @@ export const holidayWeeksTopic = function holidayWeeksTopic(): HelpTopic {
       "Ein `Feriengast` geht auf keine Schule deines Trägers. In Klammern steht die Schule, die die Eltern genannt haben.",
       "Steht in einer Spalte `–`, haben die Eltern die Frage nicht beantwortet.",
       "Gesundheitsangaben siehst du nur, wenn die Eltern zugestimmt haben. Sie stehen nur in der Liste, nicht in der Excel- oder CSV-Datei.",
+      "Die Einwilligungen zeigen immer den Stand von jetzt. Widerrufen die Eltern in der Eltern-App, steht sofort `Widerrufen`. In Excel und CSV heißt die Spalte `Einwilligung:` mit dem Titel. Eine Datei zeigt den Stand beim Herunterladen.",
       "Kinder deiner OGS bleiben in ihrer Gruppe. moto trägt für die gebuchten Tage Ankunft und Abholung ein. Der Check-in erwartet das Kind dann an diesen Tagen. Neu bestätigte Kinder plant moto innerhalb einer Stunde ein.",
       "In der Kinderakte steht unter `Angaben aus der Ferienanmeldung`, was die Eltern angegeben haben: Betreuung, Notfall, Abholung und Gesundheit. Die Stammdaten des Kindes ändern sich nicht.",
       "Änderst du an einem eingeplanten Tag die Abholzeit, bleibt deine Zeit stehen.",
@@ -3989,10 +4004,19 @@ export const invitationTopic = function invitationTopic(): HelpTopic {
 } satisfies typeof authored_invitationTopic;
 
 /**
- * Das Einladen ins Elternportal. Der Weg des Teams laeuft ueber das Kind:
+ * Das Einladen ins Elternportal. Eine Person laedt das Team beim Kind ein:
  * Reiter `Erziehungsberechtigte`, dann `Einladen` bei der Person
  * (student-guardian-manager.tsx). Ohne E-Mail-Adresse tut der Knopf nichts --
  * `handleInviteGuardian` bricht bei `!guardian.email` still ab.
+ *
+ * Die Sammeleinladung (#3378, #6601) steht in `Kinderdaten`
+ * (`/database/students`), nicht in `Alle Kinder`: `Auswählen` im
+ * Drei-Punkte-Menue braucht `users:update`, `Eltern einladen` in der Leiste
+ * `users:create` (students-list.tsx, canInviteGuardians). Das Fenster ist
+ * selection-bulk-invite-modal.tsx. `Offene Einladungen noch einmal senden`
+ * erscheint nur bei offenen Einladungen; fehlende E-Mail-Adressen nennt die
+ * Problemliste, die Zeile `Keine E-Mail-Adresse` nur mit dem Haken
+ * `Eltern mit Konto benachrichtigen`.
  *
  * Die Seite `Elternzugänge` (`/admin/guardian-approvals`) ist NICHT die
  * Warteschlange fuer Einladungen des Teams. Sie sammelt nur, was Eltern
@@ -4017,13 +4041,13 @@ export const inviteGuardiansTopic = function inviteGuardiansTopic(): HelpTopic {
     title: "Eltern ins Elternportal einladen",
     question: "Wie lade ich Eltern ein?",
     summary:
-      "Du lädst jede Person beim Kind ein. Dafür brauchst du ihre E-Mail-Adresse.",
+      "Du lädst eine Person beim Kind ein oder die Eltern vieler Kinder auf einmal. Dafür braucht jede Person eine E-Mail-Adresse.",
     group: "elternarbeit",
     audience: "lead",
     icon: "KeyRound",
     requirements: [
       "Das Kind ist in moto angelegt.",
-      "Du kennst die E-Mail-Adresse der Person.",
+      "Du kennst die E-Mail-Adresse der Person, oder sie steht schon beim Kind.",
     ],
     steps: [],
     instructionGroups: [
@@ -4052,6 +4076,19 @@ export const inviteGuardiansTopic = function inviteGuardiansTopic(): HelpTopic {
         ],
       },
       {
+        title: "Eltern mehrerer Kinder auf einmal einladen",
+        description:
+          "So lädst du die Eltern von Kindern ein, die du selbst auswählst. Das geht in `Kinderdaten`, nicht in `Alle Kinder`.",
+        steps: [
+          "Öffne `Datenverwaltung` und danach `Kinderdaten`.",
+          "Wähle oben rechts das Menü mit den drei Punkten und dann `Auswählen`.",
+          "Hake die Kinder an. Mit `Alle … auswählen` hakst du alle Kinder an, die die Liste gerade zeigt.",
+          "Wähle oben in der Leiste `Eltern einladen`.",
+          "Das Fenster `Eltern ins Elternportal einladen` zeigt, wie viele Eltern Zugang bekommen. Darunter steht, wer keine Einladung braucht, zum Beispiel `Nutzen das Elternportal schon`.",
+          "Wähle unten zum Beispiel `10 Eltern einladen`. moto verschickt die E-Mails sofort. Bis sie ankommen, dauert es ein paar Minuten.",
+        ],
+      },
+      {
         title: "Alle Eltern einer Klasse einladen",
         description:
           "So lädst du die Eltern aller Kinder einer Klasse auf einmal ein, auch von Kindern ohne OGS-Platz.",
@@ -4060,7 +4097,7 @@ export const inviteGuardiansTopic = function inviteGuardiansTopic(): HelpTopic {
           "Ordne die Liste nach `Klasse`.",
           "Öffne bei der Klasse das Menü mit den drei Punkten.",
           "Wähle `Eltern einladen`.",
-          "Prüfe die Übersicht und bestätige.",
+          "Prüfe im Fenster `Eltern ins Elternportal einladen` die Zahlen und bestätige unten.",
         ],
       },
       {
@@ -4068,9 +4105,7 @@ export const inviteGuardiansTopic = function inviteGuardiansTopic(): HelpTopic {
         description:
           "Wurden Kinder aus einem importierten Vertrag angemeldet, sehen ihre Eltern die Betreuung jetzt im Elternportal. Eltern mit Konto sagst du das mit einer kurzen E-Mail.",
         steps: [
-          "Öffne `Datenverwaltung` und danach `Kinderdaten`.",
-          "Wähle oben rechts das Menü mit den drei Punkten und dann `Auswählen`.",
-          "Hake die Kinder an und wähle `Eltern einladen`.",
+          "Wähle die Kinder aus wie unter „Eltern mehrerer Kinder auf einmal einladen“ und dann `Eltern einladen`.",
           "Setze den Haken bei `Eltern mit Konto benachrichtigen`.",
           "Prüfe die Zahlen: `Werden eingeladen`, `Bekommen die Nachricht` und `Keine E-Mail-Adresse`. Kinder, die heute keine Betreuung gebucht haben, zählt `Kinder ohne gebuchte Betreuung: keine Nachricht`.",
           "Wähle unten zum Beispiel `3 Eltern anschreiben`.",
@@ -4088,17 +4123,24 @@ export const inviteGuardiansTopic = function inviteGuardiansTopic(): HelpTopic {
         ],
       },
     ],
+    image: "/help/screens/eltern-sammeleinladung.webp",
+    imageAlt:
+      "Das Fenster zum Einladen vieler Eltern mit den Zahlen der Auswahl und dem Knopf zum Einladen.",
     result:
       "Die Person bekommt eine E-Mail mit einem Link. Bei der Person siehst du, ob die Mail angekommen ist. Sobald sie ihr Passwort festlegt, sieht sie ihr Kind im Elternportal.",
     notes: [
       "Hinter dem Namen steht, wie weit die Person ist: `Kein Konto`, `Einladung offen`, `Link gilt nicht mehr` oder `Konto aktiv`.",
       "Bei `Einladung offen` heißt der Knopf `Erneut einladen`. Damit geht die E-Mail noch einmal raus.",
       "Eine Person mit mehreren Kindern lädst du nur einmal ein. Sie sieht danach alle ihre Kinder.",
+      "Sag den Eltern vorher Bescheid, dass eine E-Mail von moto kommt. Das rät auch das Fenster `Eltern ins Elternportal einladen`.",
+      "Steht im Fenster `Einladung ist noch offen`? Diese Eltern haben ihre Einladung noch nicht angenommen. Soll die E-Mail noch einmal rausgehen, setze den Haken bei `Offene Einladungen noch einmal senden`.",
+      "Hat eine Person eine eingeschränkte `Portalrolle`, etwa `Nur Abholung`, bekommt sie keine Einladung. Das Fenster zählt sie unter `Nur Kontakt, zum Beispiel abholberechtigt. Wird nicht eingeladen`.",
       "Die Nachricht geht an die E-Mail-Adresse, mit der sich die Eltern im Elternportal anmelden. Sie nennt nur die Vornamen der Kinder, die Schule und den Weg ins Elternportal. Geschwister stehen in einer Nachricht.",
       "Die Nachricht nennt nur Kinder, die heute Betreuung gebucht haben. Buchungen, die erst später beginnen, zählen nicht, ein Wochenplan allein auch nicht. Jedes Elternteil bekommt sie pro Kind nur einmal. Wurde sie schon verschickt, steht das Elternteil unter `Nachricht schon verschickt`.",
       "Holt jemand das Kind nur ab, wähle `Portalrolle` `Nur Abholung`. Dann sind `E-Mail` und Telefon freiwillig. Die Person bekommt keinen Zugang zur Eltern-App.",
     ],
     differences: [
+      "`Auswählen` oder `Eltern einladen` fehlt in `Kinderdaten`? Für `Auswählen` brauchst du das Recht `Benutzerinformationen bearbeiten`, für `Eltern einladen` das Recht `Neue Benutzer erstellen`. Frag die Person, die bei euch die Rechte vergibt.",
       "`Eltern mit Konto benachrichtigen` fehlt? Dann hat in der Auswahl niemand ein Konto. Eltern ohne Konto bekommen die Einladung.",
       "Steht bei der Person `Konto aktiv, kein Portalzugriff`, heißt der Knopf `Zugriff gewähren`.",
       "Bei einer eingeschränkten `Portalrolle` wie `Notfallkontakt` oder `Nur Abholung` fragt moto zuerst `Vollen Zugriff gewähren?`. Erst `Zugriff gewähren` erteilt den Zugang.",
@@ -4109,6 +4151,8 @@ export const inviteGuardiansTopic = function inviteGuardiansTopic(): HelpTopic {
       "Jemand mit Konto bekommt keine Nachricht? Die Person darf das Kind im Elternportal nicht sehen, zum Beispiel mit `Portalrolle` `Nur Abholung`. Oder das Kind hat heute keine Betreuung gebucht. Oder die Nachricht für dieses Kind wurde schon verschickt.",
       "Ein Elternteil sagt, die Nachricht ist nicht angekommen? moto schickt sie kein zweites Mal. Bitte die Person, im Spam-Ordner nachzusehen. Sonst sag ihr selbst: Die Betreuung steht im Elternportal beim Kind unter `Betreuung & Wochenplan`.",
       "`Einladen` bewirkt nichts? Dann fehlt die `E-Mail`. Trage sie über `Bearbeiten` nach.",
+      "Im Fenster steht zum Beispiel `2 Eltern können nicht eingeladen werden`? Darunter steht bei jedem Elternteil der Grund, etwa `E-Mail-Adresse fehlt`. Trage die Adresse beim Kind unter `Erziehungsberechtigte` nach. Alle anderen Eltern lädst du trotzdem schon ein.",
+      "Im Fenster steht `Für diese Auswahl gibt es niemanden einzuladen.`? Dann braucht niemand eine Einladung. Oder es fehlt etwas, zum Beispiel die E-Mail-Adresse. Offene Einladungen schickst du mit `Offene Einladungen noch einmal senden` noch einmal.",
       "Bei der Person steht `Link gilt nicht mehr`? Zum Beispiel wurde die `E-Mail` nach der Einladung geändert. Wähle `Einladung neu senden`. Der neue Link geht an die Adresse, die jetzt eingetragen ist.",
       "Bei der Person steht `Adresse prüfen` oder `Verzögert`, und `Erneut einladen` fehlt? Der Hinweis dort sagt, was zu tun ist. Mehr dazu unter `Wenn eine E-Mail nicht ankommt`.",
       "Die Person ist schon bei einem anderen Kind eingetragen? Wähle `Vorhandene/n suchen` statt `+ Hinzufügen`. Sonst entstehen zwei Einträge für dieselbe Person.",
@@ -6271,6 +6315,7 @@ export const parentChildDataTopic = function parentChildDataTopic(): HelpTopic {
           "Tippe bei `Raumverlauf und Stimmung` auf `Stoppen`.",
           "Tippe auf `Jetzt stoppen`.",
           "moto löscht sofort, in welchen Räumen dein Kind war. Danach speichert moto keine Räume und keine Stimmung mehr. Die Betreuung sieht weiter, wo dein Kind gerade ist. Schon gespeicherte Stimmungen löscht moto erst nach der üblichen Frist.",
+          "Wird dein Kind in den Ferien an einer anderen Schule betreut, gilt der Stopp auch dort.",
           "Mit `Wieder speichern` hebst du den Stopp für dein Kind auf. Deine Schule entscheidet, ob Raumverlauf und Stimmung gespeichert werden. Gelöschtes kommt nicht zurück.",
         ],
       },
@@ -6280,7 +6325,9 @@ export const parentChildDataTopic = function parentChildDataTopic(): HelpTopic {
     notes: [
       "Gesundheitshinweise gehen sofort an das Team, ohne Prüfung.",
       "Du möchtest eine offene Anfrage ändern? Tippe unter `Beantragte Änderung` auf `Anfrage bearbeiten`.",
+      "Mit der Foto-Einwilligung darf die OGS dein Kind fotografieren und ein Foto von deinem Kind in moto speichern.",
       "Nach dem Widerruf löscht moto ein gespeichertes Foto deines Kindes.",
+      "Der Widerruf gilt sofort. Er gilt auch, wenn dein Kind in den Ferien an einer anderen Schule betreut wird. Das Team dort sieht dann sofort, dass keine Einwilligung vorliegt.",
       "Nach dem letzten Betreuungstag löscht moto das Foto und die Foto-Einwilligung in der Nacht danach von selbst. Bis dahin kannst du weiter widerrufen. Neu geben kannst du die Einwilligung dann nicht mehr.",
     ],
     differences: [
@@ -7058,6 +7105,51 @@ export const parentGuardiansTopic = function parentGuardiansTopic(): HelpTopic {
 } satisfies typeof authored_parentGuardiansTopic;
 
 /**
+ * `/ferienanmeldungen` (#8038, ADR 0321): die freiwilligen Einwilligungen
+ * einer Ferienanmeldung sehen, widerrufen und wieder geben. Die OGS, die
+ * das Kind in den Ferien betreut, sieht den Stand sofort.
+ */
+export const parentHolidayConsentsTopic =
+  function parentHolidayConsentsTopic(): HelpTopic {
+    return {
+      id: HELP_TOPICS.parentHolidayConsents,
+      title: "Einwilligungen der Ferienanmeldung ändern",
+      question: "Wie widerrufe ich eine Einwilligung aus der Ferienanmeldung?",
+      summary:
+        "Unter `Ferienanmeldungen` siehst du jede Einwilligung. Du widerrufst sie dort oder gibst sie wieder.",
+      group: "anmeldung",
+      audience: "parent",
+      icon: "ShieldCheck",
+      requirements: [
+        "Du hast ein Elternkonto. Die Ferienanmeldung steht unter `Ferienanmeldungen`.",
+        "Der Träger hat im Formular eine Einwilligung abgefragt, zum Beispiel `Fotos in der Ferienbetreuung`.",
+      ],
+      steps: [
+        "Öffne in der Eltern-App `Ferienanmeldungen`.",
+        "Unter jeder Anmeldung steht `Einwilligungen`. Dort steht jede Einwilligung mit dem Text, dem du zugestimmt hast.",
+        "Rechts steht `Erteilt`, `Nicht erteilt` oder `Widerrufen`.",
+        "Wähle bei der Einwilligung `Widerrufen`.",
+        "moto fragt nach. Wähle noch einmal `Widerrufen`.",
+      ],
+      result:
+        "Die Einwilligung gilt ab jetzt nicht mehr. Die OGS, die dein Kind in den Ferien betreut, sieht das sofort. Der Träger sieht es auch.",
+      notes: [
+        "Die Einwilligungen sind freiwillig. Die Anmeldung gilt auch ohne sie.",
+        "Ohne Elternkonto widerrufst du beim Träger, zum Beispiel per Mail. Er trägt den Widerruf in moto ein.",
+        "Hast du dich anders entschieden? Wähle `Einwilligung geben`. Das geht auch bei einer Einwilligung, die du bei der Anmeldung nicht gegeben hast.",
+        "Ein Widerruf gilt ab jetzt. Was vorher geschehen ist, bleibt erlaubt.",
+        "Die Foto-Einwilligung bei der Schule deines Kindes ist eine eigene Einwilligung. Du änderst sie beim Kind unter `Angaben`.",
+      ],
+      troubleshootingDetails: [
+        "Du siehst keine `Einwilligungen`? Dann hat der Träger im Formular keine abgefragt.",
+        "Deine Anmeldung fehlt unter `Ferienanmeldungen`? Dann ist sie nicht mit deinem Konto verbunden. Wende dich an den Träger. Er trägt deinen Widerruf ein.",
+        "moto meldet, die Anmeldung gebe es nicht mehr? Nach den Ferien löscht der Träger die Anmeldung. Dann gibt es auch die Einwilligungen nicht mehr.",
+      ],
+      related: [HELP_TOPICS.parentHolidayRegistration],
+    };
+  } satisfies typeof authored_parentHolidayConsentsTopic;
+
+/**
  * `/ferienanmeldung/<link>` (#4661): der Link eines Trägers, ohne Konto, oder
  * die Karte `Ferienbetreuung` auf der Startseite der Eltern-App (#6671).
  * Die Frage nach dem Elternkonto, die zweite E-Mail und der Stand unter
@@ -7113,6 +7205,7 @@ export const parentHolidayRegistrationTopic =
         "Unter `Ferienanmeldungen` steht jede Anmeldung mit ihrem Stand: `Eingegangen`, `Bestätigt` oder `Storniert`. Bei jedem Kind siehst du die Wochen mit `Platz reserviert`, `Warteliste` oder `Platz offen`. Auf der Startseite steht dazu die Karte `Deine Ferienanmeldungen`.",
         "Den Stand siehst du auch ohne Elternkonto. Wähle nach dem Absenden oder in der E-Mail `Stand ansehen`. Die Seite zeigt `Eingegangen`, `Bestätigt` oder `Storniert` und bei jedem Kind die Wochen mit ihrem Platz. Ändern kannst du dort nichts. Gib den Link nicht weiter.",
         "Ist die Anmeldung bestätigt, findest du die Bestätigung und die Rechnung unter `Dokumente`.",
+        "Unter `Ferienanmeldungen` stehen auch die `Einwilligungen`, die du gegeben hast. Dort widerrufst du sie oder gibst sie wieder.",
         "Vergibt der Träger die Plätze nach festen Regeln? Dann steht im Formular `Fragen für die Platzvergabe`. Beantworte jede Frage mit Ja oder Nein. Das Büro kann nach einem Nachweis fragen. Nach dem Absenden steht bei jeder Woche `Platz offen`. Das Büro vergibt die Plätze. Du bekommst eine E-Mail.",
         "Nach dem Absenden siehst du bei jeder Woche `Platz` oder `Warteliste`. Ist eine Woche voll, steht dein Kind dort auf der Warteliste. Wird ein Platz frei, bekommt dein Kind ihn automatisch. Du bekommst dann eine E-Mail. Bei einer verbindlichen Anmeldung ist auch dieser Platz verbindlich.",
         "Liest du die Anmeldung in einer anderen Sprache? Dann steht unter jeder Erklärung eine Übersetzung. Es gilt der deutsche Text.",
@@ -7150,7 +7243,7 @@ export const parentHolidayRegistrationTopic =
         "Der Link zum Elternkonto gilt nicht mehr? Er gilt 30 Tage. Hast du schon ein Konto, melde dich an. Sonst frag den Träger nach einem neuen Link.",
         "Du siehst eine Anmeldung nicht unter `Ferienanmeldungen`? Dort stehen Anmeldungen mit der E-Mail-Adresse deines Kontos. Hast du eine andere Adresse eingetragen, frage den Träger.",
       ],
-      related: [HELP_TOPICS.parentEnroll],
+      related: [HELP_TOPICS.parentEnroll, HELP_TOPICS.parentHolidayConsents],
     };
   } satisfies typeof authored_parentHolidayRegistrationTopic;
 
@@ -9496,6 +9589,12 @@ export const studentSearchTopic = function studentSearchTopic(
     presenceMode === "binary"
       ? "Bei einfacher Anwesenheit siehst du keinen Raum. Du siehst nur, ob das Kind da ist."
       : null;
+  // #6601: Die Auswahl-Leiste von `Alle Kinder` hat kein `Eltern einladen`.
+  // Die Sammeleinladung steht in `Kinderdaten` (students-list.tsx, nur mit
+  // `users:create`); der Hinweis fuehrt dorthin. Er nennt den Artikel nicht,
+  // weil `eltern-einladen` nur fuer die Leitung sichtbar ist.
+  const inviteNote =
+    "Eltern vieler Kinder auf einmal einladen geht nicht in `Alle Kinder`. Das geht nur in `Datenverwaltung` unter `Kinderdaten`.";
   // #5026: ohne Räume (Binärmodus) gibt es keine Zuweisung.
   const transitNotes =
     presenceMode === "binary"
@@ -9630,7 +9729,7 @@ export const studentSearchTopic = function studentSearchTopic(
       "Fehlt im Filter `Anmeldung`? Den Filter sehen nur Mitarbeitende, die auch die Angaben aus der Anmeldung beim Kind sehen. Er erscheint erst, wenn Eltern in der Online-Anmeldung eigene Fragen der Schule beantwortet haben.",
       ...(presenceDifference ? [presenceDifference] : []),
     ],
-    ...(transitNotes.length > 0 ? { notes: transitNotes } : {}),
+    notes: [...transitNotes, inviteNote],
     troubleshooting: HELP_TOPICS.missingChildOrGroup,
     related: [
       HELP_TOPICS.schoolSearch,
@@ -9638,6 +9737,7 @@ export const studentSearchTopic = function studentSearchTopic(
       HELP_TOPICS.webAttendance,
       HELP_TOPICS.absences,
       HELP_TOPICS.leadManageStudent,
+      HELP_TOPICS.leadInviteGuardians,
     ],
   };
 } satisfies typeof authored_studentSearchTopic;
@@ -14243,6 +14343,7 @@ export const traegerHolidayRegistrationReviewTopic =
             "Die Anmeldung hat vier Reiter: `Übersicht`, `Kind`, `Eltern` und `Nachweise und Beitrag`. Unter `Übersicht` steht der Status.",
             "Prüfe im Reiter `Kind` die Angaben der Kinder. Antworten auf eigene Fragen stehen beim Kind unter `Weitere Angaben`, allgemeine Antworten unter `Allgemeine Angaben`.",
             "Im Reiter `Kind` unter `Hinweise und Einwilligungen` siehst du, was die Eltern bestätigt haben und wann. Dort stehen die damaligen Texte und PDFs.",
+            "Widerrufen Eltern eine Einwilligung per Mail, Brief oder Telefon? Wähle unter `Hinweise und Einwilligungen` bei der Einwilligung `Widerruf eintragen`. moto fragt nach. Die OGS, die das Kind in den Ferien betreut, sieht den Widerruf sofort.",
             "Im Reiter `Eltern` stehen unter `Eltern` `Sorgerecht bestätigt`, `Unterschrieben mit Namen` und `Version der Erklärung`. Den genauen Text öffnest du unter `Wortlaut der Erklärung`.",
             "Prüfe im Reiter `Nachweise und Beitrag` unter `Ferienbeitrag`, was die Familie zahlt.",
             "Geben die Eltern an, dass sie Leistungen beziehen? Prüfe den Nachweis. Haben die Eltern ihn hochgeladen, wähle unter `Nachweis für den Leistungsbezug` den Dateinamen. Die Datei öffnet sich in einem neuen Tab.",
@@ -14353,6 +14454,7 @@ export const traegerHolidayRegistrationReviewTopic =
       result:
         "Unter `Verlauf` steht bei jeder Anmeldung, wann sie bestätigt, geändert, storniert, umgebucht, eingefroren oder wieder geöffnet wurde. Auch jede Debitorennummer steht dort, mit der Nummer vorher und nachher. Bei einer Änderung der Angaben steht dort, welche Angaben sich geändert haben, aber nicht die Werte. Auch jedes Zusammenführen und Trennen von Geschwistern steht dort. Storniert jemand eine Anmeldung der Geschwister, steht bei allen `Aus Geschwistergruppe gelöst (storniert)`.",
       notes: [
+        "Eltern mit Elternkonto widerrufen Einwilligungen selbst unter `Ferienanmeldungen`. Du siehst dann `Von den Eltern widerrufen` mit Datum. Wieder geben können die Einwilligung nur die Eltern.",
         "Berücksichtigt der Ferienzeitraum den Ferienwunsch, filterst du auch nach `Ferienwunsch`. Beim Kind steht dann `Mit Ferienwunsch`, `Ohne Ferienwunsch` oder `Ferienwunsch prüfen`.",
         "Offen bleibt eine Anmeldung, wenn ein Platz noch offen ist, die Eltern Leistungsbezug angeben, ein Kind vielleicht doppelt angemeldet ist oder die Debitorennummer fehlt. Eine Anmeldung von Geschwistern übernimmt die Debitorennummer der Geschwister.",
         "Beim Bestätigen bekommen die Eltern eine E-Mail mit den Kindern, Wochen und Zeitmodellen. Darin steht auch dein `Text der Annahme-Mail` aus dem Ferienzeitraum. Jede Anmeldung bekommt diese E-Mail nur einmal.",
@@ -14784,9 +14886,11 @@ export const traegerOccupancyTopic =
   } satisfies typeof authored_traegerOccupancyTopic;
 
 /**
- * `/traeger/personal/lohnexport` (#4712, ADR 0250): die DATEV-Lohndatei über
- * alle Schulen mit eigenen Lohnarten je Art des Vertrags, der Zeitexport als
- * CSV mit seinen festen Spalten und die Lohnarten im Reiter `Lohnarten`.
+ * `/traeger/personal/lohnexport` (#4712, ADR 0250; #8041, ADR 0320): die
+ * DATEV-Lohndatei über alle Schulen mit eigenen Lohnarten je Art des
+ * Vertrags, als eine Datei für den ganzen Träger oder als eine Datei je
+ * Arbeitgeber, der Zeitexport als CSV mit seinen festen Spalten und die
+ * Einrichtung im Reiter `Einrichtung`.
  */
 export const traegerPayrollExportTopic =
   function traegerPayrollExportTopic(): HelpTopic {
@@ -14795,7 +14899,7 @@ export const traegerPayrollExportTopic =
       title: "Lohnexport und Zeitexport",
       question: "Wie bekomme ich die Lohndatei für DATEV?",
       summary:
-        "Du lädst eine Lohndatei für alle Schulen herunter. Minijob, Übungsleiter und Ehrenamt bekommen eigene Lohnarten.",
+        "Du lädst die Lohndatei für alle Schulen herunter. Stellt eine Gemeinde oder ein Schulträger an, wählst du eine Datei oder eine je Arbeitgeber.",
       group: "personal",
       audience: "traeger",
       icon: "Download",
@@ -14807,11 +14911,34 @@ export const traegerPayrollExportTopic =
         {
           title: "Einmal: Lohnarten eintragen",
           steps: [
-            "Wähle in der Navigation `Lohnexport` und den Reiter `Lohnarten`.",
-            "Trage `Beraternummer` und `Mandantennummer` deines Lohnbüros ein. Lohn und Gehalt braucht sie nicht.",
-            "Trage in der Tabelle je Art des Vertrags die Nummer der Lohnart aus deinem DATEV ein.",
+            "Wähle in der Navigation `Lohnexport` und den Reiter `Einrichtung`.",
+            "Trage bei `DATEV-Mandant des Trägers` die `Beraternummer` und `Mandantennummer` deines Lohnbüros ein. Lohn und Gehalt braucht sie nur bei einer Datei je Arbeitgeber.",
+            "Trage in der Tabelle je Art des Vertrags die Nummer der Lohnart aus deinem DATEV ein. Sie gilt für alle Arbeitgeber.",
             "Wähle bei `Krank`, `Urlaub` und `Fortbildung`, ob DATEV Stunden oder Tage erwartet.",
             "Wähle unten `Speichern`.",
+          ],
+        },
+        {
+          title: "Fall 1: Eine Datei für den ganzen Träger",
+          description:
+            "Für Träger, deren Lohnbüro alle Personen unter einem DATEV-Mandanten abrechnet, auch das Personal einer Gemeinde oder eines Schulträgers.",
+          steps: [
+            "Wähle im Reiter `Einrichtung` bei `Wie viele Lohndateien?` die Form `Eine Datei für den ganzen Träger`.",
+            "Stellt an einer Schule eine Gemeinde oder ein Schulträger an, steht sie unter `Andere Arbeitgeber`. Trage dort ihre `Kostenstelle` ein.",
+            "Wähle unten `Speichern`.",
+            "Wähle den Reiter `Lohndatei`, prüfe die Zahlen und wähle `Herunterladen`.",
+          ],
+        },
+        {
+          title: "Fall 2: Eine Datei je Arbeitgeber",
+          description:
+            "Für Träger, bei denen jede Gemeinde und jeder Schulträger ein eigener DATEV-Mandant ist.",
+          steps: [
+            "Wähle im Reiter `Einrichtung` bei `Wie viele Lohndateien?` die Form `Eine Datei je Arbeitgeber`.",
+            "Trage unter `Andere Arbeitgeber` je Gemeinde und Schulträger die `Beraternummer` und die `Mandantennummer` ein. Die Nummern bekommst du vom Lohnbüro des Arbeitgebers.",
+            "Wähle unten `Speichern`.",
+            "Hat eine Person bei einer Gemeinde eine andere Personalnummer als beim Träger: Öffne ihre Personalakte, wähle bei `Personalnummer` den Knopf `Bearbeiten` und trage die Nummer bei der Gemeinde ein.",
+            "Wähle den Reiter `Lohndatei`. Unter `Dateien je Arbeitgeber` steht jede Datei mit ihren Schulen. Wähle bei jeder Datei `Herunterladen`.",
           ],
         },
         {
@@ -14834,8 +14961,12 @@ export const traegerPayrollExportTopic =
       ],
       steps: [],
       result:
-        "Die Lohndatei enthält jeden Vertrag beim Träger, an allen Schulen zusammengezählt. Jeder Download steht im Zugriffsprotokoll jeder Schule.",
+        "Die Lohndatei enthält jeden Vertrag beim Träger, an allen Schulen zusammengezählt. Arbeitet eine Person bei zwei Arbeitgebern, stehen ihre Stunden getrennt: mit Kostenstelle oder in zwei Dateien. Jeder Download steht im Zugriffsprotokoll jeder Schule.",
       notes: [
+        "Wer an einer Schule das Personal anstellt, legst du unter `Einstellungen` > `Zuständigkeiten` fest. Ohne Angaben der Gemeinde oder des Schulträgers stellt der Träger an.",
+        "Personen aus dem Vertretungspool stellt immer der Träger an.",
+        "Haben zwei Gemeinden dieselbe Berater- und Mandantennummer, stehen sie in einer Datei.",
+        "Ohne eigene Nummer bei einer Gemeinde gilt die Personalnummer des Trägers. Die eine Datei für den ganzen Träger nutzt immer die Nummer des Trägers.",
         "Hat eine Person zwei Verträge verschiedener Art, etwa Teilzeit und Übungsleiter, stehen beide getrennt in der Datei.",
         "Personen ohne Vertrag beim Träger rechnet weiter jede Schule selbst ab.",
         "Wechselt der Vertrag einer Person im Monat an einer Schule, rechnet der neuere Vertrag den ganzen Monat dort ab. Die Seite nennt die Person unter `Vertragswechsel in diesem Monat`.",
@@ -14846,14 +14977,20 @@ export const traegerPayrollExportTopic =
       differences: [
         "Statt der Zahlen steht `In diesem Monat gilt kein Arbeitsvertrag des Trägers`: Für den Monat gibt es keine Lohndatei des Trägers.",
         "Die Seite zeigt `Diese Funktion ist nicht eingeschaltet`: Personal beim Träger ist noch nicht freigeschaltet. Das moto-Team schaltet es frei. Bis dahin rechnet jede Schule selbst ab.",
+        "Unter `Andere Arbeitgeber` steht `An allen Schulen stellt der Träger das Personal an`: Keine Schule hat eine Gemeinde oder einen Schulträger als Arbeitgeber. Dann gibt es nur die Datei des Trägers.",
       ],
       troubleshootingDetails: [
         "`Herunterladen` ist grau: Unter `Das fehlt noch` steht, was zuerst erledigt sein muss.",
         "„… hat noch keine Personalnummer“: Wähle `Akte öffnen` und trage die Nummer ein.",
-        "Ein Wert fehlt in der Tabelle `Nach Art des Vertrags`: Für diese Art fehlt die Lohnart. Trage sie im Reiter `Lohnarten` ein.",
+        "„Für … fehlt die Kostenstelle“ oder „Für … fehlen Berater- und Mandantennummer“: Wähle `Einrichtung öffnen` und trage die Werte unter `Andere Arbeitgeber` ein.",
+        "„… haben in der Datei für … dieselbe Personalnummer“: DATEV würde beide Personen als eine buchen. Gib einer von beiden ihre Nummer bei diesem Arbeitgeber.",
+        "„… stünde in der Datei für … unter zwei Personalnummern“: Die Person arbeitet an zwei Schulen desselben Arbeitgebers, die Nummer bei ihm steht aber nur an einer. Trag sie in der Personalakte bei beiden ein.",
+        "Unter `In mehreren Dateien` steht eine Person: Sie arbeitet bei zwei Arbeitgebern. Prüfe mit beiden Lohnbüros, ob ihre Personalnummer stimmt.",
+        "Ein Wert fehlt in der Tabelle `Nach Art des Vertrags`: Für diese Art fehlt die Lohnart. Trage sie im Reiter `Einrichtung` ein.",
         "Eine Person fehlt im Zeitexport: Sie hat keine Personalnummer. Die Seite nennt sie unter `Nicht in der Datei`.",
       ],
       related: [
+        HELP_TOPICS.traegerResponsibilities,
         HELP_TOPICS.traegerStaffContracts,
         HELP_TOPICS.traegerStaffTimeAccount,
         HELP_TOPICS.traegerStaffRecords,
@@ -15015,7 +15152,7 @@ export const traegerResponsibilitiesTopic =
         "Schon verschickte Verträge bleiben, wie sie sind. Auch Erinnerungen und die Seite zum Unterschreiben nennen weiter die Stelle, die den Vertrag ausgestellt hat.",
         "Auf dem Vertrag einer anderen Stelle stehen das Logo und die Fußzeile deines Trägers nicht.",
         "Rechnungen, Bescheide und Lastschriften stellt moto noch mit den Angaben deines Trägers aus. Die Wahl bei `Wer rechnet mit den Eltern ab?` bereitet den Wechsel vor.",
-        "Der Lohnexport bleibt eine Datei für alle Schulen.",
+        "Stellt eine Gemeinde oder ein Schulträger an, wählst du unter `Lohnexport` > `Einrichtung`: eine Lohndatei für den ganzen Träger oder eine je Arbeitgeber.",
       ],
       troubleshootingDetails: [
         "Bei einer Schule steht `Angaben fehlen`? Die gewählte Stelle hat dort noch keinen Namen und keine Anschrift. Trage sie bei der Schule ein.",
@@ -15027,6 +15164,7 @@ export const traegerResponsibilitiesTopic =
         HELP_TOPICS.traegerSettings,
         HELP_TOPICS.traegerCareContracts,
         HELP_TOPICS.traegerStaffRecords,
+        HELP_TOPICS.traegerPayrollExport,
         HELP_TOPICS.traegerSchoolView,
       ],
     };

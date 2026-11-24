@@ -46,8 +46,11 @@ var traegerCoreActions = map[RouteKey]CoreAction{
 	// The review of the holiday registrations (#4663) belongs to the
 	// Träger, not to a school: no school to count it for.
 	{http.MethodPost, "/traeger/holiday-periods/{id}/registrations/{registrationId}/freeze"}: notCaptured,
-	{http.MethodPost, "/traeger/holiday-periods/{id}/registrations/{registrationId}/reopen"}: notCaptured,
-	{http.MethodPut, "/traeger/holiday-periods/{id}/registrations/{registrationId}/details"}: notCaptured,
+	// The office records a withdrawal the parents declared outside moto
+	// (ADR 0321).
+	{http.MethodPost, "/traeger/holiday-periods/{id}/registrations/{registrationId}/consents/{key}/withdraw"}: notCaptured,
+	{http.MethodPost, "/traeger/holiday-periods/{id}/registrations/{registrationId}/reopen"}:                  notCaptured,
+	{http.MethodPut, "/traeger/holiday-periods/{id}/registrations/{registrationId}/details"}:                  notCaptured,
 	// The office's decision on a holiday care wish (#4703).
 	{http.MethodPut, "/traeger/holiday-periods/{id}/registrations/{registrationId}/children/{childId}/holiday-wish"}: notCaptured,
 	// The allocation of holiday places by criteria (#4700) belongs to the
@@ -292,6 +295,11 @@ var traegerCoreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate"}:         event("sepa_mandate_granted"),
 	{http.MethodPost, "/parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate/revoke"}:  event("sepa_mandate_revoked"),
 	{http.MethodPost, "/parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate/preview"}: notCaptured,
+	// The parents withdraw or give again a voluntary consent of a holiday
+	// registration (#8038, ADR 0321). The registration belongs to a Träger
+	// and names no school of the session, so no school's count gets it;
+	// parents without a school have no school at all.
+	{http.MethodPut, "/parent/me/holiday-registration-entries/{registrationId}/consents/{key}"}: notCaptured,
 }
 
 func init() {

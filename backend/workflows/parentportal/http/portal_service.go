@@ -57,6 +57,9 @@ type PortalService interface {
 	// HolidayRegistrationEntries reads the holiday registrations linked to
 	// the account, newest first (ADR 0216 point 9).
 	HolidayRegistrationEntries(ctx context.Context, accountID int64) ([]parentService.HolidayRegistrationEntry, error)
+	// ChangeHolidayRegistrationConsent withdraws or gives again a voluntary
+	// consent of a registration linked to the account (ADR 0321).
+	ChangeHolidayRegistrationConsent(ctx context.Context, accountID, registrationID int64, key string, given bool) error
 	// ClaimHolidayRegistrationsAfterSignIn links the holiday registrations
 	// of the address a parent signed in with to its account (ADR 0216 point
 	// 3); a failure is logged and never fails the sign-in.

@@ -138,7 +138,9 @@ func (s *StudentPhotoService) FindPhoto(ctx context.Context, studentID int64, fi
 		if err != nil {
 			return err
 		}
-		if photo.StoredPhoto() == "" {
+		// No photo of a holiday guest is served, also one stored before the
+		// upload was refused (#4721).
+		if photo.StoredPhoto() == "" || photo.HolidayGuest {
 			return domain.ErrPhotoNotSet
 		}
 		storedURL = photo.StoredPhoto()
@@ -441,6 +443,11 @@ func (s *StudentPhotoService) requireInitialPhotoConsent(txCtx context.Context, 
 	photo, err := s.readPhoto(txCtx, stats, studentID, false)
 	if err != nil {
 		return err
+	}
+	// A holiday guest never gets a photo here, whatever the caller
+	// acknowledges: its photo consent lives at its home school (#4721).
+	if photo.HolidayGuest {
+		return domain.ErrPhotoStudentForbidden
 	}
 	if photo.PhotoConsentGivenAt == nil && !consentAck {
 		return domain.ErrPhotoConsentRequired

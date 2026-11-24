@@ -186,6 +186,7 @@ func TestWithdrawPhotoConsentRemovesPhotoAndRecordsOneHistoryEntry(t *testing.T)
 	assert.Equal(t, "withdrawn", rows[0].Action)
 	assert.Equal(t, "parent_portal", rows[0].Source)
 	assert.Equal(t, chain.AccountID, *rows[0].ActorAccountID)
+	assert.Nil(t, rows[0].TextVersion, "a withdrawal confirms no wording (#8039)")
 }
 
 func TestGrantPhotoConsentAfterWithdrawalRecordsNewStateWithoutRestoringPhoto(t *testing.T) {
@@ -244,6 +245,10 @@ func TestGrantPhotoConsentAfterWithdrawalRecordsNewStateWithoutRestoringPhoto(t 
 	assert.Equal(t, "withdrawn", rows[1].Action)
 	assert.Equal(t, "parent_portal", rows[0].Source)
 	assert.Equal(t, chain.AccountID, *rows[0].ActorAccountID)
+	// #8039: the re-grant confirmed moto's photo wording, the withdrawal none.
+	require.NotNil(t, rows[0].TextVersion)
+	assert.Equal(t, "photo-1", *rows[0].TextVersion)
+	assert.Nil(t, rows[1].TextVersion)
 }
 
 func TestGrantPhotoConsentRejectsNeverRecordedConsent(t *testing.T) {

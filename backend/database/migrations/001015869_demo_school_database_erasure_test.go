@@ -144,6 +144,7 @@ var demoErasureSchoolTablesOutsideThePlan = map[string]struct {
 	"workforce.staff_contract_targets":         {true, "the Soll of a Träger contract names the school by plain id and goes with its contract, record or the Träger (ADR 0237)"},
 	"workforce.staff_pool_blocks":              {true, "a block of a Springer names the blocking school by plain id and goes with its record or the Träger (ADR 0252)"},
 	"workforce.staff_record_links":             {true, "an Einsatzort of a Träger staff record names the school by plain id and goes with its record or the Träger (ADR 0233)"},
+	"workforce.payroll_employers":              {true, "the payroll values of a Schulträger or a Gemeinde name the school by plain id and stay with the Träger like its bodies (ADR 0320)"},
 	"workforce.staff_record_changes":           {true, "the trail of a Träger staff record names the school of a value and goes with its record or the Träger (ADR 0233)"},
 	"platform.demo_school_file_erasures":       {true, "the #5544 file marker carries the database erasure evidence: time and row counts per table (ADR 0148, ADR 0189)"},
 	"platform.demo_school_origins":             {true, "the demo origin: school ID and time only; it keeps a reused ID from ever looking like a real school (ADR 0148)"},

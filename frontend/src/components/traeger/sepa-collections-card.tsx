@@ -141,7 +141,6 @@ export function SepaCollectionsCard({
           columns={columns}
           rows={debits}
           getRowKey={(debit) => debit.id}
-          stackedOnMobile
         />
       ) : debits ? (
         <EmptyState

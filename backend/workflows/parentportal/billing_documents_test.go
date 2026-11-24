@@ -93,7 +93,7 @@ func documentInboxDependencies(t *testing.T, db *bun.DB, mails *owners.CareContr
 		Logger:              slog.Default(), CarePlanPolicy: owners.NewParentCarePlanPolicy(),
 		BillingDocuments: owners.NewParentBillingDocuments(), ContractDocuments: owners.NewParentContractDocuments(owners.NewParentContractSigningForTests(mails), owners.CareContractTestHolidays{}, time.Now), TraegerRuntime: owners.ParentPortalRuntime{},
 		SchoolTraeger: owners.NewParentSchoolTraeger(organizations), ParentAccounts: owners.NewParentAccounts(identity),
-		HolidayRegistrations: owners.NewParentHolidayRegistrations(organizations),
+		HolidayRegistrations: owners.NewParentHolidayRegistrations(organizations, time.Now),
 	}
 }
 

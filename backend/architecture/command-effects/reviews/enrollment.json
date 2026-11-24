@@ -8610,7 +8610,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.StudentConsents.RecordEnrollmentConsentTransitions",
-      "reason": "Platform protocol participation (mutation): enrollment reaches modules/auditlog/records.StudentConsentChangeRepository.Create (audit-platform) through roots/owners.enrollmentStudentConsents.RecordEnrollmentConsentTransitions. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (mutation): enrollment reaches modules/auditlog/records.StudentConsentChangeRepository.Create (audit-platform) through roots/owners.enrollmentStudentConsents.RecordEnrollmentConsentTransitions. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). #8039: the binding also asks People Directory's pure StudentConsentTextVersion which wording version a grant records; no further mutation.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.StudentConsentChangeRepository.Create",
       "target_owner": "audit-platform"
@@ -8620,7 +8620,17 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.StudentConsents.RecordEnrollmentConsentTransitions",
-      "reason": "Read or pure value helper on the supplied interface: modules/peopledirectory.StudentConsentTransitions. No mutation or locking read at this terminal; type-level binding coverage, not proof that Enrollment calls every exposed method.",
+      "reason": "Read or pure value helper: modules/peopledirectory.StudentConsentTextVersion names the wording version a consent grant records (#8039). No mutation or locking read at this terminal; may-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentConsentTextVersion",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentStudentConsents.RecordEnrollmentConsentTransitions",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.StudentConsents.RecordEnrollmentConsentTransitions",
+      "reason": "Read or pure value helper on the supplied interface: modules/peopledirectory.StudentConsentTransitions. No mutation or locking read at this terminal; type-level binding coverage, not proof that Enrollment calls every exposed method. #8039: the binding also asks People Directory's pure StudentConsentTextVersion which wording version a grant records; no further mutation.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentConsentTransitions",
       "target_owner": "people-directory"

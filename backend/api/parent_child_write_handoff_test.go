@@ -409,6 +409,12 @@ func TestParentChildWritesAnswerLikeBefore(t *testing.T) {
 		granted := rig.state(t, f)
 		require.NotNil(t, granted.PhotoGivenAt)
 		require.Greater(t, granted.ConsentRows, withdrawn.ConsentRows)
+		// #8039: the portal's grant names moto's photo wording, its
+		// withdrawal none.
+		var versions []string
+		require.NoError(t, rig.db.NewRaw(`SELECT action || ':' || COALESCE(text_version, 'NULL') FROM audit.student_consent_changes
+			WHERE student_id = ? ORDER BY id`, f.StudentID).Scan(context.Background(), &versions))
+		require.Equal(t, []string{"withdrawn:NULL", "granted:photo-1"}, versions)
 
 		g := rig.family(t)
 		rig.revoke(t, g, "parent_portal.consent.manage")

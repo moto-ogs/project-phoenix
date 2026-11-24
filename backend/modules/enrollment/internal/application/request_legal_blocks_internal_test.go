@@ -298,3 +298,33 @@ func TestAwaitsRenewalOnlyUntilSchoolDecision(t *testing.T) {
 		})
 	}
 }
+
+// A template stores the label it was saved with. A school that never reworded
+// the photo consent still holds the standard wording from before #8039;
+// parents get the current one, and its stale translations drop out. A wording
+// the school wrote itself stays.
+func TestBuildTemplateLegalBlocks_PreviousStandardPhotoLabelBecomesTheCurrentOne(t *testing.T) {
+	t.Parallel()
+
+	photo := func(label string) enrollmentNative.FormLegalBlock {
+		return enrollmentNative.FormLegalBlock{
+			Key: enrollmentNative.ConsentKeyPhoto, Kind: "consent", Title: "Fotoeinwilligung", Label: label,
+			Text: "Text der Schule", Enabled: true, SortOrder: 30, Source: enrollmentNative.LegalBlockSourceStandard,
+			Translations: enrollmentNative.Translations{"en": {
+				enrollmentNative.TranslationAttrLabel: {Text: "translated label", Source: label},
+				enrollmentNative.TranslationAttrTitle: {Text: "Photo consent", Source: "Fotoeinwilligung"},
+			}},
+		}
+	}
+
+	blocks := buildTemplateLegalBlocks([]enrollmentNative.FormLegalBlock{photo(previousStandardPhotoConsentLabel)})
+	require.Len(t, blocks, 1)
+	assert.Equal(t, standardPhotoConsentLabel, blocks[0].Label)
+	assert.NotContains(t, blocks[0].Translations["en"], enrollmentNative.TranslationAttrLabel, "the translation of the previous wording must not stand beside the new one")
+	assert.Equal(t, "Photo consent", blocks[0].Translations["en"][enrollmentNative.TranslationAttrTitle].Text)
+
+	own := buildTemplateLegalBlocks([]enrollmentNative.FormLegalBlock{photo("Fotos nur beim Sommerfest.")})
+	require.Len(t, own, 1)
+	assert.Equal(t, "Fotos nur beim Sommerfest.", own[0].Label)
+	assert.Equal(t, "translated label", own[0].Translations["en"][enrollmentNative.TranslationAttrLabel].Text)
+}

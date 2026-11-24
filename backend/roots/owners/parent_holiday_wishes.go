@@ -75,13 +75,14 @@ type HolidayRegistrationOrganizations interface {
 // NewParentHolidayRegistrations binds the parents portal to Enrollment's
 // registrations of a parent account (ADR 0216 points 3 and 9) and names
 // their Träger through Organisation & Tenancy in one read. It runs in the
-// caller's administrative transaction.
-func NewParentHolidayRegistrations(organizations HolidayRegistrationOrganizations) parentportal.HolidayParentRegistrations {
-	return parentHolidayRegistrations{HolidayParentRegistrations: enrollmentCompose.NewHolidayParentRegistrations(), organizations: organizations}
+// caller's administrative transaction; now stamps the consents the parents
+// withdraw or give again (ADR 0321).
+func NewParentHolidayRegistrations(organizations HolidayRegistrationOrganizations, now func() time.Time) parentportal.HolidayParentRegistrations {
+	return parentHolidayRegistrations{HolidayParentRegistrations: enrollmentCompose.NewHolidayParentRegistrations(now), organizations: organizations}
 }
 
-// parentHolidayRegistrations claims through Enrollment's capability as it
-// is; it names the Träger of the reads.
+// parentHolidayRegistrations claims and changes a consent through
+// Enrollment's capability as it is; it names the Träger of the reads.
 type parentHolidayRegistrations struct {
 	enrollmentOwner.HolidayParentRegistrations
 	organizations HolidayRegistrationOrganizations
@@ -110,10 +111,16 @@ func (r parentHolidayRegistrations) HolidayRegistrationEntries(ctx context.Conte
 			}
 			children[j] = parentportal.HolidayRegistrationEntryChild{FirstName: child.FirstName, Weeks: weeks}
 		}
+		consents := make([]parentportal.HolidayRegistrationConsent, len(registration.Consents))
+		for j, consent := range registration.Consents {
+			consents[j] = parentportal.HolidayRegistrationConsent{
+				Key: consent.Key, Title: consent.Title, Label: consent.Label, Text: consent.Text, Given: consent.Given, ChangedAt: consent.ChangedAt,
+			}
+		}
 		entries[i] = parentportal.HolidayRegistrationEntry{
 			ID: registration.ID, TraegerName: names[registration.OrganizationID], PeriodName: registration.PeriodName,
 			FirstDay: registration.FirstDay, LastDay: registration.LastDay, SubmittedAt: registration.SubmittedAt,
-			Status: registration.Status, Children: children,
+			Status: registration.Status, Children: children, Consents: consents,
 		}
 	}
 	return entries, nil

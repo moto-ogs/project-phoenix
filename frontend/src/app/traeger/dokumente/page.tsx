@@ -201,7 +201,6 @@ export default function TraegerDocumentsPage() {
         getRowKey={(document) => document.id}
         isLoading={isLoading || schoolsPending}
         loadingRowCount={3}
-        stackedOnMobile
         stackedLayout="row"
         stackedDetailKey="releases"
         onRowClick={(document) =>

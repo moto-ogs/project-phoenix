@@ -742,7 +742,6 @@ export function ExportHandoverHistoryCard({
         columns={handoverColumns(showRecipient)}
         rows={[...handovers]}
         getRowKey={(handover) => handover.id}
-        stackedOnMobile
         emptyState={
           <EmptyState
             title="Noch keine Übergabe."

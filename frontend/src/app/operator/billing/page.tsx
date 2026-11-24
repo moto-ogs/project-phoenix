@@ -407,7 +407,6 @@ function OperatorBillingPageContent() {
             }
             isLoading={countsLoading}
             defaultSortKey="organization"
-            stackedOnMobile
           />
         )}
       </SectionCard>

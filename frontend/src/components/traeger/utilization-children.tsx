@@ -251,7 +251,6 @@ export function UtilizationChildrenSection({
       rows={[...children.children]}
       getRowKey={(child) => child.studentId}
       defaultSortKey="name"
-      stackedOnMobile
       pageSize={25}
       pageNoun="Kinder"
       emptyState={

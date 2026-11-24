@@ -39,6 +39,28 @@ func (s *Store) ListRoomHistoryStops(ctx context.Context, studentIDs []int64) (m
 	return result, stats, nil
 }
 
+// moodCaptureStoppedSQL also asks for the stop of a holiday guest's home
+// school (#8037). The hosting school holds no row for it: the database's
+// narrow function reads it live and answers NULL for every other child.
+const moodCaptureStoppedSQL = `SELECT EXISTS (
+	SELECT 1 FROM active.room_history_stops WHERE tenant_id = ? AND student_id = ?
+) OR COALESCE(enrollment.holiday_guest_home_room_history_stopped(?), false)`
+
+func (s *Store) MoodCaptureStopped(ctx context.Context, studentID int64) (bool, ports.Stats, error) {
+	db, tenantID, err := s.database(ctx)
+	if err != nil {
+		return false, ports.Stats{}, err
+	}
+	var stopped bool
+	started := time.Now()
+	err = db.NewRaw(moodCaptureStoppedSQL, tenantID, studentID, studentID).Scan(ctx, &stopped)
+	stats := ports.Stats{Queries: 1, Rows: 1, StatementDuration: time.Since(started)}
+	if err != nil {
+		return false, stats, fmt.Errorf("read mood capture stop: %w", err)
+	}
+	return stopped, stats, nil
+}
+
 // insertRoomHistoryStopSQL preserves the original start of an existing stop.
 const insertRoomHistoryStopSQL = `INSERT INTO active.room_history_stops (tenant_id, student_id, stopped_at) VALUES (?, ?, ?)
 ON CONFLICT (tenant_id, student_id) DO NOTHING

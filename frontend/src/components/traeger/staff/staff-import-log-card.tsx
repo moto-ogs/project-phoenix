@@ -76,7 +76,6 @@ export function StaffImportLogCard({
           getRowKey={(entry) =>
             `${entry.file}|${entry.importedAt}|${entry.accountId}`
           }
-          stackedOnMobile
           stackedLayout="lines"
           dense
         />

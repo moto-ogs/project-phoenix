@@ -8,6 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	organizationCompose "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/compose"
 	configModel "github.com/moto-ogs/project-phoenix/modules/settings/records"
+	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -81,20 +82,22 @@ func (s schoolResponsibilitySettings) SchoolResponsibilityChoices(ctx context.Co
 
 // StaffEmployers binds the employer at the Einsatzorte of a staff record of
 // the Träger (#4811) to the responsibilities of Organisation & Tenancy: the
-// name of the school's Schulträger or Gemeinde where the responsibility
-// "Personal" names it and its master data are stored.
+// kind and the name of the school's Schulträger or Gemeinde where the
+// responsibility "Personal" names it and its master data are stored. The
+// Personalakte names it, the payroll file books its Einsatzorte apart
+// (#8041).
 type StaffEmployers struct {
 	Responsible organizationtenancy.ResponsibleParties
 }
 
-func (b StaffEmployers) SchoolEmployers(ctx context.Context, organizationID int64, schoolIDs []int64) (map[int64]string, error) {
+func (b StaffEmployers) SchoolEmployers(ctx context.Context, organizationID int64, schoolIDs []int64) (map[int64]workforce.TraegerStaffEmployer, error) {
 	parties, err := b.Responsible.ResponsibleParties(ctx, organizationID, organizationtenancy.ResponsibilityStaff, schoolIDs)
 	if err != nil {
 		return nil, err
 	}
-	employers := make(map[int64]string, len(parties))
+	employers := make(map[int64]workforce.TraegerStaffEmployer, len(parties))
 	for schoolID, party := range parties {
-		employers[schoolID] = party.Name
+		employers[schoolID] = workforce.TraegerStaffEmployer{Body: string(party.Kind), Name: party.Name}
 	}
 	return employers, nil
 }

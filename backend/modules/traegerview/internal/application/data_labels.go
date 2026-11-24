@@ -37,10 +37,10 @@ var dataLabels = map[string]string{
 	"traeger_daily_attendance":            "Tagesmeldung Mecklenburg-Vorpommern (Zahlen je Tag)",
 	"traeger_daily_attendance_export":     "Tagesmeldung Mecklenburg-Vorpommern (Export ohne Namen)",
 	"holiday_prefill":                     "Angaben eines Kindes für die Ferienanmeldung",
-	"holiday_participants":                "Teilnehmerliste einer Ferienwoche",
+	"holiday_participants":                "Teilnehmerliste einer Ferienwoche mit Einwilligungen",
 	"holiday_participants_export":         "Teilnehmerliste einer Ferienwoche (Export)",
 	"holiday_guest_transfer":              "Feriengäste in die Feriengruppe übernommen",
-	"holiday_guest_sheet":                 "Betreuung, Notfall, Abholung und Gesundheit eines Feriengasts",
+	"holiday_guest_sheet":                 "Betreuung, Notfall, Abholung, Gesundheit, Einwilligungen und Stopp des Raumverlaufs eines Feriengasts",
 	"holiday_student_health":              "Gesundheitsangaben aus der Ferienanmeldung eines Kindes",
 	"holiday_home_school_bookings":        "Ferienbuchungen eigener Kinder an anderen OGS",
 	"guardian_email_stop":                 "Mails an einen Elternteil gestoppt oder wieder freigegeben",
@@ -76,6 +76,7 @@ var dataLabels = map[string]string{
 	"holiday_registration_rebook":         "Ferienanmeldung umgebucht",
 	"holiday_registration_freeze":         "Ferienanmeldung eingefroren",
 	"holiday_registration_reopen":         "Ferienanmeldung wieder geöffnet",
+	"holiday_registration_consent":        "Einwilligung einer Ferienanmeldung geändert",
 }
 
 // otherData labels a resource type a later feature adds before this list

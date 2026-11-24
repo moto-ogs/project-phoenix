@@ -253,6 +253,7 @@ export const HELP_TOPIC_AUDIENCE = {
   [HELP_TOPICS.parentEnroll]: "parent",
   [HELP_TOPICS.parentEnrollStatus]: "parent",
   [HELP_TOPICS.parentHolidayRegistration]: "parent",
+  [HELP_TOPICS.parentHolidayConsents]: "parent",
   [HELP_TOPICS.parentAccountProblem]: "parent",
   [HELP_TOPICS.parentChildMissing]: "parent",
   [HELP_TOPICS.parentFeatureMissing]: "parent",
