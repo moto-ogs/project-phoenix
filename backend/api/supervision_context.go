@@ -12,13 +12,11 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/supervisiondashboard"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
 type supervisionContextPresence interface {
-	QueryGroupSupervisions(context.Context, studentpresence.GroupSupervisionFilter) ([]studentpresence.GroupSupervision, error)
 	QueryLiveGroups(context.Context, studentpresence.LiveGroupFilter) ([]studentpresence.LiveGroup, error)
 }
 
@@ -35,13 +33,12 @@ type supervisionContextSessions struct {
 	activities interface {
 		ListGroups(context.Context, timetable.GroupFilter) ([]timetable.Group, error)
 	}
-	today func() calendar.Date
 }
 
-func supervisionContextReader(groups grouplive.Query, sessions supervisionContextSessions, logger *slog.Logger) supervisiondashboard.ContextReader {
+func supervisionContextReader(groups func(context.Context) (grouplive.NavigationContext, error), sessions supervisionContextSessions, assignments studentpresence.StaffSupervisionAssignments, logger *slog.Logger) supervisiondashboard.ContextReader {
 	return supervisiondashboard.ContextReader{
 		Groups: func(ctx context.Context) (supervisiondashboard.ContextGroups, error) {
-			groupContext, err := groups.NavigationContext(ctx)
+			groupContext, err := groups(ctx)
 			if err != nil {
 				return supervisiondashboard.ContextGroups{}, err
 			}
@@ -51,7 +48,8 @@ func supervisionContextReader(groups grouplive.Query, sessions supervisionContex
 			}
 			return supervisiondashboard.ContextGroups{Navigation: navigation, OwnGroupIDs: groupContext.OwnGroupIDs, OwnRoomNames: groupContext.OwnRoomNames}, nil
 		},
-		Sessions: sessions,
+		Sessions:      sessions,
+		OwnSessionIDs: assignments.StaffSupervisionSessionIDs,
 		ReleasedRooms: func(ctx context.Context) ([]supervisiondashboard.ContextRoom, error) {
 			rooms, err := sessions.rooms.ListRooms(ctx, facilities.RoomFilter{IsOpenRoom: new(true), ExcludeSystem: true})
 			if err != nil {
@@ -77,19 +75,6 @@ func (s supervisionContextSessions) StaffID(ctx context.Context) (int64, error) 
 		return 0, err
 	}
 	return id, err
-}
-
-func (s supervisionContextSessions) OwnSessionIDs(ctx context.Context, staffID int64) (map[int64]bool, error) {
-	day := s.today().String()
-	rows, err := s.presence.QueryGroupSupervisions(ctx, studentpresence.GroupSupervisionFilter{StaffID: &staffID, ActiveOn: &day})
-	if err != nil {
-		return nil, err
-	}
-	ids := make(map[int64]bool, len(rows))
-	for _, row := range rows {
-		ids[row.GroupID] = true
-	}
-	return ids, nil
 }
 
 func (s supervisionContextSessions) CanReadOverview(ctx context.Context, staffID int64, staffErr error) (bool, error) {

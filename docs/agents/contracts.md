@@ -372,6 +372,8 @@ session ID comes from the caller.
   the overview or the own list loaded; clients still check both statuses.
   Released rooms never grant supervision. Overview requires `groups:read`
   as well as the canonical operational overview rule; own sessions need neither.
+  Student Presence uses the same school-day assignment rule here and in the
+  existing own-session read. Only open sessions appear in this response.
 - `released_rooms.items` needs `rooms:read` and lists permanently released,
   non-archived rooms. The Schulhof stays; WC and other system rooms are
   excluded. The list is not paged and has no occupancy data.

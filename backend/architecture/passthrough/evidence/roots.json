@@ -1598,13 +1598,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (s supervisionContextSessions) OwnSessionIDs(ctx context.Context, staffID int64) (map[int64]bool, error) {\n\tday := s.today().String()\n\trows, err := s.presence.QueryGroupSupervisions(ctx, studentpresence.GroupSupervisionFilter{StaffID: \u0026staffID, ActiveOn: \u0026day})\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tids := make(map[int64]bool, len(rows))\n\tfor _, row := range rows {\n\t\tids[row.GroupID] = true\n\t}\n\treturn ids, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "api/supervisionContextSessions.OwnSessionIDs",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
       "evidence": "func (p supervisionPresence) AttendanceTimes(ctx context.Context, studentIDs []int64) (map[int64]supervisiondashboard.Attendance, error) {\n\tstatuses, err := p.active.GetStudentsAttendanceStatuses(ctx, studentIDs)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make(map[int64]supervisiondashboard.Attendance, len(statuses))\n\tfor id, status := range statuses {\n\t\tif status == nil {\n\t\t\tcontinue\n\t\t}\n\t\tresult[id] = supervisiondashboard.Attendance{CheckInTime: status.Arrival(), CheckOutTime: status.PickupTime()}\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/supervisionPresence.AttendanceTimes",

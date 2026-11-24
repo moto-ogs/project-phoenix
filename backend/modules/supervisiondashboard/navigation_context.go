@@ -73,7 +73,6 @@ type ContextRoom struct {
 // sessions. Only the projection may pass nil, after checking overview access.
 type ContextSessionSource interface {
 	StaffID(context.Context) (int64, error)
-	OwnSessionIDs(context.Context, int64) (map[int64]bool, error)
 	CanReadOverview(context.Context, int64, error) (bool, error)
 	OpenSessions(context.Context, []int64) ([]ContextSession, error)
 }
@@ -81,6 +80,7 @@ type ContextSessionSource interface {
 type ContextReader struct {
 	Groups        func(context.Context) (ContextGroups, error)
 	Sessions      ContextSessionSource
+	OwnSessionIDs func(context.Context, int64) ([]int64, error)
 	ReleasedRooms func(context.Context) ([]ContextRoom, error)
 	CanReadRooms  func(context.Context) bool
 	Savepoint     func(context.Context, func(context.Context) error) error
@@ -134,12 +134,12 @@ func (q ContextReader) readSessions(ctx context.Context) (ContextSessions, error
 	result := ContextSessions{Status: ContextUnavailable, Items: []ContextSession{}}
 	var staffID int64
 	var staffErr error
-	own, ownStatus, err := readContextSource(ctx, q, "own_supervisions", func(ctx context.Context) (map[int64]bool, error) {
+	own, ownStatus, err := readContextSource(ctx, q, "own_supervisions", func(ctx context.Context) ([]int64, error) {
 		staffID, staffErr = q.Sessions.StaffID(ctx)
 		if staffErr != nil || staffID == 0 {
 			return nil, staffErr
 		}
-		return q.Sessions.OwnSessionIDs(ctx, staffID)
+		return q.OwnSessionIDs(ctx, staffID)
 	})
 	if err != nil {
 		return result, err
@@ -151,10 +151,8 @@ func (q ContextReader) readSessions(ctx context.Context) (ContextSessions, error
 	}
 	result.OverviewStatus = status
 	if status == ContextOK {
-		for i := range overview {
-			if ownStatus == ContextOK {
-				overview[i].IsOwn = new(own[overview[i].ID.Int64()])
-			}
+		if ownStatus == ContextOK {
+			markContextOwnership(overview, own)
 		}
 		result.Items = append(result.Items, overview...)
 		result.Status = ContextOK
@@ -165,6 +163,16 @@ func (q ContextReader) readSessions(ctx context.Context) (ContextSessions, error
 		return result, nil
 	}
 	return q.readOwnSessionDisplay(ctx, result, own)
+}
+
+func markContextOwnership(sessions []ContextSession, own []int64) {
+	ids := make(map[int64]bool, len(own))
+	for _, id := range own {
+		ids[id] = true
+	}
+	for i := range sessions {
+		sessions[i].IsOwn = new(ids[sessions[i].ID.Int64()])
+	}
 }
 
 func (q ContextReader) readOverview(ctx context.Context, staffID int64, staffErr error) ([]ContextSession, ContextStatus, error) {
@@ -183,11 +191,7 @@ func (q ContextReader) readOverview(ctx context.Context, staffID int64, staffErr
 	return items, status, err
 }
 
-func (q ContextReader) readOwnSessionDisplay(ctx context.Context, result ContextSessions, own map[int64]bool) (ContextSessions, error) {
-	ids := make([]int64, 0, len(own))
-	for id := range own {
-		ids = append(ids, id)
-	}
+func (q ContextReader) readOwnSessionDisplay(ctx context.Context, result ContextSessions, ids []int64) (ContextSessions, error) {
 	items, status, err := readContextSource(ctx, q, "own_session_display", func(ctx context.Context) ([]ContextSession, error) {
 		return q.Sessions.OpenSessions(ctx, ids)
 	})

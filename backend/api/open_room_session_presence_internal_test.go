@@ -3,12 +3,15 @@ package api
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"testing"
 	"time"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -18,6 +21,22 @@ type runningSessionQuery struct {
 	query        func(context.Context, studentpresence.LiveGroupFilter) ([]studentpresence.LiveGroup, error)
 	visits       func(context.Context, studentpresence.VisitFilter) ([]studentpresence.Visit, error)
 	supervisions func(context.Context, studentpresence.GroupSupervisionFilter) ([]studentpresence.GroupSupervision, error)
+}
+
+func TestStaffSessionAssignmentsUseThePresenceOwnerClock(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	staff := testpkg.CreateTestStaff(t, db, "Assignment", "Reader")
+	session := testpkg.CreateTestActiveGroupForTenant(t, db, testpkg.Tenant(t))
+	day := calendar.TodayDate().AddDays(2)
+	testpkg.CreateTestGroupSupervisorOn(t, db, staff.ID, session.ID, "supervisor", day)
+	clock := func() time.Time { return day.BerlinMidnight() }
+	presence := owners.NewLoggedStudentPresence(testpkg.NewDatabase(t, db), slog.Default(), clock)
+	adapter := owners.OpenRoomSessionPresence{Presence: presence}
+
+	ids, err := adapter.GetStaffActiveGroupIDs(testpkg.Ctx(t), staff.ID)
+	require.NoError(t, err)
+	require.Equal(t, []int64{session.ID}, ids)
 }
 
 func (q runningSessionQuery) QueryGroupSupervisions(ctx context.Context, filter studentpresence.GroupSupervisionFilter) ([]studentpresence.GroupSupervision, error) {

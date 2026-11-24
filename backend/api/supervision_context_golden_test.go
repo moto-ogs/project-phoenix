@@ -61,12 +61,12 @@ func newSupervisionContextFixture(t *testing.T) supervisionContextFixture {
 	testpkg.SetEducationGroupRoom(t, db, substitution.ID, &yard.ID)
 	testpkg.CreateTestGroupTeacher(t, db, group.ID, teacher.ID)
 	today := calendar.TodayDate()
-	testpkg.CreateTestGroupSubstitution(t, db, substitution.ID, nil, teacher.StaffID, today, today.AddDays(1))
+	testpkg.CreateTestGroupSubstitution(t, db, substitution.ID, nil, teacher.StaffID, today.AddDays(-1), today.AddDays(2))
 	activity := testpkg.CreateTestActivityGroup(t, db, "Werken")
 	own := testpkg.CreateTestActiveGroup(t, db, activity.ID, room.ID)
 	second := testpkg.CreateTestActiveGroup(t, db, activity.ID, room.ID)
 	testpkg.CreateTestGroupSupervisor(t, db, teacher.StaffID, own.ID, "supervisor")
-	testpkg.CreateTestGroupSupervisorOn(t, db, teacher.StaffID, second.ID, "supervisor", today.AddDays(1))
+	testpkg.CreateTestGroupSupervisorOn(t, db, teacher.StaffID, second.ID, "supervisor", today.AddDays(2))
 	ended := testpkg.CreateTestEndedActiveGroup(t, db, "Aufsicht")
 	testpkg.CreateTestGroupSupervisor(t, db, teacher.StaffID, ended.GroupID, "supervisor")
 
@@ -355,7 +355,7 @@ func growSupervisionContextFixture(t *testing.T, f supervisionContextFixture) {
 			group := testpkg.CreateTestEducationGroup(t, f.db, fmt.Sprintf("Gruppe %02d", i))
 			testpkg.SetEducationGroupRoom(t, f.db, group.ID, &room.ID)
 			today := calendar.TodayDate()
-			testpkg.CreateTestGroupSubstitution(t, f.db, group.ID, nil, f.staff.Int64(), today, today.AddDays(1))
+			testpkg.CreateTestGroupSubstitution(t, f.db, group.ID, nil, f.staff.Int64(), today.AddDays(-1), today.AddDays(2))
 			activity := testpkg.CreateTestActivityGroup(t, f.db, fmt.Sprintf("Angebot %02d", i))
 			session := testpkg.CreateTestActiveGroup(t, f.db, activity.ID, room.ID)
 			testpkg.CreateTestGroupSupervisor(t, f.db, f.staff.Int64(), session.ID, "supervisor")
@@ -412,7 +412,11 @@ func checkSupervisionContextSections(t *testing.T, f supervisionContextFixture, 
 
 func assertSupervisionTransactions(t *testing.T, statements []string) {
 	t.Helper()
-	routeSQL := withoutSessionCheck(t, statements)
+	assertSupervisionSchoolTransaction(t, withoutSessionCheck(t, statements))
+}
+
+func assertSupervisionSchoolTransaction(t *testing.T, routeSQL []string) {
+	t.Helper()
 	begins := 0
 	for _, statement := range routeSQL {
 		if statement == "BEGIN" {
