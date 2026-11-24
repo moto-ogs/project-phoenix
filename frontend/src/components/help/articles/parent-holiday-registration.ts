@@ -56,6 +56,7 @@ export function parentHolidayRegistrationTopic(): HelpTopic {
       "Unter `Ferienanmeldungen` steht jede Anmeldung mit ihrem Stand: `Eingegangen`, `Bestätigt` oder `Storniert`. Bei jedem Kind siehst du die Wochen mit `Platz reserviert`, `Warteliste` oder `Platz offen`. Auf der Startseite steht dazu die Karte `Deine Ferienanmeldungen`.",
       "Den Stand siehst du auch ohne Elternkonto. Wähle nach dem Absenden oder in der E-Mail `Stand ansehen`. Die Seite zeigt `Eingegangen`, `Bestätigt` oder `Storniert` und bei jedem Kind die Wochen mit ihrem Platz. Ändern kannst du dort nichts. Gib den Link nicht weiter.",
       "Ist die Anmeldung bestätigt, findest du die Bestätigung und die Rechnung unter `Dokumente`.",
+      "Unter `Ferienanmeldungen` stehen auch die `Einwilligungen`, die du gegeben hast. Dort widerrufst du sie oder gibst sie wieder.",
       "Vergibt der Träger die Plätze nach festen Regeln? Dann steht im Formular `Fragen für die Platzvergabe`. Beantworte jede Frage mit Ja oder Nein. Das Büro kann nach einem Nachweis fragen. Nach dem Absenden steht bei jeder Woche `Platz offen`. Das Büro vergibt die Plätze. Du bekommst eine E-Mail.",
       "Nach dem Absenden siehst du bei jeder Woche `Platz` oder `Warteliste`. Ist eine Woche voll, steht dein Kind dort auf der Warteliste. Wird ein Platz frei, bekommt dein Kind ihn automatisch. Du bekommst dann eine E-Mail. Bei einer verbindlichen Anmeldung ist auch dieser Platz verbindlich.",
       "Liest du die Anmeldung in einer anderen Sprache? Dann steht unter jeder Erklärung eine Übersetzung. Es gilt der deutsche Text.",
@@ -93,6 +94,6 @@ export function parentHolidayRegistrationTopic(): HelpTopic {
       "Der Link zum Elternkonto gilt nicht mehr? Er gilt 30 Tage. Hast du schon ein Konto, melde dich an. Sonst frag den Träger nach einem neuen Link.",
       "Du siehst eine Anmeldung nicht unter `Ferienanmeldungen`? Dort stehen Anmeldungen mit der E-Mail-Adresse deines Kontos. Hast du eine andere Adresse eingetragen, frage den Träger.",
     ],
-    related: [HELP_TOPICS.parentEnroll],
+    related: [HELP_TOPICS.parentEnroll, HELP_TOPICS.parentHolidayConsents],
   };
 }

@@ -55,6 +55,7 @@ const EVENT_ACTIONS = [
   "wish",
   "allocate",
   "criteria_check",
+  "consent",
 ] as const satisfies readonly string[];
 
 type HolidayRegistrationEventAction = (typeof EVENT_ACTIONS)[number];
@@ -314,6 +315,11 @@ export interface HolidayRegistrationEvent {
   readonly reason?: string;
   /** The checks of the criteria the office changed (#4700). */
   readonly checks?: readonly HolidayCriterionCheck[];
+  /**
+   * The voluntary consent the parents withdrew (`given: false`) or gave
+   * again in the parents portal (#8038); absent for other actions.
+   */
+  readonly consent?: { readonly key: string; readonly given: boolean };
 }
 
 /** "yes"/"no" as the office checked it, null for not checked. */
@@ -395,6 +401,8 @@ export interface HolidayRegistrationDetail extends HolidayRegistrationSummary {
    * answers, also after a later change of the form.
    */
   readonly legalAcceptances?: Readonly<Record<string, string>>;
+  /** When the parents withdrew a voluntary consent, by key (#8038). */
+  readonly legalWithdrawals?: Readonly<Record<string, string>>;
   readonly form: HolidayFormVersion;
   /** Answers to the family questions, by key. */
   readonly answers: Readonly<Record<string, unknown>>;
@@ -593,6 +601,9 @@ function historyFromBackend(
         ...(details.checks
           ? { checks: checksFromBackend(details.checks) }
           : {}),
+        ...(details.key && details.given !== undefined
+          ? { consent: { key: details.key, given: details.given } }
+          : {}),
       },
     ];
   });
@@ -680,6 +691,7 @@ function detailFromBackend(
     })),
     history: historyFromBackend(registration.history),
     legalAcceptances: registration.legal_acceptances ?? {},
+    legalWithdrawals: registration.legal_withdrawals ?? {},
     // The answers render along the pinned version; a question this build
     // does not know fails the read rather than hiding its answer.
     form: registration.form
@@ -900,6 +912,25 @@ export async function changeHolidayRegistration(
         ? "POST /traeger/holiday-periods/{id}/registrations/{registrationId}/freeze"
         : "POST /traeger/holiday-periods/{id}/registrations/{registrationId}/reopen",
       { params: { id: periodId, registrationId } },
+    ),
+  );
+}
+
+/**
+ * Records a withdrawal of a voluntary consent the parents declared to the
+ * office outside moto, by mail, letter or phone (#8038, ADR 0321). The
+ * hosting school reads it at once.
+ */
+export async function withdrawHolidayConsent(
+  periodId: string,
+  registrationId: string,
+  key: string,
+): Promise<HolidayRegistrationDetail> {
+  return detailFromBackend(
+    await bffJson(
+      "org",
+      "POST /traeger/holiday-periods/{id}/registrations/{registrationId}/consents/{key}/withdraw",
+      { params: { id: periodId, registrationId, key } },
     ),
   );
 }

@@ -31,9 +31,9 @@ func NewHolidayParentAccountProofs(health enrollment.HolidayHealthCipher, now fu
 	return applicationNative.NewHolidayParentAccountProofs(health, now)
 }
 
-// NewHolidayParentRegistrations claims and reads a parent account's registrations in the administrative transaction (ADR 0216 points 3 and 9).
-func NewHolidayParentRegistrations() enrollment.HolidayParentRegistrations {
-	return postgres.NewHolidayRegistrationStore()
+// NewHolidayParentRegistrations claims and reads a parent account's registrations in the administrative transaction (ADR 0216 points 3 and 9); now stamps the consents the parents withdraw or give again (ADR 0321).
+func NewHolidayParentRegistrations(now func() time.Time) enrollment.HolidayParentRegistrations {
+	return postgres.NewHolidayRegistrationStore().WithClock(now)
 }
 
 // NewHolidayRegistrationAnnouncements builds the read of the published periods the parents app announces (#6671, ADR 0207), in the administrative transaction.

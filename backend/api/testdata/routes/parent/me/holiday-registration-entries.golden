@@ -1,1 +1,2 @@
 GET /parent/me/holiday-registration-entries
+PUT /parent/me/holiday-registration-entries/{registrationId}/consents/{key}

@@ -1,1 +1,2 @@
 GET /parent/me/holiday-registration-entries -> eltern_app  (#4895 Elternportal: Eltern-Sitzung und ParentScopeMiddleware)
+PUT /parent/me/holiday-registration-entries/{registrationId}/consents/{key} -> eltern_app  (#4895 Elternportal: Eltern-Sitzung und ParentScopeMiddleware)

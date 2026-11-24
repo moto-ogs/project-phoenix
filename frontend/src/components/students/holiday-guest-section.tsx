@@ -1,6 +1,7 @@
 "use client";
 
 import { HolidayHealthFields } from "~/components/holiday/holiday-health-lines";
+import { HolidayGuestConsents } from "~/components/holiday/holiday-host-consents";
 import { StudentCareTimesSection } from "~/components/students/care-times-section";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { InfoSection } from "~/components/ui/info-section";
@@ -118,8 +119,9 @@ function HolidayGuestRoomHistoryStop({
  * Feriengast in der Kindakte (#4666): Für ein Kind, das als Feriengast in die
  * ausrichtende OGS kam, zeigt die Akte nur Betreuung, Notfall und Abholung,
  * dazu die Antworten, die der Träger freigibt (#5202), und die
- * Gesundheitsangaben, wenn die Eltern zugestimmt haben (#4722). Die Angaben
- * stehen auch im Gesundheitsfeld des Kindes. Die Angaben kommen aus
+ * Gesundheitsangaben, wenn die Eltern zugestimmt haben (#4722), und die
+ * freiwilligen Einwilligungen der Anmeldung, live gelesen (#8038). Die
+ * Angaben stehen auch im Gesundheitsfeld des Kindes. Die Angaben kommen aus
  * der bestätigten Ferienanmeldung beim Träger. Ohne
  * das Recht, Kinderdaten zu lesen, bleibt es beim Hinweis.
  */
@@ -223,6 +225,10 @@ export function HolidayGuestSection({
             {data.homeRoomHistoryStopped === true && (
               <HolidayGuestRoomHistoryStop schoolName={data.schoolName} />
             )}
+            <HolidayGuestConsents
+              consents={data.consents}
+              homePhotoConsent={data.homePhotoConsent}
+            />
             {data.answers.length > 0 && (
               <InfoSection title="Angaben aus der Ferienanmeldung">
                 <DataGrid>

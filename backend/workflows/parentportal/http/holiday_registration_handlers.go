@@ -279,6 +279,20 @@ type HolidayRegistrationEntryResponse struct {
 	SubmittedAt time.Time                               `json:"submitted_at"`
 	Status      string                                  `json:"status"`
 	Children    []HolidayRegistrationEntryChildResponse `json:"children"`
+	// Consents are the voluntary consents of the registration (#8038).
+	Consents []HolidayRegistrationConsentResponse `json:"consents"`
+}
+
+// HolidayRegistrationConsentResponse is a voluntary consent of a
+// registration in the words the parents gave it with: whether it is given
+// right now and when it was given or withdrawn (null when never given).
+type HolidayRegistrationConsentResponse struct {
+	Key       string     `json:"key"`
+	Title     string     `json:"title"`
+	Label     string     `json:"label"`
+	Text      string     `json:"text"`
+	Given     bool       `json:"given"`
+	ChangedAt *time.Time `json:"changed_at"`
 }
 
 // HolidayRegistrationEntriesResponse is the body of GET
@@ -315,6 +329,10 @@ func holidayRegistrationEntriesResponse(entries []parentService.HolidayRegistrat
 		response := HolidayRegistrationEntryResponse{
 			ID: ident.ID(entry.ID), TraegerName: entry.TraegerName, PeriodName: entry.PeriodName, SubmittedAt: entry.SubmittedAt,
 			Status: entry.Status, Children: make([]HolidayRegistrationEntryChildResponse, 0, len(entry.Children)),
+			Consents: make([]HolidayRegistrationConsentResponse, 0, len(entry.Consents)),
+		}
+		for _, consent := range entry.Consents {
+			response.Consents = append(response.Consents, HolidayRegistrationConsentResponse(consent))
 		}
 		if !entry.FirstDay.IsZero() && !entry.LastDay.IsZero() {
 			first, last := entry.FirstDay, entry.LastDay
