@@ -3,6 +3,7 @@
 // catalog proxy here (#7563).
 
 import { parseAttendanceActor } from "~/lib/attendance-actor";
+import { studentPhotoHref } from "~/lib/student-photo-href";
 import { knownEnum } from "./contract/known-enum";
 // Types only: the browser loads this module, and a value import would pull
 // every decoder of the generated module into its bundle.
@@ -155,7 +156,9 @@ function mapSlimStudent(row: SlimRow): Student {
     actual_arrival_time: row.actual_arrival_time,
     actual_pickup_time: row.actual_pickup_time,
     companion_student_ids: row.companion_student_ids,
-    photo_url: row.photo_url,
+    photo_url: row.photo_version
+      ? studentPhotoHref(row.id, row.photo_version)
+      : undefined,
     photo_consent_given: row.photo_consent_given,
     has_full_access: row.has_full_access,
   };

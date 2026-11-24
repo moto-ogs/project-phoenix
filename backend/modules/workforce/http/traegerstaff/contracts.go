@@ -223,10 +223,10 @@ func renderContractError(w http.ResponseWriter, r *http.Request, err error) {
 		renderError(w, r, err)
 		return
 	}
-	details := map[string]any{"field": contractErr.Field, "school": contractErr.SchoolName, "school_id": ident.ID(contractErr.SchoolID)}
+	details := StaffContractDetails{Field: contractErr.Field, School: contractErr.SchoolName, SchoolID: ident.ID(contractErr.SchoolID)}
 	if !contractErr.Day.IsZero() {
-		details["day"] = contractErr.Day.Format("02.01.2006")
-		details["date"] = contractErr.Day.String()
+		details.Day = contractErr.Day.Format("02.01.2006")
+		details.Date = contractErr.Day.String()
 	}
 	switch {
 	case errors.Is(err, workforce.ErrTraegerContractMonthClosed):
@@ -238,4 +238,12 @@ func renderContractError(w http.ResponseWriter, r *http.Request, err error) {
 	default:
 		common.RenderError(w, r, common.ErrorInvalidOnField(err, common.CodeWorkforceTraegerContractInvalid, contractErr.Field))
 	}
+}
+
+type StaffContractDetails struct {
+	Field    string   `json:"field"`
+	School   string   `json:"school"`
+	SchoolID ident.ID `json:"school_id"`
+	Day      string   `json:"day,omitempty"`
+	Date     string   `json:"date,omitempty"`
 }

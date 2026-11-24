@@ -1,0 +1,126 @@
+package api
+
+import (
+	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/modules/carecontract"
+	"github.com/moto-ogs/project-phoenix/modules/careplan"
+	careStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/careplan/http"
+	classdayHTTP "github.com/moto-ogs/project-phoenix/modules/classday/http"
+	staffMessagingAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/staffmessages"
+	importAPI "github.com/moto-ogs/project-phoenix/modules/dataimport/http"
+	devicesAPI "github.com/moto-ogs/project-phoenix/modules/devicefleet/http/devices"
+	enrollmentHTTP "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
+	roomsHTTP "github.com/moto-ogs/project-phoenix/modules/facilities/http"
+	provisioningOperatorAPI "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/operator"
+	parentBillingHTTP "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
+	projectionStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/presenceprojection/http"
+	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
+	settingsOperatorAPI "github.com/moto-ogs/project-phoenix/modules/settings/inbound/operator"
+	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
+	presenceStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/studentpresence/http"
+	timetableModule "github.com/moto-ogs/project-phoenix/modules/timetable"
+	timetableHTTP "github.com/moto-ogs/project-phoenix/modules/timetable/http"
+	traegerPortalHTTP "github.com/moto-ogs/project-phoenix/modules/traegerportal"
+	traegerViewHTTP "github.com/moto-ogs/project-phoenix/modules/traegerview/http"
+	workforceModule "github.com/moto-ogs/project-phoenix/modules/workforce"
+	timeTrackingHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking"
+	workforceTraegerStaff "github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
+	parentPortalHTTP "github.com/moto-ogs/project-phoenix/workflows/parentportal/http"
+)
+
+// problemDetailContracts names the DTO allowed under details for each code.
+// Route-specific partial imports register their result on the route itself.
+var problemDetailContracts = map[string]any{
+	common.CodeGeneralInput:                                     common.InputLimitDetails{},
+	common.CodeFilesFileTooLarge:                                common.SizeLimitDetails{},
+	common.CodeIdentityRolePlatformPermission:                   common.PermissionDetails{},
+	common.CodeCommunicationLetterPlaceholderUnknown:            common.PlaceholderDetails{},
+	common.CodeTraegerDocumentTemplateUnknownPlaceholder:        common.PlaceholderDetails{},
+	common.CodeEnrollmentLegalDocumentInvalid:                   common.SizeLimitDetails{},
+	common.CodeSettingsAttendanceVisibleExceedsRetention:        settingsOperatorAPI.RetentionDaysDetails{},
+	common.CodeSettingsAttendanceRetentionBelowVisible:          settingsOperatorAPI.VisibleDaysDetails{},
+	common.CodeSettingsModuleRequires:                           settingsOperatorAPI.ModuleRequiresDetails{},
+	common.CodeSettingsModuleRequiredBy:                         settingsOperatorAPI.ModuleRequiredByDetails{},
+	common.CodeWorkforceTraegerContractMonthClosed:              workforceTraegerStaff.StaffContractDetails{},
+	common.CodeWorkforceTraegerContractOverlap:                  workforceTraegerStaff.StaffContractDetails{},
+	common.CodeWorkforceTraegerHolidayWeekSchoolOverride:        workforceTraegerStaff.StaffContractDetails{},
+	common.CodeWorkforceTraegerMonthLaterClosed:                 workforceTraegerStaff.SchoolMonthDetails{},
+	common.CodeWorkforceTraegerMonthClosedBySchool:              workforceTraegerStaff.SchoolMonthDetails{},
+	common.CodeWorkforceTraegerPayrollNotReady:                  workforceTraegerStaff.PayrollNotReadyDetails{},
+	common.CodeStudentsPickupResetStillNeeded:                   careStudentsHTTP.PickupResetDetails{},
+	common.CodeStudentsExportSelectionTooLarge:                  projectionStudentsHTTP.ExportSelectionDetails{},
+	common.CodeEnrollmentHolidayWeekNoCareDay:                   common.HolidayWeekNoCareDetails{},
+	common.CodeEnrollmentHolidayChildDayLimit:                   common.HolidayChildDayLimitDetails{},
+	common.CodeEnrollmentHolidayChildDayLimitPublic:             enrollmentHTTP.PublicHolidayChildDayLimitDetails{},
+	common.CodeEnrollmentUploadInvalid:                          enrollmentHTTP.UploadRefusalDetails{},
+	common.CodeEnrollmentUploadContentMismatch:                  enrollmentHTTP.UploadContentDetails{},
+	common.CodeEnrollmentPhaseBookingBoundsConflict:             enrollmentHTTP.BookingBoundsDetails{},
+	common.CodeEnrollmentHolidayProofLimit:                      enrollmentHTTP.HolidayProofLimitDetails{},
+	common.CodeEnrollmentHolidayAllocationFull:                  enrollmentHTTP.HolidayAllocationDetails{},
+	common.CodeCommunicationStaffGroupNameInvalid:               staffMessagingAPI.StaffGroupNameLimitDetails{},
+	common.CodeCommunicationStaffGroupTooLarge:                  staffMessagingAPI.StaffGroupSizeLimitDetails{},
+	common.CodeEnrollmentCompleteWithdrawalConfirmationRequired: parentPortalHTTP.WithdrawalConfirmationDetails{},
+	common.CodeTimetableWindowTooLarge:                          timetableModule.RefusalValues{},
+	common.CodeTimetableExportRangeTooLarge:                     timetableModule.RefusalValues{},
+	common.CodeTimetableSeriesEndBeforeStart:                    timetableModule.RefusalValues{},
+	common.CodeTimetableSeriesEndOutsidePeriod:                  timetableModule.RefusalValues{},
+	common.CodeTimetableTemplateGradeAboveMax:                   timetableModule.RefusalValues{},
+	common.CodeTimetablePickupExtensionTooManyBlocks:            timetableModule.RefusalValues{},
+	common.CodeTimetableDatesInPast:                             timetableModule.RefusalValues{},
+	common.CodeTimetableTooManyDates:                            timetableModule.RefusalValues{},
+	common.CodeTimetableSubstituteAbsentOnDate:                  timetableModule.RefusalValues{},
+	common.CodeTimetableCalendarPeriodOverlapConflict:           timetableHTTP.CalendarPeriodOverlapDetails{},
+	common.CodeTimetableCalendarPeriodShiftSeriesConflict:       timetableHTTP.CalendarPeriodShiftSeriesDetails{},
+	common.CodeRoomsStillPlanned:                                roomsHTTP.RoomStillPlannedDetails{},
+	common.CodeTraegerAccessLogExportTooLarge:                   traegerViewHTTP.AccessLogLimitDetails{},
+	common.CodeParentBillingNumberRangeStartTaken:               parentBillingHTTP.NumberRangeTakenDetails{},
+	common.CodeParentBillingPaymentTextDebtorNumberMissing:      parentBillingHTTP.PaymentTextDebtorDetails{},
+	common.CodeCareContractFamilyRefused:                        carecontract.FamilyRefusalDetails{},
+	common.CodeEnrollmentCareOfferingTemplateMixedPhases:        careplan.CareOfferingSourceConflictValues{},
+	common.CodeEnrollmentCareOfferingTemplateNoActiveSource:     careplan.CareOfferingSourceConflictValues{},
+	common.CodeEnrollmentCareOfferingTemplateOutsidePeriod:      careplan.CareOfferingSourceConflictValues{},
+	common.CodeEnrollmentCareOfferingTemplateSourceInvalid:      careplan.CareOfferingSourceConflictValues{},
+	common.CodeWorkforceRebookingBeforeVacationOpening:          workforceModule.RebookingValues{},
+	common.CodeWorkforceRebookingHalfDayEdge:                    workforceModule.RebookingValues{},
+	common.CodeWorkforceRebookingNoWorkingDay:                   workforceModule.RebookingValues{},
+	common.CodeWorkforceRebookingOutsideBalance:                 workforceModule.RebookingValues{},
+	common.CodeWorkforceRebookingRequest:                        workforceModule.RebookingValues{},
+	common.CodeWorkforceRebookingSameType:                       workforceModule.RebookingValues{},
+	common.CodeWorkforceRebookingSickReport:                     workforceModule.RebookingValues{},
+	common.CodeWorkforceRebookingTooMany:                        workforceModule.RebookingValues{},
+	common.CodeWorkforceMonthClosed:                             workforceModule.RebookingValues{},
+	common.CodeWorkforceTargetOverrideHoursInvalid:              workforceModule.TargetOverrideValues{},
+	common.CodeWorkforceTargetOverrideOverlap:                   workforceModule.TargetOverrideValues{},
+	common.CodeWorkforceTargetOverrideRangeInvalid:              workforceModule.TargetOverrideValues{},
+	common.CodeWorkforceTargetOverrideTooLong:                   workforceModule.TargetOverrideValues{},
+	common.CodeImportFileColumnsMissing:                         importAPI.MissingColumnsDetails{},
+	common.CodeImportFileRowInvalid:                             importAPI.InvalidRowDetails{},
+	common.CodeProvisioningOrganizationHasSchools:               provisioningOperatorAPI.OrganizationHasSchoolsDetails{},
+	common.CodeProvisioningDeviceActiveSession:                  provisioningOperatorAPI.DeviceRemovalDetails{},
+	common.CodeProvisioningDeviceSlotsFull:                      provisioningOperatorAPI.DeviceSlotsDetails{},
+	common.CodeProvisioningDeviceSlotsBelowOccupied:             provisioningOperatorAPI.DeviceSlotsBelowOccupiedDetails{},
+	common.CodeIotDeviceInActiveSession:                         devicesAPI.DeviceInActiveSessionDetails{},
+	common.CodeIotDeviceSlotsFull:                               devicesAPI.SchoolDeviceSlotsDetails{},
+	common.CodeTraegerSchoolRoleNameUsedAtSchool:                traegerPortalHTTP.SchoolRoleNameDetails{},
+	common.CodePresenceRoomCapacityExceeded:                     studentpresence.RoomCapacityDetails{},
+	common.CodePresenceActivityParticipantLimitReached:          studentpresence.ActivityParticipantLimitDetails{},
+	common.CodeStudentsCompanionPlanConflict:                    careStudentsHTTP.CompanionConflictDetails{},
+	common.CodeClassdayClassTripStatusConflict:                  classdayHTTP.ClassTripConflictDetails{},
+	common.CodeStudentsStatusDayConflict:                        presenceStudentsHTTP.StatusDayConflictDetails{},
+	common.CodeStudentsChildQuotaReached:                        schoolmembership.ChildQuotaDetails{},
+	common.CodeModuleNotBooked:                                  common.ModuleNotBookedDetails{},
+	common.CodeProvisioningCaregiverCapabilityBlocked:           common.CaregiverCapabilityDetails{},
+	common.CodeEnrollmentChildPossiblyEnrolled:                  enrollmentHTTP.PossiblyEnrolledDetails{},
+	common.CodeWorkforceTraegerStaffHireDuplicate:               workforceTraegerStaff.HireDuplicateDetails{},
+	common.CodeWorkforceTraegerStaffHireIncomplete:              workforceTraegerStaff.HireIncompleteDetails{},
+	common.CodeWorkforceShiftWorkingTimeWarning:                 workforceModule.ShiftWorkingTimeDetails{},
+	common.CodeWorkforceShiftOverlapsOtherSite:                  workforceModule.ShiftOtherSiteDetails{},
+	common.CodeIotPlannedStartNotReached:                        timeTrackingHTTP.PlannedStartDetails{},
+	common.CodeIotDeviationReasonRequired:                       timeTrackingHTTP.DeviationReasonDetails{},
+	common.CodeParentBillingSollstellungRevenueAccountMissing:   parentBillingHTTP.SollRevenueAccountDetails{},
+	common.CodeParentBillingDatevNotReady:                       parentBillingHTTP.DatevReadinessDetails{},
+	common.CodeParentBillingDatevBookingsInvalid:                parentBillingHTTP.DatevBookingsDetails{},
+	common.CodeParentBillingDebtorNumberDigitRange:              parentBillingHTTP.DebtorNumberDigitRangeDetails{},
+	common.CodeParentBillingDebtorNumberDigits:                  parentBillingHTTP.DebtorNumberDigitsDetails{},
+	common.CodeParentBillingFamilyDebtorNumberConflict:          parentBillingHTTP.FamilyDebtorNumberDetails{},
+}

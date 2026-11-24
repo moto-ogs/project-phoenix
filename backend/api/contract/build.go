@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 var (
@@ -250,7 +251,10 @@ func queryParams(params []QueryParam, where string) ([]QueryParam, error) {
 		}
 		values := slices.Clone(param.Values)
 		sort.Strings(values)
-		query = append(query, QueryParam{Name: param.Name, Kind: param.Kind, Repeated: param.Repeated, Values: values})
+		if param.TextReason != "" && param.Kind != "string" {
+			return nil, fmt.Errorf("%s: %s documents a text alternative but is not a string query", where, param.Name)
+		}
+		query = append(query, QueryParam{Name: param.Name, Kind: param.Kind, Repeated: param.Repeated, Values: values, TextReason: param.TextReason})
 	}
 	sort.Slice(query, func(i, j int) bool { return query[i].Name < query[j].Name })
 	return query, nil
@@ -482,6 +486,9 @@ func (b *builder) named(t reflect.Type, where string, request bool) (Schema, boo
 	}
 	if schema, ok := b.timeSchema(t); ok {
 		return schema, true, nil
+	}
+	if t == reflect.TypeFor[ident.IDOrNone]() {
+		return Schema{Kind: KindID, NoID: true}, true, nil
 	}
 	if kind, ok := b.identifiers[t]; ok {
 		return Schema{Kind: kind}, true, nil

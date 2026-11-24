@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -150,18 +149,18 @@ func applyPhaseClassConfig(resp *PhaseResponse, p *enrollmentOwner.Phase) {
 // row, or omitted/empty for "no custom fields" (the parent form
 // renders core fields only).
 type EnrollmentPhaseRequest struct {
-	Name                      string  `json:"name"`
-	Kind                      string  `json:"kind"`
-	ServiceStartDate          string  `json:"service_start_date"`
-	ServiceEndDate            string  `json:"service_end_date"`
-	EnrollmentOpenAt          *string `json:"enrollment_open_at,omitempty"`
-	EnrollmentCloseAt         *string `json:"enrollment_close_at,omitempty"`
-	FormSchemaID              *string `json:"form_schema_id,omitempty" contract_text:"empty string clears the form schema"`
-	CalendarPeriodID          *string `json:"calendar_period_id,omitempty" contract_text:"empty string clears the calendar period"`
-	ShowStatusReasonToParent  bool    `json:"show_status_reason_to_parent"`
-	CareOverflowMode          string  `json:"care_overflow_mode"`
-	CareOfferingSelectionMode string  `json:"care_offering_selection_mode"`
-	IsActive                  bool    `json:"is_active"`
+	Name                      string          `json:"name"`
+	Kind                      string          `json:"kind"`
+	ServiceStartDate          string          `json:"service_start_date"`
+	ServiceEndDate            string          `json:"service_end_date"`
+	EnrollmentOpenAt          *string         `json:"enrollment_open_at,omitempty"`
+	EnrollmentCloseAt         *string         `json:"enrollment_close_at,omitempty"`
+	FormSchemaID              *ident.IDOrNone `json:"form_schema_id,omitempty"`
+	CalendarPeriodID          *ident.IDOrNone `json:"calendar_period_id,omitempty"`
+	ShowStatusReasonToParent  bool            `json:"show_status_reason_to_parent"`
+	CareOverflowMode          string          `json:"care_overflow_mode"`
+	CareOfferingSelectionMode string          `json:"care_offering_selection_mode"`
+	IsActive                  bool            `json:"is_active"`
 	// Concrete-class config (issue #1833) is optional on the wire so a
 	// stale client that predates the feature omits it rather than sending
 	// zero values. Pointers distinguish "field omitted" (nil -> preserve
@@ -345,15 +344,13 @@ func parseOptionalRFC3339(value *string, errMsg string) (*time.Time, error) {
 	return &t, nil
 }
 
-// parseOptionalPositiveID parses an optional positive int64 ID string. A nil
-// or empty value yields (nil, nil); a non-positive or malformed value yields
-// errMsg.
-func parseOptionalPositiveID(value *string, errMsg string) (*int64, error) {
-	if value == nil || *value == "" {
+// parseOptionalPositiveID keeps nil and the legacy empty marker unselected.
+func parseOptionalPositiveID(value *ident.IDOrNone, errMsg string) (*int64, error) {
+	if value == nil || value.IsZero() {
 		return nil, nil
 	}
-	id, err := strconv.ParseInt(*value, 10, 64)
-	if err != nil || id <= 0 {
+	id := value.Int64()
+	if id <= 0 {
 		return nil, errors.New(errMsg)
 	}
 	return &id, nil
@@ -679,7 +676,11 @@ func bookingBoundsConflict(err error) render.Renderer {
 		return common.ErrorConflictWithCode(enrollmentOwner.ErrPhaseBookingBoundsConflict, common.CodeEnrollmentPhaseBookingBoundsConflict)
 	}
 	return common.ErrorConflictWithDetails(enrollmentOwner.ErrPhaseBookingBoundsConflict, common.CodeEnrollmentPhaseBookingBoundsConflict,
-		map[string]any{"child": conflict.ChildName})
+		BookingBoundsDetails{Child: conflict.ChildName})
+}
+
+type BookingBoundsDetails struct {
+	Child string `json:"child"`
 }
 
 // PhaseTranslationsRequest is the translations a phase body carries: locale →

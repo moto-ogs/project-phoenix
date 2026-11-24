@@ -1,7 +1,7 @@
 import { ApiError } from "~/lib/api-error";
 import { bffJson } from "~/lib/bff-fetch";
 import { knownEnum } from "~/lib/contract/known-enum";
-import { problemDetails } from "~/lib/contract/problem-details.generated";
+import { StatusDayConflictDetailsSchema } from "~/lib/contract/problem-details.generated";
 import type {
   BulkCreateStudentStatusDaysRequest,
   CreateStudentStatusDaysRequest,
@@ -62,9 +62,7 @@ function parseConflictError(error: ApiError): ApiError {
   // other 409 (a partial absence, the Kinderkontingent) keeps its own code,
   // so the person reads its real reason.
   if (error.code !== "students.status_day_conflict") return error;
-  const result = problemDetails["students.status_day_conflict"].safeParse(
-    error.details,
-  );
+  const result = StatusDayConflictDetailsSchema.safeParse(error.details);
   if (!result.success) return error;
   const conflicts = mapStatusDays(result.data.conflicts ?? []);
   return new StudentStatusDayConflictError(

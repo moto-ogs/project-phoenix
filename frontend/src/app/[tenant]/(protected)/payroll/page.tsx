@@ -65,7 +65,7 @@ import {
   type PayrollTargetCoverage,
 } from "~/lib/payroll-api";
 import { hasPermission } from "~/lib/auth-utils";
-import { notBookedModuleOf } from "~/lib/module-not-booked";
+import { isModuleNotBooked } from "~/lib/module-not-booked";
 import { MISSING_TARGET_OWNER } from "~/components/staff/missing-target-notice";
 import { ProgressBar } from "~/components/ui/progress-bar";
 import {
@@ -543,7 +543,7 @@ function ReadinessCard({
   );
   // Ohne gebuchte Zeiterfassung gibt es kein Soll zu prüfen: dann entfällt
   // die Zeile, statt einen Fehler zu zeigen.
-  const targetCheckBooked = notBookedModuleOf(target.error) === null;
+  const targetCheckBooked = !isModuleNotBooked(target.error);
   if (targetCheckBooked) {
     items.push(targetItem(target));
   }

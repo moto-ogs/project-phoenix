@@ -58,7 +58,7 @@ func renderIoTErrorReportFailure(w http.ResponseWriter, r *http.Request, status 
 
 func iotDevicesRuntime(history devicefleet.LifecycleHistory, names DeviceActorDirectory, sessions DeviceRemovalSessions, logger *slog.Logger, now func() time.Time) devicesAPI.Runtime {
 	return devicesAPI.Runtime{ParseID: common.ParseIDParam, Now: now, Permission: common.RequiresPermission, Success: common.Respond, Failure: renderIoTDataFailure, ConflictOnField: renderIoTConflictOnField, ConstraintViolation: transactionFailures.IsConstraintViolation,
-		ConflictWithDetails: func(w http.ResponseWriter, r *http.Request, err error, code string, details map[string]any) {
+		ConflictWithDetails: func(w http.ResponseWriter, r *http.Request, err error, code string, details any) {
 			common.RenderError(w, r, common.ErrorConflictWithDetails(err, code, details))
 		},
 		ActiveSession:     deviceRemovalSession(sessions),
@@ -172,15 +172,7 @@ func iotSessionRuntime(now func() time.Time) sessionsAPI.Runtime {
 // renderIoTSessionConflict answers a session conflict in the shared error
 // envelope; the conflict travels as details.
 func renderIoTSessionConflict(w http.ResponseWriter, r *http.Request, message string, info devicescan.ConflictInfoResponse) {
-	details := map[string]any{
-		"has_conflict":     info.HasConflict,
-		"conflict_message": info.ConflictMessage,
-		"can_override":     info.CanOverride,
-	}
-	if info.ConflictingDevice != nil {
-		details["conflicting_device"] = *info.ConflictingDevice
-	}
-	common.RenderError(w, r, common.ErrorConflictWithDetails(errors.New(message), common.CodeGeneralBusinessRejection, details))
+	common.RenderError(w, r, common.ErrorConflictWithDetails(errors.New(message), common.CodeGeneralBusinessRejection, info))
 }
 
 func iotDataRuntime(now func() time.Time) dataAPI.Runtime {
@@ -252,11 +244,7 @@ func renderIoTKioskFailure(w http.ResponseWriter, r *http.Request, status int, c
 		common.RenderError(w, r, common.ErrorNotFoundWithCode(err, code))
 	case http.StatusConflict:
 		if len(details) > 0 {
-			payload := make(map[string]any, len(details))
-			for key, value := range details {
-				payload[key] = value
-			}
-			common.RenderError(w, r, common.ErrorConflictWithDetails(err, code, payload))
+			common.RenderError(w, r, common.ErrorConflictWithDetails(err, code, details))
 			return
 		}
 		common.RenderError(w, r, common.ErrorConflictWithCode(err, code))

@@ -1,5 +1,9 @@
 import type { AppLocale } from "~/i18n/locales";
-import { ApiError, errorClassCode } from "~/lib/api-error";
+import {
+  ApiError,
+  apiErrorCatalogValues,
+  errorClassCode,
+} from "~/lib/api-error";
 import { ERROR_CATALOG } from "~/lib/error-catalog.generated";
 import type { ErrorContact } from "~/lib/error-contact";
 import {
@@ -112,7 +116,9 @@ export function presentError(
   const values = withDerivedCapacityDetails(
     known,
     Object.fromEntries(
-      Object.entries(error.details ?? {}).filter(([key]) => allowed.has(key)),
+      Object.entries(apiErrorCatalogValues(error)).filter(([key]) =>
+        allowed.has(key),
+      ),
     ),
   );
   // The class text speaks the reader's language too, also for a code this

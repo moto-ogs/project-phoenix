@@ -113,6 +113,9 @@ func (c *checker) value(at string, s Schema, raw json.RawMessage) {
 		}
 		return
 	}
+	if s.Kind == KindID && s.NoID && string(raw) == `""` {
+		return
+	}
 	switch s.Kind {
 	case KindArray:
 		c.array(at, *s.Elem, raw)

@@ -3,7 +3,6 @@
 package common
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -33,19 +32,49 @@ import (
 func init() {
 	answerObserver = observeAnswerContract
 	refusalObserver = observeRefusal
-	numericProblemDetailsObserver = func(r *http.Request) {
-		if observe, ok := r.Context().Value(numericProblemDetailsKey{}).(func()); ok {
-			observe()
-		}
-	}
+	problemDetailsObserver = observeProblemDetailsContract
 }
 
-type numericProblemDetailsKey struct{}
+func observeProblemDetailsContract(r *http.Request, code string, details any) error {
+	// Direct renderer unit tests use a synthetic request, not a handler.
+	if chi.RouteContext(r.Context()) == nil {
+		return nil
+	}
+	loaded := loadAnswerContract()
+	pattern := RoutePattern(r)
+	route := r.Method + " " + pattern
+	for _, outside := range loaded.doc.Outside {
+		if outside.Reason == "device" && outside.Key() == route {
+			return nil
+		}
+	}
+	if partial, ok := details.(PartialImportDetails); ok {
+		return loaded.checkPartialDetails(r.Method, pattern, code, partial)
+	}
+	return loaded.checkProblemDetails(route, code, details)
+}
 
-// ObserveNumericProblemDetails flags a wire violation even when the final
-// problem middleware repaired the response before sending it.
-func ObserveNumericProblemDetails(r *http.Request, observe func()) *http.Request {
-	return r.WithContext(context.WithValue(r.Context(), numericProblemDetailsKey{}, observe))
+func (loaded *answerContract) checkProblemDetails(route, code string, details any) error {
+	schema, ok := loaded.doc.ProblemDetails[code]
+	theType := reflect.TypeOf(details)
+	if !ok || theType == nil || theType.Kind() != reflect.Struct || loaded.goTypes[schema.Ref] != theType.String() {
+		return fmt.Errorf("%s: %s details from %T do not match their registered Go type %q", route, code, details, loaded.goTypes[schema.Ref])
+	}
+	return nil
+}
+
+func (loaded *answerContract) checkPartialDetails(method, pattern, code string, partial PartialImportDetails) error {
+	routes, _ := loaded.candidates(method, pattern, partial.Result)
+	for _, route := range routes {
+		if route.PartialError != code || !loaded.answersWith(route, partial.Result) {
+			continue
+		}
+		if partial.Rejection != nil && partial.Rejection.Details != nil {
+			return loaded.checkProblemDetails(route.Key(), partial.Rejection.Code, partial.Rejection.Details)
+		}
+		return nil
+	}
+	return fmt.Errorf("%s %s: %s has no matching PartialError for result %T", method, pattern, code, partial.Result)
 }
 
 // answersFileEnv names a file that collects the key of every registered

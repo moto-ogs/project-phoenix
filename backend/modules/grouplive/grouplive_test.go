@@ -453,8 +453,8 @@ func TestGetProjectsRosterUnderFullAccess(t *testing.T) {
 		members: func(_ context.Context, groupID int64) ([]RosterStudent, error) {
 			assert.Equal(t, appleGroupID, groupID)
 			return []RosterStudent{
-				{ID: 11, FirstName: "Ada", LastName: "Lovelace", SchoolClass: "2a", Sick: true, SickSince: &since, PhotoURL: "/api/students/11/photo/ada.jpg"},
-				{ID: 12, FirstName: "Bob", LastName: "Builder", SchoolClass: "2b", PhotoURL: "https://example.test/bob.jpg"},
+				{ID: 11, FirstName: "Ada", LastName: "Lovelace", SchoolClass: "2a", Sick: true, SickSince: &since, PhotoVersion: "ada.jpg"},
+				{ID: 12, FirstName: "Bob", LastName: "Builder", SchoolClass: "2b"},
 				{ID: 13, FirstName: "Cy", LastName: "Absent", SchoolClass: "2b"},
 			}, nil
 		},
@@ -532,7 +532,7 @@ func TestGetProjectsRosterUnderFullAccess(t *testing.T) {
 	assert.Equal(t, new("#A3D977"), ada.RoomColor)
 	assert.True(t, ada.Sick)
 	assert.Equal(t, &since, ada.SickSince)
-	assert.Equal(t, "/api/students/11/photo/ada.jpg", ada.PhotoURL)
+	assert.Equal(t, "ada.jpg", ada.PhotoVersion)
 	assert.Equal(t, "not_coming_today", ada.DayPlanningStatus)
 	assert.Equal(t, DayReasonSick, ada.DayPlanningReason)
 	assert.Equal(t, "krank gemeldet", ada.DayPlanningLabel)
@@ -541,7 +541,7 @@ func TestGetProjectsRosterUnderFullAccess(t *testing.T) {
 	assert.Nil(t, ada.PendingExcusedNote)
 
 	bob := got.Students[1]
-	assert.Equal(t, "https://example.test/bob.jpg", bob.PhotoURL, "non-upload URLs pass through untouched")
+	assert.Empty(t, bob.PhotoVersion, "a student without a stored photo has no version")
 	assert.True(t, bob.Excused, "the excused status day applies to a child who is not sick")
 	assert.Equal(t, &since, bob.ExcusedSince)
 	assert.Equal(t, "comes_today", bob.DayPlanningStatus)
@@ -736,7 +736,7 @@ func TestGetRedactsRestrictedCallersButKeepsTheReviewersNote(t *testing.T) {
 		},
 		supervisedGroups: func(context.Context) ([]GroupRecord, error) { return twoGroups(), nil },
 		members: func(context.Context, int64) ([]RosterStudent, error) {
-			return []RosterStudent{{ID: 11, FirstName: "Ada", PhotoURL: "/api/students/11/photo/ada.jpg"}}, nil
+			return []RosterStudent{{ID: 11, FirstName: "Ada", PhotoVersion: "ada.jpg"}}, nil
 		},
 		snapshot: func(context.Context, []int64, Date) (PresenceSnapshot, error) {
 			return presenceFake{
@@ -765,7 +765,7 @@ func TestGetRedactsRestrictedCallersButKeepsTheReviewersNote(t *testing.T) {
 	student := got.Students[0]
 	assert.Equal(t, "Anwesend", student.Location)
 	assert.Nil(t, student.LocationSince)
-	assert.Empty(t, student.PhotoURL)
+	assert.Empty(t, student.PhotoVersion)
 	assert.Empty(t, student.DayPlanningStatus, "day plans stay gated on full access")
 	assert.Nil(t, student.ArrivalTime)
 	assert.Nil(t, student.ActualArrivalTime)
@@ -1133,7 +1133,7 @@ func TestProjectionWireGolden(t *testing.T) {
 			LocationSince: &since, RoomColor: new("#A3D977"), Excused: true, ExcusedSince: &since,
 			DayPlanningStatus: "comes_today", DayPlanningReason: "arrival_exception", DayPlanningLabel: "geplante Ankunft heute",
 			PendingExcusedNote: new("Zahnarzt"), ArrivalTime: new("07:45"), ArrivalIsException: true, ArrivalNotes: "später",
-			ActualArrivalTime: new("08:10"), PhotoURL: "/api/students/11/photo/ada.jpg",
+			ActualArrivalTime: new("08:10"), PhotoVersion: "ada.jpg",
 		}, {ID: 12, FirstName: "Bob", LastName: "Builder", SchoolClass: "2b", Location: "Abwesend"}},
 		RoomStatus:         map[string]RoomStatus{"11": {InGroupRoom: true, CurrentRoomID: new(ident.ID(31))}, "12": {}},
 		PickupTimes:        []PickupTime{{StudentID: 11, Date: string(today), WeekdayName: "Freitag", PickupTime: new("15:30"), IsException: true, Notes: "Oma", DayNotes: []DayNote{{ID: 7, Content: "Klingeln"}}}},
@@ -1151,7 +1151,7 @@ func TestProjectionWireGolden(t *testing.T) {
 		`"excused_since":"2026-08-21T06:30:00Z","class_trip":false,"day_planning_status":"comes_today",` +
 		`"day_planning_reason":"arrival_exception","day_planning_label":"geplante Ankunft heute","pending_excused_note":"Zahnarzt",` +
 		`"arrival_time":"07:45","arrival_is_exception":true,"arrival_notes":"später","actual_arrival_time":"08:10",` +
-		`"photo_url":"/api/students/11/photo/ada.jpg"},` +
+		`"photo_version":"ada.jpg"},` +
 		`{"id":"12","first_name":"Bob","last_name":"Builder","school_class":"2b","current_location":"Abwesend","sick":false,"excused":false,"class_trip":false}],` +
 		`"room_status":{"11":{"in_group_room":true,"current_room_id":"31"},"12":{"in_group_room":false}},` +
 		`"pickup_times":[{"student_id":"11","date":"2026-08-21","weekday_name":"Freitag","pickup_time":"15:30","is_exception":true,"notes":"Oma","day_notes":[{"id":"7","content":"Klingeln"}]}],` +

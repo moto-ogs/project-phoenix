@@ -2539,13 +2539,13 @@ func TestCaregiverCapabilityProvisioningErrorRenderer(t *testing.T) {
 			blockers: []string{"active_group_supervisions", "group_assignments"},
 		})
 
-		blocked, ok := renderer.(*common.CaregiverCapabilityBlockedResponse)
+		blocked, ok := renderer.(*common.ErrResponse)
 		require.True(t, ok)
 		assert.Equal(t, http.StatusConflict, blocked.HTTPStatusCode)
 		assert.Equal(
 			t,
 			[]string{"active_group_supervisions", "group_assignments"},
-			blocked.Blockers,
+			blocked.Details.(common.CaregiverCapabilityDetails).Blockers,
 		)
 	})
 
@@ -2613,7 +2613,6 @@ func TestCaregiverCapabilityBlockedResponse_Render(t *testing.T) {
 	t.Parallel()
 
 	resp := common.NewCaregiverCapabilityBlockedResponse(
-		http.StatusConflict,
 		"blocked",
 		nil,
 	)

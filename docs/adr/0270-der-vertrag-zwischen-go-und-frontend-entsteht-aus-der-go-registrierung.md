@@ -487,19 +487,26 @@ Für [#8003](https://github.com/moto-ogs/project-phoenix/issues/8003):
 Server-Module und Layouts lesen angemeldete JSON-Routen über `contractGet`
 und schreiben über `contractWrite`. Der erzeugte Eintrag bestimmt den Pfad
 und die Typen von `params` und `query`; es gibt keine freie Zieladresse.
+Registriert eine benannte Browserroute Query-Parameter, gibt sie den
+eingegangenen `Request` mit. Der Transport leitet alle registrierten Werte
+weiter. Dateirouten streamt der Katalog-Proxy; die JSON-Helfer nehmen keine
+Dateieinträge an.
 Die Staff-Shell lässt nicht lesbare
 optionale Startdaten aus; der Browser lädt sie auf dem normalen Weg.
 Der Schul-Lookup prüft den öffentlichen Routeneintrag und speichert
 dekodierte Treffer mit geprüften Branding-Feldern sowie 404, aber keine
-anderen Fehler. Die Invalidierung gilt für Treffer und 404 und läuft
+anderen Fehler. Bei 429 erhält der Browser Gos `Retry-After`. Die
+Invalidierung gilt für Treffer und 404 und läuft
 serverseitig im Schreibaufruf, nicht in einem zweiten Browser-Aufruf. Der Generator
-übernimmt die betroffenen Einstellungsschlüssel aus Go. Schulbezogene
-Zusatzschlüssel bleiben offen. Der Wächter in `route-backend-paths.test.ts` prüft
+übernimmt die betroffenen Einstellungsschlüssel aus Go. Der Operator-Write
+liefert die Subdomain direkt, ohne zweiten Lookup. Der Wächter in
+`route-backend-paths.test.ts` prüft
 auch Server-Module, nicht nur benannte BFF-Routen.
 
 Katalog-Proxy, benannte Routen und SSE verwenden für Ablehnungen vor dem
-Stream denselben Fehlerpfad. Die registrierten Formen in `details` und
-die SSE-Ereignisform erzeugt `gencontract` aus den Go-Typen.
+Stream denselben Fehlerpfad. `gencontract` erzeugt die Fehlerdecoder aus den
+je Code registrierten Go-Typen und der SSE-Ereignisform. Strukturierte
+Ablaufdaten stehen unter `details`, nicht neben der Problem-Hülle.
 Eine unlesbare Erfolgsantwort, auch abgeschnittenes JSON, ergibt 502.
 Kann die Änderung festgeschrieben sein, lautet der Fehlercode
 `general.write_answer_unreadable`; bei GET und `NoCommit` bleibt der
@@ -511,6 +518,8 @@ Fehler wiederholbar. Ein 204 ersetzt keine zugesagten Daten.
    aus einem registrierten GET-Dateischlüssel mit getypten Pfad- und
    Query-Parametern. `bffFile` bleibt der Aufruf, der einen `Response`
    liefert. `bffPath` baut andere registrierte Adressen mit einem Routenschlüssel.
+   Beim Schülerfoto liefert Go Schülerkennung und Fotoversion. Das BFF hält
+   `photo_url` nur für ältere Tabs aus derselben Dateiroute verfügbar.
    Der Wächter prüft den Produktcode auf handgebaute Adressen, auch wenn
    Templates oder Verkettungen Konstanten und Hilfsfunktionen nutzen.
    Die Lint-Ausnahmen für ungetypte Aufrufe gelten pro Datei, Methode und

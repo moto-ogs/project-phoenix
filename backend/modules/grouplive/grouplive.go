@@ -115,7 +115,8 @@ type Student struct {
 	ArrivalNotes       string                  `json:"arrival_notes,omitempty"`
 	ActualArrivalTime  *string                 `json:"actual_arrival_time,omitempty"`
 	ActualPickupTime   *string                 `json:"actual_pickup_time,omitempty"`
-	PhotoURL           string                  `json:"photo_url,omitempty"`
+	PhotoVersion       string                  `json:"photo_version,omitempty"`
+	PhotoURL           string                  `json:"photo_url,omitempty"` // legacy BFF alias
 	// TeacherHints are today's hints of the Lehrkraft for this child or its
 	// class (#4795), oldest first; only with planning access.
 	TeacherHints []GroupLiveTeacherHint `json:"teacher_hints,omitempty"`
@@ -408,7 +409,7 @@ func projectStudents(students []RosterStudent, presence PresenceSnapshot, fullAc
 			student.Excused, student.ExcusedSince = model.Excused, model.ExcusedSince
 		}
 		if photosEnabled && fullAccess {
-			student.PhotoURL = model.PhotoURL
+			student.PhotoVersion = model.PhotoVersion
 		}
 		result = append(result, student)
 	}

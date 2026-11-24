@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ApiResponseError, handleApiError } from "./api-response-error.server";
 import { forwardBackendResponse } from "./backend-proxy-response.server";
 
 describe("forwardBackendResponse", () => {
@@ -72,6 +73,7 @@ describe("forwardBackendResponse", () => {
   // The saved part of an import whose later batch failed is written for the
   // person who imported (#3184); its detail text stays on the server.
   it("keeps the details of a failed import batch, not its diagnostics", async () => {
+    const timestamp = "2026-11-24T10:00:00Z";
     const errors = [
       "creation_failed",
       "update_failed",
@@ -83,7 +85,15 @@ describe("forwardBackendResponse", () => {
       "vacation_opening_preflight_failed",
     ].map((code, index) => ({
       row_number: index + 4,
-      data: { first_name: "Ada", last_name: "Test" },
+      data: {
+        first_name: "Ada",
+        last_name: "Test",
+        school_class: "2a",
+        bus_permission: false,
+        privacy_accepted: false,
+        data_retention_days: 0,
+      },
+      timestamp,
       errors: [
         {
           field: "write",
@@ -94,28 +104,29 @@ describe("forwardBackendResponse", () => {
       ],
     }));
     const result = {
+      started_at: timestamp,
+      completed_at: timestamp,
       total_rows: errors.length + 3,
       created_count: 2,
       updated_count: 1,
+      skipped_count: 0,
       error_count: errors.length,
+      warning_count: 0,
+      bulk_actions: [],
+      dry_run: false,
       errors,
     };
-    const response = forwardBackendResponse(
-      new Response(
-        JSON.stringify({
-          type: "about:blank",
-          title: "Internal Server Error",
-          status: 500,
-          detail: "batch 2 failed at db.internal",
-          code: "import.import_batch_failed",
-          details: { result },
-        }),
-        {
-          status: 500,
-          headers: { "Content-Type": "application/problem+json" },
-        },
-      ),
-    );
+    const raw = JSON.stringify({
+      type: "about:blank",
+      title: "Internal Server Error",
+      status: 500,
+      detail: "batch 2 failed at db.internal",
+      code: "import.import_batch_failed",
+      details: { result },
+    });
+    const error = new ApiResponseError(500, raw);
+    error.contractRouteKey = "POST /api/import/students/import";
+    const response = handleApiError(error);
 
     const body = await response.text();
     expect(JSON.parse(body)).toMatchObject({
@@ -140,6 +151,9 @@ describe("forwardBackendResponse", () => {
       },
     });
     expect(body).not.toContain("db.internal");
+    expect(
+      await forwardBackendResponse(new Response(raw, { status: 500 })).json(),
+    ).not.toHaveProperty("details");
   });
 
   it("adds the request ID to a sanitized backend error", async () => {

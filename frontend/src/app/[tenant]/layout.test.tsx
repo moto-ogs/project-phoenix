@@ -437,15 +437,22 @@ describe("TenantLayout", () => {
       vi.resetModules();
       const other = await import("~/lib/tenant-resolve.server");
       expect(other.TenantResolveStatusError).not.toBe(TenantResolveStatusError);
-      const fetchSpy = vi
-        .spyOn(globalThis, "fetch")
-        .mockResolvedValue(new Response(null, { status }));
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response(null, {
+          status,
+          headers: status === 429 ? { "Retry-After": "7" } : undefined,
+        }),
+      );
 
       const first = resolveTenantCached("school-a", {});
       const second = other.resolveTenantCached("school-a", {});
       await Promise.all([
         expect(first).rejects.toBeInstanceOf(TenantResolveStatusError),
         expect(second).rejects.toBeInstanceOf(other.TenantResolveStatusError),
+        expect(second).rejects.toMatchObject({
+          status,
+          retryAfter: status === 429 ? "7" : null,
+        }),
       ]);
       expect(fetchSpy).toHaveBeenCalledOnce();
     },

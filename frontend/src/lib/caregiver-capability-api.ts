@@ -1,5 +1,6 @@
 import { ApiError } from "./api-error";
 import { bffJson } from "./bff-fetch";
+import { CaregiverCapabilityDetailsSchema } from "./contract/problem-details.generated";
 import type * as sharedContract from "./contract/shared.generated";
 import type * as authAccountsContract from "./contract/auth-accounts.generated";
 
@@ -169,15 +170,18 @@ function mapCapabilityState(
 
 /**
  * A refusal as CaregiverCapabilityApiError: a 409 names the People Directory
- * blockers in its `blockers` extension member, translated for the dialog.
+ * blockers in its registered details, translated for the dialog.
  */
 function capabilityError(error: unknown): never {
   if (!(error instanceof ApiError)) throw error;
-  const raw = error.problem?.blockers;
-  const blockers = Array.isArray(raw)
-    ? raw
-        .filter((blocker): blocker is string => typeof blocker === "string")
-        .map((blocker) => translateCapabilityBlocker(blocker))
+  const parsed =
+    error.code === "provisioning.caregiver_capability_blocked"
+      ? CaregiverCapabilityDetailsSchema.safeParse(error.details)
+      : undefined;
+  const blockers = parsed?.success
+    ? (parsed.data.blockers ?? []).map((blocker) =>
+        translateCapabilityBlocker(blocker),
+      )
     : [];
   const wrapped = new CaregiverCapabilityApiError(
     error.detail ?? error.message,

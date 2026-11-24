@@ -106,20 +106,35 @@ describe("getCachedSession", () => {
   it("clears API and log-shipping backoff with the session context", async () => {
     const { clearSessionCache } = await freshModule();
     const {
+      installRateLimitFetchGuard,
       isClientLogShippingPaused,
       pauseClientLogShipping,
-      rateLimitBlockedError,
-      recordRateLimit,
+      remainingRateLimitMs,
     } = await import("./rate-limit-backoff");
 
-    recordRateLimit("17", "PATCH");
+    const previousFetch = window.fetch;
+    window.fetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response("rate limited", {
+          status: 429,
+          headers: { "Retry-After": "17" },
+        }),
+      );
+    const restore = installRateLimitFetchGuard();
+    try {
+      await fetch("/api/students/1", { method: "PATCH" });
+    } finally {
+      restore();
+      window.fetch = previousFetch;
+    }
     pauseClientLogShipping("17");
-    expect(rateLimitBlockedError("PATCH")).not.toBeNull();
+    expect(remainingRateLimitMs("PATCH")).toBeGreaterThan(0);
     expect(isClientLogShippingPaused()).toBe(true);
 
     clearSessionCache();
 
-    expect(rateLimitBlockedError("PATCH")).toBeNull();
+    expect(remainingRateLimitMs("PATCH")).toBe(0);
     expect(isClientLogShippingPaused()).toBe(false);
   });
 

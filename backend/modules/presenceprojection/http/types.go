@@ -129,7 +129,8 @@ type StudentResponse struct {
 	// feature is off, making "photos disabled" indistinguishable from
 	// "consent withdrawn" — the frontend ended up special-casing this in
 	// buildDraft(...) just to recover the missing signal.
-	PhotoURL            string     `json:"photo_url,omitempty"`
+	PhotoVersion        string     `json:"photo_version,omitempty"`
+	PhotoURL            string     `json:"photo_url,omitempty"` // legacy BFF alias
 	PhotoConsentGiven   *bool      `json:"photo_consent_given,omitempty"`
 	PhotoConsentGivenAt *time.Time `json:"photo_consent_given_at,omitempty"`
 	PhotoConsentGivenBy *ident.ID  `json:"photo_consent_given_by,omitempty"`

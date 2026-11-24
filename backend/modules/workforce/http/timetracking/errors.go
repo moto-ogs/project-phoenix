@@ -132,9 +132,9 @@ func isPlannedStartNotReached(err error) bool {
 func renderPlannedStartNotReached(err error) render.Renderer {
 	var plannedStart *workforce.PlannedStartNotReachedError
 	errors.As(err, &plannedStart)
-	return common.ErrorConflictWithDetails(err, common.CodeIotPlannedStartNotReached, map[string]any{
-		"planned_start_time": plannedStart.PlannedStartTime,
-		"current_time":       plannedStart.CurrentTime,
+	return common.ErrorConflictWithDetails(err, common.CodeIotPlannedStartNotReached, PlannedStartDetails{
+		PlannedStartTime: plannedStart.PlannedStartTime,
+		CurrentTime:      plannedStart.CurrentTime,
 	})
 }
 
@@ -146,12 +146,24 @@ func isDeviationReasonRequired(err error) bool {
 func renderDeviationReasonRequired(err error) render.Renderer {
 	var deviation *workforce.DeviationReasonRequiredError
 	errors.As(err, &deviation)
-	return common.ErrorConflictWithDetails(err, common.CodeIotDeviationReasonRequired, map[string]any{
-		"action":            deviation.Action,
-		"planned_time":      deviation.PlannedTime,
-		"actual_time":       deviation.ActualTime,
-		"deviation_minutes": strconv.Itoa(deviation.DeviationMinutes),
+	return common.ErrorConflictWithDetails(err, common.CodeIotDeviationReasonRequired, DeviationReasonDetails{
+		Action:           deviation.Action,
+		PlannedTime:      deviation.PlannedTime,
+		ActualTime:       deviation.ActualTime,
+		DeviationMinutes: strconv.Itoa(deviation.DeviationMinutes),
 	})
+}
+
+type PlannedStartDetails struct {
+	PlannedStartTime string `json:"planned_start_time"`
+	CurrentTime      string `json:"current_time"`
+}
+
+type DeviationReasonDetails struct {
+	Action           string `json:"action"`
+	PlannedTime      string `json:"planned_time"`
+	ActualTime       string `json:"actual_time"`
+	DeviationMinutes string `json:"deviation_minutes"`
 }
 
 func isAny(targets ...error) func(error) bool {

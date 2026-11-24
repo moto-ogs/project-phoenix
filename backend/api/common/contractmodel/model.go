@@ -25,6 +25,7 @@ const (
 type Schema struct {
 	Kind       string  `json:"kind"`
 	Nullable   bool    `json:"nullable,omitempty"`
+	NoID       bool    `json:"no_id,omitempty"` // the named empty marker of ident.IDOrNone
 	LegacyJSON bool    `json:"legacy_json,omitempty"`
 	Elem       *Schema `json:"elem,omitempty"`
 	// Ref names the object of a KindRef or the enum of a KindEnum.
@@ -59,10 +60,11 @@ type Enum struct {
 
 // QueryParam is one query parameter of a route.
 type QueryParam struct {
-	Name     string   `json:"name"`
-	Kind     string   `json:"kind"`
-	Repeated bool     `json:"repeated,omitempty"`
-	Values   []string `json:"values,omitempty"`
+	Name       string   `json:"name"`
+	Kind       string   `json:"kind"`
+	Repeated   bool     `json:"repeated,omitempty"`
+	Values     []string `json:"values,omitempty"`
+	TextReason string   `json:"text_reason,omitempty"`
 }
 
 // Variants is a response whose shape a query parameter selects.

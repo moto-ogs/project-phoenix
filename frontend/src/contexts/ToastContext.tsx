@@ -815,7 +815,7 @@ function useApiErrorCore(
         ...(presentation.fields.length > 0 && { fields: presentation.fields }),
       });
       const labels = errorDisplayLabels(locale);
-      const notBookedModule = notBookedModuleOf(error);
+      const notBookedModule = await notBookedModuleOf(error);
       if (notBookedModule) {
         announceModuleBookingStale();
         setFieldErrors({});

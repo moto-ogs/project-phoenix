@@ -12,8 +12,14 @@ const declarations = new Map([
 
 function castsOfErrorBodies(program, files, sources = declarations) {
   const checker = program.getTypeChecker();
-  function originatesFromErrorBody(node, seen) {
-    if (!node || seen.has(node)) return false;
+  const envelopeFields = new Set(["type", "title", "status", "detail", "instance", "code", "errors", "details"]);
+  function memberName(node) {
+    if (ts.isPropertyAccessExpression(node)) return node.name.text;
+    const key = checker.getTypeAtLocation(node.argumentExpression);
+    return key.isStringLiteral() ? key.value : undefined;
+  }
+  function origin(node, seen = new Set()) {
+    if (!node || seen.has(node)) return undefined;
     seen.add(node);
     if (
       ts.isAsExpression(node) ||
@@ -22,53 +28,82 @@ function castsOfErrorBodies(program, files, sources = declarations) {
       ts.isNonNullExpression(node) ||
       ts.isAwaitExpression(node)
     ) {
-      return originatesFromErrorBody(node.expression, seen);
+      return origin(node.expression, seen);
     }
     if (ts.isBinaryExpression(node)) {
       return (
-        originatesFromErrorBody(node.left, seen) ||
-        originatesFromErrorBody(node.right, seen)
+        origin(node.left, seen) ?? origin(node.right, seen)
       );
     }
     if (ts.isConditionalExpression(node)) {
       return (
-        originatesFromErrorBody(node.whenTrue, seen) ||
-        originatesFromErrorBody(node.whenFalse, seen)
+        origin(node.whenTrue, seen) ?? origin(node.whenFalse, seen)
       );
     }
     if (ts.isCallExpression(node)) {
-      return originatesFromErrorBody(node.expression, seen);
+      return origin(node.expression, seen);
     }
     if (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)) {
-      const name = ts.isPropertyAccessExpression(node) ? node.name : node.argumentExpression;
-      const symbol = checker.getSymbolAtLocation(name);
-      if (symbol?.declarations?.some((decl) =>
+      const name = memberName(node);
+      const symbol = name && checker.getTypeAtLocation(node.expression).getProperty(name);
+      if (symbol && symbol.declarations?.some((decl) =>
         (ts.isPropertyDeclaration(decl) || ts.isMethodDeclaration(decl)) &&
         sources.get(decl.getSourceFile().fileName)?.has(symbol.name),
-      )) return true;
-      return originatesFromErrorBody(node.expression, seen);
+      )) return name === "details" ? "details" : "envelope";
+      const source = origin(node.expression, seen);
+      if (source === "envelope" && name === "details") return "details";
+      return source === "envelope" && envelopeFields.has(name) ? undefined : source;
     }
-    if (!ts.isIdentifier(node)) return false;
+    if (!ts.isIdentifier(node)) return undefined;
     const symbol = checker.getSymbolAtLocation(node);
-    return !!symbol?.declarations?.some((decl) => {
+    for (const decl of symbol?.declarations ?? []) {
       if (ts.isVariableDeclaration(decl)) {
-        return originatesFromErrorBody(decl.initializer, seen);
+        return origin(decl.initializer, seen);
       }
       if (ts.isBindingElement(decl)) {
         const owner = decl.parent.parent;
-        return ts.isVariableDeclaration(owner) &&
-          originatesFromErrorBody(owner.initializer, seen);
+        if (!ts.isVariableDeclaration(owner)) continue;
+        const type = checker.getTypeAtLocation(owner.initializer ?? owner);
+        const key = decl.propertyName ?? decl.name;
+        if (ts.isIdentifier(key) || ts.isStringLiteral(key)) {
+          const property = type.getProperty(key.text);
+          if (property?.declarations?.some((member) =>
+            sources.get(member.getSourceFile().fileName)?.has(property.name),
+          )) return key.text === "details" ? "details" : "envelope";
+          const source = origin(owner.initializer, seen);
+          if (source === "envelope" && key.text === "details") return "details";
+          return source === "envelope" && envelopeFields.has(key.text) ? undefined : source;
+        }
       }
-      return false;
-    });
+    }
+    return undefined;
+  }
+
+  function bindingReadsPayload(node) {
+    if (!ts.isBindingElement(node)) return false;
+    const owner = node.parent.parent;
+    if (!ts.isVariableDeclaration(owner)) return false;
+    const source = origin(owner.initializer);
+    if (source === "details") return true;
+    if (source !== "envelope") return false;
+    const key = node.propertyName ?? node.name;
+    return node.dotDotDotToken ||
+      (!ts.isIdentifier(key) && !ts.isStringLiteral(key)) ||
+      !envelopeFields.has(key.text);
   }
 
   const findings = [];
   for (const file of files) {
     function visit(node) {
+      const access = ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node);
+      const input = access ? origin(node.expression) : undefined;
       if (
         (ts.isAsExpression(node) || ts.isTypeAssertionExpression(node)) &&
-        originatesFromErrorBody(node.expression, new Set())
+        origin(node.expression) ||
+        input === "details" ||
+        (input === "envelope" && !envelopeFields.has(memberName(node))) ||
+        bindingReadsPayload(node) ||
+        (ts.isSpreadAssignment(node) && origin(node.expression) === "details")
       ) {
         const { line } = file.getLineAndCharacterOfPosition(node.getStart());
         findings.push(`${file.fileName}:${line + 1}`);
@@ -80,25 +115,33 @@ function castsOfErrorBodies(program, files, sources = declarations) {
   return findings;
 }
 
-test("detects an aliased, indexed error body but not another object's details", () => {
+test("rejects casts and members of aliased error payloads, not local values", () => {
   const fileName = join(tmpdir(), "phoenix-error-body-cast-probe.ts");
   const options = { noLib: true };
   const host = ts.createCompilerHost(options);
   host.getSourceFile = (name) => name === fileName
     ? ts.createSourceFile(name, [
-        "class ApiError { declare details: unknown; }",
+        "class ApiError { declare details: unknown; declare problem: unknown; }",
         "const e = new ApiError();",
         "const raw = e['details'];",
         "const copy = raw;",
         "const invalid = copy as { changed: boolean };",
         "const local = { details: 4 };",
         "const valid = local.details as number;",
+        "const { details: payload } = e;",
+        "const key = 'matches';",
+        "const invalidRead = payload[key];",
+        "const envelope = e.problem;",
+        "const misplaced = envelope.blockers;",
+        "const { warnings } = envelope;",
+        "const { matches: list } = copy;",
+        "const copiedMembers = { ...copy };",
       ].join("\n"), ts.ScriptTarget.Latest, true)
     : undefined;
   const program = ts.createProgram([fileName], options, host);
   assert.deepEqual(
-    castsOfErrorBodies(program, program.getSourceFiles(), new Map([[fileName, new Set(["details"])]])),
-    [`${fileName}:5`],
+    castsOfErrorBodies(program, program.getSourceFiles(), new Map([[fileName, new Set(["details", "problem"])]])),
+    [5, 10, 12, 13, 14, 15].map((line) => `${fileName}:${line}`),
   );
 });
 

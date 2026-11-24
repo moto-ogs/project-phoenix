@@ -536,9 +536,7 @@ func companionConflictRenderer(err error) render.Renderer {
 			Weekdays:  conflict.Weekdays,
 		})
 	}
-	return common.ErrorConflictWithDetails(conflictErr, common.CodeStudentsCompanionPlanConflict, map[string]any{
-		"conflicts": details.Conflicts,
-	})
+	return common.ErrorConflictWithDetails(conflictErr, common.CodeStudentsCompanionPlanConflict, details)
 }
 
 // updateStudentTxErrorRenderer maps the applyStudentUpdate transaction error to

@@ -18,9 +18,9 @@ func renderHolidayWeekWithoutCare(w http.ResponseWriter, r *http.Request, err er
 	if !errors.As(err, &refusal) {
 		return false
 	}
-	common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeEnrollmentHolidayWeekNoCareDay, map[string]any{
-		"week": refusal.Week, "week_id": ident.ID(refusal.WeekID), "date": refusal.Day.Date.Format("02.01.2006"),
-		"iso_date": refusal.Day.Date.String(), "kind": refusal.Day.Kind, "name": refusal.Day.Name,
+	common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeEnrollmentHolidayWeekNoCareDay, common.HolidayWeekNoCareDetails{
+		Week: refusal.Week, WeekID: ident.ID(refusal.WeekID), Date: refusal.Day.Date.Format("02.01.2006"),
+		ISODate: refusal.Day.Date, Kind: refusal.Day.Kind, Name: refusal.Day.Name,
 	}))
 	return true
 }

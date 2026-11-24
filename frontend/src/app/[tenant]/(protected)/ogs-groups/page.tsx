@@ -3,6 +3,7 @@
 import type * as studentsContract from "~/lib/contract/students.generated";
 import { knownEnum } from "~/lib/contract/known-enum";
 import { DAY_PLANNING_STATUS_VALUES } from "~/lib/student-wire";
+import { studentPhotoHref } from "~/lib/student-photo-href";
 import { groupKeys } from "~/lib/swr/groups-keys";
 import { tenantListKeys } from "~/lib/swr/tenant-list-keys";
 
@@ -287,9 +288,9 @@ function mapStudentForOgsPage(student: studentsContract.Student): Student {
     class_handover: student.class_handover,
     actual_arrival_time: student.actual_arrival_time,
     actual_pickup_time: student.actual_pickup_time,
-    // Photo URL is forwarded as-is. Backend has already rewritten it
-    // to the authenticated /api/students/{id}/photo/{filename} proxy.
-    photo_url: student.photo_url,
+    photo_url: student.photo_version
+      ? studentPhotoHref(student.id, student.photo_version)
+      : undefined,
   };
 }
 

@@ -1,4 +1,6 @@
 import { ApiError } from "~/lib/api-error";
+import { PossiblyEnrolledDetailsSchema } from "~/lib/contract/problem-details.generated";
+import { candidateFromContract } from "~/lib/enrollment-admin-api";
 import type {
   AdminCandidatePhaseRequest,
   AdminExistingChildCandidate,
@@ -243,16 +245,6 @@ export function existingChildChoiceOf(
     : { existingStudentId: value };
 }
 
-function isCandidate(value: unknown): value is AdminExistingChildCandidate {
-  if (!value || typeof value !== "object") return false;
-  const candidate = value as Record<string, unknown>;
-  return (
-    typeof candidate.student_id === "string" &&
-    typeof candidate.first_name === "string" &&
-    typeof candidate.last_name === "string"
-  );
-}
-
 /**
  * The enrolled children a refused approval names (#6148), or null when the
  * error is no such refusal or carries no usable candidate.
@@ -266,11 +258,10 @@ export function possiblyEnrolledCandidates(
   ) {
     return null;
   }
-  const raw = error.details?.candidates;
-  if (!Array.isArray(raw) || raw.length === 0 || !raw.every(isCandidate)) {
-    return null;
-  }
-  return raw;
+  const parsed = PossiblyEnrolledDetailsSchema.safeParse(error.details);
+  return parsed.success && parsed.data.candidates?.length
+    ? parsed.data.candidates.map(candidateFromContract)
+    : null;
 }
 
 /** How often one approval asks the office before it gives up. */

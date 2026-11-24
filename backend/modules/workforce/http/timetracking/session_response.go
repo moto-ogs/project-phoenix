@@ -49,8 +49,7 @@ func sessionResponse(session *workforce.WorkSession) *SessionResponse {
 }
 
 // HistorySessionResponse is a block of the history with what was computed
-// from it. It names the wire form workforce.SessionResponse writes;
-// BreakMinutes is the computed value there, not the block's cached one.
+// from it. BreakMinutes is the computed value, not the block's cached one.
 type HistorySessionResponse struct {
 	ID               ident.ID                      `json:"id"`
 	TenantID         ident.ID                      `json:"tenant_id"`

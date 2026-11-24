@@ -347,7 +347,12 @@ export default function StudentImportPage() {
           setBatchNotice(
             importBatchFailureMessage(
               interrupted,
-              childQuotaMessage(readImportBatchRejection(result)),
+              childQuotaMessage(
+                readImportBatchRejection(
+                  result,
+                  partialResults["POST /api/import/students/import"],
+                ),
+              ),
             ),
           );
           logger.error("student_import_batch_failed", {

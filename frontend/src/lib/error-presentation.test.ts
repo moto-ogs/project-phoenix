@@ -1,15 +1,28 @@
 import { describe, expect, it } from "vitest";
-import { ApiError } from "./api-error";
+import { ApiError, apiErrorFromResponse } from "./api-error";
 import { errorCodeMessage, presentError } from "./error-presentation";
+
+function fromWire(
+  status: number,
+  code: string,
+  details: Record<string, unknown>,
+  message = "backend diagnostic",
+) {
+  return apiErrorFromResponse(
+    Response.json({ code, details }, { status }),
+    message,
+  );
+}
 
 describe("presentError", () => {
   it.each(["de", "en", "pl", "ru", "sq", "tr", "uk"] as const)(
     "formats the public holiday day limit without booking totals in %s",
-    (locale) => {
-      const error = new ApiError("internal day limit diagnostic", 400, {
-        code: "enrollment.holiday_child_day_limit_public",
-        details: { limit: 3, child: 1 },
-      });
+    async (locale) => {
+      const error = await fromWire(
+        400,
+        "enrollment.holiday_child_day_limit_public",
+        { limit: 3, child: 1 },
+      );
       const result = presentError(error, "die Anmeldung", locale);
       expect(result.message).toContain("3");
       expect(result.message).not.toMatch(/[{}#]|plural|diagnostic/);
@@ -19,12 +32,18 @@ describe("presentError", () => {
 
   it.each(["de", "en", "pl", "ru", "sq", "tr", "uk"] as const)(
     "formats the holiday day limit and other registrations in %s",
-    (locale) => {
+    async (locale) => {
       for (const elsewhere of [0, 1, 3]) {
-        const error = new ApiError("internal day limit diagnostic", 409, {
-          code: "enrollment.holiday_child_day_limit",
-          details: { limit: 5, days: 8, elsewhere, child: "child-17" },
-        });
+        const error = await fromWire(
+          409,
+          "enrollment.holiday_child_day_limit",
+          {
+            limit: 5,
+            days: 8,
+            elsewhere,
+            child: 17,
+          },
+        );
         const result = presentError(error, "die Anmeldung", locale);
         expect(result.message).toContain("5");
         expect(result.message).toContain("8");
@@ -70,11 +89,13 @@ describe("presentError", () => {
 
   it.each(["de", "en", "pl", "ru", "sq", "tr", "uk"] as const)(
     "names the rejected upload in %s without exposing backend diagnostics",
-    (locale) => {
-      const error = new ApiError("unsupported magic bytes", 400, {
-        code: "enrollment.upload_content_mismatch",
-        details: { filename: "Bescheid.pdf" },
-      });
+    async (locale) => {
+      const error = await fromWire(
+        400,
+        "enrollment.upload_content_mismatch",
+        { filename: "Bescheid.pdf" },
+        "unsupported magic bytes",
+      );
       const result = presentError(error, "Nachweis", locale);
       expect(result.kind).toBe("api");
       expect(result.message).toContain("Bescheid.pdf");
@@ -97,41 +118,41 @@ describe("presentError", () => {
     expect(result.requestId).toBeUndefined();
   });
 
-  it("explains a disguised proof and the next step in plain German", () => {
-    const error = new ApiError("unsupported magic bytes", 400, {
-      code: "enrollment.upload_content_mismatch",
-      details: { filename: "Bescheid.pdf" },
-    });
+  it("explains a disguised proof and the next step in plain German", async () => {
+    const error = await fromWire(
+      400,
+      "enrollment.upload_content_mismatch",
+      { filename: "Bescheid.pdf" },
+      "unsupported magic bytes",
+    );
     expect(presentError(error, "Nachweis").message).toBe(
       "Der Inhalt von „Bescheid.pdf“ passt nicht zur Dateiart. Bitte wähle eine andere Datei. Umbenennen reicht nicht.",
     );
   });
 
-  it("uses structured details, never the backend sentence", () => {
-    const error = new ApiError("This is a backend diagnostic", 409, {
-      code: "iot.room_capacity_exceeded",
-      details: { room_name: "Sonnenraum" },
-      instance: "req-17",
+  it("uses structured details, never the backend sentence", async () => {
+    const error = await fromWire(409, "presence.room_capacity_exceeded", {
+      room_id: "12",
+      room_name: "Sonnenraum",
+      current_occupancy: 30,
+      max_capacity: 30,
+      incoming_students: 1,
     });
     const result = presentError(error, "Der Raum");
     expect(result.kind).toBe("api");
-    expect(result.message).toBe(
-      "Im Raum Sonnenraum ist kein Platz mehr. Bitte wähle einen anderen Raum.",
-    );
+    expect(result.message).toContain("Der Raum Sonnenraum: 30 von 30 Plätzen");
     expect(result.message).not.toContain(error.message);
     expect(result.requestId).toBeUndefined();
     expect(result.retryable).toBe(false);
   });
 
-  it("explains the remaining capacity for a partial bulk admission", () => {
-    const error = new ApiError("capacity", 409, {
-      code: "presence.room_capacity_exceeded",
-      details: {
-        room_name: "Turnhalle",
-        current_occupancy: 29,
-        max_capacity: 30,
-        incoming_students: 2,
-      },
+  it("explains the remaining capacity for a partial bulk admission", async () => {
+    const error = await fromWire(409, "presence.room_capacity_exceeded", {
+      room_id: "9007199254740993",
+      room_name: "Turnhalle",
+      current_occupancy: 29,
+      max_capacity: 30,
+      incoming_students: 2,
     });
 
     expect(presentError(error, "die Anwesenheit").message).toBe(

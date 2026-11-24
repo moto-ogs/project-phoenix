@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -169,14 +168,14 @@ func toThreadSummary(t *parentService.InboxThread) ThreadSummaryResponse {
 	}
 }
 
-// ThreadViewResponse is the full conversation for one child. thread_id is empty
-// when no conversation exists yet (created on the first message).
+// ThreadViewResponse is the full conversation for one child. NoID means the
+// first message has not created a conversation yet.
 type ThreadViewResponse struct {
-	ThreadID        string   `json:"thread_id" contract_text:"empty string before the first message"`
-	StudentID       ident.ID `json:"student_id"`
-	StudentName     string   `json:"student_name"`
-	SchoolName      string   `json:"school_name"`
-	CounterpartName string   `json:"counterpart_name"`
+	ThreadID        ident.IDOrNone `json:"thread_id"`
+	StudentID       ident.ID       `json:"student_id"`
+	StudentName     string         `json:"student_name"`
+	SchoolName      string         `json:"school_name"`
+	CounterpartName string         `json:"counterpart_name"`
 	// Audience, Readers and LeadershipOption describe the conversation and
 	// the compose choice (#5200). They are filled also while no conversation
 	// exists yet (thread_id empty), as the preview of who would read it.
@@ -193,7 +192,7 @@ type PostMessageRequest struct {
 	// AttachmentIDs names the uploads the message carries (#6685).
 	AttachmentIDs []ident.ID `json:"attachment_ids,omitempty"`
 	// GroupThreadID names the group thread this message answers (#4784).
-	GroupThreadID string `json:"group_thread_id,omitempty" contract_text:"empty string means send without a group thread"`
+	GroupThreadID ident.IDOrNone `json:"group_thread_id,omitzero"`
 	// Audience is "team" (default) or "leadership" (#5200). An answer to a
 	// group thread always goes to the team.
 	Audience string `json:"audience,omitempty"`
@@ -270,13 +269,9 @@ func toMessageResponses(messages []*parentService.ParentMessage, counterpart str
 
 func toThreadView(v *parentService.MessageThreadView, viewer ...int64) ThreadViewResponse {
 	counterpart := ogsLabel(v.SchoolName)
-	threadID := ""
-	if v.ThreadID > 0 {
-		threadID = strconv.FormatInt(v.ThreadID, 10)
-	}
 	audience := threadAudience(v.Audience)
 	return ThreadViewResponse{
-		ThreadID:        threadID,
+		ThreadID:        ident.Optional(v.ThreadID),
 		StudentID:       ident.ID(v.StudentID),
 		StudentName:     v.StudentName,
 		SchoolName:      v.SchoolName,
@@ -405,7 +400,7 @@ func (rs *Resource) postChildMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if len(req.ClientMessageID) > 128 {
-		common.RenderError(w, r, common.ErrorInvalidRequestMessageWithCodeAndDetails("client_message_id exceeds 128 bytes", common.CodeGeneralInput, map[string]any{"max_bytes": 128}))
+		common.RenderError(w, r, common.ErrorInvalidRequestMessageWithCodeAndDetails("client_message_id exceeds 128 bytes", common.CodeGeneralInput, common.InputLimitDetails{MaxBytes: 128}))
 		return
 	}
 

@@ -115,11 +115,11 @@ func TestProvisioningErrorRendererHidesInvalidDataText(t *testing.T) {
 func TestCaregiverCapabilityRendererAnswersWithCodes(t *testing.T) {
 	t.Parallel()
 
-	blocked, ok := caregiverCapabilityProvisioningErrorRenderer(fakeCaregiverBlockedError{blockers: []string{"group_assignments"}}).(*common.CaregiverCapabilityBlockedResponse)
+	blocked, ok := caregiverCapabilityProvisioningErrorRenderer(fakeCaregiverBlockedError{blockers: []string{"group_assignments"}}).(*common.ErrResponse)
 	require.True(t, ok)
 	assert.Equal(t, http.StatusConflict, blocked.HTTPStatusCode)
 	assert.Equal(t, common.CodeProvisioningCaregiverCapabilityBlocked, blocked.Code)
-	assert.Equal(t, []string{"group_assignments"}, blocked.Blockers)
+	assert.Equal(t, []string{"group_assignments"}, blocked.Details.(common.CaregiverCapabilityDetails).Blockers)
 
 	missing, ok := caregiverCapabilityProvisioningErrorRenderer(organizationtenancy.ErrAccountNotFound).(*common.ErrResponse)
 	require.True(t, ok)

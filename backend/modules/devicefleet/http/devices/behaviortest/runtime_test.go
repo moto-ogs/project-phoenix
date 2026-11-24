@@ -64,7 +64,7 @@ func testRuntime(fleet devicefleet.Capability) devices.Runtime {
 				"errors": []map[string]string{{"field": field, "reason": err.Error()}},
 			})
 		},
-		ConflictWithDetails: func(w http.ResponseWriter, r *http.Request, err error, code string, details map[string]any) {
+		ConflictWithDetails: func(w http.ResponseWriter, r *http.Request, err error, code string, details any) {
 			wire := make(map[string]string, len(details))
 			for key, value := range details {
 				wire[key] = fmt.Sprint(value)

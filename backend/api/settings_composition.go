@@ -18,6 +18,7 @@ import (
 	enrollmentAPI "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
 	settingsModule "github.com/moto-ogs/project-phoenix/modules/settings"
 	settingsHTTP "github.com/moto-ogs/project-phoenix/modules/settings/http"
+	settingsOperatorAPI "github.com/moto-ogs/project-phoenix/modules/settings/inbound/operator"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 )
 
@@ -111,8 +112,8 @@ func settingsInputError(err error) render.Renderer {
 	}
 	if window.VisibleWritten() {
 		return apiCommon.ErrorInvalidRequestWithDetails(err, apiCommon.CodeSettingsAttendanceVisibleExceedsRetention,
-			map[string]any{"retention_days": window.RetentionDays})
+			settingsOperatorAPI.RetentionDaysDetails{RetentionDays: window.RetentionDays})
 	}
 	return apiCommon.ErrorInvalidRequestWithDetails(err, apiCommon.CodeSettingsAttendanceRetentionBelowVisible,
-		map[string]any{"visible_days": window.VisibleDays})
+		settingsOperatorAPI.VisibleDaysDetails{VisibleDays: window.VisibleDays})
 }

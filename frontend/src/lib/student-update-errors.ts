@@ -11,21 +11,11 @@ import {
   problemDetail,
 } from "./api-error";
 import { knownEnum } from "./contract/known-enum";
-import { problemDetails } from "./contract/problem-details.generated";
+import { CompanionConflictDetailsSchema } from "./contract/problem-details.generated";
 import {
   ALL_COMPANION_WEEKDAYS,
   type CompanionExtensionConfirmation,
 } from "./student-companion-api";
-
-/** The error body: parsed already (ApiError.problem) or its JSON text. */
-function parsedBody(body: unknown): unknown {
-  if (typeof body !== "string") return body;
-  try {
-    return JSON.parse(body);
-  } catch {
-    return undefined;
-  }
-}
 
 /**
  * The conflict list of a 409 body in the confirmation shape. Anything
@@ -39,9 +29,7 @@ function conflictExtensions(body: unknown): CompanionExtensionConfirmation[] {
   ) {
     return [];
   }
-  const parsed = problemDetails["students.companion_plan_conflict"].safeParse(
-    body.details,
-  );
+  const parsed = CompanionConflictDetailsSchema.safeParse(body.details);
   if (!parsed.success) return [];
   const confirmations: CompanionExtensionConfirmation[] = [];
   for (const conflict of parsed.data.conflicts ?? []) {
@@ -72,12 +60,11 @@ export class CompanionPlanConflictError extends ApiError {
   readonly conflicts: CompanionExtensionConfirmation[];
 
   constructor(body: unknown) {
-    const parsed = parsedBody(body);
-    super(problemDetail(parsed)?.trim() ?? "companion plan conflict", 409);
-    // Keeps code and details, including the half-saved consent marker.
-    enrichApiError(this, parsed, 409);
+    super(problemDetail(body)?.trim() ?? "companion plan conflict", 409);
+    // Keep the original error's code and details.
+    enrichApiError(this, body, 409);
     this.name = "CompanionPlanConflictError";
-    this.conflicts = conflictExtensions(parsed);
+    this.conflicts = conflictExtensions(body);
   }
 }
 
@@ -89,7 +76,7 @@ export class CompanionPlanConflictError extends ApiError {
  * confirmation the user cannot answer.
  */
 export function isCompanionPlanConflictResponse(body: unknown): boolean {
-  return conflictExtensions(parsedBody(body)).length > 0;
+  return conflictExtensions(body).length > 0;
 }
 
 /**
@@ -116,8 +103,13 @@ export function isCompanionDepartureRefusal(err: unknown): boolean {
   );
 }
 
-/** The detail key of a student PUT that failed after its consent write. */
-export const PRIVACY_CONSENT_SAVED_DETAIL = "privacy_consent_saved";
+const consentSavedBeforeRefusal = new WeakSet<ApiError>();
+
+/** Marks browser-local write progress without changing the Go refusal. */
+export function markPrivacyConsentSaved(error: unknown): unknown {
+  if (error instanceof ApiError) consentSavedBeforeRefusal.add(error);
+  return error;
+}
 
 /**
  * The student PUT writes the privacy consent first, against another backend
@@ -126,8 +118,5 @@ export const PRIVACY_CONSENT_SAVED_DETAIL = "privacy_consent_saved";
  * which half landed instead of inviting the user to abandon the retry.
  */
 export function isPrivacyConsentSaved(err: unknown): boolean {
-  return (
-    err instanceof ApiError &&
-    err.details?.[PRIVACY_CONSENT_SAVED_DETAIL] === true
-  );
+  return err instanceof ApiError && consentSavedBeforeRefusal.has(err);
 }

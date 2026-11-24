@@ -11,7 +11,7 @@ import {
   TENANT_RESOLVE_AFFECTING_KEYS,
 } from "~/lib/settings-keys";
 import { bffError } from "~/lib/api-response-error.server";
-import { contractGet, contractWrite } from "~/lib/contract/client.server";
+import { contractWrite } from "~/lib/contract/client.server";
 import { routes } from "~/lib/contract/operator-schools.generated";
 import type * as sharedContract from "~/lib/contract/shared.generated";
 
@@ -19,42 +19,15 @@ const logger = createLogger({
   component: "OperatorSchoolSettingsValuesRoute",
 });
 
-async function resolveSchoolSubdomain(
-  schoolId: string,
-  token: string,
-): Promise<string | null> {
-  try {
-    // No dedicated single-school endpoint exists; the summaries list is the
-    // cheapest server-side path that returns the subdomain for an operator. List
-    // size is bounded (one entry per school in the platform) so a single
-    // server-to-server call per write is acceptable for an admin action.
-    // Identifiers arrive as strings (ADR 0300).
-    const result = await contractGet(
-      routes["GET /operator/schools/summaries"],
-      { token },
-    );
-    if (!result.ok) throw result.error.cause;
-    const match = result.value.data.find((school) => school.id === schoolId);
-    return match?.subdomain ?? null;
-  } catch (error) {
-    logger.warn("school_subdomain_lookup_failed", {
-      school_id: schoolId,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return null;
-  }
-}
-
-async function revalidateTenantIfNeeded(
+function revalidateTenantIfNeeded(
   schoolId: string,
   key: string,
-  token: string,
-): Promise<void> {
+  subdomain: string | undefined,
+): void {
   if (!TENANT_RESOLVE_AFFECTING_KEYS.has(key)) return;
 
-  const subdomain = await resolveSchoolSubdomain(schoolId, token);
+  purgeTenantSettingsCache(subdomain || undefined);
   if (!subdomain) {
-    purgeTenantSettingsCache();
     logger.warn("tenant_revalidate_all_no_subdomain", {
       school_id: schoolId,
       key,
@@ -62,7 +35,6 @@ async function revalidateTenantIfNeeded(
     return;
   }
 
-  purgeTenantSettingsCache(subdomain);
   logger.info("tenant_cache_revalidated", { subdomain, key });
 }
 
@@ -88,7 +60,13 @@ export const PUT = createOperatorPutHandler(
       },
     );
     // Go may have applied the change even if the reply cannot be read.
-    if (result.backend?.ok) await revalidateTenantIfNeeded(id, key, token);
+    if (result.backend?.ok) {
+      revalidateTenantIfNeeded(
+        id,
+        key,
+        result.ok ? result.value.data.school_slug : undefined,
+      );
+    }
     if (!result.ok) throw result.error.cause;
     return result.value.data;
   },
@@ -114,7 +92,13 @@ export const DELETE = createOperatorDeleteHandler(
         request,
       },
     );
-    if (result.backend?.ok) await revalidateTenantIfNeeded(id, key, token);
+    if (result.backend?.ok) {
+      revalidateTenantIfNeeded(
+        id,
+        key,
+        result.ok ? result.value.data.school_slug : undefined,
+      );
+    }
     if (!result.ok) throw result.error.cause;
     return result.value.data;
   },

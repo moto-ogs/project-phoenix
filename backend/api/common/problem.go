@@ -91,7 +91,6 @@ func problemResponseHandler(next http.Handler, logger func() *slog.Logger) http.
 		body := readProblemBody(capture, w.Header().Get("Content-Type"))
 		repaired := wroteBody && departsFromEnvelope(body, capture.status)
 		addProblemFields(body, capture.status, middleware.GetReqID(r.Context()))
-		repairProblemIdentifiers(r, body, logger)
 		if repaired {
 			// A handler wrote its own error body. The answer is repaired, but
 			// that is a regression of the one error path (#2520): it is logged

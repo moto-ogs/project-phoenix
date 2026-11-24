@@ -327,6 +327,10 @@ func schoolRoleResponse(role identityaccess.TraegerSchoolRole) SchoolRoleRespons
 	return response
 }
 
+type SchoolRoleNameDetails struct {
+	Schools string `json:"schools"`
+}
+
 // renderSchoolRoleError maps the refusals of the Träger roles onto their
 // registered codes.
 func renderSchoolRoleError(err error) render.Renderer {
@@ -340,11 +344,11 @@ func renderSchoolRoleError(err error) render.Renderer {
 		return &common.ErrResponse{
 			Err: used, HTTPStatusCode: http.StatusConflict, Detail: used.Error(), Code: common.CodeTraegerSchoolRoleNameUsedAtSchool,
 			Errors:  []common.FieldError{{Field: "name", Reason: used.Error()}},
-			Details: map[string]any{"schools": strings.Join(used.Schools, ", ")},
+			Details: SchoolRoleNameDetails{Schools: strings.Join(used.Schools, ", ")},
 		}
 	}
 	if reserved, ok := errors.AsType[*identityaccess.ReservedPermissionError](err); ok {
-		return common.ErrorInvalidRequestWithDetails(reserved, common.CodeIdentityRolePlatformPermission, map[string]any{"permission": reserved.Permission})
+		return common.ErrorInvalidRequestWithDetails(reserved, common.CodeIdentityRolePlatformPermission, common.PermissionDetails{Permission: reserved.Permission})
 	}
 	return schoolRoleErrors(err)
 }

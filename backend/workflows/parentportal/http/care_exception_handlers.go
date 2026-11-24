@@ -68,7 +68,7 @@ type SubmitCareExceptionRequest struct {
 	// PickupPersonGuardianProfileID names a contact person who collects the
 	// child that day; Signature is needed for a collector or walking home
 	// alone (#4780).
-	PickupPersonGuardianProfileID *string                      `json:"pickup_person_guardian_profile_id" contract_text:"empty string explicitly clears the collector; null leaves it unspecified"`
+	PickupPersonGuardianProfileID *ident.IDOrNone              `json:"pickup_person_guardian_profile_id"`
 	Signature                     *declarationSignatureRequest `json:"signature,omitempty"`
 }
 

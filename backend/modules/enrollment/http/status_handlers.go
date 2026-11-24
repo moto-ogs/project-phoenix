@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"net/url"
-	"strconv"
 	"strings"
 	"time"
 
@@ -164,12 +162,9 @@ type EditDraftOfferingDayResponse struct {
 
 // getStatusSignatureProof answers GET /requests/{statusToken}/signature-proof:
 // the proof of the parent's signature on a path of its own, which the
-// frontend's catalog proxy serves as a public file (#2352). It is the status
-// read with ?format=pdf, so token resolution and its transaction stay one.
+// frontend's catalog proxy serves as a public file (#2352).
 func (rs *Resource) getStatusSignatureProof(w http.ResponseWriter, r *http.Request) {
-	proof := r.Clone(r.Context())
-	proof.URL.RawQuery = url.Values{"format": {"pdf"}}.Encode()
-	rs.getStatus(w, proof)
+	rs.readStatus(w, r, true)
 }
 
 // getStatus returns the per-child status for a token-bearing parent.
@@ -177,6 +172,10 @@ func (rs *Resource) getStatusSignatureProof(w http.ResponseWriter, r *http.Reque
 // With ?format=pdf it answers the proof of the parent's signature (#4786)
 // instead, for the request the same token names.
 func (rs *Resource) getStatus(w http.ResponseWriter, r *http.Request) {
+	rs.readStatus(w, r, wantsStatusProofPDF(r))
+}
+
+func (rs *Resource) readStatus(w http.ResponseWriter, r *http.Request, proof bool) {
 	if rs.RequestService == nil {
 		common.RenderError(w, r, common.ErrorInternalServer(errors.New("enrollment request service not configured")))
 		return
@@ -193,7 +192,7 @@ func (rs *Resource) getStatus(w http.ResponseWriter, r *http.Request) {
 		statusErr   error
 	)
 	err := withinAdmin(r.Context(), func(adminCtx context.Context) error {
-		view, invalidLink, statusErr = rs.loadPublicStatusView(adminCtx, token, wantsStatusProofPDF(r))
+		view, invalidLink, statusErr = rs.loadPublicStatusView(adminCtx, token, proof)
 		return statusErr
 	})
 	if err != nil {
@@ -204,7 +203,7 @@ func (rs *Resource) getStatus(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInternalServerWrap("failed to load enrollment status", err))
 		return
 	}
-	if wantsStatusProofPDF(r) {
+	if proof {
 		rs.writeStatusSignatureProof(w, r, view)
 		return
 	}
@@ -642,7 +641,7 @@ func mapEditError(w http.ResponseWriter, r *http.Request, err error) {
 // WithdrawRequest is the wire shape for POST /requests/{token}/withdraw.
 // Optional child_id; omit to withdraw every non-terminal child.
 type WithdrawRequest struct {
-	ChildID *string `json:"child_id,omitempty" contract_text:"empty string or omission withdraws the whole request"`
+	ChildID *ident.IDOrNone `json:"child_id,omitempty"`
 }
 
 func (req *WithdrawRequest) Bind(_ *http.Request) error { return nil }
@@ -668,13 +667,12 @@ func (rs *Resource) withdrawStatus(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	var childID int64
-	if body.ChildID != nil && *body.ChildID != "" {
-		v, err := strconv.ParseInt(*body.ChildID, 10, 64)
-		if err != nil || v <= 0 {
+	if body.ChildID != nil && !body.ChildID.IsZero() {
+		childID = body.ChildID.Int64()
+		if childID <= 0 {
 			common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid child_id")))
 			return
 		}
-		childID = v
 	}
 
 	err := rs.RequestService.Withdraw(r.Context(), token, childID)

@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/modules/communication"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
@@ -214,7 +216,7 @@ func TestReadersWireContract(t *testing.T) {
 			School:   communication.ParentMessageSchoolReaders{Kind: communication.ParentMessageReadersLeadership, Names: []string{"Swantje M.", ""}},
 		},
 	})
-	body, err := json.Marshal(struct {
+	body, err := wire.Marshal(struct {
 		Audience string          `json:"audience"`
 		Readers  ReadersResponse `json:"readers"`
 	}{detail.Audience, detail.Readers})
@@ -223,7 +225,7 @@ func TestReadersWireContract(t *testing.T) {
 		"guardian":{"account_id":"9","name":"Sabine Schneider","relationship_type":"parent"},
 		"school":{"kind":"leadership","names":["Swantje M."],"unnamed_count":1}}}`, string(body))
 
-	team, err := json.Marshal(toReadersResponse(communication.ParentMessageReaders{
+	team, err := wire.Marshal(toReadersResponse(communication.ParentMessageReaders{
 		School: communication.ParentMessageSchoolReaders{Kind: communication.ParentMessageReadersAllStaff},
 	}))
 	require.NoError(t, err)

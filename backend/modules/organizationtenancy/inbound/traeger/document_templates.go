@@ -178,7 +178,7 @@ func renderTemplateError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.As(err, &unknown):
 		common.RenderError(w, r, common.ErrorInvalidRequestWithDetails(err, common.CodeTraegerDocumentTemplateUnknownPlaceholder,
-			map[string]any{"placeholders": strings.Join(unknown.Names, ", ")}))
+			common.PlaceholderDetails{Placeholders: strings.Join(unknown.Names, ", ")}))
 	case errors.As(err, &fields):
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeTraegerDocumentTemplateInvalid))
 	case errors.Is(err, organizationtenancy.ErrTraegerDocumentTemplateKindNotFound):

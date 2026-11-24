@@ -16,15 +16,19 @@ proxy filters names only and forwards every occurrence of each registered
 key to Go, which validates the values. Server calls build the Go address
 from the same route entry. Catalog paths use the portal's BFF prefix;
 a named route file must register its exact `BrowserPath` to expose its
-address. Only legacy `GET /api/students/` selects its response shape by query;
+address and pass the incoming `Request` if it declares query keys.
+Only legacy `GET /api/students/` selects its response shape by query;
 both clients use the selected variant or the registered default. See the
 [students example](frontend-api.md#generated-contract-adr-0270).
 
 Bigint identifiers in portal JSON use Go `ident.ID` and travel as decimal
-strings. Identically named text fields carry a `contract_text` reason.
+strings. `ident.IDOrNone` registers a decimal ID or the legacy empty marker.
+Fields that hold real text carry a `contract_text` reason.
 Stored JSON and the numeric kiosk contract are separate from this boundary.
 Structured refusal data belongs in `details`. Register its Go type by error
-code and consume the generated decoder. When a batch refusal reports a
+code in `ContractDocument` and read it through the generated decoder. The
+handler test observer checks the rendered Go type against that registration.
+When a batch refusal reports a
 partially saved result, set `PartialError` on the route registration.
 `gencontract` emits a browser decoder for `details.result` from the same Go
 type as the success response. A cast of the error body is not a decoder.
@@ -1222,8 +1226,10 @@ outside it that a portal page calls belongs in that list.
 `GET /auth/tenant/resolve` via `contractGet`. The per-replica cache in
 `tenant-resolve.server.ts` keeps decoded successes and 404s for 60 seconds.
 Only missing, deleted or inactive schools return 404; lookup failures are
-not cached. Provisioning and writes to the generated lookup setting keys
-invalidate the same cache. The registry test checks that none of those keys
+not cached. A 429 keeps Go's `Retry-After` through the host check. Provisioning
+and writes to the generated lookup setting keys invalidate the same cache.
+Operator writes use the school subdomain returned as `school_slug`; they do
+not read the school list. The registry test checks that none of those keys
 can change through a Träger write. `POST /auth/switch-tenant` returns a tenant-session JWT
 for the target school, not a `scope=school` portal token.
 Verified MFA belongs to the live tenant-session family of the same account,

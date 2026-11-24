@@ -17,7 +17,7 @@ func TestPlanningPermissionProtectsEveryNoteRepresentation(t *testing.T) {
 			},
 			supervisedGroups: func(context.Context) ([]GroupRecord, error) { return twoGroups(), nil },
 			members: func(context.Context, int64) ([]RosterStudent, error) {
-				return []RosterStudent{{ID: 11, FirstName: "Mila", PhotoURL: "/api/students/11/photo/test.jpg"}}, nil
+				return []RosterStudent{{ID: 11, FirstName: "Mila", PhotoVersion: "test.jpg"}}, nil
 			},
 			photosEnabled: func(context.Context) (bool, error) { return true, nil },
 			arrivals: func(_ context.Context, ids []int64, _ Date) (map[int64]Arrival, error) {
@@ -37,7 +37,7 @@ func TestPlanningPermissionProtectsEveryNoteRepresentation(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, projection.Students, 1)
 		require.Equal(t, "Mila", projection.Students[0].FirstName)
-		require.NotEmpty(t, projection.Students[0].PhotoURL)
+		require.NotEmpty(t, projection.Students[0].PhotoVersion)
 		body, err := json.Marshal(projection)
 		require.NoError(t, err)
 		for _, note := range []string{"Ankunft vertraulich", "Tagesnotiz vertraulich", "Abholung vertraulich", "Abholnotiz vertraulich", "Ausnahme vertraulich"} {

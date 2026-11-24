@@ -122,19 +122,18 @@ func (rs *RecordsResource) changeTimeAccountMonth(w http.ResponseWriter, r *http
 // renderTimeAccountError maps the refusals of the Stundenkonto onto their
 // codes; a refusal of one school names it in details.
 func renderTimeAccountError(w http.ResponseWriter, r *http.Request, err error) {
-	details := map[string]any{}
-	var school *workforce.TraegerSchoolMonthError
-	if errors.As(err, &school) {
-		details["school"], details["school_id"] = school.SchoolName, ident.ID(school.SchoolID)
-	}
+	school, _ := errors.AsType[*workforce.TraegerSchoolMonthError](err)
 	switch {
 	case errors.Is(err, workforce.ErrLaterMonthClosed) && school != nil:
-		details["month"] = laterMonthLabel(school.LaterMonth)
-		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeWorkforceTraegerMonthLaterClosed, details))
+		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeWorkforceTraegerMonthLaterClosed,
+			SchoolMonthDetails{School: school.SchoolName, SchoolID: ident.ID(school.SchoolID), Month: laterMonthLabel(school.LaterMonth)}))
 	case errors.Is(err, workforce.ErrLaterMonthClosed):
 		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeWorkforceLaterMonthClosed))
+	case errors.Is(err, workforce.ErrMonthClosedBySchool) && school != nil:
+		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeWorkforceTraegerMonthClosedBySchool,
+			SchoolMonthDetails{School: school.SchoolName, SchoolID: ident.ID(school.SchoolID)}))
 	case errors.Is(err, workforce.ErrMonthClosedBySchool):
-		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeWorkforceTraegerMonthClosedBySchool, details))
+		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeWorkforceTraegerMonthClosedBySchool))
 	case errors.Is(err, workforce.ErrMonthNotKeptByTraeger):
 		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeWorkforceTraegerMonthNotKept))
 	case errors.Is(err, workforce.ErrMonthNotClosable):
@@ -146,6 +145,12 @@ func renderTimeAccountError(w http.ResponseWriter, r *http.Request, err error) {
 	default:
 		renderError(w, r, err)
 	}
+}
+
+type SchoolMonthDetails struct {
+	School   string   `json:"school"`
+	SchoolID ident.ID `json:"school_id"`
+	Month    string   `json:"month,omitempty"`
 }
 
 var germanMonthNames = [...]string{"Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"}

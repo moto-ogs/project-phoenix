@@ -26,6 +26,9 @@ for reconnect/error behavior. Events are triggers: refetch rather than using
 them as data payloads.
 
 - Hook: `~/lib/hooks/use-sse` (`status`: `idle | connected | reconnecting | failed`); `lib/sse-types.ts` re-exports the generated event type.
+- Message events carry `sender_account_id` as a decimal identifier when the
+  recipient may see it. Staff copies of parent events omit it. The relay's
+  stored `source` is not the browser sender identifier.
 - The tenant, parent and school proxy routes inject the JWT server-side and
   stream through `proxySSEStream`. Before the stream starts, backend refusals
   use the shared problem policy. An unreachable backend or header timeout

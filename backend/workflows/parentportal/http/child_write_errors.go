@@ -183,7 +183,7 @@ func renderParentOfferingWriteError(w http.ResponseWriter, r *http.Request, err 
 		common.RenderError(w, r, common.ErrorConflictWithDetails(
 			err,
 			common.CodeEnrollmentCompleteWithdrawalConfirmationRequired,
-			map[string]any{"confirmation": "complete_withdrawal"},
+			WithdrawalConfirmationDetails{Confirmation: "complete_withdrawal"},
 		))
 	case errors.Is(err, careplan.ErrOfferingChangeAlreadyPending):
 		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeCareOfferingChangeAlreadyPending))

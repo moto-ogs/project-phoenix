@@ -381,10 +381,10 @@ func renderBillingError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.As(err, &startTaken):
 		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeParentBillingNumberRangeStartTaken,
-			map[string]any{"last_number": startTaken.LastNumber, "last_sequence": startTaken.LastSequence}))
+			NumberRangeTakenDetails{LastNumber: startTaken.LastNumber, LastSequence: startTaken.LastSequence}))
 	case errors.As(err, &missingDebtor):
 		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeParentBillingPaymentTextDebtorNumberMissing,
-			map[string]any{"count": len(missingDebtor.InvoiceNumbers), "invoice_numbers": missingDebtor.InvoiceNumbers}))
+			PaymentTextDebtorDetails{Count: len(missingDebtor.InvoiceNumbers), InvoiceNumbers: missingDebtor.InvoiceNumbers}))
 	case errors.As(err, &fields) && fields["format"] != nil:
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 	case errors.As(err, &fields):

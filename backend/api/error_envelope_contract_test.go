@@ -14,7 +14,6 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/stretchr/testify/require"
 
-	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/api/testutil/routetest"
 )
 
@@ -45,8 +44,6 @@ func checkErrorEnvelopeOnEveryRoute(t *testing.T, apiInstance *goldenRuntime) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		req := httptest.NewRequestWithContext(ctx, method, probePath, strings.NewReader("{"))
-		numericIdentifier := false
-		req = common.ObserveNumericProblemDetails(req, func() { numericIdentifier = true })
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set(middleware.RequestIDHeader, requestID)
 		rec := httptest.NewRecorder()
@@ -58,9 +55,6 @@ func checkErrorEnvelopeOnEveryRoute(t *testing.T, apiInstance *goldenRuntime) {
 		}
 		failures++
 		problems := routetest.ProblemEnvelopeViolations(rec.Body.Bytes(), rec.Code, true)
-		if numericIdentifier {
-			problems = append(problems, "numeric identifier in error details; use ident.ID")
-		}
 		if contentType := rec.Header().Get("Content-Type"); contentType != "application/problem+json" {
 			problems = append(problems, "content type "+contentType)
 		}

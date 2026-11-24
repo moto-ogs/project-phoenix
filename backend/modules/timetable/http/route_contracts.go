@@ -177,7 +177,7 @@ func templateRouteContracts() []common.RouteContract {
 	period := query(idQuery, "period_id")
 	filter := append(query(common.QueryString, "grade_levels", "school_classes"),
 		common.QueryParam{Name: "offering_ids", Kind: idQuery, Repeated: true})
-	draft := params(query(idQuery, "period_id"), []common.QueryParam{{Name: "roster", Kind: common.QueryString, Repeated: true}},
+	draft := params(query(idQuery, "period_id"), []common.QueryParam{{Name: "roster", Kind: common.QueryString, Repeated: true, TextReason: "each member pairs an ISO weekday with that day's list of child IDs"}},
 		query(common.QueryString, "list_kind", "type"))
 	suggestion := params(draft, query(common.QueryString, "school_classes", "grade_levels", "end_time"))
 	preview := params(draft, filter, query(dateQuery, "from"))

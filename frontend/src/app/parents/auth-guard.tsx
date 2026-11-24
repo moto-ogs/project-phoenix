@@ -7,7 +7,7 @@ import { useSWRAuth } from "~/lib/swr";
 import { PortalAuthGuard } from "~/components/auth/portal-auth-guard";
 import { Alert } from "~/components/ui/alert";
 import { normalizeLocale } from "~/i18n/locales";
-import { notBookedModuleOf } from "~/lib/module-not-booked";
+import { isModuleNotBooked } from "~/lib/module-not-booked";
 import { portalNotBookedExplanation } from "~/lib/portal-not-booked";
 import { fetchParentProfile } from "~/lib/parent-api";
 import { ParentShellProvider } from "~/lib/shell-auth-context";
@@ -101,7 +101,7 @@ function ParentPortal({
             <ParentPageSkeleton rows={2} />
           ) : notBooked ||
             session.notBooked ||
-            notBookedModuleOf(profileError) ? (
+            isModuleNotBooked(profileError) ? (
             // Keine Schule des Kontos nutzt das Elternportal mehr (#4895):
             // ein Hinweis statt einer Fehlerkarte je Bereich der Seite.
             <Alert

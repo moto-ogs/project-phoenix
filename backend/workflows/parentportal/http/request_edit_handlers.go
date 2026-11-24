@@ -48,7 +48,7 @@ type EditPickupChangeRequestBody struct {
 	ExpectedVersion string `json:"expected_version"`
 	// PickupPersonGuardianProfileID names the one-day collector; Signature is
 	// needed for a collector or walking home alone (#4780).
-	PickupPersonGuardianProfileID *string                      `json:"pickup_person_guardian_profile_id" contract_text:"empty string explicitly clears the collector; null leaves it unspecified"`
+	PickupPersonGuardianProfileID *ident.IDOrNone              `json:"pickup_person_guardian_profile_id"`
 	Signature                     *declarationSignatureRequest `json:"signature,omitempty"`
 }
 
