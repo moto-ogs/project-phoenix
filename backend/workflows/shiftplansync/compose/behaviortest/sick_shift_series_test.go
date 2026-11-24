@@ -380,10 +380,13 @@ func TestSickReport_DeletingReportPreservesTodayAfterSeriesSplit(t *testing.T) {
 			if sickBeforeSplit {
 				absenceID = e.createSickAbsence(t, today, today)
 			}
+			// The planner opened today's occurrence as the week shows it now.
+			opened := workforce.ShiftVersion(e.seriesShift(t, seriesID, today).UpdatedAt)
 			e.inTx(t, func(ctx context.Context) error {
 				result, err := e.Planning.SplitSeries(ctx, workforce.SplitStaffShiftSeries{
 					SeriesID: seriesID, ExpectedVersion: e.mustSeriesVersion(ctx, t, seriesID), EffectiveDate: today.String(), OccurrenceShiftID: shift.ID,
-					StartTime: clock("09:00"), EndTime: clock("13:00"), ActorStaffID: e.admin.ID,
+					ExpectedOccurrenceVersion: opened,
+					StartTime:                 clock("09:00"), EndTime: clock("13:00"), ActorStaffID: e.admin.ID,
 				})
 				seriesID = result.SeriesID
 				return err

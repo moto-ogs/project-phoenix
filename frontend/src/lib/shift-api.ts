@@ -37,6 +37,8 @@ interface ShiftPayload {
   originShiftId?: string | null;
   /** Answer to the working-time warnings of a refused save (#4708). */
   workingTime?: WorkingTimeConfirmation;
+  /** The version of the shift an edit replaces (ADR 0311). Create-ignored. */
+  expectedVersion?: string;
 }
 
 interface MoveShiftPayload {
@@ -52,6 +54,8 @@ interface MoveShiftPayload {
   shiftTypeId: string | null;
   /** Answer to the working-time warnings of a refused save (#4708). */
   workingTime?: WorkingTimeConfirmation;
+  /** The version of the shift the planner moved (ADR 0311). */
+  expectedVersion: string;
 }
 
 /** One replacement (Vertretung) covering part of a cancelled shift's gap. */
@@ -84,6 +88,10 @@ interface CancellationPayload {
   replacements: ReplacementPayload[];
   /** Answer to the working-time warnings of a refused save (#4708). */
   workingTime?: WorkingTimeConfirmation;
+  /** The version of the shift and of every cover the planner read, by shift
+   *  id (ADR 0311): the covers are rebuilt from this request. */
+  expectedVersion: string;
+  expectedReplacementVersions: Readonly<Record<string, string>>;
 }
 
 interface SeriesPayload {
@@ -118,6 +126,9 @@ interface SeriesSplitPayload {
   /** Concrete occurrence opened by the planner. If it is today, the backend
    * updates this row in place and only re-plans the series from tomorrow. */
   occurrenceShiftId?: string;
+  /** Version of that occurrence as the modal shows it (ADR 0311): a split
+   *  effective today rewrites it in place and refuses it when it changed. */
+  expectedOccurrenceVersion?: string;
   startTime: string;
   endTime: string;
   breakMinutes: number;
@@ -212,6 +223,9 @@ function toBackendBody(
     ...(payload.changeReason !== undefined
       ? { change_reason: payload.changeReason }
       : {}),
+    ...(payload.expectedVersion !== undefined
+      ? { expected_version: payload.expectedVersion }
+      : {}),
     ...(payload.originShiftId != null
       ? { origin_shift_id: payload.originShiftId }
       : {}),
@@ -289,6 +303,7 @@ class StaffShiftService {
           end_time: payload.endTime,
           break_minutes: payload.breakMinutes,
           shift_type_id: payload.shiftTypeId,
+          expected_version: payload.expectedVersion,
           ...workingTimeBody(payload.workingTime),
         },
         errorMessage: "Schicht konnte nicht gespeichert werden",
@@ -324,6 +339,10 @@ class StaffShiftService {
           break_minutes: r.breakMinutes,
           shift_type_id: r.shiftTypeId,
         })),
+        expected_version: payload.expectedVersion,
+        expected_replacement_versions: {
+          ...payload.expectedReplacementVersions,
+        },
         ...workingTimeBody(payload.workingTime),
       },
       errorMessage: "Änderung konnte nicht gespeichert werden",
@@ -377,7 +396,11 @@ class StaffShiftSeriesService {
         body: {
           effective_date: payload.effectiveDate,
           ...(payload.occurrenceShiftId !== undefined
-            ? { occurrence_shift_id: payload.occurrenceShiftId }
+            ? {
+                occurrence_shift_id: payload.occurrenceShiftId,
+                expected_occurrence_version:
+                  payload.expectedOccurrenceVersion ?? "",
+              }
             : {}),
           start_time: payload.startTime,
           end_time: payload.endTime,

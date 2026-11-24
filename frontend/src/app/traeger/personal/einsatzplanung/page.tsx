@@ -9,7 +9,7 @@
 
 import { GearSixIcon, WarningCircleIcon } from "@phosphor-icons/react";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { useId, useMemo, useState } from "react";
+import { useCallback, useId, useMemo, useState } from "react";
 
 import {
   PlanShiftModal,
@@ -37,7 +37,7 @@ import {
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
-import { useToast } from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { useInvalidateFamily } from "~/lib/swr";
@@ -46,6 +46,8 @@ import {
   downloadTraegerPlanningWeek,
   fetchTraegerPlanningWeek,
   type TraegerPlanningPerson,
+  type TraegerPlanningShift,
+  type TraegerPlanningWeek,
 } from "~/lib/traeger-planning-api";
 import { traegerPath } from "~/lib/traeger-url";
 import { describeWorkingTimeWarning } from "~/lib/working-time";
@@ -147,16 +149,34 @@ const INFO = (
   </div>
 );
 
+/** Die Meldung, wenn die Schicht nach einer Ablehnung fehlt. */
+const SHIFT_GONE_MESSAGE =
+  "Deine Änderung ist nicht gespeichert. Die Schule hat die Schicht inzwischen gelöscht oder auf einen anderen Tag gelegt.";
+
+/** Die gespeicherte Schicht und ihre Person in der neu gelesenen Woche. */
+function storedShift(
+  week: TraegerPlanningWeek | undefined,
+  shiftId: string,
+): { person: TraegerPlanningPerson; shift: TraegerPlanningShift } | null {
+  for (const person of week?.people ?? []) {
+    const shift = person.shifts.find((candidate) => candidate.id === shiftId);
+    if (shift) return { person, shift };
+  }
+  return null;
+}
+
 export default function TraegerStaffPlanningPage() {
   const today = useBerlinToday();
   const [weekStart, setWeekStart] = useState(() => mondayOf(today));
   const [target, setTarget] = useState<PlanShiftTarget | null>(null);
   const { success } = useToast();
+  const { showMessage } = useApiErrorDisplay();
   const invalidateFamily = useInvalidateFamily();
   const {
     data: shownWeek,
     error,
     failure,
+    reloadOrThrow,
   } = useTraegerResource(
     traegerStaffKeys.planningWeek(weekStart),
     () => fetchTraegerPlanningWeek(weekStart),
@@ -164,6 +184,30 @@ export default function TraegerStaffPlanningPage() {
   );
   const notReleased =
     failure instanceof ApiError && failure.code === NOT_RELEASED;
+
+  // Nach einem abgelehnten Ändern zeigt der Dialog die gespeicherte Schicht
+  // (ADR 0311). Fehlt sie in der neu gelesenen Woche, ist sie gelöscht oder
+  // verschoben: der Dialog schließt mit einer Meldung.
+  const openedShiftId = target?.kind === "edit" ? target.shift.id : null;
+  const reloadShift = useCallback(async () => {
+    const week = await reloadOrThrow();
+    if (openedShiftId === null) return;
+    const stored = storedShift(week, openedShiftId);
+    if (!stored) {
+      setTarget((current) =>
+        current?.kind === "edit" && current.shift.id === openedShiftId
+          ? null
+          : current,
+      );
+      showMessage(SHIFT_GONE_MESSAGE);
+      return;
+    }
+    setTarget((current) =>
+      current?.kind === "edit" && current.shift.id === openedShiftId
+        ? { kind: "edit", ...stored }
+        : current,
+    );
+  }, [reloadOrThrow, openedShiftId, showMessage]);
   const loadError = notReleased ? null : error;
   const colors = useMemo(
     () => schoolColors(shownWeek?.schools ?? []),
@@ -290,6 +334,7 @@ export default function TraegerStaffPlanningPage() {
         <PlanShiftModal
           target={target}
           onClose={() => setTarget(null)}
+          reloadShift={reloadShift}
           onSaved={(message) => {
             setTarget(null);
             success(message);

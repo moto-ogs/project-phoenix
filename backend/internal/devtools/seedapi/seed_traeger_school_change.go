@@ -131,7 +131,7 @@ func seedSchoolChangeRun(client *Client, auth AuthRef, school int64, month calen
 	if err != nil {
 		return err
 	}
-	if err := seedBillingTerms(client, auth, runID, month); err != nil {
+	if _, err := seedBillingTerms(client, auth, runID, month); err != nil {
 		return err
 	}
 	return seedSchoolChangeHeldRun(client, auth, school, month)

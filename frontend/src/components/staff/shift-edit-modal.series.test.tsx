@@ -136,6 +136,7 @@ const seriesShift: StaffShift = {
   cancelled: false,
   changeReason: null,
   originShiftId: null,
+  version: "occurrence-v1",
 };
 
 // The series rule loads asynchronously and the button stays disabled until
@@ -434,6 +435,8 @@ describe("ShiftEditModal series scopes", () => {
       expect(splitSeries).toHaveBeenCalledWith("5", {
         effectiveDate: "2026-09-07",
         occurrenceShiftId: "9",
+        // ADR 0311: a split from today rewrites the opened occurrence.
+        expectedOccurrenceVersion: "occurrence-v1",
         startTime: "08:00",
         endTime: "12:00",
         breakMinutes: 0,
@@ -552,6 +555,8 @@ describe("ShiftEditModal series rule editing", () => {
       expect(splitSeries).toHaveBeenCalledWith("5", {
         effectiveDate: "2026-09-07",
         occurrenceShiftId: "9",
+        // ADR 0311: a split from today rewrites the opened occurrence.
+        expectedOccurrenceVersion: "occurrence-v1",
         startTime: "08:00",
         endTime: "14:00",
         breakMinutes: 0,
@@ -781,6 +786,8 @@ describe("ShiftEditModal series rule editing at the end of a segment", () => {
       expect(splitSeries).toHaveBeenCalledWith("5", {
         effectiveDate: "2026-09-07",
         occurrenceShiftId: "9",
+        // ADR 0311: a split from today rewrites the opened occurrence.
+        expectedOccurrenceVersion: "occurrence-v1",
         startTime: "08:00",
         endTime: "12:00",
         breakMinutes: 0,

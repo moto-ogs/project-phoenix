@@ -298,6 +298,7 @@ func planningShift(shift workforce.PlannedShift, school workforce.TraegerStaffSc
 		ID: ident.ID(shift.ID), SchoolID: school.ID, SchoolName: school.Name, StaffID: ident.ID(shift.StaffID), Date: calendar.Date(shift.Date),
 		StartTime: shortClock(shift.StartTime), EndTime: shortClock(shift.EndTime), BreakMinutes: shift.BreakMinutes, Notes: shift.Notes,
 		Cancelled: shift.Cancelled, PlannedByTraeger: shift.PlannedByTraeger, FromSeries: shift.SeriesID != nil,
+		Version: workforce.ShiftVersion(shift.UpdatedAt),
 	}
 	if shift.ShiftType != nil {
 		result.ShiftTypeName, result.ShiftTypeColor = shift.ShiftType.Name, shift.ShiftType.Color

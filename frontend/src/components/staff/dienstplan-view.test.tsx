@@ -37,6 +37,16 @@ vi.mock("~/lib/swr", () => ({
   useTenantMutateMatching: () => mocks.refreshPlanCaches,
 }));
 
+// The view shows a vanished shift of an open modal as a toast.
+vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/contexts/ToastContext")>()),
+  useApiErrorDisplay: () => ({
+    show: vi.fn(),
+    showMessage: vi.fn(),
+    clear: vi.fn(),
+  }),
+}));
+
 vi.mock("~/lib/hooks/use-berlin-today", () => ({
   useBerlinToday: mocks.useBerlinToday,
 }));

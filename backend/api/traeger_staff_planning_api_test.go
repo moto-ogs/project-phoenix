@@ -69,6 +69,7 @@ type planningWeekBody struct {
 			Date             string `json:"date"`
 			StartTime        string `json:"start_time"`
 			PlannedByTraeger bool   `json:"planned_by_traeger"`
+			Version          string `json:"version"`
 		} `json:"shifts"`
 		PlannedMinutes int  `json:"planned_minutes"`
 		SollMinutes    *int `json:"soll_minutes"`
@@ -290,11 +291,39 @@ func TestTraegerStaffPlanningChecksEveryEinsatzort(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	})
 
+	// The version of the shift as the week shows it (ADR 0311).
+	shownVersion := func(t *testing.T, shiftID int64) string {
+		t.Helper()
+		rec := traegerJSON(t, router, office.token, http.MethodGet, "/traeger/staff-planning/?week=2026-11-23", nil)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		for _, person := range decode[planningWeekBody](t, rec).People {
+			for _, shift := range person.Shifts {
+				if int64(shift.ID) == shiftID {
+					require.NotEmpty(t, shift.Version, "the week carries the shift's token")
+					return shift.Version
+				}
+			}
+		}
+		t.Fatalf("shift %d is not in the week", shiftID)
+		return ""
+	}
+
 	t.Run("a change keeps the school and clears the warning", func(t *testing.T) {
+		read := shownVersion(t, afternoonID)
 		rec := traegerJSON(t, router, office.token, http.MethodPut, fmt.Sprintf("%s/%d", shifts, afternoonID), map[string]any{
 			"school_id": strconv.FormatInt(south, 10), "date": "2026-11-23", "start_time": "14:00", "end_time": "18:00",
+			"expected_version": read,
 		})
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		assert.Equal(t, "14:00:00", shiftColumn(t, db, `SELECT start_time::text FROM schedule.staff_shifts WHERE id = ?`, afternoonID))
+
+		// ADR 0311: a change over the week read before that one is refused
+		// and writes nothing; the stored state is shown again.
+		rec = traegerJSON(t, router, office.token, http.MethodPut, fmt.Sprintf("%s/%d", shifts, afternoonID), map[string]any{
+			"school_id": strconv.FormatInt(south, 10), "date": "2026-11-23", "start_time": "15:00", "end_time": "18:00",
+			"expected_version": read,
+		})
+		assertStaffRefusal(t, rec, http.StatusConflict, "general.changed_since_read")
 		assert.Equal(t, "14:00:00", shiftColumn(t, db, `SELECT start_time::text FROM schedule.staff_shifts WHERE id = ?`, afternoonID))
 	})
 
@@ -343,11 +372,36 @@ func TestTraegerStaffPlanningChecksEveryEinsatzort(t *testing.T) {
 		// A new cover is a new shift too; cancelling without one still works.
 		cover := testpkg.CreateTestStaffForTenant(t, db, north, "Ole", "Vertretung")
 		morning := staffSchoolValue(t, db, `SELECT id FROM schedule.staff_shifts WHERE tenant_id = ? AND staff_id = ? AND NOT cancelled ORDER BY date, start_time LIMIT 1`, north, miraNorth.ID)
+		var morningDate string
+		require.NoError(t, db.NewRaw(`SELECT date::text FROM schedule.staff_shifts WHERE id = ?`, morning).Scan(context.Background(), &morningDate))
 		cancel := func(replacements []map[string]any) *httptest.ResponseRecorder {
 			claims := testutil.DefaultTestClaims()
 			claims.ID, claims.TenantID, claims.IsAdmin = int(northLead.ID), north, false
 			claims.Permissions = []string{"time_tracking:manage"}
-			payload, err := json.Marshal(map[string]any{"cancelled": true, "change_reason": "Krank", "replacements": replacements})
+			// The version of the shift as the school's list shows it (ADR 0311).
+			list := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/staff-shifts/?from=%s&to=%s&staff_id=%d", morningDate, morningDate, miraNorth.ID), nil)
+			list.Header.Set("Authorization", "Bearer "+testutil.MintTestJWT(t, claims))
+			listed := httptest.NewRecorder()
+			schoolShifts.ServeHTTP(listed, list)
+			require.Equal(t, http.StatusOK, listed.Code, listed.Body.String())
+			var read struct {
+				Data []struct {
+					ID      wireID `json:"id"`
+					Version string `json:"version"`
+				} `json:"data"`
+			}
+			require.NoError(t, json.Unmarshal(listed.Body.Bytes(), &read))
+			version := ""
+			for _, row := range read.Data {
+				if int64(row.ID) == int64(morning) {
+					version = row.Version
+				}
+			}
+			require.NotEmpty(t, version)
+			payload, err := json.Marshal(map[string]any{
+				"cancelled": true, "change_reason": "Krank", "replacements": replacements,
+				"expected_version": version, "expected_replacement_versions": map[string]string{},
+			})
 			require.NoError(t, err)
 			req := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/staff-shifts/%d/cancellation", morning), bytes.NewReader(payload))
 			req.Header.Set("Content-Type", "application/json")

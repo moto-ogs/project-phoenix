@@ -357,11 +357,12 @@ func seedCareRun(client *Client, auth AuthRef, school int64, month calendar.Date
 	if err != nil {
 		return 0, err
 	}
-	if err := seedBillingTerms(client, auth, runID, month); err != nil {
+	numbered, err := seedBillingTerms(client, auth, runID, month)
+	if err != nil {
 		return 0, err
 	}
 	if release {
-		return seedReleaseCareRun(client, auth, runID)
+		return seedReleaseCareRun(client, auth, runID, numbered)
 	}
 	run, err := seedReadCareRun(client, auth, runID)
 	if err != nil {
@@ -389,9 +390,11 @@ func seedReadCareRun(client *Client, auth AuthRef, runID int64) (seedCareRunDeta
 // a conflict, read the current preview before trying its release again.
 // Keep payment/mandate setup outside this loop and stop after three attempts
 // if the state keeps changing; every release still checks its fingerprint.
-func seedReleaseCareRun(client *Client, auth AuthRef, runID int64) (int, error) {
+// A family the worker added gets its debtor number first (numbered holds the
+// contracts that have one), so every invoice can go to DATEV.
+func seedReleaseCareRun(client *Client, auth AuthRef, runID int64, numbered map[ident.ID]bool) (int, error) {
 	for attempt := 0; ; attempt++ {
-		run, err := seedReadCareRun(client, auth, runID)
+		run, err := seedReadNumberedCareRun(client, auth, runID, numbered)
 		if err != nil {
 			return 0, err
 		}
@@ -412,6 +415,25 @@ func seedReleaseCareRun(client *Client, auth AuthRef, runID int64) (int, error) 
 		}
 		return run.PreviewCount, nil
 	}
+}
+
+// seedReadNumberedCareRun reads the preview of the run and, when the worker
+// added a family without a debtor number, gives it one and reads the
+// preview that number changed.
+func seedReadNumberedCareRun(client *Client, auth AuthRef, runID int64, numbered map[ident.ID]bool) (seedCareRunDetail, error) {
+	run, err := seedReadCareRun(client, auth, runID)
+	if err != nil {
+		return seedCareRunDetail{}, err
+	}
+	contracts := make([]ident.ID, 0, len(run.Invoices))
+	for _, invoice := range run.Invoices {
+		contracts = append(contracts, invoice.ContractID)
+	}
+	changed, err := seedLateDebtorNumbers(client, auth, contracts, numbered)
+	if err != nil || !changed {
+		return run, err
+	}
+	return seedReadCareRun(client, auth, runID)
 }
 
 // The registered codes of a run another seed of the same Träger started or
