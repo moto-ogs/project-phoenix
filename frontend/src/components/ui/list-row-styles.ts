@@ -38,6 +38,13 @@ const DENSITY_CLASSES: Record<ListRowDensity, string> = {
   compact: "px-3 py-1.5 max-sm:py-2",
 };
 
+/**
+ * Rückmeldung beim Antippen einer Zeile (#7794): per Finger tönt sie grau,
+ * der graue iOS-Blitz bleibt aus. Mit Maus ändert sich nichts.
+ */
+export const ROW_TAP_FEEDBACK =
+  "[-webkit-tap-highlight-color:transparent] pointer-coarse:active:bg-gray-200/70";
+
 /** Fläche einer Listenzeile, geteilt von `ListRow` und `ListRowSkeleton`. */
 export function listRowClasses({
   tone = "neutral",
@@ -53,7 +60,7 @@ export function listRowClasses({
     DENSITY_CLASSES[density],
     TONE_CLASSES[tone],
     interactive &&
-      `w-full text-left transition-colors focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none focus-visible:ring-inset ${TONE_HOVER_CLASSES[tone]}`,
+      `w-full text-left transition-colors focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none focus-visible:ring-inset ${TONE_HOVER_CLASSES[tone]} ${ROW_TAP_FEEDBACK}`,
   );
 }
 
@@ -64,5 +71,5 @@ export function listRowClasses({
 export function listRowLinkStateClasses(selected: boolean): string {
   return selected
     ? "bg-moto-green-soft/60 hover:bg-moto-green-soft/70 active:bg-moto-green-soft/70"
-    : "hover:bg-gray-50 active:bg-gray-100";
+    : `hover:bg-gray-50 active:bg-gray-100 ${ROW_TAP_FEEDBACK}`;
 }

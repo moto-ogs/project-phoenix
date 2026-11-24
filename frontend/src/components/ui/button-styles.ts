@@ -26,6 +26,18 @@ export type ButtonVariant =
 export type ButtonSize =
   "sm" | "md" | "field" | "base" | "lg" | "xl" | "compact" | "icon" | "card";
 
+/**
+ * Trefferfläche per Finger (#8070, #7790): ein unsichtbares `::before`,
+ * mittig über dem Element und mindestens 44 × 44 px. Für Kit-Knöpfe, Chips
+ * und Zeilen, deren sichtbare Höhe kleiner bleiben soll.
+ */
+export const TOUCH_HIT_AREA =
+  "pointer-coarse:[&:where(:not(.absolute,.fixed,.sticky))]:relative pointer-coarse:before:absolute pointer-coarse:before:top-1/2 pointer-coarse:before:left-1/2 pointer-coarse:before:size-full pointer-coarse:before:min-h-11 pointer-coarse:before:min-w-11 pointer-coarse:before:-translate-1/2 pointer-coarse:before:content-['']";
+
+/** Sichtbare Rückmeldung beim Antippen (#7794), ohne den iOS-Blitz. */
+export const TOUCH_FEEDBACK =
+  "[-webkit-tap-highlight-color:transparent] pointer-coarse:active:opacity-75";
+
 // Ruhiger Knopf ohne Fläche; `segment` und `disclosure` bauen darauf auf.
 const GHOST =
   "bg-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-900 active:bg-gray-200";
@@ -65,7 +77,7 @@ export function buttonStyles({
       "h-8 gap-1.5 rounded-md px-2.5 disabled:cursor-not-allowed aria-disabled:cursor-not-allowed",
     // `aspect-square` statt `w-8`: erzwingt die Kopfkarte ihre Bedienhöhe
     // (40/44 px), folgt die Breite — sonst wird der quadratische Knopf oval.
-    icon: "aspect-square h-8 rounded-md pointer-coarse:min-w-11 disabled:cursor-not-allowed aria-disabled:cursor-not-allowed",
+    icon: "aspect-square h-8 rounded-md disabled:cursor-not-allowed aria-disabled:cursor-not-allowed",
     card: "w-full rounded-2xl p-4",
   };
   const variantStyles: Record<ButtonVariant, string> = {
@@ -164,8 +176,14 @@ export function buttonStyles({
   // mindestens 44 px hoch (Apple HIG 44 pt), `icon` auch 44 px breit. Mit Maus
   // bleibt es bei den Kit-Maßen. Kein Knopf braucht dafür ein eigenes
   // `min-h-11`. Kein `transform` im Übergang: das Kit skaliert nicht.
-  const baseStyles =
-    "inline-flex items-center justify-center font-medium transition-[background-color,box-shadow,color,opacity] duration-200 pointer-coarse:min-h-11 focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none disabled:opacity-50 aria-disabled:opacity-50";
+  //
+  // Seit #8070 ist die 44-px-Fläche eine Trefferfläche, keine sichtbare
+  // Höhe (Epic: „44 px als Trefferfläche, nicht als sichtbare Höhe“): Ein
+  // unsichtbares `::before`, mittig und mindestens 44 × 44 px, nimmt den
+  // Finger an; der Knopf behält sein Kit-Maß. Positionierte Knöpfe
+  // (`absolute`, `fixed`, `sticky`) behalten ihre Lage. Beim Antippen
+  // dunkelt der Knopf kurz ab (#7794), ohne den grauen iOS-Blitz.
+  const baseStyles = `inline-flex items-center justify-center font-medium transition-[background-color,box-shadow,color,opacity] duration-200 ${TOUCH_HIT_AREA} ${TOUCH_FEEDBACK} focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none disabled:opacity-50 aria-disabled:opacity-50`;
 
   // Die Variante steht hinter der Größe: Varianten mit eigenem Maß (`fab`,
   // `filter`, `day_chip` …) setzen sich so auch bei der Schriftgröße durch.

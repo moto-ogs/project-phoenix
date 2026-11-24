@@ -13,8 +13,12 @@ export const CARD_FRAME = "moto-content-surface rounded-2xl border";
 // und in der kompakten Ansicht 16 px.
 export const CARD_SURFACE_PADDING = "compact:p-4 p-5 max-sm:p-4";
 
-/** Hebt eine Karte beim Überfahren an (`globals.css`). */
-export const CARD_HOVER = "moto-hover-elevated";
+/**
+ * Hebt eine Karte beim Überfahren an (`globals.css`); per Finger blendet sie
+ * beim Antippen kurz ab (#7794), ohne den grauen iOS-Blitz.
+ */
+export const CARD_HOVER =
+  "moto-hover-elevated [-webkit-tap-highlight-color:transparent] pointer-coarse:active:opacity-80";
 
 /**
  * Fokusring einer klickbaren Karte, in moto-blue für 3:1 Kontrast (#6565).
