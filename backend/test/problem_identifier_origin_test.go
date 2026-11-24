@@ -24,6 +24,7 @@ func problemIdentifierOrigins(files []parsedSource, module string, integers map[
 		})
 	}
 	common := module + "/api/common."
+	detailsParams := problemDetailsParameters(files, module, common, types)
 	var findings []string
 	for _, file := range files {
 		if deviceAPI(file.dir, "") {
@@ -65,8 +66,10 @@ func problemIdentifierOrigins(files []parsedSource, module string, integers map[
 				if name == common+"RenderError" && len(value.Args) == 3 {
 					check(value.Args[2])
 				}
-				if strings.HasPrefix(name, common+"Error") && strings.HasSuffix(name, "Details") && len(value.Args) > 0 {
-					check(value.Args[len(value.Args)-1])
+				for _, index := range detailsParams[name] {
+					if index < len(value.Args) {
+						check(value.Args[index])
+					}
 				}
 			case *ast.FuncDecl:
 				if value.Recv != nil && value.Name.Name == "ErrorDetails" {
@@ -84,6 +87,62 @@ func problemIdentifierOrigins(files []parsedSource, module string, integers map[
 		})
 	}
 	return findings
+}
+
+// Discover shared constructors by which parameters they copy into Details.
+// Renaming a constructor or introducing one with a different name retains the
+// check at its call sites.
+func problemDetailsParameters(files []parsedSource, module, common string, types map[string]declaredType) map[string][]int {
+	result := make(map[string][]int)
+	for _, file := range files {
+		if module+"/"+file.dir+"." != common {
+			continue
+		}
+		for _, decl := range file.file.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || fn.Recv != nil || fn.Body == nil {
+				continue
+			}
+			params := make(map[*localBinding]int)
+			index := 0
+			for _, field := range fn.Type.Params.List {
+				for _, name := range field.Names {
+					params[name.Obj] = index
+					index++
+				}
+			}
+			add := func(expr ast.Expr) {
+				if name, ok := ast.Unparen(expr).(*ast.Ident); ok {
+					if index, ok := params[name.Obj]; ok {
+						key := common + fn.Name.Name
+						result[key] = append(result[key], index)
+					}
+				}
+			}
+			ast.Inspect(fn.Body, func(node ast.Node) bool {
+				switch value := node.(type) {
+				case *ast.CompositeLit:
+					if embeddedProblemEnvelope(value.Type, file, module, common, types, map[string]bool{}) {
+						for _, expr := range value.Elts {
+							if entry, ok := expr.(*ast.KeyValueExpr); ok {
+								if field, ok := entry.Key.(*ast.Ident); ok && field.Name == "Details" {
+									add(entry.Value)
+								}
+							}
+						}
+					}
+				case *ast.AssignStmt:
+					for i, left := range value.Lhs {
+						if field, ok := left.(*ast.SelectorExpr); ok && field.Sel.Name == "Details" && len(value.Lhs) == len(value.Rhs) {
+							add(value.Rhs[i])
+						}
+					}
+				}
+				return true
+			})
+		}
+	}
+	return result
 }
 
 func embeddedProblemEnvelope(expr ast.Expr, file parsedSource, module, common string, types map[string]declaredType, seen map[string]bool) bool {
@@ -194,17 +253,26 @@ func TestProblemIdentifierOriginsFollowPublicTypes(t *testing.T) {
 		return parsedSource{dir: dir, rel: dir + "/probe.go", fset: fset, file: file, imports: imports}
 	}
 	files := []parsedSource{
+		makeFile("api/common", `package common
+type ErrResponse struct { Details any }
+func Refuse(status int, payload any) *ErrResponse {
+	return &ErrResponse{Details: payload}
+}
+`, nil),
 		makeFile("modules/owner", `package owner
 type Problem struct { StudentID int64 `+"\x60"+`json:"student_id"`+"\x60"+` }
 type NotOnWire struct { LessonID int64 }
+type MoreDetails struct { AccountID int64 }
 `, nil),
 		makeFile("modules/owner/adapter", `package adapter
 type envelope struct { *c.ErrResponse; Conflicts []o.Problem }
 func refuse() { details := envelope{}; c.RenderError(w, r, &details) }
+func refuseOther() { c.Refuse(409, o.MoreDetails{}) }
 `, map[string]string{"o": module + "/modules/owner", "c": module + "/api/common"}),
 	}
 	got := strings.Join(problemIdentifierOrigins(files, module, nil), "\n")
-	if !strings.Contains(got, "modules/owner/probe.go:2: numeric identifier StudentID") || strings.Contains(got, "LessonID") {
+	if !strings.Contains(got, "modules/owner/probe.go:2: numeric identifier StudentID") ||
+		!strings.Contains(got, "modules/owner/probe.go:4: numeric identifier AccountID") || strings.Contains(got, "LessonID") {
 		t.Fatalf("error source was not followed independently of package: %s", got)
 	}
 }
