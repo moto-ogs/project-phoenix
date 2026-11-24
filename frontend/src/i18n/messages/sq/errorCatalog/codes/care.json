@@ -77,6 +77,7 @@
   "primary_guardian_protected": "Nuk keni qasje te: {object}. Kontaktoni shkollën.",
   "remove_disabled": "Për momentin nuk është i disponueshëm këtu: {object}. Pyetni personin tuaj të kontaktit.",
   "request_not_found": "Nuk u gjet: {object}. Ju lutemi ringarkoni faqen.",
+  "request_feed_not_found": "Lidhja RSS nuk ekziston më. Ju lutemi ringarkoni faqen dhe krijoni një lidhje të re.",
   "request_not_open": "Nuk është më i hapur: {object}. Pyetni personin tuaj të kontaktit.",
   "request_sharing_invalid": "Ka të dhëna të pavlefshme: {object}. Kontrolloni çfarë keni shkruar.",
   "room_history_stop_disabled": "Për momentin nuk mund ta ndryshoni këtu: {object}. Pyetni personin tuaj të kontaktit.",

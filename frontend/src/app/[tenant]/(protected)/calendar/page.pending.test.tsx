@@ -29,7 +29,13 @@ const {
   mockUseSession: vi.fn(),
 }));
 
-vi.mock("~/lib/swr", () => ({ useSWRAuth: mockUseSWRAuth }));
+// These cases create appointments; the edit form's detail read
+// (preload, reload after a refusal) is not reached.
+vi.mock("~/lib/swr", () => ({
+  useSWRAuth: mockUseSWRAuth,
+  useSWRPreload: () => () => Promise.resolve(undefined),
+  revalidateOrThrow: () => Promise.reject(new Error("not reached")),
+}));
 
 // Personalprofil in dieser Schule laut Nutzerkontext (#7306).
 const ownStaff = vi.hoisted(() => ({ present: true }));

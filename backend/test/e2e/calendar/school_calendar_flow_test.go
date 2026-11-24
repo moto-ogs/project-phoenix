@@ -24,6 +24,7 @@ type schoolCalendarE2EResponse struct {
 		Events []struct {
 			Title         string  `json:"title"`
 			AppointmentID *string `json:"appointment_id"`
+			Version       string  `json:"version"`
 		} `json:"events"`
 		Classes []string `json:"classes"`
 	} `json:"data"`
@@ -86,9 +87,17 @@ func TestSchoolCalendarHTTPFlow(t *testing.T) {
 	assert.Equal(t, []string{"Zoobesuch"}, eventTitles(listed))
 	assert.Equal(t, []string{"1a"}, listed.Data.Classes)
 
+	// The change rests on the Schultermin as the calendar listed it.
+	require.Len(t, listed.Data.Events, 1)
+	require.NotEmpty(t, listed.Data.Events[0].Version)
 	appointment["title"] = "Zoobesuch mit Picknick"
+	appointment["expected_version"] = listed.Data.Events[0].Version
 	updateRR := doJSON(t, router, http.MethodPut, "/school/calendar/appointments/"+appointmentID, token, appointment)
 	require.Equal(t, http.StatusOK, updateRR.Code, updateRR.Body.String())
+	appointment["title"] = "Zoobesuch ohne Picknick"
+	staleRR := doJSON(t, router, http.MethodPut, "/school/calendar/appointments/"+appointmentID, token, appointment)
+	require.Equal(t, http.StatusConflict, staleRR.Code, staleRR.Body.String())
+	assert.Contains(t, staleRR.Body.String(), `"code":"general.changed_since_read"`)
 
 	// The OGS invites the Lehrkraft; she answers in moto schule.
 	_, organizerAccount := testpkg.CreateTestCalendarStaff(t, db, "School", "FlowOrganizer")

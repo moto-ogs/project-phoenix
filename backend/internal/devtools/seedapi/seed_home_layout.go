@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 )
 
@@ -32,11 +33,25 @@ func (seedHomeLayoutStep) Run(_ context.Context, rt *Runtime) error {
 	}); err != nil {
 		return fmt.Errorf("seed personal start page layout: %w", err)
 	}
+	// The prescription rests on the one the layout read shows (ADR 0311).
+	raw, err := rt.Client.Get("/api/settings/home-layout")
+	if err != nil {
+		return fmt.Errorf("read start page layout: %w", err)
+	}
+	var layout struct {
+		Data struct {
+			PoliciesVersion string `json:"policies_version"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(raw, &layout); err != nil {
+		return fmt.Errorf("parse start page layout: %w", err)
+	}
 	if _, err := rt.Client.Put("/api/settings/home-layout/policies", map[string]any{
 		"policies": map[string]string{
 			"section.day_changes":     "required",
 			"section.recent_activity": "disabled",
 		},
+		"expected_version": layout.Data.PoliciesVersion,
 	}); err != nil {
 		return fmt.Errorf("seed school start page layout: %w", err)
 	}

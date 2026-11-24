@@ -201,6 +201,9 @@ type SchoolAppointmentRequest struct {
 	EventType   string    `json:"school_event_type"`
 	Parents     string    `json:"parents"`
 	Classes     []string  `json:"classes,omitempty"`
+	// ExpectedVersion is the Event.Version a change of the Schultermin
+	// started from (ADR 0311); a creation has none.
+	ExpectedVersion string `json:"-"`
 }
 
 type StaffCalDAVService interface {
@@ -312,8 +315,11 @@ type Event struct {
 	CanEdit              bool    `json:"can_edit"`
 	CanViewOverview      bool    `json:"can_view_overview"`
 	// SchoolEventType marks a Schultermin from moto schule (#4798).
-	SchoolEventType *string   `json:"school_event_type,omitempty"`
-	ModifiedAt      time.Time `json:"-"`
+	SchoolEventType *string `json:"school_event_type,omitempty"`
+	// Version is the read-state token of the appointment behind an event
+	// the reader may edit (ADR 0311); an edit sends it back.
+	Version    string    `json:"version,omitempty"`
+	ModifiedAt time.Time `json:"-"`
 }
 
 type AppointmentDetail struct {
@@ -321,6 +327,9 @@ type AppointmentDetail struct {
 	Recurrence  *appointmentcap.RecurrenceRule         `json:"recurrence,omitempty"`
 	Recipients  []*appointmentcap.AppointmentRecipient `json:"recipients"`
 	Targets     []*appointmentcap.AppointmentTarget    `json:"targets"`
+	// Version is the read-state token of the appointment (ADR 0311): an
+	// edit sends it back as expected_version.
+	Version string `json:"version"`
 }
 
 type CreateAppointmentRequest struct {
@@ -355,6 +364,9 @@ type UpdateAppointmentRequest struct {
 	Recurrence         *RecurrenceRequest `json:"recurrence,omitempty"`
 	SendEmail          bool               `json:"send_email"`
 	SendEmailSet       bool               `json:"-"`
+	// ExpectedVersion is the AppointmentDetail.Version the edit started
+	// from (ADR 0311).
+	ExpectedVersion string `json:"-"`
 }
 
 // AppointmentOverview lists who is invited and how they answered. Staff get

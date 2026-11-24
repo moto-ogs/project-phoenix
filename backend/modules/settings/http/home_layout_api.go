@@ -41,6 +41,9 @@ type homeBlockPoliciesRequest struct {
 	// Policies maps a block key to "optional", "required" or "disabled".
 	// Optional entries are dropped before storing: no opinion is the default.
 	Policies map[string]string `json:"policies"`
+	// ExpectedVersion is the policies_version of the home layout the editor
+	// read (ADR 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // getHomeLayout returns the person's own composition together with the
@@ -150,7 +153,7 @@ func (rs *SettingsResource) setHomeBlockPolicies(w http.ResponseWriter, r *http.
 		return
 	}
 
-	err := rs.homeLayouts.SetHomeBlockPolicies(r.Context(), actor.TenantID, actor.AccountID, actor.Permissions, req.Policies)
+	err := rs.homeLayouts.SetHomeBlockPolicies(r.Context(), actor.TenantID, actor.AccountID, actor.Permissions, req.Policies, req.ExpectedVersion)
 	if err != nil {
 		rs.renderSettingsError(w, r, err)
 		return

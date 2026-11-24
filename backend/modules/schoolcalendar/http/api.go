@@ -97,6 +97,9 @@ type updateAppointmentRequest struct {
 	OverviewVisibility string                             `json:"overview_visibility"`
 	Recurrence         *calendarService.RecurrenceRequest `json:"recurrence,omitempty"`
 	SendEmail          *bool                              `json:"send_email"`
+	// ExpectedVersion is the version of the appointment the edit read
+	// (ADR 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 type appointmentTargetRequest struct {
@@ -272,6 +275,7 @@ func (rs *Resource) updateAppointment(w http.ResponseWriter, r *http.Request) {
 		Recurrence:         req.Recurrence,
 		SendEmail:          req.SendEmail != nil && *req.SendEmail,
 		SendEmailSet:       req.SendEmail != nil,
+		ExpectedVersion:    req.ExpectedVersion,
 	})
 	if err != nil {
 		renderCalendarError(w, r, err)

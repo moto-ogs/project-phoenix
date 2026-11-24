@@ -184,6 +184,7 @@ export interface updateAppointmentRequest {
   overview_visibility?: string;
   recurrence?: RecurrenceRequest | null;
   send_email?: boolean | null;
+  expected_version?: string;
 }
 
 export const routes = {

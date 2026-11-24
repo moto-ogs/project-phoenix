@@ -51,7 +51,7 @@ func (s *settingsService) ResetHomeLayout(ctx context.Context, tenantID, account
 	return homeLayouts.ResetOverrides(ctx, tenantID, accountID)
 }
 
-func (s *settingsService) SetHomeBlockPolicies(ctx context.Context, tenantID, accountID int64, permissions []string, policies map[string]string) error {
+func (s *settingsService) SetHomeBlockPolicies(ctx context.Context, tenantID, accountID int64, permissions []string, policies map[string]string, expectedVersion string) error {
 	homeLayouts, err := s.homeLayoutService()
 	if err != nil {
 		return err
@@ -60,5 +60,5 @@ func (s *settingsService) SetHomeBlockPolicies(ctx context.Context, tenantID, ac
 	for key, policy := range policies {
 		parsed[key] = config.BlockPolicy(policy)
 	}
-	return homeLayouts.SetPolicies(ctx, tenantID, accountID, permissions, parsed)
+	return homeLayouts.SetPolicies(ctx, tenantID, accountID, permissions, parsed, expectedVersion)
 }

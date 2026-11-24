@@ -60,7 +60,11 @@ func TestCalendarLifecyclePushJoinsTriggeringTransaction(t *testing.T) {
 					case portal.EmailKindAppointmentPublished:
 						_, err = calendar.CreateStaffAppointment(txCtx, request)
 					case portal.EmailKindAppointmentUpdated:
-						_, err = calendar.UpdateStaffAppointment(txCtx, appointmentID, portal.UpdateAppointmentRequest{Title: "Updated lifecycle push", StartDate: date, EndDate: date, StartTime: wallClock(14, 0), EndTime: wallClock(15, 0), SendEmail: true, SendEmailSet: true})
+						var read *portal.AppointmentDetail
+						if read, err = calendar.GetStaffAppointmentDetail(txCtx, appointmentID); err != nil {
+							return err
+						}
+						_, err = calendar.UpdateStaffAppointment(txCtx, appointmentID, portal.UpdateAppointmentRequest{Title: "Updated lifecycle push", StartDate: date, EndDate: date, StartTime: wallClock(14, 0), EndTime: wallClock(15, 0), SendEmail: true, SendEmailSet: true, ExpectedVersion: read.Version})
 					default:
 						_, err = calendar.CancelStaffAppointment(txCtx, appointmentID)
 					}

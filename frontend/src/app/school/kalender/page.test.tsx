@@ -57,7 +57,12 @@ const {
   mockMutate: vi.fn(),
 }));
 
-vi.mock("~/lib/swr", () => ({ useSWRAuth: mockUseSWRAuth }));
+vi.mock("~/lib/swr", () => ({
+  useSWRAuth: mockUseSWRAuth,
+  // The read of the stored state after a refusal (ADR 0311).
+  revalidateOrThrow: (read: { mutate: () => Promise<unknown> }) =>
+    read.mutate(),
+}));
 
 vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/contexts/ToastContext")>()),
@@ -90,6 +95,7 @@ vi.mock("~/lib/personal-calendar-api", async () => {
 });
 
 import { ToastProvider } from "~/contexts/ToastContext";
+import { ApiError } from "~/lib/api-error";
 import type { SchoolCalendarResponse } from "~/lib/personal-calendar-api";
 
 import { SchoolAuthGuard } from "../auth-guard";
@@ -122,6 +128,7 @@ function calendar(
         school_event_type: "ausflug",
         can_respond: false,
         can_edit: true,
+        version: "v-3",
       },
       {
         id: "appointment:8:2026-09-10",
@@ -270,6 +277,66 @@ describe("SchoolCalendarPage", () => {
           title: "Zoo-Ausflug",
           school_event_type: "ausflug",
         }),
+        "v-3",
+      ),
+    );
+  });
+
+  // ADR 0311: the change goes out on the Schultermin as the calendar showed
+  // it; a refusal shows the stored one and saves on its version.
+  it("shows the stored Schultermin after a change was refused as changed since it was read", async () => {
+    const before = calendar();
+    const stored: SchoolCalendarResponse = {
+      ...before,
+      events: before.events.map((event) =>
+        event.appointment_id === "3"
+          ? { ...event, title: "Zoo-Ausflug mit Picknick", version: "v-4" }
+          : event,
+      ),
+    };
+    let shown = before;
+    mockUseSWRAuth.mockImplementation(() => ({
+      data: shown,
+      error: undefined,
+      isLoading: false,
+      mutate: mockMutate,
+    }));
+    mockMutate.mockImplementation(async () => {
+      shown = stored;
+      return stored;
+    });
+    mockUpdateSchoolAppointment
+      .mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      )
+      .mockResolvedValueOnce(undefined);
+    render(<SchoolCalendarPage />);
+
+    fireEvent.click(screen.getAllByRole("button", { name: /Zoo-Ausflug/ })[0]!);
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    fireEvent.change(screen.getByLabelText("Titel"), {
+      target: { value: "Mein Titel" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(mockUpdateSchoolAppointment).toHaveBeenCalledWith(
+        "3",
+        expect.objectContaining({ title: "Mein Titel" }),
+        "v-3",
+      ),
+    );
+    await waitFor(() =>
+      expect(screen.getByLabelText("Titel")).toHaveValue(
+        "Zoo-Ausflug mit Picknick",
+      ),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(mockUpdateSchoolAppointment).toHaveBeenLastCalledWith(
+        "3",
+        expect.objectContaining({ title: "Zoo-Ausflug mit Picknick" }),
+        "v-4",
       ),
     );
   });

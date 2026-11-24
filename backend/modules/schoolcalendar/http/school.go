@@ -50,9 +50,17 @@ type SchoolAppointmentRequest struct {
 	Classes []string `json:"classes,omitempty"`
 }
 
+// SchoolAppointmentUpdateRequest is the body of a change of a Schultermin:
+// the appointment as edited and the version the Lehrkraft read (ADR 0311).
+type SchoolAppointmentUpdateRequest struct {
+	SchoolAppointmentRequest
+	ExpectedVersion string `json:"expected_version"`
+}
+
 func decodeSchoolAppointment(w http.ResponseWriter, r *http.Request) (calendarService.SchoolAppointmentRequest, bool) {
-	var req SchoolAppointmentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	var body SchoolAppointmentUpdateRequest
+	req := &body.SchoolAppointmentRequest
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return calendarService.SchoolAppointmentRequest{}, false
 	}
@@ -78,6 +86,8 @@ func decodeSchoolAppointment(w http.ResponseWriter, r *http.Request) (calendarSe
 		EventType:   req.SchoolEventType,
 		Parents:     req.Parents,
 		Classes:     req.Classes,
+		// A creation sends none; only the change reads it.
+		ExpectedVersion: body.ExpectedVersion,
 	}, true
 }
 

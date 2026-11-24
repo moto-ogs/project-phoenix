@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
+
 	appointmentcap "github.com/moto-ogs/project-phoenix/modules/appointments"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal/internal/ports"
@@ -80,7 +82,17 @@ func (s *service) createAppointmentFor(ctx context.Context, organizerStaffID int
 		Recurrence:  recurrence,
 		Recipients:  recipients,
 		Targets:     targets,
+		Version:     appointmentVersion(appointment),
 	}, nil
+}
+
+// appointmentVersion is the read-state token of an appointment (ADR 0311).
+// The trigger update_calendar_appointments_updated_at moves updated_at on
+// every write of the row: an edit, a cancellation, a deletion and the
+// revision bump of a cancelled occurrence. The recurrence rule changes only
+// through an edit, so readstate.Of covers what the edit form shows.
+func appointmentVersion(appointment *appointmentcap.Appointment) string {
+	return readstate.Of(appointment.UpdatedAt)
 }
 
 // newStaffAppointment builds and validates the appointment (with its optional
@@ -256,6 +268,7 @@ func (s *service) appointmentDetail(ctx context.Context, appointment *appointmen
 		Recurrence:  recurrence,
 		Recipients:  recipients,
 		Targets:     targets,
+		Version:     appointmentVersion(appointment),
 	}, nil
 }
 
@@ -280,6 +293,11 @@ func (s *service) UpdateStaffAppointment(ctx context.Context, appointmentID int6
 func (s *service) updateStaffAppointment(ctx context.Context, appointmentID int64, req UpdateAppointmentRequest) (*AppointmentDetail, error) {
 	appointment, err := s.loadAppointmentForWrite(ctx, appointmentID)
 	if err != nil {
+		return nil, err
+	}
+	// The appointment is locked: an edit from a read older than the stored
+	// appointment is refused (ADR 0311).
+	if err := readstate.Check(req.ExpectedVersion, appointmentVersion(appointment)); err != nil {
 		return nil, err
 	}
 	return s.updateLoadedAppointment(ctx, appointment, req)

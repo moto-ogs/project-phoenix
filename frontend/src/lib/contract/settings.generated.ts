@@ -52,6 +52,7 @@ export interface HomeLayoutResponse {
   blocks: HomeBlockPlacement[] | null;
   policies: Record<string, string> | null;
   can_manage_policies: boolean;
+  policies_version: string;
 }
 
 export const HomeLayoutResponseSchema: z.ZodType<HomeLayoutResponse, unknown> = object<HomeLayoutResponse>({
@@ -59,6 +60,7 @@ export const HomeLayoutResponseSchema: z.ZodType<HomeLayoutResponse, unknown> = 
   blocks: nullable(arr(HomeBlockPlacementSchema)),
   policies: nullable(rec(str)),
   can_manage_policies: bool,
+  policies_version: str,
 });
 
 /** Go: settingshttp.loginImageResponse */
@@ -186,6 +188,7 @@ export interface homeLayoutOverridesRequest {
 /** Go: settingshttp.homeBlockPoliciesRequest */
 export interface homeBlockPoliciesRequest {
   policies?: Record<string, string> | null;
+  expected_version?: string;
 }
 
 export const routes = {
