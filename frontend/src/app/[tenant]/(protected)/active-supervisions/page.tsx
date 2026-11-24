@@ -1032,6 +1032,8 @@ function MeinRaumPageContent() {
                 variant="ghost"
                 size="icon"
                 aria-label="Kinder suchen"
+                // Abstand zum „…“: beide behalten ihre 44-px-Trefferfläche.
+                className="mr-3"
                 tooltip="Öffnet Suche und Filter für die Kinderliste."
                 onClick={() => setSearchSheetOpen(true)}
               >

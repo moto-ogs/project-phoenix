@@ -598,7 +598,7 @@ export function TimetableRosterApp({
         empty="Tippe links auf ein Kind, um es hier zu sehen."
       />
       {moreAdd.length > 0 || listFooter ? (
-        <div className="tablet:max-w-[35rem] flex flex-col gap-2">
+        <div className="tablet:max-w-[35rem] flex flex-col gap-3">
           {moreAdd}
           {listFooter}
         </div>
