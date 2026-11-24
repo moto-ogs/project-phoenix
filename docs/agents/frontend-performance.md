@@ -40,10 +40,10 @@ journey names for diagnosis only. A partial result is not a baseline.
   “First” means first visit to the target from a running app, not a hard document
   load. Ordinary viewport prefetch is not disabled.
 - Desktop: CPU ×4, 150 ms latency, 3 Mbit/s down, 1 Mbit/s up. Parents also use
-  Pixel 7 touch at 1.6 Mbit/s down. Time starts in the browser at pointer-down,
+  Pixel 7 touch at 1.6 Mbit/s down. Time starts at the browser event timestamp, including input queueing, for pointer-down,
   touch-start, Enter or the actual history traversal. No synthetic hover or
-  dwell. Stop at the first animation frame containing the correct rendered
-  content, not at URL change, shell mount or network idle. The keyboard case
+  dwell. Stop on the next animation frame after the correct content was first
+  rendered and remains visible (one paint opportunity), not at URL change, shell mount or network idle. The keyboard case
   focuses the link and presses Enter without a dwell.
 - Warm 1 returns by a fresh click; Back 1 makes a history traversal. Warm 4 and
   Back 4 visit at least four distinct *other* pathnames before returning to the
@@ -57,13 +57,19 @@ journey names for diagnosis only. A partial result is not a baseline.
   fixture rejects the old family's content and a hidden matching link on the
   same pathname, then requires the second family's actual child card after
   login. Logout confirmation and a signed-out bookmark are reported separately.
+  For an actual rights change the school admin temporarily changes **one seeded**
+  child's guardian relationship to pickup-only. The ordinary family home must
+  show the still-permitted sibling without the former child. The versioned
+  school form command restores the original preset and the fixture verifies
+  the child is visible again. This is a separate fresh-document measurement,
+  not a probe of cached child records.
 - Same-page dialogs and filters without their own history entries have no Back
   time: opening the parent absence form does **not** submit it; the caregiver's
   regular daily plan is measured via its sidebar entry and browser history. The
   additional read-only weekly plan changes day/week with `replaceState`. Caterer has just
   two protected routes, orders and account. Period and school expansion operate
   on the orders page. None can supply four distinct intermediate routes.
-- Timing stops before the network diagnostic window: all non-noise requests from
+- Timing stops before the network diagnostic window: after the intervening pages have settled, all non-noise requests from
   action preparation through 1.5 s quiet (25 s cap) are counted, including runs
   below budget. RSC/JS/BFF are request counts, not necessarily transferred bodies.
   Visible loading indicators are recorded separately. Host load averages and

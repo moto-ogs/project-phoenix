@@ -16,7 +16,7 @@ export interface Content {
 type Probe = {
   matches: (content: Content) => boolean;
   elapsed: number | null;
-  start: () => void;
+  start: (event?: Event) => void;
 };
 declare global {
   interface Window {
@@ -50,6 +50,7 @@ export async function installContentProbe(page: Page) {
           return Array.from(document.querySelectorAll<HTMLElement>(css)).some(
             (node) => {
               if (!visible(node)) return false;
+              if (!regex && exact === undefined) return true;
               const label = (
                 node.innerText ||
                 node.getAttribute("aria-label") ||
@@ -81,12 +82,20 @@ export async function armContentClock(
       if (probe.matches(content))
         throw new Error("Zielinhalt steht bereits vor der Aktion.");
       probe.elapsed = null;
-      probe.start = () => {
-        const start = performance.now();
+      probe.start = (event) => {
+        if (event && !event.isTrusted) return;
+        const start = event?.timeStamp ?? performance.now();
+        let matchedLastFrame = false;
         const frame = () => {
-          if (probe.matches(content)) probe.elapsed = performance.now() - start;
-          else if (performance.now() - start < 30_000)
-            requestAnimationFrame(frame);
+          const matched = probe.matches(content);
+          // The next frame follows a paint opportunity for the first matching
+          // frame; a transient or unmounted target cannot finish the clock.
+          if (matched && matchedLastFrame) {
+            probe.elapsed = performance.now() - start;
+            return;
+          }
+          matchedLastFrame = matched;
+          if (performance.now() - start < 30000) requestAnimationFrame(frame);
         };
         requestAnimationFrame(frame);
       };

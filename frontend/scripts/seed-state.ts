@@ -39,6 +39,7 @@ interface SeedProfile {
       email?: string;
       password?: string;
       student_ids?: number[];
+      guardian_id?: number;
     }>;
   };
 }

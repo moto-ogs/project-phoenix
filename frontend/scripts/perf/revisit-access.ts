@@ -36,12 +36,20 @@ export function revisitFixture() {
         students.some((student) => student.id === id),
       ),
   );
-  const first =
-    families.find((parent) => parent.student_ids!.length > 1) ?? families[0];
+  const first = families.find((parent) => parent.student_ids!.length > 1);
   const second = families.find(
     (parent) =>
       !parent.student_ids!.some((id) => first?.student_ids!.includes(id)),
   );
+  if (
+    !seed.credentials?.caterer?.email ||
+    !seed.credentials.caterer.password ||
+    !seed.credentials.operator?.email ||
+    !seed.credentials.operator.password
+  )
+    throw new Error(
+      "Lokaler vollbetrieb-Seed mit bestätigten Caterer- und Operator-Zugängen erforderlich.",
+    );
   const staff = seed?.credentials?.accounts?.betreuer?.[0];
   const room = Object.values(seed?.entities?.rooms ?? {}).find(
     (r) => r.name === "Mensa",
@@ -70,6 +78,8 @@ export function revisitFixture() {
       email: parent.email!,
       password: parent.password!,
       childId: child.id,
+      siblingId: parent.student_ids?.[1],
+      guardianId: parent.guardian_id,
       childName: child.first_name + " " + child.last_name,
     };
   };

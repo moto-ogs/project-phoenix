@@ -86,6 +86,7 @@ interface HopResult {
   toContentMs: number;
   settleMs: number;
   shellSurvived: boolean;
+  mountedLoading: boolean;
   documents: number;
   rsc: number;
   api: number;
@@ -108,9 +109,9 @@ function expectNavigationInvariants(result: HopResult): void {
     `${transition}: keine wiederholten Hüllen-Endpunkte`,
   ).toEqual([]);
   expect(
-    result.fallbacks.filter((fallback) => fallback.startsWith("loading:")),
+    result.mountedLoading,
     `${transition}: kein allgemeiner Ladeplatzhalter`,
-  ).toEqual([]);
+  ).toBe(false);
 }
 
 /** „3x /api/…“ je Pfad, absteigend — die Rohliste eines Wechsels. */
@@ -190,6 +191,7 @@ async function measureHop(
     toContentMs: Math.round(toContentMs),
     settleMs: Math.round(settleMs),
     shellSurvived: probe.shellSurvived,
+    mountedLoading: probe.mountedLoading,
     fallbacks: probe.fallbacks,
     documents: records.filter((record) => record.resourceType === "document")
       .length,
@@ -469,8 +471,39 @@ test("measure cold click after intent", async ({ browser }) => {
   );
 });
 
+test("measure revisit: delayed loading probe", async ({ page }) => {
+  await page.setContent(
+    "<style>.moto-nav-progress{opacity:0;animation:appear 1ms 180ms forwards}@keyframes appear{to{opacity:1}}</style><main></main>",
+  );
+  await armProbe(page);
+  await page.evaluate(() => {
+    const bar = document.createElement("div");
+    bar.className = "moto-nav-progress";
+    bar.textContent = "Lädt";
+    const placeholder = document.createElement("output");
+    placeholder.setAttribute("aria-busy", "true");
+    placeholder.hidden = true;
+    document.querySelector("main")!.append(bar, placeholder);
+  });
+  await page.waitForFunction(
+    () =>
+      getComputedStyle(document.querySelector(".moto-nav-progress")!)
+        .opacity === "1",
+  );
+  await page.evaluate(
+    () =>
+      new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      ),
+  );
+  const probe = await readProbe(page);
+  expect(probe.fallbacks).toEqual(["progress-bar"]);
+  expect(probe.mountedLoading).toBe(true);
+});
+
 // Revisit shares the production server, throttle, network recorder and visible loading probe.
 test("measure revisit", async ({ browser }) => {
-  test.setTimeout(0);
+  // This serial, three-round study is local only; individual actions have short deadlines.
+  test.setTimeout(4 * 60 * 60_000);
   await measureRevisits(browser);
 });

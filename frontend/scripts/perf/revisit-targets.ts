@@ -68,8 +68,8 @@ function flow(
 function tenant(role: "admin" | "betreuer", f: RevisitFixture): Journey[] {
   const home = pageStop("/home", "Datenzeile der Startkarte", [
     role === "admin"
-      ? exact("p,span,div", "Wünsche von Eltern")
-      : text("span,p", "\\d+ von \\d+ da"),
+      ? text('main a[href="/students/search"]', "Kinder anwesend\\s*[1-9]\\d*")
+      : text("main span,main p", "\\d+ von \\d+ da"),
   ]);
   const children = pageStop("/students/search", "Öffnbare Kinderkarte", [
     css(
@@ -89,7 +89,12 @@ function tenant(role: "admin" | "betreuer", f: RevisitFixture): Journey[] {
   const requests = pageStop(
     "/anfragen",
     "Anfragegruppe mit offener Anzahl oder bestätigter Leerzustand",
-    [text("p,span", "\\d+ offene Anfragen? ·|Keine offenen Anfragen")],
+    [
+      text(
+        "main p,main span",
+        "\\d+ offene Anfragen? ·|Keine offenen Anfragen",
+      ),
+    ],
   );
   const time = pageStop(
     "/time-tracking",
@@ -99,7 +104,7 @@ function tenant(role: "admin" | "betreuer", f: RevisitFixture): Journey[] {
   const plan = pageStop(
     "/betreuungsplan",
     "Belegte Planzeile mit Personenzahl",
-    [text("span", "\\d+\\s*P\\.")],
+    [text("main span", "\\d+\\s*P\\.")],
   );
   for (const [stop, key] of [
     [time, "team"],
@@ -323,7 +328,7 @@ function tenant(role: "admin" | "betreuer", f: RevisitFixture): Journey[] {
     const stats = pageStop(
       "/statistics",
       "Anwesenheitsbericht mit geladener Datenzeile",
-      [css("main tbody tr td")],
+      [css("main tbody tr td:nth-child(2)")],
     );
     stats.prepare = async (p) => {
       if (!(await hasLink(p, "/statistics")))
@@ -400,7 +405,22 @@ function tenant(role: "admin" | "betreuer", f: RevisitFixture): Journey[] {
   return journeys;
 }
 export function revisitTargets(f: RevisitFixture): Journey[] {
-  return [...tenant("admin", f), ...tenant("betreuer", f), ...portals(f)];
+  const journeys = [
+    ...tenant("admin", f),
+    ...tenant("betreuer", f),
+    ...portals(f),
+  ];
+  for (const name of [
+    "kindersuche-betreuer",
+    "tagesübersicht-klasse",
+    "übersicht-schule",
+    "trägerliste-konten",
+    "konto-bestellungen",
+  ]) {
+    const original = journeys.find((j) => j.name === name)!;
+    journeys.push({ ...original, name: name + "-tastatur", keyboard: true });
+  }
+  return journeys;
 }
 export function parentStops(family: RevisitFixture["first"]) {
   const childPath = "/children/" + family.childId;
@@ -509,7 +529,7 @@ function portals(f: RevisitFixture): Journey[] {
   const absences = pageStop(
     "/fehlzeiten",
     "Fehlzeiten der zugewiesenen Klasse",
-    [css("main tbody tr td")],
+    [css("main tbody tr td:nth-child(2)")],
   );
   const schCalendar = pageStop(
     "/kalender",
@@ -536,6 +556,30 @@ function portals(f: RevisitFixture): Journey[] {
     "Bestätigter leerer Posteingang oder auswählbare Unterhaltung",
     [text("main p,main a", "Noch keine Nachrichten|Unterhaltung öffnen")],
   );
+  const noteLink = (p: Page) =>
+    p.locator('main a[href^="/klasse/kind?klasse="]').first();
+  const sharedNote = pageStop(
+    "/klasse/kind",
+    "Klassenkind mit freigegebenen Beobachtungen oder bestätigtem Leerzustand",
+    [exact("main h2,main h3", "Beobachtungen der OGS")],
+    noteLink,
+  );
+  sharedNote.selectContent = async (p: Page) => {
+    const url = new URL((await noteLink(p).getAttribute("href"))!, p.url());
+    const student = f.students.find(
+      (s) => String(s.id) === url.searchParams.get("kind"),
+    );
+    if (!student) throw new Error("Klassenzeile gehört nicht zur Messfixture.");
+    return {
+      ...sharedNote.content,
+      query: Object.fromEntries(url.searchParams),
+      markers: [
+        ...sharedNote.content.markers,
+        exact("main h1", student.first_name + " " + student.last_name),
+        text("main p", "Die OGS hat diese Notizen für dich freigegeben"),
+      ],
+    };
+  };
   const schoolPool = [school, absences, schCalendar, notices, schoolMessages];
   const detail = "/schulen/" + f.schoolId;
   const targetSchool = css('main a[href="' + detail + '"]');
@@ -620,7 +664,7 @@ function portals(f: RevisitFixture): Journey[] {
     text("tbody tr", f.schoolName),
   ]);
   const accounts = pageStop("/accounts", "Geladene Kontozeile", [
-    css("main tbody tr td"),
+    css("main tbody tr td:nth-child(2)"),
   ]);
   const caterers = pageStop(
     "/caterers",
@@ -635,10 +679,7 @@ function portals(f: RevisitFixture): Journey[] {
   const account = pageStop(
     "/konto",
     "Bestätigte Anmeldeadresse und bedienbare Passwortaktion",
-    [
-      exact("main dd,main span,main div", f.caterer?.email ?? ""),
-      exact("button", "Passwort ändern"),
-    ],
+    [exact("main dd", f.caterer.email), exact("button", "Passwort ändern")],
   );
   account.prepare = async (page) => {
     await page.getByRole("button", { name: /Profilmenü/ }).click();
@@ -691,6 +732,16 @@ function portals(f: RevisitFixture): Journey[] {
   return [
     ...parentFlows,
     flow("school", "tagesübersicht-klasse", school, klass, schoolPool),
+    {
+      ...flow("school", "klasse-kind", klass, sharedNote, [
+        school,
+        absences,
+        schCalendar,
+        schoolMessages,
+      ]),
+      long: [absences, schCalendar, school],
+      backVia: school,
+    },
     flow("school", "fehlzeiten-start", absences, school, schoolPool),
     flow("traeger", "schulen-ferien", directory, holidays, traegerPool),
     flow("traeger", "ferien-zeitraum", holidays, holiday, traegerPool),

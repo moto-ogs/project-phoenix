@@ -60,7 +60,8 @@ export async function measureParentSwitch(
         ? (1.6 * 1024 * 1024) / 8
         : NETWORK.downloadThroughput,
     });
-    await page.getByRole("button", { name: /Profilmenü/ }).click();
+    if (mobile) await page.locator('button[data-parent-nav-item="more"]').tap();
+    else await page.getByRole("button", { name: /Profilmenü/ }).click();
     const recorder = new RequestRecorder(page);
     const diagnostic = () => {
       const records = recorder.records.filter((r) => !r.noise);
@@ -72,11 +73,11 @@ export async function measureParentSwitch(
     recorder.start();
     let start = performance.now();
     await page
-      .getByRole("dialog", { name: /Profilmenü/ })
+      .getByRole("dialog", { name: mobile ? "Mehr" : /Profilmenü/ })
       .getByRole("button", { name: "Abmelden", exact: true })
       .click();
     const confirm = page
-      .getByRole("dialog")
+      .getByRole("dialog", { name: "Abmelden", exact: true })
       .getByRole("button", { name: "Abmelden", exact: true });
     await confirm.waitFor();
     const confirmation = {

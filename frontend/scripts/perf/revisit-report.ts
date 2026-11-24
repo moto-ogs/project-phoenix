@@ -1,7 +1,8 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { median, OUT_DIR } from "./navigation-probe";
+import { median, OUT_DIR, REPEATS } from "./navigation-probe";
 import type { RevisitRole } from "./revisit-access";
+import type { measurePermissionChange } from "./revisit-permission";
 import type { measureParentSwitch } from "./revisit-context";
 
 export type Step = "kalt" | "warm-1" | "zurück-1" | "warm-4" | "zurück-4";
@@ -14,6 +15,7 @@ export interface Observation {
   criterion: string;
   load: number[];
   idlePercent: number;
+  protocol: string;
   step: Step;
   ms: number;
   rsc: number;
@@ -57,6 +59,7 @@ export function writeReport(
   metadata: { revision: string; started: string; browser: string },
   switches: Switch[],
   results: Observation[],
+  permission: Awaited<ReturnType<typeof measurePermissionChange>>,
 ) {
   const rows = new Map<string, Observation[]>();
   for (const r of results) {
@@ -75,10 +78,10 @@ export function writeReport(
       " · Chromium " +
       metadata.browser,
     "",
-    "Millisekunden: Median [Minimum–Maximum] aus drei Läufen. Ziel: je gültigem warmen bzw. Rückweg-Median < 150 ms. · = kein solcher History-Weg. Netzspalte: RSC/JS/BFF summiert über die tatsächlich gemessenen Schritte und Wiederholungen. Das JSON enthält die Zuordnung pro Einzellauf, auch unter 150 ms.",
+    "Millisekunden: Median [Minimum–Maximum] aus drei Läufen. Ziel: je gültigem warmen bzw. Rückweg-Median < 150 ms. · = kein solcher History-Weg. Pro Zelle folgen RSC/JS/BFF (jeweils Median) und die tatsächlich sichtbaren Ladeanzeigen dieser Richtung. Einzelwerte und Ladeanzeigen je Lauf stehen im JSON.",
     "",
-    "| Portal/Rolle | Ablauf | Profil/Eingabe | Erstbesuch | Warm 1 | Zurück 1 | Warm 4 | Zurück 4 | RSC/JS/BFF | Sichtbare Ladezustände | Inhaltskriterium |",
-    "|---|---|---|---:|---:|---:|---:|---:|---|---|---|",
+    "| Portal/Rolle | Ablauf | Profil/Eingabe | Erstbesuch | Warm 1 | Zurück 1 | Warm 4 | Zurück 4 | Inhaltskriterium |",
+    "|---|---|---|---|---|---|---|---|---|",
   ];
   const summary = [];
   for (const group of rows.values()) {
@@ -87,8 +90,18 @@ export function writeReport(
     for (const step of steps) {
       const runs = group.filter((r) => r.step === step);
       const ms = runs.map((r) => r.ms);
-      cells.push(interval(ms));
-      if (!runs.length) continue;
+      if (!runs.length) {
+        cells.push("·");
+        continue;
+      }
+      if (new Set(runs.map((r) => r.repeat)).size !== REPEATS)
+        throw new Error("Unvollständige Serie: " + first.name + "/" + step);
+      const net = (["rsc", "scripts", "api"] as const)
+        .map((k) => median(runs.map((r) => r[k])))
+        .join("/");
+      const loading =
+        [...new Set(runs.flatMap((r) => r.loading))].join(", ") || "keine";
+      cells.push(interval(ms) + "<br>" + net + " · " + loading);
       summary.push({
         role: first.role,
         name: first.name,
@@ -105,11 +118,6 @@ export function writeReport(
         criterion: first.criterion,
       });
     }
-    const net = (["rsc", "scripts", "api"] as const)
-      .map((k) => group.reduce((a, r) => a + r[k], 0))
-      .join("/");
-    const states =
-      [...new Set(group.flatMap((r) => r.loading))].join(", ") || "keine";
     lines.push(
       "| " +
         [
@@ -117,8 +125,6 @@ export function writeReport(
           first.name,
           first.profile + "/" + first.input,
           ...cells,
-          net,
-          states,
           first.criterion,
         ].join(" | ") +
         " |",
@@ -146,6 +152,23 @@ export function writeReport(
           " |",
       );
     }
+  }
+  if (permission.length) {
+    lines.push(
+      "",
+      "| Elternprofil | Nach Rechteentzug: erlaubte Familienübersicht |",
+      "|---|---:|",
+    );
+    for (const profile of new Set(permission.map((s) => s.profile)))
+      lines.push(
+        "| " +
+          profile +
+          " | " +
+          interval(
+            permission.filter((s) => s.profile === profile).map((s) => s.ms),
+          ) +
+          " |",
+      );
   }
   writeFileSync(
     join(OUT_DIR, "revisit.summary.json"),

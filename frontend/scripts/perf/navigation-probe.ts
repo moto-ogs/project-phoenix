@@ -12,7 +12,11 @@ export const NETWORK = {
 export const QUIET = { quietMs: 1500, capMs: 25_000 } as const;
 
 interface NavProbeWindow {
-  __navProbe?: { fallbacks: string[]; observer: MutationObserver | null };
+  __navProbe?: {
+    fallbacks: string[];
+    mountedLoading: boolean;
+    stop: () => void;
+  };
 }
 
 /**
@@ -23,10 +27,11 @@ interface NavProbeWindow {
 export async function armProbe(page: Page): Promise<void> {
   await page.evaluate(() => {
     const probeWindow = window as NavProbeWindow;
-    probeWindow.__navProbe?.observer?.disconnect();
+    probeWindow.__navProbe?.stop();
     const state = {
       fallbacks: [] as string[],
-      observer: null as MutationObserver | null,
+      mountedLoading: false,
+      stop: () => {},
     };
     probeWindow.__navProbe = state;
 
@@ -44,29 +49,39 @@ export async function armProbe(page: Page): Promise<void> {
         }) ||
         !element.getClientRects().length
       )
-        return;
+        return false;
       const label = element.matches("output")
         ? "loading:" + (element.getAttribute("aria-label") ?? "")
         : element.matches(".animate-pulse")
           ? "skeleton"
           : "progress-bar";
       if (!state.fallbacks.includes(label)) state.fallbacks.push(label);
+      return true;
     };
     const candidates = new Set<Element>();
-    let queued = false;
-    const inspect = (element: Element) => {
-      if (element.matches(selector)) candidates.add(element);
-      for (const child of element.querySelectorAll(selector))
-        candidates.add(child);
-      if (candidates.size && !queued) {
-        queued = true;
-        requestAnimationFrame(() => {
-          for (const candidate of candidates)
-            if (candidate.isConnected) note(candidate);
-          candidates.clear();
-          queued = false;
-        });
+    let frame = 0;
+    const checkFrame = () => {
+      frame = 0;
+      for (const candidate of candidates) {
+        if (
+          !candidate.isConnected ||
+          !candidate.matches(selector) ||
+          !candidate.getClientRects().length ||
+          note(candidate)
+        )
+          candidates.delete(candidate);
       }
+      // CSS-only opacity delays don't cause DOM mutations.
+      if (candidates.size) frame = requestAnimationFrame(checkFrame);
+    };
+    const add = (node: Element) => {
+      if (node.matches('output[aria-busy="true"]')) state.mountedLoading = true;
+      candidates.add(node);
+    };
+    const inspect = (element: Element) => {
+      if (element.matches(selector)) add(element);
+      for (const child of element.querySelectorAll(selector)) add(child);
+      if (candidates.size && !frame) frame = requestAnimationFrame(checkFrame);
     };
     const observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
@@ -85,24 +100,34 @@ export async function armProbe(page: Page): Promise<void> {
       attributes: true,
       attributeFilter: ["hidden", "aria-busy", "style"],
     });
-    state.observer = observer;
+    state.stop = () => {
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+      candidates.clear();
+    };
   });
 }
 
-export async function readProbe(
-  page: Page,
-): Promise<{ shellSurvived: boolean; fallbacks: string[] }> {
+export async function readProbe(page: Page): Promise<{
+  shellSurvived: boolean;
+  fallbacks: string[];
+  mountedLoading: boolean;
+}> {
   return page.evaluate(() => {
     const probeWindow = window as NavProbeWindow;
     const state = probeWindow.__navProbe;
-    state?.observer?.disconnect();
+    state?.stop();
     const shellSurvived =
       document
         .querySelector("[data-portal-background]")
         ?.getAttribute("data-nav-probe") === "armed";
     // Mehrfach dasselbe Skelett zählt einmal; interessant ist, WAS zu sehen war.
     const fallbacks = [...new Set(state?.fallbacks ?? [])];
-    return { shellSurvived, fallbacks };
+    return {
+      shellSurvived,
+      fallbacks,
+      mountedLoading: state?.mountedLoading ?? false,
+    };
   });
 }
 

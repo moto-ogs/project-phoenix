@@ -26,6 +26,7 @@ import {
   type Observation,
   type Step,
 } from "./revisit-report";
+import { measurePermissionChange } from "./revisit-permission";
 import { measureParentSwitch } from "./revisit-context";
 import { routeCatalog } from "./revisit-catalog";
 import { RequestRecorder } from "./recorder";
@@ -161,6 +162,7 @@ async function runJourney(
       : journey.keyboard
         ? "keyboard"
         : "click";
+    let protocol = "";
     const rows: Sample[] = [];
     const visit = async (stop: Stop) => {
       await navigate(page, stop, input);
@@ -172,7 +174,7 @@ async function runJourney(
     };
     const sample = async (step: Step, back = 0) => {
       const result = await measure(page, recorder, target, input, back);
-      rows.push({ step, input: back ? "history" : input, ...result });
+      rows.push({ step, input: back ? "history" : input, protocol, ...result });
     };
     recorder.start();
     await gotoTolerant(
@@ -182,6 +184,14 @@ async function runJourney(
     );
     if (journey.initialSelection) await navigate(page, journey.via, input);
     await ready(page, journey.via.content);
+    protocol = await page.evaluate(
+      () =>
+        (
+          performance.getEntriesByType(
+            "navigation",
+          )[0] as PerformanceNavigationTiming
+        ).nextHopProtocol,
+    );
     await recorder.waitForQuiet({ quietMs: 3000, capMs: 30000 });
     let documentRequests = 0;
     page.on("request", (request) => {
@@ -213,7 +223,10 @@ async function runJourney(
     }
     const excursion = async (stops: Stop[]) => {
       const before = await historyIndex(page);
+      recorder.start();
       for (const stop of stops) await visit(stop);
+      if ((await recorder.waitForQuiet(QUIET)) !== "quiet")
+        throw new Error("Zwischenseite nicht ruhig: " + journey.name);
       return before - (await historyIndex(page));
     };
     await excursion([journey.via]);
@@ -240,15 +253,19 @@ async function runJourney(
       throw new Error(
         "Dokument-Reload auf einer Zwischen- oder Zielseite: " + journey.name,
       );
-    session.state.cookies = await context.cookies();
     return rows;
   } finally {
-    await context.close();
+    try {
+      session.state.cookies = await context.cookies();
+    } finally {
+      await context.close();
+    }
   }
 }
 type Sample = Awaited<ReturnType<typeof measure>> & {
   step: Step;
   input: Input | "history";
+  protocol: string;
 };
 function cpuTimes() {
   return cpus().reduce(
@@ -290,7 +307,17 @@ export async function measureRevisits(browser: Browser) {
   );
   const fixture = revisitFixture();
   const catalog = revisitTargets(fixture);
-  const selected = process.env.PERF_REVISIT?.split(",").filter(Boolean);
+  const names = new Set(catalog.map((j) => j.name));
+  for (const row of catalogRows) {
+    if (
+      row.representative !== "–" &&
+      row.representative.split(", ").some((n) => !names.has(n))
+    )
+      throw new Error("Unbekannter Vertreter im Seitenkatalog: " + row.route);
+  }
+  const selected = process.env.PERF_REVISIT?.trim()
+    ? process.env.PERF_REVISIT.split(",").map((s) => s.trim())
+    : undefined;
   if (selected?.some((name) => !catalog.some((target) => target.name === name)))
     throw new Error("Unbekanntes PERF_REVISIT-Ziel.");
   const journeys = catalog.filter(
@@ -300,6 +327,7 @@ export async function measureRevisits(browser: Browser) {
   const roleOrder = new Set(journeys.map((journey) => journey.role));
   const switches: Awaited<ReturnType<typeof measureParentSwitch>>[] = [];
   const results: Observation[] = [];
+  let permission: Awaited<ReturnType<typeof measurePermissionChange>> = [];
   const metadata = {
     initialIdlePercent: await initialIdleWindow(),
     revision: execFileSync("git", ["rev-parse", "HEAD"], {
@@ -314,6 +342,7 @@ export async function measureRevisits(browser: Browser) {
     rttMs: NETWORK.latency,
     desktopMbit: 3,
     mobileMbit: 1.6,
+    selection: selected ?? "all",
     seed: "vollbetrieb + simulate full-day",
     seedCreatedAt: fixture.seedCreatedAt,
     seedStudents: fixture.seedStudents,
@@ -322,11 +351,22 @@ export async function measureRevisits(browser: Browser) {
       mobile: devices["Pixel 7"]!.viewport,
     },
     uploadMbit: 1,
-    networkProtocol: "HTTP/1.1",
+    applicationTree: execFileSync("git", ["rev-parse", "HEAD:frontend/src"], {
+      encoding: "utf8",
+    }).trim(),
+    dirtyWorktree: Boolean(
+      execFileSync("git", ["status", "--porcelain"], {
+        encoding: "utf8",
+      }).trim(),
+    ),
     repeats: REPEATS,
   };
-  const save = () =>
-    saveObservations({ ...metadata, loadEnd: loadavg() }, switches, results);
+  const save = (complete = false) =>
+    saveObservations(
+      { ...metadata, complete, loadEnd: loadavg(), permission },
+      switches,
+      results,
+    );
   for (const role of roleOrder) {
     const setup = await browser.newContext({
       locale: "de-DE",
@@ -381,6 +421,8 @@ export async function measureRevisits(browser: Browser) {
     }
   }
   if (roleOrder.has("parents")) {
+    permission = await measurePermissionChange(browser, fixture);
+    save();
     for (let repeat = 1; repeat <= REPEATS; repeat++) {
       for (const mobile of [false, true])
         switches.push(await measureParentSwitch(browser, fixture, mobile));
@@ -392,5 +434,6 @@ export async function measureRevisits(browser: Browser) {
       [...failures.values()],
       "Keine vollständige Baseline: " + [...failures.keys()].join(", "),
     );
-  writeReport(metadata, switches, results);
+  writeReport(metadata, switches, results, permission);
+  save(true);
 }
