@@ -357,7 +357,6 @@ func (s *staffAbsenceService) broadcastTimeTrackingChanged(ctx context.Context) 
 	queueStaffTimeTrackingChanged(ctx, s.broadcaster, nil)
 }
 
-// NewStaffAbsenceService creates a new staff absence service
 func newStaffAbsenceService(
 	absenceRepo AbsenceRequestRecords,
 	workSessionRepo WorkSessionRecords,

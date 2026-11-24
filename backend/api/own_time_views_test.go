@@ -79,6 +79,11 @@ func checkOwnTimeViews(t *testing.T, api *goldenRuntime) {
 
 	yearStart := calendar.NewDate(today.Year(), time.January, 1)
 	yearEnd := calendar.NewDate(today.Year(), time.December, 31)
+	// Growing the leave fixture must not change today's absence in the clock view.
+	requestEnd := yearEnd
+	if today.DaysUntil(yearEnd) < 9 {
+		requestEnd = today.AddDays(-1)
+	}
 	custom := testpkg.CreateTestStaffAbsenceType(t, db, "Additional leave")
 	_, err = db.NewRaw("UPDATE active.staff_absence_types SET requestable = true, allowance_enabled = true WHERE id = ?", custom.ID).Exec(testpkg.Ctx(t))
 	require.NoError(t, err)
@@ -128,7 +133,7 @@ func checkOwnTimeViews(t *testing.T, api *goldenRuntime) {
 			recent := today.AddDays(-added - 1)
 			recentEnd := recent.BerlinMidnight().Add(12 * time.Hour)
 			fixture.session(recent, recentEnd.Add(-2*time.Hour), &recentEnd, "Clock history")
-			date := yearEnd.AddDays(-added)
+			date := requestEnd.AddDays(-added)
 			kind := workforce.AbsenceTypeVacation
 			if added%3 == 2 {
 				kind = workforce.AbsenceTypeOther
