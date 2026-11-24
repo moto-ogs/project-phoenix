@@ -361,7 +361,7 @@ const TRAEGER_SETTINGS_NAV_ITEMS: readonly TraegerNavItem[] = [
     key: "schulrollen",
     href: "/traeger/einstellungen/schulrollen",
     label: "Rollen für Schulen",
-    shortLabel: "Schulrollen",
+    shortLabel: "Rollen",
     concept: rolesConcept,
     right: SETTINGS_RIGHT,
   },
