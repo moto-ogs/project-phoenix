@@ -91,7 +91,8 @@ function derivedType(type, source, generated, seen = new Set()) {
   if (!ts.isIdentifier(type.typeName)) return false;
   const name = type.typeName.text;
   if (["Omit", "Pick", "Partial", "Required", "Readonly"].includes(name)) {
-    return Boolean(type.typeArguments?.length);
+    const base = type.typeArguments?.[0];
+    return base !== undefined && derivedType(base, source, generated, seen);
   }
   if (seen.has(name)) return false;
   seen.add(name);

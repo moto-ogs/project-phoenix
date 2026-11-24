@@ -101,7 +101,7 @@ export function success<T>(
 /**
  * A route that answers no data: a 204, which the backend client reads as
  * undefined, or the envelope without a data member. The catalog proxy
- * answers it as `{ status: "success", data: null }`, a DELETE as 204.
+ * preserves the status: a 204 stays bodyless, other successes get a null-data envelope.
  */
 export const noData = z
   .union([

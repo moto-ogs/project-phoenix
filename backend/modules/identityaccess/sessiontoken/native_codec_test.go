@@ -13,6 +13,32 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken/tokentest"
 )
 
+func TestNativeHolidayParentSetupPreservesOrganizationID(t *testing.T) {
+	t.Parallel()
+	signer := jwtauth.New("HS256", []byte("holiday-setup-codec-test-only"), nil)
+	native, err := identityCompose.NewSessionTokenCodec(signer, time.Hour, 24*time.Hour, nil)
+	require.NoError(t, err)
+
+	claims := identityaccess.HolidayParentSetupClaims{Email: "eltern@example.org", OrganizationID: 9007199254740993}
+	token, err := native.IssueHolidayParentSetupToken(claims, time.Hour)
+	require.NoError(t, err)
+	decoded, err := native.ParseHolidayParentSetupToken(token)
+	require.NoError(t, err)
+	require.Equal(t, claims.OrganizationID, decoded.OrganizationID)
+	require.Equal(t, claims.Email, decoded.Email)
+	_, err = native.ParseAccessToken(token)
+	require.Error(t, err)
+
+	_, legacy, err := signer.Encode(map[string]any{
+		"holiday_parent_setup": true, "email": claims.Email, "org_id": 42,
+		"exp": time.Now().Add(time.Hour).Unix(),
+	})
+	require.NoError(t, err)
+	decoded, err = native.ParseHolidayParentSetupToken(legacy)
+	require.NoError(t, err)
+	require.EqualValues(t, 42, decoded.OrganizationID)
+}
+
 func TestNativeInvitationOwnershipProof(t *testing.T) {
 	t.Parallel()
 	legacy, err := sessiontoken.NewTokenAuthWithDurations("invitation-codec-test-key-not-for-deployment", time.Hour, 24*time.Hour)

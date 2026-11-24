@@ -40,19 +40,19 @@ const logger = createLogger({ component: "StaffKontoTab" });
 /**
  * Was der Bearbeiten-Zustand speichert. Nur die Felder, die die Person
  * ändern darf, sind gesetzt: ohne users:update fehlen Vorname und Nachname,
- * ohne Betreuungsprofil die Position, ohne Rollenwechsel `role_id`.
+ * ohne Betreuungsprofil die Position, ohne Rollenwechsel `roleId`.
  */
 export type KontoDraft = Readonly<
   Partial<Pick<Teacher, "first_name" | "last_name" | "role" | "staff_notes">>
 > & {
   /** Neue Systemrolle, nur wenn sie sich von der aktuellen unterscheidet. */
-  readonly role_id?: string;
+  readonly roleId?: string;
   /**
    * Die Version der Rollen, die das Feld zeigte, als die Person die Rolle
-   * wählte (ADR 0311); gesetzt mit `role_id`. Ein späteres Nachladen ändert
+   * wählte (ADR 0311); gesetzt mit `roleId`. Ein späteres Nachladen ändert
    * sie nicht, sonst ersetzte das Speichern eine inzwischen vergebene Rolle.
    */
-  readonly role_version?: string;
+  readonly roleVersion?: string;
   /**
    * Der Datensatz, auf dem der Entwurf ruht (ADR 0311): seine Stände gehen
    * mit Name, Position und Notizen zurück, nicht die einer späteren Lesung.
@@ -348,7 +348,7 @@ export function KontoTab({ teacher, editing }: KontoTabProps) {
       !assignment.currentIsLehrkraft &&
       selectedRoleId !== "" &&
       currentSelectableRoleId(assignment) !== selectedRoleId
-        ? { role_id: selectedRoleId, role_version: draft.roleVersion ?? "" }
+        ? { roleId: selectedRoleId, roleVersion: draft.roleVersion ?? "" }
         : {}),
     };
 

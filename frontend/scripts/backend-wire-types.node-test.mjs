@@ -47,6 +47,20 @@ test("finds a copy in an object union branch", () => {
   ]);
 });
 
+test("does not exempt a wire shape intersected with an unrelated utility type", () => {
+  const findings = findBackendWireTypes(
+    "x.ts",
+    `type Wire = Readonly<object> & {
+      target_school_class: string;
+      target_grade_level: number;
+    };`,
+  );
+  assert.deepEqual(
+    findings.map(({ fields }) => fields),
+    [["target_school_class", "target_grade_level"]],
+  );
+});
+
 test("finds wire shapes inside casts, call type arguments, parameters and returns", () => {
   const findings = findBackendWireTypes(
     "x.ts",
