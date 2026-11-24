@@ -176,6 +176,7 @@ export interface RoleResponse {
   is_system: boolean;
   base_role?: string;
   school_portal: boolean;
+  from_traeger: boolean;
   created_at: string;
   updated_at: string;
   version: string;
@@ -189,6 +190,7 @@ export const RoleResponseSchema: z.ZodType<RoleResponse, unknown> = object<RoleR
   is_system: bool,
   base_role: optional(str),
   school_portal: bool,
+  from_traeger: bool,
   created_at: str,
   updated_at: str,
   version: str,

@@ -165,6 +165,7 @@ import { routes as traegerProfile } from "./traeger-profile.generated";
 import { routes as traegerReportTemplates } from "./traeger-report-templates.generated";
 import { routes as traegerReports } from "./traeger-reports.generated";
 import { routes as traegerRequiredDetails } from "./traeger-required-details.generated";
+import { routes as traegerSchoolRoles } from "./traeger-school-roles.generated";
 import { routes as traegerSchoolSessions } from "./traeger-school-sessions.generated";
 import { routes as traegerSchools } from "./traeger-schools.generated";
 import { routes as traegerSepaCreditor } from "./traeger-sepa-creditor.generated";
@@ -503,6 +504,12 @@ export const portalRoutes = {
     traegerReports["GET /traeger/reports/key-date"],
     traegerReports["GET /traeger/reports/key-date/export"],
     traegerRequiredDetails["GET /traeger/required-details/"],
+    traegerSchoolRoles["GET /traeger/school-roles/"],
+    traegerSchoolRoles["GET /traeger/school-roles/catalog"],
+    traegerSchoolRoles["GET /traeger/school-roles/{id}/removal-preview"],
+    traegerSchoolRoles["POST /traeger/school-roles/"],
+    traegerSchoolRoles["POST /traeger/school-roles/{id}/removal"],
+    traegerSchoolRoles["PUT /traeger/school-roles/{id}"],
     traegerSchoolSessions["POST /traeger/school-sessions/"],
     traegerSchools["GET /traeger/schools/"],
     traegerSchools["GET /traeger/schools/alerts"],

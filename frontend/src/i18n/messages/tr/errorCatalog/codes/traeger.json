@@ -29,6 +29,9 @@
   "report_template_not_found": "Bu şablon artık yok. Lütfen sayfayı yenileyin.",
   "school_not_found": "{object} için erişim izniniz yok. Okulla iletişime geçin.",
   "school_requires_code": "{object} için erişim izniniz yok. Okulla iletişime geçin.",
+  "school_role_name_taken": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "school_role_name_used_at_school": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "school_role_not_found": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "second_factor_required": "{object} için erişim izniniz yok. Okulla iletişime geçin.",
   "shared_document_not_found": "Kurum bu belgeyi artık paylaşmıyor. Lütfen sayfayı yenileyin."
 }

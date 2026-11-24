@@ -349,6 +349,14 @@
       "write_owner": "identity-access"
     },
     {
+      "name": "auth.traeger_school_role_permissions",
+      "write_owner": "identity-access"
+    },
+    {
+      "name": "auth.traeger_school_roles",
+      "write_owner": "identity-access"
+    },
+    {
       "name": "auth.demo_crm_jobs",
       "write_owner": "identity-access"
     }

@@ -170,7 +170,7 @@ func rbacBudgetCollection(t *testing.T, rr *httptest.ResponseRecorder, message s
 
 func rbacBudgetRoleDTO(role identityaccess.Role) map[string]any {
 	dto := map[string]any{"id": strconv.FormatInt(role.ID, 10), "name": role.Name, "description": role.Description,
-		"is_system": role.IsSystem, "school_portal": role.SchoolPortal,
+		"is_system": role.IsSystem, "school_portal": role.SchoolPortal, "from_traeger": role.TraegerRoleID != nil,
 		"created_at": role.CreatedAt.Format(time.RFC3339), "updated_at": role.UpdatedAt.Format(time.RFC3339),
 		"version": identityaccess.RoleVersion(role)}
 	if role.BaseRole != nil {

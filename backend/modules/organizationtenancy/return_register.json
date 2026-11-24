@@ -2,7 +2,7 @@
   "registerVersion": 1,
   "formatVersion": 1,
   "catalogVersion": 1,
-  "catalogSHA256": "29fd8753ffa1bbf4353a7f148a0d11596c84e60216a27c2327cc2a7d89c5a974",
+  "catalogSHA256": "6312e3f8b0f35db6491ba07e32ce2dc8ce60cc58838733b967fe070f8bc2e8f1",
   "about": "Dieses Register beschreibt das Rückgabepaket von moto: welche Tabellen und Felder es enthält, welche Typen sie haben, ob sie leer sein dürfen und wie die Tabellen verbunden sind. Es enthält keine Kundendaten. Jedes Paket enthält dieselbe Beschreibung für seine Tabellen als model.json. formatVersion und catalogSHA256 stehen auch in der manifest.json des Pakets.",
   "standards": [
     {
@@ -8159,6 +8159,12 @@
           "type": "boolean",
           "udt": "bool",
           "nullable": false
+        },
+        {
+          "name": "traeger_role_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -8417,6 +8423,108 @@
           "targetTable": "auth.accounts",
           "targetColumn": "id"
         },
+        {
+          "column": "organization_id",
+          "targetTable": "platform.organizations",
+          "targetColumn": "id"
+        }
+      ],
+      "packages": [
+        "school",
+        "organization"
+      ]
+    },
+    {
+      "name": "auth.traeger_school_role_permissions",
+      "columns": [
+        {
+          "name": "organization_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "traeger_role_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "permission_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        }
+      ],
+      "relationships": [
+        {
+          "column": "organization_id",
+          "targetTable": "auth.traeger_school_roles",
+          "targetColumn": "organization_id"
+        },
+        {
+          "column": "permission_id",
+          "targetTable": "auth.permissions",
+          "targetColumn": "id"
+        },
+        {
+          "column": "traeger_role_id",
+          "targetTable": "auth.traeger_school_roles",
+          "targetColumn": "id"
+        }
+      ],
+      "packages": [
+        "school",
+        "organization"
+      ]
+    },
+    {
+      "name": "auth.traeger_school_roles",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "organization_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "udt": "text",
+          "nullable": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "udt": "text",
+          "nullable": false
+        },
+        {
+          "name": "base_role",
+          "type": "character varying",
+          "udt": "varchar",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        }
+      ],
+      "relationships": [
         {
           "column": "organization_id",
           "targetTable": "platform.organizations",

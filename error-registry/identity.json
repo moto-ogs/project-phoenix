@@ -379,6 +379,12 @@
       "class": "unavailable",
       "parameters": [],
       "legacy": "identity.logout_not_revoked"
+    },
+    {
+      "code": "identity.role_from_traeger",
+      "class": "permission",
+      "parameters": [],
+      "legacy": "identity.role_from_traeger"
     }
   ]
 }

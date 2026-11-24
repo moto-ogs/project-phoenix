@@ -57,6 +57,9 @@ export function getTraegerHelpTopicForPath(pathname: string): HelpTopicId {
   if (onPage(page, "/einstellungen/mitglieder")) {
     return HELP_TOPICS.traegerAccounts;
   }
+  if (onPage(page, "/einstellungen/schulrollen")) {
+    return HELP_TOPICS.traegerSchoolRoles;
+  }
   if (onPage(page, "/einstellungen/zugriffsprotokoll")) {
     return HELP_TOPICS.traegerAccessLog;
   }

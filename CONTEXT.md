@@ -180,6 +180,19 @@ Schule darf alles daran ändern; jede Änderung ist eine **Abweichung**, die ein
 späterer Abgleich behält. Löschen kann nur das Büro (Zurückziehen). Wechselt die
 Schule den Träger, wird die Kopie ein gewöhnliches Angebot ohne Trägerbezug.
 
+## Träger-Rolle (Schulpersonal)
+
+Eine **Träger-Rolle** ist eine Rolle, die das Träger-Büro einmal für das
+Personal aller seiner Schulen festlegt (Name, „Gilt als“, Rechte aus dem
+Katalog der Schule). Jede Schule des Trägers bekommt sie als Rolle „vom
+Träger“, auch eine Schule, die später dazukommt. Die Schule weist sie zu,
+ändert und löscht sie aber nicht; eigene Rollen legt sie weiter an
+([ADR 0317](docs/adr/0317-traeger-rollen-fuer-schulpersonal-werden-je-schule-kopiert.md)).
+
+_Vermeiden_: Rollenvorlage (belegt durch die Vorlagen beim Anlegen einer
+Schulrolle), Büro-Rolle (die Rollen der Personen im Träger-Büro sind ein
+anderes System).
+
 ## Gehzeit
 
 Die **Gehzeit** ist die geplante Uhrzeit, zu der ein Kind an einem Betreuungstag

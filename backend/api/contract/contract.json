@@ -12501,6 +12501,39 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/school-roles/",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "SchoolRoleListResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/school-roles/catalog",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "SchoolRoleCatalogResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/school-roles/{id}/removal-preview",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "SchoolRoleRemovalResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/schools/",
       "portals": [
         "org"
@@ -20779,6 +20812,33 @@
     },
     {
       "method": "POST",
+      "pattern": "/traeger/school-roles/",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "SchoolRoleRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "SchoolRoleResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/school-roles/{id}/removal",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "SchoolRoleRemovalRequest"
+      },
+      "no_data": true
+    },
+    {
+      "method": "POST",
       "pattern": "/traeger/school-sessions/",
       "portals": [
         "org"
@@ -23989,6 +24049,21 @@
       "response": {
         "kind": "ref",
         "ref": "TraegerReportTemplate"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/traeger/school-roles/{id}",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "SchoolRoleRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "SchoolRoleResponse"
       }
     },
     {
@@ -85471,6 +85546,12 @@
           }
         },
         {
+          "name": "from_traeger",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "created_at",
           "schema": {
             "kind": "string"
@@ -90912,6 +90993,391 @@
           "name": "care_beyond_end",
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolRoleCarryResponse",
+      "go_type": "traegerportal.SchoolRoleCarryResponse",
+      "fields": [
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "carried",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "name_taken",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "holders",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolRoleCatalogResponse",
+      "go_type": "traegerportal.SchoolRoleCatalogResponse",
+      "fields": [
+        {
+          "name": "permissions",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SchoolRolePermissionResponse"
+            }
+          }
+        },
+        {
+          "name": "templates",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SchoolRoleTemplateResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolRoleHolderResponse",
+      "go_type": "traegerportal.SchoolRoleHolderResponse",
+      "fields": [
+        {
+          "name": "account_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolRoleListResponse",
+      "go_type": "traegerportal.SchoolRoleListResponse",
+      "fields": [
+        {
+          "name": "roles",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SchoolRoleResponse"
+            }
+          }
+        },
+        {
+          "name": "schools",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SchoolRoleSchoolResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolRolePermissionResponse",
+      "go_type": "traegerportal.SchoolRolePermissionResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "description",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "resource",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "action",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolRoleRemovalRequest",
+      "go_type": "traegerportal.SchoolRoleRemovalRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolRoleRemovalResponse",
+      "go_type": "traegerportal.SchoolRoleRemovalResponse",
+      "fields": [
+        {
+          "name": "role_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "schools",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SchoolRoleRemovalSchoolResponse"
+            }
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolRoleRemovalSchoolResponse",
+      "go_type": "traegerportal.SchoolRoleRemovalSchoolResponse",
+      "fields": [
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "holders",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SchoolRoleHolderResponse"
+            }
+          }
+        },
+        {
+          "name": "kept_for_invitations",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolRoleRequest",
+      "go_type": "traegerportal.SchoolRoleRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "description",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "base_role",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "permission_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "id"
+            }
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolRoleResponse",
+      "go_type": "traegerportal.SchoolRoleResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "description",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "base_role",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "permission_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "id"
+            }
+          }
+        },
+        {
+          "name": "schools",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SchoolRoleCarryResponse"
+            }
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolRoleSchoolResponse",
+      "go_type": "traegerportal.SchoolRoleSchoolResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolRoleTemplateResponse",
+      "go_type": "traegerportal.SchoolRoleTemplateResponse",
+      "fields": [
+        {
+          "name": "base_role",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "permission_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "id"
+            }
           }
         }
       ]

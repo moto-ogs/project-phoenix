@@ -15574,6 +15574,188 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerRolePeople.AccountNames",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRolePeople.AccountNames",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target *modules/peopledirectory/compose.Directory.ListPersonsByAccount: the Träger roles read the schools of the Träger, the school ID of a tenant transaction and the names behind a school's accounts (ADR 0317). May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListPersonsByAccount",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerRoleRuntime.WithinExclusive",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoleRuntime.WithinExclusive",
+      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinExclusive (tenant-runtime) through api.traegerRoleRuntime.WithinExclusive. The Träger roles open the Träger transaction and one tenant transaction per school one after the other, never both at once, under one exclusive key per Träger (ADR 0105, ADR 0317). Transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinExclusive",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerRoleRuntime.WithinSchool",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoleRuntime.WithinSchool",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target tenant.NewTenantID: the Träger roles read the school ID of a tenant transaction (ADR 0317). May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.NewTenantID",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerRoleRuntime.WithinSchool",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoleRuntime.WithinSchool",
+      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinTenant (tenant-runtime) through api.traegerRoleRuntime.WithinSchool. The Träger roles open the Träger transaction and one tenant transaction per school one after the other, never both at once, under one exclusive key per Träger (ADR 0105, ADR 0317). Transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerRoleRuntime.WithinTraeger",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoleRuntime.WithinTraeger",
+      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinTraeger (tenant-runtime) through api.traegerRoleRuntime.WithinTraeger. The Träger roles open the Träger transaction and one tenant transaction per school one after the other, never both at once, under one exclusive key per Träger (ADR 0105, ADR 0317). Transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTraeger",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerRoleSchools.TraegerSchools",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoleSchools.TraegerSchools",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Capability.ListSchoolsByOrganization: the Träger roles read the schools of the Träger, the school ID of a tenant transaction and the names behind a school's accounts (ADR 0317). May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListSchoolsByOrganization",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerRoleSchools.TraegerSchools",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoleSchools.TraegerSchools",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Query.ListSchoolsByOrganization: the Träger roles read the schools of the Träger, the school ID of a tenant transaction and the names behind a school's accounts (ADR 0317). May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListSchoolsByOrganization",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerRoleSchools.TraegerSchools",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoleSchools.TraegerSchools",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.School.IsDeleted: the Träger roles read the schools of the Träger, the school ID of a tenant transaction and the names behind a school's accounts (ADR 0317). May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.School.IsDeleted",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.CreateTraegerSchoolRole",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.CreateTraegerSchoolRole",
+      "reason": "Platform protocol participation (scope): identity-access reaches tenant.RegisterAfterCommit (tenant-runtime) through *modules/identityaccess/internal/application.TraegerSchoolRoles.CreateTraegerSchoolRole. The copy of a Träger role is written with the role administration's locks and session revocation inside the school's tenant transaction the root binding opened (ADR 0317); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.CreateTraegerSchoolRole",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.CreateTraegerSchoolRole",
+      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinAdmin (tenant-runtime) through *modules/identityaccess/internal/application.TraegerSchoolRoles.CreateTraegerSchoolRole. The copy of a Träger role is written with the role administration's locks and session revocation inside the school's tenant transaction the root binding opened (ADR 0317); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.CreateTraegerSchoolRole",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.CreateTraegerSchoolRole",
+      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinCurrentTenant (tenant-runtime) through *modules/identityaccess/internal/application.TraegerSchoolRoles.CreateTraegerSchoolRole. The copy of a Träger role is written with the role administration's locks and session revocation inside the school's tenant transaction the root binding opened (ADR 0317); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.RemoveTraegerSchoolRole",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.RemoveTraegerSchoolRole",
+      "reason": "Platform protocol participation (scope): identity-access reaches tenant.RegisterAfterCommit (tenant-runtime) through *modules/identityaccess/internal/application.TraegerSchoolRoles.RemoveTraegerSchoolRole. The copy of a Träger role is written with the role administration's locks and session revocation inside the school's tenant transaction the root binding opened (ADR 0317); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.RemoveTraegerSchoolRole",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.RemoveTraegerSchoolRole",
+      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinAdmin (tenant-runtime) through *modules/identityaccess/internal/application.TraegerSchoolRoles.RemoveTraegerSchoolRole. The copy of a Träger role is written with the role administration's locks and session revocation inside the school's tenant transaction the root binding opened (ADR 0317); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.RemoveTraegerSchoolRole",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.RemoveTraegerSchoolRole",
+      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinCurrentTenant (tenant-runtime) through *modules/identityaccess/internal/application.TraegerSchoolRoles.RemoveTraegerSchoolRole. The copy of a Träger role is written with the role administration's locks and session revocation inside the school's tenant transaction the root binding opened (ADR 0317); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.UpdateTraegerSchoolRole",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.UpdateTraegerSchoolRole",
+      "reason": "Platform protocol participation (scope): identity-access reaches tenant.RegisterAfterCommit (tenant-runtime) through *modules/identityaccess/internal/application.TraegerSchoolRoles.UpdateTraegerSchoolRole. The copy of a Träger role is written with the role administration's locks and session revocation inside the school's tenant transaction the root binding opened (ADR 0317); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.UpdateTraegerSchoolRole",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.UpdateTraegerSchoolRole",
+      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinAdmin (tenant-runtime) through *modules/identityaccess/internal/application.TraegerSchoolRoles.UpdateTraegerSchoolRole. The copy of a Träger role is written with the role administration's locks and session revocation inside the school's tenant transaction the root binding opened (ADR 0317); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.UpdateTraegerSchoolRole",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.UpdateTraegerSchoolRole",
+      "reason": "Platform protocol participation (scope): identity-access reaches tenant.WithinCurrentTenant (tenant-runtime) through *modules/identityaccess/internal/application.TraegerSchoolRoles.UpdateTraegerSchoolRole. The copy of a Träger role is written with the role administration's locks and session revocation inside the school's tenant transaction the root binding opened (ADR 0317); transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/api.TraegerPortalIdentity.StartTraegerSchoolSession",
       "classification": "platform",

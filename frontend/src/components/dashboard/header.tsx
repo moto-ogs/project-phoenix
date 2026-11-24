@@ -157,6 +157,7 @@ const TRAEGER_PAGE_TITLES: ReadonlyArray<
   ["/abrechnung", "Abrechnungsläufe"],
   ["/vertraege", "Verträge"],
   ["/einstellungen/mitglieder", "Mitglieder und Rollen"],
+  ["/einstellungen/schulrollen", "Rollen für Schulen"],
   ["/einstellungen/briefkopf", "Briefkopf und Vorlagen"],
   ["/einstellungen/abrechnung", "Abrechnungsvorgaben"],
   ["/einstellungen/dokumentarten", "Dokumentarten"],

@@ -60,6 +60,11 @@ const (
 	// #4654). Written against the school with the Träger in the metadata,
 	// so the school sees who opened it through the Träger and when.
 	EventTypeTraegerSchoolSwitch = "traeger_school_switch"
+
+	// A change the Träger-Büro made to the copy of one of its roles at the
+	// school (#4810, ADR 0317). Written against the school with the level
+	// „traeger“, the Träger and the role in the metadata.
+	EventTypeTraegerRoleChanged = "traeger_role_changed"
 )
 
 // Validate ensures auth event is valid
@@ -90,7 +95,7 @@ func (ae *AuthEvent) Validate() error {
 		EventTypeTenantAccessGranted, EventTypeTenantAccessRevoked,
 		EventTypeTenantRoleChanged,
 		EventTypeStaffPreviewStarted, EventTypeStaffPreviewEnded,
-		EventTypeTraegerSchoolSwitch:
+		EventTypeTraegerSchoolSwitch, EventTypeTraegerRoleChanged:
 		// Valid types
 	default:
 		return errors.New("invalid event type")

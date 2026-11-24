@@ -1,0 +1,6 @@
+GET /traeger/school-roles/ -> basis
+GET /traeger/school-roles/catalog -> basis
+GET /traeger/school-roles/{id}/removal-preview -> basis
+POST /traeger/school-roles/ -> basis
+POST /traeger/school-roles/{id}/removal -> basis
+PUT /traeger/school-roles/{id} -> basis

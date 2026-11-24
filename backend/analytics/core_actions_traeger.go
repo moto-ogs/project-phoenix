@@ -27,6 +27,10 @@ var traegerCoreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/traeger/accounts/invitations"}:                  notCaptured,
 	{http.MethodDelete, "/traeger/accounts/invitations/{invitationId}"}: notCaptured,
 	{http.MethodPut, "/traeger/accounts/{accountId}/roles"}:             notCaptured,
+	// The roles the Träger gives the staff of all its schools (#4810).
+	{http.MethodPost, "/traeger/school-roles/"}:             notCaptured,
+	{http.MethodPut, "/traeger/school-roles/{id}"}:          notCaptured,
+	{http.MethodPost, "/traeger/school-roles/{id}/removal"}: notCaptured,
 	// The name of a person of the Träger-Büro (#4693) belongs to the Träger,
 	// not to a school: no school to count it for.
 	{http.MethodPut, "/traeger/accounts/{accountId}/name"}:     notCaptured,

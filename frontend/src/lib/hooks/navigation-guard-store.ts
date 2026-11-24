@@ -50,6 +50,11 @@ export function allowConfirmedUnload(): () => void {
   };
 }
 
+/** True while a page guards unsaved changes against leaving it. */
+export function hasNavigationBlocker(): boolean {
+  return blockers.length > 0;
+}
+
 export function isUnloadConfirmed(): boolean {
   return confirmedUnloads > 0;
 }
