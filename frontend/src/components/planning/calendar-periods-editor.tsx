@@ -118,9 +118,11 @@ export function CalendarPeriodsEditor({
         key: "name",
         header: "Zeitraum",
         sortValue: (period) => period.name,
+        stacked: "title",
         // Auf schmalen Screens tragen die ausgeblendeten Spalten (Art,
         // Zeitraum, Status) hier als Unterzeile — die Tabelle bleibt damit
-        // ohne Seitwärts-Scrollen lesbar (#2033).
+        // ohne Seitwärts-Scrollen lesbar (#2033). Unter md stapelt die
+        // Tabelle und zeigt sie nur hier (#7912).
         render: (period) => (
           // Kein fester max-w: die Zelle nimmt die Restbreite, die die
           // schmale Aktionsspalte (w-px) übrig lässt. Umbrechender Text
@@ -131,16 +133,16 @@ export function CalendarPeriodsEditor({
             <p className="font-medium wrap-anywhere text-gray-900">
               {period.name}
             </p>
-            <p className="mt-0.5 text-xs break-words text-gray-500 sm:hidden">
+            <p className="mt-0.5 text-xs break-words text-gray-500 md:hidden">
               {PERIOD_TYPE_LABELS[period.periodType]}
             </p>
-            <p className="text-xs leading-5 break-words text-gray-500 sm:hidden">
+            <p className="text-xs leading-5 break-words text-gray-500 md:hidden">
               {formatPeriodRange(period)}
             </p>
             {/* Der Status steht nur mobil hier, und nur wenn er vom Normalfall
                 abweicht — angehängt an die Datumszeile würde er abgeschnitten. */}
             {!period.isActive && (
-              <span className="mt-1 inline-flex sm:hidden">
+              <span className="mt-1 inline-flex md:hidden">
                 <DataTableStatusBadge active={false} />
               </span>
             )}
@@ -149,6 +151,7 @@ export function CalendarPeriodsEditor({
       },
       {
         key: "type",
+        stacked: "hidden",
         header: "Art",
         className: "hidden sm:table-cell",
         headerClassName: "hidden sm:table-cell",
@@ -161,6 +164,7 @@ export function CalendarPeriodsEditor({
       },
       {
         key: "range",
+        stacked: "hidden",
         header: "Von – Bis",
         className: "hidden sm:table-cell",
         headerClassName: "hidden sm:table-cell",
@@ -215,6 +219,7 @@ export function CalendarPeriodsEditor({
       },
       {
         key: "status",
+        stacked: "hidden",
         header: "Status",
         className: "hidden sm:table-cell",
         headerClassName: "hidden sm:table-cell",
