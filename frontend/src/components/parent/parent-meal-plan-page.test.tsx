@@ -533,6 +533,24 @@ describe("ParentMealPlanPage", () => {
     ).not.toBeInTheDocument();
   });
 
+  // The phone puts today first, as its own card; like every other day card
+  // it names the date, not only the weekday (#7915).
+  it("names the date on today's card, also on a phone", async () => {
+    mocks.getChildMealPlan.mockResolvedValue([
+      { date: "2026-08-12", position: 0, dish: "Gemüse-Lasagne" },
+    ]);
+
+    render(<ParentMealPlanPage />);
+
+    await screen.findAllByText("Gemüse-Lasagne");
+    const todayBadges = screen.getAllByText("Heute");
+    // Phone card and desktop column each mark today.
+    expect(todayBadges).toHaveLength(2);
+    for (const badge of todayBadges) {
+      expect(badge.parentElement!.parentElement).toHaveTextContent("12.08.");
+    }
+  });
+
   it("marks each dish with its allergens and explains the letters (#4777)", async () => {
     mocks.getChildMealPlan.mockResolvedValue([
       {

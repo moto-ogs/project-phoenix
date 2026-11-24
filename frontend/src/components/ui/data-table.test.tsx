@@ -1264,6 +1264,28 @@ describe("DataTable phone cards without lost columns (#7911)", () => {
     expect(card.queryByText("Gruppe Rot")).not.toBeInTheDocument();
   });
 
+  it("opens the full cell of a detail the row line shows in short form", () => {
+    const { card } = renderCards("row", {
+      columns: cardColumns.map((c) =>
+        c.key === "pickup"
+          ? {
+              ...c,
+              render: (r: CardRow) => `${r.pickup} (mit Notiz)`,
+              stackedRender: (r: CardRow) => r.pickup,
+            }
+          : c,
+      ),
+    });
+
+    // Anker: die Kurzform steht auf der Zeile.
+    expect(card.getByText("15:30")).toBeInTheDocument();
+    expect(card.queryByText("15:30 (mit Notiz)")).not.toBeInTheDocument();
+
+    fireEvent.click(card.getByRole("button", { name: "Details zu Alpha" }));
+
+    expect(card.getByText("15:30 (mit Notiz)")).toBeInTheDocument();
+  });
+
   it("opens the details without opening the entry, and the card still opens it", () => {
     const { card, onRowClick } = renderCards("row", {
       columns: cardColumns.filter((c) => c.key !== "actions"),

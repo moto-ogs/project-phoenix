@@ -871,9 +871,13 @@ function StackedRows<T>({
     (c) => c !== title && c !== meta && c !== rowMenu && c.stacked !== "hidden",
   );
   // "row" shows one chosen field on the card; every other one opens in the
-  // details, so no column is lost on a phone (#7911).
+  // details, so no column is lost on a phone (#7911). A chosen field shown
+  // in a short form (`stackedRender`) opens there in full too: the short
+  // form drops notes and markers of the cell (#7915).
   const detailFields =
-    layout === "row" ? fields.filter((c) => c !== detail) : [];
+    layout === "row"
+      ? fields.filter((c) => c !== detail || c.stackedRender !== undefined)
+      : [];
   const shownDetail =
     layout === "row" && detail && detail !== title && detail !== meta
       ? detail
