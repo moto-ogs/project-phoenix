@@ -77,10 +77,16 @@ func createConference(t *testing.T, db *bun.DB, service calendarSvc.FullService,
 // the change req on the version of that read (ADR 0311).
 func readConference(t *testing.T, db *bun.DB, service calendarSvc.FullService, accountID, id int64, req calendarSvc.ParentConferenceRequest) calendarSvc.ParentConferenceRequest {
 	t.Helper()
-	view, err := testpkg.TenantQuery1(t, calendarContext(t, accountID), db, service.GetSchoolParentConference, id)
+	days, err := testpkg.TenantQuery0(t, calendarContext(t, accountID), db, service.ListSchoolParentConferences)
 	require.NoError(t, err)
-	require.NotEmpty(t, view.Version)
-	req.ExpectedVersion = view.Version
+	for _, view := range days.Conferences {
+		if view.ID == strconv.FormatInt(id, 10) {
+			require.NotEmpty(t, view.Version)
+			req.ExpectedVersion = view.Version
+			return req
+		}
+	}
+	t.Fatalf("parent conference %d missing from the Lehrkraft's list", id)
 	return req
 }
 
