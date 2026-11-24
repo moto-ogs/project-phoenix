@@ -28,12 +28,12 @@ func (s *service) CreateDevice(ctx context.Context, row *devicefleet.Device) err
 	return err
 }
 
-func (s *service) UpdateDevice(ctx context.Context, row *devicefleet.Device) error {
+func (s *service) UpdateDevice(ctx context.Context, row *devicefleet.Device, expectedVersion string) error {
 	if row == nil {
-		return s.Administration.UpdateDevice(ctx, nil)
+		return s.Administration.UpdateDevice(ctx, nil, expectedVersion)
 	}
 	value := toAdministrationDevice(row)
-	err := s.Administration.UpdateDevice(ctx, &value)
+	err := s.Administration.UpdateDevice(ctx, &value, expectedVersion)
 	*row = *toModel(value)
 	return err
 }
