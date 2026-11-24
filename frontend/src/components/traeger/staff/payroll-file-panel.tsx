@@ -3,12 +3,15 @@
 // Die DATEV-Lohndatei des Trägers über alle Schulen (#4712, ADR 0250). Die
 // Prüfung zeigt dieselbe Rechnung wie die Datei: Verträge je Art, Zeilen,
 // Werte ohne Lohnart und Schulen mit offenem Monat. Was die Datei noch
-// verhindert, steht als Liste mit dem nächsten Schritt darunter.
+// verhindert, steht als Liste mit dem nächsten Schritt darunter. In der Form
+// je Arbeitgeber (#8041, ADR 0320) gibt es eine Datei je DATEV-Mandant, jede
+// mit eigenem Download.
 
 import { DownloadSimpleIcon, WarningCircleIcon } from "@phosphor-icons/react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
+import { employerLabel } from "~/components/traeger/staff/payroll-employers-card";
 import { CONTRACT_KIND_LABELS } from "~/components/traeger/staff/staff-contract-format";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
@@ -28,6 +31,7 @@ import { payrollConcept } from "~/lib/concepts/payroll";
 import type { StaffContractKind } from "~/lib/traeger-staff-api";
 import {
   PAYROLL_CATEGORY_LABELS,
+  type PayrollFile,
   type PayrollFormat,
   type PayrollKindCount,
   type PayrollReport,
@@ -54,6 +58,97 @@ interface Blocker {
   readonly action: ReactNode;
 }
 
+/** Die Arbeitgeber einer Datei: „Träger“, „Gemeinde Hardt“. */
+const fileEmployers = (file: PayrollFile) =>
+  file.employers
+    .map((employer) =>
+      employer.body === "traeger" ? "Träger" : employerLabel(employer),
+    )
+    .join(", ");
+
+function openRecord(person: {
+  recordId: string;
+  firstName: string;
+  lastName: string;
+}) {
+  return (
+    <ButtonLink
+      href={traegerPath(
+        `/traeger/personal/${encodeURIComponent(person.recordId)}`,
+      )}
+      variant="surface"
+      size="compact"
+      aria-label={`Personalakte von ${personName(person)} öffnen`}
+      tooltip="Öffnet die Personalakte, dort trägst du die Personalnummer ein."
+    >
+      Akte öffnen
+    </ButtonLink>
+  );
+}
+
+/** Was den Arbeitgebern und Dateien fehlt (#8041), je mit nächstem Schritt. */
+function employerBlockers(
+  report: PayrollReport,
+  openSettings: (label: string) => ReactNode,
+): Blocker[] {
+  const blockers: Blocker[] = [];
+  for (const employer of report.employers) {
+    const name = `${employerLabel(employer)} (${employer.schoolName})`;
+    if (employer.missingCostCenter) {
+      blockers.push({
+        key: `cost-center-${employer.schoolId}`,
+        text: `Für ${name} fehlt die Kostenstelle.`,
+        action: openSettings(
+          `Einrichtung öffnen, um die Kostenstelle von ${name} einzutragen`,
+        ),
+      });
+    }
+    if (employer.missingClient) {
+      blockers.push({
+        key: `client-${employer.schoolId}`,
+        text: `Für ${name} fehlen Berater- und Mandantennummer.`,
+        action: openSettings(
+          `Einrichtung öffnen, um die Nummern von ${name} einzutragen`,
+        ),
+      });
+    }
+  }
+  if (report.form === "arbeitgeber") {
+    for (const file of report.files) {
+      if (
+        file.missingClient &&
+        file.employers.some((employer) => employer.body === "traeger")
+      ) {
+        blockers.push({
+          key: `client-traeger-${file.key}`,
+          text: "Für den Träger fehlen Berater- und Mandantennummer.",
+          action: openSettings(
+            "Einrichtung öffnen, um die Nummern des Trägers einzutragen",
+          ),
+        });
+      }
+    }
+  }
+  for (const file of report.files) {
+    for (const split of file.splitNumbers) {
+      blockers.push({
+        key: `split-${file.key}-${split.person.recordId}`,
+        text: `${personName(split.person)} stünde in der Datei für ${fileEmployers(file)} unter zwei Personalnummern (${split.numbers.join(" und ")}). Trag bei jedem Einsatzort dieses Arbeitgebers dieselbe Nummer ein.`,
+        action: openRecord(split.person),
+      });
+    }
+    for (const duplicate of file.duplicates) {
+      const first = duplicate.people[0];
+      blockers.push({
+        key: `duplicate-${file.key}-${duplicate.number}`,
+        text: `${duplicate.people.map(personName).join(" und ")} haben in der Datei für ${fileEmployers(file)} dieselbe Personalnummer ${duplicate.number}.`,
+        action: first ? openRecord(first) : null,
+      });
+    }
+  }
+  return blockers;
+}
+
 /** Was die Datei noch verhindert, mit dem nächsten Schritt je Zeile. */
 function blockersOf(
   report: PayrollReport,
@@ -65,10 +160,10 @@ function blockersOf(
       variant="surface"
       size="compact"
       aria-label={label}
-      tooltip="Öffnet die Lohnarten und die Nummern für DATEV."
+      tooltip="Öffnet die Einrichtung mit Lohnarten und DATEV-Nummern."
       onClick={onOpenWageTypes}
     >
-      Lohnarten öffnen
+      Einrichtung öffnen
     </Button>
   );
   const blockers: Blocker[] = [];
@@ -77,7 +172,7 @@ function blockersOf(
       key: "no-wage-type",
       text: "Es gibt noch keine Lohnart. Trage die Nummern aus deinem DATEV ein.",
       action: openWageTypes(
-        "Lohnarten öffnen, um die erste Lohnart einzutragen",
+        "Einrichtung öffnen, um die erste Lohnart einzutragen",
       ),
     });
   }
@@ -86,7 +181,7 @@ function blockersOf(
       key: "missing-client",
       text: "Für LODAS fehlen die Beraternummer oder die Mandantennummer.",
       action: openWageTypes(
-        "Lohnarten öffnen, um die Nummern für LODAS einzutragen",
+        "Einrichtung öffnen, um die Nummern für LODAS einzutragen",
       ),
     });
   }
@@ -94,25 +189,16 @@ function blockersOf(
     blockers.push({
       key: `person-${person.recordId}`,
       text: `${personName(person)} hat noch keine Personalnummer.`,
-      action: (
-        <ButtonLink
-          href={traegerPath(
-            `/traeger/personal/${encodeURIComponent(person.recordId)}`,
-          )}
-          variant="surface"
-          size="compact"
-          aria-label={`Personalakte von ${personName(person)} öffnen`}
-          tooltip="Öffnet die Personalakte, dort trägst du die Personalnummer ein."
-        >
-          Akte öffnen
-        </ButtonLink>
-      ),
+      action: openRecord(person),
     });
   }
-  return blockers;
+  return [...blockers, ...employerBlockers(report, openWageTypes)];
 }
 
-function BlockerList({ blockers }: Readonly<{ blockers: readonly Blocker[] }>) {
+function BlockerList({
+  blockers,
+  perEmployer,
+}: Readonly<{ blockers: readonly Blocker[]; perEmployer: boolean }>) {
   const [expanded, setExpanded] = useState(false);
   const shown = expanded ? blockers : blockers.slice(0, VISIBLE_BLOCKERS);
   const hidden = blockers.length - VISIBLE_BLOCKERS;
@@ -132,7 +218,11 @@ function BlockerList({ blockers }: Readonly<{ blockers: readonly Blocker[] }>) {
           compact
         />
       }
-      description="Erst dann entsteht die Lohndatei."
+      description={
+        perEmployer
+          ? "Jede Datei entsteht, sobald für sie nichts mehr fehlt."
+          : "Erst dann entsteht die Lohndatei."
+      }
     >
       <ResponsiveActionList id="payroll-blockers">
         {shown.map((blocker) => (
@@ -171,6 +261,72 @@ function BlockerList({ blockers }: Readonly<{ blockers: readonly Blocker[] }>) {
         </Button>
       ) : null}
     </SectionCard>
+  );
+}
+
+/** Die Dateien der Form je Arbeitgeber, jede mit eigenem Download. */
+function FileList({
+  files,
+  onDownloadFile,
+  downloadingFile,
+}: Readonly<{
+  files: readonly PayrollFile[];
+  onDownloadFile: (key: string) => void;
+  downloadingFile: string | null;
+}>) {
+  return (
+    <div>
+      <SectionLabel as="h3" className="mb-2">
+        Dateien je Arbeitgeber
+      </SectionLabel>
+      <ResponsiveActionList>
+        {files.map((file) => {
+          const client =
+            file.consultantNumber && file.clientNumber
+              ? `Berater ${file.consultantNumber}, Mandant ${file.clientNumber}`
+              : "Nummern fehlen";
+          return (
+            <ResponsiveActionRow key={file.key}>
+              <div className="min-w-0">
+                <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-gray-900">
+                  {fileEmployers(file)}
+                  <StatusBadge
+                    label={file.ready ? "Bereit" : "Noch nicht bereit"}
+                    tone={file.ready ? "green" : "warning"}
+                    compact
+                  />
+                </p>
+                <p className="mt-0.5 text-sm text-gray-500">
+                  {`${file.schools.join(", ")} · ${client} · ${file.people} ${file.people === 1 ? "Person" : "Personen"} · ${file.lineCount} Zeilen`}
+                </p>
+              </div>
+              <ResponsiveRowActions>
+                <Button
+                  type="button"
+                  variant="surface"
+                  size="compact"
+                  className="gap-2"
+                  aria-label={`Datei für ${fileEmployers(file)} herunterladen`}
+                  disabled={!file.ready}
+                  disabledReason={
+                    file.ready
+                      ? undefined
+                      : "Erst muss für diese Datei alles unter „Das fehlt noch“ erledigt sein."
+                  }
+                  isLoading={downloadingFile === file.key}
+                  loadingText="Lädt"
+                  tooltip="Lädt die Datei dieses Arbeitgebers herunter. Das steht im Zugriffsprotokoll jeder Schule."
+                  onClick={() => onDownloadFile(file.key)}
+                >
+                  <DownloadSimpleIcon className="h-4 w-4" aria-hidden="true" />
+                  Herunterladen
+                </Button>
+              </ResponsiveRowActions>
+            </ResponsiveActionRow>
+          );
+        })}
+      </ResponsiveActionList>
+    </div>
   );
 }
 
@@ -230,6 +386,29 @@ function kindColumns(
   ];
 }
 
+/** Der Stand der Karte; je Arbeitgeber kann ein Teil der Dateien fertig sein. */
+function readinessLabel(report: PayrollReport): string {
+  if (report.ready) return "Bereit";
+  if (
+    report.form === "arbeitgeber" &&
+    report.files.some((file) => file.ready)
+  ) {
+    return "Teilweise bereit";
+  }
+  return "Noch nicht bereit";
+}
+
+/** Die Unterzeile der Karte: Monat und wie die Datei entsteht. */
+function fileDescription(report: PayrollReport | null, monthLabel: string) {
+  if (report?.form === "arbeitgeber") {
+    return `${monthLabel} · Eine Datei je Arbeitgeber, jede mit eigener Berater- und Mandantennummer.`;
+  }
+  if (report && report.employers.length > 0) {
+    return `${monthLabel} · Eine Datei für alle Schulen. Stunden anderer Arbeitgeber tragen ihre Kostenstelle.`;
+  }
+  return `${monthLabel} · Eine Datei für alle Schulen. Jede Art des Vertrags hat eigene Lohnarten.`;
+}
+
 export function PayrollFilePanel({
   report,
   monthLabel,
@@ -243,10 +422,13 @@ export function PayrollFilePanel({
   monthLabel: string;
   format: PayrollFormat;
   onFormatChange: (format: PayrollFormat) => void;
-  onDownload: () => void;
-  downloading: boolean;
+  /** Ohne Schlüssel die eine Datei, sonst die Datei dieses Arbeitgebers. */
+  onDownload: (file?: string) => void;
+  /** Die Datei, die gerade lädt; `""` für die eine Datei. */
+  downloading: string | null;
   onOpenWageTypes: () => void;
 }>) {
+  const perEmployer = report?.form === "arbeitgeber";
   const blockers = report ? blockersOf(report, onOpenWageTypes) : [];
   const empty =
     report !== null && report.contracts === 0 && blockers.length === 0;
@@ -263,13 +445,13 @@ export function PayrollFilePanel({
         titleBadge={
           report ? (
             <StatusBadge
-              label={report.ready ? "Bereit" : "Noch nicht bereit"}
+              label={readinessLabel(report)}
               tone={report.ready ? "green" : "warning"}
               compact
             />
           ) : undefined
         }
-        description={`${monthLabel} · Eine Datei für alle Schulen. Jede Art des Vertrags hat eigene Lohnarten.`}
+        description={fileDescription(report, monthLabel)}
         actions={
           <>
             <SegmentedControl<PayrollFormat>
@@ -278,21 +460,23 @@ export function PayrollFilePanel({
               value={format}
               onChange={onFormatChange}
             />
-            <Button
-              type="button"
-              size="md"
-              variant="primary"
-              className="gap-2"
-              disabled={!report?.ready}
-              disabledReason={report?.ready ? undefined : notReadyReason}
-              isLoading={downloading}
-              loadingText="Lädt"
-              tooltip="Lädt die Datei für DATEV herunter. Das steht im Zugriffsprotokoll jeder Schule."
-              onClick={onDownload}
-            >
-              <DownloadSimpleIcon className="h-4 w-4" aria-hidden="true" />
-              Herunterladen
-            </Button>
+            {perEmployer ? null : (
+              <Button
+                type="button"
+                size="md"
+                variant="primary"
+                className="gap-2"
+                disabled={!report?.ready}
+                disabledReason={report?.ready ? undefined : notReadyReason}
+                isLoading={downloading === ""}
+                loadingText="Lädt"
+                tooltip="Lädt die Datei für DATEV herunter. Das steht im Zugriffsprotokoll jeder Schule."
+                onClick={() => onDownload()}
+              >
+                <DownloadSimpleIcon className="h-4 w-4" aria-hidden="true" />
+                Herunterladen
+              </Button>
+            )}
           </>
         }
         loading={report === null}
@@ -325,7 +509,9 @@ export function PayrollFilePanel({
               />
               <StatCard
                 variant="tile"
-                label="Zeilen in der Datei"
+                label={
+                  perEmployer ? "Zeilen in den Dateien" : "Zeilen in der Datei"
+                }
                 value={String(report.lineCount)}
               />
             </div>
@@ -334,6 +520,20 @@ export function PayrollFilePanel({
                 type="warning"
                 announce="off"
                 message={`Noch nicht abgeschlossen: ${report.openSchools.join(", ")}. Die Werte können sich bis zum Monatsabschluss ändern.`}
+              />
+            ) : null}
+            {perEmployer && report.inSeveralFiles.length > 0 ? (
+              <Alert
+                type="info"
+                announce="off"
+                message={`In mehreren Dateien: ${report.inSeveralFiles.map(personName).join(", ")}. Prüfe, ob die Personalnummer bei jedem Arbeitgeber stimmt.`}
+              />
+            ) : null}
+            {perEmployer && report.files.length > 0 ? (
+              <FileList
+                files={report.files}
+                onDownloadFile={(key) => onDownload(key)}
+                downloadingFile={downloading}
               />
             ) : null}
             {report.contractChanges.length > 0 ? (
@@ -358,7 +558,9 @@ export function PayrollFilePanel({
           </>
         ) : null}
       </SectionCard>
-      {blockers.length > 0 ? <BlockerList blockers={blockers} /> : null}
+      {blockers.length > 0 ? (
+        <BlockerList blockers={blockers} perEmployer={perEmployer} />
+      ) : null}
     </>
   );
 }

@@ -1,6 +1,8 @@
 package traegerstaff
 
 import (
+	"slices"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
@@ -20,6 +22,14 @@ type PersonnelNumberRequest struct {
 	PersonnelNumber *string `json:"personnel_number"`
 }
 
+// EmployerNumberRequest is the body PUT /{id}/employer-numbers/{schoolId}
+// reads (#8041): the key is required, null clears the number; the version
+// is the employment's employer_number_version.
+type EmployerNumberRequest struct {
+	EmployerPersonnelNumber *string `json:"employer_personnel_number"`
+	ExpectedVersion         string  `json:"expected_version"`
+}
+
 // RecordRouteContracts registers the typed contract of the staff records
 // (ADR 0270), with patterns relative to /traeger/staff-records. The export
 // answers a file (#2352).
@@ -34,6 +44,7 @@ func RecordRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/{id}", Portals: traegerPortal, Response: workforce.TraegerStaffRecordDetail{}},
 		{Method: "DELETE", Pattern: "/{id}", Portals: traegerPortal, Response: IDResponse{}},
 		{Method: "PUT", Pattern: "/{id}/personnel-number", Portals: traegerPortal, Request: PersonnelNumberRequest{}, Response: workforce.TraegerStaffRecordDetail{}},
+		{Method: "PUT", Pattern: "/{id}/employer-numbers/{schoolId}", Portals: traegerPortal, Request: EmployerNumberRequest{}, Response: workforce.TraegerStaffRecordDetail{}},
 		{Method: "PUT", Pattern: "/{id}/person", Portals: traegerPortal, Request: PersonRequest{}, NoData: true},
 		{Method: "GET", Pattern: "/{id}/financial", Portals: traegerPortal, Response: workforce.TraegerStaffFinancial{}},
 		{Method: "POST", Pattern: "/{id}/financial/reveal", Portals: traegerPortal, Response: workforce.TraegerStaffFinancial{}},
@@ -120,7 +131,9 @@ func ExportRouteContracts() []common.RouteContract {
 	month := []common.QueryParam{{Name: "year", Kind: common.QueryInt}, {Name: "month", Kind: common.QueryInt}, {Name: "format", Kind: common.QueryString}}
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/payroll", Portals: traegerPortal, Query: month, Response: workforce.TraegerPayrollReport{}},
-		{Method: "GET", Pattern: "/payroll/export", Portals: traegerPortal, Query: month, File: true},
+		{Method: "GET", Pattern: "/payroll/export", Portals: traegerPortal, Query: append(slices.Clone(month), common.QueryParam{Name: "file", Kind: common.QueryString}), File: true},
+		{Method: "GET", Pattern: "/payroll/employers", Portals: traegerPortal, Response: workforce.TraegerPayrollEmployerList{}},
+		{Method: "PUT", Pattern: "/payroll/employers/{schoolId}", Portals: traegerPortal, Request: PayrollEmployerRequest{}, Response: workforce.TraegerPayrollEmployerValues{}},
 		{Method: "GET", Pattern: "/times", Portals: traegerPortal, Query: month, Response: workforce.TraegerTimeReport{}},
 		{Method: "GET", Pattern: "/times/export", Portals: traegerPortal, Query: month, File: true},
 	}

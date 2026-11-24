@@ -149,14 +149,14 @@ func mountTraegerStaffPool(root, tenant chi.Router, records workforce.TraegerSta
 }
 
 // traegerPayrollSettings reads the Träger values of the payroll file
-// (#4712): its DATEV client and a Lohnart per category and kind, or the
-// empty registry defaults.
+// (#4712): its form (#8041), its DATEV client and a Lohnart per category
+// and kind, or the registry defaults.
 type traegerPayrollSettings struct {
 	settings TraegerBrandingSettings
 }
 
 func (s traegerPayrollSettings) TraegerPayrollSettings(ctx context.Context, organizationID int64) (workforce.TraegerPayrollSettings, error) {
-	keys := []string{configModels.KeyTraegerPayrollConsultantNumber, configModels.KeyTraegerPayrollClientNumber}
+	keys := []string{configModels.KeyTraegerPayrollFileForm, configModels.KeyTraegerPayrollConsultantNumber, configModels.KeyTraegerPayrollClientNumber}
 	for _, category := range workforce.TraegerPayrollCategories {
 		for _, kind := range workforce.TraegerContractKinds {
 			keys = append(keys, configModels.TraegerPayrollWageTypeKey(category, kind))
@@ -170,6 +170,7 @@ func (s traegerPayrollSettings) TraegerPayrollSettings(ctx context.Context, orga
 		return workforce.TraegerPayrollSettings{}, err
 	}
 	result := workforce.TraegerPayrollSettings{
+		Form:             texts[configModels.KeyTraegerPayrollFileForm],
 		ConsultantNumber: texts[configModels.KeyTraegerPayrollConsultantNumber],
 		ClientNumber:     texts[configModels.KeyTraegerPayrollClientNumber],
 		WageTypes:        map[string]map[string]string{}, Units: map[string]string{},

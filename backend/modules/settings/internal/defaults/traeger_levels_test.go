@@ -82,10 +82,10 @@ func TestTraegerLevelKeysOfVersionOne(t *testing.T) {
 		config.KeyStaffPlanningCheckBreaks: true, config.KeyStaffPlanningEnabled: true,
 		config.KeyStaffPlanningMaxDailyHours: true, config.KeyStaffPlanningMinRestHours: true,
 	}
-	// The payroll file of the Träger (#4712): its DATEV client, a Lohnart
-	// per category and kind of contract and the unit of each day category,
-	// written with the right Personal.
-	payroll := []string{config.KeyTraegerPayrollConsultantNumber, config.KeyTraegerPayrollClientNumber}
+	// The payroll file of the Träger (#4712): its form (#8041), its DATEV
+	// client, a Lohnart per category and kind of contract and the unit of
+	// each day category, written with the right Personal.
+	payroll := []string{config.KeyTraegerPayrollFileForm, config.KeyTraegerPayrollConsultantNumber, config.KeyTraegerPayrollClientNumber}
 	for _, category := range config.TraegerPayrollCategories {
 		for _, kind := range config.TraegerPayrollContractKinds {
 			payroll = append(payroll, config.TraegerPayrollWageTypeKey(category, kind))
@@ -94,7 +94,7 @@ func TestTraegerLevelKeysOfVersionOne(t *testing.T) {
 	for _, category := range config.TraegerPayrollDayCategories {
 		payroll = append(payroll, config.TraegerPayrollUnitKey(category))
 	}
-	assert.Len(t, payroll, 2+7*5+3)
+	assert.Len(t, payroll, 3+7*5+3)
 	for _, key := range payroll {
 		staffRight[key] = true
 	}

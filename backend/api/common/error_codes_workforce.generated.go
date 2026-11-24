@@ -100,6 +100,7 @@ const CodeWorkforceTraegerHolidayWeekSchoolOverride = "workforce.traeger_holiday
 const CodeWorkforceTraegerMonthClosedBySchool = "workforce.traeger_month_closed_by_school"
 const CodeWorkforceTraegerMonthLaterClosed = "workforce.traeger_month_later_closed"
 const CodeWorkforceTraegerMonthNotKept = "workforce.traeger_month_not_kept"
+const CodeWorkforceTraegerPayrollEmployerInvalid = "workforce.traeger_payroll_employer_invalid"
 const CodeWorkforceTraegerPayrollNotReady = "workforce.traeger_payroll_not_ready"
 const CodeWorkforceTraegerPlanningShiftNotFound = "workforce.traeger_planning_shift_not_found"
 const CodeWorkforceTraegerPlanningSiteInvalid = "workforce.traeger_planning_site_invalid"
@@ -109,6 +110,7 @@ const CodeWorkforceTraegerProofNotFound = "workforce.traeger_proof_not_found"
 const CodeWorkforceTraegerProofTypeNameTaken = "workforce.traeger_proof_type_name_taken"
 const CodeWorkforceTraegerProofTypeNotFound = "workforce.traeger_proof_type_not_found"
 const CodeWorkforceTraegerStaffAlreadyLinked = "workforce.traeger_staff_already_linked"
+const CodeWorkforceTraegerStaffEmployerChanged = "workforce.traeger_staff_employer_changed"
 const CodeWorkforceTraegerStaffHireDuplicate = "workforce.traeger_staff_hire_duplicate"
 const CodeWorkforceTraegerStaffHireIncomplete = "workforce.traeger_staff_hire_incomplete"
 const CodeWorkforceTraegerStaffHireInvalid = "workforce.traeger_staff_hire_invalid"
@@ -232,6 +234,7 @@ var errorCodeClassesWorkforce = []errorCodeClass{
 	{CodeWorkforceTraegerMonthClosedBySchool, "business_rejection"},
 	{CodeWorkforceTraegerMonthLaterClosed, "business_rejection"},
 	{CodeWorkforceTraegerMonthNotKept, "business_rejection"},
+	{CodeWorkforceTraegerPayrollEmployerInvalid, "input"},
 	{CodeWorkforceTraegerPayrollNotReady, "business_rejection"},
 	{CodeWorkforceTraegerPlanningShiftNotFound, "input"},
 	{CodeWorkforceTraegerPlanningSiteInvalid, "input"},
@@ -241,6 +244,7 @@ var errorCodeClassesWorkforce = []errorCodeClass{
 	{CodeWorkforceTraegerProofTypeNameTaken, "business_rejection"},
 	{CodeWorkforceTraegerProofTypeNotFound, "input"},
 	{CodeWorkforceTraegerStaffAlreadyLinked, "business_rejection"},
+	{CodeWorkforceTraegerStaffEmployerChanged, "business_rejection"},
 	{CodeWorkforceTraegerStaffHireDuplicate, "business_rejection"},
 	{CodeWorkforceTraegerStaffHireIncomplete, "business_rejection"},
 	{CodeWorkforceTraegerStaffHireInvalid, "input"},
