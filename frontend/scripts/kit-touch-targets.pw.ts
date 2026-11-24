@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
@@ -11,7 +11,10 @@ import {
   validateKnownViolations,
   type KnownViolations,
 } from "./kit-touch-targets-lib.mjs";
-import { measureTouchTargets } from "./kit-touch-targets-measure";
+import {
+  measureTouchTargets,
+  type TouchTargetFinding,
+} from "./kit-touch-targets-measure";
 import {
   kitStories,
   openStory,
@@ -42,6 +45,32 @@ const TABLET_VIEWPORT = { width: 820, height: 1180 };
 
 /** 44 px Trefferfläche, Messpunkte alle 4 px. */
 const MEASURE = { size: 44, step: 4 };
+
+/**
+ * Öffnet die Story und misst. Feuert nach der ersten Eingabe von `play` ein
+ * `resize` (Chromes Mobil-Ansicht, unter Last), schließt sich, was `play`
+ * geöffnet hat (`OverflowMenu`), je nach Last vor oder nach dem Messen. Dann
+ * gilt die Messung nicht, die Story lädt neu, höchstens dreimal.
+ */
+async function measureStory(
+  page: Page,
+  id: string,
+  origin: string,
+  settle: () => Promise<void>,
+): Promise<TouchTargetFinding[]> {
+  let findings: TouchTargetFinding[] = [];
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await openStory(page, id, origin);
+    await settle();
+    findings = await page.evaluate(measureTouchTargets, MEASURE);
+    const resized = await page.evaluate(
+      () =>
+        (window as Window & { __KIT_RESIZES__?: number }).__KIT_RESIZES__ ?? 0,
+    );
+    if (resized === 0) return findings;
+  }
+  return findings;
+}
 
 const stories = kitStories();
 const findingsDir = path.join(process.env.KIT_PIXEL_WORK_DIR ?? "", "touch");
@@ -82,7 +111,10 @@ test.describe("Trefferflächen", () => {
 
   for (const [importPath, ids] of storiesByFile) {
     test(importPath.replace("./src/components/", ""), async ({ page }) => {
-      const { externalRequests } = await prepareServedStorybookPage(
+      // Jede Story in zwei Breiten; große Dateien (TenantPage) brauchen mehr
+      // als Playwrights 30 s, unter Last erst recht.
+      test.setTimeout(30_000 + ids.length * 2 * 2_000);
+      const { externalRequests, settle } = await prepareServedStorybookPage(
         page,
         server.origin,
       );
@@ -91,8 +123,7 @@ test.describe("Trefferflächen", () => {
       for (const width of TOUCH_WIDTHS) {
         if (width === "tablet") await page.setViewportSize(TABLET_VIEWPORT);
         for (const id of ids) {
-          await openStory(page, id, server.origin);
-          const findings = await page.evaluate(measureTouchTargets, MEASURE);
+          const findings = await measureStory(page, id, server.origin, settle);
           (measured[id] ??= {})[width] = findings;
           const { unexpected, stale } = checkStory({
             story: id,

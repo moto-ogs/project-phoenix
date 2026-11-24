@@ -16,9 +16,6 @@ function requiredEnv(name: string): string {
   return value;
 }
 
-/** Trefferflächen unter `pointer: coarse` (#8060), nur im Projekt `phone`. */
-const TOUCH_TARGETS_SPEC = "kit-touch-targets.pw.ts";
-
 const workDir = requiredEnv("KIT_PIXEL_WORK_DIR");
 // Die Trefferflächen-Prüfung vergleicht keine Bilder und braucht keine Baseline.
 const baselineDir =
@@ -56,7 +53,8 @@ export default defineConfig({
     "./scripts/kit-pixel-browser-version.setup.ts",
   ],
   testDir: "./scripts",
-  testMatch: ["kit-pixel-stories.pw.ts", TOUCH_TARGETS_SPEC],
+  // Dazu die Trefferflächen unter `pointer: coarse` (#8060), nur im Projekt `phone`.
+  testMatch: ["kit-pixel-stories.pw.ts", "kit-touch-targets.pw.ts"],
   outputDir: `${workDir}/results`,
   snapshotPathTemplate: `${baselineDir}/{projectName}/{arg}{ext}`,
   fullyParallel: true,
@@ -80,7 +78,7 @@ export default defineConfig({
     {
       name: "desktop",
       // Trefferflächen gelten nur für den Finger; mit Maus bleibt alles, wie es ist.
-      testIgnore: TOUCH_TARGETS_SPEC,
+      testIgnore: "kit-touch-targets.pw.ts",
       use: {
         ...devices["Desktop Chrome"],
         ...stableContext,

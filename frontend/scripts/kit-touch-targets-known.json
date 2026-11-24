@@ -161,6 +161,9 @@
       "zu klein: button \"Mo, 07.09.: Verlauf öffnen\""
     ]
   },
+  "components-ui-datatable--phone-one-line-list": {
+    "phone": ["zu klein: button \"Details zu Noah Becker\""]
+  },
   "components-ui-datatable--with-header-actions-and-caption": {
     "phone": ["zu klein: button \"Filtern\""],
     "tablet": [
@@ -199,6 +202,40 @@
       "zu klein: option \"November\"",
       "zu klein: option \"Oktober\"",
       "zu klein: option \"September\""
+    ]
+  },
+  "components-ui-daterangepicker--range-calendar-inline-standalone": {
+    "phone": [
+      "zu klein: button \"Dienstag, 1. September 2026\"",
+      "zu klein: button \"Dienstag, 15. September 2026\"",
+      "zu klein: button \"Dienstag, 22. September 2026\"",
+      "zu klein: button \"Dienstag, 29. September 2026\"",
+      "zu klein: button \"Dienstag, 8. September 2026\"",
+      "zu klein: button \"Donnerstag, 10. September 2026\"",
+      "zu klein: button \"Donnerstag, 17. September 2026\"",
+      "zu klein: button \"Donnerstag, 24. September 2026\"",
+      "zu klein: button \"Donnerstag, 3. September 2026\"",
+      "zu klein: button \"Freitag, 11. September 2026\"",
+      "zu klein: button \"Freitag, 18. September 2026\"",
+      "zu klein: button \"Freitag, 25. September 2026\"",
+      "zu klein: button \"Freitag, 4. September 2026\"",
+      "zu klein: button \"Heute, Mittwoch, 9. September 2026\"",
+      "zu klein: button \"Mittwoch, 16. September 2026\"",
+      "zu klein: button \"Mittwoch, 2. September 2026\"",
+      "zu klein: button \"Mittwoch, 23. September 2026\"",
+      "zu klein: button \"Mittwoch, 30. September 2026\"",
+      "zu klein: button \"Montag, 14. September 2026\"",
+      "zu klein: button \"Montag, 21. September 2026\"",
+      "zu klein: button \"Montag, 28. September 2026\"",
+      "zu klein: button \"Montag, 7. September 2026\"",
+      "zu klein: button \"Samstag, 12. September 2026\"",
+      "zu klein: button \"Samstag, 19. September 2026\"",
+      "zu klein: button \"Samstag, 26. September 2026\"",
+      "zu klein: button \"Samstag, 5. September 2026\"",
+      "zu klein: button \"Sonntag, 13. September 2026\"",
+      "zu klein: button \"Sonntag, 20. September 2026\"",
+      "zu klein: button \"Sonntag, 27. September 2026\"",
+      "zu klein: button \"Sonntag, 6. September 2026\""
     ]
   },
   "components-ui-input--compact": {

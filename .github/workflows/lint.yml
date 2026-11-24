@@ -253,17 +253,48 @@ jobs:
       - name: Frontend quality (shared with pre-push)
         run: bash scripts/check-quality.sh frontend
 
-      # Google Chrome for the touch-target check below, installed while
-      # Storybook builds (#8060). Every Playwright config demands it
-      # (scripts/secure-chrome.ts, #5612).
+      - name: Build Storybook
+        working-directory: frontend
+        run: pnpm run build-storybook
+
+  # Touch targets of the kit stories under `pointer: coarse` (#8060): every
+  # control needs a 44 px hit area, measured with elementFromPoint at phone
+  # and iPad width (frontend/scripts/kit-touch-targets.pw.ts). Inside
+  # "Frontend quality" the check took 200 s and made that job the longest of
+  # the run (381 s), so it has its own hosted runner beside the Storybook
+  # shards. Chrome installs while Storybook builds.
+  touch-targets:
+    name: Touch targets (kit stories)
+    if: ${{ inputs.run-frontend }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+          cache: "pnpm"
+          cache-dependency-path: "frontend/pnpm-lock.yaml"
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      # Google Chrome, which every Playwright config demands
+      # (scripts/secure-chrome.ts, #5612), installed in the background.
       - name: Start Chrome install
         working-directory: frontend
         run: |
           (pnpm exec playwright install --with-deps --force chrome > "$RUNNER_TEMP/chrome-install.log" 2>&1
            echo $? > "$RUNNER_TEMP/chrome-install.status") &
 
-      # Storybook supplies its own mock environment and needs no Next build.
-      # Keep it off the serial Next.js/bundle-ratchet critical path.
       - name: Build Storybook
         working-directory: frontend
         run: pnpm run build-storybook
@@ -275,12 +306,9 @@ jobs:
           cat "$RUNNER_TEMP/chrome-install.log"
           exit "$(cat "$RUNNER_TEMP/chrome-install.status")"
 
-      # Touch targets of the kit stories under `pointer: coarse` (#8060), on
-      # the Storybook build above. This job ends before the Storybook shards,
-      # so the check stays off the critical path.
       - name: Touch targets of kit stories
         working-directory: frontend
-        timeout-minutes: 5
+        timeout-minutes: 6
         run: node scripts/kit-pixel.mjs touch --storybook-dir storybook-static
 
   # Every story renders in Chromium and fails on an axe violation (#7108).

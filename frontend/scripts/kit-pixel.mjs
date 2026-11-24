@@ -153,7 +153,10 @@ function runPlaywright({
   allStories,
 }) {
   const selection =
-    mode === "touch" ? ["--project=phone", TOUCH_SPEC] : [PIXEL_SPEC];
+    mode === "touch"
+      ? // Die Prüfung hält jeden Kern busy; Playwrights Standard ist die Hälfte.
+        ["--project=phone", "--workers=100%", TOUCH_SPEC]
+      : [PIXEL_SPEC];
   return run(
     "pnpm",
     [

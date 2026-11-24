@@ -47,10 +47,10 @@ export interface TouchTargetMeasureOptions {
  * oder Menü), Hintergründe, die den ganzen Bildschirm füllen, Links im
  * Fließtext und Beschriftungen von Textfeldern (getippt wird ins Feld).
  */
-export function measureTouchTargets({
+export async function measureTouchTargets({
   size,
   step,
-}: TouchTargetMeasureOptions): TouchTargetFinding[] {
+}: TouchTargetMeasureOptions): Promise<TouchTargetFinding[]> {
   const INTERACTIVE = [
     "button",
     "a[href]",
@@ -243,11 +243,10 @@ export function measureTouchTargets({
 
   const findings: TouchTargetFinding[] = [];
 
-  for (const el of Array.from(document.querySelectorAll(INTERACTIVE))) {
-    if (skip(el)) continue;
-    el.scrollIntoView({ block: "center", inline: "nearest" });
-    const rect = el.getBoundingClientRect();
+  /** Misst ein Element an der Stelle, an der es gerade steht. */
+  const measureOne = (el: Element): void => {
     const accepted = acceptedFor(el);
+    const rect = el.getBoundingClientRect();
     const isOwn = (owner: Element | null) =>
       owner !== null && accepted.includes(owner);
     /** Bedienelement innerhalb der eigenen Fläche (Augen-Knopf im Passwortfeld). */
@@ -258,7 +257,7 @@ export function measureTouchTargets({
     const cy = rect.top + rect.height / 2;
     // Trifft schon der Mittelpunkt etwas anderes, liegt ein Dialog, Menü
     // oder Blatt über dem Element: in diesem Zustand nicht antippbar.
-    if (!isOwn(ownerOf(document.elementFromPoint(cx, cy)))) continue;
+    if (!isOwn(ownerOf(document.elementFromPoint(cx, cy)))) return;
 
     // 1. Eigene Fläche, 1 px nach innen: Wer trifft dort?
     let covered = false;
@@ -304,7 +303,7 @@ export function measureTouchTargets({
       covered = true;
       break;
     }
-    if (covered || ownHits === 0) continue;
+    if (covered || ownHits === 0) return;
 
     const target = describe(el);
     const center = {
@@ -379,7 +378,76 @@ export function measureTouchTargets({
         clearance24: hasClearance(rect, el, isOwn, isInnerControl),
       });
     }
+  };
+
+  /**
+   * Bringt ein Element, das eine in sich scrollende Liste abschneidet, in
+   * deren sichtbaren Teil, ohne das Fenster zu bewegen.
+   */
+  const revealInContainer = (el: Element): void => {
+    for (let box = el.parentElement; box; box = box.parentElement) {
+      if (box === document.body || box === document.documentElement) return;
+      const style = getComputedStyle(box);
+      const scrollsY =
+        /auto|scroll/.test(style.overflowY) &&
+        box.scrollHeight > box.clientHeight;
+      const scrollsX =
+        /auto|scroll/.test(style.overflowX) &&
+        box.scrollWidth > box.clientWidth;
+      if (!scrollsY && !scrollsX) continue;
+      const outer = box.getBoundingClientRect();
+      const inner = el.getBoundingClientRect();
+      if (scrollsY && (inner.top < outer.top || inner.bottom > outer.bottom)) {
+        box.scrollTop +=
+          inner.top + inner.height / 2 - (outer.top + outer.height / 2);
+      }
+      if (scrollsX && (inner.left < outer.left || inner.right > outer.right)) {
+        box.scrollLeft +=
+          inner.left + inner.width / 2 - (outer.left + outer.width / 2);
+      }
+      return;
+    }
+  };
+
+  const offScreen = (el: Element): boolean => {
+    const r = el.getBoundingClientRect();
+    return (
+      r.top < size / 2 || r.bottom > vh - size / 2 || r.left < 0 || r.right > vw
+    );
+  };
+
+  const frame = () =>
+    new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+  // Erst alles, was ohne Fenster-Scrollen messbar ist: Ein Scrollen des
+  // Fensters schließt offene Menüs (`OverflowMenu`), und wann React das
+  // umsetzt, hängt an der Last. Verdeckte Elemente werden nie gescrollt.
+  const later: Element[] = [];
+  for (const el of Array.from(document.querySelectorAll(INTERACTIVE))) {
+    if (skip(el)) continue;
+    if (offScreen(el)) {
+      later.push(el);
+      continue;
+    }
+    revealInContainer(el);
+    measureOne(el);
   }
-  window.scrollTo(0, 0);
+  // Dann die Elemente außerhalb des Fensters, jedes nach dem Scrollen in
+  // Ruhe: drei Frames, in denen es an derselben Stelle steht.
+  for (const el of later) {
+    el.scrollIntoView({ block: "center", inline: "nearest" });
+    let previous = "";
+    for (let calm = 0, tries = 0; calm < 3 && tries < 60; tries++) {
+      await frame();
+      const r = el.getBoundingClientRect();
+      const current = `${r.x},${r.y},${r.width},${r.height}`;
+      calm = current === previous ? calm + 1 : 0;
+      previous = current;
+    }
+    if (!el.isConnected || skip(el)) continue;
+    revealInContainer(el);
+    measureOne(el);
+  }
+  if (scrollX || scrollY) window.scrollTo(0, 0);
   return findings;
 }

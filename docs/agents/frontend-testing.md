@@ -320,7 +320,7 @@ menuitem, option, tab, checkbox, radio, switch) needs a 44 px hit area,
 and two hit areas must not overlap. It runs only in the `phone` project
 (Pixel 7, touch), in two widths: phone and iPad portrait (820 px), where
 sizes tied to `max-sm:` do not apply. The desktop project does not run it.
-CI runs it in „Frontend quality“ on the Storybook build of that job.
+CI runs it in its own job „Touch targets (kit stories)“ beside the Storybook shards.
 
 - Measured with `elementFromPoint`, as the browser assigns a tap, so
   `after:` areas and padding with negative margin count. A circle of 44 px
@@ -346,9 +346,18 @@ CI runs it in „Frontend quality“ on the Storybook build of that job.
 - Measurements per story land in `.kit-pixel/touch/`. Each story and width
   loads a fresh page from a server of the worker on 127.0.0.1 (no
   `page.route`, so the browser cache holds the build): switching stories
-  over Storybook's channel carried state into the next story. Locally the
-  run took 58 s on 12 cores (about 250 CPU seconds); `--filter` narrows it
-  like the pixel comparison, `--storybook-dir` reuses a finished build.
+  over Storybook's channel carried state into the next story.
+- Timing, all found under load (two runs of 12 workers on 12 cores): the
+  check waits for open requests, the kit's lazy calendar
+  (`[data-day-picker-skeleton]`; React reveals it up to 300 ms late) and a
+  calm layout; it measures controls in place first and scrolls the window
+  last, because a scroll closes `OverflowMenu`; a `resize` after `play`'s
+  first input closes it too and makes the story load again (at most three
+  times). A new lazy kit part adds its fallback marker to `LAZY_FALLBACKS`
+  in `scripts/kit-pixel-storybook.ts`.
+- Locally the run took 50 s on 12 cores (about 270 CPU seconds); `--filter`
+  narrows it like the pixel comparison, `--storybook-dir` reuses a finished
+  build.
 - Both runs ignore axe findings: they render at widths where
   `pnpm run test:storybook` does not run axe (412 px, 820 px), and axe stays
   that test's job. A render error or a failing `play` still fails.

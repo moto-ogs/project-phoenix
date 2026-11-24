@@ -238,14 +238,19 @@ export async function startStorybookServer(): Promise<{
 /**
  * Wie `prepareStorybookPage`, für den eigenen Server: Bewegung anhalten,
  * Story-Ende abhören, Uhr anhalten. Eine Anfrage an eine andere Adresse
- * lässt den Lauf scheitern, statt still ins Netz zu gehen.
+ * lässt den Lauf scheitern, statt still ins Netz zu gehen. `settle` wartet
+ * nach `openStory`, bis nachgeladene Teile da sind (siehe dort).
  */
 export async function prepareServedStorybookPage(
   page: Page,
   origin: string,
-): Promise<{ externalRequests: string[] }> {
+): Promise<{ externalRequests: string[]; settle: () => Promise<void> }> {
   const externalRequests: string[] = [];
+  let inFlight = 0;
+  let started = 0;
   page.on("request", (request) => {
+    inFlight++;
+    started++;
     const url = request.url();
     if (
       !url.startsWith(`${origin}/`) &&
@@ -255,6 +260,11 @@ export async function prepareServedStorybookPage(
       externalRequests.push(url);
     }
   });
+  const done = () => {
+    inFlight = Math.max(0, inFlight - 1);
+  };
+  page.on("requestfinished", done);
+  page.on("requestfailed", done);
   await page.addInitScript((style) => {
     const install = () =>
       document.documentElement.insertAdjacentHTML("beforeend", style);
@@ -262,8 +272,101 @@ export async function prepareServedStorybookPage(
     else document.addEventListener("readystatechange", install, { once: true });
   }, FREEZE_MOTION_STYLE);
   await page.addInitScript(listenForStoryOutcome);
+  // Zählt `resize` nach der ersten Eingabe von `play` (Klick, Taste): Er
+  // schließt, was `play` geöffnet hat. Ein `resize` beim Laden der Seite
+  // (fast immer, Chromes Mobil-Ansicht) zählt nicht.
+  await page.addInitScript(() => {
+    const win = window as Window & { __KIT_RESIZES__?: number };
+    win.__KIT_RESIZES__ = 0;
+    let played = false;
+    const markPlayed = () => {
+      played = true;
+    };
+    window.addEventListener("pointerdown", markPlayed, true);
+    window.addEventListener("keydown", markPlayed, true);
+    window.addEventListener("resize", () => {
+      if (played) win.__KIT_RESIZES__ = (win.__KIT_RESIZES__ ?? 0) + 1;
+    });
+  });
   await page.clock.setFixedTime(TEST_CLOCK_INSTANT);
-  return { externalRequests };
+
+  /**
+   * `storyFinished` kommt vor nachgeladenen Teilen: Der Kalender des
+   * `DateRangePicker` (`lazy-day-picker`) war beim Messen oft noch nicht
+   * da und unter Last schon, das Ergebnis hing an der Zeit (#8060). React
+   * zeigt aufgelöste Suspense-Inhalte bis zu 300 ms verzögert; so lange
+   * steht das Layout still, obwohl der Kalender noch fehlt. Wartet deshalb,
+   * bis keine Anfrage mehr läuft, kein Platzhalter eines nachgeladenen
+   * Kit-Teils (`LAZY_FALLBACKS`) mehr steht und die Bedienelemente ruhig
+   * an derselben Stelle stehen, ohne dass eine neue Anfrage begann.
+   */
+  const settle = async () => {
+    const deadline = Date.now() + 10_000;
+    while (Date.now() < deadline) {
+      // `inFlight` ändern die Ereignisse der Seite, nicht diese Schleife.
+      const busy = () => inFlight > 0;
+      while (busy() && Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      const before = started;
+      await page
+        .waitForFunction(
+          (selector) => !document.querySelector(selector),
+          LAZY_FALLBACKS,
+          { timeout: Math.max(1, deadline - Date.now()) },
+        )
+        .catch(() => undefined);
+      await waitForStableLayout(page);
+      if (inFlight === 0 && started === before) return;
+    }
+    throw new Error(
+      "Story kommt nicht zur Ruhe: Anfragen, Platzhalter oder Layout ändern sich nach 10 s noch.",
+    );
+  };
+  return { externalRequests, settle };
+}
+
+/**
+ * Platzhalter nachgeladener Kit-Teile. Heute nur der Kalender
+ * (`DayPickerSkeleton` in `lazy-day-picker.tsx`); ein neuer nachgeladener
+ * Teil trägt ein eigenes Kennzeichen und gehört hierher.
+ */
+const LAZY_FALLBACKS = "[data-day-picker-skeleton]";
+
+/** Bedienelemente stehen drei Frames und 100 ms an derselben Stelle (höchstens 3 s). */
+async function waitForStableLayout(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    const frame = () =>
+      new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    const snapshot = () =>
+      Array.from(
+        document.querySelectorAll("button, a[href], input, label, [role]"),
+        (el) => {
+          const r = el.getBoundingClientRect();
+          return `${r.x},${r.y},${r.width},${r.height}`;
+        },
+      ).join(";");
+    // Mindestens drei Frames und 100 ms ohne Bewegung: Ein Popover setzt
+    // seine Lage asynchron (Floating UI); unter Last (24 Worker auf 12
+    // Kernen) kam das nach zwei ruhigen Frames.
+    let previous = snapshot();
+    let frames = 0;
+    let since = performance.now();
+    const deadline = since + 3000;
+    while (
+      (frames < 3 || performance.now() - since < 100) &&
+      performance.now() < deadline
+    ) {
+      await frame();
+      const current = snapshot();
+      if (current === previous) frames++;
+      else {
+        frames = 0;
+        since = performance.now();
+        previous = current;
+      }
+    }
+  });
 }
 
 /**
