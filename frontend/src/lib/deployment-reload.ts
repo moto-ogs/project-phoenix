@@ -4,8 +4,8 @@
  * so nothing happened on the server. Instead of showing every open tab the
  * „neue Version“ message after each release, the tab reloads once by itself
  * on a refused read when the reload costs nothing: no form or field on screen
- * that someone typed into (a search field aside), no open dialog, no page
- * guarding unsaved changes. A refused write and every other case reach the
+ * that someone typed into (a search field aside), no open dialog or edit
+ * state (EditActions), no page guarding unsaved changes. A refused write and every other case reach the
  * caller, whose message asks the person to reload. A marker in
  * sessionStorage (reload-once) stops a reload loop.
  */
@@ -49,7 +49,7 @@ function reloadLosesNothing(): boolean {
     !hasDraftOnScreen() &&
     !hasNavigationBlocker() &&
     !document.querySelector(
-      '[role="dialog"], [role="alertdialog"], dialog[open]',
+      '[role="dialog"], [role="alertdialog"], dialog[open], [data-edit-state]',
     )
   );
 }

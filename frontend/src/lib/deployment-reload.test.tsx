@@ -13,6 +13,7 @@ vi.mock("./session-cache", () => ({
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 
+import { EditActions } from "~/components/ui/edit-actions";
 import { SearchBar } from "~/components/ui/page-header/SearchBar";
 import type { bffFile, bffJson } from "./bff-fetch";
 
@@ -122,6 +123,14 @@ describe("a tab of an earlier deployment, refused by the proxy", () => {
 
   it("shows the message while a dialog is open", async () => {
     document.body.innerHTML = '<div role="dialog"></div>';
+
+    await expectRefusalReachesCaller(read("tenant", "GET /api/groups/"));
+  });
+
+  it("shows the message while an edit state is open, whose controls may fire no input", async () => {
+    // The note editor changes its kind by buttons only, then saves through
+    // EditActions; a poll refused before Save must not reload over it.
+    render(<EditActions onCancel={() => undefined} onSave={() => undefined} />);
 
     await expectRefusalReachesCaller(read("tenant", "GET /api/groups/"));
   });
