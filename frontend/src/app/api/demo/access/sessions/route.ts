@@ -6,6 +6,7 @@ import {
   DEMO_SESSION_ROLE_VALUES,
   routes,
 } from "~/lib/contract/demo-access.generated";
+import { TokenResponseSchema } from "~/lib/contract/shared.generated";
 import { contractError } from "~/lib/contract/route-response.server";
 import { frontendOrigin } from "~/lib/client-headers.server";
 import { createLogger } from "~/lib/logger";
@@ -37,11 +38,12 @@ const DEMO_PORTAL_AUTH = {
 } as const;
 
 const demoSessionRole = z.enum(DEMO_SESSION_ROLE_VALUES);
-const rollbackAnswer = z.object({
-  access_token: z.string().min(1),
-  refresh_token: z.string().min(1),
-  demo: z.object({ role: demoSessionRole }),
-});
+const rollbackAnswer = z.intersection(
+  TokenResponseSchema.refine(
+    (pair) => !!pair.access_token && !!pair.refresh_token,
+  ),
+  z.object({ demo: z.object({ role: demoSessionRole }) }),
+);
 
 /** The portal a demo role's session belongs to (#3468, #6193). */
 function portalOfDemoRole(role: string): DemoPortal {

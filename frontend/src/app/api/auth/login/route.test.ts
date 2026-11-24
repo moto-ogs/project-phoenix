@@ -123,10 +123,19 @@ describe("POST /api/auth/login", () => {
     const loginPayload = { email: "test@example.com", password: "wrong" };
 
     vi.mocked(global.fetch).mockResolvedValueOnce(
-      new Response(JSON.stringify({ detail: "Invalid credentials" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      }),
+      new Response(
+        JSON.stringify({
+          type: "about:blank",
+          title: "Unauthorized",
+          detail: "Invalid credentials",
+          code: "general.permission",
+          status: 401,
+        }),
+        {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
     );
 
     const request = createMockRequest("/api/auth/login", {
