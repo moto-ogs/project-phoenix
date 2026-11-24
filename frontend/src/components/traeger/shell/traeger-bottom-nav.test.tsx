@@ -165,7 +165,9 @@ describe("TraegerBottomNav", () => {
     mockPathname.mockReturnValue("/einstellungen");
     render(<TraegerBottomNav />);
 
-    expect(bar().getAllByRole("link")).toHaveLength(4);
+    // The way back and the four pages „Übersicht lesen“ opens, the
+    // Zuständigkeiten among them (#4811).
+    expect(bar().getAllByRole("link")).toHaveLength(5);
     expect(bar().queryByRole("button", { name: "Mehr" })).toBeNull();
     expect(bar().getByRole("link", { name: "Allgemein" })).toHaveAttribute(
       "aria-current",

@@ -190,6 +190,40 @@ func (h Letterhead) Reach() WithdrawalReach {
 	}
 }
 
+// Issuer is the body that concludes the contracts of a school in place of
+// the Träger (#4811): the school's Schulträger or Gemeinde, as its contract
+// names it. SenderText is its name and its address, one line each, the
+// shape of the Träger's letterhead text.
+type Issuer struct {
+	SenderText   string `json:"sender_text"`
+	ContactName  string `json:"contact_name"`
+	ContactPhone string `json:"contact_phone"`
+	ContactEmail string `json:"contact_email"`
+}
+
+// Letterhead is the Träger's letterhead as the issuer signs with it: its
+// own name, address and contact person. The colour and the template stay;
+// the Träger's logo and footer do not stand on another body's letter.
+func (i Issuer) Letterhead(head Letterhead) Letterhead {
+	head.SenderText, head.FooterText, head.Logo = i.SenderText, "", nil
+	head.ContactName, head.ContactPhone, head.ContactEmail = i.ContactName, i.ContactPhone, i.ContactEmail
+	head.WithdrawalPhone, head.WithdrawalEmail = "", ""
+	return head
+}
+
+// Reach is where the withdrawal notice says parents reach the issuer.
+func (i Issuer) Reach() WithdrawalReach {
+	return WithdrawalReach{ContactPhone: i.ContactPhone, ContactEmail: i.ContactEmail}
+}
+
+// SchoolIssuers names per school the body that concludes its contracts
+// when that is not the Träger (#4811), in the caller's Träger transaction.
+// A school the Träger itself concludes for has no entry. The roots bind it
+// to the responsibilities of Organisation & Tenancy.
+type SchoolIssuers interface {
+	SchoolIssuers(ctx context.Context, organizationID int64, schoolIDs []int64) (map[int64]Issuer, error)
+}
+
 // Letterheads reads the letterhead in the Träger transaction of the
 // reviewer.
 type Letterheads interface {

@@ -45,6 +45,7 @@ var (
 type MasterDataResource struct {
 	masterData    organizationtenancy.TraegerMasterData
 	templates     organizationtenancy.TraegerDocumentTemplates
+	responsible   organizationtenancy.SchoolResponsibilities
 	lists         common.ListRenderer
 	requireRead   common.Middleware
 	requireManage common.Middleware
@@ -53,12 +54,14 @@ type MasterDataResource struct {
 // NewMasterDataResource builds the resource. The root binds requireRead and
 // requireManage to the rights Identity & Access bundles into the Träger roles
 // (ADR 0084 section 4); lists renders the list of the templates as PDF,
-// Excel or CSV (#4718).
-func NewMasterDataResource(masterData organizationtenancy.TraegerMasterData, templates organizationtenancy.TraegerDocumentTemplates, lists common.ListRenderer, requireRead, requireManage common.Middleware) *MasterDataResource {
-	if masterData == nil || templates == nil || lists == nil || requireRead == nil || requireManage == nil {
-		panic("organization tenancy traeger: the master data, the document templates, the list renderer and the right checks are required")
+// Excel or CSV (#4718); responsible serves who is responsible at the
+// schools and the master data of their Schulträger and Gemeinde (#4811).
+func NewMasterDataResource(masterData organizationtenancy.TraegerMasterData, templates organizationtenancy.TraegerDocumentTemplates,
+	responsible organizationtenancy.SchoolResponsibilities, lists common.ListRenderer, requireRead, requireManage common.Middleware) *MasterDataResource {
+	if masterData == nil || templates == nil || responsible == nil || lists == nil || requireRead == nil || requireManage == nil {
+		panic("organization tenancy traeger: the master data, the document templates, the responsibilities, the list renderer and the right checks are required")
 	}
-	return &MasterDataResource{masterData: masterData, templates: templates, lists: lists, requireRead: requireRead, requireManage: requireManage}
+	return &MasterDataResource{masterData: masterData, templates: templates, responsible: responsible, lists: lists, requireRead: requireRead, requireManage: requireManage}
 }
 
 // TraegerRouter returns the routes mounted at /traeger/master-data. The
@@ -88,6 +91,7 @@ func (rs *MasterDataResource) TraegerRouter(protectedTraegerRoutes func(chi.Rout
 		// The preview fills sample data and stores nothing, so every
 		// reader of the templates may see it.
 		read.Post("/document-templates/{kind}/preview", rs.previewTemplate)
+		rs.responsibilityRoutes(read, manage)
 	})
 	return r
 }

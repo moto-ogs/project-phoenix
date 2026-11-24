@@ -2,10 +2,15 @@
 
 // Ansicht einer Schule im Träger-Portal (#5686): Zahlen von jetzt und
 // Stammdaten, ohne die Träger-Navigation zu verlassen. Nur Zahlen, keine Namen.
-// Die Schul-App öffnet sich als eigene Aktion in einem neuen Tab.
+// Die Schul-App öffnet sich als eigene Aktion in einem neuen Tab. Der Reiter
+// „Zuständigkeiten“ (#4811) zeigt, wer an der Schule Verträge schließt,
+// abrechnet und Personal anstellt, mit den Angaben zu Schulträger und
+// Gemeinde.
 
-import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useParams, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
+import dynamic from "next/dynamic";
+import { Loading } from "~/components/ui/loading";
 import {
   SCHOOL_SWITCH_MISSING_HINT,
   useOpenTraegerSchool,
@@ -29,12 +34,30 @@ import type { TraegerSchoolView } from "~/lib/traeger-api";
 import { traegerPath } from "~/lib/traeger-url";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 
-type SchoolTab = "uebersicht" | "stammdaten";
+// The tab with the forms for Schulträger and Gemeinde loads when it opens:
+// most visits read the figures only (bundle ratchet, #2939).
+const SchoolResponsibilityPanel = dynamic(
+  () =>
+    import("~/components/traeger/school-responsibility-panel").then(
+      (module) => module.SchoolResponsibilityPanel,
+    ),
+  { ssr: false, loading: () => <Loading /> },
+);
+
+type SchoolTab = "uebersicht" | "stammdaten" | "zustaendigkeiten";
 
 const SCHOOL_TABS = [
   { value: "uebersicht", label: "Übersicht" },
   { value: "stammdaten", label: "Stammdaten" },
+  { value: "zustaendigkeiten", label: "Zuständigkeiten" },
 ] as const;
+
+/** Opens a tab by its key, e.g. `?bereich=zustaendigkeiten` from the settings. */
+const TAB_PARAM = "bereich";
+
+function initialTab(value: string | null | undefined): SchoolTab {
+  return SCHOOL_TABS.find((tab) => tab.value === value)?.value ?? "uebersicht";
+}
 
 const EMPTY_VALUE = "–";
 
@@ -160,10 +183,22 @@ function MasterDataTab({
 }
 
 export default function TraegerSchoolPage() {
+  // `useSearchParams` braucht eine Suspense-Grenze; bis dahin lädt die Seite.
+  return (
+    <Suspense fallback={<TenantPage title="Schule" loading />}>
+      <TraegerSchoolContent />
+    </Suspense>
+  );
+}
+
+function TraegerSchoolContent() {
   const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const { school, error } = useTraegerSchool(params?.id ?? "");
   const { canOpen, opening, open, codeStepModal } = useOpenTraegerSchool();
-  const [tab, setTab] = useState<SchoolTab>("uebersicht");
+  const [tab, setTab] = useState<SchoolTab>(() =>
+    initialTab(searchParams?.get(TAB_PARAM)),
+  );
 
   return (
     <TenantPage
@@ -174,8 +209,9 @@ export default function TraegerSchoolPage() {
       backLabel="Zurück zu den Schulen"
       info={
         <>
-          Zahlen und Stammdaten dieser Schule. moto zeigt hier keine Namen. Die
-          Zahlen aktualisieren sich jede Minute.
+          Zahlen, Stammdaten und Zuständigkeiten dieser Schule. moto zeigt hier
+          keine Namen von Kindern oder Personal. Die Zahlen aktualisieren sich
+          jede Minute.
           {!canOpen && ` ${SCHOOL_SWITCH_MISSING_HINT}`}
         </>
       }
@@ -203,9 +239,11 @@ export default function TraegerSchoolPage() {
     >
       {tab === "uebersicht" ? (
         <OverviewTab figures={school?.figures ?? null} />
-      ) : (
-        <MasterDataTab school={school} />
-      )}
+      ) : null}
+      {tab === "stammdaten" ? <MasterDataTab school={school} /> : null}
+      {tab === "zustaendigkeiten" ? (
+        <SchoolResponsibilityPanel schoolId={params?.id ?? ""} />
+      ) : null}
       <TraegerCodeStepModal {...codeStepModal} />
     </TenantPage>
   );

@@ -32,6 +32,7 @@ type Contracts struct {
 	links       carecontract.SigningLinks
 	versions    carecontract.ContractVersions
 	notices     carecontract.DocumentNotices
+	issuers     carecontract.SchoolIssuers
 	periods     withdrawalPeriods
 }
 
@@ -49,6 +50,10 @@ type ContractPorts struct {
 	Notices carecontract.DocumentNotices
 	// Holidays dates the withdrawal period of a signature at the school.
 	Holidays carecontract.SchoolHolidays
+	// Issuers names the Schulträger or the Gemeinde that concludes the
+	// contracts of a school (#4811). The roots bind it; a composition
+	// without it knows only the Träger.
+	Issuers carecontract.SchoolIssuers
 }
 
 var _ carecontract.Contracts = (*Contracts)(nil)
@@ -60,7 +65,7 @@ func NewContracts(store ContractStore, renderer LetterRenderer, ports ContractPo
 		panic("care contract: the store, the renderer, the letterhead, the post, the runtime, the access log, the ledger, the link tokens, the versions and the school holidays are required")
 	}
 	return &Contracts{store: store, letterheads: ports.Letterheads, renderer: renderer, post: ports.Post, clock: clock,
-		runtime: ports.Runtime, access: ports.Access, ledger: ports.Ledger, links: ports.Links, versions: versions, notices: ports.Notices,
+		runtime: ports.Runtime, access: ports.Access, ledger: ports.Ledger, links: ports.Links, versions: versions, notices: ports.Notices, issuers: ports.Issuers,
 		periods: withdrawalPeriods{holidays: ports.Holidays}}
 }
 
@@ -325,12 +330,19 @@ func (c *Contracts) contractDocument(ctx context.Context, reviewer carecontract.
 // preview carries the preview note; the PDF a send or handover freezes never
 // does (#8030).
 func (c *Contracts) render(ctx context.Context, reviewer carecontract.Reviewer, record ContractRecord, preview bool) (carecontract.File, int, error) {
-	head, err := c.letterheads.Letterhead(ctx, reviewer)
+	file, templateVersion, _, err := c.renderIssued(ctx, reviewer, record, preview)
+	return file, templateVersion, err
+}
+
+// renderIssued renders the PDF and names the body it printed as sender, nil
+// for the Träger, so the stored PDF keeps exactly that body (#4811).
+func (c *Contracts) renderIssued(ctx context.Context, reviewer carecontract.Reviewer, record ContractRecord, preview bool) (carecontract.File, int, *carecontract.Issuer, error) {
+	head, issuer, err := c.letterhead(ctx, reviewer, record)
 	if err != nil {
-		return carecontract.File{}, 0, fmt.Errorf("care contract: letterhead: %w", err)
+		return carecontract.File{}, 0, nil, err
 	}
 	if firstText(record.Version.Terms.ContractPartner, firstLine(textLines(head.SenderText))) == "" {
-		return carecontract.File{}, 0, &carecontract.ValidationError{Fields: map[string]string{"contract_partner": "required"}}
+		return carecontract.File{}, 0, nil, &carecontract.ValidationError{Fields: map[string]string{"contract_partner": "required"}}
 	}
 	letter := contractLetter(record, head)
 	if preview {
@@ -338,9 +350,25 @@ func (c *Contracts) render(ctx context.Context, reviewer carecontract.Reviewer, 
 	}
 	file, err := c.renderer.RenderContract(letter, documentFilenameBase(record))
 	if err != nil {
-		return carecontract.File{}, 0, fmt.Errorf("care contract: render: %w", err)
+		return carecontract.File{}, 0, nil, fmt.Errorf("care contract: render: %w", err)
 	}
-	return file, head.Template.Version, nil
+	return file, head.Template.Version, issuer, nil
+}
+
+// letterhead is the letterhead the contract prints and its mails name: the
+// Träger's, or on it the body that concludes the contracts of the school
+// (#4811), which it returns as well, nil for the Träger. A frozen PDF keeps
+// its body.
+func (c *Contracts) letterhead(ctx context.Context, reviewer carecontract.Reviewer, record ContractRecord) (carecontract.Letterhead, *carecontract.Issuer, error) {
+	head, err := c.letterheads.Letterhead(ctx, reviewer)
+	if err != nil {
+		return carecontract.Letterhead{}, nil, fmt.Errorf("care contract: letterhead: %w", err)
+	}
+	issuer, err := contractIssuer(ctx, c.issuers, reviewer.OrganizationID, record)
+	if err != nil {
+		return carecontract.Letterhead{}, nil, err
+	}
+	return issuedLetterhead(head, issuer), issuer, nil
 }
 
 // SendContracts sends every contract of the list once. A contract that
@@ -450,9 +478,9 @@ func (c *Contracts) deliver(ctx context.Context, reviewer carecontract.Reviewer,
 	if err != nil {
 		return err
 	}
-	head, err := c.letterheads.Letterhead(ctx, reviewer)
+	head, _, err := c.letterhead(ctx, reviewer, record)
 	if err != nil {
-		return fmt.Errorf("care contract: letterhead: %w", err)
+		return err
 	}
 	// The withdrawal notice of the contract and of its signing page takes
 	// the Träger's address from the letterhead (#7177).
@@ -570,11 +598,12 @@ func (c *Contracts) frozenDocument(ctx context.Context, reviewer carecontract.Re
 		file, err := c.store.Document(ctx, reviewer.OrganizationID, record.Summary.ID.Int64())
 		return file, *record.DocumentID, err
 	}
-	file, templateVersion, err := c.render(ctx, reviewer, record, false)
+	// The PDF keeps the body that issued it (#4811): the one it prints.
+	file, templateVersion, issuer, err := c.renderIssued(ctx, reviewer, record, false)
 	if err != nil {
 		return carecontract.File{}, 0, err
 	}
-	id, err := c.store.InsertDocument(ctx, reviewer.OrganizationID, reviewer.AccountID, record, templateVersion, file)
+	id, err := c.store.InsertDocument(ctx, reviewer.OrganizationID, reviewer.AccountID, record, templateVersion, file, issuer)
 	return file, id, err
 }
 
@@ -585,9 +614,10 @@ func (c *Contracts) paperDocument(ctx context.Context, reviewer carecontract.Rev
 	if record.DocumentID != nil {
 		return *record.DocumentID, nil
 	}
-	head, err := c.letterheads.Letterhead(ctx, reviewer)
+	// The letterhead of the body that concludes the school's contracts.
+	head, _, err := c.letterhead(ctx, reviewer, record)
 	if err != nil {
-		return 0, fmt.Errorf("care contract: letterhead: %w", err)
+		return 0, err
 	}
 	if letterheadMissing(head.SenderText) {
 		return 0, carecontract.ErrLetterheadMissing

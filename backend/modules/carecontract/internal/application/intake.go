@@ -34,6 +34,7 @@ type Intake struct {
 	modes        carecontract.ConclusionModes
 	mail         carecontract.MailBlocks
 	letterheads  carecontract.Letterheads
+	issuers      carecontract.SchoolIssuers
 	families     carecontract.FamilyNumbers
 	today        func() calendar.Date
 }
@@ -50,6 +51,11 @@ type IntakePorts struct {
 	// Letterheads gives the Träger's address and contact the withdrawal
 	// notice of the enrollment form names (#6105).
 	Letterheads carecontract.Letterheads
+	// Issuers names the Schulträger or the Gemeinde that concludes the
+	// contracts of a school (#4811): the withdrawal notice of its
+	// enrollment form names that body. The roots bind it; a composition
+	// without it knows only the Träger.
+	Issuers carecontract.SchoolIssuers
 	// Families takes the registration's number of children over with the
 	// contract (#6335).
 	Families carecontract.FamilyNumbers
@@ -64,7 +70,7 @@ func NewIntake(store Store, ports IntakePorts, today func() calendar.Date) *Inta
 	}
 	return &Intake{store: store, schools: ports.Schools, applications: ports.Applications, bookings: ports.Bookings,
 		access: ports.Access, runtime: ports.Runtime, modes: ports.Modes, mail: ports.Mail, letterheads: ports.Letterheads,
-		families: ports.Families, today: today}
+		issuers: ports.Issuers, families: ports.Families, today: today}
 }
 
 // schoolRead is what the intake read in one school's tenant transaction.
@@ -383,10 +389,14 @@ func (in *Intake) Templates(ctx context.Context, reviewer carecontract.Reviewer)
 	}
 	var rows []TemplateRow
 	var head carecontract.Letterhead
+	var issuers map[int64]carecontract.Issuer
 	err = in.runtime.WithinTraeger(ctx, reviewer.OrganizationID, func(txCtx context.Context) error {
 		var err error
 		if head, err = in.letterheads.Letterhead(txCtx, reviewer); err != nil {
 			return fmt.Errorf("letterhead: %w", err)
+		}
+		if issuers, err = in.schoolIssuers(txCtx, reviewer.OrganizationID, schools); err != nil {
+			return err
 		}
 		rows, err = in.store.Templates(txCtx, reviewer.OrganizationID)
 		return err
@@ -405,7 +415,7 @@ func (in *Intake) Templates(ctx context.Context, reviewer carecontract.Reviewer)
 			if template, ok := byOffering[[2]int64{school.ID, offering.ID}]; ok {
 				found = &template
 			}
-			result = append(result, offeringTemplate(school, offering, found, head))
+			result = append(result, offeringTemplate(school, offering, found, schoolLetterhead(head, issuers, school.ID), issuerName(issuers, school.ID)))
 		}
 	}
 	sortTemplates(result)
@@ -477,6 +487,7 @@ func (in *Intake) SaveTemplate(ctx context.Context, reviewer carecontract.Review
 	}
 	var saved carecontract.ContractTemplate
 	var head carecontract.Letterhead
+	var issuer string
 	err = in.runtime.WithinTraeger(ctx, reviewer.OrganizationID, func(txCtx context.Context) error {
 		// A save that read no template only inserts: the catalog rollout
 		// inserts templates without this lock (ADR 0311).
@@ -484,8 +495,8 @@ func (in *Intake) SaveTemplate(ctx context.Context, reviewer carecontract.Review
 		if err != nil {
 			return err
 		}
-		if head, err = in.letterheads.Letterhead(txCtx, reviewer); err != nil {
-			return fmt.Errorf("care contract: letterhead: %w", err)
+		if head, issuer, err = in.issuedSchoolLetterhead(txCtx, reviewer, schools[0]); err != nil {
+			return err
 		}
 		if saved, err = in.store.UpsertTemplate(txCtx, reviewer.OrganizationID, reviewer.AccountID, schoolID, offeringID, input, stored != nil); err != nil {
 			return err
@@ -496,7 +507,7 @@ func (in *Intake) SaveTemplate(ctx context.Context, reviewer carecontract.Review
 	if err != nil {
 		return carecontract.OfferingTemplate{}, err
 	}
-	return offeringTemplate(schools[0], offering, &saved, head), nil
+	return offeringTemplate(schools[0], offering, &saved, head, issuer), nil
 }
 
 // lockTemplateAsRead takes the lock of one offering's template, also for an
@@ -637,7 +648,8 @@ func (in *Intake) templateIndex(ctx context.Context, organizationID int64) (temp
 	return index, nil
 }
 
-func offeringTemplate(school carecontract.School, offering carecontract.Offering, template *carecontract.ContractTemplate, head carecontract.Letterhead) carecontract.OfferingTemplate {
+func offeringTemplate(school carecontract.School, offering carecontract.Offering, template *carecontract.ContractTemplate, head carecontract.Letterhead,
+	issuer string) carecontract.OfferingTemplate {
 	text, withdrawal, earlyStart, term, notice := "", "", "", "", ""
 	if template != nil {
 		text = acceptanceText(template.TemplateInput)
@@ -648,7 +660,7 @@ func offeringTemplate(school carecontract.School, offering carecontract.Offering
 		AcceptanceText: text, WithdrawalText: withdrawal, EarlyStartText: earlyStart, TermText: term, NoticeText: notice,
 		SchoolID: ident.ID(school.ID), SchoolName: school.Name, OfferingID: ident.ID(offering.ID), OfferingName: offering.Name,
 		PhaseName: offering.PhaseName, PriceCents: offering.PriceCents, Active: offering.Active, Template: template,
-		Version: carecontract.TemplateVersion(template),
+		Version: carecontract.TemplateVersion(template), IssuerName: issuer,
 	}
 }
 

@@ -165,6 +165,11 @@ type OfferingTemplate struct {
 	PriceCents   *int              `json:"price_cents"`
 	Active       bool              `json:"active"`
 	Template     *ContractTemplate `json:"template"`
+	// IssuerName names the Schulträger or the Gemeinde that concludes the
+	// contracts of the school in place of the Träger (#4811); empty for
+	// the Träger. A contract partner the conditions name wins over it, so
+	// the form warns where both differ.
+	IssuerName string `json:"issuer_name"`
 	// AcceptanceText is the complete saved conditions text for the enrollment
 	// form. It is empty without a template or an explicit contract partner.
 	AcceptanceText string `json:"acceptance_text"`

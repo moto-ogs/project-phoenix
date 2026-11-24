@@ -32,6 +32,7 @@ vi.mock("next-auth/react", () => ({
 }));
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "2" }),
+  useSearchParams: () => new URLSearchParams(),
   usePathname: () => "/schulen/2",
   useRouter: () => ({ push: vi.fn() }),
 }));

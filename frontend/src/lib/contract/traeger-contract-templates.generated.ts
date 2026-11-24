@@ -53,6 +53,7 @@ export interface OfferingTemplate {
   price_cents: number | null;
   active: boolean;
   template: ContractTemplate | null;
+  issuer_name: string;
   acceptance_text: string;
   withdrawal_text: string;
   early_start_text: string;
@@ -70,6 +71,7 @@ export const OfferingTemplateSchema: z.ZodType<OfferingTemplate, unknown> = obje
   price_cents: nullable(safeInt),
   active: bool,
   template: nullable(ContractTemplateSchema),
+  issuer_name: str,
   acceptance_text: str,
   withdrawal_text: str,
   early_start_text: str,

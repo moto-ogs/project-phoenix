@@ -42,6 +42,7 @@ export interface TraegerStaffEmployment {
   staff_id: string;
   active: boolean;
   via_pool: boolean;
+  employer_name: string;
 }
 
 export const TraegerStaffEmploymentSchema: z.ZodType<TraegerStaffEmployment, unknown> = object<TraegerStaffEmployment>({
@@ -50,6 +51,7 @@ export const TraegerStaffEmploymentSchema: z.ZodType<TraegerStaffEmployment, unk
   staff_id: int64String,
   active: bool,
   via_pool: bool,
+  employer_name: str,
 });
 
 /** Go: workforce.TraegerStaffFinancial */
