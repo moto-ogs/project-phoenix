@@ -16,6 +16,7 @@ import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import { testClockDay } from "~/test/clock-instant";
+import { setTestClock } from "~/test/clock";
 import type {
   BillingKeyDateCount,
   BillingKeyDay,
@@ -150,8 +151,9 @@ describe("OperatorBillingPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("lists the schools still without figures in the running month (#7301)", async () => {
-    const month = testClockDay(0).slice(0, 7);
+  // The pending schools' key date lies in the running month; whether it is
+  // still ahead or already past depends on the day, so each case sets it.
+  function mockRunningMonthWithPendingSchool(month: string) {
     mockListKeyDateCounts.mockResolvedValue([
       count({
         period: `${month}-01`,
@@ -187,15 +189,22 @@ describe("OperatorBillingPage", () => {
         deletedAt: "2026-01-01",
       },
     ]);
-    renderPage();
+  }
 
-    const neu = (await screen.findAllByText("OGS Neu"))
+  async function pendingRow(): Promise<HTMLElement> {
+    renderPage();
+    return (await screen.findAllByText("OGS Neu"))
       .map((cell) => cell.closest("tr"))
       .find(Boolean) as HTMLElement;
+  }
+
+  it("lists the schools still without figures in the running month (#7301)", async () => {
+    setTestClock("2026-11-10T12:00:00+01:00");
+    mockRunningMonthWithPendingSchool("2026-11");
+
+    const neu = await pendingRow();
     // Its Träger's own day gives the key date of the month.
-    expect(
-      within(neu).getByText(`20.${month.slice(5, 7)}.${month.slice(0, 4)}`),
-    ).toBeInTheDocument();
+    expect(within(neu).getByText("20.11.2026")).toBeInTheDocument();
     expect(within(neu).getByText("noch nicht erfasst")).toBeInTheDocument();
     expect(screen.queryAllByText("OGS Alt")).toHaveLength(0);
     expect(screen.getByText("1 von 2")).toBeInTheDocument();
@@ -203,6 +212,16 @@ describe("OperatorBillingPage", () => {
     expect(
       screen.getByText(/Schulen ohne Zahlen stehen mit ihrem Stichtag dabei\./),
     ).toBeInTheDocument();
+  });
+
+  it("marks a school whose key date passed without figures (#7301)", async () => {
+    setTestClock("2026-11-21T00:30:00+01:00");
+    mockRunningMonthWithPendingSchool("2026-11");
+
+    const neu = await pendingRow();
+    expect(within(neu).getByText("20.11.2026")).toBeInTheDocument();
+    expect(within(neu).getByText("Zahlen fehlen")).toBeInTheDocument();
+    expect(within(neu).queryByText("noch nicht erfasst")).toBeNull();
   });
 
   it("shows the key day and the next key date", async () => {
