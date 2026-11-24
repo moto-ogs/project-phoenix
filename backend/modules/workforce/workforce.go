@@ -19,7 +19,6 @@
 package workforce
 
 import (
-	"cmp"
 	"context"
 	"errors"
 	"slices"
@@ -142,7 +141,10 @@ type UpdateWorkTimeModel struct {
 func WorkTimeModelVersion(m WorkTimeModel) string {
 	entries := slices.Clone(m.Entries)
 	slices.SortFunc(entries, func(a, b WorkTimeModelEntry) int {
-		return cmp.Or(cmp.Compare(a.WeekIndex, b.WeekIndex), cmp.Compare(a.DayOfWeek, b.DayOfWeek))
+		if a.WeekIndex != b.WeekIndex {
+			return a.WeekIndex - b.WeekIndex
+		}
+		return a.DayOfWeek - b.DayOfWeek
 	})
 	slots := make([]any, 0, len(entries))
 	for _, entry := range entries {
