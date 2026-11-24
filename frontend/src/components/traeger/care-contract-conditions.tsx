@@ -125,8 +125,8 @@ export function CareContractConditions({
   onSelect: (key: string | null) => void;
   onSaved: (offering: OfferingTemplate) => void;
 }>) {
-  // `null` until the width is known: `useMediaQuery` reports `false` before
-  // its first effect, which would write the desktop default on a phone.
+  // `null` until the width is known: `useMediaQuery` reports `false` during
+  // hydration, which would write the desktop default on a phone.
   const isMobile = useResolvedMediaQuery(BELOW_MD);
   const firstOpen = useMemo(
     () =>

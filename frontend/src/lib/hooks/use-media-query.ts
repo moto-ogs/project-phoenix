@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { useCallback, useRef, useSyncExternalStore } from "react";
 
 /**
  * Verfolgt eine CSS-Media-Query im Client.
@@ -13,22 +13,16 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
  * unsichtbare Kopie. Für reine Sichtbarkeit bleiben Tailwind-Klassen der
  * einfachere und flackerfreie Weg.
  *
- * Vor dem ersten Effect ist das Ergebnis `false` — bewusst, damit Server- und
- * Client-Render übereinstimmen und React keine Hydrations-Abweichung meldet.
- * Aufrufer legen deshalb die Desktop-Variante als `false`-Fall aus.
+ * Im Server-Render und während der Hydration ist das Ergebnis `false`,
+ * bewusst, damit Server- und Client-Render übereinstimmen und React keine
+ * Hydrations-Abweichung meldet. Aufrufer legen deshalb die Desktop-Variante
+ * als `false`-Fall aus. Wird die Komponente erst im Client eingehängt (ein
+ * Menü nach dem Tippen, eine Seite nach einem Seitenwechsel), steht der echte
+ * Wert schon im ersten Render fest (#8013): Ein Telefon sieht dann nie erst
+ * die Desktop-Variante.
  */
 export function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState(false);
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia(query);
-    const update = () => setMatches(mediaQuery.matches);
-    update();
-    mediaQuery.addEventListener("change", update);
-    return () => mediaQuery.removeEventListener("change", update);
-  }, [query]);
-
-  return matches;
+  return useResolvedMediaQuery(query) ?? false;
 }
 
 const noSubscription = () => () => undefined;
@@ -43,22 +37,26 @@ const unknownOnServer = () => null;
  * bleibt der Wert `null`.
  */
 export function useResolvedMediaQuery(query: string): boolean | null {
+  // Eine Liste je Abfrage, für Lesen und Abonnieren: Sie entsteht erst im
+  // Client, beim ersten Lesen.
+  const listRef = useRef<{ query: string; list: MediaQueryList } | null>(null);
+  const getList = useCallback(() => {
+    if (typeof window.matchMedia !== "function") return null;
+    if (listRef.current?.query !== query) {
+      listRef.current = { query, list: window.matchMedia(query) };
+    }
+    return listRef.current.list;
+  }, [query]);
   const subscribe = useCallback(
     (onChange: () => void) => {
-      if (typeof window.matchMedia !== "function") return noSubscription();
-      const mediaQuery = window.matchMedia(query);
-      mediaQuery.addEventListener("change", onChange);
-      return () => mediaQuery.removeEventListener("change", onChange);
+      const list = getList();
+      if (list === null) return noSubscription();
+      list.addEventListener("change", onChange);
+      return () => list.removeEventListener("change", onChange);
     },
-    [query],
+    [getList],
   );
-  const getSnapshot = useCallback(
-    () =>
-      typeof window.matchMedia === "function"
-        ? window.matchMedia(query).matches
-        : null,
-    [query],
-  );
+  const getSnapshot = useCallback(() => getList()?.matches ?? null, [getList]);
   return useSyncExternalStore(subscribe, getSnapshot, unknownOnServer);
 }
 

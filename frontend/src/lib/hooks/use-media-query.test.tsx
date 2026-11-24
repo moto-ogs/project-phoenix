@@ -114,6 +114,18 @@ describe("useMediaQuery", () => {
     expect(renderToString(<Probe />)).toContain("false");
   });
 
+  it("kennt die Breite schon im ersten Render, wenn es im Client eingehängt wird (#8013)", () => {
+    setViewportWidth(390);
+    const seen: boolean[] = [];
+    renderHook(() => {
+      const matches = useMediaQuery(BELOW_MD);
+      seen.push(matches);
+      return matches;
+    });
+
+    expect(seen[0]).toBe(true);
+  });
+
   it("folgt einer Verengung über eine Bruchteil-Grenze bei 20 px Schrift", () => {
     setDefaultFontSize(20);
     setViewportWidth(960);
