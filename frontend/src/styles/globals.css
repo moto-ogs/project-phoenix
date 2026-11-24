@@ -50,7 +50,13 @@
  * Regel, deshalb bleibt er pixelgleich. `compact` gilt nur ohne Finger: Das
  * iPad bekommt die App-Maße statt der dichten Desktop-Stufe.
  */
-@custom-variant app (@media (width < 64rem), (pointer: coarse));
+/* Blockform: In der Kurzform trennt Tailwind am Komma wie in einer
+   Selektorliste, das ergab ungültiges CSS. */
+@custom-variant app {
+  @media (width < 64rem), (pointer: coarse) {
+    @slot;
+  }
+}
 @custom-variant desk (@media (width >= 64rem) and (not (pointer: coarse)));
 @custom-variant phone (@media (width < 40rem));
 @custom-variant tablet (@media (width >= 40rem) and ((width < 64rem) or (pointer: coarse)));
