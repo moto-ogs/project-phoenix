@@ -385,10 +385,7 @@ func (s *TemplateSplitService) splitInTransaction(
 	in TemplateSplitInput,
 	tenantID int64,
 ) (*timetable.SplitTemplateResult, error) {
-	if err := s.lockSplitRecurrence(ctx, "split template"); err != nil {
-		return nil, err
-	}
-	if err := checkTemplateSeriesVersion(ctx, s.deps.SeriesReads, "split template", in.TemplateID, in.ExpectedVersion); err != nil {
+	if err := s.lockSplitTemplate(ctx, in); err != nil {
 		return nil, err
 	}
 	if err := s.validateSplitCatalogue(ctx, in); err != nil {
@@ -472,6 +469,15 @@ func (s *TemplateSplitService) lockSplitRecurrence(ctx context.Context, op strin
 		return &ports.ScheduleError{Op: op + ": lock recurrence", Err: err}
 	}
 	return nil
+}
+
+// lockSplitTemplate takes the recurrence gate and compares the version the
+// editor read with the segment stored under it (ADR 0311).
+func (s *TemplateSplitService) lockSplitTemplate(ctx context.Context, in TemplateSplitInput) error {
+	if err := s.lockSplitRecurrence(ctx, "split template"); err != nil {
+		return err
+	}
+	return checkTemplateSeriesVersion(ctx, s.deps.SeriesReads, "split template", in.TemplateID, in.ExpectedVersion)
 }
 
 // writeSplitSuccessor caps the old template, creates and validates the

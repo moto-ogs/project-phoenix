@@ -155,38 +155,49 @@ func templateSeriesWeekdays(templateID int64, rows []TemplateWeekdayRosterRow) (
 	)
 	assignmentAt, protectedAt := map[int]int{}, map[int]int{}
 	for _, row := range rows {
-		if row.TemplateID != templateID {
-			continue
-		}
-		if row.Kind == TemplateWeekdayRosterKindProtectedStudent {
-			position, ok := protectedAt[row.Weekday]
-			if !ok {
-				protected = append(protected, templateSeriesProtectedState{Weekday: row.Weekday, StudentIDs: []int64{}})
-				position = len(protected) - 1
-				protectedAt[row.Weekday] = position
-			}
-			protected[position].StudentIDs = append(protected[position].StudentIDs, row.PersonID)
-			continue
-		}
-		position, ok := assignmentAt[row.Weekday]
-		if !ok {
-			assignments = append(assignments, templateSeriesWeekdayState{Weekday: row.Weekday, StaffIDs: []int64{}, StudentIDs: []int64{}})
-			position = len(assignments) - 1
-			assignmentAt[row.Weekday] = position
-		}
-		entry := &assignments[position]
-		switch row.Kind {
-		case TemplateWeekdayRosterKindStaff:
-			entry.StaffIDs = append(entry.StaffIDs, row.PersonID)
-			if row.IsPrimary && entry.PrimaryStaffID == nil {
-				staffID := row.PersonID
-				entry.PrimaryStaffID = &staffID
-			}
-		case TemplateWeekdayRosterKindStudent:
-			entry.StudentIDs = append(entry.StudentIDs, row.PersonID)
+		switch {
+		case row.TemplateID != templateID:
+		case row.Kind == TemplateWeekdayRosterKindProtectedStudent:
+			protected = addProtectedSeriesStudent(protected, protectedAt, row)
+		default:
+			assignments = addSeriesWeekdayPerson(assignments, assignmentAt, row)
 		}
 	}
 	return assignments, protected
+}
+
+func addProtectedSeriesStudent(protected []templateSeriesProtectedState, at map[int]int, row TemplateWeekdayRosterRow) []templateSeriesProtectedState {
+	position, ok := at[row.Weekday]
+	if !ok {
+		protected = append(protected, templateSeriesProtectedState{Weekday: row.Weekday, StudentIDs: []int64{}})
+		position = len(protected) - 1
+		at[row.Weekday] = position
+	}
+	protected[position].StudentIDs = append(protected[position].StudentIDs, row.PersonID)
+	return protected
+}
+
+// addSeriesWeekdayPerson adds a staff member or a child to the weekday's
+// entry; an empty row only makes sure the weekday has one.
+func addSeriesWeekdayPerson(assignments []templateSeriesWeekdayState, at map[int]int, row TemplateWeekdayRosterRow) []templateSeriesWeekdayState {
+	position, ok := at[row.Weekday]
+	if !ok {
+		assignments = append(assignments, templateSeriesWeekdayState{Weekday: row.Weekday, StaffIDs: []int64{}, StudentIDs: []int64{}})
+		position = len(assignments) - 1
+		at[row.Weekday] = position
+	}
+	entry := &assignments[position]
+	switch row.Kind {
+	case TemplateWeekdayRosterKindStaff:
+		entry.StaffIDs = append(entry.StaffIDs, row.PersonID)
+		if row.IsPrimary && entry.PrimaryStaffID == nil {
+			staffID := row.PersonID
+			entry.PrimaryStaffID = &staffID
+		}
+	case TemplateWeekdayRosterKindStudent:
+		entry.StudentIDs = append(entry.StudentIDs, row.PersonID)
+	}
+	return assignments
 }
 
 func requiredStaffOverride(n *int64) *int {
