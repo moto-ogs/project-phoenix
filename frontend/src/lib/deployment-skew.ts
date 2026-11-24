@@ -15,10 +15,12 @@ export const DEPLOYMENT_ID_HEADER = "X-Moto-Deployment-ID";
 
 /**
  * The deployment of the running code. Next.js inlines the server value at
- * build time and sets the browser value from the page it served.
+ * build time and sets the browser value from the page it served; a build
+ * without one inlines `false`.
  */
 export function deploymentId(): string | undefined {
-  return process.env.NEXT_DEPLOYMENT_ID || undefined;
+  const id = process.env.NEXT_DEPLOYMENT_ID;
+  return id ? id : undefined;
 }
 
 /** Whether a request comes from a bundle of another deployment. */
