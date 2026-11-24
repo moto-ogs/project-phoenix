@@ -6,7 +6,6 @@ import {
   successResponse,
   createUnauthorizedResponse,
   isStringParam,
-  requirePathSegmentParam,
   requireStringParam,
   type RouteContext,
 } from "./route-wrapper-utils.server";
@@ -237,14 +236,8 @@ describe("route param helpers", () => {
     expect(requireStringParam({ id: "abc/123" })).toBe("abc/123");
   });
 
-  it("encodes one URL path segment with requirePathSegmentParam", () => {
-    expect(
-      requirePathSegmentParam({ slug: "school/name with spaces" }, "slug"),
-    ).toBe("school%2Fname%20with%20spaces");
-  });
-
-  it("throws when the required path segment param is missing", () => {
-    expect(() => requirePathSegmentParam({}, "studentId")).toThrow(
+  it("throws when the required route param is missing", () => {
+    expect(() => requireStringParam({}, "studentId")).toThrow(
       "Invalid studentId parameter",
     );
   });

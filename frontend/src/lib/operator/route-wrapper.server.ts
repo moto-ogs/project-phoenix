@@ -12,8 +12,6 @@ import {
 } from "../contract/catalog-proxy.server";
 import { makePortalHandlers } from "../portal-handlers.server";
 
-export { isStringParam } from "../route-wrapper-utils.server";
-
 /**
  * An error the operator BFF answers itself (#2519): a registered code for the
  * client and an English diagnostic, never a UI sentence. The client shows the

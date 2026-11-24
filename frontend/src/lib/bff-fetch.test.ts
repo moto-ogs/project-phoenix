@@ -463,6 +463,29 @@ describe("bffJson", () => {
     expect(mockRenewSession).not.toHaveBeenCalled();
   });
 
+  it("does not replay a student photo upload after a 401", async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockResolvedValueOnce(ok({ id: "4" }));
+    await expect(
+      bffJson("tenant", "POST /api/students/{id}/photo", {
+        params: { id: "4" },
+        body: new FormData(),
+      }),
+    ).rejects.toMatchObject({ status: 401 });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockRenewSession).not.toHaveBeenCalled();
+  });
+
+  it("does not replay a credential route marked NoRetryAfterRenewal", async () => {
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 401 }));
+    await expect(
+      bffJson("tenant", "POST /auth/passkeys/enrollment/challenge"),
+    ).rejects.toMatchObject({ status: 401 });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockRenewSession).not.toHaveBeenCalled();
+  });
+
   it("passes the signal to the request", async () => {
     const controller = new AbortController();
     mockFetch.mockResolvedValueOnce(ok([]));

@@ -21,8 +21,9 @@ Proxy rules, file flags and the session path in detail:
 
 Go is the source of every response shape. A type the frontend writes by hand
 for a registered route (`Backend*`) is a second, unchecked copy; import the
-generated type instead. `frontend/scripts/backend-wire-types.node-test.mjs`
-(part of `pnpm run check`) finds such a copy by its form, whatever its name:
+generated type instead. `frontend/scripts/backend-wire-types.mjs` finds
+such a copy by its form, whatever its name (run by
+`frontend/scripts/backend-wire-types.node-test.mjs` in `pnpm run check`):
 two `snake_case` fields of its own (a `Backend*` name: one), a generated type
 imported under another name, or a type that only renames a generated one.
 
@@ -60,8 +61,9 @@ Worked example, the same route from Go to the browser:
    sets go in `Enums`. A count is an `int`; an amount or a count kept as
    `int64` says so with `contract:"number"`. The generator refuses a bare
    `int64`, the json option `,string`, a number under an identifier's name
-   (`id`, `*_id`, `*_ids`), a numeric identifier in an answer and an answer
-   whose shape depends on a query parameter. Do not format database IDs into
+   (`id`, `*_id`, `*_ids`) and a numeric identifier in an answer. Register
+   response variants when the answer shape depends on a query parameter.
+   Do not format database IDs into
    Go strings. A field named like an ID that actually carries text, such as an
    RFID tag or a SEPA creditor ID, states why with `contract_text:"reason"`.
    The generator records the reason as `text_reason` in `contract.json`.
@@ -246,6 +248,8 @@ Only for what belongs to the browser and cannot live in Go:
   (`frontend/src/lib/login-route.server.ts`, `frontend/src/lib/logout-route.server.ts`);
 - the SSE pipe (`app/api/sse/events`, `app/api/parent/sse/events`,
   `app/api/school/sse/events`) and the client log routes;
+- a device token in a header instead of a browser session, as in
+  `frontend/src/app/api/display/dashboard/route.ts`;
 - a BFF cache or cookie the write must change: `settings/values/[key]`
   purges the cached tenant lookup, `demo/access/sessions` sets the demo cookie;
 - a hand-off for a path on the catalog proxy allowlist that Next would give

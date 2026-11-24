@@ -138,7 +138,10 @@ was eine Antwort-Kennung als Zahl zuließ:
    sie im Browser über `/api/auth/tenant/resolve` und den Katalog-Proxy
    auf, im Server über denselben Routeneintrag mit `contractGet`.
    Der Server-Cache speichert nur dekodierte Treffer und prüft bekannte
-   Branding-Felder. `contractGet` nimmt den Slug im getypten `query` entgegen. Die
+   Branding-Felder. `contractGet` nimmt den Slug im getypten `query` entgegen.
+   Bei Varianten-Reads gilt dieselbe Kennungsprüfung im jeweils ausgewählten
+   Decoder (siehe [ADR 0270](0270-der-vertrag-zwischen-go-und-frontend-entsteht-aus-der-go-registrierung.md)).
+   Die
    Schulkennung der Oberfläche (`TenantInfo.tenantId`) ist ein String. Die
    Schulkennung im Sitzungstoken bleibt eine Zahl; die Vergleiche wandeln sie
    in Text.

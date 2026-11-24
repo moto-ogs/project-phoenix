@@ -7,6 +7,8 @@ import {
   routeFileRoutes,
 } from "~/lib/contract/portals.generated";
 import { PORTALS } from "~/server/auth/portals";
+import { localSessionKeys } from "~/lib/session-bff";
+import { sourceBindings } from "~/test/helpers/source-bindings";
 
 vi.mock("~/env", () => ({ env: { TENANT_DOMAIN: "localhost" } }));
 
@@ -279,11 +281,7 @@ const rawCalls =
   /^(?:fetch|sendBackend|readBackendJson|backendFetch|api(?:Get|Post|Put|Patch|Delete)|postForm|api)$/;
 
 function handlerCalls(file: string, text: string) {
-  const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
-  const generated = new Set<string>();
-  const namespaces = new Set<string>();
-  const bindings = new Map<string, string>();
-  const decoderBindings = new Set<string>();
+  const { source, binding } = sourceBindings(file, text);
   const methods = new Set<string>();
   for (const statement of source.statements) {
     if (
@@ -302,43 +300,14 @@ function handlerCalls(file: string, text: string) {
       }
     }
   }
-  for (const binding of source.statements) {
-    if (
-      !ts.isImportDeclaration(binding) ||
-      !ts.isStringLiteral(binding.moduleSpecifier)
-    )
-      continue;
-    const imports = binding.importClause?.namedBindings;
-    if (!imports) continue;
-    const isGenerated = binding.moduleSpecifier.text.endsWith(".generated");
-    if (ts.isNamespaceImport(imports)) {
-      if (isGenerated) namespaces.add(imports.name.text);
-      continue;
-    }
-    for (const imported of imports.elements) {
-      const name = (imported.propertyName ?? imported.name).text;
-      bindings.set(imported.name.text, name);
-      if (isGenerated && name === "routes") generated.add(imported.name.text);
-      if (
-        binding.moduleSpecifier.text.endsWith("/contract/client.server") &&
-        (name === "contractGet" || name === "contractWrite")
-      ) {
-        decoderBindings.add(imported.name.text);
-      }
-    }
-  }
-  const isGeneratedRoutes = (expression: ts.Expression) =>
-    (ts.isIdentifier(expression) && generated.has(expression.text)) ||
-    (ts.isPropertyAccessExpression(expression) &&
-      expression.name.text === "routes" &&
-      ts.isIdentifier(expression.expression) &&
-      namespaces.has(expression.expression.text));
-
-  const callee = ({ expression }: ts.CallExpression) => {
-    if (ts.isIdentifier(expression))
-      return bindings.get(expression.text) ?? expression.text;
-    if (ts.isPropertyAccessExpression(expression)) return expression.name.text;
-    return "";
+  const callee = ({ expression }: ts.CallExpression) =>
+    binding(expression).names.at(-1) ?? "";
+  const isDecoderCall = ({ expression }: ts.CallExpression) => {
+    const { from, names } = binding(expression);
+    return (
+      from?.endsWith("contract/client.server") &&
+      (names[0] === "contractGet" || names[0] === "contractWrite")
+    );
   };
 
   // backendFetch can supply the transport, but does not return the raw
@@ -349,7 +318,11 @@ function handlerCalls(file: string, text: string) {
     const property = arrow.parent;
     if (
       !ts.isPropertyAssignment(property) ||
-      property.name.getText(source) !== "send"
+      !(
+        (ts.isIdentifier(property.name) ||
+          ts.isStringLiteralLike(property.name)) &&
+        property.name.text === "send"
+      )
     )
       return false;
     let argument: ts.Node = property.parent;
@@ -363,10 +336,7 @@ function handlerCalls(file: string, text: string) {
     }
     if (ts.isSpreadElement(argument.parent)) argument = argument.parent;
     const call = argument.parent;
-    return (
-      ts.isCallExpression(call) &&
-      ["contractGet", "contractWrite"].includes(callee(call))
-    );
+    return ts.isCallExpression(call) && isDecoderCall(call);
   }
 
   const entries = new Set<string>();
@@ -377,28 +347,27 @@ function handlerCalls(file: string, text: string) {
     if (ts.isCallExpression(node)) {
       const name = callee(node);
       calls.add(name);
-      if (
-        ts.isIdentifier(node.expression) &&
-        decoderBindings.has(node.expression.text)
-      ) {
+      if (isDecoderCall(node)) {
         callsDecoder = true;
       }
       if (rawCalls.test(name) && !isContractTransport(node)) bypasses.add(name);
     }
     if (
       ts.isElementAccessExpression(node) &&
-      isGeneratedRoutes(node.expression) &&
-      ts.isStringLiteral(node.argumentExpression)
+      ts.isStringLiteralLike(node.argumentExpression)
     ) {
+      const { from, names } = binding(node.expression);
       const owner = node.parent;
       if (
-        (ts.isCallExpression(owner) && knownContractCall.has(callee(owner))) ||
-        (ts.isPropertyAssignment(owner) &&
-          (file === "portals.ts" ||
-            (owner.name.getText(source) === "route" &&
-              ts.isCallExpression(owner.parent.parent) &&
-              callee(owner.parent.parent) === "createFactorConfirmRoute"))) ||
-        (file === "portals.ts" && ts.isVariableDeclaration(owner))
+        from?.endsWith(".generated") &&
+        names[0] === "routes" &&
+        ((ts.isCallExpression(owner) && knownContractCall.has(callee(owner))) ||
+          (ts.isPropertyAssignment(owner) &&
+            (file === "portals.ts" ||
+              (owner.name.getText(source) === "route" &&
+                ts.isCallExpression(owner.parent.parent) &&
+                callee(owner.parent.parent) === "createFactorConfirmRoute"))) ||
+          (file === "portals.ts" && ts.isVariableDeclaration(owner)))
       ) {
         const [method, pattern] = node.argumentExpression.text.split(" ");
         if (method && pattern) entries.add(key(method, segmentsOf(pattern)));
@@ -436,6 +405,19 @@ function missingDecoders(file: string, source: string): string[] {
 }
 
 describe("RouteFile response decoding", () => {
+  it("serves each BFF-only session key from its named route file", () => {
+    for (const key of Object.values(localSessionKeys)) {
+      const [method, pathname] = key.split(" ");
+      const file = `${pathname?.slice("/api/".length)}/route.ts`;
+      const route = routeFiles.find((item) => item.file === file);
+      expect(route, key).toBeDefined();
+      if (route)
+        expect(handlerCalls(file, route.source).methods.has(method ?? "")).toBe(
+          true,
+        );
+    }
+  });
+
   it("uses every generated entry in a named handler or its portal's session table", () => {
     const missing = routeFiles.flatMap(({ file, source }) =>
       missingDecoders(file, source).map((entry) => `${file}: ${entry}`),
@@ -554,7 +536,8 @@ describe("Server response decoding", () => {
 
   it("catches a typed unchecked read in a shell helper even under an alias", () => {
     const source = `
-      import { sendBackend as read } from "~/lib/backend-client.server";
+      import * as backend from "~/lib/backend-client.server";
+      const read = backend["sendBackend"];
       const endpoint = "/api/me/groups/supervised";
       export const load = (token: string) =>
         read(endpoint, token, { method: "GET" });

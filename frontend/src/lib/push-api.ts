@@ -1,5 +1,5 @@
 import { ApiError } from "./api-error";
-import { bffJson, bffJsonUncontracted, bffPath } from "./bff-fetch";
+import { bffJson } from "./bff-fetch";
 import type * as sharedContract from "./contract/shared.generated";
 /**
  * Web Push client (#2003): service worker registration, permission +
@@ -227,7 +227,7 @@ async function syncSubscription(
  * the portal's call, its 401 handling included. During a logout the session
  * family is already revoked and the sign-out must stay the last cookie
  * change, so the call goes out plain: no session gate, no renewal, no login
- * redirect (bff-boundary/only-listed-uncontracted).
+ * redirect.
  */
 async function deleteServerSubscription(
   portal: PushPortal,
@@ -236,62 +236,28 @@ async function deleteServerSubscription(
   duringLogout: boolean,
 ): Promise<void> {
   const options = {
+    query: { endpoint },
     ...(signal ? { signal } : {}),
     errorMessage: PUSH_FAILED,
+    skipAuthRecovery: duringLogout,
   };
-  const query = { query: { endpoint }, ...options };
   switch (portal) {
     case "parent":
-      if (duringLogout) {
-        await bffJsonUncontracted<null>(
-          "public",
-          "DELETE",
-          bffPath("parent", "DELETE /parent/me/push/subscriptions", query),
-          options,
-        );
-      } else {
-        await bffJson("parent", "DELETE /parent/me/push/subscriptions", query);
-      }
+      await bffJson("parent", "DELETE /parent/me/push/subscriptions", options);
       return;
     case "school":
-      if (duringLogout) {
-        await bffJsonUncontracted<null>(
-          "public",
-          "DELETE",
-          bffPath(
-            "school",
-            "DELETE /school/notifications/push/subscriptions",
-            query,
-          ),
-          options,
-        );
-      } else {
-        await bffJson(
-          "school",
-          "DELETE /school/notifications/push/subscriptions",
-          query,
-        );
-      }
+      await bffJson(
+        "school",
+        "DELETE /school/notifications/push/subscriptions",
+        options,
+      );
       return;
     case "tenant":
-      if (duringLogout) {
-        await bffJsonUncontracted<null>(
-          "public",
-          "DELETE",
-          bffPath(
-            "tenant",
-            "DELETE /api/notifications/push/subscriptions",
-            query,
-          ),
-          options,
-        );
-      } else {
-        await bffJson(
-          "tenant",
-          "DELETE /api/notifications/push/subscriptions",
-          query,
-        );
-      }
+      await bffJson(
+        "tenant",
+        "DELETE /api/notifications/push/subscriptions",
+        options,
+      );
   }
 }
 

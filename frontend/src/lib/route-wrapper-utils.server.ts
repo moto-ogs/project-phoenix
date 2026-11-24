@@ -127,8 +127,7 @@ export function isStringParam(param: unknown): param is string {
 
 /**
  * A required, non-empty string route param; anything else is the request's
- * mistake (400). This does not URL-encode the value; use
- * requirePathSegmentParam for path interpolation.
+ * mistake (400). This does not URL-encode the value.
  */
 export function requireStringParam(
   params: Record<string, unknown>,
@@ -139,14 +138,4 @@ export function requireStringParam(
     throw bffError(400, `Invalid ${key} parameter`);
   }
   return value;
-}
-
-/**
- * Returns a required route param encoded for use as one URL path segment.
- */
-export function requirePathSegmentParam(
-  params: Record<string, unknown>,
-  key = "id",
-): string {
-  return encodeURIComponent(requireStringParam(params, key));
 }

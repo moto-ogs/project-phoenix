@@ -687,6 +687,7 @@ export function makeCatalogProxy(
     const backend = await sendBackend(endpoint, null, {
       method,
       request,
+      headers: conditionalHeaders(route, request),
       ...(cacheOf(route) === PUBLIC_ASSET_CACHE && {
         timeout: "publicAsset" as const,
       }),

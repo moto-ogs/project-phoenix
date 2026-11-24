@@ -4,6 +4,8 @@ import { getRouteMatcher } from "next/dist/shared/lib/router/utils/route-matcher
 import { getRouteRegex } from "next/dist/shared/lib/router/utils/route-regex";
 import { getSortedRoutes } from "next/dist/shared/lib/router/utils/sorted-routes";
 import { describe, expect, it } from "vitest";
+import ts from "typescript";
+import { sourceBindings } from "~/test/helpers/source-bindings";
 import {
   CATALOG_OUTSIDE_MOUNTS,
   CATALOG_PUBLIC_OUTSIDE_MOUNTS,
@@ -16,10 +18,9 @@ import {
 
 /**
  * A registered route reaches its portal's catalog proxy only when no route
- * file stands in front of it: Next would prefer a
- * `billing-families/[id]/route.ts` over `[...path]` for
- * `billing-families/debtor-number-format`, and that file would answer with
- * its own backend call (#2352). A path Next gives to Auth.js keeps a literal
+ * file stands in front of it: Next prefers a single-segment parameter
+ * over `[...path]`, and that file could make its own backend call (#2352).
+ * A path Next gives to Auth.js keeps a literal
  * hand-off file that passes the request to the proxy.
  */
 
@@ -52,11 +53,38 @@ const bffRoute = (file: string) =>
  * hand-off is a route file that calls `catalogProxyUnder` with the portal's
  * routes; the file itself says in a comment why it stands there.
  */
+function handOffPortals(file: string, text: string): string[] {
+  const { source, binding } = sourceBindings(file, text);
+  const portals = new Set<string>();
+  function visit(node: ts.Node) {
+    if (ts.isCallExpression(node)) {
+      const factory = binding(node.expression);
+      if (
+        factory.from?.endsWith("/route-wrapper.server") &&
+        factory.names.join(".") === "catalogProxyUnder"
+      ) {
+        const routes = node.arguments[1] && binding(node.arguments[1]);
+        portals.add(
+          routes?.from?.endsWith("/portals.generated") &&
+            routes.names[0] === "portalRoutes"
+            ? (routes.names[1] ?? "")
+            : "",
+        );
+      }
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(source);
+  return [...portals];
+}
+
 const handOffFiles = routeFilePaths.flatMap((file) => {
   const source = readFileSync(path.join(apiDir, file), "utf8");
-  if (!source.includes("catalogProxyUnder(")) return [];
-  const portal = /portalRoutes\.(\w+)/.exec(source)?.[1] ?? "";
-  return [{ route: bffRoute(file), portal, source }];
+  return handOffPortals(file, source).map((portal) => ({
+    route: bffRoute(file),
+    portal,
+    source,
+  }));
 });
 
 const HAND_OFFS: Record<string, SessionPortal> = Object.fromEntries(
@@ -146,6 +174,17 @@ const cases = Object.entries(portalRoutes).flatMap(([name, routes]) =>
 );
 
 describe("hand-off route file", () => {
+  it("finds the actual portal through aliases and element access", () => {
+    const text = `
+      import * as wrapper from "~/lib/route-wrapper.server";
+      import { portalRoutes as catalog } from "~/lib/contract/portals.generated";
+      const handOff = wrapper["catalogProxyUnder"];
+      const routes = catalog["school"];
+      export const GET = handOff(["auth"], routes, "GET");
+    `;
+    expect(handOffPortals("route.ts", text)).toEqual(["school"]);
+  });
+
   it.each(handOffFiles)(
     "$route hands an Auth.js path to a session portal and says why",
     ({ route, portal, source }) => {
@@ -267,7 +306,6 @@ describe("path freed from its own route file", () => {
     ["/api/enrollment/legal/schule/1", "/api/[...path]"],
     ["/api/staff/shifts/overview", "/api/[...path]"],
     ["/api/timetable/conflict-check", "/api/[...path]"],
-    // Its hand-off file is gone: billing-families/[id] has no route file.
     [
       "/api/traeger/billing-families/debtor-number-format",
       "/api/traeger/[...path]",

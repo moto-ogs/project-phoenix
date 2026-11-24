@@ -56,6 +56,20 @@ describe.concurrent("bff-boundary", () => {
     expect(result.output).toContain("bff-boundary(only-listed-uncontracted)");
   });
 
+  it.each([
+    "import { sessionPost as post } from '~/lib/session-bff-route'; post('/api/students')",
+    "import * as session from './session-bff-route'; session['sessionPost']('/api/students')",
+    "export * from '~/lib/session-bff-route'",
+    "const { sessionPost } = await import('~/lib/session-bff-route')",
+  ])(
+    "prevents constructing a session contract outside its owner: %s",
+    async (source) => {
+      const result = await lintSource(source, "src/lib/probe.ts");
+      expect(result.status).toBe(1);
+      expect(result.output).toContain("Only session-bff.ts may construct");
+    },
+  );
+
   it.each(["/api/invitations/accept", "/api/rooms"])(
     "rejects a second call to %s in an allowlisted file",
     async (path) => {

@@ -4,14 +4,9 @@ import {
   forwardedBody,
 } from "./backend-proxy-response.server";
 
-export interface FileResponseOptions {
-  /** Keep the backend's Cache-Control, for a versioned image like a logo. */
-  backendCacheControl?: boolean;
+interface FileResponseOptions {
   /** The BFF's own Cache-Control for an image the browser may keep. */
   cacheControl?: string;
-  /** Used when the backend names no type or disposition. */
-  fallbackType?: string;
-  fallbackDisposition?: string;
 }
 
 /**
@@ -52,21 +47,10 @@ export async function fileResponse(
     const value = backend.headers.get(name);
     if (value) headers.set(name, value);
   }
-  if (options.fallbackType && !headers.has("Content-Type")) {
-    headers.set("Content-Type", options.fallbackType);
-  }
-  if (options.fallbackDisposition && !headers.has("Content-Disposition")) {
-    headers.set("Content-Disposition", options.fallbackDisposition);
-  }
   if (!headers.has("X-Content-Type-Options")) {
     headers.set("X-Content-Type-Options", "nosniff");
   }
-  headers.set(
-    "Cache-Control",
-    options.cacheControl ??
-      ((options.backendCacheControl && backend.headers.get("Cache-Control")) ||
-        "no-store"),
-  );
+  headers.set("Cache-Control", options.cacheControl ?? "no-store");
   return new Response(forwardedBody(backend), {
     status: backend.status,
     headers,

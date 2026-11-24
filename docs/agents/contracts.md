@@ -15,6 +15,9 @@ booleans are booleans. The helpers serialize values to the URL; the catalog
 proxy filters names only and forwards every occurrence of each registered
 key to Go, which validates the values. Server calls build the Go address
 from the same route entry; browser paths use the portal’s BFF prefix.
+For a GET with response variants, both clients select the answer from
+the variant query or the route's default. See the
+[students example](frontend-api.md#generated-contract-adr-0270).
 
 Bigint identifiers in portal JSON use Go `ident.ID` and travel as decimal
 strings. Identically named text fields carry a `contract_text` reason.
