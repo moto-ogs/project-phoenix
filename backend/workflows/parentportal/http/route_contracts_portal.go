@@ -82,6 +82,7 @@ func accountRouteContracts() []common.RouteContract {
 		{Method: "POST", Pattern: "/me/notifications/feed/{id}/read", Portals: portals, Response: notificationFeedCountResponse{}},
 		{Method: "GET", Pattern: "/me/holiday-registrations", Portals: portals, Response: []HolidayRegistrationOfferResponse{}},
 		{Method: "GET", Pattern: "/me/holiday-registration-entries", Portals: portals, Response: HolidayRegistrationEntriesResponse{}},
+		{Method: "PUT", Pattern: "/me/holiday-registration-entries/{registrationId}/consents/{key}", Portals: portals, Request: HolidayRegistrationConsentRequest{}, NoData: true},
 	}
 }
 

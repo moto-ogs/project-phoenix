@@ -634,13 +634,13 @@ Foto-Einwilligung:
   auch sonst nicht, wann die ausrichtende Schule ein Blatt öffnet, und die
   Antwort enthält keine Angabe, die sie nicht selbst hält.
 
-Nicht Teil dieses Nachtrags, mit eigenem Ticket:
+Nicht Teil dieses Nachtrags:
 
 - Die freiwilligen Einwilligungen der Ferienanmeldung selbst (Rechtstext-
-  Blöcke der Art `consent`, etwa Erinnerungsfotos) sieht die ausrichtende
-  OGS weiter nicht (ADR 0116 Punkt 2), und Eltern können sie im Elternportal
-  weder sehen noch widerrufen
-  ([#8038](https://github.com/moto-ogs/project-phoenix/issues/8038)).
+  Blöcke der Art `consent`, etwa Erinnerungsfotos) regelt seit #8038
+  [ADR 0321](0321-eltern-widerrufen-einwilligungen-der-ferienanmeldung-und-die-ausrichtende-ogs-liest-sie-live.md):
+  Eltern widerrufen sie im Elternportal, und das Blatt des Feriengasts nennt
+  sie live neben der Foto-Einwilligung der Heimatschule.
 
 ### Stopp von Raumverlauf und Stimmung (#8037)
 

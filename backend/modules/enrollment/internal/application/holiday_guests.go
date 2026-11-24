@@ -613,6 +613,9 @@ func (h *HolidayGuests) HolidayGuestSheet(ctx context.Context, host enrollment.H
 		// change there holds here at once (#4721, #8037).
 		sheet.HomePhotoConsent = guest.HomePhotoConsent
 		sheet.HomeRoomHistoryStopped = guest.HomeRoomHistoryStopped
+		// The voluntary consents of the registration come the same way
+		// (#8038): a withdrawal in the parents portal holds at once.
+		sheet.Consents = guest.Consents
 	}
 	return sheet, nil
 }

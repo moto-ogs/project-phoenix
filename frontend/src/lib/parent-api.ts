@@ -820,6 +820,25 @@ export async function listHolidayRegistrationEntries(): Promise<
 }
 
 /**
+ * Withdraws (`given: false`) or gives again (`given: true`) a voluntary
+ * consent of a holiday registration (#8038, ADR 0321). The answer carries no
+ * body; the caller reloads the entries.
+ */
+export async function setHolidayRegistrationConsent(
+  registrationId: string,
+  key: string,
+  given: boolean,
+): Promise<void> {
+  await parentCall(
+    bffJson(
+      "parent",
+      "PUT /parent/me/holiday-registration-entries/{registrationId}/consents/{key}",
+      { params: { registrationId, key }, body: { given } },
+    ),
+  );
+}
+
+/**
  * Counts the conversations with unread staff-side activity for the badge:
  * exactly the rows the inbox shows (#5200), team and leadership ones per
  * child plus the group threads.

@@ -666,7 +666,7 @@ describe("getParentHelpTopicForPath", () => {
     // 27 seit #4671 („Dokumente vom Träger finden“).
     // 28 seit #4801 („Einen Termin am Elternsprechtag buchen“).
     // 29 seit #7051 („Anmeldung mit Code“).
-    expect(parentTopics).toHaveLength(29);
+    expect(parentTopics).toHaveLength(30);
     expect(
       parentTopics.every(
         (topic) =>

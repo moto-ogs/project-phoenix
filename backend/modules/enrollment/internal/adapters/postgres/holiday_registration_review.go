@@ -281,7 +281,7 @@ const (
 		FROM enrollment.holiday_registration_audit
 		WHERE organization_id = ? AND holiday_registration_id = ?
 			AND action IN ('confirm', 'cancel', 'rebook', 'freeze', 'reopen', 'debtor_number', 'edit', 'proof_upload', 'sibling_merge', 'sibling_split', 'sibling_cancel', 'promote', 'wish',
-				'allocate', 'criteria_check')
+				'allocate', 'criteria_check', 'consent')
 		ORDER BY occurred_at, id`
 )
 
@@ -512,7 +512,7 @@ func (s *HolidayRegistrationStore) AppendHolidayAudit(ctx context.Context, organ
 }
 
 const (
-	reviewRegistrationAnswersQuery = `SELECT id, form_version, custom_data, legal_acceptances
+	reviewRegistrationAnswersQuery = `SELECT id, form_version, custom_data, legal_acceptances, legal_withdrawals
 		FROM enrollment.holiday_registrations
 		WHERE organization_id = ? AND holiday_period_id = ? AND (?::bigint = 0 OR id = ?)`
 	reviewChildAnswersQuery = `SELECT id, holiday_registration_id, custom_data
@@ -534,6 +534,7 @@ func (s *HolidayRegistrationStore) ReadHolidayAnswers(ctx context.Context, organ
 	var registrations []struct {
 		ID               int64                     `bun:"id"`
 		LegalAcceptances map[string]time.Time      `bun:"legal_acceptances,type:jsonb"`
+		LegalWithdrawals map[string]time.Time      `bun:"legal_withdrawals,type:jsonb"`
 		FormVersion      int                       `bun:"form_version"`
 		CustomData       enrollment.HolidayAnswers `bun:"custom_data,type:jsonb"`
 	}
@@ -547,7 +548,7 @@ func (s *HolidayRegistrationStore) ReadHolidayAnswers(ctx context.Context, organ
 	}
 	for _, row := range registrations {
 		answers[row.ID] = enrollment.HolidayRegistrationAnswers{
-			LegalAcceptances: row.LegalAcceptances, FormVersion: row.FormVersion, CustomData: answersOrEmpty(row.CustomData), Children: []enrollment.HolidayChildAnswers{},
+			LegalAcceptances: row.LegalAcceptances, LegalWithdrawals: row.LegalWithdrawals, FormVersion: row.FormVersion, CustomData: answersOrEmpty(row.CustomData), Children: []enrollment.HolidayChildAnswers{},
 		}
 	}
 	var children []struct {

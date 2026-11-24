@@ -78,6 +78,12 @@ type HolidayGuestSheet struct {
 	// photo consent, and nil in the same cases. While it is true the hosting
 	// school stores no closed room visit and takes no mood of the guest.
 	HomeRoomHistoryStopped *bool `json:"home_room_history_stopped,omitempty"`
+	// Consents are the voluntary consents of the guest's holiday
+	// registration (#8038, ADR 0321), read live from the registration, so a
+	// withdrawal in the parents portal counts here at once. Nil after the
+	// last day of the week and when the hosting school has no access to
+	// the booking any more.
+	Consents []HolidayRegistrationConsent `json:"consents"`
 	// ReadOnly is true after the last day of the week: the guest is no
 	// longer cared for and the sheet stays only for questions afterwards.
 	ReadOnly bool `json:"read_only"`
@@ -363,4 +369,7 @@ type HolidayGuest struct {
 	// HomeRoomHistoryStopped is whether room history and mood are stopped at
 	// the home school right now (#8037). It is not stored either.
 	HomeRoomHistoryStopped *bool
+	// Consents are the voluntary consents of the registration (#8038), read
+	// like HomePhotoConsent only with the sheet of one guest.
+	Consents []HolidayRegistrationConsent
 }

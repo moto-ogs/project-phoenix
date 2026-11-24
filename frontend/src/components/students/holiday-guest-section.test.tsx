@@ -72,6 +72,7 @@ const sheet: HolidayGuestSheet = {
   health: null,
   homePhotoConsent: null,
   homeRoomHistoryStopped: null,
+  consents: [],
   readOnly: false,
 };
 
@@ -253,6 +254,71 @@ describe("HolidayGuestSection", () => {
     expect(screen.getByText("Gesundheit")).toBeInTheDocument();
     expect(screen.getByText("Medikamente")).toBeInTheDocument();
     expect(screen.getByText("Trägt eine Brille")).toBeInTheDocument();
+  });
+
+  it("shows the voluntary consents of the registration, read live (#8038)", async () => {
+    sheetMock.mockResolvedValue({
+      ...sheet,
+      consents: [
+        {
+          key: "fotos",
+          title: "Fotos in der Ferienbetreuung",
+          label: "Mein Kind darf auf Erinnerungsfotos zu sehen sein.",
+          given: false,
+          changedAt: "2026-09-01T08:00:00Z",
+        },
+        {
+          key: "ausfluege",
+          title: "Ausflüge",
+          label: "Mein Kind darf mit dem Bus fahren.",
+          given: true,
+          changedAt: "2026-08-20T08:00:00Z",
+        },
+      ],
+    });
+    renderSection(<HolidayGuestSection studentId="91" canRead />);
+
+    expect(
+      await screen.findByText("Einwilligungen aus der Ferienanmeldung"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Die Eltern haben sie am 01.09.2026 widerrufen."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Widerrufen")).toBeInTheDocument();
+    expect(screen.getByText("Seit 20.08.2026")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Ein Widerruf gilt sofort auch hier/),
+    ).toBeInTheDocument();
+    // Without an answer of a home school there is nothing to weigh.
+    expect(screen.queryByText(/gilt das Nein/)).not.toBeInTheDocument();
+  });
+
+  it("names the rule for a conflict when the home school answers too (#8038)", async () => {
+    sheetMock.mockResolvedValue({
+      ...sheet,
+      homeSchoolId: "31",
+      schoolName: "OGS Süd",
+      homePhotoConsent: true,
+      consents: [
+        {
+          key: "fotos",
+          title: "Fotos in der Ferienbetreuung",
+          label: "Mein Kind darf auf Erinnerungsfotos zu sehen sein.",
+          given: false,
+          changedAt: null,
+        },
+      ],
+    });
+    renderSection(<HolidayGuestSection studentId="91" canRead />);
+
+    expect(
+      await screen.findByText(
+        "Sagen „Fotos“ oben und eine Einwilligung hier zum selben Thema etwas anderes, gilt das Nein, bis die Eltern es geklärt haben.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Bei der Anmeldung nicht erteilt."),
+    ).toBeInTheDocument();
   });
 
   it("keeps the sheet of before without shared answers", async () => {

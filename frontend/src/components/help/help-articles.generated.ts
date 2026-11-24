@@ -200,6 +200,8 @@ import type { parentGroupMessageTopic as authored_parentGroupMessageTopic } from
 
 import type { parentGuardiansTopic as authored_parentGuardiansTopic } from "./articles/parent-guardians";
 
+import type { parentHolidayConsentsTopic as authored_parentHolidayConsentsTopic } from "./articles/parent-holiday-consents";
+
 import type { parentHolidayRegistrationTopic as authored_parentHolidayRegistrationTopic } from "./articles/parent-holiday-registration";
 
 import type { parentInstallAppTopic as authored_parentInstallAppTopic } from "./articles/parent-install-app";
@@ -3631,7 +3633,8 @@ export const holidayGuestGroupTopic =
  * wie viele Kinder dazukommen (#6680). Kinder der eigenen OGS bleiben in
  * ihrer Gruppe und zeigen die Angaben der Anmeldung in ihrer Akte (#6678).
  * Unter „Fotos“ steht der Stand der Foto-Einwilligung bei der Heimatschule
- * (#4721).
+ * (#4721), unter „Einwilligungen aus der Ferienanmeldung“ der Stand der
+ * freiwilligen Einwilligungen der Anmeldung, live gelesen (#8038).
  */
 export const holidayGuestsTopic = function holidayGuestsTopic(): HelpTopic {
   return {
@@ -3645,7 +3648,7 @@ export const holidayGuestsTopic = function holidayGuestsTopic(): HelpTopic {
     icon: "SunHorizon",
     image: "/help/screens/feriengast-angaben-aus-der-anmeldung.webp",
     imageAlt:
-      "Notfall, Abholung, Gesundheit, Fotos, Raumverlauf und Stimmung und Angaben aus der Ferienanmeldung bei einem Feriengast.",
+      "Notfall, Abholung, Gesundheit, Fotos, Raumverlauf und Stimmung, Einwilligungen und Angaben aus der Ferienanmeldung bei einem Feriengast.",
     requirements: [
       "Deine OGS richtet eine Ferienwoche für den Träger aus.",
       "Die Leitung hat unter `Ferienwochen` eine Feriengruppe gewählt.",
@@ -3660,6 +3663,7 @@ export const holidayGuestsTopic = function holidayGuestsTopic(): HelpTopic {
       "Unter `Gesundheit` stehen Allergien, Medikamente und weitere Hinweise der Eltern.",
       "Unter `Fotos` steht, ob die Eltern eine Foto-Einwilligung gegeben haben. Steht dort `Keine Foto-Einwilligung`, mach bitte keine Fotos von dem Kind.",
       "Steht auf der Karte `Raumverlauf und Stimmung` mit `An der Heimatschule gestoppt`? Dann speichert moto für dieses Kind keinen Raumverlauf und fragt keine Stimmung ab. Den Raum, in dem das Kind gerade ist, siehst du weiter.",
+      "Unter `Einwilligungen aus der Ferienanmeldung` steht, was die Eltern beim Träger erlaubt haben. Zum Beispiel `Fotos in der Ferienbetreuung` mit `Erteilt`, `Nicht erteilt` oder `Widerrufen`.",
       "Unter `Angaben aus der Ferienanmeldung` steht zum Beispiel, ob das Kind allein nach Hause gehen darf.",
     ],
     result: "Du weißt, wann das Kind gehen darf und wen du im Notfall anrufst.",
@@ -3669,7 +3673,9 @@ export const holidayGuestsTopic = function holidayGuestsTopic(): HelpTopic {
       "Vor der Ferienwoche ist die Feriengruppe leer. Dort steht dann, wie viele Kinder dazukommen und ab wann. Zum Beispiel `Feriengruppe: 3 Kinder kommen ab 04.01.2027 dazu.`",
       "Kinder deiner OGS sind keine Feriengäste. Sie bleiben in ihrer Gruppe. Notfall, Abholung und Zeiten aus der Anmeldung stehen in ihrer Kinderakte unter `Angaben aus der Ferienanmeldung`.",
       "Die Foto-Einwilligung geben und widerrufen die Eltern bei der Schule ihres Kindes. Ein Widerruf steht sofort bei dir unter `Fotos`. Ein Foto in moto bekommt ein Feriengast nicht.",
-      "Mehr als Betreuung, Notfall, Abholung, Gesundheit, Fotos und die freigegebenen Angaben siehst du von einem Feriengast nicht. Die übrigen Angaben bleiben beim Träger.",
+      "Die Einwilligungen aus der Ferienanmeldung widerrufen die Eltern in der Eltern-App oder beim Träger. Ein Widerruf steht sofort bei dir.",
+      "Sagen `Fotos` und eine Einwilligung aus der Ferienanmeldung zum selben Thema etwas anderes? Dann gilt das Nein. Mach keine Fotos und frag die Eltern.",
+      "Mehr als Betreuung, Notfall, Abholung, Gesundheit, Fotos, Einwilligungen und die freigegebenen Angaben siehst du von einem Feriengast nicht. Die übrigen Angaben bleiben beim Träger.",
       "Jeder Blick auf Notfall und Abholung steht im Zugriffsprotokoll deiner OGS.",
     ],
     differences: [
@@ -3677,6 +3683,7 @@ export const holidayGuestsTopic = function holidayGuestsTopic(): HelpTopic {
     ],
     troubleshootingDetails: [
       "Fehlt `Angaben aus der Ferienanmeldung`? Dann gibt der Träger keine Frage frei.",
+      "Fehlt `Einwilligungen aus der Ferienanmeldung`? Dann fragt das Formular des Trägers keine ab, oder die Ferienwoche ist vorbei.",
       "Fehlt `Fotos`? Dann geht das Kind auf keine Schule deines Trägers, oder die Ferienwoche ist vorbei. Frage dann die Eltern.",
       "Fehlt `Gesundheit`? Dann haben die Eltern nichts angegeben oder der Weitergabe nicht zugestimmt.",
       "Ist die Feriengruppe leer? Vor dem ersten Tag der Ferienwoche ist das richtig. Die Feriengäste kommen am ersten Tag von selbst dazu.",
@@ -3772,6 +3779,7 @@ export const holidayWeeksTopic = function holidayWeeksTopic(): HelpTopic {
       "Gibt der Träger Fragen frei, steht jede in einer eigenen Spalte. Zum Beispiel `Darf allein nach Hause gehen`.",
       "Unter `Zweite sorgeberechtigte Person` stehen Name und Telefon, wenn die Eltern eine zweite Person angegeben haben.",
       "Unter `Gesundheit` stehen Allergien, Medikamente und weitere Hinweise. Dort stehen auch Antworten auf Gesundheitsfragen, die der Träger freigibt.",
+      "Fragt der Träger im Formular Einwilligungen ab, steht jede in einer eigenen Spalte. Zum Beispiel `Fotos in der Ferienbetreuung` mit `Ja`, `Nein` oder `Widerrufen`.",
     ],
     result:
       "Du weißt, wie viele Kinder in welcher Zeit kommen und woher sie kommen.",
@@ -3783,6 +3791,7 @@ export const holidayWeeksTopic = function holidayWeeksTopic(): HelpTopic {
       "Ein `Feriengast` geht auf keine Schule deines Trägers. In Klammern steht die Schule, die die Eltern genannt haben.",
       "Steht in einer Spalte `–`, haben die Eltern die Frage nicht beantwortet.",
       "Gesundheitsangaben siehst du nur, wenn die Eltern zugestimmt haben. Sie stehen nur in der Liste, nicht in der Excel- oder CSV-Datei.",
+      "Die Einwilligungen zeigen immer den Stand von jetzt. Widerrufen die Eltern in der Eltern-App, steht sofort `Widerrufen`. In Excel und CSV heißt die Spalte `Einwilligung:` mit dem Titel. Eine Datei zeigt den Stand beim Herunterladen.",
       "Kinder deiner OGS bleiben in ihrer Gruppe. moto trägt für die gebuchten Tage Ankunft und Abholung ein. Der Check-in erwartet das Kind dann an diesen Tagen. Neu bestätigte Kinder plant moto innerhalb einer Stunde ein.",
       "In der Kinderakte steht unter `Angaben aus der Ferienanmeldung`, was die Eltern angegeben haben: Betreuung, Notfall, Abholung und Gesundheit. Die Stammdaten des Kindes ändern sich nicht.",
       "Änderst du an einem eingeplanten Tag die Abholzeit, bleibt deine Zeit stehen.",
@@ -7096,6 +7105,51 @@ export const parentGuardiansTopic = function parentGuardiansTopic(): HelpTopic {
 } satisfies typeof authored_parentGuardiansTopic;
 
 /**
+ * `/ferienanmeldungen` (#8038, ADR 0321): die freiwilligen Einwilligungen
+ * einer Ferienanmeldung sehen, widerrufen und wieder geben. Die OGS, die
+ * das Kind in den Ferien betreut, sieht den Stand sofort.
+ */
+export const parentHolidayConsentsTopic =
+  function parentHolidayConsentsTopic(): HelpTopic {
+    return {
+      id: HELP_TOPICS.parentHolidayConsents,
+      title: "Einwilligungen der Ferienanmeldung ändern",
+      question: "Wie widerrufe ich eine Einwilligung aus der Ferienanmeldung?",
+      summary:
+        "Unter `Ferienanmeldungen` siehst du jede Einwilligung. Du widerrufst sie dort oder gibst sie wieder.",
+      group: "anmeldung",
+      audience: "parent",
+      icon: "ShieldCheck",
+      requirements: [
+        "Du hast ein Elternkonto. Die Ferienanmeldung steht unter `Ferienanmeldungen`.",
+        "Der Träger hat im Formular eine Einwilligung abgefragt, zum Beispiel `Fotos in der Ferienbetreuung`.",
+      ],
+      steps: [
+        "Öffne in der Eltern-App `Ferienanmeldungen`.",
+        "Unter jeder Anmeldung steht `Einwilligungen`. Dort steht jede Einwilligung mit dem Text, dem du zugestimmt hast.",
+        "Rechts steht `Erteilt`, `Nicht erteilt` oder `Widerrufen`.",
+        "Wähle bei der Einwilligung `Widerrufen`.",
+        "moto fragt nach. Wähle noch einmal `Widerrufen`.",
+      ],
+      result:
+        "Die Einwilligung gilt ab jetzt nicht mehr. Die OGS, die dein Kind in den Ferien betreut, sieht das sofort. Der Träger sieht es auch.",
+      notes: [
+        "Die Einwilligungen sind freiwillig. Die Anmeldung gilt auch ohne sie.",
+        "Ohne Elternkonto widerrufst du beim Träger, zum Beispiel per Mail. Er trägt den Widerruf in moto ein.",
+        "Hast du dich anders entschieden? Wähle `Einwilligung geben`. Das geht auch bei einer Einwilligung, die du bei der Anmeldung nicht gegeben hast.",
+        "Ein Widerruf gilt ab jetzt. Was vorher geschehen ist, bleibt erlaubt.",
+        "Die Foto-Einwilligung bei der Schule deines Kindes ist eine eigene Einwilligung. Du änderst sie beim Kind unter `Angaben`.",
+      ],
+      troubleshootingDetails: [
+        "Du siehst keine `Einwilligungen`? Dann hat der Träger im Formular keine abgefragt.",
+        "Deine Anmeldung fehlt unter `Ferienanmeldungen`? Dann ist sie nicht mit deinem Konto verbunden. Wende dich an den Träger. Er trägt deinen Widerruf ein.",
+        "moto meldet, die Anmeldung gebe es nicht mehr? Nach den Ferien löscht der Träger die Anmeldung. Dann gibt es auch die Einwilligungen nicht mehr.",
+      ],
+      related: [HELP_TOPICS.parentHolidayRegistration],
+    };
+  } satisfies typeof authored_parentHolidayConsentsTopic;
+
+/**
  * `/ferienanmeldung/<link>` (#4661): der Link eines Trägers, ohne Konto, oder
  * die Karte `Ferienbetreuung` auf der Startseite der Eltern-App (#6671).
  * Die Frage nach dem Elternkonto, die zweite E-Mail und der Stand unter
@@ -7151,6 +7205,7 @@ export const parentHolidayRegistrationTopic =
         "Unter `Ferienanmeldungen` steht jede Anmeldung mit ihrem Stand: `Eingegangen`, `Bestätigt` oder `Storniert`. Bei jedem Kind siehst du die Wochen mit `Platz reserviert`, `Warteliste` oder `Platz offen`. Auf der Startseite steht dazu die Karte `Deine Ferienanmeldungen`.",
         "Den Stand siehst du auch ohne Elternkonto. Wähle nach dem Absenden oder in der E-Mail `Stand ansehen`. Die Seite zeigt `Eingegangen`, `Bestätigt` oder `Storniert` und bei jedem Kind die Wochen mit ihrem Platz. Ändern kannst du dort nichts. Gib den Link nicht weiter.",
         "Ist die Anmeldung bestätigt, findest du die Bestätigung und die Rechnung unter `Dokumente`.",
+        "Unter `Ferienanmeldungen` stehen auch die `Einwilligungen`, die du gegeben hast. Dort widerrufst du sie oder gibst sie wieder.",
         "Vergibt der Träger die Plätze nach festen Regeln? Dann steht im Formular `Fragen für die Platzvergabe`. Beantworte jede Frage mit Ja oder Nein. Das Büro kann nach einem Nachweis fragen. Nach dem Absenden steht bei jeder Woche `Platz offen`. Das Büro vergibt die Plätze. Du bekommst eine E-Mail.",
         "Nach dem Absenden siehst du bei jeder Woche `Platz` oder `Warteliste`. Ist eine Woche voll, steht dein Kind dort auf der Warteliste. Wird ein Platz frei, bekommt dein Kind ihn automatisch. Du bekommst dann eine E-Mail. Bei einer verbindlichen Anmeldung ist auch dieser Platz verbindlich.",
         "Liest du die Anmeldung in einer anderen Sprache? Dann steht unter jeder Erklärung eine Übersetzung. Es gilt der deutsche Text.",
@@ -7188,7 +7243,7 @@ export const parentHolidayRegistrationTopic =
         "Der Link zum Elternkonto gilt nicht mehr? Er gilt 30 Tage. Hast du schon ein Konto, melde dich an. Sonst frag den Träger nach einem neuen Link.",
         "Du siehst eine Anmeldung nicht unter `Ferienanmeldungen`? Dort stehen Anmeldungen mit der E-Mail-Adresse deines Kontos. Hast du eine andere Adresse eingetragen, frage den Träger.",
       ],
-      related: [HELP_TOPICS.parentEnroll],
+      related: [HELP_TOPICS.parentEnroll, HELP_TOPICS.parentHolidayConsents],
     };
   } satisfies typeof authored_parentHolidayRegistrationTopic;
 
@@ -14288,6 +14343,7 @@ export const traegerHolidayRegistrationReviewTopic =
             "Die Anmeldung hat vier Reiter: `Übersicht`, `Kind`, `Eltern` und `Nachweise und Beitrag`. Unter `Übersicht` steht der Status.",
             "Prüfe im Reiter `Kind` die Angaben der Kinder. Antworten auf eigene Fragen stehen beim Kind unter `Weitere Angaben`, allgemeine Antworten unter `Allgemeine Angaben`.",
             "Im Reiter `Kind` unter `Hinweise und Einwilligungen` siehst du, was die Eltern bestätigt haben und wann. Dort stehen die damaligen Texte und PDFs.",
+            "Widerrufen Eltern eine Einwilligung per Mail, Brief oder Telefon? Wähle unter `Hinweise und Einwilligungen` bei der Einwilligung `Widerruf eintragen`. moto fragt nach. Die OGS, die das Kind in den Ferien betreut, sieht den Widerruf sofort.",
             "Im Reiter `Eltern` stehen unter `Eltern` `Sorgerecht bestätigt`, `Unterschrieben mit Namen` und `Version der Erklärung`. Den genauen Text öffnest du unter `Wortlaut der Erklärung`.",
             "Prüfe im Reiter `Nachweise und Beitrag` unter `Ferienbeitrag`, was die Familie zahlt.",
             "Geben die Eltern an, dass sie Leistungen beziehen? Prüfe den Nachweis. Haben die Eltern ihn hochgeladen, wähle unter `Nachweis für den Leistungsbezug` den Dateinamen. Die Datei öffnet sich in einem neuen Tab.",
@@ -14398,6 +14454,7 @@ export const traegerHolidayRegistrationReviewTopic =
       result:
         "Unter `Verlauf` steht bei jeder Anmeldung, wann sie bestätigt, geändert, storniert, umgebucht, eingefroren oder wieder geöffnet wurde. Auch jede Debitorennummer steht dort, mit der Nummer vorher und nachher. Bei einer Änderung der Angaben steht dort, welche Angaben sich geändert haben, aber nicht die Werte. Auch jedes Zusammenführen und Trennen von Geschwistern steht dort. Storniert jemand eine Anmeldung der Geschwister, steht bei allen `Aus Geschwistergruppe gelöst (storniert)`.",
       notes: [
+        "Eltern mit Elternkonto widerrufen Einwilligungen selbst unter `Ferienanmeldungen`. Du siehst dann `Von den Eltern widerrufen` mit Datum. Wieder geben können die Einwilligung nur die Eltern.",
         "Berücksichtigt der Ferienzeitraum den Ferienwunsch, filterst du auch nach `Ferienwunsch`. Beim Kind steht dann `Mit Ferienwunsch`, `Ohne Ferienwunsch` oder `Ferienwunsch prüfen`.",
         "Offen bleibt eine Anmeldung, wenn ein Platz noch offen ist, die Eltern Leistungsbezug angeben, ein Kind vielleicht doppelt angemeldet ist oder die Debitorennummer fehlt. Eine Anmeldung von Geschwistern übernimmt die Debitorennummer der Geschwister.",
         "Beim Bestätigen bekommen die Eltern eine E-Mail mit den Kindern, Wochen und Zeitmodellen. Darin steht auch dein `Text der Annahme-Mail` aus dem Ferienzeitraum. Jede Anmeldung bekommt diese E-Mail nur einmal.",

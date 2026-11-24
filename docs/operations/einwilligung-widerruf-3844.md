@@ -190,10 +190,16 @@ Foto-Einwilligung der Heimatschule (ADR 0120, Nachtrag vom 24.11.2026).
 Ein Widerruf über einen der Wege oben steht dort sofort als „Keine Foto-Einwilligung“;
 ein gesonderter Widerruf bei der ausrichtenden Schule ist nicht nötig. Die
 ausrichtende Schule kann für einen Feriengast kein Foto in moto speichern.
-Das gilt nicht für eine Einwilligung, die die Eltern nur in der
-Ferienanmeldung des Trägers gegeben haben (etwa Erinnerungsfotos): Sie ist
-im Träger-Portal an der Anmeldung zu sehen und wird dort außerhalb von moto
-widerrufen.
+Eine Einwilligung, die die Eltern nur in der Ferienanmeldung des Trägers
+gegeben haben (etwa Erinnerungsfotos), widerrufen Eltern mit Elternkonto
+selbst im Elternportal unter „Ferienanmeldungen“ (seit #8038, ADR 0321). Die
+ausrichtende Schule sieht den Stand sofort in der Teilnehmerliste und in der
+Kindakte des Feriengasts. Eltern ohne Elternkonto widerrufen beim Träger;
+das Träger-Büro trägt den Widerruf an der Anmeldung unter „Hinweise und
+Einwilligungen“ mit `Widerruf eintragen` ein, und die ausrichtende Schule
+sieht ihn ebenso sofort. Das Büro sieht an der Anmeldung, im Verlauf und in
+der Erklärung als PDF, wann widerrufen wurde. Sagen Heimatschule und Ferienanmeldung zu Fotos
+Verschiedenes, gilt das Nein, bis die Eltern es geklärt haben.
 
 ### 2.2 Raumhistorie und Anwesenheitsprotokoll
 
