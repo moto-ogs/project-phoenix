@@ -10,6 +10,7 @@ import { sickConcept } from "~/lib/concepts/sick";
 import { SpinnerIcon } from "~/components/ui/icons";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { TileCard, tileCardSurface } from "~/components/ui/tile-card";
+import { useDeviceContext } from "~/lib/device-context";
 import { cn } from "~/lib/utils";
 
 // Die Schnellaktionen stehen als gleich hohe Kacheln nebeneinander; das
@@ -17,14 +18,27 @@ import { cn } from "~/lib/utils";
 // In der App (#8070) schrumpfen die Kacheln zu einer Aktionsleiste: eine
 // Zeile, Symbol über kurzem Label, ohne Erklärzeile.
 const QUICK_ACTION_TILE =
-  "flex flex-1 flex-col items-center gap-3 active:scale-[0.97] sm:gap-4 app:min-w-0 app:gap-1 app:px-1.5 app:py-2";
+  "flex flex-1 flex-col items-center gap-3 active:scale-[0.97] sm:gap-4";
+const APP_QUICK_ACTION_TILE =
+  "flex min-w-0 flex-1 flex-col items-center gap-1 px-0.5 py-2 active:scale-[0.97]";
+
+/** Kachel oder (App) Knopf der Aktionsleiste, ohne Kartenpolster. */
+function useQuickActionTile() {
+  const { resolved, isApp } = useDeviceContext();
+  const app = resolved && isApp;
+  return {
+    className: app ? APP_QUICK_ACTION_TILE : QUICK_ACTION_TILE,
+    padding: app ? ("none" as const) : ("md" as const),
+    app,
+  };
+}
 /** Symbolkreis einer Schnellaktion; in der App nur das Symbol. */
 const QUICK_ACTION_ICON =
-  "flex h-12 w-12 items-center justify-center rounded-full border-2 sm:h-14 sm:w-14 app:h-7 app:w-7 app:border-0";
+  "flex h-12 w-12 items-center justify-center rounded-full border-2 sm:h-14 sm:w-14 app:h-7! app:w-7! app:border-0";
 const QUICK_ACTION_LABEL =
   "text-base font-semibold text-gray-900 app:text-xs app:leading-4 app:whitespace-nowrap";
 const QUICK_ACTION_HINT =
-  "mt-0.5 hidden text-xs text-gray-500 sm:block app:hidden";
+  "mt-0.5 hidden text-xs text-gray-500 sm:block app:hidden!";
 
 interface StudentCheckoutSectionProps {
   readonly onCheckoutClick: () => void;
@@ -34,9 +48,14 @@ export function StudentCheckoutSection({
   onCheckoutClick,
 }: StudentCheckoutSectionProps) {
   const attendanceWebEnabled = useAttendanceWebEnabled();
+  const tile = useQuickActionTile();
   if (!attendanceWebEnabled) return null;
   return (
-    <TileCard onClick={onCheckoutClick} className={QUICK_ACTION_TILE}>
+    <TileCard
+      onClick={onCheckoutClick}
+      className={tile.className}
+      padding={tile.padding}
+    >
       <div className={cn(QUICK_ACTION_ICON, "border-gray-200")}>
         <MotoConceptIcon concept={homeConcept} size={26} />
       </div>
@@ -57,9 +76,14 @@ export function StudentCheckinSection({
   onCheckinClick,
 }: StudentCheckinSectionProps) {
   const attendanceWebEnabled = useAttendanceWebEnabled();
+  const tile = useQuickActionTile();
   if (!attendanceWebEnabled) return null;
   return (
-    <TileCard onClick={onCheckinClick} className={QUICK_ACTION_TILE}>
+    <TileCard
+      onClick={onCheckinClick}
+      className={tile.className}
+      padding={tile.padding}
+    >
       <div
         className={cn(QUICK_ACTION_ICON, "border-moto-green text-moto-green")}
       >
@@ -87,6 +111,7 @@ export function StudentSickReportSection({
   onToggle,
   isLoading,
 }: StudentSickReportSectionProps) {
+  const tile = useQuickActionTile();
   const sickSinceDisplay = sickSince
     ? new Date(sickSince).toLocaleDateString("de-DE", {
         timeZone: "Europe/Berlin",
@@ -107,7 +132,8 @@ export function StudentSickReportSection({
     <TileCard
       onClick={onToggle}
       disabled={isLoading}
-      className={QUICK_ACTION_TILE}
+      className={tile.className}
+      padding={tile.padding}
     >
       <div
         className={`${QUICK_ACTION_ICON} ${
@@ -144,6 +170,7 @@ export function StudentExcusedReportSection({
   onToggle,
   isLoading,
 }: StudentExcusedReportSectionProps) {
+  const tile = useQuickActionTile();
   const excusedSinceDisplay = excusedSince
     ? new Date(excusedSince).toLocaleDateString("de-DE", {
         timeZone: "Europe/Berlin",
@@ -164,7 +191,8 @@ export function StudentExcusedReportSection({
     <TileCard
       onClick={onToggle}
       disabled={isLoading}
-      className={QUICK_ACTION_TILE}
+      className={tile.className}
+      padding={tile.padding}
     >
       <div
         className={`${QUICK_ACTION_ICON} ${
@@ -200,6 +228,7 @@ export function StudentStatusActionsMenu({
   onPlanClassTrip,
   isLoading,
 }: StudentStatusActionsMenuProps) {
+  const tile = useQuickActionTile();
   const classTripSinceDisplay = classTripSince
     ? new Date(classTripSince).toLocaleDateString("de-DE", {
         timeZone: "Europe/Berlin",
@@ -214,7 +243,11 @@ export function StudentStatusActionsMenu({
       ariaLabel="Weitere Statusaktionen"
       disabled={isLoading}
       wrapperClassName="shrink-0"
-      triggerClassName="moto-hover-elevated h-full min-h-[116px] w-full rounded-2xl disabled:opacity-50 sm:min-h-[140px] sm:w-16 app:min-h-0 app:w-12"
+      triggerClassName={
+        tile.app
+          ? "moto-hover-elevated h-full w-11 rounded-2xl disabled:opacity-50"
+          : "moto-hover-elevated h-full min-h-[116px] w-full rounded-2xl disabled:opacity-50 sm:min-h-[140px] sm:w-16"
+      }
       triggerContent={
         // Die Fläche sitzt innen: Ihr Schatten überdeckte sonst den Fokusring
         // des Auslösers.

@@ -2052,7 +2052,7 @@ function StudentQuickActions({
     // laesst -- die Zeile lief rechts aus dem Bild, das Menue war gar nicht
     // erreichbar. Ab sm stehen sie wieder in einer Reihe.
     <div
-      className="app:flex app:gap-2 grid grid-cols-2 gap-3 sm:flex sm:gap-4"
+      className="app:flex app:gap-1.5! grid grid-cols-2 gap-3 sm:flex sm:gap-4"
       aria-label="Schnellaktionen"
     >
       {showCheckout && (
