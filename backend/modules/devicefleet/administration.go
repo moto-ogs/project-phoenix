@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Error message constants to avoid string duplication
@@ -155,8 +157,12 @@ func (s *administration) GetDeviceByDeviceID(ctx context.Context, deviceID strin
 // registered_by_id, and status when the caller names one): the API key,
 // last_seen, room, archive and transfer columns belong to other flows, and a
 // key rotation, deactivation or transfer that commits after this unlocked
-// read must not be reverted. An empty status keeps the stored one.
-func (s *administration) UpdateDevice(ctx context.Context, device *Device) error {
+// read must not be reverted. An empty status keeps the stored one. The
+// edit writes back what its editor read: a device whose edited fields
+// differ from expectedVersion is refused with readstate.ErrChanged (ADR
+// 0311). The caller holds the device's row lock, so the check and the write
+// see the same row.
+func (s *administration) UpdateDevice(ctx context.Context, device *Device, expectedVersion string) error {
 	if device == nil || device.ID <= 0 {
 		return &AdministrationError{Op: "UpdateDevice", Err: ErrAdministrationInvalidDeviceData}
 	}
@@ -175,6 +181,9 @@ func (s *administration) UpdateDevice(ctx context.Context, device *Device) error
 	}
 	if isProtectedSystemDevice(administrationDevicePointer(existing)) {
 		return &AdministrationError{Op: "UpdateDevice", Err: ErrAdministrationDeviceProtected}
+	}
+	if err := readstate.Check(expectedVersion, DeviceVersion(&existing)); err != nil {
+		return err
 	}
 
 	if existing.DeviceID != device.DeviceID {
@@ -314,7 +323,7 @@ type DeviceAdministration interface {
 	CreateDevice(ctx context.Context, device *Device) error
 	GetDeviceByID(ctx context.Context, id int64) (*Device, error)
 	GetDeviceByDeviceID(ctx context.Context, deviceID string) (*Device, error)
-	UpdateDevice(ctx context.Context, device *Device) error
+	UpdateDevice(ctx context.Context, device *Device, expectedVersion string) error
 	DeleteDevice(ctx context.Context, id int64) error
 	ListDevices(ctx context.Context, filter DeviceFilter) ([]*Device, error)
 	// Status operations
