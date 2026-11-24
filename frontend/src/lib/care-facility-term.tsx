@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  createContext,
   useContext,
   useEffect,
   useMemo,
@@ -9,17 +8,14 @@ import {
   type ReactNode,
 } from "react";
 import { useTranslations } from "next-intl";
+import {
+  CareFacilityTermScopeContext as CareFacilityTermContext,
+  type CareFacilityTermScopeValue as ScopeValue,
+} from "~/lib/care-facility-term-context";
 import { normalizeCareFacilityTerm } from "~/lib/care-facility-term-value";
 import { useTenantSafe } from "~/lib/tenant-context";
 
 export { normalizeCareFacilityTerm } from "~/lib/care-facility-term-value";
-
-interface ScopeValue {
-  readonly term: string | undefined;
-  readonly setTerm: (term: string | undefined) => void;
-}
-
-const CareFacilityTermContext = createContext<ScopeValue | null>(null);
 
 /**
  * A page part whose school is not the tenant in context: the token status

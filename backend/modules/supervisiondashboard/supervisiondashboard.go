@@ -265,7 +265,8 @@ type Visit struct {
 	SickSince         *time.Time `json:"sick_since,omitempty"`
 	Excused           bool       `json:"excused"`
 	ExcusedSince      *time.Time `json:"excused_since,omitempty"`
-	PhotoURL          string     `json:"photo_url,omitempty"`
+	PhotoVersion      string     `json:"photo_version,omitempty"`
+	PhotoURL          string     `json:"photo_url,omitempty"` // legacy BFF alias
 	// ClassHandover: today's handover of the child to the OGS (#4794).
 	ClassHandover *SupervisionClassHandover `json:"class_handover,omitempty"`
 }
@@ -688,7 +689,7 @@ func (s *service) buildVisit(row VisitRecord, attendance map[int64]Attendance, f
 	// Same full-access gate the single endpoint used: without it, avatar
 	// requests for out-of-scope students would 403 in the byte-serve path.
 	if photosEnabled && fullAccess {
-		visit.PhotoURL = row.PhotoURL
+		visit.PhotoVersion = row.PhotoVersion
 	}
 	return visit
 }

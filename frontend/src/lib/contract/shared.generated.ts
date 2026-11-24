@@ -6,6 +6,7 @@ import {
   calendarDate,
   instant,
   int64String,
+  int64StringOrNone,
   json,
   nullable,
   num,
@@ -2610,7 +2611,7 @@ export interface InboxThreadResponse {
 
 export const InboxThreadResponseSchema: z.ZodType<InboxThreadResponse, unknown> = object<InboxThreadResponse>({
   thread_id: int64String,
-  counterpart_account_id: str,
+  counterpart_account_id: int64StringOrNone,
   counterpart_name: str,
   counterpart_role_kind: str,
   last_message_at: optional(str),
@@ -2710,7 +2711,7 @@ export interface ThreadDetailResponse {
 
 export const ThreadDetailResponseSchema: z.ZodType<ThreadDetailResponse, unknown> = object<ThreadDetailResponse>({
   thread_id: int64String,
-  counterpart_account_id: str,
+  counterpart_account_id: int64StringOrNone,
   counterpart_name: str,
   counterpart_role_kind: str,
   messages: nullable(arr(MessageResponseSchema)),
@@ -3756,6 +3757,21 @@ export interface TraegerNameRequest {
   name?: string;
 }
 
+/** Go: parentbilling.ServiceDocumentKind */
+export interface ServiceDocumentKind {
+  service: string;
+  document_kind: string;
+  choices: string[] | null;
+  updated_at: string | null;
+}
+
+export const ServiceDocumentKindSchema: z.ZodType<ServiceDocumentKind, unknown> = object<ServiceDocumentKind>({
+  service: str,
+  document_kind: str,
+  choices: nullable(arr(str)),
+  updated_at: nullable(instant),
+});
+
 /** Go: parentbilling.RunDueDate */
 export interface RunDueDate {
   payment_method: string;
@@ -3765,6 +3781,19 @@ export interface RunDueDate {
 export const RunDueDateSchema: z.ZodType<RunDueDate, unknown> = object<RunDueDate>({
   payment_method: str,
   due_on: nullable(calendarDate),
+});
+
+/** Go: parentbilling.BillingIssuer */
+export interface BillingIssuer {
+  key: string;
+  body: string;
+  name: string;
+}
+
+export const BillingIssuerSchema: z.ZodType<BillingIssuer, unknown> = object<BillingIssuer>({
+  key: str,
+  body: str,
+  name: str,
 });
 
 /** Go: parentbilling.PostalAddress */

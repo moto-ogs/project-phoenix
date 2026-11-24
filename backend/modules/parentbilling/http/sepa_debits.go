@@ -89,7 +89,7 @@ func (rs *SEPADebitResource) run(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	run, err := rs.debits.SEPADebitRun(r.Context(), reviewer, kind, id)
+	run, err := rs.debits.SEPADebitRun(r.Context(), reviewer, kind, id, r.URL.Query().Get("issuer"))
 	if err != nil {
 		renderDebitError(w, r, err)
 		return
@@ -105,7 +105,7 @@ func (rs *SEPADebitResource) file(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	file, err := rs.debits.SEPADebitFile(r.Context(), reviewer, kind, id)
+	file, err := rs.debits.SEPADebitFile(r.Context(), reviewer, kind, id, r.URL.Query().Get("issuer"))
 	if err != nil {
 		tenant.MarkRollback(r.Context())
 		renderDebitError(w, r, err)
@@ -128,7 +128,7 @@ func (rs *SEPADebitResource) submit(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	run, err := rs.debits.SubmitSEPADebits(r.Context(), reviewer, kind, id, req.MessageID)
+	run, err := rs.debits.SubmitSEPADebits(r.Context(), reviewer, kind, id, r.URL.Query().Get("issuer"), req.MessageID)
 	if err != nil {
 		tenant.MarkRollback(r.Context())
 		renderDebitError(w, r, err)

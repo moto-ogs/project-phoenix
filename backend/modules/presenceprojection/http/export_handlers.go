@@ -36,16 +36,18 @@ type studentExportRequest struct {
 }
 
 type studentExportFilters struct {
-	Search       string `json:"search"`
-	GroupID      string `json:"group_id" contract_text:"comma-separated list of groups or empty selection"`
-	RoomID       string `json:"room_id" contract_text:"empty string means no room filter"`
-	Year         string `json:"year"`
-	SchoolClass  string `json:"school_class"`
-	Status       string `json:"status"`
-	Bus          string `json:"bus"`
-	PhotoConsent string `json:"photo_consent"`
-	PickupStatus string `json:"pickup_status"`
-	DayStatus    string `json:"day_status"`
+	Search string `json:"search"`
+	// Older tabs send group_id as CSV; new clients send individual IDs.
+	GroupID      string         `json:"group_id" contract_text:"legacy comma-separated group filter"`
+	GroupIDs     []ident.ID     `json:"group_ids"`
+	RoomID       ident.IDOrNone `json:"room_id"`
+	Year         string         `json:"year"`
+	SchoolClass  string         `json:"school_class"`
+	Status       string         `json:"status"`
+	Bus          string         `json:"bus"`
+	PhotoConsent string         `json:"photo_consent"`
+	PickupStatus string         `json:"pickup_status"`
+	DayStatus    string         `json:"day_status"`
 	// Date is the optional planning day (YYYY-MM-DD) the day-planning status,
 	// status days, and planned arrival/pickup times are evaluated for (#1939).
 	// Empty means the school-local today.
@@ -218,6 +220,11 @@ func decodeStudentExportRequest(r *http.Request) (studentExportRequest, error) {
 	if _, err := parseExportStudentIDs(req.Filters.StudentIDs); err != nil {
 		return req, err
 	}
+	for _, id := range req.Filters.GroupIDs {
+		if id <= 0 {
+			return req, errors.New("invalid group id")
+		}
+	}
 	if _, err := parseEnrollmentAnswer(req.Filters.EnrollmentAnswer); err != nil {
 		return req, err
 	}
@@ -314,9 +321,14 @@ func exportSelectionCapError(count int) render.Renderer {
 		common.CodeStudentsExportSelectionTooLarge,
 	)
 	if resp, ok := rendered.(*common.ErrResponse); ok {
-		resp.Details = map[string]any{"total": count, "limit": studentExportPageSize}
+		resp.Details = ExportSelectionDetails{Total: count, Limit: studentExportPageSize}
 	}
 	return rendered
+}
+
+type ExportSelectionDetails struct {
+	Total int `json:"total"`
+	Limit int `json:"limit"`
 }
 
 // exportSelectionTooLarge reports whether a filtered export exceeds what a single
@@ -356,14 +368,14 @@ func exportRequestToListParams(req studentExportRequest, today calendar.Date) *s
 		fetchAll:   true,
 		studentIDs: studentIDs,
 	}
-	params.groupIDs = parseGroupIDList([]string{req.Filters.GroupID})
+	if req.Filters.GroupIDs != nil {
+		params.groupIDs = ident.Int64s(req.Filters.GroupIDs)
+	} else {
+		params.groupIDs = parseGroupIDList([]string{req.Filters.GroupID})
+	}
 	// decodeStudentExportRequest already rejected a malformed value.
 	params.enrollmentAnswer, _ = parseEnrollmentAnswer(req.Filters.EnrollmentAnswer)
-	if req.Filters.RoomID != "" {
-		if roomID, err := strconv.ParseInt(req.Filters.RoomID, 10, 64); err == nil {
-			params.roomID = roomID
-		}
-	}
+	params.roomID = req.Filters.RoomID.Int64()
 	return params
 }
 

@@ -190,6 +190,16 @@
       "target_owner": "settings-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.schoolResponsibilitySettings.SchoolResponsibilityChoices",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolResponsibilitySettings.SchoolResponsibilityChoices",
+      "reason": "Reviewed value construction: a settings snapshot of the registry defaults for the schools a test asks for (the Träger is responsible for everything); no data access, no row changes.",
+      "source_owner": "organization-tenancy",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.NewSettingsSnapshot",
+      "target_owner": "settings-platform"
+    },
+    {
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/cmd.tenantExportAudit.BeginTenantExport",
       "classification": "platform",

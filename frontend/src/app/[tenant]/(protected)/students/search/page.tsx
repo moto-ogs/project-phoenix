@@ -3004,12 +3004,10 @@ function SearchPageContent() {
   const exportFilters = useMemo(
     () => ({
       search: searchTerm,
-      // Comma-separated so an export mirrors a multi-selection (#2218); the
-      // backend accepts the same shape — and the same escaping — as the list
-      // endpoint, so a class carrying a comma prints as one class.
-      group_id: encodeMultiValueParam(selectedGroupIds),
+      group_ids: selectedGroupIds,
       year:
         selectedYears.length > 0 ? encodeMultiValueParam(selectedYears) : "all",
+      // Preserve class names containing commas as one selection.
       school_class: encodeMultiValueParam(selectedSchoolClasses),
       // The realtime snapshot/room filters are neutral for non-today dates —
       // the export must mirror what the page shows (#1939).

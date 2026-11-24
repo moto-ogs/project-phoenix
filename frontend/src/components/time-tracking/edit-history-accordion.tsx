@@ -9,7 +9,6 @@ import type { WorkSessionEdit } from "~/lib/time-tracking-helpers";
 import { formatTime } from "~/lib/time-tracking-helpers";
 import { berlinClockFromISO, formatBerlinDate } from "~/lib/date-helpers";
 import { SpinnerIcon } from "~/components/ui/icons";
-import { InsetPanel } from "~/components/ui/inset-panel";
 
 // Renders the audit trail for a single work session. Used by both the
 // MA self-service /time-tracking page and the admin staff detail view —
@@ -65,15 +64,44 @@ interface EditRow {
   readonly notes: string | null | undefined;
 }
 
+function fieldLabel(edit: WorkSessionEdit): string {
+  return FIELD_LABELS[edit.fieldName] ?? edit.fieldName;
+}
+
+function OldValue({ edit }: Readonly<{ edit: WorkSessionEdit }>) {
+  return (
+    <span className="text-moto-red line-through">
+      {formatEditValue(edit.fieldName, edit.oldValue)}
+    </span>
+  );
+}
+
+function NewValue({ edit }: Readonly<{ edit: WorkSessionEdit }>) {
+  return (
+    <span className="text-moto-green-strong font-medium">
+      {formatEditValue(edit.fieldName, edit.newValue)}
+    </span>
+  );
+}
+
+// On a phone each change is a card of the table (#7915): the field with
+// "vorher → nachher" heads it, date and author of the save beside and below.
+// The two value columns stand in that head, so they carry no line of their own.
 const EDIT_COLUMNS: DataTableColumn<EditRow>[] = [
   {
     key: "date",
     header: "Datum",
     className: "whitespace-nowrap",
+    stacked: "meta",
     render: (row) =>
       row.firstOfSave ? (
         <span className="text-gray-500">{row.dateStr}</span>
       ) : null,
+    // On a phone every card of a save carries its date: without the table's
+    // rows beside each other, the date ties the cards of one save together.
+    stackedRender: (row) => (
+      <span className="text-gray-500">{row.dateStr}</span>
+    ),
   },
   {
     key: "editor",
@@ -88,9 +116,19 @@ const EDIT_COLUMNS: DataTableColumn<EditRow>[] = [
     key: "field",
     header: "Feld",
     className: "whitespace-nowrap",
+    stacked: "title",
     render: (row) => (
-      <span className="text-gray-600">
-        {FIELD_LABELS[row.edit.fieldName] ?? row.edit.fieldName}
+      <span className="text-gray-600">{fieldLabel(row.edit)}</span>
+    ),
+    stackedRender: (row) => (
+      <span className="flex flex-wrap items-center gap-x-2 text-sm">
+        <span className="text-gray-600">{fieldLabel(row.edit)}</span>
+        <OldValue edit={row.edit} />
+        <span className="text-gray-500" aria-hidden="true">
+          →
+        </span>
+        <span className="sr-only">geändert zu</span>
+        <NewValue edit={row.edit} />
       </span>
     ),
   },
@@ -98,21 +136,15 @@ const EDIT_COLUMNS: DataTableColumn<EditRow>[] = [
     key: "old",
     header: "Vorher",
     className: "whitespace-nowrap",
-    render: (row) => (
-      <span className="text-moto-red line-through">
-        {formatEditValue(row.edit.fieldName, row.edit.oldValue)}
-      </span>
-    ),
+    stacked: "hidden",
+    render: (row) => <OldValue edit={row.edit} />,
   },
   {
     key: "new",
     header: "Nachher",
     className: "whitespace-nowrap",
-    render: (row) => (
-      <span className="text-moto-green-strong font-medium">
-        {formatEditValue(row.edit.fieldName, row.edit.newValue)}
-      </span>
-    ),
+    stacked: "hidden",
+    render: (row) => <NewValue edit={row.edit} />,
   },
   {
     key: "reason",
@@ -151,7 +183,7 @@ export function EditHistoryAccordion({
   }
 
   // Group edits by createdAt timestamp — edits from the same save action
-  // share the same timestamp, so they belong in one visual row.
+  // share the same timestamp; date, author and reason stand once per save.
   const grouped = new Map<string, WorkSessionEdit[]>();
   for (const edit of edits) {
     const key = edit.createdAt;
@@ -179,61 +211,25 @@ export function EditHistoryAccordion({
       : editorName
         ? `${editorName} (Admin)`
         : "Admin";
-    return { timestamp, dateStr, fieldEdits, notes, editorLabel };
+    return { dateStr, fieldEdits, notes, editorLabel };
   });
 
   return (
     <div>
-      {/* Mobile: Compact card layout */}
-      <div className="space-y-2 md:hidden">
-        {rows.map(({ timestamp, dateStr, fieldEdits, notes, editorLabel }) => (
-          <InsetPanel key={timestamp} tone="white">
-            <div className="mb-1.5 flex items-center justify-between text-xs text-gray-500">
-              <span>{dateStr}</span>
-              <span className="font-medium">{editorLabel}</span>
-            </div>
-            <div className="space-y-1">
-              {fieldEdits.map((edit) => (
-                <div key={edit.id} className="flex items-center gap-2 text-xs">
-                  <span className="w-12 shrink-0 text-gray-500">
-                    {FIELD_LABELS[edit.fieldName] ?? edit.fieldName}
-                  </span>
-                  <span className="text-moto-red line-through">
-                    {formatEditValue(edit.fieldName, edit.oldValue)}
-                  </span>
-                  <span className="text-gray-500">→</span>
-                  <span className="text-moto-green-strong font-medium">
-                    {formatEditValue(edit.fieldName, edit.newValue)}
-                  </span>
-                </div>
-              ))}
-            </div>
-            {notes && (
-              <p className="mt-1.5 text-xs text-gray-500 italic">
-                &ldquo;{notes}&rdquo;
-              </p>
-            )}
-          </InsetPanel>
-        ))}
-      </div>
-
-      {/* Desktop: Table layout */}
-      <div className="hidden md:block">
-        <DataTable
-          columns={EDIT_COLUMNS}
-          rows={rows.flatMap(({ dateStr, fieldEdits, notes, editorLabel }) =>
-            fieldEdits.map((edit, index) => ({
-              edit,
-              firstOfSave: index === 0,
-              dateStr,
-              editorLabel,
-              notes,
-            })),
-          )}
-          getRowKey={(row) => row.edit.id}
-          dense
-        />
-      </div>
+      <DataTable
+        columns={EDIT_COLUMNS}
+        rows={rows.flatMap(({ dateStr, fieldEdits, notes, editorLabel }) =>
+          fieldEdits.map((edit, index) => ({
+            edit,
+            firstOfSave: index === 0,
+            dateStr,
+            editorLabel,
+            notes,
+          })),
+        )}
+        getRowKey={(row) => row.edit.id}
+        dense
+      />
       {onEdit && (
         <Button
           type="button"

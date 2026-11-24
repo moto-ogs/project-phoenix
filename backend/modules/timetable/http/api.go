@@ -63,9 +63,9 @@ func calendarPeriodOverlapRenderer(err error) render.Renderer {
 		germanCalendarDate(first.StartDate),
 		germanCalendarDate(first.EndDate),
 	)
-	return common.ErrorConflictWithDetails(message, common.CodeTimetableCalendarPeriodOverlapConflict, map[string]any{
-		"overlapping_period_ids":   ids,
-		"overlapping_period_names": names,
+	return common.ErrorConflictWithDetails(message, common.CodeTimetableCalendarPeriodOverlapConflict, CalendarPeriodOverlapDetails{
+		IDs:   ids,
+		Names: names,
 	})
 }
 
@@ -625,7 +625,7 @@ func calendarPeriodShiftSeriesConflict(seriesCount int) render.Renderer {
 	return common.ErrorConflictWithDetails(
 		schoolcalendar.ErrCalendarPeriodUsedByShiftSeries,
 		common.CodeTimetableCalendarPeriodShiftSeriesConflict,
-		map[string]any{"staff_shift_series_count": seriesCount},
+		CalendarPeriodShiftSeriesDetails{Count: seriesCount},
 	)
 }
 

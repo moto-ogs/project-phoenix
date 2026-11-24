@@ -170,7 +170,7 @@ func renderRoleMutationError(err error) render.Renderer {
 	}
 	var reservedErr *identityaccess.ReservedPermissionError
 	if errors.As(err, &reservedErr) {
-		return common.ErrorInvalidRequestWithDetails(err, common.CodeIdentityRolePlatformPermission, map[string]any{"permission": reservedErr.Permission})
+		return common.ErrorInvalidRequestWithDetails(err, common.CodeIdentityRolePlatformPermission, common.PermissionDetails{Permission: reservedErr.Permission})
 	}
 	var roleErr *identityaccess.AuthenticationError
 	if errors.As(err, &roleErr) {

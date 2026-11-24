@@ -29,6 +29,7 @@ import {
   LoadErrorAlert,
 } from "~/components/ui/form-error-alert";
 import { useApiFormError } from "~/contexts/ToastContext";
+import { ParentSchoolCareTermScope } from "~/lib/parent-care-term";
 import { useSWRAuth } from "~/lib/swr";
 import { parentInboxKeys } from "~/lib/swr/parent-inbox-keys";
 import { PARENT_RESOURCE_OPTIONS } from "~/lib/hooks/use-parent-resources";
@@ -1140,16 +1141,7 @@ function NewsActionContext({
   );
 }
 
-/**
- * Detail view: full text (URLs clickable), optional link, explicit acknowledge.
- * Opening it marks the announcement read and nudges the sidebar badge.
- */
-export function NewsDetailModal({
-  item,
-  onClose,
-  onUpdated,
-  onStale,
-}: Readonly<{
+type NewsDetailModalProps = Readonly<{
   item: parentMeContract.AnnouncementResponse;
   onClose: () => void;
   onUpdated: (
@@ -1162,7 +1154,28 @@ export function NewsDetailModal({
    * should refetch the feed so the list + unread badge stop showing stale items.
    */
   onStale?: (id: string) => void;
-}>) {
+}>;
+
+/**
+ * Detail view: full text (URLs clickable), optional link, explicit acknowledge.
+ * Opening it marks the announcement read and nudges the sidebar badge. The
+ * letter belongs to one school: its texts and refusals name that school's
+ * care, not the account's (#6258).
+ */
+export function NewsDetailModal(props: NewsDetailModalProps) {
+  return (
+    <ParentSchoolCareTermScope schoolName={props.item.school_name}>
+      <NewsDetail {...props} />
+    </ParentSchoolCareTermScope>
+  );
+}
+
+function NewsDetail({
+  item,
+  onClose,
+  onUpdated,
+  onStale,
+}: NewsDetailModalProps) {
   const t = useTranslations("parentDashboard");
   const [busy, setBusy] = useState(false);
   // Shown inside the dialog, which lies above every toast.

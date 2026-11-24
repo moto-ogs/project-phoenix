@@ -1,4 +1,4 @@
-import type { Decoder } from "~/lib/contract/browser-runtime";
+import type { Decoder, PartialResult } from "~/lib/contract/browser-runtime";
 import type { ClassListImportResult } from "~/lib/contract/import.generated";
 import type { ErrorCode } from "~/lib/error-codes.generated";
 
@@ -35,16 +35,9 @@ function rowHasAbortingWrite(entry: ImportBatchRowError): boolean {
  */
 export function readImportBatchFailure<T>(
   payload: unknown,
-  schema: Pick<Decoder<T>, "safeParse">,
+  schema: Pick<Decoder<PartialResult<T>>, "safeParse">,
 ): T | null {
-  if (!isRecord(payload) || payload.code !== importBatchFailedCode) {
-    return null;
-  }
-  if (!isRecord(payload.details)) {
-    return null;
-  }
-  const parsed = schema.safeParse(payload.details.result);
-  return parsed.success ? parsed.data : null;
+  return readImportBatchDetails(payload, schema)?.result ?? null;
 }
 
 /**
@@ -52,14 +45,22 @@ export function readImportBatchFailure<T>(
  * (#3571): `{ code, details }` in `details.rejection` of an
  * `import.import_batch_failed` envelope. Null when a batch failed for another reason.
  */
-export function readImportBatchRejection(payload: unknown): unknown {
+export function readImportBatchRejection<T>(
+  payload: unknown,
+  schema: Pick<Decoder<PartialResult<T>>, "safeParse">,
+): unknown {
+  return readImportBatchDetails(payload, schema)?.rejection ?? null;
+}
+
+function readImportBatchDetails<T>(
+  payload: unknown,
+  schema: Pick<Decoder<PartialResult<T>>, "safeParse">,
+): PartialResult<T> | null {
   if (!isRecord(payload) || payload.code !== importBatchFailedCode) {
     return null;
   }
-  if (!isRecord(payload.details) || !isRecord(payload.details.rejection)) {
-    return null;
-  }
-  return payload.details.rejection;
+  const parsed = schema.safeParse(payload.details);
+  return parsed.success ? parsed.data : null;
 }
 
 export function importBatchSavedCount(

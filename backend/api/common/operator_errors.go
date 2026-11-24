@@ -29,7 +29,7 @@ func OperatorRejection(status int, code, message string) render.Renderer {
 
 // OperatorRejectionWithDetails is OperatorRejection with the structured
 // values the catalog text of the code interpolates.
-func OperatorRejectionWithDetails(status int, code, message string, details map[string]any) render.Renderer {
+func OperatorRejectionWithDetails(status int, code, message string, details any) render.Renderer {
 	return &ErrResponse{HTTPStatusCode: status, Detail: message, Code: code, Details: details}
 }
 

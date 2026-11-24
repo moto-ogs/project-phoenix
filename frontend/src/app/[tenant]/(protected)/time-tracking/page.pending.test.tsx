@@ -107,10 +107,8 @@ vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
     remove: vi.fn(),
   }),
 }));
-vi.mock("~/lib/time-tracking-api", () => ({
-  DEVIATION_REASON_REQUIRED_CODE: "iot.deviation_reason_required",
-  PLANNED_START_NOT_REACHED_CODE: "iot.planned_start_not_reached",
-  REOPEN_STATUS_CONFLICT_CODE: "reopen_status_conflict",
+vi.mock("~/lib/time-tracking-api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/time-tracking-api")>()),
   timeTrackingService: service,
 }));
 vi.mock("~/lib/tenant-context", async (importOriginal) => ({

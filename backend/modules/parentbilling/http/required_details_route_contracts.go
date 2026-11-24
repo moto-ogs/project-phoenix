@@ -11,5 +11,6 @@ import (
 func RequiredDetailsRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: []common.PortalScope{common.PortalTraeger}, Response: capability.RequiredDetails{}},
+		{Method: "GET", Pattern: "/issuers", Portals: []common.PortalScope{common.PortalTraeger}, Response: capability.BillingIssuerOverview{}},
 	}
 }

@@ -72,7 +72,9 @@ func (h *ExportHandovers) producer(reviewer parentbilling.HolidayReviewer, reque
 		}, nil
 	case parentbilling.ExportFormatPain008:
 		return func(ctx context.Context) (producedFile, error) {
-			file, err := h.debits.SEPADebitFile(ctx, reviewer, request.RunKind, request.RunID)
+			// Only the Träger's own file goes to its bank (#8040): a body that
+			// bills a school itself submits its file to its own bank.
+			file, err := h.debits.SEPADebitFile(ctx, reviewer, request.RunKind, request.RunID, "")
 			return producedFile{exportFileID: file.ExportFileID, fileName: file.Filename, data: file.Data}, err
 		}, nil
 	}

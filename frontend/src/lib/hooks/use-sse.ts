@@ -8,10 +8,6 @@ import type {
   ConnectionStatus,
 } from "../sse-types";
 import { createLogger } from "~/lib/logger";
-import {
-  STREAM_EVENT_TYPE_VALUES,
-  SSEEventSchema,
-} from "~/lib/contract/stream-event.generated";
 
 // Logger instance for SSE connection
 const logger = createLogger({ component: "SSE" });
@@ -127,13 +123,12 @@ export function useSSE(
       eventSource: FetchEventSource,
       eventType: string,
       event: Event,
+      parse: (value: unknown) => SSEEvent,
     ) => {
       if (!mountedRef.current || eventSourceRef.current !== eventSource) return;
       try {
         const messageEvent = event as MessageEvent;
-        const parsed = SSEEventSchema.parse(
-          JSON.parse(String(messageEvent.data)),
-        );
+        const parsed = parse(JSON.parse(String(messageEvent.data)));
         stableOnMessage(parsed);
       } catch (err) {
         logger.error("failed to parse sse event", {
@@ -150,17 +145,23 @@ export function useSSE(
     };
 
     let sessionRefused = false;
-    const connect = () => {
-      if (!mountedRef.current) return;
+    let disposed = false;
+    let connecting = false;
+    const connect = async () => {
+      if (disposed || connecting) return;
+      connecting = true;
 
       // Reconnection callback
       const attemptReconnect = () => {
         if (mountedRef.current) {
-          connect();
+          void connect();
         }
       };
 
       try {
+        const { SSEEventSchema, STREAM_EVENT_TYPE_VALUES } =
+          await import("~/lib/contract/stream-event.generated");
+        if (disposed) return;
         const eventSource = new FetchEventSource(endpoint);
         eventSourceRef.current = eventSource;
 
@@ -175,12 +176,17 @@ export function useSSE(
         };
 
         eventSource.onmessage = (event) =>
-          handleSSEMessage(eventSource, "message", event);
+          handleSSEMessage(eventSource, "message", event, SSEEventSchema.parse);
 
         // Handle specific event types
         for (const eventType of STREAM_EVENT_TYPE_VALUES) {
           eventSource.addEventListener(eventType, (event) =>
-            handleSSEMessage(eventSource, eventType, event),
+            handleSSEMessage(
+              eventSource,
+              eventType,
+              event,
+              SSEEventSchema.parse,
+            ),
           );
         }
 
@@ -256,16 +262,19 @@ export function useSSE(
           }
         };
       } catch (err) {
+        if (disposed) return;
         logger.error("failed to create eventsource", {
           endpoint,
           error: err instanceof Error ? err.message : String(err),
         });
         setError("Failed to establish SSE connection");
+      } finally {
+        connecting = false;
       }
     };
 
     // Initial connection
-    connect();
+    void connect();
 
     // Reconnect when device wakes from sleep or network restores
     const handleWakeReconnect = () => {
@@ -292,7 +301,7 @@ export function useSSE(
       setReconnectAttempts(0);
       setIsConnected(false);
 
-      connect();
+      void connect();
     };
 
     const handleVisibilityChange = () => {
@@ -320,6 +329,7 @@ export function useSSE(
 
     // Cleanup on unmount
     return () => {
+      disposed = true;
       mountedRef.current = false;
       restartIfDownRef.current = () => undefined;
 

@@ -187,6 +187,7 @@ export interface StudentResponse {
   day_planning_label?: string;
   pending_excused_note?: string;
   class_handover?: ClassHandover;
+  photo_version?: string;
   photo_url?: string;
   photo_consent_given?: boolean;
   photo_consent_given_at?: string;
@@ -251,6 +252,7 @@ export const StudentResponseSchema: z.ZodType<StudentResponse, unknown> = object
   day_planning_label: optional(str),
   pending_excused_note: optional(str),
   class_handover: optional(ClassHandoverSchema),
+  photo_version: optional(str),
   photo_url: optional(str),
   photo_consent_given: optional(bool),
   photo_consent_given_at: optional(instant),
@@ -315,6 +317,7 @@ export interface SlimStudentResponse {
   actual_arrival_time?: string;
   actual_pickup_time?: string;
   companion_student_ids?: string[];
+  photo_version?: string;
   photo_url?: string;
   photo_consent_given?: boolean;
   has_full_access: boolean;
@@ -354,6 +357,7 @@ export const SlimStudentResponseSchema: z.ZodType<SlimStudentResponse, unknown> 
   actual_arrival_time: optional(clockTime),
   actual_pickup_time: optional(clockTime),
   companion_student_ids: optional(arr(int64String)),
+  photo_version: optional(str),
   photo_url: optional(str),
   photo_consent_given: optional(bool),
   has_full_access: bool,
@@ -1447,6 +1451,7 @@ export interface Student {
   arrival_notes?: string;
   actual_arrival_time?: string;
   actual_pickup_time?: string;
+  photo_version?: string;
   photo_url?: string;
   teacher_hints?: GroupLiveTeacherHint[];
   planned_activities?: PlannedActivity[];
@@ -1476,6 +1481,7 @@ export const StudentSchema: z.ZodType<Student, unknown> = object<Student>({
   arrival_notes: optional(str),
   actual_arrival_time: optional(str),
   actual_pickup_time: optional(str),
+  photo_version: optional(str),
   photo_url: optional(str),
   teacher_hints: optional(arr(GroupLiveTeacherHintSchema)),
   planned_activities: optional(arr(PlannedActivitySchema)),
@@ -1793,6 +1799,7 @@ export interface StudentDetailResponse {
   day_planning_label?: string;
   pending_excused_note?: string;
   class_handover?: ClassHandover;
+  photo_version?: string;
   photo_url?: string;
   photo_consent_given?: boolean;
   photo_consent_given_at?: string;
@@ -1868,6 +1875,7 @@ export const StudentDetailResponseSchema: z.ZodType<StudentDetailResponse, unkno
   day_planning_label: optional(str),
   pending_excused_note: optional(str),
   class_handover: optional(ClassHandoverSchema),
+  photo_version: optional(str),
   photo_url: optional(str),
   photo_consent_given: optional(bool),
   photo_consent_given_at: optional(instant),
@@ -2952,6 +2960,7 @@ export interface DecideExcusedRequestBody {
 export interface studentExportFilters {
   search?: string;
   group_id?: string;
+  group_ids?: string[] | null;
   room_id?: string;
   year?: string;
   school_class?: string;
@@ -3282,10 +3291,14 @@ export interface PartialAbsenceRequest {
 
 /** Go: students.studentPhotoUploadedResponse */
 export interface studentPhotoUploadedResponse {
+  student_id: string;
+  photo_version: string;
   photo_url: string;
 }
 
 export const studentPhotoUploadedResponseSchema: z.ZodType<studentPhotoUploadedResponse, unknown> = object<studentPhotoUploadedResponse>({
+  student_id: int64String,
+  photo_version: str,
   photo_url: str,
 });
 

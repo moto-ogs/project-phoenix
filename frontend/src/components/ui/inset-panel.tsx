@@ -23,7 +23,9 @@ const PADDING_CLASSES: Record<InsetPanelPadding, string> = {
   tight: "px-3 py-1",
   compact: "px-3 py-2",
   sm: "p-3",
-  md: "p-4",
+  // Telefon 12 px: Die Karte darum hat dort selbst nur 16 px, eine zweite
+  // 16-px-Polsterung kostet die schmale Spalte doppelt.
+  md: "p-4 max-sm:p-3",
 };
 
 function toneClasses(

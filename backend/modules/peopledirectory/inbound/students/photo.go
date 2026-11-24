@@ -11,11 +11,12 @@ import (
 	render "github.com/go-chi/render"
 	common "github.com/moto-ogs/project-phoenix/api/common"
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	tenant "github.com/moto-ogs/project-phoenix/tenant"
 )
 
 // publicPhotoBaseDir + StudentPhotoStoredURLPrefix must stay aligned —
-// ResolveStoredPath and BuildStudentPhotoServeURL both key off them.
+// ResolveStoredPath and StudentPhotoVersion both key off them.
 const (
 	maxStudentPhotoFile = 5 * 1024 * 1024 // 5 MiB advertised file limit
 	maxStudentPhotoBody = maxStudentPhotoFile + 1024
@@ -31,8 +32,11 @@ const (
 	msgPhotoNotFound         = "kein Foto hinterlegt"
 )
 
-// studentPhotoUploadedResponse names the served address of the new photo.
+// studentPhotoUploadedResponse names the version of the new photo.
 type studentPhotoUploadedResponse struct {
+	StudentID    ident.ID `json:"student_id"`
+	PhotoVersion string   `json:"photo_version"`
+	// The BFF supplies the legacy address to browser tabs opened before the release.
 	PhotoURL string `json:"photo_url"`
 }
 
@@ -83,8 +87,9 @@ func (rs *Resource) uploadStudentPhoto(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	servedURL := common.BuildStudentPhotoServeURL(id, newStoredURL)
-	common.Respond(w, r, http.StatusOK, studentPhotoUploadedResponse{PhotoURL: servedURL}, "Foto hochgeladen")
+	common.Respond(w, r, http.StatusOK, studentPhotoUploadedResponse{
+		StudentID: ident.ID(id), PhotoVersion: common.StudentPhotoVersion(newStoredURL),
+	}, "Foto hochgeladen")
 }
 
 // deleteStudentPhoto is idempotent — returns 200 even when no photo was set.

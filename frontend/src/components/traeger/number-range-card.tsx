@@ -52,16 +52,36 @@ const SERVICES = {
   },
 } as const;
 
+/** A body that bills a school itself and keeps its own range (#8040). */
+interface NumberRangeIssuer {
+  /** The creditor identifier that names the body. */
+  readonly key: string;
+  readonly name: string;
+}
+
 export function NumberRangeCard({
   numberRange,
   onChanged,
   service = "holiday",
+  issuer,
 }: Readonly<{
   numberRange: NumberRange;
   onChanged: () => Promise<unknown>;
   service?: keyof typeof SERVICES;
+  /** Without it the card shows the Träger's own range. */
+  issuer?: NumberRangeIssuer;
 }>) {
-  const copy = SERVICES[service];
+  const base = SERVICES[service];
+  const copy = issuer
+    ? {
+        ...base,
+        title: `${base.title}: ${issuer.name}`,
+        description: `Eigener Nummernkreis von ${issuer.name}. Nimm ein anderes Kürzel als dein Träger.`,
+        save: (pattern: string) => base.save(pattern, issuer.key),
+        saveStart: (nextNumber: number) =>
+          base.saveStart(nextNumber, issuer.key),
+      }
+    : base;
   const [open, setOpen] = useState(false);
   const [startOpen, setStartOpen] = useState(false);
   const [history, setHistory] = useState(false);
@@ -248,7 +268,7 @@ export function NumberRangeCard({
         >
           <Input
             controlSize="touch"
-            id={`number-range-pattern-${service}`}
+            id={`number-range-pattern-${service}${issuer ? `-${issuer.key}` : ""}`}
             name="pattern"
             label="Muster der Rechnungsnummer"
             value={pattern}

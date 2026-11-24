@@ -143,6 +143,14 @@
       "legacy": "traeger.master_data_invalid"
     },
     {
+      "code": "traeger.school_party_creditor_account_conflict",
+      "class": "business_rejection",
+      "parameters": [
+        "school_name"
+      ],
+      "legacy": "traeger.school_party_creditor_account_conflict"
+    },
+    {
       "code": "traeger.member_not_found",
       "class": "input",
       "parameters": [],

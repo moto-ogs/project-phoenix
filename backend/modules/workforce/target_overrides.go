@@ -29,11 +29,11 @@ type TargetOverrideError struct {
 // TargetOverrideValues are the values a coded refusal names; only the ones
 // its code uses are set.
 type TargetOverrideValues struct {
-	MaxDays   int
-	MaxHours  int
-	StartDate string
-	EndDate   string
-	Month     string
+	MaxDays   int    `json:"max_days,omitempty"`
+	MaxHours  int    `json:"max_hours,omitempty"`
+	StartDate string `json:"start_date,omitempty"`
+	EndDate   string `json:"end_date,omitempty"`
+	Month     string `json:"month,omitempty"`
 }
 
 func (e *TargetOverrideError) Error() string { return e.Reason }
@@ -80,12 +80,6 @@ type DailyProjection struct {
 	CreditMinutes  int    `json:"credit_minutes"`
 	ActualMinutes  int    `json:"actual_minutes"`
 	BalanceMinutes int    `json:"balance_minutes"`
-}
-
-// DailyTarget is the contractual Soll of one calendar day.
-type DailyTarget struct {
-	Date          string `json:"date"`
-	TargetMinutes int    `json:"target_minutes"`
 }
 
 // TargetOverrideDays maps staff member and calendar day (DateLayout) to the

@@ -133,7 +133,7 @@ import {
   type LaborHint,
 } from "~/lib/labor-time-hints";
 import {
-  DEVIATION_REASON_REQUIRED_CODE,
+  readStampDeviation,
   PLANNED_START_NOT_REACHED_CODE,
   timeTrackingService,
 } from "~/lib/time-tracking-api";
@@ -3670,30 +3670,19 @@ function TimeTrackingContent() {
       action: "check_in" | "check_out",
       status?: SessionStatus,
     ) => {
-      if (
-        !(err instanceof ApiError) ||
-        err.code !== DEVIATION_REASON_REQUIRED_CODE
-      ) {
-        return false;
-      }
-      const details = err.details;
+      const details = readStampDeviation(err);
+      if (details === null) return false;
       deviationErrors.clear();
       setDeviationReason("");
       setPendingDeviation({
         action,
         status,
-        plannedTime:
-          typeof details?.planned_time === "string"
-            ? details.planned_time
-            : undefined,
-        actualTime:
-          typeof details?.actual_time === "string"
-            ? details.actual_time
-            : undefined,
+        plannedTime: details?.planned_time,
+        actualTime: details?.actual_time,
         deviationMinutes:
-          typeof details?.deviation_minutes === "string"
-            ? details.deviation_minutes
-            : undefined,
+          details.deviation_minutes === undefined
+            ? undefined
+            : String(details.deviation_minutes),
       });
       return true;
     },

@@ -8,6 +8,7 @@ import { bffFile, bffJson } from "~/lib/bff-fetch";
  */
 
 import { knownEnum } from "./contract/known-enum";
+import { DatevBookingsDetailsSchema } from "./contract/problem-details.generated";
 import { requiredDay } from "./contract/required-day";
 import type * as traegerFinanceExportsContract from "./contract/traeger-finance-exports.generated";
 import { type BillingFile, billingFile } from "./traeger-billing-api";
@@ -575,12 +576,10 @@ async function fetchDatevRunPage(
   runs: readonly ExportRun[],
 ): Promise<traegerFinanceExportsContract.DatevRunOverviews> {
   const idsOf = (kind: "care" | "holiday") =>
-    runs
-      .filter((run) => run.runKind === kind)
-      .map((run) => run.runId)
-      .join(",") || undefined;
+    runs.filter((run) => run.runKind === kind).map((run) => run.runId);
   const query = { care: idsOf("care"), holiday: idsOf("holiday") };
-  if (!query.care && !query.holiday) return { ready: true, runs: [] };
+  if (!query.care.length && !query.holiday.length)
+    return { ready: true, runs: [] };
   return bffJson("org", "GET /traeger/finance-exports/datev-runs", { query });
 }
 
@@ -639,31 +638,26 @@ const DATEV_PROBLEM_REASONS = new Set<string>([
  * The invoices a refused DATEV download names in its details; an entry of
  * another shape is left out, never guessed.
  */
-export function datevBookingProblems(
-  details: Record<string, unknown> | undefined,
-): DatevBookingProblem[] {
-  const documents = details?.documents;
-  if (!Array.isArray(documents)) return [];
-  return documents.flatMap((entry: unknown) => {
-    if (typeof entry !== "object" || entry === null) return [];
-    const { document_number, field, reason } = entry as Record<string, unknown>;
-    if (
-      typeof document_number !== "string" ||
-      typeof field !== "string" ||
-      typeof reason !== "string" ||
-      !DATEV_PROBLEM_FIELDS.has(field) ||
-      !DATEV_PROBLEM_REASONS.has(reason)
-    ) {
-      return [];
-    }
-    return [
-      {
-        documentNumber: document_number,
-        field: field as DatevBookingProblem["field"],
-        reason: reason as DatevBookingProblem["reason"],
-      },
-    ];
-  });
+export function datevBookingProblems(details: unknown): DatevBookingProblem[] {
+  const parsed = DatevBookingsDetailsSchema.safeParse(details);
+  if (!parsed.success) return [];
+  return (parsed.data.documents ?? []).flatMap(
+    ({ document_number, field, reason }) => {
+      if (
+        !DATEV_PROBLEM_FIELDS.has(field) ||
+        !DATEV_PROBLEM_REASONS.has(reason)
+      ) {
+        return [];
+      }
+      return [
+        {
+          documentNumber: document_number,
+          field: field as DatevBookingProblem["field"],
+          reason: reason as DatevBookingProblem["reason"],
+        },
+      ];
+    },
+  );
 }
 
 /** The history of an invoice, oldest step first. */

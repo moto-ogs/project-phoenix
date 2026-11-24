@@ -1940,8 +1940,8 @@ func TestCheckIn_DeviationReasonRequired(t *testing.T) {
 	assert.Equal(t, "check_in", resp.Details["action"])
 	assert.Equal(t, "08:00", resp.Details["planned_time"])
 	assert.Equal(t, "07:30", resp.Details["actual_time"])
-	assert.Equal(t, "30", resp.Details["deviation_minutes"],
-		"minutes are serialized as string, consistent with the reopen-conflict details")
+	assert.Equal(t, float64(30), resp.Details["deviation_minutes"],
+		"the portal refuses with a minute count")
 }
 
 func TestCheckOut_DeviationReasonRequired(t *testing.T) {
@@ -1978,7 +1978,7 @@ func TestCheckOut_DeviationReasonRequired(t *testing.T) {
 	assert.Equal(t, "check_out", resp.Details["action"])
 	assert.Equal(t, "16:00", resp.Details["planned_time"])
 	assert.Equal(t, "16:30", resp.Details["actual_time"])
-	assert.Equal(t, "30", resp.Details["deviation_minutes"])
+	assert.Equal(t, float64(30), resp.Details["deviation_minutes"])
 }
 
 func TestCheckIn_ForwardsReason(t *testing.T) {

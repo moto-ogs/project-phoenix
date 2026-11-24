@@ -349,7 +349,7 @@ func TestSupervisionPresenceMapsVisitsAndAttendance(t *testing.T) {
 	visits, err := p.GroupVisits(ctx, 55)
 	require.NoError(t, err)
 	assert.Equal(t, []supervisiondashboard.VisitRecord{
-		{StudentID: 1, ActiveGroupID: 55, EntryTime: checkedIn, FirstName: "Erika", LastName: "Muster", SchoolClass: "4a", GroupName: "Bären", Sick: true, SickSince: &checkedIn, PhotoURL: "/api/students/1/photo/p.jpg"},
+		{StudentID: 1, ActiveGroupID: 55, EntryTime: checkedIn, FirstName: "Erika", LastName: "Muster", SchoolClass: "4a", GroupName: "Bären", Sick: true, SickSince: &checkedIn, PhotoVersion: "p.jpg"},
 		{StudentID: 2, ActiveGroupID: 55, EntryTime: checkedIn, ExitTime: &checkedOut},
 	}, visits)
 

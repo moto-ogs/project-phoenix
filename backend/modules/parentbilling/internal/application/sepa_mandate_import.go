@@ -73,8 +73,8 @@ func (m *SEPAMandates) ImportSEPAMandates(ctx context.Context, reviewer parentbi
 	if err != nil {
 		return parentbilling.SEPAMandateImport{}, err
 	}
-	if creditor.CreditorID == "" {
-		return parentbilling.SEPAMandateImport{}, parentbilling.ErrSEPACreditorMissing
+	if err := m.importCreditorSet(ctx, reviewer.OrganizationID, creditor.CreditorID); err != nil {
+		return parentbilling.SEPAMandateImport{}, err
 	}
 	result.CreditorID = creditor.CreditorID
 	bindCreditorChoice(&result.Mapping, creditor.CreditorID)
@@ -129,6 +129,24 @@ func importPreviewRows(candidates []importCandidate) ([]importCandidate, int) {
 		shown = append(shown, candidate)
 	}
 	return shown, withoutMandate
+}
+
+// importCreditorSet refuses an import without any creditor identifier: the
+// Träger has none and no body bills a school itself. A body that bills
+// takes mandates for its own identifier also while the Träger has none
+// (#8040); a row of a school the Träger bills then names the missing one.
+func (m *SEPAMandates) importCreditorSet(ctx context.Context, organizationID int64, traegerCreditor string) error {
+	if traegerCreditor != "" {
+		return nil
+	}
+	issuers, err := schoolIssuers(ctx, m.issuers, organizationID)
+	if err != nil {
+		return err
+	}
+	if len(issuers) == 0 {
+		return parentbilling.ErrSEPACreditorMissing
+	}
+	return nil
 }
 
 // bindCreditorChoice keeps the office's choice that the file holds the
@@ -245,6 +263,13 @@ func (m *SEPAMandates) evaluateImport(ctx context.Context, reviewer parentbillin
 	}
 	check := newImportCheck(columns, creditorID, payers, existing, m.today(), sequences)
 	check.accounts = accounts
+	issuers, err := schoolIssuers(ctx, m.issuers, reviewer.OrganizationID)
+	if err != nil {
+		return nil, err
+	}
+	for schoolID, issuer := range issuers {
+		check.schoolCreditors[schoolID] = issuer.Key
+	}
 	candidates := make([]importCandidate, len(table.rows))
 	for i, cells := range table.rows {
 		candidates[i] = check.candidate(cells, table.lines[i])
@@ -345,7 +370,7 @@ func (m *SEPAMandates) importPayers(ctx context.Context, organizationID int64) (
 		childUntil: map[string]calendar.Date{}, byChild: map[string]importPayer{}}
 	for _, id := range ids {
 		recipient := recipients[id]
-		payer := importPayer{contractID: id, family: recipient.FamilyOf(id),
+		payer := importPayer{contractID: id, schoolID: recipient.SchoolID, family: recipient.FamilyOf(id),
 			firstName: recipient.FirstName, lastName: recipient.LastName, until: until[id], child: children[id]}
 		payers.byContract[id] = payer
 		payers.countChild(payer)

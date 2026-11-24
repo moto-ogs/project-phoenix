@@ -201,7 +201,7 @@ func (rs *Resource) importStudents(w http.ResponseWriter, r *http.Request) {
 	result, err := rs.studentImportService.ImportBatches(r.Context(), request,
 		importModels.BatchAudit{EntityType: "student", Filename: uploadResult.Filename, AccountID: accountID})
 	if err != nil {
-		renderBatchImportError(rs.runtime, w, r, result, err)
+		renderBatchImportError(rs.runtime, w, r, result, err, importModels.NewStudentImportResult)
 		return
 	}
 
@@ -236,13 +236,13 @@ const codeImportBatchFailed = "import.import_batch_failed"
 
 // A failed batch may follow committed batches. Keep that progress and the
 // stable row errors available without reporting the upload as successful.
-func renderBatchImportError[T any](runtime Runtime, w http.ResponseWriter, r *http.Request, result *importModels.ImportResult[T], err error) {
+func renderBatchImportError[T, R any](runtime Runtime, w http.ResponseWriter, r *http.Request, result *importModels.ImportResult[T], err error, project func(*importModels.ImportResult[T]) R) {
 	if result == nil {
 		runtime.Failure(w, r, Failure{Status: http.StatusInternalServerError, Cause: err, Message: "Import fehlgeschlagen"})
 		return
 	}
 	runtime.Failure(w, r, Failure{Status: http.StatusInternalServerError, Cause: err,
-		Message: "Import fehlgeschlagen", Code: codeImportBatchFailed, Result: result})
+		Message: "Import fehlgeschlagen", Code: codeImportBatchFailed, Result: project(result)})
 }
 
 func (rs *Resource) mountStaffImports(r chi.Router, withTx func(http.Handler) http.Handler) {

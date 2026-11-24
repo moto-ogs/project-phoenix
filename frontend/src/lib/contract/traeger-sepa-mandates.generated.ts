@@ -17,7 +17,9 @@ import {
   success,
 } from "./runtime";
 import {
+  BillingIssuerSchema,
   SEPADebitSchema,
+  type BillingIssuer,
 } from "./shared.generated";
 
 /** Go: parentbilling.SEPAMandate */
@@ -34,6 +36,7 @@ export interface SEPAMandate {
   account_holder: string;
   creditor_id: string;
   creditor_current: boolean;
+  issuer?: BillingIssuer;
   last_collected_on: string | null;
   expires_on: string | null;
   iban_masked: string;
@@ -58,6 +61,7 @@ export const SEPAMandateSchema: z.ZodType<SEPAMandate, unknown> = object<SEPAMan
   account_holder: str,
   creditor_id: str,
   creditor_current: bool,
+  issuer: optional(BillingIssuerSchema),
   last_collected_on: nullable(calendarDate),
   expires_on: nullable(calendarDate),
   iban_masked: str,

@@ -46,7 +46,7 @@ func TestStudentSensitiveReadRequiresUsersRead(t *testing.T) {
 			response := rs.buildSingleStudentResponse(ctx, student, &studentListParams{}, rs.determineStudentAccess(req), snapshot, nil, true)
 			require.NotNil(t, response)
 			require.Equal(t, tc.full, response.HasFullAccess, "list read scope")
-			require.NotEmpty(t, response.PhotoURL, "verified staff can still read photos")
+			require.NotEmpty(t, response.PhotoVersion, "verified staff can still read photos")
 		})
 	}
 }
@@ -88,7 +88,7 @@ func TestStudentResponseRedactsSensitiveFields(t *testing.T) {
 			var body map[string]any
 			require.NoError(t, json.Unmarshal(encoded, &body))
 			require.Equal(t, "Mila", body["first_name"])
-			require.NotEmpty(t, body["photo_url"])
+			require.NotEmpty(t, body["photo_version"])
 			if full {
 				require.Equal(t, *student.PickupStatus, body["pickup_status"])
 			} else {

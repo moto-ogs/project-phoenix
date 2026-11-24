@@ -116,7 +116,8 @@ type SlimStudentResponse struct {
 	// Photo + consent. photo_consent_given is carried because the page probes
 	// its PRESENCE (not its value) to decide whether the "Fotoerlaubnis" filter
 	// is offered at all — omitting it would silently remove that filter.
-	PhotoURL          string `json:"photo_url,omitempty"`
+	PhotoVersion      string `json:"photo_version,omitempty"`
+	PhotoURL          string `json:"photo_url,omitempty"` // legacy BFF alias
 	PhotoConsentGiven *bool  `json:"photo_consent_given,omitempty"`
 
 	HasFullAccess bool `json:"has_full_access"`
@@ -163,7 +164,7 @@ func slimStudentResponses(responses []StudentResponse, planningDate calendar.Dat
 			ActualArrivalTime:    r.ActualArrivalTime,
 			ActualPickupTime:     r.ActualPickupTime,
 			CompanionStudentIDs:  r.CompanionStudentIDs,
-			PhotoURL:             r.PhotoURL,
+			PhotoVersion:         r.PhotoVersion,
 			PhotoConsentGiven:    r.PhotoConsentGiven,
 			HasFullAccess:        r.HasFullAccess,
 		}

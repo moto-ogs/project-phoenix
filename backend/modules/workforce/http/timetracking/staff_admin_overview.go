@@ -52,24 +52,10 @@ func parseOverviewFilters(r *http.Request) (workforce.OverviewFilters, error) {
 	default:
 		return filters, errors.New("order must be asc or desc")
 	}
-	// year/month are optional and only meaningful together: a bare ?month=3
-	// would silently mean March of whatever year today happens to be, which
-	// reads as a working filter and is not one.
-	rawYear, rawMonth := query.Get("year"), query.Get("month")
-	if (rawYear == "") != (rawMonth == "") {
-		return filters, errors.New("year and month must be given together")
-	}
-	if rawYear != "" {
-		var err error
-		if filters.Year, err = strconv.Atoi(rawYear); err != nil {
-			return filters, errors.New("year must be an integer")
-		}
-		if filters.Month, err = strconv.Atoi(rawMonth); err != nil {
-			return filters, errors.New("month must be an integer")
-		}
-		if filters.Year == 0 || filters.Month == 0 {
-			return filters, errors.New("year and month must be greater than zero")
-		}
+	var err error
+	filters.Year, filters.Month, err = parseOverviewPeriod(query.Get("year"), query.Get("month"))
+	if err != nil {
+		return filters, err
 	}
 	for _, bound := range []struct {
 		name   string
@@ -89,6 +75,28 @@ func parseOverviewFilters(r *http.Request) (workforce.OverviewFilters, error) {
 		*bound.target = &value
 	}
 	return filters, nil
+}
+
+// parseOverviewPeriod reads the optional year and month as a pair.
+func parseOverviewPeriod(rawYear, rawMonth string) (int, int, error) {
+	if rawYear == "" && rawMonth == "" {
+		return 0, 0, nil
+	}
+	if rawYear == "" || rawMonth == "" {
+		return 0, 0, errors.New("year and month must be given together")
+	}
+	year, err := strconv.Atoi(rawYear)
+	if err != nil {
+		return 0, 0, errors.New("year must be an integer")
+	}
+	month, err := strconv.Atoi(rawMonth)
+	if err != nil {
+		return 0, 0, errors.New("month must be an integer")
+	}
+	if year == 0 || month == 0 {
+		return 0, 0, errors.New("year and month must be greater than zero")
+	}
+	return year, month, nil
 }
 
 // getDashboardSummary handles GET /api/staff/dashboard-summary?period=week|month
@@ -124,12 +132,13 @@ func (rs *StaffAdminResource) getTimeTrackingOverview(w http.ResponseWriter, r *
 // getTargetCoverage handles GET /api/staff/time-tracking/target-coverage with
 // the overview's optional year/month pair.
 func (rs *StaffAdminResource) getTargetCoverage(w http.ResponseWriter, r *http.Request) {
-	filters, err := parseOverviewFilters(r)
+	query := r.URL.Query()
+	year, month, err := parseOverviewPeriod(query.Get("year"), query.Get("month"))
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	coverage, err := rs.StaffOverviewService.TargetCoverage(r.Context(), filters.Year, filters.Month)
+	coverage, err := rs.StaffOverviewService.TargetCoverage(r.Context(), year, month)
 	if err != nil {
 		renderOverviewError(w, r, err)
 		return

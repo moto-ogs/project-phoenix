@@ -89,7 +89,7 @@ func TestProblemTypeUsesRegisteredClassRatherThanStatusOnly(t *testing.T) {
 	require.Equal(t, "https://moto-app.de/help/fehlermeldungen#anleitung-eingabe-pruefen", body["type"])
 }
 
-func TestProblemResponsePreservesLargeLegacyNumbers(t *testing.T) {
+func TestProblemResponseDoesNotReinterpretNumbersByMemberName(t *testing.T) {
 	t.Parallel()
 
 	recorder := httptest.NewRecorder()
@@ -103,7 +103,7 @@ func TestProblemResponsePreservesLargeLegacyNumbers(t *testing.T) {
 	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &body))
 	var details map[string]json.RawMessage
 	require.NoError(t, json.Unmarshal(body["details"], &details))
-	require.Equal(t, `"9007199254740993"`, string(details["id"]))
+	require.Equal(t, "9007199254740993", string(details["id"]))
 	require.Equal(t, "9007199254740993", string(details["count"]))
 }
 
@@ -122,15 +122,15 @@ func TestProblemResponseAnswersEveryLegacyBodyInTheSharedEnvelope(t *testing.T) 
 		wantDetail  string
 		wantCode    string
 		wantType    string
-		wantKept    map[string]any
+		wantDropped string
 	}{
 		{name: "message instead of error", status: http.StatusTooManyRequests, contentType: "application/json", body: `{"status":"Too Many Requests","message":"slow down"}`, wantDetail: "slow down", wantCode: "general.unavailable"},
 		{name: "human status text without error text", status: http.StatusForbidden, contentType: "application/json", body: `{"status":"Forbidden"}`, wantDetail: "Forbidden", wantCode: "general.permission"},
-		{name: "success envelope on a conflict", status: http.StatusConflict, contentType: "application/json", body: `{"status":"success","data":{"status":"conflict"},"message":"Conflict detected"}`, wantDetail: "Conflict detected", wantCode: "general.business_rejection", wantKept: map[string]any{"data": map[string]any{"status": "conflict"}}},
+		{name: "success envelope on a conflict", status: http.StatusConflict, contentType: "application/json", body: `{"status":"success","data":{"status":"conflict"},"message":"Conflict detected"}`, wantDetail: "Conflict detected", wantCode: "general.business_rejection", wantDropped: "data"},
 		{name: "numeric legacy code", status: http.StatusUnauthorized, contentType: "application/json", body: `{"status":"error","code":401,"error":"token unauthorized"}`, wantDetail: "token unauthorized", wantCode: "general.permission"},
 		{name: "unregistered code", status: http.StatusConflict, contentType: "application/json", body: `{"status":409,"code":"care.not_registered","detail":"companion conflict"}`, wantDetail: "companion conflict", wantCode: "general.business_rejection"},
 		{name: "unregistered code and stale type", status: http.StatusConflict, contentType: "application/json", body: `{"status":409,"code":"care.not_registered","type":"https://moto-app.de/help/fehlermeldungen#anleitung-eingabe-pruefen","detail":"companion conflict"}`, wantDetail: "companion conflict", wantCode: "general.business_rejection", wantType: "https://moto-app.de/help/fehlermeldungen#anleitung-vorgang-nicht-moeglich"},
-		{name: "extension members stay", status: http.StatusConflict, contentType: "application/json", body: `{"conflicts":[{"id":"1"}],"message":"companion conflict"}`, wantDetail: "companion conflict", wantCode: "general.business_rejection", wantKept: map[string]any{"conflicts": []any{map[string]any{"id": "1"}}}},
+		{name: "business fields outside details are dropped", status: http.StatusConflict, contentType: "application/json", body: `{"conflicts":[{"id":"1"}],"message":"companion conflict"}`, wantDetail: "companion conflict", wantCode: "general.business_rejection", wantDropped: "conflicts"},
 		{name: "plain text", status: http.StatusNotFound, contentType: "text/plain", body: "not found", wantDetail: "not found", wantCode: "general.input"},
 		{name: "empty body", status: http.StatusInternalServerError, wantDetail: "Internal Server Error", wantCode: "general.server"},
 	} {
@@ -159,8 +159,8 @@ func TestProblemResponseAnswersEveryLegacyBodyInTheSharedEnvelope(t *testing.T) 
 			if tc.wantType != "" {
 				require.Equal(t, tc.wantType, body["type"])
 			}
-			for member, want := range tc.wantKept {
-				require.Equal(t, want, body[member], member)
+			if tc.wantDropped != "" {
+				require.NotContains(t, body, tc.wantDropped)
 			}
 		})
 	}

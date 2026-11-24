@@ -159,8 +159,8 @@ type VisitRecord struct {
 	SickSince     *time.Time
 	Excused       bool
 	ExcusedSince  *time.Time
-	// PhotoURL is the browser address; the projection checks photo access.
-	PhotoURL string
+	// PhotoVersion names the stored photo after the projection checks access.
+	PhotoVersion string
 }
 
 // Attendance is today's attendance row of one student.

@@ -257,7 +257,7 @@ func renderHolidayReviewError(w http.ResponseWriter, r *http.Request, err error)
 		common.RenderError(w, r, common.ErrorNotFoundWithCode(err, common.CodeEnrollmentUploadNotFound))
 	case errors.Is(err, capability.ErrHolidayProofLimit):
 		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeEnrollmentHolidayProofLimit,
-			map[string]any{"max_files": capability.HolidayProofOptions.MaxFiles()}))
+			HolidayProofLimitDetails{MaxFiles: capability.HolidayProofOptions.MaxFiles()}))
 	case errors.Is(err, capability.ErrHolidayRegistrationFrozen):
 		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeEnrollmentHolidayRegistrationFrozen))
 	case errors.Is(err, capability.ErrHolidayRegistrationStateConflict):

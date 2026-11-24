@@ -1,8 +1,5 @@
 // lib/api-helpers.ts
-import { ApiError, apiErrorFromBody, type ProblemBody } from "./api-error";
-
-/** The error body of an API answer: the RFC 9457 envelope (ADR 0006). */
-export type ApiErrorResponse = ProblemBody;
+import { ApiError, apiErrorFromBody } from "./api-error";
 
 /**
  * Generic domain API error handler: every failure leaves as an ApiError, so

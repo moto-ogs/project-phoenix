@@ -129,9 +129,9 @@ export const ERROR_CATALOG = {
       "care.care_request_field_disabled":
         "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
       "care.child_care_ended":
-        "Die Betreuung dieses Kindes ist beendet. Änderungen sind nicht mehr möglich. Bei Fragen wende dich bitte an die OGS.",
+        "Die Betreuung dieses Kindes ist beendet. Änderungen sind nicht mehr möglich. Bei Fragen wende dich bitte an die {careTerm}.",
       "care.child_without_care_place":
-        "Dein Kind hat keinen Platz in der OGS. Diese Funktion gibt es für dein Kind deshalb nicht.",
+        "Dein Kind hat keinen Platz in der {careTerm}. Diese Funktion gibt es für dein Kind deshalb nicht.",
       "care.course_request_invalid":
         "{object} enthält ungültige Angaben. Bitte prüfe deine Eingaben.",
       "care.course_requests_disabled":
@@ -139,9 +139,9 @@ export const ERROR_CATALOG = {
       "care.declaration_action_not_allowed":
         "Das geht gerade nicht. Bitte lade die Seite neu und prüfe den aktuellen Stand.",
       "care.declaration_closed":
-        "Die Frist ist abgelaufen. Du kannst nicht mehr antworten. Bei Fragen wende dich bitte an die OGS.",
+        "Die Frist ist abgelaufen. Du kannst nicht mehr antworten. Bei Fragen wende dich bitte an die {careTerm}.",
       "care.declaration_not_permitted":
-        "Für dieses Kind darfst du nicht antworten. Bei Fragen wende dich an die OGS.",
+        "Für dieses Kind darfst du nicht antworten. Bei Fragen wende dich an die {careTerm}.",
       "care.declaration_password_incorrect":
         "Das Passwort stimmt nicht. Bitte versuche es noch einmal.",
       "care.declaration_password_required": "Bitte gib dein Passwort ein.",
@@ -162,7 +162,7 @@ export const ERROR_CATALOG = {
       "care.guardian_has_own_account":
         "Diese Person verwaltet ihre Kontaktdaten über ein eigenes Elternkonto. Sie kann die Angaben dort selbst ändern.",
       "care.guardian_invite_unavailable":
-        "Diese Einladung konnte gerade nicht gesendet werden. Bitte wende dich an die OGS.",
+        "Diese Einladung konnte gerade nicht gesendet werden. Bitte wende dich an die {careTerm}.",
       "care.guardian_management_disabled":
         "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
       "care.guardian_no_change":
@@ -210,7 +210,7 @@ export const ERROR_CATALOG = {
       "care.pickup_change_disabled":
         "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
       "care.pickup_permission_request_required":
-        "Eine neue Abholerlaubnis braucht deine Unterschrift. Die OGS bestätigt sie dann.",
+        "Eine neue Abholerlaubnis braucht deine Unterschrift. Die {careTerm} bestätigt sie dann.",
       "care.pickup_permission_unchanged":
         "Diese Person darf an diesen Tagen schon abholen.",
       "care.pickup_person_not_linked":
@@ -242,7 +242,7 @@ export const ERROR_CATALOG = {
       "classday.absence_list_invalid_period":
         "Dieser Zeitraum geht nicht. Bis darf nicht vor Von liegen. Wähle höchstens ein Schuljahr.",
       "classday.absence_report_conflict":
-        "Für dieses Kind steht heute schon etwas, zum Beispiel eine frühere Abholung. Es wurde nichts gespeichert. Bitte sprich mit der OGS.",
+        "Für dieses Kind steht heute schon etwas, zum Beispiel eine frühere Abholung. Es wurde nichts gespeichert. Bitte sprich mit der {careTerm}.",
       "classday.absence_report_no_school_day":
         "Heute ist kein Schultag. Eine Meldung lässt sich nur an Schultagen eintragen.",
       "classday.absence_report_not_found":
@@ -268,7 +268,7 @@ export const ERROR_CATALOG = {
       "classday.class_handover_unknown_child":
         "Ein Kind gehört nicht mehr zu dieser Klasse. Bitte lade die Seite neu.",
       "classday.class_trip_arrival_conflict":
-        "Die OGS hat für ein Kind schon eine andere Ankunftszeit eingetragen. Es wurde nichts gespeichert. Bitte sprich mit der OGS.",
+        "Die {careTerm} hat für ein Kind schon eine andere Ankunftszeit eingetragen. Es wurde nichts gespeichert. Bitte sprich mit der {careTerm}.",
       "classday.class_trip_invalid_range":
         "Dieser Zeitraum geht nicht. Bitte wähle höchstens 31 Tage, das Ende nach dem Beginn.",
       "classday.class_trip_no_students": "Bitte wähle mindestens ein Kind aus.",
@@ -277,17 +277,17 @@ export const ERROR_CATALOG = {
       "classday.class_trip_return_time_multi_day":
         "Eine Rückkehrzeit geht nur für einen einzelnen Tag. Bitte lösche die Uhrzeit oder wähle einen Tag.",
       "classday.class_trip_return_time_weekend":
-        "Am Wochenende kommt kein Kind in die OGS. Bitte lösche die Rückkehrzeit.",
+        "Am Wochenende kommt kein Kind in die {careTerm}. Bitte lösche die Rückkehrzeit.",
       "classday.class_trip_status_conflict":
-        "Für ein Kind steht an einem dieser Tage schon etwas, zum Beispiel krank. Es wurde nichts gespeichert. Bitte sprich mit der OGS.",
+        "Für ein Kind steht an einem dieser Tage schon etwas, zum Beispiel krank. Es wurde nichts gespeichert. Bitte sprich mit der {careTerm}.",
       "classday.class_trip_student_not_in_class":
         "Ein Kind ist nicht mehr in dieser Klasse. Bitte lade die Seite neu.",
       "classday.day_hint_class_empty":
-        "In dieser Klasse ist kein Kind in der OGS. Ein Hinweis für die ganze Klasse ist deshalb nicht möglich.",
+        "In dieser Klasse ist kein Kind in der {careTerm}. Ein Hinweis für die ganze Klasse ist deshalb nicht möglich.",
       "classday.day_hint_invalid":
         "Der Hinweis braucht einen Text. Er darf höchstens 500 Zeichen lang sein.",
       "classday.day_hint_not_today":
-        "Einen Hinweis für die OGS kannst du nur für heute schreiben.",
+        "Einen Hinweis für die {careTerm} kannst du nur für heute schreiben.",
       "classday.day_hint_student_not_in_class":
         "Dieses Kind ist heute nicht in deiner Klasse. Bitte lade die Seite neu.",
       "classday.homework_not_found":
@@ -315,7 +315,7 @@ export const ERROR_CATALOG = {
       "communication.group_thread_no_recipients":
         "Niemand in dieser Gruppe hat Eltern mit Zugang zu moto. Die Nachricht wurde nicht verschickt.",
       "communication.leadership_messages_unavailable":
-        "Nachrichten nur an die Leitung sind hier zurzeit nicht möglich. Bitte schreibe an das ganze OGS-Team.",
+        "Nachrichten nur an die Leitung sind hier zurzeit nicht möglich. Bitte schreibe an das ganze {careTerm}-Team.",
       "communication.letter_placeholder_letter_only":
         "Platzhalter gehen nur im Text eines Elternbriefs. Bitte nimm sie aus dem Betreff oder wähle „Elternbrief“.",
       "communication.letter_placeholder_unknown":
@@ -333,9 +333,9 @@ export const ERROR_CATALOG = {
       "communication.poll_not_open":
         "{object} ist nicht mehr geöffnet. Bitte frage deine Ansprechperson.",
       "communication.staff_group_create_forbidden":
-        "Lehrkräfte können keinen Gruppenchat anlegen. Frag die OGS danach.",
+        "Lehrkräfte können keinen Gruppenchat anlegen. Frag die {careTerm} danach.",
       "communication.staff_group_manage_forbidden":
-        "Nur wer den Gruppenchat angelegt hat und die OGS-Leitung können ihn ändern.",
+        "Nur wer den Gruppenchat angelegt hat und die {careTerm}-Leitung können ihn ändern.",
       "communication.staff_group_members_required":
         "Bitte wähle mindestens eine Person aus, die noch nicht in der Gruppe ist.",
       "communication.staff_group_name_invalid":
@@ -712,7 +712,7 @@ export const ERROR_CATALOG = {
       "enrollment.withdraw_not_allowed":
         "Diese Anmeldung kann nicht mehr zurückgezogen werden. Bitte wende dich an die Schule.",
       "enrollment.without_care_place_school_year_only":
-        "Ein Kind ohne OGS-Platz bekommt seinen Platz über eine Anmeldung für das Schuljahr.",
+        "Ein Kind ohne {careTerm}-Platz bekommt seinen Platz über eine Anmeldung für das Schuljahr.",
       "feedback.disabled": "Rückmeldungen sind an dieser Schule ausgeschaltet.",
       "files.announcement_published":
         "Die Mitteilung ist schon veröffentlicht. Deine Anhänge lassen sich nicht mehr ändern.",
@@ -945,7 +945,7 @@ export const ERROR_CATALOG = {
       "meals.order_not_found":
         "Diese Bestellung gibt es nicht. Bitte lade die Seite neu.",
       "meals.participation_manage_denied":
-        "Du darfst die Essensanmeldung ansehen, aber nicht ändern. Bitte wende dich an die OGS.",
+        "Du darfst die Essensanmeldung ansehen, aber nicht ändern. Bitte wende dich an die {careTerm}.",
       "meals.plan_disabled":
         "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
       "meals.registration_disabled":
@@ -1153,6 +1153,8 @@ export const ERROR_CATALOG = {
         "Diese Rechnung hat schon eine Gutschrift. Schreibe den Rest gut, statt zu stornieren.",
       "parent_billing.invoice_number_taken":
         "Diese Rechnungsnummer gibt es schon. Bitte ändere das Muster unter „Abrechnungsvorgaben“.",
+      "parent_billing.issuer_creditor_is_traegers":
+        "{issuer_name} trägt die Gläubiger-ID deines Trägers. Jede Stelle braucht ihre eigene: Trag sie bei der Schule unter „Zuständigkeiten“ ein.",
       "parent_billing.legal_remedy_missing":
         "Der Gebührenbescheid braucht eine Rechtsbehelfsbelehrung. Trage sie in der Vorlage „Bescheid“ ein. Das darf, wer das Recht „Einstellungen“ hat. Danach kannst du freigeben.",
       "parent_billing.letter_mail_block_unreadable":
@@ -1534,7 +1536,7 @@ export const ERROR_CATALOG = {
       "students.pickup_change_completed":
         "Das Kind ist schon abgemeldet. Die Abholzeit lässt sich nicht mehr ändern.",
       "students.pickup_change_conflict":
-        "Für diesen Tag gibt es bereits einen Eintrag der OGS. Prüfe, ob die gewünschte Änderung schon eingetragen ist. Falls ja, kannst du die Anfrage mit einer Begründung ablehnen. Der vorhandene Eintrag bleibt bestehen.",
+        "Für diesen Tag gibt es bereits einen Eintrag der {careTerm}. Prüfe, ob die gewünschte Änderung schon eingetragen ist. Falls ja, kannst du die Anfrage mit einer Begründung ablehnen. Der vorhandene Eintrag bleibt bestehen.",
       "students.pickup_change_expired":
         "Der Tag liegt in der Vergangenheit. Bitte lehne {object} ab.",
       "students.pickup_change_impact_changed":
@@ -1930,6 +1932,8 @@ export const ERROR_CATALOG = {
         "Diese Vorlage gibt es nicht mehr. Bitte lade die Seite neu.",
       "traeger.school_not_found":
         "Diese Schule gehört nicht zu deinem Träger. Bitte lade die Seite neu.",
+      "traeger.school_party_creditor_account_conflict":
+        "Diese Gläubiger-ID ist schon bei {school_name} mit einem anderen Konto eingetragen. Eine Gläubiger-ID gehört zu genau einem Konto: Trag dieselbe IBAN, dieselbe BIC und denselben Kontoinhaber ein oder prüfe die Gläubiger-ID.",
       "traeger.school_requires_code":
         "Diese Schule verlangt zum Öffnen einen Code aus deiner E-Mail.",
       "traeger.school_role_name_taken":
@@ -2312,9 +2316,9 @@ export const ERROR_CATALOG = {
       "care.care_request_field_disabled":
         "{object} is not available here at the moment. Please ask your contact person.",
       "care.child_care_ended":
-        "Care for this child has ended. Changes are no longer possible. If you have questions, please contact the OGS.",
+        "Care for this child has ended. Changes are no longer possible. If you have questions, please contact the {careTerm}.",
       "care.child_without_care_place":
-        "Your child does not have a place in the OGS. This function is therefore not available for your child.",
+        "Your child does not have a place in the {careTerm}. This function is therefore not available for your child.",
       "care.course_request_invalid":
         "{object} contains invalid details. Please check your entries.",
       "care.course_requests_disabled":
@@ -2322,9 +2326,9 @@ export const ERROR_CATALOG = {
       "care.declaration_action_not_allowed":
         "This is not possible right now. Please reload the page and check the current status.",
       "care.declaration_closed":
-        "The deadline has passed. You can no longer answer. If you have questions, please contact the OGS.",
+        "The deadline has passed. You can no longer answer. If you have questions, please contact the {careTerm}.",
       "care.declaration_not_permitted":
-        "You may not answer for this child. If you have questions, please contact the OGS.",
+        "You may not answer for this child. If you have questions, please contact the {careTerm}.",
       "care.declaration_password_incorrect":
         "The password is not correct. Please try again.",
       "care.declaration_password_required": "Please enter your password.",
@@ -2344,7 +2348,7 @@ export const ERROR_CATALOG = {
       "care.guardian_has_own_account":
         "This person manages their contact details through their own parent account. They can change the details there themselves.",
       "care.guardian_invite_unavailable":
-        "This invitation could not be sent right now. Please contact the after-school care team.",
+        "This invitation could not be sent right now. Please contact the {careTerm}.",
       "care.guardian_management_disabled":
         "{object} is not available here at the moment. Please ask your contact person.",
       "care.guardian_no_change":
@@ -2392,7 +2396,7 @@ export const ERROR_CATALOG = {
       "care.pickup_change_disabled":
         "{object} is not available here at the moment. Please ask your contact person.",
       "care.pickup_permission_request_required":
-        "A new pickup permission needs your signature. The OGS then confirms it.",
+        "A new pickup permission needs your signature. The {careTerm} then confirms it.",
       "care.pickup_permission_unchanged":
         "This person may already pick up on these days.",
       "care.pickup_person_not_linked":
@@ -2424,7 +2428,7 @@ export const ERROR_CATALOG = {
       "classday.absence_list_invalid_period":
         "This period does not work. To must not be before From. Choose at most one school year.",
       "classday.absence_report_conflict":
-        "This child already has an entry for today, for example an early pickup. Nothing was saved. Please talk to the after-school care.",
+        "This child already has an entry for today, for example an early pickup. Nothing was saved. Please talk to the {careTerm}.",
       "classday.absence_report_no_school_day":
         "Today is not a school day. A report can only be entered on school days.",
       "classday.absence_report_not_found":
@@ -2444,11 +2448,11 @@ export const ERROR_CATALOG = {
       "classday.class_handover_unknown_child":
         "A child no longer belongs to this class. Please reload the page.",
       "classday.day_hint_class_empty":
-        "No child in this class attends the OGS. A note for the whole class is therefore not possible.",
+        "No child in this class attends the {careTerm}. A note for the whole class is therefore not possible.",
       "classday.day_hint_invalid":
         "The note needs a text. It may be at most 500 characters long.",
       "classday.day_hint_not_today":
-        "You can only write a note for the OGS for today.",
+        "You can only write a note for the {careTerm} for today.",
       "classday.day_hint_student_not_in_class":
         "This child is not in your class today. Please reload the page.",
       "classday.homework_not_found":
@@ -2468,7 +2472,7 @@ export const ERROR_CATALOG = {
       "communication.group_thread_no_recipients":
         "No child in this group has parents with access to moto. The message was not sent.",
       "communication.leadership_messages_unavailable":
-        "Messages to the leadership only are not possible here right now. Please write to the whole OGS team.",
+        "Messages to the leadership only are not possible here right now. Please write to the whole {careTerm} team.",
       "communication.letter_placeholder_letter_only":
         "Placeholders only work in the text of a parent letter. Please remove them from the subject or choose “Parent letter”.",
       "communication.letter_placeholder_unknown":
@@ -2480,7 +2484,7 @@ export const ERROR_CATALOG = {
       "communication.parent_messaging_disabled":
         "The school has turned off parent messaging. This is not possible right now.",
       "communication.staff_group_create_forbidden":
-        "Teachers cannot start a group chat. Please ask the after-school team.",
+        "Teachers cannot start a group chat. Please ask the {careTerm} team.",
       "communication.staff_group_manage_forbidden":
         "Only the person who started the group chat and the leadership can change it.",
       "communication.staff_group_members_required":
@@ -2681,7 +2685,7 @@ export const ERROR_CATALOG = {
       "enrollment.withdraw_not_allowed":
         "This enrollment can no longer be withdrawn. Please contact the school.",
       "enrollment.without_care_place_school_year_only":
-        "A child without an OGS place gets its place through an enrollment for the school year.",
+        "A child without a place in the {careTerm} gets its place through an enrollment for the school year.",
       "files.file_name_invalid":
         "This file name is not allowed. Please choose the file again.",
       "general.changed_since_read":
@@ -2785,7 +2789,7 @@ export const ERROR_CATALOG = {
       "meals.order_not_found":
         "This order does not exist. Please reload the page.",
       "meals.participation_manage_denied":
-        "You can view meal registrations, but cannot change them. Please contact the after-school care team.",
+        "You can view meal registrations, but cannot change them. Please contact the {careTerm}.",
       "meals.plan_disabled":
         "{object} is not available here at the moment. Please ask your contact person.",
       "meals.registration_disabled":
@@ -2997,6 +3001,8 @@ export const ERROR_CATALOG = {
         "This template no longer exists. Please reload the page.",
       "traeger.school_not_found":
         "This school does not belong to your Träger. Please reload the page.",
+      "traeger.school_party_creditor_account_conflict":
+        "This creditor identifier is already entered for {school_name} with another bank account. A creditor identifier belongs to exactly one account: enter the same account or check the creditor identifier.",
       "traeger.school_requires_code":
         "This school asks for a code from your e-mail before it opens.",
       "traeger.second_factor_required":
@@ -3103,9 +3109,9 @@ export const ERROR_CATALOG = {
       "care.care_request_field_disabled":
         "Сейчас здесь недоступно: {object}. Обратитесь к контактному лицу.",
       "care.child_care_ended":
-        "Присмотр за этим ребёнком завершён. Изменения больше невозможны. По вопросам обращайтесь в OGS.",
+        "Присмотр за этим ребёнком завершён. Изменения больше невозможны. По вопросам обращайтесь в {careTerm}.",
       "care.child_without_care_place":
-        "У вашего ребёнка нет места в OGS. Поэтому эта функция для ребёнка недоступна.",
+        "У вашего ребёнка нет места в {careTerm}. Поэтому эта функция для ребёнка недоступна.",
       "care.course_request_invalid":
         "Указаны неверные данные: {object}. Проверьте введённые данные.",
       "care.course_requests_disabled":
@@ -3113,9 +3119,9 @@ export const ERROR_CATALOG = {
       "care.declaration_action_not_allowed":
         "Сейчас это невозможно. Обновите страницу и проверьте текущее состояние.",
       "care.declaration_closed":
-        "Срок истёк. Ответить больше нельзя. По вопросам обращайтесь в OGS.",
+        "Срок истёк. Ответить больше нельзя. По вопросам обращайтесь в {careTerm}.",
       "care.declaration_not_permitted":
-        "Вы не можете ответить за этого ребёнка. По вопросам обращайтесь в OGS.",
+        "Вы не можете ответить за этого ребёнка. По вопросам обращайтесь в {careTerm}.",
       "care.declaration_password_incorrect":
         "Пароль неверный. Пожалуйста, попробуйте ещё раз.",
       "care.declaration_password_required": "Пожалуйста, введите пароль.",
@@ -3136,7 +3142,7 @@ export const ERROR_CATALOG = {
       "care.guardian_has_own_account":
         "Этот человек управляет своими контактными данными через собственный родительский аккаунт. Он может сам изменить их там.",
       "care.guardian_invite_unavailable":
-        "Сейчас не удалось отправить это приглашение. Обратитесь, пожалуйста, в группу продлённого дня.",
+        "Сейчас не удалось отправить это приглашение. Обратитесь, пожалуйста, в {careTerm}.",
       "care.guardian_management_disabled":
         "Сейчас здесь недоступно: {object}. Обратитесь к контактному лицу.",
       "care.guardian_no_change": "Ничего не изменено. Проверьте свои данные.",
@@ -3183,7 +3189,7 @@ export const ERROR_CATALOG = {
       "care.pickup_change_disabled":
         "Сейчас здесь недоступно: {object}. Обратитесь к контактному лицу.",
       "care.pickup_permission_request_required":
-        "Для нового разрешения нужна ваша подпись. Затем OGS его подтвердит.",
+        "Для нового разрешения нужна ваша подпись. Затем {careTerm} его подтвердит.",
       "care.pickup_permission_unchanged":
         "Этот человек уже может забирать ребёнка в эти дни.",
       "care.pickup_person_not_linked":
@@ -3250,7 +3256,7 @@ export const ERROR_CATALOG = {
       "communication.group_thread_no_recipients":
         "Ни у одного ребёнка в этой группе нет родителей с доступом к moto. Сообщение не отправлено.",
       "communication.leadership_messages_unavailable":
-        "Сообщения только для руководства сейчас здесь недоступны. Пожалуйста, напишите всей команде OGS.",
+        "Сообщения только для руководства сейчас здесь недоступны. Пожалуйста, напишите всей команде {careTerm}.",
       "communication.message_send_conflict":
         "Это сообщение уже было отправлено с другими данными. Обновите чат.",
       "communication.parent_messaging_disabled":
@@ -3415,7 +3421,7 @@ export const ERROR_CATALOG = {
       "enrollment.withdraw_not_allowed":
         "Эту запись больше нельзя отозвать. Обратитесь в школу.",
       "enrollment.without_care_place_school_year_only":
-        "Ребёнок без места в OGS получает место через запись на учебный год.",
+        "Ребёнок без места в {careTerm} получает место через запись на учебный год.",
       "files.file_name_invalid":
         "Имя файла недопустимо. Выберите файл ещё раз.",
       "general.changed_since_read":
@@ -3515,7 +3521,7 @@ export const ERROR_CATALOG = {
       "meals.order_not_found":
         "Такого заказа нет. Пожалуйста, обновите страницу.",
       "meals.participation_manage_denied":
-        "Вы можете просматривать запись на питание, но не изменять её. Обратитесь в группу продлённого дня.",
+        "Вы можете просматривать запись на питание, но не изменять её. Обратитесь в {careTerm}.",
       "meals.plan_disabled":
         "Сейчас здесь недоступно: {object}. Обратитесь к контактному лицу.",
       "meals.registration_disabled":
@@ -3652,6 +3658,8 @@ export const ERROR_CATALOG = {
         "Шаблон с таким названием уже есть. Выберите другое название.",
       "traeger.report_template_not_found":
         "Этого шаблона больше нет. Обновите страницу.",
+      "traeger.school_party_creditor_account_conflict":
+        "Этот идентификатор кредитора уже указан для {school_name} с другим счётом. Укажите тот же счёт или проверьте идентификатор.",
       "traeger.shared_document_not_found":
         "Организация больше не открывает доступ к этому документу. Обновите страницу.",
       "workforce.payroll_wage_type_name_taken":
@@ -3754,9 +3762,9 @@ export const ERROR_CATALOG = {
       "care.care_request_field_disabled":
         "Për momentin nuk është i disponueshëm këtu: {object}. Pyetni personin tuaj të kontaktit.",
       "care.child_care_ended":
-        "Kujdesi për këtë fëmijë ka përfunduar. Ndryshimet nuk janë më të mundshme. Për pyetje kontaktoni OGS-në.",
+        "Kujdesi për këtë fëmijë ka përfunduar. Ndryshimet nuk janë më të mundshme. Për pyetje kontaktoni {careTerm}-në.",
       "care.child_without_care_place":
-        "Fëmija juaj nuk ka vend në OGS. Prandaj ky funksion nuk është i disponueshëm për fëmijën tuaj.",
+        "Fëmija juaj nuk ka vend në {careTerm}. Prandaj ky funksion nuk është i disponueshëm për fëmijën tuaj.",
       "care.course_request_invalid":
         "Ka të dhëna të pavlefshme: {object}. Kontrolloni çfarë keni shkruar.",
       "care.course_requests_disabled":
@@ -3764,9 +3772,9 @@ export const ERROR_CATALOG = {
       "care.declaration_action_not_allowed":
         "Kjo nuk është e mundur tani. Ju lutemi ringarkoni faqen dhe kontrolloni gjendjen aktuale.",
       "care.declaration_closed":
-        "Afati ka kaluar. Nuk mund të përgjigjeni më. Për pyetje kontaktoni OGS-në.",
+        "Afati ka kaluar. Nuk mund të përgjigjeni më. Për pyetje kontaktoni {careTerm}-në.",
       "care.declaration_not_permitted":
-        "Nuk mund të përgjigjeni për këtë fëmijë. Për pyetje kontaktoni OGS-në.",
+        "Nuk mund të përgjigjeni për këtë fëmijë. Për pyetje kontaktoni {careTerm}-në.",
       "care.declaration_password_incorrect":
         "Fjalëkalimi nuk është i saktë. Ju lutemi provoni përsëri.",
       "care.declaration_password_required": "Ju lutemi shkruani fjalëkalimin.",
@@ -3787,7 +3795,7 @@ export const ERROR_CATALOG = {
       "care.guardian_has_own_account":
         "Ky person i menaxhon të dhënat e kontaktit përmes llogarisë së vet prindërore. Ai mund t'i ndryshojë vetë të dhënat atje.",
       "care.guardian_invite_unavailable":
-        "Kjo ftesë nuk mund të dërgohej tani. Ju lutemi kontaktoni kujdesin pas shkollës.",
+        "Kjo ftesë nuk mund të dërgohej tani. Ju lutemi kontaktoni {careTerm}-në.",
       "care.guardian_management_disabled":
         "Për momentin nuk është i disponueshëm këtu: {object}. Pyetni personin tuaj të kontaktit.",
       "care.guardian_no_change":
@@ -3835,7 +3843,7 @@ export const ERROR_CATALOG = {
       "care.pickup_change_disabled":
         "Për momentin nuk është i disponueshëm këtu: {object}. Pyetni personin tuaj të kontaktit.",
       "care.pickup_permission_request_required":
-        "Një leje e re për marrjen e fëmijës kërkon nënshkrimin tuaj. Pastaj OGS e konfirmon.",
+        "Një leje e re për marrjen e fëmijës kërkon nënshkrimin tuaj. Pastaj {careTerm} e konfirmon.",
       "care.pickup_permission_unchanged":
         "Ky person e merr tashmë fëmijën në këto ditë.",
       "care.pickup_person_not_linked":
@@ -3903,7 +3911,7 @@ export const ERROR_CATALOG = {
       "communication.group_thread_no_recipients":
         "Asnjë fëmijë në këtë grup nuk ka prindër me qasje në moto. Mesazhi nuk u dërgua.",
       "communication.leadership_messages_unavailable":
-        "Mesazhet vetëm për drejtuesit nuk janë të mundshme këtu tani. Ju lutemi shkruajini gjithë ekipit të OGS.",
+        "Mesazhet vetëm për drejtuesit nuk janë të mundshme këtu tani. Ju lutemi shkruajini gjithë ekipit të {careTerm}.",
       "communication.message_send_conflict":
         "Ky mesazh është dërguar tashmë me të dhëna të tjera. Ringarkoni bisedën.",
       "communication.parent_messaging_disabled":
@@ -4079,7 +4087,7 @@ export const ERROR_CATALOG = {
       "enrollment.withdraw_not_allowed":
         "Ky regjistrim nuk mund të tërhiqet më. Ju lutemi kontaktoni shkollën.",
       "enrollment.without_care_place_school_year_only":
-        "Një fëmijë pa vend në OGS e merr vendin me një regjistrim për vitin shkollor.",
+        "Një fëmijë pa vend në {careTerm} e merr vendin me një regjistrim për vitin shkollor.",
       "files.file_name_invalid":
         "Emri i skedarit nuk lejohet. Ju lutemi zgjidhni skedarin përsëri.",
       "general.changed_since_read":
@@ -4180,7 +4188,7 @@ export const ERROR_CATALOG = {
       "meals.order_not_found":
         "Kjo porosi nuk ekziston. Ju lutemi ringarkoni faqen.",
       "meals.participation_manage_denied":
-        "Mund t’i shikoni regjistrimet për ushqim, por nuk mund t’i ndryshoni. Ju lutemi kontaktoni ekipin e kujdesit pas shkollës.",
+        "Mund t’i shikoni regjistrimet për ushqim, por nuk mund t’i ndryshoni. Ju lutemi kontaktoni {careTerm}-në.",
       "meals.plan_disabled":
         "Për momentin nuk është i disponueshëm këtu: {object}. Pyetni personin tuaj të kontaktit.",
       "meals.registration_disabled":
@@ -4319,6 +4327,8 @@ export const ERROR_CATALOG = {
         "Një shabllon me këtë emër ekziston tashmë. Ju lutemi zgjidhni një emër tjetër.",
       "traeger.report_template_not_found":
         "Ky shabllon nuk ekziston më. Ju lutemi rifreskoni faqen.",
+      "traeger.school_party_creditor_account_conflict":
+        "Ky identifikues kreditori është regjistruar tashmë për {school_name} me një llogari tjetër. Vendosni të njëjtën llogari ose kontrolloni identifikuesin.",
       "traeger.shared_document_not_found":
         "Ofruesi nuk e ndan më këtë dokument. Ju lutemi rifreskoni faqen.",
       "workforce.payroll_wage_type_name_taken":
@@ -4421,9 +4431,9 @@ export const ERROR_CATALOG = {
       "care.care_request_field_disabled":
         "Obecnie niedostępne tutaj: {object}. Zapytaj swoją osobę kontaktową.",
       "care.child_care_ended":
-        "Opieka nad tym dzieckiem zakończyła się. Zmiany nie są już możliwe. W razie pytań skontaktuj się z OGS.",
+        "Opieka nad tym dzieckiem zakończyła się. Zmiany nie są już możliwe. W razie pytań skontaktuj się z {careTerm}.",
       "care.child_without_care_place":
-        "Państwa dziecko nie ma miejsca w OGS. Dlatego ta funkcja nie jest dostępna dla dziecka.",
+        "Państwa dziecko nie ma miejsca w {careTerm}. Dlatego ta funkcja nie jest dostępna dla dziecka.",
       "care.course_request_invalid":
         "Nieprawidłowe dane: {object}. Sprawdź wpisane dane.",
       "care.course_requests_disabled":
@@ -4431,9 +4441,9 @@ export const ERROR_CATALOG = {
       "care.declaration_action_not_allowed":
         "To teraz nie działa. Odśwież stronę i sprawdź aktualny stan.",
       "care.declaration_closed":
-        "Termin minął. Nie możesz już odpowiedzieć. W razie pytań skontaktuj się z OGS.",
+        "Termin minął. Nie możesz już odpowiedzieć. W razie pytań skontaktuj się z {careTerm}.",
       "care.declaration_not_permitted":
-        "Nie możesz odpowiedzieć za to dziecko. W razie pytań skontaktuj się z OGS.",
+        "Nie możesz odpowiedzieć za to dziecko. W razie pytań skontaktuj się z {careTerm}.",
       "care.declaration_password_incorrect":
         "Hasło jest nieprawidłowe. Spróbuj ponownie.",
       "care.declaration_password_required": "Wpisz swoje hasło.",
@@ -4454,7 +4464,7 @@ export const ERROR_CATALOG = {
       "care.guardian_has_own_account":
         "Ta osoba zarządza swoimi danymi kontaktowymi przez własne konto rodzica. Może sama zmienić tam te dane.",
       "care.guardian_invite_unavailable":
-        "Nie udało się teraz wysłać tego zaproszenia. Prosimy o kontakt ze świetlicą.",
+        "Nie udało się teraz wysłać tego zaproszenia. Prosimy o kontakt z {careTerm}.",
       "care.guardian_management_disabled":
         "Obecnie niedostępne tutaj: {object}. Zapytaj swoją osobę kontaktową.",
       "care.guardian_no_change":
@@ -4502,7 +4512,7 @@ export const ERROR_CATALOG = {
       "care.pickup_change_disabled":
         "Obecnie niedostępne tutaj: {object}. Zapytaj swoją osobę kontaktową.",
       "care.pickup_permission_request_required":
-        "Nowa zgoda na odbiór wymaga Państwa podpisu. OGS ją potem potwierdzi.",
+        "Nowa zgoda na odbiór wymaga Państwa podpisu. {careTerm} ją potem potwierdzi.",
       "care.pickup_permission_unchanged":
         "Ta osoba już może odbierać dziecko w te dni.",
       "care.pickup_person_not_linked":
@@ -4569,7 +4579,7 @@ export const ERROR_CATALOG = {
       "communication.group_thread_no_recipients":
         "Żadne dziecko w tej grupie nie ma rodziców z dostępem do moto. Wiadomość nie została wysłana.",
       "communication.leadership_messages_unavailable":
-        "Wiadomości tylko do kierownictwa nie są tu obecnie możliwe. Prosimy napisać do całego zespołu OGS.",
+        "Wiadomości tylko do kierownictwa nie są tu obecnie możliwe. Prosimy napisać do całego zespołu {careTerm}.",
       "communication.message_send_conflict":
         "Ta wiadomość została już wysłana z innymi danymi. Odśwież czat.",
       "communication.parent_messaging_disabled":
@@ -4733,7 +4743,7 @@ export const ERROR_CATALOG = {
       "enrollment.withdraw_not_allowed":
         "Tego zapisu nie można już wycofać. Skontaktuj się ze szkołą.",
       "enrollment.without_care_place_school_year_only":
-        "Dziecko bez miejsca w OGS otrzymuje miejsce poprzez zapis na rok szkolny.",
+        "Dziecko bez miejsca w {careTerm} otrzymuje miejsce poprzez zapis na rok szkolny.",
       "files.file_name_invalid":
         "Nazwa pliku jest niedozwolona. Wybierz plik ponownie.",
       "general.changed_since_read":
@@ -4834,7 +4844,7 @@ export const ERROR_CATALOG = {
       "meals.order_not_found":
         "To zamówienie nie istnieje. Proszę odświeżyć stronę.",
       "meals.participation_manage_denied":
-        "Możesz przeglądać zapisy na posiłki, ale nie możesz ich zmieniać. Skontaktuj się z zespołem opieki pozaszkolnej.",
+        "Możesz przeglądać zapisy na posiłki, ale nie możesz ich zmieniać. Skontaktuj się z {careTerm}.",
       "meals.plan_disabled":
         "Obecnie niedostępne tutaj: {object}. Zapytaj swoją osobę kontaktową.",
       "meals.registration_disabled":
@@ -4971,6 +4981,8 @@ export const ERROR_CATALOG = {
         "Szablon o tej nazwie już istnieje. Wybierz inną nazwę.",
       "traeger.report_template_not_found":
         "Ten szablon już nie istnieje. Odśwież stronę.",
+      "traeger.school_party_creditor_account_conflict":
+        "Ten identyfikator wierzyciela jest już wpisany dla {school_name} z innym kontem. Wpisz to samo konto lub sprawdź identyfikator.",
       "traeger.shared_document_not_found":
         "Organizator nie udostępnia już tego dokumentu. Odśwież stronę.",
       "workforce.payroll_wage_type_name_taken":
@@ -5073,9 +5085,9 @@ export const ERROR_CATALOG = {
       "care.care_request_field_disabled":
         "{object} şu anda burada kullanılamıyor. Lütfen ilgili kişinize danışın.",
       "care.child_care_ended":
-        "Bu çocuğun bakımı sona erdi. Artık değişiklik yapılamaz. Sorularınız için OGS ile iletişime geçin.",
+        "Bu çocuğun bakımı sona erdi. Artık değişiklik yapılamaz. Sorularınız için {careTerm} ile iletişime geçin.",
       "care.child_without_care_place":
-        "Çocuğunuzun OGS'de yeri yok. Bu nedenle bu işlev çocuğunuz için kullanılamaz.",
+        "Çocuğunuzun {careTerm}'de yeri yok. Bu nedenle bu işlev çocuğunuz için kullanılamaz.",
       "care.course_request_invalid":
         "{object} geçersiz bilgiler içeriyor. Lütfen girdiğiniz bilgileri kontrol edin.",
       "care.course_requests_disabled":
@@ -5083,9 +5095,9 @@ export const ERROR_CATALOG = {
       "care.declaration_action_not_allowed":
         "Bu şu anda mümkün değil. Lütfen sayfayı yenileyin ve güncel durumu kontrol edin.",
       "care.declaration_closed":
-        "Süre doldu. Artık yanıt veremezsiniz. Sorularınız için OGS ile iletişime geçin.",
+        "Süre doldu. Artık yanıt veremezsiniz. Sorularınız için {careTerm} ile iletişime geçin.",
       "care.declaration_not_permitted":
-        "Bu çocuk için yanıt veremezsiniz. Sorularınız için OGS ile iletişime geçin.",
+        "Bu çocuk için yanıt veremezsiniz. Sorularınız için {careTerm} ile iletişime geçin.",
       "care.declaration_password_incorrect":
         "Şifre doğru değil. Lütfen tekrar deneyin.",
       "care.declaration_password_required": "Lütfen şifrenizi girin.",
@@ -5106,7 +5118,7 @@ export const ERROR_CATALOG = {
       "care.guardian_has_own_account":
         "Bu kişi iletişim bilgilerini kendi veli hesabından yönetiyor. Bilgileri orada kendisi değiştirebilir.",
       "care.guardian_invite_unavailable":
-        "Bu davet şu anda gönderilemedi. Lütfen okul sonrası bakım ekibiyle iletişime geçin.",
+        "Bu davet şu anda gönderilemedi. Lütfen {careTerm} ile iletişime geçin.",
       "care.guardian_management_disabled":
         "{object} şu anda burada kullanılamıyor. Lütfen ilgili kişinize danışın.",
       "care.guardian_no_change":
@@ -5154,7 +5166,7 @@ export const ERROR_CATALOG = {
       "care.pickup_change_disabled":
         "{object} şu anda burada kullanılamıyor. Lütfen ilgili kişinize danışın.",
       "care.pickup_permission_request_required":
-        "Yeni bir alma izni imzanızı gerektirir. Ardından OGS onaylar.",
+        "Yeni bir alma izni imzanızı gerektirir. Ardından {careTerm} onaylar.",
       "care.pickup_permission_unchanged":
         "Bu kişi bu günlerde zaten çocuğu alabilir.",
       "care.pickup_person_not_linked":
@@ -5222,7 +5234,7 @@ export const ERROR_CATALOG = {
       "communication.group_thread_no_recipients":
         "Bu gruptaki hiçbir çocuğun moto erişimi olan velisi yok. Mesaj gönderilmedi.",
       "communication.leadership_messages_unavailable":
-        "Yalnızca yönetime mesaj göndermek şu anda burada mümkün değil. Lütfen tüm OGS ekibine yazın.",
+        "Yalnızca yönetime mesaj göndermek şu anda burada mümkün değil. Lütfen tüm {careTerm} ekibine yazın.",
       "communication.message_send_conflict":
         "Bu mesaj daha önce farklı bilgilerle gönderildi. Lütfen sohbeti yenileyin.",
       "communication.parent_messaging_disabled":
@@ -5392,7 +5404,7 @@ export const ERROR_CATALOG = {
       "enrollment.withdraw_not_allowed":
         "Bu kayıt artık geri çekilemez. Lütfen okulla iletişime geçin.",
       "enrollment.without_care_place_school_year_only":
-        "OGS yeri olmayan bir çocuk, yerini okul yılı kaydıyla alır.",
+        "{careTerm} yeri olmayan bir çocuk, yerini okul yılı kaydıyla alır.",
       "files.file_name_invalid":
         "Dosya adı kabul edilmiyor. Lütfen dosyayı yeniden seçin.",
       "general.changed_since_read":
@@ -5492,7 +5504,7 @@ export const ERROR_CATALOG = {
       "meals.order_not_found":
         "Bu sipariş mevcut değil. Lütfen sayfayı yeniden yükleyin.",
       "meals.participation_manage_denied":
-        "Yemek kayıtlarını görüntüleyebilirsiniz, ancak değiştiremezsiniz. Lütfen okul sonrası bakım ekibine başvurun.",
+        "Yemek kayıtlarını görüntüleyebilirsiniz, ancak değiştiremezsiniz. Lütfen {careTerm} ile iletişime geçin.",
       "meals.plan_disabled":
         "{object} şu anda burada kullanılamıyor. Lütfen ilgili kişinize danışın.",
       "meals.registration_disabled":
@@ -5631,6 +5643,8 @@ export const ERROR_CATALOG = {
         "Bu adda bir şablon zaten var. Lütfen başka bir ad seçin.",
       "traeger.report_template_not_found":
         "Bu şablon artık yok. Lütfen sayfayı yenileyin.",
+      "traeger.school_party_creditor_account_conflict":
+        "Bu alacaklı kimliği {school_name} için başka bir hesapla zaten kayıtlı. Aynı hesabı girin veya alacaklı kimliğini kontrol edin.",
       "traeger.shared_document_not_found":
         "Kurum bu belgeyi artık paylaşmıyor. Lütfen sayfayı yenileyin.",
       "workforce.payroll_wage_type_name_taken":
@@ -5732,9 +5746,9 @@ export const ERROR_CATALOG = {
       "care.care_request_field_disabled":
         "Зараз тут недоступно: {object}. Зверніться до контактної особи.",
       "care.child_care_ended":
-        "Догляд за цією дитиною завершено. Зміни більше неможливі. З питаннями звертайтеся до OGS.",
+        "Догляд за цією дитиною завершено. Зміни більше неможливі. З питаннями звертайтеся до {careTerm}.",
       "care.child_without_care_place":
-        "Ваша дитина не має місця в OGS. Тому ця функція для дитини недоступна.",
+        "Ваша дитина не має місця в {careTerm}. Тому ця функція для дитини недоступна.",
       "care.course_request_invalid":
         "Указано неправильні дані: {object}. Перевірте введені дані.",
       "care.course_requests_disabled":
@@ -5742,9 +5756,9 @@ export const ERROR_CATALOG = {
       "care.declaration_action_not_allowed":
         "Зараз це неможливо. Оновіть сторінку і перевірте поточний стан.",
       "care.declaration_closed":
-        "Строк минув. Відповісти більше не можна. З питаннями звертайтеся до OGS.",
+        "Строк минув. Відповісти більше не можна. З питаннями звертайтеся до {careTerm}.",
       "care.declaration_not_permitted":
-        "Ви не можете відповісти за цю дитину. З питаннями звертайтеся до OGS.",
+        "Ви не можете відповісти за цю дитину. З питаннями звертайтеся до {careTerm}.",
       "care.declaration_password_incorrect":
         "Пароль неправильний. Будь ласка, спробуйте ще раз.",
       "care.declaration_password_required": "Будь ласка, введіть пароль.",
@@ -5765,7 +5779,7 @@ export const ERROR_CATALOG = {
       "care.guardian_has_own_account":
         "Ця особа має власний батьківський обліковий запис і сама керує своїми контактними даними. Вона може сама змінити їх там.",
       "care.guardian_invite_unavailable":
-        "Зараз не вдалося надіслати це запрошення. Будь ласка, зверніться до групи продовженого дня.",
+        "Зараз не вдалося надіслати це запрошення. Будь ласка, зверніться до {careTerm}.",
       "care.guardian_management_disabled":
         "Зараз тут недоступно: {object}. Зверніться до контактної особи.",
       "care.guardian_no_change": "Нічого не змінено. Перевірте свої дані.",
@@ -5812,7 +5826,7 @@ export const ERROR_CATALOG = {
       "care.pickup_change_disabled":
         "Зараз тут недоступно: {object}. Зверніться до контактної особи.",
       "care.pickup_permission_request_required":
-        "Для нового дозволу потрібен ваш підпис. Потім OGS його підтвердить.",
+        "Для нового дозволу потрібен ваш підпис. Потім {careTerm} його підтвердить.",
       "care.pickup_permission_unchanged":
         "Ця особа вже може забирати дитину в ці дні.",
       "care.pickup_person_not_linked":
@@ -5879,7 +5893,7 @@ export const ERROR_CATALOG = {
       "communication.group_thread_no_recipients":
         "Жодна дитина в цій групі не має батьків із доступом до moto. Повідомлення не надіслано.",
       "communication.leadership_messages_unavailable":
-        "Повідомлення лише для керівництва зараз тут недоступні. Будь ласка, напишіть усій команді OGS.",
+        "Повідомлення лише для керівництва зараз тут недоступні. Будь ласка, напишіть усій команді {careTerm}.",
       "communication.message_send_conflict":
         "Це повідомлення вже надіслано з іншими даними. Оновіть чат.",
       "communication.parent_messaging_disabled":
@@ -6044,7 +6058,7 @@ export const ERROR_CATALOG = {
       "enrollment.withdraw_not_allowed":
         "Цей запис більше не можна відкликати. Зверніться до школи.",
       "enrollment.without_care_place_school_year_only":
-        "Дитина без місця в OGS отримує місце через запис на навчальний рік.",
+        "Дитина без місця в {careTerm} отримує місце через запис на навчальний рік.",
       "files.file_name_invalid":
         "Назва файлу не дозволена. Виберіть файл ще раз.",
       "general.changed_since_read":
@@ -6144,7 +6158,7 @@ export const ERROR_CATALOG = {
       "meals.order_not_found":
         "Такого замовлення немає. Будь ласка, оновіть сторінку.",
       "meals.participation_manage_denied":
-        "Ви можете переглядати записи на харчування, але не змінювати їх. Зверніться до групи продовженого дня.",
+        "Ви можете переглядати записи на харчування, але не змінювати їх. Зверніться до {careTerm}.",
       "meals.plan_disabled":
         "Зараз тут недоступно: {object}. Зверніться до контактної особи.",
       "meals.registration_disabled":
@@ -6281,6 +6295,8 @@ export const ERROR_CATALOG = {
         "Шаблон із такою назвою вже є. Виберіть іншу назву.",
       "traeger.report_template_not_found":
         "Цього шаблону більше немає. Оновіть сторінку.",
+      "traeger.school_party_creditor_account_conflict":
+        "Цей ідентифікатор кредитора вже вказано для {school_name} з іншим рахунком. Укажіть той самий рахунок або перевірте ідентифікатор.",
       "traeger.shared_document_not_found":
         "Організація більше не відкриває доступ до цього документа. Оновіть сторінку.",
       "workforce.payroll_wage_type_name_taken":

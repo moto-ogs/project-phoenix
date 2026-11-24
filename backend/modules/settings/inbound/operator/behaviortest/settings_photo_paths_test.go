@@ -4,13 +4,8 @@
 // Two paths in particular are <100% in coverage and matter for the
 // student-photo-avatar feature:
 //
-//  1. resolveSchoolSlug — runs when schoolRepo is non-nil, attaching
-//     `school_slug` to the mutation response so the operator proxy
-//     can bust the slug-keyed `tenant-${slug}` Next.js cache after
-//     flipping a tenant-resolve-affecting setting (e.g.
-//     operations.student_photos_enabled). With a nil schoolRepo
-//     (the existing test setup) this branch is skipped and the
-//     response carries an empty slug.
+//  1. The mutation names the school lookup to invalidate after changing
+//     operations.student_photos_enabled.
 //
 //  2. The OnValueSet hook on a flag-flip path — proves that operator
 //     writes to operations.student_photos_enabled invoke the hook the
@@ -40,18 +35,17 @@ import (
 // setupOperatorSettingsWithSchoolRepoRoute mirrors
 // setupOperatorSettingsRoute but injects the real school owner so the
 // slug-resolution branch in SetSchoolSettingValue / ResetSchoolSettingValue
-// is exercised end to end. Without a real repo the response carries
-// `school_slug: ""` (empty omitted) and resolveSchoolSlug returns
-// before its real query path runs.
+// is exercised end to end.
 func setupOperatorSettingsWithSchoolRepoRoute(t *testing.T) *operatorSettingsTestContext {
 	t.Helper()
 
 	db, svc := setupOperatorSettingsModule(t)
 	tc := &operatorSettingsTestContext{db: db}
 	resource := settingsoperator.NewSettingsResource(settingsoperator.SettingsConfig{
-		Settings:   svc.OperatorSchoolSettings(tc.runValueSetHook),
-		Schools:    svc.SchoolSlugs(),
-		OperatorID: operatorAccount(t, db),
+		Settings:             svc.OperatorSchoolSettings(tc.runValueSetHook),
+		Schools:              svc.SchoolSlugs(),
+		TenantLookupSettings: []string{settings.KeyStudentPhotosEnabled},
+		OperatorID:           operatorAccount(t, db),
 	})
 
 	router := chi.NewRouter()
@@ -68,10 +62,7 @@ func setupOperatorSettingsWithSchoolRepoRoute(t *testing.T) *operatorSettingsTes
 // TestOperatorSetSchoolSettingValue_StudentPhotosEnabled_ReturnsSlug
 // verifies the slug-resolution path runs when an operator flips
 // operations.student_photos_enabled. The frontend proxy depends on
-// `school_slug` being present in the response to bust the
-// `tenant-${slug}` Next.js cache; without that bust the layout
-// keeps serving the stale resolve payload for up to 5 minutes and
-// the avatar UI flickers between "feature on" and "feature off".
+// `school_slug` (the subdomain) to invalidate the cached lookup.
 func TestOperatorSetSchoolSettingValue_StudentPhotosEnabled_ReturnsSlug(t *testing.T) {
 	t.Parallel()
 	ctx := setupOperatorSettingsWithSchoolRepoRoute(t)

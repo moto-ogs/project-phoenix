@@ -74,7 +74,7 @@ export const RESPONSIBILITY_AREA_EFFECTS: Record<ResponsibilityArea, string> = {
   contracts:
     "Steht in neuen Betreuungsverträgen als Absender und, wenn die Vertragsbedingungen keinen nennen, als Vertragspartner.",
   billing:
-    "Vorgesehen für Rechnungen, Bescheide und Lastschriften. Bis moto das umstellt, laufen sie über den Träger.",
+    "Stellt neue Rechnungen und Bescheide aus und zieht Lastschriften mit eigener Gläubiger-ID ein.",
   staff: "Steht in der Personalakte beim Einsatzort als Arbeitgeber.",
 };
 

@@ -111,7 +111,8 @@ func TestStaffMessagePositiveGrowthQueryBudget(t *testing.T) {
 				detail := decodeData[staffmessaging.ThreadDetailResponse](t, request("GET", "/threads/"+threadIDs[0], "", true).Body.Bytes())
 				require.Len(t, detail.Messages, n+1)
 				require.Equal(t, threadIDs[0], detail.ThreadID.String())
-				require.Equal(t, counterpartIDs[0], detail.CounterpartAccountID)
+				require.False(t, detail.CounterpartAccountID.IsZero())
+				require.Equal(t, counterpartIDs[0], fmt.Sprint(detail.CounterpartAccountID.Int64()))
 				require.Equal(t, "Colleague 00", detail.CounterpartName)
 				require.Equal(t, "inbox-00", detail.Messages[0].Body)
 				for i, id := range messageIDs {

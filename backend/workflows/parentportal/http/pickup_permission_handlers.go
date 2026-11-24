@@ -4,7 +4,6 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -304,12 +303,12 @@ func renderParentPickupPermissionError(w http.ResponseWriter, r *http.Request, e
 }
 
 // parsePickupPersonID reads the optional collector of a one-day request.
-func parsePickupPersonID(raw *string) (int64, error) {
-	if raw == nil || strings.TrimSpace(*raw) == "" {
+func parsePickupPersonID(raw *ident.IDOrNone) (int64, error) {
+	if raw == nil || raw.IsZero() {
 		return 0, nil
 	}
-	id, ok := parsePositiveID(strings.TrimSpace(*raw))
-	if !ok {
+	id := raw.Int64()
+	if id <= 0 {
 		return 0, errors.New("invalid pickup_person_guardian_profile_id")
 	}
 	return id, nil

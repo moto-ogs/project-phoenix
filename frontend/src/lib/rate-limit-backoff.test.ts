@@ -35,6 +35,14 @@ describe("rate-limit fetch guard", () => {
     expect(first.status).toBe(429);
     expect(blocked.status).toBe(429);
     expect(blocked.headers.get("Retry-After")).toBe("17");
+    expect(blocked.headers.get("Content-Type")).toBe(
+      "application/problem+json",
+    );
+    await expect(blocked.json()).resolves.toMatchObject({
+      status: 429,
+      code: "general.unavailable",
+      title: "Too Many Requests",
+    });
     expect(backendFetch).toHaveBeenCalledTimes(1);
     expect(notice).toHaveBeenCalledTimes(1);
 
@@ -255,7 +263,7 @@ describe("rate-limit fetch guard", () => {
     expect(backendFetch).toHaveBeenCalledTimes(2);
   });
 
-  it("recognizes structured and message-based 429 errors", async () => {
+  it("recognizes 429 only from structured status fields", async () => {
     const rateLimit = await loadGuard(vi.fn());
 
     expect(rateLimit.isRateLimitError({ status: 429 })).toBe(true);
@@ -264,7 +272,7 @@ describe("rate-limit fetch guard", () => {
       true,
     );
     expect(rateLimit.isRateLimitError(new Error("HTTP failed (429)"))).toBe(
-      true,
+      false,
     );
     expect(rateLimit.isRateLimitError(new Error("HTTP failed (500)"))).toBe(
       false,

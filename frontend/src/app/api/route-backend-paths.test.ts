@@ -183,7 +183,12 @@ const serverAuthSources = readdirSync(serverAuthDir, { encoding: "utf8" })
     source: readFileSync(path.join(serverAuthDir, file), "utf8"),
   }));
 /** Follow the exported handler's local references, not strings in its file. */
-function handlerContracts(file: string, text: string, method: string) {
+function handlerContracts(
+  file: string,
+  text: string,
+  method: string,
+  observeCall?: (route: string, forwardsRequest: boolean) => void,
+) {
   const { source, binding, declaration } = sourceBindings(file, text);
   const seen = new Set<ts.Node>();
   const followed = new Set<ts.Node>();
@@ -230,12 +235,57 @@ function handlerContracts(file: string, text: string, method: string) {
       )
     );
   };
-  const record = (operand: ts.Expression | undefined) => {
+  const origin = (value: ts.Node | undefined): ts.Node | undefined => {
+    const seen = new Set<ts.Node>();
+    while (value && !seen.has(value)) {
+      seen.add(value);
+      if (ts.isIdentifier(value)) value = declaration(value);
+      else if (ts.isVariableDeclaration(value)) value = value.initializer;
+      else if (
+        ts.isParenthesizedExpression(value) ||
+        ts.isSatisfiesExpression(value) ||
+        ts.isAsExpression(value)
+      )
+        value = value.expression;
+      else return value;
+    }
+  };
+  const forwardsRequest = (options: ts.Expression | undefined) => {
+    const value = origin(options);
+    if (!value || !ts.isObjectLiteralExpression(value)) return false;
+    const property = [...value.properties]
+      .reverse()
+      .find(
+        (prop) =>
+          (ts.isPropertyAssignment(prop) ||
+            ts.isShorthandPropertyAssignment(prop)) &&
+          (ts.isIdentifier(prop.name) || ts.isStringLiteralLike(prop.name)) &&
+          prop.name.text === "request",
+      );
+    const request = origin(
+      property && ts.isPropertyAssignment(property)
+        ? property.initializer
+        : property?.name,
+    );
+    return (
+      !!request &&
+      ts.isParameter(request) &&
+      ts.isFunctionLike(request.parent) &&
+      request.parent.parameters[0] === request
+    );
+  };
+  const record = (
+    operand: ts.Expression | undefined,
+    options?: ts.Expression,
+  ) => {
     if (!operand) return;
     const { from, names } = binding(operand);
     if (from?.startsWith("~/lib/contract/") && from.endsWith(".generated")) {
       const [table, route] = names;
-      if (table === "routes" && route) keys.add(route);
+      if (table === "routes" && route) {
+        keys.add(route);
+        observeCall?.(route, forwardsRequest(options));
+      }
     }
   };
   const follow = (node: ts.Node | undefined) => {
@@ -278,7 +328,7 @@ function handlerContracts(file: string, text: string, method: string) {
         (factory.from === "~/lib/auth-proxy.server" &&
           imported === "authStepProxy")
       )
-        record(portal);
+        record(portal, imported === "contractWrite" ? explicitRoute : step);
       if (
         factory.from === "~/lib/login-route.server" &&
         imported === "createPortalLoginRoute"
@@ -372,6 +422,35 @@ function browserHandlerContracts(file: string, text: string, method: string) {
 }
 
 describe("route served by a portal's own route file", () => {
+  it("detects a replaced or dropped browser query, even through route and request aliases", () => {
+    const source = `
+      import { contractGet as send } from "~/lib/contract/client.server";
+      import { routes as catalog } from "~/lib/contract/enrollment.generated";
+      const entry = catalog["GET /api/enrollment/form-bootstrap/public/{tenantSlug}/{phaseId}"];
+      export function GET(incoming: Request) {
+        const alias = incoming;
+        return send(entry, { request: alias });
+      }
+    `;
+    const observe = vi.fn();
+    handlerContracts("probe.ts", source, "GET", observe);
+    expect(observe).toHaveBeenLastCalledWith(expect.any(String), true);
+    handlerContracts(
+      "probe.ts",
+      source.replace("{ request: alias }", "{}"),
+      "GET",
+      observe,
+    );
+    expect(observe).toHaveBeenLastCalledWith(expect.any(String), false);
+    handlerContracts(
+      "probe.ts",
+      source.replace("= incoming", "= new Request(incoming.url)"),
+      "GET",
+      observe,
+    );
+    expect(observe).toHaveBeenLastCalledWith(expect.any(String), false);
+  });
+
   it("binds each method to its own Go route, through aliases but not sibling handlers", () => {
     const text = `
       import { routes as table } from "~/lib/contract/operator-auth.generated";
@@ -421,6 +500,23 @@ describe("route served by a portal's own route file", () => {
           browserHandlerContracts(row.file, row.source, method),
           "the exported method must dispatch only to its registered browser-facing Go route",
         ).toEqual([`${route.method} ${route.pattern}`]);
+        if ("query" in route) {
+          const forwarded: boolean[] = [];
+          handlerContracts(
+            row.file,
+            row.source,
+            method,
+            (called, fromRequest) => {
+              if (called === `${route.method} ${route.pattern}`)
+                forwarded.push(fromRequest);
+            },
+          );
+          expect(forwarded.length).toBeGreaterThan(0);
+          expect(
+            forwarded,
+            "the registered query must come from the incoming request",
+          ).not.toContain(false);
+        }
       });
     }
   }

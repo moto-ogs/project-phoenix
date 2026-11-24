@@ -183,7 +183,7 @@ export function Alert({
   ) : (
     icons[type]
   );
-  const padding = compact ? "px-3 py-2 text-xs" : "p-4 text-sm";
+  const padding = compact ? "px-3 py-2 text-sm" : "p-4 text-sm";
   // The symbol stands beside the first line as soon as something stacks
   // under the message (details, a stacked action, a responsive action on a
   // phone). Centred, it would float between the message and the action.

@@ -144,6 +144,14 @@
       "legacy": "parent_billing.number_range_missing"
     },
     {
+      "code": "parent_billing.issuer_creditor_is_traegers",
+      "class": "business_rejection",
+      "parameters": [
+        "issuer_name"
+      ],
+      "legacy": "parent_billing.issuer_creditor_is_traegers"
+    },
+    {
       "code": "parent_billing.number_range_start_invalid",
       "class": "input",
       "parameters": [],

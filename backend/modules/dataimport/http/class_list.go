@@ -79,7 +79,7 @@ func (rs *Resource) runClassListImport(w http.ResponseWriter, r *http.Request, d
 		Rows: uploadResult.Rows, Mode: importModels.ImportModeCreate, DryRun: dryRun, UserID: accountID, SkipInvalidRows: !dryRun,
 	}, importModels.BatchAudit{EntityType: "class_list_entries", Filename: uploadResult.Filename, AccountID: accountID})
 	if err != nil {
-		renderBatchImportError(rs.runtime, w, r, result, err)
+		renderBatchImportError(rs.runtime, w, r, result, err, importModels.NewClassListImportResult)
 		return
 	}
 

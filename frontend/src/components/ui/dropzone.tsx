@@ -196,7 +196,7 @@ export function Dropzone({
         {line}
       </p>
       {loading ? null : (
-        <p className="text-xs text-gray-500 pointer-coarse:hidden">oder</p>
+        <p className="text-sm text-gray-500 pointer-coarse:hidden">oder</p>
       )}
       <Button
         type="button"

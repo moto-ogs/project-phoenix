@@ -176,7 +176,7 @@ func (rs *Resource) ImportOpeningBalances(w http.ResponseWriter, r *http.Request
 		Options: fmt.Sprintf("%s\n%d\n%s", reqCtx.EffectiveDate, decidedBy, reqCtx.Note),
 	})
 	if err != nil {
-		renderBatchImportError(rs.runtime, w, r, result, err)
+		renderBatchImportError(rs.runtime, w, r, result, err, importModels.NewOpeningBalanceImportResult)
 		return
 	}
 

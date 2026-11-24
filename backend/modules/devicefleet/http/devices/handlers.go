@@ -213,10 +213,10 @@ func (rs *Resource) deleteDevice(w http.ResponseWriter, r *http.Request) {
 	}
 	if session != nil {
 		rs.runtime.AuditRemoval(r, RemovalAudit{DeviceRowID: device.ID, DeviceID: device.DeviceID, Outcome: RemovalOutcomeActiveSession, SessionID: &session.ID})
-		rs.runtime.ConflictWithDetails(w, r, errors.New("device has an active session and cannot be removed"), codeDeviceInActiveSession, map[string]any{
-			"session_id": ident.ID(session.ID),
-			"room_id":    ident.ID(session.RoomID),
-			"started_at": session.StartedAt.Format(time.RFC3339),
+		rs.runtime.ConflictWithDetails(w, r, errors.New("device has an active session and cannot be removed"), codeDeviceInActiveSession, DeviceInActiveSessionDetails{
+			SessionID: ident.ID(session.ID),
+			RoomID:    ident.ID(session.RoomID),
+			StartedAt: session.StartedAt.Format(time.RFC3339),
 		})
 		return
 	}

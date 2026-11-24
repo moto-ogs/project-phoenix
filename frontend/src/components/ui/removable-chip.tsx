@@ -42,7 +42,7 @@ export function RemovableChip({
       {icon}
       <span className="min-w-0 truncate">{label}</span>
       {detail ? (
-        <span className="shrink-0 text-xs font-normal text-gray-500">
+        <span className="shrink-0 text-sm font-normal text-gray-500">
           {detail}
         </span>
       ) : null}

@@ -10,7 +10,10 @@ import { DataField, DataGrid } from "~/components/ui/data-field";
 import { ExportMenu, type ExportMenuOption } from "~/components/ui/export-menu";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { InsetPanel } from "~/components/ui/inset-panel";
-import { SectionCard } from "~/components/ui/section-card";
+import {
+  SectionCard,
+  SECTION_CARD_BODY_GAP,
+} from "~/components/ui/section-card";
 import { SegmentedControl } from "~/components/ui/segmented-control";
 import type { SegmentedControlItem } from "~/components/ui/segmented-control";
 import { StatusBadge } from "~/components/ui/status-badge";
@@ -247,7 +250,7 @@ export function DeclarationStatusPanel({
       <SectionCard
         title="Antworten"
         icon={CheckCircle2}
-        bodyClassName="compact:mt-3 mt-4 space-y-3"
+        bodyClassName={`${SECTION_CARD_BODY_GAP} space-y-3`}
       >
         <div className="flex flex-wrap items-baseline gap-x-2">
           <span className="text-3xl font-semibold text-gray-900 tabular-nums">

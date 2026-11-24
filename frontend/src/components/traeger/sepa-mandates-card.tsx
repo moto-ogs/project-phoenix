@@ -337,10 +337,15 @@ function FamilyMandates({
               ) : null}
               <DataField label="Gläubiger-ID">
                 <span className="font-mono">{inForce.creditorId}</span>
+                {inForce.issuerName ? (
+                  <span className="block text-gray-500">
+                    Für {inForce.issuerName}
+                  </span>
+                ) : null}
                 {inForce.creditorCurrent ? null : (
                   <span className="text-moto-red-strong block">
-                    Gilt nicht mehr: deine Gläubiger-ID hat sich geändert.
-                    Widerrufe dieses Mandat und erfasse das neue.
+                    Gilt nicht mehr für diesen Vertrag: Hier zieht eine andere
+                    Gläubiger-ID ein. Erfasse dafür ein neues Mandat.
                   </span>
                 )}
               </DataField>

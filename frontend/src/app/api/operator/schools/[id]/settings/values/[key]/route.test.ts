@@ -29,29 +29,6 @@ global.fetch = mockFetch as unknown as typeof fetch;
 
 import { PUT, DELETE } from "./route";
 
-function schoolSummary(id: string, subdomain: string) {
-  return {
-    id,
-    slug: `slug-${subdomain}`,
-    subdomain,
-    name: subdomain,
-    organization_id: "1",
-    organization_name: "Test Träger",
-    active: true,
-    hidden: false,
-    created_at: "2026-07-01T00:00:00Z",
-    updated_at: "2026-07-01T00:00:00Z",
-    konten_count: 0,
-    geraete_count: 0,
-    personen_count: 0,
-    child_quota_bundles: null,
-    child_quota_bundle_size: 20,
-    child_quota_count: 0,
-    device_slots: null,
-    version: "v-1",
-  };
-}
-
 describe("PUT /api/operator/schools/[id]/settings/values/[key]", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -67,7 +44,7 @@ describe("PUT /api/operator/schools/[id]/settings/values/[key]", () => {
     });
 
     const request = new NextRequest(
-      "http://localhost:3000/api/operator/schools/10/settings/values/operations.session_end_time",
+      "http://localhost:3000/api/operator/schools/10/settings/values/operations.session_end_time?force=true&ignored=1",
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -84,21 +61,14 @@ describe("PUT /api/operator/schools/[id]/settings/values/[key]", () => {
 
     expect(response.status).toBe(200);
     expect(mockFetch).toHaveBeenCalledWith(
-      "http://localhost:8080/operator/schools/10/settings/values/operations.session_end_time",
+      "http://localhost:8080/operator/schools/10/settings/values/operations.session_end_time?force=true",
       expect.objectContaining({ method: "PUT" }),
     );
   });
 
   it("purges the tenant cache even when the committed write's answer is unreadable", async () => {
     mockAuth.mockResolvedValue({ user: { token: "valid-token" } });
-    mockFetch
-      .mockResolvedValueOnce(new Response("not JSON", { status: 200 }))
-      .mockResolvedValueOnce(
-        Response.json({
-          status: "success",
-          data: [schoolSummary("10", "school-ten")],
-        }),
-      );
+    mockFetch.mockResolvedValueOnce(new Response("not JSON", { status: 200 }));
     const request = new NextRequest(
       "http://localhost:3000/api/operator/schools/10/settings/values/analytics.enabled",
       {
@@ -113,7 +83,8 @@ describe("PUT /api/operator/schools/[id]/settings/values/[key]", () => {
     });
 
     expect(result.status).toBe(502);
-    expect(mockRevalidatePath).toHaveBeenCalledWith("/school-ten", "layout");
+    expect(mockFetch).toHaveBeenCalledOnce();
+    expect(mockRevalidatePath).toHaveBeenCalledWith("/[tenant]", "layout");
   });
 
   it("returns 401 when not authenticated", async () => {
@@ -186,25 +157,12 @@ describe("PUT /api/operator/schools/[id]/settings/values/[key]", () => {
     "revalidates tenant cache after writing $key for school $schoolId",
     async ({ key, schoolId }) => {
       mockAuth.mockResolvedValue({ user: { token: "valid-token" } });
-      // First fetch: the backend PUT. Second fetch: the slug lookup via
-      // /operator/schools/summaries that revalidateTenantIfNeeded issues.
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: async () => ({ status: "success", data: {} }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: async () => ({
-            status: "success",
-            data: [
-              schoolSummary(schoolId, "school-ten"),
-              schoolSummary("11", "school-eleven"),
-            ],
-          }),
-        });
+      mockFetch.mockResolvedValueOnce(
+        Response.json({
+          status: "success",
+          data: { school_slug: "school-ten" },
+        }),
+      );
 
       const request = new NextRequest(
         `http://localhost:3000/api/operator/schools/${schoolId}/settings/values/${key}`,
@@ -227,30 +185,16 @@ describe("PUT /api/operator/schools/[id]/settings/values/[key]", () => {
         `http://localhost:8080/operator/schools/${schoolId}/settings/values/${key}`,
         expect.objectContaining({ method: "PUT" }),
       );
-      expect(mockFetch).toHaveBeenCalledWith(
-        "http://localhost:8080/operator/schools/summaries",
-        expect.objectContaining({ method: "GET" }),
-      );
+      expect(mockFetch).toHaveBeenCalledOnce();
       expect(mockRevalidatePath).toHaveBeenCalledWith("/school-ten", "layout");
     },
   );
 
   it("revalidates tenant metadata after an operator changes grade_level_max", async () => {
     mockAuth.mockResolvedValue({ user: { token: "valid-token" } });
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ status: "success", data: {} }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({
-          status: "success",
-          data: [schoolSummary("10", "school-ten")],
-        }),
-      });
+    mockFetch.mockResolvedValueOnce(
+      Response.json({ status: "success", data: { school_slug: "school-ten" } }),
+    );
 
     const request = new NextRequest(
       "http://localhost:3000/api/operator/schools/10/settings/values/enrollment.grade_level_max",
@@ -297,25 +241,15 @@ describe("PUT /api/operator/schools/[id]/settings/values/[key]", () => {
     };
     await PUT(request, context);
 
-    // Only the backend PUT, never the summaries lookup.
     expect(mockFetch).toHaveBeenCalledTimes(1);
     expect(mockRevalidatePath).not.toHaveBeenCalled();
   });
 
-  it("purges all lookups when the slug lookup cannot resolve the school", async () => {
+  it("purges all lookups when Go cannot name the school lookup", async () => {
     mockAuth.mockResolvedValue({ user: { token: "valid-token" } });
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ status: "success", data: {} }),
-      })
-      // summaries lookup returns an empty list — no matching id.
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ status: "success", data: [] }),
-      });
+    mockFetch.mockResolvedValueOnce(
+      Response.json({ status: "success", data: {} }),
+    );
 
     const request = new NextRequest(
       "http://localhost:3000/api/operator/schools/10/settings/values/operations.student_photos_enabled",
@@ -426,18 +360,12 @@ describe("DELETE /api/operator/schools/[id]/settings/values/[key]", () => {
     "revalidates tenant cache after writing $key for school $schoolId",
     async ({ key, schoolId }) => {
       mockAuth.mockResolvedValue({ user: { token: "valid-token" } });
-      mockFetch
-        // Backend DELETE — 204 No Content, parseResponse short-circuits.
-        .mockResolvedValueOnce(Response.json({ status: "success", data: {} }))
-        // Slug lookup.
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: async () => ({
-            status: "success",
-            data: [schoolSummary(schoolId, "school-ten")],
-          }),
-        });
+      mockFetch.mockResolvedValueOnce(
+        Response.json({
+          status: "success",
+          data: { school_slug: "school-ten" },
+        }),
+      );
 
       const request = new NextRequest(
         `http://localhost:3000/api/operator/schools/${schoolId}/settings/values/${key}`,
@@ -452,6 +380,7 @@ describe("DELETE /api/operator/schools/[id]/settings/values/[key]", () => {
       const response = await DELETE(request, context);
 
       expect(response.status).toBe(200);
+      expect(mockFetch).toHaveBeenCalledOnce();
       expect(mockRevalidatePath).toHaveBeenCalledWith("/school-ten", "layout");
     },
   );

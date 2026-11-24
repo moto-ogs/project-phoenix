@@ -328,6 +328,8 @@ export interface CareInvoice {
   readonly familyEmail?: string;
   readonly schoolId: string;
   readonly schoolName: string;
+  /** The Schulträger or the Gemeinde that issues it (#8040); empty for the Träger. */
+  readonly issuerName?: string;
   readonly childFirstName: string;
   readonly childLastName: string;
   readonly recipient: {
@@ -780,6 +782,7 @@ function invoiceFromBackend(
     familyEmail: invoice.family_email,
     schoolId: id(invoice.school_id),
     schoolName: invoice.school_name,
+    issuerName: invoice.issuer?.name ?? "",
     childFirstName: invoice.child_first_name,
     childLastName: invoice.child_last_name,
     recipient: {

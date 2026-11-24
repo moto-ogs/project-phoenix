@@ -521,7 +521,7 @@ func TestBuildVisitsAndEffectiveTimes(t *testing.T) {
 	rows := []VisitRecord{{
 		StudentID: 1, ActiveGroupID: 2, EntryTime: checkedIn,
 		FirstName: "  Erika", LastName: "Mustermann ", SchoolClass: "4a", GroupName: "Bären",
-		Sick: true, SickSince: &checkedIn, Excused: true, ExcusedSince: &checkedOut, PhotoURL: "/api/students/1/photo/portrait.jpg",
+		Sick: true, SickSince: &checkedIn, Excused: true, ExcusedSince: &checkedOut, PhotoVersion: "portrait.jpg",
 	}}
 	svc := newService(&fakes{})
 
@@ -531,17 +531,17 @@ func TestBuildVisitsAndEffectiveTimes(t *testing.T) {
 	assert.True(t, visits[0].Sick)
 	assert.True(t, visits[0].Excused)
 	assert.Equal(t, &checkedIn, visits[0].SickSince)
-	assert.Equal(t, "/api/students/1/photo/portrait.jpg", visits[0].PhotoURL)
+	assert.Equal(t, "portrait.jpg", visits[0].PhotoVersion)
 	require.NotNil(t, visits[0].ActualArrivalTime)
 	assert.Equal(t, "12:00", *visits[0].ActualArrivalTime, "actual clocks render in Berlin summer time")
 	assert.Equal(t, "13:00", *visits[0].ActualPickupTime)
 
 	privateVisits := svc.buildVisits(rows, nil, false, true)
 	assert.Nil(t, privateVisits[0].ActualArrivalTime)
-	assert.Empty(t, privateVisits[0].PhotoURL)
+	assert.Empty(t, privateVisits[0].PhotoVersion)
 
 	noPhotos := svc.buildVisits(rows, nil, true, false)
-	assert.Empty(t, noPhotos[0].PhotoURL)
+	assert.Empty(t, noPhotos[0].PhotoVersion)
 
 	pickup := "15:30"
 	pickupItem := pickupTimeFromEffective(1, Pickup{
@@ -908,7 +908,7 @@ func TestProjectionWireShape(t *testing.T) {
 	projection.PlannedNow = []PlannedInstance{{ID: 5, Title: "Malen", Date: "2026-08-19", StartTime: "14:00", EndTime: "15:00", RoomID: 21, Status: "planned",
 		AssignedStaffIDs: []ident.ID{7}, RosterPreview: []RosterRow{{StudentID: 1, StudentName: "Erika Muster", Status: "expected", PickupTime: &clock, CareDayStatus: "scheduled"}},
 		PickupTimesLoaded: true, Warnings: []ConflictWarning{}, StartAvailableAt: "13:45", StartExpiresAt: "15:00"}}
-	projection.Visits = []Visit{{StudentID: 1, StudentName: "Erika Muster", SchoolClass: "4a", GroupName: "Bären", ActiveGroupID: 11, CheckInTime: entry, ActualArrivalTime: &clock, Sick: false, PhotoURL: "/api/students/1/photo/p.jpg"}}
+	projection.Visits = []Visit{{StudentID: 1, StudentName: "Erika Muster", SchoolClass: "4a", GroupName: "Bären", ActiveGroupID: 11, CheckInTime: entry, ActualArrivalTime: &clock, Sick: false, PhotoVersion: "p.jpg"}}
 	projection.TrackingIndicators = DashboardTrackingIndicators{Labels: []string{"Hausaufgaben"}, Results: map[int64][]bool{1: {true}}}
 	projection.PickupTimes = []DashboardPickupTime{{StudentID: 1, Date: "2026-08-19", WeekdayName: "Mittwoch", PickupTime: &clock, IsException: true, Notes: "Oma", DayNotes: []DashboardDayNote{{ID: 3, Content: "Klingeln"}}}}
 	projection.ArrivalTimes = []ArrivalTime{{StudentID: 1, Date: "2026-08-19", WeekdayName: "Mittwoch"}}
@@ -934,7 +934,7 @@ func TestProjectionWireShape(t *testing.T) {
 		`"expected_students_count":0,"present_students_count":0,"not_scheduled_students_count":0,"current_students_count":0,"planned_students_count":0,"is_spontaneous":false,"assigned_staff_ids":["7"],"is_assigned":false,"is_primary":false,"is_substitute":false,"is_absent":false,` +
 		`"roster_preview":[{"student_id":"1","student_name":"Erika Muster","school_class":"","group_name":"","planned":false,"is_unplanned":false,"currently_present":false,"status":"expected","pickup_time":"08:00","care_day_status":"scheduled"}],` +
 		`"pickup_times_loaded":true,"warnings":[],"can_start":false,"start_available_at":"13:45","start_expires_at":"15:00"}],` +
-		`"visits":[{"student_id":"1","student_name":"Erika Muster","school_class":"4a","group_name":"Bären","active_group_id":"11","check_in_time":"2026-08-19T06:00:00Z","actual_arrival_time":"08:00","sick":false,"excused":false,"photo_url":"/api/students/1/photo/p.jpg"}],` +
+		`"visits":[{"student_id":"1","student_name":"Erika Muster","school_class":"4a","group_name":"Bären","active_group_id":"11","check_in_time":"2026-08-19T06:00:00Z","actual_arrival_time":"08:00","sick":false,"excused":false,"photo_version":"p.jpg"}],` +
 		`"tracking_indicators":{"labels":["Hausaufgaben"],"results":{"1":[true]}},` +
 		`"pickup_times":[{"student_id":"1","date":"2026-08-19","weekday_name":"Mittwoch","pickup_time":"08:00","is_exception":true,"notes":"Oma","day_notes":[{"id":"3","content":"Klingeln"}]}],` +
 		`"arrival_times":[{"student_id":"1","date":"2026-08-19","weekday_name":"Mittwoch","is_exception":false}],` +

@@ -222,7 +222,9 @@ export function arrivalColumn<T extends Student>(
       }
       return <ArrivalTimeRow {...day.arrival} variant="cell" />;
     },
-    // Short form under the name in the phone list (#3834).
+    // Short form under the name in the phone list (#3834); the details
+    // open the full cell with its note and markers (#7915).
+    stackedFullInDetails: true,
     stackedRender: (student) => {
       if (!canSeeDay(student)) return EMPTY;
       const day = getDay(student);
@@ -251,7 +253,9 @@ export function pickupColumn<T extends Student>(
   return {
     key: "pickup",
     header: "Gehzeit",
-    // Short form under the name in the phone list (#3834).
+    // Short form under the name in the phone list (#3834); the details
+    // open the full cell with its note and markers (#7915).
+    stackedFullInDetails: true,
     stackedRender: (student) => {
       if (!canSeeDay(student)) return EMPTY;
       const day = getDay(student);

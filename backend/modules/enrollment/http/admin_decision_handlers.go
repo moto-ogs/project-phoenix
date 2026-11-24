@@ -573,11 +573,11 @@ func toAdminSchemaMetadata(fs *capability.FormSchema) ([]AdminRequestSchemaField
 // ShownExistingStudentIDs lists the candidates the office saw when it chose a
 // new child; a candidate outside it refuses the approval again (#6247).
 type AdminDecideRequest struct {
-	Status                  string     `json:"status"` // approved | waitlisted | rejected | under_review
-	Reason                  string     `json:"reason,omitempty"`
-	ExistingStudentID       string     `json:"existing_student_id,omitempty" contract_text:"empty string means no existing student selected"`
-	CreateNewStudent        bool       `json:"create_new_student,omitempty"`
-	ShownExistingStudentIDs []ident.ID `json:"shown_existing_student_ids,omitempty"`
+	Status                  string         `json:"status"` // approved | waitlisted | rejected | under_review
+	Reason                  string         `json:"reason,omitempty"`
+	ExistingStudentID       ident.IDOrNone `json:"existing_student_id,omitzero"`
+	CreateNewStudent        bool           `json:"create_new_student,omitempty"`
+	ShownExistingStudentIDs []ident.ID     `json:"shown_existing_student_ids,omitempty"`
 	// AcceptOfferingChanges confirms booking the offerings' current terms
 	// although they changed since the submission (#6837).
 	AcceptOfferingChanges bool `json:"accept_offering_changes,omitempty"`
@@ -605,13 +605,12 @@ func parseShownStudentIDs(values []ident.ID) ([]int64, error) {
 
 // parseExistingStudentID reads the office's chosen enrolled child of a
 // decision or a manual enrollment, nil when none is chosen.
-func parseExistingStudentID(value string) (*int64, error) {
-	raw := strings.TrimSpace(value)
-	if raw == "" {
+func parseExistingStudentID(value ident.IDOrNone) (*int64, error) {
+	if value.IsZero() {
 		return nil, nil
 	}
-	id, err := strconv.ParseInt(raw, 10, 64)
-	if err != nil || id <= 0 {
+	id := value.Int64()
+	if id <= 0 {
 		return nil, errors.New("invalid existing_student_id")
 	}
 	return &id, nil

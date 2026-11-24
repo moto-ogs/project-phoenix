@@ -188,7 +188,7 @@ func exportRequest(w http.ResponseWriter, r *http.Request) (workforce.TraegerSta
 func renderExportError(w http.ResponseWriter, r *http.Request, err error) {
 	if notReady, ok := errors.AsType[*workforce.TraegerPayrollNotReadyError](err); ok {
 		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeWorkforceTraegerPayrollNotReady,
-			map[string]any{"report": notReady.Report}))
+			PayrollNotReadyDetails{Report: notReady.Report}))
 		return
 	}
 	if invalid, ok := errors.AsType[*workforce.TraegerPayrollEmployerError](err); ok {
@@ -200,4 +200,8 @@ func renderExportError(w http.ResponseWriter, r *http.Request, err error) {
 		return
 	}
 	renderError(w, r, err)
+}
+
+type PayrollNotReadyDetails struct {
+	Report workforce.TraegerPayrollReport `json:"report"`
 }

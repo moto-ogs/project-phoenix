@@ -229,12 +229,24 @@ it("disabling aborts a pending request and ignores its late result", async () =>
     ({ enabled }) => useSSE("/api/sse/events", { enabled, onMessage }),
     { initialProps: { enabled: true } },
   );
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
   const signal = fetchMock.mock.calls[0]![1]!.signal!;
   rerender({ enabled: false });
   expect(signal.aborted).toBe(true);
   await act(async () => resolve(streamResponse()));
   expect(result.current.status).toBe("idle");
   expect(onMessage).not.toHaveBeenCalled();
+});
+
+it("does not open a stream after its effect is removed while the decoder loads", async () => {
+  const { unmount } = renderHook(() =>
+    useSSE("/api/sse/events", { onMessage }),
+  );
+  unmount();
+  await act(async () => {
+    await import("~/lib/contract/stream-event.generated");
+  });
+  expect(fetchMock).not.toHaveBeenCalled();
 });
 
 // Native EventSource support is no longer a prerequisite; fetch owns the stream.

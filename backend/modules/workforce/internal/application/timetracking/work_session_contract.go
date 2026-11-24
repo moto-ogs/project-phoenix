@@ -4,12 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // BreakDurationUpdate represents an update to a single break's duration
@@ -76,51 +74,6 @@ type SessionResponse struct {
 	RoundingMinutes int `json:"rounding_minutes"`
 	// Version is the token of the block and its breaks (sessionVersion).
 	Version string `json:"version"`
-}
-
-// MarshalJSON emits the session id as a decimal STRING instead of the model's
-// int64 number. A day can carry several blocks (#2402) and the frontend picks
-// the block to edit by id, so the id has to survive the wire intact:
-// JSON.parse() turns a number into a float64-backed JS number and rounds
-// anything past 2^53 BEFORE any .toString() in the client can run. Quoting it
-// here matches the project-wide int64→string convention (root CLAUDE.md,
-// Type Mapping) and keeps the comparison exact for any id PostgreSQL can hand
-// out. Marshaling (rather than a field set at each construction site) is what
-// makes a future third construction site impossible to get wrong.
-func (sr SessionResponse) MarshalJSON() ([]byte, error) {
-	// The alias drops the methods, so json does not recurse back in here.
-	// wire.Marshal keeps the identifiers of the breaks strings, as the
-	// answer writes them (ADR 0300).
-	type alias SessionResponse
-	if sr.WorkSession == nil {
-		// Nothing to quote — json omits the fields of a nil embedded pointer,
-		// which is exactly what an unwrapped response serialized to before.
-		return wire.Marshal(alias(sr))
-	}
-	return wire.Marshal(struct {
-		alias
-		// Shallower than the embedded WorkSession.ID, so this wins the "id" tag.
-		ID        string  `json:"id"`
-		TenantID  string  `json:"tenant_id"`
-		StaffID   string  `json:"staff_id"`
-		CreatedBy string  `json:"created_by"`
-		UpdatedBy *string `json:"updated_by,omitempty"`
-	}{
-		alias:     alias(sr),
-		ID:        strconv.FormatInt(sr.ID, 10),
-		TenantID:  strconv.FormatInt(sr.TenantID, 10),
-		StaffID:   strconv.FormatInt(sr.StaffID, 10),
-		CreatedBy: strconv.FormatInt(sr.CreatedBy, 10),
-		UpdatedBy: optionalIDString(sr.UpdatedBy),
-	})
-}
-
-func optionalIDString(id *int64) *string {
-	if id == nil {
-		return nil
-	}
-	value := strconv.FormatInt(*id, 10)
-	return &value
 }
 
 // WeeklySummary aggregates work session data per ISO week

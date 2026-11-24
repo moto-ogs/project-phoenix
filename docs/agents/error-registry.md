@@ -9,6 +9,11 @@
 
 The registry covers error codes emitted by the existing backend error helpers, domain faults that become API errors, and the IoT and substitution error responses. Success and warning codes and import-row validation codes are not API error identities. Some old codes are reused by several endpoints; they have one mapping. The original count in ADR 0006 was a point-in-time estimate, not a cap.
 
+Register a structured portal refusal's Go type by code in `ContractDocument`
+(`backend/api/problem_detail_contracts.go`), then run `gencontract`. The browser reads
+the generated schema for that code, not fields alongside or inside raw `details`.
+For a route-specific partial import use the route's `PartialError` registration.
+
 Authored definitions live in automatically discovered `error-registry/<domain>.json`
 fragments. A fragment may contain only codes with that domain prefix. The loader
 validates all fragments together: code, legacy identity and generated Go symbol

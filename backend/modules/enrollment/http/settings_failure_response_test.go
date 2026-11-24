@@ -59,7 +59,7 @@ func TestEnrollmentResponsesHideSettingsReadFailures(t *testing.T) {
 		name, method, path string
 		handler            http.HandlerFunc
 	}{
-		{"public status", "GET", "/status/token", rs.getStatus},
+		{"public status", "GET", "/status/token", rs.getStatusResponse},
 		{"edit patch", "PATCH", "/status/token", rs.patchStatus},
 		{"edit replacement", "PUT", "/status/token", rs.replaceStatus},
 		{"change request create", "POST", "/status/token", rs.createChangeRequest},

@@ -111,6 +111,7 @@ it("confirms the downloaded file rather than the stale overview", async () => {
       "care-runs",
       "42",
       "downloaded-id",
+      "",
     ),
   );
 });
@@ -152,6 +153,57 @@ it("confirms the message ID of a file named with its file number (#4693)", async
       "care-runs",
       "42",
       "MOTO-M3-20291104",
+      "",
+    ),
+  );
+});
+
+it("shows the file of a Gemeinde that bills a school itself on its own card (#8040)", async () => {
+  const hardt = { key: "DE13ZZZ00000012345", name: "Gemeinde Hardt" };
+  api.fetchSepaDebitRun.mockImplementation(
+    (_kind: string, _run: string, issuerKey = "") =>
+      Promise.resolve(
+        issuerKey === hardt.key
+          ? {
+              ...RUN,
+              creditorId: hardt.key,
+              creditorName: "Gemeindekasse Hardt",
+              messageId: "hardt-id",
+              issuer: hardt,
+            }
+          : { ...RUN, issuers: [hardt] },
+      ),
+  );
+  render(
+    <TraegerResourceTestProvider>
+      <SepaDebitCard kind="care-runs" runId="42" />
+    </TraegerResourceTestProvider>,
+  );
+  expect(
+    await screen.findByText("Lastschrift von Gemeinde Hardt"),
+  ).toBeInTheDocument();
+  expect(api.fetchSepaDebitRun).toHaveBeenCalledWith(
+    "care-runs",
+    "42",
+    hardt.key,
+  );
+  expect(
+    screen.getByText(
+      /Gib die Datei an Gemeinde Hardt weiter und bestätige es danach hier/,
+    ),
+  ).toBeInTheDocument();
+  expect(screen.getByText(hardt.key)).toBeInTheDocument();
+
+  const buttons = screen.getAllByRole("button", {
+    name: "Datei herunterladen",
+  });
+  expect(buttons).toHaveLength(2);
+  fireEvent.click(buttons[1]!);
+  await waitFor(() =>
+    expect(api.downloadSepaDebitFile).toHaveBeenCalledWith(
+      "care-runs",
+      "42",
+      hardt.key,
     ),
   );
 });

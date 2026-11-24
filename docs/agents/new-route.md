@@ -56,7 +56,10 @@ Worked example, the same route from Go to the browser:
    lists every parameter the handler reads (`days` is `from`/`to` as
    `QueryDate`). The generated route keeps the kind of each key. The catalog
    proxy drops unregistered keys and forwards every occurrence of registered
-   keys without checking values. Identifiers are `ident.ID`
+   keys without checking values. Use repeated `QueryID` for a list of
+   identifiers. If a key also accepts text with a distinct meaning, set
+   `TextReason` on that `QueryString`. The router's query-read check compares
+   handler reads with the registration. Identifiers are `ident.ID`
    (`sharedkernel/ident`) in every role, days are `calendar.Date`, closed value
    sets go in `Enums`. A count is an `int`; an amount or a count kept as
    `int64` says so with `contract:"number"`. The generator refuses a bare
@@ -130,9 +133,8 @@ Worked example, the same route from Go to the browser:
    `mapPartialAbsence` maps to the view type. A failure throws an `ApiError`
    for the shared error path; `errorMessage` keeps a client's own text.
    Another portal is the first argument, with a pattern of that portal:
-   `bffJson("parent", "GET /parent/me/notifications/feed/")`,
-   `bffJson("org", …)`, `bffJson("platform", …)`; every portal has a real
-   example in [Browser calls](frontend-api.md#browser-calls), with the rules
+   see the working calls for every portal in
+   [Browser calls](frontend-api.md#browser-calls), with the rules
    for 204, 401, a missing `data` and the guards against the old helpers and
    hand-written wire types.
    Components load through `useSWRAuth` and a key factory of `~/lib/swr`.
@@ -153,6 +155,8 @@ reads the response itself. Use `bffPath` with a registered key for other
 BFF addresses. The BFF route guard scans production source for retired
 forwarding helpers and handwritten registered addresses, including templates
 and concatenations that refer to constants or helper returns.
+Go returns the file identifiers, not a BFF address. For a student photo those
+are the student ID and `photo_version`; the frontend calls `bffFileHref`.
 
 ## Write route
 
@@ -270,13 +274,17 @@ browser caller is allowlisted for exactly this address.
 
 Such a JSON route stays typed: its `common.RouteContract` names `RouteFile`,
 one sentence why the route file serves it (`common.RouteFileSession` for a
-session step), beside its portal, `Request` and `Response` (or `NoData`,
-`File`, `Multipart`). `Plain: true` says the handler writes the data without
+session step), beside its portal, `Request` (or `Multipart`) and `Response`
+(or `NoData`). `Plain: true` says the handler writes the data without
 the envelope (`common.RenderJSON`). The generator writes its types, decoder
 and route entry and lists that entry in `routeFileRoutes`, never in a proxy
 allowlist. The named handler calls `contractGet(entry, options)` or
 `contractWrite(entry, body, options)`, even without a session. Both fill the
-route entry’s path with typed `params` and serialize its typed `query`. The session
+path with typed `params`. If a named browser route registers query keys,
+pass its incoming `request`: the transport forwards all registered values.
+See the [operator settings write](../../frontend/src/app/api/operator/schools/[id]/settings/values/[key]/route.ts).
+File answers use `File: true` on a catalog route; the proxy streams them.
+The JSON helpers do not accept file entries. The session
 step's Go tokens never reach the browser; put its BFF answer in
 `frontend/src/lib/session-bff.ts` and call that entry with `bffJson`.
 See [school switching](../../frontend/src/app/api/auth/switch-tenant/route.ts)

@@ -65,7 +65,7 @@ type CareStore interface {
 	// FamilyChildCounts reads the numbers of the Träger's families (#5918).
 	FamilyChildCounts(ctx context.Context, organizationID int64) ([]parentbilling.FamilyChildCount, error)
 	ListNumberRanges(ctx context.Context, organizationID int64) ([]parentbilling.NumberRange, error)
-	ReserveNumbers(ctx context.Context, organizationID int64, service string, year, count int) (int64, error)
+	ReserveNumbers(ctx context.Context, organizationID int64, issuerKey, service string, year, count int) (int64, error)
 	// The terms, the family deviations and the due dates of the run decide
 	// the recipient and the payment of every invoice (#4689).
 	paymentTermsReader
@@ -489,27 +489,33 @@ func (c *CareBilling) ReleaseCareRun(ctx context.Context, reviewer parentbilling
 	return c.detail(ctx, reviewer, released)
 }
 
-// issue numbers the invoices from the counter of the issue year and stores
-// them. A number another invoice of the Träger already carries is
-// ErrInvoiceNumberTaken.
-func (c *CareBilling) issue(ctx context.Context, organizationID int64, run parentbilling.CareRun, rule, pattern string,
+// issue numbers the invoices of each issuer from the counter of its issue
+// year (#8040) and stores them. A number another invoice of the issuer
+// already carries is ErrInvoiceNumberTaken.
+func (c *CareBilling) issue(ctx context.Context, organizationID int64, run parentbilling.CareRun, rule string, patterns map[string]string,
 	issuedOn calendar.Date, invoices []parentbilling.CareInvoice,
 ) error {
-	year := numberYear(pattern, issuedOn.Year())
-	first, err := c.store.ReserveNumbers(ctx, organizationID, parentbilling.ServiceCare, year, len(invoices))
-	if err != nil {
-		return fmt.Errorf("parent billing: reserve invoice numbers: %w", err)
-	}
-	for i := range invoices {
-		invoices[i].Number = formatInvoiceNumber(pattern, issuedOn.Year(), first+int64(i))
-		invoices[i].IssuedOn = &issuedOn
-	}
 	resolver, err := bookingResolverOf(ctx, c.store, c.settings, organizationID)
 	if err != nil {
 		return err
 	}
-	freezeCareAccounts(resolver, invoices)
-	return c.store.IssueCareInvoices(ctx, organizationID, run, rule, year, first, invoices)
+	for _, group := range byIssuer(invoices, func(invoice parentbilling.CareInvoice) string { return parentbilling.IssuerKeyOf(invoice.Issuer) }) {
+		pattern := patterns[parentbilling.IssuerKeyOf(group[0].Issuer)]
+		year := numberYear(pattern, issuedOn.Year())
+		first, err := c.store.ReserveNumbers(ctx, organizationID, parentbilling.IssuerKeyOf(group[0].Issuer), parentbilling.ServiceCare, year, len(group))
+		if err != nil {
+			return fmt.Errorf("parent billing: reserve invoice numbers: %w", err)
+		}
+		for i := range group {
+			group[i].Number = formatInvoiceNumber(pattern, issuedOn.Year(), first+int64(i))
+			group[i].IssuedOn = &issuedOn
+		}
+		freezeCareAccounts(resolver, group)
+		if err := c.store.IssueCareInvoices(ctx, organizationID, run, rule, year, first, group); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // preview computes the draft invoices of a calculated run with the rule of
@@ -562,7 +568,15 @@ func (c *CareBilling) monthWith(ctx context.Context, organizationID int64, run p
 	if run.InvoiceDate != nil {
 		issuedOn = *run.InvoiceDate
 	}
+	// The issuer of the school bills the invoice and collects it with the
+	// family's mandate for its creditor identifier (#8040, ADR 0322).
+	issuers, err := schoolIssuers(ctx, c.kinds.templates, organizationID)
+	if err != nil {
+		return rule, month, err
+	}
+	payments.withIssuers(issuers)
 	for i := range month.invoices {
+		month.invoices[i].Issuer = parentbilling.IssuerOf(issuers, month.invoices[i].SchoolID.Int64())
 		payments.careInvoice(&month.invoices[i], issuedOn)
 	}
 	month.dueDates, month.deviations, month.mandates = payments.run, payments.deviationsRead(), payments.mandatesRead()
@@ -665,14 +679,11 @@ func (c *CareBilling) detail(ctx context.Context, reviewer parentbilling.Holiday
 		detail.PreviewCount++
 		detail.PreviewCents += invoice.TotalCents
 	}
-	pattern, err := numberPatternOf(ctx, c.store, reviewer.OrganizationID, parentbilling.ServiceCare)
-	switch {
-	case errors.Is(err, parentbilling.ErrNumberRangeMissing):
-	case err != nil:
+	pattern, missing, err := numberRangeState(ctx, c.store, reviewer.OrganizationID, parentbilling.ServiceCare, careIssuers(detail.Invoices))
+	if err != nil {
 		return parentbilling.CareRunDetail{}, err
-	default:
-		detail.NumberPattern, detail.NumberRangeSet = pattern, true
 	}
+	detail.NumberPattern, detail.NumberRangeSet, detail.NumberRangeMissingFor = pattern, missing == nil, missing
 	return detail, nil
 }
 

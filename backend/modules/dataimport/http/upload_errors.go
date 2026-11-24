@@ -36,13 +36,13 @@ func decodeFailure(err error) Failure {
 	var missing *importModels.FileMissingColumnsError
 	if errors.As(err, &missing) {
 		failure := uploadFailure(codeImportFileColumnsMissing, cause)
-		failure.Details = map[string]any{"columns": strings.Join(missing.Columns, ", ")}
+		failure.Details = MissingColumnsDetails{Columns: strings.Join(missing.Columns, ", ")}
 		return failure
 	}
 	var row *importModels.FileRowError
 	if errors.As(err, &row) {
 		failure := uploadFailure(codeImportFileRowInvalid, cause)
-		failure.Details = map[string]any{"row": row.Row}
+		failure.Details = InvalidRowDetails{Row: row.Row}
 		return failure
 	}
 	var noRows *importModels.FileNoDataRowsError
@@ -50,4 +50,12 @@ func decodeFailure(err error) Failure {
 		return uploadFailure(codeImportFileNoRows, cause)
 	}
 	return uploadFailure(codeImportFileUnreadable, cause)
+}
+
+type MissingColumnsDetails struct {
+	Columns string `json:"columns"`
+}
+
+type InvalidRowDetails struct {
+	Row int `json:"row"`
 }

@@ -43,7 +43,7 @@ func TestClassListEntryExportEligibleActiveFilterExcludesEntries(t *testing.T) {
 		{"pickup_status", studentExportFilters{PickupStatus: "self"}},
 		{"day_status", studentExportFilters{DayStatus: DayPlanningStatusComesToday}},
 		{"group", studentExportFilters{GroupID: "5"}},
-		{"room", studentExportFilters{RoomID: "7"}},
+		{"room", studentExportFilters{RoomID: ident.Optional(7)}},
 		{"selection", studentExportFilters{StudentIDs: []ident.ID{3}}},
 	}
 	for _, tt := range tests {

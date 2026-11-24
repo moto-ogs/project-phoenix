@@ -421,7 +421,7 @@ function FilePanel({
         icon={<FileTypeIcon contentType={item.contentType} className="" />}
       />
       <p className="mt-4 text-base font-semibold break-words">{item.name}</p>
-      {meta ? <p className="mt-1 text-xs text-gray-500">{meta}</p> : null}
+      {meta ? <p className="mt-1 text-sm text-gray-500">{meta}</p> : null}
       <p className="mt-4 text-sm text-gray-600">{text}</p>
       <ActionHint text={labels.downloadHint}>
         <a

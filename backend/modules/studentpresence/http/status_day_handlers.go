@@ -207,10 +207,7 @@ func statusDayConflictResponse(conflictErr *studentpresence.StudentStatusDayConf
 		HTTPStatusCode: http.StatusConflict,
 		Detail:         "existing student status days were not overwritten",
 		Code:           common.CodeStudentsStatusDayConflict,
-		Details: map[string]any{
-			"conflicts":      details.Conflicts,
-			"conflict_count": details.ConflictCount,
-		},
+		Details:        details,
 	}
 }
 

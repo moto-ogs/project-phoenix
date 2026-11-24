@@ -4,7 +4,6 @@ import (
 	json "encoding/json"
 	errors "errors"
 	http "net/http"
-	strconv "strconv"
 	strings "strings"
 
 	render "github.com/go-chi/render"
@@ -33,7 +32,7 @@ type resolveConflictBody struct {
 	// the list. Ids travel as strings like every other int64 on this API.
 	RequestIDs       []ident.ID     `json:"request_ids"`
 	ExpectedVersions []string       `json:"expected_versions"`
-	ChosenRequestID  string         `json:"chosen_request_id" contract_text:"empty string means no selected request"`
+	ChosenRequestID  ident.IDOrNone `json:"chosen_request_id"`
 	StaffValue       map[string]any `json:"staff_value" contract_json:"The conflict kind selects the staff value shape"`
 	None             bool           `json:"none"`
 	// ConflictKey is the group's key from the list. It pins WHICH part of a
@@ -78,12 +77,9 @@ func (b *resolveConflictBody) toInput() (parentrequests.ResolveConflictInput, er
 	if err != nil {
 		return parentrequests.ResolveConflictInput{}, err
 	}
-	var chosen int64
-	if strings.TrimSpace(b.ChosenRequestID) != "" {
-		chosen, err = strconv.ParseInt(b.ChosenRequestID, 10, 64)
-		if err != nil || chosen <= 0 {
-			return parentrequests.ResolveConflictInput{}, errors.New("invalid chosen request id")
-		}
+	chosen := b.ChosenRequestID.Int64()
+	if !b.ChosenRequestID.IsZero() && chosen <= 0 {
+		return parentrequests.ResolveConflictInput{}, errors.New("invalid chosen request id")
 	}
 	// The typed result travels to the request kind unread; an absent or null
 	// value means none was typed.

@@ -16,7 +16,7 @@ var window = []common.QueryParam{{Name: "from", Kind: common.QueryDate}, {Name: 
 func SchoolRouteContracts() []common.RouteContract {
 	format := []common.QueryParam{common.ListFormatQuery}
 	school := []common.QueryParam{common.ListFormatQuery, {Name: "school", Kind: common.QueryID}}
-	comparison := append([]common.QueryParam{{Name: "schools", Kind: common.QueryString}}, window...)
+	comparison := append([]common.QueryParam{{Name: "schools", Kind: common.QueryID, Repeated: true}}, window...)
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: []traegerview.TraegerSchool{}},
 		{Method: "GET", Pattern: "/export", Portals: traegerPortal, Query: format, File: true},

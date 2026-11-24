@@ -87,7 +87,7 @@ func (rs *Resource) searchSchool(w http.ResponseWriter, r *http.Request) {
 	}
 	if _, err := schoolsearchview.ValidateQueryText(req.Query); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequestWithDetails(err, common.CodeGeneralInput,
-			map[string]any{"min": schoolsearchview.MinQueryRunes, "max": schoolsearchview.MaxQueryRunes}))
+			common.InputLimitDetails{Min: schoolsearchview.MinQueryRunes, Max: schoolsearchview.MaxQueryRunes}))
 		return
 	}
 	scope, err := rs.scope(r.Context())

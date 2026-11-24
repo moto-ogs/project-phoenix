@@ -126,12 +126,12 @@ func dataImportAccountID(ctx context.Context) (int64, error) {
 // a concurrent write (#3571), is a 409 that also names the refusal's code and
 // details, so the client can say both what was saved and why it stopped.
 func dataImportBatchFailure(failure importapi.Failure) render.Renderer {
-	details := map[string]any{"result": failure.Result}
+	details := common.PartialImportDetails{Result: failure.Result}
 	status := failure.Status
 	var rejection common.BusinessRejection
 	if errors.As(failure.Cause, &rejection) {
 		status = http.StatusConflict
-		details["rejection"] = map[string]any{"code": rejection.ErrorCode(), "details": rejection.ErrorDetails()}
+		details.Rejection = &common.PartialImportRejection{Code: rejection.ErrorCode(), Details: rejection.ErrorDetails()}
 	}
 	return &common.ErrResponse{Err: failure.Cause, HTTPStatusCode: status, Detail: failure.Message, Code: failure.Code, Details: details}
 }

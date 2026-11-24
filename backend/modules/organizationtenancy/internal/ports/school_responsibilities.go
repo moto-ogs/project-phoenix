@@ -19,6 +19,10 @@ type SchoolPartyStore interface {
 	// SchoolParties reads the stored bodies of the given schools of the
 	// Träger, by school and kind; nil reads those of every school.
 	SchoolParties(ctx context.Context, organizationID int64, schoolIDs []int64) ([]organizationtenancy.SchoolParty, error)
+	// OwnSchoolParties reads in one statement the stored bodies of the
+	// undeleted schools of the Träger, by school and kind; nil asks for
+	// every school (#8040).
+	OwnSchoolParties(ctx context.Context, organizationID int64, schoolIDs []int64) ([]organizationtenancy.SchoolParty, error)
 	// SaveSchoolParty inserts the body of the school or overwrites it.
 	SaveSchoolParty(ctx context.Context, organizationID, accountID, schoolID int64, kind organizationtenancy.ResponsibleBody, input organizationtenancy.SchoolPartyInput) (organizationtenancy.SchoolParty, error)
 	// DeleteSchoolParty reports false when the school has no such body.

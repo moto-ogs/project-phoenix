@@ -22,19 +22,12 @@ describe("childQuotaMessage", () => {
     );
   });
 
-  it("reads the code from the raw response body the CRUD fetch keeps", () => {
+  it("does not treat obsolete string bodies as coded errors", () => {
     const error = Object.assign(new Error("HTTP 409"), {
       status: 409,
-      body: JSON.stringify({
-        error: "child quota reached",
-        code: CHILD_QUOTA_REACHED_CODE,
-        details: { booked_places: 100, occupied_places: 102 },
-      }),
+      body: JSON.stringify({ code: CHILD_QUOTA_REACHED_CODE }),
     });
-
-    expect(childQuotaMessage(error)).toContain(
-      "Die Kontingentzahl beträgt 102 von 100 Kindern.",
-    );
+    expect(childQuotaMessage(error)).toBeNull();
   });
 
   it("stays readable without numbers", () => {

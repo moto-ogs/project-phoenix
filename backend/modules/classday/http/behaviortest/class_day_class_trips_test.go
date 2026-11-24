@@ -1,8 +1,10 @@
 package classdayhttp_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"testing"
 	"time"
 
@@ -135,10 +137,25 @@ func TestSchoolClassTripWritesStatusDays(t *testing.T) {
 	// Reporting the days again collides with the status just written.
 	code, resp = f.post(t, body, classTripWritePermission)
 	require.Equal(t, http.StatusConflict, code, resp)
-	assert.Contains(t, resp, "classday.class_trip_status_conflict")
 	// Like the OGS, the refusal names every blocking child and day.
-	assert.Contains(t, resp, `"conflict_count":6`)
-	assert.Contains(t, resp, fmt.Sprintf(`{"date":%q,"status":"class_trip","student_id":"%d"}`, classTripWednesday, f.first))
+	type conflict struct {
+		StudentID string `json:"student_id"`
+		Date      string `json:"date"`
+		Status    string `json:"status"`
+	}
+	var problem struct {
+		Code    string `json:"code"`
+		Details struct {
+			Count     int        `json:"conflict_count"`
+			Conflicts []conflict `json:"conflicts"`
+		} `json:"details"`
+	}
+	require.NoError(t, json.Unmarshal([]byte(resp), &problem), resp)
+	assert.Equal(t, "classday.class_trip_status_conflict", problem.Code)
+	assert.Equal(t, 6, problem.Details.Count)
+	assert.Contains(t, problem.Details.Conflicts, conflict{
+		StudentID: strconv.FormatInt(f.first, 10), Date: classTripWednesday, Status: "class_trip",
+	})
 	assert.Equal(t, 3, f.classTripDays(t, f.first))
 
 	// A child of another class is refused before anything is written.

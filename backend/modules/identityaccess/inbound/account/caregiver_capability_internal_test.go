@@ -295,7 +295,8 @@ func TestDisableCaregiverCapability_RendersBlockedConflict(t *testing.T) {
 	responseBody := decodeResponseBody(t, rr)
 	assert.Equal(t, float64(rr.Code), responseBody["status"])
 	assert.Equal(t, "caregiver capability cannot be removed while active bindings exist", responseBody["detail"])
-	assert.Equal(t, []any{"active_group_supervisions"}, responseBody["blockers"])
+	assert.Equal(t, map[string]any{"blockers": []any{"active_group_supervisions"}}, responseBody["details"])
+	assert.NotContains(t, responseBody, "blockers")
 }
 
 func TestCaregiverCapabilityErrorRenderer_MapsNotFound(t *testing.T) {
@@ -341,5 +342,6 @@ func TestCaregiverCapabilityErrorRenderer_MapsBlockedToSharedRenderer(t *testing
 	rr := renderCaregiverCapabilityError(t, fakeCaregiverBlocked{blockers: []string{"group_assignments"}})
 	require.Equal(t, http.StatusConflict, rr.Code, rr.Body.String())
 	responseBody := decodeResponseBody(t, rr)
-	assert.Equal(t, []any{"group_assignments"}, responseBody["blockers"])
+	assert.Equal(t, map[string]any{"blockers": []any{"group_assignments"}}, responseBody["details"])
+	assert.NotContains(t, responseBody, "blockers")
 }

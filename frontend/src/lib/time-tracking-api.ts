@@ -3,6 +3,11 @@
 import type * as shared from "~/lib/contract/shared.generated";
 import type * as tt from "~/lib/contract/time-tracking.generated";
 import type { ErrorCode } from "~/lib/error-codes.generated";
+import { ApiError } from "~/lib/api-error";
+import {
+  DeviationReasonDetailsSchema,
+  type DeviationReasonDetails,
+} from "~/lib/contract/problem-details.generated";
 import {
   knownMailOutcome,
   type MailOutcome,
@@ -41,8 +46,22 @@ export const PLANNED_START_NOT_REACHED_CODE: ErrorCode =
  * planned shift window by more than the configured tolerance (F9). The page
  * prompts for a reason and retries the same stamp with `reason` set.
  */
-export const DEVIATION_REASON_REQUIRED_CODE: ErrorCode =
+const DEVIATION_REASON_REQUIRED_CODE: ErrorCode =
   "iot.deviation_reason_required";
+
+export function readStampDeviation(
+  error: unknown,
+): Partial<DeviationReasonDetails> | null {
+  if (
+    !(error instanceof ApiError) ||
+    error.code !== DEVIATION_REASON_REQUIRED_CODE
+  ) {
+    return null;
+  }
+  const decoded = DeviationReasonDetailsSchema.safeParse(error.details);
+  // Even a missing hint does not remove the required reason prompt.
+  return decoded.success ? decoded.data : {};
+}
 
 /**
  * Update session request body

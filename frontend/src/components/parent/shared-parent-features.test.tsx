@@ -9,11 +9,10 @@ import {
   useParentFeatures,
   useParentToday,
 } from "~/lib/hooks/use-parent-resources";
-import { ApiError } from "~/lib/api-error";
+import { ApiError, apiErrorFromResponse } from "~/lib/api-error";
 import {
   clearRateLimitBackoff,
-  rateLimitBlockedError,
-  recordRateLimit,
+  installRateLimitFetchGuard,
 } from "~/lib/rate-limit-backoff";
 import { releaseFakeTimers } from "~/test/clock";
 import { useChildCare } from "./child-care";
@@ -274,17 +273,36 @@ describe("shared parent daily status", () => {
 });
 
 describe("shared parent rate-limit recovery", () => {
+  let restoreFetchGuard: (() => void) | undefined;
   afterEach(() => {
+    restoreFetchGuard?.();
+    vi.restoreAllMocks();
     clearRateLimitBackoff();
     releaseFakeTimers();
   });
 
   it("automatically restores features and daily statuses after the read quota recovers", async () => {
     vi.useFakeTimers();
-    recordRateLimit("10", "GET");
+    const previousFetch = window.fetch;
+    window.fetch = vi
+      .fn()
+      .mockResolvedValue(new Response(null, { status: 200 }))
+      .mockResolvedValueOnce(
+        new Response("rate limited", {
+          status: 429,
+          headers: { "Retry-After": "10" },
+        }),
+      );
+    const restore = installRateLimitFetchGuard();
+    restoreFetchGuard = () => {
+      restore();
+      window.fetch = previousFetch;
+    };
+    await fetch("/api/parent/me/children");
     vi.mocked(api.getChildFeatures).mockImplementation(async () => {
-      const blocked = rateLimitBlockedError("GET");
-      if (blocked) throw blocked;
+      const reply = await fetch("/api/parent/me/children/42/features");
+      if (!reply.ok)
+        throw await apiErrorFromResponse(reply, "Features unavailable");
       return features;
     });
     const present: parentMeContract.TodayStatusResponse = {
@@ -292,8 +310,9 @@ describe("shared parent rate-limit recovery", () => {
       state: "present",
     };
     vi.spyOn(api, "getChildToday").mockImplementation(async () => {
-      const blocked = rateLimitBlockedError("GET");
-      if (blocked) throw blocked;
+      const reply = await fetch("/api/parent/me/children/42/today");
+      if (!reply.ok)
+        throw await apiErrorFromResponse(reply, "Status unavailable");
       return present;
     });
     const { result } = renderHook(

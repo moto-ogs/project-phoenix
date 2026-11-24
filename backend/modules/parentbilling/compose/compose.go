@@ -68,9 +68,9 @@ func NewCareLetters(letterheads parentbilling.BillingLetterheads, contracts pare
 	return application.NewCareLetters(postgres.NewStore(now), ports, rendering.NewLetterRenderer(), rendering.NewLetterRenderer(), today)
 }
 
-// NewBillingTerms builds the payment terms, the bundling, the family deviations with the debtor number in the format of the Träger (#6675) and the due dates of the runs (#4689) over the contracts the root binds, and the check of the details the Träger still has to enter (#7177) over the sources the root binds; now is the root's clock.
+// NewBillingTerms builds the payment terms, the bundling, the family deviations with the debtor number in the format of the Träger (#6675) and the due dates of the runs (#4689) over the contracts the root binds, and the check of the details the Träger still has to enter (#7177) with the state of each issuer (#8040) over the sources the root binds; now is the root's clock.
 func NewBillingTerms(contracts parentbilling.CareContracts, formats parentbilling.DebtorNumberFormats, details parentbilling.RequiredDetailSources, now func() time.Time) (parentbilling.BillingTerms, parentbilling.RequiredDetailsCheck) {
-	return application.NewBillingTerms(postgres.NewStore(now), contracts, formats, func() calendar.Date { return calendar.DateFromTime(now()) }), application.NewRequiredDetails(postgres.NewStore(now), details)
+	return application.NewBillingTerms(postgres.NewStore(now), contracts, formats, func() calendar.Date { return calendar.DateFromTime(now()) }), application.NewRequiredDetails(postgres.NewStore(now), details, func() calendar.Date { return calendar.DateFromTime(now()) })
 }
 
 // NewCareFeeNotices builds the Jahresbescheide of the monthly care (#6219, ADR 0182) over the monthly computation and the letterhead of the Träger, which carries the template of the fee notice; the root binds the ports and the clocks.
@@ -84,9 +84,9 @@ func NewCareNoticeLetters(letterheads parentbilling.BillingLetterheads, contract
 	return application.NewCareNoticeLetters(postgres.NewStore(now), application.CareNoticeLetterPorts{Letterheads: letterheads, Recipients: contracts, Post: post, NoticePost: noticePost}, rendering.NewLetterRenderer(), rendering.NewLetterRenderer())
 }
 
-// NewSEPAMandates builds the SEPA mandates and the creditor of the Träger (#4695, ADR 0171) over the contracts, the field cipher and the day clock the root binds; the import judges a mandate's lapse on that day.
-func NewSEPAMandates(contracts parentbilling.CareContracts, cipher parentbilling.BankDataCipher, formats parentbilling.DebtorNumberFormats, today func() calendar.Date, now func() time.Time) parentbilling.SEPAMandates {
-	return application.NewSEPAMandates(postgres.NewStore(now), contracts, cipher, formats, today)
+// NewSEPAMandates builds the SEPA mandates and the creditor of the Träger (#4695, ADR 0171) over the contracts, the field cipher, the issuers of the schools (#8040) and the day clock the root binds; the import judges a mandate's lapse on that day.
+func NewSEPAMandates(contracts parentbilling.CareContracts, cipher parentbilling.BankDataCipher, formats parentbilling.DebtorNumberFormats, issuers parentbilling.BillingIssuers, today func() calendar.Date, now func() time.Time) parentbilling.SEPAMandates {
+	return application.NewSEPAMandates(postgres.NewStore(now), contracts, cipher, formats, issuers, today)
 }
 
 // NewFamilyChildrenImports builds the numbers of the families from a file (#7356, ADR 0288) over the contracts and schools the root binds.
@@ -130,9 +130,9 @@ func NewBelegRetention(contracts parentbilling.RetainedContracts, today func() c
 	return application.NewBelegRetention(postgres.NewStore(now), contracts, today)
 }
 
-// NewParentSEPAMandates builds the SEPA mandate the parents give in the parents portal (#4696) over the contract parties, the bank-data cipher and the Träger's online mandate setting the root binds.
-func NewParentSEPAMandates(contracts parentbilling.ContractParties, cipher parentbilling.BankDataCipher, terms parentbilling.OnlineMandateSettings, sums parentbilling.ContentFingerprints, today func() calendar.Date, now func() time.Time) parentbilling.ParentSEPAMandates {
-	return application.NewParentMandates(postgres.NewStore(now), contracts, cipher, terms, sums, today)
+// NewParentSEPAMandates builds the SEPA mandate the parents give in the parents portal (#4696) over the contract parties, the bank-data cipher, the Träger's online mandate setting and the issuers of the schools (#8040) the root binds.
+func NewParentSEPAMandates(contracts parentbilling.ContractParties, cipher parentbilling.BankDataCipher, terms parentbilling.OnlineMandateSettings, sums parentbilling.ContentFingerprints, issuers parentbilling.BillingIssuers, today func() calendar.Date, now func() time.Time) parentbilling.ParentSEPAMandates {
+	return application.NewParentMandates(postgres.NewStore(now), contracts, cipher, terms, sums, issuers, today)
 }
 
 // NewExportHandovers builds the handover of finance exports to the recipient of the Träger (ADR 0218) over the producers of the downloads and the transport the root binds; no write it reaches stamps from the store clock (ADR 0281).

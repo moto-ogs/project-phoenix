@@ -17,12 +17,24 @@ export function moduleNotBookedExplanation(
  * (`module.not_booked`, #4893), or `null` for every other failure. The
  * backend names the module key in `details.module`.
  */
-export function notBookedModuleOf(error: unknown): ModuleKey | null {
-  if (!(error instanceof ApiError) || error.code !== "module.not_booked") {
+export function isModuleNotBooked(error: unknown): error is ApiError {
+  return error instanceof ApiError && error.code === "module.not_booked";
+}
+
+export async function notBookedModuleOf(
+  error: unknown,
+): Promise<ModuleKey | null> {
+  if (!isModuleNotBooked(error)) return null;
+  try {
+    const { ModuleNotBookedDetailsSchema } =
+      await import("~/lib/contract/problem-details.generated");
+    const decoded = ModuleNotBookedDetailsSchema.safeParse(error.details);
+    const key = decoded.success ? decoded.data.module : undefined;
+    return isModuleKey(key) ? key : null;
+  } catch {
+    // If the chunk is unavailable, the caller still presents the refusal.
     return null;
   }
-  const key = error.details?.module;
-  return isModuleKey(key) ? key : null;
 }
 
 /**

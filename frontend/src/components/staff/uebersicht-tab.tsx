@@ -11,7 +11,10 @@ import {
   DateRangePicker,
 } from "~/components/ui/date-range-picker";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
-import { SectionCard } from "~/components/ui/section-card";
+import {
+  SectionCard,
+  SECTION_CARD_BODY_GAP,
+} from "~/components/ui/section-card";
 import { Skeleton } from "~/components/ui/skeleton";
 import type { ChartConfig } from "~/components/ui/chart";
 import { UebersichtTabSkeleton } from "~/components/staff/uebersicht-tab-skeleton";
@@ -361,7 +364,7 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
           title="Tagesvergleich Ist / Soll"
           headingLevel={3}
           className="flex flex-col"
-          bodyClassName="compact:mt-3 mt-4 flex flex-1 flex-col"
+          bodyClassName={`${SECTION_CARD_BODY_GAP} flex flex-1 flex-col`}
           action={
             <DateRangePicker
               value={clampedDailyRange}
@@ -392,7 +395,7 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
           title="Saldo-Verlauf"
           headingLevel={3}
           className="flex flex-col"
-          bodyClassName="compact:mt-3 mt-4 flex flex-1 flex-col"
+          bodyClassName={`${SECTION_CARD_BODY_GAP} flex flex-1 flex-col`}
           action={
             <DateRangePicker
               value={clampedSaldoRange}
