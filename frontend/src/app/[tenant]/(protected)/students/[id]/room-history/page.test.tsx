@@ -880,6 +880,9 @@ describe("StudentRoomHistoryPage", () => {
       expect(card.getByText("Fußball-AG")).toBeInTheDocument();
       expect(card.getByText("ungeplant")).toBeInTheDocument();
       expect(card.getByText(/Hat sich am Knie gestoßen\./)).toBeInTheDocument();
+      // An offering's attendance status is labelled as a status, not as
+      // the day's duration (#7915).
+      expect(card.getByText("Status")).toBeInTheDocument();
     });
 
     it("names who recorded the arrival and the pickup on the card (#4761)", async () => {
@@ -937,8 +940,10 @@ describe("StudentRoomHistoryPage", () => {
 
       expect(card.getAllByText("Krank")).toHaveLength(2);
       // The report reads as a report, not as an arrival (#7915).
-      expect(card.getByText("gemeldet 09:30")).toBeInTheDocument();
-      expect(card.getByText("beendet 18:00")).toBeInTheDocument();
+      expect(card.getByText("Gemeldet")).toBeInTheDocument();
+      expect(card.getByText("09:30")).toBeInTheDocument();
+      expect(card.getByText("Beendet")).toBeInTheDocument();
+      expect(card.getByText("18:00")).toBeInTheDocument();
       expect(
         card.getByText("Keine Raumwechsel an diesem Tag."),
       ).toBeInTheDocument();
@@ -956,7 +961,8 @@ describe("StudentRoomHistoryPage", () => {
       const card = within(within(list).getByRole("listitem"));
       fireEvent.click(card.getByRole("button", { name: /Details öffnen/ }));
 
-      expect(card.getByText("gemeldet 09:30")).toBeInTheDocument();
+      expect(card.getByText("Gemeldet")).toBeInTheDocument();
+      expect(card.getByText("09:30")).toBeInTheDocument();
       expect(
         card.getByText(/Raumdetails nicht mehr verfügbar/),
       ).toBeInTheDocument();

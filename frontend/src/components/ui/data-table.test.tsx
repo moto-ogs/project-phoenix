@@ -1378,6 +1378,32 @@ describe("DataTable phone cards without lost columns (#7911)", () => {
     expect(card.getByText("Block 8–12")).toBeInTheDocument();
   });
 
+  it("labels a sub row cell on the card with its own phone label", () => {
+    const { card } = renderCards("lines", {
+      renderSubRows: (row) => [
+        {
+          key: `${row.id}-report`,
+          cells: [
+            { columnKey: "name", content: "Krank" },
+            { columnKey: "room", content: "08:10", stackedLabel: "Gemeldet" },
+            { columnKey: "pickup", content: "–" },
+          ],
+        },
+      ],
+    });
+
+    const toggle = card.getByRole("button", { name: "Details zu Alpha" });
+    fireEvent.click(toggle);
+
+    const details = within(
+      document.getElementById(toggle.getAttribute("aria-controls")!)!,
+    );
+    expect(details.getByText("Gemeldet")).toBeInTheDocument();
+    // The column header stays the label where the cell names none.
+    expect(details.getByText("Abholung")).toBeInTheDocument();
+    expect(details.queryByText("Raum")).not.toBeInTheDocument();
+  });
+
   it("names the toggle of an expandable row with its own label", () => {
     const { card } = renderCards("lines", {
       expandable: {

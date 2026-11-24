@@ -331,6 +331,9 @@ function daySlotRows(
       },
       {
         columnKey: "duration",
+        // The table shows an offering's status under "Dauer"; the card
+        // names it (#7915).
+        stackedLabel: "Status",
         content: (
           <span className="text-gray-600">
             {formatAttendanceSlotStatus(slot.status, slot.substatus)}
@@ -343,9 +346,9 @@ function daySlotRows(
 
 // Die Statusmeldungen und Raumwechsel eines aufgeklappten Tages.
 function dayRoomRows(day: AttendanceHistoryDay): DataTableExtraRow[] {
-  // A report stands under the arrival and departure columns, named as a
-  // report: stacked on a phone, the column label alone would read as an
-  // arrival (#7915). Reports outlive the room-detail retention.
+  // A report stands under the arrival and departure columns; on a phone
+  // card it carries its own labels, or it would read as an arrival (#7915).
+  // Reports outlive the room-detail retention.
   const statusRows: DataTableExtraRow[] = day.statusEntries.map((entry) => ({
     key: `${day.date}-${entry.status}`,
     cells: [
@@ -359,17 +362,17 @@ function dayRoomRows(day: AttendanceHistoryDay): DataTableExtraRow[] {
       },
       {
         columnKey: "arrival",
+        stackedLabel: "Gemeldet",
         content: (
-          <span className="tabular-nums">
-            gemeldet {formatTime(entry.reportedAt)}
-          </span>
+          <span className="tabular-nums">{formatTime(entry.reportedAt)}</span>
         ),
       },
       {
         columnKey: "departure",
+        stackedLabel: "Beendet",
         content: (
           <span className="tabular-nums">
-            {entry.clearedAt ? `beendet ${formatTime(entry.clearedAt)}` : "–"}
+            {entry.clearedAt ? formatTime(entry.clearedAt) : "–"}
           </span>
         ),
       },

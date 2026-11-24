@@ -146,6 +146,10 @@ interface DataTableExtraCell {
   readonly columnKey: string;
   readonly colSpan?: number;
   readonly content: ReactNode;
+  // The label of this cell on a phone card, where the column header does
+  // not fit the sub row (a report time under "Ankunft"; #7915). The table
+  // keeps the column header.
+  readonly stackedLabel?: string;
 }
 
 /**
@@ -657,7 +661,10 @@ function StackedExtraRow<T>({
         </div>
       ) : null}
       {cells.map((cell) => (
-        <StackedField key={cell.columnKey} label={headerOf(cell.columnKey)}>
+        <StackedField
+          key={cell.columnKey}
+          label={cell.stackedLabel ?? headerOf(cell.columnKey)}
+        >
           {cell.content}
         </StackedField>
       ))}
