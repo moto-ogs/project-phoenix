@@ -163,7 +163,8 @@ type CallerProfileUpdate struct {
 // the version of the linked person (persons.updated_at, the People
 // Directory's PersonVersion, which an admin's name change through
 // PUT /api/users/{id} sends as well), or readstate.Absent while the account
-// has no person. Username and bio only their holder writes.
+// has no person. It does not cover the username (auth.accounts) or the bio
+// (users.profiles): the profile form edits only the names.
 func ProfileVersion(profile CallerProfile) string {
 	if profile.Person == nil {
 		return readstate.Absent

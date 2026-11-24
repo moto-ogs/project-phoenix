@@ -19,8 +19,14 @@ func (c *CallerContext) Profile(ctx context.Context) (domain.CallerProfile, erro
 		return domain.CallerProfile{}, &domain.CallerError{Op: "get current profile", Err: err}
 	}
 	profile := domain.CallerProfile{Account: account}
-	if person, err := c.Person(ctx); err == nil {
+	// Only a clean "not linked" reads as no person; a failed lookup would
+	// otherwise answer readstate.Absent and refuse the next save.
+	person, err := c.Person(ctx)
+	switch {
+	case err == nil:
 		profile.Person = &person
+	case !errors.Is(err, domain.ErrCallerNotLinkedToPerson):
+		return domain.CallerProfile{}, &domain.CallerError{Op: "get current profile", Err: err}
 	}
 	if account.ID > 0 {
 		fields, found, err := c.deps.Accounts.FindAccountProfile(ctx, account.ID.Int64())
@@ -73,6 +79,11 @@ func (c *CallerContext) UpdateProfile(ctx context.Context, update domain.CallerP
 // a person was read as readstate.Absent.
 func (c *CallerContext) updatePersonNames(ctx context.Context, accountID int64, person domain.CallerPerson, personErr error, update domain.CallerProfileUpdate) error {
 	if personErr != nil {
+		// A failed lookup is no missing person: it fails the save instead of
+		// refusing it as changed since it was read.
+		if !errors.Is(personErr, domain.ErrCallerNotLinkedToPerson) {
+			return personErr
+		}
 		if err := readstate.Check(update.ExpectedVersion, readstate.Absent); err != nil {
 			return err
 		}
