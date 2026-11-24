@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	devicefleet "github.com/moto-ogs/project-phoenix/modules/devicefleet"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 const (
@@ -142,7 +143,7 @@ func (rs *Resource) updateDevice(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse request
-	req := &DeviceRequest{}
+	req := &DeviceUpdateRequest{}
 	if err := render.Bind(r, req); err != nil {
 		rs.runtime.Failure(w, r, http.StatusBadRequest, err, "")
 		return
@@ -152,6 +153,12 @@ func (rs *Resource) updateDevice(w http.ResponseWriter, r *http.Request) {
 	// the committed row (#2317, #2321); deviceForEdit says why.
 	device, err := rs.deviceForEdit(r, id)
 	if err != nil {
+		rs.renderError(w, r, err)
+		return
+	}
+	// The edit writes back what its editor read: a device changed since
+	// then is refused, under the lock the write holds (ADR 0311).
+	if err := readstate.Check(req.ExpectedVersion, devicefleet.DeviceVersion(device)); err != nil {
 		rs.renderError(w, r, err)
 		return
 	}

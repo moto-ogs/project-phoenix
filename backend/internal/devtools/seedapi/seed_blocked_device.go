@@ -37,10 +37,16 @@ func (s *FixedSeeder) seedBlockedDevice() error {
 	if err := json.Unmarshal(created, &device); err != nil {
 		return fmt.Errorf("failed to parse device %s: %w", demoBlockedDevice.DeviceID, err)
 	}
-	if _, err := s.client.Put(fmt.Sprintf("/api/iot/%d", device.Data.ID), map[string]any{
-		"device_id":   demoBlockedDevice.DeviceID,
-		"name":        demoBlockedDevice.Name,
-		"device_type": "terminal",
+	path := fmt.Sprintf("/api/iot/%d", device.Data.ID)
+	version, err := readDataVersion(s.client.Get, path)
+	if err != nil {
+		return err
+	}
+	if _, err := s.client.Put(path, map[string]any{
+		"device_id":        demoBlockedDevice.DeviceID,
+		"name":             demoBlockedDevice.Name,
+		"device_type":      "terminal",
+		"expected_version": version,
 	}); err != nil {
 		return fmt.Errorf("failed to rename device %s: %w", demoBlockedDevice.DeviceID, err)
 	}

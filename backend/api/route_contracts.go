@@ -718,7 +718,7 @@ func staffPortalCalendarContractMounts() []contractMount {
 		{Method: "POST", Pattern: "/", Portals: portals, Request: devicesAPI.DeviceRequest{}, Response: devicesAPI.DeviceCreationResponse{}},
 		{Method: "GET", Pattern: "/device-slots", Portals: portals, Response: devicesAPI.DeviceSlotsResponse{}},
 		{Method: "GET", Pattern: "/{id}", Portals: portals, Response: devicesAPI.DeviceResponse{}},
-		{Method: "PUT", Pattern: "/{id}", Portals: portals, Request: devicesAPI.DeviceRequest{}, Response: devicesAPI.DeviceResponse{}},
+		{Method: "PUT", Pattern: "/{id}", Portals: portals, Request: devicesAPI.DeviceUpdateRequest{}, Response: devicesAPI.DeviceResponse{}},
 		{Method: "DELETE", Pattern: "/{id}", Portals: portals, NoData: true},
 		{Method: "GET", Pattern: "/{id}/history", Portals: portals, Response: []devicesAPI.LifecycleEventResponse{}},
 		{Method: "PATCH", Pattern: "/{deviceId}/status", Portals: portals, Request: devicesAPI.DeviceStatusRequest{}, NoData: true},

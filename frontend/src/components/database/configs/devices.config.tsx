@@ -24,7 +24,18 @@ import {
   DEVICE_TYPE_OPTIONS,
 } from "@/lib/iot-helpers";
 import { devicesConcept } from "~/lib/concepts/devices";
+import type * as iotContract from "~/lib/contract/iot.generated";
 import { useClipboardCopy } from "~/lib/use-clipboard-copy";
+
+/**
+ * The body of a device edit: the fields of the form and the `version` of the
+ * stored device the form was filled from (ADR 0311).
+ */
+export function toDeviceUpdateRequest(
+  data: Partial<Device>,
+): iotContract.DeviceUpdateRequest {
+  return { ...prepareDeviceForBackend(data), expected_version: data.version };
+}
 
 /**
  * Der API-Schlüssel eines Geräts: verborgen, mit zwei Schaltflächen aus dem
@@ -126,7 +137,7 @@ export const devicesConfig = defineEntityConfig<Device>({
       mapDeviceResponse(
         await bffJson("tenant", "PUT /api/iot/{id}", {
           params: { id },
-          body: prepareDeviceForBackend(data),
+          body: toDeviceUpdateRequest(data),
         }),
       ),
     delete: (id) =>

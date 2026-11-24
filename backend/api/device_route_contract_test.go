@@ -50,10 +50,21 @@ func TestDeviceManagementAnswersItsContract(t *testing.T) {
 	code, body = exec(http.MethodGet, device, nil)
 	require.Equal(t, http.StatusOK, code, string(body))
 	assert.NotContains(t, string(body), "api_key", "a read never carries the key")
+	var read struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(body, &read))
+	require.NotEmpty(t, read.Data.Version, "the read carries the version an edit sends back")
 
-	code, body = exec(http.MethodPut, device, map[string]string{"device_id": "contract-terminal", "device_type": "terminal", "name": "Flur"})
+	code, body = exec(http.MethodPut, device, map[string]string{"device_id": "contract-terminal", "device_type": "terminal", "name": "Flur", "expected_version": read.Data.Version})
 	require.Equal(t, http.StatusOK, code, string(body))
 	assert.Contains(t, string(body), `"name":"Flur"`)
+	// The read before that save is outdated now (ADR 0311).
+	code, body = exec(http.MethodPut, device, map[string]string{"device_id": "contract-terminal", "device_type": "terminal", "name": "Gang", "expected_version": read.Data.Version})
+	assert.Equal(t, http.StatusConflict, code, string(body))
+	assert.Contains(t, string(body), `"code":"general.changed_since_read"`)
 
 	code, body = exec(http.MethodGet, "/api/iot/device-slots", nil)
 	require.Equal(t, http.StatusOK, code, string(body))

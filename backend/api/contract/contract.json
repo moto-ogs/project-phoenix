@@ -21341,7 +21341,7 @@
       ],
       "request": {
         "kind": "ref",
-        "ref": "DeviceRequest"
+        "ref": "DeviceUpdateRequest"
       },
       "response": {
         "kind": "ref",
@@ -51815,6 +51815,12 @@
           }
         },
         {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "api_key",
           "schema": {
             "kind": "string"
@@ -51958,6 +51964,12 @@
           "schema": {
             "kind": "instant"
           }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -52068,6 +52080,57 @@
           "schema": {
             "kind": "ref",
             "ref": "DeviceTransferSession"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DeviceUpdateRequest",
+      "go_type": "devices.DeviceUpdateRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "device_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "device_type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "registered_by_id",
+          "optional": true,
+          "schema": {
+            "kind": "id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
