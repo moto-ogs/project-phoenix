@@ -117,7 +117,7 @@ const RECORD = {
   id: "5",
   firstName: "Mira",
   lastName: "Sommer-Berg",
-  heldBankSchools: [],
+  heldBankSchools: [] as readonly string[],
 } as StaffRecordDetail;
 
 function renderPage() {
