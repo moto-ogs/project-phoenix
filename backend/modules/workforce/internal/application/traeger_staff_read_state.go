@@ -7,11 +7,11 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
-// The tokens of what the Personalverwaltung edits in a record (ADR 0311).
-// Each is a fingerprint over the stored values its form shows: the record
-// row and a contract carry no updated_at that every writer moves. A read
-// shows the token, the write sends it back and the owner compares it under
-// the lock it writes under.
+// The tokens of what the Personalverwaltung edits in a record and in its
+// catalogs (ADR 0311). Each is a fingerprint over the stored values its form
+// shows: the record row, a contract and the two catalogs carry no updated_at
+// that every writer moves. A read shows the token, the write sends it back
+// and the owner compares it under the lock it writes under.
 
 // personVersion is the token of the record's „Person“ section.
 func personVersion(record domain.TraegerStaffRecord) string {
@@ -75,4 +75,29 @@ func compareID(a, b int64) int {
 	default:
 		return 0
 	}
+}
+
+// absenceTypeVersion is the token of one absence type of the Träger: every
+// field its form rewrites.
+func absenceTypeVersion(value domain.TraegerAbsenceType) string {
+	return readstate.Fingerprint(struct {
+		Name             string  `json:"name"`
+		AllowanceEnabled bool    `json:"allowance_enabled"`
+		StandardDays     float64 `json:"standard_days"`
+		CarryoverUntil   string  `json:"carryover_until"`
+		Requestable      bool    `json:"requestable"`
+		IsActive         bool    `json:"is_active"`
+	}{value.Name, value.AllowanceEnabled, value.StandardDays, value.CarryoverUntil, value.Requestable, value.IsActive})
+}
+
+// proofTypeVersion is the token of one Nachweisart: every field its form
+// rewrites.
+func proofTypeVersion(kind domain.TraegerProofType) string {
+	return readstate.Fingerprint(struct {
+		Name              string `json:"name"`
+		ValidityMonths    *int   `json:"validity_months"`
+		ReminderLeadWeeks int    `json:"reminder_lead_weeks"`
+		Mandatory         bool   `json:"mandatory"`
+		Archived          bool   `json:"archived"`
+	}{kind.Name, kind.ValidityMonths, kind.ReminderLeadWeeks, kind.Mandatory, kind.Archived()})
 }

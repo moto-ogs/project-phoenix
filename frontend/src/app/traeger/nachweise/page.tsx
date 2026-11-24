@@ -541,6 +541,7 @@ export default function TraegerStaffProofsPage() {
     loading: listLoading,
     error: listError,
     reload: reloadList,
+    reloadOrThrow: reloadListOrThrow,
   } = useTraegerResource(
     traegerReportKeys.staffProofList(),
     fetchStaffProofList,
@@ -610,6 +611,8 @@ export default function TraegerStaffProofsPage() {
       overlays={
         <StaffProofTypeModal
           target={editing}
+          types={list?.types ?? []}
+          reload={async () => (await reloadListOrThrow()).types}
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);

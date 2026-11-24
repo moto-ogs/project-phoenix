@@ -146,6 +146,10 @@ type ProofTypeRequest struct {
 	ReminderLeadWeeks *int   `json:"reminder_lead_weeks"`
 	Mandatory         bool   `json:"mandatory"`
 	Archived          bool   `json:"archived"`
+	// ExpectedVersion is the kind's version an update was made on; a kind
+	// changed since is refused with general.changed_since_read (ADR 0311).
+	// A create ignores it.
+	ExpectedVersion string `json:"expected_version"`
 }
 
 func (req *ProofTypeRequest) Bind(*http.Request) error {
@@ -162,6 +166,7 @@ func (req *ProofTypeRequest) toInput() workforce.TraegerStaffProofTypeInput {
 	}
 	return workforce.TraegerStaffProofTypeInput{
 		Name: req.Name, ValidityMonths: req.ValidityMonths, ReminderLeadWeeks: lead, Mandatory: req.Mandatory, Archived: req.Archived,
+		ExpectedVersion: req.ExpectedVersion,
 	}
 }
 

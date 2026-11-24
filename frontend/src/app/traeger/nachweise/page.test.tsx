@@ -1,5 +1,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiError } from "~/lib/api-error";
+import { catalogText } from "~/test/error-catalog-text";
 import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type {
   SchoolProofKinds,
@@ -46,6 +48,7 @@ const police = {
   mandatory: true,
   archived: false,
   policeCertificate: true,
+  version: "police-v1",
 };
 const measles = {
   id: "8",
@@ -56,6 +59,7 @@ const measles = {
   mandatory: true,
   archived: false,
   policeCertificate: false,
+  version: "measles-v1",
 };
 
 const entry = (
@@ -244,5 +248,60 @@ describe("TraegerStaffProofsPage", () => {
     const grid = cards[0]?.parentElement;
     expect(grid).toHaveClass("grid");
     for (const card of cards) expect(card?.parentElement).toBe(grid);
+  });
+
+  // ADR 0311: a change rests on the kind as the dialog opened on it. A
+  // colleague's change since is refused; the dialog shows the stored kind.
+  it("keeps the dialog open on the stored kind after a refusal", async () => {
+    api.saveStaffProofType.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    renderPage();
+    fireEvent.click(await screen.findByRole("tab", { name: "Nachweisarten" }));
+    fireEvent.click(await screen.findByText("Masernschutz"));
+    const dialog = await screen.findByRole("dialog");
+    const lead = within(dialog).getByLabelText(/Warnung vor Ablauf/);
+    expect(lead).toHaveValue("8");
+    fireEvent.change(lead, { target: { value: "6" } });
+    api.fetchStaffProofList.mockResolvedValue({
+      ...LIST,
+      types: [
+        police,
+        { ...measles, reminderLeadWeeks: 10, version: "measles-v2" },
+      ],
+    });
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Änderungen speichern" }),
+    );
+
+    expect(
+      await within(dialog).findByText(
+        catalogText("general.changed_since_read", "die Nachweisart"),
+      ),
+    ).toBeInTheDocument();
+    expect(api.saveStaffProofType.mock.calls.at(-1)?.[0]).toEqual({
+      id: "8",
+      version: "measles-v1",
+    });
+    await vi.waitFor(() =>
+      expect(within(dialog).getByLabelText(/Warnung vor Ablauf/)).toHaveValue(
+        "10",
+      ),
+    );
+
+    api.saveStaffProofType.mockResolvedValue({
+      ...measles,
+      reminderLeadWeeks: 10,
+      version: "measles-v3",
+    });
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Änderungen speichern" }),
+    );
+    await vi.waitFor(() =>
+      expect(api.saveStaffProofType.mock.calls.at(-1)?.[0]).toEqual({
+        id: "8",
+        version: "measles-v2",
+      }),
+    );
   });
 });

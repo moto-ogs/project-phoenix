@@ -127,7 +127,22 @@ func TestTraegerStaffProofsWarnBeforeExpiry(t *testing.T) {
 			"name": "Belehrung Infektionsschutz", "reminder_lead_weeks": 60,
 		})
 		assertStaffRefusal(t, rec, http.StatusBadRequest, "workforce.traeger_proof_invalid")
-		rec = traegerJSON(t, router, office.token, http.MethodPut, fmt.Sprintf("/traeger/staff-proofs/types/%d", own.ID), map[string]any{
+		// ADR 0311: an update saves only over the kind the dialog read.
+		stale := own.Version
+		rec = traegerUpdateProofType(t, router, office.token, own.ID, map[string]any{
+			"name": "Belehrung Infektionsschutz", "validity_months": 24, "reminder_lead_weeks": 6,
+		})
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		assert.Equal(t, 6, decode[workforce.TraegerStaffProofType](t, rec).ReminderLeadWeeks)
+		for _, version := range []string{stale, ""} {
+			rec = traegerJSON(t, router, office.token, http.MethodPut, fmt.Sprintf("/traeger/staff-proofs/types/%d", own.ID), map[string]any{
+				"name": "Belehrung Infektionsschutz", "reminder_lead_weeks": 4, "archived": true, "expected_version": version,
+			})
+			assertStaffRefusal(t, rec, http.StatusConflict, "general.changed_since_read")
+		}
+		assert.Equal(t, 1, staffSchoolValue(t, db, `SELECT COUNT(*) FROM workforce.staff_proof_types WHERE id = ? AND reminder_lead_weeks = 6 AND archived_at IS NULL`, own.ID),
+			"the colleague's change stays and the kind stays live")
+		rec = traegerUpdateProofType(t, router, office.token, own.ID, map[string]any{
 			"name": "Belehrung Infektionsschutz", "reminder_lead_weeks": 4, "archived": true,
 		})
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())

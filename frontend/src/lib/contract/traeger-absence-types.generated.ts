@@ -47,6 +47,7 @@ export interface TraegerAbsenceType {
   is_active: boolean;
   schools: TraegerAbsenceTypeSchool[] | null;
   created_at: string;
+  version: string;
 }
 
 export const TraegerAbsenceTypeSchema: z.ZodType<TraegerAbsenceType, unknown> = object<TraegerAbsenceType>({
@@ -59,6 +60,7 @@ export const TraegerAbsenceTypeSchema: z.ZodType<TraegerAbsenceType, unknown> = 
   is_active: bool,
   schools: nullable(arr(TraegerAbsenceTypeSchoolSchema)),
   created_at: instant,
+  version: str,
 });
 
 /** Go: workforce.TraegerAbsenceTypeList */
@@ -82,6 +84,7 @@ export interface AbsenceTypeRequest {
   carryover_until?: string;
   requestable?: boolean;
   is_active?: boolean | null;
+  expected_version?: string;
 }
 
 export const routes = {
