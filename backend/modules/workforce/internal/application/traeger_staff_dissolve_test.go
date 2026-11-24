@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // dissolveStore is a record, its trail times and the schools' bank rows a
@@ -26,13 +27,21 @@ type dissolveStore struct {
 	writtenAt time.Time
 	writes    int
 	dissolved bool
+	// locked counts the reads of the record under its lock; meanwhile, when
+	// set, changes the record after a school's write, as a colleague's write
+	// committed during the dissolution would.
+	locked    int
+	meanwhile func(*dissolveStore)
 }
 
 func (s *dissolveStore) TraegerStaffRelease(context.Context, int64) (*domain.TraegerStaffRelease, error) {
 	return &domain.TraegerStaffRelease{OrganizationID: s.record.OrganizationID}, nil
 }
 
-func (s *dissolveStore) FindStaffRecord(context.Context, int64, int64, bool) (domain.TraegerStaffRecord, error) {
+func (s *dissolveStore) FindStaffRecord(_ context.Context, _ int64, _ int64, forUpdate bool) (domain.TraegerStaffRecord, error) {
+	if forUpdate {
+		s.locked++
+	}
 	return s.record, nil
 }
 
@@ -50,7 +59,7 @@ func (s *dissolveStore) SchoolFinancialRows(_ context.Context, staffIDs []int64)
 	return rows, nil
 }
 
-func (s *dissolveStore) InsertSchoolFinancialRow(_ context.Context, row domain.StaffFinancialData) error {
+func (s *dissolveStore) WriteSchoolFinancialRow(_ context.Context, row domain.StaffFinancialData) error {
 	for _, link := range s.record.Links {
 		if link.StaffID == row.StaffID {
 			row.TenantID = link.SchoolID
@@ -58,14 +67,21 @@ func (s *dissolveStore) InsertSchoolFinancialRow(_ context.Context, row domain.S
 	}
 	row.UpdatedAt = s.writtenAt
 	s.rows[row.StaffID] = row
-	s.writes++
+	s.wrote()
 	return nil
 }
 
 func (s *dissolveStore) DeleteSchoolFinancialRow(_ context.Context, staffID int64) error {
 	delete(s.rows, staffID)
-	s.writes++
+	s.wrote()
 	return nil
+}
+
+func (s *dissolveStore) wrote() {
+	s.writes++
+	if s.meanwhile != nil {
+		s.meanwhile(s)
+	}
 }
 
 func (s *dissolveStore) DeleteStaffRecord(context.Context, int64, int64) error {
@@ -243,4 +259,81 @@ func auditOf(changes []domain.MasterDataChange, staffID int64) []domain.MasterDa
 		}
 	}
 	return entries
+}
+
+// A held row whose only value the Personalverwaltung emptied after the hold
+// keeps no value: the school's row goes instead of staying as an empty row,
+// with the emptied value in its audit.
+func TestDissolveDeletesARowLeftWithoutAValue(t *testing.T) {
+	t.Parallel()
+	service, store, changes := dissolveFixture(t)
+	store.rows[10] = schoolRow(t, service, map[string]string{domain.StaffFieldSocialSecurityNumber: schoolSSN}, dissolveHeldAt)
+	store.changedAt = map[string]time.Time{domain.StaffFieldSocialSecurityNumber: dissolveHeldAt.Add(time.Minute)}
+
+	require.NoError(t, service.Dissolve(context.Background(), dissolveActor(), 7))
+	_, kept := store.rows[10]
+	assert.False(t, kept, "a row without a value goes")
+	entries := auditOf(*changes, 10)
+	require.Len(t, entries, 1)
+	assert.Equal(t, domain.StaffFieldSocialSecurityNumber, entries[0].Field)
+	assert.Empty(t, entries[0].NewValue)
+}
+
+// recordIBANLater is the IBAN the Personalverwaltung saves while a
+// dissolution writes the schools.
+const recordIBANLater = "DE75512108001245126199"
+
+// The Personalverwaltung saves a new IBAN while the dissolution writes the
+// schools. The record is not deleted over it: the return runs again, and the
+// new IBAN reaches every school, also one whose row the first attempt
+// stamped after the trail entry of the save (both stamps are transaction
+// starts). The record is read and deleted under its lock.
+func TestDissolveReturnsAValueSavedDuringTheDissolution(t *testing.T) {
+	t.Parallel()
+	service, store, changes := dissolveFixture(t)
+	store.meanwhile = func(s *dissolveStore) {
+		s.meanwhile = nil
+		require.NoError(t, service.sealRecordFinancial(&s.record, map[string]string{domain.StaffFieldIBAN: recordIBANLater, domain.StaffFieldTaxID: recordTax}))
+		s.changedAt = map[string]time.Time{domain.StaffFieldIBAN: s.writtenAt.Add(-time.Minute)}
+	}
+
+	require.NoError(t, service.Dissolve(context.Background(), dissolveActor(), 7))
+	assert.True(t, store.dissolved)
+	want := map[string]string{domain.StaffFieldIBAN: recordIBANLater, domain.StaffFieldTaxID: recordTax}
+	assert.Equal(t, want, schoolValues(t, service, store, 10), "the school written first gets the new IBAN as well")
+	assert.Equal(t, want, schoolValues(t, service, store, 11))
+	assert.Equal(t, 3, store.locked, "the first read and the check before each delete take the lock")
+	assert.Len(t, auditOf(*changes, 10), 3, "school 2 logs both values, then the new IBAN")
+}
+
+// An Einsatzort linked while the dissolution writes the schools handed its
+// bank row to the record. The record is not deleted with that link: the
+// return runs again and gives the new school the record's values.
+func TestDissolveReturnsToAnEinsatzortLinkedDuringTheDissolution(t *testing.T) {
+	t.Parallel()
+	service, store, _ := dissolveFixture(t)
+	store.meanwhile = func(s *dissolveStore) {
+		s.meanwhile = nil
+		s.record.Links = append(s.record.Links, domain.TraegerStaffLink{SchoolID: 4, StaffID: 12, LinkedAt: s.writtenAt.Add(time.Minute)})
+	}
+
+	require.NoError(t, service.Dissolve(context.Background(), dissolveActor(), 7))
+	assert.True(t, store.dissolved)
+	assert.Equal(t, map[string]string{domain.StaffFieldIBAN: recordIBAN, domain.StaffFieldTaxID: recordTax}, schoolValues(t, service, store, 12),
+		"the school linked meanwhile keeps the bank values")
+}
+
+// A record that changes on every attempt is refused as changed after the
+// last one and stays: nothing is lost, the Personalverwaltung dissolves it
+// again (ADR 0311).
+func TestDissolveRefusesARecordThatKeepsChanging(t *testing.T) {
+	t.Parallel()
+	service, store, _ := dissolveFixture(t)
+	ibans := []string{recordIBANLater, schoolIBAN, recordIBAN, recordIBANLater, schoolIBAN, recordIBAN}
+	store.meanwhile = func(s *dissolveStore) {
+		require.NoError(t, service.sealRecordFinancial(&s.record, map[string]string{domain.StaffFieldIBAN: ibans[s.writes%len(ibans)]}))
+	}
+
+	require.ErrorIs(t, service.Dissolve(context.Background(), dissolveActor(), 7), readstate.ErrChanged)
+	assert.False(t, store.dissolved)
 }

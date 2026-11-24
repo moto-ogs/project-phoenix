@@ -19,14 +19,6 @@ func changeBankContext(field string, organizationID, recordID int64) []byte {
 	return []byte("workforce.staff_record_changes." + field + "|" + strconv.FormatInt(organizationID, 10) + "|" + strconv.FormatInt(recordID, 10))
 }
 
-// schoolBankField maps a record field onto the field name of the school's
-// sealed row.
-var schoolBankField = map[string]string{
-	domain.StaffFieldIBAN:                 staffIBANField,
-	domain.StaffFieldTaxID:                staffTaxIDField,
-	domain.StaffFieldSocialSecurityNumber: staffSocialField,
-}
-
 // recordSealed returns the pointer to the sealed value of field on record.
 func recordSealed(record *domain.TraegerStaffRecord, field string) *[]byte {
 	switch field {
@@ -43,7 +35,7 @@ func recordSealed(record *domain.TraegerStaffRecord, field string) *[]byte {
 // field; a field without a value is absent.
 func (t *TraegerStaff) openRecordFinancial(record domain.TraegerStaffRecord) (map[string]string, error) {
 	values := map[string]string{}
-	for field := range schoolBankField {
+	for _, field := range domain.FinancialStaffFields {
 		sealed := *recordSealed(&record, field)
 		if len(sealed) == 0 {
 			continue
@@ -60,7 +52,7 @@ func (t *TraegerStaff) openRecordFinancial(record domain.TraegerStaffRecord) (ma
 // sealRecordFinancial seals values onto a saved record and sets the IBAN
 // mask; an empty value clears its field.
 func (t *TraegerStaff) sealRecordFinancial(record *domain.TraegerStaffRecord, values map[string]string) error {
-	for field := range schoolBankField {
+	for _, field := range domain.FinancialStaffFields {
 		target := recordSealed(record, field)
 		value := values[field]
 		if value == "" {

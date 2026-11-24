@@ -365,7 +365,7 @@ func (s *TraegerStaffStore) FinancialChangeTimes(ctx context.Context, organizati
 	if err := db.NewRaw(`SELECT field, MAX(occurred_at) AS at FROM workforce.staff_record_changes
 		WHERE organization_id = ? AND staff_record_id = ? AND kind = ANY(?) AND field = ANY(?) GROUP BY field`,
 		organizationID, recordID, pgdialect.Array([]string{domain.StaffChangeChanged, domain.StaffChangeImported}),
-		pgdialect.Array([]string{domain.StaffFieldIBAN, domain.StaffFieldTaxID, domain.StaffFieldSocialSecurityNumber})).Scan(ctx, &rows); err != nil {
+		pgdialect.Array(domain.FinancialStaffFields)).Scan(ctx, &rows); err != nil {
 		return nil, fmt.Errorf("workforce postgres: read financial change times: %w", err)
 	}
 	times := make(map[string]time.Time, len(rows))

@@ -96,11 +96,12 @@ func (s *TraegerStaffStore) HoldSchoolFinancialRow(ctx context.Context, staffID 
 	return nil
 }
 
-// InsertSchoolFinancialRow writes the school's bank and tax row of one
+// WriteSchoolFinancialRow writes the school's bank and tax row of one
 // employment when its Träger dissolves a record: a new row, or the values
-// the dissolution decided over the row the school has. The row's update
-// trigger stamps it on the database clock (ADR 0280).
-func (s *TraegerStaffStore) InsertSchoolFinancialRow(ctx context.Context, data domain.StaffFinancialData) error {
+// the dissolution decided over the row the school has. Both stamp the row on
+// the database clock (ADR 0280): a new row through the column default, an
+// overwritten one through the row's update trigger.
+func (s *TraegerStaffStore) WriteSchoolFinancialRow(ctx context.Context, data domain.StaffFinancialData) error {
 	db, schoolID, err := schoolStaffDB(ctx)
 	if err != nil {
 		return err

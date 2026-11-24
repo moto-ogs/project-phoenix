@@ -460,9 +460,9 @@ type TraegerStaffStore interface {
 	// HoldSchoolFinancialRow stamps the school's bank row of a linked
 	// employment that the link did not read, so later hand-overs keep it.
 	HoldSchoolFinancialRow(ctx context.Context, staffID int64) error
-	// InsertSchoolFinancialRow writes the school's bank row a dissolution
+	// WriteSchoolFinancialRow writes the school's bank row a dissolution
 	// decided: a new row, or the decided values over the existing one.
-	InsertSchoolFinancialRow(ctx context.Context, data domain.StaffFinancialData) error
+	WriteSchoolFinancialRow(ctx context.Context, data domain.StaffFinancialData) error
 	// InsertSchoolHireData writes the master data row of an employment a
 	// hire just created at the school (#7206): entry day, last day, address
 	// and phone. The employment has no row yet.
