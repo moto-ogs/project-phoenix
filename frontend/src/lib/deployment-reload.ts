@@ -3,8 +3,8 @@
  * from a tab older than the server is refused with 412 before any route runs,
  * so nothing happened on the server. Instead of showing every open tab the
  * „neue Version“ message after each release, the tab reloads once by itself
- * when the reload costs nothing: no form on screen that someone typed into,
- * no open dialog, no page guarding unsaved changes. Otherwise the refusal
+ * when the reload costs nothing: no form or field on screen that someone
+ * typed into (a search field aside), no open dialog, no page guarding unsaved changes. Otherwise the refusal
  * reaches the caller and its message asks the person to reload. A marker in
  * sessionStorage (reload-once) stops a reload loop.
  */
@@ -14,13 +14,21 @@ import { reloadOnce } from "./reload-once";
 
 const RELOAD_MARKER_KEY = "moto:deployment-skew-reload-at";
 
-/** Forms someone typed into; a form that left the page holds no draft. */
-const editedForms = new Set<HTMLFormElement>();
+/** What can hold a draft; a field inside a form counts as its form. */
+const DRAFT_FIELDS = "form, input, textarea, select, [contenteditable]";
+
+/**
+ * Forms and fields someone typed into or changed. A search field only filters
+ * the page and holds no draft; an element that left the page holds none
+ * either, so only elements still in the document are checked.
+ */
+const edited = new WeakSet<Element>();
 if (typeof document !== "undefined") {
-  const markDraft = (event: Event) => {
-    const form =
-      event.target instanceof Element ? event.target.closest("form") : null;
-    if (form) editedForms.add(form);
+  const markDraft = ({ target }: Event) => {
+    if (!(target instanceof Element)) return;
+    if (target.closest('[role="search"]')) return;
+    if (target instanceof HTMLInputElement && target.type === "search") return;
+    edited.add(target.closest("form") ?? target);
   };
   document.addEventListener("input", markDraft, true);
   document.addEventListener("change", markDraft, true);
@@ -30,11 +38,9 @@ if (typeof document !== "undefined") {
 let reloading = false;
 
 function hasDraftOnScreen(): boolean {
-  for (const form of editedForms) {
-    if (form.isConnected) return true;
-    editedForms.delete(form);
-  }
-  return false;
+  return Array.from(document.querySelectorAll(DRAFT_FIELDS)).some((element) =>
+    edited.has(element),
+  );
 }
 
 function reloadLosesNothing(): boolean {

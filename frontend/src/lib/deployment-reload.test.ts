@@ -136,6 +136,30 @@ describe("a tab of an earlier deployment, refused by the proxy", () => {
     );
   });
 
+  it("shows the message while an editor outside a form holds a draft", async () => {
+    // The student notes edit in a textarea without a form element.
+    document.body.innerHTML = "<div><textarea></textarea></div>";
+    document
+      .querySelector("textarea")
+      ?.dispatchEvent(new Event("input", { bubbles: true }));
+
+    await expectRefusalReachesCaller(
+      read("tenant", "POST /api/activities/categories", {
+        body: { name: "Sport", color: "#83CD2D" },
+      }),
+    );
+  });
+
+  it("reloads although someone typed into the page's search", async () => {
+    document.body.innerHTML =
+      '<div role="search"><input /></div><input type="search" />';
+    for (const input of document.querySelectorAll("input")) {
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+
+    await expectReloadInsteadOfAnswer(read("tenant", "GET /api/groups/"));
+  });
+
   it("reloads once the typed-in form has left the page, such as the login", async () => {
     document.body.innerHTML = "<form><input /></form>";
     document
