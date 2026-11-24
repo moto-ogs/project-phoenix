@@ -198,45 +198,6 @@ export default function AnfragenPage() {
     setTypeFilter([]);
   }, []);
 
-  // Stabil memoisiert: die Liste lädt bei jeder Identitätsänderung neu.
-  const filters: AggregatedRequestFilters = useMemo(
-    () => ({
-      search: deferredSearch,
-      includeAggregated: showAggregatedRequests,
-      includeEnrollment: showEnrollmentRequests,
-      includeCareWithdrawals: showCareWithdrawals,
-      canManageFamilyProtection: showEnrollmentRequests,
-      types:
-        view === "history"
-          ? typeFilter.filter((type) => type !== "care_withdrawal")
-          : typeFilter.filter((type) => type !== "direct_correction"),
-      statuses: view === "history" ? statusFilter : [],
-      from:
-        view === "history" && dateRange?.from
-          ? toISODate(dateRange.from)
-          : undefined,
-      to:
-        view === "history" && dateRange?.to
-          ? toISODate(dateRange.to)
-          : undefined,
-    }),
-    [
-      deferredSearch,
-      showAggregatedRequests,
-      showEnrollmentRequests,
-      showCareWithdrawals,
-      typeFilter,
-      statusFilter,
-      dateRange,
-      view,
-    ],
-  );
-
-  const staffFilters: StaffAbsenceRequestFilters = useMemo(
-    () => ({ search: deferredSearch, types: absenceTypeFilter }),
-    [deferredSearch, absenceTypeFilter],
-  );
-
   // Die im aktuellen Umschalter-Zustand wählbaren Anfragearten. Eine Quelle
   // für Filterknöpfe UND Filter-Chips: was hier fehlt, ist auch als Chip weg.
   const typeOptions = useMemo(
@@ -258,6 +219,16 @@ export default function AnfragenPage() {
     ],
   );
 
+  // Die Arten, die in dieser Ansicht gelten. Ein übrig gebliebener Wert der
+  // anderen Ansicht filtert hier nichts und zählt nicht als Filter.
+  const viewTypeFilter = useMemo(
+    () =>
+      view === "history"
+        ? typeFilter.filter((type) => type !== "care_withdrawal")
+        : typeFilter.filter((type) => type !== "direct_correction"),
+    [typeFilter, view],
+  );
+
   const filterConfigs = useMemo(() => {
     const typeConfig: FilterConfig[] = showTypeFilter
       ? [
@@ -266,7 +237,7 @@ export default function AnfragenPage() {
             label: "Anfrageart",
             type: "buttons",
             multiSelect: true,
-            value: typeFilter,
+            value: viewTypeFilter,
             onChange: (value) =>
               setTypeFilter(
                 (Array.isArray(value)
@@ -312,13 +283,58 @@ export default function AnfragenPage() {
           ]
         : [];
     return [...typeConfig, ...historyConfigs];
-  }, [showTypeFilter, view, typeOptions, typeFilter, statusFilter, dateRange]);
+  }, [
+    showTypeFilter,
+    view,
+    typeOptions,
+    viewTypeFilter,
+    statusFilter,
+    dateRange,
+  ]);
+
+  // Alle Werte eines Filters gewählt heißt „alle“ (#6734): kein Chip, kein
+  // Ring, und die Liste lädt ungefiltert, wie die leere Auswahl.
+  const restricting = useMemo(
+    () => restrictingFilterIds(filterConfigs),
+    [filterConfigs],
+  );
+
+  // Stabil memoisiert: die Liste lädt bei jeder Identitätsänderung neu.
+  const filters: AggregatedRequestFilters = useMemo(
+    () => ({
+      search: deferredSearch,
+      includeAggregated: showAggregatedRequests,
+      includeEnrollment: showEnrollmentRequests,
+      includeCareWithdrawals: showCareWithdrawals,
+      canManageFamilyProtection: showEnrollmentRequests,
+      types: restricting.has("art") ? viewTypeFilter : [],
+      statuses:
+        view === "history" && restricting.has("status") ? statusFilter : [],
+      from:
+        view === "history" && dateRange?.from
+          ? toISODate(dateRange.from)
+          : undefined,
+      to:
+        view === "history" && dateRange?.to
+          ? toISODate(dateRange.to)
+          : undefined,
+    }),
+    [
+      deferredSearch,
+      showAggregatedRequests,
+      showEnrollmentRequests,
+      showCareWithdrawals,
+      restricting,
+      viewTypeFilter,
+      statusFilter,
+      dateRange,
+      view,
+    ],
+  );
 
   const activeFilters = useMemo(() => {
     const chips: ActiveFilter[] = [];
-    // Alle Werte gewählt heißt „alle“ und trägt keinen Chip (#6734).
-    const restricting = restrictingFilterIds(filterConfigs);
-    for (const type of restricting.has("art") ? typeFilter : []) {
+    for (const type of restricting.has("art") ? viewTypeFilter : []) {
       // Eine Art, die in dieser Ansicht nicht wählbar ist, trägt auch keinen
       // Chip — in der Arbeitsliste betrifft das die Direkt-Korrekturen.
       const label = typeOptions.find((option) => option.value === type)?.label;
@@ -352,7 +368,7 @@ export default function AnfragenPage() {
       }
     }
     return chips;
-  }, [filterConfigs, typeOptions, typeFilter, statusFilter, dateRange, view]);
+  }, [restricting, typeOptions, viewTypeFilter, statusFilter, dateRange, view]);
 
   const staffFilterConfigs = useMemo<FilterConfig[]>(
     () => [
@@ -372,12 +388,22 @@ export default function AnfragenPage() {
     [absenceTypeFilter],
   );
 
+  const staffAbsenceTypes = useMemo(
+    () =>
+      restrictingFilterIds(staffFilterConfigs).has("abwesenheitsart")
+        ? absenceTypeFilter
+        : [],
+    [staffFilterConfigs, absenceTypeFilter],
+  );
+
+  const staffFilters: StaffAbsenceRequestFilters = useMemo(
+    () => ({ search: deferredSearch, types: staffAbsenceTypes }),
+    [deferredSearch, staffAbsenceTypes],
+  );
+
   const staffActiveFilters = useMemo<ActiveFilter[]>(
     () =>
-      (restrictingFilterIds(staffFilterConfigs).has("abwesenheitsart")
-        ? absenceTypeFilter
-        : []
-      ).map((type) => ({
+      staffAbsenceTypes.map((type) => ({
         id: `abwesenheitsart-${type}`,
         label:
           ABSENCE_TYPE_OPTIONS.find((option) => option.value === type)?.label ??
@@ -387,7 +413,7 @@ export default function AnfragenPage() {
             prev.filter((value) => value !== type),
           ),
       })),
-    [staffFilterConfigs, absenceTypeFilter],
+    [staffAbsenceTypes],
   );
 
   const clearAllFilters = () => {
@@ -540,18 +566,12 @@ export default function AnfragenPage() {
         <MitarbeitendeTab
           view={view}
           filters={staffFilters}
-          filtersActive={
-            deferredSearch.trim() !== "" || staffActiveFilters.length > 0
-          }
           onCountChange={handleStaffCount}
         />
       ) : (
         <ElternTab
           view={view}
           filters={filters}
-          filtersActive={
-            deferredSearch.trim() !== "" || activeFilters.length > 0
-          }
           onCountChange={handleParentCount}
           onOpenWaitlistRequest={clearOpenParentRequestFilters}
         />
@@ -568,13 +588,11 @@ export default function AnfragenPage() {
 function ElternTab({
   view,
   filters,
-  filtersActive,
   onCountChange,
   onOpenWaitlistRequest,
 }: Readonly<{
   view: "open" | "history";
   filters: AggregatedRequestFilters;
-  filtersActive: boolean;
   onCountChange: (count: number | null, hasMore: boolean) => void;
   onOpenWaitlistRequest: () => void;
 }>) {
@@ -641,7 +659,6 @@ function ElternTab({
             key={view}
             view={view}
             filters={filters}
-            filtersActive={filtersActive}
             onCountChange={onCountChange}
             focusRequest={focusRequest}
           />
@@ -659,12 +676,10 @@ function ElternTab({
 function MitarbeitendeTab({
   view,
   filters,
-  filtersActive,
   onCountChange,
 }: Readonly<{
   view: "open" | "history";
   filters: StaffAbsenceRequestFilters;
-  filtersActive: boolean;
   onCountChange: (count: number | null) => void;
 }>) {
   return (
@@ -674,7 +689,6 @@ function MitarbeitendeTab({
         key={view}
         view={view}
         filters={filters}
-        filtersActive={filtersActive}
         onCountChange={onCountChange}
       />
     </div>

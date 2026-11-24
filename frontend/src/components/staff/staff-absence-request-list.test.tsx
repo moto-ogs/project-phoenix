@@ -144,41 +144,6 @@ describe("StaffAbsenceRequestList", () => {
     );
   });
 
-  it("nennt im Leerzustand Filter nur, wenn der Seitenkopf sie als aktiv zeigt (#6734)", async () => {
-    listRequests.mockResolvedValue([]);
-    const allTypes = {
-      search: "",
-      types: ["vacation", "sick", "training", "other"],
-    };
-
-    const { unmount } = render(
-      <StaffAbsenceRequestList view="open" filters={allTypes} />,
-    );
-    // Ohne Angabe der Seite zählt jede gewählte Art als Filter.
-    expect(
-      await screen.findByText(
-        "Für die aktuelle Suche und Filter gibt es keine Treffer.",
-      ),
-    ).toBeInTheDocument();
-    unmount();
-
-    render(
-      <StaffAbsenceRequestList
-        view="history"
-        filters={allTypes}
-        filtersActive={false}
-      />,
-    );
-    expect(
-      await screen.findByText("Noch keine entschiedenen Anträge."),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByText(
-        "Für die aktuelle Suche und Filter gibt es keine Treffer.",
-      ),
-    ).not.toBeInTheDocument();
-  });
-
   it("zeigt in der Historie Status, Entscheiderin und Begründung", async () => {
     listRequests.mockResolvedValue([decidedRow()]);
 

@@ -93,17 +93,10 @@ function decidedByLabel(row: StaffAbsenceRequestRow): string | undefined {
 export function StaffAbsenceRequestList({
   view,
   filters,
-  filtersActive,
   onCountChange,
 }: Readonly<{
   view: "open" | "history";
   filters: StaffAbsenceRequestFilters;
-  /**
-   * Ob Suche oder Filter die Liste einschränken, wie es der Seitenkopf zeigt:
-   * alle Arten gewählt heißt „alle“ (#6734). Ohne Angabe aus `filters`
-   * abgeleitet.
-   */
-  filtersActive?: boolean;
   /** Meldet die geladene Zeilenzahl an den Seitenkopf (Statuszeile). */
   onCountChange?: (count: number | null) => void;
 }>) {
@@ -253,8 +246,7 @@ export function StaffAbsenceRequestList({
     );
   }
 
-  const hasFilters =
-    filtersActive ?? (filters.search.trim() !== "" || filters.types.length > 0);
+  const hasFilters = filters.search.trim() !== "" || filters.types.length > 0;
 
   if (failed || rows === undefined) {
     return <LoadErrorAlert error={loadError} />;

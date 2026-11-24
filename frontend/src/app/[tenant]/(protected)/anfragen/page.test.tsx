@@ -550,14 +550,16 @@ describe("AnfragenPage", () => {
       screen.getAllByRole("button", { name: "Alle löschen" }).length,
     ).toBeGreaterThan(0);
     expect(filterButton).toHaveAttribute("data-filters-active");
+    expect(absenceProbe().filters.types).toEqual(["training"]);
 
     fireEvent.click(filterButton);
     for (const label of ["Urlaub", "Krank", "Sonstige"]) {
       fireEvent.click(screen.getAllByRole("button", { name: label })[0]!);
     }
     fireEvent.click(filterButton);
-    expect(absenceProbe().filters.types).toHaveLength(4);
-    // Alle Arten gewählt heißt „alle“: kein Chip, kein Ring.
+    // Alle Arten gewählt heißt „alle“: die Liste lädt ungefiltert, wie ohne
+    // Auswahl, und es gibt keinen Chip und keinen Ring.
+    expect(absenceProbe().filters.types).toEqual([]);
     expect(
       screen.queryByRole("button", { name: "Alle löschen" }),
     ).not.toBeInTheDocument();

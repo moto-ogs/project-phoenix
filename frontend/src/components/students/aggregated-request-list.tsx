@@ -97,19 +97,12 @@ function bulkRef(item: AggregatedOpenRequest): BulkApproveRequestRef[] {
 export function AggregatedRequestList({
   view,
   filters,
-  filtersActive,
   onCountChange,
   focusRequest = null,
   singleChild = false,
 }: Readonly<{
   view: "open" | "history";
   filters: AggregatedRequestFilters;
-  /**
-   * Ob Suche oder Filter die Liste einschränken, wie es der Seitenkopf zeigt:
-   * alle Werte eines Filters gewählt heißt „alle“ (#6734). Ohne Angabe aus
-   * `filters` abgeleitet.
-   */
-  filtersActive?: boolean;
   /** Meldet die geladene Zeilenzahl an den Seitenkopf (Statuszeile). */
   onCountChange?: (count: number | null, hasMore: boolean) => void;
   /**
@@ -523,12 +516,11 @@ export function AggregatedRequestList({
   // filters.studentId zählt bewusst NICHT als aktiver Filter: im
   // Änderungsprotokoll eines Kindes ist es der Kontext, kein Suchkriterium.
   const hasActiveFilters =
-    filtersActive ??
-    (filters.search.trim() !== "" ||
-      filters.types.length > 0 ||
-      filters.statuses.length > 0 ||
-      Boolean(filters.from) ||
-      Boolean(filters.to));
+    filters.search.trim() !== "" ||
+    filters.types.length > 0 ||
+    filters.statuses.length > 0 ||
+    Boolean(filters.from) ||
+    Boolean(filters.to);
 
   const showList =
     view === "open" && !singleChild && (wide || selectedCase === undefined);

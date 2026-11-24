@@ -51,8 +51,10 @@ import { ApiError } from "~/lib/api-error";
 import { SectionCard } from "~/components/ui/section-card";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import {
+  isMultiSelectRestricting,
   restrictingFilterIds,
   type FilterConfig,
+  type FilterOption,
   type ActiveFilter,
   type FilterSection,
 } from "~/components/ui/page-header/types";
@@ -220,6 +222,7 @@ const EMPTY_STRING_ARRAY: string[] = [];
 const EMPTY_STUDENT_ARRAY: Student[] = [];
 const NO_GROUPS: Group[] = [];
 const NO_ROOMS: Room[] = [];
+const NO_VALUES: string[] = [];
 
 type StatusFilter =
   | "all"
@@ -1628,6 +1631,29 @@ function SearchPageContent() {
     [schoolClassOptionsData],
   );
 
+  // A multi-select with every option chosen means "alle", as the head shows
+  // (#6734): list and export then get no selection, so nothing is narrowed
+  // that the page does not show as a filter. A chosen value outside the
+  // options (a class or group not loaded) still narrows.
+  const queryYears = isMultiSelectRestricting(
+    selectedYears,
+    SCHOOL_YEAR_MULTI_OPTIONS,
+  )
+    ? selectedYears
+    : NO_VALUES;
+  const querySchoolClasses = isMultiSelectRestricting(
+    selectedSchoolClasses,
+    schoolClassOptions.map((value) => ({ value })),
+  )
+    ? selectedSchoolClasses
+    : NO_VALUES;
+  const queryGroupIds = isMultiSelectRestricting(
+    selectedGroupIds,
+    groups.map((group) => ({ value: group.id })),
+  )
+    ? selectedGroupIds
+    : NO_VALUES;
+
   // Generate SWR cache key for students (changes when filters change → SWR auto-cancels old requests)
   // Note: User context is only for badge styling, not for fetching students
   const photoConsentFeatureAvailable = studentPhotosSettingLoading
@@ -1720,9 +1746,9 @@ function SearchPageContent() {
   // the free-text term: the term may contain dashes ("Anna-Lena"), so no
   // segment after it can be located positionally. See lib/swr/search-students-key.
   const studentSearchParams = {
-    groupIds: selectedGroupIds,
+    groupIds: queryGroupIds,
     search: searchTerm,
-    schoolClasses: selectedSchoolClasses,
+    schoolClasses: querySchoolClasses,
     roomId: effectiveRoomId,
     dayStatus: dayStatusFilter,
     date: selectedDate,
@@ -1731,7 +1757,7 @@ function SearchPageContent() {
     bus: busFilter,
     photoConsent: requestedPhotoConsentFilter,
     companions: wantsCompanions,
-    years: selectedYears,
+    years: queryYears,
     pickupStatus: pickupStatusFilter,
     enrollmentAnswer: serverEnrollmentAnswer,
   } satisfies StudentSearchFilterInput & { photoState: string };
@@ -2048,6 +2074,37 @@ function SearchPageContent() {
     [loadedStudents, activeEnrollmentAnswerChildren],
   );
 
+  // The pickup times of the loaded children. A chosen time no child has (from
+  // a link, or while the list loads) stays selectable so it can be lifted, but
+  // counts as outside the options: it still narrows (#6734).
+  const pickupTimeOptions = useMemo<FilterOption[]>(() => {
+    const loadedTimes = new Set(
+      students.map((s) => s.pickup_time).filter((t): t is string => !!t),
+    );
+    const times = new Set([
+      ...loadedTimes,
+      ...pickupTimeFilter.filter((time) => time !== "none"),
+    ]);
+    return [
+      ...Array.from(times)
+        .sort((a, b) => a.localeCompare(b))
+        .map((time) => ({
+          value: time,
+          label: `${time} Uhr`,
+          ...(loadedTimes.has(time) ? {} : { outsideOptions: true }),
+        })),
+      { value: "none", label: "Keine Gehzeit" },
+    ];
+  }, [students, pickupTimeFilter]);
+  // Every pickup time chosen is "alle" (#6734): no child is left out, also
+  // not one without full access or with an exception.
+  const queryPickupTimes = isMultiSelectRestricting(
+    pickupTimeFilter,
+    pickupTimeOptions,
+  )
+    ? pickupTimeFilter
+    : NO_VALUES;
+
   // Gated on the same staleness check as the rows themselves: a held response
   // from the previous date must not warn about the new one.
   const truncatedTotal =
@@ -2231,9 +2288,9 @@ function SearchPageContent() {
 
       // Apply pickup time filter. For redacted students, missing pickup_time
       // due to has_full_access=false is not the same as "no schedule")
-      if (pickupTimeFilter.length > 0) {
+      if (queryPickupTimes.length > 0) {
         if (student.has_full_access === false) return false;
-        const matchesPickupTime = pickupTimeFilter.some((time) =>
+        const matchesPickupTime = queryPickupTimes.some((time) =>
           time === "none"
             ? !student.pickup_time && !student.pickup_is_exception
             : student.pickup_time === time,
@@ -2261,7 +2318,7 @@ function SearchPageContent() {
     },
     [
       dayStatusFilter,
-      pickupTimeFilter,
+      queryPickupTimes,
       arrivalTimeFilter,
       effectiveTrackingFilter,
       trackingData,
@@ -2502,19 +2559,7 @@ function SearchPageContent() {
         summaryLabel: (count) => `${count} Gehzeiten`,
         value: pickupTimeFilter,
         onChange: (value) => updatePickupTimeFilter(asFilterValues(value)),
-        options: [
-          ...Array.from(
-            new Set(
-              [
-                ...students.map((s) => s.pickup_time),
-                ...pickupTimeFilter.filter((time) => time !== "none"),
-              ].filter((t): t is string => !!t),
-            ),
-          )
-            .sort((a, b) => a.localeCompare(b))
-            .map((time) => ({ value: time, label: `${time} Uhr` })),
-          { value: "none", label: "Keine Gehzeit" },
-        ],
+        options: pickupTimeOptions,
       },
       {
         id: "arrivalTime",
@@ -2720,6 +2765,7 @@ function SearchPageContent() {
       selectedSchoolClasses,
       selectedGroupIds,
       pickupTimeFilter,
+      pickupTimeOptions,
       arrivalTimeFilter,
       busFilter,
       photoConsentFilter,
@@ -3012,11 +3058,10 @@ function SearchPageContent() {
   const exportFilters = useMemo(
     () => ({
       search: searchTerm,
-      group_ids: selectedGroupIds,
-      year:
-        selectedYears.length > 0 ? encodeMultiValueParam(selectedYears) : "all",
+      group_ids: queryGroupIds,
+      year: queryYears.length > 0 ? encodeMultiValueParam(queryYears) : "all",
       // Preserve class names containing commas as one selection.
-      school_class: encodeMultiValueParam(selectedSchoolClasses),
+      school_class: encodeMultiValueParam(querySchoolClasses),
       // The realtime snapshot/room filters are neutral for non-today dates —
       // the export must mirror what the page shows (#1939).
       status: effectiveAttendanceFilter,
@@ -3026,16 +3071,16 @@ function SearchPageContent() {
       enrollment_answer: effectiveEnrollmentAnswer,
       day_status: dayStatusFilter,
       ...(isToday ? {} : { date: selectedDate }),
-      pickup_time: encodeMultiValueParam(pickupTimeFilter),
+      pickup_time: encodeMultiValueParam(queryPickupTimes),
       arrival_time: arrivalTimeFilter,
       room_id: effectiveRoomId,
       sort: sortMode,
     }),
     [
       searchTerm,
-      selectedGroupIds,
-      selectedYears,
-      selectedSchoolClasses,
+      queryGroupIds,
+      queryYears,
+      querySchoolClasses,
       effectiveAttendanceFilter,
       busFilter,
       effectivePhotoConsentFilter,
@@ -3044,7 +3089,7 @@ function SearchPageContent() {
       dayStatusFilter,
       isToday,
       selectedDate,
-      pickupTimeFilter,
+      queryPickupTimes,
       arrivalTimeFilter,
       effectiveRoomId,
       sortMode,
