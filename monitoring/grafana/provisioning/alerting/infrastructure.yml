@@ -320,8 +320,8 @@ groups:
           severity: high
         isPaused: false
       - uid: dfslb2pyr356ob
-        # Backend connection pool, not the PostgreSQL cluster: the stack runs no
-        # postgres_exporter (#6465). The left side is the 5-minute mean of
+        # Backend connection pool, not the PostgreSQL cluster (#6465); the
+        # exporter's cluster view has no rule. The left side is the 5-minute mean of
         # connections in use against DB_MAX_OPEN_CONNS. The right side keeps a
         # scraped backend without these gauges from passing as OK: it yields
         # 100 with reason="pool_metric_missing" for every env whose backend is
