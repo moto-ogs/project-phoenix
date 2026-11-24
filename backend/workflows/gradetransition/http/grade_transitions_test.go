@@ -465,8 +465,8 @@ func TestGradeTransitionResource_Delete(t *testing.T) {
 		rr := testutil.ExecuteRequest(router, req)
 		testutil.AssertSuccessResponse(t, rr, http.StatusOK)
 
-		rr = testutil.ExecuteRequest(router, testutil.NewAuthenticatedRequest(t, "GET", url, nil, testutil.WithJWTBearer(token)))
-		assert.Equal(t, http.StatusNotFound, rr.Code, "the deleted transition is gone: %s", rr.Body.String())
+		_, found := findTransition(t, router, token, transition.ID)
+		assert.False(t, found, "the deleted transition is gone")
 	})
 
 	t.Run("delete non-existent transition returns error", func(t *testing.T) {
@@ -1127,17 +1127,7 @@ func TestToTransitionResponse(t *testing.T) {
 		applyRR := testutil.ExecuteRequest(router, applyReq)
 		require.Equal(t, http.StatusOK, applyRR.Code)
 
-		// Get the transition
-		getURL := fmt.Sprintf("/%d", transition.ID)
-		getReq := testutil.NewAuthenticatedRequest(t, "GET", getURL, nil,
-			testutil.WithJWTBearer(token),
-		)
-
-		getRR := testutil.ExecuteRequest(router, getReq)
-		testutil.AssertSuccessResponse(t, getRR, http.StatusOK)
-
-		response := testutil.ParseJSONResponse(t, getRR.Body.Bytes())
-		data := response["data"].(map[string]interface{})
+		data := readTransition(t, router, token, transition.ID)
 		assert.NotNil(t, data["applied_at"])
 		assert.NotNil(t, data["applied_by"])
 
@@ -1176,17 +1166,7 @@ func TestToTransitionResponse(t *testing.T) {
 		)
 		testutil.ExecuteRequest(router, revertReq)
 
-		// Get the transition
-		getURL := fmt.Sprintf("/%d", transition.ID)
-		getReq := testutil.NewAuthenticatedRequest(t, "GET", getURL, nil,
-			testutil.WithJWTBearer(token),
-		)
-
-		getRR := testutil.ExecuteRequest(router, getReq)
-		testutil.AssertSuccessResponse(t, getRR, http.StatusOK)
-
-		response := testutil.ParseJSONResponse(t, getRR.Body.Bytes())
-		data := response["data"].(map[string]interface{})
+		data := readTransition(t, router, token, transition.ID)
 		assert.NotNil(t, data["reverted_at"])
 		assert.NotNil(t, data["reverted_by"])
 	})
@@ -1196,16 +1176,7 @@ func TestToTransitionResponse(t *testing.T) {
 		testpkg.CreateTestGradeTransitionMapping(t, tc.db, transition.ID, "1g", testpkg.StrPtr("2g"))
 		testpkg.CreateTestGradeTransitionMapping(t, tc.db, transition.ID, "4g", nil) // Graduate
 
-		getURL := fmt.Sprintf("/%d", transition.ID)
-		getReq := testutil.NewAuthenticatedRequest(t, "GET", getURL, nil,
-			testutil.WithJWTBearer(token),
-		)
-
-		getRR := testutil.ExecuteRequest(router, getReq)
-		testutil.AssertSuccessResponse(t, getRR, http.StatusOK)
-
-		response := testutil.ParseJSONResponse(t, getRR.Body.Bytes())
-		data := response["data"].(map[string]interface{})
+		data := readTransition(t, router, token, transition.ID)
 
 		mappingsRaw, hasMappings := data["mappings"]
 		require.True(t, hasMappings, "Response should include 'mappings' field")
@@ -1231,16 +1202,7 @@ func TestToTransitionResponse(t *testing.T) {
 		transition := testpkg.CreateTestGradeTransition(t, tc.db, "2025-2026", account.ID)
 		testpkg.CreateTestGradeTransitionMapping(t, tc.db, transition.ID, "1h", testpkg.StrPtr("2h"))
 
-		getURL := fmt.Sprintf("/%d", transition.ID)
-		getReq := testutil.NewAuthenticatedRequest(t, "GET", getURL, nil,
-			testutil.WithJWTBearer(token),
-		)
-
-		getRR := testutil.ExecuteRequest(router, getReq)
-		testutil.AssertSuccessResponse(t, getRR, http.StatusOK)
-
-		response := testutil.ParseJSONResponse(t, getRR.Body.Bytes())
-		data := response["data"].(map[string]interface{})
+		data := readTransition(t, router, token, transition.ID)
 
 		// Draft transition with mappings
 		assert.True(t, data["can_modify"].(bool))
@@ -1253,13 +1215,33 @@ func TestToTransitionResponse(t *testing.T) {
 // Helper Functions
 // ============================================================================
 
+// findTransition reads one transition as the list answers it: the keyset
+// window behind the id before it starts with that transition.
+func findTransition(t *testing.T, router chi.Router, token string, id int64) (map[string]interface{}, bool) {
+	t.Helper()
+	req := testutil.NewAuthenticatedRequest(t, "GET", fmt.Sprintf("/?after_id=%d&page_size=1", id-1), nil, testutil.WithJWTBearer(token))
+	rr := testutil.ExecuteRequest(router, req)
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	rows, _ := testutil.ParseJSONResponse(t, rr.Body.Bytes())["data"].([]interface{})
+	if len(rows) == 0 {
+		return nil, false
+	}
+	row, _ := rows[0].(map[string]interface{})
+	return row, row["id"] == strconv.FormatInt(id, 10)
+}
+
+// readTransition reads a transition that exists.
+func readTransition(t *testing.T, router chi.Router, token string, id int64) map[string]interface{} {
+	t.Helper()
+	row, found := findTransition(t, router, token, id)
+	require.True(t, found, "transition %d missing from the list", id)
+	return row
+}
+
 // transitionVersion reads the version an editor saves against.
 func transitionVersion(t *testing.T, router chi.Router, token string, id int64) string {
 	t.Helper()
-	req := testutil.NewAuthenticatedRequest(t, "GET", fmt.Sprintf("/%d", id), nil, testutil.WithJWTBearer(token))
-	rr := testutil.ExecuteRequest(router, req)
-	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
-	version, _ := testutil.ParseJSONResponse(t, rr.Body.Bytes())["data"].(map[string]interface{})["version"].(string)
+	version, _ := readTransition(t, router, token, id)["version"].(string)
 	require.NotEmpty(t, version)
 	return version
 }

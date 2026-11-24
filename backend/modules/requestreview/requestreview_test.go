@@ -287,7 +287,7 @@ func TestNewRequiresQueuesAndAccess(t *testing.T) {
 func TestParseListQueryValidatesTheWire(t *testing.T) {
 	t.Parallel()
 	for _, raw := range []string{
-		"types=unknown", "status=approved", "from=2026-08-01", "to=2026-08-01",
+		"types=unknown",
 		"limit=0", "limit=x", "student_id=0", "student_id=abc", "cursor=%21%21%21", "cursor=bm90LWpzb24",
 	} {
 		values, err := url.ParseQuery(raw)
@@ -307,6 +307,12 @@ func TestParseListQueryValidatesTheWire(t *testing.T) {
 	assert.Equal(t, MaxLimit, q.Limit)
 	assert.Equal(t, "Emma", q.Search)
 	assert.False(t, q.History)
+
+	// The open list registers no history filter and reads none.
+	unfiltered := parse(t, "status=approved&from=2026-08-01&to=2026-08-19")
+	assert.Empty(t, unfiltered.Statuses)
+	assert.True(t, unfiltered.From.IsZero())
+	assert.True(t, unfiltered.To.IsZero())
 
 	open := parse(t, "types=direct_correction,offering")
 	assert.Equal(t, []string{TypeOffering}, open.Types, "corrections have no open state")

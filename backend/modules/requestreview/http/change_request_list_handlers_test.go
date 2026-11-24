@@ -527,8 +527,6 @@ func TestAggregatedChangeRequests_InvalidQuery(t *testing.T) {
 		"limit=0",
 		"limit=abc",
 		"types=unknown",
-		"status=approved", // status is a history-only filter
-		"from=2026-08-10", // date range is history-only
 	} {
 		rr, _ := execAggregated(t, rs, query, aggUpdatePerms)
 		assert.Equal(t, http.StatusBadRequest, rr.Code, fmt.Sprintf("query %q must be rejected", query))
