@@ -106,3 +106,10 @@ packageExtensions:
   dependency-cruiser@18.7.2:
     dependencies:
       typescript: 6.0.3
+
+# SWR's mutate destructures its rest parameter; Safari 26 throws there after a
+# saved write ("undefined is not a function"), so the screen reports a crash.
+# The patch gives the function named parameters. Drop it with an SWR release
+# that no longer destructures `...args` in internalMutate.
+patchedDependencies:
+  swr@2.5.1: patches/swr@2.5.1.patch
