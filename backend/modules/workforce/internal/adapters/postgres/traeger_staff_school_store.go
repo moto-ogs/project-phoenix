@@ -96,15 +96,20 @@ func (s *TraegerStaffStore) HoldSchoolFinancialRow(ctx context.Context, staffID 
 	return nil
 }
 
-// InsertSchoolFinancialRow gives the school its bank and tax row back when
-// its Träger dissolves a record. A row the school has meanwhile kept stays.
-func (s *TraegerStaffStore) InsertSchoolFinancialRow(ctx context.Context, data domain.StaffFinancialData) error {
+// WriteSchoolFinancialRow writes the school's bank and tax row of one
+// employment when its Träger dissolves a record: a new row, or the values
+// the dissolution decided over the row the school has. Both stamp the row on
+// the database clock (ADR 0280): a new row through the column default, an
+// overwritten one through the row's update trigger.
+func (s *TraegerStaffStore) WriteSchoolFinancialRow(ctx context.Context, data domain.StaffFinancialData) error {
 	db, schoolID, err := schoolStaffDB(ctx)
 	if err != nil {
 		return err
 	}
-	if _, err := db.ExecContext(ctx, `INSERT INTO users.staff_financial_data (tenant_id, staff_id, iban_sealed, iban_masked, tax_id_sealed, social_security_number_sealed)
-		VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (staff_id) DO NOTHING`,
+	if _, err := db.ExecContext(ctx, `INSERT INTO users.staff_financial_data AS f (tenant_id, staff_id, iban_sealed, iban_masked, tax_id_sealed, social_security_number_sealed)
+		VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (staff_id) DO UPDATE SET iban_sealed = EXCLUDED.iban_sealed, iban_masked = EXCLUDED.iban_masked,
+		tax_id_sealed = EXCLUDED.tax_id_sealed, social_security_number_sealed = EXCLUDED.social_security_number_sealed
+		WHERE f.tenant_id = EXCLUDED.tenant_id`,
 		schoolID, data.StaffID, data.IBANSealed, data.IBANMasked, data.TaxIDSealed, data.SocialSecurityNumberSealed); err != nil {
 		return fmt.Errorf("workforce postgres: restore school bank row: %w", err)
 	}

@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
@@ -101,60 +102,218 @@ func (t *TraegerStaff) writeFinancial(ctx context.Context, actor workforce.Traeg
 
 // Dissolve ends a record: every live Einsatzort gets the bank and tax values
 // back as its own row, then the record goes with its links and trail. The
-// schools' personnel numbers stay. A school that kept a row of its own
-// meanwhile keeps it.
+// schools' personnel numbers stay. Per field the newer entry wins (#8029,
+// returnedFinancial). Each school is written in its own tenant transaction,
+// never with the Träger's (ADR 0105), so a dissolution that fails at one
+// school repeats (ADR 0233 section 6): a school that got its values back
+// keeps them.
+//
+// The record is read and deleted under its lock, which every write of its
+// values and links takes. A record whose values or Einsatzorte changed while
+// the schools were written is not deleted: the return runs again on the
+// changed record, and a value changed meanwhile wins at every school the
+// earlier attempt wrote (markNewer). After dissolveAttempts the
+// dissolution is refused as changed (ADR 0311).
 func (t *TraegerStaff) Dissolve(ctx context.Context, actor workforce.TraegerStaffActor, recordID int64) error {
-	var record domain.TraegerStaffRecord
-	var values map[string]string
+	var read dissolution
 	err := t.released(ctx, actor, func(ctx context.Context) error {
 		var err error
-		if record, err = t.store.FindStaffRecord(ctx, actor.OrganizationID, recordID, false); err != nil {
-			return err
-		}
-		values, err = t.openRecordFinancial(record)
+		read, err = t.lockDissolution(ctx, actor, recordID)
 		return err
 	})
 	if err != nil {
 		return publicTraegerStaffError(err)
 	}
-	for _, link := range record.Links {
+	newer := map[employmentKey]map[string]bool{}
+	for attempt := 1; ; attempt++ {
+		if err := t.returnToSchools(ctx, actor, read, newer); err != nil {
+			return err
+		}
+		current, deleted, err := t.deleteDissolved(ctx, actor, read)
+		if err != nil || deleted {
+			return publicTraegerStaffError(err)
+		}
+		if attempt == dissolveAttempts {
+			return readstate.ErrChanged
+		}
+		markNewer(newer, read, current)
+		read = current
+	}
+}
+
+// markNewer records, per Einsatzort of the earlier read, the fields the
+// record changed since: that attempt already wrote them to its school, so
+// the changed value must win there whatever the stamps say. An Einsatzort
+// linked meanwhile gets no mark: its link may have held a newer value of its
+// school back (HoldSchoolFinancialRow), which the stamps rule decides.
+func markNewer(newer map[employmentKey]map[string]bool, read, current dissolution) {
+	for _, link := range read.record.Links {
+		key := employmentKey{link.SchoolID, link.StaffID}
+		for _, field := range domain.FinancialStaffFields {
+			if read.values[field] == current.values[field] {
+				continue
+			}
+			if newer[key] == nil {
+				newer[key] = map[string]bool{}
+			}
+			newer[key][field] = true
+		}
+	}
+}
+
+// dissolveAttempts bounds how often a dissolution returns the values again
+// on a record that changed under it.
+const dissolveAttempts = 3
+
+// dissolution is the record a dissolution returns, read under its lock: the
+// opened bank and tax values and, per field, the trail's newest change.
+type dissolution struct {
+	record    domain.TraegerStaffRecord
+	values    map[string]string
+	changedAt map[string]time.Time
+}
+
+// lockDissolution locks the record and reads it with its trail times. The
+// trail is read after the lock in its own statement (ADR 0311): a write of
+// the values holds the lock until its trail entries commit with them.
+func (t *TraegerStaff) lockDissolution(ctx context.Context, actor workforce.TraegerStaffActor, recordID int64) (dissolution, error) {
+	record, err := t.store.FindStaffRecord(ctx, actor.OrganizationID, recordID, true)
+	if err != nil {
+		return dissolution{}, err
+	}
+	values, err := t.openRecordFinancial(record)
+	if err != nil {
+		return dissolution{}, err
+	}
+	changedAt, err := t.store.FinancialChangeTimes(ctx, actor.OrganizationID, recordID)
+	return dissolution{record: record, values: values, changedAt: changedAt}, err
+}
+
+// deleteDissolved deletes the record under its lock when its values and
+// Einsatzorte are still the ones read returned. Otherwise it keeps the
+// record and returns it as it is now.
+func (t *TraegerStaff) deleteDissolved(ctx context.Context, actor workforce.TraegerStaffActor, read dissolution) (dissolution, bool, error) {
+	var current dissolution
+	deleted := false
+	err := t.released(ctx, actor, func(ctx context.Context) error {
+		var err error
+		if current, err = t.lockDissolution(ctx, actor, read.record.ID); err != nil {
+			return err
+		}
+		if financialVersion(current.record) != financialVersion(read.record) || !sameLinks(current.record.Links, read.record.Links) {
+			return nil
+		}
+		deleted = true
+		return t.store.DeleteStaffRecord(ctx, actor.OrganizationID, read.record.ID)
+	})
+	return current, deleted, err
+}
+
+// sameLinks reports whether two reads hold the same employments; a record
+// holds one per school.
+func sameLinks(a, b []domain.TraegerStaffLink) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	held := make(map[employmentKey]bool, len(a))
+	for _, link := range a {
+		held[employmentKey{link.SchoolID, link.StaffID}] = true
+	}
+	for _, link := range b {
+		if !held[employmentKey{link.SchoolID, link.StaffID}] {
+			return false
+		}
+	}
+	return true
+}
+
+// returnToSchools returns the values to every Einsatzort of the read record,
+// each in its school's transaction.
+func (t *TraegerStaff) returnToSchools(ctx context.Context, actor workforce.TraegerStaffActor, read dissolution, newer map[employmentKey]map[string]bool) error {
+	for _, link := range read.record.Links {
 		err := t.ports.Runtime.WithinSchool(ctx, link.SchoolID, func(ctx context.Context) error {
-			return t.returnToSchool(ctx, actor, link, values)
+			return t.returnToSchool(ctx, actor, link, read, newer[employmentKey{link.SchoolID, link.StaffID}])
 		})
 		if err != nil {
 			return publicTraegerStaffError(fmt.Errorf("return to school %d: %w", link.SchoolID, err))
 		}
 	}
-	return publicTraegerStaffError(t.released(ctx, actor, func(ctx context.Context) error {
-		return t.store.DeleteStaffRecord(ctx, actor.OrganizationID, recordID)
-	}))
+	return nil
 }
 
-func (t *TraegerStaff) returnToSchool(ctx context.Context, actor workforce.TraegerStaffActor, link domain.TraegerStaffLink, values map[string]string) error {
+// returnToSchool writes the values returnedFinancial decides into the
+// school's bank row of a live employment, under the lock the school writes
+// its row under, with a master data audit entry per field that changes. A
+// row left without a value goes.
+func (t *TraegerStaff) returnToSchool(ctx context.Context, actor workforce.TraegerStaffActor, link domain.TraegerStaffLink, read dissolution, newer map[string]bool) error {
 	live, err := t.schoolStaff(ctx, []int64{link.StaffID})
-	if err != nil || len(live) == 0 || len(values) == 0 {
+	if err != nil || len(live) == 0 {
 		return err
 	}
-	existing, err := t.store.SchoolFinancialRows(ctx, []int64{link.StaffID})
-	if err != nil || len(existing) > 0 {
+	if _, err := t.subjects.LockStaff(ctx, link.StaffID, false); err != nil {
 		return err
 	}
-	row, err := t.schoolFinancialRow(link.SchoolID, link.StaffID, values)
+	rows, err := t.store.SchoolFinancialRows(ctx, []int64{link.StaffID})
 	if err != nil {
 		return err
 	}
-	for _, field := range []string{domain.StaffFieldIBAN, domain.StaffFieldTaxID, domain.StaffFieldSocialSecurityNumber} {
-		if values[field] == "" {
+	school := map[string]string{}
+	if len(rows) > 0 {
+		if school, err = t.openSchoolFinancial(rows[0]); err != nil {
+			return err
+		}
+	}
+	after := returnedFinancial(link, rows, school, read, newer)
+	changed := false
+	for _, field := range domain.FinancialStaffFields {
+		if school[field] == after[field] {
 			continue
 		}
+		changed = true
 		if err := t.audit.RecordMasterDataChange(ctx, domain.MasterDataChange{
 			StaffID: link.StaffID, ChangedBy: actor.AccountID, Section: domain.AuditSectionBankSteuer, Field: field,
-			OldValue: "", NewValue: domain.MaskStaffValue(field, values[field]), Note: noteReturnedByTraeger,
+			OldValue: domain.MaskStaffValue(field, school[field]), NewValue: domain.MaskStaffValue(field, after[field]), Note: noteReturnedByTraeger,
 		}); err != nil {
 			return fmt.Errorf("write bank return audit: %w", err)
 		}
 	}
-	return t.store.InsertSchoolFinancialRow(ctx, row)
+	if !changed {
+		return nil
+	}
+	if len(after) == 0 {
+		return t.store.DeleteSchoolFinancialRow(ctx, link.StaffID)
+	}
+	row, err := t.schoolFinancialRow(link.SchoolID, link.StaffID, after)
+	if err != nil {
+		return err
+	}
+	return t.store.WriteSchoolFinancialRow(ctx, row)
+}
+
+// returnedFinancial decides the school's bank values when its Träger
+// dissolves a record (#8029): per field the newer entry wins. A school
+// without a row, or with a row from before the link (one a failed hand-over
+// left), gets the record's values. A row stamped after the link is one the
+// link held back (HoldSchoolFinancialRow) or an earlier attempt of the
+// dissolution wrote: it keeps a value unless the trail changed or imported
+// that field after the row's stamp, or the field changed after an earlier
+// attempt wrote this school (newer), a value then emptied included. Both stamps are
+// on the database clock (ADR 0280).
+func returnedFinancial(link domain.TraegerStaffLink, rows []domain.StaffFinancialData, school map[string]string, read dissolution, newer map[string]bool) map[string]string {
+	if len(rows) == 0 || !rows[0].UpdatedAt.After(link.LinkedAt) {
+		return read.values
+	}
+	after := map[string]string{}
+	for _, field := range domain.FinancialStaffFields {
+		value := school[field]
+		if at, ok := read.changedAt[field]; newer[field] || (ok && at.After(rows[0].UpdatedAt)) {
+			value = read.values[field]
+		}
+		if value != "" {
+			after[field] = value
+		}
+	}
+	return after
 }
 
 func optional(value string) *string {

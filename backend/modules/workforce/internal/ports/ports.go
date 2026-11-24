@@ -438,6 +438,9 @@ type TraegerStaffStore interface {
 	InsertStaffLinks(ctx context.Context, organizationID, recordID, accountID int64, links []domain.TraegerStaffLink) error
 	AppendStaffChanges(ctx context.Context, organizationID int64, changes []domain.TraegerStaffChange) error
 	ListStaffChanges(ctx context.Context, organizationID, recordID int64, limit int) ([]domain.TraegerStaffChange, error)
+	// FinancialChangeTimes returns, per bank and tax field, the newest trail
+	// entry that changed or imported it, on the database clock.
+	FinancialChangeTimes(ctx context.Context, organizationID, recordID int64) (map[string]time.Time, error)
 	DeleteStaffRecord(ctx context.Context, organizationID, recordID int64) error
 
 	// The Abwesenheitsarten and Kontingente of the Träger (#4710).
@@ -457,7 +460,9 @@ type TraegerStaffStore interface {
 	// HoldSchoolFinancialRow stamps the school's bank row of a linked
 	// employment that the link did not read, so later hand-overs keep it.
 	HoldSchoolFinancialRow(ctx context.Context, staffID int64) error
-	InsertSchoolFinancialRow(ctx context.Context, data domain.StaffFinancialData) error
+	// WriteSchoolFinancialRow writes the school's bank row a dissolution
+	// decided: a new row, or the decided values over the existing one.
+	WriteSchoolFinancialRow(ctx context.Context, data domain.StaffFinancialData) error
 	// InsertSchoolHireData writes the master data row of an employment a
 	// hire just created at the school (#7206): entry day, last day, address
 	// and phone. The employment has no row yet.
