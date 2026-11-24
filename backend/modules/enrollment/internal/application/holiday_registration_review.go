@@ -65,6 +65,10 @@ type HolidayReviewStore interface {
 	// an empty one stores none (#5621).
 	SetHolidayDebtorNumber(ctx context.Context, organizationID, registrationID int64, debtorNumber string) error
 	SetHolidayRegistrationFreeze(ctx context.Context, organizationID, registrationID int64, override string) error
+	// WithdrawHolidayConsent takes the given consent key out of the
+	// registration's acceptances and stamps its withdrawal (ADR 0321); false
+	// when the consent is not given or not a consent of its form version.
+	WithdrawHolidayConsent(ctx context.Context, organizationID, registrationID int64, key string) (bool, error)
 	// ReplaceHolidayChildBookings makes bookings the child's bookings and
 	// returns the weeks whose places changed: those it left and those it
 	// newly books, which wait for their placement (#4699).
@@ -585,7 +589,7 @@ func (h *HolidayRegistrationReview) detailAnswers(ctx context.Context, organizat
 		return fmt.Errorf("enrollment: holiday registration %d keeps the missing form version %d", detail.ID, registration.FormVersion)
 	}
 	detail.Form = &form
-	detail.LegalAcceptances = registration.LegalAcceptances
+	detail.LegalAcceptances, detail.LegalWithdrawals = registration.LegalAcceptances, registration.LegalWithdrawals
 	detail.CustomData = registration.CustomData
 	detail.ChildCustomData = registration.Children
 	return nil

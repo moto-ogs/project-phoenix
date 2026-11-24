@@ -37,6 +37,7 @@ const ACTION_LABELS: Readonly<
   allocate: "Vergabe entschieden",
   criteria_check: "Angaben für die Vergabe geprüft",
   wish: "Ferienwunsch festgelegt",
+  consent: "Einwilligung geändert",
 };
 
 const CHECK_LABELS = { yes: "trifft zu", no: "trifft nicht zu" } as const;
@@ -149,6 +150,13 @@ function eventDetail(
   }
   if (event.action === "criteria_check") {
     return checksText(event, registration);
+  }
+  if (event.action === "consent" && event.consent) {
+    const { key, given } = event.consent;
+    const block = registration.form.legalBlocks?.find(
+      (entry) => entry.key === key,
+    );
+    return `${block?.title ?? "Einwilligung"}: ${given ? "gegeben" : "widerrufen"}`;
   }
   if (event.debtorNumber) return debtorNumberText(event.debtorNumber);
   if (event.siblings.length > 0) {

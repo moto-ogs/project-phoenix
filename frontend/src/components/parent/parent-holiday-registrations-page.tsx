@@ -3,9 +3,10 @@
 /**
  * Ferienanmeldungen (#6673, ADR 0216): the holiday registrations linked to
  * the account, newest first, with their state and the place of every week.
- * The page only shows; the Träger decides. A registration the Träger
- * confirmed points to the documents, where the confirmation and the invoice
- * arrive.
+ * The Träger decides on the registration; the parents keep their voluntary
+ * consents in their hand and withdraw or give them here (#8038, ADR 0321).
+ * A registration the Träger confirmed points to the documents, where the
+ * confirmation and the invoice arrive.
  */
 
 import { useLocale, useTranslations } from "next-intl";
@@ -23,6 +24,7 @@ import { formatDate } from "~/lib/date-helpers";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import type { HolidayRegistrationEntry } from "~/lib/parent-holiday-registration-entries";
 import { parentPath } from "~/lib/parent-url";
+import { HolidayRegistrationConsents } from "./holiday-registration-consents";
 import {
   useEntryLine,
   useHolidayRegistrationEntries,
@@ -57,7 +59,10 @@ export function ParentHolidayRegistrationsPage() {
         <ul className="space-y-5">
           {entries.data.map((entry) => (
             <li key={entry.id}>
-              <HolidayRegistrationCard entry={entry} />
+              <HolidayRegistrationCard
+                entry={entry}
+                onChanged={() => entries.mutate()}
+              />
             </li>
           ))}
         </ul>
@@ -68,7 +73,11 @@ export function ParentHolidayRegistrationsPage() {
 
 function HolidayRegistrationCard({
   entry,
-}: Readonly<{ entry: HolidayRegistrationEntry }>) {
+  onChanged,
+}: Readonly<{
+  entry: HolidayRegistrationEntry;
+  onChanged: () => Promise<unknown>;
+}>) {
   const t = useTranslations("parentHolidayRegistrations");
   const tr = useTranslations("holidayRegistration");
   const locale = useLocale();
@@ -141,6 +150,12 @@ function HolidayRegistrationCard({
 
         {pending ? <Alert type="info" message={tr("pendingNote")} /> : null}
         {waitlisted ? <Alert type="info" message={tr("waitlistNote")} /> : null}
+
+        <HolidayRegistrationConsents
+          registrationId={entry.id}
+          consents={entry.consents}
+          onChanged={onChanged}
+        />
 
         {entry.status === "confirmed" ? (
           <div className="flex flex-col gap-3 border-t border-gray-100 pt-4 sm:flex-row sm:items-center sm:justify-between">

@@ -24,5 +24,40 @@
     "more": "{count, plural, one {# kolejne zgłoszenie} few {# kolejne zgłoszenia} many {# kolejnych zgłoszeń} other {# kolejnego zgłoszenia}}",
     "showAllTooltip": "Otwiera listę wszystkich zapisów wakacyjnych Twoich dzieci."
   },
-  "toDocumentsTooltip": "Otwiera Państwa dokumenty z potwierdzeniem i rachunkiem."
+  "toDocumentsTooltip": "Otwiera Państwa dokumenty z potwierdzeniem i rachunkiem.",
+  "consents": {
+    "title": "Zgody",
+    "description": "Dobrowolne. Każdą zgodę mogą Państwo w każdej chwili wycofać lub udzielić jej ponownie. Świetlica (OGS), która opiekuje się dzieckiem w ferie, od razu widzi zmianę.",
+    "states": {
+      "given": "Udzielona",
+      "withdrawn": "Wycofana",
+      "notGiven": "Nieudzielona"
+    },
+    "dates": {
+      "given": "Od {date}",
+      "withdrawn": "Wycofali ją Państwo {date}.",
+      "notGiven": "Nie udzielili jej Państwo przy zgłoszeniu."
+    },
+    "withdraw": "Wycofaj",
+    "withdrawAria": "Wycofaj zgodę „{title}”",
+    "withdrawTooltip": "Wycofuje zgodę. moto najpierw zapyta.",
+    "grant": "Udziel zgody",
+    "grantAria": "Udziel zgody „{title}”",
+    "grantTooltip": "Udziela zgody. moto najpierw zapyta.",
+    "withdrawTitle": "Wycofać zgodę?",
+    "withdrawNote": "Wycofanie obowiązuje od teraz. Świetlica (OGS), która opiekuje się dzieckiem w ferie, od razu je widzi.",
+    "withdrawConfirm": "Wycofaj",
+    "withdrawing": "Wycofywanie …",
+    "grantTitle": "Udzielić zgody?",
+    "grantNote": "Zgoda obowiązuje od teraz. W każdej chwili mogą ją Państwo znowu wycofać.",
+    "grantConfirm": "Udziel zgody",
+    "granting": "Zapisywanie …",
+    "withdrawSuccess": "Wycofali Państwo zgodę „{title}”.",
+    "grantSuccess": "Udzielili Państwo zgody „{title}”.",
+    "cancel": "Anuluj",
+    "close": "Zamknij",
+    "errorObject": "Zgoda",
+    "savedButStale": "Zmiana została zapisana. Tylko widok nie jest jeszcze aktualny.",
+    "reloadObject": "Państwa zgłoszenia na ferie"
+  }
 }

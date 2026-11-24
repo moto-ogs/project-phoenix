@@ -193,7 +193,7 @@ func (r *HolidayRegistrationRecords) record(organizationID int64, period enrollm
 	if !ok {
 		return enrollment.HolidayRegistrationRecord{}, fmt.Errorf("enrollment: holiday registration %d keeps the missing form version %d", detail.ID, answers.FormVersion)
 	}
-	detail.Form, detail.LegalAcceptances = &form, answers.LegalAcceptances
+	detail.Form, detail.LegalAcceptances, detail.LegalWithdrawals = &form, answers.LegalAcceptances, answers.LegalWithdrawals
 	detail.CustomData, detail.ChildCustomData = answers.CustomData, answers.Children
 	detail.Contacts = parts.contacts[detail.ID.Int64()]
 	if texts, ok := enrollment.HolidayConsentTextsOf(detail.ConsentVersion, detail.RetentionDays); ok {

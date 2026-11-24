@@ -37,6 +37,7 @@ export function traegerHolidayRegistrationReviewTopic(): HelpTopic {
           "Die Anmeldung hat vier Reiter: `Übersicht`, `Kind`, `Eltern` und `Nachweise und Beitrag`. Unter `Übersicht` steht der Status.",
           "Prüfe im Reiter `Kind` die Angaben der Kinder. Antworten auf eigene Fragen stehen beim Kind unter `Weitere Angaben`, allgemeine Antworten unter `Allgemeine Angaben`.",
           "Im Reiter `Kind` unter `Hinweise und Einwilligungen` siehst du, was die Eltern bestätigt haben und wann. Dort stehen die damaligen Texte und PDFs.",
+          "Widerrufen Eltern eine Einwilligung per Mail, Brief oder Telefon? Wähle unter `Hinweise und Einwilligungen` bei der Einwilligung `Widerruf eintragen`. moto fragt nach. Die OGS, die das Kind in den Ferien betreut, sieht den Widerruf sofort.",
           "Im Reiter `Eltern` stehen unter `Eltern` `Sorgerecht bestätigt`, `Unterschrieben mit Namen` und `Version der Erklärung`. Den genauen Text öffnest du unter `Wortlaut der Erklärung`.",
           "Prüfe im Reiter `Nachweise und Beitrag` unter `Ferienbeitrag`, was die Familie zahlt.",
           "Geben die Eltern an, dass sie Leistungen beziehen? Prüfe den Nachweis. Haben die Eltern ihn hochgeladen, wähle unter `Nachweis für den Leistungsbezug` den Dateinamen. Die Datei öffnet sich in einem neuen Tab.",
@@ -147,6 +148,7 @@ export function traegerHolidayRegistrationReviewTopic(): HelpTopic {
     result:
       "Unter `Verlauf` steht bei jeder Anmeldung, wann sie bestätigt, geändert, storniert, umgebucht, eingefroren oder wieder geöffnet wurde. Auch jede Debitorennummer steht dort, mit der Nummer vorher und nachher. Bei einer Änderung der Angaben steht dort, welche Angaben sich geändert haben, aber nicht die Werte. Auch jedes Zusammenführen und Trennen von Geschwistern steht dort. Storniert jemand eine Anmeldung der Geschwister, steht bei allen `Aus Geschwistergruppe gelöst (storniert)`.",
     notes: [
+      "Eltern mit Elternkonto widerrufen Einwilligungen selbst unter `Ferienanmeldungen`. Du siehst dann `Von den Eltern widerrufen` mit Datum. Wieder geben können die Einwilligung nur die Eltern.",
       "Berücksichtigt der Ferienzeitraum den Ferienwunsch, filterst du auch nach `Ferienwunsch`. Beim Kind steht dann `Mit Ferienwunsch`, `Ohne Ferienwunsch` oder `Ferienwunsch prüfen`.",
       "Offen bleibt eine Anmeldung, wenn ein Platz noch offen ist, die Eltern Leistungsbezug angeben, ein Kind vielleicht doppelt angemeldet ist oder die Debitorennummer fehlt. Eine Anmeldung von Geschwistern übernimmt die Debitorennummer der Geschwister.",
       "Beim Bestätigen bekommen die Eltern eine E-Mail mit den Kindern, Wochen und Zeitmodellen. Darin steht auch dein `Text der Annahme-Mail` aus dem Ferienzeitraum. Jede Anmeldung bekommt diese E-Mail nur einmal.",

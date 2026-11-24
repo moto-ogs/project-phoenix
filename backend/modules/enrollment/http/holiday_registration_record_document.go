@@ -289,6 +289,12 @@ func holidayRecordDeclaration(detail capability.HolidayRegistrationDetail) lists
 			if at, ok := detail.LegalAcceptances[block.Key]; ok {
 				given(lists.SanitizeUserText(block.Title), strings.TrimSpace(block.Label+"\n"+strings.TrimSpace(block.Text)), &at)
 			}
+			// A consent the parents withdrew in the parents portal (#8038).
+			if at, ok := detail.LegalWithdrawals[block.Key]; ok {
+				record.Subs = append(record.Subs, lists.SubRecord{Title: lists.SanitizeUserText(block.Title), Fields: []lists.Field{
+					field("Widerrufen am", holidayRecordTime(at)), field("Wortlaut", strings.TrimSpace(block.Label+"\n"+strings.TrimSpace(block.Text))),
+				}})
+			}
 		}
 	}
 	return record

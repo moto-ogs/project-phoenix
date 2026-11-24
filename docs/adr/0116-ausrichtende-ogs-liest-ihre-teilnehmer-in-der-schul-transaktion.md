@@ -348,3 +348,13 @@ Ferien an einer anderen OGS betreut werden und wann
   (5, exact). Keine neue Tabelle, kein neuer `data_objects`-Eintrag, keine
   neue Regel in `policy.json`. Die Bindung des Zugriffsprotokolls
   (`holidayGuestAccessLog`) nennt die neue Art des Eintrags.
+
+## Nachtrag 2026-11-24: Einwilligungen der Anmeldung (#8038)
+
+Punkt 2 gilt mit einer Ausnahme: Die ausrichtende OGS sieht die freiwilligen
+Einwilligungen der Anmeldung (Rechtstext-Blöcke der Art `consent`) live in
+der Teilnehmerliste, ihrem Export und am Feriengast, über die Funktion
+`enrollment.holiday_host_registration_consents`. Sie bekommt je Einwilligung
+Titel, Satz, Stand und Zeitpunkt, nichts sonst aus der Anmeldung. Die
+Entscheidung und ihre Grenzen stehen in
+[ADR 0321](0321-eltern-widerrufen-einwilligungen-der-ferienanmeldung-und-die-ausrichtende-ogs-liest-sie-live.md).

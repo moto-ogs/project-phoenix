@@ -81,6 +81,9 @@ type hostedParticipantRow struct {
 	SecondGuardianName  *string         `bun:"second_guardian_name"`
 	SecondGuardianPhone *string         `bun:"second_guardian_phone"`
 	Answers             json.RawMessage `bun:"answers,type:jsonb"`
+	// Consents of the registration, built by the database's narrow function
+	// (#8038).
+	Consents json.RawMessage `bun:"consents,type:jsonb"`
 	hostedHealthColumns
 }
 
@@ -120,10 +123,14 @@ func (row hostedParticipantRow) participant(organizationID int64) (enrollment.Ho
 	if err != nil {
 		return enrollment.HolidayParticipant{}, err
 	}
+	consents, err := decodeHolidayRegistrationConsents(row.Consents)
+	if err != nil {
+		return enrollment.HolidayParticipant{}, err
+	}
 	participant := enrollment.HolidayParticipant{
 		ChildID: ident.ID(row.ChildID), FirstName: row.FirstName, LastName: row.LastName, BirthDate: row.BirthDate,
 		HomeSchoolID: (*ident.ID)(row.HomeSchoolID), GuestSchoolName: row.GuestSchoolName, TimeModelID: ident.ID(row.TimeModelID), Answers: answers,
-		Sealed: sealed,
+		Consents: consents, Sealed: sealed,
 	}
 	if row.SecondGuardianName != nil {
 		participant.SecondGuardian = &enrollment.HolidayHostGuardian{Name: *row.SecondGuardianName}
@@ -188,11 +195,14 @@ const (
 	// health information through the database's own narrow function: the
 	// school has no row access to the children, so no column beyond these
 	// can leave, and health information leaves only sealed and only with
-	// the parents' consent of version 2 (#5202, #4722).
+	// the parents' consent of version 2 (#5202, #4722). The voluntary
+	// consents of each registration come live through a second narrow
+	// function in the same statement (#8038).
 	hostedParticipantsQuery = `SELECT child_id, first_name, last_name, birth_date, home_school_id, guest_school_name, time_model_id,
 			second_guardian_name, second_guardian_phone, answers,
-			registration_id, child_position, health_data, family_health_data, health_fields
-		FROM enrollment.holiday_host_participants(?, ?)
+			registration_id, child_position, health_data, family_health_data, health_fields,
+			enrollment.holiday_host_registration_consents(?0, ?1, child_id) AS consents
+		FROM enrollment.holiday_host_participants(?0, ?1)
 		ORDER BY lower(last_name), lower(first_name), child_id`
 	// hostedBookingDaysQuery reads the booked days of the confirmed bookings
 	// of a week by days (#4701) and the bookings with lunch (#5631). The
