@@ -448,8 +448,14 @@ function ParallelGroup({
       >
         Gleichzeitig · {span}
       </p>
+      {/* `relative`: Der Scrollbereich ist Bezugsrahmen für absolut
+          positionierte Kinder (das „Mein Block“ für Vorleseprogramme). Ohne
+          ihn entkam der Text der dritten Spalte dem Scrollbereich und machte
+          das Dokument am Telefon breiter als den Bildschirm (#8070). */}
       <div
-        className={scrolls ? "overflow-x-auto overflow-y-hidden" : undefined}
+        className={
+          scrolls ? "relative overflow-x-auto overflow-y-hidden" : undefined
+        }
       >
         <ul
           aria-labelledby={captionId}
