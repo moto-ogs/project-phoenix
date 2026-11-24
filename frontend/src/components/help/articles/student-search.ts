@@ -16,6 +16,11 @@ export function studentSearchTopic(
     presenceMode === "binary"
       ? "Bei einfacher Anwesenheit siehst du keinen Raum. Du siehst nur, ob das Kind da ist."
       : null;
+  // #6601: Die Auswahl-Leiste von `Alle Kinder` hat kein `Eltern einladen`.
+  // Die Sammeleinladung steht in `Kinderdaten` (students-list.tsx, nur mit
+  // `users:create`); der Hinweis fuehrt dorthin.
+  const inviteNote =
+    "Die Eltern mehrerer Kinder lädt die Leitung nicht in `Alle Kinder` ins Elternportal ein, sondern in `Datenverwaltung` unter `Kinderdaten`. Wie es geht, steht unter „Eltern ins Elternportal einladen“.";
   // #5026: ohne Räume (Binärmodus) gibt es keine Zuweisung.
   const transitNotes =
     presenceMode === "binary"
@@ -150,7 +155,7 @@ export function studentSearchTopic(
       "Fehlt im Filter `Anmeldung`? Den Filter sehen nur Mitarbeitende, die auch die Angaben aus der Anmeldung beim Kind sehen. Er erscheint erst, wenn Eltern in der Online-Anmeldung eigene Fragen der Schule beantwortet haben.",
       ...(presenceDifference ? [presenceDifference] : []),
     ],
-    ...(transitNotes.length > 0 ? { notes: transitNotes } : {}),
+    notes: [...transitNotes, inviteNote],
     troubleshooting: HELP_TOPICS.missingChildOrGroup,
     related: [
       HELP_TOPICS.schoolSearch,
@@ -158,6 +163,7 @@ export function studentSearchTopic(
       HELP_TOPICS.webAttendance,
       HELP_TOPICS.absences,
       HELP_TOPICS.leadManageStudent,
+      HELP_TOPICS.leadInviteGuardians,
     ],
   };
 }
