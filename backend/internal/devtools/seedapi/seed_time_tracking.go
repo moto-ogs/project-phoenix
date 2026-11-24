@@ -587,13 +587,41 @@ func seedCustomAbsenceType(rt *Runtime, name string) (int64, error) {
 	return id, nil
 }
 
+// seedAbsenceTypeVersion reads the version of the type from the school's
+// list: every edit of the type sends it back (ADR 0311).
+func seedAbsenceTypeVersion(rt *Runtime, absenceTypeID int64) (string, error) {
+	raw, err := rt.Client.Get("/api/absence-types")
+	if err != nil {
+		return "", fmt.Errorf("list absence types: %w", err)
+	}
+	var listed struct {
+		Data []struct {
+			ID      string `json:"id"`
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(raw, &listed); err != nil {
+		return "", fmt.Errorf("parse absence types: %w", err)
+	}
+	for _, value := range listed.Data {
+		if value.ID == strconv.FormatInt(absenceTypeID, 10) {
+			return value.Version, nil
+		}
+	}
+	return "", fmt.Errorf("absence type %d is not listed", absenceTypeID)
+}
+
 func seedAbsenceTypeCarryover(rt *Runtime, absenceTypeID int64, until string) error {
 	currentAuth := rt.Client.auth
 	defer rt.Client.BindAuth(currentAuth)
 	rt.Client.BindAuth(rt.TenantAuth)
+	version, err := seedAbsenceTypeVersion(rt, absenceTypeID)
+	if err != nil {
+		return fmt.Errorf("seed absence type carryover: %w", err)
+	}
 	if _, err := rt.Client.Put(
 		fmt.Sprintf("/api/absence-types/%d", absenceTypeID),
-		map[string]any{"allowance_enabled": true, "carryover_until": until},
+		map[string]any{"allowance_enabled": true, "carryover_until": until, "expected_version": version},
 	); err != nil {
 		return fmt.Errorf("seed absence type carryover: %w", err)
 	}
@@ -604,9 +632,13 @@ func seedCustomAbsenceTypeAllowance(rt *Runtime, absenceTypeID, staffID int64, y
 	currentAuth := rt.Client.auth
 	defer rt.Client.BindAuth(currentAuth)
 	rt.Client.BindAuth(rt.TenantAuth)
+	version, err := seedAbsenceTypeVersion(rt, absenceTypeID)
+	if err != nil {
+		return fmt.Errorf("enable custom absence type allowance: %w", err)
+	}
 	if _, err := rt.Client.Put(
 		fmt.Sprintf("/api/absence-types/%d", absenceTypeID),
-		map[string]any{"allowance_enabled": true},
+		map[string]any{"allowance_enabled": true, "expected_version": version},
 	); err != nil {
 		return fmt.Errorf("enable custom absence type allowance: %w", err)
 	}
