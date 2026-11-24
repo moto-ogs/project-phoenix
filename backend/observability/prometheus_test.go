@@ -226,7 +226,7 @@ func TestObserveMealPlanOperationRecordsStatementDuration(t *testing.T) {
 
 	before := testutil.CollectAndCount(mealPlanStatementDuration)
 
-	ObserveMealPlanOperation("replace_day", time.Millisecond, 2, 1, 3*time.Millisecond, nil)
+	ObserveMealPlanOperation("replace_day", time.Millisecond, 2, 1, 3*time.Millisecond, "none", nil)
 
 	assert.Equal(t, before+1, testutil.CollectAndCount(mealPlanStatementDuration))
 }

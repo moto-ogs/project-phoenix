@@ -1,7 +1,6 @@
 package observability
 
 import (
-	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -18,7 +17,7 @@ import (
 func TestOperationMetricsLabelARefusalWithItsCode(t *testing.T) {
 	t.Parallel()
 	refusal := fmt.Errorf("save: %w", readstate.ErrChanged)
-	// Every observer that labels an owner failure (15): a new one belongs here.
+	// Every observer that labels an owner failure (16): a new one belongs here.
 	observers := map[string]struct {
 		counter *prometheus.CounterVec
 		observe func(operation, label string, err error)
@@ -65,6 +64,9 @@ func TestOperationMetricsLabelARefusalWithItsCode(t *testing.T) {
 		"communication": {communicationOperations, func(operation, label string, err error) {
 			ObserveCommunicationOperation(operation, time.Millisecond, 1, 0, 0, 0, label, err)
 		}},
+		"meal plan": {mealPlanOperations, func(operation, label string, err error) {
+			ObserveMealPlanOperation(operation, time.Millisecond, 1, 0, 0, label, err)
+		}},
 		"care plan": {carePlanOperations, func(operation, label string, err error) {
 			ObserveCarePlanOperation(operation, time.Millisecond, 1, 0, 0, 0, label, err)
 		}},
@@ -85,12 +87,4 @@ func TestOperationMetricsLabelARefusalWithItsCode(t *testing.T) {
 			assert.Equal(t, internalBefore, testutil.ToFloat64(internal))
 		})
 	}
-}
-
-func TestOperationCodeKeepsTheOwnersLabel(t *testing.T) {
-	t.Parallel()
-	refusal := fmt.Errorf("save: %w", readstate.ErrChanged)
-	assert.Equal(t, "not_found", operationCode("not_found", refusal), "the owner's table names its own failures")
-	assert.Equal(t, "internal_error", operationCode("internal_error", errors.New("boom")))
-	assert.Equal(t, readstate.ChangedCode, operationCode("internal", refusal))
 }

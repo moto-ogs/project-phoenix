@@ -79,6 +79,9 @@ type GroupAssignmentFilter struct {
 	GroupsOfTeacherStaffIDs []int64
 	// WithTeacherStaff fills TeacherStaffID in the same statement.
 	WithTeacherStaff bool
+	// ForUpdate locks the matched rows in the caller's unit of work until it
+	// ends, so a writer decides on the assignments it then changes (ADR 0311).
+	ForUpdate bool
 }
 
 // ValidateClassAssignment requires the staff member and a non-blank class.

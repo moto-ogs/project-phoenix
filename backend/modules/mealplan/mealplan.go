@@ -3,6 +3,7 @@ package mealplan
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -210,6 +211,20 @@ type Fault struct {
 }
 
 func (f *Fault) Error() string { return f.Code }
+
+// ErrorCode is the metric code of a Meal Plan failure: a refusal's Code, else
+// internal_error.
+func ErrorCode(err error) string {
+	var fault *Fault
+	switch {
+	case err == nil:
+		return "none"
+	case errors.As(err, &fault):
+		return fault.Code
+	default:
+		return "internal_error"
+	}
+}
 
 var (
 	ErrDisabled             = &Fault{Code: "meal_plan_disabled", Detail: "feature_disabled"}

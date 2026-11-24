@@ -277,7 +277,7 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	"modules/schedulerruntime": 4,
 	// Raised by ADR 0073: the feed cleanup keeps only the staff feed tombstones.
 	"modules/schoolcalendar":   13,
-	"modules/schoolmembership": 15,
+	"modules/schoolmembership": 14,
 	"modules/schoolsetup":      1,
 	"modules/schoolstructure":  41, // Lowered by #7956: the retained test group update reads the version itself (-1)
 	"modules/settings":         16,

@@ -247,11 +247,6 @@ func (rs *GuardianResource) renderGuardianDeleteError(w http.ResponseWriter, r *
 		rs.failMessage(w, r, FailureConflict, message)
 	case errors.Is(err, peopledirectory.ErrGuardianForceDeleteRequiresAdmin):
 		rs.fail(w, r, FailureForbidden, err)
-	case errors.Is(err, readstate.ErrChanged):
-		// The links changed since the preview: general.changed_since_read
-		// lets the dialog read the new set (ADR 0311).
-		rs.runtime.MarkRollback(r.Context())
-		rs.fail(w, r, FailureConflict, err)
 	case errors.Is(err, peopledirectory.ErrGuardianLinkConflict):
 		// A link added between the check and the delete trips the RESTRICT
 		// constraint; surface it as the same 409 rather than a 500.
@@ -260,6 +255,10 @@ func (rs *GuardianResource) renderGuardianDeleteError(w http.ResponseWriter, r *
 	case errors.Is(err, peopledirectory.ErrGuardianNotFound):
 		rs.fail(w, r, FailureNotFound, err)
 	default:
+		// Nothing of a delete that failed otherwise stays: a business
+		// rejection such as a stale preview (ADR 0311) answers 409, which
+		// the request transaction would commit.
+		rs.runtime.MarkRollback(r.Context())
 		rs.fail(w, r, FailureInternal, err)
 	}
 }

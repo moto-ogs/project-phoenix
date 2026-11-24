@@ -10,7 +10,6 @@ import (
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -145,11 +144,6 @@ func (rs *GuardianResource) renderPaymentError(w http.ResponseWriter, r *http.Re
 			rs.fail(w, r, FailureInvalidRequest, paymentInputError{message: rule.message, sentinel: rule.sentinel})
 			return
 		}
-	}
-	if errors.Is(err, readstate.ErrChanged) {
-		// Saved by someone else since the reveal: a 409, not a 500 (ADR 0311).
-		rs.fail(w, r, FailureConflict, err)
-		return
 	}
 	if errors.Is(err, peopledirectory.ErrGuardianPaymentInvalid) {
 		rs.failMessage(w, r, FailureInvalidRequest, "Die Eingabe ist nicht gültig. Bitte prüfe die Felder.")
