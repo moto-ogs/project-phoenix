@@ -141,6 +141,10 @@ interface DataTableExtraCell {
   readonly columnKey: string;
   readonly colSpan?: number;
   readonly content: ReactNode;
+  // Label on a phone card, where the cell is a line of its own. Defaults to
+  // the header of `columnKey`; a cell spanning several columns with content
+  // of its own (a week's hint across the day columns) names it here.
+  readonly stackedLabel?: string;
 }
 
 /**
@@ -652,7 +656,10 @@ function StackedExtraRow<T>({
         </div>
       ) : null}
       {cells.map((cell) => (
-        <StackedField key={cell.columnKey} label={headerOf(cell.columnKey)}>
+        <StackedField
+          key={cell.columnKey}
+          label={cell.stackedLabel ?? headerOf(cell.columnKey)}
+        >
           {cell.content}
         </StackedField>
       ))}

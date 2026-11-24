@@ -16,6 +16,7 @@ import { ApiError } from "~/lib/api-error";
 import { setTestClock } from "~/test/clock";
 import { SWRConfig } from "~/lib/swr/testing";
 import { catalogText } from "~/test/error-catalog-text";
+import { usePhoneViewport } from "~/test/helpers/viewport";
 
 // The read of the shown sessions; it answers (ADR 0311, rule 6).
 const reloadSessions = () => Promise.resolve();
@@ -853,6 +854,93 @@ describe("staff-session-table.blocks", () => {
   function renderTable(props?: TableProps) {
     return render(tableElement(props));
   }
+
+  // Am Handy stapelt die Tabelle zu Tageskarten (#7913). Keine Spalte geht
+  // dabei verloren: was zum Prüfen des Tages nötig ist, steht auf der Karte,
+  // der Rest im aufgeklappten Detail.
+  describe("StaffSessionTable am Handy (#7913)", () => {
+    usePhoneViewport();
+
+    it("zeigt Pause, Soll und Status auf der Karte und Verlauf, Blöcke und Hinweis aufgeklappt", async () => {
+      const fetchEdits = vi.fn().mockResolvedValue([]);
+      render(
+        <StaffSessionTable
+          reloadSessions={reloadSessions}
+          staffId="1"
+          from={from}
+          to={to}
+          sessions={[afternoonOgs, { ...morningHomeOffice, audit_count: 1 }]}
+          schedule={schedule}
+          dailyProjection={dayProjection({
+            "2026-01-05": { targetMinutes: 480, balanceMinutes: -110 },
+          })}
+          accountStartDate=""
+          accountStartDatePending={false}
+          accountStartDateError={false}
+          today={today}
+          isAdminView
+          fetchEdits={fetchEdits}
+          weeklySummaries={[
+            {
+              weekNumber: 2,
+              year: 2026,
+              totalNetMinutes: 49 * 60,
+              targetMinutes: null,
+              deltaMinutes: null,
+              sessionCount: 2,
+              isOverWeeklyMax: true,
+            },
+          ]}
+        />,
+        { wrapper: FreshCache },
+      );
+
+      const stacked = screen.getByTestId("data-table-stacked");
+      const card = within(stacked.querySelector("li")!);
+      expect(card.getByText("Mo 05.01.")).toBeInTheDocument();
+      expect(card.getByText("−1h 50min")).toBeInTheDocument();
+      expect(card.getByText("ab 08:00 bis 16:00")).toBeInTheDocument();
+      expect(card.getByText("Pause 20min")).toBeInTheDocument();
+      expect(card.getByText("Ist 6h 10min")).toBeInTheDocument();
+      expect(card.getByText("Soll 8h")).toBeInTheDocument();
+      expect(card.getByText("2 Blöcke")).toBeInTheDocument();
+      // Die Zeilenaktionen brauchen kein Aufklappen.
+      expect(
+        card.getByRole("button", { name: /Aktionen für 05\.01\./ }),
+      ).toBeInTheDocument();
+      expect(card.queryByText("Block 1")).not.toBeInTheDocument();
+
+      fireEvent.click(
+        card.getByRole("button", {
+          name: "05.01.: Änderungshistorie öffnen",
+        }),
+      );
+
+      expect(card.getByText("Block 1")).toBeInTheDocument();
+      expect(card.getByText("Block 2")).toBeInTheDocument();
+      expect(card.getAllByText("Hinweis").length).toBeGreaterThan(0);
+      expect(card.getByText("Gutschrift")).toBeInTheDocument();
+      expect(
+        await card.findByText("Keine Änderungen vorhanden"),
+      ).toBeInTheDocument();
+      expect(fetchEdits).toHaveBeenCalledWith("1", "41");
+      // Die Wochensumme ist eine eigene Karte unter dem Tag; ihr Hinweis
+      // heißt dort Hinweis, nicht nach der Spalte, unter der er am Desktop
+      // beginnt.
+      const week = within(
+        within(stacked)
+          .getByText(/Summe KW 2/)
+          .closest("dl")!,
+      );
+      expect(week.getByText("Ist")).toBeInTheDocument();
+      expect(week.getByText("49h")).toBeInTheDocument();
+      expect(week.getByText("Hinweis")).toBeInTheDocument();
+      expect(
+        week.getByText("Mehr als 48 Std. in der Woche"),
+      ).toBeInTheDocument();
+      expect(week.queryByText("Gutschrift")).not.toBeInTheDocument();
+    });
+  });
 
   describe("StaffSessionTable Arbeitsblöcke (#2402)", () => {
     it("aggregiert die Tageszeile über alle Blöcke", () => {

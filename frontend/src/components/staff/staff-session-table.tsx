@@ -2,7 +2,14 @@
 
 import { differenceInCalendarDays } from "date-fns/differenceInCalendarDays";
 import { CalendarPlus, SquarePen, Thermometer } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Fragment,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useInvalidateMatching, useSWRAuth } from "~/lib/swr";
 import { staffTimeKeys } from "~/lib/swr/staff-keys";
 
@@ -762,8 +769,122 @@ export function StaffSessionTable({
     }
   };
 
+  // Die Tageszeile wiederholt keine Block-Details: gestapelte
+  // Status-/Quelle-Badges nebeneinander suggerieren falsche Paare (OGS neben
+  // App, obwohl der OGS-Block per NFC kam). Der Zähler verweist auf die
+  // Block-Unterzeilen, die die Fakten je Block korrekt gepaart tragen.
+  const dayStatus = (row: DayRow) =>
+    row.hasMultipleBlocks ? (
+      <StatusBadge label={`${row.daySessions.length} Blöcke`} tone="blue" />
+    ) : (
+      row.status && <RowStatusBadge status={row.status} />
+    );
+  const targetPendingTitle = projectionFailed
+    ? "Soll konnte nicht geladen werden"
+    : "Soll wird geladen";
+  const targetText = (row: DayRow) =>
+    row.targetUnresolved
+      ? projectionFailed
+        ? "?"
+        : "…"
+      : row.target > 0 || row.projected?.isOverride
+        ? formatDuration(row.target)
+        : "–";
+  const overrideNote = (row: DayRow) =>
+    !row.targetUnresolved && row.projected?.isOverride
+      ? row.closingReason
+        ? "Sonderarbeitszeit · Schließtag"
+        : "Sonderarbeitszeit"
+      : null;
+
+  // Die Zeile der Tageskarte am Handy (#7913): Kommen–Gehen · Pause · Ist ·
+  // Soll und darunter der Status, aus denselben Werten wie die Spalten
+  // Check-in bis Status. Diese Spalten stehen deshalb nicht noch einmal auf
+  // der Karte (`stacked: "hidden"`).
+  const phoneDayLine = (row: DayRow) => {
+    const checkIn = row.session?.check_in_time
+      ? formatTimeOnly(row.session.check_in_time)
+      : null;
+    const checkOut = row.lastSession?.check_out_time
+      ? formatTimeOnly(row.lastSession.check_out_time)
+      : null;
+    // Auf einem Mehrblock-Tag sind es Tagesgrenzen, kein durchgehender
+    // Zeitraum; die Blöcke stehen im aufgeklappten Detail.
+    const times =
+      checkIn === null
+        ? null
+        : row.hasMultipleBlocks
+          ? `ab ${checkIn}${!row.openSession && checkOut ? ` bis ${checkOut}` : ""}`
+          : `${checkIn}${!row.openSession && checkOut ? `–${checkOut}` : ""}`;
+    const parts: { key: string; node: ReactNode }[] = [];
+    if (times !== null) {
+      parts.push({
+        key: "times",
+        node: (
+          <span
+            title={row.hasMultipleBlocks ? multiBlockBoundsHint : undefined}
+          >
+            {times}
+          </span>
+        ),
+      });
+    }
+    if (row.session) {
+      parts.push({
+        key: "pause",
+        node: <span>{`Pause ${formatDuration(row.pause)}`}</span>,
+      });
+    }
+    parts.push(
+      {
+        key: "actual",
+        node: (
+          <span className="font-medium">
+            {`Ist ${row.session ? formatDuration(row.ist) : "–"}`}
+          </span>
+        ),
+      },
+      {
+        key: "target",
+        node: (
+          <span title={row.targetUnresolved ? targetPendingTitle : undefined}>
+            {`Soll ${targetText(row)}`}
+          </span>
+        ),
+      },
+    );
+    const note = overrideNote(row);
+    return (
+      <span className="flex flex-col items-start gap-1">
+        <span className="flex flex-wrap items-center gap-x-1.5 text-gray-700 tabular-nums">
+          {parts.map((part, index) => (
+            <Fragment key={part.key}>
+              {index > 0 ? (
+                <span aria-hidden="true" className="text-gray-500">
+                  ·
+                </span>
+              ) : null}
+              <span className="whitespace-nowrap">{part.node}</span>
+            </Fragment>
+          ))}
+        </span>
+        {note ? <span className="text-xs text-gray-500">{note}</span> : null}
+        {row.openSession || row.hasMultipleBlocks || row.status ? (
+          <span className="flex flex-wrap gap-1">
+            {row.openSession ? (
+              <StatusBadge label="eingestempelt" tone="green" compact />
+            ) : null}
+            {dayStatus(row)}
+          </span>
+        ) : null}
+      </span>
+    );
+  };
+
   // Spalten nach dem Muster der Tagesansicht: Check-in, Check-out, Pause, Soll,
-  // Ist und Saldo.
+  // Ist und Saldo. Am Handy wird jede Zeile eine Tageskarte (#7913): Datum als
+  // Titel, Saldo rechts, darunter die Tageszeile; Plan, Gutschrift, Quelle,
+  // Hinweis, Blöcke und Verlauf öffnen im Detail der Karte.
   const columns: DataTableColumn<DayRow>[] = [
     {
       key: "date",
@@ -772,10 +893,16 @@ export function StaffSessionTable({
       render: (row) => (
         <span className="text-gray-700">{formatShortDate(row.day)}</span>
       ),
+      // Am Handy ist das Datum der Titel der Tageskarte und trägt den
+      // Wochentag mit (#7913).
+      stacked: "title",
+      stackedRender: (row) =>
+        `${dayLabels[row.dow]} ${formatShortDate(row.day)}`,
     },
     {
       key: "weekday",
       header: "Tag",
+      stacked: "hidden",
       render: (row) => (
         <span className="text-gray-500">{dayLabels[row.dow]}</span>
       ),
@@ -803,6 +930,9 @@ export function StaffSessionTable({
       header: "Check-in",
       headerClassName: "whitespace-nowrap",
       className: "tabular-nums whitespace-nowrap",
+      // Die Zeile unter dem Titel der Tageskarte (`stackedDetailKey`).
+      stackedLabel: false,
+      stackedRender: phoneDayLine,
       render: (row) => (
         <span className="text-gray-700">
           {row.session?.check_in_time ? (
@@ -822,6 +952,7 @@ export function StaffSessionTable({
     },
     {
       key: "checkOut",
+      stacked: "hidden",
       header: "Check-out",
       headerClassName: "whitespace-nowrap",
       className: "tabular-nums whitespace-nowrap",
@@ -846,6 +977,7 @@ export function StaffSessionTable({
     },
     {
       key: "pause",
+      stacked: "hidden",
       header: "Pause",
       align: "right",
       className: "tabular-nums whitespace-nowrap",
@@ -857,31 +989,20 @@ export function StaffSessionTable({
     },
     {
       key: "target",
+      stacked: "hidden",
       header: "Soll",
       align: "right",
       className: "tabular-nums whitespace-nowrap",
       render: (row) => (
         <span className="text-gray-500">
           {row.targetUnresolved ? (
-            <span
-              title={
-                projectionFailed
-                  ? "Soll konnte nicht geladen werden"
-                  : "Soll wird geladen"
-              }
-            >
-              {projectionFailed ? "?" : "…"}
-            </span>
-          ) : row.target > 0 || row.projected?.isOverride ? (
-            formatDuration(row.target)
+            <span title={targetPendingTitle}>{targetText(row)}</span>
           ) : (
-            "–"
+            targetText(row)
           )}
-          {!row.targetUnresolved && row.projected?.isOverride && (
+          {overrideNote(row) && (
             <span className="block text-xs text-gray-500">
-              {row.closingReason
-                ? "Sonderarbeitszeit · Schließtag"
-                : "Sonderarbeitszeit"}
+              {overrideNote(row)}
             </span>
           )}
         </span>
@@ -889,6 +1010,7 @@ export function StaffSessionTable({
     },
     {
       key: "actual",
+      stacked: "hidden",
       header: "Ist",
       align: "right",
       className: "tabular-nums whitespace-nowrap",
@@ -920,6 +1042,7 @@ export function StaffSessionTable({
     {
       key: "balance",
       header: "Saldo",
+      stacked: "meta",
       align: "right",
       className: "tabular-nums whitespace-nowrap",
       render: (row) =>
@@ -937,16 +1060,8 @@ export function StaffSessionTable({
     {
       key: "status",
       header: "Status",
-      // Die Tageszeile wiederholt keine Block-Details: gestapelte
-      // Status-/Quelle-Badges nebeneinander suggerieren falsche Paare (OGS
-      // neben App, obwohl der OGS-Block per NFC kam). Der Zähler verweist auf
-      // die Block-Unterzeilen, die die Fakten je Block korrekt gepaart tragen.
-      render: (row) =>
-        row.hasMultipleBlocks ? (
-          <StatusBadge label={`${row.daySessions.length} Blöcke`} tone="blue" />
-        ) : (
-          row.status && <RowStatusBadge status={row.status} />
-        ),
+      stacked: "hidden",
+      render: dayStatus,
     },
     {
       key: "source",
@@ -1175,10 +1290,7 @@ export function StaffSessionTable({
       .map((block, blockIndex) => ({
         key: `${row.key}-audit-${block.id ?? blockIndex}`,
         content: (
-          // Auf dem Telefon ist die Tabelle breiter als der Bildschirm. Die
-          // Historie bleibt im sichtbaren Ausschnitt, sonst stehen Bearbeiter
-          // und Knopf rechts außerhalb.
-          <div className="max-md:sticky max-md:left-3 max-md:w-[calc(100vw-5.75rem)]">
+          <div>
             {row.hasMultipleBlocks && (
               <p className="mb-1 text-xs font-medium text-gray-500">
                 {`Block ${row.daySessions.indexOf(block) + 1}${
@@ -1228,6 +1340,9 @@ export function StaffSessionTable({
         rows={rows}
         getRowKey={(row) => row.key}
         dense
+        stackedOnMobile
+        stackedLayout="row"
+        stackedDetailKey="checkIn"
         expandable={{
           canExpand: (row) => row.canExpand,
           rowLabel: (row, expanded) =>
@@ -1639,6 +1754,7 @@ function weekSummaryCells(
   sunday.setDate(sunday.getDate() + 6);
   const reachesBeyond =
     toDateKey(monday) < toDateKey(from) || toDateKey(sunday) > toDateKey(to);
+  const hints = weekLaborHints(summary);
   return [
     {
       columnKey: "date",
@@ -1667,10 +1783,13 @@ function weekSummaryCells(
     // Der Wochenhinweis steht direkt neben der Summe, über die freien
     // Tagesspalten, damit er nicht in der schmalen Hinweis-Spalte am Rand
     // abgeschnitten wird.
+    // Am Handy ist die Zelle eine eigene Zeile der Wochenkarte (#7913): ohne
+    // Hinweis entfällt sie, mit Hinweis heißt sie nicht „Gutschrift“.
     {
       columnKey: "credit",
       colSpan: 5,
-      content: <LaborHintList hints={weekLaborHints(summary)} />,
+      stackedLabel: "Hinweis",
+      content: hints.length > 0 ? <LaborHintList hints={hints} /> : null,
     },
   ];
 }
