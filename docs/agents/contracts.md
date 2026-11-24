@@ -1194,8 +1194,9 @@ moved pages. The page list comes from the `app/<portal>/` folders:
 `/api/*` path outside its allow-list, because the domain-scoped tenant cookie
 reaches it too; a portal's catalog routes pass under its prefix, and a path
 outside it that a portal page calls belongs in that list.
-`[tenant]/layout.tsx` resolves slugs through `/auth/tenant/resolve?slug=...`
-(cached five minutes). `POST /auth/switch-tenant` returns a tenant-session JWT
+`[tenant]/layout.tsx` resolves slugs through the public contract entry
+`GET /auth/tenant/resolve` via `contractGet`. The per-replica cache in
+`tenant-resolve.server.ts` keeps decoded successes for 60 seconds. `POST /auth/switch-tenant` returns a tenant-session JWT
 for the target school, not a `scope=school` portal token.
 Verified MFA belongs to the live tenant-session family of the same account,
 not its school or organization. A permitted switch across organizations preserves

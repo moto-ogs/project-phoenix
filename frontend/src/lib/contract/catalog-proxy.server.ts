@@ -7,7 +7,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import type { z } from "zod";
 import { bffError, handleApiError } from "~/lib/api-response-error.server";
-import { readBackendJson, sendBackend } from "~/lib/backend-client.server";
+import { sendBackend } from "~/lib/backend-client.server";
 import type { ErrorCode } from "~/lib/error-codes.generated";
 import { fileResponse } from "~/lib/file-response.server";
 import type { makePortalHandlers } from "~/lib/portal-handlers.server";
@@ -18,8 +18,8 @@ import {
   type RouteContext,
 } from "~/lib/route-wrapper-utils.server";
 import { underOutsideHead } from "./catalog-outside-mounts";
-import { commits, decodeContract } from "./client.server";
-import { fileAnswer, multipart } from "./runtime";
+import { commits, decodeContract, readContractJson } from "./client.server";
+import { fileAnswer, multipart, noData } from "./runtime";
 
 /** A generated route entry, as `portalRoutes` lists it. */
 export interface CatalogRoute {
@@ -76,7 +76,6 @@ type PortalHandlers = Pick<
   | "patch"
   | "del"
   | "delWithBody"
-  | "api"
   | "route"
   | "backendFetch"
 >;
@@ -474,16 +473,35 @@ export function makeCatalogProxy(
     };
   }
 
+  async function jsonAnswer(
+    route: ServedRoute,
+    request: NextRequest,
+    endpoint: string,
+    token: string | null,
+    json?: unknown,
+    idempotencyKey?: string | null,
+  ) {
+    // Portal handlers own renewal; this sends once with the supplied token.
+    const response = await sendBackend(endpoint, token, {
+      method,
+      json: json ?? undefined,
+      idempotencyKey,
+      request,
+    });
+    return decoded(
+      route,
+      request,
+      await readContractJson(response, route, { request }),
+    );
+  }
+
   const read = async (
     request: NextRequest,
     token: string,
     params: Record<string, unknown>,
   ) => {
     const { route, endpoint } = target(request, params.path);
-    const answer = await portal.api(method, endpoint, token, undefined, {
-      request,
-    });
-    return NextResponse.json(decoded(route, request, answer));
+    return NextResponse.json(await jsonAnswer(route, request, endpoint, token));
   };
 
   /** A DELETE forwards a JSON body, such as a reason, when it carries one. */
@@ -496,19 +514,14 @@ export function makeCatalogProxy(
     const { route, endpoint } = target(request, params.path);
     const sent =
       typeof body === "object" && body !== null && Object.keys(body).length > 0;
-    const answer = await portal.api(
-      method,
+    const envelope = await jsonAnswer(
+      route,
+      request,
       endpoint,
       token,
       sent ? body : undefined,
-      { request },
     );
-    // A DELETE may answer 204; every other empty answer breaks the contract.
-    // A DELETE without data answers 204 as well, whatever envelope the
-    // backend wrote around nothing.
-    if (answer === undefined) return null;
-    const envelope = decoded(route, request, answer);
-    return envelope.data === null && !("pagination" in envelope)
+    return decoderOf(route, request) === noData
       ? null
       : NextResponse.json(envelope);
   };
@@ -520,11 +533,16 @@ export function makeCatalogProxy(
     params: Record<string, unknown>,
   ) => {
     const { route, endpoint } = target(request, params.path);
-    const answer = await portal.api(method, endpoint, token, body, {
-      idempotencyKey: request.headers.get("Idempotency-Key"),
-      request,
-    });
-    return NextResponse.json(decoded(route, request, answer));
+    return NextResponse.json(
+      await jsonAnswer(
+        route,
+        request,
+        endpoint,
+        token,
+        body,
+        request.headers.get("Idempotency-Key"),
+      ),
+    );
   };
 
   /**
@@ -576,7 +594,7 @@ export function makeCatalogProxy(
       throw error;
     }
     if (counted.exceeded()) throw tooLarge();
-    const answer = await readBackendJson<unknown>(response);
+    const answer = await readContractJson(response, route, { request });
     return NextResponse.json(decoded(route as ServedRoute, request, answer), {
       status: response.status === 204 ? 200 : response.status,
     });
@@ -708,15 +726,16 @@ export function makeCatalogProxy(
       method === "GET"
         ? undefined
         : await parseRequestBody(request, route.maxBodyBytes ?? 0);
-    const answer = await readBackendJson<unknown>(
-      await sendBackend(endpoint, null, {
-        method,
-        json,
-        idempotencyKey: request.headers.get("Idempotency-Key"),
+    return NextResponse.json(
+      await jsonAnswer(
+        route,
         request,
-      }),
+        endpoint,
+        null,
+        json,
+        request.headers.get("Idempotency-Key"),
+      ),
     );
-    return NextResponse.json(decoded(route, request, answer));
   }
 
   return async (request: NextRequest, context: RouteContext) => {
