@@ -78,6 +78,7 @@ const RECORD: StaffRecordDetail = {
       staffId: "11",
       active: true,
       viaPool: false,
+      employerName: "",
     },
     {
       schoolId: "2",
@@ -85,6 +86,7 @@ const RECORD: StaffRecordDetail = {
       staffId: "22",
       active: false,
       viaPool: false,
+      employerName: "Gemeinde Hardt",
     },
   ],
   personVersion: "person-v1",
@@ -196,6 +198,10 @@ describe("TraegerStaffRecordPage", () => {
   it("shows the Einsatzorte, the masked bank values and the trail in their tabs", async () => {
     renderPage();
     expect(await screen.findByText("Einsatzorte")).toBeInTheDocument();
+    // The Gemeinde employs the staff of the second school (#4811); the
+    // Träger's own Einsatzort names no employer.
+    expect(screen.getAllByText(/^Arbeitgeber:/)).toHaveLength(1);
+    expect(screen.getByText("Arbeitgeber: Gemeinde Hardt")).toBeInTheDocument();
     expect(screen.getByText("Beendet")).toBeInTheDocument();
     expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
       "Stammdaten",

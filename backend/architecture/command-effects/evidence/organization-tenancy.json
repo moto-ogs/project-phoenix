@@ -121,6 +121,30 @@
       "target_owner": "operator-dashboard-view"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.schoolResponsibilitySettings.SchoolResponsibilityChoices",
+      "binding_digest": "6a5cc40c95142f64f070d584f8dc84a9",
+      "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolResponsibilitySettings.SchoolResponsibilityChoices",
+      "source_owner": "organization-tenancy",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsSnapshot.Layer",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.schoolResponsibilitySettings.SchoolResponsibilityChoices",
+      "binding_digest": "a029fd88584fb3d9cff0d9f63f9fa279",
+      "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolResponsibilitySettings.SchoolResponsibilityChoices",
+      "source_owner": "organization-tenancy",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsSnapshot.String",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.schoolResponsibilitySettings.SchoolResponsibilityChoices",
+      "binding_digest": "a81d7c5f94ca0eb20973afac38113005",
+      "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolResponsibilitySettings.SchoolResponsibilityChoices",
+      "source_owner": "organization-tenancy",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveManyForTenants",
+      "target_owner": "settings-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/cmd.tenantExportAudit.BeginTenantExport",
       "binding_digest": "049a8f9d604254cde9914a713a57f233",
       "port": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TenantExportAudit.BeginTenantExport",

@@ -222,6 +222,7 @@ export const GERMAN_PAGE_TITLES: Readonly<
     "/einstellungen/mitglieder": "Mitglieder und Rollen",
     "/einstellungen/schulrollen": "Rollen für Schulen",
     "/einstellungen/zugriffsprotokoll": "Zugriffsprotokoll",
+    "/einstellungen/zustaendigkeiten": "Zuständigkeiten",
     "/ferien": "Ferienbetreuung",
     "/ferien/:id": "Ferienzeitraum",
     "/ferien/:id/anmeldungen": "Ferienanmeldungen",

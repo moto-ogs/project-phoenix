@@ -317,7 +317,7 @@ func traegerSteps(seeder *Seeder) []Step {
 // traegerSetupSteps prepare the Träger: office, holidays, settings and
 // master data.
 func traegerSetupSteps(seeder *Seeder) []Step {
-	return traegerSerial(seedTraegerBueroStep{}, seedVisitorTraegerBueroStep{seeder: seeder}, seedTraegerHolidayPeriodStep{}, seedHolidayParentAccountStep{seeder: seeder}, seedTraegerClosingDayStep{}, seedTraegerHolidayDaysStep{}, seedTraegerHolidayCriteriaStep{}, seedTraegerHolidayHomeSchoolStep{}, seedHolidayLegalStep{}, seedTraegerSettingsStep{}, seedTraegerMasterDataStep{}, seedTraegerReportTemplatesStep{}, seedDemoNeighbourPlanningStep{retry: seeder.options.ReplaceAbandoned})
+	return traegerSerial(seedTraegerBueroStep{}, seedVisitorTraegerBueroStep{seeder: seeder}, seedTraegerHolidayPeriodStep{}, seedHolidayParentAccountStep{seeder: seeder}, seedTraegerClosingDayStep{}, seedTraegerHolidayDaysStep{}, seedTraegerHolidayCriteriaStep{}, seedTraegerHolidayHomeSchoolStep{}, seedHolidayLegalStep{}, seedTraegerSettingsStep{}, seedTraegerMasterDataStep{}, seedSchoolResponsibilitiesStep{}, seedTraegerReportTemplatesStep{}, seedDemoNeighbourPlanningStep{retry: seeder.options.ReplaceAbandoned})
 }
 
 // traegerCareSteps conclude and bill the contracts of the school's accepted

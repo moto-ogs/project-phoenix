@@ -94,7 +94,7 @@ func withSentVersion(record ContractRecord, versions []carecontract.Version) Con
 	for _, version := range versions {
 		if version.ID == ident.ID(record.SentDocument.VersionID) {
 			documentID := record.SentDocument.ID
-			record.Version, record.DocumentID = version, &documentID
+			record.Version, record.DocumentID, record.Issuer = version, &documentID, record.SentDocument.Issuer
 		}
 	}
 	return record

@@ -103,8 +103,11 @@ func careContractPorts(organizations HolidayOrganizations, settings TraegerBrand
 	}
 	letterheads := careContractLetterheads{masterData: organizationTenancyCompose.NewTraegerMasterData(),
 		templates: organizationTenancyCompose.NewTraegerDocumentTemplates(), settings: settings}
+	// The Schulträger or the Gemeinde that concludes the contracts of a
+	// school in place of the Träger (#4811).
+	issuers := owners.CareContractIssuers{Responsible: owners.NewSchoolResponsibilities(schoolSettings)}
 	return careContractCompose.ContractPorts{
-		Letterheads: letterheads, Post: owners.CareContractPost{Delivery: delivery, Outcomes: outcomes},
+		Issuers: issuers, Letterheads: letterheads, Post: owners.CareContractPost{Delivery: delivery, Outcomes: outcomes},
 		Runtime: owners.CareContractRuntime{}, Access: careContractAccessLog{log: accessLog},
 		Ledger: owners.NewCareContractSignatures(), Links: owners.CareContractLinks(parentsURL),
 		Notices: owners.CareContractDocumentNotices{Delivery: delivery}, Holidays: holidays,
@@ -113,7 +116,7 @@ func careContractPorts(organizations HolidayOrganizations, settings TraegerBrand
 		Bookings: careContractBookings{offerings: carePlanCompose.NewContractOfferings(), bookings: carePlanCompose.NewOfferingBookings(now)},
 		Access:   careContractAccessLog{log: accessLog}, Runtime: owners.CareContractRuntime{},
 		Modes: careContractModes{settings: schoolSettings}, Mail: owners.CareContractPost{Delivery: delivery, Outcomes: outcomes},
-		Letterheads: letterheads, Families: owners.NewCareContractFamilyNumbers(),
+		Letterheads: letterheads, Issuers: issuers, Families: owners.NewCareContractFamilyNumbers(),
 	}
 }
 
@@ -122,6 +125,8 @@ func careContractPorts(organizations HolidayOrganizations, settings TraegerBrand
 // default (ADR 0086).
 type CareContractSchoolSettings interface {
 	ResolveString(ctx context.Context, key string) (string, error)
+	// The responsibilities of several schools at once (#4811).
+	owners.ResponsibilitySchoolSettings
 }
 
 // TraegerSchoolSettings are the settings of the schools the Träger routes

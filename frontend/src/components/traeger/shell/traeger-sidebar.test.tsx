@@ -176,6 +176,8 @@ describe("TraegerSidebar", () => {
       "Allgemein",
       "Mitglieder und Rollen",
       "Briefkopf und Vorlagen",
+      // Wer Verträge schließt, abrechnet und Personal anstellt (#4811).
+      "Zuständigkeiten",
       "Abrechnungsvorgaben",
       // Dokumentart je Leistung, für die Rolle „Abrechnung“ (#4688).
       "Dokumentarten",
@@ -216,6 +218,7 @@ describe("TraegerSidebar", () => {
       "Zurück zur App",
       "Allgemein",
       "Briefkopf und Vorlagen",
+      "Zuständigkeiten",
       "Abrechnungsvorgaben",
     ]);
     unmount();

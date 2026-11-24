@@ -2,10 +2,18 @@
 
 // Ansicht einer Schule im Träger-Portal (#5686): Zahlen von jetzt und
 // Stammdaten, ohne die Träger-Navigation zu verlassen. Nur Zahlen, keine Namen.
-// Die Schul-App öffnet sich als eigene Aktion in einem neuen Tab.
+// Die Schul-App öffnet sich als eigene Aktion in einem neuen Tab. Der Reiter
+// „Zuständigkeiten“ (#4811) zeigt, wer an der Schule Verträge schließt,
+// abrechnet und Personal anstellt, mit den Angaben zu Schulträger und
+// Gemeinde.
 
-import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useParams, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
+import { SchoolResponsibilityTab } from "~/components/traeger/school-responsibility-tab";
+import { useTraegerResponsibilities } from "~/components/traeger/use-traeger-responsibilities";
+import { Loading } from "~/components/ui/loading";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
+import { EmptyState } from "~/components/ui/empty-state";
 import {
   SCHOOL_SWITCH_MISSING_HINT,
   useOpenTraegerSchool,
@@ -29,12 +37,20 @@ import type { TraegerSchoolView } from "~/lib/traeger-api";
 import { traegerPath } from "~/lib/traeger-url";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 
-type SchoolTab = "uebersicht" | "stammdaten";
+type SchoolTab = "uebersicht" | "stammdaten" | "zustaendigkeiten";
 
 const SCHOOL_TABS = [
   { value: "uebersicht", label: "Übersicht" },
   { value: "stammdaten", label: "Stammdaten" },
+  { value: "zustaendigkeiten", label: "Zuständigkeiten" },
 ] as const;
+
+/** Opens a tab by its key, e.g. `?bereich=zustaendigkeiten` from the settings. */
+const TAB_PARAM = "bereich";
+
+function initialTab(value: string | null | undefined): SchoolTab {
+  return SCHOOL_TABS.find((tab) => tab.value === value)?.value ?? "uebersicht";
+}
 
 const EMPTY_VALUE = "–";
 
@@ -159,11 +175,44 @@ function MasterDataTab({
   );
 }
 
+/**
+ * Who is responsible at the school, read when the tab opens: the read
+ * shows bank accounts and stands in the Träger's log.
+ */
+function ResponsibilityTab({ schoolId }: Readonly<{ schoolId: string }>) {
+  const { data, loading, error, reloadOrThrow } = useTraegerResponsibilities();
+  const school = data?.find((entry) => entry.schoolId === schoolId);
+  if (error) return <LoadErrorAlert error={error} />;
+  if (loading || !data) return <Loading />;
+  if (!school) {
+    return (
+      <EmptyState
+        variant="compact"
+        title="Für diese Schule gibt es keine Zuständigkeiten"
+        description="Die Schule gehört nicht mehr zu deinem Träger."
+      />
+    );
+  }
+  return <SchoolResponsibilityTab school={school} reload={reloadOrThrow} />;
+}
+
 export default function TraegerSchoolPage() {
+  // `useSearchParams` braucht eine Suspense-Grenze; bis dahin lädt die Seite.
+  return (
+    <Suspense fallback={<TenantPage title="Schule" loading />}>
+      <TraegerSchoolContent />
+    </Suspense>
+  );
+}
+
+function TraegerSchoolContent() {
   const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const { school, error } = useTraegerSchool(params?.id ?? "");
   const { canOpen, opening, open, codeStepModal } = useOpenTraegerSchool();
-  const [tab, setTab] = useState<SchoolTab>("uebersicht");
+  const [tab, setTab] = useState<SchoolTab>(() =>
+    initialTab(searchParams?.get(TAB_PARAM)),
+  );
 
   return (
     <TenantPage
@@ -174,8 +223,9 @@ export default function TraegerSchoolPage() {
       backLabel="Zurück zu den Schulen"
       info={
         <>
-          Zahlen und Stammdaten dieser Schule. moto zeigt hier keine Namen. Die
-          Zahlen aktualisieren sich jede Minute.
+          Zahlen, Stammdaten und Zuständigkeiten dieser Schule. moto zeigt hier
+          keine Namen von Kindern oder Personal. Die Zahlen aktualisieren sich
+          jede Minute.
           {!canOpen && ` ${SCHOOL_SWITCH_MISSING_HINT}`}
         </>
       }
@@ -203,9 +253,11 @@ export default function TraegerSchoolPage() {
     >
       {tab === "uebersicht" ? (
         <OverviewTab figures={school?.figures ?? null} />
-      ) : (
-        <MasterDataTab school={school} />
-      )}
+      ) : null}
+      {tab === "stammdaten" ? <MasterDataTab school={school} /> : null}
+      {tab === "zustaendigkeiten" ? (
+        <ResponsibilityTab schoolId={params?.id ?? ""} />
+      ) : null}
       <TraegerCodeStepModal {...codeStepModal} />
     </TenantPage>
   );

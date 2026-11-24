@@ -35,6 +35,8 @@ func TestTraegerLevelKeysOfVersionOne(t *testing.T) {
 		config.KeyParentCarePickupRequestEnabled, config.KeyParentGuardianManagementEnabled,
 		config.KeyParentMasterDataEditEnabled, config.KeyParentMasterDataRequestEnabled,
 		config.KeyParentMessageStaffNameVisible, config.KeyParentNewsEnabled,
+		// Who concludes contracts, bills and employs at a school (#4811).
+		config.KeyResponsibilityBilling, config.KeyResponsibilityContracts, config.KeyResponsibilityStaff,
 	}
 	sort.Strings(want)
 	wantTraeger := []string{

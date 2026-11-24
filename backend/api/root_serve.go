@@ -541,7 +541,7 @@ func composeServeRoot(
 		},
 		func() error {
 			return errors.Join(mountStaffRoutes(router, tenant, db, logger, membership, workTime, workTime, workTime, services.Users, staffAdmin, workforce, shifts,
-				structureViews.Education, structureViews.Substitution, persons, settings.Service, hub, identity, caller, calendarAdmin, owners.UploadFileKeys(env), appUploads, env.Now), mountTraegerStaffRoutes(router, tenant, staffAdmin, workforce.TimeTracking.TraegerMonths, organizations, persons, membership, audit.Persistence.DataAccessLog, shifts.TraegerSites(workforce.StaffShifts), workforce.TimeTracking.TraegerExports, settings.Traeger, identity, env.Today))
+				structureViews.Education, structureViews.Substitution, persons, settings.Service, hub, identity, caller, calendarAdmin, owners.UploadFileKeys(env), appUploads, env.Now), mountTraegerStaffRoutes(router, tenant, staffAdmin, workforce.TimeTracking.TraegerMonths, organizations, persons, membership, audit.Persistence.DataAccessLog, shifts.TraegerSites(workforce.StaffShifts), workforce.TimeTracking.TraegerExports, settings.Traeger, settings.Service, identity, env.Today))
 		},
 		func() error {
 			return mountSchoolPortalRoutes(router, tenant, db, logger, appUploads, limiters, studentPresence, timetableOwner, calendarAdmin,

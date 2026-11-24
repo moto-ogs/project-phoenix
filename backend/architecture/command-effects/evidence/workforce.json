@@ -7625,6 +7625,22 @@
       "target_owner": "organization-tenancy"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StaffEmployers.SchoolEmployers",
+      "binding_digest": "d12d143d719a233e747e6aa6925c410f",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffEmployers.SchoolEmployers",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.ResponsibleParties.ResponsibleParties",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StaffEmployers.SchoolEmployers",
+      "binding_digest": "2612eb346b39476314affb8a86a71e11",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffEmployers.SchoolEmployers",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolResponsibilities.ResponsibleParties",
+      "target_owner": "organization-tenancy"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.TraegerStaff.ChangeShift",
       "binding_digest": "a53072dc69cae85fe55cd079e6f5fa29",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffPlanning.ChangeShift",
