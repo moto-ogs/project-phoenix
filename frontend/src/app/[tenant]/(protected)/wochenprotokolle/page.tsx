@@ -100,7 +100,6 @@ function WeekProtocolsContent() {
         rows={protocols}
         getRowKey={(protocol) => protocol.id}
         onRowClick={(protocol) => router.push(weekProtocolPath(protocol.id))}
-        stackedOnMobile
         stackedLayout="row"
         stackedDetailKey="week"
         defaultSortKey="week"

@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"

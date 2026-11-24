@@ -24558,6 +24558,26 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.MoodCaptureStopped",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.RoomHistoryStopStore.MoodCaptureStopped",
+      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through *modules/studentpresence/internal/adapters/postgres.Store.MoodCaptureStopped. No persistent, lock or scope effect; the read of the mood capture stop, including the stop of a holiday guest's home school (#8037), joins the ambient tenant transaction.",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.MoodCaptureStopped",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.RoomHistoryStopStore.MoodCaptureStopped",
+      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/ports.Store.MoodCaptureStopped. No persistent, lock or scope effect; the read of the mood capture stop, including the stop of a holiday guest's home school (#8037), joins the ambient tenant transaction.",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.RoomUtilization",
       "classification": "platform",
@@ -25607,6 +25627,16 @@
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.MarkParticipantsNotScheduled",
       "reason": "Read-only newly exposed target: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/adapters/postgres.Store.MarkParticipantsNotScheduled. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.MoodCaptureStopped",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.MoodCaptureStopped",
+      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through *modules/studentpresence/internal/adapters/postgres.Store.MoodCaptureStopped. No persistent, lock or scope effect; the read of the mood capture stop, including the stop of a holiday guest's home school (#8037), joins the ambient tenant transaction.",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
       "target_owner": "tenant-runtime"

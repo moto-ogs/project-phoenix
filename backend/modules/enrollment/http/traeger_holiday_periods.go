@@ -35,6 +35,7 @@ type HolidayPeriodResource struct {
 	known         capability.HolidayKnownChildren
 	knownTrail    capability.HolidayKnownChildTrail
 	mails         capability.HolidayRegistrationMailReview
+	consents      capability.HolidayConsentWithdrawals
 	lists         common.ListRenderer
 	requireManage common.Middleware
 	requireHealth common.Middleware
@@ -66,7 +67,13 @@ func NewHolidayPeriodResource(periods capability.HolidayPeriods, review capabili
 	if !ok {
 		panic("enrollment http: the registration review does not name the undelivered mails")
 	}
-	return &HolidayPeriodResource{periods: periods, review: review, records: records, wishes: wishes, places: places, allocation: allocation, decide: decide, schoolNames: schoolNames, known: known, knownTrail: knownTrail, mails: mails, lists: lists, requireManage: requireManage, requireHealth: requireHealth, Now: now}
+	// The review also records a withdrawal the parents declared outside
+	// moto (ADR 0321).
+	consents, ok := review.(capability.HolidayConsentWithdrawals)
+	if !ok {
+		panic("enrollment http: the registration review does not record consent withdrawals")
+	}
+	return &HolidayPeriodResource{periods: periods, review: review, records: records, wishes: wishes, places: places, allocation: allocation, decide: decide, schoolNames: schoolNames, known: known, knownTrail: knownTrail, mails: mails, consents: consents, lists: lists, requireManage: requireManage, requireHealth: requireHealth, Now: now}
 }
 
 // HolidayAllocationReads names the Träger's criteria, shows the proposal of

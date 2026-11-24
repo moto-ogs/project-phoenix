@@ -1431,6 +1431,25 @@ export const HolidayHostHealthSchema: z.ZodType<HolidayHostHealth, unknown> = ob
   answers: nullable(arr(HolidayHostAnswerSchema)),
 });
 
+/** Go: enrollment.HolidayRegistrationConsent */
+export interface HolidayRegistrationConsent {
+  key: string;
+  title: string;
+  label: string;
+  text?: string;
+  given: boolean;
+  changed_at: string | null;
+}
+
+export const HolidayRegistrationConsentSchema: z.ZodType<HolidayRegistrationConsent, unknown> = object<HolidayRegistrationConsent>({
+  key: str,
+  title: str,
+  label: str,
+  text: optional(str),
+  given: bool,
+  changed_at: nullable(instant),
+});
+
 /** Go: messageattachments.UploadResponse */
 export interface UploadResponse {
   id: string;
@@ -4387,6 +4406,8 @@ export interface HolidayRegistrationEventDetails {
   reason?: string;
   checks?: HolidayCriterionCheck[];
   wish?: string;
+  key?: string;
+  given?: boolean;
 }
 
 export const HolidayRegistrationEventDetailsSchema: z.ZodType<HolidayRegistrationEventDetails, unknown> = object<HolidayRegistrationEventDetails>({
@@ -4403,6 +4424,8 @@ export const HolidayRegistrationEventDetailsSchema: z.ZodType<HolidayRegistratio
   reason: optional(str),
   checks: optional(arr(HolidayCriterionCheckSchema)),
   wish: optional(str),
+  key: optional(str),
+  given: optional(bool),
 });
 
 /** Go: enrollment.HolidayRegistrationEvent */
@@ -4475,6 +4498,7 @@ export interface HolidayRegistrationDetail {
   mail_problems?: HolidayRegistrationMailProblem[];
   guardian_address: HolidayAddress | null;
   legal_acceptances: Record<string, string> | null;
+  legal_withdrawals: Record<string, string> | null;
   second_guardian?: HolidayGuardianInput;
   form: HolidayPeriodForm | null;
   custom_data: Record<string, unknown | null> | null;
@@ -4513,6 +4537,7 @@ export const HolidayRegistrationDetailSchema: z.ZodType<HolidayRegistrationDetai
   mail_problems: optional(arr(HolidayRegistrationMailProblemSchema)),
   guardian_address: nullable(HolidayAddressSchema),
   legal_acceptances: nullable(rec(instant)),
+  legal_withdrawals: nullable(rec(instant)),
   second_guardian: optional(HolidayGuardianInputSchema),
   form: nullable(HolidayPeriodFormSchema),
   custom_data: nullable(rec(nullable(json))),

@@ -150,7 +150,6 @@ export default function TraegerHolidayPeriodsPage() {
         getRowKey={(period) => period.id}
         isLoading={loading}
         loadingRowCount={3}
-        stackedOnMobile
         stackedLayout="row"
         stackedDetailKey="weeks"
         onRowClick={(period) =>

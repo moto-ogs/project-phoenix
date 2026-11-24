@@ -176,7 +176,6 @@ export function ContributionRulesCard({
         rows={[...rules]}
         getRowKey={(rule) => rule.id}
         rowHasInteractiveControls
-        stackedOnMobile
         emptyState={
           <EmptyState
             icon={<Receipt className="h-12 w-12" aria-hidden="true" />}

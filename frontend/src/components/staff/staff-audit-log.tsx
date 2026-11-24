@@ -322,6 +322,7 @@ export function StaffAuditLog({ staffOptions }: StaffAuditLogProps) {
       {
         key: "occurredAt",
         header: "Zeitpunkt",
+        stacked: "meta",
         // School time, whatever the viewer's zone (#6293).
         render: (row) =>
           `${formatBerlinDate(row.occurredAt)}, ${berlinClockFromISO(row.occurredAt)}`,
@@ -330,6 +331,7 @@ export function StaffAuditLog({ staffOptions }: StaffAuditLogProps) {
       {
         key: "staff",
         header: "Mitarbeiter:in",
+        stacked: "title",
         render: staffLabel,
       },
       {

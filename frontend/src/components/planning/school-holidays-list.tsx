@@ -73,6 +73,7 @@ const columns: DataTableColumn<SchoolHoliday>[] = [
   {
     key: "date",
     header: "Datum",
+    stacked: "meta",
     sortValue: (holiday) => holiday.date,
     render: (holiday) => (
       <span className="text-sm whitespace-nowrap text-gray-600 tabular-nums">
@@ -83,6 +84,7 @@ const columns: DataTableColumn<SchoolHoliday>[] = [
   {
     key: "name",
     header: "Feiertag",
+    stacked: "title",
     sortValue: (holiday) => holiday.name,
     render: (holiday) => (
       <span className="font-medium wrap-anywhere text-gray-900">

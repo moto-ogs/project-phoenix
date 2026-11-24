@@ -202,7 +202,6 @@ export function FamilyChildrenImportPreviewCard({
         columns={columns}
         rows={[...shown]}
         getRowKey={(row) => row.line}
-        stackedOnMobile
         stackedLayout="lines"
         dense
         // A file may hold 5.000 rows: show them in pages; the counts and the

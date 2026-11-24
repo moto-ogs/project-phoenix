@@ -156,7 +156,6 @@ export default function TraegerSchoolsPage() {
         isLoading={loading}
         loadingRowCount={3}
         defaultSortKey="name"
-        stackedOnMobile
         stackedLayout="row"
         stackedDetailKey={canOpen ? "city" : null}
         rowHasInteractiveControls

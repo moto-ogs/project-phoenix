@@ -7,6 +7,7 @@ import {
   int64String,
   nullable,
   object,
+  optional,
   safeInt,
   str,
   success,
@@ -15,9 +16,11 @@ import {
   HolidayGuestContactSchema,
   HolidayHostAnswerSchema,
   HolidayHostHealthSchema,
+  HolidayRegistrationConsentSchema,
   type HolidayGuestContact,
   type HolidayHostAnswer,
   type HolidayHostHealth,
+  type HolidayRegistrationConsent,
 } from "./shared.generated";
 
 /** Go: enrollment.HolidayGuestBadge */
@@ -65,6 +68,9 @@ export interface HolidayGuestSheet {
   pickup_contacts: HolidayGuestContact[] | null;
   answers: HolidayHostAnswer[] | null;
   health: HolidayHostHealth | null;
+  home_photo_consent?: boolean;
+  home_room_history_stopped?: boolean;
+  consents: HolidayRegistrationConsent[] | null;
   read_only: boolean;
 }
 
@@ -84,6 +90,9 @@ export const HolidayGuestSheetSchema: z.ZodType<HolidayGuestSheet, unknown> = ob
   pickup_contacts: nullable(arr(HolidayGuestContactSchema)),
   answers: nullable(arr(HolidayHostAnswerSchema)),
   health: nullable(HolidayHostHealthSchema),
+  home_photo_consent: optional(bool),
+  home_room_history_stopped: optional(bool),
+  consents: nullable(arr(HolidayRegistrationConsentSchema)),
   read_only: bool,
 });
 

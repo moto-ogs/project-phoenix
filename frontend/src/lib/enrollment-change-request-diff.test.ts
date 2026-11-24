@@ -324,7 +324,7 @@ describe("buildEnrollmentChangeRequestDiffGroups", () => {
         rows: [
           {
             id: "photo",
-            label: "Fotos bei Schulveranstaltungen",
+            label: "Foto-Einwilligung",
             before: true,
             after: false,
           },
@@ -576,7 +576,7 @@ describe("form labels (#6142)", () => {
         { id: "newsletter", label: "newsletter", before: true, after: false },
         {
           id: "photo",
-          label: "Fotos bei Schulveranstaltungen",
+          label: "Foto-Einwilligung",
           before: true,
           after: false,
         },

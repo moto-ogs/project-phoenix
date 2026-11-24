@@ -55,6 +55,7 @@ func HolidayPeriodRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: registration + "/pdf", Portals: traegerPortal, Query: []common.QueryParam{health}, File: true},
 		{Method: "GET", Pattern: registration + "/proofs/{proofId}", Portals: traegerPortal, File: true},
 		{Method: "POST", Pattern: registration + "/freeze", Portals: traegerPortal, Response: capability.HolidayRegistrationDetail{}},
+		{Method: "POST", Pattern: registration + "/consents/{key}/withdraw", Portals: traegerPortal, Response: capability.HolidayRegistrationDetail{}},
 		{Method: "POST", Pattern: registration + "/reopen", Portals: traegerPortal, Response: capability.HolidayRegistrationDetail{}},
 		{Method: "PUT", Pattern: registration + "/children/{childId}/holiday-wish", Portals: traegerPortal, Request: HolidayWishRequest{}, Response: capability.HolidayRegistrationDetail{}},
 		{Method: "PUT", Pattern: registration + "/details", Portals: traegerPortal, Request: HolidayRegistrationEditRequest{}, Response: capability.HolidayRegistrationDetail{}},

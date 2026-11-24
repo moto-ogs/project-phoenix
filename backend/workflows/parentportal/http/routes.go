@@ -123,6 +123,9 @@ func (rs *Resource) mountEnrollmentRoutes(r chi.Router) {
 	// The holiday registrations linked to the account (ADR 0216): what
 	// became of them, without health information, address or contacts.
 	r.Get("/me/holiday-registration-entries", rs.listHolidayRegistrationEntries)
+	// The parents withdraw a voluntary consent of a registration or give it
+	// again (#8038, ADR 0321).
+	r.Put("/me/holiday-registration-entries/{registrationId}/consents/{key}", rs.setHolidayRegistrationConsent)
 }
 
 func (rs *Resource) mountChildStatusRoutes(r chi.Router) {

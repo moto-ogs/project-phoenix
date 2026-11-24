@@ -36,7 +36,8 @@ type RoomHistoryStopReads interface {
 	// RoomHistoryStoppedSince maps the listed stopped children to the start
 	// of their stop; children without a stop are absent.
 	RoomHistoryStoppedSince(context.Context, []int64) (map[int64]time.Time, error)
-	// MoodCaptureStopped reports whether the child's mood capture is stopped.
+	// MoodCaptureStopped reports whether the child's mood capture is stopped:
+	// at this school or, for a holiday guest, at its home school (#8037).
 	MoodCaptureStopped(ctx context.Context, studentID int64) (bool, error)
 }
 

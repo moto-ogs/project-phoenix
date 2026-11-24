@@ -138,6 +138,32 @@ interface HolidayHostGuardian {
   readonly phone: string;
 }
 
+/**
+ * Eine freiwillige Einwilligung aus der Ferienanmeldung (#8038, ADR 0321),
+ * live aus der Anmeldung: Ein Widerruf der Eltern steht mit dem nächsten
+ * Abruf hier. `changedAt` ist, seit wann sie gilt oder seit wann sie
+ * widerrufen ist; `null`, wenn die Eltern sie nie gegeben haben.
+ */
+export interface HolidayHostConsent {
+  readonly key: string;
+  readonly title: string;
+  readonly label: string;
+  readonly given: boolean;
+  readonly changedAt: string | null;
+}
+
+function mapConsents(
+  consents: readonly shared.HolidayRegistrationConsent[] | null | undefined,
+): HolidayHostConsent[] {
+  return (consents ?? []).map((consent) => ({
+    key: consent.key,
+    title: consent.title,
+    label: consent.label,
+    given: consent.given,
+    changedAt: consent.changed_at,
+  }));
+}
+
 export interface HolidayParticipant {
   readonly childId: string;
   readonly firstName: string;
@@ -156,6 +182,8 @@ export interface HolidayParticipant {
   readonly answers: HolidayHostAnswer[];
   /** `null` ohne Gesundheitsangaben oder ohne Zustimmung der Eltern. */
   readonly health: HolidayHostHealth | null;
+  /** Die freiwilligen Einwilligungen der Anmeldung; leer, wenn das Formular keine fragt. */
+  readonly consents: HolidayHostConsent[];
 }
 
 export interface HolidayParticipantList {
@@ -242,6 +270,7 @@ function mapHolidayParticipantList(
       secondGuardian: participant.second_guardian,
       answers: mapAnswers(participant.answers),
       health: mapHealth(participant.health),
+      consents: mapConsents(participant.consents),
     })),
   };
 }
@@ -324,6 +353,23 @@ export interface HolidayGuestSheet {
   readonly answers: HolidayHostAnswer[];
   /** `null` ohne Gesundheitsangaben oder ohne Zustimmung der Eltern. */
   readonly health: HolidayHostHealth | null;
+  /**
+   * Ob die Heimatschule gerade eine Foto-Einwilligung für das Kind hat
+   * (#4721). moto fragt bei jedem Abruf neu; ein Widerruf der Eltern gilt
+   * deshalb sofort. `null` ohne Heimatschule beim Träger und nach der Woche.
+   */
+  readonly homePhotoConsent: boolean | null;
+  /**
+   * Ob Raumverlauf und Stimmung an der Heimatschule gerade gestoppt sind
+   * (#8037), live gelesen wie die Foto-Einwilligung. `null` in denselben
+   * Fällen.
+   */
+  readonly homeRoomHistoryStopped: boolean | null;
+  /**
+   * Die freiwilligen Einwilligungen aus der Ferienanmeldung (#8038), live
+   * gelesen. Leer ohne Einwilligungen im Formular und nach der Woche.
+   */
+  readonly consents: HolidayHostConsent[];
   /** Nach dem letzten Tag der Woche: nur noch sieben Tage zum Nachlesen. */
   readonly readOnly: boolean;
 }
@@ -503,6 +549,9 @@ export async function fetchHolidayGuestSheet(
     pickupContacts: sheet.pickup_contacts ?? [],
     answers: mapAnswers(sheet.answers),
     health: mapHealth(sheet.health),
+    homePhotoConsent: sheet.home_photo_consent ?? null,
+    homeRoomHistoryStopped: sheet.home_room_history_stopped ?? null,
+    consents: mapConsents(sheet.consents),
     readOnly: sheet.read_only,
   };
 }

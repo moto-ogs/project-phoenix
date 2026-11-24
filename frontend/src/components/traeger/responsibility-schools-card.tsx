@@ -68,7 +68,6 @@ export function ResponsibilitySchoolsCard({
         onRowClick={(school) =>
           router.push(schoolResponsibilityHref(school.schoolId))
         }
-        stackedOnMobile
         emptyState={
           <EmptyState
             variant="compact"

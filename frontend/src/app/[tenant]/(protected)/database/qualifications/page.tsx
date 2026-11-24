@@ -288,7 +288,6 @@ export default function QualificationsPage() {
           getRowKey={rowKey}
           isLoading={loading}
           defaultSortKey="status"
-          stackedOnMobile
           emptyState={
             <EmptyState
               title={

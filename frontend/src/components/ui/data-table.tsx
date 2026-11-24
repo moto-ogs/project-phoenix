@@ -58,7 +58,8 @@ export interface DataTableColumn<T> {
   // null is a missing value and sorts after all present values, independent
   // of direction.
   sortValue?: (row: T) => string | number | null;
-  // Role this column plays in the stacked phone layout (`stackedOnMobile`).
+  // Role this column plays in the stacked phone layout (below md, unless
+  // the table sets `mobileScroll`).
   // A "field" whose render returns null for a row has no line in that row.
   // "title" is the headline of a stacked row, "meta" the muted value beside
   // it, "field" a labelled line below (in the "row" layout: in the card's
@@ -103,6 +104,46 @@ interface DataTableSelection<T> {
   readonly rowLabel: (row: T) => string;
   /** Locks every checkbox, e.g. while a bulk action runs. */
   readonly disabled?: boolean;
+}
+
+type UppercaseLetter =
+  | "A"
+  | "B"
+  | "C"
+  | "D"
+  | "E"
+  | "F"
+  | "G"
+  | "H"
+  | "I"
+  | "J"
+  | "K"
+  | "L"
+  | "M"
+  | "N"
+  | "O"
+  | "P"
+  | "Q"
+  | "R"
+  | "S"
+  | "T"
+  | "U"
+  | "V"
+  | "W"
+  | "X"
+  | "Y"
+  | "Z"
+  | "Ä"
+  | "Ö"
+  | "Ü";
+
+/**
+ * Opt-out of the stacked phone layout for a comparison table (#7912). The
+ * reason is a sentence („Zahlenreihen je Monat zum Vergleichen“): the type
+ * refuses a missing or empty one at compile time.
+ */
+interface DataTableMobileScroll {
+  readonly reason: `${UppercaseLetter}${string}`;
 }
 
 /** Title of a table inside its own surface, e.g. one group of a list. */
@@ -205,13 +246,20 @@ interface DataTableProps<T> {
   // button in the place of `pageSize`'s button, inside the table's surface.
   // The caller loads the next page and appends it to `rows`.
   moreAction?: DataTableMoreAction;
-  // Below md, render the same rows stacked instead of as a table. Use it when
-  // a phone viewport cannot show the columns that carry the point of the list
-  // (a fourth column pushed off screen is a value nobody reads). Sorting,
-  // paging, loading and empty state stay shared between both layouts —
-  // per-column roles come from `DataTableColumn.stacked`. Cell editors must
-  // keep drafts above the table: switching layouts remounts their controls.
-  stackedOnMobile?: boolean;
+  // Below md every DataTable renders its rows stacked as cards (#7912): a
+  // phone cannot show the columns side by side, and a column pushed off
+  // screen is a value nobody reads. Sorting, paging, loading and empty state
+  // stay shared between both layouts — per-column roles come from
+  // `DataTableColumn.stacked`. Cell editors must keep drafts above the
+  // table: switching layouts remounts their controls.
+  //
+  // `mobileScroll` is the one exception: the table stays a table on a phone,
+  // scrolls sideways with its first column pinned, and the existing cue at
+  // the cut edge shows that more columns follow. It is for comparison
+  // tables only: the rows are series of figures read across rows (a month
+  // against the next, one group against another), not records to edit. The
+  // reason is required and names that, so a table never opts out silently.
+  mobileScroll?: DataTableMobileScroll;
   // "lines" (default) gives every field its own labelled line; "row" shows
   // one entry per line with title, meta and the stackedDetailKey column
   // under the title, so a phone still reads a list (#3834); its other
@@ -220,7 +268,7 @@ interface DataTableProps<T> {
   // rows whose fields are controls: the title with the meta value (a row
   // menu) beside it, then every field with its label above and the control
   // at full width, so all controls share one left and one right edge
-  // (#4807). Only with stackedOnMobile.
+  // (#4807). Not with mobileScroll.
   stackedLayout?: "lines" | "row" | "form";
   // "form" only: the headline of a stacked row when the title is itself a
   // control (an editable name). The title column then becomes a field.
@@ -307,26 +355,88 @@ const ROW_TONE_CLASS: Record<DataTableRowTone, string> = {
   muted: "bg-gray-50/60",
 };
 
-// A gradient in the row's translucent colour over white gives the same colour
-// as the row, but opaque, so wider columns do not shine through while they
-// scroll beneath the pinned cell.
-const PINNED_TONE_CLASS: Record<DataTableRowTone, string> = {
-  today:
-    "bg-linear-to-r from-moto-blue-soft/60 to-moto-blue-soft/60 group-hover:bg-none",
-  muted: "bg-linear-to-r from-gray-50/60 to-gray-50/60 group-hover:bg-none",
+// A comparison table (`mobileScroll`) keeps its first column at the left
+// edge below md while the figures scroll beneath it (#7912). From md on
+// nothing changes, so every class of that edge carries `max-md:`. The
+// shadow appears once columns sit beneath it.
+const pinnedStartCellClass =
+  "max-md:sticky max-md:left-0 max-md:group-data-[overflow-start=true]/tablescroll:shadow-[12px_0_12px_-8px_rgb(0_0_0/0.18)]";
+
+type PinEdge = "start" | "end";
+
+// The backgrounds of a pinned cell, so wider columns do not shine through
+// while they scroll beneath it; they follow the row's hover, selection and
+// tone. A gradient in the row's translucent colour over white gives the
+// same colour as the row, but opaque. Tailwind needs every class spelled
+// out, hence one literal set per edge.
+const PIN_CLASSES: Record<
+  PinEdge,
+  {
+    readonly position: string;
+    readonly surface: string;
+    readonly selected: string;
+    readonly hover: string;
+    readonly extraRow: string;
+    readonly tone: Record<DataTableRowTone, string>;
+  }
+> = {
+  end: {
+    position: pinnedCellClass,
+    surface: "bg-white",
+    selected: "bg-gray-50",
+    hover: "group-hover:bg-gray-50",
+    extraRow: "bg-gray-50",
+    tone: {
+      today:
+        "bg-linear-to-r from-moto-blue-soft/60 to-moto-blue-soft/60 group-hover:bg-none",
+      muted: "bg-linear-to-r from-gray-50/60 to-gray-50/60 group-hover:bg-none",
+    },
+  },
+  start: {
+    position: pinnedStartCellClass,
+    surface: "max-md:bg-white",
+    selected: "max-md:bg-gray-50",
+    hover: "max-md:group-hover:bg-gray-50",
+    extraRow: "max-md:bg-gray-50",
+    tone: {
+      today:
+        "max-md:bg-linear-to-r max-md:from-moto-blue-soft/60 max-md:to-moto-blue-soft/60 max-md:group-hover:bg-none",
+      muted:
+        "max-md:bg-linear-to-r max-md:from-gray-50/60 max-md:to-gray-50/60 max-md:group-hover:bg-none",
+    },
+  },
 };
 
+/** Which edge a column is pinned to, if any. */
+function pinEdgeOf(
+  key: string,
+  pinStartKey: string | undefined,
+): PinEdge | null {
+  if (key === PINNED_COLUMN_KEY) return "end";
+  return key === pinStartKey ? "start" : null;
+}
+
+function pinnedHeadCellClass(edge: PinEdge | null): string {
+  return edge
+    ? `${PIN_CLASSES[edge].position} ${PIN_CLASSES[edge].surface}`
+    : "";
+}
+
 function pinnedBodyCellClass(
+  edge: PinEdge | null,
   selected: boolean,
   clickable: boolean,
   tone: DataTableRowTone | null,
 ): string {
-  if (selected) return `${pinnedCellClass} bg-gray-50`;
-  const tint = tone ? PINNED_TONE_CLASS[tone] : "";
+  if (!edge) return "";
+  const pin = PIN_CLASSES[edge];
+  if (selected) return `${pin.position} ${pin.selected}`;
+  const tint = tone ? pin.tone[tone] : "";
   return clickable
-    ? `${pinnedCellClass} bg-white ${tint} transition-colors group-hover:bg-gray-50`
-    : `${pinnedCellClass} bg-white ${tint}`;
+    ? `${pin.position} ${pin.surface} ${tint} transition-colors ${pin.hover}`
+    : `${pin.position} ${pin.surface} ${tint}`;
 }
+
 const bodyCellClass =
   "px-5 py-3 align-middle max-sm:px-3 compact:px-4 compact:py-2";
 const denseBodyCellClass = `px-2.5 py-3 align-middle compact:py-2 ${DENSE_EDGE}`;
@@ -376,6 +486,7 @@ function ExtraRow<T>({
   cellClass,
   leadingEmptyCell,
   indentFirstCell,
+  pinStartKey,
 }: Readonly<{
   row: DataTableExtraRow;
   columns: readonly DataTableColumn<T>[];
@@ -384,6 +495,7 @@ function ExtraRow<T>({
   cellClass: string;
   leadingEmptyCell: boolean;
   indentFirstCell: boolean;
+  pinStartKey: string | undefined;
 }>) {
   if ("content" in row) {
     return (
@@ -400,8 +512,14 @@ function ExtraRow<T>({
     const col = columns[index];
     if (!col) continue;
     const cell = cellsByColumn.get(col.key);
-    const pinned =
-      col.key === PINNED_COLUMN_KEY ? `${pinnedCellClass} bg-gray-50` : "";
+    // A cell spanning several columns is no first-column cell to pin.
+    const edge =
+      (cell?.colSpan ?? 1) > 1 && col.key !== PINNED_COLUMN_KEY
+        ? null
+        : pinEdgeOf(col.key, pinStartKey);
+    const pinned = edge
+      ? `${PIN_CLASSES[edge].position} ${PIN_CLASSES[edge].extraRow}`
+      : "";
     cells.push(
       <td
         key={col.key}
@@ -558,7 +676,7 @@ function StackedRowEnd({
   return (
     <span
       data-row-control=""
-      className={`flex shrink-0 items-center gap-1 ${className}`}
+      className={`flex max-w-full shrink-0 items-center gap-1 ${className}`}
     >
       {toggle}
       {menu}
@@ -784,7 +902,7 @@ function loadMoreLabel(shown: number, total: number, noun?: string): string {
 
 /**
  * The phone layout of DataTable: the same sorted, paged rows rendered stacked
- * inside one surface. Enabled per call site via `stackedOnMobile`. Every
+ * inside one surface. The default below md, unless `mobileScroll`. Every
  * column stands on the card or in its details (#7911).
  */
 function StackedRows<T>({
@@ -1057,7 +1175,7 @@ function StackedRows<T>({
             <>
               <div
                 data-stacked-head=""
-                className="flex items-baseline justify-between gap-3"
+                className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-2"
               >
                 {selection ? (
                   <StackedRowCheckbox
@@ -1066,7 +1184,9 @@ function StackedRows<T>({
                     selection={selection}
                   />
                 ) : null}
-                <span id={titleId} className="min-w-0 flex-1">
+                {/* Wide row actions (several text buttons) wrap below the
+                    title instead of squeezing it under them. */}
+                <span id={titleId} className="min-w-32 flex-1">
                   {title?.render(row)}
                 </span>
                 {meta ? (
@@ -1267,7 +1387,7 @@ export function DataTable<T>({
   pageNoun,
   paginationResetKey,
   moreAction,
-  stackedOnMobile = false,
+  mobileScroll,
   stackedLayout = "lines",
   stackedTitle,
   stackedDetailKey,
@@ -1310,8 +1430,12 @@ export function DataTable<T>({
   // Match Tailwind's md query exactly, including fractional widths and the
   // browser's default font size. A max-width in px can leave a CSS/JS gap.
   const desktop = useResolvedMediaQuery(AT_LEAST_MD);
+  const stackedOnMobile = mobileScroll === undefined;
   const showStacked = stackedOnMobile && desktop !== true;
   const showTable = !stackedOnMobile || desktop !== false;
+  // Only the first data column is pinned; a selection checkbox in front of
+  // it scrolls away (comparison tables carry no selection).
+  const pinStartKey = stackedOnMobile ? undefined : shownColumns[0]?.key;
 
   const [sort, setSort] = useState<{
     key: string;
@@ -1373,13 +1497,16 @@ export function DataTable<T>({
   // the pinned column's shadow. Without it a cut column reads as missing.
   const scrollRef = useRef<HTMLDivElement>(null);
   const [overflowEnd, setOverflowEnd] = useState(false);
+  const [overflowStart, setOverflowStart] = useState(false);
   useEffect(() => {
     const scroller = scrollRef.current;
     if (!scroller) return;
-    const update = () =>
+    const update = () => {
       setOverflowEnd(
         scroller.scrollWidth - scroller.clientWidth - scroller.scrollLeft > 1,
       );
+      setOverflowStart(scroller.scrollLeft > 1);
+    };
     update();
     scroller.addEventListener("scroll", update, { passive: true });
     let observer: ResizeObserver | undefined;
@@ -1490,6 +1617,7 @@ export function DataTable<T>({
             <div
               ref={scrollRef}
               data-overflow-end={overflowEnd ? "true" : undefined}
+              data-overflow-start={overflowStart ? "true" : undefined}
               className="group/tablescroll relative overflow-x-auto"
             >
               <table className={tableClass}>
@@ -1522,10 +1650,9 @@ export function DataTable<T>({
                       const align = alignClass[col.align ?? "left"];
                       const sortable = Boolean(col.sortValue);
                       const active = sort?.key === col.key;
-                      const pinned =
-                        col.key === PINNED_COLUMN_KEY
-                          ? `${pinnedCellClass} bg-white`
-                          : "";
+                      const pinned = pinnedHeadCellClass(
+                        pinEdgeOf(col.key, pinStartKey),
+                      );
                       if (!sortable) {
                         return (
                           <th
@@ -1711,14 +1838,12 @@ export function DataTable<T>({
                             ) : null}
                             {shownColumns.map((col, colIndex) => {
                               const align = alignClass[col.align ?? "left"];
-                              const pinned =
-                                col.key === PINNED_COLUMN_KEY
-                                  ? pinnedBodyCellClass(
-                                      tinted,
-                                      interactive,
-                                      tone,
-                                    )
-                                  : "";
+                              const pinned = pinnedBodyCellClass(
+                                pinEdgeOf(col.key, pinStartKey),
+                                tinted,
+                                interactive,
+                                tone,
+                              );
                               return (
                                 <td
                                   key={col.key}
@@ -1785,6 +1910,7 @@ export function DataTable<T>({
                               cellClass={extraCell}
                               leadingEmptyCell={selection !== undefined}
                               indentFirstCell={expandable !== undefined}
+                              pinStartKey={pinStartKey}
                             />
                           ))}
                           {summary ? (
@@ -1796,6 +1922,7 @@ export function DataTable<T>({
                               cellClass={extraCell}
                               leadingEmptyCell={selection !== undefined}
                               indentFirstCell={false}
+                              pinStartKey={pinStartKey}
                             />
                           ) : null}
                         </Fragment>

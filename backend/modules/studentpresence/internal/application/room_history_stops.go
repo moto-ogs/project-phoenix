@@ -89,13 +89,22 @@ func (s *RoomHistoryStopReads) RoomHistoryStoppedSince(ctx context.Context, stud
 	return result, nil
 }
 
-// MoodCaptureStopped reports whether the child is stopped.
+// MoodCaptureStopped reports whether the child is stopped: at this school
+// or, for a holiday guest, at its home school (#8037).
 func (s *RoomHistoryStopReads) MoodCaptureStopped(ctx context.Context, studentID int64) (bool, error) {
-	stops, err := s.RoomHistoryStoppedSince(ctx, []int64{studentID})
+	var stopped bool
+	err := s.run(ctx, "mood_capture_stopped", func(ctx context.Context) (ports.Stats, error) {
+		if studentID <= 0 {
+			return ports.Stats{}, studentpresence.ErrInvalidRoomHistoryStop
+		}
+		var stats ports.Stats
+		var err error
+		stopped, stats, err = s.store.MoodCaptureStopped(ctx, studentID)
+		return stats, err
+	})
 	if err != nil {
 		return false, err
 	}
-	_, stopped := stops[studentID]
 	return stopped, nil
 }
 

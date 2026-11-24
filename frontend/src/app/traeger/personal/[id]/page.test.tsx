@@ -12,6 +12,7 @@ const { api, mockPush, mockReplace } = vi.hoisted(() => ({
   api: {
     fetchStaffRecord: vi.fn(),
     updateStaffPersonnelNumber: vi.fn(),
+    updateStaffEmployerNumber: vi.fn(),
     updateStaffPerson: vi.fn(),
     revealStaffFinancial: vi.fn(),
     updateStaffFinancial: vi.fn(),
@@ -79,6 +80,9 @@ const RECORD: StaffRecordDetail = {
       active: true,
       viaPool: false,
       employerName: "",
+      employerBody: "",
+      employerPersonnelNumber: null,
+      employerNumberVersion: "number-v1",
     },
     {
       schoolId: "2",
@@ -87,6 +91,9 @@ const RECORD: StaffRecordDetail = {
       active: false,
       viaPool: false,
       employerName: "Gemeinde Hardt",
+      employerBody: "gemeinde",
+      employerPersonnelNumber: null,
+      employerNumberVersion: "number-v2",
     },
   ],
   personVersion: "person-v1",
@@ -365,6 +372,45 @@ describe("TraegerStaffRecordPage", () => {
       expect(api.updateStaffPersonnelNumber).toHaveBeenCalledWith("5", "70005"),
     );
     expect(await within(card!).findByText("70005")).toBeInTheDocument();
+  });
+
+  // #8041: Bei einer Gemeinde kann die Person eine eigene Nummer haben.
+  it("saves the personnel number with the Gemeinde of an Einsatzort", async () => {
+    api.updateStaffEmployerNumber.mockResolvedValue({
+      ...RECORD,
+      employments: RECORD.employments.map((employment) =>
+        employment.schoolId === "2"
+          ? { ...employment, employerPersonnelNumber: "9001" }
+          : employment,
+      ),
+    });
+    renderPage();
+    const card = (
+      await screen.findByText("Personalnummer", {
+        selector: "h2",
+      })
+    ).closest("section");
+    expect(card).not.toBeNull();
+    expect(
+      within(card!).getByText("Bei Gemeinde Hardt (OGS Süd)"),
+    ).toBeInTheDocument();
+    expect(within(card!).getByText("Wie beim Träger")).toBeInTheDocument();
+    fireEvent.click(within(card!).getByRole("button", { name: /Bearbeiten/ }));
+    fireEvent.change(
+      within(card!).getByLabelText("Bei Gemeinde Hardt (OGS Süd)"),
+      { target: { value: "9001" } },
+    );
+    fireEvent.click(within(card!).getByRole("button", { name: "Speichern" }));
+    await vi.waitFor(() =>
+      expect(api.updateStaffEmployerNumber).toHaveBeenCalledWith(
+        "5",
+        "2",
+        "9001",
+        "number-v2",
+      ),
+    );
+    expect(api.updateStaffPersonnelNumber).not.toHaveBeenCalled();
+    expect(await within(card!).findByText("9001")).toBeInTheDocument();
   });
 
   // #7379: Name und Geburtstag korrigiert die Personalverwaltung in der Akte.

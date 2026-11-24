@@ -40,6 +40,8 @@ export const traegerStaffKeys = {
   payrollFamily: "traeger-staff-payroll-",
   payrollReport: (year: number, month: number, format: string) =>
     `traeger-staff-payroll-report-${year}-${month}-${encodeURIComponent(format)}`,
+  /** Die Lohnwerte der anderen Arbeitgeber; gehören zur Familie der Prüfungen. */
+  payrollEmployers: () => "traeger-staff-payroll-employers",
   timeReport: (year: number, month: number) =>
     `traeger-staff-time-report-${year}-${month}`,
 } as const;

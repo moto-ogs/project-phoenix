@@ -69,6 +69,13 @@ type holidayGuestRow struct {
 	HealthData      []byte          `bun:"health_data"`
 	Days            []calendar.Date `bun:"days,array"`
 	Lunch           bool            `bun:"lunch"`
+	// HomePhotoConsent is read only with the sheet of one guest (#4721).
+	HomePhotoConsent *bool `bun:"home_photo_consent,scanonly"`
+	// HomeRoomHistoryStopped is read with it (#8037).
+	HomeRoomHistoryStopped *bool `bun:"home_room_history_stopped,scanonly"`
+	// Consents of the registration, read only with the sheet of one guest
+	// (#8038).
+	Consents json.RawMessage `bun:"consents,scanonly,type:jsonb"`
 }
 
 func (r *holidayGuestRow) guest() (enrollment.HolidayGuest, error) {
@@ -508,7 +515,7 @@ func (s *HolidayGuestStore) PurgeHealth(ctx context.Context, schoolID int64, tod
 }
 
 // ReadGuest reads the guest behind a child of the school with its
-// contacts, while its access has not ended early and its week ended on
+// contacts and the photo consent its home school holds right now, while its access has not ended early and its week ended on
 // lastReadableEnd or later; found is false otherwise.
 func (s *HolidayGuestStore) ReadGuest(ctx context.Context, schoolID, studentID int64, lastReadableEnd calendar.Date) (enrollment.HolidayGuest, bool, error) {
 	db, err := hostDB(ctx, schoolID)
@@ -516,7 +523,17 @@ func (s *HolidayGuestStore) ReadGuest(ctx context.Context, schoolID, studentID i
 		return enrollment.HolidayGuest{}, false, err
 	}
 	var rows []holidayGuestRow
+	// The home school's photo consent and its stop of room history and mood
+	// come with the same statement, from the database's narrow functions
+	// (#4721, #8037): they check the hosting school, the Träger, the
+	// confirmed booking and the end of the week themselves and answer NULL
+	// when the question does not apply. Nothing is stored, so a change at the
+	// home school counts with the next read. The voluntary consents of the
+	// registration come the same way (#8038).
 	if err := db.NewSelect().TableExpr("enrollment.holiday_guests").ColumnExpr(holidayGuestColumns).
+		ColumnExpr("enrollment.holiday_guest_home_photo_consent(student_id) AS home_photo_consent").
+		ColumnExpr("enrollment.holiday_guest_home_room_history_stopped(student_id) AS home_room_history_stopped").
+		ColumnExpr("enrollment.holiday_host_registration_consents(organization_id, holiday_period_week_id, holiday_registration_child_id) AS consents").
 		Where("tenant_id = ?", schoolID).Where("student_id = ?", studentID).
 		Where("ended_on IS NULL").Where("ends_on >= ?", lastReadableEnd).Scan(ctx, &rows); err != nil {
 		return enrollment.HolidayGuest{}, false, fmt.Errorf("enrollment postgres: read holiday guest: %w", err)
@@ -527,6 +544,13 @@ func (s *HolidayGuestStore) ReadGuest(ctx context.Context, schoolID, studentID i
 	guest, err := rows[0].guest()
 	if err != nil {
 		return enrollment.HolidayGuest{}, false, err
+	}
+	guest.HomePhotoConsent = rows[0].HomePhotoConsent
+	guest.HomeRoomHistoryStopped = rows[0].HomeRoomHistoryStopped
+	if len(rows[0].Consents) > 0 && string(rows[0].Consents) != "null" {
+		if guest.Consents, err = decodeHolidayRegistrationConsents(rows[0].Consents); err != nil {
+			return enrollment.HolidayGuest{}, false, err
+		}
 	}
 	var contacts []holidayGuestContactRow
 	if err := db.NewRaw(guestContactsQuery, schoolID, bun.List([]int64{guest.ID})).Scan(ctx, &contacts); err != nil {

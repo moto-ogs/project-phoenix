@@ -221,6 +221,7 @@ export const HELP_TOPICS = {
   parentEnroll: "mein-kind-anmelden",
   parentEnrollStatus: "anmeldung-weiter-bearbeiten",
   parentHolidayRegistration: "fuer-die-ferienbetreuung-anmelden",
+  parentHolidayConsents: "einwilligungen-der-ferienanmeldung-aendern",
   parentAccountProblem: "eltern-konto-laesst-sich-nicht-einrichten",
   parentChildMissing: "mein-kind-wird-nicht-angezeigt",
   parentFeatureMissing: "funktion-ist-fuer-mich-nicht-verfuegbar",

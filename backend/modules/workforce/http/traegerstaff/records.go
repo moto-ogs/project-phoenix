@@ -62,6 +62,7 @@ func (rs *RecordsResource) TraegerRouter(protectedTraegerRoutes func(chi.Router,
 		staff.Get("/{id}", rs.record)
 		staff.Delete("/{id}", rs.dissolve)
 		staff.Put("/{id}/personnel-number", rs.personnelNumber)
+		staff.Put("/{id}/employer-numbers/{schoolId}", rs.employerNumber)
 		staff.Put("/{id}/person", rs.person)
 		staff.Get("/{id}/financial", rs.financial)
 		staff.Post("/{id}/financial/reveal", rs.revealFinancial)
@@ -227,6 +228,47 @@ func (rs *RecordsResource) personnelNumber(w http.ResponseWriter, r *http.Reques
 	common.Respond(w, r, http.StatusOK, detail, "Personnel number updated successfully")
 }
 
+// employerNumberRequest sets or, with null, clears the personnel number
+// with the employer of one Einsatzort (#8041).
+type employerNumberRequest struct {
+	EmployerPersonnelNumber json.RawMessage `json:"employer_personnel_number"`
+	ExpectedVersion         string          `json:"expected_version"`
+
+	value *string
+}
+
+func (req *employerNumberRequest) Bind(*http.Request) error {
+	if len(req.EmployerPersonnelNumber) == 0 {
+		return errors.New("employer_personnel_number is required")
+	}
+	if err := json.Unmarshal(req.EmployerPersonnelNumber, &req.value); err != nil {
+		return errors.New("employer_personnel_number must be a string or null")
+	}
+	return nil
+}
+
+func (rs *RecordsResource) employerNumber(w http.ResponseWriter, r *http.Request) {
+	session, id, ok := actorAndRecord(w, r)
+	if !ok {
+		return
+	}
+	schoolID, ok := common.ParseInt64IDWithError(w, r, "schoolId", "invalid school ID")
+	if !ok {
+		return
+	}
+	req := &employerNumberRequest{}
+	if err := render.Bind(r, req); err != nil {
+		common.RenderError(w, r, common.ErrorInvalidOnField(err, common.CodeWorkforcePersonnelNumberInvalid, "employer_personnel_number"))
+		return
+	}
+	detail, err := rs.records.UpdateEmployerNumber(r.Context(), session, id, schoolID, req.value, req.ExpectedVersion)
+	if err != nil {
+		renderError(w, r, err)
+		return
+	}
+	common.Respond(w, r, http.StatusOK, detail, "Employer personnel number updated successfully")
+}
+
 // PersonRequest corrects name and birthday of a record (#7379); a birthday
 // of null or "" clears it.
 type PersonRequest struct {
@@ -332,6 +374,7 @@ var recordErrors = common.RulesRenderer([]common.ErrorRule{
 	{Target: workforce.ErrTraegerStaffNotReleased, Render: coded(common.ErrorConflictWithCode, common.CodeWorkforceTraegerStaffNotReleased)},
 	{Target: workforce.ErrTraegerStaffRecordNotFound, Render: coded(common.ErrorNotFoundWithCode, common.CodeWorkforceTraegerStaffRecordNotFound)},
 	{Target: workforce.ErrTraegerStaffAlreadyLinked, Render: coded(common.ErrorConflictWithCode, common.CodeWorkforceTraegerStaffAlreadyLinked)},
+	{Target: workforce.ErrTraegerStaffEmployerChanged, Render: coded(common.ErrorConflictWithCode, common.CodeWorkforceTraegerStaffEmployerChanged)},
 	{Target: workforce.ErrPersonnelNumberTaken, Render: coded(common.ErrorConflictWithCode, common.CodeWorkforcePersonnelNumberTaken)},
 	{Target: workforce.ErrPersonnelNumberInvalid, Render: onField(common.CodeWorkforcePersonnelNumberInvalid, "personnel_number")},
 	{Target: workforce.ErrStaffStammdatenInvalid, Render: coded(common.ErrorInvalidRequestWithCode, common.CodeWorkforceStammdatenInvalid)},

@@ -12,7 +12,7 @@ const seedHolidayLegalPublishedKey = "traeger.holiday_legal_published"
 type seedHolidayLegalStep struct{}
 
 func (seedHolidayLegalStep) Name() string { return "Seeding holiday PDF notices and acceptances" }
-func (seedHolidayLegalStep) Run(_ context.Context, rt *Runtime) error {
+func (seedHolidayLegalStep) Run(ctx context.Context, rt *Runtime) error {
 	period, ok := rt.Values[seedHolidayLegalPeriodKey].(int64)
 	if !ok {
 		return fmt.Errorf("the seeded holiday period is missing")
@@ -26,7 +26,7 @@ func (seedHolidayLegalStep) Run(_ context.Context, rt *Runtime) error {
 	if err != nil {
 		return err
 	}
-	return seedHolidayLegalRegistration(rt, version)
+	return seedHolidayLegalRegistration(ctx, rt, auth, period, version)
 }
 
 func seedHolidayLegalForm(rt *Runtime, auth AuthRef, path string) (int, error) {
@@ -100,8 +100,12 @@ func seedHolidayLegalPDF(rt *Runtime, auth AuthRef, path string, position int, t
 }
 
 // Older registrations retain version 1 without legal blocks. This later
-// registration demonstrates the evidence display of the new version.
-func seedHolidayLegalRegistration(rt *Runtime, version int) error {
+// registration demonstrates the evidence display of the new version and its
+// voluntary consent (#8038): the first seeded parent's account holds it, the
+// parent withdraws the photo consent in the parents portal and gives it
+// again, and the Träger confirms it, so the hosting school's participant
+// list names the consent.
+func seedHolidayLegalRegistration(ctx context.Context, rt *Runtime, auth AuthRef, period int64, version int) error {
 	if rt.Values[seedHolidayRegistrationsSkippedKey] == true {
 		return nil
 	}
@@ -109,13 +113,42 @@ func seedHolidayLegalRegistration(rt *Runtime, version int) error {
 	if !ok {
 		return fmt.Errorf("the published holiday offer is missing")
 	}
-	token, body, err := seedHolidayRegistration(published, rt.Bootstrap.SchoolID)
+	token, body, err := seedHolidayLegalBody(published, rt.Bootstrap.SchoolID, version)
 	if err != nil {
 		return err
 	}
+	parent, err := seedHolidayConsentParent(ctx, rt, token, body)
+	if err != nil {
+		return err
+	}
+	raw, err := rt.Client.PostPublic("/traeger/holiday-registrations/"+token, body)
+	if err != nil {
+		return err
+	}
+	registration, err := decodeSeedEntityID(raw)
+	if err != nil {
+		return fmt.Errorf("read the holiday registration with notices: %w", err)
+	}
+	if parent != nil {
+		if err := seedHolidayConsentChange(rt, *parent, registration); err != nil {
+			return err
+		}
+	}
+	if err := postReadHolidayConfirmation(rt, auth, period, registration, map[string]any{"benefits_exemption": false, "debtor_number": "47040"}); err != nil {
+		return fmt.Errorf("confirm the holiday registration with notices: %w", err)
+	}
+	return nil
+}
+
+// seedHolidayLegalBody is the registration of the version with notices: both
+// notices and the photo consent accepted, and "Keine" for the health fields
+// the version requires (#6686).
+func seedHolidayLegalBody(published []byte, schoolID int64, version int) (string, map[string]any, error) {
+	token, body, err := seedHolidayRegistration(published, schoolID)
+	if err != nil {
+		return "", nil, err
+	}
 	body["guardian"].(map[string]any)["email"] = "hinweise.ferien@example.org"
-	// The version requires both health fields; "Keine" answers a child
-	// without any (#6686).
 	for _, child := range body["children"].([]map[string]any) {
 		for _, field := range []string{"allergies", "medication"} {
 			if value, _ := child[field].(string); value == "" {
@@ -123,8 +156,7 @@ func seedHolidayLegalRegistration(rt *Runtime, version int) error {
 			}
 		}
 	}
-	body["legal_acceptances"] = map[string]bool{"hinweis_1": true, "hinweis_2": true, "fotos_ferien": false}
+	body["legal_acceptances"] = map[string]bool{"hinweis_1": true, "hinweis_2": true, seedHolidayPhotoConsentKey: true}
 	body["form_version"] = version
-	_, err = rt.Client.PostPublic("/traeger/holiday-registrations/"+token, body)
-	return err
+	return token, body, nil
 }

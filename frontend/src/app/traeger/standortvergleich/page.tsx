@@ -562,7 +562,6 @@ function TraegerComparisonContent() {
         defaultSortKey="name"
         isLoading={loading}
         loadingRowCount={3}
-        stackedOnMobile
         emptyState={
           <EmptyState
             title="Keine Schule im Vergleich"

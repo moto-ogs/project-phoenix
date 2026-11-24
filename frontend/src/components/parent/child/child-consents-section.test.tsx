@@ -130,6 +130,12 @@ describe("ChildConsentsSection", () => {
     ).not.toBeInTheDocument();
     expect(screen.getByText("Foto-Einwilligung")).toBeInTheDocument();
     expect(screen.getAllByText("Hinterlegt")).toHaveLength(3);
+    // #8039: Die Zeile sagt, was die Foto-Einwilligung erlaubt.
+    expect(
+      screen.getByText(
+        "Die OGS darf dein Kind fotografieren und ein Foto von deinem Kind in moto speichern.",
+      ),
+    ).toBeInTheDocument();
     expect(screen.queryByText("Nicht hinterlegt")).not.toBeInTheDocument();
     expect(
       screen.getByText(
@@ -247,6 +253,11 @@ describe("ChildConsentsSection", () => {
         "Die Einwilligung endet sofort. Falls ein Foto gespeichert ist, wird es gelöscht.",
       ),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Das gilt auch, wenn dein Kind in den Ferien an einer anderen Schule betreut wird.",
+      ),
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Jetzt widerrufen" }));
 
@@ -283,9 +294,23 @@ describe("ChildConsentsSection", () => {
         name: "Foto-Einwilligung erneut geben?",
       }),
     ).toBeInTheDocument();
+    // #8039: Der Dialog nennt den ganzen Wortlaut, den die Eltern geben;
+    // solange die Einwilligung widerrufen ist, steht er nicht an der Zeile.
     expect(
-      screen.getByText("Die OGS darf danach wieder ein Foto hinterlegen."),
+      within(screen.getByRole("dialog")).getByText(
+        "Die OGS darf dein Kind fotografieren und ein Foto von deinem Kind in moto speichern.",
+      ),
     ).toBeInTheDocument();
+    expect(
+      screen.getAllByText(
+        "Die OGS darf dein Kind fotografieren und ein Foto von deinem Kind in moto speichern.",
+      ),
+    ).toHaveLength(1);
+    // Der Ferienhinweis gehört nur zum Widerruf: Ein Feriengast bekommt an
+    // der anderen Schule kein Foto (#4721).
+    expect(
+      screen.queryByText(/in den Ferien an einer anderen Schule/),
+    ).not.toBeInTheDocument();
 
     await user.click(
       screen.getByRole("button", { name: "Einwilligung geben" }),
@@ -295,6 +320,11 @@ describe("ChildConsentsSection", () => {
     expect(await screen.findAllByText("Hinterlegt")).toHaveLength(3);
     expect(
       screen.getByText("Die Foto-Einwilligung wurde erneut gegeben."),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("list")).getByText(
+        "Die OGS darf dein Kind fotografieren und ein Foto von deinem Kind in moto speichern.",
+      ),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Foto-Einwilligung widerrufen" }),

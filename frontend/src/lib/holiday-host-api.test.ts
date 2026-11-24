@@ -142,6 +142,15 @@ describe("holiday host api", () => {
               second_guardian: null,
               answers: null,
               health: null,
+              consents: [
+                {
+                  key: "fotos",
+                  title: "Fotos in der Ferienbetreuung",
+                  label: "Mein Kind darf auf Erinnerungsfotos zu sehen sein.",
+                  given: false,
+                  changed_at: "2026-09-01T08:00:00Z",
+                },
+              ],
             },
           ],
           questions: null,
@@ -168,6 +177,15 @@ describe("holiday host api", () => {
       secondGuardian: null,
       answers: [],
       health: null,
+      consents: [
+        {
+          key: "fotos",
+          title: "Fotos in der Ferienbetreuung",
+          label: "Mein Kind darf auf Erinnerungsfotos zu sehen sein.",
+          given: false,
+          changedAt: "2026-09-01T08:00:00Z",
+        },
+      ],
     });
     expect(list.questions).toEqual([]);
   });
@@ -381,6 +399,8 @@ describe("holiday host api", () => {
             },
           ],
           pickup_contacts: null,
+          home_photo_consent: false,
+          home_room_history_stopped: true,
           read_only: false,
         },
       }),
@@ -402,6 +422,9 @@ describe("holiday host api", () => {
       pickupContacts: [],
       answers: [],
       health: null,
+      homePhotoConsent: false,
+      homeRoomHistoryStopped: true,
+      consents: [],
       readOnly: false,
     });
     expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/holiday-guests/91");

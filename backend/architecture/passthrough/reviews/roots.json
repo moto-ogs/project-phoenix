@@ -2508,7 +2508,7 @@
     {
       "decision": "0318",
       "id": "roots/owners/StaffEmployers.SchoolEmployers",
-      "reason": "ADR 0318 (#4811): Consumer-port adapter that asks Organisation \u0026 Tenancy for the body that employs the staff of each Einsatzort and translates it into the employer name the Personalakte shows."
+      "reason": "ADR 0318 (#4811), ADR 0320 (#8041): Consumer-port adapter that asks Organisation \u0026 Tenancy for the body that employs the staff of each Einsatzort and translates it into the employer kind and name the Personalakte and the payroll file use."
     },
     {
       "decision": "0090",

@@ -456,3 +456,14 @@ legt nur den Personalstamm an:
    Nullen beim Speichern weglassen. Die Nummer der Akte ändert der Import
    nicht. Steht eine Nummer mehrmals in der Datei, übernimmt der Import
    keine dieser Zeilen.
+
+## Nachtrag 2026-11-24: Mehrere Arbeitgeber je Träger (#8041)
+
+**Status: Abgelöst in §4 Satz 3.**
+
+[ADR 0320](0320-lohnexport-des-traegers-teilt-nach-arbeitgeber-oder-kennzeichnet-mit-kostenstelle.md)
+löst „In v1 hat ein Träger genau einen Arbeitgeber und einen DATEV-Mandanten“
+ab. Stellt eine Gemeinde oder ein Schulträger das Personal einer Schule an,
+schreibt der Lohnexport eine Datei je Arbeitgeber oder eine Datei mit
+Kostenstelle; der Träger wählt. Die Personalnummer des Personalstamms bleibt
+eine je Person; für einen anderen Arbeitgeber kann eine eigene dazukommen.
