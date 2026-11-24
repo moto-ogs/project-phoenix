@@ -75,6 +75,13 @@ function buildSubtitle(role: Role): string {
   return description?.trim() || "Keine Beschreibung";
 }
 
+/** In der Liste steht bei einer Rolle des Trägers vorn, woher sie kommt. */
+function buildListSubtitle(role: Role): string {
+  return role.fromTraeger
+    ? `Vom Träger · ${buildSubtitle(role)}`
+    : buildSubtitle(role);
+}
+
 export function RolesMasterDetail({
   roles,
   selectedId,
@@ -93,7 +100,7 @@ export function RolesMasterDetail({
   const renderItem = (role: Role) => (
     <DatabaseListItem
       title={getRoleDisplayName(role.name)}
-      subtitle={buildSubtitle(role)}
+      subtitle={buildListSubtitle(role)}
       isSelected={selectedId === role.id}
       onSelect={() => onSelect(role.id)}
     />
@@ -185,8 +192,9 @@ function RoleDetailContent({
   };
 
   const canEditActiveTab = activeTab !== "permissions" || canManagePermissions;
+  // Eine Rolle des Trägers ändert und löscht nur das Träger-Büro (#4810).
   const headerActions =
-    role.isSystem || editing ? null : (
+    role.isSystem || role.fromTraeger || editing ? null : (
       <>
         {canEditActiveTab ? (
           <Button
@@ -323,6 +331,9 @@ function RoleStammdatenTab({
           {role.isSystem ? (
             <StatusBadge label="Vorgegeben" tone="gray" />
           ) : null}
+          {role.fromTraeger ? (
+            <StatusBadge label="Vom Träger" tone="blue" />
+          ) : null}
           {!role.isSystem && !role.baseRole ? (
             <StatusColorBadge
               label="Zuordnung fehlt"
@@ -370,6 +381,12 @@ function RoleStammdatenTab({
         <Alert
           type="info"
           message="Vorgegebene Rollen gelten für alle Schulen. Sie können nicht bearbeitet oder gelöscht werden."
+        />
+      ) : null}
+      {role.fromTraeger ? (
+        <Alert
+          type="info"
+          message="Diese Rolle gibt dein Träger für alle seine Schulen vor. Du kannst sie Personen geben. Ändern und löschen kann sie nur das Träger-Büro."
         />
       ) : null}
     </div>

@@ -50,7 +50,7 @@ import { TenantPageStats } from "~/components/ui/tenant-page";
 
 /** Info-Knopf am Titel: wofür die Seite da ist und was man zuerst tut. */
 const ROLES_INFO =
-  "Die Rolle einer Person legt fest, was sie in moto sehen und tun darf. Rollen vom System kannst du nicht ändern. Lege dafür eine eigene Rolle an.";
+  "Die Rolle einer Person legt fest, was sie in moto sehen und tun darf. Rollen vom System und von deinem Träger kannst du nicht ändern. Lege dafür eine eigene Rolle an.";
 
 const NO_ROLES: Role[] = [];
 
@@ -168,13 +168,21 @@ function RolesPageContent() {
   // Statuszeile des Seitenkopfs aus der bereits geladenen Rollenliste.
   const statusLine = useMemo(() => {
     const systemRoles = roles.filter((r) => r.isSystem).length;
+    const traegerRoles = roles.filter((r) => r.fromTraeger).length;
     const label = roles.length === 1 ? "Rolle" : "Rollen";
-    if (systemRoles === 0) return `${formatCount(roles.length)} ${label}`;
+    if (systemRoles === 0 && traegerRoles === 0) {
+      return `${formatCount(roles.length)} ${label}`;
+    }
     return (
       <TenantPageStats
         items={[
           { value: formatCount(roles.length), label },
-          { value: formatCount(systemRoles), label: "vom System" },
+          ...(systemRoles > 0
+            ? [{ value: formatCount(systemRoles), label: "vom System" }]
+            : []),
+          ...(traegerRoles > 0
+            ? [{ value: formatCount(traegerRoles), label: "vom Träger" }]
+            : []),
         ]}
       />
     );

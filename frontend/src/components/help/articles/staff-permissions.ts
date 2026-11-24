@@ -3,7 +3,8 @@ import { HELP_TOPICS } from "~/lib/help-topics";
 
 /**
  * Rollen unter `/database/roles`, Rechteliste unter `/database/permissions`.
- * Vorgegebene Rollen (`role.isSystem`) haben keine Kopfaktionen
+ * Rollen des Trägers (`role.fromTraeger`, #4810) und
+ * vorgegebene Rollen (`role.isSystem`) haben keine Kopfaktionen
  * (roles-master-detail.tsx). Eine neue Rolle startet mit den Rechten ihrer
  * Vorlage; gesperrte Rechte bietet der Reiter nicht an (#4574).
  */
@@ -65,6 +66,7 @@ export function staffPermissionsTopic(): HelpTopic {
     differences: [
       "moto bringt einige Rollen schon mit: `Verwaltung`, `Betreuung`, `Lehrkraft`, `Schulverwaltung`, `AG-Leitung` und `Gast`. Sie sind als `Vorgegeben` markiert.",
       "Bei einer vorgegebenen Rolle fehlen `Bearbeiten` und `Löschen`. Zum Ändern von Rechten lege deshalb eine eigene Rolle an.",
+      "Eine Rolle trägt den Vermerk `Vom Träger`: Dein Träger gibt sie für alle seine Schulen vor. Du gibst sie Personen wie jede andere Rolle. `Bearbeiten` und `Löschen` fehlen, das macht das Träger-Büro.",
       "Einige Rechte stehen nicht zur Auswahl. Sie gehören nur der Rolle `Verwaltung` oder dem moto-Team.",
     ],
     troubleshootingDetails: [

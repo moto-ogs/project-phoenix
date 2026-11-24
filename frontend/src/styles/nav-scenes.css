@@ -310,6 +310,11 @@
 .ns-play[data-nav-scene="UserCircleGearIcon"] .ns-check{animation:ns-approve 640ms var(--ns-o) both}
 @keyframes ns-approve{0%,20%{opacity:0;stroke-dashoffset:1;transform:none}24%{opacity:1;stroke-dashoffset:1}48%{stroke-dashoffset:0;transform:none}62%{opacity:1;transform:scale(1.25)}74%,100%{opacity:0;transform:scale(0)}}
 
+/* UserGearIcon: das Zahnrad dreht eine halbe Runde weiter, mit Ausholen und Nachfedern. Sechs Zähne: 180° ist wieder der Ruhezustand. */
+[data-nav-scene="UserGearIcon"] .ns-cog{transform-origin:224px 136px}
+.ns-play[data-nav-scene="UserGearIcon"] .ns-cog{animation:ns-cogStep 560ms var(--ns-o) both}
+@keyframes ns-cogStep{0%{transform:none}18%{transform:rotate(-20deg)}78%{transform:rotate(195deg)}100%{transform:rotate(180deg)}}
+
 /* UserPlusIcon: das Plus dreht sich herein */
 [data-nav-scene="UserPlusIcon"] .ns-spinIn2{transform-origin:208px 128px} .ns-play[data-nav-scene="UserPlusIcon"] .ns-spinIn2{animation:ns-spinIn 440ms var(--ns-o) both}
 .ns-play[data-nav-scene="UserPlusIcon"] .ns-hopS{animation:ns-hop14 340ms var(--ns-o) 120ms both}

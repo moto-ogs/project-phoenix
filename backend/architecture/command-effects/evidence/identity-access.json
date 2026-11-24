@@ -11481,6 +11481,134 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerRolePeople.AccountNames",
+      "binding_digest": "b817c225e9e1f53b32e51193dc16ea45",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRolePeople.AccountNames",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListPersonsByAccount",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerDocumentRuntime.WithinSchool",
+      "binding_digest": "bfa11418ec7ca8493b66c7c61984f695",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoleRuntime.WithinSchool",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.NewTenantID",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerDocumentRuntime.WithinSchool",
+      "binding_digest": "7b31cc809beace1579627a8accc7185d",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoleRuntime.WithinSchool",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerDocumentRuntime.WithinTraeger",
+      "binding_digest": "589fb0341ccdc788fc7724ba4768bec4",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoleRuntime.WithinTraeger",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTraeger",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerRoleSchools.TraegerSchools",
+      "binding_digest": "fe9982a75f61b67ea6e272a171cc31bd",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoleSchools.TraegerSchools",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListSchoolsByOrganization",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerRoleSchools.TraegerSchools",
+      "binding_digest": "cbe3bd5da0dc720a4ce66e92671ed851",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoleSchools.TraegerSchools",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListSchoolsByOrganization",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerRoleSchools.TraegerSchools",
+      "binding_digest": "3dbd58353820f3655d8c296d6b85630d",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoleSchools.TraegerSchools",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.School.IsDeleted",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.CreateTraegerSchoolRole",
+      "binding_digest": "31cba1dda7cc11385ff9cbeaade9b6a6",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.CreateTraegerSchoolRole",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.CreateTraegerSchoolRole",
+      "binding_digest": "88113579b0fcf9cb756a23768c428619",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.CreateTraegerSchoolRole",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.CreateTraegerSchoolRole",
+      "binding_digest": "6e3cf37d5efd970adc63246bb98d06aa",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.CreateTraegerSchoolRole",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.RemoveTraegerSchoolRole",
+      "binding_digest": "31cba1dda7cc11385ff9cbeaade9b6a6",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.RemoveTraegerSchoolRole",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.RemoveTraegerSchoolRole",
+      "binding_digest": "88113579b0fcf9cb756a23768c428619",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.RemoveTraegerSchoolRole",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.RemoveTraegerSchoolRole",
+      "binding_digest": "6e3cf37d5efd970adc63246bb98d06aa",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.RemoveTraegerSchoolRole",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.UpdateTraegerSchoolRole",
+      "binding_digest": "31cba1dda7cc11385ff9cbeaade9b6a6",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.UpdateTraegerSchoolRole",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.UpdateTraegerSchoolRole",
+      "binding_digest": "88113579b0fcf9cb756a23768c428619",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.UpdateTraegerSchoolRole",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.UpdateTraegerSchoolRole",
+      "binding_digest": "6e3cf37d5efd970adc63246bb98d06aa",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.UpdateTraegerSchoolRole",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.TraegerPortalIdentity.StartTraegerSchoolSession",
       "binding_digest": "31cba1dda7cc11385ff9cbeaade9b6a6",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolSessions.StartTraegerSchoolSession",

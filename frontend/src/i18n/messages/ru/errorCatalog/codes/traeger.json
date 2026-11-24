@@ -29,6 +29,9 @@
   "report_template_not_found": "Этого шаблона больше нет. Обновите страницу.",
   "school_not_found": "У вас нет доступа к: {object}. Обратитесь в школу.",
   "school_requires_code": "У вас нет доступа к: {object}. Обратитесь в школу.",
+  "school_role_name_taken": "Не удалось изменить: {object}. Проверьте текущее состояние.",
+  "school_role_name_used_at_school": "Не удалось изменить: {object}. Проверьте текущее состояние.",
+  "school_role_not_found": "Не удалось сохранить: {object}. Проверьте введённые данные.",
   "second_factor_required": "У вас нет доступа к: {object}. Обратитесь в школу.",
   "shared_document_not_found": "Организация больше не открывает доступ к этому документу. Обновите страницу."
 }

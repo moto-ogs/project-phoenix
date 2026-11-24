@@ -29,6 +29,9 @@
   "report_template_not_found": "Ten szablon już nie istnieje. Odśwież stronę.",
   "school_not_found": "Nie masz dostępu do: {object}. Skontaktuj się ze szkołą.",
   "school_requires_code": "Nie masz dostępu do: {object}. Skontaktuj się ze szkołą.",
+  "school_role_name_taken": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
+  "school_role_name_used_at_school": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
+  "school_role_not_found": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
   "second_factor_required": "Nie masz dostępu do: {object}. Skontaktuj się ze szkołą.",
   "shared_document_not_found": "Organizator nie udostępnia już tego dokumentu. Odśwież stronę."
 }

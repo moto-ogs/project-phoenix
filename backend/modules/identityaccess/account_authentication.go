@@ -250,6 +250,9 @@ const (
 	AuthEventTenantAccessGranted      = "tenant_access_granted"
 	AuthEventTenantRoleChanged        = "tenant_role_changed"
 	AuthEventTenantAccessRevoked      = "tenant_access_revoked"
+	// AuthEventTraegerRoleChanged is a change the Träger-Büro made to the
+	// copy of one of its roles, filed in the school's ledger (#4810).
+	AuthEventTraegerRoleChanged = "traeger_role_changed"
 )
 
 // AuthEvent is one authentication ledger entry with its typed evidence.
@@ -269,9 +272,27 @@ type AuthEvent struct {
 	CompletedWipe   *CompletedWipeEvidence
 	// MFA is set on the mfa_* events (#3331).
 	MFA *MFAEvidence
-	// OrganizationID is the Träger of a traeger_school_switch event (#4654).
+	// OrganizationID is the Träger of a traeger_school_switch (#4654) or
+	// traeger_role_changed event.
 	OrganizationID int64
+	// TraegerRole is set on traeger_role_changed events (#4810).
+	TraegerRole *TraegerRoleEvidence
 }
+
+// TraegerRoleEvidence describes what the Träger-Büro changed on the copy of
+// one of its roles at a school (#4810, ADR 0317). Action is created, updated
+// or removed; HoldersRemoved counts the people a removal took the role from.
+type TraegerRoleEvidence struct {
+	Action         string
+	RoleID         int64
+	RoleName       string
+	TraegerRoleID  int64
+	HoldersRemoved int
+}
+
+// AuthEventLevelTraeger is the level a traeger_role_changed entry names: the
+// change came from the Träger, not from the school.
+const AuthEventLevelTraeger = "traeger"
 
 // AuthEventMetadataEntry is one metadata key of an auth audit event and the
 // value the Audit platform stores under it.
@@ -318,6 +339,16 @@ func (e AuthEvent) Metadata() []AuthEventMetadataEntry {
 	}
 	if evidence := e.CompletedWipe; evidence != nil {
 		add("pending_event_id", evidence.PendingEventID)
+	}
+	if evidence := e.TraegerRole; evidence != nil {
+		add("level", AuthEventLevelTraeger)
+		add("action", evidence.Action)
+		add("role_id", evidence.RoleID)
+		add("role", evidence.RoleName)
+		add("traeger_role_id", evidence.TraegerRoleID)
+		if evidence.HoldersRemoved > 0 {
+			add("holders_removed", evidence.HoldersRemoved)
+		}
 	}
 	if e.OrganizationID > 0 {
 		add("organization_id", e.OrganizationID)

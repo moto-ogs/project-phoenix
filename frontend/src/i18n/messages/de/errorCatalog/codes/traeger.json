@@ -29,6 +29,9 @@
   "report_template_not_found": "Diese Vorlage gibt es nicht mehr. Bitte lade die Seite neu.",
   "school_not_found": "Diese Schule gehört nicht zu deinem Träger. Bitte lade die Seite neu.",
   "school_requires_code": "Diese Schule verlangt zum Öffnen einen Code aus deiner E-Mail.",
+  "school_role_name_taken": "Eine Rolle mit diesem Namen gibt es schon. Bitte wähle einen anderen Namen.",
+  "school_role_name_used_at_school": "Diesen Namen nutzt schon eine eigene Rolle an: {schools}. Bitte wähle einen anderen Namen.",
+  "school_role_not_found": "Diese Rolle gibt es nicht mehr. Bitte lade die Seite neu.",
   "second_factor_required": "Zum Öffnen einer Schule brauchst du einen zweiten Anmeldenachweis. Bitte melde dich im Träger-Portal neu an.",
   "shared_document_not_found": "Der Träger hat dieses Dokument nicht mehr freigegeben. Bitte lade die Seite neu."
 }

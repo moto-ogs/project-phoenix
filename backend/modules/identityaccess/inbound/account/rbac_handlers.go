@@ -24,6 +24,7 @@ func toRoleResponse(role identityaccess.Role) *RoleResponse {
 		IsSystem:     role.IsSystem,
 		BaseRole:     role.BaseRole,
 		SchoolPortal: role.SchoolPortal,
+		FromTraeger:  role.TraegerRoleID != nil,
 		CreatedAt:    role.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:    role.UpdatedAt.Format(time.RFC3339),
 		Version:      identityaccess.RoleVersion(role),
@@ -175,6 +176,9 @@ func renderRoleMutationError(err error) render.Renderer {
 	if errors.As(err, &roleErr) {
 		if errors.Is(roleErr.Err, identityaccess.ErrSystemRoleImmutable) {
 			return common.ErrorForbidden(roleErr.Err)
+		}
+		if errors.Is(roleErr.Err, identityaccess.ErrTraegerRoleImmutable) {
+			return common.ErrorForbiddenWithCode(roleErr.Err, common.CodeIdentityRoleFromTraeger)
 		}
 		if errors.Is(roleErr.Err, identityaccess.ErrRoleNotFound) {
 			return common.ErrorNotFound(roleErr.Err)

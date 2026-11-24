@@ -54,6 +54,7 @@ const CodeIdentityPreviewTargetNotPreviewable = "identity.preview_target_not_pre
 const CodeIdentityPreviewTargetSchoolPortal = "identity.preview_target_school_portal"
 const CodeIdentityPreviewTokenInvalid = "identity.preview_token_invalid"
 const CodeIdentityReadOnlyPreview = "identity.read_only_preview"
+const CodeIdentityRoleFromTraeger = "identity.role_from_traeger"
 const CodeIdentityRoleNameTaken = "identity.role_name_taken"
 const CodeIdentityRolePlatformPermission = "identity.role_platform_permission"
 const CodeIdentitySessionAccountInactive = "identity.session_account_inactive"
@@ -119,6 +120,7 @@ var errorCodeClassesIdentity = []errorCodeClass{
 	{CodeIdentityPreviewTargetSchoolPortal, "permission"},
 	{CodeIdentityPreviewTokenInvalid, "permission"},
 	{CodeIdentityReadOnlyPreview, "permission"},
+	{CodeIdentityRoleFromTraeger, "permission"},
 	{CodeIdentityRoleNameTaken, "business_rejection"},
 	{CodeIdentityRolePlatformPermission, "input"},
 	{CodeIdentitySessionAccountInactive, "permission"},

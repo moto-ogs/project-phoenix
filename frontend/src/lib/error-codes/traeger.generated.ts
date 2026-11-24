@@ -30,6 +30,9 @@ export const codes = [
   "traeger.report_template_not_found",
   "traeger.school_not_found",
   "traeger.school_requires_code",
+  "traeger.school_role_name_taken",
+  "traeger.school_role_name_used_at_school",
+  "traeger.school_role_not_found",
   "traeger.second_factor_required",
   "traeger.shared_document_not_found",
 ] as const;
@@ -65,6 +68,9 @@ export const classes = {
   "traeger.report_template_not_found": "input",
   "traeger.school_not_found": "permission",
   "traeger.school_requires_code": "permission",
+  "traeger.school_role_name_taken": "business_rejection",
+  "traeger.school_role_name_used_at_school": "business_rejection",
+  "traeger.school_role_not_found": "input",
   "traeger.second_factor_required": "permission",
   "traeger.shared_document_not_found": "input",
 } as const;
@@ -100,6 +106,9 @@ export const parameters = {
   "traeger.report_template_not_found": [],
   "traeger.school_not_found": [],
   "traeger.school_requires_code": [],
+  "traeger.school_role_name_taken": [],
+  "traeger.school_role_name_used_at_school": ["schools"],
+  "traeger.school_role_not_found": [],
   "traeger.second_factor_required": [],
   "traeger.shared_document_not_found": [],
 } as const;

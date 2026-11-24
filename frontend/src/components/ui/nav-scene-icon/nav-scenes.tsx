@@ -1064,6 +1064,19 @@ export const NAV_SCENES: Readonly<Record<string, NavScene>> = {
       </>
     ),
   },
+  UserGearIcon: {
+    description: "das Zahnrad dreht eine halbe Runde weiter",
+    render: () => (
+      <>
+        <circle cx="108" cy="100" r="60" />
+        <path d="M24,200c20-25,50-40,84-40s64,15,84,40" />
+        <g className="ns-cog">
+          <circle cx="224" cy="136" r="16" />
+          <path d="M224,106v8M224,158v8M243,125l7-4M243,147l7,4M205,125l-7-4M205,147l-7,4" />
+        </g>
+      </>
+    ),
+  },
   UserPlusIcon: {
     description: "das Plus dreht sich herein",
     render: () => (

@@ -185,6 +185,26 @@
       "legacy": "traeger.school_requires_code"
     },
     {
+      "code": "traeger.school_role_name_taken",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "traeger.school_role_name_taken"
+    },
+    {
+      "code": "traeger.school_role_name_used_at_school",
+      "class": "business_rejection",
+      "parameters": [
+        "schools"
+      ],
+      "legacy": "traeger.school_role_name_used_at_school"
+    },
+    {
+      "code": "traeger.school_role_not_found",
+      "class": "input",
+      "parameters": [],
+      "legacy": "traeger.school_role_not_found"
+    },
+    {
       "code": "traeger.second_factor_required",
       "class": "permission",
       "parameters": [],

@@ -29,6 +29,9 @@
   "report_template_not_found": "Ky shabllon nuk ekziston më. Ju lutemi rifreskoni faqen.",
   "school_not_found": "Nuk keni qasje te: {object}. Kontaktoni shkollën.",
   "school_requires_code": "Nuk keni qasje te: {object}. Kontaktoni shkollën.",
+  "school_role_name_taken": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
+  "school_role_name_used_at_school": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
+  "school_role_not_found": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
   "second_factor_required": "Nuk keni qasje te: {object}. Kontaktoni shkollën.",
   "shared_document_not_found": "Ofruesi nuk e ndan më këtë dokument. Ju lutemi rifreskoni faqen."
 }
