@@ -355,8 +355,12 @@ func (n *Notices) confirm(ctx context.Context, record ContractRecord, d declarat
 			return err
 		}
 	}
-	if err := n.requireOfficeLetterhead(ctx, d); err != nil {
+	if err := n.requireOfficeLetterhead(ctx, d, record); err != nil {
 		return err
+	}
+	// The body that issued the contract confirms its end (#4811).
+	if issuer, _ := issuedBy(record); issuer != nil {
+		d.traeger = firstLine(textLines(issuer.SenderText))
 	}
 	traeger := strings.TrimSpace(firstText(d.traeger, record.Version.Terms.ContractPartner))
 	template, err := n.templates.NoticeTemplate(ctx, d.organizationID, templateKind(*notice))
@@ -398,7 +402,7 @@ func (n *Notices) confirm(ctx context.Context, record ContractRecord, d declarat
 // confirmation names the Träger's organization, and a withdrawal or
 // termination by the button must not depend on the Träger's settings
 // (§ 312k BGB), nor may the withdrawal period run out meanwhile.
-func (n *Notices) requireOfficeLetterhead(ctx context.Context, d declaration) error {
+func (n *Notices) requireOfficeLetterhead(ctx context.Context, d declaration, record ContractRecord) error {
 	if d.channel != carecontract.NoticeChannelOffice {
 		return nil
 	}
@@ -406,7 +410,7 @@ func (n *Notices) requireOfficeLetterhead(ctx context.Context, d declaration) er
 	if err != nil {
 		return fmt.Errorf("care contract: letterhead: %w", err)
 	}
-	if letterheadMissing(letterhead) {
+	if letterheadMissing(issuedSender(letterhead, record)) {
 		return carecontract.ErrLetterheadMissing
 	}
 	return nil

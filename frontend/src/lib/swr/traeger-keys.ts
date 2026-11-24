@@ -22,6 +22,8 @@ export const traegerKeys = {
   schoolRoleCatalog: () => "traeger-school-role-catalog",
   schoolRoleRemoval: (id: string) =>
     `traeger-school-role-removal-${encodeURIComponent(id)}`,
+  // Zuständigkeiten je Schule mit Schulträger und Gemeinde (#4811).
+  responsibilities: () => "traeger-responsibilities",
   // Verlauf des Träger-Büros (#5474): die erste Seite; ältere Seiten lädt
   // die Ansicht dazu. Jede Änderung im Büro liest die Familie neu.
   accountHistoryFamily: "traeger-account-history-",

@@ -631,6 +631,11 @@ function StaffRecordContent() {
                               />
                             ) : null}
                           </div>
+                          {employment.employerName ? (
+                            <p className="mt-0.5 text-sm text-gray-500">
+                              Arbeitgeber: {employment.employerName}
+                            </p>
+                          ) : null}
                           {employment.viaPool ? (
                             <p className="mt-0.5 text-sm text-gray-500">
                               {poolEmploymentHint(employment.active)}

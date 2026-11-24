@@ -165,23 +165,40 @@ func (s Store) Contract(ctx context.Context, organizationID, contractID int64, f
 // newest stored PDF of the contract with its version (#4681).
 func readDocuments(ctx context.Context, db bun.IDB, organizationID int64, record *ports.ContractRecord) error {
 	var documents []struct {
-		ID        int64 `bun:"id"`
-		VersionID int64 `bun:"contract_version_id"`
+		ID        int64   `bun:"id"`
+		VersionID int64   `bun:"contract_version_id"`
+		Issuer    *string `bun:"issuer"`
 	}
-	if err := db.NewRaw(`SELECT id, contract_version_id FROM care_contract.contract_documents
+	if err := db.NewRaw(`SELECT id, contract_version_id, issuer FROM care_contract.contract_documents
 		WHERE organization_id = ? AND contract_id = ? ORDER BY id DESC`, organizationID, record.Summary.ID).Scan(ctx, &documents); err != nil {
 		return fmt.Errorf("care contract postgres: read documents: %w", err)
 	}
 	for i, document := range documents {
+		issuer, err := storedIssuer(document.Issuer)
+		if err != nil {
+			return err
+		}
 		if i == 0 {
-			record.SentDocument = &ports.SentDocument{ID: document.ID, VersionID: document.VersionID}
+			record.SentDocument = &ports.SentDocument{ID: document.ID, VersionID: document.VersionID, Issuer: issuer}
 		}
 		if ident.ID(document.VersionID) == record.Version.ID && record.DocumentID == nil {
 			id := document.ID
-			record.DocumentID = &id
+			record.DocumentID, record.Issuer = &id, issuer
 		}
 	}
 	return nil
+}
+
+// storedIssuer decodes the body that issued a PDF; NULL is the Träger.
+func storedIssuer(stored *string) (*carecontract.Issuer, error) {
+	if stored == nil {
+		return nil, nil
+	}
+	var issuer carecontract.Issuer
+	if err := json.Unmarshal([]byte(*stored), &issuer); err != nil {
+		return nil, fmt.Errorf("care contract postgres: read the issuer of a document: %w", err)
+	}
+	return &issuer, nil
 }
 
 // Mailings reads the sends of a contract, newest first.
@@ -209,16 +226,27 @@ func (Store) Mailings(ctx context.Context, organizationID, contractID int64) ([]
 }
 
 // InsertDocument stores the PDF of the contract's current version.
-func (Store) InsertDocument(ctx context.Context, organizationID, accountID int64, record ports.ContractRecord, templateVersion int, file carecontract.File) (int64, error) {
+func (Store) InsertDocument(ctx context.Context, organizationID, accountID int64, record ports.ContractRecord, templateVersion int, file carecontract.File,
+	issuer *carecontract.Issuer) (int64, error) {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {
 		return 0, err
 	}
+	// The body that issued the PDF stays with it (#4811); NULL is the Träger.
+	var issuedBy *string
+	if issuer != nil {
+		encoded, err := json.Marshal(issuer)
+		if err != nil {
+			return 0, fmt.Errorf("care contract postgres: encode the issuer of a document: %w", err)
+		}
+		text := string(encoded)
+		issuedBy = &text
+	}
 	var id int64
 	if err := db.NewRaw(`INSERT INTO care_contract.contract_documents (organization_id, contract_id, contract_version_id,
-			template_version, filename, pdf, created_by_account_id, withdrawal_notice)
-		VALUES (?, ?, ?, ?, ?, ?, ?, true) RETURNING id`, organizationID, record.Summary.ID, record.Version.ID, templateVersion,
-		file.Filename, file.Data, accountRef(accountID)).Scan(ctx, &id); err != nil {
+			template_version, filename, pdf, created_by_account_id, withdrawal_notice, issuer)
+		VALUES (?, ?, ?, ?, ?, ?, ?, true, ?::jsonb) RETURNING id`, organizationID, record.Summary.ID, record.Version.ID, templateVersion,
+		file.Filename, file.Data, accountRef(accountID), issuedBy).Scan(ctx, &id); err != nil {
 		return 0, fmt.Errorf("care contract postgres: insert document: %w", err)
 	}
 	return id, nil

@@ -23,6 +23,7 @@ import { CareContractConditions } from "./care-contract-conditions";
 const OPEN: OfferingTemplate = {
   schoolId: "3",
   schoolName: "OGS Am Lindenhof",
+  issuerName: "",
   offeringId: "5",
   offeringName: "Offene Ganztagsschule",
   phaseName: "2027/28",
@@ -83,6 +84,44 @@ describe("CareContractConditions", () => {
       target: { value: "Anderer Träger" },
     });
     expect(text).toHaveValue("Vollständige gespeicherte Bedingungen");
+  });
+
+  it("warns when the conditions name another party than the body responsible at the school (#4811)", () => {
+    render(
+      <ToastProvider>
+        <CareContractConditions
+          offerings={[{ ...OPEN, issuerName: "Gemeinde Hardt" }]}
+          onSaved={vi.fn()}
+          reload={vi.fn()}
+          selectedKey={null}
+          onSelect={vi.fn()}
+        />
+      </ToastProvider>,
+    );
+    // Empty: the Gemeinde is the party, and the hint says so.
+    expect(
+      screen.getByText(/Leer lassen, wenn Gemeinde Hardt Vertragspartner ist/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Als Vertragspartner steht dort aber/),
+    ).toBeNull();
+
+    fireEvent.change(screen.getByLabelText("Vertragspartner"), {
+      target: { value: "Ganztag im Quartier e.V." },
+    });
+    expect(
+      screen.getByText(
+        /Für die Verträge dieser Schule ist Gemeinde Hardt zuständig .* Als Vertragspartner steht dort aber „Ganztag im Quartier e.V.“/,
+      ),
+    ).toBeInTheDocument();
+
+    // The same body named explicitly is no conflict.
+    fireEvent.change(screen.getByLabelText("Vertragspartner"), {
+      target: { value: "Gemeinde Hardt" },
+    });
+    expect(
+      screen.queryByText(/Als Vertragspartner steht dort aber/),
+    ).toBeNull();
   });
 
   it("selects a fixed term through the shared width-constrained selector", async () => {

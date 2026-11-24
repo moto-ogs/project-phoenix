@@ -163,7 +163,7 @@ func traegerPortalRoutesOnWithStaffing(t *testing.T, db *bun.DB, identity Traege
 	schoolSettings, err := owners.NewSettingsTestModule(database, unit)
 	require.NoError(t, err)
 	portal, err := NewTraegerPortalHTTP(identity, organizations, owners.MustNewPeopleDirectory(database), membership,
-		TraegerAudit{Trail: audit.AccessTrail, Log: audit.DataAccessLog}, settings, testHealthCipher(), days,
+		TraegerAudit{Trail: audit.AccessTrail, Log: audit.DataAccessLog}, settings, schoolSettings.Settings, testHealthCipher(), days,
 		holidayTraegerMail{delivery: delivery.Module}, holidayMailStates{mails: delivery.TraegerMails}, newHolidayOfficeTraeger(organizations), statistics.Statistics, today, now,
 		owners.NewTraegerCalendarSchools(organizations, schoolSettings.Settings))
 	require.NoError(t, err)

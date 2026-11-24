@@ -8,6 +8,7 @@
 
 import { Check, Copy, MousePointer2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { DatabaseDetailHeader } from "~/components/database/database-detail-header";
@@ -404,6 +405,7 @@ function ConditionsForm({
           draft={draft}
           set={set}
           fieldError={formErrors.fieldError}
+          issuerName={selected.issuerName}
         />
         {/* What all texts below share stands once (shared text once). */}
         {selected.acceptanceText ||
@@ -480,11 +482,22 @@ export function ContractTermsFields({
   draft,
   set,
   fieldError,
+  issuerName = "",
 }: Readonly<{
   draft: ContractTerms;
   set: <K extends keyof ContractTerms>(key: K, value: ContractTerms[K]) => void;
   fieldError: (name: string) => string | undefined;
+  /**
+   * The Schulträger or the Gemeinde that concludes the contracts of the
+   * school (#4811); empty for the Träger and where the form knows no school.
+   */
+  issuerName?: string;
 }>) {
+  const partner = draft.contractPartner.trim();
+  // The contract would name two bodies: the sender from the responsibility
+  // and another contract partner from these conditions.
+  const partnerDiffers =
+    issuerName !== "" && partner !== "" && partner !== issuerName;
   const formErrors = { fieldError };
   return (
     <>
@@ -635,9 +648,18 @@ export function ContractTermsFields({
         placeholder="Name des Vertragspartners"
         onChange={(event) => set("contractPartner", event.target.value)}
       />
+      {partnerDiffers ? (
+        <Alert
+          type="warning"
+          message={`Für die Verträge dieser Schule ist ${issuerName} zuständig und steht als Absender im Vertrag. Als Vertragspartner steht dort aber „${partner}“. Trage ${issuerName} ein oder leere das Feld, wenn beide dieselbe Stelle sein sollen.`}
+        />
+      ) : null}
       <p className="text-sm text-gray-600">
-        Leer lassen, wenn der Name im Briefkopf steht. Sonst trägst du den
-        Vertragspartner hier ein. Für „Bei der Annahme“ trägst du ihn immer ein.
+        {issuerName
+          ? `Leer lassen, wenn ${issuerName} Vertragspartner ist: Diese Stelle ist für die Verträge der Schule zuständig.`
+          : "Leer lassen, wenn dein Träger laut Briefkopf Vertragspartner ist."}{" "}
+        Sonst trägst du den Vertragspartner hier ein. Für „Bei der Annahme“
+        trägst du ihn immer ein.
       </p>
     </>
   );

@@ -31,6 +31,7 @@ import { peopleConcept } from "~/lib/concepts/people";
 import { rolesConcept } from "~/lib/concepts/roles";
 import { reportsConcept } from "~/lib/concepts/reports";
 import { schoolComparisonConcept } from "~/lib/concepts/schoolComparison";
+import { organizationsConcept } from "~/lib/concepts/organizations";
 import { schoolsConcept } from "~/lib/concepts/schools";
 import { settingsConcept } from "~/lib/concepts/settings";
 import { staffConcept } from "~/lib/concepts/staff";
@@ -371,6 +372,15 @@ const TRAEGER_SETTINGS_NAV_ITEMS: readonly TraegerNavItem[] = [
     label: "Briefkopf und Vorlagen",
     shortLabel: "Briefkopf",
     concept: documentsConcept,
+    right: OVERVIEW_RIGHT,
+  },
+  {
+    // Wer Verträge schließt, abrechnet und Personal anstellt (#4811).
+    key: "zustaendigkeiten",
+    href: "/traeger/einstellungen/zustaendigkeiten",
+    label: "Zuständigkeiten",
+    shortLabel: "Zuständig",
+    concept: organizationsConcept,
     right: OVERVIEW_RIGHT,
   },
   {

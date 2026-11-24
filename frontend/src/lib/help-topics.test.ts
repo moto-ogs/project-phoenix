@@ -803,6 +803,7 @@ describe("getParentHelpTopicForPath", () => {
       HELP_TOPICS.traegerBriefkopf,
       HELP_TOPICS.traegerDocumentTemplates,
       HELP_TOPICS.traegerDocumentKinds,
+      HELP_TOPICS.traegerResponsibilities,
       HELP_TOPICS.traegerSettings,
       HELP_TOPICS.errorMessages,
     ]);

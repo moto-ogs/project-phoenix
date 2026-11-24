@@ -39,7 +39,8 @@ const traegerBueroOnly = "Träger-Büro of a demo Träger: the seed's bootstrap 
 // Abwesenheitsarten of the Träger and the Kontingente of its staff records,
 // ADR 0237 their contracts with Soll and holiday weeks, ADR 0238 their
 // Nachweise, ADR 0246 the report templates of the Träger-Büro, ADR 0252
-// the blocks of the Springer of the Vertretungspool.
+// the blocks of the Springer of the Vertretungspool, ADR 0318 the
+// Schulträger and the Gemeinde the Träger-Büro keeps for its schools.
 var demoErasureExceptions = map[string]string{
 	"active.activity_session_attendance":             schoolContentUntil5559,
 	"active.activity_sessions":                       schoolContentUntil5559,
@@ -146,6 +147,7 @@ var demoErasureExceptions = map[string]string{
 	"parent_billing.sepa_debit_files":                "ADR 0187: the stored PAIN.008 file of a message drops by trigger (drop_sepa_debit_files_with_their_members), an unsubmitted download with the first of its debits, installment notices or mandates, a submitted original with the last of its debits and notices, and those go with the demo visitor's contracts",
 	"platform.billing_key_date_counts":               "school name and counts of an invoice key date, no person",
 	"platform.email_suppressions":                    schoolContentUntil5559,
+	"platform.school_responsible_parties":            traegerBueroOnly + "; invented Schulträger and Gemeinde of the demo Träger's schools (ADR 0318)",
 	"platform.traeger_bank_accounts":                 traegerBueroOnly + "; invented bank details of the demo Träger",
 	"platform.traeger_document_reads":                "an opening keeps only the school ID and the account ID, which the erasure anonymizes; expires three years after the opening (#4692)",
 	"platform.traeger_document_releases":             traegerBueroOnly + "; a release names the school, not a person",
@@ -261,7 +263,9 @@ var demoErasureExceptions = map[string]string{
 // ADR 0252: the blocks of the Springer of the Vertretungspool (+1).
 // ADR 0271: the visitor's membership in the office of its own Träger, its
 // roles and its ledger go with the visit (-3).
-const demoErasureExceptionBudget = 201
+// ADR 0318: the Schulträger and the Gemeinde the Träger-Büro keeps for its
+// schools (+1).
+const demoErasureExceptionBudget = 202
 
 func TestDemoErasureExceptionsKeepTheirBudget(t *testing.T) {
 	t.Parallel()

@@ -96,6 +96,12 @@ interface StaffEmployment {
    * nimmt ihn wieder auf (#7197).
    */
   readonly viaPool: boolean;
+  /**
+   * Der Schulträger oder die Gemeinde, die das Personal dieser Schule
+   * anstellt (#4811); leer, wenn der Träger der Arbeitgeber ist. Nur die
+   * Ansicht einer Akte trägt ihn.
+   */
+  readonly employerName: string;
 }
 
 export interface StaffRecordSummary {
@@ -302,6 +308,7 @@ function mapSummary(
       staffId: employment.staff_id,
       active: employment.active,
       viaPool: employment.via_pool,
+      employerName: employment.employer_name,
     })),
   };
 }

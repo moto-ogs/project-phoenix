@@ -33,3 +33,8 @@ func NewSharedTraegerDocuments() *postgres.TraegerDocumentStore {
 func NewTraegerReportTemplates() (organizationtenancy.TraegerReportTemplates, organizationtenancy.TraegerReportTemplateReads) {
 	return application.NewTraegerReportTemplates(postgres.NewTraegerMasterDataStore()), postgres.NewTraegerReportTemplateReads()
 }
+
+// NewSchoolResponsibilities builds the responsibilities at the schools of a Träger (#4811, ADR 0318) in the Träger transaction; the root binds settings to the Settings Platform.
+func NewSchoolResponsibilities(settings organizationtenancy.SchoolResponsibilitySettings) organizationtenancy.SchoolResponsibilities {
+	return application.NewSchoolResponsibilities(postgres.NewTraegerMasterDataStore(), settings)
+}

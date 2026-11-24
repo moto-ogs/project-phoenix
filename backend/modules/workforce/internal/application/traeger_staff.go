@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
 	"strings"
 
@@ -231,8 +232,12 @@ func (t *TraegerStaff) Record(ctx context.Context, actor workforce.TraegerStaffA
 	var changes []domain.TraegerStaffChange
 	var proofs []workforce.TraegerStaffProof
 	var contracts []domain.TraegerStaffContract
+	var employers map[int64]string
 	err = t.released(ctx, actor, func(ctx context.Context) error {
 		if record, err = t.store.FindStaffRecord(ctx, actor.OrganizationID, recordID, false); err != nil {
+			return err
+		}
+		if employers, err = t.employers(ctx, actor.OrganizationID, record); err != nil {
 			return err
 		}
 		if contracts, err = t.store.ListStaffContracts(ctx, actor.OrganizationID, recordID); err != nil {
@@ -265,10 +270,35 @@ func (t *TraegerStaff) Record(ctx context.Context, actor workforce.TraegerStaffA
 		Proofs:                    proofs,
 		Contracts:                 publicContracts(contracts, names, openFrom),
 	}
+	nameEmployers(detail.Employments, employers)
 	for _, change := range changes {
 		detail.Changes = append(detail.Changes, publicChange(change, names))
 	}
 	return detail, nil
+}
+
+// employers names who employs at each Einsatzort of the record where that
+// is not the Träger (#4811), in one read for all, in the caller's Träger
+// transaction. Without the port the Träger employs everywhere.
+func (t *TraegerStaff) employers(ctx context.Context, organizationID int64, record domain.TraegerStaffRecord) (map[int64]string, error) {
+	if t.ports.Employers == nil || len(record.Links) == 0 {
+		return nil, nil
+	}
+	employers, err := t.ports.Employers.SchoolEmployers(ctx, organizationID, linkSchools(record))
+	if err != nil {
+		return nil, fmt.Errorf("workforce: employers of the Einsatzorte: %w", err)
+	}
+	return employers, nil
+}
+
+// nameEmployers names the employer at each Einsatzort. A Springer of the
+// Vertretungspool stays employed by the Träger.
+func nameEmployers(employments []workforce.TraegerStaffEmployment, employers map[int64]string) {
+	for i := range employments {
+		if !employments[i].ViaPool {
+			employments[i].EmployerName = employers[employments[i].SchoolID.Int64()]
+		}
+	}
 }
 
 // publicTraegerStaffError maps the stored refusals onto the contract.

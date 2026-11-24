@@ -111,6 +111,9 @@ type ContractRecord struct {
 	Version    carecontract.Version
 	Parties    []carecontract.Party
 	DocumentID *int64
+	// Issuer is the body that issued the stored PDF of the version in place
+	// of the Träger (#4811); nil for the Träger and without a stored PDF.
+	Issuer *carecontract.Issuer
 	// Concluded is how and when the contract was concluded; nil before. The
 	// conclusion at acceptance sets it before the PDF is rendered, so the
 	// frozen PDF and the mail say that the contract is concluded.
@@ -128,6 +131,8 @@ type ContractRecord struct {
 type SentDocument struct {
 	ID        int64
 	VersionID int64
+	// Issuer is the body that issued this PDF, nil for the Träger.
+	Issuer *carecontract.Issuer
 }
 
 type StoredMailing struct {
@@ -198,7 +203,7 @@ type Store interface {
 	CountContracts(ctx context.Context, organizationID int64) (map[string]int, error)
 	Contract(ctx context.Context, organizationID, contractID int64, forUpdate bool) (ContractRecord, error)
 	Mailings(ctx context.Context, organizationID, contractID int64) ([]StoredMailing, error)
-	InsertDocument(ctx context.Context, organizationID, accountID int64, record ContractRecord, templateVersion int, file carecontract.File) (int64, error)
+	InsertDocument(ctx context.Context, organizationID, accountID int64, record ContractRecord, templateVersion int, file carecontract.File, issuer *carecontract.Issuer) (int64, error)
 	Document(ctx context.Context, organizationID, contractID int64) (carecontract.File, error)
 	// InsertMailing records a send at the owner clock's instant at; the
 	// reminders compare it with that clock (ADR 0281).

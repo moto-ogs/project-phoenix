@@ -77,6 +77,10 @@ var traegerCoreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/traeger/master-data/bank-accounts"}:            notCaptured,
 	{http.MethodPut, "/traeger/master-data/bank-accounts/{id}"}:        notCaptured,
 	{http.MethodDelete, "/traeger/master-data/bank-accounts/{id}"}:     notCaptured,
+	// The Schulträger and the Gemeinde of a school (#4811) are master
+	// data like the bank accounts.
+	{http.MethodPut, "/traeger/master-data/responsibilities/schools/{schoolId}/parties/{kind}"}:    notCaptured,
+	{http.MethodDelete, "/traeger/master-data/responsibilities/schools/{schoolId}/parties/{kind}"}: notCaptured,
 	// The document templates (#4677) belong to the Träger: no school to
 	// count them for. The preview stores nothing.
 	{http.MethodPost, "/traeger/master-data/document-templates/{kind}/versions"}: notCaptured,

@@ -266,6 +266,8 @@ export const HELP_TOPICS = {
   traegerBriefkopf: "briefkopf-des-traegers",
   traegerDocumentTemplates: "vorlagen-des-traegers",
   traegerDocumentKinds: "rechnung-oder-gebuehrenbescheid",
+  // Träger, Schulträger oder Gemeinde je Schule (#4811).
+  traegerResponsibilities: "zustaendigkeiten-festlegen",
   traegerCareContracts: "betreuungsvertraege-senden",
   traegerCareTimeOverruns: "laenger-als-gebucht",
   traegerArrivalPickupTimes: "ankunft-und-abholung",

@@ -15,7 +15,20 @@ import {
   safeInt,
   str,
   success,
+  type OpenEnum,
 } from "./runtime";
+
+export const RESPONSIBILITY_AREA_VALUES = ["billing", "contracts", "staff"] as const;
+export type ResponsibilityArea = (typeof RESPONSIBILITY_AREA_VALUES)[number];
+
+export const RESPONSIBILITY_SOURCE_VALUES = ["default", "school", "traeger"] as const;
+export type ResponsibilitySource = (typeof RESPONSIBILITY_SOURCE_VALUES)[number];
+
+export const RESPONSIBLE_BODY_VALUES = ["gemeinde", "schultraeger", "traeger"] as const;
+export type ResponsibleBody = (typeof RESPONSIBLE_BODY_VALUES)[number];
+
+export const SCHOOL_PARTY_KIND_VALUES = ["gemeinde", "schultraeger"] as const;
+export type SchoolPartyKind = (typeof SCHOOL_PARTY_KIND_VALUES)[number];
 
 /** Go: organizationtenancy.TraegerContact */
 export interface TraegerContact {
@@ -204,6 +217,86 @@ export const TraegerDocumentTemplateDetailSchema: z.ZodType<TraegerDocumentTempl
   versions: nullable(arr(TraegerDocumentTemplateSchema)),
 });
 
+/** Go: organizationtenancy.AreaResponsibility */
+export interface AreaResponsibility {
+  area: OpenEnum<ResponsibilityArea>;
+  body: OpenEnum<ResponsibleBody>;
+  source: OpenEnum<ResponsibilitySource>;
+  effective: OpenEnum<ResponsibleBody>;
+}
+
+export const AreaResponsibilitySchema: z.ZodType<AreaResponsibility, unknown> = object<AreaResponsibility>({
+  area: str,
+  body: str,
+  source: str,
+  effective: str,
+});
+
+/** Go: organizationtenancy.SchoolParty */
+export interface SchoolParty {
+  id: string;
+  school_id: string;
+  kind: OpenEnum<SchoolPartyKind>;
+  name: string;
+  street: string;
+  postal_code: string;
+  city: string;
+  contact_name: string;
+  contact_phone: string;
+  contact_email: string;
+  creditor_id: string;
+  account_holder: string;
+  iban: string;
+  bic: string;
+  bank_name: string;
+  updated_at: string;
+  version: string;
+}
+
+export const SchoolPartySchema: z.ZodType<SchoolParty, unknown> = object<SchoolParty>({
+  id: int64String,
+  school_id: int64String,
+  kind: str,
+  name: str,
+  street: str,
+  postal_code: str,
+  city: str,
+  contact_name: str,
+  contact_phone: str,
+  contact_email: str,
+  creditor_id: str,
+  account_holder: str,
+  iban: str,
+  bic: str,
+  bank_name: str,
+  updated_at: instant,
+  version: str,
+});
+
+/** Go: organizationtenancy.SchoolResponsibility */
+export interface SchoolResponsibility {
+  school_id: string;
+  school_name: string;
+  areas: AreaResponsibility[] | null;
+  parties: SchoolParty[] | null;
+}
+
+export const SchoolResponsibilitySchema: z.ZodType<SchoolResponsibility, unknown> = object<SchoolResponsibility>({
+  school_id: int64String,
+  school_name: str,
+  areas: nullable(arr(AreaResponsibilitySchema)),
+  parties: nullable(arr(SchoolPartySchema)),
+});
+
+/** Go: organizationtenancy.ResponsibilityOverview */
+export interface ResponsibilityOverview {
+  schools: SchoolResponsibility[] | null;
+}
+
+export const ResponsibilityOverviewSchema: z.ZodType<ResponsibilityOverview, unknown> = object<ResponsibilityOverview>({
+  schools: nullable(arr(SchoolResponsibilitySchema)),
+});
+
 /** Go: traeger.BankAccountRequest */
 export interface BankAccountRequest {
   label?: string;
@@ -314,6 +407,23 @@ export const TraegerSavedContactSchema: z.ZodType<TraegerSavedContact, unknown> 
   version: str,
 });
 
+/** Go: traeger.SchoolPartyRequest */
+export interface SchoolPartyRequest {
+  name?: string;
+  street?: string;
+  postal_code?: string;
+  city?: string;
+  contact_name?: string;
+  contact_phone?: string;
+  contact_email?: string;
+  creditor_id?: string;
+  account_holder?: string;
+  iban?: string;
+  bic?: string;
+  bank_name?: string;
+  expected_version?: string;
+}
+
 /** Go: traeger.WithdrawalContactRequest */
 export interface WithdrawalContactRequest {
   phone?: string;
@@ -344,6 +454,12 @@ export const routes = {
   "DELETE /traeger/master-data/logo": {
     method: "DELETE",
     pattern: "/traeger/master-data/logo",
+    portals: ["org"],
+    response: noData,
+  },
+  "DELETE /traeger/master-data/responsibilities/schools/{schoolId}/parties/{kind}": {
+    method: "DELETE",
+    pattern: "/traeger/master-data/responsibilities/schools/{schoolId}/parties/{kind}",
     portals: ["org"],
     response: noData,
   },
@@ -383,6 +499,12 @@ export const routes = {
       "v": { kind: "string" },
     },
     response: fileAnswer,
+  },
+  "GET /traeger/master-data/responsibilities": {
+    method: "GET",
+    pattern: "/traeger/master-data/responsibilities",
+    portals: ["org"],
+    response: success(ResponsibilityOverviewSchema),
   },
   "POST /traeger/master-data/bank-accounts": {
     method: "POST",
@@ -428,6 +550,13 @@ export const routes = {
     tooLargeCode: "traeger.logo_too_large",
     request: multipart,
     response: success(TraegerLogoSchema),
+  },
+  "PUT /traeger/master-data/responsibilities/schools/{schoolId}/parties/{kind}": {
+    method: "PUT",
+    pattern: "/traeger/master-data/responsibilities/schools/{schoolId}/parties/{kind}",
+    portals: ["org"],
+    request: requestBody<SchoolPartyRequest>(),
+    response: success(SchoolPartySchema),
   },
   "PUT /traeger/master-data/withdrawal-contact": {
     method: "PUT",

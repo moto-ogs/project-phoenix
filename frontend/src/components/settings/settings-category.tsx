@@ -69,6 +69,12 @@ interface SettingsCategoryProps {
    */
   readonly tabLabel?: string;
   /**
+   * Heading of the card in place of the category's name, where the page
+   * around it names what the values are for („Für alle Schulen“ above the
+   * list of the schools, #4811).
+   */
+  readonly title?: string;
+  /**
    * Content right below one setting, in its row: settings that only make
    * sense together, such as the length of the debtor number under its
    * switch (#6675). Return null for every other setting.
@@ -97,6 +103,7 @@ export function SettingsCategory({
   plainTextareas = false,
   filterQuery = "",
   tabLabel,
+  title,
   renderAddon,
   renderConfirmDetail,
 }: SettingsCategoryProps) {
@@ -121,8 +128,12 @@ export function SettingsCategory({
   return (
     <SectionCard
       headingLevel={headingLevel}
-      title={displayCategoryLabel(category)}
-      titleClassName={hasCategoryLabel(category) ? undefined : "capitalize"}
+      title={title ?? displayCategoryLabel(category)}
+      titleClassName={
+        title !== undefined || hasCategoryLabel(category)
+          ? undefined
+          : "capitalize"
+      }
       titleBadge={
         tabLabel || changed > 0 ? (
           <>
