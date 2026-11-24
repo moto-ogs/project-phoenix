@@ -384,7 +384,7 @@ export function AppRangeBar({
 }>) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="flex items-center gap-1" data-app-range-bar="">
+    <div className="flex items-center gap-1.5 px-1" data-app-range-bar="">
       <Button
         type="button"
         variant="ghost"
@@ -773,7 +773,7 @@ export function AppTimeTrackingLayout({
           >
             {clock}
           </div>
-          <div className="flex min-w-0 flex-col gap-4 pb-20 [&>*]:shrink-0">
+          <div className="flex min-w-0 flex-col gap-4 pb-20 [&>*]:shrink-0 [&>section]:h-auto">
             {days}
             {more}
           </div>
@@ -785,7 +785,7 @@ export function AppTimeTrackingLayout({
     <div
       // Das Polster der ActionBar gehört ans Seitenende, nicht unter die
       // Stempeluhr.
-      className="flex flex-col gap-4 [&>*]:shrink-0 [&>[aria-hidden=true]:has(+[data-action-bar])]:order-last"
+      className="flex flex-col gap-4 [&>*]:shrink-0 [&>[aria-hidden=true]:has(+[data-action-bar])]:order-last [&>section]:h-auto"
       data-app-time-tracking=""
     >
       {errors}
