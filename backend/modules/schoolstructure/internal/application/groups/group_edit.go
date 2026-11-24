@@ -10,7 +10,8 @@ import (
 )
 
 // EditGroup applies an edit of a group in the caller's tenant unit (ADR
-// 0311): it locks the group row first, refuses the edit with
+// 0311): it locks the group row and then its teacher assignments, which
+// offboarding removes without the group row, refuses the edit with
 // readstate.ErrChanged unless the group, its room and its teachers are
 // stored as the editor read them, and writes the name and, where the edit
 // names them, the room and the teachers. The lock, the check and the writes
@@ -19,6 +20,9 @@ func (s *service) EditGroup(ctx context.Context, edit schoolstructure.GroupEdit)
 	existing, err := s.groupRepo.FindByIDForUpdate(ctx, edit.ID)
 	if err != nil {
 		return &EducationError{Op: "EditGroup", Err: ErrGroupNotFound}
+	}
+	if _, err := s.groupTeacherRepo.TeacherAssignmentIDs(ctx, edit.ID); err != nil {
+		return &EducationError{Op: "EditGroup", Err: err}
 	}
 	teachers, err := s.GetGroupTeachers(ctx, edit.ID)
 	if err != nil {

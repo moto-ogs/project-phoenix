@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 type Middleware = func(http.Handler) http.Handler
@@ -133,11 +132,6 @@ func (rs *Resource) renderError(w http.ResponseWriter, r *http.Request, err erro
 		return
 	}
 	status := http.StatusInternalServerError
-	if errors.Is(err, readstate.ErrChanged) {
-		// The shared renderer answers it with its 409 and code (ADR 0311).
-		rs.runtime.Failure(w, r, http.StatusConflict, err, "")
-		return
-	}
 	var failure *devicefleet.AdministrationError
 	// Keep the historical outer-wrapper dispatch, not a nested refusal.
 	if errors.As(err, &failure) && errors.Is(failure, err) {

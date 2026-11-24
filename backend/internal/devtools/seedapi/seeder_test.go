@@ -1979,10 +1979,6 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 			_, _ = fmt.Fprint(w, `{"data":{"permissions":[],"version":"empty"}}`)
 			return
 		}
-		if strings.HasPrefix(r.URL.Path, "/auth/roles/") && strings.HasSuffix(r.URL.Path, "/permissions") {
-			w.WriteHeader(seedHTTPStatusNoContent)
-			return
-		}
 
 		switch r.URL.Path {
 		case "/health":
