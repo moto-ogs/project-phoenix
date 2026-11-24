@@ -23,8 +23,6 @@ import (
 // caller's visible group set.
 var ErrForbiddenGroup = errors.New("caller cannot view the requested group")
 
-const studentPhotoStoredURLPrefix = "/uploads/student-photos/"
-
 // Query is the single public capability of the projection.
 type Query interface {
 	LiveGroup(ctx context.Context, requestedGroupID int64) (*Projection, error)
@@ -409,19 +407,12 @@ func projectStudents(students []RosterStudent, presence PresenceSnapshot, fullAc
 			student.Sick, student.SickSince = model.Sick, model.SickSince
 			student.Excused, student.ExcusedSince = model.Excused, model.ExcusedSince
 		}
-		if photosEnabled && fullAccess && model.PhotoPath != nil {
-			student.PhotoURL = buildPhotoURL(model.ID, *model.PhotoPath)
+		if photosEnabled && fullAccess {
+			student.PhotoURL = model.PhotoURL
 		}
 		result = append(result, student)
 	}
 	return result
-}
-
-func buildPhotoURL(studentID int64, storedURL string) string {
-	if storedURL == "" || !strings.HasPrefix(storedURL, studentPhotoStoredURLPrefix) {
-		return storedURL
-	}
-	return fmt.Sprintf("/api/students/%d/photo/%s", studentID, strings.TrimPrefix(storedURL, studentPhotoStoredURLPrefix))
 }
 
 func (s *service) applyStatusDays(ctx context.Context, state *buildState) error {

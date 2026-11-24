@@ -518,11 +518,10 @@ func TestBuildVisitsAndEffectiveTimes(t *testing.T) {
 
 	checkedIn := time.Date(2026, time.August, 19, 10, 0, 0, 0, time.UTC)
 	checkedOut := checkedIn.Add(time.Hour)
-	storedPhoto := studentPhotoStoredURLPrefix + "portrait.jpg"
 	rows := []VisitRecord{{
 		StudentID: 1, ActiveGroupID: 2, EntryTime: checkedIn,
 		FirstName: "  Erika", LastName: "Mustermann ", SchoolClass: "4a", GroupName: "Bären",
-		Sick: true, SickSince: &checkedIn, Excused: true, ExcusedSince: &checkedOut, PhotoPath: &storedPhoto,
+		Sick: true, SickSince: &checkedIn, Excused: true, ExcusedSince: &checkedOut, PhotoURL: "/api/students/1/photo/portrait.jpg",
 	}}
 	svc := newService(&fakes{})
 
@@ -558,13 +557,6 @@ func TestBuildVisitsAndEffectiveTimes(t *testing.T) {
 	})
 	assert.Equal(t, "11:45", *arrivalItem.ExpectedArrival)
 	assert.Equal(t, []DashboardDayNote{{ID: 4, Content: "Verspätung"}}, arrivalItem.DayNotes)
-}
-
-func TestBuildPhotoURL(t *testing.T) {
-	t.Parallel()
-
-	assert.Empty(t, buildPhotoURL(1, ""))
-	assert.Equal(t, "https://example.test/photo.jpg", buildPhotoURL(1, "https://example.test/photo.jpg"))
 }
 
 func TestEmptyAndPermissionRedactedProjection(t *testing.T) {

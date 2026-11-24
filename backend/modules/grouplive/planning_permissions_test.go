@@ -17,7 +17,7 @@ func TestPlanningPermissionProtectsEveryNoteRepresentation(t *testing.T) {
 			},
 			supervisedGroups: func(context.Context) ([]GroupRecord, error) { return twoGroups(), nil },
 			members: func(context.Context, int64) ([]RosterStudent, error) {
-				return []RosterStudent{{ID: 11, FirstName: "Mila", PhotoPath: new("/uploads/student-photos/test.jpg")}}, nil
+				return []RosterStudent{{ID: 11, FirstName: "Mila", PhotoURL: "/api/students/11/photo/test.jpg"}}, nil
 			},
 			photosEnabled: func(context.Context) (bool, error) { return true, nil },
 			arrivals: func(_ context.Context, ids []int64, _ Date) (map[int64]Arrival, error) {
