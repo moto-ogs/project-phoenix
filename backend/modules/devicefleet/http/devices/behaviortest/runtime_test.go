@@ -47,7 +47,15 @@ func testRuntime(fleet devicefleet.Capability) devices.Runtime {
 		},
 		Success: testutil.RespondSuccess,
 		Failure: func(w http.ResponseWriter, r *http.Request, status int, err error, message string) {
-			testutil.RespondCoded(w, r, status, "", err, nil, message)
+			// Like common.RenderError, the root's renderer answers a business
+			// rejection the resource leaves unclassified with 409 and its code
+			// (ADR 0311).
+			code := ""
+			var rejection interface{ ErrorCode() string }
+			if status >= http.StatusInternalServerError && errors.As(err, &rejection) {
+				status, code = http.StatusConflict, rejection.ErrorCode()
+			}
+			testutil.RespondCoded(w, r, status, code, err, nil, message)
 		},
 		ConflictOnField: func(w http.ResponseWriter, r *http.Request, err error, code, field string) {
 			render.Status(r, http.StatusConflict)

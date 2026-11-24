@@ -4,6 +4,7 @@ import (
 	"context"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -276,7 +277,7 @@ func TestAnAmendmentWritesNoVersionForAContractUnboundSinceItsRead(t *testing.T)
 	again := f.plan(t).Rows[0]
 	require.Equal(t, carecontract.EnrollmentHeld, again.Status, "the changed bookings are not the contract's any more")
 	require.NoError(t, testpkg.WithinTraeger(f.ctx, f.org, func(txCtx context.Context) error {
-		_, err := f.store.BindContractApplications(txCtx, f.org, []ports.ApplicationBinding{{ContractID: f.imported, StudentID: f.student, RequestChildID: f.requestChild}})
+		_, err := f.store.BindContractApplications(txCtx, f.org, f.reviewer.AccountID, []ports.ApplicationBinding{{ContractID: f.imported, StudentID: f.student, RequestChildID: f.requestChild}})
 		return err
 	}))
 	run, err = f.conclusions.AmendFromBookings(f.ctx, f.org)
@@ -550,7 +551,7 @@ func TestTheStoreRefusesASecondContractOfAnApplicationChild(t *testing.T) {
 	_, err := f.db.ExecContext(context.Background(), `UPDATE care_contract.contracts SET school_id = ? WHERE id = ?`, f.school.school.ID, f.contract)
 	require.NoError(t, err)
 	err = testpkg.WithinTraeger(f.ctx, f.org, func(txCtx context.Context) error {
-		_, err := f.store.BindContractApplications(txCtx, f.org, []ports.ApplicationBinding{
+		_, err := f.store.BindContractApplications(txCtx, f.org, f.reviewer.AccountID, []ports.ApplicationBinding{
 			{ContractID: f.imported, StudentID: f.student, RequestChildID: keyChild}})
 		return err
 	})
@@ -571,4 +572,62 @@ func TestThePlanRefusesAReadOfAnotherSchool(t *testing.T) {
 	require.ErrorIs(t, err, carecontract.ErrSchoolOutsideTraeger)
 	_, err = f.enrollments.EnrollmentPlans(f.ctx, carecontract.EnrollmentRead{SchoolID: f.school.school.ID})
 	require.ErrorIs(t, err, carecontract.ErrSchoolOutsideTraeger, "without the tenant transaction of the school nothing is planned")
+}
+
+// A binding reads the contracts it decides on under their row locks. When it
+// waits for a writer that adds a version, it answers the contract as that
+// writer left it: the newest child and the next free version number, not
+// the snapshot its statement started with.
+func TestTheLockedEnrollmentReadSeesAVersionAddedWhileItWaited(t *testing.T) {
+	t.Parallel()
+	f := newEnrollmentFixture(t, "Träger Anmeldung Sperre")
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	writer, err := f.db.BeginTx(ctx, nil)
+	require.NoError(t, err)
+	defer func() { _ = writer.Rollback() }()
+	_, err = writer.ExecContext(ctx, `SELECT id FROM care_contract.contracts WHERE id = ? FOR UPDATE`, f.imported)
+	require.NoError(t, err)
+	_, err = writer.ExecContext(ctx, `INSERT INTO care_contract.contract_versions (organization_id, contract_id,
+			version_number, status, effective_from, ends_on, child_first_name, child_last_name, child_birth_date,
+			school_name, phase_name, price_cents, term_kind, term_months, notice_months, notice_to, special_termination,
+			special_termination_note, statute_required, statute_title, statute_url, contract_partner, source)
+		SELECT organization_id, contract_id, version_number + 1, ?, effective_from, ends_on, 'Lina', child_last_name,
+			child_birth_date, school_name, phase_name, price_cents, term_kind, term_months, notice_months, notice_to,
+			special_termination, special_termination_note, statute_required, statute_title, statute_url, contract_partner, source
+		FROM care_contract.contract_versions WHERE contract_id = ? AND version_number = 1`, carecontract.VersionReplaced, f.imported)
+	require.NoError(t, err)
+	var pid int
+	require.NoError(t, writer.NewRaw("SELECT pg_backend_pid()").Scan(ctx, &pid))
+
+	type answer struct {
+		contracts []carecontract.EnrollmentContract
+		err       error
+	}
+	done := make(chan answer, 1)
+	go func() {
+		var read answer
+		read.err = testpkg.WithinTraeger(f.ctx, f.org, func(txCtx context.Context) error {
+			var err error
+			read.contracts, err = f.store.EnrollmentContracts(txCtx, f.org, f.school.school.ID, []int64{f.imported}, true)
+			return err
+		})
+		done <- read
+	}()
+	require.Eventually(t, func() bool {
+		var waiting bool
+		err := f.db.NewRaw("SELECT EXISTS (SELECT 1 FROM pg_locks l WHERE NOT l.granted AND ? = ANY(pg_blocking_pids(l.pid)))", pid).Scan(ctx, &waiting)
+		return err == nil && waiting
+	}, 5*time.Second, 10*time.Millisecond, "the locked read must wait for the writer's row lock")
+	require.NoError(t, writer.Commit())
+
+	select {
+	case read := <-done:
+		require.NoError(t, read.err)
+		require.Len(t, read.contracts, 1)
+		assert.Equal(t, 3, read.contracts[0].NextNumber, "the number after the version the writer added")
+		assert.Equal(t, "Lina", read.contracts[0].ChildFirstName, "the child of the newest version")
+	case <-ctx.Done():
+		t.Fatal("the locked read did not finish after the writer")
+	}
 }

@@ -33,10 +33,10 @@ type EnrollmentStore interface {
 	// an error without one.
 	TransactionSchool(ctx context.Context) (int64, error)
 	// BindContractApplications binds each imported contract without an
-	// application child that still has the child record named, and answers
-	// the contracts it bound; ErrContractExists for an application child
-	// that has a contract.
-	BindContractApplications(ctx context.Context, organizationID int64, bindings []ports.ApplicationBinding) ([]int64, error)
+	// application child that still has the child record named, records each
+	// binding as an event by accountID, and answers the contracts it bound;
+	// ErrContractExists for an application child that has a contract.
+	BindContractApplications(ctx context.Context, organizationID, accountID int64, bindings []ports.ApplicationBinding) ([]int64, error)
 	InsertEvents(ctx context.Context, organizationID int64, events []Event) error
 	// LockImportedContract locks one imported contract and answers its
 	// school and its application child; ErrContractNotFound for any other.
@@ -238,37 +238,31 @@ func (e *ContractEnrollments) BindApplications(ctx context.Context, reviewer car
 		return nil, err
 	}
 	check := newBindingCheck(contracts, children)
-	bind, events := []ports.ApplicationBinding{}, []Event{}
+	bind := []ports.ApplicationBinding{}
 	for i, binding := range bindings {
 		results[i] = carecontract.ApplicationBindingResult{ContractID: binding.ContractID, Status: check.decide(binding)}
 		if results[i].Status != carecontract.BindingBound {
 			continue
 		}
-		contractID, school := binding.ContractID.Int64(), schoolID
-		bind = append(bind, ports.ApplicationBinding{ContractID: contractID, StudentID: binding.StudentID.Int64(),
+		bind = append(bind, ports.ApplicationBinding{ContractID: binding.ContractID.Int64(), StudentID: binding.StudentID.Int64(),
 			RequestChildID: binding.RequestChildID.Int64()})
-		events = append(events, Event{ContractID: &contractID, SchoolID: &school, AccountID: reviewer.AccountID,
-			Action: ports.ActionBindApplication, Details: map[string]any{
-				"request_child_id": binding.RequestChildID.Int64(), "student_id": binding.StudentID.Int64()}})
 	}
-	return results, e.storeBindings(ctx, reviewer.OrganizationID, bind, events)
+	return results, e.storeBindings(ctx, reviewer, bind)
 }
 
-// storeBindings binds the contracts and records each. The checks ran under
-// the row locks, so a contract the statement leaves out is a fault.
-func (e *ContractEnrollments) storeBindings(ctx context.Context, organizationID int64, bind []ports.ApplicationBinding, events []Event) error {
+// storeBindings binds the contracts and records each in one statement. The
+// checks ran under the row locks, so a contract the statement leaves out is
+// a fault.
+func (e *ContractEnrollments) storeBindings(ctx context.Context, reviewer carecontract.Reviewer, bind []ports.ApplicationBinding) error {
 	if len(bind) == 0 {
 		return nil
 	}
-	bound, err := e.store.BindContractApplications(ctx, organizationID, bind)
+	bound, err := e.store.BindContractApplications(ctx, reviewer.OrganizationID, reviewer.AccountID, bind)
 	if err != nil {
 		return err
 	}
 	if len(bound) != len(bind) {
 		return fmt.Errorf("care contract: bound %d of %d contracts under their row locks", len(bound), len(bind))
-	}
-	if err := e.store.InsertEvents(ctx, organizationID, events); err != nil {
-		return fmt.Errorf("care contract: record the bindings: %w", err)
 	}
 	return nil
 }
