@@ -393,8 +393,11 @@ only what they need to assemble that request:
 Use `problemResponse` directly from `lib/api-response-error.server.ts`.
 
 Read the affected portal's route wrapper before changing a handler; retain the
-affected endpoint's error contract. Logout forwards backend errors unchanged
-even though the browser always clears its local session.
+affected endpoint's error contract. Logout uses the same error policy. If the
+request gets no answer, the browser keeps the session and offers a retry. A
+401 means there is no active session to revoke. Other failures that get an
+HTTP answer end the local session and show that server revocation could not be
+confirmed.
 
 Context params are async in Next.js 16: `params: Promise<...>` — always `await`.
 
