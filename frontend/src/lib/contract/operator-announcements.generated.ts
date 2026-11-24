@@ -32,6 +32,7 @@ export interface OperatorAnnouncementResponse {
   created_at: string;
   updated_at: string;
   status: string;
+  edit_version: string;
 }
 
 export const OperatorAnnouncementResponseSchema: z.ZodType<OperatorAnnouncementResponse, unknown> = object<OperatorAnnouncementResponse>({
@@ -51,6 +52,7 @@ export const OperatorAnnouncementResponseSchema: z.ZodType<OperatorAnnouncementR
   created_at: str,
   updated_at: str,
   status: str,
+  edit_version: str,
 });
 
 /** Go: communication.AnnouncementStats */
@@ -100,6 +102,11 @@ export interface CreateAnnouncementRequest {
   target_tenant_ids?: string[] | null;
 }
 
+/** Go: operatorannouncements.PublishAnnouncementRequest */
+export interface PublishAnnouncementRequest {
+  expected_edit_version?: string;
+}
+
 /** Go: operatorannouncements.UpdateAnnouncementRequest */
 export interface UpdateAnnouncementRequest {
   title?: string;
@@ -112,6 +119,7 @@ export interface UpdateAnnouncementRequest {
   target_roles?: string[] | null;
   target_org_ids?: string[] | null;
   target_tenant_ids?: string[] | null;
+  expected_edit_version?: string;
 }
 
 export const routes = {
@@ -159,6 +167,7 @@ export const routes = {
     method: "POST",
     pattern: "/operator/announcements/{id}/publish",
     portals: ["platform"],
+    request: requestBody<PublishAnnouncementRequest>(),
     response: noData,
   },
   "PUT /operator/announcements/{id}": {

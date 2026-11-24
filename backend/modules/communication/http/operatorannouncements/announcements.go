@@ -50,6 +50,9 @@ type OperatorAnnouncementResponse struct {
 	CreatedAt       string     `json:"created_at"`
 	UpdatedAt       string     `json:"updated_at"`
 	Status          string     `json:"status"` // draft, published, expired
+	// EditVersion is the token an edit and the publication send back (ADR
+	// 0311); Version is the release label the announcement names.
+	EditVersion string `json:"edit_version"`
 }
 
 // CreateAnnouncementRequest represents the create announcement request body
@@ -91,6 +94,9 @@ type UpdateAnnouncementRequest struct {
 	TargetRoles     []string   `json:"target_roles,omitempty"`
 	TargetOrgIDs    []ident.ID `json:"target_org_ids,omitempty"`
 	TargetTenantIDs []ident.ID `json:"target_tenant_ids,omitempty"`
+	// ExpectedEditVersion is the edit_version of the announcement the edit
+	// was made on (ADR 0311).
+	ExpectedEditVersion string `json:"expected_edit_version"`
 }
 
 // Bind validates the update announcement request
@@ -253,7 +259,7 @@ func (rs *AnnouncementsResource) UpdateAnnouncement(w http.ResponseWriter, r *ht
 
 	clientIP := common.ParseClientIP(r)
 
-	if err := rs.announcementService.UpdateAnnouncement(r.Context(), existing, operatorID, clientIP); err != nil {
+	if err := rs.announcementService.UpdateAnnouncement(r.Context(), existing, req.ExpectedEditVersion, operatorID, clientIP); err != nil {
 		common.RenderError(w, r, AnnouncementErrorRenderer(err))
 		return
 	}
@@ -266,9 +272,32 @@ func (rs *AnnouncementsResource) DeleteAnnouncement(w http.ResponseWriter, r *ht
 	common.OperatorAuditedIDAction(w, r, int64(sessiontoken.ClaimsFromCtx(r.Context()).ID), "id", "invalid announcement ID", rs.announcementService.DeleteAnnouncement, AnnouncementErrorRenderer, "Announcement deleted successfully")
 }
 
-// PublishAnnouncement handles publishing an announcement
+// PublishAnnouncementRequest names the state the operator publishes.
+type PublishAnnouncementRequest struct {
+	// ExpectedEditVersion is the edit_version of the announcement as read
+	// (ADR 0311).
+	ExpectedEditVersion string `json:"expected_edit_version"`
+}
+
+// PublishAnnouncement handles publishing an announcement: the one the
+// operator read, not one edited since (ADR 0311).
 func (rs *AnnouncementsResource) PublishAnnouncement(w http.ResponseWriter, r *http.Request) {
-	common.OperatorAuditedIDAction(w, r, int64(sessiontoken.ClaimsFromCtx(r.Context()).ID), "id", "invalid announcement ID", rs.announcementService.PublishAnnouncement, AnnouncementErrorRenderer, "Announcement published successfully")
+	id, ok := common.ParseInt64IDWithError(w, r, "id", "invalid announcement ID")
+	if !ok {
+		return
+	}
+	// A POST without a body names no state; the owner refuses it.
+	req := &PublishAnnouncementRequest{}
+	if err := common.DecodeReadStateBody(r, req); err != nil {
+		common.RenderError(w, r, common.OperatorInvalidRequest(err))
+		return
+	}
+	operatorID := int64(sessiontoken.ClaimsFromCtx(r.Context()).ID)
+	if err := rs.announcementService.PublishAnnouncement(r.Context(), id, req.ExpectedEditVersion, operatorID, common.ParseClientIP(r)); err != nil {
+		common.RenderError(w, r, AnnouncementErrorRenderer(err))
+		return
+	}
+	common.Respond(w, r, http.StatusOK, nil, "Announcement published successfully")
 }
 
 // GetStats handles getting view statistics for an announcement
@@ -332,7 +361,9 @@ func AnnouncementErrorRenderer(err error) render.Renderer {
 	case errors.As(err, &invalidData):
 		return common.OperatorInvalidRequest(err)
 	default:
-		return common.OperatorInternal("An error occurred")
+		// RenderError lifts a changed state (readstate.ErrChanged, ADR 0311)
+		// to its 409 and code.
+		return common.OperatorInternal(err, "An error occurred")
 	}
 }
 
@@ -365,6 +396,7 @@ func newAnnouncementResponse(a *communication.Announcement, now time.Time) Opera
 		CreatedBy:       ident.ID(a.CreatedBy),
 		CreatedAt:       a.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:       a.UpdatedAt.Format(time.RFC3339),
+		EditVersion:     communication.AnnouncementEditVersion(*a),
 	}
 
 	if a.PublishedAt != nil {

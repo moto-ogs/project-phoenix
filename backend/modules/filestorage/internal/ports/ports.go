@@ -22,6 +22,10 @@ type FolderStore interface {
 	// caller queues cleanup intents for the bytes BEFORE calling this.
 	Delete(ctx context.Context, folderID int64) (domain.OperationStats, error)
 	FindByID(ctx context.Context, folderID int64) (domain.Folder, bool, domain.OperationStats, error)
+	// FindByIDForUpdate is FindByID under the row lock: an edit and a delete
+	// compare the state their author read with it, and a file upload (its
+	// foreign key share lock) waits until they commit.
+	FindByIDForUpdate(ctx context.Context, folderID int64) (domain.Folder, bool, domain.OperationStats, error)
 	// ListVisible returns the folders the viewer may see, by name, with the
 	// number of live files in each.
 	ListVisible(ctx context.Context, viewer domain.Viewer) ([]domain.FolderListItem, domain.OperationStats, error)
@@ -159,14 +163,19 @@ type Events interface {
 // itself: does the announcement exist in the current tenant, and may its
 // content still be changed. Implemented by the Communication owner.
 type Announcements interface {
-	AnnouncementExists(ctx context.Context, announcementID int64) (bool, error)
+	// AnnouncementExists answers whether the announcement exists and, if so,
+	// its version (ADR 0311), which every attachment change stamps.
+	AnnouncementExists(ctx context.Context, announcementID int64) (string, bool, error)
 	AnnouncementEditable(ctx context.Context, announcementID int64) (bool, error)
 	// LockAnnouncementForAttachmentChange answers (exists, editable) while
 	// holding the announcement's row lock until the caller's transaction ends.
-	LockAnnouncementForAttachmentChange(ctx context.Context, announcementID int64) (bool, bool, error)
+	// An editable draft whose version is not expectedVersion refuses with
+	// readstate.ErrChanged (ADR 0311).
+	LockAnnouncementForAttachmentChange(ctx context.Context, announcementID int64, expectedVersion string) (bool, bool, error)
 	// ResetAnnouncementEngagement drops the read and acknowledgement rows of a
-	// draft after its attachments changed.
-	ResetAnnouncementEngagement(ctx context.Context, announcementID int64) error
+	// draft after its attachments changed, stamps the draft as changed and
+	// answers its new version.
+	ResetAnnouncementEngagement(ctx context.Context, announcementID int64) (string, error)
 }
 
 // Transaction is the tenant-runtime seam.

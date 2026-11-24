@@ -126,7 +126,12 @@ func seedSurvey(rt *Runtime, body map[string]any) (seedSurveyResponse, error) {
 	if err := parseJSON(raw, &survey); err != nil || survey.Data.ID == "" {
 		return survey, fmt.Errorf("parse survey %q: %w", body["title"], err)
 	}
-	if _, err := rt.Client.Post("/api/surveys/"+survey.Data.ID+"/publish", nil); err != nil {
+	// The author publishes the draft as created (ADR 0311).
+	version, err := readDataVersion(func(string) ([]byte, error) { return raw, nil }, "the created survey")
+	if err != nil {
+		return survey, err
+	}
+	if _, err := rt.Client.Post("/api/surveys/"+survey.Data.ID+"/publish", map[string]any{"expected_version": version}); err != nil {
 		return survey, fmt.Errorf("publish survey %q: %w", body["title"], err)
 	}
 	return survey, nil

@@ -313,15 +313,15 @@ const ROW_ACTION_BASELINE = new Map(
     // Zeilenaktion dieselbe Ausnahme nutzen kann.
     // Ziele einer Ankündigung, die es nicht mehr gibt (#5604, Formularwert).
     "src/app/operator/announcements/page.tsx": [
-      "aus Zielen entfernen@750",
-      "aus Zielen entfernen@783",
+      "aus Zielen entfernen@864",
+      "aus Zielen entfernen@897",
     ],
     "src/app/[tenant]/(protected)/meal-plan/page.tsx": [
       "Gericht entfernen@1006",
     ],
     "src/app/[tenant]/(protected)/parent-announcements/page.tsx": [
-      "Antwort entfernen@1695",
-      "Entfernen@2109",
+      "Antwort entfernen@1961",
+      "Entfernen@2375",
     ],
     "src/components/enrollment/care-offerings-editor.tsx": [
       "Bedingung löschen@2157",
@@ -1577,7 +1577,7 @@ const EDIT_OVERLAY_BASELINE = new Map(
     // seinen eigenen Fuß (BAUARTEN-SPEC Bauart 2 Regel 4, #3115); die Anzeige
     // liegt auf der Route `parent-announcements/[id]`.
     "src/app/[tenant]/(protected)/parent-announcements/page.tsx": [
-      "Umfrage bearbeiten Neue Umfrage Elternbrief bearbeiten Neuer Elternbrief Einverständnis bearbeiten Neues Einverständnis Elternmitteilung bearbeiten Neue Elternmitteilung@1589",
+      "Umfrage bearbeiten Neue Umfrage Elternbrief bearbeiten Neuer Elternbrief Einverständnis bearbeiten Neues Einverständnis Elternmitteilung bearbeiten Neue Elternmitteilung@1854",
     ],
     // Einträge ohne eigene Objektansicht (Termin, Schließtag,
     // Kalenderzeitraum, Jahrgangswechsel, Klassenlisteneintrag,
@@ -1594,7 +1594,7 @@ const EDIT_OVERLAY_BASELINE = new Map(
     // haben keine eigene Objektroute; ein Umbau geht über das Seitengerüst
     // hinaus und ist nicht Teil von #5604.
     "src/app/operator/announcements/page.tsx": [
-      "Ankündigung bearbeiten Neue Ankündigung@532",
+      "Ankündigung bearbeiten Neue Ankündigung@645",
     ],
     "src/app/operator/provisioning/edit-organization-modal.tsx": [
       "Träger bearbeiten@133",
@@ -1615,7 +1615,7 @@ const EDIT_OVERLAY_BASELINE = new Map(
       "Anmeldephase übertragen new Neue Anmeldephase Anmeldephase bearbeiten@1149",
     ],
     "src/components/files/folder-modal.tsx": [
-      "Ordner bearbeiten Neuer Ordner@157",
+      "Ordner bearbeiten Neuer Ordner@242",
     ],
     "src/components/planning/closing-day-modal.tsx": [
       "Schließtag bearbeiten Schließtag anlegen@232",

@@ -74,7 +74,7 @@ describe("files-api errors", () => {
       errorResponse(403, { error: "file storage action not permitted" }),
     );
 
-    await expect(filesService.deleteFolder("3")).rejects.toMatchObject({
+    await expect(filesService.deleteFolder("3", "fp")).rejects.toMatchObject({
       status: 403,
       code: "general.permission",
     });

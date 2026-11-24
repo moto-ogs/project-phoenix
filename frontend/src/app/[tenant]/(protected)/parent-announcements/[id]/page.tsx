@@ -44,7 +44,12 @@ import {
   isPoll,
 } from "~/lib/parent-announcements-api";
 import type { Announcement } from "~/lib/parent-announcements-api";
-import { useSWRAuth, useSWRSeedFrom, useTenantMutate } from "~/lib/swr";
+import {
+  revalidateOrThrow,
+  useSWRAuth,
+  useSWRSeedFrom,
+  useTenantMutate,
+} from "~/lib/swr";
 import { useTenantRouter } from "~/lib/tenant-router";
 import { resolveDetailReferrer } from "~/lib/tenant-path";
 import { AnnouncementDetailLoadingPage } from "./page-skeleton";
@@ -115,16 +120,20 @@ function AnnouncementDetailPageContent() {
   const tenantMutate = useTenantMutate();
   const announcementId = params.id as string;
 
+  const detailRead = useSWRAuth<Announcement | undefined>(
+    parentAnnouncementKeys.detail(announcementId),
+    () => fetchAnnouncement(announcementId),
+    { revalidateOnFocus: false, keepPreviousData: false },
+  );
   const {
     data: announcement,
     isLoading,
     error: loadError,
     mutate,
-  } = useSWRAuth<Announcement | undefined>(
-    parentAnnouncementKeys.detail(announcementId),
-    () => fetchAnnouncement(announcementId),
-    { revalidateOnFocus: false, keepPreviousData: false },
-  );
+  } = detailRead;
+  // After a refusal the dialogs show the stored announcement; a failed read
+  // rejects (ADR 0311).
+  const reloadDetail = () => revalidateOrThrow(detailRead);
 
   const seedFrom = useSWRSeedFrom();
   const preview = useMemo(
@@ -310,6 +319,7 @@ function AnnouncementDetailPageContent() {
           {action === "publish" && (
             <PublishAnnouncementDialog
               announcement={announcement}
+              reload={reloadDetail}
               onClose={() => setAction(null)}
               onDone={refresh}
             />
@@ -324,6 +334,7 @@ function AnnouncementDetailPageContent() {
           {action === "reminder" && (
             <AnnouncementReminderDialog
               announcement={announcement}
+              reload={reloadDetail}
               onClose={() => setAction(null)}
               onSaved={reminderAfterWrite.refresh}
             />

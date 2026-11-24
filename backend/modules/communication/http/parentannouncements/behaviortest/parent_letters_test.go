@@ -188,7 +188,8 @@ func TestParentLettersNameEachChildAndStayWithTheirFamily(t *testing.T) {
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	var created struct {
 		Data struct {
-			ID string `json:"id"`
+			ID      string `json:"id"`
+			Version string `json:"version"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &created))
@@ -211,7 +212,7 @@ func TestParentLettersNameEachChildAndStayWithTheirFamily(t *testing.T) {
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	require.Contains(t, rec.Body.String(), "communication.letter_print_not_letter")
 
-	require.Equal(t, http.StatusOK, send(http.MethodPost, base+"/publish", admin, nil).Code)
+	require.Equal(t, http.StatusOK, send(http.MethodPost, base+"/publish", admin, map[string]any{"expected_version": created.Data.Version}).Code)
 
 	// The child's data change after publication; the letter does not.
 	values[lina.StudentID].group = "Bären"

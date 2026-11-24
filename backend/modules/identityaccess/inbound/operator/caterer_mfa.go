@@ -32,7 +32,7 @@ type CatererSecurityResponse struct {
 
 func (rs *CatererMFAResource) available(w http.ResponseWriter, r *http.Request) bool {
 	if rs == nil || rs.Caterers == nil {
-		common.RenderError(w, r, common.OperatorInternal("caterer MFA endpoints are not configured"))
+		common.RenderError(w, r, common.OperatorInternal(nil, "caterer MFA endpoints are not configured"))
 		return false
 	}
 	return true
@@ -45,7 +45,7 @@ func (rs *CatererMFAResource) ListCaterers(w http.ResponseWriter, r *http.Reques
 	}
 	caterers, err := rs.Caterers.ListCaterersForOperator(r.Context())
 	if err != nil {
-		common.RenderError(w, r, common.OperatorInternal("failed to list caterers"))
+		common.RenderError(w, r, common.OperatorInternal(err, "failed to list caterers"))
 		return
 	}
 	rows := make([]CatererSecurityResponse, 0, len(caterers))
@@ -98,6 +98,6 @@ func (rs *CatererMFAResource) ResetCatererMFA(w http.ResponseWriter, r *http.Req
 	case errors.Is(err, identityaccess.ErrOperatorAuditUnavailable):
 		common.RenderError(w, r, operatorAuditUnavailable())
 	default:
-		common.RenderError(w, r, common.OperatorInternal("caterer MFA reset failed"))
+		common.RenderError(w, r, common.OperatorInternal(err, "caterer MFA reset failed"))
 	}
 }

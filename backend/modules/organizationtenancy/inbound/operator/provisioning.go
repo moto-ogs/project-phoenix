@@ -504,7 +504,7 @@ func (rs *ProvisioningResource) ListSchoolAccounts(w http.ResponseWriter, r *htt
 
 func (rs *ProvisioningResource) GetSchoolAccountCaregiverCapability(w http.ResponseWriter, r *http.Request) {
 	if rs.CaregiverCapabilityService == nil {
-		common.RenderError(w, r, common.OperatorInternal("Caregiver capability service is not configured"))
+		common.RenderError(w, r, common.OperatorInternal(nil, "Caregiver capability service is not configured"))
 		return
 	}
 
@@ -528,7 +528,7 @@ func (rs *ProvisioningResource) GetSchoolAccountCaregiverCapability(w http.Respo
 
 func (rs *ProvisioningResource) EnableSchoolAccountCaregiverCapability(w http.ResponseWriter, r *http.Request) {
 	if rs.CaregiverCapabilityService == nil {
-		common.RenderError(w, r, common.OperatorInternal("Caregiver capability service is not configured"))
+		common.RenderError(w, r, common.OperatorInternal(nil, "Caregiver capability service is not configured"))
 		return
 	}
 
@@ -565,7 +565,7 @@ func (rs *ProvisioningResource) EnableSchoolAccountCaregiverCapability(w http.Re
 
 func (rs *ProvisioningResource) DisableSchoolAccountCaregiverCapability(w http.ResponseWriter, r *http.Request) {
 	if rs.CaregiverCapabilityService == nil {
-		common.RenderError(w, r, common.OperatorInternal("Caregiver capability service is not configured"))
+		common.RenderError(w, r, common.OperatorInternal(nil, "Caregiver capability service is not configured"))
 		return
 	}
 

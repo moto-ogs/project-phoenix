@@ -135,7 +135,13 @@ func newLocalePushFixtureFor(t *testing.T, locales []string, perLocale int, sche
 
 func (f *localePushFixture) post(t *testing.T, suffix string) (*httptest.ResponseRecorder, []string) {
 	t.Helper()
-	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/parent-announcements/%d%s", f.pollID, suffix), strings.NewReader("{}")).WithContext(f.counter.Context(f.ctx))
+	body := "{}"
+	if suffix == "/publish" {
+		// The author publishes the draft as read (ADR 0311); the read is
+		// not part of the measured statements.
+		body = fmt.Sprintf(`{"expected_version":%q}`, f.readVersion(t))
+	}
+	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/parent-announcements/%d%s", f.pollID, suffix), strings.NewReader(body)).WithContext(f.counter.Context(f.ctx))
 	req.Header.Set("Authorization", "Bearer "+f.token)
 	req.Header.Set("Content-Type", "application/json")
 	f.counter.Reset()
@@ -143,6 +149,22 @@ func (f *localePushFixture) post(t *testing.T, suffix string) (*httptest.Respons
 	rec := testutil.ExecuteRequestForTest(t, f.router, req)
 	f.counter.Stop()
 	return rec, f.counter.Queries()
+}
+
+// readVersion reads the poll's version as the author's screen does.
+func (f *localePushFixture) readVersion(t *testing.T) string {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/parent-announcements/%d", f.pollID), nil).WithContext(f.ctx)
+	req.Header.Set("Authorization", "Bearer "+f.token)
+	rec := testutil.ExecuteRequestForTest(t, f.router, req)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	var read struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &read))
+	return read.Data.Version
 }
 
 // stored is the poll's committed state after a request.

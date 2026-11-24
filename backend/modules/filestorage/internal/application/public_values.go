@@ -38,6 +38,9 @@ func toFolder(view domain.FolderView) filestorage.Folder {
 		RoleIDs:    append([]int64{}, view.Audience.RoleIDs...),
 		AccountIDs: append([]int64{}, view.Audience.AccountIDs...),
 		CreatedAt:  view.CreatedAt,
+		Version:    domain.FolderVersion(view.Folder),
+		// The files a delete would remove; the caller fills FileIDs.
+		DeleteFingerprint: domain.FolderContentsFingerprint(view.FileIDs),
 	}
 }
 

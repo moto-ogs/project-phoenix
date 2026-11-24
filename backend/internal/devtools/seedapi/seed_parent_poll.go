@@ -40,7 +40,7 @@ func seedParentPoll(rt *Runtime) error {
 	if err != nil {
 		return fmt.Errorf("parse parent poll response: %w", err)
 	}
-	if _, err := rt.Client.Post(fmt.Sprintf("/api/parent-announcements/%d/publish", id), nil); err != nil {
+	if _, err := publishParentAnnouncement(rt, nil, id, raw); err != nil {
 		return fmt.Errorf("publish parent poll: %w", err)
 	}
 	fmt.Printf("  1 parent poll with %d appointment options published\n", seedParentPollSlotsPerDay*len(seedParentPollDays(todaySeedDate())))

@@ -99,6 +99,8 @@ const openSurvey: surveysContract.surveyToAnswerResponse = {
 
 const managed: Survey = {
   id: "21",
+  version: "2026-09-01T08:00:00Z",
+  fingerprint: "fp-21",
   title: "Elternzufriedenheit",
   intro: "",
   audience: "parents",

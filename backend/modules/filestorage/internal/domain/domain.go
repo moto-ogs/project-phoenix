@@ -10,8 +10,11 @@ package domain
 import (
 	"errors"
 	"io"
+	"slices"
 	"strings"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Folder visibility values, mirrored by the CHECK constraint on
@@ -96,10 +99,28 @@ type Folder struct {
 	UpdatedAt  time.Time
 }
 
-// FolderListItem is a folder together with its live file count.
+// FolderListItem is a folder together with its live file count and the ids
+// of those files, which the delete dialog's fingerprint covers.
 type FolderListItem struct {
 	Folder
 	FileCount int64
+	FileIDs   []int64
+}
+
+// FolderVersion is the token of a stored folder an edit sends back (ADR
+// 0311). Only the edit writes the row, and the table's trigger stamps
+// updated_at on every write.
+func FolderVersion(folder Folder) string {
+	return readstate.Of(folder.UpdatedAt)
+}
+
+// FolderContentsFingerprint is the token of the live files a folder delete
+// removes: the dialog names their number, and a file uploaded or deleted
+// since it opened refuses the delete.
+func FolderContentsFingerprint(fileIDs []int64) string {
+	ids := append(make([]int64, 0, len(fileIDs)), fileIDs...)
+	slices.Sort(ids)
+	return readstate.Fingerprint(ids)
 }
 
 // Audience is the explicit share list of a folder with VisibilitySelected.

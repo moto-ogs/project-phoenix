@@ -79,11 +79,11 @@ func (s *surveyContract) CreateSurvey(_ context.Context, createdBy int64, in com
 func (s *surveyContract) UpdateSurvey(_ context.Context, _ int64, in communication.SurveyInput) (*communication.Survey, error) {
 	return s.written("update", in)
 }
-func (s *surveyContract) DeleteSurvey(context.Context, int64) error {
+func (s *surveyContract) DeleteSurvey(context.Context, int64, string) error {
 	s.record("delete")
 	return nil
 }
-func (s *surveyContract) PublishSurvey(context.Context, int64, int64) (*communication.Survey, error) {
+func (s *surveyContract) PublishSurvey(context.Context, int64, int64, string) (*communication.Survey, error) {
 	s.record("publish")
 	published := time.Date(2026, 10, 1, 8, 0, 0, 0, time.UTC)
 	out := s.survey

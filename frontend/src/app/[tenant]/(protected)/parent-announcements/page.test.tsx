@@ -5,15 +5,21 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { SessionProvider } from "next-auth/react";
+import { ToastProvider } from "~/contexts/ToastContext";
 import { SWRConfig } from "~/lib/swr/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  deleteAnnouncementAttachment,
+  fetchAnnouncementAttachments,
   fetchAnnouncements,
   createAnnouncement,
+  publishAnnouncement,
   updateAnnouncement,
+  uploadAnnouncementAttachment,
   type Announcement,
+  type AnnouncementAttachmentList,
 } from "~/lib/parent-announcements-api";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { ApiError, unavailableApiError } from "~/lib/api-error";
@@ -25,8 +31,8 @@ vi.unmock("swr");
 
 // The draft's attachments read through real SWR under a staff session; the
 // other resources stay per-key fakes.
-function render(ui: ReactElement) {
-  return rtlRender(
+function Providers({ children }: { readonly children: ReactNode }) {
+  return (
     <SessionProvider
       session={{
         user: { id: "staff-7", scope: "tenant", tenantId: 42 },
@@ -34,10 +40,14 @@ function render(ui: ReactElement) {
       }}
     >
       <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
-        {ui}
+        <ToastProvider>{children}</ToastProvider>
       </SWRConfig>
-    </SessionProvider>,
+    </SessionProvider>
   );
+}
+
+function render(ui: ReactElement) {
+  return rtlRender(ui, { wrapper: Providers });
 }
 import { stashAnnouncementStudents } from "~/lib/announcement-prefill";
 
@@ -50,6 +60,8 @@ const { searchParams, pushMock, updateUrlParamsMock, listState, previewLoad } =
       data: undefined as Announcement[] | undefined,
       isLoading: false,
       error: null as Error | null,
+      // A failed read again of the list (`revalidateOrThrow`).
+      reloadError: null as Error | null,
     },
     previewLoad: { error: null as Error | null, retry: vi.fn() },
   }));
@@ -92,6 +104,10 @@ vi.mock("~/lib/swr", async (importOriginal) => {
                 async (data?: Promise<Announcement[]>) =>
                   data ?? fetchAnnouncements(true).catch(() => listState.data),
               ),
+              readCurrent: () =>
+                listState.reloadError
+                  ? { data: listState.data, error: listState.reloadError }
+                  : undefined,
             }
           : key === "parent-letter-preview-children-school"
             ? {
@@ -117,6 +133,9 @@ vi.mock("~/lib/parent-announcements-api", async (importOriginal) => {
     fetchAnnouncements: vi.fn(() => Promise.resolve([])),
     createAnnouncement: vi.fn(() => Promise.resolve({ id: "new" })),
     updateAnnouncement: vi.fn(() => Promise.resolve({ id: "1" })),
+    publishAnnouncement: vi.fn(() => Promise.resolve({ id: "1" })),
+    uploadAnnouncementAttachment: vi.fn(),
+    deleteAnnouncementAttachment: vi.fn(),
     fetchAnnouncementAttachments: vi.fn(() =>
       Promise.resolve({
         attachments: [],
@@ -142,6 +161,7 @@ vi.mock("~/lib/activity-api", () => ({
 
 const base: Announcement = {
   id: "1",
+  version: "2026-09-01T08:00:00Z",
   title: "Sommerfest",
   body: "Am Freitag.",
   priority: "info",
@@ -457,6 +477,7 @@ describe("ParentAnnouncementsPage: scheduled reminder (#3162)", () => {
         expect.objectContaining({
           options: ["Ja", "Nein", "Di 14.10. 15:00", "Di 14.10. 15:15"],
         }),
+        "2026-09-01T08:00:00Z",
       ),
     );
   });
@@ -865,6 +886,7 @@ describe("ParentAnnouncementsPage: Einverständnisse (#3430)", () => {
         declaration_signers: "all",
         declaration_requires_password: true,
       }),
+      "2026-09-01T08:00:00Z",
     );
   });
 
@@ -899,6 +921,7 @@ describe("ParentAnnouncementsPage: Einverständnisse (#3430)", () => {
           declaration_requires_password: false,
           declaration_requires_signature: false,
         }),
+        "2026-09-01T08:00:00Z",
       ),
     );
     expect(vi.mocked(updateAnnouncement).mock.calls[0]?.[1]).not.toHaveProperty(
@@ -931,6 +954,7 @@ describe("ParentAnnouncementsPage: Einverständnisse (#3430)", () => {
       expect(updateAnnouncement).toHaveBeenCalledWith(
         "9",
         expect.objectContaining({ declaration_requires_signature: true }),
+        "2026-09-01T08:00:00Z",
       ),
     );
   });
@@ -951,5 +975,311 @@ describe("ParentAnnouncementsPage: Einverständnisse (#3430)", () => {
     expect(
       screen.queryByRole("button", { name: "Datei auswählen" }),
     ).not.toBeInTheDocument();
+  });
+});
+
+// The editor is the draft of the stored announcement (ADR 0311): a refusal
+// shows the stored state instead of the input, a newer read refills an
+// untouched form, and a save never sends old input on a newer version.
+describe("ParentAnnouncementsPage: der gelesene Stand (ADR 0311)", () => {
+  const changedSinceRead = () =>
+    new ApiError("changed", 409, { code: "general.changed_since_read" });
+  const byColleague: Announcement = {
+    ...base,
+    version: "2026-09-02T08:00:00Z",
+    title: "Sommerfest am Samstag",
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    searchParams.delete("art");
+    searchParams.delete("search");
+    searchParams.delete("status");
+    searchParams.set("bearbeiten", "1");
+    // Back to the empty list of files: a test's queued answer stays out of
+    // the next one.
+    vi.mocked(fetchAnnouncementAttachments).mockReset();
+    listState.data = [base];
+    listState.isLoading = false;
+    listState.error = null;
+    listState.reloadError = null;
+    previewLoad.error = null;
+  });
+
+  const titleField = () => screen.findByRole("textbox", { name: "Titel" });
+  const saveDraft = async () =>
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Als Entwurf speichern" }),
+    );
+
+  it("never sends the refused input on the version read after a failed reload", async () => {
+    render(<ParentAnnouncementsPage />);
+    fireEvent.change(await titleField(), { target: { value: "Mein Titel" } });
+    fireEvent.click(screen.getByRole("button", { name: "Weiter" }));
+    vi.mocked(updateAnnouncement).mockRejectedValueOnce(changedSinceRead());
+    listState.reloadError = new ApiError("down", 503);
+    await saveDraft();
+    await waitFor(() => expect(updateAnnouncement).toHaveBeenCalledTimes(1));
+    const retry = await screen.findByRole("button", { name: "Wiederholen" });
+
+    // While the stored draft is not there, a save sends nothing.
+    await saveDraft();
+    expect(updateAnnouncement).toHaveBeenCalledTimes(1);
+
+    // The read succeeds: the form shows the colleague's draft, not the
+    // refused input.
+    listState.reloadError = null;
+    listState.data = [byColleague];
+    vi.mocked(fetchAnnouncements).mockResolvedValue([byColleague]);
+    fireEvent.click(retry);
+    fireEvent.click(await screen.findByRole("button", { name: "Zurück" }));
+    await waitFor(async () =>
+      expect(await titleField()).toHaveValue("Sommerfest am Samstag"),
+    );
+
+    vi.mocked(updateAnnouncement).mockResolvedValueOnce(byColleague);
+    fireEvent.click(screen.getByRole("button", { name: "Weiter" }));
+    await saveDraft();
+    await waitFor(() => expect(updateAnnouncement).toHaveBeenCalledTimes(2));
+    const [, input, version] = vi.mocked(updateAnnouncement).mock.calls[1]!;
+    expect(version).toBe(byColleague.version);
+    expect(input.title).toBe("Sommerfest am Samstag");
+  });
+
+  it("refills an untouched form with a newer read", async () => {
+    const { rerender } = render(<ParentAnnouncementsPage />);
+    expect(await titleField()).toHaveValue("Sommerfest");
+
+    listState.data = [byColleague];
+    rerender(<ParentAnnouncementsPage />);
+
+    await waitFor(async () =>
+      expect(await titleField()).toHaveValue("Sommerfest am Samstag"),
+    );
+  });
+
+  it("closes the form and says so when the refused draft was deleted", async () => {
+    render(<ParentAnnouncementsPage />);
+    fireEvent.change(await titleField(), { target: { value: "Mein Titel" } });
+    fireEvent.click(screen.getByRole("button", { name: "Weiter" }));
+    vi.mocked(updateAnnouncement).mockRejectedValueOnce(changedSinceRead());
+    vi.mocked(fetchAnnouncements).mockResolvedValue([]);
+    listState.data = [];
+    await saveDraft();
+
+    expect(
+      await screen.findByText(
+        "Diese Mitteilung gibt es nicht mehr. Deine Änderungen sind nicht gespeichert.",
+      ),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        screen.queryByText("Elternmitteilung bearbeiten"),
+      ).not.toBeInTheDocument(),
+    );
+    expect(updateAnnouncement).toHaveBeenCalledTimes(1);
+  });
+
+  it("publishes the version the last upload answered", async () => {
+    const saved: Announcement = { ...base, version: "2026-09-03T08:00:00Z" };
+    vi.mocked(updateAnnouncement).mockResolvedValueOnce(saved);
+    vi.mocked(uploadAnnouncementAttachment).mockResolvedValueOnce({
+      id: "att-1",
+      filename: "Plan.pdf",
+      size_bytes: 10,
+      content_type: "application/pdf",
+      uploaded_at: "2026-09-03T08:00:01Z",
+      announcement_version: "2026-09-03T08:00:01Z",
+    });
+    const { container } = render(<ParentAnnouncementsPage />);
+    await titleField();
+    const input =
+      container.ownerDocument.querySelector<HTMLInputElement>(
+        'input[type="file"]',
+      );
+    expect(input).not.toBeNull();
+    fireEvent.change(input!, {
+      target: {
+        files: [new File(["%PDF"], "Plan.pdf", { type: "application/pdf" })],
+      },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Weiter" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Veröffentlichen" }),
+    );
+
+    await waitFor(() => expect(publishAnnouncement).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(uploadAnnouncementAttachment).mock.calls[0]![2]).toBe(
+      saved.version,
+    );
+    expect(vi.mocked(publishAnnouncement).mock.calls[0]![1]).toBe(
+      "2026-09-03T08:00:01Z",
+    );
+  });
+
+  // The attachments are part of what the publication confirms: the panel
+  // shows the list of the version the draft rests on, never an older one.
+  const attachmentsOf = (
+    version: string,
+    ...filenames: string[]
+  ): AnnouncementAttachmentList => ({
+    attachments: filenames.map((filename, index) => ({
+      id: `att-${filename}`,
+      filename,
+      size_bytes: 10 + index,
+      content_type: "application/pdf",
+      uploaded_at: "2026-09-01T08:00:00Z",
+    })),
+    max_count: 5,
+    max_bytes: 1,
+    editable: true,
+    announcement_version: version,
+  });
+
+  it("publishes only once the panel shows the files of the version read after a refusal", async () => {
+    vi.mocked(fetchAnnouncementAttachments).mockResolvedValueOnce(
+      attachmentsOf(base.version, "Alt.pdf"),
+    );
+    render(<ParentAnnouncementsPage />);
+    expect(await screen.findByText("Alt.pdf")).toBeInTheDocument();
+    fireEvent.change(await titleField(), { target: { value: "Mein Titel" } });
+    fireEvent.click(screen.getByRole("button", { name: "Weiter" }));
+
+    // A colleague removed Alt.pdf and attached Neu.pdf meanwhile.
+    vi.mocked(updateAnnouncement).mockRejectedValueOnce(changedSinceRead());
+    vi.mocked(fetchAnnouncements).mockResolvedValue([byColleague]);
+    listState.data = [byColleague];
+    let answerList: (list: AnnouncementAttachmentList) => void = () => {};
+    vi.mocked(fetchAnnouncementAttachments).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          answerList = resolve;
+        }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Veröffentlichen" }));
+    await waitFor(() => expect(updateAnnouncement).toHaveBeenCalledTimes(1));
+
+    // The form shows the colleague's draft; its files are still on the way.
+    const publish = screen.getByRole("button", { name: "Veröffentlichen" });
+    await waitFor(() =>
+      expect(publish).toHaveAttribute("aria-disabled", "true"),
+    );
+    fireEvent.click(publish);
+    expect(updateAnnouncement).toHaveBeenCalledTimes(1);
+    expect(publishAnnouncement).not.toHaveBeenCalled();
+
+    answerList(attachmentsOf(byColleague.version, "Neu.pdf"));
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Veröffentlichen" }),
+      ).not.toHaveAttribute("aria-disabled"),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Zurück" }));
+    expect(await screen.findByText("Neu.pdf")).toBeInTheDocument();
+    expect(screen.queryByText("Alt.pdf")).not.toBeInTheDocument();
+
+    const saved: Announcement = {
+      ...byColleague,
+      version: "2026-09-03T08:00:00Z",
+    };
+    vi.mocked(updateAnnouncement).mockResolvedValueOnce(saved);
+    fireEvent.click(screen.getByRole("button", { name: "Weiter" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Veröffentlichen" }),
+    );
+    await waitFor(() => expect(publishAnnouncement).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(updateAnnouncement).mock.calls[1]![2]).toBe(
+      byColleague.version,
+    );
+    expect(vi.mocked(publishAnnouncement).mock.calls[0]![1]).toBe(
+      saved.version,
+    );
+  });
+
+  // Saving a draft confirms no files, so a failed attachment read blocks only
+  // the publication, not the way to „Als Entwurf speichern“.
+  it("saves the draft's text while the files fail to load", async () => {
+    vi.mocked(fetchAnnouncementAttachments).mockRejectedValue(
+      new ApiError("unavailable", 503, {}),
+    );
+    vi.mocked(updateAnnouncement).mockResolvedValueOnce({
+      ...base,
+      title: "Mein Titel",
+      version: "2026-09-03T08:00:00Z",
+    });
+    render(<ParentAnnouncementsPage />);
+    fireEvent.change(await titleField(), { target: { value: "Mein Titel" } });
+    fireEvent.click(screen.getByRole("button", { name: "Weiter" }));
+
+    const publish = await screen.findByRole("button", {
+      name: "Veröffentlichen",
+    });
+    await waitFor(() =>
+      expect(publish).toHaveAttribute("aria-disabled", "true"),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Als Entwurf speichern" }),
+    );
+    await waitFor(() => expect(updateAnnouncement).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(updateAnnouncement).mock.calls[0]![2]).toBe(base.version);
+    expect(publishAnnouncement).not.toHaveBeenCalled();
+  });
+
+  it("shows the stored draft at once after a refused attachment removal", async () => {
+    vi.mocked(fetchAnnouncementAttachments).mockResolvedValue(
+      attachmentsOf(base.version, "Alt.pdf"),
+    );
+    render(<ParentAnnouncementsPage />);
+    expect(await screen.findByText("Alt.pdf")).toBeInTheDocument();
+    fireEvent.change(await titleField(), { target: { value: "Mein Titel" } });
+
+    vi.mocked(deleteAnnouncementAttachment).mockRejectedValueOnce(
+      changedSinceRead(),
+    );
+    vi.mocked(fetchAnnouncements).mockResolvedValue([byColleague]);
+    listState.data = [byColleague];
+    vi.mocked(fetchAnnouncementAttachments).mockResolvedValue(
+      attachmentsOf(byColleague.version, "Alt.pdf"),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Anhang entfernen: Alt.pdf" }),
+    );
+
+    await waitFor(async () =>
+      expect(await titleField()).toHaveValue("Sommerfest am Samstag"),
+    );
+    expect(deleteAnnouncementAttachment).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(deleteAnnouncementAttachment).mock.calls[0]![2]).toBe(
+      base.version,
+    );
+  });
+
+  it("says that the picked files are not uploaded after a refused save", async () => {
+    const { container } = render(<ParentAnnouncementsPage />);
+    fireEvent.change(await titleField(), { target: { value: "Mein Titel" } });
+    const input =
+      container.ownerDocument.querySelector<HTMLInputElement>(
+        'input[type="file"]',
+      );
+    fireEvent.change(input!, {
+      target: {
+        files: [new File(["%PDF"], "Plan.pdf", { type: "application/pdf" })],
+      },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Weiter" }));
+    vi.mocked(updateAnnouncement).mockRejectedValueOnce(changedSinceRead());
+    vi.mocked(fetchAnnouncements).mockResolvedValue([byColleague]);
+    listState.data = [byColleague];
+    await saveDraft();
+    await waitFor(() => expect(updateAnnouncement).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(await screen.findByRole("button", { name: "Zurück" }));
+    expect(await screen.findByText("Plan.pdf")).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        "„Plan.pdf“ ist noch nicht hochgeladen. Prüfe zuerst den gespeicherten Stand. Beim nächsten Speichern lädt moto die Datei hoch.",
+      ),
+    ).toBeInTheDocument();
+    expect(uploadAnnouncementAttachment).not.toHaveBeenCalled();
   });
 });

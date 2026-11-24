@@ -49,7 +49,7 @@ func (rs *ProvisioningResource) SetSchoolDeviceSlots(w http.ResponseWriter, r *h
 		return
 	}
 	if rs.deviceSlots == nil {
-		common.RenderError(w, r, common.OperatorInternal(internalErrorMessage))
+		common.RenderError(w, r, common.OperatorInternal(nil, internalErrorMessage))
 		return
 	}
 	operatorID := int64(sessiontoken.ClaimsFromCtx(r.Context()).ID)

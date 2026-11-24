@@ -9,9 +9,10 @@ type FolderRemovedResponse struct {
 }
 
 // AttachmentRemovedResponse names the announcement whose attachment a delete
-// removed.
+// removed, with the version the removal stamped on the draft (ADR 0311).
 type AttachmentRemovedResponse struct {
-	AnnouncementID string `json:"announcement_id"`
+	AnnouncementID      string `json:"announcement_id"`
+	AnnouncementVersion string `json:"announcement_version"`
 }
 
 // inlineQuery asks for in-browser viewing with inline=1; serveContent
@@ -29,7 +30,7 @@ func RouteContracts() []common.RouteContract {
 		{Method: "POST", Pattern: "/folders", Portals: portals, Request: FolderRequest{}, Response: FolderResponse{}},
 		{Method: "GET", Pattern: "/audience", Portals: portals, Response: AudienceResponse{}},
 		{Method: "PUT", Pattern: "/folders/{folderId}", Portals: portals, Request: FolderRequest{}, Response: FolderResponse{}},
-		{Method: "DELETE", Pattern: "/folders/{folderId}", Portals: portals, Response: FolderRemovedResponse{}},
+		{Method: "DELETE", Pattern: "/folders/{folderId}", Portals: portals, Request: FolderRemovalRequest{}, Response: FolderRemovedResponse{}},
 		{Method: "DELETE", Pattern: "/folders/{folderId}/files/{fileId}", Portals: portals, Response: FolderRemovedResponse{}},
 		{Method: "GET", Pattern: "/folders/{folderId}/files", Portals: portals, Response: FileListResponse{}},
 		{Method: "POST", Pattern: "/folders/{folderId}/files", Portals: portals, Multipart: true,
@@ -45,10 +46,11 @@ func AnnouncementAttachmentRouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalTenant}
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/{announcementId}/{attachmentId}/download", Portals: portals, Query: inlineQuery, File: true},
-		{Method: "DELETE", Pattern: "/{announcementId}/{attachmentId}", Portals: portals, Response: AttachmentRemovedResponse{}},
-		{Method: "GET", Pattern: "/{announcementId}", Portals: portals, Response: AnnouncementAttachmentListResponse{}},
+		{Method: "DELETE", Pattern: "/{announcementId}/{attachmentId}", Portals: portals, Request: AttachmentRemovalRequest{}, Response: AttachmentRemovedResponse{}},
+		{Method: "GET", Pattern: "/{announcementId}", Portals: portals, Response: StaffAttachmentListResponse{}},
 		{Method: "POST", Pattern: "/{announcementId}", Portals: portals, Multipart: true,
-			MaxBodyBytes: maxBody, TooLargeCode: common.CodeFilesFileTooLarge, Response: AnnouncementAttachmentResponse{}},
+			Query:        []common.QueryParam{{Name: "expected_version", Kind: common.QueryString}},
+			MaxBodyBytes: maxBody, TooLargeCode: common.CodeFilesFileTooLarge, Response: UploadedAttachmentResponse{}},
 	}
 }
 

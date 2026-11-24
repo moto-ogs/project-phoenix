@@ -101,7 +101,7 @@ func TestParentPortalSurveyAnswersThroughTheParentMount(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		survey, err = surveys.PublishSurvey(ctx, author.ID, draft.ID)
+		survey, err = surveys.PublishSurvey(ctx, author.ID, draft.ID, communication.SurveyVersion(*draft))
 		return err
 	}))
 	require.NotNil(t, survey.AnnouncementID, "the published survey has its news item")

@@ -98,13 +98,14 @@ func (m *mockRepo) Update(ctx context.Context, a *StaffParentAnnouncement) error
 	return m.updateFn(ctx, a)
 }
 func (m *mockRepo) FindByID(ctx context.Context, id int64) (*StaffParentAnnouncement, error) {
-	return m.findByIDFn(ctx, id)
+	a, err := m.findByIDFn(ctx, id)
+	return asStored(a), err
 }
 
 // FindByIDForUpdate has no lock to take against a mock; it answers from the
 // same source as FindByID so a test can arrange one state for both.
 func (m *mockRepo) FindByIDForUpdate(ctx context.Context, id int64) (*StaffParentAnnouncement, error) {
-	return m.findByIDFn(ctx, id)
+	return m.FindByID(ctx, id)
 }
 func (m *mockRepo) Delete(ctx context.Context, id int64) error { return m.deleteFn(ctx, id) }
 func (m *mockRepo) ListForTenant(ctx context.Context, includeInactive bool) ([]*StaffParentAnnouncement, error) {
@@ -433,7 +434,7 @@ func TestService_Update(t *testing.T) {
 		replaceTargets: func(_ context.Context, _, _ int64, _ []*StaffParentAnnouncementTarget) error { return nil },
 	}
 	svc := NewService(ServiceConfig{Now: staffTestClock, Repo: repo}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
-	got, err := svc.Update(context.Background(), testAnnID, validInputM())
+	got, err := updateAsRead(context.Background(), svc, testAnnID, validInputM())
 	if err != nil {
 		t.Fatalf("Update: %v", err)
 	}
@@ -458,7 +459,7 @@ func TestService_Update_AllowsPastReminderOnUnpublishedAnnouncement(t *testing.T
 	in := validInputM()
 	in.ReminderAt = &past
 
-	if _, err := svc.Update(context.Background(), testAnnID, in); err != nil {
+	if _, err := updateAsRead(context.Background(), svc, testAnnID, in); err != nil {
 		t.Fatalf("Update() error = %v, want draft update to retain its elapsed reminder", err)
 	}
 	if !updated {
@@ -471,7 +472,7 @@ func TestService_Update_NotFound(t *testing.T) {
 
 	repo := &mockRepo{findByIDFn: func(_ context.Context, _ int64) (*StaffParentAnnouncement, error) { return nil, nil }}
 	svc := NewService(ServiceConfig{Now: staffTestClock, Repo: repo}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
-	if _, err := svc.Update(context.Background(), testAnnID, validInputM()); !errors.Is(err, ErrNotFound) {
+	if _, err := updateAsRead(context.Background(), svc, testAnnID, validInputM()); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("expected ErrNotFound, got %v", err)
 	}
 }
@@ -481,7 +482,7 @@ func TestService_Update_PublishedImmutable(t *testing.T) {
 
 	repo := &mockRepo{findByIDFn: func(_ context.Context, _ int64) (*StaffParentAnnouncement, error) { return published(), nil }}
 	svc := NewService(ServiceConfig{Now: staffTestClock, Repo: repo}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
-	if _, err := svc.Update(context.Background(), testAnnID, validInputM()); !errors.Is(err, ErrPublishedImmutable) {
+	if _, err := updateAsRead(context.Background(), svc, testAnnID, validInputM()); !errors.Is(err, ErrPublishedImmutable) {
 		t.Fatalf("expected ErrPublishedImmutable, got %v", err)
 	}
 }
@@ -496,7 +497,7 @@ func TestService_Update_PublishedRace(t *testing.T) {
 		},
 	}
 	svc := NewService(ServiceConfig{Now: staffTestClock, Repo: repo}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
-	if _, err := svc.Update(context.Background(), testAnnID, validInputM()); !errors.Is(err, ErrPublishedImmutable) {
+	if _, err := updateAsRead(context.Background(), svc, testAnnID, validInputM()); !errors.Is(err, ErrPublishedImmutable) {
 		t.Fatalf("expected ErrPublishedImmutable on update race, got %v", err)
 	}
 }
@@ -512,7 +513,7 @@ func TestService_Update_TargetsPublishedRace(t *testing.T) {
 		},
 	}
 	svc := NewService(ServiceConfig{Now: staffTestClock, Repo: repo}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
-	if _, err := svc.Update(context.Background(), testAnnID, validInputM()); !errors.Is(err, ErrPublishedImmutable) {
+	if _, err := updateAsRead(context.Background(), svc, testAnnID, validInputM()); !errors.Is(err, ErrPublishedImmutable) {
 		t.Fatalf("expected ErrPublishedImmutable on targets race, got %v", err)
 	}
 }
@@ -636,7 +637,7 @@ func TestService_Publish_WithEmail(t *testing.T) {
 		Outbox:     outbox,
 		ParentsURL: "https://parents.example",
 	}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
-	if _, err := svc.Publish(context.Background(), testAnnID); err != nil {
+	if _, err := publishAsRead(context.Background(), svc, testAnnID); err != nil {
 		t.Fatalf("Publish: %v", err)
 	}
 	if enqueued != 1 {
@@ -653,7 +654,7 @@ func TestService_Publish_AlreadyPublished_NoEmail(t *testing.T) {
 	}
 	// PublishIfDraft must not be called for an already-published row.
 	svc := NewService(ServiceConfig{Now: staffTestClock, Repo: repo, Settings: stubSettings{newsEnabled: true}}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
-	if _, err := svc.Publish(context.Background(), testAnnID); err != nil {
+	if _, err := publishAsRead(context.Background(), svc, testAnnID); err != nil {
 		t.Fatalf("Publish already-published: %v", err)
 	}
 }
@@ -667,7 +668,7 @@ func TestService_Publish_LostRace_NoEmail(t *testing.T) {
 		listTargetsFn:  func(_ context.Context, _ int64) ([]*StaffParentAnnouncementTarget, error) { return nil, nil },
 	}
 	svc := NewService(ServiceConfig{Now: staffTestClock, Repo: repo, Settings: stubSettings{newsEnabled: true}}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
-	if _, err := svc.Publish(context.Background(), testAnnID); err != nil {
+	if _, err := publishAsRead(context.Background(), svc, testAnnID); err != nil {
 		t.Fatalf("Publish lost race: %v", err)
 	}
 }
@@ -677,7 +678,7 @@ func TestService_Publish_NewsDisabled(t *testing.T) {
 
 	repo := &mockRepo{findByIDFn: func(_ context.Context, _ int64) (*StaffParentAnnouncement, error) { return draft(), nil }}
 	svc := NewService(ServiceConfig{Now: staffTestClock, Repo: repo, Settings: stubSettings{newsEnabled: false}}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
-	if _, err := svc.Publish(context.Background(), testAnnID); !errors.Is(err, ErrNewsDisabled) {
+	if _, err := publishAsRead(context.Background(), svc, testAnnID); !errors.Is(err, ErrNewsDisabled) {
 		t.Fatalf("expected ErrNewsDisabled, got %v", err)
 	}
 }
@@ -690,7 +691,7 @@ func TestService_Publish_ExpiredDraft(t *testing.T) {
 	a.ExpiresAt = &past
 	repo := &mockRepo{findByIDFn: func(_ context.Context, _ int64) (*StaffParentAnnouncement, error) { return a, nil }}
 	svc := NewService(ServiceConfig{Now: staffTestClock, Repo: repo, Settings: stubSettings{newsEnabled: true}}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
-	if _, err := svc.Publish(context.Background(), testAnnID); !errors.Is(err, ErrValidation) {
+	if _, err := publishAsRead(context.Background(), svc, testAnnID); !errors.Is(err, ErrValidation) {
 		t.Fatalf("expected ErrValidation for expired draft, got %v", err)
 	}
 }
@@ -700,7 +701,7 @@ func TestService_Publish_NotFound(t *testing.T) {
 
 	repo := &mockRepo{findByIDFn: func(_ context.Context, _ int64) (*StaffParentAnnouncement, error) { return nil, nil }}
 	svc := NewService(ServiceConfig{Now: staffTestClock, Repo: repo}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
-	if _, err := svc.Publish(context.Background(), testAnnID); !errors.Is(err, ErrNotFound) {
+	if _, err := publishAsRead(context.Background(), svc, testAnnID); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("expected ErrNotFound, got %v", err)
 	}
 }
@@ -837,7 +838,7 @@ func TestService_Publish_EmailNoOutbox(t *testing.T) {
 		Settings: stubSettings{newsEnabled: true},
 		Notifier: &fakeNotifier{},
 	}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
-	if _, err := svc.Publish(context.Background(), testAnnID); err != nil {
+	if _, err := publishAsRead(context.Background(), svc, testAnnID); err != nil {
 		t.Fatalf("Publish without outbox: %v", err)
 	}
 }
@@ -946,7 +947,7 @@ func TestService_Publish_LogoLookupError_StillEnqueues(t *testing.T) {
 		Notifier: &fakeNotifier{},
 		Outbox:   outbox,
 	}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
-	if _, err := svc.Publish(context.Background(), testAnnID); err != nil {
+	if _, err := publishAsRead(context.Background(), svc, testAnnID); err != nil {
 		t.Fatalf("Publish with logo error: %v", err)
 	}
 	if enqueued != 1 {
@@ -981,7 +982,7 @@ func TestService_Publish_EmptyAudience(t *testing.T) {
 		Notifier: &fakeNotifier{},
 		Outbox:   outbox,
 	}, testpkg.TenantTransactionRuntime{}, deliveryPolicy.NewParentDeliveryPolicy())
-	if _, err := svc.Publish(context.Background(), testAnnID); err != nil {
+	if _, err := publishAsRead(context.Background(), svc, testAnnID); err != nil {
 		t.Fatalf("Publish empty audience: %v", err)
 	}
 }
