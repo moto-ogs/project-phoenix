@@ -60,7 +60,10 @@ type TimetableHTTPTestOptions struct {
 	Materialization            timetable.MaterializationCapability
 	NonWorkingDays             timetable.NonWorkingDayCalendar
 	Instances                  timetable.InstanceLifecycleCapability
-	Clock                      func() time.Time
+	// OfferingSources serve the offering connection's preview check; nil
+	// leaves the connection unconfigured.
+	OfferingSources timetable.OfferingSourceSupport
+	Clock           func() time.Time
 }
 
 // TimetableHTTPTestModule is what the composition root hands the timetable
@@ -116,28 +119,28 @@ func NewTimetableHTTPTestModule(db transactionruntime.Database, options Timetabl
 		}
 	}
 	templates, rosterReview, err := timetableCompose.NewTemplateAdministration(timetablePorts.TemplateAdministrationDependencies{
-		Groups:               r.Timetable,
-		Categories:           r.ActivityCategory,
-		Schedules:            r.ActivitySchedule,
-		Enrollments:          r.StudentEnrollment,
-		Supervisors:          r.ActivitySupervisor,
-		Directories:          r.Directories,
-		Instances:            r.ActivityInstance,
-		InstanceStaff:        r.InstanceStaff,
-		Participants:         r.InstanceStudent,
-		Timeframes:           r.Timeframe,
-		EducationGroups:      owners.NewSchoolStructureSuiteRepositories(db).Group,
-		Materialization:      materialization,
-		Deviations:           timetableHTTPTestSeriesDeviations(options.Instances),
-		CareOfferings:        timetableHTTPTestCareOfferingChecks(options),
+		Groups:          r.Timetable,
+		Categories:      r.ActivityCategory,
+		Schedules:       r.ActivitySchedule,
+		Enrollments:     r.StudentEnrollment,
+		Supervisors:     r.ActivitySupervisor,
+		Directories:     r.Directories,
+		Instances:       r.ActivityInstance,
+		InstanceStaff:   r.InstanceStaff,
+		Participants:    r.InstanceStudent,
+		Timeframes:      r.Timeframe,
+		EducationGroups: owners.NewSchoolStructureSuiteRepositories(db).Group,
+		Materialization: materialization,
+		Deviations:      timetableHTTPTestSeriesDeviations(options.Instances),
+		CareOfferings:   timetableHTTPTestCareOfferingChecks(options),
+		OfferingSources: options.OfferingSources, SeriesReads: data,
 		ResyncOfferingRoster: options.ResyncOfferingRoster,
 		RecurrenceLock:       lock,
 		SchoolClasses: timetablePorts.SchoolClassRules{
 			MinGradeLevel: timetable.MinSchoolGradeLevel, MaxGradeLevel: timetable.MaxSchoolGradeLevel,
 			Normalize: func(class string) string { return strings.ToLower(strings.TrimSpace(class)) },
 		},
-		Transactions: timetableCompose.NewTenantTransactions(db.Pool()),
-		Today:        today,
+		Transactions: timetableCompose.NewTenantTransactions(db.Pool()), Today: today,
 	})
 	if err != nil {
 		return TimetableHTTPTestModule{}, err
@@ -373,6 +376,12 @@ func WithTimetableNonWorkingDays(days timetable.NonWorkingDayCalendar) Timetable
 // whose deviations it preserves.
 func WithTimetableInstances(instances timetable.InstanceLifecycleCapability) TimetableHTTPOption {
 	return func(options *TimetableHTTPTestOptions) { options.Instances = instances }
+}
+
+// WithTimetableOfferingSources binds Care Plan's offering-source support the
+// offering connection computes its preview with.
+func WithTimetableOfferingSources(sources timetable.OfferingSourceSupport) TimetableHTTPOption {
+	return func(options *TimetableHTTPTestOptions) { options.OfferingSources = sources }
 }
 
 // WithTimetableClock replaces the owner's clock.

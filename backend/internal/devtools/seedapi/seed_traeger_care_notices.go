@@ -75,42 +75,36 @@ func seedCareNotices(client *Client, auth AuthRef, school int64, current calenda
 // seedReleaseNoticeRun releases the notice run with the preview it read.
 // The contract-conclusion worker concludes contracts on its own tick, 70 s
 // after the server starts, and a contract it concludes between the read and
-// the release changes the preview (#6438). Like the office after the
-// refusal, the seed reads the preview once more and releases that; a second
-// refusal stays an error. It returns the number of issued notices.
+// the release changes the preview (#6438); seedOnCurrentPreview reads it
+// again. A run another seed released or one with nothing to issue gives 0
+// without an error. It returns the number of issued notices.
 func seedReleaseNoticeRun(client *Client, auth AuthRef, runID int64) (int, error) {
-	issued, err := seedTryNoticeRelease(client, auth, runID)
-	if seedConflictCode(err, seedCareRunChanged) {
-		issued, err = seedTryNoticeRelease(client, auth, runID)
-	}
-	return issued, err
-}
-
-// seedTryNoticeRelease releases the preview it reads; a run another seed
-// released or one with nothing to issue gives 0 without an error.
-func seedTryNoticeRelease(client *Client, auth AuthRef, runID int64) (int, error) {
-	run, err := seedReadNoticeRun(client, auth, runID)
-	if err != nil {
-		return 0, err
-	}
-	if run.Status != "calculated" {
-		return 0, nil
-	}
-	if run.PreviewCount == 0 {
-		return 0, seedDiscardNoticeRun(client, auth, runID)
-	}
-	_, err = client.PostWithAuth(auth, fmt.Sprintf("/traeger/care-notice-runs/%d/release", runID), map[string]any{
-		"document_count": run.PreviewCount, "total_cents": run.PreviewCents, "fingerprint": run.Fingerprint,
+	issued := 0
+	err := seedOnCurrentPreview(func() (seedCareNoticeRun, error) {
+		return seedReadNoticeRun(client, auth, runID)
+	}, func(run seedCareNoticeRun) error {
+		issued = 0
+		if run.Status != "calculated" {
+			return nil
+		}
+		if run.PreviewCount == 0 {
+			return seedDiscardNoticeRun(client, auth, runID)
+		}
+		_, err := client.PostWithAuth(auth, fmt.Sprintf("/traeger/care-notice-runs/%d/release", runID), map[string]any{
+			"document_count": run.PreviewCount, "total_cents": run.PreviewCents, "fingerprint": run.Fingerprint,
+		})
+		switch {
+		case seedConflictCode(err, seedCareRunReleased):
+			return nil
+		case seedConflictCode(err, seedBillingRunEmpty):
+			return seedDiscardNoticeRun(client, auth, runID)
+		case err != nil:
+			return fmt.Errorf("release the notice run: %w", err)
+		}
+		issued = run.PreviewCount
+		return nil
 	})
-	switch {
-	case seedConflictCode(err, seedCareRunReleased):
-		return 0, nil
-	case seedConflictCode(err, seedBillingRunEmpty):
-		return 0, seedDiscardNoticeRun(client, auth, runID)
-	case err != nil:
-		return 0, fmt.Errorf("release the notice run: %w", err)
-	}
-	return run.PreviewCount, nil
+	return issued, err
 }
 
 func seedReadNoticeRun(client *Client, auth AuthRef, runID int64) (seedCareNoticeRun, error) {

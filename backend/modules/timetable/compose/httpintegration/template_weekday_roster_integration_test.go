@@ -1067,7 +1067,7 @@ func makeWeekdayRosterScenario(t *testing.T, anchor calendar.Date, clocks ...fun
 		ctx:             ctx,
 		tenantID:        tenantID,
 		instance:        fixtures.FromInstanceLifecycle(ttLifecycle.Instances),
-		timetableData:   ttPlanning.Planning,
+		timetableData:   withEditorReads(ttPlanning.Planning),
 		active:          ttActive,
 		materialization: ttMaterialization,
 		careDay:         ttSchedules.CareDay,

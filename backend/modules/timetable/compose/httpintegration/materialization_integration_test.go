@@ -169,7 +169,7 @@ func makeScenario(t *testing.T, weekday int, materializeDate calendar.Date) *sce
 	s := &scenarioSetup{
 		svc:             svc,
 		instance:        fixtures.FromInstanceLifecycle(ttLifecycle.Instances),
-		timetableData:   ttPlanning.Planning,
+		timetableData:   withEditorReads(ttPlanning.Planning),
 		hub:             hub,
 		active:          ttActive,
 		materialization: ttMaterialization,

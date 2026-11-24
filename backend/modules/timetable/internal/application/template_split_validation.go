@@ -98,6 +98,8 @@ type TemplateSplitInput struct {
 	// ActorAccountID stamps Änderungsprotokoll entries for deviations the
 	// split drops (#1886); nil records actor-less events.
 	ActorAccountID *int64
+	// ExpectedVersion is the editor's TemplateSeriesVersion (ADR 0311).
+	ExpectedVersion string
 }
 
 // validateSplitInput checks the semantic rules the handler's Bind cannot:

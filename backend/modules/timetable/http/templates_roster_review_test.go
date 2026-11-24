@@ -19,6 +19,7 @@ import (
 	timetableModule "github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
@@ -60,6 +61,7 @@ func buildRosterReviewModule(t *testing.T, sources timetableModule.OfferingSourc
 		resyncOfferingRoster:       setup.fakeResync,
 		materialization:            mat,
 		instances:                  s.res.InstanceService,
+		offeringSources:            sources,
 	}, rosterReviewClock)
 	s.res.Templates = composed
 	s.res.RosterReview = composed.RosterReview()
@@ -431,6 +433,56 @@ func TestTemplateOfferingConnectionCoversEveryFutureSegment(t *testing.T) {
 			AND selected_weekdays IS NULL AND (valid_until IS NULL OR valid_until > GREATEST(valid_from, ?::date))`,
 		fixture.segmentA, fixture.segmentB, effective.String()).Scan(s.ctx, &openHandRows))
 	assert.Zero(t, openHandRows, "no hand-picked child plans the series after the boundary")
+}
+
+// TestConnectOfferingSourceComparesThePreviewItself: the Timetable owner
+// computes the preview under its recurrence gate, so a caller that skips the
+// route cannot connect against an outdated preview either (ADR 0311). The
+// fingerprint GET offering-preview answers is the one the owner accepts.
+func TestConnectOfferingSourceComparesThePreviewItself(t *testing.T) {
+	t.Parallel()
+	sources := &rosterMaintenanceSources{}
+	s := buildRosterReviewModule(t, sources)
+	fixture := s.arrangeTwoSegmentSeries(t)
+	s.booked = fixture.booked
+	effective := rosterReviewMonday.AddDays(2)
+	readPreview := func() string {
+		w := doTemplateJSON(t, s.router, http.MethodGet, fmt.Sprintf(
+			"/templates/%d/offering-preview?offering_ids=%d&school_classes=2c", fixture.segmentB, rosterReviewOfferingID), nil)
+		require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
+		return decodeTemplateData[offeringPreviewResponse](t, w).Fingerprint
+	}
+	connect := func(fingerprint string) error {
+		return testpkg.WithTenantTx(t, s.ctx, s.db, tenant.FromContext(s.ctx), func(txCtx context.Context, _ bun.Tx) error {
+			_, err := s.res.RosterReview.ConnectOfferingSource(txCtx, timetableModule.ConnectOfferingSourceCommand{
+				TemplateID: fixture.segmentB, OfferingIDs: []int64{rosterReviewOfferingID}, SchoolClasses: []string{"2c"},
+				EffectiveDate: effective, ExpectedFingerprint: fingerprint,
+			})
+			return err
+		})
+	}
+	targetOf := func(segment int64) string {
+		var target string
+		require.NoError(t, s.db.NewRaw(`SELECT target_group_type FROM activities.groups WHERE id = ?`, segment).Scan(s.ctx, &target))
+		return target
+	}
+
+	confirmed := readPreview()
+	// A child is booked after the school confirmed the preview.
+	sources.bookings = []timetableModule.OfferingWeekdayBooking{{
+		OfferingID: rosterReviewOfferingID, StudentID: fixture.booked[0], SchoolClass: "2c",
+		Weekdays: []int{timetableModule.WeekdayMonday, timetableModule.WeekdayWednesday},
+	}}
+	for _, stale := range []string{confirmed, ""} {
+		require.ErrorIs(t, connect(stale), readstate.ErrChanged, "fingerprint %q", stale)
+	}
+	assert.Empty(t, s.resyncs, "a refused connection resyncs nothing")
+	for _, segment := range []int64{fixture.segmentA, fixture.segmentB} {
+		assert.Equal(t, timetableModule.TargetGroupTypeSchoolClass, targetOf(segment), "a refused connection keeps segment %d", segment)
+	}
+
+	require.NoError(t, connect(readPreview()), "the owner accepts the fingerprint the preview read answers")
+	assert.Equal(t, timetableModule.TargetGroupTypeOffering, targetOf(fixture.segmentB))
 }
 
 func TestTemplateOfferingConnectionRefusals(t *testing.T) {

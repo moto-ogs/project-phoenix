@@ -57,13 +57,14 @@ func NewTemplateAdministration(deps ports.TemplateAdministrationDependencies) (t
 		Logger:               deps.Logger,
 		Transactions:         deps.Transactions,
 		Today:                deps.Today,
+		SeriesReads:          deps.SeriesReads,
 	})
 	if err != nil {
 		return nil, nil, err
 	}
 	templates := newTemplateAdministrationService(deps)
 	return &templateAdministration{templateAdministrationQueries: templates, templates: templates, split: split, templateEnder: split},
-		&templateRosterReview{templates: templates}, nil
+		&templateRosterReview{templates: templates, offerings: deps.OfferingSources}, nil
 }
 
 func (a *templateAdministration) CreateTemplate(ctx context.Context, cmd timetable.CreateTemplateCommand) (*timetable.CreateTemplateResult, error) {
@@ -291,6 +292,7 @@ func templateUpdateInput(cmd timetable.UpdateTemplateCommand) TemplateUpdateInpu
 		StartDate:                    cmd.StartDate,
 		ReplanFuture:                 cmd.ReplanFuture,
 		ActorAccountID:               cmd.ActorAccountID,
+		ExpectedVersion:              cmd.ExpectedVersion,
 	}
 }
 
@@ -341,6 +343,7 @@ func templateSplitInput(cmd timetable.SplitTemplateCommand) TemplateSplitInput {
 		MaterializeTo:                 cmd.MaterializeTo,
 		GradeLevelMax:                 cmd.GradeLevelMax,
 		ActorAccountID:                cmd.ActorAccountID,
+		ExpectedVersion:               cmd.ExpectedVersion,
 	}
 }
 
@@ -370,6 +373,7 @@ func newTemplateAdministrationService(deps ports.TemplateAdministrationDependenc
 		Transactions:           deps.Transactions,
 		Today:                  deps.Today,
 		Materialization:        deps.Materialization,
+		SeriesReads:            deps.SeriesReads,
 	})
 }
 

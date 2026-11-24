@@ -86,16 +86,38 @@ func seedHolidayBillingRun(client *Client, auth AuthRef, periodID, costBearerID 
 	if run, err = seedCorrectSecondFamily(client, auth, runID, run); err != nil {
 		return 0, err
 	}
-	if _, err := client.PostWithAuth(auth, fmt.Sprintf("/traeger/billing-runs/%d/release", runID), map[string]any{
-		"document_count": run.PreviewCount, "total_cents": run.PreviewCents, "fingerprint": run.Fingerprint,
-	}); err != nil {
-		return 0, fmt.Errorf("release the billing run: %w", err)
+	if run, err = seedReleaseHolidayRun(client, auth, runID, run); err != nil {
+		return 0, err
 	}
 	if err := seedHolidayRunDownloads(client, auth, runID, costBearerID); err != nil {
 		return 0, err
 	}
 	fmt.Printf("  Abrechnung: holiday run released with %d invoice(s) and one correction, overview downloaded\n", run.PreviewCount)
 	return runID, nil
+}
+
+// seedReleaseHolidayRun releases the preview the corrections answered with
+// and, after a refusal because the run changed, the preview it reads again
+// (seedOnCurrentPreview). It returns the preview it released.
+func seedReleaseHolidayRun(client *Client, auth AuthRef, runID int64, reviewed seedBillingRunDetail) (seedBillingRunDetail, error) {
+	held := true
+	var released seedBillingRunDetail
+	err := seedOnCurrentPreview(func() (seedBillingRunDetail, error) {
+		if held {
+			held = false
+			return reviewed, nil
+		}
+		return seedReadBillingRun(client.GetWithAuth(auth, fmt.Sprintf("/traeger/billing-runs/%d", runID)))
+	}, func(run seedBillingRunDetail) error {
+		released = run
+		if _, err := client.PostWithAuth(auth, fmt.Sprintf("/traeger/billing-runs/%d/release", runID), map[string]any{
+			"document_count": run.PreviewCount, "total_cents": run.PreviewCents, "fingerprint": run.Fingerprint,
+		}); err != nil {
+			return fmt.Errorf("release the billing run: %w", err)
+		}
+		return nil
+	})
+	return released, err
 }
 
 // seedCorrectSecondFamily corrects the first child of the second family twice,

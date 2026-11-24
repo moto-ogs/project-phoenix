@@ -21,13 +21,15 @@ import (
 // catalog guards, School Structure's class rules and the realtime hub over
 // the template rows. deviations is the instance lifecycle's deviation
 // machinery the split preserves Vertretungsplan overrides with;
-// careOfferings and resyncOfferingRoster are Enrollment's. The composition
-// root adds its database handle to the dependencies they bind.
+// careOfferings and resyncOfferingRoster are Enrollment's; seriesReads are the
+// owner's planner reads an update or split takes the editor's version over
+// (ADR 0311). The composition root adds its database handle to the
+// dependencies they bind.
 func TimetableTemplateDependencies(
 	rows timetableCompose.TemplateRows, planningTracks timetablePorts.PlanningTrackAssignments, materialization timetable.MaterializationCapability,
 	deviations timetablePorts.SeriesDeviations, careOfferings careplan.CareOfferingGuards,
 	resyncOfferingRoster func(context.Context, timetable.OfferingRosterResyncInput) error, recurrenceLock timetable.RecurrenceWriteLock,
-	broadcaster realtime.Broadcaster, logger *slog.Logger, today func() timezone.Date,
+	seriesReads timetablePorts.TemplateSeriesReads, broadcaster realtime.Broadcaster, logger *slog.Logger, today func() timezone.Date,
 ) (timetablePorts.TemplateAdministrationDependencies, error) {
 	if careOfferings == nil || deviations == nil {
 		return timetablePorts.TemplateAdministrationDependencies{}, errors.New("timetable templates: care offerings and instance lifecycle are required")
@@ -51,6 +53,7 @@ func TimetableTemplateDependencies(
 		CareOfferings:        timetableCareOfferingChecks(careOfferings),
 		ResyncOfferingRoster: resyncOfferingRoster,
 		RecurrenceLock:       recurrenceLock,
+		SeriesReads:          seriesReads,
 		SchoolClasses:        timetableSchoolClassRules(),
 		Staffing:             owners.NewStaffingAnnouncer(broadcaster),
 		Logger:               logger,
