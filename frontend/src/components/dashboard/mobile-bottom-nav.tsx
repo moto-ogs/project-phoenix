@@ -123,6 +123,8 @@ import {
   useIsStaffSettingsPage,
 } from "./staff-settings-nav";
 import { supervisionConcept } from "~/lib/concepts/supervision";
+import { usePillTabs } from "~/lib/mobile-navigation/use-pill-tabs";
+import { MORE_TAB } from "~/lib/mobile-navigation/tab-registry";
 
 // Das Vollbild-Blatt der Benachrichtigungen (#7148) lädt erst im Staff-Portal
 // und nach dem ersten Zeichnen, nicht in jedem Bündel der unteren Leiste.
@@ -927,16 +929,26 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
     (group) => group.items,
   );
 
+  // Reiter-Modell (#8070): Der aktive Reiter kommt aus dem Register und dem
+  // Verlaufseintrag (ein Detail gehört zum Reiter, aus dem es kam); bis der
+  // Eintrag bekannt ist, gilt die bisherige Pfad-Regel.
+  const pillTabs = usePillTabs(displayMainItems);
+  const isMainItemActive = (item: NavItem) =>
+    pillTabs.activeHref === null
+      ? isActiveRoute(item.href, item.activePaths)
+      : pillTabs.activeHref === item.href;
+
   // Check if any additional nav item is active
-  const isAnyAdditionalNavActive = displayAdditionalItems.some((item) =>
-    isActiveRoute(item.href, item.activePaths),
-  );
+  const isAnyAdditionalNavActive =
+    pillTabs.activeHref === null
+      ? displayAdditionalItems.some((item) =>
+          isActiveRoute(item.href, item.activePaths),
+        )
+      : pillTabs.activeHref === MORE_TAB;
 
   // Die Fläche liegt unter dem aktiven Reiter oder, wenn das Ziel im Menü
   // steht, unter „Mehr"; ohne aktives Ziel fehlt sie.
-  const activeMainIndex = displayMainItems.findIndex((item) =>
-    isActiveRoute(item.href, item.activePaths),
-  );
+  const activeMainIndex = displayMainItems.findIndex(isMainItemActive);
   const indicator = usePortalBottomNavIndicator(
     () => {
       if (activeMainIndex !== -1) {
@@ -1281,11 +1293,15 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
         }
       >
         {displayMainItems.map((item, index) => {
-          const isActive = isActiveRoute(item.href, item.activePaths);
+          const isActive = isMainItemActive(item);
+          const rootHref = navigationEntryTarget(item.href);
           return (
             <PortalBottomNavLink
               key={item.href}
-              href={navigationEntryTarget(item.href)}
+              href={pillTabs.hrefFor(item.href, rootHref)}
+              onClick={(event) =>
+                pillTabs.onTabClick(item.href, rootHref, event)
+              }
               ref={(el: HTMLAnchorElement | null) => {
                 navRefs.current[index] = el;
               }}

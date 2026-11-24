@@ -18,7 +18,9 @@ import NavigationLink, {
 } from "~/components/ui/navigation-link";
 import type { MotoConcept } from "~/lib/moto-concepts";
 
-const ITEM = `relative ${Z_LAYER.raised} flex min-h-[44px] items-center justify-center gap-2.5 rounded-full py-2.5 transition-colors duration-200`;
+// Rückmeldung beim Antippen (#8070): nur mit Finger kurz kleiner und
+// blasser, ohne den grauen Tipp-Blitz von iOS.
+const ITEM = `relative ${Z_LAYER.raised} flex min-h-[44px] items-center justify-center gap-2.5 rounded-full py-2.5 transition-[color,background-color,scale,opacity] duration-200 [-webkit-tap-highlight-color:transparent] pointer-coarse:active:scale-[0.96] pointer-coarse:active:opacity-70 pointer-coarse:active:duration-75`;
 const ITEM_ACTIVE = "bg-gray-100 text-gray-900";
 const ITEM_IDLE = "text-gray-500 hover:text-gray-700";
 const ITEM_IDLE_QUIET = "text-gray-500 hover:text-gray-600";
@@ -138,8 +140,13 @@ function bottomNavItemClassName({
   return `${ITEM} ${paddingClassName} ${active ? ITEM_ACTIVE : idle}`;
 }
 
+/**
+ * In der App (#8070) schrumpft nie das aktive Feld: sein Kurzname steht
+ * immer ganz da („Gruppe“ statt „Grup…“). Platz geben die ruhenden Felder ab,
+ * deren Fläche dabei nur unsichtbaren Rand verliert.
+ */
 function bottomNavItemShrink(active: boolean): string {
-  return active ? "min-w-0" : "shrink-0";
+  return active ? "min-w-0 app:shrink-0" : "shrink-0 app:shrink app:min-w-0";
 }
 
 /** Ein `<button>` füllt sein `<li>` nicht von selbst, sonst schrumpft er nicht mit. */
