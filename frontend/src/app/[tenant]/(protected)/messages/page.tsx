@@ -4,6 +4,7 @@ import { messageKeys } from "~/lib/swr/portal-keys";
 
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useSWRAuth } from "~/lib/swr";
+import { NotePencilIcon } from "@phosphor-icons/react";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { StatusBadge } from "~/components/ui/status-badge";
@@ -33,6 +34,9 @@ import { childrenConcept } from "~/lib/concepts/children";
 import { parentConversationsConcept } from "~/lib/concepts/parentConversations";
 import { parentsConcept } from "~/lib/concepts/parents";
 import { foldForSearch } from "~/lib/search-fold";
+import { useDeviceContext } from "~/lib/device-context";
+import { MessagesInboxApp } from "~/components/messaging/messages-inbox-app";
+import { MessageThreadContent } from "./[threadId]/page";
 
 // Info-Knopf am Seitentitel (#7578): wofür die Seite da ist.
 const MESSAGES_INFO =
@@ -59,6 +63,9 @@ function MessagesInboxContent() {
   // turned off — composing would otherwise hit a backend 403 dead-end. Existing
   // threads stay readable.
   const messagingEnabled = tenant?.messagingEnabled === true;
+  // App (#8070): Liste in einer Karte, „Neu“ als Symbol, iPad quer mit
+  // Verlauf daneben. Der Desktop-Zweig bleibt unverändert.
+  const { isApp } = useDeviceContext();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [onlyUnread, setOnlyUnread] = useState(false);
@@ -181,7 +188,18 @@ function MessagesInboxContent() {
       />
     );
 
-  const composeButton = messagingEnabled ? (
+  const composeButton = !messagingEnabled ? undefined : isApp ? (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      onClick={() => setComposeOpen(true)}
+      tooltip="Öffnet ein Fenster, in dem du Kind und Eltern wählst."
+      aria-label="Neue Nachricht"
+    >
+      <NotePencilIcon size={22} aria-hidden="true" />
+    </Button>
+  ) : (
     <Button
       type="button"
       variant="primary"
@@ -191,7 +209,7 @@ function MessagesInboxContent() {
     >
       Neue Nachricht
     </Button>
-  ) : undefined;
+  );
 
   // Der Fehler ersetzt den Inhalt nur, wenn nichts anzuzeigen ist. Liegt noch
   // eine (möglicherweise veraltete) Liste vor, bleibt sie stehen und der
@@ -209,7 +227,8 @@ function MessagesInboxContent() {
       info={MESSAGES_INFO}
       title="Nachrichten"
       tabs={messagesTabs("conversations")}
-      stats={inboxSummary}
+      // App: Ungelesenes zeigt jede Zeile selbst; der Kopf bleibt einzeilig.
+      stats={isApp ? undefined : inboxSummary}
       statsLoading={showSkeleton}
       actions={composeButton}
       overflowMenu={[
@@ -291,56 +310,70 @@ function MessagesInboxContent() {
       <>
         {loadFailed && <LoadErrorAlert error={loadError} />}
 
-        <ul className="space-y-3">
-          {filteredThreads.map((thread) => {
-            const navigate = () => router.push(`/messages/${thread.thread_id}`);
+        {isApp ? (
+          <MessagesInboxApp
+            threads={filteredThreads}
+            renderDetail={(threadId) => (
+              <MessageThreadContent
+                key={threadId}
+                threadId={threadId}
+                embedded
+              />
+            )}
+          />
+        ) : (
+          <ul className="space-y-3">
+            {filteredThreads.map((thread) => {
+              const navigate = () =>
+                router.push(`/messages/${thread.thread_id}`);
 
-            return (
-              <li key={thread.thread_id}>
-                <TileCard onClick={navigate}>
-                  {/* Absender und Kind tragen die Symbole aus dem
+              return (
+                <li key={thread.thread_id}>
+                  <TileCard onClick={navigate}>
+                    {/* Absender und Kind tragen die Symbole aus dem
                       Konzeptregister, wie in den Anfragen (#4361). */}
-                  <div className="flex min-w-0 items-center gap-2">
-                    <MotoConceptIcon concept={parentsConcept} size={20} />
-                    <h3 className="truncate text-base font-semibold text-gray-900">
-                      {thread.guardian_name}
-                    </h3>
-                    {thread.audience === "leadership" && (
-                      <StatusBadge
-                        tone="blue"
-                        label={LEADERSHIP_AUDIENCE_LABEL}
-                        compact
-                      />
-                    )}
-                    <UnreadBadge count={thread.unread_count} />
-                    {thread.last_message_at && (
-                      <span className="ml-auto flex-shrink-0 pl-1 text-xs whitespace-nowrap text-gray-500">
-                        {formatChatDateTime(thread.last_message_at)}
-                      </span>
-                    )}
-                  </div>
-                  <p className="mt-1 flex min-w-0 items-center gap-1.5 text-sm text-gray-500">
-                    <span className="flex-shrink-0">
-                      {relationshipLabel(thread.relationship_type)} von
-                    </span>
-                    <MotoConceptIcon concept={childrenConcept} size={16} />
-                    <span className="truncate font-medium text-gray-700">
-                      {thread.student_name}
-                    </span>
-                  </p>
-                  {thread.last_message_body && (
-                    <p className="mt-1 truncate text-sm text-gray-600">
-                      {thread.last_sender_kind === "staff" && (
-                        <span className="text-gray-500">Du: </span>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <MotoConceptIcon concept={parentsConcept} size={20} />
+                      <h3 className="truncate text-base font-semibold text-gray-900">
+                        {thread.guardian_name}
+                      </h3>
+                      {thread.audience === "leadership" && (
+                        <StatusBadge
+                          tone="blue"
+                          label={LEADERSHIP_AUDIENCE_LABEL}
+                          compact
+                        />
                       )}
-                      {thread.last_message_body}
+                      <UnreadBadge count={thread.unread_count} />
+                      {thread.last_message_at && (
+                        <span className="ml-auto flex-shrink-0 pl-1 text-xs whitespace-nowrap text-gray-500">
+                          {formatChatDateTime(thread.last_message_at)}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-1 flex min-w-0 items-center gap-1.5 text-sm text-gray-500">
+                      <span className="flex-shrink-0">
+                        {relationshipLabel(thread.relationship_type)} von
+                      </span>
+                      <MotoConceptIcon concept={childrenConcept} size={16} />
+                      <span className="truncate font-medium text-gray-700">
+                        {thread.student_name}
+                      </span>
                     </p>
-                  )}
-                </TileCard>
-              </li>
-            );
-          })}
-        </ul>
+                    {thread.last_message_body && (
+                      <p className="mt-1 truncate text-sm text-gray-600">
+                        {thread.last_sender_kind === "staff" && (
+                          <span className="text-gray-500">Du: </span>
+                        )}
+                        {thread.last_message_body}
+                      </p>
+                    )}
+                  </TileCard>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </>
     </TenantPage>
   );
