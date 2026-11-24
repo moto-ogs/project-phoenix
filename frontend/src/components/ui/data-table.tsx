@@ -74,8 +74,9 @@ export interface DataTableColumn<T> {
   // clamp, for a title that must stay whole (an e-mail address in a log,
   // without a detail page that would show it). Defaults to true.
   stackedClamp?: boolean;
-  // What the "row" phone line shows for this column, when it needs a
-  // shorter form than the table cell ("15:30" instead of "🕒 15:30 Uhr").
+  // What the phone shows for this column, when it needs another form than
+  // the table cell ("15:30" instead of "🕒 15:30 Uhr"): the "row" line's
+  // title, meta and detail, and the head (title, meta) of a "lines" card.
   stackedRender?: (row: T) => ReactNode;
   // False drops the visible header where the value names itself: in the
   // "row" phone line in front of the value (a class, a group), in the
@@ -804,6 +805,7 @@ function StackedRows<T>({
   expandable,
   renderSubRows,
   summaryRow,
+  rowTone,
 }: Readonly<{
   columns: DataTableColumn<T>[];
   rows: T[];
@@ -830,6 +832,7 @@ function StackedRows<T>({
   expandable?: DataTableExpandable<T>;
   renderSubRows?: (row: T, expanded: boolean) => readonly DataTableExtraRow[];
   summaryRow?: (row: T) => DataTableExtraRow | null;
+  rowTone?: (row: T) => DataTableRowTone | null;
 }>) {
   const idBase = useId();
   // German defaults drop under a non-German KitLocaleProvider (#6744).
@@ -913,6 +916,9 @@ function StackedRows<T>({
     // details have their own button (#7911).
     const rowClickable = clickable && (canClickRow?.(row) ?? true);
     const open = openKeys.has(rowKey);
+    // The card carries its row's tint like the table row (today, a total);
+    // the selected tint of the row beside the table wins.
+    const tone = active ? null : (rowTone?.(row) ?? null);
     const detailValues = detailFields
       .map((col) => ({ col, value: col.render(row) }))
       .filter((entry) => entry.value !== null);
@@ -1013,7 +1019,7 @@ function StackedRows<T>({
         }
       >
         <div
-          className={`${STACKED_ROW_PADDING[layout]} ${ROW_ACTION_FOCUS_CLASS} ${rowClickable ? "cursor-pointer" : ""} ${active ? ACTIVE_ROW_CLASS : ""} ${rowClassName ? rowClassName(row) : ""}`}
+          className={`${STACKED_ROW_PADDING[layout]} ${ROW_ACTION_FOCUS_CLASS} ${rowClickable ? "cursor-pointer" : ""} ${active ? ACTIVE_ROW_CLASS : ""} ${tone ? ROW_TONE_CLASS[tone] : ""} ${rowClassName ? rowClassName(row) : ""}`}
           tabIndex={rowKeyboardClickable ? 0 : undefined}
           role={rowKeyboardClickable ? "button" : undefined}
         >
@@ -1052,7 +1058,7 @@ function StackedRows<T>({
                   />
                 ) : null}
                 <span id={titleId} className="min-w-0 flex-1">
-                  {title?.render(row)}
+                  {title ? (title.stackedRender ?? title.render)(row) : null}
                 </span>
                 {meta ? (
                   <span
@@ -1062,7 +1068,7 @@ function StackedRows<T>({
                         : "shrink-0 text-xs text-gray-500"
                     }
                   >
-                    {meta.render(row)}
+                    {(meta.stackedRender ?? meta.render)(row)}
                   </span>
                 ) : null}
                 {end}
@@ -1450,6 +1456,7 @@ export function DataTable<T>({
             expandable={expandable}
             renderSubRows={renderSubRows}
             summaryRow={summaryRow}
+            rowTone={rowTone}
           />
         </div>
       )}

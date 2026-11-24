@@ -1353,6 +1353,40 @@ describe("DataTable phone cards without lost columns (#7911)", () => {
     expect(card.getByText("Verlauf des Tages")).toBeInTheDocument();
   });
 
+  it("shows the phone form of title and meta in the head of a lines card", () => {
+    const { card } = renderCards("lines", {
+      columns: [
+        {
+          ...cardColumns[0]!,
+          stackedRender: (r) => `${r.name} (kurz)`,
+        },
+        {
+          ...cardColumns[1]!,
+          stackedRender: (r) => `Status ${r.status}`,
+        },
+        ...cardColumns.slice(2),
+      ],
+    });
+
+    const head = card
+      .getByText("Alpha (kurz)")
+      .closest("[data-stacked-head]") as HTMLElement;
+    expect(within(head).getByText("Status Da")).toBeInTheDocument();
+    expect(card.queryByText("Alpha")).not.toBeInTheDocument();
+  });
+
+  it("tints a phone card like its table row", () => {
+    const { card } = renderCards("lines", {
+      rowTone: () => "today",
+    });
+
+    // Anker: die Karte ist gerendert.
+    expect(card.getByText("Alpha")).toBeInTheDocument();
+    expect(
+      card.getByText("Alpha").closest("[data-stacked-head]")!.parentElement,
+    ).toHaveClass("bg-moto-blue-soft/60");
+  });
+
   it("still opens the entry from the card of a row that expands", () => {
     const { card, onRowClick } = renderCards("lines", {
       expandable: { rowLabel: (row) => `Verlauf ${row.name}` },
