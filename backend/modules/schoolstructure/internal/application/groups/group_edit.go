@@ -2,6 +2,8 @@ package groups
 
 import (
 	"context"
+	"maps"
+	"slices"
 
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure"
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure/contract"
@@ -21,10 +23,11 @@ func (s *service) EditGroup(ctx context.Context, edit schoolstructure.GroupEdit)
 	if err != nil {
 		return &EducationError{Op: "EditGroup", Err: ErrGroupNotFound}
 	}
-	if _, err := s.groupTeacherRepo.TeacherAssignmentIDs(ctx, edit.ID); err != nil {
+	assignments, err := s.groupTeacherRepo.TeacherAssignmentIDs(ctx, edit.ID)
+	if err != nil {
 		return &EducationError{Op: "EditGroup", Err: err}
 	}
-	teachers, err := s.GetGroupTeachers(ctx, edit.ID)
+	teachers, err := s.assignedTeachers(ctx, assignments)
 	if err != nil {
 		return err
 	}
@@ -42,11 +45,26 @@ func (s *service) EditGroup(ctx context.Context, edit schoolstructure.GroupEdit)
 	if !edit.ReplaceTeachers {
 		return nil
 	}
-	changed, err := s.updateGroupTeachersInTx(ctx, edit.ID, edit.TeacherIDs)
+	// The group row and its assignments stay locked since the check, so
+	// the locked set is the one to replace.
+	changed, err := s.replaceGroupTeachers(ctx, edit.ID, assignments, edit.TeacherIDs)
 	if err == nil && changed {
 		s.announceGroupAccessChanged(ctx, "group_teachers")
 	}
 	return err
+}
+
+// assignedTeachers are the teachers of the locked assignments, read like
+// GetGroupTeachers so the check compares the token the read returned.
+func (s *service) assignedTeachers(ctx context.Context, assignments map[int64]int64) ([]*Teacher, error) {
+	if len(assignments) == 0 {
+		return []*Teacher{}, nil
+	}
+	teachers, err := s.teachers.ListTeachers(ctx, slices.Collect(maps.Keys(assignments)))
+	if err != nil {
+		return nil, &EducationError{Op: "EditGroup", Err: err}
+	}
+	return teachers, nil
 }
 
 // teacherIDs are the IDs of the teachers.
