@@ -3,7 +3,6 @@
 // Routen unter /api/school/* laufen über die school-Session und rufen das
 // Backend mit dem school-Token unter /school/class-day auf.
 
-import { z } from "zod";
 import { ApiError } from "./api-error";
 import { bffFile, bffJson } from "./bff-fetch";
 import type { StudentStatusKind } from "./student-status-days-api";
@@ -13,7 +12,8 @@ import type {
   ClassArrivalExceptionResponse,
 } from "./contract/students.generated";
 import { requiredDay } from "./contract/required-day";
-import { calendarDate } from "./contract/runtime";
+import { calendarDate } from "./contract/browser-runtime";
+import { knownEnum } from "./contract/known-enum";
 import { problemDetails } from "./contract/problem-details.generated";
 import type * as schoolClassDayContract from "./contract/school-class-day.generated";
 
@@ -114,7 +114,7 @@ export interface ClassTripConflictDay {
   status: StudentStatusKind;
 }
 
-const tripConflictStatus = z.enum(["sick", "excused", "class_trip"]);
+const tripConflictStatuses = ["sick", "excused", "class_trip"] as const;
 
 /**
  * Liest die blockierenden Tage aus der Ablehnung einer Meldung, wie die OGS
@@ -135,9 +135,9 @@ export function classTripConflictsFromError(
   if (!parsed.success) return null;
   const conflicts: ClassTripConflictDay[] = [];
   for (const conflict of parsed.data.conflicts ?? []) {
-    const status = tripConflictStatus.safeParse(conflict.status);
-    if (status.success && calendarDate.safeParse(conflict.date).success) {
-      conflicts.push({ ...conflict, status: status.data });
+    const status = knownEnum(tripConflictStatuses, conflict.status);
+    if (status !== undefined && calendarDate.safeParse(conflict.date).success) {
+      conflicts.push({ ...conflict, status });
     }
   }
   return conflicts.length > 0

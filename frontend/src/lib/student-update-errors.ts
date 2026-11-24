@@ -4,8 +4,13 @@
 // the ApiError of updateStudent (~/lib/student-api). Keyed off the code, never
 // the status: the student PUT answers 409 and 400 for several reasons.
 
-import { z } from "zod";
-import { ApiError, enrichApiError, problemDetail } from "./api-error";
+import {
+  ApiError,
+  enrichApiError,
+  isProblemRecord,
+  problemDetail,
+} from "./api-error";
+import { knownEnum } from "./contract/known-enum";
 import { problemDetails } from "./contract/problem-details.generated";
 import {
   ALL_COMPANION_WEEKDAYS,
@@ -27,22 +32,26 @@ function parsedBody(body: unknown): unknown {
  * unparsable yields an empty list, which makes the retry ask again rather than
  * confirm something we could not read.
  */
-const companionConflict = z.object({
-  code: z.literal("students.companion_plan_conflict"),
-  details: problemDetails["students.companion_plan_conflict"],
-});
-const companionWeekdays = z.array(z.enum(ALL_COMPANION_WEEKDAYS)).min(1);
-
 function conflictExtensions(body: unknown): CompanionExtensionConfirmation[] {
-  const parsed = companionConflict.safeParse(body);
+  if (
+    !isProblemRecord(body) ||
+    body.code !== "students.companion_plan_conflict"
+  ) {
+    return [];
+  }
+  const parsed = problemDetails["students.companion_plan_conflict"].safeParse(
+    body.details,
+  );
   if (!parsed.success) return [];
   const confirmations: CompanionExtensionConfirmation[] = [];
-  for (const conflict of parsed.data.details.conflicts ?? []) {
-    const days = companionWeekdays.safeParse(conflict.weekdays);
-    if (!days.success) return [];
+  for (const conflict of parsed.data.conflicts ?? []) {
+    const days = conflict.weekdays?.map((day) =>
+      knownEnum(ALL_COMPANION_WEEKDAYS, day),
+    );
+    if (!days?.length || !days.every((day) => day !== undefined)) return [];
     confirmations.push({
       companion_student_id: conflict.student_id,
-      weekdays: days.data,
+      weekdays: days,
     });
   }
   return confirmations;

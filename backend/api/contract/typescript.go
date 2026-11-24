@@ -68,18 +68,20 @@ func TypeScript(doc Document) (map[string]string, error) {
 func writeNonRouteFiles(files map[string]string, doc Document, newWriter func() *tsWriter) {
 	if len(doc.ProblemDetails) > 0 {
 		writer := newWriter()
+		writer.browser = true
 		var decoders strings.Builder
 		decoders.WriteString("\nexport const problemDetails = {\n")
 		for _, code := range sortedKeys(doc.ProblemDetails) {
 			schema := doc.ProblemDetails[code]
 			writer.visit(schema)
-			fmt.Fprintf(&decoders, "  %q: %s,\n", code, writer.zod(schema))
+			fmt.Fprintf(&decoders, "  %q: %s,\n", code, writer.field(schema))
 		}
 		decoders.WriteString("} as const;\n")
 		files["problem-details.generated.ts"] = writer.file(nil, nil) + decoders.String()
 	}
 	if doc.StreamEvent != nil {
 		writer := newWriter()
+		writer.browser = true
 		writer.visit(*doc.StreamEvent)
 		files["stream-event.generated.ts"] = writer.file(nil, nil)
 	}
@@ -296,6 +298,8 @@ type tsWriter struct {
 	helpers   map[string]bool
 	typeOrder []string
 	enumOrder []string
+	// Non-route decoders run in browsers and must not bring the route runtime.
+	browser bool
 	// pending names the types of the file not written yet: a reference to one
 	// of them closes a cycle and is read lazily.
 	pending map[string]bool
@@ -346,11 +350,15 @@ func (w *tsWriter) file(routes []Route, shared *tsWriter) string {
 
 	var out strings.Builder
 	out.WriteString(tsHeader)
+	runtime := "runtime"
+	if w.browser {
+		runtime = "browser-runtime"
+	}
 	if strings.Contains(body.String(), "z.") {
 		out.WriteString("import { z } from \"zod\";\n")
 	}
 	if helpers := sortedKeys(w.helpers); len(helpers) > 0 {
-		fmt.Fprintf(&out, "import {\n  %s,\n} from \"./runtime\";\n", strings.Join(helpers, ",\n  "))
+		fmt.Fprintf(&out, "import {\n  %s,\n} from \"./%s\";\n", strings.Join(helpers, ",\n  "), runtime)
 	}
 	if imports := shared.namedIn(body.String()); len(imports) > 0 {
 		fmt.Fprintf(&out, "import {\n  %s,\n} from \"./%s\";\n", strings.Join(imports, ",\n  "), strings.TrimSuffix(sharedFile, ".ts"))
@@ -397,7 +405,12 @@ func (w *tsWriter) object(out *strings.Builder, object Object) {
 	// The interface above and this shape come from one model; `object` hands
 	// the checker the interface instead of letting it derive the shape's type.
 	w.helpers["object"] = true
-	fmt.Fprintf(out, "\nexport const %sSchema: z.ZodType<%s, unknown> = object<%s>({\n", object.Name, object.Name, object.Name)
+	codecType := "z.ZodType<" + object.Name + ", unknown>"
+	if w.browser {
+		w.helpers["type Decoder"] = true
+		codecType = "Decoder<" + object.Name + ">"
+	}
+	fmt.Fprintf(out, "\nexport const %sSchema: %s = object<%s>({\n", object.Name, codecType, object.Name)
 	for _, field := range object.Fields {
 		decoder := w.field(field.Schema)
 		if field.Optional {
