@@ -56,7 +56,7 @@ var responsibilityDefinitions = []config.Definition{
 		Key:             config.KeyResponsibilityStaff,
 		Levels:          config.LevelBoth,
 		Label:           "Wer stellt das Personal an?",
-		Description:     "Diese Stelle steht in der Personalakte beim Einsatzort als Arbeitgeber.",
+		Description:     "Diese Stelle steht in der Personalakte beim Einsatzort als Arbeitgeber. Im Lohnexport des Trägers stehen ihre Stunden mit ihrer Kostenstelle oder in einer eigenen Datei.",
 		Type:            config.FieldSelect,
 		Default:         config.ResponsibleBodyTraeger,
 		ReadPermission:  "config:read",

@@ -121,7 +121,6 @@ export function CatalogSchoolsCard({
         columns={columns}
         rows={standings}
         getRowKey={(standing) => standing.schoolId}
-        stackedOnMobile
         emptyState={
           <EmptyState
             variant="compact"
@@ -320,7 +319,6 @@ export function CatalogOfferingsCard({
           (a, b) => a.draft.fields.sortOrder - b.draft.fields.sortOrder,
         )}
         getRowKey={(offering) => offering.id}
-        stackedOnMobile
         rowHasInteractiveControls={(offering) =>
           editable && !offering.withdrawnAt
         }

@@ -359,7 +359,6 @@ export function CatererSchoolOrders({
       rows={rows}
       getRowKey={(row) => row.key}
       rowClassName={(row) => (row.kind === "total" ? "bg-gray-50" : "")}
-      stackedOnMobile
       caption={`Bestellung von ${school.name} an den gewählten Tagen`}
     />
   );

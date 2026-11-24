@@ -83,7 +83,6 @@ export function PhaseOfferingOccupancy({
         columns={columns}
         rows={data.offerings}
         getRowKey={(offering) => offering.id}
-        stackedOnMobile
         defaultSortKey="name"
         defaultSortDirection="asc"
       />

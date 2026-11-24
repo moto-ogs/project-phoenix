@@ -216,7 +216,6 @@ test.describe("phone card details toggle", () => {
         ],
         getRowKey: (r) => r.id,
         onRowClick: () => undefined,
-        stackedOnMobile: true,
         stackedLayout: "row",
         stackedDetailKey: "date",
       }),

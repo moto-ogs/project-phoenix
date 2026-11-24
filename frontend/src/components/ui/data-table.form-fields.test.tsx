@@ -94,7 +94,6 @@ function WageForm({ error }: { readonly error?: unknown }) {
     <form>
       <FormErrorAlert message={errors.error} />
       <DataTable
-        stackedOnMobile
         stackedLayout="form"
         columns={columns}
         rows={wageRows}

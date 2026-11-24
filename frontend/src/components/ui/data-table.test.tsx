@@ -43,7 +43,6 @@ describe("DataTable keyboard navigation", () => {
         getRowKey={(row) => row.id}
         onRowClick={onRowClick}
         canClickRow={(row) => row.id === "1"}
-        stackedOnMobile
       />
     );
     setViewportWidth(DESKTOP_WIDTH);
@@ -192,7 +191,6 @@ describe("DataTable keyboard navigation", () => {
           getRowKey={(row) => row.id}
           onRowClick={vi.fn()}
           rowHasInteractiveControls
-          stackedOnMobile
         />,
       );
 
@@ -225,7 +223,6 @@ describe("DataTable keyboard navigation", () => {
           getRowKey={(row) => row.id}
           onRowClick={onRowClick}
           rowHasInteractiveControls={(row) => row.id === "1"}
-          stackedOnMobile
         />,
       );
 
@@ -424,7 +421,6 @@ describe("DataTable stacked phone layout", () => {
         columns={stackedColumns}
         rows={people}
         getRowKey={(row) => row.id}
-        stackedOnMobile
       />
     );
     const { unmount } = render(table);
@@ -464,7 +460,6 @@ describe("DataTable stacked phone layout", () => {
         ]}
         rows={people}
         getRowKey={(row) => row.id}
-        stackedOnMobile
       />,
     );
 
@@ -495,7 +490,6 @@ describe("DataTable stacked phone layout", () => {
         ]}
         rows={people}
         getRowKey={(row) => row.id}
-        stackedOnMobile
       />,
     );
 
@@ -512,7 +506,6 @@ describe("DataTable stacked phone layout", () => {
         rows={people}
         getRowKey={(row) => row.id}
         pageSize={1}
-        stackedOnMobile
       />,
     );
 
@@ -528,12 +521,13 @@ describe("DataTable stacked phone layout", () => {
     expect(stacked).toHaveTextContent("Lea");
   });
 
-  it("renders the table alone when the phone layout is not requested", () => {
+  it("renders the table alone when a comparison table opts out (#7912)", () => {
     render(
       <DataTable
         columns={stackedColumns}
         rows={people}
         getRowKey={(row) => row.id}
+        mobileScroll={{ reason: "Zahlen je Kind zum Vergleichen" }}
       />,
     );
 
@@ -661,7 +655,6 @@ describe("DataTable one-line phone list (#3834)", () => {
         rows={rows}
         getRowKey={(row) => row.id}
         onRowClick={onRowClick}
-        stackedOnMobile
         stackedLayout="row"
         stackedDetailKey="end"
         selection={{
@@ -705,7 +698,6 @@ describe("DataTable one-line phone list (#3834)", () => {
         rows={rows}
         getRowKey={(row) => row.id}
         hiddenColumns={new Set(["status"])}
-        stackedOnMobile
         stackedLayout="row"
       />
     );
@@ -857,7 +849,6 @@ describe("DataTable form phone layout (#4807)", () => {
         columns={formColumns}
         rows={wageRows}
         getRowKey={(row) => row.id}
-        stackedOnMobile
         stackedLayout="form"
         stackedTitle={(row) => row.name}
         rowHasInteractiveControls
@@ -890,7 +881,6 @@ describe("DataTable form phone layout (#4807)", () => {
         columns={formColumns}
         rows={wageRows}
         getRowKey={(row) => row.id}
-        stackedOnMobile
         stackedLayout="form"
         stackedTitle={(row) => row.name}
         rowHasInteractiveControls
@@ -1212,7 +1202,6 @@ describe("DataTable phone cards without lost columns (#7911)", () => {
         rows={cardRows}
         getRowKey={(r) => r.id}
         onRowClick={onRowClick}
-        stackedOnMobile
         stackedLayout={layout}
         stackedDetailKey={layout === "row" ? "pickup" : undefined}
         {...props}
@@ -1465,5 +1454,109 @@ describe("DataTable phone cards without lost columns (#7911)", () => {
     fireEvent.click(card.getByText("Alpha"));
 
     expect(onRowClick).toHaveBeenCalledWith(cardRows[0]);
+  });
+});
+
+describe("DataTable on a phone: stacked by default, comparison tables scroll (#7912)", () => {
+  usePhoneViewport();
+
+  interface MonthRow {
+    id: string;
+    month: string;
+    present: number;
+    absent: number;
+  }
+  const months: MonthRow[] = [
+    { id: "1", month: "Januar", present: 120, absent: 4 },
+    { id: "2", month: "Februar", present: 110, absent: 9 },
+  ];
+  const monthColumns: DataTableColumn<MonthRow>[] = [
+    { key: "month", header: "Monat", render: (r) => r.month },
+    { key: "present", header: "Anwesend", render: (r) => r.present },
+    { key: "absent", header: "Abwesend", render: (r) => r.absent },
+  ];
+
+  it("stacks the rows without an opt-in", () => {
+    render(
+      <DataTable
+        columns={monthColumns}
+        rows={months}
+        getRowKey={(r) => r.id}
+      />,
+    );
+
+    const stacked = screen.getByTestId("data-table-stacked");
+    const cards = within(stacked).getAllByRole("listitem");
+    expect(cards).toHaveLength(2);
+    // The first column heads the card, every other column is a labelled line.
+    expect(within(cards[0]!).getByText("Januar")).toBeInTheDocument();
+    expect(within(cards[0]!).getByText("Anwesend")).toBeInTheDocument();
+    expect(within(cards[0]!).getByText("120")).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
+
+  it("keeps a comparison table as a table that scrolls with its first column pinned", () => {
+    render(
+      <DataTable
+        columns={monthColumns}
+        rows={months}
+        getRowKey={(r) => r.id}
+        mobileScroll={{ reason: "Zahlenreihen je Monat zum Vergleichen" }}
+      />,
+    );
+
+    const table = screen.getByRole("table");
+    // Anker: die Tabelle steht am Handy, die Karten fehlen.
+    expect(within(table).getByText("Januar")).toBeInTheDocument();
+    expect(screen.queryByTestId("data-table-stacked")).not.toBeInTheDocument();
+
+    // Head and body cells of the first column stay at the left edge below
+    // md; the other columns scroll beneath them.
+    const firstHead = within(table).getByRole("columnheader", {
+      name: "Monat",
+    });
+    const firstCell = within(table).getByRole("cell", { name: "Januar" });
+    for (const cell of [firstHead, firstCell]) {
+      expect(cell).toHaveClass("max-md:sticky", "max-md:left-0");
+    }
+    expect(within(table).getByRole("cell", { name: "120" })).not.toHaveClass(
+      "max-md:sticky",
+    );
+  });
+
+  it("shows the existing swipe cue while columns run past the edge", () => {
+    render(
+      <DataTable
+        columns={monthColumns}
+        rows={months}
+        getRowKey={(r) => r.id}
+        mobileScroll={{ reason: "Zahlenreihen je Monat zum Vergleichen" }}
+      />,
+    );
+    const table = screen.getByRole("table");
+    const scroller = table.parentElement!;
+    Object.defineProperty(scroller, "scrollWidth", { value: 900 });
+    Object.defineProperty(scroller, "clientWidth", { value: 390 });
+    fireEvent.scroll(scroller);
+
+    expect(scroller).toHaveAttribute("data-overflow-end", "true");
+  });
+
+  it("refuses an opt-out without a reason at compile time", () => {
+    const opts = {
+      columns: monthColumns,
+      rows: months,
+      getRowKey: (r: MonthRow) => r.id,
+    };
+    render(
+      <>
+        {/* @ts-expect-error -- the exception needs a reason */}
+        <DataTable {...opts} mobileScroll={{}} />
+        {/* @ts-expect-error -- an empty reason is no reason */}
+        <DataTable {...opts} mobileScroll={{ reason: "" }} />
+      </>,
+    );
+    // Anker: zur Laufzeit stehen beide Tabellen; der Test prüft den Typ.
+    expect(screen.getAllByRole("table")).toHaveLength(2);
   });
 });

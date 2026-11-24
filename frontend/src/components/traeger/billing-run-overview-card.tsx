@@ -274,7 +274,7 @@ export function BillingRunOverviewCard({
   // Panel die neuen Beträge.
   const [shownKey, setShownKey] = useState<string | null>(null);
   // Below md the table shows its rows stacked, with the row menu in the
-  // row's head (DataTable `stackedOnMobile`).
+  // row's head (DataTable stacked phone layout).
   const isPhoneRow = useMediaQuery(BELOW_MD);
   const [breakdownShown, setBreakdownShown] = useState(false);
   // The issued document whose letter shows beside the list (#5692).
@@ -586,7 +586,6 @@ export function BillingRunOverviewCard({
       }
       activeRowKey={previewed ? rowKey(previewed) : null}
       rowHasInteractiveControls
-      stackedOnMobile
       emptyState={
         <EmptyState
           title="Keine Rechnung in diesem Lauf."

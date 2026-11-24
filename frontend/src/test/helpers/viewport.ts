@@ -10,7 +10,7 @@ export const DESKTOP_WIDTH = 1920;
 /**
  * Resizes the Happy DOM window. Its `matchMedia` follows the new size and
  * notifies `change` listeners, so components that pick a layout by media
- * query (DataTable's `stackedOnMobile`) switch as in a browser.
+ * query (DataTable's stacked phone layout) switch as in a browser.
  *
  * Happy DOM quirk: a `change` listener starts from `matches === false`, not
  * from the real value. A query that matched when the listener was added

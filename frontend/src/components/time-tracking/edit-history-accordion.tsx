@@ -229,7 +229,6 @@ export function EditHistoryAccordion({
         )}
         getRowKey={(row) => row.edit.id}
         dense
-        stackedOnMobile
       />
       {onEdit && (
         <Button

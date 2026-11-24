@@ -756,7 +756,6 @@ export default function TraegerDashboardPage() {
         // Six figures and the action beside the school: narrower cells keep
         // the name whole and every column in view on a laptop.
         dense
-        stackedOnMobile
         rowHasInteractiveControls
         onRowClick={(school) => router.push(schoolPath(school))}
         emptyState={

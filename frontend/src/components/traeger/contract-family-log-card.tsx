@@ -91,7 +91,6 @@ export function ContractFamilyLogCard({
           getRowKey={(event) => event.id}
           pageSize={10}
           pageNoun="Änderungen"
-          stackedOnMobile
           stackedLayout="lines"
           dense
         />

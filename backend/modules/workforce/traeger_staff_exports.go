@@ -30,6 +30,14 @@ const (
 	TraegerPayrollFormatLug   = "datev_lug"
 )
 
+// The forms of the payroll file (#8041, ADR 0320): one file for the whole
+// Träger, whose lines of another employer carry its Kostenstelle, or one
+// file per employer with its own DATEV client.
+const (
+	TraegerPayrollFormTraeger     = "traeger"
+	TraegerPayrollFormArbeitgeber = "arbeitgeber"
+)
+
 // The categories of the payroll file, the same the school's file books
 // (#1417 2b). Each has a Lohnart per kind of contract.
 const (
@@ -66,12 +74,29 @@ var (
 	// names a reason: a person without Personalnummer, a LODAS file without
 	// Berater- and Mandantennummer, or no Lohnart at all.
 	ErrTraegerPayrollNotReady = errors.New("workforce: the payroll file cannot be made yet")
+	// ErrTraegerPayrollEmployerInvalid refuses a payroll value of an
+	// employer; TraegerPayrollEmployerError names the field.
+	ErrTraegerPayrollEmployerInvalid = errors.New("workforce: the payroll values of the employer are invalid")
 )
+
+// TraegerPayrollEmployerError names the refused field of an employer's
+// payroll values.
+type TraegerPayrollEmployerError struct {
+	Field string
+}
+
+func (e *TraegerPayrollEmployerError) Error() string {
+	return ErrTraegerPayrollEmployerInvalid.Error() + ": " + e.Field
+}
+
+func (e *TraegerPayrollEmployerError) Unwrap() error { return ErrTraegerPayrollEmployerInvalid }
 
 // TraegerPayrollSettings are the Träger values of the payroll file (ADR 0089
 // section 11): the DATEV client and the Lohnart per category and kind of
 // contract. A school's own payroll settings do not apply.
 type TraegerPayrollSettings struct {
+	// Form is TraegerPayrollFormTraeger or TraegerPayrollFormArbeitgeber.
+	Form             string
 	ConsultantNumber string
 	ClientNumber     string
 	// WageTypes maps a category and a kind to its Lohnart, "" for none.
@@ -150,6 +175,41 @@ type TraegerExportMonth struct {
 	Year   int
 	Month  int
 	Format string
+	// File names one file of the form per employer (TraegerPayrollFile.Key);
+	// empty for the one file of the Träger.
+	File string
+}
+
+// TraegerPayrollEmployerValues are the payroll values of a body that
+// employs the staff of a school in place of the Träger (#8041, ADR 0320):
+// the DATEV client of its own file and the Kostenstelle of its lines in the
+// one file of the Träger. Version is the read state a save sends back (ADR
+// 0311); readstate.Absent while nothing is stored.
+type TraegerPayrollEmployerValues struct {
+	SchoolID         ident.ID `json:"school_id"`
+	SchoolName       string   `json:"school_name"`
+	Body             string   `json:"body"`
+	Name             string   `json:"name"`
+	ConsultantNumber string   `json:"consultant_number"`
+	ClientNumber     string   `json:"client_number"`
+	CostCenter       string   `json:"cost_center"`
+	Version          string   `json:"version"`
+}
+
+// TraegerPayrollEmployerList lists, in school order, every school whose
+// staff a Schulträger or a Gemeinde employs, with its payroll values.
+type TraegerPayrollEmployerList struct {
+	Employers []TraegerPayrollEmployerValues `json:"employers"`
+}
+
+// TraegerPayrollEmployerInput are the payroll values the Personalverwaltung
+// saves for the body of a school; every value may be empty.
+type TraegerPayrollEmployerInput struct {
+	Body             string
+	ConsultantNumber string
+	ClientNumber     string
+	CostCenter       string
+	ExpectedVersion  string
 }
 
 // TraegerExportPerson is a person the export names: one left out for a
@@ -174,12 +234,72 @@ type TraegerPayrollGap struct {
 	Kind     string `json:"kind"`
 }
 
+// TraegerPayrollFileEmployer is an employer whose lines a file carries:
+// the Träger (Body "traeger", no name) or a Schulträger or a Gemeinde.
+type TraegerPayrollFileEmployer struct {
+	Body string `json:"body"`
+	Name string `json:"name"`
+}
+
+// TraegerPayrollDuplicate is a personnel number two people would share in
+// one file: DATEV would book the hours of both to one person.
+type TraegerPayrollDuplicate struct {
+	Number string                `json:"number"`
+	People []TraegerExportPerson `json:"people"`
+}
+
+// TraegerPayrollSplitNumber is a person a file would book under two
+// personnel numbers: DATEV would see two people.
+type TraegerPayrollSplitNumber struct {
+	Person  TraegerExportPerson `json:"person"`
+	Numbers []string            `json:"numbers"`
+}
+
+// TraegerPayrollFile is one file of the month: the one file of the Träger,
+// or in the form per employer one file per DATEV client. Key names it for
+// the download.
+type TraegerPayrollFile struct {
+	Key              string                       `json:"key"`
+	Employers        []TraegerPayrollFileEmployer `json:"employers"`
+	Schools          []string                     `json:"schools"`
+	ConsultantNumber string                       `json:"consultant_number"`
+	ClientNumber     string                       `json:"client_number"`
+	People           int                          `json:"people"`
+	LineCount        int                          `json:"line_count"`
+	// MissingClient is true when the file lacks its Berater- or
+	// Mandantennummer: for LODAS always, per employer for every format.
+	MissingClient bool `json:"missing_client"`
+	// WithoutNumber are the people of this file without personnel number.
+	WithoutNumber []TraegerExportPerson     `json:"without_number"`
+	Duplicates    []TraegerPayrollDuplicate `json:"duplicates"`
+	// SplitNumbers are the people with two numbers in this file: their
+	// number with the employer differs between its Einsatzorte.
+	SplitNumbers []TraegerPayrollSplitNumber `json:"split_numbers"`
+	Ready        bool                        `json:"ready"`
+}
+
+// TraegerPayrollEmployerCheck is a body that employs staff with values in
+// the month, and what its payroll values still lack.
+type TraegerPayrollEmployerCheck struct {
+	SchoolID   ident.ID `json:"school_id"`
+	SchoolName string   `json:"school_name"`
+	Body       string   `json:"body"`
+	Name       string   `json:"name"`
+	// MissingClient: the form per employer needs its Berater- and
+	// Mandantennummer. MissingCostCenter: the one file needs its
+	// Kostenstelle.
+	MissingClient     bool `json:"missing_client"`
+	MissingCostCenter bool `json:"missing_cost_center"`
+}
+
 // TraegerPayrollReport is the check the page shows before the download. The
 // file and the report come from one computation, so they never disagree.
 type TraegerPayrollReport struct {
-	Year      int                       `json:"year"`
-	Month     int                       `json:"month"`
-	Format    string                    `json:"format"`
+	Year   int    `json:"year"`
+	Month  int    `json:"month"`
+	Format string `json:"format"`
+	// Form is the form of the file the Träger chose (ADR 0320).
+	Form      string                    `json:"form"`
 	Contracts int                       `json:"contracts"`
 	People    int                       `json:"people"`
 	Schools   int                       `json:"schools"`
@@ -201,7 +321,15 @@ type TraegerPayrollReport struct {
 	// ContractChanges are the people whose contract changes within the
 	// month at one school; the later contract books the whole month there.
 	ContractChanges []TraegerExportPerson `json:"contract_changes"`
-	Ready           bool                  `json:"ready"`
+	// Files are the files of the month, one in the form of the Träger.
+	Files []TraegerPayrollFile `json:"files"`
+	// Employers are the bodies besides the Träger with values in the month.
+	Employers []TraegerPayrollEmployerCheck `json:"employers"`
+	// InSeveralFiles are the people in more than one file of the form per
+	// employer: the Lohnbüro checks their number with each employer.
+	InSeveralFiles []TraegerExportPerson `json:"in_several_files"`
+	// Ready is true when every file can be made.
+	Ready bool `json:"ready"`
 }
 
 // TraegerTimeReport is the check of the time export.
@@ -240,4 +368,12 @@ type TraegerStaffExports interface {
 	PayrollFile(ctx context.Context, actor TraegerStaffActor, month TraegerExportMonth) (TraegerExportFile, error)
 	TimeReport(ctx context.Context, actor TraegerStaffActor, month TraegerExportMonth) (TraegerTimeReport, error)
 	TimeFile(ctx context.Context, actor TraegerStaffActor, month TraegerExportMonth) (TraegerExportFile, error)
+	// PayrollEmployers lists the bodies that employ staff of a school with
+	// their payroll values (#8041, ADR 0320); it reads no person.
+	PayrollEmployers(ctx context.Context, actor TraegerStaffActor) (TraegerPayrollEmployerList, error)
+	// SavePayrollEmployer stores the payroll values of the body that employs
+	// the staff of schoolID. A body that does not employ there is
+	// ErrTraegerStaffEmployerChanged, values changed since
+	// input.ExpectedVersion readstate.ErrChanged.
+	SavePayrollEmployer(ctx context.Context, actor TraegerStaffActor, schoolID int64, input TraegerPayrollEmployerInput) (TraegerPayrollEmployerValues, error)
 }

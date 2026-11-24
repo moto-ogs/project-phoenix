@@ -294,7 +294,6 @@ export function BillingMailCard({ runId }: Readonly<{ runId: string }>) {
           )}
           rows={[...mailings]}
           getRowKey={(mailing) => mailing.documentId}
-          stackedOnMobile
           caption="Jede Zeile ist das Schreiben an eine Familie."
         />
       ) : null}

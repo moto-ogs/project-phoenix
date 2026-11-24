@@ -13098,11 +13098,26 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/staff-exports/payroll/employers",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "TraegerPayrollEmployerList"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/staff-exports/payroll/export",
       "portals": [
         "org"
       ],
       "query": [
+        {
+          "name": "file",
+          "kind": "string"
+        },
         {
           "name": "format",
           "kind": "string"
@@ -20734,6 +20749,17 @@
     },
     {
       "method": "POST",
+      "pattern": "/traeger/holiday-periods/{id}/registrations/{registrationId}/consents/{key}/withdraw",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "HolidayRegistrationDetail"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/traeger/holiday-periods/{id}/registrations/{registrationId}/freeze",
       "portals": [
         "org"
@@ -23233,6 +23259,18 @@
     },
     {
       "method": "PUT",
+      "pattern": "/parent/me/holiday-registration-entries/{registrationId}/consents/{key}",
+      "portals": [
+        "parent"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "HolidayRegistrationConsentRequest"
+      },
+      "no_data": true
+    },
+    {
+      "method": "PUT",
       "pattern": "/parent/me/notification-preferences/{type}",
       "portals": [
         "parent"
@@ -24214,6 +24252,21 @@
     },
     {
       "method": "PUT",
+      "pattern": "/traeger/staff-exports/payroll/employers/{schoolId}",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "PayrollEmployerRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TraegerPayrollEmployerValues"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/traeger/staff-planning/records/{id}/shifts/{shiftId}",
       "portals": [
         "org"
@@ -24302,6 +24355,21 @@
       "request": {
         "kind": "ref",
         "ref": "UpdateContractRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TraegerStaffRecordDetail"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/traeger/staff-records/{id}/employer-numbers/{schoolId}",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "EmployerNumberRequest"
       },
       "response": {
         "kind": "ref",
@@ -53753,6 +53821,28 @@
       ]
     },
     {
+      "name": "EmployerNumberRequest",
+      "go_type": "traegerstaff.EmployerNumberRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "employer_personnel_number",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "Employment",
       "go_type": "staffpersonmerge.Employment",
       "fields": [
@@ -63492,6 +63582,31 @@
           }
         },
         {
+          "name": "home_photo_consent",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "home_room_history_stopped",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "consents",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HolidayRegistrationConsent"
+            }
+          }
+        },
+        {
           "name": "read_only",
           "schema": {
             "kind": "bool"
@@ -64687,6 +64802,108 @@
       ]
     },
     {
+      "name": "HolidayRegistrationConsent",
+      "go_type": "enrollment.HolidayRegistrationConsent",
+      "fields": [
+        {
+          "name": "key",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "text",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "given",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "changed_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayRegistrationConsentRequest",
+      "go_type": "parent.HolidayRegistrationConsentRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "given",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayRegistrationConsentResponse",
+      "go_type": "parent.HolidayRegistrationConsentResponse",
+      "fields": [
+        {
+          "name": "key",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "text",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "given",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "changed_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "HolidayRegistrationContact",
       "go_type": "enrollment.HolidayRegistrationContact",
       "fields": [
@@ -64951,6 +65168,16 @@
         },
         {
           "name": "legal_acceptances",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "instant"
+            }
+          }
+        },
+        {
+          "name": "legal_withdrawals",
           "schema": {
             "kind": "map",
             "nullable": true,
@@ -65307,6 +65534,17 @@
               "ref": "HolidayRegistrationEntryChildResponse"
             }
           }
+        },
+        {
+          "name": "consents",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HolidayRegistrationConsentResponse"
+            }
+          }
         }
       ]
     },
@@ -65495,6 +65733,20 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        },
+        {
+          "name": "key",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "given",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -78896,6 +79148,48 @@
             "elem": {
               "kind": "int"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "PayrollEmployerRequest",
+      "go_type": "traegerstaff.PayrollEmployerRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "body",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "consultant_number",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "client_number",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "cost_center",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -108210,6 +108504,262 @@
       ]
     },
     {
+      "name": "TraegerPayrollDuplicate",
+      "go_type": "workforce.TraegerPayrollDuplicate",
+      "fields": [
+        {
+          "name": "number",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "people",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "TraegerExportPerson"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerPayrollEmployerCheck",
+      "go_type": "workforce.TraegerPayrollEmployerCheck",
+      "fields": [
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "body",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "missing_client",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "missing_cost_center",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerPayrollEmployerList",
+      "go_type": "workforce.TraegerPayrollEmployerList",
+      "fields": [
+        {
+          "name": "employers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "TraegerPayrollEmployerValues"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerPayrollEmployerValues",
+      "go_type": "workforce.TraegerPayrollEmployerValues",
+      "fields": [
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "body",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "consultant_number",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "client_number",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "cost_center",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerPayrollFile",
+      "go_type": "workforce.TraegerPayrollFile",
+      "fields": [
+        {
+          "name": "key",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "employers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "TraegerPayrollFileEmployer"
+            }
+          }
+        },
+        {
+          "name": "schools",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "consultant_number",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "client_number",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "people",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "line_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "missing_client",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "without_number",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "TraegerExportPerson"
+            }
+          }
+        },
+        {
+          "name": "duplicates",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "TraegerPayrollDuplicate"
+            }
+          }
+        },
+        {
+          "name": "split_numbers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "TraegerPayrollSplitNumber"
+            }
+          }
+        },
+        {
+          "name": "ready",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerPayrollFileEmployer",
+      "go_type": "workforce.TraegerPayrollFileEmployer",
+      "fields": [
+        {
+          "name": "body",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "TraegerPayrollGap",
       "go_type": "workforce.TraegerPayrollGap",
       "fields": [
@@ -108269,6 +108819,12 @@
         },
         {
           "name": "format",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "form",
           "schema": {
             "kind": "string"
           }
@@ -108364,9 +108920,65 @@
           }
         },
         {
+          "name": "files",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "TraegerPayrollFile"
+            }
+          }
+        },
+        {
+          "name": "employers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "TraegerPayrollEmployerCheck"
+            }
+          }
+        },
+        {
+          "name": "in_several_files",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "TraegerExportPerson"
+            }
+          }
+        },
+        {
           "name": "ready",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerPayrollSplitNumber",
+      "go_type": "workforce.TraegerPayrollSplitNumber",
+      "fields": [
+        {
+          "name": "person",
+          "schema": {
+            "kind": "ref",
+            "ref": "TraegerExportPerson"
+          }
+        },
+        {
+          "name": "numbers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
           }
         }
       ]
@@ -109586,6 +110198,25 @@
         },
         {
           "name": "employer_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "employer_body",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "employer_personnel_number",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "employer_number_version",
           "schema": {
             "kind": "string"
           }
@@ -122014,6 +122645,17 @@
             "kind": "ref",
             "nullable": true,
             "ref": "HolidayHostHealth"
+          }
+        },
+        {
+          "name": "consents",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HolidayRegistrationConsent"
+            }
           }
         },
         {

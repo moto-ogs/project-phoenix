@@ -482,7 +482,6 @@ export default function TraegerClosingDaysPage() {
             getRowKey={(day) => day.id}
             defaultSortKey="range"
             defaultSortDirection="asc"
-            stackedOnMobile
           />
         )}
       </SectionCard>

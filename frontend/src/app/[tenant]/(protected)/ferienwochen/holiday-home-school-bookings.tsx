@@ -160,7 +160,6 @@ export function HolidayHomeSchoolBookings({
           rows={[...bookings]}
           getRowKey={(child) => `${child.weekId}:${child.childId}`}
           defaultSortKey="week"
-          stackedOnMobile
           emptyState={
             <EmptyState
               title="Kein Kind deiner OGS ist für eine andere OGS bestätigt"

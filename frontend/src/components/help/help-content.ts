@@ -233,6 +233,7 @@ const PARENT_DRAFT_TOPICS: readonly HelpTopic[] = [
   articles.parentEnrollTopic(),
   articles.parentEnrollStatusTopic(),
   articles.parentHolidayRegistrationTopic(),
+  articles.parentHolidayConsentsTopic(),
 
   // --- Wenn etwas nicht klappt ---
   articles.parentAccountProblemTopic(),

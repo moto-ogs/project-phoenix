@@ -3509,7 +3509,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (b StaffEmployers) SchoolEmployers(ctx context.Context, organizationID int64, schoolIDs []int64) (map[int64]string, error) {\n\tparties, err := b.Responsible.ResponsibleParties(ctx, organizationID, organizationtenancy.ResponsibilityStaff, schoolIDs)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\temployers := make(map[int64]string, len(parties))\n\tfor schoolID, party := range parties {\n\t\temployers[schoolID] = party.Name\n\t}\n\treturn employers, nil\n}",
+      "evidence": "func (b StaffEmployers) SchoolEmployers(ctx context.Context, organizationID int64, schoolIDs []int64) (map[int64]workforce.TraegerStaffEmployer, error) {\n\tparties, err := b.Responsible.ResponsibleParties(ctx, organizationID, organizationtenancy.ResponsibilityStaff, schoolIDs)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\temployers := make(map[int64]workforce.TraegerStaffEmployer, len(parties))\n\tfor schoolID, party := range parties {\n\t\temployers[schoolID] = workforce.TraegerStaffEmployer{Body: string(party.Kind), Name: party.Name}\n\t}\n\treturn employers, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/StaffEmployers.SchoolEmployers",
       "owner": "roots"

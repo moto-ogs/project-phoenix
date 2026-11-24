@@ -169,6 +169,7 @@ function listOf(week: HostedHolidayWeek): HolidayParticipantList {
         secondGuardian: null,
         answers: [],
         health: null,
+        consents: [],
       },
       {
         childId: "2",
@@ -181,6 +182,7 @@ function listOf(week: HostedHolidayWeek): HolidayParticipantList {
         secondGuardian: null,
         answers: [],
         health: null,
+        consents: [],
       },
     ],
   };
@@ -355,6 +357,57 @@ describe("FerienwochenPage", () => {
       screen.getByText(
         "Nur zur Information. Anmeldungen prüft und bestätigt der Träger. Gesundheitsangaben stehen bei den Kindern, deren Eltern zugestimmt haben.",
       ),
+    ).toBeInTheDocument();
+  });
+
+  it("shows each voluntary consent of the registrations in its own column (#8038)", async () => {
+    weeksMock.mockResolvedValue([firstWeek]);
+    const list = listOf(firstWeek);
+    const [ben, lia] = list.participants;
+    if (!ben || !lia) throw new Error("fixture without children");
+    const photos = {
+      key: "fotos",
+      title: "Fotos in der Ferienbetreuung",
+      label: "Mein Kind darf auf Erinnerungsfotos zu sehen sein.",
+    };
+    participantsMock.mockResolvedValue({
+      ...list,
+      participants: [
+        {
+          ...ben,
+          consents: [
+            { ...photos, given: false, changedAt: "2026-09-01T08:00:00Z" },
+          ],
+        },
+        {
+          ...lia,
+          consents: [
+            { ...photos, given: true, changedAt: "2026-08-20T08:00:00Z" },
+          ],
+        },
+      ],
+    } satisfies HolidayParticipantList);
+
+    renderPage();
+
+    await screen.findByText("Muster, Lia", { selector: "td, td *" });
+    const children = tableWith("Geburtsdatum");
+    expect(
+      within(children).getByText("Fotos in der Ferienbetreuung", {
+        selector: "th, th *",
+      }),
+    ).toBeInTheDocument();
+    const benRow = within(children)
+      .getByText("Muster, Ben", { selector: "td, td *" })
+      .closest("tr");
+    const liaRow = within(children)
+      .getByText("Muster, Lia", { selector: "td, td *" })
+      .closest("tr");
+    if (!benRow || !liaRow) throw new Error("rows missing");
+    expect(within(benRow).getByText("Widerrufen")).toBeInTheDocument();
+    expect(within(liaRow).getByText("Ja")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Einwilligungen zeigen den Stand von jetzt/),
     ).toBeInTheDocument();
   });
 

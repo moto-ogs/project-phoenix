@@ -103,23 +103,35 @@ func (s *SchoolResponsibilities) ResponsibleParties(ctx context.Context, organiz
 	if organizationID <= 0 {
 		return nil, errTraegerRequired
 	}
+	result := map[int64]organizationtenancy.SchoolParty{}
+	if len(schoolIDs) == 0 {
+		return result, nil
+	}
+	// A school without a stored Schulträger or Gemeinde has the Träger
+	// responsible whatever its settings say (EffectiveBody), so the bodies
+	// come first and only schools with one go on: the common Träger without
+	// any body costs one statement (#8041).
+	stored, err := s.store.SchoolParties(ctx, organizationID, schoolIDs)
+	if err != nil || len(stored) == 0 {
+		return result, err
+	}
 	// Only schools of the Träger: the settings are read outside its
 	// transaction, so a foreign school must not reach that read.
 	own, err := s.store.TraegerSchoolNames(ctx, organizationID)
 	if err != nil {
 		return nil, err
 	}
-	asked := make([]int64, 0, len(schoolIDs))
+	asked := make([]int64, 0, len(stored))
 	for _, school := range own {
-		if slices.Contains(schoolIDs, school.ID) {
+		if slices.ContainsFunc(stored, func(party organizationtenancy.SchoolParty) bool { return party.SchoolID.Int64() == school.ID }) &&
+			slices.Contains(schoolIDs, school.ID) {
 			asked = append(asked, school.ID)
 		}
 	}
-	result := map[int64]organizationtenancy.SchoolParty{}
 	if len(asked) == 0 {
 		return result, nil
 	}
-	parties, choices, err := s.read(ctx, organizationID, asked)
+	parties, choices, err := s.choices(ctx, stored, asked)
 	if err != nil {
 		return nil, err
 	}
@@ -130,6 +142,35 @@ func (s *SchoolResponsibilities) ResponsibleParties(ctx context.Context, organiz
 		}
 	}
 	return result, nil
+}
+
+// choices groups the stored bodies of the asked schools and reads their
+// settings.
+func (s *SchoolResponsibilities) choices(ctx context.Context, stored []organizationtenancy.SchoolParty, schoolIDs []int64,
+) (map[int64]map[organizationtenancy.ResponsibleBody]organizationtenancy.SchoolParty,
+	map[int64]map[organizationtenancy.ResponsibilityArea]organizationtenancy.SchoolResponsibilityChoice, error) {
+	parties := map[int64]map[organizationtenancy.ResponsibleBody]organizationtenancy.SchoolParty{}
+	for _, row := range stored {
+		if !slices.Contains(schoolIDs, row.SchoolID.Int64()) {
+			continue
+		}
+		if parties[row.SchoolID.Int64()] == nil {
+			parties[row.SchoolID.Int64()] = map[organizationtenancy.ResponsibleBody]organizationtenancy.SchoolParty{}
+		}
+		parties[row.SchoolID.Int64()][row.Kind] = row
+	}
+	choices, err := s.settings.SchoolResponsibilityChoices(ctx, schoolIDs)
+	if err != nil {
+		return nil, nil, fmt.Errorf("organization tenancy: read the responsibilities of the schools: %w", err)
+	}
+	for _, schoolID := range schoolIDs {
+		for _, area := range organizationtenancy.ResponsibilityAreas() {
+			if choices[schoolID][area].Body == "" {
+				return nil, nil, fmt.Errorf("organization tenancy: no responsibility %s for school %d", area, schoolID)
+			}
+		}
+	}
+	return parties, choices, nil
 }
 
 // read loads the stored bodies and the settings of the schools. A school

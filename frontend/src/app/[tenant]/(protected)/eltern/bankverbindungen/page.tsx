@@ -264,7 +264,6 @@ function BankverbindungenContent() {
         pageSize={ROWS_PER_PAGE}
         paginationResetKey={`${completeness}:${searchValue}`}
         emptyState={emptyState}
-        stackedOnMobile
       />
       <ExportDialog
         isOpen={exportOpen}

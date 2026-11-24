@@ -79,6 +79,7 @@ import { Button } from "~/components/ui/button";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { exportMenuItems } from "~/components/ui/export-menu";
 import { ConfirmationModal } from "~/components/ui/modal";
+import { HolidayConsentWithdrawButton } from "~/components/traeger/holiday-consent-withdraw-button";
 import NavigationLink from "~/components/ui/navigation-link";
 import { SectionCard } from "~/components/ui/section-card";
 import { SectionLabel } from "~/components/ui/section-label";
@@ -727,11 +728,21 @@ function HolidayRegistrationContent() {
                       ) : null}
                       {block.kind === "notice" && !block.required ? null : (
                         <p className="text-sm text-gray-700">
-                          {at
-                            ? `Zugestimmt am ${formatChatDateTime(at)} Uhr`
-                            : "Nicht zugestimmt"}
+                          {legalBlockState(
+                            at,
+                            registration.legalWithdrawals?.[block.key],
+                          )}
                         </p>
                       )}
+                      {block.kind === "consent" && at ? (
+                        <HolidayConsentWithdrawButton
+                          periodId={periodId}
+                          registrationId={registration.id}
+                          consentKey={block.key}
+                          title={block.title}
+                          onChanged={changed}
+                        />
+                      ) : null}
                       <DocumentAttachmentList
                         labels={PDF_LABELS}
                         attachments={block.attachments}
@@ -1088,4 +1099,19 @@ function HolidayRegistrationContent() {
       )}
     </HolidayRegistrationStatusScope>
   );
+}
+
+/**
+ * Whether the parents agreed to a legal block: since when, or since when
+ * they withdrew a voluntary consent in the parents portal (#8038).
+ */
+function legalBlockState(
+  acceptedAt: string | undefined,
+  withdrawnAt: string | undefined,
+): string {
+  if (acceptedAt) return `Zugestimmt am ${formatChatDateTime(acceptedAt)} Uhr`;
+  if (withdrawnAt) {
+    return `Von den Eltern widerrufen am ${formatChatDateTime(withdrawnAt)} Uhr`;
+  }
+  return "Nicht zugestimmt";
 }

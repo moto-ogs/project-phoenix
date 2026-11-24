@@ -38,6 +38,7 @@ export function holidayWeeksTopic(): HelpTopic {
       "Gibt der Träger Fragen frei, steht jede in einer eigenen Spalte. Zum Beispiel `Darf allein nach Hause gehen`.",
       "Unter `Zweite sorgeberechtigte Person` stehen Name und Telefon, wenn die Eltern eine zweite Person angegeben haben.",
       "Unter `Gesundheit` stehen Allergien, Medikamente und weitere Hinweise. Dort stehen auch Antworten auf Gesundheitsfragen, die der Träger freigibt.",
+      "Fragt der Träger im Formular Einwilligungen ab, steht jede in einer eigenen Spalte. Zum Beispiel `Fotos in der Ferienbetreuung` mit `Ja`, `Nein` oder `Widerrufen`.",
     ],
     result:
       "Du weißt, wie viele Kinder in welcher Zeit kommen und woher sie kommen.",
@@ -49,6 +50,7 @@ export function holidayWeeksTopic(): HelpTopic {
       "Ein `Feriengast` geht auf keine Schule deines Trägers. In Klammern steht die Schule, die die Eltern genannt haben.",
       "Steht in einer Spalte `–`, haben die Eltern die Frage nicht beantwortet.",
       "Gesundheitsangaben siehst du nur, wenn die Eltern zugestimmt haben. Sie stehen nur in der Liste, nicht in der Excel- oder CSV-Datei.",
+      "Die Einwilligungen zeigen immer den Stand von jetzt. Widerrufen die Eltern in der Eltern-App, steht sofort `Widerrufen`. In Excel und CSV heißt die Spalte `Einwilligung:` mit dem Titel. Eine Datei zeigt den Stand beim Herunterladen.",
       "Kinder deiner OGS bleiben in ihrer Gruppe. moto trägt für die gebuchten Tage Ankunft und Abholung ein. Der Check-in erwartet das Kind dann an diesen Tagen. Neu bestätigte Kinder plant moto innerhalb einer Stunde ein.",
       "In der Kinderakte steht unter `Angaben aus der Ferienanmeldung`, was die Eltern angegeben haben: Betreuung, Notfall, Abholung und Gesundheit. Die Stammdaten des Kindes ändern sich nicht.",
       "Änderst du an einem eingeplanten Tag die Abholzeit, bleibt deine Zeit stehen.",

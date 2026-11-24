@@ -496,7 +496,6 @@ export default function TraegerContractFamiliesPage() {
             rows={visible}
             getRowKey={(family) => family.leadId}
             heading={{ title: "Familien", count: visible.length, level: 2 }}
-            stackedOnMobile
             rowHasInteractiveControls={isJoined}
             selection={{
               selectedKeys: selected,

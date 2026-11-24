@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	directory "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/uptrace/bun"
@@ -30,6 +31,7 @@ func (s *StudentStore) readPhoto(ctx context.Context, studentID int64, lock stri
 	return domain.StudentPhoto{
 		StudentID: record.ID, Status: record.Status, PhotoPath: record.PhotoPath,
 		PhotoConsentGivenAt: record.PhotoConsentGivenAt, PhotoConsentGivenBy: record.PhotoConsentGivenBy,
+		HolidayGuest: record.SchoolClass == directory.HolidayGuestSchoolClass,
 	}, found, stats, err
 }
 

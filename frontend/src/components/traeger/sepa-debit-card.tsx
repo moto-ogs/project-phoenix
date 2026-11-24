@@ -423,7 +423,6 @@ export function SepaDebitCard({
               columns={kind === "notice-months" ? noticeRateColumns : columns}
               rows={[...(pending ? run.debits : run.submitted)]}
               getRowKey={(debit) => debit.id}
-              stackedOnMobile
             />
           ) : null}
         </div>

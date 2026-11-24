@@ -10282,7 +10282,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.StudentConsents.RecordStudentConsentTransitions",
-      "binding_digest": "46bf547e04a33d33295c438eb6803789",
+      "binding_digest": "fed92eeedb111d621715f15d4c8a531b",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.StudentConsentCapability.RecordStudentConsentTransitions",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.StudentConsentChangeRepository.Create",
@@ -10290,7 +10290,15 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.StudentConsents.RecordStudentConsentTransitions",
-      "binding_digest": "fde532d858f8bef957705c4223098fd5",
+      "binding_digest": "004d75ed83f641260a8ff7794ae06383",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.StudentConsentCapability.RecordStudentConsentTransitions",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentConsentTextVersion",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.StudentConsents.RecordStudentConsentTransitions",
+      "binding_digest": "a9a36a842f4651e9b59517a90aa5328f",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.StudentConsentCapability.RecordStudentConsentTransitions",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentConsentTransitions",
@@ -10298,7 +10306,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StudentConsentRecords.RecordStudentConsentTransitions",
-      "binding_digest": "46bf547e04a33d33295c438eb6803789",
+      "binding_digest": "fed92eeedb111d621715f15d4c8a531b",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.StudentConsentCapability.RecordStudentConsentTransitions",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.StudentConsentChangeRepository.Create",
@@ -10306,7 +10314,15 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StudentConsentRecords.RecordStudentConsentTransitions",
-      "binding_digest": "fde532d858f8bef957705c4223098fd5",
+      "binding_digest": "004d75ed83f641260a8ff7794ae06383",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.StudentConsentCapability.RecordStudentConsentTransitions",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentConsentTextVersion",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StudentConsentRecords.RecordStudentConsentTransitions",
+      "binding_digest": "a9a36a842f4651e9b59517a90aa5328f",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.StudentConsentCapability.RecordStudentConsentTransitions",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentConsentTransitions",

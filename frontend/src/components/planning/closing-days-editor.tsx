@@ -180,6 +180,8 @@ export function ClosingDaysEditor({
       {
         key: "range",
         header: "Von – Bis",
+        // Am Handy steht der Zeitraum als Unterzeile unter dem Grund.
+        stacked: "hidden",
         className: "hidden sm:table-cell",
         headerClassName: "hidden sm:table-cell",
         sortValue: (day) => day.startDate,
@@ -192,9 +194,11 @@ export function ClosingDaysEditor({
       {
         key: "reason",
         header: "Grund",
+        stacked: "title",
         sortValue: (day) => day.reason,
         // Der Zeitraum rutscht auf schmalen Screens als Unterzeile hierher,
-        // weil die eigene Spalte dort ausgeblendet ist (#2033).
+        // weil die eigene Spalte dort ausgeblendet ist (#2033); unter md
+        // stapelt die Tabelle und zeigt ihn nur hier (#7912).
         render: (day) => (
           // Wie im CalendarPeriodsEditor: kein fester max-w, sondern
           // Restbreite neben der schmalen Aktionsspalte plus umbrechender
@@ -215,7 +219,7 @@ export function ClosingDaysEditor({
                 />
               ) : null}
             </p>
-            <p className="mt-0.5 text-xs leading-5 break-words text-gray-500 sm:hidden">
+            <p className="mt-0.5 text-xs leading-5 break-words text-gray-500 md:hidden">
               {formatClosingDayRange(day)}
             </p>
           </div>

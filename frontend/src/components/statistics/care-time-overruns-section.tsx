@@ -204,7 +204,6 @@ export function CareTimeOverrunsSection({
           isLoading={loading}
           pageSize={25}
           paginationResetKey={`${fromISO}-${toISO}-${filterKey}`}
-          stackedOnMobile
           emptyState={
             <EmptyState
               title="Keine Überschreitungen"

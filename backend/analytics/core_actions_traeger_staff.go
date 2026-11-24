@@ -11,14 +11,18 @@ import (
 // Träger, not to a school, so like the other Träger-Portal routes they count
 // for no school yet. init merges the table into coreActions.
 var traegerStaffCoreActions = map[RouteKey]CoreAction{
-	{http.MethodPost, "/traeger/staff-records/"}:                      notCaptured,
-	{http.MethodPost, "/traeger/staff-records/link-preview"}:          notCaptured,
-	{http.MethodPost, "/traeger/staff-records/hire"}:                  notCaptured,
-	{http.MethodDelete, "/traeger/staff-records/{id}"}:                notCaptured,
-	{http.MethodPut, "/traeger/staff-records/{id}/personnel-number"}:  notCaptured,
-	{http.MethodPut, "/traeger/staff-records/{id}/person"}:            notCaptured,
-	{http.MethodPost, "/traeger/staff-records/{id}/financial/reveal"}: notCaptured,
-	{http.MethodPut, "/traeger/staff-records/{id}/financial"}:         notCaptured,
+	{http.MethodPost, "/traeger/staff-records/"}:                     notCaptured,
+	{http.MethodPost, "/traeger/staff-records/link-preview"}:         notCaptured,
+	{http.MethodPost, "/traeger/staff-records/hire"}:                 notCaptured,
+	{http.MethodDelete, "/traeger/staff-records/{id}"}:               notCaptured,
+	{http.MethodPut, "/traeger/staff-records/{id}/personnel-number"}: notCaptured,
+	// The personnel number with another employer (#8041).
+	{http.MethodPut, "/traeger/staff-records/{id}/employer-numbers/{schoolId}"}: notCaptured,
+	// The payroll values of another employer (#8041).
+	{http.MethodPut, "/traeger/staff-exports/payroll/employers/{schoolId}"}: notCaptured,
+	{http.MethodPut, "/traeger/staff-records/{id}/person"}:                  notCaptured,
+	{http.MethodPost, "/traeger/staff-records/{id}/financial/reveal"}:       notCaptured,
+	{http.MethodPut, "/traeger/staff-records/{id}/financial"}:               notCaptured,
 	// The Nachweise of the records (#4707).
 	{http.MethodPost, "/traeger/staff-proofs/types"}:                   notCaptured,
 	{http.MethodPut, "/traeger/staff-proofs/types/{id}"}:               notCaptured,

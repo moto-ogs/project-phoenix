@@ -260,7 +260,7 @@ func buildLegalBlocks(texts enrollmentNative.LegalTexts) []enrollmentNative.Lega
 	if texts.PhotoEnabled && texts.Photo != "" {
 		blocks = append(blocks, enrollmentNative.LegalBlock{
 			Key: enrollmentNative.ConsentKeyPhoto, Kind: "consent", Title: "Fotoeinwilligung",
-			Label: "Mein Kind darf bei Schulveranstaltungen fotografiert werden. Diese Einwilligung ist freiwillig und jederzeit mit Wirkung für die Zukunft widerrufbar.",
+			Label: standardPhotoConsentLabel,
 			Text:  texts.Photo, Required: false, SortOrder: 30, Source: enrollmentNative.LegalBlockSourceStandard,
 		})
 	}
@@ -299,12 +299,35 @@ func legalAGBBlockText(texts enrollmentNative.LegalTexts) string {
 	return fmt.Sprintf("Die AGB / Teilnahmebedingungen sind als PDF-Datei hinterlegt: [AGB-Dokument öffnen](%s)", enrollmentNative.PublicEnrollmentLegalDocumentURL(texts.AGBDocumentURL))
 }
 
+// standardPhotoConsentLabel is the one wording of the photo consent in the
+// online enrollment (#8039): the consent covers photographing the child and
+// storing a photo in moto, as the parents portal and the staff form say.
+// previousStandardPhotoConsentLabel is the standard wording before it. A form
+// template stores the label it was saved with, so a template a school never
+// reworded still holds the previous one.
+const (
+	standardPhotoConsentLabel         = "Mein Kind darf in der Betreuung fotografiert werden. Ein Foto von meinem Kind darf in moto gespeichert werden. Diese Einwilligung ist freiwillig und jederzeit mit Wirkung für die Zukunft widerrufbar."
+	previousStandardPhotoConsentLabel = "Mein Kind darf bei Schulveranstaltungen fotografiert werden. Diese Einwilligung ist freiwillig und jederzeit mit Wirkung für die Zukunft widerrufbar."
+)
+
+// withCurrentStandardPhotoLabel shows parents the current standard wording
+// where a template still stores the previous one. A wording the school wrote
+// itself stays. The stored translations of the previous wording no longer
+// match their source and drop out (Translations.Fresh).
+func withCurrentStandardPhotoLabel(block enrollmentNative.FormLegalBlock) enrollmentNative.FormLegalBlock {
+	if block.Key == enrollmentNative.ConsentKeyPhoto && strings.TrimSpace(block.Label) == previousStandardPhotoConsentLabel {
+		block.Label = standardPhotoConsentLabel
+	}
+	return block
+}
+
 func buildTemplateLegalBlocks(configured []enrollmentNative.FormLegalBlock) []enrollmentNative.LegalBlock {
 	blocks := make([]enrollmentNative.LegalBlock, 0, len(configured))
 	for _, block := range configured {
 		if !block.Enabled {
 			continue
 		}
+		block = withCurrentStandardPhotoLabel(block)
 		blocks = append(blocks, enrollmentNative.PublicLegalBlock(enrollmentNative.LegalBlock{
 			Key: block.Key, Kind: block.Kind, Title: block.Title, Label: block.Label,
 			Attachments: enrollmentNative.PublicFormAttachments(block.Attachments),

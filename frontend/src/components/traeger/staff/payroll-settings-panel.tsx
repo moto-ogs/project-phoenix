@@ -1,10 +1,11 @@
 "use client";
 
-// Die Träger-Werte der Lohndatei (#4712, ADR 0250 Punkt 3): der
-// DATEV-Mandant des Lohns und eine Lohnart je Kategorie und Art des
-// Vertrags. Die Werte sind Einstellungen des Trägers (`traeger_payroll.*`);
-// die Seite zeigt sie als eine Tabelle statt 40 einzelner Felder und
-// speichert erst mit „Speichern“.
+// Die Einrichtung der Lohndatei (#4712, ADR 0250 Punkt 3; #8041, ADR 0320):
+// die Form (eine Datei oder eine je Arbeitgeber), der DATEV-Mandant des
+// Trägers, die Werte der anderen Arbeitgeber und eine Lohnart je Kategorie
+// und Art des Vertrags. Form, Mandant und Lohnarten sind Einstellungen des
+// Trägers (`traeger_payroll.*`), die Werte der Arbeitgeber gehören zur
+// Personalverwaltung. Die Seite speichert alles erst mit „Speichern“.
 
 import { useMemo, useState } from "react";
 
@@ -12,7 +13,13 @@ import {
   CONTRACT_KINDS,
   CONTRACT_KIND_LABELS,
 } from "~/components/traeger/staff/staff-contract-format";
+import {
+  employerFieldKey,
+  employerGap,
+  PayrollEmployersCard,
+} from "~/components/traeger/staff/payroll-employers-card";
 import { Alert } from "~/components/ui/alert";
+import { ChoiceTile } from "~/components/ui/choice-tile";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EditActions } from "~/components/ui/edit-actions";
@@ -20,7 +27,9 @@ import {
   FormErrorAlert,
   LoadErrorAlert,
 } from "~/components/ui/form-error-alert";
+import type { FormErrorInput } from "~/components/ui/form-error";
 import { Input } from "~/components/ui/input";
+import { Radio } from "~/components/ui/radio";
 import { SectionCard } from "~/components/ui/section-card";
 import { StickyActionBar } from "~/components/ui/sticky-action-bar";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
@@ -36,6 +45,11 @@ import type { StaffContractKind } from "~/lib/traeger-staff-api";
 import {
   CLIENT_KEY,
   CONSULTANT_KEY,
+  FILE_FORM_KEY,
+  savePayrollEmployer,
+  type PayrollEmployer,
+  type PayrollEmployerValues,
+  type PayrollForm,
   PAYROLL_CATEGORIES,
   PAYROLL_CATEGORY_LABELS,
   PAYROLL_DAY_CATEGORIES,
@@ -59,6 +73,84 @@ const UNIT_OPTIONS = [
 const WAGE_TYPE_PATTERN = /^\d{1,4}$/;
 const CONSULTANT_PATTERN = /^\d{1,7}$/;
 const CLIENT_PATTERN = /^\d{1,5}$/;
+const COST_CENTER_PATTERN = /^\d{1,8}$/;
+
+/** Die zwei Formen der Lohndatei mit dem, was jede bedeutet (ADR 0320). */
+const FORM_OPTIONS: readonly {
+  readonly value: PayrollForm;
+  readonly title: string;
+  readonly text: string;
+}[] = [
+  {
+    value: "traeger",
+    title: "Eine Datei für den ganzen Träger",
+    text: "Dein Lohnbüro rechnet alle Personen in einem DATEV-Mandanten ab. Stunden bei einer Gemeinde oder einem Schulträger tragen deren Kostenstelle.",
+  },
+  {
+    value: "arbeitgeber",
+    title: "Eine Datei je Arbeitgeber",
+    text: "Jede Gemeinde und jeder Schulträger bekommt eine eigene Datei. Jede Datei hat eigene Berater- und Mandantennummer.",
+  },
+];
+
+type EmployerDrafts = Readonly<Record<string, PayrollEmployerValues>>;
+
+/** Ein Entwurf gilt nur für die Stelle, für die er begonnen wurde. */
+const draftKey = (employer: PayrollEmployer) =>
+  `${employer.schoolId}:${employer.body}`;
+
+const savedEmployerValues = (
+  employer: PayrollEmployer,
+): PayrollEmployerValues => ({
+  consultantNumber: employer.consultantNumber,
+  clientNumber: employer.clientNumber,
+  costCenter: employer.costCenter,
+});
+
+const EMPLOYER_PATTERNS: Record<
+  keyof PayrollEmployerValues,
+  readonly [RegExp, string]
+> = {
+  consultantNumber: [CONSULTANT_PATTERN, "1 bis 7 Ziffern."],
+  clientNumber: [CLIENT_PATTERN, "1 bis 5 Ziffern."],
+  costCenter: [COST_CENTER_PATTERN, "1 bis 8 Ziffern."],
+};
+
+/** Die Arbeitgeber, deren Werte sich im Entwurf geändert haben. */
+function changedEmployers(
+  employers: readonly PayrollEmployer[],
+  drafts: EmployerDrafts,
+): PayrollEmployer[] {
+  return employers.filter((employer) => {
+    const draft = drafts[draftKey(employer)];
+    if (!draft) return false;
+    const saved = savedEmployerValues(employer);
+    return (Object.keys(saved) as (keyof PayrollEmployerValues)[]).some(
+      (field) => draft[field] !== saved[field],
+    );
+  });
+}
+
+/** Prüft die Werte der Arbeitgeber wie das Backend und nennt das Feld. */
+function invalidEmployerFields(
+  employers: readonly PayrollEmployer[],
+  drafts: EmployerDrafts,
+): Record<string, string> {
+  const invalid: Record<string, string> = {};
+  for (const employer of employers) {
+    const draft = drafts[draftKey(employer)];
+    if (!draft) continue;
+    for (const field of Object.keys(
+      EMPLOYER_PATTERNS,
+    ) as (keyof PayrollEmployerValues)[]) {
+      const [pattern, message] = EMPLOYER_PATTERNS[field];
+      if (draft[field] !== "" && !pattern.test(draft[field])) {
+        invalid[employerFieldKey(employer.schoolId, field)] = message;
+      }
+    }
+  }
+  return invalid;
+}
 
 /** Die Werte des Bereichs `lohnexport` aus dem Schema des Trägers. */
 function payrollValues(schema: SettingsSchema | undefined): {
@@ -110,10 +202,14 @@ function gapSentence(gaps: readonly PayrollGap[]): string | null {
 export function PayrollSettingsPanel({
   schema,
   gaps,
+  employers,
+  employersError,
   onSaved,
 }: Readonly<{
   schema: SettingsSchema | undefined;
   gaps: readonly PayrollGap[];
+  employers: readonly PayrollEmployer[] | undefined;
+  employersError: FormErrorInput;
   onSaved: () => Promise<void>;
 }>) {
   const { values: saved, writable } = useMemo(
@@ -121,6 +217,7 @@ export function PayrollSettingsPanel({
     [schema],
   );
   const [draft, setDraft] = useState<Values | null>(null);
+  const [employerDrafts, setEmployerDrafts] = useState<EmployerDrafts>({});
   const [saving, setSaving] = useState(false);
   const errors = useApiFormError();
   const { success } = useToast();
@@ -128,7 +225,15 @@ export function PayrollSettingsPanel({
   // als Fehler des Speicherns (#6652).
   const afterWrite = useRefreshAfterWrite("die Anzeige der Lohnarten", onSaved);
   const shown = draft ?? saved;
-  const dirty = draft !== null && changedKeys(draft, saved).length > 0;
+  const form: PayrollForm =
+    shown[FILE_FORM_KEY] === "arbeitgeber" ? "arbeitgeber" : "traeger";
+  const employerList = employers ?? [];
+  const employerChanges = changedEmployers(employerList, employerDrafts);
+  const dirty =
+    (draft !== null && changedKeys(draft, saved).length > 0) ||
+    employerChanges.length > 0;
+  const employerValues = (employer: PayrollEmployer) =>
+    employerDrafts[draftKey(employer)] ?? savedEmployerValues(employer);
   const gapKeys = useMemo(
     () => new Set(gaps.map((gap) => wageTypeKey(gap.category, gap.kind))),
     [gaps],
@@ -138,9 +243,25 @@ export function PayrollSettingsPanel({
     setDraft((current) => ({ ...(current ?? saved), [key]: value.trim() }));
   };
 
+  const setEmployer = (
+    employer: PayrollEmployer,
+    field: keyof PayrollEmployerValues,
+    value: string,
+  ) => {
+    setEmployerDrafts((current) => ({
+      ...current,
+      [draftKey(employer)]: {
+        ...(current[draftKey(employer)] ?? savedEmployerValues(employer)),
+        [field]: value.trim(),
+      },
+    }));
+  };
+
   const save = async () => {
-    if (!draft) return;
-    const invalid = invalidFields(draft);
+    const invalid = {
+      ...(draft ? invalidFields(draft) : {}),
+      ...invalidEmployerFields(employerList, employerDrafts),
+    };
     if (Object.keys(invalid).length > 0) {
       errors.invalid("Bitte prüfe die markierten Felder.", invalid);
       return;
@@ -148,23 +269,30 @@ export function PayrollSettingsPanel({
     setSaving(true);
     errors.clear();
     try {
-      for (const key of changedKeys(draft, saved)) {
-        const value = draft[key] ?? "";
+      for (const key of draft ? changedKeys(draft, saved) : []) {
+        const value = draft?.[key] ?? "";
         if (value === "") await clearTraegerSettingValue(key);
         else await saveTraegerSettingValue(key, value);
+      }
+      for (const employer of employerChanges) {
+        await savePayrollEmployer(employer, employerValues(employer));
       }
     } catch (err) {
       logger.error("traeger_payroll_settings_save_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
-      void errors.show(err, { object: "die Lohnarten" });
+      void errors.show(err, { object: "die Einrichtung der Lohndatei" });
       setSaving(false);
+      // Was vor dem Fehler gespeichert wurde, kommt mit neuem Stand zurück;
+      // der Entwurf behält nur noch, was offen ist.
+      await afterWrite.refresh();
       return;
     }
     setDraft(null);
+    setEmployerDrafts({});
     setSaving(false);
     success(
-      "Die Lohnarten sind gespeichert. Die Prüfung der Lohndatei ist neu gerechnet.",
+      "Die Einrichtung ist gespeichert. Die Prüfung der Lohndatei ist neu gerechnet.",
     );
     await afterWrite.refresh();
   };
@@ -221,7 +349,8 @@ export function PayrollSettingsPanel({
     })),
   ];
 
-  const changes = draft ? changedKeys(draft, saved).length : 0;
+  const changes =
+    (draft ? changedKeys(draft, saved).length : 0) + employerChanges.length;
   const saveBar =
     writable && dirty ? (
       <StickyActionBar
@@ -230,26 +359,79 @@ export function PayrollSettingsPanel({
         <EditActions
           onCancel={() => {
             setDraft(null);
+            setEmployerDrafts({});
             errors.clear();
           }}
           onSave={() => void save()}
           saving={saving}
-          saveTooltip="Speichert die Nummern für alle Schulen. Die nächste Lohndatei nutzt sie."
+          saveTooltip="Speichert die Einrichtung für alle Schulen. Die nächste Lohndatei nutzt sie."
         />
       </StickyActionBar>
     ) : null;
   const gapText = gapSentence(gaps);
 
+  const missingEmployers = employerList.filter(
+    (employer) => employerGap(form, employerValues(employer)) !== null,
+  ).length;
+
   return (
     <>
+      <FormErrorAlert message={errors.error} />
+      {afterWrite.error ? <LoadErrorAlert error={afterWrite.error} /> : null}
       <SectionCard
         concept={settingsConcept}
-        title="DATEV-Mandant für den Lohn"
-        description="Diese Nummern stehen oben in der LODAS-Datei. Sie gelten nur für den Lohn, nicht für die Buchhaltung."
+        title="Wie viele Lohndateien?"
+        description="Frag dein Lohnbüro, wie es die Gemeinden und Schulträger abrechnet."
+        bodyClassName="mt-4"
+      >
+        <fieldset className="grid gap-3 md:grid-cols-2">
+          <legend className="sr-only">Wie viele Lohndateien?</legend>
+          {FORM_OPTIONS.map((option) => (
+            <ChoiceTile
+              key={option.value}
+              selected={form === option.value}
+              disabled={!writable}
+              tone="blue"
+              className="items-start p-4"
+            >
+              <Radio
+                name={FILE_FORM_KEY}
+                value={option.value}
+                checked={form === option.value}
+                disabled={!writable}
+                onChange={() => set(FILE_FORM_KEY, option.value)}
+              />
+              <span className="flex min-w-0 flex-col gap-1">
+                <span className="font-medium text-gray-900">
+                  {option.title}
+                </span>
+                <span className="text-sm font-normal text-gray-600">
+                  {option.text}
+                </span>
+              </span>
+            </ChoiceTile>
+          ))}
+        </fieldset>
+        {missingEmployers > 0 ? (
+          <Alert
+            type="warning"
+            announce="off"
+            className="mt-4"
+            message={
+              form === "traeger"
+                ? "Für diese Form fehlt bei einem Arbeitgeber noch die Kostenstelle. Trag sie unten bei „Andere Arbeitgeber“ ein."
+                : "Für diese Form fehlen bei einem Arbeitgeber noch die DATEV-Nummern. Trag sie unten bei „Andere Arbeitgeber“ ein."
+            }
+          />
+        ) : null}
+      </SectionCard>
+
+      <SectionCard
+        concept={settingsConcept}
+        title="DATEV-Mandant des Trägers"
+        description="Diese Nummern stehen oben in der LODAS-Datei des Trägers. Sie gelten nur für den Lohn, nicht für die Buchhaltung."
         bodyClassName="mt-4 space-y-4"
       >
-        <FormErrorAlert message={errors.error} />
-        {afterWrite.error ? <LoadErrorAlert error={afterWrite.error} /> : null}
         <div className="grid gap-4 sm:grid-cols-2">
           <Input
             name={CONSULTANT_KEY}
@@ -278,10 +460,20 @@ export function PayrollSettingsPanel({
         </div>
       </SectionCard>
 
+      <PayrollEmployersCard
+        employers={employers}
+        loadError={employersError}
+        form={form}
+        valuesOf={employerValues}
+        writable={writable}
+        fieldError={(key) => errors.fieldError(key) ?? null}
+        onChange={setEmployer}
+      />
+
       <SectionCard
         concept={settingsConcept}
         title="Lohnarten je Art des Vertrags"
-        description="Trage die Nummer aus deinem DATEV ein. Ein leeres Feld fehlt in der Lohndatei."
+        description="Trage die Nummer aus deinem DATEV ein. Sie gelten für alle Arbeitgeber. Ein leeres Feld fehlt in der Lohndatei."
         bodyClassName="mt-4 space-y-4"
       >
         {gapText ? (
@@ -298,7 +490,6 @@ export function PayrollSettingsPanel({
           columns={columns}
           rows={[...PAYROLL_CATEGORIES]}
           getRowKey={(category) => category}
-          stackedOnMobile
         />
       </SectionCard>
       {saveBar}

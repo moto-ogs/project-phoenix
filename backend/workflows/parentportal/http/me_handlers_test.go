@@ -215,6 +215,9 @@ func (f *fakeParentService) HolidayRegistrationOffers(context.Context, int64) ([
 func (f *fakeParentService) HolidayRegistrationEntries(context.Context, int64) ([]parentService.HolidayRegistrationEntry, error) {
 	return nil, nil
 }
+func (f *fakeParentService) ChangeHolidayRegistrationConsent(context.Context, int64, int64, string, bool) error {
+	return nil
+}
 func (f *fakeParentService) ClaimHolidayRegistrationsAfterSignIn(_ context.Context, email string) {
 	f.claimedEmails = append(f.claimedEmails, email)
 }

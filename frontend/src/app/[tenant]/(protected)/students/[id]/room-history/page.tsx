@@ -490,7 +490,6 @@ function HistoryTable({
                 : []
             }
             rowTone={(day) => (day.date === todayKey ? "today" : null)}
-            stackedOnMobile
           />
         )}
       </SectionCard>
