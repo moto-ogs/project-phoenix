@@ -66,7 +66,7 @@ func (p payrollTargets) of(record domain.TraegerStaffRecord, schoolID int64) pay
 		return target
 	}
 	key := employerKey{schoolID, employer.Body}
-	target.employer = workforce.TraegerPayrollFileEmployer{Body: employer.Body, Name: employer.Name}
+	target.employer = workforce.TraegerPayrollFileEmployer(employer)
 	target.check = &payrollCheckRef{key: key, schoolName: p.names[schoolID]}
 	values := p.values[key]
 	if values == nil {
