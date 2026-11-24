@@ -78,6 +78,14 @@ const STAFF_SHIFT_MAX_BREAK_MINUTES = 300;
 // Stable empty default so the optional staffOptions prop does not create a new
 // array reference each render (oxlint react/no-object-type-as-default-prop).
 const EMPTY_STAFF_OPTIONS: readonly StaffScheduleStaff[] = [];
+/** Both reads after one refusal; rejects when either fails. */
+function readBoth(
+  first: (() => Promise<unknown>) | undefined,
+  second: () => Promise<unknown>,
+): () => Promise<unknown> {
+  return () => Promise.all([first?.(), second()]);
+}
+
 /** No reload given: a refused save stays locked with this load error. */
 function reloadShiftUnavailable(): Promise<unknown> {
   return Promise.reject(new Error("the stored shift cannot be read again"));
@@ -771,9 +779,7 @@ export function ShiftEditModal({
     // its version: read it again too, so the next save sends the stored one.
     const readAgain =
       seriesEffectiveDate === berlinTodayISO()
-        ? async () => {
-            await Promise.all([reload?.(), reloadShift()]);
-          }
+        ? readBoth(reload, reloadShift)
         : reload;
     void formErrors.show(err, { object: "die Serie", reload: readAgain });
   };
