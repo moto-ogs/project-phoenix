@@ -16,13 +16,15 @@ SLA evidence: [Störungs-Runbook](../docs/operations/stoerungen.md).
   the booking-consistency, server-error, and Postgres-error alert rules from
   `grafana/provisioning`.
 
-The stack does not run `postgres_exporter`. Phoenix exports connection-pool
-metrics from the backend process. Do not enable the exporter's table-statistics
-collector: its repeated `pg_stat_user_tables` scan costs more database time than
-the application workload. Disable that collector in any older server-local
-monitoring setup before applying this overlay. Without the exporter, no rule
-or panel sees connections of the whole PostgreSQL cluster; see
-[DB pool utilization](#db-pool-utilization).
+Phoenix exports connection-pool metrics from the backend process. The overlay
+also runs one `postgres_exporter` per environment (`postgres-prod`,
+`postgres-staging`) under the `postgres_exporter` role with `pg_monitor`; its
+DSNs `PG_EXPORTER_PROD_DSN` and `PG_EXPORTER_STAGING_DSN` live in
+`/root/monitoring/.env`. "Phoenix Scaling" reads its database size and
+`pg_stat_database` metrics; no alert rule uses it. Keep the table-statistics
+collectors (`stat_user_tables`, `statio_user_tables`) off: until 2026-11-24
+their `pg_stat_user_tables` query took about 400 ms per 15-second scrape and
+nine times the database time of all application roles.
 
 ## Deploy
 
@@ -56,6 +58,11 @@ targets use the existing app networks and metrics bearer token, with no host
 ports. Deploy the updated Grafana rules and booking-consistency dashboard
 before the split: their `server|worker` selectors cover both the old embedded
 worker and the new process, including a rollback.
+
+The production cutover shipped on 2026-11-24 without these steps. The
+booking audit ran in the Worker, but the rules still read `service="server"`,
+so "Booking audit missing for 26 hours" fired and the Worker's errors raised no
+alert. Rules, dashboard and worker targets were deployed the same day.
 
 After cutover, check both worker targets are up in Prometheus and that Loki
 returns worker startup/job lines for `{env="prod",service="worker"}` and
@@ -157,8 +164,8 @@ rate in the "Phoenix Scaling" dashboard. Long transactions or slow queries
 that hold connections need a fix in the code; a pool that is too small for
 the load needs a larger `DB_MAX_OPEN_CONNS`, which must stay below the
 cluster's `max_connections` minus the connections of other clients such as
-migrations and SSH tunnel sessions. Connections of the whole cluster need a `postgres_exporter`,
-which needs its own database role, a deployment change and a load assessment.
+migrations and SSH tunnel sessions. The exporter's `pg_stat_activity_count`
+and `pg_settings_max_connections` show the connections of the whole cluster.
 
 ## Error codes
 
@@ -206,9 +213,14 @@ matches the host, including the five that used to exist only there
 with `scripts/deploy-grafana-provisioning.sh`, not in the Grafana UI: a
 provisioned dashboard edited in the UI is overwritten on the next restart.
 
-`alerting/server-errors.yml` is deployed. `alerting/student-contract.yml` is
-not deployed: its collector is not installed, and the rule alerts on missing
-data.
+On 2026-11-24 the host's `booking-consistency.yml`, `daily-backup.yml`,
+`infrastructure.yml`, `production.yml` and `server-errors.yml` and
+`prometheus/prometheus.yml` matched this directory. Not deployed:
+`contract-decode.yml`, `email-delivery.yml`,
+`holiday-closure-notifications.yml`, `nightly-cleanup.yml` and
+`student-contract.yml` (its collector and the node exporter's textfile mount
+are not installed, and the rule alerts on missing data). Check for drift with
+`scripts/deploy-grafana-provisioning.sh --dry-run <ssh-host> <file>...`.
 
 `alerting/infrastructure.yml` (backup, host, DB pool saturation and
 utilization, event loop) and `alerting/production.yml` (5xx, DB connection, server down)
