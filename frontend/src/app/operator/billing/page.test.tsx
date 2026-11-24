@@ -151,9 +151,10 @@ describe("OperatorBillingPage", () => {
     ).toBeInTheDocument();
   });
 
-  // The pending schools' key date lies in the running month; whether it is
+  // The pending school's key date lies in the running month; whether it is
   // still ahead or already past depends on the day, so each case sets it.
-  function mockRunningMonthWithPendingSchool(month: string) {
+  function mockRunningMonthWithPendingSchool() {
+    const month = "2026-11";
     mockListKeyDateCounts.mockResolvedValue([
       count({
         period: `${month}-01`,
@@ -200,7 +201,7 @@ describe("OperatorBillingPage", () => {
 
   it("lists the schools still without figures in the running month (#7301)", async () => {
     setTestClock("2026-11-10T12:00:00+01:00");
-    mockRunningMonthWithPendingSchool("2026-11");
+    mockRunningMonthWithPendingSchool();
 
     const neu = await pendingRow();
     // Its Träger's own day gives the key date of the month.
@@ -215,10 +216,12 @@ describe("OperatorBillingPage", () => {
   });
 
   it("marks a school whose key date passed without figures (#7301)", async () => {
+    // The first Berlin day after the key date, while UTC is still on the 20th.
     setTestClock("2026-11-21T00:30:00+01:00");
-    mockRunningMonthWithPendingSchool("2026-11");
+    mockRunningMonthWithPendingSchool();
 
     const neu = await pendingRow();
+    // Anker: the pending row is loaded and marked as overdue.
     expect(within(neu).getByText("20.11.2026")).toBeInTheDocument();
     expect(within(neu).getByText("Zahlen fehlen")).toBeInTheDocument();
     expect(within(neu).queryByText("noch nicht erfasst")).toBeNull();
