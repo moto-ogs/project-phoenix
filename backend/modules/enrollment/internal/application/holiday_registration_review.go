@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	validation "github.com/go-ozzo/ozzo-validation"
 
@@ -66,9 +67,11 @@ type HolidayReviewStore interface {
 	SetHolidayDebtorNumber(ctx context.Context, organizationID, registrationID int64, debtorNumber string) error
 	SetHolidayRegistrationFreeze(ctx context.Context, organizationID, registrationID int64, override string) error
 	// WithdrawHolidayConsent takes the given consent key out of the
-	// registration's acceptances and stamps its withdrawal (ADR 0321); false
-	// when the consent is not given or not a consent of its form version.
-	WithdrawHolidayConsent(ctx context.Context, organizationID, registrationID int64, key string) (bool, error)
+	// registration's acceptances and stamps its withdrawal (ADR 0321). It
+	// answers the form version and when the consent had been given;
+	// withdrawn is false when the consent is not given or not a consent of
+	// its form version.
+	WithdrawHolidayConsent(ctx context.Context, organizationID, registrationID int64, key string) (formVersion int, acceptedAt *time.Time, withdrawn bool, err error)
 	// ReplaceHolidayChildBookings makes bookings the child's bookings and
 	// returns the weeks whose places changed: those it left and those it
 	// newly books, which wait for their placement (#4699).

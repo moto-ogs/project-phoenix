@@ -7,6 +7,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"testing"
@@ -147,6 +148,16 @@ func TestHostingSchoolReadsTheVoluntaryConsentsOfAHolidayRegistrationLive(t *tes
 			WHERE holiday_registration_id = ? AND action = 'consent' ORDER BY id`, f.siblings).Scan(t.Context(), &authors))
 		require.Len(t, authors, 3, "the parents twice, the office once")
 		assert.NotEqual(t, parent.ID, authors[2], "the office is the author of its entry")
+		var evidence struct {
+			AcceptedAt  *string `json:"accepted_at"`
+			FormVersion int     `json:"form_version"`
+		}
+		var raw string
+		require.NoError(t, f.db.NewRaw(`SELECT details::text FROM enrollment.holiday_registration_audit
+			WHERE holiday_registration_id = ? AND action = 'consent' ORDER BY id DESC LIMIT 1`, f.siblings).Scan(t.Context(), &raw))
+		require.NoError(t, json.Unmarshal([]byte(raw), &evidence))
+		assert.NotNil(t, evidence.AcceptedAt, "the office's entry keeps when the consent had been given")
+		assert.Positive(t, evidence.FormVersion, "and in which form version")
 		setConsent(true)
 	})
 

@@ -20,14 +20,18 @@ func (h *HolidayRegistrationReview) WithdrawHolidayConsent(ctx context.Context, 
 		return enrollment.HolidayRegistrationDetail{}, enrollment.ErrHolidayRegistrationStateConflict
 	}
 	return h.change(ctx, reviewer, periodID, registrationID, func(_ enrollment.HolidayPeriod, current holidayRegistrationState) (string, any, error) {
-		withdrawn, err := h.store.WithdrawHolidayConsent(ctx, reviewer.OrganizationID, current.ID, key)
+		formVersion, acceptedAt, withdrawn, err := h.store.WithdrawHolidayConsent(ctx, reviewer.OrganizationID, current.ID, key)
 		if err != nil {
 			return "", nil, fmt.Errorf("enrollment: withdraw holiday consent: %w", err)
 		}
 		if !withdrawn {
 			return "", nil, enrollment.ErrHolidayRegistrationStateConflict
 		}
-		given := false
-		return enrollment.HolidayAuditConsent, enrollment.HolidayRegistrationEventDetails{Key: key, Given: &given}, nil
+		// The entry keeps when the consent had been given and in which form
+		// version, like a withdrawal in the parents portal: the acceptance
+		// itself is gone (Art. 7 Abs. 1 DSGVO).
+		return enrollment.HolidayAuditConsent, map[string]any{
+			"key": key, "given": false, "form_version": formVersion, "accepted_at": acceptedAt,
+		}, nil
 	})
 }
