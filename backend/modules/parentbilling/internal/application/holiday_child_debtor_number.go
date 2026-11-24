@@ -1,7 +1,6 @@
 package application
 
 import (
-	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -94,7 +93,15 @@ func holidayChildNumbersVersion(registration parentbilling.HolidayRegistration, 
 			children[i].DebtorNumber = byKey[key]
 		}
 	}
-	slices.SortFunc(children, func(a, b shown) int { return cmp.Compare(a.ChildID, b.ChildID) })
+	slices.SortFunc(children, func(a, b shown) int {
+		switch {
+		case a.ChildID < b.ChildID:
+			return -1
+		case a.ChildID > b.ChildID:
+			return 1
+		}
+		return 0
+	})
 	return readstate.Fingerprint(children)
 }
 
