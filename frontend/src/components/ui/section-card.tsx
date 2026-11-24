@@ -33,6 +33,12 @@ const TITLE_SIZES = {
   display: "text-2xl leading-tight tracking-tight break-words sm:text-[28px]",
 } as const;
 
+/**
+ * Abstand zwischen Kopf und Inhalt, in allen drei Stufen. Wer `bodyClassName`
+ * setzt, um Layout anzuhängen, setzt diesen Wert davor, statt ihn abzuschreiben.
+ */
+export const SECTION_CARD_BODY_GAP = "compact:mt-3 mt-4 max-sm:mt-3";
+
 function SectionCardLoadingRows({ rows }: Readonly<{ rows: number }>) {
   return (
     <dl className="space-y-3">
@@ -353,7 +359,7 @@ export function SectionCard({
   /** Schriftstufe des Titels; die Größe kommt nie über `titleClassName`. */
   titleSize?: keyof typeof TITLE_SIZES;
   titleClassName?: string;
-  /** Overrides the default spacing above the body (`mt-4`, `compact:` and phone `mt-3`). */
+  /** Overrides the default spacing above the body (`SECTION_CARD_BODY_GAP`). */
   bodyClassName?: string;
   className?: string;
   overflow?: "hidden" | "visible";
@@ -425,7 +431,7 @@ export function SectionCard({
   if (padding === "default" && !zoned) surfacePadding = CARD_SURFACE_PADDING;
   const bodySpacing =
     hasHeader && !bare
-      ? (bodyClassName ?? "compact:mt-3 mt-4 max-sm:mt-3")
+      ? (bodyClassName ?? SECTION_CARD_BODY_GAP)
       : bodyClassName;
   const bodyClasses = zoned
     ? cn(

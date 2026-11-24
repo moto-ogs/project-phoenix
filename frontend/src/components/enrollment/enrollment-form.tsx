@@ -29,7 +29,10 @@ import { Button } from "~/components/ui/button";
 import { FieldErrorHint } from "~/components/ui/field-error-hint";
 import { FieldLabel, RequiredMark } from "~/components/ui/field-label";
 import { DataField, DataGrid } from "~/components/ui/data-field";
-import { SectionCard } from "~/components/ui/section-card";
+import {
+  SectionCard,
+  SECTION_CARD_BODY_GAP,
+} from "~/components/ui/section-card";
 import { SectionLabel } from "~/components/ui/section-label";
 import { Input } from "~/components/ui/input";
 import { useTenant } from "~/lib/tenant-context";
@@ -1366,7 +1369,7 @@ export function EnrollmentForm({
                   key={child.clientId}
                   title={name || tr("structured.child")}
                   icon={Lock}
-                  bodyClassName="compact:mt-3 mt-4 space-y-3"
+                  bodyClassName={`${SECTION_CARD_BODY_GAP} space-y-3`}
                 >
                   <StatusBadge label={tr("locked.badge")} tone="green" />
                   <DataGrid columns={1}>

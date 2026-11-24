@@ -10,7 +10,10 @@ import {
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useApiLoadError } from "~/contexts/ToastContext";
 import { EmptyState } from "~/components/ui/empty-state";
-import { SectionCard } from "~/components/ui/section-card";
+import {
+  SectionCard,
+  SECTION_CARD_BODY_GAP,
+} from "~/components/ui/section-card";
 import Link from "~/components/ui/navigation-link";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { StatusBadge } from "~/components/ui/status-badge";
@@ -44,7 +47,7 @@ import { roomsConcept } from "~/lib/concepts/rooms";
 // Liste schrumpfen mit (flex-1, min-h-0), statt über den Rahmen zu wachsen.
 const CARD_LAYOUT = {
   className: "flex h-full flex-col",
-  bodyClassName: "compact:mt-3 mt-4 flex min-h-0 flex-1 flex-col space-y-3",
+  bodyClassName: `${SECTION_CARD_BODY_GAP} flex min-h-0 flex-1 flex-col space-y-3`,
 } as const;
 
 export function BetreuungsplanHeuteCard({

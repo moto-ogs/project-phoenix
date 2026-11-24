@@ -313,11 +313,6 @@ Kopfkarte: Innenrand und Titelgrade aller Stufen stehen als
 | `SectionCard`: Kopf zum Inhalt | 16 px              | 12 px           | 12 px    |
 | `InsetPanel` `md`              | 16 px              | 16 px           | 12 px    |
 | `ListRow` `compact`            | 6 px senkrecht     | 6 px            | 8 px     |
-| `ListRow` `default`            | 8 px senkrecht     | 8 px            | 8 px     |
-
-Die letzten vier Zeilen kamen mit #8064 dazu. `ListRow` `compact` hiess
-vorher mobil-first `py-2 sm:py-1.5`; jetzt steht der Desktop-Wert
-unvariiert und das Telefon trägt `max-sm:py-2`, mit demselben Ergebnis.
 
 Nicht in der Stufe: die Bedienhöhe. 768–1023 px ist genau der Tablet-
 Bereich, und ein 36-px-Knopf unterschreitet dort das Touch-Mass. Regel 17

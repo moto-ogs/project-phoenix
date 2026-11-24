@@ -33,7 +33,10 @@ import {
   LoadErrorAlert,
 } from "~/components/ui/form-error-alert";
 import { DataField } from "~/components/ui/data-field";
-import { SectionCard } from "~/components/ui/section-card";
+import {
+  SectionCard,
+  SECTION_CARD_BODY_GAP,
+} from "~/components/ui/section-card";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
@@ -261,7 +264,7 @@ export function RolloverForm({
           <SectionCard
             title="Vorschau"
             icon={Check}
-            bodyClassName="compact:mt-3 mt-4 space-y-3"
+            bodyClassName={`${SECTION_CARD_BODY_GAP} space-y-3`}
           >
             <dl className="grid gap-3 sm:grid-cols-3">
               <DataField label="Werden übernommen">
