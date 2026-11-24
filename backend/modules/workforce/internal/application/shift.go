@@ -594,7 +594,7 @@ func (s *Service) UpdateShiftType(ctx context.Context, shiftType workforce.Shift
 // lock and refuses the update when its editor read another version (ADR
 // 0311). A missing type keeps its own answer from the update.
 func (s *Service) checkShiftTypeRead(ctx context.Context, id int64, expected string, stats *domain.OperationStats) error {
-	locked, lockStats, err := s.store.LockShiftType(ctx, id)
+	locked, lockStats, err := s.store.LockShiftTypeForEdit(ctx, id)
 	stats.Add(lockStats)
 	if err != nil || !locked {
 		return err

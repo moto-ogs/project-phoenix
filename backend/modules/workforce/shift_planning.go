@@ -311,10 +311,11 @@ type StaffShiftPlanning interface {
 // route. A nil IsActive keeps the stored flag on update and means active on
 // create. CategoryIDs, when non-nil, replaces the timetable categories mapped
 // to the type; nil leaves the mapping untouched. An update carries the
-// ShiftTypeVersion its editor read in ExpectedVersion and, with CategoryIDs,
-// the link token of every category it read in ExpectedCategoryLinks
-// (category id -> timetable.CategoryShiftTypeLinkVersion, ADR 0311); a
-// create ignores both.
+// ShiftTypeVersion its editor read in ExpectedVersion; a create or update
+// with CategoryIDs carries the link token of every category it read in
+// ExpectedCategoryLinks (category id ->
+// timetable.CategoryShiftTypeLinkVersion, ADR 0311). A create ignores
+// ExpectedVersion.
 type ShiftTypeInput struct {
 	ID                    int64
 	Name                  string

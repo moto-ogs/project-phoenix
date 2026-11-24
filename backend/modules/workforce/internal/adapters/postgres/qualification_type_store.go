@@ -35,7 +35,8 @@ type staffQualificationTypeRow struct {
 }
 
 // LockQualificationType locks the kind's row; the update reads the kinds
-// after it.
+// after it. The update changes no key column, so FOR NO KEY UPDATE lets a
+// qualification that references the kind through its FK check.
 func (s *Store) LockQualificationType(ctx context.Context, id int64) (bool, domain.OperationStats, error) {
 	db, scope, err := s.database(ctx)
 	if err != nil {
@@ -49,7 +50,7 @@ func (s *Store) LockQualificationType(ctx context.Context, id int64) (bool, doma
 		ModelTableExpr(tableStaffQualificationTypes+` AS "staff_qualification_type"`).
 		Column("staff_qualification_type.id").
 		Where(`"staff_qualification_type".id = ?`, id).
-		For("UPDATE"), aliasStaffQualificationType, scope)
+		For("NO KEY UPDATE"), aliasStaffQualificationType, scope)
 	return scanOne(ctx, query, "lock staff qualification type")
 }
 

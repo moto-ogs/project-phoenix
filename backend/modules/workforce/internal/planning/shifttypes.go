@@ -11,8 +11,8 @@ import (
 // CategoryLinker syncs the optional Kategorie↔Schichtart mapping. The FK
 // lives on activities.categories, so the write belongs to the Timetable
 // owner; a nil linker leaves every mapping untouched. expected carries the
-// link token per category the editor read (ADR 0311); nil is a new type,
-// whose form read no links.
+// link token per category the form read (ADR 0311); the administration
+// always passes a map, nil skips the check for internal callers.
 type CategoryLinker func(ctx context.Context, shiftTypeID int64, categoryIDs []int64, expected map[int64]string) error
 
 type shiftTypeAdministration struct {
@@ -46,9 +46,10 @@ func (a shiftTypeAdministration) CreateShiftType(ctx context.Context, input work
 	if err != nil {
 		return workforce.ShiftType{}, mapShiftTypeError(err)
 	}
-	// A new type had no links to read: the chosen categories are an option
-	// list (ADR 0311, point 5).
-	if err := a.syncCategoryLinks(ctx, saved.ID, input.CategoryIDs, nil); err != nil {
+	// Linking a category moves it from the type it was linked to: the form
+	// read that link with the category list and sends its token, like an
+	// edit (ADR 0311).
+	if err := a.syncCategoryLinks(ctx, saved.ID, input.CategoryIDs, expectedCategoryLinks(input)); err != nil {
 		return workforce.ShiftType{}, err
 	}
 	return shiftTypeToCapability(saved), nil
@@ -80,11 +81,7 @@ func (a shiftTypeAdministration) UpdateShiftType(ctx context.Context, input work
 	if err != nil {
 		return workforce.ShiftType{}, mapShiftTypeError(err)
 	}
-	expectedLinks := input.ExpectedCategoryLinks
-	if expectedLinks == nil {
-		expectedLinks = map[int64]string{}
-	}
-	if err := a.syncCategoryLinks(ctx, saved.ID, input.CategoryIDs, expectedLinks); err != nil {
+	if err := a.syncCategoryLinks(ctx, saved.ID, input.CategoryIDs, expectedCategoryLinks(input)); err != nil {
 		return workforce.ShiftType{}, err
 	}
 	return shiftTypeToCapability(saved), nil
@@ -97,6 +94,15 @@ func (a shiftTypeAdministration) UpdateShiftType(ctx context.Context, input work
 func (a shiftTypeAdministration) DeleteShiftType(ctx context.Context, id int64) (workforce.ShiftTypeRemoval, error) {
 	removal, err := a.types.DeleteShiftType(ctx, id)
 	return removal, mapShiftTypeError(err)
+}
+
+// expectedCategoryLinks is never nil: a nil map would skip the link check,
+// and a write naming categories always changes links its form read.
+func expectedCategoryLinks(input workforce.ShiftTypeInput) map[int64]string {
+	if input.ExpectedCategoryLinks == nil {
+		return map[int64]string{}
+	}
+	return input.ExpectedCategoryLinks
 }
 
 // syncCategoryLinks applies the optional mapping after a write. A nil set

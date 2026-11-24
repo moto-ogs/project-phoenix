@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	timetableHTTPAdapter "github.com/moto-ogs/project-phoenix/modules/timetable/http/activities"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
@@ -27,6 +27,7 @@ import (
 type shiftTypeRoute struct {
 	db                *bun.DB
 	router            chi.Router
+	categories        chi.Router
 	token             string
 	ctx               context.Context
 	categoryShiftType func(context.Context, int64) (*int64, error)
@@ -38,12 +39,17 @@ func setupShiftTypeRoute(t *testing.T) *shiftTypeRoute {
 	shiftTypes, references, module, err := NewShiftTypeTestModule(testpkg.NewDatabase(t, db))
 	require.NoError(t, err)
 	resource := newShiftTypesResource(shiftTypes, references)
+	activityModule, activities, people, caller, err := NewActivitiesTestModule(testpkg.NewDatabase(t, db))
+	require.NoError(t, err)
+	categories := chi.NewRouter()
+	categories.Mount("/activities", timetableHTTPAdapter.NewResource(activities, activityModule.Timetable,
+		NewTimetableSupervisorDirectory(people), caller, TimetableHTTPTransactions).Router(ProtectedTenantRoutes))
 
 	claims := testutil.DefaultTestClaims()
 	claims.TenantID = testpkg.Tenant(t)
 	claims.Permissions = []string{permissions.TimeTrackingManage}
 	claims.IsAdmin = false
-	return &shiftTypeRoute{db: db, router: resource.Router(), token: testutil.MintTestJWT(t, claims), ctx: testpkg.Ctx(t), categoryShiftType: func(ctx context.Context, categoryID int64) (*int64, error) {
+	return &shiftTypeRoute{db: db, router: resource.Router(), categories: categories, token: testutil.MintTestJWT(t, claims), ctx: testpkg.Ctx(t), categoryShiftType: func(ctx context.Context, categoryID int64) (*int64, error) {
 		category, err := module.Repositories.Rows.ActivityCategory.FindCategory(ctx, categoryID)
 		if err != nil {
 			return nil, err
@@ -65,13 +71,32 @@ func (s *shiftTypeRoute) shiftTypeIDOf(t *testing.T, categoryID int64) *int64 {
 	return shiftTypeID
 }
 
-// linkVersions are the link tokens the category list answers for the stored
-// categories (ADR 0311), keyed as the form sends them.
+// linkVersions are the link tokens the category list answers (ADR 0311),
+// read from GET /api/activities/categories as the shift-type form reads them
+// and keyed as it sends them.
 func (s *shiftTypeRoute) linkVersions(t *testing.T, categoryIDs ...int64) map[string]string {
 	t.Helper()
+	request := testutil.NewAuthenticatedRequest(t, http.MethodGet, "/activities/categories", nil, testutil.WithJWTBearer(s.token))
+	listed := testutil.ExecuteRequest(s.categories, request).Result()
+	defer func() { _ = listed.Body.Close() }()
+	require.Equal(t, http.StatusOK, listed.StatusCode)
+	var envelope struct {
+		Data []struct {
+			ID                   wireID `json:"id"`
+			ShiftTypeLinkVersion string `json:"shift_type_link_version"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.NewDecoder(listed.Body).Decode(&envelope))
+	listedVersions := make(map[int64]string, len(envelope.Data))
+	for _, row := range envelope.Data {
+		listedVersions[int64(row.ID)] = row.ShiftTypeLinkVersion
+	}
 	versions := make(map[string]string, len(categoryIDs))
 	for _, id := range categoryIDs {
-		versions[strconv.FormatInt(id, 10)] = timetable.CategoryShiftTypeLinkVersion(timetable.Category{ID: id, ShiftTypeID: s.shiftTypeIDOf(t, id)})
+		version, ok := listedVersions[id]
+		require.True(t, ok, "category %d is listed", id)
+		require.NotEmpty(t, version, "category %d carries its link token", id)
+		versions[strconv.FormatInt(id, 10)] = version
 	}
 	return versions
 }
@@ -138,10 +163,24 @@ func TestShiftTypesRouteCreatesWithCategoryLinks(t *testing.T) {
 	first := testpkg.CreateTestActivityCategory(t, route.db, "st-create-1")
 	second := testpkg.CreateTestActivityCategory(t, route.db, "st-create-2")
 
-	created := route.do(t, http.MethodPost, "/", map[string]any{
-		"name": fmt.Sprintf("Betreuung-%d", time.Now().UnixNano()), "color": "#83CD2D", "category_ids": []string{fmt.Sprint(first.ID), fmt.Sprint(second.ID)},
+	read := route.linkVersions(t, first.ID, second.ID)
+	// ADR 0311: linking moves a category from the type it had; a form that
+	// read another link is refused and creates nothing.
+	stale := map[string]string{fmt.Sprint(first.ID): "anders", fmt.Sprint(second.ID): read[fmt.Sprint(second.ID)]}
+	name := fmt.Sprintf("Betreuung-%d", time.Now().UnixNano())
+	refused := route.do(t, http.MethodPost, "/", map[string]any{
+		"name": name, "color": "#83CD2D", "category_ids": []string{fmt.Sprint(first.ID), fmt.Sprint(second.ID)},
+		"expected_category_link_versions": stale,
 	})
-	require.Equal(t, http.StatusCreated, created.StatusCode)
+	require.Equal(t, http.StatusConflict, refused.StatusCode)
+	assert.Nil(t, route.shiftTypeIDOf(t, first.ID), "a refused create links nothing")
+	assert.Nil(t, route.shiftTypeIDOf(t, second.ID), "a refused create links nothing")
+
+	created := route.do(t, http.MethodPost, "/", map[string]any{
+		"name": name, "color": "#83CD2D", "category_ids": []string{fmt.Sprint(first.ID), fmt.Sprint(second.ID)},
+		"expected_category_link_versions": read,
+	})
+	require.Equal(t, http.StatusCreated, created.StatusCode, "the refused create rolled its type back")
 	typeID := decodeShiftTypeID(t, created)
 
 	require.NotNil(t, route.shiftTypeIDOf(t, first.ID))
@@ -160,6 +199,7 @@ func TestShiftTypesRouteUpdateSyncsAndOmittedLeavesUntouched(t *testing.T) {
 	name := fmt.Sprintf("Vorbereitung-%d", time.Now().UnixNano())
 	created := route.do(t, http.MethodPost, "/", map[string]any{
 		"name": name, "color": "#5080D8", "category_ids": []string{fmt.Sprint(first.ID), fmt.Sprint(second.ID)},
+		"expected_category_link_versions": route.linkVersions(t, first.ID, second.ID),
 	})
 	require.Equal(t, http.StatusCreated, created.StatusCode)
 	typeID := decodeShiftTypeID(t, created)
@@ -207,6 +247,7 @@ func TestShiftTypesRouteRejectsUnknownCategoryIDsAndRollsBack(t *testing.T) {
 	name := fmt.Sprintf("Betreuung-%d", time.Now().UnixNano())
 	created := route.do(t, http.MethodPost, "/", map[string]any{
 		"name": name, "color": "#83CD2D", "category_ids": []string{fmt.Sprint(first.ID)},
+		"expected_category_link_versions": route.linkVersions(t, first.ID),
 	})
 	require.Equal(t, http.StatusCreated, created.StatusCode)
 	typeID := decodeShiftTypeID(t, created)

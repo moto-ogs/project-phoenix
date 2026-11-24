@@ -152,6 +152,13 @@ func (s *Service) UpdateWorkTimeModel(ctx context.Context, input workforce.Updat
 			if err := s.checkWorkTimeModelRead(txCtx, id, input.ExpectedVersion, stats); err != nil {
 				return err
 			}
+			// The bound people before the write: a rename strengthens the
+			// template lock to one a binding's FK check waits for, and a
+			// schedule save binds a person under that person's lock.
+			staffIDs, err := s.lockAssignedStaff(txCtx, id)
+			if err != nil {
+				return err
+			}
 			var found bool
 			var writeStats domain.OperationStats
 			result, found, writeStats, err = s.store.UpdateWorkTimeModel(txCtx, id, fields)
@@ -162,7 +169,7 @@ func (s *Service) UpdateWorkTimeModel(ctx context.Context, input workforce.Updat
 			if !found {
 				return domain.ErrWorkTimeModelNotFound
 			}
-			return s.refreshAssignedSchedules(txCtx, result, stats)
+			return s.refreshAssignedSchedules(txCtx, result, staffIDs, stats)
 		})
 	})
 	return modelToPublic(result), MapError(err)
@@ -236,28 +243,33 @@ func (s *Service) refuseAssignedOrReleaseRetired(ctx context.Context, id int64) 
 	return s.store.ReleaseWorkTimeModel(ctx, id, bound)
 }
 
-// refreshAssignedSchedules rewrites the schedule snapshots of every staff
-// member bound to the template. Running versions are closed at today and the
-// new ones carry the template's own anchor, so a template edit can never
-// re-parity a week that has already been accounted for. It runs inside the
-// caller's write transaction and must never be given its own.
-func (s *Service) refreshAssignedSchedules(ctx context.Context, model domain.WorkTimeModel, stats *domain.OperationStats) error {
-	staffIDs, err := s.assignments.AssignedStaffIDs(ctx, model.ID)
+// lockAssignedStaff takes the balance lock of every staff member bound to
+// the template, ascending, so concurrent edits cannot deadlock against each
+// other. The template lock held before keeps an assignment from adding a
+// member until the edit commits.
+func (s *Service) lockAssignedStaff(ctx context.Context, modelID int64) ([]int64, error) {
+	staffIDs, err := s.assignments.AssignedStaffIDs(ctx, modelID)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if len(staffIDs) == 0 {
-		return nil
-	}
-	// Sorted so concurrent refreshes take the per-staff locks in the same
-	// order and cannot deadlock against each other.
 	slices.Sort(staffIDs)
 	for _, staffID := range staffIDs {
 		if err := s.transaction.LockStaffBalance(ctx, staffID); err != nil {
-			return err
+			return nil, err
 		}
 	}
+	return staffIDs, nil
+}
 
+// refreshAssignedSchedules rewrites the schedule snapshots of the staff
+// members lockAssignedStaff locked. Running versions are closed at today and
+// the new ones carry the template's own anchor, so a template edit can never
+// re-parity a week that has already been accounted for. It runs inside the
+// caller's write transaction and must never be given its own.
+func (s *Service) refreshAssignedSchedules(ctx context.Context, model domain.WorkTimeModel, staffIDs []int64, stats *domain.OperationStats) error {
+	if len(staffIDs) == 0 {
+		return nil
+	}
 	today := s.clock.Today()
 	closeStats, err := s.store.CloseStaffSchedules(ctx, staffIDs, today)
 	stats.Add(closeStats)

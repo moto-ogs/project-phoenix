@@ -12,9 +12,20 @@ import (
 
 // LockShiftType takes the row lock a staff_shifts or staff_shift_series FK
 // check conflicts with, so the reference count read after it stays true
-// until the removal commits (#6845). An edit of the type writes under it
-// too and reads the type after it (ADR 0311).
+// until the removal commits (#6845).
 func (s *Store) LockShiftType(ctx context.Context, id int64) (bool, domain.OperationStats, error) {
+	return s.lockShiftType(ctx, id, "UPDATE")
+}
+
+// LockShiftTypeForEdit is the row lock an edit of the type writes under; the
+// edit reads the type after it (ADR 0311). The edit changes no key column,
+// so the lock lets the FK check of a shift or series naming the type
+// through instead of holding it for the whole save.
+func (s *Store) LockShiftTypeForEdit(ctx context.Context, id int64) (bool, domain.OperationStats, error) {
+	return s.lockShiftType(ctx, id, "NO KEY UPDATE")
+}
+
+func (s *Store) lockShiftType(ctx context.Context, id int64, strength string) (bool, domain.OperationStats, error) {
 	db, scope, err := s.database(ctx)
 	if err != nil {
 		return false, domain.OperationStats{}, err
@@ -31,7 +42,7 @@ func (s *Store) LockShiftType(ctx context.Context, id int64) (bool, domain.Opera
 		ModelTableExpr(tableShiftTypes+` AS "shift_type"`).
 		Column("id").
 		Where(`"shift_type".id = ?`, id).
-		For("UPDATE"), aliasShiftType, scope)
+		For(strength), aliasShiftType, scope)
 	return scanOne(ctx, query, "lock shift type")
 }
 

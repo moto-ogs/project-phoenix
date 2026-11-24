@@ -98,7 +98,7 @@ func TestAssignWorkTimeModelLocksAscendingAndWritesOnce(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []int64{1, 2, 3}, result.Assigned)
 	assert.Equal(t, []string{"template", "4", "balance", "1", "balance", "2", "balance", "3", "row", "1", "row", "2", "row", "3"}, locks,
-		"the template first, as an edit of it takes it; then the people as refreshAssignedSchedules takes them")
+		"the template first, as an edit of it takes it; then the people as lockAssignedStaff takes them")
 	assert.Equal(t, []string{"close", "bind", "insert"}, store.writes, "one statement per write, whatever the number of people")
 }
 
@@ -122,4 +122,47 @@ func TestAssignWorkTimeModelRefusesAnUnknownTemplateBeforeLockingPeople(t *testi
 	require.ErrorIs(t, err, workforce.ErrWorkTimeModelNotFound)
 	assert.Equal(t, []string{"template", "9"}, locks)
 	assert.Empty(t, store.writes)
+}
+
+// editStore records the template lock and the template write of an edit.
+type editStore struct{ assignmentStore }
+
+func (s *editStore) LockWorkTimeModel(_ context.Context, id int64) (bool, domain.OperationStats, error) {
+	*s.locks = append(*s.locks, "template", string(rune('0'+id)))
+	return true, domain.OperationStats{}, nil
+}
+
+func (s *editStore) UpdateWorkTimeModel(_ context.Context, id int64, _ domain.WorkTimeModelFields) (domain.WorkTimeModel, bool, domain.OperationStats, error) {
+	*s.locks = append(*s.locks, "update")
+	model, _, stats, err := s.FindWorkTimeModel(context.Background(), id)
+	return model, true, stats, err
+}
+
+type editAssignments struct{ assignmentLive }
+
+func (editAssignments) AssignedStaffIDs(context.Context, int64) ([]int64, error) {
+	return []int64{3, 1}, nil
+}
+
+func (editAssignments) RebaseAnchor(context.Context, []int64, string) error { return nil }
+
+// A rename strengthens the template lock to one the FK check of a binding
+// waits for, and a schedule save binds a person under that person's balance
+// lock: the edit takes the bound people before it writes the template.
+func TestUpdateWorkTimeModelLocksBoundPeopleBeforeWritingTemplate(t *testing.T) {
+	t.Parallel()
+	var locks []string
+	store := &editStore{}
+	service := newAssignmentService(&store.assignmentStore, &locks)
+	service.store = store
+	service.assignments = editAssignments{}
+	stored, _, _, err := store.FindWorkTimeModel(context.Background(), 4)
+	require.NoError(t, err)
+	_, err = service.UpdateWorkTimeModel(context.Background(), workforce.UpdateWorkTimeModel{
+		ID: 4, ExpectedVersion: workforce.WorkTimeModelVersion(modelToPublic(stored)),
+		WorkTimeModelFields: workforce.WorkTimeModelFields{Name: "Vollzeit", RotationLength: 1, RotationAnchorDate: "2026-10-12"},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, []string{"template", "4", "balance", "1", "balance", "3", "update"}, locks)
+	assert.Equal(t, []string{"close", "insert"}, store.writes, "the bound people get the new version")
 }

@@ -272,6 +272,10 @@ type ShiftTypeRetirementStore interface {
 	// concurrent shift or series write naming the type waits on its FK
 	// check. A missing type reports found=false.
 	LockShiftType(context.Context, int64) (bool, domain.OperationStats, error)
+	// LockShiftTypeForEdit holds the type row FOR NO KEY UPDATE until the
+	// transaction ends: concurrent edits wait, a shift or series naming the
+	// type does not. A missing type reports found=false.
+	LockShiftTypeForEdit(context.Context, int64) (bool, domain.OperationStats, error)
 	// ArchiveShiftType stamps archived_at once; a missing type reports
 	// found=false.
 	ArchiveShiftType(context.Context, int64) (domain.ShiftType, bool, domain.OperationStats, error)

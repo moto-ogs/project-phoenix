@@ -42,9 +42,9 @@ import {
   useRefreshAfterWrite,
 } from "~/lib/hooks/use-refresh-after-write";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
-import { ApiError } from "~/lib/api-error";
+import { ApiError, isChangedSinceRead } from "~/lib/api-error";
 import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
-import { revalidateOrThrow, useSWRAuth, useTenantMutate } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { useModuleBooked } from "~/lib/tenant-context";
 import { staffPlanConcept } from "~/lib/concepts/staffPlan";
@@ -67,6 +67,38 @@ const DEFAULT_COLOR: string = LOCATION_COLORS.GROUP_ROOM;
 interface EditableShiftType extends ShiftType {
   readonly categoryIds?: readonly string[];
   readonly categoryLinkVersions?: Readonly<Record<string, string>>;
+}
+
+/** The link token of every category of one read, keyed by category id. */
+function linkVersionsOf(
+  categories: readonly ActivityCategory[],
+): Readonly<Record<string, string>> {
+  return Object.fromEntries(
+    categories.map((category) => [
+      category.id,
+      category.shiftTypeLinkVersion ?? "",
+    ]),
+  );
+}
+
+/**
+ * The types as their forms read them: each with the categories that belong
+ * to it and the link tokens of the same category read. Without categories
+ * the types stay bare and a save leaves the links alone.
+ */
+function withCategoryLinks(
+  types: readonly ShiftType[],
+  categories: readonly ActivityCategory[] | undefined,
+): EditableShiftType[] {
+  if (!categories) return [...types];
+  const linkVersions = linkVersionsOf(categories);
+  return types.map((type) => ({
+    ...type,
+    categoryIds: categories
+      .filter((category) => category.shiftTypeId === type.id)
+      .map((category) => category.id),
+    categoryLinkVersions: linkVersions,
+  }));
 }
 
 /** „12 geplante Dienste“ / „1 Schichtserie“ für die Rückfrage (#6845). */
@@ -167,7 +199,6 @@ function shiftTypeStats(types: readonly ShiftType[]) {
 
 function ShiftTypesPageContent() {
   const searchParams = useSearchParams();
-  const tenantMutate = useTenantMutate();
   const toast = useToast();
   // „Beispiele hinzufügen“ ist eine Aktion ohne Formular: Fehler als Toast.
   const { show: showSeedError } = useApiErrorDisplay();
@@ -203,20 +234,25 @@ function ShiftTypesPageContent() {
   // Vorauswahl. Solange sie nicht geladen sind, zeigt das Formular das Feld
   // gar nicht und die Speichern-Aufrufe lassen `categoryIds` weg — eine leere
   // Liste würde bestehende Zuordnungen löschen (#1837).
-  const { data: categories, error: categoriesError } = useSWRAuth<
-    ActivityCategory[]
-  >(CATEGORY_CACHE_KEY, () => categoryService.getManagedCategories());
+  const categoriesRead = useSWRAuth<ActivityCategory[]>(
+    CATEGORY_CACHE_KEY,
+    () => categoryService.getManagedCategories(),
+  );
+  const { data: categories, error: categoriesError } = categoriesRead;
   const categoriesReady = categories !== undefined && !categoriesError;
 
-  // Lehnt ab, wenn das Lesen scheitert (ADR 0311), mit der Liste als
-  // Antwort.
+  // Lehnt ab, wenn das Lesen der Liste scheitert (ADR 0311). Die Antwort
+  // trägt die Kategorien der neuen Lesung wie die Einträge auf dem
+  // Bildschirm: nach einer Ablehnung speichert das Formular damit wieder.
   const onChanged = useCallback(async () => {
-    const [stored] = await Promise.all([
+    const [stored, storedCategories] = await Promise.all([
       revalidateOrThrow(list),
-      tenantMutate(CATEGORY_CACHE_KEY),
+      // Scheitert das Lesen der Kategorien, zeigt das Formular das Feld
+      // nicht (categoriesError) und das Speichern lässt die Zuordnung weg.
+      revalidateOrThrow(categoriesRead).catch(() => undefined),
     ]);
-    return stored;
-  }, [list, tenantMutate]);
+    return withCategoryLinks(stored, storedCategories);
+  }, [list, categoriesRead]);
 
   // Ein Eintrag trägt die Kategorien, die zu ihm gehören, und den Stand
   // jeder gelesenen Kategorie: das Formular zeigt die Zuordnung aus genau
@@ -224,24 +260,16 @@ function ShiftTypesPageContent() {
   const items = useMemo(() => {
     if (!data) return undefined;
     const sorted = [...data].sort((a, b) => a.name.localeCompare(b.name, "de"));
-    if (!categoriesReady || !categories) return sorted;
-    const linkVersions = Object.fromEntries(
-      categories.map((category) => [
-        category.id,
-        category.shiftTypeLinkVersion ?? "",
-      ]),
-    );
-    return sorted.map((type): EditableShiftType => ({
-      ...type,
-      categoryIds: categories
-        .filter((category) => category.shiftTypeId === type.id)
-        .map((category) => category.id),
-      categoryLinkVersions: linkVersions,
-    }));
+    return withCategoryLinks(sorted, categoriesReady ? categories : undefined);
   }, [data, categories, categoriesReady]);
 
   const config = useMemo<CatalogConfig<EditableShiftType>>(() => {
     const categoryList = categoriesReady ? (categories ?? []) : [];
+    // Ein Anlegen holt Kategorien von ihrer bisherigen Dienstart weg: es
+    // schickt die Stände der Kategorien, aus denen das Formular wählt.
+    const createLinkVersions = categoriesReady
+      ? linkVersionsOf(categoryList)
+      : undefined;
 
     const sections = (type: EditableShiftType | null): SectionConfig[] => [
       {
@@ -334,7 +362,7 @@ function ShiftTypesPageContent() {
             expectedVersion: fallback.version,
             expectedCategoryLinkVersions: fallback.categoryLinkVersions,
           }
-        : {}),
+        : { expectedCategoryLinkVersions: createLinkVersions }),
     });
 
     return {
@@ -373,8 +401,19 @@ function ShiftTypesPageContent() {
         isActive: true,
         categoryIds: [],
       },
-      create: (values) =>
-        shiftTypeService.createShiftType(payloadOf(values, null)),
+      create: async (values) => {
+        try {
+          return await shiftTypeService.createShiftType(
+            payloadOf(values, null),
+          );
+        } catch (err: unknown) {
+          // Seit dem Lesen geändert: die Kategorien neu lesen, damit das
+          // nächste Anlegen mit ihren Ständen geht; die Meldung zeigt das
+          // Formular. Scheitert das Lesen, steht sein Fehler über der Liste.
+          if (isChangedSinceRead(err)) await onChanged().catch(() => undefined);
+          throw err;
+        }
+      },
       update: (type, values) =>
         shiftTypeService.updateShiftType(type.id, payloadOf(values, type)),
       retire: {
@@ -430,7 +469,7 @@ function ShiftTypesPageContent() {
             : `Die Dienstart „${type.name}“ ist gelöscht.`,
       },
     };
-  }, [categories, categoriesReady]);
+  }, [categories, categoriesReady, onChanged]);
 
   // Die Beispiele laden nach dem Anlegen; ein Fehler dabei steht über der
   // Liste und legt nichts erneut an (#6652).

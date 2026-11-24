@@ -99,9 +99,9 @@ type ShiftTypeRequest struct {
 	// it.
 	ExpectedVersion string `json:"expected_version,omitempty"`
 	// ExpectedCategoryLinkVersions holds, per category id, the
-	// shift_type_link_version of every category the editor read. An update
-	// with category_ids is refused when a category whose link it changes
-	// moved since. A create ignores it.
+	// shift_type_link_version of every category the form read. A create or
+	// update with category_ids is refused when a category whose link it
+	// changes moved since.
 	ExpectedCategoryLinkVersions map[string]string `json:"expected_category_link_versions,omitempty"`
 }
 
@@ -273,7 +273,9 @@ func (rs *Resource) create(w http.ResponseWriter, r *http.Request) {
 		rs.runtime.Failure(w, r, FailureInvalid, err)
 		return
 	}
-	saved, err := rs.types.CreateShiftType(r.Context(), toShiftTypeInput(0, req))
+	input := toShiftTypeInput(0, req)
+	input.ExpectedCategoryLinks = categoryLinkVersions(req.ExpectedCategoryLinkVersions)
+	saved, err := rs.types.CreateShiftType(r.Context(), input)
 	if err != nil {
 		rs.renderError(w, r, err)
 		return

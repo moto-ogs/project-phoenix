@@ -269,6 +269,9 @@ func (s *Store) SetCategoryShiftTypeLinks(ctx context.Context, shiftTypeID int64
 	return stats, setShiftTypeLinks(ctx, db, tenantID, shiftTypeID, ids, &stats)
 }
 
+// LockShiftTypeLinkCategories locks FOR NO KEY UPDATE: the link write sets
+// shift_type_id, no key column, so a group or anything else referencing a
+// category keeps passing its FK check during the save.
 func (s *Store) LockShiftTypeLinkCategories(ctx context.Context, shiftTypeID int64, categoryIDs []int64) ([]timetable.Category, domain.OperationStats, error) {
 	db, tenantID, err := s.database(ctx)
 	if err != nil {
@@ -290,7 +293,7 @@ func (s *Store) LockShiftTypeLinkCategories(ctx context.Context, shiftTypeID int
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	err = scope(db.NewSelect().TableExpr(`activities.categories AS "category"`).Column("category.id")).
-		OrderExpr(`"category".id ASC`).For("UPDATE").Scan(ctx, &locked)
+		OrderExpr(`"category".id ASC`).For("NO KEY UPDATE").Scan(ctx, &locked)
 	stats.StatementDuration = time.Since(started)
 	if err != nil {
 		return nil, stats, fmt.Errorf("timetable postgres: lock shift type link categories: %w", err)
