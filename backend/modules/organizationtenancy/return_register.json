@@ -15941,6 +15941,12 @@
           "nullable": false
         },
         {
+          "name": "legal_withdrawals",
+          "type": "jsonb",
+          "udt": "jsonb",
+          "nullable": false
+        },
+        {
           "name": "health",
           "type": "text",
           "udt": "text",

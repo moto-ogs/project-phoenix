@@ -20772,6 +20772,17 @@
     },
     {
       "method": "POST",
+      "pattern": "/traeger/holiday-periods/{id}/registrations/{registrationId}/consents/{key}/withdraw",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "HolidayRegistrationDetail"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/traeger/holiday-periods/{id}/registrations/{registrationId}/freeze",
       "portals": [
         "org"
@@ -23274,6 +23285,18 @@
         "kind": "ref",
         "ref": "ContractFamilyChildren"
       }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/parent/me/holiday-registration-entries/{registrationId}/consents/{key}",
+      "portals": [
+        "parent"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "HolidayRegistrationConsentRequest"
+      },
+      "no_data": true
     },
     {
       "method": "PUT",
@@ -63767,6 +63790,17 @@
           }
         },
         {
+          "name": "consents",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HolidayRegistrationConsent"
+            }
+          }
+        },
+        {
           "name": "read_only",
           "schema": {
             "kind": "bool"
@@ -64962,6 +64996,108 @@
       ]
     },
     {
+      "name": "HolidayRegistrationConsent",
+      "go_type": "enrollment.HolidayRegistrationConsent",
+      "fields": [
+        {
+          "name": "key",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "text",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "given",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "changed_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayRegistrationConsentRequest",
+      "go_type": "parent.HolidayRegistrationConsentRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "given",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayRegistrationConsentResponse",
+      "go_type": "parent.HolidayRegistrationConsentResponse",
+      "fields": [
+        {
+          "name": "key",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "text",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "given",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "changed_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "HolidayRegistrationContact",
       "go_type": "enrollment.HolidayRegistrationContact",
       "fields": [
@@ -65226,6 +65362,16 @@
         },
         {
           "name": "legal_acceptances",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "instant"
+            }
+          }
+        },
+        {
+          "name": "legal_withdrawals",
           "schema": {
             "kind": "map",
             "nullable": true,
@@ -65582,6 +65728,17 @@
               "ref": "HolidayRegistrationEntryChildResponse"
             }
           }
+        },
+        {
+          "name": "consents",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HolidayRegistrationConsentResponse"
+            }
+          }
         }
       ]
     },
@@ -65770,6 +65927,20 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        },
+        {
+          "name": "key",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "given",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -122734,6 +122905,17 @@
             "kind": "ref",
             "nullable": true,
             "ref": "HolidayHostHealth"
+          }
+        },
+        {
+          "name": "consents",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HolidayRegistrationConsent"
+            }
           }
         },
         {

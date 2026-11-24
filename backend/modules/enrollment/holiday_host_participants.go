@@ -102,6 +102,10 @@ type HolidayParticipant struct {
 	// nil without any, or when the parents did not agree under consent
 	// texts of HolidayConsentVersionHostHealth.
 	Health *HolidayHostHealth `json:"health"`
+	// Consents are the voluntary consents of the registration (#8038, ADR
+	// 0321), read live: a withdrawal in the parents portal shows with the
+	// next read. Empty when the form asks none.
+	Consents []HolidayRegistrationConsent `json:"consents"`
 	// Sealed carries the sealed health information from the store to the
 	// service, which opens it into Health; it never leaves Enrollment.
 	Sealed *HolidaySealedHostHealth `json:"-"`

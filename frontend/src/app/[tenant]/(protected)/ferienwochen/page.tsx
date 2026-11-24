@@ -3,6 +3,10 @@
 import { useSession } from "next-auth/react";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { HolidayHealthCell } from "~/components/holiday/holiday-health-lines";
+import {
+  HolidayConsentCell,
+  holidayConsentSortValue,
+} from "~/components/holiday/holiday-host-consents";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
@@ -125,6 +129,22 @@ function studentFileCell(
   );
 }
 
+/**
+ * Die freiwilligen Einwilligungen der Anmeldungen (#8038), eine Spalte je
+ * Einwilligung in der Reihenfolge, in der sie zuerst vorkommen.
+ */
+function holidayConsentColumns(
+  list: HolidayParticipantList,
+): { key: string; title: string }[] {
+  const columns = new Map<string, string>();
+  for (const child of list.participants) {
+    for (const consent of child.consents) {
+      if (!columns.has(consent.key)) columns.set(consent.key, consent.title);
+    }
+  }
+  return [...columns].map(([key, title]) => ({ key, title }));
+}
+
 const participantColumns = (
   list: HolidayParticipantList,
   assignments: ReadonlyMap<string, HolidayOwnChildAssignment>,
@@ -137,6 +157,8 @@ const participantColumns = (
   const withHealth = list.participants.some((child) => child.health !== null);
   const answer = (child: HolidayParticipant, key: string) =>
     child.answers.find((entry) => entry.key === key);
+  const consentOf = (child: HolidayParticipant, key: string) =>
+    child.consents.find((entry) => entry.key === key);
   return [
     {
       key: "name",
@@ -208,6 +230,15 @@ const participantColumns = (
         const value = answer(child, question.key)?.value ?? null;
         return typeof value === "boolean" ? String(value) : value;
       },
+    })),
+    ...holidayConsentColumns(list).map((consent) => ({
+      key: `consent:${consent.key}`,
+      header: consent.title,
+      render: (child: HolidayParticipant) => (
+        <HolidayConsentCell consent={consentOf(child, consent.key)} />
+      ),
+      sortValue: (child: HolidayParticipant) =>
+        holidayConsentSortValue(consentOf(child, consent.key)),
     })),
     ...(assignments.size > 0
       ? [
@@ -581,6 +612,9 @@ function ParticipantList({
             : "",
           list.participants.some((child) => child.health !== null)
             ? "Gesundheitsangaben stehen bei den Kindern, deren Eltern zugestimmt haben."
+            : "",
+          list.participants.some((child) => child.consents.length > 0)
+            ? "Einwilligungen zeigen den Stand von jetzt: Widerrufen die Eltern, steht es sofort hier."
             : "",
         ]
           .filter(Boolean)

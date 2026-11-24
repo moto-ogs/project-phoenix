@@ -16,9 +16,11 @@ import {
   HolidayGuestContactSchema,
   HolidayHostAnswerSchema,
   HolidayHostHealthSchema,
+  HolidayRegistrationConsentSchema,
   type HolidayGuestContact,
   type HolidayHostAnswer,
   type HolidayHostHealth,
+  type HolidayRegistrationConsent,
 } from "./shared.generated";
 
 /** Go: enrollment.HolidayGuestBadge */
@@ -68,6 +70,7 @@ export interface HolidayGuestSheet {
   health: HolidayHostHealth | null;
   home_photo_consent?: boolean;
   home_room_history_stopped?: boolean;
+  consents: HolidayRegistrationConsent[] | null;
   read_only: boolean;
 }
 
@@ -89,6 +92,7 @@ export const HolidayGuestSheetSchema: z.ZodType<HolidayGuestSheet, unknown> = ob
   health: nullable(HolidayHostHealthSchema),
   home_photo_consent: optional(bool),
   home_room_history_stopped: optional(bool),
+  consents: nullable(arr(HolidayRegistrationConsentSchema)),
   read_only: bool,
 });
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PARENT_HOLIDAY_REGISTRATION_ENTRIES } from "~/test/fixtures/holiday-registrations";
+import { holidayConsentState } from "./holiday-consents";
 import { holidayRegistrationEntriesFromBackend } from "./parent-holiday-registration-entries";
 
 describe("holidayRegistrationEntriesFromBackend (#6673)", () => {
@@ -28,6 +29,7 @@ describe("holidayRegistrationEntriesFromBackend (#6673)", () => {
           ],
         },
       ],
+      consents: [],
     });
     expect(second?.children.map((child) => child.firstName)).toEqual([
       "Mia",
@@ -46,6 +48,7 @@ describe("holidayRegistrationEntriesFromBackend (#6673)", () => {
           last_day: null,
           submitted_at: "2026-09-01T08:00:00Z",
           status: "something_new",
+          consents: [],
           children: [
             {
               first_name: "Ida",
@@ -70,5 +73,54 @@ describe("holidayRegistrationEntriesFromBackend (#6673)", () => {
     expect(
       holidayRegistrationEntriesFromBackend({ registrations: null }),
     ).toEqual([]);
+  });
+
+  it("maps the voluntary consents and tells given, withdrawn and never given apart (#8038)", () => {
+    const [entry] = holidayRegistrationEntriesFromBackend({
+      registrations: [
+        {
+          ...PARENT_HOLIDAY_REGISTRATION_ENTRIES.registrations![0]!,
+          consents: [
+            {
+              key: "a",
+              title: "A",
+              label: "a",
+              text: "",
+              given: true,
+              changed_at: "2026-09-01T08:00:00Z",
+            },
+            {
+              key: "b",
+              title: "B",
+              label: "b",
+              text: "Text",
+              given: false,
+              changed_at: "2026-09-02T08:00:00Z",
+            },
+            {
+              key: "c",
+              title: "C",
+              label: "c",
+              text: "",
+              given: false,
+              changed_at: null,
+            },
+          ],
+        },
+      ],
+    });
+    expect(entry?.consents[1]).toEqual({
+      key: "b",
+      title: "B",
+      label: "b",
+      text: "Text",
+      given: false,
+      changedAt: "2026-09-02T08:00:00Z",
+    });
+    expect(entry?.consents.map(holidayConsentState)).toEqual([
+      "given",
+      "withdrawn",
+      "notGiven",
+    ]);
   });
 });

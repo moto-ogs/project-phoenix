@@ -101,6 +101,9 @@ type HolidayParentRegistration struct {
 	SubmittedAt    time.Time
 	Status         string
 	Children       []HolidayParentRegistrationChild
+	// Consents are the voluntary consents of the form version the
+	// registration came with (#8038), in the order of the form.
+	Consents []HolidayRegistrationConsent
 }
 
 // HolidayParentRegistrations are the registrations of a parent account
@@ -120,4 +123,12 @@ type HolidayParentRegistrations interface {
 	// HolidayParentRegistrationTraeger names the Träger at which the account
 	// has a linked registration, ascending.
 	HolidayParentRegistrationTraeger(ctx context.Context, accountID int64) ([]int64, error)
+	// SetHolidayRegistrationConsent withdraws (given false) or gives again
+	// (given true) the voluntary consent key of the account's registration
+	// and records the change in the registration's audit trail with the
+	// account as its author (#8038, ADR 0321). A consent already in that
+	// state stays unchanged and records nothing. found is false when the
+	// account has no such registration or its form version no enabled
+	// consent of that key.
+	SetHolidayRegistrationConsent(ctx context.Context, accountID, registrationID int64, key string, given bool) (found bool, err error)
 }

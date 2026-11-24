@@ -292,7 +292,8 @@ var holidayParticipantColumns = []lists.Column{
 
 // holidayParticipantExtraColumns adds to the minimum fields the second
 // guardian, when a child has one, the booked dates of a day offer, the lunch
-// of a week with lunch (#5631), and one column per shared question (#5202).
+// of a week with lunch (#5631), one column per shared question (#5202) and
+// one per voluntary consent of the registrations (#8038).
 func holidayParticipantExtraColumns(list capability.HolidayParticipantList) []lists.Column {
 	columns := append([]lists.Column{}, holidayParticipantColumns...)
 	if list.Week.BookingUnit == capability.HolidayBookingUnitDay {
@@ -312,7 +313,40 @@ func holidayParticipantExtraColumns(list capability.HolidayParticipantList) []li
 	for _, question := range list.Questions {
 		columns = append(columns, lists.Column{ID: hostAnswerColumnID(question.Key), Label: lists.SanitizeUserText(question.Label)})
 	}
+	return append(columns, holidayConsentColumns(list.Participants)...)
+}
+
+// holidayConsentColumns are the voluntary consents of the children's
+// registrations, one column per key in the order they first appear, titled
+// as the form titles them (#8038).
+func holidayConsentColumns(participants []capability.HolidayParticipant) []lists.Column {
+	columns := []lists.Column{}
+	seen := map[string]bool{}
+	for _, participant := range participants {
+		for _, consent := range participant.Consents {
+			if seen[consent.Key] {
+				continue
+			}
+			seen[consent.Key] = true
+			columns = append(columns, lists.Column{ID: hostConsentColumnID(consent.Key), Label: lists.SanitizeUserText("Einwilligung: " + consent.Title)})
+		}
+	}
 	return columns
+}
+
+func hostConsentColumnID(key string) lists.ColumnID { return lists.ColumnID("consent." + key) }
+
+// hostConsentText is the state of a consent as a cell: given, withdrawn by
+// the parents, or never given.
+func hostConsentText(consent capability.HolidayRegistrationConsent) string {
+	switch {
+	case consent.Given:
+		return "Ja"
+	case consent.ChangedAt != nil:
+		return "Widerrufen"
+	default:
+		return "Nein"
+	}
 }
 
 // hostAnswerText is a shared answer as a cell, written like the Träger's
@@ -345,37 +379,47 @@ func holidayParticipantDocument(list capability.HolidayParticipantList, names ho
 	}
 	rows := make([]lists.Row, len(list.Participants))
 	for i, participant := range list.Participants {
-		values := map[lists.ColumnID]string{
-			"last_name": participant.LastName, "first_name": participant.FirstName,
-			"birth_date": participant.BirthDate.Format("02.01.2006"), "home_school": names.participantSchool(participant),
-			"time_model": models[participant.TimeModelID.Int64()],
-		}
-		days := make([]string, len(participant.Days))
-		for j, day := range participant.Days {
-			days[j] = day.Format("02.01.2006")
-		}
-		values["days"] = strings.Join(days, ", ")
-		values["lunch"] = "Nein"
-		if participant.Lunch {
-			values["lunch"] = "Ja"
-		}
-		if participant.SecondGuardian != nil {
-			values["second_guardian"] = participant.SecondGuardian.Name
-			values["second_guardian_phone"] = participant.SecondGuardian.Phone
-		}
-		for _, answer := range participant.Answers {
-			values[hostAnswerColumnID(answer.Key)] = hostAnswerText(answer)
-		}
-		for id, value := range values {
-			values[id] = lists.SanitizeUserText(value)
-		}
-		rows[i] = lists.Row{Values: values}
+		rows[i] = lists.Row{Values: holidayParticipantValues(participant, models, names)}
 	}
 	return lists.Document{
 		Title: "Teilnehmerliste", Subtitle: list.Week.PeriodName, GeneratedAt: generatedAt,
 		Filters: header, Columns: holidayParticipantExtraColumns(list), Rows: rows,
 		Footer: "Vertraulich. Enthält personenbezogene Daten.",
 	}
+}
+
+// holidayParticipantValues is the row of one child in the export: its
+// minimum fields, booked days, lunch, second guardian, shared answers and
+// voluntary consents (#8038), each sanitized for the file.
+func holidayParticipantValues(participant capability.HolidayParticipant, models map[int64]string, names holidaySchoolNameMap) map[lists.ColumnID]string {
+	values := map[lists.ColumnID]string{
+		"last_name": participant.LastName, "first_name": participant.FirstName,
+		"birth_date": participant.BirthDate.Format("02.01.2006"), "home_school": names.participantSchool(participant),
+		"time_model": models[participant.TimeModelID.Int64()],
+	}
+	days := make([]string, len(participant.Days))
+	for j, day := range participant.Days {
+		days[j] = day.Format("02.01.2006")
+	}
+	values["days"] = strings.Join(days, ", ")
+	values["lunch"] = "Nein"
+	if participant.Lunch {
+		values["lunch"] = "Ja"
+	}
+	if participant.SecondGuardian != nil {
+		values["second_guardian"] = participant.SecondGuardian.Name
+		values["second_guardian_phone"] = participant.SecondGuardian.Phone
+	}
+	for _, answer := range participant.Answers {
+		values[hostAnswerColumnID(answer.Key)] = hostAnswerText(answer)
+	}
+	for _, consent := range participant.Consents {
+		values[hostConsentColumnID(consent.Key)] = hostConsentText(consent)
+	}
+	for id, value := range values {
+		values[id] = lists.SanitizeUserText(value)
+	}
+	return values
 }
 
 // holidayLunchHeader names the lunches of each care day of the week, so the

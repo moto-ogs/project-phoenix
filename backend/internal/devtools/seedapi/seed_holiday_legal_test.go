@@ -16,7 +16,7 @@ func TestSeedHolidayLegalUsesSavedFormVersion(t *testing.T) {
 	for _, version := range []int{2, 7} {
 		t.Run(fmt.Sprint(version), func(t *testing.T) {
 			t.Parallel()
-			var submitted map[string]any
+			var submitted, confirmed map[string]any
 			srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
 				w.Header().Set("Content-Type", "application/json")
 				switch {
@@ -38,6 +38,13 @@ func TestSeedHolidayLegalUsesSavedFormVersion(t *testing.T) {
 						return
 					}
 					_, _ = w.Write([]byte(`{"data":{"id":11}}`))
+				case r.Method == http.MethodGet && r.URL.Path == "/traeger/holiday-contributions/5/registrations/11":
+					_, _ = w.Write([]byte(`{"data":{"fingerprint":"beitrag-1"}}`))
+				case r.Method == http.MethodPost && r.URL.Path == "/traeger/holiday-contributions/5/registrations/11/confirm":
+					if err := json.NewDecoder(r.Body).Decode(&confirmed); err != nil {
+						t.Error(err)
+					}
+					_, _ = w.Write([]byte(`{"data":{}}`))
 				default:
 					t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
 					w.WriteHeader(http.StatusNotFound)
@@ -55,7 +62,11 @@ func TestSeedHolidayLegalUsesSavedFormVersion(t *testing.T) {
 			}
 			require.NoError(t, (seedHolidayLegalStep{}).Run(context.Background(), runtime))
 			assert.Equal(t, float64(version), submitted["form_version"])
-			assert.Equal(t, map[string]any{"hinweis_1": true, "hinweis_2": true, "fotos_ferien": false}, submitted["legal_acceptances"])
+			assert.Equal(t, map[string]any{"hinweis_1": true, "hinweis_2": true, "fotos_ferien": true}, submitted["legal_acceptances"])
+			// Without a seeded parent the registration has no account; the
+			// Träger confirms it so the hosting school lists its consent (#8038).
+			assert.NotContains(t, submitted, "parent_account_proof")
+			assert.Equal(t, "beitrag-1", confirmed["expected_fingerprint"])
 		})
 	}
 }

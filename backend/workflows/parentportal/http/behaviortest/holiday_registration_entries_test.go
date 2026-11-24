@@ -43,7 +43,7 @@ func holidayEntriesPortal(t *testing.T, db *bun.DB) (*parentService.Portal, http
 		GuardianPolicy: owners.NewParentGuardianPolicy(), DeparturePolicy: owners.ParentDeparturePolicy(), Fingerprints: owners.SecurityFingerprints{},
 		Declarations: owners.ParentDeclarationPolicy(), Locales: owners.ParentPortalLocales(), Runtime: owners.ParentPortalRuntime{}, Logger: slog.Default(),
 		ChildRepo: api.NewRepositoryTestFactory(database).ParentChildReads(), ParentAccounts: owners.NewParentAccounts(identity),
-		HolidayRegistrations: owners.NewParentHolidayRegistrations(organizations),
+		HolidayRegistrations: owners.NewParentHolidayRegistrations(organizations, time.Now),
 	})
 	router := testpkg.TenantRuntimeMiddleware(t, db)(parentHTTP.NewResource(parentHTTP.ResourceConfig{Now: time.Now, Parent: portal}).Router(api.ParentSessionChain))
 	return portal, router

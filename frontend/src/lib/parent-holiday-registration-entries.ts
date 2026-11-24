@@ -44,6 +44,21 @@ interface HolidayRegistrationEntryChild {
   readonly weeks: readonly HolidayRegistrationEntryWeek[];
 }
 
+/**
+ * A voluntary consent of the registration (#8038, ADR 0321) in the words the
+ * parents gave it with. `changedAt` is when it was given while it holds, when
+ * it was withdrawn while it does not, and null for one never given.
+ */
+export interface HolidayRegistrationConsent {
+  readonly key: string;
+  readonly title: string;
+  readonly label: string;
+  readonly text: string;
+  readonly given: boolean;
+  /** RFC 3339 instant, or null when never given. */
+  readonly changedAt: string | null;
+}
+
 export interface HolidayRegistrationEntry {
   readonly id: string;
   readonly traegerName: string;
@@ -55,6 +70,7 @@ export interface HolidayRegistrationEntry {
   readonly submittedAt: string;
   readonly status: HolidayRegistrationEntryStatus;
   readonly children: readonly HolidayRegistrationEntryChild[];
+  readonly consents: readonly HolidayRegistrationConsent[];
 }
 
 /**
@@ -91,6 +107,14 @@ function holidayRegistrationEntryFromBackend(
         placement: knownHolidayPlacement(week.placement),
         ...(week.lunch ? { lunch: true } : {}),
       })),
+    })),
+    consents: (entry.consents ?? []).map((consent) => ({
+      key: consent.key,
+      title: consent.title,
+      label: consent.label,
+      text: consent.text,
+      given: consent.given,
+      changedAt: consent.changed_at,
     })),
   };
 }

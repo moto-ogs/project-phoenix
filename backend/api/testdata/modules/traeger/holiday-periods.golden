@@ -22,6 +22,7 @@ POST /traeger/holiday-periods/ -> ferienbetreuung
 POST /traeger/holiday-periods/{id}/allocation/decisions -> ferienbetreuung
 POST /traeger/holiday-periods/{id}/form/documents -> ferienbetreuung
 POST /traeger/holiday-periods/{id}/publish -> ferienbetreuung
+POST /traeger/holiday-periods/{id}/registrations/{registrationId}/consents/{key}/withdraw -> ferienbetreuung
 POST /traeger/holiday-periods/{id}/registrations/{registrationId}/freeze -> ferienbetreuung
 POST /traeger/holiday-periods/{id}/registrations/{registrationId}/proofs -> ferienbetreuung
 POST /traeger/holiday-periods/{id}/registrations/{registrationId}/reopen -> ferienbetreuung

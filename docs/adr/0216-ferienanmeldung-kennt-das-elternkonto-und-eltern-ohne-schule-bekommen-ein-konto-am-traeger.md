@@ -203,3 +203,12 @@ Meldet der Push-Dienst ein Gerät als abgelaufen, entfernen beide
 Versandwege dieselbe unveränderte Gerätebindung. Dieser eine administrative
 Schreibvorgang ist nötig, weil keine sendende Schule das Gerät besitzt.
 Der Versand und seine Zugriffsprüfung bleiben im Schulkontext.
+
+## Nachtrag 2026-11-24: Einwilligungen sehen und widerrufen (#8038)
+
+Punkt 9 gilt erweitert: Die Liste nennt je Anmeldung die freiwilligen
+Einwilligungen ihrer Formularversion mit Stand und Zeitpunkt, und das Konto
+widerruft sie oder gibt sie wieder (`PUT
+/parent/me/holiday-registration-entries/{registrationId}/consents/{key}`), in
+einer Admin-Transaktion mit dem Konto im Filter. Einzelheiten:
+[ADR 0321](0321-eltern-widerrufen-einwilligungen-der-ferienanmeldung-und-die-ausrichtende-ogs-liest-sie-live.md).
