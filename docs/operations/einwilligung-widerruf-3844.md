@@ -89,6 +89,20 @@ eine Neuerteilung stellt kein Foto wieder her. Rechte sind kindbezogen, nicht
 allein durch ein Elternkonto gegeben. Nach Betreuungsende bleibt der
 Portal-Widerruf möglich (#6494), eine Neuerteilung nicht.
 
+**Wortlaut und Textfassung (seit #8039):** Elternportal und Personal-UI
+zeigen für die Foto-Einwilligung denselben Wortlaut: Die OGS (der
+Betreuungsbegriff der Schule) darf das Kind fotografieren und ein Foto des
+Kindes in moto speichern. Eine Erteilung mit Quelle `parent_portal` oder
+`tenant_portal` hält dazu im Einwilligungsprotokoll die Textfassung fest
+(`audit.student_consent_changes.text_version`, derzeit `photo-1`). Widerrufe
+und Erteilungen mit Quelle `enrollment`, `import` oder
+`migration_snapshot` haben `NULL`: Bei der Anmeldung gilt der Rechtsblock der
+Schule, der mit der Anmeldung gespeichert ist
+(`enrollment.requests.legal_blocks_snapshot`), bei Import und Übernahme der
+externe Nachweis. `NULL` heißt also „Wortlaut nicht von moto“, nie „ohne
+Wortlaut erteilt“. Einträge vor #8039 bleiben ebenfalls `NULL`, weil moto
+ihren damals gezeigten Wortlaut nicht kennt.
+
 **Ende der Betreuung (#6650, [ADR 0213](../adr/0213-kinderfoto-endet-mit-der-betreuung.md)):**
 Im ersten nächtlichen Lauf nach dem letzten Betreuungstag oder dem Abgang
 entfernt moto Foto, Foto-Einwilligung und wer sie erfasst hat, ohne weitere
@@ -169,6 +183,18 @@ externer Nachweise setzen.** Keine der vorhandenen Stellen prüft den externen
 Nachweis automatisch; der Abgleich ist organisatorisch, kein technischer
 Schutz vor jedem Konflikt.
 
+**Ferienbetreuung an einer anderen Schule des Trägers (seit #4721):** Ist das
+Kind als Feriengast an einer anderen Schule des Trägers gebucht, liest deren
+Team bei jedem Blick in die Kindakte den aktuellen Stand der
+Foto-Einwilligung der Heimatschule (ADR 0120, Nachtrag vom 24.11.2026).
+Ein Widerruf über einen der Wege oben steht dort sofort als „Keine Foto-Einwilligung“;
+ein gesonderter Widerruf bei der ausrichtenden Schule ist nicht nötig. Die
+ausrichtende Schule kann für einen Feriengast kein Foto in moto speichern.
+Das gilt nicht für eine Einwilligung, die die Eltern nur in der
+Ferienanmeldung des Trägers gegeben haben (etwa Erinnerungsfotos): Sie ist
+im Träger-Portal an der Anmeldung zu sehen und wird dort außerhalb von moto
+widerrufen.
+
 ### 2.2 Raumhistorie und Anwesenheitsprotokoll
 
 Schulweit: **Einstellungen → Datenschutz → Anwesenheitsprotokoll**
@@ -221,11 +247,21 @@ lesen darf jede Person mit vollem Zugriff auf das Kind. Wirkung im Code:
   wieder öffnen; das gestoppte Kind kommt dabei weder mit Raum noch mit
   Anwesenheit zurück in den Termin. Es bleibt so, wie der Abschluss es
   hinterlassen hat, bis es sich wieder anmeldet.
-- **Grenzen:** Der Stopp gilt für den Datensatz des Kindes an dieser Schule.
-  Ein Ferienkind an einer anderen Schule hat dort einen eigenen Datensatz;
-  dort muss der Stopp gesondert gesetzt werden. Ein im selben Moment
+- **Ferienbetreuung an einer anderen Schule des Trägers (seit #8037):** Ist
+  das Kind dort als Feriengast gebucht, gilt der Stopp der Heimatschule auch
+  für dessen Datensatz an der ausrichtenden Schule, ohne dass dort ein
+  Stopp gesetzt wird (ADR 0120, Nachtrag vom 24.11.2026). Die ausrichtende
+  Schule speichert keinen abgeschlossenen Raumbesuch und keine Stimmung des
+  Gasts; ihre Kindakte zeigt „An der Heimatschule gestoppt“. Raumbesuche,
+  die sie vor dem Stopp gespeichert hat, löscht moto beim nächsten
+  Raumwechsel des Gasts dort, spätestens mit der Kopie nach der
+  Ferienwoche. Das gilt nicht für einen Feriengast ohne Schule beim Träger.
+- **Grenzen:** Ein im selben Moment
   nachgetragener, schon abgeschlossener Raumbesuch kann den Stopp überleben;
-  erneutes Aufheben und Setzen entfernt ihn.
+  erneutes Aufheben und Setzen an der Schule des Stopps entfernt ihn. Für
+  einen Feriengast an der ausrichtenden Schule gilt das nicht: Dort
+  verschwindet ein solcher Besuch erst mit dem nächsten Raumwechsel des
+  Gasts.
 
 Der zugehörige Personal-API-Weg ist `GET`/`PUT /students/{id}/privacy-consent`
 (`users:read` bzw. `users:update` plus Kinderzugriff). Auch der Kinderimport

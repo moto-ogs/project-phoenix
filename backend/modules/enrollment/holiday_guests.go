@@ -68,6 +68,16 @@ type HolidayGuestSheet struct {
 	// Health is the health information the Träger shares with the hosting
 	// school (#4722); nil without any.
 	Health *HolidayHostHealth `json:"health"`
+	// HomePhotoConsent says whether the home school of the guest holds a
+	// photo consent for the child right now (#4721): read live from the home
+	// school, so a withdrawal there counts here at once. Nil for a child
+	// without a home school of the Träger and after the last day of the week.
+	HomePhotoConsent *bool `json:"home_photo_consent,omitempty"`
+	// HomeRoomHistoryStopped says whether room history and mood of the child
+	// are stopped at its home school right now (#8037): read live like the
+	// photo consent, and nil in the same cases. While it is true the hosting
+	// school stores no closed room visit and takes no mood of the guest.
+	HomeRoomHistoryStopped *bool `json:"home_room_history_stopped,omitempty"`
 	// ReadOnly is true after the last day of the week: the guest is no
 	// longer cared for and the sheet stays only for questions afterwards.
 	ReadOnly bool `json:"read_only"`
@@ -346,4 +356,11 @@ type HolidayGuest struct {
 	// carries the stored value between the store and the service.
 	Health       *HolidayHostHealth
 	HealthSealed []byte
+	// HomePhotoConsent is whether the home school holds a photo consent for
+	// the child right now (#4721). It is no stored field: only the read of
+	// one guest's sheet asks the home school, every other read leaves it nil.
+	HomePhotoConsent *bool
+	// HomeRoomHistoryStopped is whether room history and mood are stopped at
+	// the home school right now (#8037). It is not stored either.
+	HomeRoomHistoryStopped *bool
 }

@@ -102,6 +102,37 @@ func TestPhotoCleanupOutboxSharesEveryDetachingTransaction(t *testing.T) {
 	}
 }
 
+// A holiday guest is a copy at the hosting school for one week (ADR 0120).
+// Its photo consent lives at its home school, so the hosting school stores
+// and serves no photo of it, whatever the caller acknowledges (#4721).
+func TestHolidayGuestNeverHoldsAPhoto(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	ctx := testpkg.WithTenantRuntime(t, testpkg.Ctx(t), db)
+	cleanup := fileStorageCompose.NewUploadCleanup(db, "student-photos", time.Now)
+	photos, err := peopleCompose.New(peopleCompose.Dependencies{DB: db, StudentDirectory: testpkg.StudentDirectory{}, Observe: func(peopleCompose.Observation) {}, StudentPhotos: photoCleanupRuntime{enqueue: cleanup.Queue}}, nil)
+	require.NoError(t, err)
+	guest := testpkg.CreateTestStudent(t, db, "Gast", "Ferien", peopledirectory.HolidayGuestSchoolClass)
+	within := func(fn func(context.Context) error) error {
+		return testpkg.WithinTenantTransaction(ctx, db, testpkg.Tenant(t), func(txCtx context.Context, _ bun.Tx) error { return fn(txCtx) })
+	}
+
+	err = within(func(txCtx context.Context) error {
+		return photos.CommitStudentPhoto(txCtx, guest.ID, "/uploads/student-photos/guest.jpg", true)
+	})
+	require.ErrorIs(t, err, peopledirectory.ErrPhotoStudentForbidden)
+
+	// A photo stored before the upload was refused is not served either.
+	_, err = db.NewRaw(`UPDATE users.student_profiles SET photo_path = ?, photo_consent_given_at = ? WHERE id = ? AND tenant_id = ?`,
+		"/uploads/student-photos/guest.jpg", time.Now(), guest.ID, testpkg.Tenant(t)).Exec(ctx)
+	require.NoError(t, err)
+	err = within(func(txCtx context.Context) error {
+		_, findErr := photos.FindStudentPhoto(txCtx, guest.ID, "guest.jpg")
+		return findErr
+	})
+	require.ErrorIs(t, err, peopledirectory.ErrPhotoNotSet)
+}
+
 func TestPhotoCleanupWorkerRecoversCommittedIntentAndRetriesRemovalFailure(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
