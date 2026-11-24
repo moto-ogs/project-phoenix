@@ -118,7 +118,7 @@ func makeMoveSetup(t *testing.T) *moveSetup {
 		ctx:             testpkg.TenantContext(tenantID),
 		tenantID:        tenantID,
 		instance:        fixtures.FromInstanceLifecycle(ttLifecycle.Instances),
-		timetableData:   ttPlanning.Planning,
+		timetableData:   withEditorReads(ttPlanning.Planning),
 		active:          ttActive,
 		materialization: ttMaterialization,
 		careDay:         ttSchedules.CareDay,

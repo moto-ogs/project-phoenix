@@ -11,6 +11,7 @@ import (
 	scheduleModel "github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain/schedulerecords"
 	"github.com/moto-ogs/project-phoenix/modules/timetable/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -222,6 +223,8 @@ type TemplateServiceDependencies struct {
 	// Materialization names the people a create's materialization window
 	// plans; nil plans nobody (#6702).
 	Materialization timetable.MaterializationCapability
+	// SeriesReads take the version an update compares (ADR 0311).
+	SeriesReads ports.TemplateSeriesReads
 }
 
 // TemplateService holds the template writes (create, update, archive, the
@@ -255,6 +258,25 @@ func (s *TemplateService) lockRecurrence(ctx context.Context, op string) error {
 		return &ports.ScheduleError{Op: op + ": lock recurrence", Err: err}
 	}
 	return nil
+}
+
+// checkTemplateSeriesVersion compares the version the editor read with the
+// segment stored now (ADR 0311). It runs under the recurrence gate every
+// template write holds, so the check and the write see the same segment. A
+// segment the read does not find passes: the write itself answers that it is
+// gone.
+func checkTemplateSeriesVersion(ctx context.Context, reads ports.TemplateSeriesReads, op string, templateID int64, expected string) error {
+	if reads == nil {
+		return &ports.ScheduleError{Op: op + ": check version", Err: errors.New("template series reads are not configured")}
+	}
+	current, found, err := timetable.ReadTemplateSeriesVersion(ctx, reads, templateID)
+	if err != nil {
+		return &ports.ScheduleError{Op: op + ": check version", Err: err}
+	}
+	if !found {
+		return nil
+	}
+	return readstate.Check(expected, current)
 }
 
 // newRosterReconciler builds the roster maintenance the template writes use

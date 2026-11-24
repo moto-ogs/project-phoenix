@@ -85,6 +85,8 @@ type TemplateUpdateInput struct {
 	// same transaction (#6838); ActorAccountID attributes dropped deviations.
 	ReplanFuture   bool
 	ActorAccountID *int64
+	// ExpectedVersion is the editor's TemplateSeriesVersion (ADR 0311).
+	ExpectedVersion string
 }
 
 // UpdateTemplate replaces a template's editable fields, schedules, and roster
@@ -162,6 +164,9 @@ func (s *TemplateService) updateTemplateLocked(
 	targetsProvided bool,
 ) error {
 	if err := s.lockRecurrence(ctx, updateTemplateOp); err != nil {
+		return err
+	}
+	if err := checkTemplateSeriesVersion(ctx, s.deps.SeriesReads, updateTemplateOp, in.TemplateID, in.ExpectedVersion); err != nil {
 		return err
 	}
 	existing, err := s.loadUpdateTarget(ctx, in)

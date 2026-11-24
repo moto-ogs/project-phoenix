@@ -260,9 +260,8 @@ func (rs *Resource) splitTemplate(w http.ResponseWriter, r *http.Request) {
 	if !rs.validateSplitTemplateReferences(w, r, req) {
 		return
 	}
-	if !rs.lockTemplateForWrite(w, r) || !rs.checkTemplateReadVersion(w, r, id, req.ExpectedVersion) {
-		return
-	}
+	// The owner compares the version under its recurrence gate (ADR 0311).
+	in.ExpectedVersion = req.ExpectedVersion
 
 	result, err := rs.Templates.SplitTemplate(r.Context(), in)
 	if err != nil {
