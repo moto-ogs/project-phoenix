@@ -586,7 +586,6 @@ export default function TraegerArrivalPickupPage() {
           getRowKey={(school) => school.id}
           defaultSortKey="name"
           onRowClick={(school) => setSchoolId(school.id)}
-          stackedOnMobile
         />
       ) : null}
     </TenantPage>

@@ -605,7 +605,6 @@ function TraegerUtilizationContent() {
             defaultSortKey="name"
             isLoading={loading}
             loadingRowCount={3}
-            stackedOnMobile
           />
           <UtilizationChildrenSection
             canSeeNames={canSeeNames}
@@ -630,7 +629,6 @@ function TraegerUtilizationContent() {
           defaultSortDirection="desc"
           isLoading={loading}
           loadingRowCount={3}
-          stackedOnMobile
           emptyState={
             <EmptyState
               title="Keine Betreuungsform im Zeitraum"
@@ -651,7 +649,6 @@ function TraegerUtilizationContent() {
           defaultSortDirection="desc"
           isLoading={loading}
           loadingRowCount={3}
-          stackedOnMobile
           emptyState={
             <EmptyState
               title="Keine Raumbesuche im Zeitraum"

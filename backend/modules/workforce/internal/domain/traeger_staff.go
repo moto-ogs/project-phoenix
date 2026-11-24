@@ -24,6 +24,9 @@ const (
 	StaffFieldIBAN                 = "iban"
 	StaffFieldTaxID                = "tax_id"
 	StaffFieldSocialSecurityNumber = "social_security_number"
+	// StaffFieldEmployerNumber is the personnel number with the employer of
+	// one Einsatzort (#8041); its trail entry names the school.
+	StaffFieldEmployerNumber = "employer_personnel_number"
 )
 
 // StaffRecordFields lists every field a link resolves.

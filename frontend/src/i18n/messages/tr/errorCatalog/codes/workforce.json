@@ -127,6 +127,8 @@
   "pool_block_taken": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "pool_springer_not_found": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "pool_springer_busy": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "traeger_payroll_employer_invalid": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "traeger_payroll_not_ready": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "traeger_staff_employer_changed": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "no_staff_profile": "{object} için erişim izniniz yok. Okulla iletişime geçin."
 }

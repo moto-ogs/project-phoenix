@@ -566,7 +566,6 @@ export default function TraegerCareNoticeDeliveryPage() {
           })}
           rows={[...letters.notices]}
           getRowKey={(notice) => notice.noticeId}
-          stackedOnMobile
           caption="Jede Zeile ist ein ausgestellter Bescheid mit seinem Original."
           emptyState={
             <EmptyState

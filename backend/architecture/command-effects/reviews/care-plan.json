@@ -13724,7 +13724,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.StudentConsentCapability.RecordStudentConsentTransitions",
-      "reason": "Platform protocol participation (mutation): care-plan reaches modules/auditlog/records.StudentConsentChangeRepository.Create (audit-platform) through roots/owners.StudentConsents.RecordStudentConsentTransitions. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (mutation): care-plan reaches modules/auditlog/records.StudentConsentChangeRepository.Create (audit-platform) through roots/owners.StudentConsents.RecordStudentConsentTransitions. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). #8039: the binding also asks People Directory's pure StudentConsentTextVersion which wording version a grant records; no further mutation.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.StudentConsentChangeRepository.Create",
       "target_owner": "audit-platform"
@@ -13734,7 +13734,17 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.StudentConsentCapability.RecordStudentConsentTransitions",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentConsentTransitions; modules/peopledirectory/student_consent.go:73. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Read or pure value helper: modules/peopledirectory.StudentConsentTextVersion names the wording version a consent grant records (#8039). No mutation or locking read at this terminal; may-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentConsentTextVersion",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.StudentConsents.RecordStudentConsentTransitions",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.StudentConsentCapability.RecordStudentConsentTransitions",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentConsentTransitions; modules/peopledirectory/student_consent.go:73. May-bind method surface, not a production-call/liveness claim. #8039: the binding also asks People Directory's pure StudentConsentTextVersion which wording version a grant records; no further mutation.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentConsentTransitions",
       "target_owner": "people-directory"
@@ -13745,7 +13755,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.StudentConsentCapability.RecordStudentConsentTransitions",
-      "reason": "Platform protocol participation (mutation): care-plan reaches modules/auditlog/records.StudentConsentChangeRepository.Create (audit-platform) through roots/owners.StudentConsentRecords.RecordStudentConsentTransitions. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (mutation): care-plan reaches modules/auditlog/records.StudentConsentChangeRepository.Create (audit-platform) through roots/owners.StudentConsentRecords.RecordStudentConsentTransitions. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). #8039: the binding also asks People Directory's pure StudentConsentTextVersion which wording version a grant records; no further mutation.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.StudentConsentChangeRepository.Create",
       "target_owner": "audit-platform"
@@ -13755,7 +13765,17 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.StudentConsentCapability.RecordStudentConsentTransitions",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentConsentTransitions; modules/peopledirectory/student_consent.go:73. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Read or pure value helper: modules/peopledirectory.StudentConsentTextVersion names the wording version a consent grant records (#8039). No mutation or locking read at this terminal; may-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentConsentTextVersion",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StudentConsentRecords.RecordStudentConsentTransitions",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.StudentConsentCapability.RecordStudentConsentTransitions",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentConsentTransitions; modules/peopledirectory/student_consent.go:73. May-bind method surface, not a production-call/liveness claim. #8039: the binding also asks People Directory's pure StudentConsentTextVersion which wording version a grant records; no further mutation.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentConsentTransitions",
       "target_owner": "people-directory"

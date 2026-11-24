@@ -127,7 +127,6 @@ export function CostBearerTotalsCard({
         rows={[...totals]}
         getRowKey={(total) => total.id}
         rowHasInteractiveControls={list !== undefined}
-        stackedOnMobile
       />
     </SectionCard>
   );

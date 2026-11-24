@@ -157,7 +157,7 @@ describe("MealCaterer", () => {
     await waitFor(() =>
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
     );
-    // Liste fürs Handy und Tabelle stehen beide im DOM (stackedOnMobile).
+    // Liste fürs Handy und Tabelle stehen beide im DOM (gestapelt unter md).
     expect(await screen.findAllByText("Offene Einladungen")).not.toHaveLength(
       0,
     );

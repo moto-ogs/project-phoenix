@@ -70,6 +70,8 @@ const sheet: HolidayGuestSheet = {
   pickupContacts: [{ name: "Opa Muster", phone: "", relationship: "" }],
   answers: [],
   health: null,
+  homePhotoConsent: null,
+  homeRoomHistoryStopped: null,
   readOnly: false,
 };
 
@@ -320,5 +322,83 @@ describe("HolidayGuestSection", () => {
     // Anker: der Ladefehler steht da.
     expect(await screen.findByRole("alert")).toBeInTheDocument();
     expect(screen.queryByText("Eva Muster (Eltern)")).not.toBeInTheDocument();
+  });
+});
+
+describe("Foto-Einwilligung des Feriengasts (#4721)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    clock.today = "2026-09-09";
+    vi.mocked(useTenantSlugSafe).mockReturnValue("test-tenant");
+  });
+
+  const fromSued = {
+    ...sheet,
+    homeSchoolId: "7",
+    guestSchoolName: "",
+    schoolName: "OGS Süd",
+  };
+
+  it("bittet ohne Einwilligung bei der Heimatschule, keine Fotos zu machen", async () => {
+    sheetMock.mockResolvedValue({ ...fromSued, homePhotoConsent: false });
+    renderSection(<HolidayGuestSection studentId="91" canRead />);
+
+    expect(
+      await screen.findByText("Keine Foto-Einwilligung"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Mach bitte keine Fotos von diesem Kind. In moto liegt keine Foto-Einwilligung der Eltern vor.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Die Eltern geben und widerrufen sie an der Heimatschule (OGS Süd). Ein Widerruf gilt sofort auch hier.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("zeigt die Einwilligung der Heimatschule", async () => {
+    sheetMock.mockResolvedValue({ ...fromSued, homePhotoConsent: true });
+    renderSection(<HolidayGuestSection studentId="91" canRead />);
+
+    expect(
+      await screen.findByText("Foto-Einwilligung liegt vor"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Mach bitte keine Fotos/),
+    ).not.toBeInTheDocument();
+  });
+
+  it("zeigt den Stopp der Heimatschule für Raumverlauf und Stimmung (#8037)", async () => {
+    sheetMock.mockResolvedValue({ ...fromSued, homeRoomHistoryStopped: true });
+    renderSection(<HolidayGuestSection studentId="91" canRead />);
+
+    expect(
+      await screen.findByText("An der Heimatschule gestoppt"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Den Stopp setzt und beendet die Heimatschule (OGS Süd). Er gilt sofort auch hier.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("zeigt ohne Stopp an der Heimatschule keine Zeile dazu", async () => {
+    sheetMock.mockResolvedValue({ ...fromSued, homeRoomHistoryStopped: false });
+    renderSection(<HolidayGuestSection studentId="91" canRead />);
+
+    expect(await screen.findByText("Notfall")).toBeInTheDocument();
+    expect(
+      screen.queryByText("An der Heimatschule gestoppt"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("zeigt ohne Heimatschule beim Träger keine Zeile zu Fotos", async () => {
+    sheetMock.mockResolvedValue(sheet);
+    renderSection(<HolidayGuestSection studentId="91" canRead />);
+
+    expect(await screen.findByText("Notfall")).toBeInTheDocument();
+    expect(screen.queryByText("Fotos")).not.toBeInTheDocument();
   });
 });

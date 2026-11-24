@@ -232,7 +232,6 @@ function StudentChangeHistoryPageContent() {
             columns={CHANGE_COLUMNS}
             rows={entries ?? []}
             getRowKey={(entry) => entry.id}
-            stackedOnMobile
           />
         </SectionCard>
       </TenantPage>

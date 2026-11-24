@@ -342,7 +342,6 @@ export function MealCaterer({ canManageSupply }: MealCatererProps) {
               rows={openInvitations}
               getRowKey={(invitation) => invitation.id}
               rowHasInteractiveControls
-              stackedOnMobile
               renderSubRows={(invitation) => {
                 const mailNote = catererMailNote(invitation);
                 return mailNote

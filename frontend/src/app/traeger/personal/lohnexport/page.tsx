@@ -1,9 +1,10 @@
 "use client";
 
 // Lohnexport des Trägers über alle Schulen (#4712, ADR 0089 Abschnitt 11,
-// ADR 0250): die DATEV-Lohndatei für alle Arbeitsverträge des Trägers, der
-// Zeitexport für ein eigenes Zeiterfassungssystem und die Lohnarten je Art
-// des Vertrags. Ein Monat gilt für alle drei Reiter; Standard ist der
+// ADR 0250): die DATEV-Lohndatei für alle Arbeitsverträge des Trägers, eine
+// Datei oder eine je Arbeitgeber (#8041, ADR 0320), der Zeitexport für ein
+// eigenes Zeiterfassungssystem und die Einrichtung mit Lohnarten je Art des
+// Vertrags. Ein Monat gilt für alle drei Reiter; Standard ist der
 // Vormonat, denn den rechnet das Lohnbüro ab.
 
 import { Suspense, useState } from "react";
@@ -29,6 +30,7 @@ import { traegerStaffKeys } from "~/lib/swr/traeger-staff-keys";
 import {
   downloadPayrollFile,
   downloadTimeFile,
+  fetchPayrollEmployers,
   fetchPayrollReport,
   fetchTimeReport,
   type PayrollFormat,
@@ -38,20 +40,30 @@ const logger = createLogger({ component: "TraegerPayrollExportPage" });
 
 const NOT_RELEASED = "workforce.traeger_staff_not_released";
 
-type Tab = "lohndatei" | "zeitexport" | "lohnarten";
+type Tab = "lohndatei" | "zeitexport" | "einrichtung";
 const TABS: readonly { value: Tab; label: string }[] = [
   { value: "lohndatei", label: "Lohndatei" },
   { value: "zeitexport", label: "Zeitexport" },
-  { value: "lohnarten", label: "Lohnarten" },
+  { value: "einrichtung", label: "Einrichtung" },
 ];
+
+/** Der Reiter hieß bis #8041 „Lohnarten“; alte Links öffnen die Einrichtung. */
+const parseTab = (value: string | null | undefined): Tab => {
+  if (value === "lohnarten") return "einrichtung";
+  return TABS.find((entry) => entry.value === value)?.value ?? "lohndatei";
+};
 
 const INFO = (
   <div className="space-y-2">
     <p>
-      Hier entsteht die Lohndatei für DATEV: eine Datei für alle Schulen und
-      alle Arbeitsverträge beim Träger. Jede Art des Vertrags hat eigene
-      Lohnarten. So bleiben Minijob, Übungsleiterpauschale und Ehrenamt
-      getrennt.
+      Hier entsteht die Lohndatei für DATEV für alle Arbeitsverträge beim
+      Träger. Jede Art des Vertrags hat eigene Lohnarten. So bleiben Minijob,
+      Übungsleiterpauschale und Ehrenamt getrennt.
+    </p>
+    <p>
+      Stellt an einer Schule eine Gemeinde oder ein Schulträger an, wählst du
+      unter „Einrichtung“: eine Datei für den ganzen Träger oder eine Datei je
+      Arbeitgeber.
     </p>
     <p>
       Der Zeitexport gibt die Zeiten für ein eigenes Zeiterfassungssystem aus.
@@ -93,17 +105,14 @@ export default function TraegerPayrollExportPage() {
 function PayrollExportContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const tabParam = searchParams?.get("tab");
-  const tab: Tab = TABS.some((entry) => entry.value === tabParam)
-    ? (tabParam as Tab)
-    : "lohndatei";
+  const tab = parseTab(searchParams?.get("tab"));
   const today = useBerlinToday();
   const thisMonth = monthOf(today);
   const [shown, setShown] = useState<MonthKey>(() => shift(monthOf(today), -1));
   const [format, setFormat] = useState<PayrollFormat>("datev_lodas");
-  const [downloading, setDownloading] = useState<"payroll" | "times" | null>(
-    null,
-  );
+  // Die Datei, die gerade lädt: `""` die eine Lohndatei, sonst der
+  // Schlüssel einer Datei je Arbeitgeber oder `times`.
+  const [downloading, setDownloading] = useState<string | null>(null);
   const display = useApiErrorDisplay();
   const settings = useTraegerSettingsSchema();
   const invalidateFamily = useInvalidateFamily();
@@ -119,6 +128,11 @@ function PayrollExportContent() {
     // fragt den Stand neu ab, auch kurz nach der letzten Abfrage.
     { dedupingInterval: 0 },
   );
+  const employersLoad = useTraegerResource(
+    tab === "einrichtung" ? traegerStaffKeys.payrollEmployers() : null,
+    fetchPayrollEmployers,
+    "die anderen Arbeitgeber",
+  );
   const timesLoad = useTraegerResource(
     tab === "zeitexport"
       ? traegerStaffKeys.timeReport(shown.year, shown.month)
@@ -132,18 +146,25 @@ function PayrollExportContent() {
     (failure) => failure instanceof ApiError && failure.code === NOT_RELEASED,
   );
 
-  const download = async (kind: "payroll" | "times") => {
-    setDownloading(kind);
+  const download = async (kind: "payroll" | "times", payrollFile = "") => {
+    setDownloading(kind === "payroll" ? payrollFile : "times");
     try {
       const file =
         kind === "payroll"
-          ? await downloadPayrollFile(shown.year, shown.month, format)
+          ? await (payrollFile
+              ? downloadPayrollFile(
+                  shown.year,
+                  shown.month,
+                  format,
+                  payrollFile,
+                )
+              : downloadPayrollFile(shown.year, shown.month, format))
           : await downloadTimeFile(shown.year, shown.month);
       downloadBlob(
         file.blob,
         file.filename ??
           (kind === "payroll"
-            ? `lohnexport_${format}_${shown.year}-${String(shown.month).padStart(2, "0")}.txt`
+            ? `lohnexport_${format}_${shown.year}-${String(shown.month).padStart(2, "0")}${payrollFile ? `_${payrollFile}` : ""}.txt`
             : `zeitexport_${shown.year}-${String(shown.month).padStart(2, "0")}.csv`),
       );
     } catch (err) {
@@ -217,7 +238,7 @@ function PayrollExportContent() {
         tab === "zeitexport"
           ? timesLoad.error
           : (payrollLoad.error ??
-            (tab === "lohnarten" ? settings.loadError : null))
+            (tab === "einrichtung" ? settings.loadError : null))
       }
     >
       {tab === "lohndatei" ? (
@@ -226,9 +247,9 @@ function PayrollExportContent() {
           monthLabel={shownLabel}
           format={format}
           onFormatChange={setFormat}
-          onDownload={() => void download("payroll")}
-          downloading={downloading === "payroll"}
-          onOpenWageTypes={() => changeTab("lohnarten")}
+          onDownload={(file) => void download("payroll", file)}
+          downloading={downloading}
+          onOpenWageTypes={() => changeTab("einrichtung")}
         />
       ) : null}
       {tab === "zeitexport" ? (
@@ -239,16 +260,19 @@ function PayrollExportContent() {
           downloading={downloading === "times"}
         />
       ) : null}
-      {tab === "lohnarten" && !settings.data && !settings.loadError ? (
-        <SectionCard title="Lohnarten je Art des Vertrags" loading />
+      {tab === "einrichtung" && !settings.data && !settings.loadError ? (
+        <SectionCard title="Wie viele Lohndateien?" loading />
       ) : null}
-      {tab === "lohnarten" && settings.data ? (
+      {tab === "einrichtung" && settings.data ? (
         <PayrollSettingsPanel
           schema={settings.data}
           gaps={payroll?.unconfigured ?? []}
+          employers={employersLoad.data ?? undefined}
+          employersError={employersLoad.error}
           onSaved={async () => {
             await settings.mutate();
-            // Die Lohnarten ändern die Prüfung jedes Monats.
+            // Die Einrichtung ändert die Prüfung jedes Monats und die
+            // Werte der Arbeitgeber (dieselbe Familie).
             await invalidateFamily(traegerStaffKeys.payrollFamily);
           }}
         />

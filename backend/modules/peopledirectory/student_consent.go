@@ -94,6 +94,38 @@ func StudentConsentTransitions(before, after StudentConsentSnapshot, changedAt t
 	return transitions
 }
 
+// StudentConsentPhotoTextVersion names moto's own wording of the photo
+// consent (#8039): the care team may photograph the child and may store a
+// photo of the child in moto. A new wording gets a new version; recorded
+// entries keep the version their grant showed.
+const StudentConsentPhotoTextVersion = "photo-1"
+
+// Sources of the consent trail that show moto's fixed photo wording. They
+// equal the trail's stored source values.
+const (
+	studentConsentSourceParentPortal = "parent_portal"
+	studentConsentSourceTenantPortal = "tenant_portal"
+)
+
+// StudentConsentTextVersion is the wording version a consent change records.
+// Only a photo grant in the parent or the tenant portal has one: both show
+// moto's fixed wording. A withdrawal confirms no wording. Enrollment shows the
+// school's own legal block, kept with the enrollment request, and an import
+// or a migration snapshot carries an outside proof; moto does not know that
+// wording, so they record none.
+func StudentConsentTextVersion(key, source string, granted bool) *string {
+	if !granted || key != StudentConsentPhoto {
+		return nil
+	}
+	switch source {
+	case studentConsentSourceParentPortal, studentConsentSourceTenantPortal:
+		version := StudentConsentPhotoTextVersion
+		return &version
+	default:
+		return nil
+	}
+}
+
 // StudentConsentEvent is one recorded consent change of a child.
 type StudentConsentEvent struct {
 	Key       string

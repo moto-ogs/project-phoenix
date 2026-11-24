@@ -602,7 +602,6 @@ function StaffRecordsContent() {
               .map((member) => `${member.schoolId}-${member.staffId}`)
               .join("+")
           }
-          stackedOnMobile
           onRowClick={(suggestion) => setLinking(linkRequestOf(suggestion))}
           emptyState={
             filtering && proposals.length > 0 ? (
@@ -625,7 +624,6 @@ function StaffRecordsContent() {
           columns={RECORD_COLUMNS}
           rows={[...shownRecords]}
           getRowKey={(record) => record.id}
-          stackedOnMobile
           onRowClick={(record) => router.push(recordHref(record.id))}
           emptyState={
             filtering && overview.records.length > 0 ? (
@@ -653,7 +651,6 @@ function StaffRecordsContent() {
           getRowKey={(candidate) =>
             `${candidate.schoolId}-${candidate.staffId}`
           }
-          stackedOnMobile
           onRowClick={(candidate) =>
             setLinking({
               recordId: null,

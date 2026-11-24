@@ -120,7 +120,6 @@ export function HolidayAllocationHistory({
           columns={columns(periodId)}
           rows={[...decisions]}
           getRowKey={(decision) => decision.id}
-          stackedOnMobile
           stackedLayout="row"
         />
       )}

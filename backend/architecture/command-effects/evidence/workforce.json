@@ -7506,7 +7506,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.traegerPayrollSettings.TraegerPayrollSettings",
-      "binding_digest": "8b0e8d69dd98b4945fd5105aaddea4ae",
+      "binding_digest": "0305a674df82e6e17e8440da88449ab9",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerPayrollSettingsReader.TraegerPayrollSettings",
       "source_owner": "workforce",
       "target": "*github.com/moto-ogs/project-phoenix/modules/settings/compose.TraegerSettings.TraegerTexts",
@@ -7626,7 +7626,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StaffEmployers.SchoolEmployers",
-      "binding_digest": "d12d143d719a233e747e6aa6925c410f",
+      "binding_digest": "fb063b3a57bfc7ee3892339165074f6f",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffEmployers.SchoolEmployers",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.ResponsibleParties.ResponsibleParties",
@@ -7634,7 +7634,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StaffEmployers.SchoolEmployers",
-      "binding_digest": "2612eb346b39476314affb8a86a71e11",
+      "binding_digest": "07f30bfdb03da471ee52b9c9286bc5f5",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffEmployers.SchoolEmployers",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolResponsibilities.ResponsibleParties",

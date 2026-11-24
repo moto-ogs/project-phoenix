@@ -342,7 +342,6 @@ export default function SchoolAbsenceListPage() {
               getRowKey={childKey}
               isLoading={!list}
               defaultSortKey="name"
-              stackedOnMobile
               emptyState={
                 <EmptyState
                   title="In dieser Klasse sind keine Kinder."
