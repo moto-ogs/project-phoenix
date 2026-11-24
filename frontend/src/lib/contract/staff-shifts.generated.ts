@@ -209,6 +209,7 @@ export interface ShiftRequest {
   cancelled?: boolean;
   change_reason?: string | null;
   origin_shift_id?: string | null;
+  expected_version?: string;
 }
 
 /** Go: staffshifts.PlanExportRequest */
@@ -281,6 +282,8 @@ export interface CancellationRequest {
   break_minutes?: number;
   shift_type_id?: string | null;
   replacements?: ReplacementRequest[] | null;
+  expected_version?: string;
+  expected_replacement_versions?: Record<string, string> | null;
 }
 
 /** Go: staffshifts.CancellationResponse */
@@ -305,6 +308,7 @@ export interface MoveShiftRequest {
   end_time?: string;
   break_minutes?: number;
   shift_type_id?: string | null;
+  expected_version?: string;
 }
 
 export const routes = {

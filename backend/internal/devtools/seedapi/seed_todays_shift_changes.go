@@ -56,6 +56,7 @@ func seedTodaysShiftChanges(rt *Runtime, today seedDate) error {
 			StartTime string `json:"start_time"`
 			EndTime   string `json:"end_time"`
 			Cancelled bool   `json:"cancelled"`
+			Version   string `json:"version"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil {
@@ -70,6 +71,8 @@ func seedTodaysShiftChanges(rt *Runtime, today seedDate) error {
 	shift := envelope.Data[0]
 	if _, err := rt.Client.Put("/api/staff-shifts/"+shift.ID+"/cancellation", map[string]any{
 		"cancelled": true, "change_reason": "Fortbildung",
+		// The Dienst read above has no cover yet (ADR 0311).
+		"expected_version": shift.Version, "expected_replacement_versions": map[string]string{},
 		"replacements": []map[string]any{{
 			"staff_id": ident.ID(coverID), "start_time": coverShiftTodayStart,
 			"end_time": shift.EndTime, "break_minutes": 0,

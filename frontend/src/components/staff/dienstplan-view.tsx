@@ -200,6 +200,7 @@ function DienstplanContent() {
     scheduleError,
     scheduleLoading,
     retryLoad,
+    reloadShifts,
     reducedPath,
     refreshPlanCaches,
     mutateShiftTypes,
@@ -287,6 +288,24 @@ function DienstplanContent() {
   const holidayCareHref = holidayWeeks.canOpenList
     ? tenantPath("/ferienwochen")
     : undefined;
+
+  // After a refused save the modal shows the shift as stored (ADR 0311):
+  // read the week again, rejecting on failure, and hand the modal the
+  // stored shift with its covers. A gone shift keeps what the modal shows.
+  const reloadModalShift = useCallback(async () => {
+    const shifts = await reloadShifts();
+    setModal((current) => {
+      const opened = current?.shift;
+      if (!current || !opened) return current;
+      const stored = shifts.find((s) => s.id === opened.id);
+      if (!stored) return current;
+      return {
+        ...current,
+        shift: stored,
+        replacements: shifts.filter((s) => s.originShiftId === stored.id),
+      };
+    });
+  }, [reloadShifts]);
 
   const refreshAfterPlanMutation = useCallback(() => {
     // Bewusst still: die Änderung ist gespeichert; ein misslungenes
@@ -499,6 +518,7 @@ function DienstplanContent() {
           shiftTypes={shiftTypes ?? []}
           reducedPath={reducedPath}
           currentStaffId={currentStaffId}
+          reloadShifts={reloadShifts}
           onCellClick={(member, date, shift) =>
             setModal({
               mode: shift ? "edit" : "create",
@@ -718,6 +738,7 @@ function DienstplanContent() {
           initialEndTime={modal.initialTimes?.endTime}
           onClose={() => setModal(null)}
           onSaved={refreshAfterPlanMutation}
+          reloadShift={reloadModalShift}
         />
       )}
       {periodModalOpen && (

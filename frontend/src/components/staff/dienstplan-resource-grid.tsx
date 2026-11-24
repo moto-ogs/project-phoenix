@@ -91,6 +91,8 @@ const ABSENCE_CHANGE_REASON = "Abwesenheit";
 
 interface DienstplanResourceGridProps {
   readonly staff: readonly StaffScheduleStaff[];
+  /** Reads the week's shifts again, rejecting on failure (ADR 0311). */
+  readonly reloadShifts?: () => Promise<readonly StaffShift[]>;
   /** staffId -> date ("YYYY-MM-DD") -> shifts */
   readonly shiftsByStaff: Map<string, Map<string, StaffShift[]>>;
   /** staffId -> date ("YYYY-MM-DD") -> concrete Betreuungsplan assignments.
@@ -337,6 +339,7 @@ export function DienstplanResourceGrid({
   shiftTypes,
   reducedPath = false,
   currentStaffId = null,
+  reloadShifts,
   onCellClick,
   onSickReport,
   onOpenPersonWeek,
@@ -890,6 +893,7 @@ export function DienstplanResourceGrid({
           onDataChanged={() => {
             void refreshAfterMove();
           }}
+          reloadShifts={reloadShifts}
         />
       )}
       {closingDayPrompt && (

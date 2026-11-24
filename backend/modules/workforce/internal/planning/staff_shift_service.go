@@ -109,6 +109,9 @@ type StaffShiftUpdateOptions struct {
 	// It marks an ordinary edit, not ApplyCancellation: such an edit that
 	// changes nothing keeps a sick report's stamp (#6302).
 	PreserveExistingCancelled bool
+	// Read is what the planner read (ADR 0311), checked after the edit's
+	// locks; nil is a write no person read and checks nothing.
+	Read *workforce.ShiftReadState
 }
 
 type staffShiftService struct {
@@ -576,7 +579,7 @@ func (s *staffShiftService) updateShiftWithOptions(ctx context.Context, shift *w
 	if err := s.lockShiftEdit(ctx, shift, revalidateOrigin); err != nil {
 		return nil, err
 	}
-	if err := s.ensureShiftUnchangedWhileLocking(ctx, shift.ID, existing); err != nil {
+	if err := s.ensureShiftUnchangedWhileLocking(ctx, shift.ID, existing, opts.Read); err != nil {
 		return nil, err
 	}
 	if revalidateOrigin {
@@ -710,9 +713,12 @@ func (s *staffShiftService) lockShiftEdit(ctx context.Context, shift *workforce.
 // including a same-person date/window move: otherwise the stale edit payload
 // would silently move the row back. UpdatedAt additionally catches other
 // concurrent whole-row updates while this request waited.
-func (s *staffShiftService) ensureShiftUnchangedWhileLocking(ctx context.Context, id int64, existing *workforce.ShiftRecord) error {
+func (s *staffShiftService) ensureShiftUnchangedWhileLocking(ctx context.Context, id int64, existing *workforce.ShiftRecord, read *workforce.ShiftReadState) error {
 	lockedExisting, err := s.findShiftOrNotFound(ctx, id, "reload staff shift after lock")
 	if err != nil {
+		return err
+	}
+	if err := checkShiftRead(read, lockedExisting); err != nil {
 		return err
 	}
 	if staffShiftMoveChanged(existing, lockedExisting) ||

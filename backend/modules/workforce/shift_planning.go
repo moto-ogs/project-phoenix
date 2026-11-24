@@ -1,6 +1,11 @@
 package workforce
 
-import "context"
+import (
+	"context"
+	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
+)
 
 // --- HTTP contracts ---
 
@@ -53,6 +58,24 @@ type CreateStaffShift struct {
 	StaffShiftInput
 }
 
+// ShiftReadState is what an edit of a planned shift was read from (ADR
+// 0311): the ShiftVersion of the shift and, for a cancellation, the
+// ShiftVersion of every replacement the planner showed, by shift id. The
+// write refuses a shift or a cover set changed since with
+// readstate.ErrChanged. A nil read state is a write no person read (the sick
+// cascade, a split's retained occurrence, the Träger's planning) and checks
+// nothing.
+type ShiftReadState struct {
+	Version      string
+	Replacements map[int64]string
+}
+
+// ShiftVersion is the token of a planned shift (ADR 0311): every writer of
+// schedule.staff_shifts updates the row, and its trigger moves updated_at.
+func ShiftVersion(updatedAt time.Time) string {
+	return readstate.Of(updatedAt)
+}
+
 // UpdateStaffShift rewrites one shift. The Preserve flags keep stored values
 // a client omitted; the cancellation state is always preserved because it is
 // changed through CancelStaffShift only.
@@ -62,6 +85,8 @@ type UpdateStaffShift struct {
 	PreserveExistingNotes        bool
 	PreserveExistingShiftType    bool
 	PreserveExistingChangeReason bool
+	// Read is what the planner read; nil checks nothing (see ShiftReadState).
+	Read *ShiftReadState
 }
 
 // MoveStaffShift is the complete desired slot of one concrete shift.
@@ -81,6 +106,8 @@ type MoveStaffShift struct {
 	ActorAccountID *int64
 	// WorkingTime confirms the working-time warnings of the move (#4708).
 	WorkingTime WorkingTimeConfirmation
+	// Read is what the planner read; nil checks nothing (see ShiftReadState).
+	Read *ShiftReadState
 }
 
 // ShiftReplacement is one person covering part of a cancelled shift's gap.
@@ -117,6 +144,9 @@ type CancelStaffShift struct {
 	TraegerAccountID int64
 	// WorkingTime confirms the working-time warnings of the covers (#4708).
 	WorkingTime WorkingTimeConfirmation
+	// Read is what the planner read, the shift and its covers; nil checks
+	// nothing (see ShiftReadState).
+	Read *ShiftReadState
 }
 
 type StaffShiftCancellation struct {

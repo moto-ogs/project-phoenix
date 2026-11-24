@@ -1,10 +1,11 @@
 import {
+  act,
   fireEvent,
   render as renderUi,
   screen,
   waitFor,
 } from "@testing-library/react";
-import type { ReactElement, ReactNode } from "react";
+import { useState, type ReactElement, type ReactNode } from "react";
 import { SWRConfig } from "~/lib/swr/testing";
 import { describe, expect, it, vi } from "vitest";
 
@@ -165,6 +166,101 @@ describe("ShiftEditModal", () => {
     fireEvent.change(breakInput, { target: { value: "60" } });
     expect(saveButton).toBeEnabled();
     expect(saveButton).not.toHaveAttribute("aria-disabled");
+  });
+
+  // ADR 0311: die Absage schickt den Stand der Schicht und jeder gezeigten
+  // Vertretung aus der Öffnung; nach einer Ablehnung wartet Speichern auf
+  // den gespeicherten Stand, der das Formular neu füllt.
+  it("cancels over the shift and covers it opened and saves again only from the stored state", async () => {
+    const applyCancellation = vi.mocked(staffShiftService.applyCancellation);
+    applyCancellation.mockReset();
+    applyCancellation
+      .mockRejectedValueOnce(
+        new ApiError("changed since it was read", 409, {
+          code: "general.changed_since_read",
+        }),
+      )
+      .mockResolvedValueOnce(undefined as never);
+    const opened: StaffShift = {
+      ...oneHourShift,
+      id: "5",
+      startTime: "08:00",
+      endTime: "16:00",
+      cancelled: true,
+      version: "shift-v1",
+    };
+    const cover: StaffShift = {
+      ...oneHourShift,
+      id: "11",
+      staffId: "9",
+      startTime: "08:00",
+      endTime: "12:00",
+      breakMinutes: 0,
+      originShiftId: "5",
+      version: "cover-v1",
+    };
+    let handOver: (() => void) | undefined;
+    function Harness() {
+      const [read, setRead] = useState({ shift: opened, covers: [cover] });
+      handOver = () =>
+        setRead({
+          shift: { ...opened, version: "shift-v2" },
+          covers: [{ ...cover, endTime: "13:00", version: "cover-v2" }],
+        });
+      return (
+        <ShiftEditModal
+          isOpen={true}
+          mode="edit"
+          staffId="7"
+          staffName="Ada Lovelace"
+          date="2026-07-06"
+          shift={read.shift}
+          shiftTypes={[]}
+          staffOptions={[{ id: "9", firstName: "Grace", lastName: "Hopper" }]}
+          existingReplacements={read.covers}
+          onClose={vi.fn()}
+          onSaved={vi.fn()}
+          reloadShift={async () => {
+            await Promise.resolve();
+            act(() => {
+              handOver?.();
+            });
+          }}
+        />
+      );
+    }
+    render(<Harness />);
+
+    const save = () =>
+      fireEvent.click(
+        screen.getByRole("button", { name: "Änderungen speichern" }),
+      );
+    save();
+
+    await waitFor(() => expect(applyCancellation).toHaveBeenCalledTimes(1));
+    expect(applyCancellation).toHaveBeenLastCalledWith(
+      "5",
+      expect.objectContaining({
+        expectedVersion: "shift-v1",
+        expectedReplacementVersions: { "11": "cover-v1" },
+      }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Änderungen speichern" }),
+      ).not.toHaveAttribute("aria-disabled"),
+    );
+    save();
+
+    await waitFor(() => expect(applyCancellation).toHaveBeenCalledTimes(2));
+    expect(applyCancellation).toHaveBeenLastCalledWith(
+      "5",
+      expect.objectContaining({
+        expectedVersion: "shift-v2",
+        expectedReplacementVersions: { "11": "cover-v2" },
+        replacements: [expect.objectContaining({ endTime: "13:00" })],
+      }),
+    );
   });
 
   it("keeps existing covers when the cancel toggle is un- and re-checked (#1841)", async () => {

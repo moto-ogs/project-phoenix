@@ -34,13 +34,14 @@ import {
 } from "~/lib/calendar-period-helpers";
 import { berlinTodayISO, parseISODate, toISODate } from "~/lib/date-helpers";
 import {
+  readStateWaitReason,
   useReadDraftLoadError,
   useSwrResourceLoadError,
 } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { useSWRAuth } from "~/lib/swr";
 import { databaseKeys } from "~/lib/swr/portal-keys";
-import { useReadDraft } from "~/lib/swr/read-draft";
+import { useActionOn, useReadDraft } from "~/lib/swr/read-draft";
 import { staffTimeKeys } from "~/lib/swr/staff-keys";
 import {
   copyStableObjectKey,
@@ -77,6 +78,24 @@ const STAFF_SHIFT_MAX_BREAK_MINUTES = 300;
 // Stable empty default so the optional staffOptions prop does not create a new
 // array reference each render (oxlint react/no-object-type-as-default-prop).
 const EMPTY_STAFF_OPTIONS: readonly StaffScheduleStaff[] = [];
+/** No reload given: a refused save stays locked with this load error. */
+function reloadShiftUnavailable(): Promise<unknown> {
+  return Promise.reject(new Error("the stored shift cannot be read again"));
+}
+
+/** The token of a shift and its covers as the planner opened them. */
+function shiftReadToken(read: ShiftRead) {
+  return [
+    read.shift.version ?? "",
+    read.covers.map((cover) => [cover.id, cover.version ?? ""]),
+  ];
+}
+
+interface ShiftRead {
+  readonly shift: StaffShift;
+  readonly covers: readonly StaffShift[];
+}
+
 // Stable empty default for the optional existingReplacements prop (same
 // rationale as EMPTY_STAFF_OPTIONS).
 const EMPTY_REPLACEMENTS: readonly StaffShift[] = [];
@@ -115,6 +134,12 @@ interface ShiftEditModalProps {
   readonly initialEndTime?: string;
   readonly onClose: () => void;
   readonly onSaved: () => void;
+  /**
+   * Reads the stored shift again after a refused save and hands it in as
+   * `shift` and `existingReplacements`; rejects when the read fails (ADR
+   * 0311). Without it a refusal keeps saving locked with the load error.
+   */
+  readonly reloadShift?: () => Promise<unknown>;
 }
 
 /** One replacement (Vertretung) covering a cancelled shift. Several rows split
@@ -193,6 +218,7 @@ export function ShiftEditModal({
   initialEndTime,
   onClose,
   onSaved,
+  reloadShift = reloadShiftUnavailable,
 }: ShiftEditModalProps) {
   const initial = useMemo(() => {
     if (shift) {
@@ -423,6 +449,28 @@ export function ShiftEditModal({
   );
   const seriesRule: SeriesRule | null = seriesRead.base ?? null;
   const seriesRuleLoadError = useReadDraftLoadError(seriesRead, "die Serie");
+
+  // The shift and its covers as the planner opened them (ADR 0311): an edit
+  // and a cancellation send their versions, the server refuses a shift or a
+  // cover set changed since. The modal keeps what it opened with; after a
+  // refusal `reloadShift` hands it the stored shift, which reseeds the form,
+  // and saving waits for that read.
+  const shiftRead = useMemo<ShiftRead | undefined>(
+    () =>
+      mode === "edit" && shift
+        ? { shift, covers: existingReplacements }
+        : undefined,
+    [mode, shift, existingReplacements],
+  );
+  const shiftSave = useActionOn(
+    {
+      opening: isOpen && shiftRead ? shiftRead.shift.id : null,
+      data: shiftRead,
+      reload: reloadShift,
+    },
+    { token: shiftReadToken },
+  );
+  const shiftSaveLoadError = useReadDraftLoadError(shiftSave, "die Schicht");
 
   const selectedPeriod = useMemo(
     () => periods?.find((p) => p.id === periodId) ?? null,
@@ -851,43 +899,66 @@ export function ShiftEditModal({
           const wasCancelled = shift.cancelled ?? false;
           const cancellationInvolved =
             !isReplacementRow && (cancelled || wasCancelled);
-          if (cancellationInvolved) {
-            await staffShiftService.applyCancellation(shift.id, {
-              cancelled,
-              changeReason,
-              // Carry the shift's own edited window/type so a time change made in
-              // the same save is applied to the origin, not silently dropped, and
-              // a reactivation re-checks overlap against the edited window (#1841).
-              startTime,
-              endTime,
-              breakMinutes: breakMinutes ?? 0,
-              shiftTypeId: resolvedShiftTypeId,
-              // Each cover keeps its own break and shift type — a replacement may
-              // have been edited directly in the grid to differ from the origin,
-              // so re-saving the origin must not reset them (#1841).
-              replacements: cancelled
-                ? replacements.map((row) => ({
-                    staffId: row.staffId,
-                    startTime: row.startTime,
-                    endTime: row.endTime,
-                    breakMinutes: row.breakMinutes,
-                    shiftTypeId:
-                      row.shiftTypeId === "" ? null : row.shiftTypeId,
-                  }))
-                : [],
-              workingTime: workingTime.current(),
-            });
-          } else {
-            await staffShiftService.updateShift(shift.id, {
-              staffId,
-              date,
-              startTime,
-              endTime,
-              breakMinutes: breakMinutes ?? 0,
-              shiftTypeId: resolvedShiftTypeId,
-              changeReason,
-              workingTime: workingTime.current(),
-            });
+          // Sends over the shift and covers the modal opened with (ADR 0311).
+          const expectedVersion = shift.version ?? "";
+          const result = await shiftSave.submit<unknown>(() =>
+            cancellationInvolved
+              ? staffShiftService.applyCancellation(shift.id, {
+                  cancelled,
+                  changeReason,
+                  // Carry the shift's own edited window/type so a time change made in
+                  // the same save is applied to the origin, not silently dropped, and
+                  // a reactivation re-checks overlap against the edited window (#1841).
+                  startTime,
+                  endTime,
+                  breakMinutes: breakMinutes ?? 0,
+                  shiftTypeId: resolvedShiftTypeId,
+                  // Each cover keeps its own break and shift type — a replacement may
+                  // have been edited directly in the grid to differ from the origin,
+                  // so re-saving the origin must not reset them (#1841).
+                  replacements: cancelled
+                    ? replacements.map((row) => ({
+                        staffId: row.staffId,
+                        startTime: row.startTime,
+                        endTime: row.endTime,
+                        breakMinutes: row.breakMinutes,
+                        shiftTypeId:
+                          row.shiftTypeId === "" ? null : row.shiftTypeId,
+                      }))
+                    : [],
+                  workingTime: workingTime.current(),
+                  expectedVersion,
+                  expectedReplacementVersions: Object.fromEntries(
+                    existingReplacements.map((cover) => [
+                      cover.id,
+                      cover.version ?? "",
+                    ]),
+                  ),
+                })
+              : staffShiftService.updateShift(shift.id, {
+                  staffId,
+                  date,
+                  startTime,
+                  endTime,
+                  breakMinutes: breakMinutes ?? 0,
+                  shiftTypeId: resolvedShiftTypeId,
+                  changeReason,
+                  workingTime: workingTime.current(),
+                  expectedVersion,
+                }),
+          );
+          if (!result.ok) {
+            if (result.skipped) return;
+            if (!result.refused) throw result.error;
+            // Changed since the modal opened: the message waits for the
+            // stored shift, which reseeds the form; no retry resends.
+            if (op.isCurrent()) {
+              await formErrors.show(result.error, {
+                object: "die Schicht",
+                reload: result.reload,
+              });
+            }
+            return;
           }
         } else {
           await staffShiftService.createShift({
@@ -1166,12 +1237,20 @@ export function ShiftEditModal({
         isLoading={isSaving}
         loadingText="Speichern…"
         disabled={
-          isSaving || isDeleting || !timesValid || !breakValid || !seriesValid
+          isSaving ||
+          isDeleting ||
+          !timesValid ||
+          !breakValid ||
+          !seriesValid ||
+          (shiftRead !== undefined && !shiftSave.canSubmit)
         }
         disabledReason={
           isDeleting
             ? undefined
             : (timeBlockedReason(timesValid, breakValid) ??
+              (shiftRead !== undefined && !shiftSave.canSubmit
+                ? readStateWaitReason(shiftSave.status)
+                : undefined) ??
               (weekdays.length === 0
                 ? WEEKDAY_BLOCKED_REASON
                 : "Wähle zuerst einen Planungszeitraum aus."))
@@ -1230,6 +1309,11 @@ export function ShiftEditModal({
             <SlideOverTitle>{title}</SlideOverTitle>
           </SlideOverHeader>
           <SlideOverBody error={seriesNotice ? null : formErrors.error}>
+            {/* The read after a refused save failed; the form's alert
+                names it while it shows the refusal. */}
+            {shiftSave.status === "loadFailed" && !formErrors.error ? (
+              <LoadErrorAlert error={shiftSaveLoadError} />
+            ) : null}
             {seriesNotice ? (
               <div className="space-y-3 text-sm">
                 <p className="text-gray-700">Die Serie wurde gespeichert.</p>

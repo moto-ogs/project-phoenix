@@ -37,6 +37,8 @@ interface ShiftPayload {
   originShiftId?: string | null;
   /** Answer to the working-time warnings of a refused save (#4708). */
   workingTime?: WorkingTimeConfirmation;
+  /** The version of the shift an edit replaces (ADR 0311). Create-ignored. */
+  expectedVersion?: string;
 }
 
 interface MoveShiftPayload {
@@ -52,6 +54,8 @@ interface MoveShiftPayload {
   shiftTypeId: string | null;
   /** Answer to the working-time warnings of a refused save (#4708). */
   workingTime?: WorkingTimeConfirmation;
+  /** The version of the shift the planner moved (ADR 0311). */
+  expectedVersion: string;
 }
 
 /** One replacement (Vertretung) covering part of a cancelled shift's gap. */
@@ -84,6 +88,10 @@ interface CancellationPayload {
   replacements: ReplacementPayload[];
   /** Answer to the working-time warnings of a refused save (#4708). */
   workingTime?: WorkingTimeConfirmation;
+  /** The version of the shift and of every cover the planner read, by shift
+   *  id (ADR 0311): the covers are rebuilt from this request. */
+  expectedVersion: string;
+  expectedReplacementVersions: Readonly<Record<string, string>>;
 }
 
 interface SeriesPayload {
@@ -212,6 +220,9 @@ function toBackendBody(
     ...(payload.changeReason !== undefined
       ? { change_reason: payload.changeReason }
       : {}),
+    ...(payload.expectedVersion !== undefined
+      ? { expected_version: payload.expectedVersion }
+      : {}),
     ...(payload.originShiftId != null
       ? { origin_shift_id: payload.originShiftId }
       : {}),
@@ -289,6 +300,7 @@ class StaffShiftService {
           end_time: payload.endTime,
           break_minutes: payload.breakMinutes,
           shift_type_id: payload.shiftTypeId,
+          expected_version: payload.expectedVersion,
           ...workingTimeBody(payload.workingTime),
         },
         errorMessage: "Schicht konnte nicht gespeichert werden",
@@ -324,6 +336,10 @@ class StaffShiftService {
           break_minutes: r.breakMinutes,
           shift_type_id: r.shiftTypeId,
         })),
+        expected_version: payload.expectedVersion,
+        expected_replacement_versions: {
+          ...payload.expectedReplacementVersions,
+        },
         ...workingTimeBody(payload.workingTime),
       },
       errorMessage: "Änderung konnte nicht gespeichert werden",
