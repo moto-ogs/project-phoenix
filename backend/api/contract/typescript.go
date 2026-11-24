@@ -29,7 +29,7 @@ func TypeScript(doc Document) (map[string]string, error) {
 	for _, route := range doc.Routes {
 		resources[resourceOf(route.Pattern)] = append(resources[resourceOf(route.Pattern)], route)
 	}
-	for _, reserved := range []string{portalsFile, sharedFile, browserTraitsFile} {
+	for _, reserved := range []string{portalsFile, sharedFile, browserTraitsFile, "problem-details.generated.ts", "stream-event.generated.ts"} {
 		if _, taken := resources[strings.TrimSuffix(reserved, ".generated.ts")]; taken {
 			return nil, fmt.Errorf("the resource name %q is taken by a generated table", strings.TrimSuffix(reserved, ".generated.ts"))
 		}
@@ -61,7 +61,28 @@ func TypeScript(doc Document) (map[string]string, error) {
 	if len(shared.typeOrder)+len(shared.enumOrder) > 0 {
 		files[sharedFile] = shared.file(nil, nil)
 	}
+	writeNonRouteFiles(files, doc, newWriter)
 	return files, nil
+}
+
+func writeNonRouteFiles(files map[string]string, doc Document, newWriter func() *tsWriter) {
+	if len(doc.ProblemDetails) > 0 {
+		writer := newWriter()
+		var decoders strings.Builder
+		decoders.WriteString("\nexport const problemDetails = {\n")
+		for _, code := range sortedKeys(doc.ProblemDetails) {
+			schema := doc.ProblemDetails[code]
+			writer.visit(schema)
+			fmt.Fprintf(&decoders, "  %q: %s,\n", code, writer.zod(schema))
+		}
+		decoders.WriteString("} as const;\n")
+		files["problem-details.generated.ts"] = writer.file(nil, nil) + decoders.String()
+	}
+	if doc.StreamEvent != nil {
+		writer := newWriter()
+		writer.visit(*doc.StreamEvent)
+		files["stream-event.generated.ts"] = writer.file(nil, nil)
+	}
 }
 
 // visitRoutes orders the types of a resource's routes and counts the
@@ -129,6 +150,7 @@ func browserTraits(routes []Route) string {
 		out.WriteString("  },\n")
 	}
 	out.WriteString("} as const;\n")
+	writeAccountLogoutBrowserPaths(&out, routes)
 	writeRouteSet(&out, "noCommitRoutes", routes, func(route Route) bool {
 		return route.NoCommit != ""
 	})
@@ -142,6 +164,21 @@ func browserTraits(routes []Route) string {
 	}
 	out.WriteString("]);\n")
 	return out.String()
+}
+
+// These browser routes revoke portal-specific sessions through the same Go route.
+func writeAccountLogoutBrowserPaths(out *strings.Builder, routes []Route) {
+	for _, route := range routes {
+		if route.Key() != "POST /auth/logout" {
+			continue
+		}
+		out.WriteString("\nexport const accountLogoutBrowserPaths = {\n")
+		for _, portal := range []string{"caterer", "parent", "school", "traeger"} {
+			fmt.Fprintf(out, "  %s: %q,\n", portal, "/api/"+portal+route.Pattern)
+		}
+		out.WriteString("} as const;\n")
+		return
+	}
 }
 
 func writeRouteSet(out *strings.Builder, name string, routes []Route, matches func(Route) bool) {

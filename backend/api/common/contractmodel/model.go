@@ -192,7 +192,9 @@ func (r Route) Key() string { return r.Method + " " + r.Pattern }
 // Document is the whole contract. It is committed as contract.json, and the
 // comparison with the base branch reads it.
 type Document struct {
-	Routes []Route `json:"routes"`
+	ProblemDetails map[string]Schema `json:"problem_details,omitempty"`
+	StreamEvent    *Schema           `json:"stream_event,omitempty"`
+	Routes         []Route           `json:"routes"`
 	// Outside lists the catalog lines without a contract, with their reason.
 	Outside []OutsideRoute `json:"outside"`
 	Enums   []Enum         `json:"enums"`

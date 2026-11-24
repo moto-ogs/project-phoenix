@@ -129,9 +129,7 @@ export const activeService = {
       bffJson("tenant", "GET /api/active/visits/", {
         query: {
           active: filters?.active,
-          active_group_ids: filters?.activeGroupIds?.length
-            ? filters.activeGroupIds.join(",")
-            : undefined,
+          active_group_ids: filters?.activeGroupIds,
         },
       }),
     );

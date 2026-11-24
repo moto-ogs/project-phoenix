@@ -94,9 +94,9 @@ describe("student-status-days-api", () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       Response.json(
         {
-          code: "students.sick_excused_conflict",
+          code: "students.status_day_conflict",
           instance: "req-409",
-          conflicts: [backendDay],
+          details: { conflicts: [backendDay], conflict_count: 1 },
         },
         { status: 409 },
       ),
@@ -108,14 +108,20 @@ describe("student-status-days-api", () => {
 
     expect(error).toBeInstanceOf(StudentStatusDayConflictError);
     expect((error as StudentStatusDayConflictError).code).toBe(
-      "students.sick_excused_conflict",
+      "students.status_day_conflict",
     );
     expect((error as StudentStatusDayConflictError).requestId).toBe("req-409");
   });
 
   it("returns conflicting rows from an atomic create rejection", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      Response.json({ conflicts: [backendDay] }, { status: 409 }),
+      Response.json(
+        {
+          code: "students.status_day_conflict",
+          details: { conflicts: [backendDay], conflict_count: 1 },
+        },
+        { status: 409 },
+      ),
     );
 
     const error = await createStudentStatusDays("42", "sick", [
@@ -266,8 +272,8 @@ describe("student-status-days-api", () => {
       Response.json(
         {
           detail: "existing student status days were not overwritten",
-          conflicts: [backendDay],
-          conflict_count: 48,
+          code: "students.status_day_conflict",
+          details: { conflicts: [backendDay], conflict_count: 48 },
         },
         { status: 409 },
       ),

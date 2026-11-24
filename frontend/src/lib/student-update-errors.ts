@@ -4,18 +4,19 @@
 // the ApiError of updateStudent (~/lib/student-api). Keyed off the code, never
 // the status: the student PUT answers 409 and 400 for several reasons.
 
+import { z } from "zod";
 import { ApiError, enrichApiError, problemDetail } from "./api-error";
+import { problemDetails } from "./contract/problem-details.generated";
 import {
   ALL_COMPANION_WEEKDAYS,
   type CompanionExtensionConfirmation,
-  type CompanionWeekday,
 } from "./student-companion-api";
 
 /** The error body: parsed already (ApiError.problem) or its JSON text. */
 function parsedBody(body: unknown): unknown {
   if (typeof body !== "string") return body;
   try {
-    return JSON.parse(body) as unknown;
+    return JSON.parse(body);
   } catch {
     return undefined;
   }
@@ -26,24 +27,25 @@ function parsedBody(body: unknown): unknown {
  * unparsable yields an empty list, which makes the retry ask again rather than
  * confirm something we could not read.
  */
+const companionConflict = z.object({
+  code: z.literal("students.companion_plan_conflict"),
+  details: problemDetails["students.companion_plan_conflict"],
+});
+const companionWeekdays = z.array(z.enum(ALL_COMPANION_WEEKDAYS)).min(1);
+
 function conflictExtensions(body: unknown): CompanionExtensionConfirmation[] {
-  const conflicts =
-    body && typeof body === "object"
-      ? (
-          body as {
-            conflicts?: { student_id?: number | string; weekdays?: string[] }[];
-          }
-        ).conflicts
-      : undefined;
-  return (Array.isArray(conflicts) ? conflicts : [])
-    .filter((conflict) => conflict.student_id !== undefined)
-    .map((conflict) => ({
-      companion_student_id: String(conflict.student_id),
-      weekdays: (conflict.weekdays ?? []).filter(
-        (day): day is CompanionWeekday =>
-          ALL_COMPANION_WEEKDAYS.includes(day as CompanionWeekday),
-      ),
-    }));
+  const parsed = companionConflict.safeParse(body);
+  if (!parsed.success) return [];
+  const confirmations: CompanionExtensionConfirmation[] = [];
+  for (const conflict of parsed.data.details.conflicts ?? []) {
+    const days = companionWeekdays.safeParse(conflict.weekdays);
+    if (!days.success) return [];
+    confirmations.push({
+      companion_student_id: conflict.student_id,
+      weekdays: days.data,
+    });
+  }
+  return confirmations;
 }
 
 /**

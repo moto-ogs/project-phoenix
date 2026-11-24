@@ -90,7 +90,7 @@ var errRequestChildIDs = errors.New("request_child_ids must list between 1 and 5
 // list answers GET /care-contracts?request_child_ids=1,2: the contracts of
 // these application children at the school, a child without one left out.
 func (rs *ApplicationContractResource) list(w http.ResponseWriter, r *http.Request) {
-	ids, err := requestChildIDs(r.URL.Query().Get("request_child_ids"))
+	ids, err := requestChildIDs(strings.Join(r.URL.Query()["request_child_ids"], ","))
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return

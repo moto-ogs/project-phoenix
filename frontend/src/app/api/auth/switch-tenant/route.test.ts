@@ -122,11 +122,15 @@ describe.each([
       "preserves backend error bytes and headers (%s)",
       async (status) => {
         const body = JSON.stringify({
+          type: "about:blank",
+          title: "Request refused",
           status,
           code:
             status === 401
               ? "identity.mfa_session_required"
-              : "general.permission",
+              : status === 403
+                ? "general.permission"
+                : "general.unavailable",
           detail: "refused",
         });
         backend.mockResolvedValueOnce(

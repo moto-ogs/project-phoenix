@@ -49,7 +49,7 @@ import { rolesConfig } from "~/components/database/configs/roles.config";
 import { getRoleDisplayName } from "~/lib/auth-helpers";
 import { useSWRAuth } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
-import type * as importContract from "~/lib/contract/import.generated";
+import * as importContract from "~/lib/contract/import.generated";
 import { createLogger } from "~/lib/logger";
 
 /** Info-Knopf am Seitentitel: wofür die Seite da ist und was man zuerst tut. */
@@ -284,10 +284,12 @@ export default function StaffImportPage() {
       } catch (error) {
         // A stopped batch carries the rows already saved in its error body.
         const result = importFailureBody(error);
-        const interrupted =
-          readImportBatchFailure<importContract.StaffImportError>(result);
+        const interrupted = readImportBatchFailure(
+          result,
+          importContract.StaffImportResultSchema,
+        );
         if (interrupted) {
-          setImportResult(interrupted as importContract.StaffImportResult);
+          setImportResult(interrupted);
           setImportInterrupted(true);
           setPreviewData((interrupted.errors ?? []).map(toDisplayStaff));
           setBatchNotice(importBatchFailureMessage(interrupted));

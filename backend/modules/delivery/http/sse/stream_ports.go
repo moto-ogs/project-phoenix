@@ -2,7 +2,10 @@ package sse
 
 // Event exposes the SSE name while its native value keeps the existing JSON
 // representation. Root selects the Delivery event type.
-type Event interface{ SSEType() string }
+type Event interface {
+	SSEType() string
+	SSEPayload() any
+}
 
 // Client exposes the native event channel. The port adds no queue or relay.
 type Client[E Event] interface {

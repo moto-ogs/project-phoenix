@@ -2,19 +2,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 import type { RouteContext } from "~/lib/route-wrapper-utils.server";
 
-const {
-  mockAuth,
-  mockFetch,
-  mockGetServerApiUrl,
-  mockRevalidateTag,
-  mockRevalidatePath,
-} = vi.hoisted(() => ({
-  mockAuth: vi.fn(),
-  mockFetch: vi.fn(),
-  mockGetServerApiUrl: vi.fn(() => "http://localhost:8080"),
-  mockRevalidateTag: vi.fn(),
-  mockRevalidatePath: vi.fn(),
-}));
+const { mockAuth, mockFetch, mockGetServerApiUrl, mockRevalidatePath } =
+  vi.hoisted(() => ({
+    mockAuth: vi.fn(),
+    mockFetch: vi.fn(),
+    mockGetServerApiUrl: vi.fn(() => "http://localhost:8080"),
+    mockRevalidatePath: vi.fn(),
+  }));
 
 vi.mock("~/server/auth/operator", async () =>
   (await import("~/test/portal-binding")).mockPortalModule("operator", {
@@ -28,7 +22,6 @@ vi.mock("~/lib/server-api-url", () => ({
 }));
 
 vi.mock("next/cache", () => ({
-  revalidateTag: (...args: unknown[]) => mockRevalidateTag(...args),
   revalidatePath: (...args: unknown[]) => mockRevalidatePath(...args),
 }));
 
@@ -120,9 +113,7 @@ describe("PUT /api/operator/schools/[id]/settings/values/[key]", () => {
     });
 
     expect(result.status).toBe(502);
-    expect(mockRevalidateTag).toHaveBeenCalledWith("tenant-school-ten", {
-      expire: 0,
-    });
+    expect(mockRevalidatePath).toHaveBeenCalledWith("/school-ten", "layout");
   });
 
   it("returns 401 when not authenticated", async () => {
@@ -240,9 +231,6 @@ describe("PUT /api/operator/schools/[id]/settings/values/[key]", () => {
         "http://localhost:8080/operator/schools/summaries",
         expect.objectContaining({ method: "GET" }),
       );
-      expect(mockRevalidateTag).toHaveBeenCalledWith("tenant-school-ten", {
-        expire: 0,
-      });
       expect(mockRevalidatePath).toHaveBeenCalledWith("/school-ten", "layout");
     },
   );
@@ -282,9 +270,6 @@ describe("PUT /api/operator/schools/[id]/settings/values/[key]", () => {
     const response = await PUT(request, context);
 
     expect(response.status).toBe(200);
-    expect(mockRevalidateTag).toHaveBeenCalledWith("tenant-school-ten", {
-      expire: 0,
-    });
     expect(mockRevalidatePath).toHaveBeenCalledWith("/school-ten", "layout");
   });
 
@@ -314,7 +299,6 @@ describe("PUT /api/operator/schools/[id]/settings/values/[key]", () => {
 
     // Only the backend PUT, never the summaries lookup.
     expect(mockFetch).toHaveBeenCalledTimes(1);
-    expect(mockRevalidateTag).not.toHaveBeenCalled();
     expect(mockRevalidatePath).not.toHaveBeenCalled();
   });
 
@@ -350,7 +334,6 @@ describe("PUT /api/operator/schools/[id]/settings/values/[key]", () => {
     const response = await PUT(request, context);
 
     expect(response.status).toBe(200);
-    expect(mockRevalidateTag).not.toHaveBeenCalled();
     expect(mockRevalidatePath).not.toHaveBeenCalled();
   });
 });
@@ -469,9 +452,6 @@ describe("DELETE /api/operator/schools/[id]/settings/values/[key]", () => {
       const response = await DELETE(request, context);
 
       expect(response.status).toBe(200);
-      expect(mockRevalidateTag).toHaveBeenCalledWith("tenant-school-ten", {
-        expire: 0,
-      });
       expect(mockRevalidatePath).toHaveBeenCalledWith("/school-ten", "layout");
     },
   );
@@ -490,7 +470,6 @@ describe("DELETE /api/operator/schools/[id]/settings/values/[key]", () => {
     await DELETE(request, context);
 
     expect(mockFetch).toHaveBeenCalledTimes(1);
-    expect(mockRevalidateTag).not.toHaveBeenCalled();
     expect(mockRevalidatePath).not.toHaveBeenCalled();
   });
 });

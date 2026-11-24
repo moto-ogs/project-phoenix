@@ -3,6 +3,7 @@
 // Routen unter /api/school/* laufen über die school-Session und rufen das
 // Backend mit dem school-Token unter /school/class-day auf.
 
+import { z } from "zod";
 import { ApiError } from "./api-error";
 import { bffFile, bffJson } from "./bff-fetch";
 import type { StudentStatusKind } from "./student-status-days-api";
@@ -12,6 +13,8 @@ import type {
   ClassArrivalExceptionResponse,
 } from "./contract/students.generated";
 import { requiredDay } from "./contract/required-day";
+import { calendarDate } from "./contract/runtime";
+import { problemDetails } from "./contract/problem-details.generated";
 import type * as schoolClassDayContract from "./contract/school-class-day.generated";
 
 /** Antwort von GET /school/class-day/classes; ohne Klassen eine leere Liste. */
@@ -111,6 +114,8 @@ export interface ClassTripConflictDay {
   status: StudentStatusKind;
 }
 
+const tripConflictStatus = z.enum(["sick", "excused", "class_trip"]);
+
 /**
  * Liest die blockierenden Tage aus der Ablehnung einer Meldung, wie die OGS
  * sie bei ihrer Klassenfahrt zeigt. Ohne genannte Tage `null`.
@@ -124,28 +129,20 @@ export function classTripConflictsFromError(
   ) {
     return null;
   }
-  const raw = err.details?.conflicts;
-  if (!Array.isArray(raw) || raw.length === 0) {
-    return null;
-  }
-  const conflicts = raw.flatMap((entry: unknown): ClassTripConflictDay[] => {
-    if (!entry || typeof entry !== "object") return [];
-    const { student_id, date, status } = entry as Record<string, unknown>;
-    if (
-      typeof student_id !== "number" ||
-      typeof date !== "string" ||
-      (status !== "sick" && status !== "excused" && status !== "class_trip")
-    ) {
-      return [];
+  const parsed = problemDetails[
+    "classday.class_trip_status_conflict"
+  ].safeParse(err.details);
+  if (!parsed.success) return null;
+  const conflicts: ClassTripConflictDay[] = [];
+  for (const conflict of parsed.data.conflicts ?? []) {
+    const status = tripConflictStatus.safeParse(conflict.status);
+    if (status.success && calendarDate.safeParse(conflict.date).success) {
+      conflicts.push({ ...conflict, status: status.data });
     }
-    return [{ student_id: student_id.toString(), date, status }];
-  });
-  const count = err.details?.conflict_count;
-  const total =
-    typeof count === "number" && Number.isFinite(count)
-      ? count
-      : conflicts.length;
-  return conflicts.length > 0 ? { conflicts, total } : null;
+  }
+  return conflicts.length > 0
+    ? { conflicts, total: parsed.data.conflict_count }
+    : null;
 }
 
 /**

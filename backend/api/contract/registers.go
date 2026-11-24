@@ -9,6 +9,11 @@ import (
 // a registered type is an ident.ID, or a count or an amount tagged
 // contract:"number" (ADR 0300).
 type Options struct {
+	// ProblemDetails maps each structured error code to its details type.
+	ProblemDetails map[string]any
+	// StreamEvent is the typed payload of an SSE application event.
+	StreamEvent any
+	StreamEnums []EnumSpec
 	// QueryVariants lists the routes whose response shape a query parameter
 	// selects, as "METHOD /pattern". It only shrinks: GET /api/students/ is
 	// the one named debt of ADR 0270 point 3, and no route joins it.

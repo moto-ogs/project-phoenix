@@ -93,7 +93,13 @@ describe("demo reset route", () => {
   it("passes the backend's refusal through", async () => {
     fetchMock.mockResolvedValue(
       Response.json(
-        { status: "error", code: "identity.demo_access_expired" },
+        {
+          type: "about:blank",
+          title: "Gone",
+          status: 410,
+          detail: "Demo access expired",
+          code: "identity.demo_access_expired",
+        },
         { status: 410 },
       ),
     );

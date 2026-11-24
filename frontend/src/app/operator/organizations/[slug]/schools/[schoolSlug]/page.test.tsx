@@ -127,7 +127,6 @@ vi.mock("~/lib/operator/provisioning-api", async () => {
   >("~/lib/operator/provisioning-api");
   return {
     ...actual,
-    revalidateTenantCache: vi.fn().mockResolvedValue(undefined),
     operatorProvisioningService: {
       listOrganizationSummaries: mockListOrganizationSummaries,
       listOrganizationSchools: mockListOrganizationSchools,
@@ -192,7 +191,6 @@ vi.mock("~/components/teachers/caregiver-capability-modal", () => ({
 }));
 
 import OperatorSchoolDetailPage from "./page";
-import { revalidateTenantCache } from "~/lib/operator/provisioning-api";
 
 const mockOrg = {
   id: "1",
@@ -523,7 +521,6 @@ describe("OperatorSchoolDetailPage", () => {
           active: false,
         }),
       );
-      expect(revalidateTenantCache).toHaveBeenCalledWith(["test-school"]);
     });
   });
 
@@ -580,11 +577,11 @@ describe("OperatorSchoolDetailPage", () => {
   });
 
   // #6652: the status change holds once the write is through; a failed reload
-  // of the portal cache is a load error above the page, never a failed change.
-  it("keeps a status change successful when the portal cache reload fails", async () => {
+  // of the page is a load error above the data, never a failed change.
+  it("keeps a status change successful when the page reload fails", async () => {
     setupSWR();
     mockUpdateSchool.mockResolvedValue({ ...mockSchool, active: false });
-    vi.mocked(revalidateTenantCache).mockRejectedValueOnce(
+    mockMutateSchools.mockRejectedValueOnce(
       new ApiError("down", 503, { code: "general.unavailable" }),
     );
 
@@ -602,7 +599,7 @@ describe("OperatorSchoolDetailPage", () => {
       ),
     ).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
-    await waitFor(() => expect(revalidateTenantCache).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(mockMutateSchools).toHaveBeenCalledTimes(2));
     expect(mockUpdateSchool).toHaveBeenCalledTimes(1);
   });
 
@@ -1167,9 +1164,6 @@ describe("OperatorSchoolDetailPage", () => {
 
     await waitFor(() => {
       expect(mockSoftDeleteSchool).toHaveBeenCalledWith("10");
-    });
-    await waitFor(() => {
-      expect(revalidateTenantCache).toHaveBeenCalledWith(["test-school"]);
     });
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith(

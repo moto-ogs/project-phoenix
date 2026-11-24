@@ -9,7 +9,6 @@ package staffmessaging
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -86,7 +85,7 @@ func (rs *Resource) registerGroupAdminRoutes(r chi.Router, withTx common.Middlew
 // InboxThreadResponse is one row of the caller's conversation list.
 type InboxThreadResponse struct {
 	ThreadID             ident.ID `json:"thread_id"`
-	CounterpartAccountID string   `json:"counterpart_account_id" contract_text:"empty string for group threads without a counterpart"`
+	CounterpartAccountID string   `json:"counterpart_account_id" contract_text:"required legacy field, empty for group threads without a counterpart"`
 	CounterpartName      string   `json:"counterpart_name"`
 	// CounterpartRoleKind: "lehrkraft" | "admin" | "staff" (#2208).
 	CounterpartRoleKind string `json:"counterpart_role_kind"`
@@ -159,7 +158,7 @@ type postMessageRequest struct {
 // ThreadDetailResponse is the chat window payload.
 type ThreadDetailResponse struct {
 	ThreadID             ident.ID          `json:"thread_id"`
-	CounterpartAccountID string            `json:"counterpart_account_id" contract_text:"empty string for group threads without a counterpart"`
+	CounterpartAccountID string            `json:"counterpart_account_id" contract_text:"required legacy field, empty for group threads without a counterpart"`
 	CounterpartName      string            `json:"counterpart_name"`
 	CounterpartRoleKind  string            `json:"counterpart_role_kind"`
 	Messages             []MessageResponse `json:"messages"`
@@ -213,7 +212,7 @@ func toThreadDetail(d *communication.StaffMessageThread, viewer ...int64) Thread
 		Members:   toMemberResponses(d.Members),
 	}
 	if d.Kind == "direct" {
-		response.CounterpartAccountID = strconv.FormatInt(d.CounterpartAccountID, 10)
+		response.CounterpartAccountID = ident.ID(d.CounterpartAccountID).String()
 		response.CounterpartName = d.CounterpartName
 		response.CounterpartRoleKind = d.CounterpartRoleKind
 	}
@@ -243,20 +242,19 @@ func (rs *Resource) listInbox(w http.ResponseWriter, r *http.Request) {
 	out := make([]InboxThreadResponse, 0, len(rows))
 	for _, row := range rows {
 		item := InboxThreadResponse{
-			ThreadID:             ident.ID(row.ThreadID),
-			CounterpartAccountID: strconv.FormatInt(row.CounterpartAccountID, 10),
-			CounterpartName:      row.CounterpartName,
-			CounterpartRoleKind:  row.CounterpartRoleKind,
-			LastMessageBody:      row.LastMessageBody,
-			UnreadCount:          row.UnreadCount,
-			LastMessageMine:      row.LastSenderAccountID != nil && *row.LastSenderAccountID == actor,
-			Kind:                 row.Kind,
-			GroupName:            row.GroupName,
-			MemberCount:          row.MemberCount,
-			LastSenderName:       row.LastSenderName,
+			ThreadID:            ident.ID(row.ThreadID),
+			CounterpartName:     row.CounterpartName,
+			CounterpartRoleKind: row.CounterpartRoleKind,
+			LastMessageBody:     row.LastMessageBody,
+			UnreadCount:         row.UnreadCount,
+			LastMessageMine:     row.LastSenderAccountID != nil && *row.LastSenderAccountID == actor,
+			Kind:                row.Kind,
+			GroupName:           row.GroupName,
+			MemberCount:         row.MemberCount,
+			LastSenderName:      row.LastSenderName,
 		}
-		if row.CounterpartAccountID == 0 {
-			item.CounterpartAccountID = ""
+		if row.CounterpartAccountID != 0 {
+			item.CounterpartAccountID = ident.ID(row.CounterpartAccountID).String()
 		}
 		if row.LastMessageAt != nil {
 			item.LastMessageAt = row.LastMessageAt.Format(time.RFC3339)

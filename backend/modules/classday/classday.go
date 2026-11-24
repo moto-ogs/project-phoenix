@@ -152,9 +152,9 @@ var (
 
 // ClassTripConflict is one day a chosen child already has a status on.
 type ClassTripConflict struct {
-	StudentID int64  `json:"student_id"`
-	Date      Date   `json:"date"`
-	Status    string `json:"status"`
+	StudentID int64
+	Date      Date
+	Status    string
 }
 
 // ClassTripStatusConflictError names the days that refused a class trip,

@@ -37,6 +37,7 @@ import (
 	careContractHTTP "github.com/moto-ogs/project-phoenix/modules/carecontract/http"
 	careStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/careplan/http"
 	requestFeedHTTP "github.com/moto-ogs/project-phoenix/modules/careplan/requestfeed/http"
+	classdayHTTP "github.com/moto-ogs/project-phoenix/modules/classday/http"
 	messageAttachmentsHTTP "github.com/moto-ogs/project-phoenix/modules/communication/http/messageattachments"
 	operatorAnnouncementsHTTP "github.com/moto-ogs/project-phoenix/modules/communication/http/operatorannouncements"
 	announcementAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentannouncements"
@@ -74,6 +75,7 @@ import (
 	timeTrackingHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking"
 	workforceTraegerStaff "github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
 	worktimemodelsHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/worktimemodels"
+	"github.com/moto-ogs/project-phoenix/realtime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	catererPortalHTTP "github.com/moto-ogs/project-phoenix/workflows/catererportal/http"
 	contractEnrollmentHTTP "github.com/moto-ogs/project-phoenix/workflows/contractenrollment/http"
@@ -282,6 +284,15 @@ func ContractDocument() (contract.Document, error) {
 	}
 	substitutions := substitutionsHTTP.RouteContractTypes()
 	options := contract.Options{
+		StreamEvent: realtime.SSEEvent{},
+		StreamEnums: []contract.EnumSpec{{
+			Name: "StreamEventType", Type: realtime.EventType(""), Values: realtime.EventTypeValues(),
+		}},
+		ProblemDetails: map[string]any{
+			common.CodeStudentsCompanionPlanConflict:   careStudentsHTTP.CompanionConflictDetails{},
+			common.CodeClassdayClassTripStatusConflict: classdayHTTP.ClassTripConflictDetails{},
+			common.CodeStudentsStatusDayConflict:       presenceStudentsHTTP.StatusDayConflictDetails{},
+		},
 		Identifiers: map[reflect.Type]string{
 			reflect.TypeFor[ident.ID](): contract.KindID,
 			// The device management renders its instants in whole seconds.
@@ -507,7 +518,7 @@ func guardianRouteContracts() []common.RouteContract {
 	types := guardiansHTTP.RouteContractTypes()
 	portals := []common.PortalScope{common.PortalTenant}
 	search := []common.QueryParam{{Name: "q", Kind: common.QueryString}, {Name: "page", Kind: common.QueryInt}, {Name: "page_size", Kind: common.QueryInt}}
-	deleteQuery := []common.QueryParam{{Name: "force", Kind: common.QueryString}, {Name: "expected_link_ids", Kind: common.QueryString}}
+	deleteQuery := []common.QueryParam{{Name: "force", Kind: common.QueryString}, {Name: "expected_link_ids", Kind: common.QueryID, Repeated: true}}
 	const guardianEditRefused = "the staff form saves a guardian as one entry against its read state (ADR 0311, #7953 removes this edit)"
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/search", Portals: portals, Query: search, Paginated: true, Response: types.Pickers},

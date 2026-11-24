@@ -1,10 +1,10 @@
 // Handwritten helpers of the generated contract (ADR 0270). The files
 // `*.generated.ts` next to this one hold only shapes and import from here.
 import { z } from "zod";
-import { INT64_DECIMAL } from "../compare-ids";
+import { isInt64Decimal } from "../compare-ids";
 
 /** An int64 identifier sent as a JSON string. Kept verbatim, never a number. */
-export const int64String = z.string().regex(INT64_DECIMAL);
+export const int64String = z.string().refine(isInt64Decimal);
 
 export const safeInt = z.number().refine(Number.isSafeInteger);
 

@@ -840,6 +840,12 @@ describe("StudentImportPage", () => {
             code: "import.import_batch_failed",
             details: {
               result: {
+                started_at: "2026-11-24T12:00:00Z",
+                completed_at: "2026-11-24T12:01:00Z",
+                skipped_count: 0,
+                warning_count: 0,
+                bulk_actions: null,
+                dry_run: false,
                 total_rows: 205,
                 created_count: 100,
                 updated_count: 0,
@@ -847,7 +853,11 @@ describe("StudentImportPage", () => {
                 errors: [
                   {
                     row_number: 152,
+                    timestamp: "2026-11-24T12:00:00Z",
                     data: {
+                      bus_permission: false,
+                      privacy_accepted: false,
+                      data_retention_days: 0,
                       first_name: "Refused",
                       last_name: "Batch",
                       school_class: "1a",
@@ -919,6 +929,12 @@ describe("StudentImportPage", () => {
             code: "import.import_batch_failed",
             details: {
               result: {
+                started_at: "2026-11-24T12:00:00Z",
+                completed_at: "2026-11-24T12:01:00Z",
+                skipped_count: 0,
+                warning_count: 0,
+                bulk_actions: null,
+                dry_run: false,
                 total_rows: 205,
                 created_count: 100,
                 updated_count: 0,
@@ -973,6 +989,12 @@ describe("StudentImportPage", () => {
             code: "import.import_batch_failed",
             details: {
               result: {
+                started_at: "2026-11-24T12:00:00Z",
+                completed_at: "2026-11-24T12:01:00Z",
+                skipped_count: 0,
+                warning_count: 0,
+                bulk_actions: null,
+                dry_run: false,
                 total_rows: 205,
                 created_count: 100,
                 updated_count: 0,
@@ -980,7 +1002,11 @@ describe("StudentImportPage", () => {
                 errors: [
                   {
                     row_number: 152,
+                    timestamp: "2026-11-24T12:00:00Z",
                     data: {
+                      bus_permission: false,
+                      privacy_accepted: false,
+                      data_retention_days: 0,
                       first_name: "Refused",
                       last_name: "Batch",
                       school_class: "1a",
@@ -1566,6 +1592,12 @@ describe("StudentImportPage", () => {
               code: "import.import_batch_failed",
               details: {
                 result: {
+                  started_at: "2026-11-24T12:00:00Z",
+                  completed_at: "2026-11-24T12:01:00Z",
+                  skipped_count: 0,
+                  warning_count: 0,
+                  bulk_actions: null,
+                  dry_run: false,
                   total_rows: 80,
                   created_count: 50,
                   updated_count: 0,

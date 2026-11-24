@@ -158,7 +158,6 @@ vi.mock("~/lib/operator/provisioning-api", async () => {
   >("~/lib/operator/provisioning-api");
   return {
     ...actual,
-    revalidateTenantCache: vi.fn().mockResolvedValue(undefined),
     operatorProvisioningService: {
       listOrganizations: mockListOrganizations,
       listOrganizationSummaries: mockListOrganizationSummaries,
@@ -231,7 +230,6 @@ vi.mock("~/components/teachers/caregiver-capability-modal", () => ({
 }));
 
 import OperatorOrganizationDetailPage from "./page";
-import { revalidateTenantCache } from "~/lib/operator/provisioning-api";
 import {
   expectPageReloadedAfterRefusal,
   resetPageReloads,
@@ -783,7 +781,6 @@ describe("OperatorOrganizationDetailPage", () => {
           active: false,
         }),
       );
-      expect(revalidateTenantCache).toHaveBeenCalledWith(["test-school"]);
     });
   });
 
@@ -849,7 +846,6 @@ describe("OperatorOrganizationDetailPage", () => {
 
     await waitFor(() => {
       expect(mockRestoreSchool).toHaveBeenCalledWith("20");
-      expect(revalidateTenantCache).toHaveBeenCalledWith(["deleted-school"]);
     });
   });
 
@@ -1697,11 +1693,11 @@ describe("OperatorOrganizationDetailPage", () => {
     const reloadText = (object: string) =>
       `${catalogText("general.unavailable", object)} ${SAVED_BUT_STALE_SUFFIX}`;
 
-    it("keeps a created school successful when the portal cache reload fails", async () => {
+    it("keeps a created school successful when the page reload fails", async () => {
       currentSearchParams = new URLSearchParams("tab=schulen");
       setupSWR();
       mockCreateSchool.mockResolvedValue(mockSchool);
-      vi.mocked(revalidateTenantCache).mockRejectedValueOnce(down());
+      mockMutateSchoolSummaries.mockRejectedValueOnce(down());
 
       await renderPage();
       fireEvent.click(await screen.findByText("Neue Schule"));
@@ -1720,15 +1716,15 @@ describe("OperatorOrganizationDetailPage", () => {
       expect(screen.queryByTestId("modal")).toBeNull();
       fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
       await waitFor(() =>
-        expect(revalidateTenantCache).toHaveBeenCalledTimes(2),
+        expect(mockMutateSchoolSummaries).toHaveBeenCalledTimes(2),
       );
       expect(mockCreateSchool).toHaveBeenCalledTimes(1);
     });
 
-    it("keeps a status change successful when the portal cache reload fails", async () => {
+    it("keeps a status change successful when the page reload fails", async () => {
       setupSWR();
       mockUpdateOrganization.mockResolvedValue({ ...mockOrg, active: false });
-      vi.mocked(revalidateTenantCache).mockRejectedValueOnce(down());
+      mockMutateSchoolSummaries.mockRejectedValueOnce(down());
 
       await renderPage();
       fireEvent.click(await screen.findByLabelText("Deaktivieren"));
@@ -1744,7 +1740,7 @@ describe("OperatorOrganizationDetailPage", () => {
       ).toBeNull();
       fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
       await waitFor(() =>
-        expect(revalidateTenantCache).toHaveBeenCalledTimes(2),
+        expect(mockMutateSchoolSummaries).toHaveBeenCalledTimes(2),
       );
       expect(mockUpdateOrganization).toHaveBeenCalledTimes(1);
     });
@@ -1848,10 +1844,9 @@ describe("OperatorOrganizationDetailPage", () => {
       expect(mockCreateSampleChildren).toHaveBeenCalledTimes(1);
     });
 
-    it("keeps a restored school restored when the portal cache reload fails", async () => {
+    it("keeps a restored school restored when the page reload fails", async () => {
       currentSearchParams = new URLSearchParams("tab=schulen");
       mockRestoreSchool.mockResolvedValue(undefined);
-      vi.mocked(revalidateTenantCache).mockRejectedValueOnce(down());
       setupSWR({
         schools: [
           mockSchool,
@@ -1864,6 +1859,7 @@ describe("OperatorOrganizationDetailPage", () => {
           },
         ],
       });
+      mockMutateSchoolSummaries.mockRejectedValueOnce(down());
 
       await renderPage();
       fireEvent.click(await screen.findByText("Papierkorb (1)"));
@@ -1876,7 +1872,7 @@ describe("OperatorOrganizationDetailPage", () => {
       expect(screen.queryByTestId("confirmation-modal")).toBeNull();
       fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
       await waitFor(() =>
-        expect(revalidateTenantCache).toHaveBeenCalledTimes(2),
+        expect(mockMutateSchoolSummaries).toHaveBeenCalledTimes(2),
       );
       expect(mockRestoreSchool).toHaveBeenCalledTimes(1);
     });

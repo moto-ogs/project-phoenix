@@ -2,7 +2,10 @@ import { captureBffException } from "~/lib/sentry-bff.server";
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { contractWrite } from "~/lib/contract/client.server";
-import { routes } from "~/lib/contract/demo-access.generated";
+import {
+  DEMO_SESSION_ROLE_VALUES,
+  routes,
+} from "~/lib/contract/demo-access.generated";
 import { contractError } from "~/lib/contract/route-response.server";
 import { frontendOrigin } from "~/lib/client-headers.server";
 import { createLogger } from "~/lib/logger";
@@ -33,13 +36,7 @@ const DEMO_PORTAL_AUTH = {
   traeger: traegerPortal,
 } as const;
 
-const demoSessionRole = z.enum([
-  "lead",
-  "caregiver",
-  "parent",
-  "traeger",
-  "all",
-]);
+const demoSessionRole = z.enum(DEMO_SESSION_ROLE_VALUES);
 const rollbackAnswer = z.object({
   access_token: z.string().min(1),
   refresh_token: z.string().min(1),

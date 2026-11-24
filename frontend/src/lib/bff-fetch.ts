@@ -512,8 +512,12 @@ export function bffJson(
     params?: Record<string, string>;
     query?: Record<string, QueryValue>;
   };
-  if (typeof route !== "string")
-    return call(portal, route.method, route.path, opts);
+  if (typeof route !== "string") {
+    if (portal !== route.portal) {
+      throw new Error("The session step belongs to a different portal");
+    }
+    return call(route.portal, route.method, route.path, opts);
+  }
   const method = route.slice(0, space) as Method;
   const url = browserPath(
     portal,

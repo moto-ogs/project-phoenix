@@ -74,16 +74,18 @@ func TestOGSMessagesShowWhatBecameOfTheirMail(t *testing.T) {
 	read("POST", "/threads/"+thread.ThreadID.String(), `{"body":"Bitte Turnbeutel mitgeben"}`, &[]messaging.ParentChatMessageResponse{})
 	read("GET", "/threads/"+thread.ThreadID.String(), "", &thread)
 	require.Len(t, thread.Messages, 1)
-	messageID := thread.Messages[0].ID.String()
+	messageID := thread.Messages[0].ID
 	var mails messaging.ThreadMailsResponse
 	read("GET", "/threads/"+thread.ThreadID.String()+"/mails", "", &mails)
-	require.Equal(t, map[string]string{messageID: "queued"}, mails.Messages, "the mail is queued with the message")
+	require.Len(t, mails.Messages, 1)
+	require.Equal(t, "queued", mails.Messages[messageID], "the mail is queued with the message")
 
 	_, err = db.NewRaw(`UPDATE platform.email_outbox SET status = 'sent', sent_at = now(), delivery_state = 'failed', delivery_state_at = now()
 		WHERE related_entity_type = 'parent_message' AND related_entity_id = ?`, messageID).Exec(testpkg.Ctx(t))
 	require.NoError(t, err)
 	read("GET", "/threads/"+thread.ThreadID.String()+"/mails", "", &mails)
-	require.Equal(t, map[string]string{messageID: "undeliverable"}, mails.Messages)
+	require.Len(t, mails.Messages, 1)
+	require.Equal(t, "undeliverable", mails.Messages[messageID])
 
 	var group messaging.GroupThreadDetailResponse
 	read("POST", "/group-threads", `{"target_type":"class","target_id":"1a","target_label":"Klasse 1a","title":"Ausflug","body":"Morgen Zoo"}`, &group)
@@ -91,7 +93,7 @@ func TestOGSMessagesShowWhatBecameOfTheirMail(t *testing.T) {
 	var groupMails messaging.GroupThreadMailsResponse
 	read("GET", "/group-threads/"+group.Thread.ID.String()+"/mails", "", &groupMails)
 	require.Len(t, groupMails.Messages, 1)
-	require.Equal(t, map[string]int{"queued": 1}, groupMails.Messages[group.Messages[0].ID.String()], "one mail per family of the class")
+	require.Equal(t, map[string]int{"queued": 1}, groupMails.Messages[group.Messages[0].ID], "one mail per family of the class")
 
 	// The list shows the group thread with its families, the reach names
 	// the child, and closing the thread ends it.

@@ -61,11 +61,17 @@ func Build(routes []Registration, options Options) (Document, error) {
 			b.deprecated[field] = true
 		}
 	}
+	if err := b.registerEnums(Registration{Enums: options.StreamEnums}); err != nil {
+		return Document{}, err
+	}
 	built, lines, err := b.routes(routes, options)
 	if err != nil {
 		return Document{}, err
 	}
 	doc := Document{Routes: built, Outside: lines}
+	if err := b.buildNonRouteShapes(&doc, options); err != nil {
+		return Document{}, err
+	}
 	if err := b.unused(options); err != nil {
 		return Document{}, err
 	}
@@ -80,6 +86,27 @@ func Build(routes []Registration, options Options) (Document, error) {
 	sort.Slice(doc.Routes, func(i, j int) bool { return doc.Routes[i].Key() < doc.Routes[j].Key() })
 	sort.Slice(doc.Outside, func(i, j int) bool { return doc.Outside[i].Key() < doc.Outside[j].Key() })
 	return doc, nil
+}
+
+func (b *builder) buildNonRouteShapes(doc *Document, options Options) error {
+	if options.StreamEvent != nil {
+		schema, err := b.top(options.StreamEvent, "SSE event", false)
+		if err != nil {
+			return err
+		}
+		doc.StreamEvent = &schema
+	}
+	if len(options.ProblemDetails) != 0 {
+		doc.ProblemDetails = make(map[string]Schema, len(options.ProblemDetails))
+	}
+	for _, code := range sortedKeys(options.ProblemDetails) {
+		schema, err := b.top(options.ProblemDetails[code], "error details "+code, false)
+		if err != nil {
+			return err
+		}
+		doc.ProblemDetails[code] = schema
+	}
+	return nil
 }
 
 // routes builds every registration once, the lines outside the contract

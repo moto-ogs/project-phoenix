@@ -41,7 +41,7 @@ import {
   importBatchSavedCount,
   readImportBatchFailure,
 } from "~/lib/import-batch-result";
-import type * as importContract from "~/lib/contract/import.generated";
+import * as importContract from "~/lib/contract/import.generated";
 import { createLogger } from "~/lib/logger";
 
 /** Info-Knopf am Seitentitel: wofür die Seite da ist und was man zuerst tut. */
@@ -225,10 +225,12 @@ export default function ClassListImportPage() {
       } catch (error) {
         // A stopped batch carries the rows already saved in its error body.
         const result = importFailureBody(error);
-        const interrupted =
-          readImportBatchFailure<importContract.ClassListImportError>(result);
+        const interrupted = readImportBatchFailure(
+          result,
+          importContract.ClassListImportResultSchema,
+        );
         if (interrupted) {
-          setImportResult(interrupted as importContract.ClassListImportResult);
+          setImportResult(interrupted);
           setImportInterrupted(true);
           setPreviewData((interrupted.errors ?? []).map(toDisplayEntry));
           setBatchNotice(importBatchFailureMessage(interrupted));

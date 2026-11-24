@@ -47,7 +47,7 @@ import {
   importFailureBody,
 } from "~/lib/import-request";
 import { bffJson } from "~/lib/bff-fetch";
-import type * as importContract from "~/lib/contract/import.generated";
+import * as importContract from "~/lib/contract/import.generated";
 import { createLogger } from "~/lib/logger";
 
 /** Info-Knopf am Seitentitel: wofür die Seite da ist und was man zuerst tut. */
@@ -333,10 +333,12 @@ export default function StudentImportPage() {
       } catch (error) {
         // A stopped batch carries the rows already saved in its error body.
         const result = importFailureBody(error);
-        const interrupted =
-          readImportBatchFailure<importContract.StudentImportError>(result);
+        const interrupted = readImportBatchFailure(
+          result,
+          importContract.StudentImportResultSchema,
+        );
         if (interrupted) {
-          setImportResult(interrupted as importContract.StudentPreviewResponse);
+          setImportResult(interrupted);
           setImportInterrupted(true);
           setPreviewData((interrupted.errors ?? []).map(toDisplayStudent));
           // Ein Stapel kann am Kinderkontingent scheitern, wenn zwischen

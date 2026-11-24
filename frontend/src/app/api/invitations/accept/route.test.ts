@@ -151,10 +151,16 @@ describe("POST /api/invitations/accept", () => {
     };
 
     vi.mocked(global.fetch).mockResolvedValueOnce(
-      new Response(JSON.stringify({ detail: "Token expired" }), {
-        status: 410,
-        headers: { "Content-Type": "application/json" },
-      }),
+      Response.json(
+        {
+          type: "about:blank",
+          title: "Gone",
+          status: 410,
+          detail: "Token expired",
+          code: "identity.invitation_expired",
+        },
+        { status: 410 },
+      ),
     );
 
     const request = createMockRequest("/api/invitations/accept", {
