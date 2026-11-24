@@ -97,7 +97,7 @@ func testFutureSplitAndBulkCancellation(t *testing.T, offset int) {
 	splitDone := make(chan error, 1)
 	running.Go(func() {
 		splitDone <- testpkg.WithTenantTx(t, ctx, f.s.db, f.s.tenantID, func(splitCtx context.Context, _ bun.Tx) error {
-			_, err := module.Templates.SplitTemplate(splitCtx, in)
+			_, err := editorTemplates{TemplateAdministration: module.Templates, reads: module.Data}.SplitTemplate(splitCtx, in)
 			return err
 		})
 	})

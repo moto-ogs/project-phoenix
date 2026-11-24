@@ -252,6 +252,9 @@ type UpdateTemplateCommand struct {
 	// (#6838). ActorAccountID attributes dropped deviations.
 	ReplanFuture   bool
 	ActorAccountID *int64
+	// ExpectedVersion is the TemplateSeriesVersion of the segment its editor
+	// read (ADR 0311); the write compares it under the recurrence gate.
+	ExpectedVersion string
 }
 
 // SplitTemplateCommand is "Dieser und alle folgenden" (WP-B3): the update
@@ -305,6 +308,9 @@ type SplitTemplateCommand struct {
 	// ActorAccountID stamps the Änderungsprotokoll entries of deviations the
 	// split drops (#1886).
 	ActorAccountID *int64
+	// ExpectedVersion is the TemplateSeriesVersion of the segment its editor
+	// read (ADR 0311); the write compares it under the recurrence gate.
+	ExpectedVersion string
 }
 
 // SplitTemplateResult summarises one split.

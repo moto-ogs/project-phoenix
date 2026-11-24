@@ -25,6 +25,16 @@ type OfferingPreviewSources interface {
 	OfferingWeekdayBookings(ctx context.Context, calendarPeriodID *int64, from calendar.Date) ([]timetable.OfferingWeekdayBooking, error)
 }
 
+// TemplateSeriesReads are the Timetable owner's template reads the series
+// version of an edit or split is taken over (timetable.TemplateSeriesVersion,
+// ADR 0311): the period-free template entries and the weekday roster of the
+// template's planning period. The composition binds the owner's planner
+// reads.
+type TemplateSeriesReads interface {
+	ListTemplateEntries(ctx context.Context, templateID *int64, childrenPerStaffRatio int) ([]timetable.TemplateListEntry, error)
+	ListTemplateWeekdayRoster(ctx context.Context, templateID, calendarPeriodID *int64) ([]timetable.TemplateWeekdayRosterRow, error)
+}
+
 // TemplateAdministrationDependencies wires timetable.TemplateAdministration:
 // the retained template rows, the owner's materialization and recurrence
 // gate, and the ports the composition root binds — the instance lifecycle's
@@ -53,6 +63,8 @@ type TemplateAdministrationDependencies struct {
 	// Periods bound the re-plan an update requests (#6838).
 	Periods       TemplatePeriods
 	CareOfferings CareOfferingChecks
+	// SeriesReads take the version an update or a split compares.
+	SeriesReads TemplateSeriesReads
 	// OfferingSources serve the offering connection's preview check.
 	OfferingSources      OfferingPreviewSources
 	ResyncOfferingRoster func(context.Context, timetable.OfferingRosterResyncInput) error

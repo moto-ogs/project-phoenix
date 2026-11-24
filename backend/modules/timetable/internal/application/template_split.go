@@ -65,6 +65,8 @@ type TemplateSplitDependencies struct {
 	Logger               *slog.Logger
 	Transactions         ports.TenantTransactions
 	Today                func() calendar.Date
+	// SeriesReads take the version a split compares (ADR 0311).
+	SeriesReads ports.TemplateSeriesReads
 }
 
 // TemplateSplitService performs recurring-template scope operations.
@@ -384,6 +386,9 @@ func (s *TemplateSplitService) splitInTransaction(
 	tenantID int64,
 ) (*timetable.SplitTemplateResult, error) {
 	if err := s.lockSplitRecurrence(ctx, "split template"); err != nil {
+		return nil, err
+	}
+	if err := checkTemplateSeriesVersion(ctx, s.deps.SeriesReads, "split template", in.TemplateID, in.ExpectedVersion); err != nil {
 		return nil, err
 	}
 	if err := s.validateSplitCatalogue(ctx, in); err != nil {

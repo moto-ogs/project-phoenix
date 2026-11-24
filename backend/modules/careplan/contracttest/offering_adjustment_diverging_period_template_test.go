@@ -448,6 +448,7 @@ func TestSourcedRowPeriod_SplitWithoutPeriodPlansSuccessorWithoutPeriod(t *testi
 			CategoryID:      f.template.CategoryID,
 			TargetGroupType: timetable.TargetGroupTypeOffering,
 			GradeLevelMax:   testpkg.MaxSchoolGradeLevel,
+			ExpectedVersion: templateSeriesVersion(t, txCtx, templates.Data, f.template.ID),
 		})
 		return splitErr
 	})
@@ -485,4 +486,17 @@ func offeringPreviewFingerprint(t *testing.T, ctx context.Context, review timeta
 	require.NoError(t, err)
 	filter := timetable.OfferingSourceFilter{OfferingIDs: cmd.OfferingIDs, GradeLevels: cmd.GradeLevels, SchoolClasses: cmd.SchoolClasses}
 	return timetable.OfferingSourcePreviewFingerprint(cmd.EffectiveDate, segments, timetable.PreviewOfferingSource(rosters[living.TemplateID], filter, bookings))
+}
+
+// templateSeriesVersion is the version GET /templates/{id} answers for the
+// series editor: the owner's token over the period-free entries and the
+// weekday roster of the template's planning period.
+func templateSeriesVersion(t *testing.T, ctx context.Context, reads timetable.TimetableDataCapability, templateID int64) string {
+	t.Helper()
+	entries, err := reads.ListTemplateEntries(ctx, &templateID, 1)
+	require.NoError(t, err)
+	require.NotEmpty(t, entries)
+	roster, err := reads.ListTemplateWeekdayRoster(ctx, &templateID, entries[0].TemplateCalendarPeriodID)
+	require.NoError(t, err)
+	return timetable.TemplateSeriesVersion(entries, roster)
 }

@@ -134,6 +134,7 @@ func NewTimetableHTTPTestModule(db transactionruntime.Database, options Timetabl
 		Deviations:           timetableHTTPTestSeriesDeviations(options.Instances),
 		CareOfferings:        timetableHTTPTestCareOfferingChecks(options),
 		OfferingSources:      options.OfferingSources,
+		SeriesReads:          data,
 		ResyncOfferingRoster: options.ResyncOfferingRoster,
 		RecurrenceLock:       lock,
 		SchoolClasses: timetablePorts.SchoolClassRules{

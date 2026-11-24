@@ -114,7 +114,7 @@ func buildLifecycle(t *testing.T, clocks ...func() time.Time) *lifecycleSetup {
 	setup := &lifecycleSetup{
 		presence:        newInstancePresence(t, db),
 		instance:        fixtures.FromInstanceLifecycle(ttLifecycle.Instances),
-		timetableData:   ttPlanning.Planning,
+		timetableData:   withEditorReads(ttPlanning.Planning),
 		active:          ttActive,
 		materialization: ttMaterialization,
 		careDay:         ttSchedules.CareDay,
