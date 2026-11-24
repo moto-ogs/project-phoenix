@@ -251,7 +251,7 @@ function legalTexts(
       kind: "consent",
       title: "Fotoeinwilligung",
       label:
-        "Mein Kind darf in der Betreuung fotografiert werden. Ein Foto von meinem Kind darf in moto gespeichert werden. Diese Einwilligung ist freiwillig und jederzeit mit Wirkung für die Zukunft widerrufbar.",
+        "Mein Kind darf bei Schulveranstaltungen fotografiert werden. Diese Einwilligung ist freiwillig und jederzeit mit Wirkung für die Zukunft widerrufbar.",
       text: "Foto Text",
       required: false,
     },
