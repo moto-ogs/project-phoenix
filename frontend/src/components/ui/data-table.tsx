@@ -672,7 +672,7 @@ function StackedRowEnd({
   return (
     <span
       data-row-control=""
-      className={`flex shrink-0 items-center gap-1 ${className}`}
+      className={`flex max-w-full shrink-0 items-center gap-1 ${className}`}
     >
       {toggle}
       {menu}
@@ -1160,7 +1160,7 @@ function StackedRows<T>({
             <>
               <div
                 data-stacked-head=""
-                className="flex items-baseline justify-between gap-3"
+                className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-2"
               >
                 {selection ? (
                   <StackedRowCheckbox
@@ -1169,7 +1169,9 @@ function StackedRows<T>({
                     selection={selection}
                   />
                 ) : null}
-                <span id={titleId} className="min-w-0 flex-1">
+                {/* Wide row actions (several text buttons) wrap below the
+                    title instead of squeezing it under them. */}
+                <span id={titleId} className="min-w-32 flex-1">
                   {title?.render(row)}
                 </span>
                 {meta ? (
