@@ -62,17 +62,37 @@ func seedCareNotices(client *Client, auth AuthRef, school int64, current calenda
 	if err != nil || runID == 0 {
 		return 0, err
 	}
-	raw, err := client.GetWithAuth(auth, fmt.Sprintf("/traeger/care-notice-runs/%d", runID))
+	issued, err := seedReleaseNoticeRun(client, auth, runID)
+	if err != nil || issued == 0 {
+		return 0, err
+	}
+	if err := seedCareNoticeLetters(client, auth, runID); err != nil {
+		return 0, err
+	}
+	return issued, nil
+}
+
+// seedReleaseNoticeRun releases the notice run with the preview it read.
+// The contract-conclusion worker concludes contracts on its own tick, 70 s
+// after the server starts, and a contract it concludes between the read and
+// the release changes the preview (#6438). Like the office after the
+// refusal, the seed reads the preview once more and releases that; a second
+// refusal stays an error. It returns the number of issued notices.
+func seedReleaseNoticeRun(client *Client, auth AuthRef, runID int64) (int, error) {
+	issued, err := seedTryNoticeRelease(client, auth, runID)
+	if seedConflictCode(err, seedCareRunChanged) {
+		issued, err = seedTryNoticeRelease(client, auth, runID)
+	}
+	return issued, err
+}
+
+// seedTryNoticeRelease releases the preview it reads; a run another seed
+// released or one with nothing to issue gives 0 without an error.
+func seedTryNoticeRelease(client *Client, auth AuthRef, runID int64) (int, error) {
+	run, err := seedReadNoticeRun(client, auth, runID)
 	if err != nil {
-		return 0, fmt.Errorf("check the notice run: %w", err)
+		return 0, err
 	}
-	var envelope struct {
-		Data seedCareNoticeRun `json:"data"`
-	}
-	if err := json.Unmarshal(raw, &envelope); err != nil {
-		return 0, fmt.Errorf("check the notice run: %w", err)
-	}
-	run := envelope.Data
 	if run.Status != "calculated" {
 		return 0, nil
 	}
@@ -82,19 +102,29 @@ func seedCareNotices(client *Client, auth AuthRef, school int64, current calenda
 	_, err = client.PostWithAuth(auth, fmt.Sprintf("/traeger/care-notice-runs/%d/release", runID), map[string]any{
 		"document_count": run.PreviewCount, "total_cents": run.PreviewCents, "fingerprint": run.Fingerprint,
 	})
-	if seedConflictCode(err, seedCareRunReleased) {
+	switch {
+	case seedConflictCode(err, seedCareRunReleased):
 		return 0, nil
-	}
-	if seedConflictCode(err, seedBillingRunEmpty) {
+	case seedConflictCode(err, seedBillingRunEmpty):
 		return 0, seedDiscardNoticeRun(client, auth, runID)
-	}
-	if err != nil {
+	case err != nil:
 		return 0, fmt.Errorf("release the notice run: %w", err)
 	}
-	if err := seedCareNoticeLetters(client, auth, runID); err != nil {
-		return 0, err
-	}
 	return run.PreviewCount, nil
+}
+
+func seedReadNoticeRun(client *Client, auth AuthRef, runID int64) (seedCareNoticeRun, error) {
+	raw, err := client.GetWithAuth(auth, fmt.Sprintf("/traeger/care-notice-runs/%d", runID))
+	if err != nil {
+		return seedCareNoticeRun{}, fmt.Errorf("check the notice run: %w", err)
+	}
+	var envelope struct {
+		Data seedCareNoticeRun `json:"data"`
+	}
+	if err := json.Unmarshal(raw, &envelope); err != nil {
+		return seedCareNoticeRun{}, fmt.Errorf("check the notice run: %w", err)
+	}
+	return envelope.Data, nil
 }
 
 // seedDiscardNoticeRun discards the seed's notice run that has nothing to

@@ -13,11 +13,12 @@ import (
 // released: the SJR pattern of the monthly care by direct debit and the
 // holiday care by transfer, the run's due date per payment method (2nd and
 // 4th of the month after), and two families that deviate: one invoice goes
-// to another payer, one to both parents with its own due day.
-func seedBillingTerms(client *Client, auth AuthRef, runID int64, month calendar.Date) error {
+// to another payer, one to both parents with its own due day. It returns the
+// contracts whose families got their debtor number.
+func seedBillingTerms(client *Client, auth AuthRef, runID int64, month calendar.Date) (map[ident.ID]bool, error) {
 	versions, err := serviceTermsVersions(client, auth)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	for service, terms := range map[string]map[string]any{
 		"care":    {"payment_method": "direct_debit", "due_days": 10},
@@ -26,21 +27,21 @@ func seedBillingTerms(client *Client, auth AuthRef, runID int64, month calendar.
 	} {
 		terms["expected_version"] = versions[service]
 		if _, err := client.PutWithAuth(auth, "/traeger/billing-terms/"+service, terms); err != nil {
-			return fmt.Errorf("keep the payment terms of %s: %w", service, err)
+			return nil, fmt.Errorf("keep the payment terms of %s: %w", service, err)
 		}
 	}
 	// The run names its invoices and the version of its due dates, which
 	// their change sends back (ADR 0311); the dates change no invoice.
 	raw, err := client.GetWithAuth(auth, fmt.Sprintf("/traeger/care-billing-runs/%d", runID))
 	if err != nil {
-		return fmt.Errorf("read the monthly run: %w", err)
+		return nil, fmt.Errorf("read the monthly run: %w", err)
 	}
 	run, err := seedReadData[struct {
 		Invoices        []seedRunInvoice `json:"invoices"`
 		DueDatesVersion string           `json:"due_dates_version"`
 	}](raw, "monthly run")
 	if err != nil {
-		return err
+		return nil, err
 	}
 	next := calendar.NewDate(month.Year(), month.Month(), 1).AddDays(32)
 	if _, err := client.PutWithAuth(auth, fmt.Sprintf("/traeger/billing-run-due-dates/care/%d", runID), map[string]any{
@@ -50,13 +51,17 @@ func seedBillingTerms(client *Client, auth AuthRef, runID int64, month calendar.
 			{"payment_method": "direct_debit", "due_on": calendar.NewDate(next.Year(), next.Month(), 4).String()},
 		},
 	}); err != nil {
-		return fmt.Errorf("keep the due dates of the monthly run: %w", err)
+		return nil, fmt.Errorf("keep the due dates of the monthly run: %w", err)
 	}
 	invoices := run.Invoices
 	if err := seedFamilyBilling(client, auth, invoices); err != nil {
-		return err
+		return nil, err
 	}
-	return seedSEPAMandates(client, auth, invoices)
+	numbered := make(map[ident.ID]bool, len(invoices))
+	for _, invoice := range invoices {
+		numbered[invoice.ContractID] = true
+	}
+	return numbered, seedSEPAMandates(client, auth, invoices)
 }
 
 // serviceTermsVersions reads per service the version of its terms, which a
@@ -142,6 +147,34 @@ func familyBillingVersion(client *Client, auth AuthRef, contractID ident.ID) (st
 		return "", fmt.Errorf("read the deviation of a family: %w", err)
 	}
 	return envelope.Data.Version, nil
+}
+
+// seedLateDebtorNumbers gives the families of the invoices that joined the
+// preview after seedBillingTerms read it their debtor number: the
+// contract-conclusion worker concludes contracts on its own tick, 70 s after
+// the server starts. Without the number the released invoice lacks its
+// DATEV account and the DATEV file of the run is refused (#6433). It reports
+// whether it changed a family, which changes the preview again.
+func seedLateDebtorNumbers(client *Client, auth AuthRef, contracts []ident.ID, numbered map[ident.ID]bool) (bool, error) {
+	changed := false
+	for _, contractID := range contracts {
+		if numbered[contractID] {
+			continue
+		}
+		version, err := familyBillingVersion(client, auth, contractID)
+		if err != nil {
+			return changed, err
+		}
+		if _, err := client.PutWithAuth(auth, "/traeger/family-billing/", map[string]any{
+			"contract_id": contractID, "recipient_kind": "applicant", "debtor_number": seedDebtorNumber(len(numbered)),
+			"expected_version": version,
+		}); err != nil {
+			return changed, fmt.Errorf("keep the debtor number of a late family: %w", err)
+		}
+		numbered[contractID] = true
+		changed = true
+	}
+	return changed, nil
 }
 
 // seedSEPACreditor keeps the Bundesbank's test identifier as the creditor,
