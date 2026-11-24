@@ -70,6 +70,7 @@ import {
 import { hasPermission, isAdmin } from "~/lib/auth-utils";
 import { berlinTodayISO, parseISODate, toISODate } from "~/lib/date-helpers";
 import {
+  useReadDraftForm,
   useSwrLoadError,
   useSwrResourceLoadError,
 } from "~/lib/hooks/use-swr-load-error";
@@ -88,6 +89,7 @@ import {
   type CalendarAppointmentOverview,
   type CalendarDeliveryMode,
   type CalendarEvent,
+  type CalendarAppointmentDetail,
   type CalendarOverviewVisibility,
   type CalendarRecipientOptions,
   type CalendarResponse,
@@ -100,6 +102,7 @@ import {
   type SchoolHolidays,
 } from "~/lib/school-holidays-api";
 import { useSWRAuth } from "~/lib/swr";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import { useCalDAVEnabled } from "~/lib/tenant-context";
 import { calendarPeriodsConcept } from "~/lib/concepts/calendarPeriods";
@@ -112,6 +115,80 @@ import {
 } from "~/lib/calendar-answers";
 
 type RecurrenceFrequency = "none" | "daily" | "weekly" | "monthly" | "yearly";
+
+/** What the appointment form edits. */
+interface AppointmentFormFields {
+  readonly title: string;
+  readonly description: string;
+  readonly location: string;
+  readonly startDate: string;
+  readonly endDate: string;
+  readonly startTime: string;
+  readonly endTime: string;
+  readonly allDay: boolean;
+  readonly overviewVisibility: CalendarOverviewVisibility;
+  readonly sendEmail: boolean;
+  readonly frequency: RecurrenceFrequency;
+  readonly intervalCount: number;
+  readonly weeklyDays: string[];
+  readonly endsOn: string;
+  // Recurrence fields the form has no dedicated control for yet (monthly
+  // by-day-of-month, count-based end). They are preserved verbatim across an
+  // edit so re-saving a series never silently drops them (which would change
+  // the schedule or make a bounded series unbounded).
+  readonly monthDays: number[];
+  readonly occurrenceCount: number | null;
+}
+
+function newAppointmentFields(today: string): AppointmentFormFields {
+  return {
+    title: "",
+    description: "",
+    location: "",
+    startDate: today,
+    endDate: today,
+    startTime: "09:00",
+    endTime: "10:00",
+    allDay: false,
+    overviewVisibility: "organizer",
+    sendEmail: false,
+    frequency: "none",
+    intervalCount: 1,
+    weeklyDays: [],
+    endsOn: "",
+    monthDays: [],
+    occurrenceCount: null,
+  };
+}
+
+/**
+ * The form of a stored appointment. Editing is series-scoped, so it starts
+ * from the persisted series base, never from a clicked occurrence.
+ */
+function appointmentFieldsOf(
+  detail: CalendarAppointmentDetail,
+): AppointmentFormFields {
+  const base = detail.appointment;
+  const rule = detail.recurrence;
+  return {
+    title: base.title,
+    description: base.description ?? "",
+    location: base.location ?? "",
+    startDate: base.start_date,
+    endDate: base.end_date,
+    startTime: base.all_day ? "09:00" : base.start_time,
+    endTime: base.all_day ? "10:00" : base.end_time,
+    allDay: base.all_day,
+    overviewVisibility: base.overview_visibility,
+    sendEmail: base.notify_guardians,
+    frequency: rule?.frequency ?? "none",
+    intervalCount: rule?.interval_count ?? 1,
+    weeklyDays: rule?.weekdays ?? [],
+    endsOn: rule?.ends_on ?? "",
+    monthDays: rule?.month_days ?? [],
+    occurrenceCount: rule?.occurrence_count ?? null,
+  };
+}
 
 interface DraftTarget extends CalendarTarget {
   readonly key: string;
@@ -447,19 +524,86 @@ function StaffCalendarPageInner() {
     "occurrence" | "series" | null
   >(null);
   const [cancelTarget, setCancelTarget] = useState<CalendarEvent | null>(null);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [location, setLocation] = useState("");
-  const [startDate, setStartDate] = useState(berlinTodayISO());
-  const [endDate, setEndDate] = useState(berlinTodayISO());
-  const [startTime, setStartTime] = useState("09:00");
-  const [endTime, setEndTime] = useState("10:00");
-  const [allDay, setAllDay] = useState(false);
+  // Die Angaben des Formulars. Ein neuer Termin hält sie selbst; ein
+  // geänderter ruht auf dem Termin, wie er beim Öffnen gelesen war
+  // (ADR 0311): ein neueres Lesen füllt nur einen unberührten Entwurf nach,
+  // nach einer Ablehnung zeigt das Formular den gespeicherten Termin, und
+  // Speichern wartet, bis er gelesen ist.
+  const [createFields, setCreateFields] = useState<AppointmentFormFields>(() =>
+    newAppointmentFields(berlinTodayISO()),
+  );
+  // The appointment as its edit read it: on opening, after a refusal.
+  const [editedDetail, setEditedDetail] = useState<CalendarAppointmentDetail>();
+  const edit = useDraftOn<
+    CalendarAppointmentDetail,
+    AppointmentFormFields,
+    string,
+    CalendarAppointmentDetail
+  >(
+    {
+      opening: editingId,
+      data: editedDetail,
+      reload: async () => {
+        const stored = await getStaffAppointmentDetail(editingId ?? "");
+        setEditedDetail(stored);
+        return stored;
+      },
+    },
+    {
+      token: (detail) => detail.version,
+      toDraft: appointmentFieldsOf,
+      answer: (saved) => saved,
+    },
+  );
+  const fields = (editingId ? edit.draft : undefined) ?? createFields;
+  const {
+    title,
+    description,
+    location,
+    startDate,
+    endDate,
+    startTime,
+    endTime,
+    allDay,
+    overviewVisibility,
+    sendEmail,
+    frequency,
+    intervalCount,
+    weeklyDays,
+    endsOn,
+    monthDays,
+    occurrenceCount,
+  } = fields;
+  const updateFields = (
+    next: (current: AppointmentFormFields) => AppointmentFormFields,
+  ) => {
+    if (editingId) edit.setDraft(next);
+    else setCreateFields(next);
+  };
+  const setField =
+    <K extends keyof AppointmentFormFields>(key: K) =>
+    (value: AppointmentFormFields[K]) =>
+      updateFields((current) => ({ ...current, [key]: value }));
+  const setTitle = setField("title");
+  const setDescription = setField("description");
+  const setLocation = setField("location");
+  const setStartDate = setField("startDate");
+  const setEndDate = setField("endDate");
+  const setStartTime = setField("startTime");
+  const setEndTime = setField("endTime");
+  const setAllDay = setField("allDay");
+  const setOverviewVisibility = setField("overviewVisibility");
+  const setSendEmail = setField("sendEmail");
+  const setFrequency = setField("frequency");
+  const setIntervalCount = setField("intervalCount");
+  const setEndsOn = setField("endsOn");
+  const setWeeklyDays = (next: (current: string[]) => string[]) =>
+    updateFields((current) => ({
+      ...current,
+      weeklyDays: next(current.weeklyDays),
+    }));
   const [deliveryMode, setDeliveryMode] =
     useState<CalendarDeliveryMode>("rsvp_required");
-  const [overviewVisibility, setOverviewVisibility] =
-    useState<CalendarOverviewVisibility>("organizer");
-  const [sendEmail, setSendEmail] = useState(false);
   const [targetSearch, setTargetSearch] = useState("");
   const [targets, setTargets] = useState<DraftTarget[]>([]);
   const [overview, setOverview] = useState<CalendarAppointmentOverview | null>(
@@ -467,16 +611,6 @@ function StaffCalendarPageInner() {
   );
   const [overviewLoading, setOverviewLoading] = useState(false);
   const [overviewFailed, setOverviewFailed] = useState(false);
-  const [frequency, setFrequency] = useState<RecurrenceFrequency>("none");
-  const [intervalCount, setIntervalCount] = useState(1);
-  const [weeklyDays, setWeeklyDays] = useState<string[]>([]);
-  const [endsOn, setEndsOn] = useState("");
-  // Recurrence fields the form has no dedicated control for yet (monthly
-  // by-day-of-month, count-based end). They are preserved verbatim across an
-  // edit so re-saving a series never silently drops them (which would change
-  // the schedule or make a bounded series unbounded).
-  const [monthDays, setMonthDays] = useState<number[]>([]);
-  const [occurrenceCount, setOccurrenceCount] = useState<number | null>(null);
   const save = useFormModalPending(formOpen && canManageCalendar, editingId);
   const submitting = save.pending;
   // Fehler des Terminformulars: Alert oben im Panel, Feldfehler am Feld
@@ -485,6 +619,11 @@ function StaffCalendarPageInner() {
   const formRef = useRef<HTMLDivElement>(null);
   const formErrors = useApiFormError(formRef);
   const clearFormErrors = formErrors.clear;
+  const editForm = useReadDraftForm(
+    editingId ? edit : null,
+    formErrors,
+    "den Termin",
+  );
   // Aktionen ohne eigene Fläche (Termin öffnen, Antworten, Absagen): Toast
   // mit Katalogtext und Wiederholen (#2517).
   const { show: showActionError } = useApiErrorDisplay();
@@ -623,31 +762,17 @@ function StaffCalendarPageInner() {
   };
 
   const resetForm = () => {
-    setTitle("");
-    setDescription("");
-    setLocation("");
+    setCreateFields(newAppointmentFields(berlinTodayISO()));
     setTargets([]);
-    setFrequency("none");
-    setEndsOn("");
-    setWeeklyDays([]);
-    setIntervalCount(1);
-    setMonthDays([]);
-    setOccurrenceCount(null);
-    setOverviewVisibility("organizer");
     setDeliveryMode("rsvp_required");
-    setSendEmail(false);
     setEditingId(null);
+    setEditedDetail(undefined);
     clearFormErrors();
     setFormOpen(false);
   };
 
   const handleCreate = () => {
     resetForm();
-    setStartDate(berlinTodayISO());
-    setEndDate(berlinTodayISO());
-    setStartTime("09:00");
-    setEndTime("10:00");
-    setAllDay(false);
     setFormOpen(true);
   };
 
@@ -659,37 +784,11 @@ function StaffCalendarPageInner() {
       // appointment), so prefill from the persisted appointment DETAIL — its
       // base title/dates/etc. — NOT from the clicked occurrence. Otherwise
       // opening a later occurrence and saving would re-anchor the series to that
-      // occurrence's date and drop earlier occurrences. Times don't shift per
-      // occurrence (only dates do), so the occurrence event's clean HH:MM values
-      // match the base and are safe to reuse.
+      // occurrence's date and drop earlier occurrences.
+      // The draft rests on this read and its version (ADR 0311).
       const detail = await getStaffAppointmentDetail(event.appointment_id);
-      const base = detail.appointment;
-      setTitle(base.title);
-      setDescription(base.description ?? "");
-      setLocation(base.location ?? "");
-      setStartDate(base.start_date);
-      setEndDate(base.end_date);
-      setAllDay(base.all_day);
-      setStartTime(base.all_day ? "09:00" : event.start_time);
-      setEndTime(base.all_day ? "10:00" : event.end_time);
-      setOverviewVisibility(base.overview_visibility);
-      setSendEmail(base.notify_guardians);
-      if (detail.recurrence) {
-        setFrequency(detail.recurrence.frequency);
-        setIntervalCount(detail.recurrence.interval_count);
-        setWeeklyDays(detail.recurrence.weekdays ?? []);
-        setEndsOn(detail.recurrence.ends_on ?? "");
-        // Preserve fields the form can't yet edit so re-saving doesn't drop them.
-        setMonthDays(detail.recurrence.month_days ?? []);
-        setOccurrenceCount(detail.recurrence.occurrence_count ?? null);
-      } else {
-        setFrequency("none");
-        setIntervalCount(1);
-        setWeeklyDays([]);
-        setEndsOn("");
-        setMonthDays([]);
-        setOccurrenceCount(null);
-      }
+      clearFormErrors();
+      setEditedDetail(detail);
       setEditingId(event.appointment_id);
       setFormOpen(true);
     } catch (err) {
@@ -823,6 +922,36 @@ function StaffCalendarPageInner() {
     await refreshCalendar();
   };
 
+  // Ein geänderter Termin geht mit dem Stand raus, auf dem der Entwurf ruht.
+  // Seit dem Lesen geändert (in einem anderen Fenster, eine abgesagte
+  // Einzelstunde): das Formular zeigt den gespeicherten Termin, ohne
+  // „Wiederholen“ (ADR 0311).
+  const submitEdit = async (
+    op: { isCurrent: () => boolean },
+    send: (version: string) => Promise<CalendarAppointmentDetail>,
+  ) => {
+    const result = await edit.submit((version) => send(version));
+    if (result.ok) {
+      toast.success(`Der Termin „${title.trim()}“ ist gespeichert.`);
+      if (op.isCurrent()) resetForm();
+      return true;
+    }
+    if (result.skipped) return false;
+    logFailure("calendar_appointment_save_failed", result.error);
+    if (op.isCurrent()) {
+      void formErrors.show(
+        result.error,
+        result.refused
+          ? { object: "das Speichern des Termins", reload: result.reload }
+          : {
+              object: "das Speichern des Termins",
+              retry: () => latestSubmitRef.current(),
+            },
+      );
+    }
+    return false;
+  };
+
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     void submit();
@@ -865,42 +994,54 @@ function StaffCalendarPageInner() {
               !endsOn && occurrenceCount ? occurrenceCount : undefined,
           };
 
-    formErrors.clear();
+    // Nichts geht raus, bevor der gespeicherte Stand gelesen ist; der
+    // gezeigte Fehler bleibt dann stehen.
+    if (!editForm.begin()) return;
+    if (editingId) {
+      // Editing keeps the original audience + delivery mode (see the API
+      // note): those cannot change without discarding collected RSVPs.
+      const appointmentId = editingId;
+      const changed = await save.run((op) =>
+        submitEdit(op, (version) =>
+          updateStaffAppointment(
+            appointmentId,
+            {
+              title: title.trim(),
+              description: description.trim() || undefined,
+              location: location.trim() || undefined,
+              start_date: startDate,
+              end_date: endDate || startDate,
+              start_time: allDay ? "00:00" : startTime,
+              end_time: allDay ? "23:59" : endTime,
+              all_day: allDay,
+              overview_visibility: overviewVisibility,
+              recurrence,
+              send_email: sendEmail,
+            },
+            version,
+          ),
+        ),
+      );
+      if (changed) await refreshCalendar();
+      return;
+    }
     const saved = await save.run(async (op) => {
       try {
-        if (editingId) {
-          // Editing keeps the original audience + delivery mode (see the API
-          // note): those cannot change without discarding collected RSVPs.
-          await updateStaffAppointment(editingId, {
-            title: title.trim(),
-            description: description.trim() || undefined,
-            location: location.trim() || undefined,
-            start_date: startDate,
-            end_date: endDate || startDate,
-            start_time: allDay ? "00:00" : startTime,
-            end_time: allDay ? "23:59" : endTime,
-            all_day: allDay,
-            overview_visibility: overviewVisibility,
-            recurrence,
-            send_email: sendEmail,
-          });
-        } else {
-          await createStaffAppointment({
-            title: title.trim(),
-            description: description.trim() || undefined,
-            location: location.trim() || undefined,
-            start_date: startDate,
-            end_date: endDate || startDate,
-            start_time: allDay ? "00:00" : startTime,
-            end_time: allDay ? "23:59" : endTime,
-            all_day: allDay,
-            delivery_mode: deliveryMode,
-            overview_visibility: overviewVisibility,
-            recurrence,
-            targets: targets.map(serializeTarget),
-            send_email: sendEmail,
-          });
-        }
+        await createStaffAppointment({
+          title: title.trim(),
+          description: description.trim() || undefined,
+          location: location.trim() || undefined,
+          start_date: startDate,
+          end_date: endDate || startDate,
+          start_time: allDay ? "00:00" : startTime,
+          end_time: allDay ? "23:59" : endTime,
+          all_day: allDay,
+          delivery_mode: deliveryMode,
+          overview_visibility: overviewVisibility,
+          recurrence,
+          targets: targets.map(serializeTarget),
+          send_email: sendEmail,
+        });
         toast.success(`Der Termin „${title.trim()}“ ist gespeichert.`);
         if (op.isCurrent()) resetForm();
         return true;
@@ -1131,6 +1272,7 @@ function StaffCalendarPageInner() {
               </SlideOverHeader>
               <SlideOverBody error={formErrors.error}>
                 <div ref={formRef}>
+                  <LoadErrorAlert error={editForm.loadError} className="mb-4" />
                   <form className="space-y-5" onSubmit={handleSubmit}>
                     <div className="flex items-center gap-2">
                       <MotoConceptIcon
@@ -1465,6 +1607,8 @@ function StaffCalendarPageInner() {
                         size="md"
                         isLoading={submitting}
                         loadingText="Speichert…"
+                        disabled={editForm.waitReason !== undefined}
+                        disabledReason={editForm.waitReason}
                         tooltip={appointmentSaveHint(
                           Boolean(editingId),
                           frequency !== "none",

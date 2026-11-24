@@ -538,6 +538,7 @@ export interface AppointmentDetail {
   recurrence?: RecurrenceRule;
   recipients: (AppointmentRecipient | null)[] | null;
   targets: (AppointmentTarget | null)[] | null;
+  version: string;
 }
 
 export const AppointmentDetailSchema: z.ZodType<AppointmentDetail, unknown> = object<AppointmentDetail>({
@@ -545,6 +546,7 @@ export const AppointmentDetailSchema: z.ZodType<AppointmentDetail, unknown> = ob
   recurrence: optional(RecurrenceRuleSchema),
   recipients: nullable(arr(nullable(AppointmentRecipientSchema))),
   targets: nullable(arr(nullable(AppointmentTargetSchema))),
+  version: str,
 });
 
 /** Go: portal.AppointmentResponseCounts */
@@ -628,6 +630,7 @@ export interface Event {
   can_edit: boolean;
   can_view_overview: boolean;
   school_event_type?: string;
+  version?: string;
 }
 
 export const EventSchema: z.ZodType<Event, unknown> = object<Event>({
@@ -661,6 +664,7 @@ export const EventSchema: z.ZodType<Event, unknown> = object<Event>({
   can_edit: bool,
   can_view_overview: bool,
   school_event_type: optional(str),
+  version: optional(str),
 });
 
 /** Go: portal.InvitationAnswer */

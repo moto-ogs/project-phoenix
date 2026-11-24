@@ -1603,7 +1603,7 @@ const EDIT_OVERLAY_BASELINE = new Map(
       "Schule bearbeiten@230",
     ],
     "src/app/school/kalender/page.tsx": [
-      "Schultermin anlegen Schultermin bearbeiten@335",
+      "Schultermin anlegen Schultermin bearbeiten@410",
     ],
     "src/components/database/grade-transitions/transition-editor.tsx": [
       "Schuljahreswechsel bearbeiten Neuer Schuljahreswechsel@369",

@@ -77,6 +77,7 @@ func TestOrganizerSeesWhatBecameOfTheAppointmentMails(t *testing.T) {
 	for _, title := range []string{"Elternabend neu", "Elternabend später"} {
 		rec := doJSON(t, router, http.MethodPut, "/calendar/appointments/"+appointmentID, token, map[string]any{
 			"title": title, "start_date": "2026-05-04", "end_date": "2026-05-04", "start_time": "18:30", "end_time": "19:30", "send_email": true,
+			"expected_version": appointmentVersionE2E(t, router, "/calendar/appointments/"+appointmentID, token),
 		})
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	}

@@ -57,7 +57,12 @@ const {
   mockMutate: vi.fn(),
 }));
 
-vi.mock("~/lib/swr", () => ({ useSWRAuth: mockUseSWRAuth }));
+vi.mock("~/lib/swr", () => ({
+  useSWRAuth: mockUseSWRAuth,
+  // The read of the stored state after a refusal (ADR 0311).
+  revalidateOrThrow: (read: { mutate: () => Promise<unknown> }) =>
+    read.mutate(),
+}));
 vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/contexts/ToastContext")>()),
   useToast: () => ({
@@ -125,6 +130,7 @@ const data: SchoolCalendarResponse = {
       school_event_type: "ausflug",
       can_respond: false,
       can_edit: true,
+      version: "v-3",
     },
   ],
   closing_days: [],
@@ -210,6 +216,7 @@ describe("Schulkalender: Speichern sperrt das Panel (#6593)", () => {
     expect(mockUpdateSchoolAppointment).toHaveBeenCalledWith(
       "3",
       expect.objectContaining({ title: "Zoo-Ausflug" }),
+      "v-3",
     );
     expect(mockToastSuccess).toHaveBeenCalledOnce();
     expect(mockMutate).toHaveBeenCalledOnce();

@@ -52,7 +52,10 @@ import {
   useToast,
 } from "~/contexts/ToastContext";
 import { berlinTodayISO, toISODate, parseISODate } from "~/lib/date-helpers";
-import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import {
+  useReadDraftForm,
+  useSwrLoadError,
+} from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import {
   createSchoolAppointment,
@@ -78,7 +81,8 @@ import {
 import { SCHOOL_PARENT_CONFERENCES_ROUTE } from "~/lib/parent-conferences";
 import { schoolClassLabel } from "~/lib/school-class-label";
 import { schoolPath } from "~/lib/school-url";
-import { useSWRAuth } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { schoolPortalKeys } from "~/lib/swr/portal-keys";
 
 const logger = createLogger({ component: "SchoolCalendarPage" });
@@ -120,10 +124,14 @@ export default function SchoolCalendarPage() {
   const calendarKey = session
     ? schoolPortalKeys.calendar(toISODate(range.from), toISODate(range.to))
     : null;
-  const { data, error, isLoading, mutate } = useSWRAuth<SchoolCalendarResponse>(
-    calendarKey,
-    () => getSchoolCalendar(range.from, range.to),
+  const calendarRead = useSWRAuth<SchoolCalendarResponse>(calendarKey, () =>
+    getSchoolCalendar(range.from, range.to),
   );
+  const { data, error, isLoading, mutate } = calendarRead;
+  const calendarReadRef = useRef(calendarRead);
+  useLayoutEffect(() => {
+    calendarReadRef.current = calendarRead;
+  });
   const events = useMemo(() => schoolCalendarEvents(data), [data]);
   const classes = data?.classes ?? [];
   const loadError = useSwrLoadError(error, "den Kalender", () => mutate());
@@ -131,13 +139,42 @@ export default function SchoolCalendarPage() {
   // Formular: angelegt wird ein neuer Schultermin, geändert ein eigener.
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<SchoolAppointmentDraft>(() =>
+  const [createDraft, setCreateDraft] = useState<SchoolAppointmentDraft>(() =>
     emptySchoolAppointmentDraft(berlinTodayISO()),
   );
   const save = useFormModalPending(formOpen, editingId);
   const submitting = save.pending;
   const formRef = useRef<HTMLDivElement>(null);
   const formErrors = useApiFormError(formRef);
+  // Eine Änderung ruht auf dem Schultermin, wie der Kalender ihn beim
+  // Öffnen zeigte (ADR 0311): ein neueres Lesen füllt nur einen unberührten
+  // Entwurf nach, nach einer Ablehnung zeigt das Formular den gespeicherten
+  // Termin, und Speichern wartet, bis er gelesen ist.
+  const edit = useDraftOn<CalendarEvent, SchoolAppointmentDraft, string, void>(
+    {
+      opening: formOpen ? editingId : null,
+      data: events.find((event) => event.appointment_id === editingId),
+      error: error ?? undefined,
+      reload: async () => {
+        const stored = await revalidateOrThrow(calendarReadRef.current);
+        const event = schoolCalendarEvents(stored).find(
+          (candidate) => candidate.appointment_id === editingId,
+        );
+        if (!event) throw new Error("school appointment is gone");
+        return event;
+      },
+    },
+    {
+      token: (event) => event.version ?? "",
+      toDraft: schoolAppointmentDraftFromEvent,
+    },
+  );
+  const editForm = useReadDraftForm(
+    editingId ? edit : null,
+    formErrors,
+    "den Termin",
+  );
+  const draft = (editingId ? edit.draft : undefined) ?? createDraft;
 
   const [deleteTarget, setDeleteTarget] = useState<CalendarEvent | null>(null);
   const [busyAppointmentId, setBusyAppointmentId] = useState<string | null>(
@@ -159,13 +196,15 @@ export default function SchoolCalendarPage() {
     ) => void
   >(() => undefined);
 
-  const update = (patch: Partial<SchoolAppointmentDraft>) =>
-    setDraft((current) => ({ ...current, ...patch }));
+  const update = (patch: Partial<SchoolAppointmentDraft>) => {
+    if (editingId) edit.setDraft((current) => ({ ...current, ...patch }));
+    else setCreateDraft((current) => ({ ...current, ...patch }));
+  };
 
   const openCreate = () => {
     formErrors.clear();
     setEditingId(null);
-    setDraft(emptySchoolAppointmentDraft(berlinTodayISO()));
+    setCreateDraft(emptySchoolAppointmentDraft(berlinTodayISO()));
     setFormOpen(true);
   };
 
@@ -173,7 +212,6 @@ export default function SchoolCalendarPage() {
     if (!event.appointment_id) return;
     formErrors.clear();
     setEditingId(event.appointment_id);
-    setDraft(schoolAppointmentDraftFromEvent(event));
     setFormOpen(true);
   };
 
@@ -199,15 +237,20 @@ export default function SchoolCalendarPage() {
       formErrors.invalid("Bitte prüfe die markierten Felder.", fields);
       return;
     }
-    formErrors.clear();
+    // Nichts geht raus, bevor der gespeicherte Stand gelesen ist; der
+    // gezeigte Fehler bleibt dann stehen.
+    if (!editForm.begin()) return;
+    if (editingId) {
+      const appointmentId = editingId;
+      // A saved change reads the calendar again through the draft (its
+      // answer carries no event), so no second refresh here.
+      await save.run((op) => submitEdit(op, appointmentId));
+      return;
+    }
     const saved = await save.run(async (op) => {
       try {
         const body = schoolAppointmentRequest(draft);
-        if (editingId) {
-          await updateSchoolAppointment(editingId, body);
-        } else {
-          await createSchoolAppointment(body);
-        }
+        await createSchoolAppointment(body);
         toast.success(`Der Termin „${body.title}“ ist gespeichert.`);
         if (op.isCurrent()) closeForm();
         return true;
@@ -223,6 +266,38 @@ export default function SchoolCalendarPage() {
       }
     });
     if (saved) await refreshCalendar();
+  };
+
+  // Ein geänderter Schultermin geht mit dem Stand raus, auf dem der Entwurf
+  // ruht. Seit dem Lesen geändert: das Formular zeigt den gespeicherten
+  // Termin, ohne „Wiederholen“ (ADR 0311).
+  const submitEdit = async (
+    op: { isCurrent: () => boolean },
+    appointmentId: string,
+  ) => {
+    const body = schoolAppointmentRequest(draft);
+    const result = await edit.submit((version) =>
+      updateSchoolAppointment(appointmentId, body, version),
+    );
+    if (result.ok) {
+      toast.success(`Der Termin „${body.title}“ ist gespeichert.`);
+      if (op.isCurrent()) closeForm();
+      return true;
+    }
+    if (result.skipped) return false;
+    logFailure("school_appointment_save_failed", result.error);
+    if (op.isCurrent()) {
+      void formErrors.show(
+        result.error,
+        result.refused
+          ? { object: "das Speichern des Termins", reload: result.reload }
+          : {
+              object: "das Speichern des Termins",
+              retry: () => latestSubmitRef.current(),
+            },
+      );
+    }
+    return false;
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -343,6 +418,10 @@ export default function SchoolCalendarPage() {
               >
                 <SlideOverBody error={formErrors.error}>
                   <div ref={formRef}>
+                    <LoadErrorAlert
+                      error={editForm.loadError}
+                      className="mb-4"
+                    />
                     <div className="space-y-5">
                       <div className="grid gap-4 md:grid-cols-2">
                         <Input
@@ -569,6 +648,8 @@ export default function SchoolCalendarPage() {
                   <EditActions
                     onCancel={closeForm}
                     saving={submitting}
+                    disabled={editForm.waitReason !== undefined}
+                    disabledReason={editForm.waitReason}
                     saveLabel="Speichern"
                     savingLabel="Speichert…"
                   />

@@ -156,6 +156,22 @@ export interface ParentConferenceRequest {
   location?: string | null;
 }
 
+/** Go: staffcalendarhttp.SchoolAppointmentUpdateRequest */
+export interface SchoolAppointmentUpdateRequest {
+  title?: string;
+  description?: string | null;
+  location?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  start_time?: string;
+  end_time?: string;
+  all_day?: boolean;
+  school_event_type?: string;
+  parents?: string;
+  classes?: string[] | null;
+  expected_version?: string;
+}
+
 /** Go: staffcalendarhttp.ParentConferenceUpdateRequest */
 export interface ParentConferenceUpdateRequest {
   school_class?: string;
@@ -241,7 +257,7 @@ export const routes = {
     method: "PUT",
     pattern: "/school/calendar/appointments/{appointmentId}",
     portals: ["school"],
-    request: requestBody<SchoolAppointmentRequest>(),
+    request: requestBody<SchoolAppointmentUpdateRequest>(),
     response: success(AppointmentDetailSchema),
   },
   "PUT /school/calendar/parent-conferences/{conferenceId}": {

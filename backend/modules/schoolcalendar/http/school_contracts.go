@@ -39,7 +39,7 @@ func SchoolRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/feed", Portals: portals, Response: CalendarFeedResponse{}},
 		{Method: "POST", Pattern: "/feed/rotate", Portals: portals, Response: CalendarFeedResponse{}},
 		{Method: "POST", Pattern: "/appointments", Portals: portals, Request: SchoolAppointmentRequest{}, Response: calendarService.AppointmentDetail{}},
-		{Method: "PUT", Pattern: "/appointments/{appointmentId}", Portals: portals, Request: SchoolAppointmentRequest{}, Response: calendarService.AppointmentDetail{}},
+		{Method: "PUT", Pattern: "/appointments/{appointmentId}", Portals: portals, Request: SchoolAppointmentUpdateRequest{}, Response: calendarService.AppointmentDetail{}},
 		{Method: "DELETE", Pattern: "/appointments/{appointmentId}", Portals: portals, Response: CalendarStatusResponse{}},
 		{Method: "POST", Pattern: "/recipients/{recipientId}/response", Portals: portals, Request: calendarService.InvitationAnswer{}, Response: CalendarStatusResponse{}},
 		{Method: "GET", Pattern: "/parent-conferences", Portals: portals, Response: calendarService.SchoolParentConferenceList{}},

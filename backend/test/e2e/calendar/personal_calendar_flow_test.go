@@ -56,6 +56,22 @@ func doJSON(t *testing.T, router http.Handler, method, path, token string, body 
 	return rr
 }
 
+// appointmentVersionE2E reads the version of an appointment the way the
+// edit form does, through GET {path} (ADR 0311).
+func appointmentVersionE2E(t *testing.T, router http.Handler, path, token string) string {
+	t.Helper()
+	rr := doJSON(t, router, http.MethodGet, path, token, nil)
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	var read struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &read))
+	require.NotEmpty(t, read.Data.Version)
+	return read.Data.Version
+}
+
 type createAppointmentE2EResponse struct {
 	Data struct {
 		Appointment struct {
@@ -163,16 +179,24 @@ func TestPersonalCalendarHTTPFlow_EditCancelDeleteAndICS(t *testing.T) {
 	path := "/api/calendar/appointments/" + strconv.FormatInt(int64(apptID), 10)
 	listPath := "/api/calendar/my?from=2026-05-01&to=2026-05-10"
 
-	// Edit details (audience stays fixed).
-	updRR := doJSON(t, router, http.MethodPut, path, manageToken, map[string]any{
-		"title":      "Updated title",
-		"location":   "Room 2",
-		"start_date": "2026-05-05",
-		"end_date":   "2026-05-05",
-		"start_time": "11:00",
-		"end_time":   "12:00",
-	})
+	// Edit details (audience stays fixed) on the appointment as read.
+	read := appointmentVersionE2E(t, router, path, manageToken)
+	edit := map[string]any{
+		"title":            "Updated title",
+		"location":         "Room 2",
+		"start_date":       "2026-05-05",
+		"end_date":         "2026-05-05",
+		"start_time":       "11:00",
+		"end_time":         "12:00",
+		"expected_version": read,
+	}
+	updRR := doJSON(t, router, http.MethodPut, path, manageToken, edit)
 	require.Equal(t, http.StatusOK, updRR.Code, updRR.Body.String())
+	// That read is outdated now (ADR 0311).
+	edit["title"] = "Overwritten"
+	staleRR := doJSON(t, router, http.MethodPut, path, manageToken, edit)
+	require.Equal(t, http.StatusConflict, staleRR.Code, staleRR.Body.String())
+	assert.Contains(t, staleRR.Body.String(), `"code":"general.changed_since_read"`)
 
 	var listed calendarListE2EResponse
 	listRR := doJSON(t, router, http.MethodGet, listPath, ownToken, nil)
