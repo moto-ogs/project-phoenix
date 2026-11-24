@@ -148,9 +148,17 @@ Eingabe neuer ist:
 3. Ohne Zeile bekommt die Schule die Werte der Akte. Eine Zeile ohne jeden
    Wert wird gelöscht.
 
-Workforce liest die Zeitpunkte im Verlauf in der Träger-Transaktion, bevor
-die Akte geht, und schreibt jede Schule in ihrer Tenant-Transaktion unter der
-Sperre der Beschäftigung (ADR 0105). Beide Zeitstempel stammen aus der
+Workforce liest Akte und Zeitpunkte im Verlauf in der Träger-Transaktion unter
+der Sperre der Akte, die jedes Schreiben ihrer Werte und Einsatzorte nimmt,
+und schreibt jede Schule in ihrer Tenant-Transaktion unter der Sperre der
+Beschäftigung (ADR 0105). Gelöscht wird die Akte erst, wenn sie unter
+erneuter Sperre noch dieselben Werte und Einsatzorte hat. Hat die
+Personalverwaltung währenddessen gespeichert oder verknüpft, gibt die
+Auflösung die Werte noch einmal zurück: Ein in dieser Zeit geänderter Wert
+ist neuer als alles bei den Schulen und gewinnt überall, ein neuer
+Einsatzort bekommt die Werte der Akte. Ändert sich die Akte auch beim dritten
+Versuch, wird die Auflösung als geändert abgelehnt (ADR 0311); die Akte
+bleibt. Beide Zeitstempel stammen aus der
 Datenbankuhr (ADR 0280). Jedes Feld, das sich bei der Schule ändert, steht mit
 alter und neuer Maske in ihrem Stammdaten-Audit; ein unverändertes Feld
 schreibt keinen Eintrag. Die Auflösung bleibt wiederholbar: Eine Zeile, die
