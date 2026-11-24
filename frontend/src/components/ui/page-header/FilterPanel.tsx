@@ -242,7 +242,7 @@ export function FilterPanel({
       type="button"
       aria-pressed={selectedValues.includes(option.value)}
       onClick={() => selectOption(filter, option.value, selectedValues)}
-      className={`flex h-9 min-w-[84px] items-center justify-center rounded-md px-3 text-xs font-medium transition ${extraClass} ${
+      className={`flex h-9 min-w-[84px] items-center justify-center rounded-md px-3 text-sm font-medium transition ${extraClass} ${
         selectedValues.includes(option.value)
           ? selectedOptionClass
           : "text-gray-600 hover:text-gray-900"

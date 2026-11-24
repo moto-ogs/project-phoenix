@@ -112,7 +112,7 @@ export function ChoiceModal({
               </span>
               {option.description && (
                 <span
-                  className={`text-xs font-normal ${option.primary ? "text-white/80" : "text-gray-500"}`}
+                  className={`text-sm font-normal ${option.primary ? "text-white/80" : "text-gray-500"}`}
                 >
                   {option.description}
                 </span>

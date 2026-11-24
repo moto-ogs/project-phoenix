@@ -92,4 +92,13 @@ describe("InsetPanel", () => {
     expect(screen.getByTestId("sm")).toHaveClass("rounded-xl", "p-3");
     expect(screen.getByTestId("md")).toHaveClass("rounded-xl", "p-4");
   });
+
+  it("gives the md step a phone tier like the card around it (#8064)", () => {
+    render(
+      <InsetPanel data-testid="md" padding="md">
+        C
+      </InsetPanel>,
+    );
+    expect(screen.getByTestId("md")).toHaveClass("p-4", "max-sm:p-3");
+  });
 });

@@ -24,6 +24,9 @@ const allowedClasses = new Set([
 // Portals whose readers turn to someone else than the school. Each lists the
 // classes whose fallback names that contact (#6871).
 const portalClasses = { traeger: ["permission"] };
+// Placeholders `presentError` fills in itself: the object of the failed
+// action and the school's care term (`enrollment.care_facility_term`).
+const FRONTEND_PARAMETERS = ["object", "careTerm"];
 const failures = [];
 const runtimeCatalog = {};
 
@@ -43,7 +46,12 @@ for (const { code: locale } of locales) {
       failures.push(`${locale}: ${entry.code}: missing text`);
       continue;
     }
-    const allowedParameters = new Set(["object", ...entry.parameters]);
+    // `object` and `careTerm` come from the frontend (#6258): registry
+    // parameters are snake_case, so a backend value cannot take their place.
+    const allowedParameters = new Set([
+      ...FRONTEND_PARAMETERS,
+      ...entry.parameters,
+    ]);
     for (const match of text.matchAll(/\{([^{}]+)\}/g)) {
       if (!allowedParameters.has(match[1])) {
         failures.push(

@@ -26,7 +26,10 @@ import {
   exportFormatOptions,
   type ExportMenuOption,
 } from "~/components/ui/export-menu";
-import { SectionCard } from "~/components/ui/section-card";
+import {
+  SectionCard,
+  SECTION_CARD_BODY_GAP,
+} from "~/components/ui/section-card";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { createLogger } from "~/lib/logger";
@@ -446,7 +449,7 @@ function ExportCard({
       icon={icon}
       headingLevel={3}
       className="flex h-full flex-col"
-      bodyClassName="compact:mt-3 mt-4 flex min-h-0 flex-1 flex-col space-y-3"
+      bodyClassName={`${SECTION_CARD_BODY_GAP} flex min-h-0 flex-1 flex-col space-y-3`}
     >
       {children}
     </SectionCard>

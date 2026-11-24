@@ -166,6 +166,10 @@ An unexplained bespoke component is a review failure, not a style preference.
 
 If none fits, add the missing primitive to `frontend/src/components/ui/` and name it in the PR description (step 3 above). No styled native `<select>`.
 
+## Width and pointer
+
+[ADR 0323](../../docs/adr/0323-breite-entscheidet-struktur-und-seitenraster-zeigerart-die-bedienmasse.md): width (`sm`/`md`/`lg`) decides structure and page spacing (`compact:` + height); the primary pointer decides control sizes, hit areas: `pointer-coarse:`/`pointer-fine:`, JS `COARSE_POINTER`/`FINE_POINTER`. No `any-pointer`, orientation, iPad breakpoint; nothing hover-only.
+
 ## Buttons
 
 Decided in #5529, enforced since #5531. Not up for renegotiation: if code cannot meet a rule, comment on the ticket instead of deviating.

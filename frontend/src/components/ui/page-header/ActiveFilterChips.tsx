@@ -30,7 +30,7 @@ export function ActiveFilterChips({
         <button
           type="button"
           onClick={onClearAll}
-          className="text-moto-blue-strong hover:text-moto-blue-hover text-xs font-medium transition-colors"
+          className="text-moto-blue-strong hover:text-moto-blue-hover text-sm font-medium transition-colors"
         >
           Alle löschen
         </button>

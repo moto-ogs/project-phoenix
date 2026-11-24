@@ -135,7 +135,7 @@ export function ExportDialog<F extends ExportFileFormat>({
               <p className="text-sm font-medium text-gray-900">
                 Filter der Seite
               </p>
-              <p className="text-xs text-gray-500">
+              <p className="text-sm text-gray-500">
                 Die Datei enthält nur, was diese Filter zeigen.
               </p>
               <ul className="mt-2 flex flex-wrap gap-1.5">

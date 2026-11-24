@@ -4,10 +4,10 @@ import {
   apiErrorCatalogValues,
   errorClassCode,
 } from "~/lib/api-error";
+import { normalizeCareFacilityTerm } from "~/lib/care-facility-term-value";
 import { ERROR_CATALOG } from "~/lib/error-catalog.generated";
 import type { ErrorContact } from "~/lib/error-contact";
 import {
-  ERROR_CODES,
   ERROR_CODE_CLASSES,
   ERROR_CODE_PARAMETERS,
   type ErrorClass,
@@ -27,8 +27,6 @@ const catalogs: Record<
   }
 > = ERROR_CATALOG;
 
-const knownErrorCodes: ReadonlySet<string> = new Set(ERROR_CODES);
-
 export interface ErrorPresentation {
   kind: "api" | "crash";
   errorClass?: ErrorClass;
@@ -40,17 +38,28 @@ export interface ErrorPresentation {
 }
 
 function isKnownErrorCode(code: string): code is ErrorCode {
-  return knownErrorCodes.has(code);
+  return Object.hasOwn(ERROR_CODE_CLASSES, code);
+}
+
+/**
+ * Values the frontend fills in itself, next to the parameters a code
+ * declares: the object of the action and the school's care term (#6258).
+ */
+interface FrontendValues {
+  readonly object: string;
+  readonly careTerm: string;
 }
 
 function interpolate(
   template: string,
-  object: string,
+  own: FrontendValues,
   parameters: Record<string, unknown>,
 ): string | null {
   let missing = false;
   const result = template.replaceAll(/\{([^{}]+)\}/g, (_, key: string) => {
-    const value = key === "object" ? object : parameters[key];
+    const value = Object.hasOwn(own, key)
+      ? own[key as keyof FrontendValues]
+      : parameters[key];
     if (typeof value !== "string" && typeof value !== "number") {
       missing = true;
       return "";
@@ -85,19 +94,26 @@ function withDerivedCapacityDetails(
  * No backend sentence is read here. Only the code and structured fields are used.
  * `contact` names whom the reader turns to: a class text such as a missing
  * right sends a Träger-Büro to its own Leitung, not to a school (#6871).
+ * `careTerm` is what the reader's school calls its care (GTS, OGS, …) for
+ * the `{careTerm}` placeholder; without a school the texts say „OGS“.
  */
 export function presentError(
   error: unknown,
   object: string,
   locale: AppLocale = "de",
   contact: ErrorContact = "school",
+  careTerm?: string,
 ): ErrorPresentation {
   const catalog = catalogs[locale];
+  const own: FrontendValues = {
+    object,
+    careTerm: normalizeCareFacilityTerm(careTerm),
+  };
   if (!(error instanceof ApiError)) {
     return {
       kind: "crash",
       message:
-        interpolate(catalog.actions.crash, object, {}) ?? catalog.actions.crash,
+        interpolate(catalog.actions.crash, own, {}) ?? catalog.actions.crash,
       retryable: false,
       fields: [],
       requiresLogin: false,
@@ -129,8 +145,8 @@ export function presentError(
       : catalog.portalClasses[contact][errorClass]) ??
     catalog.classes[errorClass];
   const message =
-    (codeTemplate && interpolate(codeTemplate, object, values)) ||
-    interpolate(classTemplate, object, {}) ||
+    (codeTemplate && interpolate(codeTemplate, own, values)) ||
+    interpolate(classTemplate, own, {}) ||
     catalogs.de.classes.server;
 
   return {

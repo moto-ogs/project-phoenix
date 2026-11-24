@@ -19,6 +19,8 @@ import { TOAST_FADE_MS } from "~/components/ui/motion";
 import { Toast } from "~/components/ui/toast";
 import { clientEnv } from "~/env.client";
 import { normalizeLocale, type AppLocale } from "~/i18n/locales";
+import { useErrorCareFacilityTerm } from "~/lib/care-facility-term-context";
+import { useLatest } from "~/lib/hooks/use-latest";
 import { useErrorContact } from "~/lib/error-contact";
 import { useModulePortal } from "~/lib/module-portal-context";
 import {
@@ -30,6 +32,7 @@ import { ApiError, isReadStateRefusal } from "~/lib/api-error";
 import type { ErrorPresentation } from "~/lib/error-presentation";
 import {
   announceModuleBookingStale,
+  isModuleNotBooked,
   moduleNotBookedExplanation,
   notBookedModuleOf,
 } from "~/lib/module-not-booked";
@@ -621,6 +624,10 @@ function useApiErrorCore(
 ) {
   const markFields = surface !== "load";
   const contact = useErrorContact();
+  // The school of the screen that failed names the care in the text (#6258).
+  // Read when the error shows: a term that arrives with a response must not
+  // give `show` a new identity, or callers that depend on it load again.
+  const careTermRef = useLatest(useErrorCareFacilityTerm());
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   // A catalog import can finish after the caller has cleared the error, shown
   // another one, or unmounted. Only the latest request may update its state.
@@ -769,6 +776,7 @@ function useApiErrorCore(
           options.object,
           locale,
           contact,
+          careTermRef.current,
         );
         if (loadPresentation.requiresLogin) {
           window.location.assign(
@@ -800,7 +808,17 @@ function useApiErrorCore(
         );
         return loadPresentation;
       }
-      const presentation = presentError(error, options.object, locale, contact);
+      const notBookedModule = isModuleNotBooked(error)
+        ? await notBookedModuleOf(error).catch(() => null)
+        : null;
+      if (showVersion.current !== version) return;
+      const presentation = presentError(
+        error,
+        options.object,
+        locale,
+        contact,
+        careTermRef.current,
+      );
       if (presentation.requiresLogin) {
         window.location.assign(
           loginUrl(window.location.host, window.location.pathname),
@@ -815,7 +833,6 @@ function useApiErrorCore(
         ...(presentation.fields.length > 0 && { fields: presentation.fields }),
       });
       const labels = errorDisplayLabels(locale);
-      const notBookedModule = await notBookedModuleOf(error);
       if (notBookedModule) {
         announceModuleBookingStale();
         setFieldErrors({});
@@ -857,7 +874,7 @@ function useApiErrorCore(
       );
       return presentation;
     },
-    [contact, deliver, logShown, markFields],
+    [careTermRef, contact, deliver, logShown, markFields],
   );
 
   const clearFieldErrors = useCallback(() => setFieldErrors({}), []);

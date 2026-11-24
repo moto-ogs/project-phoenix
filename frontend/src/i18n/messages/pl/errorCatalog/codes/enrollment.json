@@ -182,5 +182,5 @@
   "traeger_catalog_invalid": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
   "traeger_preview_stale": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "traeger_copy_rejected": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
-  "without_care_place_school_year_only": "Dziecko bez miejsca w OGS otrzymuje miejsce poprzez zapis na rok szkolny."
+  "without_care_place_school_year_only": "Dziecko bez miejsca w {careTerm} otrzymuje miejsce poprzez zapis na rok szkolny."
 }

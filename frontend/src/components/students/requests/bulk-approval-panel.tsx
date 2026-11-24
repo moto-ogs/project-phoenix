@@ -8,7 +8,10 @@
 import { Button } from "~/components/ui/button";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { Textarea } from "~/components/ui/textarea";
-import { SectionCard } from "~/components/ui/section-card";
+import {
+  SectionCard,
+  SECTION_CARD_BODY_GAP,
+} from "~/components/ui/section-card";
 
 export function BulkApprovalPanel({
   count,
@@ -34,7 +37,7 @@ export function BulkApprovalPanel({
           ? "Wähle noch eine passende Anfrage aus."
           : "Alle ausgewählten Anfragen werden freigegeben. Klappt eine nicht, wird keine freigegeben."
       }
-      bodyClassName="compact:mt-3 mt-4 space-y-3"
+      bodyClassName={`${SECTION_CARD_BODY_GAP} space-y-3`}
     >
       <Textarea
         label={

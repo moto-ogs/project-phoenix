@@ -28,7 +28,8 @@ vi.mock("~/components/ui/tenant-page", async (importOriginal) => ({
   ),
 }));
 
-vi.mock("~/components/ui/section-card", () => ({
+vi.mock("~/components/ui/section-card", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/components/ui/section-card")>()),
   SectionCard: ({
     children,
     title,

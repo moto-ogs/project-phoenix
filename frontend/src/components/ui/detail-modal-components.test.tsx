@@ -166,7 +166,7 @@ describe("InfoText", () => {
     const { container } = render(<InfoText>Test</InfoText>);
 
     const p = container.querySelector("p");
-    expect(p).toHaveClass("text-xs", "text-gray-700", "whitespace-pre-wrap");
+    expect(p).toHaveClass("text-sm", "text-gray-700", "whitespace-pre-wrap");
   });
 });
 

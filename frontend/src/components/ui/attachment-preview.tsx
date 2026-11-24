@@ -121,7 +121,7 @@ export function AttachmentPreview({
           {name}
         </span>
         {detail ? (
-          <span className="truncate text-xs text-gray-500">{detail}</span>
+          <span className="truncate text-sm text-gray-500">{detail}</span>
         ) : null}
       </span>
     </>

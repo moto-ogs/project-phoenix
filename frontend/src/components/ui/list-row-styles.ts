@@ -31,8 +31,11 @@ export const LIST_ROW_NEUTRAL_GROUP_HOVER =
 
 const DENSITY_CLASSES: Record<ListRowDensity, string> = {
   default: "px-3 py-2",
-  // Für Karten fester Höhe: ab `sm` passen so drei Zeilen ganz hinein.
-  compact: "px-3 py-2 sm:py-1.5",
+  // Für Karten fester Höhe: ab `sm` passen so drei Zeilen ganz hinein. Der
+  // Desktop-Wert steht unvariiert, das Telefon (`max-sm:`) behält seine 8 px
+  // (Stufenmodell, TENANT-PAGE-SPEC.md). `compact:` braucht keinen eigenen
+  // Wert: die Zeile ist dort so dicht wie am Desktop.
+  compact: "px-3 py-1.5 max-sm:py-2",
 };
 
 /** Fläche einer Listenzeile, geteilt von `ListRow` und `ListRowSkeleton`. */

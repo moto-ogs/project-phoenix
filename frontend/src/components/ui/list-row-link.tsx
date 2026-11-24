@@ -138,7 +138,7 @@ export function ListRowLink({
         {meta != null ? (
           <span
             className={cn(
-              "shrink-0 text-xs tabular-nums",
+              "shrink-0 text-sm tabular-nums",
               unread ? "text-moto-blue-strong font-semibold" : mutedTone,
             )}
           >
@@ -188,7 +188,7 @@ export function ListRowLink({
         {title}
       </span>
       {subtitle ? (
-        <span className={cn("block text-xs", subtitleTone, framed && "mt-1")}>
+        <span className={cn("block text-sm", subtitleTone, framed && "mt-1")}>
           {subtitle}
         </span>
       ) : null}

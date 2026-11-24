@@ -11,6 +11,16 @@ import { timeTrackingConcept } from "~/lib/concepts/timeTracking";
 import { SectionCard } from "./section-card";
 
 describe("SectionCard Kopfzeilen-Aktionen", () => {
+  it("gibt dem Abstand über dem Inhalt eine Telefon-Stufe (#8064)", () => {
+    render(<SectionCard title="Block">Inhalt</SectionCard>);
+
+    expect(screen.getByText("Inhalt")).toHaveClass(
+      "compact:mt-3",
+      "mt-4",
+      "max-sm:mt-3",
+    );
+  });
+
   it("bricht Aktionen auf dem Telefon standardmäßig als eigene Zeile um", () => {
     render(
       <SectionCard

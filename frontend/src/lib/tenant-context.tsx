@@ -19,6 +19,7 @@ import { useAnalyticsSchoolPolicy } from "~/lib/hooks/use-analytics-school-polic
 import { subscribeSettingsChanged } from "~/lib/settings-broadcast";
 import type { ModuleKey } from "~/lib/modules";
 import { createLogger } from "~/lib/logger";
+import { TenantCareFacilityTermContext } from "~/lib/care-facility-term-context";
 
 interface TenantContextValue {
   /** The tenant slug from the URL path segment */
@@ -176,7 +177,11 @@ export function TenantProvider({
   );
 
   return (
-    <TenantContext.Provider value={value}>{children}</TenantContext.Provider>
+    <TenantContext.Provider value={value}>
+      <TenantCareFacilityTermContext.Provider value={tenant?.careFacilityTerm}>
+        {children}
+      </TenantCareFacilityTermContext.Provider>
+    </TenantContext.Provider>
   );
 }
 

@@ -23,7 +23,7 @@ interface InfoTextProps {
  */
 export function InfoText({ children }: InfoTextProps) {
   return (
-    <p className="text-xs break-words whitespace-pre-wrap text-gray-700 md:text-sm">
+    <p className="text-sm break-words whitespace-pre-wrap text-gray-700">
       {children}
     </p>
   );
