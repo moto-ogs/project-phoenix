@@ -46,6 +46,7 @@ import {
 import { PickupRequestDetailModal } from "~/components/messaging/pickup-request-detail-modal";
 import { RequestStatusBadge } from "~/components/messaging/request-status-badge";
 import { useChatViewportLock } from "~/lib/hooks/use-chat-viewport-lock";
+import { useDeviceContext } from "~/lib/device-context";
 import { useMessagesActivity } from "~/lib/hooks/use-messages-activity";
 import { useThreadMails } from "~/lib/hooks/use-message-mails";
 import {
@@ -114,9 +115,16 @@ const MESSAGES_BACK = {
   backLabel: "Zurück zu Nachrichten",
 } as const;
 
-function MessageThreadContent() {
-  const params = useParams();
-  const threadId = params.threadId as string;
+/**
+ * Der Verlauf einer Unterhaltung. `embedded` (#8070, iPad quer): rechts
+ * neben der Liste in `/messages`, ohne eigenes Seitengerüst.
+ */
+export function MessageThreadContent({
+  threadId,
+  embedded = false,
+}: Readonly<{ threadId: string; embedded?: boolean }>) {
+  // App (#8070): einzeiliger Kopf, Kinderprofil als Symbol, Pill aus.
+  const { isApp } = useDeviceContext();
   const router = useTenantRouter();
   const { data: session } = useSession();
   // The Änderungsanfragen queue is gated on users:update (backend + page guard),
@@ -604,15 +612,213 @@ function MessageThreadContent() {
     );
   }
 
+  // App: nur die Beziehung als Chip; die Zahl der Nachrichten sieht man im
+  // Verlauf selbst. Der Name des Kindes bleibt sichtbar.
+  const appStatusLine = thread ? (
+    <TenantPageStats
+      items={[
+        ...(thread.audience === "leadership"
+          ? [{ label: LEADERSHIP_AUDIENCE_LABEL }]
+          : []),
+        {
+          label: `${relationshipLabel(thread.relationship_type)} von ${thread.student_name}`,
+        },
+      ]}
+    />
+  ) : null;
+
+  const markUnreadMenu = (
+    <OverflowMenu
+      ariaLabel="Weitere Aktionen"
+      items={[
+        {
+          label: MARK_UNREAD_LABEL,
+          description: "Für das ganze Team, bis jemand die Unterhaltung öffnet",
+          onClick: () => void handleMarkUnread(),
+        },
+      ]}
+    />
+  );
+  // App und eingebetteter Verlauf: Kinderprofil als Symbol (Kopf der App
+  // behält höchstens zwei Symbole, das Menü wandert ins „…“-Blatt).
+  const compactActions = thread ? (
+    <>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={() =>
+          router.push(`/students/${thread.student_id}?from=/messages`)
+        }
+        tooltip="Öffnet die Akte des Kindes."
+        aria-label={`Kinderprofil von ${thread.student_name}`}
+      >
+        <MotoConceptIcon concept={childrenConcept} size={20} />
+      </Button>
+      {markUnreadMenu}
+    </>
+  ) : null;
+
+  const chat = (
+    <div
+      ref={containerRef}
+      className="flex min-h-[20rem] w-full flex-col overflow-hidden"
+    >
+      {/* `moto-scroll-surface`: die Höhe setzt `useChatViewportLock`, nicht
+            die Wachs-Regel des Seitenrumpfs; nur die Liste scrollt (#3328). */}
+      <SectionCard
+        className="moto-scroll-surface flex min-h-0 flex-1 flex-col"
+        bodyClassName="flex min-h-0 flex-1 flex-col"
+        title={embedded ? (thread?.guardian_name ?? "Unterhaltung") : undefined}
+        description={
+          embedded && thread
+            ? `${relationshipLabel(thread.relationship_type)} von ${thread.student_name}`
+            : undefined
+        }
+        action={embedded ? compactActions : undefined}
+      >
+        {showSkeleton ? (
+          <ThreadSkeleton />
+        ) : (
+          <div
+            ref={scrollRef}
+            data-chat-scroll=""
+            role="log"
+            aria-label="Nachrichtenverlauf"
+            className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1"
+          >
+            {messagesLoading ? (
+              <ThreadMessagesSkeleton />
+            ) : messages.length > 0 ? (
+              messages.map((message) =>
+                message.kind === "request" ? (
+                  <RequestHistoryCard key={message.id} message={message} />
+                ) : message.kind === "event" ? (
+                  <ChatEventCard
+                    key={message.id}
+                    body={message.body}
+                    createdAt={message.created_at}
+                    action={eventAction(message)}
+                  />
+                ) : (
+                  <div key={message.id}>
+                    {message.group_thread_id && (
+                      <GroupThreadReference
+                        id={message.group_thread_id}
+                        title={message.group_thread_title}
+                      />
+                    )}
+                    <ChatBubble
+                      body={message.body}
+                      own={message.sender_kind === "staff"}
+                      senderName={message.sender_name}
+                      createdAt={message.created_at}
+                      pending={send.stateOf(message.id)}
+                      attachments={message.attachments}
+                      attachmentFiles={PARENT_MESSAGE_ATTACHMENTS}
+                      readReceiptLabel={
+                        message.sender_kind === "staff" &&
+                        message.read_by_guardian
+                          ? "Gelesen"
+                          : undefined
+                      }
+                      mailStatus={
+                        <MessageMailBadge
+                          outcome={threadMails.mails[message.id]}
+                        />
+                      }
+                      mailNote={messageMailNote(threadMails.mails[message.id])}
+                    />
+                  </div>
+                ),
+              )
+            ) : loadError ? (
+              // The header seed (fallbackData) keeps `thread` truthy with an empty
+              // messages array, so a failed history fetch would otherwise render the
+              // "no messages" empty state for a thread that actually has history.
+              // Surface the load failure instead of a misleading empty conversation.
+              <LoadErrorAlert error={shownLoadError} />
+            ) : (
+              <EmptyState
+                title="Noch keine Nachrichten"
+                description="In dieser Unterhaltung wurde noch nichts geschrieben."
+              />
+            )}
+          </div>
+        )}
+
+        <LoadErrorAlert error={threadMails.loadError} className="mt-3" />
+        <FormErrorAlert message={sendError.error} className="mt-3" />
+
+        {/* Wer mitliest, steht direkt über dem Schreibfeld (#5200). Die
+              Angabe kommt vom Backend, das Frontend rät sie nie. */}
+        <div className="mt-4">
+          {thread?.readers ? (
+            <p
+              className="mb-2 text-sm text-gray-500"
+              data-testid="thread-readers"
+            >
+              {readersLabel(thread.readers)}
+            </p>
+          ) : null}
+          {messagingEnabled ? (
+            <MessageComposer
+              value={draft}
+              onChange={(value) => {
+                draftRevision.current += 1;
+                setDraft(value);
+              }}
+              onSend={async (files) => {
+                await handleSend(files);
+                return sendArrived.current;
+              }}
+              sending={isSending}
+              disabled={snapshotUnavailable}
+              attachments={{
+                upload: PARENT_MESSAGE_ATTACHMENTS.upload,
+              }}
+              sendHint={`Schickt die Nachricht sofort an ${thread?.guardian_name ?? "die Eltern"}.`}
+              placeholder="Nachricht an die Eltern schreiben…"
+            />
+          ) : (
+            <Alert
+              type="info"
+              message="Die Eltern-Nachrichten sind für diese Schule ausgeschaltet. Du kannst den Verlauf weiterhin lesen, aber nicht antworten."
+            />
+          )}
+        </div>
+      </SectionCard>
+    </div>
+  );
+
+  const requestModal = (
+    <PickupRequestDetailModal
+      requestId={openRequestId}
+      onClose={() => setOpenRequestId(null)}
+      onOpenQueue={() => router.push("/anfragen")}
+    />
+  );
+
+  if (embedded) {
+    return (
+      <>
+        {chat}
+        {requestModal}
+      </>
+    );
+  }
+
   return (
     <TenantPage
       info={THREAD_INFO}
       title={thread?.guardian_name ?? "Unterhaltung"}
       {...MESSAGES_BACK}
-      stats={statusLine}
+      stats={isApp ? appStatusLine : statusLine}
       statsLoading={showSkeleton}
       actions={
-        thread ? (
+        isApp ? (
+          compactActions
+        ) : thread ? (
           <>
             <Button
               type="button"
@@ -646,136 +852,9 @@ function MessageThreadContent() {
         ) : null
       }
     >
-      <div
-        ref={containerRef}
-        className="flex min-h-[20rem] w-full flex-col overflow-hidden"
-      >
-        {/* `moto-scroll-surface`: die Höhe setzt `useChatViewportLock`, nicht
-            die Wachs-Regel des Seitenrumpfs; nur die Liste scrollt (#3328). */}
-        <SectionCard
-          className="moto-scroll-surface flex min-h-0 flex-1 flex-col"
-          bodyClassName="flex min-h-0 flex-1 flex-col"
-        >
-          {showSkeleton ? (
-            <ThreadSkeleton />
-          ) : (
-            <div
-              ref={scrollRef}
-              data-chat-scroll=""
-              role="log"
-              aria-label="Nachrichtenverlauf"
-              className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1"
-            >
-              {messagesLoading ? (
-                <ThreadMessagesSkeleton />
-              ) : messages.length > 0 ? (
-                messages.map((message) =>
-                  message.kind === "request" ? (
-                    <RequestHistoryCard key={message.id} message={message} />
-                  ) : message.kind === "event" ? (
-                    <ChatEventCard
-                      key={message.id}
-                      body={message.body}
-                      createdAt={message.created_at}
-                      action={eventAction(message)}
-                    />
-                  ) : (
-                    <div key={message.id}>
-                      {message.group_thread_id && (
-                        <GroupThreadReference
-                          id={message.group_thread_id}
-                          title={message.group_thread_title}
-                        />
-                      )}
-                      <ChatBubble
-                        body={message.body}
-                        own={message.sender_kind === "staff"}
-                        senderName={message.sender_name}
-                        createdAt={message.created_at}
-                        pending={send.stateOf(message.id)}
-                        attachments={message.attachments}
-                        attachmentFiles={PARENT_MESSAGE_ATTACHMENTS}
-                        readReceiptLabel={
-                          message.sender_kind === "staff" &&
-                          message.read_by_guardian
-                            ? "Gelesen"
-                            : undefined
-                        }
-                        mailStatus={
-                          <MessageMailBadge
-                            outcome={threadMails.mails[message.id]}
-                          />
-                        }
-                        mailNote={messageMailNote(
-                          threadMails.mails[message.id],
-                        )}
-                      />
-                    </div>
-                  ),
-                )
-              ) : loadError ? (
-                // The header seed (fallbackData) keeps `thread` truthy with an empty
-                // messages array, so a failed history fetch would otherwise render the
-                // "no messages" empty state for a thread that actually has history.
-                // Surface the load failure instead of a misleading empty conversation.
-                <LoadErrorAlert error={shownLoadError} />
-              ) : (
-                <EmptyState
-                  title="Noch keine Nachrichten"
-                  description="In dieser Unterhaltung wurde noch nichts geschrieben."
-                />
-              )}
-            </div>
-          )}
+      {chat}
 
-          <LoadErrorAlert error={threadMails.loadError} className="mt-3" />
-          <FormErrorAlert message={sendError.error} className="mt-3" />
-
-          {/* Wer mitliest, steht direkt über dem Schreibfeld (#5200). Die
-              Angabe kommt vom Backend, das Frontend rät sie nie. */}
-          <div className="mt-4">
-            {thread?.readers ? (
-              <p
-                className="mb-2 text-sm text-gray-500"
-                data-testid="thread-readers"
-              >
-                {readersLabel(thread.readers)}
-              </p>
-            ) : null}
-            {messagingEnabled ? (
-              <MessageComposer
-                value={draft}
-                onChange={(value) => {
-                  draftRevision.current += 1;
-                  setDraft(value);
-                }}
-                onSend={async (files) => {
-                  await handleSend(files);
-                  return sendArrived.current;
-                }}
-                sending={isSending}
-                disabled={snapshotUnavailable}
-                attachments={{
-                  upload: PARENT_MESSAGE_ATTACHMENTS.upload,
-                }}
-                sendHint={`Schickt die Nachricht sofort an ${thread?.guardian_name ?? "die Eltern"}.`}
-                placeholder="Nachricht an die Eltern schreiben…"
-              />
-            ) : (
-              <Alert
-                type="info"
-                message="Die Eltern-Nachrichten sind für diese Schule ausgeschaltet. Du kannst den Verlauf weiterhin lesen, aber nicht antworten."
-              />
-            )}
-          </div>
-        </SectionCard>
-      </div>
-
-      <PickupRequestDetailModal
-        requestId={openRequestId}
-        onClose={() => setOpenRequestId(null)}
-        onOpenQueue={() => router.push("/anfragen")}
-      />
+      {requestModal}
     </TenantPage>
   );
 }
@@ -826,5 +905,6 @@ function GroupThreadReference({
 }
 
 export default function MessageThreadPage() {
-  return <MessageThreadContent />;
+  const params = useParams();
+  return <MessageThreadContent threadId={params.threadId as string} />;
 }
