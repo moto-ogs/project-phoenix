@@ -39,9 +39,6 @@ func New(store ports.Store, access ports.AccessResolver, tokens ports.TokenCodec
 }
 
 func (s *Service) Status(ctx context.Context, tenantID, accountID int64) (requestfeed.Status, error) {
-	if tenantID <= 0 || accountID <= 0 {
-		return requestfeed.Status{}, requestfeed.ErrNoAccess
-	}
 	if _, err := s.requireAccess(ctx, tenantID, accountID); err != nil {
 		return requestfeed.Status{}, err
 	}
@@ -50,9 +47,6 @@ func (s *Service) Status(ctx context.Context, tenantID, accountID int64) (reques
 }
 
 func (s *Service) Provision(ctx context.Context, tenantID, accountID int64) (requestfeed.Created, error) {
-	if tenantID <= 0 || accountID <= 0 {
-		return requestfeed.Created{}, requestfeed.ErrNoAccess
-	}
 	access, err := s.requireAccess(ctx, tenantID, accountID)
 	if err != nil {
 		return requestfeed.Created{}, err
@@ -72,9 +66,6 @@ func (s *Service) Provision(ctx context.Context, tenantID, accountID int64) (req
 }
 
 func (s *Service) Rotate(ctx context.Context, tenantID, accountID int64) (requestfeed.Created, error) {
-	if tenantID <= 0 || accountID <= 0 {
-		return requestfeed.Created{}, requestfeed.ErrNoAccess
-	}
 	access, err := s.requireAccess(ctx, tenantID, accountID)
 	if err != nil {
 		return requestfeed.Created{}, err
@@ -126,6 +117,9 @@ func (s *Service) ByToken(ctx context.Context, raw string) (requestfeed.Feed, er
 }
 
 func (s *Service) requireAccess(ctx context.Context, tenantID, accountID int64) (domain.Access, error) {
+	if tenantID <= 0 || accountID <= 0 {
+		return domain.Access{}, requestfeed.ErrNoAccess
+	}
 	access, err := s.access.Resolve(ctx, tenantID, accountID)
 	if err != nil {
 		return domain.Access{}, err

@@ -77,7 +77,7 @@
   "primary_guardian_protected": "Nie masz dostępu do: {object}. Skontaktuj się ze szkołą.",
   "remove_disabled": "Obecnie niedostępne tutaj: {object}. Zapytaj swoją osobę kontaktową.",
   "request_not_found": "Nie znaleziono: {object}. Odśwież stronę.",
-  "request_feed_not_found": "Link RSS już nie istnieje. Odśwież stronę.",
+  "request_feed_not_found": "Link RSS już nie istnieje. Odśwież stronę i utwórz nowy link.",
   "request_not_open": "Już nie jest otwarte: {object}. Zapytaj swoją osobę kontaktową.",
   "request_sharing_invalid": "Nieprawidłowe dane: {object}. Sprawdź wpisane dane.",
   "room_history_stop_disabled": "Obecnie nie możesz tutaj zmienić: {object}. Zapytaj swoją osobę kontaktową.",

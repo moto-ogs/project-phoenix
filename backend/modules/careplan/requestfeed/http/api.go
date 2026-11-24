@@ -102,7 +102,7 @@ func (rs *Resource) feed(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte(feed.XML))
 }
 
-// Registered class codes (error-registry/) of the feed's refusals. This
+// Registered codes (error-registry/) of the feed's refusals. This
 // package may not import api/common, so it names them once here.
 const (
 	codeRequestFeedNotFound      = "care.request_feed_not_found"

@@ -1360,7 +1360,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *Service) Status(ctx context.Context, tenantID, accountID int64) (requestfeed.Status, error) {\n\tif tenantID \u003c= 0 || accountID \u003c= 0 {\n\t\treturn requestfeed.Status{}, requestfeed.ErrNoAccess\n\t}\n\tif _, err := s.requireAccess(ctx, tenantID, accountID); err != nil {\n\t\treturn requestfeed.Status{}, err\n\t}\n\tactive, err := s.store.Active(ctx, tenantID, accountID)\n\treturn requestfeed.Status{Active: active}, err\n}",
+      "evidence": "func (s *Service) Status(ctx context.Context, tenantID, accountID int64) (requestfeed.Status, error) {\n\tif _, err := s.requireAccess(ctx, tenantID, accountID); err != nil {\n\t\treturn requestfeed.Status{}, err\n\t}\n\tactive, err := s.store.Active(ctx, tenantID, accountID)\n\treturn requestfeed.Status{Active: active}, err\n}",
       "form": "unclassified-evidence",
       "id": "modules/careplan/requestfeed/internal/application/Service.Status",
       "owner": "modules/careplan"

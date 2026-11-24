@@ -77,7 +77,7 @@
   "primary_guardian_protected": "У вас нет доступа к: {object}. Обратитесь в школу.",
   "remove_disabled": "Сейчас здесь недоступно: {object}. Обратитесь к контактному лицу.",
   "request_not_found": "Не найдено: {object}. Обновите страницу.",
-  "request_feed_not_found": "RSS-ссылки больше нет. Обновите страницу.",
+  "request_feed_not_found": "RSS-ссылки больше нет. Обновите страницу и создайте новую ссылку.",
   "request_not_open": "Больше не открыто: {object}. Обратитесь к контактному лицу.",
   "request_sharing_invalid": "Указаны неверные данные: {object}. Проверьте введённые данные.",
   "room_history_stop_disabled": "Сейчас здесь нельзя изменить: {object}. Обратитесь к контактному лицу.",

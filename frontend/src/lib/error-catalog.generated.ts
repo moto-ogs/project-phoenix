@@ -226,7 +226,7 @@ export const ERROR_CATALOG = {
       "care.remove_disabled":
         "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
       "care.request_feed_not_found":
-        "Es gibt keinen RSS-Link mehr. Bitte lade die Seite neu.",
+        "Es gibt keinen RSS-Link mehr. Bitte lade die Seite neu und erstelle einen neuen Link.",
       "care.request_not_found":
         "{object} wurde nicht gefunden. Bitte lade die Seite neu.",
       "care.request_not_open":
@@ -2394,7 +2394,7 @@ export const ERROR_CATALOG = {
       "care.remove_disabled":
         "{object} is not available here at the moment. Please ask your contact person.",
       "care.request_feed_not_found":
-        "There is no RSS link any more. Please reload the page.",
+        "There is no RSS link any more. Please reload the page and create a new link.",
       "care.request_not_found":
         "{object} was not found. Please reload the page.",
       "care.request_not_open":
@@ -3183,7 +3183,7 @@ export const ERROR_CATALOG = {
       "care.remove_disabled":
         "Сейчас здесь недоступно: {object}. Обратитесь к контактному лицу.",
       "care.request_feed_not_found":
-        "RSS-ссылки больше нет. Обновите страницу.",
+        "RSS-ссылки больше нет. Обновите страницу и создайте новую ссылку.",
       "care.request_not_found": "Не найдено: {object}. Обновите страницу.",
       "care.request_not_open":
         "Больше не открыто: {object}. Обратитесь к контактному лицу.",
@@ -3835,7 +3835,7 @@ export const ERROR_CATALOG = {
       "care.remove_disabled":
         "Për momentin nuk është i disponueshëm këtu: {object}. Pyetni personin tuaj të kontaktit.",
       "care.request_feed_not_found":
-        "Lidhja RSS nuk ekziston më. Ju lutemi ringarkoni faqen.",
+        "Lidhja RSS nuk ekziston më. Ju lutemi ringarkoni faqen dhe krijoni një lidhje të re.",
       "care.request_not_found":
         "Nuk u gjet: {object}. Ju lutemi ringarkoni faqen.",
       "care.request_not_open":
@@ -4502,7 +4502,7 @@ export const ERROR_CATALOG = {
       "care.remove_disabled":
         "Obecnie niedostępne tutaj: {object}. Zapytaj swoją osobę kontaktową.",
       "care.request_feed_not_found":
-        "Link RSS już nie istnieje. Odśwież stronę.",
+        "Link RSS już nie istnieje. Odśwież stronę i utwórz nowy link.",
       "care.request_not_found": "Nie znaleziono: {object}. Odśwież stronę.",
       "care.request_not_open":
         "Już nie jest otwarte: {object}. Zapytaj swoją osobę kontaktową.",
@@ -5154,7 +5154,7 @@ export const ERROR_CATALOG = {
       "care.remove_disabled":
         "{object} şu anda burada kullanılamıyor. Lütfen ilgili kişinize danışın.",
       "care.request_feed_not_found":
-        "RSS bağlantısı artık yok. Lütfen sayfayı yenileyin.",
+        "RSS bağlantısı artık yok. Lütfen sayfayı yenileyin ve yeni bir bağlantı oluşturun.",
       "care.request_not_found":
         "{object} bulunamadı. Lütfen sayfayı yenileyin.",
       "care.request_not_open":
@@ -5812,7 +5812,7 @@ export const ERROR_CATALOG = {
       "care.remove_disabled":
         "Зараз тут недоступно: {object}. Зверніться до контактної особи.",
       "care.request_feed_not_found":
-        "RSS-посилання більше немає. Оновіть сторінку.",
+        "RSS-посилання більше немає. Оновіть сторінку та створіть нове посилання.",
       "care.request_not_found": "Не знайдено: {object}. Оновіть сторінку.",
       "care.request_not_open":
         "Уже не відкрито: {object}. Зверніться до контактної особи.",
