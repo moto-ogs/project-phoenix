@@ -11362,6 +11362,36 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/contract-families/",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ContractFamilySet"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/contract-families/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/contract-imports/",
       "portals": [
         "org"
@@ -20204,6 +20234,36 @@
         "ref": "EnrollmentPreview"
       },
       "no_commit": "the preview shows what the run would do for the children of the imported contracts and enrolls nobody"
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/contract-families/",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "FamilyJoinRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ContractFamilySet"
+      }
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/contract-families/{contractId}/leave",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "FamilyLeaveRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ContractFamilySet"
+      }
     },
     {
       "method": "POST",
@@ -46677,6 +46737,40 @@
       ]
     },
     {
+      "name": "ContractFamilySet",
+      "go_type": "carecontract.ContractFamilySet",
+      "fields": [
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "contracts",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "FamilyMember"
+            }
+          }
+        },
+        {
+          "name": "events",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "FamilyEvent"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "ContractImport",
       "go_type": "carecontract.ContractImport",
       "fields": [
@@ -56334,6 +56428,188 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "FamilyEvent",
+      "go_type": "carecontract.FamilyEvent",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "action",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "contract_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "family_contract_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "previous_family_contract_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "child_first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child_last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "account_id",
+          "schema": {
+            "kind": "id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "FamilyJoinRequest",
+      "go_type": "carecontracthttp.FamilyJoinRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "contract_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "id"
+            }
+          }
+        },
+        {
+          "name": "family_contract_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "FamilyLeaveRequest",
+      "go_type": "carecontracthttp.FamilyLeaveRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "FamilyMember",
+      "go_type": "carecontract.FamilyMember",
+      "fields": [
+        {
+          "name": "contract_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "family_contract_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child_first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child_last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child_birth_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "party_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "effective_from",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "ends_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
           }
         }
       ]
@@ -106648,6 +106924,16 @@
         },
         {
           "name": "federal_states",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "booked_modules",
           "schema": {
             "kind": "array",
             "nullable": true,

@@ -1,2 +1,2 @@
-GET /traeger/sepa-creditor/ -> basis
-PUT /traeger/sepa-creditor/ -> basis
+GET /traeger/sepa-creditor/ -> elternbeitraege
+PUT /traeger/sepa-creditor/ -> elternbeitraege

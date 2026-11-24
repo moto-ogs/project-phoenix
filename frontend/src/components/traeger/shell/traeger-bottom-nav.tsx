@@ -14,6 +14,9 @@ import {
   isTraegerNavActive,
   isTraegerSettingsPath,
 } from "./traeger-nav-active";
+import { ModuleLockMark } from "~/components/ui/module-lock-mark";
+import type { ModuleKey } from "~/lib/modules";
+import { TRAEGER_MODULE_LOCK_TITLE } from "~/lib/traeger-modules";
 import {
   TRAEGER_BACK_NAV,
   TRAEGER_HELP_NAV,
@@ -46,16 +49,22 @@ const HELP_ITEM: BottomNavItem = {
  */
 export function TraegerBottomNav({
   federalStates,
+  bookedModules = null,
 }: {
   /** Die Bundesländer der Schulen des Trägers, wie in der Seitenleiste (#4717). */
   readonly federalStates?: readonly string[];
+  /** Die gebuchten moto-Module des Trägers, wie in der Seitenleiste (#6052). */
+  readonly bookedModules?: readonly ModuleKey[] | null;
 }) {
   const pathname = usePathname() ?? "";
   const { data: session } = useSession();
   const returnHref = useTraegerReturnHref();
   const openSearch = useOpenTraegerSearch();
 
-  const settingsItems = traegerSettingsNavItemsFor(session ?? null);
+  const settingsItems = traegerSettingsNavItemsFor(
+    session ?? null,
+    bookedModules,
+  );
   const settingsEntry = settingsItems[0];
   const inSettings = isTraegerSettingsPath(pathname);
   const items: readonly BottomNavItem[] = inSettings
@@ -66,9 +75,11 @@ export function TraegerBottomNav({
     : [
         // Die Leiste folgt der Seitenleiste (#5685); was nicht passt,
         // steht unter „Mehr“.
-        ...traegerNavGroupsFor(session ?? null, federalStates).flatMap(
-          (group) => group.items,
-        ),
+        ...traegerNavGroupsFor(
+          session ?? null,
+          federalStates,
+          bookedModules,
+        ).flatMap((group) => group.items),
         HELP_ITEM,
         ...(settingsEntry
           ? [{ ...TRAEGER_SETTINGS_NAV, href: settingsEntry.href }]
@@ -85,6 +96,11 @@ export function TraegerBottomNav({
     // Die Hilfe ist kein Arbeitsbereich: eine Linie trennt sie ab, wie unten
     // in der Seitenleiste.
     separated: item.help === true,
+    // Ein nicht gebuchtes moto-Modul steht mit Schloss unter „Mehr“ (#6052).
+    mark:
+      "locked" in item && item.locked ? (
+        <ModuleLockMark title={TRAEGER_MODULE_LOCK_TITLE} />
+      ) : undefined,
   }));
 
   return (

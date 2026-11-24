@@ -34,5 +34,6 @@
   "child_link_refused": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "child_link_bound": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "enrollment_preview_changed": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
-  "enrollment_binding_changed": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale."
+  "enrollment_binding_changed": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
+  "family_refused": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale."
 }

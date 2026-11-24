@@ -206,7 +206,11 @@ function AbsenceTypeCard({
       reload: storedType,
       write: async (stored) => onSaved(stored, ""),
     },
-    { token: (read) => read.version, toDraft: draftOf, answer: (saved) => saved },
+    {
+      token: (read) => read.version,
+      toDraft: draftOf,
+      answer: (saved) => saved,
+    },
   );
   const form = useReadDraftForm(
     editing ? edit : null,

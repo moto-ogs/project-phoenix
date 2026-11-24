@@ -57,6 +57,7 @@ const VERTRAEGE = "/traeger/vertraege";
 const BEDINGUNGEN = "/traeger/vertraege/bedingungen";
 const NACHPFLEGE = "/traeger/vertraege/nachpflege";
 const VERKNUEPFEN = "/traeger/vertraege/verknuepfen";
+const GESCHWISTER = "/traeger/vertraege/geschwister";
 
 const readContractImport = (
   file: File,
@@ -90,7 +91,7 @@ function doneDescription(done: ContractImportResult): string {
   const withoutEmail = contractsWithoutEmail(done);
   const paper =
     withoutEmail > 0
-      ? ` ${contractCountLabel(withoutEmail)} ohne Mail-Adresse: Diesen Familien gibst du die Rechnungen auf Papier.`
+      ? ` ${contractCountLabel(withoutEmail)} ohne Mail-Adresse: Diesen Familien gibst du die Rechnungen auf Papier. Geschwister unter ihnen führst du unter „Geschwister zusammenführen“ zusammen.`
       : "";
   return `${parts.join(", ")}.${paper} Du findest die Verträge unter Verträge mit dem Stand „Aktiv“. Als Nächstes verknüpfst du sie mit der Kinderakte des Kindes.`;
 }
@@ -211,6 +212,16 @@ export default function TraegerContractImportPage() {
                 >
                   Mit Kinderakten verknüpfen
                 </ButtonLink>
+                {contractsWithoutEmail(done) > 0 ? (
+                  <ButtonLink
+                    href={traegerPath(GESCHWISTER)}
+                    variant="outline"
+                    size="md"
+                    tooltip="Öffnet die Familien ohne Mail-Adresse, um Geschwister zusammenzuführen."
+                  >
+                    Geschwister zusammenführen
+                  </ButtonLink>
+                ) : null}
                 <Button
                   type="button"
                   variant="outline"

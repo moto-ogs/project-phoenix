@@ -7,14 +7,14 @@ import (
 	"github.com/uptrace/bun"
 )
 
-const studentConsentTextVersionVersion = "20261124160000"
+const studentConsentTextVersionVersion = "20261124170000"
 
 func init() {
 	MigrationRegistry.Register(&Migration{
 		Version:     studentConsentTextVersionVersion,
 		Description: "Einwilligungsverlauf: Eine Foto-Einwilligung hält die Fassung des Wortlauts fest, der ihr zugrunde lag (#8039)",
 		DependsOn: []string{
-			careContractDocumentIssuerVersion, // the newest migration on development
+			careContractFamiliesVersion, // the newest migration on development
 		},
 	})
 	Migrations.MustRegister(studentConsentTextVersionUp, studentConsentTextVersionDown)

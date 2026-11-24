@@ -6,7 +6,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SWRConfig } from "~/lib/swr/testing";
 vi.unmock("swr");
 
@@ -77,6 +77,19 @@ const { billingApi, termsApi, masterApi, session, api } = vi.hoisted(() => ({
   },
 }));
 
+// The booked moto modules of the Träger of the session (#6052).
+const mockBookedModules = vi.hoisted(() => ({
+  current: [
+    "traeger_uebersicht",
+    "ferienbetreuung",
+    "vertraege",
+    "elternbeitraege",
+  ] as string[],
+}));
+vi.mock("~/lib/traeger-booked-modules", () => ({
+  useTraegerModuleBooked: (module: string) =>
+    mockBookedModules.current.includes(module),
+}));
 vi.mock("~/lib/traeger-url", () => ({ traegerPath: (path: string) => path }));
 vi.mock("~/lib/traeger-contributions-api", () => api);
 vi.mock("~/lib/traeger-billing-api", () => billingApi);
@@ -997,5 +1010,37 @@ describe("TraegerAbrechnungsvorgabenPage", () => {
         "true",
       ),
     );
+  });
+
+  // #6052: the billing rules belong to Elternbeiträge und Abrechnung; the
+  // bank accounts are moto Basis and stay.
+  describe("without the module Elternbeiträge und Abrechnung", () => {
+    beforeEach(() => {
+      mockBookedModules.current = ["vertraege"];
+    });
+    afterEach(() => {
+      mockBookedModules.current = [
+        "traeger_uebersicht",
+        "ferienbetreuung",
+        "vertraege",
+        "elternbeitraege",
+      ];
+    });
+
+    it("keeps the bank accounts, reads no billing rule and says who acts next", async () => {
+      renderPage();
+
+      expect(
+        await screen.findByText(
+          "Zahlung, Rechnungsnummern, Ermäßigungen und Kostenträger fehlen hier. Sie gehören zum moto-Modul „Elternbeiträge und Abrechnung“. Dein Träger nutzt es nicht. Wenn du es brauchst, sprich mit der Leitung deines Träger-Büros.",
+        ),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { name: "Bankverbindungen" }),
+      ).toBeInTheDocument();
+      expect(api.fetchContributionRules).not.toHaveBeenCalled();
+      expect(api.fetchCostBearers).not.toHaveBeenCalled();
+      expect(billingApi.fetchHolidayNumberRange).not.toHaveBeenCalled();
+    });
   });
 });

@@ -238,7 +238,9 @@ describe("TraegerAbsenceTypesPage", () => {
         name: "Weitere Aktionen zu Regenerationstag",
       }),
     );
-    fireEvent.click(await screen.findByRole("menuitem", { name: /Ausschalten/ }));
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: /Ausschalten/ }),
+    );
     expect(
       await screen.findByText(
         catalogText("general.changed_since_read", "die Abwesenheitsart"),

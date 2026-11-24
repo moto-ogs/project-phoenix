@@ -277,9 +277,8 @@ export function HolidayCriteriaEditor({
     toDraft: (stored) => draftsFromCriteria(stored.criteria),
     answer: (saved) => saved,
   });
-  const criteria: readonly HolidayCriterion[] = (
-    editor.base ?? source.data
-  )?.criteria ?? [];
+  const criteria: readonly HolidayCriterion[] =
+    (editor.base ?? source.data)?.criteria ?? [];
   const drafts = editor.draft ?? draftsFromCriteria(criteria);
   const setDrafts = editor.setDraft;
   const loadError = useReadDraftLoadError(editor, "die Kriterien");

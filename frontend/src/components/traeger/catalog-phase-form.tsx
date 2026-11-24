@@ -262,7 +262,10 @@ export function CatalogPhaseForm({
           saving={saving}
           saveLabel={saveLabel}
           {...(source && !editor.canSubmit
-            ? { disabled: true, disabledReason: draftBlockReason(editor.status) }
+            ? {
+                disabled: true,
+                disabledReason: draftBlockReason(editor.status),
+              }
             : {})}
         />
       }

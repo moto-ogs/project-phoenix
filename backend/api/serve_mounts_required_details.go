@@ -2,11 +2,11 @@ package api
 
 import (
 	"context"
-	"errors"
+	"slices"
 
 	organizationTenancyCompose "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/compose"
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
-	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
+	settingsModule "github.com/moto-ogs/project-phoenix/modules/settings"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
@@ -24,36 +24,22 @@ func requiredDetailSources(organizations HolidayOrganizations, settings TraegerB
 }
 
 // schoolModuleSwitches reads the module switches of several schools in one
-// batch read. The caller runs in its Träger transaction, whose row security
+// batch read: a module counts once one of the schools books it, the rule of
+// the Träger portal's lock (#6052). The caller runs in its Träger transaction, whose row security
 // hides the settings of the schools, so they are read in an administrative
 // transaction of their own (ADR 0105).
 type schoolModuleSwitches struct {
 	settings owners.MealAttendanceSchoolSettings
 }
 
-var errSchoolSettingsMissing = errors.New("required details: no settings for a school of the Träger")
-
 func (s schoolModuleSwitches) BookedModules(ctx context.Context, schoolIDs []int64) (parentbilling.TraegerModules, error) {
-	keys := []string{configModels.KeyModuleVertraege, configModels.KeyModuleElternbeitraege, configModels.KeyModuleFerienbetreuung}
-	snapshots, err := s.settings.ResolveManyForTenants(tenant.ContextWithoutTransaction(ctx), schoolIDs, keys)
+	booked, err := settingsModule.ModulesBookedByAnySchool(tenant.ContextWithoutTransaction(ctx), s.settings, schoolIDs)
 	if err != nil {
 		return parentbilling.TraegerModules{}, err
 	}
-	modules := parentbilling.TraegerModules{}
-	for _, id := range schoolIDs {
-		snapshot, ok := snapshots[id]
-		if !ok {
-			return parentbilling.TraegerModules{}, errSchoolSettingsMissing
-		}
-		booked := make(map[string]bool, len(keys))
-		for _, key := range keys {
-			if booked[key], err = snapshot.Bool(key); err != nil {
-				return parentbilling.TraegerModules{}, err
-			}
-		}
-		modules.Contracts = modules.Contracts || booked[configModels.KeyModuleVertraege]
-		modules.CareBilling = modules.CareBilling || booked[configModels.KeyModuleElternbeitraege]
-		modules.HolidayCare = modules.HolidayCare || booked[configModels.KeyModuleFerienbetreuung]
-	}
-	return modules, nil
+	return parentbilling.TraegerModules{
+		Contracts:   slices.Contains(booked, settingsModule.ModuleVertraege),
+		CareBilling: slices.Contains(booked, settingsModule.ModuleElternbeitraege),
+		HolidayCare: slices.Contains(booked, settingsModule.ModuleFerienbetreuung),
+	}, nil
 }

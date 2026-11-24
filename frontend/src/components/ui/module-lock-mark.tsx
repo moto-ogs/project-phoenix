@@ -12,13 +12,16 @@ import { LockSimpleIcon } from "@phosphor-icons/react/ssr";
  */
 export function ModuleLockMark({
   className = "",
+  title = "Deine Schule hat dieses Modul nicht gebucht",
 }: {
   readonly className?: string;
+  /** Wer das Modul nicht gebucht hat; das Träger-Portal nennt den Träger (#6052). */
+  readonly title?: string;
 }) {
   return (
     <span
       className={`relative inline-flex shrink-0 items-center text-gray-500 ${className}`}
-      title="Deine Schule hat dieses Modul nicht gebucht"
+      title={title}
     >
       <LockSimpleIcon size={14} weight="bold" aria-hidden="true" />
       <span className="sr-only">, nicht gebucht</span>

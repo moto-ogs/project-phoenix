@@ -94,3 +94,14 @@ func moduleKeys(modules []ModuleDefinition) []ModuleKey {
 	}
 	return keys
 }
+
+// Every module of the catalog is offered since #6052 enforces the four
+// switches of the Träger portal. A module added as not offered yet stays
+// without routes: api's module map refuses a rule for it.
+func TestEveryModuleOfTheCatalogIsOffered(t *testing.T) {
+	t.Parallel()
+	for _, module := range Modules() {
+		assert.True(t, module.Available, "%s is offered", module.Key)
+		assert.NotContains(t, module.Summary, "noch nicht", "%s: the summary no longer calls the module missing", module.Key)
+	}
+}

@@ -17,6 +17,7 @@ import { NumberRangeCard } from "~/components/traeger/number-range-card";
 import { SepaCreditorCard } from "~/components/traeger/sepa-creditor-card";
 import { TraegerBankAccountsCard } from "~/components/traeger/traeger-bank-accounts-card";
 import { useTraegerMasterData } from "~/components/traeger/use-traeger-master-data";
+import { useTraegerModuleBooked } from "~/lib/traeger-booked-modules";
 import { useTraegerSettingsSchema } from "~/components/traeger/use-traeger-resources";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
@@ -25,6 +26,10 @@ import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { hasPermission } from "~/lib/auth-utils";
 import { useInvalidateFamily } from "~/lib/swr";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
+import {
+  seesLockedTraegerModules,
+  traegerModuleNotBookedExplanation,
+} from "~/lib/traeger-modules";
 import {
   fetchCareNumberRange,
   fetchHolidayNumberRange,
@@ -199,7 +204,12 @@ function useBillingDefaults(enabled: boolean) {
 
 export default function TraegerAbrechnungsvorgabenPage() {
   const { data: session } = useSession();
-  const canBill = hasPermission(session ?? null, BILLING_RIGHT);
+  const hasBillingRight = hasPermission(session ?? null, BILLING_RIGHT);
+  // Zahlung, Rechnungsnummern, Regeln und Kostenträger gehören zum moto-Modul
+  // „Elternbeiträge und Abrechnung“ (#6052); die Bankverbindungen sind moto
+  // Basis und bleiben. Solange die Module laden, liest die Seite sie nicht.
+  const billingBooked = useTraegerModuleBooked("elternbeitraege");
+  const canBill = hasBillingRight && billingBooked === true;
   const canEditBank = hasPermission(session ?? null, SETTINGS_RIGHT);
   const invalidateFamily = useInvalidateFamily();
   const master = useTraegerMasterData("die Liste der Bankverbindungen");
@@ -255,12 +265,22 @@ export default function TraegerAbrechnungsvorgabenPage() {
               message="Die Bankverbindungen kannst du nur ansehen. Ändern kann, wer im Träger-Büro die Rolle „Verwaltung“ hat."
             />
           )}
-          {canBill ? null : (
+          {hasBillingRight ? null : (
             <Alert
               type="info"
               message="Zahlung, Rechnungsnummern, Ermäßigungen und Kostenträger pflegt die Rolle „Abrechnung“."
             />
           )}
+          {hasBillingRight && billingBooked === false ? (
+            <Alert
+              type="info"
+              message={`Zahlung, Rechnungsnummern, Ermäßigungen und Kostenträger fehlen hier. ${traegerModuleNotBookedExplanation(
+                "elternbeitraege",
+                seesLockedTraegerModules(session ?? null),
+                "named-before",
+              )}`}
+            />
+          ) : null}
           <TraegerBankAccountsCard
             accounts={master.masterData.bankAccounts}
             canEdit={canEditBank}
