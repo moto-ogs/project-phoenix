@@ -11,7 +11,7 @@ import {
   type ReactNode,
 } from "react";
 
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
 import {
   AT_LEAST_MD,
@@ -603,9 +603,11 @@ function StackedDetailsToggle({
       tooltip={open ? closeTooltip : openTooltip}
       onClick={onToggle}
     >
-      <ChevronDown
+      {/* Same chevron as an expandable table row: to the side while
+          closed, down while open (#7915). */}
+      <ChevronRight
         aria-hidden="true"
-        className={`h-4 w-4 text-gray-500 transition-transform ${open ? "rotate-180" : ""}`}
+        className={`h-4 w-4 text-gray-500 transition-transform ${open ? "rotate-90" : ""}`}
       />
     </Button>
   );
