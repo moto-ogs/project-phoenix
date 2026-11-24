@@ -14,8 +14,17 @@ import { cn } from "~/lib/utils";
 
 // Die Schnellaktionen stehen als gleich hohe Kacheln nebeneinander; das
 // Polster ist das Kartenpolster der TileCard (#6135).
+// In der App (#8070) schrumpfen die Kacheln zu einer Aktionsleiste: eine
+// Zeile, Symbol über kurzem Label, ohne Erklärzeile.
 const QUICK_ACTION_TILE =
-  "flex flex-1 flex-col items-center gap-3 active:scale-[0.97] sm:gap-4";
+  "flex flex-1 flex-col items-center gap-3 active:scale-[0.97] sm:gap-4 app:min-w-0 app:gap-1 app:px-1.5 app:py-2";
+/** Symbolkreis einer Schnellaktion; in der App nur das Symbol. */
+const QUICK_ACTION_ICON =
+  "flex h-12 w-12 items-center justify-center rounded-full border-2 sm:h-14 sm:w-14 app:h-7 app:w-7 app:border-0";
+const QUICK_ACTION_LABEL =
+  "text-base font-semibold text-gray-900 app:text-xs app:leading-4 app:whitespace-nowrap";
+const QUICK_ACTION_HINT =
+  "mt-0.5 hidden text-xs text-gray-500 sm:block app:hidden";
 
 interface StudentCheckoutSectionProps {
   readonly onCheckoutClick: () => void;
@@ -28,14 +37,12 @@ export function StudentCheckoutSection({
   if (!attendanceWebEnabled) return null;
   return (
     <TileCard onClick={onCheckoutClick} className={QUICK_ACTION_TILE}>
-      <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-gray-200 sm:h-14 sm:w-14">
+      <div className={cn(QUICK_ACTION_ICON, "border-gray-200")}>
         <MotoConceptIcon concept={homeConcept} size={26} />
       </div>
       <div className="text-center">
-        <p className="text-base font-semibold text-gray-900">Abmelden</p>
-        <p className="mt-0.5 hidden text-xs text-gray-500 sm:block">
-          Aus der OGS abmelden
-        </p>
+        <p className={QUICK_ACTION_LABEL}>Abmelden</p>
+        <p className={QUICK_ACTION_HINT}>Aus der OGS abmelden</p>
       </div>
     </TileCard>
   );
@@ -53,14 +60,14 @@ export function StudentCheckinSection({
   if (!attendanceWebEnabled) return null;
   return (
     <TileCard onClick={onCheckinClick} className={QUICK_ACTION_TILE}>
-      <div className="border-moto-green text-moto-green flex h-12 w-12 items-center justify-center rounded-full border-2 sm:h-14 sm:w-14">
+      <div
+        className={cn(QUICK_ACTION_ICON, "border-moto-green text-moto-green")}
+      >
         <LogIn className="h-5 w-5 sm:h-6 sm:w-6" />
       </div>
       <div className="text-center">
-        <p className="text-base font-semibold text-gray-900">Anmelden</p>
-        <p className="mt-0.5 hidden text-xs text-gray-500 sm:block">
-          Für heute in der OGS anmelden
-        </p>
+        <p className={QUICK_ACTION_LABEL}>Anmelden</p>
+        <p className={QUICK_ACTION_HINT}>Für heute in der OGS anmelden</p>
       </div>
     </TileCard>
   );
@@ -103,17 +110,17 @@ export function StudentSickReportSection({
       className={QUICK_ACTION_TILE}
     >
       <div
-        className={`flex h-12 w-12 items-center justify-center rounded-full border-2 sm:h-14 sm:w-14 ${
+        className={`${QUICK_ACTION_ICON} ${
           isSick ? "border-moto-green" : "border-moto-red/30"
         }`}
       >
         {renderSickIcon()}
       </div>
       <div className="text-center">
-        <p className="text-base font-semibold text-gray-900">
+        <p className={QUICK_ACTION_LABEL}>
           {isSick ? "Gesund melden" : "Krank melden"}
         </p>
-        <p className="mt-0.5 hidden text-xs text-gray-500 sm:block">
+        <p className={QUICK_ACTION_HINT}>
           {isSick && sickSinceDisplay
             ? `Krank gemeldet seit ${sickSinceDisplay}`
             : "Als krank melden"}
@@ -160,17 +167,17 @@ export function StudentExcusedReportSection({
       className={QUICK_ACTION_TILE}
     >
       <div
-        className={`flex h-12 w-12 items-center justify-center rounded-full border-2 sm:h-14 sm:w-14 ${
+        className={`${QUICK_ACTION_ICON} ${
           isExcused ? "border-moto-green" : "border-moto-purple/30"
         }`}
       >
         {renderExcusedIcon()}
       </div>
       <div className="text-center">
-        <p className="text-base font-semibold text-gray-900">
+        <p className={QUICK_ACTION_LABEL}>
           {isExcused ? "Entschuldigung aufheben" : "Entschuldigen"}
         </p>
-        <p className="mt-0.5 hidden text-xs text-gray-500 sm:block">
+        <p className={QUICK_ACTION_HINT}>
           {isExcused && excusedSinceDisplay
             ? `Entschuldigt seit ${excusedSinceDisplay}`
             : "Als entschuldigt markieren"}
@@ -207,7 +214,7 @@ export function StudentStatusActionsMenu({
       ariaLabel="Weitere Statusaktionen"
       disabled={isLoading}
       wrapperClassName="shrink-0"
-      triggerClassName="moto-hover-elevated h-full min-h-[116px] w-full rounded-2xl disabled:opacity-50 sm:min-h-[140px] sm:w-16"
+      triggerClassName="moto-hover-elevated h-full min-h-[116px] w-full rounded-2xl disabled:opacity-50 sm:min-h-[140px] sm:w-16 app:min-h-0 app:w-12"
       triggerContent={
         // Die Fläche sitzt innen: Ihr Schatten überdeckte sonst den Fokusring
         // des Auslösers.
@@ -229,7 +236,7 @@ export function StudentStatusActionsMenu({
             // Symbol.
             <span className="flex flex-col items-center gap-3">
               <MoreVertical className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden />
-              <span className="text-base font-semibold text-gray-900 sm:hidden">
+              <span className="app:hidden text-base font-semibold text-gray-900 sm:hidden">
                 Weitere
               </span>
             </span>
