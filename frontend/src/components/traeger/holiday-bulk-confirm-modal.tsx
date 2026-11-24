@@ -246,9 +246,13 @@ export function HolidayBulkConfirmModal({
       const registration = plan.confirmable[next]!;
       next += 1;
       try {
-        // The dialog shows no amounts: each confirmation freezes the
-        // preview of the family paying it reads right before (ADR 0311),
-        // and a change in between leaves the registration open as changed.
+        // Deliberately read right before: the dialog shows no amounts and
+        // confirms the current ones. The token only keeps the route's
+        // contract uniform, where an empty token is refused (ADR 0311); a
+        // change between this read and the confirmation leaves the
+        // registration open as changed. The preview carries more than the
+        // fingerprint (siblings, lines); the route has no narrower read,
+        // and the run uses nothing else of it.
         const preview = await fetchHolidayContribution(
           periodId,
           registration.id,

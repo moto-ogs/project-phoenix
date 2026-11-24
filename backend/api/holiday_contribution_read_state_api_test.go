@@ -8,7 +8,9 @@ package api
 import (
 	"context"
 	"net/http"
+	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -67,6 +69,43 @@ func TestHolidayChildNumbersSaveOnlyOverTheNumbersTheOfficeRead(t *testing.T) {
 	inputs[1]["debtor_number"] = "60104"
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, path, map[string]any{"children": inputs, "expected_version": answer.Version})
 	require.Equal(t, http.StatusOK, rec.Code, "a second save over the answer is no refusal: %s", rec.Body.String())
+
+	// The check reads the numbers under the lock of the family's numbers: a
+	// save that waits for another writer of the family checks what that
+	// writer committed, never what it read before it waited.
+	waited := holidayChildNumbers(t, f, f.siblings)
+	ctx := context.Background()
+	holder, err := f.db.BeginTx(ctx, nil)
+	require.NoError(t, err)
+	defer func() { _ = holder.Rollback() }()
+	var key int64
+	require.NoError(t, holder.NewRaw(`SELECT hashtextextended('parent_billing.child_debtor_numbers:' || ?::text || ':' || ?, 0)`,
+		f.office.organization, "eva.muster@example.org").Scan(ctx, &key))
+	_, err = holder.ExecContext(ctx, `SELECT pg_advisory_xact_lock(?)`, key)
+	require.NoError(t, err)
+	inputs[1]["debtor_number"] = "60105"
+	saved := make(chan *httptest.ResponseRecorder, 1)
+	go func() {
+		saved <- traegerJSON(t, f.traeger, f.office.token, http.MethodPut, path, map[string]any{"children": inputs, "expected_version": waited.Version})
+	}()
+	require.Eventually(t, func() bool {
+		var waiting bool
+		require.NoError(t, f.db.NewRaw(`SELECT EXISTS (SELECT 1 FROM pg_locks WHERE locktype = 'advisory' AND NOT granted
+			AND objsubid = 1 AND ((classid::bigint << 32) | objid::bigint) = ?)`, key).Scan(ctx, &waiting))
+		return waiting
+	}, 10*time.Second, 5*time.Millisecond, "the save waits for the lock of the family's numbers")
+	changed, err := holder.ExecContext(ctx, `UPDATE parent_billing.child_debtor_numbers SET debtor_number = '60111'
+		WHERE organization_id = ? AND family_email = 'eva.muster@example.org' AND child_first_name = 'Lia'`, f.office.organization)
+	require.NoError(t, err)
+	rows, err := changed.RowsAffected()
+	require.NoError(t, err)
+	require.EqualValues(t, 1, rows)
+	require.NoError(t, holder.Commit())
+	rec = <-saved
+	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+	assert.Equal(t, "general.changed_since_read", refusalCode(t, rec))
+	assert.Equal(t, map[string]string{"Lia": "60111", "Ben": "60104"}, numbersOf(holidayChildNumbers(t, f, f.siblings)),
+		"the waiting save writes nothing")
 
 	// A confirmation that sends the numbers sends their version too.
 	repeated := f.submitChild(t, f.period, f.offer, "eva.muster@example.org", "Lia", 0)

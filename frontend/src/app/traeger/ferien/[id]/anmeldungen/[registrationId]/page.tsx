@@ -373,7 +373,7 @@ function HolidayRegistrationContent() {
     ids ? traegerKeys.holidayRegistration(periodId, registrationId) : null,
   );
   const beginRegistrationRead = useSWRRequestGuard();
-  const fetchRegistration = useCallback(async () => {
+  const readRegistration = useCallback(async () => {
     const complete = beginRegistrationRead(
       ids ? traegerKeys.holidayRegistration(periodId, registrationId) : null,
     );
@@ -406,7 +406,10 @@ function HolidayRegistrationContent() {
         mutateConfirmation(loadedConfirmation, fresh),
         mutateFamily(loadedFamilyDebtorNumber, fresh),
       ]);
-      return loadedRegistration;
+      return {
+        registration: loadedRegistration,
+        familyNumbers: loadedFamilyDebtorNumber,
+      };
     } catch (error) {
       if (error instanceof ApiError && error.status === 404) {
         complete(() => {
@@ -432,6 +435,16 @@ function HolidayRegistrationContent() {
     mutateConfirmation,
     mutateFamily,
   ]);
+  const fetchRegistration = useCallback(
+    async () => (await readRegistration()).registration,
+    [readRegistration],
+  );
+  // The status card settles the children's numbers on the read a refusal
+  // started (ADR 0311).
+  const readFamilyNumbers = useCallback(
+    async () => (await readRegistration()).familyNumbers,
+    [readRegistration],
+  );
 
   // A change of the bookings or of the exemption changes what a confirmation
   // would freeze, so the contribution is read again; only the newest answer
@@ -886,7 +899,7 @@ function HolidayRegistrationContent() {
       onChanged={changed}
       onReload={afterWrite.refresh}
       onDebtorNumberChanged={afterWrite.refresh}
-      onRead={fetchRegistration}
+      onRead={readFamilyNumbers}
       onFamilyNumbersSaved={(stored) =>
         mutateFamily(stored, { revalidate: false })
       }

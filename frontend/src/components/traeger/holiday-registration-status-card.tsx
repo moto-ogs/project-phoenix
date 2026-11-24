@@ -13,7 +13,14 @@
 // Vorschlag am Feld; weicht die eingetragene ab, fragt ein Dialog, welche
 // Nummer gilt (#6692).
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { ChoiceTile } from "~/components/ui/choice-tile";
@@ -487,9 +494,11 @@ export interface HolidayRegistrationStatusProps {
   readonly onDebtorNumberChanged: () => Promise<unknown>;
   /**
    * Reads the registration with its contribution and numbers after a
-   * refusal of a changed state (ADR 0311); rejects when the read fails.
+   * refusal of a changed state (ADR 0311) and resolves with the numbers
+   * read (undefined: they arrive through the props); rejects when the read
+   * fails.
    */
-  readonly onRead: () => Promise<unknown>;
+  readonly onRead: () => Promise<HolidayFamilyDebtorNumbers | undefined>;
   /** Hands the children's numbers a save answered to the page's read. */
   readonly onFamilyNumbersSaved: (
     stored: HolidayFamilyDebtorNumbers,
@@ -602,6 +611,19 @@ function useHolidayRegistrationStatus({
   const confirmFieldRef = useRef<HTMLInputElement>(null);
   const confirmRef = useRef<HTMLFormElement>(null);
   const confirmErrors = useApiFormError(confirmRef);
+  // One read per refusal: the confirmation's refusal reads the stored state,
+  // and the children's numbers settle on that same read (ADR 0311).
+  const lastRead = useRef<Promise<
+    HolidayFamilyDebtorNumbers | undefined
+  > | null>(null);
+  const refusalRead = useRef<Promise<
+    HolidayFamilyDebtorNumbers | undefined
+  > | null>(null);
+  const readStored = useCallback(() => {
+    const read = onRead();
+    lastRead.current = read;
+    return read;
+  }, [onRead]);
   // The confirmation freezes the preview on screen and sends its
   // fingerprint (ADR 0311); after a refusal nothing is sent until the
   // stored state is read.
@@ -609,7 +631,7 @@ function useHolidayRegistrationStatus({
     {
       opening: registration.status === "received" ? registration.id : null,
       data: contribution ?? undefined,
-      reload: onRead,
+      reload: readStored,
     },
     { token: (read) => read.fingerprint ?? "" },
   );
@@ -659,14 +681,19 @@ function useHolidayRegistrationStatus({
     {
       opening: sendsChildNumbers ? registration.id : null,
       data: familyNumbers,
-      reload: async () => {
-        await onRead();
-        return undefined;
+      reload: () => {
+        const shared = refusalRead.current;
+        refusalRead.current = null;
+        return shared ?? onRead();
       },
     },
     {
       token: (read) => read.version,
       toDraft: (read) => storedChildNumbers(read.children),
+      // A refusal of the preview alone leaves the numbers as read: the
+      // typed ones stay; newer numbers replace them.
+      rebase: (draft, from, to) =>
+        from.version === to.version ? draft : storedChildNumbers(to.children),
       // A confirmed registration closes the fields; the page reads it
       // again after the confirmation (afterWrite).
       answer: (_saved, base) => base,
@@ -727,13 +754,16 @@ function useHolidayRegistrationStatus({
         choice,
         values ? childNumberInputs(childBase.children, values) : undefined,
       );
-    // The preview's refusal and the numbers' refusal each read the stored
-    // state again; the numbers' draft wraps the confirmation.
+    // The numbers' draft wraps the confirmation. A refusal reads the stored
+    // state once: the confirmation's read, on which the numbers settle too.
     const result = sendsChildNumbers
       ? await childDraft.submit(async (version, values) => {
+          refusalRead.current = null;
           const sent = await confirmRead.submit(() => send(version, values));
-          if (!sent.ok) throw sent.skipped ? CONFIRM_SKIPPED : sent.error;
-          return sent.saved;
+          if (sent.ok) return sent.saved;
+          if (sent.skipped) throw CONFIRM_SKIPPED;
+          if (sent.refused) refusalRead.current = lastRead.current;
+          throw sent.error;
         })
       : await confirmRead.submit(() => send());
     if (!result.ok) {
