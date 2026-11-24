@@ -1954,18 +1954,6 @@
     },
     {
       "method": "GET",
-      "pattern": "/api/admin/grade-transitions/{id}/",
-      "portals": [
-        "tenant"
-      ],
-      "deprecated": true,
-      "response": {
-        "kind": "ref",
-        "ref": "TransitionResponse"
-      }
-    },
-    {
-      "method": "GET",
       "pattern": "/api/admin/grade-transitions/{id}/history",
       "portals": [
         "tenant"
@@ -2537,18 +2525,6 @@
           "kind": "ref",
           "ref": "CareOfferingBookingStatsResponse"
         }
-      }
-    },
-    {
-      "method": "GET",
-      "pattern": "/api/enrollment/care-offerings/{id}/",
-      "portals": [
-        "tenant"
-      ],
-      "deprecated": true,
-      "response": {
-        "kind": "ref",
-        "ref": "CareOfferingResponse"
       }
     },
     {
@@ -4165,27 +4141,6 @@
         {
           "name": "page_size",
           "kind": "int"
-        }
-      ],
-      "response": {
-        "kind": "array",
-        "elem": {
-          "kind": "ref",
-          "ref": "RoomResponse"
-        }
-      }
-    },
-    {
-      "method": "GET",
-      "pattern": "/api/rooms/by-category",
-      "portals": [
-        "tenant"
-      ],
-      "deprecated": true,
-      "query": [
-        {
-          "name": "category",
-          "kind": "string"
         }
       ],
       "response": {
@@ -5862,10 +5817,6 @@
           "kind": "string"
         },
         {
-          "name": "from",
-          "kind": "date"
-        },
-        {
           "name": "limit",
           "kind": "int"
         },
@@ -5874,28 +5825,12 @@
           "kind": "string"
         },
         {
-          "name": "status",
-          "kind": "string"
-        },
-        {
           "name": "student_id",
           "kind": "id"
         },
         {
-          "name": "to",
-          "kind": "date"
-        },
-        {
           "name": "types",
           "kind": "string"
-        },
-        {
-          "name": "view",
-          "kind": "string",
-          "values": [
-            "history",
-            "open"
-          ]
         }
       ],
       "response": {
@@ -9879,18 +9814,6 @@
       "response": {
         "kind": "ref",
         "ref": "SchoolParentConferenceList"
-      }
-    },
-    {
-      "method": "GET",
-      "pattern": "/school/calendar/parent-conferences/{conferenceId}",
-      "portals": [
-        "school"
-      ],
-      "deprecated": true,
-      "response": {
-        "kind": "ref",
-        "ref": "ParentConferenceView"
       }
     },
     {
@@ -67824,14 +67747,6 @@
           }
         },
         {
-          "name": "can_correct",
-          "optional": true,
-          "deprecated": true,
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
           "name": "family_protected",
           "schema": {
             "kind": "bool"
@@ -67849,15 +67764,6 @@
           "optional": true,
           "schema": {
             "kind": "string"
-          }
-        },
-        {
-          "name": "data",
-          "deprecated": true,
-          "json_reason": "The originating request owner supplies a different DTO for each inbox item kind",
-          "schema": {
-            "kind": "json",
-            "nullable": true
           }
         },
         {

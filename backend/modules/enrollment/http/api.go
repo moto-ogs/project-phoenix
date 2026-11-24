@@ -203,7 +203,6 @@ func (rs *Resource) mountConfigRoutes(r chi.Router) {
 		r.With(common.RequiresPermission("config:read")).Get("/booking-stats", rs.listCareOfferingBookingStats)
 		r.With(common.RequiresPermission("config:manage")).Post("/", rs.createCareOffering)
 		r.Route("/{id}", func(r chi.Router) {
-			r.With(common.RequiresPermission("config:read")).Get("/", rs.getCareOffering)
 			r.With(common.RequiresPermission("config:manage")).Put("/", rs.updateCareOffering)
 			r.With(common.RequiresPermission("config:manage")).Delete("/", rs.deleteCareOffering)
 			r.With(common.RequiresPermission("config:manage")).Post("/clone", rs.cloneCareOffering)

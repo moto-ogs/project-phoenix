@@ -43,7 +43,7 @@ func TestParentAbsenceReviewScopeKeepsReadsAndDecisionsConsistent(t *testing.T) 
 	}
 	checkReads := func(actor sessiontoken.AppClaims, allowed bool) {
 		t.Helper()
-		list := authExec(t, tc, testutil.NewRequest("GET", "/change-requests?types=excused&view=open", nil), actor, perms)
+		list := authExec(t, tc, testutil.NewRequest("GET", "/change-requests?types=excused", nil), actor, perms)
 		require.Equal(t, http.StatusOK, list.Code, list.Body.String())
 		var listed struct {
 			Data struct {
@@ -113,7 +113,7 @@ func TestParentAbsenceReviewScopeKeepsReadsAndDecisionsConsistent(t *testing.T) 
 	testpkg.InsertTestMasterDataChangeRequest(t, tc.db, (*testpkg.MasterDataChangeRequestRow)(masterData))
 	perms = []string{"users:read", "users:update", "users:absence"}
 	checkReads(unassigned, true)
-	otherQueue := authExec(t, tc, testutil.NewRequest("GET", "/change-requests?types=master_data&view=open", nil), unassigned, perms)
+	otherQueue := authExec(t, tc, testutil.NewRequest("GET", "/change-requests?types=master_data", nil), unassigned, perms)
 	require.Equal(t, http.StatusOK, otherQueue.Code, otherQueue.Body.String())
 	var otherList aggListEnvelope
 	require.NoError(t, json.Unmarshal(otherQueue.Body.Bytes(), &otherList))
@@ -144,28 +144,16 @@ func TestParentAbsenceReviewScopeKeepsReadsAndDecisionsConsistent(t *testing.T) 
 		return err
 	}))
 	// A stale mixed selection must not partially approve its allowed absence.
-	adminList := authExec(t, tc, testutil.NewRequest("GET", "/change-requests?view=open", nil),
+	adminList := authExec(t, tc, testutil.NewRequest("GET", "/change-requests", nil),
 		testutil.AdminTestClaims(int(account.ID)), perms)
 	require.Equal(t, http.StatusOK, adminList.Code, adminList.Body.String())
-	var pending struct {
-		Data struct {
-			Items []struct {
-				RequestType     string          `json:"request_type"`
-				ExpectedVersion string          `json:"expected_version"`
-				Data            json.RawMessage `json:"data"`
-			} `json:"items"`
-		} `json:"data"`
-	}
+	var pending aggListEnvelope
 	require.NoError(t, json.Unmarshal(adminList.Body.Bytes(), &pending))
 	require.Len(t, pending.Data.Items, 2)
 	refs := make([]map[string]string, 0, 2)
 	for _, item := range pending.Data.Items {
-		var payload struct {
-			ID string `json:"id"`
-		}
-		require.NoError(t, json.Unmarshal(item.Data, &payload))
 		require.NotEmpty(t, item.ExpectedVersion)
-		refs = append(refs, map[string]string{"kind": item.RequestType, "id": payload.ID, "expected_version": item.ExpectedVersion})
+		refs = append(refs, map[string]string{"kind": item.RequestType, "id": item.requestID(t), "expected_version": item.ExpectedVersion})
 	}
 	bulk := authExec(t, tc, testutil.NewAuthenticatedRequest(t, "POST", "/change-requests/bulk-approve",
 		map[string]any{"requests": refs, "reason": "Gemeinsam geprüft"}), unassigned, perms)

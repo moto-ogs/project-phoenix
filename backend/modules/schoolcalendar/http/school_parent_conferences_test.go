@@ -18,11 +18,6 @@ func (f *fakeCalendarService) ListSchoolParentConferences(context.Context) (*cal
 	return &calendarSvc.SchoolParentConferenceList{Conferences: []calendarSvc.ParentConferenceView{}, Classes: []string{"1a"}}, f.school.writeErr
 }
 
-func (f *fakeCalendarService) GetSchoolParentConference(_ context.Context, id int64) (*calendarSvc.ParentConferenceView, error) {
-	f.school.gotConferenceID = id
-	return &calendarSvc.ParentConferenceView{ID: "5"}, f.school.writeErr
-}
-
 func (f *fakeCalendarService) CreateSchoolParentConference(_ context.Context, req calendarSvc.ParentConferenceRequest) (*calendarSvc.ParentConferenceView, error) {
 	f.school.gotConference = req
 	return &calendarSvc.ParentConferenceView{ID: "5", SchoolClass: req.SchoolClass}, f.school.writeErr
@@ -75,7 +70,7 @@ func TestSchoolParentConferenceRoutes(t *testing.T) {
 
 	service.school.writeErr = calendarSvc.ErrNotFound
 	w = httptest.NewRecorder()
-	rs.getSchoolParentConference(w, conferenceIDRequest(http.MethodGet, "6"))
+	rs.deleteSchoolParentConference(w, conferenceIDRequest(http.MethodDelete, "6"))
 	assert.Equal(t, http.StatusNotFound, w.Code, "another Lehrkraft's day")
 }
 

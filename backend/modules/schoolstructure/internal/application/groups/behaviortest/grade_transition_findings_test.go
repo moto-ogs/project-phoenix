@@ -338,7 +338,7 @@ func TestGradeTransitionWorkflow_Apply_RejectsStalePreview(t *testing.T) {
 	assertStudentStatus(t, db, reviewed.ID, testpkg.StudentStatusActive)
 	assertStudentStatus(t, db, latecomer.ID, testpkg.StudentStatusActive)
 
-	current, err := wf.FindTransition(ctx, id)
+	current, err := findTransition(ctx, wf, id)
 	require.NoError(t, err)
 	assert.True(t, current.IsDraft(), "a refused apply leaves the transition a draft")
 

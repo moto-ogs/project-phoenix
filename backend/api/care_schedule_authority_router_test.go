@@ -96,7 +96,7 @@ func doCareScheduleJSON(t *testing.T, handler http.Handler, method, path, token 
 // pending care request (#6843).
 func careScheduleImpactToken(t *testing.T, handler http.Handler, token string, studentID, requestID int64) string {
 	t.Helper()
-	req := httptest.NewRequest(http.MethodGet, "/api/students/change-requests?view=open&types=care_schedule&student_id="+strconv.FormatInt(studentID, 10), nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/students/change-requests?types=care_schedule&student_id="+strconv.FormatInt(studentID, 10), nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 	recorder := httptest.NewRecorder()
 	handler.ServeHTTP(recorder, req)

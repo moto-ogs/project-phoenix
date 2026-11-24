@@ -95,8 +95,8 @@ type ParentConferences interface {
 	CreateParentConference(ctx context.Context, fields ParentConferenceFields) (*ParentConference, error)
 	UpdateParentConference(ctx context.Context, id int64, fields ParentConferenceFields) (*ParentConference, error)
 	// FindParentConference returns ErrParentConferenceNotFound for a missing
-	// day; lock holds the row until the unit of work ends.
-	FindParentConference(ctx context.Context, id int64, lock bool) (*ParentConference, error)
+	// day and holds the row until the unit of work ends.
+	FindParentConference(ctx context.Context, id int64) (*ParentConference, error)
 	ListParentConferences(ctx context.Context, filter ParentConferenceFilter) ([]*ParentConference, error)
 	DeleteParentConference(ctx context.Context, id int64) error
 	ListParentConferenceBookings(ctx context.Context, conferenceIDs []int64) ([]*ParentConferenceBooking, error)

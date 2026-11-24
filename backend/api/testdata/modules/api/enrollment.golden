@@ -23,7 +23,6 @@ GET /api/enrollment/admin/requests/{id}/uploads/{uploadId} -> online_anmeldung
 GET /api/enrollment/admin/students/{studentId}/requests/ -> online_anmeldung
 GET /api/enrollment/care-offerings/ -> online_anmeldung
 GET /api/enrollment/care-offerings/booking-stats -> online_anmeldung
-GET /api/enrollment/care-offerings/{id}/ -> online_anmeldung
 GET /api/enrollment/form-bootstrap/public/{tenantSlug}/{phaseId} -> online_anmeldung  (Anmeldung: enrollment.enabled nur mit gebuchtem Modul)
 GET /api/enrollment/legal/{tenantSlug} -> online_anmeldung  (Anmeldung: Rechtstexte der Schule, keine Personendaten)
 GET /api/enrollment/legal/{tenantSlug}/{phaseId} -> online_anmeldung  (Anmeldung: Rechtstexte der Schule, keine Personendaten)

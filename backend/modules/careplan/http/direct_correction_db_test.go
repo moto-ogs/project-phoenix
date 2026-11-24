@@ -99,13 +99,21 @@ func TestAggregatedChangeRequests_RouterDirectCorrections(t *testing.T) {
 	claims := testutil.AdminTestClaims(int(account.ID))
 	perms := []string{"users:read", "users:update"}
 
-	fetch := func(t *testing.T, query string) aggListEnvelope {
+	fetchAt := func(t *testing.T, path, query string) aggListEnvelope {
 		t.Helper()
-		rr := authExec(t, tc, testutil.NewRequest("GET", "/change-requests?"+query, nil), claims, perms)
+		rr := authExec(t, tc, testutil.NewRequest("GET", path+"?"+query, nil), claims, perms)
 		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 		var env aggListEnvelope
 		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &env))
 		return env
+	}
+	fetch := func(t *testing.T, query string) aggListEnvelope {
+		t.Helper()
+		return fetchAt(t, "/change-requests", query)
+	}
+	fetchHistory := func(t *testing.T, query string) aggListEnvelope {
+		t.Helper()
+		return fetchAt(t, "/change-requests/history", query)
 	}
 
 	// ARRANGE 1 — the office corrects the booking itself, through the very
@@ -127,7 +135,7 @@ func TestAggregatedChangeRequests_RouterDirectCorrections(t *testing.T) {
 	require.NoError(t, err)
 
 	// ASSERT 1 — the correction is in the history, as its own row kind.
-	history := fetch(t, "view=history&search=Zkorrektur")
+	history := fetchHistory(t, "search=Zkorrektur")
 	require.Len(t, history.Data.Items, 1)
 	assert.Equal(t, "direct_correction", history.Data.Items[0].RequestType)
 
@@ -142,7 +150,7 @@ func TestAggregatedChangeRequests_RouterDirectCorrections(t *testing.T) {
 			New   string `json:"new"`
 		} `json:"diff"`
 	}
-	require.NoError(t, json.Unmarshal(history.Data.Items[0].Data, &row))
+	require.NoError(t, json.Unmarshal(history.Data.Items[0].DirectCorrection, &row))
 	assert.Equal(t, "Zkorrektur Kindlein", row.StudentName)
 	assert.Equal(t, "Agg CorrectionReviewer", row.ChangedByName)
 	assert.Equal(t, "Telefonisch gemeldet", row.Reason)
@@ -170,7 +178,7 @@ func TestAggregatedChangeRequests_RouterDirectCorrections(t *testing.T) {
 
 	// ASSERT 2 — the approval appears exactly once, as the decided request; its
 	// side effect on the booking log stays out of the correction feed.
-	after := fetch(t, "view=history&search=Zkorrektur")
+	after := fetchHistory(t, "search=Zkorrektur")
 	types := make([]string, 0, len(after.Data.Items))
 	for _, item := range after.Data.Items {
 		types = append(types, item.RequestType)
@@ -239,7 +247,7 @@ func TestAggregatedChangeRequests_HistoryOrdersSourcesOnOneClock(t *testing.T) {
 	decide(fmt.Sprintf("/offering-change-requests/%d/decide", offering.ID),
 		fmt.Sprintf(`{"approve":true,"reason":"Passt","effective_from":%q,"expected_version":%q}`, offering.EffectiveFrom, testpkg.OfferingRequestVersion(t, offering.ID)))
 
-	rr := authExec(t, tc, testutil.NewRequest("GET", "/change-requests?view=history&search=Zuhrzeit", nil), claims, perms)
+	rr := authExec(t, tc, testutil.NewRequest("GET", "/change-requests/history?search=Zuhrzeit", nil), claims, perms)
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 	var history aggListEnvelope
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &history))

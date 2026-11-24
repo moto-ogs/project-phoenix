@@ -57,7 +57,6 @@ func ConfigRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/care-offerings/", Portals: portals, Query: phase, Response: []CareOfferingResponse{}},
 		{Method: "POST", Pattern: "/care-offerings/", Portals: portals, Request: CareOfferingRequest{}, Response: CareOfferingResponse{}},
 		{Method: "GET", Pattern: "/care-offerings/booking-stats", Portals: portals, Query: phase, Response: []CareOfferingBookingStatsResponse{}},
-		{Method: "GET", Pattern: "/care-offerings/{id}/", Portals: portals, Deprecated: true, Response: CareOfferingResponse{}},
 		{Method: "PUT", Pattern: "/care-offerings/{id}/", Portals: portals, Request: CareOfferingRequest{}, Response: CareOfferingResponse{}},
 		{Method: "DELETE", Pattern: "/care-offerings/{id}/", Portals: portals, NoData: true},
 		{Method: "POST", Pattern: "/care-offerings/{id}/clone", Portals: portals, Request: CloneCareOfferingRequest{}, Response: CareOfferingResponse{}},

@@ -121,7 +121,6 @@ func (rs *Resource) Router() chi.Router {
 		protected.With(rs.runtime.Permission(rs.runtime.Read), withTx).Get("/", rs.listRooms)
 		protected.With(rs.runtime.Permission(rs.runtime.Read), rs.runtime.Permission(rs.runtime.ReadUsers), withTx).Post("/export", rs.exportSnapshot)
 		protected.With(rs.runtime.Permission(rs.runtime.Read), withTx).Get("/{id}", rs.getRoom)
-		protected.With(rs.runtime.Permission(rs.runtime.Read), withTx).Get("/by-category", rs.getRoomsByCategory)
 		protected.With(rs.runtime.Permission(rs.runtime.Read), withTx).Get("/{id}/history", rs.GetRoomHistory)
 		protected.With(rs.runtime.Permission(rs.runtime.Create), withTx).Post("/", rs.createRoom)
 		protected.With(rs.runtime.Permission(rs.runtime.Update), withTx).Put("/{id}", rs.updateRoom)
@@ -296,24 +295,6 @@ func (rs *Resource) updateRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rs.runtime.Success(w, r, http.StatusOK, simpleRoomResponse(room), "Room updated successfully")
-}
-
-func (rs *Resource) getRoomsByCategory(w http.ResponseWriter, r *http.Request) {
-	category := r.URL.Query().Get("category")
-	if category == "" {
-		rs.runtime.Failure(w, r, FailureInvalid, errors.New("category parameter is required"), "invalid_request")
-		return
-	}
-	rooms, err := rs.rooms.ListRooms(r.Context(), facilities.RoomFilter{Category: &category})
-	if err != nil {
-		rs.failure(w, r, err)
-		return
-	}
-	responses := make([]RoomResponse, 0, len(rooms))
-	for _, room := range rooms {
-		responses = append(responses, simpleRoomResponse(room))
-	}
-	rs.runtime.Success(w, r, http.StatusOK, responses, "Rooms retrieved successfully")
 }
 
 // ErrHistoryDisabled refuses the room history of a school whose attendance
