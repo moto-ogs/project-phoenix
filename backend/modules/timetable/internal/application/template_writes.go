@@ -269,19 +269,14 @@ func checkTemplateSeriesVersion(ctx context.Context, reads ports.TemplateSeriesR
 	if reads == nil {
 		return &ports.ScheduleError{Op: op + ": check version", Err: errors.New("template series reads are not configured")}
 	}
-	// The Betreuungsschlüssel only derives counts the version leaves out.
-	entries, err := reads.ListTemplateEntries(ctx, &templateID, 1)
+	current, found, err := timetable.ReadTemplateSeriesVersion(ctx, reads, templateID)
 	if err != nil {
 		return &ports.ScheduleError{Op: op + ": check version", Err: err}
 	}
-	if len(entries) == 0 {
+	if !found {
 		return nil
 	}
-	roster, err := reads.ListTemplateWeekdayRoster(ctx, &templateID, entries[0].TemplateCalendarPeriodID)
-	if err != nil {
-		return &ports.ScheduleError{Op: op + ": check version", Err: err}
-	}
-	return readstate.Check(expected, timetable.TemplateSeriesVersion(entries, roster))
+	return readstate.Check(expected, current)
 }
 
 // newRosterReconciler builds the roster maintenance the template writes use

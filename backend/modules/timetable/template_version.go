@@ -1,10 +1,41 @@
 package timetable
 
 import (
+	"context"
 	"slices"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
+
+// TemplateSeriesReads are the template reads a series version is taken
+// over: the period-free template entries and the weekday roster of a
+// planning period. The planner's TimetableDataCapability has both.
+type TemplateSeriesReads interface {
+	ListTemplateEntries(ctx context.Context, templateID *int64, childrenPerStaffRatio int) ([]TemplateListEntry, error)
+	ListTemplateWeekdayRoster(ctx context.Context, templateID, calendarPeriodID *int64) ([]TemplateWeekdayRosterRow, error)
+}
+
+// ReadTemplateSeriesVersion reads the segment and answers its
+// TemplateSeriesVersion: the one read the editor's GET, the save answer and
+// the owner's check under the recurrence gate share, so every side takes the
+// roster of the series' own planning period, never the editor's. found is
+// false for a segment the read no longer returns; its version is the token
+// of no state.
+func ReadTemplateSeriesVersion(ctx context.Context, reads TemplateSeriesReads, templateID int64) (version string, found bool, err error) {
+	// The Betreuungsschlüssel only derives counts the version leaves out.
+	entries, err := reads.ListTemplateEntries(ctx, &templateID, 1)
+	if err != nil {
+		return "", false, err
+	}
+	if len(entries) == 0 {
+		return TemplateSeriesVersion(nil, nil), false, nil
+	}
+	roster, err := reads.ListTemplateWeekdayRoster(ctx, &templateID, entries[0].TemplateCalendarPeriodID)
+	if err != nil {
+		return "", false, err
+	}
+	return TemplateSeriesVersion(entries, roster), true, nil
+}
 
 // TemplateSeriesVersion is the read-state token of a Regeltermin segment
 // (ADR 0311): the template's stored fields, its schedules and its roster as

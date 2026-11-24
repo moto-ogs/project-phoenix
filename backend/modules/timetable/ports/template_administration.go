@@ -26,14 +26,10 @@ type OfferingPreviewSources interface {
 }
 
 // TemplateSeriesReads are the Timetable owner's template reads the series
-// version of an edit or split is taken over (timetable.TemplateSeriesVersion,
-// ADR 0311): the period-free template entries and the weekday roster of the
-// template's planning period. The composition binds the owner's planner
-// reads.
-type TemplateSeriesReads interface {
-	ListTemplateEntries(ctx context.Context, templateID *int64, childrenPerStaffRatio int) ([]timetable.TemplateListEntry, error)
-	ListTemplateWeekdayRoster(ctx context.Context, templateID, calendarPeriodID *int64) ([]timetable.TemplateWeekdayRosterRow, error)
-}
+// version of an edit or split is taken over
+// (timetable.ReadTemplateSeriesVersion, ADR 0311). The composition binds the
+// owner's planner reads.
+type TemplateSeriesReads = timetable.TemplateSeriesReads
 
 // TemplateAdministrationDependencies wires timetable.TemplateAdministration:
 // the retained template rows, the owner's materialization and recurrence

@@ -489,14 +489,11 @@ func offeringPreviewFingerprint(t *testing.T, ctx context.Context, review timeta
 }
 
 // templateSeriesVersion is the version GET /templates/{id} answers for the
-// series editor: the owner's token over the period-free entries and the
-// weekday roster of the template's planning period.
+// series editor: the owner's ReadTemplateSeriesVersion.
 func templateSeriesVersion(t *testing.T, ctx context.Context, reads timetable.TimetableDataCapability, templateID int64) string {
 	t.Helper()
-	entries, err := reads.ListTemplateEntries(ctx, &templateID, 1)
+	version, found, err := timetable.ReadTemplateSeriesVersion(ctx, reads, templateID)
 	require.NoError(t, err)
-	require.NotEmpty(t, entries)
-	roster, err := reads.ListTemplateWeekdayRoster(ctx, &templateID, entries[0].TemplateCalendarPeriodID)
-	require.NoError(t, err)
-	return timetable.TemplateSeriesVersion(entries, roster)
+	require.True(t, found)
+	return version
 }

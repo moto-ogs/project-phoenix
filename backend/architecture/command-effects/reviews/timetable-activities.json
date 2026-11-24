@@ -28939,6 +28939,158 @@
     },
     {
       "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.TimetableDataCapability.ListTemplateEntries",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateSeriesReads.ListTemplateEntries",
+      "reason": "Platform protocol participation (scope): timetable-activities reaches tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/timetable.TemplateSeriesReads.ListTemplateEntries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Added with #8014: the template update and split take the editor's version over the owner's planner reads under their recurrence gate (ADR 0311).",
+      "source_owner": "timetable-activities",
+      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.TimetableDataCapability.ListTemplateEntries",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateSeriesReads.ListTemplateEntries",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/facilities.Capability.ListRoomsByID (facilities) through modules/timetable.TemplateSeriesReads.ListTemplateEntries. No persistent, lock or scope effect. Added with #8014: the template update and split take the editor's version over the owner's planner reads under their recurrence gate (ADR 0311).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/facilities.Capability.ListRoomsByID",
+      "target_owner": "facilities"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.TimetableDataCapability.ListTemplateEntries",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateSeriesReads.ListTemplateEntries",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/facilities.Catalog.ListRoomsByID (facilities) through modules/timetable.TemplateSeriesReads.ListTemplateEntries. No persistent, lock or scope effect. Added with #8014: the template update and split take the editor's version over the owner's planner reads under their recurrence gate (ADR 0311).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/facilities.Catalog.ListRoomsByID",
+      "target_owner": "facilities"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.TimetableDataCapability.ListTemplateEntries",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateSeriesReads.ListTemplateEntries",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/facilities.Query.ListRoomsByID (facilities) through modules/timetable.TemplateSeriesReads.ListTemplateEntries. No persistent, lock or scope effect. Added with #8014: the template update and split take the editor's version over the owner's planner reads under their recurrence gate (ADR 0311).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/facilities.Query.ListRoomsByID",
+      "target_owner": "facilities"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.TimetableDataCapability.ListTemplateEntries",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateSeriesReads.ListTemplateEntries",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/schoolcalendar.Calendar.ListCalendarPeriods (school-calendar) through modules/timetable.TemplateSeriesReads.ListTemplateEntries. No persistent, lock or scope effect. Added with #8014: the template update and split take the editor's version over the owner's planner reads under their recurrence gate (ADR 0311).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Calendar.ListCalendarPeriods",
+      "target_owner": "school-calendar"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.TimetableDataCapability.ListTemplateEntries",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateSeriesReads.ListTemplateEntries",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/schoolcalendar.Capability.ListCalendarPeriods (school-calendar) through modules/timetable.TemplateSeriesReads.ListTemplateEntries. No persistent, lock or scope effect. Added with #8014: the template update and split take the editor's version over the owner's planner reads under their recurrence gate (ADR 0311).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Capability.ListCalendarPeriods",
+      "target_owner": "school-calendar"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.TimetableDataCapability.ListTemplateEntries",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateSeriesReads.ListTemplateEntries",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/schoolcalendar.Days.ListCalendarPeriods (school-calendar) through modules/timetable.TemplateSeriesReads.ListTemplateEntries. No persistent, lock or scope effect. Added with #8014: the template update and split take the editor's version over the owner's planner reads under their recurrence gate (ADR 0311).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
+      "target_owner": "school-calendar"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.TimetableDataCapability.ListTemplateEntries",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateSeriesReads.ListTemplateEntries",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/schoolcalendar.Query.ListCalendarPeriods (school-calendar) through modules/timetable.TemplateSeriesReads.ListTemplateEntries. No persistent, lock or scope effect. Added with #8014: the template update and split take the editor's version over the owner's planner reads under their recurrence gate (ADR 0311).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Query.ListCalendarPeriods",
+      "target_owner": "school-calendar"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.TimetableDataCapability.ListTemplateEntries",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateSeriesReads.ListTemplateEntries",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/schoolstructure.Capability.ListGroupsByID (school-structure) through modules/timetable.TemplateSeriesReads.ListTemplateEntries. No persistent, lock or scope effect. Added with #8014: the template update and split take the editor's version over the owner's planner reads under their recurrence gate (ADR 0311).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Capability.ListGroupsByID",
+      "target_owner": "school-structure"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.TimetableDataCapability.ListTemplateEntries",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateSeriesReads.ListTemplateEntries",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/schoolstructure.Owner.ListGroupsByID (school-structure) through modules/timetable.TemplateSeriesReads.ListTemplateEntries. No persistent, lock or scope effect. Added with #8014: the template update and split take the editor's version over the owner's planner reads under their recurrence gate (ADR 0311).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Owner.ListGroupsByID",
+      "target_owner": "school-structure"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.TimetableDataCapability.ListTemplateEntries",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateSeriesReads.ListTemplateEntries",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/schoolstructure.Query.ListGroupsByID (school-structure) through modules/timetable.TemplateSeriesReads.ListTemplateEntries. No persistent, lock or scope effect. Added with #8014: the template update and split take the editor's version over the owner's planner reads under their recurrence gate (ADR 0311).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Query.ListGroupsByID",
+      "target_owner": "school-structure"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.TimetableDataCapability.ListTemplateEntries",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateSeriesReads.ListTemplateEntries",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/workforce.Capability.ListShiftTypes (workforce) through modules/timetable.TemplateSeriesReads.ListTemplateEntries. No persistent, lock or scope effect. Added with #8014: the template update and split take the editor's version over the owner's planner reads under their recurrence gate (ADR 0311).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/workforce.Capability.ListShiftTypes",
+      "target_owner": "workforce"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.TimetableDataCapability.ListTemplateEntries",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateSeriesReads.ListTemplateEntries",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/workforce.ShiftQuery.ListShiftTypes (workforce) through modules/timetable.TemplateSeriesReads.ListTemplateEntries. No persistent, lock or scope effect. Added with #8014: the template update and split take the editor's version over the owner's planner reads under their recurrence gate (ADR 0311).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/workforce.ShiftQuery.ListShiftTypes",
+      "target_owner": "workforce"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.TimetableDataCapability.ListTemplateEntries",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateSeriesReads.ListTemplateEntries",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/workforce/compose.WorkTime.ListShiftTypes (workforce) through modules/timetable.TemplateSeriesReads.ListTemplateEntries. No persistent, lock or scope effect. Added with #8014: the template update and split take the editor's version over the owner's planner reads under their recurrence gate (ADR 0311).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.ListShiftTypes",
+      "target_owner": "workforce"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.TimetableDataCapability.ListTemplateWeekdayRoster",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateSeriesReads.ListTemplateWeekdayRoster",
+      "reason": "Platform protocol participation (scope): timetable-activities reaches tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/timetable.TemplateSeriesReads.ListTemplateWeekdayRoster. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Added with #8014: the template update and split take the editor's version over the owner's planner reads under their recurrence gate (ADR 0311).",
+      "source_owner": "timetable-activities",
+      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.Capability.CreateTimeframe",
       "classification": "platform",
       "effect": "scope",
@@ -41224,158 +41376,6 @@
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/notifications.PreferenceService.FilterNotOptedOut",
       "target_owner": "delivery-platform"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.TimetableDataCapability.ListTemplateEntries",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.TemplateSeriesReads.ListTemplateEntries",
-      "reason": "Platform protocol participation (scope): timetable-activities reaches tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/timetable/ports.TemplateSeriesReads.ListTemplateEntries. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Added with #8014: the template update and split take the editor's version over the owner's planner reads under their recurrence gate (ADR 0311).",
-      "source_owner": "timetable-activities",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.TimetableDataCapability.ListTemplateEntries",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.TemplateSeriesReads.ListTemplateEntries",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/facilities.Capability.ListRoomsByID (facilities) through modules/timetable/ports.TemplateSeriesReads.ListTemplateEntries. No persistent, lock or scope effect. Added with #8014: the template update and split take the editor's version over the owner's planner reads under their recurrence gate (ADR 0311).",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/facilities.Capability.ListRoomsByID",
-      "target_owner": "facilities"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.TimetableDataCapability.ListTemplateEntries",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.TemplateSeriesReads.ListTemplateEntries",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/facilities.Catalog.ListRoomsByID (facilities) through modules/timetable/ports.TemplateSeriesReads.ListTemplateEntries. No persistent, lock or scope effect. Added with #8014: the template update and split take the editor's version over the owner's planner reads under their recurrence gate (ADR 0311).",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/facilities.Catalog.ListRoomsByID",
-      "target_owner": "facilities"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.TimetableDataCapability.ListTemplateEntries",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.TemplateSeriesReads.ListTemplateEntries",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/facilities.Query.ListRoomsByID (facilities) through modules/timetable/ports.TemplateSeriesReads.ListTemplateEntries. No persistent, lock or scope effect. Added with #8014: the template update and split take the editor's version over the owner's planner reads under their recurrence gate (ADR 0311).",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/facilities.Query.ListRoomsByID",
-      "target_owner": "facilities"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.TimetableDataCapability.ListTemplateEntries",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.TemplateSeriesReads.ListTemplateEntries",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/schoolcalendar.Calendar.ListCalendarPeriods (school-calendar) through modules/timetable/ports.TemplateSeriesReads.ListTemplateEntries. No persistent, lock or scope effect. Added with #8014: the template update and split take the editor's version over the owner's planner reads under their recurrence gate (ADR 0311).",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Calendar.ListCalendarPeriods",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.TimetableDataCapability.ListTemplateEntries",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.TemplateSeriesReads.ListTemplateEntries",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/schoolcalendar.Capability.ListCalendarPeriods (school-calendar) through modules/timetable/ports.TemplateSeriesReads.ListTemplateEntries. No persistent, lock or scope effect. Added with #8014: the template update and split take the editor's version over the owner's planner reads under their recurrence gate (ADR 0311).",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Capability.ListCalendarPeriods",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.TimetableDataCapability.ListTemplateEntries",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.TemplateSeriesReads.ListTemplateEntries",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/schoolcalendar.Days.ListCalendarPeriods (school-calendar) through modules/timetable/ports.TemplateSeriesReads.ListTemplateEntries. No persistent, lock or scope effect. Added with #8014: the template update and split take the editor's version over the owner's planner reads under their recurrence gate (ADR 0311).",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Days.ListCalendarPeriods",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.TimetableDataCapability.ListTemplateEntries",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.TemplateSeriesReads.ListTemplateEntries",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/schoolcalendar.Query.ListCalendarPeriods (school-calendar) through modules/timetable/ports.TemplateSeriesReads.ListTemplateEntries. No persistent, lock or scope effect. Added with #8014: the template update and split take the editor's version over the owner's planner reads under their recurrence gate (ADR 0311).",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.Query.ListCalendarPeriods",
-      "target_owner": "school-calendar"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.TimetableDataCapability.ListTemplateEntries",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.TemplateSeriesReads.ListTemplateEntries",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/schoolstructure.Capability.ListGroupsByID (school-structure) through modules/timetable/ports.TemplateSeriesReads.ListTemplateEntries. No persistent, lock or scope effect. Added with #8014: the template update and split take the editor's version over the owner's planner reads under their recurrence gate (ADR 0311).",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Capability.ListGroupsByID",
-      "target_owner": "school-structure"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.TimetableDataCapability.ListTemplateEntries",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.TemplateSeriesReads.ListTemplateEntries",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/schoolstructure.Owner.ListGroupsByID (school-structure) through modules/timetable/ports.TemplateSeriesReads.ListTemplateEntries. No persistent, lock or scope effect. Added with #8014: the template update and split take the editor's version over the owner's planner reads under their recurrence gate (ADR 0311).",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Owner.ListGroupsByID",
-      "target_owner": "school-structure"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.TimetableDataCapability.ListTemplateEntries",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.TemplateSeriesReads.ListTemplateEntries",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/schoolstructure.Query.ListGroupsByID (school-structure) through modules/timetable/ports.TemplateSeriesReads.ListTemplateEntries. No persistent, lock or scope effect. Added with #8014: the template update and split take the editor's version over the owner's planner reads under their recurrence gate (ADR 0311).",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure.Query.ListGroupsByID",
-      "target_owner": "school-structure"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.TimetableDataCapability.ListTemplateEntries",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.TemplateSeriesReads.ListTemplateEntries",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/workforce.Capability.ListShiftTypes (workforce) through modules/timetable/ports.TemplateSeriesReads.ListTemplateEntries. No persistent, lock or scope effect. Added with #8014: the template update and split take the editor's version over the owner's planner reads under their recurrence gate (ADR 0311).",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/workforce.Capability.ListShiftTypes",
-      "target_owner": "workforce"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.TimetableDataCapability.ListTemplateEntries",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.TemplateSeriesReads.ListTemplateEntries",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/workforce.ShiftQuery.ListShiftTypes (workforce) through modules/timetable/ports.TemplateSeriesReads.ListTemplateEntries. No persistent, lock or scope effect. Added with #8014: the template update and split take the editor's version over the owner's planner reads under their recurrence gate (ADR 0311).",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/workforce.ShiftQuery.ListShiftTypes",
-      "target_owner": "workforce"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.TimetableDataCapability.ListTemplateEntries",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.TemplateSeriesReads.ListTemplateEntries",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/workforce/compose.WorkTime.ListShiftTypes (workforce) through modules/timetable/ports.TemplateSeriesReads.ListTemplateEntries. No persistent, lock or scope effect. Added with #8014: the template update and split take the editor's version over the owner's planner reads under their recurrence gate (ADR 0311).",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.ListShiftTypes",
-      "target_owner": "workforce"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.TimetableDataCapability.ListTemplateWeekdayRoster",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.TemplateSeriesReads.ListTemplateWeekdayRoster",
-      "reason": "Platform protocol participation (scope): timetable-activities reaches tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/timetable/ports.TemplateSeriesReads.ListTemplateWeekdayRoster. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Added with #8014: the template update and split take the editor's version over the owner's planner reads under their recurrence gate (ADR 0311).",
-      "source_owner": "timetable-activities",
-      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
-      "target_owner": "tenant-runtime"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable.TemplateAdministration.AlignPlannedInstanceStaff",

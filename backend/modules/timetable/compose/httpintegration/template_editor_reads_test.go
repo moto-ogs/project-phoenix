@@ -50,22 +50,10 @@ func (e editorTemplates) SplitTemplate(ctx context.Context, cmd timetable.SplitT
 }
 
 // readTemplateVersion is the version GET /templates/{id} answers: the owner's
-// TemplateSeriesVersion over the period-free entries and the weekday roster
-// of the template's planning period.
+// ReadTemplateSeriesVersion.
 func readTemplateVersion(ctx context.Context, reads timetable.TimetableDataCapability, templateID int64) (string, error) {
-	entries, err := reads.ListTemplateEntries(ctx, &templateID, 1)
-	if err != nil {
-		return "", err
-	}
-	var periodID *int64
-	if len(entries) > 0 {
-		periodID = entries[0].TemplateCalendarPeriodID
-	}
-	roster, err := reads.ListTemplateWeekdayRoster(ctx, &templateID, periodID)
-	if err != nil {
-		return "", err
-	}
-	return timetable.TemplateSeriesVersion(entries, roster), nil
+	version, _, err := timetable.ReadTemplateSeriesVersion(ctx, reads, templateID)
+	return version, err
 }
 
 // TestTemplateWritesRefuseAnOlderRead: the Timetable owner compares the

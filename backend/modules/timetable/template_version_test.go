@@ -12,7 +12,9 @@ import (
 // shape. The owner took the canonical form over unchanged: an editor opened
 // before the release saves without a refusal. The fixtures cover a series
 // with and without a planning period, with and without weekday rows,
-// unsorted schedules and rosters, and a segment that is gone.
+// unsorted schedules and rosters, nil and empty lists, no participant
+// limit or staff override, a period with only protected children, and a
+// segment that is gone.
 func TestTemplateSeriesVersionKeepsTheTokensHandedOut(t *testing.T) {
 	t.Parallel()
 	i64 := func(v int64) *int64 { return &v }
@@ -48,6 +50,21 @@ func TestTemplateSeriesVersionKeepsTheTokensHandedOut(t *testing.T) {
 	inPeriod := base
 	inPeriod.TemplateCalendarPeriodID = i64(55)
 	bare := timetable.TemplateListRow{TemplateID: 42, Name: "Leer", Type: "activity", CategoryID: 1}
+	// nil and empty lists, no participant limit and no staff override.
+	emptyLists := timetable.TemplateListRow{
+		TemplateID: 43, Name: "Listen", Type: "care", CategoryID: 2, MaxParticipants: 0, RequiredStaff: nil,
+		StudentIDs: []int64{}, StaffIDs: []int64{},
+	}
+	emptyListsEntry := timetable.TemplateListEntry{
+		TemplateListRow: emptyLists, Targets: []timetable.GroupTarget{},
+		SourceCareOfferingIDs: []int64{}, SourceGradeLevels: []int{}, SourceSchoolClasses: []string{},
+	}
+	nilLists := emptyLists
+	nilLists.StudentIDs, nilLists.StaffIDs = nil, nil
+	protectedOnly := []timetable.TemplateWeekdayRosterRow{
+		{TemplateID: 41, Weekday: 4, Kind: timetable.TemplateWeekdayRosterKindProtectedStudent, PersonID: 30},
+		{TemplateID: 41, Weekday: 2, Kind: timetable.TemplateWeekdayRosterKindProtectedStudent, PersonID: 20},
+	}
 	for name, tc := range map[string]struct {
 		entries []timetable.TemplateListEntry
 		roster  []timetable.TemplateWeekdayRosterRow
@@ -65,6 +82,11 @@ func TestTemplateSeriesVersionKeepsTheTokensHandedOut(t *testing.T) {
 		"in a period without weekday rows": {[]timetable.TemplateListEntry{entry(inPeriod, 901, 1, nil)}, nil, "6a3658097efa2cc073cc1007ce59f385"},
 		"bare":                             {[]timetable.TemplateListEntry{{TemplateListRow: bare}}, nil, "21593622b4242d056b2490bfa38eed25"},
 		"gone":                             {nil, nil, "692d4a7bd3757277b806e961fef351c4"},
+		"empty lists":                      {[]timetable.TemplateListEntry{emptyListsEntry}, nil, "10128c3fbe0d879d24efb5f540c6ffb3"},
+		"nil lists":                        {[]timetable.TemplateListEntry{{TemplateListRow: nilLists}}, nil, "a897e01386b0e5eea9cc499ecd5b1412"},
+		"in a period with only protected children": {
+			[]timetable.TemplateListEntry{entry(inPeriod, 901, 1, nil)}, protectedOnly, "00aa9ab4315999d17da46702fb91ccb7",
+		},
 	} {
 		assert.Equal(t, tc.want, timetable.TemplateSeriesVersion(tc.entries, tc.roster), name)
 	}
