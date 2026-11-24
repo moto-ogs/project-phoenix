@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/uptrace/bun"
@@ -48,6 +49,53 @@ func childNumbersOfRows(rows []childDebtorNumberRow) []parentbilling.ChildDebtor
 	return numbers
 }
 
+// LockChildDebtorNumbers holds the numbers of the children of each family
+// until the transaction ends (#7904, ADR 0311): every writer of a number
+// takes it before it writes, and a save that checks the numbers it read
+// takes it before it reads them. One statement takes the families in the
+// order of their keys, so two writers of several families never wait for
+// each other in a circle. It is the last lock of the Elternabrechnung a
+// write takes: a caller holds the families' rows (LockFamilies) before it,
+// never after.
+func (s *Store) LockChildDebtorNumbers(ctx context.Context, organizationID int64, familyEmails []string) error {
+	families := childNumberFamilies(familyEmails)
+	if len(families) == 0 {
+		return nil
+	}
+	db, err := traegerDB(ctx, organizationID)
+	if err != nil {
+		return err
+	}
+	if _, err := db.NewRaw(`WITH ordered AS MATERIALIZED (
+			SELECT family FROM unnest(?1::text[]) WITH ORDINALITY AS key(family, position) ORDER BY position)
+		SELECT pg_advisory_xact_lock(hashtextextended('parent_billing.child_debtor_numbers:' || ?0::text || ':' || family, 0)) FROM ordered`,
+		organizationID, pgdialect.Array(families)).Exec(ctx); err != nil {
+		return fmt.Errorf("lock the debtor numbers of the children: %w", err)
+	}
+	return nil
+}
+
+// childNumberFamilies is each family key once, sorted.
+func childNumberFamilies(familyEmails []string) []string {
+	families := make([]string, 0, len(familyEmails))
+	for _, email := range familyEmails {
+		if family := parentbilling.FamilyKey(email); family != "" {
+			families = append(families, family)
+		}
+	}
+	slices.Sort(families)
+	return slices.Compact(families)
+}
+
+// lockNumbersOf holds the families of the numbers a statement writes.
+func (s *Store) lockNumbersOf(ctx context.Context, organizationID int64, numbers []parentbilling.ChildDebtorNumber) error {
+	families := make([]string, len(numbers))
+	for i, number := range numbers {
+		families[i] = number.FamilyEmail
+	}
+	return s.LockChildDebtorNumbers(ctx, organizationID, families)
+}
+
 // ChildDebtorNumbers reads every number of a child of the Träger, by family
 // and child.
 func (s *Store) ChildDebtorNumbers(ctx context.Context, organizationID int64) ([]parentbilling.ChildDebtorNumber, error) {
@@ -75,6 +123,9 @@ func (s *Store) SaveChildDebtorNumbers(ctx context.Context, organizationID, acco
 ) ([]parentbilling.ChildDebtorNumber, error) {
 	if len(numbers) == 0 {
 		return nil, nil
+	}
+	if err := s.lockNumbersOf(ctx, organizationID, numbers); err != nil {
+		return nil, err
 	}
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {
@@ -130,6 +181,9 @@ func (s *Store) DeleteChildDebtorNumbers(ctx context.Context, organizationID, ac
 	if len(childKeys) == 0 {
 		return nil, nil
 	}
+	if err := s.LockChildDebtorNumbers(ctx, organizationID, []string{familyEmail}); err != nil {
+		return nil, err
+	}
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {
 		return nil, err
@@ -154,6 +208,9 @@ func (s *Store) DeleteChildDebtorNumbers(ctx context.Context, organizationID, ac
 func (s *Store) ExtendChildDebtorNumbers(ctx context.Context, organizationID int64, numbers []parentbilling.ChildDebtorNumber) error {
 	if len(numbers) == 0 {
 		return nil
+	}
+	if err := s.lockNumbersOf(ctx, organizationID, numbers); err != nil {
+		return err
 	}
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {

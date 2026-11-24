@@ -63,8 +63,7 @@ func seedHolidayFamilyDebtorNumbers(rt *Runtime, auth AuthRef, token string, per
 	if err != nil || refused {
 		return err
 	}
-	confirm := fmt.Sprintf("/traeger/holiday-contributions/%d/registrations/%d/confirm", periodID, first)
-	if _, err := rt.Client.PostWithAuth(auth, confirm, map[string]any{"benefits_exemption": false, "debtor_number": seedFamilyDebtorNumber}); err != nil {
+	if err := postReadHolidayConfirmation(rt, auth, periodID, first, map[string]any{"benefits_exemption": false, "debtor_number": seedFamilyDebtorNumber}); err != nil {
 		return fmt.Errorf("confirm the holiday family's first registration: %w", err)
 	}
 	if _, refused, err := seedHolidayFamilyRegistration(rt, token, registration, "Petra", "Sommer", "Petra.Sommer@example.org", "Ole"); err != nil || refused {
@@ -76,10 +75,9 @@ func seedHolidayFamilyDebtorNumbers(rt *Runtime, auth AuthRef, token string, per
 	if err != nil || refused {
 		return err
 	}
-	confirm = fmt.Sprintf("/traeger/holiday-contributions/%d/registrations/%d/confirm", periodID, conflict)
 	// "replace" keeps a second seed run going: the family then has the
 	// number the list sets below, and the list sets it again (#6692).
-	if _, err := rt.Client.PostWithAuth(auth, confirm, map[string]any{"benefits_exemption": false,
+	if err := postReadHolidayConfirmation(rt, auth, periodID, conflict, map[string]any{"benefits_exemption": false,
 		"debtor_number": seedConflictRegistrationNumber, "family_debtor_number": "replace"}); err != nil {
 		return fmt.Errorf("confirm the registration of the family with two numbers: %w", err)
 	}

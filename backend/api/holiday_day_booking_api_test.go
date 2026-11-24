@@ -192,11 +192,11 @@ func TestHolidayDayBookingPlacesEachDayAndBillsItsDays(t *testing.T) {
 	assert.Equal(t, []string{dayTuesday, dayWednesday}, places.Waitlist[0].Days)
 	assert.Equal(t, []string{dayMonday, dayTuesday, dayWednesday}, d.readOffer(t).Weeks[0].FullDays)
 
-	rec := traegerJSON(t, d.traeger, d.office.token, http.MethodPost, holidayConfirmPath(int64(d.period.ID), int64(tom.ID)), nil)
+	rec := confirmReadHoliday(t, d.traeger, d.office.token, int64(d.period.ID), int64(tom.ID), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	confirmed := decodeSchoolPortalData[confirmationBody](t, rec.Body.Bytes())
 	assert.Equal(t, int64(3000), confirmed.Contribution.TotalCents, "two days at 15 €; the repeated Monday counts once")
-	rec = traegerJSON(t, d.traeger, d.office.token, http.MethodPost, holidayConfirmPath(int64(d.period.ID), int64(ida.ID)), nil)
+	rec = confirmReadHoliday(t, d.traeger, d.office.token, int64(d.period.ID), int64(ida.ID), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, int64(0), decodeSchoolPortalData[confirmationBody](t, rec.Body.Bytes()).Contribution.TotalCents,
 		"a waiting booking is not billed")
@@ -210,7 +210,7 @@ func TestHolidayDayBookingPlacesEachDayAndBillsItsDays(t *testing.T) {
 	assert.Equal(t, []string{dayMonday + ".." + dayMonday, dayTuesday + ".." + dayTuesday}, d.hostWindows(t, d.office.schools[0]),
 		"the host school's Soll keeps to the booked days")
 
-	rec = traegerJSON(t, d.traeger, d.office.token, http.MethodPost, holidayConfirmPath(int64(d.period.ID), int64(max.ID)), nil)
+	rec = confirmReadHoliday(t, d.traeger, d.office.token, int64(d.period.ID), int64(max.ID), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, map[string]int{dayMonday: 1, dayTuesday: 1, dayWednesday: 1}, d.hostedDays(t),
 		"the hosted week counts the confirmed children per booked day; Ida waits and counts nowhere")
@@ -414,7 +414,7 @@ func TestHolidayDailyBillingRulesStartOnTheFirstSelectedDay(t *testing.T) {
 	assert.True(t, quoted.ExemptionAvailable)
 	assert.Equal(t, int64(0), quote(true).TotalCents)
 	receipt := d.submit(t, d.registration("rules.days@example.org", "Mia", d.days(dayFriday, dayThursday)))
-	rec := traegerJSON(t, d.traeger, d.office.token, http.MethodPost, holidayConfirmPath(int64(d.period.ID), int64(receipt.ID)),
+	rec := confirmReadHoliday(t, d.traeger, d.office.token, int64(d.period.ID), int64(receipt.ID),
 		map[string]any{"benefits_exemption": true})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	confirmed := decodeSchoolPortalData[confirmationBody](t, rec.Body.Bytes()).Contribution

@@ -152,7 +152,7 @@ func TestHolidayPlacesFullyWaitingFamilyCanKeepItsExemption(t *testing.T) {
 	preview := decodeSchoolPortalData[contributionBody](t, rec.Body.Bytes())
 	assert.True(t, preview.ExemptionAvailable)
 	assert.True(t, preview.BenefitsExemption)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(int64(f.period.ID), int64(registration)), map[string]any{"benefits_exemption": true})
+	rec = confirmReadHoliday(t, f.traeger, f.office.token, int64(f.period.ID), int64(registration), map[string]any{"benefits_exemption": true})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Zero(t, f.contributionTotal(t, int64(registration)))
 	f.setCapacity(t, int64(first.ID), 3)

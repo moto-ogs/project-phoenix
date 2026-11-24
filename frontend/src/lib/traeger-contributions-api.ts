@@ -222,15 +222,26 @@ export async function fetchHolidayContribution(
 }
 
 /**
- * Confirms the registration and freezes its contribution, with the debtor
- * number of the family (#5621); an empty one confirms without. A cost
- * bearer pays instead of the family (#5627). childDebtorNumbers are the
- * numbers of the children instead, when the Träger keeps one per child
- * (#7007).
+ * What a confirmation was read on (ADR 0311): the fingerprint of the preview
+ * shown and, when it sends the numbers of the children, the version of the
+ * numbers shown.
+ */
+export interface HolidayConfirmationRead {
+  readonly fingerprint: string;
+  readonly childNumbersVersion?: string;
+}
+
+/**
+ * Confirms the registration and freezes the contribution of the preview
+ * `read` names (ADR 0311), with the debtor number of the family (#5621); an
+ * empty one confirms without. A cost bearer pays instead of the family
+ * (#5627). childDebtorNumbers are the numbers of the children instead, when
+ * the Träger keeps one per child (#7007).
  */
 export async function confirmHolidayRegistration(
   periodId: string,
   registrationId: string,
+  read: HolidayConfirmationRead,
   benefitsExemption: boolean,
   debtorNumber = "",
   costBearerId?: string,
@@ -250,8 +261,13 @@ export async function confirmHolidayRegistration(
           ? { family_debtor_number: familyDebtorNumber }
           : {}),
         ...(childDebtorNumbers
-          ? { child_debtor_numbers: childNumbersToBackend(childDebtorNumbers) }
+          ? {
+              child_debtor_numbers: childNumbersToBackend(childDebtorNumbers),
+              expected_child_debtor_numbers_version:
+                read.childNumbersVersion ?? "",
+            }
           : {}),
+        expected_fingerprint: read.fingerprint,
       },
     },
   );
@@ -331,6 +347,11 @@ export interface HolidayChildDebtorNumberInput {
 export interface HolidayFamilyDebtorNumbers {
   readonly debtorNumber: string;
   readonly children: readonly HolidayChildDebtorNumber[];
+  /**
+   * The token of the children's numbers (ADR 0311) a change of them and a
+   * confirmation that sends them send back; "" with a number per payer.
+   */
+  readonly version: string;
 }
 
 function childNumberFromBackend(
@@ -371,18 +392,28 @@ export async function fetchHolidayFamilyDebtorNumber(
   return {
     debtorNumber: family.debtor_number,
     children: (family.children ?? []).map(childNumberFromBackend),
+    version: family.version ?? "",
   };
+}
+
+/** The answer of a change of the children's numbers. */
+export interface SavedHolidayChildDebtorNumbers {
+  /** The children named, with their numbers now. */
+  readonly children: readonly HolidayChildDebtorNumber[];
+  /** The version of the numbers now stored, for the next change. */
+  readonly version: string;
 }
 
 /**
  * Changes the debtor numbers of the children of a confirmed registration
- * (#7007); answers the children named with their numbers.
+ * (#7007) from the `version` they were read at (ADR 0311).
  */
 export async function setHolidayChildDebtorNumbers(
   periodId: string,
   registrationId: string,
   numbers: readonly HolidayChildDebtorNumberInput[],
-): Promise<readonly HolidayChildDebtorNumber[]> {
+  version: string,
+): Promise<SavedHolidayChildDebtorNumbers> {
   const saved = await bffJson(
     "org",
     "PUT /traeger/holiday-contributions/{periodId}/registrations/{registrationId}/child-debtor-numbers",
@@ -390,10 +421,14 @@ export async function setHolidayChildDebtorNumbers(
       params: { periodId, registrationId },
       body: {
         children: childNumbersToBackend(numbers),
+        expected_version: version,
       } satisfies traegerHolidayContributionsContract.HolidayChildDebtorNumbersRequest,
     },
   );
-  return (saved.children ?? []).map(childNumberFromBackend);
+  return {
+    children: (saved.children ?? []).map(childNumberFromBackend),
+    version: saved.version ?? "",
+  };
 }
 
 /** Both numbers of a refusal because the family has another number. */

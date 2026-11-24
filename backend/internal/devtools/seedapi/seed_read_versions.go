@@ -60,3 +60,35 @@ func putReadChildOfferings(rt *Runtime, auth AuthRef, requestID, childID int64, 
 	}
 	return rt.Client.PutWithAuth(auth, fmt.Sprintf("/api/enrollment/admin/requests/%d/children/%d/offerings", requestID, childID), sent)
 }
+
+// postReadHolidayConfirmation confirms a holiday registration over the
+// preview it reads first with the payer of body, as the registration page
+// does (ADR 0311): the preview's fingerprint, and with child_debtor_numbers
+// the version of the children's numbers read now.
+func postReadHolidayConfirmation(rt *Runtime, auth AuthRef, periodID, registrationID int64, body map[string]any) error {
+	path := fmt.Sprintf("/traeger/holiday-contributions/%d/registrations/%d", periodID, registrationID)
+	exemption, _ := body["benefits_exemption"].(bool)
+	query := fmt.Sprintf("?benefits_exemption=%t", exemption)
+	if bearer, ok := body["cost_bearer_id"]; ok {
+		query = fmt.Sprintf("?benefits_exemption=false&cost_bearer_id=%v", bearer)
+	}
+	raw, err := rt.Client.GetWithAuth(auth, path+query)
+	if err != nil {
+		return fmt.Errorf("read the contribution of registration %d: %w", registrationID, err)
+	}
+	fingerprint, err := seedReadToken(raw, "fingerprint")
+	if err != nil {
+		return err
+	}
+	sent := maps.Clone(body)
+	sent["expected_fingerprint"] = fingerprint
+	if _, numbers := body["child_debtor_numbers"]; numbers {
+		version, err := readSeedVersion(rt, auth, path+"/family-debtor-number", "the numbers of the children")
+		if err != nil {
+			return err
+		}
+		sent["expected_child_debtor_numbers_version"] = version
+	}
+	_, err = rt.Client.PostWithAuth(auth, path+"/confirm", sent)
+	return err
+}

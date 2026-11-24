@@ -28,9 +28,13 @@ const {
   mockFamilyChoice,
   mockChildNumbers,
   mockSetChildNumbers,
+  mockConfirmRead,
+  mockSetChildVersion,
 } = vi.hoisted(() => ({
   mockChildNumbers: vi.fn(),
   mockSetChildNumbers: vi.fn(),
+  mockConfirmRead: vi.fn(),
+  mockSetChildVersion: vi.fn(),
   mockChange: vi.fn(),
   mockCancel: vi.fn(),
   mockConfirm: vi.fn(),
@@ -54,12 +58,14 @@ vi.mock("~/lib/traeger-contributions-api", async (importOriginal) => ({
   confirmHolidayRegistration: (
     periodId: string,
     id: string,
+    read: unknown,
     benefitsExemption: boolean,
     debtorNumber?: string,
     costBearerId?: string,
     familyChoice?: string,
     childNumbers?: unknown,
   ) => {
+    mockConfirmRead(read);
     mockConfirmDebtorNumber(debtorNumber);
     mockFamilyChoice(familyChoice);
     mockChildNumbers(childNumbers);
@@ -67,11 +73,17 @@ vi.mock("~/lib/traeger-contributions-api", async (importOriginal) => ({
       ? mockConfirm(periodId, id, benefitsExemption)
       : mockConfirm(periodId, id, benefitsExemption, costBearerId);
   },
-  setHolidayChildDebtorNumbers: (
+  setHolidayChildDebtorNumbers: async (
     periodId: string,
     id: string,
     numbers: unknown,
-  ) => mockSetChildNumbers(periodId, id, numbers),
+    version: string,
+  ) => {
+    mockSetChildVersion(version);
+    const saved: unknown = await mockSetChildNumbers(periodId, id, numbers);
+    // A test that answers only the children gets the next version too.
+    return Array.isArray(saved) ? { children: saved, version: "v2" } : saved;
+  },
   changeHolidayDebtorNumber: (
     periodId: string,
     id: string,
@@ -93,9 +105,22 @@ import {
  * The status as the page shows it (#7410): „Bestätigen“ in the head, every
  * other action in the menu of the head, the card and its dialogs.
  */
-function StatusInPage(props: HolidayRegistrationStatusProps) {
+const READ_NOTHING = () => Promise.resolve(undefined);
+
+function StatusInPage({
+  onRead = READ_NOTHING,
+  onFamilyNumbersSaved = READ_NOTHING,
+  ...props
+}: Omit<HolidayRegistrationStatusProps, "onRead" | "onFamilyNumbersSaved"> &
+  Partial<
+    Pick<HolidayRegistrationStatusProps, "onRead" | "onFamilyNumbersSaved">
+  >) {
   return (
-    <HolidayRegistrationStatusScope {...props}>
+    <HolidayRegistrationStatusScope
+      {...props}
+      onRead={onRead}
+      onFamilyNumbersSaved={onFamilyNumbersSaved}
+    >
       {(status) => (
         <>
           {status.confirmAction}
@@ -175,6 +200,8 @@ describe("HolidayRegistrationStatusCard", () => {
     mockFamilyChoice.mockReset();
     mockChildNumbers.mockReset();
     mockSetChildNumbers.mockReset();
+    mockConfirmRead.mockReset();
+    mockSetChildVersion.mockReset();
   });
 
   describe("with a debtor number per child (#7007)", () => {
@@ -1402,6 +1429,273 @@ describe("HolidayRegistrationStatusCard", () => {
         expect(mockChangeDebtorNumber).toHaveBeenCalledTimes(2),
       );
       expect(mockFamilyChoice).toHaveBeenLastCalledWith("replace");
+    });
+  });
+
+  // ADR 0311: the confirmation freezes the preview on screen, a change of
+  // the children's numbers rests on the numbers read; a refusal is never
+  // silent and nothing is sent until the stored state is read.
+  describe("on the state the office read (#7904)", () => {
+    const children = [
+      {
+        childId: "71",
+        firstName: "Mia",
+        lastName: "Muster",
+        debtorNumber: "60101",
+      },
+      {
+        childId: "72",
+        firstName: "Noah",
+        lastName: "Muster",
+        debtorNumber: "",
+      },
+    ];
+    const changed = () =>
+      new ApiError("changed", 409, { code: "general.changed_since_read" });
+
+    it("confirms the preview on screen with its fingerprint", async () => {
+      mockConfirm.mockResolvedValue({ ...HOLIDAY_CONTRIBUTION, frozen: true });
+      renderCard(HOLIDAY_REGISTRATION);
+      fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
+      await waitFor(() => expect(mockConfirm).toHaveBeenCalledTimes(1));
+      expect(mockConfirmRead).toHaveBeenCalledWith({
+        fingerprint: "vorschau-1",
+        childNumbersVersion: undefined,
+      });
+    });
+
+    it("shows a refusal and sends nothing until the stored state is read", async () => {
+      mockConfirm.mockRejectedValueOnce(changed());
+      const read = deferred<undefined>();
+      const onRead = vi.fn(() => read.promise);
+      render(
+        <ToastProvider>
+          <StatusInPage
+            periodId="5"
+            registration={HOLIDAY_REGISTRATION}
+            contribution={HOLIDAY_CONTRIBUTION}
+            exemption={false}
+            onExemptionChange={vi.fn()}
+            onChanged={vi.fn()}
+            onReload={vi.fn(() => Promise.resolve())}
+            onDebtorNumberChanged={vi.fn(() => Promise.resolve())}
+            onRead={onRead}
+          />
+        </ToastProvider>,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
+      await waitFor(() => expect(onRead).toHaveBeenCalledTimes(1));
+      const confirm = screen.getByRole("button", { name: "Bestätigen" });
+      expect(confirm).toHaveAttribute("aria-disabled", "true");
+      fireEvent.submit(confirm.ownerDocument.querySelector("form")!);
+      expect(mockConfirm).toHaveBeenCalledTimes(1);
+
+      await act(async () => read.resolve(undefined));
+      expect(
+        await screen.findByText(
+          catalogText("general.changed_since_read", "die Anmeldung"),
+        ),
+      ).toBeInTheDocument();
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: "Bestätigen" }),
+        ).not.toHaveAttribute("aria-disabled"),
+      );
+    });
+
+    it("keeps the confirmation locked when the stored state cannot be read", async () => {
+      mockConfirm.mockRejectedValueOnce(changed());
+      const onRead = vi.fn(() => Promise.reject(new ApiError("down", 503)));
+      render(
+        <ToastProvider>
+          <StatusInPage
+            periodId="5"
+            registration={HOLIDAY_REGISTRATION}
+            contribution={HOLIDAY_CONTRIBUTION}
+            exemption={false}
+            onExemptionChange={vi.fn()}
+            onChanged={vi.fn()}
+            onReload={vi.fn(() => Promise.resolve())}
+            onDebtorNumberChanged={vi.fn(() => Promise.resolve())}
+            onRead={onRead}
+          />
+        </ToastProvider>,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
+      expect(
+        await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+      ).toBeInTheDocument();
+      const confirm = screen.getByRole("button", { name: "Bestätigen" });
+      expect(confirm).toHaveAttribute("aria-disabled", "true");
+      fireEvent.click(confirm);
+      expect(mockConfirm).toHaveBeenCalledTimes(1);
+    });
+
+    it("confirms the children's numbers with the version read when typing started", async () => {
+      mockConfirm.mockResolvedValue({ ...HOLIDAY_CONTRIBUTION, frozen: true });
+      const card = (version: string, numbers = children) => (
+        <ToastProvider>
+          <StatusInPage
+            periodId="5"
+            registration={HOLIDAY_REGISTRATION}
+            contribution={HOLIDAY_CONTRIBUTION}
+            debtorNumberRequired
+            childDebtorNumbers={numbers}
+            childNumbersVersion={version}
+            exemption={false}
+            onExemptionChange={vi.fn()}
+            onChanged={vi.fn()}
+            onReload={vi.fn(() => Promise.resolve())}
+            onDebtorNumberChanged={vi.fn(() => Promise.resolve())}
+          />
+        </ToastProvider>
+      );
+      const { rerender } = render(card("kv-1"));
+      fireEvent.change(screen.getByLabelText(/^Noah Muster/), {
+        target: { value: "60102" },
+      });
+      // A colleague's number arrives with a newer read: the typed fields
+      // keep the numbers and the version they rest on.
+      rerender(
+        card("kv-2", [
+          { ...children[0]!, debtorNumber: "60109" },
+          children[1]!,
+        ]),
+      );
+      expect(screen.getByLabelText(/^Mia Muster/)).toHaveValue("60101");
+      fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
+      await waitFor(() => expect(mockConfirm).toHaveBeenCalledTimes(1));
+      expect(mockConfirmRead).toHaveBeenCalledWith({
+        fingerprint: "vorschau-1",
+        childNumbersVersion: "kv-1",
+      });
+      expect(mockChildNumbers).toHaveBeenCalledWith([
+        { childId: "71", debtorNumber: "60101" },
+        { childId: "72", debtorNumber: "60102" },
+      ]);
+    });
+
+    it("keeps the typed numbers and reads once when only the preview changed", async () => {
+      mockConfirm
+        .mockRejectedValueOnce(changed())
+        .mockResolvedValue({ ...HOLIDAY_CONTRIBUTION, frozen: true });
+      // The stored state: another amount, the same numbers.
+      const onRead = vi.fn(() =>
+        Promise.resolve({ debtorNumber: "", children, version: "kv-1" }),
+      );
+      const card = (contribution: HolidayContribution) => (
+        <ToastProvider>
+          <StatusInPage
+            periodId="5"
+            registration={HOLIDAY_REGISTRATION}
+            contribution={contribution}
+            debtorNumberRequired
+            childDebtorNumbers={children}
+            childNumbersVersion="kv-1"
+            exemption={false}
+            onExemptionChange={vi.fn()}
+            onChanged={vi.fn()}
+            onReload={vi.fn(() => Promise.resolve())}
+            onDebtorNumberChanged={vi.fn(() => Promise.resolve())}
+            onRead={onRead}
+          />
+        </ToastProvider>
+      );
+      const { rerender } = render(card(HOLIDAY_CONTRIBUTION));
+      fireEvent.change(screen.getByLabelText(/^Noah Muster/), {
+        target: { value: "60102" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
+      expect(
+        await screen.findByText(
+          catalogText("general.changed_since_read", "die Anmeldung"),
+        ),
+      ).toBeInTheDocument();
+      rerender(card({ ...HOLIDAY_CONTRIBUTION, fingerprint: "vorschau-2" }));
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: "Bestätigen" }),
+        ).not.toHaveAttribute("aria-disabled"),
+      );
+      expect(onRead).toHaveBeenCalledTimes(1);
+      expect(screen.getByLabelText(/^Noah Muster/)).toHaveValue("60102");
+
+      fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
+      await waitFor(() => expect(mockConfirm).toHaveBeenCalledTimes(2));
+      expect(mockConfirmRead).toHaveBeenLastCalledWith({
+        fingerprint: "vorschau-2",
+        childNumbersVersion: "kv-1",
+      });
+      expect(mockChildNumbers).toHaveBeenLastCalledWith([
+        { childId: "71", debtorNumber: "60101" },
+        { childId: "72", debtorNumber: "60102" },
+      ]);
+      expect(onRead).toHaveBeenCalledTimes(1);
+    });
+
+    const confirmedNumbers = (
+      onRead: HolidayRegistrationStatusProps["onRead"],
+      onFamilyNumbersSaved: HolidayRegistrationStatusProps["onFamilyNumbersSaved"] = () =>
+        Promise.resolve(),
+    ) =>
+      render(
+        <ToastProvider>
+          <StatusInPage
+            periodId="5"
+            registration={{ ...HOLIDAY_REGISTRATION, status: "confirmed" }}
+            contribution={HOLIDAY_CONTRIBUTION}
+            debtorNumberRequired
+            childDebtorNumbers={children}
+            childNumbersVersion="kv-1"
+            exemption={false}
+            onExemptionChange={vi.fn()}
+            onChanged={vi.fn()}
+            onReload={vi.fn(() => Promise.resolve())}
+            onDebtorNumberChanged={vi.fn(() => Promise.resolve())}
+            onRead={onRead}
+            onFamilyNumbersSaved={onFamilyNumbersSaved}
+          />
+        </ToastProvider>,
+      );
+
+    it("changes the children's numbers over the version read and keeps the answer's", async () => {
+      mockSetChildNumbers.mockResolvedValue({
+        children: [{ ...children[1]!, debtorNumber: "60103" }],
+        version: "kv-2",
+      });
+      const saved = vi.fn(() => Promise.resolve());
+      confirmedNumbers(() => Promise.resolve(undefined), saved);
+      fireEvent.click(menuEntry("Nummern der Kinder bearbeiten"));
+      fireEvent.change(screen.getByLabelText(/^Noah Muster/), {
+        target: { value: "60103" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+      await waitFor(() => expect(saved).toHaveBeenCalledTimes(1));
+      expect(mockSetChildVersion).toHaveBeenCalledWith("kv-1");
+      expect(saved).toHaveBeenCalledWith({
+        debtorNumber: "60101",
+        children: [children[0], { ...children[1], debtorNumber: "60103" }],
+        version: "kv-2",
+      });
+    });
+
+    it("shows the stored numbers after a refusal and saves nothing until they are read", async () => {
+      mockSetChildNumbers.mockRejectedValueOnce(changed());
+      const onRead = vi.fn(() => Promise.reject(new ApiError("down", 503)));
+      confirmedNumbers(onRead);
+      fireEvent.click(menuEntry("Nummern der Kinder bearbeiten"));
+      fireEvent.change(screen.getByLabelText(/^Noah Muster/), {
+        target: { value: "60103" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+      await waitFor(() => expect(onRead).toHaveBeenCalledTimes(1));
+      expect(
+        await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+      ).toBeInTheDocument();
+      const save = screen.getByRole("button", { name: "Speichern" });
+      expect(save).toHaveAttribute("aria-disabled", "true");
+      fireEvent.click(save);
+      expect(mockSetChildNumbers).toHaveBeenCalledTimes(1);
     });
   });
 });

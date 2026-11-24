@@ -88,7 +88,7 @@ func releaseSecondPeriodFor(t *testing.T, f reviewFixture, billing, email string
 	registration := decodeSchoolPortalData[struct {
 		ID wireID `json:"id"`
 	}](t, rec.Body.Bytes())
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(int64(second.ID), int64(registration.ID)), nil)
+	rec = confirmReadHoliday(t, f.traeger, f.office.token, int64(second.ID), int64(registration.ID), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	run := billingRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(second.ID)).ID))
 	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(run))

@@ -100,6 +100,7 @@ export interface HolidayContribution {
   sibling_debtor_number?: string;
   siblings_invoiced?: boolean;
   correction_needed?: boolean;
+  fingerprint?: string;
 }
 
 export const HolidayContributionSchema: z.ZodType<HolidayContribution, unknown> = object<HolidayContribution>({
@@ -116,6 +117,7 @@ export const HolidayContributionSchema: z.ZodType<HolidayContribution, unknown> 
   sibling_debtor_number: optional(str),
   siblings_invoiced: optional(bool),
   correction_needed: optional(bool),
+  fingerprint: optional(str),
 });
 
 export const routes = {

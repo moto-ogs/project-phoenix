@@ -306,8 +306,7 @@ func seedHolidayRegistrations(ctx context.Context, rt *Runtime, auth AuthRef, pe
 	if _, err := rt.Client.PutWithAuth(auth, "/traeger/settings/values/"+seedPaymentTextSettingKey, map[string]any{"value": seedPaymentText}); err != nil {
 		return "", fmt.Errorf("write the payment text of the letters: %w", err)
 	}
-	confirm := fmt.Sprintf("/traeger/holiday-contributions/%d/registrations/%d/confirm", periodID, siblings)
-	if _, err := rt.Client.PostWithAuth(auth, confirm, seedSiblingsConfirmation); err != nil {
+	if err := postReadHolidayConfirmation(rt, auth, periodID, siblings, seedSiblingsConfirmation); err != nil {
 		return "", fmt.Errorf("confirm the holiday registration: %w", err)
 	}
 	fmt.Println("  Träger-Büro: siblings confirmed with their contribution and debtor number")
@@ -433,8 +432,7 @@ func seedHolidayCostTakeover(rt *Runtime, auth AuthRef, periodID, registrationID
 		return fmt.Errorf("read the cost bearer: %w", err)
 	}
 	rt.Values[seedCostBearerKey] = costBearerID
-	confirm := fmt.Sprintf("/traeger/holiday-contributions/%d/registrations/%d/confirm", periodID, registrationID)
-	if _, err := rt.Client.PostWithAuth(auth, confirm, map[string]any{
+	if err := postReadHolidayConfirmation(rt, auth, periodID, registrationID, map[string]any{
 		"benefits_exemption": false, "cost_bearer_id": costBearerID, "debtor_number": seedCostTakeoverDebtorNumber,
 	}); err != nil {
 		return fmt.Errorf("confirm the holiday registration with the cost takeover: %w", err)
