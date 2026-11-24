@@ -51,9 +51,10 @@ test("a request identifier may become an id, an answer's may not", () => {
     route.types[0].request = true;
     return route;
   };
-  for (const kind of ["string", "legacy_id", "lax_id"]) {
+  for (const kind of ["string", "legacy_id"]) {
     assert.deepEqual(breakingChanges(body(kind), body("id")), [], `Go reads a ${kind} identifier as an id`);
   }
+  assert.deepEqual(breakingChanges(body("lax_id"), body("id")), ["POST /api/rows/ request.id: lax_id became id"]);
   assert.deepEqual(breakingChanges(body("id"), body("string")), ["POST /api/rows/ request.id: id became string"]);
   assert.deepEqual(breakingChanges(model([field("id", "string")]), model([field("id", "id")])), ["GET /api/rows/[].id: string became id"]);
 });

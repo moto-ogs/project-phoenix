@@ -1787,7 +1787,7 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 				items = append(items, map[string]any{
 					"request_type":     "care_schedule",
 					"expected_version": fmt.Sprintf("v%d", id),
-					"data":             map[string]any{"id": fmt.Sprintf("%d", id), "impact_token": fmt.Sprintf("impact-%d", id)},
+					"care_schedule":    map[string]any{"id": fmt.Sprintf("%d", id), "impact_token": fmt.Sprintf("impact-%d", id)},
 				})
 			}
 			_ = json.NewEncoder(w).Encode(map[string]any{

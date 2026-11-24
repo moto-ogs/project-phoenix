@@ -786,13 +786,9 @@ export interface Item {
   current_value_changed?: boolean;
   current_status_by_date?: Record<string, string>;
   partial_absence_from_by_date?: Record<string, string>;
-  /** @deprecated leaves the contract with the next release */
-  can_correct?: boolean;
   family_protected: boolean;
   submitted_by_name?: string;
   submitted_by_relationship?: string;
-  /** @deprecated leaves the contract with the next release */
-  data: unknown | null;
   master_data?: MasterDataChangeRequestResponse;
   care_schedule?: CareRequestResponse;
   offering?: OfferingRequestResponse;
@@ -817,11 +813,9 @@ export const ItemSchema: z.ZodType<Item, unknown> = object<Item>({
   current_value_changed: optional(bool),
   current_status_by_date: optional(rec(str)),
   partial_absence_from_by_date: optional(rec(str)),
-  can_correct: optional(bool),
   family_protected: bool,
   submitted_by_name: optional(str),
   submitted_by_relationship: optional(str),
-  data: nullable(json),
   master_data: optional(MasterDataChangeRequestResponseSchema),
   care_schedule: optional(CareRequestResponseSchema),
   offering: optional(OfferingRequestResponseSchema),
@@ -3860,14 +3854,10 @@ export const routes = {
     portals: ["tenant"],
     query: {
       "cursor": { kind: "string" },
-      "from": { kind: "date" },
       "limit": { kind: "int" },
       "search": { kind: "string" },
-      "status": { kind: "string" },
       "student_id": { kind: "id" },
-      "to": { kind: "date" },
       "types": { kind: "string" },
-      "view": { kind: "string", values: ["history", "open"] },
     },
     response: success(PageSchema),
   },

@@ -432,32 +432,6 @@ func (rs *Resource) listCareOfferingBookingStats(w http.ResponseWriter, r *http.
 	common.Respond(w, r, http.StatusOK, out, "Care offering booking stats retrieved")
 }
 
-func (rs *Resource) getCareOffering(w http.ResponseWriter, r *http.Request) {
-	if rs.CareOfferingService == nil {
-		common.RenderError(w, r, common.ErrorInternalServer(errors.New("care offering service not configured")))
-		return
-	}
-	id, ok := common.ParsePositiveInt64IDWithError(w, r, "id", "invalid id")
-	if !ok {
-		return
-	}
-	var offering *CareOffering
-	err := rs.runInTenantTx(r, func(ctx context.Context) error {
-		o, e := rs.CareOfferingService.GetByID(ctx, id)
-		offering = o
-		return e
-	})
-	if err != nil {
-		if errors.Is(err, capability.ErrCareOfferingNotFound) {
-			common.RenderError(w, r, common.ErrorNotFoundWithCode(err, common.CodeEnrollmentCareOfferingNotFound))
-			return
-		}
-		common.RenderError(w, r, common.ErrorInternalServerWrap("load care offering failed", err))
-		return
-	}
-	common.Respond(w, r, http.StatusOK, toCareOfferingResponse(offering), "Care offering retrieved")
-}
-
 func (rs *Resource) createCareOffering(w http.ResponseWriter, r *http.Request) {
 	if rs.CareOfferingService == nil {
 		common.RenderError(w, r, common.ErrorInternalServer(errors.New("care offering service not configured")))

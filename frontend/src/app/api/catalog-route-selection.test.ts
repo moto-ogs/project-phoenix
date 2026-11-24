@@ -285,7 +285,6 @@ describe("path freed from its own route file", () => {
     ["/api/staff/by-role", "/api/[...path]"],
     ["/api/staff/qualification-types", "/api/[...path]"],
     ["/api/rooms/1", "/api/[...path]"],
-    ["/api/rooms/by-category", "/api/[...path]"],
     ["/api/activities/1", "/api/[...path]"],
     ["/api/activities/quick-create", "/api/[...path]"],
     ["/api/iot/device-slots", "/api/[...path]"],

@@ -116,17 +116,12 @@ func TestRequestReviewRuntimeEvidence(t *testing.T) {
 		want func(t *testing.T, body []byte, children int)
 	}
 	requests := []request{
-		{"open", "/change-requests?view=open&search=Runtime&limit=25", func(t *testing.T, body []byte, children int) {
+		{"open", "/change-requests?search=Runtime&limit=25", func(t *testing.T, body []byte, children int) {
 			var env aggListEnvelope
 			require.NoError(t, json.Unmarshal(body, &env))
 			require.Len(t, env.Data.Items, min(children*4, 25))
 		}},
-		{"history", "/change-requests?view=history&search=Runtime&limit=25", func(t *testing.T, body []byte, children int) {
-			var env aggListEnvelope
-			require.NoError(t, json.Unmarshal(body, &env))
-			require.Len(t, env.Data.Items, min(children*3, 25))
-		}},
-		{"history-path", "/change-requests/history?search=Runtime&limit=25", func(t *testing.T, body []byte, children int) {
+		{"history", "/change-requests/history?search=Runtime&limit=25", func(t *testing.T, body []byte, children int) {
 			var env struct {
 				Data requestreview.HistoryPage `json:"data"`
 			}

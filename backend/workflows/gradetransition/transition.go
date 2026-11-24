@@ -410,22 +410,6 @@ func (w *Workflow) DeleteDraft(ctx context.Context, id int64) error {
 	})
 }
 
-// FindTransition returns one transition with its mappings.
-func (w *Workflow) FindTransition(ctx context.Context, id int64) (result schoolstructure.Transition, err error) {
-	err = w.run(ctx, "find", OperationRead, id, func(txCtx context.Context, _ Actor) error {
-		found, err := w.deps.Structure.FindTransition(txCtx, id)
-		if err != nil {
-			return translateStructureError(err)
-		}
-		result = found
-		return nil
-	})
-	if err != nil {
-		return schoolstructure.Transition{}, err
-	}
-	return result, nil
-}
-
 // ListTransitions returns a page of transitions with their mappings and the
 // total.
 func (w *Workflow) ListTransitions(ctx context.Context, filter ListFilter) (result []schoolstructure.Transition, total int, err error) {

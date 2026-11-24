@@ -13,9 +13,9 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// ErrInvalidQuery reports a malformed listing query: an unknown view, type
-// or status, a bad date, a history-only filter on the open view, a
-// non-positive limit or student ID, or a cursor this projection did not mint.
+// ErrInvalidQuery reports a malformed listing query: an unknown type or
+// status, a bad date, a non-positive limit or student ID, or a cursor this
+// projection did not mint.
 var ErrInvalidQuery = errors.New("invalid change request list query")
 
 // The list defaults to a screenful and caps the page size against abusive
@@ -60,25 +60,32 @@ type ListQuery struct {
 	today Date
 }
 
-// ParseListQuery reads the wire query of the list route.
+// ParseListQuery reads the query of GET /change-requests: the filters of the
+// open list.
 func ParseListQuery(values url.Values) (ListQuery, error) {
-	switch values.Get("view") {
-	case "", "open":
-		return parseListQuery(values, false)
-	case "history":
-		return parseListQuery(values, true)
-	default:
-		return ListQuery{Limit: DefaultLimit}, ErrInvalidQuery
+	q, err := parseSharedFilters(values, false)
+	if err != nil {
+		return q, err
 	}
+	return q, q.validate()
 }
 
 // ParseHistoryQuery reads the query of GET /change-requests/history: the
-// filters of the history view, which the path names.
+// shared filters plus status, from and to, which only the history registers.
 func ParseHistoryQuery(values url.Values) (ListQuery, error) {
-	return parseListQuery(values, true)
+	q, err := parseSharedFilters(values, true)
+	if err != nil {
+		return q, err
+	}
+	if err := parseHistoryFilters(&q, values); err != nil {
+		return q, err
+	}
+	return q, q.validate()
 }
 
-func parseListQuery(values url.Values, history bool) (ListQuery, error) {
+// parseSharedFilters reads what both lists filter by: search, child, types,
+// page size and cursor.
+func parseSharedFilters(values url.Values, history bool) (ListQuery, error) {
 	q := ListQuery{Limit: DefaultLimit, History: history}
 
 	q.Search = strings.TrimSpace(values.Get("search"))
@@ -97,10 +104,6 @@ func parseListQuery(values url.Values, history bool) (ListQuery, error) {
 	}
 	q.Types = types
 
-	if err := parseHistoryFilters(&q, values); err != nil {
-		return q, err
-	}
-
 	if raw := values.Get("limit"); raw != "" {
 		n, convErr := strconv.Atoi(raw)
 		if convErr != nil || n <= 0 {
@@ -110,9 +113,6 @@ func parseListQuery(values url.Values, history bool) (ListQuery, error) {
 	}
 
 	q.Cursor = values.Get("cursor")
-	if err := q.validate(); err != nil {
-		return q, err
-	}
 	return q, nil
 }
 
@@ -161,15 +161,12 @@ func parseTypes(raw string) ([]string, error) {
 	return requested, nil
 }
 
-// parseHistoryFilters reads status/from/to — history-only filters; their
-// presence on the open view is a client bug and rejected loudly.
+// parseHistoryFilters reads status/from/to, the filters only the history
+// path registers.
 func parseHistoryFilters(q *ListQuery, values url.Values) error {
 	rawStatus := values.Get("status")
 	rawFrom := values.Get("from")
 	rawTo := values.Get("to")
-	if !q.History && (rawStatus != "" || rawFrom != "" || rawTo != "") {
-		return ErrInvalidQuery
-	}
 	if rawStatus != "" {
 		statuses := make(map[string]struct{})
 		for part := range strings.SplitSeq(rawStatus, ",") {

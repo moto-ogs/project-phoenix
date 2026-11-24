@@ -193,8 +193,9 @@ or write a `Backend*` interface for a registered route.
   endpoint) only shrink: `scripts/check-contract-shrink.mjs <base>` fails on
   a new one unless a new ADR names its catalog line
   ([new route](new-route.md#routes-outside-the-contract)).
-- In a request type an identifier is a `string`; for one release Go still
-  reads a JSON number there (`ident.ID`). A request type with its own
+- In a request type an identifier is a `string`. Go's `ident.ID` also reads
+  a JSON number; refusing it at the request decoder is open in #7987. A
+  request type with its own
   `UnmarshalJSON` needs an entry in `Readers`
   (`backend/api/route_contracts.go`), or the generator stops; an own reader
   does not make an `int64` an identifier.

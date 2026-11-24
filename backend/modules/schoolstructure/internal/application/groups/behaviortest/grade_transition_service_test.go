@@ -150,7 +150,7 @@ func TestGradeTransitionWorkflow_Update(t *testing.T) {
 			})
 			require.ErrorIs(t, err, readstate.ErrChanged)
 		}
-		unchanged, err := wf.FindTransition(ctx, id)
+		unchanged, err := findTransition(ctx, wf, id)
 		require.NoError(t, err)
 		require.Len(t, unchanged.Mappings, 1)
 		require.NotNil(t, unchanged.Mappings[0].ToClass, "the colleague's draft stays")
@@ -179,7 +179,7 @@ func TestGradeTransitionWorkflow_Delete(t *testing.T) {
 		require.NoError(t, wf.DeleteDraft(ctx, id))
 
 		// Verify deletion
-		_, err := wf.FindTransition(ctx, id)
+		_, err := findTransition(ctx, wf, id)
 		require.ErrorIs(t, err, gradetransition.ErrTransitionNotFound)
 	})
 
@@ -202,7 +202,9 @@ func TestGradeTransitionWorkflow_Delete(t *testing.T) {
 	})
 }
 
-func TestGradeTransitionWorkflow_Get(t *testing.T) {
+// The list answers a transition with its mappings; the workflow has no read
+// of a single transition since its route left (#7723).
+func TestGradeTransitionWorkflow_ListAnswersMappings(t *testing.T) {
 	t.Parallel()
 
 	db := testpkg.SetupTestDB(t)
@@ -212,20 +214,13 @@ func TestGradeTransitionWorkflow_Get(t *testing.T) {
 	ctx, cancel := context.WithTimeout(testpkg.Ctx(t), 10*time.Second)
 	defer cancel()
 
-	t.Run("get transition with mappings", func(t *testing.T) {
-		id := f.createDraft(t, ctx, "2025-2026", promote("1a", "2a"), promote("2a", "3a"))
+	id := f.createDraft(t, ctx, "2025-2026", promote("1a", "2a"), promote("2a", "3a"))
 
-		result, err := wf.FindTransition(ctx, id)
-		require.NoError(t, err)
-		assert.Equal(t, id, result.ID)
-		assert.Equal(t, "2025-2026", result.AcademicYear)
-		assert.Len(t, result.Mappings, 2)
-	})
-
-	t.Run("get non-existent transition", func(t *testing.T) {
-		_, err := wf.FindTransition(ctx, deletedTransitionID(t, ctx, f, wf))
-		require.ErrorIs(t, err, gradetransition.ErrTransitionNotFound)
-	})
+	result, err := findTransition(ctx, wf, id)
+	require.NoError(t, err)
+	assert.Equal(t, id, result.ID)
+	assert.Equal(t, "2025-2026", result.AcademicYear)
+	assert.Len(t, result.Mappings, 2)
 }
 
 func TestGradeTransitionWorkflow_List(t *testing.T) {
@@ -827,7 +822,7 @@ func TestGradeTransitionWorkflow_Update_InvalidMapping(t *testing.T) {
 		require.ErrorIs(t, err, gradetransition.ErrInvalidTransitionData)
 		assert.Contains(t, err.Error(), "cannot be the same")
 
-		unchanged, err := wf.FindTransition(ctx, id)
+		unchanged, err := findTransition(ctx, wf, id)
 		require.NoError(t, err)
 		assert.Nil(t, unchanged.Notes)
 		require.Len(t, unchanged.Mappings, 1)
@@ -1295,7 +1290,7 @@ func TestGradeTransitionWorkflow_Update_ClearMappings(t *testing.T) {
 		id := f.createDraft(t, ctx, "2025-2026", promote("1a", "2a"))
 
 		// Verify mapping exists
-		initial, err := wf.FindTransition(ctx, id)
+		initial, err := findTransition(ctx, wf, id)
 		require.NoError(t, err)
 		assert.Len(t, initial.Mappings, 1)
 
@@ -1409,7 +1404,7 @@ func TestGradeTransitionWorkflow_PromotionSkipsAlumni(t *testing.T) {
 // draftVersion is the version an editor reads before it saves the draft.
 func draftVersion(t *testing.T, ctx context.Context, wf *gradetransition.Workflow, id int64) string {
 	t.Helper()
-	found, err := wf.FindTransition(ctx, id)
+	found, err := findTransition(ctx, wf, id)
 	require.NoError(t, err)
 	return gradetransition.Version(found)
 }
