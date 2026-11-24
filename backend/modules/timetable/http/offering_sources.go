@@ -134,7 +134,7 @@ func (rs *Resource) getCombinedOfferingSourceCounts(w http.ResponseWriter, r *ht
 		common.RenderError(w, r, common.ErrorInternalServer(errors.New("timetable resource not fully wired")))
 		return
 	}
-	offeringIDs, err := parseOfferingIDList(r.URL.Query().Get("ids"))
+	offeringIDs, err := parseOfferingIDList(strings.Join(r.URL.Query()["ids"], ","))
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return

@@ -71,7 +71,9 @@ func getAbsenceDecisionMails(t *testing.T, router http.Handler, token string, id
 		return rec, nil
 	}
 	var body struct {
-		Data timetracking.AbsenceDecisionMailsResponse `json:"data"`
+		Data struct {
+			Absences map[string]string `json:"absences"`
+		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
 	return rec, body.Data.Absences
@@ -203,7 +205,9 @@ func getOwnAbsenceMails(t *testing.T, router http.Handler, token string) map[str
 	router.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	var body struct {
-		Data timetracking.AbsenceRequestMailsResponse `json:"data"`
+		Data struct {
+			Absences map[string]map[string]int `json:"absences"`
+		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
 	return body.Data.Absences

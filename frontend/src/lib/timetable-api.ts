@@ -245,7 +245,7 @@ class TimetableService {
       "GET /api/timetable/offering-sources/combined-counts",
       {
         query: {
-          ids: offeringIds.join(","),
+          ids: offeringIds,
           calendar_period_id: calendarPeriodId || undefined,
         },
       },
@@ -512,16 +512,14 @@ class TimetableService {
   async checkConflicts(
     params: ConflictCheckParams,
   ): Promise<ConflictCheckResult> {
-    const list = (ids?: string[]) =>
-      ids && ids.length > 0 ? ids.join(",") : undefined;
     const raw = await bffJson("tenant", "GET /api/timetable/conflicts", {
       query: {
         date: params.date,
         start_time: params.startTime,
         end_time: params.endTime,
         room_id: params.roomId || undefined,
-        staff_ids: list(params.staffIds),
-        student_ids: list(params.studentIds),
+        staff_ids: params.staffIds,
+        student_ids: params.studentIds,
         exclude_instance_id: params.excludeInstanceId || undefined,
         exclude_activity_group_id: params.excludeActivityGroupId || undefined,
       },

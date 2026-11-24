@@ -4599,7 +4599,8 @@
       "query": [
         {
           "name": "ids",
-          "kind": "string"
+          "kind": "id",
+          "repeated": true
         }
       ],
       "response": {
@@ -7051,7 +7052,8 @@
         },
         {
           "name": "staff_ids",
-          "kind": "string"
+          "kind": "id",
+          "repeated": true
         },
         {
           "name": "start_time",
@@ -7059,7 +7061,8 @@
         },
         {
           "name": "student_ids",
-          "kind": "string"
+          "kind": "id",
+          "repeated": true
         }
       ],
       "response": {
@@ -7295,7 +7298,8 @@
         },
         {
           "name": "ids",
-          "kind": "string"
+          "kind": "id",
+          "repeated": true
         }
       ],
       "response": {
@@ -7324,7 +7328,8 @@
         },
         {
           "name": "offering_ids",
-          "kind": "string"
+          "kind": "id",
+          "repeated": true
         },
         {
           "name": "period_id",
@@ -7665,7 +7670,8 @@
         },
         {
           "name": "offering_ids",
-          "kind": "string"
+          "kind": "id",
+          "repeated": true
         },
         {
           "name": "school_classes",
