@@ -2736,6 +2736,8 @@ const KIT_PURE_LIB_MODULES = new Set([
   "src/lib/constants/input-limits",
   "src/lib/date-helpers",
   "src/lib/date-picker-labels",
+  // Gerätekontext (#8070): nur Media Queries, kein Wissen über Schulen.
+  "src/lib/device-context",
   "src/lib/file-format",
   "src/lib/format-utils",
   "src/lib/hooks/use-berlin-today",

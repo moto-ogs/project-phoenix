@@ -73,6 +73,13 @@ import { DialogActions, DialogErrorSlot } from "./dialog-parts";
 import { useBusyFocus } from "./hooks/useBusyFocus";
 import { InOverlayContext } from "./in-overlay";
 import { useSheetAboveKeyboard } from "./hooks/useSheetAboveKeyboard";
+import { useIsApp } from "~/lib/device-context";
+import {
+  SheetSessionProvider,
+  useParentSheetId,
+  useSheetCovered,
+  useSheetSession,
+} from "./sheet-session";
 import type { FormModalPending } from "./use-form-modal-pending";
 import type { FormErrorInput } from "./form-error";
 import {
@@ -315,29 +322,40 @@ const SlideOver = ({
     [dismissLocked, onOpenChange],
   );
 
+  // In der App hängt das Panel am Verlauf: Zurück schließt es, ein zweites
+  // Blatt ersetzt es (#8070). Auf dem Desktop bleibt die Sitzung aus.
+  const isApp = useIsApp();
+  const sheetSessionId = useSheetSession(
+    open,
+    () => handleOpenChange(false),
+    isApp,
+  );
+
   return (
-    <SlideOverDirectionContext.Provider value={direction}>
-      <SlideOverBusyContext.Provider value={busy}>
-        <SlideOverDismissLockedContext.Provider value={dismissLocked}>
-          <SlideOverOpenContext.Provider value={open}>
-            <SlideOverReturnFocusContext.Provider value={returnFocusRef}>
-              <DrawerPrimitive.Root
-                // Vaul liest die Richtung beim Mount für Drag-Achse und Animation.
-                // Der Key baut die Instanz erst nach dem Schließen für einen inzwischen
-                // geänderten Breakpoint neu auf.
-                key={direction}
-                direction={direction}
-                shouldScaleBackground={shouldScaleBackground}
-                open={open}
-                onOpenChange={handleOpenChange}
-                dismissible={!dismissLocked}
-                {...props}
-              />
-            </SlideOverReturnFocusContext.Provider>
-          </SlideOverOpenContext.Provider>
-        </SlideOverDismissLockedContext.Provider>
-      </SlideOverBusyContext.Provider>
-    </SlideOverDirectionContext.Provider>
+    <SheetSessionProvider value={isApp ? sheetSessionId : null}>
+      <SlideOverDirectionContext.Provider value={direction}>
+        <SlideOverBusyContext.Provider value={busy}>
+          <SlideOverDismissLockedContext.Provider value={dismissLocked}>
+            <SlideOverOpenContext.Provider value={open}>
+              <SlideOverReturnFocusContext.Provider value={returnFocusRef}>
+                <DrawerPrimitive.Root
+                  // Vaul liest die Richtung beim Mount für Drag-Achse und Animation.
+                  // Der Key baut die Instanz erst nach dem Schließen für einen inzwischen
+                  // geänderten Breakpoint neu auf.
+                  key={direction}
+                  direction={direction}
+                  shouldScaleBackground={shouldScaleBackground}
+                  open={open}
+                  onOpenChange={handleOpenChange}
+                  dismissible={!dismissLocked}
+                  {...props}
+                />
+              </SlideOverReturnFocusContext.Provider>
+            </SlideOverOpenContext.Provider>
+          </SlideOverDismissLockedContext.Provider>
+        </SlideOverBusyContext.Provider>
+      </SlideOverDirectionContext.Provider>
+    </SheetSessionProvider>
   );
 };
 SlideOver.displayName = "SlideOver";
@@ -424,9 +442,11 @@ const SlideOverContent = React.forwardRef<
     // Keeps focus in the panel while the save disables its own button.
     useBusyFocus(sheetRef, busy);
     const returnFocus = React.useContext(SlideOverReturnFocusContext);
+    // Ein Blatt, das im Panel aufgeht, ersetzt es sichtbar (#8070).
+    const covered = useSheetCovered(useParentSheetId());
     return (
       <SlideOverPortal>
-        <SlideOverOverlay />
+        <SlideOverOverlay className={covered ? "app:opacity-0" : undefined} />
         <DrawerPrimitive.Content
           ref={(node: HTMLDivElement | null) => {
             sheetRef.current = node;
@@ -451,6 +471,7 @@ const SlideOverContent = React.forwardRef<
                   "top-0 right-0 h-full w-[420px] max-w-full",
                   isSlideOverWidth(size) ? SLIDE_OVER_WIDTH[size] : undefined,
                 ),
+            covered && "app:pointer-events-none app:invisible",
             className,
           )}
           // `dismissible={false}` an der Wurzel wäre für einen reinen

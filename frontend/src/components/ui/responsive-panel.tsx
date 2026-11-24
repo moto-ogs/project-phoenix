@@ -8,6 +8,7 @@ import {
   type RefObject,
 } from "react";
 
+import { APP_QUERY } from "~/lib/device-context";
 import {
   BELOW_SM,
   useMediaQuery,
@@ -16,13 +17,15 @@ import {
 import { ResponsivePanelSheet } from "./responsive-panel-sheet";
 
 /**
- * Ob ein Panel am Auslöser gerade als Blatt von unten erscheint: unter `sm`
- * (Telefon), sonst als verankertes Popover. Die einzige Stelle, an der diese
+ * Ob ein Panel am Auslöser gerade als Blatt erscheint: in der App (Telefon
+ * und iPad, #8070), sonst als verankertes Popover. Die einzige Stelle, an der diese
  * Bedingung steht (#7797). Ein Baustein fragt sie nur ab, um sein Popover
  * (Lage am Auslöser, Schließen bei Scrollen) im Blatt abzuschalten.
  */
 export function useResponsivePanelSheet(): boolean {
-  return useMediaQuery(BELOW_SM);
+  const phone = useMediaQuery(BELOW_SM);
+  const app = useMediaQuery(APP_QUERY);
+  return phone || app;
 }
 
 interface ResponsivePanelProps {
@@ -83,7 +86,14 @@ export function ResponsivePanel({
   children,
 }: ResponsivePanelProps) {
   // `null`, solange die Breite unbekannt ist (Server, Hydration).
-  const sheetState = useResolvedMediaQuery(BELOW_SM);
+  // In der ganzen App ein Blatt (#8070): am Telefon von unten, am iPad als
+  // Karte. Der Desktop behält das Popover.
+  const phoneState = useResolvedMediaQuery(BELOW_SM);
+  const appState = useResolvedMediaQuery(APP_QUERY);
+  const sheetState =
+    phoneState === null && appState === null
+      ? null
+      : phoneState === true || appState === true;
   const asSheet = sheetState === true;
   const generatedSheetId = useId();
   const dialogId = sheetId ?? generatedSheetId;
