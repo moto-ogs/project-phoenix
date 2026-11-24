@@ -1,5 +1,10 @@
 import { ApiError } from "~/lib/api-error";
-import { bffFile, bffJson, bffJsonUncontracted } from "~/lib/bff-fetch";
+import {
+  bffFile,
+  bffJson,
+  bffJsonUncontracted,
+  bffPath,
+} from "~/lib/bff-fetch";
 import { knownEnum, requiredEnum } from "~/lib/contract/known-enum";
 import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import type * as sharedContract from "~/lib/contract/shared.generated";
@@ -18,7 +23,6 @@ import {
   formLabelsFromContract,
   type EnrollmentFormLabels,
 } from "~/lib/enrollment-change-request-diff";
-import { withLateInviteQuery } from "~/lib/enrollment-http";
 import {
   publicFormSchemaFromContract,
   publicLegalBlockFromContract,
@@ -231,16 +235,23 @@ export async function fetchPublicEnrollmentBootstrap(
 ): Promise<PublicEnrollmentBootstrap> {
   // Its own route file adds the signed-in staff member's profile, so the
   // path has no Go contract of its own.
-  const path = withLateInviteQuery(
-    `/api/enrollment/form-bootstrap/public/${encodeURIComponent(
-      tenantSlug,
-    )}/${encodeURIComponent(phaseId)}`,
-    options.lateInviteToken,
-  );
+  const lateInvite = options.lateInviteToken?.trim();
   return bootstrapFromContract(
-    await bffJsonUncontracted<BootstrapAnswer>("public", "GET", path, {
-      errorMessage: "Anmeldeformular konnte nicht geladen werden",
-    }),
+    await bffJsonUncontracted<BootstrapAnswer>(
+      "public",
+      "GET",
+      bffPath(
+        "tenant",
+        "GET /api/enrollment/form-bootstrap/public/{tenantSlug}/{phaseId}",
+        {
+          params: { tenantSlug, phaseId },
+          query: lateInvite ? { late_invite: lateInvite } : {},
+        },
+      ),
+      {
+        errorMessage: "Anmeldeformular konnte nicht geladen werden",
+      },
+    ),
   );
 }
 

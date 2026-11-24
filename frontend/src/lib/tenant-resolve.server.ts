@@ -1,13 +1,15 @@
 import "server-only";
 import { revalidateTag } from "next/cache";
 import { contractGet } from "~/lib/contract/client.server";
-import type { TenantSettings } from "~/lib/tenant-api";
+import {
+  parseTenantSettings,
+  type TenantSettings,
+} from "~/lib/tenant-branding";
 import * as authTenantContract from "~/lib/contract/auth-tenant.generated";
 
 /**
  * The backend's answer to `/auth/tenant/resolve?slug=…`. The contract
- * carries `settings` as an untyped object; the layout reads it as the
- * tenant settings.
+ * carries open settings; the cache validates the known branding fields.
  */
 export type TenantResolveResponse = Omit<
   authTenantContract.TenantResolveResponse,
@@ -48,14 +50,14 @@ async function loadTenant(
   // The visitor who starts the lookup supplies the forwarding headers.
   const route = authTenantContract.routes["GET /auth/tenant/resolve"];
   const result = await contractGet(route, {
-    endpoint: `${route.pattern}?slug=${encodeURIComponent(slug)}`,
+    query: { slug },
     headers: forwardHeaders,
   });
   if (!result.ok) return { ok: false, status: result.error.status };
   const { settings, ...tenant } = result.value.data;
   return {
     ok: true,
-    data: { ...tenant, settings: settings as TenantSettings | null },
+    data: { ...tenant, settings: parseTenantSettings(settings) },
   };
 }
 

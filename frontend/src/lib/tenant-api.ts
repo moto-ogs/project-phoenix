@@ -11,13 +11,7 @@ import { clearSessionCache } from "./session-cache";
 import { clearPersonalStorage } from "./personal-storage";
 import { mapAccountTenant } from "./account-tenants";
 import { parseBookedModules, type ModuleKey } from "./modules";
-
-export interface TenantSettings {
-  logoUrl?: string;
-  loginImageUrl?: string;
-  primaryColor?: string;
-  [key: string]: unknown;
-}
+import { parseTenantSettings, type TenantSettings } from "./tenant-branding";
 
 /**
  * The module fields of TenantInfo from the tenant shell's booked_modules.
@@ -335,7 +329,7 @@ export async function resolveTenant(slug: string): Promise<TenantInfo> {
     traegerName: data.traeger_name,
     hidden: data.hidden === true,
     // The contract types the school's settings map as open JSON.
-    settings: (data.settings ?? {}) as TenantSettings,
+    settings: parseTenantSettings(data.settings) ?? {},
     presenceMode: normalizePresenceMode(data.presence_mode),
     studentPhotosEnabled: data.student_photos_enabled === true,
     ...bookedModuleFields(data.booked_modules),

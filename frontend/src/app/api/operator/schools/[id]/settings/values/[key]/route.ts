@@ -1,8 +1,5 @@
 import { invalidateTenantResolve } from "~/lib/tenant-resolve.server";
-import {
-  encodePathSegment,
-  requireStringParam,
-} from "~/lib/route-wrapper-utils.server";
+import { requireStringParam } from "~/lib/route-wrapper-utils.server";
 import { revalidatePath } from "next/cache";
 import type { NextRequest } from "next/server";
 import { createLogger } from "~/lib/logger";
@@ -86,7 +83,7 @@ export const PUT = createOperatorPutHandler(
       routes["PUT /operator/schools/{id}/settings/values/{key}"],
       body,
       {
-        endpoint: `/operator/schools/${encodePathSegment(id)}/settings/values/${encodePathSegment(key)}`,
+        params: { id, key },
         token,
         request,
       },
@@ -113,7 +110,7 @@ export const DELETE = createOperatorDeleteHandler(
       routes["DELETE /operator/schools/{id}/settings/values/{key}"],
       undefined,
       {
-        endpoint: `/operator/schools/${encodePathSegment(id)}/settings/values/${encodePathSegment(key)}`,
+        params: { id, key },
         token,
         request,
       },

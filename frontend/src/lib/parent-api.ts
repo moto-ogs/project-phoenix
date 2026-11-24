@@ -876,11 +876,15 @@ export async function listAnnouncementAttachments(
 export function announcementAttachmentDownloadUrl(
   announcementId: string,
   attachmentId: string,
+  inline = false,
 ): string {
   return bffFileHref(
     "parent",
     "GET /parent-news-attachments/{announcementId}/{attachmentId}/download",
-    { params: { announcementId, attachmentId } },
+    {
+      params: { announcementId, attachmentId },
+      query: inline ? { inline: "1" } : {},
+    },
   );
 }
 
@@ -1075,13 +1079,14 @@ export function declarationProofAttachmentDownloadUrl(
   announcementId: string,
   studentId: string,
   attachmentId: string,
+  inline = false,
 ): string {
   return bffFileHref(
     "parent",
     "GET /parent-news-attachments/{announcementId}/{attachmentId}/download",
     {
       params: { announcementId, attachmentId },
-      query: { student_id: studentId },
+      query: { student_id: studentId, ...(inline ? { inline: "1" } : {}) },
     },
   );
 }

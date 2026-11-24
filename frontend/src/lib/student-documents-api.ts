@@ -5,7 +5,7 @@
 // caller may see plus the caller's visible categories.
 
 import type * as wire from "~/lib/contract/students.generated";
-import { bffJson } from "./bff-fetch";
+import { bffFileHref, bffJson } from "./bff-fetch";
 import {
   mapAccidentReport,
   type AccidentReportDetails,
@@ -62,10 +62,6 @@ function mapDocument(data: wire.StudentDocumentResponse): StudentDocument {
   };
 }
 
-function documentsPath(studentId: string, documentId: string): string {
-  return `/api/students/${encodeURIComponent(studentId)}/documents/${encodeURIComponent(documentId)}`;
-}
-
 class StudentDocumentsService {
   async list(studentId: string): Promise<StudentDocumentList> {
     const list = await bffJson("tenant", "GET /api/students/{id}/documents", {
@@ -99,7 +95,11 @@ class StudentDocumentsService {
 
   /** Same-origin proxy URL for the authenticated download. */
   downloadUrl(studentId: string, documentId: string): string {
-    return `${documentsPath(studentId, documentId)}/download`;
+    return bffFileHref(
+      "tenant",
+      "GET /api/students/{id}/documents/{documentId}/download",
+      { params: { id: studentId, documentId } },
+    );
   }
 }
 

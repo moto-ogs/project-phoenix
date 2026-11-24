@@ -108,7 +108,7 @@ describe("tenant-api", () => {
           organization_id: 10,
           organization_name: "Org A",
           hidden: false,
-          settings: { primaryColor: "#ff0000" },
+          settings: { primaryColor: "#ff0000", logoUrl: 123, schoolKey: true },
           grade_level_max: 13,
         },
       };
@@ -135,7 +135,7 @@ describe("tenant-api", () => {
         organizationId: 10,
         organizationName: "Org A",
         hidden: false,
-        settings: { primaryColor: "#ff0000" },
+        settings: { primaryColor: "#ff0000", schoolKey: true },
         // Missing presence_mode on a backend response defaults to "detailed"
         // — matches backend's own safe fallback.
         presenceMode: "detailed",

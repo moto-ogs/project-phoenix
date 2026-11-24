@@ -309,10 +309,16 @@ export const DEMO_RESTART_RUNNING = "Wird vorbereitet …";
 export async function restartDemo(
   role: DemoRole | undefined,
 ): Promise<string | null> {
-  const body = await demoPost<{ entry_url?: string }>(
-    "/api/demo/access/reset",
-    { role },
-    "demo restart failed",
+  const body = await demoResult(() =>
+    bffJsonUncontracted<{ entry_url?: string }>(
+      "public",
+      "POST",
+      "/api/demo/access/reset",
+      {
+        body: { role },
+        errorMessage: "demo restart failed",
+      },
+    ),
   );
   if (body === null) return null;
   if (!body.entry_url?.startsWith("http")) {
@@ -361,16 +367,9 @@ export function demoHandoffPath(role: DemoRole): string {
  * APP_ENV=demo). An unknown or expired link (404, 410) is null; any other
  * failure is the ApiError.
  */
-async function demoPost<T>(
-  path: string,
-  body: unknown,
-  errorMessage: string,
-): Promise<T | null> {
+async function demoResult<T>(send: () => Promise<T>): Promise<T | null> {
   try {
-    return await bffJsonUncontracted<T>("public", "POST", path, {
-      body,
-      errorMessage,
-    });
+    return await send();
   } catch (error) {
     if (
       error instanceof ApiError &&
@@ -394,11 +393,16 @@ interface DemoAccessProgress {
 async function fetchDemoAccessProgress(
   token: string,
 ): Promise<DemoAccessProgress> {
-  const body = await demoPost<{
-    status?: string;
-    school_url?: string;
-    school_name?: string;
-  }>("/api/demo/access/status", { token }, "demo status failed");
+  const body = await demoResult(() =>
+    bffJsonUncontracted<{
+      status?: string;
+      school_url?: string;
+      school_name?: string;
+    }>("public", "POST", "/api/demo/access/status", {
+      body: { token },
+      errorMessage: "demo status failed",
+    }),
+  );
   if (body === null) return { status: "invalid" };
   if (body.status === "ready") {
     return {
@@ -477,16 +481,21 @@ async function postSession(body: {
   token?: string;
   role: DemoRole;
 }): Promise<DemoSession | null> {
-  const payload = await demoPost<{
-    session_created?: boolean;
-    demo?: {
-      access_id?: string;
-      role?: string;
-      src?: string;
-      fixed_role?: boolean;
-      traeger?: boolean;
-    };
-  }>("/api/demo/access/sessions", body, "demo redeem failed");
+  const payload = await demoResult(() =>
+    bffJsonUncontracted<{
+      session_created?: boolean;
+      demo?: {
+        access_id?: string;
+        role?: string;
+        src?: string;
+        fixed_role?: boolean;
+        traeger?: boolean;
+      };
+    }>("public", "POST", "/api/demo/access/sessions", {
+      body,
+      errorMessage: "demo redeem failed",
+    }),
+  );
   if (payload === null) return null;
   return {
     sessionCreated: payload.session_created === true,

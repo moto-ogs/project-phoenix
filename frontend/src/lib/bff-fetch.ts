@@ -12,9 +12,16 @@ import type {
   portalRoutes,
   routeFileRoutes,
 } from "./contract/portals.generated";
+import {
+  fillRoutePath,
+  routeSearch,
+  type ParamsOf,
+  type QueryOf,
+  type QueryValue,
+} from "./contract/address";
 import type { RequestBody } from "./contract/runtime";
 import type { ErrorCode } from "./error-codes.generated";
-import type { SessionBffRoute } from "./session-bff";
+import type { SessionBffRoute } from "./session-bff-route";
 import { renewTenantSession, requireTenantSession } from "./session-cache";
 
 /**
@@ -105,17 +112,6 @@ type RouteOf<P extends Portal, K extends RouteKey<P>> =
       : never
     : never;
 
-type ParamNames<S extends string> =
-  S extends `${string}{${infer N}}${infer Rest}` ? N | ParamNames<Rest> : never;
-
-type QueryValue =
-  | string
-  | number
-  | boolean
-  | null
-  | undefined
-  | readonly (string | number | boolean)[];
-
 /** The variant names of a route with response variants. */
 type VariantOf<R> = R extends {
   variantParam: string;
@@ -159,43 +155,6 @@ type BodyOf<R> = R extends { request: RequestBody<infer B> }
   : R extends { request: { kind: "multipart" } }
     ? { body: FormData }
     : { body?: never };
-
-type ParamsOf<R> = R extends { pattern: infer T extends string }
-  ? [ParamNames<T>] extends [never]
-    ? { params?: never }
-    : { params: Record<ParamNames<T>, string> }
-  : never;
-
-type VariantQuery<R, V> = R extends { variantParam: infer N extends string }
-  ? { [key in N]?: V }
-  : unknown;
-
-type QueryScalar = {
-  string: string;
-  id: string;
-  // A YYYY-MM-DD string on the wire. Go validates the calendar date.
-  date: string;
-  int: number;
-  bool: boolean;
-};
-
-type ScalarOf<Q> = Q extends { values: readonly (infer Value extends string)[] }
-  ? Value
-  : Q extends { kind: infer Kind extends keyof QueryScalar }
-    ? QueryScalar[Kind]
-    : never;
-
-type QueryOf<R, V> = R extends { query: infer Q }
-  ? {
-      query?: {
-        -readonly [
-          K in keyof Q as R extends { variantParam: K } ? never : K
-        ]?: Q[K] extends { repeated: true }
-          ? readonly ScalarOf<Q[K]>[]
-          : ScalarOf<Q[K]>;
-      } & VariantQuery<R, V>;
-    }
-  : { query?: never };
 
 /** The query accepted by a generated route entry. */
 export type BffQuery<R> = NonNullable<QueryOf<R, VariantOf<R>>["query"]>;
@@ -357,20 +316,14 @@ const PORTALS: Readonly<Record<Portal, PortalRow>> = {
 };
 
 /** The BFF path of a backend pattern, with its parameters filled in. */
-export function bffPath(
+function browserPath(
   portal: Portal,
   pattern: string,
   params: Readonly<Record<string, string>> = {},
   query?: Readonly<Record<string, QueryValue>>,
-): string {
+): `/api/${string}` {
   const { mount, bff } = PORTALS[portal];
-  const filled = pattern.replaceAll(/\{([^}]+)\}/g, (_, name: string) => {
-    const value = params[name];
-    if (value === undefined || value === "") {
-      throw new Error(`bffJson: missing path parameter ${name} of ${pattern}`);
-    }
-    return encodeURIComponent(value);
-  });
+  const filled = fillRoutePath(pattern, params);
   const underMount =
     mount !== "" && (filled === mount || filled.startsWith(`${mount}/`));
   // A public pattern under /api (enrollment links) is its BFF path already.
@@ -378,16 +331,41 @@ export function bffPath(
   const path = (
     atBff ? filled : bff + (underMount ? filled.slice(mount.length) : filled)
   ).replace(/\/+$/, "");
-  const search = new URLSearchParams();
-  for (const [key, value] of Object.entries(query ?? {})) {
-    if (value === undefined || value === null) continue;
-    for (const item of Array.isArray(value) ? value : [value]) {
-      search.append(key, String(item));
-    }
-  }
-  const qs = search.toString();
-  return qs ? `${path}?${qs}` : path;
+  return `${path}${routeSearch(query)}` as `/api/${string}`;
 }
+
+type AddressRoute<P extends Portal, K extends KeyOf<AnyRoute<P>>> =
+  AnyRoute<P> extends infer R
+    ? R extends unknown
+      ? KeyOf<R> extends K
+        ? R
+        : never
+      : never
+    : never;
+
+/** Same-origin address for a registered route, including named route files. */
+export function bffPath<P extends Portal, K extends KeyOf<AnyRoute<P>>>(
+  portal: P,
+  route: K,
+  ...[options]: object extends PathOptions<AddressRoute<P, K>>
+    ? [options?: PathOptions<AddressRoute<P, K>>]
+    : [options: PathOptions<AddressRoute<P, K>>]
+): `/api/${string}` {
+  const opts = options as
+    | {
+        params?: Record<string, string>;
+        query?: Record<string, QueryValue>;
+      }
+    | undefined;
+  return browserPath(
+    portal,
+    route.slice(route.indexOf(" ") + 1),
+    opts?.params,
+    opts?.query,
+  );
+}
+
+type PathOptions<R> = ParamsOf<R> & QueryOf<R, VariantOf<R>>;
 
 /** Sends through the portal's row; a failure is the ApiError. */
 async function send(
@@ -511,7 +489,12 @@ export function bffJson(
   if (typeof route !== "string")
     return call(portal, route.method, route.path, opts);
   const method = route.slice(0, space) as Method;
-  const url = bffPath(portal, route.slice(space + 1), opts.params, opts.query);
+  const url = browserPath(
+    portal,
+    route.slice(space + 1),
+    opts.params,
+    opts.query,
+  );
   return call(portal, method, url, opts);
 }
 
@@ -534,7 +517,7 @@ export function bffFileHref<
         query?: Record<string, QueryValue>;
       }
     | undefined;
-  return bffPath(portal, route.slice(4), opts?.params, opts?.query);
+  return browserPath(portal, route.slice(4), opts?.params, opts?.query);
 }
 
 /**
@@ -554,7 +537,12 @@ export async function bffFile<P extends Portal, K extends FileRouteKey<P>>(
     params?: Record<string, string>;
     query?: Record<string, QueryValue>;
   };
-  const url = bffPath(portal, route.slice(space + 1), opts.params, opts.query);
+  const url = browserPath(
+    portal,
+    route.slice(space + 1),
+    opts.params,
+    opts.query,
+  );
   return send(portal, method, url, requestInit(method, opts), opts);
 }
 

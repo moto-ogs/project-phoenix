@@ -141,10 +141,6 @@ export function requireStringParam(
   return value;
 }
 
-export function encodePathSegment(param: string): string {
-  return encodeURIComponent(param);
-}
-
 /**
  * Returns a required route param encoded for use as one URL path segment.
  */
@@ -152,5 +148,5 @@ export function requirePathSegmentParam(
   params: Record<string, unknown>,
   key = "id",
 ): string {
-  return encodePathSegment(requireStringParam(params, key));
+  return encodeURIComponent(requireStringParam(params, key));
 }

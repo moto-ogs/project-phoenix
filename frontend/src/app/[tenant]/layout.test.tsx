@@ -311,6 +311,27 @@ describe("TenantLayout", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 
+  it("ignores invalid branding fields without losing valid settings or the school", async () => {
+    const valid = await tenantResponse().json();
+    const settings = {
+      loginImageUrl: "/image.webp",
+      schoolValue: { enabled: true },
+    };
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      Response.json({
+        ...valid,
+        data: { ...valid.data, settings: { ...settings, logoUrl: 123 } },
+      }),
+    );
+
+    const tenant = await resolveTenantCached("school-a", {});
+    expect(tenant.name).toBe("School A");
+    expect(tenant.settings).toEqual(settings);
+    expect(tenant.settings?.logoUrl).toBeUndefined();
+    expect(await resolveTenantCached("school-a", {})).toBe(tenant);
+    expect(fetchSpy).toHaveBeenCalledOnce();
+  });
+
   it("shares a refresh and waits for current tenant settings after 60 seconds", async () => {
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")

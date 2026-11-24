@@ -16,6 +16,13 @@ import {
 } from "~/lib/api-response-error.server";
 import type { ErrorCode } from "~/lib/error-codes.generated";
 import { createLogger } from "~/lib/logger";
+import {
+  fillRoutePath,
+  routeSearch,
+  type ParamsOf,
+  type QueryOf,
+  type QueryValue,
+} from "./address";
 import type { RequestBody } from "./runtime";
 
 const logger = createLogger({ component: "Contract" });
@@ -127,17 +134,25 @@ export type ContractBody<R> = R extends { request: RequestBody<infer B> }
     ? FormData
     : undefined;
 
-interface ContractOptions extends Pick<
+interface TransportOptions extends Pick<
   BackendCall,
   "request" | "signal" | "timeout" | "headers" | "idempotencyKey"
 > {
-  /** Override the pattern only to fill path parameters or add a query. */
-  endpoint?: string;
   /** A bearer the caller holds; omit it for a pre-session or public call. */
   token?: string | null;
   /** Use the portal's session client when the route owns renewal policy. */
   send?: (path: string, call: BackendCall) => Promise<Response>;
 }
+
+type ContractAddress<R> = ParamsOf<R> & QueryOf<R, never>;
+type CallAddress = {
+  params?: Readonly<Record<string, string>>;
+  query?: Readonly<Record<string, QueryValue>>;
+};
+export type ContractOptions<R> =
+  object extends ContractAddress<R>
+    ? [options?: TransportOptions & ContractAddress<R>]
+    : [options: TransportOptions & ContractAddress<R>];
 
 export type ContractReply<T> = ContractResult<T> & {
   /** The HTTP result even when the answer body cannot be decoded. */
@@ -146,10 +161,11 @@ export type ContractReply<T> = ContractResult<T> & {
 
 async function callContract<T>(
   route: JsonRoute & { response: z.ZodType<T> },
-  options: ContractOptions,
+  options: TransportOptions & CallAddress,
   body?: unknown,
 ): Promise<ContractReply<T>> {
-  const { endpoint = route.pattern, token, send, ...transport } = options;
+  const { params, query, token, send, ...transport } = options;
+  const endpoint = fillRoutePath(route.pattern, params) + routeSearch(query);
   const call: BackendCall = {
     ...transport,
     method: route.method,
@@ -183,23 +199,25 @@ async function callContract<T>(
 }
 
 /** GET of a registered JSON route, with or without a session. */
-export function contractGet<T>(
-  route: JsonRoute & { method: "GET"; response: z.ZodType<T> },
-  options: ContractOptions = {},
-): Promise<ContractReply<T>> {
-  return callContract(route, options);
+export function contractGet<const R extends JsonRoute & { method: "GET" }>(
+  route: R,
+  ...[options]: ContractOptions<NoInfer<R>>
+): Promise<ContractReply<z.output<R["response"]>>> {
+  return callContract(route, options ?? {}) as Promise<
+    ContractReply<z.output<R["response"]>>
+  >;
 }
 
 /** Write a registered route once; its generated entry types both directions. */
 export function contractWrite<
-  R extends JsonRoute & { method: Exclude<BackendMethod, "GET"> },
+  const R extends JsonRoute & { method: Exclude<BackendMethod, "GET"> },
 >(
   route: R,
   body: NoInfer<ContractBody<R>>,
-  options: ContractOptions = {},
+  ...[options]: ContractOptions<NoInfer<R>>
 ): Promise<ContractReply<z.output<R["response"]>>> {
   // The output is inferred from this entry's decoder, never from the body.
-  return callContract(route, options, body) as Promise<
+  return callContract(route, options ?? {}, body) as Promise<
     ContractReply<z.output<R["response"]>>
   >;
 }

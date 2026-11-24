@@ -265,7 +265,11 @@ class FilesService {
 
   /** Same URL, but the browser shows the file (PDF, image) instead of saving it. */
   viewUrl(folderId: string, fileId: string): string {
-    return `${this.downloadUrl(folderId, fileId)}?inline=1`;
+    return bffFileHref(
+      "tenant",
+      "GET /api/files/folders/{folderId}/files/{fileId}/download",
+      { params: { folderId, fileId }, query: { inline: "1" } },
+    );
   }
 }
 

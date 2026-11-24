@@ -3,6 +3,8 @@ package common
 import (
 	"bytes"
 	"encoding/json"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // DeferredJSON reads an optional field with a typed value. If the value has
@@ -17,7 +19,7 @@ type DeferredJSON[T any] struct {
 
 func (field *DeferredJSON[T]) UnmarshalJSON(data []byte) error {
 	*field = DeferredJSON[T]{Present: true}
-	if err := json.Unmarshal(data, &field.Value); err != nil {
+	if err := wire.Unmarshal(data, &field.Value); err != nil {
 		field.Invalid = bytes.Clone(data)
 	}
 	return nil

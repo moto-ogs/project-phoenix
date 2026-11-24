@@ -22,8 +22,8 @@ type AttachmentListItem = Pick<
 
 interface AttachmentListProps {
   attachments: readonly AttachmentListItem[];
-  /** Builds the download address for one attachment. */
-  downloadUrl: (attachmentId: string) => string;
+  /** Builds the address, asking the route for inline display when supported. */
+  downloadUrl: (attachmentId: string, inline?: boolean) => string;
   /** When set, each row gets a remove button calling this. */
   onRemove?: (attachmentId: string) => void;
   /** Disables the remove buttons while a request is in flight. */
@@ -78,9 +78,7 @@ export function AttachmentList({
       {attachments.map((attachment) => {
         const viewable = isViewableInBrowser(attachment.content_type);
         const downloadHref = downloadUrl(attachment.id);
-        const href = viewable
-          ? `${downloadHref}${downloadHref.includes("?") ? "&" : "?"}inline=1`
-          : downloadHref;
+        const href = viewable ? downloadUrl(attachment.id, true) : downloadHref;
         return (
           <li
             key={attachment.id}

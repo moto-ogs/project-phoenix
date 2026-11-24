@@ -1,4 +1,4 @@
-import { backendJson as sendJson } from "~/lib/backend-client.server";
+import { readBackendJson, sendBackend } from "~/lib/backend-client.server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { NextAuthRequest, Session } from "next-auth";
 import { NextRequest } from "next/server";
@@ -51,7 +51,9 @@ async function sending(
   request: NextRequest,
   token: string,
 ) {
-  await sendJson(method, "/api/x", token, undefined, { request });
+  await readBackendJson(
+    await sendBackend("/api/x", token, { method, request }),
+  );
 }
 
 type Route = (
@@ -70,7 +72,7 @@ function call(route: Route, params: Record<string, string | string[]> = {}) {
   );
 }
 
-function backendJson(status: number, body: unknown): Response {
+function jsonAnswer(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
@@ -147,7 +149,9 @@ const routes: Array<[string, () => Promise<Route>]> = [
     async () => {
       const { traeger } = await import("~/lib/traeger/route-wrapper.server");
       return traeger.del(async (request, token) =>
-        sendJson("DELETE", "/api/x", token, undefined, { request }),
+        sendBackend("/api/x", token, { method: "DELETE", request }).then(
+          readBackendJson,
+        ),
       ) as Route;
     },
   ],
@@ -176,7 +180,7 @@ afterEach(() => {
 describe("portal route wrappers send private, no-store", () => {
   it.each(routes)("%s: JSON success", async (portal, load) => {
     mockFetch.mockResolvedValue(
-      backendJson(
+      jsonAnswer(
         200,
         portal === "public login step"
           ? { challenge_token: "challenge" }
@@ -192,7 +196,7 @@ describe("portal route wrappers send private, no-store", () => {
 
   it.each(routes)("%s: JSON error", async (_portal, load) => {
     mockFetch.mockResolvedValue(
-      backendJson(404, {
+      jsonAnswer(404, {
         status: 404,
         title: "Not Found",
         code: "general.not_found",
@@ -212,7 +216,7 @@ describe("the Träger portal's catalog proxy sends private, no-store", () => {
     // traeger/billing-families/debtor-number-format, which wrapped itself;
     // the catch-all serves the path now (#2352).
     mockFetch.mockResolvedValue(
-      backendJson(200, {
+      jsonAnswer(200, {
         status: "success",
         data: {
           digits_only: true,
@@ -287,7 +291,7 @@ describe("tenant routes on a school subdomain (#5130)", () => {
     "%s: answers a session of the host's school",
     async (_portal, load) => {
       mockFetch.mockResolvedValue(
-        backendJson(200, { status: "success", data: { id: 1 } }),
+        jsonAnswer(200, { status: "success", data: { id: 1 } }),
       );
 
       const response = await callOnHost(

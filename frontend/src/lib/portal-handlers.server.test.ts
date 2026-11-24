@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ServerSession } from "~/server/auth/session-types";
 import { testPortalBinding } from "~/test/portal-binding";
 import { createMockContext } from "~/test/route-test-helpers";
-import { backendJson, unwrapEnvelope } from "./backend-client.server";
+import { readBackendJson, sendBackend } from "./backend-client.server";
 import { makePortalHandlers } from "./portal-handlers.server";
 
 const { captureException } = vi.hoisted(() => ({
@@ -32,12 +32,14 @@ async function backendData(
   token: string,
   body?: unknown,
 ) {
-  return unwrapEnvelope(
-    await backendJson(method, path, token, body, {
-      request,
-      idempotencyKey: request.headers.get("Idempotency-Key"),
-    }),
-  );
+  const response = await sendBackend(path, token, {
+    method,
+    json: body,
+    request,
+    idempotencyKey: request.headers.get("Idempotency-Key"),
+  });
+  const answer = await readBackendJson<{ data: unknown } | undefined>(response);
+  return answer?.data;
 }
 
 function request(
@@ -366,7 +368,10 @@ describe("401 retry", () => {
   it("does not run a handler again that opts out, and forwards its 401", async () => {
     fetchMock.mockResolvedValueOnce(problem401());
     const handler = vi.fn(async (_request, body: unknown, token: string) =>
-      backendJson("POST", "/operator/profile/password", token, body),
+      sendBackend("/operator/profile/password", token, {
+        method: "POST",
+        json: body,
+      }).then(readBackendJson),
     );
 
     const response = await portal.post(handler, {

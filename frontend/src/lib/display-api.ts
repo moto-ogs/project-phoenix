@@ -3,7 +3,7 @@ import { apiErrorFromResponse, unavailableApiError } from "./api-error";
 // Admin CRUD goes through the portal's catalog proxy under /api/display;
 // the public dashboard fetch is token-only.
 
-import { bffJson } from "~/lib/bff-fetch";
+import { bffJson, bffPath } from "~/lib/bff-fetch";
 import type * as displayContract from "~/lib/contract/display.generated";
 import type { InfoDisplay } from "~/lib/display-helpers";
 import { mapDisplayResponse } from "~/lib/display-helpers";
@@ -23,7 +23,7 @@ export async function fetchDisplayDashboard(
   // file itself (bff-boundary/no-raw-browser-transport lists it).
   let response: Response;
   try {
-    response = await fetch("/api/display/dashboard", {
+    response = await fetch(bffPath("tenant", "GET /api/display/dashboard"), {
       cache: "no-store",
       signal,
       headers: { "X-Display-Token": token },

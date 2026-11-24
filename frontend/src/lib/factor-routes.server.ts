@@ -1,6 +1,10 @@
 import "server-only";
 import type { z } from "zod";
-import { contractWrite, type ContractBody } from "~/lib/contract/client.server";
+import {
+  contractWrite,
+  type ContractBody,
+  type ContractOptions,
+} from "~/lib/contract/client.server";
 import { contractError } from "~/lib/contract/route-response.server";
 import type { TokenResponse } from "~/lib/contract/shared.generated";
 import type { SessionRenewed } from "~/lib/session-bff";
@@ -23,7 +27,7 @@ interface FactorConfirmRoute<R extends FactorRoute> {
   portal: Pick<PortalAuth, "portal" | "setSession" | "withAuth">;
   handlers: Pick<ReturnType<typeof makePortalHandlers>, "backendFetch">;
   /** The backend route that redeems the code and answers the new session. */
-  route: R;
+  route: R & (R["pattern"] extends `${string}{${string}` ? never : unknown);
   /** Why a backend 401 is not repeated with a renewed session. */
   retry: { off: string };
   log: { component: string; event: string };
@@ -55,10 +59,16 @@ export function createFactorConfirmRoute<R extends FactorRoute>({
       return problemResponse(400, "Invalid JSON", request);
     }
     try {
-      const reply = await contractWrite(route, body as ContractBody<R>, {
-        send: (path, call) =>
-          handlers.backendFetch(request, path, { ...call, retry }),
-      });
+      const reply = await contractWrite<R>(
+        route,
+        body as ContractBody<R>,
+        ...([
+          {
+            send: (path, call) =>
+              handlers.backendFetch(request, path, { ...call, retry }),
+          },
+        ] as ContractOptions<NoInfer<R>>),
+      );
       if (!reply.ok) return contractError(reply, request);
       const failure = await installLoginSession(request, reply.value, portal);
       return Response.json(

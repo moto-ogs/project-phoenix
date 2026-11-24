@@ -34,58 +34,64 @@ afterEach(() => {
 
 describe("bffPath", () => {
   it("puts the pattern below the portal's BFF prefix", () => {
-    expect(bffPath("tenant", "/api/activities/categories")).toBe(
+    expect(bffPath("tenant", "GET /api/activities/categories")).toBe(
       "/api/activities/categories",
     );
-    expect(bffPath("org", "/traeger/absence-types/")).toBe(
+    expect(bffPath("org", "GET /traeger/absence-types/")).toBe(
       "/api/traeger/absence-types",
     );
-    expect(bffPath("platform", "/operator/stats")).toBe("/api/operator/stats");
+    expect(bffPath("platform", "GET /operator/stats")).toBe(
+      "/api/operator/stats",
+    );
   });
 
   it("puts a route outside the portal's mount below the prefix as a whole", () => {
-    expect(bffPath("parent", "/analytics-policy")).toBe(
+    expect(bffPath("parent", "GET /analytics-policy")).toBe(
       "/api/parent/analytics-policy",
     );
-    expect(bffPath("tenant", "/analytics-consent")).toBe(
+    expect(bffPath("tenant", "GET /analytics-consent/")).toBe(
       "/api/analytics-consent",
     );
   });
 
   it("puts a public pattern below /api unless it is there already", () => {
     expect(
-      bffPath("public", "/caterer/invitations/{schoolId}/{token}", {
-        schoolId: "3",
-        token: "t",
+      bffPath("public", "GET /caterer/invitations/{schoolId}/{token}", {
+        params: { schoolId: "3", token: "t" },
       }),
     ).toBe("/api/caterer/invitations/3/t");
-    expect(bffPath("public", "/auth/password-reset")).toBe(
+    expect(bffPath("public", "POST /auth/password-reset")).toBe(
       "/api/auth/password-reset",
     );
     expect(
-      bffPath("public", "/api/enrollment/phases/public/{tenantSlug}", {
-        tenantSlug: "ogs",
+      bffPath("public", "GET /api/enrollment/phases/public/{tenantSlug}", {
+        params: { tenantSlug: "ogs" },
       }),
     ).toBe("/api/enrollment/phases/public/ogs");
   });
 
-  it("encodes parameters and drops empty query values", () => {
+  it("encodes parameters", () => {
     expect(
-      bffPath(
-        "tenant",
-        "/api/activities/categories/{categoryId}",
-        { categoryId: "a/b" },
-        { include_archived: true, empty: undefined, ids: ["1", "2"] },
-      ),
-    ).toBe(
-      "/api/activities/categories/a%2Fb?include_archived=true&ids=1&ids=2",
-    );
+      bffPath("tenant", "DELETE /api/activities/categories/{categoryId}", {
+        params: { categoryId: "a/b" },
+      }),
+    ).toBe("/api/activities/categories/a%2Fb");
+  });
+
+  it("uses the query registered on the selected route", () => {
+    expect(
+      bffPath("tenant", "GET /api/rooms/", {
+        query: {
+          is_open_room: true,
+        },
+      }),
+    ).toBe("/api/rooms?is_open_room=true");
   });
 
   it("refuses a missing parameter instead of calling another path", () => {
-    expect(() => bffPath("tenant", "/api/activities/{id}", {})).toThrow(
-      "missing path parameter id",
-    );
+    expect(() =>
+      bffPath("tenant", "DELETE /api/activities/{id}", { params: { id: "" } }),
+    ).toThrow("missing path parameter id");
   });
 });
 

@@ -8,11 +8,13 @@ repository root unless the section says otherwise.
 
 Go's `RouteContracts()` declares each query key and its kind. Generated
 TypeScript route entries keep those kinds, allowed string values and
-repetition. `bffJson`, `bffFile` and `bffFileHref` use them to type the query: dates are
+repetition. `bffJson`, `bffFile`, `bffFileHref`, `bffPath`,
+`contractGet` and `contractWrite` type the query from the selected route: dates are
 `YYYY-MM-DD` strings, IDs and text are strings, integers are numbers and
 booleans are booleans. The helpers serialize values to the URL; the catalog
 proxy filters names only and forwards every occurrence of each registered
-key to Go, which validates the values.
+key to Go, which validates the values. Server calls build the Go address
+from the same route entry; browser paths use the portal’s BFF prefix.
 
 Bigint identifiers in portal JSON use Go `ident.ID` and travel as decimal
 strings. Identically named text fields carry a `contract_text` reason.

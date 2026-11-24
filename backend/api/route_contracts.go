@@ -321,9 +321,9 @@ func contractReaders() map[reflect.Type]string {
 		reflect.TypeFor[common.DeferredJSON[*carerequests.WeeklyChange]](): contract.ReadsValue,
 		// The template writes tell an absent key from null.
 		reflect.TypeFor[timetableHTTP.NullableInt]():                         contract.ReadsValue,
-		reflect.TypeFor[timetableHTTP.NullableInt64]():                       contract.ReadsValue,
+		reflect.TypeFor[timetableHTTP.NullableID]():                          contract.ReadsValue,
 		reflect.TypeFor[timetableHTTP.NullableIntSlice]():                    contract.ReadsValue,
-		reflect.TypeFor[timetableHTTP.NullableInt64Slice]():                  contract.ReadsValue,
+		reflect.TypeFor[timetableHTTP.NullableIDSlice]():                     contract.ReadsValue,
 		reflect.TypeFor[timetableHTTP.NullableStringSlice]():                 contract.ReadsValue,
 		reflect.TypeFor[timetableHTTP.NullableStr]():                         contract.ReadsValue,
 		reflect.TypeFor[common.DeferredJSON[enrollmentOwner.Translations]](): contract.ReadsValue,

@@ -4,7 +4,7 @@
  * subject). Sending is get-or-create — there is at most one conversation per
  * (child, guardian).
  *
- * Talks to the Next.js proxy routes under /api/messages, which forward to the
+ * Talks to the catalog BFF under /api/messages, which forward to the
  * Go backend with the staff JWT. Backend int64 ids arrive already stringified.
  */
 

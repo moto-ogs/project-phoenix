@@ -244,7 +244,7 @@ describe("route file with backend calls of its own", () => {
 
   it("refuses a file whose backend paths the contract registers", () => {
     const text = `
-      import { apiGet } from "~/lib/api-helpers.server";
+      import { apiGet } from "~/lib/retired-transport.server";
       import { createGetHandler } from "~/lib/route-wrapper.server";
       export const GET = createGetHandler((_request, token, params) =>
         apiGet(\`/api/groups/\${String(params.id)}?details=1\`, token));
@@ -276,7 +276,7 @@ const knownContractCall = new Set([
   "authStepProxy",
 ]);
 const rawCalls =
-  /^(?:fetch|sendBackend|readBackendJson|backendJson|backendFetch|api(?:Get|Post|Put|Patch|Delete)|postForm|api)$/;
+  /^(?:fetch|sendBackend|readBackendJson|backendFetch|api(?:Get|Post|Put|Patch|Delete)|postForm|api)$/;
 
 function handlerCalls(file: string, text: string) {
   const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
@@ -352,7 +352,17 @@ function handlerCalls(file: string, text: string) {
       property.name.getText(source) !== "send"
     )
       return false;
-    const call = property.parent.parent;
+    let argument: ts.Node = property.parent;
+    if (ts.isArrayLiteralExpression(argument.parent))
+      argument = argument.parent;
+    while (
+      ts.isParenthesizedExpression(argument.parent) ||
+      ts.isAsExpression(argument.parent)
+    ) {
+      argument = argument.parent;
+    }
+    if (ts.isSpreadElement(argument.parent)) argument = argument.parent;
+    const call = argument.parent;
     return (
       ts.isCallExpression(call) &&
       ["contractGet", "contractWrite"].includes(callee(call))
@@ -532,7 +542,7 @@ describe("Server response decoding", () => {
           !file.endsWith(".server.ts") &&
           !file.startsWith("server/") &&
           !file.startsWith("app/api/") &&
-          !/backend-client\.server|api-helpers\.server|\bAPI_URL\b/.test(source)
+          !/backend-client\.server|\bAPI_URL\b/.test(source)
         )
           return [];
         return serverTransportBypasses(file, source).map(
@@ -544,13 +554,13 @@ describe("Server response decoding", () => {
 
   it("catches a typed unchecked read in a shell helper even under an alias", () => {
     const source = `
-      import { backendJson as read } from "~/lib/backend-client.server";
+      import { sendBackend as read } from "~/lib/backend-client.server";
       const endpoint = "/api/me/groups/supervised";
       export const load = (token: string) =>
-        read<{ data: unknown }>("GET", endpoint, token);
+        read(endpoint, token, { method: "GET" });
     `;
     expect(
       serverTransportBypasses("lib/shell-bootstrap.server.ts", source),
-    ).toEqual(["backendJson"]);
+    ).toEqual(["sendBackend"]);
   });
 });

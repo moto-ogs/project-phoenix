@@ -33,13 +33,13 @@ type NullableInt struct {
 	Value *int
 }
 
-// NullableInt64 is the int64 member of the tri-state family.
-type NullableInt64 struct {
+// NullableID is the ident.ID member of the tri-state family.
+type NullableID struct {
 	Set   bool
 	Value *ident.ID
 }
 
-func (n *NullableInt64) UnmarshalJSON(b []byte) error {
+func (n *NullableID) UnmarshalJSON(b []byte) error {
 	n.Set = true
 	if string(b) == "null" {
 		n.Value = nil
@@ -75,16 +75,16 @@ func (n *NullableIntSlice) UnmarshalJSON(b []byte) error {
 	return json.Unmarshal(b, &n.Value)
 }
 
-// NullableInt64Slice is the []int64 member of the tri-state family: it tells
+// NullableIDSlice is the []ident.ID member of the tri-state family: it tells
 // an omitted source_care_offering_ids ("keep the stored Quelle") apart from
 // an explicit null or empty list ("clear the source") on the template PUT
 // and the split body (multi-source follow-up to #2147 round 12).
-type NullableInt64Slice struct {
+type NullableIDSlice struct {
 	Set   bool
 	Value []ident.ID
 }
 
-func (n *NullableInt64Slice) UnmarshalJSON(b []byte) error {
+func (n *NullableIDSlice) UnmarshalJSON(b []byte) error {
 	n.Set = true
 	if string(b) == "null" {
 		n.Value = nil

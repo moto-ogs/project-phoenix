@@ -172,12 +172,12 @@ describe("Elternbriefe in moto schule (#4800)", () => {
         declaration_requires_signature: true,
         targets: [{ target_type: "class", ref_text: "3b" }],
       }),
-      "/api/school/parent-letters",
+      SCHOOL_PARENT_LETTERS_BASE,
     );
     expect(mockPublish).toHaveBeenCalledWith(
       "12",
       "2026-09-08T08:00:00Z",
-      "/api/school/parent-letters",
+      SCHOOL_PARENT_LETTERS_BASE,
     );
     expect(mockToastSuccess).toHaveBeenCalledWith(
       expect.stringContaining("Klasse 3b"),

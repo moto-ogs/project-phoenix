@@ -516,7 +516,7 @@ describe("class letters of a Lehrkraft (#4800)", () => {
       <PublishAnnouncementDialog
         reload={vi.fn(() => Promise.resolve())}
         announcement={{ ...classLetter, status: "draft" }}
-        apiBase="/api/school/parent-letters"
+        apiBase="school"
         onClose={onClose}
         onDone={vi.fn()}
       />,
@@ -527,7 +527,7 @@ describe("class letters of a Lehrkraft (#4800)", () => {
     expect(publishMock).toHaveBeenCalledWith(
       "7",
       "2026-09-01T08:00:00Z",
-      "/api/school/parent-letters",
+      "school",
     );
   });
 });
