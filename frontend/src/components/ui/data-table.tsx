@@ -11,7 +11,7 @@ import {
   type ReactNode,
 } from "react";
 
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
 import {
   AT_LEAST_MD,
@@ -664,8 +664,9 @@ function StackedRowCheckbox<T>({
 }
 
 /**
- * The top right of a phone card (#7911): the details toggle, then the row
- * menu, in every layout. Neither control opens the row.
+ * The top right of a phone card (#7911): the row menu, then the details
+ * toggle at the outer edge, in every layout, so the arrows of all cards
+ * stand in one column (#7913). Neither control opens the row.
  */
 function StackedRowEnd({
   toggle,
@@ -678,8 +679,8 @@ function StackedRowEnd({
       data-row-control=""
       className={`flex max-w-full shrink-0 items-center gap-1 ${className}`}
     >
-      {toggle}
       {menu}
+      {toggle}
     </span>
   );
 }
@@ -716,9 +717,10 @@ function StackedDetailsToggle({
       tooltip={open ? closeTooltip : openTooltip}
       onClick={onToggle}
     >
-      <ChevronDown
+      {/* Closed it points to the side, open down, as the table's arrow. */}
+      <ChevronRight
         aria-hidden="true"
-        className={`h-4 w-4 text-gray-500 transition-transform ${open ? "rotate-180" : ""}`}
+        className={`h-4 w-4 text-gray-500 transition-transform ${open ? "rotate-90" : ""}`}
       />
     </Button>
   );
@@ -856,9 +858,11 @@ function RowStackedRow<T>({
           detail line: beside it they would narrow the title and the detail
           that a phone line has room for (#7911). The column stays at the
           title, also beside a detail of several lines, and a framed button
-          keeps its distance to the value above it (#7913). */}
+          keeps its distance to the value above it. Only the value keeps its
+          9.5rem: a labelled action with the toggle beside it is wider and
+          would push the toggle out of the card (#7913). */}
       {meta && end ? (
-        <div className="flex max-w-[9.5rem] min-w-0 flex-col items-end gap-1 self-start">
+        <div className="flex shrink-0 flex-col items-end gap-1 self-start">
           {metaValue}
           {end}
         </div>

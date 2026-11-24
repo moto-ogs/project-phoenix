@@ -1341,7 +1341,6 @@ export function StaffSessionTable({
         rows={rows}
         getRowKey={(row) => row.key}
         dense
-        stackedOnMobile
         stackedLayout="row"
         stackedDetailKey="checkIn"
         expandable={{
