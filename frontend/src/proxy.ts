@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { problemBody } from "~/lib/api-error";
 import { REQUEST_ID_HEADER } from "~/lib/request-id";
+import { isOtherDeployment } from "~/lib/deployment-skew";
 import { RESERVED_SLUGS } from "~/lib/reserved-slugs";
 import { normalizeHostname, tenantSlugFromHost } from "~/lib/tenant-host";
 import { LOCALE_SCOPE_HEADER } from "~/i18n/locales";
@@ -451,6 +452,23 @@ function notFound(): NextResponse {
   );
 }
 
+/**
+ * A BFF call from a bundle of another deployment (`deployment-skew.ts`).
+ * Same code and text as a retired route: the tab predates the release and
+ * has to reload. 412, not 404: callers read a 404 as a missing object and
+ * hide their data, and the request did not miss its route.
+ */
+function otherDeployment(): NextResponse {
+  return withSecurityHeaders(
+    NextResponse.json(
+      problemBody(412, "bundle of another deployment", {
+        code: "general.route_not_found",
+      }),
+      { status: 412, headers: { "Content-Type": "application/problem+json" } },
+    ),
+  );
+}
+
 function handlePortalHost(
   request: NextRequest,
   host: PortalHost,
@@ -800,6 +818,10 @@ function routeRequest(request: NextRequest): NextResponse {
 
   if (pathname.startsWith("/_next")) {
     return NextResponse.next();
+  }
+
+  if (pathname.startsWith("/api/") && isOtherDeployment(request.headers)) {
+    return otherDeployment();
   }
 
   const hostname = originalHost(request);
