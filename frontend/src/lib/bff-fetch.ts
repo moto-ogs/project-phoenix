@@ -8,6 +8,7 @@ import {
   noCommitRoutes,
 } from "./contract/browser-traits.generated";
 import { commits } from "./contract/commit";
+import { DEPLOYMENT_ID_HEADER, deploymentId } from "./deployment-skew";
 import {
   ApiError,
   apiErrorFromResponse,
@@ -406,21 +407,28 @@ async function send(
   return response;
 }
 
-/** The fetch init of a call: JSON serialized, FormData as is. */
+/**
+ * The fetch init of a call: JSON serialized, FormData as is, and the
+ * deployment of this bundle, so a tab older than the server is refused
+ * before the route runs (`deployment-skew.ts`).
+ */
 function requestInit(
   method: Method,
   { body, signal, headers, keepalive }: CallOptions & { body?: unknown },
 ): RequestInit {
   const isForm = body instanceof FormData;
   const json = body !== undefined && !isForm;
+  const deployment = deploymentId();
   return {
     method,
     ...(signal && { signal }),
     ...(keepalive && { keepalive }),
-    ...((json || headers) && {
-      headers: json
-        ? { "Content-Type": "application/json", ...headers }
-        : { ...headers },
+    ...((json || headers || deployment) && {
+      headers: {
+        ...(json && { "Content-Type": "application/json" }),
+        ...(deployment && { [DEPLOYMENT_ID_HEADER]: deployment }),
+        ...headers,
+      },
     }),
     ...(body !== undefined && { body: isForm ? body : JSON.stringify(body) }),
   };
