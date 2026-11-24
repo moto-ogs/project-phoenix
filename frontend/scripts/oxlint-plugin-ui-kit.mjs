@@ -2751,7 +2751,6 @@ const KIT_PURE_LIB_MODULES = new Set([
   "src/lib/logger",
   // Navigationsmodell der App (#8070): Verlauf, Reiter-Stack, Übergänge.
   // Kein Mandanten- oder Fachwissen, keine Daten.
-  "src/lib/device-context",
   "src/lib/mobile-navigation/history-stack",
   "src/lib/mobile-navigation/use-keyboard-flag",
   "src/lib/mobile-navigation/page-transition",
