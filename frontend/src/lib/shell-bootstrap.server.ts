@@ -19,7 +19,10 @@ import {
 } from "~/lib/change-request-access";
 import { createLogger } from "~/lib/logger";
 import { mapProfileResponse } from "~/lib/profile-helpers";
-import { contractGet } from "~/lib/contract/client.server";
+import {
+  contractGet,
+  type ContractOptions,
+} from "~/lib/contract/client.server";
 import type { z } from "zod";
 import * as authAccountContract from "~/lib/contract/auth-account.generated";
 import * as enrollmentContract from "~/lib/contract/enrollment.generated";
@@ -77,13 +80,13 @@ async function optional<T>(
   }
 }
 
-async function readShell<T>(
-  route: { method: "GET"; pattern: string; response: z.ZodType<T> },
-  token: string,
-  signal: AbortSignal,
-  endpoint?: string,
-): Promise<T> {
-  const result = await contractGet(route, { token, signal, endpoint });
+async function readShell<
+  R extends { method: "GET"; pattern: string; response: z.ZodType },
+>(
+  route: R,
+  ...options: ContractOptions<NoInfer<R>>
+): Promise<z.output<R["response"]>> {
+  const result = await contractGet(route, ...options);
   if (!result.ok) throw result.error.cause;
   return result.value;
 }
@@ -111,18 +114,16 @@ async function loadSupervision(
     overviewOk: boolean;
   }> => {
     const loadOwn = () =>
-      readShell(
-        meContract.routes["GET /api/me/groups/supervised"],
+      readShell(meContract.routes["GET /api/me/groups/supervised"], {
         token,
         signal,
-      );
+      });
     if (canReadGroups && mayHaveOverview) {
       const [overview, own] = await Promise.allSettled([
-        readShell(
-          activeContract.routes["GET /api/active/supervisors/all"],
+        readShell(activeContract.routes["GET /api/active/supervisors/all"], {
           token,
           signal,
-        ),
+        }),
         loadOwn(),
       ]);
       if (overview.status === "fulfilled") {
@@ -155,8 +156,7 @@ async function loadSupervision(
     optional("groups", async (signal) => {
       const response = await readShell(
         studentsContract.routes["GET /api/students/ogs-group-navigation"],
-        token,
-        signal,
+        { token, signal },
       );
       return response.data;
     }),
@@ -167,9 +167,7 @@ async function loadSupervision(
     optional("openRooms", async (signal) => {
       const response = await readShell(
         roomsContract.routes["GET /api/rooms/"],
-        token,
-        signal,
-        "/api/rooms?is_open_room=true",
+        { token, signal, query: { is_open_room: true } },
       );
       return response.data ?? [];
     }),
@@ -232,8 +230,7 @@ async function loadCounts(
     loadCount("staffAbsencesPending", canReviewAbsences, async (signal) => {
       const response = await readShell(
         staffContract.routes["GET /api/staff/absences/pending"],
-        token,
-        signal,
+        { token, signal },
       );
       return (response.data ?? []).length;
     }),
@@ -243,8 +240,7 @@ async function loadCounts(
       async (signal) => {
         const response = await readShell(
           messagesContract.routes["GET /api/messages/unread-count"],
-          token,
-          signal,
+          { token, signal },
         );
         return response.data?.unread_count ?? 0;
       },
@@ -255,8 +251,7 @@ async function loadCounts(
       async (signal) => {
         const response = await readShell(
           staffMessagesContract.routes["GET /api/staff-messages/unread-count"],
-          token,
-          signal,
+          { token, signal },
         );
         return response.data?.unread_count ?? 0;
       },
@@ -269,8 +264,7 @@ async function loadCounts(
           studentsContract.routes[
             "GET /api/students/change-requests/pending-count"
           ],
-          token,
-          signal,
+          { token, signal },
         );
         return response.data?.pending_count ?? 0;
       },
@@ -283,8 +277,7 @@ async function loadCounts(
           enrollmentContract.routes[
             "GET /api/enrollment/admin/change-requests/pending-count"
           ],
-          token,
-          signal,
+          { token, signal },
         );
         return response.data?.pending_count ?? 0;
       },
@@ -295,9 +288,7 @@ async function loadCounts(
       async (signal) => {
         const response = await readShell(
           studentsContract.routes["GET /api/students/care-withdrawals"],
-          token,
-          signal,
-          "/api/students/care-withdrawals?page_size=1",
+          { token, signal, query: { page_size: 1 } },
         );
         return response.data?.total ?? 0;
       },
@@ -349,16 +340,14 @@ export async function loadShellBootstrap(
     optional("profile", async (signal) => {
       const response = await readShell(
         meContract.routes["GET /api/me/profile"],
-        token,
-        signal,
+        { token, signal },
       );
       return mapProfileResponse(response.data);
     }),
     optional("accountTenants", async (signal) => {
       const response = await readShell(
         authAccountContract.routes["GET /auth/account/tenants"],
-        token,
-        signal,
+        { token, signal },
       );
       return (response.data ?? []).map(mapAccountTenant);
     }),
@@ -367,8 +356,7 @@ export async function loadShellBootstrap(
       ? optional("reminders", async (signal) => {
           const response = await readShell(
             remindersContract.routes["GET /api/reminders/"],
-            token,
-            signal,
+            { token, signal },
           );
           return toRemindersResult(response.data);
         })
@@ -380,8 +368,7 @@ export async function loadShellBootstrap(
       ? optional("staffNoticesToday", async (signal) => {
           const response = await readShell(
             staffNoticesContract.routes["GET /api/staff-notices/today"],
-            token,
-            signal,
+            { token, signal },
           );
           return response.data.map(toStaffNotice);
         })
@@ -389,8 +376,7 @@ export async function loadShellBootstrap(
     optional("announcements", async (signal) => {
       const response = await readShell(
         platformContract.routes["GET /api/platform/announcements/unread"],
-        token,
-        signal,
+        { token, signal },
       );
       return response.data ?? [];
     }),

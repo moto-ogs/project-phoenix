@@ -146,8 +146,10 @@ before push.
 
 File links and browser navigations use `bffFileHref` with the registered GET
 file key, typed path parameters and query. Use `bffFile` when the caller
-reads the response itself; never build a file URL by hand. The BFF route
-guard checks both retired forwarding helpers and handwritten file URLs.
+reads the response itself. Use `bffPath` with a registered key for other
+BFF addresses. The BFF route guard scans production source for retired
+forwarding helpers and handwritten registered addresses, including templates
+and concatenations that refer to constants or helper returns.
 
 ## Write route
 
@@ -250,6 +252,11 @@ Only for what belongs to the browser and cannot live in Go:
   to a neighbouring route file (`catalogProxyUnder`); `app/api/catalog-route-selection.test.ts`
   fails when one is missing.
 
+One named exception: `app/api/enrollment/form-bootstrap/public/[tenantSlug]/[phaseId]/route.ts`
+adds the signed-in Staff profile to the public form. Both backend requests
+use their generated entries. #5018 tracks moving the projection to Go; the
+browser caller is allowlisted for exactly this address.
+
 Such a JSON route stays typed: its `common.RouteContract` names `RouteFile`,
 one sentence why the route file serves it (`common.RouteFileSession` for a
 session step), beside its portal, `Request` and `Response` (or `NoData`,
@@ -257,7 +264,8 @@ session step), beside its portal, `Request` and `Response` (or `NoData`,
 the envelope (`common.RenderJSON`). The generator writes its types, decoder
 and route entry and lists that entry in `routeFileRoutes`, never in a proxy
 allowlist. The named handler calls `contractGet(entry, options)` or
-`contractWrite(entry, body, options)`, even without a session. The session
+`contractWrite(entry, body, options)`, even without a session. Both fill the
+route entry’s path with typed `params` and serialize its typed `query`. The session
 step's Go tokens never reach the browser; put its BFF answer in
 `frontend/src/lib/session-bff.ts` and call that entry with `bffJson`.
 See [school switching](../../frontend/src/app/api/auth/switch-tenant/route.ts)

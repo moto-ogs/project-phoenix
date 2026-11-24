@@ -471,10 +471,13 @@ Für [#7945](https://github.com/moto-ogs/project-phoenix/issues/7945).
 
 Für [#8003](https://github.com/moto-ogs/project-phoenix/issues/8003):
 Server-Module und Layouts lesen angemeldete JSON-Routen über `contractGet`
-und schreiben über `contractWrite`. Die Staff-Shell lässt nicht lesbare
+und schreiben über `contractWrite`. Der erzeugte Eintrag bestimmt den Pfad
+und die Typen von `params` und `query`; es gibt keine freie Zieladresse.
+Die Staff-Shell lässt nicht lesbare
 optionale Startdaten aus; der Browser lädt sie auf dem normalen Weg.
 Der Schul-Lookup prüft den öffentlichen Routeneintrag und cached nur
-dekodierte Treffer. Der Wächter in `route-backend-paths.test.ts` prüft
+dekodierte Treffer mit geprüften Branding-Feldern. Schulbezogene
+Zusatzschlüssel bleiben offen. Der Wächter in `route-backend-paths.test.ts` prüft
 auch Server-Module, nicht nur benannte BFF-Routen.
 
 Katalog-Proxy und Vertragsclient lesen JSON auf demselben Fehlerpfad.
@@ -488,8 +491,11 @@ Fehler wiederholbar. Ein 204 ersetzt keine zugesagten Daten.
 1. **Eine Datei-Adresse kommt aus dem Vertrag.** `bffFileHref` baut Links
    aus einem registrierten GET-Dateischlüssel mit getypten Pfad- und
    Query-Parametern. `bffFile` bleibt der Aufruf, der einen `Response`
-   liefert. Der Wächter beanstandet handgebaute Datei-Adressen und die
-   ausgebauten Durchreich-Helfer.
+   liefert. `bffPath` baut andere registrierte Adressen mit einem Routenschlüssel.
+   Der Wächter prüft den Produktcode auf handgebaute Adressen, auch wenn
+   Templates oder Verkettungen Konstanten und Hilfsfunktionen nutzen.
+   Die Lint-Ausnahmen für ungetypte Aufrufe gelten pro Datei, Methode und
+   Pfad für genau einen Aufruf.
 2. **Ein Sitzungsschritt erbt den Request-Typ, nicht den Antworttyp.**
    `sessionBff` nutzt die erzeugten Request-Typen. Die Antwort der
    Oberfläche bleibt eine Projektion des dekodierten Backend-Ergebnisses:

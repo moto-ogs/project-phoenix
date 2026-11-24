@@ -1,3 +1,4 @@
+import { bffPath } from "./bff-fetch";
 // The browser contract of the session routes. Go's generated answers stay
 // on the server; the BFF sends only the fields named here.
 import type { LoginRequest } from "./contract/auth-login.generated";
@@ -34,6 +35,7 @@ import type {
   PasskeyCeremonyOptions,
 } from "./contract/shared.generated";
 import { portalAuthPath, type PortalKey } from "./portal-paths";
+import { sessionPost as post, type SessionBffRoute } from "./session-bff-route";
 
 export type SessionAuthenticated = { status: "authenticated" };
 
@@ -102,57 +104,103 @@ type PasskeyOptionsBody = {
   [P in PortalKey]: P extends "tenant" ? passkeyLoginOptionsRequest : undefined;
 };
 
-const SESSION_TYPES = Symbol("session BFF types");
+type SessionPath = SessionBffRoute<unknown, unknown>["path"];
 
-export interface SessionBffRoute<T, B> {
-  readonly method: "POST";
-  readonly path: `/api/${string}`;
-  readonly [SESSION_TYPES]: { answer: T; body: B } | undefined;
-}
+const loginPaths = {
+  tenant: bffPath("tenant", "POST /auth/login"),
+  school: bffPath("school", "POST /school/auth/login"),
+  traeger: bffPath("org", "POST /traeger/auth/login"),
+  operator: bffPath("platform", "POST /operator/auth/login"),
+  parent: bffPath("parent", "POST /parent/auth/login"),
+  caterer: bffPath("caterer", "POST /caterer/auth/login"),
+} satisfies Record<PortalKey, SessionPath>;
 
-function post<T, B = undefined>(path: `/api/${string}`): SessionBffRoute<T, B> {
-  return { method: "POST", path, [SESSION_TYPES]: undefined };
-}
+const verifyPaths = {
+  tenant: bffPath("tenant", "POST /auth/mfa/verify"),
+  school: bffPath("school", "POST /school/auth/mfa/verify"),
+  traeger: bffPath("org", "POST /traeger/auth/mfa/verify"),
+  operator: bffPath("platform", "POST /operator/auth/mfa/verify"),
+  parent: bffPath("parent", "POST /parent/auth/mfa/verify"),
+  caterer: bffPath("caterer", "POST /caterer/auth/mfa/verify"),
+} satisfies Record<PortalKey, SessionPath>;
 
-function authStep<T, B = undefined>(step: string) {
-  return (portal: PortalKey) => post<T, B>(portalAuthPath(portal, step));
-}
+const resendPaths = {
+  tenant: bffPath("tenant", "POST /auth/mfa/resend"),
+  school: bffPath("school", "POST /school/auth/mfa/resend"),
+  traeger: bffPath("org", "POST /traeger/auth/mfa/resend"),
+  operator: bffPath("platform", "POST /operator/auth/mfa/resend"),
+  parent: bffPath("parent", "POST /parent/auth/mfa/resend"),
+  caterer: bffPath("caterer", "POST /caterer/auth/mfa/resend"),
+} satisfies Record<PortalKey, SessionPath>;
 
-function portalStep<T, Bodies extends Record<PortalKey, unknown>>(
-  step: string,
-) {
-  return <P extends PortalKey>(portal: P) =>
-    post<T, Bodies[P]>(portalAuthPath(portal, step));
+const enrollmentStarts = {
+  tenant: bffPath("tenant", "POST /auth/mfa/enroll/start"),
+  school: bffPath("school", "POST /school/auth/mfa/enroll/start"),
+  traeger: bffPath("org", "POST /traeger/auth/mfa/enroll/start"),
+  operator: bffPath("platform", "POST /operator/auth/mfa/enroll/start"),
+  parent: portalAuthPath("parent", "mfa/enroll/start"),
+  caterer: portalAuthPath("caterer", "mfa/enroll/start"),
+};
+const enrollmentConfirms = {
+  tenant: bffPath("tenant", "POST /auth/mfa/enroll/confirm"),
+  school: bffPath("school", "POST /school/auth/mfa/enroll/confirm"),
+  traeger: bffPath("org", "POST /traeger/auth/mfa/enroll/confirm"),
+  operator: bffPath("platform", "POST /operator/auth/mfa/enroll/confirm"),
+  parent: portalAuthPath("parent", "mfa/enroll/confirm"),
+  caterer: portalAuthPath("caterer", "mfa/enroll/confirm"),
+};
+const passkeyOptions = {
+  tenant: bffPath("tenant", "POST /auth/passkeys/login/options"),
+  operator: bffPath("platform", "POST /operator/auth/passkeys/login/options"),
+  caterer: bffPath("caterer", "POST /caterer/auth/passkeys/login/options"),
+};
+const passkeyVerifies = {
+  tenant: bffPath("tenant", "POST /auth/passkeys/login/verify"),
+  operator: bffPath("platform", "POST /operator/auth/passkeys/login/verify"),
+  caterer: bffPath("caterer", "POST /caterer/auth/passkeys/login/verify"),
+};
+
+// The other portals' logout only clears the BFF session and has no Go route.
+function logoutPath(portal: PortalKey): SessionPath {
+  if (portal === "tenant") return bffPath("tenant", "POST /auth/logout");
+  if (portal === "operator")
+    return bffPath("platform", "POST /operator/auth/logout");
+  return portalAuthPath(portal, "logout");
 }
 
 export const sessionBff = {
-  login: portalStep<SignInReply, PasswordBody>("login"),
-  verifyMfa: portalStep<SessionAuthenticated, VerifyBody>("mfa/verify"),
-  resendMfa: authStep<MFAResendResponse, MFAResendRequest>("mfa/resend"),
-  startEnrollment: authStep<EnrollStartResponse | null>("mfa/enroll/start"),
-  confirmEnrollment: portalStep<SessionAuthenticated, ConfirmBody>(
-    "mfa/enroll/confirm",
+  login: <P extends PortalKey>(portal: P) =>
+    post<SignInReply, PasswordBody[P]>(loginPaths[portal]),
+  verifyMfa: <P extends PortalKey>(portal: P) =>
+    post<SessionAuthenticated, VerifyBody[P]>(verifyPaths[portal]),
+  resendMfa: (portal: PortalKey) =>
+    post<MFAResendResponse, MFAResendRequest>(resendPaths[portal]),
+  startEnrollment: (portal: keyof typeof enrollmentStarts) =>
+    post<EnrollStartResponse | null>(enrollmentStarts[portal]),
+  confirmEnrollment: <P extends keyof typeof enrollmentConfirms>(portal: P) =>
+    post<SessionAuthenticated, ConfirmBody[P]>(enrollmentConfirms[portal]),
+  passkeyOptions: <P extends keyof typeof passkeyOptions>(portal: P) =>
+    post<PasskeyCeremonyOptions, PasskeyOptionsBody[P]>(passkeyOptions[portal]),
+  verifyPasskey: (portal: keyof typeof passkeyVerifies) =>
+    post<SessionAuthenticated, PasskeyVerifyRequest>(passkeyVerifies[portal]),
+  logout: (portal: PortalKey) => post<null>(logoutPath(portal)),
+  switchTenant: post<null, SwitchTenantRequest>(
+    bffPath("tenant", "POST /auth/switch-tenant"),
   ),
-  passkeyOptions: portalStep<PasskeyCeremonyOptions, PasskeyOptionsBody>(
-    "passkeys/login/options",
-  ),
-  verifyPasskey: authStep<SessionAuthenticated, PasskeyVerifyRequest>(
-    "passkeys/login/verify",
-  ),
-  logout: authStep<null>("logout"),
-  switchTenant: post<null, SwitchTenantRequest>("/api/auth/switch-tenant"),
   startPreview: post<StaffPreviewReply, StaffPreviewStartRequest>(
-    "/api/auth/staff-preview",
+    bffPath("tenant", "POST /auth/staff-preview"),
   ),
-  endPreview: post<null, StaffPreviewEndRequest>("/api/auth/staff-preview/end"),
+  endPreview: post<null, StaffPreviewEndRequest>(
+    bffPath("tenant", "POST /auth/staff-preview/end"),
+  ),
   confirmCatererFactor: post<SessionRenewed, confirmMFARequest>(
-    "/api/caterer/account/mfa/confirm",
+    bffPath("caterer", "POST /caterer/account/mfa/confirm"),
   ),
   confirmParentFactor: post<SessionRenewed, MFAVerifyRequest>(
-    "/api/parent/me/mfa/confirm",
+    bffPath("parent", "POST /parent/me/mfa/confirm"),
   ),
   verifyTraegerStepUp: post<SessionRenewed, MFAVerifyRequest>(
-    "/api/traeger/auth/mfa/step-up/verify",
+    bffPath("org", "POST /traeger/auth/mfa/step-up/verify"),
   ),
   startOperatorInvite: post<
     OperatorInvitationFlow,
@@ -161,8 +209,8 @@ export const sessionBff = {
   validateOperatorInvite: post<
     OperatorInvitationValidationResponse,
     ValidateInvitationRequest
-  >("/api/operator/auth/invitations/validate"),
+  >(bffPath("platform", "POST /operator/auth/invitations/validate")),
   acceptOperatorInvite: post<OperatorResponse, OperatorAcceptInvitationRequest>(
-    "/api/operator/auth/invitations/accept",
+    bffPath("platform", "POST /operator/auth/invitations/accept"),
   ),
 };

@@ -137,10 +137,14 @@ was eine Antwort-Kennung als Zahl zuließ:
    `tenant_id` und `organization_id` reisen als String; das Frontend ruft
    sie im Browser über `/api/auth/tenant/resolve` und den Katalog-Proxy
    auf, im Server über denselben Routeneintrag mit `contractGet`.
-   Der Server-Cache speichert nur dekodierte Treffer (#8003). Die
+   Der Server-Cache speichert nur dekodierte Treffer und prüft bekannte
+   Branding-Felder. `contractGet` nimmt den Slug im getypten `query` entgegen. Die
    Schulkennung der Oberfläche (`TenantInfo.tenantId`) ist ein String. Die
    Schulkennung im Sitzungstoken bleibt eine Zahl; die Vergleiche wandeln sie
    in Text.
+
+Die HTTP-Hüllen `OptionalJSON` und `DeferredJSON` nutzen auch beim
+   Lesen ihrer inneren Werte den strengen Wire-Decoder.
 
 Der Wächter gegen neue Zahl-Kennungen ist damit der Generator selbst;
 `scripts/check-contract-shrink.mjs` vergleicht nur noch die Routen ohne

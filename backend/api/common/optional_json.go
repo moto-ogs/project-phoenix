@@ -1,6 +1,8 @@
 package common
 
-import "encoding/json"
+import (
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
+)
 
 // OptionalJSON preserves the difference between an absent field and its zero
 // or null value. Use omitzero to leave an absent field off the wire.
@@ -12,7 +14,7 @@ type OptionalJSON[T any] struct {
 func (field OptionalJSON[T]) IsZero() bool { return !field.present }
 
 func (field *OptionalJSON[T]) UnmarshalJSON(data []byte) error {
-	if err := json.Unmarshal(data, &field.Value); err != nil {
+	if err := wire.Unmarshal(data, &field.Value); err != nil {
 		return err
 	}
 	field.present = true
@@ -20,5 +22,5 @@ func (field *OptionalJSON[T]) UnmarshalJSON(data []byte) error {
 }
 
 func (field OptionalJSON[T]) MarshalJSON() ([]byte, error) {
-	return json.Marshal(field.Value)
+	return wire.Marshal(field.Value)
 }

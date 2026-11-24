@@ -54,7 +54,7 @@ export const PUT = createPutHandler(
       routes["PUT /api/settings/values/{key}"],
       body,
       {
-        endpoint: `/api/settings/values/${encodeURIComponent(key)}`,
+        params: { key },
         token,
         request,
       },
@@ -80,7 +80,7 @@ export const DELETE = createDeleteHandler(
       routes["DELETE /api/settings/values/{key}"],
       undefined,
       {
-        endpoint: `/api/settings/values/${encodeURIComponent(key)}`,
+        params: { key },
         token,
         request,
       },

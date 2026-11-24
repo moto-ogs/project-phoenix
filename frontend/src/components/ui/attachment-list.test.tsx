@@ -16,7 +16,9 @@ describe("AttachmentList", () => {
             content_type: "application/pdf",
           },
         ]}
-        downloadUrl={(id) => `/files/${id}`}
+        downloadUrl={(id, inline) =>
+          inline ? `/files/${id}?inline=1` : `/files/${id}`
+        }
         openLabel="In neuem Tab öffnen"
       />,
     );
@@ -65,7 +67,9 @@ describe("AttachmentList", () => {
               content_type: "application/pdf",
             },
           ]}
-          downloadUrl={(id) => `/files/${id}`}
+          downloadUrl={(id, inline) =>
+            inline ? `/files/${id}?inline=1` : `/files/${id}`
+          }
           fileActions
         />,
       );

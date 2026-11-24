@@ -1,4 +1,4 @@
-import { backendJson } from "~/lib/backend-client.server";
+import { readBackendJson, sendBackend } from "~/lib/backend-client.server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { NextAuthRequest, Session } from "next-auth";
 import { NextRequest } from "next/server";
@@ -48,7 +48,9 @@ async function sending(
   request: NextRequest,
   token: string,
 ) {
-  await backendJson(method, "/api/x", token, undefined, { request });
+  await readBackendJson(
+    await sendBackend("/api/x", token, { method, request }),
+  );
 }
 
 type Route = (

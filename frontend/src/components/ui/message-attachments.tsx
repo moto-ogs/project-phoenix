@@ -67,8 +67,8 @@ export function MessageAttachments({
   labels = GERMAN_LABELS,
 }: Readonly<{
   attachments: readonly MessageAttachmentItem[];
-  /** Builds the address that saves one attachment. */
-  downloadUrl: (attachmentId: string) => string;
+  /** Builds the attachment address for saving or inline display. */
+  downloadUrl: (attachmentId: string, inline?: boolean) => string;
   /** Which edge the block hugs: the sender's own messages sit at the end. */
   align?: "start" | "end";
   /**
@@ -85,7 +85,7 @@ export function MessageAttachments({
   // The viewer pages in the order the message shows them: pictures, files.
   const ordered = [...images, ...files];
   const viewerItems: ViewerItem[] = ordered.map((item) => ({
-    src: `${downloadUrl(item.id)}?inline=1`,
+    src: downloadUrl(item.id, true),
     name: item.filename,
     contentType: item.content_type,
     sizeBytes: item.size_bytes,
@@ -142,7 +142,7 @@ export function MessageAttachments({
               >
                 {/* eslint-disable-next-line @next/next/no-img-element -- private, session-bound file; next/image cannot fetch it */}
                 <img
-                  src={`${downloadUrl(item.id)}?inline=1`}
+                  src={downloadUrl(item.id, true)}
                   alt={item.filename}
                   loading="lazy"
                   decoding="async"

@@ -6,9 +6,9 @@ import type { PortalKey } from "./portal-paths";
 import {
   sessionBff,
   type SessionAuthenticated,
-  type SessionBffRoute,
   type SessionLoginBody,
 } from "./session-bff";
+import type { SessionBffRoute } from "./session-bff-route";
 import { signInAnswer, type SignInAnswer } from "./sign-in-answer";
 
 export type LoginScope = PortalKey;

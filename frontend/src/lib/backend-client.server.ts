@@ -216,34 +216,6 @@ export async function readBackendJson<T>(response: Response): Promise<T> {
   return (await response.json()) as T;
 }
 
-/**
- * The backend's JSON for a token the caller holds, envelope included; an
- * error answer throws ApiResponseError. Retained for the legacy portal
- * handlers; registered JSON routes use the contract client or catalog proxy.
- */
-export async function backendJson<T>(
-  method: BackendMethod,
-  endpoint: string,
-  token: string,
-  body?: unknown,
-  options: Pick<BackendCall, "idempotencyKey" | "request" | "signal"> = {},
-): Promise<T> {
-  const response = await sendBackend(endpoint, token, {
-    method,
-    json: body ?? undefined,
-    ...options,
-  });
-  return readBackendJson<T>(response);
-}
-
-/** The `data` of the backend's `{ status, data, message }` envelope. */
-export function unwrapEnvelope<T>(json: unknown): T {
-  if (typeof json === "object" && json !== null && "data" in json) {
-    return (json as { data: T }).data;
-  }
-  return json as T;
-}
-
 /** One portal's session, as its Auth.js instance reads it. */
 export interface PortalSession {
   /** The request's session (cached for the request). */

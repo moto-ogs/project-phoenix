@@ -11,7 +11,7 @@ import type {
   MailProviderBlock,
   MailOutcome,
 } from "~/lib/email-delivery-status";
-import { bffFile, bffJson } from "~/lib/bff-fetch";
+import { bffFile, bffFileHref, bffJson } from "~/lib/bff-fetch";
 import type * as parentAnnouncementsContract from "~/lib/contract/parent-announcements.generated";
 import type * as attachmentContract from "~/lib/contract/announcement-attachments.generated";
 import type * as sharedContract from "~/lib/contract/shared.generated";
@@ -339,14 +339,14 @@ export type DeclarationStatus = Omit<
   submissions: DeclarationSubmission[];
 };
 
-const BASE = "/api/parent-announcements";
+const BASE = "tenant";
 
 /**
  * The routes of a class letter in moto schule (#4800): the same announcement
- * calls behind the school session. Every call below takes the base; the OGS
+ * calls behind the school session. Every call below takes the portal selector; the OGS
  * portal uses the default.
  */
-export const SCHOOL_PARENT_LETTERS_BASE = "/api/school/parent-letters";
+export const SCHOOL_PARENT_LETTERS_BASE = "school";
 
 /** Where an announcement call goes: the OGS portal or moto schule. */
 export type AnnouncementApiBase =
@@ -873,8 +873,6 @@ export async function fetchAnnouncementRecipients(
  * Empfängerkreis bei.
  */
 
-const ATTACHMENTS_BASE = "/api/announcement-attachments";
-
 /**
  * Die Anhänge einer Mitteilung mit `max_count` (Höchstzahl je Mitteilung),
  * `max_bytes` (Größengrenze je Datei), `editable` (false, sobald die
@@ -950,8 +948,16 @@ export async function deleteAnnouncementAttachment(
 export function announcementAttachmentDownloadUrl(
   announcementId: string,
   attachmentId: string,
+  inline = false,
 ): string {
-  return `${ATTACHMENTS_BASE}/${encodeURIComponent(announcementId)}/${encodeURIComponent(attachmentId)}/download`;
+  return bffFileHref(
+    "tenant",
+    "GET /api/announcement-attachments/{announcementId}/{attachmentId}/download",
+    {
+      params: { announcementId, attachmentId },
+      query: inline ? { inline: "1" } : {},
+    },
+  );
 }
 
 // --- Serienbriefe (#4813) ----------------------------------------------------

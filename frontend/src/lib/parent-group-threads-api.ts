@@ -3,7 +3,7 @@
  * every family of a group, class or AG. Parents answer only the OGS, in the
  * conversation of their child; their answers never appear here.
  *
- * Talks to the Next.js proxy routes under /api/messages/group-threads.
+ * Talks to the catalog BFF under /api/messages/group-threads.
  * Backend int64 ids arrive already stringified.
  */
 

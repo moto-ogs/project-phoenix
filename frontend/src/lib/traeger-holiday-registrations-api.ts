@@ -1,4 +1,4 @@
-import { bffFile, bffJson } from "~/lib/bff-fetch";
+import { bffFile, bffFileHref, bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the review of the holiday registrations in the Träger portal
  * (#4663): the list of a holiday period with its filters, one registration
@@ -706,19 +706,17 @@ function detailFromBackend(
   };
 }
 
-const registrationsPath = (periodId: string) =>
-  `/api/traeger/holiday-periods/${encodeURIComponent(periodId)}/registrations`;
-
-const registrationPath = (periodId: string, registrationId: string) =>
-  `${registrationsPath(periodId)}/${encodeURIComponent(registrationId)}`;
-
 /** Address of the proxy that opens one proof of benefits (#5238). */
 export function holidayProofHref(
   periodId: string,
   registrationId: string,
   proofId: string,
 ): string {
-  return `${registrationPath(periodId, registrationId)}/proofs/${encodeURIComponent(proofId)}`;
+  return bffFileHref(
+    "org",
+    "GET /traeger/holiday-periods/{id}/registrations/{registrationId}/proofs/{proofId}",
+    { params: { id: periodId, registrationId, proofId } },
+  );
 }
 
 /**

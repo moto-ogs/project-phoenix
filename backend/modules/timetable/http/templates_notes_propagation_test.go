@@ -155,7 +155,7 @@ func notesPropagationParsedUpdate(stored templateResponse) *parsedUpdateTemplate
 			Weekdays:                     []int{1},
 			RoomID:                       *stored.RoomID,
 			CategoryID:                   stored.CategoryID,
-			PlanningTrackID:              NullableInt64{Set: true, Value: stored.PlanningTrackID},
+			PlanningTrackID:              NullableID{Set: true, Value: stored.PlanningTrackID},
 			MaxParticipants:              NullableInt{Set: true, Value: stored.MaxParticipants},
 			RequiredStaff:                stored.RequiredStaffOverride,
 			CalendarPeriodID:             stored.CalendarPeriodID,

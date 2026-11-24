@@ -95,9 +95,9 @@ interface PersonalCalendarProps {
   readonly onCancel?: (event: CalendarEvent) => void;
   readonly onDelete?: (event: CalendarEvent) => void;
   readonly busyAppointmentId?: string | null;
-  // Base path for the .ics download route, e.g. "/api/parent/me/calendar/appointments".
+  // The portal supplies the complete, registered file address.
   // When set, appointment cards show a "Zum Kalender hinzufügen" download link.
-  readonly icsHrefBase?: string;
+  readonly icsHref?: (appointmentId: string) => string;
   /** Zeigt dem Ersteller, was aus den E-Mails an die Eltern wurde (#7058). */
   readonly showGuardianMails?: boolean;
 }
@@ -124,7 +124,7 @@ interface CalendarEventActions {
   readonly onCancel?: (event: CalendarEvent) => void;
   readonly onDelete?: (event: CalendarEvent) => void;
   readonly busyAppointmentId?: string | null;
-  readonly icsHrefBase?: string;
+  readonly icsHref?: (appointmentId: string) => string;
   readonly showGuardianMails?: boolean;
 }
 
@@ -621,7 +621,7 @@ export function PersonalCalendar({
   onCancel,
   onDelete,
   busyAppointmentId,
-  icsHrefBase,
+  icsHref,
   showGuardianMails,
 }: PersonalCalendarProps) {
   const [clicked, setClicked] = useState<CalendarEvent | null>(null);
@@ -636,7 +636,7 @@ export function PersonalCalendar({
     onCancel,
     onDelete,
     busyAppointmentId,
-    icsHrefBase,
+    icsHref,
     showGuardianMails,
   };
   const referenceDate =
@@ -1308,7 +1308,7 @@ function CalendarEventDetail({
     onCancel,
     onDelete,
     busyAppointmentId,
-    icsHrefBase,
+    icsHref,
     showGuardianMails,
   } = actions;
   const tone = toneOf(event);
@@ -1349,7 +1349,7 @@ function CalendarEventDetail({
     !cancelled &&
     event.source === "appointment" &&
     event.appointment_id &&
-    icsHrefBase,
+    icsHref,
   );
   const startDate = parseISODate(event.start_date);
   const endDate = parseISODate(event.end_date);
@@ -1507,9 +1507,7 @@ function CalendarEventDetail({
           {showIcs ? (
             <ActionHint text="Speichert den Termin als Datei für deinen Kalender.">
               <a
-                href={`${icsHrefBase}/${encodeURIComponent(
-                  event.appointment_id!,
-                )}/ics`}
+                href={icsHref?.(event.appointment_id!)}
                 download
                 className={buttonClassName({
                   variant: "outline",

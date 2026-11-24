@@ -1,4 +1,4 @@
-import { bffFile, bffJson } from "~/lib/bff-fetch";
+import { bffFile, bffFileHref, bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the Träger portal ("moto träger", #4649). Talks to the BFF
  * routes under /api/traeger, which forward to the backend with the Träger
@@ -1061,11 +1061,11 @@ function backendBankAccount(
   };
 }
 
-const masterDataPath = "/api/traeger/master-data";
-
 /** The logo as an image source; the version reloads it after a change. */
 export function traegerLogoSrc(logo: TraegerLogo): string {
-  return `${masterDataPath}/logo?v=${encodeURIComponent(logo.updatedAt)}`;
+  return bffFileHref("org", "GET /traeger/master-data/logo", {
+    query: { v: logo.updatedAt },
+  });
 }
 
 /** Reads the master data of the Träger. The read is logged. */

@@ -219,7 +219,7 @@ describe("loadShellBootstrap", () => {
       "/api/me/groups/supervised": {
         data: [ownGroup],
       },
-      "/api/rooms?is_open_room=true": {
+      "/api/rooms/?is_open_room=true": {
         data: [room],
         pagination: page,
       },
@@ -304,7 +304,7 @@ describe("loadShellBootstrap", () => {
       "/auth/account/tenants": { data: [] },
       "/api/students/ogs-group-navigation": { data: [] },
       "/api/me/groups/supervised": { data: [] },
-      "/api/rooms?is_open_room=true": { data: [], pagination: page },
+      "/api/rooms/?is_open_room=true": { data: [], pagination: page },
       "/api/staff-notices/today": { data: [] },
       "/api/messages/unread-count": { data: { unread_count: 2 } },
       "/api/reminders/": { data: { enabled: false, reminders: [], count: 0 } },
@@ -348,7 +348,7 @@ describe("loadShellBootstrap", () => {
       "/auth/account/tenants": { data: [] },
       "/api/students/ogs-group-navigation": { data: [] },
       "/api/me/groups/supervised": { data: [] },
-      "/api/rooms?is_open_room=true": { data: [], pagination: page },
+      "/api/rooms/?is_open_room=true": { data: [], pagination: page },
       "/api/staff-notices/today": { data: [] },
       "/api/messages/unread-count": { data: { unread_count: 3 } },
       "/api/platform/announcements/unread": { data: [] },
@@ -378,7 +378,7 @@ describe("loadShellBootstrap", () => {
       "/api/me/groups/supervised": {
         data: [{ id: 3, group_id: 3, room_id: 2, room: { id: 2, name: "B" } }],
       },
-      "/api/rooms?is_open_room=true": new Error("500"),
+      "/api/rooms/?is_open_room=true": new Error("500"),
       "/api/staff/absences/pending": new Error("500"),
       "/api/messages/unread-count": new Error("500"),
       "/api/staff-notices/today": new Error("500"),
@@ -411,7 +411,7 @@ describe("loadShellBootstrap", () => {
         data: [overviewGroup],
       },
       "/api/me/groups/supervised": new Error("500"),
-      "/api/rooms?is_open_room=true": { data: [], pagination: page },
+      "/api/rooms/?is_open_room=true": { data: [], pagination: page },
     });
 
     const shell = await loadShellBootstrap(session(), tenant, ACCESS_TOKEN);
@@ -429,7 +429,7 @@ describe("loadShellBootstrap", () => {
     routeBackend({
       "/api/students/ogs-group-navigation": { data: [] },
       "/api/me/groups/supervised": { data: [{ ...ownGroup, id: 1 }] },
-      "/api/rooms?is_open_room=true": { data: [], pagination: page },
+      "/api/rooms/?is_open_room=true": { data: [], pagination: page },
     });
 
     const shell = await loadShellBootstrap(

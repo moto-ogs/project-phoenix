@@ -59,8 +59,8 @@ export interface MessageAttachmentRoutes {
     file: File,
     signal?: AbortSignal,
   ) => Promise<MessageAttachment>;
-  /** Die Adresse, die einen Anhang speichert (`<a href>`, `<img src>`). */
-  readonly downloadUrl: (attachmentId: string) => string;
+  /** Builds the address for saving or viewing an attachment. */
+  readonly downloadUrl: (attachmentId: string, inline?: boolean) => string;
   /**
    * Lädt die Bytes eines Anhangs für die Ansicht in der Seite: ein PDF zeigt
    * der Betrachter aus einer Object-URL, weil die App sich nicht rahmen lässt.
@@ -86,7 +86,7 @@ export const PARENT_MESSAGE_ATTACHMENTS: MessageAttachmentRoutes = {
       signal,
       errorMessage: UPLOAD_FAILED,
     }),
-  downloadUrl: (attachmentId) =>
+  downloadUrl: (attachmentId, inline) =>
     bffFileHref(
       "tenant",
       "GET /api/messages/attachments/{attachmentId}/download",
@@ -94,6 +94,7 @@ export const PARENT_MESSAGE_ATTACHMENTS: MessageAttachmentRoutes = {
         params: {
           attachmentId,
         },
+        query: inline ? { inline: "1" } : {},
       },
     ),
   loadFile: (attachmentId) =>
@@ -111,11 +112,11 @@ export const STAFF_MESSAGE_ATTACHMENTS: MessageAttachmentRoutes = {
       signal,
       errorMessage: UPLOAD_FAILED,
     }),
-  downloadUrl: (attachmentId) =>
+  downloadUrl: (attachmentId, inline) =>
     bffFileHref(
       "tenant",
       "GET /api/staff-messages/attachments/{attachmentId}/download",
-      { params: { attachmentId } },
+      { params: { attachmentId }, query: inline ? { inline: "1" } : {} },
     ),
   loadFile: (attachmentId) =>
     bffFile(
@@ -138,11 +139,11 @@ export const SCHOOL_STAFF_MESSAGE_ATTACHMENTS: MessageAttachmentRoutes = {
       signal,
       errorMessage: UPLOAD_FAILED,
     }),
-  downloadUrl: (attachmentId) =>
+  downloadUrl: (attachmentId, inline) =>
     bffFileHref(
       "school",
       "GET /school-staff-messages/attachments/{attachmentId}/download",
-      { params: { attachmentId } },
+      { params: { attachmentId }, query: inline ? { inline: "1" } : {} },
     ),
   loadFile: (attachmentId) =>
     bffFile(
@@ -172,11 +173,14 @@ export function guardianMessageAttachments(
           errorMessage: UPLOAD_FAILED,
         },
       ),
-    downloadUrl: (attachmentId) =>
+    downloadUrl: (attachmentId, inline) =>
       bffFileHref(
         "parent",
         "GET /parent/me/messages/children/{studentId}/attachments/{attachmentId}/download",
-        { params: { studentId, attachmentId } },
+        {
+          params: { studentId, attachmentId },
+          query: inline ? { inline: "1" } : {},
+        },
       ),
     loadFile: (attachmentId) =>
       bffFile(

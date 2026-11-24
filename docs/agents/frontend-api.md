@@ -67,7 +67,9 @@ slash is dropped and each parameter encoded.
   reasons in the [BFF boundary rules](../../frontend/scripts/oxlint-plugin-bff-boundary.mjs).
   `bff-boundary/only-listed-uncontracted` rejects access outside that list
   and forwarding the helper, including renamed imports and re-exports.
-  The list only shrinks.
+  Each entry permits exactly one call for a file, portal, method and address.
+  A second call or an unused entry fails lint. The enrollment bootstrap adds
+  the Staff profile in its named route until #5018.
 - **Wait:** a refusal with `Retry-After` (429, 503) carries the wait as
   `retryAfterSeconds` on the `ApiError` (`apiErrorFromResponse`).
 - **Keepalive cleanup:** `keepalive: true` starts the request immediately.
@@ -104,7 +106,8 @@ slash is dropped and each parameter encoded.
   body and `Content-Disposition` the caller reads. A link the browser opens
   itself (`<a href>`, image or navigation) uses `bffFileHref(portal, route,
   { params, query })`. It accepts only registered GET file keys with their
-  typed path parameters and query. Do not concatenate a BFF file address.
+  typed path parameters and query. For other registered addresses use `bffPath(portal, key, { params, query })`.
+  Do not assemble a registered BFF address separately.
 
 ## Environment & API URLs — Fail Fast, No Defaults
 
@@ -123,7 +126,7 @@ checklist. Local values belong in `.env.local` using `.env.example` as the templ
 
 ### Server-Only Import Isolation (`.server.ts`)
 
-Server-only wrappers carry a `.server.ts` suffix (`lib/route-wrapper.server.ts`, `lib/api-helpers.server.ts`, `lib/operator/route-wrapper.server.ts`, `lib/parent/route-wrapper.server.ts`).
+Server-only wrappers carry a `.server.ts` suffix (`lib/route-wrapper.server.ts`, `lib/operator/route-wrapper.server.ts`, `lib/parent/route-wrapper.server.ts`).
 
 Read the existing server-only wrappers and keep server auth/env imports out
 of client components. Modules outside `src/server/`, `src/app/api/` and
@@ -153,17 +156,19 @@ or write a `Backend*` interface for a registered route.
 - A portal forwards its backend routes through one catalog proxy, so a new
   backend route needs no pass-through `route.ts`. `app/api/proxy-routes.test.ts`
   rejects retired forwarding helpers even in a route with its own code, and
-  checks for hand-built file addresses.
+  checks the whole production source tree for registered BFF addresses
+  built from literals, concatenations, templates, constants or helper returns.
+  The host router’s incoming-path comparisons are not address builders.
 - In named routes, layouts and server modules, read with
   `contractGet(entry, options)`; write with
   `contractWrite(entry, body, options)`. Import the entry from its
-  generated resource file. The entry types the write body and decodes the
+  generated resource file. The entry types the address and write body and decodes the
   full answer, with or without an envelope. A malformed answer is a 502,
   never an empty value. A request type has optional fields because Go
   reads absent keys as zero values; Go's `Bind` still validates the body.
 - Pass `token` when the caller holds the bearer, or omit it for a public
-  or pre-session step. Pass `endpoint` for the path with its parameters
-  filled in, or to add query parameters. For a session-bound route that
+  or pre-session step. Pass typed `params` and `query`; the entry supplies
+  the backend path. There is no endpoint override. For a session-bound route that
   uses `backendFetch`, hand that transport to the contract helper as
   `send`; it keeps the portal's renewal policy.
 - Return `contractResponse(reply, request)` for decoded JSON that the BFF

@@ -253,11 +253,12 @@ function ProofDocument({
                 <p className="text-gray-600">{t("attachments")}</p>
                 <AttachmentList
                   attachments={version.attachments ?? []}
-                  downloadUrl={(attachmentId) =>
+                  downloadUrl={(attachmentId, inline) =>
                     declarationProofAttachmentDownloadUrl(
                       announcementId,
                       studentId,
                       attachmentId,
+                      inline,
                     )
                   }
                 />

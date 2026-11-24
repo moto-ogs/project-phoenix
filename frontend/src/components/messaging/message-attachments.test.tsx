@@ -209,7 +209,8 @@ describe("Anhänge im Eingabefeld (#6685)", () => {
 
 describe("Anhänge in der Sprechblase (#6685)", () => {
   const files = {
-    downloadUrl: (id: string) => `/files/${id}`,
+    downloadUrl: (id: string, inline?: boolean) =>
+      inline ? `/files/${id}?inline=1` : `/files/${id}`,
     loadFile: vi.fn<MessageAttachmentRoutes["loadFile"]>(),
   };
 
@@ -322,7 +323,8 @@ describe("Anhänge in der Sprechblase (#6685)", () => {
           attachments={props.attachments.map((item) => ({ ...item }))}
           attachmentFiles={{
             ...props.attachmentFiles,
-            downloadUrl: (id) => `/files/${id}`,
+            downloadUrl: (id, inline) =>
+              inline ? `/files/${id}?inline=1` : `/files/${id}`,
           }}
         />,
       );

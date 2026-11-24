@@ -146,7 +146,7 @@ func TestApplyOfferingSourcePresence(t *testing.T) {
 	t.Run("explicit null clears sources and drags the omitted filter along", func(t *testing.T) {
 		req := &updateTemplateRequest{
 			TargetGroupType:       timetableModule.TargetGroupTypeOffering,
-			SourceCareOfferingIDs: NullableInt64Slice{Set: true, Value: nil},
+			SourceCareOfferingIDs: NullableIDSlice{Set: true, Value: nil},
 		}
 		applyOfferingSourcePresence(req, sourcedExistingTemplate(storedOfferingIDs, []int{1, 2}))
 		assert.Nil(t, req.SourceCareOfferingIDs.Value)
@@ -157,7 +157,7 @@ func TestApplyOfferingSourcePresence(t *testing.T) {
 	t.Run("provided values win over the stored ones", func(t *testing.T) {
 		req := &updateTemplateRequest{
 			TargetGroupType:       timetableModule.TargetGroupTypeOffering,
-			SourceCareOfferingIDs: NullableInt64Slice{Set: true, Value: []ident.ID{44}},
+			SourceCareOfferingIDs: NullableIDSlice{Set: true, Value: []ident.ID{44}},
 			SourceGradeLevels:     NullableIntSlice{Set: true, Value: []int{4}},
 		}
 		applyOfferingSourcePresence(req, sourcedExistingTemplate(storedOfferingIDs, []int{1, 2}))
@@ -168,7 +168,7 @@ func TestApplyOfferingSourcePresence(t *testing.T) {
 	t.Run("omitted filter follows a provided source", func(t *testing.T) {
 		req := &updateTemplateRequest{
 			TargetGroupType:       timetableModule.TargetGroupTypeOffering,
-			SourceCareOfferingIDs: NullableInt64Slice{Set: true, Value: []ident.ID{44}},
+			SourceCareOfferingIDs: NullableIDSlice{Set: true, Value: []ident.ID{44}},
 		}
 		applyOfferingSourcePresence(req, sourcedExistingTemplate(storedOfferingIDs, []int{1, 2}))
 		assert.Equal(t, []int{1, 2}, req.SourceGradeLevels.Value)
@@ -236,7 +236,7 @@ func TestApplyOfferingSourcePresenceClassFilter(t *testing.T) {
 	t.Run("clearing the source clears both filters", func(t *testing.T) {
 		req := &updateTemplateRequest{
 			TargetGroupType:       timetableModule.TargetGroupTypeOffering,
-			SourceCareOfferingIDs: NullableInt64Slice{Set: true, Value: nil},
+			SourceCareOfferingIDs: NullableIDSlice{Set: true, Value: nil},
 		}
 		applyOfferingSourcePresence(req, storedClasses)
 		assert.Empty(t, req.SourceSchoolClasses.Value)

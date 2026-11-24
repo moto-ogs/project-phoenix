@@ -149,7 +149,7 @@ Every POST, PUT, PATCH, or DELETE route of the portal routers (`/api`,
    unclassified writing route and for a table entry whose route is gone.
 4. The Next.js route handler forwards `X-POSTHOG-SESSION-ID`. The shared
    backend client does (`sendBackend` in `lib/backend-client.server.ts`, under
-   every portal's route handlers and `api-helpers.server`); a handler with its own `fetch`
+   routes and server contract client); a handler with its own `fetch`
    spreads `incomingAnalyticsSessionHeaders()` into its headers.
 
 The event is sent only for a 2xx response, after the tenant transaction

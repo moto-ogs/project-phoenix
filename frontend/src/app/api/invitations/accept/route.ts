@@ -45,7 +45,7 @@ async function POSTHandler(request: NextRequest) {
         routes["POST /auth/invitations/{token}/accept"],
         payload,
         {
-          endpoint: `/auth/invitations/${encodeURIComponent(token)}/accept`,
+          params: { token },
           token: ownerToken,
           request,
         },

@@ -2339,10 +2339,11 @@ function AnnouncementFormModal({
                   {existingAttachments.length > 0 && (
                     <AttachmentList
                       attachments={existingAttachments}
-                      downloadUrl={(attachmentId) =>
+                      downloadUrl={(attachmentId, inline) =>
                         announcementAttachmentDownloadUrl(
                           persistedId ?? "",
                           attachmentId,
+                          inline,
                         )
                       }
                       onRemove={

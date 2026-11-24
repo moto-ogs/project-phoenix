@@ -1,5 +1,7 @@
 "use client";
 
+import { bffFileHref } from "~/lib/bff-fetch";
+
 import {
   Suspense,
   useCallback,
@@ -1130,7 +1132,13 @@ function StaffCalendarPageInner() {
       onCancel={canManageCalendar ? handleCancel : undefined}
       onDelete={canManageCalendar ? handleDelete : undefined}
       busyAppointmentId={busyAppointmentId}
-      icsHrefBase="/api/calendar/appointments"
+      icsHref={(appointmentId) =>
+        bffFileHref(
+          "tenant",
+          "GET /api/calendar/appointments/{appointmentId}/ics",
+          { params: { appointmentId } },
+        )
+      }
       showGuardianMails={canManageCalendar}
     />
   );

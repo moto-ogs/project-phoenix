@@ -54,7 +54,8 @@ vi.mock("~/lib/traeger-api", () => ({
 }));
 // Side reads of the page that these tests do not set up fail at once, as
 // they did while traeger-api was mocked without its request helper.
-vi.mock("~/lib/bff-fetch", () => ({
+vi.mock("~/lib/bff-fetch", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/bff-fetch")>()),
   bffJson: () => Promise.reject(new Error("bffJson is not mocked here")),
 }));
 const {
@@ -958,7 +959,7 @@ describe("TraegerHolidayRegistrationPage", () => {
     });
     expect(open).toHaveAttribute(
       "href",
-      "/api/traeger/holiday-periods/5/registrations/7/proofs/91?inline=1",
+      "/api/traeger/holiday-periods/5/registrations/7/proofs/91",
     );
     expect(open).toHaveAttribute("target", "_blank");
     expect(open).toHaveAttribute("rel", "noopener");
@@ -968,7 +969,7 @@ describe("TraegerHolidayRegistrationPage", () => {
       card.getByRole("link", { name: "Bescheid Bürgergeld.pdf öffnen" }),
     ).toHaveAttribute(
       "href",
-      "/api/traeger/holiday-periods/5/registrations/7/proofs/91?inline=1",
+      "/api/traeger/holiday-periods/5/registrations/7/proofs/91",
     );
     expect(
       card.getByRole("link", { name: "Bescheid Bürgergeld.pdf herunterladen" }),

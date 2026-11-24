@@ -26,16 +26,28 @@ export const RAW_TRANSPORT = {
 
 // Named route files whose browser-facing response is not the Go contract.
 export const UNCONTRACTED = {
-  "lib/invitation-api.ts":
-    "POST invitations/accept: a new account accepts without a session, an existing one with the owner's; the route's contract names only the tenant portal",
-  "lib/enrollment-submission-api.ts":
-    "GET enrollment/form-bootstrap/public/[tenantSlug]/[phaseId]: the route adds the signed-in staff member's profile to the public form",
-  "lib/demo-access.ts":
-    "POST demo/access/status, sessions, reset: the demo routes exist only with APP_ENV=demo and carry the token in the body or the BFF's cookie, so they have no Go contract",
-  "lib/push-api.ts":
-    "DELETE …/push/subscriptions during logout: the family is revoked and the sign-out must stay the last cookie change, so the call goes through the portal without a session (no gate, renewal or login redirect)",
-  "lib/operator/provisioning-api.ts":
-    "POST operator/provisioning/revalidate-tenant: the route purges the cached tenant lookup and the ISR pages, no backend route",
+  // The Go contract covers only the tenant; new accounts may accept anonymously.
+  "lib/invitation-api.ts": ["public POST /api/invitations/accept"],
+  // The named handler adds the signed-in staff profile (#5018).
+  "lib/enrollment-submission-api.ts": [
+    "public GET tenant GET /api/enrollment/form-bootstrap/public/{tenantSlug}/{phaseId}",
+  ],
+  // Demo-only routes own the cookie and have no Go contract.
+  "lib/demo-access.ts": [
+    "public POST /api/demo/access/reset",
+    "public POST /api/demo/access/status",
+    "public POST /api/demo/access/sessions",
+  ],
+  // Logout must not renew the revoked session or replace the sign-out cookie.
+  "lib/push-api.ts": [
+    "public DELETE parent DELETE /parent/me/push/subscriptions",
+    "public DELETE school DELETE /school/notifications/push/subscriptions",
+    "public DELETE tenant DELETE /api/notifications/push/subscriptions",
+  ],
+  // Purges the BFF lookup and ISR caches without calling Go.
+  "lib/operator/provisioning-api.ts": [
+    "platform POST /api/operator/provisioning/revalidate-tenant",
+  ],
 };
 
 const RETIRED_HELPERS = new Set([
@@ -261,7 +273,7 @@ const onlyListedUncontracted = {
     messages: {
       helper:
         "Use bffJson with a contract. Only the listed callers may use bffJsonUncontracted, and they must not forward it.",
-      unused: "Remove this file's unused bffJsonUncontracted exception.",
+      unused: "Remove the unused bffJsonUncontracted exception: {{route}}.",
     },
   },
   create(context) {
@@ -269,8 +281,32 @@ const onlyListedUncontracted = {
     if (!file || isTest(file) || file === "lib/bff-fetch.ts") return {};
     const allowed = Object.hasOwn(UNCONTRACTED, file);
     if (!allowed && !/bff-fetch|\\/.test(context.sourceCode.text)) return {};
-    let used = false;
+    const remaining = new Set(UNCONTRACTED[file]);
     const report = (node) => context.report({ node, messageId: "helper" });
+
+    function routeAddress(node) {
+      if (!node) return;
+      if (node.type !== "CallExpression") return staticName(node, true);
+      const callee = node.callee;
+      if (callee.type !== "Identifier") return;
+      for (
+        let scope = context.sourceCode.getScope(callee);
+        scope;
+        scope = scope.upper
+      ) {
+        const variable = scope.set.get(callee.name);
+        if (!variable) continue;
+        const specifier = variable.defs[0]?.node;
+        if (
+          specifier?.type !== "ImportSpecifier" ||
+          staticName(specifier.imported, false) !== "bffPath" ||
+          !isBffModule(specifier.parent.source)
+        )
+          return;
+        const [portal, key] = node.arguments;
+        return `${portal && staticName(portal, true)} ${key && staticName(key, true)}`;
+      }
+    }
 
     function isBffModule(node) {
       const path = node && staticName(node, true);
@@ -301,12 +337,17 @@ const onlyListedUncontracted = {
             specifier,
           )) {
             for (const { identifier } of variable.references) {
+              const call = identifier.parent;
               if (
-                identifier.parent.type !== "CallExpression" ||
-                identifier.parent.callee !== identifier
-              )
+                call.type !== "CallExpression" ||
+                call.callee !== identifier
+              ) {
                 report(identifier);
-              else used = true;
+                continue;
+              }
+              const [portal, method, address] = call.arguments;
+              const route = `${portal && staticName(portal, true)} ${method && staticName(method, true)} ${routeAddress(address)}`;
+              if (!remaining.delete(route)) report(identifier);
             }
           }
         }
@@ -336,7 +377,8 @@ const onlyListedUncontracted = {
         if (isBffModule(node.expression)) report(node);
       },
       "Program:exit"(node) {
-        if (allowed && !used) context.report({ node, messageId: "unused" });
+        for (const route of remaining)
+          context.report({ node, messageId: "unused", data: { route } });
       },
     };
   },

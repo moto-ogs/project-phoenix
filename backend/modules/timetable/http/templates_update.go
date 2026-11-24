@@ -17,15 +17,15 @@ import (
 )
 
 type updateTemplateRequest struct {
-	Name            string        `json:"name"`
-	Type            string        `json:"type"`
-	Weekdays        []int         `json:"weekdays"`
-	StartTime       string        `json:"start_time"`
-	EndTime         string        `json:"end_time"`
-	RoomID          ident.ID      `json:"room_id"`
-	CategoryID      ident.ID      `json:"category_id"`
-	PlanningTrackID NullableInt64 `json:"planning_track_id"`
-	MaxParticipants NullableInt   `json:"max_participants"`
+	Name            string      `json:"name"`
+	Type            string      `json:"type"`
+	Weekdays        []int       `json:"weekdays"`
+	StartTime       string      `json:"start_time"`
+	EndTime         string      `json:"end_time"`
+	RoomID          ident.ID    `json:"room_id"`
+	CategoryID      ident.ID    `json:"category_id"`
+	PlanningTrackID NullableID  `json:"planning_track_id"`
+	MaxParticipants NullableInt `json:"max_participants"`
 	// RequiredStaff is the optional manual Personalbedarf override (#1839);
 	// omitted/null clears the override (derive from the Betreuungsschlüssel).
 	RequiredStaff    *int      `json:"required_staff,omitempty"`
@@ -42,8 +42,8 @@ type updateTemplateRequest struct {
 	// template's stored value, only an explicit null (or explicit empty
 	// list) clears it. A client predating these fields must not strip a
 	// template's dynamic Angebots-Belegung by simply not knowing them.
-	SourceCareOfferingIDs NullableInt64Slice `json:"source_care_offering_ids"`
-	SourceGradeLevels     NullableIntSlice   `json:"source_grade_levels"`
+	SourceCareOfferingIDs NullableIDSlice  `json:"source_care_offering_ids"`
+	SourceGradeLevels     NullableIntSlice `json:"source_grade_levels"`
 	// SourceSchoolClasses is the Klassenfilter (#2482), same presence
 	// contract. Mutually exclusive with source_grade_levels: submitting one
 	// non-empty filter drops a carried-over other one, submitting both

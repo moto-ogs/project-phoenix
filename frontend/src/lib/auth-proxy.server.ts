@@ -1,7 +1,11 @@
 import type { NextRequest } from "next/server";
 import { handleApiError } from "./api-response-error.server";
 import { noData } from "./contract/runtime";
-import { contractWrite, type ContractBody } from "./contract/client.server";
+import {
+  contractWrite,
+  type ContractBody,
+  type ContractOptions,
+} from "./contract/client.server";
 import { contractResponse } from "./contract/route-response.server";
 import { withPrivateNoStore } from "./private-no-store";
 import { successResponse } from "./route-wrapper-utils.server";
@@ -15,7 +19,7 @@ export function authStepProxy<
     method: "POST";
     routeFile: string;
   },
->(route: R) {
+>(route: R & (R["pattern"] extends `${string}{${string}` ? never : unknown)) {
   return withPrivateNoStore(async (request: NextRequest) => {
     // The Go route validates the body it binds.
     const body: ContractBody<R> =
@@ -24,11 +28,17 @@ export function authStepProxy<
         : (undefined as ContractBody<R>);
     const proof = request.headers.get("authorization");
     try {
-      const reply = await contractWrite(route, body, {
-        request,
-        timeout: "login",
-        headers: proof ? { Authorization: proof } : undefined,
-      });
+      const reply = await contractWrite<R>(
+        route,
+        body,
+        ...([
+          {
+            request,
+            timeout: "login",
+            headers: proof ? { Authorization: proof } : undefined,
+          },
+        ] as unknown as ContractOptions<NoInfer<R>>),
+      );
       return route.response === noData
         ? contractResponse(reply, request)
         : contractResponse(reply, request, successResponse);

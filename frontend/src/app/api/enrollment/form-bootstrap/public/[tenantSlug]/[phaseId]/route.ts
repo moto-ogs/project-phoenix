@@ -9,10 +9,7 @@ import {
 import { routes } from "~/lib/contract/enrollment.generated";
 import { createLogger } from "~/lib/logger";
 import { problemResponse } from "~/lib/api-response-error.server";
-import {
-  LATE_INVITE_QUERY_PARAM,
-  withLateInviteQuery,
-} from "~/lib/enrollment-http";
+import { LATE_INVITE_QUERY_PARAM } from "~/lib/enrollment-http";
 
 const logger = createLogger({ component: "EnrollmentFormBootstrapRoute" });
 
@@ -22,18 +19,17 @@ interface RouteContext {
 
 async function GETHandler(request: NextRequest, context: RouteContext) {
   const { tenantSlug, phaseId } = await context.params;
+  const lateInvite = request.nextUrl.searchParams
+    .get(LATE_INVITE_QUERY_PARAM)
+    ?.trim();
   try {
     const reply = await contractGet(
       routes[
         "GET /api/enrollment/form-bootstrap/public/{tenantSlug}/{phaseId}"
       ],
       {
-        endpoint: withLateInviteQuery(
-          `/api/enrollment/form-bootstrap/public/${encodeURIComponent(
-            tenantSlug,
-          )}/${encodeURIComponent(phaseId)}`,
-          request.nextUrl.searchParams.get(LATE_INVITE_QUERY_PARAM),
-        ),
+        params: { tenantSlug, phaseId },
+        query: lateInvite ? { late_invite: lateInvite } : {},
         request,
       },
     );
